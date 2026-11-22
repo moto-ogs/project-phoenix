@@ -12,13 +12,13 @@ import (
 // --- wire types ------------------------------------------------------------
 
 // FolderRequest is the body of a folder create or update. The share lists
-// arrive as decimal strings; a JSON number still decodes (common.JSONID), so
+// arrive as decimal strings; a JSON number still decodes (common.ID), so
 // nothing that already talks to this endpoint breaks.
 type FolderRequest struct {
-	Name       string          `json:"name"`
-	Visibility string          `json:"visibility"`
-	RoleIDs    []common.JSONID `json:"role_ids"`
-	AccountIDs []common.JSONID `json:"account_ids"`
+	Name       string      `json:"name"`
+	Visibility string      `json:"visibility"`
+	RoleIDs    []common.ID `json:"role_ids"`
+	AccountIDs []common.ID `json:"account_ids"`
 }
 
 // FolderResponse is one folder on the wire. Ids are decimal strings; see

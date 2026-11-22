@@ -128,7 +128,7 @@ func (p *Provisioning) CreateOrganization(ctx context.Context, input *organizati
 		if err != nil {
 			return nil, mapOrganizationError(err, 0)
 		}
-		return &created, p.recordAction(adminCtx, operatorID, domain.AuditActionCreate, domain.AuditResourceOrganization, &created.ID, clientIP, map[string]any{
+		return &created, p.recordAction(adminCtx, operatorID, domain.AuditActionCreate, domain.AuditResourceOrganization, (*int64)(&created.ID), clientIP, map[string]any{
 			"name": created.Name,
 			"slug": created.Slug,
 		})
@@ -172,9 +172,9 @@ func (p *Provisioning) guardReactivation(adminCtx context.Context, existing orga
 	if existing.Active || !active {
 		return nil
 	}
-	_, open, err := p.organizations.FindOpenTraegerErasureOrder(adminCtx, existing.ID)
+	_, open, err := p.organizations.FindOpenTraegerErasureOrder(adminCtx, existing.ID.Int64())
 	if err != nil {
-		return mapOrganizationError(err, existing.ID)
+		return mapOrganizationError(err, existing.ID.Int64())
 	}
 	if open {
 		return organizationtenancy.ErrTraegerErasureOrderOpen
@@ -188,7 +188,7 @@ func (p *Provisioning) endSessionsOfDeactivatedTraeger(adminCtx context.Context,
 	if !existing.Active || updated.Active {
 		return nil
 	}
-	ended, err := p.identity.EndTraegerSessions(adminCtx, existing.ID)
+	ended, err := p.identity.EndTraegerSessions(adminCtx, existing.ID.Int64())
 	if err != nil {
 		return err
 	}

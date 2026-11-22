@@ -109,12 +109,12 @@ func planChange(read schoolRead, application carecontract.Application, contract 
 func withChange(base, booked []carecontract.Service, changed map[int64]bool) []carecontract.Service {
 	services := []carecontract.Service{}
 	for _, service := range base {
-		if !changed[service.CareOfferingID] {
+		if !changed[service.CareOfferingID.Int64()] {
 			services = append(services, service)
 		}
 	}
 	for _, service := range booked {
-		if changed[service.CareOfferingID] {
+		if changed[service.CareOfferingID.Int64()] {
 			services = append(services, service)
 		}
 	}
@@ -145,7 +145,7 @@ func changedOfferings(read schoolRead, application carecontract.Application, tim
 		if !slices.ContainsFunc(booked, func(b carecontract.Service) bool {
 			return b.CareOfferingID == service.CareOfferingID && b.Weekday == service.Weekday
 		}) {
-			changed[service.CareOfferingID] = true
+			changed[service.CareOfferingID.Int64()] = true
 		}
 	}
 	return changed
@@ -159,7 +159,7 @@ func endedPromises(timeline []carecontract.Version, day calendar.Date) []int64 {
 		ended := version.EndsOn != nil && version.EndsOn.AddDays(1) == day
 		for _, service := range version.Services {
 			if ended || (service.LastDay != nil && service.LastDay.AddDays(1) == day) {
-				offerings = append(offerings, service.CareOfferingID)
+				offerings = append(offerings, service.CareOfferingID.Int64())
 			}
 		}
 	}
@@ -183,8 +183,8 @@ func sameDay(date *calendar.Date, day calendar.Date) bool { return date != nil &
 func singleModulePrice(read schoolRead, services []carecontract.Service) *int64 {
 	offerings := []int64{}
 	for _, service := range services {
-		if !slices.Contains(offerings, service.CareOfferingID) {
-			offerings = append(offerings, service.CareOfferingID)
+		if !slices.Contains(offerings, service.CareOfferingID.Int64()) {
+			offerings = append(offerings, service.CareOfferingID.Int64())
 		}
 	}
 	if len(offerings) != 1 {
@@ -344,7 +344,7 @@ func sameCare(a, b []carecontract.Service) bool {
 	key := func(services []carecontract.Service) []string {
 		keys := make([]string, len(services))
 		for i, service := range services {
-			keys[i] = service.Weekday + "|" + strconv.FormatInt(service.CareOfferingID, 10) + "|" + service.EndsAt
+			keys[i] = service.Weekday + "|" + strconv.FormatInt(service.CareOfferingID.Int64(), 10) + "|" + service.EndsAt
 		}
 		slices.Sort(keys)
 		return slices.Compact(keys)

@@ -3,7 +3,7 @@ import { z } from "zod";
 import {
   arr,
   bool,
-  int64StringOrNumber,
+  int64String,
   noData,
   nullable,
   object,
@@ -35,7 +35,7 @@ export interface OperatorAnnouncementResponse {
 }
 
 export const OperatorAnnouncementResponseSchema: z.ZodType<OperatorAnnouncementResponse, unknown> = object<OperatorAnnouncementResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   title: str,
   content: str,
   type: str,
@@ -45,9 +45,9 @@ export const OperatorAnnouncementResponseSchema: z.ZodType<OperatorAnnouncementR
   published_at: optional(str),
   expires_at: optional(str),
   target_roles: nullable(arr(str)),
-  target_org_ids: nullable(arr(int64StringOrNumber)),
-  target_tenant_ids: nullable(arr(int64StringOrNumber)),
-  created_by: int64StringOrNumber,
+  target_org_ids: nullable(arr(int64String)),
+  target_tenant_ids: nullable(arr(int64String)),
+  created_by: int64String,
   created_at: str,
   updated_at: str,
   status: str,
@@ -62,7 +62,7 @@ export interface AnnouncementStats {
 }
 
 export const AnnouncementStatsSchema: z.ZodType<AnnouncementStats, unknown> = object<AnnouncementStats>({
-  announcement_id: int64StringOrNumber,
+  announcement_id: int64String,
   target_count: safeInt,
   seen_count: safeInt,
   dismissed_count: safeInt,
@@ -79,7 +79,7 @@ export interface AnnouncementViewDetailResponse {
 }
 
 export const AnnouncementViewDetailResponseSchema: z.ZodType<AnnouncementViewDetailResponse, unknown> = object<AnnouncementViewDetailResponse>({
-  user_id: int64StringOrNumber,
+  user_id: int64String,
   user_name: str,
   seen_at: str,
   shown_at: nullable(str),
@@ -96,8 +96,8 @@ export interface CreateAnnouncementRequest {
   version?: string | null;
   expires_at?: string | null;
   target_roles?: string[] | null;
-  target_org_ids?: number[] | null;
-  target_tenant_ids?: number[] | null;
+  target_org_ids?: string[] | null;
+  target_tenant_ids?: string[] | null;
 }
 
 /** Go: operatorannouncements.UpdateAnnouncementRequest */
@@ -110,8 +110,8 @@ export interface UpdateAnnouncementRequest {
   active?: boolean | null;
   expires_at?: string | null;
   target_roles?: string[] | null;
-  target_org_ids?: number[] | null;
-  target_tenant_ids?: number[] | null;
+  target_org_ids?: string[] | null;
+  target_tenant_ids?: string[] | null;
 }
 
 /** Query of GET /operator/announcements/ */

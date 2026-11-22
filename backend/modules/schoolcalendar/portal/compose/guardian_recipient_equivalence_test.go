@@ -7,6 +7,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/appointments"
 	calendarCompose "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal/compose"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 )
@@ -20,8 +21,8 @@ func legacyRecipientAudiences(t *testing.T, ctx context.Context, cfg calendarCom
 	var guardians, recipients []int64
 	for _, row := range rows {
 		if row.RecipientType == appointments.RecipientTypeGuardianProfile && row.GuardianProfileID != nil {
-			guardians = append(guardians, *row.GuardianProfileID)
-			recipients = append(recipients, row.ID)
+			guardians = append(guardians, (*row.GuardianProfileID).Int64())
+			recipients = append(recipients, row.ID.Int64())
 		}
 	}
 	contacts, err := cfg.GuardianProfileRepo.ListPortalContacts(ctx, guardians, nil)
@@ -48,21 +49,21 @@ func legacyRecipientAudiences(t *testing.T, ctx context.Context, cfg calendarCom
 			continue
 		}
 		guardian := *row.GuardianProfileID
-		profile := profiles[guardian]
+		profile := profiles[guardian.Int64()]
 		if profile == nil || profile.AccountID == nil || *profile.AccountID <= 0 {
 			continue
 		}
 		var children []int64
 		for _, link := range links {
-			if link.RecipientID == row.ID && allowed[[2]int64{guardian, link.StudentID}] {
+			if ident.ID(link.RecipientID) == row.ID && allowed[[2]int64{guardian.Int64(), link.StudentID}] {
 				children = append(children, link.StudentID)
 			}
 		}
 		if len(children) > 0 {
-			audience := result[row.AppointmentID]
-			audience.GuardianIDs = append(audience.GuardianIDs, guardian)
-			audience.StudentsByGuardian[guardian] = append(audience.StudentsByGuardian[guardian], children...)
-			result[row.AppointmentID] = audience
+			audience := result[row.AppointmentID.Int64()]
+			audience.GuardianIDs = append(audience.GuardianIDs, guardian.Int64())
+			audience.StudentsByGuardian[guardian.Int64()] = append(audience.StudentsByGuardian[guardian.Int64()], children...)
+			result[row.AppointmentID.Int64()] = audience
 		}
 	}
 	return result
@@ -93,13 +94,13 @@ func TestGuardianNotificationAudiencesMatchLegacyLinks(t *testing.T) {
 		StartTime: wallClock(14, 0), EndTime: wallClock(15, 0), DeliveryMode: appointments.DeliveryModeInformational,
 	}})
 	require.NoError(t, err)
-	_, _, err = cfg.Appointments.CreateAppointmentRecipients(foreignCtx, foreignAppointment.ID, []appointments.AppointmentRecipientFields{{
+	_, _, err = cfg.Appointments.CreateAppointmentRecipients(foreignCtx, foreignAppointment.ID.Int64(), []appointments.AppointmentRecipientFields{{
 		RecipientType: appointments.RecipientTypeGuardianProfile, GuardianProfileID: &foreignGuardian.ID,
 		Status: appointments.ResponseStatusPending, StudentIDs: []int64{foreignStudent.ID},
 	}})
 	require.NoError(t, err)
 	foreignID, foreignStudentID := foreignAppointment.ID, foreignStudent.ID
-	ids = append(ids, foreignID)
+	ids = append(ids, foreignID.Int64())
 	service := owners.NewCalendarPortal(cfg)
 	check := func(want []int64) {
 		t.Helper()
@@ -107,7 +108,7 @@ func TestGuardianNotificationAudiencesMatchLegacyLinks(t *testing.T) {
 			rows, err := cfg.Appointments.FindAppointmentRecipientsByAppointmentIDs(txCtx, ids)
 			require.NoError(t, err)
 			for _, row := range rows {
-				links, err := cfg.Appointments.FindAppointmentRecipientStudents(txCtx, []int64{row.ID})
+				links, err := cfg.Appointments.FindAppointmentRecipientStudents(txCtx, []int64{row.ID.Int64()})
 				require.NoError(t, err)
 				var students []int64
 				for _, value := range links {
@@ -121,11 +122,11 @@ func TestGuardianNotificationAudiencesMatchLegacyLinks(t *testing.T) {
 			require.NoError(t, err)
 			// Each reachable guardian carries the answer of its own recipient row (#7014).
 			for _, row := range rows {
-				audience := after[row.AppointmentID]
-				if row.GuardianProfileID == nil || len(audience.StudentsByGuardian[*row.GuardianProfileID]) == 0 {
+				audience := after[row.AppointmentID.Int64()]
+				if row.GuardianProfileID == nil || len(audience.StudentsByGuardian[(*row.GuardianProfileID).Int64()]) == 0 {
 					continue
 				}
-				answer, ok := audience.Answers[*row.GuardianProfileID]
+				answer, ok := audience.Answers[(*row.GuardianProfileID).Int64()]
 				require.True(t, ok, "reachable guardian %d has an answer", *row.GuardianProfileID)
 				require.Equal(t, row.Status, answer.Status)
 				require.Equal(t, row.OccurrenceResponses, answer.OccurrenceResponses)
@@ -136,7 +137,7 @@ func TestGuardianNotificationAudiencesMatchLegacyLinks(t *testing.T) {
 				before[id] = audience
 			}
 			require.Equal(t, before, after)
-			require.Empty(t, after[foreignID].GuardianIDs)
+			require.Empty(t, after[foreignID.Int64()].GuardianIDs)
 			require.Equal(t, want, after[ids[0]].StudentsByGuardian[family.GuardianProfileID])
 			return nil
 		}))

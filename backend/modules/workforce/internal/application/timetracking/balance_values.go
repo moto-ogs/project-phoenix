@@ -3,14 +3,15 @@ package timetracking
 import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // --- mapping ---
 
 func StaffBalanceAdjustmentToCapability(entity *StaffBalanceAdjustment) workforce.StaffBalanceAdjustment {
 	return workforce.StaffBalanceAdjustment{
-		ID: entity.ID, TenantID: entity.TenantID, StaffID: entity.StaffID, Type: entity.Type, MinutesDelta: entity.MinutesDelta,
-		EffectiveDate: entity.EffectiveDate.String(), Note: entity.Note, DecidedBy: entity.DecidedBy, DecidedAt: entity.DecidedAt,
+		ID: ident.ID(entity.ID), TenantID: ident.ID(entity.TenantID), StaffID: ident.ID(entity.StaffID), Type: entity.Type, MinutesDelta: entity.MinutesDelta,
+		EffectiveDate: entity.EffectiveDate.String(), Note: entity.Note, DecidedBy: ident.ID(entity.DecidedBy), DecidedAt: entity.DecidedAt,
 		CreatedAt: entity.CreatedAt, UpdatedAt: entity.UpdatedAt,
 	}
 }
@@ -22,16 +23,16 @@ func adjustmentToRecord(value workforce.StaffBalanceAdjustment) *StaffBalanceAdj
 }
 
 func applyAdjustmentToRecord(entity *StaffBalanceAdjustment, value workforce.StaffBalanceAdjustment) {
-	entity.ID = value.ID
+	entity.ID = value.ID.Int64()
 	entity.CreatedAt = value.CreatedAt
 	entity.UpdatedAt = value.UpdatedAt
-	entity.TenantID = value.TenantID
-	entity.StaffID = value.StaffID
+	entity.TenantID = value.TenantID.Int64()
+	entity.StaffID = value.StaffID.Int64()
 	entity.Type = value.Type
 	entity.MinutesDelta = value.MinutesDelta
 	entity.EffectiveDate = calendar.Date(value.EffectiveDate)
 	entity.Note = value.Note
-	entity.DecidedBy = value.DecidedBy
+	entity.DecidedBy = value.DecidedBy.Int64()
 	entity.DecidedAt = value.DecidedAt
 }
 
@@ -45,9 +46,9 @@ func adjustmentsToRecords(values []workforce.StaffBalanceAdjustment) []*StaffBal
 
 func openingToCapability(entity *StaffVacationOpening) workforce.StaffVacationOpening {
 	return workforce.StaffVacationOpening{
-		ID: entity.ID, TenantID: entity.TenantID, StaffID: entity.StaffID, Year: entity.Year, EffectiveDate: entity.EffectiveDate.String(),
+		ID: ident.ID(entity.ID), TenantID: ident.ID(entity.TenantID), StaffID: ident.ID(entity.StaffID), Year: entity.Year, EffectiveDate: entity.EffectiveDate.String(),
 		TakenBeforeDays: entity.TakenBeforeDays, EnteredRemainingDays: entity.EnteredRemainingDays, Note: entity.Note,
-		DecidedBy: entity.DecidedBy, DecidedAt: entity.DecidedAt, CreatedAt: entity.CreatedAt, UpdatedAt: entity.UpdatedAt,
+		DecidedBy: ident.ID(entity.DecidedBy), DecidedAt: entity.DecidedAt, CreatedAt: entity.CreatedAt, UpdatedAt: entity.UpdatedAt,
 	}
 }
 
@@ -58,17 +59,17 @@ func openingToRecord(value workforce.StaffVacationOpening) *StaffVacationOpening
 }
 
 func applyOpeningToRecord(entity *StaffVacationOpening, value workforce.StaffVacationOpening) {
-	entity.ID = value.ID
+	entity.ID = value.ID.Int64()
 	entity.CreatedAt = value.CreatedAt
 	entity.UpdatedAt = value.UpdatedAt
-	entity.TenantID = value.TenantID
-	entity.StaffID = value.StaffID
+	entity.TenantID = value.TenantID.Int64()
+	entity.StaffID = value.StaffID.Int64()
 	entity.Year = value.Year
 	entity.EffectiveDate = calendar.Date(value.EffectiveDate)
 	entity.TakenBeforeDays = value.TakenBeforeDays
 	entity.EnteredRemainingDays = value.EnteredRemainingDays
 	entity.Note = value.Note
-	entity.DecidedBy = value.DecidedBy
+	entity.DecidedBy = value.DecidedBy.Int64()
 	entity.DecidedAt = value.DecidedAt
 }
 
@@ -100,7 +101,7 @@ func applyQuotaToRecord(entity *StaffVacationQuota, value workforce.StaffVacatio
 func staffAdjustmentsByID(values []workforce.StaffBalanceAdjustment) map[int64][]*StaffBalanceAdjustment {
 	result := make(map[int64][]*StaffBalanceAdjustment)
 	for _, value := range values {
-		result[value.StaffID] = append(result[value.StaffID], adjustmentToRecord(value))
+		result[value.StaffID.Int64()] = append(result[value.StaffID.Int64()], adjustmentToRecord(value))
 	}
 	return result
 }
@@ -113,7 +114,7 @@ func firstOpening(values []workforce.StaffVacationOpening) *StaffVacationOpening
 func openingsByStaff(values []workforce.StaffVacationOpening) map[int64]*StaffVacationOpening {
 	result := make(map[int64]*StaffVacationOpening)
 	for _, value := range values {
-		result[value.StaffID] = openingToRecord(value)
+		result[value.StaffID.Int64()] = openingToRecord(value)
 	}
 	return result
 }

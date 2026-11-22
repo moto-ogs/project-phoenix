@@ -11,6 +11,7 @@ import (
 	common "github.com/moto-ogs/project-phoenix/api/common"
 	careplan "github.com/moto-ogs/project-phoenix/modules/careplan"
 	sessiontoken "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	tenant "github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -52,8 +53,8 @@ func studentDocumentActor(r *http.Request) (careplan.StudentDocumentActor, error
 
 // StudentDocumentResponse is one document on the wire.
 type StudentDocumentResponse struct {
-	ID            int64     `json:"id"`
-	StudentID     int64     `json:"student_id"`
+	ID            common.ID `json:"id"`
+	StudentID     common.ID `json:"student_id"`
 	Category      string    `json:"category"`
 	CategoryLabel string    `json:"category_label"`
 	Filename      string    `json:"filename"`
@@ -71,7 +72,7 @@ type StudentDocumentResponse struct {
 // see plus the caller's visible categories (drives the filter and the upload
 // category picker).
 type StudentDocumentListResponse struct {
-	StudentID         int64                     `json:"student_id"`
+	StudentID         common.ID                 `json:"student_id"`
 	Documents         []StudentDocumentResponse `json:"documents"`
 	VisibleCategories []StudentDocumentCategory `json:"visible_categories"`
 }
@@ -85,8 +86,8 @@ type StudentDocumentCategory struct {
 
 func newStudentDocumentResponse(doc careplan.CareDocument) StudentDocumentResponse {
 	return StudentDocumentResponse{
-		ID:            doc.ID,
-		StudentID:     doc.StudentID,
+		ID:            ident.ID(doc.ID),
+		StudentID:     ident.ID(doc.StudentID),
 		Category:      doc.Category,
 		CategoryLabel: studentDocumentLabel(doc.Category),
 		Filename:      doc.FilenameDisplay,
@@ -140,7 +141,7 @@ func (rs *Resource) listStudentDocuments(w http.ResponseWriter, r *http.Request)
 	rs.retryStudentDocumentCleanups(r.Context(), id, actor, "retry")
 
 	resp := &StudentDocumentListResponse{
-		StudentID:         id,
+		StudentID:         ident.ID(id),
 		Documents:         make([]StudentDocumentResponse, 0, len(docs)),
 		VisibleCategories: make([]StudentDocumentCategory, 0, len(visible)),
 	}
@@ -515,5 +516,5 @@ func (rs *Resource) deleteStudentDocument(w http.ResponseWriter, r *http.Request
 			coordinator.CleanupDocument(cleanupCtx, tenantID, id, documentID, storedName, "delete")
 		})
 	}
-	common.Respond(w, r, http.StatusOK, studentDocumentDeletedResponse{StudentID: id}, "Student document deleted successfully")
+	common.Respond(w, r, http.StatusOK, studentDocumentDeletedResponse{StudentID: ident.ID(id)}, "Student document deleted successfully")
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type planningTrackRequest struct {
@@ -31,7 +32,7 @@ func (req *planningTrackRequest) Bind(_ *http.Request) error {
 }
 
 type planningTrackOrderRequest struct {
-	IDs []int64 `json:"ids"`
+	IDs []common.ID `json:"ids"`
 }
 
 func (req *planningTrackOrderRequest) Bind(_ *http.Request) error {
@@ -108,7 +109,7 @@ func (rs *Resource) reorderPlanningTracks(w http.ResponseWriter, r *http.Request
 		common.RenderError(w, r, bindErrorRenderer(err))
 		return
 	}
-	if err := service.OrderPlanningTracks(r.Context(), req.IDs); err != nil {
+	if err := service.OrderPlanningTracks(r.Context(), ident.Int64s(req.IDs)); err != nil {
 		renderPlanningTrackError(w, r, err)
 		return
 	}

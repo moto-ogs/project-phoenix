@@ -7,6 +7,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	activityContract "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The activity service, the template writes and split, the materializer,
@@ -246,6 +247,9 @@ func legacyCategory(category timetable.Category) *activityContract.Category {
 }
 
 func LegacyGroupID(id any) (int64, bool) {
+	if typed, ok := id.(ident.ID); ok {
+		id = typed.Int64()
+	}
 	switch value := id.(type) {
 	case int64:
 		return value, true

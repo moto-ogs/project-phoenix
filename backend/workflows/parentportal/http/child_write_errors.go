@@ -48,6 +48,8 @@ func renderParentCareWriteError(w http.ResponseWriter, r *http.Request, err erro
 		common.RenderError(w, r, common.ErrorConflictWithCode(err, common.CodeMealsParticipationCutoffPassed))
 	case errors.Is(err, parentService.ErrInvalidMealParticipation):
 		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeMealsInvalidParticipation))
+	case errors.Is(err, parentService.ErrRoomHistoryStopDisabled):
+		common.RenderError(w, r, common.ErrorForbiddenWithCode(err, common.CodeCareRoomHistoryStopDisabled))
 	case errors.Is(err, parentService.ErrPickupChangeDisabled):
 		common.RenderError(w, r, common.ErrorForbiddenWithCode(err, common.CodeCarePickupChangeDisabled))
 	case errors.Is(err, parentService.ErrPickupChangeCutoffPassed):

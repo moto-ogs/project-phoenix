@@ -159,11 +159,11 @@ func (rs *StaffAdminResource) listAbsenceRequests(w http.ResponseWriter, r *http
 	for i, item := range items {
 		responses[i] = absenceRequestResponse{
 			StaffAbsenceRequestItem: item,
-			ID:                      strconv.FormatInt(item.ID, 10),
-			StaffID:                 strconv.FormatInt(item.StaffID, 10),
+			ID:                      strconv.FormatInt(item.ID.Int64(), 10),
+			StaffID:                 strconv.FormatInt(item.StaffID.Int64(), 10),
 		}
 		if item.ApprovedBy != nil {
-			approvedBy := strconv.FormatInt(*item.ApprovedBy, 10)
+			approvedBy := strconv.FormatInt((*item.ApprovedBy).Int64(), 10)
 			responses[i].ApprovedBy = &approvedBy
 		}
 	}

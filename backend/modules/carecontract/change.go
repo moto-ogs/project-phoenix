@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The Träger-Büro decides the parents' change of the booked care itself
@@ -28,7 +29,7 @@ const (
 // the parents ask for. Before or After is empty when the module is added or
 // removed.
 type ChangeLine struct {
-	CareOfferingID int64    `json:"care_offering_id"`
+	CareOfferingID ident.ID `json:"care_offering_id"`
 	ModuleName     string   `json:"module_name"`
 	State          string   `json:"state"`
 	BeforeDays     []string `json:"before_days"`
@@ -38,7 +39,7 @@ type ChangeLine struct {
 // ChangeRequest is a change of the booked care the parents asked for and
 // nobody decided yet. Version pins the request a decision is taken on.
 type ChangeRequest struct {
-	ID            int64         `json:"id"`
+	ID            ident.ID      `json:"id"`
 	Version       string        `json:"version"`
 	SubmittedAt   time.Time     `json:"submitted_at"`
 	EffectiveFrom calendar.Date `json:"effective_from"`

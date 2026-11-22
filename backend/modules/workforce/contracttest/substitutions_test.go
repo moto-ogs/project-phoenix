@@ -10,6 +10,7 @@ import (
 	education "github.com/moto-ogs/project-phoenix/modules/schoolstructure/contract"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 )
@@ -60,7 +61,7 @@ func TestSubstitutionCapabilityPreservesCallerAndOverview(t *testing.T) {
 			return nil, nil
 		}
 		calls++
-		return &education.OverviewResult{Groups: []education.GroupRef{{ID: staff.ID, Name: "Klasse"}}, Targets: []education.StaffRef{{ID: staff.ID, FullName: "Target"}}, ScheduleTargets: []education.StaffRef{{ID: staff.ID, FullName: "Schedule"}}, GroupHandovers: []education.GroupHandover{{ID: staff.ID, Group: education.GroupRef{Name: "Klasse"}, Target: education.StaffRef{FullName: "Target"}, Period: education.Period{StartDate: day.String(), EndDate: day.String()}, CanEnd: true}}, ScheduleAppointments: []education.ScheduleAppointmentOverview{{ID: staff.ID, Date: day, StartTime: "09:00", EndTime: "10:00", Title: "Betreuung", Staff: []education.ScheduleAppointmentStaff{{AssignmentID: staff.ID, Staff: education.StaffRef{ID: staff.ID}, IsSubstitute: true, CanEnd: true}}}}, RunningSupervisions: []education.RunningSupervision{{ID: staff.ID, Name: "Raum", CanAssign: true, IsCurrentUserSupervising: true, Supervisors: []education.StaffRef{{ID: staff.ID}}, AvailableTargets: []education.StaffRef{{ID: staff.ID}}}}}, nil
+		return &education.OverviewResult{Groups: []education.GroupRef{{ID: ident.ID(staff.ID), Name: "Klasse"}}, Targets: []education.StaffRef{{ID: ident.ID(staff.ID), FullName: "Target"}}, ScheduleTargets: []education.StaffRef{{ID: ident.ID(staff.ID), FullName: "Schedule"}}, GroupHandovers: []education.GroupHandover{{ID: ident.ID(staff.ID), Group: education.GroupRef{Name: "Klasse"}, Target: education.StaffRef{FullName: "Target"}, Period: education.Period{StartDate: day.String(), EndDate: day.String()}, CanEnd: true}}, ScheduleAppointments: []education.ScheduleAppointmentOverview{{ID: staff.ID, Date: day, StartTime: "09:00", EndTime: "10:00", Title: "Betreuung", Staff: []education.ScheduleAppointmentStaff{{AssignmentID: staff.ID, Staff: education.StaffRef{ID: ident.ID(staff.ID)}, IsSubstitute: true, CanEnd: true}}}}, RunningSupervisions: []education.RunningSupervision{{ID: ident.ID(staff.ID), Name: "Raum", CanAssign: true, IsCurrentUserSupervising: true, Supervisors: []education.StaffRef{{ID: ident.ID(staff.ID)}}, AvailableTargets: []education.StaffRef{{ID: ident.ID(staff.ID)}}}}}, nil
 	}})
 	out, err := capability.Overview(ctx, caller, workforce.SubstitutionOverviewQuery{On: day.String(), ScheduleFrom: day.String(), ScheduleTo: day.String(), IncludeTargets: true, IncludeScheduleTargets: true})
 	require.NoError(t, err)
@@ -71,7 +72,7 @@ func TestSubstitutionCapabilityPreservesCallerAndOverview(t *testing.T) {
 	require.Equal(t, "2026-09-21", out.ScheduleAppointments[0].Date)
 	require.True(t, out.ScheduleAppointments[0].Staff[0].IsSubstitute)
 	require.True(t, out.RunningSupervisions[0].CanAssign)
-	require.Equal(t, staff.ID, out.RunningSupervisions[0].AvailableTargets[0].ID)
+	require.Equal(t, staff.ID, out.RunningSupervisions[0].AvailableTargets[0].ID.Int64())
 	out, err = capability.Overview(ctx, caller, workforce.SubstitutionOverviewQuery{})
 	require.NoError(t, err)
 	require.Nil(t, out)
@@ -88,10 +89,10 @@ func TestSubstitutionCapabilityPreservesAssignmentPresenceAndWholeDays(t *testin
 		t.Run(fmt.Sprint(populated), func(t *testing.T) {
 			input := workforce.SubstitutionAssignment{GroupHandover: &workforce.GroupHandoverAssignment{GroupID: staff.ID, TargetStaffID: staff.ID, StartDate: day.String(), EndDate: day.String()}, AdditionalSupervision: &workforce.AdditionalSupervisionAssignment{ActiveGroupID: staff.ID, TargetStaffID: staff.ID}, ScheduleSubstitution: &workforce.ScheduleSubstitutionAssignment{InstanceID: staff.ID}}
 			if populated {
-				input.ScheduleSubstitution.Absences = []workforce.ScheduleAbsenceChange{{StaffID: staff.ID}}
-				input.ScheduleSubstitution.Substitutions = []workforce.ScheduleSubstitutionChange{{AbsentStaffID: staff.ID, SubstituteStaffID: staff.ID}}
-				input.ScheduleSubstitution.SubstitutionRemovals = []workforce.ScheduleSubstitutionRemoval{{StaffID: staff.ID}}
-				input.ScheduleSubstitution.Presences = []workforce.SchedulePresenceChange{{StaffID: staff.ID}}
+				input.ScheduleSubstitution.Absences = []workforce.ScheduleAbsenceChange{{StaffID: ident.ID(staff.ID)}}
+				input.ScheduleSubstitution.Substitutions = []workforce.ScheduleSubstitutionChange{{AbsentStaffID: ident.ID(staff.ID), SubstituteStaffID: ident.ID(staff.ID)}}
+				input.ScheduleSubstitution.SubstitutionRemovals = []workforce.ScheduleSubstitutionRemoval{{StaffID: ident.ID(staff.ID)}}
+				input.ScheduleSubstitution.Presences = []workforce.SchedulePresenceChange{{StaffID: ident.ID(staff.ID)}}
 				input.ScheduleSubstitution.WholeDays = &workforce.ScheduleWholeDayAssignment{AbsentStaffID: staff.ID, SubstituteStaffID: &staff.ID, Dates: []string{day.String()}}
 			}
 			capability := api.SubstitutionCapability(substitutionContract{assign: func(c context.Context, _ education.Caller, a education.Assignment) (*education.AssignmentResult, error) {
@@ -113,7 +114,7 @@ func TestSubstitutionCapabilityPreservesAssignmentPresenceAndWholeDays(t *testin
 					require.Nil(t, a.ScheduleSubstitution.Presences)
 					require.Nil(t, a.ScheduleSubstitution.WholeDays)
 				}
-				result := &education.AssignmentResult{ID: staff.ID, Group: &education.GroupRef{ID: staff.ID, Name: "Klasse"}, Period: &education.Period{StartDate: day.String()}, Target: education.StaffRef{ID: staff.ID}, CanEnd: true, ScheduleSubstitution: &education.ScheduleSubstitutionResult{InstanceID: staff.ID, TotalAffected: 1}}
+				result := &education.AssignmentResult{ID: ident.ID(staff.ID), Group: &education.GroupRef{ID: ident.ID(staff.ID), Name: "Klasse"}, Period: &education.Period{StartDate: day.String()}, Target: education.StaffRef{ID: ident.ID(staff.ID)}, CanEnd: true, ScheduleSubstitution: &education.ScheduleSubstitutionResult{InstanceID: staff.ID, TotalAffected: 1}}
 				if populated {
 					result.ScheduleSubstitution.AffectedAppointments = []education.ScheduleAffectedAppointment{{InstanceID: staff.ID, Title: "Betreuung", StartTime: "09:00", Action: "substituted"}}
 					result.ScheduleSubstitution.Warnings = []education.ScheduleTimeConflict{{Kind: "overlap", OtherID: staff.ID, Message: "conflict"}}

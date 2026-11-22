@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Conclusion of a contract (#4680, ADR 0088 sections 2, 3 and 6). A contract
@@ -84,7 +86,7 @@ type Concluded struct {
 // SchoolConclusion is how the contracts of one school of the Träger come
 // about: ModeSendLater or ModeOnAcceptance.
 type SchoolConclusion struct {
-	SchoolID   int64  `json:"school_id"`
-	SchoolName string `json:"school_name"`
-	Mode       string `json:"mode"`
+	SchoolID   ident.ID `json:"school_id"`
+	SchoolName string   `json:"school_name"`
+	Mode       string   `json:"mode"`
 }

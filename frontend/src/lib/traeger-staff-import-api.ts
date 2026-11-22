@@ -9,6 +9,8 @@
  */
 
 import { apiErrorFromResponse, transportFetch } from "./api-error";
+import type * as traegerStaffRecordImportsContract from "./contract/traeger-staff-record-imports.generated";
+import { knownEnum } from "./contract/known-enum";
 import { readJson, traegerRequest } from "./traeger-api";
 
 const IMPORTS_PATH = "/api/traeger/staff-record-imports";
@@ -16,20 +18,44 @@ const IMPORTS_PATH = "/api/traeger/staff-record-imports";
 /** Largest file the backend reads, in bytes. */
 export const MAX_STAFF_IMPORT_FILE_BYTES = 2 * 1024 * 1024;
 
-export type StaffImportField =
-  | "personnel_number"
-  | "first_name"
-  | "last_name"
-  | "birthday"
-  | "iban"
-  | "tax_id"
-  | "social_security_number";
+// Go does not register these sets; the contract types them as string.
+const STAFF_IMPORT_FIELD_VALUES = [
+  "personnel_number",
+  "first_name",
+  "last_name",
+  "birthday",
+  "iban",
+  "tax_id",
+  "social_security_number",
+] as const;
+const STAFF_IMPORT_ROW_STATUS_VALUES = [
+  "new",
+  "complete",
+  "duplicate",
+  "conflict",
+  "invalid",
+  "imported",
+] as const;
+const STAFF_IMPORT_PROBLEM_CODE_VALUES = [
+  "missing",
+  "invalid",
+  "too_long",
+  "future",
+  "repeated",
+  "differs",
+] as const;
+
+export type StaffImportField = (typeof STAFF_IMPORT_FIELD_VALUES)[number];
 
 export type StaffImportRowStatus =
-  "new" | "complete" | "duplicate" | "conflict" | "invalid" | "imported";
+  (typeof STAFF_IMPORT_ROW_STATUS_VALUES)[number];
 
+/**
+ * Why a row stays out. `other`: a reason this build does not know; the row
+ * still stays out.
+ */
 type StaffImportProblemCode =
-  "missing" | "invalid" | "too_long" | "future" | "repeated" | "differs";
+  (typeof STAFF_IMPORT_PROBLEM_CODE_VALUES)[number] | "other";
 
 /** Header of the column each field comes from; "" leaves it unmapped. */
 type StaffImportColumns = Readonly<Record<StaffImportField, string>>;
@@ -39,13 +65,15 @@ export interface StaffImportMapping {
 }
 
 export interface StaffImportProblem {
-  readonly field: StaffImportField;
+  /** undefined: a field this build does not know. */
+  readonly field: StaffImportField | undefined;
   readonly code: StaffImportProblemCode;
 }
 
 export interface StaffImportRow {
   readonly line: number;
-  readonly status: StaffImportRowStatus;
+  /** undefined: a state this build does not know. */
+  readonly status: StaffImportRowStatus | undefined;
   readonly personnelNumber: string;
   readonly firstName: string;
   readonly lastName: string;
@@ -97,47 +125,18 @@ export interface StaffImportRequest {
   readonly fingerprint?: string;
 }
 
-interface BackendRow {
-  line: number;
-  status: StaffImportRowStatus;
-  personnel_number: string;
-  first_name: string;
-  last_name: string;
-  birthday?: string;
-  iban_masked?: string;
-  tax_id_masked?: string;
-  social_security_number_masked?: string;
-  staff_record_id?: string;
-  completes: StaffImportField[] | null;
-  problems: StaffImportProblem[] | null;
-}
+const knownFields = (values: readonly string[] | null): StaffImportField[] =>
+  (values ?? []).flatMap((value) => {
+    const field = knownEnum(STAFF_IMPORT_FIELD_VALUES, value);
+    return field === undefined ? [] : [field];
+  });
 
-interface BackendResult {
-  encoding: string;
-  delimiter: string;
-  headers: string[] | null;
-  mapping: { columns: Record<StaffImportField, string> };
-  unmapped: StaffImportField[] | null;
-  fingerprint?: string;
-  applied: boolean;
-  counts: Record<StaffImportRowStatus, number>;
-  rows: BackendRow[] | null;
-}
-
-interface BackendLogEntry {
-  file: string;
-  account_id: string;
-  by_you: boolean;
-  account_name?: string;
-  imported_at: string;
-  created: number;
-  completed: number;
-}
-
-function mapRow(row: BackendRow): StaffImportRow {
+function mapRow(
+  row: traegerStaffRecordImportsContract.StaffImportRow,
+): StaffImportRow {
   return {
     line: row.line,
-    status: row.status,
+    status: knownEnum(STAFF_IMPORT_ROW_STATUS_VALUES, row.status),
     personnelNumber: row.personnel_number,
     firstName: row.first_name,
     lastName: row.last_name,
@@ -145,19 +144,27 @@ function mapRow(row: BackendRow): StaffImportRow {
     ibanMasked: row.iban_masked ?? "",
     taxIdMasked: row.tax_id_masked ?? "",
     socialSecurityNumberMasked: row.social_security_number_masked ?? "",
-    recordId: row.staff_record_id ? String(row.staff_record_id) : null,
-    completes: row.completes ?? [],
-    problems: row.problems ?? [],
+    // Go omits the field while the row has no record, so "0" never comes.
+    recordId: row.staff_record_id ?? null,
+    completes: knownFields(row.completes),
+    problems: (row.problems ?? []).map((problem) => ({
+      field: knownEnum(STAFF_IMPORT_FIELD_VALUES, problem.field),
+      code:
+        knownEnum(STAFF_IMPORT_PROBLEM_CODE_VALUES, problem.code) ?? "other",
+    })),
   };
 }
 
-function mapResult(result: BackendResult): StaffImportResult {
+function mapResult(
+  result: traegerStaffRecordImportsContract.StaffImport,
+): StaffImportResult {
   return {
     encoding: result.encoding,
     delimiter: result.delimiter,
     headers: result.headers ?? [],
     mapping: { columns: result.mapping.columns },
-    unmapped: result.unmapped ?? [],
+    // A field this build does not know has no column to choose here.
+    unmapped: knownFields(result.unmapped),
     fingerprint: result.fingerprint ?? "",
     applied: result.applied,
     counts: result.counts,
@@ -193,7 +200,9 @@ async function postImport(
     );
   }
   const data = await readJson(response);
-  return mapResult((data as { data: BackendResult }).data);
+  return mapResult(
+    (data as { data: traegerStaffRecordImportsContract.StaffImport }).data,
+  );
 }
 
 /** Reads the file and answers every row; stores nothing. */
@@ -212,10 +221,13 @@ export function applyStaffImport(
 
 /** The imports of the Träger, newest first. */
 export async function fetchStaffImportLog(): Promise<StaffImportLogEntry[]> {
-  const entries = await traegerRequest<BackendLogEntry[] | null>(IMPORTS_PATH);
-  return (entries ?? []).map((entry) => ({
+  const entries =
+    await traegerRequest<traegerStaffRecordImportsContract.StaffImportEntry[]>(
+      IMPORTS_PATH,
+    );
+  return entries.map((entry) => ({
     file: entry.file,
-    accountId: String(entry.account_id),
+    accountId: entry.account_id,
     byYou: entry.by_you,
     accountName: entry.account_name ?? "",
     importedAt: entry.imported_at,

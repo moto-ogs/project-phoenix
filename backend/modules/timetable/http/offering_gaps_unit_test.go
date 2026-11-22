@@ -5,6 +5,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -12,7 +13,7 @@ func TestOfferingGapTemplateIndependentLinks(t *testing.T) {
 	t.Parallel()
 	const offeringID = rosterReviewOfferingID
 	template := templateResponse{
-		SourceCareOfferingIDs: []int64{offeringID},
+		SourceCareOfferingIDs: []ident.ID{ident.ID(offeringID)},
 		Schedules:             []templateScheduleResponse{{Weekday: 1}},
 	}
 	feeds := timetable.TemplateRosterMaintenance{

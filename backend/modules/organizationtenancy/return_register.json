@@ -2,7 +2,7 @@
   "registerVersion": 1,
   "formatVersion": 1,
   "catalogVersion": 1,
-  "catalogSHA256": "79a015bb6a36fbefd0109c915785ead31673a7174be63d4e3721f01d4ed59d3f",
+  "catalogSHA256": "4165f8984f194997edb07297e81b2079fc26854f20ebc5ac0a3f02a45bf1fcbb",
   "about": "Dieses Register beschreibt das Rückgabepaket von moto: welche Tabellen und Felder es enthält, welche Typen sie haben, ob sie leer sein dürfen und wie die Tabellen verbunden sind. Es enthält keine Kundendaten. Jedes Paket enthält dieselbe Beschreibung für seine Tabellen als model.json. formatVersion und catalogSHA256 stehen auch in der manifest.json des Pakets.",
   "standards": [
     {
@@ -1574,6 +1574,49 @@
           "column": "tenant_id",
           "targetTable": "platform.schools",
           "targetColumn": "id"
+        }
+      ],
+      "packages": [
+        "school"
+      ]
+    },
+    {
+      "name": "active.room_history_stops",
+      "columns": [
+        {
+          "name": "tenant_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "student_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "stopped_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        }
+      ],
+      "relationships": [
+        {
+          "column": "student_id",
+          "targetTable": "users.student_profiles",
+          "targetColumn": "id"
+        },
+        {
+          "column": "tenant_id",
+          "targetTable": "platform.schools",
+          "targetColumn": "id"
+        },
+        {
+          "column": "tenant_id",
+          "targetTable": "users.student_profiles",
+          "targetColumn": "tenant_id"
         }
       ],
       "packages": [
@@ -39341,6 +39384,11 @@
       "name": "auth.demo_accesses",
       "classification": "excludeInternal",
       "reason": "Separate public-demo access lifecycle, not a customer school; access requests require authorized demo-process handling."
+    },
+    {
+      "name": "auth.demo_crm_jobs",
+      "classification": "excludeInternal",
+      "reason": "Separate public-demo CRM queue, not customer school content; no tenant export."
     },
     {
       "name": "auth.passkey_sessions",

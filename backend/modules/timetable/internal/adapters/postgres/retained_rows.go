@@ -41,10 +41,14 @@ func (s *Store) classArrivalExceptionQuery(ctx context.Context, classes []string
 	if err != nil {
 		return nil, err
 	}
-	return db.NewSelect().
+	query := db.NewSelect().
 		Model(rows).
-		ModelTableExpr(classArrivalExceptionTable).
-		Where(`LOWER(BTRIM("class_arrival_exception".school_class)) IN (?)`, bun.List(classes)).
+		ModelTableExpr(classArrivalExceptionTable)
+	// Nil classes read every class of the school (#7681, "Heute anders").
+	if classes != nil {
+		query = query.Where(`LOWER(BTRIM("class_arrival_exception".school_class)) IN (?)`, bun.List(classes))
+	}
+	return query.
 		Where(`"class_arrival_exception".date >= ?`, from).
 		Where(`"class_arrival_exception".date <= ?`, to).
 		OrderExpr(`"class_arrival_exception".date ASC, LOWER(BTRIM("class_arrival_exception".school_class)) ASC`).

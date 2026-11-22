@@ -1,3 +1,7 @@
+import type {
+  offeringSuggestionEnvelope,
+  templateRosterMaintenanceOfferingResponse,
+} from "./contract/timetable.generated";
 import type { OfferingSelection } from "./roster-deviation";
 
 /**
@@ -35,23 +39,8 @@ export interface OfferingSuggestionQuery {
   gradeLevels: number[];
 }
 
-interface BackendOfferingRef {
-  id: number;
-  name: string;
-}
-
-export interface BackendOfferingSuggestionResponse {
-  suggestion?: {
-    offerings?: BackendOfferingRef[] | null;
-    grade_levels?: number[] | null;
-    school_classes?: string[] | null;
-    unbooked_count: number;
-    missing_count: number;
-    candidates?: BackendOfferingRef[] | null;
-    combinations?: BackendOfferingRef[][] | null;
-    ambiguous?: boolean;
-  } | null;
-}
+// Wire type: the decoded response of the catalog proxy (#2353).
+export type OfferingSuggestionWire = offeringSuggestionEnvelope;
 
 function appendRoster(params: URLSearchParams, roster: DraftRoster): void {
   const weekdays = Object.keys(roster)
@@ -105,26 +94,26 @@ export function draftPreviewQuery(
   return params;
 }
 
-const offeringRef = (offering: BackendOfferingRef) => ({
-  id: String(offering.id),
+const offeringRef = (offering: templateRosterMaintenanceOfferingResponse) => ({
+  id: offering.id,
   name: offering.name,
 });
 
 export function mapOfferingSuggestion(
-  raw: BackendOfferingSuggestionResponse,
+  raw: OfferingSuggestionWire,
 ): OfferingSuggestion | null {
   const suggestion = raw.suggestion;
   if (!suggestion) return null;
   return {
     offerings: (suggestion.offerings ?? []).map(offeringRef),
     combinations: (suggestion.combinations ?? []).map((combination) =>
-      combination.map(offeringRef),
+      (combination ?? []).map(offeringRef),
     ),
     gradeLevels: suggestion.grade_levels ?? [],
     schoolClasses: suggestion.school_classes ?? [],
     unbookedCount: suggestion.unbooked_count,
     missingCount: suggestion.missing_count,
     candidates: (suggestion.candidates ?? []).map(offeringRef),
-    ambiguous: suggestion.ambiguous ?? false,
+    ambiguous: suggestion.ambiguous,
   };
 }

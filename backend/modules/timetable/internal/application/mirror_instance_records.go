@@ -38,9 +38,9 @@ func NativeMirrorInstances(rows ports.InstanceRows) *ports.MirrorInstanceRecords
 	}}, Create: func(ctx context.Context, value *timetable.ScheduledInstance) error {
 		var row *models.ActivityInstance
 		if value != nil {
-			row = &models.ActivityInstance{Date: calendar.Date(value.Date), ActivityGroupID: value.ActivityGroupID, CalendarPeriodID: value.CalendarPeriodID, Title: value.Title, Description: value.Description, StartTime: value.StartTime, EndTime: value.EndTime, RoomID: value.RoomID, RequiredStaff: value.RequiredStaff, Status: value.Status, ActiveGroupID: value.ActiveGroupID, ListKind: value.ListKind, IsSpontaneous: value.IsSpontaneous, UnderstaffedAck: value.UnderstaffedAck, UnderstaffedNote: value.UnderstaffedNote, CancelReason: value.CancelReason, Notes: value.Notes, CreatedBy: value.CreatedBy, StartedBy: value.StartedBy, StartedAt: value.StartedAt, CompletedAt: value.CompletedAt, CompletedBy: value.CompletedBy, ReopenUntil: value.ReopenUntil}
+			row = &models.ActivityInstance{Date: calendar.Date(value.Date), ActivityGroupID: (*int64)(value.ActivityGroupID), CalendarPeriodID: (*int64)(value.CalendarPeriodID), Title: value.Title, Description: value.Description, StartTime: value.StartTime, EndTime: value.EndTime, RoomID: value.RoomID.Int64(), RequiredStaff: value.RequiredStaff, Status: value.Status, ActiveGroupID: (*int64)(value.ActiveGroupID), ListKind: value.ListKind, IsSpontaneous: value.IsSpontaneous, UnderstaffedAck: value.UnderstaffedAck, UnderstaffedNote: value.UnderstaffedNote, CancelReason: value.CancelReason, Notes: value.Notes, CreatedBy: (*int64)(value.CreatedBy), StartedBy: (*int64)(value.StartedBy), StartedAt: value.StartedAt, CompletedAt: value.CompletedAt, CompletedBy: (*int64)(value.CompletedBy), ReopenUntil: value.ReopenUntil}
 			row.SetWallClockTimes(value.StartTime, value.EndTime)
-			row.ID, row.TenantID, row.CreatedAt, row.UpdatedAt = value.ID, value.TenantID, value.CreatedAt, value.UpdatedAt
+			row.ID, row.TenantID, row.CreatedAt, row.UpdatedAt = value.ID.Int64(), value.TenantID.Int64(), value.CreatedAt, value.UpdatedAt
 		}
 		err := createLegacyInstance(ctx, rows, row, rows.Now)
 		if value != nil && row != nil {

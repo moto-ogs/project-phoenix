@@ -36,6 +36,7 @@ AS $function$ SELECT $manifest$[
   {"name": "active.morning_attendance","predicate": "r.tenant_id = $1"},
   {"name": "active.presence_backfill_batches","predicate": "r.tenant_id = $1"},
   {"name": "active.presence_backfill_checkpoints","predicate": "r.tenant_id = $1"},
+  {"name": "active.room_history_stops","predicate": "r.tenant_id = $1"},
   {"name": "active.scheduled_checkouts","predicate": "r.tenant_id = $1"},
   {"name": "active.staff_absence_audit","predicate": "r.tenant_id = $1"},
   {"name": "active.staff_absence_type_allowance_changes","predicate": "r.tenant_id = $1"},

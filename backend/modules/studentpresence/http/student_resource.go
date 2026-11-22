@@ -22,10 +22,13 @@ type ResourceConfig struct {
 	ParentEventEmitter GuardianWake
 	// PartialAbsences replaces confirmed partial absences inside the status
 	// write (#5698). Nil refuses every replacement request.
-	PartialAbsences         PartialAbsenceReplacer
-	PeopleDirectory         peopleModule.Capability
-	Persons                 PersonRecords
-	PrivacyConsents         PrivacyConsentCapability
+	PartialAbsences PartialAbsenceReplacer
+	PeopleDirectory peopleModule.Capability
+	Persons         PersonRecords
+	PrivacyConsents PrivacyConsentCapability
+	// RoomHistoryStops is the per-child stop of room history and mood (#3844).
+	// Nil refuses its routes.
+	RoomHistoryStops        studentpresence.RoomHistoryStops
 	SettingsService         TenantSettings
 	StudentStatusDayService studentpresence.StatusDays
 	UserContextService      CallerContext
@@ -52,6 +55,11 @@ func (rs *Resource) Register(r chi.Router, withTx common.Middleware) {
 	r.With(common.RequiresPermission(permissions.UsersCreate), withTx).Get("/privacy-consent/defaults", rs.getPrivacyConsentDefaults)
 	r.With(common.RequiresPermission(permissions.UsersRead), withTx).Get("/{id}/privacy-consent", rs.getStudentPrivacyConsent)
 	r.With(common.RequiresPermission(permissions.UsersUpdate), withTx).Put("/{id}/privacy-consent", rs.updateStudentPrivacyConsent)
+	// The stop of a child's room history and mood (#3844): every reader of the
+	// child sees it; setting and lifting it is the OGS administration's.
+	r.With(common.RequiresPermission(permissions.UsersRead), withTx).Get("/{id}/room-history-stop", rs.getRoomHistoryStop)
+	r.With(common.RequiresPermission(permissions.ConfigManage), withTx).Put("/{id}/room-history-stop", rs.stopRoomHistory)
+	r.With(common.RequiresPermission(permissions.ConfigManage), withTx).Delete("/{id}/room-history-stop", rs.resumeRoomHistory)
 	r.With(common.RequiresPermission(permissions.UsersCheckin), withTx, common.RequireWebAttendanceEnabled(settingsFacts.WebAttendanceEnabledReader(rs.SettingsService))).Post("/{id}/school-checkin", rs.schoolCheckinHandler)
 	r.With(common.RequiresPermission(permissions.UsersCheckin), withTx, common.RequireWebAttendanceEnabled(settingsFacts.WebAttendanceEnabledReader(rs.SettingsService))).Post("/school-checkin/batch", rs.schoolCheckinBatchHandler)
 }

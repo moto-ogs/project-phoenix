@@ -76,3 +76,96 @@ Der Typ aus ADR 0270, `common.ID`, liegt in `api/common`. Das dürfen nur
 - Rechnen mit Kennungen braucht `Int64()` oder eine Umwandlung.
   Listenhelfer kommen mit ihrem ersten produktiven Aufrufer hinzu.
 - `common.JSONID` behält seine Wire-Form und liest wie `ident.ID`.
+
+## Nachtrag vom 2026-11-21: Gespeichertes JSON behält Zahlen
+
+Punkt 2 galt nicht lange. Fachtypen mit `ident.ID` gehen nicht nur in
+Antworten, sondern auch in gespeichertes JSON: Audit- und Ereignis-Details,
+Outbox-Payloads, Schnappschüsse und Fingerabdrücke. Datenbankfunktionen
+vergleichen dort Kennungen als Zahl, etwa der Trigger
+`enrollment.holiday_time_model_keeps_booked_history`
+(`details->'before' @> jsonb_build_array(jsonb_build_object('time_model_id', OLD.id))`)
+oder die Löschfunktionen der Demo-Daten (`details->'contract_ids' @> to_jsonb(contract.id)`).
+Ein Test der Gruppe Anmeldung zeigte, dass der Trigger mit String-Kennungen
+nicht mehr greift. Rund 270 `json.Marshal`-Aufrufe außerhalb der HTTP-Schicht,
+viele mit `any`, lassen sich nicht verlässlich einzeln absichern; Antworten
+laufen dagegen zentral über `render.Respond`.
+
+Entscheidung:
+
+1. **`ident.ID` schreibt mit `encoding/json` eine Zahl**, wie `int64`.
+   Gespeichertes JSON, Fingerabdrücke und Datenbankfunktionen bleiben, wie sie
+   sind. `ident.ID` hat kein `MarshalJSON` und kein `MarshalText`; bun bindet
+   ihn deshalb weiter als `bigint`.
+2. **Nur Antworten schreiben Strings.** `wire.Marshal` (`sharedkernel/ident/wire`, neues Paket des Kernels) kodiert mit
+   `encoding/json/v2`, `DefaultOptionsV1()` und einem Marshaler für
+   `ident.ID`: byte-gleich zu `encoding/json`, nur Kennungen als String, auch in
+   `any`, Listen und Zeigern. `api/common` setzt `render.Respond` darauf und
+   bietet `common.RenderJSON` statt `render.JSON`. Der Vertragsabgleich im
+   Testbuild kodiert ebenso und meldet jede angemeldete Antwort, die eine
+   Kennung als Zahl schreibt.
+3. Lesen bleibt unverändert: String oder Zahl.
+
+Folgen: PyrePortal ist nicht betroffen, weil die IoT-Typen kein `ident.ID`
+tragen. Tests, die Fachtypen direkt mit `encoding/json` kodieren, sehen
+wieder Zahlen; Tests über den Router sehen Strings.
+
+## Nachtrag vom 2026-11-21: Der Vertrag kennt keine Zahl-Kennung mehr
+
+Mit dem letzten Schritt von Phase 2 ist die Liste der numerischen
+Alt-Kennungen leer (1.025 Einträge am Anfang). Der Generator verliert alles,
+was eine Antwort-Kennung als Zahl zuließ:
+
+1. **Kein Register, kein Übergangs-Tag.** `NumericIDs`, die Dateien
+   `numeric_ids_*.go`, die Art `legacy_id` und das Tag `contract:"legacy-id"`
+   entfallen; `numeric_ids` steht nicht mehr in `contract.json`. Ein nacktes
+   `int64` ohne Aussage bleibt ein Fehler des Generators.
+2. **Lockeres Lesen nur in Requests.** Die Art `lax_id` (`ReadsLaxIDs`, ein
+   von der Wurzel benannter Lesetyp) steht nur noch in einem Request; in einer
+   Antwort lehnt der Generator sie ab. `common.JSONID` und die gleichartigen
+   Typen in `schoolmembership/http` und `workforce/http/substitutions` gehen
+   in `common.ID` bzw. `ident.ID` auf, die String und Zahl lesen.
+3. **Strenger Decoder.** Jede Antwort-Kennung decodiert mit `int64String`;
+   `int64StringOrNumber` gibt es im Frontend nicht mehr.
+   `TestAnAnswerIdentifierIsOnlyAString` (`backend/api/contract`) hält das
+   fest.
+4. **`/auth/tenant/resolve` steht im Vertrag** als öffentliche Route.
+   `tenant_id` und `organization_id` reisen als String; das Frontend ruft
+   sie über `/api/auth/tenant/resolve` und den Katalog-Proxy, die
+   Schulkennung der Oberfläche (`TenantInfo.tenantId`) ist ein String. Die
+   Schulkennung im Sitzungstoken bleibt eine Zahl; die Vergleiche wandeln sie
+   in Text.
+
+Der Wächter gegen neue Zahl-Kennungen ist damit der Generator selbst;
+`scripts/check-contract-shrink.mjs` vergleicht nur noch die Routen ohne
+Vertrag. Bewusst gegen „expand, then contract“ in einem Release liegt
+zusätzlich: Ein offener Tab mit altem Bundle ruft `/api/tenant/resolve`, das
+es nicht mehr gibt, bis er neu lädt.
+
+## Nachtrag vom 2026-11-22: Eine Schreibweise für Kennungen
+
+Nach Phase 2 standen im Backend drei Schreibweisen für dieselbe Kennung:
+`common.ID` (in `http`-Rollen 428-mal), `ident.ID` (dort 311-mal, 75 Dateien
+mischten beide) und `int64` mit der JSON-Option `,string` (130 Felder). Wer
+eine Nachbardatei kopierte, erwischte oft den falschen Stil. Die Regel aus
+Punkt 1 („HTTP-Typen nutzen `common.ID`“) ließ sich zudem nicht überall
+halten: Mehrere `http`-Pakete dürfen `api/common` nicht importieren und
+schrieben deshalb `ident.ID` (#7808).
+
+Entscheidung:
+
+1. **`ident.ID` ist der einzige Name einer Kennung, in jeder Rolle.** Der
+   Alias `common.ID` entfällt; ohne ihn kompiliert der alte Name nicht mehr.
+   Punkt 1 gilt ohne den Halbsatz über HTTP-Typen.
+2. **Die JSON-Option `,string` macht keine Kennung.** Sie liest nur einen
+   String und wirkt nicht auf Listen. Der Generator lehnt sie auf einem
+   angemeldeten Typ ab, und `TestNoJSONStringOptionRatchet` (`backend/test`)
+   lehnt sie in jeder Go-Datei des Backends ab, ohne Ausnahmeliste.
+3. **Die Wire-Form bleibt.** Antworten schreiben `ident.ID` über
+   `wire.Marshal` als String, wie vorher `,string`; Anfragen lesen jetzt
+   zusätzlich eine Zahl. Zwei Typen gingen mit `,string` auch in
+   gespeichertes oder gehashtes JSON: der Anhang-Schnappschuss einer
+   Nachricht (`communication.ReservedMessageAttachments`), den die Antwort
+   unverändert weitergibt, und die Revision der Personen-Zusammenführung
+   (`staffpersonmerge`). Beide kodieren mit `wire.Marshal` und schreiben
+   dieselben Bytes wie vorher.

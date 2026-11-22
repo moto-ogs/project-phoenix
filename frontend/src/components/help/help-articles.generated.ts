@@ -1021,19 +1021,32 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
         // Baustein „Heute anders" (#7659), components/home/day-changes-block.tsx.
         title: "Was heute anders ist",
         description:
-          "Ganz oben auf der `Startseite` steht die Karte `Heute anders`. Sie zeigt, wer heute fehlt und wer vertritt. Dazu kommen die Hinweise der Leitung für heute. Sie zeigt auch Angebote und AGs, die heute ausfallen, doch stattfinden, in einem anderen Raum sind oder bei denen jemand anderes betreut.",
+          "Ganz oben auf der `Startseite` steht die Karte `Heute anders`. Sie zeigt, wer heute fehlt und wer vertritt. Sie zeigt auch Dienste, Angebote und AGs, die heute anders sind oder ausfallen. Dazu kommen die Hinweise der Leitung für heute.",
         ordered: false,
         steps: [
-          "Unter `Betrifft dich` steht, was dich selbst angeht: deine Gruppen, deine Vertretungen, deine Termine und ob du selbst heute fehlst.",
+          "Unter `Betrifft dich` steht, was dich selbst angeht: deine Gruppen, Vertretungen, Termine und Dienste.",
+          "Dort steht auch, ob du heute fehlst oder dein Dienst anders ist oder ausfällt.",
           "Unter `Schule` steht der Rest der Schule.",
+          // Kinder in „Heute anders" (#7665): einzeln in den eigenen Gruppen,
+          // sonst eine aufklappbare Zeile pro Gruppe oder Klasse.
+          "Bei den Kindern steht, wer krank gemeldet oder entschuldigt ist, wer zu einer anderen Zeit geht, wer allein nach Hause geht und wer einen Hinweis zum Abholen hat.",
+          "Die Kinder deiner Gruppen stehen einzeln da. Für die übrige Schule gibt es eine Zeile pro Gruppe, etwa `Gruppe Igel` mit `4 krank, 1 geht allein`. Tippe auf den Namen der Gruppe, um die Kinder zu sehen.",
+          // Klassen in „Heute anders" (#7681): Ausflug aus dem Betreuungsplan,
+          // Unterrichtsschluss aus dem Stundenplan; nie Namen oder Gründe.
+          "Ist eine Klasse heute auf Ausflug oder endet ihr Unterricht zu einer anderen Zeit, steht das auch dort. Beispiel: `Bei Klasse 2c endet der Unterricht heute um 11:30 Uhr.`",
+          "Bist du einer Klasse zugeordnet oder ist ein Kind deiner Gruppe auf dem Ausflug, steht die Klasse unter `Betrifft dich`.",
           // Darstellung über den Tag (#7660). Die Zeilen mit Uhrzeit und das
           // eingeklappte „erledigt“ beschreibt erst die erste Quelle mit
           // Uhrzeit (Termine, #7662/#7663), vorher gibt es sie nicht.
           "Neue Änderungen stehen oben. Längere Änderungen stehen kurz darunter, zum Beispiel mit `seit 3.11.`.",
-          // Quelle Stundenplan (#7662): Uhrzeit und Raum, eingeklapptes „erledigt“.
+          // Quelle Stundenplan (#7662): Uhrzeit und Raum.
           "Bei Angeboten und AGs stehen Uhrzeit und Raum unter dem Satz. Sie stehen nach Beginn geordnet.",
-          "Was heute schon vorbei ist, steht eingeklappt am Ende, zum Beispiel `3 erledigt`. Tippe darauf, um es zu sehen.",
+          // Abwesenheit und Vertretung bei einem Termin (#7675): Quelle
+          // Personal, Link in den Vertretungsplan mit schedules:manage.
+          "Auch wer nur bei einem Termin fehlt oder vertritt, steht mit Uhrzeit da. Beispiel: `Sara übernimmt heute „Chor“ für Ben.`",
+          "Darfst du den `Vertretungsplan` öffnen, führt dich der Eintrag zu diesem Termin.",
           "Am Handy zeigt `Schule` nur die ersten 3 Einträge. Den Rest zeigt `Alle anzeigen`.",
+          "Dienste, Angebote und AGs, die schon vorbei sind, stehen ganz unten unter `erledigt`. Wähle `erledigt`, um sie zu sehen.",
           // Hinweise der Leitung in „Heute anders" (#7667), components/home/day-notice-row.tsx.
           "Einen Hinweis der Leitung, den du noch bestätigen sollst, siehst du ganz oben. Wähle `Zur Kenntnis nehmen`. Danach steht er unter `Schule`.",
           // Speiseplan in „Heute anders" (#7666): nur die Kurzinfo, ohne Gerichte.
@@ -1074,7 +1087,15 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
       "Unter `Bausteine` fehlt eine Karte? Dann steht sie schon auf deiner Startseite. Oder deine Rolle oder deine OGS sieht sie nicht vor.",
       // Sichtregel von „Heute anders" (#7659): Namen nur für die eigenen
       // Gruppen, für die übrige Schule nur die Zahl; die Leitung sieht alle.
+      // Kinder nur mit users:read, wie auf der Seite eines Kindes (#7665).
+      "In `Heute anders` fehlen die Kinder und Klassen? Du siehst sie nur, wenn du auch die Krankmeldungen auf der Seite eines Kindes sehen darfst.",
       "In `Heute anders` stehen bei dir nur Zahlen statt Namen? Namen siehst du für deine eigenen Gruppen. Für den Rest der Schule zeigt die Karte nur, wie viele fehlen. Die Leitung sieht alle Namen.",
+      // Termin-Vertretungen in „Heute anders" (#7675): Namen für eigene
+      // Termine und das eigene Team, sonst nur die Zeile ohne Namen.
+      "In `Heute anders` steht bei Terminen nur `ändert sich heute, wer betreut`? Namen siehst du bei deinen Terminen und deinen Gruppen. Für die übrigen Termine zeigt die Karte nur, wie viele es sind. Die Leitung sieht alle Namen.",
+      // Dienste in „Heute anders" (#7661): die Betreuung sieht nur den
+      // eigenen, wer den Dienstplan der Schule öffnen darf, sieht alle.
+      "Du siehst in `Heute anders` nur deinen eigenen Dienst? Geänderte Dienste der anderen sieht nur, wer den `Dienstplan` der Schule öffnen darf.",
       // Sichtregel der Quelle Stundenplan (#7662): wie im Tagesplan.
       "In `Heute anders` fehlen Angebote anderer Leute? Die Karte zeigt die Termine, die du auch im Tagesplan siehst. Je nach Einstellung deiner Schule sind das nur deine eigenen.",
       // Link zum Speiseplan nur mit Leserecht des Speiseplans (#7666).
@@ -1228,6 +1249,8 @@ export const calendarPeriodsTopic = function calendarPeriodsTopic(): HelpTopic {
           "Richtet deine OGS in dieser Zeit Ferienbetreuung für den Träger aus, zeigt der Dialog die Woche und wie viele Kinder gebucht haben. Die Buchungen bleiben.",
           "Wähle `Speichern`.",
           "Stehen an diesen Tagen schon Termine, fragt moto nach. Sage sie ab wie im nächsten Abschnitt.",
+          // „Heute anders“ (#7664) zeigt den Schließtag mit seinem Grund.
+          "Am Schließtag steht auf der `Startseite` unter `Heute anders`, dass die OGS geschlossen ist. Dort steht auch der `Grund`.",
         ],
       },
       {
@@ -6188,6 +6211,19 @@ export const parentChildDataTopic = function parentChildDataTopic(): HelpTopic {
           "Tippe auf `Jetzt widerrufen`.",
         ],
       },
+      {
+        // #3844: wenn der Träger den Eltern-Stopp eingeschaltet hat oder das Kind gestoppt ist.
+        title: "Raumverlauf und Stimmung stoppen",
+        description:
+          "Diese Zeile siehst du, wenn deine Schule das erlaubt oder dein Kind schon gestoppt ist.",
+        steps: [
+          "Gehe zum Abschnitt `Einwilligungen und Bestätigungen`.",
+          "Tippe bei `Raumverlauf und Stimmung` auf `Stoppen`.",
+          "Tippe auf `Jetzt stoppen`.",
+          "moto löscht sofort, in welchen Räumen dein Kind war. Danach speichert moto keine Räume und keine Stimmung mehr. Die Betreuung sieht weiter, wo dein Kind gerade ist. Schon gespeicherte Stimmungen löscht moto erst nach der üblichen Frist.",
+          "Mit `Wieder speichern` hebst du den Stopp für dein Kind auf. Deine Schule entscheidet, ob Raumverlauf und Stimmung gespeichert werden. Gelöschtes kommt nicht zurück.",
+        ],
+      },
     ],
     result:
       "Unter dem Feld steht dann `Beantragte Änderung` mit dem neuen Wert und `In Prüfung`. Bis zur Bestätigung gilt der Wert darüber.",
@@ -6199,6 +6235,7 @@ export const parentChildDataTopic = function parentChildDataTopic(): HelpTopic {
     ],
     differences: [
       "Unter einem Feld steht schon `Beantragte Änderung`? Dann wartet diese Änderung noch auf die OGS.",
+      "Bei `Raumverlauf und Stimmung` steht `Gestoppt`, aber es gibt keinen Knopf? Dann hebt die OGS den Stopp auf.",
     ],
     troubleshootingDetails: [
       "Du siehst bei `Foto-Einwilligung` kein `Widerrufen` oder hast kein Elternportal? Sage der OGS Bescheid. Die OGS trägt den Widerruf für dich ein.",
@@ -9483,6 +9520,21 @@ export const studentSearchTopic = function studentSearchTopic(
         ],
       },
       {
+        // #3844: Stopp je Kind, gesetzt und aufgehoben von der OGS-Verwaltung
+        // (config:manage) im Bereich `Historien`.
+        title: "Raumverlauf und Stimmung für ein Kind stoppen",
+        description: "Das kann nur die OGS-Verwaltung.",
+        steps: [
+          "Öffne beim Kind `Historie`.",
+          "Wähle bei `Historien` den Knopf `Stopp setzen`.",
+          "Gib zur Bestätigung `LÖSCHEN` ein. Wähle dann `Stoppen und löschen`.",
+          "moto löscht den bisherigen Raumverlauf des Kindes sofort.",
+          "Danach speichert moto für das Kind keine Räume und keine Stimmung mehr. Am Tablet fragt moto das Kind nicht nach seiner Stimmung.",
+          "Der aktuelle Raum bleibt für die Betreuung sichtbar. Frühere Stimmungen bleiben bis zum Ende ihrer Frist gespeichert.",
+          "Mit `Stopp aufheben` speichert moto ab jetzt wieder. Gelöschtes kommt nicht zurück.",
+        ],
+      },
+      {
         // #3834: derselbe Umschalter steht auch in `Gruppen` und in der
         // aktuellen Aufsicht, auch auf dem Handy.
         title: "Als Liste ansehen",
@@ -11709,7 +11761,7 @@ export const traegerBillingTermsTopic =
             "Wähle bei der Rechnung des Kindes das Menü mit den drei Punkten und dann `Empfänger und Zahlung`. Es öffnet sich eine eigene Seite.",
             "Wähle bei `Rechnung an`: `Person im Vertrag`, `Beide Eltern` oder `Andere Person`.",
             "Bei `Beide Eltern` trägst du den Namen des zweiten Elternteils ein. Beide Namen stehen dann auf der Rechnung.",
-            "Bei `Andere Person` trägst du Name, E-Mail-Adresse und Anschrift ein. Die Rechnung geht dann an diese Person.",
+            "Bei `Andere Person` trägst du Name, E-Mail-Adresse und Anschrift ein. Die Rechnung geht dann an diese Person. Mit dem Standardtext von moto beginnt das Schreiben mit „Guten Tag“ und ihrem Namen und spricht sie mit „du“ an. Eine eigene Vorlage behält ihren Wortlaut.",
             "Wähle bei Bedarf einen eigenen `Zahlungsweg`. `Wie in den Abrechnungsvorgaben` nimmt den dort eingestellten Zahlungsweg.",
             "Wähle bei Bedarf einen `Eigenen Zahltag`, zum Beispiel den 15. des Monats.",
             "Wähle `Speichern`.",
@@ -14999,6 +15051,8 @@ export const traegerSettingsTopic = function traegerSettingsTopic(): HelpTopic {
       "Der eigene Zahlungstext gilt für die Schreiben, die du danach erstellst. Fertige Schreiben bleiben, wie sie sind.",
       "Unter `Ferienbetreuung` legst du bei `Ferienanmeldungen löschen nach (Tagen)` fest, wie lange moto Ferienanmeldungen aufbewahrt. Möglich sind 92 bis 1095 Tage, der Standard ist 365 Tage. Die Frist steht im Einwilligungstext für die Eltern. Eine Änderung gilt nur für Anmeldungen, die danach eingehen.",
       "Unter `Datenschutz` legst du bei `Erziehungsberechtigte ohne Kind aufbewahren (Tage)` fest, wie lange moto Eltern ohne Kind aufbewahrt. Möglich sind 30 bis 365 Tage, der Standard ist 90 Tage. Eine Schule kann einen eigenen Wert eintragen.",
+      // #3844: Eltern-Stopp von Raumverlauf und Stimmung, nur Träger-Ebene.
+      "Unter `Datenschutz` legst du bei `Eltern dürfen Raumverlauf und Stimmung stoppen` fest, ob Eltern das im Elternportal selbst tun dürfen. Der Standard ist aus. Ist es an, löscht ein Stopp den bisherigen Raumverlauf des Kindes. Eine Schule kann hier keinen eigenen Wert eintragen.",
       "Im Bereich `Dashboard` legst du fest, ab wann das Dashboard eine Schule unter `Auffälligkeiten` zeigt: bei zu wenig Personal, bei vielen Krankmeldungen und bei offenen Anmeldungen. 0 schaltet einen Hinweis aus.",
       "Unter `Ferienbetreuung` legst du bei `Ferienbeitrag` auch fest, welches Kind das erste Kind ist und was ein Kostenträger bezahlt. Mehr dazu steht im Artikel `Ferienbeitrag festlegen`.",
     ],

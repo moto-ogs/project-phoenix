@@ -1,6 +1,9 @@
 package postgres
 
-import "github.com/moto-ogs/project-phoenix/modules/parentbilling"
+import (
+	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+)
 
 // The contracts a month already bills (#4684, #6219): the issued monthly
 // invoices and the months of the Jahresbescheide nobody amended, read by
@@ -91,9 +94,9 @@ func invoicedFromRows(rows []invoicedContractRow) map[int64]parentbilling.CareIn
 		// A meal-only care invoice can coexist with a notice. Keep its ID
 		// while the notice supplies the care assessment for the rule chain.
 		if row.InvoiceID != 0 {
-			invoice.ID = row.InvoiceID
+			invoice.ID = ident.ID(row.InvoiceID)
 		}
-		invoice.ContractID, invoice.SchoolID = row.ContractID, row.SchoolID
+		invoice.ContractID, invoice.SchoolID = ident.ID(row.ContractID), ident.ID(row.SchoolID)
 		invoice.Recipient.Email, invoice.TotalCents = row.RecipientEmail, row.TotalCents
 		invoice.FamilyEmail = row.FamilyEmail
 		invoice.Reductions = row.Reductions
@@ -102,7 +105,7 @@ func invoicedFromRows(rows []invoicedContractRow) map[int64]parentbilling.CareIn
 		}
 		if row.CareOfferingID != 0 {
 			invoice.Positions = append(invoice.Positions, parentbilling.CarePosition{
-				CareOfferingID: row.CareOfferingID, AmountCents: row.AmountCents, PayableCents: row.PayableCents,
+				CareOfferingID: ident.ID(row.CareOfferingID), AmountCents: row.AmountCents, PayableCents: row.PayableCents,
 			})
 		}
 		invoiced[row.ContractID] = invoice

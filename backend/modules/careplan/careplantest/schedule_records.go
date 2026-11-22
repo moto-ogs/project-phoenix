@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type ScheduleRecords struct {
@@ -21,6 +22,9 @@ func NewScheduleRecords(records careplan.Capability) ScheduleRecords {
 	return ScheduleRecords{StudentArrivalSchedule: ArrivalRecords{records}, StudentArrivalException: ArrivalExceptionRecords{records}, StudentPickupSchedule: PickupRecords{records}, StudentPickupException: PickupExceptionRecords{records}, CareScheduleChangeRequest: RequestRecords{records}}
 }
 func fixtureRecordID(raw any) (int64, error) {
+	if typed, ok := raw.(ident.ID); ok {
+		raw = typed.Int64()
+	}
 	switch id := raw.(type) {
 	case int64:
 		return id, nil

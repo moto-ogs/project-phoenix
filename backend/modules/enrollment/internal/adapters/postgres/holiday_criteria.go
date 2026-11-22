@@ -15,6 +15,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Criteria of the allocation of holiday places (#4700). Every statement runs
@@ -116,13 +117,13 @@ const (
 )
 
 type holidayCriterionRow struct {
-	ID       int64  `bun:"id"`
-	Name     string `bun:"name"`
-	Question string `bun:"question"`
-	Scope    string `bun:"scope"`
-	Active   bool   `bun:"active"`
-	Position int    `bun:"position"`
-	Answered bool   `bun:"answered"`
+	ID       ident.ID `bun:"id"`
+	Name     string   `bun:"name"`
+	Question string   `bun:"question"`
+	Scope    string   `bun:"scope"`
+	Active   bool     `bun:"active"`
+	Position int      `bun:"position"`
+	Answered bool     `bun:"answered"`
 }
 
 // ReadHolidayCriteria reads the criteria of the Träger by priority, archived
@@ -183,7 +184,7 @@ func (s *HolidayRegistrationStore) WriteHolidayCriteria(ctx context.Context, org
 	kept := []int64{}
 	for _, criterion := range criteria {
 		if criterion.ID > 0 {
-			kept = append(kept, criterion.ID)
+			kept = append(kept, criterion.ID.Int64())
 		}
 	}
 	now := holidayNow(s.now)
@@ -211,10 +212,10 @@ func (s *HolidayRegistrationStore) WriteHolidayCriteria(ctx context.Context, org
 func checkHolidayCriteriaScopes(current []enrollment.HolidayCriterion, input []enrollment.HolidayCriterionInput) error {
 	byID := make(map[int64]enrollment.HolidayCriterion, len(current))
 	for _, criterion := range current {
-		byID[criterion.ID] = criterion
+		byID[criterion.ID.Int64()] = criterion
 	}
 	for i, criterion := range input {
-		previous := byID[criterion.ID]
+		previous := byID[criterion.ID.Int64()]
 		if previous.Answered && previous.Scope != criterion.Scope {
 			return validation.Errors{fmt.Sprintf("criteria.%d.scope", i): errors.New("scope cannot change after an answer")}
 		}
@@ -270,7 +271,7 @@ func lockHolidayAnswerCriteria(ctx context.Context, db bun.IDB, organizationID i
 	}
 	scopes := make(map[int64]string, len(rows))
 	for _, row := range rows {
-		scopes[row.ID] = row.Scope
+		scopes[row.ID.Int64()] = row.Scope
 	}
 	return scopes, nil
 }
@@ -474,7 +475,7 @@ func (s *HolidayRegistrationStore) InsertHolidayAllocationDecisions(ctx context.
 		if err != nil {
 			return nil, fmt.Errorf("enrollment postgres: encode criteria met: %w", err)
 		}
-		registrations[i], children[i], weeks[i], ranks[i] = decision.RegistrationID, decision.ChildID, decision.WeekID, decision.Rank
+		registrations[i], children[i], weeks[i], ranks[i] = decision.RegistrationID.Int64(), decision.ChildID.Int64(), decision.WeekID.Int64(), decision.Rank
 		startsOn[i], endsOn[i] = decision.WeekStartsOn.String(), decision.WeekEndsOn.String()
 		placements[i], proposals[i], met[i], reasons[i] = decision.Placement, decision.Proposal, string(encoded), decision.Reason
 	}
@@ -526,10 +527,10 @@ func (s *HolidayRegistrationStore) ReadHolidayAllocationDecisions(ctx context.Co
 			met = []string{}
 		}
 		decisions[i] = enrollment.HolidayAllocationDecision{
-			ID: row.ID, WeekID: row.WeekID, WeekStartsOn: row.WeekStartsOn, WeekEndsOn: row.WeekEndsOn,
-			RegistrationID: row.RegistrationID, ChildID: row.ChildID, ChildFirstName: row.ChildFirstName, ChildLastName: row.ChildLastName,
+			ID: ident.ID(row.ID), WeekID: ident.ID(row.WeekID), WeekStartsOn: row.WeekStartsOn, WeekEndsOn: row.WeekEndsOn,
+			RegistrationID: ident.ID(row.RegistrationID), ChildID: ident.ID(row.ChildID), ChildFirstName: row.ChildFirstName, ChildLastName: row.ChildLastName,
 			Placement: row.Placement, Proposal: row.Proposal, Rank: row.Rank, CriteriaMet: met, Reason: row.Reason,
-			DecidedAt: row.DecidedAt, DecidedByAccountID: row.DecidedByAccountID,
+			DecidedAt: row.DecidedAt, DecidedByAccountID: (*ident.ID)(row.DecidedByAccountID),
 		}
 	}
 	return decisions, nil

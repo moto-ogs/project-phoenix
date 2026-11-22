@@ -51,7 +51,7 @@ func (s *preparation) PrepareAppointmentReminders(ctx context.Context, from, to 
 	for _, delivery := range deliveries {
 		snapshot := delivery.snapshot()
 		slices.Sort(snapshot.ProfileIDs)
-		key := appointmentReminderKey(snapshot.Appointment.ID, snapshot.Appointment.Revision, snapshot.Occurrence, snapshot.ProfileIDs[0])
+		key := appointmentReminderKey(snapshot.Appointment.ID.Int64(), snapshot.Appointment.Revision, snapshot.Occurrence, snapshot.ProfileIDs[0])
 		id, err := s.deps.Outbox.Enqueue(ctx, key, snapshot)
 		if err != nil {
 			return queued, nil, err
@@ -61,7 +61,7 @@ func (s *preparation) PrepareAppointmentReminders(ctx context.Context, from, to 
 	return queued, func(dispatchCtx context.Context) error {
 		var failures []error
 		for index, id := range ids {
-			if err := s.deps.Outbox.Deliver(dispatchCtx, tenantID, id); err != nil {
+			if err := s.deps.Outbox.Deliver(dispatchCtx, tenantID.Int64(), id); err != nil {
 				// A stored terminal result does not call the provider, so it cannot
 				// release the legacy audience claim acquired by this scan itself.
 				failures = append(failures, errors.Join(err, s.releaseReminderPushDelivery(dispatchCtx, deliveries[index])))
@@ -131,10 +131,10 @@ func (s *preparation) enqueueReminderBatch(
 	if err != nil {
 		return 0, err
 	}
-	brand := s.loadReminderBrand(ctx, due[0].appointment.TenantID)
+	brand := s.loadReminderBrand(ctx, due[0].appointment.TenantID.Int64())
 	queued := 0
 	for _, reminder := range due {
-		count, err := s.enqueueAppointmentReminder(ctx, reminder, recipients[reminder.appointment.ID], preferences, brand, from, to, deliveries)
+		count, err := s.enqueueAppointmentReminder(ctx, reminder, recipients[reminder.appointment.ID.Int64()], preferences, brand, from, to, deliveries)
 		if err != nil {
 			return queued, err
 		}
@@ -153,7 +153,7 @@ func dueReminderAppointmentIDs(reminders []dueAppointmentReminder) []int64 {
 	ids := make([]int64, 0, len(reminders))
 	seen := make(map[int64]bool)
 	for _, reminder := range reminders {
-		appendDistinctID(&ids, seen, reminder.appointment.ID)
+		appendDistinctID(&ids, seen, reminder.appointment.ID.Int64())
 	}
 	return ids
 }
@@ -258,7 +258,7 @@ func (s *preparation) enqueueAppointmentReminder(
 		return queued, err
 	}
 	s.deps.Logger.Info("appointment reminders queued",
-		slog.Int64("appointment_id", reminder.appointment.ID),
+		slog.Int64("appointment_id", reminder.appointment.ID.Int64()),
 		slog.String("occurrence_date", reminder.occurrence.String()),
 		slog.Int("recipient_count", len(audience.profilesByAccount)),
 	)
@@ -333,7 +333,7 @@ func (s *preparation) enqueueReminderEmail(
 		payload[apptPayloadGuardianAccountID] = *profile.AccountID
 		payload[apptPayloadStudentIDs] = append([]int64(nil), recipients.StudentsByGuardian[profile.ID]...)
 	}
-	inserted, err := s.deps.Email(ctx, appointmentReminderKey(reminder.appointment.ID, reminder.appointment.Revision, reminder.occurrence, profile.ID), reminder.appointment.ID, payload)
+	inserted, err := s.deps.Email(ctx, appointmentReminderKey(reminder.appointment.ID.Int64(), reminder.appointment.Revision, reminder.occurrence, profile.ID), reminder.appointment.ID.Int64(), payload)
 	if err != nil {
 		return false, fmt.Errorf("calendar: enqueue appointment reminder: %w", err)
 	}
@@ -395,7 +395,7 @@ func (s *preparation) dispatchReminderPush(ctx context.Context, delivery reminde
 		}
 	}
 	delivery.appointment, delivery.profileIDs = appointment, profileIDs
-	dispatched, err := s.deps.Push(ctx, appointment.TenantID, []int64{delivery.accountID}, studentIDs, delivery.locale)
+	dispatched, err := s.deps.Push(ctx, appointment.TenantID.Int64(), []int64{delivery.accountID}, studentIDs, delivery.locale)
 	if err == nil && dispatched {
 		return nil
 	}
@@ -406,7 +406,7 @@ func (s *preparation) dispatchReminderPush(ctx context.Context, delivery reminde
 		return ports.ErrReminderAudienceUnavailable
 	}
 	s.deps.Logger.Warn("calendar: appointment reminder push failed",
-		slog.Int64("appointment_id", appointment.ID),
+		slog.Int64("appointment_id", appointment.ID.Int64()),
 		slog.Int64("guardian_account_id", delivery.accountID))
 	return fmt.Errorf("calendar: dispatch appointment reminder push: %w", err)
 }
@@ -427,7 +427,7 @@ func (s *preparation) prepareReminderPushDispatch(ctx context.Context, delivery 
 	var appointment *appointments.Appointment
 	var profileIDs []int64
 	var studentIDs []int64
-	err := s.runtime.WithinTenant(ctx, delivery.appointment.TenantID, func(txCtx context.Context) error {
+	err := s.runtime.WithinTenant(ctx, delivery.appointment.TenantID.Int64(), func(txCtx context.Context) error {
 		var prepareErr error
 		appointment, profileIDs, studentIDs, prepareErr = s.prepareReminderPushInTx(txCtx, delivery)
 		return prepareErr
@@ -456,13 +456,13 @@ func withoutReminderProfiles(claimed, reachable []int64) []int64 {
 // outbox row. The leased push is dispatched after commit, so a durable
 // claim can never outlive a rolled-back reminder.
 func (s *preparation) claimReminderPush(ctx context.Context, appointment *appointments.Appointment, occurrence appointments.Date, profileID int64) (bool, error) {
-	return s.deps.Appointments.ClaimReminderPushDelivery(ctx, appointment.ID, appointment.Revision, occurrence, profileID)
+	return s.deps.Appointments.ClaimReminderPushDelivery(ctx, appointment.ID.Int64(), appointment.Revision, occurrence, profileID)
 }
 
 func (s *preparation) releaseReminderPush(ctx context.Context, appointment *appointments.Appointment, occurrence appointments.Date, profileID int64) error {
 	cleanupCtx := context.WithoutCancel(s.runtime.Detached(ctx))
-	return s.runtime.WithinTenant(cleanupCtx, appointment.TenantID, func(txCtx context.Context) error {
-		return s.deps.Appointments.ReleaseReminderPushDelivery(txCtx, appointment.ID, appointment.Revision, occurrence, profileID)
+	return s.runtime.WithinTenant(cleanupCtx, appointment.TenantID.Int64(), func(txCtx context.Context) error {
+		return s.deps.Appointments.ReleaseReminderPushDelivery(txCtx, appointment.ID.Int64(), appointment.Revision, occurrence, profileID)
 	})
 }
 
@@ -472,7 +472,7 @@ func (s *preparation) releaseReminderPush(ctx context.Context, appointment *appo
 // with whatever replaces it.
 func (s *preparation) releaseReminderPushProfiles(ctx context.Context, appointment *appointments.Appointment, occurrence appointments.Date, profileIDs []int64) error {
 	for _, profileID := range profileIDs {
-		if err := s.deps.Appointments.ReleaseReminderPushDelivery(ctx, appointment.ID, appointment.Revision, occurrence, profileID); err != nil {
+		if err := s.deps.Appointments.ReleaseReminderPushDelivery(ctx, appointment.ID.Int64(), appointment.Revision, occurrence, profileID); err != nil {
 			return fmt.Errorf("calendar: release superseded reminder push delivery: %w", err)
 		}
 	}

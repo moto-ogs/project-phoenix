@@ -4,8 +4,35 @@
 // Widerrufsbelehrung; die Unterschrift schließt den Vertrag ab.
 
 import { apiErrorFromResponse, transportFetch } from "./api-error";
+import { knownEnum } from "./contract/known-enum";
+import { requiredDay } from "./contract/required-day";
+import type { SignRequest as WireSignRequest } from "./contract/public-care-contract-signing.generated";
+import type { SigningView as WireSigningView } from "./contract/shared.generated";
 import type { SignatureValue } from "./signature";
 import type { CareContractStatus, Weekday } from "./traeger-care-contracts-api";
+
+// Go does not register these sets; the contract types them as string. A value
+// this build does not know stays undefined instead of passing as a known one.
+const STATUS_VALUES = [
+  "entwurf",
+  "versendet",
+  "aktiv",
+  "gekuendigt",
+  "widerrufen",
+  "beendet",
+] as const satisfies readonly CareContractStatus[];
+const WEEKDAY_VALUES = [
+  "mon",
+  "tue",
+  "wed",
+  "thu",
+  "fri",
+  "sat",
+  "sun",
+] as const satisfies readonly Weekday[];
+const SIGNATURE_METHOD_VALUES = ["drawn", "typed", "paper"] as const;
+
+type SignatureMethod = (typeof SIGNATURE_METHOD_VALUES)[number];
 
 export interface SigningService {
   readonly weekday: Weekday;
@@ -15,7 +42,8 @@ export interface SigningService {
 }
 
 interface SigningSignature {
-  readonly method: "drawn" | "typed" | "paper";
+  /** undefined: a method this build does not know. */
+  readonly method: SignatureMethod | undefined;
   readonly signerName: string;
   readonly signedAt: string;
   readonly earlyStartRequested: boolean;
@@ -23,7 +51,8 @@ interface SigningSignature {
 }
 
 export interface SigningView {
-  readonly status: CareContractStatus;
+  /** undefined: a state this build does not know; the page offers no signing. */
+  readonly status: CareContractStatus | undefined;
   readonly traegerName: string;
   readonly partyName: string;
   readonly childName: string;
@@ -38,59 +67,40 @@ export interface SigningView {
   readonly signature: SigningSignature | null;
 }
 
-interface BackendSigningView {
-  status: CareContractStatus;
-  traeger_name: string;
-  party_name: string;
-  version: {
-    child_first_name: string;
-    child_last_name: string;
-    school_name: string;
-    phase_name: string;
-    effective_from: string;
-    ends_on: string | null;
-    price_cents: number | null;
-    services: {
-      weekday: Weekday;
-      module_name: string;
-      ends_at: string;
-      last_day: string | null;
-    }[];
-  };
-  document_sha256: string;
-  withdrawal_notice: string[] | null;
-  signature: {
-    method: SigningSignature["method"];
-    signer_name: string;
-    signed_at: string;
-    early_start_requested: boolean;
-    withdrawal_ends_on: string | null;
-  } | null;
-}
-
-function mapSigningView(raw: BackendSigningView): SigningView {
+function mapSigningView(raw: WireSigningView): SigningView {
   const version = raw.version;
   return {
-    status: raw.status,
+    status: knownEnum(STATUS_VALUES, raw.status),
     traegerName: raw.traeger_name,
     partyName: raw.party_name,
     childName: `${version.child_first_name} ${version.child_last_name}`.trim(),
     schoolName: version.school_name,
     phaseName: version.phase_name,
-    effectiveFrom: version.effective_from,
+    effectiveFrom: requiredDay(
+      version.effective_from,
+      "SigningContract.effective_from",
+    ),
     endsOn: version.ends_on,
     priceCents: version.price_cents,
-    services: (version.services ?? []).map((service) => ({
-      weekday: service.weekday,
-      moduleName: service.module_name,
-      endsAt: service.ends_at,
-      lastDay: service.last_day,
-    })),
+    // A service on a weekday this build does not know has no row to show.
+    services: (version.services ?? []).flatMap((service) => {
+      const weekday = knownEnum(WEEKDAY_VALUES, service.weekday);
+      return weekday === undefined
+        ? []
+        : [
+            {
+              weekday,
+              moduleName: service.module_name,
+              endsAt: service.ends_at,
+              lastDay: service.last_day,
+            },
+          ];
+    }),
     documentSha256: raw.document_sha256,
     withdrawalNotice: raw.withdrawal_notice ?? [],
     signature: raw.signature
       ? {
-          method: raw.signature.method,
+          method: knownEnum(SIGNATURE_METHOD_VALUES, raw.signature.method),
           signerName: raw.signature.signer_name,
           signedAt: raw.signature.signed_at,
           earlyStartRequested: raw.signature.early_start_requested,
@@ -106,7 +116,7 @@ interface SigningInput {
   readonly earlyStart: boolean;
 }
 
-function signBody(input: SigningInput) {
+function signBody(input: SigningInput): WireSignRequest {
   return {
     method: input.signature.method,
     image_png: input.signature.imagePngBase64,
@@ -130,7 +140,7 @@ async function request(url: string, init: RequestInit): Promise<SigningView> {
       `Care contract signing failed: ${response.status}`,
     );
   }
-  const body = (await response.json()) as { data: BackendSigningView };
+  const body = (await response.json()) as { data: WireSigningView };
   return mapSigningView(body.data);
 }
 

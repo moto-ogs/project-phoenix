@@ -395,7 +395,7 @@ func TestTraegerCatalogChangesSelectionGroupsTogether(t *testing.T) {
 		delete(draft, "contract_template")
 		rec = traegerJSON(t, router, office.token, http.MethodPost, path+"/offerings", draft)
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-		ids = append(ids, decodeSchoolPortalData[careplan.TraegerOffering](t, rec.Body.Bytes()).ID)
+		ids = append(ids, (decodeSchoolPortalData[careplan.TraegerOffering](t, rec.Body.Bytes()).ID).Int64())
 	}
 	preview := catalogPreview(t, router, office.token, path)
 	catalogRollout(t, router, office.token, path, preview.Fingerprint)
@@ -446,7 +446,7 @@ func TestTraegerCatalogStatementCountDoesNotGrowWithOfferings(t *testing.T) {
 			draft["fields"].(map[string]any)["name"] = fmt.Sprintf("Modul %d", index)
 			rec = traegerJSON(t, router, office.token, http.MethodPost, path+"/offerings", draft)
 			require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-			ids = append(ids, decodeSchoolPortalData[careplan.TraegerOffering](t, rec.Body.Bytes()).ID)
+			ids = append(ids, (decodeSchoolPortalData[careplan.TraegerOffering](t, rec.Body.Bytes()).ID).Int64())
 		}
 		counter.Reset()
 		preview := catalogPreview(t, counted, office.token, path)

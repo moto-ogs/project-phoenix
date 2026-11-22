@@ -19,7 +19,7 @@ checklist. Local values belong in `.env.local` using `.env.example` as the templ
 | `NEXTAUTH_URL` / `NEXTAUTH_SECRET` | Server          | NextAuth base URL + JWT secret                                |
 | `SKIP_ENV_VALIDATION`              | Build           | `true` skips env validation (Docker builds)                   |
 
-**`getServerApiUrl()`** (`lib/server-api-url.ts`) returns the startup-validated `process.env.API_URL` — no fallback chain; never `NEXT_PUBLIC_API_URL` on the server. Every server call to the backend goes through `sendBackend` (`lib/backend-client.server.ts`), its only reader: base URL, bearer, client identity, timeout, log line and metric in one place. Browser code calls only the BFF under `/api/`.
+**`getServerApiUrl()`** (`lib/server-api-url.ts`) returns the startup-validated `process.env.API_URL` — no fallback chain; never `NEXT_PUBLIC_API_URL` on the server. Every server call to the backend goes through `sendBackend` (`lib/backend-client.server.ts`), its only reader: base URL, bearer, client identity, timeout, log line and metric in one place. Depcruise (`backend-only-through-send-backend`) rejects importing `server-api-url.ts` elsewhere; oxlint (`backend-url/only-server-api-url`) rejects reading `API_URL` from `process.env` or `~/env` outside it. Browser code calls only the BFF under `/api/`.
 
 ### Server-Only Import Isolation (`.server.ts`)
 
@@ -66,24 +66,24 @@ or write a `Backend*` interface for a registered route.
   contract.
 - A portal other than `tenant` uses its own route wrapper with the same
   helpers; the route entry names its portals.
-- Identifiers leave the decoder as strings. A registered enum is typed as its
+- A registered enum is typed as its
   known values but decodes any string; narrow it with `knownEnum`.
 - A day is a `calendar.Date`, an instant a `time.Time`. A string field that
   carries a day or a wall-clock time says so in its tag: `contract:"date"`
   (`YYYY-MM-DD`) or `contract:"clock"` (`HH:MM`); the decoder then rejects
   another form. Closed value sets are registered in `Enums`.
-- A new identifier is a `common.ID`, a count an `int`; the generator rejects a
-  bare `int64` and a response shape that depends on a query parameter.
-  The fields that travel as numeric identifiers (`numeric_ids` in
-  `contract.json`: `NumericIDs`, `ReadsLaxIDs` readers, `common.JSONID`) and
-  the backend routes without a contract only shrink:
+- An identifier is a `common.ID` (`ident.ID` outside `http` roles), a count
+  an `int`; the generator rejects a bare `int64` and a response shape that
+  depends on a query parameter. Every answer sends identifiers as strings,
+  and the generated decoder (`int64String`) takes nothing else (ADR 0300).
+  The backend routes without a contract only shrink:
   `scripts/check-contract-shrink.mjs <base>` fails on a new one. A route the contract cannot carry
   (a sign-in step, a device or webhook endpoint) needs a new ADR that names
   its catalog line.
-- In a request type an identifier is a `string`, except a field Go still
-  reads only as a JSON number (`NumericIDs`): that one is a `number`. A
-  request type with its own `UnmarshalJSON` needs an entry in `Readers`
-  (`backend/api/route_contracts.go`), or the generator stops.
+- In a request type an identifier is a `string`; Go still reads a JSON number
+  there. A request type with its own `UnmarshalJSON` needs an entry in
+  `Readers` (`backend/api/route_contracts.go`), or the generator stops;
+  `ReadsLaxIDs` is for a request only.
 - Removing or renaming a registered field or route needs one release as
   deprecated (`DeprecatedFields`, `Deprecated`);
   `scripts/check-contract-compat.mjs <base>` fails otherwise.
@@ -169,8 +169,9 @@ The key is the scope claim of the portal's session token
   path the contract does not register (a sign-in step, a stream, a bundle);
   `app/api/route-backend-paths.test.ts` fails a file whose backend paths are
   all registered.
-- Not served by a proxy: a route with response variants
-  (`GET /api/students/`).
+- A route with response variants (`GET /api/students/`) names its
+  `variantParam`; the proxy decodes the answer with the variant the query
+  asks for, else the default variant.
 - A Go type two resources answer with (the staff portal and moto schule
   mount the same notification feed) is written once, in
   `lib/contract/shared.generated.ts`, and imported by both resource files.
@@ -178,8 +179,7 @@ The key is the scope claim of the portal's session token
   `NoData: true` in place of a response type. Its decoder (`noData`) takes
   exactly those two answers, and the BFF answers `{ status: "success",
   data: null }` with the backend's message (a DELETE: 204).
-- An identifier in `NumericIDs` leaves the proxy as a string, whatever Go
-  sends. A client type for such a route reads `string`, never `number`.
+- A client type reads an identifier as `string`, never `number`.
 
 The registered routes are the entries of `portals.generated.ts`.
 
@@ -199,8 +199,8 @@ session, renews it once on a backend 401 and answers errors through
 `forwardToBackend`, `runWithRenewal`) throw outside that wrapper;
 `src/app/api/route-session-coverage.test.ts` runs every route and fails on a
 session read outside it. Success answers the backend's envelope
-`{ status: "success", data }` (`successResponse`, type `ApiResponse` in
-`lib/api-envelope.ts`), a DELETE without a result answers 204, and a handler
+`{ status: "success", data }` (`successResponse` in
+`lib/route-wrapper-utils.server.ts`, type `ApiResponse` in `lib/api-envelope.ts`), a DELETE without a result answers 204, and a handler
 may return a Response as it is. No BFF route invents another success
 envelope (#2353). Public JSON routes use `createPublicJsonProxy`
 (`lib/backend-proxy-route.server.ts`), login steps before a session
@@ -290,6 +290,50 @@ uses `captureBffException(error, request)` once at the handler boundary so the
 event carries the proxy-assigned `X-Request-ID`. `logger.error` records context
 and a breadcrumb, never an event. Uncaught Next.js exceptions use
 `onRequestError` in `src/instrumentation.ts`.
+
+### Browser calls
+
+Every JSON call of the browser to the BFF goes through one helper,
+`bffJson(portal, route, options)` (`lib/bff-fetch.ts`, #7806). `route` is the
+catalog key of a registered route; it must be in `portalRoutes[portal]`, and
+its generated entry types `params`, `query`, `body` and the answer. The
+import is type-only, so no decoder reaches the browser bundle: the portal's
+catalog proxy has decoded the answer already.
+
+| Portal | Example |
+|---|---|
+| Staff (`tenant`) | `bffJson("tenant", "GET /api/students/{id}/partial-absences", { params: { id }, query: { from, to } })` |
+| Parents (`parent`) | `bffJson("parent", "GET /parent/me/children")` |
+| moto schule (`school`) | `bffJson("school", "GET /school/calendar/my")` |
+| Träger (`org`) | `bffJson("org", "POST /traeger/absence-types/", { body })` |
+| Caterer (`caterer`) | `bffJson("caterer", "GET /caterer/schools/{schoolId}/orders", { params: { schoolId }, query: { from, to } })` |
+| Operator (`platform`) | `bffJson("platform", "GET /operator/stats")` |
+
+The path is the pattern below the portal's BFF prefix, a route outside the
+portal's mount (`/analytics-policy`) below the prefix as a whole; a trailing
+slash is dropped and each parameter encoded.
+
+- **Answer:** the `data` of the envelope; a paginated list resolves to
+  `{ data, pagination }`; a route without data and a 204 resolve to `null`.
+- **Variants:** a route with response variants (`GET /api/students/`) takes
+  the variant in its query (`query: { view: "names" }`), and the answer has
+  that variant's type; without it the route's default variant.
+- **Missing `data`:** a 2xx answer without a `data` member
+  is an `ApiError` 502, `general.write_answer_unreadable` for a write (as
+  `decodeContract`). There is no fallback value.
+- **Failure:** an `ApiError` with the backend's code, field errors and
+  request ID. `errorMessage` sets its message, so a client keeps its text.
+- **401:** one table in `bff-fetch.ts` holds where the portals differ. Staff:
+  the session gate before the request and one renewal with a retry
+  (`sessionFetch`), then sign-out; `authRefusals` names codes that refuse
+  only the operation. Operator: to `/operator/login`. Parents: to
+  `/parents/login`. Träger, moto schule and caterer: the error stays on the
+  page. A parent client that reports refusals (`PARENT_ACCESS_REFUSED_EVENT`)
+  catches the `ApiError` itself.
+- **No contract:** a backend route without a contract gets one first
+  (#7808); its client waits until then. A named `route.ts` the contract
+  cannot carry (`activities/[id]/students`) keeps its own call.
+- Files and downloads keep their own path (`fetch` of the file URL).
 
 ### API clients and data mapping
 

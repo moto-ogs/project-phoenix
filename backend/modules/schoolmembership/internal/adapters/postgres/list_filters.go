@@ -22,7 +22,7 @@ func teacherListQuery(query *bun.SelectQuery, filter schoolmembership.TeacherFil
 	if !filter.IncludeDeleted {
 		query = query.Where(`"teacher".deleted_at IS NULL`)
 	}
-	if matchesNothing(filter.IDs, filter.StaffIDs, filter.GroupIDs) {
+	if matchesNothing(filter.IDs, filter.StaffIDs) {
 		return query, false
 	}
 	if filter.IDs != nil {
@@ -30,9 +30,6 @@ func teacherListQuery(query *bun.SelectQuery, filter schoolmembership.TeacherFil
 	}
 	if filter.StaffIDs != nil {
 		query = query.Where(`"teacher".staff_id IN (?)`, bun.List(filter.StaffIDs))
-	}
-	if filter.GroupIDs != nil {
-		query = query.Where(`EXISTS (SELECT 1 FROM education.group_teacher AS "group_assignment" WHERE "group_assignment".tenant_id = "teacher".tenant_id AND "group_assignment".teacher_id = "teacher".id AND "group_assignment".group_id IN (?))`, bun.List(filter.GroupIDs))
 	}
 	if filter.Specialization != "" {
 		query = query.Where(`LOWER("teacher".specialization) = LOWER(?)`, filter.Specialization)
@@ -107,6 +104,12 @@ func groupAssignmentListQuery(query *bun.SelectQuery, filter schoolmembership.Gr
 		query = query.
 			Join(`INNER JOIN users.teachers AS "teacher" ON "teacher".id = "group_assignment".teacher_id`).
 			Where(`"teacher".staff_id IN (?)`, bun.List(filter.TeacherStaffIDs))
+	}
+	if filter.WithTeacherStaff {
+		query = query.ColumnExpr(`"group_assignment".*`).
+			ColumnExpr(`"assigned_teacher".staff_id AS teacher_staff_id`).
+			Join(`LEFT JOIN users.teachers AS "assigned_teacher" ON "assigned_teacher".id = "group_assignment".teacher_id
+				AND "assigned_teacher".tenant_id = "group_assignment".tenant_id AND "assigned_teacher".deleted_at IS NULL`)
 	}
 	query = query.OrderExpr(`"group_assignment".id ASC`)
 	if forUpdate {

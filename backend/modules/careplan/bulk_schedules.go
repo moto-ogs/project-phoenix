@@ -3,6 +3,8 @@ package careplan
 import (
 	"context"
 	"errors"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 var (
@@ -31,10 +33,10 @@ type BulkUpsertResult struct {
 }
 
 type OverwriteWarning struct {
-	StudentID    int64  `json:"student_id"`
-	StudentName  string `json:"student_name"`
-	Weekday      int    `json:"weekday"`
-	WeekdayName  string `json:"weekday_name"`
-	PreviousTime string `json:"previous_time"`
-	NewTime      string `json:"new_time"`
+	StudentID    ident.ID `json:"student_id"`
+	StudentName  string   `json:"student_name"`
+	Weekday      int      `json:"weekday"`
+	WeekdayName  string   `json:"weekday_name"`
+	PreviousTime string   `json:"previous_time"`
+	NewTime      string   `json:"new_time"`
 }

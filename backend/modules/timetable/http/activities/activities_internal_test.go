@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	activityContract "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	httpadapter "github.com/moto-ogs/project-phoenix/modules/timetable/http/activities"
 	"github.com/stretchr/testify/assert"
@@ -24,13 +25,13 @@ func TestQuickActivityRequest_Fields(t *testing.T) {
 	req := httpadapter.QuickActivityRequest{
 		Name:            "Test Activity",
 		CategoryID:      5,
-		RoomID:          &roomID,
+		RoomID:          (*ident.ID)(&roomID),
 		MaxParticipants: new(20),
 	}
 
 	assert.Equal(t, "Test Activity", req.Name)
-	assert.Equal(t, int64(5), req.CategoryID)
-	assert.Equal(t, int64(10), *req.RoomID)
+	assert.Equal(t, ident.ID(int64(5)), req.CategoryID)
+	assert.Equal(t, ident.ID(int64(10)), *req.RoomID)
 	assert.Equal(t, 20, *req.MaxParticipants)
 }
 
@@ -57,15 +58,15 @@ func TestActivityRequest_Fields(t *testing.T) {
 		MaxParticipants: new(30),
 		IsOpen:          true,
 		CategoryID:      10,
-		PlannedRoomID:   &roomID,
-		SupervisorIDs:   []int64{1, 2},
+		PlannedRoomID:   (*ident.ID)(&roomID),
+		SupervisorIDs:   []ident.ID{1, 2},
 	}
 
 	assert.Equal(t, "Test Activity", req.Name)
 	assert.Equal(t, 30, *req.MaxParticipants)
 	assert.True(t, req.IsOpen)
-	assert.Equal(t, int64(10), req.CategoryID)
-	assert.Equal(t, int64(20), *req.PlannedRoomID)
+	assert.Equal(t, ident.ID(int64(10)), req.CategoryID)
+	assert.Equal(t, ident.ID(int64(20)), *req.PlannedRoomID)
 	assert.Len(t, req.SupervisorIDs, 2)
 }
 
@@ -75,11 +76,11 @@ func TestScheduleRequest_Fields(t *testing.T) {
 	timeframeID := int64(5)
 	req := httpadapter.ScheduleRequest{
 		Weekday:     1, // Monday
-		TimeframeID: &timeframeID,
+		TimeframeID: (*ident.ID)(&timeframeID),
 	}
 
 	assert.Equal(t, 1, req.Weekday)
-	assert.Equal(t, int64(5), *req.TimeframeID)
+	assert.Equal(t, ident.ID(int64(5)), *req.TimeframeID)
 }
 
 func TestScheduleRequest_NilTimeframeID(t *testing.T) {
@@ -94,23 +95,11 @@ func TestScheduleRequest_NilTimeframeID(t *testing.T) {
 	assert.Nil(t, req.TimeframeID)
 }
 
-func TestSupervisorRequest_Fields(t *testing.T) {
-	t.Parallel()
-
-	req := httpadapter.SupervisorRequest{
-		StaffID:   123,
-		IsPrimary: true,
-	}
-
-	assert.Equal(t, int64(123), req.StaffID)
-	assert.True(t, req.IsPrimary)
-}
-
 func TestBatchEnrollmentRequest_Fields(t *testing.T) {
 	t.Parallel()
 
 	req := httpadapter.BatchEnrollmentRequest{
-		StudentIDs: []common.JSONID{1, 2, 3},
+		StudentIDs: []common.ID{1, 2, 3},
 	}
 
 	assert.Len(t, req.StudentIDs, 3)
@@ -121,7 +110,7 @@ func TestBatchEnrollmentRequest_EmptyList(t *testing.T) {
 	t.Parallel()
 
 	req := httpadapter.BatchEnrollmentRequest{
-		StudentIDs: []common.JSONID{},
+		StudentIDs: []common.ID{},
 	}
 
 	assert.Empty(t, req.StudentIDs)
@@ -165,7 +154,7 @@ func TestAddSupervisorsToResponse_WithNilSupervisorInList(t *testing.T) {
 	}
 	httpadapter.AddSupervisorsToResponseForTest(response, supervisors)
 	assert.Len(t, response.SupervisorIDs, 1)
-	assert.Equal(t, int64(1), response.SupervisorIDs[0])
+	assert.Equal(t, ident.ID(int64(1)), response.SupervisorIDs[0])
 }
 
 func TestAddSupervisorsToResponse_WithPrimarySupervisor(t *testing.T) {
@@ -180,7 +169,7 @@ func TestAddSupervisorsToResponse_WithPrimarySupervisor(t *testing.T) {
 	httpadapter.AddSupervisorsToResponseForTest(response, supervisors)
 	assert.Len(t, response.SupervisorIDs, 3)
 	assert.NotNil(t, response.SupervisorID)
-	assert.Equal(t, int64(2), *response.SupervisorID)
+	assert.Equal(t, ident.ID(int64(2)), *response.SupervisorID)
 }
 
 func TestAddSupervisorsToResponse_NoPrimarySupervisor(t *testing.T) {
@@ -231,7 +220,7 @@ func TestAddSchedulesToResponse_WithNilScheduleInList(t *testing.T) {
 	}
 	httpadapter.AddSchedulesToResponseForTest(response, schedules)
 	assert.Len(t, response.Schedules, 1)
-	assert.Equal(t, int64(1), response.Schedules[0].ID)
+	assert.Equal(t, ident.ID(int64(1)), response.Schedules[0].ID)
 }
 
 func TestAddSchedulesToResponse_WithMultipleSchedules(t *testing.T) {
@@ -272,7 +261,7 @@ func TestAddCategoryToResponse_WithCategory(t *testing.T) {
 	}
 	httpadapter.AddCategoryToResponseForTest(response, group)
 	assert.NotNil(t, response.Category)
-	assert.Equal(t, int64(1), response.Category.ID)
+	assert.Equal(t, ident.ID(int64(1)), response.Category.ID)
 	assert.Equal(t, "Test Category", response.Category.Name)
 }
 
@@ -296,13 +285,13 @@ func TestBuildBaseActivityResponse_BasicFields(t *testing.T) {
 
 	response := httpadapter.BuildBaseActivityResponseForTest(group, 15)
 
-	assert.Equal(t, int64(1), response.ID)
+	assert.Equal(t, ident.ID(int64(1)), response.ID)
 	assert.Equal(t, "Test Activity", response.Name)
 	assert.NotNil(t, response.MaxParticipants)
 	assert.Equal(t, 20, *response.MaxParticipants)
 	assert.True(t, response.IsOpen)
-	assert.Equal(t, int64(5), response.CategoryID)
-	assert.Equal(t, int64(10), *response.PlannedRoomID)
+	assert.Equal(t, ident.ID(int64(5)), response.CategoryID)
+	assert.Equal(t, ident.ID(int64(10)), *response.PlannedRoomID)
 	assert.Equal(t, 15, response.EnrollmentCount)
 	assert.Empty(t, response.Schedules)
 }
@@ -348,7 +337,7 @@ func TestUpdateGroupFields_AllFields(t *testing.T) {
 		MaxParticipants: new(50),
 		IsOpen:          true,
 		CategoryID:      10,
-		PlannedRoomID:   &roomID,
+		PlannedRoomID:   (*ident.ID)(&roomID),
 	}
 
 	httpadapter.UpdateGroupFieldsForTest(group, req)
@@ -393,7 +382,7 @@ func TestNewCategoryResponse_FullCategory(t *testing.T) {
 
 	response := httpadapter.NewCategoryResponseForTest(category)
 
-	assert.Equal(t, int64(1), response.ID)
+	assert.Equal(t, ident.ID(int64(1)), response.ID)
 	assert.Equal(t, "Sports", response.Name)
 	assert.Equal(t, "Sports activities", response.Description)
 	assert.Equal(t, "#FF0000", response.Color)
@@ -409,7 +398,7 @@ func TestNewCategoryResponse_MinimalCategory(t *testing.T) {
 
 	response := httpadapter.NewCategoryResponseForTest(category)
 
-	assert.Equal(t, int64(1), response.ID)
+	assert.Equal(t, ident.ID(int64(1)), response.ID)
 	assert.Equal(t, "Minimal", response.Name)
 	assert.Empty(t, response.Description)
 	assert.Empty(t, response.Color)
@@ -436,7 +425,7 @@ func TestNewScheduleResponse_Basic(t *testing.T) {
 
 	response := httpadapter.NewScheduleResponseForTest(schedule)
 
-	assert.Equal(t, int64(1), response.ID)
+	assert.Equal(t, ident.ID(int64(1)), response.ID)
 	assert.Equal(t, 1, response.Weekday)
 }
 
@@ -452,16 +441,16 @@ func TestNewScheduleResponse_WithTimeframeID(t *testing.T) {
 
 	response := httpadapter.NewScheduleResponseForTest(schedule)
 
-	assert.Equal(t, int64(1), response.ID)
+	assert.Equal(t, ident.ID(int64(1)), response.ID)
 	assert.NotNil(t, response.TimeframeID)
-	assert.Equal(t, int64(5), *response.TimeframeID)
+	assert.Equal(t, ident.ID(int64(5)), *response.TimeframeID)
 }
 
 func TestNewScheduleResponse_NilSchedule(t *testing.T) {
 	t.Parallel()
 
 	response := httpadapter.NewScheduleResponseForTest(nil)
-	assert.Equal(t, int64(0), response.ID)
+	assert.Equal(t, ident.ID(int64(0)), response.ID)
 }
 
 // =============================================================================
@@ -481,8 +470,8 @@ func TestNewSupervisorResponse_Complete(t *testing.T) {
 
 	response := httpadapter.NewSupervisorResponseForTest(supervisor)
 
-	assert.Equal(t, int64(1), response.ID)
-	assert.Equal(t, int64(10), response.StaffID)
+	assert.Equal(t, ident.ID(int64(1)), response.ID)
+	assert.Equal(t, ident.ID(int64(10)), response.StaffID)
 	assert.True(t, response.IsPrimary)
 	assert.Equal(t, "John", response.FirstName)
 	assert.Equal(t, "Doe", response.LastName)
@@ -499,8 +488,8 @@ func TestNewSupervisorResponse_NilStaff(t *testing.T) {
 
 	response := httpadapter.NewSupervisorResponseForTest(supervisor)
 
-	assert.Equal(t, int64(1), response.ID)
-	assert.Equal(t, int64(10), response.StaffID)
+	assert.Equal(t, ident.ID(int64(1)), response.ID)
+	assert.Equal(t, ident.ID(int64(10)), response.StaffID)
 	assert.False(t, response.IsPrimary)
 	assert.Empty(t, response.FirstName)
 	assert.Empty(t, response.LastName)
@@ -517,7 +506,7 @@ func TestNewSupervisorResponse_StaffWithNilPerson(t *testing.T) {
 
 	response := httpadapter.NewSupervisorResponseForTest(supervisor)
 
-	assert.Equal(t, int64(1), response.ID)
+	assert.Equal(t, ident.ID(int64(1)), response.ID)
 	assert.Empty(t, response.FirstName)
 	assert.Empty(t, response.LastName)
 }
@@ -526,7 +515,7 @@ func TestNewSupervisorResponse_NilSupervisor(t *testing.T) {
 	t.Parallel()
 
 	response := httpadapter.NewSupervisorResponseForTest(nil)
-	assert.Equal(t, int64(0), response.ID)
+	assert.Equal(t, ident.ID(int64(0)), response.ID)
 }
 
 // =============================================================================
@@ -555,7 +544,7 @@ func TestCategoryResponse_Fields(t *testing.T) {
 		Color:       "#000000",
 	}
 
-	assert.Equal(t, int64(1), response.ID)
+	assert.Equal(t, ident.ID(int64(1)), response.ID)
 	assert.Equal(t, "Test", response.Name)
 	assert.Equal(t, "Description", response.Description)
 	assert.Equal(t, "#000000", response.Color)

@@ -4,7 +4,9 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // templateRosterMaintenanceResponse is the Regeltermin indicator (#3140):
@@ -34,8 +36,8 @@ type templateRosterMaintenanceResponse struct {
 }
 
 type templateRosterMaintenanceOfferingResponse struct {
-	ID   int64  `json:"id"`
-	Name string `json:"name"`
+	ID   common.ID `json:"id"`
+	Name string    `json:"name"`
 }
 
 // attachRosterMaintenance fills RosterMaintenance on every template with a
@@ -52,9 +54,9 @@ func (rs *Resource) attachRosterMaintenance(
 	queries := make([]timetable.TemplateRosterMaintenanceQuery, 0, len(templates))
 	for _, template := range templates {
 		queries = append(queries, timetable.TemplateRosterMaintenanceQuery{
-			TemplateID:            template.ID,
+			TemplateID:            template.ID.Int64(),
 			CalendarPeriodID:      rosterMaintenanceCalendarPeriodID(template, requestedPeriodID),
-			SourceCareOfferingIDs: template.SourceCareOfferingIDs,
+			SourceCareOfferingIDs: ident.Int64s(template.SourceCareOfferingIDs),
 			SourceGradeLevels:     template.SourceGradeLevels,
 			SourceSchoolClasses:   template.SourceSchoolClasses,
 			HasDynamicTargets:     templateHasDynamicTargets(template),
@@ -68,7 +70,7 @@ func (rs *Resource) attachRosterMaintenance(
 		return
 	}
 	for i := range templates {
-		templates[i].RosterMaintenance = rosterMaintenanceResponse(derived[templates[i].ID])
+		templates[i].RosterMaintenance = rosterMaintenanceResponse(derived[templates[i].ID.Int64()])
 	}
 }
 
@@ -77,8 +79,8 @@ func (rs *Resource) attachRosterMaintenance(
 func rosterMaintenanceCalendarPeriodID(template templateResponse, requestedPeriodID *int64) *int64 {
 	if requestedPeriodID != nil {
 		for _, schedule := range template.Schedules {
-			if schedule.CalendarPeriodID != nil && *schedule.CalendarPeriodID == *requestedPeriodID {
-				return schedule.CalendarPeriodID
+			if schedule.CalendarPeriodID != nil && schedule.CalendarPeriodID.Int64() == *requestedPeriodID {
+				return (*int64)(schedule.CalendarPeriodID)
 			}
 		}
 	}
@@ -93,16 +95,16 @@ func rosterMaintenanceCalendarPeriodID(template templateResponse, requestedPerio
 // stored on the template row.
 func effectiveTemplateCalendarPeriodID(template templateResponse) *int64 {
 	if len(template.Schedules) > 0 && template.Schedules[0].CalendarPeriodID != nil {
-		return template.Schedules[0].CalendarPeriodID
+		return (*int64)(template.Schedules[0].CalendarPeriodID)
 	}
-	return template.CalendarPeriodID
+	return (*int64)(template.CalendarPeriodID)
 }
 
 func effectiveScheduleCalendarPeriodID(schedule templateScheduleResponse, template templateResponse) *int64 {
 	if schedule.CalendarPeriodID != nil {
-		return schedule.CalendarPeriodID
+		return (*int64)(schedule.CalendarPeriodID)
 	}
-	return template.CalendarPeriodID
+	return (*int64)(template.CalendarPeriodID)
 }
 
 func templateHasDynamicTargets(template templateResponse) bool {
@@ -132,7 +134,7 @@ func rosterMaintenanceResponse(derived timetable.TemplateRosterMaintenance) *tem
 func rosterMaintenanceOfferings(offerings []timetable.OfferingRef) []templateRosterMaintenanceOfferingResponse {
 	result := make([]templateRosterMaintenanceOfferingResponse, 0, len(offerings))
 	for _, offering := range offerings {
-		result = append(result, templateRosterMaintenanceOfferingResponse{ID: offering.ID, Name: offering.Name})
+		result = append(result, templateRosterMaintenanceOfferingResponse{ID: ident.ID(offering.ID), Name: offering.Name})
 	}
 	return result
 }

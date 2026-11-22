@@ -8,6 +8,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/domain/userscontract"
 	peoplePorts "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // StudentRoutePersons binds the person half of the student routes'
@@ -38,7 +39,7 @@ func (p StudentRoutePersons) CreatePerson(ctx context.Context, input peopleModul
 	person := &peopleModule.DirectoryPersonSnapshot{
 		FirstName: input.FirstName, LastName: input.LastName,
 		Birthday: peopleModule.OptionalCalendarDate(input.Birthday),
-		TagID:    input.TagID, AccountID: input.AccountID,
+		TagID:    input.TagID, AccountID: (*ident.ID)(input.AccountID),
 	}
 	if err := p.persons.Create(ctx, person); err != nil {
 		return peopleModule.Person{}, err
@@ -51,9 +52,9 @@ func (p StudentRoutePersons) UpdatePerson(ctx context.Context, input peopleModul
 	person := &peopleModule.DirectoryPersonSnapshot{
 		FirstName: input.FirstName, LastName: input.LastName,
 		Birthday: peopleModule.OptionalCalendarDate(input.Birthday),
-		TagID:    input.TagID, AccountID: input.AccountID,
+		TagID:    input.TagID, AccountID: (*ident.ID)(input.AccountID),
 	}
-	person.ID = input.ID
+	person.ID = ident.ID(input.ID)
 	if err := p.persons.Update(ctx, person); err != nil {
 		return peopleModule.Person{}, err
 	}
@@ -120,15 +121,15 @@ func (p StudentRoutePersons) StaffIDForPerson(ctx context.Context, personID int6
 	if staff == nil {
 		return 0, false, nil
 	}
-	return staff.ID, true, nil
+	return staff.ID.Int64(), true, nil
 }
 
 func studentRoutePerson(person *peopleModule.DirectoryPersonSnapshot) peopleModule.Person {
 	return peopleModule.Person{
-		ID: person.ID, CreatedAt: person.CreatedAt, UpdatedAt: person.UpdatedAt, TenantID: person.TenantID,
+		ID: person.ID.Int64(), CreatedAt: person.CreatedAt, UpdatedAt: person.UpdatedAt, TenantID: person.TenantID.Int64(),
 		FirstName: person.FirstName, LastName: person.LastName,
 		Birthday: peopleModule.RenderCalendarDate(person.Birthday),
-		TagID:    person.TagID, AccountID: person.AccountID, DeletedAt: person.DeletedAt,
+		TagID:    person.TagID, AccountID: (*int64)(person.AccountID), DeletedAt: person.DeletedAt,
 	}
 }
 

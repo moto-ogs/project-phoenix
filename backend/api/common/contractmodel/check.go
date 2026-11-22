@@ -163,10 +163,8 @@ func scalar(kind string, raw json.RawMessage) string {
 	want := map[string]string{
 		KindString: "a string", KindEnum: "a string", KindBool: "a boolean",
 		KindInt: "a safe integer", KindNumber: "a number",
-		KindID:       "an identifier as a decimal string",
-		KindLegacyID: "an identifier as a safe integer or a decimal string",
-		KindLaxID:    "an identifier as a safe integer or a decimal string",
-		KindDate:     "a day as YYYY-MM-DD", KindInstant: "an RFC 3339 instant", KindClock: "a time as HH:MM",
+		KindID:   "an identifier as a decimal string",
+		KindDate: "a day as YYYY-MM-DD", KindInstant: "an RFC 3339 instant", KindClock: "a time as HH:MM",
 	}[kind]
 	switch kind {
 	case KindString, KindEnum:
@@ -180,8 +178,6 @@ func scalar(kind string, raw json.RawMessage) string {
 		ok = !isString && json.Unmarshal(raw, &number) == nil
 	case KindID:
 		ok = isString && int64Text.MatchString(text)
-	case KindLegacyID, KindLaxID:
-		ok = isString && int64Text.MatchString(text) || safeInteger(raw)
 	case KindDate:
 		_, err := time.Parse(time.DateOnly, text)
 		ok = isString && err == nil

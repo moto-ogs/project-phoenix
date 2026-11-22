@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 var ErrInvalidPayload = errors.New("enrollment: invalid offering change request")
@@ -84,6 +86,9 @@ func payloadStrings(values []any) ([]string, error) {
 }
 
 func payloadInt64(value any) (int64, error) {
+	if typed, ok := value.(ident.ID); ok {
+		value = typed.Int64()
+	}
 	switch typed := value.(type) {
 	case float64:
 		return int64(typed), nil

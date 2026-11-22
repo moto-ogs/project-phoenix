@@ -242,7 +242,7 @@ func (s *service) createParentConferenceAppointment(ctx context.Context, confere
 	if err != nil {
 		return 0, err
 	}
-	return detail.Appointment.ID, nil
+	return detail.Appointment.ID.Int64(), nil
 }
 
 // moveParentConferenceAppointment moves the booking's appointment to the
@@ -275,13 +275,13 @@ func (s *service) cancelParentConferenceAppointment(ctx context.Context, booking
 	if err != nil || appointment == nil {
 		return err
 	}
-	transitioned, err := s.cfg.Appointments.CancelAppointment(ctx, appointment.ID)
+	transitioned, err := s.cfg.Appointments.CancelAppointment(ctx, appointment.ID.Int64())
 	if err != nil || !transitioned {
 		return err
 	}
 	now := s.now()
 	appointment.CancelledAt = &now
-	if err := s.cancelPendingNotifications(ctx, appointment.ID, "parent conference booking cancelled"); err != nil {
+	if err := s.cancelPendingNotifications(ctx, appointment.ID.Int64(), "parent conference booking cancelled"); err != nil {
 		return err
 	}
 	return s.notifyGuardianLifecycle(ctx, appointment, portal.EmailKindAppointmentCancelled)

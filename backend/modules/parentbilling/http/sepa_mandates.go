@@ -82,7 +82,7 @@ func (req *SEPACreditorRequest) Bind(*http.Request) error { return nil }
 // SEPAMandateRequest is the body of POST /traeger/sepa-mandates: the
 // mandate of the family of a contract of the Träger.
 type SEPAMandateRequest struct {
-	ContractID    int64         `json:"contract_id"`
+	ContractID    common.ID     `json:"contract_id"`
 	Reference     string        `json:"reference"`
 	SignedOn      calendar.Date `json:"signed_on"`
 	Kind          string        `json:"kind"`
@@ -184,7 +184,7 @@ func (rs *SEPAMandateResource) createMandate(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	mandate, err := rs.mandates.CreateSEPAMandate(r.Context(), reviewer, capability.SEPAMandateInput{
-		ContractID: req.ContractID, Reference: req.Reference, SignedOn: req.SignedOn, Kind: req.Kind, Sequence: req.Sequence,
+		ContractID: req.ContractID.Int64(), Reference: req.Reference, SignedOn: req.SignedOn, Kind: req.Kind, Sequence: req.Sequence,
 		AccountHolder: req.AccountHolder, IBAN: req.IBAN, BIC: req.BIC, Source: capability.MandateFromOffice,
 	})
 	if err != nil {

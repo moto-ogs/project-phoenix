@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"testing"
 	"time"
 
@@ -75,7 +76,7 @@ func TestParentTrustedDevicesQueryBudget(t *testing.T) {
 		for len(devices) < n {
 			name := fmt.Sprintf("Parent browser %d", len(devices))
 			id := addDevice(chain.AccountID, nil, true, name)
-			devices = append(devices, map[string]any{"id": float64(id), "user_agent": name, "ip_address": "127.0.0.1", "created_at": created.Format(time.RFC3339), "expires_at": expires.Format(time.RFC3339)})
+			devices = append(devices, map[string]any{"id": strconv.FormatInt(id, 10), "user_agent": name, "ip_address": "127.0.0.1", "created_at": created.Format(time.RFC3339), "expires_at": expires.Format(time.RFC3339)})
 		}
 		counter.Reset()
 		counter.Start()

@@ -63,12 +63,12 @@ func (h *ExportHandovers) producer(reviewer parentbilling.HolidayReviewer, reque
 	case parentbilling.ExportFormatSollstellung:
 		return func(ctx context.Context) (producedFile, error) {
 			file, err := h.exports.SollstellungFile(ctx, reviewer, request.RunKind, request.RunID)
-			return producedFile{exportFileID: file.Entry.ID, fileName: file.Entry.FileName, data: file.Data}, err
+			return producedFile{exportFileID: file.Entry.ID.Int64(), fileName: file.Entry.FileName, data: file.Data}, err
 		}, nil
 	case parentbilling.ExportFormatDatev:
 		return func(ctx context.Context) (producedFile, error) {
 			file, err := h.exports.DatevFile(ctx, reviewer, request.RunKind, request.RunID, request.Datev)
-			return producedFile{exportFileID: file.Entry.ID, fileName: file.Entry.FileName, data: file.Data}, err
+			return producedFile{exportFileID: file.Entry.ID.Int64(), fileName: file.Entry.FileName, data: file.Data}, err
 		}, nil
 	case parentbilling.ExportFormatPain008:
 		return func(ctx context.Context) (producedFile, error) {

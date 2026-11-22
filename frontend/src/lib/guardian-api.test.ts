@@ -16,29 +16,31 @@ import {
 } from "./guardian-api";
 import type {
   StudentGuardianLinkRequest,
-  BackendGuardianProfile,
-  BackendGuardianWithRelationship,
   PhoneNumberCreateRequest,
   PhoneNumberUpdateRequest,
-  BackendPhoneNumber,
 } from "./guardian-helpers";
+import type {
+  GuardianResponse,
+  GuardianWithRelationship as GuardianWithRelationshipWire,
+  PhoneNumberResponse,
+} from "./contract/guardians.generated";
 
 // Mock data helpers
-const mockBackendGuardian: BackendGuardianProfile = {
-  id: 1,
+const mockBackendGuardian: GuardianResponse = {
+  id: "1",
   first_name: "John",
   last_name: "Doe",
   email: "john@example.com",
   phone_numbers: [
     {
-      id: 1,
+      id: "1",
       phone_number: "123-456-7890",
       phone_type: "home",
       is_primary: true,
       priority: 1,
     },
     {
-      id: 2,
+      id: "2",
       phone_number: "098-765-4321",
       phone_type: "mobile",
       is_primary: false,
@@ -55,15 +57,18 @@ const mockBackendGuardian: BackendGuardianProfile = {
   account_id: undefined,
 };
 
-const mockBackendGuardianWithRelationship: BackendGuardianWithRelationship = {
+const mockBackendGuardianWithRelationship: GuardianWithRelationshipWire = {
   guardian: mockBackendGuardian,
-  relationship_id: 10,
+  relationship_id: "10",
   relationship_type: "parent",
   is_primary: true,
   is_emergency_contact: true,
   can_pickup: true,
   pickup_notes: "Can pickup anytime",
   emergency_priority: 1,
+  guardian_role: "",
+  is_payer: false,
+  account_status: "",
 };
 
 const mockLinkRequest: StudentGuardianLinkRequest = {
@@ -515,7 +520,7 @@ describe("guardian-api functions", () => {
         string,
         unknown
       >;
-      expect(body.guardian_profile_id).toBe(1);
+      expect(body.guardian_profile_id).toBe("1");
       expect(body.relationship_type).toBe("parent");
       expect(body.guardian_role).toBe(mockLinkRequest.guardianRole);
       expect(body.is_primary).toBe(true);
@@ -764,8 +769,8 @@ describe("guardian-api functions", () => {
       isPrimary: false,
     };
 
-    const mockBackendPhoneNumber: BackendPhoneNumber = {
-      id: 3,
+    const mockBackendPhoneNumber: PhoneNumberResponse = {
+      id: "3",
       phone_number: "555-9999",
       phone_type: "work",
       label: "Office",
@@ -829,7 +834,7 @@ describe("guardian-api functions", () => {
           Promise.resolve({
             status: "success",
             data: {
-              id: 4,
+              id: "4",
               phone_number: "555-0000",
               phone_type: "mobile",
               is_primary: true,

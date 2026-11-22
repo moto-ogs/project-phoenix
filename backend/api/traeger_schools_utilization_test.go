@@ -15,6 +15,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/traegerview"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 )
@@ -79,7 +80,7 @@ func (p utilizationPresence) visit(student, session int64, day calendar.Date, fr
 func utilizationOf(t *testing.T, got traegerview.Utilization, school int64) traegerview.SchoolUtilization {
 	t.Helper()
 	for _, row := range got.Schools {
-		if row.ID == school {
+		if row.ID == ident.ID(school) {
 			return row
 		}
 	}
@@ -152,12 +153,12 @@ func TestTraegerUtilizationCountsOfferingsAttendanceAndRoomsPerDay(t *testing.T)
 	require.NotNil(t, bach.AttendanceFrom)
 	require.Len(t, bach.Offerings, 2, "lunch does not count as care")
 	assert.Equal(t, "Frühbetreuung", bach.Offerings[0].Name)
-	assert.Equal(t, early, bach.Offerings[0].ID)
+	assert.Equal(t, ident.ID(early), bach.Offerings[0].ID)
 	assert.Equal(t, 1, bach.Offerings[0].Booked[0])
-	assert.Equal(t, ogs, bach.Offerings[1].ID)
+	assert.Equal(t, ident.ID(ogs), bach.Offerings[1].ID)
 	assert.Equal(t, 2, bach.Offerings[1].Booked[0])
 	require.Len(t, bach.Rooms, 1, "only rooms with a counted visit")
-	assert.Equal(t, gym, bach.Rooms[0].ID)
+	assert.Equal(t, ident.ID(gym), bach.Rooms[0].ID)
 	require.NotNil(t, bach.Rooms[0].Children[0])
 	assert.Equal(t, 2, *bach.Rooms[0].Children[0], "Anna and Cem; Ben has no consent")
 	assert.Equal(t, 2, *bach.Rooms[0].Peak[0], "both between 14 and 15 o'clock")
@@ -245,7 +246,7 @@ func TestTraegerUtilizationChildrenNeedTheirRightAndAreLogged(t *testing.T) {
 	rec := traegerOccupancyRequest(t, router, path, admin, nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	got := decodeSchoolPortalData[traegerview.UtilizationChildren](t, rec.Body.Bytes())
-	assert.Equal(t, school, got.School.ID)
+	assert.Equal(t, ident.ID(school), got.School.ID)
 	require.Len(t, got.Children, 1)
 	assert.Equal(t, "Mia", got.Children[0].FirstName)
 	assert.Equal(t, 1, got.Children[0].PresentDays)

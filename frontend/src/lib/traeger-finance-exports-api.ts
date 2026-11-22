@@ -8,20 +8,7 @@
 
 import { knownEnum } from "./contract/known-enum";
 import { requiredDay } from "./contract/required-day";
-import type {
-  BookingAccounts as WireBookingAccounts,
-  CostCenterRequest,
-  DatevRunOverviews as WireDatevRuns,
-  ExportProtocolEntry as WireEntry,
-  ExportProtocolPage as WireProtocolPage,
-  ExportRunPage as WireRunPage,
-  ExportSettings as WireSettings,
-  FileNumberStartRequest,
-  InvoiceHistory as WireHistory,
-  RevenueAccountRequest,
-  SollstellungMapping as WireMapping,
-  SollstellungMappingRequest,
-} from "./contract/traeger-finance-exports.generated";
+import type * as traegerFinanceExportsContract from "./contract/traeger-finance-exports.generated";
 import { traegerRequest } from "./traeger-api";
 import { type BillingFile, billingFile } from "./traeger-billing-api";
 
@@ -287,7 +274,9 @@ const PATH_KINDS: Record<ExportRunKind, ExportRunPathKind> = {
  * editor can neither show nor save it then, and a reload brings the newer
  * build.
  */
-function mappingFromBackend(mapping: WireMapping): SollMapping | null {
+function mappingFromBackend(
+  mapping: traegerFinanceExportsContract.SollstellungMapping,
+): SollMapping | null {
   const delimiter = knownEnum(DELIMITER_VALUES, mapping.delimiter);
   const decimalSeparator = knownEnum(DECIMAL_VALUES, mapping.decimal_separator);
   const dateFormat = knownEnum(DATE_FORMAT_VALUES, mapping.date_format);
@@ -310,7 +299,9 @@ function mappingFromBackend(mapping: WireMapping): SollMapping | null {
   };
 }
 
-function mappingToBackend(mapping: SollMapping): SollstellungMappingRequest {
+function mappingToBackend(
+  mapping: SollMapping,
+): traegerFinanceExportsContract.SollstellungMappingRequest {
   return {
     columns: mapping.columns.map((column) => ({
       field: column.field,
@@ -326,7 +317,9 @@ function mappingToBackend(mapping: SollMapping): SollstellungMappingRequest {
   };
 }
 
-function settingsFromBackend(settings: WireSettings): ExportSettings {
+function settingsFromBackend(
+  settings: traegerFinanceExportsContract.ExportSettings,
+): ExportSettings {
   return {
     mapping: mappingFromBackend(settings.sollstellung.mapping),
     custom: settings.sollstellung.custom,
@@ -345,7 +338,9 @@ function settingsFromBackend(settings: WireSettings): ExportSettings {
  * A protocol entry; null for a run kind this build does not know, which has
  * no page to link to.
  */
-function entryFromBackend(entry: WireEntry): ExportProtocolEntry | null {
+function entryFromBackend(
+  entry: traegerFinanceExportsContract.ExportProtocolEntry,
+): ExportProtocolEntry | null {
   const runKind = knownEnum(RUN_KIND_VALUES, entry.run_kind);
   if (!runKind) return null;
   return {
@@ -393,7 +388,9 @@ function entryFromBackend(entry: WireEntry): ExportProtocolEntry | null {
 /** The mapping of the Sollstellung and the file numbers of the Träger. */
 export async function fetchExportSettings(): Promise<ExportSettings> {
   return settingsFromBackend(
-    await traegerRequest<WireSettings>(`${BASE}/settings`),
+    await traegerRequest<traegerFinanceExportsContract.ExportSettings>(
+      `${BASE}/settings`,
+    ),
   );
 }
 
@@ -402,10 +399,13 @@ export async function saveSollMapping(
   mapping: SollMapping,
 ): Promise<ExportSettings> {
   return settingsFromBackend(
-    await traegerRequest<WireSettings>(`${BASE}/settings/sollstellung`, {
-      method: "PUT",
-      body: mappingToBackend(mapping),
-    }),
+    await traegerRequest<traegerFinanceExportsContract.ExportSettings>(
+      `${BASE}/settings/sollstellung`,
+      {
+        method: "PUT",
+        body: mappingToBackend(mapping),
+      },
+    ),
   );
 }
 
@@ -420,10 +420,15 @@ export async function setFileNumberStart(
   start: number,
 ): Promise<ExportSettings> {
   return settingsFromBackend(
-    await traegerRequest<WireSettings>(`${BASE}/settings/file-number-start`, {
-      method: "PUT",
-      body: { start } satisfies FileNumberStartRequest,
-    }),
+    await traegerRequest<traegerFinanceExportsContract.ExportSettings>(
+      `${BASE}/settings/file-number-start`,
+      {
+        method: "PUT",
+        body: {
+          start,
+        } satisfies traegerFinanceExportsContract.FileNumberStartRequest,
+      },
+    ),
   );
 }
 
@@ -449,9 +454,10 @@ function pagePath(path: string, offset: number): string {
 export async function fetchExportRuns(
   offset = 0,
 ): Promise<FinanceExportRunPage> {
-  const body = await traegerRequest<WireRunPage>(
-    pagePath(`${BASE}/runs`, offset),
-  );
+  const body =
+    await traegerRequest<traegerFinanceExportsContract.ExportRunPage>(
+      pagePath(`${BASE}/runs`, offset),
+    );
   return {
     // A run of a kind this build does not know has no page; it is left out.
     items: (body.runs ?? []).flatMap((run) => {
@@ -484,9 +490,10 @@ export async function fetchExportRuns(
 export async function fetchExportProtocol(
   offset = 0,
 ): Promise<FinanceExportPage<ExportProtocolEntry>> {
-  const body = await traegerRequest<WireProtocolPage>(
-    pagePath(`${BASE}/files`, offset),
-  );
+  const body =
+    await traegerRequest<traegerFinanceExportsContract.ExportProtocolPage>(
+      pagePath(`${BASE}/files`, offset),
+    );
   return {
     items: (body.files ?? []).flatMap((file) => {
       const entry = entryFromBackend(file);
@@ -567,7 +574,7 @@ const DATEV_RUNS_PER_REQUEST = 50;
 
 async function fetchDatevRunPage(
   runs: readonly ExportRun[],
-): Promise<WireDatevRuns> {
+): Promise<traegerFinanceExportsContract.DatevRunOverviews> {
   const query = new URLSearchParams();
   for (const kind of ["care", "holiday"] as const) {
     const ids = runs
@@ -576,7 +583,7 @@ async function fetchDatevRunPage(
     if (ids.length > 0) query.set(kind, ids.join(","));
   }
   if (query.size === 0) return { ready: true, runs: [] };
-  return traegerRequest<WireDatevRuns>(
+  return traegerRequest<traegerFinanceExportsContract.DatevRunOverviews>(
     `${BASE}/datev-runs?${query.toString()}`,
   );
 }
@@ -668,9 +675,10 @@ export async function fetchInvoiceHistory(
   kind: InvoiceHistoryKind,
   invoiceId: string,
 ): Promise<InvoiceHistory> {
-  const body = await traegerRequest<WireHistory>(
-    `${BASE}/invoice-history/${kind}/${encodeURIComponent(invoiceId)}`,
-  );
+  const body =
+    await traegerRequest<traegerFinanceExportsContract.InvoiceHistory>(
+      `${BASE}/invoice-history/${kind}/${encodeURIComponent(invoiceId)}`,
+    );
   return {
     number: body.number,
     steps: (body.entries ?? []).map((entry) => ({
@@ -732,7 +740,7 @@ export interface BookingAccounts {
 // Accounts and cost centers of a scope this build does not know have no row
 // to show; they are left out.
 function bookingAccountsFromBackend(
-  body: WireBookingAccounts,
+  body: traegerFinanceExportsContract.BookingAccounts,
 ): BookingAccounts {
   return {
     standardAccount: body.standard_account,
@@ -771,7 +779,9 @@ function bookingAccountsFromBackend(
 /** The revenue accounts and cost centers of the Träger (#4821). */
 export async function fetchBookingAccounts(): Promise<BookingAccounts> {
   return bookingAccountsFromBackend(
-    await traegerRequest<WireBookingAccounts>(`${BASE}/booking-accounts`),
+    await traegerRequest<traegerFinanceExportsContract.BookingAccounts>(
+      `${BASE}/booking-accounts`,
+    ),
   );
 }
 
@@ -782,15 +792,15 @@ export async function saveRevenueAccount(
   account: string,
 ): Promise<BookingAccounts> {
   return bookingAccountsFromBackend(
-    await traegerRequest<WireBookingAccounts>(
+    await traegerRequest<traegerFinanceExportsContract.BookingAccounts>(
       `${BASE}/booking-accounts/revenue-accounts`,
       {
         method: "PUT",
         body: {
           scope,
-          scope_id: Number(scopeId),
+          scope_id: scopeId,
           account,
-        } satisfies RevenueAccountRequest,
+        } satisfies traegerFinanceExportsContract.RevenueAccountRequest,
       },
     ),
   );
@@ -804,16 +814,16 @@ export async function addCostCenter(center: {
   code: string;
 }): Promise<BookingAccounts> {
   return bookingAccountsFromBackend(
-    await traegerRequest<WireBookingAccounts>(
+    await traegerRequest<traegerFinanceExportsContract.BookingAccounts>(
       `${BASE}/booking-accounts/cost-centers`,
       {
         method: "POST",
         body: {
           scope: center.scope,
-          scope_id: Number(center.scopeId),
+          scope_id: center.scopeId,
           valid_from: center.validFrom,
           code: center.code,
-        } satisfies CostCenterRequest,
+        } satisfies traegerFinanceExportsContract.CostCenterRequest,
       },
     ),
   );

@@ -16,6 +16,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // SchoolSupervisionRouter is the assignment-bound supervision surface of the
@@ -114,8 +115,8 @@ func (rs *Resource) schoolStudentSheet(w http.ResponseWriter, r *http.Request) {
 	boundary := make([]int64, 0, len(roster.Rows))
 	onRoster := false
 	for _, row := range roster.Rows {
-		boundary = append(boundary, row.StudentID)
-		if row.StudentID == studentID {
+		boundary = append(boundary, row.StudentID.Int64())
+		if row.StudentID == ident.ID(studentID) {
 			onRoster = true
 		}
 	}

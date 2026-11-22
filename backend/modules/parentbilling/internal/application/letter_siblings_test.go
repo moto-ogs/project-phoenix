@@ -42,7 +42,7 @@ func TestSiblingLetterNamesOnlyItsOwnRegistration(t *testing.T) {
 	for _, document := range previewed.documents {
 		content := goldenLetterContent(t)
 		content.document = document
-		letters[document.RegistrationID] = fmt.Sprintf("%+v", confirmationLetter(content))
+		letters[document.RegistrationID.Int64()] = fmt.Sprintf("%+v", confirmationLetter(content))
 	}
 	assert.Contains(t, letters[1], "Lina")
 	assert.NotContains(t, letters[1], "Ermäßigung für Geschwister", "the first child pays in full")

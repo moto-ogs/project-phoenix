@@ -1,9 +1,36 @@
+import { knownEnum } from "~/lib/contract/known-enum";
+import { labelOf } from "~/lib/label-of";
+import type * as operatorAnnouncementsContract from "~/lib/contract/operator-announcements.generated";
 import { SYSTEM_ROLE_LABELS as ROLE_LABELS } from "~/lib/role-labels";
 
-export type AnnouncementType = "announcement" | "release" | "maintenance";
-export type AnnouncementSeverity = "info" | "warning" | "critical";
-type AnnouncementStatus = "draft" | "published" | "expired";
-export type SystemRole = "admin" | "user" | "guardian";
+export type { AnnouncementStats } from "~/lib/contract/operator-announcements.generated";
+
+// Go does not register these sets; the contract types them as string.
+const ANNOUNCEMENT_TYPE_VALUES = [
+  "announcement",
+  "release",
+  "maintenance",
+] as const;
+const ANNOUNCEMENT_SEVERITY_VALUES = ["info", "warning", "critical"] as const;
+const ANNOUNCEMENT_STATUS_VALUES = ["draft", "published", "expired"] as const;
+const SYSTEM_ROLE_VALUES = ["admin", "user", "guardian"] as const;
+
+export type AnnouncementType = (typeof ANNOUNCEMENT_TYPE_VALUES)[number];
+export type AnnouncementSeverity =
+  (typeof ANNOUNCEMENT_SEVERITY_VALUES)[number];
+type AnnouncementStatus = (typeof ANNOUNCEMENT_STATUS_VALUES)[number];
+export type SystemRole = (typeof SYSTEM_ROLE_VALUES)[number];
+
+/** Display defaults must not replace the wire values sent back on save. */
+export function announcementTypeForDisplay(value: string): AnnouncementType {
+  return knownEnum(ANNOUNCEMENT_TYPE_VALUES, value) ?? "announcement";
+}
+
+export function announcementSeverityForDisplay(
+  value: string,
+): AnnouncementSeverity {
+  return knownEnum(ANNOUNCEMENT_SEVERITY_VALUES, value) ?? "info";
+}
 
 export const SYSTEM_ROLE_LABELS: Record<SystemRole, string> = {
   admin: ROLE_LABELS.admin.name,
@@ -11,58 +38,33 @@ export const SYSTEM_ROLE_LABELS: Record<SystemRole, string> = {
   guardian: ROLE_LABELS.guardian.name,
 };
 
-export interface BackendAnnouncement {
-  id: number | string;
-  title: string;
-  content: string;
-  type: AnnouncementType;
-  severity: AnnouncementSeverity;
-  version?: string | null;
-  active: boolean;
-  published_at?: string | null;
-  expires_at?: string | null;
-  target_roles: string[];
-  target_org_ids: (number | string)[];
-  target_tenant_ids: (number | string)[];
-  created_by: number | string;
-  created_at: string;
-  updated_at: string;
-  status: AnnouncementStatus;
+/** The label of a target role; „–“ for one this build does not know. */
+export function systemRoleLabel(role: string): string {
+  return labelOf(SYSTEM_ROLE_LABELS, knownEnum(SYSTEM_ROLE_VALUES, role), "–");
 }
 
 export interface Announcement {
   id: string;
   title: string;
   content: string;
-  type: AnnouncementType;
-  severity: AnnouncementSeverity;
+  type: string;
+  severity: string;
   version: string | null;
   active: boolean;
   publishedAt: string | null;
   expiresAt: string | null;
-  targetRoles: SystemRole[];
+  /**
+   * Kept verbatim, also a role this build does not know: saving the
+   * announcement sends them back, and an empty list means "everyone".
+   */
+  targetRoles: string[];
   targetOrgIds: string[];
   targetTenantIds: string[];
   createdBy: string;
   createdAt: string;
   updatedAt: string;
-  status: AnnouncementStatus;
-}
-
-export interface AnnouncementStats {
-  announcement_id: number | string;
-  target_count: number;
-  seen_count: number;
-  dismissed_count: number;
-}
-
-export interface BackendAnnouncementViewDetail {
-  user_id: number | string;
-  user_name: string;
-  seen_at: string;
-  shown_at: string | null;
-  dismissed_at: string | null;
-  dismissed: boolean;
+  /** undefined: a status this build does not know. */
+  status: AnnouncementStatus | undefined;
 }
 
 export interface AnnouncementViewDetail {
@@ -75,10 +77,10 @@ export interface AnnouncementViewDetail {
 }
 
 export function mapViewDetail(
-  data: BackendAnnouncementViewDetail,
+  data: operatorAnnouncementsContract.AnnouncementViewDetailResponse,
 ): AnnouncementViewDetail {
   return {
-    userId: data.user_id.toString(),
+    userId: data.user_id,
     userName: data.user_name,
     seenAt: data.seen_at,
     shownAt: data.shown_at,
@@ -87,34 +89,27 @@ export function mapViewDetail(
   };
 }
 
-export interface CreateAnnouncementRequest {
-  title: string;
-  content: string;
-  type: AnnouncementType;
-  severity: AnnouncementSeverity;
-  version?: string;
-  expires_at?: string;
-  target_roles?: SystemRole[];
-  target_org_ids?: number[];
-  target_tenant_ids?: number[];
-}
+export type CreateAnnouncementRequest =
+  operatorAnnouncementsContract.CreateAnnouncementRequest & {
+    title: string;
+    content: string;
+    type: string;
+    severity: string;
+  };
 
-export interface UpdateAnnouncementRequest {
-  title: string;
-  content: string;
-  type: AnnouncementType;
-  severity: AnnouncementSeverity;
-  version?: string | null;
-  active?: boolean;
-  expires_at?: string | null;
-  target_roles?: SystemRole[];
-  target_org_ids?: number[];
-  target_tenant_ids?: number[];
-}
+export type UpdateAnnouncementRequest =
+  operatorAnnouncementsContract.UpdateAnnouncementRequest & {
+    title: string;
+    content: string;
+    type: string;
+    severity: string;
+  };
 
-export function mapAnnouncement(data: BackendAnnouncement): Announcement {
+export function mapAnnouncement(
+  data: operatorAnnouncementsContract.OperatorAnnouncementResponse,
+): Announcement {
   return {
-    id: data.id.toString(),
+    id: data.id,
     title: data.title,
     content: data.content,
     type: data.type,
@@ -123,13 +118,13 @@ export function mapAnnouncement(data: BackendAnnouncement): Announcement {
     active: data.active,
     publishedAt: data.published_at ?? null,
     expiresAt: data.expires_at ?? null,
-    targetRoles: (data.target_roles ?? []) as SystemRole[],
-    targetOrgIds: (data.target_org_ids ?? []).map(String),
-    targetTenantIds: (data.target_tenant_ids ?? []).map(String),
-    createdBy: data.created_by.toString(),
+    targetRoles: data.target_roles ?? [],
+    targetOrgIds: data.target_org_ids ?? [],
+    targetTenantIds: data.target_tenant_ids ?? [],
+    createdBy: data.created_by,
     createdAt: data.created_at,
     updatedAt: data.updated_at,
-    status: data.status,
+    status: knownEnum(ANNOUNCEMENT_STATUS_VALUES, data.status),
   };
 }
 

@@ -239,6 +239,7 @@ export const routes = {
     method: "POST",
     pattern: "/api/parent-announcements/letter-preview",
     portals: ["tenant"],
+    noCommit: "the preview renders the letter and sends nothing",
     request: requestBody<letterPreviewRequest>(),
     response: success(letterPreviewResponseSchema),
   },

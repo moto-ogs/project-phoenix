@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 const bulkPickupOperation = "bulk upsert pickup schedules"
@@ -168,7 +169,7 @@ func (s *pickupScheduleService) preservePickupNotes(ctx context.Context, student
 		return err
 	}
 	result.OverwrittenStudents = append(result.OverwrittenStudents, careplan.OverwriteWarning{
-		StudentID: student.ID, StudentName: name, Weekday: row.Weekday, WeekdayName: domain.WeekdayName(row.Weekday),
+		StudentID: ident.ID(student.ID), StudentName: name, Weekday: row.Weekday, WeekdayName: domain.WeekdayName(row.Weekday),
 		PreviousTime: previous.PickupTime.Format("15:04"), NewTime: row.PickupTime.Format("15:04"),
 	})
 	return nil

@@ -21,34 +21,48 @@ Proxy rules, file flags and the session path in detail:
 
 Go is the source of every response shape. A type the frontend writes by hand
 for a registered route (`Backend*`) is a second, unchecked copy; import the
-generated type instead.
+generated type instead. `frontend/scripts/backend-wire-types.node-test.mjs`
+(part of `pnpm run check`) fails on a `Backend*` type with `snake_case`
+fields; a copy under another name is just as wrong.
 
 ## Read route
 
-Worked example: `GET /api/activities/categories`, staff portal.
+Worked example, the same route from Go to the browser:
+`GET /api/students/{id}/partial-absences`, staff portal.
 
 1. **Handler.** Mount it in the owner's router inside the tenant
-   transaction and behind its permission:
-   `r.With(common.RequiresPermission(permissions.ActivitiesRead), withTx).Get("/{id}", rs.getActivity)`
-   in `backend/modules/timetable/http/activities/http.go`. (The category list
-   beside it has no permission on purpose: every picker reads it.)
-2. **Contract.** Add one line to the owner's `RouteContracts()` in
-   `backend/modules/timetable/http/activities/route_contracts.go`:
+   transaction and behind its permission
+   (`backend/modules/careplan/http/student_resource.go`):
 
    ```go
-   {Method: "GET", Pattern: "/categories", Portals: portals, Query: categoryFlags, Response: []ActivityCategoryResponse{}},
+   r.With(common.RequiresPermission(permissions.UsersRead), withTx).Get("/{id}/partial-absences", rs.getStudentPartialAbsences)
+   ```
+
+   The handler answers through `common.Respond`
+   (`partial_absence_handlers.go`); only that path writes identifiers as
+   strings (`backend/api/common/wire_json.go`).
+2. **Contract.** Add one line to the owner's route contracts in
+   `backend/modules/careplan/http/route_contracts.go`:
+
+   ```go
+   {Method: "GET", Pattern: "/{id}/partial-absences", Portals: portals, Query: days, Response: []PartialAbsenceResponse{}},
    ```
 
    The pattern is relative to the mount. `Portals` names every portal that
    may call it (`common.PortalTenant`, `PortalParent`, `PortalSchool`,
    `PortalTraeger`, `PortalCaterer`, `PortalOperator`, `PortalPublic`). `Query`
-   lists every parameter the handler reads; the proxy drops the others.
-   Identifiers are `common.ID`, days `calendar.Date`, closed value sets go in
-   `Enums`; the generator refuses a bare `int64` and an answer whose shape
-   depends on a query parameter.
-3. **Mount.** A new `RouteContracts()` function gets one row in the matching
-   `*ContractMounts()` list of `backend/api/route_contracts.go`, here
-   `{"/api/activities", timetableActivitiesHTTP.RouteContracts()}`. The
+   lists every parameter the handler reads (`days` is `from`/`to` as
+   `QueryDate`); the proxy drops the others. Identifiers are `common.ID`
+   (`ident.ID` outside `http` roles), days are `calendar.Date`, closed value
+   sets go in `Enums`. A count is an `int`; an amount or a count kept as
+   `int64` says so with `contract:"number"`. The generator refuses a bare
+   `int64`, the json option `,string`, a number under an identifier's name
+   (`id`, `*_id`, `*_ids`), a numeric identifier in an answer and an answer
+   whose shape depends on a query parameter.
+3. **Mount.** A new contracts function gets one row in the matching
+   `*ContractMounts()` list of `backend/api/route_contracts.go`, e.g.
+   `{"/api/activities", timetableActivitiesHTTP.RouteContracts()}`. This
+   route's function is mounted there under `/api/students` already. The
    generator refuses a contract the route catalog does not know.
 4. **Catalog and contract.** From `backend/`:
 
@@ -57,31 +71,35 @@ Worked example: `GET /api/activities/categories`, staff portal.
    ../scripts/run-go-toolchain.sh go run . gencontract
    ```
 
-   This writes the catalog line (`backend/api/testdata/routes/api/activities.golden`),
-   the type `ActivityCategoryResponse` and the entry
-   `routes["GET /api/activities/categories"]` in
-   `frontend/src/lib/contract/activities.generated.ts`, and the allowlist entry
+   This writes the catalog line (`backend/api/testdata/routes/api/students.golden`),
+   the type `PartialAbsenceResponse` and the entry
+   `routes["GET /api/students/{id}/partial-absences"]` in
+   `frontend/src/lib/contract/students.generated.ts`, and the allowlist entry
    in `portals.generated.ts`. Commit all of them; `TestTheCommittedContractIsCurrent`
    fails on a stale file.
-5. **Browser call.** The domain client calls the BFF path with `bffJson`
-   (`frontend/src/lib/bff-fetch.ts`) and types the answer with the generated
-   type:
+5. **Backend test.** A router test answers the route
+   (`backend/modules/careplan/http/partial_absence_replace_test.go`). CI's
+   `TestEveryRegisteredRouteIsAnsweredInATest` (`backend/api`) fails on a
+   registered JSON route no test answers.
+6. **Browser call.** The domain client calls `bffJson` (`frontend/src/lib/bff-fetch.ts`)
+   with the portal and the route's catalog key; the generated entry types the
+   path parameters, the query, the body and the answer
+   (`frontend/src/lib/student-partial-absences-api.ts`):
 
    ```ts
-   import { bffJson } from "./bff-fetch";
-   import type { ActivityCategoryResponse } from "./contract/activities.generated";
-
-   const rows = await bffJson<ActivityCategoryResponse[] | null>(
-     "/api/activities/categories?include_archived=true",
-   );
-   return (rows ?? []).map(mapActivityCategoryResponse);
+   const rows = await bffJson("tenant", "GET /api/students/{id}/partial-absences", {
+     params: { id: studentId },
+     query: { from, to },
+   });
+   return rows.map(mapPartialAbsence);
    ```
 
-   `mapActivityCategoryResponse` (`frontend/src/lib/activity-helpers.ts`)
-   maps to the view type. A failure throws an `ApiError` for the shared error
-   path. Components load it through `useSWRAuth` and a key factory of
-   `~/lib/swr`.
-6. **No route file.** The staff portal's catch-all `app/api/[...path]/route.ts`
+   `mapPartialAbsence` maps to the view type. A failure throws an `ApiError`
+   for the shared error path; `errorMessage` keeps a client's own text.
+   The other portals and the rules for 204, 401 and a missing `data`:
+   [Browser calls](frontend-api.md#browser-calls).
+   Components load through `useSWRAuth` and a key factory of `~/lib/swr`.
+7. **No route file.** The staff portal's catch-all `app/api/[...path]/route.ts`
    serves the path. Other portals call `/api/<portal>/…` for the backend's
    `/<portal>/…`; the prefix table is in
    [Portal proxy](frontend-api.md#portal-proxy-2352).
@@ -94,10 +112,11 @@ before push.
 
 ## Write route
 
-Same steps; the contract names the body type:
+Same steps; the contract names the body type, and the client sends it typed
+(`saveStudentPartialAbsence` in the same client file):
 
 ```go
-{Method: "POST", Pattern: "/categories", Portals: portals, Request: ActivityCategoryRequest{}, Response: ActivityCategoryResponse{}},
+{Method: "POST", Pattern: "/{id}/partial-absences", Portals: portals, Request: PartialAbsenceRequest{}, Response: PartialAbsenceResponse{}},
 ```
 
 - Go's `Bind` validates and answers 400 with field errors; the generated
@@ -105,6 +124,9 @@ Same steps; the contract names the body type:
 - A route without an answer body registers `NoData: true`.
 - A route whose body carries a password or a code names why it must not be
   sent twice in `NoRetryAfterRenewal`.
+- A POST that commits nothing its caller asked for (a preview, a search)
+  names why in `NoCommit`. When its answer does not match the contract, the
+  proxy then offers a retry; every other write asks to reload.
 - Classify the writing route for analytics (`.claude/rules/usage-analytics.md`).
 - After the write, the component refreshes its SWR family with
   `useInvalidateFamily`.
@@ -141,17 +163,16 @@ Only for what belongs to the browser and cannot live in Go:
   purges the cached tenant lookup, `demo/access/sessions` sets the demo cookie;
 - a hand-off for a registered path that Next would give to a neighbouring
   route file (`catalogProxyUnder`); `app/api/catalog-route-selection.test.ts`
-  fails when one is missing;
-- an aggregation of several backend reads that has no Go view yet
-  (`activities/[id]/students`). A new one is a Go view instead (#5018).
+  fails when one is missing.
 
 A reshaping, an ID or format check or a second backend call for the same
-screen moves into the Go handler. A file whose only code forwards to the
+screen moves into the Go handler; an aggregation of several reads is a Go
+view (#5018). A file whose only code forwards to the
 backend fails `app/api/proxy-routes.test.ts`; a file whose backend paths
 the contract registers, all of them, fails `app/api/route-backend-paths.test.ts`,
 and a file in front of a registered path fails
 `app/api/catalog-route-selection.test.ts`. A new backend route without a
-contract and a new numeric identifier fail `scripts/check-contract-shrink.mjs`;
+contract fails `scripts/check-contract-shrink.mjs`;
 a route the contract cannot carry (a sign-in step, a device or webhook
 endpoint) needs a new ADR that names its catalog line. A named route builds its
 handlers from its portal's route wrapper (`frontend/src/lib/route-wrapper.server.ts`,

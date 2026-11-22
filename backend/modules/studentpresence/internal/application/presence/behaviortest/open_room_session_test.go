@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	activeSvc "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -76,11 +77,11 @@ func TestEnsureOpenRoomSessionRunsBesideAnActivitySession(t *testing.T) {
 
 	first, err := presence.EnsureOpenRoomSession(ctx, gym.ID, roomActivity.ID)
 	require.NoError(t, err, "a running activity must not block the room session")
-	assert.NotEqual(t, footballSession.ID, first.ID, "the room session is not the activity session")
+	assert.NotEqual(t, footballSession.ID, first.ID.Int64(), "the room session is not the activity session")
 	assert.Nil(t, first.DeviceID)
 	require.NotNil(t, first.GroupID)
-	assert.Equal(t, roomActivity.ID, *first.GroupID)
-	assert.Equal(t, gym.ID, first.RoomID)
+	assert.Equal(t, ident.ID(roomActivity.ID), *first.GroupID)
+	assert.Equal(t, ident.ID(gym.ID), first.RoomID)
 
 	second, err := presence.EnsureOpenRoomSession(ctx, gym.ID, roomActivity.ID)
 	require.NoError(t, err)
@@ -107,9 +108,9 @@ func TestEnsureOpenRoomSessionJoinsTheKioskSession(t *testing.T) {
 
 	session, err := presence.EnsureOpenRoomSession(ctx, yard.ID, play.ID)
 	require.NoError(t, err)
-	assert.Equal(t, kiosk.ID, session.ID, "a phone move must join the running kiosk session")
+	assert.Equal(t, ident.ID(kiosk.ID), session.ID, "a phone move must join the running kiosk session")
 	require.NotNil(t, session.DeviceID)
-	assert.Equal(t, device.ID, *session.DeviceID)
+	assert.Equal(t, ident.ID(device.ID), *session.DeviceID)
 }
 
 func TestKioskStartJoinsAPhoneCreatedRoomStay(t *testing.T) {
@@ -134,7 +135,7 @@ func TestKioskStartJoinsAPhoneCreatedRoomStay(t *testing.T) {
 	require.NoError(t, err, "a kiosk start must join the phone-created stay")
 	assert.Equal(t, stay.ID, started.ID)
 	require.NotNil(t, started.DeviceID)
-	assert.Equal(t, device.ID, *started.DeviceID)
+	assert.Equal(t, ident.ID(device.ID), *started.DeviceID)
 }
 
 func TestKioskStartConflictsWithAPlannerSessionInTheSameRoom(t *testing.T) {
@@ -189,15 +190,15 @@ func TestOpenRoomMoveNeedsNoSupervisionAtTheDestination(t *testing.T) {
 	auth := activeSvc.StudentMoveAuthorization{StaffID: staff.ID}
 
 	// The ordinary push move still requires a supervised destination ...
-	_, err = svc.MoveStudentsToActiveGroupAuthorized(ctx, []int64{child}, roomSession.ID, auth)
+	_, err = svc.MoveStudentsToActiveGroupAuthorized(ctx, []int64{child}, roomSession.ID.Int64(), auth)
 	require.ErrorIs(t, err, activeSvc.ErrStudentMoveForbidden)
 	assert.Equal(t, source.ID, openVisitSessions(t, presence, []int64{child})[child], "a rejected move leaves the child where it was")
 
 	// ... the move into a released room's session does not.
-	result, err := openRoom.MoveStudentsToOpenRoomSessionAuthorized(ctx, []int64{child}, roomSession.ID, auth)
+	result, err := openRoom.MoveStudentsToOpenRoomSessionAuthorized(ctx, []int64{child}, roomSession.ID.Int64(), auth)
 	require.NoError(t, err)
-	assert.Equal(t, []int64{child}, result.Moved)
-	assert.Equal(t, roomSession.ID, openVisitSessions(t, presence, []int64{child})[child])
+	assert.Equal(t, []ident.ID{ident.ID(child)}, result.Moved)
+	assert.Equal(t, roomSession.ID.Int64(), openVisitSessions(t, presence, []int64{child})[child])
 	assertStillAttending(t, presence, []int64{child})
 }
 
@@ -224,7 +225,7 @@ func TestOpenRoomMoveKeepsTheSourceSideRights(t *testing.T) {
 
 	// A staff member who does not supervise the child's current place cannot
 	// move it anywhere, a released room included.
-	_, err = openRoom.MoveStudentsToOpenRoomSessionAuthorized(ctx, []int64{child}, roomSession.ID, activeSvc.StudentMoveAuthorization{StaffID: outsider.ID})
+	_, err = openRoom.MoveStudentsToOpenRoomSessionAuthorized(ctx, []int64{child}, roomSession.ID.Int64(), activeSvc.StudentMoveAuthorization{StaffID: outsider.ID})
 	require.ErrorIs(t, err, activeSvc.ErrStudentMoveForbidden)
 	assert.Equal(t, source.ID, openVisitSessions(t, presence, []int64{child})[child])
 }
@@ -248,19 +249,19 @@ func TestOpenRoomMoveRepeatedRecordsOneStay(t *testing.T) {
 	roomSession, err := openRoom.EnsureOpenRoomSession(ctx, craftRoom.ID, roomActivity.ID)
 	require.NoError(t, err)
 
-	first, err := openRoom.MoveStudentsToOpenRoomSessionAuthorized(ctx, []int64{child}, roomSession.ID, activeSvcBypassAuth)
+	first, err := openRoom.MoveStudentsToOpenRoomSessionAuthorized(ctx, []int64{child}, roomSession.ID.Int64(), activeSvcBypassAuth)
 	require.NoError(t, err)
-	assert.Equal(t, []int64{child}, first.Moved)
+	assert.Equal(t, []ident.ID{ident.ID(child)}, first.Moved)
 
-	second, err := openRoom.MoveStudentsToOpenRoomSessionAuthorized(ctx, []int64{child}, roomSession.ID, activeSvcBypassAuth)
+	second, err := openRoom.MoveStudentsToOpenRoomSessionAuthorized(ctx, []int64{child}, roomSession.ID.Int64(), activeSvcBypassAuth)
 	require.NoError(t, err)
 	assert.Empty(t, second.Moved, "a repeated move must not record a second stay")
-	assert.Equal(t, []int64{child}, second.Unchanged)
+	assert.Equal(t, []ident.ID{ident.ID(child)}, second.Unchanged)
 
 	visits, err := presence.ListVisits(ctx, studentpresence.VisitFilter{StudentIDs: []int64{child}})
 	require.NoError(t, err)
 	assert.Len(t, visits, 2, "one closed source visit and exactly one room stay")
-	assert.Equal(t, roomSession.ID, openVisitSessions(t, presence, []int64{child})[child])
+	assert.Equal(t, roomSession.ID.Int64(), openVisitSessions(t, presence, []int64{child})[child])
 }
 
 // TestEndingAnActivityLeavesIndependentRoomStays is the specification's
@@ -299,9 +300,9 @@ func TestEndingAnActivityLeavesIndependentRoomStays(t *testing.T) {
 	roomActivity := testpkg.CreateTestActivityGroup(t, db, "Raumaufenthalt Acht plus drei")
 	roomSession, err := openRoom.EnsureOpenRoomSession(ctx, gym.ID, roomActivity.ID)
 	require.NoError(t, err)
-	moved, err := openRoom.MoveStudentsToOpenRoomSessionAuthorized(ctx, independents, roomSession.ID, activeSvcBypassAuth)
+	moved, err := openRoom.MoveStudentsToOpenRoomSessionAuthorized(ctx, independents, roomSession.ID.Int64(), activeSvcBypassAuth)
 	require.NoError(t, err)
-	require.ElementsMatch(t, independents, moved.Moved)
+	require.ElementsMatch(t, independents, ident.Int64s(moved.Moved))
 
 	all := append(append([]int64{}, footballers...), independents...)
 	before := openVisitSessions(t, presence, all)
@@ -309,7 +310,7 @@ func TestEndingAnActivityLeavesIndependentRoomStays(t *testing.T) {
 		require.Equal(t, footballSession.ID, before[id])
 	}
 	for _, id := range independents {
-		require.Equal(t, roomSession.ID, before[id], "the independent stay is not participation in football")
+		require.Equal(t, roomSession.ID.Int64(), before[id], "the independent stay is not participation in football")
 	}
 
 	// Football ends: only its eight remaining children become Unterwegs.
@@ -321,7 +322,7 @@ func TestEndingAnActivityLeavesIndependentRoomStays(t *testing.T) {
 		assert.False(t, stillInRoom, "football child %d must become Unterwegs", id)
 	}
 	for _, id := range independents {
-		assert.Equal(t, roomSession.ID, afterFootball[id], "independent child %d must stay in the gym", id)
+		assert.Equal(t, roomSession.ID.Int64(), afterFootball[id], "independent child %d must stay in the gym", id)
 	}
 	assertStillAttending(t, presence, all)
 
@@ -355,9 +356,9 @@ func TestStartingAnActivityLeavesIndependentRoomStays(t *testing.T) {
 
 	roomSession, err := openRoom.EnsureOpenRoomSession(ctx, gym.ID, roomActivity.ID)
 	require.NoError(t, err)
-	moved, err := openRoom.MoveStudentsToOpenRoomSessionAuthorized(ctx, []int64{child}, roomSession.ID, activeSvcBypassAuth)
+	moved, err := openRoom.MoveStudentsToOpenRoomSessionAuthorized(ctx, []int64{child}, roomSession.ID.Int64(), activeSvcBypassAuth)
 	require.NoError(t, err)
-	require.Equal(t, []int64{child}, moved.Moved)
+	require.Equal(t, []ident.ID{ident.ID(child)}, moved.Moved)
 
 	football := testpkg.CreateTestActivityGroup(t, db, "Fußball Start danach")
 	footballDevice := testpkg.CreateTestDevice(t, db, "open-room-football-start")
@@ -365,10 +366,10 @@ func TestStartingAnActivityLeavesIndependentRoomStays(t *testing.T) {
 	require.NoError(t, err, "an independent stay must not occupy the room against a later activity")
 	require.NotEqual(t, roomSession.ID, footballSession.ID)
 
-	assert.Equal(t, roomSession.ID, openVisitSessions(t, presence, []int64{child})[child], "starting football must not absorb the independent stay")
-	_, endErr := svc.EndActivitySession(ctx, footballSession.ID)
+	assert.Equal(t, roomSession.ID.Int64(), openVisitSessions(t, presence, []int64{child})[child], "starting football must not absorb the independent stay")
+	_, endErr := svc.EndActivitySession(ctx, footballSession.ID.Int64())
 	require.NoError(t, endErr)
-	assert.Equal(t, roomSession.ID, openVisitSessions(t, presence, []int64{child})[child], "ending football must leave the independent stay")
+	assert.Equal(t, roomSession.ID.Int64(), openVisitSessions(t, presence, []int64{child})[child], "ending football must leave the independent stay")
 	assertStillAttending(t, presence, []int64{child})
 }
 
@@ -425,7 +426,7 @@ func TestOpenRoomRebookingAfterActivityEnd(t *testing.T) {
 			roomSession, err := openRoom.EnsureOpenRoomSession(ctx, gym.ID, roomActivity.ID)
 			require.NoError(t, err)
 
-			result, err := openRoom.MoveStudentsToOpenRoomSessionAuthorized(ctx, []int64{child}, roomSession.ID,
+			result, err := openRoom.MoveStudentsToOpenRoomSessionAuthorized(ctx, []int64{child}, roomSession.ID.Int64(),
 				activeSvc.StudentMoveAuthorization{StaffID: staff.ID, SchoolWideAttendanceEligible: true})
 			if !tc.allowed {
 				require.ErrorIs(t, err, activeSvc.ErrStudentMoveForbidden)
@@ -433,8 +434,8 @@ func TestOpenRoomRebookingAfterActivityEnd(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
-			assert.Equal(t, []int64{child}, result.Moved)
-			assert.Equal(t, roomSession.ID, openVisitSessions(t, presence, []int64{child})[child],
+			assert.Equal(t, []ident.ID{ident.ID(child)}, result.Moved)
+			assert.Equal(t, roomSession.ID.Int64(), openVisitSessions(t, presence, []int64{child})[child],
 				"the child stays in the gym on its own, not in the ended activity")
 			assertStillAttending(t, presence, []int64{child})
 		})

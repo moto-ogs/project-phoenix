@@ -25,6 +25,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	timetableModule "github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -61,8 +62,8 @@ func buildSplitSeriesSetup(t *testing.T, name string) *splitSeriesSetup {
 	return &splitSeriesSetup{
 		templateSetup: s,
 		router:        router,
-		oldID:         created.TemplateID,
-		newID:         split.NewTemplateID,
+		oldID:         created.TemplateID.Int64(),
+		newID:         split.NewTemplateID.Int64(),
 		effective:     effective,
 		periodID:      period.ID,
 	}
@@ -95,9 +96,9 @@ func TestGetTemplate_ResolvesCappedPredecessorToLivingSuccessor(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
 
 	resp := decodeTemplateData[templateResponse](t, w)
-	assert.Equal(t, s.newID, resp.ID, "the editor must be handed the living segment")
+	assert.Equal(t, ident.ID(s.newID), resp.ID, "the editor must be handed the living segment")
 	require.NotNil(t, resp.ResolvedFromTemplateID)
-	assert.Equal(t, s.oldID, *resp.ResolvedFromTemplateID,
+	assert.Equal(t, ident.ID(s.oldID), *resp.ResolvedFromTemplateID,
 		"the response reports which id was resolved away")
 }
 

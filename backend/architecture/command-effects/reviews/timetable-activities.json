@@ -31980,7 +31980,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/compose.RosterStudents.FindByID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -32000,7 +32000,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/compose.RosterStudents.FindByIDForUpdate",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -32021,7 +32021,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/compose.RosterStudents.FindByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -32041,7 +32041,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/compose.RosterStudents.FindByIDsForUpdate",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -32062,7 +32062,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/compose.RosterStudents.FindReadScopeByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -32805,7 +32805,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/http.People.AccountPersonID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.PersonDirectory.FindByAccountID; modules/peopledirectory/ports/person_directory_port.go:23. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.PersonDirectory.FindByAccountID; modules/peopledirectory/ports/person_directory_port.go:23. May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonDirectory.FindByAccountID",
       "target_owner": "people-directory"
@@ -32885,7 +32885,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/http.People.PersonStaffID",
-      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added.",
+      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
       "target_owner": "people-directory"
@@ -32895,7 +32895,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/http.People.PersonStaffID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.PersonDirectory.StaffRows; modules/peopledirectory/internal/application/staff_directory.go:55. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.PersonDirectory.StaffRows; modules/peopledirectory/internal/application/staff_directory.go:55. May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonDirectory.StaffRows",
       "target_owner": "people-directory"
@@ -32905,7 +32905,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/http.People.PersonStaffID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.StaffRepository.FindByPersonID; modules/peopledirectory/ports/repository_contracts.go:237. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.StaffRepository.FindByPersonID; modules/peopledirectory/ports/repository_contracts.go:237. May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StaffRepository.FindByPersonID",
       "target_owner": "people-directory"
@@ -32915,7 +32915,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/http.People.PersonStaffID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Capability.FindStaffByPerson; modules/schoolmembership.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Capability.FindStaffByPerson; modules/schoolmembership.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.FindStaffByPerson",
       "target_owner": "school-membership"
@@ -32925,7 +32925,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/http.People.PersonStaffID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.FindStaffByPerson; modules/schoolmembership.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.FindStaffByPerson; modules/schoolmembership.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.FindStaffByPerson",
       "target_owner": "school-membership"
@@ -32945,7 +32945,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/http.People.StaffNames",
-      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added.",
+      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
       "target_owner": "people-directory"
@@ -32965,7 +32965,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/http.People.StaffNames",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through api.TimetablePeople.StaffNames. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through api.TimetablePeople.StaffNames. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
       "target_owner": "people-directory"
@@ -32985,7 +32985,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/http.People.StaffNames",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Capability.ListStaff; modules/schoolmembership.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Capability.ListStaff; modules/schoolmembership.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListStaff",
       "target_owner": "school-membership"
@@ -32995,7 +32995,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/http.People.StaffNames",
-      "reason": "Read-only newly exposed target: timetable-activities reaches modules/schoolmembership.ExternalCaregiver (school-membership) through api.TimetablePeople.StaffNames. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: timetable-activities reaches modules/schoolmembership.ExternalCaregiver (school-membership) through api.TimetablePeople.StaffNames. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ExternalCaregiver",
       "target_owner": "school-membership"
@@ -33005,7 +33005,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/http.People.StaffNames",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.ListStaff; modules/schoolmembership.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.ListStaff; modules/schoolmembership.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListStaff",
       "target_owner": "school-membership"
@@ -33015,7 +33015,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/http.People.StaffPersonID",
-      "reason": "E1 #5892: SetTenantID decorates only the returned membership DTO (peopledirectory/record_metadata.go). It neither writes a row nor changes transaction scope; the narrow subject/name lookup remains read-only.",
+      "reason": "E1 #5892: SetTenantID decorates only the returned membership DTO (peopledirectory/record_metadata.go). It neither writes a row nor changes transaction scope; the narrow subject/name lookup remains read-only. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
       "target_owner": "people-directory"
@@ -33025,7 +33025,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/http.People.StaffPersonID",
-      "reason": "E1 #5892: Live subject/name/qualification lookup uses membership-only owner queries and existing person hydration. Invalid single IDs retain the original owner validation path; valid IDs retain live/tenant filters and not-found mapping. No persistent write, row/advisory lock or scope switch.",
+      "reason": "E1 #5892: Live subject/name/qualification lookup uses membership-only owner queries and existing person hydration. Invalid single IDs retain the original owner validation path; valid IDs retain live/tenant filters and not-found mapping. No persistent write, row/advisory lock or scope switch. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonDirectory.StaffRows",
       "target_owner": "people-directory"
@@ -33035,7 +33035,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/http.People.StaffPersonID",
-      "reason": "E1 #5892: Live subject/name/qualification lookup uses membership-only owner queries and existing person hydration. Invalid single IDs retain the original owner validation path; valid IDs retain live/tenant filters and not-found mapping. No persistent write, row/advisory lock or scope switch.",
+      "reason": "E1 #5892: Live subject/name/qualification lookup uses membership-only owner queries and existing person hydration. Invalid single IDs retain the original owner validation path; valid IDs retain live/tenant filters and not-found mapping. No persistent write, row/advisory lock or scope switch. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StaffRepository.FindMembershipByID",
       "target_owner": "people-directory"
@@ -33045,7 +33045,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/http.People.StaffPersonID",
-      "reason": "E1 #5892: Live subject/name/qualification lookup uses membership-only owner queries and existing person hydration. Invalid single IDs retain the original owner validation path; valid IDs retain live/tenant filters and not-found mapping. No persistent write, row/advisory lock or scope switch.",
+      "reason": "E1 #5892: Live subject/name/qualification lookup uses membership-only owner queries and existing person hydration. Invalid single IDs retain the original owner validation path; valid IDs retain live/tenant filters and not-found mapping. No persistent write, row/advisory lock or scope switch. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.FindStaff",
       "target_owner": "school-membership"
@@ -33055,7 +33055,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/http.People.StaffPersonID",
-      "reason": "E1 #5892: Live subject/name/qualification lookup uses membership-only owner queries and existing person hydration. Invalid single IDs retain the original owner validation path; valid IDs retain live/tenant filters and not-found mapping. No persistent write, row/advisory lock or scope switch.",
+      "reason": "E1 #5892: Live subject/name/qualification lookup uses membership-only owner queries and existing person hydration. Invalid single IDs retain the original owner validation path; valid IDs retain live/tenant filters and not-found mapping. No persistent write, row/advisory lock or scope switch. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListStaff",
       "target_owner": "school-membership"
@@ -33065,7 +33065,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/http.People.StaffPersonID",
-      "reason": "E1 #5892: Live subject/name/qualification lookup uses membership-only owner queries and existing person hydration. Invalid single IDs retain the original owner validation path; valid IDs retain live/tenant filters and not-found mapping. No persistent write, row/advisory lock or scope switch.",
+      "reason": "E1 #5892: Live subject/name/qualification lookup uses membership-only owner queries and existing person hydration. Invalid single IDs retain the original owner validation path; valid IDs retain live/tenant filters and not-found mapping. No persistent write, row/advisory lock or scope switch. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.FindStaff",
       "target_owner": "school-membership"
@@ -33075,7 +33075,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/http.People.StaffPersonID",
-      "reason": "E1 #5892: Live subject/name/qualification lookup uses membership-only owner queries and existing person hydration. Invalid single IDs retain the original owner validation path; valid IDs retain live/tenant filters and not-found mapping. No persistent write, row/advisory lock or scope switch.",
+      "reason": "E1 #5892: Live subject/name/qualification lookup uses membership-only owner queries and existing person hydration. Invalid single IDs retain the original owner validation path; valid IDs retain live/tenant filters and not-found mapping. No persistent write, row/advisory lock or scope switch. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListStaff",
       "target_owner": "school-membership"
@@ -33162,6 +33162,17 @@
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar.SchoolVacationOwner.TenantSchoolVacations",
       "target_owner": "school-calendar"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.StaffingAnnouncer.AnnounceStaffingChanged",
+      "classification": "platform",
+      "effect": "notice",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/http.StaffingAnnouncer.AnnounceStaffingChanged",
+      "reason": "Platform protocol participation (notice): timetable-activities reaches realtime.Broadcaster.BroadcastToTenant (delivery-platform) through modules/timetable/http.StaffingAnnouncer.AnnounceStaffingChanged. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/realtime.Broadcaster.BroadcastToTenant",
+      "target_owner": "delivery-platform"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.TimetableSupervisionSheets.SupervisionStudentSheet",
@@ -33302,7 +33313,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/http/activities.SupervisorDirectory.GetStaffWithPersonByIDs",
-      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added.",
+      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
       "target_owner": "people-directory"
@@ -33312,7 +33323,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/http/activities.SupervisorDirectory.GetStaffWithPersonByIDs",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through api.TimetableSupervisorDirectory.GetStaffWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through api.TimetableSupervisorDirectory.GetStaffWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -33332,7 +33343,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/http/activities.SupervisorDirectory.GetStaffWithPersonByIDs",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through api.TimetableSupervisorDirectory.GetStaffWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through api.TimetableSupervisorDirectory.GetStaffWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
       "target_owner": "people-directory"
@@ -33352,7 +33363,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/http/activities.SupervisorDirectory.GetStaffWithPersonByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Capability.ListStaff; modules/schoolmembership.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Capability.ListStaff; modules/schoolmembership.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListStaff",
       "target_owner": "school-membership"
@@ -33362,7 +33373,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/http/activities.SupervisorDirectory.GetStaffWithPersonByIDs",
-      "reason": "Read-only newly exposed target: timetable-activities reaches modules/schoolmembership.ExternalCaregiver (school-membership) through api.TimetableSupervisorDirectory.GetStaffWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: timetable-activities reaches modules/schoolmembership.ExternalCaregiver (school-membership) through api.TimetableSupervisorDirectory.GetStaffWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ExternalCaregiver",
       "target_owner": "school-membership"
@@ -33372,7 +33383,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/http/activities.SupervisorDirectory.GetStaffWithPersonByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.ListStaff; modules/schoolmembership.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.ListStaff; modules/schoolmembership.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListStaff",
       "target_owner": "school-membership"
@@ -33432,7 +33443,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/http/activities.SupervisorDirectory.ListStaffWithPerson",
-      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added.",
+      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
       "target_owner": "people-directory"
@@ -33452,7 +33463,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/http/activities.SupervisorDirectory.ListStaffWithPerson",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through api.TimetableSupervisorDirectory.ListStaffWithPerson. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through api.TimetableSupervisorDirectory.ListStaffWithPerson. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
       "target_owner": "people-directory"
@@ -33482,7 +33493,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/http/activities.SupervisorDirectory.ListStaffWithPerson",
-      "reason": "Read-only newly exposed target: timetable-activities reaches modules/schoolmembership.ExternalCaregiver (school-membership) through api.TimetableSupervisorDirectory.ListStaffWithPerson. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: timetable-activities reaches modules/schoolmembership.ExternalCaregiver (school-membership) through api.TimetableSupervisorDirectory.ListStaffWithPerson. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ExternalCaregiver",
       "target_owner": "school-membership"
@@ -33552,7 +33563,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.ActivityStudents.FindByID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -33572,7 +33583,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.ActivityStudents.FindByIDForUpdate",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -33593,7 +33604,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.ActivityStudents.FindByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -33613,7 +33624,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.ActivityStudents.FindByIDsForUpdate",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -33634,7 +33645,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.ActivityStudents.FindReadScopeByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -36489,7 +36500,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.ConflictStaffDirectory.FindWithPersonByIDs",
-      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added.",
+      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
       "target_owner": "people-directory"
@@ -36499,7 +36510,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.ConflictStaffDirectory.FindWithPersonByIDs",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -36509,7 +36520,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.ConflictStaffDirectory.FindWithPersonByIDs",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through roots/owners.TimetableStaff.FindWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through roots/owners.TimetableStaff.FindWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
       "target_owner": "people-directory"
@@ -36529,7 +36540,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.ConflictStaffDirectory.FindWithPersonByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Capability.ListStaff; modules/schoolmembership.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Capability.ListStaff; modules/schoolmembership.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListStaff",
       "target_owner": "school-membership"
@@ -36539,7 +36550,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.ConflictStaffDirectory.FindWithPersonByIDs",
-      "reason": "Read-only newly exposed target: timetable-activities reaches modules/schoolmembership.ExternalCaregiver (school-membership) through roots/owners.TimetableStaff.FindWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: timetable-activities reaches modules/schoolmembership.ExternalCaregiver (school-membership) through roots/owners.TimetableStaff.FindWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ExternalCaregiver",
       "target_owner": "school-membership"
@@ -36549,7 +36560,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.ConflictStaffDirectory.FindWithPersonByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.ListStaff; modules/schoolmembership.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.ListStaff; modules/schoolmembership.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListStaff",
       "target_owner": "school-membership"
@@ -36559,7 +36570,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.ConflictStaffDirectory.ListAllWithPerson",
-      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added.",
+      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
       "target_owner": "people-directory"
@@ -36569,7 +36580,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.ConflictStaffDirectory.ListAllWithPerson",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through roots/owners.TimetableStaff.ListAllWithPerson. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through roots/owners.TimetableStaff.ListAllWithPerson. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
       "target_owner": "people-directory"
@@ -36599,7 +36610,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.ConflictStaffDirectory.ListAllWithPerson",
-      "reason": "Read-only newly exposed target: timetable-activities reaches modules/schoolmembership.ExternalCaregiver (school-membership) through roots/owners.TimetableStaff.ListAllWithPerson. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: timetable-activities reaches modules/schoolmembership.ExternalCaregiver (school-membership) through roots/owners.TimetableStaff.ListAllWithPerson. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ExternalCaregiver",
       "target_owner": "school-membership"
@@ -36619,7 +36630,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.CorrectionPeople.FindByAccountID",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through api.timetableCorrectionPeople.FindByAccountID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through api.timetableCorrectionPeople.FindByAccountID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -37177,7 +37188,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.DeviationStaff.FindByID",
-      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added.",
+      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
       "target_owner": "people-directory"
@@ -37187,7 +37198,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.DeviationStaff.FindByID",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindByID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindByID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -37227,7 +37238,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.DeviationStaff.FindByIDs",
-      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added.",
+      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
       "target_owner": "people-directory"
@@ -37237,7 +37248,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.DeviationStaff.FindByIDs",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -37257,7 +37268,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.DeviationStaff.FindByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Capability.ListStaff; modules/schoolmembership.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Capability.ListStaff; modules/schoolmembership.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListStaff",
       "target_owner": "school-membership"
@@ -37267,7 +37278,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.DeviationStaff.FindByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.ListStaff; modules/schoolmembership.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.ListStaff; modules/schoolmembership.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListStaff",
       "target_owner": "school-membership"
@@ -37277,7 +37288,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.DeviationStaff.FindWithPersonByIDs",
-      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added.",
+      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
       "target_owner": "people-directory"
@@ -37287,7 +37298,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.DeviationStaff.FindWithPersonByIDs",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -37297,7 +37308,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.DeviationStaff.FindWithPersonByIDs",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through roots/owners.TimetableStaff.FindWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through roots/owners.TimetableStaff.FindWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
       "target_owner": "people-directory"
@@ -37317,7 +37328,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.DeviationStaff.FindWithPersonByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Capability.ListStaff; modules/schoolmembership.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Capability.ListStaff; modules/schoolmembership.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListStaff",
       "target_owner": "school-membership"
@@ -37327,7 +37338,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.DeviationStaff.FindWithPersonByIDs",
-      "reason": "Read-only newly exposed target: timetable-activities reaches modules/schoolmembership.ExternalCaregiver (school-membership) through roots/owners.TimetableStaff.FindWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: timetable-activities reaches modules/schoolmembership.ExternalCaregiver (school-membership) through roots/owners.TimetableStaff.FindWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ExternalCaregiver",
       "target_owner": "school-membership"
@@ -37337,7 +37348,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.DeviationStaff.FindWithPersonByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.ListStaff; modules/schoolmembership.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.ListStaff; modules/schoolmembership.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListStaff",
       "target_owner": "school-membership"
@@ -37347,7 +37358,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.DeviationStaff.ListAllWithPerson",
-      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added.",
+      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
       "target_owner": "people-directory"
@@ -37357,7 +37368,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.DeviationStaff.ListAllWithPerson",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through roots/owners.TimetableStaff.ListAllWithPerson. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through roots/owners.TimetableStaff.ListAllWithPerson. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
       "target_owner": "people-directory"
@@ -37387,7 +37398,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.DeviationStaff.ListAllWithPerson",
-      "reason": "Read-only newly exposed target: timetable-activities reaches modules/schoolmembership.ExternalCaregiver (school-membership) through roots/owners.TimetableStaff.ListAllWithPerson. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: timetable-activities reaches modules/schoolmembership.ExternalCaregiver (school-membership) through roots/owners.TimetableStaff.ListAllWithPerson. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ExternalCaregiver",
       "target_owner": "school-membership"
@@ -37743,7 +37754,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.GroupTeacherStaff.GroupTeacherStaffIDs",
-      "reason": "Read-only target: timetable-activities reaches modules/schoolmembership.Capability.ListGroupAssignments (school-membership) through roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs (#7136). No persistent, lock or scope effect.",
+      "reason": "Read-only target: timetable-activities reaches modules/schoolmembership.Capability.ListGroupAssignments (school-membership) through roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs (#7136), with the teachers' staff records joined in the same read (#7675). No persistent, lock or scope effect.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListGroupAssignments",
       "target_owner": "school-membership"
@@ -37753,17 +37764,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.GroupTeacherStaff.GroupTeacherStaffIDs",
-      "reason": "Read-only target: timetable-activities reaches modules/schoolmembership.Capability.ListTeachers (school-membership) through roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs (#7136). No persistent, lock or scope effect.",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListTeachers",
-      "target_owner": "school-membership"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.GroupTeacherStaff.GroupTeacherStaffIDs",
-      "reason": "Read-only target: timetable-activities reaches modules/schoolmembership.Owner.ListGroupAssignments (school-membership) through roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs (#7136). No persistent, lock or scope effect.",
+      "reason": "Read-only target: timetable-activities reaches modules/schoolmembership.Owner.ListGroupAssignments (school-membership) through roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs (#7136), with the teachers' staff records joined in the same read (#7675). No persistent, lock or scope effect.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListGroupAssignments",
       "target_owner": "school-membership"
@@ -37773,29 +37774,9 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.GroupTeacherStaff.GroupTeacherStaffIDs",
-      "reason": "Read-only target: timetable-activities reaches modules/schoolmembership.Owner.ListTeachers (school-membership) through roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs (#7136). No persistent, lock or scope effect.",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListTeachers",
-      "target_owner": "school-membership"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.GroupTeacherStaff.GroupTeacherStaffIDs",
-      "reason": "Read-only target: timetable-activities reaches modules/schoolmembership.Query.ListGroupAssignments (school-membership) through roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs (#7136). No persistent, lock or scope effect.",
+      "reason": "Read-only target: timetable-activities reaches modules/schoolmembership.Query.ListGroupAssignments (school-membership) through roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs (#7136), with the teachers' staff records joined in the same read (#7675). No persistent, lock or scope effect.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Query.ListGroupAssignments",
-      "target_owner": "school-membership"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.GroupTeacherStaff.GroupTeacherStaffIDs",
-      "reason": "Read-only target: timetable-activities reaches modules/schoolmembership.Query.ListTeachers (school-membership) through roots/owners.timetableGroupTeachers.GroupTeacherStaffIDs (#7136). No persistent, lock or scope effect.",
-      "source_owner": "timetable-activities",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Query.ListTeachers",
       "target_owner": "school-membership"
     },
     {
@@ -38909,7 +38890,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.LifecycleStaff.FindByID",
-      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added.",
+      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
       "target_owner": "people-directory"
@@ -38919,7 +38900,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.LifecycleStaff.FindByID",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindByID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindByID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -38959,7 +38940,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.LifecycleStaff.FindByIDs",
-      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added.",
+      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
       "target_owner": "people-directory"
@@ -38969,7 +38950,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.LifecycleStaff.FindByIDs",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -38989,7 +38970,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.LifecycleStaff.FindByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Capability.ListStaff; modules/schoolmembership.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Capability.ListStaff; modules/schoolmembership.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListStaff",
       "target_owner": "school-membership"
@@ -38999,7 +38980,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.LifecycleStaff.FindByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.ListStaff; modules/schoolmembership.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.ListStaff; modules/schoolmembership.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListStaff",
       "target_owner": "school-membership"
@@ -39009,7 +38990,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.LifecycleStaff.FindWithPerson",
-      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added.",
+      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
       "target_owner": "people-directory"
@@ -39019,7 +39000,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.LifecycleStaff.FindWithPerson",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindWithPerson. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindWithPerson. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -39079,7 +39060,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.LifecycleStaff.FindWithPersonByIDs",
-      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added.",
+      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
       "target_owner": "people-directory"
@@ -39089,7 +39070,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.LifecycleStaff.FindWithPersonByIDs",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableStaff.FindWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -39099,7 +39080,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.LifecycleStaff.FindWithPersonByIDs",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through roots/owners.TimetableStaff.FindWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through roots/owners.TimetableStaff.FindWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
       "target_owner": "people-directory"
@@ -39119,7 +39100,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.LifecycleStaff.FindWithPersonByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Capability.ListStaff; modules/schoolmembership.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Capability.ListStaff; modules/schoolmembership.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListStaff",
       "target_owner": "school-membership"
@@ -39129,7 +39110,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.LifecycleStaff.FindWithPersonByIDs",
-      "reason": "Read-only newly exposed target: timetable-activities reaches modules/schoolmembership.ExternalCaregiver (school-membership) through roots/owners.TimetableStaff.FindWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: timetable-activities reaches modules/schoolmembership.ExternalCaregiver (school-membership) through roots/owners.TimetableStaff.FindWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ExternalCaregiver",
       "target_owner": "school-membership"
@@ -39139,7 +39120,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.LifecycleStaff.FindWithPersonByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.ListStaff; modules/schoolmembership.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.ListStaff; modules/schoolmembership.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListStaff",
       "target_owner": "school-membership"
@@ -39149,7 +39130,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.LifecycleStudents.FindByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -39169,7 +39150,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.LifecycleStudents.FindByIDsForUpdate",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -39190,7 +39171,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.LifecycleStudents.FindReadScopeByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -39473,7 +39454,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationPeople.FindByAccountID",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableOperationPeople.FindByAccountID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableOperationPeople.FindByAccountID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -39493,7 +39474,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationPeople.FindByAccountID",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.timetableOperationPeople.FindByAccountID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.timetableOperationPeople.FindByAccountID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -39513,7 +39494,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationPeople.GetByIDs",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableOperationPeople.GetByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableOperationPeople.GetByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -39533,7 +39514,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationPeople.GetByIDs",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.timetableOperationPeople.GetByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.timetableOperationPeople.GetByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -39583,7 +39564,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationPeople.GetStaffByPersonID",
-      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added.",
+      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
       "target_owner": "people-directory"
@@ -39593,7 +39574,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationPeople.GetStaffByPersonID",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.timetableOperationPeople.GetStaffByPersonID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.timetableOperationPeople.GetStaffByPersonID. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -39643,7 +39624,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationPeople.GetStaffWithPersonByIDs",
-      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added.",
+      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
       "target_owner": "people-directory"
@@ -39653,7 +39634,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationPeople.GetStaffWithPersonByIDs",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableOperationPeople.GetStaffWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.TimetableOperationPeople.GetStaffWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -39673,7 +39654,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationPeople.GetStaffWithPersonByIDs",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through roots/owners.TimetableOperationPeople.GetStaffWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through roots/owners.TimetableOperationPeople.GetStaffWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
       "target_owner": "people-directory"
@@ -39693,7 +39674,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationPeople.GetStaffWithPersonByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Capability.ListStaff; modules/schoolmembership.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Capability.ListStaff; modules/schoolmembership.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListStaff",
       "target_owner": "school-membership"
@@ -39703,7 +39684,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationPeople.GetStaffWithPersonByIDs",
-      "reason": "Read-only newly exposed target: timetable-activities reaches modules/schoolmembership.ExternalCaregiver (school-membership) through roots/owners.TimetableOperationPeople.GetStaffWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: timetable-activities reaches modules/schoolmembership.ExternalCaregiver (school-membership) through roots/owners.TimetableOperationPeople.GetStaffWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ExternalCaregiver",
       "target_owner": "school-membership"
@@ -39713,7 +39694,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationPeople.GetStaffWithPersonByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.ListStaff; modules/schoolmembership.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.ListStaff; modules/schoolmembership.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListStaff",
       "target_owner": "school-membership"
@@ -39723,7 +39704,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationPeople.GetStaffWithPersonByIDs",
-      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added.",
+      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
       "target_owner": "people-directory"
@@ -39733,7 +39714,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationPeople.GetStaffWithPersonByIDs",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.timetableOperationPeople.GetStaffWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory.StudentState.IsAlumnus (people-directory) through roots/owners.timetableOperationPeople.GetStaffWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -39753,7 +39734,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationPeople.GetStaffWithPersonByIDs",
-      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through roots/owners.timetableOperationPeople.GetStaffWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: timetable-activities reaches modules/peopledirectory/ports.PersonRepository.FindByIDs (people-directory) through roots/owners.timetableOperationPeople.GetStaffWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
       "target_owner": "people-directory"
@@ -39773,7 +39754,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationPeople.GetStaffWithPersonByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Capability.ListStaff; modules/schoolmembership.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Capability.ListStaff; modules/schoolmembership.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListStaff",
       "target_owner": "school-membership"
@@ -39783,7 +39764,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationPeople.GetStaffWithPersonByIDs",
-      "reason": "Read-only newly exposed target: timetable-activities reaches modules/schoolmembership.ExternalCaregiver (school-membership) through roots/owners.timetableOperationPeople.GetStaffWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only newly exposed target: timetable-activities reaches modules/schoolmembership.ExternalCaregiver (school-membership) through roots/owners.timetableOperationPeople.GetStaffWithPersonByIDs. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ExternalCaregiver",
       "target_owner": "school-membership"
@@ -39793,7 +39774,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationPeople.GetStaffWithPersonByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.ListStaff; modules/schoolmembership.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.ListStaff; modules/schoolmembership.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListStaff",
       "target_owner": "school-membership"
@@ -39926,7 +39907,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.OperationStudents.FindByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.IsAlumnus; modules/peopledirectory/student_state.go:73. May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. Also carries the mark of a child without an OGS place, which AG and care offering enrollment writes refuse (ADR 0282). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.IsAlumnus",
       "target_owner": "people-directory"
@@ -40847,7 +40828,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.SickReportReader.OpenSickReports",
-      "reason": "Pure value helper: the absence binding takes the statuses with plan effect (reported, approved) from modules/workforce.PlanEffectiveAbsenceStatuses (modules/workforce/shiftplansync.go), a constant list shared with the shift-series materializer (#6847). No database access, mutation or lock.",
+      "reason": "Pure value helper: the absence binding takes the statuses with plan effect (reported, approved) from modules/workforce.PlanEffectiveAbsenceStatuses (modules/workforce/shiftplansync.go), a constant list shared with the shift-series materializer (#6847). No database access, mutation or lock. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/workforce.PlanEffectiveAbsenceStatuses",
       "target_owner": "workforce"
@@ -40857,7 +40838,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.SickReportReader.OpenSickReports",
-      "reason": "Pure value helper: modules/workforce.StaffAbsence.HalfBoundaryDays (modules/workforce/absence.go) derives the half boundary days from the row's own fields (#6847). No database access, mutation or lock.",
+      "reason": "Pure value helper: modules/workforce.StaffAbsence.HalfBoundaryDays (modules/workforce/absence.go) derives the half boundary days from the row's own fields (#6847). No database access, mutation or lock. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffAbsence.HalfBoundaryDays",
       "target_owner": "workforce"
@@ -40867,7 +40848,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.SickReportReader.OpenSickReports",
-      "reason": "Reviewed read: the materializer lists the absences in force of its window through modules/workforce/compose.WorkTime.ListStaffAbsences (modules/workforce/internal/application/absence.go:34), a plain filtered select in the caller's tenant transaction. No owned-row mutation or locking read (#6292). Since #6847 every type with plan effect counts, filtered by modules/workforce.PlanEffectiveAbsenceStatuses; the read is unchanged.",
+      "reason": "Reviewed read: the materializer lists the absences in force of its window through modules/workforce/compose.WorkTime.ListStaffAbsences (modules/workforce/internal/application/absence.go:34), a plain filtered select in the caller's tenant transaction. No owned-row mutation or locking read (#6292). Since #6847 every type with plan effect counts, filtered by modules/workforce.PlanEffectiveAbsenceStatuses; the read is unchanged. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/workforce/compose.WorkTime.ListStaffAbsences",
       "target_owner": "workforce"

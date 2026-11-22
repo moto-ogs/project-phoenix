@@ -11,6 +11,7 @@ import (
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	feedbackModule "github.com/moto-ogs/project-phoenix/modules/feedback"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type Middleware = func(http.Handler) http.Handler
@@ -59,11 +60,11 @@ func (rs *Resource) Router() chi.Router {
 }
 
 type FeedbackResponse struct {
-	ID              int64                    `json:"id"`
+	ID              ident.ID                 `json:"id"`
 	Value           string                   `json:"value"`
 	Day             string                   `json:"day"`
 	Time            string                   `json:"time"`
-	StudentID       int64                    `json:"student_id"`
+	StudentID       ident.ID                 `json:"student_id"`
 	IsMensaFeedback bool                     `json:"is_mensa_feedback"`
 	CreatedAt       time.Time                `json:"created_at"`
 	UpdatedAt       time.Time                `json:"updated_at"`
@@ -71,9 +72,9 @@ type FeedbackResponse struct {
 }
 
 type FeedbackStudentResponse struct {
-	ID        int64  `json:"id"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
+	ID        ident.ID `json:"id"`
+	FirstName string   `json:"first_name"`
+	LastName  string   `json:"last_name"`
 }
 
 type FeedbackRequest struct {
@@ -153,11 +154,11 @@ func (rs *Resource) parseID(r *http.Request) (int64, error) {
 
 func newFeedbackResponse(entry feedbackModule.Entry) FeedbackResponse {
 	response := FeedbackResponse{
-		ID: entry.ID, Value: entry.Value, Day: string(entry.Day), Time: entry.Time, StudentID: entry.StudentID,
+		ID: ident.ID(entry.ID), Value: entry.Value, Day: string(entry.Day), Time: entry.Time, StudentID: ident.ID(entry.StudentID),
 		IsMensaFeedback: entry.IsMensaFeedback, CreatedAt: entry.CreatedAt, UpdatedAt: entry.UpdatedAt,
 	}
 	if entry.Student != nil {
-		response.Student = &FeedbackStudentResponse{ID: entry.Student.ID, FirstName: entry.Student.FirstName, LastName: entry.Student.LastName}
+		response.Student = &FeedbackStudentResponse{ID: ident.ID(entry.Student.ID), FirstName: entry.Student.FirstName, LastName: entry.Student.LastName}
 	}
 	return response
 }

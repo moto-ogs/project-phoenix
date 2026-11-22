@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The time export of the Träger (#4712, ADR 0089 section 11): a fixed CSV
@@ -74,20 +75,20 @@ func (t *TraegerStaff) timeRows(ctx context.Context, actor workforce.TraegerStaf
 	kept := map[siteKey]bool{}
 	var rows []timeRow
 	for _, school := range scene.schools {
-		answer, err := t.schoolTimeDays(ctx, actor, view, staff, school.ID, first, last)
+		answer, err := t.schoolTimeDays(ctx, actor, view, staff, school.ID.Int64(), first, last)
 		if err != nil {
 			return workforce.TraegerTimeReport{}, nil, err
 		}
 		inFile := false
 		for _, staffID := range answer.Kept {
-			kept[siteKey{school.ID, staffID}] = true
-			inFile = inFile || slices.Contains(staff.bySchool[school.ID], staffID)
+			kept[siteKey{school.ID.Int64(), staffID}] = true
+			inFile = inFile || slices.Contains(staff.bySchool[school.ID.Int64()], staffID)
 		}
 		if inFile {
 			report.Schools++
 		}
 		for _, day := range answer.Days {
-			rows = append(rows, timeRow{record: staff.owners[siteKey{school.ID, day.StaffID}], school: school.Name, day: day})
+			rows = append(rows, timeRow{record: staff.owners[siteKey{school.ID.Int64(), day.StaffID}], school: school.Name, day: day})
 		}
 	}
 	staff.countPeople(kept, &report)
@@ -161,7 +162,7 @@ func (s timeStaff) countPeople(kept map[siteKey]bool, report *workforce.TraegerT
 			continue
 		}
 		if record.PersonnelNumber == nil || *record.PersonnelNumber == "" {
-			report.WithoutNumber = append(report.WithoutNumber, workforce.TraegerExportPerson{RecordID: record.ID, FirstName: record.FirstName, LastName: record.LastName})
+			report.WithoutNumber = append(report.WithoutNumber, workforce.TraegerExportPerson{RecordID: ident.ID(record.ID), FirstName: record.FirstName, LastName: record.LastName})
 			continue
 		}
 		report.People++

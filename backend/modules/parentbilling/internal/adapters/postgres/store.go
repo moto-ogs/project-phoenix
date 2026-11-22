@@ -16,6 +16,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -78,10 +79,10 @@ type ruleRow struct {
 
 func (r ruleRow) rule() parentbilling.ContributionRule {
 	return parentbilling.ContributionRule{
-		ID: r.ID, Service: r.Service, Kind: r.Kind, ValidFrom: r.ValidFrom, ValidUntil: r.ValidUntil,
+		ID: ident.ID(r.ID), Service: r.Service, Kind: r.Kind, ValidFrom: r.ValidFrom, ValidUntil: r.ValidUntil,
 		SiblingFromChild: r.SiblingFromChild, DiscountBasisPoints: r.DiscountBasisPoints, DiscountCents: r.DiscountCents,
-		Note: r.Note, Name: r.Name, SchoolIDs: idsOrEmpty(r.SchoolIDs), CareOfferingIDs: idsOrEmpty(r.CareOfferingIDs),
-		CountSchoolIDs: idsOrEmpty(r.CountSchoolIDs), PriceCents: r.PriceCents, CapCents: r.CapCents, UpdatedAt: r.UpdatedAt,
+		Note: r.Note, Name: r.Name, SchoolIDs: ident.IDs(idsOrEmpty(r.SchoolIDs)), CareOfferingIDs: ident.IDs(idsOrEmpty(r.CareOfferingIDs)),
+		CountSchoolIDs: ident.IDs(idsOrEmpty(r.CountSchoolIDs)), PriceCents: r.PriceCents, CapCents: r.CapCents, UpdatedAt: r.UpdatedAt,
 		CountsFamilyChildren: r.CountsFamilyChildren,
 		TariffSiblingPrice:   r.TariffSiblingPrice,
 	}

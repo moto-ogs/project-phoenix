@@ -10,15 +10,16 @@ import (
 	"strings"
 )
 
-// ID is an int64 identifier that travels as a JSON string. A JSON number
-// beyond 2^53 is rounded by JavaScript to the identifier of a different row,
-// so Go writes the decimal string. It reads a decimal string or a JSON
-// number, so a client that still sends numbers keeps working.
+// ID is an int64 identifier that travels to a client as a JSON string. A JSON
+// number beyond 2^53 is rounded by JavaScript to the identifier of a
+// different row. It reads a decimal string or a JSON number, so a client that
+// still sends numbers keeps working.
 //
-// It writes itself through MarshalText, not MarshalJSON: bun writes a value
-// whose pointer is a json.Marshaler as JSON text, and the shared kernel may
-// not import database/sql/driver for a Value method. In the database an ID
-// therefore stays a plain bigint.
+// encoding/json writes an ID as a JSON number, as it writes an int64: stored
+// JSON (audit details, outbox payloads, snapshots, fingerprints) keeps the
+// form that database functions compare with numbers (ADR 0300, addendum).
+// Only an answer to a client writes the string: package wire. In the database
+// an ID is a plain bigint.
 type ID int64
 
 // Int64 returns the identifier as the int64 the rest of the code works with.
@@ -26,12 +27,6 @@ func (id ID) Int64() int64 { return int64(id) }
 
 // String renders the identifier in decimal.
 func (id ID) String() string { return strconv.FormatInt(int64(id), 10) }
-
-// MarshalText renders the identifier in decimal; encoding/json writes it as a
-// JSON string.
-func (id ID) MarshalText() ([]byte, error) {
-	return strconv.AppendInt(nil, int64(id), 10), nil
-}
 
 // UnmarshalJSON accepts a decimal string or a JSON number. A string is parsed
 // with strconv, so digits beyond float64 precision survive, and anything that
@@ -64,4 +59,37 @@ func (id *ID) UnmarshalJSON(data []byte) error {
 	}
 	*id = ID(parsed)
 	return nil
+}
+
+// IDs converts int64 identifiers to IDs.
+func IDs(values []int64) []ID {
+	if values == nil {
+		return nil
+	}
+	out := make([]ID, len(values))
+	for i, v := range values {
+		out[i] = ID(v)
+	}
+	return out
+}
+
+// Int64s converts IDs back to int64 identifiers.
+func Int64s(ids []ID) []int64 {
+	if ids == nil {
+		return nil
+	}
+	out := make([]int64, len(ids))
+	for i, id := range ids {
+		out[i] = int64(id)
+	}
+	return out
+}
+
+// OptionalInt64s converts an optional list of IDs back to int64 identifiers.
+func OptionalInt64s(ids *[]ID) *[]int64 {
+	if ids == nil {
+		return nil
+	}
+	values := Int64s(*ids)
+	return &values
 }

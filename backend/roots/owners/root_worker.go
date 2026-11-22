@@ -447,7 +447,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 			return
 		},
 		func() (err error) {
-			shifts, err = BuildShiftPlanning(db, env, hub, workTime, people, calendar, audit, timetableRows, rooms, activities, settings.Service)
+			shifts, err = BuildShiftPlanning(db, env, hub, workTime, membership, people, calendar, audit, timetableRows, rooms, activities, settings.Service)
 			return
 		},
 		func() (err error) {

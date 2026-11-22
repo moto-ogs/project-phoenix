@@ -1,11 +1,11 @@
+import type { studentDeleteImpactResponse } from "~/lib/contract/students.generated";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 
 import { installStorybookFetch, jsonResponse } from "~storybook/mocks/fetch";
-import type { StudentDeletionImpact } from "~/lib/student-api";
 
 import { StudentDeletionModal } from "./student-deletion-modal";
 
-const impact: StudentDeletionImpact = {
+const impact: studentDeleteImpactResponse = {
   confirmation_name: "Mia Musterkind",
   fingerprint: "storybook-student-deletion-fingerprint",
   total: 28,

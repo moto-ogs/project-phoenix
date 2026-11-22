@@ -37,23 +37,39 @@ func NewDayChangesTestResource(db transactionruntime.Database, unit tenant.UnitO
 	if err != nil {
 		return nil, err
 	}
+	// The Kinder reads take the day as a filter; Care Plan's clock stamps
+	// writes only. A shared clock adds no closure to its effect bindings.
+	carePlan, err := NewClockedCarePlanForTests(db, time.Now)
+	if err != nil {
+		return nil, err
+	}
 	// The operational day of the active graph; its read takes the day.
 	day, _ := NewActiveTestTimetable(db, unit)
 	blocks, err := timetable.BlockDayChangesOf(day.TimetableOperations)
 	if err != nil {
 		return nil, err
 	}
+	blockStaff, err := timetable.BlockStaffChangesOf(day.TimetableOperations)
+	if err != nil {
+		return nil, err
+	}
+	classArrivals, err := owners.BuildClassArrivals(db, slog.Default())
+	if err != nil {
+		return nil, err
+	}
 	view, err := NewDayChanges(DayChangesSources{
-		Caller: caller, Workforce: owners.MustNewWorkforce(db), Teachers: membership,
-		Blocks: blocks,
-		Names:  newDayChangesStaffNames(people), Groups: owners.NewSchoolStructureSuiteRepositories(db).Group,
+		Assignments: membership, ClassArrivals: classArrivals,
+		Caller: caller, Workforce: owners.MustNewWorkforce(db), Teachers: owners.NewGroupTeacherStaff(membership),
+		CarePlan: carePlan, Students: owners.MustNewPeopleDirectory(db), Blocks: blocks, BlockStaff: blockStaff,
+		Names: newDayChangesStaffNames(people), Groups: owners.NewSchoolStructureSuiteRepositories(db).Group,
 		// Without calendar periods every notice applies in every week; the
 		// weekdays and the validity still decide.
 		Notices: timetableCompose.NewStaffNotices(timetableCompose.StaffNoticeDependencies{
 			DB: db.Pool(), Now: func() time.Time { return today.BerlinMidnight().Add(12 * time.Hour) },
 		}),
-		MealPlan: mealplanCompose.NewMenuChanges(),
-		Today:    func() calendar.Date { return today }, Logger: slog.Default(),
+		ClosingDays: owners.NewSchoolClosingDayReads(),
+		MealPlan:    mealplanCompose.NewMenuChanges(),
+		Today:       func() calendar.Date { return today }, Logger: slog.Default(),
 	})
 	if err != nil {
 		return nil, err
@@ -98,4 +114,28 @@ func NewDayChangesNoticeTestRouter(db transactionruntime.Database, tenantID int6
 			}
 		}
 	}
+}
+
+// DayChangesClassDismissal writes a class-wide arrival exception of one
+// day ("15:04") through Timetable, the fixture of the class source of
+// "Heute anders" (#7681).
+type DayChangesClassDismissal func(ctx context.Context, class string, day calendar.Date, hhmm, reason string) error
+
+// NewDayChangesClassDismissalForTests binds the fixture to Timetable's class
+// arrivals over db.
+func NewDayChangesClassDismissalForTests(db transactionruntime.Database) (DayChangesClassDismissal, error) {
+	arrivals, err := owners.BuildClassArrivals(db, slog.Default())
+	if err != nil {
+		return nil, err
+	}
+	return func(ctx context.Context, class string, day calendar.Date, hhmm, reason string) error {
+		at, err := time.Parse("15:04", hhmm)
+		if err != nil {
+			return err
+		}
+		_, err = arrivals.UpsertClassArrivalException(ctx, timetable.ClassArrivalExceptionInput{
+			SchoolClass: class, Date: day.String(), ArrivalTime: at, Reason: &reason,
+		})
+		return err
+	}, nil
 }

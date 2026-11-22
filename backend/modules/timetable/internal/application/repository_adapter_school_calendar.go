@@ -11,6 +11,7 @@ import (
 	scheduleModels "github.com/moto-ogs/project-phoenix/modules/timetable/internal/domain/schedulerecords"
 	"github.com/moto-ogs/project-phoenix/modules/timetable/ports"
 	"github.com/moto-ogs/project-phoenix/modules/transactionruntime"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The retained calendar period, closing day and dateframe repositories serve
@@ -280,6 +281,9 @@ func calendarWrapError(op string, err error) error {
 }
 
 func membershipID(id any) (int64, error) {
+	if typed, ok := id.(ident.ID); ok {
+		id = typed.Int64()
+	}
 	switch value := id.(type) {
 	case int64:
 		return value, nil

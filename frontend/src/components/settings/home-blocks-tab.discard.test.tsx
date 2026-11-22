@@ -72,7 +72,7 @@ function Wrapper({ children }: { children: ReactNode }) {
         shouldRetryOnError: false,
       }}
     >
-      <SWRScopeBoundary expectedTenantId={1} />
+      <SWRScopeBoundary expectedTenantId="1" />
       <ToastProvider>{children}</ToastProvider>
     </SWRConfig>
   );

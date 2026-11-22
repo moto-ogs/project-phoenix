@@ -16,7 +16,7 @@ func (d *TraegerDocuments) enqueueReleaseNotice(ctx context.Context, organizatio
 		return nil
 	}
 	err := d.ports.Notices.EnqueueReleaseNotice(ctx, organizationtenancy.TraegerDocumentReleaseNotice{
-		OrganizationID: organizationID, ReleaseID: release.ID, DocumentID: documentID,
+		OrganizationID: organizationID, ReleaseID: release.ID.Int64(), DocumentID: documentID,
 	})
 	if err != nil {
 		return fmt.Errorf("organization tenancy: enqueue release push: %w", err)

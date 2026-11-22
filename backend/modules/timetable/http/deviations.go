@@ -29,43 +29,44 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // deviationAbsence marks one staff member absent. An omitted instance_ids keeps
 // the established day-wide contract; a present list targets exact appointments.
 type deviationAbsence struct {
-	StaffID     int64    `json:"staff_id"`
-	Reason      *string  `json:"reason,omitempty"`
-	InstanceIDs *[]int64 `json:"instance_ids,omitempty"`
+	StaffID     common.ID    `json:"staff_id"`
+	Reason      *string      `json:"reason,omitempty"`
+	InstanceIDs *[]common.ID `json:"instance_ids,omitempty"`
 }
 
 // deviationSubstitution assigns substituteStaffID to cover absentStaffID. An
 // omitted instance_ids keeps the established day-wide contract; a present list
 // targets exactly those same-day appointments.
 type deviationSubstitution struct {
-	AbsentStaffID     int64    `json:"absent_staff_id"`
-	SubstituteStaffID int64    `json:"substitute_staff_id"`
-	Reason            *string  `json:"reason,omitempty"`
-	InstanceIDs       *[]int64 `json:"instance_ids,omitempty"`
+	AbsentStaffID     common.ID    `json:"absent_staff_id"`
+	SubstituteStaffID common.ID    `json:"substitute_staff_id"`
+	Reason            *string      `json:"reason,omitempty"`
+	InstanceIDs       *[]common.ID `json:"instance_ids,omitempty"`
 }
 
 // DeviationPresence clears an absence in an optional appointment scope. Its
 // decoder accepts the former numeric staff id so an already-open frontend from
 // before this change keeps its established day-wide correction behavior.
 type DeviationPresence struct {
-	StaffID     int64    `json:"staff_id"`
-	InstanceIDs *[]int64 `json:"instance_ids,omitempty"`
+	StaffID     common.ID    `json:"staff_id"`
+	InstanceIDs *[]common.ID `json:"instance_ids,omitempty"`
 }
 
 type deviationSubstitutionRemoval struct {
-	StaffID     int64    `json:"staff_id"`
-	InstanceIDs *[]int64 `json:"instance_ids,omitempty"`
+	StaffID     common.ID    `json:"staff_id"`
+	InstanceIDs *[]common.ID `json:"instance_ids,omitempty"`
 }
 
 func (p *DeviationPresence) UnmarshalJSON(data []byte) error {
 	var legacyStaffID int64
 	if err := json.Unmarshal(data, &legacyStaffID); err == nil {
-		p.StaffID = legacyStaffID
+		p.StaffID = ident.ID(legacyStaffID)
 		p.InstanceIDs = nil
 		return nil
 	}
@@ -100,7 +101,7 @@ type applyDeviationsRequest struct {
 
 // ApplyDeviationsResponse is the 200 body.
 type ApplyDeviationsResponse struct {
-	InstanceID        int64                              `json:"instance_id"`
+	InstanceID        common.ID                          `json:"instance_id"`
 	Cancelled         bool                               `json:"cancelled"`
 	UnderstaffedAck   bool                               `json:"understaffed_ack"`
 	AffectedInstances []AffectedInstance                 `json:"affected_instances"`
@@ -114,28 +115,28 @@ func (req applyDeviationsRequest) toServiceInput(actor *int64) timetable.ApplyDe
 	absences := make([]timetable.DeviationAbsenceInput, 0, len(req.Absences))
 	for _, a := range req.Absences {
 		absences = append(absences, timetable.DeviationAbsenceInput{
-			StaffID: a.StaffID, Reason: a.Reason, InstanceIDs: a.InstanceIDs,
+			StaffID: a.StaffID.Int64(), Reason: a.Reason, InstanceIDs: ident.OptionalInt64s(a.InstanceIDs),
 		})
 	}
 	subs := make([]timetable.DeviationSubstitutionInput, 0, len(req.Substitutions))
 	for _, s := range req.Substitutions {
 		subs = append(subs, timetable.DeviationSubstitutionInput{
-			AbsentStaffID:     s.AbsentStaffID,
-			SubstituteStaffID: s.SubstituteStaffID,
+			AbsentStaffID:     s.AbsentStaffID.Int64(),
+			SubstituteStaffID: s.SubstituteStaffID.Int64(),
 			Reason:            s.Reason,
-			InstanceIDs:       s.InstanceIDs,
+			InstanceIDs:       ident.OptionalInt64s(s.InstanceIDs),
 		})
 	}
 	presences := make([]timetable.DeviationPresenceInput, 0, len(req.Presences))
 	for _, p := range req.Presences {
 		presences = append(presences, timetable.DeviationPresenceInput{
-			StaffID: p.StaffID, InstanceIDs: p.InstanceIDs,
+			StaffID: p.StaffID.Int64(), InstanceIDs: ident.OptionalInt64s(p.InstanceIDs),
 		})
 	}
 	removals := make([]timetable.DeviationSubstitutionRemovalInput, 0, len(req.SubstitutionRemovals))
 	for _, removal := range req.SubstitutionRemovals {
 		removals = append(removals, timetable.DeviationSubstitutionRemovalInput{
-			StaffID: removal.StaffID, InstanceIDs: removal.InstanceIDs,
+			StaffID: removal.StaffID.Int64(), InstanceIDs: ident.OptionalInt64s(removal.InstanceIDs),
 		})
 	}
 	return timetable.ApplyDeviationsInput{
@@ -202,7 +203,7 @@ func deviationResponseOf(id int64, result *timetable.ApplyDeviationsResult) Appl
 	affected := make([]AffectedInstance, 0, len(result.Affected))
 	for _, a := range result.Affected {
 		affected = append(affected, AffectedInstance{
-			InstanceID: a.InstanceID,
+			InstanceID: ident.ID(a.InstanceID),
 			Title:      a.Title,
 			StartTime:  a.StartTime.Format("15:04"),
 			Action:     a.Action,
@@ -213,7 +214,7 @@ func deviationResponseOf(id int64, result *timetable.ApplyDeviationsResult) Appl
 		warnings = []timetable.SubstituteTimeConflict{}
 	}
 	return ApplyDeviationsResponse{
-		InstanceID:        id,
+		InstanceID:        ident.ID(id),
 		Cancelled:         result.Cancelled,
 		UnderstaffedAck:   result.UnderstaffedAck,
 		AffectedInstances: affected,

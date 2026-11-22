@@ -13709,6 +13709,138 @@
     },
     {
       "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.roomHistoryStopAudit.RecordRoomHistoryStop",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.RoomHistoryStopAudit.RecordRoomHistoryStop",
+      "reason": "Platform protocol participation (mutation): student-presence reaches modules/auditlog/records.DataDeletionRepository.Create (audit-platform) through roots/owners.roomHistoryStopAudit.RecordRoomHistoryStop. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DataDeletionRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.roomHistoryStopAudit.RecordRoomHistoryStop",
+      "classification": "platform",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.RoomHistoryStopAudit.RecordRoomHistoryStop",
+      "reason": "Platform protocol participation (mutation): student-presence reaches modules/auditlog/records.StudentFieldEditRepository.CreateBatch (audit-platform) through roots/owners.roomHistoryStopAudit.RecordRoomHistoryStop. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.StudentFieldEditRepository.CreateBatch",
+      "target_owner": "audit-platform"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.MoodCaptureStopped",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.RoomHistoryStopOwner.MoodCaptureStopped",
+      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through *modules/studentpresence/internal/application.Service.MoodCaptureStopped. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "student-presence",
+      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.RoomHistoryStoppedSince",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.RoomHistoryStopOwner.RoomHistoryStoppedSince",
+      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through *modules/studentpresence/internal/application.Service.RoomHistoryStoppedSince. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "student-presence",
+      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.RoomHistoryStopReads.MoodCaptureStopped",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.RoomHistoryStopReads.MoodCaptureStopped",
+      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through *modules/studentpresence/internal/application.RoomHistoryStopReads.MoodCaptureStopped. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "student-presence",
+      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.RoomHistoryStopOwner.MoodCaptureStopped",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.RoomHistoryStopReads.MoodCaptureStopped",
+      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/studentpresence.RoomHistoryStopOwner.MoodCaptureStopped. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "student-presence",
+      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.RoomHistoryStopReads.RoomHistoryStoppedSince",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.RoomHistoryStopReads.RoomHistoryStoppedSince",
+      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through *modules/studentpresence/internal/application.RoomHistoryStopReads.RoomHistoryStoppedSince. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "student-presence",
+      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.RoomHistoryStopOwner.RoomHistoryStoppedSince",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.RoomHistoryStopReads.RoomHistoryStoppedSince",
+      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through modules/studentpresence.RoomHistoryStopOwner.RoomHistoryStoppedSince. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "student-presence",
+      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.RoomHistoryStops.MoodCaptureStopped",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.RoomHistoryStops.MoodCaptureStopped",
+      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through *modules/studentpresence/internal/application.RoomHistoryStops.MoodCaptureStopped. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "student-presence",
+      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.RoomHistoryStops.ResumeRoomHistory",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.RoomHistoryStops.ResumeRoomHistory",
+      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through *modules/studentpresence/internal/application.RoomHistoryStops.ResumeRoomHistory. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "student-presence",
+      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.RoomHistoryStops.RoomHistoryStoppedSince",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.RoomHistoryStops.RoomHistoryStoppedSince",
+      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through *modules/studentpresence/internal/application.RoomHistoryStops.RoomHistoryStoppedSince. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "student-presence",
+      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.RoomHistoryStops.StopRoomHistory",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.RoomHistoryStops.StopRoomHistory",
+      "reason": "Platform protocol participation (scope): student-presence reaches *tenant.TransactionRunner.RunInTx (tenant-runtime) through *modules/studentpresence/internal/application.RoomHistoryStops.StopRoomHistory. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "student-presence",
+      "target": "*github.com/moto-ogs/project-phoenix/tenant.TransactionRunner.RunInTx",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListRoomOccupancy",
       "classification": "platform",
       "effect": "scope",
@@ -17507,7 +17639,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.People.FindByAccountID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.PersonDirectory.FindByAccountID; modules/peopledirectory/ports/person_directory_port.go:23. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.PersonDirectory.FindByAccountID; modules/peopledirectory/ports/person_directory_port.go:23. May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonDirectory.FindByAccountID",
       "target_owner": "people-directory"
@@ -17517,7 +17649,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.People.GetStaffByPersonID",
-      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added.",
+      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "student-presence",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
       "target_owner": "people-directory"
@@ -17527,7 +17659,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.People.GetStaffByPersonID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.PersonDirectory.StaffRows; modules/peopledirectory/internal/application/staff_directory.go:55. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.PersonDirectory.StaffRows; modules/peopledirectory/internal/application/staff_directory.go:55. May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonDirectory.StaffRows",
       "target_owner": "people-directory"
@@ -17537,7 +17669,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.People.GetStaffByPersonID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.StaffRepository.FindByPersonID; modules/peopledirectory/ports/repository_contracts.go:237. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.StaffRepository.FindByPersonID; modules/peopledirectory/ports/repository_contracts.go:237. May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StaffRepository.FindByPersonID",
       "target_owner": "people-directory"
@@ -17547,7 +17679,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.People.GetStaffByPersonID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Capability.FindStaffByPerson; modules/schoolmembership.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Capability.FindStaffByPerson; modules/schoolmembership.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.FindStaffByPerson",
       "target_owner": "school-membership"
@@ -17557,7 +17689,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.People.GetStaffByPersonID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.FindStaffByPerson; modules/schoolmembership.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.FindStaffByPerson; modules/schoolmembership.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.FindStaffByPerson",
       "target_owner": "school-membership"
@@ -18820,7 +18952,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.AttendanceStaff.ExistingStaffIDs",
-      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added.",
+      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "student-presence",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
       "target_owner": "people-directory"
@@ -18840,7 +18972,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.AttendanceStaff.ExistingStaffIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Capability.ListStaff; modules/schoolmembership.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Capability.ListStaff; modules/schoolmembership.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListStaff",
       "target_owner": "school-membership"
@@ -18850,7 +18982,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.AttendanceStaff.ExistingStaffIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.ListStaff; modules/schoolmembership.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.ListStaff; modules/schoolmembership.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListStaff",
       "target_owner": "school-membership"
@@ -18860,7 +18992,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.AttendanceStaff.LockStaffExists",
-      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added.",
+      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "student-presence",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
       "target_owner": "people-directory"
@@ -18903,7 +19035,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.AttendanceStaff.StaffTenantID",
-      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added.",
+      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "student-presence",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
       "target_owner": "people-directory"
@@ -18913,7 +19045,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.AttendanceStaff.StaffTenantID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.StaffRepository.FindByID; modules/peopledirectory/internal/application/student_records_boundary.go:23. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.StaffRepository.FindByID; modules/peopledirectory/internal/application/student_records_boundary.go:23. May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StaffRepository.FindByID",
       "target_owner": "people-directory"
@@ -18923,7 +19055,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.AttendanceStaff.StaffTenantID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Capability.FindStaff; modules/schoolmembership.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Capability.FindStaff; modules/schoolmembership.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.FindStaff",
       "target_owner": "school-membership"
@@ -18933,7 +19065,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.AttendanceStaff.StaffTenantID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.FindStaff; modules/schoolmembership.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.FindStaff; modules/schoolmembership.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.FindStaff",
       "target_owner": "school-membership"
@@ -18953,7 +19085,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.AttendanceStaffNames.StaffNames",
-      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target *modules/peopledirectory.Staff.SetTenantID. Reviewed for #4761: the attendance staff-name read of student-presence hydrates retired staff with their persons; no owned-row mutation or locking read.",
+      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target *modules/peopledirectory.Staff.SetTenantID. Reviewed for #4761: the attendance staff-name read of student-presence hydrates retired staff with their persons; no owned-row mutation or locking read. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "student-presence",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
       "target_owner": "people-directory"
@@ -18963,7 +19095,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.AttendanceStaffNames.StaffNames",
-      "reason": "Read-only target: student-presence reaches modules/peopledirectory/ports.PersonRepository.FindByIDs through roots/owners.attendanceStaffNames.StaffNames, the tenant-scoped staff-name read behind attendance records (#4761). No owned-row mutation or locking read. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Read-only target: student-presence reaches modules/peopledirectory/ports.PersonRepository.FindByIDs through roots/owners.attendanceStaffNames.StaffNames, the tenant-scoped staff-name read behind attendance records (#4761). No owned-row mutation or locking read. May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonRepository.FindByIDs",
       "target_owner": "people-directory"
@@ -18983,7 +19115,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.AttendanceStaffNames.StaffNames",
-      "reason": "Read-only target: student-presence reaches modules/schoolmembership.Capability.ListStaff through roots/owners.attendanceStaffNames.StaffNames, the tenant-scoped staff-name read behind attendance records (#4761). No owned-row mutation or locking read. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Read-only target: student-presence reaches modules/schoolmembership.Capability.ListStaff through roots/owners.attendanceStaffNames.StaffNames, the tenant-scoped staff-name read behind attendance records (#4761). No owned-row mutation or locking read. May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListStaff",
       "target_owner": "school-membership"
@@ -18993,7 +19125,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.AttendanceStaffNames.StaffNames",
-      "reason": "Read-only target: student-presence reaches modules/schoolmembership.ExternalCaregiver through roots/owners.attendanceStaffNames.StaffNames, the tenant-scoped staff-name read behind attendance records (#4761). No owned-row mutation or locking read. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Read-only target: student-presence reaches modules/schoolmembership.ExternalCaregiver through roots/owners.attendanceStaffNames.StaffNames, the tenant-scoped staff-name read behind attendance records (#4761). No owned-row mutation or locking read. May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ExternalCaregiver",
       "target_owner": "school-membership"
@@ -19003,7 +19135,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.AttendanceStaffNames.StaffNames",
-      "reason": "Read-only target: student-presence reaches modules/schoolmembership.Owner.ListStaff through roots/owners.attendanceStaffNames.StaffNames, the tenant-scoped staff-name read behind attendance records (#4761). No owned-row mutation or locking read. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Read-only target: student-presence reaches modules/schoolmembership.Owner.ListStaff through roots/owners.attendanceStaffNames.StaffNames, the tenant-scoped staff-name read behind attendance records (#4761). No owned-row mutation or locking read. May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListStaff",
       "target_owner": "school-membership"
@@ -19745,7 +19877,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.SchoolQuery.ListSchoolsByID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Capability.ListSchoolsByID; modules/organizationtenancy.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Capability.ListSchoolsByID; modules/organizationtenancy.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.ListSchoolsByID",
       "target_owner": "organization-tenancy"
@@ -19755,7 +19887,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.SchoolQuery.ListSchoolsByID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Query.ListSchoolsByID; modules/organizationtenancy.Query (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Query.ListSchoolsByID; modules/organizationtenancy.Query (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.ListSchoolsByID",
       "target_owner": "organization-tenancy"
@@ -19765,7 +19897,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.SchoolQuery.ListSchoolsByID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.SchoolListQuery.ListSchoolsByID; modules/organizationtenancy/organizationtenancy.go:108. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.SchoolListQuery.ListSchoolsByID; modules/organizationtenancy/organizationtenancy.go:108. May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolListQuery.ListSchoolsByID",
       "target_owner": "organization-tenancy"
@@ -20465,7 +20597,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence.StatusDayOverviewPeople.GetByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.PersonDirectory.GetByIDs; modules/peopledirectory/ports/person_directory_port.go:27. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/ports.PersonDirectory.GetByIDs; modules/peopledirectory/ports/person_directory_port.go:27. May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.PersonDirectory.GetByIDs",
       "target_owner": "people-directory"
@@ -24709,6 +24841,86 @@
       "target_owner": "facilities"
     },
     {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.DeleteCompletedVisits",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.RoomHistoryStopStore.DeleteCompletedVisits",
+      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through *modules/studentpresence/internal/adapters/postgres.Store.DeleteCompletedVisits. No persistent, lock or scope effect; the per-child room history stop (#3844) joins the ambient tenant transaction.",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.DeleteCompletedVisits",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.RoomHistoryStopStore.DeleteCompletedVisits",
+      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence/internal/ports.Store.DeleteCompletedVisits. No persistent, lock or scope effect; the per-child room history stop (#3844) joins the ambient tenant transaction.",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.DeleteRoomHistoryStop",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.RoomHistoryStopStore.DeleteRoomHistoryStop",
+      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through *modules/studentpresence/internal/adapters/postgres.Store.DeleteRoomHistoryStop. No persistent, lock or scope effect; the per-child room history stop (#3844) joins the ambient tenant transaction.",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.DeleteRoomHistoryStop",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.RoomHistoryStopStore.DeleteRoomHistoryStop",
+      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence/internal/ports.Store.DeleteRoomHistoryStop. No persistent, lock or scope effect; the per-child room history stop (#3844) joins the ambient tenant transaction.",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.InsertRoomHistoryStop",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.RoomHistoryStopStore.InsertRoomHistoryStop",
+      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through *modules/studentpresence/internal/adapters/postgres.Store.InsertRoomHistoryStop. No persistent, lock or scope effect; the per-child room history stop (#3844) joins the ambient tenant transaction.",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.InsertRoomHistoryStop",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.RoomHistoryStopStore.InsertRoomHistoryStop",
+      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence/internal/ports.Store.InsertRoomHistoryStop. No persistent, lock or scope effect; the per-child room history stop (#3844) joins the ambient tenant transaction.",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.ListRoomHistoryStops",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.RoomHistoryStopStore.ListRoomHistoryStops",
+      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through *modules/studentpresence/internal/adapters/postgres.Store.ListRoomHistoryStops. No persistent, lock or scope effect; the per-child room history stop (#3844) joins the ambient tenant transaction.",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.ListRoomHistoryStops",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.RoomHistoryStopStore.ListRoomHistoryStops",
+      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence/internal/ports.Store.ListRoomHistoryStops. No persistent, lock or scope effect; the per-child room history stop (#3844) joins the ambient tenant transaction.",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.RoomUtilization",
       "classification": "platform",
@@ -25183,6 +25395,16 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.DeleteCompletedVisits",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.DeleteCompletedVisits",
+      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through *modules/studentpresence/internal/adapters/postgres.Store.DeleteCompletedVisits. No persistent, lock or scope effect; the per-child room history stop (#3844) joins the ambient tenant transaction.",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.DeleteExpiredVisits",
       "classification": "query",
       "effect": "query",
@@ -25208,6 +25430,16 @@
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.DeleteMorningAttendanceBefore",
       "reason": "Read-only newly exposed target: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence/internal/adapters/postgres.Store.DeleteMorningAttendanceBefore. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.DeleteRoomHistoryStop",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.DeleteRoomHistoryStop",
+      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through *modules/studentpresence/internal/adapters/postgres.Store.DeleteRoomHistoryStop. No persistent, lock or scope effect; the per-child room history stop (#3844) joins the ambient tenant transaction.",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
       "target_owner": "tenant-runtime"
@@ -25353,6 +25585,16 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.InsertRoomHistoryStop",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.InsertRoomHistoryStop",
+      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through *modules/studentpresence/internal/adapters/postgres.Store.InsertRoomHistoryStop. No persistent, lock or scope effect; the per-child room history stop (#3844) joins the ambient tenant transaction.",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.LatestPresenceDate",
       "classification": "query",
       "effect": "query",
@@ -25488,6 +25730,16 @@
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.ListPrivacyConsents",
       "reason": "Read-only newly exposed target: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through modules/studentpresence/internal/adapters/postgres.Store.ListPrivacyConsents. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.ListRoomHistoryStops",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.ListRoomHistoryStops",
+      "reason": "Read-only target already reviewed as query: student-presence reaches tenant.CurrentTenantTransaction (tenant-runtime) through *modules/studentpresence/internal/adapters/postgres.Store.ListRoomHistoryStops. No persistent, lock or scope effect; the per-child room history stop (#3844) joins the ambient tenant transaction.",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
       "target_owner": "tenant-runtime"
@@ -26477,7 +26729,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.SupervisionStaffDirectory.SupervisionStaff",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Capability.ListPersonsByID; modules/peopledirectory.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Capability.ListPersonsByID; modules/peopledirectory.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListPersonsByID",
       "target_owner": "people-directory"
@@ -26487,7 +26739,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.SupervisionStaffDirectory.SupervisionStaff",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.ListPersonsByID; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.ListPersonsByID; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListPersonsByID",
       "target_owner": "people-directory"
@@ -26497,7 +26749,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.SupervisionStaffDirectory.SupervisionStaff",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Query.ListPersonsByID; modules/peopledirectory/peopledirectory.go:122. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Query.ListPersonsByID; modules/peopledirectory/peopledirectory.go:122. May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Query.ListPersonsByID",
       "target_owner": "people-directory"
@@ -26507,7 +26759,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.SupervisionStaffDirectory.SupervisionStaff",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/compose.ParseRetainedCalendarDate; modules/peopledirectory/compose/repository_adapter_record_errors.go:10. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/compose.ParseRetainedCalendarDate; modules/peopledirectory/compose/repository_adapter_record_errors.go:10. May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.ParseRetainedCalendarDate",
       "target_owner": "people-directory"

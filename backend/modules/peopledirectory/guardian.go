@@ -7,6 +7,8 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Guardian and contact-person capability (#2663). The People Directory owns
@@ -281,7 +283,7 @@ type NewGuardianPhone struct {
 // for that child. It is the wire shape shared by the student create flow
 // and the guardian batch endpoint, so it carries the JSON tags.
 type NewStudentGuardian struct {
-	GuardianProfileID *int64 `json:"guardian_profile_id,omitempty"`
+	GuardianProfileID *ident.ID `json:"guardian_profile_id,omitempty"`
 
 	FirstName              string `json:"first_name"`
 	LastName               string `json:"last_name"`

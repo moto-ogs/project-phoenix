@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -37,7 +38,7 @@ func TestSEPAMandateImportLogKeepsTheTraegerBelowRLS(t *testing.T) {
 		_, err = tx.ExecContext(ctx, `SET LOCAL session_replication_role = replica`)
 		require.NoError(t, err)
 		require.NoError(t, store.InsertSEPAMandateImportEvents(ctx, own.organization, 0, ownFile,
-			[]parentbilling.ImportedSEPAMandate{{Mandate: parentbilling.SEPAMandate{ID: own.mandate, ContractID: 1}, Line: 2}}))
+			[]parentbilling.ImportedSEPAMandate{{Mandate: parentbilling.SEPAMandate{ID: ident.ID(own.mandate), ContractID: 1}, Line: 2}}))
 		_, err = tx.ExecContext(ctx, `INSERT INTO parent_billing.sepa_mandate_events (organization_id, mandate_id, care_contract_id,
 			action, source, import_file, import_line) VALUES (?, ?, 1, 'create', 'import', ?, 2)`, other.organization, other.mandate, otherFile)
 		require.NoError(t, err)

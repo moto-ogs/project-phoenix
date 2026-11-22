@@ -17,6 +17,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/realtime"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/moto-ogs/project-phoenix/workflows/staffoffboarding"
@@ -257,7 +258,7 @@ func TestOffboardStaff_CleanupIntentFailureRestoresAccessAndAllOwnerWrites(t *te
 	person, err := testpkg.TenantQuery1(t, sc.ctx, testpkg.SetupTestDB(t), sc.reposPeople.Person.FindByID, any(staff.PersonID))
 	require.NoError(t, err)
 	require.NotNil(t, person.AccountID)
-	require.Equal(t, account.ID, *person.AccountID)
+	require.Equal(t, ident.ID(account.ID), *person.AccountID)
 	var roleCount int
 	require.NoError(t, sc.db.NewSelect().TableExpr("auth.account_roles").ColumnExpr("count(*)").
 		Where("account_id = ?", account.ID).Where("tenant_id = ?", testpkg.Tenant(t)).Scan(sc.ctx, &roleCount))
@@ -1029,7 +1030,7 @@ func TestOffboardStaff_ExcludedFromListsAndPIN(t *testing.T) {
 	listed, err := sc.reposPeople.Staff.ListAllWithPerson(sc.ctx)
 	require.NoError(t, err)
 	for _, s := range listed {
-		assert.NotEqual(t, staff.ID, s.ID, "offboarded staff must not appear in the staff list")
+		assert.NotEqual(t, staff.ID, s.ID.Int64(), "offboarded staff must not appear in the staff list")
 	}
 
 	found, err := sc.reposPeople.Staff.FindByID(sc.ctx, staff.ID)
@@ -1159,12 +1160,12 @@ func TestOffboardStaff_RemovesPendingAndFutureAbsences(t *testing.T) {
 
 	makeAbsence := func(absenceType, status string, start, end calendar.Date) workforce.StaffAbsence {
 		absence, err := sc.workTime.CreateStaffAbsence(sc.ctx, &workforce.StaffAbsence{
-			StaffID:     staff.ID,
+			StaffID:     ident.ID(staff.ID),
 			AbsenceType: absenceType,
 			DateStart:   start.String(),
 			DateEnd:     end.String(),
 			Status:      status,
-			CreatedBy:   staff.ID,
+			CreatedBy:   ident.ID(staff.ID),
 		})
 		require.NoError(t, err)
 		return absence
@@ -1189,10 +1190,10 @@ func TestOffboardStaff_RemovesPendingAndFutureAbsences(t *testing.T) {
 			Scan(context.Background(), &n))
 		return n
 	}
-	assert.Zero(t, countAbsence(pendingRequest.ID), "pending request must be removed")
-	assert.Zero(t, countAbsence(futureApproved.ID), "future approved absence must be removed")
-	assert.Zero(t, countAbsence(pastQuestion.ID), "past questioned request must be removed")
-	assert.Equal(t, 1, countAbsence(pastApproved.ID), "past absence must stay as history")
+	assert.Zero(t, countAbsence(pendingRequest.ID.Int64()), "pending request must be removed")
+	assert.Zero(t, countAbsence(futureApproved.ID.Int64()), "future approved absence must be removed")
+	assert.Zero(t, countAbsence(pastQuestion.ID.Int64()), "past questioned request must be removed")
+	assert.Equal(t, 1, countAbsence(pastApproved.ID.Int64()), "past absence must stay as history")
 
 	var auditedCount string
 	require.NoError(t, sc.db.NewSelect().
@@ -1216,7 +1217,7 @@ func TestOffboardStaff_RemovesPendingAndFutureAbsences(t *testing.T) {
 		assert.Equal(t, "Personal-Offboarding", tombstone.Note)
 		var payload workforce.StaffAbsence
 		require.NoError(t, json.Unmarshal(tombstone.Payload, &payload))
-		assert.Equal(t, tombstone.SourceID, payload.ID)
+		assert.Equal(t, ident.ID(tombstone.SourceID), payload.ID)
 	}
 }
 
@@ -1228,12 +1229,12 @@ func TestOffboardStaff_AbsenceAuditFailureRollsBackOffboarding(t *testing.T) {
 	staff := testpkg.CreateTestStaff(t, sc.db, "Audit", "Rollback")
 	today := offboardingDay
 	absence, err := sc.workTime.CreateStaffAbsence(sc.ctx, &workforce.StaffAbsence{
-		StaffID:     staff.ID,
+		StaffID:     ident.ID(staff.ID),
 		AbsenceType: workforce.AbsenceTypeVacation,
 		DateStart:   today.AddDays(1).String(),
 		DateEnd:     today.AddDays(2).String(),
 		Status:      workforce.AbsenceStatusApproved,
-		CreatedBy:   staff.ID,
+		CreatedBy:   ident.ID(staff.ID),
 	})
 	require.NoError(t, err)
 
@@ -1369,7 +1370,7 @@ func TestOffboardStaff_ReleasesTransponderForTheNextPerson(t *testing.T) {
 	holder, err := testpkg.TenantQuery1(t, sc.ctx, sc.db, persons.FindByTagID, card.ID)
 	require.NoError(t, err)
 	require.NotNil(t, holder)
-	assert.Equal(t, next.ID, holder.ID)
+	assert.Equal(t, ident.ID(next.ID), holder.ID)
 }
 
 // TestOffboardStaff_LocksAccountBeforeRevokingRoles pins the LOCK ORDER the

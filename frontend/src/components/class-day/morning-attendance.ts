@@ -5,7 +5,12 @@
 // „Fehlt“ (source "report"). Markierungen sammeln sich in einem Entwurf und
 // gehen erst mit „Speichern“ an das Backend.
 
-import type { ClassDayRow, MorningAttendanceStatus } from "~/lib/class-day-api";
+import {
+  type ClassDayRow,
+  MORNING_ATTENDANCE_STATUSES,
+  type MorningAttendanceStatus,
+} from "~/lib/class-day-api";
+import { knownEnum } from "~/lib/contract/known-enum";
 import type { MorningAttendanceMark } from "~/lib/school-class-day-api";
 
 /** Entwurf: Schlüssel der Zeile → markierter Zustand. */
@@ -25,7 +30,11 @@ export function morningStatus(
   row: ClassDayRow,
   draft: MorningAttendanceDraft,
 ): MorningAttendanceStatus | null {
-  return draft[morningRowKey(row)] ?? row.morning_attendance?.status ?? null;
+  return (
+    draft[morningRowKey(row)] ??
+    knownEnum(MORNING_ATTENDANCE_STATUSES, row.morning_attendance?.status) ??
+    null
+  );
 }
 
 /** Krank, entschuldigt und Klassenfahrt erklären ein Fehlen am Vormittag. */

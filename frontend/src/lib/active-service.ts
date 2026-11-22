@@ -18,40 +18,57 @@ import {
   type Visit,
   type Supervisor,
   type SchulhofStatus,
-  type BackendActiveGroup,
-  type BackendVisit,
-  type BackendSupervisor,
-  type BackendSchulhofStatus,
+  type ActiveGroupWire,
+  type VisitWire,
+  type SupervisorWire,
+  type SchulhofStatusWire,
   type TrackingIndicatorsResponse,
 } from "./active-helpers";
 import type { ApiResponse } from "./api-envelope";
+import type {
+  StudentMoveResult as StudentMoveResultWire,
+  TrackingIndicatorsRequest,
+  TrackingIndicatorsResponse as TrackingIndicatorsWire,
+  TransitAssignResult as TransitAssignResultWire,
+  assignTransitStudentsRequest,
+  checkInStudentsToOpenRoomRequest,
+  checkInStudentsToSessionRequest,
+  moveStudentsToActiveGroupRequest,
+  moveStudentsToOpenRoomRequest,
+} from "./contract/active.generated";
 
-interface TransitAssignSkipped {
-  student_id: number | string;
-  reason: string;
+/** The decoded result with its lists present; Go always sends them (#2353). */
+type WithLists<T, K extends keyof T> = Omit<T, K> & {
+  [P in K]-?: NonNullable<T[P]>;
+};
+
+type TransitAssignResult = WithLists<
+  TransitAssignResultWire,
+  "assigned" | "skipped"
+>;
+
+export type StudentMoveResult = WithLists<
+  StudentMoveResultWire,
+  "moved" | "unchanged" | "skipped"
+>;
+
+function transitAssignResult(
+  wire: TransitAssignResultWire,
+): TransitAssignResult {
+  return {
+    ...wire,
+    assigned: wire.assigned ?? [],
+    skipped: wire.skipped ?? [],
+  };
 }
 
-// Identifiers arrive as decimal strings through the catalog proxy (#2352).
-interface TransitAssignResult {
-  assigned: (number | string)[];
-  skipped: TransitAssignSkipped[];
-  active_group_id: number | string;
-  room_id: number | string;
-}
-
-interface StudentMoveSkipped {
-  student_id: number | string;
-  reason: string;
-}
-
-export interface StudentMoveResult {
-  moved: (number | string)[];
-  unchanged: (number | string)[];
-  skipped: StudentMoveSkipped[];
-  active_group_id?: number | string | null;
-  room_id?: number | string | null;
-  /** Children a check-in into the target opened today's attendance for (#6953). */
-  checked_in?: (number | string)[];
+function studentMoveResult(wire: StudentMoveResultWire): StudentMoveResult {
+  return {
+    ...wire,
+    moved: wire.moved ?? [],
+    unchanged: wire.unchanged ?? [],
+    skipped: wire.skipped ?? [],
+  };
 }
 
 export interface StudentMoveSummary {
@@ -270,13 +287,24 @@ function buildActiveFilterSuffix(filters?: {
   return query ? `?${query}` : "";
 }
 
+/** Labels and per-student matches; Go sends both, never null (#2353). */
+function trackingIndicators(
+  wire: TrackingIndicatorsWire,
+): TrackingIndicatorsResponse {
+  const results: Record<string, boolean[]> = {};
+  for (const [studentId, matches] of Object.entries(wire.results ?? {})) {
+    results[studentId] = matches ?? [];
+  }
+  return { labels: wire.labels ?? [], results };
+}
+
 export const activeService = {
   // Active Groups
   getActiveGroups: async (filters?: {
     active?: boolean;
   }): Promise<ActiveGroup[]> => {
     const suffix = buildActiveFilterSuffix(filters);
-    return proxyGetPaginated<BackendActiveGroup, ActiveGroup>(
+    return proxyGetPaginated<ActiveGroupWire, ActiveGroup>(
       `/api/active/groups${suffix}`,
       mapActiveGroupResponse,
       "Get active groups",
@@ -284,7 +312,7 @@ export const activeService = {
   },
 
   getActiveGroupSupervisors: async (id: string): Promise<Supervisor[]> => {
-    return proxyGetPaginated<BackendSupervisor, Supervisor>(
+    return proxyGetPaginated<SupervisorWire, Supervisor>(
       `/api/active/groups/${id}/supervisors`,
       mapSupervisorResponse,
       "Get active group supervisors",
@@ -297,7 +325,7 @@ export const activeService = {
     activeGroupIds?: readonly string[];
   }): Promise<Visit[]> => {
     const suffix = buildActiveFilterSuffix(filters);
-    return proxyGetArray<BackendVisit, Visit>(
+    return proxyGetArray<VisitWire, Visit>(
       `/api/active/visits${suffix}`,
       mapVisitResponse,
       "Get visits",
@@ -307,7 +335,7 @@ export const activeService = {
   getStaffActiveSupervisions: async (
     staffId: string,
   ): Promise<Supervisor[]> => {
-    return proxyGetArray<BackendSupervisor, Supervisor>(
+    return proxyGetArray<SupervisorWire, Supervisor>(
       `/api/active/supervisors/staff/${staffId}/active`,
       mapSupervisorResponse,
       "Get staff active supervisions",
@@ -316,7 +344,7 @@ export const activeService = {
 
   /** The ended supervision; null when the backend could not read it back. */
   endSupervision: async (id: string): Promise<Supervisor | null> => {
-    return proxyPostNoBody<BackendSupervisor | null, Supervisor | null>(
+    return proxyPostNoBody<SupervisorWire | null, Supervisor | null>(
       `/api/active/supervisors/${id}/end`,
       (data) => (data ? mapSupervisorResponse(data) : null),
       "End supervision",
@@ -335,14 +363,16 @@ export const activeService = {
     studentIds: string[],
     activeGroupId: string,
   ): Promise<TransitAssignResult> => {
-    return coreFetch<TransitAssignResult>(
-      "POST",
-      "/api/active/visits/transit/assign",
-      "Assign transit students",
-      {
-        student_ids: studentIds.map((id) => Number.parseInt(id, 10)),
-        active_group_id: Number.parseInt(activeGroupId, 10),
-      },
+    return transitAssignResult(
+      await coreFetch<TransitAssignResultWire>(
+        "POST",
+        "/api/active/visits/transit/assign",
+        "Assign transit students",
+        {
+          student_ids: [...studentIds],
+          active_group_id: activeGroupId,
+        } satisfies assignTransitStudentsRequest,
+      ),
     );
   },
 
@@ -350,14 +380,16 @@ export const activeService = {
     studentIds: string[],
     activeGroupId: string,
   ): Promise<StudentMoveResult> => {
-    return coreFetch<StudentMoveResult>(
-      "POST",
-      "/api/active/visits/move-to-group",
-      "Move students to active group",
-      {
-        student_ids: studentIds.map((id) => Number.parseInt(id, 10)),
-        target_active_group_id: Number.parseInt(activeGroupId, 10),
-      },
+    return studentMoveResult(
+      await coreFetch<StudentMoveResultWire>(
+        "POST",
+        "/api/active/visits/move-to-group",
+        "Move students to active group",
+        {
+          student_ids: [...studentIds],
+          target_active_group_id: activeGroupId,
+        } satisfies moveStudentsToActiveGroupRequest,
+      ),
     );
   },
 
@@ -374,9 +406,9 @@ export const activeService = {
     const response = await sessionFetch("/api/active/visits/move-to-room", {
       method: "POST",
       body: JSON.stringify({
-        student_ids: studentIds.map((id) => Number.parseInt(id, 10)),
-        target_room_id: Number.parseInt(roomId, 10),
-      }),
+        student_ids: [...studentIds],
+        target_room_id: roomId,
+      } satisfies moveStudentsToOpenRoomRequest),
     });
     if (!response.ok) {
       const error = proxyError(
@@ -391,8 +423,9 @@ export const activeService = {
       });
       throw error;
     }
-    const payload = (await response.json()) as ApiResponse<StudentMoveResult>;
-    return payload.data;
+    const payload =
+      (await response.json()) as ApiResponse<StudentMoveResultWire>;
+    return studentMoveResult(payload.data);
   },
 
   /**
@@ -405,15 +438,17 @@ export const activeService = {
     activeGroupId: string,
     keepPresent: boolean,
   ): Promise<StudentMoveResult> => {
-    return coreFetch<StudentMoveResult>(
-      "POST",
-      "/api/active/visits/check-in-to-group",
-      "Check students in to active group",
-      {
-        student_ids: studentIds.map((id) => Number.parseInt(id, 10)),
-        target_active_group_id: Number.parseInt(activeGroupId, 10),
-        keep_present: keepPresent,
-      },
+    return studentMoveResult(
+      await coreFetch<StudentMoveResultWire>(
+        "POST",
+        "/api/active/visits/check-in-to-group",
+        "Check students in to active group",
+        {
+          student_ids: [...studentIds],
+          target_active_group_id: activeGroupId,
+          keep_present: keepPresent,
+        } satisfies checkInStudentsToSessionRequest,
+      ),
     );
   },
 
@@ -426,15 +461,17 @@ export const activeService = {
     roomId: string,
     keepPresent: boolean,
   ): Promise<StudentMoveResult> => {
-    return coreFetch<StudentMoveResult>(
-      "POST",
-      "/api/active/visits/check-in-to-room",
-      "Check students in to open room",
-      {
-        student_ids: studentIds.map((id) => Number.parseInt(id, 10)),
-        target_room_id: Number.parseInt(roomId, 10),
-        keep_present: keepPresent,
-      },
+    return studentMoveResult(
+      await coreFetch<StudentMoveResultWire>(
+        "POST",
+        "/api/active/visits/check-in-to-room",
+        "Check students in to open room",
+        {
+          student_ids: [...studentIds],
+          target_room_id: roomId,
+          keep_present: keepPresent,
+        } satisfies checkInStudentsToOpenRoomRequest,
+      ),
     );
   },
 
@@ -444,7 +481,7 @@ export const activeService = {
    * Get the current Schulhof status including room info, supervisors, and student count.
    */
   getSchulhofStatus: async (): Promise<SchulhofStatus> => {
-    return proxyGet<BackendSchulhofStatus, SchulhofStatus>(
+    return proxyGet<SchulhofStatusWire, SchulhofStatus>(
       "/api/active/schulhof/status",
       mapSchulhofStatusResponse,
       "Get Schulhof status",
@@ -470,8 +507,8 @@ export const activeService = {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        student_ids: studentIds.map((id) => Number.parseInt(id, 10)),
-      }),
+        student_ids: [...studentIds],
+      } satisfies TrackingIndicatorsRequest),
     });
 
     if (!response.ok) {
@@ -483,8 +520,8 @@ export const activeService = {
       return empty;
     }
 
-    const data =
-      (await response.json()) as ApiResponse<TrackingIndicatorsResponse>;
-    return data.data;
+    const { data } =
+      (await response.json()) as ApiResponse<TrackingIndicatorsWire>;
+    return trackingIndicators(data);
   },
 };

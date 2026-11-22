@@ -6,56 +6,58 @@ import (
 	strconv "strconv"
 	time "time"
 
+	common "github.com/moto-ogs/project-phoenix/api/common"
 	careplan "github.com/moto-ogs/project-phoenix/modules/careplan"
 	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // PickupScheduleResponse represents a pickup schedule in API responses
 type PickupScheduleResponse struct {
-	ID          int64   `json:"id"`
-	StudentID   int64   `json:"student_id"`
-	Weekday     int     `json:"weekday"`
-	WeekdayName string  `json:"weekday_name"`
-	PickupTime  string  `json:"pickup_time"` // HH:MM format
-	Notes       *string `json:"notes,omitempty"`
+	ID          common.ID `json:"id"`
+	StudentID   common.ID `json:"student_id"`
+	Weekday     int       `json:"weekday"`
+	WeekdayName string    `json:"weekday_name"`
+	PickupTime  string    `json:"pickup_time"` // HH:MM format
+	Notes       *string   `json:"notes,omitempty"`
 	// Source marks the row's provenance: "staff" (manually maintained) or
 	// "care_offering" (booking-derived Angebots-Gehzeit).
-	Source           string  `json:"source"`
-	CareOfferingID   *string `json:"care_offering_id,omitempty"`
-	CareOfferingName string  `json:"care_offering_name,omitempty"`
-	CreatedBy        int64   `json:"created_by"`
-	CreatedAt        string  `json:"created_at"`
-	UpdatedAt        string  `json:"updated_at"`
+	Source           string    `json:"source"`
+	CareOfferingID   *string   `json:"care_offering_id,omitempty"`
+	CareOfferingName string    `json:"care_offering_name,omitempty"`
+	CreatedBy        common.ID `json:"created_by"`
+	CreatedAt        string    `json:"created_at"`
+	UpdatedAt        string    `json:"updated_at"`
 }
 
 // PickupExceptionResponse represents a pickup exception in API responses
 type PickupExceptionResponse struct {
-	ID            int64   `json:"id"`
-	StudentID     int64   `json:"student_id"`
-	ExceptionDate string  `json:"exception_date"` // YYYY-MM-DD format
-	PickupTime    *string `json:"pickup_time,omitempty"`
-	Reason        *string `json:"reason,omitempty"`
-	Source        string  `json:"source"` // "staff" or "guardian" (parent-set)
+	ID            common.ID `json:"id"`
+	StudentID     common.ID `json:"student_id"`
+	ExceptionDate string    `json:"exception_date"` // YYYY-MM-DD format
+	PickupTime    *string   `json:"pickup_time,omitempty"`
+	Reason        *string   `json:"reason,omitempty"`
+	Source        string    `json:"source"` // "staff" or "guardian" (parent-set)
 	// ExcusedFrom (HH:MM) is the partial-absence cutoff carried by this
 	// exception; ExcusedAuto marks it as derived from a pulled-forward pickup
 	// time (#2360) rather than a manual staff decision.
-	ExcusedFrom *string `json:"excused_from,omitempty"`
-	ExcusedAuto bool    `json:"excused_auto"`
-	CreatedBy   int64   `json:"created_by"`
-	CreatedAt   string  `json:"created_at"`
-	UpdatedAt   string  `json:"updated_at"`
+	ExcusedFrom *string   `json:"excused_from,omitempty"`
+	ExcusedAuto bool      `json:"excused_auto"`
+	CreatedBy   common.ID `json:"created_by"`
+	CreatedAt   string    `json:"created_at"`
+	UpdatedAt   string    `json:"updated_at"`
 }
 
 // PickupNoteResponse represents a pickup note in API responses
 type PickupNoteResponse struct {
-	ID        int64  `json:"id"`
-	StudentID int64  `json:"student_id"`
-	NoteDate  string `json:"note_date,omitempty"` // YYYY-MM-DD format; empty for a recurring note
-	Weekday   int    `json:"weekday,omitempty"`   // 1-5; set for a recurring weekday note (#3369)
-	Content   string `json:"content"`
-	CreatedBy int64  `json:"created_by"`
-	CreatedAt string `json:"created_at"`
-	UpdatedAt string `json:"updated_at"`
+	ID        common.ID `json:"id"`
+	StudentID common.ID `json:"student_id"`
+	NoteDate  string    `json:"note_date,omitempty"` // YYYY-MM-DD format; empty for a recurring note
+	Weekday   int       `json:"weekday,omitempty"`   // 1-5; set for a recurring weekday note (#3369)
+	Content   string    `json:"content"`
+	CreatedBy common.ID `json:"created_by"`
+	CreatedAt string    `json:"created_at"`
+	UpdatedAt string    `json:"updated_at"`
 }
 
 // PickupDataResponse represents combined pickup data
@@ -89,7 +91,7 @@ type BulkPickupScheduleRequest struct {
 }
 
 type BulkPickupSchedulePatchRequest struct {
-	StudentIDs         []int64                        `json:"student_ids"`
+	StudentIDs         []common.ID                    `json:"student_ids"`
 	Schedules          []careplan.PickupScheduleInput `json:"schedules"`
 	ConfirmedException bool                           `json:"confirmed_exception"`
 }
@@ -192,10 +194,10 @@ func (r *BulkPickupSchedulePatchRequest) Bind(_ *http.Request) error {
 		if id <= 0 {
 			return errors.New("student_ids must be positive")
 		}
-		if _, exists := seenIDs[id]; exists {
+		if _, exists := seenIDs[id.Int64()]; exists {
 			return errors.New("duplicate student_ids are not allowed")
 		}
-		seenIDs[id] = struct{}{}
+		seenIDs[id.Int64()] = struct{}{}
 	}
 	items := make([]PickupScheduleRequest, 0, len(r.Schedules))
 	for _, schedule := range r.Schedules {
@@ -248,15 +250,15 @@ func (r *PickupExceptionRequest) Bind(_ *http.Request) error {
 // mapScheduleToResponse converts a schedule model to API response
 func mapScheduleToResponse(s *careplan.PickupSchedule) PickupScheduleResponse {
 	resp := PickupScheduleResponse{
-		ID:               s.ID,
-		StudentID:        s.StudentID,
+		ID:               ident.ID(s.ID),
+		StudentID:        ident.ID(s.StudentID),
 		Weekday:          s.Weekday,
 		WeekdayName:      weekdayNames[s.Weekday],
 		PickupTime:       s.PickupTime.Format("15:04"),
 		Notes:            s.Notes,
 		Source:           s.Source,
 		CareOfferingName: s.CareOfferingName,
-		CreatedBy:        s.CreatedBy,
+		CreatedBy:        ident.ID(s.CreatedBy),
 		CreatedAt:        s.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:        s.UpdatedAt.Format(time.RFC3339),
 	}
@@ -273,13 +275,13 @@ func mapScheduleToResponse(s *careplan.PickupSchedule) PickupScheduleResponse {
 // mapExceptionToResponse converts an exception model to API response
 func mapExceptionToResponse(e *careplan.PickupException) PickupExceptionResponse {
 	resp := PickupExceptionResponse{
-		ID:            e.ID,
-		StudentID:     e.StudentID,
+		ID:            ident.ID(e.ID),
+		StudentID:     ident.ID(e.StudentID),
 		ExceptionDate: e.ExceptionDate.Format(dateFormatISO),
 		Reason:        e.Reason,
 		Source:        e.Source,
 		ExcusedAuto:   e.ExcusedAuto,
-		CreatedBy:     e.CreatedBy,
+		CreatedBy:     ident.ID(e.CreatedBy),
 		CreatedAt:     e.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:     e.UpdatedAt.Format(time.RFC3339),
 	}
@@ -297,12 +299,12 @@ func mapExceptionToResponse(e *careplan.PickupException) PickupExceptionResponse
 // mapNoteToResponse converts a note model to API response
 func mapNoteToResponse(n *careplan.PickupNote) PickupNoteResponse {
 	return PickupNoteResponse{
-		ID:        n.ID,
-		StudentID: n.StudentID,
+		ID:        ident.ID(n.ID),
+		StudentID: ident.ID(n.StudentID),
 		NoteDate:  n.NoteDate.String(),
 		Weekday:   n.Weekday,
 		Content:   n.Content,
-		CreatedBy: n.CreatedBy,
+		CreatedBy: ident.ID(n.CreatedBy),
 		CreatedAt: n.CreatedAt.Format(time.RFC3339),
 		UpdatedAt: n.UpdatedAt.Format(time.RFC3339),
 	}

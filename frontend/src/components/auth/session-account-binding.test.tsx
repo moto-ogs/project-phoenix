@@ -89,7 +89,7 @@ function Portal() {
   return (
     <>
       <SessionAccountBinding />
-      <SWRScopeBoundary expectedTenantId={1} />
+      <SWRScopeBoundary expectedTenantId="1" />
       <Students />
     </>
   );

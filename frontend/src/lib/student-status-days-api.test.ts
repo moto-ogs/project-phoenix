@@ -18,13 +18,12 @@ import {
 } from "./student-status-days-api";
 
 const backendDay = {
-  id: 7,
-  student_id: 42,
+  id: "7",
+  student_id: "42",
   date: "2026-05-26",
   status: "excused" as const,
   label: "Entschuldigt",
   reported_at: "2026-05-25T08:00:00Z",
-  cleared_at: null,
   source: "planned",
   created_at: "2026-05-25T08:00:00Z",
   updated_at: "2026-05-25T08:00:00Z",
@@ -57,6 +56,21 @@ describe("student-status-days-api", () => {
     ]);
   });
 
+  // The contract sends the status as an open string (#2353): a day with a
+  // status this build does not know is left out of the list.
+  it("leaves out a day with an unknown status", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      Response.json({
+        status: "success",
+        data: [backendDay, { ...backendDay, id: "8", status: "quarantine" }],
+      }),
+    );
+
+    const days = await fetchStudentStatusDays("42", "2026-05-25", "2026-05-29");
+
+    expect(days.map((day) => day.id)).toEqual(["7"]);
+  });
+
   it("posts status and dates when creating planned days", async () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
@@ -71,6 +85,7 @@ describe("student-status-days-api", () => {
 
     expect(fetchMock).toHaveBeenCalledWith("/api/students/42/status-days", {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         status: "sick",
         dates: ["2026-05-26", "2026-05-27"],
@@ -180,7 +195,7 @@ describe("student-status-days-api", () => {
     );
   });
 
-  it("posts bulk class trip ranges with numeric student ids and reason", async () => {
+  it("posts bulk class trip ranges with string student ids and reason", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       Response.json({
         status: "success",
@@ -198,8 +213,9 @@ describe("student-status-days-api", () => {
 
     expect(fetchMock).toHaveBeenCalledWith("/api/students/status-days/bulk", {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        student_ids: [42, 43],
+        student_ids: ["42", "43"],
         status: "class_trip",
         from: "2026-05-26",
         to: "2026-05-28",
@@ -226,8 +242,9 @@ describe("student-status-days-api", () => {
 
     expect(fetchMock).toHaveBeenCalledWith("/api/students/status-days/bulk", {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        student_ids: [42],
+        student_ids: ["42"],
         status: "class_trip",
         from: "2026-05-26",
         to: "2026-05-26",

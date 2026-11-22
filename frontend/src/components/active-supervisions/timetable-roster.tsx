@@ -35,6 +35,8 @@ import {
   HOMEWORK_NOTE_MAX_LENGTH,
   homeworkLine,
 } from "~/lib/homework-feedback";
+import { labelOf } from "~/lib/label-of";
+import { LOCATION_COLORS } from "~/lib/location-helper";
 import { EmptyStudentResults } from "~/components/students/empty-student-results";
 import { OccupancyBadges } from "~/components/activities/occupancy-badges";
 import type { AddUnplannedStudentModalProps } from "~/components/active-supervisions/add-unplanned-student-modal";
@@ -600,8 +602,12 @@ function TimetableRosterStudentRow({
         {row.homeworkFeedback ? (
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <StatusColorBadge
-              label={`Rückmeldung: ${HOMEWORK_FEEDBACK_LABELS[row.homeworkFeedback.status]}`}
-              color={HOMEWORK_FEEDBACK_COLORS[row.homeworkFeedback.status]}
+              label={`Rückmeldung: ${labelOf(HOMEWORK_FEEDBACK_LABELS, row.homeworkFeedback.status, "–")}`}
+              color={labelOf(
+                HOMEWORK_FEEDBACK_COLORS,
+                row.homeworkFeedback.status,
+                LOCATION_COLORS.UNKNOWN,
+              )}
             />
             {row.homeworkFeedback.note ? (
               <span className="text-sm break-words text-gray-600">

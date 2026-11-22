@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	capability "github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -85,7 +86,7 @@ type instructionRequest struct {
 
 type suspensionRequest struct {
 	BelegType   string        `json:"beleg_type"`
-	BelegID     int64         `json:"beleg_id,string,omitempty"`
+	BelegID     ident.ID      `json:"beleg_id,omitempty"`
 	Reason      string        `json:"reason"`
 	Scope       string        `json:"scope"`
 	Responsible string        `json:"responsible"`

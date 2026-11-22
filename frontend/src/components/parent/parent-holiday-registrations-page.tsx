@@ -10,10 +10,8 @@
 
 import { useLocale, useTranslations } from "next-intl";
 import { ParentPage, ParentPageHeader } from "~/components/parent/parent-page";
-import {
-  HOLIDAY_PLACEMENT_BADGES,
-  HOLIDAY_REGISTRATION_STATUS_TONES,
-} from "~/components/holiday-registration/holiday-registration-badges";
+import { HolidayPlacementBadge } from "~/components/holiday-registration/holiday-placement-badge";
+import { HOLIDAY_REGISTRATION_STATUS_TONES } from "~/components/holiday-registration/holiday-registration-badges";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { Alert } from "~/components/ui/alert";
 import { ButtonLink } from "~/components/ui/button";
@@ -128,11 +126,8 @@ function HolidayRegistrationCard({
                           .join(" · ")}
                       </span>
                       {active ? (
-                        <StatusBadge
-                          label={tr(
-                            HOLIDAY_PLACEMENT_BADGES[week.placement].key,
-                          )}
-                          tone={HOLIDAY_PLACEMENT_BADGES[week.placement].tone}
+                        <HolidayPlacementBadge
+                          placement={week.placement}
                           size="xs"
                         />
                       ) : null}

@@ -17,6 +17,7 @@ import (
 	scheduleModels "github.com/moto-ogs/project-phoenix/modules/timetable/internal/domain/schedulerecords"
 	"github.com/moto-ogs/project-phoenix/modules/timetable/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 func (s *operations) Roster(ctx context.Context, accountID int64, isAdmin bool, instanceID int64) (*timetable.OperationRoster, error) {
@@ -284,7 +285,7 @@ func (s *operations) rosterRows(src rosterSources, rc rosterRowContext) []timeta
 
 func (s *operations) rosterRow(src rosterSources, studentID int64, planned *scheduleModels.InstanceStudent, visit *studentpresence.Visit, warnings []timetable.OperationRosterWarning, rc rosterRowContext) timetable.OperationRosterRow {
 	row := timetable.OperationRosterRow{
-		StudentID:        studentID,
+		StudentID:        ident.ID(studentID),
 		Planned:          planned != nil && !planned.IsUnplanned,
 		IsUnplanned:      (planned != nil && planned.IsUnplanned) || (planned == nil && visit != nil),
 		CurrentlyPresent: visit != nil && visit.ExitTime == nil,
@@ -295,7 +296,7 @@ func (s *operations) rosterRow(src rosterSources, studentID int64, planned *sche
 	applyPlannedRosterAttendance(&row, planned)
 	if visit != nil {
 		id := visit.ID
-		row.VisitID = &id
+		row.VisitID = (*ident.ID)(&id)
 		entry := visit.EntryTime.UTC().Format(time.RFC3339)
 		row.VisitEntryTime = &entry
 	}
@@ -339,12 +340,12 @@ func (s *operations) rosterEnvelope(ctx context.Context, inst *scheduleModels.Ac
 	availability := timetable.EvaluateLifecycleAvailability(lifecycleWindow(inst), s.now(), 15, completeLead, enforcePlannedEnd)
 	return &timetable.OperationRoster{
 		Instance: timetable.OperationRosterInstance{
-			ID:                  inst.ID,
+			ID:                  ident.ID(inst.ID),
 			Title:               inst.Title,
 			Status:              inst.Status,
 			IsSpontaneous:       inst.IsSpontaneous,
-			ActiveGroupID:       inst.ActiveGroupID,
-			RoomID:              inst.RoomID,
+			ActiveGroupID:       (*ident.ID)(inst.ActiveGroupID),
+			RoomID:              ident.ID(inst.RoomID),
 			RoomName:            roomNames[inst.RoomID],
 			Date:                inst.Date.String(),
 			StartTime:           inst.StartTime.Format("15:04"),
@@ -426,7 +427,7 @@ func (s *operations) parallelPresenceByStudent(ctx context.Context, inst *schedu
 			continue
 		}
 		out[row.StudentID] = &timetable.OperationParallelPresence{
-			InstanceID: row.InstanceID,
+			InstanceID: ident.ID(row.InstanceID),
 			Title:      row.Title,
 			StartTime:  row.StartTime.Format("15:04"),
 			EndTime:    row.EndTime.Format("15:04"),

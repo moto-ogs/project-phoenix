@@ -6,7 +6,6 @@ import {
   calendarDate,
   instant,
   int64String,
-  int64StringOrNumber,
   json,
   nullable,
   num,
@@ -123,7 +122,7 @@ export interface TrustedDeviceDTO {
 }
 
 export const TrustedDeviceDTOSchema: z.ZodType<TrustedDeviceDTO, unknown> = object<TrustedDeviceDTO>({
-  id: int64StringOrNumber,
+  id: int64String,
   user_agent: optional(str),
   ip_address: optional(str),
   created_at: str,
@@ -248,11 +247,11 @@ export interface Appointment {
 }
 
 export const AppointmentSchema: z.ZodType<Appointment, unknown> = object<Appointment>({
-  id: int64StringOrNumber,
-  tenant_id: int64StringOrNumber,
+  id: int64String,
+  tenant_id: int64String,
   created_at: instant,
   updated_at: instant,
-  organizer_staff_id: int64StringOrNumber,
+  organizer_staff_id: int64String,
   title: str,
   description: optional(str),
   location: optional(str),
@@ -286,11 +285,11 @@ export interface RecurrenceRule {
 }
 
 export const RecurrenceRuleSchema: z.ZodType<RecurrenceRule, unknown> = object<RecurrenceRule>({
-  id: int64StringOrNumber,
-  tenant_id: int64StringOrNumber,
+  id: int64String,
+  tenant_id: int64String,
   created_at: instant,
   updated_at: instant,
-  appointment_id: int64StringOrNumber,
+  appointment_id: int64String,
   frequency: str,
   interval_count: safeInt,
   weekdays: optional(arr(str)),
@@ -315,14 +314,14 @@ export interface AppointmentRecipient {
 }
 
 export const AppointmentRecipientSchema: z.ZodType<AppointmentRecipient, unknown> = object<AppointmentRecipient>({
-  id: int64StringOrNumber,
-  tenant_id: int64StringOrNumber,
+  id: int64String,
+  tenant_id: int64String,
   created_at: instant,
   updated_at: instant,
-  appointment_id: int64StringOrNumber,
+  appointment_id: int64String,
   recipient_type: str,
-  staff_id: optional(int64StringOrNumber),
-  guardian_profile_id: optional(int64StringOrNumber),
+  staff_id: optional(int64String),
+  guardian_profile_id: optional(int64String),
   status: str,
   responded_at: optional(instant),
   occurrence_responses: optional(rec(str)),
@@ -341,13 +340,13 @@ export interface AppointmentTarget {
 }
 
 export const AppointmentTargetSchema: z.ZodType<AppointmentTarget, unknown> = object<AppointmentTarget>({
-  id: int64StringOrNumber,
-  tenant_id: int64StringOrNumber,
+  id: int64String,
+  tenant_id: int64String,
   created_at: instant,
   updated_at: instant,
-  appointment_id: int64StringOrNumber,
+  appointment_id: int64String,
   target_type: str,
-  target_id: optional(int64StringOrNumber),
+  target_id: optional(int64String),
   target_value: optional(str),
 });
 
@@ -508,7 +507,7 @@ export interface schoolFeedEntryResponse {
 }
 
 export const schoolFeedEntryResponseSchema: z.ZodType<schoolFeedEntryResponse, unknown> = object<schoolFeedEntryResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   type: str,
   title: str,
   body: str,
@@ -978,7 +977,7 @@ export interface SubmitGuardianRequest {
 
 /** Go: enrollmenthttp.SubmitOfferingDaysRow */
 export interface SubmitOfferingDaysRow {
-  offering_id?: number;
+  offering_id?: string;
   selected_days?: string[] | null;
 }
 
@@ -992,7 +991,7 @@ export interface SubmitChildRequest {
   target_school_class?: string | null;
   holiday_care_wish?: boolean | null;
   custom_data?: Record<string, unknown | null> | null;
-  offering_ids?: number[] | null;
+  offering_ids?: string[] | null;
   offering_days?: SubmitOfferingDaysRow[] | null;
 }
 
@@ -1005,14 +1004,14 @@ export interface SubmitSignatureRequest {
 
 /** Go: enrollmenthttp.SubmitEnrollmentRequest */
 export interface SubmitEnrollmentRequest {
-  phase_id?: number;
+  phase_id?: string;
   guardian_first_name?: string;
   guardian_last_name?: string;
   guardian_email?: string;
   guardian_phone?: string | null;
   additional_guardians?: SubmitGuardianRequest[] | null;
   consent_flags?: Record<string, unknown | null> | null;
-  form_schema_id?: number;
+  form_schema_id?: string;
   custom_data?: Record<string, unknown | null> | null;
   children?: SubmitChildRequest[] | null;
   captcha_token?: string;
@@ -1067,7 +1066,7 @@ export interface NewGuardianPhone {
 
 /** Go: peopledirectory.NewStudentGuardian */
 export interface NewStudentGuardian {
-  guardian_profile_id?: number | null;
+  guardian_profile_id?: string | null;
   first_name?: string;
   last_name?: string;
   email?: string;
@@ -1179,7 +1178,7 @@ export interface feedEntryResponse {
 }
 
 export const feedEntryResponseSchema: z.ZodType<feedEntryResponse, unknown> = object<feedEntryResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   type: str,
   title: str,
   body: str,
@@ -1277,7 +1276,7 @@ export interface OrganizationAccount {
 }
 
 export const OrganizationAccountSchema: z.ZodType<OrganizationAccount, unknown> = object<OrganizationAccount>({
-  account_id: int64StringOrNumber,
+  account_id: int64String,
   email: str,
   active: bool,
   first_name: str,
@@ -1289,7 +1288,7 @@ export const OrganizationAccountSchema: z.ZodType<OrganizationAccount, unknown> 
   has_user_role: bool,
   has_caregiver_profile: bool,
   is_active_caregiver: bool,
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   school_name: str,
 });
 
@@ -1324,7 +1323,7 @@ export interface OperatorDevice {
 }
 
 export const OperatorDeviceSchema: z.ZodType<OperatorDevice, unknown> = object<OperatorDevice>({
-  id: int64StringOrNumber,
+  id: int64String,
   device_id: str,
   device_type: str,
   name: optional(str),
@@ -1333,9 +1332,9 @@ export const OperatorDeviceSchema: z.ZodType<OperatorDevice, unknown> = object<O
   masked_api_key: str,
   last_seen: optional(instant),
   is_online: bool,
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   school_name: str,
-  organization_id: int64StringOrNumber,
+  organization_id: int64String,
   organization_name: str,
   created_at: instant,
   updated_at: instant,
@@ -1355,7 +1354,7 @@ export interface OperatorListItem {
 }
 
 export const OperatorListItemSchema: z.ZodType<OperatorListItem, unknown> = object<OperatorListItem>({
-  id: int64StringOrNumber,
+  id: int64String,
   email: str,
   display_name: str,
   active: bool,
@@ -1380,7 +1379,7 @@ export interface Organization {
 }
 
 export const OrganizationSchema: z.ZodType<Organization, unknown> = object<Organization>({
-  id: int64StringOrNumber,
+  id: int64String,
   created_at: instant,
   updated_at: instant,
   name: str,
@@ -1409,7 +1408,7 @@ export interface OperatorPerson {
 }
 
 export const OperatorPersonSchema: z.ZodType<OperatorPerson, unknown> = object<OperatorPerson>({
-  id: int64StringOrNumber,
+  id: int64String,
   first_name: str,
   last_name: str,
   has_account: bool,
@@ -1417,9 +1416,9 @@ export const OperatorPersonSchema: z.ZodType<OperatorPerson, unknown> = object<O
   has_rfid_card: bool,
   is_staff: bool,
   is_student: bool,
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   school_name: str,
-  organization_id: int64StringOrNumber,
+  organization_id: int64String,
   organization_name: str,
   created_at: instant,
 });
@@ -1453,8 +1452,8 @@ export interface SchoolSummary {
 }
 
 export const SchoolSummarySchema: z.ZodType<SchoolSummary, unknown> = object<SchoolSummary>({
-  id: int64StringOrNumber,
-  organization_id: int64StringOrNumber,
+  id: int64String,
+  organization_id: int64String,
   organization_name: str,
   name: str,
   slug: str,
@@ -1645,10 +1644,10 @@ export interface School {
 }
 
 export const SchoolSchema: z.ZodType<School, unknown> = object<School>({
-  id: int64StringOrNumber,
+  id: int64String,
   created_at: instant,
   updated_at: instant,
-  organization_id: int64StringOrNumber,
+  organization_id: int64String,
   name: str,
   slug: str,
   subdomain: str,
@@ -2241,8 +2240,8 @@ export interface SigningView {
 }
 
 export const SigningViewSchema: z.ZodType<SigningView, unknown> = object<SigningView>({
-  contract_id: int64StringOrNumber,
-  organization_id: int64StringOrNumber,
+  contract_id: int64String,
+  organization_id: int64String,
   status: str,
   traeger_name: str,
   party_name: str,
@@ -2455,9 +2454,9 @@ export const OperationRosterWarningSchema: z.ZodType<OperationRosterWarning, unk
   message: str,
   expected_arrival: optional(str),
   slot_start: optional(str),
-  expected_group_id: optional(int64StringOrNumber),
+  expected_group_id: optional(int64String),
   expected_group_name: optional(str),
-  current_education_group_id: optional(int64StringOrNumber),
+  current_education_group_id: optional(int64String),
 });
 
 /** Go: timetable.OperationParallelPresence */
@@ -2469,7 +2468,7 @@ export interface OperationParallelPresence {
 }
 
 export const OperationParallelPresenceSchema: z.ZodType<OperationParallelPresence, unknown> = object<OperationParallelPresence>({
-  instance_id: int64StringOrNumber,
+  instance_id: int64String,
   title: str,
   start_time: str,
   end_time: str,
@@ -2536,14 +2535,14 @@ export interface OperationRosterRow {
 }
 
 export const OperationRosterRowSchema: z.ZodType<OperationRosterRow, unknown> = object<OperationRosterRow>({
-  student_id: int64StringOrNumber,
+  student_id: int64String,
   student_name: str,
   school_class: str,
   group_name: str,
   planned: bool,
   is_unplanned: bool,
   currently_present: bool,
-  visit_id: optional(int64StringOrNumber),
+  visit_id: optional(int64String),
   status: str,
   substatus: optional(str),
   note: optional(str),
@@ -2574,11 +2573,11 @@ export interface InstanceConflictWarning {
 
 export const InstanceConflictWarningSchema: z.ZodType<InstanceConflictWarning, unknown> = object<InstanceConflictWarning>({
   kind: str,
-  resource_id: int64StringOrNumber,
+  resource_id: int64String,
   message: str,
   can_override: bool,
   fingerprint: optional(str),
-  conflicting_instance_id: optional(int64StringOrNumber),
+  conflicting_instance_id: optional(int64String),
   conflicting_title: optional(str),
   overlap_start: optional(str),
   overlap_end: optional(str),
@@ -2592,7 +2591,7 @@ export interface OperationStaffName {
 }
 
 export const OperationStaffNameSchema: z.ZodType<OperationStaffName, unknown> = object<OperationStaffName>({
-  staff_id: int64StringOrNumber,
+  staff_id: int64String,
   display_name: str,
   is_substitute: bool,
 });
@@ -2639,12 +2638,12 @@ export interface OperationPlannedInstance {
 }
 
 export const OperationPlannedInstanceSchema: z.ZodType<OperationPlannedInstance, unknown> = object<OperationPlannedInstance>({
-  id: int64StringOrNumber,
+  id: int64String,
   title: str,
   date: str,
   start_time: str,
   end_time: str,
-  room_id: int64StringOrNumber,
+  room_id: int64String,
   room_name: optional(str),
   activity_type: optional(str),
   status: str,
@@ -2656,7 +2655,7 @@ export const OperationPlannedInstanceSchema: z.ZodType<OperationPlannedInstance,
   current_students_count: safeInt,
   planned_students_count: safeInt,
   is_spontaneous: bool,
-  assigned_staff_ids: nullable(arr(int64StringOrNumber)),
+  assigned_staff_ids: nullable(arr(int64String)),
   is_assigned: bool,
   is_primary: bool,
   is_substitute: bool,
@@ -2670,7 +2669,7 @@ export const OperationPlannedInstanceSchema: z.ZodType<OperationPlannedInstance,
   start_expires_at: str,
   can_reopen: optional(bool),
   reopen_until: optional(str),
-  active_group_id: optional(int64StringOrNumber),
+  active_group_id: optional(int64String),
   cancel_reason: optional(str),
   planning_track_name: optional(str),
   planning_track_color: optional(str),
@@ -2697,12 +2696,12 @@ export interface OperationRosterInstance {
 }
 
 export const OperationRosterInstanceSchema: z.ZodType<OperationRosterInstance, unknown> = object<OperationRosterInstance>({
-  id: int64StringOrNumber,
+  id: int64String,
   title: str,
   status: str,
   is_spontaneous: bool,
-  active_group_id: optional(int64StringOrNumber),
-  room_id: int64StringOrNumber,
+  active_group_id: optional(int64String),
+  room_id: int64String,
   room_name: optional(str),
   date: str,
   start_time: str,
@@ -2751,7 +2750,7 @@ export interface PatchAttendanceRequest {
 
 /** Go: timetablehttp.CompleteOperationRequest */
 export interface CompleteOperationRequest {
-  confirmed_present_student_ids?: number[] | null;
+  confirmed_present_student_ids?: string[] | null;
 }
 
 /** Go: timetable.ScheduledInstance */
@@ -2786,32 +2785,32 @@ export interface ScheduledInstance {
 }
 
 export const ScheduledInstanceSchema: z.ZodType<ScheduledInstance, unknown> = object<ScheduledInstance>({
-  id: int64StringOrNumber,
+  id: int64String,
   created_at: instant,
   updated_at: instant,
-  tenant_id: int64StringOrNumber,
+  tenant_id: int64String,
   date: nullable(calendarDate),
-  activity_group_id: optional(int64StringOrNumber),
-  calendar_period_id: optional(int64StringOrNumber),
+  activity_group_id: optional(int64String),
+  calendar_period_id: optional(int64String),
   title: str,
   description: optional(str),
   start_time: instant,
   end_time: instant,
-  room_id: int64StringOrNumber,
+  room_id: int64String,
   required_staff: optional(safeInt),
   status: str,
-  active_group_id: optional(int64StringOrNumber),
+  active_group_id: optional(int64String),
   list_kind: optional(str),
   is_spontaneous: bool,
   understaffed_ack: bool,
   understaffed_note: optional(str),
   cancel_reason: optional(str),
   notes: optional(str),
-  created_by: optional(int64StringOrNumber),
-  started_by: optional(int64StringOrNumber),
+  created_by: optional(int64String),
+  started_by: optional(int64String),
   started_at: optional(instant),
   completed_at: optional(instant),
-  completed_by: optional(int64StringOrNumber),
+  completed_by: optional(int64String),
   reopen_until: optional(instant),
 });
 
@@ -2824,9 +2823,9 @@ export interface startOperationResponse {
 }
 
 export const startOperationResponseSchema: z.ZodType<startOperationResponse, unknown> = object<startOperationResponse>({
-  instance_id: int64StringOrNumber,
+  instance_id: int64String,
   status: str,
-  active_group_id: int64StringOrNumber,
+  active_group_id: int64String,
   warnings: nullable(arr(InstanceConflictWarningSchema)),
 });
 
@@ -2845,7 +2844,7 @@ export interface HomeworkFeedbackResponse {
 }
 
 export const HomeworkFeedbackResponseSchema: z.ZodType<HomeworkFeedbackResponse, unknown> = object<HomeworkFeedbackResponse>({
-  student_id: int64StringOrNumber,
+  student_id: int64String,
   date: str,
   status: str,
   note: optional(str),
@@ -2879,9 +2878,9 @@ export interface StaffAbsenceResponse {
 }
 
 export const StaffAbsenceResponseSchema: z.ZodType<StaffAbsenceResponse, unknown> = object<StaffAbsenceResponse>({
-  id: int64StringOrNumber,
-  tenant_id: int64StringOrNumber,
-  staff_id: int64StringOrNumber,
+  id: int64String,
+  tenant_id: int64String,
+  staff_id: int64String,
   absence_type: str,
   absence_type_label: optional(str),
   date_start: str,
@@ -2891,13 +2890,13 @@ export const StaffAbsenceResponseSchema: z.ZodType<StaffAbsenceResponse, unknown
   end_half_day: bool,
   note: optional(str),
   status: str,
-  approved_by: optional(int64StringOrNumber),
+  approved_by: optional(int64String),
   approved_at: optional(instant),
-  created_by: int64StringOrNumber,
+  created_by: int64String,
   working_days: optional(num),
   decision_note: optional(str),
   requested_at: instant,
-  substitute_staff_id: optional(int64StringOrNumber),
+  substitute_staff_id: optional(int64String),
   created_at: instant,
   updated_at: instant,
   duration_days: safeInt,
@@ -3057,12 +3056,12 @@ export interface AdjustmentView {
 }
 
 export const AdjustmentViewSchema: z.ZodType<AdjustmentView, unknown> = object<AdjustmentView>({
-  id: int64StringOrNumber,
+  id: int64String,
   type: str,
   minutes_delta: safeInt,
   effective_date: str,
   note: str,
-  decided_by: int64StringOrNumber,
+  decided_by: int64String,
   decided_at: instant,
 });
 
@@ -3104,7 +3103,7 @@ export interface MonthSummary {
 }
 
 export const MonthSummarySchema: z.ZodType<MonthSummary, unknown> = object<MonthSummary>({
-  staff_id: int64StringOrNumber,
+  staff_id: int64String,
   year: safeInt,
   month: safeInt,
   carry_in_minutes: safeInt,
@@ -3130,7 +3129,7 @@ export const MonthSummarySchema: z.ZodType<MonthSummary, unknown> = object<Month
   closing_balance_minutes: safeInt,
   is_closed: bool,
   closed_at: optional(instant),
-  closed_by: optional(int64StringOrNumber),
+  closed_by: optional(int64String),
   closed_by_traeger: bool,
   close_reason: optional(str),
   frozen_closing_balance_minutes: optional(safeInt),
@@ -3175,11 +3174,11 @@ export interface WorkSessionEditView {
 }
 
 export const WorkSessionEditViewSchema: z.ZodType<WorkSessionEditView, unknown> = object<WorkSessionEditView>({
-  id: int64StringOrNumber,
-  tenant_id: int64StringOrNumber,
-  session_id: int64StringOrNumber,
-  staff_id: int64StringOrNumber,
-  edited_by: int64StringOrNumber,
+  id: int64String,
+  tenant_id: int64String,
+  session_id: int64String,
+  staff_id: int64String,
+  edited_by: int64String,
   field_name: str,
   old_value: nullable(str),
   new_value: nullable(str),
@@ -3206,15 +3205,15 @@ export interface StaffVacationOpening {
 }
 
 export const StaffVacationOpeningSchema: z.ZodType<StaffVacationOpening, unknown> = object<StaffVacationOpening>({
-  id: int64StringOrNumber,
-  tenant_id: int64StringOrNumber,
-  staff_id: int64StringOrNumber,
+  id: int64String,
+  tenant_id: int64String,
+  staff_id: int64String,
   year: safeInt,
   effective_date: str,
   taken_before_days: num,
   entered_remaining_days: num,
   note: str,
-  decided_by: int64StringOrNumber,
+  decided_by: int64String,
   decided_at: instant,
   created_at: instant,
   updated_at: instant,
@@ -3234,7 +3233,7 @@ export interface VacationQuotaSummary {
 }
 
 export const VacationQuotaSummarySchema: z.ZodType<VacationQuotaSummary, unknown> = object<VacationQuotaSummary>({
-  staff_id: int64StringOrNumber,
+  staff_id: int64String,
   year: safeInt,
   entitled_days: num,
   carryover_days: num,
@@ -3298,8 +3297,8 @@ export interface PoolBlock {
 }
 
 export const PoolBlockSchema: z.ZodType<PoolBlock, unknown> = object<PoolBlock>({
-  id: optional(int64StringOrNumber),
-  school_id: int64StringOrNumber,
+  id: optional(int64String),
+  school_id: int64String,
   school_name: str,
   own: bool,
   date: nullable(calendarDate),
@@ -3320,7 +3319,7 @@ export interface PoolSpringer {
 }
 
 export const PoolSpringerSchema: z.ZodType<PoolSpringer, unknown> = object<PoolSpringer>({
-  staff_record_id: int64StringOrNumber,
+  staff_record_id: int64String,
   first_name: str,
   last_name: str,
   pool_from: nullable(calendarDate),
@@ -3367,12 +3366,12 @@ export interface ShiftResponse {
 
 export const ShiftResponseSchema: z.ZodType<ShiftResponse, unknown> = object<ShiftResponse>({
   id: int64String,
-  staff_id: int64StringOrNumber,
+  staff_id: int64String,
   date: str,
   start_time: str,
   end_time: str,
   break_minutes: safeInt,
-  shift_type_id: optional(int64StringOrNumber),
+  shift_type_id: optional(int64String),
   shift_type_name: optional(str),
   shift_type_color: optional(str),
   notes: optional(str),
@@ -3403,7 +3402,7 @@ export interface TraegerStaffSchool {
 }
 
 export const TraegerStaffSchoolSchema: z.ZodType<TraegerStaffSchool, unknown> = object<TraegerStaffSchool>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
 });
 
@@ -3448,7 +3447,7 @@ export interface InvoiceMandate {
 }
 
 export const InvoiceMandateSchema: z.ZodType<InvoiceMandate, unknown> = object<InvoiceMandate>({
-  mandate_id: int64StringOrNumber,
+  mandate_id: int64String,
   reference: str,
   signed_on: nullable(calendarDate),
   creditor_id: str,
@@ -3522,12 +3521,12 @@ export interface CareUnpriced {
 }
 
 export const CareUnpricedSchema: z.ZodType<CareUnpriced, unknown> = object<CareUnpriced>({
-  contract_id: int64StringOrNumber,
-  school_id: int64StringOrNumber,
+  contract_id: int64String,
+  school_id: int64String,
   school_name: str,
   child_first_name: str,
   child_last_name: str,
-  care_offering_id: int64StringOrNumber,
+  care_offering_id: int64String,
   module_name: str,
   weekday: str,
   days_per_week: optional(safeInt),
@@ -3541,8 +3540,8 @@ export interface CareDuplicateContract {
 }
 
 export const CareDuplicateContractSchema: z.ZodType<CareDuplicateContract, unknown> = object<CareDuplicateContract>({
-  contract_id: int64StringOrNumber,
-  school_id: int64StringOrNumber,
+  contract_id: int64String,
+  school_id: int64String,
   school_name: str,
 });
 
@@ -3570,7 +3569,7 @@ export interface CareSchool {
 }
 
 export const CareSchoolSchema: z.ZodType<CareSchool, unknown> = object<CareSchool>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
 });
 
@@ -3600,7 +3599,7 @@ export interface CostBearer {
 }
 
 export const CostBearerSchema: z.ZodType<CostBearer, unknown> = object<CostBearer>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   address: str,
   file_reference: str,
@@ -3632,7 +3631,7 @@ export interface ContributionRule {
 }
 
 export const ContributionRuleSchema: z.ZodType<ContributionRule, unknown> = object<ContributionRule>({
-  id: int64StringOrNumber,
+  id: int64String,
   service: str,
   kind: str,
   valid_from: nullable(calendarDate),
@@ -3642,9 +3641,9 @@ export const ContributionRuleSchema: z.ZodType<ContributionRule, unknown> = obje
   discount_cents: nullable(safeInt),
   note: str,
   name: str,
-  school_ids: nullable(arr(int64StringOrNumber)),
-  care_offering_ids: nullable(arr(int64StringOrNumber)),
-  count_school_ids: nullable(arr(int64StringOrNumber)),
+  school_ids: nullable(arr(int64String)),
+  care_offering_ids: nullable(arr(int64String)),
+  count_school_ids: nullable(arr(int64String)),
   price_cents: nullable(safeInt),
   cap_cents: nullable(safeInt),
   tariff_sibling_price: bool,
@@ -3665,9 +3664,9 @@ export interface CareModule {
 }
 
 export const CareModuleSchema: z.ZodType<CareModule, unknown> = object<CareModule>({
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   school_name: str,
-  care_offering_id: int64StringOrNumber,
+  care_offering_id: int64String,
   module_name: str,
   ends_at: str,
   booked_weekdays: nullable(arr(str)),
@@ -3683,7 +3682,7 @@ export interface HolidaySiblingChild {
 }
 
 export const HolidaySiblingChildSchema: z.ZodType<HolidaySiblingChild, unknown> = object<HolidaySiblingChild>({
-  id: int64StringOrNumber,
+  id: int64String,
   first_name: str,
   last_name: str,
 });
@@ -3696,7 +3695,7 @@ export interface HolidaySibling {
 }
 
 export const HolidaySiblingSchema: z.ZodType<HolidaySibling, unknown> = object<HolidaySibling>({
-  registration_id: int64StringOrNumber,
+  registration_id: int64String,
   status: str,
   children: nullable(arr(HolidaySiblingChildSchema)),
 });
@@ -3720,11 +3719,11 @@ export interface HolidayRegistrationBooking {
 }
 
 export const HolidayRegistrationBookingSchema: z.ZodType<HolidayRegistrationBooking, unknown> = object<HolidayRegistrationBooking>({
-  week_id: int64StringOrNumber,
+  week_id: int64String,
   week_starts_on: nullable(calendarDate),
   week_ends_on: nullable(calendarDate),
-  host_school_id: int64StringOrNumber,
-  time_model_id: int64StringOrNumber,
+  host_school_id: int64String,
+  time_model_id: int64String,
   time_model_name: str,
   price_cents: safeInt,
   days: optional(arr(nullable(calendarDate))),
@@ -3752,14 +3751,14 @@ export interface HolidayRegistrationChild {
 }
 
 export const HolidayRegistrationChildSchema: z.ZodType<HolidayRegistrationChild, unknown> = object<HolidayRegistrationChild>({
-  id: int64StringOrNumber,
+  id: int64String,
   first_name: str,
   last_name: str,
   birth_date: nullable(calendarDate),
-  home_school_id: nullable(int64StringOrNumber),
+  home_school_id: nullable(int64String),
   guest_school_name: str,
   bookings: nullable(arr(HolidayRegistrationBookingSchema)),
-  duplicate_registration_ids: nullable(arr(int64StringOrNumber)),
+  duplicate_registration_ids: nullable(arr(int64String)),
   holiday_wish: str,
   holiday_wish_source: str,
   holiday_wish_check: bool,
@@ -3875,7 +3874,7 @@ export interface HolidayChildAnswers {
 }
 
 export const HolidayChildAnswersSchema: z.ZodType<HolidayChildAnswers, unknown> = object<HolidayChildAnswers>({
-  child_id: int64StringOrNumber,
+  child_id: int64String,
   custom_data: nullable(rec(nullable(json))),
 });
 
@@ -3925,7 +3924,7 @@ export interface HolidayRegistrationProof {
 }
 
 export const HolidayRegistrationProofSchema: z.ZodType<HolidayRegistrationProof, unknown> = object<HolidayRegistrationProof>({
-  id: int64StringOrNumber,
+  id: int64String,
   filename: str,
   size_bytes: safeInt,
   content_type: str,
@@ -3943,8 +3942,8 @@ export interface HolidayBookingChange {
 }
 
 export const HolidayBookingChangeSchema: z.ZodType<HolidayBookingChange, unknown> = object<HolidayBookingChange>({
-  week_id: int64StringOrNumber,
-  time_model_id: int64StringOrNumber,
+  week_id: int64String,
+  time_model_id: int64String,
   waitlisted: optional(bool),
   promoted_at: optional(instant),
   days: optional(arr(nullable(calendarDate))),
@@ -3970,8 +3969,8 @@ export interface HolidayCriterionCheck {
 }
 
 export const HolidayCriterionCheckSchema: z.ZodType<HolidayCriterionCheck, unknown> = object<HolidayCriterionCheck>({
-  criterion_id: int64StringOrNumber,
-  child_id: nullable(int64StringOrNumber),
+  criterion_id: int64String,
+  child_id: nullable(int64String),
   checked: nullable(str),
 });
 
@@ -3994,13 +3993,13 @@ export interface HolidayRegistrationEventDetails {
 
 export const HolidayRegistrationEventDetailsSchema: z.ZodType<HolidayRegistrationEventDetails, unknown> = object<HolidayRegistrationEventDetails>({
   from: optional(str),
-  child_id: optional(int64StringOrNumber),
+  child_id: optional(int64String),
   before: optional(arr(HolidayBookingChangeSchema)),
   after: optional(arr(HolidayBookingChangeSchema)),
   debtor_number: optional(HolidayDebtorNumberChangeSchema),
   fields: optional(arr(str)),
-  siblings: optional(arr(int64StringOrNumber)),
-  week_ids: optional(arr(int64StringOrNumber)),
+  siblings: optional(arr(int64String)),
+  week_ids: optional(arr(int64String)),
   placement: optional(str),
   proposal: optional(str),
   reason: optional(str),
@@ -4019,7 +4018,7 @@ export interface HolidayRegistrationEvent {
 export const HolidayRegistrationEventSchema: z.ZodType<HolidayRegistrationEvent, unknown> = object<HolidayRegistrationEvent>({
   action: str,
   occurred_at: instant,
-  actor_account_id: nullable(int64StringOrNumber),
+  actor_account_id: nullable(int64String),
   details: HolidayRegistrationEventDetailsSchema,
 });
 
@@ -4036,11 +4035,11 @@ export interface HolidayRegistrationCriterion {
 }
 
 export const HolidayRegistrationCriterionSchema: z.ZodType<HolidayRegistrationCriterion, unknown> = object<HolidayRegistrationCriterion>({
-  criterion_id: int64StringOrNumber,
+  criterion_id: int64String,
   name: str,
   question: str,
   scope: str,
-  child_id: nullable(int64StringOrNumber),
+  child_id: nullable(int64String),
   stated: str,
   checked: nullable(str),
   checked_at: nullable(instant),
@@ -4054,9 +4053,9 @@ export interface HolidayPromotion {
 }
 
 export const HolidayPromotionSchema: z.ZodType<HolidayPromotion, unknown> = object<HolidayPromotion>({
-  registration_id: int64StringOrNumber,
-  child_id: int64StringOrNumber,
-  week_id: int64StringOrNumber,
+  registration_id: int64String,
+  child_id: int64String,
+  week_id: int64String,
 });
 
 /** Go: enrollment.HolidayRegistrationDetail */
@@ -4098,7 +4097,7 @@ export interface HolidayRegistrationDetail {
 }
 
 export const HolidayRegistrationDetailSchema: z.ZodType<HolidayRegistrationDetail, unknown> = object<HolidayRegistrationDetail>({
-  id: int64StringOrNumber,
+  id: int64String,
   status: str,
   frozen: bool,
   submitted_at: instant,
@@ -4193,11 +4192,11 @@ export interface SEPADebit {
 }
 
 export const SEPADebitSchema: z.ZodType<SEPADebit, unknown> = object<SEPADebit>({
-  id: int64StringOrNumber,
-  mandate_id: int64StringOrNumber,
-  contract_id: int64StringOrNumber,
+  id: int64String,
+  mandate_id: int64String,
+  contract_id: int64String,
   run_kind: str,
-  run_id: int64StringOrNumber,
+  run_id: int64String,
   invoice_number: str,
   recipient_name: str,
   amount_cents: safeInt,
@@ -4209,7 +4208,7 @@ export const SEPADebitSchema: z.ZodType<SEPADebit, unknown> = object<SEPADebit>(
   status: str,
   left: optional(str),
   submitted_at: nullable(instant),
-  notice_id: optional(int64StringOrNumber),
+  notice_id: optional(int64String),
   notice_month: optional(calendarDate),
   message_id: optional(str),
 });
@@ -4229,7 +4228,7 @@ export interface TraegerStaffProof {
 }
 
 export const TraegerStaffProofSchema: z.ZodType<TraegerStaffProof, unknown> = object<TraegerStaffProof>({
-  type_id: int64StringOrNumber,
+  type_id: int64String,
   type_name: str,
   mandatory: bool,
   police_certificate: bool,

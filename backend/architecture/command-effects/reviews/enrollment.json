@@ -1686,7 +1686,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.FamilyChildrenPurpose.FamilyChildrenAsked",
-      "reason": "Read-only newly exposed target: enrollment reaches modules/parentbilling ParentDocuments.CountsFamilyChildrenAt (parent-billing) through roots/owners.enrollmentFamilyChildrenPurpose.FamilyChildrenAsked (#6335) in the Träger's read transaction: it lists the care rules of the Träger and tells whether a current sibling rule counts the family at the school. No persistent, lock or scope effect.",
+      "reason": "Read-only newly exposed target: enrollment reaches modules/parentbilling ParentDocuments.CountsFamilyChildrenAt (parent-billing) through roots/owners.enrollmentFamilyChildrenPurpose.FamilyChildrenAsked (#6335) in the Träger's read transaction: it lists the care rules of the Träger and tells whether a current sibling rule counts the family at the school. No persistent, lock or scope effect. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "enrollment",
       "target": "*github.com/moto-ogs/project-phoenix/modules/parentbilling/internal/application.ParentDocuments.CountsFamilyChildrenAt",
       "target_owner": "parent-billing"
@@ -1696,7 +1696,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.FamilyChildrenPurpose.FamilyChildrenAsked",
-      "reason": "Read-only newly exposed target: enrollment reaches modules/organizationtenancy.Capability.FindSchool through roots/owners.enrollmentFamilyChildrenPurpose.FamilyChildrenAsked (#6335) to read the school and its Träger, so the status page asks for the children of the family only where a sibling rule counts them. No persistent, lock or scope effect.",
+      "reason": "Read-only newly exposed target: enrollment reaches modules/organizationtenancy.Capability.FindSchool through roots/owners.enrollmentFamilyChildrenPurpose.FamilyChildrenAsked (#6335) to read the school and its Träger, so the status page asks for the children of the family only where a sibling rule counts them. No persistent, lock or scope effect. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.FindSchool",
       "target_owner": "organization-tenancy"
@@ -1706,7 +1706,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.FamilyChildrenPurpose.FamilyChildrenAsked",
-      "reason": "Read-only newly exposed target: enrollment reaches modules/organizationtenancy.Query.FindSchool through roots/owners.enrollmentFamilyChildrenPurpose.FamilyChildrenAsked (#6335) to read the school and its Träger, so the status page asks for the children of the family only where a sibling rule counts them. No persistent, lock or scope effect.",
+      "reason": "Read-only newly exposed target: enrollment reaches modules/organizationtenancy.Query.FindSchool through roots/owners.enrollmentFamilyChildrenPurpose.FamilyChildrenAsked (#6335) to read the school and its Träger, so the status page asks for the children of the family only where a sibling rule counts them. No persistent, lock or scope effect. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.FindSchool",
       "target_owner": "organization-tenancy"
@@ -1716,7 +1716,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.FamilyChildrenPurpose.FamilyChildrenAsked",
-      "reason": "Read-only newly exposed target: enrollment reaches modules/organizationtenancy.SchoolQuery.FindSchool through roots/owners.enrollmentFamilyChildrenPurpose.FamilyChildrenAsked (#6335) to read the school and its Träger, so the status page asks for the children of the family only where a sibling rule counts them. No persistent, lock or scope effect.",
+      "reason": "Read-only newly exposed target: enrollment reaches modules/organizationtenancy.SchoolQuery.FindSchool through roots/owners.enrollmentFamilyChildrenPurpose.FamilyChildrenAsked (#6335) to read the school and its Träger, so the status page asks for the children of the family only where a sibling rule counts them. No persistent, lock or scope effect. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolQuery.FindSchool",
       "target_owner": "organization-tenancy"
@@ -1726,7 +1726,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.FamilyChildrenPurpose.FamilyChildrenAsked",
-      "reason": "Read-only newly exposed target: enrollment reaches modules/parentbilling ParentDocuments.CountsFamilyChildrenAt (parent-billing) through roots/owners.enrollmentFamilyChildrenPurpose.FamilyChildrenAsked (#6335) in the Träger's read transaction: it lists the care rules of the Träger and tells whether a current sibling rule counts the family at the school. No persistent, lock or scope effect.",
+      "reason": "Read-only newly exposed target: enrollment reaches modules/parentbilling ParentDocuments.CountsFamilyChildrenAt (parent-billing) through roots/owners.enrollmentFamilyChildrenPurpose.FamilyChildrenAsked (#6335) in the Träger's read transaction: it lists the care rules of the Träger and tells whether a current sibling rule counts the family at the school. No persistent, lock or scope effect. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/parentbilling/compose.NewParentDocuments",
       "target_owner": "parent-billing"
@@ -1737,7 +1737,7 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.FamilyChildrenPurpose.FamilyChildrenAsked",
-      "reason": "Platform protocol participation (scope): enrollment reaches tenant.WithinTraeger (tenant-runtime) through roots/owners.enrollmentFamilyChildrenPurpose.FamilyChildrenAsked (#6335), which reads the sibling rules of the school's Träger in that Träger's own read transaction, outside the school transaction of the status link, to ask for the children of the family only where a rule counts them. No write.",
+      "reason": "Platform protocol participation (scope): enrollment reaches tenant.WithinTraeger (tenant-runtime) through roots/owners.enrollmentFamilyChildrenPurpose.FamilyChildrenAsked (#6335), which reads the sibling rules of the school's Träger in that Träger's own read transaction, outside the school transaction of the status link, to ask for the children of the family only where a rule counts them. No write. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTraeger",
       "target_owner": "tenant-runtime"
@@ -2223,7 +2223,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayHostSchoolNames.HolidayHostSchoolNames",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Capability.FindSchool. ADR 0116 (#4665): the participant list of the hosting school names the home schools from the schools of its Träger, read in Organisation \u0026 Tenancy's own read unit before the route opens the school's tenant transaction. ADR 0120 Nachtrag (#5630): the reconciliation names the home school of each guest copy with the same read, in the school's tenant transaction, where the school role may read platform.schools.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Capability.FindSchool. ADR 0116 (#4665): the participant list of the hosting school names the home schools from the schools of its Träger, read in Organisation \u0026 Tenancy's own read unit before the route opens the school's tenant transaction. ADR 0120 Nachtrag (#5630): the reconciliation names the home school of each guest copy with the same read, in the school's tenant transaction, where the school role may read platform.schools. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.FindSchool",
       "target_owner": "organization-tenancy"
@@ -2233,7 +2233,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayHostSchoolNames.HolidayHostSchoolNames",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Capability.ListSchoolsByOrganization. ADR 0116 (#4665): the participant list of the hosting school names the home schools from the schools of its Träger, read in Organisation \u0026 Tenancy's own read unit before the route opens the school's tenant transaction. ADR 0120 Nachtrag (#5630): the reconciliation names the home school of each guest copy with the same read, in the school's tenant transaction, where the school role may read platform.schools.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Capability.ListSchoolsByOrganization. ADR 0116 (#4665): the participant list of the hosting school names the home schools from the schools of its Träger, read in Organisation \u0026 Tenancy's own read unit before the route opens the school's tenant transaction. ADR 0120 Nachtrag (#5630): the reconciliation names the home school of each guest copy with the same read, in the school's tenant transaction, where the school role may read platform.schools. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.ListSchoolsByOrganization",
       "target_owner": "organization-tenancy"
@@ -2243,7 +2243,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayHostSchoolNames.HolidayHostSchoolNames",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Query.FindSchool. ADR 0116 (#4665): the participant list of the hosting school names the home schools from the schools of its Träger, read in Organisation \u0026 Tenancy's own read unit before the route opens the school's tenant transaction. ADR 0120 Nachtrag (#5630): the reconciliation names the home school of each guest copy with the same read, in the school's tenant transaction, where the school role may read platform.schools.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Query.FindSchool. ADR 0116 (#4665): the participant list of the hosting school names the home schools from the schools of its Träger, read in Organisation \u0026 Tenancy's own read unit before the route opens the school's tenant transaction. ADR 0120 Nachtrag (#5630): the reconciliation names the home school of each guest copy with the same read, in the school's tenant transaction, where the school role may read platform.schools. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.FindSchool",
       "target_owner": "organization-tenancy"
@@ -2253,7 +2253,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayHostSchoolNames.HolidayHostSchoolNames",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Query.ListSchoolsByOrganization. ADR 0116 (#4665): the participant list of the hosting school names the home schools from the schools of its Träger, read in Organisation \u0026 Tenancy's own read unit before the route opens the school's tenant transaction. ADR 0120 Nachtrag (#5630): the reconciliation names the home school of each guest copy with the same read, in the school's tenant transaction, where the school role may read platform.schools.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Query.ListSchoolsByOrganization. ADR 0116 (#4665): the participant list of the hosting school names the home schools from the schools of its Träger, read in Organisation \u0026 Tenancy's own read unit before the route opens the school's tenant transaction. ADR 0120 Nachtrag (#5630): the reconciliation names the home school of each guest copy with the same read, in the school's tenant transaction, where the school role may read platform.schools. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.ListSchoolsByOrganization",
       "target_owner": "organization-tenancy"
@@ -2464,7 +2464,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidaySchoolCalendar.HolidayNoCareDays",
-      "reason": "ADR 0194: read-only current school membership and closing-day projection. The caller owns the existing transaction; no write, lock or scope change.",
+      "reason": "ADR 0194: read-only current school membership and closing-day projection. The caller owns the existing transaction; no write, lock or scope change. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.ListSchoolsByOrganization",
       "target_owner": "organization-tenancy"
@@ -2474,7 +2474,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidaySchoolCalendar.HolidayNoCareDays",
-      "reason": "ADR 0194: read-only current school membership and closing-day projection. The caller owns the existing transaction; no write, lock or scope change.",
+      "reason": "ADR 0194: read-only current school membership and closing-day projection. The caller owns the existing transaction; no write, lock or scope change. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.School.IsDeleted",
       "target_owner": "organization-tenancy"
@@ -2545,7 +2545,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidaySchoolNames.HolidaySchoolNames",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/traegerview.Overview.Schools. ADR 0114: the export of the holiday registrations names the Träger's schools from the projection's school list, read in the projection's own administrative unit before the route opens the Träger transaction. Re-reviewed for #2352: the projection's school type is named TraegerSchool now, the binding reads the same list.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/traegerview.Overview.Schools. ADR 0114: the export of the holiday registrations names the Träger's schools from the projection's school list, read in the projection's own administrative unit before the route opens the Träger transaction. Re-reviewed for #2352: the projection's school type is named TraegerSchool now, the binding reads the same list. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/traegerview.Overview.Schools",
       "target_owner": "traeger-view"
@@ -2607,7 +2607,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayTraegerDirectory.HolidayTraeger",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Capability.FindOrganization. ADR 0110: the public holiday registration resolves the Träger of its link and its undeleted schools in the administrative transaction of the link lookup.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Capability.FindOrganization. ADR 0110: the public holiday registration resolves the Träger of its link and its undeleted schools in the administrative transaction of the link lookup. After #2342 (ADR 0300), Organization Tenancy returns school IDs as ident.ID directly, so this binding no longer converts them from int64. Read calls, filtering, ordering and transaction scope are unchanged. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.FindOrganization",
       "target_owner": "organization-tenancy"
@@ -2617,7 +2617,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayTraegerDirectory.HolidayTraeger",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Capability.ListSchoolsByOrganization. ADR 0110: the public holiday registration resolves the Träger of its link and its undeleted schools in the administrative transaction of the link lookup.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Capability.ListSchoolsByOrganization. ADR 0110: the public holiday registration resolves the Träger of its link and its undeleted schools in the administrative transaction of the link lookup. After #2342 (ADR 0300), Organization Tenancy returns school IDs as ident.ID directly, so this binding no longer converts them from int64. Read calls, filtering, ordering and transaction scope are unchanged. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.ListSchoolsByOrganization",
       "target_owner": "organization-tenancy"
@@ -2627,7 +2627,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayTraegerDirectory.HolidayTraeger",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Organization.IsDeleted. ADR 0110: the public holiday registration resolves the Träger of its link and its undeleted schools in the administrative transaction of the link lookup.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Organization.IsDeleted. ADR 0110: the public holiday registration resolves the Träger of its link and its undeleted schools in the administrative transaction of the link lookup. After #2342 (ADR 0300), Organization Tenancy returns school IDs as ident.ID directly, so this binding no longer converts them from int64. Read calls, filtering, ordering and transaction scope are unchanged. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Organization.IsDeleted",
       "target_owner": "organization-tenancy"
@@ -2637,7 +2637,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayTraegerDirectory.HolidayTraeger",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Query.FindOrganization. ADR 0113: the parents portal prefill resolves the Träger of a holiday registration link and its undeleted schools in the administrative transaction of the link lookup, through the same directory as the public link (ADR 0110).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Query.FindOrganization. ADR 0113: the parents portal prefill resolves the Träger of a holiday registration link and its undeleted schools in the administrative transaction of the link lookup, through the same directory as the public link (ADR 0110). After #2342 (ADR 0300), Organization Tenancy returns school IDs as ident.ID directly, so this binding no longer converts them from int64. Read calls, filtering, ordering and transaction scope are unchanged. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.FindOrganization",
       "target_owner": "organization-tenancy"
@@ -2647,7 +2647,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayTraegerDirectory.HolidayTraeger",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Query.ListSchoolsByOrganization. ADR 0113: the parents portal prefill resolves the Träger of a holiday registration link and its undeleted schools in the administrative transaction of the link lookup, through the same directory as the public link (ADR 0110).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Query.ListSchoolsByOrganization. ADR 0113: the parents portal prefill resolves the Träger of a holiday registration link and its undeleted schools in the administrative transaction of the link lookup, through the same directory as the public link (ADR 0110). After #2342 (ADR 0300), Organization Tenancy returns school IDs as ident.ID directly, so this binding no longer converts them from int64. Read calls, filtering, ordering and transaction scope are unchanged. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.ListSchoolsByOrganization",
       "target_owner": "organization-tenancy"
@@ -2657,7 +2657,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayTraegerDirectory.HolidayTraeger",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.School.IsDeleted. ADR 0110: the public holiday registration resolves the Träger of its link and its undeleted schools in the administrative transaction of the link lookup.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.School.IsDeleted. ADR 0110: the public holiday registration resolves the Träger of its link and its undeleted schools in the administrative transaction of the link lookup. After #2342 (ADR 0300), Organization Tenancy returns school IDs as ident.ID directly, so this binding no longer converts them from int64. Read calls, filtering, ordering and transaction scope are unchanged. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.School.IsDeleted",
       "target_owner": "organization-tenancy"
@@ -2667,7 +2667,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayTraegerDirectory.HolidayTraeger",
-      "reason": "Lists the Träger's schools in the caller's Träger transaction to check the current membership (ADR 0196 section 3.1); read only.",
+      "reason": "Lists the Träger's schools in the caller's Träger transaction to check the current membership (ADR 0196 section 3.1); read only. After #2342 (ADR 0300), Organization Tenancy returns school IDs as ident.ID directly, so this binding no longer converts them from int64. Read calls, filtering, ordering and transaction scope are unchanged. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.ListSchoolsByOrganization",
       "target_owner": "organization-tenancy"
@@ -2677,7 +2677,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayTraegerDirectory.HolidayTraeger",
-      "reason": "Lists the Träger's schools in the caller's Träger transaction to check the current membership (ADR 0196 section 3.1); read only.",
+      "reason": "Lists the Träger's schools in the caller's Träger transaction to check the current membership (ADR 0196 section 3.1); read only. After #2342 (ADR 0300), Organization Tenancy returns school IDs as ident.ID directly, so this binding no longer converts them from int64. Read calls, filtering, ordering and transaction scope are unchanged. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.ListSchoolsByOrganization",
       "target_owner": "organization-tenancy"
@@ -2687,7 +2687,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayTraegerDirectory.HolidayTraeger",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.School.IsDeleted. #6434, #6437: the closure notice and the mail that a booking moved up after a change in the Träger-Büro name the undeleted host schools of the Träger, read in the caller's Träger transaction like the host-school check of the holiday calendar. Moved to roots/owners for the Worker's notices (ADR 0196).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.School.IsDeleted. #6434, #6437: the closure notice and the mail that a booking moved up after a change in the Träger-Büro name the undeleted host schools of the Träger, read in the caller's Träger transaction like the host-school check of the holiday calendar. Moved to roots/owners for the Worker's notices (ADR 0196). After #2342 (ADR 0300), Organization Tenancy returns school IDs as ident.ID directly, so this binding no longer converts them from int64. Read calls, filtering, ordering and transaction scope are unchanged. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.School.IsDeleted",
       "target_owner": "organization-tenancy"
@@ -2697,7 +2697,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayTraegerDirectory.HolidayTraeger",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.TraegerMasterData.TraegerName. #6437: the mail that a booking moved up after a change in the Träger-Büro, and the closure notice, name the Träger; Organisation \u0026 Tenancy reads its own name in the caller's Träger transaction through platform.current_traeger_name (1.15.902), without a log. Moved to roots/owners for the Worker's notices (ADR 0196).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.TraegerMasterData.TraegerName. #6437: the mail that a booking moved up after a change in the Träger-Büro, and the closure notice, name the Träger; Organisation \u0026 Tenancy reads its own name in the caller's Träger transaction through platform.current_traeger_name (1.15.902), without a log. Moved to roots/owners for the Worker's notices (ADR 0196). After #2342 (ADR 0300), Organization Tenancy returns school IDs as ident.ID directly, so this binding no longer converts them from int64. Read calls, filtering, ordering and transaction scope are unchanged. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.TraegerMasterData.TraegerName",
       "target_owner": "organization-tenancy"
@@ -2707,7 +2707,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayTraegerDirectory.HolidayTraeger",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.TraegerNames.TraegerName. #6437: the mail that a booking moved up after a change in the Träger-Büro, and the closure notice, name the Träger; Organisation \u0026 Tenancy reads its own name in the caller's Träger transaction through platform.current_traeger_name (1.15.902), without a log. Moved to roots/owners for the Worker's notices (ADR 0196).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.TraegerNames.TraegerName. #6437: the mail that a booking moved up after a change in the Träger-Büro, and the closure notice, name the Träger; Organisation \u0026 Tenancy reads its own name in the caller's Träger transaction through platform.current_traeger_name (1.15.902), without a log. Moved to roots/owners for the Worker's notices (ADR 0196). After #2342 (ADR 0300), Organization Tenancy returns school IDs as ident.ID directly, so this binding no longer converts them from int64. Read calls, filtering, ordering and transaction scope are unchanged. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.TraegerNames.TraegerName",
       "target_owner": "organization-tenancy"
@@ -2717,7 +2717,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayTraegerDirectory.HolidayTraeger",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy/internal/ports.TraegerMasterDataStore.TraegerName. #6437: the mail that a booking moved up after a change in the Träger-Büro, and the closure notice, name the Träger; Organisation \u0026 Tenancy reads its own name in the caller's Träger transaction through platform.current_traeger_name (1.15.902), without a log. Moved to roots/owners for the Worker's notices (ADR 0196).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy/internal/ports.TraegerMasterDataStore.TraegerName. #6437: the mail that a booking moved up after a change in the Träger-Büro, and the closure notice, name the Träger; Organisation \u0026 Tenancy reads its own name in the caller's Träger transaction through platform.current_traeger_name (1.15.902), without a log. Moved to roots/owners for the Worker's notices (ADR 0196). After #2342 (ADR 0300), Organization Tenancy returns school IDs as ident.ID directly, so this binding no longer converts them from int64. Read calls, filtering, ordering and transaction scope are unchanged. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/ports.TraegerMasterDataStore.TraegerName",
       "target_owner": "organization-tenancy"
@@ -5782,7 +5782,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.SchoolDirectory.GetSchoolBySlug",
-      "reason": "Read or pure value helper on the supplied interface: *modules/organizationtenancy.School.IsDeleted. No mutation or locking read at this terminal; type-level binding coverage, not proof that Enrollment calls every exposed method.",
+      "reason": "Read or pure value helper on the supplied interface: *modules/organizationtenancy.School.IsDeleted. No mutation or locking read at this terminal; type-level binding coverage, not proof that Enrollment calls every exposed method. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "enrollment",
       "target": "*github.com/moto-ogs/project-phoenix/modules/organizationtenancy.School.IsDeleted",
       "target_owner": "organization-tenancy"
@@ -5792,7 +5792,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.SchoolDirectory.GetSchoolBySlug",
-      "reason": "Read-only already reviewed target: enrollment reaches modules/organizationtenancy.Capability.FindSchool (organization-tenancy) through api.enrollmentSchoolDirectory.GetSchoolBySlug. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: enrollment reaches modules/organizationtenancy.Capability.FindSchool (organization-tenancy) through api.enrollmentSchoolDirectory.GetSchoolBySlug. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.FindSchool",
       "target_owner": "organization-tenancy"
@@ -5802,7 +5802,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.SchoolDirectory.GetSchoolBySlug",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Capability.FindSchoolBySlug; modules/organizationtenancy.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Capability.FindSchoolBySlug; modules/organizationtenancy.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.FindSchoolBySlug",
       "target_owner": "organization-tenancy"
@@ -5812,7 +5812,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.SchoolDirectory.GetSchoolBySlug",
-      "reason": "Read-only already reviewed target: enrollment reaches modules/organizationtenancy.Capability.FindSchoolBySubdomain (organization-tenancy) through api.enrollmentSchoolDirectory.GetSchoolBySlug. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: enrollment reaches modules/organizationtenancy.Capability.FindSchoolBySubdomain (organization-tenancy) through api.enrollmentSchoolDirectory.GetSchoolBySlug. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.FindSchoolBySubdomain",
       "target_owner": "organization-tenancy"
@@ -5822,7 +5822,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.SchoolDirectory.GetSchoolBySlug",
-      "reason": "Read-only already reviewed target: enrollment reaches modules/organizationtenancy.Query.FindSchool (organization-tenancy) through api.enrollmentSchoolDirectory.GetSchoolBySlug. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: enrollment reaches modules/organizationtenancy.Query.FindSchool (organization-tenancy) through api.enrollmentSchoolDirectory.GetSchoolBySlug. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.FindSchool",
       "target_owner": "organization-tenancy"
@@ -5832,7 +5832,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.SchoolDirectory.GetSchoolBySlug",
-      "reason": "Read or pure value helper on the supplied interface: modules/organizationtenancy.Query.FindSchoolBySlug. No mutation or locking read at this terminal; type-level binding coverage, not proof that Enrollment calls every exposed method. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged.",
+      "reason": "Read or pure value helper on the supplied interface: modules/organizationtenancy.Query.FindSchoolBySlug. No mutation or locking read at this terminal; type-level binding coverage, not proof that Enrollment calls every exposed method. #4836 binding-flow review: callable/closure, unexported-helper or generic-origin resolution changed this binding evidence; effect and classification unchanged. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.FindSchoolBySlug",
       "target_owner": "organization-tenancy"
@@ -5842,7 +5842,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/http.SchoolDirectory.GetSchoolBySlug",
-      "reason": "Read-only already reviewed target: enrollment reaches modules/organizationtenancy.Query.FindSchoolBySubdomain (organization-tenancy) through api.enrollmentSchoolDirectory.GetSchoolBySlug. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
+      "reason": "Read-only already reviewed target: enrollment reaches modules/organizationtenancy.Query.FindSchoolBySubdomain (organization-tenancy) through api.enrollmentSchoolDirectory.GetSchoolBySlug. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.FindSchoolBySubdomain",
       "target_owner": "organization-tenancy"
@@ -8045,7 +8045,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.ReviewerStaff.StaffIDByPerson",
-      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added.",
+      "reason": "Value-only tenant metadata setter on a returned DTO, not a database write or transaction-scope switch. Target modules/peopledirectory.Staff.SetTenantID; modules/peopledirectory/record_metadata.go:14. May-bind method surface, not a production-call/liveness claim. Re-reviewed for #4573 (ADR 0091): staff hydration now sets the external caregiver marker instead of the guest flag; value mapping only, no owned-row mutation or locking read added. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "enrollment",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
       "target_owner": "people-directory"
@@ -8055,7 +8055,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.ReviewerStaff.StaffIDByPerson",
-      "reason": "Read or pure value helper on the supplied interface: modules/peopledirectory/ports.StaffRepository.FindByPersonID. No mutation or locking read at this terminal; type-level binding coverage, not proof that Enrollment calls every exposed method.",
+      "reason": "Read or pure value helper on the supplied interface: modules/peopledirectory/ports.StaffRepository.FindByPersonID. No mutation or locking read at this terminal; type-level binding coverage, not proof that Enrollment calls every exposed method. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StaffRepository.FindByPersonID",
       "target_owner": "people-directory"
@@ -8065,7 +8065,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.ReviewerStaff.StaffIDByPerson",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Capability.FindStaffByPerson; modules/schoolmembership.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Capability.FindStaffByPerson; modules/schoolmembership.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.FindStaffByPerson",
       "target_owner": "school-membership"
@@ -8075,7 +8075,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.ReviewerStaff.StaffIDByPerson",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.FindStaffByPerson; modules/schoolmembership.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.FindStaffByPerson; modules/schoolmembership.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.FindStaffByPerson",
       "target_owner": "school-membership"

@@ -83,7 +83,7 @@ function Page() {
   return (
     <TenantProviders
       tenantSlug="school-a"
-      tenant={{ tenantId: 1 } as TenantInfo}
+      tenant={{ tenantId: "1" } as TenantInfo}
       routingMode="subdomain"
       session={session}
       shell={shell}
@@ -146,7 +146,7 @@ it("loads the server answer, not the seed, after a rights change under the same 
     return (
       <TenantProviders
         tenantSlug="school-a"
-        tenant={{ tenantId: 1 } as TenantInfo}
+        tenant={{ tenantId: "1" } as TenantInfo}
         routingMode="subdomain"
         session={session}
         shell={{

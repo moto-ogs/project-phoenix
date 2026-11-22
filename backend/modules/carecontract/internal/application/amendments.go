@@ -146,9 +146,9 @@ func (c *Conclusions) amend(ctx context.Context, organizationID int64, contract 
 func timelineStep(contract AmendableContract, plan amendmentPlan) VersionStep {
 	switch {
 	case plan.replace != nil:
-		return VersionStep{Replace: plan.replace.ID, Status: plan.replace.Status}
+		return VersionStep{Replace: plan.replace.ID.Int64(), Status: plan.replace.Status}
 	case plan.version.Status == carecontract.VersionEffective:
-		return VersionStep{Supersede: contract.Latest.ID, Status: carecontract.VersionEffective}
+		return VersionStep{Supersede: contract.Latest.ID.Int64(), Status: carecontract.VersionEffective}
 	}
 	return VersionStep{}
 }

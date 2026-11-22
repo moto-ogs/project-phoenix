@@ -55,7 +55,7 @@ func (s *Rules) ListCostBearers(ctx context.Context, organizationID int64) ([]pa
 		return nil, fmt.Errorf("parent billing: read cost bearers in use: %w", err)
 	}
 	for i := range bearers {
-		bearers[i].InUse = inUse[bearers[i].ID]
+		bearers[i].InUse = inUse[bearers[i].ID.Int64()]
 	}
 	return bearers, nil
 }

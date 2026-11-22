@@ -230,7 +230,7 @@ func (t careContractTraeger) ActiveTraegerIDs(ctx context.Context) ([]int64, err
 	ids := make([]int64, 0, len(organizations))
 	for _, organization := range organizations {
 		if organization.Active && organization.DeletedAt == nil {
-			ids = append(ids, organization.ID)
+			ids = append(ids, organization.ID.Int64())
 		}
 	}
 	return ids, nil

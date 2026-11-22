@@ -1,11 +1,11 @@
 import type { ParentConferenceOffer } from "~/lib/parent-conferences";
 import type { MessageAttachment } from "~/lib/message-attachments";
 import {
-  type BackendHolidayRegistrationEntries,
   type HolidayRegistrationEntry,
   holidayRegistrationEntriesFromBackend,
 } from "~/lib/parent-holiday-registration-entries";
 import type { CareContractStatus } from "./traeger-care-contracts-api";
+import type { HolidayRegistrationEntriesResponse as WireHolidayRegistrationEntries } from "./contract/parent-me.generated";
 import {
   ApiError,
   transportFetch as fetchTransport,
@@ -99,9 +99,14 @@ export interface Child {
   readonly without_care_place?: boolean;
 }
 
-export type ChildConsentState = ConsentState;
+// The row "room_history" (#3844) shows whether moto records the child's
+// rooms and mood ("recording") or the stop is set ("stopped"). It only comes
+// when the Träger lets parents stop it.
+export type ChildConsentState = ConsentState | "recording" | "stopped";
 
-export interface ChildConsent extends ConsentRecord {
+export interface ChildConsent extends Omit<ConsentRecord, "key" | "state"> {
+  readonly key: ConsentRecord["key"] | "room_history";
+  readonly state: ChildConsentState;
   readonly can_withdraw: boolean;
   readonly can_grant: boolean;
 }
@@ -681,6 +686,46 @@ export async function grantChildPhotoConsent(
     `/api/parent/me/children/${encodeURIComponent(studentId)}/consents/photo`,
     {},
   );
+}
+
+/**
+ * Whether the room history and mood of the child are stopped (#3844).
+ * `offered` is false while the Träger has not let parents stop it and the
+ * child is not stopped; `can_change` needs the Träger's switch and the
+ * guardian's consent permission.
+ */
+export interface ChildRoomHistoryStop {
+  readonly offered: boolean;
+  readonly stopped: boolean;
+  readonly stopped_at?: string;
+  readonly can_change: boolean;
+}
+
+const roomHistoryStopUrl = (studentId: string) =>
+  `/api/parent/me/children/${encodeURIComponent(studentId)}/room-history-stop`;
+
+/** Reads the stop of the child's room history and mood. */
+export async function getChildRoomHistoryStop(
+  studentId: string,
+): Promise<ChildRoomHistoryStop> {
+  return getJson<ChildRoomHistoryStop>(roomHistoryStopUrl(studentId));
+}
+
+/**
+ * Stops the room history and mood of the child; moto deletes the child's
+ * room history.
+ */
+export async function stopChildRoomHistory(
+  studentId: string,
+): Promise<ChildRoomHistoryStop> {
+  return putJson<ChildRoomHistoryStop>(roomHistoryStopUrl(studentId), {});
+}
+
+/** Lifts the stop; moto records again from now on. */
+export async function resumeChildRoomHistory(
+  studentId: string,
+): Promise<ChildRoomHistoryStop> {
+  return deleteJson<ChildRoomHistoryStop>(roomHistoryStopUrl(studentId));
 }
 
 const parentConferencesUrl = (studentId: string) =>
@@ -1396,7 +1441,7 @@ export async function listHolidayOffers(): Promise<HolidayOffer[]> {
 export async function listHolidayRegistrationEntries(): Promise<
   HolidayRegistrationEntry[]
 > {
-  const body = await getJson<BackendHolidayRegistrationEntries | null>(
+  const body = await getJson<WireHolidayRegistrationEntries>(
     "/api/parent/me/holiday-registration-entries",
   );
   return holidayRegistrationEntriesFromBackend(body);

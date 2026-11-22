@@ -11,6 +11,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -89,7 +90,7 @@ func resolveFamilyImportMapping(headers []string, mapping parentbilling.FamilyCh
 		parentbilling.FamilyImportFieldChildren:       mapping.Columns.Children,
 	}
 	refused := validation.Errors{}
-	index := familyImportIndex{fields: map[string]int{}, schoolID: mapping.SchoolID}
+	index := familyImportIndex{fields: map[string]int{}, schoolID: mapping.SchoolID.Int64()}
 	used := map[string]bool{}
 	for _, field := range familyImportFields {
 		header := columns[field]
@@ -237,7 +238,7 @@ func (c *familyImportCheck) children(row *parentbilling.FamilyChildrenImportRow,
 // school finds the school of the row: the chosen one, else the one the
 // cell names without case and punctuation.
 func (c *familyImportCheck) school(row *parentbilling.FamilyChildrenImportRow, cells []string) (int64, bool) {
-	matches := func(school parentbilling.CareSchool) bool { return school.ID == c.index.schoolID }
+	matches := func(school parentbilling.CareSchool) bool { return school.ID == ident.ID(c.index.schoolID) }
 	if c.index.has(parentbilling.FamilyImportFieldSchool) {
 		value := c.index.cell(cells, parentbilling.FamilyImportFieldSchool)
 		row.SchoolName = value
@@ -258,7 +259,7 @@ func (c *familyImportCheck) school(row *parentbilling.FamilyChildrenImportRow, c
 	switch len(found) {
 	case 1:
 		row.SchoolName = found[0].Name
-		return found[0].ID, true
+		return found[0].ID.Int64(), true
 	case 0:
 		problemOf(row, parentbilling.FamilyImportFieldSchool, parentbilling.FamilyImportProblemUnknown)
 	default:
@@ -329,7 +330,7 @@ func (c *familyImportCheck) targets(row *parentbilling.FamilyChildrenImportRow, 
 		}
 	}
 	if !repeated {
-		row.ContractID, row.ValidFrom = targets[0].contractID, &targets[0].firstDay
+		row.ContractID, row.ValidFrom = ident.ID(targets[0].contractID), &targets[0].firstDay
 	}
 	return targets
 }

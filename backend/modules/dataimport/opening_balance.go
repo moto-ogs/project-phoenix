@@ -1,5 +1,7 @@
 package dataimport
 
+import "github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+
 // OpeningBalanceFactory validates upload dates and creates request-scoped imports.
 type OpeningBalanceFactory interface {
 	ValidateDate(string) (string, error)
@@ -21,7 +23,7 @@ type OpeningBalanceImportRow struct {
 	VacationRemaining string `json:"vacation_remaining"`
 
 	// Resolved during validation, not part of the file.
-	StaffID               int64    `json:"staff_id,omitempty"`
+	StaffID               ident.ID `json:"staff_id,omitempty"`
 	HoursBalanceMinutes   *int     `json:"hours_balance_minutes,omitempty"`
 	VacationEntitledDays  *float64 `json:"vacation_entitled_days,omitempty"`
 	VacationCarryoverDays *float64 `json:"vacation_carryover_days,omitempty"`

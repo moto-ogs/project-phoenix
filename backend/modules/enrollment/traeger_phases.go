@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Träger phase (ADR 0195): a Träger keeps an enrollment phase once in its
@@ -78,7 +80,7 @@ type TraegerPhaseInput struct {
 // TraegerCatalogSchool is one school of a Träger phase or offering with the
 // last outcome of its copy there.
 type TraegerCatalogSchool struct {
-	SchoolID       int64      `json:"school_id"`
+	SchoolID       ident.ID   `json:"school_id"`
 	Selected       bool       `json:"selected"`
 	AppliedVersion *int       `json:"applied_version,omitempty"`
 	Outcome        string     `json:"outcome,omitempty"`
@@ -89,8 +91,8 @@ type TraegerCatalogSchool struct {
 // TraegerPhase is a Träger phase with its draft, its released version and
 // its schools.
 type TraegerPhase struct {
-	ID              int64                  `json:"id"`
-	OrganizationID  int64                  `json:"organization_id"`
+	ID              ident.ID               `json:"id"`
+	OrganizationID  ident.ID               `json:"organization_id"`
 	Draft           TraegerPhaseFields     `json:"draft"`
 	AllSchools      bool                   `json:"all_schools"`
 	ReleasedVersion *int                   `json:"released_version,omitempty"`

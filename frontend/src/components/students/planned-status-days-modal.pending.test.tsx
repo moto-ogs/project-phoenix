@@ -98,7 +98,6 @@ const plannedDay: StudentStatusDay = {
   status: "sick",
   label: "Krank",
   reported_at: "2026-09-08T08:00:00Z",
-  cleared_at: null,
   source: "planned",
   created_at: "2026-09-08T08:00:00Z",
   updated_at: "2026-09-08T08:00:00Z",

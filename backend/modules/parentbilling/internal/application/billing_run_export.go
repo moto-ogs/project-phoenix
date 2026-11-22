@@ -11,6 +11,7 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation"
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // runEventExport records the download of the overview of a run.
@@ -63,7 +64,7 @@ func (b *BillingRuns) ExportBillingRun(ctx context.Context, reviewer parentbilli
 	if run.Status != parentbilling.RunReleased {
 		return parentbilling.ExportFile{}, parentbilling.ErrBillingRunNotReleased
 	}
-	documents, err := b.store.RunDocuments(ctx, reviewer.OrganizationID, run.ID)
+	documents, err := b.store.RunDocuments(ctx, reviewer.OrganizationID, run.ID.Int64())
 	if err != nil {
 		return parentbilling.ExportFile{}, fmt.Errorf("parent billing: read invoices: %w", err)
 	}
@@ -71,7 +72,7 @@ func (b *BillingRuns) ExportBillingRun(ctx context.Context, reviewer parentbilli
 	if err != nil {
 		return parentbilling.ExportFile{}, fmt.Errorf("parent billing: render billing run overview: %w", err)
 	}
-	if err := b.store.InsertRunEvent(ctx, reviewer.OrganizationID, run.ID, reviewer.AccountID, runEventExport,
+	if err := b.store.InsertRunEvent(ctx, reviewer.OrganizationID, run.ID.Int64(), reviewer.AccountID, runEventExport,
 		map[string]any{"format": format, "document_count": len(documents)}); err != nil {
 		return parentbilling.ExportFile{}, fmt.Errorf("parent billing: record billing run export: %w", err)
 	}
@@ -416,10 +417,10 @@ func documentCostTakeovers(document parentbilling.BillingDocument) []costTakeove
 			if position.Kind != parentbilling.LineCostTakeover || position.CostBearerID == nil {
 				continue
 			}
-			at := slices.IndexFunc(paid, func(takeover costTakeover) bool { return takeover.id == *position.CostBearerID })
+			at := slices.IndexFunc(paid, func(takeover costTakeover) bool { return ident.ID(takeover.id) == *position.CostBearerID })
 			if at < 0 {
 				at = len(paid)
-				paid = append(paid, costTakeover{id: *position.CostBearerID, name: position.CostBearerName})
+				paid = append(paid, costTakeover{id: (*position.CostBearerID).Int64(), name: position.CostBearerName})
 			}
 			paid[at].cents -= position.AmountCents
 		}

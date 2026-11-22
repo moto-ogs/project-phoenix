@@ -72,6 +72,9 @@ func TestSeedPlanningDemoStepCreatesRealPlanningFlows(t *testing.T) {
 		if strings.HasPrefix(path, "/api/students/32/departure-exceptions/") {
 			paths[i] = "/api/students/32/departure-exceptions/{weekday}"
 		}
+		if strings.HasPrefix(path, "/api/students/31/departure-exceptions/") {
+			paths[i] = "/api/students/31/departure-exceptions/{weekday}"
+		}
 	}
 
 	assert.Equal(t, []string{
@@ -102,6 +105,9 @@ func TestSeedPlanningDemoStepCreatesRealPlanningFlows(t *testing.T) {
 		// mark two Kinderkarten.
 		"/api/students/33/pickup-exceptions",
 		"/api/students/32/departure-exceptions/{weekday}",
+		// „Heute anders“ (#7665): goes home alone and a pickup note today.
+		"/api/students/31/departure-exceptions/{weekday}",
+		"/api/students/33/pickup-notes",
 		"/api/timetable/periods/bootstrap",
 		"/api/timetable/planning-tracks",
 		"/api/timetable/templates",

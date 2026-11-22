@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	appointmentcap "github.com/moto-ogs/project-phoenix/modules/appointments"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 func (s *service) RespondToStaffInvitation(ctx context.Context, recipientID int64, answer InvitationAnswer) error {
@@ -20,13 +21,13 @@ func (s *service) RespondToStaffInvitation(ctx context.Context, recipientID int6
 	if err != nil {
 		return err
 	}
-	if recipient == nil || recipient.StaffID == nil || *recipient.StaffID != staff.ID {
+	if recipient == nil || recipient.StaffID == nil || *recipient.StaffID != ident.ID(staff.ID) {
 		return ErrNotFound
 	}
 	if recipient.Status == appointmentcap.ResponseStatusInfo {
 		return fmt.Errorf("%w: informational appointments cannot be answered", ErrInvalidRequest)
 	}
-	appointment, err := s.findAppointment(ctx, recipient.AppointmentID)
+	appointment, err := s.findAppointment(ctx, recipient.AppointmentID.Int64())
 	if err != nil {
 		return err
 	}
@@ -68,7 +69,7 @@ func (s *service) answeredOccurrence(ctx context.Context, appointment *appointme
 	if date.IsZero() {
 		return "", nil
 	}
-	recurrence, err := s.cfg.Appointments.FindRecurrenceRule(ctx, appointment.ID)
+	recurrence, err := s.cfg.Appointments.FindRecurrenceRule(ctx, appointment.ID.Int64())
 	if err != nil {
 		return "", err
 	}
@@ -81,7 +82,7 @@ func (s *service) answeredOccurrence(ctx context.Context, appointment *appointme
 	if !occurrenceExists(appointment, recurrence, date) {
 		return "", fmt.Errorf("%w: the series has no date %s", ErrOccurrenceUnavailable, date)
 	}
-	overrides, err := s.cfg.Appointments.FindOccurrenceOverrides(ctx, []int64{appointment.ID}, []appointmentcap.Date{date})
+	overrides, err := s.cfg.Appointments.FindOccurrenceOverrides(ctx, []int64{appointment.ID.Int64()}, []appointmentcap.Date{date})
 	if err != nil {
 		return "", err
 	}
@@ -97,7 +98,7 @@ func (s *service) answeredOccurrence(ctx context.Context, appointment *appointme
 // member is not invited.
 func staffRecipient(recipients []*appointmentcap.AppointmentRecipient, staffID int64) *appointmentcap.AppointmentRecipient {
 	for _, recipient := range recipients {
-		if recipient.StaffID != nil && *recipient.StaffID == staffID {
+		if recipient.StaffID != nil && *recipient.StaffID == ident.ID(staffID) {
 			return recipient
 		}
 	}
@@ -136,7 +137,7 @@ func recipientsOfGuardians(recipients []*appointmentcap.AppointmentRecipient, al
 		if recipient.GuardianProfileID == nil {
 			continue
 		}
-		if _, ok := allowedGuardians[*recipient.GuardianProfileID]; ok {
+		if _, ok := allowedGuardians[(*recipient.GuardianProfileID).Int64()]; ok {
 			out = append(out, recipient)
 		}
 	}

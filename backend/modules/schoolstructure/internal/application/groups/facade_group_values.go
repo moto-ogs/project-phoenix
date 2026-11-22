@@ -3,13 +3,14 @@ package groups
 import (
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure"
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 func PublicGroup(row *domain.Group) *schoolstructure.Group {
 	if row == nil {
 		return nil
 	}
-	result := &schoolstructure.Group{ID: row.ID, TenantID: row.TenantID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Name: row.Name, RoomID: row.RoomID}
+	result := &schoolstructure.Group{ID: row.ID.Int64(), TenantID: row.TenantID.Int64(), CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, Name: row.Name, RoomID: (*int64)(row.RoomID)}
 	if row.Room != nil {
 		value := schoolstructure.GroupRoom(*row.Room)
 		result.Room = &value
@@ -21,7 +22,7 @@ func LegacyGroup(value *schoolstructure.Group) *domain.Group {
 	if value == nil {
 		return nil
 	}
-	row := &domain.Group{ID: value.ID, TenantID: value.TenantID, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt, Name: value.Name, RoomID: value.RoomID}
+	row := &domain.Group{ID: ident.ID(value.ID), TenantID: ident.ID(value.TenantID), CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt, Name: value.Name, RoomID: (*ident.ID)(value.RoomID)}
 	if value.Room != nil {
 		room := domain.GroupRoom(*value.Room)
 		row.Room = &room

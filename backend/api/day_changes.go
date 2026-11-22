@@ -5,7 +5,10 @@ package api
 // School Membership's group teachers, the People Directory's staff names and
 // the group names, and applies the visibility rule of this one read: the
 // care staff sees names for its own groups and itself, a number for the rest
-// of the school; the lead sees every name. The projection names none of
+// of the school; the lead sees every name. The changed and cancelled shifts
+// of Workforce's Dienstplan (#7661) are part of the same source: the care
+// staff sees only its own, the lead of the Dienstplan every one. So are the
+// absences and covers of single blocks of Timetable (#7675). The projection names none of
 // these owners; the translation is cross-owner glue and lives here.
 
 import (
@@ -22,35 +25,33 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/mealplan"
 	peoplePorts "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports"
-	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	schoolstructureCompose "github.com/moto-ogs/project-phoenix/modules/schoolstructure/compose"
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
+	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
 // dayChangesCaller is the Identity & Access read of the caller's staff
-// record and own groups. The groups the caller covers on the day come from
-// the day's Gruppenübergaben the source reads anyway (#7666, as #7661): one
-// read less, and the same day as the overview.
+// record and classes. The caller's teacher groups come from School
+// Membership by staff record (#7681); the groups it covers on the day from
+// the day's Gruppenübergaben the source reads anyway (#7661, #7664): fewer
+// reads, and the same day as the overview.
 type dayChangesCaller interface {
 	CurrentStaffID(ctx context.Context) (int64, bool, error)
-	MyTeacherGroupIDs(ctx context.Context) ([]int64, error)
+	// MySchoolClasses are the classes the caller is staff of (#7681).
+	MySchoolClasses(ctx context.Context) ([]string, error)
 }
 
-// dayChangesWorkforce is the Workforce read of absences and substitutions.
+// dayChangesWorkforce is the Workforce read of absences, substitutions and
+// planned shifts.
 type dayChangesWorkforce interface {
 	ListStaffAbsences(context.Context, workforce.StaffAbsenceFilter) ([]workforce.StaffAbsence, error)
 	ListGroupSubstitutions(context.Context, workforce.GroupSubstitutionFilter) ([]workforce.GroupSubstitution, error)
-}
-
-// dayChangesTeam is the School Membership read of the teachers of groups:
-// one statement for the team of the caller's groups (#7666 kept the route's
-// query budget with it).
-type dayChangesTeam interface {
-	ListTeachers(context.Context, schoolmembership.TeacherFilter) ([]schoolmembership.Teacher, error)
+	ListStaffShifts(context.Context, workforce.StaffShiftFilter) ([]workforce.StaffShift, error)
 }
 
 // dayChangesStaffNames maps staff ids to display names in one read.
@@ -94,13 +95,26 @@ type dayChangesGroups interface {
 type DayChangesSources struct {
 	Caller    dayChangesCaller
 	Workforce dayChangesWorkforce
-	Teachers  dayChangesTeam
+	Teachers  owners.GroupTeacherStaff
 	Names     dayChangesStaffNames
 	Groups    dayChangesGroups
+	CarePlan  dayChangesCarePlan
+	Students  dayChangesStudents
 	// Notices is Timetable's read of the Hinweise der Leitung (#7667).
 	Notices dayChangesNoticeReads
+	// ClosingDays is School Calendar's read of the closing days (#7664).
+	ClosingDays dayChangesClosingDayReads
 	// Blocks is Timetable's read of the day's changed blocks (#7662).
 	Blocks dayChangesBlocks
+	// BlockStaff is Timetable's read of the day's blocks with an absent or
+	// covering supervisor, for the Personal source (#7675).
+	BlockStaff dayChangesBlockStaff
+	// Assignments is School Membership's read of the caller's teacher
+	// groups by staff record (#7681).
+	Assignments dayChangesAssignments
+	// ClassArrivals is Timetable's class arrival query; its day read gives
+	// the class-wide arrival exceptions of the day (#7681).
+	ClassArrivals timetable.ClassArrivalQuery
 	// MealPlan is Meal Plan's change mark of a day (#7666).
 	MealPlan mealplan.MenuChanges
 	Today    func() calendar.Date
@@ -109,11 +123,17 @@ type DayChangesSources struct {
 
 // NewDayChanges binds the sources to the projection's ports.
 func NewDayChanges(sources DayChangesSources) (daychangesview.Query, error) {
-	if sources.Caller == nil || sources.Workforce == nil || sources.Teachers == nil || sources.Names == nil || sources.Groups == nil {
+	if sources.Caller == nil || sources.Workforce == nil || sources.Teachers == nil || sources.Names == nil || sources.Groups == nil || sources.BlockStaff == nil {
 		return nil, fmt.Errorf("%w: personal sources", daychangesview.ErrDependencies)
+	}
+	if sources.CarePlan == nil || sources.Students == nil {
+		return nil, fmt.Errorf("%w: children sources", daychangesview.ErrDependencies)
 	}
 	if sources.Notices == nil {
 		return nil, fmt.Errorf("%w: notice source", daychangesview.ErrDependencies)
+	}
+	if sources.ClosingDays == nil {
+		return nil, fmt.Errorf("%w: closing day source", daychangesview.ErrDependencies)
 	}
 	if sources.Blocks == nil {
 		return nil, fmt.Errorf("%w: timetable source", daychangesview.ErrDependencies)
@@ -121,12 +141,24 @@ func NewDayChanges(sources DayChangesSources) (daychangesview.Query, error) {
 	if sources.MealPlan == nil {
 		return nil, fmt.Errorf("%w: meal plan source", daychangesview.ErrDependencies)
 	}
+	if sources.Assignments == nil || sources.ClassArrivals == nil {
+		return nil, fmt.Errorf("%w: class sources", daychangesview.ErrDependencies)
+	}
+	classDay, err := timetable.ClassArrivalDayOf(sources.ClassArrivals)
+	if err != nil {
+		return nil, err
+	}
+	// One name read per request for the sources that name staff (#7675).
+	sources.Names = memoStaffNames{inner: sources.Names}
 	return daychangesview.New(daychangesview.Dependencies{
 		Today:      sources.Today,
 		Isolation:  dayChangesSavepoints{},
 		Staff:      dayChangesStaff{sources: sources},
+		Children:   dayChangesChildren{sources: sources},
 		Notices:    dayChangesNotices{reads: sources.Notices},
+		Closing:    dayChangesClosingDays{reads: sources.ClosingDays},
 		Activities: dayChangesActivities{sources: sources},
+		Classes:    dayChangesClasses{sources: sources, classDay: classDay},
 		MealPlan:   dayChangesMealPlan{reads: sources.MealPlan},
 		Logger:     sources.Logger,
 	})
@@ -138,7 +170,10 @@ func NewDayChanges(sources DayChangesSources) (daychangesview.Query, error) {
 type dayChangesSavepoints struct{}
 
 func (dayChangesSavepoints) Run(ctx context.Context, read func(context.Context) error) error {
-	return tenant.WithSavepoint(ctx, read)
+	// The sources of one savepoint read the staff names once (#7675).
+	return tenant.WithSavepoint(ctx, func(ctx context.Context) error {
+		return read(withDayChangesGroupMemo(withDayChangesNameMemo(ctx)))
+	})
 }
 
 func (dayChangesSavepoints) IsFatal(err error) bool { return tenant.IsSavepointControlFailure(err) }
@@ -171,6 +206,14 @@ type staffViewer struct {
 	staffRecords bool
 	// groupHandovers may open the group substitutions overview.
 	groupHandovers bool
+	// shiftPlan may open the Dienstplan of the school (admin or
+	// time_tracking:manage). It sees every changed shift with its name; the
+	// others see only their own.
+	shiftPlan bool
+	// substitutionPlan may open the Vertretungsplan (admin or
+	// schedules:manage); dayPlan may open the day plan (schedules:read).
+	substitutionPlan bool
+	dayPlan          bool
 	// groups are the caller's own groups and those it covers today; team
 	// are the staff of these groups (teachers and today's substitutes).
 	groups map[int64]bool
@@ -202,11 +245,20 @@ func (s dayChangesStaff) StaffChanges(ctx context.Context, day calendar.Date) ([
 		return nil, fmt.Errorf("list staff absences: %w", err)
 	}
 	builder := newStaffEntryBuilder(viewer, day)
+	absentToday := map[int64]bool{}
 	for _, absence := range mergeAbsences(absences, day) {
 		builder.absence(absence)
+		// A half day leaves the other half: its block absences stay entries.
+		absentToday[absence.staffID] = !absence.half
 	}
 	for _, handover := range handovers {
 		builder.handover(handover)
+	}
+	if err := s.addShifts(ctx, builder, day); err != nil {
+		return nil, err
+	}
+	if err := s.addBlocks(ctx, builder, day, absentToday); err != nil {
+		return nil, err
 	}
 	return builder.finish(ctx, s.sources.Names, s.sources.Groups)
 }
@@ -228,10 +280,13 @@ func (s dayChangesStaff) viewer(ctx context.Context) (staffViewer, error) {
 	viewer := staffViewer{
 		lead: admin || securityruntime.HasPermission(permissions.VacationApprove, granted) ||
 			securityruntime.HasPermission(permissions.TimeTrackingManage, granted),
-		ownAbsences:    securityruntime.HasPermission(permissions.TimeTrackingOwn, granted),
-		staffRecords:   admin || hasStaffRecordAccess(granted),
-		groupHandovers: admin || hasGroupHandoverAccess(roles, granted),
-		groups:         map[int64]bool{}, team: map[int64]bool{},
+		ownAbsences:      securityruntime.HasPermission(permissions.TimeTrackingOwn, granted),
+		staffRecords:     admin || hasStaffRecordAccess(granted),
+		groupHandovers:   admin || hasGroupHandoverAccess(roles, granted),
+		shiftPlan:        admin || securityruntime.HasPermission(permissions.TimeTrackingManage, granted),
+		substitutionPlan: admin || securityruntime.HasPermission(permissions.SchedulesManage, granted),
+		dayPlan:          readsDayPlan(ctx),
+		groups:           map[int64]bool{}, team: map[int64]bool{},
 	}
 	viewer.counts = viewer.lead || securityruntime.HasPermission(permissions.UsersRead, granted)
 	staffID, isStaff, err := s.sources.Caller.CurrentStaffID(ctx)
@@ -242,9 +297,11 @@ func (s dayChangesStaff) viewer(ctx context.Context) (staffViewer, error) {
 		return viewer, nil
 	}
 	viewer.selfID = staffID
-	groupIDs, err := s.sources.Caller.MyTeacherGroupIDs(ctx)
+	// The teacher groups come from School Membership in one statement by
+	// staff record (#7681), as the Kinder source reads them.
+	groupIDs, err := s.sources.teacherGroups(ctx, staffID)
 	if err != nil {
-		return staffViewer{}, fmt.Errorf("resolve caller groups: %w", err)
+		return staffViewer{}, err
 	}
 	for _, id := range groupIDs {
 		viewer.groups[id] = true
@@ -284,12 +341,14 @@ func (s dayChangesStaff) addTeam(ctx context.Context, viewer *staffViewer, hando
 	if len(viewer.groups) == 0 {
 		return nil
 	}
-	teachers, err := s.sources.Teachers.ListTeachers(ctx, schoolmembership.TeacherFilter{GroupIDs: sortedIDs(viewer.groups)})
+	teachers, err := s.sources.Teachers.GroupTeacherStaffIDs(ctx, sortedIDs(viewer.groups))
 	if err != nil {
 		return fmt.Errorf("resolve group teachers: %w", err)
 	}
-	for _, teacher := range teachers {
-		viewer.team[teacher.StaffID] = true
+	for _, staffIDs := range teachers {
+		for _, id := range staffIDs {
+			viewer.team[id] = true
+		}
 	}
 	return nil
 }
@@ -316,11 +375,11 @@ func mergeAbsences(rows []workforce.StaffAbsence, day calendar.Date) []staffAbse
 	byStaff := map[int64]*staffAbsenceSpan{}
 	order := []int64{}
 	for _, row := range rows {
-		span, ok := byStaff[row.StaffID]
+		span, ok := byStaff[row.StaffID.Int64()]
 		if !ok {
-			span = &staffAbsenceSpan{staffID: row.StaffID, start: row.DateStart, end: row.DateEnd, half: true}
-			byStaff[row.StaffID] = span
-			order = append(order, row.StaffID)
+			span = &staffAbsenceSpan{staffID: row.StaffID.Int64(), start: row.DateStart, end: row.DateEnd, half: true}
+			byStaff[row.StaffID.Int64()] = span
+			order = append(order, row.StaffID.Int64())
 		}
 		span.start = min(span.start, row.DateStart)
 		span.end = max(span.end, row.DateEnd)
@@ -347,6 +406,7 @@ type staffEntryBuilder struct {
 	entries       []daychangesview.SourceEntry
 	absentCount   int
 	handoverCount int
+	blockCount    int
 	staffIDs      map[int64]bool
 	groupIDs      map[int64]bool
 }
@@ -369,7 +429,7 @@ func (b *staffEntryBuilder) absence(span staffAbsenceSpan) {
 	b.entries = append(b.entries, daychangesview.SourceEntry{
 		Kind: daychangesview.KindStaffAbsent, Involved: involved, HalfDay: span.half,
 		Since: since, Until: until,
-		People: []daychangesview.Person{{StaffID: span.staffID, Role: daychangesview.RoleAbsent, IsSelf: self}},
+		People: []daychangesview.Person{{StaffID: ident.ID(span.staffID), Role: daychangesview.RoleAbsent, IsSelf: self}},
 		Link:   b.absenceLink(span.staffID, self),
 	})
 }
@@ -381,9 +441,9 @@ func (b *staffEntryBuilder) absenceLink(staffID int64, self bool) *daychangesvie
 	case self:
 		return nil
 	case b.viewer.lead:
-		return &daychangesview.Link{Target: daychangesview.LinkStaffAbsences, StaffID: &staffID}
+		return &daychangesview.Link{Target: daychangesview.LinkStaffAbsences, StaffID: (*ident.ID)(&staffID)}
 	case b.viewer.staffRecords:
-		return &daychangesview.Link{Target: daychangesview.LinkStaffMember, StaffID: &staffID}
+		return &daychangesview.Link{Target: daychangesview.LinkStaffMember, StaffID: (*ident.ID)(&staffID)}
 	default:
 		return nil
 	}
@@ -399,17 +459,17 @@ func (b *staffEntryBuilder) handover(row workforce.GroupSubstitution) {
 		}
 		return
 	}
-	people := []daychangesview.Person{{StaffID: row.SubstituteStaffID, Role: daychangesview.RoleSubstitute, IsSelf: row.SubstituteStaffID == b.viewer.selfID}}
+	people := []daychangesview.Person{{StaffID: ident.ID(row.SubstituteStaffID), Role: daychangesview.RoleSubstitute, IsSelf: row.SubstituteStaffID == b.viewer.selfID}}
 	b.staffIDs[row.SubstituteStaffID] = true
 	if row.RegularStaffID != nil {
-		people = append(people, daychangesview.Person{StaffID: *row.RegularStaffID, Role: daychangesview.RoleReplaced, IsSelf: *row.RegularStaffID == b.viewer.selfID})
+		people = append(people, daychangesview.Person{StaffID: ident.ID(*row.RegularStaffID), Role: daychangesview.RoleReplaced, IsSelf: *row.RegularStaffID == b.viewer.selfID})
 		b.staffIDs[*row.RegularStaffID] = true
 	}
 	b.groupIDs[row.GroupID] = true
 	since, until := b.span(row.StartDate, row.EndDate)
 	entry := daychangesview.SourceEntry{
 		Kind: daychangesview.KindGroupSubstitution, Involved: involved, Since: since, Until: until,
-		People: people, Group: &daychangesview.Group{ID: row.GroupID},
+		People: people, Group: &daychangesview.Group{ID: ident.ID(row.GroupID)},
 	}
 	if b.viewer.groupHandovers {
 		entry.Link = &daychangesview.Link{Target: daychangesview.LinkGroupHandovers}
@@ -435,6 +495,14 @@ func (b *staffEntryBuilder) finish(ctx context.Context, names dayChangesStaffNam
 	}
 	b.appendCount(daychangesview.KindStaffAbsentCount, b.absentCount, daychangesview.LinkStaffList, b.viewer.staffRecords)
 	b.appendCount(daychangesview.KindGroupSubstitutionCount, b.handoverCount, daychangesview.LinkGroupHandovers, b.viewer.groupHandovers)
+	switch {
+	case b.viewer.substitutionPlan:
+		b.appendCount(daychangesview.KindBlockChangeCount, b.blockCount, daychangesview.LinkSubstitutionPlan, true)
+	case b.viewer.dayPlan:
+		b.appendCount(daychangesview.KindBlockChangeCount, b.blockCount, daychangesview.LinkDayPlan, true)
+	default:
+		b.appendCount(daychangesview.KindBlockChangeCount, b.blockCount, daychangesview.LinkDayPlan, false)
+	}
 	return b.entries, nil
 }
 
@@ -471,10 +539,10 @@ func (b *staffEntryBuilder) resolveNames(ctx context.Context, names dayChangesSt
 	}
 	for i := range b.entries {
 		for j := range b.entries[i].People {
-			b.entries[i].People[j].Name = staffNames[b.entries[i].People[j].StaffID]
+			b.entries[i].People[j].Name = staffNames[b.entries[i].People[j].StaffID.Int64()]
 		}
 		if group := b.entries[i].Group; group != nil {
-			group.Name = groupNames[group.ID]
+			group.Name = groupNames[group.ID.Int64()]
 		}
 	}
 	return nil

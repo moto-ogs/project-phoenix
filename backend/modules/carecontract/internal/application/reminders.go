@@ -104,7 +104,7 @@ func (r *Reminders) remind(ctx context.Context, organizationID int64, letterhead
 		return err
 	}
 	candidate = due[0]
-	document, err := r.store.CurrentDocument(ctx, organizationID, candidate.ContractID, record.Version.ID)
+	document, err := r.store.CurrentDocument(ctx, organizationID, candidate.ContractID, record.Version.ID.Int64())
 	if err != nil {
 		return err
 	}
@@ -146,7 +146,7 @@ func berlinDay(at time.Time) string {
 // a contract sent before links existed keeps what it has now.
 func reminderSentState(ctx context.Context, store SignatureStore, fingerprint func([]byte) string, organizationID int64,
 	record ContractRecord) (SentState, error) {
-	latest, found, err := store.LatestSigningLink(ctx, organizationID, record.Summary.ID)
+	latest, found, err := store.LatestSigningLink(ctx, organizationID, record.Summary.ID.Int64())
 	if err != nil {
 		return SentState{}, err
 	}

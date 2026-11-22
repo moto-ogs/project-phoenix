@@ -2,11 +2,9 @@ package staff
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -14,63 +12,18 @@ import (
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
-
-// JSONID accepts a JSON number or a decimal string. Person ids are bigints,
-// and the Next.js proxy in front of this endpoint parses and re-serializes
-// the body, which rounds a JSON number past 2^53 into a valid id for a
-// DIFFERENT person (#2222). A string is parsed with strconv, so every digit
-// survives, and anything that is not a plain integer is rejected instead of
-// being coerced to zero.
-type JSONID int64
-
-// Int64 returns the id as the int64 the rest of the code works with.
-func (id JSONID) Int64() int64 { return int64(id) }
-
-func (id *JSONID) UnmarshalJSON(data []byte) error {
-	trimmed := strings.TrimSpace(string(data))
-	if trimmed == "null" {
-		return nil
-	}
-	if strings.HasPrefix(trimmed, `"`) {
-		var raw string
-		if err := json.Unmarshal(data, &raw); err != nil {
-			return err
-		}
-		raw = strings.TrimSpace(raw)
-		if raw == "" {
-			return errors.New("id must not be empty")
-		}
-		parsed, err := strconv.ParseInt(raw, 10, 64)
-		if err != nil {
-			return fmt.Errorf("invalid id %q: %w", raw, err)
-		}
-		*id = JSONID(parsed)
-		return nil
-	}
-	var parsed int64
-	if err := json.Unmarshal(data, &parsed); err != nil {
-		return err
-	}
-	*id = JSONID(parsed)
-	return nil
-}
-
-// MarshalJSON emits a JSON number, so a struct that is decoded and
-// re-encoded keeps the shape every existing consumer expects.
-func (id JSONID) MarshalJSON() ([]byte, error) {
-	return []byte(strconv.FormatInt(int64(id), 10)), nil
-}
 
 // StaffPersonResponse represents a simplified person response.
 type StaffPersonResponse struct {
-	ID        int64     `json:"id"`
+	ID        ident.ID  `json:"id"`
 	FirstName string    `json:"first_name"`
 	LastName  string    `json:"last_name"`
 	Email     string    `json:"email,omitempty"`
 	Avatar    string    `json:"avatar,omitempty"`
 	TagID     string    `json:"tag_id,omitempty"`
-	AccountID *int64    `json:"account_id,omitempty"`
+	AccountID *ident.ID `json:"account_id,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
@@ -83,14 +36,14 @@ type StaffResponse struct {
 	// IDs are bigints, and the Next.js proxy parses every JSON number before
 	// the mapper can preserve it. A rounded staff ID could address a different
 	// staff record when the caller sends it back.
-	ID int64 `json:"id,string"`
+	ID ident.ID `json:"id"`
 	// PersonID goes out as a decimal STRING. It is a bigint, and the staff
 	// screens send it back to identify the person they edit — as a JSON
 	// number it would be rounded past 2^53 by the JSON.parse in the Next.js
 	// proxy, before any mapper could preserve it, and the rounded value is a
 	// valid id for a different person (#2222). The request side takes either
-	// form (JSONID), so no client breaks on this.
-	PersonID        int64                `json:"person_id,string"`
+	// form (ident.ID), so no client breaks on this.
+	PersonID        ident.ID             `json:"person_id"`
 	StaffNotes      string               `json:"staff_notes,omitempty"`
 	Person          *StaffPersonResponse `json:"person,omitempty"`
 	IsTeacher       bool                 `json:"is_teacher"`
@@ -125,9 +78,9 @@ type StaffResponse struct {
 // start at 1, so omitempty never drops a real one.
 type StaffRecordResponse struct {
 	StaffResponse
-	TeacherID      int64  `json:"teacher_id,omitempty"`
-	Specialization string `json:"specialization,omitempty"`
-	Role           string `json:"role,omitempty"`
+	TeacherID      ident.ID `json:"teacher_id,omitempty"`
+	Specialization string   `json:"specialization,omitempty"`
+	Role           string   `json:"role,omitempty"`
 	// RoleForm names the grammatical form the free-text Role takes for this
 	// person: "feminine" or "masculine", from the gender in the personnel
 	// record. Omitted without a stated gender, for "diverse" (the inclusive
@@ -145,13 +98,13 @@ type GroupResponse struct {
 
 // StaffWithRoleResponse represents a staff member with role information.
 type StaffWithRoleResponse struct {
-	ID                int64     `json:"id"`
-	PersonID          int64     `json:"person_id"`
-	TeacherID         int64     `json:"teacher_id,omitempty"`
+	ID                ident.ID  `json:"id"`
+	PersonID          ident.ID  `json:"person_id"`
+	TeacherID         ident.ID  `json:"teacher_id,omitempty"`
 	FirstName         string    `json:"first_name"`
 	LastName          string    `json:"last_name"`
 	FullName          string    `json:"full_name"`
-	AccountID         int64     `json:"account_id"`
+	AccountID         ident.ID  `json:"account_id"`
 	Email             string    `json:"email"`
 	IsActiveCaregiver bool      `json:"is_active_caregiver"`
 	CreatedAt         time.Time `json:"created_at"`
@@ -160,8 +113,8 @@ type StaffWithRoleResponse struct {
 
 // StaffRequest represents a staff creation/update request.
 type StaffRequest struct {
-	PersonID   JSONID `json:"person_id"`
-	StaffNotes string `json:"staff_notes,omitempty"`
+	PersonID   ident.ID `json:"person_id"`
+	StaffNotes string   `json:"staff_notes,omitempty"`
 	// Teacher-specific fields for creating a teacher
 	IsTeacher      bool   `json:"is_teacher,omitempty"`
 	Specialization string `json:"specialization,omitempty"`
@@ -245,7 +198,7 @@ func (req *ExternalInvitationRequest) Bind(*http.Request) error {
 // SchoolClassesResponse is the wire shape of a staff member's school class
 // assignments (#1772).
 type SchoolClassesResponse struct {
-	StaffID       int64    `json:"staff_id"`
+	StaffID       ident.ID `json:"staff_id"`
 	SchoolClasses []string `json:"school_classes"`
 }
 
@@ -330,13 +283,13 @@ func newStaffPersonResponse(person *Person, email, avatar string) *StaffPersonRe
 		return nil
 	}
 	return &StaffPersonResponse{
-		ID:        person.ID,
+		ID:        ident.ID(person.ID),
 		FirstName: person.FirstName,
 		LastName:  person.LastName,
 		Email:     email,
 		Avatar:    avatar,
 		TagID:     person.TagID,
-		AccountID: person.AccountID,
+		AccountID: (*ident.ID)(person.AccountID),
 		CreatedAt: person.CreatedAt,
 		UpdatedAt: person.UpdatedAt,
 	}
@@ -349,10 +302,10 @@ func newStaffPersonResponse(person *Person, email, avatar string) *StaffPersonRe
 func buildStaffResponse(access staffFieldAccess, staff schoolmembership.Staff, person *Person, isTeacher bool, data enrichment) StaffResponse {
 	isExternal := schoolmembership.ExternalCaregiver(staff.HasExternalCaregiverRecord, person != nil)
 	response := StaffResponse{
-		ID:               staff.ID,
+		ID:               ident.ID(staff.ID),
 		StartedOn:        calendar.DateFromTime(staff.CreatedAt),
 		EndedOn:          staffEndedOn(staff),
-		PersonID:         staff.PersonID,
+		PersonID:         ident.ID(staff.PersonID),
 		StaffNotes:       staff.StaffNotes,
 		IsTeacher:        isTeacher,
 		WasPresentToday:  data.present,
@@ -400,7 +353,7 @@ func redactStaffFields(response *StaffResponse, access staffFieldAccess) {
 func buildStaffRecordResponse(access staffFieldAccess, staff schoolmembership.Staff, person *Person, teacher schoolmembership.Teacher, data enrichment) StaffRecordResponse {
 	response := StaffRecordResponse{
 		StaffResponse:  buildStaffResponse(access, staff, person, true, data),
-		TeacherID:      teacher.ID,
+		TeacherID:      ident.ID(teacher.ID),
 		Specialization: strings.TrimSpace(teacher.Specialization),
 		Role:           teacher.Role,
 		Qualifications: teacher.Qualifications,

@@ -5,7 +5,7 @@ import {
   bool,
   calendarDate,
   instant,
-  int64StringOrNumber,
+  int64String,
   nullable,
   object,
   optional,
@@ -47,12 +47,12 @@ export interface HolidayClosureWeek {
 }
 
 export const HolidayClosureWeekSchema: z.ZodType<HolidayClosureWeek, unknown> = object<HolidayClosureWeek>({
-  week_id: int64StringOrNumber,
-  period_id: int64StringOrNumber,
+  week_id: int64String,
+  period_id: int64String,
   period_name: str,
   starts_on: nullable(calendarDate),
   ends_on: nullable(calendarDate),
-  host_school_id: int64StringOrNumber,
+  host_school_id: int64String,
   closed_days: nullable(arr(HolidayClosedDaySchema)),
   reopened_days: nullable(arr(HolidayClosedDaySchema)),
   children: safeInt,
@@ -83,10 +83,10 @@ export interface TraegerNotice {
 
 export const TraegerNoticeSchema: z.ZodType<TraegerNotice, unknown> = object<TraegerNotice>({
   token: str,
-  id: int64StringOrNumber,
-  school_id: int64StringOrNumber,
+  id: int64String,
+  school_id: int64String,
   school_name: optional(str),
-  closing_day_id: int64StringOrNumber,
+  closing_day_id: int64String,
   reason: str,
   previous: nullable(RangeSchema),
   current: nullable(RangeSchema),
@@ -163,10 +163,10 @@ export interface ClosureNotice {
 
 export const ClosureNoticeSchema: z.ZodType<ClosureNotice, unknown> = object<ClosureNotice>({
   token: str,
-  id: int64StringOrNumber,
-  school_id: int64StringOrNumber,
+  id: int64String,
+  school_id: int64String,
   school_name: optional(str),
-  closing_day_id: int64StringOrNumber,
+  closing_day_id: int64String,
   reason: str,
   previous: nullable(RangeSchema),
   current: nullable(RangeSchema),
@@ -181,7 +181,7 @@ export const ClosureNoticeSchema: z.ZodType<ClosureNotice, unknown> = object<Clo
 
 /** Go: enrollment.HolidayClosureSpan */
 export interface HolidayClosureSpan {
-  school_ids?: number[] | null;
+  school_ids?: string[] | null;
   start_date?: string | null;
   end_date?: string | null;
 }
@@ -191,8 +191,8 @@ export interface HolidayClosurePreviewRequest {
   start_date?: string | null;
   end_date?: string | null;
   reason?: string;
-  school_ids?: number[] | null;
-  closing_day_id?: number;
+  school_ids?: string[] | null;
+  closing_day_id?: string;
   previous?: HolidayClosureSpan | null;
   delete?: boolean;
 }
@@ -239,6 +239,7 @@ export const routes = {
     method: "POST",
     pattern: "/traeger/holiday-closures/preview",
     portals: ["org"],
+    noCommit: "the preview counts the bookings a closure would touch and saves nothing",
     request: requestBody<HolidayClosurePreviewRequest>(),
     response: success(HolidayClosureImpactSchema),
   },

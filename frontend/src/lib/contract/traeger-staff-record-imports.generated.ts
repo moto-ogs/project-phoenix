@@ -4,7 +4,7 @@ import {
   arr,
   bool,
   instant,
-  int64StringOrNumber,
+  int64String,
   multipart,
   nullable,
   object,
@@ -27,7 +27,7 @@ export interface StaffImportEntry {
 
 export const StaffImportEntrySchema: z.ZodType<StaffImportEntry, unknown> = object<StaffImportEntry>({
   file: str,
-  account_id: int64StringOrNumber,
+  account_id: int64String,
   by_you: bool,
   account_name: optional(str),
   imported_at: instant,
@@ -121,7 +121,7 @@ export const StaffImportRowSchema: z.ZodType<StaffImportRow, unknown> = object<S
   iban_masked: optional(str),
   tax_id_masked: optional(str),
   social_security_number_masked: optional(str),
-  staff_record_id: optional(int64StringOrNumber),
+  staff_record_id: optional(int64String),
   completes: nullable(arr(str)),
   problems: nullable(arr(StaffImportProblemSchema)),
 });
@@ -171,6 +171,7 @@ export const routes = {
     method: "POST",
     pattern: "/traeger/staff-record-imports/preview",
     portals: ["org"],
+    noCommit: "an import preview checks the file and saves no row of it",
     maxBodyBytes: 2162688,
     tooLargeCode: "workforce.traeger_staff_import_file_too_large",
     request: multipart,

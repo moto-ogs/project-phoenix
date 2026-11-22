@@ -12,6 +12,7 @@ import (
 
 	peopleCompose "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -56,7 +57,7 @@ func TestPersonRepository_Create(t *testing.T) {
 
 		err := testpkg.TenantCommand1(t, ctx, db, repo.Create, person)
 		require.NoError(t, err)
-		createdIDs = append(createdIDs, person.ID)
+		createdIDs = append(createdIDs, person.ID.Int64())
 
 		assert.NotZero(t, person.ID)
 		assert.False(t, person.CreatedAt.IsZero())
@@ -73,7 +74,7 @@ func TestPersonRepository_Create(t *testing.T) {
 
 		err := testpkg.TenantCommand1(t, ctx, db, repo.Create, person)
 		require.NoError(t, err)
-		createdIDs = append(createdIDs, person.ID)
+		createdIDs = append(createdIDs, person.ID.Int64())
 
 		assert.NotZero(t, person.ID)
 		require.NotNil(t, person.Birthday)
@@ -123,7 +124,7 @@ func TestPersonRepository_FindByID(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, found)
 
-		assert.Equal(t, person.ID, found.ID)
+		assert.Equal(t, ident.ID(person.ID), found.ID)
 		assert.Equal(t, "FindByID", found.FirstName)
 		assert.Equal(t, "Test", found.LastName)
 	})
@@ -228,7 +229,7 @@ func TestPersonRepository_List(t *testing.T) {
 		persons, err := testpkg.TenantQuery1(t, ctx, db, repo.List, filters)
 		require.NoError(t, err)
 		require.Len(t, persons, 1)
-		assert.Equal(t, person1.ID, persons[0].ID)
+		assert.Equal(t, ident.ID(person1.ID), persons[0].ID)
 	})
 
 	t.Run("list with name like filter", func(t *testing.T) {
@@ -306,7 +307,7 @@ func TestPersonRepository_LinkToAccount(t *testing.T) {
 		found, err := testpkg.TenantQuery1(t, ctx, db, repo.FindByAccountID, account.ID)
 		require.NoError(t, err)
 		require.NotNil(t, found)
-		assert.Equal(t, person.ID, found.ID)
+		assert.Equal(t, ident.ID(person.ID), found.ID)
 	})
 
 	t.Run("link non-existent person should fail", func(t *testing.T) {
@@ -357,7 +358,7 @@ func TestPersonRepository_FindByAccountID(t *testing.T) {
 		found, err := testpkg.TenantQuery1(t, ctx, db, repo.FindByAccountID, account.ID)
 		require.NoError(t, err)
 		require.NotNil(t, found)
-		assert.Equal(t, person.ID, found.ID)
+		assert.Equal(t, ident.ID(person.ID), found.ID)
 	})
 
 	t.Run("find by non-existent account ID returns nil", func(t *testing.T) {
@@ -391,7 +392,7 @@ func TestPersonRepository_LinkToRFIDCard(t *testing.T) {
 		found, err := testpkg.TenantQuery1(t, ctx, db, repo.FindByTagID, rfidCard.ID)
 		require.NoError(t, err)
 		require.NotNil(t, found)
-		assert.Equal(t, person.ID, found.ID)
+		assert.Equal(t, ident.ID(person.ID), found.ID)
 	})
 
 	t.Run("link non-existent person should fail", func(t *testing.T) {
@@ -452,7 +453,7 @@ func TestPersonRepository_FindByTagID(t *testing.T) {
 		found, err := testpkg.TenantQuery1(t, ctx, db, repo.FindByTagID, rfidCard.ID)
 		require.NoError(t, err)
 		require.NotNil(t, found)
-		assert.Equal(t, person.ID, found.ID)
+		assert.Equal(t, ident.ID(person.ID), found.ID)
 	})
 
 	t.Run("find by tag ID with different case", func(t *testing.T) {
@@ -490,15 +491,16 @@ func TestPersonRepository_FindWithAccount(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, found)
 
-		assert.Equal(t, person.ID, found.ID)
+		assert.Equal(t, ident.ID(person.ID), found.ID)
 		require.NotNil(t, found.Account, "Account should be loaded")
-		assert.Equal(t, account.ID, found.Account.ID)
+		assert.Equal(t, ident.ID(account.ID), found.Account.ID)
 		assert.Contains(t, found.Account.Email, "WithAccount")
 
 		// The directory now attaches metadata, not an auth ORM row. Keep the
 		// wire shape, including optional-field omission and timestamps.
 		previousJSON, err := json.Marshal(account)
 		require.NoError(t, err)
+
 		metadataJSON, err := json.Marshal(found.Account)
 		require.NoError(t, err)
 		assert.JSONEq(t, string(previousJSON), string(metadataJSON))
@@ -523,6 +525,7 @@ func TestPersonRepository_FindWithAccount(t *testing.T) {
 		require.NotNil(t, found.Account)
 		previousJSON, err := json.Marshal(account)
 		require.NoError(t, err)
+
 		metadataJSON, err := json.Marshal(found.Account)
 		require.NoError(t, err)
 		assert.JSONEq(t, string(previousJSON), string(metadataJSON))
@@ -536,7 +539,7 @@ func TestPersonRepository_FindWithAccount(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, found)
 
-		assert.Equal(t, person.ID, found.ID)
+		assert.Equal(t, ident.ID(person.ID), found.ID)
 		assert.Nil(t, found.Account, "Account should be nil for person without account")
 	})
 }
@@ -567,7 +570,7 @@ func TestPersonRepository_ListWithNullableFilters(t *testing.T) {
 		// Should include personWithAccount
 		var found bool
 		for _, p := range persons {
-			if p.ID == personWithAccount.ID {
+			if p.ID == ident.ID(personWithAccount.ID) {
 				found = true
 				break
 			}
@@ -585,7 +588,7 @@ func TestPersonRepository_ListWithNullableFilters(t *testing.T) {
 		// Should include personWithoutAccount
 		var found bool
 		for _, p := range persons {
-			if p.ID == personWithoutAccount.ID {
+			if p.ID == ident.ID(personWithoutAccount.ID) {
 				found = true
 				break
 			}
@@ -610,7 +613,7 @@ func TestPersonRepository_ListWithNullableFilters(t *testing.T) {
 		// Should include personWithCard
 		var found bool
 		for _, p := range persons {
-			if p.ID == personWithCard.ID {
+			if p.ID == ident.ID(personWithCard.ID) {
 				found = true
 				break
 			}

@@ -285,12 +285,20 @@ func listSeedDevices(rt *Runtime, deviceType string) ([]SeedDevice, error) {
 		return nil, err
 	}
 	var envelope struct {
-		Data []SeedDevice `json:"data"`
+		Data []struct {
+			SeedDevice
+			ID apiID `json:"id"`
+		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil {
 		return nil, err
 	}
-	return envelope.Data, nil
+	devices := make([]SeedDevice, len(envelope.Data))
+	for i, device := range envelope.Data {
+		devices[i] = device.SeedDevice
+		devices[i].ID = int64(device.ID)
+	}
+	return devices, nil
 }
 
 func verifyProfileStudents(rt *Runtime, minimum int) error {

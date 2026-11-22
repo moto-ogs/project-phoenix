@@ -5,7 +5,7 @@ import {
   bool,
   calendarDate,
   instant,
-  int64StringOrNumber,
+  int64String,
   multipart,
   nullable,
   object,
@@ -25,7 +25,7 @@ export interface ContractImportEntry {
 
 export const ContractImportEntrySchema: z.ZodType<ContractImportEntry, unknown> = object<ContractImportEntry>({
   file: str,
-  account_id: nullable(int64StringOrNumber),
+  account_id: nullable(int64String),
   imported_at: instant,
   contracts: safeInt,
 });
@@ -75,7 +75,7 @@ export interface ContractImportMapping {
 
 export const ContractImportMappingSchema: z.ZodType<ContractImportMapping, unknown> = object<ContractImportMapping>({
   columns: ContractImportColumnsSchema,
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   module_name: str,
   effective_from: nullable(calendarDate),
 });
@@ -89,7 +89,7 @@ export interface ContractImportModule {
 }
 
 export const ContractImportModuleSchema: z.ZodType<ContractImportModule, unknown> = object<ContractImportModule>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   phase_name: str,
   has_conditions: bool,
@@ -103,7 +103,7 @@ export interface ContractImportSchool {
 }
 
 export const ContractImportSchoolSchema: z.ZodType<ContractImportSchool, unknown> = object<ContractImportSchool>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   modules: nullable(arr(ContractImportModuleSchema)),
 });
@@ -175,7 +175,7 @@ export const ContractImportRowSchema: z.ZodType<ContractImportRow, unknown> = ob
   child_first_name: str,
   child_last_name: str,
   child_birth_date: nullable(calendarDate),
-  school_id: optional(int64StringOrNumber),
+  school_id: optional(int64String),
   school_name: str,
   module_names: nullable(arr(str)),
   weekdays: nullable(arr(str)),
@@ -185,7 +185,7 @@ export const ContractImportRowSchema: z.ZodType<ContractImportRow, unknown> = ob
   party_email: str,
   problems: nullable(arr(ContractImportProblemSchema)),
   hints: nullable(arr(str)),
-  contract_id: optional(int64StringOrNumber),
+  contract_id: optional(int64String),
   repeats_line: optional(safeInt),
   debtor_number: optional(str),
   debtor_number_status: optional(str),
@@ -244,6 +244,7 @@ export const routes = {
     method: "POST",
     pattern: "/traeger/contract-imports/preview",
     portals: ["org"],
+    noCommit: "an import preview checks the file and saves no row of it",
     maxBodyBytes: 2359296,
     tooLargeCode: "care_contract.import_file_too_large",
     request: multipart,

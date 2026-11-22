@@ -19,7 +19,7 @@ import (
 func (f *FinanceExports) nameExporters(ctx context.Context, reviewer parentbilling.HolidayReviewer, entries []*parentbilling.ExportProtocolEntry) error {
 	accounts := make([]*int64, 0, len(entries))
 	for _, entry := range entries {
-		accounts = append(accounts, entry.ExportedBy)
+		accounts = append(accounts, (*int64)(entry.ExportedBy))
 	}
 	names, err := f.colleagueNames(ctx, reviewer, accounts)
 	if err != nil {
@@ -36,16 +36,16 @@ func (f *FinanceExports) nameExporters(ctx context.Context, reviewer parentbilli
 func (f *FinanceExports) nameHistorySteps(ctx context.Context, reviewer parentbilling.HolidayReviewer, steps []parentbilling.InvoiceHistoryEntry) error {
 	accounts := make([]*int64, 0, len(steps))
 	for _, step := range steps {
-		accounts = append(accounts, step.AccountID)
+		accounts = append(accounts, (*int64)(step.AccountID))
 	}
 	names, err := f.colleagueNames(ctx, reviewer, accounts)
 	if err != nil {
 		return err
 	}
 	for i := range steps {
-		steps[i].ByYou = byAccount(steps[i].AccountID, reviewer.AccountID)
+		steps[i].ByYou = byAccount((*int64)(steps[i].AccountID), reviewer.AccountID)
 		if !steps[i].ByYou && steps[i].AccountID != nil {
-			steps[i].AccountName = names[*steps[i].AccountID]
+			steps[i].AccountName = names[(*steps[i].AccountID).Int64()]
 		}
 		if steps[i].File != nil {
 			nameExporter(steps[i].File, reviewer, names)
@@ -55,9 +55,9 @@ func (f *FinanceExports) nameHistorySteps(ctx context.Context, reviewer parentbi
 }
 
 func nameExporter(entry *parentbilling.ExportProtocolEntry, reviewer parentbilling.HolidayReviewer, names map[int64]string) {
-	entry.ExportedByYou = byAccount(entry.ExportedBy, reviewer.AccountID)
+	entry.ExportedByYou = byAccount((*int64)(entry.ExportedBy), reviewer.AccountID)
 	if !entry.ExportedByYou && entry.ExportedBy != nil {
-		entry.ExportedByName = names[*entry.ExportedBy]
+		entry.ExportedByName = names[(*entry.ExportedBy).Int64()]
 	}
 }
 

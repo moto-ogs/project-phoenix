@@ -61,7 +61,7 @@ func DecideBelegRetention(fact parentbilling.BelegFact, instruction *parentbilli
 	if instruction == nil {
 		return proposedDecision(fact)
 	}
-	decision := BelegDecision{TriggerEvent: instruction.TriggerEvent, InstructionID: instruction.ID}
+	decision := BelegDecision{TriggerEvent: instruction.TriggerEvent, InstructionID: instruction.ID.Int64()}
 	if fact.BelegType == parentbilling.BelegSEPAMandate {
 		decideMandate(&decision, fact, instruction.Period, today)
 	} else {
@@ -69,7 +69,7 @@ func DecideBelegRetention(fact parentbilling.BelegFact, instruction *parentbilli
 	}
 	if suspension != nil {
 		decision.State = parentbilling.RetentionSuspended
-		decision.SuspensionID = suspension.ID
+		decision.SuspensionID = suspension.ID.Int64()
 	}
 	return decision
 }

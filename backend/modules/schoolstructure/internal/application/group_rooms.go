@@ -27,7 +27,7 @@ func (r *GroupRoomDirectory) ListGroupRooms(ctx context.Context) ([]*schoolstruc
 	result := make([]*schoolstructure.GroupRoomAssignment, len(rows))
 	for i, row := range rows {
 		if row != nil {
-			result[i] = &schoolstructure.GroupRoomAssignment{ID: row.ID, RoomID: row.RoomID}
+			result[i] = &schoolstructure.GroupRoomAssignment{ID: row.ID.Int64(), RoomID: (*int64)(row.RoomID)}
 		}
 	}
 	return result, err

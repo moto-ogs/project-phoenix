@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Person is the complete directory snapshot used by the workflow's identity
@@ -23,7 +24,7 @@ type Person struct {
 	RFIDCard  *PersonRFIDCard
 }
 type PersonAccount struct {
-	ID            int64
+	ID            ident.ID
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 	Email         string
@@ -37,6 +38,6 @@ type PersonRFIDCard struct {
 	ID        string
 	CreatedAt time.Time
 	UpdatedAt time.Time
-	TenantID  int64
+	TenantID  ident.ID
 	Active    bool
 }

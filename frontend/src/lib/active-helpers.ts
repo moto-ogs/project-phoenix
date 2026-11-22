@@ -1,7 +1,12 @@
 // lib/active-helpers.ts
 // Type definitions for active entities
 
-import type { ClassHandover } from "~/lib/class-handover";
+import type {
+  ActiveGroupResponse,
+  SchulhofStatusResponse,
+  SupervisorResponse,
+  VisitResponse,
+} from "~/lib/contract/active.generated";
 
 // Tracking indicators response from POST /api/active/tracking-indicators
 export interface TrackingIndicatorsResponse {
@@ -9,77 +14,11 @@ export interface TrackingIndicatorsResponse {
   results: Record<string, boolean[]>; // student_id → [matched1, matched2, ...]
 }
 
-// Backend types (from Go structs).
-// group_id: number | null — WP-B6 made active.groups.group_id nullable so
-// spontaneous activity instances can run without a parent template. The
-// backend serializes `null` explicitly (no omitempty), so clients MUST
-// handle both shapes.
-export interface BackendActiveGroup {
-  id: number | string;
-  group_id: number | string | null;
-  room_id: number | string;
-  start_time: string;
-  end_time?: string;
-  is_active: boolean;
-  notes?: string;
-  visit_count?: number;
-  supervisor_count?: number;
-  room?: {
-    id: number | string;
-    name: string;
-    category?: string;
-  };
-  actual_group?: {
-    id: number | string;
-    name: string;
-  };
-  created_at: string;
-  updated_at: string;
-}
-
-export interface BackendVisit {
-  id: number | string;
-  student_id: number | string;
-  active_group_id: number | string;
-  check_in_time: string;
-  check_out_time?: string;
-  actual_arrival_time?: string;
-  actual_pickup_time?: string;
-  is_active: boolean;
-  notes?: string;
-  student_name?: string;
-  // Optional display fields, set only by reads that join student display data
-  school_class?: string;
-  group_name?: string; // Student's OGS group (not the active group)
-  active_group_name?: string;
-  // Status flags, set only by reads that join student display data
-  sick?: boolean;
-  sick_since?: string;
-  excused?: boolean;
-  excused_since?: string;
-  // Übergabe nach dem Unterricht (#4794): heute mit der Klasse an die OGS
-  // übergeben, „da“ oder „nicht da“ (auch wenn das Kind jetzt hier ist).
-  class_handover?: ClassHandover;
-  // Authenticated proxy URL — backend rewrites the raw /uploads path
-  // to /api/students/{id}/photo/{filename} before sending it down.
-  photo_url?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface BackendSupervisor {
-  id: number | string;
-  staff_id: number | string;
-  active_group_id: number | string;
-  start_time: string;
-  end_time?: string;
-  is_active: boolean;
-  notes?: string;
-  staff_name?: string;
-  active_group_name?: string;
-  created_at: string;
-  updated_at: string;
-}
+// Wire types: the decoded responses of the catalog proxy (#2353).
+export type ActiveGroupWire = ActiveGroupResponse;
+export type VisitWire = VisitResponse;
+export type SupervisorWire = SupervisorResponse;
+export type SchulhofStatusWire = SchulhofStatusResponse;
 
 // Frontend types
 // groupId: string | null — mirrors the nullable backend contract (WP-B6).
@@ -91,16 +30,19 @@ export interface ActiveGroup {
   startTime: Date;
   endTime?: Date;
   isActive: boolean;
-  notes?: string;
   visitCount?: number;
   supervisorCount?: number;
   room?: {
-    id: number | string;
+    id: string;
     name: string;
-    category?: string;
+    color?: string;
   };
+  /**
+   * The activity the session runs. Go sends no name with a session (#2353);
+   * the check-in target resolves it from the activity list.
+   */
   actualGroup?: {
-    id: number | string;
+    id: string;
     name: string;
   };
   createdAt: Date;
@@ -113,23 +55,9 @@ export interface Visit {
   activeGroupId: string;
   checkInTime: Date;
   checkOutTime?: Date;
-  actualArrivalTime?: string;
-  actualPickupTime?: string;
   isActive: boolean;
-  notes?: string;
   studentName?: string;
-  // Optional display fields propagated when available
-  schoolClass?: string;
-  groupName?: string;
   activeGroupName?: string;
-  // Status flags (set only by reads that join student display data)
-  sick?: boolean;
-  sickSince?: string;
-  excused?: boolean;
-  excusedSince?: string;
-  classHandover?: ClassHandover;
-  // Authenticated photo URL (forwarded as-is from the BFF/proxy).
-  photoUrl?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -141,7 +69,6 @@ export interface Supervisor {
   startTime: Date;
   endTime?: Date;
   isActive: boolean;
-  notes?: string;
   staffName?: string;
   activeGroupName?: string;
   createdAt: Date;
@@ -150,74 +77,55 @@ export interface Supervisor {
 
 // Transformation functions
 export function mapActiveGroupResponse(
-  backendActiveGroup: BackendActiveGroup,
+  backendActiveGroup: ActiveGroupWire,
 ): ActiveGroup {
   return {
-    id: String(backendActiveGroup.id),
-    // Preserve null when the backend sends `group_id: null` (spontaneous
-    // session, WP-B6). Do NOT do `String(null)` — that produces the literal
-    // string "null" which would silently break any equality check.
-    groupId:
-      backendActiveGroup.group_id === null
-        ? null
-        : String(backendActiveGroup.group_id),
-    roomId: String(backendActiveGroup.room_id),
+    id: backendActiveGroup.id,
+    // null: a spontaneous session without a parent template (WP-B6).
+    groupId: backendActiveGroup.group_id,
+    roomId: backendActiveGroup.room_id,
     startTime: new Date(backendActiveGroup.start_time),
     endTime: backendActiveGroup.end_time
       ? new Date(backendActiveGroup.end_time)
       : undefined,
     isActive: backendActiveGroup.is_active,
-    notes: backendActiveGroup.notes,
     visitCount: backendActiveGroup.visit_count,
     supervisorCount: backendActiveGroup.supervisor_count,
     room: backendActiveGroup.room,
-    actualGroup: backendActiveGroup.actual_group,
     createdAt: new Date(backendActiveGroup.created_at),
     updatedAt: new Date(backendActiveGroup.updated_at),
   };
 }
 
-export function mapVisitResponse(backendVisit: BackendVisit): Visit {
+export function mapVisitResponse(backendVisit: VisitWire): Visit {
   return {
-    id: String(backendVisit.id),
-    studentId: String(backendVisit.student_id),
-    activeGroupId: String(backendVisit.active_group_id),
+    id: backendVisit.id,
+    studentId: backendVisit.student_id,
+    activeGroupId: backendVisit.active_group_id,
     checkInTime: new Date(backendVisit.check_in_time),
     checkOutTime: backendVisit.check_out_time
       ? new Date(backendVisit.check_out_time)
       : undefined,
-    actualArrivalTime: backendVisit.actual_arrival_time,
-    actualPickupTime: backendVisit.actual_pickup_time,
     isActive: backendVisit.is_active,
-    notes: backendVisit.notes,
     studentName: backendVisit.student_name,
-    schoolClass: backendVisit.school_class,
-    groupName: backendVisit.group_name,
     activeGroupName: backendVisit.active_group_name,
-    sick: backendVisit.sick,
-    sickSince: backendVisit.sick_since,
-    excused: backendVisit.excused,
-    excusedSince: backendVisit.excused_since,
-    classHandover: backendVisit.class_handover,
-    photoUrl: backendVisit.photo_url,
     createdAt: new Date(backendVisit.created_at),
     updatedAt: new Date(backendVisit.updated_at),
   };
 }
 
 export function mapSupervisorResponse(
-  backendSupervisor: BackendSupervisor,
+  backendSupervisor: SupervisorWire,
 ): Supervisor {
   return {
-    id: String(backendSupervisor.id),
-    staffId: String(backendSupervisor.staff_id),
-    activeGroupId: String(backendSupervisor.active_group_id),
+    id: backendSupervisor.id,
+    staffId: backendSupervisor.staff_id,
+    activeGroupId: backendSupervisor.active_group_id,
     startTime: new Date(backendSupervisor.start_time),
     endTime: backendSupervisor.end_time
       ? new Date(backendSupervisor.end_time)
       : undefined,
     isActive: backendSupervisor.is_active,
-    notes: backendSupervisor.notes,
     staffName: backendSupervisor.staff_name,
     activeGroupName: backendSupervisor.active_group_name,
     createdAt: new Date(backendSupervisor.created_at),
@@ -225,29 +133,7 @@ export function mapSupervisorResponse(
   };
 }
 
-// UnclaimedGroup interface for deviceless room claiming
-
-// Schulhof (schoolyard) types for permanent tab functionality
-export interface BackendSchulhofStatus {
-  exists: boolean;
-  room_id?: number | string;
-  room_name: string;
-  activity_group_id?: number | string;
-  active_group_id?: number | string;
-  is_user_supervising: boolean;
-  supervision_id?: number | string;
-  supervisor_count: number;
-  student_count: number;
-  supervisors: BackendSchulhofSupervisor[];
-}
-
-interface BackendSchulhofSupervisor {
-  id: number | string;
-  staff_id: number | string;
-  name: string;
-  is_current_user: boolean;
-}
-
+// Schulhof (schoolyard) status for the permanent tab
 export interface SchulhofStatus {
   exists: boolean;
   roomId: string | null;
@@ -269,27 +155,21 @@ interface SchulhofSupervisor {
 }
 
 export function mapSchulhofStatusResponse(
-  backend: BackendSchulhofStatus,
+  backend: SchulhofStatusWire,
 ): SchulhofStatus {
   return {
     exists: backend.exists,
-    roomId: backend.room_id ? String(backend.room_id) : null,
+    roomId: backend.room_id ?? null,
     roomName: backend.room_name,
-    activityGroupId: backend.activity_group_id
-      ? String(backend.activity_group_id)
-      : null,
-    activeGroupId: backend.active_group_id
-      ? String(backend.active_group_id)
-      : null,
+    activityGroupId: backend.activity_group_id ?? null,
+    activeGroupId: backend.active_group_id ?? null,
     isUserSupervising: backend.is_user_supervising,
-    supervisionId: backend.supervision_id
-      ? String(backend.supervision_id)
-      : null,
+    supervisionId: backend.supervision_id ?? null,
     supervisorCount: backend.supervisor_count,
     studentCount: backend.student_count,
-    supervisors: backend.supervisors.map((sup) => ({
-      id: String(sup.id),
-      staffId: String(sup.staff_id),
+    supervisors: (backend.supervisors ?? []).map((sup) => ({
+      id: sup.id,
+      staffId: sup.staff_id,
       name: sup.name,
       isCurrentUser: sup.is_current_user,
     })),

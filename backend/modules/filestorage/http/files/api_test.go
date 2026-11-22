@@ -151,7 +151,7 @@ func (c *apiContext) createFolder(payload folderPayload) int64 {
 	assert.Contains(c.t, rec.Body.String(), `"id":"`, "folder id must be a string")
 	var resp struct {
 		Data struct {
-			ID common.JSONID `json:"id"`
+			ID common.ID `json:"id"`
 		} `json:"data"`
 	}
 	require.NoError(c.t, json.Unmarshal(rec.Body.Bytes(), &resp))
@@ -160,12 +160,12 @@ func (c *apiContext) createFolder(payload folderPayload) int64 {
 
 type folderListData struct {
 	Folders []struct {
-		ID         common.JSONID `json:"id"`
-		Name       string        `json:"name"`
-		Visibility string        `json:"visibility"`
-		FileCount  int64         `json:"file_count"`
-		RoleIDs    []string      `json:"role_ids"`
-		AccountIDs []string      `json:"account_ids"`
+		ID         common.ID `json:"id"`
+		Name       string    `json:"name"`
+		Visibility string    `json:"visibility"`
+		FileCount  int64     `json:"file_count"`
+		RoleIDs    []string  `json:"role_ids"`
+		AccountIDs []string  `json:"account_ids"`
 	} `json:"folders"`
 	CanManage          bool `json:"can_manage"`
 	CanUpload          bool `json:"can_upload"`
@@ -300,10 +300,10 @@ func TestFolderManagementRequiresPermission(t *testing.T) {
 	var audience struct {
 		Data struct {
 			Roles []struct {
-				ID common.JSONID `json:"id"`
+				ID common.ID `json:"id"`
 			} `json:"roles"`
 			Accounts []struct {
-				AccountID common.JSONID `json:"account_id"`
+				AccountID common.ID `json:"account_id"`
 			} `json:"accounts"`
 		} `json:"data"`
 	}
@@ -330,7 +330,7 @@ func TestFileRoutesWriteOnlyOnUpload(t *testing.T) {
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	var uploaded struct {
 		Data struct {
-			ID common.JSONID `json:"id"`
+			ID common.ID `json:"id"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &uploaded))
@@ -381,10 +381,10 @@ func TestUploadDownloadDeleteLifecycle(t *testing.T) {
 	assert.Contains(t, rec.Body.String(), `"id":"`, "file id must be a string")
 	var uploaded struct {
 		Data struct {
-			ID        common.JSONID `json:"id"`
-			Filename  string        `json:"filename"`
-			SizeBytes int64         `json:"size_bytes"`
-			CanDelete bool          `json:"can_delete"`
+			ID        common.ID `json:"id"`
+			Filename  string    `json:"filename"`
+			SizeBytes int64     `json:"size_bytes"`
+			CanDelete bool      `json:"can_delete"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &uploaded))
@@ -400,8 +400,8 @@ func TestUploadDownloadDeleteLifecycle(t *testing.T) {
 	var listed struct {
 		Data struct {
 			Files []struct {
-				ID        common.JSONID `json:"id"`
-				CanDelete bool          `json:"can_delete"`
+				ID        common.ID `json:"id"`
+				CanDelete bool      `json:"can_delete"`
 			} `json:"files"`
 		} `json:"data"`
 	}
@@ -428,7 +428,7 @@ func TestUploadDownloadDeleteLifecycle(t *testing.T) {
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	var sheet struct {
 		Data struct {
-			ID common.JSONID `json:"id"`
+			ID common.ID `json:"id"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &sheet))
@@ -496,7 +496,7 @@ func TestStaffUploadSetting(t *testing.T) {
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	var own struct {
 		Data struct {
-			ID common.JSONID `json:"id"`
+			ID common.ID `json:"id"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &own))
@@ -509,7 +509,7 @@ func TestStaffUploadSetting(t *testing.T) {
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	var foreign struct {
 		Data struct {
-			ID common.JSONID `json:"id"`
+			ID common.ID `json:"id"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &foreign))
@@ -595,7 +595,7 @@ func TestFileMetadataTablesEnforceRLS(t *testing.T) {
 			require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 			var uploaded struct {
 				Data struct {
-					ID common.JSONID `json:"id"`
+					ID common.ID `json:"id"`
 				} `json:"data"`
 			}
 			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &uploaded))
@@ -612,7 +612,7 @@ func TestFileMetadataTablesEnforceRLS(t *testing.T) {
 			require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 			var attachment struct {
 				Data struct {
-					ID common.JSONID `json:"id"`
+					ID common.ID `json:"id"`
 				} `json:"data"`
 			}
 			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &attachment))

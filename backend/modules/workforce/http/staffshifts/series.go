@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/render"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // occurrenceShiftID accepts legacy JSON numbers as well as the lossless
@@ -74,8 +75,8 @@ type SeriesRequest struct {
 type SeriesResponse struct {
 	// Keep bigint identifiers as strings on the wire. The frontend needs to
 	// carry them through a subsequent split request without JavaScript rounding.
-	SeriesID     int64    `json:"series_id,string"`
-	OldSeriesID  int64    `json:"old_series_id,omitempty,string"`
+	SeriesID     ident.ID `json:"series_id"`
+	OldSeriesID  ident.ID `json:"old_series_id,omitempty"`
 	Created      int      `json:"created"`
 	Deleted      int      `json:"deleted"`
 	SkippedDates []string `json:"skipped_dates"`
@@ -90,8 +91,8 @@ func toSeriesResponse(result workforce.StaffShiftSeriesResult) SeriesResponse {
 		skipped = []string{}
 	}
 	return SeriesResponse{
-		SeriesID:              result.SeriesID,
-		OldSeriesID:           result.OldSeriesID,
+		SeriesID:              ident.ID(result.SeriesID),
+		OldSeriesID:           ident.ID(result.OldSeriesID),
 		Created:               result.Created,
 		Deleted:               int(result.Deleted),
 		SkippedDates:          skipped,
@@ -119,18 +120,18 @@ func toWeekdays(values []int) ([]int, error) {
 // wall-clock, dates "YYYY-MM-DD"; valid_until is exclusive, as everywhere in
 // the series API.
 type SeriesDetailResponse struct {
-	ID               int64   `json:"id,string"`
-	StaffID          int64   `json:"staff_id"`
-	Weekdays         []int   `json:"weekdays"`
-	StartTime        string  `json:"start_time"`
-	EndTime          string  `json:"end_time"`
-	BreakMinutes     int     `json:"break_minutes"`
-	ShiftTypeID      *int64  `json:"shift_type_id"`
-	Notes            string  `json:"notes,omitempty"`
-	CalendarPeriodID int64   `json:"calendar_period_id"`
-	WeekPattern      int     `json:"week_pattern"`
-	ValidFrom        string  `json:"valid_from"`
-	ValidUntil       *string `json:"valid_until"`
+	ID               ident.ID  `json:"id"`
+	StaffID          ident.ID  `json:"staff_id"`
+	Weekdays         []int     `json:"weekdays"`
+	StartTime        string    `json:"start_time"`
+	EndTime          string    `json:"end_time"`
+	BreakMinutes     int       `json:"break_minutes"`
+	ShiftTypeID      *ident.ID `json:"shift_type_id"`
+	Notes            string    `json:"notes,omitempty"`
+	CalendarPeriodID ident.ID  `json:"calendar_period_id"`
+	WeekPattern      int       `json:"week_pattern"`
+	ValidFrom        string    `json:"valid_from"`
+	ValidUntil       *string   `json:"valid_until"`
 	// IncludeSchoolBreaks: the series is also planned in the Ferien and on
 	// closing days (#3820).
 	IncludeSchoolBreaks bool `json:"include_school_breaks"`
@@ -140,15 +141,15 @@ func toSeriesDetailResponse(series workforce.StaffShiftSeries) SeriesDetailRespo
 	weekdays := make([]int, 0, len(series.Weekdays))
 	weekdays = append(weekdays, series.Weekdays...)
 	resp := SeriesDetailResponse{
-		ID:                  series.ID,
-		StaffID:             series.StaffID,
+		ID:                  ident.ID(series.ID),
+		StaffID:             ident.ID(series.StaffID),
 		Weekdays:            weekdays,
 		StartTime:           FormatWallClock(series.StartTime),
 		EndTime:             FormatWallClock(series.EndTime),
 		BreakMinutes:        series.BreakMinutes,
-		ShiftTypeID:         series.ShiftTypeID,
+		ShiftTypeID:         (*ident.ID)(series.ShiftTypeID),
 		Notes:               series.Notes,
-		CalendarPeriodID:    series.CalendarPeriodID,
+		CalendarPeriodID:    ident.ID(series.CalendarPeriodID),
 		WeekPattern:         series.WeekPattern,
 		ValidFrom:           series.ValidFrom,
 		IncludeSchoolBreaks: series.IncludeSchoolBreaks,

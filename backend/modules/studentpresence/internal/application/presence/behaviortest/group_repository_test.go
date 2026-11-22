@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -41,9 +42,9 @@ func TestActiveGroupRepository_Create(t *testing.T) {
 			StartTime:      now,
 			LastActivity:   now,
 			TimeoutMinutes: 30,
-			GroupID:        ptrtest.Ptr(activityGroup.ID),
-			DeviceID:       &device.ID,
-			RoomID:         room.ID,
+			GroupID:        (*ident.ID)(ptrtest.Ptr(activityGroup.ID)),
+			DeviceID:       (*ident.ID)(&device.ID),
+			RoomID:         ident.ID(room.ID),
 		}
 
 		err := repo.Create(ctx, group)
@@ -60,8 +61,8 @@ func TestActiveGroupRepository_Create(t *testing.T) {
 			StartTime:      now,
 			LastActivity:   now,
 			TimeoutMinutes: 30,
-			GroupID:        ptrtest.Ptr(activityGroup.ID),
-			RoomID:         room.ID,
+			GroupID:        (*ident.ID)(ptrtest.Ptr(activityGroup.ID)),
+			RoomID:         ident.ID(room.ID),
 		}
 
 		err := repo.Create(ctx, group)
@@ -107,16 +108,16 @@ func TestActiveGroupRepository_FindActiveSessionsOlderThanPreservesTenant(t *tes
 
 	var found *ports.ActiveGroup
 	for _, session := range sessions {
-		if session.ID == group.ID {
+		if session.ID == ident.ID(group.ID) {
 			found = session
 			break
 		}
 	}
 	require.NotNil(t, found)
-	assert.Equal(t, tenantID, found.TenantID)
+	assert.Equal(t, ident.ID(tenantID), found.TenantID)
 	require.NotNil(t, found.Device, "device enrichment remains available")
-	assert.Equal(t, device.ID, found.Device.ID)
-	assert.Equal(t, tenantID, found.Device.TenantID)
+	assert.Equal(t, ident.ID(device.ID), found.Device.ID)
+	assert.Equal(t, ident.ID(tenantID), found.Device.TenantID)
 	assert.Equal(t, device.DeviceID, found.Device.DeviceID)
 	assert.Equal(t, device.DeviceType, found.Device.DeviceType)
 	assert.Equal(t, device.Name, found.Device.Name)
@@ -125,13 +126,13 @@ func TestActiveGroupRepository_FindActiveSessionsOlderThanPreservesTenant(t *tes
 	boundary, err := testpkg.TenantQuery1(t, ctx, db, repo.FindActiveSessionsOlderThan, found.LastActivity)
 	require.NoError(t, err)
 	for _, row := range boundary {
-		require.NotEqual(t, group.ID, row.ID, "cutoff is exclusive")
+		require.NotEqual(t, group.ID, row.ID.Int64(), "cutoff is exclusive")
 	}
 	manual := testpkg.CreateTestActiveGroupForTenant(t, db, tenantID)
 	rows, err := testpkg.TenantQuery1(t, ctx, db, repo.FindActiveSessionsOlderThan, time.Now().Add(time.Hour))
 	require.NoError(t, err)
 	for i, row := range rows {
-		require.NotEqual(t, manual.ID, row.ID, "manual sessions do not expire through device cleanup")
+		require.NotEqual(t, manual.ID, row.ID.Int64(), "manual sessions do not expire through device cleanup")
 		if i > 0 {
 			require.False(t, rows[i-1].LastActivity.After(row.LastActivity))
 		}
@@ -155,17 +156,17 @@ func TestActiveGroupRepository_FindByID(t *testing.T) {
 			StartTime:      now,
 			LastActivity:   now,
 			TimeoutMinutes: 30,
-			GroupID:        ptrtest.Ptr(activityGroup.ID),
-			RoomID:         room.ID,
+			GroupID:        (*ident.ID)(ptrtest.Ptr(activityGroup.ID)),
+			RoomID:         ident.ID(room.ID),
 		}
 		err := repo.Create(ctx, group)
 		require.NoError(t, err)
 
-		found, err := repo.FindByID(ctx, group.ID)
+		found, err := repo.FindByID(ctx, group.ID.Int64())
 		require.NoError(t, err)
 		assert.Equal(t, group.ID, found.ID)
 		if assert.NotNil(t, found.GroupID) {
-			assert.Equal(t, activityGroup.ID, *found.GroupID)
+			assert.Equal(t, ident.ID(activityGroup.ID), *found.GroupID)
 		}
 	})
 
@@ -192,8 +193,8 @@ func TestActiveGroupRepository_Update(t *testing.T) {
 			StartTime:      now,
 			LastActivity:   now,
 			TimeoutMinutes: 30,
-			GroupID:        ptrtest.Ptr(activityGroup.ID),
-			RoomID:         room.ID,
+			GroupID:        (*ident.ID)(ptrtest.Ptr(activityGroup.ID)),
+			RoomID:         ident.ID(room.ID),
 		}
 		err := repo.Create(ctx, group)
 		require.NoError(t, err)
@@ -202,7 +203,7 @@ func TestActiveGroupRepository_Update(t *testing.T) {
 		err = repo.Update(ctx, group)
 		require.NoError(t, err)
 
-		found, err := repo.FindByID(ctx, group.ID)
+		found, err := repo.FindByID(ctx, group.ID.Int64())
 		require.NoError(t, err)
 		assert.Equal(t, 60, found.TimeoutMinutes)
 	})
@@ -225,16 +226,16 @@ func TestActiveGroupRepository_Delete(t *testing.T) {
 			StartTime:      now,
 			LastActivity:   now,
 			TimeoutMinutes: 30,
-			GroupID:        ptrtest.Ptr(activityGroup.ID),
-			RoomID:         room.ID,
+			GroupID:        (*ident.ID)(ptrtest.Ptr(activityGroup.ID)),
+			RoomID:         ident.ID(room.ID),
 		}
 		err := repo.Create(ctx, group)
 		require.NoError(t, err)
 
-		err = repo.Delete(ctx, group.ID)
+		err = repo.Delete(ctx, group.ID.Int64())
 		require.NoError(t, err)
 
-		_, err = repo.FindByID(ctx, group.ID)
+		_, err = repo.FindByID(ctx, group.ID.Int64())
 		require.Error(t, err)
 	})
 }
@@ -260,8 +261,8 @@ func TestPresence_QueryGroupsAfterLegacyCreate(t *testing.T) {
 			StartTime:      now,
 			LastActivity:   now,
 			TimeoutMinutes: 30,
-			GroupID:        ptrtest.Ptr(activityGroup.ID),
-			RoomID:         room.ID,
+			GroupID:        (*ident.ID)(ptrtest.Ptr(activityGroup.ID)),
+			RoomID:         ident.ID(room.ID),
 		}
 		err := repo.Create(ctx, group)
 		require.NoError(t, err)
@@ -289,8 +290,8 @@ func TestActiveGroupRepository_FindActiveGroups(t *testing.T) {
 			StartTime:      now,
 			LastActivity:   now,
 			TimeoutMinutes: 30,
-			GroupID:        ptrtest.Ptr(activityGroup.ID),
-			RoomID:         room.ID,
+			GroupID:        (*ident.ID)(ptrtest.Ptr(activityGroup.ID)),
+			RoomID:         ident.ID(room.ID),
 		}
 		err := repo.Create(ctx, group)
 		require.NoError(t, err)
@@ -332,8 +333,8 @@ func TestActiveGroupRepository_FindActiveByRoomID(t *testing.T) {
 			StartTime:      now,
 			LastActivity:   now,
 			TimeoutMinutes: 30,
-			GroupID:        ptrtest.Ptr(activityGroup.ID),
-			RoomID:         room.ID,
+			GroupID:        (*ident.ID)(ptrtest.Ptr(activityGroup.ID)),
+			RoomID:         ident.ID(room.ID),
 		}
 		err := repo.Create(ctx, group)
 		require.NoError(t, err)
@@ -346,7 +347,7 @@ func TestActiveGroupRepository_FindActiveByRoomID(t *testing.T) {
 		for _, g := range groups {
 			if g.ID == group.ID {
 				found = true
-				assert.Equal(t, room.ID, g.RoomID)
+				assert.Equal(t, ident.ID(room.ID), g.RoomID)
 				break
 			}
 		}
@@ -380,9 +381,9 @@ func TestActiveGroupRepository_FindActiveByRoomIDAndDeviceID(t *testing.T) {
 			StartTime:      now,
 			LastActivity:   now,
 			TimeoutMinutes: 30,
-			GroupID:        ptrtest.Ptr(activityGroup.ID),
-			DeviceID:       &device.ID,
-			RoomID:         room.ID,
+			GroupID:        (*ident.ID)(ptrtest.Ptr(activityGroup.ID)),
+			DeviceID:       (*ident.ID)(&device.ID),
+			RoomID:         ident.ID(room.ID),
 		}
 		err := repo.Create(ctx, group)
 		require.NoError(t, err)
@@ -403,8 +404,8 @@ func TestActiveGroupRepository_FindActiveByRoomIDAndDeviceID(t *testing.T) {
 			StartTime:      now,
 			LastActivity:   now,
 			TimeoutMinutes: 30,
-			GroupID:        ptrtest.Ptr(activityGroup.ID),
-			RoomID:         room.ID,
+			GroupID:        (*ident.ID)(ptrtest.Ptr(activityGroup.ID)),
+			RoomID:         ident.ID(room.ID),
 		}
 		err := repo.Create(ctx, group)
 		require.NoError(t, err)
@@ -432,8 +433,8 @@ func TestActiveGroupRepository_FindActiveByGroupID(t *testing.T) {
 			StartTime:      now,
 			LastActivity:   now,
 			TimeoutMinutes: 30,
-			GroupID:        ptrtest.Ptr(activityGroup.ID),
-			RoomID:         room.ID,
+			GroupID:        (*ident.ID)(ptrtest.Ptr(activityGroup.ID)),
+			RoomID:         ident.ID(room.ID),
 		}
 		err := repo.Create(ctx, group)
 		require.NoError(t, err)
@@ -471,15 +472,15 @@ func TestActiveGroupRepository_FindActiveByGroupIDs(t *testing.T) {
 			StartTime:      now,
 			LastActivity:   now,
 			TimeoutMinutes: 30,
-			GroupID:        ptrtest.Ptr(activity1.ID),
-			RoomID:         room.ID,
+			GroupID:        (*ident.ID)(ptrtest.Ptr(activity1.ID)),
+			RoomID:         ident.ID(room.ID),
 		}
 		group2 := &ports.ActiveGroup{
 			StartTime:      now,
 			LastActivity:   now,
 			TimeoutMinutes: 30,
-			GroupID:        ptrtest.Ptr(activity2.ID),
-			RoomID:         room.ID,
+			GroupID:        (*ident.ID)(ptrtest.Ptr(activity2.ID)),
+			RoomID:         ident.ID(room.ID),
 		}
 		require.NoError(t, repo.Create(ctx, group1))
 		require.NoError(t, repo.Create(ctx, group2))
@@ -513,8 +514,8 @@ func TestActiveGroupRepository_FindByTimeRange(t *testing.T) {
 			StartTime:      now.Add(-1 * time.Hour),
 			LastActivity:   now,
 			TimeoutMinutes: 30,
-			GroupID:        ptrtest.Ptr(activityGroup.ID),
-			RoomID:         room.ID,
+			GroupID:        (*ident.ID)(ptrtest.Ptr(activityGroup.ID)),
+			RoomID:         ident.ID(room.ID),
 		}
 		err := repo.Create(ctx, group)
 		require.NoError(t, err)
@@ -559,17 +560,17 @@ func TestActiveGroupRepository_UpdateLastActivity(t *testing.T) {
 			StartTime:      startTime,
 			LastActivity:   startTime,
 			TimeoutMinutes: 30,
-			GroupID:        ptrtest.Ptr(activityGroup.ID),
-			RoomID:         room.ID,
+			GroupID:        (*ident.ID)(ptrtest.Ptr(activityGroup.ID)),
+			RoomID:         ident.ID(room.ID),
 		}
 		err := repo.Create(ctx, group)
 		require.NoError(t, err)
 
 		newLastActivity := time.Now()
-		err = repo.UpdateLastActivity(ctx, group.ID, newLastActivity)
+		err = repo.UpdateLastActivity(ctx, group.ID.Int64(), newLastActivity)
 		require.NoError(t, err)
 
-		found, err := repo.FindByID(ctx, group.ID)
+		found, err := repo.FindByID(ctx, group.ID.Int64())
 		require.NoError(t, err)
 		// LastActivity should be updated (within a second tolerance)
 		assert.WithinDuration(t, newLastActivity, found.LastActivity, time.Second)
@@ -584,17 +585,17 @@ func TestActiveGroupRepository_UpdateLastActivity(t *testing.T) {
 			StartTime:      startTime,
 			LastActivity:   startTime,
 			TimeoutMinutes: 30,
-			GroupID:        ptrtest.Ptr(activityGroup.ID),
-			RoomID:         room.ID,
+			GroupID:        (*ident.ID)(ptrtest.Ptr(activityGroup.ID)),
+			RoomID:         ident.ID(room.ID),
 		}
 		err := repo.Create(ctx, group)
 		require.NoError(t, err)
 
 		// End the session
-		testpkg.EndTestActiveGroup(t, db, testpkg.EndedActiveGroup{GroupID: group.ID})
+		testpkg.EndTestActiveGroup(t, db, testpkg.EndedActiveGroup{GroupID: group.ID.Int64()})
 
 		// Try to update last activity on ended session
-		err = repo.UpdateLastActivity(ctx, group.ID, time.Now())
+		err = repo.UpdateLastActivity(ctx, group.ID.Int64(), time.Now())
 		require.Error(t, err)
 	})
 }
@@ -621,9 +622,9 @@ func TestActiveGroupRepository_FindActiveByDeviceID(t *testing.T) {
 			StartTime:      now,
 			LastActivity:   now,
 			TimeoutMinutes: 30,
-			GroupID:        ptrtest.Ptr(activityGroup.ID),
-			DeviceID:       &device.ID,
-			RoomID:         room.ID,
+			GroupID:        (*ident.ID)(ptrtest.Ptr(activityGroup.ID)),
+			DeviceID:       (*ident.ID)(&device.ID),
+			RoomID:         ident.ID(room.ID),
 		}
 		err := repo.Create(ctx, group)
 		require.NoError(t, err)
@@ -665,9 +666,9 @@ func TestActiveGroupRepository_FindActiveByDeviceIDWithNames(t *testing.T) {
 			StartTime:      now,
 			LastActivity:   now,
 			TimeoutMinutes: 30,
-			GroupID:        ptrtest.Ptr(activityGroup.ID),
-			DeviceID:       &device.ID,
-			RoomID:         room.ID,
+			GroupID:        (*ident.ID)(ptrtest.Ptr(activityGroup.ID)),
+			DeviceID:       (*ident.ID)(&device.ID),
+			RoomID:         ident.ID(room.ID),
 		}
 		err := repo.Create(ctx, group)
 		require.NoError(t, err)
@@ -714,8 +715,8 @@ func TestActiveGroupRepository_GetOccupiedActivityGroupIDs(t *testing.T) {
 			StartTime:      now,
 			LastActivity:   now,
 			TimeoutMinutes: 30,
-			GroupID:        ptrtest.Ptr(activityGroup1.ID),
-			RoomID:         room.ID,
+			GroupID:        (*ident.ID)(ptrtest.Ptr(activityGroup1.ID)),
+			RoomID:         ident.ID(room.ID),
 		}
 		err := repo.Create(ctx, group1)
 		require.NoError(t, err)
@@ -724,8 +725,8 @@ func TestActiveGroupRepository_GetOccupiedActivityGroupIDs(t *testing.T) {
 			StartTime:      now,
 			LastActivity:   now,
 			TimeoutMinutes: 30,
-			GroupID:        ptrtest.Ptr(activityGroup2.ID),
-			RoomID:         room.ID,
+			GroupID:        (*ident.ID)(ptrtest.Ptr(activityGroup2.ID)),
+			RoomID:         ident.ID(room.ID),
 		}
 		err = repo.Create(ctx, group2)
 		require.NoError(t, err)
@@ -751,8 +752,8 @@ func TestActiveGroupRepository_GetOccupiedActivityGroupIDs(t *testing.T) {
 			EndTime:        &endTime,
 			LastActivity:   now,
 			TimeoutMinutes: 30,
-			GroupID:        ptrtest.Ptr(activityGroup.ID),
-			RoomID:         room.ID,
+			GroupID:        (*ident.ID)(ptrtest.Ptr(activityGroup.ID)),
+			RoomID:         ident.ID(room.ID),
 		}
 		err := repo.Create(ctx, endedGroup)
 		require.NoError(t, err)
@@ -793,8 +794,8 @@ func TestActiveGroupRepository_CheckRoomConflict(t *testing.T) {
 			StartTime:      now,
 			LastActivity:   now,
 			TimeoutMinutes: 30,
-			GroupID:        ptrtest.Ptr(activityGroup.ID),
-			RoomID:         room.ID,
+			GroupID:        (*ident.ID)(ptrtest.Ptr(activityGroup.ID)),
+			RoomID:         ident.ID(room.ID),
 		}
 		err := repo.Create(ctx, group1)
 		require.NoError(t, err)
@@ -825,14 +826,14 @@ func TestActiveGroupRepository_CheckRoomConflict(t *testing.T) {
 			StartTime:      now,
 			LastActivity:   now,
 			TimeoutMinutes: 30,
-			GroupID:        ptrtest.Ptr(activityGroup.ID),
-			RoomID:         room.ID,
+			GroupID:        (*ident.ID)(ptrtest.Ptr(activityGroup.ID)),
+			RoomID:         ident.ID(room.ID),
 		}
 		err := repo.Create(ctx, group)
 		require.NoError(t, err)
 
 		// Check for conflict excluding our own group (for updates)
-		hasConflict, _, err := repo.CheckRoomConflict(ctx, room.ID, group.ID)
+		hasConflict, _, err := repo.CheckRoomConflict(ctx, room.ID, group.ID.Int64())
 		require.NoError(t, err)
 		assert.False(t, hasConflict)
 	})
@@ -845,8 +846,8 @@ func TestActiveGroupRepository_CheckRoomConflict(t *testing.T) {
 		stay := &ports.ActiveGroup{
 			StartTime:    now,
 			LastActivity: now,
-			GroupID:      ptrtest.Ptr(roomActivity.ID),
-			RoomID:       room.ID,
+			GroupID:      (*ident.ID)(ptrtest.Ptr(roomActivity.ID)),
+			RoomID:       ident.ID(room.ID),
 		}
 		require.NoError(t, repo.Create(ctx, stay))
 
@@ -859,8 +860,8 @@ func TestActiveGroupRepository_CheckRoomConflict(t *testing.T) {
 		footballSession := &ports.ActiveGroup{
 			StartTime:    now,
 			LastActivity: now,
-			GroupID:      ptrtest.Ptr(football.ID),
-			RoomID:       room.ID,
+			GroupID:      (*ident.ID)(ptrtest.Ptr(football.ID)),
+			RoomID:       ident.ID(room.ID),
 		}
 		require.NoError(t, repo.Create(ctx, footballSession))
 
@@ -894,15 +895,15 @@ func TestActiveGroupRepository_FindByIDs(t *testing.T) {
 			StartTime:      now,
 			LastActivity:   now,
 			TimeoutMinutes: 30,
-			GroupID:        ptrtest.Ptr(activityGroup.ID),
-			RoomID:         room1.ID,
+			GroupID:        (*ident.ID)(ptrtest.Ptr(activityGroup.ID)),
+			RoomID:         ident.ID(room1.ID),
 		}
 		group2 := &ports.ActiveGroup{
 			StartTime:      now,
 			LastActivity:   now,
 			TimeoutMinutes: 30,
-			GroupID:        ptrtest.Ptr(activityGroup.ID),
-			RoomID:         room2.ID,
+			GroupID:        (*ident.ID)(ptrtest.Ptr(activityGroup.ID)),
+			RoomID:         ident.ID(room2.ID),
 		}
 
 		err := repo.Create(ctx, group1)
@@ -910,11 +911,11 @@ func TestActiveGroupRepository_FindByIDs(t *testing.T) {
 		err = repo.Create(ctx, group2)
 		require.NoError(t, err)
 
-		groupMap, err := repo.FindByIDs(ctx, []int64{group1.ID, group2.ID})
+		groupMap, err := repo.FindByIDs(ctx, []int64{group1.ID.Int64(), group2.ID.Int64()})
 		require.NoError(t, err)
 		assert.Len(t, groupMap, 2)
-		assert.Contains(t, groupMap, group1.ID)
-		assert.Contains(t, groupMap, group2.ID)
+		assert.Contains(t, groupMap, group1.ID.Int64())
+		assert.Contains(t, groupMap, group2.ID.Int64())
 	})
 
 	t.Run("returns empty map for empty input", func(t *testing.T) {
@@ -946,15 +947,15 @@ func TestActiveGroupRepository_FindWithSupervisors(t *testing.T) {
 			StartTime:      now,
 			LastActivity:   now,
 			TimeoutMinutes: 30,
-			GroupID:        ptrtest.Ptr(activityGroup.ID),
-			RoomID:         room.ID,
+			GroupID:        (*ident.ID)(ptrtest.Ptr(activityGroup.ID)),
+			RoomID:         ident.ID(room.ID),
 		}
 		err := repo.Create(ctx, group)
 		require.NoError(t, err)
 
 		// Create a supervisor for this group using ModelTableExpr
 		groupSup := &testpkg.GroupSupervisorRow{
-			GroupID:   group.ID,
+			GroupID:   group.ID.Int64(),
 			StaffID:   staff.ID,
 			Role:      "supervisor",
 			StartDate: calendar.DateFromTime(now),
@@ -966,7 +967,7 @@ func TestActiveGroupRepository_FindWithSupervisors(t *testing.T) {
 			Exec(ctx)
 		require.NoError(t, err)
 
-		found, err := repo.FindWithSupervisors(ctx, group.ID)
+		found, err := repo.FindWithSupervisors(ctx, group.ID.Int64())
 		require.NoError(t, err)
 		assert.Equal(t, group.ID, found.ID)
 		assert.NotEmpty(t, found.Supervisors)
@@ -981,13 +982,13 @@ func TestActiveGroupRepository_FindWithSupervisors(t *testing.T) {
 			StartTime:      now,
 			LastActivity:   now,
 			TimeoutMinutes: 30,
-			GroupID:        ptrtest.Ptr(activityGroup.ID),
-			RoomID:         room.ID,
+			GroupID:        (*ident.ID)(ptrtest.Ptr(activityGroup.ID)),
+			RoomID:         ident.ID(room.ID),
 		}
 		err := repo.Create(ctx, group)
 		require.NoError(t, err)
 
-		found, err := repo.FindWithSupervisors(ctx, group.ID)
+		found, err := repo.FindWithSupervisors(ctx, group.ID.Int64())
 		require.NoError(t, err)
 		assert.Equal(t, group.ID, found.ID)
 		// Empty or nil supervisors is ok

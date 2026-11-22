@@ -129,7 +129,7 @@ func TestBuildDailyAttendanceExportListsAnonymousRecords(t *testing.T) {
 
 	require.Len(t, export.Records, 8, "five stays and three absences; the present child's sick day is left out")
 	first := export.Records[0]
-	assert.Equal(t, data.schools[0].ID, first.SchoolID, "Hort am Hafen comes first by name")
+	assert.Equal(t, data.schools[0].ID.Int64(), first.SchoolID, "Hort am Hafen comes first by name")
 	assert.Equal(t, traegerview.AttendancePresent, first.Status)
 	assert.Equal(t, traegerview.AttendanceClassTrip, export.Records[1].Status)
 	assert.Nil(t, export.Records[1].ArrivedAt, "an absence has no times")

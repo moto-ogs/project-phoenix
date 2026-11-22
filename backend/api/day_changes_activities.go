@@ -20,6 +20,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // dayChangesBlocks is Timetable's read of the day's changed blocks.
@@ -107,11 +108,11 @@ func activityEntries(day calendar.Date, change timetable.BlockDayChange, names m
 	entry := func(kind daychangesview.Kind) daychangesview.SourceEntry {
 		result := daychangesview.SourceEntry{
 			Kind: kind, Involved: change.Involved, StartsAt: startsAt, EndsAt: endsAt,
-			Activity: &daychangesview.BlockActivity{ID: change.InstanceID, Title: change.Title},
+			Activity: &daychangesview.BlockActivity{ID: ident.ID(change.InstanceID), Title: change.Title},
 			Link:     &daychangesview.Link{Target: daychangesview.LinkDayPlan},
 		}
 		if change.RoomID > 0 {
-			result.Room = &daychangesview.BlockRoom{ID: change.RoomID, Name: change.RoomName}
+			result.Room = &daychangesview.BlockRoom{ID: ident.ID(change.RoomID), Name: change.RoomName}
 		}
 		return result
 	}
@@ -124,7 +125,7 @@ func activityEntries(day calendar.Date, change timetable.BlockDayChange, names m
 	}
 	if change.RoomChanged() {
 		moved := entry(daychangesview.KindActivityRoomChanged)
-		moved.PreviousRoom = &daychangesview.BlockRoom{ID: change.RegularRoomID, Name: change.RegularRoomName}
+		moved.PreviousRoom = &daychangesview.BlockRoom{ID: ident.ID(change.RegularRoomID), Name: change.RegularRoomName}
 		entries = append(entries, moved)
 	}
 	if change.LeadChanged() {
@@ -133,10 +134,10 @@ func activityEntries(day calendar.Date, change timetable.BlockDayChange, names m
 			return append(entries, covered)
 		}
 		for _, id := range change.SubstituteStaffIDs {
-			covered.People = append(covered.People, daychangesview.Person{StaffID: id, Name: names[id], Role: daychangesview.RoleSubstitute, IsSelf: id == selfID})
+			covered.People = append(covered.People, daychangesview.Person{StaffID: ident.ID(id), Name: names[id], Role: daychangesview.RoleSubstitute, IsSelf: id == selfID})
 		}
 		for _, id := range change.AbsentStaffIDs {
-			covered.People = append(covered.People, daychangesview.Person{StaffID: id, Name: names[id], Role: daychangesview.RoleAbsent, IsSelf: id == selfID})
+			covered.People = append(covered.People, daychangesview.Person{StaffID: ident.ID(id), Name: names[id], Role: daychangesview.RoleAbsent, IsSelf: id == selfID})
 		}
 		entries = append(entries, covered)
 	}
@@ -147,13 +148,5 @@ func activityEntries(day calendar.Date, change timetable.BlockDayChange, names m
 // school's time zone. A block whose end is not after its start ends with the
 // day, as the lifecycle treats it.
 func blockInstants(day calendar.Date, change timetable.BlockDayChange) (*time.Time, *time.Time) {
-	start, err := time.ParseInLocation("2006-01-02 15:04", day.String()+" "+change.StartTime, calendar.Berlin)
-	if err != nil {
-		return nil, nil
-	}
-	end, err := time.ParseInLocation("2006-01-02 15:04", day.String()+" "+change.EndTime, calendar.Berlin)
-	if err != nil || !end.After(start) {
-		end = day.EndOfDay()
-	}
-	return &start, &end
+	return wallClockInstants(day, change.StartTime, change.EndTime)
 }

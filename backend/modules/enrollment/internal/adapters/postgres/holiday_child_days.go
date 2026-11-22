@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The bookings children hold in a period across their registrations
@@ -79,7 +80,7 @@ func (s *HolidayRegistrationStore) ReadHolidayChildBookings(ctx context.Context,
 			return nil, err
 		}
 		key := enrollment.HolidayChildKey{GuardianEmail: row.GuardianEmail, FirstName: row.FirstName, LastName: row.LastName, BirthDate: row.BirthDate}
-		bookings[key] = append(bookings[key], enrollment.HolidayBookingInput{WeekID: row.WeekID, TimeModelID: row.TimeModelID, Days: days})
+		bookings[key] = append(bookings[key], enrollment.HolidayBookingInput{WeekID: ident.ID(row.WeekID), TimeModelID: ident.ID(row.TimeModelID), Days: days})
 	}
 	return bookings, nil
 }

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Import of existing SEPA mandates from a CSV file (#6198, ADR 0171 point
@@ -220,12 +221,12 @@ type SEPAMandateImportRow struct {
 	IBANMasked      string                     `json:"iban_masked"`
 	BIC             string                     `json:"bic"`
 	AccountHolder   string                     `json:"account_holder"`
-	ContractID      int64                      `json:"contract_id,omitempty"`
+	ContractID      ident.ID                   `json:"contract_id,omitempty"`
 	PayerFirstName  string                     `json:"payer_first_name"`
 	PayerLastName   string                     `json:"payer_last_name"`
 	Sequence        string                     `json:"sequence"`
 	LastCollectedOn *calendar.Date             `json:"last_collected_on"`
-	MandateID       int64                      `json:"mandate_id,omitempty"`
+	MandateID       ident.ID                   `json:"mandate_id,omitempty"`
 	Problems        []SEPAMandateImportProblem `json:"problems"`
 	Hints           []string                   `json:"hints"`
 	// DebtorNumber is the debtor number of the row and DebtorNumberStatus
@@ -298,7 +299,7 @@ type ImportedSEPAMandate struct {
 // file and how many mandates it took over.
 type SEPAMandateImportEntry struct {
 	File       string    `json:"file"`
-	AccountID  *int64    `json:"account_id"`
+	AccountID  *ident.ID `json:"account_id"`
 	ImportedAt time.Time `json:"imported_at"`
 	Mandates   int       `json:"mandates"`
 }

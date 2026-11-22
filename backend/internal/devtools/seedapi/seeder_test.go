@@ -1783,6 +1783,13 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 			})
 			return
 		}
+		if r.URL.Path == "/api/staff-shifts" && r.Method == seedHTTPMethodGet {
+			// Today's Dienst the changed-shift step cancels (#7661).
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"status": "success", "data": []map[string]any{{"id": fmt.Sprint(idCounter), "start_time": "08:30", "end_time": "17:00", "cancelled": false}},
+			})
+			return
+		}
 		if r.URL.Path == "/api/timetable/instances" && r.Method == seedHTTPMethodGet {
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"status": "success", "data": map[string]any{"instances": []map[string]any{

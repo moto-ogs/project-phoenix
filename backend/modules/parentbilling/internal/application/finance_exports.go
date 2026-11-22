@@ -12,6 +12,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The finance exports of a Träger (#4693): settings, runs, protocol,
@@ -498,7 +499,7 @@ func (f *FinanceExports) InvoiceHistory(ctx context.Context, reviewer parentbill
 		return parentbilling.InvoiceHistory{}, err
 	}
 	slices.SortStableFunc(steps, func(a, b parentbilling.InvoiceHistoryEntry) int { return a.At.Compare(b.At) })
-	return parentbilling.InvoiceHistory{Kind: kind, ID: id, Number: number, Entries: steps}, nil
+	return parentbilling.InvoiceHistory{Kind: kind, ID: ident.ID(id), Number: number, Entries: steps}, nil
 }
 
 // recordHistoryRead records the read of an invoice's history in the trail of

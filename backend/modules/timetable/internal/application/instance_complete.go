@@ -203,6 +203,7 @@ func (s *InstanceLifecycleService) snapshotCompletion(ctx context.Context, insta
 	for _, visit := range visitsBefore {
 		if visit.ExitTime == nil {
 			snapshot.VisitIDs = append(snapshot.VisitIDs, visit.ID)
+			snapshot.VisitStudentIDs = append(snapshot.VisitStudentIDs, visit.StudentID)
 			openStudentIDs = append(openStudentIDs, visit.StudentID)
 		}
 	}
@@ -258,6 +259,7 @@ func completionSupervisorVersion(row *studentpresence.StaffedSupervision) schedu
 func completionAttendanceOf(row *scheduleModel.InstanceStudent) scheduleModel.CompletionAttendanceSnapshot {
 	return scheduleModel.CompletionAttendanceSnapshot{
 		RowID:              row.ID,
+		StudentID:          row.StudentID,
 		Status:             row.Status,
 		Substatus:          row.Substatus,
 		Note:               row.Note,

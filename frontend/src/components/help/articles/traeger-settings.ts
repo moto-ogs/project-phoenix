@@ -40,6 +40,8 @@ export function traegerSettingsTopic(): HelpTopic {
       "Der eigene Zahlungstext gilt für die Schreiben, die du danach erstellst. Fertige Schreiben bleiben, wie sie sind.",
       "Unter `Ferienbetreuung` legst du bei `Ferienanmeldungen löschen nach (Tagen)` fest, wie lange moto Ferienanmeldungen aufbewahrt. Möglich sind 92 bis 1095 Tage, der Standard ist 365 Tage. Die Frist steht im Einwilligungstext für die Eltern. Eine Änderung gilt nur für Anmeldungen, die danach eingehen.",
       "Unter `Datenschutz` legst du bei `Erziehungsberechtigte ohne Kind aufbewahren (Tage)` fest, wie lange moto Eltern ohne Kind aufbewahrt. Möglich sind 30 bis 365 Tage, der Standard ist 90 Tage. Eine Schule kann einen eigenen Wert eintragen.",
+      // #3844: Eltern-Stopp von Raumverlauf und Stimmung, nur Träger-Ebene.
+      "Unter `Datenschutz` legst du bei `Eltern dürfen Raumverlauf und Stimmung stoppen` fest, ob Eltern das im Elternportal selbst tun dürfen. Der Standard ist aus. Ist es an, löscht ein Stopp den bisherigen Raumverlauf des Kindes. Eine Schule kann hier keinen eigenen Wert eintragen.",
       "Im Bereich `Dashboard` legst du fest, ab wann das Dashboard eine Schule unter `Auffälligkeiten` zeigt: bei zu wenig Personal, bei vielen Krankmeldungen und bei offenen Anmeldungen. 0 schaltet einen Hinweis aus.",
       "Unter `Ferienbetreuung` legst du bei `Ferienbeitrag` auch fest, welches Kind das erste Kind ist und was ein Kostenträger bezahlt. Mehr dazu steht im Artikel `Ferienbeitrag festlegen`.",
     ],

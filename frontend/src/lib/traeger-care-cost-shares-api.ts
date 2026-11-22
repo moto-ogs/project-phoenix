@@ -9,11 +9,7 @@
 
 import { knownEnum } from "./contract/known-enum";
 import { requiredDay } from "./contract/required-day";
-import type {
-  CareCostShare as WireShare,
-  CareCostShareRequest,
-  CareCostShareSet as WireSet,
-} from "./contract/traeger-care-cost-shares.generated";
+import type * as traegerCareCostSharesContract from "./contract/traeger-care-cost-shares.generated";
 import { traegerRequest } from "./traeger-api";
 import { type BillingFile, billingFile } from "./traeger-billing-api";
 import {
@@ -82,7 +78,9 @@ export type CareCostShareExportFormat = "pdf" | "xlsx" | "csv";
 
 const SHARES_PATH = "/api/traeger/care-cost-shares";
 
-function shareFromBackend(share: WireShare): CareCostShare {
+function shareFromBackend(
+  share: traegerCareCostSharesContract.CareCostShare,
+): CareCostShare {
   return {
     id: share.id,
     contractId: share.contract_id,
@@ -100,7 +98,9 @@ function shareFromBackend(share: WireShare): CareCostShare {
   };
 }
 
-function costShareSetFromBackend(body: WireSet): CareCostShareSet {
+function costShareSetFromBackend(
+  body: traegerCareCostSharesContract.CareCostShareSet,
+): CareCostShareSet {
   return {
     contracts: (body.contracts ?? []).map((contract) => ({
       contractId: contract.contract_id,
@@ -120,11 +120,13 @@ function costShareSetFromBackend(body: WireSet): CareCostShareSet {
   };
 }
 
-function shareBody(input: CareCostShareInput): CareCostShareRequest {
+function shareBody(
+  input: CareCostShareInput,
+): traegerCareCostSharesContract.CareCostShareRequest {
   return {
-    contract_id: Number(input.contractId),
+    contract_id: input.contractId,
     kind: input.kind,
-    cost_bearer_id: Number(input.costBearerId),
+    cost_bearer_id: input.costBearerId,
     share_basis_points: input.shareBasisPoints,
     share_cents: input.shareCents,
     scope: input.scope,
@@ -137,7 +139,11 @@ function shareBody(input: CareCostShareInput): CareCostShareRequest {
 
 /** Reads the shares; the backend records the read per contract. */
 export async function fetchCareCostShares(): Promise<CareCostShareSet> {
-  return costShareSetFromBackend(await traegerRequest<WireSet>(SHARES_PATH));
+  return costShareSetFromBackend(
+    await traegerRequest<traegerCareCostSharesContract.CareCostShareSet>(
+      SHARES_PATH,
+    ),
+  );
 }
 
 /** Creates a share without `shareId`, changes that one otherwise. */
@@ -146,7 +152,7 @@ export async function saveCareCostShare(
   input: CareCostShareInput,
 ): Promise<CareCostShareSet> {
   return costShareSetFromBackend(
-    await traegerRequest<WireSet>(
+    await traegerRequest<traegerCareCostSharesContract.CareCostShareSet>(
       shareId ? `${SHARES_PATH}/${encodeURIComponent(shareId)}` : SHARES_PATH,
       { method: shareId ? "PUT" : "POST", body: shareBody(input) },
     ),
@@ -157,7 +163,7 @@ export async function deleteCareCostShare(
   shareId: string,
 ): Promise<CareCostShareSet> {
   return costShareSetFromBackend(
-    await traegerRequest<WireSet>(
+    await traegerRequest<traegerCareCostSharesContract.CareCostShareSet>(
       `${SHARES_PATH}/${encodeURIComponent(shareId)}`,
       { method: "DELETE" },
     ),

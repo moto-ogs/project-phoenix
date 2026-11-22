@@ -12,6 +12,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -41,11 +42,11 @@ func TestHolidayPositionsKeepTheirKost1AndFallback(t *testing.T) {
 		fer := parentbilling.PositionAccounts{RevenueAccount: "4420", CostCenter: "FER", Frozen: true}
 		sequence := testpkg.UniqueTestTenantID(t)
 		number := fmt.Sprintf("FE-G-%d", sequence)
-		document, err := store.IssueDocument(ctx, scope.organization, parentbilling.BillingRun{ID: run, Service: parentbilling.ServiceHoliday,
+		document, err := store.IssueDocument(ctx, scope.organization, parentbilling.BillingRun{ID: ident.ID(run), Service: parentbilling.ServiceHoliday,
 			HolidayPeriodID: 1}, 2029, sequence, parentbilling.BillingDocument{
-			Number: number, IssuedOn: &issuedOn, RegistrationID: sequence, RecipientFirstName: "Eva", RecipientLastName: "Beispiel",
+			Number: number, IssuedOn: &issuedOn, RegistrationID: ident.ID(sequence), RecipientFirstName: "Eva", RecipientLastName: "Beispiel",
 			ServiceFrom: first, ServiceUntil: secondEnd, TotalCents: 8000,
-			Children: []parentbilling.BillingChild{{ChildID: sequence, FirstName: "Mia", LastName: "Beispiel", Positions: []parentbilling.BillingPosition{
+			Children: []parentbilling.BillingChild{{ChildID: ident.ID(sequence), FirstName: "Mia", LastName: "Beispiel", Positions: []parentbilling.BillingPosition{
 				{Kind: parentbilling.LineBase, AmountCents: 5000, WeekStartsOn: &first, WeekEndsOn: &firstEnd, Accounts: isp},
 				{Kind: parentbilling.LineBase, AmountCents: 3000, WeekStartsOn: &second, WeekEndsOn: &secondEnd, Accounts: fer,
 					CostCenterFallback: parentbilling.CostCenterFallbackNoSchoolCostCenter}}}},

@@ -36,8 +36,8 @@ type HireContract struct {
 
 // HireSite is one Einsatzort of a hire with its Soll Monday to Friday.
 type HireSite struct {
-	SchoolID       common.JSONID `json:"school_id"`
-	WeekdayMinutes []int         `json:"weekday_minutes"`
+	SchoolID       common.ID `json:"school_id"`
+	WeekdayMinutes []int     `json:"weekday_minutes"`
 }
 
 func (req *HireRequest) Bind(*http.Request) error { return nil }

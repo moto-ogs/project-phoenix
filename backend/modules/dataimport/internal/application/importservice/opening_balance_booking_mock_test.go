@@ -9,6 +9,7 @@ import (
 	importModels "github.com/moto-ogs/project-phoenix/modules/dataimport"
 	"github.com/moto-ogs/project-phoenix/modules/dataimport/ports"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -44,11 +45,11 @@ func (b *recordingOpeningBooker) CreateOpeningBalance(_ context.Context, staffID
 		return nil, b.createErr
 	}
 	return &ports.StaffBalanceAdjustment{
-		StaffID:       staffID,
+		StaffID:       ident.ID(staffID),
 		Type:          ports.BalanceAdjustmentTypeOpening,
 		MinutesDelta:  balanceMinutes,
 		EffectiveDate: effectiveDate,
-		DecidedBy:     decidedBy,
+		DecidedBy:     ident.ID(decidedBy),
 		Note:          note,
 	}, nil
 }
@@ -75,7 +76,7 @@ func (b *recordingVacationBooker) VacationQuotaSummary(_ context.Context, staffI
 	if b.summary != nil {
 		return b.summary, nil
 	}
-	return &ports.VacationQuotaSummary{StaffID: staffID, Year: year, EntitledDays: 30, CarryoverDays: 0}, nil
+	return &ports.VacationQuotaSummary{StaffID: ident.ID(staffID), Year: year, EntitledDays: 30, CarryoverDays: 0}, nil
 }
 
 func (b *recordingVacationBooker) UpsertVacationQuota(_ context.Context, _ int64, _ int, entitled, carryover float64) error {
@@ -97,11 +98,11 @@ func (b *recordingVacationBooker) SetVacationOpening(_ context.Context, staffID,
 		return nil, err
 	}
 	return &ports.StaffVacationOpening{
-		StaffID:              staffID,
+		StaffID:              ident.ID(staffID),
 		Year:                 effective.Year(),
 		EffectiveDate:        req.EffectiveDate,
 		EnteredRemainingDays: req.RemainingDays,
-		DecidedBy:            decidedBy,
+		DecidedBy:            ident.ID(decidedBy),
 	}, nil
 }
 
@@ -220,7 +221,7 @@ func TestOpeningBalanceCreate_BooksOnlyTheSidesTheRowCarries(t *testing.T) {
 		c, hours, _ := newBookingConfig(&events)
 
 		id, err := c.create(t.Context(), importModels.OpeningBalanceImportRow{
-			StaffID:             openingStaffAnnaID,
+			StaffID:             ident.ID(openingStaffAnnaID),
 			HoursBalanceMinutes: intPtr(-330),
 		})
 
@@ -237,7 +238,7 @@ func TestOpeningBalanceCreate_BooksOnlyTheSidesTheRowCarries(t *testing.T) {
 		c, _, vacation := newBookingConfig(&events)
 
 		_, err := c.create(t.Context(), importModels.OpeningBalanceImportRow{
-			StaffID:               openingStaffAnnaID,
+			StaffID:               ident.ID(openingStaffAnnaID),
 			VacationRemainingDays: float64Ptr(17.5),
 		})
 
@@ -252,7 +253,7 @@ func TestOpeningBalanceCreate_BooksOnlyTheSidesTheRowCarries(t *testing.T) {
 		c, _, vacation := newBookingConfig(&events)
 
 		_, err := c.create(t.Context(), importModels.OpeningBalanceImportRow{
-			StaffID:               openingStaffAnnaID,
+			StaffID:               ident.ID(openingStaffAnnaID),
 			HoursBalanceMinutes:   intPtr(750),
 			VacationEntitledDays:  float64Ptr(28),
 			VacationCarryoverDays: float64Ptr(3),
@@ -271,7 +272,7 @@ func TestOpeningBalanceCreate_BooksOnlyTheSidesTheRowCarries(t *testing.T) {
 		events := []string{}
 		c, _, _ := newBookingConfig(&events)
 
-		_, err := c.create(t.Context(), importModels.OpeningBalanceImportRow{StaffID: openingStaffAnnaID})
+		_, err := c.create(t.Context(), importModels.OpeningBalanceImportRow{StaffID: ident.ID(openingStaffAnnaID)})
 
 		require.NoError(t, err)
 		assert.Empty(t, events)
@@ -288,7 +289,7 @@ func TestOpeningBalanceCreate_QuotaKeepsUnsuppliedComponent(t *testing.T) {
 	// Only the Übertrag column is filled: the persisted Jahresanspruch must
 	// survive untouched.
 	_, err := c.create(t.Context(), importModels.OpeningBalanceImportRow{
-		StaffID:               openingStaffAnnaID,
+		StaffID:               ident.ID(openingStaffAnnaID),
 		VacationCarryoverDays: float64Ptr(1.5),
 	})
 
@@ -319,7 +320,7 @@ func TestOpeningBalanceCreate_RequiresATransactionForItsSavepoint(t *testing.T) 
 	c, _, _ := newBookingConfig(&events)
 
 	_, err := c.Create(t.Context(), importModels.OpeningBalanceImportRow{
-		StaffID:             openingStaffAnnaID,
+		StaffID:             ident.ID(openingStaffAnnaID),
 		HoursBalanceMinutes: intPtr(60),
 	})
 
@@ -364,7 +365,7 @@ func TestOpeningBalanceCreate_TranslatesLedgerRejections(t *testing.T) {
 			hours.createErr = tc.err
 
 			_, err := c.create(t.Context(), importModels.OpeningBalanceImportRow{
-				StaffID:             openingStaffAnnaID,
+				StaffID:             ident.ID(openingStaffAnnaID),
 				HoursBalanceMinutes: intPtr(60),
 			})
 
@@ -401,7 +402,7 @@ func TestOpeningBalanceCreate_TranslatesVacationRejections(t *testing.T) {
 			vacation.openingErr = tc.err
 
 			_, err := c.create(t.Context(), importModels.OpeningBalanceImportRow{
-				StaffID:               openingStaffAnnaID,
+				StaffID:               ident.ID(openingStaffAnnaID),
 				VacationRemainingDays: float64Ptr(10),
 			})
 
@@ -420,7 +421,7 @@ func TestOpeningBalanceCreate_ReportsQuotaFailures(t *testing.T) {
 		vacation.summaryErr = errors.New("db down")
 
 		_, err := c.create(t.Context(), importModels.OpeningBalanceImportRow{
-			StaffID:              openingStaffAnnaID,
+			StaffID:              ident.ID(openingStaffAnnaID),
 			VacationEntitledDays: float64Ptr(30),
 		})
 
@@ -434,7 +435,7 @@ func TestOpeningBalanceCreate_ReportsQuotaFailures(t *testing.T) {
 		vacation.upsertErr = errors.New("db down")
 
 		_, err := c.create(t.Context(), importModels.OpeningBalanceImportRow{
-			StaffID:              openingStaffAnnaID,
+			StaffID:              ident.ID(openingStaffAnnaID),
 			VacationEntitledDays: float64Ptr(30),
 		})
 

@@ -10,9 +10,55 @@ import { ApiError, apiErrorFromBody, transportFetch } from "./api-error";
  * - materialize(from?, to?)      → POST   /materialize
  */
 
+import type { PatchAttendanceRequest } from "./contract/shared.generated";
 import type {
+  ApplyDeviationsResponse as WireApplyDeviations,
+  AttendanceResponse as WireAttendance,
+  BulkCancelResult as WireBulkCancel,
+  bulkCancelRequest,
+  bookingLeftoversResponse,
+  BulkSubstitutionResponse as WireBulkSubstitution,
+  CancelInstanceRequest,
+  combinedOfferingCountsResponse as WireCombinedOfferingCounts,
+  conflictAcksResponse,
+  convertInstanceToSeriesRequest,
+  convertInstanceToSeriesResponse as WireConvertInstanceToSeries,
+  createTemplateRequest,
+  createTemplateResponse as WireCreateTemplate,
+  endTemplateRequest,
+  endTemplateResponse as WireEndTemplate,
+  keptStudentTemplateDaysRequest,
+  listTemplatesResponse as WireTemplates,
+  manualRosterRequest,
+  offeringGapAckRequest,
+  offeringSourcesResponse as WireOfferingSources,
+  splitTemplateRequest,
+  splitTemplateResponse as WireSplitTemplate,
+  templateResponse as WireTemplate,
+  updateTemplateRequest,
+  createInstanceRequest,
+  editedInWindowResponse as WireEditedInWindow,
+  GuardianNoticeReachResponse as WireGuardianNoticeReach,
+  InstanceParticipantsResponse,
+  InstanceStatusResponse as WireInstanceStatus,
+  materializeRequest,
+  materializeResponse as WireMaterialize,
+  moveStaffRequest,
+  MoveStaffResponse as WireMoveStaff,
+  PlannedConflictsResponse as WireConflictCheck,
+  replanWeekRequest,
+  replanWeekResponse as WireReplanWeek,
+  ShiftCoverageRequest,
+  ShiftCoverageResponse as WireShiftCoverage,
+  StaffPoolResponse as WireStaffPool,
+  StartInstanceResponse as WireStartInstance,
+  DeviationHistoryResponse as WireDeviationHistory,
+  enrichedInstance as WireInstance,
+  GapsResponse as WireGaps,
   offeringPreviewResponse,
   rosterDeviationsResponse,
+  updateInstanceRequest,
+  weeklyInstancesResponse as WireWeeklyInstances,
 } from "./contract/timetable.generated";
 import { hasSessionAccess } from "./session-access";
 import { getCachedSession } from "./session-cache";
@@ -23,36 +69,11 @@ import {
   type PlanFilter,
 } from "./plan-filter";
 import type {
-  BackendConflictCheckResult,
-  BackendShiftCoverageCheckResult,
-  BackendCreateTemplateResult,
-  BackendConvertInstanceToSeriesResult,
-  BackendAttendanceResponse,
-  BackendEndTemplateResult,
-  BackendEnrichedInstance,
-  BackendGapsResponse,
-  BackendDeviationHistoryResponse,
-  BackendGuardianNoticeReach,
-  BackendInstanceStatusResult,
-  BackendMaterializeResult,
-  BackendBulkCancelResult,
-  BackendReplanWeekResult,
-  BackendEditedInWindowResult,
-  BackendSplitTemplateResult,
-  BackendStartInstanceResult,
-  BackendApplyDeviationsResponse,
-  BackendMoveStaffResponse,
-  BackendStaffPoolResponse,
   MoveStaffInput,
   MoveStaffResponse,
   StaffPoolResponse,
-  BackendCombinedOfferingCountsResponse,
-  BackendOfferingSourcesResponse,
   CombinedOfferingCounts,
-  BackendTimetableTemplate,
-  BackendTemplatesResponse,
   OfferingSourceOption,
-  BackendWeeklyInstancesResponse,
   AttendancePatchBody,
   AttendanceResponse,
   ConflictCheckParams,
@@ -83,7 +104,6 @@ import type {
   ApplyDeviationsResponse,
   BulkSubstitutionInput,
   BulkSubstitutionResponse,
-  BackendBulkSubstitutionResponse,
   TemplatesResponse,
   TimetableTemplate,
   UpdateTemplateBody,
@@ -126,21 +146,17 @@ import {
   type OfferingSelection,
   type RosterDeviation,
 } from "./roster-deviation";
-import {
-  mapBookingLeftovers,
-  type BackendBookingLeftoversResponse,
-  type BookingLeftover,
-} from "./booking-leftover";
+import { mapBookingLeftovers, type BookingLeftover } from "./booking-leftover";
 import {
   mapOfferingGaps,
-  type BackendOfferingGapsResponse,
+  type OfferingGapsWire,
   type OfferingGap,
 } from "./offering-gap";
 import {
   draftPreviewQuery,
   mapOfferingSuggestion,
   suggestionQuery,
-  type BackendOfferingSuggestionResponse,
+  type OfferingSuggestionWire,
   type DraftRoster,
   type OfferingSuggestion,
   type OfferingSuggestionQuery,
@@ -211,7 +227,7 @@ class TimetableService {
       },
     );
 
-    const raw = await unwrap<BackendWeeklyInstancesResponse>(response);
+    const raw = await unwrap<WireWeeklyInstances>(response);
     return mapWeeklyInstances(raw);
   }
 
@@ -234,9 +250,9 @@ class TimetableService {
         "Idempotency-Key": idempotencyKey,
       },
       credentials: "include",
-      body: JSON.stringify(body),
+      body: JSON.stringify(body satisfies createInstanceRequest),
     });
-    const raw = await unwrap<BackendEnrichedInstance>(response);
+    const raw = await unwrap<WireInstance>(response);
     logger.info("instance_created", {
       instance_id: raw.id,
       is_spontaneous: raw.is_spontaneous,
@@ -260,12 +276,12 @@ class TimetableService {
         Accept: "application/json",
       },
       credentials: "include",
-      body: JSON.stringify(body),
+      body: JSON.stringify(body satisfies createTemplateRequest),
     });
-    const raw = await unwrap<BackendCreateTemplateResult>(response);
+    const raw = await unwrap<WireCreateTemplate>(response);
     logger.info("template_created", {
       template_id: raw.template_id,
-      schedules: raw.schedule_ids.length,
+      schedules: raw.schedule_ids?.length ?? 0,
       instances_created: raw.instances_created,
     });
     return mapCreateTemplateResult(raw);
@@ -285,19 +301,19 @@ class TimetableService {
           Accept: "application/json",
         },
         credentials: "include",
-        body: JSON.stringify(body),
+        body: JSON.stringify(body satisfies convertInstanceToSeriesRequest),
       },
     );
-    const raw = await unwrap<BackendConvertInstanceToSeriesResult>(response);
+    const raw = await unwrap<WireConvertInstanceToSeries>(response);
     logger.info("instance_converted_to_series", {
       instance_id: raw.linked_instance_id,
       template_id: raw.template_id,
     });
     return {
-      templateId: String(raw.template_id),
-      timeframeId: String(raw.timeframe_id),
-      scheduleIds: (raw.schedule_ids ?? []).map(String),
-      linkedInstanceId: String(raw.linked_instance_id),
+      templateId: raw.template_id,
+      timeframeId: raw.timeframe_id,
+      scheduleIds: raw.schedule_ids ?? [],
+      linkedInstanceId: raw.linked_instance_id,
     };
   }
 
@@ -319,7 +335,7 @@ class TimetableService {
         credentials: "include",
       },
     );
-    const raw = await unwrap<BackendOfferingSourcesResponse>(response);
+    const raw = await unwrap<WireOfferingSources>(response);
     return mapOfferingSourceOptions(raw);
   }
 
@@ -344,7 +360,7 @@ class TimetableService {
         credentials: "include",
       },
     );
-    const raw = await unwrap<BackendCombinedOfferingCountsResponse>(response);
+    const raw = await unwrap<WireCombinedOfferingCounts>(response);
     return mapCombinedOfferingCounts(raw);
   }
 
@@ -360,7 +376,7 @@ class TimetableService {
       },
     );
 
-    const raw = await unwrap<BackendTemplatesResponse>(response);
+    const raw = await unwrap<WireTemplates>(response);
     return mapTemplates(raw);
   }
 
@@ -383,7 +399,7 @@ class TimetableService {
         credentials: "include",
       },
     );
-    const raw = await unwrap<BackendTimetableTemplate>(response);
+    const raw = await unwrap<WireTemplate>(response);
     return mapTemplates({ templates: [raw] }).templates[0]!;
   }
 
@@ -430,7 +446,7 @@ class TimetableService {
       },
     );
     return mapBookingLeftovers(
-      await unwrap<BackendBookingLeftoversResponse>(response),
+      await unwrap<bookingLeftoversResponse>(response),
     );
   }
 
@@ -455,7 +471,7 @@ class TimetableService {
           weekdays: leftover.weekdays,
           booking_ended_on: leftover.bookingEndedOn,
           kept,
-        }),
+        } satisfies keptStudentTemplateDaysRequest),
       },
     );
     await unwrap<unknown>(response);
@@ -475,7 +491,7 @@ class TimetableService {
         credentials: "include",
       },
     );
-    return mapOfferingGaps(await unwrap<BackendOfferingGapsResponse>(response));
+    return mapOfferingGaps(await unwrap<OfferingGapsWire>(response));
   }
 
   /**
@@ -498,9 +514,9 @@ class TimetableService {
         },
         credentials: "include",
         body: JSON.stringify({
-          period_id: Number(periodId),
+          period_id: periodId,
           acknowledged,
-        }),
+        } satisfies offeringGapAckRequest),
       },
     );
     await unwrap<unknown>(response);
@@ -540,7 +556,7 @@ class TimetableService {
       },
     );
     return mapOfferingSuggestion(
-      await unwrap<BackendOfferingSuggestionResponse>(response),
+      await unwrap<OfferingSuggestionWire>(response),
     );
   }
 
@@ -605,7 +621,7 @@ class TimetableService {
           Accept: "application/json",
         },
         credentials: "include",
-        body: JSON.stringify({ confirmed }),
+        body: JSON.stringify({ confirmed } satisfies manualRosterRequest),
       },
     );
     await unwrap<unknown>(response);
@@ -631,10 +647,10 @@ class TimetableService {
           Accept: "application/json",
         },
         credentials: "include",
-        body: JSON.stringify(body),
+        body: JSON.stringify(body satisfies splitTemplateRequest),
       },
     );
-    const raw = await unwrap<BackendSplitTemplateResult>(response);
+    const raw = await unwrap<WireSplitTemplate>(response);
     logger.info("template_split", {
       old_template_id: raw.old_template_id,
       new_template_id: raw.new_template_id,
@@ -662,10 +678,10 @@ class TimetableService {
           Accept: "application/json",
         },
         credentials: "include",
-        body: JSON.stringify(body),
+        body: JSON.stringify(body satisfies endTemplateRequest),
       },
     );
-    const raw = await unwrap<BackendEndTemplateResult>(response);
+    const raw = await unwrap<WireEndTemplate>(response);
     logger.info("template_ended", {
       template_id: raw.template_id,
       effective_date: raw.effective_date,
@@ -706,7 +722,7 @@ class TimetableService {
       headers: { Accept: "application/json" },
       credentials: "include",
     });
-    const raw = await unwrap<BackendConflictCheckResult>(response);
+    const raw = await unwrap<WireConflictCheck>(response);
     return mapConflictCheckResult(raw);
   }
 
@@ -720,7 +736,7 @@ class TimetableService {
       headers: { Accept: "application/json" },
       credentials: "include",
     });
-    const raw = await unwrap<{ fingerprints: string[] | null }>(response);
+    const raw = await unwrap<conflictAcksResponse>(response);
     return raw.fingerprints ?? [];
   }
 
@@ -776,21 +792,15 @@ class TimetableService {
         dates: params.dates,
         start_time: params.startTime,
         end_time: params.endTime,
-        staff_ids: params.staffIds.map(Number),
-        exclude_instance_id: params.excludeInstanceId
-          ? Number(params.excludeInstanceId)
-          : undefined,
+        staff_ids: params.staffIds,
+        exclude_instance_id: params.excludeInstanceId || undefined,
         concrete_instance_date: params.concreteInstanceDate,
-        replan_activity_group_id: params.replanActivityGroupId
-          ? Number(params.replanActivityGroupId)
-          : undefined,
-        calendar_period_id: params.calendarPeriodId
-          ? Number(params.calendarPeriodId)
-          : undefined,
+        replan_activity_group_id: params.replanActivityGroupId || undefined,
+        calendar_period_id: params.calendarPeriodId || undefined,
         week_pattern: params.weekPattern,
-      }),
+      } satisfies ShiftCoverageRequest),
     });
-    const raw = await unwrap<BackendShiftCoverageCheckResult>(response);
+    const raw = await unwrap<WireShiftCoverage>(response);
     return mapShiftCoverageCheckResult(raw);
   }
 
@@ -807,10 +817,10 @@ class TimetableService {
           Accept: "application/json",
         },
         credentials: "include",
-        body: JSON.stringify(body),
+        body: JSON.stringify(body satisfies updateTemplateRequest),
       },
     );
-    const raw = await unwrap<BackendTimetableTemplate>(response);
+    const raw = await unwrap<WireTemplate>(response);
     return mapTemplates({ templates: [raw] }).templates[0]!;
   }
 
@@ -839,10 +849,10 @@ class TimetableService {
           Accept: "application/json",
         },
         credentials: "include",
-        body: JSON.stringify(body),
+        body: JSON.stringify(body satisfies updateInstanceRequest),
       },
     );
-    const raw = await unwrap<BackendEnrichedInstance>(response);
+    const raw = await unwrap<WireInstance>(response);
     return mapInstance(raw);
   }
 
@@ -868,7 +878,7 @@ class TimetableService {
    * caller can surface them.
    */
   async start(instanceId: string): Promise<StartInstanceResult> {
-    return this.lifecycle<BackendStartInstanceResult, StartInstanceResult>(
+    return this.lifecycle<WireStartInstance, StartInstanceResult>(
       instanceId,
       "start",
       mapStartInstanceResult,
@@ -894,17 +904,15 @@ class TimetableService {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          confirmed_present_student_ids: confirmedPresentStudentIds.map(Number),
+          confirmed_present_student_ids: confirmedPresentStudentIds,
         }),
       },
     );
-    return mapInstanceStatusResult(
-      await unwrap<BackendInstanceStatusResult>(response),
-    );
+    return mapInstanceStatusResult(await unwrap<WireInstanceStatus>(response));
   }
 
   async reopen(instanceId: string): Promise<StartInstanceResult> {
-    return this.lifecycle<BackendStartInstanceResult, StartInstanceResult>(
+    return this.lifecycle<WireStartInstance, StartInstanceResult>(
       instanceId,
       "reopen",
       mapStartInstanceResult,
@@ -921,7 +929,7 @@ class TimetableService {
     reason?: string,
     guardianNotice?: GuardianNoticeInput,
   ): Promise<InstanceStatusResult> {
-    const body: Record<string, unknown> = {};
+    const body: CancelInstanceRequest = {};
     if (reason) body.reason = reason;
     if (guardianNotice) {
       body.guardian_notice = {
@@ -929,7 +937,7 @@ class TimetableService {
         message: guardianNotice.message,
       };
     }
-    return this.lifecycle<BackendInstanceStatusResult, InstanceStatusResult>(
+    return this.lifecycle<WireInstanceStatus, InstanceStatusResult>(
       instanceId,
       "cancel",
       mapInstanceStatusResult,
@@ -943,7 +951,7 @@ class TimetableService {
    * planned again and its staff hear "findet doch statt".
    */
   async reinstate(instanceId: string): Promise<InstanceStatusResult> {
-    return this.lifecycle<BackendInstanceStatusResult, InstanceStatusResult>(
+    return this.lifecycle<WireInstanceStatus, InstanceStatusResult>(
       instanceId,
       "reinstate",
       mapInstanceStatusResult,
@@ -966,7 +974,7 @@ class TimetableService {
       },
     );
     return mapGuardianNoticeReach(
-      await unwrap<BackendGuardianNoticeReach>(response),
+      await unwrap<WireGuardianNoticeReach>(response),
     );
   }
 
@@ -974,7 +982,7 @@ class TimetableService {
     instanceId: string,
     action: "start" | "complete" | "cancel" | "reopen" | "reinstate",
     mapper: (raw: TBackend) => TFront,
-    body: Record<string, unknown> = {},
+    body: CancelInstanceRequest = {},
   ): Promise<TFront> {
     const response = await transportFetch(
       `/api/timetable/instances/${instanceId}/${action}`,
@@ -1004,7 +1012,7 @@ class TimetableService {
    * materialization for that window.
    */
   async materialize(from?: string, to?: string): Promise<MaterializeResult> {
-    const body: Record<string, string> = {};
+    const body: materializeRequest = {};
     if (from) body.from_date = from;
     if (to) body.to_date = to;
 
@@ -1018,7 +1026,7 @@ class TimetableService {
       body: JSON.stringify(body),
     });
 
-    const raw = await unwrap<BackendMaterializeResult>(response);
+    const raw = await unwrap<WireMaterialize>(response);
     logger.info("materialize_completed", {
       from: raw.from,
       to: raw.to,
@@ -1038,9 +1046,9 @@ class TimetableService {
     to: string,
     activityGroupId?: string,
   ): Promise<ReplanWeekResult> {
-    const body: Record<string, unknown> = { from_date: from, to_date: to };
+    const body: replanWeekRequest = { from_date: from, to_date: to };
     if (activityGroupId) {
-      body.activity_group_id = Number(activityGroupId);
+      body.activity_group_id = activityGroupId;
     }
     const response = await transportFetch(
       "/api/timetable/instances/re-plan-week",
@@ -1055,7 +1063,7 @@ class TimetableService {
       },
     );
 
-    const raw = await unwrap<BackendReplanWeekResult>(response);
+    const raw = await unwrap<WireReplanWeek>(response);
     logger.info("week_replanned", {
       from: raw.from,
       to: raw.to,
@@ -1092,11 +1100,11 @@ class TimetableService {
           to,
           dry_run: dryRun,
           include_closing_day_series: includeClosingDaySeries,
-        }),
+        } satisfies bulkCancelRequest),
       },
     );
 
-    const raw = await unwrap<BackendBulkCancelResult>(response);
+    const raw = await unwrap<WireBulkCancel>(response);
     if (!dryRun) {
       logger.info("instances_bulk_cancelled", {
         from: raw.from,
@@ -1137,7 +1145,7 @@ class TimetableService {
       },
     );
 
-    const raw = await unwrap<BackendEditedInWindowResult>(response);
+    const raw = await unwrap<WireEditedInWindow>(response);
     return mapEditedInWindowResult(raw);
   }
 
@@ -1149,7 +1157,7 @@ class TimetableService {
       credentials: "include",
     });
 
-    const raw = await unwrap<BackendGapsResponse>(response);
+    const raw = await unwrap<WireGaps>(response);
     return mapGaps(raw);
   }
 
@@ -1173,7 +1181,7 @@ class TimetableService {
       },
     );
 
-    const raw = await unwrap<BackendDeviationHistoryResponse>(response);
+    const raw = await unwrap<WireDeviationHistory>(response);
     return mapDeviationHistory(raw);
   }
 
@@ -1203,7 +1211,7 @@ class TimetableService {
       },
     );
 
-    const raw = await unwrap<BackendApplyDeviationsResponse>(response);
+    const raw = await unwrap<WireApplyDeviations>(response);
     logger.info("deviations_applied", {
       instance_id: instanceId,
       cancelled: raw.cancelled,
@@ -1232,7 +1240,7 @@ class TimetableService {
       body: JSON.stringify(body),
     });
 
-    const raw = await unwrap<BackendBulkSubstitutionResponse>(response);
+    const raw = await unwrap<WireBulkSubstitution>(response);
     const result = mapBulkSubstitution(raw);
     logger.info("bulk_substitution_applied", {
       dates: input.dates.length,
@@ -1256,7 +1264,7 @@ class TimetableService {
         credentials: "include",
       },
     );
-    const raw = await unwrap<BackendStaffPoolResponse>(response);
+    const raw = await unwrap<WireStaffPool>(response);
     return mapStaffPool(raw);
   }
 
@@ -1278,16 +1286,13 @@ class TimetableService {
         credentials: "include",
       },
     );
-    const raw = await unwrap<{
-      participants: { student_id: number; display_name: string }[];
-      staff: { staff_id: number; display_name: string }[];
-    }>(response);
+    const raw = await unwrap<InstanceParticipantsResponse>(response);
     return {
       studentNames: new Map(
-        raw.participants.map((p) => [p.student_id.toString(), p.display_name]),
+        (raw.participants ?? []).map((p) => [p.student_id, p.display_name]),
       ),
       staffNames: new Map(
-        raw.staff.map((s) => [s.staff_id.toString(), s.display_name]),
+        (raw.staff ?? []).map((s) => [s.staff_id, s.display_name]),
       ),
     };
   }
@@ -1301,9 +1306,9 @@ class TimetableService {
     instanceId: string,
     input: MoveStaffInput,
   ): Promise<MoveStaffResponse> {
-    const body: Record<string, unknown> = { staff_id: Number(input.staffId) };
+    const body: moveStaffRequest = { staff_id: input.staffId };
     if (input.sourceInstanceId) {
-      body.source_instance_id = Number(input.sourceInstanceId);
+      body.source_instance_id = input.sourceInstanceId;
     }
     const response = await transportFetch(
       `/api/timetable/instances/${instanceId}/move-staff`,
@@ -1317,7 +1322,7 @@ class TimetableService {
         body: JSON.stringify(body),
       },
     );
-    const raw = await unwrap<BackendMoveStaffResponse>(response);
+    const raw = await unwrap<WireMoveStaff>(response);
     logger.info("staff_moved", {
       target_instance_id: instanceId,
       action: raw.action,
@@ -1339,11 +1344,11 @@ class TimetableService {
           Accept: "application/json",
         },
         credentials: "include",
-        body: JSON.stringify(body),
+        body: JSON.stringify(body satisfies PatchAttendanceRequest),
       },
     );
 
-    const raw = await unwrap<BackendAttendanceResponse>(response);
+    const raw = await unwrap<WireAttendance>(response);
     return mapAttendance(raw);
   }
 }

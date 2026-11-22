@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/classday/internal/ports"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // collectSlotEntries derives the cohort from materialized activity instances
@@ -122,7 +123,7 @@ func (s *service) buildSlotContext(inst *slotInstance, params listRequest, roomN
 		listKind = *inst.ListKind
 	}
 	result.Slots = append(result.Slots, classday.Slot{
-		InstanceID: inst.ID,
+		InstanceID: ident.ID(inst.ID),
 		Title:      inst.Title,
 		TimeRange:  fmt.Sprintf("%s–%s", inst.StartTime.Format(timeLayout), inst.EndTime.Format(timeLayout)),
 		Status:     inst.Status,

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -27,12 +28,12 @@ func TestCustomAbsenceAllowanceCannotDropBelowUsedDays(t *testing.T) {
 	_, err = svc.SetAllowance(ctx, claim)
 	require.NoError(t, err)
 	_, err = svc.CreateStaffAbsence(ctx, &workforce.StaffAbsence{
-		StaffID: staff.ID, CreatedBy: admin.ID, AbsenceType: workforce.AbsenceTypeOther, AbsenceTypeID: &typ.ID,
+		StaffID: ident.ID(staff.ID), CreatedBy: ident.ID(admin.ID), AbsenceType: workforce.AbsenceTypeOther, AbsenceTypeID: (*ident.ID)(&typ.ID),
 		Status: workforce.AbsenceStatusReported, DateStart: "2026-09-07", DateEnd: "2026-09-07",
 	})
 	require.NoError(t, err)
 	_, err = svc.CreateStaffAbsence(ctx, &workforce.StaffAbsence{
-		StaffID: staff.ID, CreatedBy: staff.ID, AbsenceType: workforce.AbsenceTypeOther, AbsenceTypeID: &typ.ID,
+		StaffID: ident.ID(staff.ID), CreatedBy: ident.ID(staff.ID), AbsenceType: workforce.AbsenceTypeOther, AbsenceTypeID: (*ident.ID)(&typ.ID),
 		Status: workforce.AbsenceStatusRequested, DateStart: "2026-09-08", DateEnd: "2026-09-08", HalfDay: true,
 		StartHalfDay: true, EndHalfDay: true,
 	})

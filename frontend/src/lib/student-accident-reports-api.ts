@@ -4,10 +4,7 @@
 // reports and names the PDF. The backend decides every permission
 // (student_accidents:read / :manage) and refuses changes to a signed report.
 
-import type {
-  AccidentReportResponse,
-  StudentDocumentResponse,
-} from "~/lib/contract/students.generated";
+import type { AccidentReportResponse } from "~/lib/contract/students.generated";
 import { bffJson } from "./bff-fetch";
 import { signatureRequestBody, type SignatureValue } from "./signature";
 
@@ -85,20 +82,6 @@ function requestBody(fields: AccidentReportFields) {
   };
 }
 
-function reportsPath(studentId: string, reportIdValue?: string): string {
-  const base = `/api/students/${encodeURIComponent(studentId)}/accident-reports`;
-  return reportIdValue ? `${base}/${encodeURIComponent(reportIdValue)}` : base;
-}
-
-async function writeReport(
-  url: string,
-  method: "POST" | "PUT",
-  body: unknown,
-): Promise<string> {
-  const report = await bffJson<StudentDocumentResponse>(url, { method, body });
-  return report.id;
-}
-
 /** The page of one accident report in the tenant portal. */
 export function accidentReportPath(studentId: string, reportId: string) {
   return `/students/${studentId}/unfallanzeigen/${reportId}`;
@@ -110,7 +93,15 @@ class StudentAccidentReportsService {
     studentId: string,
     fields: AccidentReportFields,
   ): Promise<string> {
-    return writeReport(reportsPath(studentId), "POST", requestBody(fields));
+    const report = await bffJson(
+      "tenant",
+      "POST /api/students/{id}/accident-reports",
+      {
+        params: { id: studentId },
+        body: requestBody(fields),
+      },
+    );
+    return report.id;
   }
 
   /** Changes an open report. */
@@ -119,10 +110,13 @@ class StudentAccidentReportsService {
     reportIdValue: string,
     fields: AccidentReportFields,
   ): Promise<void> {
-    await writeReport(
-      reportsPath(studentId, reportIdValue),
-      "PUT",
-      requestBody(fields),
+    await bffJson(
+      "tenant",
+      "PUT /api/students/{id}/accident-reports/{documentId}",
+      {
+        params: { id: studentId, documentId: reportIdValue },
+        body: requestBody(fields),
+      },
     );
   }
 
@@ -132,11 +126,15 @@ class StudentAccidentReportsService {
     reportIdValue: string,
     fields: AccidentReportFields,
   ): Promise<string> {
-    return writeReport(
-      `${reportsPath(studentId, reportIdValue)}/corrections`,
-      "POST",
-      requestBody(fields),
+    const report = await bffJson(
+      "tenant",
+      "POST /api/students/{id}/accident-reports/{documentId}/corrections",
+      {
+        params: { id: studentId, documentId: reportIdValue },
+        body: requestBody(fields),
+      },
     );
+    return report.id;
   }
 
   async sign(
@@ -144,10 +142,13 @@ class StudentAccidentReportsService {
     reportIdValue: string,
     signature: SignatureValue,
   ): Promise<void> {
-    await writeReport(
-      `${reportsPath(studentId, reportIdValue)}/signature`,
-      "POST",
-      signatureRequestBody(signature),
+    await bffJson(
+      "tenant",
+      "POST /api/students/{id}/accident-reports/{documentId}/signature",
+      {
+        params: { id: studentId, documentId: reportIdValue },
+        body: signatureRequestBody(signature),
+      },
     );
   }
 
@@ -158,18 +159,16 @@ class StudentAccidentReportsService {
   ): Promise<void> {
     const formData = new FormData();
     formData.append("file", file);
-    await bffJson<unknown>(
-      `${reportsPath(studentId, reportIdValue)}/paper-copy`,
-      {
-        method: "POST",
-        body: formData,
-      },
+    await bffJson(
+      "tenant",
+      "POST /api/students/{id}/accident-reports/{documentId}/paper-copy",
+      { params: { id: studentId, documentId: reportIdValue }, body: formData },
     );
   }
 
   /** Same-origin proxy URL of the report as PDF. */
   pdfUrl(studentId: string, reportIdValue: string): string {
-    return `${reportsPath(studentId, reportIdValue)}/pdf`;
+    return `/api/students/${encodeURIComponent(studentId)}/accident-reports/${encodeURIComponent(reportIdValue)}/pdf`;
   }
 }
 

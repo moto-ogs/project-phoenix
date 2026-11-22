@@ -11,6 +11,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/classday"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // fakeAbsenceMarks serves fixed morning marks and remembers the last window.
@@ -418,7 +419,7 @@ func TestAbsenceListUsesGermanNameOrder(t *testing.T) {
 	report, err := a.AbsenceListReport(context.Background(), absenceQuery("2026-09-07", "2026-09-09"))
 	require.NoError(t, err)
 	require.Len(t, report.Children, 3)
-	assert.Equal(t, []int64{1, 2, 3}, []int64{report.Children[0].StudentID, report.Children[1].StudentID, report.Children[2].StudentID})
+	assert.Equal(t, []int64{1, 2, 3}, []int64{report.Children[0].StudentID.Int64(), report.Children[1].StudentID.Int64(), report.Children[2].StudentID.Int64()})
 }
 
 // TestAbsenceListCountsChildrenWithoutCarePlace lists a child without an OGS
@@ -488,7 +489,7 @@ func TestAbsenceListBoundsChildrenWithoutCarePlaceByMembership(t *testing.T) {
 	require.Len(t, report.Children, 2)
 	byID := map[int64]classday.AbsenceListChild{}
 	for _, child := range report.Children {
-		byID[child.StudentID] = child
+		byID[child.StudentID.Int64()] = child
 	}
 	assert.Equal(t, 1, byID[5].AbsentDays, "the moved mark of 7 September counts")
 	assert.Equal(t, 2, byID[5].NotRecordedDays, "9 and 11 September, not 8 September before the child existed")
@@ -517,7 +518,7 @@ func TestAbsenceListKeepsTransferredAbsencesBeforeMembership(t *testing.T) {
 					Participation: fakeAbsenceParticipation{end: "2026-09-01"},
 					Children: func(context.Context, string) ([]classday.AbsenceListChild, error) {
 						return []classday.AbsenceListChild{
-							{StudentID: convertedStudentID, SchoolMemberOnly: true, SchoolMemberFrom: &created},
+							{StudentID: ident.ID(convertedStudentID), SchoolMemberOnly: true, SchoolMemberFrom: &created},
 							{StudentID: 6, SchoolMemberOnly: true, SchoolMemberFrom: &created},
 							{StudentID: 7, SchoolMemberOnly: true, SchoolMemberFrom: &created},
 							{StudentID: 8},
@@ -534,7 +535,7 @@ func TestAbsenceListKeepsTransferredAbsencesBeforeMembership(t *testing.T) {
 				return
 			}
 			require.Len(t, report.Children, 1)
-			assert.Equal(t, convertedStudentID, report.Children[0].StudentID)
+			assert.Equal(t, ident.ID(convertedStudentID), report.Children[0].StudentID)
 			assert.Equal(t, 1, report.Children[0].AbsentDays)
 			assert.Equal(t, 1, report.Children[0].UnexcusedDays)
 			assert.Zero(t, report.Children[0].NotRecordedDays, "unmarked days before membership do not count")

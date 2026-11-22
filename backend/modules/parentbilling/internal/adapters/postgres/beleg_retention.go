@@ -12,6 +12,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -106,7 +107,7 @@ type instructionRow struct {
 
 func (r instructionRow) instruction() parentbilling.RetentionInstruction {
 	instruction := parentbilling.RetentionInstruction{
-		ID: r.ID, OrganizationID: r.OrganizationID, BelegType: r.BelegType, TriggerEvent: r.TriggerEvent, Period: r.Period,
+		ID: ident.ID(r.ID), OrganizationID: ident.ID(r.OrganizationID), BelegType: r.BelegType, TriggerEvent: r.TriggerEvent, Period: r.Period,
 		Basis: r.Basis, LegalBasis: r.LegalBasis, InstructedBy: r.InstructedBy, InstructedOn: r.InstructedOn,
 		InstructionReference: r.InstructionReference, StatutesNotApplicableConfirmed: r.Confirmed,
 		ConfirmedAt: r.ConfirmedAt, RecordedAt: r.RecordedAt,
@@ -134,11 +135,11 @@ type suspensionRow struct {
 
 func (r suspensionRow) suspension() parentbilling.RetentionSuspension {
 	suspension := parentbilling.RetentionSuspension{
-		ID: r.ID, OrganizationID: r.OrganizationID, BelegType: r.BelegType, Reason: r.Reason, Scope: r.Scope,
+		ID: ident.ID(r.ID), OrganizationID: ident.ID(r.OrganizationID), BelegType: r.BelegType, Reason: r.Reason, Scope: r.Scope,
 		Responsible: r.Responsible, ReviewOn: r.ReviewOn, CreatedAt: r.CreatedAt,
 	}
 	if r.BelegID != nil {
-		suspension.BelegID = *r.BelegID
+		suspension.BelegID = ident.ID(*r.BelegID)
 	}
 	return suspension
 }
@@ -237,7 +238,7 @@ func (s *Store) InsertSuspension(ctx context.Context, organizationID, operatorID
 		Responsible: input.Responsible, ReviewOn: input.ReviewOn, CreatedByOperatorID: optionalOperator(operatorID), CreatedAt: s.now(),
 	}
 	if input.BelegID > 0 {
-		row.BelegID = &input.BelegID
+		row.BelegID = (*int64)(&input.BelegID)
 	}
 	if _, err := db.NewInsert().Model(row).Returning("id, created_at").Exec(ctx); err != nil {
 		return parentbilling.RetentionSuspension{}, fmt.Errorf("parent billing postgres: insert retention suspension: %w", writeError(err))

@@ -12,6 +12,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -59,7 +60,7 @@ func TestCareReviewFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 
 		run, err := store.CareRun(ctx, own.organization, own.open, false)
 		require.NoError(t, err)
-		assert.Equal(t, []int64{own.school}, run.SchoolIDs, "the schools of a run are its own")
+		assert.Equal(t, []ident.ID{ident.ID(own.school)}, run.SchoolIDs, "the schools of a run are its own")
 
 		exclusions, err := store.CareRunExclusions(ctx, own.organization, other.open)
 		require.NoError(t, err)

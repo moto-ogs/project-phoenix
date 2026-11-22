@@ -17,20 +17,8 @@ import {
 } from "./care-contract-status";
 import { knownEnum } from "./contract/known-enum";
 import { requiredDay } from "./contract/required-day";
-import type { OfferingTemplate as WireOfferingTemplate } from "./contract/traeger-contract-templates.generated";
-import type {
-  Candidate as WireCandidate,
-  ContractDetail as WireDetail,
-  ContractList as WireList,
-  ContractSummary as WireSummary,
-  CreateRequest,
-  CreateResult as WireCreateResult,
-  SchoolConclusion as WireSchoolConclusion,
-  SendRequest,
-  SendResult as WireSendResult,
-  Service as WireService,
-  TemplateInput as WireTerms,
-} from "./contract/traeger-contracts.generated";
+import type * as traegerContractTemplatesContract from "./contract/traeger-contract-templates.generated";
+import type * as traegerContractsContract from "./contract/traeger-contracts.generated";
 import { filenameFromDisposition } from "./file-download";
 import { traegerRequest } from "./traeger-api";
 
@@ -406,7 +394,7 @@ function optionalReason<T extends string>(
 }
 
 export function termsFromBackend(
-  terms: Omit<WireTerms, "term_months"> & {
+  terms: Omit<traegerContractsContract.TemplateInput, "term_months"> & {
     readonly term_months?: number | null;
   },
 ): ContractTerms {
@@ -426,7 +414,9 @@ export function termsFromBackend(
 
 // An unknown term kind or notice date goes back as "": the backend refuses it
 // at its field instead of the client guessing one.
-export function termsToBackend(terms: ContractTerms): WireTerms {
+export function termsToBackend(
+  terms: ContractTerms,
+): traegerContractsContract.TemplateInput {
   return {
     term_kind: terms.termKind ?? "",
     term_months: terms.termKind === "fixed_months" ? terms.termMonths : null,
@@ -441,7 +431,9 @@ export function termsToBackend(terms: ContractTerms): WireTerms {
   };
 }
 
-function offeringFromBackend(row: WireOfferingTemplate): OfferingTemplate {
+function offeringFromBackend(
+  row: traegerContractTemplatesContract.OfferingTemplate,
+): OfferingTemplate {
   return {
     acceptanceText: row.acceptance_text,
     withdrawalText: row.withdrawal_text,
@@ -467,7 +459,7 @@ function offeringFromBackend(row: WireOfferingTemplate): OfferingTemplate {
 
 // A service on a weekday this build does not know is left out.
 function servicesFromBackend(
-  rows: readonly WireService[] | null,
+  rows: readonly traegerContractsContract.Service[] | null,
 ): ContractService[] {
   return (rows ?? []).flatMap((row) => {
     const weekday = knownEnum(WEEKDAY_VALUES, row.weekday);
@@ -484,7 +476,9 @@ function servicesFromBackend(
   });
 }
 
-function candidateFromBackend(row: WireCandidate): ContractCandidate {
+function candidateFromBackend(
+  row: traegerContractsContract.Candidate,
+): ContractCandidate {
   return {
     schoolId: row.school_id,
     requestChildId: row.request_child_id,
@@ -507,7 +501,9 @@ function candidateFromBackend(row: WireCandidate): ContractCandidate {
   };
 }
 
-function summaryFromBackend(row: WireSummary): CareContractSummary {
+function summaryFromBackend(
+  row: traegerContractsContract.ContractSummary,
+): CareContractSummary {
   return {
     id: row.id,
     status: knownContractStatus(row.status),
@@ -532,7 +528,9 @@ function summaryFromBackend(row: WireSummary): CareContractSummary {
   };
 }
 
-function detailFromBackend(row: WireDetail): CareContractDetail {
+function detailFromBackend(
+  row: traegerContractsContract.ContractDetail,
+): CareContractDetail {
   return {
     ...summaryFromBackend(row),
     version: {
@@ -607,8 +605,8 @@ function detailFromBackend(row: WireDetail): CareContractDetail {
 
 function keyToBackend(key: CandidateKey) {
   return {
-    school_id: Number(key.schoolId),
-    request_child_id: Number(key.requestChildId),
+    school_id: key.schoolId,
+    request_child_id: key.requestChildId,
   };
 }
 
@@ -630,7 +628,8 @@ export async function fetchCareContracts(
   if (filter.search) query.set("search", filter.search);
   if (filter.offset) query.set("offset", String(filter.offset));
   const path = query.size ? `${CONTRACTS_PATH}?${query}` : CONTRACTS_PATH;
-  const body = await traegerRequest<WireList>(path);
+  const body =
+    await traegerRequest<traegerContractsContract.ContractList>(path);
   const counts: Partial<Record<CareContractStatus, number>> = {};
   for (const [status, count] of Object.entries(body.counts ?? {})) {
     const known = knownContractStatus(status);
@@ -644,9 +643,9 @@ export async function fetchCareContracts(
 }
 
 export async function fetchConclusionModes(): Promise<SchoolConclusionMode[]> {
-  const rows = await traegerRequest<WireSchoolConclusion[]>(
-    `${CONTRACTS_PATH}/conclusion-modes`,
-  );
+  const rows = await traegerRequest<
+    traegerContractsContract.SchoolConclusion[]
+  >(`${CONTRACTS_PATH}/conclusion-modes`);
   return rows.map((row) => ({
     schoolId: row.school_id,
     schoolName: row.school_name,
@@ -655,7 +654,7 @@ export async function fetchConclusionModes(): Promise<SchoolConclusionMode[]> {
 }
 
 export async function fetchContractCandidates(): Promise<ContractCandidate[]> {
-  const rows = await traegerRequest<WireCandidate[]>(
+  const rows = await traegerRequest<traegerContractsContract.Candidate[]>(
     `${CONTRACTS_PATH}/candidates`,
   );
   return rows.map(candidateFromBackend);
@@ -702,10 +701,15 @@ export async function sendCareContracts(
 async function createCareContractBatch(
   keys: readonly CandidateKey[],
 ): Promise<CreateResult> {
-  const body = await traegerRequest<WireCreateResult>(CONTRACTS_PATH, {
-    method: "POST",
-    body: { contracts: keys.map(keyToBackend) } satisfies CreateRequest,
-  });
+  const body = await traegerRequest<traegerContractsContract.CreateResult>(
+    CONTRACTS_PATH,
+    {
+      method: "POST",
+      body: {
+        contracts: keys.map(keyToBackend),
+      } satisfies traegerContractsContract.CreateRequest,
+    },
+  );
   return {
     created: (body.created ?? []).map(summaryFromBackend),
     skipped: (body.skipped ?? []).map((skip) => ({
@@ -728,15 +732,18 @@ async function sendCareContractBatch(
   ids: readonly string[],
   recipientEmail?: string,
 ): Promise<SendResult> {
-  const body = await traegerRequest<WireSendResult>(`${CONTRACTS_PATH}/send`, {
-    method: "POST",
-    body: {
-      contract_ids: ids.map(Number),
-      ...(recipientEmail === undefined
-        ? {}
-        : { recipient_email: recipientEmail }),
-    } satisfies SendRequest,
-  });
+  const body = await traegerRequest<traegerContractsContract.SendResult>(
+    `${CONTRACTS_PATH}/send`,
+    {
+      method: "POST",
+      body: {
+        contract_ids: [...ids],
+        ...(recipientEmail === undefined
+          ? {}
+          : { recipient_email: recipientEmail }),
+      } satisfies traegerContractsContract.SendRequest,
+    },
+  );
   return {
     sent: body.sent ?? [],
     skipped: (body.skipped ?? []).map((skip) => ({
@@ -749,7 +756,11 @@ async function sendCareContractBatch(
 export async function fetchCareContract(
   id: string,
 ): Promise<CareContractDetail> {
-  return detailFromBackend(await traegerRequest<WireDetail>(contractPath(id)));
+  return detailFromBackend(
+    await traegerRequest<traegerContractsContract.ContractDetail>(
+      contractPath(id),
+    ),
+  );
 }
 
 export async function discardCareContract(id: string): Promise<void> {
@@ -795,7 +806,10 @@ async function downloadContractFile(
 }
 
 export async function fetchContractTemplates(): Promise<OfferingTemplate[]> {
-  const rows = await traegerRequest<WireOfferingTemplate[]>(TEMPLATES_PATH);
+  const rows =
+    await traegerRequest<traegerContractTemplatesContract.OfferingTemplate[]>(
+      TEMPLATES_PATH,
+    );
   return rows.map(offeringFromBackend);
 }
 
@@ -805,7 +819,7 @@ export async function saveContractTemplate(
   terms: ContractTerms,
 ): Promise<OfferingTemplate> {
   return offeringFromBackend(
-    await traegerRequest<WireOfferingTemplate>(
+    await traegerRequest<traegerContractTemplatesContract.OfferingTemplate>(
       `${TEMPLATES_PATH}/${encodeURIComponent(schoolId)}/${encodeURIComponent(offeringId)}`,
       { method: "PUT", body: termsToBackend(terms) },
     ),

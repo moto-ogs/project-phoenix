@@ -29,7 +29,7 @@ func TestProvisioningListSchoolRequiredDetails(t *testing.T) {
 		require.NoError(t, err)
 		byID := map[int64]organizationtenancy.SchoolRequiredDetails{}
 		for _, detail := range details {
-			byID[detail.SchoolID] = detail
+			byID[detail.SchoolID.Int64()] = detail
 		}
 		require.Len(t, byID, 3, "the deleted school 50 is not listed")
 		assert.False(t, byID[10].ReplyAddressMissing, "the contact address answers")

@@ -143,7 +143,7 @@ func (s *service) processSessionTimeoutTx(ctx context.Context, sessionID int64, 
 
 	return &TimeoutResult{
 		SessionID:          sessionID,
-		ActivityID:         session.GroupID,
+		ActivityID:         (*int64)(session.GroupID),
 		StudentsCheckedOut: len(ended.ClosedVisits),
 		TimeoutAt:          ended.EndedAt,
 	}, endData, nil

@@ -7,6 +7,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The debtor number of a family (#6692): the number of the family in the
@@ -164,17 +165,17 @@ type HolidayFamilyDebtorNumber struct {
 // HolidayChildDebtorNumber is a child of a holiday registration with its
 // debtor number (#7007).
 type HolidayChildDebtorNumber struct {
-	ChildID      int64  `json:"child_id"`
-	FirstName    string `json:"first_name"`
-	LastName     string `json:"last_name"`
-	DebtorNumber string `json:"debtor_number"`
+	ChildID      ident.ID `json:"child_id"`
+	FirstName    string   `json:"first_name"`
+	LastName     string   `json:"last_name"`
+	DebtorNumber string   `json:"debtor_number"`
 }
 
 // HolidayChildDebtorNumberInput is the number the office enters for a child
 // of a holiday registration (#7007); an empty number removes it.
 type HolidayChildDebtorNumberInput struct {
-	ChildID      int64  `json:"child_id"`
-	DebtorNumber string `json:"debtor_number"`
+	ChildID      ident.ID `json:"child_id"`
+	DebtorNumber string   `json:"debtor_number"`
 }
 
 // FamilyMemory is what a holiday registration tells the family of its

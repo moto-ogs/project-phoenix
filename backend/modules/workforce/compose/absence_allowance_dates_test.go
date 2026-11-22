@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -32,7 +33,7 @@ func TestAllowanceCalendarDays(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			staff := testpkg.CreateTestStaff(t, db, "Calendar", "Coverage")
 			_, err := capability.CreateStaffAbsence(ctx, &workforce.StaffAbsence{
-				StaffID: staff.ID, CreatedBy: staff.ID, AbsenceTypeID: &absenceType.ID,
+				StaffID: ident.ID(staff.ID), CreatedBy: ident.ID(staff.ID), AbsenceTypeID: (*ident.ID)(&absenceType.ID),
 				AbsenceType: workforce.AbsenceTypeOther, Status: workforce.AbsenceStatusApproved,
 				DateStart: tc.from, DateEnd: tc.to, HalfDay: tc.half, StartHalfDay: tc.startHalf, EndHalfDay: tc.endHalf,
 			})

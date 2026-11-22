@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // A cancellation in a sibling group (#5662, ADR 0115 addendum): the
@@ -36,7 +37,7 @@ func (h *HolidayContributions) CancelHolidayRegistration(ctx context.Context, re
 	if err != nil {
 		return parentbilling.HolidayCancellation{}, err
 	}
-	cancelled := parentbilling.HolidayCancellation{RegistrationID: registration.ID, Status: registration.Status, MovedUp: movedUpOrEmpty(registration.MovedUp)}
+	cancelled := parentbilling.HolidayCancellation{RegistrationID: ident.ID(registration.ID), Status: registration.Status, MovedUp: ident.IDs(movedUpOrEmpty(registration.MovedUp))}
 	if err := h.leaveSiblingGroup(ctx, reviewer, periodID, groups, registration); err != nil {
 		return parentbilling.HolidayCancellation{}, err
 	}
@@ -58,8 +59,8 @@ func (h *HolidayContributions) leaveSiblingGroup(ctx context.Context, reviewer p
 	if !grouped {
 		return nil
 	}
-	ids := slices.DeleteFunc(slices.Clone(group.RegistrationIDs), func(id int64) bool { return id == registration.ID })
-	rest, err := h.readSiblings(ctx, reviewer, periodID, ids, nil)
+	ids := slices.DeleteFunc(slices.Clone(group.RegistrationIDs), func(id ident.ID) bool { return id == ident.ID(registration.ID) })
+	rest, err := h.readSiblings(ctx, reviewer, periodID, ident.Int64s(ids), nil)
 	if err != nil {
 		return err
 	}
@@ -73,7 +74,7 @@ func (h *HolidayContributions) leaveSiblingGroup(ctx context.Context, reviewer p
 		return err
 	}
 	left := []siblingMember{{registration: registration}}
-	if err := h.recordSiblings(ctx, reviewer, periodID, left, parentbilling.HolidaySiblingsCancelled, ids...); err != nil {
+	if err := h.recordSiblings(ctx, reviewer, periodID, left, parentbilling.HolidaySiblingsCancelled, ident.Int64s(ids)...); err != nil {
 		return err
 	}
 	return h.recordSiblings(ctx, reviewer, periodID, rest, parentbilling.HolidaySiblingsCancelled, registration.ID)

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/transactionruntime"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/moto-ogs/project-phoenix/modules/devicefleet"
 	facilitiesModule "github.com/moto-ogs/project-phoenix/modules/facilities"
@@ -75,20 +76,20 @@ func (d presenceSupervisionStaff) SupervisionStaff(ctx context.Context, staffIDs
 func attachSupervisionPersons(ctx context.Context, query personsByIDQuery, staff map[int64]*presenceCompose.SessionStaff) error {
 	ids := make([]int64, 0, len(staff))
 	for _, member := range staff {
-		ids = append(ids, member.PersonID)
+		ids = append(ids, member.PersonID.Int64())
 	}
 	persons, err := livePersonsByID(ctx, query, ids)
 	if err != nil {
 		return err
 	}
 	for _, member := range staff {
-		if person, found := persons[member.PersonID]; found {
+		if person, found := persons[member.PersonID.Int64()]; found {
 			// The birthday stays with the owner; no supervision reader
 			// renders it.
 			member.Person = &presenceCompose.SessionStaffPerson{
-				ID: person.ID, TenantID: person.TenantID, CreatedAt: person.CreatedAt, UpdatedAt: person.UpdatedAt,
+				ID: ident.ID(person.ID), TenantID: ident.ID(person.TenantID), CreatedAt: person.CreatedAt, UpdatedAt: person.UpdatedAt,
 				FirstName: person.FirstName, LastName: person.LastName,
-				TagID: person.TagID, AccountID: person.AccountID,
+				TagID: person.TagID, AccountID: (*ident.ID)(person.AccountID),
 			}
 		}
 	}
@@ -100,9 +101,9 @@ func attachSupervisionPersons(ctx context.Context, query personsByIDQuery, staff
 // offboarded colleague keeps resolving here.
 func sessionStaff(member schoolmembership.Staff) *presenceCompose.SessionStaff {
 	return &presenceCompose.SessionStaff{
-		ID: member.ID, TenantID: member.TenantID, CreatedAt: member.CreatedAt, UpdatedAt: member.UpdatedAt,
-		PersonID: member.PersonID, StaffNotes: member.StaffNotes, EmploymentType: member.EmploymentType,
-		WorkTimeModelID: member.WorkTimeModelID, RotationAnchorDate: peopleCompose.ParseRetainedCalendarDate(member.RotationAnchorDate),
+		ID: ident.ID(member.ID), TenantID: ident.ID(member.TenantID), CreatedAt: member.CreatedAt, UpdatedAt: member.UpdatedAt,
+		PersonID: ident.ID(member.PersonID), StaffNotes: member.StaffNotes, EmploymentType: member.EmploymentType,
+		WorkTimeModelID: (*ident.ID)(member.WorkTimeModelID), RotationAnchorDate: peopleCompose.ParseRetainedCalendarDate(member.RotationAnchorDate),
 		BirthdayDisplayOptOut: member.BirthdayDisplayOptOut,
 	}
 }

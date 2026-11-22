@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/workflows/openroommove"
 )
 
@@ -31,8 +32,8 @@ func (rs *Resource) Register(r chi.Router, withTx common.Middleware) {
 }
 
 type moveStudentsToOpenRoomRequest struct {
-	StudentIDs   []int64 `json:"student_ids"`
-	TargetRoomID int64   `json:"target_room_id"`
+	StudentIDs   []common.ID `json:"student_ids"`
+	TargetRoomID common.ID   `json:"target_room_id"`
 }
 
 // checkInStudentsToOpenRoomRequest adds keep_present: the check-in mode of
@@ -63,8 +64,8 @@ func (rs *Resource) moveStudentsToOpenRoom(w http.ResponseWriter, r *http.Reques
 	}
 
 	result, err := rs.OpenRoomMove.MoveToOpenRoom(r.Context(), openroommove.Move{
-		StudentIDs: req.StudentIDs,
-		RoomID:     req.TargetRoomID,
+		StudentIDs: ident.Int64s(req.StudentIDs),
+		RoomID:     req.TargetRoomID.Int64(),
 		Actor: openroommove.Actor{
 			StaffID:                      auth.StaffID,
 			BypassResourceChecks:         auth.BypassResourceChecks,
@@ -100,8 +101,8 @@ func (rs *Resource) checkInStudentsToOpenRoom(w http.ResponseWriter, r *http.Req
 	}
 
 	result, err := rs.OpenRoomMove.CheckInToOpenRoom(r.Context(), openroommove.CheckIn{
-		StudentIDs:  req.StudentIDs,
-		RoomID:      req.TargetRoomID,
+		StudentIDs:  ident.Int64s(req.StudentIDs),
+		RoomID:      req.TargetRoomID.Int64(),
 		CheckedInBy: staffID,
 		KeepPresent: req.KeepPresent,
 		Actor: openroommove.Actor{
@@ -122,15 +123,15 @@ func (rs *Resource) checkInStudentsToOpenRoom(w http.ResponseWriter, r *http.Req
 // handle every result alike.
 func moveResponse(result openroommove.Result) *studentpresence.StudentMoveResult {
 	response := &studentpresence.StudentMoveResult{
-		Moved:         nonNilIDs(result.Moved),
-		Unchanged:     nonNilIDs(result.Unchanged),
+		Moved:         ident.IDs(nonNilIDs(result.Moved)),
+		Unchanged:     ident.IDs(nonNilIDs(result.Unchanged)),
 		Skipped:       make([]studentpresence.StudentMoveSkipped, 0, len(result.Skipped)),
-		ActiveGroupID: &result.RoomSessionID,
-		RoomID:        &result.RoomID,
-		CheckedIn:     result.CheckedIn,
+		ActiveGroupID: (*ident.ID)(&result.RoomSessionID),
+		RoomID:        (*ident.ID)(&result.RoomID),
+		CheckedIn:     ident.IDs(result.CheckedIn),
 	}
 	for _, skipped := range result.Skipped {
-		response.Skipped = append(response.Skipped, studentpresence.StudentMoveSkipped{StudentID: skipped.StudentID, Reason: skipped.Reason})
+		response.Skipped = append(response.Skipped, studentpresence.StudentMoveSkipped{StudentID: ident.ID(skipped.StudentID), Reason: skipped.Reason})
 	}
 	return response
 }

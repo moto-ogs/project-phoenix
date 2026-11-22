@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type historyStore struct {
@@ -77,7 +78,7 @@ func TestInvoiceHistorySeparatesRequestedMailFromSuccessfulSend(t *testing.T) {
 			store := historyStore{steps: []parentbilling.InvoiceHistoryEntry{issuedIn(7)}}
 			for id := int64(11); id <= 16; id++ {
 				store.steps = append(store.steps, parentbilling.InvoiceHistoryEntry{Kind: parentbilling.HistoryMailRequested, At: requested,
-					AccountID: &account, RunID: 7, DeliveryID: id, Note: "invoice"})
+					AccountID: (*ident.ID)(&account), RunID: 7, DeliveryID: id, Note: "invoice"})
 			}
 			history, err := newFinanceExportsForTest(store, post).InvoiceHistory(context.Background(), sjrReviewer, kind, 1)
 			require.NoError(t, err)
@@ -196,10 +197,10 @@ func TestInvoiceHistoryNamesColleaguesInOneCall(t *testing.T) {
 	at := time.Date(2026, 11, 9, 10, 0, 0, 0, time.UTC)
 	store := historyFilesStore{historyStore: historyStore{steps: []parentbilling.InvoiceHistoryEntry{
 		issuedIn(7),
-		{Kind: parentbilling.HistoryMailRequested, At: at, AccountID: &colleague, RunID: 7, DeliveryID: 1},
-		{Kind: parentbilling.HistoryMailRequested, At: at, AccountID: &own, RunID: 7, DeliveryID: 2},
-		{Kind: parentbilling.HistoryMailRequested, At: at, AccountID: &unnamed, RunID: 7, DeliveryID: 3},
-	}}, files: []parentbilling.ExportProtocolEntry{{ID: 5, ExportedBy: &colleague, ExportedAt: at.Add(time.Hour)}}}
+		{Kind: parentbilling.HistoryMailRequested, At: at, AccountID: (*ident.ID)(&colleague), RunID: 7, DeliveryID: 1},
+		{Kind: parentbilling.HistoryMailRequested, At: at, AccountID: (*ident.ID)(&own), RunID: 7, DeliveryID: 2},
+		{Kind: parentbilling.HistoryMailRequested, At: at, AccountID: (*ident.ID)(&unnamed), RunID: 7, DeliveryID: 3},
+	}}, files: []parentbilling.ExportProtocolEntry{{ID: 5, ExportedBy: (*ident.ID)(&colleague), ExportedAt: at.Add(time.Hour)}}}
 	names := &actorNamesDouble{names: map[int64]string{colleague: "Jana Krause"}}
 	exports := newFinanceExportsWith(store, &historyPost{}, names, &datevSettingsDouble{})
 	history, err := exports.InvoiceHistory(context.Background(), sjrReviewer, parentbilling.HistoryCareInvoice, 1)
@@ -226,7 +227,7 @@ func TestInvoiceHistoryNamesColleaguesInOneCall(t *testing.T) {
 
 	names.calls = nil
 	alone := historyStore{steps: []parentbilling.InvoiceHistoryEntry{issuedIn(7),
-		{Kind: parentbilling.HistoryMailRequested, At: at, AccountID: &own, RunID: 7, DeliveryID: 2}}}
+		{Kind: parentbilling.HistoryMailRequested, At: at, AccountID: (*ident.ID)(&own), RunID: 7, DeliveryID: 2}}}
 	_, err = newFinanceExportsWith(alone, &historyPost{}, names, &datevSettingsDouble{}).InvoiceHistory(context.Background(), sjrReviewer, parentbilling.HistoryCareInvoice, 1)
 	require.NoError(t, err)
 	assert.Empty(t, names.calls, "a history without a colleague reads no name")

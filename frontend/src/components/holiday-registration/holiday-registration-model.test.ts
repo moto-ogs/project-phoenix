@@ -209,11 +209,11 @@ describe("payloadFromDraft", () => {
     expect(payload.guardian.first_name).toBe("Eva");
     expect(payload.children[0]).toEqual(
       expect.objectContaining({
-        home_school_id: 0,
+        home_school_id: "0",
         guest_school_name: "GS Melle",
         bookings: [
-          { week_id: 11, time_model_id: 21 },
-          { week_id: 12, time_model_id: 22 },
+          { week_id: "11", time_model_id: "21" },
+          { week_id: "12", time_model_id: "22" },
         ],
       }),
     );
@@ -238,7 +238,7 @@ describe("payloadFromDraft", () => {
       offer,
       "captcha",
     );
-    expect(payload.children[0]?.home_school_id).toBe(31);
+    expect(payload.children[0]?.home_school_id).toBe("31");
     expect(payload.children[0]?.guest_school_name).toBe("");
   });
 });
@@ -646,7 +646,7 @@ describe("holiday care wish of a known child (#4703)", () => {
     const draft = toggleKnownChild(complete(), lia, withMode("priority"));
     const payload = payloadFromDraft(draft, withMode("priority"), "t");
     const sent = payload.children.find((child) => child.first_name === "Lia");
-    expect(sent?.home_school_id).toBe(31);
+    expect(sent?.home_school_id).toBe("31");
     expect(sent?.wish_proof).toBe("sealed");
   });
 
@@ -722,7 +722,7 @@ describe("booking of days (#4701)", () => {
       "token",
     );
     expect(payload.children[0]?.bookings).toEqual([
-      { week_id: 11, time_model_id: 21, days: ["2027-01-04", "2027-01-05"] },
+      { week_id: "11", time_model_id: "21", days: ["2027-01-04", "2027-01-05"] },
     ]);
   });
 

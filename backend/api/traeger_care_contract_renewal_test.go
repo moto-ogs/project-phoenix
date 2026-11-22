@@ -22,6 +22,7 @@ import (
 	enrollmentCompose "github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -307,7 +308,7 @@ func careContractAcceptanceText(t *testing.T, f careContractFixture) string {
 	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, "/traeger/contract-templates", nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	for _, offering := range decodeSchoolPortalData[[]carecontract.OfferingTemplate](t, rec.Body.Bytes()) {
-		if offering.SchoolID == f.school && offering.OfferingID == f.offering && offering.AcceptanceText != "" {
+		if offering.SchoolID == ident.ID(f.school) && offering.OfferingID == ident.ID(f.offering) && offering.AcceptanceText != "" {
 			return offering.AcceptanceText
 		}
 	}
@@ -329,7 +330,7 @@ func renewalCandidateIssue(t *testing.T, f careContractFixture, childID int64) s
 	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, "/traeger/contracts/candidates", nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	for _, candidate := range decodeSchoolPortalData[[]carecontract.Candidate](t, rec.Body.Bytes()) {
-		if candidate.RequestChildID == childID {
+		if candidate.RequestChildID == ident.ID(childID) {
 			require.Empty(t, candidate.TemplateIssue, "the renewed module has its conditions")
 			assert.True(t, candidate.Renewal, "the office sees that the child was renewed")
 			return candidate.AcceptanceIssue

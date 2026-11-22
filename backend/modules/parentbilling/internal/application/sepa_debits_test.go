@@ -17,6 +17,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -149,12 +150,12 @@ func (s *debitStoreFake) SubmitSEPADebits(_ context.Context, _, _ int64, message
 ) error {
 	ids := make([]int64, len(debits))
 	for i, debit := range debits {
-		ids[i] = debit.ID
+		ids[i] = debit.ID.Int64()
 	}
 	s.submitted = append(s.submitted, ids)
 	s.collected = append(s.collected, collected)
 	for i := range s.debits {
-		if slices.Contains(ids, s.debits[i].Debit.ID) {
+		if slices.Contains(ids, s.debits[i].Debit.ID.Int64()) {
 			s.debits[i].Debit.Status, s.debits[i].Debit.MessageID = parentbilling.DebitSubmitted, messageID
 			at := time.Date(2026, 11, 20, 9, 0, 0, 0, time.UTC)
 			s.debits[i].Debit.SubmittedAt = &at
@@ -176,7 +177,7 @@ func (s *debitStoreFake) InsertSEPAMandateEvents(_ context.Context, _, _ int64, 
 		s.events = map[string][]int64{}
 	}
 	for _, mandate := range mandates {
-		s.events[action] = append(s.events[action], mandate.ID)
+		s.events[action] = append(s.events[action], mandate.ID.Int64())
 	}
 	return nil
 }
@@ -193,7 +194,7 @@ func sealedDebit(id, mandateID int64, number string, cents int64, sequence, hold
 	sealedIBAN, _ := cipher.Seal([]byte(iban), ibanContext(7, reference))
 	sealedHolder, _ := cipher.Seal([]byte(holder), holderContext(7, reference))
 	return parentbilling.SealedSEPADebit{
-		Debit: parentbilling.SEPADebit{ID: id, MandateID: mandateID, ContractID: mandateID * 10, RunKind: parentbilling.DebitRunCare,
+		Debit: parentbilling.SEPADebit{ID: ident.ID(id), MandateID: ident.ID(mandateID), ContractID: ident.ID(mandateID * 10), RunKind: parentbilling.DebitRunCare,
 			RunID: 3, InvoiceNumber: number, AmountCents: cents, DueOn: calendar.NewDate(2027, 1, 1), SequenceType: sequence,
 			MandateReference: reference, IBANMasked: "DE•• 30 00", Status: parentbilling.DebitPending},
 		CreditorID: sjrDebitCreditor, MandateSignedOn: calendar.NewDate(2026, 9, 1), MandateKind: parentbilling.MandateRecurring,
@@ -526,7 +527,7 @@ func noticeRateFor(mandateID int64, reference, kind, iban string) parentbilling.
 	sealedIBAN, _ := cipher.Seal([]byte(iban), ibanContext(7, reference))
 	sealedHolder, _ := cipher.Seal([]byte("Familie Rate"), holderContext(7, reference))
 	return parentbilling.SEPANoticeRate{RecipientName: "Rosa Rate", IBAN: sealedIBAN, Holder: sealedHolder,
-		Mandate: &parentbilling.SEPAMandate{ID: mandateID, Reference: reference, SignedOn: calendar.NewDate(2026, 9, 1), Kind: kind,
+		Mandate: &parentbilling.SEPAMandate{ID: ident.ID(mandateID), Reference: reference, SignedOn: calendar.NewDate(2026, 9, 1), Kind: kind,
 			Sequence: parentbilling.SequenceRecurring, CreditorID: sjrDebitCreditor, IBANMasked: "DE•• 30 00",
 			CreatedAt: calendar.NewDate(2026, 11, 1).BerlinMidnight()}}
 }
@@ -585,8 +586,8 @@ func TestSEPADebitFileCollectsTheInstallmentsOfTheMonth(t *testing.T) {
 	_, err = debits.SubmitSEPADebits(context.Background(), sjrReviewer, parentbilling.DebitRunNotice, 202701, run.MessageID)
 	require.NoError(t, err)
 	require.Len(t, store.written, 1, "the confirmation writes the installment it collected")
-	assert.Equal(t, int64(41), store.written[0].NoticeID)
-	assert.Equal(t, int64(21), store.written[0].MandateID)
+	assert.Equal(t, ident.ID(int64(41)), store.written[0].NoticeID)
+	assert.Equal(t, ident.ID(int64(21)), store.written[0].MandateID)
 	assert.Equal(t, int64(6400), store.written[0].AmountCents)
 	assert.Equal(t, parentbilling.SequenceTypeRecurring, store.written[0].SequenceType)
 	assert.Contains(t, store.collected[0], int64(21), "the installment's mandate is collected")

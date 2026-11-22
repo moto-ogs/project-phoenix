@@ -20,6 +20,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 	"github.com/stretchr/testify/require"
@@ -144,8 +145,8 @@ func TestPlatformAnnouncementPositiveGrowthQueryBudget(t *testing.T) {
 				require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &out))
 				require.Len(t, out.Data, n*2)
 				for i, row := range out.Data {
-					require.Equal(t, ids[len(ids)-1-i], row.ID)
-					require.Contains(t, ids, row.ID)
+					require.Equal(t, ident.ID(ids[len(ids)-1-i]), row.ID)
+					require.Contains(t, ids, row.ID.Int64())
 					require.Equal(t, "published", row.Status)
 				}
 			case "views":
@@ -155,7 +156,7 @@ func TestPlatformAnnouncementPositiveGrowthQueryBudget(t *testing.T) {
 				require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &out))
 				require.Len(t, out.Data, n)
 				for _, row := range out.Data {
-					require.Contains(t, expectedReaderIDs, row.UserID)
+					require.Contains(t, expectedReaderIDs, row.UserID.Int64())
 					require.Contains(t, row.UserName, "Reader")
 					require.NotEmpty(t, row.SeenAt)
 					require.False(t, row.Dismissed)

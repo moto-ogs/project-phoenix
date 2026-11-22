@@ -4,10 +4,7 @@
  * and the revocation of a change. Only the page of one invoice loads it.
  */
 
-import type {
-  CareAmendmentRequest,
-  CareRunDetail as WireRunDetail,
-} from "./contract/traeger-care-billing-runs.generated";
+import type * as traegerCareBillingRunsContract from "./contract/traeger-care-billing-runs.generated";
 import { traegerRequest } from "./traeger-api";
 import type { PostalAddress } from "./traeger-billing-terms-api";
 import {
@@ -47,9 +44,11 @@ export type CareAmendmentInput = {
     }
 );
 
-function amendmentBody(input: CareAmendmentInput): CareAmendmentRequest {
-  const body: CareAmendmentRequest = {
-    contract_id: Number(input.contractId),
+function amendmentBody(
+  input: CareAmendmentInput,
+): traegerCareBillingRunsContract.CareAmendmentRequest {
+  const body: traegerCareBillingRunsContract.CareAmendmentRequest = {
+    contract_id: input.contractId,
     service: input.service,
     kind: input.kind satisfies CareAmendmentKind | "revoke",
     fingerprint: input.fingerprint,
@@ -84,7 +83,7 @@ function amendmentBody(input: CareAmendmentInput): CareAmendmentRequest {
     case "revoke":
       return {
         ...body,
-        revokes_id: Number(input.revokesId),
+        revokes_id: input.revokesId,
         revokes_carried: input.revokesCarried,
       };
   }
@@ -96,7 +95,7 @@ export async function amendCareInvoice(
   input: CareAmendmentInput,
 ): Promise<CareRunDetail> {
   return detailFromBackend(
-    await traegerRequest<WireRunDetail>(
+    await traegerRequest<traegerCareBillingRunsContract.CareRunDetail>(
       `/api/traeger/care-billing-runs/${encodeURIComponent(runId)}/amendments`,
       { method: "POST", body: amendmentBody(input) },
     ),

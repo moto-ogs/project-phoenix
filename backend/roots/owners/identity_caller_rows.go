@@ -234,7 +234,7 @@ func (r *CallerRows) educationalGroupRows(ctx context.Context, groups []identity
 	}
 	result := make([]*CallerGroupRow, 0, len(rows))
 	for _, row := range rows {
-		result = append(result, &CallerGroupRow{Group: row, ViaSubstitution: via[row.ID]})
+		result = append(result, &CallerGroupRow{Group: row, ViaSubstitution: via[row.ID.Int64()]})
 	}
 	return result, nil
 }

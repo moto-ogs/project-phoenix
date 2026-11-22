@@ -2,9 +2,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { fetchPickupExtensions } from "./pickup-extension-api";
 
-// Shape the BFF route actually sends: proxyGet unwraps the backend envelope
-// and the GET wrapper puts its own around the result (#3776). An earlier
-// fixture without this envelope hid that the browser always read no tasks.
+// Shape the catalog proxy sends: the backend's envelope around { tasks }
+// (#3776). An earlier fixture without this envelope hid that the browser
+// always read no tasks.
 function bffResponse(tasks: unknown[]): Response {
   return new Response(JSON.stringify({ status: "success", data: { tasks } }));
 }

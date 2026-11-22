@@ -11,6 +11,7 @@ import (
 	fixtures "github.com/moto-ogs/project-phoenix/modules/timetable/fixturetest"
 	timetablePorts "github.com/moto-ogs/project-phoenix/modules/timetable/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // mirrorCreateRecorder records the plan the mirror inserts and the session
@@ -49,7 +50,7 @@ func TestCreateMirroredSessionInstanceOwnsTheSpontaneousActiveDefaults(t *testin
 
 	_, err := records.CreateMirroredSessionInstance(context.Background(), timetable.ScheduledInstance{
 		Title: "Kiosk-Sitzung", Status: timetable.InstanceStatusPlanned, IsSpontaneous: false,
-		Date: calendar.NewDate(2026, time.April, 20), RoomID: 5, ActiveGroupID: &sessionID,
+		Date: calendar.NewDate(2026, time.April, 20), RoomID: 5, ActiveGroupID: (*ident.ID)(&sessionID),
 		StartTime: time.Date(2000, time.January, 1, 14, 0, 0, 0, time.UTC), EndTime: time.Date(2000, time.January, 1, 15, 0, 0, 0, time.UTC),
 	})
 	if err != nil {
@@ -69,7 +70,7 @@ func TestCreateMirroredSessionInstanceRejectsMissingRoom(t *testing.T) {
 	records := compose.Repositories{ActivityInstance: timetablePorts.InstanceRows{Plans: recorder, Sessions: recorder}}.NativeRecords()
 	sessionID := int64(77)
 	_, err := records.CreateMirroredSessionInstance(t.Context(), timetable.ScheduledInstance{
-		Title: "Kiosk", Date: calendar.NewDate(2026, time.November, 2), ActiveGroupID: &sessionID,
+		Title: "Kiosk", Date: calendar.NewDate(2026, time.November, 2), ActiveGroupID: (*ident.ID)(&sessionID),
 		StartTime: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC), EndTime: time.Date(2000, 1, 1, 1, 0, 0, 0, time.UTC),
 	})
 	if err == nil || err.Error() != "room_id is required" {
@@ -122,7 +123,7 @@ func TestRepositoriesStartRunningRowsOnTheirClock(t *testing.T) {
 	sessionID := int64(77)
 
 	_, err := repos.NativeRecords().CreateMirroredSessionInstance(context.Background(), timetable.ScheduledInstance{
-		Title: "Kiosk-Sitzung", Date: calendar.NewDate(2030, time.August, 26), RoomID: 5, ActiveGroupID: &sessionID,
+		Title: "Kiosk-Sitzung", Date: calendar.NewDate(2030, time.August, 26), RoomID: 5, ActiveGroupID: (*ident.ID)(&sessionID),
 		StartTime: time.Date(2000, time.January, 1, 10, 0, 0, 0, time.UTC), EndTime: time.Date(2000, time.January, 1, 11, 0, 0, 0, time.UTC),
 	})
 	if err != nil {

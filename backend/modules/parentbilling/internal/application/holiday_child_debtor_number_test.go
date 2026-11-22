@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Counts the reads at the application's ports, independently of any
@@ -45,7 +46,7 @@ func TestHolidayChildNumbersReadTheFormatAndStoredNumbersOnce(t *testing.T) {
 			registration.Children = append(registration.Children, parentbilling.HolidayChild{
 				ID: id, FirstName: "Kind", LastName: "Muster", BirthDate: calendar.NewDate(2018, 3, 1),
 			})
-			inputs = append(inputs, parentbilling.HolidayChildDebtorNumberInput{ChildID: id, DebtorNumber: "60101"})
+			inputs = append(inputs, parentbilling.HolidayChildDebtorNumberInput{ChildID: ident.ID(id), DebtorNumber: "60101"})
 		}
 		entered, err := h.enteredChildNumbers(context.Background(), 7, registration, inputs)
 		require.NoError(t, err)

@@ -4,6 +4,8 @@ import (
 	"errors"
 	"net"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Operator audit vocabulary the provisioning flows record (#3253). The
@@ -148,7 +150,7 @@ type SchoolAccountRegistration struct {
 
 // CreatedAccount is a registered account.
 type CreatedAccount struct {
-	ID            int64
+	ID            ident.ID
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 	Email         string
@@ -173,7 +175,7 @@ type SchoolIdentityRequest struct {
 
 // SchoolAccount is one account with access to a school.
 type SchoolAccount struct {
-	AccountID           int64
+	AccountID           ident.ID
 	Email               string
 	Active              bool
 	FirstName           string

@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	scheduleModels "github.com/moto-ogs/project-phoenix/modules/timetable/internal/domain/schedulerecords"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // DetectPlannedConflicts checks a hypothetical slot against the day's already
@@ -168,9 +169,9 @@ func (d *conflictDetection) plannedStudentConflicts(
 func plannedConflictWarning(kind string, resourceID int64, instance *scheduleModels.ActivityInstance, message string) timetable.PlannedConflictWarning {
 	return timetable.PlannedConflictWarning{
 		Kind:                  kind,
-		ResourceID:            resourceID,
+		ResourceID:            ident.ID(resourceID),
 		Message:               message,
-		ConflictingInstanceID: instance.ID,
+		ConflictingInstanceID: ident.ID(instance.ID),
 		ConflictingTitle:      instance.Title,
 	}
 }

@@ -108,7 +108,7 @@ func ComposeParentMessagingRepositories(
 				out[id] = nil
 				continue
 			}
-			out[id] = &recordports.StaffPersonAccount{AccountID: row.AccountID}
+			out[id] = &recordports.StaffPersonAccount{AccountID: (*int64)(row.AccountID)}
 		}
 		return out, err
 	}
@@ -270,7 +270,7 @@ func (d ParentPortalSchools) ListParentPortalSchools(ctx context.Context, ids []
 	result := make([]carePlanBindingPorts.ParentPortalSchool, 0, len(schools))
 	for _, school := range schools {
 		result = append(result, carePlanBindingPorts.ParentPortalSchool{
-			ID: school.ID, Name: school.Name, Slug: school.Slug, Subdomain: school.Subdomain,
+			ID: school.ID.Int64(), Name: school.Name, Slug: school.Slug, Subdomain: school.Subdomain,
 			Active: school.Active, Hidden: school.Hidden, Deleted: school.IsDeleted(),
 		})
 	}

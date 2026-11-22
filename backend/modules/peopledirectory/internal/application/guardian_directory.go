@@ -444,7 +444,7 @@ func toNewStudentGuardians(inputs []peopledirectory.NewStudentGuardian) []people
 				EmergencyPriority:  in.EmergencyPriority,
 			},
 			PhoneNumbers:      toNewGuardianPhones(in.PhoneNumbers),
-			ExistingProfileID: in.GuardianProfileID,
+			ExistingProfileID: (*int64)(in.GuardianProfileID),
 		})
 	}
 	return out

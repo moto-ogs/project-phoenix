@@ -116,7 +116,7 @@ func freeCareInvoice() careLetterContent {
 
 func cancelledCareInvoice() careLetterContent {
 	content := careLetterSJR()
-	content.cancellation = &parentbilling.CareCancellation{InvoiceID: content.invoice.ID, Number: "MB-2027-0009",
+	content.cancellation = &parentbilling.CareCancellation{InvoiceID: content.invoice.ID.Int64(), Number: "MB-2027-0009",
 		IssuedOn: calendar.NewDate(2027, 1, 20), Reason: "Vertrag beendet", TotalCents: -content.invoice.TotalCents}
 	return content
 }

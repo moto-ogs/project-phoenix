@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/moto-ogs/project-phoenix/modules/traegerview"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 func TestKnownChildrenNeedExactlyOneManagedNamesake(t *testing.T) {
@@ -35,8 +36,8 @@ func TestKnownChildrenNeedExactlyOneManagedNamesake(t *testing.T) {
 	}
 
 	assert.Equal(t, []traegerview.KnownChild{
-		{RegistrationID: 7, ChildID: 70, SchoolID: south},
-		{RegistrationID: 9, ChildID: 90, SchoolID: north},
+		{RegistrationID: 7, ChildID: 70, SchoolID: ident.ID(south)},
+		{RegistrationID: 9, ChildID: 90, SchoolID: ident.ID(north)},
 	}, knownChildren(children, namesakes, roster))
 	assert.Equal(t, []int64{south, north}, namesakeSchools(namesakes))
 }

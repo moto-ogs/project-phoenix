@@ -134,6 +134,12 @@ export interface GroupOption {
 }
 
 const MAX_SUPPORTED_TARGET_GRADE_LEVEL = 13;
+
+/** A stored row's ID: a positive decimal, not a blank or a draft key. */
+function isPersistedID(id: string | undefined): id is string {
+  const numeric = Number(id);
+  return Boolean(id) && Number.isFinite(numeric) && numeric > 0;
+}
 /**
  * Advisory probes (Dienstplan coverage, double bookings) never block the
  * save. Their failure is a hint next to the form, not an error: the person
@@ -1390,12 +1396,12 @@ export function useEventForm({
         const primary =
           roster.primaryStaffId &&
           roster.staffIds.includes(roster.primaryStaffId)
-            ? Number(roster.primaryStaffId)
+            ? roster.primaryStaffId
             : undefined;
         return {
           weekday,
-          staff_ids: roster.staffIds.map(Number),
-          student_ids: sourced ? [] : roster.studentIds.map(Number),
+          staff_ids: [...roster.staffIds],
+          student_ids: sourced ? [] : [...roster.studentIds],
           primary_staff_id: primary,
         };
       });
@@ -1672,19 +1678,26 @@ export function useEventForm({
     }
   };
 
+  // The picker only knows this build's values. Preserve a newer backend's
+  // classification on unrelated edits, but honor an explicit pick or clear.
+  const instanceListKind = listKindTouched.current
+    ? form.listKind
+    : (initialInstance?.rawListKind ?? form.listKind);
+
   const instanceBody = (roomId: number, activityGroupId?: string) =>
     ({
       date: form.date,
       title: form.title.trim(),
       start_time: form.startTime,
       end_time: form.endTime,
-      room_id: roomId,
+      room_id: String(roomId),
       notes: form.notes.trim() || undefined,
       // Ein Dienst hat keine Kinder und gehört in keine Tagesliste (#3822).
-      list_kind: form.type === "duty" ? undefined : form.listKind || undefined,
-      activity_group_id: activityGroupId ? Number(activityGroupId) : undefined,
-      staff_ids: staffIDsForSave.map(Number),
-      student_ids: form.type === "duty" ? [] : studentIDsForSave.map(Number),
+      list_kind:
+        form.type === "duty" ? undefined : instanceListKind || undefined,
+      activity_group_id: activityGroupId || undefined,
+      staff_ids: [...staffIDsForSave],
+      student_ids: form.type === "duty" ? [] : [...studentIDsForSave],
       required_staff: parseRequiredStaffOverride(form.requiredStaff),
     }) satisfies CreateInstanceBody;
 
@@ -1726,22 +1739,14 @@ export function useEventForm({
     weekdays: form.weekdays,
     start_time: form.startTime,
     end_time: form.endTime,
-    room_id: roomId,
-    category_id: categoryId,
-    planning_track_id: form.planningTrackId
-      ? Number(form.planningTrackId)
-      : null,
+    room_id: String(roomId),
+    category_id: String(categoryId),
+    planning_track_id: form.planningTrackId || null,
     notes: form.seriesNotes.trim() || undefined,
     education_group_id:
       form.targetGroupType === "gruppe"
-        ? form.educationGroupIds.length > 0
-          ? Number(form.educationGroupIds[0])
-          : form.educationGroupId
-            ? Number(form.educationGroupId)
-            : undefined
-        : form.educationGroupId
-          ? Number(form.educationGroupId)
-          : undefined,
+        ? form.educationGroupIds[0] || form.educationGroupId || undefined
+        : form.educationGroupId || undefined,
     target_group_type: form.targetGroupType,
     target_grade_level:
       form.targetGroupType === "jahrgang" && form.targetGradeLevels.length > 0
@@ -1758,7 +1763,7 @@ export function useEventForm({
     source_care_offering_ids:
       form.targetGroupType === "angebot" &&
       form.sourceCareOfferingIds.length > 0
-        ? form.sourceCareOfferingIds.map(Number)
+        ? [...form.sourceCareOfferingIds]
         : null,
     // Jahrgang und Klasse schließen sich aus (#2482): der aktive Modus
     // bestimmt, welche Liste gesendet wird; die andere geht als explizites
@@ -1792,10 +1797,10 @@ export function useEventForm({
           : form.targetGroupType === "gruppe"
             ? form.educationGroupIds.map((value) => ({
                 type: "gruppe" as const,
-                education_group_id: Number(value),
+                education_group_id: value,
               }))
             : [],
-    calendar_period_id: Number(form.calendarPeriodId),
+    calendar_period_id: form.calendarPeriodId,
     week_pattern: form.weekPattern,
     required_staff: parseRequiredStaffOverride(form.requiredStaff),
     // #2233: explicit value or explicit null ("unbegrenzt"). The update
@@ -1809,11 +1814,9 @@ export function useEventForm({
       form.targetGroupType === "angebot" &&
       form.sourceCareOfferingIds.length > 0
         ? []
-        : studentIDsForSave.map(Number),
-    staff_ids: staffIDsForSave.map(Number),
-    primary_staff_id: primaryStaffIDForSave
-      ? Number(primaryStaffIDForSave)
-      : undefined,
+        : [...studentIDsForSave],
+    staff_ids: [...staffIDsForSave],
+    primary_staff_id: primaryStaffIDForSave || undefined,
     weekday_assignments: weekdayAssignmentsBody(),
     // #3594: the answer to "Diese Serie trifft N Schließtage" wins; without a
     // prompt the stored series flag stays as it is.
@@ -1859,15 +1862,13 @@ export function useEventForm({
   const changedRosterIDs = (
     next: readonly string[],
     before: readonly string[],
-  ): number[] => {
+  ): string[] => {
     const nextSet = new Set(next);
     const beforeSet = new Set(before);
     const changed = new Set<string>();
     for (const id of next) if (!beforeSet.has(id)) changed.add(id);
     for (const id of before) if (!nextSet.has(id)) changed.add(id);
-    return [...changed]
-      .map(Number)
-      .filter((id) => Number.isFinite(id) && id > 0);
+    return [...changed].filter(isPersistedID);
   };
 
   /**
@@ -1884,18 +1885,12 @@ export function useEventForm({
    * sides of a changed Hauptbetreuung, whose is_primary flag has to be
    * rewritten on the predecessor rows as well.
    */
-  const changedStaffIDs = (): number[] => {
+  const changedStaffIDs = (): string[] => {
     const changed = changedRosterIDs(form.staffIds, initialStaffIDsSnapshot);
     if (primaryStaffTouched()) {
       for (const id of [form.primaryStaffId, initialPrimaryStaffIDSnapshot]) {
-        const numeric = Number(id);
-        if (
-          id &&
-          Number.isFinite(numeric) &&
-          numeric > 0 &&
-          !changed.includes(numeric)
-        ) {
-          changed.push(numeric);
+        if (isPersistedID(id) && !changed.includes(id)) {
+          changed.push(id);
         }
       }
     }
@@ -1948,16 +1943,12 @@ export function useEventForm({
       );
     }
     if (template.roomId) {
-      keep(
-        form.roomId === initialInstance.roomId,
-        "room_id",
-        Number(template.roomId),
-      );
+      keep(form.roomId === initialInstance.roomId, "room_id", template.roomId);
     }
     keep(
       (form.planningTrackId || "") === (initialInstance.planningTrackId ?? ""),
       "planning_track_id",
-      template.planningTrackId ? Number(template.planningTrackId) : null,
+      template.planningTrackId || null,
     );
     return { preserved, edited };
   };
@@ -1997,10 +1988,10 @@ export function useEventForm({
       ) {
         return {
           weekday: assignment.weekday,
-          staff_ids: assignment.staffIds.map(Number),
-          student_ids: sourced ? [] : assignment.studentIds.map(Number),
+          staff_ids: [...assignment.staffIds],
+          student_ids: sourced ? [] : [...assignment.studentIds],
           primary_staff_id: assignment.primaryStaffId
-            ? Number(assignment.primaryStaffId)
+            ? assignment.primaryStaffId
             : undefined,
         };
       }
@@ -2031,15 +2022,13 @@ export function useEventForm({
           : primaryStaffId;
       return {
         weekday: assignment.weekday,
-        staff_ids: weekdayStaffIDs.map(Number),
-        student_ids: sourced ? [] : weekdayStudentIDs.map(Number),
+        staff_ids: [...weekdayStaffIDs],
+        student_ids: sourced ? [] : [...weekdayStudentIDs],
         primary_staff_id: staffWasEdited
           ? weekdayPrimary && weekdayStaffIDs.includes(weekdayPrimary)
-            ? Number(weekdayPrimary)
+            ? weekdayPrimary
             : undefined
-          : assignment.primaryStaffId
-            ? Number(assignment.primaryStaffId)
-            : undefined,
+          : assignment.primaryStaffId || undefined,
       };
     });
   };
@@ -2118,17 +2107,13 @@ export function useEventForm({
       weekdays: weekdays.length > 0 ? weekdays : [1],
       start_time: form.startTime,
       end_time: form.endTime,
-      room_id: roomId,
-      category_id: Number(template.categoryId),
-      planning_track_id: form.planningTrackId
-        ? Number(form.planningTrackId)
-        : null,
+      room_id: String(roomId),
+      category_id: template.categoryId,
+      planning_track_id: form.planningTrackId || null,
       // Preserve the series' own Wochennotiz verbatim — an instance-scope edit
       // (all/following) must never wipe it. It is read-only in this flow.
       notes: template.notes ?? undefined,
-      education_group_id: template.educationGroupId
-        ? Number(template.educationGroupId)
-        : undefined,
+      education_group_id: template.educationGroupId || undefined,
       // Zielgruppe is preserved from the existing template, not edited —
       // this body builder only carries the fields a single-instance edit
       // actually changes (title, times, room, people).
@@ -2140,7 +2125,7 @@ export function useEventForm({
       source_care_offering_ids:
         template.sourceCareOfferingIds &&
         template.sourceCareOfferingIds.length > 0
-          ? template.sourceCareOfferingIds.map(Number)
+          ? [...template.sourceCareOfferingIds]
           : null,
       source_grade_levels:
         template.sourceCareOfferingIds &&
@@ -2160,9 +2145,7 @@ export function useEventForm({
         type: target.type,
         grade_level: target.gradeLevel,
         school_class: target.schoolClass,
-        education_group_id: target.educationGroupId
-          ? Number(target.educationGroupId)
-          : undefined,
+        education_group_id: target.educationGroupId || undefined,
       })),
       // The occurrence editor never shows the Teilnehmergrenze (#2233), so a
       // scope save must echo the stored series value — null included, the
@@ -2176,20 +2159,18 @@ export function useEventForm({
         ? parseRequiredStaffOverride(form.requiredStaff)
         : (template.requiredStaffOverride ?? null),
       week_pattern: firstSchedule?.weekPattern ?? 0,
-      calendar_period_id: calendarPeriodId
-        ? Number(calendarPeriodId)
-        : undefined,
+      calendar_period_id: calendarPeriodId || undefined,
       // A sourced template's studentIds ARE the sourced rows; echoing them
       // next to the source would be rejected by the backend.
       student_ids:
         template.sourceCareOfferingIds &&
         template.sourceCareOfferingIds.length > 0
           ? []
-          : templateStudentIDs.map(Number),
-      staff_ids: templateStaffIDs.map(Number),
+          : [...templateStudentIDs],
+      staff_ids: [...templateStaffIDs],
       primary_staff_id:
         primaryStaffId && templateStaffIDs.includes(primaryStaffId)
-          ? Number(primaryStaffId)
+          ? primaryStaffId
           : undefined,
       // #2129: an occurrence-scope edit must not silently flatten a series
       // that staffs each weekday differently. Carry the template's weekday
@@ -2804,8 +2785,8 @@ export function useEventForm({
       // children. The form loads them empty and cannot edit them, so only
       // the staffing can have changed.
       const sourcedSeries = (template.sourceCareOfferingIds?.length ?? 0) > 0;
-      const studentScope = new Set<number>();
-      const staffScope = new Set<number>();
+      const studentScope = new Set<string>();
+      const staffScope = new Set<string>();
       const scopeWeekdays: number[] = [];
       let primaryChanged = false;
 
@@ -2831,10 +2812,7 @@ export function useEventForm({
             changedStudents.forEach((id) => studentScope.add(id));
             changedStaff.forEach((id) => staffScope.add(id));
             for (const id of [next.primaryStaffId, assignment.primaryStaffId]) {
-              const numeric = Number(id);
-              if (id && Number.isFinite(numeric) && numeric > 0) {
-                staffScope.add(numeric);
-              }
+              if (isPersistedID(id)) staffScope.add(id);
             }
             primaryChanged ||= weekdayPrimaryChanged;
           }
@@ -2911,14 +2889,13 @@ export function useEventForm({
       let followUpOk = true;
       for (const chunk of chunks.slice(1)) {
         try {
-          const result = await timetableService.replanWeek(
+          // The re-plan answers no warnings (replan_week.go:40): without
+          // an active period a chunk plans nothing and the next one runs.
+          await timetableService.replanWeek(
             chunk.from,
             chunk.to,
             seriesTemplateId,
           );
-          if (result.warnings.some((w) => w.code === "no_active_period")) {
-            break;
-          }
         } catch (chunkErr) {
           logger.error("series_replan_chunk_failed", {
             template_id: seriesTemplateId,

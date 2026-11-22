@@ -18,6 +18,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/internal/ptrtest"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -41,11 +42,11 @@ func TestNewPresenceLiveGroupResponse_BasicFields(t *testing.T) {
 
 	response := newPresenceLiveGroupResponse(group)
 
-	assert.Equal(t, int64(1), response.ID)
+	assert.Equal(t, ident.ID(int64(1)), response.ID)
 	if assert.NotNil(t, response.GroupID) {
-		assert.Equal(t, int64(100), *response.GroupID)
+		assert.Equal(t, ident.ID(int64(100)), *response.GroupID)
 	}
-	assert.Equal(t, int64(200), response.RoomID)
+	assert.Equal(t, ident.ID(int64(200)), response.RoomID)
 	assert.Equal(t, now, response.StartTime)
 	assert.Equal(t, &endTime, response.EndTime)
 	assert.False(t, response.IsActive) // Has end time so not active
@@ -80,11 +81,11 @@ func TestLoadActiveGroupRelations_KeepsActiveSupervisorsAndRooms(t *testing.T) {
 	response := responses[0]
 	assert.Equal(t, 2, response.SupervisorCount) // Only 2 active supervisors
 	assert.Len(t, response.Supervisors, 2)
-	assert.Equal(t, int64(10), response.Supervisors[0].StaffID)
+	assert.Equal(t, ident.ID(int64(10)), response.Supervisors[0].StaffID)
 	assert.Equal(t, "Teacher", response.Supervisors[0].Role)
-	assert.Equal(t, int64(30), response.Supervisors[1].StaffID)
+	assert.Equal(t, ident.ID(int64(30)), response.Supervisors[1].StaffID)
 	if assert.NotNil(t, response.Room) {
-		assert.Equal(t, int64(200), response.Room.ID)
+		assert.Equal(t, ident.ID(int64(200)), response.Room.ID)
 		assert.Equal(t, "Test Room", response.Room.Name)
 	}
 }
@@ -105,9 +106,9 @@ func TestNewPresenceVisitResponse_BasicFields(t *testing.T) {
 
 	response := newPresenceVisitResponse(visit)
 
-	assert.Equal(t, int64(1), response.ID)
-	assert.Equal(t, int64(100), response.StudentID)
-	assert.Equal(t, int64(200), response.ActiveGroupID)
+	assert.Equal(t, ident.ID(int64(1)), response.ID)
+	assert.Equal(t, ident.ID(int64(100)), response.StudentID)
+	assert.Equal(t, ident.ID(int64(200)), response.ActiveGroupID)
 	assert.Equal(t, now, response.CheckInTime)
 	assert.Equal(t, &exitTime, response.CheckOutTime)
 	assert.False(t, response.IsActive) // Has exit time

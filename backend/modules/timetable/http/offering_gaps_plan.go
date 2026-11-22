@@ -108,7 +108,7 @@ func (rs *Resource) attachOfferingGapRosters(ctx context.Context, templates []te
 	ids := make([]int64, 0, len(templates))
 	for i, template := range templates {
 		if allRosters || (!gapTemplates[i].HasOfferingSource && gapTemplates[i].Kind != timetable.RosterOfferingAny) {
-			ids = append(ids, template.ID)
+			ids = append(ids, template.ID.Int64())
 		}
 	}
 	if len(ids) == 0 {
@@ -122,7 +122,7 @@ func (rs *Resource) attachOfferingGapRosters(ctx context.Context, templates []te
 		return err
 	}
 	for i, template := range templates {
-		if roster, ok := rosters[template.ID]; ok {
+		if roster, ok := rosters[template.ID.Int64()]; ok {
 			gapTemplates[i].Roster = &roster
 		}
 	}

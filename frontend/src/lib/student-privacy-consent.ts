@@ -26,11 +26,6 @@ export interface ConsentPairInput {
 // (studentpresence defaultPrivacyPolicyVersion).
 const POLICY_VERSION = "1.0";
 
-interface BackendConsent {
-  accepted: boolean;
-  data_retention_days: number;
-}
-
 /**
  * The pair a write carries, or null when it carries neither field. The
  * backend write is a full upsert, so a lone field would silently reset the
@@ -57,17 +52,15 @@ export async function writeStudentConsent(
   studentId: string,
   pair: ConsentPair,
 ): Promise<void> {
-  await bffJson<unknown>(
-    `/api/students/${encodeURIComponent(studentId)}/privacy-consent`,
-    {
-      method: "PUT",
-      body: {
-        policy_version: POLICY_VERSION,
-        accepted: pair.privacy_consent_accepted,
-        data_retention_days: pair.data_retention_days,
-      },
+  await bffJson("tenant", "PUT /api/students/{id}/privacy-consent", {
+    params: { id: studentId },
+    body: {
+      policy_version: POLICY_VERSION,
+      accepted: pair.privacy_consent_accepted,
+      // Go reads null and an absent key alike and refuses the empty value.
+      data_retention_days: pair.data_retention_days ?? undefined,
     },
-  );
+  });
 }
 
 /**
@@ -78,8 +71,10 @@ async function readStudentConsent(
   studentId: string,
 ): Promise<ConsentPair | null> {
   try {
-    const consent = await bffJson<BackendConsent>(
-      `/api/students/${encodeURIComponent(studentId)}/privacy-consent`,
+    const consent = await bffJson(
+      "tenant",
+      "GET /api/students/{id}/privacy-consent",
+      { params: { id: studentId } },
     );
     return {
       privacy_consent_accepted: consent.accepted,

@@ -11,11 +11,11 @@ import {
 } from "./public-enrollment-shell";
 
 const fakeTenant: TenantInfo = {
-  tenantId: 1,
+  tenantId: "1",
   slug: "musterschule",
   name: "OGS Musterschule",
   subdomain: "musterschule",
-  organizationId: 1,
+  organizationId: "1",
   organizationName: "Muster Träger",
   settings: {},
   presenceMode: "detailed",

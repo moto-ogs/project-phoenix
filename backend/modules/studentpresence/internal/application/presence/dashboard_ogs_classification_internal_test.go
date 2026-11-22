@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -35,30 +36,30 @@ func templateFixtures() map[int64]*ports.SessionActivity {
 		Type:            "activity",
 		TargetGroupType: "none",
 	}
-	collidingActivity.ID = collidingID
+	collidingActivity.ID = ident.ID(collidingID)
 
 	careGroup := &ports.SessionActivity{
 		Name:             "Gruppenzeit Bären",
 		Type:             "care",
 		TargetGroupType:  "gruppe",
-		EducationGroupID: &educationRef,
+		EducationGroupID: (*ident.ID)(&educationRef),
 	}
-	careGroup.ID = careTemplateID
+	careGroup.ID = ident.ID(careTemplateID)
 
 	careWithoutGroup := &ports.SessionActivity{
 		Name:            "Mittagessen 1. Schicht",
 		Type:            "care",
 		TargetGroupType: "none",
 	}
-	careWithoutGroup.ID = careWithoutGroupID
+	careWithoutGroup.ID = ident.ID(careWithoutGroupID)
 
 	activityWithTarget := &ports.SessionActivity{
 		Name:             "Basteln für die Bären",
 		Type:             "activity",
 		TargetGroupType:  "gruppe",
-		EducationGroupID: &educationRef,
+		EducationGroupID: (*ident.ID)(&educationRef),
 	}
-	activityWithTarget.ID = activityWithTargetID
+	activityWithTarget.ID = ident.ID(activityWithTargetID)
 
 	return map[int64]*ports.SessionActivity{
 		collidingID:          collidingActivity,
@@ -71,10 +72,10 @@ func templateFixtures() map[int64]*ports.SessionActivity {
 func activeSession(id int64, templateID *int64, roomID int64) *ports.ActiveGroup {
 	session := &ports.ActiveGroup{
 		StartTime: presenceTestNow().Add(-10 * time.Minute),
-		GroupID:   templateID,
-		RoomID:    roomID,
+		GroupID:   (*ident.ID)(templateID),
+		RoomID:    ident.ID(roomID),
 	}
-	session.ID = id
+	session.ID = ident.ID(id)
 	return session
 }
 

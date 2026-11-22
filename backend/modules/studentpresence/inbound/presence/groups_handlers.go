@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // ===== Active Group Handlers =====
@@ -116,7 +117,7 @@ func (rs *Resource) loadActiveSupervisorsMap(ctx context.Context, groups []stude
 			return make(map[int64][]GroupSupervisorSimple)
 		}
 		if response.IsActive {
-			supervisorMap[row.GroupID] = append(supervisorMap[row.GroupID], GroupSupervisorSimple{StaffID: row.StaffID, Role: row.Role})
+			supervisorMap[row.GroupID] = append(supervisorMap[row.GroupID], GroupSupervisorSimple{StaffID: ident.ID(row.StaffID), Role: row.Role})
 		}
 	}
 	return supervisorMap

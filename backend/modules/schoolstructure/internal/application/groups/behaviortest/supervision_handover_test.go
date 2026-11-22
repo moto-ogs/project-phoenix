@@ -122,13 +122,13 @@ func TestSupervisionHandOverMovesOnlyTheRunningSupervision(t *testing.T) {
 	result, err := f.handOver(t, ctx, substitutionCaller(t, f.ownerAccount, false), f.targetStaff)
 	require.NoError(t, err)
 	require.Equal(t, TargetAdditionalSupervision, result.Type)
-	require.Equal(t, f.running, result.ActiveGroupID)
-	require.Equal(t, f.targetStaff, result.Target.ID)
+	require.Equal(t, f.running, result.ActiveGroupID.Int64())
+	require.Equal(t, f.targetStaff, result.Target.ID.Int64())
 	require.Empty(t, f.broadcaster.Events(), "signals wait for the commit")
 	commit()
 
 	require.Equal(t, []int64{f.targetStaff}, f.currentSupervisors(t))
-	require.Equal(t, "supervisor", testpkg.GroupSupervisorRowByID(t, f.db, result.ID).Role,
+	require.Equal(t, "supervisor", testpkg.GroupSupervisorRowByID(t, f.db, result.ID.Int64()).Role,
 		"the target takes over the role the owner held")
 	owner := testpkg.GroupSupervisorRowByID(t, f.db, f.ownerRow)
 	require.NotNil(t, owner.EndDate, "the hand-over ends the owner's supervision instead of deleting it")

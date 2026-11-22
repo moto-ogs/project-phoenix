@@ -421,3 +421,33 @@ durch die Datenbank-Dienste verlor die Seite des Backends.
   Sinn.
 - Der Statuscode des Backends geht nur bei Uploads durch; JSON-Routen
   antworten 200 wie zuvor.
+
+## Nachtrag vom 2026-11-22: Ausdrückliche Merkmale statt Namen
+
+Nach der Kette #2341 hielt der Generator noch zwei Regeln, die man nur aus
+der Geschichte verstand (#7808): Ein `int64`, dessen Go-Name auf `Cents`
+endete, galt als Betrag (124 Felder), entgegen Punkt 4. Und welche POST-Route
+nichts festschreibt, stand als Liste von 23 Einträgen ohne Grund im Frontend
+(`READ_ONLY_POST_ROUTES`), außerhalb des Vertrags.
+
+Entscheidung:
+
+1. **Ein Betrag oder Zähler als `int64` sagt es mit `contract:"number"`.**
+   Die Namensregel `Cents` entfällt. Ein nacktes `int64` bleibt ein Fehler.
+2. **Eine Zahl unter dem Namen einer Kennung bricht ab.** Ein Feld `id`,
+   `*_id` oder `*_ids`, dessen Wert eine Zahl ist (`int`, `int64` mit
+   `contract:"number"`), lehnt der Generator ab. Der Name macht keine Kennung,
+   wie Punkt 4 sagt; er fängt nur die vergessene: Die Abnahme in #2353 ließ
+   ein `RoomID int` unerkannt durch.
+3. **`NoCommit` ist ein Merkmal der Route.** Eine POST-Route, die nichts
+   festschreibt, worum ihr Aufrufer bitten kann (Vorschau, Suche, Lesen mit
+   Body), nennt den Grund in `common.RouteContract.NoCommit`. Der Generator
+   schreibt ihn an die Route; Katalog-Proxy und `contractWrite` lesen ihn und
+   bieten bei einer unlesbaren Antwort Wiederholen statt Neuladen an. Nur ein
+   POST darf ihn tragen. Er ist nicht die Freigabeliste der Lesevorschau
+   (`api/common/readonly_preview.go`): Eine Import-Vorschau schreibt nichts
+   fest, aber eine Audit-Zeile.
+4. **`contract.Legacy` entfällt.** Die Wurzel baut ihre `Options` selbst; die
+   eine Route mit Query-Varianten (`GET /api/students/`, Punkt 3) steht dort
+   mit Verweis auf diesen ADR. Die Art `legacy_id` verlässt auch die
+   Kompatibilitätsprüfung.

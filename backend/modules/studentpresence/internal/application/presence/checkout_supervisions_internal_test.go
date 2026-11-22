@@ -45,7 +45,7 @@ func TestDeviceSupervisorReadPreservesFailureClassification(t *testing.T) {
 				}},
 				SchoolPresence: checkoutSupervisions{query: func(got context.Context, filter studentpresence.GroupSupervisionFilter) ([]studentpresence.GroupSupervision, error) {
 					assert.Same(t, ctx, got)
-					assert.Equal(t, []int64{group.ID}, filter.GroupIDs)
+					assert.Equal(t, []int64{group.ID.Int64()}, filter.GroupIDs)
 					require.NotNil(t, filter.ActiveOn)
 					return tc.rows, tc.err
 				}},

@@ -32,9 +32,9 @@ type betreuungsplanExportRequest struct {
 	// GroupID, StaffID and RoomID carry the planner's group and person
 	// filter (#4766) and its room filter (#4768); omitted, the whole plan
 	// prints.
-	GroupID *common.JSONID `json:"group_id,omitempty"`
-	StaffID *common.JSONID `json:"staff_id,omitempty"`
-	RoomID  *common.JSONID `json:"room_id,omitempty"`
+	GroupID *common.ID `json:"group_id,omitempty"`
+	StaffID *common.ID `json:"staff_id,omitempty"`
+	RoomID  *common.ID `json:"room_id,omitempty"`
 }
 
 // exportBetreuungsplan handles POST /api/timetable/betreuungsplan/export.
@@ -88,7 +88,7 @@ func (rs *Resource) exportBetreuungsplan(w http.ResponseWriter, r *http.Request)
 	_, _ = w.Write(file.Data)
 }
 
-func exportFilterID(id *common.JSONID) *int64 {
+func exportFilterID(id *common.ID) *int64 {
 	if id == nil {
 		return nil
 	}

@@ -8,75 +8,31 @@ import {
   parseAttendanceActor,
   type AttendanceActor,
 } from "~/lib/attendance-actor";
-
-export interface BackendAttendanceHistoryResponse {
-  student_id: string;
-  days: BackendAttendanceHistoryDay[];
-  range: { start: string; end: string };
-  clamped: boolean;
-  caps: { attendance_days: number; room_detail_days: number };
-}
+import { knownEnum } from "~/lib/contract/known-enum";
+import type {
+  attendanceDayRecord,
+  attendanceHistoryDay,
+  attendanceHistoryResponse,
+  attendanceSessionRecord,
+  attendanceSlotEntry,
+  attendanceStatusEntry,
+  attendanceVisitEntry,
+} from "~/lib/contract/students.generated";
 
 export type AttendanceSlotStatus = "expected" | "present" | "absent";
 type ActivityInstanceStatus = "planned" | "active" | "completed" | "cancelled";
 
-interface BackendAttendanceHistoryDay {
-  date: string;
-  attendance: BackendAttendanceRecord | null;
-  status_entries?: BackendAttendanceStatusEntry[] | null;
-  room_detail_available: boolean;
-  visits: BackendAttendanceVisit[] | null;
-  slots?: BackendAttendanceSlot[] | null;
-}
-
-interface BackendAttendanceRecord {
-  check_in_time: string;
-  check_out_time?: string | null;
-  duration_minutes?: number | null;
-  checked_in_by: number | string;
-  checked_out_by?: number | string | null;
-  checked_in_actor?: AttendanceActor | null;
-  checked_out_actor?: AttendanceActor | null;
-  device_id: number | string;
-  sessions?: BackendAttendanceSession[] | null;
-}
-
-interface BackendAttendanceSession {
-  check_in_time: string;
-  check_out_time?: string | null;
-  duration_minutes?: number | null;
-  check_out_note?: string | null;
-  check_out_reason?: string | null;
-}
-
-interface BackendAttendanceSlot {
-  instance_id: string;
-  instance_status?: ActivityInstanceStatus;
-  title: string;
-  start_time: string;
-  end_time: string;
-  status: AttendanceSlotStatus;
-  substatus?: string | null;
-  note?: string | null;
-  checked_in_at?: string | null;
-  checked_out_at?: string | null;
-  is_unplanned: boolean;
-}
-
-interface BackendAttendanceVisit {
-  room_id?: number | string | null;
-  room_name?: string;
-  entry_time: string;
-  exit_time?: string | null;
-  duration_minutes?: number | null;
-}
-
-interface BackendAttendanceStatusEntry {
-  status: string;
-  label: string;
-  reported_at: string;
-  cleared_at?: string | null;
-}
+const SLOT_STATUSES: readonly AttendanceSlotStatus[] = [
+  "expected",
+  "present",
+  "absent",
+];
+const INSTANCE_STATUSES: readonly ActivityInstanceStatus[] = [
+  "planned",
+  "active",
+  "completed",
+  "cancelled",
+];
 
 // --- UI-friendly shapes ---
 
@@ -101,12 +57,12 @@ interface AttendanceRecord {
   checkInTime: Date;
   checkOutTime: Date | null;
   durationMinutes: number | null;
-  checkedInBy: number | string;
-  checkedOutBy: number | string | null;
+  checkedInBy: string;
+  checkedOutBy: string | null;
   /** Who recorded the day's arrival and pickup (#4761). */
   checkedInActor: AttendanceActor | null;
   checkedOutActor: AttendanceActor | null;
-  deviceId: number | string;
+  deviceId: string;
   sessions: AttendanceSession[];
   /**
    * Reasons staff left when the child went home early (#3324), in the order
@@ -130,7 +86,8 @@ interface AttendanceSlot {
   title: string;
   startTime: string;
   endTime: string;
-  status: AttendanceSlotStatus;
+  /** undefined: a status this build does not know; the row shows „–“. */
+  status: AttendanceSlotStatus | undefined;
   substatus: string | null;
   note: string | null;
   checkedInAt: Date | null;
@@ -139,7 +96,7 @@ interface AttendanceSlot {
 }
 
 interface AttendanceVisit {
-  roomId: number | string | null;
+  roomId: string | null;
   roomName: string;
   entryTime: Date;
   exitTime: Date | null;
@@ -154,11 +111,11 @@ interface AttendanceStatusEntry {
 }
 
 export function mapAttendanceHistoryResponse(
-  raw: BackendAttendanceHistoryResponse,
+  raw: attendanceHistoryResponse,
 ): AttendanceHistory {
   return {
     studentId: raw.student_id,
-    days: raw.days.map(mapAttendanceHistoryDay),
+    days: (raw.days ?? []).map(mapAttendanceHistoryDay),
     range: {
       start: new Date(raw.range.start),
       end: new Date(raw.range.end),
@@ -172,7 +129,7 @@ export function mapAttendanceHistoryResponse(
 }
 
 function mapAttendanceHistoryDay(
-  day: BackendAttendanceHistoryDay,
+  day: attendanceHistoryDay,
 ): AttendanceHistoryDay {
   return {
     date: day.date,
@@ -184,7 +141,7 @@ function mapAttendanceHistoryDay(
   };
 }
 
-function mapAttendanceRecord(rec: BackendAttendanceRecord): AttendanceRecord {
+function mapAttendanceRecord(rec: attendanceDayRecord): AttendanceRecord {
   const sessions = (rec.sessions ?? [rec]).map(mapAttendanceSession);
   const notes = sessions
     .map((session) => session.checkOutNote)
@@ -209,7 +166,7 @@ function mapAttendanceRecord(rec: BackendAttendanceRecord): AttendanceRecord {
 }
 
 function mapAttendanceSession(
-  session: BackendAttendanceSession,
+  session: attendanceSessionRecord,
 ): AttendanceSession {
   return {
     checkInTime: new Date(session.check_in_time),
@@ -221,14 +178,14 @@ function mapAttendanceSession(
   };
 }
 
-function mapAttendanceSlot(slot: BackendAttendanceSlot): AttendanceSlot {
+function mapAttendanceSlot(slot: attendanceSlotEntry): AttendanceSlot {
   return {
     instanceId: slot.instance_id,
-    instanceStatus: slot.instance_status ?? null,
+    instanceStatus: knownEnum(INSTANCE_STATUSES, slot.instance_status) ?? null,
     title: slot.title,
     startTime: slot.start_time,
     endTime: slot.end_time,
-    status: slot.status,
+    status: knownEnum(SLOT_STATUSES, slot.status),
     substatus: slot.substatus ?? null,
     note: slot.note ?? null,
     checkedInAt: slot.checked_in_at ? new Date(slot.checked_in_at) : null,
@@ -237,7 +194,7 @@ function mapAttendanceSlot(slot: BackendAttendanceSlot): AttendanceSlot {
   };
 }
 
-function mapAttendanceVisit(v: BackendAttendanceVisit): AttendanceVisit {
+function mapAttendanceVisit(v: attendanceVisitEntry): AttendanceVisit {
   return {
     roomId: v.room_id ?? null,
     roomName: v.room_name ?? "",
@@ -248,7 +205,7 @@ function mapAttendanceVisit(v: BackendAttendanceVisit): AttendanceVisit {
 }
 
 function mapAttendanceStatusEntry(
-  entry: BackendAttendanceStatusEntry,
+  entry: attendanceStatusEntry,
 ): AttendanceStatusEntry {
   return {
     status: entry.status,
@@ -268,9 +225,10 @@ export function formatTime(d: Date): string {
 }
 
 export function formatAttendanceSlotStatus(
-  status: AttendanceSlotStatus,
+  status: AttendanceSlotStatus | undefined,
   substatus?: string | null,
 ): string {
+  if (status === undefined) return "–";
   if (status === "present") return "Anwesend";
   if (substatus === "sick") return "Krank";
   if (substatus === "excused") return "Entschuldigt";

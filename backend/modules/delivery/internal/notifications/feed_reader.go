@@ -13,6 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/delivery/contract"
 	"github.com/moto-ogs/project-phoenix/modules/delivery/internal/domain"
 	deliveryPorts "github.com/moto-ogs/project-phoenix/modules/delivery/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Feed page sizes (#7148).
@@ -123,7 +124,7 @@ func (f *feedReader) read(ctx context.Context, tenantID, accountID int64, portal
 	page.Entries = make([]FeedEntry, 0, len(entries))
 	for _, entry := range entries {
 		page.Entries = append(page.Entries, FeedEntry{
-			ID: entry.ID, Type: entry.Type, Title: entry.Title, Body: entry.Body, DeepLink: feedEntryLink(entry.FeedEntryContent, view),
+			ID: ident.ID(entry.ID), Type: entry.Type, Title: entry.Title, Body: entry.Body, DeepLink: feedEntryLink(entry.FeedEntryContent, view),
 			CreatedAt: entry.CreatedAt, UpdatedAt: entry.UpdatedAt, ReadAt: entry.ReadAt,
 		})
 	}

@@ -44,7 +44,7 @@ func TestStaffMembershipRoutesAnswerUnderTheProductionPath(t *testing.T) {
 	assert.ElementsMatch(t, []any{"1a", "2b"}, written["school_classes"])
 	read := call(http.MethodGet, classes, nil, token("users:read"))
 	assert.ElementsMatch(t, []any{"1a", "2b"}, read["school_classes"], "the read shows the stored assignment")
-	assert.EqualValues(t, staffID, read["staff_id"])
+	assert.EqualValues(t, staffID, testpkg.JSONID(t, read["staff_id"]))
 
 	for path, permission := range map[string]string{
 		fmt.Sprintf("/staff/documents-profile/%d", staffID): "staff:documents",
@@ -52,7 +52,7 @@ func TestStaffMembershipRoutesAnswerUnderTheProductionPath(t *testing.T) {
 	} {
 		profile := call(http.MethodGet, path, nil, token(permission))
 		assert.Equal(t, "Lehrkraft Zuordnung", profile["name"], path)
-		assert.EqualValues(t, staffID, profile["id"], path)
+		assert.EqualValues(t, staffID, testpkg.JSONID(t, profile["id"]), path)
 		assert.NotContains(t, profile, "ended_on", "a current staff member carries no employment period")
 	}
 }

@@ -7,7 +7,10 @@ import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 import {
   getChildConsents,
+  getChildRoomHistoryStop,
   grantChildPhotoConsent,
+  resumeChildRoomHistory,
+  stopChildRoomHistory,
   withdrawChildPhotoConsent,
 } from "~/lib/parent-api";
 import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
@@ -17,13 +20,19 @@ vi.unmock("swr");
 
 vi.mock("~/lib/parent-api", () => ({
   getChildConsents: vi.fn(),
+  getChildRoomHistoryStop: vi.fn(),
   grantChildPhotoConsent: vi.fn(),
   withdrawChildPhotoConsent: vi.fn(),
+  stopChildRoomHistory: vi.fn(),
+  resumeChildRoomHistory: vi.fn(),
 }));
 
 const mockedGet = vi.mocked(getChildConsents);
 const mockedGrant = vi.mocked(grantChildPhotoConsent);
 const mockedWithdraw = vi.mocked(withdrawChildPhotoConsent);
+const mockedStop = vi.mocked(stopChildRoomHistory);
+const mockedStopRead = vi.mocked(getChildRoomHistoryStop);
+const mockedResume = vi.mocked(resumeChildRoomHistory);
 
 const granted = [
   {
@@ -68,6 +77,11 @@ function renderSection() {
 beforeEach(() => {
   vi.clearAllMocks();
   mockedGet.mockResolvedValue(granted);
+  mockedStopRead.mockResolvedValue({
+    offered: false,
+    stopped: false,
+    can_change: false,
+  });
 });
 
 describe("ChildConsentsSection", () => {
@@ -311,5 +325,134 @@ describe("ChildConsentsSection", () => {
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText(/backend sentence/)).not.toBeInTheDocument();
+  });
+
+  // #3844: Raumverlauf und Stimmung, nur wenn der Träger es freigibt.
+  it("lässt Eltern Raumverlauf und Stimmung nach Rückfrage stoppen und wieder speichern", async () => {
+    const user = userEvent.setup();
+    const recording = { offered: true, stopped: false, can_change: true };
+    const stopped = {
+      offered: true,
+      stopped: true,
+      stopped_at: "2026-11-21T09:00:00Z",
+      can_change: true,
+    };
+    mockedStopRead.mockResolvedValue(recording);
+    mockedStop.mockResolvedValue(stopped);
+    mockedResume.mockResolvedValue(recording);
+    renderSection();
+
+    expect(
+      await screen.findByText("Raumverlauf und Stimmung"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Nicht gestoppt")).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: "Raumverlauf und Stimmung stoppen" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      within(dialog).getByText(/moto löscht sofort, in welchen Räumen/),
+    ).toBeInTheDocument();
+    await user.click(
+      within(dialog).getByRole("button", { name: "Jetzt stoppen" }),
+    );
+    await waitFor(() => expect(mockedStop).toHaveBeenCalledWith("42"));
+    expect(
+      await screen.findByText(
+        "Raumverlauf und Stimmung sind gestoppt. Der bisherige Raumverlauf ist gelöscht.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Gestoppt")).toBeInTheDocument();
+    expect(mockedWithdraw).not.toHaveBeenCalled();
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Raumverlauf und Stimmung wieder speichern",
+      }),
+    );
+    const resumeDialog = await screen.findByRole("dialog");
+    expect(
+      within(resumeDialog).getByText(
+        "Du hebst den Stopp für dein Kind auf. Deine Schule entscheidet, ob Raumverlauf und Stimmung gespeichert werden. Gelöschtes kommt nicht zurück.",
+      ),
+    ).toBeInTheDocument();
+    await user.click(
+      within(resumeDialog).getByRole("button", { name: "Wieder speichern" }),
+    );
+    await waitFor(() => expect(mockedResume).toHaveBeenCalledWith("42"));
+    expect(
+      await screen.findByText("Der Stopp für dein Kind ist aufgehoben."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Nicht gestoppt")).toBeInTheDocument();
+  });
+
+  it("zeigt keine Zeile, solange der Träger den Stopp nicht freigibt", async () => {
+    renderSection();
+
+    expect(await screen.findByText("Foto-Einwilligung")).toBeInTheDocument();
+    await waitFor(() => expect(mockedStopRead).toHaveBeenCalledWith("42"));
+    expect(
+      screen.queryByText("Raumverlauf und Stimmung"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("zeigt die Foto-Einwilligung weiter, wenn der Stopp nicht lesbar ist", async () => {
+    mockedStopRead.mockRejectedValue(
+      new ApiError("diag", 503, { code: "general.unavailable" }),
+    );
+    renderSection();
+
+    expect(await screen.findByText("Foto-Einwilligung")).toBeInTheDocument();
+    await waitFor(() => expect(mockedStopRead).toHaveBeenCalledWith("42"));
+    expect(
+      screen.getByRole("button", { name: "Foto-Einwilligung widerrufen" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Raumverlauf und Stimmung"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("zeigt einen Stopp, den Eltern nicht aufheben können, mit Hinweis auf die OGS", async () => {
+    mockedStopRead.mockResolvedValue({
+      offered: true,
+      stopped: true,
+      stopped_at: "2026-11-21T09:00:00Z",
+      can_change: false,
+    });
+    renderSection();
+
+    expect(
+      await screen.findByText("Raumverlauf und Stimmung"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Gestoppt")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Den Stopp für Raumverlauf und Stimmung hebt die/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Raumverlauf und Stimmung kannst du hier stoppen/),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: "Raumverlauf und Stimmung wieder speichern",
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("zeigt Raumverlauf und Stimmung ohne Aktion, wenn das Einwilligungsrecht fehlt", async () => {
+    mockedStopRead.mockResolvedValue({
+      offered: true,
+      stopped: false,
+      can_change: false,
+    });
+    renderSection();
+
+    expect(
+      await screen.findByText("Raumverlauf und Stimmung"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: "Raumverlauf und Stimmung stoppen",
+      }),
+    ).not.toBeInTheDocument();
   });
 });

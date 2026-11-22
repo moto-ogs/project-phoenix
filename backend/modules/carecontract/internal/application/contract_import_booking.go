@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -207,7 +208,7 @@ func (r rowReader) moduleServices(module carecontract.Offering, days []string) [
 			r.problem(carecontract.ContractImportFieldWeekdays, carecontract.ContractImportProblemNotOffered)
 			return nil
 		}
-		services = append(services, carecontract.Service{Weekday: day, CareOfferingID: module.ID, ModuleName: module.Name,
+		services = append(services, carecontract.Service{Weekday: day, CareOfferingID: ident.ID(module.ID), ModuleName: module.Name,
 			EndsAt: module.EndTimes[day], LastDay: module.ServiceEnd})
 	}
 	return services

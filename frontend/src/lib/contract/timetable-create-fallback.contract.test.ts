@@ -1,9 +1,9 @@
 import { NextRequest } from "next/server";
 import { describe, expect, it, vi } from "vitest";
 import { mapInstance } from "~/lib/timetable-helpers";
-import type { BackendEnrichedInstance } from "~/lib/timetable-types";
 import { makeCatalogProxy } from "./catalog-proxy.server";
 import { portalRoutes } from "./portals.generated";
+import type { enrichedInstance } from "./timetable.generated";
 
 /**
  * A created block whose enriched re-read failed (#2352): the backend answers
@@ -15,7 +15,7 @@ const createdWithoutEnrichment = {
   status: "success",
   data: {
     enrich_warning: "enrichment failed: read failed",
-    id: 41,
+    id: "41",
     date: "2026-11-18",
     start_time: "13:30",
     end_time: "14:15",
@@ -24,7 +24,7 @@ const createdWithoutEnrichment = {
     is_spontaneous: false,
     is_live: false,
     activity_type: "",
-    room_id: 7,
+    room_id: "7",
     room_name: "",
     staff: [],
     student_ids: [],
@@ -89,7 +89,7 @@ describe("POST /api/timetable/instances without enrichment", () => {
     );
     const { status, data } = (await response.json()) as {
       status: string;
-      data: BackendEnrichedInstance;
+      data: enrichedInstance;
     };
     expect(status).toBe("success");
     // The page shows the block with what was saved and nothing invented.

@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
@@ -16,59 +15,37 @@ import (
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
-	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	education "github.com/moto-ogs/project-phoenix/modules/schoolstructure/contract"
-	"github.com/moto-ogs/project-phoenix/modules/schoolstructure/internal/domain"
-	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
-	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
-// CallerGroups resolves the educational groups of the request's caller.
-type CallerGroups interface {
-	GetMyGroups(ctx context.Context) ([]*domain.Group, error)
-}
-
 // GroupPeople is the People Directory side of the group routes: the children
-// of a group and the persons behind them. The root binds it to the retained
-// person service.
+// of a group. The root binds it to the retained person service.
 type GroupPeople interface {
 	// GroupStudents returns the children of a group.
 	GroupStudents(ctx context.Context, groupID int64) ([]peopledirectory.StudentRecord, error)
 	// CountByGroupIDs counts the children of each group.
 	CountByGroupIDs(ctx context.Context, groupIDs []int64) (map[int64]int, error)
-	// FindPerson returns one person.
-	FindPerson(ctx context.Context, personID int64) (peopledirectory.Person, error)
-	// ListPersonsByID returns the persons keyed by ID; an unknown ID is absent.
-	ListPersonsByID(ctx context.Context, personIDs []int64) (map[int64]peopledirectory.Person, error)
 }
 
 // Resource defines the group API resource
 type Resource struct {
 	ConstraintViolation func(error) bool
 	EducationService    GroupService
-	ActiveService       studentpresence.Presence
 	People              GroupPeople
-	UserContextService  CallerGroups
-	InClass             InClassDay
 }
 
 // NewResource creates a new groups resource
-func NewResource(educationService GroupService, activeService studentpresence.Presence, people GroupPeople, userContextService CallerGroups, inClass InClassDay, constraintViolation func(error) bool) *Resource {
+func NewResource(educationService GroupService, people GroupPeople, constraintViolation func(error) bool) *Resource {
 	if constraintViolation == nil {
 		panic("group resource: database failure classifier is required")
 	}
-	if inClass == nil {
-		panic("group resource: care day rule for children in class is required")
-	}
 	return &Resource{
-		InClass:             inClass,
 		ConstraintViolation: constraintViolation,
 		EducationService:    educationService,
-		ActiveService:       activeService,
 		People:              people,
-		UserContextService:  userContextService,
 	}
 }
 
@@ -83,8 +60,6 @@ func (rs *Resource) Router(protectedTenantRoutes func(chi.Router, func(chi.Route
 		// Read operations only require groups:read permission
 		r.With(common.RequiresPermission(permissions.GroupsRead), withTx).Get("/", rs.listGroups)
 		r.With(common.RequiresPermission(permissions.GroupsRead), withTx).Get("/{id}", rs.getGroup)
-		r.With(common.RequiresPermission(permissions.GroupsRead), withTx).Get("/{id}/students", rs.getGroupStudents)
-		r.With(common.RequiresPermission(permissions.GroupsRead), withTx).Get("/{id}/supervisors", rs.getGroupSupervisors)
 
 		// Write operations require groups:create, groups:update, or groups:delete permission
 		r.With(common.RequiresPermission(permissions.GroupsCreate), withTx).Post("/", rs.createGroup)
@@ -97,11 +72,11 @@ func (rs *Resource) Router(protectedTenantRoutes func(chi.Router, func(chi.Route
 
 // GroupResponse represents a group API response
 type GroupResponse struct {
-	ID               int64             `json:"id"`
+	ID               common.ID         `json:"id"`
 	Name             string            `json:"name"`
-	RoomID           *int64            `json:"room_id,omitempty"`
+	RoomID           *common.ID        `json:"room_id,omitempty"`
 	Room             *Room             `json:"room,omitempty"`
-	RepresentativeID *int64            `json:"representative_id,omitempty"`
+	RepresentativeID *common.ID        `json:"representative_id,omitempty"`
 	Representative   *TeacherResponse  `json:"representative,omitempty"`
 	Teachers         []TeacherResponse `json:"teachers,omitempty"`
 	StudentCount     int               `json:"student_count"`
@@ -111,26 +86,26 @@ type GroupResponse struct {
 
 // TeacherResponse represents a teacher in API responses
 type TeacherResponse struct {
-	ID             int64  `json:"id"`
-	StaffID        int64  `json:"staff_id"`
-	FirstName      string `json:"first_name"`
-	LastName       string `json:"last_name"`
-	Specialization string `json:"specialization"`
-	Role           string `json:"role,omitempty"`
-	FullName       string `json:"full_name"`
+	ID             common.ID `json:"id"`
+	StaffID        common.ID `json:"staff_id"`
+	FirstName      string    `json:"first_name"`
+	LastName       string    `json:"last_name"`
+	Specialization string    `json:"specialization"`
+	Role           string    `json:"role,omitempty"`
+	FullName       string    `json:"full_name"`
 }
 
 // Room represents a simplified room for inclusion in group responses
 type Room struct {
-	ID   int64  `json:"id"`
-	Name string `json:"name"`
+	ID   common.ID `json:"id"`
+	Name string    `json:"name"`
 }
 
 // GroupRequest represents a group creation/update request
 type GroupRequest struct {
-	Name       string  `json:"name"`
-	RoomID     *int64  `json:"room_id,omitempty"`
-	TeacherIDs []int64 `json:"teacher_ids,omitempty"`
+	Name       string      `json:"name"`
+	RoomID     *common.ID  `json:"room_id,omitempty"`
+	TeacherIDs []common.ID `json:"teacher_ids,omitempty"`
 }
 
 // Bind validates the group request
@@ -144,9 +119,9 @@ func (req *GroupRequest) Bind(_ *http.Request) error {
 // newGroupResponse converts a group model to a response object
 func newGroupResponse(group *education.Group, teachers []*education.Teacher, studentCount int) GroupResponse {
 	response := GroupResponse{
-		ID:           group.ID,
+		ID:           ident.ID(group.ID),
 		Name:         group.Name,
-		RoomID:       group.RoomID,
+		RoomID:       (*ident.ID)(group.RoomID),
 		StudentCount: studentCount,
 		CreatedAt:    group.CreatedAt,
 		UpdatedAt:    group.UpdatedAt,
@@ -166,13 +141,13 @@ func newGroupResponse(group *education.Group, teachers []*education.Teacher, stu
 
 		// First teacher is the representative by convention
 		firstTeacher := teachers[0]
-		response.RepresentativeID = &firstTeacher.ID
+		response.RepresentativeID = (*ident.ID)(&firstTeacher.ID)
 
 		// Convert all teachers to response format
 		for _, teacher := range teachers {
 			teacherResp := TeacherResponse{
-				ID:             teacher.ID,
-				StaffID:        teacher.StaffID,
+				ID:             ident.ID(teacher.ID),
+				StaffID:        ident.ID(teacher.StaffID),
 				Specialization: teacher.Specialization,
 				Role:           teacher.Role,
 				FullName:       teacher.FullName(),
@@ -198,46 +173,6 @@ func newGroupResponse(group *education.Group, teachers []*education.Teacher, stu
 // =============================================================================
 // HELPER METHODS - Reduce code duplication for common parsing/validation
 // =============================================================================
-
-// parseAndGetGroup parses group ID from URL and returns the group if it exists.
-// Returns nil and false if parsing fails or group doesn't exist (error already rendered).
-func (rs *Resource) parseAndGetGroup(w http.ResponseWriter, r *http.Request) (*education.Group, bool) {
-	id, err := common.ParseID(r)
-	if err != nil {
-		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New(common.MsgInvalidGroupID)))
-		return nil, false
-	}
-
-	group, err := rs.EducationService.GetGroup(r.Context(), id)
-	if err != nil {
-		common.RenderError(w, r, common.ErrorNotFound(errors.New(common.MsgGroupNotFound)))
-		return nil, false
-	}
-
-	return group, true
-}
-
-// userHasGroupAccess checks if the current user has access to the specified group.
-// Returns true if user is admin or supervises the group.
-func (rs *Resource) userHasGroupAccess(r *http.Request, groupID int64) bool {
-	userPermissions := sessiontoken.PermissionsFromCtx(r.Context())
-	if securityruntime.HasAdminWildcard(userPermissions) {
-		return true
-	}
-
-	myGroups, err := rs.UserContextService.GetMyGroups(r.Context())
-	if err != nil {
-		slog.Default().Error("failed to get user groups", slog.String("error", err.Error()))
-		return false
-	}
-
-	for _, myGroup := range myGroups {
-		if myGroup.ID == groupID {
-			return true
-		}
-	}
-	return false
-}
 
 // =============================================================================
 // GROUP HANDLERS
@@ -319,7 +254,7 @@ func (rs *Resource) createGroup(w http.ResponseWriter, r *http.Request) {
 	// Create group
 	group := &education.Group{
 		Name:   req.Name,
-		RoomID: req.RoomID,
+		RoomID: (*int64)(req.RoomID),
 	}
 
 	if err := tenant.WithinCurrentTenant(r.Context(), func(ctx context.Context) error {
@@ -328,7 +263,7 @@ func (rs *Resource) createGroup(w http.ResponseWriter, r *http.Request) {
 		}
 		// Assign teachers to the group if any were provided
 		if len(req.TeacherIDs) > 0 {
-			if err := rs.EducationService.UpdateGroupTeachers(ctx, group.ID, req.TeacherIDs); err != nil {
+			if err := rs.EducationService.UpdateGroupTeachers(ctx, group.ID, ident.Int64s(req.TeacherIDs)); err != nil {
 				return err
 			}
 		}
@@ -373,7 +308,7 @@ func (rs *Resource) updateGroup(w http.ResponseWriter, r *http.Request) {
 
 	// Update fields
 	group.Name = req.Name
-	group.RoomID = req.RoomID
+	group.RoomID = (*int64)(req.RoomID)
 
 	// Update group
 	if err := tenant.WithinCurrentTenant(r.Context(), func(ctx context.Context) error {
@@ -382,7 +317,7 @@ func (rs *Resource) updateGroup(w http.ResponseWriter, r *http.Request) {
 		}
 		// Update teacher assignments if provided
 		if req.TeacherIDs != nil {
-			if err := rs.EducationService.UpdateGroupTeachers(ctx, group.ID, req.TeacherIDs); err != nil {
+			if err := rs.EducationService.UpdateGroupTeachers(ctx, group.ID, ident.Int64s(req.TeacherIDs)); err != nil {
 				return err
 			}
 		}
@@ -473,48 +408,4 @@ func (rs *Resource) deleteGroup(w http.ResponseWriter, r *http.Request) {
 	}
 
 	common.Respond(w, r, http.StatusOK, nil, "Group deleted successfully")
-}
-
-// getGroupSupervisors gets all supervisors (teachers) for a specific group
-func (rs *Resource) getGroupSupervisors(w http.ResponseWriter, r *http.Request) {
-	// Parse and get group
-	group, ok := rs.parseAndGetGroup(w, r)
-	if !ok {
-		return
-	}
-
-	// Get teachers/supervisors for this group
-	teachers, err := rs.EducationService.GetGroupTeachers(r.Context(), group.ID)
-	if err != nil {
-		common.RenderError(w, r, ErrorRenderer(err))
-		return
-	}
-
-	// Map to response objects
-	type TeacherResponse struct {
-		ID             int64     `json:"id"`
-		StaffID        int64     `json:"staff_id"`
-		Specialization string    `json:"specialization"`
-		Role           string    `json:"role,omitempty"`
-		Qualifications string    `json:"qualifications,omitempty"`
-		FullName       string    `json:"full_name"`
-		CreatedAt      time.Time `json:"created_at"`
-		UpdatedAt      time.Time `json:"updated_at"`
-	}
-
-	responses := make([]TeacherResponse, 0, len(teachers))
-	for _, teacher := range teachers {
-		responses = append(responses, TeacherResponse{
-			ID:             teacher.ID,
-			StaffID:        teacher.StaffID,
-			Specialization: teacher.Specialization,
-			Role:           teacher.Role,
-			Qualifications: teacher.Qualifications,
-			FullName:       teacher.FullName(),
-			CreatedAt:      teacher.CreatedAt,
-			UpdatedAt:      teacher.UpdatedAt,
-		})
-	}
-
-	common.Respond(w, r, http.StatusOK, responses, "Group supervisors retrieved successfully")
 }

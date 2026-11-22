@@ -14,30 +14,9 @@ import {
 } from "~/lib/email-delivery-status";
 import { apiErrorFromBody, transportFetch } from "./api-error";
 import { knownEnum } from "./contract/known-enum";
-import type { BillingLetterSeries } from "./contract/shared.generated";
-import type {
-  BillingCancellationRequest,
-  BillingCarriedCorrectionRequest,
-  BillingCorrectionRequest,
-  BillingCreditRequest,
-  BillingDocument as WireDocument,
-  BillingDocumentLink as WireDocumentLink,
-  BillingLetterMailing as WireLetterMailing,
-  BillingLetterMailings,
-  BillingLetters as WireLetters,
-  BillingLettersRequest,
-  BillingPosition as WirePosition,
-  BillingReleaseRequest,
-  BillingRun as WireRun,
-  BillingRunDetail as WireRunDetail,
-  BillingRunRequest,
-  HolidayBillingPeriod,
-} from "./contract/traeger-billing-runs.generated";
-import type {
-  NumberRange as WireNumberRange,
-  NumberRangeRequest,
-  NumberRangeStartRequest,
-} from "./contract/traeger-number-ranges.generated";
+import type * as sharedContract from "./contract/shared.generated";
+import type * as traegerBillingRunsContract from "./contract/traeger-billing-runs.generated";
+import type * as traegerNumberRangesContract from "./contract/traeger-number-ranges.generated";
 import { filenameFromDisposition } from "./file-download";
 import { traegerRequest } from "./traeger-api";
 import {
@@ -311,7 +290,9 @@ export interface NumberRange {
   readonly starts: readonly NumberRangeStart[];
 }
 
-function lettersFromBackend(letters: WireLetters): BillingLetters {
+function lettersFromBackend(
+  letters: traegerBillingRunsContract.BillingLetters,
+): BillingLetters {
   return {
     paymentDueOn: letters.payment_due_on,
     notes: letters.notes,
@@ -324,7 +305,9 @@ function lettersFromBackend(letters: WireLetters): BillingLetters {
   };
 }
 
-function runFromBackend(run: WireRun): BillingRun {
+function runFromBackend(
+  run: traegerBillingRunsContract.BillingRun,
+): BillingRun {
   return {
     id: run.id,
     holidayPeriodId: run.holiday_period_id,
@@ -341,7 +324,9 @@ function runFromBackend(run: WireRun): BillingRun {
   };
 }
 
-function positionFromBackend(position: WirePosition): BillingPosition {
+function positionFromBackend(
+  position: traegerBillingRunsContract.BillingPosition,
+): BillingPosition {
   return {
     kind: knownEnum(POSITION_KIND_VALUES, position.kind),
     amountCents: position.amount_cents,
@@ -358,7 +343,9 @@ function positionFromBackend(position: WirePosition): BillingPosition {
   };
 }
 
-function documentLinkFromBackend(link: WireDocumentLink): BillingDocumentLink {
+function documentLinkFromBackend(
+  link: traegerBillingRunsContract.BillingDocumentLink,
+): BillingDocumentLink {
   return {
     id: link.id,
     runId: link.run_id,
@@ -370,7 +357,9 @@ function documentLinkFromBackend(link: WireDocumentLink): BillingDocumentLink {
   };
 }
 
-function documentFromBackend(document: WireDocument): BillingDocument {
+function documentFromBackend(
+  document: traegerBillingRunsContract.BillingDocument,
+): BillingDocument {
   return {
     // A draft has no ID yet: 0, which the contract decoder hands on as "0".
     id: document.id === "0" ? "" : document.id,
@@ -428,7 +417,9 @@ function documentFromBackend(document: WireDocument): BillingDocument {
   };
 }
 
-function detailFromBackend(run: WireRunDetail): BillingRunDetail {
+function detailFromBackend(
+  run: traegerBillingRunsContract.BillingRunDetail,
+): BillingRunDetail {
   return {
     ...runFromBackend(run),
     documents: (run.documents ?? []).map(documentFromBackend),
@@ -452,15 +443,16 @@ const runPath = (id: string) => `${RUNS_PATH}/${encodeURIComponent(id)}`;
 
 /** The runs of the Träger, newest first. */
 export async function fetchBillingRuns(): Promise<BillingRun[]> {
-  const runs = await traegerRequest<WireRun[]>(RUNS_PATH);
+  const runs =
+    await traegerRequest<traegerBillingRunsContract.BillingRun[]>(RUNS_PATH);
   return runs.map(runFromBackend);
 }
 
 /** The published holiday periods a run can bill, latest first. */
 export async function fetchBillingPeriods(): Promise<BillingPeriod[]> {
-  const periods = await traegerRequest<HolidayBillingPeriod[]>(
-    `${RUNS_PATH}/periods`,
-  );
+  const periods = await traegerRequest<
+    traegerBillingRunsContract.HolidayBillingPeriod[]
+  >(`${RUNS_PATH}/periods`);
   return periods.map((period) => ({
     id: period.id,
     name: period.name,
@@ -471,16 +463,22 @@ export async function fetchBillingPeriods(): Promise<BillingPeriod[]> {
 
 export async function startBillingRun(periodId: string): Promise<BillingRun> {
   return runFromBackend(
-    await traegerRequest<WireRun>(RUNS_PATH, {
+    await traegerRequest<traegerBillingRunsContract.BillingRun>(RUNS_PATH, {
       method: "POST",
-      body: { holiday_period_id: Number(periodId) } satisfies BillingRunRequest,
+      body: {
+        holiday_period_id: periodId,
+      } satisfies traegerBillingRunsContract.BillingRunRequest,
     }),
   );
 }
 
 /** A run with its preview, or with its issued invoices once released. */
 export async function fetchBillingRun(id: string): Promise<BillingRunDetail> {
-  return detailFromBackend(await traegerRequest<WireRunDetail>(runPath(id)));
+  return detailFromBackend(
+    await traegerRequest<traegerBillingRunsContract.BillingRunDetail>(
+      runPath(id),
+    ),
+  );
 }
 
 /** Sets the amount of one child to totalCents, with a reason. */
@@ -494,15 +492,18 @@ export async function correctBillingRun(
   },
 ): Promise<BillingRunDetail> {
   return detailFromBackend(
-    await traegerRequest<WireRunDetail>(`${runPath(id)}/corrections`, {
-      method: "POST",
-      body: {
-        registration_id: Number(correction.registrationId),
-        child_id: Number(correction.childId),
-        total_cents: correction.totalCents,
-        reason: correction.reason,
-      } satisfies BillingCorrectionRequest,
-    }),
+    await traegerRequest<traegerBillingRunsContract.BillingRunDetail>(
+      `${runPath(id)}/corrections`,
+      {
+        method: "POST",
+        body: {
+          registration_id: correction.registrationId,
+          child_id: correction.childId,
+          total_cents: correction.totalCents,
+          reason: correction.reason,
+        } satisfies traegerBillingRunsContract.BillingCorrectionRequest,
+      },
+    ),
   );
 }
 
@@ -519,13 +520,16 @@ export async function changeCarriedCorrection(
   change: { readonly totalCents: number; readonly reason: string },
 ): Promise<BillingRunDetail> {
   return detailFromBackend(
-    await traegerRequest<WireRunDetail>(carriedPath(runId, positionId), {
-      method: "PUT",
-      body: {
-        total_cents: change.totalCents,
-        reason: change.reason,
-      } satisfies BillingCarriedCorrectionRequest,
-    }),
+    await traegerRequest<traegerBillingRunsContract.BillingRunDetail>(
+      carriedPath(runId, positionId),
+      {
+        method: "PUT",
+        body: {
+          total_cents: change.totalCents,
+          reason: change.reason,
+        } satisfies traegerBillingRunsContract.BillingCarriedCorrectionRequest,
+      },
+    ),
   );
 }
 
@@ -535,9 +539,12 @@ export async function removeCarriedCorrection(
   positionId: string,
 ): Promise<BillingRunDetail> {
   return detailFromBackend(
-    await traegerRequest<WireRunDetail>(carriedPath(runId, positionId), {
-      method: "DELETE",
-    }),
+    await traegerRequest<traegerBillingRunsContract.BillingRunDetail>(
+      carriedPath(runId, positionId),
+      {
+        method: "DELETE",
+      },
+    ),
   );
 }
 
@@ -552,11 +559,13 @@ export async function cancelBillingDocument(
   reason: string,
 ): Promise<BillingDocument> {
   return documentFromBackend(
-    await traegerRequest<WireDocument>(
+    await traegerRequest<traegerBillingRunsContract.BillingDocument>(
       `${runPath(runId)}/documents/${encodeURIComponent(documentId)}/cancellation`,
       {
         method: "POST",
-        body: { reason } satisfies BillingCancellationRequest,
+        body: {
+          reason,
+        } satisfies traegerBillingRunsContract.BillingCancellationRequest,
       },
     ),
   );
@@ -573,15 +582,15 @@ export async function creditBillingDocument(
   },
 ): Promise<BillingDocument> {
   return documentFromBackend(
-    await traegerRequest<WireDocument>(
+    await traegerRequest<traegerBillingRunsContract.BillingDocument>(
       `${runPath(runId)}/documents/${encodeURIComponent(documentId)}/credits`,
       {
         method: "POST",
         body: {
-          child_id: Number(credit.childId),
+          child_id: credit.childId,
           amount_cents: credit.amountCents,
           reason: credit.reason,
-        } satisfies BillingCreditRequest,
+        } satisfies traegerBillingRunsContract.BillingCreditRequest,
       },
     ),
   );
@@ -599,16 +608,19 @@ export async function releaseBillingRun(
   >,
 ): Promise<BillingRunDetail> {
   return detailFromBackend(
-    await traegerRequest<WireRunDetail>(`${runPath(run.id)}/release`, {
-      method: "POST",
-      body: {
-        document_count: run.previewCount,
-        total_cents: run.previewCents,
-        fingerprint: run.fingerprint,
-        // The release refuses another kind than the one shown (#4688).
-        ...(run.documentKind ? { document_kind: run.documentKind } : {}),
-      } satisfies BillingReleaseRequest,
-    }),
+    await traegerRequest<traegerBillingRunsContract.BillingRunDetail>(
+      `${runPath(run.id)}/release`,
+      {
+        method: "POST",
+        body: {
+          document_count: run.previewCount,
+          total_cents: run.previewCents,
+          fingerprint: run.fingerprint,
+          // The release refuses another kind than the one shown (#4688).
+          ...(run.documentKind ? { document_kind: run.documentKind } : {}),
+        } satisfies traegerBillingRunsContract.BillingReleaseRequest,
+      },
+    ),
   );
 }
 
@@ -621,13 +633,18 @@ export async function discardBillingRun(
   runId: string,
 ): Promise<BillingRunDetail> {
   return detailFromBackend(
-    await traegerRequest<WireRunDetail>(`${runPath(runId)}/discard`, {
-      method: "POST",
-    }),
+    await traegerRequest<traegerBillingRunsContract.BillingRunDetail>(
+      `${runPath(runId)}/discard`,
+      {
+        method: "POST",
+      },
+    ),
   );
 }
 
-function lettersBody(input: BillingLettersInput): BillingLettersRequest {
+function lettersBody(
+  input: BillingLettersInput,
+): traegerBillingRunsContract.BillingLettersRequest {
   return {
     payment_due_on: input.paymentDueOn,
     notes: input.notes,
@@ -647,10 +664,13 @@ export async function createBillingLetters(
   input: BillingLettersInput,
 ): Promise<BillingLetters> {
   return lettersFromBackend(
-    await traegerRequest<WireLetters>(`${runPath(runId)}/letters`, {
-      method: "POST",
-      body: lettersBody(input),
-    }),
+    await traegerRequest<traegerBillingRunsContract.BillingLetters>(
+      `${runPath(runId)}/letters`,
+      {
+        method: "POST",
+        body: lettersBody(input),
+      },
+    ),
   );
 }
 
@@ -765,7 +785,9 @@ export interface LetterSeries {
   readonly withoutEmail: number;
 }
 
-function mailingFromBackend(mailing: WireLetterMailing): LetterMailing {
+function mailingFromBackend(
+  mailing: traegerBillingRunsContract.BillingLetterMailing,
+): LetterMailing {
   return {
     documentId: mailing.document_id,
     kind: knownDocumentKind(mailing.kind),
@@ -786,9 +808,10 @@ function mailingFromBackend(mailing: WireLetterMailing): LetterMailing {
 export async function fetchLetterMailings(
   runId: string,
 ): Promise<LetterMailing[]> {
-  const body = await traegerRequest<BillingLetterMailings>(
-    `${runPath(runId)}/mailings`,
-  );
+  const body =
+    await traegerRequest<traegerBillingRunsContract.BillingLetterMailings>(
+      `${runPath(runId)}/mailings`,
+    );
   return (body.documents ?? []).map(mailingFromBackend);
 }
 
@@ -797,7 +820,7 @@ export async function fetchLetterMailings(
  * second call sends nothing twice.
  */
 export async function mailBillingLetters(runId: string): Promise<LetterSeries> {
-  const series = await traegerRequest<BillingLetterSeries>(
+  const series = await traegerRequest<sharedContract.BillingLetterSeries>(
     `${runPath(runId)}/mailings`,
     { method: "POST" },
   );
@@ -814,7 +837,7 @@ export async function mailBillingLetter(
   documentId: string,
 ): Promise<LetterMailing> {
   return mailingFromBackend(
-    await traegerRequest<WireLetterMailing>(
+    await traegerRequest<traegerBillingRunsContract.BillingLetterMailing>(
       `${runPath(runId)}/documents/${encodeURIComponent(documentId)}/mailings`,
       { method: "POST" },
     ),
@@ -860,7 +883,7 @@ type NumberRangeService = "holiday" | "care";
 
 function mapNumberRange(
   service: string,
-  range: WireNumberRange | undefined,
+  range: traegerNumberRangesContract.NumberRange | undefined,
 ): NumberRange {
   return {
     service,
@@ -883,7 +906,10 @@ function mapNumberRange(
 async function fetchNumberRange(
   service: NumberRangeService,
 ): Promise<NumberRange> {
-  const ranges = await traegerRequest<WireNumberRange[]>(NUMBER_RANGES_PATH);
+  const ranges =
+    await traegerRequest<traegerNumberRangesContract.NumberRange[]>(
+      NUMBER_RANGES_PATH,
+    );
   return mapNumberRange(
     service,
     ranges.find((range) => range.service === service),
@@ -894,9 +920,14 @@ async function saveNumberRange(
   service: NumberRangeService,
   pattern: string,
 ): Promise<NumberRange> {
-  const range = await traegerRequest<WireNumberRange>(
+  const range = await traegerRequest<traegerNumberRangesContract.NumberRange>(
     `${NUMBER_RANGES_PATH}/${service}`,
-    { method: "PUT", body: { pattern } satisfies NumberRangeRequest },
+    {
+      method: "PUT",
+      body: {
+        pattern,
+      } satisfies traegerNumberRangesContract.NumberRangeRequest,
+    },
   );
   return mapNumberRange(range.service, range);
 }
@@ -909,11 +940,13 @@ async function saveNumberRangeStart(
   service: NumberRangeService,
   nextNumber: number,
 ): Promise<NumberRange> {
-  const range = await traegerRequest<WireNumberRange>(
+  const range = await traegerRequest<traegerNumberRangesContract.NumberRange>(
     `${NUMBER_RANGES_PATH}/${service}/start`,
     {
       method: "PUT",
-      body: { next_number: nextNumber } satisfies NumberRangeStartRequest,
+      body: {
+        next_number: nextNumber,
+      } satisfies traegerNumberRangesContract.NumberRangeStartRequest,
     },
   );
   return mapNumberRange(range.service, range);

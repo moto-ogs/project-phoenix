@@ -4,7 +4,7 @@ import {
   bool,
   fileAnswer,
   instant,
-  int64StringOrNumber,
+  int64String,
   object,
   optional,
   paginated,
@@ -45,7 +45,7 @@ export interface RoomResponse {
 }
 
 export const RoomResponseSchema: z.ZodType<RoomResponse, unknown> = object<RoomResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   building: optional(str),
   floor: optional(safeInt),
@@ -76,7 +76,7 @@ export interface RoomSessionEntry {
 }
 
 export const RoomSessionEntrySchema: z.ZodType<RoomSessionEntry, unknown> = object<RoomSessionEntry>({
-  session_id: int64StringOrNumber,
+  session_id: int64String,
   started_at: instant,
   ended_at: optional(instant),
   duration_minutes: optional(safeInt),

@@ -67,6 +67,7 @@ services:
       # Never interpolate the privileged maintenance DB_DSN here.
       DB_DSN: postgres://phoenix_auth@postgres:5432/postgres?sslmode=disable
       TZ: ${TZ:?TZ is required}
+      HUBSPOT_DEMO_TOKEN: ${HUBSPOT_DEMO_TOKEN-}
       APP_ENV: ${APP_ENV:?APP_ENV is required}
       LOG_LEVEL: ${LOG_LEVEL:?LOG_LEVEL is required}
       LOG_TEXTLOGGING: ${LOG_TEXTLOGGING:?LOG_TEXTLOGGING is required}
@@ -159,7 +160,6 @@ services:
       METRICS_BEARER_TOKEN: ${METRICS_BEARER_TOKEN:?METRICS_BEARER_TOKEN is required}
       TENANT_DOMAIN: ${TENANT_DOMAIN:?TENANT_DOMAIN is required}
       NEXT_PUBLIC_APP_ENV: ${NEXT_PUBLIC_APP_ENV:?NEXT_PUBLIC_APP_ENV is required}
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?NEXT_PUBLIC_API_URL is required}
       NEXT_PUBLIC_LOG_LEVEL: ${NEXT_PUBLIC_LOG_LEVEL:?NEXT_PUBLIC_LOG_LEVEL is required}
       NEXT_PUBLIC_TENANT_DOMAIN: ${NEXT_PUBLIC_TENANT_DOMAIN:?NEXT_PUBLIC_TENANT_DOMAIN is required}
       NEXT_PUBLIC_POSTHOG_KEY: ${NEXT_PUBLIC_POSTHOG_KEY?NEXT_PUBLIC_POSTHOG_KEY is required}

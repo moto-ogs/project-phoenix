@@ -18,6 +18,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
@@ -203,8 +204,8 @@ func (rs *Resource) create(w http.ResponseWriter, r *http.Request) {
 }
 
 type SendRequest struct {
-	ContractIDs    []int64 `json:"contract_ids"`
-	RecipientEmail *string `json:"recipient_email"`
+	ContractIDs    []common.ID `json:"contract_ids"`
+	RecipientEmail *string     `json:"recipient_email"`
 }
 
 // Bind accepts the body; the owner checks the IDs.
@@ -223,11 +224,11 @@ func (rs *Resource) send(w http.ResponseWriter, r *http.Request) {
 	var result carecontract.SendResult
 	var err error
 	if req.RecipientEmail == nil {
-		result, err = rs.contracts.SendContracts(r.Context(), reviewer, req.ContractIDs)
+		result, err = rs.contracts.SendContracts(r.Context(), reviewer, ident.Int64s(req.ContractIDs))
 	} else if len(req.ContractIDs) != 1 {
 		err = carecontract.InvalidSelection("contract_ids", "single_required")
 	} else {
-		result, err = rs.contracts.ResendContract(r.Context(), reviewer, req.ContractIDs[0], *req.RecipientEmail)
+		result, err = rs.contracts.ResendContract(r.Context(), reviewer, req.ContractIDs[0].Int64(), *req.RecipientEmail)
 	}
 	if err != nil {
 		tenant.MarkRollback(r.Context())

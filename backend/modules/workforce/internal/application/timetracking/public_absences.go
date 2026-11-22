@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type staffAbsenceCapability struct {
@@ -24,11 +25,11 @@ func publicStaffAbsence(entity *StaffAbsence) *workforce.StaffAbsence {
 		return nil
 	}
 	return &workforce.StaffAbsence{
-		ID: entity.ID, TenantID: entity.TenantID, StaffID: entity.StaffID, AbsenceType: entity.AbsenceType, AbsenceTypeID: entity.AbsenceTypeID,
+		ID: ident.ID(entity.ID), TenantID: ident.ID(entity.TenantID), StaffID: ident.ID(entity.StaffID), AbsenceType: entity.AbsenceType, AbsenceTypeID: (*ident.ID)(entity.AbsenceTypeID),
 		AbsenceTypeLabel: entity.AbsenceTypeLabel, DateStart: entity.DateStart.String(), DateEnd: entity.DateEnd.String(), HalfDay: entity.HalfDay,
-		StartHalfDay: entity.StartHalfDay, EndHalfDay: entity.EndHalfDay, Note: entity.Note, Status: entity.Status, ApprovedBy: entity.ApprovedBy,
-		ApprovedAt: entity.ApprovedAt, CreatedBy: entity.CreatedBy, WorkingDays: entity.WorkingDays, DecisionNote: entity.DecisionNote,
-		RequestedAt: entity.RequestedAt, SubstituteStaffID: entity.SubstituteStaffID, CreatedAt: entity.CreatedAt, UpdatedAt: entity.UpdatedAt,
+		StartHalfDay: entity.StartHalfDay, EndHalfDay: entity.EndHalfDay, Note: entity.Note, Status: entity.Status, ApprovedBy: (*ident.ID)(entity.ApprovedBy),
+		ApprovedAt: entity.ApprovedAt, CreatedBy: ident.ID(entity.CreatedBy), WorkingDays: entity.WorkingDays, DecisionNote: entity.DecisionNote,
+		RequestedAt: entity.RequestedAt, SubstituteStaffID: (*ident.ID)(entity.SubstituteStaffID), CreatedAt: entity.CreatedAt, UpdatedAt: entity.UpdatedAt,
 	}
 }
 
@@ -57,9 +58,9 @@ func publicVacationOpening(entity *StaffVacationOpening) *workforce.StaffVacatio
 		return nil
 	}
 	return &workforce.StaffVacationOpening{
-		ID: entity.ID, TenantID: entity.TenantID, StaffID: entity.StaffID, Year: entity.Year, EffectiveDate: entity.EffectiveDate.String(),
+		ID: ident.ID(entity.ID), TenantID: ident.ID(entity.TenantID), StaffID: ident.ID(entity.StaffID), Year: entity.Year, EffectiveDate: entity.EffectiveDate.String(),
 		TakenBeforeDays: entity.TakenBeforeDays, EnteredRemainingDays: entity.EnteredRemainingDays, Note: entity.Note,
-		DecidedBy: entity.DecidedBy, DecidedAt: entity.DecidedAt, CreatedAt: entity.CreatedAt, UpdatedAt: entity.UpdatedAt,
+		DecidedBy: ident.ID(entity.DecidedBy), DecidedAt: entity.DecidedAt, CreatedAt: entity.CreatedAt, UpdatedAt: entity.UpdatedAt,
 	}
 }
 
@@ -279,7 +280,7 @@ func (c staffAbsenceCapability) VacationQuotaSummary(ctx context.Context, staffI
 		return nil, nil
 	}
 	return &workforce.VacationQuotaSummary{
-		StaffID: summary.StaffID, Year: summary.Year, EntitledDays: summary.EntitledDays, CarryoverDays: summary.CarryoverDays,
+		StaffID: ident.ID(summary.StaffID), Year: summary.Year, EntitledDays: summary.EntitledDays, CarryoverDays: summary.CarryoverDays,
 		TakenBeforeDays: summary.TakenBeforeDays, TakenDays: summary.TakenDays, ReservedDays: summary.ReservedDays,
 		RemainingDays: summary.RemainingDays, Opening: publicVacationOpening(summary.Opening),
 	}, nil

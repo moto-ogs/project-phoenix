@@ -2,7 +2,7 @@
 import { z } from "zod";
 import {
   instant,
-  int64StringOrNumber,
+  int64String,
   object,
   optional,
   requestBody,
@@ -23,12 +23,12 @@ export interface PersonResponse {
 }
 
 export const PersonResponseSchema: z.ZodType<PersonResponse, unknown> = object<PersonResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   first_name: str,
   last_name: str,
   email: optional(str),
   tag_id: optional(str),
-  account_id: optional(int64StringOrNumber),
+  account_id: optional(int64String),
   created_at: instant,
   updated_at: instant,
 });
@@ -38,7 +38,7 @@ export interface DirectoryPersonRequest {
   first_name?: string;
   last_name?: string;
   tag_id?: string;
-  account_id?: number;
+  account_id?: string;
 }
 
 export const routes = {

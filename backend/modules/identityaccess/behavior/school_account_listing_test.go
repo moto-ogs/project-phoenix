@@ -8,6 +8,7 @@ import (
 	"time"
 
 	api "github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	identityaccessCompose "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose"
 
@@ -80,7 +81,7 @@ func TestOperatorAccountListingCaregiverEnrichment(t *testing.T) {
 	rows, err := directory.ListAccountsByTenantID(ctx, testpkg.Tenant(t))
 	require.NoError(t, err)
 	require.Len(t, rows, 1)
-	require.Equal(t, account.ID, rows[0].AccountID)
+	require.Equal(t, ident.ID(account.ID), rows[0].AccountID)
 	require.Equal(t, "Ada", rows[0].FirstName)
 	require.Equal(t, "Listing", rows[0].LastName)
 	require.True(t, rows[0].HasCaregiverProfile)

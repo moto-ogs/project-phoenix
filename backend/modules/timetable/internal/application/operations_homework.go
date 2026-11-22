@@ -29,7 +29,7 @@ func (s *operations) applyRosterHomework(ctx context.Context, inst *scheduleMode
 	studentIDs := make([]int64, 0, len(rows))
 	for _, row := range rows {
 		classes = append(classes, row.SchoolClass)
-		studentIDs = append(studentIDs, row.StudentID)
+		studentIDs = append(studentIDs, row.StudentID.Int64())
 	}
 	entries, err := s.deps.Homework.ClassHomework(ctx, classes, date)
 	if err != nil {
@@ -52,7 +52,7 @@ func (s *operations) applyRosterHomework(ctx context.Context, inst *scheduleMode
 		if keys := classArrivalKeys([]string{rows[i].SchoolClass}); len(keys) > 0 {
 			rows[i].Homework = byClass[keys[0]]
 		}
-		rows[i].HomeworkFeedback = byStudent[rows[i].StudentID]
+		rows[i].HomeworkFeedback = byStudent[rows[i].StudentID.Int64()]
 	}
 	return nil
 }

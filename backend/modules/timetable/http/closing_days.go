@@ -11,7 +11,15 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
+
+// closingDayChangeSource names a saved closing day in the tenant-wide
+// staffing_deviation_changed signal (#7664). Series skip a closing day when
+// they plan, and the open pages that show the day („Heute anders“, the
+// planner, the calendar periods) refetch on that signal. It carries no
+// content and runs after the commit.
+const closingDayChangeSource = "closing_days"
 
 // ClosingDayRequest represents a create/update request for a closing day
 // range (#1418 3b).
@@ -42,12 +50,12 @@ func (req *ClosingDayRequest) Bind(_ *http.Request) error {
 
 // ClosingDayResponse represents a closing day in API responses
 type ClosingDayResponse struct {
-	ID        int64  `json:"id"`
-	StartDate string `json:"start_date"`
-	EndDate   string `json:"end_date"`
-	Reason    string `json:"reason"`
-	CreatedAt string `json:"created_at"`
-	UpdatedAt string `json:"updated_at"`
+	ID        common.ID `json:"id"`
+	StartDate string    `json:"start_date"`
+	EndDate   string    `json:"end_date"`
+	Reason    string    `json:"reason"`
+	CreatedAt string    `json:"created_at"`
+	UpdatedAt string    `json:"updated_at"`
 	// Traeger marks a closing day the school's Träger planned (#4702): it
 	// counts like the school's own, but only the Träger-Büro changes it.
 	Traeger bool `json:"traeger"`
@@ -55,7 +63,7 @@ type ClosingDayResponse struct {
 
 func mapClosingDayToResponse(d schoolcalendar.ClosingDay) ClosingDayResponse {
 	return ClosingDayResponse{
-		ID:        d.ID,
+		ID:        ident.ID(d.ID),
 		StartDate: d.StartDate,
 		EndDate:   d.EndDate,
 		Reason:    d.Reason,
@@ -128,6 +136,7 @@ func (rs *Resource) createClosingDay(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	rs.broadcastStaffingDeviationChanged(r.Context(), closingDayChangeSource)
 	common.Respond(w, r, http.StatusCreated, mapClosingDayToResponse(day), "Closing day created successfully")
 }
 
@@ -169,6 +178,7 @@ func (rs *Resource) updateClosingDay(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	rs.broadcastStaffingDeviationChanged(r.Context(), closingDayChangeSource)
 	common.Respond(w, r, http.StatusOK, mapClosingDayToResponse(updated), "Closing day updated successfully")
 }
 
@@ -193,6 +203,7 @@ func (rs *Resource) deleteClosingDay(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	rs.broadcastStaffingDeviationChanged(r.Context(), closingDayChangeSource)
 	common.Respond(w, r, http.StatusOK, nil, "Closing day deleted successfully")
 }
 

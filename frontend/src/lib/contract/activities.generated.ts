@@ -4,7 +4,7 @@ import {
   arr,
   bool,
   instant,
-  int64StringOrNumber,
+  int64String,
   noData,
   nullable,
   object,
@@ -30,11 +30,11 @@ export interface ActivityCategoryResponse {
 }
 
 export const ActivityCategoryResponseSchema: z.ZodType<ActivityCategoryResponse, unknown> = object<ActivityCategoryResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   description: optional(str),
   color: optional(str),
-  shift_type_id: optional(int64StringOrNumber),
+  shift_type_id: optional(int64String),
   is_system: bool,
   archived_at: optional(instant),
   usage_count: optional(safeInt),
@@ -52,8 +52,8 @@ export interface ActivitySupervisorResponse {
 }
 
 export const ActivitySupervisorResponseSchema: z.ZodType<ActivitySupervisorResponse, unknown> = object<ActivitySupervisorResponse>({
-  id: int64StringOrNumber,
-  staff_id: int64StringOrNumber,
+  id: int64String,
+  staff_id: int64String,
   is_primary: bool,
   first_name: optional(str),
   last_name: optional(str),
@@ -70,10 +70,10 @@ export interface ActivityScheduleResponse {
 }
 
 export const ActivityScheduleResponseSchema: z.ZodType<ActivityScheduleResponse, unknown> = object<ActivityScheduleResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   weekday: safeInt,
-  timeframe_id: optional(int64StringOrNumber),
-  activity_group_id: int64StringOrNumber,
+  timeframe_id: optional(int64String),
+  activity_group_id: int64String,
   created_at: instant,
   updated_at: instant,
 });
@@ -99,17 +99,17 @@ export interface ActivityResponse {
 }
 
 export const ActivityResponseSchema: z.ZodType<ActivityResponse, unknown> = object<ActivityResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   max_participants: nullable(safeInt),
   is_open: bool,
-  category_id: int64StringOrNumber,
-  planned_room_id: optional(int64StringOrNumber),
-  created_by: nullable(int64StringOrNumber),
+  category_id: int64String,
+  planned_room_id: optional(int64String),
+  created_by: nullable(int64String),
   created_by_name: optional(str),
   category: optional(ActivityCategoryResponseSchema),
-  supervisor_id: optional(int64StringOrNumber),
-  supervisor_ids: optional(arr(int64StringOrNumber)),
+  supervisor_id: optional(int64String),
+  supervisor_ids: optional(arr(int64String)),
   supervisors: optional(arr(ActivitySupervisorResponseSchema)),
   schedules: optional(arr(ActivityScheduleResponseSchema)),
   enrollment_count: optional(safeInt),
@@ -117,10 +117,23 @@ export const ActivityResponseSchema: z.ZodType<ActivityResponse, unknown> = obje
   updated_at: instant,
 });
 
+/** Go: httpadapter.EnrolledStudentResponse */
+export interface EnrolledStudentResponse {
+  id: string;
+  first_name: string;
+  last_name: string;
+}
+
+export const EnrolledStudentResponseSchema: z.ZodType<EnrolledStudentResponse, unknown> = object<EnrolledStudentResponse>({
+  id: int64String,
+  first_name: str,
+  last_name: str,
+});
+
 /** Go: httpadapter.ScheduleRequest */
 export interface ScheduleRequest {
   weekday?: number;
-  timeframe_id?: number | null;
+  timeframe_id?: string | null;
 }
 
 /** Go: httpadapter.ActivityRequest */
@@ -128,10 +141,10 @@ export interface ActivityRequest {
   name?: string;
   max_participants?: number | null;
   is_open?: boolean;
-  category_id?: number;
-  planned_room_id?: number | null;
+  category_id?: string;
+  planned_room_id?: string | null;
   schedules?: ScheduleRequest[] | null;
-  supervisor_ids?: number[] | null;
+  supervisor_ids?: string[] | null;
 }
 
 /** Go: httpadapter.ActivityCategoryRequest */
@@ -144,8 +157,8 @@ export interface ActivityCategoryRequest {
 /** Go: httpadapter.QuickActivityRequest */
 export interface QuickActivityRequest {
   name?: string;
-  category_id?: number;
-  room_id?: number | null;
+  category_id?: string;
+  room_id?: string | null;
   max_participants?: number | null;
 }
 
@@ -162,7 +175,7 @@ export interface QuickActivityResponse {
 }
 
 export const QuickActivityResponseSchema: z.ZodType<QuickActivityResponse, unknown> = object<QuickActivityResponse>({
-  activity_id: int64StringOrNumber,
+  activity_id: int64String,
   name: str,
   category_name: str,
   room_name: optional(str),
@@ -170,6 +183,28 @@ export const QuickActivityResponseSchema: z.ZodType<QuickActivityResponse, unkno
   status: str,
   message: str,
   created_at: instant,
+});
+
+/** Go: httpadapter.BatchEnrollmentRequest */
+export interface BatchEnrollmentRequest {
+  student_ids?: string[] | null;
+}
+
+/** Go: httpadapter.EnrollmentUpdateResponse */
+export interface EnrollmentUpdateResponse {
+  activity_id: string;
+  activity_name: string;
+  enrollment_count: number;
+  max_participants: number | null;
+  students_enrolled: string[] | null;
+}
+
+export const EnrollmentUpdateResponseSchema: z.ZodType<EnrollmentUpdateResponse, unknown> = object<EnrollmentUpdateResponse>({
+  activity_id: int64String,
+  activity_name: str,
+  enrollment_count: safeInt,
+  max_participants: nullable(safeInt),
+  students_enrolled: nullable(arr(int64String)),
 });
 
 /** Query of DELETE /api/activities/{id}/supervisors/{supervisorId} */
@@ -248,6 +283,12 @@ export const routes = {
     portals: ["tenant"],
     response: success(ActivityResponseSchema),
   },
+  "GET /api/activities/{id}/students": {
+    method: "GET",
+    pattern: "/api/activities/{id}/students",
+    portals: ["tenant"],
+    response: success(z.array(EnrolledStudentResponseSchema)),
+  },
   "POST /api/activities/": {
     method: "POST",
     pattern: "/api/activities/",
@@ -288,5 +329,12 @@ export const routes = {
     portals: ["tenant"],
     request: requestBody<ActivityRequest>(),
     response: success(ActivityResponseSchema),
+  },
+  "PUT /api/activities/{id}/students": {
+    method: "PUT",
+    pattern: "/api/activities/{id}/students",
+    portals: ["tenant"],
+    request: requestBody<BatchEnrollmentRequest>(),
+    response: success(EnrollmentUpdateResponseSchema),
   },
 } as const;

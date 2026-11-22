@@ -6,7 +6,7 @@ import {
   calendarDate,
   fileAnswer,
   instant,
-  int64StringOrNumber,
+  int64String,
   multipart,
   noData,
   nullable,
@@ -51,10 +51,10 @@ export interface ContractSummary {
 }
 
 export const ContractSummarySchema: z.ZodType<ContractSummary, unknown> = object<ContractSummary>({
-  student_id: nullable(int64StringOrNumber),
-  id: int64StringOrNumber,
+  student_id: nullable(int64String),
+  id: int64String,
   status: str,
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   school_name: str,
   child_first_name: str,
   child_last_name: str,
@@ -93,7 +93,7 @@ export interface Service {
 
 export const ServiceSchema: z.ZodType<Service, unknown> = object<Service>({
   weekday: str,
-  care_offering_id: int64StringOrNumber,
+  care_offering_id: int64String,
   module_name: str,
   ends_at: str,
   last_day: nullable(calendarDate),
@@ -119,8 +119,8 @@ export interface Candidate {
 }
 
 export const CandidateSchema: z.ZodType<Candidate, unknown> = object<Candidate>({
-  school_id: int64StringOrNumber,
-  request_child_id: int64StringOrNumber,
+  school_id: int64String,
+  request_child_id: int64String,
   acceptance_issue: str,
   renewal: bool,
   school_name: str,
@@ -144,7 +144,7 @@ export interface SchoolConclusion {
 }
 
 export const SchoolConclusionSchema: z.ZodType<SchoolConclusion, unknown> = object<SchoolConclusion>({
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   school_name: str,
   mode: str,
 });
@@ -197,7 +197,7 @@ export interface Version {
 }
 
 export const VersionSchema: z.ZodType<Version, unknown> = object<Version>({
-  id: int64StringOrNumber,
+  id: int64String,
   number: safeInt,
   status: str,
   effective_from: nullable(calendarDate),
@@ -326,10 +326,10 @@ export interface ContractDetail {
 }
 
 export const ContractDetailSchema: z.ZodType<ContractDetail, unknown> = object<ContractDetail>({
-  student_id: nullable(int64StringOrNumber),
-  id: int64StringOrNumber,
+  student_id: nullable(int64String),
+  id: int64String,
   status: str,
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   school_name: str,
   child_first_name: str,
   child_last_name: str,
@@ -356,8 +356,8 @@ export const ContractDetailSchema: z.ZodType<ContractDetail, unknown> = object<C
 
 /** Go: carecontract.CandidateKey */
 export interface CandidateKey {
-  school_id?: number;
-  request_child_id?: number;
+  school_id?: string;
+  request_child_id?: string;
 }
 
 /** Go: carecontracthttp.CreateRequest */
@@ -373,8 +373,8 @@ export interface CreateSkip {
 }
 
 export const CreateSkipSchema: z.ZodType<CreateSkip, unknown> = object<CreateSkip>({
-  school_id: int64StringOrNumber,
-  request_child_id: int64StringOrNumber,
+  school_id: int64String,
+  request_child_id: int64String,
   reason: str,
 });
 
@@ -391,7 +391,7 @@ export const CreateResultSchema: z.ZodType<CreateResult, unknown> = object<Creat
 
 /** Go: carecontracthttp.SendRequest */
 export interface SendRequest {
-  contract_ids?: number[] | null;
+  contract_ids?: string[] | null;
   recipient_email?: string | null;
 }
 
@@ -402,7 +402,7 @@ export interface SendSkip {
 }
 
 export const SendSkipSchema: z.ZodType<SendSkip, unknown> = object<SendSkip>({
-  id: int64StringOrNumber,
+  id: int64String,
   reason: str,
 });
 
@@ -413,7 +413,7 @@ export interface SendResult {
 }
 
 export const SendResultSchema: z.ZodType<SendResult, unknown> = object<SendResult>({
-  sent: nullable(arr(int64StringOrNumber)),
+  sent: nullable(arr(int64String)),
   skipped: nullable(arr(SendSkipSchema)),
 });
 

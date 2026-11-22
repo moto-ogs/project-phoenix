@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // PlanningResource serves the Einsatzplanung of the session's Träger at
@@ -49,14 +50,14 @@ func (rs *PlanningResource) TraegerRouter(protectedTraegerRoutes func(chi.Router
 
 // PlanShiftRequest is one shift at one Einsatzort of the record.
 type PlanShiftRequest struct {
-	WorkingTimeConfirmed bool   `json:"working_time_confirmed"`
-	WorkingTimeReason    string `json:"working_time_reason"`
-	SchoolID             int64  `json:"school_id,string"`
-	Date                 string `json:"date"`
-	StartTime            string `json:"start_time"`
-	EndTime              string `json:"end_time"`
-	BreakMinutes         int    `json:"break_minutes"`
-	Notes                string `json:"notes"`
+	WorkingTimeConfirmed bool     `json:"working_time_confirmed"`
+	WorkingTimeReason    string   `json:"working_time_reason"`
+	SchoolID             ident.ID `json:"school_id"`
+	Date                 string   `json:"date"`
+	StartTime            string   `json:"start_time"`
+	EndTime              string   `json:"end_time"`
+	BreakMinutes         int      `json:"break_minutes"`
+	Notes                string   `json:"notes"`
 }
 
 func (req *PlanShiftRequest) Bind(*http.Request) error {
@@ -71,7 +72,7 @@ func (req *PlanShiftRequest) Bind(*http.Request) error {
 
 func (req *PlanShiftRequest) toInput(recordID int64) workforce.TraegerPlanShift {
 	return workforce.TraegerPlanShift{
-		RecordID: recordID, SchoolID: req.SchoolID, Date: calendar.Date(req.Date), StartTime: req.StartTime, EndTime: req.EndTime,
+		RecordID: recordID, SchoolID: req.SchoolID.Int64(), Date: calendar.Date(req.Date), StartTime: req.StartTime, EndTime: req.EndTime,
 		BreakMinutes: req.BreakMinutes, Notes: req.Notes,
 		WorkingTime: workforce.WorkingTimeConfirmation{Confirmed: req.WorkingTimeConfirmed, Reason: req.WorkingTimeReason},
 	}

@@ -5,6 +5,15 @@
 // zählt sie für die Geschwisterermäßigung.
 
 import { apiErrorFromResponse, transportFetch } from "./api-error";
+import type {
+  RegistrationFamilyChildren as WireRegistrationFamilyChildren,
+  StatusFamilyChildrenRequest as WireStatusFamilyChildrenRequest,
+} from "./contract/enrollment.generated";
+import type {
+  ContractFamilyChildren as WireContractFamilyChildren,
+  familyChildrenRequest as WireContractFamilyChildrenRequest,
+} from "./contract/parent-me.generated";
+import type { SigningFamilyChildrenRequest as WireSigningFamilyChildrenRequest } from "./contract/public-care-contract-signing.generated";
 
 /** Where the parents state the number. */
 export type FamilyChildrenSource =
@@ -36,24 +45,6 @@ export interface ParentFamilyChildren {
   readonly accepted: boolean;
 }
 
-interface BackendFamilyChildren {
-  stated_children: number | null;
-  stated_at: string | null;
-  confirmed_children: number | null;
-  confirmed_at: string | null;
-  valid_from: string | null;
-  valid_until: string | null;
-  can_state: boolean;
-}
-
-interface BackendRegistrationFamilyChildren {
-  children: number | null;
-  stated_at: string | null;
-  asked: boolean;
-  can_state: boolean;
-  accepted: boolean;
-}
-
 function path(source: FamilyChildrenSource): string {
   switch (source.kind) {
     case "inbox":
@@ -65,7 +56,7 @@ function path(source: FamilyChildrenSource): string {
   }
 }
 
-function mapContract(data: BackendFamilyChildren): ParentFamilyChildren {
+function mapContract(data: WireContractFamilyChildren): ParentFamilyChildren {
   return {
     statedChildren: data.stated_children,
     statedAt: data.stated_at,
@@ -81,7 +72,7 @@ function mapContract(data: BackendFamilyChildren): ParentFamilyChildren {
 
 /** A registration has no confirmation yet: the contract brings it later. */
 function mapRegistration(
-  data: BackendRegistrationFamilyChildren,
+  data: WireRegistrationFamilyChildren,
 ): ParentFamilyChildren {
   return {
     statedChildren: data.children,
@@ -113,8 +104,8 @@ async function request(
   }
   const { data } = (await response.json()) as { data: unknown };
   return source.kind === "enrollment"
-    ? mapRegistration(data as BackendRegistrationFamilyChildren)
-    : mapContract(data as BackendFamilyChildren);
+    ? mapRegistration(data as WireRegistrationFamilyChildren)
+    : mapContract(data as WireContractFamilyChildren);
 }
 
 /** The number of the family at the given source. */
@@ -131,6 +122,11 @@ export function stateFamilyChildren(
 ): Promise<ParentFamilyChildren> {
   return request(source, {
     method: "PUT",
-    body: JSON.stringify({ children }),
+    // One body for all three routes.
+    body: JSON.stringify({
+      children,
+    } satisfies WireStatusFamilyChildrenRequest &
+      WireContractFamilyChildrenRequest &
+      WireSigningFamilyChildrenRequest),
   });
 }

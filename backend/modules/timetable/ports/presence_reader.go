@@ -41,6 +41,7 @@ type ActivityInstance struct {
 	CreatedBy                         *int64
 	TemplateType                      string
 	TemplateRequiredStaff             *int
+	TemplatePlannedRoomID             *int64
 	ActiveGroupID, StartedBy          *int64
 	StartedAt, CompletedAt            *time.Time
 	CompletedBy                       *int64

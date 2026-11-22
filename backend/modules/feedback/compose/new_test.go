@@ -33,7 +33,7 @@ func buildModule(t *testing.T, db *bun.DB, settings settingsStub, observations .
 	if len(observations) > 0 {
 		observe = observations[0]
 	}
-	module, err := New(Dependencies{DB: db, Settings: settings, Today: func() feedback.Date { return fixedToday }, Observe: observe})
+	module, err := New(Dependencies{DB: db, Settings: settings, Stops: internalNoStops{}, Today: func() feedback.Date { return fixedToday }, Observe: observe})
 	require.NoError(t, err)
 	return module
 }
@@ -251,3 +251,8 @@ func hasEntry(t *testing.T, module feedback.Capability, ctx context.Context, id 
 	}
 	return false
 }
+
+// internalNoStops stops no child's mood capture.
+type internalNoStops struct{}
+
+func (internalNoStops) MoodCaptureStopped(context.Context, int64) (bool, error) { return false, nil }

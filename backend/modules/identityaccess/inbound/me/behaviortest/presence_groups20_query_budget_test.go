@@ -8,6 +8,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	rootAPI "github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 	"github.com/stretchr/testify/require"
@@ -51,12 +53,12 @@ func TestPresenceGroups20CallerQueryBudget(t *testing.T) {
 			group := testpkg.CreateTestEducationGroup(t, db, fmt.Sprintf("Caller20Group%02d", i))
 			testpkg.CreateTestGroupTeacher(t, db, group.ID, teacher.ID)
 			groupIDs = append(groupIDs, group.ID)
-			expected["groups"][group.ID] = map[string]any{"id": group.ID, "tenant_id": group.TenantID, "created_at": group.CreatedAt, "updated_at": group.UpdatedAt, "name": group.Name, "via_substitution": false}
+			expected["groups"][group.ID] = map[string]any{"id": ident.ID(group.ID), "tenant_id": ident.ID(group.TenantID), "created_at": group.CreatedAt, "updated_at": group.UpdatedAt, "name": group.Name, "via_substitution": false}
 			activity := testpkg.CreateTestActivityGroup(t, db, fmt.Sprintf("Caller20Activity%02d", i))
 			var category testpkg.ActivityCategory
 			require.NoError(t, db.NewSelect().Model(&category).Where("id = ?", activity.CategoryID).Scan(testpkg.Ctx(t)))
-			cat := map[string]any{"id": category.ID, "tenant_id": category.TenantID, "created_at": category.CreatedAt, "updated_at": category.UpdatedAt, "name": category.Name, "color": category.Color, "is_system": false}
-			activityRow := map[string]any{"id": activity.ID, "tenant_id": activity.TenantID, "created_at": activity.CreatedAt, "updated_at": activity.UpdatedAt, "name": activity.Name, "max_participants": activity.MaxParticipants, "is_open": activity.IsOpen, "category_id": activity.CategoryID, "created_by": activity.CreatedBy, "type": "activity", "is_template": false, "is_system": false, "target_group_type": "none", "category": cat}
+			cat := map[string]any{"id": ident.ID(category.ID), "tenant_id": ident.ID(category.TenantID), "created_at": category.CreatedAt, "updated_at": category.UpdatedAt, "name": category.Name, "color": category.Color, "is_system": false}
+			activityRow := map[string]any{"id": ident.ID(activity.ID), "tenant_id": ident.ID(activity.TenantID), "created_at": activity.CreatedAt, "updated_at": activity.UpdatedAt, "name": activity.Name, "max_participants": activity.MaxParticipants, "is_open": activity.IsOpen, "category_id": ident.ID(activity.CategoryID), "created_by": (*ident.ID)(activity.CreatedBy), "type": "activity", "is_template": false, "is_system": false, "target_group_type": "none", "category": cat}
 			supervisor := testpkg.ActivitySupervisor{TenantID: testpkg.Tenant(t), StaffID: teacher.StaffID, GroupID: activity.ID}
 			_, err := db.NewInsert().Model(&supervisor).Exec(testpkg.Ctx(t))
 			require.NoError(t, err)
@@ -64,8 +66,8 @@ func TestPresenceGroups20CallerQueryBudget(t *testing.T) {
 			// The API renders stored instants in the database session zone.
 			require.NoError(t, db.NewSelect().Model(session).WherePK().Scan(testpkg.Ctx(t)))
 			sessionIDs = append(sessionIDs, session.ID)
-			roomRow := map[string]any{"id": room.ID, "tenant_id": room.TenantID, "created_at": room.CreatedAt, "updated_at": room.UpdatedAt, "name": room.Name, "building": room.Building, "capacity": room.Capacity, "is_system": false, "is_open_room": false}
-			sessionRow := map[string]any{"id": session.ID, "tenant_id": session.TenantID, "created_at": session.CreatedAt, "updated_at": session.UpdatedAt, "start_time": session.StartTime, "last_activity": session.LastActivity, "timeout_minutes": session.TimeoutMinutes, "group_id": activity.ID, "room_id": room.ID, "room": roomRow, "actual_group": activityRow}
+			roomRow := map[string]any{"id": ident.ID(room.ID), "tenant_id": ident.ID(room.TenantID), "created_at": room.CreatedAt, "updated_at": room.UpdatedAt, "name": room.Name, "building": room.Building, "capacity": room.Capacity, "is_system": false, "is_open_room": false}
+			sessionRow := map[string]any{"id": ident.ID(session.ID), "tenant_id": ident.ID(session.TenantID), "created_at": session.CreatedAt, "updated_at": session.UpdatedAt, "start_time": session.StartTime, "last_activity": session.LastActivity, "timeout_minutes": session.TimeoutMinutes, "group_id": ident.ID(activity.ID), "room_id": ident.ID(room.ID), "room": roomRow, "actual_group": activityRow}
 			expected["supervised"][session.ID] = sessionRow
 			testpkg.CreateTestGroupSupervisor(t, db, teacher.StaffID, session.ID, "supervisor")
 		}
@@ -94,12 +96,12 @@ func TestPresenceGroups20CallerQueryBudget(t *testing.T) {
 			for _, row := range envelope.Data {
 				id := testpkg.JSONID(t, row["id"])
 				ids = append(ids, id)
-				want, err := json.Marshal(expected[route.key][id])
+				want, err := wire.Marshal(expected[route.key][id])
 				require.NoError(t, err)
 				actual, err := json.Marshal(row)
 				require.NoError(t, err)
 				require.JSONEq(t, string(want), string(actual), "complete fixture-derived DTO")
-				require.EqualValues(t, testpkg.Tenant(t), row["tenant_id"])
+				require.EqualValues(t, testpkg.Tenant(t), testpkg.JSONID(t, row["tenant_id"]))
 				require.NotEmpty(t, row["created_at"])
 				require.NotEmpty(t, row["updated_at"])
 				if route.key == "groups" {

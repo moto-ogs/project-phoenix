@@ -21,10 +21,10 @@ func (d *SEPADebits) recordDebitFile(ctx context.Context, reviewer parentbilling
 		fileName: func(number int64) string { return debitFileName(number, plan.run.MessageID) }}
 	for _, entry := range plan.included {
 		if isNoticeRate(entry.Debit) {
-			file.notices = append(file.notices, entry.Debit.NoticeID)
+			file.notices = append(file.notices, entry.Debit.NoticeID.Int64())
 			continue
 		}
-		file.debits = append(file.debits, entry.Debit.ID)
+		file.debits = append(file.debits, entry.Debit.ID.Int64())
 	}
 	entry, _, err := recordExportFile(ctx, d.store, reviewer, file)
 	return entry, err

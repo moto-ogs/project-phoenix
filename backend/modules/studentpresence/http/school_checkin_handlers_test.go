@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -58,7 +59,7 @@ func TestBuildSchoolCheckinResponse_CheckedIn(t *testing.T) {
 	resp := buildSchoolCheckinResponse(42, status, true)
 
 	require.NotNil(t, resp)
-	assert.Equal(t, int64(42), resp.StudentID)
+	assert.Equal(t, ident.ID(int64(42)), resp.StudentID)
 	assert.Equal(t, "checked_in", resp.Status)
 	assert.Equal(t, "Anwesend", resp.Location)
 	assert.True(t, resp.Changed)

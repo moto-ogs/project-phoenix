@@ -12,18 +12,8 @@ import type {
   HandoverState,
 } from "./traeger-finance-exports-api";
 import { knownEnum } from "./contract/known-enum";
-import type {
-  FormatsRequest,
-  RecipientRequest,
-  TraegerRecipient as WireRecipient,
-  TraegerRecipientPage as WireRecipientPage,
-  TraegerRecipientsPage as WireRecipientsPage,
-  TraegerTransferEntry as WireHandover,
-} from "./contract/traeger-export-recipient.generated";
-import type {
-  HandoverRequestBody,
-  HandoverResult as WireResult,
-} from "./contract/traeger-finance-handovers.generated";
+import type * as traegerExportRecipientContract from "./contract/traeger-export-recipient.generated";
+import type * as traegerFinanceHandoversContract from "./contract/traeger-finance-handovers.generated";
 import { traegerRequest } from "./traeger-api";
 
 // Go does not register these sets; the contract types them as string. A value
@@ -164,7 +154,9 @@ export interface HandoverResult {
   readonly targetDirectory: string;
 }
 
-function handoverFromBackend(handover: WireHandover): ExportHandover {
+function handoverFromBackend(
+  handover: traegerExportRecipientContract.TraegerTransferEntry,
+): ExportHandover {
   return {
     id: handover.id,
     createdAt: handover.created_at,
@@ -180,7 +172,9 @@ function handoverFromBackend(handover: WireHandover): ExportHandover {
   };
 }
 
-function recipientFromBackend(recipient: WireRecipient): ExportRecipient {
+function recipientFromBackend(
+  recipient: traegerExportRecipientContract.TraegerRecipient,
+): ExportRecipient {
   return {
     id: recipient.id,
     name: recipient.name,
@@ -202,7 +196,7 @@ function recipientFromBackend(recipient: WireRecipient): ExportRecipient {
 }
 
 function recipientsPageFromBackend(
-  page: WireRecipientsPage,
+  page: traegerExportRecipientContract.TraegerRecipientsPage,
 ): ExportRecipientsPage {
   return {
     recipients: (page.recipients ?? []).map(recipientFromBackend),
@@ -215,7 +209,9 @@ function recipientsPageFromBackend(
   };
 }
 
-function recipientBody(draft: ExportRecipientDraft): RecipientRequest {
+function recipientBody(
+  draft: ExportRecipientDraft,
+): traegerExportRecipientContract.RecipientRequest {
   return {
     name: draft.name,
     enabled: draft.enabled,
@@ -233,7 +229,9 @@ const recipientPath = (id: string) => `${RECIPIENTS}/${encodeURIComponent(id)}`;
 /** Every recipient of the Träger, its formats and the newest handovers. */
 export async function fetchExportRecipients(): Promise<ExportRecipientsPage> {
   return recipientsPageFromBackend(
-    await traegerRequest<WireRecipientsPage>(RECIPIENTS),
+    await traegerRequest<traegerExportRecipientContract.TraegerRecipientsPage>(
+      RECIPIENTS,
+    ),
   );
 }
 
@@ -241,7 +239,10 @@ export async function fetchExportRecipients(): Promise<ExportRecipientsPage> {
 export async function fetchExportRecipient(
   id: string,
 ): Promise<ExportRecipientPage> {
-  const page = await traegerRequest<WireRecipientPage>(recipientPath(id));
+  const page =
+    await traegerRequest<traegerExportRecipientContract.TraegerRecipientPage>(
+      recipientPath(id),
+    );
   return {
     recipient: recipientFromBackend(page.recipient),
     handovers: (page.handovers ?? []).map(handoverFromBackend),
@@ -253,10 +254,13 @@ export async function createExportRecipient(
   draft: ExportRecipientDraft,
 ): Promise<ExportRecipient> {
   return recipientFromBackend(
-    await traegerRequest<WireRecipient>(RECIPIENTS, {
-      method: "POST",
-      body: recipientBody(draft),
-    }),
+    await traegerRequest<traegerExportRecipientContract.TraegerRecipient>(
+      RECIPIENTS,
+      {
+        method: "POST",
+        body: recipientBody(draft),
+      },
+    ),
   );
 }
 
@@ -266,10 +270,13 @@ export async function saveExportRecipient(
   draft: ExportRecipientDraft,
 ): Promise<ExportRecipient> {
   return recipientFromBackend(
-    await traegerRequest<WireRecipient>(recipientPath(id), {
-      method: "PUT",
-      body: recipientBody(draft),
-    }),
+    await traegerRequest<traegerExportRecipientContract.TraegerRecipient>(
+      recipientPath(id),
+      {
+        method: "PUT",
+        body: recipientBody(draft),
+      },
+    ),
   );
 }
 
@@ -278,9 +285,12 @@ export async function deleteExportRecipient(
   id: string,
 ): Promise<ExportRecipientsPage> {
   return recipientsPageFromBackend(
-    await traegerRequest<WireRecipientsPage>(recipientPath(id), {
-      method: "DELETE",
-    }),
+    await traegerRequest<traegerExportRecipientContract.TraegerRecipientsPage>(
+      recipientPath(id),
+      {
+        method: "DELETE",
+      },
+    ),
   );
 }
 
@@ -289,18 +299,18 @@ export async function assignExportFormats(
   assignments: readonly ExportFormatAssignment[],
 ): Promise<ExportRecipientsPage> {
   return recipientsPageFromBackend(
-    await traegerRequest<WireRecipientsPage>(`${RECIPIENTS}/formats`, {
-      method: "PUT",
-      body: {
-        assignments: assignments.map((assignment) => ({
-          format: assignment.format,
-          recipient_id:
-            assignment.recipientId === null
-              ? null
-              : Number(assignment.recipientId),
-        })),
-      } satisfies FormatsRequest,
-    }),
+    await traegerRequest<traegerExportRecipientContract.TraegerRecipientsPage>(
+      `${RECIPIENTS}/formats`,
+      {
+        method: "PUT",
+        body: {
+          assignments: assignments.map((assignment) => ({
+            format: assignment.format,
+            recipient_id: assignment.recipientId,
+          })),
+        } satisfies traegerExportRecipientContract.FormatsRequest,
+      },
+    ),
   );
 }
 
@@ -311,17 +321,18 @@ export async function handOverRunFile(
   runId: string,
   options: HandoverOptions = {},
 ): Promise<HandoverResult> {
-  const result = await traegerRequest<WireResult>(
-    `${HANDOVERS}/runs/${pathKind}/${encodeURIComponent(runId)}/${format}`,
-    {
-      method: "POST",
-      body: {
-        repeat: options.repeat ?? false,
-        ...(options.all ? { mode: "all" } : {}),
-        ...(options.fiscalYear ? { fiscal_year: options.fiscalYear } : {}),
-      } satisfies HandoverRequestBody,
-    },
-  );
+  const result =
+    await traegerRequest<traegerFinanceHandoversContract.HandoverResult>(
+      `${HANDOVERS}/runs/${pathKind}/${encodeURIComponent(runId)}/${format}`,
+      {
+        method: "POST",
+        body: {
+          repeat: options.repeat ?? false,
+          ...(options.all ? { mode: "all" } : {}),
+          ...(options.fiscalYear ? { fiscal_year: options.fiscalYear } : {}),
+        } satisfies traegerFinanceHandoversContract.HandoverRequestBody,
+      },
+    );
   return {
     fileName: result.file_name,
     state: knownHandoverState(result.state),

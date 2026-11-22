@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // ProfileResource handles the operator profile read and the e-mail change.
@@ -38,7 +39,7 @@ func (rs *ProfileResource) GetProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := &OperatorResponse{
-		ID:          operator.ID,
+		ID:          ident.ID(operator.ID),
 		Email:       operator.Email,
 		DisplayName: operator.DisplayName,
 	}

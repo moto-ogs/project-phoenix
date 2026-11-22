@@ -130,7 +130,7 @@ func (rs *Resource) applyDayDepartures(ctx context.Context, responses []StudentR
 	ids := make([]int64, 0, len(responses))
 	for i := range responses {
 		if responses[i].HasFullAccess {
-			ids = append(ids, responses[i].ID)
+			ids = append(ids, responses[i].ID.Int64())
 		}
 	}
 	if len(ids) == 0 {
@@ -142,7 +142,7 @@ func (rs *Resource) applyDayDepartures(ctx context.Context, responses []StudentR
 	}
 	for i := range responses {
 		if responses[i].HasFullAccess {
-			responses[i].DayDepartureMode = modes[responses[i].ID]
+			responses[i].DayDepartureMode = modes[responses[i].ID.Int64()]
 		}
 	}
 	return nil

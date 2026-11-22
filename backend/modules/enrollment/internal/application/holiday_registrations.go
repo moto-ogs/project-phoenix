@@ -16,6 +16,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The public holiday registration (#4661, ADR 0110). The link resolution runs
@@ -365,16 +366,16 @@ func (h *HolidayRegistrations) storeSubmitted(ctx context.Context, link enrollme
 	if err != nil {
 		return enrollment.HolidayRegistrationReceipt{}, fmt.Errorf("enrollment: store holiday registration: %w", err)
 	}
-	if err := h.claimHolidayProofs(ctx, link, receipt.ID, input.BenefitsProofTokens); err != nil {
+	if err := h.claimHolidayProofs(ctx, link, receipt.ID.Int64(), input.BenefitsProofTokens); err != nil {
 		return enrollment.HolidayRegistrationReceipt{}, err
 	}
-	if receipt.Placements, err = h.placeSubmitted(ctx, link.OrganizationID, period, input, receipt.ID); err != nil {
+	if receipt.Placements, err = h.placeSubmitted(ctx, link.OrganizationID, period, input, receipt.ID.Int64()); err != nil {
 		return enrollment.HolidayRegistrationReceipt{}, err
 	}
 	if err := h.enqueueReceipt(ctx, link, period, form, input, receipt); err != nil {
 		return enrollment.HolidayRegistrationReceipt{}, err
 	}
-	if receipt.ParentAccountOffered, err = h.offerHolidayParentAccount(ctx, link, period, input, receipt.ID); err != nil {
+	if receipt.ParentAccountOffered, err = h.offerHolidayParentAccount(ctx, link, period, input, receipt.ID.Int64()); err != nil {
 		return enrollment.HolidayRegistrationReceipt{}, err
 	}
 	return receipt, nil
@@ -415,7 +416,7 @@ func (h *HolidayRegistrations) placeSubmitted(ctx context.Context, organizationI
 	var weekIDs []int64
 	for _, child := range input.Children {
 		for _, booking := range child.Bookings {
-			weekIDs = append(weekIDs, booking.WeekID)
+			weekIDs = append(weekIDs, booking.WeekID.Int64())
 		}
 	}
 	own, _, err := h.placement.place(ctx, organizationID, period, weekIDs, registrationID, 0)
@@ -424,16 +425,16 @@ func (h *HolidayRegistrations) placeSubmitted(ctx context.Context, organizationI
 	}
 	placed := map[[2]int64]bool{}
 	for _, booking := range own {
-		placed[[2]int64{int64(booking.ChildPosition), booking.WeekID}] = true
+		placed[[2]int64{int64(booking.ChildPosition), booking.WeekID.Int64()}] = true
 	}
 	placements := []enrollment.HolidayReceiptPlacement{}
 	for i, child := range input.Children {
 		for _, booking := range child.Bookings {
 			placement := enrollment.HolidayPlacementWaitlisted
-			if placed[[2]int64{int64(i + 1), booking.WeekID}] {
+			if placed[[2]int64{int64(i + 1), booking.WeekID.Int64()}] {
 				placement = enrollment.HolidayPlacementPlaced
 			}
-			placements = append(placements, enrollment.HolidayReceiptPlacement{ChildPosition: i + 1, WeekID: booking.WeekID, Placement: placement})
+			placements = append(placements, enrollment.HolidayReceiptPlacement{ChildPosition: i + 1, WeekID: ident.ID(booking.WeekID), Placement: placement})
 		}
 	}
 	return placements, nil
@@ -451,8 +452,8 @@ func (h *HolidayRegistrations) enqueueReceipt(ctx context.Context, link enrollme
 	if err := h.deps.Mail.EnqueueTraegerMail(ctx, enrollment.TraegerMail{
 		OrganizationID: link.OrganizationID, Kind: enrollment.MailKindHolidayRegistrationReceived,
 		Recipient: input.Guardian.Email, Payload: payload,
-		RelatedType: enrollment.MailRelatedHolidayRegistration, RelatedID: receipt.ID,
-		IdempotencyKey: holidayReceiptMailKey(receipt.ID),
+		RelatedType: enrollment.MailRelatedHolidayRegistration, RelatedID: receipt.ID.Int64(),
+		IdempotencyKey: holidayReceiptMailKey(receipt.ID.Int64()),
 	}); err != nil {
 		return fmt.Errorf("enrollment: enqueue holiday registration mail: %w", err)
 	}
@@ -661,7 +662,7 @@ func validateHolidayChildren(children []enrollment.HolidayChildInput, schools []
 	errs := validation.Errors{}
 	known := map[int64]bool{}
 	for _, school := range schools {
-		known[school.ID] = true
+		known[school.ID.Int64()] = true
 	}
 	for i, child := range children {
 		childErrs := validation.Errors{}

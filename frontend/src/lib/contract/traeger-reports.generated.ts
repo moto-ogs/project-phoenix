@@ -6,7 +6,7 @@ import {
   calendarDate,
   fileAnswer,
   instant,
-  int64StringOrNumber,
+  int64String,
   nullable,
   num,
   object,
@@ -22,7 +22,7 @@ export interface KeyDateReportTemplate {
 }
 
 export const KeyDateReportTemplateSchema: z.ZodType<KeyDateReportTemplate, unknown> = object<KeyDateReportTemplate>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
 });
 
@@ -101,7 +101,7 @@ export interface KeyDateSchool {
 }
 
 export const KeyDateSchoolSchema: z.ZodType<KeyDateSchool, unknown> = object<KeyDateSchool>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   city: str,
   district: nullable(str),

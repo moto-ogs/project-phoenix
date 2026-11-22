@@ -108,7 +108,7 @@ func buildConsentServiceWithPhotos(t *testing.T, adjust func(*parentportalcompos
 		ChildRepo:           repos.ParentChildReads(),
 		StudentRepo:         owners.NewParentStudentReads(reposPeople.Student),
 		StudentGuardianRepo: owners.NewParentStudentGuardianReads(reposPeople.StudentGuardian),
-		StudentConsents:     owners.NewParentStudentConsents(owners.NewStudentConsentsFor(people, owners.NewTestAuditPersistence(testpkg.NewDatabase(t, db), nil).StudentConsentChange)),
+		StudentConsents:     owners.NewParentStudentConsents(owners.NewStudentConsentsFor(people, owners.NewTestAuditPersistence(testpkg.NewDatabase(t, db), nil).StudentConsentChange), owners.MustNewRoomHistoryStops(testpkg.NewDatabase(t, db))),
 		StudentPhotos:       photos,
 		StudentUpdates:      owners.BindParentStudentUpdates(testpkg.NewRecordingBroadcaster()),
 		Logger:              slog.Default(),

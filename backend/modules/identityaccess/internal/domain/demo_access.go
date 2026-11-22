@@ -48,6 +48,7 @@ func (e *DemoAccessRateLimitedError) Error() string { return "too many demo acce
 // prospect's name as given; the demo school's caregiver and parent carry
 // exactly this name.
 type DemoAccess struct {
+	UseCount     int
 	ID           int64
 	Email        string
 	FirstName    string
@@ -64,7 +65,8 @@ type DemoAccess struct {
 	// it rides in the mailed link, and the entry page skips the role cards.
 	Role DemoRole
 	// Phone is the number the team may call back, kept only with the
-	// contact consent. It is not stored either: it reaches the lead mail only.
+	// contact consent. It reaches the lead mail and the temporary CRM queue,
+	// but is never stored on the access.
 	Phone string
 }
 

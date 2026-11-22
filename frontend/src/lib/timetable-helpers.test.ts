@@ -1,4 +1,9 @@
 import { describe, expect, it } from "vitest";
+import {
+  buildEnrichedInstance,
+  buildTemplateResponse,
+  buildMaterializeResponse,
+} from "~/test/fixtures/timetable";
 import { setTestClock } from "~/test/clock";
 
 import {
@@ -30,6 +35,7 @@ import {
   mapBulkSubstitution,
   mapMoveStaff,
   mapStaffPool,
+  mapEditedInWindowResult,
   mapAttendance,
   mapConflictCheckResult,
   mapDeviationHistory,
@@ -373,6 +379,47 @@ describe("activity/status helpers", () => {
 });
 
 describe("backend mappers", () => {
+  it("leaves values this build does not know undefined and keeps an unknown conflict", () => {
+    const mapped = mapInstance(
+      buildEnrichedInstance({
+        status: "paused",
+        activity_type: "workshop",
+        list_kind: "sport",
+        students: [
+          {
+            student_id: "21",
+            status: "away",
+            substatus: "hospital",
+            care_day_status: "half_day",
+          },
+        ],
+        empty_roster_reason: { kind: "phase_closed" },
+        conflict_warnings: [
+          {
+            kind: "room",
+            resource_id: "3",
+            message: "Raum doppelt belegt",
+            can_override: true,
+          },
+        ],
+      }),
+    );
+
+    expect(mapped.status).toBeUndefined();
+    expect(mapped.activityType).toBeUndefined();
+    expect(mapped.listKind).toBeUndefined();
+    expect(mapped.students[0]).toMatchObject({
+      status: undefined,
+      substatus: undefined,
+      careDayStatus: "unknown",
+    });
+    expect(mapped.emptyRosterReason?.kind).toBeUndefined();
+    expect(mapped.conflictWarnings).toEqual([
+      expect.objectContaining({ kind: "other", resourceId: "3" }),
+    ]);
+    expect(getStatusLabel(mapped.status)).toBe("–");
+  });
+
   it("maps deviation history identifiers and nullable display fields", () => {
     expect(deviationEventLabel("cancellation")).toBe("Block abgesagt");
     expect(deviationEventLabel("future_event")).toBe("future_event");
@@ -381,23 +428,23 @@ describe("backend mappers", () => {
       mapDeviationHistory({
         events: [
           {
-            id: 42,
-            activity_group_id: 7,
+            id: "42",
+            activity_group_id: "7",
             occurrence_date: "2026-05-04",
             start_time: "12:00:00",
-            instance_id: 9,
+            instance_id: "9",
             event_type: "substitution",
-            subject_staff_id: 11,
+            subject_staff_id: "11",
             subject_staff_name: "Ada",
-            related_staff_id: 12,
+            related_staff_id: "12",
             related_staff_name: "Berta",
-            actor_account_id: 13,
+            actor_account_id: "13",
             actor_name: "Planung",
             reason: "Krankheit",
             occurred_at: "2026-05-03T12:00:00Z",
           },
           {
-            id: 43,
+            id: "43",
             occurrence_date: "2026-05-05",
             start_time: "13:00:00",
             event_type: "deviation_dropped_by_replan",
@@ -435,8 +482,8 @@ describe("backend mappers", () => {
       mapDeviationHistory({
         events: [
           {
-            id: 44,
-            activity_group_id: 7,
+            id: "44",
+            activity_group_id: "7",
             occurrence_date: "2026-05-04",
             start_time: "12:00:00",
             event_type: "substitution",
@@ -462,7 +509,7 @@ describe("backend mappers", () => {
       mapDeviationHistory({
         events: [
           {
-            id: 45,
+            id: "45",
             occurrence_date: "2026-05-05",
             start_time: "13:00:00",
             event_type: "deviation_dropped_by_replan",
@@ -486,8 +533,8 @@ describe("backend mappers", () => {
       from: "2026-05-04",
       to: "2026-05-08",
       instances: [
-        {
-          id: 42,
+        buildEnrichedInstance({
+          id: "42",
           date: "2026-05-04",
           start_time: "12:00",
           end_time: "13:00",
@@ -497,24 +544,26 @@ describe("backend mappers", () => {
           status: "planned",
           is_spontaneous: false,
           is_live: false,
-          activity_group_id: 7,
+          activity_group_id: "7",
           activity_type: "care",
-          room_id: 3,
+          room_id: "3",
           room_name: "Mensa",
           staff: [
             {
-              staff_id: 11,
+              staff_id: "11",
               is_primary: true,
               is_absent: false,
               is_substitute: false,
+              is_sick_absence: false,
             },
           ],
-          student_ids: [99],
+          student_ids: ["99"],
           students: [
             {
-              student_id: 21,
+              student_id: "21",
               status: "present",
               checked_in_at: "2026-05-04T12:03:00Z",
+              care_day_status: "unknown",
             },
           ],
           staff_count: 1,
@@ -527,12 +576,12 @@ describe("backend mappers", () => {
           conflict_warnings: [
             {
               kind: "staff",
-              resource_id: 3,
+              resource_id: "3",
               message: "Doppelt",
               can_override: true,
             },
           ],
-        },
+        }),
       ],
     });
 
@@ -552,8 +601,8 @@ describe("backend mappers", () => {
       from: "2026-05-04",
       to: "2026-05-08",
       instances: [
-        {
-          id: 43,
+        buildEnrichedInstance({
+          id: "43",
           date: "2026-05-04",
           start_time: "14:00",
           end_time: "15:00",
@@ -562,7 +611,7 @@ describe("backend mappers", () => {
           is_spontaneous: true,
           is_live: false,
           activity_type: "external",
-          room_id: 4,
+          room_id: "4",
           room_name: "Musik",
           staff: [],
           staff_count: 0,
@@ -571,7 +620,7 @@ describe("backend mappers", () => {
           present_students_count: 0,
           required_staff_count: 0,
           assigned_staff_count: 0,
-        },
+        }),
       ],
     });
 
@@ -611,6 +660,7 @@ describe("backend mappers", () => {
       dry_run: false,
       count: 0,
       days: null,
+      kept: 0,
       kept_series: null,
     });
     expect(empty.days).toEqual([]);
@@ -619,21 +669,22 @@ describe("backend mappers", () => {
 
   it("maps materialization and re-plan results", () => {
     expect(
-      mapMaterializeResult({
-        from: "2026-05-04",
-        to: "2026-05-08",
-        instances_created: 3,
-        candidates_skipped_existing: 1,
-        skipped_holidays: 1,
-        warnings: [{ code: "period_missing", message: "keine Periode" }],
-        duration_ms: 12,
-      }),
+      mapMaterializeResult(
+        buildMaterializeResponse({
+          from: "2026-05-04",
+          to: "2026-05-08",
+          instances_created: 3,
+          candidates_skipped_existing: 1,
+          skipped_holidays: 1,
+          warnings: [{ code: "period_missing", message: "keine Periode" }],
+          duration_ms: 12,
+        }),
+      ),
     ).toEqual({
       from: "2026-05-04",
       to: "2026-05-08",
       instancesCreated: 3,
       candidatesSkippedExisting: 1,
-      // #3594: an older backend without the counter reads as 0.
       skippedHolidays: 1,
       skippedClosingDays: 0,
       warnings: [{ code: "period_missing", message: "keine Periode" }],
@@ -649,7 +700,6 @@ describe("backend mappers", () => {
         instances_created: 3,
         instance_students_created: 4,
         instance_staff_created: 5,
-        warnings: [{ code: "staff_missing", message: "Personal fehlt" }],
         duration_ms: 13,
       }),
     ).toMatchObject({
@@ -657,7 +707,6 @@ describe("backend mappers", () => {
       instancesCreated: 3,
       instanceStudentsCreated: 4,
       instanceStaffCreated: 5,
-      warnings: [{ code: "staff_missing" }],
       durationMs: 13,
     });
   });
@@ -669,30 +718,33 @@ describe("backend mappers", () => {
         to: "2026-05-08",
         gaps: [
           {
-            instance_id: 42,
+            instance_id: "42",
             date: "2026-05-04",
             title: "Mensa",
             start_time: "12:00",
             end_time: "13:00",
-            room_id: 3,
+            room_id: "3",
             status: "planned",
             assigned_staff_count: 1,
+            present_staff_count: 0,
+            planned_staff_count: 0,
             absent_staff_count: 1,
           },
         ],
+        acknowledged: null,
       }).gaps[0],
     ).toMatchObject({ instanceId: "42", roomId: "3" });
 
     expect(
       mapStartInstanceResult({
-        instance_id: 42,
+        instance_id: "42",
         status: "active",
-        active_group_id: 99,
+        active_group_id: "99",
         started_at: "2026-05-04T12:00:00Z",
         warnings: [
           {
             kind: "staff",
-            resource_id: 11,
+            resource_id: "11",
             message: "Doppelt",
             can_override: true,
           },
@@ -701,40 +753,35 @@ describe("backend mappers", () => {
     ).toMatchObject({ instanceId: "42", activeGroupId: "99" });
     expect(
       mapInstanceStatusResult({
-        instance_id: 42,
+        instance_id: "42",
         status: "completed",
         completed_at: "2026-05-04T13:00:00Z",
       }),
     ).toMatchObject({ instanceId: "42", status: "completed" });
     expect(
       mapCreateTemplateResult({
-        template_id: 7,
-        timeframe_id: 4,
-        schedule_ids: [9],
+        template_id: "7",
+        timeframe_id: "4",
+        schedule_ids: ["9"],
         instances_created: 1,
       }),
     ).toMatchObject({ templateId: "7", scheduleIds: ["9"] });
     expect(
       mapAttendance({
-        id: 100,
-        instance_id: 42,
-        student_id: 21,
+        id: "100",
+        instance_id: "42",
+        student_id: "21",
         status: "absent",
         substatus: "sick",
         note: "krank",
+        checked_in_at: null,
       }),
     ).toMatchObject({ id: "100", studentId: "21" });
   });
 
   it("maps empty backend arrays from optional collections", () => {
     expect(
-      mapMaterializeResult({
-        from: "2026-05-04",
-        to: "2026-05-08",
-        instances_created: 0,
-        candidates_skipped_existing: 0,
-        duration_ms: 1,
-      }),
+      mapMaterializeResult(buildMaterializeResponse({ warnings: null })),
     ).toMatchObject({ warnings: [] });
 
     expect(
@@ -748,13 +795,14 @@ describe("backend mappers", () => {
         instance_staff_created: 0,
         duration_ms: 1,
       }),
-    ).toMatchObject({ warnings: [] });
+    ).toMatchObject({ deletedInstances: 0 });
 
     expect(
       mapGaps({
         from: "2026-05-04",
         to: "2026-05-08",
-        gaps: undefined as never,
+        gaps: null,
+        acknowledged: null,
       }),
     ).toMatchObject({ gaps: [] });
   });
@@ -765,28 +813,27 @@ describe("backend mappers", () => {
       to: "2026-05-08",
       gaps: [
         {
-          instance_id: 42,
+          instance_id: "42",
           date: "2026-05-04",
           title: "Mensa",
           start_time: "12:00",
           end_time: "13:00",
-          room_id: 3,
+          room_id: "3",
           status: "planned",
           assigned_staff_count: 2,
           absent_staff_count: 1,
           present_staff_count: 1,
           planned_staff_count: 2,
-          understaffed_note: null,
         },
       ],
       acknowledged: [
         {
-          instance_id: 43,
+          instance_id: "43",
           date: "2026-05-04",
           title: "Freispiel",
           start_time: "13:00",
           end_time: "14:00",
-          room_id: 4,
+          room_id: "4",
           status: "planned",
           assigned_staff_count: 0,
           absent_staff_count: 0,
@@ -817,7 +864,7 @@ describe("backend mappers", () => {
         from: "2026-05-04",
         to: "2026-05-08",
         gaps: [],
-        acknowledged: undefined,
+        acknowledged: null,
       }),
     ).toMatchObject({ gaps: [], acknowledged: [] });
   });
@@ -825,12 +872,12 @@ describe("backend mappers", () => {
   it("maps an applied-deviations result with affected instances and warnings (#1840)", () => {
     expect(
       mapApplyDeviations({
-        instance_id: 42,
+        instance_id: "42",
         cancelled: false,
         understaffed_ack: true,
         affected_instances: [
           {
-            instance_id: 43,
+            instance_id: "43",
             title: "Mensa",
             start_time: "12:00",
             action: "marked_absent",
@@ -838,11 +885,10 @@ describe("backend mappers", () => {
         ],
         warnings: [
           {
-            instance_id: 44,
-            title: "AG",
-            date: "2026-05-04",
-            start_time: "14:00",
-            end_time: "15:00",
+            kind: "substitute_time_conflict",
+            instance_id: "42",
+            other_instance_id: "44",
+            message: "Vertretung ist auf Instanz 44 um 14:00 eingetragen",
           },
         ],
       }),
@@ -860,11 +906,10 @@ describe("backend mappers", () => {
       ],
       warnings: [
         {
-          instanceId: "44",
-          title: "AG",
-          date: "2026-05-04",
-          startTime: "14:00",
-          endTime: "15:00",
+          instanceId: "42",
+          kind: "substitute_time_conflict",
+          otherInstanceId: "44",
+          message: "Vertretung ist auf Instanz 44 um 14:00 eingetragen",
         },
       ],
     });
@@ -873,11 +918,11 @@ describe("backend mappers", () => {
   it("maps applied-deviations with empty optional collections (#1840)", () => {
     expect(
       mapApplyDeviations({
-        instance_id: 42,
+        instance_id: "42",
         cancelled: true,
         understaffed_ack: false,
-        affected_instances: undefined as never,
-        warnings: undefined as never,
+        affected_instances: null,
+        warnings: null,
       }),
     ).toMatchObject({
       instanceId: "42",
@@ -890,15 +935,15 @@ describe("backend mappers", () => {
   it("preserves shared-substitution conflict details", () => {
     expect(
       mapApplyDeviations({
-        instance_id: 42,
+        instance_id: "42",
         cancelled: false,
         understaffed_ack: false,
         affected_instances: [],
         warnings: [
           {
             kind: "staff_overlap",
-            instance_id: 42,
-            other_instance_id: 43,
+            instance_id: "42",
+            other_instance_id: "43",
             message: "Die Ersatzperson hat gleichzeitig einen anderen Termin.",
           },
         ],
@@ -916,6 +961,12 @@ describe("backend mappers", () => {
   });
 
   it("maps a bulk-substitution result per day and aggregates warnings (#2284)", () => {
+    const CONFLICT = {
+      kind: "substitute_time_conflict",
+      instance_id: "43",
+      other_instance_id: "44",
+      message: "überschneidet sich",
+    };
     expect(
       mapBulkSubstitution({
         days: [
@@ -923,18 +974,18 @@ describe("backend mappers", () => {
             date: "2026-08-18",
             affected_instances: [
               {
-                instance_id: 43,
+                instance_id: "43",
                 title: "Mensa",
                 start_time: "12:00",
                 action: "substituted",
               },
             ],
-            warnings: [{}, {}],
+            warnings: [CONFLICT, CONFLICT],
           },
           {
             date: "2026-08-19",
             affected_instances: [],
-            warnings: [{}],
+            warnings: [CONFLICT],
           },
         ],
         total_affected: 3,
@@ -963,51 +1014,54 @@ describe("backend mappers", () => {
   it("maps a bulk-substitution result with missing optional collections (#2284)", () => {
     expect(
       mapBulkSubstitution({
-        days: undefined as never,
-        total_affected: undefined as never,
+        days: null,
+        total_affected: 0,
       }),
     ).toEqual({ days: [], totalAffected: 0, warningCount: 0 });
   });
 
   it("maps deviation fields on an instance: reason, ack and cancel note (#1840)", () => {
-    const mapped = mapInstance({
-      id: 42,
-      date: "2026-05-04",
-      start_time: "12:00",
-      end_time: "13:00",
-      title: "Mensa",
-      status: "cancelled",
-      is_spontaneous: false,
-      is_live: false,
-      activity_group_id: 7,
-      activity_type: "care",
-      room_id: 3,
-      room_name: "Mensa",
-      staff: [
-        {
-          staff_id: 11,
-          is_primary: true,
-          is_absent: true,
-          is_substitute: false,
-          absence_reason: "krank",
+    const mapped = mapInstance(
+      buildEnrichedInstance({
+        id: "42",
+        date: "2026-05-04",
+        start_time: "12:00",
+        end_time: "13:00",
+        title: "Mensa",
+        status: "cancelled",
+        is_spontaneous: false,
+        is_live: false,
+        activity_group_id: "7",
+        activity_type: "care",
+        room_id: "3",
+        room_name: "Mensa",
+        staff: [
+          {
+            staff_id: "11",
+            is_primary: true,
+            is_absent: true,
+            is_substitute: false,
+            is_sick_absence: false,
+            absence_reason: "krank",
+          },
+        ],
+        students: [],
+        staff_count: 1,
+        absent_staff_count: 1,
+        understaffed_ack: true,
+        understaffed_note: "keine Vertretung",
+        cancel_reason: "Ausflug",
+        expected_students_count: 0,
+        present_students_count: 0,
+        empty_roster_reason: {
+          kind: "before_offering_start",
+          phase_name: "Schuljahr 2026/27",
+          service_start_date: "2026-08-13",
         },
-      ],
-      students: [],
-      staff_count: 1,
-      absent_staff_count: 1,
-      understaffed_ack: true,
-      understaffed_note: "keine Vertretung",
-      cancel_reason: "Ausflug",
-      expected_students_count: 0,
-      present_students_count: 0,
-      empty_roster_reason: {
-        kind: "before_offering_start",
-        phase_name: "Schuljahr 2026/27",
-        service_start_date: "2026-08-13",
-      },
-      required_staff_count: 0,
-      assigned_staff_count: 0,
-    });
+        required_staff_count: 0,
+        assigned_staff_count: 0,
+      }),
+    );
 
     expect(mapped.staff[0]?.absenceReason).toBe("krank");
     expect(mapped).toMatchObject({
@@ -1023,60 +1077,49 @@ describe("backend mappers", () => {
   });
 
   it("maps the instance calendar period for period-scoped series reads", () => {
-    const mapped = mapInstance({
-      id: 42,
-      date: "2026-05-04",
-      start_time: "12:00",
-      end_time: "13:00",
-      title: "Mensa",
-      status: "planned",
-      is_spontaneous: false,
-      is_live: false,
-      activity_type: "care",
-      room_id: 3,
-      room_name: "Mensa",
-      staff: [],
-      staff_count: 0,
-      absent_staff_count: 0,
-      expected_students_count: 0,
-      present_students_count: 0,
-      required_staff_count: 0,
-      assigned_staff_count: 0,
-      calendar_period_id: 9,
-    });
+    const mapped = mapInstance(
+      buildEnrichedInstance({
+        id: "42",
+        date: "2026-05-04",
+        start_time: "12:00",
+        end_time: "13:00",
+        title: "Mensa",
+        status: "planned",
+        is_spontaneous: false,
+        is_live: false,
+        activity_type: "care",
+        room_id: "3",
+        room_name: "Mensa",
+        staff: [],
+        staff_count: 0,
+        absent_staff_count: 0,
+        expected_students_count: 0,
+        present_students_count: 0,
+        required_staff_count: 0,
+        assigned_staff_count: 0,
+        calendar_period_id: "9",
+      }),
+    );
 
     expect(mapped.calendarPeriodId).toBe("9");
   });
 
   it("maps the Wochennotiz (series_notes) and Tagesnotiz (notes) independently (#1837)", () => {
-    const base = {
-      id: 42,
+    const base = buildEnrichedInstance({
+      id: "42",
       date: "2026-05-04",
-      start_time: "14:00",
-      end_time: "15:00",
       title: "Betreuung",
-      status: "planned" as const,
-      is_spontaneous: false,
-      is_live: false,
-      activity_type: "care" as const,
-      room_id: 3,
+      room_id: "3",
       room_name: "Aula",
-      staff: [],
-      students: [],
-      staff_count: 0,
-      absent_staff_count: 0,
-      understaffed_ack: false,
-      expected_students_count: 0,
-      present_students_count: 0,
-      required_staff_count: 0,
-      assigned_staff_count: 0,
-    };
-
-    const withBoth = mapInstance({
-      ...base,
-      notes: "Heute ohne Herrn Müller",
-      series_notes: "Raum erst ab 14 Uhr offen",
     });
+
+    const withBoth = mapInstance(
+      buildEnrichedInstance({
+        ...base,
+        notes: "Heute ohne Herrn Müller",
+        series_notes: "Raum erst ab 14 Uhr offen",
+      }),
+    );
     expect(withBoth.notes).toBe("Heute ohne Herrn Müller");
     expect(withBoth.seriesNotes).toBe("Raum erst ab 14 Uhr offen");
 
@@ -1086,55 +1129,59 @@ describe("backend mappers", () => {
 
   it("maps actor-aware reopen eligibility", () => {
     expect(
-      mapInstance({
-        id: 42,
-        date: "2026-05-04",
-        start_time: "12:00",
-        end_time: "13:00",
-        title: "Mensa",
-        status: "completed",
-        is_spontaneous: false,
-        is_live: false,
-        activity_type: "care",
-        room_id: 3,
-        room_name: "Mensa",
-        staff: [],
-        students: [],
-        staff_count: 0,
-        absent_staff_count: 0,
-        expected_students_count: 0,
-        present_students_count: 0,
-        required_staff_count: 0,
-        assigned_staff_count: 0,
-        can_reopen: true,
-        can_complete: true,
-        complete_available_at: "2026-05-04T13:00:00+02:00",
-      }).canReopen,
+      mapInstance(
+        buildEnrichedInstance({
+          id: "42",
+          date: "2026-05-04",
+          start_time: "12:00",
+          end_time: "13:00",
+          title: "Mensa",
+          status: "completed",
+          is_spontaneous: false,
+          is_live: false,
+          activity_type: "care",
+          room_id: "3",
+          room_name: "Mensa",
+          staff: [],
+          students: [],
+          staff_count: 0,
+          absent_staff_count: 0,
+          expected_students_count: 0,
+          present_students_count: 0,
+          required_staff_count: 0,
+          assigned_staff_count: 0,
+          can_reopen: true,
+          can_complete: true,
+          complete_available_at: "2026-05-04T13:00:00+02:00",
+        }),
+      ).canReopen,
     ).toBe(true);
     expect(
-      mapInstance({
-        id: 42,
-        date: "2026-05-04",
-        start_time: "12:00",
-        end_time: "13:00",
-        title: "Mensa",
-        status: "active",
-        is_spontaneous: false,
-        is_live: true,
-        activity_type: "care",
-        room_id: 3,
-        room_name: "Mensa",
-        staff: [],
-        students: [],
-        staff_count: 0,
-        absent_staff_count: 0,
-        expected_students_count: 0,
-        present_students_count: 0,
-        required_staff_count: 0,
-        assigned_staff_count: 0,
-        can_complete: false,
-        complete_available_at: "2026-05-04T13:00:00+02:00",
-      }),
+      mapInstance(
+        buildEnrichedInstance({
+          id: "42",
+          date: "2026-05-04",
+          start_time: "12:00",
+          end_time: "13:00",
+          title: "Mensa",
+          status: "active",
+          is_spontaneous: false,
+          is_live: true,
+          activity_type: "care",
+          room_id: "3",
+          room_name: "Mensa",
+          staff: [],
+          students: [],
+          staff_count: 0,
+          absent_staff_count: 0,
+          expected_students_count: 0,
+          present_students_count: 0,
+          required_staff_count: 0,
+          assigned_staff_count: 0,
+          can_complete: false,
+          complete_available_at: "2026-05-04T13:00:00+02:00",
+        }),
+      ),
     ).toMatchObject({
       canComplete: false,
       completeAvailableAt: "2026-05-04T13:00:00+02:00",
@@ -1145,13 +1192,13 @@ describe("backend mappers", () => {
     expect(
       mapTemplates({
         templates: [
-          {
-            id: 7,
+          buildTemplateResponse({
+            id: "7",
             name: "Yoga",
             type: "activity",
-            category_id: 2,
+            category_id: "2",
             category_name: "AG",
-            room_id: 3,
+            room_id: "3",
             room_name: "Turnhalle",
             is_open: true,
             max_participants: 12,
@@ -1160,23 +1207,25 @@ describe("backend mappers", () => {
             supervisor_count: 1,
             required_staff_count: 1,
             assigned_staff_count: 1,
-            student_ids: [21],
-            staff_ids: [11],
-            primary_staff_id: 11,
-            protected_student_assignments: [{ weekday: 1, student_ids: [21] }],
+            student_ids: ["21"],
+            staff_ids: ["11"],
+            primary_staff_id: "11",
+            protected_student_assignments: [
+              { weekday: 1, student_ids: ["21"] },
+            ],
             schedules: [
               {
-                id: 9,
+                id: "9",
                 weekday: 1,
                 start_time: "14:00",
                 end_time: "15:00",
                 week_pattern: 2,
-                calendar_period_id: 5,
+                calendar_period_id: "5",
                 valid_from: "2026-05-04",
                 valid_until: "2026-06-01",
               },
             ],
-          },
+          }),
         ],
       }).templates[0],
     ).toMatchObject({
@@ -1200,11 +1249,11 @@ describe("backend mappers", () => {
   it("maps the chain-resolved predecessor id onto a template (#2187)", () => {
     const tpl = mapTemplates({
       templates: [
-        {
-          id: 9,
+        buildTemplateResponse({
+          id: "9",
           name: "Yoga",
           type: "activity",
-          category_id: 2,
+          category_id: "2",
           category_name: "AG",
           is_open: true,
           max_participants: 12,
@@ -1213,9 +1262,9 @@ describe("backend mappers", () => {
           supervisor_count: 0,
           required_staff_count: 0,
           assigned_staff_count: 0,
-          resolved_from_template_id: 87,
+          resolved_from_template_id: "87",
           schedules: [],
-        },
+        }),
       ],
     }).templates[0];
 
@@ -1223,28 +1272,22 @@ describe("backend mappers", () => {
   });
 
   it("leaves the chain-resolved id undefined when absent or null (#2187)", () => {
-    const base = {
-      id: 9,
+    const base = buildTemplateResponse({
+      id: "9",
       name: "Yoga",
-      type: "activity" as const,
-      category_id: 2,
+      type: "activity",
+      category_id: "2",
       category_name: "AG",
       is_open: true,
       max_participants: 12,
-      target_group_type: "none" as const,
-      enrollment_count: 0,
-      supervisor_count: 0,
-      required_staff_count: 0,
-      assigned_staff_count: 0,
-      schedules: [],
-    };
+    });
 
     expect(
       mapTemplates({ templates: [base] }).templates[0]?.resolvedFromTemplateId,
     ).toBeUndefined();
     expect(
       mapTemplates({
-        templates: [{ ...base, resolved_from_template_id: null }],
+        templates: [{ ...base, resolved_from_template_id: undefined }],
       }).templates[0]?.resolvedFromTemplateId,
     ).toBeUndefined();
   });
@@ -1252,16 +1295,16 @@ describe("backend mappers", () => {
   it("maps the offering-source rule and per-weekday rosters (#2137/#2129)", () => {
     const tpl = mapTemplates({
       templates: [
-        {
-          id: 7,
+        buildTemplateResponse({
+          id: "7",
           name: "Frühbetreuung Jg. 1",
           type: "care",
-          category_id: 2,
+          category_id: "2",
           category_name: "Betreuung",
           is_open: true,
           max_participants: 20,
           target_group_type: "angebot",
-          source_care_offering_ids: [12, 15],
+          source_care_offering_ids: ["12", "15"],
           source_grade_levels: [1, 2],
           enrollment_count: 9,
           supervisor_count: 1,
@@ -1271,18 +1314,18 @@ describe("backend mappers", () => {
           weekday_assignments: [
             {
               weekday: 1,
-              staff_ids: [11, 12],
-              student_ids: [21],
-              primary_staff_id: 11,
+              staff_ids: ["11", "12"],
+              student_ids: ["21"],
+              primary_staff_id: "11",
             },
             // Dienstag ist bewusst leer und ohne feste Bezugsperson.
-            { weekday: 2, primary_staff_id: null as never },
+            { weekday: 2, staff_ids: null, student_ids: null },
           ],
           protected_student_assignments: [
-            { weekday: 1, student_ids: [21] },
-            { weekday: 2 },
+            { weekday: 1, student_ids: ["21"] },
+            { weekday: 2, student_ids: null },
           ],
-        },
+        }),
       ],
     }).templates[0];
 
@@ -1313,11 +1356,11 @@ describe("backend mappers", () => {
   it("maps a source that does not fit the planning period", () => {
     const tpl = mapTemplates({
       templates: [
-        {
-          id: 7,
+        buildTemplateResponse({
+          id: "7",
           name: "Frühbetreuung",
           type: "care",
-          category_id: 2,
+          category_id: "2",
           category_name: "Betreuung",
           is_open: true,
           max_participants: 20,
@@ -1329,11 +1372,12 @@ describe("backend mappers", () => {
           schedules: [],
           roster_maintenance: {
             mode: "manual",
-            invalid_offerings: [{ id: 12, name: "Früh" }],
+            offerings: null,
+            invalid_offerings: [{ id: "12", name: "Früh" }],
             dynamic_targets: false,
             care_offerings_disabled: false,
           },
-        },
+        }),
       ],
     }).templates[0];
 
@@ -1343,23 +1387,21 @@ describe("backend mappers", () => {
   it("leaves the offering source undefined when the backend sends null (#2137)", () => {
     const tpl = mapTemplates({
       templates: [
-        {
-          id: 8,
+        buildTemplateResponse({
+          id: "8",
           name: "Yoga",
           type: "activity",
-          category_id: 2,
+          category_id: "2",
           category_name: "AG",
           is_open: true,
           max_participants: 12,
           target_group_type: "none",
-          source_care_offering_ids: null as never,
-          source_grade_levels: null as never,
           enrollment_count: 0,
           supervisor_count: 0,
           required_staff_count: 0,
           assigned_staff_count: 0,
           schedules: [],
-        },
+        }),
       ],
     }).templates[0];
 
@@ -1370,11 +1412,11 @@ describe("backend mappers", () => {
   it("maps the Wochennotiz and mapped shift type onto a template (#1837)", () => {
     const tpl = mapTemplates({
       templates: [
-        {
-          id: 7,
+        buildTemplateResponse({
+          id: "7",
           name: "Betreuung Mo",
           type: "care",
-          category_id: 2,
+          category_id: "2",
           category_name: "Betreuung",
           is_open: true,
           max_participants: 20,
@@ -1387,7 +1429,7 @@ describe("backend mappers", () => {
           shift_type_name: "Betreuung / Zeit am Kind",
           shift_type_color: "#83CD2D",
           schedules: [],
-        },
+        }),
       ],
     }).templates[0];
 
@@ -1396,25 +1438,52 @@ describe("backend mappers", () => {
     expect(tpl?.shiftTypeColor).toBe("#83CD2D");
   });
 
+  it("leaves template values this build does not know undefined", () => {
+    const tpl = mapTemplates({
+      templates: [
+        buildTemplateResponse({
+          type: "workshop",
+          target_group_type: "schule",
+          list_kind: "sport",
+          targets: [{ type: "schule" }, { type: "klasse", school_class: "3a" }],
+          roster_maintenance: {
+            mode: "hybrid",
+            offerings: null,
+            dynamic_targets: false,
+            care_offerings_disabled: false,
+          },
+        }),
+      ],
+    }).templates[0];
+
+    expect(tpl?.type).toBeUndefined();
+    expect(tpl?.targetGroupType).toBeUndefined();
+    expect(tpl?.listKind).toBeUndefined();
+    expect(tpl?.targets).toEqual([
+      expect.objectContaining({ type: "klasse", schoolClass: "3a" }),
+    ]);
+    expect(tpl?.rosterMaintenance).toBeUndefined();
+  });
+
   it("maps optional template fields without fallback ids", () => {
     expect(
       mapTemplates({
         templates: [
-          {
-            id: 8,
+          buildTemplateResponse({
+            id: "8",
             name: "Offene Betreuung",
             type: "care",
-            category_id: 3,
+            category_id: "3",
             category_name: "Betreuung",
             is_open: false,
-            max_participants: undefined as never,
+            max_participants: null,
             target_group_type: "none",
-            enrollment_count: undefined as never,
+            enrollment_count: 0,
             supervisor_count: 0,
             required_staff_count: 0,
             assigned_staff_count: 0,
-            schedules: undefined as never,
-          },
+            schedules: null,
+          }),
         ],
       }).templates[0],
     ).toEqual({
@@ -1428,7 +1497,7 @@ describe("backend mappers", () => {
       educationGroupId: undefined,
       educationGroupName: undefined,
       isOpen: false,
-      maxParticipants: undefined,
+      maxParticipants: null,
       listKind: undefined,
       notes: undefined,
       includeClosingDays: false,
@@ -1438,7 +1507,7 @@ describe("backend mappers", () => {
       targetGroupType: "none",
       targetGradeLevel: undefined,
       targetSchoolClass: undefined,
-      enrollmentCount: undefined,
+      enrollmentCount: 0,
       supervisorCount: 0,
       requiredStaffCount: 0,
       assignedStaffCount: 0,
@@ -1450,6 +1519,7 @@ describe("backend mappers", () => {
       // #2129: a template with no per-weekday deviations maps to an empty list.
       weekdayAssignments: [],
       protectedStudentAssignments: [],
+      manualRosterConfirmed: false,
     });
   });
 });
@@ -1460,8 +1530,8 @@ describe("required staff override mapping (#1839)", () => {
       from: "2026-05-04",
       to: "2026-05-08",
       instances: [
-        {
-          id: 42,
+        buildEnrichedInstance({
+          id: "42",
           date: "2026-05-04",
           start_time: "14:00",
           end_time: "15:00",
@@ -1470,7 +1540,7 @@ describe("required staff override mapping (#1839)", () => {
           is_spontaneous: false,
           is_live: false,
           activity_type: "care",
-          room_id: 3,
+          room_id: "3",
           room_name: "Hof",
           staff: [],
           staff_count: 1,
@@ -1480,7 +1550,7 @@ describe("required staff override mapping (#1839)", () => {
           required_staff_count: 3,
           assigned_staff_count: 1,
           required_staff_override: 3,
-        },
+        }),
       ],
     }).instances[0]!;
     expect(withOverride.requiredStaffOverride).toBe(3);
@@ -1489,8 +1559,8 @@ describe("required staff override mapping (#1839)", () => {
       from: "2026-05-04",
       to: "2026-05-08",
       instances: [
-        {
-          id: 43,
+        buildEnrichedInstance({
+          id: "43",
           date: "2026-05-04",
           start_time: "14:00",
           end_time: "15:00",
@@ -1499,7 +1569,7 @@ describe("required staff override mapping (#1839)", () => {
           is_spontaneous: false,
           is_live: false,
           activity_type: "care",
-          room_id: 3,
+          room_id: "3",
           room_name: "Raum",
           staff: [],
           staff_count: 2,
@@ -1508,7 +1578,7 @@ describe("required staff override mapping (#1839)", () => {
           present_students_count: 10,
           required_staff_count: 1,
           assigned_staff_count: 2,
-        },
+        }),
       ],
     }).instances[0]!;
     expect(derived.requiredStaffOverride).toBeUndefined();
@@ -1517,11 +1587,11 @@ describe("required staff override mapping (#1839)", () => {
   it("passes a template's manual override through mapTemplates", () => {
     const template = mapTemplates({
       templates: [
-        {
-          id: 7,
+        buildTemplateResponse({
+          id: "7",
           name: "Yoga",
           type: "activity",
-          category_id: 2,
+          category_id: "2",
           category_name: "AG",
           is_open: true,
           max_participants: 12,
@@ -1532,7 +1602,7 @@ describe("required staff override mapping (#1839)", () => {
           assigned_staff_count: 1,
           required_staff_override: 4,
           schedules: [],
-        },
+        }),
       ],
     }).templates[0]!;
     expect(template.requiredStaffOverride).toBe(4);
@@ -1833,9 +1903,9 @@ describe("mapSplitTemplateResult", () => {
   it("maps snake_case ints to camelCase strings", () => {
     expect(
       mapSplitTemplateResult({
-        old_template_id: 7,
-        new_template_id: 8,
-        schedule_ids: [11, 12],
+        old_template_id: "7",
+        new_template_id: "8",
+        schedule_ids: ["11", "12"],
         deleted_instances: 4,
         instances_created: 6,
       }),
@@ -1859,9 +1929,9 @@ describe("mapConflictCheckResult", () => {
         warnings: [
           {
             kind: "staff",
-            resource_id: 11,
+            resource_id: "11",
             message: "Person doppelt eingeplant",
-            conflicting_instance_id: 42,
+            conflicting_instance_id: "42",
             conflicting_title: "Mensa",
           },
         ],
@@ -1886,6 +1956,7 @@ describe("mapConflictCheckResult", () => {
         date: "2026-05-04",
         start_time: "12:00",
         end_time: "13:00",
+        warnings: null,
       }),
     ).toEqual({
       date: "2026-05-04",
@@ -1902,7 +1973,7 @@ describe("mapShiftCoverageCheckResult", () => {
       mapShiftCoverageCheckResult({
         coverage_warnings: [
           {
-            staff_id: 12,
+            staff_id: "12",
             staff_name: "Ada Lovelace",
             date: "2026-05-06",
             start_time: "12:00",
@@ -1912,6 +1983,7 @@ describe("mapShiftCoverageCheckResult", () => {
             message: "Mittwoch ist nicht vollständig abgedeckt.",
           },
         ],
+        coverage_warning_count: 1,
       }),
     ).toEqual({
       coverageWarningCount: 1,
@@ -1928,7 +2000,12 @@ describe("mapShiftCoverageCheckResult", () => {
         },
       ],
     });
-    expect(mapShiftCoverageCheckResult({})).toEqual({
+    expect(
+      mapShiftCoverageCheckResult({
+        coverage_warnings: null,
+        coverage_warning_count: 0,
+      }),
+    ).toEqual({
       coverageWarnings: [],
       coverageWarningCount: 0,
     });
@@ -2022,7 +2099,7 @@ describe("staff pool + move mappers (#1884)", () => {
   it("maps a staff pool response including null collections", () => {
     expect(
       mapStaffPool({
-        instance_id: 42,
+        instance_id: "42",
         title: "Mensa",
         date: "2026-05-04",
         start_time: "12:30",
@@ -2030,16 +2107,15 @@ describe("staff pool + move mappers (#1884)", () => {
         dienstplan_in_use: true,
         entries: [
           {
-            staff_id: 7,
+            staff_id: "7",
             display_name: "Ina Umzieherin",
             category: "assigned_elsewhere",
             on_shift: true,
             covers_window: true,
             shift_windows: ["08:00–16:00"],
-            absence_reason: null,
             assignments: [
               {
-                instance_id: 41,
+                instance_id: "41",
                 title: "Schulhof",
                 start_time: "12:00",
                 end_time: "14:00",
@@ -2048,7 +2124,7 @@ describe("staff pool + move mappers (#1884)", () => {
             ],
           },
           {
-            staff_id: 8,
+            staff_id: "8",
             display_name: "Frido Verfuegbar",
             category: "on_shift_free",
             on_shift: true,
@@ -2101,21 +2177,20 @@ describe("staff pool + move mappers (#1884)", () => {
   it("maps a move result with advisory warnings", () => {
     expect(
       mapMoveStaff({
-        target_instance_id: 42,
-        source_instance_id: 41,
+        target_instance_id: "42",
+        source_instance_id: "41",
         action: "moved",
         time_conflicts: [
           {
-            instance_id: 44,
-            title: "AG",
-            date: "2026-05-04",
-            start_time: "13:00",
-            end_time: "14:00",
+            kind: "substitute_time_conflict",
+            instance_id: "42",
+            other_instance_id: "44",
+            message: "Vertretung ist auf Instanz 44 um 13:00 eingetragen",
           },
         ],
         coverage_warnings: [
           {
-            staff_id: 7,
+            staff_id: "7",
             staff_name: "Ina Umzieherin",
             date: "2026-05-04",
             start_time: "12:30",
@@ -2132,11 +2207,10 @@ describe("staff pool + move mappers (#1884)", () => {
       action: "moved",
       timeConflicts: [
         {
-          instanceId: "44",
-          title: "AG",
-          date: "2026-05-04",
-          startTime: "13:00",
-          endTime: "14:00",
+          instanceId: "42",
+          kind: "substitute_time_conflict",
+          otherInstanceId: "44",
+          message: "Vertretung ist auf Instanz 44 um 13:00 eingetragen",
         },
       ],
       coverageWarnings: [
@@ -2154,11 +2228,57 @@ describe("staff pool + move mappers (#1884)", () => {
     });
   });
 
+  it("leaves out pool entries and edited changes this build does not know", () => {
+    const pool = mapStaffPool({
+      instance_id: "42",
+      title: "Mensa",
+      date: "2026-05-04",
+      start_time: "12:00",
+      end_time: "13:00",
+      dienstplan_in_use: true,
+      entries: [
+        {
+          staff_id: "7",
+          display_name: "Ina",
+          category: "on_call",
+          on_shift: true,
+          covers_window: true,
+          shift_windows: null,
+          assignments: null,
+        },
+        {
+          staff_id: "8",
+          display_name: "Ole",
+          category: "on_shift_free",
+          on_shift: true,
+          covers_window: true,
+          shift_windows: null,
+          assignments: null,
+        },
+      ],
+    });
+    expect(pool.entries.map((entry) => entry.staffId)).toEqual(["8"]);
+
+    expect(
+      mapEditedInWindowResult({
+        count: 1,
+        occurrences: [
+          {
+            instance_id: "42",
+            date: "2026-05-04",
+            start_time: "12:00:00",
+            title: "Mensa",
+            changes: ["room", "colour"],
+          },
+        ],
+      }).occurrences[0]?.changes,
+    ).toEqual(["room"]);
+  });
+
   it("maps a pool assign without source and defaults null warning lists", () => {
     expect(
       mapMoveStaff({
-        target_instance_id: 42,
-        source_instance_id: null,
+        target_instance_id: "42",
         action: "assigned",
         time_conflicts: null,
         coverage_warnings: null,
@@ -2179,19 +2299,19 @@ describe("mapOfferingSourceOptions (#2137)", () => {
       mapOfferingSourceOptions({
         offerings: [
           {
-            id: 12,
+            id: "12",
             name: "Frühbetreuung",
-            phase_id: 3,
+            phase_id: "3",
             phase_name: "Schuljahr 2026/27",
             phase_service_start: "2026-08-13",
             total_count: 18,
             // "0" = Kinder ohne ableitbaren Jahrgang.
             grade_counts: { "0": 2, "1": 9, "2": 7 },
             sourced_templates: [
-              { id: 7, name: "Frühbetreuung Jg. 1", grade_levels: [1] },
-              { id: 8, name: "Frühbetreuung alle" },
+              { id: "7", name: "Frühbetreuung Jg. 1", grade_levels: [1] },
+              { id: "8", name: "Frühbetreuung alle" },
             ],
-            legacy_linked_template_id: 7,
+            legacy_linked_template_id: "7",
           },
         ],
       }),
@@ -2228,14 +2348,13 @@ describe("mapOfferingSourceOptions (#2137)", () => {
       mapOfferingSourceOptions({
         offerings: [
           {
-            id: 13,
+            id: "13",
             name: "Spätbetreuung",
-            phase_id: 3,
+            phase_id: "3",
             phase_name: "Schuljahr 2026/27",
             total_count: 0,
-            grade_counts: { unbekannt: 4, "3": 1 } as never,
-            sourced_templates: undefined as never,
-            legacy_linked_template_id: null as never,
+            grade_counts: { unbekannt: 4, "3": 1 },
+            sourced_templates: null,
           },
         ],
       }),
@@ -2254,19 +2373,17 @@ describe("mapOfferingSourceOptions (#2137)", () => {
   });
 
   it("maps a payload without offerings and without counts to an empty list", () => {
-    expect(mapOfferingSourceOptions({ offerings: undefined as never })).toEqual(
-      [],
-    );
+    expect(mapOfferingSourceOptions({ offerings: null })).toEqual([]);
     expect(
       mapOfferingSourceOptions({
         offerings: [
           {
-            id: 14,
+            id: "14",
             name: "Ferienbetreuung",
-            phase_id: 4,
+            phase_id: "4",
             phase_name: "Ferien",
             total_count: 0,
-            grade_counts: undefined as never,
+            grade_counts: null,
             sourced_templates: [],
           },
         ],
@@ -2281,7 +2398,7 @@ describe("mapCombinedOfferingCounts (Mehrfach-Quelle)", () => {
       mapCombinedOfferingCounts({
         total_count: 18,
         grade_counts: { "0": 2, "1": 9, "2": 7 },
-        students: [{ student_id: 5, school_class: "1b" }],
+        students: [{ student_id: "5", school_class: "1b" }],
       }),
     ).toEqual({
       totalCount: 18,
@@ -2293,8 +2410,9 @@ describe("mapCombinedOfferingCounts (Mehrfach-Quelle)", () => {
   it("tolerates missing counts", () => {
     expect(
       mapCombinedOfferingCounts({
-        total_count: undefined as never,
-        grade_counts: undefined as never,
+        total_count: 0,
+        grade_counts: null,
+        students: null,
       }),
     ).toEqual({ totalCount: 0, gradeCounts: {}, students: [] });
   });

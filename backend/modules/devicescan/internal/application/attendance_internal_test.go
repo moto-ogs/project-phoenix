@@ -213,6 +213,19 @@ func TestToggleAttendance_DailyCheckout(t *testing.T) {
 		assert.True(t, *result.FeedbackEnabled)
 		assert.Equal(t, []string{devicescan.DestinationHome}, h.attendance.dailyCalls)
 	})
+	t.Run("going home with the mood capture stopped", func(t *testing.T) {
+		t.Parallel()
+		h := newHarness(t)
+		h.attendance.dailyAction = devicescan.ScanActionCheckedOutDaily
+		h.settings.feedback = true
+		h.settings.moodStopped = map[int64]bool{testStudentID: true}
+
+		result, err := h.service().ToggleAttendance(ctx, home)
+
+		require.NoError(t, err)
+		require.NotNil(t, result.FeedbackEnabled)
+		assert.False(t, *result.FeedbackEnabled, "a stopped child gets no mood prompt (#3844)")
+	})
 	t.Run("staying in transit", func(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t)

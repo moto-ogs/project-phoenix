@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Where the Elternabrechnung books (#4821): the revenue account of each
@@ -93,7 +94,7 @@ type PositionAccounts struct {
 // Angebot.
 type RevenueAccount struct {
 	Scope     string    `json:"scope"`
-	ScopeID   int64     `json:"scope_id"`
+	ScopeID   ident.ID  `json:"scope_id"`
 	Account   string    `json:"account"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
@@ -104,9 +105,9 @@ type RevenueAccount struct {
 // Angebot. An empty Code ends the cost center of the scope from that day
 // on.
 type CostCenter struct {
-	ID        int64         `json:"id"`
+	ID        ident.ID      `json:"id"`
 	Scope     string        `json:"scope"`
-	ScopeID   int64         `json:"scope_id"`
+	ScopeID   ident.ID      `json:"scope_id"`
 	ValidFrom calendar.Date `json:"valid_from"`
 	Code      string        `json:"code"`
 	CreatedAt time.Time     `json:"created_at"`
@@ -115,8 +116,8 @@ type CostCenter struct {
 // BookingOffering is an Angebot of a school that has a price: the scope of
 // a revenue account and of a KOST2, with the modules of its prices.
 type BookingOffering struct {
-	SchoolID       int64    `json:"school_id"`
-	CareOfferingID int64    `json:"care_offering_id"`
+	SchoolID       ident.ID `json:"school_id"`
+	CareOfferingID ident.ID `json:"care_offering_id"`
 	ModuleNames    []string `json:"module_names"`
 }
 

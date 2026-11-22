@@ -95,6 +95,10 @@ type StaffShift struct {
 	// materialized for; it does not follow Date when the row is moved.
 	// Empty for standalone rows.
 	SeriesOccurrenceDate string
+	// SeriesStartTime and SeriesEndTime are the times planned by the linked
+	// series. They are empty for standalone shifts and reads without a series.
+	SeriesStartTime string
+	SeriesEndTime   string
 	// Cancelled marks a shift that does not take place; ChangeReason is the
 	// optional why and OriginShiftID marks a replacement covering another
 	// cancelled shift's gap.
@@ -128,23 +132,26 @@ type StaffShiftOrder struct {
 }
 
 // StaffShiftFilter narrows a shift listing. Every set field is combined with
-// AND; From/To select From <= date <= To. A non-nil empty StaffIDs, Dates or
+// AND; From/To select From <= date <= To. IncludeSeriesOccurrenceDate also
+// selects a row materialized for that recurrence slot, even if it was moved
+// outside the date selection. A non-nil empty StaffIDs, Dates or
 // OriginShiftIDs matches nothing.
 type StaffShiftFilter struct {
-	StaffID        int64
-	StaffIDs       []int64
-	From           string
-	To             string
-	Dates          []string
-	SeriesID       int64
-	OriginShiftID  int64
-	OriginShiftIDs []int64
-	SickAbsenceID  *int64
-	Cancelled      *bool
-	Detached       *bool
-	Order          []StaffShiftOrder
-	Limit          int
-	Offset         int
+	StaffID                     int64
+	StaffIDs                    []int64
+	From                        string
+	To                          string
+	Dates                       []string
+	IncludeSeriesOccurrenceDate string
+	SeriesID                    int64
+	OriginShiftID               int64
+	OriginShiftIDs              []int64
+	SickAbsenceID               *int64
+	Cancelled                   *bool
+	Detached                    *bool
+	Order                       []StaffShiftOrder
+	Limit                       int
+	Offset                      int
 }
 
 // StaffShiftSeries is one recurring shift rule (#1889) bound to a calendar

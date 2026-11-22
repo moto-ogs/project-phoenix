@@ -6,6 +6,7 @@ import (
 	scheduleModels "github.com/moto-ogs/project-phoenix/modules/timetable/internal/domain/schedulerecords"
 	"github.com/moto-ogs/project-phoenix/modules/timetable/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The retained models/schedule student-schedule repositories over the Care
@@ -35,6 +36,9 @@ func invalidLegacyEntity(name string) error {
 	return fmt.Errorf("%s cannot be nil or zero value", name)
 }
 func legacyScheduleID(raw any) (int64, error) {
+	if typed, ok := raw.(ident.ID); ok {
+		raw = typed.Int64()
+	}
 	switch value := raw.(type) {
 	case int64:
 		return value, nil

@@ -28,7 +28,7 @@ func (p *Provisioning) DeviceHistory(ctx context.Context, id int64) ([]organizat
 		}
 		names := make(map[int64]string, len(schools))
 		for _, school := range schools {
-			names[school.ID] = school.Name
+			names[school.ID.Int64()] = school.Name
 		}
 		for i := range entries {
 			entries[i].SchoolName = names[entries[i].SchoolID]

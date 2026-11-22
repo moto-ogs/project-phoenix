@@ -151,7 +151,7 @@ const mockAnimate = vi.fn(() => ({
 const originalFetch = global.fetch;
 
 const resolvedTenant = {
-  tenantId: 42,
+  tenantId: "42",
   name: "",
   settings: {},
 } as ReturnType<typeof useTenant>["tenant"];

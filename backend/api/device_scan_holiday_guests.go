@@ -33,7 +33,7 @@ func deviceScanHolidayGuestSchools(badges enrollmentOwner.HolidayGuestBadgeList)
 		schools := make(map[int64]string, len(list))
 		for _, badge := range list {
 			if badge.SchoolName != "" {
-				schools[badge.StudentID] = badge.SchoolName
+				schools[badge.StudentID.Int64()] = badge.SchoolName
 			}
 		}
 		return schools, nil

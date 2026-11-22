@@ -20,6 +20,8 @@ type WorkforceShift struct {
 	Detached             bool
 	SeriesOverride       bool
 	SeriesOccurrenceDate string
+	SeriesStartTime      string
+	SeriesEndTime        string
 	Cancelled            bool
 	ChangeReason         *string
 	OriginShiftID        *int64

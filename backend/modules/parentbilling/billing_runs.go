@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The billing run for a holiday period (spec #4611 user stories 70, 71, 75
@@ -78,9 +79,9 @@ var (
 // BillingRun is a run as the list shows it. DocumentCount and TotalCents are
 // set once the run is released.
 type BillingRun struct {
-	ID              int64          `json:"id"`
+	ID              ident.ID       `json:"id"`
 	Service         string         `json:"service"`
-	HolidayPeriodID int64          `json:"holiday_period_id"`
+	HolidayPeriodID ident.ID       `json:"holiday_period_id"`
 	PeriodName      string         `json:"period_name"`
 	ServiceFrom     calendar.Date  `json:"service_from"`
 	ServiceUntil    calendar.Date  `json:"service_until"`
@@ -89,20 +90,20 @@ type BillingRun struct {
 	ReleasedAt      *time.Time     `json:"released_at"`
 	IssuedOn        *calendar.Date `json:"issued_on"`
 	DocumentCount   *int           `json:"document_count"`
-	TotalCents      *int64         `json:"total_cents"`
+	TotalCents      *int64         `json:"total_cents" contract:"number"`
 	// DiscardedAt is set once the Abrechnung discarded the empty run (#6628).
 	DiscardedAt *time.Time `json:"discarded_at"`
 }
 
 // BillingCorrection is one entry of the history of a child's amount.
 type BillingCorrection struct {
-	ID                 int64     `json:"id"`
-	ChildID            int64     `json:"child_id"`
-	AmountCents        int64     `json:"amount_cents"`
-	TotalBeforeCents   int64     `json:"total_before_cents"`
-	TotalAfterCents    int64     `json:"total_after_cents"`
+	ID                 ident.ID  `json:"id"`
+	ChildID            ident.ID  `json:"child_id"`
+	AmountCents        int64     `json:"amount_cents" contract:"number"`
+	TotalBeforeCents   int64     `json:"total_before_cents" contract:"number"`
+	TotalAfterCents    int64     `json:"total_after_cents" contract:"number"`
 	Reason             string    `json:"reason"`
-	CreatedByAccountID *int64    `json:"created_by_account_id"`
+	CreatedByAccountID *ident.ID `json:"created_by_account_id"`
 	CreatedAt          time.Time `json:"created_at"`
 	// CarriedFromNumber names the cancelled invoice a release took this
 	// correction over from (#5663); empty for a correction of the run itself.
@@ -114,15 +115,15 @@ type BillingCorrection struct {
 // correction of the run, whose Note is its reason.
 type BillingPosition struct {
 	Kind                string         `json:"kind"`
-	AmountCents         int64          `json:"amount_cents"`
+	AmountCents         int64          `json:"amount_cents" contract:"number"`
 	WeekStartsOn        *calendar.Date `json:"week_starts_on"`
 	WeekEndsOn          *calendar.Date `json:"week_ends_on"`
 	TimeModelName       string         `json:"time_model_name"`
 	ChildRank           *int           `json:"child_rank"`
 	DiscountBasisPoints *int           `json:"discount_basis_points"`
-	DiscountCents       *int64         `json:"discount_cents"`
+	DiscountCents       *int64         `json:"discount_cents" contract:"number"`
 	Note                string         `json:"note"`
-	CostBearerID        *int64         `json:"cost_bearer_id"`
+	CostBearerID        *ident.ID      `json:"cost_bearer_id"`
 	CostBearerName      string         `json:"cost_bearer_name"`
 	// BookedDays is the number of lunches a meal position prices (#5631),
 	// nil for every other position.
@@ -147,7 +148,7 @@ type HolidayInvoiceKey struct {
 
 // InvoiceKey is the key of the invoices the document belongs to.
 func (d BillingDocument) InvoiceKey() HolidayInvoiceKey {
-	return HolidayInvoiceKey{RegistrationID: d.RegistrationID, ChildID: d.RegistrationChildID}
+	return HolidayInvoiceKey{RegistrationID: d.RegistrationID.Int64(), ChildID: d.RegistrationChildID.Int64()}
 }
 
 // BillingChild is a child of an invoice with its positions and the history
@@ -155,16 +156,16 @@ func (d BillingDocument) InvoiceKey() HolidayInvoiceKey {
 // invoice a draft proposes (#5663); they are positions too. ChildID is zero
 // on an issued invoice once the registration is gone.
 type BillingChild struct {
-	ChildID   int64  `json:"child_id"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
+	ChildID   ident.ID `json:"child_id"`
+	FirstName string   `json:"first_name"`
+	LastName  string   `json:"last_name"`
 	// BirthDate finds the debtor number of the child when the Träger keeps
 	// one per child (#7007); the draft alone carries it.
 	BirthDate          calendar.Date              `json:"-"`
 	Positions          []BillingPosition          `json:"positions"`
 	Corrections        []BillingCorrection        `json:"corrections"`
 	CarriedCorrections []BillingCarriedCorrection `json:"carried_corrections"`
-	TotalCents         int64                      `json:"total_cents"`
+	TotalCents         int64                      `json:"total_cents" contract:"number"`
 }
 
 // PostalAddress is the postal address of the recipient of an invoice: all
@@ -194,21 +195,21 @@ type PostalAddress struct {
 // first invoice of a registration decides; an invoice issued again, its
 // cancellation and its credits keep the shape of the invoice they follow.
 type BillingDocument struct {
-	ID    int64  `json:"id"`
-	RunID int64  `json:"run_id"`
-	Kind  string `json:"kind"`
+	ID    ident.ID `json:"id"`
+	RunID ident.ID `json:"run_id"`
+	Kind  string   `json:"kind"`
 	// DocumentKind is the kind of document the release froze (#4688); a
 	// draft carries the kind its release would freeze now.
 	DocumentKind        string                `json:"document_kind,omitempty"`
-	ReferenceDocumentID *int64                `json:"reference_document_id"`
+	ReferenceDocumentID *ident.ID             `json:"reference_document_id"`
 	ReferenceNumber     string                `json:"reference_number"`
 	Reason              string                `json:"reason"`
 	History             []BillingDocumentLink `json:"history"`
 	ReplacedCredits     []BillingDocumentLink `json:"replaced_credits"`
 	Number              string                `json:"number"`
 	IssuedOn            *calendar.Date        `json:"issued_on"`
-	RegistrationID      int64                 `json:"registration_id"`
-	RegistrationChildID int64                 `json:"registration_child_id"`
+	RegistrationID      ident.ID              `json:"registration_id"`
+	RegistrationChildID ident.ID              `json:"registration_child_id"`
 	RecipientFirstName  string                `json:"recipient_first_name"`
 	RecipientLastName   string                `json:"recipient_last_name"`
 	RecipientEmail      string                `json:"recipient_email"`
@@ -227,7 +228,7 @@ type BillingDocument struct {
 	ServiceFrom  calendar.Date  `json:"service_from"`
 	ServiceUntil calendar.Date  `json:"service_until"`
 	Children     []BillingChild `json:"children"`
-	TotalCents   int64          `json:"total_cents"`
+	TotalCents   int64          `json:"total_cents" contract:"number"`
 }
 
 // BillingRunDetail is a run with its invoices. A calculated run shows the
@@ -242,7 +243,7 @@ type BillingRunDetail struct {
 	BillingRun
 	Documents                       []BillingDocument `json:"documents"`
 	PreviewCount                    int               `json:"preview_count"`
-	PreviewCents                    int64             `json:"preview_cents"`
+	PreviewCents                    int64             `json:"preview_cents" contract:"number"`
 	Unbilled                        int               `json:"unbilled"`
 	MissingDebtorNumbers            int               `json:"missing_debtor_numbers"`
 	PaymentTextMissingDebtorNumbers int               `json:"payment_text_missing_debtor_numbers"`
@@ -262,8 +263,8 @@ type BillingRunDetail struct {
 // BillingCorrectionInput changes the amount of one child of a family in a
 // calculated run to TotalCents, with its reason.
 type BillingCorrectionInput struct {
-	RegistrationID int64
-	ChildID        int64
+	RegistrationID ident.ID
+	ChildID        ident.ID
 	TotalCents     int64
 	Reason         string
 }
@@ -358,7 +359,7 @@ type NumberRangeStarts interface {
 // the days of its first and last week. Published names a period parents can
 // register for.
 type HolidayBillingPeriod struct {
-	ID        int64         `json:"id"`
+	ID        ident.ID      `json:"id"`
 	Name      string        `json:"name"`
 	StartsOn  calendar.Date `json:"starts_on"`
 	EndsOn    calendar.Date `json:"ends_on"`

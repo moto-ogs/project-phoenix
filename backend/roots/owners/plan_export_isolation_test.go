@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/planexport"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
@@ -245,9 +246,9 @@ func (s planExportOwnerInstances) FindByTenantAndDateRange(ctx context.Context, 
 	out := make([]*timetable.ScheduledInstance, 0, len(rows))
 	for _, row := range rows {
 		out = append(out, &timetable.ScheduledInstance{
-			ID: row.ID, Date: calendar.Date(row.Date), StartTime: row.StartTime, EndTime: row.EndTime,
-			Title: row.Title, ActivityGroupID: row.ActivityGroupID, ActiveGroupID: row.ActiveGroupID,
-			RoomID: row.RoomID, Status: row.Status, ListKind: row.ListKind,
+			ID: ident.ID(row.ID), Date: calendar.Date(row.Date), StartTime: row.StartTime, EndTime: row.EndTime,
+			Title: row.Title, ActivityGroupID: (*ident.ID)(row.ActivityGroupID), ActiveGroupID: (*ident.ID)(row.ActiveGroupID),
+			RoomID: ident.ID(row.RoomID), Status: row.Status, ListKind: row.ListKind,
 			CancelReason: row.CancelReason, Notes: row.Notes, UnderstaffedNote: row.UnderstaffedNote,
 		})
 	}

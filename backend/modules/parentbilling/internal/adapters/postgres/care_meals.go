@@ -11,6 +11,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The Mensa of the monthly run (#4686, migration 1.15.811): the Mensa
@@ -75,7 +76,7 @@ func (s *Store) CareMealTariffs(ctx context.Context, organizationID int64) ([]pa
 	}
 	tariffs := make([]parentbilling.CareMealTariff, len(rows))
 	for i, row := range rows {
-		tariffs[i] = parentbilling.CareMealTariff{ID: row.ID, SchoolID: row.SchoolID, ValidFrom: row.ValidFrom, Mode: row.Mode,
+		tariffs[i] = parentbilling.CareMealTariff{ID: ident.ID(row.ID), SchoolID: ident.ID(row.SchoolID), ValidFrom: row.ValidFrom, Mode: row.Mode,
 			AmountCents: row.AmountCents, CreatedAt: row.CreatedAt}
 	}
 	return tariffs, nil
@@ -87,10 +88,10 @@ func (s *Store) ReplaceCareMealTariff(ctx context.Context, organizationID, accou
 	if err != nil {
 		return err
 	}
-	if _, err := s.DeleteCareMealTariff(ctx, organizationID, price.SchoolID, price.ValidFrom); err != nil {
+	if _, err := s.DeleteCareMealTariff(ctx, organizationID, price.SchoolID.Int64(), price.ValidFrom); err != nil {
 		return err
 	}
-	row := &careMealTariffRow{OrganizationID: organizationID, SchoolID: price.SchoolID, ValidFrom: price.ValidFrom,
+	row := &careMealTariffRow{OrganizationID: organizationID, SchoolID: price.SchoolID.Int64(), ValidFrom: price.ValidFrom,
 		Mode: price.Mode, AmountCents: price.AmountCents, CreatedByAccountID: &accountID}
 	if _, err := db.NewInsert().Model(row).Exec(ctx); err != nil {
 		return fmt.Errorf("insert Mensa price: %w", err)
@@ -194,12 +195,12 @@ func insertCareMealPositions(ctx context.Context, db bun.IDB, organizationID int
 			// bills it (the Mensa may have moved onto an invoice of its own
 			// since, ADR 0167).
 			replaces := rows[i].ReplacesInvoiceID
-			if head, ok := cancelled[parentbilling.CareBilledMeal{SchoolID: meal.SchoolID, StudentID: meal.StudentID, Month: meal.MealMonth}]; ok {
+			if head, ok := cancelled[parentbilling.CareBilledMeal{SchoolID: meal.SchoolID.Int64(), StudentID: meal.StudentID.Int64(), Month: meal.MealMonth}]; ok {
 				replaces = &head
 			}
 			positions = append(positions, careMealPositionRow{OrganizationID: organizationID, InvoiceID: rows[i].ID,
 				Replaces: replaces, Position: j + 1, ReleaseVersion: max(meal.ReleaseVersion, 1),
-				SchoolID: meal.SchoolID, StudentID: meal.StudentID, MealMonth: meal.MealMonth, Mode: meal.Mode, Quantity: meal.Quantity,
+				SchoolID: meal.SchoolID.Int64(), StudentID: meal.StudentID.Int64(), MealMonth: meal.MealMonth, Mode: meal.Mode, Quantity: meal.Quantity,
 				UnitCents: meal.UnitCents, AmountCents: meal.AmountCents, NetCents: meal.AmountCents,
 				positionAccountsColumns: positionAccountsOf(meal.Accounts)})
 		}
@@ -276,7 +277,7 @@ func cancelledMealHeads(ctx context.Context, db bun.IDB, organizationID int64, i
 	var months []string
 	for _, invoice := range invoices {
 		for _, meal := range invoice.MealPositions {
-			schools, students, months = append(schools, meal.SchoolID), append(students, meal.StudentID), append(months, meal.MealMonth.String())
+			schools, students, months = append(schools, meal.SchoolID.Int64()), append(students, meal.StudentID.Int64()), append(months, meal.MealMonth.String())
 		}
 	}
 	heads := map[parentbilling.CareBilledMeal]int64{}

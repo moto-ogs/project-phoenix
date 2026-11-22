@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // CountAtSchoolToday counts the given students who read "Schule" right now.
@@ -38,7 +39,7 @@ func (rs *Resource) CountAtSchoolToday(ctx context.Context, studentIDs []int64) 
 
 	responses := make([]StudentResponse, len(studentIDs))
 	for i, id := range studentIDs {
-		responses[i] = StudentResponse{ID: id, HasFullAccess: true, Location: studentpresence.AbsentLocationLabel}
+		responses[i] = StudentResponse{ID: ident.ID(id), HasFullAccess: true, Location: studentpresence.AbsentLocationLabel}
 	}
 	applyDayPlanning(responses, arrivals, pickups, attendances, timetableIDs, true)
 	applyAtSchoolLocation(responses, pickups, attendances, careDayEnd, rs.Now())

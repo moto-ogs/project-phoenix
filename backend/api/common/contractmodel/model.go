@@ -6,21 +6,20 @@ package contractmodel
 
 // Kinds of a value on the wire.
 const (
-	KindString   = "string"
-	KindBool     = "bool"
-	KindInt      = "int"       // JSON number, safe integer
-	KindNumber   = "number"    // JSON number
-	KindID       = "id"        // identifier as a JSON string
-	KindLegacyID = "legacy_id" // identifier an existing route still sends, or reads only, as a JSON number
-	KindLaxID    = "lax_id"    // common.JSONID: renders a number, reads number or string
-	KindDate     = "date"      // YYYY-MM-DD
-	KindInstant  = "instant"   // RFC 3339
-	KindClock    = "clock"     // wall-clock time as HH:MM
-	KindEnum     = "enum"
-	KindArray    = "array"
-	KindMap      = "map"
-	KindRef      = "ref"
-	KindJSON     = "json" // any JSON value the owner stores and hands on unread
+	KindString  = "string"
+	KindBool    = "bool"
+	KindInt     = "int"     // JSON number, safe integer
+	KindNumber  = "number"  // JSON number
+	KindID      = "id"      // identifier as a JSON string
+	KindLaxID   = "lax_id"  // identifier a request reads as a number or a decimal string
+	KindDate    = "date"    // YYYY-MM-DD
+	KindInstant = "instant" // RFC 3339
+	KindClock   = "clock"   // wall-clock time as HH:MM
+	KindEnum    = "enum"
+	KindArray   = "array"
+	KindMap     = "map"
+	KindRef     = "ref"
+	KindJSON    = "json" // any JSON value the owner stores and hands on unread
 )
 
 // Schema is one value on the wire.
@@ -88,6 +87,9 @@ type Route struct {
 	NoRetryAfterRenewal string `json:"no_retry_after_renewal,omitempty"`
 	// MaxBodyBytes is the largest request body the proxy reads.
 	MaxBodyBytes int `json:"max_body_bytes,omitempty"`
+	// NoCommit says why a POST commits nothing its caller asked for; its
+	// unreadable answer may be retried like a GET's.
+	NoCommit string `json:"no_commit,omitempty"`
 	// File says the route answers a file instead of the envelope.
 	File bool `json:"file,omitempty"`
 	// Multipart says the request body is a multipart/form-data upload the
@@ -141,8 +143,4 @@ type Document struct {
 	Routes []Route  `json:"routes"`
 	Enums  []Enum   `json:"enums"`
 	Types  []Object `json:"types"`
-	// NumericIDs names every field that travels as a JSON number identifier
-	// (legacy_id, lax_id), as "package.Type.GoField" of its declaring type.
-	// scripts/check-contract-shrink.mjs refuses a new one (#2353).
-	NumericIDs []string `json:"numeric_ids"`
 }

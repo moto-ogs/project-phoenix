@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The office's half of the holiday care wish (#4703): a child of a school
@@ -36,7 +37,7 @@ func (h *HolidayRegistrationReview) SetHolidayWish(ctx context.Context, reviewer
 		if current.Status == enrollment.HolidayRegistrationCancelled {
 			return "", nil, enrollment.ErrHolidayRegistrationStateConflict
 		}
-		return h.decideWish(ctx, reviewer.OrganizationID, period.ID, registrationID, childID, wish)
+		return h.decideWish(ctx, reviewer.OrganizationID, period.ID.Int64(), registrationID, childID, wish)
 	})
 }
 
@@ -65,7 +66,7 @@ func (h *HolidayRegistrationReview) decideWish(ctx context.Context, organization
 	if !written {
 		return "", nil, enrollment.ErrHolidayRegistrationEntryNotFound
 	}
-	return enrollment.HolidayAuditWish, enrollment.HolidayRegistrationEventDetails{ChildID: childID, From: child.HolidayWish, Wish: wish}, nil
+	return enrollment.HolidayAuditWish, enrollment.HolidayRegistrationEventDetails{ChildID: ident.ID(childID), From: child.HolidayWish, Wish: wish}, nil
 }
 
 // holidayWishCheck marks a child whose wish the office still has to check:

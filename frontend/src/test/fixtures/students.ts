@@ -7,14 +7,14 @@ import type { Student } from "~/lib/student-helpers";
 let studentIdCounter = 0;
 
 function nextId() {
-  return ++studentIdCounter;
+  return String(++studentIdCounter);
 }
 
 type IdField = "id" | "person_id" | "group_id" | "photo_consent_given_by";
 
-/** A backend row as Go writes it: identifiers may still be numbers. */
+/** A backend row as Go writes it: identifiers are strings (#2342). */
 export type BackendStudentInput = Partial<Omit<StudentResponse, IdField>> &
-  Partial<Record<IdField, string | number>>;
+  Partial<Record<IdField, string>>;
 
 /**
  * Builds the full student row of the backend (snake_case) and reads it
@@ -27,12 +27,12 @@ export function buildBackendStudent(
   const id = overrides?.id ?? nextId();
   return StudentResponseSchema.parse({
     id,
-    person_id: 100 + Number(id),
+    person_id: String(100 + Number(id)),
     first_name: "Max",
     last_name: "Mustermann",
     school_class: "3a",
     current_location: "Schule",
-    group_id: 10,
+    group_id: "10",
     tag_id: `TAG${String(id).padStart(3, "0")}`,
     bus: false,
     sick: false,

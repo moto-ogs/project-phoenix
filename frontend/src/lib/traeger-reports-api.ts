@@ -10,6 +10,9 @@
 
 import { apiErrorFromBody, transportFetch } from "./api-error";
 import { filenameFromDisposition } from "./file-download";
+import type * as traegerReportsContract from "./contract/traeger-reports.generated";
+import type * as traegerReportTemplatesContract from "./contract/traeger-report-templates.generated";
+import { requiredDay } from "./contract/required-day";
 import { traegerRequest } from "./traeger-api";
 
 /** Das Recht, das Vorlagen anlegen, ändern und löschen lässt. */
@@ -115,81 +118,6 @@ export interface ReportTemplate {
 
 export type ReportTemplateInput = Omit<ReportTemplate, "id" | "updatedAt">;
 
-interface BackendFigures {
-  readonly children?: number;
-  readonly without_care_form?: number;
-  readonly staff?: number;
-  readonly children_per_staff?: number | null;
-  readonly present_days?: number;
-  readonly sick_days?: number;
-  readonly excused_days?: number;
-  readonly absence_rate?: number | null;
-  readonly places?: number;
-  readonly booked_places?: number;
-  readonly free_places?: number;
-  readonly booked?: number;
-  readonly open?: number;
-  readonly waitlisted?: number;
-  readonly demand?: number;
-}
-
-interface BackendCareForm {
-  readonly name: string;
-  readonly children?: number;
-  readonly capacity?: number | null;
-  readonly active?: boolean;
-}
-
-interface BackendGroup {
-  readonly unmapped?: boolean;
-  readonly name?: string;
-  readonly schools?: number;
-  readonly figures?: BackendFigures;
-  readonly care_forms?: readonly BackendCareForm[] | null;
-}
-
-interface BackendReport {
-  readonly key_date: string;
-  readonly as_of: string;
-  readonly template: {
-    readonly id: number | string;
-    readonly name: string;
-  } | null;
-  readonly sections?: readonly string[] | null;
-  readonly absence_window: {
-    readonly from: string;
-    readonly to: string;
-  } | null;
-  readonly schools?:
-    | readonly {
-        readonly id: number | string;
-        readonly name: string;
-        readonly city?: string;
-        readonly district?: string | null;
-        readonly attendance_from?: string | null;
-        readonly figures?: BackendFigures;
-        readonly care_forms?: readonly BackendCareForm[] | null;
-      }[]
-    | null;
-  readonly districts?: readonly BackendGroup[] | null;
-  readonly total?: BackendGroup;
-}
-
-interface BackendTemplate {
-  readonly id: number | string;
-  readonly name: string;
-  readonly sections?: readonly string[] | null;
-  readonly key_date_month: number;
-  readonly key_date_day: number;
-  readonly districts?:
-    | readonly {
-        readonly school_id: number | string;
-        readonly district: string;
-      }[]
-    | null;
-  readonly updated_at?: string | null;
-}
-
 function isSection(value: string): value is ReportSection {
   return (REPORT_SECTIONS as readonly string[]).includes(value);
 }
@@ -200,88 +128,105 @@ export function sectionsOf(values: readonly string[]): ReportSection[] {
   return REPORT_SECTIONS.filter((section) => known.has(section));
 }
 
-function figuresFromBackend(figures: BackendFigures = {}): ReportFigures {
+function figuresFromBackend(
+  figures: traegerReportsContract.KeyDateFigures,
+): ReportFigures {
   return {
-    children: figures.children ?? 0,
-    withoutCareForm: figures.without_care_form ?? 0,
-    staff: figures.staff ?? 0,
-    childrenPerStaff: figures.children_per_staff ?? null,
-    presentDays: figures.present_days ?? 0,
-    sickDays: figures.sick_days ?? 0,
-    excusedDays: figures.excused_days ?? 0,
-    absenceRate: figures.absence_rate ?? null,
-    places: figures.places ?? 0,
-    bookedPlaces: figures.booked_places ?? 0,
-    freePlaces: figures.free_places ?? 0,
-    booked: figures.booked ?? 0,
-    open: figures.open ?? 0,
-    waitlisted: figures.waitlisted ?? 0,
-    demand: figures.demand ?? 0,
+    children: figures.children,
+    withoutCareForm: figures.without_care_form,
+    staff: figures.staff,
+    childrenPerStaff: figures.children_per_staff,
+    presentDays: figures.present_days,
+    sickDays: figures.sick_days,
+    excusedDays: figures.excused_days,
+    absenceRate: figures.absence_rate,
+    places: figures.places,
+    bookedPlaces: figures.booked_places,
+    freePlaces: figures.free_places,
+    booked: figures.booked,
+    open: figures.open,
+    waitlisted: figures.waitlisted,
+    demand: figures.demand,
   };
 }
 
 function careFormsFromBackend(
-  forms: readonly BackendCareForm[] | null | undefined,
+  forms: traegerReportsContract.KeyDateCareForm[] | null,
 ): ReportCareForm[] {
   return (forms ?? []).map((form) => ({
     name: form.name,
-    children: form.children ?? 0,
-    capacity: form.capacity ?? null,
-    active: form.active ?? true,
+    children: form.children,
+    capacity: form.capacity,
+    active: form.active,
   }));
 }
 
-function groupFromBackend(group: BackendGroup = {}): ReportGroup {
+function groupFromBackend(
+  group:
+    | traegerReportsContract.KeyDateDistrict
+    | traegerReportsContract.KeyDateTotal,
+  name: string,
+): ReportGroup {
   return {
-    name: group.name ?? "",
-    schools: group.schools ?? 0,
+    name,
+    schools: group.schools,
     figures: figuresFromBackend(group.figures),
     careForms: careFormsFromBackend(group.care_forms),
   };
 }
 
-function reportFromBackend(body: BackendReport): KeyDateReport {
+function reportFromBackend(
+  body: traegerReportsContract.KeyDateReport,
+): KeyDateReport {
+  const window = body.absence_window;
   return {
-    keyDate: body.key_date,
+    keyDate: requiredDay(body.key_date, "key_date_report.key_date"),
     asOf: body.as_of,
-    template: body.template
-      ? { id: String(body.template.id), name: body.template.name }
-      : null,
+    template: body.template,
     sections: sectionsOf(body.sections ?? []),
-    absenceWindow: body.absence_window ?? null,
+    absenceWindow: window
+      ? {
+          from: requiredDay(window.from, "key_date_report.absence_window.from"),
+          to: requiredDay(window.to, "key_date_report.absence_window.to"),
+        }
+      : null,
     schools: (body.schools ?? []).map((school) => ({
-      id: String(school.id),
+      id: school.id,
       name: school.name,
-      city: school.city ?? "",
-      district: school.district ?? null,
-      attendanceFrom: school.attendance_from ?? null,
+      city: school.city,
+      district: school.district,
+      attendanceFrom: school.attendance_from,
       figures: figuresFromBackend(school.figures),
       careForms: careFormsFromBackend(school.care_forms),
     })),
     districts: (body.districts ?? []).map((group) => ({
-      ...groupFromBackend(group),
-      unmapped: group.unmapped ?? false,
+      ...groupFromBackend(group, group.name),
+      unmapped: group.unmapped,
     })),
-    total: groupFromBackend(body.total),
+    total: groupFromBackend(body.total, ""),
   };
 }
 
-function templateFromBackend(template: BackendTemplate): ReportTemplate {
+function templateFromBackend(
+  template: traegerReportTemplatesContract.TraegerReportTemplate,
+): ReportTemplate {
   return {
-    id: String(template.id),
+    id: template.id,
     name: template.name,
     sections: sectionsOf(template.sections ?? []),
     keyDateMonth: template.key_date_month,
     keyDateDay: template.key_date_day,
     districts: (template.districts ?? []).map((entry) => ({
-      schoolId: String(entry.school_id),
+      schoolId: entry.school_id,
       district: entry.district,
     })),
-    updatedAt: template.updated_at ?? null,
+    updatedAt: template.updated_at,
   };
 }
 
-function templateToBackend(input: ReportTemplateInput) {
+function templateToBackend(
+  input: ReportTemplateInput,
+): traegerReportTemplatesContract.ReportTemplateRequest {
   return {
     name: input.name.trim(),
     sections: sectionsOf(input.sections),
@@ -290,7 +235,7 @@ function templateToBackend(input: ReportTemplateInput) {
     districts: input.districts
       .filter((entry) => entry.district.trim() !== "")
       .map((entry) => ({
-        school_id: Number(entry.schoolId),
+        school_id: entry.schoolId,
         district: entry.district.trim(),
       })),
   };
@@ -308,7 +253,7 @@ export async function fetchKeyDateReport(
   templateId: string | null,
 ): Promise<KeyDateReport> {
   return reportFromBackend(
-    await traegerRequest<BackendReport>(
+    await traegerRequest<traegerReportsContract.KeyDateReport>(
       `${REPORT_PATH}?${reportQuery(keyDate, templateId)}`,
     ),
   );
@@ -349,18 +294,24 @@ export async function downloadKeyDateReport(
 
 /** Die Vorlagen des Trägers, nach Namen. */
 export async function fetchReportTemplates(): Promise<ReportTemplate[]> {
-  const body = await traegerRequest<BackendTemplate[] | null>(TEMPLATES_PATH);
-  return (body ?? []).map(templateFromBackend);
+  const body =
+    await traegerRequest<
+      traegerReportTemplatesContract.TraegerReportTemplate[]
+    >(TEMPLATES_PATH);
+  return body.map(templateFromBackend);
 }
 
 export async function createReportTemplate(
   input: ReportTemplateInput,
 ): Promise<ReportTemplate> {
   return templateFromBackend(
-    await traegerRequest<BackendTemplate>(TEMPLATES_PATH, {
-      method: "POST",
-      body: templateToBackend(input),
-    }),
+    await traegerRequest<traegerReportTemplatesContract.TraegerReportTemplate>(
+      TEMPLATES_PATH,
+      {
+        method: "POST",
+        body: templateToBackend(input),
+      },
+    ),
   );
 }
 
@@ -369,7 +320,7 @@ export async function updateReportTemplate(
   input: ReportTemplateInput,
 ): Promise<ReportTemplate> {
   return templateFromBackend(
-    await traegerRequest<BackendTemplate>(
+    await traegerRequest<traegerReportTemplatesContract.TraegerReportTemplate>(
       `${TEMPLATES_PATH}/${encodeURIComponent(id)}`,
       { method: "PUT", body: templateToBackend(input) },
     ),

@@ -22,19 +22,18 @@ describe("accountTenantAccessService", () => {
       jsonResponse({
         data: [
           {
-            tenant_id: 7,
+            tenant_id: "7",
             school_name: "OGS Nord",
             school_slug: "ogs-nord",
             school_active: true,
-            organization_id: 3,
+            organization_id: "3",
             organization_name: "Träger Köln",
             status: "active",
             activated_at: "2026-07-01T10:00:00Z",
-            deactivated_at: null,
             has_person: true,
             has_staff: false,
             roles: [
-              { id: "1", name: "admin", is_system: true, base_role: null },
+              { id: "1", name: "admin", is_system: true, school_portal: false },
             ],
           },
         ],
@@ -73,20 +72,21 @@ describe("accountTenantAccessService", () => {
     ]);
   });
 
-  it("treats an unknown status as no access and missing roles as empty", async () => {
+  it("leaves an unknown status unknown and treats missing roles as empty", async () => {
     mockFetch.mockResolvedValue(
       jsonResponse({
         data: [
           {
-            tenant_id: 7,
+            tenant_id: "7",
             school_name: "OGS Nord",
             school_slug: "ogs-nord",
             school_active: true,
-            organization_id: 3,
+            organization_id: "3",
             organization_name: "Träger",
             status: "something-new",
             has_person: false,
             has_staff: false,
+            roles: null,
           },
         ],
       }),
@@ -94,7 +94,10 @@ describe("accountTenantAccessService", () => {
 
     const [entry] = await accountTenantAccessService.list("42");
 
-    expect(entry?.status).toBe("inactive");
+    // ADR 0270 point 6: a status this build does not know is not passed off
+    // as a known one; the modal shows „–“.
+    expect(entry).toBeDefined();
+    expect(entry?.status).toBeUndefined();
     expect(entry?.roles).toEqual([]);
   });
 
@@ -116,7 +119,7 @@ describe("accountTenantAccessService", () => {
       expect.objectContaining({
         method: "POST",
         body: JSON.stringify({
-          school_id: 7,
+          school_id: "7",
           role_id: roleId,
           first_name: "Ada",
           last_name: "Lovelace",
@@ -138,7 +141,12 @@ describe("accountTenantAccessService", () => {
     mockFetch.mockResolvedValue(
       jsonResponse({
         data: [
-          { id: "4", name: "teamleitung", is_system: false },
+          {
+            id: "4",
+            name: "teamleitung",
+            is_system: false,
+            school_portal: false,
+          },
           // A copy of the Lehrkraft role keeps its mark (#4574).
           {
             id: "5",
@@ -203,8 +211,8 @@ describe("accountTenantAccessService", () => {
     );
   });
 
-  it("treats a missing data envelope as an empty list", async () => {
-    mockFetch.mockResolvedValue(jsonResponse({ data: null }));
+  it("maps an empty list", async () => {
+    mockFetch.mockResolvedValue(jsonResponse({ data: [] }));
 
     await expect(accountTenantAccessService.list("42")).resolves.toEqual([]);
   });
@@ -214,11 +222,11 @@ describe("accountTenantAccessService", () => {
       jsonResponse({
         data: [
           {
-            tenant_id: 7,
+            tenant_id: "7",
             school_name: "OGS Nord",
             school_slug: "ogs-nord",
             school_active: false,
-            organization_id: 3,
+            organization_id: "3",
             organization_name: "Träger",
             status: "inactive",
             activated_at: "2026-07-01T10:00:00Z",

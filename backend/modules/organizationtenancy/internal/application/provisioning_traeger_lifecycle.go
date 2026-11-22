@@ -26,7 +26,7 @@ func (p *Provisioning) RecordTraegerErasureOrder(ctx context.Context, input orga
 			return organizationtenancy.TraegerErasureOrder{}, mapOrganizationError(err, input.OrganizationID)
 		}
 		return order, p.recordAction(adminCtx, input.OperatorID, domain.AuditActionRecordErasureOrder, domain.AuditResourceOrganization, &input.OrganizationID, input.ClientIP, map[string]any{
-			"order_id":         order.ID,
+			"order_id":         order.ID.Int64(),
 			"order_reference":  order.OrderReference,
 			"confirmed_on":     order.ConfirmedOn.String(),
 			"erase_not_before": order.EraseNotBefore.String(),
@@ -43,7 +43,7 @@ func (p *Provisioning) RecordTraegerErasureOrder(ctx context.Context, input orga
 	}
 	p.logger.Info("traeger_erasure_order_recorded",
 		slog.Int64("organization_id", input.OrganizationID),
-		slog.Int64("order_id", order.ID),
+		slog.Int64("order_id", order.ID.Int64()),
 		slog.Int64("operator_id", input.OperatorID),
 		slog.String("records_choice", string(order.RecordsChoice)))
 	return order, nil
@@ -68,7 +68,7 @@ func (p *Provisioning) RecordTraegerErasureOrderRecords(ctx context.Context, inp
 			return organizationtenancy.TraegerErasureOrder{}, mapOrganizationError(err, organizationID)
 		}
 		return order, p.recordAction(adminCtx, input.OperatorID, domain.AuditActionRecordErasureOrderRecords, domain.AuditResourceOrganization, &organizationID, input.ClientIP, map[string]any{
-			"order_id":                    order.ID,
+			"order_id":                    order.ID.Int64(),
 			"order_reference":             order.OrderReference,
 			"started":                     order.StartedAt != nil,
 			"records_notice_acknowledged": order.RecordsNoticeShownAt != nil,
@@ -82,7 +82,7 @@ func (p *Provisioning) RecordTraegerErasureOrderRecords(ctx context.Context, inp
 	}
 	p.logger.Info("traeger_erasure_order_records_recorded",
 		slog.Int64("organization_id", organizationID),
-		slog.Int64("order_id", order.ID),
+		slog.Int64("order_id", order.ID.Int64()),
 		slog.Int64("operator_id", input.OperatorID),
 		slog.String("records_choice", string(order.RecordsChoice)))
 	return order, nil
@@ -97,7 +97,7 @@ func (p *Provisioning) WithdrawTraegerErasureOrder(ctx context.Context, organiza
 			return organizationtenancy.TraegerErasureOrder{}, mapOrganizationError(err, organizationID)
 		}
 		return order, p.recordAction(adminCtx, operatorID, domain.AuditActionWithdrawErasureOrder, domain.AuditResourceOrganization, &organizationID, clientIP, map[string]any{
-			"order_id":        order.ID,
+			"order_id":        order.ID.Int64(),
 			"order_reference": order.OrderReference,
 		})
 	})

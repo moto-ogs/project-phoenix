@@ -17,21 +17,22 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // StaffPoolAssignmentResponse is one overlapping same-day assignment of a
 // pool member (the move source the frontend offers).
 type StaffPoolAssignmentResponse struct {
-	InstanceID   int64  `json:"instance_id"`
-	Title        string `json:"title"`
-	StartTime    string `json:"start_time"`
-	EndTime      string `json:"end_time"`
-	IsSubstitute bool   `json:"is_substitute"`
+	InstanceID   common.ID `json:"instance_id"`
+	Title        string    `json:"title"`
+	StartTime    string    `json:"start_time"`
+	EndTime      string    `json:"end_time"`
+	IsSubstitute bool      `json:"is_substitute"`
 }
 
 // StaffPoolEntryResponse is one categorized staff member.
 type StaffPoolEntryResponse struct {
-	StaffID       int64                         `json:"staff_id"`
+	StaffID       common.ID                     `json:"staff_id"`
 	DisplayName   string                        `json:"display_name"`
 	Category      string                        `json:"category"`
 	OnShift       bool                          `json:"on_shift"`
@@ -43,7 +44,7 @@ type StaffPoolEntryResponse struct {
 
 // StaffPoolResponse is the 200 body of GET /instances/{id}/staff-pool.
 type StaffPoolResponse struct {
-	InstanceID      int64                    `json:"instance_id"`
+	InstanceID      common.ID                `json:"instance_id"`
 	Title           string                   `json:"title"`
 	Date            string                   `json:"date"`
 	StartTime       string                   `json:"start_time"`
@@ -83,10 +84,13 @@ func staffPoolResponseOf(pool timetable.StaffPool) StaffPoolResponse {
 	for _, entry := range pool.Entries {
 		assignments := make([]StaffPoolAssignmentResponse, 0, len(entry.Assignments))
 		for _, assignment := range entry.Assignments {
-			assignments = append(assignments, StaffPoolAssignmentResponse(assignment))
+			assignments = append(assignments, StaffPoolAssignmentResponse{
+				InstanceID: common.ID(assignment.InstanceID), Title: assignment.Title, StartTime: assignment.StartTime,
+				EndTime: assignment.EndTime, IsSubstitute: assignment.IsSubstitute,
+			})
 		}
 		entries = append(entries, StaffPoolEntryResponse{
-			StaffID:       entry.StaffID,
+			StaffID:       ident.ID(entry.StaffID),
 			DisplayName:   entry.DisplayName,
 			Category:      entry.Category,
 			OnShift:       entry.OnShift,
@@ -97,7 +101,7 @@ func staffPoolResponseOf(pool timetable.StaffPool) StaffPoolResponse {
 		})
 	}
 	return StaffPoolResponse{
-		InstanceID:      pool.InstanceID,
+		InstanceID:      ident.ID(pool.InstanceID),
 		Title:           pool.Title,
 		Date:            pool.Date.String(),
 		StartTime:       calendar.NormalizeWallClock(pool.StartTime).Format("15:04"),

@@ -8,16 +8,8 @@
 
 import { knownEnum } from "./contract/known-enum";
 import { requiredDay } from "./contract/required-day";
-import type {
-  CareMealChanged as WireMealChanged,
-  CareMealGap as WireMealGap,
-  CareMealPosition as WireMealPosition,
-  CareMealUnbilled as WireMealUnbilled,
-} from "./contract/traeger-care-billing-runs.generated";
-import type {
-  CareMealPriceRequest,
-  CareMealTariffs as WireMealTariffs,
-} from "./contract/traeger-care-meal-tariffs.generated";
+import type * as traegerCareBillingRunsContract from "./contract/traeger-care-billing-runs.generated";
+import type * as traegerCareMealTariffsContract from "./contract/traeger-care-meal-tariffs.generated";
 import { traegerRequest } from "./traeger-api";
 
 // Go does not register these sets; the contract types them as string. A value
@@ -84,7 +76,7 @@ export interface CareMealChanged {
 }
 
 export function mealChangedFromBackend(
-  entries: readonly WireMealChanged[] | null,
+  entries: readonly traegerCareBillingRunsContract.CareMealChanged[] | null,
 ): CareMealChanged[] {
   return (entries ?? []).map((entry) => ({
     schoolId: id(entry.school_id),
@@ -122,7 +114,7 @@ function id(value: string): string {
 }
 
 export function mealPositionsFromBackend(
-  positions: readonly WireMealPosition[] | null,
+  positions: readonly traegerCareBillingRunsContract.CareMealPosition[] | null,
 ): CareMealPosition[] {
   return (positions ?? []).map((position) => ({
     mealMonth: requiredDay(
@@ -138,7 +130,7 @@ export function mealPositionsFromBackend(
 }
 
 export function mealGapsFromBackend(
-  gaps: readonly WireMealGap[] | null,
+  gaps: readonly traegerCareBillingRunsContract.CareMealGap[] | null,
 ): CareMealGap[] {
   return (gaps ?? []).map((gap) => ({
     schoolId: id(gap.school_id),
@@ -149,7 +141,7 @@ export function mealGapsFromBackend(
 }
 
 export function mealUnbilledFromBackend(
-  entries: readonly WireMealUnbilled[] | null,
+  entries: readonly traegerCareBillingRunsContract.CareMealUnbilled[] | null,
 ): CareMealUnbilled[] {
   return (entries ?? []).map((entry) => ({
     schoolId: id(entry.school_id),
@@ -163,7 +155,9 @@ export function mealUnbilledFromBackend(
   }));
 }
 
-function mealTariffsFromBackend(body: WireMealTariffs): CareMealTariffs {
+function mealTariffsFromBackend(
+  body: traegerCareMealTariffsContract.CareMealTariffs,
+): CareMealTariffs {
   return {
     schools: (body.schools ?? []).map((school) => ({
       id: id(school.id),
@@ -187,7 +181,9 @@ function mealTariffsFromBackend(body: WireMealTariffs): CareMealTariffs {
 
 export async function fetchCareMealTariffs(): Promise<CareMealTariffs> {
   return mealTariffsFromBackend(
-    await traegerRequest<WireMealTariffs>(MEAL_TARIFFS_PATH),
+    await traegerRequest<traegerCareMealTariffsContract.CareMealTariffs>(
+      MEAL_TARIFFS_PATH,
+    ),
   );
 }
 
@@ -199,15 +195,18 @@ export async function saveCareMealTariff(input: {
   readonly amountCents: number;
 }): Promise<CareMealTariffs> {
   return mealTariffsFromBackend(
-    await traegerRequest<WireMealTariffs>(MEAL_TARIFFS_PATH, {
-      method: "PUT",
-      body: {
-        school_id: Number(input.schoolId),
-        valid_from: input.validFrom,
-        mode: input.mode,
-        amount_cents: input.amountCents,
-      } satisfies CareMealPriceRequest,
-    }),
+    await traegerRequest<traegerCareMealTariffsContract.CareMealTariffs>(
+      MEAL_TARIFFS_PATH,
+      {
+        method: "PUT",
+        body: {
+          school_id: input.schoolId,
+          valid_from: input.validFrom,
+          mode: input.mode,
+          amount_cents: input.amountCents,
+        } satisfies traegerCareMealTariffsContract.CareMealPriceRequest,
+      },
+    ),
   );
 }
 
@@ -217,7 +216,7 @@ export async function deleteCareMealTariff(
   validFrom: string,
 ): Promise<CareMealTariffs> {
   return mealTariffsFromBackend(
-    await traegerRequest<WireMealTariffs>(
+    await traegerRequest<traegerCareMealTariffsContract.CareMealTariffs>(
       `${MEAL_TARIFFS_PATH}/${encodeURIComponent(schoolId)}/${encodeURIComponent(validFrom)}`,
       { method: "DELETE" },
     ),

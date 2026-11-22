@@ -14,6 +14,7 @@ import (
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	usersHTTP "github.com/moto-ogs/project-phoenix/modules/peopledirectory/http"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -206,7 +207,7 @@ func TestGuardianRoutesAreGatedByPermission(t *testing.T) {
 	t.Parallel()
 	h := newGuardianHarness(t, &fakeGuardianDirectory{})
 
-	assert.Equal(t, http.StatusForbidden, h.do(t, http.MethodGet, "/guardians/", nil).Code)
+	assert.Equal(t, http.StatusForbidden, h.do(t, http.MethodGet, "/guardians/search?q=Muster", nil).Code)
 	assert.Equal(t, http.StatusForbidden, h.do(t, http.MethodGet, "/guardians/payment-overview", nil).Code)
 	h.permitted["users:read"] = true
 	assert.Equal(t, http.StatusBadRequest, h.do(t, http.MethodGet, "/guardians/abc", nil).Code)
@@ -306,7 +307,7 @@ func TestBatchCreateRequiresCreatePermissionOnlyForNewProfiles(t *testing.T) {
 	require.Equal(t, http.StatusCreated, recorder.Code, recorder.Body.String())
 	require.Len(t, directory.added, 1)
 	require.NotNil(t, directory.added[0].GuardianProfileID)
-	assert.Equal(t, existing, *directory.added[0].GuardianProfileID)
+	assert.Equal(t, ident.ID(existing), *directory.added[0].GuardianProfileID)
 
 	h.staff = false
 	assert.Equal(t, http.StatusForbidden, h.do(t, http.MethodPost, "/guardians/students/3/guardians/batch", map[string]any{

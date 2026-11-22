@@ -176,10 +176,10 @@ describe("route file with backend calls of its own", () => {
   it("keeps a bundle that also calls a route without a contract", () => {
     const text = `
       apiGet(\`/api/students?\${params}\`, token);
-      apiPut(\`/api/activities/\${id}/students\`, token, body);
+      apiGet(\`/api/display/dashboard\`, token);
     `;
     expect(classify("route.ts", text).unregistered).toEqual([
-      "/api/activities/{}/students",
+      "/api/display/dashboard",
     ]);
   });
 });

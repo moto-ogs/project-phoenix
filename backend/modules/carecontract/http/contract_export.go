@@ -7,6 +7,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // contractStatusLabels are the statuses as the list names them.
@@ -50,7 +51,7 @@ func contractTable(filter carecontract.ContractFilter, contracts []carecontract.
 	rows := make([][]string, 0, len(contracts))
 	schoolName := ""
 	for _, contract := range contracts {
-		if contract.SchoolID == filter.SchoolID {
+		if contract.SchoolID == ident.ID(filter.SchoolID) {
 			schoolName = contract.SchoolName
 		}
 		rows = append(rows, []string{

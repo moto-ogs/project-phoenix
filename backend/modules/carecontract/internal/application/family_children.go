@@ -51,7 +51,7 @@ func (s *Signatures) linkFamily(ctx context.Context, organizationID int64, token
 		if recipient.Email == "" {
 			return carecontract.ErrRecipientMissing
 		}
-		family := carecontract.FamilyContract{ContractID: target.record.Summary.ID, Email: recipient.Email, Channel: carecontract.FamilyChannelLink}
+		family := carecontract.FamilyContract{ContractID: target.record.Summary.ID.Int64(), Email: recipient.Email, Channel: carecontract.FamilyChannelLink}
 		if children == nil {
 			result, err = s.ports.Families.FamilyChildren(txCtx, organizationID, family)
 		} else {

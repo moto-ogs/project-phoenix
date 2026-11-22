@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -59,7 +60,7 @@ func TestCallerContext_Account(t *testing.T) {
 		result, err := caller.Account(callerCtx(t, account.ID))
 
 		require.NoError(t, err)
-		assert.Equal(t, account.ID, result.ID)
+		assert.Equal(t, ident.ID(account.ID), result.ID)
 	})
 
 	t.Run("returns error for unauthenticated context", func(t *testing.T) {

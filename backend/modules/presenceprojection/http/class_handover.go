@@ -33,14 +33,14 @@ func (rs *Resource) enrichWithClassHandovers(ctx context.Context, responses []St
 	}
 	ids := make([]int64, 0, len(responses))
 	for i := range responses {
-		ids = append(ids, responses[i].ID)
+		ids = append(ids, responses[i].ID.Int64())
 	}
 	handovers, err := rs.ClassHandovers.ClassHandovers(ctx, ids, day)
 	if err != nil {
 		return fmt.Errorf("load class handovers: %w", err)
 	}
 	for i := range responses {
-		if handover, ok := handovers[responses[i].ID]; ok {
+		if handover, ok := handovers[responses[i].ID.Int64()]; ok {
 			responses[i].ClassHandover = &handover
 		}
 	}

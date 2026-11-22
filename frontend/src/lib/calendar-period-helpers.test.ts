@@ -301,13 +301,13 @@ describe("calendar-period-helpers", () => {
 
   describe("mapPeriod on the decoded proxy answer", () => {
     it("maps only fields the contract carries, with string IDs", () => {
-      // Go answer as the catalog proxy decodes it: numeric IDs become
-      // strings, fields outside the Go type (tenant_id) are dropped.
+      // Go answer as the catalog proxy decodes it: IDs travel as strings,
+      // fields outside the Go type (tenant_id) are dropped.
       const decoded = routes["GET /api/timetable/periods/{id}"].response.parse({
         status: "success",
         data: {
-          id: 5,
-          tenant_id: 1,
+          id: "5",
+          tenant_id: "1",
           name: "Schuljahr 2026/2027",
           period_type: "school_year",
           start_date: "2026-08-01",

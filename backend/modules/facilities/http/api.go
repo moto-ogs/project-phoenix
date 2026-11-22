@@ -14,7 +14,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	validation "github.com/go-ozzo/ozzo-validation"
+	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/facilities"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type Middleware = func(http.Handler) http.Handler
@@ -46,7 +48,7 @@ type RoomView struct {
 }
 
 type RoomSessionEntry struct {
-	SessionID       int64      `json:"session_id"`
+	SessionID       common.ID  `json:"session_id"`
 	StartedAt       time.Time  `json:"started_at"`
 	EndedAt         *time.Time `json:"ended_at,omitempty"`
 	DurationMinutes *int       `json:"duration_minutes,omitempty"`
@@ -151,7 +153,7 @@ func (req *RoomRequest) Bind(_ *http.Request) error {
 }
 
 type RoomResponse struct {
-	ID              int64      `json:"id"`
+	ID              common.ID  `json:"id"`
 	Name            string     `json:"name"`
 	Building        string     `json:"building,omitempty"`
 	Floor           *int       `json:"floor,omitempty"`
@@ -172,7 +174,7 @@ type RoomResponse struct {
 
 func newRoomResponse(view RoomView) RoomResponse {
 	return RoomResponse{
-		ID: view.ID, Name: view.Name, Building: view.Building, Floor: view.Floor,
+		ID: ident.ID(view.ID), Name: view.Name, Building: view.Building, Floor: view.Floor,
 		Capacity: view.Capacity, Category: view.Category, Color: view.Color,
 		IsOccupied: view.IsOccupied, GroupName: view.GroupName, CategoryName: view.CategoryName,
 		StudentCount: view.StudentCount, SupervisorNames: view.SupervisorNames,

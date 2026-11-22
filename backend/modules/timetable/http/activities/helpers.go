@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	activityContract "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
@@ -101,11 +102,11 @@ func newCategoryResponse(category *activityContract.Category) ActivityCategoryRe
 	}
 
 	return ActivityCategoryResponse{
-		ID:          category.ID,
+		ID:          ident.ID(category.ID),
 		Name:        category.Name,
 		Description: category.Description,
 		Color:       category.Color,
-		ShiftTypeID: category.ShiftTypeID,
+		ShiftTypeID: (*ident.ID)(category.ShiftTypeID),
 		IsSystem:    category.IsSystem,
 		ArchivedAt:  category.ArchivedAt,
 		CreatedAt:   category.CreatedAt,
@@ -124,12 +125,12 @@ func newActivityResponse(group *activityContract.Group, enrollmentCount int) Act
 
 	// Create response with only the direct fields that are guaranteed to be safe
 	response := ActivityResponse{
-		ID:              group.ID,
+		ID:              ident.ID(group.ID),
 		Name:            group.Name,
 		MaxParticipants: group.ParticipantLimit(),
 		IsOpen:          group.IsOpen,
-		CategoryID:      group.CategoryID,
-		CreatedBy:       group.CreatedBy,
+		CategoryID:      ident.ID(group.CategoryID),
+		CreatedBy:       (*ident.ID)(group.CreatedBy),
 		EnrollmentCount: enrollmentCount,
 		CreatedAt:       group.CreatedAt,
 		UpdatedAt:       group.UpdatedAt,
@@ -138,7 +139,7 @@ func newActivityResponse(group *activityContract.Group, enrollmentCount int) Act
 
 	// Safely add optional fields with nil checks
 	if group.PlannedRoomID != nil {
-		response.PlannedRoomID = group.PlannedRoomID
+		response.PlannedRoomID = (*ident.ID)(group.PlannedRoomID)
 	}
 
 	// Add category details if available - with extra nil checks
@@ -175,10 +176,10 @@ func newScheduleResponse(schedule *activityContract.Schedule) ActivityScheduleRe
 		return ActivityScheduleResponse{}
 	}
 	return ActivityScheduleResponse{
-		ID:              schedule.ID,
+		ID:              ident.ID(schedule.ID),
 		Weekday:         schedule.Weekday,
-		TimeframeID:     schedule.TimeframeID,
-		ActivityGroupID: schedule.ActivityGroupID,
+		TimeframeID:     (*ident.ID)(schedule.TimeframeID),
+		ActivityGroupID: ident.ID(schedule.ActivityGroupID),
 		CreatedAt:       schedule.CreatedAt,
 		UpdatedAt:       schedule.UpdatedAt,
 	}
@@ -190,8 +191,8 @@ func newSupervisorResponse(supervisor *activityContract.SupervisorPlanned) Activ
 		return ActivitySupervisorResponse{}
 	}
 	resp := ActivitySupervisorResponse{
-		ID:        supervisor.ID,
-		StaffID:   supervisor.StaffID,
+		ID:        ident.ID(supervisor.ID),
+		StaffID:   ident.ID(supervisor.StaffID),
 		IsPrimary: supervisor.IsPrimary,
 	}
 	resp.FirstName = supervisor.FirstName
@@ -202,16 +203,6 @@ func newSupervisorResponse(supervisor *activityContract.SupervisorPlanned) Activ
 // =============================================================================
 // DATA RETRIEVAL HELPERS
 // =============================================================================
-
-func activityGroupIDs(groups []*activityContract.Group) []int64 {
-	ids := make([]int64, 0, len(groups))
-	for _, group := range groups {
-		if group != nil {
-			ids = append(ids, group.ID)
-		}
-	}
-	return ids
-}
 
 // getEnrollmentCount returns the number of enrolled students for an activity.
 func (rs *Resource) getEnrollmentCount(ctx context.Context, activityID int64) (int, error) {

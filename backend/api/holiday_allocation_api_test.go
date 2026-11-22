@@ -261,7 +261,7 @@ func TestHolidayAllocationByCriteriaWaitsForTheOfficeDecision(t *testing.T) {
 	require.Equal(t, http.StatusOK, confirmed.Code, confirmed.Body.String())
 	rec = a.act(t, int64(early.ID), "cancel")
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.Equal(t, []int64{int64(late.ID)}, decodeSchoolPortalData[placeChangeBody](t, rec.Body.Bytes()).MovedUp)
+	assert.Equal(t, []int64{int64(late.ID)}, testpkg.IDs(decodeSchoolPortalData[placeChangeBody](t, rec.Body.Bytes()).MovedUp))
 	assert.Equal(t, 2, a.mails(t, "holiday_place_granted", int64(late.ID)))
 }
 
@@ -415,7 +415,7 @@ func TestHolidayAllocationWaitingListFollowsTheCriteria(t *testing.T) {
 		"the family that meets the criterion waits first")
 	rec = a.act(t, int64(first.ID), "cancel")
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.Equal(t, []int64{int64(third.ID)}, decodeSchoolPortalData[placeChangeBody](t, rec.Body.Bytes()).MovedUp)
+	assert.Equal(t, []int64{int64(third.ID)}, testpkg.IDs(decodeSchoolPortalData[placeChangeBody](t, rec.Body.Bytes()).MovedUp))
 }
 
 // TestHolidayAllocationQueryBudgetIsFlat: the allocation list and the

@@ -15,7 +15,7 @@ import (
 // the operator /operator/auth/mfa/trusted-devices endpoints —
 // extracted to remove the duplicated DTO definition and mapping loop.
 type TrustedDeviceDTO struct {
-	ID         int64   `json:"id"`
+	ID         ID      `json:"id"`
 	UserAgent  *string `json:"user_agent,omitempty"`
 	IPAddress  string  `json:"ip_address,omitempty"`
 	CreatedAt  string  `json:"created_at"`
@@ -39,7 +39,7 @@ type TrustedDeviceRow struct {
 // fields when the source values are nil.
 func NewTrustedDeviceDTO(row TrustedDeviceRow) TrustedDeviceDTO {
 	dto := TrustedDeviceDTO{
-		ID:        row.ID,
+		ID:        ID(row.ID),
 		UserAgent: row.UserAgent,
 		CreatedAt: row.CreatedAt.UTC().Format(time.RFC3339),
 		ExpiresAt: row.ExpiresAt.UTC().Format(time.RFC3339),

@@ -115,10 +115,10 @@ func schedulerDayInstances(timetableRepositories timetableCompose.Repositories) 
 				continue
 			}
 			dayInstances = append(dayInstances, schedulerPorts.DayInstance{
-				ID:        row.ID,
+				ID:        row.ID.Int64(),
 				Date:      row.Date,
 				StartTime: row.StartTime,
-				RoomID:    row.RoomID,
+				RoomID:    row.RoomID.Int64(),
 				Planned:   timetable.IsPlannedInstanceStatus(row.Status),
 				Duty:      row.IsDuty,
 			})

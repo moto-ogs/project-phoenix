@@ -83,7 +83,7 @@ func TestAppointmentWithOverride(t *testing.T) {
 		appointment := recurrenceFixture()
 		movedStart := time.Date(2026, 1, 1, 15, 30, 0, 0, time.UTC)
 		override := &AppointmentOccurrenceOverride{
-			AppointmentID:  appointment.ID,
+			AppointmentID:  appointment.ID.Int64(),
 			OccurrenceDate: NewDate(2026, 1, 5),
 			StartTime:      &movedStart,
 		}
@@ -113,7 +113,7 @@ func TestAppointmentWithOverrideAppliesEveryChangedField(t *testing.T) {
 	movedEndDate := NewDate(2026, 3, 11)
 
 	effective := EffectiveOccurrence(appointment, occurrence, &AppointmentOccurrenceOverride{
-		AppointmentID:  appointment.ID,
+		AppointmentID:  appointment.ID.Int64(),
 		OccurrenceDate: occurrence,
 		Title:          &title,
 		Location:       &location,

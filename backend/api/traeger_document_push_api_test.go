@@ -65,7 +65,7 @@ func TestContractSendPushesOncePerAddress(t *testing.T) {
 		body["contract_ids"] = []int64{int64(id)}
 		rec := traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts/send", body)
 		require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
-		require.Contains(t, rec.Body.String(), fmt.Sprintf(`"sent":[%d]`, id))
+		require.Contains(t, rec.Body.String(), fmt.Sprintf(`"sent":["%d"]`, id))
 	}
 	mailState := func(status string) {
 		t.Helper()

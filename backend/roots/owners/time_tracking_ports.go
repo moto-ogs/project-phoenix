@@ -101,6 +101,6 @@ func StaffScheduleBindings(people TimeTrackingStaffLookup) workforceCompose.Staf
 		if err != nil {
 			return workforceCompose.StaffScheduleBinding{}, err
 		}
-		return workforceCompose.StaffScheduleBinding{ID: staff.ID, WorkTimeModelID: staff.WorkTimeModelID, RotationAnchorDate: staff.RotationAnchorDate}, nil
+		return workforceCompose.StaffScheduleBinding{ID: staff.ID.Int64(), WorkTimeModelID: (*int64)(staff.WorkTimeModelID), RotationAnchorDate: staff.RotationAnchorDate}, nil
 	}
 }

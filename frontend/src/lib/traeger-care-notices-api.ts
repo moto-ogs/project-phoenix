@@ -9,15 +9,7 @@
 
 import { knownEnum } from "./contract/known-enum";
 import { requiredDay } from "./contract/required-day";
-import type {
-  CareNotice as WireNotice,
-  CareNoticeLetter as WireLetter,
-  CareNoticeReference as WireReference,
-  CareNoticeRun as WireRun,
-  CareNoticeRunDetail as WireRunDetail,
-  CareNoticeRunList as WireRunList,
-  CareNoticeRunRequest,
-} from "./contract/traeger-care-notice-runs.generated";
+import type * as traegerCareNoticeRunsContract from "./contract/traeger-care-notice-runs.generated";
 import { traegerRequest } from "./traeger-api";
 
 // Go does not register these sets; the contract types them as string. A value
@@ -162,7 +154,9 @@ export interface CareNoticeLetter {
   } | null;
 }
 
-function runFromBackend(run: WireRun): CareNoticeRun {
+function runFromBackend(
+  run: traegerCareNoticeRunsContract.CareNoticeRun,
+): CareNoticeRun {
   return {
     id: run.id,
     year: run.year,
@@ -180,7 +174,7 @@ function runFromBackend(run: WireRun): CareNoticeRun {
 }
 
 function referenceFromBackend(
-  reference: WireReference | null,
+  reference: traegerCareNoticeRunsContract.CareNoticeReference | null,
 ): CareNoticeReference | null {
   return reference
     ? {
@@ -191,7 +185,9 @@ function referenceFromBackend(
     : null;
 }
 
-function noticeFromBackend(notice: WireNotice): CareNotice {
+function noticeFromBackend(
+  notice: traegerCareNoticeRunsContract.CareNotice,
+): CareNotice {
   const { recipient } = notice;
   return {
     id: notice.id,
@@ -254,7 +250,9 @@ function noticeFromBackend(notice: WireNotice): CareNotice {
   };
 }
 
-function detailFromBackend(detail: WireRunDetail): CareNoticeRunDetail {
+function detailFromBackend(
+  detail: traegerCareNoticeRunsContract.CareNoticeRunDetail,
+): CareNoticeRunDetail {
   return {
     ...runFromBackend(detail),
     notices: (detail.notices ?? []).map(noticeFromBackend),
@@ -273,7 +271,10 @@ function detailFromBackend(detail: WireRunDetail): CareNoticeRunDetail {
 }
 
 export async function fetchCareNoticeRuns(): Promise<CareNoticeRunList> {
-  const body = await traegerRequest<WireRunList>(RUNS_PATH);
+  const body =
+    await traegerRequest<traegerCareNoticeRunsContract.CareNoticeRunList>(
+      RUNS_PATH,
+    );
   return {
     runs: (body.runs ?? []).map(runFromBackend),
     suggestedYear: body.suggested_year,
@@ -298,15 +299,18 @@ export async function startCareNoticeRun(
   input: CareNoticeRunStartInput,
 ): Promise<CareNoticeRun> {
   return runFromBackend(
-    await traegerRequest<WireRun>(RUNS_PATH, {
-      method: "POST",
-      body: {
-        year: input.year,
-        from_month: input.fromMonth,
-        school_ids: input.schoolIds.map(Number),
-        notice_date: input.noticeDate,
-      } satisfies CareNoticeRunRequest,
-    }),
+    await traegerRequest<traegerCareNoticeRunsContract.CareNoticeRun>(
+      RUNS_PATH,
+      {
+        method: "POST",
+        body: {
+          year: input.year,
+          from_month: input.fromMonth,
+          school_ids: [...input.schoolIds],
+          notice_date: input.noticeDate,
+        } satisfies traegerCareNoticeRunsContract.CareNoticeRunRequest,
+      },
+    ),
   );
 }
 
@@ -314,7 +318,7 @@ export async function fetchCareNoticeRun(
   runId: string,
 ): Promise<CareNoticeRunDetail> {
   return detailFromBackend(
-    await traegerRequest<WireRunDetail>(
+    await traegerRequest<traegerCareNoticeRunsContract.CareNoticeRunDetail>(
       `${RUNS_PATH}/${encodeURIComponent(runId)}`,
     ),
   );
@@ -328,7 +332,7 @@ export async function releaseCareNoticeRun(
   >,
 ): Promise<CareNoticeRunDetail> {
   return detailFromBackend(
-    await traegerRequest<WireRunDetail>(
+    await traegerRequest<traegerCareNoticeRunsContract.CareNoticeRunDetail>(
       `${RUNS_PATH}/${encodeURIComponent(run.id)}/release`,
       {
         method: "POST",
@@ -350,7 +354,7 @@ export async function discardCareNoticeRun(
   runId: string,
 ): Promise<CareNoticeRunDetail> {
   return detailFromBackend(
-    await traegerRequest<WireRunDetail>(
+    await traegerRequest<traegerCareNoticeRunsContract.CareNoticeRunDetail>(
       `${RUNS_PATH}/${encodeURIComponent(runId)}/discard`,
       { method: "POST" },
     ),
@@ -361,9 +365,10 @@ export async function fetchCareNoticeLetter(
   runId: string,
   contractId: string,
 ): Promise<CareNoticeLetter> {
-  const letter = await traegerRequest<WireLetter>(
-    `${RUNS_PATH}/${encodeURIComponent(runId)}/notices/${encodeURIComponent(contractId)}/letter`,
-  );
+  const letter =
+    await traegerRequest<traegerCareNoticeRunsContract.CareNoticeLetter>(
+      `${RUNS_PATH}/${encodeURIComponent(runId)}/notices/${encodeURIComponent(contractId)}/letter`,
+    );
   return {
     notice: noticeFromBackend(letter.notice),
     senderText: letter.sender_text,

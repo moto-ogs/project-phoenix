@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // workSessionCapability embeds the service so GetTodayPresenceMap, whose
@@ -43,7 +44,7 @@ func publicWorkSessionBreak(entity *WorkSessionBreak) *workforce.WorkSessionBrea
 		return nil
 	}
 	return &workforce.WorkSessionBreak{
-		ID: entity.ID, TenantID: entity.TenantID, SessionID: entity.SessionID, StartedAt: entity.StartedAt, EndedAt: entity.EndedAt,
+		ID: ident.ID(entity.ID), TenantID: ident.ID(entity.TenantID), SessionID: ident.ID(entity.SessionID), StartedAt: entity.StartedAt, EndedAt: entity.EndedAt,
 		DurationMinutes: entity.DurationMinutes, PlannedEndTime: entity.PlannedEndTime, CreatedAt: entity.CreatedAt, UpdatedAt: entity.UpdatedAt,
 	}
 }
@@ -112,7 +113,7 @@ func publicWorkSessionEdit(entity *WorkSessionEdit) *workforce.WorkSessionEdit {
 		return nil
 	}
 	return &workforce.WorkSessionEdit{
-		ID: entity.ID, TenantID: entity.TenantID, SessionID: entity.SessionID, StaffID: entity.StaffID, EditedBy: entity.EditedBy,
+		ID: ident.ID(entity.ID), TenantID: ident.ID(entity.TenantID), SessionID: ident.ID(entity.SessionID), StaffID: ident.ID(entity.StaffID), EditedBy: ident.ID(entity.EditedBy),
 		FieldName: entity.FieldName, OldValue: entity.OldValue, NewValue: entity.NewValue, Notes: entity.Notes, CreatedAt: entity.CreatedAt,
 	}
 }

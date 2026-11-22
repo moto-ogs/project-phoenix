@@ -7,6 +7,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/workflows/traegercatalog"
 	"github.com/moto-ogs/project-phoenix/workflows/traegercatalog/ports"
 )
@@ -41,7 +42,7 @@ func (c *Catalog) Rollout(ctx context.Context, actor traegercatalog.Actor, traeg
 		if err != nil {
 			return err
 		}
-		result = traegercatalog.Rollout{TraegerPhaseID: traegerPhaseID, Version: next.phaseVersion, Schools: []traegercatalog.SchoolResult{}}
+		result = traegercatalog.Rollout{TraegerPhaseID: ident.ID(traegerPhaseID), Version: next.phaseVersion, Schools: []traegercatalog.SchoolResult{}}
 		runs := make([]schoolRun, 0, len(snap.targets()))
 		for _, target := range snap.targets() {
 			run, err := c.rollOutSchool(ctx, actor, snap, next, target, print.Schools[target.schoolID])
@@ -87,7 +88,7 @@ func (c *Catalog) release(ctx context.Context, actor traegercatalog.Actor, id in
 		for _, t := range snap.targets() {
 			pending = append(pending, enrollment.TraegerCopyOutcome{SchoolID: t.schoolID, Outcome: enrollment.TraegerOutcomeStale})
 		}
-		return c.deps.Phases.RecordTraegerPhaseOutcomes(ctx, actor.OrganizationID, snap.phase.ID, pending)
+		return c.deps.Phases.RecordTraegerPhaseOutcomes(ctx, actor.OrganizationID, snap.phase.ID.Int64(), pending)
 	})
 	return snap, next, err
 }
@@ -106,11 +107,11 @@ func (c *Catalog) samePlan(snap snapshot, print fingerprint) bool {
 }
 
 func (c *Catalog) writeVersions(ctx context.Context, actor traegercatalog.Actor, snap snapshot) (release, error) {
-	version, err := c.deps.Phases.ReleaseTraegerPhase(ctx, actor.OrganizationID, snap.phase.ID, actor.AccountID)
+	version, err := c.deps.Phases.ReleaseTraegerPhase(ctx, actor.OrganizationID, snap.phase.ID.Int64(), actor.AccountID)
 	if err != nil {
 		return release{}, err
 	}
-	released, err := c.deps.Offerings.ReleaseTraegerOfferings(ctx, actor.OrganizationID, snap.phase.ID, actor.AccountID)
+	released, err := c.deps.Offerings.ReleaseTraegerOfferings(ctx, actor.OrganizationID, snap.phase.ID.Int64(), actor.AccountID)
 	if err != nil {
 		return release{}, err
 	}
@@ -124,7 +125,7 @@ func (c *Catalog) writeVersions(ctx context.Context, actor traegercatalog.Actor,
 	next := release{month: snap.month, phaseVersion: version, phase: snap.phase.Draft, offerings: map[int64]offeringRelease{}}
 	for _, offering := range released {
 		if offering.ReleasedVersion != nil && offering.Released != nil {
-			next.offerings[offering.ID] = offeringRelease{version: *offering.ReleasedVersion, draft: *offering.Released}
+			next.offerings[offering.ID.Int64()] = offeringRelease{version: *offering.ReleasedVersion, draft: *offering.Released}
 		}
 	}
 	return next, nil
@@ -135,7 +136,7 @@ func (c *Catalog) writeVersions(ctx context.Context, actor traegercatalog.Actor,
 // as stale when it moved; otherwise it writes phase and offerings together
 // or nothing. Its tariffs and templates follow after the commit.
 func (c *Catalog) rollOutSchool(ctx context.Context, actor traegercatalog.Actor, snap snapshot, next release, t target, previewed string) (schoolRun, error) {
-	run := schoolRun{target: t, result: traegercatalog.SchoolResult{SchoolID: t.schoolID}, offeringCodes: map[int64]string{}}
+	run := schoolRun{target: t, result: traegercatalog.SchoolResult{SchoolID: ident.ID(t.schoolID)}, offeringCodes: map[int64]string{}}
 	err := c.deps.Runtime.WithinSchool(ctx, t.schoolID, func(ctx context.Context) error {
 		if err := c.lockSchool(ctx, actor.OrganizationID, t.schoolID); err != nil {
 			run.leftTraeger = errors.Is(err, errStale)
@@ -180,12 +181,12 @@ func (c *Catalog) prepareBilling(ctx context.Context, actor traegercatalog.Actor
 	prices := []ports.ModulePrices{}
 	templates := []ports.ModuleTemplate{}
 	for _, offering := range snap.offerings {
-		copy := run.copies[offering.ID]
+		copy := run.copies[offering.ID.Int64()]
 		copyID := copy.CopyID
 		if copyID == 0 {
 			continue
 		}
-		released := next.offerings[offering.ID]
+		released := next.offerings[offering.ID.Int64()]
 		plan := billingFor(offering, released, run.target.schoolID, next.phase, next.month, copy)
 		if plan.pricesFrom != nil {
 			prices = append(prices, ports.ModulePrices{SchoolID: run.target.schoolID, CareOfferingID: copyID,
@@ -244,11 +245,11 @@ func (c *Catalog) recordOutcomes(ctx context.Context, actor traegercatalog.Actor
 		phaseOutcomes = append(phaseOutcomes, phaseOutcome(run, next.phaseVersion))
 		for _, offering := range snap.offerings {
 			if outcome, ok := offeringOutcome(run, offering, next); ok {
-				offeringOutcomes[offering.ID] = append(offeringOutcomes[offering.ID], outcome)
+				offeringOutcomes[offering.ID.Int64()] = append(offeringOutcomes[offering.ID.Int64()], outcome)
 			}
 		}
 	}
-	if err := c.deps.Phases.RecordTraegerPhaseOutcomes(ctx, actor.OrganizationID, snap.phase.ID, phaseOutcomes); err != nil {
+	if err := c.deps.Phases.RecordTraegerPhaseOutcomes(ctx, actor.OrganizationID, snap.phase.ID.Int64(), phaseOutcomes); err != nil {
 		return err
 	}
 	return c.deps.Offerings.RecordTraegerOfferingOutcomes(ctx, actor.OrganizationID, offeringOutcomes)
@@ -267,12 +268,12 @@ func offeringOutcome(run schoolRun, offering careplan.TraegerOffering, next rele
 	switch {
 	case run.result.Outcome == enrollment.TraegerOutcomeApplied && offering.WithdrawnAt != nil:
 		outcome.Outcome = enrollment.TraegerOutcomeWithdrawn
-	case run.offeringCodes[offering.ID] != "":
-		outcome.Outcome, outcome.ErrorCode = enrollment.TraegerOutcomeRejected, run.offeringCodes[offering.ID]
+	case run.offeringCodes[offering.ID.Int64()] != "":
+		outcome.Outcome, outcome.ErrorCode = enrollment.TraegerOutcomeRejected, run.offeringCodes[offering.ID.Int64()]
 	case run.result.Outcome == enrollment.TraegerOutcomeApplied:
-		version := next.offerings[offering.ID].version
+		version := next.offerings[offering.ID.Int64()].version
 		outcome.AppliedVersion = &version
-		copyID := run.copies[offering.ID].CopyID
+		copyID := run.copies[offering.ID.Int64()].CopyID
 		outcome.AppliedCopyID = &copyID
 	}
 	return outcome, recordedVersion(offering, run.target.schoolID) != nil || run.result.Outcome != enrollment.TraegerOutcomeWithdrawn

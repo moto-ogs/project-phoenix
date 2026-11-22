@@ -142,6 +142,17 @@ func (rs *FeedbackResource) submitFeedback(w http.ResponseWriter, r *http.Reques
 
 	// Create feedback entry (validation happens in service layer)
 	entry, err := rs.FeedbackService.Submit(r.Context(), input)
+	if errors.Is(err, feedbackModule.ErrMoodCaptureStopped) {
+		// A stopped child (#3844) is skipped like a school without feedback:
+		// the same body PyrePortal already handles, so it needs no new
+		// mapping, and nothing is stored.
+		rs.runtime.Success(w, r, http.StatusOK, map[string]interface{}{
+			"status": "skipped",
+			"reason": "feedback_disabled",
+		}, "Feedback is stopped for this student")
+		rs.ObserveResponse(http.StatusOK, "feedback_stopped")
+		return
+	}
 	if err != nil {
 		rs.Logger.ErrorContext(r.Context(), "failed to create feedback entry",
 			slog.String("error", err.Error()),

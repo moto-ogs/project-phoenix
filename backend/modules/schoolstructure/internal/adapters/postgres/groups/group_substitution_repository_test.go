@@ -8,6 +8,7 @@ import (
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -132,7 +133,7 @@ func TestGroupSubstitutionRepository_BlockersExcludeLegacyPersonnelRows(t *testi
 
 	require.NoError(t, err)
 	require.Len(t, blockers, 1)
-	assert.Equal(t, handover.ID, blockers[0].ID)
+	assert.Equal(t, ident.ID(handover.ID), blockers[0].ID)
 }
 
 func TestGroupSubstitutionRepository_FindByID(t *testing.T) {

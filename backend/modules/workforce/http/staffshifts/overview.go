@@ -5,14 +5,15 @@ import (
 	"net/http"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 const staffScheduleOverviewLoadErrorMessage = "staff schedule overview could not be loaded"
 
 type OverviewStaffResponse struct {
-	ID        int64  `json:"id"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
+	ID        ident.ID `json:"id"`
+	FirstName string   `json:"first_name"`
+	LastName  string   `json:"last_name"`
 }
 
 type CoverageIntervalResponse struct {
@@ -21,13 +22,13 @@ type CoverageIntervalResponse struct {
 }
 
 type AssignmentResponse struct {
-	InstanceID         int64                      `json:"instance_id"`
-	StaffID            int64                      `json:"staff_id"`
+	InstanceID         ident.ID                   `json:"instance_id"`
+	StaffID            ident.ID                   `json:"staff_id"`
 	Date               string                     `json:"date"`
 	StartTime          string                     `json:"start_time"`
 	EndTime            string                     `json:"end_time"`
 	ActivityTitle      string                     `json:"activity_title"`
-	RoomID             int64                      `json:"room_id"`
+	RoomID             ident.ID                   `json:"room_id"`
 	RoomName           string                     `json:"room_name"`
 	Status             string                     `json:"status"`
 	IsAbsent           bool                       `json:"is_absent"`
@@ -39,19 +40,19 @@ type AssignmentResponse struct {
 }
 
 type WeeklySummaryResponse struct {
-	StaffID        int64  `json:"staff_id"`
-	WeekStart      string `json:"week_start"`
-	PlannedMinutes int    `json:"planned_minutes"`
-	TargetMinutes  *int   `json:"target_minutes"`
-	DeltaMinutes   *int   `json:"delta_minutes"`
+	StaffID        ident.ID `json:"staff_id"`
+	WeekStart      string   `json:"week_start"`
+	PlannedMinutes int      `json:"planned_minutes"`
+	TargetMinutes  *int     `json:"target_minutes"`
+	DeltaMinutes   *int     `json:"delta_minutes"`
 	// PlannedByShiftType splits planned_minutes by Schichtart (#3819); a null
 	// shift_type_id collects the shifts without one.
 	PlannedByShiftType []ShiftTypeMinutesResponse `json:"planned_by_shift_type"`
 }
 
 type ShiftTypeMinutesResponse struct {
-	ShiftTypeID    *int64 `json:"shift_type_id,string"`
-	PlannedMinutes int    `json:"planned_minutes"`
+	ShiftTypeID    *ident.ID `json:"shift_type_id"`
+	PlannedMinutes int       `json:"planned_minutes"`
 }
 
 type OverviewResponse struct {
@@ -80,13 +81,13 @@ func toOverviewResponse(overview workforce.StaffScheduleOverview) OverviewRespon
 			})
 		}
 		assignments = append(assignments, AssignmentResponse{
-			InstanceID:         assignment.InstanceID,
-			StaffID:            assignment.StaffID,
+			InstanceID:         ident.ID(assignment.InstanceID),
+			StaffID:            ident.ID(assignment.StaffID),
 			Date:               assignment.Date,
 			StartTime:          FormatWallClock(assignment.StartTime),
 			EndTime:            FormatWallClock(assignment.EndTime),
 			ActivityTitle:      assignment.ActivityTitle,
-			RoomID:             assignment.RoomID,
+			RoomID:             ident.ID(assignment.RoomID),
 			RoomName:           assignment.RoomName,
 			Status:             assignment.Status,
 			IsAbsent:           assignment.IsAbsent,
@@ -102,10 +103,10 @@ func toOverviewResponse(overview workforce.StaffScheduleOverview) OverviewRespon
 	for _, summary := range overview.WeeklySummaries {
 		byType := make([]ShiftTypeMinutesResponse, 0, len(summary.ByShiftType))
 		for _, entry := range summary.ByShiftType {
-			byType = append(byType, ShiftTypeMinutesResponse{ShiftTypeID: entry.ShiftTypeID, PlannedMinutes: entry.Minutes})
+			byType = append(byType, ShiftTypeMinutesResponse{ShiftTypeID: (*ident.ID)(entry.ShiftTypeID), PlannedMinutes: entry.Minutes})
 		}
 		weeklySummaries = append(weeklySummaries, WeeklySummaryResponse{
-			StaffID:            summary.StaffID,
+			StaffID:            ident.ID(summary.StaffID),
 			WeekStart:          summary.WeekStart,
 			PlannedMinutes:     summary.PlannedMinutes,
 			TargetMinutes:      summary.TargetMinutes,
@@ -130,7 +131,7 @@ func overviewStaffResponses(members []workforce.OverviewStaff) []OverviewStaffRe
 	staff := make([]OverviewStaffResponse, 0, len(members))
 	for _, member := range members {
 		staff = append(staff, OverviewStaffResponse{
-			ID:        member.ID,
+			ID:        ident.ID(member.ID),
 			FirstName: member.FirstName,
 			LastName:  member.LastName,
 		})

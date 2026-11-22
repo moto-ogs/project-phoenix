@@ -406,17 +406,17 @@ func (s *service) respondAsGuardianInTenant(ctx context.Context, recipientID int
 	if recipient == nil || recipient.GuardianProfileID == nil {
 		return false, nil
 	}
-	if _, ok := allowedProfiles[*recipient.GuardianProfileID]; !ok {
+	if _, ok := allowedProfiles[(*recipient.GuardianProfileID).Int64()]; !ok {
 		return false, nil
 	}
-	visible, err := s.recipientHasVisibleStudent(ctx, recipient.ID, allowedStudentIDs)
+	visible, err := s.recipientHasVisibleStudent(ctx, recipient.ID.Int64(), allowedStudentIDs)
 	if err != nil || !visible {
 		return false, err
 	}
 	if recipient.Status == appointmentcap.ResponseStatusInfo {
 		return false, fmt.Errorf("%w: informational appointments cannot be answered", ErrInvalidRequest)
 	}
-	appointment, err := s.findAppointment(ctx, recipient.AppointmentID)
+	appointment, err := s.findAppointment(ctx, recipient.AppointmentID.Int64())
 	if err != nil {
 		return false, err
 	}

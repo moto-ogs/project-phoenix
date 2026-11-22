@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/realtime"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -123,7 +124,7 @@ func (a *SubstitutionAdapter) loadOverviewStaff(ctx context.Context, instances [
 	instanceIDs := make([]int64, 0, len(instances))
 	for _, instance := range instances {
 		if instance != nil {
-			instanceIDs = append(instanceIDs, instance.ID)
+			instanceIDs = append(instanceIDs, instance.ID.Int64())
 		}
 	}
 	rows, err := a.deps.InstanceStaff.FindByInstanceIDs(ctx, instanceIDs)
@@ -153,7 +154,7 @@ func (a *SubstitutionAdapter) loadOverviewStaff(ctx context.Context, instances [
 func projectSubstitutionAppointments(instances []*timetable.ScheduledInstance, deviations map[int64][]*timetable.InstanceStaff, staffByID map[int64]*workforce.PlanStaff, canManage bool, today calendar.Date) []education.ScheduleAppointmentOverview {
 	appointments := make([]education.ScheduleAppointmentOverview, 0, len(deviations))
 	for _, instance := range instances {
-		rows := deviations[instance.ID]
+		rows := deviations[instance.ID.Int64()]
 		if len(rows) == 0 {
 			continue
 		}
@@ -167,14 +168,14 @@ func projectSubstitutionAppointments(instances []*timetable.ScheduledInstance, d
 			}
 			staff = append(staff, education.ScheduleAppointmentStaff{
 				AssignmentID: row.ID,
-				Staff:        education.StaffRef{ID: row.StaffID, FullName: name},
+				Staff:        education.StaffRef{ID: ident.ID(row.StaffID), FullName: name},
 				IsAbsent:     row.IsAbsent,
 				IsSubstitute: row.IsSubstitute,
 				CanEnd:       canChange && row.IsSubstitute && !row.IsAbsent,
 			})
 		}
 		appointments = append(appointments, education.ScheduleAppointmentOverview{
-			ID: instance.ID, Type: education.TargetScheduleSubstitution,
+			ID: instance.ID.Int64(), Type: education.TargetScheduleSubstitution,
 			Date:      instance.Date,
 			StartTime: instance.StartTime.Format("15:04"), EndTime: instance.EndTime.Format("15:04"),
 			Title: instance.Title, Status: instance.Status, Staff: staff,
@@ -196,7 +197,7 @@ func (a *SubstitutionAdapter) loadTargets(ctx context.Context, include bool) ([]
 	// (#4573 D6); the mark lets the pickers leave them out.
 	for _, member := range members {
 		if member != nil {
-			targets = append(targets, education.StaffRef{ID: member.ID, FullName: member.FullName(), IsExternal: member.IsExternalCaregiver})
+			targets = append(targets, education.StaffRef{ID: ident.ID(member.ID), FullName: member.FullName(), IsExternal: member.IsExternalCaregiver})
 		}
 	}
 	return targets, nil

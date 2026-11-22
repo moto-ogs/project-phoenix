@@ -6,6 +6,7 @@ import (
 	"github.com/uptrace/bun"
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The corrections a reissued invoice carries over (#5663). A proposal is no
@@ -41,7 +42,7 @@ func (s *Store) InvoiceCorrections(ctx context.Context, organizationID int64, in
 	corrections := make([]parentbilling.BillingCarriedCorrection, len(rows))
 	for i, row := range rows {
 		corrections[i] = parentbilling.BillingCarriedCorrection{
-			PositionID: row.ID, SourceAmountCents: row.AmountCents, AmountCents: row.AmountCents, Reason: row.Note,
+			PositionID: ident.ID(row.ID), SourceAmountCents: row.AmountCents, AmountCents: row.AmountCents, Reason: row.Note,
 			ChildID: row.HolidayRegistrationChildID, SourceDocumentID: row.DocumentID,
 		}
 	}

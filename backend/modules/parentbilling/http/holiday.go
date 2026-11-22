@@ -15,6 +15,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	capability "github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -93,7 +94,7 @@ func (rs *HolidayResource) QuoteRouter() chi.Router {
 // one per child (#7007). An empty body confirms without any of them.
 type HolidayConfirmRequest struct {
 	BenefitsExemption  bool                                       `json:"benefits_exemption"`
-	CostBearerID       int64                                      `json:"cost_bearer_id"`
+	CostBearerID       common.ID                                  `json:"cost_bearer_id"`
 	DebtorNumber       string                                     `json:"debtor_number"`
 	FamilyDebtorNumber string                                     `json:"family_debtor_number"`
 	ChildDebtorNumbers []capability.HolidayChildDebtorNumberInput `json:"child_debtor_numbers"`
@@ -181,8 +182,8 @@ func (rs *HolidayResource) setChildDebtorNumbers(w http.ResponseWriter, r *http.
 }
 
 type holidayQuoteBookingRequest struct {
-	WeekID      int64           `json:"week_id"`
-	TimeModelID int64           `json:"time_model_id"`
+	WeekID      common.ID       `json:"week_id"`
+	TimeModelID common.ID       `json:"time_model_id"`
 	Days        []calendar.Date `json:"days"`
 	Lunch       bool            `json:"lunch"`
 }
@@ -281,14 +282,14 @@ func (rs *HolidayResource) confirm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	confirmation, err := rs.contributions.ConfirmHolidayRegistration(r.Context(), reviewer, periodID, registrationID,
-		req.BenefitsExemption, req.CostBearerID, req.DebtorNumber, req.FamilyDebtorNumber, req.ChildDebtorNumbers)
+		req.BenefitsExemption, req.CostBearerID.Int64(), req.DebtorNumber, req.FamilyDebtorNumber, req.ChildDebtorNumbers)
 	if err != nil {
 		tenant.MarkRollback(r.Context())
 		renderHolidayError(w, r, err)
 		return
 	}
 	common.Respond(w, r, http.StatusOK, HolidayConfirmationResponse{
-		RegistrationID: confirmation.RegistrationID, Status: confirmation.Status, Contribution: holidayContributionResponse(confirmation.Contribution),
+		RegistrationID: ident.ID(confirmation.RegistrationID), Status: confirmation.Status, Contribution: holidayContributionResponse(confirmation.Contribution),
 	}, "Holiday registration confirmed successfully")
 }
 

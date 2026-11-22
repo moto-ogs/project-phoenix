@@ -9,6 +9,7 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation"
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The corrections a reissued invoice carries over (#5663, ADR 0119 addendum).
@@ -35,8 +36,8 @@ func (b *BillingRuns) replacedInvoices(ctx context.Context, organizationID, runI
 	invoiceIDs := make([]int64, 0, len(replaces))
 	keyOf := make(map[int64]parentbilling.HolidayInvoiceKey, len(replaces))
 	for key, invoice := range replaces {
-		invoiceIDs = append(invoiceIDs, invoice.ID)
-		keyOf[invoice.ID] = key
+		invoiceIDs = append(invoiceIDs, invoice.ID.Int64())
+		keyOf[invoice.ID.Int64()] = key
 	}
 	positions, err := b.store.InvoiceCorrections(ctx, organizationID, invoiceIDs)
 	if err != nil {
@@ -55,7 +56,7 @@ func (b *BillingRuns) replacedInvoices(ctx context.Context, organizationID, runI
 		credits:     map[parentbilling.HolidayInvoiceKey][]parentbilling.BillingDocumentLink{},
 	}
 	for _, position := range positions {
-		if dismissed[position.PositionID] {
+		if dismissed[position.PositionID.Int64()] {
 			continue
 		}
 		key := keyOf[position.SourceDocumentID]
@@ -66,7 +67,7 @@ func (b *BillingRuns) replacedInvoices(ctx context.Context, organizationID, runI
 		if document.Kind != parentbilling.DocumentCredit || document.ReferenceDocumentID == nil || document.IssuedOn == nil {
 			continue
 		}
-		key := keyOf[*document.ReferenceDocumentID]
+		key := keyOf[(*document.ReferenceDocumentID).Int64()]
 		result.credits[key] = append(result.credits[key], parentbilling.BillingDocumentLink{
 			ID: document.ID, RunID: document.RunID, Kind: document.Kind, Number: document.Number,
 			IssuedOn: *document.IssuedOn, TotalCents: document.TotalCents, Reason: document.Reason,
@@ -101,8 +102,8 @@ func (p preview) carriedCorrection(positionID int64) (int64, parentbilling.Billi
 	for _, document := range p.documents {
 		for _, child := range document.Children {
 			for _, correction := range child.CarriedCorrections {
-				if correction.PositionID == positionID {
-					return document.RegistrationID, child, true
+				if correction.PositionID == ident.ID(positionID) {
+					return document.RegistrationID.Int64(), child, true
 				}
 			}
 		}
@@ -128,7 +129,7 @@ func (b *BillingRuns) RemoveCarriedCorrection(ctx context.Context, reviewer pare
 	if child.TotalCents < 0 {
 		return parentbilling.BillingRunDetail{}, validation.Errors{"total_cents": errors.New("would leave the child below zero")}
 	}
-	if err := b.recordCarriedChange(ctx, reviewer, run.ID, registrationID, child.ChildID, positionID, "remove"); err != nil {
+	if err := b.recordCarriedChange(ctx, reviewer, run.ID.Int64(), registrationID, child.ChildID.Int64(), positionID, "remove"); err != nil {
 		return parentbilling.BillingRunDetail{}, err
 	}
 	return b.detail(ctx, reviewer, run)
@@ -163,7 +164,7 @@ func (b *BillingRuns) ChangeCarriedCorrection(ctx context.Context, reviewer pare
 	if err := b.store.InsertRunCorrection(ctx, reviewer.OrganizationID, run, registrationID, reviewer.AccountID, correction); err != nil {
 		return parentbilling.BillingRunDetail{}, fmt.Errorf("parent billing: store correction: %w", err)
 	}
-	if err := b.recordCarriedChange(ctx, reviewer, run.ID, registrationID, child.ChildID, positionID, "change"); err != nil {
+	if err := b.recordCarriedChange(ctx, reviewer, run.ID.Int64(), registrationID, child.ChildID.Int64(), positionID, "change"); err != nil {
 		return parentbilling.BillingRunDetail{}, err
 	}
 	return b.detail(ctx, reviewer, run)
@@ -181,14 +182,14 @@ func (b *BillingRuns) dismissCarried(ctx context.Context, reviewer parentbilling
 	if !ok {
 		return 0, parentbilling.BillingChild{}, parentbilling.ErrCarriedCorrectionNotFound
 	}
-	if err := b.store.InsertRunCorrectionDismissal(ctx, reviewer.OrganizationID, run.ID, positionID, reviewer.AccountID); err != nil {
+	if err := b.store.InsertRunCorrectionDismissal(ctx, reviewer.OrganizationID, run.ID.Int64(), positionID, reviewer.AccountID); err != nil {
 		return 0, parentbilling.BillingChild{}, fmt.Errorf("parent billing: remove the proposal: %w", err)
 	}
 	current, err = b.preview(ctx, reviewer, run)
 	if err != nil {
 		return 0, parentbilling.BillingChild{}, err
 	}
-	after, ok := current.child(registrationID, child.ChildID)
+	after, ok := current.child(registrationID, child.ChildID.Int64())
 	if !ok {
 		return 0, parentbilling.BillingChild{}, parentbilling.ErrBillingFamilyNotFound
 	}
@@ -216,7 +217,7 @@ func (b *BillingRuns) recordCarriedCorrections(ctx context.Context, reviewer par
 				if carried.AmountCents == 0 {
 					continue
 				}
-				if err := b.store.InsertRunCorrection(ctx, reviewer.OrganizationID, run, document.RegistrationID, reviewer.AccountID, parentbilling.BillingCorrection{
+				if err := b.store.InsertRunCorrection(ctx, reviewer.OrganizationID, run, document.RegistrationID.Int64(), reviewer.AccountID, parentbilling.BillingCorrection{
 					ChildID: child.ChildID, AmountCents: carried.AmountCents, TotalBeforeCents: carried.TotalBeforeCents,
 					TotalAfterCents: carried.TotalBeforeCents + carried.AmountCents, Reason: carried.Reason, CarriedFromNumber: carried.SourceNumber,
 				}); err != nil {

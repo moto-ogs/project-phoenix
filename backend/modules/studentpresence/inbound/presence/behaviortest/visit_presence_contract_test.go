@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	presenceAPI "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -56,9 +57,9 @@ func TestVisitListPresenceCutoverPreservesStatusAndGroupFilters(t *testing.T) {
 			require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
 			require.Len(t, response.Data, 1)
 			assert.Equal(t, "Visits retrieved successfully", response.Message)
-			assert.Equal(t, test.id, response.Data[0].ID)
-			assert.Equal(t, student.ID, response.Data[0].StudentID)
-			assert.Equal(t, group.ID, response.Data[0].ActiveGroupID)
+			assert.Equal(t, ident.ID(test.id), response.Data[0].ID)
+			assert.Equal(t, ident.ID(student.ID), response.Data[0].StudentID)
+			assert.Equal(t, ident.ID(group.ID), response.Data[0].ActiveGroupID)
 			assert.Equal(t, test.active, response.Data[0].IsActive)
 			assert.NotContains(t, rr.Body.String(), "tenant_id")
 			if test.active {

@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	"github.com/moto-ogs/project-phoenix/modules/carecontract/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -214,7 +215,7 @@ func summarizeContractImport(result *carecontract.ContractImport, candidates []i
 			families[debtorNumberTarget(carecontract.ContractDebtorNumberPerPayer, row)] = true
 		}
 		if row.ContractID > 0 {
-			shown[row.SchoolID] = append(shown[row.SchoolID], row.ContractID)
+			shown[row.SchoolID.Int64()] = append(shown[row.SchoolID.Int64()], row.ContractID.Int64())
 		}
 	}
 	result.Counts.DebtorNumbers, result.Counts.FamilyChildren = len(numbers), len(families)
@@ -241,7 +242,7 @@ func (i *ContractImports) apply(ctx context.Context, reviewer carecontract.Revie
 		if !ok {
 			continue
 		}
-		candidate.row.Status, candidate.row.ContractID = carecontract.ContractImportImported, id
+		candidate.row.Status, candidate.row.ContractID = carecontract.ContractImportImported, ident.ID(id)
 		contractID, schoolID := id, candidate.contract.SchoolID
 		events = append(events, Event{ContractID: &contractID, SchoolID: &schoolID, AccountID: reviewer.AccountID, Action: ActionCreate,
 			Details: map[string]any{ports.ImportActionDetail: file, "import_line": candidate.row.Line,
@@ -259,8 +260,8 @@ func (i *ContractImports) apply(ctx context.Context, reviewer carecontract.Revie
 func versionOfferings(version carecontract.Version) []int64 {
 	ids := []int64{}
 	for _, service := range version.Services {
-		if !slices.Contains(ids, service.CareOfferingID) {
-			ids = append(ids, service.CareOfferingID)
+		if !slices.Contains(ids, service.CareOfferingID.Int64()) {
+			ids = append(ids, service.CareOfferingID.Int64())
 		}
 	}
 	return ids
@@ -288,7 +289,7 @@ func (i *ContractImports) decideNumbers(ctx context.Context, reviewer carecontra
 		at[row.Line] = n
 		numbers = append(numbers, carecontract.ImportedDebtorNumber{Line: row.Line, FamilyEmail: row.PartyEmail,
 			ChildFirstName: row.ChildFirstName, ChildLastName: row.ChildLastName, ChildBirthDate: row.ChildBirthDate,
-			DebtorNumber: row.DebtorNumber, Until: candidate.until, ContractID: row.ContractID})
+			DebtorNumber: row.DebtorNumber, Until: candidate.until, ContractID: row.ContractID.Int64()})
 	}
 	if len(numbers) == 0 {
 		return nil
@@ -356,11 +357,11 @@ func contractFamilyImportRows(candidates []importCandidate, save bool) ([]careco
 		}
 		at[row.Line] = n
 		number := carecontract.ImportedFamilyChildren{Line: row.Line, FamilyEmail: row.PartyEmail,
-			ContractID: row.ContractID, Children: *row.FamilyChildren, ValidFrom: *row.EffectiveFrom, Witness: witness}
+			ContractID: row.ContractID.Int64(), Children: *row.FamilyChildren, ValidFrom: *row.EffectiveFrom, Witness: witness}
 		if witness && row.PartyEmail == "" {
 			if original, ok := at[row.RepeatsLine]; ok {
 				first := candidates[original].row
-				number.Line, number.ContractID, number.FamilyEmail = first.Line, first.ContractID, first.PartyEmail
+				number.Line, number.ContractID, number.FamilyEmail = first.Line, first.ContractID.Int64(), first.PartyEmail
 			}
 		}
 		numbers = append(numbers, number)
@@ -482,7 +483,7 @@ func (i *ContractImports) importSchools(ctx context.Context, organizationID int6
 func importSchoolChoices(schools []importSchool, templates templateIndex) []carecontract.ContractImportSchool {
 	choices := make([]carecontract.ContractImportSchool, len(schools))
 	for n, school := range schools {
-		choices[n] = carecontract.ContractImportSchool{ID: school.school.ID, Name: school.school.Name, Modules: []carecontract.ContractImportModule{}}
+		choices[n] = carecontract.ContractImportSchool{ID: ident.ID(school.school.ID), Name: school.school.Name, Modules: []carecontract.ContractImportModule{}}
 		at := map[string]int{}
 		for _, module := range school.modules {
 			_, has := templates[[2]int64{school.school.ID, module.ID}]
@@ -492,7 +493,7 @@ func importSchoolChoices(schools []importSchool, templates templateIndex) []care
 				continue
 			}
 			at[key] = len(choices[n].Modules)
-			choices[n].Modules = append(choices[n].Modules, carecontract.ContractImportModule{ID: module.ID, Name: module.Name,
+			choices[n].Modules = append(choices[n].Modules, carecontract.ContractImportModule{ID: ident.ID(module.ID), Name: module.Name,
 				PhaseName: module.PhaseName, HasConditions: has})
 		}
 		slices.SortStableFunc(choices[n].Modules, func(a, b carecontract.ContractImportModule) int { return strings.Compare(a.Name, b.Name) })

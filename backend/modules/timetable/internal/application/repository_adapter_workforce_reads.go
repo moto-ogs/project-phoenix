@@ -66,7 +66,7 @@ func (r TimetableInstanceReads) GetActivityInstancesByID(ctx context.Context, id
 	byID := make(map[int64]*timetable.ScheduledInstance, len(instances))
 	for _, instance := range instances {
 		if instance != nil {
-			byID[instance.ID] = instance
+			byID[instance.ID.Int64()] = instance
 		}
 	}
 	return byID, nil

@@ -14,6 +14,7 @@ import (
 	"github.com/gofrs/uuid"
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
@@ -64,8 +65,8 @@ func (rs *StaffAdminResource) documentActor(r *http.Request) (workforce.StaffDoc
 
 // StaffDocumentResponse is one document on the wire.
 type StaffDocumentResponse struct {
-	ID          int64          `json:"id"`
-	StaffID     int64          `json:"staff_id"`
+	ID          common.ID      `json:"id"`
+	StaffID     common.ID      `json:"staff_id"`
 	Category    string         `json:"category"`
 	Filename    string         `json:"filename"`
 	SizeBytes   int64          `json:"size_bytes" contract:"number"`
@@ -79,7 +80,7 @@ type StaffDocumentResponse struct {
 // plus the caller's visible categories (drives the filter and the upload
 // category picker).
 type StaffDocumentListResponse struct {
-	StaffID           int64                   `json:"staff_id"`
+	StaffID           common.ID               `json:"staff_id"`
 	Documents         []StaffDocumentResponse `json:"documents"`
 	VisibleCategories []string                `json:"visible_categories"`
 }
@@ -87,8 +88,8 @@ type StaffDocumentListResponse struct {
 func newStaffDocumentResponse(info workforce.StaffDocumentInfo) StaffDocumentResponse {
 	doc := info.Document
 	return StaffDocumentResponse{
-		ID:          doc.ID,
-		StaffID:     doc.StaffID,
+		ID:          ident.ID(doc.ID),
+		StaffID:     ident.ID(doc.StaffID),
 		Category:    doc.Category,
 		Filename:    doc.FilenameDisplay,
 		SizeBytes:   doc.SizeBytes,
@@ -150,7 +151,7 @@ func (rs *StaffAdminResource) listStaffDocuments(w http.ResponseWriter, r *http.
 	}
 	rs.retryQueuedStaffDocumentCleanups(r.Context(), "retry")
 	resp := &StaffDocumentListResponse{
-		StaffID:           id,
+		StaffID:           ident.ID(id),
 		Documents:         make([]StaffDocumentResponse, 0, len(infos)),
 		VisibleCategories: visible,
 	}
@@ -406,7 +407,7 @@ func (rs *StaffAdminResource) deleteStaffDocument(w http.ResponseWriter, r *http
 			rs.cleanupStaffDocumentFile(cleanupCtx, id, doc.ID, doc.FilenameStored, "delete")
 		})
 	}
-	common.Respond(w, r, http.StatusOK, &StammdatenAck{StaffID: id}, "Staff document deleted successfully")
+	common.Respond(w, r, http.StatusOK, &StammdatenAck{StaffID: ident.ID(id)}, "Staff document deleted successfully")
 }
 
 // --- helpers ---------------------------------------------------------------

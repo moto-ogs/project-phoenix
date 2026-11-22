@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The rule chain of the monthly care contribution (#4685, spec #4611 user
@@ -83,14 +84,14 @@ type CareRuleInput struct {
 	Name                string         `json:"name"`
 	ValidFrom           calendar.Date  `json:"valid_from"`
 	ValidUntil          *calendar.Date `json:"valid_until"`
-	SchoolIDs           []int64        `json:"school_ids"`
-	CareOfferingIDs     []int64        `json:"care_offering_ids"`
-	CountSchoolIDs      []int64        `json:"count_school_ids"`
+	SchoolIDs           []ident.ID     `json:"school_ids"`
+	CareOfferingIDs     []ident.ID     `json:"care_offering_ids"`
+	CountSchoolIDs      []ident.ID     `json:"count_school_ids"`
 	SiblingFromChild    *int           `json:"sibling_from_child"`
 	DiscountBasisPoints *int           `json:"discount_basis_points"`
-	DiscountCents       *int64         `json:"discount_cents"`
-	PriceCents          *int64         `json:"price_cents"`
-	CapCents            *int64         `json:"cap_cents"`
+	DiscountCents       *int64         `json:"discount_cents" contract:"number"`
+	PriceCents          *int64         `json:"price_cents" contract:"number"`
+	CapCents            *int64         `json:"cap_cents" contract:"number"`
 	// TariffSiblingPrice is the price-list mode of a sibling rule (#6196):
 	// each further child pays the sibling price of the price list.
 	TariffSiblingPrice bool `json:"tariff_sibling_price"`
@@ -111,10 +112,10 @@ type CareRuleSet struct {
 // contract from ValidFrom on, with the kind of proof the Abrechnung checked
 // and the day it checked it. A nil ValidUntil is open.
 type CareEvidence struct {
-	ID         int64          `json:"id"`
-	ContractID int64          `json:"contract_id"`
+	ID         ident.ID       `json:"id"`
+	ContractID ident.ID       `json:"contract_id"`
 	Kind       string         `json:"kind"`
-	RuleID     *int64         `json:"rule_id"`
+	RuleID     *ident.ID      `json:"rule_id"`
 	ValidFrom  calendar.Date  `json:"valid_from"`
 	ValidUntil *calendar.Date `json:"valid_until"`
 	Evidence   string         `json:"evidence"`
@@ -125,9 +126,9 @@ type CareEvidence struct {
 // CareEvidenceInput is an evidence as the Abrechnung writes it; RuleID
 // names the income level of an income evidence.
 type CareEvidenceInput struct {
-	ContractID int64          `json:"contract_id"`
+	ContractID ident.ID       `json:"contract_id"`
 	Kind       string         `json:"kind"`
-	RuleID     *int64         `json:"rule_id"`
+	RuleID     *ident.ID      `json:"rule_id"`
 	ValidFrom  calendar.Date  `json:"valid_from"`
 	ValidUntil *calendar.Date `json:"valid_until"`
 	Evidence   string         `json:"evidence"`
@@ -137,8 +138,8 @@ type CareEvidenceInput struct {
 // CareEvidenceContract is a contract of the Träger as the evidence page
 // shows it: the child, its school and the evidences of the contract.
 type CareEvidenceContract struct {
-	ContractID     int64          `json:"contract_id"`
-	SchoolID       int64          `json:"school_id"`
+	ContractID     ident.ID       `json:"contract_id"`
+	SchoolID       ident.ID       `json:"school_id"`
 	SchoolName     string         `json:"school_name"`
 	ChildFirstName string         `json:"child_first_name"`
 	ChildLastName  string         `json:"child_last_name"`
@@ -158,21 +159,21 @@ type CareEvidenceSet struct {
 // FamilyChildren its rule counted; the rank follows the base price, the
 // highest first, then the age, the oldest first.
 type CareReduction struct {
-	Kind                string `json:"kind"`
-	RuleID              int64  `json:"rule_id"`
-	Name                string `json:"name"`
-	ChildRank           *int   `json:"child_rank"`
-	FamilyChildren      *int   `json:"family_children"`
-	DiscountBasisPoints *int   `json:"discount_basis_points"`
-	DiscountCents       *int64 `json:"discount_cents"`
-	PriceCents          *int64 `json:"price_cents"`
-	CapCents            *int64 `json:"cap_cents"`
+	Kind                string   `json:"kind"`
+	RuleID              ident.ID `json:"rule_id"`
+	Name                string   `json:"name"`
+	ChildRank           *int     `json:"child_rank"`
+	FamilyChildren      *int     `json:"family_children"`
+	DiscountBasisPoints *int     `json:"discount_basis_points"`
+	DiscountCents       *int64   `json:"discount_cents" contract:"number"`
+	PriceCents          *int64   `json:"price_cents" contract:"number"`
+	CapCents            *int64   `json:"cap_cents" contract:"number"`
 	// TariffSiblingPrice copies the price-list mode of a sibling rule.
 	TariffSiblingPrice bool `json:"tariff_sibling_price"`
 	// CareOfferingIDs are the modules the rule reduced, none for all; a
 	// later run of the month places an earlier reduction by them.
-	CareOfferingIDs []int64 `json:"care_offering_ids"`
-	AmountCents     int64   `json:"amount_cents"`
+	CareOfferingIDs []ident.ID `json:"care_offering_ids"`
+	AmountCents     int64      `json:"amount_cents" contract:"number"`
 }
 
 // CareReductions lets the Abrechnung of a Träger keep the rules of the

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // GetProvisioningStats returns the platform-wide counts of the operator
@@ -28,7 +29,7 @@ func (p *Provisioning) GetProvisioningStats(ctx context.Context) (*organizationt
 		total := 0
 		for _, school := range schools {
 			if school.DeletedAt == nil {
-				total += devices[school.ID]
+				total += devices[school.ID.Int64()]
 			}
 		}
 		return &organizationtenancy.ProvisioningStats{
@@ -65,12 +66,12 @@ func (p *Provisioning) ListOrganizationSummaries(ctx context.Context) ([]*organi
 			if school.DeletedAt != nil {
 				continue
 			}
-			deviceTotals[school.OrganizationID] += devices[school.ID]
-			personTotals[school.OrganizationID] += persons[school.ID]
+			deviceTotals[school.OrganizationID.Int64()] += devices[school.ID.Int64()]
+			personTotals[school.OrganizationID.Int64()] += persons[school.ID.Int64()]
 		}
 		for _, row := range rows {
 			result = append(result, &organizationtenancy.OrganizationSummary{
-				ID: row.ID, Name: row.Name, Slug: row.Slug, Active: row.Active,
+				ID: ident.ID(row.ID), Name: row.Name, Slug: row.Slug, Active: row.Active,
 				CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, DeletedAt: row.DeletedAt, Settings: row.Settings, TestSystem: row.TestSystem,
 				SchulenCount: row.SchoolCount, KontenCount: row.AccountCount,
 				GeraeteCount: deviceTotals[row.ID], PersonenCount: personTotals[row.ID],
@@ -117,7 +118,7 @@ func (p *Provisioning) schoolSummaries(ctx context.Context, organizationID *int6
 	}
 	for _, row := range rows {
 		result = append(result, &organizationtenancy.SchoolSummary{
-			ID: row.ID, OrganizationID: row.OrganizationID, OrganizationName: row.OrganizationName,
+			ID: ident.ID(row.ID), OrganizationID: ident.ID(row.OrganizationID), OrganizationName: row.OrganizationName,
 			Name: row.Name, Slug: row.Slug, Subdomain: row.Subdomain, Active: row.Active, Hidden: row.Hidden,
 			CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, DeletedAt: row.DeletedAt,
 			Address: row.Address, City: row.City, Zip: row.Zip, Phone: row.Phone, Email: row.Email,

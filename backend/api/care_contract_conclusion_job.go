@@ -50,7 +50,7 @@ func concludeEveryTraeger(ctx context.Context, organizations organizationtenancy
 		if !organization.Active || organization.IsDeleted() {
 			continue
 		}
-		run, err := conclusion.ConcludeAccepted(ctx, organization.ID)
+		run, err := conclusion.ConcludeAccepted(ctx, organization.ID.Int64())
 		concluded += len(run.Concluded)
 		if err != nil {
 			failures = append(failures, fmt.Errorf("care contract conclusion of Träger %d: %w", organization.ID, err))
@@ -79,7 +79,7 @@ func amendEveryTraeger(ctx context.Context, organizations organizationtenancy.Ca
 		if !organization.Active || organization.IsDeleted() {
 			continue
 		}
-		run, err := amendments.AmendFromBookings(ctx, organization.ID)
+		run, err := amendments.AmendFromBookings(ctx, organization.ID.Int64())
 		amended += len(run.Amended)
 		if err != nil {
 			failures = append(failures, fmt.Errorf("care contract amendments of Träger %d: %w", organization.ID, err))

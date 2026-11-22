@@ -261,3 +261,8 @@ type StudentChangeLogCleanupResult struct {
 // retention. The root binds the People Directory sweep; the scheduler owns
 // when it runs.
 type StudentChangeLogCleanup func(context.Context) (StudentChangeLogCleanupResult, error)
+
+// OutboxJobRunner processes durable external jobs without a tenant.
+type OutboxJobRunner interface {
+	RunOnce(context.Context, int, int) (int, error)
+}

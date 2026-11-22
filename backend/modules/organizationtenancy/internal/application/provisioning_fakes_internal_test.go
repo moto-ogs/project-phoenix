@@ -15,6 +15,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/require"
 )
 
@@ -168,10 +169,10 @@ func (e *fakeEngine) Create(_ context.Context, input organizationtenancy.CreateO
 		}
 	}
 	org := &organizationtenancy.Organization{
-		ID: e.newID(), CreatedAt: fixedTime, UpdatedAt: fixedTime,
+		ID: ident.ID(e.newID()), CreatedAt: fixedTime, UpdatedAt: fixedTime,
 		Name: input.Name, Slug: input.Slug, Active: input.Active,
 	}
-	e.orgs[org.ID] = org
+	e.orgs[org.ID.Int64()] = org
 	return *org, nil
 }
 
@@ -184,7 +185,7 @@ func (e *fakeEngine) Update(_ context.Context, input organizationtenancy.UpdateO
 		return organizationtenancy.Organization{}, organizationtenancy.ErrOrganizationNotFound
 	}
 	for _, other := range e.orgs {
-		if other.ID != input.ID && other.Slug == input.Slug {
+		if other.ID != ident.ID(input.ID) && other.Slug == input.Slug {
 			return organizationtenancy.Organization{}, organizationtenancy.ErrOrganizationSlugConflict
 		}
 	}
@@ -205,7 +206,7 @@ func (e *fakeEngine) SoftDelete(_ context.Context, id int64) (organizationtenanc
 	}
 	count := 0
 	for _, school := range e.schools {
-		if school.OrganizationID == id && !school.IsDeleted() {
+		if school.OrganizationID == ident.ID(id) && !school.IsDeleted() {
 			count++
 		}
 	}
@@ -290,7 +291,7 @@ func (e *fakeEngine) ListByIDs(_ context.Context, ids []int64) ([]organizationte
 		return nil, err
 	}
 	wanted := idSet(ids)
-	return e.sortedOrgs(func(org organizationtenancy.Organization) bool { return wanted[org.ID] }), nil
+	return e.sortedOrgs(func(org organizationtenancy.Organization) bool { return wanted[org.ID.Int64()] }), nil
 }
 
 func (e *fakeEngine) CountByIDs(ctx context.Context, ids []int64) (int, error) {
@@ -313,17 +314,17 @@ func (e *fakeEngine) CreateSchool(_ context.Context, input organizationtenancy.C
 		if school.Subdomain == input.Subdomain {
 			return organizationtenancy.School{}, organizationtenancy.ErrSchoolDomainConflict
 		}
-		if school.OrganizationID == input.OrganizationID && school.Slug == input.Slug {
+		if school.OrganizationID == ident.ID(input.OrganizationID) && school.Slug == input.Slug {
 			return organizationtenancy.School{}, organizationtenancy.ErrSchoolSlugConflict
 		}
 	}
 	school := &organizationtenancy.School{
-		ID: e.newID(), CreatedAt: fixedTime, UpdatedAt: fixedTime,
-		OrganizationID: input.OrganizationID, Name: input.Name, Slug: input.Slug, Subdomain: input.Subdomain,
+		ID: ident.ID(e.newID()), CreatedAt: fixedTime, UpdatedAt: fixedTime,
+		OrganizationID: ident.ID(input.OrganizationID), Name: input.Name, Slug: input.Slug, Subdomain: input.Subdomain,
 		Active: input.Active, Hidden: input.Hidden, Settings: input.Settings,
 		Address: input.Address, City: input.City, Zip: input.Zip, Phone: input.Phone, Email: input.Email,
 	}
-	e.schools[school.ID] = school
+	e.schools[school.ID.Int64()] = school
 	return *school, nil
 }
 
@@ -336,7 +337,7 @@ func (e *fakeEngine) UpdateSchool(_ context.Context, input organizationtenancy.U
 	if !ok {
 		return organizationtenancy.School{}, organizationtenancy.ErrSchoolNotFound
 	}
-	school.OrganizationID, school.Name, school.Slug, school.Subdomain = input.OrganizationID, input.Name, input.Slug, input.Subdomain
+	school.OrganizationID, school.Name, school.Slug, school.Subdomain = ident.ID(input.OrganizationID), input.Name, input.Slug, input.Subdomain
 	school.Active, school.Hidden, school.Settings = input.Active, input.Hidden, input.Settings
 	school.Address, school.City, school.Zip, school.Phone, school.Email = input.Address, input.City, input.Zip, input.Phone, input.Email
 	return *school, nil
@@ -417,7 +418,7 @@ func (e *fakeEngine) FindSchoolBySlug(_ context.Context, slug string) (organizat
 
 func (e *fakeEngine) FindSchoolByOrganizationAndSlug(_ context.Context, organizationID int64, slug string) (organizationtenancy.School, error) {
 	return e.findSchoolWhere("FindSchoolByOrganizationAndSlug", func(s organizationtenancy.School) bool {
-		return s.OrganizationID == organizationID && s.Slug == slug
+		return s.OrganizationID == ident.ID(organizationID) && s.Slug == slug
 	})
 }
 
@@ -449,11 +450,11 @@ func (e *fakeEngine) ListSchools(context.Context) ([]organizationtenancy.School,
 
 func (e *fakeEngine) ListSchoolsByID(_ context.Context, ids []int64) ([]organizationtenancy.School, error) {
 	wanted := idSet(ids)
-	return e.listSchools("ListSchoolsByID", func(s organizationtenancy.School) bool { return wanted[s.ID] })
+	return e.listSchools("ListSchoolsByID", func(s organizationtenancy.School) bool { return wanted[s.ID.Int64()] })
 }
 
 func (e *fakeEngine) ListSchoolsByOrganization(_ context.Context, organizationID int64) ([]organizationtenancy.School, error) {
-	return e.listSchools("ListSchoolsByOrganization", func(s organizationtenancy.School) bool { return s.OrganizationID == organizationID })
+	return e.listSchools("ListSchoolsByOrganization", func(s organizationtenancy.School) bool { return s.OrganizationID == ident.ID(organizationID) })
 }
 
 func (e *fakeEngine) ListNonDeletedSchools(context.Context) ([]organizationtenancy.School, error) {
@@ -519,9 +520,9 @@ func (d *fakeDashboard) OrganizationSummaries(ctx context.Context) ([]organizati
 			}
 		}
 		rows = append(rows, organizationtenancy.DashboardOrganization{
-			ID: org.ID, Name: org.Name, Slug: org.Slug, Active: org.Active,
+			ID: org.ID.Int64(), Name: org.Name, Slug: org.Slug, Active: org.Active,
 			CreatedAt: org.CreatedAt, UpdatedAt: org.UpdatedAt, DeletedAt: org.DeletedAt, Settings: org.Settings,
-			SchoolCount: schools, AccountCount: d.accounts[org.ID],
+			SchoolCount: schools, AccountCount: d.accounts[org.ID.Int64()],
 		})
 	}
 	return rows, nil
@@ -535,19 +536,19 @@ func (d *fakeDashboard) SchoolSummaries(ctx context.Context, organizationID *int
 	}
 	rows := []organizationtenancy.DashboardSchool{}
 	for _, school := range d.engine.sortedSchools(func(s organizationtenancy.School) bool {
-		return organizationID == nil || s.OrganizationID == *organizationID
+		return organizationID == nil || s.OrganizationID == ident.ID(*organizationID)
 	}) {
 		orgName := ""
-		if org, ok := d.engine.orgs[school.OrganizationID]; ok {
+		if org, ok := d.engine.orgs[school.OrganizationID.Int64()]; ok {
 			orgName = org.Name
 		}
 		rows = append(rows, organizationtenancy.DashboardSchool{
-			ID: school.ID, OrganizationID: school.OrganizationID, OrganizationName: orgName,
+			ID: school.ID.Int64(), OrganizationID: school.OrganizationID.Int64(), OrganizationName: orgName,
 			Name: school.Name, Slug: school.Slug, Subdomain: school.Subdomain,
 			Active: school.Active, Hidden: school.Hidden, CreatedAt: school.CreatedAt, UpdatedAt: school.UpdatedAt,
 			DeletedAt: school.DeletedAt, Address: school.Address, City: school.City, Zip: school.Zip,
 			Phone: school.Phone, Email: school.Email, Settings: school.Settings,
-			AccountCount: d.accounts[school.ID], ChildQuotaBundles: school.ChildQuotaBundles,
+			AccountCount: d.accounts[school.ID.Int64()], ChildQuotaBundles: school.ChildQuotaBundles,
 			ChildQuotaBundleSize: school.ChildQuotaBundleSize,
 		})
 	}
@@ -1173,7 +1174,7 @@ func newHarness(t *testing.T) *provisioningHarness {
 }
 
 func (h *provisioningHarness) addOrg(id int64, name, slug string, deleted bool) *organizationtenancy.Organization {
-	org := &organizationtenancy.Organization{ID: id, CreatedAt: fixedTime, UpdatedAt: fixedTime, Name: name, Slug: slug, Active: true}
+	org := &organizationtenancy.Organization{ID: ident.ID(id), CreatedAt: fixedTime, UpdatedAt: fixedTime, Name: name, Slug: slug, Active: true}
 	if deleted {
 		deletedAt := fixedTime
 		org.DeletedAt = &deletedAt
@@ -1186,7 +1187,7 @@ func (h *provisioningHarness) addOrg(id int64, name, slug string, deleted bool) 
 // other states.
 func (h *provisioningHarness) addSchool(id, organizationID int64, name, slug string) *organizationtenancy.School {
 	school := &organizationtenancy.School{
-		ID: id, CreatedAt: fixedTime, UpdatedAt: fixedTime, OrganizationID: organizationID,
+		ID: ident.ID(id), CreatedAt: fixedTime, UpdatedAt: fixedTime, OrganizationID: ident.ID(organizationID),
 		Name: name, Slug: slug, Subdomain: slug, Active: true,
 	}
 	h.engine.schools[id] = school

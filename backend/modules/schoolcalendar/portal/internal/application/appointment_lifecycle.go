@@ -9,6 +9,7 @@ import (
 	appointmentcap "github.com/moto-ogs/project-phoenix/modules/appointments"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 func (s *service) CreateStaffAppointment(ctx context.Context, req CreateAppointmentRequest) (*AppointmentDetail, error) {
@@ -63,7 +64,7 @@ func (s *service) createAppointmentFor(ctx context.Context, organizerStaffID int
 		}
 	}
 
-	recipients, _, err := s.cfg.Appointments.CreateAppointmentRecipients(ctx, appointment.ID, recipientFields)
+	recipients, _, err := s.cfg.Appointments.CreateAppointmentRecipients(ctx, appointment.ID.Int64(), recipientFields)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +98,7 @@ func newStaffAppointment(organizerStaffID int64, req CreateAppointmentRequest) (
 	}
 
 	appointment := &appointmentcap.Appointment{
-		OrganizerStaffID:   organizerStaffID,
+		OrganizerStaffID:   ident.ID(organizerStaffID),
 		Title:              req.Title,
 		Description:        req.Description,
 		Location:           req.Location,
@@ -169,7 +170,7 @@ func (s *service) loadOrganizedAppointment(ctx context.Context, appointmentID in
 	if appointment.DeletedAt != nil {
 		return nil, ErrNotFound
 	}
-	if appointment.OrganizerStaffID != staff.ID {
+	if appointment.OrganizerStaffID != ident.ID(staff.ID) {
 		return nil, fmt.Errorf("%w: only the organizer may modify this appointment", ErrForbidden)
 	}
 	// A booked Elternsprechtag slot changes only through its booking (#4801):
@@ -188,7 +189,7 @@ func (s *service) loadAppointmentForWrite(ctx context.Context, appointmentID int
 	if err != nil {
 		return nil, err
 	}
-	appointment, err = s.findAppointmentForUpdate(ctx, appointment.ID)
+	appointment, err = s.findAppointmentForUpdate(ctx, appointment.ID.Int64())
 	if s.cfg.MissingRecord(err) {
 		return nil, ErrNotFound
 	}
@@ -216,7 +217,7 @@ func (s *service) findAppointmentForUpdate(ctx context.Context, appointmentID in
 
 func appointmentCapabilityFields(value *appointmentcap.Appointment) appointmentcap.AppointmentFields {
 	return appointmentcap.AppointmentFields{
-		OrganizerStaffID: value.OrganizerStaffID, Title: value.Title, Description: value.Description,
+		OrganizerStaffID: value.OrganizerStaffID.Int64(), Title: value.Title, Description: value.Description,
 		Location: value.Location, StartDate: value.StartDate, EndDate: value.EndDate,
 		StartTime: value.StartTime, EndTime: value.EndTime, AllDay: value.AllDay,
 		DeliveryMode: value.DeliveryMode, OverviewVisibility: value.OverviewVisibility,
@@ -228,7 +229,7 @@ func appointmentTargetFields(values []*appointmentcap.AppointmentTarget) []appoi
 	result := make([]appointmentcap.AppointmentTargetFields, 0, len(values))
 	for _, value := range values {
 		result = append(result, appointmentcap.AppointmentTargetFields{
-			TargetType: value.TargetType, TargetID: value.TargetID, TargetValue: value.TargetValue,
+			TargetType: value.TargetType, TargetID: (*int64)(value.TargetID), TargetValue: value.TargetValue,
 		})
 	}
 	return result
@@ -238,15 +239,15 @@ func appointmentTargetFields(values []*appointmentcap.AppointmentTarget) []appoi
 // for an appointment. Used by the lifecycle operations so callers (and the
 // notification layer in Phase B) get the same shape as CreateStaffAppointment.
 func (s *service) appointmentDetail(ctx context.Context, appointment *appointmentcap.Appointment) (*AppointmentDetail, error) {
-	recurrence, err := s.cfg.Appointments.FindRecurrenceRule(ctx, appointment.ID)
+	recurrence, err := s.cfg.Appointments.FindRecurrenceRule(ctx, appointment.ID.Int64())
 	if err != nil {
 		return nil, err
 	}
-	recipients, err := s.cfg.Appointments.FindAppointmentRecipients(ctx, appointment.ID)
+	recipients, err := s.cfg.Appointments.FindAppointmentRecipients(ctx, appointment.ID.Int64())
 	if err != nil {
 		return nil, err
 	}
-	targets, err := s.cfg.Appointments.FindAppointmentTargets(ctx, appointment.ID)
+	targets, err := s.cfg.Appointments.FindAppointmentTargets(ctx, appointment.ID.Int64())
 	if err != nil {
 		return nil, err
 	}
@@ -305,7 +306,7 @@ func (s *service) updateLoadedAppointment(ctx context.Context, appointment *appo
 	// Kill every not-yet-sent appointment e-mail so the worker cannot deliver a
 	// stale title/date/location or a reminder after guardian delivery was turned
 	// off. The update notice below replaces the lifecycle communication.
-	if err := s.cancelPendingNotifications(ctx, appointment.ID, "appointment updated"); err != nil {
+	if err := s.cancelPendingNotifications(ctx, appointment.ID.Int64(), "appointment updated"); err != nil {
 		return nil, err
 	}
 	if appointment.NotifyGuardians {
@@ -358,7 +359,7 @@ func applyAppointmentUpdate(appointment *appointmentcap.Appointment, req UpdateA
 // recurrence rule and occurrence overrides. It returns the stored appointment.
 func (s *service) persistAppointmentUpdate(ctx context.Context, appointment *appointmentcap.Appointment, recurrence *appointmentcap.RecurrenceRule) (*appointmentcap.Appointment, error) {
 	updated, err := s.cfg.Appointments.UpdateAppointment(ctx, appointmentcap.UpdateAppointment{
-		ID: appointment.ID, AppointmentFields: appointmentCapabilityFields(appointment),
+		ID: appointment.ID.Int64(), AppointmentFields: appointmentCapabilityFields(appointment),
 	})
 	if err != nil {
 		// A concurrent cancel/delete transitioned the appointment between load and
@@ -372,7 +373,7 @@ func (s *service) persistAppointmentUpdate(ctx context.Context, appointment *app
 	}
 	// Replace the recurrence rule wholesale: the DB enforces one rule per
 	// appointment, so drop the old row and recreate if the edit still recurs.
-	if err := s.cfg.Appointments.DeleteRecurrenceRule(ctx, updated.ID); err != nil {
+	if err := s.cfg.Appointments.DeleteRecurrenceRule(ctx, updated.ID.Int64()); err != nil {
 		return nil, err
 	}
 	if recurrence != nil {
@@ -384,7 +385,7 @@ func (s *service) persistAppointmentUpdate(ctx context.Context, appointment *app
 	// cancellations ("Nur diesen Termin") from the old cadence no longer apply.
 	// Drop them; otherwise a date reused by the new recurrence would be silently
 	// suppressed (and stale EXDATEs would leak into the subscription feed/ICS).
-	if err := s.cfg.Appointments.DeleteOccurrenceOverrides(ctx, updated.ID); err != nil {
+	if err := s.cfg.Appointments.DeleteOccurrenceOverrides(ctx, updated.ID.Int64()); err != nil {
 		return nil, err
 	}
 	return updated, nil
@@ -413,7 +414,7 @@ func (s *service) cancelStaffAppointment(ctx context.Context, appointmentID int6
 	// WHERE cancelled_at IS NULL AND deleted_at IS NULL — matches nothing once a
 	// concurrent cancel or delete has won. `transitioned` is true only for the
 	// caller that actually flipped the row.
-	transitioned, err := s.cfg.Appointments.CancelAppointment(ctx, appointment.ID)
+	transitioned, err := s.cfg.Appointments.CancelAppointment(ctx, appointment.ID.Int64())
 	if err != nil {
 		return nil, err
 	}
@@ -436,7 +437,7 @@ func (s *service) cancelStaffAppointment(ctx context.Context, appointmentID int6
 	// so two concurrent cancels can't send duplicate guardian e-mails. And even
 	// then, honour the persisted opt-in: an appointment created without
 	// send_email never mails guardians on cancellation.
-	if err := s.cancelPendingNotifications(ctx, appointment.ID, "appointment cancelled"); err != nil {
+	if err := s.cancelPendingNotifications(ctx, appointment.ID.Int64(), "appointment cancelled"); err != nil {
 		return nil, err
 	}
 	if appointment.NotifyGuardians {
@@ -465,7 +466,7 @@ func (s *service) deleteStaffAppointment(ctx context.Context, appointmentID int6
 func (s *service) softDeleteLoadedAppointment(ctx context.Context, appointment *appointmentcap.Appointment) error {
 	// Deleting is silent (no notice); kill any queued e-mails first so the worker
 	// doesn't send a mail for a row we're about to remove or tombstone.
-	if err := s.cancelPendingNotifications(ctx, appointment.ID, "appointment deleted"); err != nil {
+	if err := s.cancelPendingNotifications(ctx, appointment.ID.Int64(), "appointment deleted"); err != nil {
 		return err
 	}
 	// A subscribed external calendar only drops an
@@ -478,7 +479,7 @@ func (s *service) softDeleteLoadedAppointment(ctx context.Context, appointment *
 	// yet the subscription feed re-exports it as a durable STATUS:CANCELLED
 	// tombstone (retained by deletion time, independent of the date lookback) with
 	// a bumped SEQUENCE so even long-offline subscribers eventually purge it.
-	return s.cfg.Appointments.SoftDeleteAppointment(ctx, appointment.ID)
+	return s.cfg.Appointments.SoftDeleteAppointment(ctx, appointment.ID.Int64())
 }
 
 func (s *service) CancelStaffAppointmentOccurrence(ctx context.Context, appointmentID int64, occurrenceDate appointmentcap.Date) error {
@@ -499,7 +500,7 @@ func (s *service) cancelStaffAppointmentOccurrence(ctx context.Context, appointm
 	// actually generates. Without this guard, cancelling a non-recurring
 	// appointment (or a date not in the series) would persist a useless override
 	// while the appointment stayed fully visible.
-	recurrence, err := s.cfg.Appointments.FindRecurrenceRule(ctx, appointment.ID)
+	recurrence, err := s.cfg.Appointments.FindRecurrenceRule(ctx, appointment.ID.Int64())
 	if err != nil {
 		return err
 	}
@@ -512,7 +513,7 @@ func (s *service) cancelStaffAppointmentOccurrence(ctx context.Context, appointm
 	// Reuse an existing override for this date (e.g. from a prior single-occurrence
 	// edit) so cancelling stays idempotent and respects the (appointment, date)
 	// uniqueness constraint.
-	existing, err := s.cfg.Appointments.FindOccurrenceOverrides(ctx, []int64{appointment.ID}, []appointmentcap.Date{toCalendarDate(occurrenceDate)})
+	existing, err := s.cfg.Appointments.FindOccurrenceOverrides(ctx, []int64{appointment.ID.Int64()}, []appointmentcap.Date{toCalendarDate(occurrenceDate)})
 	if err != nil {
 		return err
 	}
@@ -523,14 +524,14 @@ func (s *service) cancelStaffAppointmentOccurrence(ctx context.Context, appointm
 	// Conflict-safe upsert: a concurrent request cancelling the same occurrence
 	// converges on cancelled=true instead of one hitting the unique constraint
 	// and returning a 500.
-	if _, err := s.cfg.Appointments.CancelAppointmentOccurrence(ctx, appointment.ID, toCalendarDate(occurrenceDate)); err != nil {
+	if _, err := s.cfg.Appointments.CancelAppointmentOccurrence(ctx, appointment.ID.Int64(), toCalendarDate(occurrenceDate)); err != nil {
 		return err
 	}
 	// A queued create/update notice announces the appointment's first occurrence;
 	// removing an occurrence (possibly that first one) could otherwise deliver a
 	// mail for a date parents will no longer see. Kill any pending notice, matching
 	// the cancel/delete/update stale-notification cleanup.
-	if err := s.cancelPendingNotifications(ctx, appointment.ID, "occurrence cancelled"); err != nil {
+	if err := s.cancelPendingNotifications(ctx, appointment.ID.Int64(), "occurrence cancelled"); err != nil {
 		return err
 	}
 	return nil
@@ -555,7 +556,7 @@ func (s *service) resolveTargets(ctx context.Context, deliveryMode string, targe
 	for _, target := range targets {
 		targetRows = append(targetRows, &appointmentcap.AppointmentTarget{
 			TargetType:  target.Type,
-			TargetID:    target.ID,
+			TargetID:    (*ident.ID)(target.ID),
 			TargetValue: target.Value,
 		})
 		if err := recipients.addTarget(readSet, target); err != nil {

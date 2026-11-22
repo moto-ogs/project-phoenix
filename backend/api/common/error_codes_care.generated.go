@@ -82,6 +82,7 @@ const CodeCareRemoveDisabled = "care.remove_disabled"
 const CodeCareRequestNotFound = "care.request_not_found"
 const CodeCareRequestNotOpen = "care.request_not_open"
 const CodeCareRequestSharingInvalid = "care.request_sharing_invalid"
+const CodeCareRoomHistoryStopDisabled = "care.room_history_stop_disabled"
 const CodeCareSickNoteDisabled = "care.sick_note_disabled"
 const CodeCareStaffManagedGuardianProtected = "care.staff_managed_guardian_protected"
 
@@ -167,6 +168,7 @@ var errorCodeClassesCare = []errorCodeClass{
 	{CodeCareRequestNotFound, "business_rejection"},
 	{CodeCareRequestNotOpen, "business_rejection"},
 	{CodeCareRequestSharingInvalid, "input"},
+	{CodeCareRoomHistoryStopDisabled, "permission"},
 	{CodeCareSickNoteDisabled, "permission"},
 	{CodeCareStaffManagedGuardianProtected, "permission"},
 }

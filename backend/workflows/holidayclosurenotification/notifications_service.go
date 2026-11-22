@@ -13,6 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/workflows/holidayclosurenotification/ports"
 )
 
@@ -102,7 +103,7 @@ func (s *Service) plans(ctx context.Context, organizationID int64, notices []sch
 
 func view(notice schoolcalendar.HolidayClosureNotice) ClosureNotice {
 	result := ClosureNotice{
-		ID: notice.ProposalID, SchoolID: notice.SchoolID, ClosingDayID: notice.ClosingDayID, Reason: notice.Reason,
+		ID: ident.ID(notice.ProposalID), SchoolID: ident.ID(notice.SchoolID), ClosingDayID: ident.ID(notice.ClosingDayID), Reason: notice.Reason,
 		Revision: int(notice.Revision), Status: string(notice.Status), Changed: notice.Changed, CanNotify: notice.CanNotify(),
 		ConfirmedAt: notice.ConfirmedAt, UpdatedAt: notice.UpdatedAt,
 	}
@@ -247,8 +248,8 @@ func (s *Service) currentSchools(ctx context.Context, organizationID int64) (map
 	}
 	names := make(map[int64]string, len(schools))
 	for _, school := range schools {
-		if school.OrganizationID == organizationID && !school.IsDeleted() {
-			names[school.ID] = school.Name
+		if school.OrganizationID == ident.ID(organizationID) && !school.IsDeleted() {
+			names[school.ID.Int64()] = school.Name
 		}
 	}
 	return names, nil
@@ -420,7 +421,7 @@ func (s *Service) NotifyPendingHolidayClosures(ctx context.Context, organization
 	bySchool := map[int64][]TraegerNotice{}
 	for _, notice := range pending.Notices {
 		if notice.Status == string(schoolcalendar.HolidayClosureSuggested) {
-			bySchool[notice.SchoolID] = append(bySchool[notice.SchoolID], notice)
+			bySchool[notice.SchoolID.Int64()] = append(bySchool[notice.SchoolID.Int64()], notice)
 		}
 	}
 	var result NotifiedPending
@@ -460,7 +461,7 @@ func (s *Service) confirmAtSchool(ctx context.Context, organizationID, accountID
 		operations = nil
 		confirmations := make([]schoolcalendar.HolidayClosureConfirmation, len(notices))
 		for i, notice := range notices {
-			confirmations[i] = schoolcalendar.HolidayClosureConfirmation{ProposalID: notice.ID, Revision: int64(notice.Revision), ImpactToken: notice.Token}
+			confirmations[i] = schoolcalendar.HolidayClosureConfirmation{ProposalID: notice.ID.Int64(), Revision: int64(notice.Revision), ImpactToken: notice.Token}
 		}
 		confirmed, err := s.Proposals.ConfirmHolidayClosureNotices(ctx, confirmations, schoolcalendar.HolidayClosureActor{
 			AccountID: accountID, Channel: schoolcalendar.HolidayClosureChannelTraeger, OrganizationID: organizationID,

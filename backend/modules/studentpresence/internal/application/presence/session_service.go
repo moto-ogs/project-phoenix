@@ -58,7 +58,7 @@ func (s *service) CheckActivityConflict(ctx context.Context, activityID, deviceI
 	}
 	var devicePtr *int64
 	if existingSession != nil {
-		devicePtr = existingSession.DeviceID
+		devicePtr = (*int64)(existingSession.DeviceID)
 	}
 	return &ActivityConflictInfo{
 		HasConflict:       true,
@@ -126,29 +126,29 @@ type activityEndSSEData struct {
 // names, as broadcastActivityEndEvent always did on a failed lookup.
 func (s *service) collectActivityEndSSE(ctx context.Context, group *ports.ActiveGroup) (activityEndSSEData, error) {
 	if s.Broadcaster == nil || s.RoomRepo == nil || s.ActivityGroupRepo == nil {
-		return activityEndSSEData{RoomID: group.RoomID}, nil
+		return activityEndSSEData{RoomID: group.RoomID.Int64()}, nil
 	}
 
-	activityName, err := s.getActivityEndActivityName(ctx, group.GroupID)
+	activityName, err := s.getActivityEndActivityName(ctx, (*int64)(group.GroupID))
 	if err != nil {
 		return activityEndSSEData{}, err
 	}
-	roomName, err := s.getActivityEndRoomName(ctx, group.RoomID)
+	roomName, err := s.getActivityEndRoomName(ctx, group.RoomID.Int64())
 	if err != nil {
 		return activityEndSSEData{}, err
 	}
-	return activityEndSSEData{RoomID: group.RoomID, ActivityName: activityName, RoomName: roomName}, nil
+	return activityEndSSEData{RoomID: group.RoomID.Int64(), ActivityName: activityName, RoomName: roomName}, nil
 }
 
 func (s *service) endActivitySessionLocked(ctx context.Context, group *ports.ActiveGroup) (sessionEndSSEData, []int64, error) {
 	activeGroupID := group.ID
 	// Collect active visits before mutating them for the SSE payloads.
-	visitsToNotify, err := s.collectActiveVisitsForSSE(ctx, activeGroupID)
+	visitsToNotify, err := s.collectActiveVisitsForSSE(ctx, activeGroupID.Int64())
 	if err != nil {
 		return sessionEndSSEData{}, nil, &ActiveError{Op: "EndActivitySession", Err: ErrDatabaseOperation}
 	}
 
-	ended, err := s.closeGroupSession(ctx, "EndActivitySession", activeGroupID)
+	ended, err := s.closeGroupSession(ctx, "EndActivitySession", activeGroupID.Int64())
 	if err != nil {
 		return sessionEndSSEData{}, nil, err
 	}

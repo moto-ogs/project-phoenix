@@ -21,6 +21,7 @@ import (
 	"github.com/go-chi/render"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Middleware is the HTTP middleware shape the composition root supplies.
@@ -270,25 +271,25 @@ func (o *optionalString) UnmarshalJSON(data []byte) error {
 type ShiftResponse struct {
 	// IDs cross the JSON boundary as decimal strings. A JavaScript number cannot
 	// represent every PostgreSQL bigint value without rounding it.
-	ID           int64  `json:"id,string"`
-	StaffID      int64  `json:"staff_id"`
-	Date         string `json:"date"`
-	StartTime    string `json:"start_time"`
-	EndTime      string `json:"end_time"`
-	BreakMinutes int    `json:"break_minutes"`
-	ShiftTypeID  *int64 `json:"shift_type_id,omitempty"`
+	ID           ident.ID  `json:"id"`
+	StaffID      ident.ID  `json:"staff_id"`
+	Date         string    `json:"date"`
+	StartTime    string    `json:"start_time"`
+	EndTime      string    `json:"end_time"`
+	BreakMinutes int       `json:"break_minutes"`
+	ShiftTypeID  *ident.ID `json:"shift_type_id,omitempty"`
 	// ShiftTypeName/ShiftTypeColor carry the resolved Schichtart so a staff
 	// member who cannot read the admin-only /api/shift-types endpoint still sees
 	// the label and color on their own shifts (#1844). Present only when the
 	// shift has a type and the service resolved it.
-	ShiftTypeName  *string `json:"shift_type_name,omitempty"`
-	ShiftTypeColor *string `json:"shift_type_color,omitempty"`
-	Notes          string  `json:"notes,omitempty"`
-	SeriesID       *int64  `json:"series_id,omitempty,string"`
-	Detached       bool    `json:"detached"`
-	Cancelled      bool    `json:"cancelled"`
-	ChangeReason   *string `json:"change_reason,omitempty"`
-	OriginShiftID  *int64  `json:"origin_shift_id,omitempty,string"`
+	ShiftTypeName  *string   `json:"shift_type_name,omitempty"`
+	ShiftTypeColor *string   `json:"shift_type_color,omitempty"`
+	Notes          string    `json:"notes,omitempty"`
+	SeriesID       *ident.ID `json:"series_id,omitempty"`
+	Detached       bool      `json:"detached"`
+	Cancelled      bool      `json:"cancelled"`
+	ChangeReason   *string   `json:"change_reason,omitempty"`
+	OriginShiftID  *ident.ID `json:"origin_shift_id,omitempty"`
 	// SeriesOccurrenceDate is the immutable recurrence slot. It lets clients
 	// apply a rule edit from a moved occurrence's source date, not its current
 	// display date.
@@ -302,19 +303,19 @@ type ShiftResponse struct {
 // time-tracking self endpoint, which serves the same shape.
 func ToShiftResponse(s workforce.PlannedShift) ShiftResponse {
 	resp := ShiftResponse{
-		ID:               s.ID,
-		StaffID:          s.StaffID,
+		ID:               ident.ID(s.ID),
+		StaffID:          ident.ID(s.StaffID),
 		Date:             s.Date,
 		StartTime:        FormatWallClock(s.StartTime),
 		EndTime:          FormatWallClock(s.EndTime),
 		BreakMinutes:     s.BreakMinutes,
-		ShiftTypeID:      s.ShiftTypeID,
+		ShiftTypeID:      (*ident.ID)(s.ShiftTypeID),
 		Notes:            s.Notes,
-		SeriesID:         s.SeriesID,
+		SeriesID:         (*ident.ID)(s.SeriesID),
 		Detached:         s.Detached,
 		Cancelled:        s.Cancelled,
 		ChangeReason:     s.ChangeReason,
-		OriginShiftID:    s.OriginShiftID,
+		OriginShiftID:    (*ident.ID)(s.OriginShiftID),
 		PlannedByTraeger: s.PlannedByTraeger,
 	}
 	if s.SeriesOccurrenceDate != "" {
@@ -675,7 +676,7 @@ type ReplacementRequest struct {
 
 // ShiftDeletedResponse names the shift a delete removed.
 type ShiftDeletedResponse struct {
-	ID int64 `json:"id"`
+	ID ident.ID `json:"id"`
 }
 
 // CancellationResponse returns the updated origin plus the created covers.
@@ -792,5 +793,5 @@ func (rs *Resource) delete(w http.ResponseWriter, r *http.Request) {
 		rs.renderError(w, r, err)
 		return
 	}
-	rs.runtime.Success(w, r, http.StatusOK, ShiftDeletedResponse{ID: id}, "Staff shift deleted")
+	rs.runtime.Success(w, r, http.StatusOK, ShiftDeletedResponse{ID: ident.ID(id)}, "Staff shift deleted")
 }

@@ -15,7 +15,7 @@ if [[ "${1:-quality}" == react-doctor ]]; then
   exit 0
 fi
 # Static-analysis placeholders, shared by local checks and CI. No servers run.
-export NEXT_PUBLIC_API_URL=http://localhost:8080 SKIP_ENV_VALIDATION=true
+export SKIP_ENV_VALIDATION=true
 export API_URL=http://localhost:8080 TENANT_DOMAIN=localhost
 export NEXT_PUBLIC_OPERATOR_HOSTNAME=operator.localhost:3000
 export NEXT_PUBLIC_PARENTS_HOSTNAME=parents.localhost:3000
@@ -23,6 +23,8 @@ export NEXT_PUBLIC_APP_ENV=test
 export NEXT_PUBLIC_SCHOOL_HOSTNAME=schule.localhost:3000
 export NEXT_PUBLIC_CATERER_HOSTNAME=caterer.localhost:3000
 export NEXT_PUBLIC_TRAEGER_HOSTNAME=traeger.localhost:3000
+# Sie-Anrede in German texts (ADR 0294); about a second over the whole tree.
+[[ "${1:-quality}" == fast ]] || quality_step du-form node ../scripts/check-du-form.mjs
 [[ "${1:-quality}" == fast ]] || quality_step locales pnpm exec node scripts/verify-locales.mjs
 [[ "${1:-quality}" == fast ]] || quality_step help-index pnpm exec node scripts/generate-help-index.mjs --check
 [[ "${1:-quality}" == fast ]] || quality_step portal-pages pnpm exec node scripts/generate-portal-pages.mjs --check

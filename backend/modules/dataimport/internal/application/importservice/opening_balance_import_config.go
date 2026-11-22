@@ -12,6 +12,7 @@ import (
 	importModels "github.com/moto-ogs/project-phoenix/modules/dataimport"
 	"github.com/moto-ogs/project-phoenix/modules/dataimport/ports"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // maxOpeningHours mirrors the ledger's carryover bound (10.000 h).
@@ -123,7 +124,7 @@ func (c *OpeningBalanceImportConfig) Validate(ctx context.Context, row *importMo
 	}
 
 	if row.StaffID > 0 {
-		if row.HoursBalanceMinutes != nil && c.staffWithHoursOpening[row.StaffID] {
+		if row.HoursBalanceMinutes != nil && c.staffWithHoursOpening[row.StaffID.Int64()] {
 			errs = append(errs, importModels.ValidationError{
 				Field:    "hours_balance",
 				Message:  "Für diese Person existiert bereits ein Stundenkonto-Eröffnungssaldo. Zuerst die bestehende Buchung im Stundenkonto löschen.",
@@ -131,7 +132,7 @@ func (c *OpeningBalanceImportConfig) Validate(ctx context.Context, row *importMo
 				Severity: importModels.ErrorSeverityError,
 			})
 		}
-		if row.VacationRemainingDays != nil && c.staffWithVacOpening[row.StaffID] {
+		if row.VacationRemainingDays != nil && c.staffWithVacOpening[row.StaffID.Int64()] {
 			errs = append(errs, importModels.ValidationError{
 				Field:    "vacation_remaining",
 				Message:  fmt.Sprintf("Für diese Person existiert bereits eine Urlaubs-Übernahme für %d. Zuerst die bestehende Übernahme löschen.", c.EffectiveDate.Year()),
@@ -148,7 +149,7 @@ func (c *OpeningBalanceImportConfig) validateOpeningBalancePreflight(ctx context
 	if row.StaffID <= 0 || row.HoursBalanceMinutes == nil || c.BalanceAdjustService == nil {
 		return nil
 	}
-	if err := c.BalanceAdjustService.ValidateOpeningBalance(ctx, row.StaffID, c.DecidedByStaffID, c.EffectiveDate.String(), *row.HoursBalanceMinutes, c.Note); err != nil {
+	if err := c.BalanceAdjustService.ValidateOpeningBalance(ctx, row.StaffID.Int64(), c.DecidedByStaffID, c.EffectiveDate.String(), *row.HoursBalanceMinutes, c.Note); err != nil {
 		return []importModels.ValidationError{{
 			Field:    "hours_balance",
 			Message:  fmt.Sprintf("Stundenkonto-Eröffnungssaldo kann nicht gebucht werden: %s", openingBookingPreviewMessage(err)),
@@ -167,7 +168,7 @@ func (c *OpeningBalanceImportConfig) validateDerivedVacationOpening(ctx context.
 	if row.StaffID <= 0 || row.VacationRemainingDays == nil || c.StaffAbsenceService == nil {
 		return nil
 	}
-	summary, err := c.StaffAbsenceService.VacationQuotaSummary(ctx, row.StaffID, c.EffectiveDate.Year())
+	summary, err := c.StaffAbsenceService.VacationQuotaSummary(ctx, row.StaffID.Int64(), c.EffectiveDate.Year())
 	if err != nil {
 		return []importModels.ValidationError{{
 			Field:    "vacation_remaining",
@@ -184,7 +185,7 @@ func (c *OpeningBalanceImportConfig) validateDerivedVacationOpening(ctx context.
 		carryover = *row.VacationCarryoverDays
 	}
 	opening := &ports.VacationOpeningValues{
-		StaffID:              row.StaffID,
+		StaffID:              row.StaffID.Int64(),
 		Year:                 c.EffectiveDate.Year(),
 		EffectiveDate:        c.EffectiveDate.String(),
 		TakenBeforeDays:      entitled + carryover - *row.VacationRemainingDays,
@@ -200,7 +201,7 @@ func (c *OpeningBalanceImportConfig) validateDerivedVacationOpening(ctx context.
 			ActualValue: row.VacationRemaining,
 		}}
 	}
-	if err := c.StaffAbsenceService.ValidateVacationOpeningAbsencesBefore(ctx, row.StaffID, c.EffectiveDate.String()); err != nil {
+	if err := c.StaffAbsenceService.ValidateVacationOpeningAbsencesBefore(ctx, row.StaffID.Int64(), c.EffectiveDate.String()); err != nil {
 		return []importModels.ValidationError{{
 			Field:    "vacation_remaining",
 			Message:  fmt.Sprintf("Urlaubs-Übernahme kann nicht gebucht werden: %s", openingBookingPreviewMessage(err)),
@@ -225,7 +226,7 @@ func (c *OpeningBalanceImportConfig) resolveStaff(row *importModels.OpeningBalan
 				ActualValue: row.PersonnelNumber,
 			}}
 		}
-		row.StaffID = staff.ID
+		row.StaffID = ident.ID(staff.ID)
 		return nil
 	}
 
@@ -248,7 +249,7 @@ func (c *OpeningBalanceImportConfig) resolveStaff(row *importModels.OpeningBalan
 			ActualValue: row.FirstName + " " + row.LastName,
 		}}
 	case 1:
-		row.StaffID = matches[0].ID
+		row.StaffID = ident.ID(matches[0].ID)
 		return nil
 	default:
 		return []importModels.ValidationError{{
@@ -385,7 +386,7 @@ func (c *OpeningBalanceImportConfig) ValidateBatch(_ context.Context, rows []imp
 		if row.StaffID <= 0 {
 			continue
 		}
-		if firstRow, ok := seen[row.StaffID]; ok {
+		if firstRow, ok := seen[row.StaffID.Int64()]; ok {
 			errs[i] = append(errs[i], importModels.ValidationError{
 				Field:    "name",
 				Message:  fmt.Sprintf("'%s %s' ist doppelt in der Importdatei vorhanden (erste Zeile: %d).", row.FirstName, row.LastName, firstRow+2),
@@ -394,7 +395,7 @@ func (c *OpeningBalanceImportConfig) ValidateBatch(_ context.Context, rows []imp
 			})
 			continue
 		}
-		seen[row.StaffID] = i
+		seen[row.StaffID.Int64()] = i
 	}
 	return errs
 }
@@ -413,7 +414,7 @@ func (c *OpeningBalanceImportConfig) ProcessingOrder(rows []importModels.Opening
 		row.FirstName = strings.TrimSpace(row.FirstName)
 		row.LastName = strings.TrimSpace(row.LastName)
 		_ = c.resolveStaff(&row)
-		staffIDs[i] = row.StaffID
+		staffIDs[i] = row.StaffID.Int64()
 	}
 	sort.SliceStable(order, func(i, j int) bool {
 		return staffIDs[order[i]] < staffIDs[order[j]]
@@ -453,7 +454,7 @@ func (c *OpeningBalanceImportConfig) Create(ctx context.Context, row importModel
 
 func (c *OpeningBalanceImportConfig) create(ctx context.Context, row importModels.OpeningBalanceImportRow) (int64, error) {
 	if row.HoursBalanceMinutes != nil {
-		if _, err := c.BalanceAdjustService.CreateOpeningBalance(ctx, row.StaffID, c.DecidedByStaffID, c.EffectiveDate.String(), *row.HoursBalanceMinutes, c.Note); err != nil {
+		if _, err := c.BalanceAdjustService.CreateOpeningBalance(ctx, row.StaffID.Int64(), c.DecidedByStaffID, c.EffectiveDate.String(), *row.HoursBalanceMinutes, c.Note); err != nil {
 			return 0, translateOpeningBookingError(err)
 		}
 	}
@@ -461,7 +462,7 @@ func (c *OpeningBalanceImportConfig) create(ctx context.Context, row importModel
 		return 0, err
 	}
 	if row.VacationRemainingDays != nil {
-		if _, err := c.StaffAbsenceService.SetVacationOpening(ctx, row.StaffID, c.DecidedByStaffID, ports.SetVacationOpeningRequest{
+		if _, err := c.StaffAbsenceService.SetVacationOpening(ctx, row.StaffID.Int64(), c.DecidedByStaffID, ports.SetVacationOpeningRequest{
 			EffectiveDate: c.EffectiveDate.String(),
 			RemainingDays: *row.VacationRemainingDays,
 			Note:          c.Note,
@@ -469,7 +470,7 @@ func (c *OpeningBalanceImportConfig) create(ctx context.Context, row importModel
 			return 0, translateOpeningBookingError(err)
 		}
 	}
-	return row.StaffID, nil
+	return row.StaffID.Int64(), nil
 }
 
 // applyVacationQuota writes the Jahresanspruch/Übertrag columns. An empty
@@ -479,7 +480,7 @@ func (c *OpeningBalanceImportConfig) applyVacationQuota(ctx context.Context, row
 	if row.VacationEntitledDays == nil && row.VacationCarryoverDays == nil {
 		return nil
 	}
-	summary, err := c.StaffAbsenceService.VacationQuotaSummary(ctx, row.StaffID, c.EffectiveDate.Year())
+	summary, err := c.StaffAbsenceService.VacationQuotaSummary(ctx, row.StaffID.Int64(), c.EffectiveDate.Year())
 	if err != nil {
 		return fmt.Errorf("urlaubskonto konnte nicht gelesen werden: %w", err)
 	}
@@ -490,7 +491,7 @@ func (c *OpeningBalanceImportConfig) applyVacationQuota(ctx context.Context, row
 	if row.VacationCarryoverDays != nil {
 		carryover = *row.VacationCarryoverDays
 	}
-	if err := c.StaffAbsenceService.UpsertVacationQuota(ctx, row.StaffID, c.EffectiveDate.Year(), entitled, carryover); err != nil {
+	if err := c.StaffAbsenceService.UpsertVacationQuota(ctx, row.StaffID.Int64(), c.EffectiveDate.Year(), entitled, carryover); err != nil {
 		return fmt.Errorf("urlaubsanspruch konnte nicht gespeichert werden: %w", err)
 	}
 	return nil

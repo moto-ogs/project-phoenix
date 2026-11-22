@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 const opBulkUpsertArrivalSchedules = "bulk upsert arrival schedules"
@@ -225,7 +226,7 @@ func (s *arrivalScheduleService) patchArrivalWeek(ctx context.Context, student p
 		if previous := byDay[input.Weekday]; previous != nil {
 			row.Notes = previous.Notes
 			if previous.ExpectedArrival.Format("15:04") != clock.Format("15:04") {
-				result.OverwrittenStudents = append(result.OverwrittenStudents, careplan.OverwriteWarning{StudentID: student.ID, StudentName: s.arrivalStudentName(ctx, student), Weekday: input.Weekday,
+				result.OverwrittenStudents = append(result.OverwrittenStudents, careplan.OverwriteWarning{StudentID: ident.ID(student.ID), StudentName: s.arrivalStudentName(ctx, student), Weekday: input.Weekday,
 					WeekdayName: domain.WeekdayName(input.Weekday), PreviousTime: previous.ExpectedArrival.Format("15:04"), NewTime: clock.Format("15:04")})
 			}
 		}

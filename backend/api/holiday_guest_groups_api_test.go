@@ -21,6 +21,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	groupLiveHTTP "github.com/moto-ogs/project-phoenix/modules/grouplive/http"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
@@ -67,7 +68,7 @@ func dailyGroups(t *testing.T, router http.Handler, token string) []int64 {
 		router.ServeHTTP(rec, req)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		type group struct {
-			ID int64 `json:"id,string"`
+			ID ident.ID `json:"id"`
 		}
 		var groups []group
 		if path == "/api/students/ogs-group-navigation" {
@@ -79,7 +80,7 @@ func dailyGroups(t *testing.T, router http.Handler, token string) []int64 {
 		}
 		ids := make([]int64, 0, len(groups))
 		for _, g := range groups {
-			ids = append(ids, g.ID)
+			ids = append(ids, g.ID.Int64())
 		}
 		return ids
 	}

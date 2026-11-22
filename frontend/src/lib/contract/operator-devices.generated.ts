@@ -3,7 +3,7 @@ import { z } from "zod";
 import {
   bool,
   instant,
-  int64StringOrNumber,
+  int64String,
   noData,
   nullable,
   object,
@@ -58,7 +58,7 @@ export interface DeviceTransferSession {
 }
 
 export const DeviceTransferSessionSchema: z.ZodType<DeviceTransferSession, unknown> = object<DeviceTransferSession>({
-  id: int64StringOrNumber,
+  id: int64String,
   started_at: instant,
   activity_name: optional(str),
   room_name: optional(str),
@@ -83,7 +83,7 @@ export const DeviceTransferStatusSchema: z.ZodType<DeviceTransferStatus, unknown
 
 /** Go: operator.createDeviceRequest */
 export interface createDeviceRequest {
-  school_id?: number;
+  school_id?: string;
   device_id?: string;
   device_type?: string;
   name?: string;
@@ -97,7 +97,7 @@ export interface setDeviceAPIKeyRequest {
 
 /** Go: operator.transferDeviceRequest */
 export interface transferDeviceRequest {
-  target_school_id?: number;
+  target_school_id?: string;
 }
 
 export const routes = {

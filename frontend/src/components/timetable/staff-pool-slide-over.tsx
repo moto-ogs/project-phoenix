@@ -397,14 +397,15 @@ function announceMoveResult(
       result.coverageWarnings.map((warning) => warning.message).join(" · "),
     );
   }
-  if (result.timeConflicts.length > 0) {
-    const slots = result.timeConflicts
-      .map(
-        (conflict) =>
-          `„${conflict.title}“ (${conflict.startTime} – ${conflict.endTime})`,
-      )
-      .join(", ");
-    toast.warning(`${name} ist zeitgleich auf ${slots} eingeplant.`);
+  // Go names only the other block, not its title or times
+  // (backend/modules/timetable/substitute_conflicts.go:20).
+  const overlaps = result.timeConflicts.length;
+  if (overlaps > 0) {
+    toast.warning(
+      overlaps === 1
+        ? `${name} ist zeitgleich auf einem anderen Block eingeplant.`
+        : `${name} ist zeitgleich auf ${overlaps} anderen Blöcken eingeplant.`,
+    );
   }
 }
 

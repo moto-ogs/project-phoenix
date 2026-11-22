@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
@@ -30,15 +31,15 @@ func TestWorkforceCutoverTablesEnforceRLS(t *testing.T) {
 			session, err := capability.CreateWorkSession(ctx, testWorkSession(staff.ID, day, day.BerlinMidnight().Add(8*time.Hour)))
 			require.NoError(t, err)
 			ids["active.work_sessions"] = session.ID
-			pause, err := capability.CreateWorkSessionBreak(ctx, workforce.WorkSessionBreak{SessionID: session.ID, StartedAt: session.CheckInTime.Add(time.Hour)})
+			pause, err := capability.CreateWorkSessionBreak(ctx, workforce.WorkSessionBreak{SessionID: ident.ID(session.ID), StartedAt: session.CheckInTime.Add(time.Hour)})
 			require.NoError(t, err)
-			ids["active.work_session_breaks"] = pause.ID
-			adjustment, err := capability.CreateStaffBalanceAdjustment(ctx, workforce.StaffBalanceAdjustment{StaffID: staff.ID, Type: workforce.BalanceAdjustmentTypeOpening, EffectiveDate: day.String(), DecidedBy: staff.ID})
+			ids["active.work_session_breaks"] = pause.ID.Int64()
+			adjustment, err := capability.CreateStaffBalanceAdjustment(ctx, workforce.StaffBalanceAdjustment{StaffID: ident.ID(staff.ID), Type: workforce.BalanceAdjustmentTypeOpening, EffectiveDate: day.String(), DecidedBy: ident.ID(staff.ID)})
 			require.NoError(t, err)
-			ids["active.staff_balance_adjustments"] = adjustment.ID
-			opening, err := capability.CreateStaffVacationOpening(ctx, workforce.StaffVacationOpening{StaffID: staff.ID, Year: 2026, EffectiveDate: day.String(), EnteredRemainingDays: 30, DecidedBy: staff.ID})
+			ids["active.staff_balance_adjustments"] = adjustment.ID.Int64()
+			opening, err := capability.CreateStaffVacationOpening(ctx, workforce.StaffVacationOpening{StaffID: ident.ID(staff.ID), Year: 2026, EffectiveDate: day.String(), EnteredRemainingDays: 30, DecidedBy: ident.ID(staff.ID)})
 			require.NoError(t, err)
-			ids["active.staff_vacation_openings"] = opening.ID
+			ids["active.staff_vacation_openings"] = opening.ID.Int64()
 			require.NoError(t, capability.UpsertStaffVacationQuota(ctx, workforce.StaffVacationQuota{StaffID: staff.ID, Year: 2026, EntitledDays: 30}))
 			quotas, err := capability.ListStaffVacationQuotas(ctx, workforce.StaffVacationFilter{StaffID: staff.ID, Year: 2026})
 			require.NoError(t, err)

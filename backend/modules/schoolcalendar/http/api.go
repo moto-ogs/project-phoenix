@@ -97,9 +97,9 @@ type updateAppointmentRequest struct {
 }
 
 type appointmentTargetRequest struct {
-	Type  string         `json:"type"`
-	ID    *common.JSONID `json:"id,omitempty"`
-	Value *string        `json:"value,omitempty"`
+	Type  string     `json:"type"`
+	ID    *common.ID `json:"id,omitempty"`
+	Value *string    `json:"value,omitempty"`
 }
 
 func (target appointmentTargetRequest) serviceTarget() calendarService.AppointmentTarget {

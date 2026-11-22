@@ -57,17 +57,22 @@
       "agb": "Genel şartlar ve koşullar",
       "data_processing": "Gizlilik bilgilendirmesi verildi",
       "email_contact": "E-posta ile iletişime izin verildi",
-      "photo": "Fotoğraf izni"
+      "photo": "Fotoğraf izni",
+      "room_history": "Oda geçmişi ve ruh hâli"
     },
     "states": {
       "granted": "Kayıtlı",
       "withdrawn": "Geri alındı",
-      "not_recorded": "Kayıtlı değil"
+      "not_recorded": "Kayıtlı değil",
+      "recording": "Durdurulmadı",
+      "stopped": "Durduruldu"
     },
     "dates": {
       "granted": "{date} tarihinde kaydedildi",
       "withdrawn": "{date} tarihinde geri alındı",
-      "not_recorded": "Kayıtlı değil"
+      "not_recorded": "Kayıtlı değil",
+      "recording": "Durdurulmadı",
+      "stopped": "{date} tarihinde durduruldu"
     },
     "withdrawButton": "Fotoğraf iznini geri al",
     "withdrawButtonShort": "Geri al",
@@ -88,7 +93,26 @@
     "errorObjectList": "izinler listesi",
     "errorObjectPhoto": "fotoğraf izni",
     "withdrawTooltip": "Fotoğraf iznini bitirir ve kayıtlı fotoğrafı siler. moto önce sorar.",
-    "grantTooltip": "{careTerm} için fotoğrafa yeniden izin verir. moto önce sorar."
+    "grantTooltip": "{careTerm} için fotoğrafa yeniden izin verir. moto önce sorar.",
+    "roomHistoryDescription": "Oda geçmişini ve ruh hâlini burada durdurabilirsiniz.",
+    "roomHistoryViaCareDescription": "Oda geçmişi ve ruh hâli için durdurmayı {careTerm} kaldırabilir.",
+    "roomHistoryStopAria": "Oda geçmişini ve ruh hâlini durdur",
+    "roomHistoryStopShort": "Durdur",
+    "roomHistoryStopTooltip": "Şimdiye kadarki oda geçmişini siler ve kaydı durdurur. moto önce sorar.",
+    "roomHistoryStopTitle": "Oda geçmişi ve ruh hâli durdurulsun mu?",
+    "roomHistoryStopBody": "moto, çocuğunuzun hangi odalarda bulunduğunu hemen siler. Bundan sonra moto çocuğunuzun odalarını ve ruh hâlini artık kaydetmez. Bakım personeli çocuğunuzun şu an nerede olduğunu görmeye devam eder. Daha önce kaydedilen ruh hâlleri ancak olağan süre dolunca silinir.",
+    "roomHistoryStopButton": "Şimdi durdur",
+    "roomHistoryStopping": "Durduruluyor",
+    "roomHistoryStopSuccess": "Oda geçmişi ve ruh hâli durduruldu. Şimdiye kadarki oda geçmişi silindi.",
+    "roomHistoryResumeAria": "Oda geçmişini ve ruh hâlini yeniden kaydet",
+    "roomHistoryResumeShort": "Yeniden kaydet",
+    "roomHistoryResumeTooltip": "Çocuğunuz için durdurmayı kaldırır. moto önce sorar.",
+    "roomHistoryResumeTitle": "Oda geçmişi ve ruh hâli yeniden kaydedilsin mi?",
+    "roomHistoryResumeBody": "Çocuğunuz için durdurmayı kaldırırsınız. Oda geçmişinin ve ruh hâlinin kaydedilip kaydedilmeyeceğine okulunuz karar verir. Silinenler geri gelmez.",
+    "roomHistoryResumeButton": "Yeniden kaydet",
+    "roomHistoryResuming": "Durdurma kaldırılıyor",
+    "roomHistoryResumeSuccess": "Çocuğunuz için durdurma kaldırıldı.",
+    "errorObjectRoomHistory": "Oda geçmişi ve ruh hâli"
   },
   "errorObject": "çocuklarınızın listesi",
   "errorObjectCare": "bakım özeti"
