@@ -160,6 +160,7 @@ func decideFamilyImport(candidates []familyImportCandidate, numbers map[string]*
 		}
 	}
 	decideImportedChildren(rows, current, func(importedChildren) calendar.Date { return today })
+	alignFamilyImportDays(rows)
 	var shown []parentbilling.FamilyChildTarget
 	seen := map[int64]bool{}
 	for i, row := range rows {
@@ -176,6 +177,27 @@ func decideFamilyImport(candidates []familyImportCandidate, numbers map[string]*
 		candidates[i].settle()
 	}
 	return shown
+}
+
+// alignFamilyImportDays gives the rows of one family that take over a number
+// the day the family's number is stored from: the earliest its rows name
+// (newImportedChildren). The preview then shows every row the day that
+// counts, also when siblings name different days.
+func alignFamilyImportDays(rows []importedChildren) {
+	earliest := map[string]calendar.Date{}
+	taken := func(row importedChildren) bool {
+		return !row.witness && row.status == parentbilling.ImportedChildrenNew
+	}
+	for _, row := range rows {
+		if day, seen := earliest[row.family]; taken(row) && (!seen || row.number.ValidFrom.Before(day)) {
+			earliest[row.family] = row.number.ValidFrom
+		}
+	}
+	for i := range rows {
+		if taken(rows[i]) {
+			rows[i].number.ValidFrom = earliest[rows[i].family]
+		}
+	}
 }
 
 // familyImportRows are the numbers of the candidates per family, with the
@@ -203,11 +225,15 @@ func (c *familyImportCandidate) settle() {
 	if c.row.Status != "" {
 		return
 	}
-	// The day the number counts from, as decided: a renewed number starts
-	// after the confirmation that ran out.
-	if len(c.decided) > 0 {
-		from := c.decided[0].number.ValidFrom
-		c.row.ValidFrom = &from
+	// The day the number counts from, as decided for a family that takes
+	// it over: a renewed number starts after the confirmation that ran out,
+	// siblings share the earliest day their rows name.
+	for _, row := range c.decided {
+		if row.status == parentbilling.ImportedChildrenNew {
+			from := row.number.ValidFrom
+			c.row.ValidFrom = &from
+			break
+		}
 	}
 	has := func(status string) bool {
 		return slices.ContainsFunc(c.decided, func(row importedChildren) bool { return row.status == status })

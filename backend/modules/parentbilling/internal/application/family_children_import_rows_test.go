@@ -53,6 +53,26 @@ func TestFamilyImportRowsCountFromTheDayTheOfficeNames(t *testing.T) {
 		}
 	}
 	assert.Equal(t, []calendar.Date{calendar.NewDate(2026, 10, 15), fileDay}, stored, "the stored numbers count from the named days")
+	// Siblings of one family that name different days share the earliest:
+	// the preview shows the day the family's number is stored from.
+	const family = "geschwister@example.org"
+	check = familyImportCheck{index: index, schools: schools,
+		recipients: map[int64]parentbilling.CareRecipient{1: {Email: family}, 2: {Email: family}},
+		contracts:  familyImportContracts([]parentbilling.CareContractVersion{contract(1, "Mia"), contract(2, "Noah")})}
+	siblings := []familyImportCandidate{
+		check.candidate([]string{"Mia", "Beispiel", "2", "15.10.2026"}, 2),
+		check.candidate([]string{"Noah", "Beispiel", "2", ""}, 3),
+	}
+	decideFamilyImport(siblings, map[string]*familyNumbers{}, calendar.NewDate(2026, 11, 22))
+	var kept []importedChildren
+	for _, sibling := range siblings {
+		require.Equal(t, parentbilling.FamilyImportReady, sibling.row.Status)
+		assert.Equal(t, calendar.NewDate(2026, 10, 15), *sibling.row.ValidFrom, "line %d shows the family's day", sibling.row.Line)
+		kept = append(kept, sibling.decided...)
+	}
+	numbers := newImportedChildren(kept)
+	require.Len(t, numbers, 1, "the family is stored once")
+	assert.Equal(t, calendar.NewDate(2026, 10, 15), numbers[0].ValidFrom)
 }
 
 // Without a day from the office the numbers count from the day of the

@@ -223,9 +223,6 @@ func (c *familyImportCheck) candidate(cells []string, line int) familyImportCand
 		return candidate
 	}
 	candidate.targets = c.match(row, schoolID)
-	if len(candidate.targets) > 0 && row.RepeatsLine == 0 {
-		row.ValidFrom = &candidate.validFrom
-	}
 	return candidate
 }
 
