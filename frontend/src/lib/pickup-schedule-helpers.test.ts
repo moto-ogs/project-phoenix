@@ -1,8 +1,6 @@
+import type * as studentsContract from "~/lib/contract/students.generated";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import type {
-  PickupScheduleWire,
-  PickupExceptionWire,
-  PickupDataWire,
   PickupSchedule,
   PickupException,
 } from "./pickup-schedule-helpers";
@@ -26,7 +24,7 @@ import {
 } from "./pickup-schedule-helpers";
 
 // Sample backend data for testing
-const sampleBackendSchedule: PickupScheduleWire = {
+const sampleBackendSchedule: studentsContract.PickupScheduleResponse = {
   id: "1",
   student_id: "100",
   weekday: 1,
@@ -39,7 +37,7 @@ const sampleBackendSchedule: PickupScheduleWire = {
   updated_at: "2024-01-15T12:00:00Z",
 };
 
-const sampleBackendException: PickupExceptionWire = {
+const sampleBackendException: studentsContract.PickupExceptionResponse = {
   id: "1",
   student_id: "100",
   exception_date: "2024-01-15",
@@ -195,7 +193,7 @@ describe("mapPickupDataResponse", () => {
   });
 
   it("maps combined backend data to frontend format", () => {
-    const backendData: PickupDataWire = {
+    const backendData: studentsContract.PickupDataResponse = {
       schedules: [sampleBackendSchedule],
       exceptions: [sampleBackendException],
       notes: [],
@@ -211,7 +209,7 @@ describe("mapPickupDataResponse", () => {
   });
 
   it("maps date-specific projected schedules", () => {
-    const backendData: PickupDataWire = {
+    const backendData: studentsContract.PickupDataResponse = {
       schedules: [],
       effective_schedules: [
         {
@@ -239,7 +237,7 @@ describe("mapPickupDataResponse", () => {
   });
 
   it("preserves an explicit date without a projected schedule", () => {
-    const backendData: PickupDataWire = {
+    const backendData: studentsContract.PickupDataResponse = {
       schedules: [sampleBackendSchedule],
       effective_schedules: [
         { date: "2026-08-18", schedule: null, offering_schedule: null },
@@ -261,7 +259,7 @@ describe("mapPickupDataResponse", () => {
   });
 
   it("handles empty arrays", () => {
-    const backendData: PickupDataWire = {
+    const backendData: studentsContract.PickupDataResponse = {
       schedules: [],
       exceptions: [],
       notes: [],
@@ -278,7 +276,7 @@ describe("mapPickupDataResponse", () => {
     const backendData = {
       schedules: null,
       exceptions: null,
-    } as unknown as PickupDataWire;
+    } as unknown as studentsContract.PickupDataResponse;
 
     const result = mapPickupDataResponse(backendData);
 

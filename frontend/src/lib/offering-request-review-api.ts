@@ -1,3 +1,4 @@
+import type * as studentsContract from "~/lib/contract/students.generated";
 import { ApiError, apiErrorFromBody, transportFetch } from "./api-error";
 /**
  * Staff client for the post-enrollment offering change-request review queue
@@ -7,7 +8,6 @@ import { ApiError, apiErrorFromBody, transportFetch } from "./api-error";
  */
 
 import { createLogger } from "~/lib/logger";
-import type { RosterImpactWire } from "~/lib/roster-impact";
 
 const logger = createLogger({ component: "OfferingRequestReviewAPI" });
 
@@ -139,7 +139,7 @@ export async function decideOfferingChangeRequest(
   effectiveFrom?: string,
   completeWithdrawalConfirmed?: boolean,
   expectedVersion?: string,
-): Promise<RosterImpactWire | undefined> {
+): Promise<studentsContract.rosterImpactResponse | undefined> {
   const response = await transportFetch(
     `/api/students/offering-change-requests/${encodeURIComponent(requestId)}/decide`,
     {
@@ -165,7 +165,8 @@ export async function decideOfferingChangeRequest(
   }
   // Eine Freigabe meldet, was sie im Betreuungsplan bewirkt hat (#5102).
   const body = (await response.json().catch(() => undefined)) as
-    Envelope<{ roster_impact?: RosterImpactWire }> | undefined;
+    | Envelope<{ roster_impact?: studentsContract.rosterImpactResponse }>
+    | undefined;
   return body ? unwrap(body)?.roster_impact : undefined;
 }
 

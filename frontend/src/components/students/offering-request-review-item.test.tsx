@@ -230,6 +230,7 @@ describe("OfferingRequestReviewItem", () => {
         },
       ],
       not_adjusted: [],
+      pickup_overrides: null,
     });
     const onDecided = vi.fn();
     renderItem(request(), onDecided);
@@ -248,8 +249,15 @@ describe("OfferingRequestReviewItem", () => {
       effective_from: "2027-02-01",
       adjusted: [],
       not_adjusted: [
-        { template_id: "9", name: "RDST 1b", weekdays: [3], via_target: false },
+        {
+          template_id: "9",
+          name: "RDST 1b",
+          weekdays: [3],
+          via_target: false,
+          until: null,
+        },
       ],
+      pickup_overrides: null,
     });
     const onDecided = vi.fn();
     renderItem(request(), onDecided);

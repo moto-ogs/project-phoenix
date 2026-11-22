@@ -1,7 +1,7 @@
+import type * as studentsContract from "~/lib/contract/students.generated";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { installStorybookFetch, jsonResponse } from "~storybook/mocks/fetch";
 import { CareScheduleManager } from "~/components/students/care-schedule-manager";
-import type { PickupDataWire } from "~/lib/pickup-schedule-helpers";
 
 interface MockResponses {
   arrival: { status: number; body: unknown };
@@ -54,7 +54,7 @@ const filledArrival = {
   notes: [],
 };
 
-const filledPickup: PickupDataWire = {
+const filledPickup: studentsContract.PickupDataResponse = {
   schedules: [
     {
       id: "1",
@@ -85,7 +85,7 @@ const filledPickup: PickupDataWire = {
   departure_exceptions: [],
 };
 
-const emptyPickup: PickupDataWire = {
+const emptyPickup: studentsContract.PickupDataResponse = {
   schedules: [],
   exceptions: [],
   notes: [],

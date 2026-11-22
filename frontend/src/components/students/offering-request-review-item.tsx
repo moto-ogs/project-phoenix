@@ -1,5 +1,6 @@
 "use client";
 
+import type * as studentsContract from "~/lib/contract/students.generated";
 import { weekdayShortLabel } from "~/lib/weekdays";
 import type { ErrorCode } from "~/lib/error-codes.generated";
 import { ApiError, wireErrorCode } from "~/lib/api-error";
@@ -15,7 +16,6 @@ import {
   describeAdjustment,
   mapRosterImpact,
   type RosterImpact,
-  type RosterImpactWire,
 } from "~/lib/roster-impact";
 import {
   CarePlanImpact,
@@ -197,7 +197,7 @@ export function OfferingRequestReviewItem({
       // Die hinteren Argumente nur anhängen, wenn es sie gibt: eine Anfrage
       // ohne Komplett-Abmeldung und ohne bekannte Fassung schickt denselben
       // Aufruf wie vorher.
-      let impactWire: RosterImpactWire | undefined;
+      let impactWire: studentsContract.rosterImpactResponse | undefined;
       if (expectedVersion) {
         impactWire = await decideOfferingChangeRequest(
           ...args,
