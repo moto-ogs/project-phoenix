@@ -149,6 +149,24 @@ func TestCorrectionAddsPartiesAndNeverRemovesOne(t *testing.T) {
 	decomposed := planCorrection(t, correctionSubject(), "7", "Lia Beispiel", "Beispiel, Éva | Beispiel, E\u0301va", "", "", "vertrag.pdf")
 	assert.Equal(t, carecontract.ContractCorrectionChange, composed.row.Status, "Éva is a further party")
 	assert.Equal(t, map[string]string{"parties": "party_repeated"}, correctionProblemCodes(decomposed.row))
+	// A name stored with a combining mark is the name typed or read back.
+	marked := correctionSubject()
+	marked.ChildFirstName = "Ju\u0308rgen"
+	marked.Parties = []ports.CorrectionParty{{ID: 70, FirstName: "Ju\u0308rgen", LastName: "Mu\u0308ller"}}
+	back := correctionSheet([]ports.CorrectionSubject{marked}).Rows[0]
+	read := planCorrection(t, marked, back[0], back[2], back[3], "online", "", "vertrag.pdf")
+	require.Equal(t, carecontract.ContractCorrectionChange, read.row.Status, read.row.Problems)
+	assert.Equal(t, []string{"method"}, read.row.Changes, "the names read back as they are")
+	// Particles tell nothing about a person: no rename by "von der", and
+	// "geb." is "geborene".
+	noble := correctionSubject()
+	noble.Parties = []ports.CorrectionParty{{ID: 70, FirstName: "Jan", LastName: "von der Heide"}}
+	stranger := planCorrection(t, noble, "7", "Lia Beispiel", "von der Linden, Tim", "", "", "vertrag.pdf")
+	assert.Equal(t, map[string]string{"parties": "party_unclear"}, correctionProblemCodes(stranger.row))
+	born := correctionSubject()
+	born.Parties = []ports.CorrectionParty{{ID: 70, FirstName: "Eva", LastName: "Schmidt, geb. Müller"}}
+	again := planCorrection(t, born, "7", "Lia Beispiel", "Schmidt, geb. Müller, Eva | Schmidt, geborene Müller, Eva", "", "", "vertrag.pdf")
+	assert.Equal(t, map[string]string{"parties": "party_repeated"}, correctionProblemCodes(again.row))
 	either := planCorrection(t, old, "7", "Lia Beispiel", "Müller, Tom | Müller, Jan", "", "", "vertrag.pdf")
 	assert.Equal(t, map[string]string{"parties": "party_unclear"}, correctionProblemCodes(either.row), "two names for one party")
 }

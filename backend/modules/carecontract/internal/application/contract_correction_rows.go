@@ -185,14 +185,15 @@ func (e *correctionEntry) readParties(value string) {
 
 // namesPartyTwice tells whether the row names a person more often than the
 // contract carries it. Two names are one person when they have the same
-// words in any order, without case and with umlauts written out. The
+// words in any order, without case, with umlauts written out and without
+// particles such as "von" or "geb.". The
 // contract carries the person as often as it has parties one of those names
 // writes, in the list's form or in full, in any case; two parties that only
 // share their words are not each other. Stored, a further name would be one
 // person twice in the contract, or the name of one party on another.
 func namesPartyTwice(entry correctionEntry, stored []ports.CorrectionParty) bool {
 	key := func(party ports.CorrectionParty) string {
-		words := nameWords(party.FirstName + " " + party.LastName)
+		words := personWords(party.FirstName + " " + party.LastName)
 		slices.Sort(words)
 		return strings.Join(words, " ")
 	}
@@ -300,9 +301,23 @@ type contractCorrectionCheck struct {
 func newContractCorrectionCheck(subjects []ports.CorrectionSubject) *contractCorrectionCheck {
 	check := &contractCorrectionCheck{subjects: make(map[int64]ports.CorrectionSubject, len(subjects)), seen: map[int64]int{}}
 	for _, subject := range subjects {
-		check.subjects[subject.ContractID] = subject
+		check.subjects[subject.ContractID] = composedSubject(subject)
 	}
 	return check
+}
+
+// composedSubject is subject with the letters of its names composed, as a
+// row's cells are read: a name stored with a combining mark compares equal
+// to the same name typed or read back from the list.
+func composedSubject(subject ports.CorrectionSubject) ports.CorrectionSubject {
+	subject.ChildFirstName, subject.ChildLastName = norm.NFC.String(subject.ChildFirstName), norm.NFC.String(subject.ChildLastName)
+	parties := make([]ports.CorrectionParty, len(subject.Parties))
+	for n, party := range subject.Parties {
+		party.FirstName, party.LastName = norm.NFC.String(party.FirstName), norm.NFC.String(party.LastName)
+		parties[n] = party
+	}
+	subject.Parties = parties
+	return subject
 }
 
 func (p *correctionPlan) problem(field, code string) {
@@ -548,10 +563,26 @@ func matchCorrectionParties(stored, wanted []ports.CorrectionParty) (renames, ad
 }
 
 // sharesNameWord tells whether the party's name and the written name have a
-// word in common.
+// word in common that tells who the person is: "von der" alone does not.
 func sharesNameWord(party, written ports.CorrectionParty) bool {
-	has := nameWords(written.FirstName + " " + written.LastName)
-	return slices.ContainsFunc(nameWords(party.FirstName+" "+party.LastName), func(word string) bool { return slices.Contains(has, word) })
+	has := personWords(written.FirstName + " " + written.LastName)
+	return slices.ContainsFunc(personWords(party.FirstName+" "+party.LastName), func(word string) bool { return slices.Contains(has, word) })
+}
+
+// nameParticles are words many unrelated names share: they tell nothing
+// about who a person is.
+var nameParticles = []string{"von", "vom", "van", "der", "den", "dem", "de", "del", "della", "di", "da", "du", "la", "le",
+	"zu", "zur", "zum", "und", "ten", "ter", "el", "al", "geb", "geborene", "geborener", "verw", "dr", "prof"}
+
+// personWords are the words of a name that tell who the person is: its
+// words without the particles, or all of them when it has no other.
+func personWords(name string) []string {
+	words := nameWords(name)
+	telling := slices.DeleteFunc(slices.Clone(words), func(word string) bool { return slices.Contains(nameParticles, word) })
+	if len(telling) == 0 {
+		return words
+	}
+	return telling
 }
 
 var umlauts = strings.NewReplacer("ä", "ae", "ö", "oe", "ü", "ue", "ß", "ss")
@@ -584,6 +615,7 @@ func correctionSheet(subjects []ports.CorrectionSubject) carecontract.ContractCo
 		sheet.Headers[n] = column.header
 	}
 	for _, subject := range subjects {
+		subject = composedSubject(subject)
 		if !subject.Imported || subject.ConcludedAt == nil {
 			continue
 		}
