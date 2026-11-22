@@ -125,6 +125,7 @@ An unexplained bespoke component is a review failure, not a style preference.
 | Any card: page section with heading, explanation, actions, or a plain surface | `SectionCard`, the only card head: `concept`/`icon`/`leading`, `titleSize`, `collapsible`, `flush`, `footer`, `padding="none"`, `loading`; `kicker`: ADR 0149 | `~/components/ui/section-card` |
 | Any other framed white container (list wrapper, inner card, skeleton) | the `moto-content-surface` utility + `rounded-2xl border` (inner cards keep `rounded-xl`); never `border-gray-200 bg-white` by hand | `globals.css` |
 | Floating panel at a control, with content | `AnchoredPopover` — `header`, `footer`, `align`, `focusPanelOnOpen`, `swallowOutsideClick` | `~/components/ui/anchored-popover` |
+| Panel at a trigger: popover, below `sm` a bottom sheet (#7797); the only variant, no own phone branch | `ResponsivePanel` (`trigger`, `label`, `returnFocusRef`, content `(asSheet) => …`) | `~/components/ui/responsive-panel` |
 | Count on an icon or nav row | `NotificationBadge` — `tone`, `size` | `~/components/ui/notification-badge` |
 | Selectable row or tile (label around a Checkbox/Radio, mode-picker button, row with a selection state) | `ChoiceTile` — `as` = `label` (default) / `button` / `div`, `selected`, `disabled`, `tone` = `gray` `green` `blue` `red` (serious choice); padding via `className` | `~/components/ui/choice-tile` |
 | Inner surface | `InsetPanel` (`tone`, `framed`, `dashed`, `padding`, `as`). A message with icon stays `Alert` | `~/components/ui/inset-panel` |
