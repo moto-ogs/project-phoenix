@@ -1,9 +1,5 @@
-import {
-  ApiError,
-  apiErrorFromBody,
-  transportFetch,
-  wireErrorCode,
-} from "./api-error";
+import { ApiError, apiErrorFromBody, wireErrorCode } from "./api-error";
+import { sessionFetch } from "./session-cache";
 import type {
   CompleteOperationRequest,
   OperationRoster,
@@ -93,7 +89,7 @@ export const timetableOperationsApi = {
     if (options?.scope) params.set("scope", options.scope);
     const suffix = params.size > 0 ? `?${params.toString()}` : "";
     const raw = await unwrap<PlannedNowResponse>(
-      await transportFetch(`/api/timetable/operations/planned-now${suffix}`, {
+      await sessionFetch(`/api/timetable/operations/planned-now${suffix}`, {
         credentials: "include",
         headers: { Accept: "application/json" },
       }),
@@ -103,7 +99,7 @@ export const timetableOperationsApi = {
 
   async start(instanceId: string): Promise<StartOperationResult> {
     const raw = await unwrap<startOperationResponse>(
-      await transportFetch(
+      await sessionFetch(
         `/api/timetable/operations/instances/${instanceId}/start`,
         {
           method: "POST",
@@ -119,7 +115,7 @@ export const timetableOperationsApi = {
     body: SpontaneousStartBody,
   ): Promise<StartOperationResult> {
     const raw = await unwrap<startOperationResponse>(
-      await transportFetch("/api/timetable/operations/spontaneous/start", {
+      await sessionFetch("/api/timetable/operations/spontaneous/start", {
         method: "POST",
         credentials: "include",
         headers: {
@@ -134,7 +130,7 @@ export const timetableOperationsApi = {
 
   async roster(instanceId: string): Promise<TimetableRoster> {
     const raw = await unwrap<OperationRoster>(
-      await transportFetch(
+      await sessionFetch(
         `/api/timetable/operations/instances/${instanceId}/roster`,
         {
           credentials: "include",
@@ -147,7 +143,7 @@ export const timetableOperationsApi = {
 
   async rosterByActiveGroup(activeGroupId: string): Promise<TimetableRoster> {
     const raw = await unwrap<OperationRoster>(
-      await transportFetch(
+      await sessionFetch(
         `/api/timetable/operations/active-groups/${activeGroupId}/roster`,
         {
           credentials: "include",
@@ -163,7 +159,7 @@ export const timetableOperationsApi = {
     studentId: string,
   ): Promise<TimetableRoster> {
     const raw = await unwrap<OperationRoster>(
-      await transportFetch(
+      await sessionFetch(
         `/api/timetable/operations/instances/${instanceId}/students/${studentId}/check-in`,
         {
           method: "POST",
@@ -182,7 +178,7 @@ export const timetableOperationsApi = {
     studentIds: readonly string[],
   ): Promise<TimetableRoster> {
     const raw = await unwrap<OperationRoster>(
-      await transportFetch(
+      await sessionFetch(
         `/api/timetable/operations/instances/${instanceId}/students/check-in`,
         {
           method: "POST",
@@ -206,7 +202,7 @@ export const timetableOperationsApi = {
     studentId: string,
   ): Promise<TimetableRoster> {
     const raw = await unwrap<OperationRoster>(
-      await transportFetch(
+      await sessionFetch(
         `/api/timetable/operations/instances/${instanceId}/students/${studentId}/check-out`,
         {
           method: "POST",
@@ -224,7 +220,7 @@ export const timetableOperationsApi = {
     body: AttendancePatchBody,
   ): Promise<void> {
     await unwrap<unknown>(
-      await transportFetch(
+      await sessionFetch(
         `/api/timetable/operations/instances/${instanceId}/students/${studentId}/attendance`,
         {
           method: "PATCH",
@@ -246,7 +242,7 @@ export const timetableOperationsApi = {
     body: HomeworkFeedbackBody,
   ): Promise<void> {
     await unwrap<unknown>(
-      await transportFetch(
+      await sessionFetch(
         `/api/timetable/operations/instances/${instanceId}/students/${studentId}/homework-feedback`,
         {
           method: "PUT",
@@ -266,7 +262,7 @@ export const timetableOperationsApi = {
     confirmedPresentStudentIds: string[],
   ): Promise<{ reopenUntil?: string }> {
     const raw = await unwrap<ScheduledInstance>(
-      await transportFetch(
+      await sessionFetch(
         `/api/timetable/operations/instances/${instanceId}/complete`,
         {
           method: "POST",
@@ -286,7 +282,7 @@ export const timetableOperationsApi = {
 
   async reopen(instanceId: string): Promise<StartOperationResult> {
     const raw = await unwrap<startOperationResponse>(
-      await transportFetch(
+      await sessionFetch(
         `/api/timetable/operations/instances/${instanceId}/reopen`,
         {
           method: "POST",

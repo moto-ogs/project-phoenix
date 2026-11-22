@@ -57,7 +57,12 @@ case "${1:-quality}" in
     ;;
   lint)
     base=${2:?base revision is required}
-    changed=$(git diff --name-only "$(git merge-base HEAD "$base")" HEAD)
+    changed=$(
+      {
+        git diff --no-renames --name-only "$(git merge-base HEAD "$base")"
+        git -C "$root" ls-files --others --exclude-standard
+      } | sort -u
+    )
     if printf '%s\n' "$changed" | grep -qE '^(backend/go\.(mod|sum)|backend/\.golangci.yml|scripts/(backend-affected-packages.*|backend-lint-packages.sh|check-backend-quality.sh))$'; then
       output=./...
     else

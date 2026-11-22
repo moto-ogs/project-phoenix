@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -380,4 +380,41 @@ test('Ctrl-C reaches the running step\'s process group and no further step start
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test('backend lint includes committed, staged, unstaged and untracked full-lint inputs', t => {
+  const root = mkdtempSync(join(tmpdir(), 'backend-quality-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  for (const dir of ['backend', 'scripts', 'bin']) mkdirSync(join(root, dir));
+  for (const file of ['check-backend-quality.sh', 'quality-timing.sh']) {
+    copyFileSync(new URL(file, import.meta.url), join(root, 'scripts', file));
+  }
+  const executable = (path, body) => writeFileSync(join(root, path), `#!/bin/sh\n${body}\n`, { mode: 0o755 });
+  executable('scripts/backend-affected-packages.sh', 'echo example.test/project/changed');
+  executable('bin/go', 'echo example.test/project');
+  executable('bin/golangci-lint', 'printf "%s\\n" "$@"');
+  writeFileSync(join(root, 'backend', '.golangci.yml'), 'version: "2"\n');
+  writeFileSync(join(root, 'backend', 'changed.go'), 'package changed\n');
+  const env = { ...gitTestEnvironment(), PATH: `${join(root, 'bin')}:${process.env.PATH}` };
+  const git = (...args) => execFileSync('git', args, { cwd: root, env, encoding: 'utf8' }).trim();
+  initGitFixture(git);
+  git('add', '.');
+  git('commit', '-qm', 'Initial fixture');
+  const base = git('rev-parse', 'HEAD');
+  const lintSelection = () => execFileSync('bash', ['scripts/check-backend-quality.sh', 'lint', base], {
+    cwd: root, env, encoding: 'utf8',
+  }).trim().split('\n').at(-1);
+
+  writeFileSync(join(root, 'backend', 'changed.go'), 'package changed\n// changed\n');
+  assert.equal(lintSelection(), './changed', 'ordinary Go edits retain package selection');
+  writeFileSync(join(root, 'backend', '.golangci.yml'), 'version: "2"\n# changed\n');
+  assert.equal(lintSelection(), './...', 'unstaged lint configuration');
+  git('add', 'backend/.golangci.yml');
+  assert.equal(lintSelection(), './...', 'staged lint configuration');
+  git('commit', '-qm', 'Change lint configuration');
+  assert.equal(lintSelection(), './...', 'committed lint configuration');
+  git('checkout', base, '--', 'backend/.golangci.yml');
+  assert.equal(lintSelection(), './changed');
+  executable('scripts/backend-affected-packages-new.sh', 'echo ./...');
+  assert.equal(lintSelection(), './...', 'untracked selection script');
 });

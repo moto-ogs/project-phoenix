@@ -6,6 +6,7 @@
  * the other tests render.
  */
 import { setViewportWidth } from "~/test/helpers/viewport";
+import { primeSessionCache } from "~/lib/session-cache";
 import {
   render as rtlRender,
   screen,
@@ -2243,6 +2244,10 @@ function capturePageLoadFetchers(
 
 describe("Page-load request budget", () => {
   it("uses one aggregate request plus one selected-session roster request", async () => {
+    primeSessionCache({
+      user: { id: "7", tenantId: 1 },
+      expires: "2099-01-01",
+    });
     const fetchers = new Map<string, () => Promise<unknown>>();
     capturePageLoadFetchers(fetchers);
     global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 500 });

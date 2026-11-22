@@ -1,4 +1,4 @@
-import { ApiError, apiErrorFromBody, transportFetch } from "./api-error";
+import { ApiError, apiErrorFromBody } from "./api-error";
 /**
  * API client for the timetable feature.
  *
@@ -36,7 +36,7 @@ import type {
 } from "./contract/timetable.generated";
 import type * as timetableContract from "./contract/timetable.generated";
 import { hasSessionAccess } from "./session-access";
-import { getCachedSession } from "./session-cache";
+import { getCachedSession, sessionFetch } from "./session-cache";
 import { createLogger } from "./logger";
 import {
   NO_PLAN_FILTER,
@@ -193,14 +193,11 @@ class TimetableService {
       ...planFilterQuery(filter),
       ...(options.view ? { view: options.view } : {}),
     });
-    const response = await transportFetch(
-      `/api/timetable/instances?${params}`,
-      {
-        method: "GET",
-        headers: { Accept: "application/json" },
-        credentials: "include",
-      },
-    );
+    const response = await sessionFetch(`/api/timetable/instances?${params}`, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      credentials: "include",
+    });
 
     const raw =
       await unwrap<timetableContract.weeklyInstancesResponse>(response);
@@ -218,7 +215,7 @@ class TimetableService {
     body: CreateInstanceBody,
     idempotencyKey: string,
   ): Promise<EnrichedInstance> {
-    const response = await transportFetch("/api/timetable/instances", {
+    const response = await sessionFetch("/api/timetable/instances", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -245,7 +242,7 @@ class TimetableService {
   async createTemplate(
     body: CreateTemplateBody,
   ): Promise<CreateTemplateResult> {
-    const response = await transportFetch("/api/timetable/templates", {
+    const response = await sessionFetch("/api/timetable/templates", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -269,7 +266,7 @@ class TimetableService {
     instanceId: string,
     body: ConvertInstanceToSeriesBody,
   ): Promise<ConvertInstanceToSeriesResult> {
-    const response = await transportFetch(
+    const response = await sessionFetch(
       `/api/timetable/instances/${instanceId}/convert-to-series`,
       {
         method: "POST",
@@ -305,7 +302,7 @@ class TimetableService {
   ): Promise<OfferingSourceOption[]> {
     const params = new URLSearchParams();
     if (calendarPeriodId) params.set("calendar_period_id", calendarPeriodId);
-    const response = await transportFetch(
+    const response = await sessionFetch(
       `/api/timetable/offering-sources${params.toString() ? `?${params}` : ""}`,
       {
         method: "GET",
@@ -331,7 +328,7 @@ class TimetableService {
     const params = new URLSearchParams();
     params.set("ids", offeringIds.join(","));
     if (calendarPeriodId) params.set("calendar_period_id", calendarPeriodId);
-    const response = await transportFetch(
+    const response = await sessionFetch(
       `/api/timetable/offering-sources/combined-counts?${params}`,
       {
         method: "GET",
@@ -347,7 +344,7 @@ class TimetableService {
   async getTemplates(periodId?: string | null): Promise<TemplatesResponse> {
     const params = new URLSearchParams();
     if (periodId) params.set("period_id", periodId);
-    const response = await transportFetch(
+    const response = await sessionFetch(
       `/api/timetable/templates${params.toString() ? `?${params}` : ""}`,
       {
         method: "GET",
@@ -371,7 +368,7 @@ class TimetableService {
   ): Promise<TimetableTemplate> {
     const params = new URLSearchParams();
     params.set("period_id", periodId);
-    const response = await transportFetch(
+    const response = await sessionFetch(
       `/api/timetable/templates/${templateId}${params.toString() ? `?${params}` : ""}`,
       {
         method: "GET",
@@ -397,7 +394,7 @@ class TimetableService {
   ): Promise<RosterDeviation[]> {
     const params = new URLSearchParams({ period_id: periodId });
     if (templateId) params.set("template_id", templateId);
-    const response = await transportFetch(
+    const response = await sessionFetch(
       `/api/timetable/templates/roster-deviations?${params}`,
       {
         method: "GET",
@@ -417,7 +414,7 @@ class TimetableService {
    */
   async getBookingLeftovers(periodId: string): Promise<BookingLeftover[]> {
     const params = new URLSearchParams({ period_id: periodId });
-    const response = await transportFetch(
+    const response = await sessionFetch(
       `/api/timetable/templates/booking-leftovers?${params}`,
       {
         method: "GET",
@@ -438,7 +435,7 @@ class TimetableService {
     leftover: BookingLeftover,
     kept: boolean,
   ): Promise<void> {
-    const response = await transportFetch(
+    const response = await sessionFetch(
       `/api/timetable/templates/${encodeURIComponent(leftover.templateId)}/students/${encodeURIComponent(leftover.studentId)}/kept-days`,
       {
         method: "PUT",
@@ -463,7 +460,7 @@ class TimetableService {
    */
   async getOfferingGaps(periodId: string): Promise<OfferingGap[]> {
     const params = new URLSearchParams({ period_id: periodId });
-    const response = await transportFetch(
+    const response = await sessionFetch(
       `/api/timetable/offering-gaps?${params}`,
       {
         method: "GET",
@@ -484,7 +481,7 @@ class TimetableService {
     periodId: string,
     acknowledged: boolean,
   ): Promise<void> {
-    const response = await transportFetch(
+    const response = await sessionFetch(
       `/api/timetable/offering-gaps/${offeringId}/acknowledgement`,
       {
         method: "PUT",
@@ -508,7 +505,7 @@ class TimetableService {
     selection: OfferingSelection,
     from?: string,
   ): Promise<OfferingPreview> {
-    const response = await transportFetch(
+    const response = await sessionFetch(
       `/api/timetable/templates/${templateId}/offering-preview?${previewQuery(selection, from)}`,
       {
         method: "GET",
@@ -527,7 +524,7 @@ class TimetableService {
   async getOfferingSuggestion(
     query: OfferingSuggestionQuery,
   ): Promise<OfferingSuggestion | null> {
-    const response = await transportFetch(
+    const response = await sessionFetch(
       `/api/timetable/offering-sources/suggestion?${suggestionQuery(query)}`,
       {
         method: "GET",
@@ -552,7 +549,7 @@ class TimetableService {
     from?: string,
     template?: Pick<OfferingSuggestionQuery, "type" | "listKind">,
   ): Promise<OfferingPreview> {
-    const response = await transportFetch(
+    const response = await sessionFetch(
       `/api/timetable/offering-sources/preview?${draftPreviewQuery(periodId, selection, roster, from, template)}`,
       {
         method: "GET",
@@ -572,7 +569,7 @@ class TimetableService {
     selection: OfferingSelection,
     effectiveDate: string,
   ): Promise<void> {
-    const response = await transportFetch(
+    const response = await sessionFetch(
       `/api/timetable/templates/${templateId}/offering-connection`,
       {
         method: "POST",
@@ -592,7 +589,7 @@ class TimetableService {
     templateId: string,
     confirmed: boolean,
   ): Promise<void> {
-    const response = await transportFetch(
+    const response = await sessionFetch(
       `/api/timetable/templates/${templateId}/manual-roster`,
       {
         method: "PUT",
@@ -618,7 +615,7 @@ class TimetableService {
     templateId: string,
     body: SplitTemplateBody,
   ): Promise<SplitTemplateResult> {
-    const response = await transportFetch(
+    const response = await sessionFetch(
       `/api/timetable/templates/${templateId}/split`,
       {
         method: "POST",
@@ -649,7 +646,7 @@ class TimetableService {
     templateId: string,
     body: EndTemplateBody,
   ): Promise<EndTemplateResult> {
-    const response = await transportFetch(
+    const response = await sessionFetch(
       `/api/timetable/templates/${templateId}/end`,
       {
         method: "POST",
@@ -697,7 +694,7 @@ class TimetableService {
       query.set("exclude_activity_group_id", params.excludeActivityGroupId);
     }
 
-    const response = await transportFetch(`/api/timetable/conflicts?${query}`, {
+    const response = await sessionFetch(`/api/timetable/conflicts?${query}`, {
       method: "GET",
       headers: { Accept: "application/json" },
       credentials: "include",
@@ -712,7 +709,7 @@ class TimetableService {
    * current user has hidden in this school (#2139).
    */
   async getConflictAcks(): Promise<string[]> {
-    const response = await transportFetch(`/api/timetable/conflict-acks`, {
+    const response = await sessionFetch(`/api/timetable/conflict-acks`, {
       method: "GET",
       headers: { Accept: "application/json" },
       credentials: "include",
@@ -726,7 +723,7 @@ class TimetableService {
    * conflict for the current user. Idempotent.
    */
   async acknowledgeConflict(fingerprint: string): Promise<void> {
-    const response = await transportFetch(
+    const response = await sessionFetch(
       `/api/timetable/conflict-acks/${encodeURIComponent(fingerprint)}`,
       {
         method: "PUT",
@@ -742,7 +739,7 @@ class TimetableService {
    * hidden conflict again. Idempotent.
    */
   async unacknowledgeConflict(fingerprint: string): Promise<void> {
-    const response = await transportFetch(
+    const response = await sessionFetch(
       `/api/timetable/conflict-acks/${encodeURIComponent(fingerprint)}`,
       {
         method: "DELETE",
@@ -761,7 +758,7 @@ class TimetableService {
     params: ShiftCoverageCheckParams,
     options?: { signal?: AbortSignal },
   ): Promise<ShiftCoverageCheckResult> {
-    const response = await transportFetch("/api/timetable/shift-coverage", {
+    const response = await sessionFetch("/api/timetable/shift-coverage", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -789,7 +786,7 @@ class TimetableService {
     templateId: string,
     body: UpdateTemplateBody,
   ): Promise<TimetableTemplate> {
-    const response = await transportFetch(
+    const response = await sessionFetch(
       `/api/timetable/templates/${templateId}`,
       {
         method: "PUT",
@@ -806,7 +803,7 @@ class TimetableService {
   }
 
   async archiveTemplate(templateId: string): Promise<void> {
-    const response = await transportFetch(
+    const response = await sessionFetch(
       `/api/timetable/templates/${templateId}`,
       {
         method: "DELETE",
@@ -821,7 +818,7 @@ class TimetableService {
     instanceId: string,
     body: CreateInstanceBody,
   ): Promise<EnrichedInstance> {
-    const response = await transportFetch(
+    const response = await sessionFetch(
       `/api/timetable/instances/${instanceId}`,
       {
         method: "PUT",
@@ -838,7 +835,7 @@ class TimetableService {
   }
 
   async deleteCancelled(instanceId: string): Promise<void> {
-    const response = await transportFetch(
+    const response = await sessionFetch(
       `/api/timetable/instances/${instanceId}`,
       {
         method: "DELETE",
@@ -874,7 +871,7 @@ class TimetableService {
     instanceId: string,
     confirmedPresentStudentIds: string[],
   ): Promise<InstanceStatusResult> {
-    const response = await transportFetch(
+    const response = await sessionFetch(
       `/api/timetable/instances/${instanceId}/complete`,
       {
         method: "POST",
@@ -944,7 +941,7 @@ class TimetableService {
   async getGuardianNoticeReach(
     instanceId: string,
   ): Promise<GuardianNoticeReach> {
-    const response = await transportFetch(
+    const response = await sessionFetch(
       `/api/timetable/instances/${instanceId}/guardian-notice`,
       {
         headers: { Accept: "application/json" },
@@ -962,7 +959,7 @@ class TimetableService {
     mapper: (raw: TBackend) => TFront,
     body: CancelInstanceRequest = {},
   ): Promise<TFront> {
-    const response = await transportFetch(
+    const response = await sessionFetch(
       `/api/timetable/instances/${instanceId}/${action}`,
       {
         method: "POST",
@@ -994,7 +991,7 @@ class TimetableService {
     if (from) body.from_date = from;
     if (to) body.to_date = to;
 
-    const response = await transportFetch("/api/timetable/materialize", {
+    const response = await sessionFetch("/api/timetable/materialize", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -1028,7 +1025,7 @@ class TimetableService {
     if (activityGroupId) {
       body.activity_group_id = activityGroupId;
     }
-    const response = await transportFetch(
+    const response = await sessionFetch(
       "/api/timetable/instances/re-plan-week",
       {
         method: "POST",
@@ -1064,7 +1061,7 @@ class TimetableService {
     dryRun: boolean,
     includeClosingDaySeries = false,
   ): Promise<BulkCancelResult> {
-    const response = await transportFetch(
+    const response = await sessionFetch(
       "/api/timetable/instances/bulk-cancel",
       {
         method: "POST",
@@ -1114,7 +1111,7 @@ class TimetableService {
       to,
     });
     if (includeDeletions) params.set("include_deletions", "true");
-    const response = await transportFetch(
+    const response = await sessionFetch(
       `/api/timetable/instances/edited-in-window?${params}`,
       {
         method: "GET",
@@ -1130,7 +1127,7 @@ class TimetableService {
 
   async getGaps(from: string, to: string): Promise<GapsResponse> {
     const params = new URLSearchParams({ date: from, date_to: to });
-    const response = await transportFetch(`/api/timetable/gaps?${params}`, {
+    const response = await sessionFetch(`/api/timetable/gaps?${params}`, {
       method: "GET",
       headers: { Accept: "application/json" },
       credentials: "include",
@@ -1151,7 +1148,7 @@ class TimetableService {
     const params = new URLSearchParams({ date: from, date_to: to });
     if (activityGroupId) params.set("activity_group_id", activityGroupId);
     if (startTime) params.set("start_time", startTime);
-    const response = await transportFetch(
+    const response = await sessionFetch(
       `/api/timetable/deviations/history?${params}`,
       {
         method: "GET",
@@ -1178,7 +1175,7 @@ class TimetableService {
   ): Promise<ApplyDeviationsResponse> {
     const body = prepareApplyDeviationsBody(input);
 
-    const response = await transportFetch(
+    const response = await sessionFetch(
       `/api/timetable/instances/${instanceId}/deviations`,
       {
         method: "POST",
@@ -1211,7 +1208,7 @@ class TimetableService {
   ): Promise<BulkSubstitutionResponse> {
     const body = prepareBulkSubstitutionBody(input);
 
-    const response = await transportFetch("/api/timetable/substitutions/bulk", {
+    const response = await sessionFetch("/api/timetable/substitutions/bulk", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -1238,7 +1235,7 @@ class TimetableService {
    * Dienstplan (Schichten) und überlappende Blockzuordnungen.
    */
   async getStaffPool(instanceId: string): Promise<StaffPoolResponse> {
-    const response = await transportFetch(
+    const response = await sessionFetch(
       `/api/timetable/instances/${instanceId}/staff-pool`,
       {
         method: "GET",
@@ -1260,7 +1257,7 @@ class TimetableService {
   async getInstanceParticipants(
     instanceId: string,
   ): Promise<InstanceParticipantNames> {
-    const response = await transportFetch(
+    const response = await sessionFetch(
       `/api/timetable/instances/${instanceId}/participants`,
       {
         method: "GET",
@@ -1292,7 +1289,7 @@ class TimetableService {
     if (input.sourceInstanceId) {
       body.source_instance_id = input.sourceInstanceId;
     }
-    const response = await transportFetch(
+    const response = await sessionFetch(
       `/api/timetable/instances/${instanceId}/move-staff`,
       {
         method: "POST",
@@ -1317,7 +1314,7 @@ class TimetableService {
     studentId: string,
     body: AttendancePatchBody,
   ): Promise<AttendanceResponse> {
-    const response = await transportFetch(
+    const response = await sessionFetch(
       `/api/timetable/instances/${instanceId}/students/${studentId}`,
       {
         method: "PATCH",

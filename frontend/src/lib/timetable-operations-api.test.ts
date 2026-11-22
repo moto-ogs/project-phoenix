@@ -1,3 +1,4 @@
+import { primeSessionCache } from "./session-cache";
 import { ApiError } from "./api-error";
 import { schoolSupervisionsApi } from "./school-supervisions-api";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -16,6 +17,7 @@ describe("timetableOperationsApi", () => {
   let originalFetch: typeof fetch;
 
   beforeEach(() => {
+    primeSessionCache({ user: { id: "1" }, expires: "2099-01-01" });
     originalFetch = globalThis.fetch;
     globalThis.fetch = vi.fn();
   });
@@ -53,7 +55,10 @@ describe("timetableOperationsApi", () => {
       "/api/timetable/operations/planned-now?date=2026-05-10",
       {
         credentials: "include",
-        headers: { Accept: "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
       },
     );
     expect(result[0]?.id).toBe("130");
@@ -80,7 +85,10 @@ describe("timetableOperationsApi", () => {
       "/api/timetable/operations/planned-now?horizon_minutes=480&limit=5&include_roster=true",
       {
         credentials: "include",
-        headers: { Accept: "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
       },
     );
   });
@@ -99,7 +107,10 @@ describe("timetableOperationsApi", () => {
       "/api/timetable/operations/planned-now?scope=past",
       {
         credentials: "include",
-        headers: { Accept: "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
       },
     );
   });
@@ -118,7 +129,10 @@ describe("timetableOperationsApi", () => {
       "/api/timetable/operations/planned-now",
       {
         credentials: "include",
-        headers: { Accept: "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
       },
     );
     expect(result).toEqual([]);
@@ -144,7 +158,10 @@ describe("timetableOperationsApi", () => {
       {
         method: "POST",
         credentials: "include",
-        headers: { Accept: "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
       },
     );
     expect(result).toEqual({
@@ -207,7 +224,10 @@ describe("timetableOperationsApi", () => {
       "/api/timetable/operations/instances/132/roster",
       {
         credentials: "include",
-        headers: { Accept: "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
       },
     );
     expect(mockFetch).toHaveBeenNthCalledWith(
@@ -215,7 +235,10 @@ describe("timetableOperationsApi", () => {
       "/api/timetable/operations/active-groups/233/roster",
       {
         credentials: "include",
-        headers: { Accept: "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
       },
     );
     expect(byInstance.instance.id).toBe("132");
@@ -237,7 +260,10 @@ describe("timetableOperationsApi", () => {
       {
         method: "POST",
         credentials: "include",
-        headers: { Accept: "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
       },
     );
     expect(mockFetch).toHaveBeenNthCalledWith(
@@ -246,7 +272,10 @@ describe("timetableOperationsApi", () => {
       {
         method: "POST",
         credentials: "include",
-        headers: { Accept: "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
       },
     );
   });
@@ -380,7 +409,10 @@ describe("timetableOperationsApi", () => {
       {
         method: "POST",
         credentials: "include",
-        headers: { Accept: "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
       },
     );
   });
