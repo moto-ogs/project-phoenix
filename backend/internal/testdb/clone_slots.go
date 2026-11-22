@@ -95,6 +95,10 @@ func (s *cloneSlots) try(ctx context.Context, db *sql.DB, name string, lasting b
 			return true, 0, nil
 		}
 	}
+	if _, kept := s.held[name]; kept {
+		// A clone whose drop failed kept its slot; its successor reuses it.
+		return true, s.limit, nil
+	}
 	// Short-lived clones start at the reserve, lasting clones at the other end.
 	from, to, step := s.limit-1, 0, -1
 	if lasting {

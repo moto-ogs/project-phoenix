@@ -92,7 +92,7 @@ func TestCreateCloneRetriesAfterDiskFullOnceDeadClonesAreGone(t *testing.T) {
 	require.NoError(t, err)
 
 	// Of this very run: a worktree's earlier, killed run shares its run ID.
-	killed := ClonePrefix + RunID() + "_diskfull"
+	killed := ClonePrefix + RunID() + "_" + SanitizeRunID("")
 	createBareClone(t, ctx, cfg, killed)
 	t.Cleanup(func() { dropBareClone(t, cfg, killed) })
 
