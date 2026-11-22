@@ -83,8 +83,13 @@ type ContributionRule struct {
 	TariffSiblingPrice bool `json:"tariff_sibling_price"`
 	// CountsFamilyChildren tells that a sibling rule of the care counts
 	// the children the family stated and the Abrechnung confirmed (#5918).
-	CountsFamilyChildren bool      `json:"counts_family_children"`
-	UpdatedAt            time.Time `json:"updated_at"`
+	CountsFamilyChildren bool `json:"counts_family_children"`
+	// SiblingAllChildren makes a care sibling rule choose by the size of
+	// the family instead of the child's rank (#7765): a family of at least
+	// SiblingFromChild counted children gets the reduction for every child,
+	// the first too.
+	SiblingAllChildren bool      `json:"sibling_all_children"`
+	UpdatedAt          time.Time `json:"updated_at"`
 }
 
 // ContributionRuleInput is a rule as the Abrechnung writes it.

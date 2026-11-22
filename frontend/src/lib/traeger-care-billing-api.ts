@@ -376,6 +376,8 @@ export interface CareReduction {
   readonly capCents: number | null;
   /** The sibling prices of the price list (#6196). */
   readonly tariffSiblingPrice?: boolean;
+  /** The size of the family decided, not the child's rank (#7765). */
+  readonly siblingAllChildren?: boolean;
   readonly amountCents: number;
 }
 
@@ -732,6 +734,7 @@ function invoiceFromBackend(
       priceCents: reduction.price_cents,
       capCents: reduction.cap_cents,
       tariffSiblingPrice: reduction.tariff_sibling_price,
+      siblingAllChildren: reduction.sibling_all_children,
       amountCents: reduction.amount_cents,
     })),
     mealPositions: mealPositionsFromBackend(invoice.meal_positions),

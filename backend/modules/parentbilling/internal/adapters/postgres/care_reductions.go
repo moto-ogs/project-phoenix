@@ -39,6 +39,7 @@ func newCareRuleRow(organizationID int64, input parentbilling.CareRuleInput) *ru
 		DiscountCents: input.DiscountCents, PriceCents: input.PriceCents, CapCents: input.CapCents,
 		TariffSiblingPrice:   input.TariffSiblingPrice,
 		CountsFamilyChildren: input.CountsFamilyChildren,
+		SiblingAllChildren:   input.SiblingAllChildren,
 	}
 }
 
@@ -60,6 +61,7 @@ var careRuleColumns = []string{
 	"sibling_from_child", "discount_basis_points", "discount_cents", "price_cents", "cap_cents",
 	"tariff_sibling_price",
 	"counts_family_children",
+	"sibling_all_children",
 }
 
 // UpdateCareRule replaces a care rule of the Träger. A holiday rule is no
@@ -294,6 +296,7 @@ type careInvoiceReductionRow struct {
 	PriceCents          *int64  `bun:"price_cents"`
 	CapCents            *int64  `bun:"cap_cents"`
 	TariffSiblingPrice  bool    `bun:"tariff_sibling_price"`
+	SiblingAllChildren  bool    `bun:"sibling_all_children"`
 	CareOfferingIDs     []int64 `bun:"care_offering_ids,array"`
 	AmountCents         int64   `bun:"amount_cents"`
 }
@@ -309,7 +312,7 @@ func insertCareReductions(ctx context.Context, db bun.IDB, organizationID int64,
 				RuleID: reduction.RuleID.Int64(), Name: reduction.Name, ChildRank: reduction.ChildRank,
 				FamilyChildren: reduction.FamilyChildren, DiscountBasisPoints: reduction.DiscountBasisPoints,
 				DiscountCents: reduction.DiscountCents, PriceCents: reduction.PriceCents, CapCents: reduction.CapCents,
-				TariffSiblingPrice: reduction.TariffSiblingPrice, CareOfferingIDs: idsOrEmpty(ident.Int64s(reduction.CareOfferingIDs)), AmountCents: reduction.AmountCents,
+				TariffSiblingPrice: reduction.TariffSiblingPrice, SiblingAllChildren: reduction.SiblingAllChildren, CareOfferingIDs: idsOrEmpty(ident.Int64s(reduction.CareOfferingIDs)), AmountCents: reduction.AmountCents,
 			})
 		}
 	}
@@ -335,7 +338,7 @@ func careReductionsOf(ctx context.Context, db bun.IDB, organizationID int64, inv
 		byInvoice[row.InvoiceID] = append(byInvoice[row.InvoiceID], parentbilling.CareReduction{
 			Kind: row.Kind, RuleID: ident.ID(row.RuleID), Name: row.Name, ChildRank: row.ChildRank, FamilyChildren: row.FamilyChildren,
 			DiscountBasisPoints: row.DiscountBasisPoints, DiscountCents: row.DiscountCents, PriceCents: row.PriceCents,
-			CapCents: row.CapCents, TariffSiblingPrice: row.TariffSiblingPrice, CareOfferingIDs: ident.IDs(idsOrEmpty(row.CareOfferingIDs)), AmountCents: row.AmountCents,
+			CapCents: row.CapCents, TariffSiblingPrice: row.TariffSiblingPrice, SiblingAllChildren: row.SiblingAllChildren, CareOfferingIDs: ident.IDs(idsOrEmpty(row.CareOfferingIDs)), AmountCents: row.AmountCents,
 		})
 	}
 	return byInvoice, nil

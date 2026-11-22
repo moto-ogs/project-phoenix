@@ -3627,6 +3627,7 @@ export interface ContributionRule {
   cap_cents: number | null;
   tariff_sibling_price: boolean;
   counts_family_children: boolean;
+  sibling_all_children: boolean;
   updated_at: string;
 }
 
@@ -3648,6 +3649,7 @@ export const ContributionRuleSchema: z.ZodType<ContributionRule, unknown> = obje
   cap_cents: nullable(safeInt),
   tariff_sibling_price: bool,
   counts_family_children: bool,
+  sibling_all_children: bool,
   updated_at: instant,
 });
 

@@ -46,7 +46,7 @@ func (c *CareReductions) ImportFamilyChildren(ctx context.Context, reviewer pare
 	if request.Mapping != nil {
 		result.Mapping = *request.Mapping
 	}
-	result.Mapping = settleFamilyImportMapping(result.Mapping, schools)
+	result.Mapping = settleFamilyImportMapping(result.Mapping, schools, c.today())
 	index, err := resolveFamilyImportMapping(table.headers, result.Mapping, schools)
 	if err != nil {
 		return parentbilling.FamilyChildrenImport{}, err
@@ -159,7 +159,7 @@ func decideFamilyImport(candidates []familyImportCandidate, numbers map[string]*
 			}
 		}
 	}
-	decideImportedChildren(rows, current, func(importedChildren) calendar.Date { return today })
+	decideImportedChildren(rows, current, familyImportDecisionDay(today, familyImportTargets(candidates)))
 	var shown []parentbilling.FamilyChildTarget
 	seen := map[int64]bool{}
 	for i, row := range rows {
@@ -175,7 +175,100 @@ func decideFamilyImport(candidates []familyImportCandidate, numbers map[string]*
 	for i := range candidates {
 		candidates[i].settle()
 	}
+	alignFamilyImportDays(candidates)
 	return shown
+}
+
+// familyImportDecisionDay is the day a row's number has to hold on: the
+// later of today and the day the row names. A confirmation that ends before
+// the row's day is renewed from that day, and the months it covers keep it
+// (FamilyChildCount.InForceOn). Only a family in which a contract of the
+// row's own child is in force on the row's day is decided ahead: for a
+// family the child has left or not yet joined, today decides, so the file
+// does not renew its number for a time the child is no part of it.
+func familyImportDecisionDay(today calendar.Date, targets map[familyImportRowFamily]familyImportTarget) func(importedChildren) calendar.Date {
+	return func(row importedChildren) calendar.Date {
+		day := row.number.ValidFrom
+		if day.After(today) && targets[familyImportRowFamily{row.number.Line, row.family}].covers(day) {
+			return day
+		}
+		return today
+	}
+}
+
+// familyImportRowFamily names a family of one row of the file.
+type familyImportRowFamily struct {
+	line   int
+	family string
+}
+
+// familyImportTargets are the families of every row by the row's line.
+func familyImportTargets(candidates []familyImportCandidate) map[familyImportRowFamily]familyImportTarget {
+	targets := map[familyImportRowFamily]familyImportTarget{}
+	for _, candidate := range candidates {
+		for _, target := range candidate.targets {
+			targets[familyImportRowFamily{candidate.row.Line, target.family}] = target
+		}
+	}
+	return targets
+}
+
+// alignFamilyImportDays shows on the ready rows of one family the day the
+// family's number is stored from: the earliest its ready rows name
+// (newImportedChildren). The preview then shows every row the day that
+// counts, also when siblings name different days. A row the import leaves
+// out lends no day. The rows keep their own days: the number is stored on
+// the contract of the row that names the earliest.
+func alignFamilyImportDays(candidates []familyImportCandidate) {
+	earliest := map[string]calendar.Date{}
+	for _, row := range takenFamilyImportRows(candidates) {
+		if day, seen := earliest[row.family]; !seen || row.number.ValidFrom.Before(day) {
+			earliest[row.family] = row.number.ValidFrom
+		}
+	}
+	for i := range candidates {
+		candidates[i].showDay(earliest)
+	}
+}
+
+// takenFamilyImportRows are the numbers the import stores: those to take
+// over of the ready rows.
+func takenFamilyImportRows(candidates []familyImportCandidate) []*importedChildren {
+	var taken []*importedChildren
+	for i := range candidates {
+		if candidates[i].row.Status != parentbilling.FamilyImportReady {
+			continue
+		}
+		for k := range candidates[i].decided {
+			if row := &candidates[i].decided[k]; row.status == parentbilling.ImportedChildrenNew {
+				taken = append(taken, row)
+			}
+		}
+	}
+	return taken
+}
+
+// showDay names on a ready row every day its number counts from, by the
+// day each of its families is stored from: the earliest and, when they
+// differ, each later one, so the preview hides no day the import stores.
+// Any other row names none: a confirmed number keeps its own validity,
+// which the row does not name.
+func (c *familyImportCandidate) showDay(stored map[string]calendar.Date) {
+	c.row.ValidFrom, c.row.LaterValidFrom = nil, []calendar.Date{}
+	if c.row.Status != parentbilling.FamilyImportReady {
+		return
+	}
+	var days []calendar.Date
+	for _, row := range c.decided {
+		if day := stored[row.family]; row.status == parentbilling.ImportedChildrenNew && !slices.Contains(days, day) {
+			days = append(days, day)
+		}
+	}
+	if len(days) == 0 {
+		return
+	}
+	slices.SortFunc(days, calendar.Date.Compare)
+	c.row.ValidFrom, c.row.LaterValidFrom = &days[0], days[1:]
 }
 
 // familyImportRows are the numbers of the candidates per family, with the
@@ -183,13 +276,13 @@ func decideFamilyImport(candidates []familyImportCandidate, numbers map[string]*
 // over nothing, but its number speaks against the rows of its families.
 func familyImportRows(candidates []familyImportCandidate) (rows []importedChildren, owner []int) {
 	for i, candidate := range candidates {
-		witness := candidate.row.RepeatsLine > 0
+		witness := candidate.row.RepeatsLine > 0 || candidate.speaksOnly
 		if (candidate.row.Status != "" && !witness) || candidate.row.Children == nil {
 			continue
 		}
 		for _, target := range candidate.targets {
 			rows = append(rows, importedChildren{family: target.family, witness: witness, number: parentbilling.ImportedFamilyChildren{
-				Line: candidate.row.Line, ContractID: target.contractID, Children: *candidate.row.Children, ValidFrom: target.firstDay}})
+				Line: candidate.row.Line, ContractID: target.contractID, Children: *candidate.row.Children, ValidFrom: candidate.validFrom}})
 			owner = append(owner, i)
 		}
 	}
@@ -202,12 +295,6 @@ func familyImportRows(candidates []familyImportCandidate) (rows []importedChildr
 func (c *familyImportCandidate) settle() {
 	if c.row.Status != "" {
 		return
-	}
-	// The day the number counts from, as decided: a renewed number starts
-	// after the confirmation that ran out.
-	if len(c.decided) > 0 {
-		from := c.decided[0].number.ValidFrom
-		c.row.ValidFrom = &from
 	}
 	has := func(status string) bool {
 		return slices.ContainsFunc(c.decided, func(row importedChildren) bool { return row.status == status })
@@ -275,13 +362,14 @@ func countFamilyImportRow(counts *parentbilling.FamilyChildrenImportCounts, stat
 }
 
 // familyImportFingerprint names the mapping and every row with what the
-// import does with it and for which families. A change detector, not a
+// import does with it, for which families and on which contracts. A change detector, not a
 // secret, like the fingerprint of a mandate import.
 func familyImportFingerprint(mapping parentbilling.FamilyChildrenImportMapping, candidates []familyImportCandidate) string {
 	type target struct {
-		Family string        `json:"family"`
-		From   calendar.Date `json:"from"`
-		Status string        `json:"status"`
+		Family   string        `json:"family"`
+		Contract int64         `json:"contract"`
+		From     calendar.Date `json:"from"`
+		Status   string        `json:"status"`
 	}
 	type stateRow struct {
 		Row     parentbilling.FamilyChildrenImportRow `json:"row"`
@@ -291,7 +379,7 @@ func familyImportFingerprint(mapping parentbilling.FamilyChildrenImportMapping, 
 	for i, candidate := range candidates {
 		rows[i].Row = candidate.row
 		for _, decided := range candidate.decided {
-			rows[i].Targets = append(rows[i].Targets, target{decided.family, decided.number.ValidFrom, decided.status})
+			rows[i].Targets = append(rows[i].Targets, target{decided.family, decided.number.ContractID, decided.number.ValidFrom, decided.status})
 		}
 	}
 	// The values are plain data: encoding them cannot fail.
@@ -320,13 +408,18 @@ func suggestFamilyImportMapping(headers []string) parentbilling.FamilyChildrenIm
 	return parentbilling.FamilyChildrenImportMapping{Columns: parentbilling.FamilyChildrenImportColumns{
 		ChildFirstName: found[parentbilling.FamilyImportFieldChildFirstName], ChildLastName: found[parentbilling.FamilyImportFieldChildLastName],
 		ChildBirthDate: found[parentbilling.FamilyImportFieldChildBirthDate], School: found[parentbilling.FamilyImportFieldSchool],
-		Children: found[parentbilling.FamilyImportFieldChildren],
+		Children: found[parentbilling.FamilyImportFieldChildren], ValidFrom: found[parentbilling.FamilyImportFieldValidFrom],
 	}}
 }
 
 // settleFamilyImportMapping completes a mapping with the one school of a
-// Träger that has one. A column always goes before the choice.
-func settleFamilyImportMapping(mapping parentbilling.FamilyChildrenImportMapping, schools []parentbilling.CareSchool) parentbilling.FamilyChildrenImportMapping {
+// Träger that has one, and with today as the day the numbers count from
+// when the office named none: the day of the import is the one day the
+// import itself proves (#7765). A column always goes before the choice.
+func settleFamilyImportMapping(mapping parentbilling.FamilyChildrenImportMapping, schools []parentbilling.CareSchool, today calendar.Date) parentbilling.FamilyChildrenImportMapping {
+	if mapping.ValidFrom == nil {
+		mapping.ValidFrom = &today
+	}
 	if mapping.Columns.School != "" {
 		mapping.SchoolID = 0
 	} else if mapping.SchoolID == 0 && len(schools) == 1 {

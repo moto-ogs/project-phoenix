@@ -256,6 +256,10 @@ func careReductionReason(reduction parentbilling.CareReduction) string {
 		if reduction.ChildRank == nil || reduction.FamilyChildren == nil {
 			return careRuleEffect(reduction)
 		}
+		if reduction.SiblingAllChildren {
+			// The size of the family decided, not a rank (#7765).
+			return fmt.Sprintf("%d Kinder in der Familie, %s", *reduction.FamilyChildren, careRuleEffect(reduction))
+		}
 		return fmt.Sprintf("%d. Kind von %d, %s; zuerst zählt das Kind mit dem höchsten Beitrag",
 			*reduction.ChildRank, *reduction.FamilyChildren, careRuleEffect(reduction))
 	case "cap":
