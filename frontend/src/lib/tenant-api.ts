@@ -6,9 +6,10 @@
 
 import { normalizeCareFacilityTerm } from "~/lib/care-facility-term-value";
 import { apiErrorFromResponse, transportFetch } from "./api-error";
+import { bffJson } from "./bff-fetch";
 import { clearSessionCache, sessionFetch } from "./session-cache";
 import { clearPersonalStorage } from "./personal-storage";
-import { mapAccountTenant, type AccountTenantBackend } from "./account-tenants";
+import { mapAccountTenant } from "./account-tenants";
 import { parseBookedModules, type ModuleKey } from "./modules";
 
 export interface TenantSettings {
@@ -512,15 +513,8 @@ function delay(ms: number): Promise<void> {
  */
 export async function listAvailableTenants(): Promise<TenantSummary[]> {
   // The backend path, through the staff portal's catalog proxy (#2352).
-  const response = await sessionFetch("/api/auth/account/tenants");
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Failed to list tenants: ${response.statusText}`,
-    );
-  }
-  const json = (await response.json()) as { data?: AccountTenantBackend[] };
-  return (json.data ?? []).map(mapAccountTenant);
+  const tenants = await bffJson("tenant", "GET /auth/account/tenants");
+  return tenants.map(mapAccountTenant);
 }
 
 /** Switch server-side, then clear cross-tenant caches before navigation. */

@@ -98,8 +98,7 @@ describe("staffOverviewService", () => {
     await staffOverviewService.getDashboardSummary("week");
 
     expect(sessionFetch).toHaveBeenCalledWith(
-      "/api/staff/dashboard-summary?period=week",
-    );
+      "/api/staff/dashboard-summary?period=week", { method: "GET" });
   });
 
   it.each([{ year: 2026 }, { month: 7 }])(
@@ -120,8 +119,7 @@ describe("staffOverviewService", () => {
     await staffOverviewService.getTimeAccounts();
 
     expect(sessionFetch).toHaveBeenCalledWith(
-      "/api/staff/time-tracking/overview",
-    );
+      "/api/staff/time-tracking/overview", { method: "GET" });
   });
 
   it("forwards month, employment type and saldo bounds", async () => {
