@@ -15,11 +15,6 @@ import type {
   PickupScheduleResponse,
 } from "~/lib/contract/students.generated";
 
-// Wire types: the decoded responses of the catalog proxy (#2353).
-export type PickupScheduleWire = PickupScheduleResponse;
-export type PickupExceptionWire = PickupExceptionResponse;
-export type PickupDataWire = PickupDataResponse;
-
 const DEPARTURE_MODES: readonly DepartureMode[] = [
   "alone",
   "bus",
@@ -136,7 +131,7 @@ export interface WeekdayNoteEntry {
 // Mapping Functions
 
 export function mapPickupScheduleResponse(
-  data: PickupScheduleWire,
+  data: PickupScheduleResponse,
 ): PickupSchedule {
   return {
     id: data.id,
@@ -165,7 +160,7 @@ export function pickupScheduleSourceLabel(
 }
 
 export function mapPickupExceptionResponse(
-  data: PickupExceptionWire,
+  data: PickupExceptionResponse,
 ): PickupException {
   return {
     id: data.id,
@@ -195,7 +190,7 @@ export function mapPickupNoteResponse(data: PickupNoteResponse): PickupNote {
   };
 }
 
-export function mapPickupDataResponse(data: PickupDataWire): PickupData {
+export function mapPickupDataResponse(data: PickupDataResponse): PickupData {
   return {
     schedules: (data.schedules ?? []).map(mapPickupScheduleResponse),
     effectiveSchedules: (data.effective_schedules ?? []).map((dated) => ({

@@ -1,4 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+// The session gate and its renewal are sessionFetch's own tests.
+vi.mock("./session-cache", () => ({
+  sessionFetch: (url: string, init?: RequestInit) =>
+    globalThis.fetch(url, init),
+}));
 import {
   describeAdjustment,
   formatRemovalSpan,
@@ -9,12 +15,17 @@ import {
 } from "./roster-impact";
 
 describe("mapRosterImpact", () => {
-  it("maps both lists and defaults missing weekday arrays", () => {
+  it("maps both lists and defaults null weekday arrays", () => {
     expect(
       mapRosterImpact({
         effective_from: "2027-05-31",
         adjusted: [
-          { template_id: "7", name: "Kurzbetreuung", removed_weekdays: [5] },
+          {
+            template_id: "7",
+            name: "Kurzbetreuung",
+            removed_weekdays: [5],
+            added_weekdays: null,
+          },
         ],
         not_adjusted: [
           {
@@ -22,8 +33,10 @@ describe("mapRosterImpact", () => {
             name: "RDST 1b",
             weekdays: [5],
             via_target: true,
+            until: null,
           },
         ],
+        pickup_overrides: null,
       }),
     ).toEqual({
       effectiveFrom: "2027-05-31",
@@ -52,6 +65,8 @@ describe("mapRosterImpact", () => {
     expect(
       mapRosterImpact({
         effective_from: "2026-10-30",
+        adjusted: null,
+        not_adjusted: null,
         pickup_overrides: [
           {
             weekday: 1,
@@ -65,6 +80,7 @@ describe("mapRosterImpact", () => {
             date: "2026-11-05",
             stored_time: "15:15",
             booked_time: "16:00",
+            reset_now: false,
           },
         ],
       })?.pickupOverrides,
@@ -89,14 +105,17 @@ describe("mapRosterImpact", () => {
   it("maps the end of the gap a later booking closes (#5497)", () => {
     const mapped = mapRosterImpact({
       effective_from: "2026-11-05",
+      adjusted: null,
       not_adjusted: [
         {
           template_id: "9",
           name: "RDST 1b",
           weekdays: [4],
+          via_target: false,
           until: "2026-11-16",
         },
       ],
+      pickup_overrides: null,
     });
     expect(mapped?.notAdjusted[0]?.until).toBe("2026-11-16");
   });
