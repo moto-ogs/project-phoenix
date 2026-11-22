@@ -296,7 +296,7 @@ export function StepTermin({
                   : "Raum auswählen …",
             },
             ...rooms.map((room) => ({
-              value: String(room.id),
+              value: room.id,
               label: room.building
                 ? `${room.building} - ${room.name}`
                 : room.name,

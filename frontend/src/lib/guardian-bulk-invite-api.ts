@@ -1,10 +1,6 @@
-import type { bulkInviteResponse } from "~/lib/contract/guardians.generated";
+import { ApiError } from "~/lib/api-error";
+import { bffJson } from "~/lib/bff-fetch";
 import { knownEnum } from "~/lib/contract/known-enum";
-import {
-  apiErrorFromBody,
-  apiErrorFromResponse,
-  transportFetch,
-} from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
 
 const logger = createLogger({ component: "GuardianBulkInviteAPI" });
@@ -41,11 +37,6 @@ export interface BulkInviteResult {
   problems: BulkInviteProblem[];
 }
 
-interface BulkInviteResponse {
-  status?: string;
-  data?: bulkInviteResponse;
-}
-
 /**
  * Invite the guardians of many children to the parents portal in one run
  * (#3378). `dryRun` only counts and mails nobody; `resendOpen` also mails
@@ -55,30 +46,19 @@ export async function bulkInviteGuardians(
   studentIds: string[],
   options: { dryRun: boolean; resendOpen: boolean },
 ): Promise<BulkInviteResult> {
-  const response = await transportFetch("/api/guardians/bulk-invite", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      student_ids: studentIds.map((id) => Number.parseInt(id, 10)),
+  const data = await bffJson("tenant", "POST /api/guardians/bulk-invite", {
+    body: {
+      student_ids: studentIds,
       dry_run: options.dryRun,
       resend_open: options.resendOpen,
-    }),
+    },
+    errorMessage: "Failed to bulk invite guardians",
+  }).catch((error: unknown) => {
+    logger.warn("bulk_invite_guardians_failed", {
+      status: error instanceof ApiError ? error.status : undefined,
+    });
+    throw error;
   });
-
-  if (!response.ok) {
-    logger.warn("bulk_invite_guardians_failed", { status: response.status });
-    throw await apiErrorFromResponse(
-      response,
-      `Failed to bulk invite guardians: ${response.status}`,
-    );
-  }
-
-  const result = (await response.json()) as BulkInviteResponse;
-  if (!result.data) {
-    // A 200 without data is a broken answer, so it counts as a server error.
-    throw apiErrorFromBody("Failed to bulk invite guardians", 500, result);
-  }
-  const data = result.data;
   return {
     dryRun: data.dry_run,
     invited: data.invited,

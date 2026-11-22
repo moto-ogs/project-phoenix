@@ -1,6 +1,6 @@
 // The browser calls a JSON route of the BFF through bffJson (#7806). The
 // older helpers (sessionFetch for JSON, authFetch, fetchWithAuth,
-// traegerRequest, operatorFetch) may be imported only by the files listed
+// operatorFetch) may be imported only by the files listed
 // here, each with the reason it has not moved yet. The list only shrinks:
 // a new importer fails, and so does an entry that no longer imports one, so
 // a migrated file leaves the list in the same change. Once it is empty the
@@ -13,7 +13,6 @@ const OLD_HELPERS = [
   "sessionFetch",
   "authFetch",
   "fetchWithAuth",
-  "traegerRequest",
   "operatorFetch",
 ];
 
@@ -28,7 +27,6 @@ const REMAINING_IMPORTERS: Readonly<Record<string, string>> = {
     "sessionFetch: the payment export has no request type in the contract (#7808)",
   "components/settings/personalization-tab.tsx":
     "sessionFetch: the login image route has no contract (#7808)",
-  "lib/staff-pool-api.ts": "traegerRequest: Träger portal, #7806 Teil B",
 };
 
 const SRC = join(import.meta.dirname, "..");

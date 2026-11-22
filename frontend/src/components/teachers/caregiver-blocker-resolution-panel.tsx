@@ -1,7 +1,7 @@
 "use client";
 
 import { StatusBadge } from "~/components/ui/status-badge";
-import { apiErrorFromResponse, transportFetch } from "~/lib/api-error";
+import { bffJson } from "~/lib/bff-fetch";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRightLeft, Trash2 } from "lucide-react";
 import { Alert } from "~/components/ui/alert";
@@ -48,28 +48,17 @@ interface CaregiverBlockerResolutionPanelProps {
 }
 
 async function endActiveSupervision(id: string): Promise<void> {
-  const response = await transportFetch(
-    `/api/active/supervisors/${encodeURIComponent(id)}/end`,
-    {
-      method: "POST",
-      credentials: "include",
-    },
-  );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, "End supervision failed");
-  }
+  await bffJson("tenant", "POST /api/active/supervisors/{id}/end", {
+    params: { id },
+    errorMessage: "End supervision failed",
+  });
 }
 
 async function endGroupHandover(id: string): Promise<void> {
-  const response = await transportFetch("/api/substitutions/end", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({ type: "group_handover", id: Number(id) }),
+  await bffJson("tenant", "POST /api/substitutions/end", {
+    body: { type: "group_handover", id },
+    errorMessage: "End group handover failed",
   });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, "End group handover failed");
-  }
 }
 
 async function removeActivitySupervisor(
@@ -77,48 +66,35 @@ async function removeActivitySupervisor(
   supervisorId: string,
   replacementStaffId?: string,
 ): Promise<void> {
-  const searchParams = new URLSearchParams();
-  if (replacementStaffId) {
-    searchParams.set("replacement_staff_id", replacementStaffId);
-  }
-
-  const response = await transportFetch(
-    `/api/activities/${encodeURIComponent(activityId)}/supervisors/${encodeURIComponent(supervisorId)}${searchParams.size > 0 ? `?${searchParams.toString()}` : ""}`,
-    { method: "DELETE", credentials: "include" },
+  // Code (etwa timetable.only_supervisor_replacement_required), Felder und
+  // Vorgangskennung reisen mit; der Text ist nur Diagnose.
+  await bffJson(
+    "tenant",
+    "DELETE /api/activities/{id}/supervisors/{supervisorId}",
+    {
+      params: { id: activityId, supervisorId },
+      query: { replacement_staff_id: replacementStaffId || undefined },
+      errorMessage: "Remove activity supervisor failed",
+    },
   );
-  if (!response.ok) {
-    // Code (etwa timetable.only_supervisor_replacement_required), Felder und
-    // Vorgangskennung reisen mit; der Text ist nur Diagnose.
-    throw await apiErrorFromResponse(
-      response,
-      "Remove activity supervisor failed",
-    );
-  }
 }
 
 async function updateGroupTeachers(
   groupId: string,
   groupName: string,
-  teacherIds: number[],
+  teacherIds: string[],
 ): Promise<void> {
-  const response = await transportFetch(
-    `/api/groups/${encodeURIComponent(groupId)}`,
-    {
-      method: "PUT",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: groupName, teacher_ids: teacherIds }),
-    },
-  );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, "Update group teachers failed");
-  }
+  await bffJson("tenant", "PUT /api/groups/{id}", {
+    params: { id: groupId },
+    body: { name: groupName, teacher_ids: teacherIds },
+    errorMessage: "Update group teachers failed",
+  });
 }
 
 function buildUpdatedTeacherIds(
   group: BlockerGroup,
   replacementTeacherId?: string,
-): number[] {
+): string[] {
   const currentTeacherIds =
     group.teacherIds.length > 0 ? group.teacherIds : [group.teacherId];
   const nextTeacherIds = currentTeacherIds.filter(
@@ -129,15 +105,7 @@ function buildUpdatedTeacherIds(
     nextTeacherIds.push(replacementTeacherId);
   }
 
-  return nextTeacherIds.map((teacherId) => {
-    const parsedTeacherId = Number.parseInt(teacherId, 10);
-    if (Number.isNaN(parsedTeacherId)) {
-      throw new Error(
-        `Gruppenleitung für "${group.groupName}" enthält eine ungültige Lehrkraft-ID.`,
-      );
-    }
-    return parsedTeacherId;
-  });
+  return nextTeacherIds;
 }
 
 /**
