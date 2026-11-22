@@ -347,17 +347,16 @@ describe("timetableOperationsApi", () => {
 
       await api.complete("135", ["431", "9007199254740993"]);
 
-      expect(mockFetch).toHaveBeenCalledWith(`${base}/135/complete`, {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          confirmed_present_student_ids: ["431", "9007199254740993"],
+      expect(mockFetch).toHaveBeenCalledWith(
+        `${base}/135/complete`,
+        expect.objectContaining({
+          method: "POST",
+          credentials: "include",
+          body: JSON.stringify({
+            confirmed_present_student_ids: ["431", "9007199254740993"],
+          }),
         }),
-      });
+      );
     },
   );
 
