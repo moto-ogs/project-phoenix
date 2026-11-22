@@ -200,6 +200,20 @@ func TestDecideChildLinksSeesAnUnlinkedContractOfTheChild(t *testing.T) {
 	assert.Equal(t, ident.ID(16), row.OtherContractID)
 }
 
+// Namesakes whose child records carry no date of birth: the two imported
+// contracts are born on different days, so neither is the other child's.
+func TestDecideChildLinksTellsNamesakesApartByTheContracts(t *testing.T) {
+	t.Parallel()
+	contracts := []ports.ContractChild{
+		{ContractID: 51, SchoolID: linkSchoolNorth, Status: carecontract.StatusActive, FirstName: "Ben", LastName: "Muster",
+			BirthDate: importDay(2018, 1, 2), StartsOn: calendar.NewDate(2026, 8, 1), ImportOrigin: "ben-a"},
+		{ContractID: 52, SchoolID: linkSchoolNorth, Status: carecontract.StatusActive, FirstName: "Ben", LastName: "Muster",
+			BirthDate: importDay(2019, 3, 4), StartsOn: calendar.NewDate(2026, 8, 1), ImportOrigin: "ben-b"},
+	}
+	row := decideOne(t, contracts, linkPair{line: 2, contractID: 51, studentID: linkBen})[0]
+	assert.Equal(t, carecontract.ChildLinkReady, row.Status)
+}
+
 // A row that links nothing contests no child record: the export of all
 // contracts as a file also names contracts from applications and ended
 // ones.
@@ -292,6 +306,18 @@ func TestCoveredByImportCoversTheChildOfARunningImportedContract(t *testing.T) {
 		return ports.ContractChild{ContractID: 70, SchoolID: linkSchoolNorth, Status: status, FirstName: first, LastName: "Beispiel",
 			BirthDate: birth, StartsOn: start, EndsOn: endsOn, ImportOrigin: "x", StudentID: studentID}
 	}
+	// The first booking ends with January 2027; the same module is approved
+	// again from February, as a change to come.
+	withLaterBooking := func(a carecontract.Application) carecontract.Application {
+		january, february := calendar.NewDate(2027, 2, 1), calendar.NewDate(2027, 2, 1)
+		a.Bookings[0].ValidUntil = &january
+		a.Bookings = append(a.Bookings, carecontract.Booking{CareOfferingID: 1, Days: []string{"mon"}, ValidFrom: &february})
+		return a
+	}
+	importedFrom := func(c ports.ContractChild, from calendar.Date) ports.ContractChild {
+		c.StartsOn = from
+		return c
+	}
 	key := ContractKey{SchoolID: linkSchoolNorth, RequestChildID: 81}
 	booked := calendar.NewDate(2026, 12, 1)
 	cases := []struct {
@@ -316,6 +342,8 @@ func TestCoveredByImportCoversTheChildOfARunningImportedContract(t *testing.T) {
 			imported(linkPtr(linkMia), "Mia", nil, importDay(2027, 7, 31), carecontract.StatusActive), false},
 		{"ended before today, but the booked care began before its end", application(81, linkPtr(linkMia), "Mia", nil, calendar.NewDate(2026, 9, 1)),
 			imported(linkPtr(linkMia), "Mia", nil, importDay(2026, 10, 31), carecontract.StatusEnded), true},
+		{"an approved booking to come reaches the import's start", withLaterBooking(application(81, linkPtr(linkMia), "Mia", nil, calendar.NewDate(2026, 6, 1))),
+			importedFrom(imported(linkPtr(linkMia), "Mia", nil, nil, carecontract.StatusActive), calendar.NewDate(2027, 2, 1)), true},
 		{"withdrawn", application(81, linkPtr(linkMia), "Mia", nil, booked),
 			imported(linkPtr(linkMia), "Mia", nil, nil, carecontract.StatusWithdrawn), false},
 		{"ended", application(81, linkPtr(linkMia), "Mia", nil, booked),

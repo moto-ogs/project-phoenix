@@ -145,7 +145,7 @@ func importCovers(read schoolRead, application carecontract.Application, contrac
 	if len(care.services) == 0 {
 		return 0, false
 	}
-	from, until := care.effectiveFrom(application, today), lastDay(care.until)
+	from, until := care.effectiveFrom(application, today), bookedUntil(read, application, lastDay(care.until))
 	var named int64
 	for _, contract := range contracts {
 		if !importedContractOf(read.school.ID, application, contract) || !periodsOverlap(from, until, contract.StartsOn, contract.EndsOn) {
@@ -159,6 +159,30 @@ func importCovers(read schoolRead, application carecontract.Application, contrac
 		}
 	}
 	return named, named > 0
+}
+
+// bookedUntil is the last day any approved booking of the child's care
+// holds, nil for an open one, and at least until: the contract made today
+// follows the approved bookings to come (AmendFromBookings), so a booking
+// that begins later, as a change of module next month, counts for what an
+// imported contract covers.
+func bookedUntil(read schoolRead, application carecontract.Application, until *calendar.Date) *calendar.Date {
+	if until == nil {
+		return nil
+	}
+	last := *until
+	for _, booking := range application.Bookings {
+		if _, care := read.offerings[booking.CareOfferingID]; !care {
+			continue
+		}
+		if booking.ValidUntil == nil {
+			return nil
+		}
+		if end := lastDay(booking.ValidUntil); end.After(last) {
+			last = *end
+		}
+	}
+	return &last
 }
 
 // importedContractOf tells whether an imported contract is the application
