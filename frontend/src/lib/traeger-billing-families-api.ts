@@ -386,6 +386,9 @@ export function withFamilyChildren(
   const known = new Set(families.map((family) => family.familyEmail));
   for (const family of children) {
     if (known.has(family.familyEmail)) continue;
+    // Known only by a child's number: without the children it has nothing
+    // to show and no contract to open, so it joins only a per-child list.
+    if (!perChild && !family.contractId) continue;
     listed.push({
       id: "0",
       recipientFirstName: family.recipientFirstName,

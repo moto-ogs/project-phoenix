@@ -205,4 +205,24 @@ describe("the family's own payment method and contract (#7770)", () => {
       hasDocuments: false,
     });
   });
+  it("keeps contract families and drops number-only families per payer", () => {
+    const families = withFamilyChildren(
+      [LISTED],
+      [
+        { ...CHILDREN, contractId: "11", familyEmail: "ben@example.org" },
+        { ...CHILDREN, contractId: undefined, familyEmail: "nur@example.org" },
+      ],
+      false,
+    );
+    // The family with a contract joins without children and is marked as
+    // known by its contract alone; the one known only by a child's number
+    // has nothing to show per payer.
+    expect(families.map((family) => family.familyEmail)).toEqual([
+      LISTED.familyEmail,
+      "ben@example.org",
+    ]);
+    expect(families[1]).toMatchObject({ contractId: "11", contractOnly: true });
+    expect(families[1]?.children).toBeUndefined();
+    expect(families[0]?.children).toBeUndefined();
+  });
 });
