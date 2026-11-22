@@ -51,13 +51,8 @@ func (seedTraegerSchoolChangeStep) Run(ctx context.Context, rt *Runtime) error {
 		return err
 	}
 	school := int64(manual.School.ID)
-	adminAuth, err := rt.Adapter.LoginTenant(ctx, manual.Credentials.SchoolAdmin.Email, manual.Credentials.SchoolAdmin.Password, manual.School.TenantSlug)
-	if err != nil {
-		return fmt.Errorf("sign in the admin of the Demo-Schule Manuell: %w", err)
-	}
-	// A repeated seed finds the phase of the change again and moves no
-	// second child.
-	if done, err := seedSchoolChangeDone(rt.Client, adminAuth); err != nil || done {
+	adminAuth, done, err := seedSchoolChangeAdmin(ctx, rt, manual)
+	if err != nil || done {
 		return err
 	}
 	old, ok, err := seedSchoolChangeContract(rt.Client, auth, rt.Bootstrap.SchoolID, month)
@@ -262,6 +257,18 @@ func withSchoolChangeEnrollment(rt *Runtime, auth AuthRef, enroll func() error) 
 		}
 	}
 	return enroll()
+}
+
+// seedSchoolChangeAdmin signs in the admin of the Demo-Schule Manuell; done
+// is true when an earlier seed took a child in already, so a repeated seed
+// moves no second child.
+func seedSchoolChangeAdmin(ctx context.Context, rt *Runtime, manual *SeedProfile) (AuthRef, bool, error) {
+	adminAuth, err := rt.Adapter.LoginTenant(ctx, manual.Credentials.SchoolAdmin.Email, manual.Credentials.SchoolAdmin.Password, manual.School.TenantSlug)
+	if err != nil {
+		return AuthRef{}, false, fmt.Errorf("sign in the admin of the Demo-Schule Manuell: %w", err)
+	}
+	done, err := seedSchoolChangeDone(rt.Client, adminAuth)
+	return adminAuth, done, err
 }
 
 // seedSchoolChangePhase is the phase the Demo-Schule Manuell takes the
