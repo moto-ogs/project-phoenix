@@ -5,15 +5,12 @@
 // angemeldete Person. Archivierte Arten bleiben lesbar, weil eingetragene
 // Nachweise auf sie zeigen.
 
-import { apiErrorFromResponse } from "./api-error";
+import { bffJson } from "./bff-fetch";
 import { knownEnum } from "./contract/known-enum";
 import type {
   QualificationEntryResponse,
-  QualificationOverviewResponse,
   QualificationTypeResponse,
-  TraegerProofResponse,
 } from "./contract/staff.generated";
-import { sessionFetch } from "./session-cache";
 
 export type QualificationStatus =
   "valid" | "expiring_soon" | "expired" | "missing";
@@ -105,66 +102,61 @@ function mapEntry(data: QualificationEntryResponse): QualificationEntry {
   };
 }
 
-async function readData<T>(response: Response, fallback: string): Promise<T> {
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, fallback);
-  }
-  const json = (await response.json()) as { data: T };
-  return json.data;
-}
-
-function typeBody(input: QualificationTypeInput): string {
-  return JSON.stringify({
+function typeBody(input: QualificationTypeInput) {
+  return {
     name: input.name,
     validity_months: input.validityMonths,
     reminder_lead_weeks: input.reminderLeadWeeks,
     mandatory: input.mandatory,
     archived: input.archived,
-  });
+  };
 }
 
 class StaffQualificationService {
   async listTypes(): Promise<QualificationType[]> {
-    const data = await readData<QualificationTypeResponse[]>(
-      await sessionFetch("/api/staff/qualification-types"),
-      "Nachweisarten konnten nicht geladen werden",
+    const types = await bffJson(
+      "tenant",
+      "GET /api/staff/qualification-types",
+      {
+        errorMessage: "Nachweisarten konnten nicht geladen werden",
+      },
     );
-    return data.map(mapQualificationType);
+    return types.map(mapQualificationType);
   }
 
   async createType(input: QualificationTypeInput): Promise<QualificationType> {
-    const data = await readData<QualificationTypeResponse>(
-      await sessionFetch("/api/staff/qualification-types", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+    const type = await bffJson(
+      "tenant",
+      "POST /api/staff/qualification-types",
+      {
         body: typeBody(input),
-      }),
-      "Nachweisart konnte nicht gespeichert werden",
+        errorMessage: "Nachweisart konnte nicht gespeichert werden",
+      },
     );
-    return mapQualificationType(data);
+    return mapQualificationType(type);
   }
 
   async updateType(
     id: string,
     input: QualificationTypeInput,
   ): Promise<QualificationType> {
-    const data = await readData<QualificationTypeResponse>(
-      await sessionFetch(`/api/staff/qualification-types/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
+    const type = await bffJson(
+      "tenant",
+      "PUT /api/staff/qualification-types/{typeId}",
+      {
+        params: { typeId: id },
         body: typeBody(input),
-      }),
-      "Nachweisart konnte nicht gespeichert werden",
+        errorMessage: "Nachweisart konnte nicht gespeichert werden",
+      },
     );
-    return mapQualificationType(data);
+    return mapQualificationType(type);
   }
 
   async overview(): Promise<QualificationOverviewRow[]> {
-    const data = await readData<QualificationOverviewResponse[]>(
-      await sessionFetch("/api/staff/qualifications"),
-      "Nachweise konnten nicht geladen werden",
-    );
-    return data.map((row) => ({
+    const rows = await bffJson("tenant", "GET /api/staff/qualifications", {
+      errorMessage: "Nachweise konnten nicht geladen werden",
+    });
+    return rows.map((row) => ({
       ...mapEntry(row),
       firstName: row.first_name,
       lastName: row.last_name,
@@ -172,20 +164,27 @@ class StaffQualificationService {
   }
 
   async staffEntries(staffId: string): Promise<QualificationEntry[]> {
-    const data = await readData<QualificationEntryResponse[]>(
-      await sessionFetch(`/api/staff/${staffId}/qualifications`),
-      "Nachweise konnten nicht geladen werden",
+    const entries = await bffJson(
+      "tenant",
+      "GET /api/staff/{id}/qualifications",
+      {
+        params: { id: staffId },
+        errorMessage: "Nachweise konnten nicht geladen werden",
+      },
     );
-    return data.map(mapEntry);
+    return entries.map(mapEntry);
   }
 
-  /** Der Stand der Nachweise, die der Träger für die Person führt (#4707). */
   async traegerProofs(staffId: string): Promise<TraegerProofStatus[]> {
-    const data = await readData<TraegerProofResponse[]>(
-      await sessionFetch(`/api/staff/${staffId}/traeger-proofs`),
-      "Nachweise des Trägers konnten nicht geladen werden",
+    const proofs = await bffJson(
+      "tenant",
+      "GET /api/staff/{id}/traeger-proofs",
+      {
+        params: { id: staffId },
+        errorMessage: "Nachweise des Trägers konnten nicht geladen werden",
+      },
     );
-    return data.map((proof) => ({
+    return proofs.map((proof) => ({
       typeName: proof.type_name,
       status: status(proof.status),
       expiresOn: proof.expires_on ?? "",
@@ -193,11 +192,14 @@ class StaffQualificationService {
   }
 
   async ownEntries(): Promise<QualificationEntry[]> {
-    const data = await readData<QualificationEntryResponse[]>(
-      await sessionFetch("/api/staff/me/qualifications"),
-      "Nachweise konnten nicht geladen werden",
+    const entries = await bffJson(
+      "tenant",
+      "GET /api/staff/me/qualifications",
+      {
+        errorMessage: "Nachweise konnten nicht geladen werden",
+      },
     );
-    return data.map(mapEntry);
+    return entries.map(mapEntry);
   }
 }
 
