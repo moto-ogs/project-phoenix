@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // HolidayRegistrationResource serves the public holiday registration
@@ -70,8 +71,8 @@ func (rs *HolidayRegistrationResource) Router() chi.Router {
 
 // HolidayRegistrationSchool is a school of the Träger a child may attend.
 type HolidayRegistrationSchool struct {
-	ID   common.ID `json:"id"`
-	Name string    `json:"name"`
+	ID   ident.ID `json:"id"`
+	Name string   `json:"name"`
 }
 
 // HolidayRegistrationTimeModel is a bookable care time of a week with its
@@ -79,16 +80,16 @@ type HolidayRegistrationSchool struct {
 // writes for this booking in the summary (#4664); sibling and exemption
 // rules apply only there.
 type HolidayRegistrationTimeModel struct {
-	ID         common.ID `json:"id"`
-	Name       string    `json:"name"`
-	StartsAt   string    `json:"starts_at"`
-	EndsAt     string    `json:"ends_at"`
-	PriceCents int       `json:"price_cents"`
+	ID         ident.ID `json:"id"`
+	Name       string   `json:"name"`
+	StartsAt   string   `json:"starts_at"`
+	EndsAt     string   `json:"ends_at"`
+	PriceCents int      `json:"price_cents"`
 }
 
 // HolidayRegistrationWeek is a bookable week with the name of its host school.
 type HolidayRegistrationWeek struct {
-	ID             common.ID                      `json:"id"`
+	ID             ident.ID                       `json:"id"`
 	StartsOn       calendar.Date                  `json:"starts_on"`
 	EndsOn         calendar.Date                  `json:"ends_on"`
 	HostSchoolName string                         `json:"host_school_name"`
@@ -164,8 +165,8 @@ type holidayAddressRequest struct {
 }
 
 type holidayBookingRequest struct {
-	WeekID      common.ID       `json:"week_id"`
-	TimeModelID common.ID       `json:"time_model_id"`
+	WeekID      ident.ID        `json:"week_id"`
+	TimeModelID ident.ID        `json:"time_model_id"`
 	Days        []calendar.Date `json:"days"`
 	// Lunch books lunch on the care days of the booking (#5631).
 	Lunch bool `json:"lunch"`
@@ -175,7 +176,7 @@ type holidayChildRequest struct {
 	FirstName       string                    `json:"first_name"`
 	LastName        string                    `json:"last_name"`
 	BirthDate       calendar.Date             `json:"birth_date"`
-	HomeSchoolID    common.ID                 `json:"home_school_id"`
+	HomeSchoolID    ident.ID                  `json:"home_school_id"`
 	GuestSchoolName string                    `json:"guest_school_name"`
 	Allergies       string                    `json:"allergies"`
 	Medication      string                    `json:"medication"`
@@ -291,7 +292,7 @@ func holidayContacts(contacts []holidayContactRequest) []capability.HolidayConta
 // HolidayRegistrationReceiptResponse confirms a stored registration without
 // repeating its personal data.
 type HolidayRegistrationReceiptResponse struct {
-	ID          common.ID `json:"id"`
+	ID          ident.ID  `json:"id"`
 	SubmittedAt time.Time `json:"submitted_at"`
 	// Placements say for every booking whether the child got a place or is
 	// on the waiting list (#4699), by the child's position in the form.

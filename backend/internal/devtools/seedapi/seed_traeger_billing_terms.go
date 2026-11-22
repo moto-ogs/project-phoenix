@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedBillingTerms gives the demo Träger who gets an invoice, how it is paid
@@ -53,8 +54,8 @@ func seedBillingTerms(client *Client, auth AuthRef, runID int64, month calendar.
 
 // seedRunInvoice is an invoice of the monthly run as the seed reads it.
 type seedRunInvoice = struct {
-	ContractID  apiID  `json:"contract_id"`
-	FamilyEmail string `json:"family_email"`
+	ContractID  ident.ID `json:"contract_id"`
+	FamilyEmail string   `json:"family_email"`
 	Recipient   struct {
 		LastName string `json:"last_name"`
 	} `json:"recipient"`
@@ -133,8 +134,8 @@ func seedSEPAMandates(client *Client, auth AuthRef, invoices []seedRunInvoice) e
 
 // seedImportedMandates imports the mandate of the first family, if any.
 func seedImportedMandates(client *Client, auth AuthRef, invoices []struct {
-	ContractID  apiID  `json:"contract_id"`
-	FamilyEmail string `json:"family_email"`
+	ContractID  ident.ID `json:"contract_id"`
+	FamilyEmail string   `json:"family_email"`
 	Recipient   struct {
 		LastName string `json:"last_name"`
 	} `json:"recipient"`
@@ -188,7 +189,7 @@ const (
 func seedReplacedMandate(client *Client, auth AuthRef, raw []byte, mandate map[string]any, contractID int64) error {
 	var created struct {
 		Data struct {
-			ID apiID `json:"id"`
+			ID ident.ID `json:"id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &created); err != nil {

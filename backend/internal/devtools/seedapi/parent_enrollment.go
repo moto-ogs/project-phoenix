@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type parentEnrollmentSeedStep struct {
@@ -242,7 +244,7 @@ func (s parentEnrollmentSeedStep) acceptGuardianInvitation(rt *Runtime, token, p
 	}
 	var resp struct {
 		Data struct {
-			AccountID apiID `json:"account_id"` // a decimal string (#2352)
+			AccountID ident.ID `json:"account_id"` // a decimal string (#2352)
 		} `json:"data"`
 	}
 	if err := parseJSON(respBody, &resp); err != nil {
@@ -974,8 +976,8 @@ func (s parentEnrollmentSeedStep) loadEnrollmentRequestDetail(rt *Runtime, auth 
 		Data struct {
 			StatusToken string `json:"status_token"`
 			Children    []struct {
-				ID               string `json:"id"`
-				CreatedStudentID any    `json:"created_student_id"`
+				ID               ident.ID  `json:"id"`
+				CreatedStudentID *ident.ID `json:"created_student_id"`
 			} `json:"children"`
 		} `json:"data"`
 	}
@@ -984,16 +986,12 @@ func (s parentEnrollmentSeedStep) loadEnrollmentRequestDetail(rt *Runtime, auth 
 	}
 	detail := enrollmentRequestDetail{StatusToken: resp.Data.StatusToken}
 	for _, child := range resp.Data.Children {
-		childID, err := strconv.ParseInt(child.ID, 10, 64)
-		if err != nil || childID == 0 {
-			return enrollmentRequestDetail{}, fmt.Errorf("enrollment request %d has invalid child id %q", requestID, child.ID)
+		if child.ID == 0 {
+			return enrollmentRequestDetail{}, fmt.Errorf("enrollment request %d has a child without id", requestID)
 		}
-		detail.ChildIDs = append(detail.ChildIDs, childID)
-		if child.CreatedStudentID != nil {
-			createdID, parseErr := parseSeedID(child.CreatedStudentID)
-			if parseErr == nil && createdID > 0 {
-				detail.CreatedStudentIDs = append(detail.CreatedStudentIDs, createdID)
-			}
+		detail.ChildIDs = append(detail.ChildIDs, int64(child.ID))
+		if child.CreatedStudentID != nil && *child.CreatedStudentID > 0 {
+			detail.CreatedStudentIDs = append(detail.CreatedStudentIDs, int64(*child.CreatedStudentID))
 		}
 	}
 	return detail, nil
@@ -1262,30 +1260,16 @@ func (s parentEnrollmentSeedStep) shareSeedPickupRequest(
 func parseEnvelopeStringID(respBody []byte) (int64, error) {
 	var resp struct {
 		Data struct {
-			ID any `json:"id"`
+			ID ident.ID `json:"id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(respBody, &resp); err != nil {
 		return 0, err
 	}
-	id, err := parseSeedID(resp.Data.ID)
-	if err != nil || id == 0 {
-		return 0, fmt.Errorf("invalid id %v", resp.Data.ID)
+	if resp.Data.ID == 0 {
+		return 0, fmt.Errorf("answer without id")
 	}
-	return id, nil
-}
-
-func parseSeedID(value any) (int64, error) {
-	switch v := value.(type) {
-	case string:
-		return strconv.ParseInt(v, 10, 64)
-	case float64:
-		return int64(v), nil
-	case json.Number:
-		return v.Int64()
-	default:
-		return 0, fmt.Errorf("unsupported id type %T", value)
-	}
+	return int64(resp.Data.ID), nil
 }
 
 func statusTokenFromURL(raw string) string {

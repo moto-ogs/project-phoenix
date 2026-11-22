@@ -183,14 +183,14 @@ func reconcilePickupFields(student *peopleModule.StudentState, status *string, d
 // Creating a student is governed by users:create, but attached weekly schedules
 // are writes to the same Betreuungszeiten records edited by the standalone PUT
 // endpoints. Keep that schedule write contract aligned: callers need
-// users:update and must resolve to a staff record so schedule rows always carry
-// a valid author. Both failure modes map to 403 at the call site.
+// users:update and must resolve to an author of Betreuungszeiten so schedule
+// rows always carry one. Both failure modes map to 403 at the call site.
 func (rs *Resource) resolveScheduleStaffID(r *http.Request, req *StudentRequest) (int64, error) {
 	if len(req.ArrivalSchedules) == 0 && len(req.PickupSchedules) == 0 {
 		return 0, nil
 	}
 	if !securityruntime.HasPermission(permissions.UsersUpdate, sessiontoken.PermissionsFromCtx(r.Context())) {
-		return 0, errors.New("users:update permission required to create student schedules")
+		return 0, errScheduleUpdatePermissionRequired
 	}
 	return rs.getStaffIDFromJWT(r)
 }
@@ -249,13 +249,13 @@ func (rs *Resource) persistNewStudent(ctx context.Context, person *peopleModule.
 // follow-up action on the child's card.
 func (rs *Resource) persistNewStudentAttachments(ctx context.Context, studentID int64, req *StudentRequest, staffID int64) error {
 	if len(req.ArrivalSchedules) > 0 {
-		arrivals := toArrivalScheduleModels(req.ArrivalSchedules, studentID, staffID)
+		arrivals := toArrivalScheduleModels(ctx, req.ArrivalSchedules, studentID, staffID)
 		if err := rs.ArrivalScheduleService.UpsertBulkStudentArrivalSchedules(ctx, studentID, arrivals); err != nil {
 			return err
 		}
 	}
 	if len(req.PickupSchedules) > 0 {
-		pickups := toPickupScheduleModels(req.PickupSchedules, studentID, staffID)
+		pickups := toPickupScheduleModels(ctx, req.PickupSchedules, studentID, staffID)
 		if err := rs.PickupScheduleService.UpsertBulkStudentPickupSchedules(ctx, studentID, pickups); err != nil {
 			return err
 		}
@@ -289,7 +289,7 @@ func (rs *Resource) createStudent(w http.ResponseWriter, r *http.Request) {
 
 	staffID, err := rs.resolveScheduleStaffID(r, req)
 	if err != nil {
-		renderError(w, r, common.ErrorForbidden(err))
+		renderScheduleAuthorError(w, r, err)
 		return
 	}
 

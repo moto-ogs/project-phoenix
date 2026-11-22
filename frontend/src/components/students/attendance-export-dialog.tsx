@@ -5,14 +5,13 @@ import { useEffect, useState } from "react";
 import { ExportDialog } from "~/components/ui/export-dialog";
 import { Input } from "~/components/ui/input";
 import { useExportRun } from "~/hooks/use-export-run";
-import { apiErrorFromResponse } from "~/lib/api-error";
+import { bffFile } from "~/lib/bff-fetch";
 import { formatDate, parseISODate, toISODate } from "~/lib/date-helpers";
 import {
   downloadBlob,
   filenameFromDisposition,
   openBlobForPrint,
 } from "~/lib/file-download";
-import { sessionFetch } from "~/lib/session-cache";
 
 type AttendanceExportFormat = "pdf" | "docx" | "xlsx";
 
@@ -35,13 +34,15 @@ async function downloadAttendanceExport(
   format: AttendanceExportFormat,
   printTarget?: Window,
 ): Promise<void> {
-  const params = new URLSearchParams({ format, from, to });
-  const response = await sessionFetch(
-    `/api/students/${encodeURIComponent(studentId)}/attendance-history/export?${params.toString()}`,
+  const response = await bffFile(
+    "tenant",
+    "GET /api/students/{id}/attendance-history/export",
+    {
+      params: { id: studentId },
+      query: { format, from, to },
+      errorMessage: "attendance export failed",
+    },
   );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, "attendance export failed");
-  }
   const blob = await response.blob();
   if (printTarget) {
     await openBlobForPrint(blob, printTarget);

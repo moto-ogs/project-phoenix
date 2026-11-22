@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/url"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -168,7 +169,7 @@ func (f *fixture) query() Query {
 func openRow(typ string, id int64, studentID int64, name string, at time.Time) Row {
 	return Row{
 		Type: typ, ID: id, StudentID: studentID, StudentName: name, SortTime: at, Status: "pending",
-		Version: at.UTC().Format(time.RFC3339Nano), Data: map[string]any{"id": id},
+		Version: at.UTC().Format(time.RFC3339Nano), Payload: markedPayload(id),
 	}
 }
 
@@ -176,7 +177,7 @@ func historyRow(typ string, id int64, studentID int64, name string, decidedAt ti
 	return Row{
 		Type: typ, ID: id, StudentID: studentID, StudentName: name, SortTime: decidedAt,
 		DecidedAt: decidedAt, Status: status, CanCorrect: status == "approved" || status == "rejected",
-		Data: map[string]any{"id": id},
+		Payload: markedPayload(id),
 	}
 }
 
@@ -239,18 +240,18 @@ func TestPendingCountUsesOneRequestDay(t *testing.T) {
 	assert.Equal(t, 1, calls)
 }
 
+// markedPayload carries the row id through the merge; the merge never reads
+// the projection.
+func markedPayload(id int64) Payload {
+	return Payload{DirectCorrection: &DirectCorrectionResponse{ID: strconv.FormatInt(id, 10)}}
+}
+
 func itemIDs(page Page) []string {
 	ids := make([]string, 0, len(page.Items))
 	for _, item := range page.Items {
-		data := item.Data.(map[string]any)
-		ids = append(ids, item.RequestType+":"+jsonNumber(data["id"]))
+		ids = append(ids, item.RequestType+":"+item.payload.DirectCorrection.ID)
 	}
 	return ids
-}
-
-func jsonNumber(v any) string {
-	raw, _ := json.Marshal(v)
-	return string(raw)
 }
 
 func TestNewRequiresQueuesAndAccess(t *testing.T) {
@@ -736,6 +737,7 @@ func TestItemWireShapeIsStable(t *testing.T) {
 	row.BulkEligible = true
 	row.ConflictKeys = []string{"absence:2026-08-10"}
 	row.SubmittedBy = 10
+	row.Payload = Payload{Excused: &StaffExcusedRequestResponse{ID: "1"}}
 	f.excused.open = []Row{row}
 	f.submitters = &fakeSubmitters{known: map[SubmitterKey]Submitter{{StudentID: 1, AccountID: 10}: {Name: "Klaus Adler", RelationshipType: "parent"}}}
 
@@ -743,7 +745,11 @@ func TestItemWireShapeIsStable(t *testing.T) {
 	require.NoError(t, err)
 	raw, err := json.Marshal(page)
 	require.NoError(t, err)
-	assert.JSONEq(t, `{
+	excused, err := json.Marshal(row.Payload.Excused)
+	require.NoError(t, err)
+	// The open projection travels in the member named like the type and,
+	// for one release, under the deprecated data member too.
+	assert.JSONEq(t, strings.ReplaceAll(`{
 		"items": [{
 			"request_type": "excused",
 			"occurred_at": "2026-08-10T12:00:00Z",
@@ -759,8 +765,43 @@ func TestItemWireShapeIsStable(t *testing.T) {
 			"family_protected": false,
 			"submitted_by_name": "Klaus Adler",
 			"submitted_by_relationship": "parent",
-			"data": {"id": 1}
+			"data": EXCUSED,
+			"excused": EXCUSED
 		}],
 		"review_access": "admin"
-	}`, string(raw))
+	}`, "EXCUSED", string(excused)), string(raw))
+}
+
+// The history envelope carries each decided row's history projection in the
+// member named like its type, and no untyped data (#7808).
+func TestHistoryPageCarriesEachProjectionInItsMember(t *testing.T) {
+	t.Parallel()
+	payloads := map[string]Payload{
+		TypeMasterData:       {MasterDataHistory: &MasterDataChangeRequestHistoryResponse{}},
+		TypeCareSchedule:     {CareScheduleHistory: &CareRequestHistoryResponse{}},
+		TypeOffering:         {OfferingHistory: &OfferingRequestHistoryResponse{}},
+		TypeExcused:          {ExcusedHistory: &StaffExcusedRequestHistoryResponse{}},
+		TypeDirectCorrection: {DirectCorrection: &DirectCorrectionResponse{}},
+	}
+	var page Page
+	for _, typ := range TypeOrder {
+		row := historyRow(typ, 1, 1, "Anna Adler", base, "approved")
+		row.Payload = payloads[typ]
+		page.Items = append(page.Items, newItem(&row))
+	}
+	history := HistoryPageOf(page)
+	require.Len(t, history.Items, len(TypeOrder))
+	for _, item := range history.Items {
+		raw, err := json.Marshal(item)
+		require.NoError(t, err)
+		var members map[string]json.RawMessage
+		require.NoError(t, json.Unmarshal(raw, &members))
+		assert.Contains(t, members, item.RequestType, "the projection of %s", item.RequestType)
+		assert.NotContains(t, members, "data")
+		for _, other := range TypeOrder {
+			if other != item.RequestType {
+				assert.NotContains(t, members, other, "a %s item carries no %s member", item.RequestType, other)
+			}
+		}
+	}
 }

@@ -5,8 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"strconv"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The demo day (#3921) keeps a weekday of a demo school plausible at any
@@ -75,25 +76,25 @@ func demoActivities(state *SeedState) []demoActivity {
 
 // demoBlock is one timetable block of today as the instance list returns it.
 type demoBlock struct {
-	ID              apiID   `json:"id"`
-	Date            string  `json:"date"`
-	StartTime       string  `json:"start_time"`
-	EndTime         string  `json:"end_time"`
-	Title           string  `json:"title"`
-	Description     *string `json:"description,omitempty"`
-	Notes           *string `json:"notes,omitempty"`
-	Status          string  `json:"status"`
-	IsSpontaneous   bool    `json:"is_spontaneous"`
-	ActivityGroupID *apiID  `json:"activity_group_id,omitempty"`
-	ListKind        *string `json:"list_kind,omitempty"`
-	RoomID          apiID   `json:"room_id"`
+	ID              ident.ID  `json:"id"`
+	Date            string    `json:"date"`
+	StartTime       string    `json:"start_time"`
+	EndTime         string    `json:"end_time"`
+	Title           string    `json:"title"`
+	Description     *string   `json:"description,omitempty"`
+	Notes           *string   `json:"notes,omitempty"`
+	Status          string    `json:"status"`
+	IsSpontaneous   bool      `json:"is_spontaneous"`
+	ActivityGroupID *ident.ID `json:"activity_group_id,omitempty"`
+	ListKind        *string   `json:"list_kind,omitempty"`
+	RoomID          ident.ID  `json:"room_id"`
 	Staff           []struct {
-		StaffID apiID `json:"staff_id"`
+		StaffID ident.ID `json:"staff_id"`
 	} `json:"staff"`
-	StudentIDs []apiID `json:"student_ids"`
+	StudentIDs []ident.ID `json:"student_ids"`
 	Students   []struct {
-		StudentID apiID  `json:"student_id"`
-		Status    string `json:"status"`
+		StudentID ident.ID `json:"student_id"`
+		Status    string   `json:"status"`
 	} `json:"students"`
 }
 
@@ -466,10 +467,10 @@ func (day *demoDay) writeTimeException(client Client, studentID int64, kind stri
 	var envelope struct {
 		Data struct {
 			Exceptions []struct {
-				ID            apiID  `json:"id"`
-				ExceptionDate string `json:"exception_date"`
-				Reason        string `json:"reason"`
-				Source        string `json:"source"`
+				ID            ident.ID `json:"id"`
+				ExceptionDate string   `json:"exception_date"`
+				Reason        string   `json:"reason"`
+				Source        string   `json:"source"`
 			} `json:"exceptions"`
 		} `json:"data"`
 	}
@@ -506,10 +507,10 @@ func (day *demoDay) settlePickupTasks(client Client, moved map[int64]string) {
 	var envelope struct {
 		Data struct {
 			Tasks []struct {
-				ID         apiID  `json:"id"`
-				StudentID  apiID  `json:"student_id"`
-				Date       string `json:"date"`
-				PickupTime string `json:"pickup_time"`
+				ID         ident.ID `json:"id"`
+				StudentID  ident.ID `json:"student_id"`
+				Date       string   `json:"date"`
+				PickupTime string   `json:"pickup_time"`
 			} `json:"tasks"`
 		} `json:"data"`
 	}
@@ -780,26 +781,4 @@ func (day *demoDay) present(studentID int64, minute int) bool {
 func (day *demoDay) pickedUp(studentID int64, minute int) bool {
 	times, ok := day.times[studentID]
 	return ok && times.arrival >= 0 && times.pickup >= 0 && minute >= times.pickup && !day.home[studentID]
-}
-
-func blockMinutes(block demoBlock) (int, int, bool) {
-	start, end := minutesOf(&block.StartTime), minutesOf(&block.EndTime)
-	return start, end, start >= 0 && end > start
-}
-
-// minutesOf parses HH:MM or HH:MM:SS; -1 for nil or malformed.
-func minutesOf(clock *string) int {
-	if clock == nil || len(*clock) < 5 || (*clock)[2] != ':' {
-		return -1
-	}
-	hours, errHours := strconv.Atoi((*clock)[:2])
-	minutes, errMinutes := strconv.Atoi((*clock)[3:5])
-	if errHours != nil || errMinutes != nil || hours > 23 || minutes > 59 {
-		return -1
-	}
-	return hours*60 + minutes
-}
-
-func clockOf(minutes int) string {
-	return fmt.Sprintf("%02d:%02d", minutes/60, minutes%60)
 }

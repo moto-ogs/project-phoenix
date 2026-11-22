@@ -29,7 +29,7 @@ func PhaseRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/{id}/manual-bootstrap", Portals: portals, Response: PublicEnrollmentFormBootstrapResponse{}},
 		{Method: "POST", Pattern: "/{id}/late-invites", Portals: portals, Request: AdminCreateLateInviteRequest{}, Response: AdminCreateLateInviteResponse{}},
 		{Method: "POST", Pattern: "/{id}/manual-approved-enrollments", Portals: portals, Request: AdminManualApprovedEnrollmentRequest{}, Response: AdminManualApprovedEnrollmentResponse{}},
-		{Method: "POST", Pattern: "/{id}/export", Portals: portals, File: true},
+		{Method: "POST", Pattern: "/{id}/export", Portals: portals, Request: phaseExportRequest{}, File: true},
 	}
 }
 
@@ -44,14 +44,10 @@ func ConfigRouteContracts() []common.RouteContract {
 	}
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/schema/", Portals: portals, Response: FormSchemaResponse{}},
-		// The bodies of POST and PUT carry the form's own fields and legal
-		// blocks, the Enrollment types the answer carries; a type the
-		// generator walks once as a request and once as a response it
-		// refuses, so those bodies stay unregistered (#7563).
-		{Method: "POST", Pattern: "/schema/", Portals: portals, Response: FormSchemaResponse{}},
+		{Method: "POST", Pattern: "/schema/", Portals: portals, Request: PublishSchemaRequest{}, Response: FormSchemaResponse{}},
 		{Method: "GET", Pattern: "/schema/versions", Portals: portals, Response: []FormSchemaResponse{}},
 		{Method: "GET", Pattern: "/schema/preview", Portals: portals, Query: preview, Response: SchemaPreviewBootstrapResponse{}},
-		{Method: "PUT", Pattern: "/schema/{id}", Portals: portals, Response: FormSchemaResponse{}},
+		{Method: "PUT", Pattern: "/schema/{id}", Portals: portals, Request: UpdateSchemaRequest{}, Response: FormSchemaResponse{}},
 		{Method: "PATCH", Pattern: "/schema/{id}", Portals: portals, Request: RenameSchemaRequest{}, Response: FormSchemaResponse{}},
 		{Method: "DELETE", Pattern: "/schema/{id}", Portals: portals, NoData: true},
 		{Method: "DELETE", Pattern: "/legal-documents/{filename}", Portals: portals, NoData: true},
@@ -96,7 +92,7 @@ func AdminRequestRouteContracts() []common.RouteContract {
 		{Method: "PUT", Pattern: "/admin/requests/{id}/children/{childId}/offerings", Portals: portals, Request: AdminUpdateOfferingsRequest{}, Response: AdminChildOfferingsResponse{}},
 		{Method: "GET", Pattern: "/admin/requests/{id}/children/{childId}/offering-adjustments", Portals: portals, Response: []AdminOfferingAdjustment{}},
 		{Method: "GET", Pattern: "/admin/students/{studentId}/requests/", Portals: portals, Response: []AdminRequestSummary{}},
-		{Method: "POST", Pattern: "/admin/students/{studentId}/requests/export", Portals: portals, File: true},
+		{Method: "POST", Pattern: "/admin/students/{studentId}/requests/export", Portals: portals, Request: phaseExportRequest{}, File: true},
 	}
 }
 
@@ -126,8 +122,8 @@ func AdminReviewRouteContracts() []common.RouteContract {
 		{Method: "POST", Pattern: "/admin/change-requests/{id}/approve", Portals: portals, Request: ReviewChangeRequestRequest{}, Response: ChangeRequestResponse{}},
 		{Method: "POST", Pattern: "/admin/change-requests/{id}/reject", Portals: portals, Request: ReviewChangeRequestRequest{}, Response: ChangeRequestResponse{}},
 		{Method: "GET", Pattern: "/admin/reports/care-usage", Portals: portals, Query: usage, Response: CareUsageReportResponse{}},
-		{Method: "POST", Pattern: "/admin/reports/care-usage/export", Portals: portals, File: true},
-		{Method: "POST", Pattern: "/admin/reports/class-roster/export", Portals: portals, File: true},
+		{Method: "POST", Pattern: "/admin/reports/care-usage/export", Portals: portals, Request: careUsageExportRequest{}, File: true},
+		{Method: "POST", Pattern: "/admin/reports/class-roster/export", Portals: portals, Request: classRosterExportRequest{}, File: true},
 	}
 }
 

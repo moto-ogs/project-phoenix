@@ -2,6 +2,7 @@ package studentpresencehttp_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -206,29 +207,61 @@ func TestSchoolCheckin_NonSupervisingStaffAllowed(t *testing.T) {
 	require.Equal(t, http.StatusOK, rr.Code, "body: %s", rr.Body.String())
 }
 
-// TestSchoolCheckin_AccountWithoutStaffRecordDenied is the surviving guard: an
-// account holding users:checkin without a staff record in the tenant (guest,
-// guardian) has no identity to attribute the attendance row to and stays out.
+// TestSchoolCheckin_AccountWithoutStaffRecordDenied is the surviving guard:
+// checking children in and out stays with the school's own staff, because the
+// attendance row names the person responsible on site (ADR 0089). An account
+// without a staff record in the tenant (guest, a school admin without a staff
+// profile, a session the Träger-Büro opened through the Absprung) is refused
+// with its own code (#7818), not with 401 or a generic 403, and nothing is
+// written.
 func TestSchoolCheckin_AccountWithoutStaffRecordDenied(t *testing.T) {
 	t.Parallel()
 
 	tc := setupStudentsRoute(t)
+	_ = testpkg.EnsureWebManualDevice(t, tc.db)
 
 	student := testpkg.CreateTestStudent(t, tc.db, "Denied", "Target", "3d")
-	guest := testpkg.CreateTestAccount(t, tc.db, "school-checkin-guest@example.com")
+	account := func(name string) int {
+		return int(testpkg.CreateTestAccount(t, tc.db, fmt.Sprintf("school-checkin-%s-%d@example.com", name, testpkg.UniqueSuffix())).ID)
+	}
+	guest := testutil.AdminTestClaims(account("guest"))
+	guest.Roles, guest.IsAdmin = []string{"user"}, false
+	admin := testutil.AdminTestClaims(account("admin"))
+	_, personAccount := testpkg.CreateTestPersonWithAccount(t, tc.db, "Admin", "OhnePersonal")
+	adminWithPerson := testutil.AdminTestClaims(int(personAccount.ID))
+	traeger := testutil.AdminTestClaims(account("traeger"))
+	traeger.ViaTraeger = true
 
-	bodyBytes, _ := json.Marshal(map[string]string{"action": "in"})
-	req := testutil.NewRequest("POST", fmt.Sprintf("/%d/school-checkin", student.ID), bytesReader(bodyBytes))
-	req.Header.Set("Content-Type", "application/json")
+	callers := map[string]struct {
+		claims testpkg.Claims
+		perms  []string
+	}{
+		"guest with users:checkin":    {guest, []string{"users:checkin"}},
+		"admin without person":        {admin, []string{"admin:*"}},
+		"admin with person, no staff": {adminWithPerson, []string{"admin:*"}},
+		"Träger session via Absprung": {traeger, []string{"admin:*"}},
+	}
+	requests := map[string]struct{ path, body string }{
+		"check-in":       {fmt.Sprintf("/%d/school-checkin", student.ID), `{"action":"in"}`},
+		"check-out":      {fmt.Sprintf("/%d/school-checkin", student.ID), `{"action":"out"}`},
+		"batch check-in": {"/school-checkin/batch", fmt.Sprintf(`{"action":"in","student_ids":["%d"]}`, student.ID)},
+	}
+	for name, caller := range callers {
+		for action, request := range requests {
+			req := testutil.NewRequest("POST", request.path, bytesReader([]byte(request.body)))
+			req.Header.Set("Content-Type", "application/json")
 
-	claims := testutil.AdminTestClaims(int(guest.ID))
-	claims.Roles = []string{"user"}
-	claims.IsAdmin = false
-	claims.Permissions = []string{"users:checkin"}
+			rr := authExec(t, tc, req, caller.claims, caller.perms)
 
-	rr := authExec(t, tc, req, claims, []string{"users:checkin"})
+			require.Equalf(t, http.StatusForbidden, rr.Code, "%s, %s: %s", name, action, rr.Body.String())
+			assert.Containsf(t, rr.Body.String(), `"code":"attendance.checkin_staff_profile_required"`, "%s, %s", name, action)
+		}
+	}
 
-	require.Equal(t, http.StatusForbidden, rr.Code, "body: %s", rr.Body.String())
+	var rows int
+	require.NoError(t, tc.db.NewRaw(`SELECT count(*) FROM active.attendance WHERE student_id = ?`, student.ID).
+		Scan(context.Background(), &rows))
+	assert.Zero(t, rows, "a refused check-in or check-out must not write attendance")
 }
 
 func TestSchoolCheckin_InvalidAction_Rejects(t *testing.T) {

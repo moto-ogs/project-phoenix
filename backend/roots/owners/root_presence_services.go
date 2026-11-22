@@ -83,7 +83,6 @@ func BuildActivePresence(
 		PrincipalReader: principal, SchoolPresence: presence.Presence,
 		StudentDisplay: presencePeople.StudentDisplay, GroupRepo: sessionGroups, SessionStartLock: presence.Presence,
 		SupervisorRepo: sessionSupervisors, StudentStatusRepo: carePlanRows.StatusDays,
-		CrossTenantRepo: presencePeople.CrossTenantStudents, Schools: presencePeople.PresenceSchools,
 		StudentRepo: presencePeople.PresenceStudents, StaffRepo: presence.AttendanceStaff,
 		RoomRepo:      facilitiesCompose.NewAttendanceRooms(facilitiesCompose.NewRoomRecords(rooms)),
 		YardRoomColor: facilitiesModule.YardRoomColor(rooms), ActivityGroupRepo: presence.AttendanceActivities,

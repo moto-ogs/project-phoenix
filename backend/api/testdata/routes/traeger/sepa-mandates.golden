@@ -7,4 +7,3 @@ POST /traeger/sepa-mandates/
 POST /traeger/sepa-mandates/imports
 POST /traeger/sepa-mandates/imports/preview
 POST /traeger/sepa-mandates/{id}/revoke
-PUT /traeger/sepa-mandates/{id}

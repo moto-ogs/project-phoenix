@@ -16,7 +16,9 @@ describe("POST /api/operator/auth/invitations/session", () => {
     const response = await POST(request);
 
     expect(response.status).toBe(201);
-    const body = (await response.json()) as { flow_id: string };
+    const { data: body } = (await response.json()) as {
+      data: { flow_id: string };
+    };
     expect(body.flow_id).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
     );
@@ -43,8 +45,10 @@ describe("POST /api/operator/auth/invitations/session", () => {
 
     const responseA = await POST(createRequest("token-a"));
     const responseB = await POST(createRequest("token-b"));
-    const flowA = ((await responseA.json()) as { flow_id: string }).flow_id;
-    const flowB = ((await responseB.json()) as { flow_id: string }).flow_id;
+    const flowA = ((await responseA.json()) as { data: { flow_id: string } })
+      .data.flow_id;
+    const flowB = ((await responseB.json()) as { data: { flow_id: string } })
+      .data.flow_id;
 
     expect(flowA).not.toBe(flowB);
     expect(responseA.headers.get("set-cookie")).toContain(

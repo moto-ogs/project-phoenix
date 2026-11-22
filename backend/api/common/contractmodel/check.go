@@ -44,6 +44,11 @@ func (d Document) Violations(route Route, answer Answer) []string {
 	if route.NoData && len(body) == 0 {
 		return nil
 	}
+	if route.Plain {
+		// The data is the whole body; a route file reads it.
+		c.value("body", *route.Response, body)
+		return c.found
+	}
 	var envelope map[string]json.RawMessage
 	if err := json.Unmarshal(body, &envelope); err != nil {
 		return []string{"the body is not a JSON object: " + err.Error()}

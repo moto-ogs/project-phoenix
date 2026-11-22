@@ -6,12 +6,8 @@ import {
 } from "./runtime";
 import {
   SettingsSchemaSchema,
+  type setValueRequest,
 } from "./shared.generated";
-
-/** Go: settingshttp.setValueRequest */
-export interface setValueRequest {
-  value?: unknown | null;
-}
 
 export const routes = {
   "DELETE /traeger/settings/values/{key}": {

@@ -459,6 +459,8 @@ describe("PickupTimeModal — failed preload guard", () => {
         departureModeEnabled
         pickupChangeRequests={[
           {
+            is_self: true,
+            signed: false,
             id: "7",
             date: todayISO(),
             pickup_time: null,
@@ -546,6 +548,9 @@ describe("PickupTimeModal — failed preload guard", () => {
                 id: entry.date,
                 status: "approved",
                 created_at: "2026-09-09T08:00:00Z",
+                departure_mode: null,
+                is_self: true,
+                signed: false,
               }))
             : [],
       });
@@ -565,6 +570,9 @@ describe("PickupTimeModal — failed preload guard", () => {
     const update = vi
       .spyOn(parentApi, "updatePickupChangeRequest")
       .mockResolvedValue({
+        departure_mode: null,
+        is_self: true,
+        signed: false,
         id: "request-edit",
         date: "2026-09-10",
         pickup_time: "14:30",
@@ -583,6 +591,9 @@ describe("PickupTimeModal — failed preload guard", () => {
         onRemove={vi.fn()}
         pickupChangeRequests={[
           {
+            departure_mode: null,
+            is_self: true,
+            signed: false,
             id: "request-edit",
             date: todayISO(),
             pickup_time: "14:30",
@@ -619,6 +630,9 @@ describe("PickupTimeModal — failed preload guard", () => {
         careExceptions={[]}
         pickupChangeRequests={[
           {
+            departure_mode: null,
+            is_self: true,
+            signed: false,
             id: "request-1",
             date: todayISO(),
             pickup_time: "14:30",
@@ -665,6 +679,9 @@ describe("PickupTimeModal — failed preload guard", () => {
         careExceptions={[]}
         pickupChangeRequests={[
           {
+            departure_mode: null,
+            is_self: true,
+            signed: false,
             id: "request-2",
             date: pendingDay,
             pickup_time: "14:30",
@@ -886,6 +903,8 @@ describe("PickupTimeModal — Änderungsfrist für heute", () => {
   };
 
   const todayPendingRequest = {
+    departure_mode: null,
+    signed: false,
     id: "41",
     date: todayISO(),
     pickup_time: "14:00",
@@ -2057,6 +2076,7 @@ describe("useChildCare reportSick", () => {
     const submitSickNote = vi
       .spyOn(parentApi, "submitSickNote")
       .mockResolvedValue({
+        pending_request: null,
         status_days: [
           {
             id: "1",
@@ -2232,7 +2252,10 @@ describe("useChildCare studentId switch", () => {
       new Error("no features"),
     );
     // Defer the sick-note resolution so we can switch children mid-submit.
-    let resolveSubmit!: (v: { status_days: StatusDay[] }) => void;
+    let resolveSubmit!: (v: {
+      pending_request: null;
+      status_days: StatusDay[];
+    }) => void;
     vi.spyOn(parentApi, "submitSickNote").mockReturnValue(
       new Promise((res) => {
         resolveSubmit = res;
@@ -2271,6 +2294,7 @@ describe("useChildCare studentId switch", () => {
     // keeps showing its own pickup rather than flipping to "absent".
     await act(async () => {
       resolveSubmit({
+        pending_request: null,
         status_days: [
           {
             id: "1",
@@ -2458,6 +2482,18 @@ describe("Fehlerweg der Dialoge (#2518)", () => {
       new ApiError("diag", 503, { code: "general.unavailable" }),
     );
     vi.spyOn(parentApi, "getChildFeatures").mockResolvedValue({
+      conference_book_allowed: false,
+      care_ended: false,
+      sick_requires_approval: false,
+      excused_requires_approval: false,
+      pickup_change_mode_enabled: false,
+      pickup_change_cutoff_time: "",
+      pickup_change_today_closed: false,
+      pickup_change_care_day_ended: false,
+      emergency_contact_manage_allowed: false,
+      absence_request_edit_enabled: false,
+      reason_required: false,
+      care_facility_term: "",
       sick_note_enabled: false,
       excused_note_enabled: false,
 
@@ -2755,6 +2791,7 @@ describe("PickupTimeModal, Abholperson an einem Tag", () => {
         pickupChangeEnabled
         pickupChangeRequests={[
           {
+            is_self: true,
             id: "request-collector",
             date: todayISO(),
             pickup_time: null,
@@ -2797,6 +2834,7 @@ describe("PickupTimeModal, Abholperson an einem Tag", () => {
         pickupChangeEnabled
         pickupChangeRequests={[
           {
+            is_self: true,
             id: "request-collector",
             date: todayISO(),
             pickup_time: null,

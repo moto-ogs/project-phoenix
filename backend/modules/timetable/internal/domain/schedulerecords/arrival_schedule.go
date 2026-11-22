@@ -47,7 +47,10 @@ type StudentArrivalSchedule struct {
 	// set value is a deliberate per-child deviation and wins over the class.
 	ExpectedArrival time.Time `bun:"expected_arrival,nullzero" json:"expected_arrival,omitzero"`
 	Notes           *string   `bun:"notes" json:"notes,omitempty"`
-	CreatedBy       int64     `bun:"created_by,notnull" json:"created_by"`
+	CreatedBy       int64     `bun:"created_by,nullzero" json:"created_by"`
+	// EnteredByTraeger marks a row a person of the Träger-Büro entered
+	// (#7766); CreatedBy is then 0.
+	EnteredByTraeger bool `bun:"entered_by_traeger,notnull,default:false" json:"entered_by_traeger,omitempty"`
 
 	// Source and SourceClass are hydrated on read-time projections only and
 	// have no column: "staff" marks a stored manual override, "class_schedule"
@@ -68,7 +71,7 @@ func (s *StudentArrivalSchedule) Validate() error {
 	if s.Weekday < WeekdayMonday || s.Weekday > WeekdayFriday {
 		return errors.New("weekday must be between 1 (Monday) and 5 (Friday)")
 	}
-	if s.CreatedBy <= 0 {
+	if s.CreatedBy <= 0 && !s.EnteredByTraeger {
 		return errors.New(errMsgArrivalCreatedByRequired)
 	}
 	if s.Notes != nil && len(*s.Notes) > scheduleNotesMaxLength {
@@ -97,13 +100,16 @@ type StudentArrivalException struct {
 	Model `bun:"schema:schedule,table:student_arrival_exceptions"`
 	TenantModel
 
-	StudentID         int64         `bun:"student_id,notnull" json:"student_id"`
-	ExceptionDate     calendar.Date `bun:"exception_date,notnull" json:"exception_date"`
-	ExpectedArrival   *time.Time    `bun:"expected_arrival" json:"expected_arrival,omitempty"`
-	Reason            *string       `bun:"reason" json:"reason,omitempty"`
-	Source            string        `bun:"source,nullzero,notnull,default:'staff'" json:"source"`
-	CreatedBy         int64         `bun:"created_by,nullzero" json:"created_by,omitempty"`
-	CreatedByGuardian *int64        `bun:"created_by_guardian,nullzero" json:"created_by_guardian,omitempty"`
+	StudentID       int64         `bun:"student_id,notnull" json:"student_id"`
+	ExceptionDate   calendar.Date `bun:"exception_date,notnull" json:"exception_date"`
+	ExpectedArrival *time.Time    `bun:"expected_arrival" json:"expected_arrival,omitempty"`
+	Reason          *string       `bun:"reason" json:"reason,omitempty"`
+	Source          string        `bun:"source,nullzero,notnull,default:'staff'" json:"source"`
+	CreatedBy       int64         `bun:"created_by,nullzero" json:"created_by,omitempty"`
+	// EnteredByTraeger marks a row a person of the Träger-Büro entered
+	// (#7766); CreatedBy is then 0.
+	EnteredByTraeger  bool   `bun:"entered_by_traeger,notnull,default:false" json:"entered_by_traeger,omitempty"`
+	CreatedByGuardian *int64 `bun:"created_by_guardian,nullzero" json:"created_by_guardian,omitempty"`
 }
 
 // Validate ensures arrival exception data is valid
@@ -117,7 +123,7 @@ func (e *StudentArrivalException) Validate() error {
 	if e.Reason != nil && utf8.RuneCountInString(*e.Reason) > scheduleReasonMaxLength {
 		return errors.New("reason cannot exceed 255 characters")
 	}
-	if err := validateExceptionAuthor(e.Source, e.CreatedBy, e.CreatedByGuardian); err != nil {
+	if err := validateExceptionAuthor(e.Source, e.CreatedBy, e.EnteredByTraeger, e.CreatedByGuardian); err != nil {
 		return err
 	}
 	return nil
@@ -136,7 +142,10 @@ type StudentArrivalNote struct {
 	StudentID int64         `bun:"student_id,notnull" json:"student_id"`
 	NoteDate  calendar.Date `bun:"note_date,notnull" json:"note_date"`
 	Content   string        `bun:"content,notnull" json:"content"`
-	CreatedBy int64         `bun:"created_by,notnull" json:"created_by"`
+	CreatedBy int64         `bun:"created_by,nullzero" json:"created_by"`
+	// EnteredByTraeger marks a row a person of the Träger-Büro entered
+	// (#7766); CreatedBy is then 0.
+	EnteredByTraeger bool `bun:"entered_by_traeger,notnull,default:false" json:"entered_by_traeger,omitempty"`
 }
 
 // ports.StudentArrivalScheduleRecords defines operations for managing student arrival schedules

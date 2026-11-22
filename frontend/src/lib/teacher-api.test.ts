@@ -97,7 +97,7 @@ describe("teacher-api", () => {
         teacherService.createTeacher({
           first_name: "Test",
           last_name: "Teacher",
-          role_id: 1,
+          role_id: "1",
         }),
       ).rejects.toThrow("Password is required for creating a teacher");
     });
@@ -121,8 +121,10 @@ describe("teacher-api", () => {
         ok: true,
         json: () =>
           Promise.resolve({
-            id: 50,
-            school_identity: { person_id: "100", staff_id: "7" },
+            data: {
+              id: "50",
+              school_identity: { person_id: "100", staff_id: "7" },
+            },
           }),
       } as Response);
 
@@ -136,7 +138,7 @@ describe("teacher-api", () => {
         first_name: "Test",
         last_name: "Teacher",
         password: "SecurePass123!",
-        role_id: 1,
+        role_id: "1",
       });
 
       expect(result.status).toBe("created");
@@ -159,8 +161,10 @@ describe("teacher-api", () => {
         ok: true,
         json: () =>
           Promise.resolve({
-            id: 50,
-            school_identity: { person_id: "100", staff_id: "7" },
+            data: {
+              id: "50",
+              school_identity: { person_id: "100", staff_id: "7" },
+            },
           }),
       } as Response);
 
@@ -175,7 +179,7 @@ describe("teacher-api", () => {
         last_name: "Teacher",
         email: "custom@example.com",
         password: "SecurePass123!",
-        role_id: 1,
+        role_id: "1",
       });
 
       expect(result.status).toBe("created");
@@ -201,7 +205,7 @@ describe("teacher-api", () => {
           first_name: "Test",
           last_name: "Teacher",
           password: "SecurePass123!",
-          role_id: 1,
+          role_id: "1",
         })
         .catch((error: unknown) => error);
 
@@ -218,7 +222,7 @@ describe("teacher-api", () => {
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ id: 50 }),
+        json: () => Promise.resolve({ data: { id: "50" } }),
       } as Response);
 
       await expect(
@@ -226,7 +230,7 @@ describe("teacher-api", () => {
           first_name: "Test",
           last_name: "Teacher",
           password: "SecurePass123!",
-          role_id: 1,
+          role_id: "1",
         }),
       ).rejects.toBeInstanceOf(ApiError);
       expect(consoleSpies.error).toHaveBeenCalledWith(
@@ -243,8 +247,10 @@ describe("teacher-api", () => {
         ok: true,
         json: () =>
           Promise.resolve({
-            id: 50,
-            school_identity: { person_id: "100", staff_id: "7" },
+            data: {
+              id: "50",
+              school_identity: { person_id: "100", staff_id: "7" },
+            },
           }),
       } as Response);
 
@@ -260,30 +266,9 @@ describe("teacher-api", () => {
           first_name: "Test",
           last_name: "Teacher",
           password: "SecurePass123!",
-          role_id: 1,
+          role_id: "1",
         }),
       ).rejects.toBeInstanceOf(ApiError);
-    });
-
-    it("throws error when account ID is not returned", async () => {
-      const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({}),
-      } as Response);
-
-      await expect(
-        teacherService.createTeacher({
-          first_name: "Test",
-          last_name: "Teacher",
-          password: "SecurePass123!",
-          role_id: 1,
-        }),
-      ).rejects.toBeInstanceOf(ApiError);
-      expect(consoleSpies.error).toHaveBeenCalledWith(
-        "failed to get account ID from response",
-        undefined,
-      );
     });
 
     // The identity fields are what makes the backend provision the person and
@@ -296,8 +281,10 @@ describe("teacher-api", () => {
         ok: true,
         json: () =>
           Promise.resolve({
-            id: 50,
-            school_identity: { person_id: "100", staff_id: "7" },
+            data: {
+              id: "50",
+              school_identity: { person_id: "100", staff_id: "7" },
+            },
           }),
       } as Response);
       mockFetch.mockResolvedValueOnce({
@@ -310,7 +297,7 @@ describe("teacher-api", () => {
         last_name: "Teacher",
         tag_id: "TAG-1",
         password: "SecurePass123!",
-        role_id: 1,
+        role_id: "1",
       });
 
       const registerCall = mockFetch.mock.calls.find(
@@ -336,8 +323,10 @@ describe("teacher-api", () => {
         ok: true,
         json: () =>
           Promise.resolve({
-            id: 50,
-            school_identity: { person_id: personId, staff_id: "7" },
+            data: {
+              id: "50",
+              school_identity: { person_id: personId, staff_id: "7" },
+            },
           }),
       } as Response);
       mockFetch.mockResolvedValueOnce({
@@ -349,7 +338,7 @@ describe("teacher-api", () => {
         first_name: "Test",
         last_name: "Teacher",
         password: "SecurePass123!",
-        role_id: 1,
+        role_id: "1",
       });
 
       const staffCall = mockFetch.mock.calls.find(
@@ -375,8 +364,10 @@ describe("teacher-api", () => {
         ok: true,
         json: () =>
           Promise.resolve({
-            id: 50,
-            school_identity: { person_id: personId, staff_id: "7" },
+            data: {
+              id: "50",
+              school_identity: { person_id: personId, staff_id: "7" },
+            },
           }),
       } as Response);
       mockFetch.mockResolvedValueOnce({
@@ -388,7 +379,7 @@ describe("teacher-api", () => {
         first_name: "Test",
         last_name: "Teacher",
         password: "SecurePass123!",
-        role_id: 1,
+        role_id: "1",
       });
 
       const staffCall = mockFetch.mock.calls.find(
@@ -412,9 +403,11 @@ describe("teacher-api", () => {
         ok: true,
         json: () =>
           Promise.resolve({
-            id: 50,
-            // Admin tier: person and staff, no teacher_id.
-            school_identity: { person_id: "100", staff_id: "7" },
+            data: {
+              id: "50",
+              // Admin tier: person and staff, no teacher_id.
+              school_identity: { person_id: "100", staff_id: "7" },
+            },
           }),
       } as Response);
       mockFetch.mockResolvedValueOnce({
@@ -426,7 +419,7 @@ describe("teacher-api", () => {
         first_name: "Test",
         last_name: "Teacher",
         password: "SecurePass123!",
-        role_id: 1,
+        role_id: "1",
         // What the form asked for is deliberately ignored.
         is_teacher: true,
       } as Parameters<typeof teacherService.createTeacher>[0]);
@@ -446,13 +439,15 @@ describe("teacher-api", () => {
         ok: true,
         json: () =>
           Promise.resolve({
-            id: 50,
-            // Caregiver tier: the profile is already there, so the details
-            // request updates it instead of leaving it unwritten.
-            school_identity: {
-              person_id: "100",
-              staff_id: "7",
-              teacher_id: "9",
+            data: {
+              id: "50",
+              // Caregiver tier: the profile is already there, so the details
+              // request updates it instead of leaving it unwritten.
+              school_identity: {
+                person_id: "100",
+                staff_id: "7",
+                teacher_id: "9",
+              },
             },
           }),
       } as Response);
@@ -465,7 +460,7 @@ describe("teacher-api", () => {
         first_name: "Test",
         last_name: "Teacher",
         password: "SecurePass123!",
-        role_id: 2,
+        role_id: "2",
       });
 
       const staffCall = mockFetch.mock.calls.find(
@@ -576,8 +571,9 @@ describe("teacher-api", () => {
 
         expect(mockFetch).toHaveBeenCalledTimes(2);
         expect(mockFetch.mock.calls[0]![0]).toBe("/api/users/100");
+        // Go reads null and "" alike for tag_id; removal travels as "".
         expect(JSON.parse(mockFetch.mock.calls[0]![1]!.body as string)).toEqual(
-          { tag_id },
+          { tag_id: tag_id ?? "" },
         );
       },
     );
@@ -619,7 +615,7 @@ describe("teacher-api", () => {
         const count = { "person-write": 1, "staff-write": 2 }[stage]!;
         for (let i = 1; i < count; i++) {
           mockFetch.mockResolvedValueOnce(
-            new Response(JSON.stringify({ account_id: 50 })),
+            new Response(JSON.stringify({ data: { account_id: "50" } })),
           );
         }
         mockFetch.mockResolvedValueOnce(
@@ -672,7 +668,7 @@ describe("teacher-api", () => {
       // Mock person PUT
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({}),
+        json: () => Promise.resolve({ data: null }),
       } as Response);
 
       // Mock staff update
@@ -710,7 +706,7 @@ describe("teacher-api", () => {
       // person PUT
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({}),
+        json: () => Promise.resolve({ data: null }),
       } as Response);
       // staff update
       mockFetch.mockResolvedValueOnce({
@@ -766,7 +762,7 @@ describe("teacher-api", () => {
           { first_name: "Updated" },
           sampleTeacher,
         ),
-      ).rejects.toThrow("Failed to update person: Validation error");
+      ).rejects.toBeInstanceOf(ApiError);
     });
 
     it("throws error when staff update fails", async () => {
@@ -785,7 +781,7 @@ describe("teacher-api", () => {
           { specialization: "New" },
           sampleTeacher,
         ),
-      ).rejects.toThrow("Failed to update teacher: Bad Request - Invalid data");
+      ).rejects.toBeInstanceOf(ApiError);
     });
 
     it("trims field values before sending", async () => {
@@ -821,7 +817,7 @@ describe("teacher-api", () => {
       const mockFetch = globalThis.fetch as ReturnType<typeof vi.fn>;
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({}),
+        json: () => Promise.resolve({ data: null }),
       } as Response);
 
       await teacherService.deleteTeacher("1");
@@ -830,7 +826,6 @@ describe("teacher-api", () => {
         "/api/staff/1",
         expect.objectContaining({
           method: "DELETE",
-          credentials: "include",
         }),
       );
     });
@@ -842,8 +837,8 @@ describe("teacher-api", () => {
         statusText: "Not Found",
       } as Response);
 
-      await expect(teacherService.deleteTeacher("999")).rejects.toThrow(
-        "Failed to delete teacher: Not Found",
+      await expect(teacherService.deleteTeacher("999")).rejects.toBeInstanceOf(
+        ApiError,
       );
     });
 
@@ -880,7 +875,7 @@ describe("teacher-api", () => {
         first_name: "Test",
         last_name: "Teacher",
         password: "SecurePass123!",
-        role_id: 1,
+        role_id: "1",
       });
 
       expect(result.status).toBe("account_exists");
@@ -909,7 +904,7 @@ describe("teacher-api", () => {
           first_name: "Test",
           last_name: "Teacher",
           password: "weak",
-          role_id: 1,
+          role_id: "1",
         })
         .catch((error: unknown) => error);
 
@@ -929,8 +924,10 @@ describe("teacher-api", () => {
         ok: true,
         json: () =>
           Promise.resolve({
-            id: 99,
-            school_identity: { person_id: "200", staff_id: "8" },
+            data: {
+              id: "99",
+              school_identity: { person_id: "200", staff_id: "8" },
+            },
           }),
       } as Response);
 
@@ -944,7 +941,7 @@ describe("teacher-api", () => {
         first_name: "Linked",
         last_name: "User",
         email: "linked@example.com",
-        role_id: 1,
+        role_id: "1",
         linkExisting: true,
       });
 
@@ -983,7 +980,7 @@ describe("teacher-api", () => {
           first_name: "Missing",
           last_name: "User",
           email: "missing@example.com",
-          role_id: 1,
+          role_id: "1",
           linkExisting: true,
         })
         .catch((error: unknown) => error);
@@ -997,7 +994,8 @@ describe("teacher-api", () => {
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({}),
+        json: () =>
+          Promise.resolve({ data: { id: "99", school_identity: null } }),
       } as Response);
 
       await expect(
@@ -1005,7 +1003,7 @@ describe("teacher-api", () => {
           first_name: "No",
           last_name: "ID",
           email: "noid@example.com",
-          role_id: 1,
+          role_id: "1",
           linkExisting: true,
         }),
       ).rejects.toBeInstanceOf(ApiError);

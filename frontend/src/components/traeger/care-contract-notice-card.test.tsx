@@ -558,7 +558,7 @@ describe("RejectReasonModal", () => {
     ],
     [
       "missing_student",
-      "Der Vertrag ist mit keinem Kind aus den „Kinderdaten“ der Schule verknüpft.",
+      "Der Vertrag ist mit keiner Kinderakte der Schule verknüpft.",
     ],
     [
       "no_permitted_address",

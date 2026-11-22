@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/supervisiondashboard"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // SchulhofStatusQuery supplies the courtyard status without infrastructure writes.
@@ -32,12 +33,12 @@ func NewSchulhofResource(schulhofService SchulhofStatusQuery, currentStaff func(
 // SchulhofStatusResponse represents the API response for Schulhof status.
 type SchulhofStatusResponse struct {
 	Exists            bool                     `json:"exists"`
-	RoomID            *common.ID               `json:"room_id,omitempty"`
+	RoomID            *ident.ID                `json:"room_id,omitempty"`
 	RoomName          string                   `json:"room_name"`
-	ActivityGroupID   *common.ID               `json:"activity_group_id,omitempty"`
-	ActiveGroupID     *common.ID               `json:"active_group_id,omitempty"`
+	ActivityGroupID   *ident.ID                `json:"activity_group_id,omitempty"`
+	ActiveGroupID     *ident.ID                `json:"active_group_id,omitempty"`
 	IsUserSupervising bool                     `json:"is_user_supervising"`
-	SupervisionID     *common.ID               `json:"supervision_id,omitempty"`
+	SupervisionID     *ident.ID                `json:"supervision_id,omitempty"`
 	SupervisorCount   int                      `json:"supervisor_count"`
 	StudentCount      int                      `json:"student_count"`
 	Supervisors       []SupervisorInfoResponse `json:"supervisors"`
@@ -45,10 +46,10 @@ type SchulhofStatusResponse struct {
 
 // SupervisorInfoResponse represents supervisor information in API responses.
 type SupervisorInfoResponse struct {
-	ID            common.ID `json:"id"`
-	StaffID       common.ID `json:"staff_id"`
-	Name          string    `json:"name"`
-	IsCurrentUser bool      `json:"is_current_user"`
+	ID            ident.ID `json:"id"`
+	StaffID       ident.ID `json:"staff_id"`
+	Name          string   `json:"name"`
+	IsCurrentUser bool     `json:"is_current_user"`
 }
 
 // getSchulhofStatus handles GET /api/active/schulhof/status

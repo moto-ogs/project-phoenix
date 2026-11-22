@@ -1,6 +1,7 @@
 import "server-only";
 import { forwardBackendResponse } from "~/lib/backend-proxy-response.server";
 import { problemResponse } from "~/lib/api-response-error.server";
+import { successResponse } from "~/lib/route-wrapper-utils.server";
 import { installLoginSession } from "~/lib/login-route.server";
 import { createLogger } from "~/lib/logger";
 import type { makePortalHandlers } from "~/lib/portal-handlers.server";
@@ -55,7 +56,9 @@ export function createFactorConfirmRoute({
         throw new Error("Invalid MFA confirm response");
       })) as Record<string, unknown>;
       const failure = await installLoginSession(request, data, portal);
-      return Response.json({ session_renewed: failure === null });
+      return Response.json(
+        successResponse({ session_renewed: failure === null }),
+      );
     } catch (error) {
       captureBffException(error, request);
       logger.error(log.event, {

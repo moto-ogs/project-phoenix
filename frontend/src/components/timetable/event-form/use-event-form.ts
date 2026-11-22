@@ -496,7 +496,7 @@ export function useEventForm({
       (roomRead.data ?? [])
         .map((room): RoomOption => ({
           id: Number(room.id),
-          name: room.name ?? room.room_name ?? `Raum ${room.id}`,
+          name: room.name,
           building: room.building ?? undefined,
         }))
         .sort(byName),
@@ -506,7 +506,7 @@ export function useEventForm({
     () =>
       (groupRead.data ?? [])
         .map((group): GroupOption => ({
-          id: String(group.id),
+          id: group.id,
           name: group.name,
         }))
         .sort(byName),

@@ -3,6 +3,8 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedExportHandover enters two recipients of the finance exports of the
@@ -65,8 +67,8 @@ func seededExportRecipients(client *Client, auth AuthRef) (map[string]int64, err
 	var envelope struct {
 		Data struct {
 			Recipients []struct {
-				ID   apiID  `json:"id"`
-				Name string `json:"name"`
+				ID   ident.ID `json:"id"`
+				Name string   `json:"name"`
 			} `json:"recipients"`
 		} `json:"data"`
 	}
@@ -102,7 +104,7 @@ func seedExportRecipient(client *Client, auth AuthRef, existing map[string]int64
 	}
 	var envelope struct {
 		Data struct {
-			ID apiID `json:"id"`
+			ID ident.ID `json:"id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil || envelope.Data.ID <= 0 {

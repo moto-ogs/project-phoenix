@@ -110,7 +110,8 @@ func TestOperatorBookingAuthorityResetClosesTheBookingExpiredTasks(t *testing.T)
 	require.Equal(t, 1, pending, "the booking-expired task must be pending before the reset")
 
 	rr := serve(http.MethodDelete, "/settings/values/"+operatorBookingsAuthoritativeKey, nil)
-	testutil.AssertSuccessResponse(t, rr, http.StatusNoContent)
+	// Every reset answers one shape (#7808).
+	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
 
 	_, pending, err = careLifecycle.ListPendingWithdrawals(ctx, pendingFilter)
 	require.NoError(t, err)

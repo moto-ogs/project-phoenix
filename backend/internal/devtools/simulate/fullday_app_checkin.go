@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // appCheckInCount is how many late children the team checks in through the
@@ -105,9 +107,9 @@ func supervisedSessionOutside(rt *Runtime, skipRoomID int64) (int64, int64, erro
 		return 0, 0, fmt.Errorf("decode running sessions: %w", err)
 	}
 	var sessions []struct {
-		ID              apiID `json:"id"`
-		RoomID          apiID `json:"room_id"`
-		SupervisorCount int   `json:"supervisor_count"`
+		ID              ident.ID `json:"id"`
+		RoomID          ident.ID `json:"room_id"`
+		SupervisorCount int      `json:"supervisor_count"`
 	}
 	// A server without running sessions may answer without a list.
 	if err := json.Unmarshal(envelope.Data, &sessions); err != nil {

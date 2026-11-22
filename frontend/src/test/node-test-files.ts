@@ -309,6 +309,8 @@ export const nodeLogicTestFiles = [
   "src/components/students/student-table.test.ts",
   "src/components/timetable/event-form/offering-suggestion-model.test.ts",
   "src/components/traeger/care-contract-import-format.test.ts",
+  "src/components/traeger/care-contract-offering-correction-format.test.ts",
+  "src/components/traeger/family-children-import-format.test.ts",
   "src/components/traeger/holiday-allocation-model.test.ts",
   "src/components/traeger/holiday-criteria-model.test.ts",
   "src/components/traeger/holiday-period-model.test.ts",

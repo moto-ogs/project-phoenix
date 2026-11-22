@@ -30,7 +30,6 @@ import (
 	authAPI "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account"
 	"github.com/moto-ogs/project-phoenix/modules/settings"
 	transactionFailures "github.com/moto-ogs/project-phoenix/modules/transactionruntime"
-	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -1068,12 +1067,9 @@ func TestRoleManagement_BaseRole(t *testing.T) {
 // TestPermissionManagement tests permission CRUD endpoints (protected)
 func TestPermissionManagement(t *testing.T) {
 	t.Parallel()
-	tc, router := setupProtectedRouter(t)
+	_, router := setupProtectedRouter(t)
 
 	adminClaims := testutil.AdminTestClaims(1)
-	platformClaims := adminClaims
-	platformClaims.Scope = tenant.ScopePlatform
-	platformClaims.TenantID = 0
 
 	t.Run("list permissions with permission", func(t *testing.T) {
 		req := testutil.NewJSONRequest(t, "GET", "/auth/permissions", nil)
@@ -1094,91 +1090,6 @@ func TestPermissionManagement(t *testing.T) {
 		testutil.AssertForbidden(t, rr)
 	})
 
-	t.Run("create permission with permission", func(t *testing.T) {
-		// Use fully unique identifiers (no modulo)
-		permName := fmt.Sprintf("test-permission-%d", time.Now().UnixNano())
-		resource := fmt.Sprintf("testresource_%d", time.Now().UnixNano())
-		body := map[string]string{
-			"name":        permName,
-			"description": "A test permission",
-			"resource":    resource,
-			"action":      "read",
-		}
-
-		req := testutil.NewJSONRequest(t, "POST", "/auth/permissions", body)
-		rr := testutil.ExecuteWithAuthPermissions(t, router, req, platformClaims, []string{"permissions:create"})
-
-		testutil.AssertSuccessResponse(t, rr, http.StatusCreated)
-
-		response := testutil.ParseJSONResponse(t, rr.Body.Bytes())
-		data, ok := response["data"].(map[string]interface{})
-		require.True(t, ok, "Expected data to be an object")
-		assert.Equal(t, permName, data["name"])
-		assert.Equal(t, resource, data["resource"])
-		assert.Equal(t, "read", data["action"])
-
-		// auth.permissions is tenantless; the fixture helper owns its teardown.
-		permID, err := strconv.ParseInt(data["id"].(string), 10, 64)
-		require.NoError(t, err)
-		testpkg.OwnTestPermission(t, tc.db, permID)
-	})
-
-	t.Run("create permission bad request with missing resource", func(t *testing.T) {
-		body := map[string]string{
-			"name":        fmt.Sprintf("incomplete-permission-%d", time.Now().UnixNano()),
-			"description": "Missing resource",
-			"action":      "read",
-		}
-
-		req := testutil.NewJSONRequest(t, "POST", "/auth/permissions", body)
-		rr := testutil.ExecuteWithAuthPermissions(t, router, req, platformClaims, []string{"permissions:create"})
-
-		testutil.AssertBadRequest(t, rr)
-	})
-
-}
-
-// TestAccountManagement tests account management endpoints (protected)
-func TestAccountManagement(t *testing.T) {
-	t.Parallel()
-	_, router := setupProtectedRouter(t)
-
-	adminClaims := testutil.AdminTestClaims(1)
-	adminClaims.Scope = tenant.ScopePlatform
-	adminClaims.TenantID = 0
-
-	t.Run("list accounts with permission", func(t *testing.T) {
-		req := testutil.NewJSONRequest(t, "GET", "/auth/accounts", nil)
-		rr := testutil.ExecuteWithAuthPermissions(t, router, req, adminClaims, []string{"users:list"})
-
-		testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-
-		response := testutil.ParseJSONResponse(t, rr.Body.Bytes())
-		data, ok := response["data"].([]interface{})
-		require.True(t, ok, "Expected data to be an array")
-		assert.NotEmpty(t, data, "Expected at least one account")
-	})
-
-	t.Run("list accounts forbidden without permission", func(t *testing.T) {
-		req := testutil.NewJSONRequest(t, "GET", "/auth/accounts", nil)
-		rr := testutil.ExecuteWithAuthPermissions(t, router, req, adminClaims, []string{})
-
-		testutil.AssertForbidden(t, rr)
-	})
-
-	t.Run("list accounts with email filter", func(t *testing.T) {
-		req := testutil.NewJSONRequest(t, "GET", "/auth/accounts?email=admin", nil)
-		rr := testutil.ExecuteWithAuthPermissions(t, router, req, adminClaims, []string{"users:list"})
-
-		testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-	})
-
-	t.Run("list accounts with active filter", func(t *testing.T) {
-		req := testutil.NewJSONRequest(t, "GET", "/auth/accounts?active=true", nil)
-		rr := testutil.ExecuteWithAuthPermissions(t, router, req, adminClaims, []string{"users:list"})
-
-		testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-	})
 }
 
 // ============================================================================
@@ -1411,52 +1322,6 @@ func TestAccountPermissionRoutesAreRetired(t *testing.T) {
 		assert.Contains(t, []int{http.StatusNotFound, http.StatusMethodNotAllowed}, rr.Code,
 			"%s %s must be retired, got %d: %s", route.method, route.path, rr.Code, rr.Body.String())
 	}
-}
-
-// TestAccountUpdate tests account update endpoint
-func TestAccountUpdate(t *testing.T) {
-	t.Parallel()
-	tc, router := setupProtectedRouter(t)
-	adminClaims := testutil.AdminTestClaims(1)
-
-	t.Run("update account", func(t *testing.T) {
-		account := testpkg.CreateTestAccount(t, tc.db, fmt.Sprintf("updateacc%d", time.Now().UnixNano()))
-
-		// Use Unix timestamp (seconds) + nanosecond remainder for uniqueness within 30 char limit
-		// Format: upd_<10-digit-unix>_<9-digit-nano> = 4 + 10 + 1 + 9 = 24 chars
-		now := time.Now()
-		body := map[string]string{
-			"email":    fmt.Sprintf("updated%d@test.local", now.UnixNano()),
-			"username": fmt.Sprintf("upd_%d_%d", now.Unix(), now.Nanosecond()),
-		}
-
-		req := testutil.NewJSONRequest(t, "PUT", fmt.Sprintf("/auth/accounts/%d", account.ID), body)
-		rr := testutil.ExecuteWithAuthPermissions(t, router, req, adminClaims, []string{"users:manage"})
-
-		assert.Equal(t, http.StatusNoContent, rr.Code, "Body: %s", rr.Body.String())
-	})
-
-	t.Run("update account not found", func(t *testing.T) {
-		body := map[string]string{
-			"email": "some@email.com",
-		}
-
-		req := testutil.NewJSONRequest(t, "PUT", "/auth/accounts/99999", body)
-		rr := testutil.ExecuteWithAuthPermissions(t, router, req, adminClaims, []string{"users:manage"})
-
-		testutil.AssertNotFound(t, rr)
-	})
-
-	t.Run("update account bad request with invalid email", func(t *testing.T) {
-		body := map[string]string{
-			"email": "invalid-email",
-		}
-
-		req := testutil.NewJSONRequest(t, "PUT", "/auth/accounts/1", body)
-		rr := testutil.ExecuteWithAuthPermissions(t, router, req, adminClaims, []string{"users:manage"})
-
-		testutil.AssertBadRequest(t, rr)
-	})
 }
 
 // ============================================================================

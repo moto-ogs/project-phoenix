@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/go-chi/render"
+
 	activityContract "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
@@ -41,6 +43,27 @@ func (rs *Resource) getStaffIDAndManagePermission(r *http.Request) (int64, bool,
 	}
 
 	return staffID, hasAdminPermission, nil
+}
+
+// activityCreator names the staff author of a new activity. A staff member
+// creates as themselves. A person of the Träger-Büro, who opened the school
+// through the Absprung without a staff record there (ADR 0084 section 5,
+// #7818), creates without one: created_by NULL already means "no staff
+// owner" on activities.groups, and admins may modify the activity anyway.
+// Every other account without a staff record is refused; a failed lookup is
+// a server error, never a refusal.
+func (rs *Resource) activityCreator(r *http.Request) (*int64, render.Renderer) {
+	staffID, found, err := rs.UserContextService.CurrentStaffID(r.Context())
+	switch {
+	case err != nil:
+		return nil, common.ErrorInternalServer(err)
+	case found:
+		return &staffID, nil
+	case sessiontoken.ClaimsFromCtx(r.Context()).ViaTraeger:
+		return nil, nil
+	default:
+		return nil, common.ErrorForbiddenWithCode(errNotStaff, common.CodeTimetableNoStaffProfile)
+	}
 }
 
 // requireActivityModification applies the same owner/supervisor/admin policy

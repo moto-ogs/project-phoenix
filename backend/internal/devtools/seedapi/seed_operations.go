@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type seedOperationsDemoStep struct{}
@@ -138,8 +140,8 @@ func seedStaffShift(rt *Runtime, today seedDate, staffID int64) error {
 
 // seedShiftType is one default Schichtart as the defaults endpoint returns it.
 type seedShiftType struct {
-	ID   apiID  `json:"id"`
-	Name string `json:"name"`
+	ID   ident.ID `json:"id"`
+	Name string   `json:"name"`
 }
 
 func createDefaultShiftTypes(rt *Runtime) ([]seedShiftType, error) {

@@ -62,15 +62,24 @@ type ListQuery struct {
 
 // ParseListQuery reads the wire query of the list route.
 func ParseListQuery(values url.Values) (ListQuery, error) {
-	q := ListQuery{Limit: DefaultLimit}
-
 	switch values.Get("view") {
 	case "", "open":
+		return parseListQuery(values, false)
 	case "history":
-		q.History = true
+		return parseListQuery(values, true)
 	default:
-		return q, ErrInvalidQuery
+		return ListQuery{Limit: DefaultLimit}, ErrInvalidQuery
 	}
+}
+
+// ParseHistoryQuery reads the query of GET /change-requests/history: the
+// filters of the history view, which the path names.
+func ParseHistoryQuery(values url.Values) (ListQuery, error) {
+	return parseListQuery(values, true)
+}
+
+func parseListQuery(values url.Values, history bool) (ListQuery, error) {
+	q := ListQuery{Limit: DefaultLimit, History: history}
 
 	q.Search = strings.TrimSpace(values.Get("search"))
 

@@ -16,15 +16,15 @@ func TestParentSendRetryReturnsStoredMessageWithoutAnotherNotice(t *testing.T) {
 	t.Parallel()
 	f := newFixture(t, true)
 	ctx := communication.WithMessageSendID(adminCtx(t, f.staffAccount), "parent-send-retry")
-	first, err := testpkg.TenantQuery4(t, ctx, f.db, f.svc.StartThread, f.chain.StudentID, f.chain.AccountID, "Bitte zurückrufen", "")
+	first, err := sendFirstMessage(t, ctx, f.db, f.svc, f.chain.StudentID, f.chain.AccountID, "Bitte zurückrufen", "")
 	require.NoError(t, err)
-	retry, err := testpkg.TenantQuery4(t, ctx, f.db, f.svc.StartThread, f.chain.StudentID, f.chain.AccountID, "Bitte zurückrufen", "")
+	retry, err := sendFirstMessage(t, ctx, f.db, f.svc, f.chain.StudentID, f.chain.AccountID, "Bitte zurückrufen", "")
 	require.NoError(t, err)
 	require.Len(t, retry.Messages, 1)
 	require.Equal(t, first.Messages[0].ID, retry.Messages[0].ID)
 	require.Equal(t, "parent-send-retry", retry.Messages[0].ClientMessageID)
 	require.Equal(t, 1, parentEventCount(f.bc, realtime.EventParentMessage))
-	_, err = testpkg.TenantQuery4(t, ctx, f.db, f.svc.StartThread, f.chain.StudentID, f.chain.AccountID, "Anderer Text", "")
+	_, err = sendFirstMessage(t, ctx, f.db, f.svc, f.chain.StudentID, f.chain.AccountID, "Anderer Text", "")
 	require.ErrorIs(t, err, communication.ErrMessageSendConflict)
 	// Another reply has a new key; its own retry must also return just one row.
 	replyCtx := communication.WithMessageSendID(adminCtx(t, f.staffAccount), "parent-reply-retry")
@@ -41,7 +41,7 @@ func TestParentReplyRetryAfterNewGuardianActivity(t *testing.T) {
 	t.Parallel()
 	f := newFixture(t, true)
 	staffCtx := adminCtx(t, f.staffAccount)
-	first, err := testpkg.TenantQuery4(t, staffCtx, f.db, f.svc.StartThread, f.chain.StudentID, f.chain.AccountID, "Hallo", "")
+	first, err := sendFirstMessage(t, staffCtx, f.db, f.svc, f.chain.StudentID, f.chain.AccountID, "Hallo", "")
 	require.NoError(t, err)
 	ctx := communication.WithMessageSendID(staffCtx, "reply-before-guardian")
 	sent, err := testpkg.TenantQuery3(t, ctx, f.db, f.svc.PostMessage, first.ThreadID, "Noch eine Information", 0)
@@ -134,7 +134,7 @@ func TestParentConcurrentSendRetries(t *testing.T) {
 	f := newFixture(t, true)
 	ctx := communication.WithMessageSendID(adminCtx(t, f.staffAccount), "parallel-parent-send")
 	assertConcurrentSendIdentity(t, func() (int64, int, error) {
-		view, err := testpkg.TenantQuery4(t, ctx, f.db, f.svc.StartThread, f.chain.StudentID, f.chain.AccountID, "Hallo", "")
+		view, err := sendFirstMessage(t, ctx, f.db, f.svc, f.chain.StudentID, f.chain.AccountID, "Hallo", "")
 		if err != nil {
 			return 0, 0, err
 		}

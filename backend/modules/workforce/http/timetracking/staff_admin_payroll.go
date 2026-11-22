@@ -6,10 +6,10 @@ import (
 	"net/http"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Personnel number maintenance (#1417 Tranche 2b). Gated on
@@ -38,8 +38,8 @@ func (p *PayrollNumberRequest) Bind(_ *http.Request) error {
 
 // PayrollNumberResponse mirrors the stored state after a read or write.
 type PayrollNumberResponse struct {
-	StaffID         common.ID `json:"staff_id"`
-	PersonnelNumber *string   `json:"personnel_number"`
+	StaffID         ident.ID `json:"staff_id"`
+	PersonnelNumber *string  `json:"personnel_number"`
 	// KeptByTraeger is true when the Träger keeps the number in its staff
 	// record (#4705); the school reads it and cannot change it.
 	KeptByTraeger bool `json:"kept_by_traeger"`

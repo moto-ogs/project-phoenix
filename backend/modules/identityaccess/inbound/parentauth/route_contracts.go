@@ -25,3 +25,23 @@ func SecondFactorRouteContracts() []common.RouteContract {
 		{Method: "DELETE", Pattern: "/me/mfa/trusted-devices/{" + portalauth.TrustedDeviceIDParam + "}", Portals: portals, NoData: true},
 	}
 }
+
+// SessionRouteContracts registers the parent's sign-in, its second factor
+// and the confirmation that switches it on (#7808), relative to /parent.
+// Each answer carries tokens, so only the portal's route file reads it and
+// no proxy allowlist names the route.
+func SessionRouteContracts() []common.RouteContract {
+	portals := []common.PortalScope{common.PortalParent}
+	step := func(pattern string, request, response any, plain bool) common.RouteContract {
+		return common.RouteContract{
+			Method: "POST", Pattern: pattern, Portals: portals, RouteFile: common.RouteFileSession,
+			Request: request, Response: response, Plain: plain,
+		}
+	}
+	return []common.RouteContract{
+		step("/auth/login", parentLoginRequest{}, portalauth.LoginResponse{}, false),
+		step("/auth/mfa/verify", common.MFAVerifyRequest{}, portalauth.TokenResponse{}, true),
+		step("/auth/mfa/resend", common.MFAResendRequest{}, common.MFAResendResponse{}, true),
+		step("/me/mfa/confirm", common.MFAVerifyRequest{}, portalauth.TokenResponse{}, true),
+	}
+}

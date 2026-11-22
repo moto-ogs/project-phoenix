@@ -1,3 +1,4 @@
+import { bffJson } from "~/lib/bff-fetch";
 /**
  * Siblings from separate holiday registrations (#5628): the Träger-Büro
  * merges registrations of one period as siblings, and splits them again.
@@ -6,15 +7,11 @@
  */
 
 import type * as traegerHolidayContributionsContract from "./contract/traeger-holiday-contributions.generated";
-import { traegerRequest } from "./traeger-api";
 
 export interface HolidaySiblingGroup {
   readonly id: string;
   readonly registrationIds: readonly string[];
 }
-
-const groupsPath = (periodId: string) =>
-  `/api/traeger/holiday-contributions/${encodeURIComponent(periodId)}/sibling-groups`;
 
 function groupFromBackend(
   group: traegerHolidayContributionsContract.HolidaySiblingGroup,
@@ -26,9 +23,11 @@ function groupFromBackend(
 export async function fetchHolidaySiblingGroups(
   periodId: string,
 ): Promise<HolidaySiblingGroup[]> {
-  const groups = await traegerRequest<
-    traegerHolidayContributionsContract.HolidaySiblingGroup[]
-  >(groupsPath(periodId));
+  const groups = await bffJson(
+    "org",
+    "GET /traeger/holiday-contributions/{periodId}/sibling-groups",
+    { params: { periodId } },
+  );
   return groups.map(groupFromBackend);
 }
 
@@ -41,10 +40,11 @@ export async function mergeHolidaySiblings(
   registrationIds: readonly string[],
 ): Promise<HolidaySiblingGroup> {
   return groupFromBackend(
-    await traegerRequest<traegerHolidayContributionsContract.HolidaySiblingGroup>(
-      groupsPath(periodId),
+    await bffJson(
+      "org",
+      "POST /traeger/holiday-contributions/{periodId}/sibling-groups",
       {
-        method: "POST",
+        params: { periodId },
         body: {
           registration_ids: [...registrationIds],
         } satisfies traegerHolidayContributionsContract.HolidaySiblingMergeRequest,
@@ -58,8 +58,9 @@ export async function splitHolidaySibling(
   periodId: string,
   registrationId: string,
 ): Promise<void> {
-  await traegerRequest<unknown>(
-    `/api/traeger/holiday-contributions/${encodeURIComponent(periodId)}/sibling-groups/registrations/${encodeURIComponent(registrationId)}`,
-    { method: "DELETE" },
+  await bffJson(
+    "org",
+    "DELETE /traeger/holiday-contributions/{periodId}/sibling-groups/registrations/{registrationId}",
+    { params: { periodId, registrationId } },
   );
 }

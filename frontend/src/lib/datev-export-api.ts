@@ -3,9 +3,8 @@
 // (time_tracking:manage); the file build and this report share one backend
 // code path, so they cannot disagree.
 
-import { apiErrorFromResponse } from "./api-error";
-import type { DatevExportReport as DatevExportReportWire } from "./contract/staff.generated";
-import { sessionFetch } from "./session-cache";
+import { bffJson } from "./bff-fetch";
+import type * as staffContract from "./contract/staff.generated";
 
 export type DatevFormat = "datev_lodas" | "datev_lug";
 
@@ -23,7 +22,9 @@ export interface DatevExportReport {
   openMonth: boolean;
 }
 
-function mapDatevExportReport(data: DatevExportReportWire): DatevExportReport {
+function mapDatevExportReport(
+  data: staffContract.DatevExportReport,
+): DatevExportReport {
   return {
     lineCount: data.line_count,
     staffExported: data.staff_exported,
@@ -42,20 +43,13 @@ export async function fetchDatevExportReport(
   month: number,
   format: DatevFormat,
 ): Promise<DatevExportReport> {
-  const params = new URLSearchParams({
-    year: String(year),
-    month: String(month),
-    format,
-  });
-  const response = await sessionFetch(
-    `/api/staff/time-tracking/export/datev-report?${params.toString()}`,
+  return mapDatevExportReport(
+    await bffJson(
+      "tenant",
+      "GET /api/staff/time-tracking/export/datev-report",
+      {
+        query: { year, month, format },
+      },
+    ),
   );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Failed to fetch DATEV report: ${response.statusText}`,
-    );
-  }
-  const json = (await response.json()) as { data: DatevExportReportWire };
-  return mapDatevExportReport(json.data);
 }

@@ -2,19 +2,15 @@
 // (#6676): ohne Elternkonto, ohne Gesundheitsangaben, Anschrift, Kontakte,
 // Nachnamen und Geburtsdaten.
 
-import { unavailableApiError } from "~/lib/api-error";
+import { bffJson } from "~/lib/bff-fetch";
 import { requiredDay } from "~/lib/contract/required-day";
 import type { HolidayRegistrationStatusResponse as WireHolidayRegistrationStatus } from "~/lib/contract/traeger-holiday-registrations.generated";
-import { readEnrollmentError } from "~/lib/enrollment-api-error";
-import { createLogger } from "~/lib/logger";
 import {
   entryStatus,
   knownHolidayPlacement,
   type HolidayPlacement,
   type HolidayRegistrationEntryStatus,
 } from "~/lib/parent-holiday-registration-entries";
-
-const logger = createLogger({ component: "HolidayRegistrationStatusApi" });
 
 /** The address of the status page on the parents host, by its token. */
 export function holidayRegistrationStatusPath(token: string): string {
@@ -102,25 +98,14 @@ function holidayRegistrationStatusFromBackend(
 export async function fetchHolidayRegistrationStatus(
   token: string,
 ): Promise<HolidayRegistrationStatus> {
-  let response: Response;
-  try {
-    response = await fetch(
-      `/api/traeger/holiday-registrations/status/${encodeURIComponent(token)}`,
-      { cache: "no-store" },
-    );
-  } catch (cause) {
-    throw unavailableApiError(cause);
-  }
-  if (!response.ok) {
-    throw await readEnrollmentError(
-      response,
-      "Stand der Ferienanmeldung konnte nicht geladen werden",
-      logger,
-      "holiday_registration_status_api_failed",
-    );
-  }
-  const body = (await response.json()) as {
-    data: WireHolidayRegistrationStatus;
-  };
-  return holidayRegistrationStatusFromBackend(body.data);
+  return holidayRegistrationStatusFromBackend(
+    await bffJson(
+      "public",
+      "GET /traeger/holiday-registrations/status/{statusToken}",
+      {
+        params: { statusToken: token },
+        errorMessage: "Stand der Ferienanmeldung konnte nicht geladen werden",
+      },
+    ),
+  );
 }

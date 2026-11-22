@@ -31,9 +31,9 @@ import (
 // is always present (empty array when clean) so clients can iterate without a
 // nil check.
 type StartInstanceResponse struct {
-	InstanceID    common.ID                           `json:"instance_id"`
+	InstanceID    ident.ID                            `json:"instance_id"`
 	Status        string                              `json:"status"`
-	ActiveGroupID common.ID                           `json:"active_group_id"`
+	ActiveGroupID ident.ID                            `json:"active_group_id"`
 	StartedAt     string                              `json:"started_at"`
 	Warnings      []timetable.InstanceConflictWarning `json:"warnings"`
 }
@@ -41,10 +41,10 @@ type StartInstanceResponse struct {
 // InstanceStatusResponse is the 200 body for complete and cancel — minimal
 // because the frontend already has the full instance in its cache.
 type InstanceStatusResponse struct {
-	InstanceID  common.ID `json:"instance_id"`
-	Status      string    `json:"status"`
-	CompletedAt string    `json:"completed_at,omitempty"`
-	ReopenUntil string    `json:"reopen_until,omitempty"`
+	InstanceID  ident.ID `json:"instance_id"`
+	Status      string   `json:"status"`
+	CompletedAt string   `json:"completed_at,omitempty"`
+	ReopenUntil string   `json:"reopen_until,omitempty"`
 	// GuardianNotice is set when a cancellation informed the families (#2601).
 	GuardianNotice *GuardianNoticeResponse `json:"guardian_notice,omitempty"`
 }
@@ -59,9 +59,9 @@ type GuardianNoticeRequest struct {
 
 // GuardianNoticeResponse reports what a sent notice reached.
 type GuardianNoticeResponse struct {
-	AnnouncementID common.ID `json:"announcement_id"`
-	ChildCount     int       `json:"child_count"`
-	FamilyCount    int       `json:"family_count"`
+	AnnouncementID ident.ID `json:"announcement_id"`
+	ChildCount     int      `json:"child_count"`
+	FamilyCount    int      `json:"family_count"`
 }
 
 // GuardianNoticeReachResponse is the preview for the cancel dialog.

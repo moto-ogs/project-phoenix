@@ -129,7 +129,10 @@ describe.each(paths)(
         ),
       );
       expect(response.status).toBe(200);
-      expect(await response.json()).toEqual({ status: "authenticated" });
+      expect(await response.json()).toEqual({
+        status: "success",
+        data: { status: "authenticated" },
+      });
       expect(response.headers.get("Cache-Control")).toBe("private, no-store");
       expect(backend.mock.calls[0]?.[0]).toBe(
         `http://server:8080${backendPath}`,
@@ -268,11 +271,14 @@ it("returns only an MFA challenge proof, with no session", async () => {
   );
   const response = await login(request("login"));
   expect(await response.json()).toEqual({
-    status: "mfa_required",
-    challenge_token: "challenge-proof",
-    masked_email: "l***@example.test",
-    trusted_device_enabled: false,
-    trusted_device_days: 30,
+    status: "success",
+    data: {
+      status: "mfa_required",
+      challenge_token: "challenge-proof",
+      masked_email: "l***@example.test",
+      trusted_device_enabled: false,
+      trusted_device_days: 30,
+    },
   });
   expect(backend).toHaveBeenCalledOnce();
   expect(response.headers.getSetCookie()).toEqual([]);
@@ -288,10 +294,13 @@ it("returns only the limited enrollment proof, never a refresh token", async () 
   );
   const response = await login(request("login"));
   expect(await response.json()).toEqual({
-    status: "mfa_enrollment_required",
-    access_token: "enrollment-proof",
-    masked_email: "l***@example.test",
-    mfa_enrollment_required: true,
+    status: "success",
+    data: {
+      status: "mfa_enrollment_required",
+      access_token: "enrollment-proof",
+      masked_email: "l***@example.test",
+      mfa_enrollment_required: true,
+    },
   });
   expect(backend).toHaveBeenCalledOnce();
   expect(response.headers.getSetCookie()).toEqual([]);

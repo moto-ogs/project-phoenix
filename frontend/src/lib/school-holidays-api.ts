@@ -2,9 +2,8 @@
 // dem Bundesland der Schule (operations.federal_state); die Liste ist nicht
 // bearbeitbar. Proxy: /api/timetable/holidays.
 
-import { apiErrorFromBody, transportFetch } from "~/lib/api-error";
+import { bffJson } from "~/lib/bff-fetch";
 import { parseISODate, toISODate } from "~/lib/date-helpers";
-import type { HolidaysResponse } from "~/lib/contract/timetable.generated";
 import type { CalendarEvent } from "~/lib/personal-calendar-api";
 
 const MAX_HOLIDAY_WINDOW_DAYS = 400;
@@ -54,24 +53,14 @@ async function getSchoolHolidayWindow(
   fromISO: string,
   toISO: string,
 ): Promise<SchoolHolidays> {
-  const params = new URLSearchParams({ from: fromISO, to: toISO });
-  const response = await transportFetch(`/api/timetable/holidays?${params}`, {
-    method: "GET",
-    headers: { Accept: "application/json" },
-    credentials: "include",
+  const data = await bffJson("tenant", "GET /api/timetable/holidays", {
+    query: { from: fromISO, to: toISO },
+    errorMessage: "Die Feiertage konnten nicht geladen werden.",
   });
-  if (!response.ok) {
-    throw apiErrorFromBody(
-      `Anfrage fehlgeschlagen (HTTP ${response.status})`,
-      response.status,
-      await response.json().catch(() => undefined),
-    );
-  }
-  const envelope = (await response.json()) as { data: HolidaysResponse };
   return {
-    federalState: envelope.data.federal_state,
-    federalStateName: envelope.data.federal_state_name,
-    holidays: envelope.data.holidays ?? [],
+    federalState: data.federal_state,
+    federalStateName: data.federal_state_name,
+    holidays: data.holidays ?? [],
   };
 }
 

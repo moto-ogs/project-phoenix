@@ -222,6 +222,7 @@ describe("exportStudents", () => {
 
     expect(globalThis.fetch).toHaveBeenCalledWith("/api/students/export", {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(request),
     });
     expect(createElement).toHaveBeenCalledWith("a");

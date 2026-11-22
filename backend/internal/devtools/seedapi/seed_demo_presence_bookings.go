@@ -4,10 +4,11 @@ import (
 	"fmt"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type demoPresenceBooking struct {
-	StudentID apiID         `json:"student_id"`
+	StudentID ident.ID      `json:"student_id"`
 	Date      calendar.Date `json:"date"`
 	Expected  bool          `json:"expected"`
 	NoPlan    bool          `json:"no_plan"`

@@ -11,10 +11,8 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ModalProvider } from "~/components/ui/modal-context";
-import {
-  fetchCareScheduleChangeRequest,
-  type StaffCareRequestDetail,
-} from "~/lib/care-request-review-api";
+import { fetchCareScheduleChangeRequest } from "~/lib/care-request-review-api";
+import type * as studentsContract from "~/lib/contract/students.generated";
 import { ApiError } from "~/lib/api-error";
 import { SWRConfig } from "~/lib/swr/testing";
 import { catalogText } from "~/test/error-catalog-text";
@@ -40,8 +38,8 @@ vi.mock("~/lib/care-request-review-api", async () => {
 const mockFetch = vi.mocked(fetchCareScheduleChangeRequest);
 
 function detail(
-  overrides: Partial<StaffCareRequestDetail> = {},
-): StaffCareRequestDetail {
+  overrides: Partial<studentsContract.CareRequestDetailResponse> = {},
+): studentsContract.CareRequestDetailResponse {
   return {
     id: "42",
     student_id: "7",

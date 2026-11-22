@@ -8,6 +8,8 @@ import (
 	"slices"
 	"strconv"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 const enrollmentWeeklyProfileKey = "anmeldung-wochenplan"
@@ -274,8 +276,8 @@ func inviteWeeklyProfileParent(ctx context.Context, rt *Runtime, step parentEnro
 	var response struct {
 		Data []struct {
 			Guardian struct {
-				ID    apiID  `json:"id"`
-				Email string `json:"email"`
+				ID    ident.ID `json:"id"`
+				Email string   `json:"email"`
 			} `json:"guardian"`
 		} `json:"data"`
 	}
@@ -418,8 +420,8 @@ func linkDeveloperAdminIdentity(ctx context.Context, primary, target *Runtime, s
 	var identity struct {
 		Data struct {
 			SchoolIdentity struct {
-				StaffID   apiID `json:"staff_id"`
-				TeacherID apiID `json:"teacher_id"`
+				StaffID   ident.ID `json:"staff_id"`
+				TeacherID ident.ID `json:"teacher_id"`
 			} `json:"school_identity"`
 		} `json:"data"`
 	}
@@ -470,7 +472,7 @@ func linkDeveloperAdmin(ctx context.Context, primary, target *Runtime, state *Se
 	}
 	var tenants struct {
 		Data []struct {
-			TenantID apiID `json:"tenant_id"`
+			TenantID ident.ID `json:"tenant_id"`
 		} `json:"data"`
 	}
 	if err := parseJSON(raw, &tenants); err != nil {

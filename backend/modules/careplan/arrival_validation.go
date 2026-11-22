@@ -12,7 +12,7 @@ func (s *ArrivalSchedule) Validate() error {
 	if s.Weekday < 1 || s.Weekday > 5 {
 		return errors.New("weekday must be between 1 (Monday) and 5 (Friday)")
 	}
-	if s.CreatedBy <= 0 {
+	if s.CreatedBy <= 0 && !s.EnteredByTraeger {
 		return errors.New("created_by is required")
 	}
 	if s.Notes != nil && len(*s.Notes) > 500 {
@@ -31,7 +31,7 @@ func (e *ArrivalException) Validate() error {
 	if e.Reason != nil && utf8.RuneCountInString(*e.Reason) > 255 {
 		return errors.New("reason cannot exceed 255 characters")
 	}
-	if err := validateExceptionAuthor(e.Source, e.CreatedBy, e.CreatedByGuardian); err != nil {
+	if err := validateExceptionAuthor(e.Source, e.CreatedBy, e.EnteredByTraeger, e.CreatedByGuardian); err != nil {
 		return err
 	}
 	return nil
@@ -50,7 +50,7 @@ func (n *ArrivalNote) Validate() error {
 	if len(n.Content) > 500 {
 		return errors.New("content cannot exceed 500 characters")
 	}
-	if n.CreatedBy <= 0 {
+	if n.CreatedBy <= 0 && !n.EnteredByTraeger {
 		return errors.New("created_by is required")
 	}
 	return nil

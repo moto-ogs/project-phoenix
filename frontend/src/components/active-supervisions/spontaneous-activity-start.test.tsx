@@ -10,6 +10,12 @@ import { SWRConfig } from "~/lib/swr/testing";
 import type React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { pagedJson } from "~/test/mocks/plain-session-fetch";
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 import { SpontaneousActivityStart as ProductionSpontaneousActivityStart } from "./spontaneous-activity-start";
 
 vi.unmock("swr");
@@ -137,12 +143,11 @@ describe("SpontaneousActivityStart", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
-        json: async () => ({
-          data: [
-            { id: 3, name: "Mensa" },
-            { id: 4, name: "Atelier", building: "Haus A" },
-          ],
-        }),
+        json: async () =>
+          pagedJson([
+            { id: "3", name: "Mensa" },
+            { id: "4", name: "Atelier", building: "Haus A" },
+          ]),
       }),
     );
   });
@@ -201,12 +206,11 @@ describe("SpontaneousActivityStart", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
-        json: async () => ({
-          data: [
+        json: async () =>
+          pagedJson([
             { id: "3", name: "Mensa" },
             { id: "4", name: "Atelier", building: "Haus A" },
-          ],
-        }),
+          ]),
       }),
     );
     const onStart = vi.fn();
@@ -248,12 +252,11 @@ describe("SpontaneousActivityStart", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
-        json: async () => ({
-          data: [
-            { id: 3, name: "Mensa" },
-            { id: 5, name: "Schulhof" },
-          ],
-        }),
+        json: async () =>
+          pagedJson([
+            { id: "3", name: "Mensa" },
+            { id: "5", name: "Schulhof" },
+          ]),
       }),
     );
     const onStart = vi.fn();

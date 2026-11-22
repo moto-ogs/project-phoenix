@@ -25,7 +25,6 @@ import (
 // Actions of the trail of a mandate.
 const (
 	mandateCreate = "create"
-	mandateUpdate = "update"
 	mandateRevoke = "revoke"
 	mandateRead   = "read"
 	mandateReveal = "reveal"
@@ -33,14 +32,6 @@ const (
 
 // mandateFromRun is the source of a read a run preview made.
 const mandateFromRun = "run"
-
-// Fields a change of a mandate names in its trail.
-const (
-	mandateFieldHolder   = "account_holder"
-	mandateFieldIBAN     = "iban"
-	mandateFieldBIC      = "bic"
-	mandateFieldSequence = "sequence"
-)
 
 // MandateStore persists the creditor, the mandates and their trail. Every
 // method runs in the Träger transaction of organizationID.
@@ -56,9 +47,6 @@ type MandateStore interface {
 	// InsertSEPAMandate stores a new mandate; the reference and the mandate
 	// in force of the family are unique.
 	InsertSEPAMandate(ctx context.Context, organizationID, accountID int64, mandate parentbilling.SealedSEPAMandate) (parentbilling.SEPAMandate, error)
-	// UpdateSEPAMandate stores the account of a mandate; a nil IBAN or holder keeps
-	// the sealed one.
-	UpdateSEPAMandate(ctx context.Context, organizationID, accountID int64, mandate parentbilling.SealedSEPAMandate) (parentbilling.SEPAMandate, error)
 	RevokeSEPAMandate(ctx context.Context, organizationID, accountID, id int64, revokedOn calendar.Date) (parentbilling.SEPAMandate, error)
 	// InsertSEPAMandateEvents records one action for each mandate in one
 	// statement.
@@ -382,77 +370,6 @@ func normalizeAccount(errs validation.Errors, kind, holder, iban, bic, sequence 
 		errs["sequence"] = errors.New("a one-off mandate is collected once")
 	}
 	return account, compact
-}
-
-// ChangeSEPAMandate changes the account of a mandate in force.
-func (m *SEPAMandates) ChangeSEPAMandate(ctx context.Context, reviewer parentbilling.HolidayReviewer, id int64, change parentbilling.SEPAMandateChange) (parentbilling.SEPAMandate, error) {
-	if err := validReviewer(reviewer); err != nil {
-		return parentbilling.SEPAMandate{}, err
-	}
-	current, err := m.lockInForce(ctx, reviewer.OrganizationID, id)
-	if err != nil {
-		return parentbilling.SEPAMandate{}, err
-	}
-	errs := validation.Errors{}
-	account, iban := normalizeAccount(errs, current.Kind, change.AccountHolder, change.IBAN, change.BIC, change.Sequence, false)
-	if iban == "" && account.BIC == "" && sepa.NeedsBIC(current.IBANMasked) {
-		errs["bic"] = errors.New("is required for an account outside the EEA")
-	}
-	if len(errs) > 0 {
-		return parentbilling.SEPAMandate{}, errs
-	}
-	next, fields, err := m.changedAccount(reviewer.OrganizationID, current, account, iban)
-	if err != nil {
-		return parentbilling.SEPAMandate{}, err
-	}
-	if len(fields) == 0 {
-		// Nothing changed, but the answer shows the account: a read.
-		if err := m.record(ctx, reviewer, mandateRead, parentbilling.MandateFromOffice, nil, current); err != nil {
-			return parentbilling.SEPAMandate{}, err
-		}
-		return m.named(ctx, reviewer.OrganizationID, current)
-	}
-	slices.Sort(fields)
-	stored, err := m.store.UpdateSEPAMandate(ctx, reviewer.OrganizationID, reviewer.AccountID, next)
-	if err != nil {
-		return parentbilling.SEPAMandate{}, err
-	}
-	if err := m.record(ctx, reviewer, mandateUpdate, parentbilling.MandateFromOffice, fields, stored); err != nil {
-		return parentbilling.SEPAMandate{}, err
-	}
-	return m.named(ctx, reviewer.OrganizationID, stored)
-}
-
-// changedAccount applies a checked change of the account to a mandate in
-// force: it seals a new IBAN or account holder and names the fields that
-// changed, none when nothing does.
-func (m *SEPAMandates) changedAccount(organizationID int64, current parentbilling.SEPAMandate, account parentbilling.SEPAMandateChange,
-	iban string,
-) (parentbilling.SealedSEPAMandate, []string, error) {
-	next := parentbilling.SealedSEPAMandate{Mandate: current}
-	next.Mandate.AccountHolder, next.Mandate.BIC, next.Mandate.Sequence = account.AccountHolder, account.BIC, account.Sequence
-	var fields []string
-	var err error
-	if iban != "" {
-		next.Mandate.IBANMasked = sepa.MaskIBAN(iban)
-		if next.IBAN, err = m.cipher.Seal([]byte(iban), ibanContext(organizationID, current.Reference)); err != nil {
-			return next, nil, fmt.Errorf("parent billing: seal the IBAN: %w", err)
-		}
-		fields = append(fields, mandateFieldIBAN)
-	}
-	if account.AccountHolder != current.AccountHolder {
-		if next.Holder, err = m.cipher.Seal([]byte(account.AccountHolder), holderContext(organizationID, current.Reference)); err != nil {
-			return next, nil, fmt.Errorf("parent billing: seal the account holder: %w", err)
-		}
-		fields = append(fields, mandateFieldHolder)
-	}
-	if account.BIC != current.BIC {
-		fields = append(fields, mandateFieldBIC)
-	}
-	if account.Sequence != current.Sequence {
-		fields = append(fields, mandateFieldSequence)
-	}
-	return next, fields, nil
 }
 
 // lockInForce reads a mandate in force for a change.

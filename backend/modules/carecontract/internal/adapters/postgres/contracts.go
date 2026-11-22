@@ -309,7 +309,7 @@ const inboxSQL = `SELECT c.id, c.school_id, v.child_first_name, v.child_last_nam
 	(c.status = '` + carecontract.StatusActive + `' AND ` + inboxChildScopeSQL + `) AS can_end,
 	(SELECT MAX(s.signed_at) FROM care_contract.contract_signatures AS s
 		WHERE s.organization_id = c.organization_id AND s.contract_id = c.id) AS signed_at,
-	c.concluded_at, c.conclusion_method,
+	c.concluded_at, c.conclusion_method, c.conclusion_date_unknown, c.import_origin IS NOT NULL AS taken_over,
 	LEAST(c.withdrawal_informed_at, (SELECT CASE WHEN s.method <> '` + carecontract.SignaturePaper + `' THEN s.withdrawal_notice_at END
 		FROM care_contract.contract_signatures AS s WHERE s.organization_id = c.organization_id AND s.contract_id = c.id
 		ORDER BY s.signed_at DESC, s.id DESC LIMIT 1)) AS informed_at
@@ -347,6 +347,8 @@ func (Store) InboxContracts(ctx context.Context, organizationID int64, reader ca
 		CanEnd         bool           `bun:"can_end"`
 		ConcludedAt    *time.Time     `bun:"concluded_at"`
 		Method         *string        `bun:"conclusion_method"`
+		DateUnknown    bool           `bun:"conclusion_date_unknown"`
+		TakenOver      bool           `bun:"taken_over"`
 		InformedAt     *time.Time     `bun:"informed_at"`
 	}
 	schools, students := inboxChildScope(reader.Children)
@@ -361,7 +363,8 @@ func (Store) InboxContracts(ctx context.Context, organizationID int64, reader ca
 	for i, row := range rows {
 		result[i].SchoolID, result[i].InformedAt = row.SchoolID, row.InformedAt
 		if row.ConcludedAt != nil && row.Method != nil {
-			result[i].Concluded = &carecontract.Concluded{Method: *row.Method, At: *row.ConcludedAt}
+			result[i].Concluded = &carecontract.Concluded{Method: *row.Method, At: *row.ConcludedAt,
+				DateUnknown: row.DateUnknown, TakenOver: row.TakenOver}
 		}
 		result[i].Contract = carecontract.InboxContract{
 			ID: row.ID, ChildNames: []string{row.ChildFirstName}, ModuleNames: nonNil(row.ModuleNames),

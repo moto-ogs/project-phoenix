@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The reduced roles of the demo school profile (#3469). A visitor of the
@@ -122,7 +124,7 @@ func (s *FixedSeeder) seedDemoRoles(_ context.Context, definitions ...demoRoleDe
 		}
 		var role struct {
 			Data struct {
-				ID apiID `json:"id"`
+				ID ident.ID `json:"id"`
 			} `json:"data"`
 		}
 		if err := json.Unmarshal(created, &role); err != nil {
@@ -159,9 +161,9 @@ func (s *FixedSeeder) fetchPermissionIDs() (map[string]int64, error) {
 	}
 	var resp struct {
 		Data []struct {
-			ID       apiID  `json:"id"`
-			Resource string `json:"resource"`
-			Action   string `json:"action"`
+			ID       ident.ID `json:"id"`
+			Resource string   `json:"resource"`
+			Action   string   `json:"action"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(respBody, &resp); err != nil {

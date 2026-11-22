@@ -7,6 +7,7 @@
 import { useSession } from "next-auth/react";
 import { useMemo, type ReactNode } from "react";
 
+import { schoolNotificationFeedApi } from "~/lib/notification-feed-api";
 import {
   type NotificationFeedPortal,
   NotificationFeedPortalProvider,
@@ -20,7 +21,7 @@ export function SchoolNotificationFeedProvider({
   const schoolId = session?.user?.tenantId ?? null;
   const portal = useMemo(
     (): NotificationFeedPortal => ({
-      apiBase: "/api/school/notifications/feed",
+      api: schoolNotificationFeedApi,
       keyScope: "school",
       resolveLink: schoolPath,
       analyticsSchoolId: schoolId === null ? null : String(schoolId),

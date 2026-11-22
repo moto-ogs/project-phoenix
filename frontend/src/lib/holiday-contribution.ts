@@ -6,7 +6,7 @@
  */
 
 import { knownEnum } from "./contract/known-enum";
-import type { HolidayContribution as WireHolidayContribution } from "./contract/traeger-holiday-quotes.generated";
+import type * as traegerHolidayQuotesContract from "./contract/traeger-holiday-quotes.generated";
 
 // Go does not register this set; the contract types it as string. A value
 // this build does not know stays undefined instead of passing as a known one.
@@ -110,7 +110,7 @@ function presentId(value: string | null): string {
 
 /** Maps a contribution of the backend. */
 export function contributionFromBackend(
-  contribution: WireHolidayContribution,
+  contribution: traegerHolidayQuotesContract.HolidayContribution,
 ): HolidayContribution {
   return {
     children: (contribution.children ?? []).map((child) => ({

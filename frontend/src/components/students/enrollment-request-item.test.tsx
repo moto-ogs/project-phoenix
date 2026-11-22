@@ -2,21 +2,22 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { EnrollmentRequestItem } from "./enrollment-request-item";
-import type { EnrollmentChangeRequest } from "~/lib/change-request-list-api";
+import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 
 vi.mock("~/lib/tenant-path", () => ({
   useTenantAwarePath: () => (href: string) => `/demo${href}`,
 }));
 
 function request(
-  overrides: Partial<EnrollmentChangeRequest> = {},
-): EnrollmentChangeRequest {
+  overrides: Partial<enrollmentContract.ChangeRequestReviewEntry> = {},
+): enrollmentContract.ChangeRequestReviewEntry {
   return {
     id: "12",
     request_id: "57",
     origin: "parent",
     status: "pending_review",
     child_names: ["Lina Beispiel", "Timo Beispiel"],
+    children: null,
     guardian_name: "Anna Beispiel",
     parent_note: "Bitte Telefonnummer ändern.",
     base_snapshot: {

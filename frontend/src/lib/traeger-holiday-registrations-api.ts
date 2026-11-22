@@ -1,3 +1,4 @@
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the review of the holiday registrations in the Träger portal
  * (#4663): the list of a holiday period with its filters, one registration
@@ -15,7 +16,6 @@ import {
   holidayFormVersionFromContract,
   type HolidayFormVersion,
 } from "~/lib/holiday-form-field";
-import { apiErrorFromBody, transportFetch } from "./api-error";
 import { knownEnum, requiredEnum } from "./contract/known-enum";
 import { requiredDay } from "./contract/required-day";
 import type * as sharedContract from "./contract/shared.generated";
@@ -27,7 +27,6 @@ import {
   consentTextsFromBackend,
   type HolidayConsentTexts,
 } from "./holiday-consent-texts";
-import { traegerRequest } from "./traeger-api";
 
 export type HolidayRegistrationStatus = "received" | "confirmed" | "cancelled";
 
@@ -728,37 +727,24 @@ export async function uploadHolidayProof(
 ): Promise<HolidayRegistrationDetail> {
   const body = new FormData();
   body.append("file", file);
-  const response = await transportFetch(
-    `${registrationPath(periodId, registrationId)}/proofs`,
-    { method: "POST", body, credentials: "include" },
+  return detailFromBackend(
+    await bffJson(
+      "org",
+      "POST /traeger/holiday-periods/{id}/registrations/{registrationId}/proofs",
+      { params: { id: periodId, registrationId }, body },
+    ),
   );
-  const payload = (await response.json().catch(() => null)) as {
-    data?: sharedContract.HolidayRegistrationDetail;
-  } | null;
-  if (!response.ok || !payload?.data) {
-    throw apiErrorFromBody(
-      `Request failed (${response.status})`,
-      response.status,
-      payload,
-    );
-  }
-  return detailFromBackend(payload.data);
 }
 
-/** The query string of a filter, empty values left out. */
-function holidayRegistrationQuery(
-  filter: HolidayRegistrationFilter,
-  extra: Record<string, string> = {},
-): string {
-  const params = new URLSearchParams();
-  if (filter.status) params.set("status", filter.status);
-  if (filter.school) params.set("school", filter.school);
-  if (filter.weekId) params.set("week_id", filter.weekId);
-  if (filter.timeModel) params.set("time_model", filter.timeModel);
-  if (filter.wish) params.set("wish", filter.wish);
-  for (const [key, value] of Object.entries(extra)) params.set(key, value);
-  const query = params.toString();
-  return query ? `?${query}` : "";
+/** The query of a filter, empty values left out. */
+function holidayFilterQuery(filter: HolidayRegistrationFilter) {
+  return {
+    status: filter.status || undefined,
+    school: filter.school || undefined,
+    week_id: filter.weekId || undefined,
+    time_model: filter.timeModel || undefined,
+    wish: filter.wish || undefined,
+  };
 }
 
 /** The registrations of a period that match the filter. */
@@ -766,10 +752,14 @@ export async function fetchHolidayRegistrations(
   periodId: string,
   filter: HolidayRegistrationFilter,
 ): Promise<HolidayRegistrationList> {
-  const list =
-    await traegerRequest<traegerHolidayPeriodsContract.HolidayRegistrationList>(
-      `${registrationsPath(periodId)}${holidayRegistrationQuery(filter)}`,
-    );
+  const list = await bffJson(
+    "org",
+    "GET /traeger/holiday-periods/{id}/registrations",
+    {
+      params: { id: periodId },
+      query: holidayFilterQuery(filter),
+    },
+  );
   return {
     registrations: (list.registrations ?? [])
       .filter(knownRegistration)
@@ -789,8 +779,10 @@ export async function fetchHolidayRegistration(
   registrationId: string,
 ): Promise<HolidayRegistrationDetail> {
   return detailFromBackend(
-    await traegerRequest<sharedContract.HolidayRegistrationDetail>(
-      registrationPath(periodId, registrationId),
+    await bffJson(
+      "org",
+      "GET /traeger/holiday-periods/{id}/registrations/{registrationId}",
+      { params: { id: periodId, registrationId } },
     ),
   );
 }
@@ -806,13 +798,14 @@ export async function fetchHolidayKnownChildren(
   periodId: string,
   registrationId?: string,
 ): Promise<ReadonlyMap<string, string>> {
-  const query = registrationId
-    ? `?registration_id=${encodeURIComponent(registrationId)}`
-    : "";
-  const known =
-    await traegerRequest<traegerHolidayPeriodsContract.HolidayKnownChildrenResponse>(
-      `/api/traeger/holiday-periods/${encodeURIComponent(periodId)}/registrations/known-children${query}`,
-    );
+  const known = await bffJson(
+    "org",
+    "GET /traeger/holiday-periods/{id}/registrations/known-children",
+    {
+      params: { id: periodId },
+      query: { registration_id: registrationId || undefined },
+    },
+  );
   return new Map(
     (known.children ?? []).map((child) => [child.child_id, child.school_id]),
   );
@@ -826,10 +819,11 @@ export async function fetchHolidayKnownChildren(
 export async function fetchHolidayRegistrationMailProblems(
   periodId: string,
 ): Promise<ReadonlyMap<string, readonly HolidayRegistrationMailProblem[]>> {
-  const answer =
-    await traegerRequest<traegerHolidayPeriodsContract.HolidayMailProblemsResponse>(
-      `/api/traeger/holiday-periods/${encodeURIComponent(periodId)}/registrations/mail-problems`,
-    );
+  const answer = await bffJson(
+    "org",
+    "GET /traeger/holiday-periods/{id}/registrations/mail-problems",
+    { params: { id: periodId } },
+  );
   return new Map(
     (answer.registrations ?? []).map((registration) => [
       registration.registration_id,
@@ -846,10 +840,11 @@ export async function fetchHolidayRegistrationHealth(
   periodId: string,
   registrationId: string,
 ): Promise<HolidayRegistrationHealthDetail> {
-  const health =
-    await traegerRequest<traegerHolidayPeriodsContract.HolidayRegistrationHealthDetail>(
-      `${registrationPath(periodId, registrationId)}/health`,
-    );
+  const health = await bffJson(
+    "org",
+    "GET /traeger/holiday-periods/{id}/registrations/{registrationId}/health",
+    { params: { id: periodId, registrationId } },
+  );
   return {
     answers: health.custom_data ?? {},
     children: (health.children ?? []).map((child) => ({
@@ -895,9 +890,12 @@ export async function changeHolidayRegistration(
   action: HolidayRegistrationAction,
 ): Promise<HolidayRegistrationDetail> {
   return detailFromBackend(
-    await traegerRequest<sharedContract.HolidayRegistrationDetail>(
-      `${registrationPath(periodId, registrationId)}/${action}`,
-      { method: "POST", body: {} },
+    await bffJson(
+      "org",
+      action === "freeze"
+        ? "POST /traeger/holiday-periods/{id}/registrations/{registrationId}/freeze"
+        : "POST /traeger/holiday-periods/{id}/registrations/{registrationId}/reopen",
+      { params: { id: periodId, registrationId } },
     ),
   );
 }
@@ -912,10 +910,11 @@ export async function checkHolidayRegistrationCriteria(
   checks: readonly HolidayCriterionCheck[],
 ): Promise<HolidayRegistrationDetail> {
   return detailFromBackend(
-    await traegerRequest<sharedContract.HolidayRegistrationDetail>(
-      `${registrationPath(periodId, registrationId)}/criteria`,
+    await bffJson(
+      "org",
+      "PUT /traeger/holiday-periods/{id}/registrations/{registrationId}/criteria",
       {
-        method: "PUT",
+        params: { id: periodId, registrationId },
         body: {
           checks: checks.map((check) => ({
             criterion_id: check.criterionId,
@@ -939,10 +938,11 @@ export async function setHolidayChildWish(
   wish: "yes" | "no",
 ): Promise<HolidayRegistrationDetail> {
   return detailFromBackend(
-    await traegerRequest<sharedContract.HolidayRegistrationDetail>(
-      `${registrationPath(periodId, registrationId)}/children/${encodeURIComponent(childId)}/holiday-wish`,
+    await bffJson(
+      "org",
+      "PUT /traeger/holiday-periods/{id}/registrations/{registrationId}/children/{childId}/holiday-wish",
       {
-        method: "PUT",
+        params: { id: periodId, registrationId, childId },
         body: {
           wish,
         } satisfies traegerHolidayPeriodsContract.HolidayWishRequest,
@@ -959,10 +959,11 @@ export async function rebookHolidayChild(
   bookings: readonly HolidayBookingChange[],
 ): Promise<HolidayRegistrationDetail> {
   return detailFromBackend(
-    await traegerRequest<sharedContract.HolidayRegistrationDetail>(
-      `/api/traeger/holiday-contributions/${encodeURIComponent(periodId)}/registrations/${encodeURIComponent(registrationId)}/children/${encodeURIComponent(childId)}/bookings`,
+    await bffJson(
+      "org",
+      "PUT /traeger/holiday-contributions/{periodId}/registrations/{registrationId}/children/{childId}/bookings",
       {
-        method: "PUT",
+        params: { periodId, registrationId, childId },
         body: {
           bookings: bookings.map(
             (
@@ -1100,9 +1101,13 @@ export async function editHolidayRegistration(
   edit: HolidayRegistrationEdit,
 ): Promise<HolidayRegistrationDetail> {
   return detailFromBackend(
-    await traegerRequest<sharedContract.HolidayRegistrationDetail>(
-      `${registrationPath(periodId, registrationId)}/details`,
-      { method: "PUT", body: holidayRegistrationEditBody(edit) },
+    await bffJson(
+      "org",
+      "PUT /traeger/holiday-periods/{id}/registrations/{registrationId}/details",
+      {
+        params: { id: periodId, registrationId },
+        body: holidayRegistrationEditBody(edit),
+      },
     ),
   );
 }
@@ -1113,25 +1118,10 @@ interface DownloadedFile {
 }
 
 /** Fetches a file of the Träger portal with the backend's file name. */
-async function downloadTraegerFile(path: string): Promise<DownloadedFile> {
-  const response = await transportFetch(path, {
-    credentials: "include",
-    cache: "no-store",
-  });
-  if (!response.ok) {
-    const text = await response.text();
-    let body: unknown = null;
-    try {
-      body = text ? (JSON.parse(text) as unknown) : null;
-    } catch {
-      body = null;
-    }
-    throw apiErrorFromBody(
-      `Request failed (${response.status})`,
-      response.status,
-      body,
-    );
-  }
+async function downloadTraegerFile(
+  file: Promise<Response>,
+): Promise<DownloadedFile> {
+  const response = await file;
   return {
     blob: await response.blob(),
     filename: filenameFromDisposition(response),
@@ -1145,13 +1135,11 @@ export async function downloadHolidayRegistrations(
   format: "pdf" | "xlsx" | "csv",
 ): Promise<DownloadedFile> {
   return downloadTraegerFile(
-    `${registrationsPath(periodId)}/export${holidayRegistrationQuery(filter, { format })}`,
+    bffFile("org", "GET /traeger/holiday-periods/{id}/registrations/export", {
+      params: { id: periodId },
+      query: { ...holidayFilterQuery(filter), format },
+    }),
   );
-}
-
-/** The query that asks for the health information in a file (#6691). */
-function healthQuery(withHealth: boolean): Record<string, string> {
-  return withHealth ? { health: "true" } : {};
 }
 
 /**
@@ -1164,7 +1152,14 @@ export async function downloadHolidayRegistrationPdf(
   withHealth: boolean,
 ): Promise<DownloadedFile> {
   return downloadTraegerFile(
-    `${registrationPath(periodId, registrationId)}/pdf${holidayRegistrationQuery(EMPTY_HOLIDAY_REGISTRATION_FILTER, healthQuery(withHealth))}`,
+    bffFile(
+      "org",
+      "GET /traeger/holiday-periods/{id}/registrations/{registrationId}/pdf",
+      {
+        params: { id: periodId, registrationId },
+        query: { health: withHealth ? "true" : undefined },
+      },
+    ),
   );
 }
 
@@ -1175,7 +1170,13 @@ export async function downloadHolidayRegistrationPdfs(
   withHealth: boolean,
 ): Promise<DownloadedFile> {
   return downloadTraegerFile(
-    `${registrationsPath(periodId)}/pdf${holidayRegistrationQuery(filter, healthQuery(withHealth))}`,
+    bffFile("org", "GET /traeger/holiday-periods/{id}/registrations/pdf", {
+      params: { id: periodId },
+      query: {
+        ...holidayFilterQuery(filter),
+        health: withHealth ? "true" : undefined,
+      },
+    }),
   );
 }
 
@@ -1200,10 +1201,10 @@ export interface HolidayConfirmationSettings {
 }
 
 export async function fetchHolidayConfirmationSettings(): Promise<HolidayConfirmationSettings> {
-  const settings =
-    await traegerRequest<traegerHolidayContributionsContract.HolidayConfirmationSettings>(
-      "/api/traeger/holiday-contributions/confirmation-settings",
-    );
+  const settings = await bffJson(
+    "org",
+    "GET /traeger/holiday-contributions/confirmation-settings",
+  );
   return {
     debtorNumberRequired: settings.debtor_number_required,
     debtorNumberFormat: debtorNumberFormatOf(settings.debtor_number_format),
@@ -1256,9 +1257,11 @@ export interface HolidayWeekPlaces {
 export async function fetchHolidayWeekPlaces(
   periodId: string,
 ): Promise<readonly HolidayWeekPlaces[]> {
-  const weeks = await traegerRequest<
-    traegerHolidayPeriodsContract.HolidayWeekPlaces[]
-  >(`/api/traeger/holiday-periods/${encodeURIComponent(periodId)}/places`);
+  const weeks = await bffJson(
+    "org",
+    "GET /traeger/holiday-periods/{id}/places",
+    { params: { id: periodId } },
+  );
   return weeks.map((week) => ({
     weekId: week.week_id,
     startsOn: requiredDay(week.starts_on, "holiday_week_places.starts_on"),
@@ -1302,15 +1305,15 @@ export async function setHolidayWeekCapacity(
   weekId: string,
   capacity: number | null,
 ): Promise<{ readonly movedUp: readonly string[] }> {
-  const change =
-    await traegerRequest<traegerHolidayContributionsContract.HolidayPlaceChange>(
-      `/api/traeger/holiday-contributions/${encodeURIComponent(periodId)}/weeks/${encodeURIComponent(weekId)}/capacity`,
-      {
-        method: "PUT",
-        body: {
-          capacity,
-        } satisfies traegerHolidayContributionsContract.HolidayCapacityRequest,
-      },
-    );
+  const change = await bffJson(
+    "org",
+    "PUT /traeger/holiday-contributions/{periodId}/weeks/{weekId}/capacity",
+    {
+      params: { periodId, weekId },
+      body: {
+        capacity,
+      } satisfies traegerHolidayContributionsContract.HolidayCapacityRequest,
+    },
+  );
   return { movedUp: change.moved_up ?? [] };
 }

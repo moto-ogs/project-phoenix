@@ -4,8 +4,6 @@ import (
 	"net/http"
 
 	"github.com/go-chi/render"
-
-	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
@@ -14,25 +12,25 @@ import (
 // and from when a template may be assigned to one staff member. Members
 // without any fact are absent.
 type StaffFactResponse struct {
-	StaffID           common.ID  `json:"staff_id"`
-	WorkTimeModelID   *common.ID `json:"work_time_model_id"`
-	HasSchedule       bool       `json:"has_schedule"`
-	SollKeptByTraeger bool       `json:"soll_kept_by_traeger"`
-	ClosedThrough     *string    `json:"closed_through"`
+	StaffID           ident.ID  `json:"staff_id"`
+	WorkTimeModelID   *ident.ID `json:"work_time_model_id"`
+	HasSchedule       bool      `json:"has_schedule"`
+	SollKeptByTraeger bool      `json:"soll_kept_by_traeger"`
+	ClosedThrough     *string   `json:"closed_through"`
 }
 
 // AssignRequest names the staff members a template is assigned to and the
 // first day of their new schedule (empty: today).
 type AssignRequest struct {
-	StaffIDs  []common.ID `json:"staff_ids"`
-	ValidFrom string      `json:"valid_from"`
+	StaffIDs  []ident.ID `json:"staff_ids"`
+	ValidFrom string     `json:"valid_from"`
 }
 
 // AssignResponse reports who now carries the template and since when.
 type AssignResponse struct {
-	AssignedStaffIDs  []common.ID `json:"assigned_staff_ids"`
-	UnchangedStaffIDs []common.ID `json:"unchanged_staff_ids"`
-	ValidFrom         string      `json:"valid_from"`
+	AssignedStaffIDs  []ident.ID `json:"assigned_staff_ids"`
+	UnchangedStaffIDs []ident.ID `json:"unchanged_staff_ids"`
+	ValidFrom         string     `json:"valid_from"`
 }
 
 // staffFacts handles GET /api/work-time-models/staff-facts.

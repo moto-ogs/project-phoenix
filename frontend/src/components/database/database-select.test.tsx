@@ -11,10 +11,15 @@ import { DatabaseSelect, GroupSelect } from "./database-select";
 import { useApiLoadError } from "~/contexts/ToastContext";
 import { catalogText } from "~/test/error-catalog-text";
 import { SWRConfig } from "~/lib/swr/testing";
+import { pagedJson } from "~/test/mocks/plain-session-fetch";
 
 // GroupSelect reads its options through the shared cache; each render gets
 // its own.
 vi.unmock("swr");
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
 
 function Providers({ children }: Readonly<{ children: ReactNode }>) {
   return (
@@ -328,7 +333,7 @@ describe("GroupSelect", () => {
   it("renders with default 'Gruppe' label", async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ data: [] }),
+      json: () => Promise.resolve(pagedJson([])),
     });
 
     render(<GroupSelect {...defaultProps} />);
@@ -343,7 +348,7 @@ describe("GroupSelect", () => {
   it("uses custom label when provided", async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ data: [] }),
+      json: () => Promise.resolve(pagedJson([])),
     });
 
     render(<GroupSelect {...defaultProps} label="Klassengruppe" />);
@@ -359,12 +364,12 @@ describe("GroupSelect", () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
       json: () =>
-        Promise.resolve({
-          data: [
+        Promise.resolve(
+          pagedJson([
             { id: "1", name: "Klasse 1a" },
             { id: "2", name: "Klasse 2b" },
-          ],
-        }),
+          ]),
+        ),
     });
 
     render(<GroupSelect {...defaultProps} />);
@@ -386,7 +391,7 @@ describe("GroupSelect", () => {
       ).toBeInTheDocument();
     });
 
-    expect(global.fetch).toHaveBeenCalledWith("/api/groups");
+    expect(global.fetch).toHaveBeenCalledWith("/api/groups", expect.anything());
     expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
@@ -395,7 +400,8 @@ describe("GroupSelect", () => {
       .mockRejectedValueOnce(new TypeError("Failed to fetch"))
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ data: [{ id: "1", name: "Raum Blau" }] }),
+        json: () =>
+          Promise.resolve(pagedJson([{ id: "1", name: "Raum Blau" }])),
       });
 
     render(<GroupSelectOwner />);
@@ -466,101 +472,58 @@ describe("GroupSelect", () => {
   it("includes filters in API request", async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ data: [] }),
+      json: () => Promise.resolve(pagedJson([])),
     });
 
-    render(<GroupSelect {...defaultProps} filters={{ active: true }} />);
+    render(<GroupSelect {...defaultProps} filters={{ room_id: "7" }} />);
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith("/api/groups?active=true");
+      expect(global.fetch).toHaveBeenCalledWith(
+        "/api/groups?room_id=7",
+        expect.anything(),
+      );
     });
   });
 
-  it("handles array response format", async () => {
+  it("sends every set filter", async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
-      json: () =>
-        Promise.resolve([
-          { id: 1, name: "Group 1" },
-          { id: 2, name: "Group 2" },
-        ]),
-    });
-
-    render(<GroupSelect {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByRole("combobox")).not.toBeDisabled();
-    });
-    openMenu();
-
-    await waitFor(() => {
-      expect(
-        screen.getByRole("option", { name: "Group 1" }),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByRole("option", { name: "Group 2" }),
-      ).toBeInTheDocument();
-    });
-  });
-
-  it("handles numeric IDs in response", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          data: [{ id: 123, name: "Numeric ID Group" }],
-        }),
-    });
-
-    render(<GroupSelect {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByRole("combobox")).not.toBeDisabled();
-    });
-    openMenu();
-
-    await waitFor(() => {
-      expect(
-        screen.getByRole("option", { name: "Numeric ID Group" }),
-      ).toBeInTheDocument();
-    });
-  });
-
-  it("converts filter values to strings correctly", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ data: [] }),
+      json: () => Promise.resolve(pagedJson([])),
     });
 
     render(
       <GroupSelect
         {...defaultProps}
-        filters={{ count: 5, enabled: false, name: "test" }}
+        filters={{ name: "test", room_id: "5" }}
       />,
     );
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
-        "/api/groups?count=5&enabled=false&name=test",
+        "/api/groups?name=test&room_id=5",
+        expect.anything(),
       );
     });
   });
 
-  it("skips null and undefined filter values", async () => {
+  it("skips unset filter values", async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ data: [] }),
+      json: () => Promise.resolve(pagedJson([])),
     });
 
     render(
       <GroupSelect
         {...defaultProps}
-        filters={{ valid: "yes", invalid: null, missing: undefined }}
+        filters={{ name: "yes", room_id: undefined }}
       />,
     );
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith("/api/groups?valid=yes");
+      expect(global.fetch).toHaveBeenCalledWith(
+        "/api/groups?name=yes",
+        expect.anything(),
+      );
     });
   });
 });

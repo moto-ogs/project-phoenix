@@ -10,10 +10,9 @@
 
 import { signOut } from "next-auth/react";
 
-import { apiErrorFromResponse } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
-import type { StaffPreviewCandidate as StaffPreviewCandidateWire } from "~/lib/contract/auth-staff-preview.generated";
-import { sessionFetch, clearSessionCache } from "~/lib/session-cache";
+import { bffJson, bffJsonUncontracted } from "~/lib/bff-fetch";
+import { clearSessionCache } from "~/lib/session-cache";
 
 const logger = createLogger({ component: "StaffPreviewApi" });
 
@@ -85,18 +84,11 @@ async function signOutAfterFailedRestore(): Promise<void> {
 export async function fetchStaffPreviewCandidates(): Promise<
   StaffPreviewCandidate[]
 > {
-  const response = await sessionFetch("/api/auth/staff-preview/candidates");
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Failed to load preview candidates: ${response.status}`,
-    );
-  }
-  // The catalog proxy passes the backend's envelope { status, data } through.
-  const envelope = (await response.json()) as {
-    data?: StaffPreviewCandidateWire[] | null;
-  };
-  return (envelope.data ?? []).map((candidate) => ({
+  const candidates = await bffJson(
+    "tenant",
+    "GET /auth/staff-preview/candidates",
+  );
+  return candidates.map((candidate) => ({
     accountId: candidate.account_id,
     firstName: candidate.first_name,
     lastName: candidate.last_name,
@@ -108,18 +100,16 @@ export async function fetchStaffPreviewCandidates(): Promise<
 async function startStaffPreview(
   accountId: string,
 ): Promise<StaffPreviewSession> {
-  const response = await sessionFetch("/api/auth/staff-preview", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ account_id: accountId }),
-  });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Failed to start preview: ${response.status}`,
-    );
-  }
-  const data = (await response.json()) as StaffPreviewStartBody;
+  // A sign-in step of the BFF (app/api/auth/staff-preview): no Go contract.
+  const data = await bffJsonUncontracted<StaffPreviewStartBody>(
+    "tenant",
+    "POST",
+    "/api/auth/staff-preview",
+    {
+      body: { account_id: accountId },
+      errorMessage: "Failed to start preview",
+    },
+  );
   return {
     expiresIn: data.expires_in,
     targetAccountId: data.target_account_id,

@@ -28,9 +28,9 @@ func (req *endTemplateRequest) Bind(_ *http.Request) error {
 }
 
 type endTemplateResponse struct {
-	TemplateID       common.ID `json:"template_id"`
-	EffectiveDate    string    `json:"effective_date"`
-	DeletedInstances int       `json:"deleted_instances"`
+	TemplateID       ident.ID `json:"template_id"`
+	EffectiveDate    string   `json:"effective_date"`
+	DeletedInstances int      `json:"deleted_instances"`
 }
 
 func (rs *Resource) endTemplate(w http.ResponseWriter, r *http.Request) {

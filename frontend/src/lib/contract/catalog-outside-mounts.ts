@@ -82,6 +82,7 @@ export const CATALOG_PUBLIC_OUTSIDE_MOUNTS = {
     // exact path: `/auth/invitations` also holds the staff portal's session
     // routes.
     "/auth/invitations/{token}/",
+    "/auth/guardian-invitations/{token}/",
     "/auth/guardian-invitations/{token}/accept",
     "/auth/holiday-parent-setups/{token}/",
     "/auth/tenants/",

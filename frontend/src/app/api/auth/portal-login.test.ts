@@ -151,20 +151,22 @@ describe.each(portals)(
         )(
           request(
             portal,
-            { organization_id: 9 },
+            { organization_id: "9" },
             undefined,
             `${portal}.session-token.0=obsolete; ${portal}.session-token.1=obsolete`,
           ),
         );
         expect(response.status).toBe(200);
-        expect(await response.json()).toEqual(
-          wrapStep({ status: "authenticated" }),
-        );
+        // The BFF answers every sign-in step in the success envelope.
+        expect(await response.json()).toEqual({
+          status: "success",
+          data: { status: "authenticated" },
+        });
         expect(backend.mock.calls[0]?.[0]).toBe(
           `http://server:8080/${portal}/auth/${step}`,
         );
         expect(backend.mock.calls[0]?.[1].body).toBe(
-          JSON.stringify({ organization_id: 9 }),
+          JSON.stringify({ organization_id: "9" }),
         );
         if (step === "mfa/enroll/confirm")
           expect(backend.mock.calls[0]?.[1].headers.Authorization).toBe(
@@ -280,7 +282,7 @@ describe.each(portals)(
           status,
           ...proof,
           masked_email: "a***@example.test",
-          ...(portal === "traeger" ? { organization_id: 9 } : {}),
+          ...(portal === "traeger" ? { organization_id: "9" } : {}),
         };
         backend.mockResolvedValueOnce(
           Response.json(wrap({ ...data, extra_token: "must-not-leak" })),
@@ -289,7 +291,7 @@ describe.each(portals)(
           LOGIN[portal],
           "login",
         )(request(portal));
-        expect(await response.json()).toEqual(wrap(data));
+        expect(await response.json()).toEqual({ status: "success", data });
         expect(response.headers.getSetCookie()).toEqual([]);
         expect(backend).toHaveBeenCalledOnce();
       },
@@ -325,7 +327,7 @@ it("allowlists Träger organization selection without disclosing credentials", a
   backend.mockResolvedValueOnce(
     Response.json({
       status: "organization_selection_required",
-      organizations: [{ id: 9, name: "Träger Nord", token: "must-not-leak" }],
+      organizations: [{ id: "9", name: "Träger Nord", token: "must-not-leak" }],
       ...pair(),
     }),
   );
@@ -334,8 +336,11 @@ it("allowlists Träger organization selection without disclosing credentials", a
     "login",
   )(request("traeger"));
   expect(await response.json()).toEqual({
-    status: "organization_selection_required",
-    organizations: [{ id: 9, name: "Träger Nord" }],
+    status: "success",
+    data: {
+      status: "organization_selection_required",
+      organizations: [{ id: "9", name: "Träger Nord" }],
+    },
   });
   expect(response.headers.getSetCookie()).toEqual([]);
 });

@@ -70,18 +70,18 @@ type PhaseDetail struct {
 
 // PhaseRequest is the office's draft of a Träger phase.
 type PhaseRequest struct {
-	IsActive                  *bool       `json:"is_active"`
-	Name                      string      `json:"name"`
-	Kind                      string      `json:"kind"`
-	ServiceStartDate          string      `json:"service_start_date"`
-	ServiceEndDate            string      `json:"service_end_date"`
-	EnrollmentOpenAt          *time.Time  `json:"enrollment_open_at"`
-	EnrollmentCloseAt         *time.Time  `json:"enrollment_close_at"`
-	Audience                  string      `json:"audience"`
-	CareOverflowMode          string      `json:"care_overflow_mode"`
-	CareOfferingSelectionMode string      `json:"care_offering_selection_mode"`
-	AllSchools                bool        `json:"all_schools"`
-	SchoolIDs                 []common.ID `json:"school_ids"`
+	IsActive                  *bool      `json:"is_active"`
+	Name                      string     `json:"name"`
+	Kind                      string     `json:"kind"`
+	ServiceStartDate          string     `json:"service_start_date"`
+	ServiceEndDate            string     `json:"service_end_date"`
+	EnrollmentOpenAt          *time.Time `json:"enrollment_open_at"`
+	EnrollmentCloseAt         *time.Time `json:"enrollment_close_at"`
+	Audience                  string     `json:"audience"`
+	CareOverflowMode          string     `json:"care_overflow_mode"`
+	CareOfferingSelectionMode string     `json:"care_offering_selection_mode"`
+	AllSchools                bool       `json:"all_schools"`
+	SchoolIDs                 []ident.ID `json:"school_ids"`
 }
 
 // Bind accepts the request; the owner validates it.

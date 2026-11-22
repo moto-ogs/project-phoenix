@@ -132,6 +132,14 @@ export interface RoomRequest {
   is_open_room?: boolean | null;
 }
 
+/** Go: httpadapter.roomSnapshotExportRequest */
+export interface roomSnapshotExportRequest {
+  format?: string;
+  title?: string;
+  room_ids?: string[] | null;
+  include_transit?: boolean;
+}
+
 /** Query of GET /api/rooms/ */
 export interface GetRoomsQuery {
   building?: string;
@@ -205,6 +213,7 @@ export const routes = {
     method: "POST",
     pattern: "/api/rooms/export",
     portals: ["tenant"],
+    request: requestBody<roomSnapshotExportRequest>(),
     response: fileAnswer,
   },
   "PUT /api/rooms/{id}": {
