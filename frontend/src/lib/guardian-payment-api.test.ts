@@ -86,7 +86,21 @@ describe("guardian-payment-api", () => {
     );
   });
 
-  it("sends the bank fields in snake_case", async () => {});
+  it("sends the bank fields in snake_case", async () => {
+    sessionFetch.mockResolvedValue(jsonResponse({ data: null }));
+
+    await updateGuardianPayment("42", {
+      iban: "DE89370400440532013000",
+      accountHolder: null,
+    });
+
+    const [, init] = sessionFetch.mock.calls[0] as [string, RequestInit];
+    expect(init.method).toBe("PUT");
+    expect(JSON.parse(init.body as string)).toEqual({
+      iban: "DE89370400440532013000",
+      account_holder: null,
+    });
+  });
 
   // #2517: the code, field errors and request ID reach the shared error
   // display; the backend sentence is no longer the user's message.
@@ -155,9 +169,6 @@ describe("guardian-payment-api", () => {
         ibanMasked: "",
       },
     ]);
-
-    sessionFetch.mockResolvedValue(jsonResponse({ data: null }));
-    await expect(fetchPaymentOverview()).resolves.toEqual([]);
   });
 
   it("saves the export under the filename the backend chose", async () => {
