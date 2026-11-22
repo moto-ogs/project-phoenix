@@ -71,6 +71,10 @@ function mapRegistration(
   };
 }
 
+// The link and the status token are credentials: a failure names the step,
+// never the path that carries them.
+const errorMessage = "family children request failed";
+
 /** The number of the family at the given source. */
 export async function fetchFamilyChildren(
   source: FamilyChildrenSource,
@@ -94,7 +98,7 @@ export async function fetchFamilyChildren(
         await bffJson(
           "public",
           "GET /public/care-contract-signing/{link}/family-children",
-          { params: { link: source.link } },
+          { params: { link: source.link }, errorMessage },
         ),
       );
     case "enrollment":
@@ -102,7 +106,7 @@ export async function fetchFamilyChildren(
         await bffJson(
           "public",
           "GET /api/enrollment/requests/{statusToken}/family-children",
-          { params: { statusToken: source.token } },
+          { params: { statusToken: source.token }, errorMessage },
         ),
       );
   }
@@ -135,7 +139,7 @@ export async function stateFamilyChildren(
         await bffJson(
           "public",
           "PUT /public/care-contract-signing/{link}/family-children",
-          { params: { link: source.link }, body },
+          { params: { link: source.link }, body, errorMessage },
         ),
       );
     case "enrollment":
@@ -143,7 +147,7 @@ export async function stateFamilyChildren(
         await bffJson(
           "public",
           "PUT /api/enrollment/requests/{statusToken}/family-children",
-          { params: { statusToken: source.token }, body },
+          { params: { statusToken: source.token }, body, errorMessage },
         ),
       );
   }

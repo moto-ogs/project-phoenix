@@ -162,7 +162,8 @@ export async function fetchCatererInvitation(
   const data = await bffJson(
     "public",
     "GET /caterer/invitations/{schoolId}/{token}",
-    { params: { schoolId, token } },
+    // The token is a credential: the message names the step, not the path.
+    { params: { schoolId, token }, errorMessage: "caterer invitation failed" },
   );
   return {
     email: data.email,
@@ -186,6 +187,7 @@ export async function acceptCatererInvitation(
     {
       params: { schoolId, token },
       body: { password, confirm_password: confirmPassword },
+      errorMessage: "caterer invitation acceptance failed",
     },
   );
 }
