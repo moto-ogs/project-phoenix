@@ -233,6 +233,8 @@ func TestWeeklyRowsChangedComparesRowsNotAnswers(t *testing.T) {
 
 	assert.False(t, weeklyRowsChanged(run(map[string]any{"mon": "15:00", "tue": ""}), fields))
 	assert.False(t, weeklyRowsChanged(run(map[string]any{"mon": "15:00 "}), fields))
+	assert.False(t, sameClockTime("9:00", "09:30"))
+	assert.True(t, sameClockTime("9:00", "09:00"))
 	assert.True(t, weeklyRowsChanged(run(map[string]any{"mon": "15:30"}), fields))
 	assert.True(t, weeklyRowsChanged(run(map[string]any{"mon": "15:00", "tue": "14:00"}), fields))
 	assert.True(t, weeklyRowsChanged(run(map[string]any{}), fields))
@@ -245,11 +247,10 @@ func TestWeeklyRowsChangedComparesRowsNotAnswers(t *testing.T) {
 	assert.True(t, weeklyRowsChanged(run(map[string]any{"tue": "15:00"}), arrival))
 }
 
-// An actor without an author of their own can only leave a stored author
-// standing. A plan that has none yet, because it carried no weekly answer so
-// far, gets none from them: their edit that adds one is refused, or the
-// start would have nobody to name (#7818).
-func TestEditedWeeklyPlanKeepsOnlyAStoredAuthor(t *testing.T) {
+// An actor without an author of their own can only leave the plan's author
+// as it is. Their edit that adds a weekly answer or changes its rows is
+// refused, or the start would have nobody to name (#7818).
+func TestEditedWeeklyPlanKeepsItsAuthorOnlyForUnchangedRows(t *testing.T) {
 	t.Parallel()
 
 	const schemaID int64 = 81
@@ -283,7 +284,13 @@ func TestEditedWeeklyPlanKeepsOnlyAStoredAuthor(t *testing.T) {
 	times := map[string]any{"mon": "15:00"}
 
 	_, err := d.editedWeeklyPlanAuthor(context.Background(), edit(nil, map[string]any{}), enrollmentNative.WeeklyPlan{})
-	require.ErrorIs(t, err, enrollmentNative.ErrDecisionReviewerStaffRequired, "no stored author to keep")
+	require.ErrorIs(t, err, enrollmentNative.ErrDecisionReviewerStaffRequired, "a new answer needs an author")
+
+	// A plan stored without an author before plans kept one stays as it is
+	// under an edit that leaves its weekly answer alone.
+	legacy, err := d.editedWeeklyPlanAuthor(context.Background(), edit(times, times), enrollmentNative.WeeklyPlan{})
+	require.NoError(t, err)
+	assert.Equal(t, enrollmentNative.WeeklyPlan{}, legacy)
 
 	traegerPlan := enrollmentNative.WeeklyPlan{ByTraeger: true}
 	kept, err := d.editedWeeklyPlanAuthor(context.Background(), edit(times, times), traegerPlan)

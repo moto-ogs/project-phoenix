@@ -75,11 +75,11 @@ func (d *Decisions) editedWeeklyPlanAuthor(ctx context.Context, run *approvedChi
 		return plan, nil
 	}
 	author, err := d.resolveScheduleAuthor(ctx, scheduleAuthor{reviewerAccountID: run.input.ActorAccountID})
-	// Without an author of their own the actor can only leave a stored
-	// author standing, and only for the rows it approved: a plan that has
-	// none yet (it carried no weekly answer so far) gets none from them.
-	stored := plan.AuthorStaffID > 0 || plan.ByTraeger
-	if errors.Is(err, enrollmentNative.ErrDecisionReviewerStaffRequired) && stored && !weeklyRowsChanged(run, fields) {
+	// Without an author of their own the actor can only leave the plan's
+	// author as it is, and only while the weekly answers write what they
+	// wrote before. That also holds for a plan stored without an author
+	// before plans kept one: the start still falls back to its reviewer.
+	if errors.Is(err, enrollmentNative.ErrDecisionReviewerStaffRequired) && !weeklyRowsChanged(run, fields) {
 		return plan, nil
 	}
 	if err != nil {
@@ -113,8 +113,14 @@ func weeklyRowsChanged(run *approvedChildSync, fields []enrollmentNative.FormFie
 		if field.AppliesToCh {
 			previous = previousChildData[field.Key]
 		}
+		current := readFieldValue(run.request, run.child, field)
+		// A new answer needs an author even without a time, so adding or
+		// removing the answer itself is a change.
+		if (previous == nil) != (current == nil) {
+			return true
+		}
 		before, beforeErr := weekdayScheduleRows(previous)
-		after, afterErr := weekdayScheduleRows(readFieldValue(run.request, run.child, field))
+		after, afterErr := weekdayScheduleRows(current)
 		if beforeErr != nil || afterErr != nil || !sameWeeklyRows(field.Target, before, after) {
 			return true
 		}
