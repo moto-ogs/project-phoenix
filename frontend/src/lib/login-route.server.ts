@@ -13,7 +13,8 @@ import { withoutSessionCookies } from "~/server/auth/session-cookie-writes";
 import { createLogger } from "~/lib/logger";
 import type { PortalAuth } from "~/server/auth/portal-auth";
 import type { BackendAuthStep } from "~/server/auth/portals";
-import { portalAuthAnswer, portalAuthEnvelope } from "~/lib/portal-paths";
+import { portalAuthAnswer } from "~/lib/portal-paths";
+import { successResponse } from "~/lib/route-wrapper-utils.server";
 import {
   installMintedSession,
   logoutRollback,
@@ -124,7 +125,7 @@ export function createPortalLoginRoute(login: LoginPortal, step: LoginStep) {
           }),
         );
         const json = (body: Record<string, unknown>) =>
-          Response.json(portalAuthEnvelope(key, step, body));
+          Response.json(successResponse(body));
         if (
           organizations &&
           data.status === "organization_selection_required"

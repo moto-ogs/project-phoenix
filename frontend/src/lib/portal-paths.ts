@@ -26,7 +26,11 @@ interface PortalRoutes {
   readonly logPath: `/api/${string}`;
   /** The Auth.js Credentials provider id, for `signIn` in the browser. */
   readonly providerId: string;
-  /** The steps whose answer is enveloped in `{ data }`, for server and browser. */
+  /**
+   * The steps whose backend answer is enveloped in `{ data }`. A step the BFF
+   * answers itself (login, code, enrollment confirmation) always answers the
+   * browser `{ status, data }`.
+   */
   readonly enveloped: readonly EnvelopableAuthStep[];
 }
 
@@ -148,15 +152,6 @@ export function portalAuthAnswer<T>(
   answer: unknown,
 ): T {
   return (envelopes(portal, step) ? (answer as { data: T }).data : answer) as T;
-}
-
-/** The answer in the shape the portal's auth step uses. */
-export function portalAuthEnvelope(
-  portal: PortalKey,
-  step: EnvelopableAuthStep,
-  body: Record<string, unknown>,
-): Record<string, unknown> {
-  return envelopes(portal, step) ? { status: "success", data: body } : body;
 }
 
 /** The page Auth.js sends a signed-out visitor to; the proxy rewrites
