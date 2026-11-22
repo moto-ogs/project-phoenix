@@ -1,4 +1,4 @@
-import { bffFile, bffJson } from "~/lib/bff-fetch";
+import { bffFile, bffJson, bffJsonUncontracted } from "~/lib/bff-fetch";
 /**
  * Client of the Träger portal ("moto träger", #4649). Talks to the BFF
  * routes under /api/traeger, which forward to the backend with the Träger
@@ -13,11 +13,10 @@ import { requiredDay } from "./contract/required-day";
 import type * as sharedContract from "./contract/shared.generated";
 import type * as traegerAccountsContract from "./contract/traeger-accounts.generated";
 import type * as traegerHolidayPeriodsContract from "./contract/traeger-holiday-periods.generated";
-import type * as traegerInvitationsContract from "./contract/traeger-invitations.generated";
 import type * as traegerMasterDataContract from "./contract/traeger-master-data.generated";
 import type * as traegerProfileContract from "./contract/traeger-profile.generated";
 import type * as traegerSchoolsContract from "./contract/traeger-schools.generated";
-import type { SettingsSchema } from "./settings-api";
+import { toSettingsSchema, type SettingsSchema } from "./settings-api";
 import { filenameFromDisposition } from "./file-download";
 import { portalAuthPath } from "./portal-paths";
 import { signInAnswer, type SignInAnswer } from "./sign-in-answer";
@@ -284,9 +283,11 @@ export async function verifyTraegerCodeStep(
   challengeToken: string,
   code: string,
 ): Promise<boolean> {
-  const data = await traegerRequest<{ session_renewed: boolean }>(
+  const data = await bffJsonUncontracted<{ session_renewed: boolean }>(
+    "org",
+    "POST",
     "/api/traeger/auth/mfa/step-up/verify",
-    { method: "POST", body: { challenge_token: challengeToken, code } },
+    { body: { challenge_token: challengeToken, code } },
   );
   return data.session_renewed;
 }
@@ -690,10 +691,10 @@ export async function removeTraegerMember(accountId: string): Promise<void> {
 export async function fetchTraegerInvitation(
   token: string,
 ): Promise<TraegerInvitationPreview> {
-  const data =
-    await traegerRequest<traegerInvitationsContract.InvitationPreviewResponse>(
-      `/api/traeger/invitations/${encodeURIComponent(token)}`,
-    );
+  const data = await bffJson("public", "GET /traeger/invitations/{token}", {
+    params: { token },
+    errorMessage: "traeger invitation preview failed",
+  });
   return {
     organizationName: data.organization_name,
     email: data.email,
@@ -713,10 +714,12 @@ export async function acceptTraegerInvitation(
     readonly confirmPassword?: string;
   },
 ): Promise<string> {
-  const data = await traegerRequest<{ email: string }>(
-    `/api/traeger/invitations/${encodeURIComponent(token)}/accept`,
+  const data = await bffJson(
+    "public",
+    "POST /traeger/invitations/{token}/accept",
     {
-      method: "POST",
+      params: { token },
+      errorMessage: "traeger invitation acceptance failed",
       body: {
         name: input.name,
         password: input.password,
@@ -934,11 +937,7 @@ export async function downloadTraegerAccessLog(
  * default.
  */
 export async function fetchTraegerSettingsSchema(): Promise<SettingsSchema> {
-  // Moves to toSettingsSchema with bffJson once #7850 is merged.
-  const schema = await traegerRequest<SettingsSchema | null>(
-    "/api/traeger/settings/schema",
-  );
-  return { tabs: schema?.tabs ?? [] };
+  return toSettingsSchema(await bffJson("org", "GET /traeger/settings/schema"));
 }
 
 /** Sets the Träger value of one setting. Throws an ApiError on failure. */

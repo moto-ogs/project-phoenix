@@ -146,7 +146,6 @@ describe("timetableService", () => {
       "/api/timetable/instances?from=2026-05-04&to=2026-05-08",
       expect.objectContaining({
         method: "GET",
-        credentials: "include",
       }),
     );
     expect(result.instances[0]).toMatchObject({
@@ -431,7 +430,7 @@ describe("timetableService", () => {
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
       "/api/timetable/templates/7?period_id=5",
-      expect.objectContaining({ method: "GET", credentials: "include" }),
+      expect.objectContaining({ method: "GET" }),
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
@@ -499,13 +498,13 @@ describe("timetableService", () => {
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
       "/api/timetable/offering-sources?calendar_period_id=5",
-      expect.objectContaining({ method: "GET", credentials: "include" }),
+      expect.objectContaining({ method: "GET" }),
     );
     // No period → no query string at all, not a dangling "?".
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
       "/api/timetable/offering-sources",
-      expect.objectContaining({ method: "GET", credentials: "include" }),
+      expect.objectContaining({ method: "GET" }),
     );
   });
 
@@ -567,7 +566,7 @@ describe("timetableService", () => {
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
       "/api/timetable/conflicts?date=2026-05-04&start_time=12%3A00&end_time=13%3A00&room_id=3&staff_ids=11%2C12&student_ids=21&exclude_instance_id=42",
-      expect.objectContaining({ method: "GET", credentials: "include" }),
+      expect.objectContaining({ method: "GET" }),
     );
 
     // Optional params (and empty arrays) are omitted entirely.
@@ -640,7 +639,6 @@ describe("timetableService", () => {
       "/api/timetable/shift-coverage",
       expect.objectContaining({
         method: "POST",
-        credentials: "include",
         signal: controller.signal,
         body: JSON.stringify({
           dates: ["2026-05-04", "2026-05-06"],
@@ -723,7 +721,7 @@ describe("timetableService", () => {
       instanceId: "42",
       activeGroupId: "99",
     });
-    await expect(timetableService.complete("42", [])).resolves.toMatchObject({
+    await expect(timetableService.complete("42")).resolves.toMatchObject({
       instanceId: "42",
       status: "completed",
     });
@@ -740,7 +738,7 @@ describe("timetableService", () => {
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
       "/api/timetable/instances/42/start",
-      expect.objectContaining({ method: "POST", body: "{}" }),
+      expect.not.objectContaining({ body: expect.anything() }),
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
       4,
@@ -885,7 +883,7 @@ describe("timetableService", () => {
     );
 
     await expect(timetableService.materialize("x", "y")).rejects.toMatchObject({
-      message: "Anfrage fehlgeschlagen (HTTP 400)",
+      message: expect.not.stringContaining("Zeitraum ungueltig"),
       detail: "Zeitraum ungueltig",
       status: 400,
       code: "INVALID_RANGE",
@@ -898,7 +896,6 @@ describe("timetableService", () => {
       }),
     );
     await expect(timetableService.cancel("42")).rejects.toMatchObject({
-      message: "Anfrage fehlgeschlagen (HTTP 502)",
       status: 502,
     });
   });
@@ -985,7 +982,7 @@ describe("timetableService", () => {
     const reach = await timetableService.getGuardianNoticeReach("42");
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/timetable/instances/42/guardian-notice",
-      expect.objectContaining({ credentials: "include" }),
+      expect.objectContaining({ method: "GET" }),
     );
     expect(reach).toEqual({
       childCount: 4,
@@ -1359,7 +1356,7 @@ describe("staff pool + move (#1884)", () => {
     expect(JSON.parse(String(init.body))).toEqual({ staff_id: "9" });
   });
 
-  it("posts confirmed present ids and reopens a completed instance", async () => {
+  it("completes without a roster and reopens a completed instance", async () => {
     fetchMock
       .mockResolvedValueOnce(
         jsonResponse({
@@ -1383,9 +1380,7 @@ describe("staff pool + move (#1884)", () => {
         }),
       );
 
-    await expect(
-      timetableService.complete("42", ["21", "22"]),
-    ).resolves.toMatchObject({
+    await expect(timetableService.complete("42")).resolves.toMatchObject({
       instanceId: "42",
       status: "completed",
       reopenUntil: "2026-05-04T13:05:00Z",
@@ -1398,11 +1393,9 @@ describe("staff pool + move (#1884)", () => {
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
       "/api/timetable/instances/42/complete",
-      expect.objectContaining({
-        method: "POST",
-        body: JSON.stringify({ confirmed_present_student_ids: ["21", "22"] }),
-      }),
+      expect.objectContaining({ method: "POST" }),
     );
+    expect(fetchMock.mock.calls[0]?.[1]).not.toHaveProperty("body");
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
       "/api/timetable/instances/42/reopen",
@@ -1528,7 +1521,10 @@ describe("timetableService.applyBulkSubstitution (#2284)", () => {
         substituteStaffId: "12",
         dates: ["2026-08-18"],
       }),
-    ).rejects.toThrow("Anfrage fehlgeschlagen (HTTP 400)");
+    ).rejects.toMatchObject({
+      status: 400,
+      detail: "18.08.2026: die Ersatzperson ist am 18.08.2026 selbst abwesend",
+    });
   });
 });
 
@@ -1567,7 +1563,7 @@ describe("instance participants (#2283)", () => {
 
     expect(fetchMock).toHaveBeenLastCalledWith(
       "/api/timetable/instances/42/participants",
-      expect.objectContaining({ method: "GET", credentials: "include" }),
+      expect.objectContaining({ method: "GET" }),
     );
     expect(names.studentNames.get("21")).toBe("Mia M.");
     expect(names.studentNames.get("22")).toBe("Ben B.");

@@ -1545,7 +1545,7 @@ function TimetablesContent() {
             toast.success(LIFECYCLE_SUCCESS.start);
           }
         } else if (action === "complete") {
-          await timetableService.complete(instanceId, []);
+          await timetableService.complete(instanceId);
           toast.success(LIFECYCLE_SUCCESS.complete);
         } else if (action === "reopen") {
           await timetableService.reopen(instanceId);

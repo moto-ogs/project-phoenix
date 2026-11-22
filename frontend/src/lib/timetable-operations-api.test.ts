@@ -1,5 +1,10 @@
-import { primeSessionCache } from "./session-cache";
 import { ApiError } from "./api-error";
+
+// The session gate and its renewal are sessionFetch's own tests.
+vi.mock("./session-cache", () => ({
+  sessionFetch: (url: string, init?: RequestInit) =>
+    globalThis.fetch(url, init),
+}));
 import { schoolSupervisionsApi } from "./school-supervisions-api";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -17,7 +22,6 @@ describe("timetableOperationsApi", () => {
   let originalFetch: typeof fetch;
 
   beforeEach(() => {
-    primeSessionCache({ user: { id: "1" }, expires: "2099-01-01" });
     originalFetch = globalThis.fetch;
     globalThis.fetch = vi.fn();
   });
@@ -53,13 +57,7 @@ describe("timetableOperationsApi", () => {
 
     expect(mockFetch).toHaveBeenCalledWith(
       "/api/timetable/operations/planned-now?date=2026-05-10",
-      {
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-      },
+      { method: "GET" },
     );
     expect(result[0]?.id).toBe("130");
     expect(result[0]?.assignedStaffIds).toEqual(["330"]);
@@ -83,13 +81,7 @@ describe("timetableOperationsApi", () => {
 
     expect(mockFetch).toHaveBeenCalledWith(
       "/api/timetable/operations/planned-now?horizon_minutes=480&limit=5&include_roster=true",
-      {
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-      },
+      { method: "GET" },
     );
   });
 
@@ -105,13 +97,7 @@ describe("timetableOperationsApi", () => {
 
     expect(mockFetch).toHaveBeenCalledWith(
       "/api/timetable/operations/planned-now?scope=past",
-      {
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-      },
+      { method: "GET" },
     );
   });
 
@@ -127,13 +113,7 @@ describe("timetableOperationsApi", () => {
 
     expect(mockFetch).toHaveBeenCalledWith(
       "/api/timetable/operations/planned-now",
-      {
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-      },
+      { method: "GET" },
     );
     expect(result).toEqual([]);
   });
@@ -157,11 +137,6 @@ describe("timetableOperationsApi", () => {
       "/api/timetable/operations/instances/131/start",
       {
         method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
       },
     );
     expect(result).toEqual({
@@ -195,9 +170,7 @@ describe("timetableOperationsApi", () => {
       "/api/timetable/operations/spontaneous/start",
       {
         method: "POST",
-        credentials: "include",
         headers: {
-          Accept: "application/json",
           "Content-Type": "application/json",
         },
         body: JSON.stringify(body),
@@ -222,24 +195,12 @@ describe("timetableOperationsApi", () => {
     expect(mockFetch).toHaveBeenNthCalledWith(
       1,
       "/api/timetable/operations/instances/132/roster",
-      {
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-      },
+      { method: "GET" },
     );
     expect(mockFetch).toHaveBeenNthCalledWith(
       2,
       "/api/timetable/operations/active-groups/233/roster",
-      {
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-      },
+      { method: "GET" },
     );
     expect(byInstance.instance.id).toBe("132");
     expect(byGroup.instance.id).toBe("133");
@@ -259,11 +220,6 @@ describe("timetableOperationsApi", () => {
       "/api/timetable/operations/instances/134/students/430/check-in",
       {
         method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
       },
     );
     expect(mockFetch).toHaveBeenNthCalledWith(
@@ -271,11 +227,6 @@ describe("timetableOperationsApi", () => {
       "/api/timetable/operations/instances/134/students/430/check-out",
       {
         method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
       },
     );
   });
@@ -293,9 +244,7 @@ describe("timetableOperationsApi", () => {
       "/api/timetable/operations/instances/134/students/check-in",
       {
         method: "POST",
-        credentials: "include",
         headers: {
-          Accept: "application/json",
           "Content-Type": "application/json",
         },
         body: '{"student_ids":["9007199254740993","9007199254740995"]}',
@@ -338,9 +287,7 @@ describe("timetableOperationsApi", () => {
       "/api/timetable/operations/instances/135/students/431/attendance",
       {
         method: "PATCH",
-        credentials: "include",
         headers: {
-          Accept: "application/json",
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -355,9 +302,7 @@ describe("timetableOperationsApi", () => {
       "/api/timetable/operations/instances/135/complete",
       {
         method: "POST",
-        credentials: "include",
         headers: {
-          Accept: "application/json",
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ confirmed_present_student_ids: [] }),
@@ -380,7 +325,6 @@ describe("timetableOperationsApi", () => {
         `${base}/135/complete`,
         expect.objectContaining({
           method: "POST",
-          credentials: "include",
           body: JSON.stringify({
             confirmed_present_student_ids: ["431", "9007199254740993"],
           }),
@@ -408,11 +352,6 @@ describe("timetableOperationsApi", () => {
       "/api/timetable/operations/instances/135/reopen",
       {
         method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
       },
     );
   });
@@ -424,21 +363,21 @@ describe("timetableOperationsApi", () => {
         jsonResponse({ detail: "Nicht erlaubt" }, false, 403),
       )
       .mockResolvedValueOnce(jsonResponse({}, false, 418))
-      .mockResolvedValueOnce({
-        ok: false,
-        status: 500,
-        json: () => Promise.reject(new Error("not json")),
-      } as Response);
+      .mockResolvedValueOnce(new Response("not json", { status: 500 }));
 
-    await expect(timetableOperationsApi.complete("136", [])).rejects.toThrow(
-      "Anfrage fehlgeschlagen (HTTP 403)",
-    );
-    await expect(timetableOperationsApi.complete("136", [])).rejects.toThrow(
-      "Anfrage fehlgeschlagen (HTTP 418)",
-    );
-    await expect(timetableOperationsApi.complete("136", [])).rejects.toThrow(
-      "Anfrage fehlgeschlagen (HTTP 500)",
-    );
+    await expect(
+      timetableOperationsApi.complete("136", []),
+    ).rejects.toMatchObject({
+      status: 403,
+      detail: "Nicht erlaubt",
+      message: expect.not.stringContaining("Nicht erlaubt"),
+    });
+    await expect(
+      timetableOperationsApi.complete("136", []),
+    ).rejects.toMatchObject({ status: 418 });
+    await expect(
+      timetableOperationsApi.complete("136", []),
+    ).rejects.toMatchObject({ status: 500 });
   });
 
   it("keeps http status and backend code on operations errors", async () => {
@@ -490,12 +429,8 @@ describe("isReopenUnavailableError", () => {
   });
 });
 
-function jsonResponse(body: unknown, ok = true, status = 200): Response {
-  return {
-    ok,
-    status,
-    json: () => Promise.resolve(body),
-  } as Response;
+function jsonResponse(body: unknown, _ok = true, status = 200): Response {
+  return Response.json(body, { status });
 }
 
 function rosterPayload(instanceId: number) {
