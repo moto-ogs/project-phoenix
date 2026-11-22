@@ -7,15 +7,12 @@
  * "YYYY-MM-DD".
  */
 
-import { apiErrorFromResponse, transportFetch } from "./api-error";
+import { bffJson } from "~/lib/bff-fetch";
 import { knownEnum } from "./contract/known-enum";
 import type {
   ChildLinking as WireLinking,
   ChildLinkRow as WireRow,
 } from "./contract/traeger-contract-child-links.generated";
-import { readJson, traegerRequest } from "./traeger-api";
-
-const LINKS_PATH = "/api/traeger/contract-child-links";
 
 // Go does not register these sets; the contract types them as string. A value
 // this build does not know stays undefined instead of passing as a known one.
@@ -167,7 +164,7 @@ function mapLinking(result: WireLinking): ChildLinkResult {
 }
 
 async function postFile(
-  path: string,
+  preview: boolean,
   request: ChildLinkFileRequest,
 ): Promise<ChildLinkResult> {
   const form = new FormData();
@@ -178,38 +175,26 @@ async function postFile(
   if (request.fingerprint) {
     form.append("fingerprint", request.fingerprint);
   }
-  const response = await transportFetch(path, {
-    method: "POST",
-    credentials: "include",
-    cache: "no-store",
-    body: form,
-  });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Request failed (${response.status})`,
-    );
-  }
-  const data = await readJson(response);
-  return mapLinking((data as { data: WireLinking }).data);
+  const data = await (preview
+    ? bffJson("org", "POST /traeger/contract-child-links/preview", {
+        body: form,
+      })
+    : bffJson("org", "POST /traeger/contract-child-links/", { body: form }));
+  return mapLinking(data);
 }
 
 /** Reads the file and answers every row; links nothing. */
 export function previewChildLinks(
   request: ChildLinkFileRequest,
 ): Promise<ChildLinkResult> {
-  return postFile(`${LINKS_PATH}/preview`, request);
+  return postFile(true, request);
 }
 
 /** Links the ready rows of the confirmed preview. */
 export function applyChildLinks(
   request: ChildLinkFileRequest,
 ): Promise<ChildLinkResult> {
-  return postFile(LINKS_PATH, request);
-}
-
-function contractPath(contractId: string): string {
-  return `${LINKS_PATH}/${encodeURIComponent(contractId)}`;
+  return postFile(false, request);
 }
 
 /** What linking one contract to a child record would do; links nothing. */
@@ -218,10 +203,11 @@ export async function previewContractChildLink(
   studentId: string,
 ): Promise<ChildLinkRow> {
   return mapRow(
-    await traegerRequest<WireRow>(`${contractPath(contractId)}/preview`, {
-      method: "POST",
-      body: { student_id: studentId },
-    }),
+    await bffJson(
+      "org",
+      "POST /traeger/contract-child-links/{contractId}/preview",
+      { params: { contractId }, body: { student_id: studentId } },
+    ),
   );
 }
 
@@ -239,8 +225,8 @@ export async function linkContractChild(
   fingerprint: string,
 ): Promise<ChildLinkRow> {
   return mapRow(
-    await traegerRequest<WireRow>(contractPath(contractId), {
-      method: "PUT",
+    await bffJson("org", "PUT /traeger/contract-child-links/{contractId}", {
+      params: { contractId },
       body: {
         student_id: studentId,
         accept_difference: acceptDifference,
@@ -259,8 +245,8 @@ export async function unlinkContractChild(
   contractId: string,
   studentId: string,
 ): Promise<void> {
-  const query = new URLSearchParams({ student_id: studentId }).toString();
-  await traegerRequest<unknown>(`${contractPath(contractId)}?${query}`, {
-    method: "DELETE",
+  await bffJson("org", "DELETE /traeger/contract-child-links/{contractId}", {
+    params: { contractId },
+    query: { student_id: studentId },
   });
 }
