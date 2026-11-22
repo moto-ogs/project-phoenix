@@ -80,6 +80,7 @@ const VERSION_SOURCE_VALUES = [
   "abschluss",
   "buchungsaenderung",
   "import",
+  "angebotskorrektur",
 ] as const;
 const SIGNATURE_METHOD_VALUES = ["drawn", "typed", "paper"] as const;
 const SIGNATURE_CHANNEL_VALUES = [

@@ -114,7 +114,7 @@ func (c *ContractCorrections) evaluate(ctx context.Context, reviewer carecontrac
 	if err != nil {
 		return nil, err
 	}
-	check := newCorrectionCheck(subjects)
+	check := newContractCorrectionCheck(subjects)
 	plans := make([]correctionPlan, len(entries))
 	for n, entry := range entries {
 		plans[n] = check.plan(entry)

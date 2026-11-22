@@ -322,8 +322,9 @@ type Version struct {
 	PriceCents *int64        `json:"price_cents" contract:"number"`
 	Terms      TemplateInput `json:"terms"`
 	CreatedAt  time.Time     `json:"created_at"`
-	// Source tells where the version came from: SourceConclusion or
-	// SourceBookingChange (#4681).
+	// Source tells where the version came from: SourceConclusion,
+	// SourceBookingChange (#4681), SourceImport (#4723) or
+	// SourceOfferingCorrection (#7764).
 	Source string `json:"source"`
 	// ValidUntil is the last day the version holds: the day before the next
 	// effective version starts, else its own end. Nil while it holds open

@@ -850,6 +850,7 @@ describe("tenant-api", () => {
         {
           method: "POST",
           body: JSON.stringify({ tenant_slug: "school-b" }),
+          headers: { "Content-Type": "application/json" },
         },
         {
           authRefusals: [
@@ -1013,6 +1014,7 @@ describe("tenant-api", () => {
         {
           method: "POST",
           body: JSON.stringify({ tenant_slug: "school-b" }),
+          headers: { "Content-Type": "application/json" },
         },
         {
           authRefusals: [

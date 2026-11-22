@@ -249,7 +249,7 @@ describe("Nachweis mit Unterschrift (#4785)", () => {
       "Einfache elektronische Signatur mit gezeichneter Unterschrift im angemeldeten Eltern-Konto",
     submissions: [
       {
-        ...proof.submissions[0]!,
+        ...(proof.submissions ?? [])[0]!,
         method: "simple_electronic_signature",
         signature: {
           method: "drawn",
@@ -260,7 +260,7 @@ describe("Nachweis mit Unterschrift (#4785)", () => {
         },
       },
       {
-        ...proof.submissions[0]!,
+        ...(proof.submissions ?? [])[0]!,
         id: "76",
         signature: {
           method: "typed",

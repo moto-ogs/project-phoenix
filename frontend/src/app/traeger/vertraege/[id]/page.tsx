@@ -45,6 +45,7 @@ import {
 import {
   CareContractVersions,
   plannedVersion,
+  plannedVersionText,
 } from "~/components/traeger/care-contract-versions";
 import { CareContractSignatureCard } from "~/components/traeger/care-contract-signature-card";
 import {
@@ -363,9 +364,17 @@ function TraegerVertragView() {
     ? contractSendBlockedReason(lastMail, isDraft)
     : undefined;
   const party = contract?.parties[0];
-  const planned = contract
+  const comingVersion = contract
     ? plannedVersion(contract.versions, today)
     : undefined;
+  // A contract that ends before the coming version starts never gets it.
+  const planned =
+    comingVersion &&
+    contract?.status === "gekuendigt" &&
+    contract.endsOn &&
+    contract.endsOn < comingVersion.effectiveFrom
+      ? undefined
+      : comingVersion;
   // An active or ended contract shows its versions, so the office sees where
   // an approved change will appear; a draft has only its first version.
   const showVersions =
@@ -587,7 +596,7 @@ function TraegerVertragView() {
           {planned ? (
             <Alert
               type="info"
-              message={`Ab ${formatDate(planned.effectiveFrom)} gilt Version ${planned.number}. Eine Änderung der Betreuung ist freigegeben. Was sich ändert, steht unter „Versionen“.`}
+              message={plannedVersionText(planned)}
               action={
                 <ContractSectionJump
                   targetId={CONTRACT_VERSIONS_SECTION_ID}
@@ -617,6 +626,7 @@ function TraegerVertragView() {
                     </DataField>
                   ) : null}
                   <DataField label="Kind">{childName(contract)}</DataField>
+                  <DataField label="Vertrag Nr.">{contract.id}</DataField>
                   <DataField label="Geboren am">
                     {contract.version.childBirthDate
                       ? formatDate(contract.version.childBirthDate)

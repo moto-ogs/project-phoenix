@@ -309,6 +309,7 @@ catalog proxy has decoded the answer already.
 | Träger (`org`) | `bffJson("org", "POST /traeger/absence-types/", { body })` |
 | Caterer (`caterer`) | `bffJson("caterer", "GET /caterer/schools/{schoolId}/orders", { params: { schoolId }, query: { from, to } })` |
 | Operator (`platform`) | `bffJson("platform", "GET /operator/stats")` |
+| Ohne Sitzung (`public`) | `bffJson("public", "GET /traeger/invitations/{token}", { params: { token } })` |
 
 The path is the pattern below the portal's BFF prefix, a route outside the
 portal's mount (`/analytics-policy`) below the prefix as a whole; a trailing
@@ -324,6 +325,9 @@ slash is dropped and each parameter encoded.
   `decodeContract`). There is no fallback value.
 - **Failure:** an `ApiError` with the backend's code, field errors and
   request ID. `errorMessage` sets its message, so a client keeps its text.
+- **`public`:** the routes without a session (links, password reset,
+  invitations) go without gate and renewal; a pattern names its portal
+  (`/caterer/…` → `/api/caterer/…`), one under `/api` stays as it is.
 - **401:** one table in `bff-fetch.ts` holds where the portals differ. Staff:
   the session gate before the request and one renewal with a retry
   (`sessionFetch`), then sign-out; `authRefusals` names codes that refuse
@@ -333,7 +337,10 @@ slash is dropped and each parameter encoded.
   catches the `ApiError` itself.
 - **No contract:** a backend route without a contract gets one first
   (#7808); its client waits until then. A named `route.ts` the contract
-  cannot carry (`activities/[id]/students`) keeps its own call.
+  cannot carry (`settings/values/[key]` purges the cached tenant lookup) is
+  called with `bffJsonUncontracted<T>(portal, method, path, options)`; each
+  caller is listed with its reason in `bff-fetch-uncontracted.test.ts`, and
+  the list only shrinks.
 - **Files:** a route registered with `File: true` is called with
   `bffFile(portal, route, options)` from the same module: the same path,
   portal table and ApiError, resolving to the successful `Response` whose

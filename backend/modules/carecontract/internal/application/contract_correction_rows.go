@@ -250,15 +250,15 @@ type correctionPlan struct {
 	correction ports.Correction
 }
 
-// correctionCheck decides the rows of a file against the contracts they
+// contractCorrectionCheck decides the rows of a file against the contracts they
 // name.
-type correctionCheck struct {
+type contractCorrectionCheck struct {
 	subjects map[int64]ports.CorrectionSubject
 	seen     map[int64]int
 }
 
-func newCorrectionCheck(subjects []ports.CorrectionSubject) *correctionCheck {
-	check := &correctionCheck{subjects: make(map[int64]ports.CorrectionSubject, len(subjects)), seen: map[int64]int{}}
+func newContractCorrectionCheck(subjects []ports.CorrectionSubject) *contractCorrectionCheck {
+	check := &contractCorrectionCheck{subjects: make(map[int64]ports.CorrectionSubject, len(subjects)), seen: map[int64]int{}}
 	for _, subject := range subjects {
 		check.subjects[subject.ContractID] = subject
 	}
@@ -271,7 +271,7 @@ func (p *correctionPlan) problem(field, code string) {
 
 // plan decides one row: a problem makes it invalid, values the contract has
 // already leave it unchanged, else it changes the contract.
-func (c *correctionCheck) plan(entry correctionEntry) correctionPlan {
+func (c *contractCorrectionCheck) plan(entry correctionEntry) correctionPlan {
 	subject, found := c.subject(&entry)
 	plan := correctionPlan{row: entry.row}
 	row := &plan.row
@@ -301,7 +301,7 @@ func (c *correctionCheck) plan(entry correctionEntry) correctionPlan {
 
 // subject finds the contract of a row: one of the Träger, from an import,
 // with the child the row names, and named by no row before.
-func (c *correctionCheck) subject(entry *correctionEntry) (ports.CorrectionSubject, bool) {
+func (c *contractCorrectionCheck) subject(entry *correctionEntry) (ports.CorrectionSubject, bool) {
 	if entry.contractID == 0 {
 		return ports.CorrectionSubject{}, false
 	}

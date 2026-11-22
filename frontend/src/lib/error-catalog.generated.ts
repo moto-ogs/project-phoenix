@@ -63,7 +63,7 @@ export const ERROR_CATALOG = {
       "care_contract.field_invalid":
         "Einige Angaben stimmen nicht. Bitte prüfe deine Eingaben.",
       "care_contract.import_changed":
-        "Seit der Vorschau hat sich etwas geändert. Bitte prüfe die Vorschau noch einmal und übernimm dann.",
+        "Seit der Vorschau hat sich etwas geändert. moto prüft die Datei neu. Sieh dir die neue Vorschau an und bestätige dann noch einmal.",
       "care_contract.import_file_invalid":
         "Die Datei lässt sich nicht lesen. Bitte wähle eine CSV-Datei mit Überschriften in der ersten Zeile.",
       "care_contract.import_file_too_large":

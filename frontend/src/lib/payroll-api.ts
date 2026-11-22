@@ -3,20 +3,15 @@
 // so no request fires without it. Values are written to the generic settings
 // route (savePayrollSetting) using the setting keys this status carries.
 
-import { apiErrorFromResponse } from "./api-error";
+import { bffJson, bffJsonUncontracted } from "./bff-fetch";
 import { knownEnum } from "./contract/known-enum";
 import type { PayrollStatus as PayrollStatusWire } from "./contract/settings.generated";
-import type {
-  PayrollDispatchOverview,
-  PayrollDispatchView as PayrollDispatchViewWire,
-  TargetCoverage,
-} from "./contract/staff.generated";
+import type { PayrollDispatchView as PayrollDispatchViewWire } from "./contract/staff.generated";
 import {
   knownMailOutcome,
   type MailOutcome,
   type MailOutcomeCounts,
 } from "./email-delivery-status";
-import { sessionFetch } from "./session-cache";
 import { monthYearLabel } from "./time-account-links";
 import { transferFailureMessage } from "./sftp-export-api";
 
@@ -128,15 +123,9 @@ export function mapPayrollStatus(data: PayrollStatusWire): PayrollStatus {
 }
 
 export async function fetchPayrollStatus(): Promise<PayrollStatus> {
-  const response = await sessionFetch("/api/settings/payroll-status");
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Failed to fetch payroll status: ${response.statusText}`,
-    );
-  }
-  const json = (await response.json()) as { data: PayrollStatusWire };
-  return mapPayrollStatus(json.data);
+  return mapPayrollStatus(
+    await bffJson("tenant", "GET /api/settings/payroll-status"),
+  );
 }
 
 /** Ein Einstellungswert der Abrechnung im JSON-Typ seines Schemas. */
@@ -152,17 +141,12 @@ export async function savePayrollSetting(
   key: string,
   value: PayrollSettingValue,
 ): Promise<void> {
-  const response = await sessionFetch(
+  await bffJsonUncontracted<unknown>(
+    "tenant",
+    "PUT",
     `/api/settings/values/${encodeURIComponent(key)}`,
-    {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ value }),
-    },
+    { body: { value }, errorMessage: `Saving ${key} failed` },
   );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, `Saving ${key} failed`);
-  }
 }
 
 /**
@@ -258,19 +242,11 @@ function mapPayrollDispatch(
  * time_tracking:manage oder config:manage.
  */
 export async function fetchPayrollDispatch(): Promise<PayrollDispatchView | null> {
-  const response = await sessionFetch(
-    "/api/staff/time-tracking/payroll-dispatch",
+  const overview = await bffJson(
+    "tenant",
+    "GET /api/staff/time-tracking/payroll-dispatch",
   );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Failed to fetch payroll dispatch: ${response.statusText}`,
-    );
-  }
-  const json = (await response.json()) as {
-    data: PayrollDispatchOverview;
-  };
-  return json.data.latest ? mapPayrollDispatch(json.data.latest) : null;
+  return overview.latest ? mapPayrollDispatch(overview.latest) : null;
 }
 
 /**
@@ -290,23 +266,15 @@ export interface PayrollTargetCoverage {
  * config:manage und das Modul Zeiterfassung.
  */
 export async function fetchPayrollTargetCoverage(): Promise<PayrollTargetCoverage> {
-  const response = await sessionFetch(
-    "/api/staff/time-tracking/target-coverage",
+  const coverage = await bffJson(
+    "tenant",
+    "GET /api/staff/time-tracking/target-coverage",
   );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Failed to fetch payroll target coverage: ${response.statusText}`,
-    );
-  }
-  const json = (await response.json()) as {
-    data: TargetCoverage;
-  };
   return {
-    year: json.data.year,
-    month: json.data.month,
-    staffTotal: json.data.staff_total,
-    staffWithoutTarget: json.data.staff_without_target,
+    year: coverage.year,
+    month: coverage.month,
+    staffTotal: coverage.staff_total,
+    staffWithoutTarget: coverage.staff_without_target,
   };
 }
 

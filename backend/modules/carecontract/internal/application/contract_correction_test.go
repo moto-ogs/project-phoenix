@@ -28,10 +28,10 @@ func planCorrection(t *testing.T, subject ports.CorrectionSubject, cells ...stri
 	headers := []string{"Vertrag-ID", "Kind", "Vertragsparteien", "Abschlussart", "Abschlussdatum", "Beleg"}
 	index, missing := resolveCorrectionColumns(headers)
 	require.Empty(t, missing)
-	return newCorrectionCheck([]ports.CorrectionSubject{subject}).plan(readCorrectionEntry(index, cells, 2, correctionToday))
+	return newContractCorrectionCheck([]ports.CorrectionSubject{subject}).plan(readCorrectionEntry(index, cells, 2, correctionToday))
 }
 
-func problemCodes(row carecontract.ContractCorrectionRow) map[string]string {
+func correctionProblemCodes(row carecontract.ContractCorrectionRow) map[string]string {
 	codes := map[string]string{}
 	for _, problem := range row.Problems {
 		codes[problem.Field] = problem.Code
@@ -78,7 +78,7 @@ func TestCorrectionAddsPartiesAndNeverRemovesOne(t *testing.T) {
 	two.Parties = append(two.Parties, ports.CorrectionParty{ID: 71, FirstName: "Tom", LastName: "Beispiel"})
 	removed := planCorrection(t, two, "7", "Lia Beispiel", "Eva Beispiel", "", "", "vertrag.pdf")
 	assert.Equal(t, carecontract.ContractCorrectionInvalid, removed.row.Status)
-	assert.Equal(t, map[string]string{"parties": "party_removed"}, problemCodes(removed.row))
+	assert.Equal(t, map[string]string{"parties": "party_removed"}, correctionProblemCodes(removed.row))
 	assert.Equal(t, removed.row.Before, removed.row.After, "an invalid row shows no change")
 
 	recased := planCorrection(t, two, "7", "Lia Beispiel", "tom beispiel | Ute Beispiel | Eva Beispiel", "", "", "vertrag.pdf")
@@ -103,7 +103,7 @@ func TestCorrectionAddsPartiesAndNeverRemovesOne(t *testing.T) {
 	assert.Equal(t, []ports.CorrectionParty{{ID: 70, FirstName: "Eva", LastName: "Müller"}}, first.correction.Renames)
 	assert.Equal(t, []ports.CorrectionParty{{FirstName: "Tom", LastName: "Müller"}}, first.correction.Adds)
 	other := planCorrection(t, old, "7", "Lia Beispiel", "Anders, Tom", "", "", "vertrag.pdf")
-	assert.Equal(t, map[string]string{"parties": "party_unclear"}, problemCodes(other.row))
+	assert.Equal(t, map[string]string{"parties": "party_unclear"}, correctionProblemCodes(other.row))
 	// The same row again changes nothing, whichever party a name went to.
 	pair := correctionSubject()
 	pair.Parties = []ports.CorrectionParty{{ID: 70, FirstName: "Eva", LastName: "Beispiel"}, {ID: 71, FirstName: "Eva", LastName: "Beispiel Roth"}}
@@ -121,7 +121,7 @@ func TestCorrectionAddsPartiesAndNeverRemovesOne(t *testing.T) {
 	assert.True(t, namesChild("anna marie weber", "Anna Marie", "Weber"))
 	assert.False(t, namesChild("Marie Anna Weber", "Anna Marie", "Weber"), "the row names a sibling")
 	either := planCorrection(t, old, "7", "Lia Beispiel", "Müller, Tom | Müller, Jan", "", "", "vertrag.pdf")
-	assert.Equal(t, map[string]string{"parties": "party_unclear"}, problemCodes(either.row), "two names equally like the party")
+	assert.Equal(t, map[string]string{"parties": "party_unclear"}, correctionProblemCodes(either.row), "two names equally like the party")
 }
 
 func TestCorrectionNamesItsContractUnambiguously(t *testing.T) {
@@ -142,26 +142,26 @@ func TestCorrectionNamesItsContractUnambiguously(t *testing.T) {
 	} {
 		plan := planCorrection(t, correctionSubject(), c.cells...)
 		assert.Equal(t, carecontract.ContractCorrectionInvalid, plan.row.Status, name)
-		assert.Equal(t, c.problems, problemCodes(plan.row), name)
+		assert.Equal(t, c.problems, correctionProblemCodes(plan.row), name)
 	}
 
 	own := correctionSubject()
 	own.Imported = false
 	assert.Equal(t, map[string]string{"contract_id": "not_imported"},
-		problemCodes(planCorrection(t, own, "7", "Lia Beispiel", "", "online", "", "b").row), "moto records the conclusion of its own contracts")
+		correctionProblemCodes(planCorrection(t, own, "7", "Lia Beispiel", "", "online", "", "b").row), "moto records the conclusion of its own contracts")
 
 	ended := correctionSubject()
 	received := calendar.NewDate(2026, 9, 30)
 	ended.FirstNoticeOn = &received
 	assert.Equal(t, map[string]string{"concluded_on": "after_notice"},
-		problemCodes(planCorrection(t, ended, "7", "Lia Beispiel", "", "", "01.10.2026", "b").row))
+		correctionProblemCodes(planCorrection(t, ended, "7", "Lia Beispiel", "", "", "01.10.2026", "b").row))
 
-	check := newCorrectionCheck([]ports.CorrectionSubject{correctionSubject()})
+	check := newContractCorrectionCheck([]ports.CorrectionSubject{correctionSubject()})
 	index, _ := resolveCorrectionColumns([]string{"Moto-Vertrag-ID", "Kind", "Abschlussart", "Nachweis"})
 	first := check.plan(readCorrectionEntry(index, []string{"7", "Lia Beispiel", "online", "b"}, 2, correctionToday))
 	second := check.plan(readCorrectionEntry(index, []string{"7", "Lia Beispiel", "papier", "b"}, 3, correctionToday))
 	assert.Equal(t, carecontract.ContractCorrectionChange, first.row.Status, "a worklist's own headers name the columns too")
-	assert.Equal(t, map[string]string{"contract_id": "repeated"}, problemCodes(second.row))
+	assert.Equal(t, map[string]string{"contract_id": "repeated"}, correctionProblemCodes(second.row))
 	assert.Equal(t, 2, second.row.RepeatsLine)
 }
 
@@ -215,7 +215,7 @@ func TestCorrectionSheetReadsBackAsUnchanged(t *testing.T) {
 
 	index, missing := resolveCorrectionColumns(sheet.Headers)
 	require.Empty(t, missing)
-	check := newCorrectionCheck([]ports.CorrectionSubject{subject, unknown, comma})
+	check := newContractCorrectionCheck([]ports.CorrectionSubject{subject, unknown, comma})
 	for n, cells := range sheet.Rows {
 		plan := check.plan(readCorrectionEntry(index, cells, n+2, correctionToday))
 		assert.Equal(t, carecontract.ContractCorrectionUnchanged, plan.row.Status, "%v: %v", cells, plan.row.Problems)

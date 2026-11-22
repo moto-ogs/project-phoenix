@@ -55,7 +55,7 @@ func contractTable(filter carecontract.ContractFilter, contracts []carecontract.
 			schoolName = contract.SchoolName
 		}
 		rows = append(rows, []string{
-			contract.ChildLastName, contract.ChildFirstName, contract.SchoolName, contract.ModulesText,
+			contract.ID.String(), contract.ChildLastName, contract.ChildFirstName, contract.SchoolName, contract.ModulesText,
 			contract.PartyName, contract.PartyEmail, contract.EffectiveFrom.Format("02.01.2006"),
 			contractStatusLabels[contract.Status], contractStatusDay(contract),
 		})
@@ -70,6 +70,9 @@ func contractTable(filter carecontract.ContractFilter, contracts []carecontract.
 	return common.ListTable{
 		Title: "Betreuungsverträge", Filters: filters,
 		Columns: []common.ListColumn{
+			// The number names the contract in a file of the office: the link to a
+			// child record (#7760) and the correction of the booked modules (#7764).
+			{ID: "number", Label: "Vertrag Nr."},
 			{ID: "last_name", Label: "Nachname"}, {ID: "first_name", Label: "Vorname"}, {ID: "school", Label: "Betreuungsort"},
 			{ID: "modules", Label: "Module"}, {ID: "party", Label: "Eltern"}, {ID: "email", Label: "E-Mail"},
 			{ID: "start", Label: "Beginn"}, {ID: "status", Label: "Status"}, {ID: "status_day", Label: "Seit"},
