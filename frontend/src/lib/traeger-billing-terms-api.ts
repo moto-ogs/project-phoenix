@@ -314,8 +314,10 @@ export async function fetchFamilyBillings(): Promise<FamilyBilling[]> {
 export async function fetchContractFamilyBilling(
   contractId: string,
 ): Promise<ContractFamilyBilling> {
-  const body = await traegerRequest<traegerFamilyBillingContract.ContractFamilyBilling>(
-    `${FAMILY_PATH}/contracts/${encodeURIComponent(contractId)}`,
+  const body = await bffJson(
+    "org",
+    "GET /traeger/family-billing/contracts/{id}",
+    { params: { id: contractId } },
   );
   return {
     contractId: body.contract_id,

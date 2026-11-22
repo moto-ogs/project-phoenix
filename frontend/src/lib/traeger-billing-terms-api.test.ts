@@ -9,7 +9,7 @@ import {
 } from "./traeger-billing-terms-api";
 
 const request = vi.hoisted(() => vi.fn());
-vi.mock("./traeger-api", () => ({ traegerRequest: request }));
+vi.mock("~/lib/bff-fetch", () => ({ bffJson: request }));
 afterEach(() => request.mockReset());
 
 const STORED: WireFamilyBilling = {
@@ -51,8 +51,11 @@ describe("fetchContractFamilyBilling (#7770)", () => {
       partyLastName: "Muster ",
       family: null,
     });
+    // The typed client encodes the path parameter.
     expect(request).toHaveBeenCalledWith(
-      "/api/traeger/family-billing/contracts/4%2F2",
+      "org",
+      "GET /traeger/family-billing/contracts/{id}",
+      { params: { id: "4/2" } },
     );
   });
 
