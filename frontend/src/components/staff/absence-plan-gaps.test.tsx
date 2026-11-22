@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AbsencePlanGap } from "~/lib/staff-api";
 
@@ -91,6 +91,11 @@ function renderGaps(onPlansChanged = vi.fn()) {
 }
 
 describe("AbsencePlanGaps", () => {
+  beforeAll(async () => {
+    // Assert error handling independently of the lazy catalog's load time.
+    await import("~/lib/error-presentation");
+  });
+
   beforeEach(() => {
     globalThis.localStorage.clear();
     mockGaps.current = [];

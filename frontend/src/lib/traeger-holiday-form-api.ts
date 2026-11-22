@@ -1,4 +1,4 @@
-import { bffJson, bffJsonUncontracted } from "~/lib/bff-fetch";
+import { bffFile, bffJson, bffJsonUncontracted } from "~/lib/bff-fetch";
 /**
  * Client of the registration form of a holiday period (#5198): the
  * Träger-Büro builds the questions with the form builder of the online
@@ -103,11 +103,23 @@ export async function saveHolidayForm(
   );
 }
 
-export function holidayDocumentPath(
+function holidayDocumentPath(periodId: string, documentId: string): string {
+  return `${formPath(periodId)}/documents/${encodeURIComponent(documentId)}`;
+}
+
+/** A PDF of the form's legal blocks, as the office reads it. */
+export function fetchHolidayDocument(
   periodId: string,
-  documentId?: string,
-): string {
-  return `${formPath(periodId)}/documents${documentId ? `/${encodeURIComponent(documentId)}` : ""}`;
+  documentId: string,
+): Promise<Response> {
+  return bffFile(
+    "org",
+    "GET /traeger/holiday-periods/{id}/form/documents/{documentId}",
+    {
+      params: { id: periodId, documentId },
+      errorMessage: "Holiday PDF request failed",
+    },
+  );
 }
 export async function uploadHolidayDocument(
   periodId: string,
@@ -131,10 +143,23 @@ export async function deleteHolidayDocument(
   id: string,
   options?: { keepalive?: boolean },
 ): Promise<void> {
-  const response = await transportFetch(holidayDocumentPath(periodId, id), {
-    method: "DELETE",
-    keepalive: options?.keepalive,
-  });
-  if (!response.ok)
-    throw await apiErrorFromResponse(response, "Holiday PDF request failed");
+  if (options?.keepalive) {
+    // The draft's PDF goes when the page goes (pagehide): only a keepalive
+    // request outlives it, and bffJson does not send one (#7806).
+    const response = await transportFetch(holidayDocumentPath(periodId, id), {
+      method: "DELETE",
+      keepalive: true,
+    });
+    if (!response.ok)
+      throw await apiErrorFromResponse(response, "Holiday PDF request failed");
+    return;
+  }
+  await bffJson(
+    "org",
+    "DELETE /traeger/holiday-periods/{id}/form/documents/{documentId}",
+    {
+      params: { id: periodId, documentId: id },
+      errorMessage: "Holiday PDF request failed",
+    },
+  );
 }

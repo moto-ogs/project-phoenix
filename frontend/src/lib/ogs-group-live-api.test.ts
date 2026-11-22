@@ -15,11 +15,16 @@ import {
   mapOgsGroupLiveResponse,
   fetchOgsGroupLive,
 } from "./ogs-group-live-api";
-import type { OgsGroupLiveWireResponse } from "./ogs-group-live-api";
+import type * as studentsContract from "./contract/students.generated";
+
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
 
 function wireResponse(
-  overrides: Partial<OgsGroupLiveWireResponse> = {},
-): OgsGroupLiveWireResponse {
+  overrides: Partial<studentsContract.Projection> = {},
+): studentsContract.Projection {
   return {
     groups: [],
     group_id: undefined,
@@ -84,16 +89,6 @@ describe("mapOgsGroupLiveResponse", () => {
     ).toBeNull();
   });
 
-  it("treats groups without is_personal as personal during a rolling deployment", () => {
-    const view = mapOgsGroupLiveResponse(
-      wireResponse({
-        groups: [{ id: "1", name: "Gruppe A", via_substitution: false }],
-      }),
-    );
-
-    expect(view.groups[0]?.isPersonal).toBe(true);
-  });
-
   it("passes students through unchanged", () => {
     const students = [
       {
@@ -124,6 +119,8 @@ describe("mapOgsGroupLiveResponse", () => {
         pickup_times: [
           {
             student_id: "1",
+            date: "2026-09-09",
+            weekday_name: "Mittwoch",
             pickup_time: "15:30",
             is_exception: false,
             notes: "Parent pickup",
@@ -134,6 +131,8 @@ describe("mapOgsGroupLiveResponse", () => {
           },
           {
             student_id: "2",
+            date: "2026-09-09",
+            weekday_name: "Mittwoch",
             pickup_time: "16:00",
             is_exception: true,
             day_departure_mode: "bus",
@@ -171,11 +170,16 @@ describe("mapOgsGroupLiveResponse", () => {
     expect(view.pickupTimes.size).toBe(0);
   });
 
-  it("defaults tracking_indicators to empty labels/results when absent", () => {
+  it("reads the tracking lists Go writes as null as empty", () => {
     const view = mapOgsGroupLiveResponse(
-      wireResponse({ tracking_indicators: undefined as never }),
+      wireResponse({
+        tracking_indicators: { labels: null, results: { "7": null } },
+      }),
     );
-    expect(view.trackingIndicators).toEqual({ labels: [], results: {} });
+    expect(view.trackingIndicators).toEqual({
+      labels: [],
+      results: { "7": [] },
+    });
   });
 
   it("maps transfers to the GroupTransfer view shape", () => {
@@ -256,6 +260,8 @@ describe("mapOgsGroupLiveResponse", () => {
         pickup_times: [
           {
             student_id: id,
+            date: "2026-09-09",
+            weekday_name: "Mittwoch",
             is_exception: false,
             day_notes: [{ id, content: "Hinweis" }],
           },
@@ -312,13 +318,8 @@ describe("fetchOgsGroupLive", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0]!;
     expect(url).toBe("/api/students/ogs-group-live?group_id=5");
-    expect(init).toMatchObject({
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-    expect(init?.headers).not.toHaveProperty("Authorization");
+    expect(init).toMatchObject({ method: "GET" });
+    expect(init?.headers ?? {}).not.toHaveProperty("Authorization");
   });
 
   it("omits the group_id query param when groupId is null", async () => {
@@ -377,13 +378,19 @@ describe("fetchOgsGroupLive", () => {
   it("does not retry a 403 when no group_id was requested", async () => {
     fetchMock.mockResolvedValue({ ok: false, status: 403 } as Response);
 
-    await expect(fetchOgsGroupLive(null)).rejects.toThrow("API error: 403");
+    await expect(fetchOgsGroupLive(null)).rejects.toMatchObject({
+      message: "API error",
+      status: 403,
+    });
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("throws 'API error: <status>' for a non-ok response", async () => {
+  it("throws an ApiError with the status for a non-ok response", async () => {
     fetchMock.mockResolvedValue({ ok: false, status: 500 } as Response);
 
-    await expect(fetchOgsGroupLive(null)).rejects.toThrow("API error: 500");
+    await expect(fetchOgsGroupLive(null)).rejects.toMatchObject({
+      message: "API error",
+      status: 500,
+    });
   });
 });

@@ -28,11 +28,9 @@ import {
 } from "~/components/ui/data-field";
 import { useSWRAuth } from "~/lib/swr";
 import { roomKeys } from "~/lib/swr/rooms-keys";
-import { apiErrorFromResponse, transportFetch } from "~/lib/api-error";
-import type {
-  RoomResponse,
-  RoomSessionEntry,
-} from "~/lib/contract/rooms.generated";
+import { ApiError } from "~/lib/api-error";
+import { bffJson } from "~/lib/bff-fetch";
+import type * as roomsContract from "~/lib/contract/rooms.generated";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import {
   berlinTodayISO,
@@ -73,9 +71,11 @@ interface DateGroup {
 }
 
 /** Maps one session of the contract (`RoomSessionEntry`). */
-function mapRoomHistoryEntry(entry: RoomSessionEntry): RoomHistoryEntry {
+function mapRoomHistoryEntry(
+  entry: roomsContract.RoomSessionEntry,
+): RoomHistoryEntry {
   return {
-    sessionId: String(entry.session_id),
+    sessionId: entry.session_id,
     startedAt: entry.started_at,
     endedAt: entry.ended_at ?? null,
     durationMinutes: entry.duration_minutes ?? null,
@@ -83,11 +83,6 @@ function mapRoomHistoryEntry(entry: RoomSessionEntry): RoomHistoryEntry {
     supervisorName: entry.supervisor_name,
     studentCount: entry.student_count,
   };
-}
-
-/** The history answer: the contract's envelope through the catalog proxy. */
-interface RoomHistoryBody {
-  data?: RoomSessionEntry[] | null;
 }
 
 /**
@@ -157,34 +152,30 @@ export function useRoomDetail(roomId: string): UseRoomDetailResult {
   }>(
     roomKeys.detailKey(roomId),
     async () => {
-      // Both routes read the session cookie (#5005).
-      const [roomResponse, historyResponse] = await Promise.all([
-        transportFetch(`/api/rooms/${roomId}`, {
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
+      // Both routes read the session cookie (#5005). A failed history
+      // leaves the room readable.
+      const [roomData, historyResult] = await Promise.all([
+        bffJson("tenant", "GET /api/rooms/{id}", {
+          params: { id: roomId },
+          errorMessage: "room detail failed",
         }),
-        transportFetch(`/api/rooms/${roomId}/history`, {
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-        }),
+        bffJson("tenant", "GET /api/rooms/{id}/history", {
+          params: { id: roomId },
+          errorMessage: "room history failed",
+        }).then(
+          (rows) => ({ rows, failure: null }),
+          (failure: unknown) => ({ rows: null, failure }),
+        ),
       ]);
-      if (!roomResponse.ok) {
-        throw await apiErrorFromResponse(roomResponse, "room detail failed");
-      }
-      const roomBody = (await roomResponse.json()) as { data: RoomResponse };
-      const room = mapRoomResponse(roomBody.data);
+      const room = mapRoomResponse(roomData);
 
       let history: RoomHistoryEntry[] = [];
       let historyDisabled = false;
       let historyFailure: unknown = null;
-      if (historyResponse.ok) {
-        const body = (await historyResponse.json()) as RoomHistoryBody | null;
-        history = (body?.data ?? []).map(mapRoomHistoryEntry);
+      if (historyResult.rows) {
+        history = historyResult.rows.map(mapRoomHistoryEntry);
       } else {
-        const failure = await apiErrorFromResponse(
-          historyResponse,
-          "room history failed",
-        );
+        const failure = historyResult.failure;
         // gdpr.attendance_log_enabled is off for this school (#1425): the
         // section hides deliberately. Any other refusal is a real failure
         // and stays visible; hiding it would mask an outage.
@@ -193,7 +184,7 @@ export function useRoomDetail(roomId: string): UseRoomDetailResult {
         } else {
           logger.warn("room_history_fetch_failed", {
             room_id: roomId,
-            status: historyResponse.status,
+            status: failure instanceof ApiError ? failure.status : undefined,
           });
           historyFailure = failure;
         }
