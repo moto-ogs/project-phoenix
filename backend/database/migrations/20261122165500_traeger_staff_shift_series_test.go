@@ -10,7 +10,7 @@ import (
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
-// Migration 20261122114500 lets the Träger-Büro plan shift series without a
+// Migration 20261122165500 lets the Träger-Büro plan shift series without a
 // staff record of the school (#7818). Its checks are the model: a series or
 // exception without a staff author needs the mark of the Träger-Büro, and
 // only that mark replaces the author.

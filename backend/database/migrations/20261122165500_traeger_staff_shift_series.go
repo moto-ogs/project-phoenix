@@ -8,7 +8,7 @@ import (
 	"github.com/uptrace/bun"
 )
 
-const traegerStaffShiftSeriesVersion = "20261122114500"
+const traegerStaffShiftSeriesVersion = "20261122165500"
 
 func init() {
 	MigrationRegistry.Register(&Migration{

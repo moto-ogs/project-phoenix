@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Migration 20261122114000 lets a planned weekly plan name the Träger-Büro as
+// Migration 20261122165000 lets a planned weekly plan name the Träger-Büro as
 // its author (#7818). The check is the model: the mark never stands beside a
 // staff author, and the rollback refuses while a marked plan exists.
 func TestEnrollmentWeeklyPlanByTraegerConstraintAndDown(t *testing.T) {

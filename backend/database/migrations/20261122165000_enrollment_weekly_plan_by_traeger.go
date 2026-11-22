@@ -8,7 +8,7 @@ import (
 	"github.com/uptrace/bun"
 )
 
-const enrollmentWeeklyPlanByTraegerVersion = "20261122114000"
+const enrollmentWeeklyPlanByTraegerVersion = "20261122165000"
 
 func init() {
 	MigrationRegistry.Register(&Migration{
