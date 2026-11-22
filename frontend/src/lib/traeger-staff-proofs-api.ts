@@ -15,15 +15,8 @@ import {
   type TraegerListFile,
   type TraegerListFormat,
 } from "./traeger-list-export";
-import type {
-  ProofMappingRequest,
-  ProofRequest,
-  ProofTypeRequest,
-  TraegerSchoolProofKinds as WireSchoolProofKinds,
-  TraegerStaffProofList as WireStaffProofList,
-  TraegerStaffProofType as WireStaffProofType,
-} from "./contract/traeger-staff-proofs.generated";
-import type { TraegerStaffProof as WireStaffProof } from "./contract/shared.generated";
+import type * as traegerStaffProofsContract from "./contract/traeger-staff-proofs.generated";
+import type * as sharedContract from "./contract/shared.generated";
 import { knownEnum } from "./contract/known-enum";
 import { traegerRequest } from "~/lib/traeger-api";
 
@@ -128,7 +121,9 @@ export interface SchoolProofKinds {
   readonly kinds: readonly SchoolProofKind[];
 }
 
-function mapType(kind: WireStaffProofType): StaffProofType {
+function mapType(
+  kind: traegerStaffProofsContract.TraegerStaffProofType,
+): StaffProofType {
   return {
     id: kind.id,
     standardKey: kind.standard_key ?? "",
@@ -142,7 +137,9 @@ function mapType(kind: WireStaffProofType): StaffProofType {
 }
 
 /** Der Stand einer Art an einer Akte, wie Akte und Speichern ihn liefern. */
-export function mapStaffProof(proof: WireStaffProof): StaffProof {
+export function mapStaffProof(
+  proof: sharedContract.TraegerStaffProof,
+): StaffProof {
   return {
     typeId: proof.type_id,
     typeName: proof.type_name,
@@ -160,7 +157,9 @@ export function mapStaffProof(proof: WireStaffProof): StaffProof {
   };
 }
 
-function mapSchoolKinds(data: WireSchoolProofKinds[]): SchoolProofKinds[] {
+function mapSchoolKinds(
+  data: traegerStaffProofsContract.TraegerSchoolProofKinds[],
+): SchoolProofKinds[] {
   return data.map((school) => ({
     schoolId: school.school_id,
     schoolName: school.school_name,
@@ -173,7 +172,10 @@ function mapSchoolKinds(data: WireSchoolProofKinds[]): SchoolProofKinds[] {
 }
 
 export async function fetchStaffProofList(): Promise<StaffProofList> {
-  const data = await traegerRequest<WireStaffProofList>(BASE);
+  const data =
+    await traegerRequest<traegerStaffProofsContract.TraegerStaffProofList>(
+      BASE,
+    );
   return {
     today: data.today,
     types: (data.types ?? []).map(mapType),
@@ -198,7 +200,9 @@ export async function fetchStaffProofList(): Promise<StaffProofList> {
   };
 }
 
-function typeBody(input: StaffProofTypeInput): ProofTypeRequest {
+function typeBody(
+  input: StaffProofTypeInput,
+): traegerStaffProofsContract.ProofTypeRequest {
   return {
     name: input.name,
     validity_months: input.validityMonths,
@@ -213,7 +217,7 @@ export async function saveStaffProofType(
   input: StaffProofTypeInput,
 ): Promise<StaffProofType> {
   return mapType(
-    await traegerRequest<WireStaffProofType>(
+    await traegerRequest<traegerStaffProofsContract.TraegerStaffProofType>(
       id === null ? `${BASE}/types` : `${BASE}/types/${encodeURIComponent(id)}`,
       { method: id === null ? "POST" : "PUT", body: typeBody(input) },
     ),
@@ -222,7 +226,9 @@ export async function saveStaffProofType(
 
 export async function fetchSchoolProofKinds(): Promise<SchoolProofKinds[]> {
   return mapSchoolKinds(
-    await traegerRequest<WireSchoolProofKinds[]>(`${BASE}/school-kinds`),
+    await traegerRequest<traegerStaffProofsContract.TraegerSchoolProofKinds[]>(
+      `${BASE}/school-kinds`,
+    ),
   );
 }
 
@@ -232,14 +238,17 @@ export async function mapSchoolProofKind(
   proofTypeId: string | null,
 ): Promise<SchoolProofKinds[]> {
   return mapSchoolKinds(
-    await traegerRequest<WireSchoolProofKinds[]>(`${BASE}/school-kinds`, {
-      method: "PUT",
-      body: {
-        school_id: schoolId,
-        school_type_id: schoolTypeId,
-        proof_type_id: proofTypeId === null ? null : proofTypeId,
-      } satisfies ProofMappingRequest,
-    }),
+    await traegerRequest<traegerStaffProofsContract.TraegerSchoolProofKinds[]>(
+      `${BASE}/school-kinds`,
+      {
+        method: "PUT",
+        body: {
+          school_id: schoolId,
+          school_type_id: schoolTypeId,
+          proof_type_id: proofTypeId === null ? null : proofTypeId,
+        } satisfies traegerStaffProofsContract.ProofMappingRequest,
+      },
+    ),
   );
 }
 
@@ -251,7 +260,7 @@ export async function saveStaffProof(
   typeId: string,
   input: StaffProofInput,
 ): Promise<StaffProof[]> {
-  const data = await traegerRequest<WireStaffProof[]>(
+  const data = await traegerRequest<sharedContract.TraegerStaffProof[]>(
     proofPath(recordId, typeId),
     {
       method: "PUT",
@@ -260,7 +269,7 @@ export async function saveStaffProof(
         issued_on: input.issuedOn,
         no_relevant_entry: input.noRelevantEntry,
         expires_on: input.expiresOn,
-      } satisfies ProofRequest,
+      } satisfies traegerStaffProofsContract.ProofRequest,
     },
   );
   return data.map(mapStaffProof);
@@ -270,7 +279,7 @@ export async function deleteStaffProof(
   recordId: string,
   typeId: string,
 ): Promise<StaffProof[]> {
-  const data = await traegerRequest<WireStaffProof[]>(
+  const data = await traegerRequest<sharedContract.TraegerStaffProof[]>(
     proofPath(recordId, typeId),
     { method: "DELETE" },
   );

@@ -5,10 +5,7 @@
  * from the contribution client, so the registration page does not load it.
  */
 
-import type {
-  HolidaySiblingGroup as WireGroup,
-  HolidaySiblingMergeRequest,
-} from "./contract/traeger-holiday-contributions.generated";
+import type * as traegerHolidayContributionsContract from "./contract/traeger-holiday-contributions.generated";
 import { traegerRequest } from "./traeger-api";
 
 export interface HolidaySiblingGroup {
@@ -19,7 +16,9 @@ export interface HolidaySiblingGroup {
 const groupsPath = (periodId: string) =>
   `/api/traeger/holiday-contributions/${encodeURIComponent(periodId)}/sibling-groups`;
 
-function groupFromBackend(group: WireGroup): HolidaySiblingGroup {
+function groupFromBackend(
+  group: traegerHolidayContributionsContract.HolidaySiblingGroup,
+): HolidaySiblingGroup {
   return { id: group.id, registrationIds: group.registration_ids ?? [] };
 }
 
@@ -27,7 +26,9 @@ function groupFromBackend(group: WireGroup): HolidaySiblingGroup {
 export async function fetchHolidaySiblingGroups(
   periodId: string,
 ): Promise<HolidaySiblingGroup[]> {
-  const groups = await traegerRequest<WireGroup[]>(groupsPath(periodId));
+  const groups = await traegerRequest<
+    traegerHolidayContributionsContract.HolidaySiblingGroup[]
+  >(groupsPath(periodId));
   return groups.map(groupFromBackend);
 }
 
@@ -40,12 +41,15 @@ export async function mergeHolidaySiblings(
   registrationIds: readonly string[],
 ): Promise<HolidaySiblingGroup> {
   return groupFromBackend(
-    await traegerRequest<WireGroup>(groupsPath(periodId), {
-      method: "POST",
-      body: {
-        registration_ids: [...registrationIds],
-      } satisfies HolidaySiblingMergeRequest,
-    }),
+    await traegerRequest<traegerHolidayContributionsContract.HolidaySiblingGroup>(
+      groupsPath(periodId),
+      {
+        method: "POST",
+        body: {
+          registration_ids: [...registrationIds],
+        } satisfies traegerHolidayContributionsContract.HolidaySiblingMergeRequest,
+      },
+    ),
   );
 }
 

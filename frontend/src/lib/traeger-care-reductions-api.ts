@@ -8,16 +8,9 @@
 
 import { knownEnum } from "./contract/known-enum";
 import { requiredDay } from "./contract/required-day";
-import type { ContributionRule as WireRule } from "./contract/shared.generated";
-import type {
-  CareEvidence as WireEvidence,
-  CareEvidenceRequest,
-  CareEvidenceSet as WireEvidenceSet,
-} from "./contract/traeger-care-evidences.generated";
-import type {
-  CareRuleRequest,
-  CareRuleSet as WireRuleSet,
-} from "./contract/traeger-care-rules.generated";
+import type * as sharedContract from "./contract/shared.generated";
+import type * as traegerCareEvidencesContract from "./contract/traeger-care-evidences.generated";
+import type * as traegerCareRulesContract from "./contract/traeger-care-rules.generated";
 import { traegerRequest } from "./traeger-api";
 import {
   type CareModule,
@@ -112,14 +105,19 @@ const ids = (values: readonly string[] | null): string[] => [...(values ?? [])];
  * A rule of a kind this build does not know is left out: the chain editor
  * cannot show or save it, and the backend keeps it as it is.
  */
-function rulesFromBackend(rules: readonly WireRule[] | null): CareRule[] {
+function rulesFromBackend(
+  rules: readonly sharedContract.ContributionRule[] | null,
+): CareRule[] {
   return (rules ?? []).flatMap((rule) => {
     const kind = knownEnum(RULE_KIND_VALUES, rule.kind);
     return kind ? [ruleFromBackend(rule, kind)] : [];
   });
 }
 
-function ruleFromBackend(rule: WireRule, kind: CareRuleKind): CareRule {
+function ruleFromBackend(
+  rule: sharedContract.ContributionRule,
+  kind: CareRuleKind,
+): CareRule {
   return {
     id: rule.id,
     kind,
@@ -139,7 +137,9 @@ function ruleFromBackend(rule: WireRule, kind: CareRuleKind): CareRule {
   };
 }
 
-function ruleSetFromBackend(body: WireRuleSet): CareRuleSet {
+function ruleSetFromBackend(
+  body: traegerCareRulesContract.CareRuleSet,
+): CareRuleSet {
   return {
     rules: rulesFromBackend(body.rules),
     schools: (body.schools ?? []).map(schoolFromBackend),
@@ -149,7 +149,7 @@ function ruleSetFromBackend(body: WireRuleSet): CareRuleSet {
 
 /** An evidence of a kind this build does not know is left out. */
 function evidencesFromBackend(
-  evidences: readonly WireEvidence[] | null,
+  evidences: readonly traegerCareEvidencesContract.CareEvidence[] | null,
 ): CareEvidence[] {
   return (evidences ?? []).flatMap((evidence) => {
     const kind = knownEnum(EVIDENCE_KIND_VALUES, evidence.kind);
@@ -169,7 +169,9 @@ function evidencesFromBackend(
   });
 }
 
-function evidenceSetFromBackend(body: WireEvidenceSet): CareEvidenceSet {
+function evidenceSetFromBackend(
+  body: traegerCareEvidencesContract.CareEvidenceSet,
+): CareEvidenceSet {
   return {
     contracts: (body.contracts ?? []).map((contract) => ({
       contractId: contract.contract_id,
@@ -183,7 +185,9 @@ function evidenceSetFromBackend(body: WireEvidenceSet): CareEvidenceSet {
   };
 }
 
-function ruleBody(input: CareRuleInput): CareRuleRequest {
+function ruleBody(
+  input: CareRuleInput,
+): traegerCareRulesContract.CareRuleRequest {
   return {
     kind: input.kind,
     name: input.name,
@@ -202,7 +206,9 @@ function ruleBody(input: CareRuleInput): CareRuleRequest {
   };
 }
 
-function evidenceBody(input: CareEvidenceInput): CareEvidenceRequest {
+function evidenceBody(
+  input: CareEvidenceInput,
+): traegerCareEvidencesContract.CareEvidenceRequest {
   return {
     contract_id: input.contractId,
     kind: input.kind,
@@ -215,7 +221,9 @@ function evidenceBody(input: CareEvidenceInput): CareEvidenceRequest {
 }
 
 export async function fetchCareRules(): Promise<CareRuleSet> {
-  return ruleSetFromBackend(await traegerRequest<WireRuleSet>(RULES_PATH));
+  return ruleSetFromBackend(
+    await traegerRequest<traegerCareRulesContract.CareRuleSet>(RULES_PATH),
+  );
 }
 
 /** Creates a rule without `ruleId`, changes that one otherwise. */
@@ -224,7 +232,7 @@ export async function saveCareRule(
   input: CareRuleInput,
 ): Promise<CareRuleSet> {
   return ruleSetFromBackend(
-    await traegerRequest<WireRuleSet>(
+    await traegerRequest<traegerCareRulesContract.CareRuleSet>(
       ruleId ? `${RULES_PATH}/${ruleId}` : RULES_PATH,
       { method: ruleId ? "PUT" : "POST", body: ruleBody(input) },
     ),
@@ -233,16 +241,21 @@ export async function saveCareRule(
 
 export async function deleteCareRule(ruleId: string): Promise<CareRuleSet> {
   return ruleSetFromBackend(
-    await traegerRequest<WireRuleSet>(`${RULES_PATH}/${ruleId}`, {
-      method: "DELETE",
-    }),
+    await traegerRequest<traegerCareRulesContract.CareRuleSet>(
+      `${RULES_PATH}/${ruleId}`,
+      {
+        method: "DELETE",
+      },
+    ),
   );
 }
 
 /** Reads the evidences; the backend records the read per contract. */
 export async function fetchCareEvidences(): Promise<CareEvidenceSet> {
   return evidenceSetFromBackend(
-    await traegerRequest<WireEvidenceSet>(EVIDENCES_PATH),
+    await traegerRequest<traegerCareEvidencesContract.CareEvidenceSet>(
+      EVIDENCES_PATH,
+    ),
   );
 }
 
@@ -251,7 +264,7 @@ export async function saveCareEvidence(
   input: CareEvidenceInput,
 ): Promise<CareEvidenceSet> {
   return evidenceSetFromBackend(
-    await traegerRequest<WireEvidenceSet>(
+    await traegerRequest<traegerCareEvidencesContract.CareEvidenceSet>(
       evidenceId ? `${EVIDENCES_PATH}/${evidenceId}` : EVIDENCES_PATH,
       { method: evidenceId ? "PUT" : "POST", body: evidenceBody(input) },
     ),
@@ -262,8 +275,11 @@ export async function deleteCareEvidence(
   evidenceId: string,
 ): Promise<CareEvidenceSet> {
   return evidenceSetFromBackend(
-    await traegerRequest<WireEvidenceSet>(`${EVIDENCES_PATH}/${evidenceId}`, {
-      method: "DELETE",
-    }),
+    await traegerRequest<traegerCareEvidencesContract.CareEvidenceSet>(
+      `${EVIDENCES_PATH}/${evidenceId}`,
+      {
+        method: "DELETE",
+      },
+    ),
   );
 }
