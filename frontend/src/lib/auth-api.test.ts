@@ -56,7 +56,9 @@ describe("auth-api", () => {
       ).rejects.toThrow("Fehler beim Senden der Passwort-Zurücksetzen-E-Mail");
     });
 
-    it("throws ApiError with text error message", async () => {
+    // A plain-text body (a proxy in front of the BFF) stays a diagnostic:
+    // the error keeps its status and the client's message (#7806).
+    it("throws ApiError with the status and fallback message for a text body", async () => {
       global.fetch = vi.fn().mockResolvedValue(
         failure(500, "Internal server error", {
           "Content-Type": "text/plain",
@@ -67,7 +69,11 @@ describe("auth-api", () => {
 
       await expect(
         requestPasswordReset("tenant", "test@example.com"),
-      ).rejects.toThrow("Internal server error");
+      ).rejects.toMatchObject({
+        status: 500,
+        code: "general.server",
+        message: "Fehler beim Senden der Passwort-Zurücksetzen-E-Mail",
+      });
     });
 
     it("throws ApiError with retryAfterSeconds from Retry-After header (numeric)", async () => {
