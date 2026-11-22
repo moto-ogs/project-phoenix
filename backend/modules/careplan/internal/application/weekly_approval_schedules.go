@@ -75,7 +75,7 @@ func (s *WeeklyApprovals) applyArrivalTimes(ctx context.Context, studentID, staf
 		if err != nil {
 			return fmt.Errorf("apply arrival weekday %d: %w", weekday, err)
 		}
-		row := &careplan.ArrivalSchedule{StudentID: studentID, Weekday: weekday, ExpectedArrival: clock, CreatedBy: staffID}
+		row := &careplan.ArrivalSchedule{StudentID: studentID, Weekday: weekday, ExpectedArrival: clock, CreatedBy: staffID, EnteredByTraeger: careplan.EnteredByTraeger(ctx, staffID)}
 		if err := s.Arrivals.UpsertStudentArrivalSchedule(ctx, row); err != nil {
 			return fmt.Errorf("apply arrival weekday %d: %w", weekday, err)
 		}
@@ -89,7 +89,7 @@ func (s *WeeklyApprovals) applyPickupTimes(ctx context.Context, studentID, staff
 		if err != nil {
 			return fmt.Errorf("apply pickup weekday %d: %w", weekday, err)
 		}
-		row := &careplan.PickupSchedule{StudentID: studentID, Weekday: weekday, PickupTime: clock, CreatedBy: staffID}
+		row := &careplan.PickupSchedule{StudentID: studentID, Weekday: weekday, PickupTime: clock, CreatedBy: staffID, EnteredByTraeger: careplan.EnteredByTraeger(ctx, staffID)}
 		if err := s.Pickups.UpsertStudentPickupSchedule(ctx, row); err != nil {
 			return fmt.Errorf("apply pickup weekday %d: %w", weekday, err)
 		}

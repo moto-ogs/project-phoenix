@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -72,7 +73,7 @@ func (a *seedTestAdapter) LoginParent(ctx context.Context, email, password strin
 // sign-in directly; the second factor is the command adapter's.
 func (a *seedTestAdapter) LoginTraeger(ctx context.Context, email, password string, organizationID int64) (AuthRef, error) {
 	raw, _, err := a.inner.Raw(ctx, testpkg.APIAuth{}, seedHTTPMethodPost, "/traeger/auth/login",
-		map[string]any{"email": email, "password": password, "organization_id": organizationID}, nil)
+		map[string]any{"email": email, "password": password, "organization_id": strconv.FormatInt(organizationID, 10)}, nil)
 	if err != nil {
 		return AuthRef{}, seedTestLoginError(err, "traeger login request failed")
 	}

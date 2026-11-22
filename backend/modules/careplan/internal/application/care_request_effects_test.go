@@ -314,9 +314,11 @@ func TestActingStaffIDRefusesCallersWithoutStaffProfile(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, fakeReviewer, staffID)
 	_, err = actingStaffID(ctx, staffProbe{}, pickupRequestStaff)
+	require.ErrorIs(t, err, carerequests.ErrCareRequestStaffProfileRequired)
 	require.ErrorIs(t, err, carerequests.ErrCareRequestForbidden)
 	_, err = actingStaffID(ctx, staffProbe{err: errBoom}, pickupRequestStaff)
 	require.ErrorIs(t, err, errBoom)
+	require.NotErrorIs(t, err, carerequests.ErrCareRequestForbidden, "a failed lookup is no refusal")
 	assert.Equal(t, "schedule: resolve acting staff for pickup request: boom", err.Error())
 }
 

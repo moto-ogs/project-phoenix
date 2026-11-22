@@ -1,26 +1,19 @@
+import type * as sharedContract from "./contract/shared.generated";
 // Benachrichtigungs-Feed des Staff-Portals (#7148): Hinweise in der Glocke.
 // Der Backend-Text (Titel, Text, Deep Link) entsteht beim Schreiben und kommt
 // fertig an; das Frontend zeigt ihn nur an.
 
 /**
- * Ein Eintrag, wie ihn GET /api/notifications/feed liefert. Der Portal-Proxy
- * (#2352) reicht die ID als String durch, das Elternportal noch als Zahl.
+ * Ein Eintrag, wie ihn die Feed-Routen der Portale liefern; im Träger-Portal
+ * (#7146) mit der Schule des Eintrags.
  */
-export interface NotificationFeedEntryWire {
-  id: string | number;
-  type: string;
-  title: string;
-  body: string;
-  deep_link: string;
-  created_at: string;
-  updated_at: string;
-  read_at: string | null;
-  /** Nur im Träger-Portal (#7146): die Schule des Eintrags. */
+type FeedEntryAnswer = sharedContract.feedEntryResponse & {
   school_name?: string;
-}
+};
 
-export interface NotificationFeedPageWire {
-  entries: NotificationFeedEntryWire[];
+/** Eine Seite des Feeds; Go schreibt eine leere Liste als null. */
+interface FeedPageAnswer {
+  entries: readonly FeedEntryAnswer[] | null;
   next_cursor: string | null;
   unread_count: number;
 }
@@ -51,23 +44,23 @@ export interface NotificationFeedPage {
 }
 
 export function mapNotificationFeedEntry(
-  wire: NotificationFeedEntryWire,
+  wire: FeedEntryAnswer,
 ): NotificationFeedEntry {
   return {
-    id: wire.id.toString(),
+    id: wire.id,
     type: wire.type,
     title: wire.title,
     body: wire.body,
     deepLink: wire.deep_link,
     createdAt: wire.created_at,
     updatedAt: wire.updated_at,
-    readAt: wire.read_at ?? null,
+    readAt: wire.read_at,
     ...(wire.school_name ? { schoolName: wire.school_name } : {}),
   };
 }
 
 export function mapNotificationFeedPage(
-  wire: NotificationFeedPageWire,
+  wire: FeedPageAnswer,
 ): NotificationFeedPage {
   return {
     entries: (wire.entries ?? []).map(mapNotificationFeedEntry),

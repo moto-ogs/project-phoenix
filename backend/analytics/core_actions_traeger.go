@@ -180,7 +180,6 @@ var traegerCoreActions = map[RouteKey]CoreAction{
 	// the Träger, no school to count them for.
 	{http.MethodPut, "/traeger/sepa-creditor/"}:                      notCaptured,
 	{http.MethodPost, "/traeger/sepa-mandates/"}:                     notCaptured,
-	{http.MethodPut, "/traeger/sepa-mandates/{id}"}:                  notCaptured,
 	{http.MethodPost, "/traeger/sepa-mandates/{id}/revoke"}:          notCaptured,
 	{http.MethodPost, "/traeger/sepa-debits/{kind}/{id}/submission"}: notCaptured,
 	// The field mapping of the Sollstellung and the start of the file
@@ -238,6 +237,22 @@ var traegerCoreActions = map[RouteKey]CoreAction{
 	// to a school; the preview stores nothing.
 	{http.MethodPost, "/traeger/contract-imports/"}:        notCaptured,
 	{http.MethodPost, "/traeger/contract-imports/preview"}: notCaptured,
+	// The correction of contracts from an import (#7767) completes a
+	// one-time takeover and belongs to the Träger; the preview stores
+	// nothing.
+	{http.MethodPost, "/traeger/contract-corrections/"}:        notCaptured,
+	{http.MethodPost, "/traeger/contract-corrections/preview"}: notCaptured,
+	// The correction of the modules imported contracts book (#7764) belongs
+	// to the Träger like the import; the preview stores nothing.
+	{http.MethodPost, "/traeger/contract-imports/offering-corrections"}:         notCaptured,
+	{http.MethodPost, "/traeger/contract-imports/offering-corrections/preview"}: notCaptured,
+	// The link of imported contracts to child records (#7760) belongs to the
+	// Träger; the previews store nothing.
+	{http.MethodPost, "/traeger/contract-child-links/"}:                     notCaptured,
+	{http.MethodPost, "/traeger/contract-child-links/preview"}:              notCaptured,
+	{http.MethodPost, "/traeger/contract-child-links/{contractId}/preview"}: notCaptured,
+	{http.MethodPut, "/traeger/contract-child-links/{contractId}"}:          notCaptured,
+	{http.MethodDelete, "/traeger/contract-child-links/{contractId}"}:       notCaptured,
 	// Withdrawal and termination (#4682): the Träger-Büro records a
 	// declaration it received and sets the end of an extraordinary
 	// termination it checked; the parents' own one in the parents portal.

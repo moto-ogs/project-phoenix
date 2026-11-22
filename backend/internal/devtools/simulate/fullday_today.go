@@ -7,6 +7,8 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // todayPlan is what the school plans for the simulated day, read once at the
@@ -19,19 +21,19 @@ type todayPlan struct {
 
 // dayBlock is the part of a timetable instance the simulation needs.
 type dayBlock struct {
-	ID           apiID  `json:"id"`
-	Title        string `json:"title"`
-	StartTime    string `json:"start_time"`
-	EndTime      string `json:"end_time"`
-	Status       string `json:"status"`
-	ActivityType string `json:"activity_type"`
-	Spontaneous  bool   `json:"is_spontaneous"`
-	RoomID       apiID  `json:"room_id"`
+	ID           ident.ID `json:"id"`
+	Title        string   `json:"title"`
+	StartTime    string   `json:"start_time"`
+	EndTime      string   `json:"end_time"`
+	Status       string   `json:"status"`
+	ActivityType string   `json:"activity_type"`
+	Spontaneous  bool     `json:"is_spontaneous"`
+	RoomID       ident.ID `json:"room_id"`
 	Staff        []struct {
-		StaffID  apiID `json:"staff_id"`
-		IsAbsent bool  `json:"is_absent"`
+		StaffID  ident.ID `json:"staff_id"`
+		IsAbsent bool     `json:"is_absent"`
 	} `json:"staff"`
-	StudentIDs []apiID `json:"student_ids"`
+	StudentIDs []ident.ID `json:"student_ids"`
 }
 
 // startable reports a planned block with children: no duty, no external

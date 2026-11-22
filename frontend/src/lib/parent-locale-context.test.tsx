@@ -109,7 +109,11 @@ beforeEach(() => {
   window.localStorage.clear();
   window.sessionStorage.clear();
   mockedUseLocale.mockReturnValue("de");
-  mockedUpdateLocale.mockResolvedValue({ portal_locale: "ru" });
+  mockedUpdateLocale.mockResolvedValue({
+    first_name: "",
+    last_name: "",
+    portal_locale: "ru",
+  });
 });
 
 describe("ParentLocaleProvider — anonymous", () => {
@@ -141,7 +145,11 @@ describe("ParentLocaleProvider — authenticated profile sync", () => {
   it("adopts the anonymous locale and persists it when none is stored", async () => {
     setSession("authenticated");
     mockedUseLocale.mockReturnValue("en"); // arrived as English
-    mockedFetchProfile.mockResolvedValue({ portal_locale: null });
+    mockedFetchProfile.mockResolvedValue({
+      first_name: "",
+      last_name: "",
+      portal_locale: null,
+    });
 
     renderProvider();
 
@@ -155,7 +163,11 @@ describe("ParentLocaleProvider — authenticated profile sync", () => {
   it("persists German when the adopted locale is already the default", async () => {
     setSession("authenticated");
     mockedUseLocale.mockReturnValue("de");
-    mockedFetchProfile.mockResolvedValue({ portal_locale: null });
+    mockedFetchProfile.mockResolvedValue({
+      first_name: "",
+      last_name: "",
+      portal_locale: null,
+    });
 
     renderProvider();
 
@@ -168,7 +180,11 @@ describe("ParentLocaleProvider — authenticated profile sync", () => {
   it("applies an explicit stored locale and refreshes without a second document load", async () => {
     setSession("authenticated");
     mockedUseLocale.mockReturnValue("de"); // rendered in de
-    mockedFetchProfile.mockResolvedValue({ portal_locale: "ru" });
+    mockedFetchProfile.mockResolvedValue({
+      first_name: "",
+      last_name: "",
+      portal_locale: "ru",
+    });
 
     renderProvider();
 
@@ -184,7 +200,11 @@ describe("ParentLocaleProvider — authenticated profile sync", () => {
   it("refreshes for an unsynced local choice the profile does not know yet", async () => {
     setSession("authenticated");
     mockedUseLocale.mockReturnValue("de");
-    mockedFetchProfile.mockResolvedValue({ portal_locale: "de" });
+    mockedFetchProfile.mockResolvedValue({
+      first_name: "",
+      last_name: "",
+      portal_locale: "de",
+    });
     window.localStorage.setItem(
       "phoenix_parent_unsynced_locale:parent-1",
       "ru",
@@ -212,7 +232,11 @@ describe("ParentLocaleProvider — authenticated profile sync", () => {
   it("does not refresh when the stored locale already matches the render", async () => {
     setSession("authenticated");
     mockedUseLocale.mockReturnValue("ru");
-    mockedFetchProfile.mockResolvedValue({ portal_locale: "ru" });
+    mockedFetchProfile.mockResolvedValue({
+      first_name: "",
+      last_name: "",
+      portal_locale: "ru",
+    });
 
     renderProvider();
 
@@ -238,7 +262,11 @@ describe("ParentLocaleProvider — setLocale when authenticated", () => {
     setSession("authenticated");
     mockedUseLocale.mockReturnValue("de");
     // Stored de so the mount effect is a no-op (no refresh from sync).
-    mockedFetchProfile.mockResolvedValue({ portal_locale: "de" });
+    mockedFetchProfile.mockResolvedValue({
+      first_name: "",
+      last_name: "",
+      portal_locale: "de",
+    });
 
     renderProvider();
     await waitFor(() => expect(mockedFetchProfile).toHaveBeenCalled());
@@ -254,7 +282,11 @@ describe("ParentLocaleProvider — setLocale when authenticated", () => {
   it("shows the failed persist at once but still switches the UI", async () => {
     setSession("authenticated");
     mockedUseLocale.mockReturnValue("de");
-    mockedFetchProfile.mockResolvedValue({ portal_locale: "de" });
+    mockedFetchProfile.mockResolvedValue({
+      first_name: "",
+      last_name: "",
+      portal_locale: "de",
+    });
     const failure = new ApiError("diag", 503, {
       code: "general.unavailable",
       instance: "req-locale",
@@ -283,7 +315,11 @@ describe("ParentLocaleProvider — setLocale when authenticated", () => {
     expect(screen.getByTestId("locale").textContent).toBe("ru");
 
     // Wiederholen saves the chosen language again.
-    mockedUpdateLocale.mockResolvedValue({ portal_locale: "ru" });
+    mockedUpdateLocale.mockResolvedValue({
+      first_name: "",
+      last_name: "",
+      portal_locale: "ru",
+    });
     (options as { retry: () => void }).retry();
     await waitFor(() =>
       expect(mockedUpdateLocale).toHaveBeenLastCalledWith("ru"),
@@ -294,7 +330,11 @@ describe("ParentLocaleProvider — setLocale when authenticated", () => {
   it("shows a save that got no answer marked as such (#2512)", async () => {
     setSession("authenticated");
     mockedUseLocale.mockReturnValue("de");
-    mockedFetchProfile.mockResolvedValue({ portal_locale: "de" });
+    mockedFetchProfile.mockResolvedValue({
+      first_name: "",
+      last_name: "",
+      portal_locale: "de",
+    });
     mockedUpdateLocale.mockRejectedValue(
       unavailableApiError(new TypeError("Failed to fetch")),
     );
@@ -313,12 +353,24 @@ describe("ParentLocaleProvider — setLocale when authenticated", () => {
   it("serializes profile saves so the last locale choice wins", async () => {
     setSession("authenticated");
     mockedUseLocale.mockReturnValue("de");
-    mockedFetchProfile.mockResolvedValue({ portal_locale: "de" });
+    mockedFetchProfile.mockResolvedValue({
+      first_name: "",
+      last_name: "",
+      portal_locale: "de",
+    });
 
-    const firstSave = createDeferred<{ portal_locale: "ru" }>();
+    const firstSave = createDeferred<{
+      first_name: string;
+      last_name: string;
+      portal_locale: "ru";
+    }>();
     mockedUpdateLocale
       .mockReturnValueOnce(firstSave.promise)
-      .mockResolvedValueOnce({ portal_locale: "en" });
+      .mockResolvedValueOnce({
+        first_name: "",
+        last_name: "",
+        portal_locale: "en",
+      });
 
     renderProvider();
     await waitFor(() => expect(mockedFetchProfile).toHaveBeenCalled());
@@ -332,7 +384,7 @@ describe("ParentLocaleProvider — setLocale when authenticated", () => {
     expect(mockedWriteCookie).toHaveBeenCalledWith("en");
     expect(mockedUpdateLocale).toHaveBeenCalledTimes(1);
 
-    firstSave.resolve({ portal_locale: "ru" });
+    firstSave.resolve({ first_name: "", last_name: "", portal_locale: "ru" });
 
     await waitFor(() => expect(mockedUpdateLocale).toHaveBeenCalledWith("en"));
     expect(mockedUpdateLocale.mock.calls.map(([locale]) => locale)).toEqual([

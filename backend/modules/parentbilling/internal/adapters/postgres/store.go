@@ -74,6 +74,7 @@ type ruleRow struct {
 	CapCents             *int64         `bun:"cap_cents"`
 	CountsFamilyChildren bool           `bun:"counts_family_children"`
 	TariffSiblingPrice   bool           `bun:"tariff_sibling_price"`
+	SiblingAllChildren   bool           `bun:"sibling_all_children"`
 	UpdatedAt            time.Time      `bun:"updated_at,nullzero"`
 }
 
@@ -85,6 +86,7 @@ func (r ruleRow) rule() parentbilling.ContributionRule {
 		CountSchoolIDs: ident.IDs(idsOrEmpty(r.CountSchoolIDs)), PriceCents: r.PriceCents, CapCents: r.CapCents, UpdatedAt: r.UpdatedAt,
 		CountsFamilyChildren: r.CountsFamilyChildren,
 		TariffSiblingPrice:   r.TariffSiblingPrice,
+		SiblingAllChildren:   r.SiblingAllChildren,
 	}
 }
 

@@ -1,5 +1,4 @@
 GET /api/active/analytics/dashboard
-GET /api/active/cross-tenant-students
 GET /api/active/groups/
 GET /api/active/groups/{id}/supervisors
 GET /api/active/schulhof/status

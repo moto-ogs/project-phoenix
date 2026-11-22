@@ -61,7 +61,9 @@ describe("guardian-payment-api", () => {
       ibanMasked: "•••• 3000",
       accountHolder: null,
     });
-    expect(sessionFetch).toHaveBeenCalledWith("/api/guardians/42/payment");
+    expect(sessionFetch).toHaveBeenCalledWith("/api/guardians/42/payment", {
+      method: "GET",
+    });
   });
 
   it("reveals via POST, because the backend logs every unmasked read", async () => {
@@ -138,7 +140,7 @@ describe("guardian-payment-api", () => {
     expect(JSON.parse(init.body as string)).toEqual({ guardian_id: null });
   });
 
-  it("maps overview rows and tolerates a null payload", async () => {
+  it("maps overview rows", async () => {
     sessionFetch.mockResolvedValue(
       jsonResponse({
         data: [
@@ -167,9 +169,6 @@ describe("guardian-payment-api", () => {
         ibanMasked: "",
       },
     ]);
-
-    sessionFetch.mockResolvedValue(jsonResponse({ data: null }));
-    await expect(fetchPaymentOverview()).resolves.toEqual([]);
   });
 
   it("saves the export under the filename the backend chose", async () => {

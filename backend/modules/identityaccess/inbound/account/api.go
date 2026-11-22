@@ -123,13 +123,6 @@ func NewResource(lifecycle AccountLifecycle, invitations Invitations, schoolServ
 	}
 }
 
-func (rs *Resource) withinAdmin(ctx context.Context, fn func(context.Context) error) error {
-	if rs.transactions == nil {
-		return fn(ctx)
-	}
-	return rs.transactions.WithinAdmin(ctx, fn)
-}
-
 func (rs *Resource) markRollback(ctx context.Context) {
 	if rs.transactions != nil {
 		rs.transactions.MarkRollback(ctx)
@@ -158,18 +151,6 @@ type Invitations interface {
 	identityaccess.SchoolInvitations
 	identityaccess.SchoolInvitationMailStates
 	identityaccess.GuardianInvitations
-}
-
-func requirePlatformScope(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		claims := sessiontoken.ClaimsFromCtx(r.Context())
-		if !claims.IsPlatformScope() {
-			common.RenderError(w, r, common.AuthorizationForbidden())
-			return
-		}
-
-		next.ServeHTTP(w, r)
-	})
 }
 
 // RouterWithAuthRateLimiter returns the auth router with the given rate
@@ -305,7 +286,6 @@ func (rs *Resource) mountAuthenticatedRoutes(r chi.Router, configureSession func
 
 	// Account management routes
 	r.Route("/accounts", func(r chi.Router) {
-		r.With(common.RequiresPermission(permUsersList)).Get("/", rs.listAccounts)
 		r.Route("/{accountId}", rs.mountAccountRoutes)
 	})
 
@@ -366,7 +346,6 @@ func (rs *Resource) mountRoleAndPermissionRoutes(r chi.Router) {
 
 	// Permission management routes
 	r.Route(pathPermissions, func(r chi.Router) {
-		r.With(requirePlatformScope, common.RequiresPermission("permissions:create")).Post("/", rs.createPermission)
 		r.With(common.RequiresPermission("permissions:read")).Get("/", rs.listPermissions)
 	})
 }
@@ -374,15 +353,6 @@ func (rs *Resource) mountRoleAndPermissionRoutes(r chi.Router) {
 // mountAccountRoutes registers the routes on one account under
 // /accounts/{accountId}.
 func (rs *Resource) mountAccountRoutes(r chi.Router) {
-	// Account update operations
-	// This single-command handler lets the capability select its unit before
-	// any transaction starts, including cross-school organization updates.
-	//
-	// It rewrites the login address and name, so it needs users:manage like
-	// register and link-to-tenant: under users:update, which the "user" role
-	// holds, a Betreuer could move an admin's address to their own mailbox
-	// and take the account over through a password reset.
-	r.With(common.RequiresPermission(permUsersManage)).Put("/", rs.updateAccount)
 	r.Group(rs.mountTransactionalAccountRoutes)
 }
 

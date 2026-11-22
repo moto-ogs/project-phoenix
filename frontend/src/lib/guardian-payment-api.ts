@@ -1,5 +1,5 @@
-import type * as wire from "~/lib/contract/guardians.generated";
 import { apiErrorFromResponse } from "./api-error";
+import { bffJson } from "./bff-fetch";
 import {
   downloadBlob,
   filenameFromDisposition,
@@ -54,40 +54,32 @@ export type PaymentExportFormat = "pdf" | "xlsx" | "docx";
 export async function fetchGuardianPayment(
   guardianId: string,
 ): Promise<GuardianPaymentMasked> {
-  const response = await sessionFetch(`/api/guardians/${guardianId}/payment`);
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, "load guardian payment failed");
-  }
-  const json = (await response.json()) as {
-    data: wire.GuardianPaymentMaskedResponse;
-  };
+  const payment = await bffJson("tenant", "GET /api/guardians/{id}/payment", {
+    params: { id: guardianId },
+    errorMessage: "load guardian payment failed",
+  });
   return {
-    guardianId: json.data.guardian_id,
-    ibanMasked: json.data.iban_masked,
-    accountHolder: json.data.account_holder,
+    guardianId: payment.guardian_id,
+    ibanMasked: payment.iban_masked,
+    accountHolder: payment.account_holder,
   };
 }
 
 export async function revealGuardianPayment(
   guardianId: string,
 ): Promise<GuardianPaymentPlain> {
-  const response = await sessionFetch(
-    `/api/guardians/${guardianId}/payment/reveal`,
-    { method: "POST", headers: { "Content-Type": "application/json" } },
+  const payment = await bffJson(
+    "tenant",
+    "POST /api/guardians/{id}/payment/reveal",
+    {
+      params: { id: guardianId },
+      errorMessage: "reveal guardian payment failed",
+    },
   );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      "reveal guardian payment failed",
-    );
-  }
-  const json = (await response.json()) as {
-    data: wire.GuardianPaymentRevealResponse;
-  };
   return {
-    guardianId: json.data.guardian_id,
-    iban: json.data.iban,
-    accountHolder: json.data.account_holder,
+    guardianId: payment.guardian_id,
+    iban: payment.iban,
+    accountHolder: payment.account_holder,
   };
 }
 
@@ -95,20 +87,11 @@ export async function updateGuardianPayment(
   guardianId: string,
   input: GuardianPaymentInput,
 ): Promise<void> {
-  const response = await sessionFetch(`/api/guardians/${guardianId}/payment`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      iban: input.iban,
-      account_holder: input.accountHolder,
-    }),
+  await bffJson("tenant", "PUT /api/guardians/{id}/payment", {
+    params: { id: guardianId },
+    body: { iban: input.iban, account_holder: input.accountHolder },
+    errorMessage: "update guardian payment failed",
   });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      "update guardian payment failed",
-    );
-  }
 }
 
 /** Marks which guardian pays for this child; null clears the assignment. */
@@ -116,28 +99,18 @@ export async function setStudentPayer(
   studentId: string,
   guardianId: string | null,
 ): Promise<void> {
-  const response = await sessionFetch(
-    `/api/guardians/students/${studentId}/payer`,
-    {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ guardian_id: guardianId }),
-    },
-  );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, "set student payer failed");
-  }
+  await bffJson("tenant", "PUT /api/guardians/students/{studentId}/payer", {
+    params: { studentId },
+    body: { guardian_id: guardianId },
+    errorMessage: "set student payer failed",
+  });
 }
 
 export async function fetchPaymentOverview(): Promise<PaymentOverviewRow[]> {
-  const response = await sessionFetch("/api/guardians/payment-overview");
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, "load payment overview failed");
-  }
-  const json = (await response.json()) as {
-    data: wire.PaymentOverviewRow[] | null;
-  };
-  return (json.data ?? []).map((row) => ({
+  const rows = await bffJson("tenant", "GET /api/guardians/payment-overview", {
+    errorMessage: "load payment overview failed",
+  });
+  return rows.map((row) => ({
     studentId: row.student_id,
     studentName: row.student_name,
     schoolClass: row.school_class,

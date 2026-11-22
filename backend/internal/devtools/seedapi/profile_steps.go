@@ -9,7 +9,7 @@ import (
 	"slices"
 	"sort"
 
-	"github.com/moto-ogs/project-phoenix/demoprofile"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 const (
@@ -26,11 +26,11 @@ type configureProfileStep struct {
 }
 
 type operatorSeedDevice struct {
-	ID         apiID   `json:"id"`
-	DeviceID   string  `json:"device_id"`
-	DeviceType string  `json:"device_type"`
-	Name       *string `json:"name"`
-	Status     string  `json:"status"`
+	ID         ident.ID `json:"id"`
+	DeviceID   string   `json:"device_id"`
+	DeviceType string   `json:"device_type"`
+	Name       *string  `json:"name"`
+	Status     string   `json:"status"`
 }
 
 func (configureProfileStep) Name() string { return "Configuring demo school profile" }
@@ -287,7 +287,7 @@ func listSeedDevices(rt *Runtime, deviceType string) ([]SeedDevice, error) {
 	var envelope struct {
 		Data []struct {
 			SeedDevice
-			ID apiID `json:"id"`
+			ID ident.ID `json:"id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil {
@@ -329,11 +329,11 @@ func verifyProfilePlanning(rt *Runtime, expected SeedScheduledActivityState) err
 	var envelope struct {
 		Data struct {
 			Instances []struct {
-				Status     string  `json:"status"`
-				RoomID     apiID   `json:"room_id"`
-				StudentIDs []apiID `json:"student_ids"`
+				Status     string     `json:"status"`
+				RoomID     ident.ID   `json:"room_id"`
+				StudentIDs []ident.ID `json:"student_ids"`
 				Staff      []struct {
-					StaffID apiID `json:"staff_id"`
+					StaffID ident.ID `json:"staff_id"`
 				} `json:"staff"`
 			} `json:"instances"`
 		} `json:"data"`
@@ -343,7 +343,7 @@ func verifyProfilePlanning(rt *Runtime, expected SeedScheduledActivityState) err
 	}
 	matching := 0
 	for _, instance := range envelope.Data.Instances {
-		if matchesScheduledActivity(instance.Status, int64(instance.RoomID), demoprofile.IDs(instance.StudentIDs), len(instance.Staff), expected) {
+		if matchesScheduledActivity(instance.Status, int64(instance.RoomID), ident.Int64s(instance.StudentIDs), len(instance.Staff), expected) {
 			matching++
 		}
 	}

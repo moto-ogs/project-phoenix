@@ -60,7 +60,7 @@ describe("substitutionService", () => {
 
     expect(sessionFetch).toHaveBeenCalledWith(
       "/api/substitutions?from=2026-08-31&to=2026-09-04",
-      { credentials: "include" },
+      { method: "GET" },
     );
     expect(result.staff).toEqual([
       { id: "8", name: "Nora Neu", isExternal: false },
@@ -76,7 +76,7 @@ describe("substitutionService", () => {
 
     await expect(
       substitutionService.fetchScheduleOverview("2026-08-31", "2026-09-04"),
-    ).rejects.toMatchObject({ name: "ApiError", code: "general.server" });
+    ).rejects.toMatchObject({ name: "ApiError", status: 502 });
   });
 
   it("preserves string IDs in every appointment-scoped change", async () => {
@@ -234,7 +234,7 @@ describe("substitutionService", () => {
     const result = await substitutionService.fetchOverview();
 
     expect(sessionFetch).toHaveBeenCalledWith("/api/substitutions", {
-      credentials: "include",
+      method: "GET",
     });
     expect(result.groups).toEqual([{ id: "12", name: "Robins Gruppe" }]);
     expect(result.groupHandovers[0]?.id).toBe("5");
@@ -290,7 +290,7 @@ describe("substitutionService", () => {
         "2026-08-29",
         "2026-08-30",
       ),
-    ).rejects.toThrow("Ungültige Antwort");
+    ).rejects.toMatchObject({ status: 502 });
   });
 
   it("maps an added supervisor from the named shape", async () => {
@@ -430,7 +430,7 @@ describe("substitutionService", () => {
 
     expect(sessionFetch).toHaveBeenCalledWith("/api/substitutions", {
       method: "POST",
-      credentials: "include",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         type: "group_handover",
         group_handover: {
@@ -499,7 +499,7 @@ describe("substitutionService", () => {
 
     expect(sessionFetch).toHaveBeenCalledWith(
       "/api/substitutions?active_group_id=41",
-      { credentials: "include" },
+      { method: "GET" },
     );
     expect(result).toEqual({
       id: "41",
@@ -596,7 +596,7 @@ describe("substitutionService", () => {
 
     expect(sessionFetch).toHaveBeenCalledWith("/api/substitutions", {
       method: "POST",
-      credentials: "include",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         type: "additional_supervision",
         additional_supervision: {
@@ -612,19 +612,19 @@ describe("substitutionService", () => {
   it("rejects a missing proxy envelope", async () => {
     sessionFetch.mockResolvedValue({ ok: true, json: async () => ({}) });
 
-    await expect(substitutionService.fetchSubstitutions()).rejects.toThrow(
-      "Ungültige Antwort",
-    );
+    await expect(
+      substitutionService.fetchSubstitutions(),
+    ).rejects.toMatchObject({ status: 502 });
   });
 
   it("ends a typed group handover", async () => {
-    sessionFetch.mockResolvedValue({ ok: true });
+    sessionFetch.mockResolvedValue({ ok: true, status: 204 });
 
     await substitutionService.deleteSubstitution("9007199254740993");
 
     expect(sessionFetch).toHaveBeenCalledWith("/api/substitutions/end", {
       method: "POST",
-      credentials: "include",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         type: "group_handover",
         id: "9007199254740993",

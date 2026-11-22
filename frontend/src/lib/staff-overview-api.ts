@@ -7,13 +7,9 @@
 // Callers must gate the second one on the permission (see hasPermission in
 // ~/lib/auth-utils); it is not a fallback path but a different audience.
 
-import { apiErrorFromResponse } from "./api-error";
-import type {
-  DashboardSummary as DashboardSummaryWire,
-  TimeTrackingOverview,
-  TimeTrackingOverviewRow,
-} from "./contract/staff.generated";
-import { sessionFetch } from "./session-cache";
+import { bffJson } from "./bff-fetch";
+import type { TimeTrackingOverviewRow } from "./contract/staff.generated";
+import type * as staffContract from "./contract/staff.generated";
 
 // ─── Frontend shapes (camelCase, string ids) ─────────────────────────────────
 
@@ -66,7 +62,7 @@ export interface TimeAccountOverview {
 }
 
 export function mapDashboardSummary(
-  data: DashboardSummaryWire,
+  data: staffContract.DashboardSummary,
 ): DashboardSummary {
   return {
     activeStaffCount: data.active_staff_count,
@@ -102,14 +98,6 @@ export function mapTimeAccountRow(
 
 // ─── Fetchers ────────────────────────────────────────────────────────────────
 
-async function readJson<T>(response: Response, failure: string): Promise<T> {
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, failure);
-  }
-  const json = (await response.json()) as { data: T };
-  return json.data;
-}
-
 export interface TimeAccountQuery {
   /** Both or neither — a bare month is rejected by the backend. */
   year?: number;
@@ -124,14 +112,11 @@ export const staffOverviewService = {
   async getDashboardSummary(
     period: DashboardPeriod,
   ): Promise<DashboardSummary> {
-    const response = await sessionFetch(
-      `/api/staff/dashboard-summary?period=${period}`,
-    );
     return mapDashboardSummary(
-      await readJson<DashboardSummaryWire>(
-        response,
-        "Einrichtungs-Übersicht konnte nicht geladen werden",
-      ),
+      await bffJson("tenant", "GET /api/staff/dashboard-summary", {
+        query: { period },
+        errorMessage: "Einrichtungs-Übersicht konnte nicht geladen werden",
+      }),
     );
   },
 
@@ -150,25 +135,19 @@ export const staffOverviewService = {
       throw new Error("Jahr und Monat müssen gemeinsam angegeben werden");
     }
 
-    const params = new URLSearchParams();
-    if (hasYear && hasMonth) {
-      params.set("year", String(query.year));
-      params.set("month", String(query.month));
-    }
-    if (query.employmentType)
-      params.set("employment_type", query.employmentType);
-    if (query.saldoMin !== undefined)
-      params.set("saldo_min", String(query.saldoMin));
-    if (query.saldoMax !== undefined)
-      params.set("saldo_max", String(query.saldoMax));
-
-    const suffix = params.toString();
-    const response = await sessionFetch(
-      `/api/staff/time-tracking/overview${suffix ? `?${suffix}` : ""}`,
-    );
-    const data = await readJson<TimeTrackingOverview>(
-      response,
-      "Zeitkonten konnten nicht geladen werden",
+    const data = await bffJson(
+      "tenant",
+      "GET /api/staff/time-tracking/overview",
+      {
+        query: {
+          year: query.year,
+          month: query.month,
+          employment_type: query.employmentType || undefined,
+          saldo_min: query.saldoMin,
+          saldo_max: query.saldoMax,
+        },
+        errorMessage: "Zeitkonten konnten nicht geladen werden",
+      },
     );
     return {
       year: data.year,

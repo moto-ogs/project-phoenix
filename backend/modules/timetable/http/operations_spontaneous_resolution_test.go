@@ -97,3 +97,35 @@ func TestOperationsCreateAndStartSpontaneousResolvesActivityAgainstRealRepositor
 	assert.Equal(t, http.StatusBadRequest, rr.Code, "a missing room is a client error, not a 500")
 	assert.Nil(t, service.lastSpontaneousInput)
 }
+
+// TestOperationsCreateAndStartSpontaneousStaysStaffOnlyForTraegerSession pins
+// #7818: the starter of a spontaneous activity supervises the running
+// session, so a school session the Träger-Büro opened without a staff record
+// is refused like any other account without one.
+func TestOperationsCreateAndStartSpontaneousStaysStaffOnlyForTraegerSession(t *testing.T) {
+	t.Parallel()
+
+	service := &fakeOperationsService{}
+	res := newResourceForTest(Dependencies{
+		OperationsService: service,
+		TimetableData:     operationTimetableData(operationDataDeps{ActiveGroupRepo: &fakeOperationActiveGroupRepo{}}),
+		People:            &fakePeople{},
+		SettingsService:   &fakeOperationSettingsService{hasOverride: true, boolValue: true},
+	})
+	res.Now = testWorkdayNow
+	router := operationRouter(http.MethodPost, "/spontaneous/start", res.operationsCreateAndStartSpontaneous)
+
+	body, err := json.Marshal(map[string]any{"title": "Freispiel", "room_id": 70})
+	require.NoError(t, err)
+	req := httptest.NewRequest(http.MethodPost, "/spontaneous/start", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	claims := testutil.AdminTestClaims(120)
+	claims.ViaTraeger = true
+	testutil.WithClaims(t, claims)(req)
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusForbidden, rr.Code, rr.Body.String())
+	assert.Contains(t, rr.Body.String(), `"code":"timetable.no_staff_profile"`)
+	assert.Nil(t, service.lastSpontaneousInput)
+}

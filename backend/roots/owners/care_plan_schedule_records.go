@@ -98,35 +98,35 @@ func CarePickupScheduleFromRows(value timetablePorts.CarePickupSchedule) carepla
 }
 
 func CareArrivalExceptionToRows(value careplan.ArrivalException) timetablePorts.CareArrivalException {
-	return timetablePorts.CareArrivalException{ID: value.ID, TenantID: value.TenantID, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt, StudentID: value.StudentID, ExpectedArrival: value.ExpectedArrival, Reason: value.Reason, Source: value.Source, CreatedBy: value.CreatedBy, CreatedByGuardian: value.CreatedByGuardian, ExceptionDate: timetablePorts.CareDate(value.ExceptionDate)}
+	return timetablePorts.CareArrivalException{ID: value.ID, TenantID: value.TenantID, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt, StudentID: value.StudentID, ExpectedArrival: value.ExpectedArrival, Reason: value.Reason, Source: value.Source, CreatedBy: value.CreatedBy, EnteredByTraeger: value.EnteredByTraeger, CreatedByGuardian: value.CreatedByGuardian, ExceptionDate: timetablePorts.CareDate(value.ExceptionDate)}
 }
 
 func CareArrivalExceptionFromRows(value timetablePorts.CareArrivalException) careplan.ArrivalException {
-	return careplan.ArrivalException{ID: value.ID, TenantID: value.TenantID, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt, StudentID: value.StudentID, ExpectedArrival: value.ExpectedArrival, Reason: value.Reason, Source: value.Source, CreatedBy: value.CreatedBy, CreatedByGuardian: value.CreatedByGuardian, ExceptionDate: careplan.Date(value.ExceptionDate)}
+	return careplan.ArrivalException{ID: value.ID, TenantID: value.TenantID, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt, StudentID: value.StudentID, ExpectedArrival: value.ExpectedArrival, Reason: value.Reason, Source: value.Source, CreatedBy: value.CreatedBy, EnteredByTraeger: value.EnteredByTraeger, CreatedByGuardian: value.CreatedByGuardian, ExceptionDate: careplan.Date(value.ExceptionDate)}
 }
 
 func CarePickupExceptionToRows(value careplan.PickupException) timetablePorts.CarePickupException {
-	return timetablePorts.CarePickupException{ID: value.ID, TenantID: value.TenantID, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt, StudentID: value.StudentID, PickupTime: value.PickupTime, Reason: value.Reason, ExcusedFrom: value.ExcusedFrom, ExcusedReason: value.ExcusedReason, ExcusedCreatedBy: value.ExcusedCreatedBy, ExcusedOwnsPickupTime: value.ExcusedOwnsPickupTime, ExcusedAuto: value.ExcusedAuto, Source: value.Source, CreatedBy: value.CreatedBy, CreatedByGuardian: value.CreatedByGuardian, ExceptionDate: timetablePorts.CareDate(value.ExceptionDate)}
+	return timetablePorts.CarePickupException{ID: value.ID, TenantID: value.TenantID, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt, StudentID: value.StudentID, PickupTime: value.PickupTime, Reason: value.Reason, ExcusedFrom: value.ExcusedFrom, ExcusedReason: value.ExcusedReason, ExcusedCreatedBy: value.ExcusedCreatedBy, ExcusedByTraeger: value.ExcusedByTraeger, ExcusedOwnsPickupTime: value.ExcusedOwnsPickupTime, ExcusedAuto: value.ExcusedAuto, Source: value.Source, CreatedBy: value.CreatedBy, EnteredByTraeger: value.EnteredByTraeger, CreatedByGuardian: value.CreatedByGuardian, ExceptionDate: timetablePorts.CareDate(value.ExceptionDate)}
 }
 
 func CarePickupExceptionFromRows(value timetablePorts.CarePickupException) careplan.PickupException {
-	return careplan.PickupException{ID: value.ID, TenantID: value.TenantID, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt, StudentID: value.StudentID, PickupTime: value.PickupTime, Reason: value.Reason, ExcusedFrom: value.ExcusedFrom, ExcusedReason: value.ExcusedReason, ExcusedCreatedBy: value.ExcusedCreatedBy, ExcusedOwnsPickupTime: value.ExcusedOwnsPickupTime, ExcusedAuto: value.ExcusedAuto, Source: value.Source, CreatedBy: value.CreatedBy, CreatedByGuardian: value.CreatedByGuardian, ExceptionDate: careplan.Date(value.ExceptionDate)}
+	return careplan.PickupException{ID: value.ID, TenantID: value.TenantID, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt, StudentID: value.StudentID, PickupTime: value.PickupTime, Reason: value.Reason, ExcusedFrom: value.ExcusedFrom, ExcusedReason: value.ExcusedReason, ExcusedCreatedBy: value.ExcusedCreatedBy, ExcusedByTraeger: value.ExcusedByTraeger, ExcusedOwnsPickupTime: value.ExcusedOwnsPickupTime, ExcusedAuto: value.ExcusedAuto, Source: value.Source, CreatedBy: value.CreatedBy, EnteredByTraeger: value.EnteredByTraeger, CreatedByGuardian: value.CreatedByGuardian, ExceptionDate: careplan.Date(value.ExceptionDate)}
 }
 
 func careArrivalNoteToRows(value careplan.ArrivalNote) timetablePorts.CareArrivalNote {
-	return timetablePorts.CareArrivalNote{ID: value.ID, TenantID: value.TenantID, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt, StudentID: value.StudentID, Content: value.Content, CreatedBy: value.CreatedBy, NoteDate: timetablePorts.CareDate(value.NoteDate)}
+	return timetablePorts.CareArrivalNote{ID: value.ID, TenantID: value.TenantID, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt, StudentID: value.StudentID, Content: value.Content, CreatedBy: value.CreatedBy, EnteredByTraeger: value.EnteredByTraeger, NoteDate: timetablePorts.CareDate(value.NoteDate)}
 }
 
 func careArrivalNoteFromRows(value timetablePorts.CareArrivalNote) careplan.ArrivalNote {
-	return careplan.ArrivalNote{ID: value.ID, TenantID: value.TenantID, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt, StudentID: value.StudentID, Content: value.Content, CreatedBy: value.CreatedBy, NoteDate: careplan.Date(value.NoteDate)}
+	return careplan.ArrivalNote{ID: value.ID, TenantID: value.TenantID, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt, StudentID: value.StudentID, Content: value.Content, CreatedBy: value.CreatedBy, EnteredByTraeger: value.EnteredByTraeger, NoteDate: careplan.Date(value.NoteDate)}
 }
 
 func carePickupNoteToRows(value careplan.PickupNote) timetablePorts.CarePickupNote {
-	return timetablePorts.CarePickupNote{ID: value.ID, TenantID: value.TenantID, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt, StudentID: value.StudentID, Weekday: value.Weekday, Content: value.Content, CreatedBy: value.CreatedBy, NoteDate: timetablePorts.CareDate(value.NoteDate)}
+	return timetablePorts.CarePickupNote{ID: value.ID, TenantID: value.TenantID, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt, StudentID: value.StudentID, Weekday: value.Weekday, Content: value.Content, CreatedBy: value.CreatedBy, EnteredByTraeger: value.EnteredByTraeger, NoteDate: timetablePorts.CareDate(value.NoteDate)}
 }
 
 func carePickupNoteFromRows(value timetablePorts.CarePickupNote) careplan.PickupNote {
-	return careplan.PickupNote{ID: value.ID, TenantID: value.TenantID, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt, StudentID: value.StudentID, Weekday: value.Weekday, Content: value.Content, CreatedBy: value.CreatedBy, NoteDate: careplan.Date(value.NoteDate)}
+	return careplan.PickupNote{ID: value.ID, TenantID: value.TenantID, CreatedAt: value.CreatedAt, UpdatedAt: value.UpdatedAt, StudentID: value.StudentID, Weekday: value.Weekday, Content: value.Content, CreatedBy: value.CreatedBy, EnteredByTraeger: value.EnteredByTraeger, NoteDate: careplan.Date(value.NoteDate)}
 }
 
 func (r carePlanRecords) CreateArrivalSchedule(ctx context.Context, value timetablePorts.CareArrivalSchedule) (timetablePorts.CareArrivalSchedule, error) {

@@ -1,13 +1,15 @@
-import type * as wire from "~/lib/contract/admin.generated";
+import type * as adminContract from "~/lib/contract/admin.generated";
 import { knownEnum } from "~/lib/contract/known-enum";
 import type { ErrorCode } from "~/lib/error-codes.generated";
-import { ApiError, apiErrorFromBody } from "./api-error";
+import { ApiError } from "./api-error";
+import { bffJson } from "./bff-fetch";
 // grade-transition-api.ts
 // Client for the Jahrgangsstufenwechsel (grade transition) admin flow (#405).
-// Talks to the Next.js proxy routes under /api/admin/grade-transitions which
-// forward to the Go backend. Backend snake_case is mapped to camelCase here.
-
-const BASE = "/api/admin/grade-transitions";
+// Calls the registered routes under /api/admin/grade-transitions through the
+// tenant BFF. Backend snake_case is mapped to camelCase here. A failure is
+// an ApiError with the backend's stable `code` (a NOT_DRAFT_CODE or
+// NOT_APPLIED_CODE conflict), so the caller can tell a recoverable conflict
+// from a real failure.
 
 // Wire shapes: lib/contract/admin.generated.ts. The decoder hands every id
 // over as its exact decimal string, so ids beyond 2^53 survive (#405 review).
@@ -62,7 +64,7 @@ export interface TransitionPreview {
   byMapping: MappingPreview[];
   unmappedClasses: UnmappedClass[];
   warnings: string[];
-  /** @see wire.TransitionPreviewResponse.fingerprint */
+  /** @see adminContract.TransitionPreviewResponse.fingerprint */
   fingerprint: string;
 }
 
@@ -147,7 +149,9 @@ const GRADUATE_STATES: readonly GraduateState[] = [
 const mappingAction = (value: string): MappingAction =>
   knownEnum(MAPPING_ACTIONS, value) ?? "promote";
 
-export function mapTransition(data: wire.TransitionResponse): GradeTransition {
+export function mapTransition(
+  data: adminContract.TransitionResponse,
+): GradeTransition {
   return {
     id: data.id,
     academicYear: data.academic_year,
@@ -171,7 +175,7 @@ export function mapTransition(data: wire.TransitionResponse): GradeTransition {
 }
 
 export function mapPreview(
-  data: wire.TransitionPreviewResponse,
+  data: adminContract.TransitionPreviewResponse,
 ): TransitionPreview {
   return {
     transitionId: data.transition_id,
@@ -196,7 +200,7 @@ export function mapPreview(
 }
 
 export function mapResult(
-  data: wire.TransitionResultResponse,
+  data: adminContract.TransitionResultResponse,
 ): TransitionResult {
   return {
     transitionId: data.transition_id,
@@ -209,7 +213,7 @@ export function mapResult(
 }
 
 export function mapSuggestion(
-  data: wire.SuggestedMappingResponse,
+  data: adminContract.SuggestedMappingResponse,
 ): SuggestedMapping {
   return {
     fromClass: data.from_class,
@@ -223,7 +227,7 @@ export function mapSuggestion(
 }
 
 export function mapHistoryEntry(
-  data: wire.TransitionHistoryResponse,
+  data: adminContract.TransitionHistoryResponse,
 ): TransitionHistoryEntry {
   return {
     id: data.id,
@@ -280,30 +284,12 @@ export const NOT_DRAFT_CODE: ErrorCode = "grade_transition.not_draft";
  */
 export const NOT_APPLIED_CODE: ErrorCode = "grade_transition.not_applied";
 
-/**
- * A failed response as ApiError: the backend's stable `code` (for example a
- * NOT_DRAFT_CODE or NOT_APPLIED_CODE conflict) lets the caller tell a
- * recoverable conflict from a real failure.
- */
-async function responseError(response: Response): Promise<ApiError> {
-  let body: unknown;
-  try {
-    body = await response.json();
-  } catch {
-    // Not JSON: the status still classifies.
+/** A failure keeps the backend's code; its message names the HTTP status. */
+function statusMessage(error: unknown): never {
+  if (error instanceof ApiError && error.status !== undefined) {
+    error.message = `HTTP ${error.status}`;
   }
-  return apiErrorFromBody(`HTTP ${response.status}`, response.status, body);
-}
-
-async function readJSON<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    throw await responseError(response);
-  }
-  const body = (await response.json()) as { data?: T } | T;
-  if (body && typeof body === "object" && "data" in body) {
-    return (body as { data: T }).data;
-  }
-  return body as T;
+  throw error;
 }
 
 // ---------------------------------------------------------------------------
@@ -322,8 +308,8 @@ const LIST_PAGE_LIMIT = 100;
 // never as a number, so ids above 2^53 cannot collapse through float rounding
 // (#405 review).
 function compareByIdDesc(
-  a: wire.TransitionResponse,
-  b: wire.TransitionResponse,
+  a: adminContract.TransitionResponse,
+  b: adminContract.TransitionResponse,
 ): number {
   const aID = BigInt(a.id);
   const bID = BigInt(b.id);
@@ -350,15 +336,14 @@ export async function listGradeTransitions(): Promise<GradeTransition[]> {
   // row, but one that ignores `after_id` would send the same window forever —
   // the map keeps that failure mode at "truncated list", not "duplicated
   // rows".
-  const byID = new Map<string, wire.TransitionResponse>();
+  const byID = new Map<string, adminContract.TransitionResponse>();
   let afterID = "0";
 
   for (let window = 0; window < LIST_PAGE_LIMIT; window++) {
-    const response = await fetch(
-      `${BASE}?after_id=${encodeURIComponent(afterID)}&page_size=${LIST_PAGE_SIZE}`,
-      { cache: "no-store" },
-    );
-    const data = (await readJSON<wire.TransitionResponse[]>(response)) ?? [];
+    const page = await bffJson("tenant", "GET /api/admin/grade-transitions/", {
+      query: { after_id: afterID, page_size: LIST_PAGE_SIZE },
+    }).catch(statusMessage);
+    const data = page.data ?? [];
     for (const transition of data) {
       byID.set(transition.id, transition);
     }
@@ -373,77 +358,52 @@ export async function listGradeTransitions(): Promise<GradeTransition[]> {
 export async function createGradeTransition(
   input: CreateTransitionInput,
 ): Promise<GradeTransition> {
-  const response = await fetch(BASE, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      academic_year: input.academicYear,
-      notes: input.notes,
-      mappings: toBackendMappings(input.mappings),
-    }),
-  });
-  return mapTransition(await readJSON<wire.TransitionResponse>(response));
+  return mapTransition(
+    await bffJson("tenant", "POST /api/admin/grade-transitions/", {
+      body: {
+        academic_year: input.academicYear,
+        notes: input.notes,
+        mappings: toBackendMappings(input.mappings),
+      },
+    }).catch(statusMessage),
+  );
 }
 
 export async function updateGradeTransition(
   id: string,
   input: UpdateTransitionInput,
 ): Promise<GradeTransition> {
-  const response = await fetch(`${BASE}/${encodeURIComponent(id)}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      academic_year: input.academicYear,
-      notes: input.notes,
-      mappings: input.mappings ? toBackendMappings(input.mappings) : undefined,
-    }),
-  });
-  if (!response.ok) {
-    // Keep the stable code: a NOT_DRAFT_CODE conflict means the loaded draft
-    // was applied by another admin, and the editor must say so instead of
-    // suggesting a retry that can never succeed (#405 review).
-    throw await responseError(response);
-  }
-  return mapTransition(await readJSON<wire.TransitionResponse>(response));
+  // Keeps the stable code: a NOT_DRAFT_CODE conflict means the loaded draft
+  // was applied by another admin, and the editor must say so instead of
+  // suggesting a retry that can never succeed (#405 review).
+  return mapTransition(
+    await bffJson("tenant", "PUT /api/admin/grade-transitions/{id}/", {
+      params: { id },
+      body: {
+        academic_year: input.academicYear,
+        notes: input.notes,
+        mappings: input.mappings
+          ? toBackendMappings(input.mappings)
+          : undefined,
+      },
+    }).catch(statusMessage),
+  );
 }
 
 export async function deleteGradeTransition(id: string): Promise<void> {
-  const response = await fetch(`${BASE}/${encodeURIComponent(id)}`, {
-    method: "DELETE",
-  });
-  if (!response.ok) {
-    throw await responseError(response);
-  }
+  await bffJson("tenant", "DELETE /api/admin/grade-transitions/{id}/", {
+    params: { id },
+  }).catch(statusMessage);
 }
 
 export async function previewGradeTransition(
   id: string,
 ): Promise<TransitionPreview> {
-  const response = await fetch(`${BASE}/${encodeURIComponent(id)}/preview`, {
-    cache: "no-store",
-  });
-  return mapPreview(await readJSON<wire.TransitionPreviewResponse>(response));
-}
-
-/**
- * Reads an apply/revert response, throwing an ApiError that keeps the
- * backend's stable `code` on failure. The generic {@link readJSON}
- * path drops that code, which would leave the caller unable to tell a
- * recoverable 409 conflict from a real failure.
- */
-async function readResultOrThrow(
-  response: Response,
-): Promise<TransitionResult> {
-  if (!response.ok) {
-    throw await responseError(response);
-  }
-  const body = (await response.json()) as
-    { data?: wire.TransitionResultResponse } | wire.TransitionResultResponse;
-  const data =
-    body && typeof body === "object" && "data" in body
-      ? (body as { data: wire.TransitionResultResponse }).data
-      : (body as wire.TransitionResultResponse);
-  return mapResult(data);
+  return mapPreview(
+    await bffJson("tenant", "GET /api/admin/grade-transitions/{id}/preview", {
+      params: { id },
+    }).catch(statusMessage),
+  );
 }
 
 /**
@@ -455,46 +415,54 @@ export async function applyGradeTransition(
   id: string,
   expectedFingerprint?: string,
 ): Promise<TransitionResult> {
-  const response = await fetch(`${BASE}/${encodeURIComponent(id)}/apply`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(
-      expectedFingerprint ? { expected_fingerprint: expectedFingerprint } : {},
-    ),
-  });
-  return readResultOrThrow(response);
+  return mapResult(
+    await bffJson("tenant", "POST /api/admin/grade-transitions/{id}/apply", {
+      params: { id },
+      body: expectedFingerprint
+        ? { expected_fingerprint: expectedFingerprint }
+        : {},
+    }).catch(statusMessage),
+  );
 }
 
 export async function revertGradeTransition(
   id: string,
 ): Promise<TransitionResult> {
-  const response = await fetch(`${BASE}/${encodeURIComponent(id)}/revert`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({}),
-  });
-  return readResultOrThrow(response);
+  return mapResult(
+    await bffJson("tenant", "POST /api/admin/grade-transitions/{id}/revert", {
+      params: { id },
+    }).catch(statusMessage),
+  );
 }
 
 export async function fetchTransitionClasses(): Promise<string[]> {
-  const response = await fetch(`${BASE}/classes`, { cache: "no-store" });
-  const data = await readJSON<string[]>(response);
-  return data ?? [];
+  return (
+    (await bffJson(
+      "tenant",
+      "GET /api/admin/grade-transitions/classes",
+      {},
+    ).catch(statusMessage)) ?? []
+  );
 }
 
 export async function fetchSuggestedMappings(): Promise<SuggestedMapping[]> {
-  const response = await fetch(`${BASE}/suggest`, { cache: "no-store" });
-  const data = await readJSON<wire.SuggestedMappingResponse[]>(response);
+  const data = await bffJson(
+    "tenant",
+    "GET /api/admin/grade-transitions/suggest",
+  ).catch(statusMessage);
   return (data ?? []).map(mapSuggestion);
 }
 
 export async function fetchTransitionHistory(
   id: string,
 ): Promise<TransitionHistoryEntry[]> {
-  const response = await fetch(`${BASE}/${encodeURIComponent(id)}/history`, {
-    cache: "no-store",
-  });
-  const data = await readJSON<wire.TransitionHistoryResponse[]>(response);
+  const data = await bffJson(
+    "tenant",
+    "GET /api/admin/grade-transitions/{id}/history",
+    {
+      params: { id },
+    },
+  ).catch(statusMessage);
   return (data ?? []).map(mapHistoryEntry);
 }
 
@@ -510,11 +478,7 @@ export async function fetchTransitionHistory(
  * nothing left to restore.
  */
 export async function purgeGraduatedStudent(studentId: string): Promise<void> {
-  const response = await fetch(
-    `/api/students/${encodeURIComponent(studentId)}/purge`,
-    { method: "DELETE" },
-  );
-  if (!response.ok) {
-    throw await responseError(response);
-  }
+  await bffJson("tenant", "DELETE /api/students/{id}/purge", {
+    params: { id: studentId },
+  }).catch(statusMessage);
 }

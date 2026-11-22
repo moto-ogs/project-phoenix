@@ -5,12 +5,7 @@ import {
 } from "./homework-feedback";
 import type { CareDayStatus } from "./timetable-types";
 import { knownEnum } from "./contract/known-enum";
-import type {
-  OperationPlannedInstance as WirePlannedInstance,
-  OperationRoster as WireRoster,
-  OperationRosterRow as WireRosterRow,
-  startOperationResponse as WireStartOperation,
-} from "./contract/shared.generated";
+import type * as sharedContract from "./contract/shared.generated";
 
 import type { ClassHandover } from "~/lib/class-handover";
 
@@ -277,7 +272,7 @@ function optionalId(value: string | undefined): string | null {
 }
 
 export function mapPlannedInstance(
-  raw: WirePlannedInstance,
+  raw: sharedContract.OperationPlannedInstance,
 ): PlannedTimetableInstance {
   return {
     id: raw.id,
@@ -329,7 +324,9 @@ export function mapPlannedInstance(
   };
 }
 
-function mapRosterRow(row: WireRosterRow): TimetableRosterRow {
+function mapRosterRow(
+  row: sharedContract.OperationRosterRow,
+): TimetableRosterRow {
   return {
     studentId: row.student_id,
     studentName: row.student_name,
@@ -393,7 +390,9 @@ function mapRosterRow(row: WireRosterRow): TimetableRosterRow {
   };
 }
 
-export function mapRoster(raw: WireRoster): TimetableRoster {
+export function mapRoster(
+  raw: sharedContract.OperationRoster,
+): TimetableRoster {
   return {
     instance: {
       id: raw.instance.id,
@@ -425,7 +424,7 @@ export function mapRoster(raw: WireRoster): TimetableRoster {
 }
 
 export function mapStartOperation(
-  raw: WireStartOperation,
+  raw: sharedContract.startOperationResponse,
 ): StartOperationResult {
   return {
     instanceId: raw.instance_id,

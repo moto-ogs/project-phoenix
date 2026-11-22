@@ -29,7 +29,7 @@ describe("rolesConfig", () => {
   });
 
   it("has correct API configuration", () => {
-    expect(rolesConfig.api.basePath).toBe("/api/auth/roles");
+    expect(rolesConfig.api.routes.list).toBe("GET /auth/roles/");
   });
 
   it("has form sections configured", () => {

@@ -38,7 +38,7 @@ type SubmitChildRequest struct {
 	TargetSchoolClass *string                 `json:"target_school_class,omitempty"`
 	HolidayCareWish   *bool                   `json:"holiday_care_wish,omitempty"`
 	CustomData        map[string]any          `json:"custom_data,omitempty"`
-	OfferingIDs       []common.ID             `json:"offering_ids,omitempty"`
+	OfferingIDs       []ident.ID              `json:"offering_ids,omitempty"`
 	OfferingDays      []SubmitOfferingDaysRow `json:"offering_days,omitempty"`
 }
 
@@ -48,8 +48,8 @@ type SubmitChildRequest struct {
 // these offerings" set; OfferingDays only refines the day selection
 // for parent_choice offerings.
 type SubmitOfferingDaysRow struct {
-	OfferingID   common.ID `json:"offering_id"`
-	SelectedDays []string  `json:"selected_days"`
+	OfferingID   ident.ID `json:"offering_id"`
+	SelectedDays []string `json:"selected_days"`
 }
 
 // SubmitGuardianRequest is the wire shape for one additional guardian
@@ -67,7 +67,7 @@ type SubmitGuardianRequest struct {
 // etc.). CaptchaToken is the Turnstile widget output; verified before
 // any DB write.
 type SubmitEnrollmentRequest struct {
-	PhaseID             common.ID               `json:"phase_id"`
+	PhaseID             ident.ID                `json:"phase_id"`
 	GuardianFirstName   string                  `json:"guardian_first_name"`
 	GuardianLastName    string                  `json:"guardian_last_name"`
 	GuardianEmail       string                  `json:"guardian_email"`
@@ -75,7 +75,7 @@ type SubmitEnrollmentRequest struct {
 	AdditionalGuardians []SubmitGuardianRequest `json:"additional_guardians,omitempty"`
 	ConsentFlags        map[string]any          `json:"consent_flags,omitempty"`
 	// FormSchemaID is the form version the page showed (#4680).
-	FormSchemaID    common.ID            `json:"form_schema_id,omitempty"`
+	FormSchemaID    ident.ID             `json:"form_schema_id,omitempty"`
 	CustomData      map[string]any       `json:"custom_data,omitempty"`
 	Children        []SubmitChildRequest `json:"children"`
 	CaptchaToken    string               `json:"captcha_token,omitempty"`

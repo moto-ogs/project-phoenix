@@ -1,3 +1,4 @@
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 /**
  * Dokumente, die ein Träger mit Eltern und Schulen teilt (#4692).
  *
@@ -6,9 +7,8 @@
  * Freigabe lässt sich zurücknehmen. Die OGS-Leitung liest auf „Dateien“, was
  * für ihre Schule freigegeben ist. Backend-IDs werden hier zu Strings.
  */
-import { apiErrorFromBody, transportFetch } from "~/lib/api-error";
+import { apiErrorFromBody } from "~/lib/api-error";
 import { filenameFromDisposition } from "~/lib/file-download";
-import { readJson, traegerRequest } from "~/lib/traeger-api";
 import { knownEnum } from "./contract/known-enum";
 import type * as traegerDocumentsContract from "./contract/traeger-documents.generated";
 
@@ -132,14 +132,9 @@ function mapSharedDocument(
   };
 }
 
-const traegerDocumentsPath = "/api/traeger/documents";
-
 /** Die Dokumente des Trägers, das neueste zuerst. */
 export async function fetchTraegerDocuments(): Promise<TraegerDocument[]> {
-  const documents =
-    await traegerRequest<traegerDocumentsContract.TraegerDocument[]>(
-      traegerDocumentsPath,
-    );
+  const documents = await bffJson("org", "GET /traeger/documents/");
   return documents.map(mapDocument);
 }
 
@@ -147,9 +142,7 @@ export async function fetchTraegerDocuments(): Promise<TraegerDocument[]> {
 export async function fetchTraegerDocumentAudiences(): Promise<
   TraegerDocumentSchool[]
 > {
-  const schools = await traegerRequest<
-    traegerDocumentsContract.TraegerDocumentSchool[]
-  >(`${traegerDocumentsPath}/audiences`);
+  const schools = await bffJson("org", "GET /traeger/documents/audiences");
   return schools.map((school) => ({
     id: school.id,
     name: school.name,
@@ -168,27 +161,9 @@ export async function uploadTraegerDocument(
   const form = new FormData();
   form.append("title", title);
   form.append("file", file);
-  const response = await transportFetch(traegerDocumentsPath, {
-    method: "POST",
-    credentials: "include",
-    cache: "no-store",
-    body: form,
-  });
-  const data = await readJson(response);
-  if (!response.ok) {
-    throw apiErrorFromBody(
-      `Request failed (${response.status})`,
-      response.status,
-      data,
-    );
-  }
-  const document = (
-    data as { data?: traegerDocumentsContract.TraegerDocument } | null
-  )?.data;
-  if (!document) {
-    throw apiErrorFromBody("Document response without data", 502, data);
-  }
-  return mapDocument(document);
+  return mapDocument(
+    await bffJson("org", "POST /traeger/documents/", { body: form }),
+  );
 }
 
 /** Gibt ein Dokument frei. Wirft einen ApiError bei Ablehnung. */
@@ -196,18 +171,18 @@ export async function releaseTraegerDocument(
   documentId: string,
   input: TraegerDocumentReleaseInput,
 ): Promise<TraegerDocumentRelease> {
-  const release =
-    await traegerRequest<traegerDocumentsContract.TraegerDocumentRelease>(
-      `${traegerDocumentsPath}/${encodeURIComponent(documentId)}/releases`,
-      {
-        method: "POST",
-        body: {
-          audience: input.audience,
-          school_id: input.schoolId === null ? null : input.schoolId,
-          group_id: input.groupId === null ? null : input.groupId,
-        } satisfies traegerDocumentsContract.ReleaseRequest,
-      },
-    );
+  const release = await bffJson(
+    "org",
+    "POST /traeger/documents/{id}/releases",
+    {
+      params: { id: documentId },
+      body: {
+        audience: input.audience,
+        school_id: input.schoolId === null ? null : input.schoolId,
+        group_id: input.groupId === null ? null : input.groupId,
+      } satisfies traegerDocumentsContract.ReleaseRequest,
+    },
+  );
   const mapped = mapTraegerDocumentRelease(release);
   if (!mapped) {
     throw apiErrorFromBody("Release with an unknown audience", 502, release);
@@ -220,10 +195,9 @@ export async function revokeTraegerDocumentRelease(
   documentId: string,
   releaseId: string,
 ): Promise<void> {
-  await traegerRequest(
-    `${traegerDocumentsPath}/${encodeURIComponent(documentId)}/releases/${encodeURIComponent(releaseId)}`,
-    { method: "DELETE" },
-  );
+  await bffJson("org", "DELETE /traeger/documents/{id}/releases/{releaseId}", {
+    params: { id: documentId, releaseId },
+  });
 }
 
 /**
@@ -231,26 +205,15 @@ export async function revokeTraegerDocumentRelease(
  * Ablehnung; dann ist nichts geändert.
  */
 export async function deleteTraegerDocument(documentId: string): Promise<void> {
-  await traegerRequest(
-    `${traegerDocumentsPath}/${encodeURIComponent(documentId)}`,
-    { method: "DELETE" },
-  );
+  await bffJson("org", "DELETE /traeger/documents/{id}", {
+    params: { id: documentId },
+  });
 }
 
 async function downloadFrom(
-  path: string,
+  file: Promise<Response>,
 ): Promise<{ readonly blob: Blob; readonly filename: string | null }> {
-  const response = await transportFetch(path, {
-    credentials: "include",
-    cache: "no-store",
-  });
-  if (!response.ok) {
-    throw apiErrorFromBody(
-      `Request failed (${response.status})`,
-      response.status,
-      await readJson(response),
-    );
-  }
+  const response = await file;
   return {
     blob: await response.blob(),
     filename: filenameFromDisposition(response),
@@ -260,37 +223,25 @@ async function downloadFrom(
 /** Die Datei eines Dokuments des Trägers. */
 export function downloadTraegerDocument(documentId: string) {
   return downloadFrom(
-    `${traegerDocumentsPath}/${encodeURIComponent(documentId)}/file`,
+    bffFile("org", "GET /traeger/documents/{id}/file", {
+      params: { id: documentId },
+    }),
   );
 }
-
-const schoolDocumentsPath = "/api/traeger-documents";
 
 /** Die Dokumente, die der Träger für die eigene Schule freigegeben hat. */
 export async function fetchSchoolTraegerDocuments(): Promise<
   SharedTraegerDocument[]
 > {
-  const response = await transportFetch(schoolDocumentsPath, {
-    credentials: "include",
-    cache: "no-store",
-  });
-  const data = await readJson(response);
-  if (!response.ok) {
-    throw apiErrorFromBody(
-      `Request failed (${response.status})`,
-      response.status,
-      data,
-    );
-  }
-  const documents = (
-    data as { data: traegerDocumentsContract.SharedDocument[] }
-  ).data;
-  return documents.map(mapSharedDocument);
+  const documents = await bffJson("tenant", "GET /api/traeger-documents/");
+  return (documents ?? []).map(mapSharedDocument);
 }
 
 /** Die Datei eines Dokuments, das der Träger für die Schule freigab. */
 export function downloadSchoolTraegerDocument(documentId: string) {
   return downloadFrom(
-    `${schoolDocumentsPath}/${encodeURIComponent(documentId)}/file`,
+    bffFile("tenant", "GET /api/traeger-documents/{id}/file", {
+      params: { id: documentId },
+    }),
   );
 }

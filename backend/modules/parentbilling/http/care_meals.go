@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	capability "github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -45,7 +46,7 @@ func (rs *CareMealTariffResource) Router(protectedTraegerRoutes func(chi.Router,
 
 // CareMealPriceRequest is the body of PUT /traeger/care-meal-tariffs.
 type CareMealPriceRequest struct {
-	SchoolID    common.ID     `json:"school_id"`
+	SchoolID    ident.ID      `json:"school_id"`
 	ValidFrom   calendar.Date `json:"valid_from"`
 	Mode        string        `json:"mode"`
 	AmountCents int64         `json:"amount_cents" contract:"number"`

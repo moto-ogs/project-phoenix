@@ -1,19 +1,6 @@
-import {
-  ApiError,
-  apiErrorFromBody,
-  transportFetch,
-  wireErrorCode,
-} from "./api-error";
-import type {
-  CompleteOperationRequest,
-  OperationRoster,
-  ScheduledInstance,
-  startOperationResponse,
-} from "./contract/shared.generated";
-import type {
-  PlannedNowResponse,
-  spontaneousStartRequest,
-} from "./contract/timetable.generated";
+import { ApiError, wireErrorCode } from "./api-error";
+import { bffJson } from "./bff-fetch";
+import type { spontaneousStartRequest } from "./contract/timetable.generated";
 import type {
   AttendancePatchBody,
   HomeworkFeedbackBody,
@@ -26,10 +13,6 @@ import {
   mapRoster,
   mapStartOperation,
 } from "./timetable-operations-types";
-
-interface ApiEnvelope<T> {
-  data: T;
-}
 
 interface PlannedNowOptions {
   date?: string;
@@ -59,18 +42,6 @@ export function isReopenUnavailableError(err: unknown): boolean {
   );
 }
 
-async function unwrap<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    throw apiErrorFromBody(
-      `Anfrage fehlgeschlagen (HTTP ${response.status})`,
-      response.status,
-      await response.json().catch(() => undefined),
-    );
-  }
-  const envelope = (await response.json()) as ApiEnvelope<T>;
-  return envelope.data;
-}
-
 export const timetableOperationsApi = {
   async plannedNow(
     dateOrOptions?: string | PlannedNowOptions,
@@ -79,38 +50,27 @@ export const timetableOperationsApi = {
       typeof dateOrOptions === "string"
         ? { date: dateOrOptions }
         : dateOrOptions;
-    const params = new URLSearchParams();
-    if (options?.date) params.set("date", options.date);
-    if (options?.horizonMinutes !== undefined) {
-      params.set("horizon_minutes", options.horizonMinutes.toString());
-    }
-    if (options?.limit !== undefined) {
-      params.set("limit", options.limit.toString());
-    }
-    if (options?.includeRoster !== undefined) {
-      params.set("include_roster", String(options.includeRoster));
-    }
-    if (options?.scope) params.set("scope", options.scope);
-    const suffix = params.size > 0 ? `?${params.toString()}` : "";
-    const raw = await unwrap<PlannedNowResponse>(
-      await transportFetch(`/api/timetable/operations/planned-now${suffix}`, {
-        credentials: "include",
-        headers: { Accept: "application/json" },
-      }),
+    const raw = await bffJson(
+      "tenant",
+      "GET /api/timetable/operations/planned-now",
+      {
+        query: {
+          date: options?.date || undefined,
+          horizon_minutes: options?.horizonMinutes,
+          limit: options?.limit,
+          include_roster: options?.includeRoster,
+          scope: options?.scope,
+        },
+      },
     );
     return (raw.instances ?? []).map(mapPlannedInstance);
   },
 
   async start(instanceId: string): Promise<StartOperationResult> {
-    const raw = await unwrap<startOperationResponse>(
-      await transportFetch(
-        `/api/timetable/operations/instances/${instanceId}/start`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers: { Accept: "application/json" },
-        },
-      ),
+    const raw = await bffJson(
+      "tenant",
+      "POST /api/timetable/operations/instances/{id}/start",
+      { params: { id: instanceId } },
     );
     return mapStartOperation(raw);
   },
@@ -118,42 +78,28 @@ export const timetableOperationsApi = {
   async createAndStartSpontaneous(
     body: SpontaneousStartBody,
   ): Promise<StartOperationResult> {
-    const raw = await unwrap<startOperationResponse>(
-      await transportFetch("/api/timetable/operations/spontaneous/start", {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      }),
+    const raw = await bffJson(
+      "tenant",
+      "POST /api/timetable/operations/spontaneous/start",
+      { body },
     );
     return mapStartOperation(raw);
   },
 
   async roster(instanceId: string): Promise<TimetableRoster> {
-    const raw = await unwrap<OperationRoster>(
-      await transportFetch(
-        `/api/timetable/operations/instances/${instanceId}/roster`,
-        {
-          credentials: "include",
-          headers: { Accept: "application/json" },
-        },
-      ),
+    const raw = await bffJson(
+      "tenant",
+      "GET /api/timetable/operations/instances/{id}/roster",
+      { params: { id: instanceId } },
     );
     return mapRoster(raw);
   },
 
   async rosterByActiveGroup(activeGroupId: string): Promise<TimetableRoster> {
-    const raw = await unwrap<OperationRoster>(
-      await transportFetch(
-        `/api/timetable/operations/active-groups/${activeGroupId}/roster`,
-        {
-          credentials: "include",
-          headers: { Accept: "application/json" },
-        },
-      ),
+    const raw = await bffJson(
+      "tenant",
+      "GET /api/timetable/operations/active-groups/{id}/roster",
+      { params: { id: activeGroupId } },
     );
     return mapRoster(raw);
   },
@@ -162,15 +108,10 @@ export const timetableOperationsApi = {
     instanceId: string,
     studentId: string,
   ): Promise<TimetableRoster> {
-    const raw = await unwrap<OperationRoster>(
-      await transportFetch(
-        `/api/timetable/operations/instances/${instanceId}/students/${studentId}/check-in`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers: { Accept: "application/json" },
-        },
-      ),
+    const raw = await bffJson(
+      "tenant",
+      "POST /api/timetable/operations/instances/{id}/students/{student_id}/check-in",
+      { params: { id: instanceId, student_id: studentId } },
     );
     return mapRoster(raw);
   },
@@ -181,22 +122,10 @@ export const timetableOperationsApi = {
     instanceId: string,
     studentIds: readonly string[],
   ): Promise<TimetableRoster> {
-    const raw = await unwrap<OperationRoster>(
-      await transportFetch(
-        `/api/timetable/operations/instances/${instanceId}/students/check-in`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-          },
-          // int64 IDs travel as decimal strings. The BFF parses and serializes
-          // this body again, so JSON numbers above 2^53 would otherwise lose
-          // their identity before the Go handler sees them.
-          body: JSON.stringify({ student_ids: studentIds }),
-        },
-      ),
+    const raw = await bffJson(
+      "tenant",
+      "POST /api/timetable/operations/instances/{id}/students/check-in",
+      { params: { id: instanceId }, body: { student_ids: [...studentIds] } },
     );
     return mapRoster(raw);
   },
@@ -205,15 +134,10 @@ export const timetableOperationsApi = {
     instanceId: string,
     studentId: string,
   ): Promise<TimetableRoster> {
-    const raw = await unwrap<OperationRoster>(
-      await transportFetch(
-        `/api/timetable/operations/instances/${instanceId}/students/${studentId}/check-out`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers: { Accept: "application/json" },
-        },
-      ),
+    const raw = await bffJson(
+      "tenant",
+      "POST /api/timetable/operations/instances/{id}/students/{student_id}/check-out",
+      { params: { id: instanceId, student_id: studentId } },
     );
     return mapRoster(raw);
   },
@@ -223,19 +147,10 @@ export const timetableOperationsApi = {
     studentId: string,
     body: AttendancePatchBody,
   ): Promise<void> {
-    await unwrap<unknown>(
-      await transportFetch(
-        `/api/timetable/operations/instances/${instanceId}/students/${studentId}/attendance`,
-        {
-          method: "PATCH",
-          credentials: "include",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(body),
-        },
-      ),
+    await bffJson(
+      "tenant",
+      "PATCH /api/timetable/operations/instances/{id}/students/{student_id}/attendance",
+      { params: { id: instanceId, student_id: studentId }, body },
     );
   },
 
@@ -245,19 +160,10 @@ export const timetableOperationsApi = {
     studentId: string,
     body: HomeworkFeedbackBody,
   ): Promise<void> {
-    await unwrap<unknown>(
-      await transportFetch(
-        `/api/timetable/operations/instances/${instanceId}/students/${studentId}/homework-feedback`,
-        {
-          method: "PUT",
-          credentials: "include",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(body),
-        },
-      ),
+    await bffJson(
+      "tenant",
+      "PUT /api/timetable/operations/instances/{id}/students/{student_id}/homework-feedback",
+      { params: { id: instanceId, student_id: studentId }, body },
     );
   },
 
@@ -265,35 +171,22 @@ export const timetableOperationsApi = {
     instanceId: string,
     confirmedPresentStudentIds: string[],
   ): Promise<{ reopenUntil?: string }> {
-    const raw = await unwrap<ScheduledInstance>(
-      await transportFetch(
-        `/api/timetable/operations/instances/${instanceId}/complete`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            confirmed_present_student_ids: confirmedPresentStudentIds,
-          } satisfies CompleteOperationRequest),
-        },
-      ),
+    const raw = await bffJson(
+      "tenant",
+      "POST /api/timetable/operations/instances/{id}/complete",
+      {
+        params: { id: instanceId },
+        body: { confirmed_present_student_ids: confirmedPresentStudentIds },
+      },
     );
     return { reopenUntil: raw.reopen_until };
   },
 
   async reopen(instanceId: string): Promise<StartOperationResult> {
-    const raw = await unwrap<startOperationResponse>(
-      await transportFetch(
-        `/api/timetable/operations/instances/${instanceId}/reopen`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers: { Accept: "application/json" },
-        },
-      ),
+    const raw = await bffJson(
+      "tenant",
+      "POST /api/timetable/operations/instances/{id}/reopen",
+      { params: { id: instanceId } },
     );
     return mapStartOperation(raw);
   },

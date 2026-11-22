@@ -173,7 +173,6 @@ var coreActions = map[RouteKey]CoreAction{
 	{http.MethodPost, "/api/messages/group-threads/{groupThreadId}/messages"}:                              createdEvent("parent_group_message_sent"),
 	{http.MethodPost, "/api/messages/mark-all-read"}:                                                       event("parent_messages_marked_all_read"),
 	{http.MethodPut, "/api/messages/count-scope"}:                                                          event("parent_message_count_scope_changed"),
-	{http.MethodPost, "/api/messages/threads"}:                                                             notCaptured,
 	{http.MethodPost, "/api/messages/threads/open"}:                                                        notCaptured,
 	{http.MethodPost, "/api/messages/threads/{threadId}"}:                                                  notCaptured,
 	// Ein Anhang ist noch keine Nachricht; gezählt wird das Senden (#6685).
@@ -464,7 +463,6 @@ var coreActions = map[RouteKey]CoreAction{
 	{http.MethodPost, "/api/work-time-models/{id}/assignments"}:                                          notCaptured,
 
 	// OGS portal: sign-in, accounts, invitations.
-	{http.MethodPut, "/auth/accounts/{accountId}/"}:                        notCaptured,
 	{http.MethodDelete, "/auth/accounts/{accountId}/caregiver-capability"}: notCaptured,
 	{http.MethodPost, "/auth/accounts/{accountId}/caregiver-capability"}:   notCaptured,
 	{http.MethodDelete, "/auth/accounts/{accountId}/mfa/"}:                 notCaptured,
@@ -494,7 +492,6 @@ var coreActions = map[RouteKey]CoreAction{
 	{http.MethodPost, "/auth/password"}:                                    notCaptured,
 	{http.MethodPost, "/auth/password-reset"}:                              notCaptured,
 	{http.MethodPost, "/auth/password-reset/confirm"}:                      notCaptured,
-	{http.MethodPost, "/auth/permissions/"}:                                notCaptured,
 	{http.MethodPost, "/auth/refresh"}:                                     notCaptured,
 	{http.MethodPost, "/auth/register"}:                                    notCaptured,
 	{http.MethodPost, "/auth/roles/"}:                                      notCaptured,

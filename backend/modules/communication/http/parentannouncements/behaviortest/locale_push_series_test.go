@@ -185,9 +185,10 @@ func (f *localePushFixture) stored(t *testing.T) stored {
 		FROM platform.push_outbox WHERE tenant_id = ?`, testpkg.Tenant(t)).Scan(f.ctx, &rows))
 	var out stored
 	for _, row := range rows {
+		// The outbox stores JSON with numbers (#7761).
 		var recipient struct {
-			SubscriptionID testpkg.ID `json:"subscription_id"`
-			AccountID      testpkg.ID `json:"account_id"`
+			SubscriptionID int64 `json:"subscription_id"`
+			AccountID      int64 `json:"account_id"`
 		}
 		var payload struct {
 			Title    string `json:"title"`

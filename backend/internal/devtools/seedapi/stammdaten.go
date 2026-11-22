@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"sort"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // StaffCredentials stores login credentials for a staff member
@@ -424,7 +426,7 @@ func (s *FixedSeeder) seedRooms(_ context.Context, result *FixedResult) error {
 		var resp struct {
 			Status string `json:"status"`
 			Data   struct {
-				ID apiID `json:"id"`
+				ID ident.ID `json:"id"`
 			} `json:"data"`
 		}
 		if err := json.Unmarshal(respBody, &resp); err != nil {
@@ -480,7 +482,7 @@ func (s *FixedSeeder) seedStaff(_ context.Context, result *FixedResult) error {
 			Status string `json:"status"`
 			Data   struct {
 				ID        json.Number `json:"id"`
-				TeacherID apiID       `json:"teacher_id,omitempty"`
+				TeacherID ident.ID    `json:"teacher_id,omitempty"`
 			} `json:"data"`
 		}
 		if err := json.Unmarshal(respBody, &resp); err != nil {
@@ -580,7 +582,7 @@ func (s *FixedSeeder) seedGroups(_ context.Context, result *FixedResult) error {
 		var resp struct {
 			Status string `json:"status"`
 			Data   struct {
-				ID apiID `json:"id"`
+				ID ident.ID `json:"id"`
 			} `json:"data"`
 		}
 		if err := json.Unmarshal(respBody, &resp); err != nil {
@@ -699,7 +701,7 @@ func (s *FixedSeeder) seedStudents(_ context.Context, result *FixedResult) error
 		var resp struct {
 			Status string `json:"status"`
 			Data   struct {
-				ID apiID `json:"id"`
+				ID ident.ID `json:"id"`
 			} `json:"data"`
 		}
 		if err := json.Unmarshal(respBody, &resp); err != nil {
@@ -785,7 +787,7 @@ func (s *FixedSeeder) getCheckedInStudentIDs() (map[int64]bool, error) {
 	var resp struct {
 		Status string `json:"status"`
 		Data   []struct {
-			StudentID apiID `json:"student_id"`
+			StudentID ident.ID `json:"student_id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(respBody, &resp); err != nil {
@@ -858,7 +860,7 @@ func (s *FixedSeeder) createDemoGuardian(index int, guardian DemoGuardian) (int6
 	}
 	var resp struct {
 		Data struct {
-			ID apiID `json:"id"`
+			ID ident.ID `json:"id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(respBody, &resp); err != nil {
@@ -1103,8 +1105,8 @@ func (s *FixedSeeder) fetchCategories(_ context.Context) error {
 	var resp struct {
 		Status string `json:"status"`
 		Data   []struct {
-			ID   apiID  `json:"id"`
-			Name string `json:"name"`
+			ID   ident.ID `json:"id"`
+			Name string   `json:"name"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(respBody, &resp); err != nil {
@@ -1199,7 +1201,7 @@ func (s *FixedSeeder) postDemoActivity(name string, body map[string]any) (int64,
 	}
 	var resp struct {
 		Data struct {
-			ID apiID `json:"id"`
+			ID ident.ID `json:"id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(respBody, &resp); err != nil {
@@ -1275,8 +1277,8 @@ func (s *FixedSeeder) seedDevices(_ context.Context, result *FixedResult) error 
 		var resp struct {
 			Status string `json:"status"`
 			Data   struct {
-				ID     apiID  `json:"id"`
-				APIKey string `json:"api_key"`
+				ID     ident.ID `json:"id"`
+				APIKey string   `json:"api_key"`
 			} `json:"data"`
 		}
 		if err := json.Unmarshal(respBody, &resp); err != nil {
@@ -1293,34 +1295,6 @@ func (s *FixedSeeder) seedDevices(_ context.Context, result *FixedResult) error 
 		fmt.Printf("  ✓ %d IoT devices created\n", result.DeviceCount)
 	}
 	return s.seedBlockedDevice()
-}
-
-// fetchRoles retrieves available roles from the API
-func (s *FixedSeeder) fetchRoles(_ context.Context) error {
-	respBody, err := s.client.Get("/auth/roles")
-	if err != nil {
-		return fmt.Errorf("failed to fetch roles: %w", err)
-	}
-
-	var resp struct {
-		Status string `json:"status"`
-		Data   []struct {
-			ID   apiID  `json:"id"`
-			Name string `json:"name"`
-		} `json:"data"`
-	}
-	if err := json.Unmarshal(respBody, &resp); err != nil {
-		return fmt.Errorf("failed to parse roles response: %w", err)
-	}
-
-	for _, role := range resp.Data {
-		s.roleIDs[role.Name] = int64(role.ID)
-	}
-
-	if s.verbose {
-		fmt.Printf("  ✓ %d roles found\n", len(s.roleIDs))
-	}
-	return nil
 }
 
 // seedStaffAccounts creates auth accounts for staff and the matching person
@@ -1412,10 +1386,10 @@ func (s *FixedSeeder) seedStaffAccounts(ctx context.Context, result *FixedResult
 		var account struct {
 			Status string `json:"status"`
 			Data   struct {
-				ID apiID `json:"id"`
+				ID ident.ID `json:"id"`
 				// int64 ids travel as JSON strings on this field.
 				SchoolIdentity *struct {
-					PersonID apiID `json:"person_id"`
+					PersonID ident.ID `json:"person_id"`
 				} `json:"school_identity"`
 			} `json:"data"`
 		}

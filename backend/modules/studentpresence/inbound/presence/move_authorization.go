@@ -35,9 +35,14 @@ func canBypassBulkMoveResourceChecks(r *http.Request) bool {
 // (#6953) is attributed to, and the move rights the placement revalidates.
 // A check-in needs a staff record even for administrators: the attendance row
 // names who checked the child in.
+//
+// Checking children in stays with the school's own staff (ADR 0089), so an
+// account without a staff record, a Träger-Büro session included, is refused
+// with its own code (#7818).
 func (rs *Resource) CheckInMoveActor(w http.ResponseWriter, r *http.Request) (int64, *studentpresence.StudentMoveAuthorization, bool) {
-	staff, err := rs.extractStaffFromRequest(w, r)
+	staff, err := rs.resolveRequestStaff(r)
 	if err != nil {
+		renderStaffResolutionError(w, r, err, common.ErrorForbiddenWithCode(err, common.CodeAttendanceCheckinStaffProfileRequired))
 		return 0, nil, false
 	}
 	if canBypassBulkMoveResourceChecks(r) {

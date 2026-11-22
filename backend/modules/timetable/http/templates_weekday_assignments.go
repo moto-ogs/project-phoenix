@@ -14,7 +14,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
@@ -24,10 +23,10 @@ import (
 // `staff_ids` removes them from that weekday. That keeps the wire shape
 // explicit instead of encoding add/remove semantics into flat id arrays.
 type weekdayAssignmentRequest struct {
-	Weekday        int         `json:"weekday"` // ISO 8601: 1=Mon … 7=Sun
-	StaffIDs       []common.ID `json:"staff_ids"`
-	StudentIDs     []common.ID `json:"student_ids"`
-	PrimaryStaffID *common.ID  `json:"primary_staff_id,omitempty"`
+	Weekday        int        `json:"weekday"` // ISO 8601: 1=Mon … 7=Sun
+	StaffIDs       []ident.ID `json:"staff_ids"`
+	StudentIDs     []ident.ID `json:"student_ids"`
+	PrimaryStaffID *ident.ID  `json:"primary_staff_id,omitempty"`
 }
 
 // validateWeekdayAssignments checks the deviations against the template's own
@@ -91,18 +90,18 @@ func toServiceWeekdayAssignments(assignments []weekdayAssignmentRequest) []timet
 // read side. A template whose roster is identical on every weekday returns an
 // empty list, which is how clients tell "no deviations" from "deviations".
 type templateWeekdayAssignmentResponse struct {
-	Weekday        int         `json:"weekday"`
-	StaffIDs       []common.ID `json:"staff_ids"`
-	StudentIDs     []common.ID `json:"student_ids"`
-	PrimaryStaffID *common.ID  `json:"primary_staff_id,omitempty"`
+	Weekday        int        `json:"weekday"`
+	StaffIDs       []ident.ID `json:"staff_ids"`
+	StudentIDs     []ident.ID `json:"student_ids"`
+	PrimaryStaffID *ident.ID  `json:"primary_staff_id,omitempty"`
 }
 
 // templateProtectedStudentAssignmentResponse exposes the weekdays supplied by
 // enrollment-owned rows. The editor needs this read-only metadata when it
 // expands a shared child list into explicit weekday assignments.
 type templateProtectedStudentAssignmentResponse struct {
-	Weekday    int         `json:"weekday"`
-	StudentIDs []common.ID `json:"student_ids"`
+	Weekday    int        `json:"weekday"`
+	StudentIDs []ident.ID `json:"student_ids"`
 }
 
 // buildTemplateWeekdayAssignments groups the flat, kind-tagged roster rows the

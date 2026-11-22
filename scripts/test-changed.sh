@@ -5,19 +5,21 @@
 # Frontend: Dateisystem-Guards plus vitest --changed (wie im PR-Check).
 #
 # Usage: scripts/test-changed.sh [--fast] [base-ref]   (Default: origin/development)
-#   --fast: nur direkt geänderte Packages plus ihre direkten Importer
-#           (Depth 1 statt transitiver Closure) und gezielt betroffene
-#           Quelltext-Ratchets aus ./test. CI läuft die volle Closure.
+#   --fast: nur die geänderten Packages selbst, ohne Importer, und gezielt
+#           betroffene Quelltext-Ratchets aus ./test. Importer prüft lokal
+#           nur der Lint-Typecheck; CI läuft die volle Closure.
 set -euo pipefail
 repo_root=$(git rev-parse --show-toplevel)
 cd "$repo_root"
 # shellcheck source=scripts/go-test-workspace.sh
 source "$repo_root/scripts/go-test-workspace.sh"
 
-# Keep concurrent package binaries from multiplying runtime workers across
-# overlapping worktrees. This matches scripts/test-backend.sh and the shared
-# local test budget; -parallel remains the deliberate per-binary test budget.
-export GOMAXPROCS=1
+# Bound the runtime workers of each compile, link and test binary, so package
+# binaries of overlapping worktrees do not multiply them. Four is the pinned
+# runner's budget (run-go-toolchain.sh); one core ran api in 60 s instead of
+# 31 s on Linux. macOS keeps one: parallel GC in links is expensive there
+# (test-backend.sh). -parallel remains the deliberate per-binary test budget.
+if [ "$(uname -s)" = Darwin ]; then export GOMAXPROCS=1; else export GOMAXPROCS=4; fi
 
 FAST=false
 if [ "${1:-}" = --fast ]; then
@@ -28,8 +30,8 @@ BASE=${1:-origin/development}
 
 affected=()
 if [ "$FAST" = true ]; then
-  echo "==> Schnellmodus: geänderte Packages, direkte Importer und betroffene Quelltext-Ratchets. CI läuft die volle Closure."
-  affected_output=$(scripts/backend-affected-packages.sh --direct "$BASE")
+  echo "==> Schnellmodus: geänderte Packages ohne Importer und betroffene Quelltext-Ratchets. CI läuft die volle Closure."
+  affected_output=$(scripts/backend-affected-packages.sh --changed "$BASE")
 else
   affected_output=$(scripts/backend-affected-packages.sh "$BASE")
 fi

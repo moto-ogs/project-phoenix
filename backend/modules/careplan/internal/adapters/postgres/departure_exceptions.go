@@ -10,16 +10,17 @@ import (
 )
 
 type departureExceptionRow struct {
-	bun.BaseModel `bun:"table:student_departure_exceptions,alias:student_departure_exception"`
-	ID            int64        `bun:"id,pk,autoincrement"`
-	TenantID      int64        `bun:"tenant_id,notnull"`
-	CreatedAt     time.Time    `bun:"created_at,nullzero,notnull"`
-	UpdatedAt     time.Time    `bun:"updated_at,nullzero,notnull"`
-	StudentID     int64        `bun:"student_id,notnull"`
-	ExceptionDate calendarDate `bun:"exception_date,notnull,type:date"`
-	DepartureMode string       `bun:"departure_mode,notnull"`
-	Reason        *string      `bun:"reason"`
-	CreatedBy     *int64       `bun:"created_by"`
+	bun.BaseModel    `bun:"table:student_departure_exceptions,alias:student_departure_exception"`
+	ID               int64        `bun:"id,pk,autoincrement"`
+	TenantID         int64        `bun:"tenant_id,notnull"`
+	CreatedAt        time.Time    `bun:"created_at,nullzero,notnull"`
+	UpdatedAt        time.Time    `bun:"updated_at,nullzero,notnull"`
+	StudentID        int64        `bun:"student_id,notnull"`
+	ExceptionDate    calendarDate `bun:"exception_date,notnull,type:date"`
+	DepartureMode    string       `bun:"departure_mode,notnull"`
+	Reason           *string      `bun:"reason"`
+	CreatedBy        *int64       `bun:"created_by"`
+	EnteredByTraeger bool         `bun:"entered_by_traeger,notnull,default:false"`
 }
 
 func (s *Store) ListDepartureExceptions(ctx context.Context, f careplan.StudentScheduleFilter) ([]careplan.DepartureException, domain.OperationStats, error) {
@@ -68,13 +69,14 @@ func (s *Store) SaveDepartureException(ctx context.Context, v careplan.Departure
 	}
 	row := departureExceptionRow{
 		TenantID: tid, StudentID: v.StudentID, ExceptionDate: calendarDate(v.ExceptionDate),
-		DepartureMode: v.DepartureMode, Reason: v.Reason, CreatedBy: v.CreatedBy,
+		DepartureMode: v.DepartureMode, Reason: v.Reason, CreatedBy: v.CreatedBy, EnteredByTraeger: v.EnteredByTraeger,
 	}
 	query := db.NewInsert().Model(&row).ModelTableExpr(`schedule.student_departure_exceptions`).
 		On(`CONFLICT (tenant_id, student_id, exception_date) DO UPDATE`).
 		Set(`departure_mode = EXCLUDED.departure_mode`).
 		Set(`reason = EXCLUDED.reason`).
-		Set(`created_by = EXCLUDED.created_by`)
+		Set(`created_by = EXCLUDED.created_by`).
+		Set(`entered_by_traeger = EXCLUDED.entered_by_traeger`)
 	stats, err := createStudentScheduleRow(ctx, query, "save departure exception")
 	return departureExceptionToPublic(row), stats, err
 }
@@ -90,6 +92,6 @@ func (s *Store) DeleteDepartureException(ctx context.Context, id int64) (domain.
 func departureExceptionToPublic(v departureExceptionRow) careplan.DepartureException {
 	return careplan.DepartureException{
 		ID: v.ID, TenantID: v.TenantID, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt, StudentID: v.StudentID,
-		ExceptionDate: careplan.Date(v.ExceptionDate), DepartureMode: v.DepartureMode, Reason: v.Reason, CreatedBy: v.CreatedBy,
+		ExceptionDate: careplan.Date(v.ExceptionDate), DepartureMode: v.DepartureMode, Reason: v.Reason, CreatedBy: v.CreatedBy, EnteredByTraeger: v.EnteredByTraeger,
 	}
 }

@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	capability "github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // CareAmendmentRequest is the body of POST …/{id}/amendments (#6197): one
@@ -16,7 +17,7 @@ import (
 // ContractID and Service name the invoice, Fingerprint the review the
 // change was made on; Kind decides which of the other fields count.
 type CareAmendmentRequest struct {
-	ContractID     common.ID             `json:"contract_id"`
+	ContractID     ident.ID              `json:"contract_id"`
 	Service        string                `json:"service"`
 	Kind           string                `json:"kind"`
 	Fingerprint    string                `json:"fingerprint"`
@@ -27,7 +28,7 @@ type CareAmendmentRequest struct {
 	PositionKey    string                `json:"position_key"`
 	Recipient      *RecipientNameRequest `json:"recipient"`
 	Address        *PostalAddressRequest `json:"address"`
-	RevokesID      common.ID             `json:"revokes_id"`
+	RevokesID      ident.ID              `json:"revokes_id"`
 	RevokesCarried bool                  `json:"revokes_carried"`
 }
 

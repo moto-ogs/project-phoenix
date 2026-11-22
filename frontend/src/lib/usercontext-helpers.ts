@@ -1,10 +1,6 @@
 // lib/usercontext-helpers.ts
 
-import type {
-  ActiveGroup as WireActiveGroup,
-  CallerGroupRow,
-  Staff as WireStaff,
-} from "./contract/me.generated";
+import type * as meContract from "./contract/me.generated";
 import type { EducationalGroup } from "./user-context-types";
 
 // Frontend types for UserContext (EducationalGroup is shared with the
@@ -36,13 +32,6 @@ export interface Staff {
   person?: Person;
 }
 
-/** The answer of `GET /api/me/groups`. */
-export type EducationalGroupWire = CallerGroupRow;
-/** The answer of `GET /api/me/groups/supervised`. */
-export type ActiveGroupWire = WireActiveGroup;
-/** The answer of `GET /api/me/staff`. */
-export type StaffWire = WireStaff;
-
 export interface NavigationEducationalGroup {
   id: string;
   name: string;
@@ -56,7 +45,7 @@ export interface NavigationEducationalGroup {
 
 // Helper functions to transform backend data to frontend types
 export function mapEducationalGroupResponse(
-  data: EducationalGroupWire,
+  data: meContract.CallerGroupRow,
 ): EducationalGroup {
   return {
     id: data.id,
@@ -86,7 +75,9 @@ export function mapNavigationEducationalGroupResponse(
  * A supervised session. Go sends no name of its own; the view names it by
  * its room.
  */
-export function mapActiveGroupResponse(data: ActiveGroupWire): ActiveGroup {
+export function mapActiveGroupResponse(
+  data: meContract.ActiveGroup,
+): ActiveGroup {
   return {
     id: data.id,
     room_id: data.room_id,
@@ -94,7 +85,7 @@ export function mapActiveGroupResponse(data: ActiveGroupWire): ActiveGroup {
   };
 }
 
-export function mapStaffResponse(data: StaffWire): Staff {
+export function mapStaffResponse(data: meContract.Staff): Staff {
   return {
     id: data.id,
     person_id: data.person_id,

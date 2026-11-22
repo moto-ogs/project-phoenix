@@ -11,10 +11,9 @@ import (
 var ErrAccountAdministrationUnavailable = errors.New("account administration is not composed")
 
 // ErrAccountSharedAcrossSchools refuses a school administrator's change to
-// what holds for the whole account, its login address and its second
-// factor, while the account also belongs to another school or to a Träger
-// (#6862). Such an account's identity is not one school's to rewrite; the
-// operator changes it.
+// what holds for the whole account, its second factor, while the account
+// also belongs to another school or to a Träger (#6862). Such an account's
+// identity is not one school's to rewrite; the operator changes it.
 var ErrAccountSharedAcrossSchools = errors.New("account also belongs to another school or a Träger")
 
 // ManagedAccount is one platform account as the administration reports it.
@@ -27,22 +26,6 @@ type ManagedAccount struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 	LastLogin *time.Time
-}
-
-// AccountListFilter narrows an account listing. An empty address and a nil
-// active flag list every account the caller may administer.
-type AccountListFilter struct {
-	// Email matches the stored address case-insensitively and in full.
-	Email  string
-	Active *bool
-}
-
-// AccountIdentityUpdate changes the address and, when Username is set, the
-// name of one account. A nil Username keeps the stored one.
-type AccountIdentityUpdate struct {
-	AccountID int64
-	Email     string
-	Username  *string
 }
 
 // OwnPasswordChange is an account holder's change of their own password.
@@ -59,10 +42,9 @@ type OwnPasswordChange struct {
 	UserAgent       string
 }
 
-// AccountAdministration administers platform accounts (#3332): the listings
-// behind the staff screens, the address and name change, activation and
-// deactivation, and the credential change an account holder makes for
-// themselves.
+// AccountAdministration administers platform accounts (#3332): the read of
+// one manageable account, activation and deactivation, and the credential
+// change an account holder makes for themselves.
 //
 // Accounts are platform-wide rows without a tenant, so ordinary administration
 // commands are restricted to the account set the caller may administer:
@@ -75,16 +57,14 @@ type OwnPasswordChange struct {
 // is likewise account-wide and reserved for the authorized platform deletion flow.
 //
 // Refusals arrive wrapped in an AuthenticationError whose Op names the
-// flow, carrying ErrAccountNotFound, ErrAccountSharedAcrossSchools,
-// ErrInvalidCredentials or ErrPasswordTooWeak.
+// flow, carrying ErrAccountNotFound, ErrInvalidCredentials or
+// ErrPasswordTooWeak.
 type AccountAdministration interface {
 	// AnonymizeAccountForDeletion replaces identifying fields for an already
 	// authorized platform deletion workflow. It is account-wide, preserves
 	// the caller's transaction, and does not deactivate or unlink the account.
 	AnonymizeAccountForDeletion(ctx context.Context, accountID int64, email string) error
 	FindManageableAccount(ctx context.Context, accountID int64) (ManagedAccount, error)
-	ListManageableAccounts(ctx context.Context, filter AccountListFilter) ([]ManagedAccount, error)
-	UpdateManageableAccount(ctx context.Context, update AccountIdentityUpdate) error
 	ActivateAccount(ctx context.Context, accountID int64) error
 	DeactivateAccount(ctx context.Context, accountID int64) error
 	ChangeAccountPassword(ctx context.Context, change OwnPasswordChange) error

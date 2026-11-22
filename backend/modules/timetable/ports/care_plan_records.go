@@ -31,18 +31,19 @@ type CareDate string
 
 // CareArrivalSchedule is one weekly arrival time of a child.
 type CareArrivalSchedule struct {
-	ID              int64
-	TenantID        int64
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
-	StudentID       int64
-	Weekday         int
-	ExpectedArrival time.Time
-	Notes           *string
-	CreatedBy       int64
-	Source          string
-	SourceClass     string
-	SourceLabel     string
+	ID               int64
+	TenantID         int64
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	StudentID        int64
+	Weekday          int
+	ExpectedArrival  time.Time
+	Notes            *string
+	CreatedBy        int64
+	EnteredByTraeger bool
+	Source           string
+	SourceClass      string
+	SourceLabel      string
 }
 
 // CareArrivalException is one dated arrival deviation of a child.
@@ -57,19 +58,21 @@ type CareArrivalException struct {
 	Reason            *string
 	Source            string
 	CreatedBy         int64
+	EnteredByTraeger  bool
 	CreatedByGuardian *int64
 }
 
 // CareArrivalNote is one dated arrival note of a child.
 type CareArrivalNote struct {
-	ID        int64
-	TenantID  int64
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	StudentID int64
-	NoteDate  CareDate
-	Content   string
-	CreatedBy int64
+	ID               int64
+	TenantID         int64
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	StudentID        int64
+	NoteDate         CareDate
+	Content          string
+	CreatedBy        int64
+	EnteredByTraeger bool
 }
 
 // CarePickupSchedule is one weekly pickup time of a child.
@@ -83,6 +86,7 @@ type CarePickupSchedule struct {
 	PickupTime       time.Time
 	Notes            *string
 	CreatedBy        int64
+	EnteredByTraeger bool
 	Source           string
 	CareOfferingID   *int64
 	CareOfferingName string
@@ -101,24 +105,27 @@ type CarePickupException struct {
 	ExcusedFrom           *time.Time
 	ExcusedReason         *string
 	ExcusedCreatedBy      *int64
+	ExcusedByTraeger      bool
 	ExcusedOwnsPickupTime bool
 	ExcusedAuto           bool
 	Source                string
 	CreatedBy             int64
+	EnteredByTraeger      bool
 	CreatedByGuardian     *int64
 }
 
 // CarePickupNote is a dated or a weekday-recurring pickup note of a child.
 type CarePickupNote struct {
-	ID        int64
-	TenantID  int64
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	StudentID int64
-	NoteDate  CareDate
-	Weekday   int
-	Content   string
-	CreatedBy int64
+	ID               int64
+	TenantID         int64
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	StudentID        int64
+	NoteDate         CareDate
+	Weekday          int
+	Content          string
+	CreatedBy        int64
+	EnteredByTraeger bool
 }
 
 // CareScheduleFilter selects schedule rows. Limit, Offset and Sort page a

@@ -95,4 +95,99 @@ describe("CareRuleModal", () => {
       ),
     );
   });
+  it("keeps a rank rule a rank rule and says whom it reduces", async () => {
+    saveCareRule.mockResolvedValue(data);
+    render(
+      <ToastProvider>
+        <CareRuleModal
+          data={data}
+          open={{ kind: "sibling", rule }}
+          currentMonth="2026-09-01"
+          onClose={vi.fn()}
+          onSaved={vi.fn()}
+        />
+      </ToastProvider>,
+    );
+    expect(
+      screen.getByText(
+        /Das 1\. Kind zahlt den vollen Beitrag\. Ab dem 2\. Kind/,
+      ),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Regel speichern" }));
+    await waitFor(() =>
+      expect(saveCareRule).toHaveBeenCalledWith(
+        "7",
+        expect.objectContaining({
+          siblingFromChild: 2,
+          siblingAllChildren: false,
+        }),
+      ),
+    );
+  });
+
+  it("reduces every child of a family from a size on (#7765)", async () => {
+    saveCareRule.mockResolvedValue(data);
+    render(
+      <ToastProvider>
+        <CareRuleModal
+          data={data}
+          open={{ kind: "sibling", rule }}
+          currentMonth="2026-09-01"
+          onClose={vi.fn()}
+          onSaved={vi.fn()}
+        />
+      </ToastProvider>,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Alle Kinder der Familie" }),
+    );
+    // Without the family's number only children with a contract count:
+    // the form says so where the choice is made.
+    expect(
+      screen.getByText(
+        /mindestens 2 Kinder, zahlt jedes ihrer Kinder mit Vertrag weniger, auch das erste\. Im Moment zählen nur Kinder mit Vertrag/,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText(/Ab so vielen Kindern/)).toHaveValue("2");
+    fireEvent.click(
+      screen.getByRole("switch", {
+        name: /Geschwister ohne Vertrag mitzählen/,
+      }),
+    );
+    expect(
+      screen.queryByText(/Im Moment zählen nur Kinder mit Vertrag/),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Regel speichern" }));
+    await waitFor(() =>
+      expect(saveCareRule).toHaveBeenCalledWith(
+        "7",
+        expect.objectContaining({
+          siblingFromChild: 2,
+          siblingAllChildren: true,
+          countsFamilyChildren: true,
+        }),
+      ),
+    );
+  });
+
+  it("opens a family-size rule in its mode", () => {
+    render(
+      <ToastProvider>
+        <CareRuleModal
+          data={data}
+          open={{
+            kind: "sibling",
+            rule: { ...rule, siblingFromChild: 3, siblingAllChildren: true },
+          }}
+          currentMonth="2026-09-01"
+          onClose={vi.fn()}
+          onSaved={vi.fn()}
+        />
+      </ToastProvider>,
+    );
+    expect(
+      screen.getByRole("button", { name: "Alle Kinder der Familie" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByLabelText(/Ab so vielen Kindern/)).toHaveValue("3");
+  });
 });

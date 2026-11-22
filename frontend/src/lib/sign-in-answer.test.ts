@@ -70,13 +70,13 @@ describe("signInAnswer", () => {
   });
 
   it("names the Träger of a Träger-Portal answer and offers the choice", () => {
-    expect(signInAnswer("traeger", { ...code, organization_id: 7 })).toMatchObject(
-      { organizationId: "7" },
-    );
+    expect(
+      signInAnswer("traeger", { ...code, organization_id: "7" }),
+    ).toMatchObject({ organizationId: "7" });
     expect(
       signInAnswer("traeger", {
         status: "organization_selection_required",
-        organizations: [{ id: 7, name: "Träger Nord" }],
+        organizations: [{ id: "7", name: "Träger Nord" }],
       }),
     ).toEqual({
       status: "organization_selection_required",

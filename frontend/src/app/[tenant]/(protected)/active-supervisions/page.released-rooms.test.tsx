@@ -54,6 +54,13 @@ vi.mock("next-auth/react", () => ({
     data: { user: { token: "test-token", id: "7", tenantId: 1 } },
     status: "authenticated",
   })),
+  // The session gate of sessionFetch reads the same session.
+  getSession: vi.fn(() =>
+    Promise.resolve({
+      user: { token: "test-token", id: "7", tenantId: 1 },
+      expires: "2099-01-01",
+    }),
+  ),
 }));
 
 vi.mock("~/lib/supervision-context", () => ({

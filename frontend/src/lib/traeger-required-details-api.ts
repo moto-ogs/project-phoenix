@@ -1,4 +1,4 @@
-import { traegerRequest } from "./traeger-api";
+import { bffJson } from "~/lib/bff-fetch";
 
 /**
  * A detail the Träger still has to enter before its contracts, invoices and
@@ -25,8 +25,6 @@ function isRequiredDetail(value: string): value is TraegerRequiredDetail {
 export async function fetchTraegerRequiredDetails(): Promise<
   TraegerRequiredDetail[]
 > {
-  const response = await traegerRequest<{ missing: string[] | null }>(
-    "/api/traeger/required-details",
-  );
+  const response = await bffJson("org", "GET /traeger/required-details/");
   return (response.missing ?? []).filter(isRequiredDetail);
 }

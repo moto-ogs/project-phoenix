@@ -16181,6 +16181,12 @@
           "type": "text",
           "udt": "text",
           "nullable": true
+        },
+        {
+          "name": "conclusion_date_unknown",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
         }
       ],
       "relationships": [
@@ -17404,6 +17410,12 @@
         },
         {
           "name": "tariff_sibling_price",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
+        },
+        {
+          "name": "sibling_all_children",
           "type": "boolean",
           "udt": "bool",
           "nullable": false
@@ -22498,6 +22510,12 @@
           "type": "boolean",
           "udt": "bool",
           "nullable": false
+        },
+        {
+          "name": "sibling_all_children",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
         }
       ],
       "relationships": [
@@ -24779,6 +24797,12 @@
           "type": "boolean",
           "udt": "bool",
           "nullable": true
+        },
+        {
+          "name": "weekly_plan_by_traeger",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
         }
       ],
       "relationships": [
@@ -30935,7 +30959,7 @@
           "name": "created_by",
           "type": "bigint",
           "udt": "int8",
-          "nullable": false
+          "nullable": true
         },
         {
           "name": "updated_by",
@@ -30963,6 +30987,12 @@
         },
         {
           "name": "include_school_breaks",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
+        },
+        {
+          "name": "planned_by_traeger",
           "type": "boolean",
           "udt": "bool",
           "nullable": false
@@ -31080,7 +31110,7 @@
           "name": "created_by",
           "type": "bigint",
           "udt": "int8",
-          "nullable": false
+          "nullable": true
         },
         {
           "name": "created_at",
@@ -31092,6 +31122,12 @@
           "name": "updated_at",
           "type": "timestamp with time zone",
           "udt": "timestamptz",
+          "nullable": false
+        },
+        {
+          "name": "planned_by_traeger",
+          "type": "boolean",
+          "udt": "bool",
           "nullable": false
         }
       ],
@@ -31401,6 +31437,12 @@
           "type": "bigint",
           "udt": "int8",
           "nullable": true
+        },
+        {
+          "name": "entered_by_traeger",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
         }
       ],
       "relationships": [
@@ -31466,7 +31508,7 @@
           "name": "created_by",
           "type": "bigint",
           "udt": "int8",
-          "nullable": false
+          "nullable": true
         },
         {
           "name": "created_at",
@@ -31479,6 +31521,12 @@
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": true
+        },
+        {
+          "name": "entered_by_traeger",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
         }
       ],
       "relationships": [
@@ -31545,7 +31593,7 @@
           "name": "created_by",
           "type": "bigint",
           "udt": "int8",
-          "nullable": false
+          "nullable": true
         },
         {
           "name": "created_at",
@@ -31558,6 +31606,12 @@
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": true
+        },
+        {
+          "name": "entered_by_traeger",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
         }
       ],
       "relationships": [
@@ -31636,6 +31690,12 @@
           "name": "updated_at",
           "type": "timestamp with time zone",
           "udt": "timestamptz",
+          "nullable": false
+        },
+        {
+          "name": "entered_by_traeger",
+          "type": "boolean",
+          "udt": "bool",
           "nullable": false
         }
       ],
@@ -31768,6 +31828,18 @@
           "type": "boolean",
           "udt": "bool",
           "nullable": false
+        },
+        {
+          "name": "entered_by_traeger",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
+        },
+        {
+          "name": "excused_by_traeger",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
         }
       ],
       "relationships": [
@@ -31847,7 +31919,7 @@
           "name": "created_by",
           "type": "bigint",
           "udt": "int8",
-          "nullable": false
+          "nullable": true
         },
         {
           "name": "created_at",
@@ -31872,6 +31944,12 @@
           "type": "smallint",
           "udt": "int2",
           "nullable": true
+        },
+        {
+          "name": "entered_by_traeger",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
         }
       ],
       "relationships": [
@@ -31973,6 +32051,12 @@
           "type": "bigint",
           "udt": "int8",
           "nullable": true
+        },
+        {
+          "name": "entered_by_traeger",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
         }
       ],
       "relationships": [

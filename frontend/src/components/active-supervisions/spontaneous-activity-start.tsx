@@ -1,5 +1,6 @@
 "use client";
 
+import type * as roomsContract from "~/lib/contract/rooms.generated";
 import { Plus, Search } from "lucide-react";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { InsetPanel } from "~/components/ui/inset-panel";
@@ -16,10 +17,7 @@ import { useApiFormError } from "~/contexts/ToastContext";
 import { activityService } from "~/lib/activity-service";
 import type { Activity } from "~/lib/activity-helpers";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import {
-  fetchPlannerRooms,
-  type PlannerRoomReference,
-} from "~/lib/planner-reference-api";
+import { fetchPlannerRooms } from "~/lib/planner-reference-api";
 import type { Staff } from "~/lib/staff-api";
 import { useSWRAuth } from "~/lib/swr";
 import { staff as staffResource } from "~/lib/swr/staff";
@@ -62,11 +60,11 @@ interface SpontaneousActivityStartProps {
   readonly onStart: (payload: SpontaneousActivityStartPayload) => void;
 }
 
-function normalizeRooms(rooms: PlannerRoomReference[]): RoomOption[] {
+function normalizeRooms(rooms: roomsContract.RoomResponse[]): RoomOption[] {
   return rooms
     .map((room) => ({
-      id: String(room.id),
-      name: room.name ?? room.room_name ?? `Raum ${room.id}`,
+      id: room.id,
+      name: room.name,
       building: room.building ?? null,
     }))
     .sort((a, b) => a.name.localeCompare(b.name, "de"));

@@ -16,17 +16,17 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 )
 
-// LoginRequest is the body shape for POST /school/auth/login. TenantSlug is
+// SchoolLoginRequest is the body shape for POST /school/auth/login. TenantSlug is
 // optional for direct school-portal logins, and pins an OGS-portal handoff to
 // the school the user selected.
-type LoginRequest struct {
+type SchoolLoginRequest struct {
 	Email      string `json:"email"`
 	Password   string `json:"password"`
 	TenantSlug string `json:"tenant_slug,omitempty"`
 }
 
 // Bind normalizes + validates the request.
-func (req *LoginRequest) Bind(_ *http.Request) error {
+func (req *SchoolLoginRequest) Bind(_ *http.Request) error {
 	req.Email = strings.TrimSpace(strings.ToLower(req.Email))
 	req.TenantSlug = strings.TrimSpace(req.TenantSlug)
 
@@ -39,7 +39,7 @@ func (req *LoginRequest) Bind(_ *http.Request) error {
 // login signs a Lehrkraft in to a school-scope session, or answers the
 // second factor still to pass.
 func (rs *Resource) login(w http.ResponseWriter, r *http.Request) {
-	req := &LoginRequest{}
+	req := &SchoolLoginRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return

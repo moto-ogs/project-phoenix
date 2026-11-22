@@ -105,13 +105,6 @@ export interface OfferingPreview {
   otherOfferings?: OfferingPreviewAlternative[];
 }
 
-export interface OfferingConnectionBody {
-  offering_ids: number[];
-  grade_levels: number[];
-  school_classes: string[];
-  effective_date: string;
-}
-
 const EXCLUSIONS: readonly NonNullable<
   OfferingPreviewDroppedChild["excludedBy"]
 >[] = ["school_class", "grade_level"];
@@ -381,9 +374,9 @@ export function previewQuery(
 export function connectionBody(
   selection: OfferingSelection,
   effectiveDate: string,
-): OfferingConnectionBody {
+): wire.offeringConnectionRequest {
   return {
-    offering_ids: selection.offeringIds.map(Number),
+    offering_ids: selection.offeringIds,
     grade_levels: selection.gradeLevels,
     school_classes: selection.schoolClasses,
     effective_date: effectiveDate,

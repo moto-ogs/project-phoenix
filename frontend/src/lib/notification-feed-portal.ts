@@ -7,9 +7,14 @@
 
 import { createContext, useContext } from "react";
 
+import {
+  type NotificationFeedApi,
+  tenantNotificationFeedApi,
+} from "./notification-feed-api";
+
 export interface NotificationFeedPortal {
-  /** BFF-Basis der Feed-Routen, ohne abschließenden Schrägstrich. */
-  readonly apiBase: string;
+  /** Die Feed-Aufrufe des Portals. */
+  readonly api: NotificationFeedApi;
   /** Unterscheidet die SWR-Schlüssel der Portale. */
   readonly keyScope: "staff" | "school" | "traeger" | "caterer";
   /** Macht aus dem Link eines Eintrags den Pfad für den Router. */
@@ -22,7 +27,7 @@ export interface NotificationFeedPortal {
 }
 
 const STAFF_NOTIFICATION_FEED_PORTAL: NotificationFeedPortal = {
-  apiBase: "/api/notifications/feed",
+  api: tenantNotificationFeedApi,
   keyScope: "staff",
   resolveLink: (link) => link,
 };

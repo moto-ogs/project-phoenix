@@ -17,7 +17,7 @@ import { emailCodeFactorApi } from "~/lib/email-code-factor-api";
 import { markPasswordChanged } from "~/lib/login-session-notice";
 import { useShellAuth } from "~/lib/shell-auth-context";
 
-const catererMFA = emailCodeFactorApi("/api/caterer/account/mfa");
+const catererMFA = emailCodeFactorApi("caterer");
 
 export default function CatererAccountPage() {
   const { data: session } = useSession();

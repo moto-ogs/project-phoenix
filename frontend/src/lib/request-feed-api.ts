@@ -1,33 +1,24 @@
-import { apiErrorFromResponse } from "~/lib/api-error";
-import { fetchWithAuth } from "~/lib/fetch-with-auth";
+import { bffJson } from "~/lib/bff-fetch";
+import type * as studentsContract from "~/lib/contract/students.generated";
 
-export interface RequestFeedStatus {
-  readonly active: boolean;
+export function getRequestFeedStatus(): Promise<studentsContract.FeedStatus> {
+  return bffJson("tenant", "GET /api/students/change-requests/rss-feed/", {
+    errorMessage: "request feed failed",
+  });
 }
 
-export interface RequestFeedLink {
-  readonly url: string;
+export function createRequestFeed(): Promise<studentsContract.FeedLink> {
+  return bffJson("tenant", "POST /api/students/change-requests/rss-feed/", {
+    errorMessage: "request feed failed",
+  });
 }
 
-async function request<T>(method: "GET" | "POST", suffix = ""): Promise<T> {
-  const response = await fetchWithAuth(
-    `/api/students/change-requests/rss-feed${suffix}`,
-    { method, cache: "no-store" },
+export function rotateRequestFeed(): Promise<studentsContract.FeedLink> {
+  return bffJson(
+    "tenant",
+    "POST /api/students/change-requests/rss-feed/rotate",
+    {
+      errorMessage: "request feed failed",
+    },
   );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, "request feed failed");
-  }
-  return ((await response.json()) as { data: T }).data;
-}
-
-export function getRequestFeedStatus(): Promise<RequestFeedStatus> {
-  return request("GET");
-}
-
-export function createRequestFeed(): Promise<RequestFeedLink> {
-  return request("POST");
-}
-
-export function rotateRequestFeed(): Promise<RequestFeedLink> {
-  return request("POST", "/rotate");
 }

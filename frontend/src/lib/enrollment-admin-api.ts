@@ -1,3 +1,4 @@
+import type * as studentsContract from "~/lib/contract/students.generated";
 import type { FormAttachment } from "~/lib/enrollment-form-schema-api";
 import type {
   EmailAddressMark,
@@ -8,7 +9,6 @@ import type {
   AdminDecideRequest,
   AdminUpdateOfferingsRequest,
 } from "~/lib/contract/enrollment.generated";
-import type { RosterImpactWire } from "~/lib/roster-impact";
 import { announceEnrollmentReadChange } from "~/lib/enrollment-unread-api";
 import { createLogger } from "~/lib/logger";
 import type {
@@ -148,7 +148,7 @@ export interface AdminEnrollmentChangeRequest {
     child_id: string;
     student_id: string;
     first_name: string;
-    roster_impact: RosterImpactWire;
+    roster_impact: studentsContract.rosterImpactResponse;
   }>;
 }
 
@@ -833,7 +833,7 @@ export async function decideAdminChild(
 
 /** The corrected child with its effect on the Regeltermine (#5102). */
 export type AdminChildOfferingsUpdate = AdminRequestChild & {
-  roster_impact?: RosterImpactWire;
+  roster_impact?: studentsContract.rosterImpactResponse;
 };
 
 export async function updateAdminChildOfferings(

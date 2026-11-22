@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 func localSeedAccountsEnabled(baseURL string, options SeedOptions) bool {
@@ -28,9 +30,9 @@ func registerSeedStaffAccount(rt *Runtime, body map[string]any) (AccountCredenti
 	}
 	var account struct {
 		Data struct {
-			ID             apiID `json:"id"`
+			ID             ident.ID `json:"id"`
 			SchoolIdentity *struct {
-				StaffID apiID `json:"staff_id"`
+				StaffID ident.ID `json:"staff_id"`
 			} `json:"school_identity"`
 		} `json:"data"`
 	}

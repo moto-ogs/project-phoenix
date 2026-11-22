@@ -13,6 +13,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -34,6 +35,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/traegerview"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
@@ -206,25 +208,25 @@ func traegerAccount(t *testing.T, db *bun.DB, password string) *testpkg.AccountF
 // traegerLoginAnswer reads both answer shapes: status is the login state of
 // a success and the HTTP status number of a refusal.
 type traegerLoginAnswer struct {
-	Status         any    `json:"status"`
-	AccessToken    string `json:"access_token"`
-	RefreshToken   string `json:"refresh_token"`
-	ChallengeToken string `json:"challenge_token"`
-	MaskedEmail    string `json:"masked_email"`
-	OrganizationID wireID `json:"organization_id"`
+	Status         any      `json:"status"`
+	AccessToken    string   `json:"access_token"`
+	RefreshToken   string   `json:"refresh_token"`
+	ChallengeToken string   `json:"challenge_token"`
+	MaskedEmail    string   `json:"masked_email"`
+	OrganizationID ident.ID `json:"organization_id"`
 	// The remember-device offer of the code step (#6955).
 	TrustedDeviceEnabled *bool `json:"trusted_device_enabled"`
 	TrustedDeviceDays    *int  `json:"trusted_device_days"`
 	Organizations        []struct {
-		ID   wireID `json:"id"`
-		Name string `json:"name"`
+		ID   ident.ID `json:"id"`
+		Name string   `json:"name"`
 	} `json:"organizations"`
 	Code string `json:"code"`
 }
 
 func traegerLogin(t *testing.T, router http.Handler, email, password string, organizationID int64) (int, traegerLoginAnswer) {
 	t.Helper()
-	body, err := json.Marshal(map[string]any{"email": email, "password": password, "organization_id": organizationID})
+	body, err := json.Marshal(map[string]any{"email": email, "password": password, "organization_id": strconv.FormatInt(organizationID, 10)})
 	require.NoError(t, err)
 	req := httptest.NewRequest(http.MethodPost, "/traeger/auth/login", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -300,11 +302,11 @@ func traegerSignIn(t *testing.T, portal *traegerPortalHandler, email, password s
 		started, start := traegerPost(t, portal, "/traeger/auth/mfa/enroll/start", answer.AccessToken, map[string]any{})
 		require.Equal(t, http.StatusOK, started)
 		return traegerPost(t, portal, "/traeger/auth/mfa/enroll/confirm", answer.AccessToken, map[string]any{
-			"challenge_token": start.ChallengeToken, "code": lastTraegerCode(t, portal, email), "organization_id": answer.OrganizationID,
+			"challenge_token": start.ChallengeToken, "code": lastTraegerCode(t, portal, email), "organization_id": answer.OrganizationID.String(),
 		})
 	case "mfa_required":
 		return traegerPost(t, portal, "/traeger/auth/mfa/verify", "", map[string]any{
-			"challenge_token": answer.ChallengeToken, "code": lastTraegerCode(t, portal, email), "organization_id": answer.OrganizationID,
+			"challenge_token": answer.ChallengeToken, "code": lastTraegerCode(t, portal, email), "organization_id": answer.OrganizationID.String(),
 		})
 	}
 	return code, answer

@@ -72,18 +72,21 @@ or write a `Backend*` interface for a registered route.
   carries a day or a wall-clock time says so in its tag: `contract:"date"`
   (`YYYY-MM-DD`) or `contract:"clock"` (`HH:MM`); the decoder then rejects
   another form. Closed value sets are registered in `Enums`.
-- An identifier is a `common.ID` (`ident.ID` outside `http` roles), a count
-  an `int`; the generator rejects a bare `int64` and a response shape that
+- An identifier is an `ident.ID` in every role, a count an `int`; the
+  generator rejects a bare `int64` and a response shape that
   depends on a query parameter. Every answer sends identifiers as strings,
   and the generated decoder (`int64String`) takes nothing else (ADR 0300).
-  The backend routes without a contract only shrink:
-  `scripts/check-contract-shrink.mjs <base>` fails on a new one. A route the contract cannot carry
-  (a sign-in step, a device or webhook endpoint) needs a new ADR that names
-  its catalog line.
-- In a request type an identifier is a `string`; Go still reads a JSON number
-  there. A request type with its own `UnmarshalJSON` needs an entry in
-  `Readers` (`backend/api/route_contracts.go`), or the generator stops;
-  `ReadsLaxIDs` is for a request only.
+  A sign-in step or another route its portal's route file serves is typed
+  too (`RouteFile`) and stays out of every proxy allowlist. The catalog
+  lines outside the contract (`Outside`: a device, webhook or protocol
+  endpoint) only shrink: `scripts/check-contract-shrink.mjs <base>` fails on
+  a new one unless a new ADR names its catalog line
+  ([new route](new-route.md#routes-outside-the-contract)).
+- In a request type an identifier is a `string`; for one release Go still
+  reads a JSON number there (`ident.ID`). A request type with its own
+  `UnmarshalJSON` needs an entry in `Readers`
+  (`backend/api/route_contracts.go`), or the generator stops; an own reader
+  does not make an `int64` an identifier.
 - Removing or renaming a registered field or route needs one release as
   deprecated (`DeprecatedFields`, `Deprecated`);
   `scripts/check-contract-compat.mjs <base>` fails otherwise.
@@ -202,7 +205,8 @@ session read outside it. Success answers the backend's envelope
 `{ status: "success", data }` (`successResponse` in
 `lib/route-wrapper-utils.server.ts`, type `ApiResponse` in `lib/api-envelope.ts`), a DELETE without a result answers 204, and a handler
 may return a Response as it is. No BFF route invents another success
-envelope (#2353). Public JSON routes use `createPublicJsonProxy`
+envelope (#2353); a sign-in step the BFF answers itself (password, code,
+enrollment confirmation, second factor) answers `successResponse` too (#7806). Public JSON routes use `createPublicJsonProxy`
 (`lib/backend-proxy-route.server.ts`), login steps before a session
 `authStepProxy` (`lib/auth-proxy.server.ts`). Do not move a route across
 portal auth boundaries to share code. Streaming SSE uses its documented
@@ -300,14 +304,15 @@ its generated entry types `params`, `query`, `body` and the answer. The
 import is type-only, so no decoder reaches the browser bundle: the portal's
 catalog proxy has decoded the answer already.
 
-| Portal | Example |
-|---|---|
-| Staff (`tenant`) | `bffJson("tenant", "GET /api/students/{id}/partial-absences", { params: { id }, query: { from, to } })` |
-| Parents (`parent`) | `bffJson("parent", "GET /parent/me/children")` |
-| moto schule (`school`) | `bffJson("school", "GET /school/calendar/my")` |
-| Träger (`org`) | `bffJson("org", "POST /traeger/absence-types/", { body })` |
-| Caterer (`caterer`) | `bffJson("caterer", "GET /caterer/schools/{schoolId}/orders", { params: { schoolId }, query: { from, to } })` |
-| Operator (`platform`) | `bffJson("platform", "GET /operator/stats")` |
+| Portal | Example | In the code |
+|---|---|---|
+| Staff (`tenant`) | `bffJson("tenant", "GET /api/students/{id}/partial-absences", { params: { id }, query: { from, to } })` | [`guardian-api.ts`](../../frontend/src/lib/guardian-api.ts), [`timetable-api.ts`](../../frontend/src/lib/timetable-api.ts) |
+| Parents (`parent`) | `bffJson("parent", "GET /parent/me/notifications/feed/", { query: { limit, cursor } })` | [`notification-feed-api.ts`](../../frontend/src/lib/notification-feed-api.ts) `parentNotificationFeedApi` |
+| moto schule (`school`) | `bffJson("school", "GET /school/notifications/feed/", { query: { limit, cursor } })` | [`notification-feed-api.ts`](../../frontend/src/lib/notification-feed-api.ts) `schoolNotificationFeedApi` |
+| Träger (`org`) | `bffJson("org", "GET /traeger/notifications/feed/unread-count")` | [`notification-feed-api.ts`](../../frontend/src/lib/notification-feed-api.ts) `traegerNotificationFeedApi` |
+| Caterer (`caterer`) | `bffJson("caterer", "POST /caterer/notifications/feed/{id}/read", { params: { id } })` | [`notification-feed-api.ts`](../../frontend/src/lib/notification-feed-api.ts) `catererNotificationFeedApi` |
+| Operator (`platform`) | `bffJson("platform", "GET /operator/invitations/")` | [`operator-invitation-api.ts`](../../frontend/src/lib/operator/operator-invitation-api.ts) |
+| Ohne Sitzung (`public`) | `bffJson("public", "GET /auth/invitations/{token}", { params: { token } })` | [`invitation-api.ts`](../../frontend/src/lib/invitation-api.ts) `validateInvitation` |
 
 The path is the pattern below the portal's BFF prefix, a route outside the
 portal's mount (`/analytics-policy`) below the prefix as a whole; a trailing
@@ -323,17 +328,44 @@ slash is dropped and each parameter encoded.
   `decodeContract`). There is no fallback value.
 - **Failure:** an `ApiError` with the backend's code, field errors and
   request ID. `errorMessage` sets its message, so a client keeps its text.
+- **`public`:** the routes without a session (links, password reset,
+  invitations) go without gate and renewal; a pattern names its portal
+  (`/caterer/…` → `/api/caterer/…`), one under `/api` stays as it is.
 - **401:** one table in `bff-fetch.ts` holds where the portals differ. Staff:
   the session gate before the request and one renewal with a retry
   (`sessionFetch`), then sign-out; `authRefusals` names codes that refuse
   only the operation. Operator: to `/operator/login`. Parents: to
-  `/parents/login`. Träger, moto schule and caterer: the error stays on the
-  page. A parent client that reports refusals (`PARENT_ACCESS_REFUSED_EVENT`)
-  catches the `ApiError` itself.
+  `/parents/login`, except for the call's explicit `authRefusals` (e.g. a
+  wrong MFA confirmation code or current password). Träger, moto schule and
+  caterer: the error stays on the page. A parent client that reports refusals
+  (`PARENT_ACCESS_REFUSED_EVENT`) catches the `ApiError` itself.
 - **No contract:** a backend route without a contract gets one first
   (#7808); its client waits until then. A named `route.ts` the contract
-  cannot carry (`activities/[id]/students`) keeps its own call.
-- Files and downloads keep their own path (`fetch` of the file URL).
+  cannot carry (`settings/values/[key]` purges the cached tenant lookup) is
+  called with `bffJsonUncontracted<T>(portal, method, path, options)`; each
+  caller is listed with its reason in `bff-fetch-uncontracted.test.ts`, and
+  the list only shrinks.
+- **Wait:** a refusal with `Retry-After` (429, 503) carries the wait as
+  `retryAfterSeconds` on the `ApiError` (`apiErrorFromResponse`).
+- **Lists Go writes as `null`:** the generated type says so (`T[] | null`).
+  Read it as an empty list where the screen needs one, once, in the client
+  (`slot-lists-api.ts` derives `WithLists<…>` from the generated type); do not
+  copy the answer into a hand-written type.
+- **Guards:** `fetchWithAuth`, `authFetch` and `operatorFetch` are gone.
+  `old-fetch-helpers.test.ts` lists the files that still import
+  `sessionFetch` for JSON or `traegerRequest`, each with its blocker; a new
+  importer fails, and the list only shrinks. `scripts/backend-wire-types.mjs`
+  finds hand-written wire types by their form (two `snake_case` fields of
+  their own, a generated type imported under another name, a type that only
+  renames a generated one); its baseline only shrinks.
+- **Tests:** a client test that stubs `fetch` mocks the session gate with
+  `vi.mock("~/lib/session-cache", () => import("~/test/mocks/plain-session-fetch"))`;
+  answers of a paginated route carry `pagination` (`pagedJson`).
+- **Files:** a route registered with `File: true` is called with
+  `bffFile(portal, route, options)` from the same module: the same path,
+  portal table and ApiError, resolving to the successful `Response` whose
+  body and `Content-Disposition` the caller reads. A link the browser opens
+  itself (`<a href>`) stays a plain URL.
 
 ### API clients and data mapping
 

@@ -1,3 +1,5 @@
 GET /traeger/contract-imports/
 POST /traeger/contract-imports/
+POST /traeger/contract-imports/offering-corrections
+POST /traeger/contract-imports/offering-corrections/preview
 POST /traeger/contract-imports/preview

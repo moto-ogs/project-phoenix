@@ -9,9 +9,11 @@ import { ButtonLink } from "~/components/ui/button";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { ApiError } from "~/lib/api-error";
+import { berlinTodayISO } from "~/lib/date-helpers";
 import { traegerBillingRunKeys } from "~/lib/swr/traeger-billing-run-keys";
 import { fetchSepaMandates } from "~/lib/traeger-sepa-api";
 import { traegerPath } from "~/lib/traeger-url";
+import { mandateCollectable } from "./sepa-format";
 import { useFreshTraegerResource } from "./use-traeger-resource";
 
 /** The address of the mandate page of a contract's family. */
@@ -21,25 +23,73 @@ function sepaMandatePath(contractId: string): string {
   );
 }
 
-export function SepaMandateStatusCard({
-  contractId,
-}: Readonly<{ contractId: string }>) {
+/** The mandates of a contract's family as the status card reads them. */
+export type SepaMandateStatusRead = ReturnType<typeof useSepaMandateStatus>;
+
+/**
+ * Reads the mandates of a contract's family for the status card. A page
+ * that also needs the answer (the payment form names a missing mandate,
+ * #7770) reads once and hands it to `SepaMandateStatusView`.
+ */
+export function useSepaMandateStatus(contractId: string) {
   // The page around it still works; the card says it could not load.
   const { data: mandates, failure } = useFreshTraegerResource(
     traegerBillingRunKeys.sepaMandates(contractId),
     () => fetchSepaMandates(contractId),
     "das Mandat",
   );
+  const inForce = mandates?.find((mandate) => !mandate.revokedOn);
+  return {
+    mandates,
+    failure,
+    inForce,
+    /**
+     * Whether a direct debit can be collected today: a mandate in force
+     * for the current creditor. null while loading or after a failed read.
+     */
+    collectable: mandates
+      ? Boolean(inForce && mandateCollectable(inForce, berlinTodayISO()))
+      : null,
+  };
+}
+
+export function SepaMandateStatusCard({
+  contractId,
+}: Readonly<{ contractId: string }>) {
+  return (
+    <SepaMandateStatusView
+      contractId={contractId}
+      read={useSepaMandateStatus(contractId)}
+    />
+  );
+}
+
+export function SepaMandateStatusView({
+  contractId,
+  read: { mandates, failure, inForce, collectable },
+  plainFallback = false,
+}: Readonly<{
+  contractId: string;
+  read: SepaMandateStatusRead;
+  /**
+   * Says only that nothing is collected without a mandate. Where staff
+   * choose the payment method, the card must not promise a transfer
+   * invoice: a Träger can block the run instead (#7770).
+   */
+  plainFallback?: boolean;
+}>) {
   if (failure instanceof ApiError && failure.status === 403) return null;
   const failed = mandates === null && Boolean(failure);
-  const inForce = mandates?.find((mandate) => !mandate.revokedOn);
+  // In force for the current creditor and still no proof for a collection:
+  // expired, or a one-off mandate already used.
+  const spent = Boolean(inForce?.creditorCurrent) && collectable === false;
 
   return (
     <SectionCard
       title="SEPA-Lastschriftmandat"
       titleBadge={
         mandates ? (
-          inForce?.creditorCurrent ? (
+          collectable ? (
             <StatusBadge tone="green" label="Gültig" />
           ) : inForce ? (
             <StatusBadge tone="warning" label="Neues Mandat nötig" />
@@ -51,11 +101,17 @@ export function SepaMandateStatusCard({
       description={
         failed
           ? "Der Stand des Mandats konnte nicht geladen werden."
-          : inForce && !inForce.creditorCurrent
-            ? "Das Mandat gilt für deine frühere Gläubiger-ID. Bis ein neues da ist, bekommt die Familie eine Rechnung zum Überweisen."
-            : inForce
-              ? `Mandatsreferenz ${inForce.reference} · Konto ${inForce.ibanMasked}`
-              : "Ohne Mandat bekommt die Familie eine Rechnung zum Überweisen."
+          : spent
+            ? "Mit diesem Mandat kann nicht mehr abgebucht werden: Es ist verfallen oder galt nur für eine Abbuchung. Widerrufe es und erfasse ein neues."
+            : inForce && !inForce.creditorCurrent
+              ? plainFallback
+                ? "Das Mandat gilt für deine frühere Gläubiger-ID. Bis ein neues da ist, wird nicht abgebucht."
+                : "Das Mandat gilt für deine frühere Gläubiger-ID. Bis ein neues da ist, bekommt die Familie eine Rechnung zum Überweisen."
+              : inForce
+                ? `Mandatsreferenz ${inForce.reference} · Konto ${inForce.ibanMasked}`
+                : plainFallback
+                  ? "Ohne gültiges Mandat wird nicht abgebucht."
+                  : "Ohne Mandat bekommt die Familie eine Rechnung zum Überweisen."
       }
       loading={mandates === null && !failed}
       actions={

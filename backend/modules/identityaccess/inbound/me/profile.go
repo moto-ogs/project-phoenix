@@ -45,7 +45,7 @@ type ProfileResponse struct {
 	Username  *string    `json:"username"`
 	LastLogin *time.Time `json:"last_login"`
 	Avatar    string     `json:"avatar,omitempty"`
-	ID        common.ID  `json:"id"`
+	ID        ident.ID   `json:"id"`
 	FirstName string     `json:"first_name"`
 	LastName  string     `json:"last_name"`
 	CreatedAt time.Time  `json:"created_at"`

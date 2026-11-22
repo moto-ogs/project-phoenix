@@ -523,6 +523,7 @@ func (s *Store) RecordSeriesException(ctx context.Context, value domain.StaffShi
 	}
 	row := &staffShiftSeriesExceptionRow{
 		TenantID: value.TenantID, SeriesID: value.SeriesID, Date: calendarDate(value.Date), CreatedBy: value.CreatedBy,
+		PlannedByTraeger: value.PlannedByTraeger,
 	}
 	if row.TenantID == 0 {
 		row.TenantID = scope.TenantID

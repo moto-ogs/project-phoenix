@@ -3,13 +3,7 @@
 // Every reader of these types may save the whole form back, so a value this
 // build does not know fails the read instead of being guessed or dropped.
 
-import type {
-  FormField as WireFormField,
-  FormFieldOption as WireFormFieldOption,
-  FormFileOptions as WireFormFileOptions,
-  TranslatedText as WireTranslatedText,
-  VisibilityCondition as WireVisibilityCondition,
-} from "./contract/shared.generated";
+import type * as sharedContract from "./contract/shared.generated";
 import { requiredEnum } from "./contract/known-enum";
 import {
   CONDITION_OPERATORS,
@@ -28,7 +22,7 @@ import {
 
 type WireTranslations = Record<
   string,
-  Record<string, WireTranslatedText> | null
+  Record<string, sharedContract.TranslatedText> | null
 >;
 
 /** The translations of a text, without the languages the decoder left null. */
@@ -43,7 +37,9 @@ export function translationsFromContract(
   return present;
 }
 
-function optionFromContract(option: WireFormFieldOption): FormFieldOption {
+function optionFromContract(
+  option: sharedContract.FormFieldOption,
+): FormFieldOption {
   const { translations, ...rest } = option;
   return {
     ...rest,
@@ -54,7 +50,7 @@ function optionFromContract(option: WireFormFieldOption): FormFieldOption {
 }
 
 function fileOptionsFromContract(
-  options: WireFormFileOptions,
+  options: sharedContract.FormFileOptions,
   at: string,
 ): FileFieldOptions {
   return {
@@ -82,7 +78,7 @@ function conditionValue(value: unknown, at: string): ConditionValue {
 }
 
 function conditionFromContract(
-  condition: WireVisibilityCondition,
+  condition: sharedContract.VisibilityCondition,
   at: string,
 ): VisibilityCondition {
   const value = conditionValue(condition.value, `${at}.value`);
@@ -103,7 +99,7 @@ function conditionFromContract(
  * "HolidayFormEditor.fields.2".
  */
 export function formFieldFromContract(
-  field: WireFormField,
+  field: sharedContract.FormField,
   at: string,
 ): FormField {
   const {

@@ -23,7 +23,7 @@ describe("defineEntityConfig", () => {
         editModalTitle: "Test bearbeiten",
       },
       api: {
-        basePath: "/api/test",
+        routes: { list: "GET /api/rooms/" },
       },
       form: {
         sections: [],
@@ -43,7 +43,7 @@ describe("defineEntityConfig", () => {
 
     expect(config.name.singular).toBe("Test");
     expect(config.name.plural).toBe("Tests");
-    expect(config.api.basePath).toBe("/api/test");
+    expect(config.api.routes.list).toBe("GET /api/rooms/");
   });
 });
 

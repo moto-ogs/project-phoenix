@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -408,7 +409,7 @@ func (s *Seeder) createSeedOrganization(name, slug string) (int64, error) {
 	}
 	var payload struct {
 		Data struct {
-			ID apiID `json:"id"`
+			ID ident.ID `json:"id"`
 		} `json:"data"`
 	}
 	if err := parseJSON(orgResp, &payload); err != nil {
@@ -424,8 +425,8 @@ func (s *Seeder) findSeedOrganization(slug string) (int64, error) {
 	}
 	var payload struct {
 		Data []struct {
-			ID   apiID  `json:"id"`
-			Slug string `json:"slug"`
+			ID   ident.ID `json:"id"`
+			Slug string   `json:"slug"`
 		} `json:"data"`
 	}
 	if err := parseJSON(resp, &payload); err != nil {
@@ -449,11 +450,11 @@ func (s *Seeder) retireAbandonedSchool(subdomain string) error {
 	}
 	var payload struct {
 		Data []struct {
-			ID             apiID  `json:"id"`
-			OrganizationID apiID  `json:"organization_id"`
-			Name           string `json:"name"`
-			Subdomain      string `json:"subdomain"`
-			Email          string `json:"email"`
+			ID             ident.ID `json:"id"`
+			OrganizationID ident.ID `json:"organization_id"`
+			Name           string   `json:"name"`
+			Subdomain      string   `json:"subdomain"`
+			Email          string   `json:"email"`
 		} `json:"data"`
 	}
 	if err := parseJSON(resp, &payload); err != nil {
@@ -495,8 +496,8 @@ func (s *Seeder) createSeedSchool(organizationID int64, name, slug, subdomain st
 	}
 	var payload struct {
 		Data struct {
-			ID        apiID  `json:"id"`
-			Subdomain string `json:"subdomain"`
+			ID        ident.ID `json:"id"`
+			Subdomain string   `json:"subdomain"`
 		} `json:"data"`
 	}
 	if err := parseJSON(schoolResp, &payload); err != nil {

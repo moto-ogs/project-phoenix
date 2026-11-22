@@ -1,6 +1,7 @@
 import type {
   AcceptGuardianInvitationRequest as WireAcceptGuardianInvitationRequest,
   AcceptGuardianInvitationResponse as WireAcceptGuardianInvitationResponse,
+  GuardianInvitationValidateResponse,
 } from "~/lib/contract/auth-guardian-invitations.generated";
 import {
   apiErrorFromBody,
@@ -26,16 +27,6 @@ export interface GuardianInvitationValidation {
  * the contract: the accept page reads it from Go directly (`sendBackend`),
  * so no decoder narrows it.
  */
-export interface GuardianInvitationValidationBody {
-  email: string;
-  first_name?: string;
-  last_name?: string;
-  expires_at: string;
-  school_name?: string;
-  tenant_slug?: string;
-  school_logo_url?: string;
-}
-
 export interface GuardianInvitationAcceptRequest {
   password: string;
   confirmPassword: string;
@@ -86,7 +77,7 @@ const extractData = <T>(payload: unknown): T => {
 };
 
 export const mapValidation = (
-  data: GuardianInvitationValidationBody,
+  data: GuardianInvitationValidateResponse,
 ): GuardianInvitationValidation => ({
   email: data.email,
   firstName: data.first_name,

@@ -19,6 +19,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/filestorage"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -128,7 +129,7 @@ func idStrings(ids []int64) []string {
 
 // int64IDs unwraps a decoded share list. nil stays nil: "no list sent" and
 // "empty list sent" are different requests to the owner.
-func int64IDs(ids []common.ID) []int64 {
+func int64IDs(ids []ident.ID) []int64 {
 	if ids == nil {
 		return nil
 	}

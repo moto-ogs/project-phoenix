@@ -10,6 +10,18 @@ import type {
 } from "~/lib/parent-api";
 
 const baseFeatures = {
+  conference_book_allowed: false,
+  care_ended: false,
+  excused_note_enabled: false,
+  pickup_change_mode_enabled: false,
+  pickup_change_cutoff_time: "",
+  pickup_change_today_closed: false,
+  pickup_change_care_day_ended: false,
+  pickup_manage_allowed: false,
+  emergency_contact_manage_allowed: false,
+  absence_request_edit_enabled: false,
+  reason_required: false,
+  care_facility_term: "",
   sick_note_enabled: true,
   sick_requires_approval: false,
   notes_enabled: true,
@@ -30,6 +42,7 @@ const baseFeatures = {
 
 const childrenWithMealPlans: Child[] = [
   {
+    care_ended: false,
     student_id: "child-1",
     tenant_id: "school-1",
     first_name: "Mia",
@@ -41,6 +54,7 @@ const childrenWithMealPlans: Child[] = [
     school_slug: "am-berg",
   },
   {
+    care_ended: false,
     student_id: "child-2",
     tenant_id: "school-2",
     first_name: "Ben",

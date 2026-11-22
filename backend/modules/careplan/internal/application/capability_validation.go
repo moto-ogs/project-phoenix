@@ -13,7 +13,7 @@ import (
 
 func validateDepartureException(v careplan.DepartureException) bool {
 	return v.StudentID > 0 && !v.ExceptionDate.IsZero() && careplan.ValidDepartureMode(v.DepartureMode) &&
-		validText(v.Reason, 255) && v.CreatedBy != nil && *v.CreatedBy > 0
+		validText(v.Reason, 255) && (v.CreatedBy != nil && *v.CreatedBy > 0 || v.EnteredByTraeger)
 }
 
 func normalizeStudentScheduleFilter(filter careplan.StudentScheduleFilter) careplan.StudentScheduleFilter {
@@ -24,8 +24,8 @@ func normalizeStudentScheduleFilter(filter careplan.StudentScheduleFilter) carep
 
 func validWeekday(day int) bool { return day >= 1 && day <= 5 }
 
-func validAuthor(source string, staff int64, guardian *int64) bool {
-	return (source == "" || source == careplan.ExceptionSourceStaff) && staff > 0 || source == careplan.ExceptionSourceGuardian && guardian != nil && *guardian > 0 ||
+func validAuthor(source string, staff int64, enteredByTraeger bool, guardian *int64) bool {
+	return (source == "" || source == careplan.ExceptionSourceStaff) && (staff > 0 || enteredByTraeger) || source == careplan.ExceptionSourceGuardian && guardian != nil && *guardian > 0 ||
 		source == careplan.ExceptionSourceHolidayBooking && staff == 0 && guardian == nil
 }
 
@@ -34,25 +34,25 @@ func validText(value *string, max int) bool {
 }
 
 func validateArrivalSchedule(v careplan.ArrivalSchedule) bool {
-	return v.StudentID > 0 && validWeekday(v.Weekday) && v.CreatedBy > 0 && validText(v.Notes, 500)
+	return v.StudentID > 0 && validWeekday(v.Weekday) && (v.CreatedBy > 0 || v.EnteredByTraeger) && validText(v.Notes, 500)
 }
 
 func validateArrivalException(v careplan.ArrivalException) bool {
-	return v.StudentID > 0 && !v.ExceptionDate.IsZero() && validText(v.Reason, 255) && validAuthor(v.Source, v.CreatedBy, v.CreatedByGuardian)
+	return v.StudentID > 0 && !v.ExceptionDate.IsZero() && validText(v.Reason, 255) && validAuthor(v.Source, v.CreatedBy, v.EnteredByTraeger, v.CreatedByGuardian)
 }
 
-func validateNote(studentID int64, date careplan.Date, content string, createdBy int64) bool {
-	return studentID > 0 && !date.IsZero() && strings.TrimSpace(content) != "" && len(content) <= 500 && createdBy > 0
+func validateNote(studentID int64, date careplan.Date, content string, authored bool) bool {
+	return studentID > 0 && !date.IsZero() && strings.TrimSpace(content) != "" && len(content) <= 500 && authored
 }
 
 // validatePickupNote accepts a dated note or a recurring weekday note (#3369),
 // never a row that is both or neither.
 func validatePickupNote(v careplan.PickupNote) bool {
 	if v.Weekday == 0 {
-		return validateNote(v.StudentID, v.NoteDate, v.Content, v.CreatedBy)
+		return validateNote(v.StudentID, v.NoteDate, v.Content, v.CreatedBy > 0 || v.EnteredByTraeger)
 	}
 	return v.NoteDate.IsZero() && validWeekday(v.Weekday) &&
-		v.StudentID > 0 && strings.TrimSpace(v.Content) != "" && len(v.Content) <= 500 && v.CreatedBy > 0
+		v.StudentID > 0 && strings.TrimSpace(v.Content) != "" && len(v.Content) <= 500 && (v.CreatedBy > 0 || v.EnteredByTraeger)
 }
 
 func validatePickupSchedule(v careplan.PickupSchedule) bool {
@@ -60,22 +60,22 @@ func validatePickupSchedule(v careplan.PickupSchedule) bool {
 		return false
 	}
 	if v.Source == "" || v.Source == careplan.ScheduleSourceStaff {
-		return v.CreatedBy > 0
+		return v.CreatedBy > 0 || v.EnteredByTraeger
 	}
 	return v.Source == careplan.ScheduleSourceCareOffering && v.CareOfferingID != nil && *v.CareOfferingID > 0
 }
 
 func validatePickupException(v careplan.PickupException) bool {
-	if v.StudentID <= 0 || v.ExceptionDate.IsZero() || !validText(v.Reason, 255) || !validText(v.ExcusedReason, 255) || !validAuthor(v.Source, v.CreatedBy, v.CreatedByGuardian) {
+	if v.StudentID <= 0 || v.ExceptionDate.IsZero() || !validText(v.Reason, 255) || !validText(v.ExcusedReason, 255) || !validAuthor(v.Source, v.CreatedBy, v.EnteredByTraeger, v.CreatedByGuardian) {
 		return false
 	}
 	if v.ExcusedFrom == nil {
-		return v.ExcusedReason == nil && v.ExcusedCreatedBy == nil && !v.ExcusedOwnsPickupTime && !v.ExcusedAuto
+		return v.ExcusedReason == nil && v.ExcusedCreatedBy == nil && !v.ExcusedByTraeger && !v.ExcusedOwnsPickupTime && !v.ExcusedAuto
 	}
 	if v.ExcusedAuto {
-		return v.ExcusedCreatedBy == nil && !v.ExcusedOwnsPickupTime && v.PickupTime != nil
+		return v.ExcusedCreatedBy == nil && !v.ExcusedByTraeger && !v.ExcusedOwnsPickupTime && v.PickupTime != nil
 	}
-	return v.ExcusedCreatedBy != nil && *v.ExcusedCreatedBy > 0 && (!v.ExcusedOwnsPickupTime || v.PickupTime != nil)
+	return (v.ExcusedCreatedBy != nil && *v.ExcusedCreatedBy > 0 || v.ExcusedByTraeger) && (!v.ExcusedOwnsPickupTime || v.PickupTime != nil)
 }
 
 func scheduleInvalid() error {

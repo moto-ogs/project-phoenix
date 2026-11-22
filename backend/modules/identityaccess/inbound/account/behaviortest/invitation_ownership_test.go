@@ -38,11 +38,15 @@ func TestInvitationHTTPRequiresVerifiedOwner(t *testing.T) {
 	}
 	invitation.TenantID = schoolA
 	testpkg.InsertTestInvitationToken(t, db, invitation)
+	// The invitee reads the open invitation before accepting it.
+	rr := testutil.ExecuteRequest(router, testutil.NewJSONRequest(t, http.MethodGet, "/auth/invitations/"+invitation.Token, nil))
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	require.Contains(t, rr.Body.String(), owner.Email)
 	path := "/auth/invitations/" + invitation.Token + "/accept"
 	// Neither a client account ID nor a client email is proof of ownership.
 	body := map[string]any{"account_id": owner.ID, "email": owner.Email, "owner_access_token": "unverified"}
 	req := testutil.NewJSONRequest(t, http.MethodPost, path, body)
-	rr := testutil.ExecuteRequest(router, req)
+	rr = testutil.ExecuteRequest(router, req)
 	require.Equal(t, http.StatusUnauthorized, rr.Code, rr.Body.String())
 	require.Contains(t, rr.Body.String(), "identity.invitation_account_login_required")
 	for _, scope := range []string{"", "org", "parent", "school", "platform"} {

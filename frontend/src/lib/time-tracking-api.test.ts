@@ -13,6 +13,11 @@ vi.mock("next-auth/react", () => ({
   getSession: vi.fn(),
 }));
 
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 const mockGetSession = vi.mocked(getSession);
 
 // Helper to create a mock fetch response
@@ -318,9 +323,10 @@ describe("TimeTrackingService", () => {
     });
 
     it("returns an empty account start date when backend config is unset", async () => {
+      // Go sends the unset date as an empty string; the contract decodes it.
       global.fetch = mockFetchResponse({
         status: "success",
-        data: {},
+        data: { account_start_date: "" },
       });
 
       const result = await timeTrackingService.getConfig();
@@ -724,7 +730,7 @@ describe("TimeTrackingService", () => {
         start_half_day: false,
         end_half_day: true,
         note: "Family",
-        substitute_staff_id: 42,
+        substitute_staff_id: "42",
       });
 
       expect(global.fetch).toHaveBeenCalledWith(
@@ -737,7 +743,7 @@ describe("TimeTrackingService", () => {
             start_half_day: false,
             end_half_day: true,
             note: "Family",
-            substitute_staff_id: 42,
+            substitute_staff_id: "42",
           }),
         }),
       );
@@ -918,8 +924,8 @@ describe("TimeTrackingService", () => {
 
       const callArgs = (global.fetch as ReturnType<typeof vi.fn>).mock
         .calls[0] as [string, RequestInit];
-      const headers = callArgs[1].headers as Record<string, string>;
-      expect(headers.Authorization).toBeUndefined();
+      const headers = new Headers(callArgs[1].headers);
+      expect(headers.get("Authorization")).toBeNull();
     });
 
     it("sends request without auth header when session has no token", async () => {
@@ -936,8 +942,8 @@ describe("TimeTrackingService", () => {
 
       const callArgs = (global.fetch as ReturnType<typeof vi.fn>).mock
         .calls[0] as [string, RequestInit];
-      const headers = callArgs[1].headers as Record<string, string>;
-      expect(headers.Authorization).toBeUndefined();
+      const headers = new Headers(callArgs[1].headers);
+      expect(headers.get("Authorization")).toBeNull();
     });
   });
 
@@ -952,8 +958,8 @@ describe("TimeTrackingService", () => {
 
       const callArgs = (global.fetch as ReturnType<typeof vi.fn>).mock
         .calls[0] as [string, RequestInit];
-      const headers = callArgs[1].headers as Record<string, string>;
-      expect(headers["Content-Type"]).toBe("application/json");
+      const headers = new Headers(callArgs[1].headers);
+      expect(headers.get("Content-Type")).toBe("application/json");
     });
 
     it("omits Content-Type for GET requests", async () => {
@@ -966,8 +972,8 @@ describe("TimeTrackingService", () => {
 
       const callArgs = (global.fetch as ReturnType<typeof vi.fn>).mock
         .calls[0] as [string, RequestInit];
-      const headers = callArgs[1].headers as Record<string, string>;
-      expect(headers["Content-Type"]).toBeUndefined();
+      const headers = new Headers(callArgs[1].headers);
+      expect(headers.get("Content-Type")).toBeNull();
     });
   });
 });

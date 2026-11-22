@@ -69,7 +69,6 @@ var moduleFacadeMethodSetAllowlist = map[string]int{
 	"modules/careplan/schedules.go:StudentSchedulesCommand":                                           28,
 	"modules/careplan/schedules.go:StudentSchedulesQuery":                                             13,
 	"modules/classday/classday.go:ClassDay":                                                           17,
-	"modules/communication/messages.go:ParentMessagingCapability":                                     13,
 	"modules/communication/parent_announcements.go:ParentAnnouncementCapability":                      23,
 	"modules/communication/portal_announcement_access.go:PortalAnnouncementAccess":                    23,
 	"modules/communication/staff_announcement_records.go:StaffAnnouncementRecords":                    37,
@@ -88,8 +87,8 @@ var moduleFacadeMethodSetAllowlist = map[string]int{
 	"modules/identityaccess/account_authentication.go:AccountAuthentication":                          16,
 	"modules/identityaccess/account_lifecycle.go:AccountLifecycle":                                    20,
 	"modules/identityaccess/account_mfa.go:AccountMFA":                                                29,
-	"modules/identityaccess/identityaccess.go:Owner":                                                  251,
-	"modules/identityaccess/role_administration.go:RoleAdministration":                                22,
+	"modules/identityaccess/identityaccess.go:Owner":                                                  248, // Lowered by #7808: the test-only account list, address change and permission creation left.
+	"modules/identityaccess/role_administration.go:RoleAdministration":                                21,  // Lowered by #7808: the test-only permission creation left.
 	"modules/mealplan/mealplan.go:Capability":                                                         20,
 	"modules/organizationtenancy/organizationtenancy.go:Capability":                                   39,
 	"modules/organizationtenancy/organizationtenancy.go:Query":                                        25,
@@ -98,10 +97,10 @@ var moduleFacadeMethodSetAllowlist = map[string]int{
 	"modules/peopledirectory/guardian.go:GuardianCommand":                                             16,
 	"modules/peopledirectory/guardian.go:GuardianProvider":                                            29,
 	"modules/peopledirectory/guardian.go:GuardianQuery":                                               18,
-	"modules/peopledirectory/peopledirectory.go:Capability":                                           141,
+	"modules/peopledirectory/peopledirectory.go:Capability":                                           139, // Lowered by #7808: the test-only cross-tenant visitor reads left.
 	"modules/peopledirectory/peopledirectory.go:Command":                                              78,
-	"modules/peopledirectory/peopledirectory.go:Owner":                                                144,
-	"modules/peopledirectory/peopledirectory.go:Query":                                                62,
+	"modules/peopledirectory/peopledirectory.go:Owner":                                                142, // Lowered by #7808: the test-only cross-tenant visitor reads left.
+	"modules/peopledirectory/peopledirectory.go:Query":                                                60,  // Lowered by #7808: the test-only cross-tenant person read left.
 	"modules/peopledirectory/student_directory.go:StudentDirectoryQuery":                              15,
 	"modules/schoolcalendar/period_administration.go:Calendar":                                        32,
 	"modules/schoolcalendar/portal/contract.go:FullService":                                           41,

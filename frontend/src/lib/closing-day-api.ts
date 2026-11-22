@@ -1,90 +1,51 @@
-import { apiErrorFromBody, transportFetch } from "./api-error";
-// Closing day API client (#1418 3b). Talks to the Next.js proxy at
-// /api/timetable/closing-days, which forwards to the Go backend
-// /api/timetable/closing-days (CRUD via SchedulesRead/Create/Update/Delete).
-
+// Closing day API client (#1418 3b): the tenant routes under
+// /api/timetable/closing-days (SchedulesRead/Create/Update/Delete).
+import { bffJson } from "./bff-fetch";
+import type * as timetableContract from "./contract/timetable.generated";
 import { createLogger } from "~/lib/logger";
-import type { ClosingDayResponse } from "./contract/timetable.generated";
 import {
   type ClosingDay,
-  type ClosingDayInput,
   mapClosingDay,
   mapClosingDays,
 } from "./closing-day-helpers";
 
 const logger = createLogger({ component: "ClosingDayApi" });
 
-interface ApiEnvelope<T> {
-  status?: string;
-  message?: string;
-  data: T;
-}
-
-async function unwrap<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    throw apiErrorFromBody(
-      `Anfrage fehlgeschlagen (HTTP ${response.status})`,
-      response.status,
-      await response.json().catch(() => undefined),
+class ClosingDayService {
+  async list(): Promise<ClosingDay[]> {
+    return mapClosingDays(
+      await bffJson("tenant", "GET /api/timetable/closing-days/"),
     );
   }
 
-  if (response.status === 204) {
-    return undefined as T;
-  }
-
-  const envelope = (await response.json()) as ApiEnvelope<T>;
-  return envelope.data;
-}
-
-class ClosingDayService {
-  async list(): Promise<ClosingDay[]> {
-    const response = await transportFetch("/api/timetable/closing-days", {
-      method: "GET",
-      headers: { Accept: "application/json" },
-      credentials: "include",
+  async create(body: timetableContract.ClosingDayRequest): Promise<ClosingDay> {
+    const raw = await bffJson("tenant", "POST /api/timetable/closing-days/", {
+      body,
     });
-    const raw = await unwrap<ClosingDayResponse[]>(response);
-    return mapClosingDays(raw ?? []);
-  }
-
-  async create(body: ClosingDayInput): Promise<ClosingDay> {
-    const response = await transportFetch("/api/timetable/closing-days", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      credentials: "include",
-      body: JSON.stringify(body),
-    });
-    const raw = await unwrap<ClosingDayResponse>(response);
     logger.info("closing_day_created", { closing_day_id: raw.id });
     return mapClosingDay(raw);
   }
 
-  async update(id: string, body: ClosingDayInput): Promise<ClosingDay> {
-    const response = await transportFetch(`/api/timetable/closing-days/${id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
+  async update(
+    id: string,
+    body: timetableContract.ClosingDayRequest,
+  ): Promise<ClosingDay> {
+    const raw = await bffJson(
+      "tenant",
+      "PUT /api/timetable/closing-days/{id}",
+      {
+        params: { id },
+        body,
       },
-      credentials: "include",
-      body: JSON.stringify(body),
-    });
-    const raw = await unwrap<ClosingDayResponse>(response);
+    );
     logger.info("closing_day_updated", { closing_day_id: raw.id });
     return mapClosingDay(raw);
   }
 
   async delete(id: string): Promise<void> {
-    const response = await transportFetch(`/api/timetable/closing-days/${id}`, {
-      method: "DELETE",
-      headers: { Accept: "application/json" },
-      credentials: "include",
+    await bffJson("tenant", "DELETE /api/timetable/closing-days/{id}", {
+      params: { id },
     });
-    await unwrap<void>(response);
     logger.info("closing_day_deleted", { closing_day_id: id });
   }
 }

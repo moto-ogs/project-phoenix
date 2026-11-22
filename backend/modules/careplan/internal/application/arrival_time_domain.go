@@ -38,6 +38,7 @@ func (ArrivalTimeDomain) ExceptionFields(row *careplan.ArrivalException) domain.
 		Reason:            row.Reason,
 		Source:            row.Source,
 		CreatedBy:         row.CreatedBy,
+		EnteredByTraeger:  row.EnteredByTraeger,
 		CreatedByGuardian: row.CreatedByGuardian,
 		CreatedAt:         row.CreatedAt,
 		TenantID:          row.TenantID,
@@ -52,6 +53,7 @@ func (ArrivalTimeDomain) NewException(fields domain.EffectiveExceptionFields) *c
 		Reason:            fields.Reason,
 		Source:            fields.Source,
 		CreatedBy:         fields.CreatedBy,
+		EnteredByTraeger:  fields.EnteredByTraeger,
 		CreatedByGuardian: fields.CreatedByGuardian,
 	}
 	row.ID = fields.ID

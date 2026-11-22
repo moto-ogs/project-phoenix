@@ -51,6 +51,7 @@ describe("staffPayrollNumberService", () => {
     });
     expect(mockedSessionFetch).toHaveBeenCalledWith(
       "/api/staff/42/payroll-number",
+      { method: "GET" },
     );
   });
 
@@ -81,8 +82,8 @@ describe("staffPayrollNumberService", () => {
       statusText: "Forbidden",
     } as Response);
 
-    await expect(staffPayrollNumberService.get("42")).rejects.toThrow(
-      "Failed to fetch payroll number: Forbidden",
+    await expect(staffPayrollNumberService.get("42")).rejects.toBeInstanceOf(
+      ApiError,
     );
   });
 

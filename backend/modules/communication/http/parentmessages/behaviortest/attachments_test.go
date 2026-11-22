@@ -114,12 +114,17 @@ func TestStaffSendPhotosToGuardiansAndReadThemWithTheMessages(t *testing.T) {
 	photo := uploadPhoto(t, router, sender, "basteln.png")
 	download := "/attachments/" + photo.ID + "/download"
 	require.Equal(t, http.StatusNotFound, call(t, router, colleague, http.MethodGet, download, "", nil).Code, "an unsent upload is its uploader's alone")
-	opened := post("/threads", fmt.Sprintf(`{"student_id":%q,"guardian_account_id":%q,"body":"","attachment_ids":[%q]}`, fmt.Sprint(chain.StudentID), fmt.Sprint(chain.AccountID), photo.ID))
-	require.Equal(t, http.StatusCreated, opened.Code, opened.Body.String())
+	opened := post("/threads/open", fmt.Sprintf(`{"student_id":%q,"guardian_account_id":%q}`, fmt.Sprint(chain.StudentID), fmt.Sprint(chain.AccountID)))
+	require.Equal(t, http.StatusOK, opened.Code, opened.Body.String())
 	var thread struct {
 		Data messaging.ParentChatThreadDetailResponse
 	}
 	require.NoError(t, json.Unmarshal(opened.Body.Bytes(), &thread))
+	sent := post("/threads/"+thread.Data.ThreadID, fmt.Sprintf(`{"body":"","attachment_ids":[%q]}`, photo.ID))
+	require.Equal(t, http.StatusCreated, sent.Code, sent.Body.String())
+	detail := call(t, router, sender, http.MethodGet, "/threads/"+thread.Data.ThreadID, "", nil)
+	require.Equal(t, http.StatusOK, detail.Code, detail.Body.String())
+	require.NoError(t, json.Unmarshal(detail.Body.Bytes(), &thread))
 	require.Len(t, thread.Data.Messages, 1)
 	var carried []attachmentWire
 	require.NoError(t, json.Unmarshal(thread.Data.Messages[0].Attachments, &carried))

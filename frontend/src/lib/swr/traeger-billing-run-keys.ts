@@ -16,6 +16,10 @@ export const traegerBillingRunKeys = {
     `traeger-care-run-schools-${encodeURIComponent(month)}`,
   // Abweichende Empfänger und Zahlwege der Familien (#4689).
   familyBillings: () => "traeger-family-billings",
+  // Die Familie eines Vertrags mit ihrer Abweichung (#7770), ohne Lauf.
+  contractFamilyBillingFamily: "traeger-family-billing-contract-",
+  contractFamilyBilling: (contractId: string) =>
+    `traeger-family-billing-contract-${encodeURIComponent(contractId)}`,
   // Jahresbescheide (#6219): Bescheide und ihre Originale je Vertrag.
   noticeRunsFamily: "traeger-care-notice-run-",
   noticeRuns: () => "traeger-care-notice-run-list",

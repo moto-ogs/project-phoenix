@@ -15,6 +15,7 @@ import (
 	"github.com/go-chi/render"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // CareOfferingResponse is the wire shape for a single offering. IDs
@@ -190,8 +191,8 @@ func careOfferingPublicTranslations(offering *CareOffering) (capability.Translat
 
 // CareOfferingRequest is the wire shape POST + PUT accept.
 type CareOfferingRequest struct {
-	PhaseID             common.ID                            `json:"phase_id"`
-	ActivityGroupID     *common.ID                           `json:"activity_group_id,omitempty"`
+	PhaseID             ident.ID                             `json:"phase_id"`
+	ActivityGroupID     *ident.ID                            `json:"activity_group_id,omitempty"`
 	Name                string                               `json:"name"`
 	Description         *string                              `json:"description,omitempty"`
 	DaysOfWeekMode      string                               `json:"days_of_week_mode"`
@@ -313,7 +314,7 @@ func parseCareOfferingIDStrings(values []string, field string) ([]int64, error) 
 
 // CloneCareOfferingRequest is the body POST /{id}/clone accepts.
 type CloneCareOfferingRequest struct {
-	TargetPhaseID common.ID `json:"target_phase_id"`
+	TargetPhaseID ident.ID `json:"target_phase_id"`
 }
 
 func (req *CloneCareOfferingRequest) Bind(_ *http.Request) error { return nil }

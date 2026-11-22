@@ -551,11 +551,6 @@
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
-      "decision": "0132",
-      "id": "modules/communication/internal/application/parentMessaging[I, T, M, G].StartParentMessageThread",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
       "decision": "0090",
       "id": "modules/communication/internal/application/parentmessaging/Emitter.BroadcastChildUpdateToGuardians",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."

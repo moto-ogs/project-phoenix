@@ -34,7 +34,7 @@ type NullableInt struct {
 // NullableInt64 is the int64 member of the tri-state family.
 type NullableInt64 struct {
 	Set   bool
-	Value *common.ID
+	Value *ident.ID
 }
 
 func (n *NullableInt64) UnmarshalJSON(b []byte) error {
@@ -79,7 +79,7 @@ func (n *NullableIntSlice) UnmarshalJSON(b []byte) error {
 // and the split body (multi-source follow-up to #2147 round 12).
 type NullableInt64Slice struct {
 	Set   bool
-	Value []common.ID
+	Value []ident.ID
 }
 
 func (n *NullableInt64Slice) UnmarshalJSON(b []byte) error {
@@ -199,11 +199,11 @@ func (req *splitTemplateRequest) Bind(r *http.Request) error {
 // splitTemplateResponse is the wire contract the planner UI consumes.
 // instances_created comes from the optional materialization run (0 if none).
 type splitTemplateResponse struct {
-	OldTemplateID    common.ID   `json:"old_template_id"`
-	NewTemplateID    common.ID   `json:"new_template_id"`
-	ScheduleIDs      []common.ID `json:"schedule_ids"`
-	DeletedInstances int         `json:"deleted_instances"`
-	InstancesCreated int         `json:"instances_created"`
+	OldTemplateID    ident.ID   `json:"old_template_id"`
+	NewTemplateID    ident.ID   `json:"new_template_id"`
+	ScheduleIDs      []ident.ID `json:"schedule_ids"`
+	DeletedInstances int        `json:"deleted_instances"`
+	InstancesCreated int        `json:"instances_created"`
 }
 
 func renderTemplateCareOfferingConflict(w http.ResponseWriter, r *http.Request, err error) bool {

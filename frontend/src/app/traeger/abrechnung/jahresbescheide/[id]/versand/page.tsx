@@ -1,5 +1,7 @@
 "use client";
 
+import { bffFile } from "~/lib/bff-fetch";
+
 // Versand der Jahresbescheide eines ausgestellten Laufs (#6347): moto
 // speichert jeden Bescheid einmal als PDF. Dieses Original geht per E-Mail an
 // die Familie und liegt danach in der Eltern-App unter „Dokumente“, aber erst,
@@ -42,7 +44,10 @@ import {
   REFRESH_WHILE_QUEUED_MS,
   traegerBillingRunKeys,
 } from "~/lib/swr/traeger-billing-run-keys";
-import { downloadTraegerList } from "~/lib/traeger-list-export";
+import {
+  downloadTraegerList,
+  listExportQuery,
+} from "~/lib/traeger-list-export";
 import {
   type CareNoticeLetterSummary,
   type CareNoticeMailing,
@@ -385,8 +390,10 @@ export default function TraegerCareNoticeDeliveryPage() {
   const exportItems = useTraegerListExportItems({
     download: (format) =>
       downloadTraegerList(
-        `/api/traeger/care-notice-runs/${runId}/letters/export`,
-        format,
+        bffFile("org", "GET /traeger/care-notice-runs/{id}/letters/export", {
+          params: { id: runId },
+          query: listExportQuery(format),
+        }),
       ),
     scope: traegerExportScope(),
     fallbackName: `bescheid-versand-${run?.year ?? ""}`,
