@@ -17,7 +17,7 @@ import { createLogger } from "~/lib/logger";
 import { mapProfileResponse } from "~/lib/profile-helpers";
 import { contractGet } from "~/lib/contract/client.server";
 import { routes as meRoutes } from "~/lib/contract/me.generated";
-import type { UnreadAnnouncement } from "~/lib/hooks/use-announcements";
+import type * as platformContract from "~/lib/contract/platform.generated";
 import type { RemindersResult } from "~/lib/reminders-api";
 import type { ShellBootstrap, ShellCounts } from "~/lib/shell-seed";
 import type { StaffNotice } from "~/lib/staff-notices-api";
@@ -371,11 +371,9 @@ export async function loadShellBootstrap(
         })
       : Promise.resolve(undefined),
     optional("announcements", async (signal) => {
-      const response = await apiGet<Envelope<UnreadAnnouncement[] | null>>(
-        "/api/platform/announcements/unread",
-        token,
-        { signal },
-      );
+      const response = await apiGet<
+        Envelope<platformContract.PlatformAnnouncementResponse[] | null>
+      >("/api/platform/announcements/unread", token, { signal });
       return response.data ?? [];
     }),
     loadSupervision(session, tenant, token),

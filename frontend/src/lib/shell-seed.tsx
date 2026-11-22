@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext } from "react";
-import type { UnreadAnnouncement } from "~/lib/hooks/use-announcements";
+import type * as platformContract from "~/lib/contract/platform.generated";
 import type { Profile } from "~/lib/profile-helpers";
 import type { RemindersResult } from "~/lib/reminders-api";
 import type { StaffNotice } from "~/lib/staff-notices-api";
@@ -39,7 +39,7 @@ export interface ShellBootstrap {
   reminders?: RemindersResult;
   /** Today's staff notices; the badge counts the pending acknowledgements. */
   staffNoticesToday?: StaffNotice[];
-  announcements?: UnreadAnnouncement[];
+  announcements?: platformContract.PlatformAnnouncementResponse[];
   supervision?: SupervisionSnapshot;
   counts: ShellCounts;
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import type * as platformContract from "~/lib/contract/platform.generated";
 import { useState, useCallback, useEffect, useRef } from "react";
 import {
   SparkleIcon,
@@ -42,16 +43,6 @@ const TYPE_HEADERS: Record<
   },
 };
 
-interface UnreadAnnouncement {
-  id: number | string;
-  title: string;
-  content: string;
-  type: string;
-  severity: string;
-  version?: string;
-  published_at: string;
-}
-
 export function AnnouncementModal() {
   const { announcements, dismiss, markSeen, isLoading, refresh } =
     useAnnouncements();
@@ -59,7 +50,7 @@ export function AnnouncementModal() {
   const [isVisible, setIsVisible] = useState(false);
   // Keep a stable snapshot of announcements when modal opens
   const [queuedAnnouncements, setQueuedAnnouncements] = useState<
-    UnreadAnnouncement[]
+    platformContract.PlatformAnnouncementResponse[]
   >([]);
   const dismissedIdsRef = useRef<Set<string>>(new Set());
   // Track IDs closed in this session to avoid re-opening the modal.
@@ -89,7 +80,7 @@ export function AnnouncementModal() {
   }, [announcements, isLoading, isVisible]);
 
   const reportSeen = useCallback(
-    (id: number | string) => {
+    (id: string) => {
       const key = String(id);
       const existing = seenRequestsRef.current.get(key);
       if (existing) return existing;
@@ -117,7 +108,7 @@ export function AnnouncementModal() {
   );
 
   const dismissAfterSeen = useCallback(
-    (id: number | string) => {
+    (id: string) => {
       void reportSeen(id).then(
         () =>
           dismiss(id).catch((error: unknown) => {

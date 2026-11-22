@@ -1,13 +1,11 @@
+import type * as meContract from "./contract/me.generated";
 import { describe, expect, it } from "vitest";
 import {
   mapActiveGroupResponse,
   mapEducationalGroupResponse,
   mapNavigationEducationalGroupResponse,
   mapStaffResponse,
-  type ActiveGroupWire,
-  type EducationalGroupWire,
   type NavigationEducationalGroup,
-  type StaffWire,
 } from "./usercontext-helpers";
 
 // The shapes the catalog proxy decodes (ADR 0270): IDs arrive as strings,
@@ -23,7 +21,7 @@ const ROW = {
 describe("usercontext-helpers", () => {
   describe("mapEducationalGroupResponse", () => {
     it("maps a group with its room", () => {
-      const group: EducationalGroupWire = {
+      const group: meContract.CallerGroupRow = {
         ...ROW,
         id: "12345",
         name: "Eulen",
@@ -41,7 +39,7 @@ describe("usercontext-helpers", () => {
     });
 
     it("maps a group without room", () => {
-      const group: EducationalGroupWire = {
+      const group: meContract.CallerGroupRow = {
         ...ROW,
         id: "3",
         name: "Füchse",
@@ -79,7 +77,7 @@ describe("usercontext-helpers", () => {
   });
 
   describe("mapActiveGroupResponse", () => {
-    const session: ActiveGroupWire = {
+    const session: meContract.ActiveGroup = {
       ...ROW,
       id: "9",
       start_time: "2026-09-09T10:00:00+02:00",
@@ -95,7 +93,7 @@ describe("usercontext-helpers", () => {
       const result = mapActiveGroupResponse({
         ...session,
         room: { name: "Turnhalle", id: "77" } as NonNullable<
-          ActiveGroupWire["room"]
+          meContract.ActiveGroup["room"]
         >,
       });
       expect(result).toEqual({
@@ -107,7 +105,7 @@ describe("usercontext-helpers", () => {
   });
 
   describe("mapStaffResponse", () => {
-    const staff: StaffWire = {
+    const staff: meContract.Staff = {
       ...ROW,
       id: "5",
       person_id: "8",
