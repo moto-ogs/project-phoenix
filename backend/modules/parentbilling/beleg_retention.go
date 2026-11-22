@@ -315,6 +315,9 @@ type RetainedContracts interface {
 	// TriggerContractConcluded) lies on or before lastEventOn, with
 	// everything that goes with them, and answers the IDs that went.
 	DeleteEndedContracts(ctx context.Context, organizationID int64, contractIDs []int64, today calendar.Date, event string, lastEventOn calendar.Date) ([]int64, error)
+	// DeletableContracts answers which of the given contracts
+	// DeleteEndedContracts would delete as they stand now.
+	DeletableContracts(ctx context.Context, organizationID int64, contractIDs []int64, today calendar.Date, event string, lastEventOn calendar.Date) ([]int64, error)
 	// RecipientEmails names per given contract past its draft the address
 	// its invoices go to, the family of the contract (FamilyKey); a contract
 	// without one is left out.

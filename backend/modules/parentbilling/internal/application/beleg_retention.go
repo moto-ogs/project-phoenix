@@ -314,7 +314,7 @@ func (r *BelegRetention) deleteDueContracts(ctx context.Context, today calendar.
 	total := 0
 	for _, organizationID := range order {
 		ids, rule := byTraeger[organizationID], cutoff[organizationID]
-		if err := r.keepFamilies(ctx, organizationID, ids, rule.TriggerEvent); err != nil {
+		if err := r.keepFamilies(ctx, organizationID, ids, rule, today); err != nil {
 			return 0, err
 		}
 		deleted, err := r.contracts.DeleteEndedContracts(ctx, organizationID, ids, today, rule.TriggerEvent, rule.LastEventOn)

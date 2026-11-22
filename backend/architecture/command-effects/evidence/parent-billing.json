@@ -753,6 +753,14 @@
       "target_owner": "care-contract"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.retainedContracts.DeletableContracts",
+      "binding_digest": "fb87f8cae06562f8d83d8ef103d8c0f5",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.RetainedContracts.DeletableContracts",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractRetention.DeletableContracts",
+      "target_owner": "care-contract"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.retainedContracts.DeleteEndedContracts",
       "binding_digest": "710dabcdb4cfe0e64fb3e200cfa9df1e",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.RetainedContracts.DeleteEndedContracts",

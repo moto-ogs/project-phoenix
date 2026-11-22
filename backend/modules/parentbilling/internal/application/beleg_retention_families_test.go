@@ -31,6 +31,7 @@ func TestFamilyMovesToTheContractOfTheFamilyThatStaysLongest(t *testing.T) {
 	concluded := func(id int64, on *calendar.Date, ends *calendar.Date) parentbilling.ContractRetentionFact {
 		return parentbilling.ContractRetentionFact{ContractID: id, Ended: true, ConcludedOn: on, EndedOn: ends}
 	}
+	ahead := calendar.NewDate(2031, time.June, 30)
 	cases := map[string]struct {
 		remaining []parentbilling.ContractRetentionFact
 		family    parentbilling.FamilyOnContract
@@ -47,6 +48,12 @@ func TestFamilyMovesToTheContractOfTheFamilyThatStaysLongest(t *testing.T) {
 			remaining: []parentbilling.ContractRetentionFact{ended(10, day(time.December)), running(11), ended(12, nil)},
 			family:    family(1, "a@example.org"),
 			want:      []parentbilling.FamilyMove{{FamilyBillingID: 1, From: 1, To: 11}},
+		},
+		"a termination whose last day is ahead counts as in force": {
+			remaining: []parentbilling.ContractRetentionFact{concluded(20, day(time.March), &ahead), concluded(21, day(time.June), day(time.July))},
+			family:    family(2, "b@example.org"),
+			event:     parentbilling.TriggerContractConcluded,
+			want:      []parentbilling.FamilyMove{{FamilyBillingID: 2, From: 1, To: 20}},
 		},
 		"ended without a last day wins over a known end": {
 			remaining: []parentbilling.ContractRetentionFact{ended(10, day(time.December)), ended(12, nil)},
@@ -71,7 +78,7 @@ func TestFamilyMovesToTheContractOfTheFamilyThatStaysLongest(t *testing.T) {
 			if event == "" {
 				event = parentbilling.TriggerContractEnded
 			}
-			assert.Equal(t, tc.want, familyMoves([]parentbilling.FamilyOnContract{tc.family}, tc.remaining, emails, event))
+			assert.Equal(t, tc.want, familyMoves([]parentbilling.FamilyOnContract{tc.family}, tc.remaining, emails, event, calendar.NewDate(2031, time.January, 1)))
 		})
 	}
 }

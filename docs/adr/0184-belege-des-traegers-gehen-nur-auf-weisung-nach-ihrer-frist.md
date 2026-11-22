@@ -223,7 +223,11 @@ zurück. Die Auswahl beim Speichern (#7770) machte das nur seltener.
    Contract die fälligen Verträge eines Trägers löscht, hängt die
    Elternabrechnung im selben Lauf jede Abweichung, die an einem davon
    hängt, samt ihrer Spur auf den Vertrag derselben Familie um, der am
-   längsten bleibt: ein Vertrag in Kraft, dann ein beendeter ohne den Tag
+   längsten bleibt. Als gehend zählt nur, was Care Contract nach derselben
+   Bedingung wie beim Löschen tatsächlich löscht
+   (`ContractRetention.DeletableContracts`); eine fällige Kündigung ohne
+   letzten Tag bleibt und kann die Abweichung tragen. Rangfolge: ein Vertrag
+   in Kraft (auch eine Kündigung mit künftigem letztem Tag), dann ein beendeter ohne den Tag
    des Ereignisses der Weisung (Ende oder Abschluss), dann der späteste
    solche Tag. Ein Entwurf zählt nicht. Auch Einträge der Spur, die ein
    früheres Speichern auf einem älteren Vertrag der Familie hinterließ,

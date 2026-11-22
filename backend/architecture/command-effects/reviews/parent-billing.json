@@ -956,6 +956,16 @@
       "target_owner": "care-contract"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.retainedContracts.DeletableContracts",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.RetainedContracts.DeletableContracts",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/carecontract.ContractRetention.DeletableContracts: which of the due contracts DeleteEndedContracts would delete, by the same condition, read in the administrative transaction of the hourly Beleg retention after due_retained_contracts locked them, so the Elternabrechnung moves a family's deviation only off contracts that go (#7862, ADR 0184 Nachtrag 2026-11-22); IDs only.",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractRetention.DeletableContracts",
+      "target_owner": "care-contract"
+    },
+    {
       "adr": "0067",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.retainedContracts.DeleteEndedContracts",
       "classification": "leaf",

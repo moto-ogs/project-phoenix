@@ -17,16 +17,22 @@ import (
 // its last contract, as before, so the row lives no longer than the
 // family's contracts. A row a holiday registration used keeps its number
 // either way (#6692). The trail of a deviation that stays follows it, also
-// entries an office save left on an older contract of the family. event is
-// the Weisung's event, the day the contracts' periods count from.
-func (r *BelegRetention) keepFamilies(ctx context.Context, organizationID int64, going []int64, event string) error {
+// entries an office save left on an older contract of the family. due are
+// the contracts whose period ended under the Weisung of rule; only those
+// Care Contract will actually delete go, the others stay and can take a
+// deviation (a termination without its last day stays, for one).
+func (r *BelegRetention) keepFamilies(ctx context.Context, organizationID int64, due []int64, rule parentbilling.DueContract, today calendar.Date) error {
+	going, err := r.contracts.DeletableContracts(ctx, organizationID, due, today, rule.TriggerEvent, rule.LastEventOn)
+	if err != nil {
+		return fmt.Errorf("parent billing: read the contracts that go: %w", err)
+	}
 	families, err := r.store.FamiliesOnContracts(ctx, organizationID, going)
 	if err != nil {
 		return err
 	}
 	moves := []parentbilling.FamilyMove{}
 	if len(families) > 0 {
-		if moves, err = r.familyMovesOf(ctx, organizationID, going, families, event); err != nil {
+		if moves, err = r.familyMovesOf(ctx, organizationID, going, families, rule.TriggerEvent, today); err != nil {
 			return err
 		}
 	}
@@ -36,7 +42,7 @@ func (r *BelegRetention) keepFamilies(ctx context.Context, organizationID int64,
 // familyMovesOf reads the contracts that stay and their families and picks
 // the new contract of each family.
 func (r *BelegRetention) familyMovesOf(ctx context.Context, organizationID int64, going []int64, families []parentbilling.FamilyOnContract,
-	event string,
+	event string, today calendar.Date,
 ) ([]parentbilling.FamilyMove, error) {
 	facts, err := r.contracts.ContractRetentionFacts(ctx, organizationID)
 	if err != nil {
@@ -59,16 +65,17 @@ func (r *BelegRetention) familyMovesOf(ctx context.Context, organizationID int64
 	if err != nil {
 		return nil, fmt.Errorf("parent billing: read the families of the contracts that stay: %w", err)
 	}
-	return familyMoves(families, remaining, emails, event), nil
+	return familyMoves(families, remaining, emails, event, today), nil
 }
 
 // familyMoves picks for each family the contract of the family among
-// remaining that the retention keeps longest: one in force, then an ended
-// one without the day of the Weisung's event (it waits on the
+// remaining that the retention keeps longest: one in force today (also a
+// termination whose last day is still ahead), then an ended one without the
+// day of the Weisung's event (it waits on the
 // clarification list), then the latest such day; among equals the newest
 // contract.
 func familyMoves(families []parentbilling.FamilyOnContract, remaining []parentbilling.ContractRetentionFact, emails map[int64]string,
-	event string,
+	event string, today calendar.Date,
 ) []parentbilling.FamilyMove {
 	moves := make([]parentbilling.FamilyMove, 0, len(families))
 	for _, family := range families {
@@ -78,7 +85,7 @@ func familyMoves(families []parentbilling.FamilyOnContract, remaining []parentbi
 			if !known || parentbilling.FamilyKey(email) != family.FamilyEmail {
 				continue
 			}
-			if best.ContractID == 0 || staysLonger(fact, best, event) {
+			if best.ContractID == 0 || staysLonger(fact, best, event, today) {
 				best = fact
 			}
 		}
@@ -90,8 +97,8 @@ func familyMoves(families []parentbilling.FamilyOnContract, remaining []parentbi
 }
 
 // staysLonger tells whether the retention keeps contract a longer than b
-// under a Weisung counting from event.
-func staysLonger(a, b parentbilling.ContractRetentionFact, event string) bool {
+// under a Weisung counting from event on today.
+func staysLonger(a, b parentbilling.ContractRetentionFact, event string, today calendar.Date) bool {
 	day := func(fact parentbilling.ContractRetentionFact) *calendar.Date {
 		if event == parentbilling.TriggerContractConcluded {
 			return fact.ConcludedOn
@@ -100,7 +107,7 @@ func staysLonger(a, b parentbilling.ContractRetentionFact, event string) bool {
 	}
 	rank := func(fact parentbilling.ContractRetentionFact) int {
 		switch {
-		case !fact.Ended:
+		case !fact.Ended || (fact.EndedOn != nil && fact.EndedOn.After(today)):
 			return 2
 		case day(fact) == nil:
 			return 1
@@ -111,7 +118,7 @@ func staysLonger(a, b parentbilling.ContractRetentionFact, event string) bool {
 	if rank(a) != rank(b) {
 		return rank(a) > rank(b)
 	}
-	if da, db := day(a), day(b); a.Ended && da != nil && db != nil && *da != *db {
+	if da, db := day(a), day(b); rank(a) == 0 && da != nil && db != nil && *da != *db {
 		return da.After(*db)
 	}
 	return a.ContractID > b.ContractID

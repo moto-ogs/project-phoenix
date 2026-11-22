@@ -97,12 +97,7 @@ func (ContractRetention) DeleteEndedContracts(ctx context.Context, organizationI
 	}
 	var deleted []int64
 	err = db.NewRaw(`WITH removed AS (
-			DELETE FROM care_contract.contracts c
-			WHERE c.organization_id = ?0 AND c.id = ANY(?1) AND c.status IN `+endedContractStatuses+`
-				AND (c.status <> 'gekuendigt' OR c.ends_on <= ?2::date)
-				AND CASE ?4 WHEN 'contract_concluded' THEN
-					CASE WHEN NOT c.conclusion_date_unknown THEN (c.concluded_at AT TIME ZONE 'Europe/Berlin')::date END
-					ELSE `+contractEndDay+` END <= ?3::date
+			DELETE FROM care_contract.contracts c WHERE `+deletableContract+`
 			RETURNING c.id),
 		trail AS (
 			DELETE FROM care_contract.contract_events e USING removed
@@ -112,6 +107,38 @@ func (ContractRetention) DeleteEndedContracts(ctx context.Context, organizationI
 		return nil, fmt.Errorf("care contract postgres: delete ended contracts: %w", err)
 	}
 	return deleted, nil
+}
+
+// deletableContract is the condition under which the retention deletes a
+// contract c among ?1 of the Träger ?0 on the day ?2 under a Weisung
+// counting from the event ?4 that may lie on or before ?3.
+const deletableContract = `c.organization_id = ?0 AND c.id = ANY(?1) AND c.status IN ` + endedContractStatuses + `
+				AND (c.status <> 'gekuendigt' OR c.ends_on <= ?2::date)
+				AND CASE ?4 WHEN 'contract_concluded' THEN
+					CASE WHEN NOT c.conclusion_date_unknown THEN (c.concluded_at AT TIME ZONE 'Europe/Berlin')::date END
+					ELSE ` + contractEndDay + ` END <= ?3::date`
+
+// DeletableContracts answers which of the given contracts
+// DeleteEndedContracts would delete as they stand, by the same condition.
+func (ContractRetention) DeletableContracts(ctx context.Context, organizationID int64, contractIDs []int64, today calendar.Date,
+	event string, lastEventOn calendar.Date,
+) ([]int64, error) {
+	if organizationID <= 0 || len(contractIDs) == 0 {
+		return nil, nil
+	}
+	if event != carecontract.RetentionEventEnded && event != carecontract.RetentionEventConcluded {
+		return nil, fmt.Errorf("care contract postgres: unknown retention event %q", event)
+	}
+	db, err := retentionDB(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var deletable []int64
+	if err := db.NewRaw(`SELECT c.id FROM care_contract.contracts c WHERE `+deletableContract+` ORDER BY c.id`,
+		organizationID, pgdialect.Array(contractIDs), today, lastEventOn, event).Scan(ctx, &deletable); err != nil {
+		return nil, fmt.Errorf("care contract postgres: list deletable contracts: %w", err)
+	}
+	return deletable, nil
 }
 
 // RecipientEmails answers the address of the first party with one per

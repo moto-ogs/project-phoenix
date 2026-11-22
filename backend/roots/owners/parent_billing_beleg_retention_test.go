@@ -413,3 +413,63 @@ func TestFamilyBillingOutlivesADeletedContractOfItsFamily(t *testing.T) {
 	require.NoError(t, db.NewRaw(`SELECT NOT EXISTS (SELECT 1 FROM parent_billing.family_billing WHERE id = ?)`, lost).Scan(ctx, &gone))
 	assert.True(t, gone, "a family whose last contract goes loses its deviation with it")
 }
+
+// TestFamilyBillingMovesToAContractTheDeletionSkips (#7862): under a
+// Weisung counting from the conclusion, a terminated contract without its
+// last day is due but not deleted. It is the family's remaining contract,
+// so the deviation moves onto it instead of going with its own contract.
+func TestFamilyBillingMovesToAContractTheDeletionSkips(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupIsolatedTestDB(t)
+	ctx := context.Background()
+	organization := testpkg.CreateTestOrganization(t, db, &testpkg.Organization{
+		Name: "Träger mit offener Kündigung", Slug: fmt.Sprintf("offen-%d", testpkg.UniqueTestTenantID(t)),
+	}).ID
+	school := testpkg.CreateTestSchoolInOrganization(t, db, organization, "Offen OGS")
+	contract := func(status string, endsOn any) int64 {
+		t.Helper()
+		id := testpkg.CreateTestCareContract(t, db, organization, school, testpkg.UniqueTestTenantID(t), "versendet", calendar.NewDate(2026, time.August, 1))
+		_, err := db.ExecContext(ctx, `UPDATE care_contract.contracts SET concluded_at = '2026-08-01 10:00+02', conclusion_method = 'papier',
+			status = ?, ends_on = ?::date WHERE id = ?`, status, endsOn, id)
+		require.NoError(t, err)
+		_, err = db.ExecContext(ctx, `INSERT INTO care_contract.contract_parties (organization_id, contract_id, first_name, last_name, email)
+			VALUES (?, ?, 'Eva', 'Muster', 'familie.d@example.org')`, organization, id)
+		require.NoError(t, err)
+		return id
+	}
+	held := contract("gekuendigt", "2027-07-31")
+	open := contract("gekuendigt", nil)
+	var deviation int64
+	require.NoError(t, db.NewRaw(`INSERT INTO parent_billing.family_billing (organization_id, family_email, care_contract_id,
+			recipient_kind, payment_method) VALUES (?, 'familie.d@example.org', ?, 'applicant', 'direct_debit') RETURNING id`,
+		organization, held).Scan(ctx, &deviation))
+
+	today := calendar.NewDate(2026, time.November, 9)
+	retention := NewBelegRetention(func() time.Time { return today.BerlinMidnight() })
+	admin := func(fn func(context.Context) error) {
+		t.Helper()
+		require.NoError(t, tenant.WithinAdmin(tenant.WithUnitOfWork(ctx, testpkg.TenantRuntime(t, db)), fn))
+	}
+	admin(func(adminCtx context.Context) error {
+		_, err := retention.RecordInstruction(adminCtx, organization, 0, parentbilling.NewRetentionInstruction{
+			BelegType: parentbilling.BelegCareContract, TriggerEvent: parentbilling.TriggerContractConcluded, Period: 6,
+			Basis: parentbilling.BasisBusinessLetter, LegalBasis: "§ 257 HGB", InstructedBy: "Kämmerei des Trägers",
+			InstructedOn: calendar.NewDate(2026, time.November, 9), InstructionReference: "AVV-Nachtrag 2026-11",
+		})
+		return err
+	})
+	today = calendar.NewDate(2033, time.January, 1)
+	admin(func(adminCtx context.Context) error {
+		_, err := retention.ApplyBelegRetention(adminCtx)
+		return err
+	})
+
+	var contracts []int64
+	require.NoError(t, db.NewRaw(`SELECT id FROM care_contract.contracts WHERE organization_id = ? ORDER BY id`, organization).Scan(ctx, &contracts))
+	require.Equal(t, []int64{open}, contracts, "the contract with its last day goes, the open termination stays")
+	var on *int64
+	require.NoError(t, db.NewRaw(`SELECT care_contract_id FROM parent_billing.family_billing WHERE id = ?`, deviation).Scan(ctx, &on),
+		"the deviation stays with the family's remaining contract")
+	require.NotNil(t, on)
+	assert.Equal(t, open, *on)
+}
