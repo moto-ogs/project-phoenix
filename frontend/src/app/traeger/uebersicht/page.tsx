@@ -1,5 +1,7 @@
 "use client";
 
+import { bffFile } from "~/lib/bff-fetch";
+
 // Dashboard des Träger-Portals (#4674): die Zahlen von jetzt für alle Schulen
 // des Trägers auf einer Seite, oben die Summe, darunter je Schule eine Zeile.
 // Nur Zahlen, keine Namen. Eine Zeile führt in die Ansicht der Schule (#5686);
@@ -42,7 +44,10 @@ import {
 } from "~/components/traeger/traeger-list-export-menu";
 import { TraegerOpenSchoolButton } from "~/components/traeger/traeger-open-school-button";
 import { useTraegerSchoolsAlerts } from "~/components/traeger/use-traeger-schools-alerts";
-import { downloadTraegerList } from "~/lib/traeger-list-export";
+import {
+  downloadTraegerList,
+  listExportQuery,
+} from "~/lib/traeger-list-export";
 import { between, useMediaQuery } from "~/lib/hooks/use-media-query";
 import {
   ALERT_LABELS,
@@ -471,9 +476,13 @@ export default function TraegerDashboardPage() {
   const canChangeThresholds = hasPermission(session, SETTINGS_RIGHT);
   const exportItems = useTraegerListExportItems({
     download: (format) =>
-      downloadTraegerList("/api/traeger/schools/alerts/export", format, {
-        school: selected?.id,
-      }),
+      downloadTraegerList(
+        bffFile("org", "GET /traeger/schools/alerts/export", {
+          query: listExportQuery(format, {
+            school: selected?.id,
+          }),
+        }),
+      ),
     scope: traegerExportScope(selected?.name),
     fallbackName: "dashboard",
     errorObject: "die Zahlen des Dashboards",

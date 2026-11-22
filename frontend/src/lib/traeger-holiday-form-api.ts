@@ -115,14 +115,16 @@ export async function uploadHolidayDocument(
 ): Promise<string> {
   const body = new FormData();
   body.append("document", file);
-  const response = await transportFetch(holidayDocumentPath(periodId), {
-    method: "POST",
-    body,
-  });
-  if (!response.ok)
-    throw await apiErrorFromResponse(response, "Holiday PDF request failed");
-  const result = (await response.json()) as { data: { id: string } };
-  return String(result.data.id);
+  const result = await bffJson(
+    "org",
+    "POST /traeger/holiday-periods/{id}/form/documents",
+    {
+      params: { id: periodId },
+      body,
+      errorMessage: "Holiday PDF request failed",
+    },
+  );
+  return result.id;
 }
 export async function deleteHolidayDocument(
   periodId: string,

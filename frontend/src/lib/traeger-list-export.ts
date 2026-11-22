@@ -5,7 +5,6 @@
  * to the access log; the browser only asks for it and saves it.
  */
 
-import { apiErrorFromBody, transportFetch } from "./api-error";
 import { filenameFromDisposition } from "./file-download";
 
 /** The formats of a Träger list export. */
@@ -25,43 +24,30 @@ export interface TraegerListFile {
 }
 
 /**
- * Downloads one export of the BFF route `path` (below `/api/traeger/`). The
- * params are the filters of the page; an empty value is left out.
+ * The query of an export: the filters of the page, an empty value left out,
+ * and the format.
  */
-export async function downloadTraegerList(
-  path: string,
+export function listExportQuery(
   format: TraegerListFormat,
   params: Readonly<Record<string, string | null | undefined>> = {},
-): Promise<TraegerListFile> {
-  const query = new URLSearchParams();
+): Record<string, string> {
+  const query: Record<string, string> = {};
   for (const [name, value] of Object.entries(params)) {
-    if (value) query.set(name, value);
+    if (value) query[name] = value;
   }
-  query.set("format", format);
-  const response = await transportFetch(`${path}?${query.toString()}`, {
-    credentials: "include",
-    cache: "no-store",
-  });
-  if (!response.ok) {
-    throw apiErrorFromBody(
-      `Request failed (${response.status})`,
-      response.status,
-      await errorBody(response),
-    );
-  }
+  return { ...query, format };
+}
+
+/**
+ * Reads one export, asked through `bffFile`, with the file name the backend
+ * chose. A refusal is the ApiError of `bffFile`.
+ */
+export async function downloadTraegerList(
+  file: Promise<Response>,
+): Promise<TraegerListFile> {
+  const response = await file;
   return {
     blob: await response.blob(),
     filename: filenameFromDisposition(response),
   };
-}
-
-/** The error body of a refused download; null for an empty or broken one. */
-async function errorBody(response: Response): Promise<unknown> {
-  const text = await response.text();
-  if (!text) return null;
-  try {
-    return JSON.parse(text) as unknown;
-  } catch {
-    return null;
-  }
 }

@@ -1,4 +1,4 @@
-import { bffJson } from "~/lib/bff-fetch";
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the Träger's utilization over time (#4713, ADR 0241): for a
  * window, one value per weekday for every school, care offering and room.
@@ -11,6 +11,7 @@ import {
   downloadTraegerList,
   type TraegerListFile,
   type TraegerListFormat,
+  listExportQuery,
 } from "./traeger-list-export";
 import type * as traegerSchoolsContract from "./contract/traeger-schools.generated";
 import { requiredDay } from "./contract/required-day";
@@ -18,8 +19,6 @@ import type { TraegerSchool } from "./traeger-api";
 
 /** The right that opens the children of a school by name (ADR 0156, 0241). */
 export const UTILIZATION_NAMES_RIGHT = "traeger_contracts:manage";
-
-const UTILIZATION_PATH = "/api/traeger/schools/utilization";
 
 export interface UtilizationOffering {
   readonly id: string;
@@ -185,9 +184,13 @@ export function downloadTraegerUtilization(
   schoolId: string | undefined,
   format: TraegerListFormat,
 ): Promise<TraegerListFile> {
-  return downloadTraegerList(`${UTILIZATION_PATH}/export`, format, {
-    from: window.from,
-    to: window.to,
-    school: schoolId,
-  });
+  return downloadTraegerList(
+    bffFile("org", "GET /traeger/schools/utilization/export", {
+      query: listExportQuery(format, {
+        from: window.from,
+        to: window.to,
+        school: schoolId,
+      }),
+    }),
+  );
 }

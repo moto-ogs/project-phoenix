@@ -1,4 +1,4 @@
-import { bffJson } from "~/lib/bff-fetch";
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the care contracts in the Träger portal (#4678, ADR 0153): the
  * contract template of every offering, the drafts from the accepted
@@ -11,7 +11,6 @@ import {
   type MailOutcome,
   knownMailOutcome,
 } from "~/lib/email-delivery-status";
-import { apiErrorFromResponse, transportFetch } from "./api-error";
 import {
   type CareContractStatus,
   knownContractStatus,
@@ -27,8 +26,6 @@ import {
   correctionChangesFromBackend,
   correctionValuesFromBackend,
 } from "./traeger-contract-correction-api";
-
-const CONTRACTS_PATH = "/api/traeger/contracts";
 
 export type { CareContractStatus } from "./care-contract-status";
 
@@ -653,10 +650,6 @@ function keyToBackend(key: CandidateKey) {
   };
 }
 
-function contractPath(id: string): string {
-  return `${CONTRACTS_PATH}/${encodeURIComponent(id)}`;
-}
-
 export async function fetchCareContracts(
   filter: {
     status?: CareContractStatus;
@@ -798,7 +791,9 @@ export async function discardCareContract(id: string): Promise<void> {
 
 /** The PDF: a preview of a draft, the stored document once sent. */
 export async function downloadCareContract(id: string): Promise<ContractFile> {
-  return downloadContractFile(`${contractPath(id)}/document`);
+  return downloadContractFile(
+    bffFile("org", "GET /traeger/contracts/{id}/document", { params: { id } }),
+  );
 }
 
 /**
@@ -810,24 +805,17 @@ export async function downloadCareContractVersion(
   number: number,
 ): Promise<ContractFile> {
   return downloadContractFile(
-    `${contractPath(id)}/versions/${encodeURIComponent(String(number))}/document`,
+    bffFile("org", "GET /traeger/contracts/{id}/versions/{number}/document", {
+      params: { id, number: String(number) },
+    }),
   );
 }
 
 async function downloadContractFile(
-  path: string,
+  file: Promise<Response>,
   fallbackFilename = "betreuungsvertrag.pdf",
 ): Promise<ContractFile> {
-  const response = await transportFetch(path, {
-    credentials: "include",
-    cache: "no-store",
-  });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Request failed (${response.status})`,
-    );
-  }
+  const response = await file;
   return {
     blob: await response.blob(),
     filename: filenameFromDisposition(response) ?? fallbackFilename,
@@ -869,25 +857,19 @@ export async function recordPaperSignature(
   form.append("file", input.file);
   form.append("signer_name", input.signerName);
   form.append("signed_on", input.signedOn);
-  const response = await transportFetch(`${contractPath(id)}/paper-signature`, {
-    method: "POST",
-    credentials: "include",
-    cache: "no-store",
+  await bffJson("org", "POST /traeger/contracts/{id}/paper-signature", {
+    params: { id },
     body: form,
   });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Request failed (${response.status})`,
-    );
-  }
 }
 
 export async function downloadPaperSignature(
   id: string,
 ): Promise<ContractFile> {
   return downloadContractFile(
-    `${contractPath(id)}/paper-signature`,
+    bffFile("org", "GET /traeger/contracts/{id}/paper-signature", {
+      params: { id },
+    }),
     "vertrag-papier.pdf",
   );
 }

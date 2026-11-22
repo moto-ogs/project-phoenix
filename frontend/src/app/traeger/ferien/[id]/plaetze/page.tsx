@@ -1,5 +1,7 @@
 "use client";
 
+import { bffFile } from "~/lib/bff-fetch";
+
 // Plätze eines Ferienzeitraums (#4699): je Woche, wie viele Plätze es gibt,
 // wie viele vergeben sind und wer auf der Warteliste steht. Das Büro legt
 // hier die Plätze je Woche fest. Mehr Plätze geben die Warteliste sofort
@@ -20,7 +22,10 @@ import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { traegerKeys } from "~/lib/swr/traeger-keys";
 import { fetchHolidayWeekPlaces } from "~/lib/traeger-holiday-registrations-api";
-import { downloadTraegerList } from "~/lib/traeger-list-export";
+import {
+  downloadTraegerList,
+  listExportQuery,
+} from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
 
 export default function TraegerHolidayPlacesPage() {
@@ -60,8 +65,10 @@ export default function TraegerHolidayPlacesPage() {
   const exportItems = useTraegerListExportItems({
     download: (format) =>
       downloadTraegerList(
-        `/api/traeger/holiday-periods/${id}/places/export`,
-        format,
+        bffFile("org", "GET /traeger/holiday-periods/{id}/places/export", {
+          params: { id },
+          query: listExportQuery(format),
+        }),
       ),
     scope: traegerExportScope(),
     fallbackName: "plaetze",
