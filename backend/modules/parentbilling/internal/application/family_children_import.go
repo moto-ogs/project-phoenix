@@ -159,7 +159,7 @@ func decideFamilyImport(candidates []familyImportCandidate, numbers map[string]*
 			}
 		}
 	}
-	decideImportedChildren(rows, current, familyImportDecisionDay(today, familyImportLastDays(candidates)))
+	decideImportedChildren(rows, current, familyImportDecisionDay(today, familyImportTargets(candidates)))
 	var shown []parentbilling.FamilyChildTarget
 	seen := map[int64]bool{}
 	for i, row := range rows {
@@ -182,32 +182,35 @@ func decideFamilyImport(candidates []familyImportCandidate, numbers map[string]*
 // familyImportDecisionDay is the day a row's number has to hold on: the
 // later of today and the day the row names. A confirmation that ends before
 // the row's day is renewed from that day, and the months it covers keep it
-// (FamilyChildCount.InForceOn). Only a family whose contract of the child
-// is still in force on the row's day is decided ahead: for a family the
-// child has left, today decides, so the file does not renew its number for
-// a time the child is no longer part of it.
-func familyImportDecisionDay(today calendar.Date, lastDays map[string]calendar.Date) func(importedChildren) calendar.Date {
+// (FamilyChildCount.InForceOn). Only a family in which a contract of the
+// row's own child is in force on the row's day is decided ahead: for a
+// family the child has left or not yet joined, today decides, so the file
+// does not renew its number for a time the child is no part of it.
+func familyImportDecisionDay(today calendar.Date, targets map[familyImportRowFamily]familyImportTarget) func(importedChildren) calendar.Date {
 	return func(row importedChildren) calendar.Date {
 		day := row.number.ValidFrom
-		if last, known := lastDays[row.family]; day.After(today) && known && !last.Before(day) {
+		if day.After(today) && targets[familyImportRowFamily{row.number.Line, row.family}].covers(day) {
 			return day
 		}
 		return today
 	}
 }
 
-// familyImportLastDays names per family the last day a contract of a row's
-// child is in force.
-func familyImportLastDays(candidates []familyImportCandidate) map[string]calendar.Date {
-	lastDays := map[string]calendar.Date{}
+// familyImportRowFamily names a family of one row of the file.
+type familyImportRowFamily struct {
+	line   int
+	family string
+}
+
+// familyImportTargets are the families of every row by the row's line.
+func familyImportTargets(candidates []familyImportCandidate) map[familyImportRowFamily]familyImportTarget {
+	targets := map[familyImportRowFamily]familyImportTarget{}
 	for _, candidate := range candidates {
 		for _, target := range candidate.targets {
-			if last, known := lastDays[target.family]; target.lastDay != "" && (!known || target.lastDay.After(last)) {
-				lastDays[target.family] = target.lastDay
-			}
+			targets[familyImportRowFamily{candidate.row.Line, target.family}] = target
 		}
 	}
-	return lastDays
+	return targets
 }
 
 // alignFamilyImportDays shows on the ready rows of one family the day the

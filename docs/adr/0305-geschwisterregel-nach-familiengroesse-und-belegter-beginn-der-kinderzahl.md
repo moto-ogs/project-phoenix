@@ -78,7 +78,8 @@ Punkt 5 den Satz zum Beginn der Zahl.
    spätere von heute und dem Tag der Zeile. Die Monate davor behalten die
    alte Bestätigung, weil die Historie der Bestätigungen je Tag entscheidet
    (`FamilyChildCount.InForceOn`). Das gilt nur für eine Familie, in der ein Vertrag des Kindes
-   am Tag der Zeile noch läuft: Für eine Familie, die das Kind verlassen hat,
+   dieser Zeile am Tag der Zeile läuft (ein Geschwistervertrag oder ein
+   späterer Vertrag nach einer Lücke zählt nicht): Für eine Familie, die das Kind verlassen hat,
    entscheidet heute, damit die Datei deren Zahl nicht für eine Zeit
    erneuert, in der das Kind nicht mehr dazugehört. Die Zahl hängt am Vertrag
    der Zeile, die den frühesten Tag der Familie nennt.

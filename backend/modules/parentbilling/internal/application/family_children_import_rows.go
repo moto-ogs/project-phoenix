@@ -186,9 +186,21 @@ type familyImportTarget struct {
 	family     string
 	contractID int64
 	firstDay   calendar.Date
-	// lastDay is the last day any of the child's contracts of the family
-	// is in force.
-	lastDay calendar.Date
+	// inForce are the times the child's contracts of the family are in
+	// force, one per contract.
+	inForce []familyImportSpan
+}
+
+// familyImportSpan is the time one contract is in force, both days
+// included.
+type familyImportSpan struct{ from, until calendar.Date }
+
+// covers tells whether a contract of the child is in force in the family
+// on the day.
+func (t familyImportTarget) covers(day calendar.Date) bool {
+	return slices.ContainsFunc(t.inForce, func(span familyImportSpan) bool {
+		return span.from != "" && span.until != "" && !day.Before(span.from) && !day.After(span.until)
+	})
 }
 
 // familyImportCandidate is a row with the families its number goes to, the
@@ -392,14 +404,12 @@ func (c *familyImportCheck) targets(row *parentbilling.FamilyChildrenImportRow, 
 		position := slices.IndexFunc(targets, func(target familyImportTarget) bool { return target.family == family })
 		switch {
 		case position < 0:
-			targets = append(targets, familyImportTarget{family: family, contractID: contract.id, firstDay: contract.firstDay, lastDay: contract.lastDay})
-			continue
+			targets = append(targets, familyImportTarget{family: family, contractID: contract.id, firstDay: contract.firstDay})
+			position = len(targets) - 1
 		case contract.firstDay.Before(targets[position].firstDay):
 			targets[position].contractID, targets[position].firstDay = contract.id, contract.firstDay
 		}
-		if contract.lastDay.After(targets[position].lastDay) {
-			targets[position].lastDay = contract.lastDay
-		}
+		targets[position].inForce = append(targets[position].inForce, familyImportSpan{contract.firstDay, contract.lastDay})
 	}
 	if !repeated {
 		row.ContractID = ident.ID(targets[0].contractID)

@@ -137,12 +137,18 @@ func TestFamilyImportRenewsAConfirmationThatEndsBeforeTheFileDay(t *testing.T) {
 	t.Parallel()
 	const family = "familie@example.org"
 	today, ends := calendar.NewDate(2026, 11, 22), calendar.NewDate(2027, 7, 31)
-	runs := calendar.NewDate(2027, 8, 22)
-	decideWith := func(children int, from, lastDay calendar.Date) parentbilling.FamilyChildrenImportRow {
+	began, runs := calendar.NewDate(2026, 8, 22), calendar.NewDate(2027, 8, 22)
+	decideWith := func(children int, from calendar.Date, inForce ...familyImportSpan) parentbilling.FamilyChildrenImportRow {
 		candidates := []familyImportCandidate{{
 			row:       parentbilling.FamilyChildrenImportRow{Line: 2, Children: ptr(children)},
-			targets:   []familyImportTarget{{family: family, contractID: 1, lastDay: lastDay}},
+			targets:   []familyImportTarget{{family: family, contractID: 1, inForce: inForce}},
 			validFrom: from,
+		}, {
+			// A sibling's row of the same family whose contract runs on:
+			// it lends the first row no contract.
+			row:       parentbilling.FamilyChildrenImportRow{Line: 3, Children: ptr(children)},
+			targets:   []familyImportTarget{{family: family, contractID: 2, inForce: []familyImportSpan{{began, runs}}}},
+			validFrom: today,
 		}}
 		numbers := map[string]*familyNumbers{family: {brought: []*parentbilling.FamilyChildCount{{
 			FamilyEmail: family, ConfirmedChildren: ptr(3), ValidFrom: ptr(calendar.NewDate(2026, 8, 1)), ValidUntil: &ends}}}}
@@ -150,12 +156,19 @@ func TestFamilyImportRenewsAConfirmationThatEndsBeforeTheFileDay(t *testing.T) {
 		return candidates[0].row
 	}
 	decide := func(children int, from calendar.Date) parentbilling.FamilyChildrenImportRow {
-		return decideWith(children, from, runs)
+		return decideWith(children, from, familyImportSpan{began, runs})
 	}
 	// The child left the family: its contract there ended in August 2026.
-	// Today decides, the confirmation still holds and is not renewed.
-	assert.Equal(t, parentbilling.FamilyImportDiffers, decideWith(4, ends.AddDays(1), calendar.NewDate(2026, 8, 25)).Status,
+	// Today decides, the confirmation still holds and is not renewed, also
+	// when a sibling's contract in the family runs on.
+	left := familyImportSpan{began, calendar.NewDate(2026, 8, 25)}
+	assert.Equal(t, parentbilling.FamilyImportDiffers, decideWith(4, ends.AddDays(1), left).Status,
 		"a family the child has left is not renewed ahead")
+	// The child comes back in September 2027: neither contract covers the
+	// row's day in August, the gap is not bridged.
+	back := familyImportSpan{calendar.NewDate(2027, 9, 1), calendar.NewDate(2027, 12, 31)}
+	assert.Equal(t, parentbilling.FamilyImportDiffers, decideWith(4, ends.AddDays(1), left, back).Status,
+		"a later contract does not bridge a time without one")
 	for _, children := range []int{3, 4} {
 		row := decide(children, ends.AddDays(1))
 		require.Equal(t, parentbilling.FamilyImportReady, row.Status, "%d children after the end are a successor", children)
