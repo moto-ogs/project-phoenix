@@ -21,7 +21,6 @@ GET /parent/me/children/{studentId}/meal-plan
 GET /parent/me/children/{studentId}/parent-conferences
 GET /parent/me/children/{studentId}/pickup-change-requests
 GET /parent/me/children/{studentId}/pickup-permission-requests
-GET /parent/me/children/{studentId}/pickup-requests/{requestId}/proof
 GET /parent/me/children/{studentId}/pickup-requests/{requestId}/proof/pdf
 GET /parent/me/children/{studentId}/related-accounts
 GET /parent/me/children/{studentId}/request-sharing-options

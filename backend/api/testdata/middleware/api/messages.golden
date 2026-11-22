@@ -25,7 +25,6 @@ api.requestIDs.# > api/common.ProblemResponseMiddleware > api/common.TenantRunti
 	GET /api/messages/threads/{threadId}
 	GET /api/messages/unread-count
 	POST /api/messages/mark-all-read
-	POST /api/messages/threads
 	POST /api/messages/threads/open
 	POST /api/messages/threads/{threadId}
 	POST /api/messages/threads/{threadId}/unread

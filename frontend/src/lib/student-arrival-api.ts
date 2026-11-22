@@ -174,10 +174,14 @@ export async function fetchArrivalData(
   date?: string,
   toDate?: string,
 ): Promise<ArrivalData> {
-  const data = await bffJson("tenant", "GET /api/students/{id}/arrival-schedules", {
-    params: { id: studentId },
-    query: { date, to: toDate },
-  });
+  const data = await bffJson(
+    "tenant",
+    "GET /api/students/{id}/arrival-schedules",
+    {
+      params: { id: studentId },
+      query: { date, to: toDate },
+    },
+  );
   return mapArrivalData(data);
 }
 
@@ -201,7 +205,10 @@ export async function fetchBulkArrivalScheduleStatus(
 }
 
 export async function fetchArrivalSettings(): Promise<ArrivalSettings> {
-  const settings = await bffJson("tenant", "GET /api/students/arrival-settings");
+  const settings = await bffJson(
+    "tenant",
+    "GET /api/students/arrival-settings",
+  );
   return {
     careDaysSource:
       knownEnum(CARE_DAYS_SOURCES, settings.care_days_source) ?? null,
@@ -218,10 +225,14 @@ export async function updateArrivalSchedules(
   studentId: string,
   schedules: ArrivalScheduleRequestItem[],
 ): Promise<ArrivalData> {
-  const data = await bffJson("tenant", "PUT /api/students/{id}/arrival-schedules", {
-    params: { id: studentId },
-    body: { schedules },
-  });
+  const data = await bffJson(
+    "tenant",
+    "PUT /api/students/{id}/arrival-schedules",
+    {
+      params: { id: studentId },
+      body: { schedules },
+    },
+  );
   return mapArrivalData(data);
 }
 
@@ -254,17 +265,23 @@ export async function bulkUpsertArrivalSchedules(
     }
     body.student_ids = studentIds;
   }
-  return bffJson("tenant", "POST /api/students/arrival-schedules/bulk", { body });
+  return bffJson("tenant", "POST /api/students/arrival-schedules/bulk", {
+    body,
+  });
 }
 
 export async function createArrivalException(
   studentId: string,
   input: StudentArrivalExceptionRequest,
 ): Promise<ArrivalException> {
-  const data = await bffJson("tenant", "POST /api/students/{id}/arrival-exceptions", {
-    params: { id: studentId },
-    body: input,
-  });
+  const data = await bffJson(
+    "tenant",
+    "POST /api/students/{id}/arrival-exceptions",
+    {
+      params: { id: studentId },
+      body: input,
+    },
+  );
   return mapArrivalException(data);
 }
 
@@ -285,19 +302,27 @@ export async function deleteArrivalException(
   studentId: string,
   exceptionId: string,
 ): Promise<void> {
-  await bffJson("tenant", "DELETE /api/students/{id}/arrival-exceptions/{exceptionId}", {
-    params: { id: studentId, exceptionId },
-  });
+  await bffJson(
+    "tenant",
+    "DELETE /api/students/{id}/arrival-exceptions/{exceptionId}",
+    {
+      params: { id: studentId, exceptionId },
+    },
+  );
 }
 
 export async function createArrivalNote(
   studentId: string,
   input: ArrivalNoteRequest,
 ): Promise<ArrivalNote> {
-  const data = await bffJson("tenant", "POST /api/students/{id}/arrival-notes", {
-    params: { id: studentId },
-    body: input,
-  });
+  const data = await bffJson(
+    "tenant",
+    "POST /api/students/{id}/arrival-notes",
+    {
+      params: { id: studentId },
+      body: input,
+    },
+  );
   return mapArrivalNote(data);
 }
 
@@ -306,10 +331,14 @@ export async function updateArrivalNote(
   noteId: string,
   input: ArrivalNoteRequest,
 ): Promise<ArrivalNote> {
-  const data = await bffJson("tenant", "PUT /api/students/{id}/arrival-notes/{noteId}", {
-    params: { id: studentId, noteId },
-    body: input,
-  });
+  const data = await bffJson(
+    "tenant",
+    "PUT /api/students/{id}/arrival-notes/{noteId}",
+    {
+      params: { id: studentId, noteId },
+      body: input,
+    },
+  );
   return mapArrivalNote(data);
 }
 
@@ -326,9 +355,13 @@ export async function deleteArrivalNote(
 export async function fetchClassArrivalTimes(
   schoolClass: string,
 ): Promise<ClassArrivalTimesResponse> {
-  return bffJson("tenant", "GET /api/students/class-arrival-times/{schoolClass}", {
-    params: { schoolClass },
-  });
+  return bffJson(
+    "tenant",
+    "GET /api/students/class-arrival-times/{schoolClass}",
+    {
+      params: { schoolClass },
+    },
+  );
 }
 
 /**
@@ -339,9 +372,13 @@ export async function fetchClassArrivalTimes(
 export async function fetchClassArrivalExceptions(
   schoolClass: string,
 ): Promise<ClassArrivalExceptionListResponse> {
-  return bffJson("tenant", "GET /api/students/class-arrival-exceptions/{schoolClass}", {
-    params: { schoolClass },
-  });
+  return bffJson(
+    "tenant",
+    "GET /api/students/class-arrival-exceptions/{schoolClass}",
+    {
+      params: { schoolClass },
+    },
+  );
 }
 
 export async function upsertClassArrivalException(

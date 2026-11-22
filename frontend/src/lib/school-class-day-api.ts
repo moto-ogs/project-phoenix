@@ -66,22 +66,22 @@ export async function fetchClassArrivalExceptionsSchool(
   schoolClass: string,
 ): Promise<ClassArrivalExceptionListResponse> {
   const params = new URLSearchParams({ class: schoolClass });
-  const response = await authFetch<ApiResponse<ClassArrivalExceptionListResponse>>(
-    `/api/school/class-day/arrival-exceptions?${params.toString()}`,
-  );
+  const response = await authFetch<
+    ApiResponse<ClassArrivalExceptionListResponse>
+  >(`/api/school/class-day/arrival-exceptions?${params.toString()}`);
   return response.data;
 }
 
 export async function upsertClassArrivalExceptionSchool(
   schoolClass: string,
   date: string,
-  input: ArrivalExceptionRequest,
+  input: schoolClassDayContract.ArrivalExceptionRequest,
 ): Promise<ClassArrivalExceptionResponse> {
   const response = await authFetch<ApiResponse<ClassArrivalExceptionResponse>>(
     arrivalExceptionPath(schoolClass, date),
     {
       method: "PUT",
-      body: input satisfies schoolClassDayContract.ArrivalExceptionRequest,
+      body: input,
     },
   );
   return response.data;
