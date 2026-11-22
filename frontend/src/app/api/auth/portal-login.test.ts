@@ -157,9 +157,11 @@ describe.each(portals)(
           ),
         );
         expect(response.status).toBe(200);
-        expect(await response.json()).toEqual(
-          wrapStep({ status: "authenticated" }),
-        );
+        // The BFF answers every sign-in step in the success envelope.
+        expect(await response.json()).toEqual({
+          status: "success",
+          data: { status: "authenticated" },
+        });
         expect(backend.mock.calls[0]?.[0]).toBe(
           `http://server:8080/${portal}/auth/${step}`,
         );
@@ -289,7 +291,7 @@ describe.each(portals)(
           LOGIN[portal],
           "login",
         )(request(portal));
-        expect(await response.json()).toEqual(wrap(data));
+        expect(await response.json()).toEqual({ status: "success", data });
         expect(response.headers.getSetCookie()).toEqual([]);
         expect(backend).toHaveBeenCalledOnce();
       },
@@ -334,8 +336,11 @@ it("allowlists Träger organization selection without disclosing credentials", a
     "login",
   )(request("traeger"));
   expect(await response.json()).toEqual({
-    status: "organization_selection_required",
-    organizations: [{ id: 9, name: "Träger Nord" }],
+    status: "success",
+    data: {
+      status: "organization_selection_required",
+      organizations: [{ id: 9, name: "Träger Nord" }],
+    },
   });
   expect(response.headers.getSetCookie()).toEqual([]);
 });

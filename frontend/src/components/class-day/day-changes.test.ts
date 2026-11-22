@@ -10,7 +10,7 @@ import {
 
 function row(overrides: Partial<ClassDayRow> = {}): ClassDayRow {
   return {
-    student_id: 1,
+    student_id: "1",
     first_name: "Lena",
     last_name: "Meyer",
     registered: true,
@@ -27,6 +27,12 @@ function report(rows: ClassDayRow[], schoolClass = "2a"): ClassDayReport {
     weekday: "mon",
     school_day: true,
     enrollment_known: true,
+    can_write_day_hints: false,
+    can_record_morning_attendance: false,
+    can_write_homework: false,
+    can_read_shared_notes: false,
+    can_hand_over: false,
+    can_report_absences: false,
     totals: {
       students: rows.length,
       staying: 0,
@@ -55,7 +61,7 @@ describe("isDayChange", () => {
     // Ein Kind ohne OGS-Datensatz hat keinen Plan, von dem es abweichen
     // könnte — es zählt nie als Abweichung.
     expect(
-      isDayChange(row({ list_entry: true, student_id: 0, status: "sick" })),
+      isDayChange(row({ list_entry: true, student_id: "0", status: "sick" })),
     ).toBe(false);
   });
 });
@@ -64,10 +70,10 @@ describe("countDayChanges", () => {
   it("zählt Status und geänderte Abholzeiten zusammen", () => {
     const count = countDayChanges(
       report([
-        row({ student_id: 1, status: "sick" }),
-        row({ student_id: 2, pickup_changed: true }),
-        row({ student_id: 3, pickup: "15:00" }),
-        row({ student_id: 0, list_entry: true }),
+        row({ student_id: "1", status: "sick" }),
+        row({ student_id: "2", pickup_changed: true }),
+        row({ student_id: "3", pickup: "15:00" }),
+        row({ student_id: "0", list_entry: true }),
       ]),
     );
 

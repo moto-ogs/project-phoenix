@@ -35,9 +35,12 @@ describe("performStartStaffPreview", () => {
   it("reads only allowlisted metadata and clears caches after the server swap", async () => {
     mockSessionFetch.mockResolvedValue(
       Response.json({
-        expires_in: 900,
-        target_account_id: "42",
-        target_name: "Anna Beispiel",
+        status: "success",
+        data: {
+          expires_in: 900,
+          target_account_id: "42",
+          target_name: "Anna Beispiel",
+        },
       }),
     );
     await expect(performStartStaffPreview("42", swrMutate)).resolves.toEqual({

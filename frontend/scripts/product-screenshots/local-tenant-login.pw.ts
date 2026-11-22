@@ -134,8 +134,11 @@ for (const { enrollment, deviceChoice } of childOrigin
           loginCount++;
           response.end(
             JSON.stringify({
-              status: enrollment ? "mfa_enrollment_required" : "mfa_required",
-              trusted_device_enabled: trustedDeviceEnabled,
+              status: "success",
+              data: {
+                status: enrollment ? "mfa_enrollment_required" : "mfa_required",
+                trusted_device_enabled: trustedDeviceEnabled,
+              },
             }),
           );
           return;

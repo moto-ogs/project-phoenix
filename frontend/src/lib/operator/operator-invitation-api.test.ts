@@ -158,7 +158,7 @@ describe("public invitation session", () => {
   it("moves the URL token into the server-owned session", async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ flow_id: "flow-1" }),
+      json: async () => ({ status: "success", data: { flow_id: "flow-1" } }),
     });
 
     await expect(

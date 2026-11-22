@@ -255,7 +255,9 @@ export function ClassDayClass({
         return {
           classes: [],
           can_write_arrival_exception: false,
+          can_report_class_trip: false,
           weekend_follows_friday: false,
+          can_view_school_day: false,
         };
       }
       try {
@@ -393,10 +395,9 @@ export function ClassDayClass({
   const sharedNotesHref =
     report?.can_read_shared_notes === true
       ? (row: ClassDayRow) => {
-          if (row.list_entry || row.without_care_place || row.student_id <= 0)
-            return undefined;
+          if (row.list_entry || row.without_care_place) return undefined;
           return schoolPath(
-            classDayChildPath(schoolClass, String(row.student_id), dateISO),
+            classDayChildPath(schoolClass, row.student_id, dateISO),
           );
         }
       : undefined;
@@ -405,7 +406,7 @@ export function ClassDayClass({
     report?.can_write_day_hints === true && isAssignedClass && !weekend;
   // Hinweise an die OGS sind nur für Kinder mit Betreuungsplatz.
   const hintChildren = rows.filter(
-    (row) => !row.list_entry && !row.without_care_place && row.student_id > 0,
+    (row) => !row.list_entry && !row.without_care_place,
   );
   const hintOptions = [
     {
@@ -414,22 +415,19 @@ export function ClassDayClass({
       label: `Die ganze ${schoolClassLabel(schoolClass)}`,
     },
     ...hintChildren.map((row) => ({
-      value: String(row.student_id),
+      value: row.student_id,
       label: `${row.last_name}, ${row.first_name}`,
     })),
   ];
   const ownHintFor = (target: string): ClassDayHint | undefined => {
     if (target === CLASS_TARGET) return classHints.find((hint) => hint.own);
-    const row = hintChildren.find(
-      (child) => String(child.student_id) === target,
-    );
+    const row = hintChildren.find((child) => child.student_id === target);
     return row?.day_hints?.find((hint) => hint.own);
   };
   const existingHint = ownHintFor(hintTarget);
   const trimmedHint = hintBody.trim();
   const hintTooLong = dayHintLength(trimmedHint) > DAY_HINT_MAX_LENGTH;
-  const hintStudentId =
-    hintTarget === CLASS_TARGET ? undefined : Number(hintTarget);
+  const hintStudentId = hintTarget === CLASS_TARGET ? undefined : hintTarget;
 
   const chooseHintTarget = (target: string) => {
     setHintTarget(target);
@@ -512,12 +510,9 @@ export function ClassDayClass({
   const tripStudents = useMemo(
     () =>
       rows
-        .filter(
-          (row) =>
-            !row.list_entry && !row.without_care_place && row.student_id > 0,
-        )
+        .filter((row) => !row.list_entry && !row.without_care_place)
         .map((row) => ({
-          id: String(row.student_id),
+          id: row.student_id,
           first_name: row.first_name,
           second_name: row.last_name,
           name: `${row.first_name} ${row.last_name}`.trim(),
@@ -613,7 +608,7 @@ export function ClassDayClass({
     !weekend;
   const ogsRows = useMemo(() => handoverRows(rows), [rows]);
   const [handoverOpen, setHandoverOpen] = useState(false);
-  const [handoverAbsent, setHandoverAbsent] = useState<ReadonlySet<number>>(
+  const [handoverAbsent, setHandoverAbsent] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
   const handoverSave = useFormModalPending(handoverOpen);
@@ -627,7 +622,7 @@ export function ClassDayClass({
     setHandoverAbsent(initialAbsentIds(rows, Boolean(report?.handover), draft));
     setHandoverOpen(true);
   };
-  const markHandover = (studentId: number, choice: HandoverChoice) => {
+  const markHandover = (studentId: string, choice: HandoverChoice) => {
     setHandoverAbsent((current) => {
       const next = new Set(current);
       if (choice === "absent") next.add(studentId);
@@ -643,10 +638,10 @@ export function ClassDayClass({
         await handOverClass(schoolClass, dateISO, {
           present: ogsRows
             .filter((row) => !handoverAbsent.has(row.student_id))
-            .map((row) => String(row.student_id)),
+            .map((row) => row.student_id),
           absent: ogsRows
             .filter((row) => handoverAbsent.has(row.student_id))
-            .map((row) => String(row.student_id)),
+            .map((row) => row.student_id),
         });
         await reportAfterWrite.refresh();
         if (op.isCurrent()) setHandoverOpen(false);

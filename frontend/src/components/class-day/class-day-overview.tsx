@@ -117,7 +117,7 @@ function reportLine(report: ClassDayReport): ClassLine {
 
 function schoolDayLines(report: SchoolDayReport): Record<string, ClassLine> {
   const lines: Record<string, ClassLine> = {};
-  for (const klass of report.classes) {
+  for (const klass of report.classes ?? []) {
     lines[klass.school_class] = {
       school_day: report.school_day,
       enrollment_known: report.enrollment_known,
