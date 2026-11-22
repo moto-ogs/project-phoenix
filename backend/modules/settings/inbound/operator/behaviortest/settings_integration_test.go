@@ -473,7 +473,9 @@ func TestOperatorResetSchoolSettingValue_NonPhotoKeyDoesNotInvokeOnValueSet(t *t
 
 	req := newOperatorRequest(t, http.MethodDelete, schoolPath(t, "/settings/values/checkout.schulhof_enabled"), nil)
 	rr := testutil.ExecuteRequest(ctx.router, req)
-	testutil.AssertSuccessResponse(t, rr, http.StatusNoContent)
+	// Every reset answers one shape, the slug only for the photo flag (#7808).
+	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
+	assert.NotContains(t, rr.Body.String(), "school_slug")
 	assert.False(t, called, "non-photo operator reset must not fire OnValueSet")
 }
 

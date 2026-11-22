@@ -36,8 +36,8 @@ func TestAuthenticationOrganizationIDs(t *testing.T) {
 
 	for _, id := range []string{`"9007199254740993"`, `9007199254740993`, `-1`} {
 		t.Run(id, func(t *testing.T) {
-			login := &LoginRequest{}
-			mfa := &MFAVerifyRequest{}
+			login := &TraegerLoginRequest{}
+			mfa := &TraegerMFAVerifyRequest{}
 			for _, request := range []render.Binder{login, mfa} {
 				r := httptest.NewRequest("POST", "/", strings.NewReader(`{"email":"a@b.de","password":"pw","challenge_token":"challenge","code":"123456","organization_id":`+id+`}`))
 				r.Header.Set("Content-Type", "application/json")

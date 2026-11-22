@@ -24,7 +24,17 @@ import {
   SettingsSchemaSchema,
   type MFAAdminOverrideSetRequest,
   type MFAAdminResetRequest,
+  type setSchoolSettingRequest,
 } from "./shared.generated";
+
+/** Go: operator.schoolSettingMutationResponse */
+export interface schoolSettingMutationResponse {
+  school_slug?: string;
+}
+
+export const schoolSettingMutationResponseSchema: z.ZodType<schoolSettingMutationResponse, unknown> = object<schoolSettingMutationResponse>({
+  school_slug: optional(str),
+});
 
 /** Go: organizationtenancy.SchoolRequiredDetails */
 export interface SchoolRequiredDetails {
@@ -276,6 +286,11 @@ export interface deviceSlotsRequest {
   device_slots?: number | null;
 }
 
+/** Query of PUT /operator/schools/{id}/settings/values/{key} */
+export interface PutOperatorSchoolsIdSettingsValuesKeyQuery {
+  force?: "true";
+}
+
 export const routes = {
   "DELETE /operator/schools/{id}": {
     method: "DELETE",
@@ -295,6 +310,13 @@ export const routes = {
     portals: ["platform"],
     request: requestBody<MFAAdminResetRequest>(),
     response: noData,
+  },
+  "DELETE /operator/schools/{id}/settings/values/{key}": {
+    method: "DELETE",
+    pattern: "/operator/schools/{id}/settings/values/{key}",
+    portals: ["platform"],
+    routeFile: "the operator's route file purges the school's cached tenant lookup",
+    response: success(schoolSettingMutationResponseSchema),
   },
   "GET /operator/schools/": {
     method: "GET",
@@ -422,5 +444,14 @@ export const routes = {
     portals: ["platform"],
     request: requestBody<deviceSlotsRequest>(),
     response: noData,
+  },
+  "PUT /operator/schools/{id}/settings/values/{key}": {
+    method: "PUT",
+    pattern: "/operator/schools/{id}/settings/values/{key}",
+    portals: ["platform"],
+    routeFile: "the operator's route file purges the school's cached tenant lookup",
+    query: ["force"],
+    request: requestBody<setSchoolSettingRequest>(),
+    response: success(schoolSettingMutationResponseSchema),
   },
 } as const;

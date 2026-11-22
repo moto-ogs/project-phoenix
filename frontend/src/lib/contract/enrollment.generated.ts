@@ -25,6 +25,7 @@ import {
   FormAttachmentSchema,
   FormFieldSchema,
   FormLegalBlockSchema,
+  GuardianProfileResponseSchema,
   LegalBlockSchema,
   PublicEnrollmentFormBootstrapResponseSchema,
   PublicFormSchemaResponseSchema,
@@ -2103,6 +2104,11 @@ export interface GetEnrollmentCareOfferingsBookingStatsQuery {
   phase_id?: string;
 }
 
+/** Query of GET /api/enrollment/form-bootstrap/public/{tenantSlug}/{phaseId} */
+export interface GetEnrollmentFormBootstrapPublicTenantSlugPhaseIdQuery {
+  late_invite?: string;
+}
+
 /** Query of GET /api/enrollment/legal/{tenantSlug} */
 export interface GetEnrollmentLegalTenantSlugQuery {
   late_invite?: string;
@@ -2296,6 +2302,14 @@ export const routes = {
     deprecated: true,
     response: success(CareOfferingResponseSchema),
   },
+  "GET /api/enrollment/form-bootstrap/public/{tenantSlug}/{phaseId}": {
+    method: "GET",
+    pattern: "/api/enrollment/form-bootstrap/public/{tenantSlug}/{phaseId}",
+    portals: ["tenant"],
+    routeFile: "the route file adds the signed-in staff member's profile to the public form",
+    query: ["late_invite"],
+    response: success(PublicEnrollmentFormBootstrapResponseSchema),
+  },
   "GET /api/enrollment/legal/{tenantSlug}": {
     method: "GET",
     pattern: "/api/enrollment/legal/{tenantSlug}",
@@ -2309,6 +2323,13 @@ export const routes = {
     portals: ["public"],
     query: ["late_invite"],
     response: success(PublicLegalTextsResponseSchema),
+  },
+  "GET /api/enrollment/me/profile": {
+    method: "GET",
+    pattern: "/api/enrollment/me/profile",
+    portals: ["tenant"],
+    routeFile: "read only by the form bootstrap's route file",
+    response: success(GuardianProfileResponseSchema),
   },
   "GET /api/enrollment/phases/": {
     method: "GET",

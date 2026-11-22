@@ -3,6 +3,7 @@ package operator
 import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	"github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/portalauth"
 )
 
 // RouteContracts registers the operator's profile and password, its own
@@ -72,4 +73,34 @@ func PublicRouteContracts() []common.RouteContract {
 		Method: "POST", Pattern: "/auth/email-confirm", Portals: []common.PortalScope{common.PortalPublic},
 		Request: ConfirmEmailChangeRequest{}, NoData: true, MaxBodyBytes: emailConfirmBodyBytes,
 	}}
+}
+
+// SessionRouteContracts registers the operator's session steps (#7808),
+// relative to /operator: sign-in, second factor, passkey sign-in, renewal
+// and sign-out, and the invitation steps whose token the route file reads
+// from the flow cookie. No proxy allowlist names them.
+func SessionRouteContracts() []common.RouteContract {
+	operator := []common.PortalScope{common.PortalOperator}
+	step := func(pattern string, request, response any, plain bool) common.RouteContract {
+		return common.RouteContract{
+			Method: "POST", Pattern: pattern, Portals: operator, RouteFile: common.RouteFileSession,
+			Request: request, Response: response, NoData: response == nil, Plain: plain,
+		}
+	}
+	const flowCookie = "the route file reads the invitation token from the flow cookie, never from the URL"
+	validate := step("/auth/invitations/validate", ValidateInvitationRequest{}, OperatorInvitationValidationResponse{}, false)
+	validate.RouteFile = flowCookie
+	return []common.RouteContract{
+		step("/auth/login", OperatorLoginRequest{}, OperatorLoginResponse{}, false),
+		step("/auth/logout", nil, nil, false),
+		step("/auth/refresh", nil, portalauth.TokenResponse{}, false),
+		step("/auth/mfa/enroll/start", nil, nil, false),
+		step("/auth/mfa/enroll/confirm", MFAEnrollConfirmRequest{}, portalauth.TokenResponse{}, false),
+		step("/auth/mfa/resend", MFAResendRequest{}, MFAResendResponse{}, true),
+		step("/auth/mfa/verify", MFAVerifyRequest{}, portalauth.TokenResponse{}, false),
+		step("/auth/passkeys/login/options", nil, identityaccess.PasskeyCeremonyOptions{}, true),
+		step("/auth/passkeys/login/verify", operatorPasskeyVerifyRequest{}, portalauth.LoginResponse{}, true),
+		validate,
+		step("/auth/invitations/accept", OperatorAcceptInvitationRequest{}, OperatorResponse{}, false),
+	}
 }
