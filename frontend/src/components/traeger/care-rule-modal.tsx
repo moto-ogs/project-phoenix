@@ -72,7 +72,7 @@ const SIBLING_SCOPE_ITEMS: { value: SiblingScope; label: string }[] = [
 ];
 
 /** In einem Satz, wen die Geschwisterregel mit diesen Angaben ermäßigt. */
-export function siblingScopeSentence(
+function siblingScopeSentence(
   scope: SiblingScope,
   fromChild: number,
   countsFamilyChildren: boolean,

@@ -15,7 +15,7 @@ import (
 // else the day of the file, never the first day of the contract.
 func TestFamilyImportRowsCountFromTheDayTheOfficeNames(t *testing.T) {
 	t.Parallel()
-	const school = int64(7)
+	const school = int64(schoolIspringen)
 	fileDay, contractStart := calendar.NewDate(2026, 11, 1), calendar.NewDate(2025, 8, 1)
 	headers := []string{"Vorname", "Nachname", "Kinderzahl", "Gültig ab"}
 	schools := []parentbilling.CareSchool{{ID: ident.ID(school), Name: "Grundschule Nord"}}
