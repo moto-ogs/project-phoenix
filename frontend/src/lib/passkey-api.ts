@@ -1,4 +1,9 @@
-import { ApiError, apiErrorFromBody, transportFetch } from "./api-error";
+import {
+  ApiError,
+  apiErrorFromBody,
+  apiErrorFromResponse,
+  transportFetch,
+} from "./api-error";
 import { bffJson, bffJsonUncontracted } from "./bff-fetch";
 import type * as sharedContract from "./contract/shared.generated";
 import { portalAuthPath, type PortalKey } from "./portal-paths";
@@ -80,6 +85,34 @@ async function requestLoginOptions(
   return data as sharedContract.PasskeyCeremonyOptions;
 }
 
+/**
+ * The operator's registration options. bffJson's operator row sends every 401
+ * to the login and takes no `authRefusals` yet (#7806 closing PR), so a wrong
+ * code would end at the login instead of the form: this step keeps its own
+ * call until the helper can refuse it in place.
+ */
+async function operatorRegisterOptions(
+  body: sharedContract.PasskeyRegisterOptionsRequest,
+): Promise<sharedContract.PasskeyCeremonyOptions> {
+  const response = await transportFetch(
+    "/api/operator/auth/passkeys/register/options",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(body),
+    },
+  );
+  if (!response.ok) {
+    throw await apiErrorFromResponse(response, PASSKEY_ERROR);
+  }
+  // The catalog proxy has decoded the answer into its envelope.
+  const answer = (await response.json()) as {
+    data: sharedContract.PasskeyCeremonyOptions;
+  };
+  return answer.data;
+}
+
 export function isPasskeyCeremonyIncompleteError(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
 
@@ -151,6 +184,8 @@ function registerOptions(
   scope: PasskeyScope,
   body: sharedContract.PasskeyRegisterOptionsRequest,
 ): Promise<sharedContract.PasskeyCeremonyOptions> {
+  // A wrong mailed code answers 401 identity.mfa_code_invalid: it refuses
+  // this step and leaves the session as it is.
   const options = {
     body,
     errorMessage: PASSKEY_ERROR,
@@ -160,11 +195,7 @@ function registerOptions(
     case "tenant":
       return bffJson("tenant", "POST /auth/passkeys/register/options", options);
     case "operator":
-      return bffJson(
-        "platform",
-        "POST /operator/auth/passkeys/register/options",
-        options,
-      );
+      return operatorRegisterOptions(body);
     case "caterer":
       return bffJson(
         "caterer",

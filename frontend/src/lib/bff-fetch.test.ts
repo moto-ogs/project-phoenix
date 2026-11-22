@@ -383,22 +383,6 @@ describe("bffJson", () => {
     expect(location.href).toBe("/operator/login");
   });
 
-  it("still redirects an expired operator session when a different refusal is allowed", async () => {
-    const location = { pathname: "/operator/settings", href: "" };
-    vi.stubGlobal("window", { location });
-    mockTransportFetch.mockResolvedValueOnce(
-      Response.json({ code: "general.permission" }, { status: 401 }),
-    );
-
-    await expect(
-      bffJson("platform", "POST /operator/auth/passkeys/register/options", {
-        body: { code: "000000", name: "Laptop" },
-        authRefusals: ["identity.mfa_code_invalid"],
-      }),
-    ).rejects.toMatchObject({ status: 401, message: "Session expired" });
-    expect(location.href).toBe("/operator/login");
-  });
-
   it("sends parents to the login on a 401 and throws the backend's error", async () => {
     const assign = vi.fn();
     vi.stubGlobal("window", { location: { assign } });
