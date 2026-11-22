@@ -1,7 +1,6 @@
 package application
 
 import (
-	"maps"
 	"slices"
 	"strings"
 
@@ -62,41 +61,32 @@ func contractFamilies(byContract map[int64][]parentbilling.CareContractVersion, 
 }
 
 // joinSchoolChanges joins the children of E1 that are one child changing its
-// school, in the order of the children: a joined child stands where its
-// first part stood. joined names the joined children by their index in
-// the result.
+// school. The result keeps the places of E1: a joined child stands where its
+// first part stood, and the places of its other parts stay empty, so every
+// other child keeps its place and the sibling chain its key. joined names
+// the joined children by their place.
 func joinSchoolChanges(children [][]int64, byContract map[int64][]parentbilling.CareContractVersion, families map[int64]string) (result [][]int64, joined []int) {
 	parts := make([]schoolChangePart, len(children))
 	for i, child := range children {
 		parts[i] = schoolChangePartOf(child, byContract, families)
 	}
-	into := map[int]int{}
+	result = children
 	for _, bucket := range schoolChangeBuckets(parts) {
 		if !bucketJoins(bucket, parts, children, byContract) {
 			continue
 		}
+		if joined == nil {
+			result = slices.Clone(children)
+		}
+		first := bucket[0]
+		result[first] = slices.Clone(result[first])
 		for _, part := range bucket[1:] {
-			into[part] = bucket[0]
+			result[first] = append(result[first], children[part]...)
+			result[part] = nil
 		}
+		joined = append(joined, first)
 	}
-	if len(into) == 0 {
-		return children, nil
-	}
-	at := map[int]int{}
-	for i, child := range children {
-		if first, ok := into[i]; ok {
-			result[at[first]] = append(result[at[first]], child...)
-			continue
-		}
-		at[i] = len(result)
-		result = append(result, slices.Clone(child))
-	}
-	firsts := slices.Sorted(maps.Values(into))
-	for i := range children {
-		if _, found := slices.BinarySearch(firsts, i); found {
-			joined = append(joined, at[i])
-		}
-	}
+	slices.Sort(joined)
 	return result, joined
 }
 

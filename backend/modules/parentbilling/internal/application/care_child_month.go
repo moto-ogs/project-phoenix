@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
@@ -150,8 +151,8 @@ func childKeys(byContract map[int64][]parentbilling.CareContractVersion, childre
 	byRecord := map[int64]string{}
 	byPerson := map[string][]string{}
 	personless := map[string][]string{}
-	for _, child := range children {
-		key := fmt.Sprintf("child:%019d", slices.Min(child))
+	for i, child := range children {
+		key := "child:" + strconv.Itoa(i)
 		for _, contractID := range child {
 			keys[contractID] = key
 			identity := childOfVersion(byContract[contractID][0])
@@ -185,17 +186,49 @@ func attachIssued(keys map[int64]string, index childIndex, byContract map[int64]
 ) {
 	recorded, unrecorded := outsideInForce(byContract, issued)
 	records := recordsByPerson(byContract, issued, recorded)
+	byRecord := map[int64][]int64{}
+	var order []int64
 	for _, contractID := range recorded {
-		child := issued[contractID]
-		key, known := index.byRecord[*child.StudentID]
-		if !known {
-			key = newRecordKey(child, records, index.personless)
+		record := *issued[contractID].StudentID
+		if _, seen := byRecord[record]; !seen {
+			order = append(order, record)
 		}
-		addRecordKey(index.byRecord, index.byPerson, child, key)
-		keys[contractID] = key
+		byRecord[record] = append(byRecord[record], contractID)
+	}
+	for _, record := range order {
+		key, known := index.byRecord[record]
+		if !known {
+			key = newRecordKey(record, byRecord[record], issued, records, index.personless)
+		}
+		for _, contractID := range byRecord[record] {
+			addRecordKey(index.byRecord, index.byPerson, issued[contractID], key)
+			keys[contractID] = key
+		}
 	}
 	for _, contractID := range unrecorded {
 		keys[contractID] = unrecordedKey(personOf(issued[contractID]), index.byPerson, index.personless)
+	}
+	keyIssuedChildren(keys, issued, byContract)
+}
+
+// keyIssuedChildren names a child only issued contracts bill by its first
+// contract, as E1 did (#7863): "contract:" and the smallest of them.
+func keyIssuedChildren(keys map[int64]string, issued map[int64]parentbilling.CareContractChild,
+	byContract map[int64][]parentbilling.CareContractVersion,
+) {
+	first := map[string]int64{}
+	for _, contractID := range slices.Sorted(maps.Keys(issued)) {
+		if _, inForce := byContract[contractID]; inForce || strings.HasPrefix(keys[contractID], "child:") {
+			continue
+		}
+		if _, seen := first[keys[contractID]]; !seen {
+			first[keys[contractID]] = contractID
+		}
+	}
+	for contractID, key := range keys {
+		if id, issuedOnly := first[key]; issuedOnly {
+			keys[contractID] = "contract:" + strconv.FormatInt(id, 10)
+		}
 	}
 }
 
@@ -235,15 +268,24 @@ func recordsByPerson(byContract map[int64][]parentbilling.CareContractVersion, i
 	return records
 }
 
-// newRecordKey is the child of an issued contract whose record no contract
-// in force names: the one child in force without a record of its name and
-// date of birth when its record is the only one of them (E1), else its own.
-func newRecordKey(child parentbilling.CareContractChild, records map[string][]int64, personless map[string][]string) string {
-	person := personOf(child)
-	if found := personless[person]; len(records[person]) == 1 && len(found) == 1 {
+// newRecordKey is the child of the issued contracts of a record no contract
+// in force names: the one child in force without a record that one of
+// their spellings names, when the record is the only one of that name and
+// date of birth (E1), else the record's own.
+func newRecordKey(record int64, contracts []int64, issued map[int64]parentbilling.CareContractChild, records map[string][]int64,
+	personless map[string][]string,
+) string {
+	var found []string
+	for _, contractID := range contracts {
+		person := personOf(issued[contractID])
+		if candidates := personless[person]; len(records[person]) == 1 && len(candidates) == 1 && !slices.Contains(found, candidates[0]) {
+			found = append(found, candidates[0])
+		}
+	}
+	if len(found) == 1 {
 		return found[0]
 	}
-	return fmt.Sprintf("student:%019d", *child.StudentID)
+	return fmt.Sprintf("student:%d", record)
 }
 
 // unrecordedKey is the child of a contract without a record (E1): the one

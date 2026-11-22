@@ -1,6 +1,7 @@
 package application
 
 import (
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -298,9 +299,9 @@ func assertJoined(t *testing.T, month careMonth, joined bool) {
 	assert.Empty(t, narrowMonth(month, []int64{schoolBirkenfeld + 100}, nil).joined)
 }
 
-// The sibling chain counts a child under a key of its own contracts: a
-// school change of another family does not renumber it, so a tie between
-// twins keeps its order (#7874).
+// A school change joins two children of one family; every other child
+// keeps its place and so its key in the sibling chain, so a tie between
+// twins of another family keeps its order (#7874).
 func TestCareChildKeysDoNotDependOnOtherFamilies(t *testing.T) {
 	t.Parallel()
 	twin := func(contract, student int64, first string) parentbilling.CareContractVersion {
@@ -308,23 +309,24 @@ func TestCareChildKeysDoNotDependOnOtherFamilies(t *testing.T) {
 		version.StudentID, version.ChildFirstName, version.ChildBirthDate = ptr(student), first, ptr(day(t, "2017-02-03"))
 		return version
 	}
-	twins := []parentbilling.CareContractVersion{twin(910, 9910, "Ida"), twin(911, 9911, "Ole")}
-	byContract, order := versionsByContract(twins)
-	before := childKeys(byContract, childrenOf(byContract, order, contractFamilies(byContract, nil)), nil)
-
 	moved := []parentbilling.CareContractVersion{
 		sjrVersion(t, 101, schoolBirkenfeld, 1, billingMonth, "2027-01-14", mon1400),
 		sjrVersion(t, 102, schoolIspringen, 1, "2027-01-15", "2027-01-31", mon1400),
 	}
-	recipients := map[int64]parentbilling.CareRecipient{101: {Email: familyEva}, 102: {Email: familyEva}}
 	for i := range moved {
 		moved[i].ChildFirstName, moved[i].ChildBirthDate = "Noah", ptr(day(t, noahBirth))
 	}
-	byContract, order = versionsByContract(append(moved, twins...))
-	after := childKeys(byContract, childrenOf(byContract, order, contractFamilies(byContract, recipients)), nil)
-	require.Equal(t, after[101], after[102], "the school change is one child")
-	assert.Equal(t, before[910], after[910])
-	assert.Equal(t, before[911], after[911])
+	byContract, order := versionsByContract(append(moved, twin(910, 9910, "Ida"), twin(911, 9911, "Ole")))
+	keysWith := func(second string) map[int64]string {
+		recipients := map[int64]parentbilling.CareRecipient{101: {Email: familyEva}, 102: {Email: second}}
+		return childKeys(byContract, childrenOf(byContract, order, contractFamilies(byContract, recipients)), nil)
+	}
+	apart, joined := keysWith(familyOther), keysWith(familyEva)
+	require.NotEqual(t, apart[101], apart[102], "two families: two children")
+	require.Equal(t, joined[101], joined[102], "one family: the school change is one child")
+	assert.Equal(t, apart[101], joined[101], "the joined child keeps the place of its first part")
+	assert.Equal(t, apart[910], joined[910])
+	assert.Equal(t, apart[911], joined[911])
 }
 
 // A contract an issued invoice bills outside the versions in force joins a
@@ -416,6 +418,16 @@ func TestCareIssuedContractsJoinTheChildrenInForceAsE1Does(t *testing.T) {
 			same:    [][]int64{{411, 412}},
 		},
 		{
+			// Two issued contracts of one record, the lower one spelled
+			// „Benjamin“: the record still joins the child „Ben“ in force.
+			name:    "every spelling of an issued record counts",
+			inForce: []parentbilling.CareContractVersion{inForce(431, nil, "Ben")},
+			issued: map[int64]parentbilling.CareContractChild{
+				432: identity(ptr(int64(9432)), "Benjamin"), 433: identity(ptr(int64(9432)), "Ben"),
+			},
+			same: [][]int64{{431, 432, 433}},
+		},
+		{
 			// Two records of that name and date of birth: the issued one
 			// stays apart.
 			name:     "a second record of the name stays apart",
@@ -439,5 +451,23 @@ func TestCareIssuedContractsJoinTheChildrenInForceAsE1Does(t *testing.T) {
 				assert.NotEqual(t, keys[pair[0]], keys[pair[1]])
 			}
 		})
+	}
+}
+
+// Without a school change the sibling chain keys the children as before
+// #7874: by their place in E1, so a tie between twins keeps the order a
+// run of the month already issued with.
+func TestCareChildKeysKeepThePlacesOfE1(t *testing.T) {
+	t.Parallel()
+	var versions []parentbilling.CareContractVersion
+	for i := int64(0); i < 11; i++ {
+		version := sjrVersion(t, 600+i, schoolIspringen, 1, billingMonth, "2027-01-31", mon1400)
+		version.ChildFirstName = "Kind " + strconv.FormatInt(i, 10)
+		versions = append(versions, version)
+	}
+	byContract, order := versionsByContract(versions)
+	keys := childKeys(byContract, childrenOf(byContract, order, contractFamilies(byContract, nil)), nil)
+	for i, contractID := range order {
+		assert.Equal(t, "child:"+strconv.Itoa(i), keys[contractID])
 	}
 }
