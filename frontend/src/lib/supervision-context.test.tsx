@@ -16,6 +16,12 @@ const waitFor: typeof waitForDOM = (callback, options) =>
   waitForDOM(callback, { interval: 5, ...options });
 
 // Mock next-auth
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+import { pagedJson } from "~/test/mocks/plain-session-fetch";
+
 vi.mock("next-auth/react", () => ({
   useSession: vi.fn(),
 }));
@@ -84,9 +90,13 @@ function setupFetchMock(overrides?: {
     if (url.includes("is_open_room=true")) {
       const response = overrides?.openRooms ?? defaultMockResponses.openRooms;
       if (response instanceof Error) return Promise.reject(response);
+      // The room list is paginated: the proxy's answer carries `pagination`.
       return Promise.resolve({
         ok: true,
-        json: async () => response,
+        json: async () =>
+          "data" in response && Array.isArray(response.data)
+            ? pagedJson(response.data)
+            : response,
       });
     }
     // Default fallback
@@ -1233,7 +1243,7 @@ describe("SupervisionProvider API response handling", () => {
       if (url.includes("is_open_room=true")) {
         return Promise.resolve({
           ok: true,
-          json: async () => ({ data: [{ id: 100, name: "Schulhof" }] }),
+          json: async () => pagedJson([{ id: "100", name: "Schulhof" }]),
         });
       }
       if (url.includes("/api/students/ogs-group-navigation")) {
@@ -1800,7 +1810,7 @@ describe("SupervisionProvider error state change detection", () => {
       if (url.includes("is_open_room=true")) {
         return Promise.resolve({
           ok: true,
-          json: async () => ({ data: [{ id: 42, name: "Turnhalle" }] }),
+          json: async () => pagedJson([{ id: "42", name: "Turnhalle" }]),
         });
       }
       return Promise.resolve({ ok: true, json: async () => ({}) });

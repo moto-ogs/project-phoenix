@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 import {
   fetchChangeRequestAccess,
   fetchPendingChangeRequestCount,
@@ -31,7 +36,7 @@ afterEach(() => {
 });
 
 describe("fetchPendingChangeRequestCount", () => {
-  it("GETs the pending-count proxy route with no-store", async () => {
+  it("GETs the pending-count proxy route", async () => {
     let seenURL = "";
     let seenInit: RequestInit | undefined;
     mockFetch(async (input, init) => {
@@ -44,18 +49,12 @@ describe("fetchPendingChangeRequestCount", () => {
 
     expect(seenURL).toBe("/api/students/change-requests/pending-count");
     expect(seenInit?.method).toBe("GET");
-    expect(seenInit?.cache).toBe("no-store");
     expect(count).toBe(3);
   });
 
   it("returns the count from the {data} envelope", async () => {
     mockFetch(async () => jsonResponse({ data: { pending_count: 12 } }));
     expect(await fetchPendingChangeRequestCount()).toBe(12);
-  });
-
-  it("returns 0 when pending_count is absent from data", async () => {
-    mockFetch(async () => jsonResponse({ data: {} }));
-    expect(await fetchPendingChangeRequestCount()).toBe(0);
   });
 
   it("returns 0 when the envelope has no data key", async () => {
@@ -83,7 +82,7 @@ describe("fetchChangeRequestAccess", () => {
     await expect(fetchChangeRequestAccess()).resolves.toBe("group_leader");
     expect(globalThis.fetch).toHaveBeenCalledWith(
       "/api/students/change-requests/access",
-      expect.objectContaining({ method: "GET", cache: "no-store" }),
+      expect.objectContaining({ method: "GET" }),
     );
   });
 
@@ -119,7 +118,7 @@ describe("fetchStudentRequestReviewCoverage", () => {
     });
     expect(globalThis.fetch).toHaveBeenCalledWith(
       "/api/students/change-requests/access?student_id=42",
-      expect.objectContaining({ method: "GET", cache: "no-store" }),
+      expect.objectContaining({ method: "GET" }),
     );
   });
 

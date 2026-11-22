@@ -1,5 +1,5 @@
 import type * as shared from "~/lib/contract/shared.generated";
-import type * as staffWire from "~/lib/contract/staff.generated";
+import type * as staffContract from "~/lib/contract/staff.generated";
 import { describe, expect, it } from "vitest";
 import {
   mapMonthCloseResultResponse,
@@ -38,7 +38,7 @@ const summary: shared.MonthSummary = {
   closing_balance_minutes: 90,
 };
 
-const snapshot: staffWire.StaffMonthBalanceSnapshot = {
+const snapshot: staffContract.StaffMonthBalanceSnapshot = {
   id: "",
   created_at: "",
   updated_at: "",

@@ -4,6 +4,7 @@
 // Soll, absence credit and Saldo of a day come from the server (#1842, #6847);
 // nothing here prices a day on its own.
 
+import { compareIds } from "./compare-ids";
 import type {
   StaffAbsenceRow,
   StaffHistorySession,
@@ -97,12 +98,7 @@ export function resolveTargetForDate(
 function sortAbsencesById(
   absences: readonly StaffAbsenceRow[],
 ): readonly StaffAbsenceRow[] {
-  // The ids are decimal strings of int64 values: a shorter one is smaller,
-  // equal lengths compare digit by digit, so no id is rounded.
-  return [...absences].sort(
-    (a, b) =>
-      a.id.length - b.id.length || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
-  );
+  return [...absences].sort((a, b) => compareIds(a.id, b.id));
 }
 
 interface EffectiveAbsenceRange {
@@ -317,7 +313,7 @@ export function adaptAbsenceForMetrics(absence: StaffAbsence): StaffAbsenceRow {
     id: String(absence.id),
     staff_id: String(absence.staffId),
     absence_type: absence.absenceType,
-    absence_type_id: absence.absenceTypeId,
+    absence_type_id: absence.absenceTypeId ?? undefined,
     absence_type_label: absence.absenceTypeLabel,
     date_start: absence.dateStart,
     date_end: absence.dateEnd,
@@ -326,9 +322,9 @@ export function adaptAbsenceForMetrics(absence: StaffAbsence): StaffAbsenceRow {
     end_half_day: absence.endHalfDay,
     note: absence.note,
     status: absence.status,
-    approved_by: absence.approvedBy ? String(absence.approvedBy) : null,
-    approved_at: absence.approvedAt,
-    working_days: absence.workingDays,
+    approved_by: absence.approvedBy ? String(absence.approvedBy) : undefined,
+    approved_at: absence.approvedAt ?? undefined,
+    working_days: absence.workingDays ?? undefined,
     decision_note: absence.decisionNote,
     requested_at: absence.requestedAt,
     duration_days: absence.durationDays,

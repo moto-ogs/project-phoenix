@@ -19,8 +19,7 @@
 
 "use client";
 
-import { apiErrorFromResponse } from "~/lib/api-error";
-import type { NavigationResponse } from "~/lib/contract/me.generated";
+import { bffJson } from "~/lib/bff-fetch";
 import { useImmutableSWR } from "~/lib/swr";
 import { shellResourceKeys } from "~/lib/swr/shell-keys";
 import { mapUserContext } from "~/lib/user-context-map";
@@ -63,19 +62,11 @@ export function useUserContext(enabled = true): UseUserContextReturn {
   const { data, isLoading, error } = useImmutableSWR<UserContextResponse>(
     enabled ? shellResourceKeys.userContext() : null,
     async () => {
-      const response = await fetch("/api/me/navigation", {
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        throw await apiErrorFromResponse(
-          response,
-          `User context fetch failed: ${response.status}`,
-        );
-      }
-
-      const json = (await response.json()) as { data: NavigationResponse };
-      const userContext = mapUserContext(json.data);
+      const userContext = mapUserContext(
+        await bffJson("tenant", "GET /api/me/navigation", {
+          errorMessage: "User context fetch failed",
+        }),
+      );
       if (userContext.incomplete) {
         throw new IncompleteUserContextError(userContext);
       }

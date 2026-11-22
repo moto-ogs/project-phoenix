@@ -26,14 +26,12 @@ import {
   sameSupervision,
   sortNavigationGroups,
   type DerivedSupervision,
-  type OpenRoomPayload,
   type SupervisedGroupPayload,
   type SupervisedRoom,
   type SupervisionSnapshot,
 } from "~/lib/supervision-derive";
-import type { NavigationGroup } from "~/lib/contract/students.generated";
 import type { NavigationEducationalGroup } from "~/lib/usercontext-helpers";
-import type { ApiResponse } from "./api-envelope";
+import { bffJson } from "./bff-fetch";
 
 const logger = createLogger({ component: "SupervisionContext" });
 
@@ -264,22 +262,11 @@ export function SupervisionProvider({
     try {
       // The navigation's groups come through the portal's catalog proxy
       // (#7563) as the contract's list in `data`.
-      const response = await fetch("/api/students/ogs-group-navigation", {
-        headers: {
-          "Content-Type": "application/json",
-        },
-        // Add cache control to reduce redundant requests
-        cache: "no-store",
-      });
-
-      if (response.ok) {
-        const json = (await response.json()) as {
-          data: NavigationGroup[] | null;
-        };
-        applyCurrent(sortNavigationGroups(json.data ?? []));
-      } else {
-        applyCurrent([], true);
-      }
+      const groups = await bffJson(
+        "tenant",
+        "GET /api/students/ogs-group-navigation",
+      );
+      applyCurrent(sortNavigationGroups(groups ?? []));
     } catch {
       applyCurrent([], true);
     }
@@ -313,85 +300,63 @@ export function SupervisionProvider({
 
     try {
       // Try the school-wide overview endpoint first for every caller who may
-      // read groups at all. On any non-OK response (403 = this school keeps
-      // the caller on their own supervisions; 5xx/network = transient), fall
+      // read groups at all. On any failure (403 = this school keeps the
+      // caller on their own supervisions; 5xx/network = transient), fall
       // back to the regular staff endpoint so the user at least keeps their
       // own supervisions instead of an empty sidebar.
       // The endpoint is gated on `groups:read`, so accounts without it skip
       // straight to the permission-less /me endpoint.
-      const fetchOwnSupervisedGroups = () =>
-        fetch("/api/me/groups/supervised", {
-          headers: { "Content-Type": "application/json" },
-          cache: "no-store",
-        });
+      // A failed load stays null rather than becoming an empty list: an
+      // empty navigation must not be indistinguishable from a load error.
+      const orNull = <T,>(load: Promise<T>): Promise<T | null> =>
+        load.catch(() => null);
+      const ownSupervisedGroups = () =>
+        orNull(
+          bffJson("tenant", "GET /api/me/groups/supervised").then(
+            (rows) => rows ?? [],
+          ),
+        );
 
-      const fetchSupervisedGroups = async (): Promise<{
-        response: Response;
-        ownResponse: Response | null;
+      const supervisedGroups = async (): Promise<{
+        supervised: SupervisedGroupPayload[] | null;
+        ownSupervised: SupervisedGroupPayload[] | null;
       }> => {
         if (!canReadGroupsRef.current || !mayHaveOverviewRef.current) {
           return {
-            response: await fetchOwnSupervisedGroups(),
-            ownResponse: null,
+            supervised: await ownSupervisedGroups(),
+            ownSupervised: null,
           };
         }
 
         // Die Übersicht zeigt alle laufenden Räume, kann die eigene Aufsicht
         // aber nicht kennzeichnen. Die eigene Abfrage läuft parallel und
         // liefert ausschließlich das Signal für „Aufsicht fortsetzen“.
-        const [overviewResponse, ownResponse] = await Promise.all([
-          fetch("/api/active/supervisors/all", {
-            headers: { "Content-Type": "application/json" },
-            cache: "no-store",
-          }),
-          fetchOwnSupervisedGroups().catch(() => null),
+        const [overview, own] = await Promise.all([
+          orNull(
+            bffJson("tenant", "GET /api/active/supervisors/all").then(
+              (rows) => rows ?? [],
+            ),
+          ),
+          ownSupervisedGroups(),
         ]);
-        if (!overviewResponse.ok) {
-          return {
-            response: ownResponse ?? overviewResponse,
-            ownResponse: null,
-          };
+        if (overview === null) {
+          return { supervised: own, ownSupervised: null };
         }
         overviewOk = true;
-        return { response: overviewResponse, ownResponse };
+        return { supervised: overview, ownSupervised: own };
       };
 
       // Own supervisions and the permanently released rooms in parallel. The
       // room list needs rooms:read, which every caregiver already holds for
       // the rest of the navigation, so there is no extra permission gate.
-      const [{ response, ownResponse }, openRoomsResponse] = await Promise.all([
-        fetchSupervisedGroups(),
-        fetch("/api/rooms?is_open_room=true", {
-          headers: { "Content-Type": "application/json" },
-          cache: "no-store",
-        }).catch(() => null),
+      const [{ supervised, ownSupervised }, openRooms] = await Promise.all([
+        supervisedGroups(),
+        orNull(
+          bffJson("tenant", "GET /api/rooms/", {
+            query: { is_open_room: true },
+          }).then(({ data }) => data ?? []),
+        ),
       ]);
-
-      // A failed load stays null rather than becoming "no open rooms": an
-      // empty navigation must not be indistinguishable from a load error.
-      let openRooms: OpenRoomPayload[] | null = null;
-      if (openRoomsResponse?.ok) {
-        const payload = (await openRoomsResponse.json()) as {
-          data?: OpenRoomPayload[] | null;
-        };
-        openRooms = payload.data ?? [];
-      }
-
-      let supervised: SupervisedGroupPayload[] | null = null;
-      if (response.ok) {
-        const responseData = (await response.json()) as ApiResponse<
-          SupervisedGroupPayload[] | null
-        >;
-        supervised = responseData.data ?? [];
-      }
-
-      let ownSupervised: SupervisedGroupPayload[] | null = null;
-      if (overviewOk && ownResponse?.ok) {
-        const responseData = (await ownResponse.json()) as {
-          data: SupervisedGroupPayload[] | null;
-        };
-        ownSupervised = responseData.data ?? [];
-      }
 
       applyCurrent(
         deriveSupervision(supervised, openRooms, overviewOk, ownSupervised),

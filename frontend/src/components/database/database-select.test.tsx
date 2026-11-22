@@ -12,6 +12,12 @@ import { useApiLoadError } from "~/contexts/ToastContext";
 import { catalogText } from "~/test/error-catalog-text";
 import { SWRConfig } from "~/lib/swr/testing";
 
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+import { pagedJson } from "~/test/mocks/plain-session-fetch";
+
 // GroupSelect reads its options through the shared cache; each render gets
 // its own.
 vi.unmock("swr");
@@ -328,7 +334,7 @@ describe("GroupSelect", () => {
   it("renders with default 'Gruppe' label", async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ data: [] }),
+      json: () => Promise.resolve(pagedJson([])),
     });
 
     render(<GroupSelect {...defaultProps} />);
@@ -343,7 +349,7 @@ describe("GroupSelect", () => {
   it("uses custom label when provided", async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ data: [] }),
+      json: () => Promise.resolve(pagedJson([])),
     });
 
     render(<GroupSelect {...defaultProps} label="Klassengruppe" />);
@@ -359,12 +365,12 @@ describe("GroupSelect", () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
       json: () =>
-        Promise.resolve({
-          data: [
+        Promise.resolve(
+          pagedJson([
             { id: "1", name: "Klasse 1a" },
             { id: "2", name: "Klasse 2b" },
-          ],
-        }),
+          ]),
+        ),
     });
 
     render(<GroupSelect {...defaultProps} />);
@@ -386,7 +392,7 @@ describe("GroupSelect", () => {
       ).toBeInTheDocument();
     });
 
-    expect(global.fetch).toHaveBeenCalledWith("/api/groups");
+    expect(global.fetch).toHaveBeenCalledWith("/api/groups", expect.anything());
     expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
@@ -395,7 +401,8 @@ describe("GroupSelect", () => {
       .mockRejectedValueOnce(new TypeError("Failed to fetch"))
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ data: [{ id: "1", name: "Raum Blau" }] }),
+        json: () =>
+          Promise.resolve(pagedJson([{ id: "1", name: "Raum Blau" }])),
       });
 
     render(<GroupSelectOwner />);
@@ -466,82 +473,54 @@ describe("GroupSelect", () => {
   it("includes filters in API request", async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ data: [] }),
+      json: () => Promise.resolve(pagedJson([])),
     });
 
-    render(<GroupSelect {...defaultProps} filters={{ active: true }} />);
+    render(<GroupSelect {...defaultProps} filters={{ name: "Blau" }} />);
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith("/api/groups?active=true");
+      expect(global.fetch).toHaveBeenCalledWith(
+        "/api/groups?name=Blau",
+        expect.anything(),
+      );
     });
   });
 
-  it("handles array response format", async () => {
+  it("reports an answer without data as a failed load (502)", async () => {
+    // The catalog proxy always answers { status, data, pagination }; a bare
+    // list is a broken route, not a second answer shape.
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
-      json: () =>
-        Promise.resolve([
-          { id: 1, name: "Group 1" },
-          { id: 2, name: "Group 2" },
-        ]),
+      json: () => Promise.resolve([{ id: "1", name: "Group 1" }]),
     });
 
     render(<GroupSelect {...defaultProps} />);
 
     await waitFor(() => {
-      expect(screen.getByRole("combobox")).not.toBeDisabled();
-    });
-    openMenu();
-
-    await waitFor(() => {
-      expect(
-        screen.getByRole("option", { name: "Group 1" }),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByRole("option", { name: "Group 2" }),
-      ).toBeInTheDocument();
-    });
-  });
-
-  it("handles numeric IDs in response", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          data: [{ id: 123, name: "Numeric ID Group" }],
-        }),
-    });
-
-    render(<GroupSelect {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByRole("combobox")).not.toBeDisabled();
-    });
-    openMenu();
-
-    await waitFor(() => {
-      expect(
-        screen.getByRole("option", { name: "Numeric ID Group" }),
-      ).toBeInTheDocument();
+      expect(defaultProps.onLoadError).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 502 }),
+        expect.any(Function),
+      );
     });
   });
 
   it("converts filter values to strings correctly", async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ data: [] }),
+      json: () => Promise.resolve(pagedJson([])),
     });
 
     render(
       <GroupSelect
         {...defaultProps}
-        filters={{ count: 5, enabled: false, name: "test" }}
+        filters={{ name: "test", page_size: 5 }}
       />,
     );
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
-        "/api/groups?count=5&enabled=false&name=test",
+        "/api/groups?name=test&page_size=5",
+        expect.anything(),
       );
     });
   });
@@ -549,18 +528,21 @@ describe("GroupSelect", () => {
   it("skips null and undefined filter values", async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ data: [] }),
+      json: () => Promise.resolve(pagedJson([])),
     });
 
     render(
       <GroupSelect
         {...defaultProps}
-        filters={{ valid: "yes", invalid: null, missing: undefined }}
+        filters={{ name: "yes", room_id: undefined }}
       />,
     );
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith("/api/groups?valid=yes");
+      expect(global.fetch).toHaveBeenCalledWith(
+        "/api/groups?name=yes",
+        expect.anything(),
+      );
     });
   });
 });

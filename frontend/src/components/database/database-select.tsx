@@ -5,7 +5,8 @@ import { CustomSelect } from "~/components/ui/custom-select";
 import { FieldLabel } from "~/components/ui/field-label";
 import type { FormErrorInput } from "~/components/ui/form-error";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
-import { apiErrorFromResponse, unavailableApiError } from "~/lib/api-error";
+import { bffJson } from "~/lib/bff-fetch";
+import type * as groupsContract from "~/lib/contract/groups.generated";
 import { createLogger } from "~/lib/logger";
 import { useSWRAuth } from "~/lib/swr";
 import { databaseKeys } from "~/lib/swr/portal-keys";
@@ -137,10 +138,9 @@ export function DatabaseSelect({
  * Specialized select components using DatabaseSelect as base
  */
 
-// EntitySelect: the options of one API list, read through the shared cache.
-type EntitySelectProps = Omit<DatabaseSelectProps, "options" | "loadError"> & {
-  readonly entityType: "groups" | "rooms" | "teachers" | "activities";
-  readonly filters?: Record<string, unknown>;
+// GroupSelect: the groups of the school, read through the shared cache.
+type GroupSelectProps = Omit<DatabaseSelectProps, "options" | "loadError"> & {
+  readonly filters?: groupsContract.GetGroupsQuery;
   /**
    * The owner's load path (`useApiLoadError`, #2517): a failed load goes to
    * `onLoadError` with a retry, its catalog text comes back as `loadError`.
@@ -150,65 +150,37 @@ type EntitySelectProps = Omit<DatabaseSelectProps, "options" | "loadError"> & {
   readonly onLoadError: (error: unknown, retry: () => void) => void;
 };
 
-function entityQuery(filters: Record<string, unknown> | undefined): string {
+/** The cache key's query part: the set filters in a stable order. */
+function groupQuery(
+  filters: groupsContract.GetGroupsQuery | undefined,
+): string {
   const params = new URLSearchParams();
-  Object.entries(filters ?? {}).forEach(([key, value]) => {
-    if (value === null || value === undefined) return;
-    // Convert value to string safely
-    let stringValue: string;
-    if (typeof value === "string") {
-      stringValue = value;
-    } else if (typeof value === "number" || typeof value === "boolean") {
-      stringValue = String(value);
-    } else {
-      // For objects and other types, use JSON.stringify
-      stringValue = JSON.stringify(value);
-    }
-    params.append(key, stringValue);
-  });
+  for (const [key, value] of Object.entries(filters ?? {})) {
+    if (value !== undefined) params.append(key, String(value));
+  }
   return params.toString();
 }
 
-async function fetchEntityOptions(
-  entityType: EntitySelectProps["entityType"],
-  queryString: string,
+async function fetchGroupOptions(
+  filters: groupsContract.GetGroupsQuery | undefined,
 ): Promise<ReadonlyArray<SelectOption>> {
-  const url = queryString
-    ? `/api/${entityType}?${queryString}`
-    : `/api/${entityType}`;
-  // A request that never reached the API becomes general.unavailable.
-  const response = await fetch(url).catch((error: unknown) => {
-    throw unavailableApiError(error);
+  const { data } = await bffJson("tenant", "GET /api/groups/", {
+    query: { ...filters },
+    errorMessage: "Failed to load groups",
   });
-
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, `Failed to load ${entityType}`);
-  }
-
-  const data = (await response.json()) as
-    | Array<{ id: string | number; name: string }>
-    | { data: Array<{ id: string | number; name: string }> };
-
-  // Handle different response formats
-  const items = Array.isArray(data) ? data : data.data;
-
-  return items.map((item) => ({
-    value: String(item.id),
-    label: item.name,
-  }));
+  return (data ?? []).map((group) => ({ value: group.id, label: group.name }));
 }
 
-function EntitySelect({
-  entityType,
+export function GroupSelect({
   filters,
   loadError,
   onLoadError,
   ...props
-}: EntitySelectProps) {
-  const queryString = entityQuery(filters);
+}: GroupSelectProps) {
+  const queryString = groupQuery(filters);
   const read = useSWRAuth(
-    databaseKeys.entityOptions(entityType, queryString),
-    () => fetchEntityOptions(entityType, queryString),
+    databaseKeys.entityOptions("groups", queryString),
+    () => fetchGroupOptions(filters),
     { keepPreviousData: false },
   );
   const failure = read.error;
@@ -229,25 +201,10 @@ function EntitySelect({
   return (
     <DatabaseSelect
       {...props}
+      label={props.label ?? "Gruppe"}
       options={read.data}
       loading={props.loading === true || read.isLoading}
       loadError={loadError}
-    />
-  );
-}
-
-/**
- * Convenience components for specific entity types
- */
-
-export function GroupSelect(
-  props: Readonly<Omit<EntitySelectProps, "entityType">>,
-) {
-  return (
-    <EntitySelect
-      {...props}
-      entityType="groups"
-      label={props.label ?? "Gruppe"}
     />
   );
 }

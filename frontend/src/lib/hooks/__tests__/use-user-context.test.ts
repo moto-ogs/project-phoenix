@@ -10,6 +10,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook } from "@testing-library/react";
 
 // Mock useImmutableSWR
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 vi.mock("~/lib/swr", () => ({
   useImmutableSWR: vi.fn(() => ({
     data: undefined,
@@ -171,9 +176,10 @@ describe("useUserContext", () => {
         schoolSwitches: { parentInviteMode: "direct" },
       });
 
-      expect(fetchMock).toHaveBeenCalledWith("/api/me/navigation", {
-        credentials: "include",
-      });
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/me/navigation",
+        expect.objectContaining({ method: "GET" }),
+      );
 
       fetchMock.mockRestore();
     });
@@ -188,9 +194,10 @@ describe("useUserContext", () => {
       const fetcher = vi.mocked(useImmutableSWR).mock.calls[0]?.[1];
 
       if (fetcher) {
-        await expect(fetcher()).rejects.toThrow(
-          "User context fetch failed: 401",
-        );
+        await expect(fetcher()).rejects.toMatchObject({
+          message: "User context fetch failed",
+          status: 401,
+        });
       }
 
       fetchMock.mockRestore();

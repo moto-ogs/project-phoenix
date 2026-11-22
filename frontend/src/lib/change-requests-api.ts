@@ -5,7 +5,8 @@
  * sidebar badge.
  */
 
-import { ApiError, apiErrorFromResponse } from "~/lib/api-error";
+import { ApiError } from "~/lib/api-error";
+import { bffJson } from "~/lib/bff-fetch";
 import {
   isParentRequestReviewAccess,
   isStudentRequestReviewCoverage,
@@ -13,46 +14,33 @@ import {
   type StudentRequestReviewCoverage,
 } from "~/lib/change-request-access";
 
-interface Envelope<T> {
-  readonly data?: T;
-}
-
 /**
  * Fetches the combined number of pending parent change requests (master-data +
  * care schedule) for the tenant. Mirrors fetchUnreadCount: returns 0 on any
  * failure so a badge fetch can never break the sidebar.
  */
 export async function fetchPendingChangeRequestCount(): Promise<number> {
-  const response = await fetch("/api/students/change-requests/pending-count", {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
-    cache: "no-store",
-  });
-  if (!response.ok) return 0;
-  const json = (await response.json()) as Envelope<{ pending_count: number }>;
-  return json.data?.pending_count ?? 0;
+  try {
+    const { pending_count } = await bffJson(
+      "tenant",
+      "GET /api/students/change-requests/pending-count",
+    );
+    return pending_count;
+  } catch {
+    // The badge stays empty; the sidebar must not break on it.
+    return 0;
+  }
 }
 
 export async function fetchChangeRequestAccess(): Promise<ParentRequestReviewAccess> {
-  const response = await fetch("/api/students/change-requests/access", {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
-    cache: "no-store",
-  });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Change request access failed: ${response.status}`,
-    );
-  }
-  const json = (await response.json()) as Envelope<{
-    review_access?: unknown;
-  }>;
-  const access = json.data?.review_access;
-  if (!isParentRequestReviewAccess(access)) {
+  const { review_access } = await bffJson(
+    "tenant",
+    "GET /api/students/change-requests/access",
+  );
+  if (!isParentRequestReviewAccess(review_access)) {
     throw new ApiError("Change request access response is invalid", 500);
   }
-  return access;
+  return review_access;
 }
 
 /**
@@ -63,27 +51,16 @@ export async function fetchChangeRequestAccess(): Promise<ParentRequestReviewAcc
 export async function fetchStudentRequestReviewCoverage(
   studentId: string,
 ): Promise<StudentRequestReviewCoverage> {
-  const response = await fetch(
-    `/api/students/change-requests/access?student_id=${encodeURIComponent(studentId)}`,
-    {
-      method: "GET",
-      headers: { "Content-Type": "application/json" },
-      cache: "no-store",
-    },
+  const { student } = await bffJson(
+    "tenant",
+    "GET /api/students/change-requests/access",
+    { query: { student_id: studentId } },
   );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Student request review coverage failed: ${response.status}`,
-    );
-  }
-  const json = (await response.json()) as Envelope<{ student?: unknown }>;
-  const coverage = json.data?.student;
-  if (!isStudentRequestReviewCoverage(coverage)) {
+  if (!isStudentRequestReviewCoverage(student)) {
     throw new ApiError(
       "Student request review coverage response is invalid",
       500,
     );
   }
-  return coverage;
+  return student;
 }

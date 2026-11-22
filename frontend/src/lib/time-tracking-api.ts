@@ -3,9 +3,12 @@
 import type * as shared from "~/lib/contract/shared.generated";
 import type * as tt from "~/lib/contract/time-tracking.generated";
 import type { ErrorCode } from "~/lib/error-codes.generated";
-import type { MailOutcomeCounts } from "~/lib/email-delivery-status";
-import { unavailableApiError } from "./api-error";
-import { buildApiError } from "./api-error-response";
+import {
+  knownMailOutcome,
+  type MailOutcome,
+  type MailOutcomeCounts,
+} from "~/lib/email-delivery-status";
+import { bffJson } from "./bff-fetch";
 import {
   mapAllowance,
   type AbsenceTypeAllowanceSummary,
@@ -30,7 +33,6 @@ import {
   mapWorkSessionBreakResponse,
   mapWorkSessionEditResponse,
 } from "./time-tracking-helpers";
-import type { ApiResponse } from "./api-envelope";
 
 export const PLANNED_START_NOT_REACHED_CODE: ErrorCode =
   "iot.planned_start_not_reached";
@@ -55,160 +57,67 @@ export interface UpdateSessionRequest {
   breaks?: Array<{ id: string; durationMinutes: number }>;
 }
 
-/**
- * Create absence request body
- */
-export interface CreateAbsenceRequest {
-  absence_type: string;
-  /**
-   * School-defined Abwesenheitsart (#2403). When set, the backend takes the
-   * canonical absence_type from the art itself, so the pair can never disagree.
-   */
-  absence_type_id?: string | null;
-  date_start: string;
-  date_end: string;
-  half_day?: boolean;
-  note?: string;
-}
-
-/**
- * Update absence request body
- */
-export interface UpdateAbsenceRequest {
-  absence_type?: string;
-  /** Re-points the school-defined Abwesenheitsart; `null` clears it (#2403). */
-  absence_type_id?: string | null;
-  date_start?: string;
-  date_end?: string;
-  half_day?: boolean;
-  note?: string;
-}
-
 interface TimeTrackingConfig {
   accountStartDate: string;
 }
 
 /**
- * Service class for time tracking API operations
+ * Service class for time tracking API operations. The BFF routes read the
+ * session cookie; the browser holds no token (#5005).
  */
 class TimeTrackingService {
-  private readonly baseUrl = "/api/time-tracking";
-
-  // The BFF routes read the session cookie; the browser holds no token
-  // (#5005).
-  private buildHeaders(withBody: boolean): HeadersInit {
-    return withBody ? { "Content-Type": "application/json" } : {};
-  }
-
-  private async request<T>(
-    path: string,
-    method: string,
-    errorMessage: string,
-    body?: unknown,
-  ): Promise<ApiResponse<T>> {
-    let response: Response;
-    try {
-      response = await fetch(`${this.baseUrl}${path}`, {
-        method,
-        headers: this.buildHeaders(body !== undefined),
-        ...(body !== undefined && { body: JSON.stringify(body) }),
-      });
-    } catch (error) {
-      throw unavailableApiError(error);
-    }
-
-    if (!response.ok) {
-      throw await buildApiError(response, errorMessage);
-    }
-
-    return (await response.json()) as ApiResponse<T>;
-  }
-
-  private async requestVoid(
-    path: string,
-    method: string,
-    errorMessage: string,
-  ): Promise<void> {
-    let response: Response;
-    try {
-      response = await fetch(`${this.baseUrl}${path}`, {
-        method,
-        headers: this.buildHeaders(false),
-      });
-    } catch (error) {
-      throw unavailableApiError(error);
-    }
-
-    if (!response.ok) {
-      throw await buildApiError(response, errorMessage);
-    }
-  }
-
   async checkIn(
     status: "present" | "home_office",
     reason?: string,
   ): Promise<WorkSession> {
-    const result = await this.request<WorkSession>(
-      "/check-in",
-      "POST",
-      "Failed to check in",
-      reason ? { status, reason } : { status },
+    return mapWorkSessionResponse(
+      await bffJson("tenant", "POST /api/time-tracking/check-in", {
+        body: reason ? { status, reason } : { status },
+        errorMessage: "Failed to check in",
+      }),
     );
-    return mapWorkSessionResponse(result.data as never);
   }
 
   async checkOut(reason?: string): Promise<WorkSession> {
-    const result = await this.request<WorkSession>(
-      "/check-out",
-      "POST",
-      "Failed to check out",
-      reason ? { reason } : undefined,
+    return mapWorkSessionResponse(
+      await bffJson("tenant", "POST /api/time-tracking/check-out", {
+        body: reason ? { reason } : {},
+        errorMessage: "Failed to check out",
+      }),
     );
-    return mapWorkSessionResponse(result.data as never);
   }
 
   async getCurrentSession(): Promise<WorkSession | null> {
-    const result = await this.request<WorkSession | null>(
-      "/current",
-      "GET",
-      "Failed to get current session",
-    );
-    return result.data ? mapWorkSessionResponse(result.data as never) : null;
+    const session = await bffJson("tenant", "GET /api/time-tracking/current", {
+      errorMessage: "Failed to get current session",
+    });
+    return session ? mapWorkSessionResponse(session) : null;
   }
 
   async getConfig(): Promise<TimeTrackingConfig> {
-    const result = await this.request<tt.ConfigResponse>(
-      "/config",
-      "GET",
-      "Failed to get time tracking config",
-    );
-    return {
-      accountStartDate: result.data?.account_start_date ?? "",
-    };
+    const config = await bffJson("tenant", "GET /api/time-tracking/config", {
+      errorMessage: "Failed to get time tracking config",
+    });
+    return { accountStartDate: config.account_start_date };
   }
 
   async getHistory(from: string, to: string): Promise<HistoryResult> {
-    const params = new URLSearchParams({ from, to });
-    const result = await this.request<{
-      sessions: unknown[];
-      weekly_summaries: unknown[];
-      labor_days?: unknown[] | null;
-    }>(`/history?${params}`, "GET", "Failed to get history");
-    return mapHistoryResponse(result.data as never);
+    return mapHistoryResponse(
+      await bffJson("tenant", "GET /api/time-tracking/history", {
+        query: { from, to },
+        errorMessage: "Failed to get history",
+      }),
+    );
   }
 
   // Own Monatskarte (#1842): Summe Soll/Ist, Gutschriften, Übertrag, Saldo.
   async getMonthSummary(year: number, month: number): Promise<MonthSummary> {
-    const params = new URLSearchParams({
-      year: String(year),
-      month: String(month),
-    });
-    const result = await this.request<shared.MonthSummary>(
-      `/month-summary?${params}`,
-      "GET",
-      "Failed to get month summary",
+    return mapMonthSummaryResponse(
+      await bffJson("tenant", "GET /api/time-tracking/month-summary", {
+        query: { year, month },
+        errorMessage: "Failed to get month summary",
+      }),
     );
-    return mapMonthSummaryResponse(result.data);
   }
 
   // Vollständige Tagesprojektion desselben Endpunkts (#2443): Soll, Gutschrift,
@@ -218,13 +127,12 @@ class TimeTrackingService {
     from: string,
     to: string,
   ): Promise<ReadonlyMap<string, DayProjection>> {
-    const params = new URLSearchParams({ from, to });
-    const result = await this.request<shared.DailyProjection[] | null>(
-      `/schedule-targets?${params}`,
-      "GET",
-      "Failed to get daily projection",
+    return mapDailyProjectionResponse(
+      await bffJson("tenant", "GET /api/time-tracking/schedule-targets", {
+        query: { from, to },
+        errorMessage: "Failed to get daily projection",
+      }),
     );
-    return mapDailyProjectionResponse(result.data);
   }
 
   // Gesetzliche Feiertage des Tenants (#1418 3a), keyed YYYY-MM-DD → Name.
@@ -234,13 +142,12 @@ class TimeTrackingService {
     from: string,
     to: string,
   ): Promise<ReadonlyMap<string, string>> {
-    const params = new URLSearchParams({ from, to });
-    const result = await this.request<tt.PublicHoliday[] | null>(
-      `/holidays?${params}`,
-      "GET",
-      "Failed to get holidays",
+    return mapHolidaysResponse(
+      await bffJson("tenant", "GET /api/time-tracking/holidays", {
+        query: { from, to },
+        errorMessage: "Failed to get holidays",
+      }),
     );
-    return mapHolidaysResponse(result.data);
   }
 
   // OGS-Schließtage des Tenants (#1418 3b), keyed YYYY-MM-DD → Grund.
@@ -250,106 +157,102 @@ class TimeTrackingService {
     from: string,
     to: string,
   ): Promise<ReadonlyMap<string, string>> {
-    const params = new URLSearchParams({ from, to });
-    const result = await this.request<tt.closingDayRangeResponse[] | null>(
-      `/closing-days?${params}`,
-      "GET",
-      "Failed to get closing days",
+    return mapClosingDaysResponse(
+      await bffJson("tenant", "GET /api/time-tracking/closing-days", {
+        query: { from, to },
+        errorMessage: "Failed to get closing days",
+      }),
+      from,
+      to,
     );
-    return mapClosingDaysResponse(result.data, from, to);
   }
 
   async updateSession(
     id: string,
     updates: UpdateSessionRequest,
   ): Promise<WorkSession> {
-    // The backend's own field names: the proxy forwards the body as it is.
-    const result = await this.request<WorkSession>(
-      `/${id}`,
-      "PUT",
-      "Failed to update session",
-      {
-        date: updates.date,
-        check_in_time: updates.checkInTime,
-        check_out_time: updates.checkOutTime,
-        break_minutes: updates.breakMinutes,
-        status: updates.status,
-        notes: updates.notes,
-        ...(updates.breaks && updates.breaks.length > 0
-          ? {
-              breaks: updates.breaks.map((b) => ({
-                id: b.id,
-                duration_minutes: b.durationMinutes,
-              })),
-            }
-          : {}),
-      },
+    return mapWorkSessionResponse(
+      await bffJson("tenant", "PUT /api/time-tracking/{id}", {
+        params: { id },
+        body: {
+          date: updates.date,
+          check_in_time: updates.checkInTime,
+          check_out_time: updates.checkOutTime,
+          break_minutes: updates.breakMinutes,
+          status: updates.status,
+          notes: updates.notes,
+          ...(updates.breaks && updates.breaks.length > 0
+            ? {
+                breaks: updates.breaks.map((b) => ({
+                  id: b.id,
+                  duration_minutes: b.durationMinutes,
+                })),
+              }
+            : {}),
+        },
+        errorMessage: "Failed to update session",
+      }),
     );
-    return mapWorkSessionResponse(result.data as never);
   }
 
   async startBreak(durationMinutes?: number): Promise<WorkSessionBreak> {
-    const body = durationMinutes
-      ? { planned_duration_minutes: durationMinutes }
-      : undefined;
-    const result = await this.request<WorkSessionBreak>(
-      "/break/start",
-      "POST",
-      "Failed to start break",
-      body,
+    return mapWorkSessionBreakResponse(
+      await bffJson("tenant", "POST /api/time-tracking/break/start", {
+        body: durationMinutes
+          ? { planned_duration_minutes: durationMinutes }
+          : {},
+        errorMessage: "Failed to start break",
+      }),
     );
-    return mapWorkSessionBreakResponse(result.data as never);
   }
 
   async endBreak(): Promise<WorkSession> {
-    const result = await this.request<WorkSession>(
-      "/break/end",
-      "POST",
-      "Failed to end break",
+    return mapWorkSessionResponse(
+      await bffJson("tenant", "POST /api/time-tracking/break/end", {
+        errorMessage: "Failed to end break",
+      }),
     );
-    return mapWorkSessionResponse(result.data as never);
   }
 
   async getSessionBreaks(sessionId: string): Promise<WorkSessionBreak[]> {
-    const result = await this.request<WorkSessionBreak[]>(
-      `/breaks/${sessionId}`,
-      "GET",
-      "Failed to get breaks",
+    const breaks = await bffJson(
+      "tenant",
+      "GET /api/time-tracking/breaks/{sessionId}",
+      { params: { sessionId }, errorMessage: "Failed to get breaks" },
     );
-    return (result.data ?? []).map((brk) =>
-      mapWorkSessionBreakResponse(brk as never),
-    );
+    return (breaks ?? []).map(mapWorkSessionBreakResponse);
   }
 
   async getSessionEdits(sessionId: string): Promise<WorkSessionEdit[]> {
-    const result = await this.request<WorkSessionEdit[]>(
-      `/${sessionId}/edits`,
-      "GET",
-      "Failed to get edits",
-    );
-    return (result.data ?? []).map((edit) =>
-      mapWorkSessionEditResponse(edit as never),
-    );
+    const edits = await bffJson("tenant", "GET /api/time-tracking/{id}/edits", {
+      params: { id: sessionId },
+      errorMessage: "Failed to get edits",
+    });
+    return (edits ?? []).map(mapWorkSessionEditResponse);
   }
 
   async getAbsences(from: string, to: string): Promise<StaffAbsence[]> {
-    const params = new URLSearchParams({ from, to });
-    const result = await this.request<StaffAbsence[]>(
-      `/absences?${params}`,
-      "GET",
-      "Failed to get absences",
+    const absences = await bffJson(
+      "tenant",
+      "GET /api/time-tracking/absences",
+      {
+        query: { from, to },
+        errorMessage: "Failed to get absences",
+      },
     );
-    return (result.data ?? []).map((a) => mapStaffAbsenceResponse(a as never));
+    return (absences ?? []).map(mapStaffAbsenceResponse);
   }
 
   async getQuestionedAbsences(): Promise<StaffAbsence[]> {
-    const params = new URLSearchParams({ status: "question" });
-    const result = await this.request<StaffAbsence[]>(
-      `/absences?${params}`,
-      "GET",
-      "Failed to get questioned absences",
+    const absences = await bffJson(
+      "tenant",
+      "GET /api/time-tracking/absences",
+      {
+        query: { status: "question" },
+        errorMessage: "Failed to get questioned absences",
+      },
     );
-    return (result.data ?? []).map((a) => mapStaffAbsenceResponse(a as never));
+    return (absences ?? []).map(mapStaffAbsenceResponse);
   }
 
   /**
@@ -358,80 +261,84 @@ class TimeTrackingService {
    * ohne Mail fehlt.
    */
   async getAbsenceRequestMails(): Promise<Record<string, MailOutcomeCounts>> {
-    const result = await this.request<{
-      absences?: Record<string, MailOutcomeCounts> | null;
-    }>("/absences/mails", "GET", "Failed to get absence request mails");
-    return result.data?.absences ?? {};
+    const mails = await bffJson(
+      "tenant",
+      "GET /api/time-tracking/absences/mails",
+      { errorMessage: "Failed to get absence request mails" },
+    );
+    const counts: Record<string, MailOutcomeCounts> = {};
+    for (const [id, byOutcome] of Object.entries(mails.absences ?? {})) {
+      if (!byOutcome) continue;
+      const known: Partial<Record<MailOutcome, number>> = {};
+      for (const [outcome, count] of Object.entries(byOutcome)) {
+        const mailOutcome = knownMailOutcome(outcome);
+        if (mailOutcome) known[mailOutcome] = count;
+      }
+      counts[id] = known;
+    }
+    return counts;
   }
 
-  async createAbsence(req: CreateAbsenceRequest): Promise<StaffAbsence> {
-    const result = await this.request<StaffAbsence>(
-      "/absences",
-      "POST",
-      "Failed to create absence",
-      req,
+  async createAbsence(req: shared.CreateAbsenceRequest): Promise<StaffAbsence> {
+    return mapStaffAbsenceResponse(
+      await bffJson("tenant", "POST /api/time-tracking/absences", {
+        body: req,
+        errorMessage: "Failed to create absence",
+      }),
     );
-    return mapStaffAbsenceResponse(result.data as never);
   }
 
   async updateAbsence(
     id: string,
-    req: UpdateAbsenceRequest,
+    req: tt.UpdateAbsenceRequest,
   ): Promise<StaffAbsence> {
-    const result = await this.request<StaffAbsence>(
-      `/absences/${id}`,
-      "PUT",
-      "Failed to update absence",
-      req,
+    return mapStaffAbsenceResponse(
+      await bffJson("tenant", "PUT /api/time-tracking/absences/{id}", {
+        params: { id },
+        body: req,
+        errorMessage: "Failed to update absence",
+      }),
     );
-    return mapStaffAbsenceResponse(result.data as never);
   }
 
   async deleteAbsence(id: string): Promise<void> {
-    await this.requestVoid(
-      `/absences/${id}`,
-      "DELETE",
-      "Failed to delete absence",
-    );
+    await bffJson("tenant", "DELETE /api/time-tracking/absences/{id}", {
+      params: { id },
+      errorMessage: "Failed to delete absence",
+    });
   }
 
-  async requestVacation(req: VacationRequestPayload): Promise<StaffAbsence> {
-    const result = await this.request<StaffAbsence>(
-      "/vacation/request",
-      "POST",
-      "Urlaubsantrag konnte nicht erstellt werden",
-      req,
+  async requestVacation(req: tt.RequestVacationRequest): Promise<StaffAbsence> {
+    return mapStaffAbsenceResponse(
+      await bffJson("tenant", "POST /api/time-tracking/vacation/request", {
+        body: req,
+        errorMessage: "Urlaubsantrag konnte nicht erstellt werden",
+      }),
     );
-    return mapStaffAbsenceResponse(result.data as never);
   }
 
   async cancelAbsence(id: string): Promise<void> {
-    await this.requestVoid(
-      `/absences/${id}/cancel`,
-      "POST",
-      "Antrag konnte nicht storniert werden",
-    );
+    await bffJson("tenant", "POST /api/time-tracking/absences/{id}/cancel", {
+      params: { id },
+      errorMessage: "Antrag konnte nicht storniert werden",
+    });
   }
 
   // Answer to a Rückfrage (#1419): amend the own note and move the absence
   // back to "requested" for another decision round.
   async resubmitAbsence(id: string, note: string): Promise<void> {
-    await this.request(
-      `/absences/${id}/resubmit`,
-      "POST",
-      "Antrag konnte nicht erneut eingereicht werden",
-      { note },
-    );
+    await bffJson("tenant", "POST /api/time-tracking/absences/{id}/resubmit", {
+      params: { id },
+      body: { note },
+      errorMessage: "Antrag konnte nicht erneut eingereicht werden",
+    });
   }
 
-  async getVacationQuota(year?: number): Promise<VacationQuotaSummary> {
-    const params = year ? `?year=${year}` : "";
-    const result = await this.request<VacationQuotaSummary>(
-      `/vacation/quota${params}`,
-      "GET",
-      "Urlaubskontingent konnte nicht geladen werden",
-    );
-    return result.data;
+  async getVacationQuota(year?: number): Promise<shared.VacationQuotaSummary> {
+    return bffJson("tenant", "GET /api/time-tracking/vacation/quota", {
+      query: { year },
+      errorMessage: "Urlaubskontingent konnte nicht geladen werden",
+    });
   }
 
   /**
@@ -440,12 +347,12 @@ class TimeTrackingService {
    * Berlin year when none is given.
    */
   async getOwnAbsenceAllowances(): Promise<OwnAbsenceAllowance[]> {
-    const result = await this.request<tt.OwnAllowanceResponse[] | null>(
-      "/absence-allowances",
-      "GET",
-      "Kontingente konnten nicht geladen werden",
+    const allowances = await bffJson(
+      "tenant",
+      "GET /api/time-tracking/absence-allowances",
+      { errorMessage: "Kontingente konnten nicht geladen werden" },
     );
-    return (result.data ?? []).map((entry) => ({
+    return (allowances ?? []).map((entry) => ({
       name: entry.name,
       summary: mapAllowance(entry),
     }));
@@ -456,25 +363,6 @@ class TimeTrackingService {
 export interface OwnAbsenceAllowance {
   readonly name: string;
   readonly summary: AbsenceTypeAllowanceSummary;
-}
-
-interface VacationRequestPayload {
-  date_start: string;
-  date_end: string;
-  start_half_day: boolean;
-  end_half_day: boolean;
-  note?: string;
-  substitute_staff_id?: number;
-}
-
-interface VacationQuotaSummary {
-  staff_id: number;
-  year: number;
-  entitled_days: number;
-  carryover_days: number;
-  taken_days: number;
-  reserved_days: number;
-  remaining_days: number;
 }
 
 export const timeTrackingService = new TimeTrackingService();

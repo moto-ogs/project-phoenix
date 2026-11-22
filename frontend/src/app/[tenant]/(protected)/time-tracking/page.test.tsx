@@ -903,10 +903,11 @@ function setupDefaultMocks(overrides?: {
   // Default: getSessionBreaks returns empty
   vi.mocked(timeTrackingService.getSessionBreaks).mockResolvedValue([]);
   vi.mocked(timeTrackingService.getVacationQuota).mockResolvedValue({
-    staff_id: 10,
+    staff_id: "10",
     year: today.getFullYear(),
     entitled_days: 30,
     carryover_days: 0,
+    taken_before_days: 0,
     taken_days: 0,
     reserved_days: 0,
     remaining_days: 30,

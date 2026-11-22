@@ -20,6 +20,11 @@ import { USER_CONTEXT_SWR_KEY, useUserContext } from "./use-user-context";
 // Echtes SWR: gezählt wird, was beim Server ankommt.
 vi.unmock("swr");
 
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
     data: { user: { id: "7" }, expires: "2099-01-01" },

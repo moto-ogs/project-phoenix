@@ -3,7 +3,7 @@
 import { expandClosingDaysToMap } from "~/lib/closing-day-helpers";
 import { knownEnum } from "~/lib/contract/known-enum";
 import type * as shared from "~/lib/contract/shared.generated";
-import type * as staffWire from "~/lib/contract/staff.generated";
+import type * as staffContract from "~/lib/contract/staff.generated";
 import type * as tt from "~/lib/contract/time-tracking.generated";
 import {
   berlinClockFromISO,
@@ -874,7 +874,7 @@ export interface MonthCloseSnapshot {
 }
 
 export function mapMonthCloseSnapshotResponse(
-  data: staffWire.StaffMonthBalanceSnapshot,
+  data: staffContract.StaffMonthBalanceSnapshot,
 ): MonthCloseSnapshot {
   return {
     staffId: data.staff_id,
@@ -896,7 +896,7 @@ export interface MonthCloseResult {
 }
 
 export function mapMonthCloseResultResponse(
-  data: staffWire.MonthCloseResult,
+  data: staffContract.MonthCloseResult,
 ): MonthCloseResult {
   return {
     year: data.year,

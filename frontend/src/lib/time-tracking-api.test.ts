@@ -2,11 +2,14 @@ import { afterEach, describe, it, expect, vi, beforeEach } from "vitest";
 import { getSession } from "next-auth/react";
 import { ApiError } from "./api-error";
 import { timeTrackingService } from "./time-tracking-api";
-import type {
-  CreateAbsenceRequest,
-  UpdateAbsenceRequest,
-  UpdateSessionRequest,
-} from "./time-tracking-api";
+import type { UpdateSessionRequest } from "./time-tracking-api";
+import type * as shared from "~/lib/contract/shared.generated";
+import type * as tt from "~/lib/contract/time-tracking.generated";
+
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
 
 // Mock next-auth/react
 vi.mock("next-auth/react", () => ({
@@ -318,9 +321,10 @@ describe("TimeTrackingService", () => {
     });
 
     it("returns an empty account start date when backend config is unset", async () => {
+      // Go writes the unset date as its zero value, an empty string.
       global.fetch = mockFetchResponse({
         status: "success",
-        data: {},
+        data: { account_start_date: "" },
       });
 
       const result = await timeTrackingService.getConfig();
@@ -647,7 +651,7 @@ describe("TimeTrackingService", () => {
         data: backendAbsence,
       });
 
-      const req: CreateAbsenceRequest = {
+      const req: shared.CreateAbsenceRequest = {
         absence_type: "sick",
         date_start: "2025-06-20",
         date_end: "2025-06-21",
@@ -675,7 +679,7 @@ describe("TimeTrackingService", () => {
         data: { ...backendAbsence, note: "Severe flu" },
       });
 
-      const req: UpdateAbsenceRequest = { note: "Severe flu" };
+      const req: tt.UpdateAbsenceRequest = { note: "Severe flu" };
       const result = await timeTrackingService.updateAbsence("7", req);
 
       expect(global.fetch).toHaveBeenCalledWith(
@@ -724,7 +728,7 @@ describe("TimeTrackingService", () => {
         start_half_day: false,
         end_half_day: true,
         note: "Family",
-        substitute_staff_id: 42,
+        substitute_staff_id: "42",
       });
 
       expect(global.fetch).toHaveBeenCalledWith(
@@ -737,7 +741,7 @@ describe("TimeTrackingService", () => {
             start_half_day: false,
             end_half_day: true,
             note: "Family",
-            substitute_staff_id: 42,
+            substitute_staff_id: "42",
           }),
         }),
       );
@@ -918,7 +922,7 @@ describe("TimeTrackingService", () => {
 
       const callArgs = (global.fetch as ReturnType<typeof vi.fn>).mock
         .calls[0] as [string, RequestInit];
-      const headers = callArgs[1].headers as Record<string, string>;
+      const headers = (callArgs[1].headers ?? {}) as Record<string, string>;
       expect(headers.Authorization).toBeUndefined();
     });
 
@@ -936,7 +940,7 @@ describe("TimeTrackingService", () => {
 
       const callArgs = (global.fetch as ReturnType<typeof vi.fn>).mock
         .calls[0] as [string, RequestInit];
-      const headers = callArgs[1].headers as Record<string, string>;
+      const headers = (callArgs[1].headers ?? {}) as Record<string, string>;
       expect(headers.Authorization).toBeUndefined();
     });
   });
@@ -952,7 +956,7 @@ describe("TimeTrackingService", () => {
 
       const callArgs = (global.fetch as ReturnType<typeof vi.fn>).mock
         .calls[0] as [string, RequestInit];
-      const headers = callArgs[1].headers as Record<string, string>;
+      const headers = (callArgs[1].headers ?? {}) as Record<string, string>;
       expect(headers["Content-Type"]).toBe("application/json");
     });
 
@@ -966,7 +970,7 @@ describe("TimeTrackingService", () => {
 
       const callArgs = (global.fetch as ReturnType<typeof vi.fn>).mock
         .calls[0] as [string, RequestInit];
-      const headers = callArgs[1].headers as Record<string, string>;
+      const headers = (callArgs[1].headers ?? {}) as Record<string, string>;
       expect(headers["Content-Type"]).toBeUndefined();
     });
   });

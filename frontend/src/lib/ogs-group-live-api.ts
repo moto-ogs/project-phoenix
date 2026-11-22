@@ -3,12 +3,12 @@
 // GET /api/students/ogs-group-live returns everything the OGS-Gruppen page renders for
 // one supervised group in a single backend request. The wire DTO is minimal by
 // contract — it must never grow personal fields the page does not display.
-import type { ClassHandover } from "~/lib/class-handover";
 import { apiErrorFromResponse, transportFetch } from "~/lib/api-error";
 import type { TrackingIndicatorsResponse } from "~/lib/active-helpers";
 import type { DepartureMode } from "~/lib/departure-plan";
 import type { PlannedActivity, TeacherHint } from "~/lib/student-helpers";
 import type { ApiResponse } from "./api-envelope";
+import type * as studentsContract from "~/lib/contract/students.generated";
 
 // Wire types (Go DTOs from backend/api/students/ogs_group_live_handlers.go)
 
@@ -44,7 +44,7 @@ export interface OgsLiveWireStudent {
   planned_activities?: PlannedActivity[];
   // Übergabe nach dem Unterricht (#4794): heute mit der Klasse an die OGS
   // übergeben, „da“ oder „nicht da“.
-  class_handover?: ClassHandover;
+  class_handover?: studentsContract.ClassHandover;
   arrival_time?: string;
   arrival_is_exception?: boolean;
   arrival_notes?: string;

@@ -1,8 +1,8 @@
 import type { StatusBadgeTone } from "~/components/ui/status-badge";
-import type { ClassHandover } from "~/lib/class-handover";
 import type { Student, TeacherHint } from "~/lib/student-helpers";
 import type { TimetableRoster } from "~/lib/timetable-operations-types";
 import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
+import type * as studentsContract from "~/lib/contract/students.generated";
 
 export const SCHULHOF_ROOM_NAME = "Schulhof";
 
@@ -447,7 +447,7 @@ export interface VisitDisplayLike {
   sickSince?: string;
   excused?: boolean;
   excusedSince?: string;
-  classHandover?: ClassHandover;
+  classHandover?: studentsContract.ClassHandover;
   photoUrl?: string;
 }
 
