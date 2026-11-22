@@ -228,7 +228,7 @@ func (c *effectiveTimeCore[S, E, N, D]) updateException(
 
 		fields := c.domain.ExceptionFields(fresh)
 
-		if err := prepareExceptionUpdate(&fields, studentID, date, clearValue, resolveStaffID); err != nil {
+		if err := prepareExceptionUpdate(txCtx, &fields, studentID, date, clearValue, resolveStaffID); err != nil {
 			return err
 		}
 		fields.ApplyTimePatch(date, reason, value, clearValue)
@@ -304,7 +304,7 @@ func (c *effectiveTimeCore[S, E, N, D]) deleteExceptionRow(ctx context.Context, 
 
 // reclaimedFields takes over a guardian's exception for a staff write, or
 // refuses the day.
-func (c *effectiveTimeCore[S, E, N, D]) reclaimedFields(existing E, fields domain.EffectiveExceptionFields, resolveStaffID func() (int64, error)) (domain.EffectiveExceptionFields, error) {
+func (c *effectiveTimeCore[S, E, N, D]) reclaimedFields(ctx context.Context, existing E, fields domain.EffectiveExceptionFields, resolveStaffID func() (int64, error)) (domain.EffectiveExceptionFields, error) {
 	previous := c.domain.ExceptionFields(existing)
 	if previous.Source != careplan.ExceptionSourceGuardian {
 		return fields, careplan.ErrCareExceptionDayConflict
@@ -314,15 +314,15 @@ func (c *effectiveTimeCore[S, E, N, D]) reclaimedFields(existing E, fields domai
 		return fields, careplan.ErrCareExceptionContainsPartialAbsence
 	}
 	staffID, err := resolveStaffID()
-	if err != nil || staffID == 0 {
+	if err != nil || !careplan.HasScheduleAuthor(ctx, staffID) {
 		return fields, careplan.ErrCareExceptionStaffProfileRequired
 	}
 	fields.ID, fields.CreatedAt, fields.TenantID = previous.ID, previous.CreatedAt, previous.TenantID
-	fields.CreatedBy = staffID
+	fields.CreatedBy, fields.EnteredByTraeger = staffID, careplan.EnteredByTraeger(ctx, staffID)
 	return fields, nil
 }
 
-func prepareExceptionUpdate(fields *domain.EffectiveExceptionFields, studentID int64, date calendar.Date, clearValue bool, resolveStaffID func() (int64, error)) error {
+func prepareExceptionUpdate(ctx context.Context, fields *domain.EffectiveExceptionFields, studentID int64, date calendar.Date, clearValue bool, resolveStaffID func() (int64, error)) error {
 	if fields.StudentID != studentID {
 		return careplan.ErrCareExceptionWrongStudent
 	}
@@ -333,11 +333,11 @@ func prepareExceptionUpdate(fields *domain.EffectiveExceptionFields, studentID i
 		return nil
 	}
 	staffID, err := resolveStaffID()
-	if err != nil || staffID == 0 {
+	if err != nil || !careplan.HasScheduleAuthor(ctx, staffID) {
 		return careplan.ErrCareExceptionStaffProfileRequired
 	}
 	fields.Source = careplan.ExceptionSourceStaff
-	fields.CreatedBy = staffID
+	fields.CreatedBy, fields.EnteredByTraeger = staffID, careplan.EnteredByTraeger(ctx, staffID)
 	fields.CreatedByGuardian = nil
 	return nil
 }

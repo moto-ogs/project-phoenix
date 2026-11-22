@@ -70,7 +70,8 @@ func (s *pickupScheduleService) SetDayDeparture(ctx context.Context, studentID i
 		}
 		var err error
 		saved, err = s.departures.SaveDepartureException(txCtx, careplan.DepartureException{
-			StudentID: studentID, ExceptionDate: careplan.Date(date), DepartureMode: mode, Reason: reason, CreatedBy: &staffID,
+			StudentID: studentID, ExceptionDate: careplan.Date(date), DepartureMode: mode, Reason: reason,
+			CreatedBy: optionalStaff(staffID), EnteredByTraeger: careplan.EnteredByTraeger(txCtx, staffID),
 		})
 		return err
 	})

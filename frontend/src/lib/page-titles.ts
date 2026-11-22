@@ -250,6 +250,7 @@ export const GERMAN_PAGE_TITLES: Readonly<
     "/vertraege/:id": "Vertrag",
     "/vertraege/bedingungen": "Vertragsbedingungen",
     "/vertraege/import": "Verträge importieren",
+    "/vertraege/module-zuordnen": "Module neu zuordnen",
     "/zeitvergleich": "Länger als gebucht",
   },
   operator: {

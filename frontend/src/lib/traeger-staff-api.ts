@@ -1,3 +1,4 @@
+import { bffJson } from "~/lib/bff-fetch";
 /**
  * Personalakte des Trägers über alle Schulen (#4705, ADR 0089, ADR 0233).
  *
@@ -16,7 +17,6 @@ import {
   type TraegerListFile,
   type TraegerListFormat,
 } from "./traeger-list-export";
-import { traegerRequest } from "~/lib/traeger-api";
 import { mapStaffProof, type StaffProof } from "~/lib/traeger-staff-proofs-api";
 
 const BASE = "/api/traeger/staff-records";
@@ -416,15 +416,8 @@ function linkBody(
   };
 }
 
-const recordPath = (id: string, suffix = "") =>
-  `${BASE}/${encodeURIComponent(id)}${suffix}`;
-
 export async function fetchStaffOverview(): Promise<StaffOverview> {
-  return mapStaffOverview(
-    await traegerRequest<traegerStaffRecordsContract.TraegerStaffOverview>(
-      `${BASE}`,
-    ),
-  );
+  return mapStaffOverview(await bffJson("org", "GET /traeger/staff-records/"));
 }
 
 /** Die Liste der Akten als Datei; der Download steht im Zugriffsprotokoll. */
@@ -436,23 +429,18 @@ export function downloadStaffRecordList(
 
 export async function fetchStaffRecord(id: string): Promise<StaffRecordDetail> {
   return mapDetail(
-    await traegerRequest<traegerStaffRecordsContract.TraegerStaffRecordDetail>(
-      recordPath(id),
-    ),
+    await bffJson("org", "GET /traeger/staff-records/{id}", { params: { id } }),
   );
 }
 
 export async function previewStaffLink(
   input: StaffLinkInput,
 ): Promise<StaffLinkPreview> {
-  const data =
-    await traegerRequest<traegerStaffRecordsContract.TraegerStaffLinkPreview>(
-      `${BASE}/link-preview`,
-      {
-        method: "POST",
-        body: linkBody(input),
-      },
-    );
+  const data = await bffJson(
+    "org",
+    "POST /traeger/staff-records/link-preview",
+    { body: linkBody(input) },
+  );
   return {
     record: data.record ? mapSummary(data.record) : null,
     members: (data.members ?? []).map(mapCandidate),
@@ -479,13 +467,9 @@ export async function linkStaff(
   input: StaffLinkInput,
 ): Promise<StaffRecordDetail> {
   return mapDetail(
-    await traegerRequest<traegerStaffRecordsContract.TraegerStaffRecordDetail>(
-      `${BASE}`,
-      {
-        method: "POST",
-        body: linkBody(input),
-      },
-    ),
+    await bffJson("org", "POST /traeger/staff-records/", {
+      body: linkBody(input),
+    }),
   );
 }
 
@@ -494,15 +478,12 @@ export async function updateStaffPersonnelNumber(
   value: string | null,
 ): Promise<StaffRecordDetail> {
   return mapDetail(
-    await traegerRequest<traegerStaffRecordsContract.TraegerStaffRecordDetail>(
-      recordPath(id, "/personnel-number"),
-      {
-        method: "PUT",
-        body: {
-          personnel_number: value,
-        } satisfies traegerStaffRecordsContract.PersonnelNumberRequest,
-      },
-    ),
+    await bffJson("org", "PUT /traeger/staff-records/{id}/personnel-number", {
+      params: { id },
+      body: {
+        personnel_number: value,
+      } satisfies traegerStaffRecordsContract.PersonnelNumberRequest,
+    }),
   );
 }
 
@@ -529,8 +510,8 @@ export async function updateStaffPerson(
     last_name: input.lastName,
     birthday: input.birthday === "" ? null : input.birthday,
   };
-  await traegerRequest<unknown>(recordPath(id, "/person"), {
-    method: "PUT",
+  await bffJson("org", "PUT /traeger/staff-records/{id}/person", {
+    params: { id },
     body,
   });
 }
@@ -539,12 +520,9 @@ export async function revealStaffFinancial(
   id: string,
 ): Promise<StaffFinancial> {
   return mapFinancial(
-    await traegerRequest<traegerStaffRecordsContract.TraegerStaffFinancial>(
-      recordPath(id, "/financial/reveal"),
-      {
-        method: "POST",
-      },
-    ),
+    await bffJson("org", "POST /traeger/staff-records/{id}/financial/reveal", {
+      params: { id },
+    }),
   );
 }
 
@@ -552,8 +530,8 @@ export async function updateStaffFinancial(
   id: string,
   values: StaffFinancial,
 ): Promise<void> {
-  await traegerRequest<unknown>(recordPath(id, "/financial"), {
-    method: "PUT",
+  await bffJson("org", "PUT /traeger/staff-records/{id}/financial", {
+    params: { id },
     body: {
       iban: values.iban,
       tax_id: values.taxId,
@@ -562,28 +540,22 @@ export async function updateStaffFinancial(
   });
 }
 
-const contractPath = (recordId: string, contractId: string, suffix = "") =>
-  recordPath(recordId, `/contracts/${encodeURIComponent(contractId)}${suffix}`);
-
 /** Legt einen Arbeitsvertrag mit dem ersten Soll je Einsatzort an (#4706). */
 export async function createStaffContract(
   recordId: string,
   input: StaffContractInput,
 ): Promise<StaffRecordDetail> {
   return mapDetail(
-    await traegerRequest<traegerStaffRecordsContract.TraegerStaffRecordDetail>(
-      recordPath(recordId, "/contracts"),
-      {
-        method: "POST",
-        body: {
-          kind: input.kind,
-          starts_on: input.startsOn,
-          ends_on: input.endsOn,
-          pool: input.pool,
-          sites: input.sites.map(siteBody),
-        } satisfies traegerStaffRecordsContract.CreateContractRequest,
-      },
-    ),
+    await bffJson("org", "POST /traeger/staff-records/{id}/contracts", {
+      params: { id: recordId },
+      body: {
+        kind: input.kind,
+        starts_on: input.startsOn,
+        ends_on: input.endsOn,
+        pool: input.pool,
+        sites: input.sites.map(siteBody),
+      } satisfies traegerStaffRecordsContract.CreateContractRequest,
+    }),
   );
 }
 
@@ -598,10 +570,11 @@ export async function updateStaffContract(
   },
 ): Promise<StaffRecordDetail> {
   return mapDetail(
-    await traegerRequest<traegerStaffRecordsContract.TraegerStaffRecordDetail>(
-      contractPath(recordId, contractId),
+    await bffJson(
+      "org",
+      "PUT /traeger/staff-records/{id}/contracts/{contractId}",
       {
-        method: "PUT",
+        params: { id: recordId, contractId },
         body: {
           kind: input.kind,
           ends_on: input.endsOn,
@@ -620,10 +593,11 @@ export async function changeStaffContractSoll(
   sites: readonly StaffContractSiteInput[],
 ): Promise<StaffRecordDetail> {
   return mapDetail(
-    await traegerRequest<traegerStaffRecordsContract.TraegerStaffRecordDetail>(
-      contractPath(recordId, contractId, "/soll"),
+    await bffJson(
+      "org",
+      "POST /traeger/staff-records/{id}/contracts/{contractId}/soll",
       {
-        method: "POST",
+        params: { id: recordId, contractId },
         body: {
           valid_from: validFrom,
           sites: sites.map(siteBody),
@@ -640,10 +614,11 @@ export async function addStaffHolidayWeeks(
   input: StaffHolidayWeeksInput,
 ): Promise<StaffRecordDetail> {
   return mapDetail(
-    await traegerRequest<traegerStaffRecordsContract.TraegerStaffRecordDetail>(
-      contractPath(recordId, contractId, "/holiday-weeks"),
+    await bffJson(
+      "org",
+      "POST /traeger/staff-records/{id}/contracts/{contractId}/holiday-weeks",
       {
-        method: "POST",
+        params: { id: recordId, contractId },
         body: {
           school_id: input.schoolId,
           staff_id: input.staffId,
@@ -664,13 +639,10 @@ export async function deleteStaffHolidayWeek(
   weekStart: string,
 ): Promise<StaffRecordDetail> {
   return mapDetail(
-    await traegerRequest<traegerStaffRecordsContract.TraegerStaffRecordDetail>(
-      contractPath(
-        recordId,
-        contractId,
-        `/holiday-weeks/${encodeURIComponent(schoolId)}/${encodeURIComponent(weekStart)}`,
-      ),
-      { method: "DELETE" },
+    await bffJson(
+      "org",
+      "DELETE /traeger/staff-records/{id}/contracts/{contractId}/holiday-weeks/{schoolId}/{weekStart}",
+      { params: { id: recordId, contractId, schoolId, weekStart } },
     ),
   );
 }
@@ -681,17 +653,18 @@ export async function deleteStaffContract(
   contractId: string,
 ): Promise<StaffRecordDetail> {
   return mapDetail(
-    await traegerRequest<traegerStaffRecordsContract.TraegerStaffRecordDetail>(
-      contractPath(recordId, contractId),
-      {
-        method: "DELETE",
-      },
+    await bffJson(
+      "org",
+      "DELETE /traeger/staff-records/{id}/contracts/{contractId}",
+      { params: { id: recordId, contractId } },
     ),
   );
 }
 
 export async function dissolveStaffRecord(id: string): Promise<void> {
-  await traegerRequest<unknown>(recordPath(id), { method: "DELETE" });
+  await bffJson("org", "DELETE /traeger/staff-records/{id}", {
+    params: { id },
+  });
 }
 
 /** Der Name einer Person, wie die Liste ihn zeigt. */
@@ -875,29 +848,25 @@ export async function hireStaff(
   input: StaffHireInput,
 ): Promise<StaffRecordDetail> {
   return mapDetail(
-    await traegerRequest<traegerStaffRecordsContract.TraegerStaffRecordDetail>(
-      `${BASE}/hire`,
-      {
-        method: "POST",
-        body: {
-          first_name: input.firstName,
-          last_name: input.lastName,
-          birthday: input.birthday,
-          email: input.email || null,
-          phone: input.phone || null,
-          personnel_number: input.personnelNumber || null,
-          contract: {
-            kind: input.kind,
-            starts_on: input.startsOn,
-            ends_on: input.endsOn,
-          },
-          sites: input.sites.map((site) => ({
-            school_id: site.schoolId,
-            weekday_minutes: [...site.weekdayMinutes],
-          })),
-          confirm_duplicate: input.confirmDuplicate,
-        } satisfies traegerStaffRecordsContract.HireRequest,
-      },
-    ),
+    await bffJson("org", "POST /traeger/staff-records/hire", {
+      body: {
+        first_name: input.firstName,
+        last_name: input.lastName,
+        birthday: input.birthday,
+        email: input.email || null,
+        phone: input.phone || null,
+        personnel_number: input.personnelNumber || null,
+        contract: {
+          kind: input.kind,
+          starts_on: input.startsOn,
+          ends_on: input.endsOn,
+        },
+        sites: input.sites.map((site) => ({
+          school_id: site.schoolId,
+          weekday_minutes: [...site.weekdayMinutes],
+        })),
+        confirm_duplicate: input.confirmDuplicate,
+      } satisfies traegerStaffRecordsContract.HireRequest,
+    }),
   );
 }

@@ -1,3 +1,4 @@
+import { bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the monthly contribution of the care contract (#4684): the
  * price list of the Träger (a monthly price per booked weekday, module and
@@ -22,7 +23,6 @@ import {
   knownMailOutcome,
   knownMailProviderBlock,
 } from "~/lib/email-delivery-status";
-import { traegerRequest } from "./traeger-api";
 import { knownEnum } from "./contract/known-enum";
 import { requiredDay } from "./contract/required-day";
 import type * as sharedContract from "./contract/shared.generated";
@@ -578,7 +578,6 @@ function amendmentFromBackend(
   };
 }
 
-const TARIFFS_PATH = "/api/traeger/care-tariffs";
 const RUNS_PATH = "/api/traeger/care-billing-runs";
 
 /** An ID of the contract; "0" is none. */
@@ -827,9 +826,7 @@ export function detailFromBackend(
 }
 
 export async function fetchCareTariffs(): Promise<CareTariffs> {
-  return tariffsFromBackend(
-    await traegerRequest<traegerCareTariffsContract.CareTariffs>(TARIFFS_PATH),
-  );
+  return tariffsFromBackend(await bffJson("org", "GET /traeger/care-tariffs/"));
 }
 
 /** Sets the prices of a school from `validFrom` (the 1st of a month) on. */
@@ -840,8 +837,7 @@ export async function saveCarePriceList(
   freeMonths: readonly number[] = [],
 ): Promise<CareTariffs> {
   return tariffsFromBackend(
-    await traegerRequest<traegerCareTariffsContract.CareTariffs>(TARIFFS_PATH, {
-      method: "PUT",
+    await bffJson("org", "PUT /traeger/care-tariffs/", {
       body: {
         school_id: schoolId,
         valid_from: validFrom,
@@ -866,16 +862,16 @@ export async function deleteCarePriceList(
   validFrom: string,
 ): Promise<CareTariffs> {
   return tariffsFromBackend(
-    await traegerRequest<traegerCareTariffsContract.CareTariffs>(
-      `${TARIFFS_PATH}/${encodeURIComponent(schoolId)}/${encodeURIComponent(validFrom)}`,
-      { method: "DELETE" },
+    await bffJson(
+      "org",
+      "DELETE /traeger/care-tariffs/{schoolID}/{validFrom}",
+      { params: { schoolID: schoolId, validFrom } },
     ),
   );
 }
 
 export async function fetchCareRuns(): Promise<CareRunList> {
-  const body =
-    await traegerRequest<traegerCareBillingRunsContract.CareRunList>(RUNS_PATH);
+  const body = await bffJson("org", "GET /traeger/care-billing-runs/");
   return {
     runs: (body.runs ?? []).map(runFromBackend),
     suggestedMonth: requiredDay(
@@ -896,8 +892,7 @@ export interface CareRunStartInput {
 
 export async function startCareRun(input: CareRunStartInput): Promise<CareRun> {
   return runFromBackend(
-    await traegerRequest<traegerCareBillingRunsContract.CareRun>(RUNS_PATH, {
-      method: "POST",
+    await bffJson("org", "POST /traeger/care-billing-runs/", {
       body: {
         billing_month: input.billingMonth,
         school_ids: [...input.schoolIds],
@@ -909,9 +904,9 @@ export async function startCareRun(input: CareRunStartInput): Promise<CareRun> {
 
 export async function fetchCareRun(runId: string): Promise<CareRunDetail> {
   return detailFromBackend(
-    await traegerRequest<traegerCareBillingRunsContract.CareRunDetail>(
-      `${RUNS_PATH}/${encodeURIComponent(runId)}`,
-    ),
+    await bffJson("org", "GET /traeger/care-billing-runs/{id}", {
+      params: { id: runId },
+    }),
   );
 }
 
@@ -926,17 +921,14 @@ export async function releaseCareRun(
   >,
 ): Promise<CareRunDetail> {
   return detailFromBackend(
-    await traegerRequest<traegerCareBillingRunsContract.CareRunDetail>(
-      `${RUNS_PATH}/${encodeURIComponent(run.id)}/release`,
-      {
-        method: "POST",
-        body: {
-          document_count: run.previewCount,
-          total_cents: run.previewCents,
-          fingerprint: run.fingerprint,
-        },
+    await bffJson("org", "POST /traeger/care-billing-runs/{id}/release", {
+      params: { id: run.id },
+      body: {
+        document_count: run.previewCount,
+        total_cents: run.previewCents,
+        fingerprint: run.fingerprint,
       },
-    ),
+    }),
   );
 }
 
@@ -947,10 +939,9 @@ export async function releaseCareRun(
  */
 export async function discardCareRun(runId: string): Promise<CareRunDetail> {
   return detailFromBackend(
-    await traegerRequest<traegerCareBillingRunsContract.CareRunDetail>(
-      `${RUNS_PATH}/${encodeURIComponent(runId)}/discard`,
-      { method: "POST" },
-    ),
+    await bffJson("org", "POST /traeger/care-billing-runs/{id}/discard", {
+      params: { id: runId },
+    }),
   );
 }
 
@@ -1125,9 +1116,9 @@ function careLetterBody(
 /** The letters of a released run with the state of every invoice. */
 export async function fetchCareLetters(runId: string): Promise<CareLetters> {
   return careLettersFromBackend(
-    await traegerRequest<traegerCareBillingRunsContract.CareLetters>(
-      lettersPath(runId),
-    ),
+    await bffJson("org", "GET /traeger/care-billing-runs/{id}/letters", {
+      params: { id: runId },
+    }),
   );
 }
 
@@ -1137,13 +1128,10 @@ export async function createCareLetters(
   input: CareLetterInput,
 ): Promise<CareLetters> {
   return careLettersFromBackend(
-    await traegerRequest<traegerCareBillingRunsContract.CareLetters>(
-      lettersPath(runId),
-      {
-        method: "POST",
-        body: careLetterBody(input),
-      },
-    ),
+    await bffJson("org", "POST /traeger/care-billing-runs/{id}/letters", {
+      params: { id: runId },
+      body: careLetterBody(input),
+    }),
   );
 }
 
@@ -1182,9 +1170,10 @@ export async function printCareLetters(
 export async function mailCareLetters(
   runId: string,
 ): Promise<CareLetterSeries> {
-  const series = await traegerRequest<sharedContract.BillingLetterSeries>(
-    `${lettersPath(runId)}/mail`,
-    { method: "POST" },
+  const series = await bffJson(
+    "org",
+    "POST /traeger/care-billing-runs/{id}/letters/mail",
+    { params: { id: runId } },
   );
   return {
     queued: series.queued,
@@ -1214,9 +1203,13 @@ export async function mailCareLetter(
   kind: CareLetterKind,
 ): Promise<CareLetterMailing> {
   return careMailingFromBackend(
-    await traegerRequest<traegerCareBillingRunsContract.CareLetterMailing>(
-      `${invoicePath(runId, invoiceId)}/mail${kind === "cancellation" ? "?kind=cancellation" : ""}`,
-      { method: "POST" },
+    await bffJson(
+      "org",
+      "POST /traeger/care-billing-runs/{id}/invoices/{invoiceID}/mail",
+      {
+        params: { id: runId, invoiceID: invoiceId },
+        query: { kind: kind === "cancellation" ? kind : undefined },
+      },
     ),
   );
 }
@@ -1228,10 +1221,11 @@ export async function cancelCareInvoice(
   reason: string,
 ): Promise<CareLetters> {
   return careLettersFromBackend(
-    await traegerRequest<traegerCareBillingRunsContract.CareLetters>(
-      `${invoicePath(runId, invoiceId)}/cancellation`,
+    await bffJson(
+      "org",
+      "POST /traeger/care-billing-runs/{id}/invoices/{invoiceID}/cancellation",
       {
-        method: "POST",
+        params: { id: runId, invoiceID: invoiceId },
         body: {
           reason,
         } satisfies traegerCareBillingRunsContract.CareCancellationRequest,

@@ -1,3 +1,4 @@
+import { bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the import of existing SEPA mandates (#6198): the preview of a
  * CSV file with its column mapping, the import of the ready rows and the log
@@ -11,7 +12,7 @@ import { apiErrorFromResponse, transportFetch } from "./api-error";
 import { knownEnum } from "./contract/known-enum";
 import type * as traegerSepaMandatesContract from "./contract/traeger-sepa-mandates.generated";
 import { type MandateSequence, knownMandateSequence } from "./traeger-sepa-api";
-import { readJson, traegerRequest } from "./traeger-api";
+import { readJson } from "./traeger-api";
 
 const IMPORTS_PATH = "/api/traeger/sepa-mandates/imports";
 
@@ -279,10 +280,7 @@ export function applySepaImport(request: ImportRequest): Promise<ImportResult> {
 
 /** The imports of the Träger, newest first. */
 export async function fetchSepaImportLog(): Promise<ImportLogEntry[]> {
-  const entries =
-    await traegerRequest<traegerSepaMandatesContract.SEPAMandateImportEntry[]>(
-      IMPORTS_PATH,
-    );
+  const entries = await bffJson("org", "GET /traeger/sepa-mandates/imports");
   return entries.map((entry) => ({
     file: entry.file,
     accountId: entry.account_id,

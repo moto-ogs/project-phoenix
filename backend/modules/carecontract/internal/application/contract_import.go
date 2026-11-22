@@ -38,6 +38,8 @@ type ImportStore interface {
 	InsertImportedContracts(ctx context.Context, organizationID, accountID int64, contracts []ports.ImportedContract) (map[int]int64, error)
 	ContractImportEvents(ctx context.Context, organizationID int64) ([]carecontract.ContractImportEntry, error)
 	InsertEvents(ctx context.Context, organizationID int64, events []Event) error
+	CorrectableContracts(ctx context.Context, organizationID int64, ids []int64, lock bool) ([]ports.CorrectableContract, error)
+	InsertCorrectedVersions(ctx context.Context, organizationID int64, corrected []ports.CorrectedVersion) (map[int64]int64, error)
 }
 
 // ImportPorts are the root-bound ports of the import.
@@ -140,7 +142,7 @@ func (i *ContractImports) ImportContracts(ctx context.Context, reviewer carecont
 	if err != nil {
 		return carecontract.ContractImport{}, err
 	}
-	if err := i.logSchools(ctx, reviewer, shown); err != nil {
+	if err := i.logSchools(ctx, reviewer, accessViewImport, shown); err != nil {
 		return carecontract.ContractImport{}, err
 	}
 	return result, nil
@@ -505,7 +507,7 @@ func importSchoolChoices(schools []importSchool, templates templateIndex) []care
 // logSchools records in the access log of each school that the office saw
 // which of its contracts a file names, or stored new ones there (ADR 0084
 // section 7).
-func (i *ContractImports) logSchools(ctx context.Context, reviewer carecontract.Reviewer, bySchool map[int64][]int64) error {
+func (i *ContractImports) logSchools(ctx context.Context, reviewer carecontract.Reviewer, view string, bySchool map[int64][]int64) error {
 	schools := make([]int64, 0, len(bySchool))
 	for school := range bySchool {
 		schools = append(schools, school)
@@ -516,7 +518,7 @@ func (i *ContractImports) logSchools(ctx context.Context, reviewer carecontract.
 		err := i.ports.Runtime.WithinSchool(ctx, school, func(txCtx context.Context) error {
 			return i.ports.Access.RecordAccess(txCtx, carecontract.SchoolAccess{
 				OrganizationID: reviewer.OrganizationID, AccountID: reviewer.AccountID,
-				Data: carecontract.SchoolAccessContracts, View: accessViewImport, Rows: len(ids), ContractIDs: ids,
+				Data: carecontract.SchoolAccessContracts, View: view, Rows: len(ids), ContractIDs: ids,
 			})
 		})
 		if err != nil {

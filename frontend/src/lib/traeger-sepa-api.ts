@@ -1,3 +1,4 @@
+import { bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the SEPA direct debit (#4695): the creditor of the Träger
  * (Gläubiger-ID, pre-notification days, what an invoice without a mandate
@@ -9,7 +10,6 @@
 import type * as traegerSepaCreditorContract from "./contract/traeger-sepa-creditor.generated";
 import type * as traegerSepaMandatesContract from "./contract/traeger-sepa-mandates.generated";
 import { knownEnum } from "./contract/known-enum";
-import { traegerRequest } from "./traeger-api";
 
 // Go does not register these sets; the contract types them as string. A value
 // this build does not know stays undefined instead of passing as a known one.
@@ -144,15 +144,10 @@ function mandateFromBackend(
   };
 }
 
-const CREDITOR_PATH = "/api/traeger/sepa-creditor";
-const MANDATES_PATH = "/api/traeger/sepa-mandates";
-
 /** The creditor of the Träger, the defaults where it set nothing. */
 export async function fetchSepaCreditor(): Promise<SepaCreditor> {
   return creditorFromBackend(
-    await traegerRequest<traegerSepaCreditorContract.SEPACreditor>(
-      CREDITOR_PATH,
-    ),
+    await bffJson("org", "GET /traeger/sepa-creditor/"),
   );
 }
 
@@ -167,10 +162,7 @@ export async function saveSepaCreditor(creditor: {
     missing_mandate: creditor.missingMandate,
   };
   return creditorFromBackend(
-    await traegerRequest<traegerSepaCreditorContract.SEPACreditor>(
-      CREDITOR_PATH,
-      { method: "PUT", body },
-    ),
+    await bffJson("org", "PUT /traeger/sepa-creditor/", { body }),
   );
 }
 
@@ -178,13 +170,10 @@ export async function saveSepaCreditor(creditor: {
 export async function fetchSepaMandates(
   contractId?: string,
 ): Promise<SepaMandate[]> {
-  const query = contractId
-    ? `?contract_id=${encodeURIComponent(contractId)}`
-    : "";
-  const mandates = await traegerRequest<
-    traegerSepaMandatesContract.SEPAMandate[]
-  >(`${MANDATES_PATH}${query}`);
-  return mandates.map(mandateFromBackend);
+  const mandates = await bffJson("org", "GET /traeger/sepa-mandates/", {
+    query: { contract_id: contractId || undefined },
+  });
+  return (mandates ?? []).map(mandateFromBackend);
 }
 
 /** The request body of a new mandate. */
@@ -207,13 +196,9 @@ export async function createSepaMandate(
   input: SepaMandateInput,
 ): Promise<SepaMandate> {
   return mandateFromBackend(
-    await traegerRequest<traegerSepaMandatesContract.SEPAMandate>(
-      MANDATES_PATH,
-      {
-        method: "POST",
-        body: sepaMandateBody(input),
-      },
-    ),
+    await bffJson("org", "POST /traeger/sepa-mandates/", {
+      body: sepaMandateBody(input),
+    }),
   );
 }
 
@@ -223,15 +208,12 @@ export async function revokeSepaMandate(
   revokedOn: string,
 ): Promise<SepaMandate> {
   return mandateFromBackend(
-    await traegerRequest<traegerSepaMandatesContract.SEPAMandate>(
-      `${MANDATES_PATH}/${encodeURIComponent(id)}/revoke`,
-      {
-        method: "POST",
-        body: {
-          revoked_on: revokedOn,
-        } satisfies traegerSepaMandatesContract.SEPAMandateRevokeRequest,
-      },
-    ),
+    await bffJson("org", "POST /traeger/sepa-mandates/{id}/revoke", {
+      params: { id },
+      body: {
+        revoked_on: revokedOn,
+      } satisfies traegerSepaMandatesContract.SEPAMandateRevokeRequest,
+    }),
   );
 }
 
@@ -239,9 +221,11 @@ export async function revokeSepaMandate(
 export async function fetchSepaMandateHistory(
   id: string,
 ): Promise<SepaMandateEvent[]> {
-  const events = await traegerRequest<
-    traegerSepaMandatesContract.SEPAMandateEvent[]
-  >(`${MANDATES_PATH}/${encodeURIComponent(id)}/history`);
+  const events = await bffJson(
+    "org",
+    "GET /traeger/sepa-mandates/{id}/history",
+    { params: { id } },
+  );
   return events.map((event) => ({
     id: event.id,
     action: knownEnum(MANDATE_ACTION_VALUES, event.action),

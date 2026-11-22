@@ -1,3 +1,4 @@
+import { bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the cost bearer shares of the monthly contribution (#4687): which
  * cost bearer (Bildung und Teilhabe, Jugendamt, another subsidy) pays which
@@ -10,7 +11,6 @@
 import { knownEnum } from "./contract/known-enum";
 import { requiredDay } from "./contract/required-day";
 import type * as traegerCareCostSharesContract from "./contract/traeger-care-cost-shares.generated";
-import { traegerRequest } from "./traeger-api";
 import { type BillingFile, billingFile } from "./traeger-billing-api";
 import {
   type CareCostShareKind,
@@ -76,8 +76,6 @@ export interface CareCostShareSet {
 
 export type CareCostShareExportFormat = "pdf" | "xlsx" | "csv";
 
-const SHARES_PATH = "/api/traeger/care-cost-shares";
-
 function shareFromBackend(
   share: traegerCareCostSharesContract.CareCostShare,
 ): CareCostShare {
@@ -140,9 +138,7 @@ function shareBody(
 /** Reads the shares; the backend records the read per contract. */
 export async function fetchCareCostShares(): Promise<CareCostShareSet> {
   return costShareSetFromBackend(
-    await traegerRequest<traegerCareCostSharesContract.CareCostShareSet>(
-      SHARES_PATH,
-    ),
+    await bffJson("org", "GET /traeger/care-cost-shares/"),
   );
 }
 
@@ -152,10 +148,14 @@ export async function saveCareCostShare(
   input: CareCostShareInput,
 ): Promise<CareCostShareSet> {
   return costShareSetFromBackend(
-    await traegerRequest<traegerCareCostSharesContract.CareCostShareSet>(
-      shareId ? `${SHARES_PATH}/${encodeURIComponent(shareId)}` : SHARES_PATH,
-      { method: shareId ? "PUT" : "POST", body: shareBody(input) },
-    ),
+    await (shareId
+      ? bffJson("org", "PUT /traeger/care-cost-shares/{id}", {
+          params: { id: shareId },
+          body: shareBody(input),
+        })
+      : bffJson("org", "POST /traeger/care-cost-shares/", {
+          body: shareBody(input),
+        })),
   );
 }
 
@@ -163,10 +163,9 @@ export async function deleteCareCostShare(
   shareId: string,
 ): Promise<CareCostShareSet> {
   return costShareSetFromBackend(
-    await traegerRequest<traegerCareCostSharesContract.CareCostShareSet>(
-      `${SHARES_PATH}/${encodeURIComponent(shareId)}`,
-      { method: "DELETE" },
-    ),
+    await bffJson("org", "DELETE /traeger/care-cost-shares/{id}", {
+      params: { id: shareId },
+    }),
   );
 }
 

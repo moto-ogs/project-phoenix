@@ -7,7 +7,7 @@
 // nicht: ihr Vertrag entsteht von selbst und ist sofort aktiv. Nur die Rolle
 // mit dem Recht „Verträge verwalten“ sieht die Seite.
 
-import { Plus, Send, Upload } from "lucide-react";
+import { Plus, Repeat, Send, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type MouseEvent, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
@@ -601,6 +601,14 @@ export default function TraegerVertraegePage() {
             "Öffnet den Import von Kindern und bestehenden Verträgen aus einer CSV-Datei.",
           icon: <Upload className="h-4 w-4" aria-hidden />,
           href: traegerPath("/traeger/vertraege/import"),
+          onClick: () => undefined,
+        },
+        {
+          label: "Module neu zuordnen",
+          description:
+            "Öffnet die neue Zuordnung der Module importierter Verträge aus einer CSV-Datei.",
+          icon: <Repeat className="h-4 w-4" aria-hidden />,
+          href: traegerPath("/traeger/vertraege/module-zuordnen"),
           onClick: () => undefined,
         },
       ]}

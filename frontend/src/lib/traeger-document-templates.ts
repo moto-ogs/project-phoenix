@@ -1,3 +1,4 @@
+import { bffJson } from "~/lib/bff-fetch";
 /**
  * Vorlagen des Trägers je Dokumentart (#4677, ADR 0152): Betreff, Anrede,
  * Brieftext und Grußformel mit Platzhaltern wie `{{familienname}}`, bei
@@ -5,7 +6,6 @@
  * (#5691). Jedes Speichern ist eine neue Version; ohne eigene Version gilt
  * die Standardvorlage (Version 0).
  */
-import { traegerRequest } from "./traeger-api";
 import type * as traegerMasterDataContract from "./contract/traeger-master-data.generated";
 
 /** Die Dokumentarten, in der Reihenfolge des Backends. */
@@ -208,10 +208,6 @@ export interface DocumentTemplatePreview {
   readonly legalRemedy?: readonly DocumentTemplatePreviewBlock[];
 }
 
-const basePath = "/api/traeger/master-data/document-templates";
-const kindPath = (kind: DocumentTemplateKind) =>
-  `${basePath}/${encodeURIComponent(kind)}`;
-
 function mapText(
   text: traegerMasterDataContract.Template,
 ): DocumentTemplateText {
@@ -263,10 +259,10 @@ function requestBody(
 export async function fetchDocumentTemplates(): Promise<
   DocumentTemplateSummary[]
 > {
-  const data =
-    await traegerRequest<
-      traegerMasterDataContract.TraegerDocumentTemplateSummary[]
-    >(basePath);
+  const data = await bffJson(
+    "org",
+    "GET /traeger/master-data/document-templates",
+  );
   // A kind this build does not know has no page; it is left out.
   return data.flatMap((summary) => {
     const { kind } = summary;
@@ -287,10 +283,11 @@ export async function fetchDocumentTemplates(): Promise<
 export async function fetchDocumentTemplate(
   kind: DocumentTemplateKind,
 ): Promise<DocumentTemplateDetail> {
-  const data =
-    await traegerRequest<traegerMasterDataContract.TraegerDocumentTemplateDetail>(
-      kindPath(kind),
-    );
+  const data = await bffJson(
+    "org",
+    "GET /traeger/master-data/document-templates/{kind}",
+    { params: { kind } },
+  );
   return {
     current: mapVersion(data.current, kind),
     standardTemplate: mapText(data.standard_template),
@@ -305,12 +302,10 @@ export async function saveDocumentTemplate(
   text: DocumentTemplateText,
 ): Promise<DocumentTemplateVersion> {
   return mapVersion(
-    await traegerRequest<traegerMasterDataContract.TraegerDocumentTemplate>(
-      `${kindPath(kind)}/versions`,
-      {
-        method: "POST",
-        body: requestBody(text),
-      },
+    await bffJson(
+      "org",
+      "POST /traeger/master-data/document-templates/{kind}/versions",
+      { params: { kind }, body: requestBody(text) },
     ),
     kind,
   );
@@ -321,12 +316,10 @@ export async function previewDocumentTemplate(
   kind: DocumentTemplateKind,
   text: DocumentTemplateText,
 ): Promise<DocumentTemplatePreview> {
-  const data = await traegerRequest<traegerMasterDataContract.SampleLetter>(
-    `${kindPath(kind)}/preview`,
-    {
-      method: "POST",
-      body: requestBody(text),
-    },
+  const data = await bffJson(
+    "org",
+    "POST /traeger/master-data/document-templates/{kind}/preview",
+    { params: { kind }, body: requestBody(text) },
   );
   return {
     recipient: data.recipient ?? [],

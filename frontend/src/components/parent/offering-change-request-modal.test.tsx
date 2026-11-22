@@ -76,6 +76,8 @@ function catalog(overrides: Partial<OfferingCatalog> = {}): OfferingCatalog {
     latest_effective_from: "2027-07-31",
     items: [
       {
+        automatic: false,
+        is_active: true,
         id: "5",
         name: "Regelbetreuung",
         days_of_week_mode: "parent_choice",
@@ -88,6 +90,8 @@ function catalog(overrides: Partial<OfferingCatalog> = {}): OfferingCatalog {
         selected_days: ["mon", "tue"],
       },
       {
+        automatic: false,
+        is_active: true,
         id: "6",
         name: "Ferienbetreuung",
         days_of_week_mode: "fixed",
@@ -443,6 +447,8 @@ describe("OfferingChangeRequestModal", () => {
       catalog({
         items: [
           {
+            automatic: false,
+            is_active: true,
             id: "7",
             name: "Frühbetreuung",
             days_of_week_mode: "parent_choice",
@@ -476,6 +482,8 @@ describe("OfferingChangeRequestModal", () => {
 
   it("names a weekday shared by two variants of a per-day group and keeps both (#4514)", async () => {
     const variant = (id: string, name: string, days: string[]) => ({
+      automatic: false,
+      is_active: true,
       id,
       name,
       days_of_week_mode: "parent_choice",
@@ -536,6 +544,8 @@ describe("OfferingChangeRequestModal", () => {
       catalog({
         items: [
           {
+            automatic: false,
+            is_active: true,
             id: "8",
             name: "Volles Angebot",
             days_of_week_mode: "fixed",
