@@ -89,6 +89,10 @@ func withdrawalUntil(concluded *carecontract.Concluded, informedAt *time.Time, h
 		return nil
 	}
 	start, known := conclusionDay(concluded)
+	// A contract from an import counts from moto's own notice alone: the day
+	// of its conclusion comes from a file or a correction and moves no
+	// period.
+	known = known && !concluded.TakenOver
 	if informedAt == nil {
 		expiry := nextWorkingDay(addMonths(start, 12).AddDays(carecontract.WithdrawalDays), holidays)
 		return &expiry
@@ -133,7 +137,7 @@ func conclusionDay(concluded *carecontract.Concluded) (calendar.Date, bool) {
 // from the provision of the notice, which hasWithdrawalPeriod then demands.
 func withdrawalWindow(concluded *carecontract.Concluded, informedAt *time.Time) (calendar.Date, calendar.Date) {
 	start, known := conclusionDay(concluded)
-	if !known && informedAt != nil {
+	if (!known || concluded.TakenOver) && informedAt != nil {
 		start = calendar.DateFromTime(*informedAt)
 	}
 	return start, addMonths(start, 12).AddDays(carecontract.WithdrawalDays + 7)

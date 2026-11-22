@@ -102,7 +102,6 @@ func TestCareContractCorrectionCompletesImportedContractsOnce(t *testing.T) {
 	t.Parallel()
 	f := newCareContractFixture(t, "Träger Vertragsnachpflege")
 	mia, ben := importedContracts(t, f)
-	footprint := contractFootprint(t, f)
 
 	// The import named no day of the conclusion: it is unknown, not the
 	// first day of the contract.
@@ -119,7 +118,7 @@ func TestCareContractCorrectionCompletesImportedContractsOnce(t *testing.T) {
 	assert.Zero(t, unchanged.Counts.Change+unchanged.Counts.Invalid)
 
 	draft, _ := sentCareContract(t, f, f.child)
-	footprint = contractFootprint(t, f)
+	footprint := contractFootprint(t, f)
 	file := contractCorrectionFile(
 		fmt.Sprintf("%d;;Beispiel, Mia;Beispiel, Eva | Tom Beispiel;online;12.03.2026;vertrag-mia.pdf", mia),
 		fmt.Sprintf("%d;;Ben Beispiel;;Online;unbekannt;vertrag-ben.pdf", ben),

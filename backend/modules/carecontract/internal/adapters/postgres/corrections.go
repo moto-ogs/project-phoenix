@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -39,9 +40,9 @@ const correctionSubjectsSQL = `SELECT c.id AS contract_id, c.school_id, c.import
 	ORDER BY v.school_name, v.child_last_name, v.child_first_name, c.id`
 
 // CorrectionSubjects reads the contracts with the given numbers, or with all
-// set every contract from an import, by school and child. With lock it holds
-// each contract until the transaction ends, so a correction stores what it
-// read.
+// set every contract from an import, by school and child. With lock it first
+// holds each numbered contract until the transaction ends, so a correction
+// stores what it read.
 func (Store) CorrectionSubjects(ctx context.Context, organizationID int64, contractIDs []int64, all, lock bool) ([]ports.CorrectionSubject, error) {
 	db, err := traegerDB(ctx, organizationID)
 	if err != nil {
@@ -60,14 +61,20 @@ func (Store) CorrectionSubjects(ctx context.Context, organizationID int64, contr
 		FirstNoticeOn  *calendar.Date `bun:"first_notice_on,type:date"`
 		Parties        string         `bun:"parties"`
 	}
-	query := correctionSubjectsSQL
-	if lock {
-		query += ` FOR UPDATE OF c`
-	}
 	if contractIDs == nil {
 		contractIDs = []int64{}
 	}
-	if err := db.NewRaw(query, organizationID, all, pgdialect.Array(contractIDs)).Scan(ctx, &rows); err != nil {
+	if lock {
+		// The locks come first, in a statement of their own: the read below
+		// then starts after every correction that held one has committed and
+		// sees its parties. A lock in the read itself would wait and still
+		// answer the parties of its older snapshot.
+		if _, err := db.ExecContext(ctx, `SELECT c.id FROM care_contract.contracts AS c
+			WHERE c.organization_id = ? AND c.id = ANY(?) ORDER BY c.id FOR UPDATE`, organizationID, pgdialect.Array(contractIDs)); err != nil {
+			return nil, fmt.Errorf("care contract postgres: lock the contracts of a correction: %w", err)
+		}
+	}
+	if err := db.NewRaw(correctionSubjectsSQL, organizationID, all, pgdialect.Array(contractIDs)).Scan(ctx, &rows); err != nil {
 		return nil, fmt.Errorf("care contract postgres: read the contracts of a correction: %w", err)
 	}
 	subjects := make([]ports.CorrectionSubject, len(rows))
@@ -153,26 +160,39 @@ func (Store) ApplyCorrections(ctx context.Context, organizationID int64, correct
 		return err
 	}
 	rows := correctionRowsOf(corrections)
-	for _, statement := range []struct {
-		sql   string
-		rows  any
-		count int
-	}{{correctConclusionsSQL, rows.conclusions, len(rows.conclusions)}, {renamePartiesSQL, rows.renames, len(rows.renames)},
-		{addPartiesSQL, rows.adds, len(rows.adds)}} {
-		if statement.count == 0 {
-			continue
-		}
-		encoded, err := json.Marshal(statement.rows)
-		if err != nil {
-			return fmt.Errorf("care contract postgres: encode a correction: %w", err)
-		}
-		result, err := db.ExecContext(ctx, statement.sql, string(encoded), organizationID)
-		if err != nil {
-			return fmt.Errorf("care contract postgres: store a correction: %w", err)
-		}
-		if stored, err := result.RowsAffected(); err != nil || int(stored) != statement.count {
-			return carecontract.ErrContractCorrectionChanged
-		}
+	// Each statement names its SQL itself, so the tables it writes stay
+	// readable from the call.
+	if err := storeCorrection(rows.conclusions, len(rows.conclusions), func(encoded string) (sql.Result, error) {
+		return db.ExecContext(ctx, correctConclusionsSQL, encoded, organizationID)
+	}); err != nil {
+		return err
+	}
+	if err := storeCorrection(rows.renames, len(rows.renames), func(encoded string) (sql.Result, error) {
+		return db.ExecContext(ctx, renamePartiesSQL, encoded, organizationID)
+	}); err != nil {
+		return err
+	}
+	return storeCorrection(rows.adds, len(rows.adds), func(encoded string) (sql.Result, error) {
+		return db.ExecContext(ctx, addPartiesSQL, encoded, organizationID)
+	})
+}
+
+// storeCorrection runs one statement of a correction over its rows and
+// demands that it stored every one of them.
+func storeCorrection(rows any, count int, exec func(encoded string) (sql.Result, error)) error {
+	if count == 0 {
+		return nil
+	}
+	encoded, err := json.Marshal(rows)
+	if err != nil {
+		return fmt.Errorf("care contract postgres: encode a correction: %w", err)
+	}
+	result, err := exec(string(encoded))
+	if err != nil {
+		return fmt.Errorf("care contract postgres: store a correction: %w", err)
+	}
+	if stored, err := result.RowsAffected(); err != nil || int(stored) != count {
+		return carecontract.ErrContractCorrectionChanged
 	}
 	return nil
 }

@@ -85,6 +85,13 @@ func TestCorrectionAddsPartiesAndNeverRemovesOne(t *testing.T) {
 	assert.Equal(t, []ports.CorrectionParty{{ID: 71, FirstName: "tom", LastName: "beispiel"}}, recased.correction.Renames,
 		"a name in another case is its own party written anew")
 	assert.Equal(t, []ports.CorrectionParty{{FirstName: "Ute", LastName: "Beispiel"}}, recased.correction.Adds)
+
+	// A name in another case finds its own party before the places decide:
+	// the changed name goes to the other party, never onto the wrong row.
+	crossed := planCorrection(t, two, "7", "Lia Beispiel", "tom beispiel | Beispiel, Eva-Maria", "", "", "vertrag.pdf")
+	assert.ElementsMatch(t, []ports.CorrectionParty{{ID: 71, FirstName: "tom", LastName: "beispiel"},
+		{ID: 70, FirstName: "Eva-Maria", LastName: "Beispiel"}}, crossed.correction.Renames)
+	assert.Empty(t, crossed.correction.Adds)
 }
 
 func TestCorrectionNamesItsContractUnambiguously(t *testing.T) {
@@ -133,18 +140,23 @@ func TestCorrectionSheetReadsBackAsUnchanged(t *testing.T) {
 	subject := correctionSubject()
 	subject.Parties = append(subject.Parties, ports.CorrectionParty{ID: 71, LastName: "Anders"},
 		ports.CorrectionParty{ID: 72, FirstName: "Jan Ole", LastName: "von der Heide"})
+	// An import may have stored a last name with a comma, with or without a
+	// first name: the list must read back as it was written.
+	comma := correctionSubject()
+	comma.ContractID = 10
+	comma.Parties = []ports.CorrectionParty{{ID: 90, FirstName: "Eva", LastName: "Schmidt, geb. Müller"}, {ID: 91, LastName: "Roth, geb. Klein"}}
 	unknown := correctionSubject()
 	unknown.ContractID, unknown.DateUnknown, unknown.Method = 8, true, carecontract.MethodElectronic
 	own := correctionSubject()
 	own.ContractID, own.Imported = 9, false
-	sheet := correctionSheet([]ports.CorrectionSubject{subject, unknown, own})
-	require.Len(t, sheet.Rows, 2, "only contracts from an import are listed")
+	sheet := correctionSheet([]ports.CorrectionSubject{subject, unknown, own, comma})
+	require.Len(t, sheet.Rows, 3, "only contracts from an import are listed")
 	assert.Equal(t, []string{"7", "Grundschule Nord", "Lia Beispiel", "Beispiel, Eva | Anders | von der Heide, Jan Ole", "papier", "01.08.2026", ""}, sheet.Rows[0])
 	assert.Equal(t, []string{"online", "unbekannt"}, sheet.Rows[1][4:6])
 
 	index, missing := resolveCorrectionColumns(sheet.Headers)
 	require.Empty(t, missing)
-	check := newCorrectionCheck([]ports.CorrectionSubject{subject, unknown})
+	check := newCorrectionCheck([]ports.CorrectionSubject{subject, unknown, comma})
 	for n, cells := range sheet.Rows {
 		plan := check.plan(readCorrectionEntry(index, cells, n+2, correctionToday))
 		assert.Equal(t, carecontract.ContractCorrectionUnchanged, plan.row.Status, "%v: %v", cells, plan.row.Problems)
@@ -169,6 +181,9 @@ func TestTakenOverContractHasNoWithdrawalPeriodUntilMotoProvidedTheNotice(t *tes
 	until := withdrawalUntil(&carecontract.Concluded{Method: carecontract.MethodElectronic, At: at, TakenOver: true, DateUnknown: true}, &informed, nil)
 	require.NotNil(t, until)
 	assert.Equal(t, calendar.NewDate(2026, 11, 16), *until)
+	corrected := withdrawalUntil(&carecontract.Concluded{Method: carecontract.MethodElectronic, At: at, TakenOver: true}, &informed, nil)
+	require.NotNil(t, corrected)
+	assert.Equal(t, *until, *corrected, "a corrected day of the conclusion moves no period")
 	_, known := conclusionDay(&carecontract.Concluded{At: at, DateUnknown: true})
 	assert.False(t, known)
 }

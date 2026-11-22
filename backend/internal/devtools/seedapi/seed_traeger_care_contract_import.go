@@ -114,12 +114,10 @@ func seedCareContractImport(client *Client, auth AuthRef, school, module, start 
 		return 0, false, fmt.Errorf("read the preview of the contract import: %w", err)
 	}
 	if preview.Data.Counts.Ready == 0 {
-		// A repeated seed finds the children again: only their corrections
-		// are left to check.
-		if preview.Data.Counts.Duplicate == 0 {
-			return 0, false, nil
-		}
-		return 0, true, seedCareContractCorrections(client, auth, preview)
+		// A repeated seed finds the children again: nothing is left to do.
+		// Their corrections belong to the run that took them over, so a
+		// contract somebody changed by hand since stays as it is.
+		return 0, preview.Data.Counts.Duplicate > 0, nil
 	}
 	raw, err = client.PostFileWithAuthFields(auth, "/traeger/contract-imports/", "file", file, csv,
 		map[string]string{"fingerprint": preview.Data.Fingerprint})
@@ -164,8 +162,7 @@ var seedCorrections = map[string][4]string{
 // seedCareContractCorrections completes the imported contracts from their
 // original documents like the office: it previews the correction file and
 // stores what the preview showed, so the demo shows a contract concluded
-// online, one whose day nobody knows and the trail of a correction. A
-// repeated seed finds the values again and stores nothing.
+// online, one whose day nobody knows and the trail of a correction.
 func seedCareContractCorrections(client *Client, auth AuthRef, imported seedContractImportAnswer) error {
 	rows := []string{"Vertrag-ID;Kind;Vertragsparteien;Abschlussart;Abschlussdatum;Beleg"}
 	for _, row := range imported.Data.Rows {

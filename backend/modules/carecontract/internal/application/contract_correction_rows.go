@@ -100,7 +100,9 @@ type correctionEntry struct {
 	child      string
 	parties    []ports.CorrectionParty
 	hasParties bool
-	method     string
+	// partyCell is the cell of the parties as the file writes it.
+	partyCell string
+	method    string
 	// date is the day of the conclusion the row names; unknown that it names
 	// none on purpose. Neither leaves the day alone.
 	date    *calendar.Date
@@ -151,7 +153,7 @@ func (e *correctionEntry) readParties(value string) {
 	if value == "" {
 		return
 	}
-	e.hasParties = true
+	e.hasParties, e.partyCell = true, value
 	for _, name := range strings.FieldsFunc(value, func(r rune) bool { return r == '|' || r == ';' || r == '\n' || r == '\r' }) {
 		if strings.TrimSpace(name) == "" {
 			continue
@@ -175,12 +177,13 @@ func (e *correctionEntry) readParties(value string) {
 	}
 }
 
-// correctionPartyOf splits a name: "Nachname, Vorname" at its comma, else
-// the last word is the last name. A name needs a last name.
+// correctionPartyOf splits a name: "Nachname, Vorname" at its last comma,
+// so a last name may carry one ("Schmidt, geb. Müller, Eva"); without a
+// comma the last word is the last name. A name needs a last name.
 func correctionPartyOf(name string) (ports.CorrectionParty, bool) {
-	if last, first, found := strings.Cut(name, ","); found {
-		party := ports.CorrectionParty{FirstName: joinWords(first), LastName: joinWords(last)}
-		return party, party.LastName != "" && !strings.Contains(first, ",")
+	if at := strings.LastIndex(name, ","); at >= 0 {
+		party := ports.CorrectionParty{FirstName: joinWords(name[at+1:]), LastName: joinWords(name[:at])}
+		return party, party.LastName != ""
 	}
 	words := strings.Fields(name)
 	if len(words) == 0 {
@@ -352,27 +355,26 @@ func planConclusion(entry correctionEntry, subject ports.CorrectionSubject, plan
 
 // planParties plans the parties: a name the contract has stays, a name it
 // lacks corrects the party left over at its place or, with none left, is a
-// further party. A row never removes a party.
+// further party. A row never removes a party. A cell the list to download
+// wrote itself changes nothing, however its names read.
 func planParties(entry correctionEntry, subject ports.CorrectionSubject, plan *correctionPlan) {
-	if !entry.hasParties {
+	if !entry.hasParties || joinWords(entry.partyCell) == joinWords(correctionPartyCell(subject.Parties)) {
 		return
 	}
-	stored, wanted := matchCorrectionParties(subject.Parties, entry.parties)
-	if len(stored) > len(wanted) {
+	renames, adds, complete := matchCorrectionParties(subject.Parties, entry.parties)
+	if !complete {
 		plan.problem(carecontract.ContractCorrectionFieldParties, carecontract.ContractCorrectionProblemPartyRemoved)
 		return
 	}
-	if len(wanted) == 0 {
+	if len(renames)+len(adds) == 0 {
 		return
 	}
+	plan.correction.Renames, plan.correction.Adds = renames, adds
 	names := map[int64]string{}
-	for n, party := range stored {
-		rename := ports.CorrectionParty{ID: party.ID, FirstName: wanted[n].FirstName, LastName: wanted[n].LastName}
-		plan.correction.Renames = append(plan.correction.Renames, rename)
-		names[party.ID] = fullName(rename.FirstName, rename.LastName)
+	for _, rename := range renames {
+		names[rename.ID] = fullName(rename.FirstName, rename.LastName)
 	}
-	plan.correction.Adds = wanted[len(stored):]
-	after := make([]string, 0, len(subject.Parties)+len(plan.correction.Adds))
+	after := make([]string, 0, len(subject.Parties)+len(adds))
 	for _, party := range subject.Parties {
 		name, renamed := names[party.ID]
 		if !renamed {
@@ -380,37 +382,58 @@ func planParties(entry correctionEntry, subject ports.CorrectionSubject, plan *c
 		}
 		after = append(after, name)
 	}
-	for _, add := range plan.correction.Adds {
+	for _, add := range adds {
 		after = append(after, fullName(add.FirstName, add.LastName))
 	}
 	plan.row.After.Parties = after
 	plan.row.Changes = append(plan.row.Changes, carecontract.ContractCorrectionFieldParties)
 }
 
-// matchCorrectionParties takes away every party the contract and the row
-// name alike and answers what is left of each, in their order. A name left
-// over that differs from a stored one only in case is the same person
-// written anew: it moves to the place of its party.
-func matchCorrectionParties(stored, wanted []ports.CorrectionParty) ([]ports.CorrectionParty, []ports.CorrectionParty) {
+// matchCorrectionParties pairs the parties of the contract with the names of
+// the row: first every name that is the same, then every name that differs
+// only in case, which is the same person written anew, and last the names
+// left over by their place. It answers the parties whose name changes, the
+// further parties and whether every party of the contract found a name.
+func matchCorrectionParties(stored, wanted []ports.CorrectionParty) (renames, adds []ports.CorrectionParty, complete bool) {
 	name := func(party ports.CorrectionParty) string {
 		return fullName(joinWords(party.FirstName), joinWords(party.LastName))
 	}
 	stored, wanted = slices.Clone(stored), slices.Clone(wanted)
-	for n := 0; n < len(stored); n++ {
-		at := slices.IndexFunc(wanted, func(party ports.CorrectionParty) bool { return name(party) == name(stored[n]) })
-		if at < 0 {
-			continue
+	pair := func(same func(a, b string) bool, rename bool) {
+		for n := 0; n < len(stored); n++ {
+			at := slices.IndexFunc(wanted, func(party ports.CorrectionParty) bool { return same(name(party), name(stored[n])) })
+			if at < 0 {
+				continue
+			}
+			if rename {
+				renames = append(renames, ports.CorrectionParty{ID: stored[n].ID, FirstName: wanted[at].FirstName, LastName: wanted[at].LastName})
+			}
+			stored, wanted = slices.Delete(stored, n, n+1), slices.Delete(wanted, at, at+1)
+			n--
 		}
-		stored, wanted = slices.Delete(stored, n, n+1), slices.Delete(wanted, at, at+1)
-		n--
 	}
-	for n := 0; n < len(stored) && n < len(wanted); n++ {
-		at := slices.IndexFunc(wanted[n:], func(party ports.CorrectionParty) bool { return strings.EqualFold(name(party), name(stored[n])) })
-		if at > 0 {
-			wanted[n], wanted[n+at] = wanted[n+at], wanted[n]
+	pair(func(a, b string) bool { return a == b }, false)
+	pair(strings.EqualFold, true)
+	if len(stored) > len(wanted) {
+		return nil, nil, false
+	}
+	for n, party := range stored {
+		renames = append(renames, ports.CorrectionParty{ID: party.ID, FirstName: wanted[n].FirstName, LastName: wanted[n].LastName})
+	}
+	return renames, wanted[len(stored):], true
+}
+
+// correctionPartyCell writes the parties as the list to download does:
+// "Nachname, Vorname", separated by " | ".
+func correctionPartyCell(parties []ports.CorrectionParty) string {
+	names := make([]string, len(parties))
+	for n, party := range parties {
+		names[n] = party.LastName
+		if party.FirstName != "" {
+			names[n] += ", " + party.FirstName
 		}
 	}
-	return stored, wanted
+	return strings.Join(names, correctionPartyJoin)
 }
 
 // correctionSheet is the list to download: every contract from an import
@@ -425,13 +448,6 @@ func correctionSheet(subjects []ports.CorrectionSubject) carecontract.ContractCo
 		if !subject.Imported || subject.ConcludedAt == nil {
 			continue
 		}
-		parties := make([]string, len(subject.Parties))
-		for n, party := range subject.Parties {
-			parties[n] = party.LastName
-			if party.FirstName != "" {
-				parties[n] += ", " + party.FirstName
-			}
-		}
 		method := correctionWordPaper
 		if subject.Method != carecontract.MethodPaper {
 			method = correctionWordOnline
@@ -441,7 +457,7 @@ func correctionSheet(subjects []ports.CorrectionSubject) carecontract.ContractCo
 			concluded = calendar.DateFromTime(*subject.ConcludedAt).Format("02.01.2006")
 		}
 		sheet.Rows = append(sheet.Rows, []string{strconv.FormatInt(subject.ContractID, 10), subject.SchoolName,
-			fullName(subject.ChildFirstName, subject.ChildLastName), strings.Join(parties, correctionPartyJoin), method, concluded, ""})
+			fullName(subject.ChildFirstName, subject.ChildLastName), correctionPartyCell(subject.Parties), method, concluded, ""})
 	}
 	return sheet
 }
