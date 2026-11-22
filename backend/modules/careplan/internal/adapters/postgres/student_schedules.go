@@ -11,16 +11,17 @@ import (
 )
 
 type arrivalScheduleRow struct {
-	bun.BaseModel   `bun:"table:student_arrival_schedules,alias:student_arrival_schedule"`
-	ID              int64     `bun:"id,pk,autoincrement"`
-	TenantID        int64     `bun:"tenant_id,notnull"`
-	CreatedAt       time.Time `bun:"created_at,nullzero,notnull"`
-	UpdatedAt       time.Time `bun:"updated_at,nullzero,notnull"`
-	StudentID       int64     `bun:"student_id,notnull"`
-	Weekday         int       `bun:"weekday,notnull"`
-	ExpectedArrival time.Time `bun:"expected_arrival,nullzero"`
-	Notes           *string   `bun:"notes"`
-	CreatedBy       int64     `bun:"created_by,notnull"`
+	bun.BaseModel    `bun:"table:student_arrival_schedules,alias:student_arrival_schedule"`
+	ID               int64     `bun:"id,pk,autoincrement"`
+	TenantID         int64     `bun:"tenant_id,notnull"`
+	CreatedAt        time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt        time.Time `bun:"updated_at,nullzero,notnull"`
+	StudentID        int64     `bun:"student_id,notnull"`
+	Weekday          int       `bun:"weekday,notnull"`
+	ExpectedArrival  time.Time `bun:"expected_arrival,nullzero"`
+	Notes            *string   `bun:"notes"`
+	CreatedBy        int64     `bun:"created_by,nullzero"`
+	EnteredByTraeger bool      `bun:"entered_by_traeger,notnull,default:false"`
 }
 
 type arrivalExceptionRow struct {
@@ -35,34 +36,37 @@ type arrivalExceptionRow struct {
 	Reason            *string      `bun:"reason"`
 	Source            string       `bun:"source,nullzero,notnull,default:'staff'"`
 	CreatedBy         int64        `bun:"created_by,nullzero"`
+	EnteredByTraeger  bool         `bun:"entered_by_traeger,notnull,default:false"`
 	CreatedByGuardian *int64       `bun:"created_by_guardian,nullzero"`
 }
 
 type arrivalNoteRow struct {
-	bun.BaseModel `bun:"table:student_arrival_notes,alias:student_arrival_note"`
-	ID            int64        `bun:"id,pk,autoincrement"`
-	TenantID      int64        `bun:"tenant_id,notnull"`
-	CreatedAt     time.Time    `bun:"created_at,nullzero,notnull"`
-	UpdatedAt     time.Time    `bun:"updated_at,nullzero,notnull"`
-	StudentID     int64        `bun:"student_id,notnull"`
-	NoteDate      calendarDate `bun:"note_date,notnull,type:date"`
-	Content       string       `bun:"content,notnull"`
-	CreatedBy     int64        `bun:"created_by,notnull"`
+	bun.BaseModel    `bun:"table:student_arrival_notes,alias:student_arrival_note"`
+	ID               int64        `bun:"id,pk,autoincrement"`
+	TenantID         int64        `bun:"tenant_id,notnull"`
+	CreatedAt        time.Time    `bun:"created_at,nullzero,notnull"`
+	UpdatedAt        time.Time    `bun:"updated_at,nullzero,notnull"`
+	StudentID        int64        `bun:"student_id,notnull"`
+	NoteDate         calendarDate `bun:"note_date,notnull,type:date"`
+	Content          string       `bun:"content,notnull"`
+	CreatedBy        int64        `bun:"created_by,nullzero"`
+	EnteredByTraeger bool         `bun:"entered_by_traeger,notnull,default:false"`
 }
 
 type pickupScheduleRow struct {
-	bun.BaseModel  `bun:"table:student_pickup_schedules,alias:student_pickup_schedule"`
-	ID             int64     `bun:"id,pk,autoincrement"`
-	TenantID       int64     `bun:"tenant_id,notnull"`
-	CreatedAt      time.Time `bun:"created_at,nullzero,notnull"`
-	UpdatedAt      time.Time `bun:"updated_at,nullzero,notnull"`
-	StudentID      int64     `bun:"student_id,notnull"`
-	Weekday        int       `bun:"weekday,notnull"`
-	PickupTime     time.Time `bun:"pickup_time,notnull"`
-	Notes          *string   `bun:"notes"`
-	CreatedBy      int64     `bun:"created_by,nullzero"`
-	Source         string    `bun:"source,nullzero,notnull,default:'staff'"`
-	CareOfferingID *int64    `bun:"care_offering_id,nullzero"`
+	bun.BaseModel    `bun:"table:student_pickup_schedules,alias:student_pickup_schedule"`
+	ID               int64     `bun:"id,pk,autoincrement"`
+	TenantID         int64     `bun:"tenant_id,notnull"`
+	CreatedAt        time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt        time.Time `bun:"updated_at,nullzero,notnull"`
+	StudentID        int64     `bun:"student_id,notnull"`
+	Weekday          int       `bun:"weekday,notnull"`
+	PickupTime       time.Time `bun:"pickup_time,notnull"`
+	Notes            *string   `bun:"notes"`
+	CreatedBy        int64     `bun:"created_by,nullzero"`
+	EnteredByTraeger bool      `bun:"entered_by_traeger,notnull,default:false"`
+	Source           string    `bun:"source,nullzero,notnull,default:'staff'"`
+	CareOfferingID   *int64    `bun:"care_offering_id,nullzero"`
 }
 
 type pickupExceptionRow struct {
@@ -78,10 +82,12 @@ type pickupExceptionRow struct {
 	ExcusedFrom           *time.Time   `bun:"excused_from"`
 	ExcusedReason         *string      `bun:"excused_reason"`
 	ExcusedCreatedBy      *int64       `bun:"excused_created_by"`
+	ExcusedByTraeger      bool         `bun:"excused_by_traeger,notnull,default:false"`
 	ExcusedOwnsPickupTime bool         `bun:"excused_owns_pickup_time,notnull,default:false"`
 	ExcusedAuto           bool         `bun:"excused_auto,notnull,default:false"`
 	Source                string       `bun:"source,nullzero,notnull,default:'staff'"`
 	CreatedBy             int64        `bun:"created_by,nullzero"`
+	EnteredByTraeger      bool         `bun:"entered_by_traeger,notnull,default:false"`
 	CreatedByGuardian     *int64       `bun:"created_by_guardian,nullzero"`
 }
 
@@ -289,7 +295,7 @@ func (s *Store) UpsertArrivalSchedule(ctx context.Context, v careplan.ArrivalSch
 	row.TenantID, row.UpdatedAt = tid, s.currentTime()
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
-	err = db.NewInsert().Model(&row).ModelTableExpr(`schedule.student_arrival_schedules`).On("CONFLICT (tenant_id, student_id, weekday) DO UPDATE").Set("expected_arrival = EXCLUDED.expected_arrival").Set("notes = EXCLUDED.notes").Set("updated_at = EXCLUDED.updated_at").Returning("*").Scan(ctx)
+	err = db.NewInsert().Model(&row).ModelTableExpr(`schedule.student_arrival_schedules`).On("CONFLICT (tenant_id, student_id, weekday) DO UPDATE").Set("expected_arrival = EXCLUDED.expected_arrival").Set("notes = EXCLUDED.notes").Set("created_by = EXCLUDED.created_by").Set("entered_by_traeger = EXCLUDED.entered_by_traeger").Set("updated_at = EXCLUDED.updated_at").Returning("*").Scan(ctx)
 	stats.StatementDuration = time.Since(started)
 	if err != nil {
 		return careplan.ArrivalSchedule{}, stats, fmt.Errorf("care plan postgres: upsert arrival schedule: %w", err)
@@ -543,7 +549,7 @@ func (s *Store) UpsertPickupSchedule(ctx context.Context, v careplan.PickupSched
 	row.TenantID, row.UpdatedAt = tid, s.currentTime()
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
-	err = db.NewInsert().Model(&row).ModelTableExpr(`schedule.student_pickup_schedules`).On("CONFLICT (tenant_id, student_id, weekday) DO UPDATE").Set("pickup_time = EXCLUDED.pickup_time").Set("notes = EXCLUDED.notes").Set("source = EXCLUDED.source").Set("care_offering_id = EXCLUDED.care_offering_id").Set("updated_at = EXCLUDED.updated_at").Returning("*").Scan(ctx)
+	err = db.NewInsert().Model(&row).ModelTableExpr(`schedule.student_pickup_schedules`).On("CONFLICT (tenant_id, student_id, weekday) DO UPDATE").Set("pickup_time = EXCLUDED.pickup_time").Set("notes = EXCLUDED.notes").Set("source = EXCLUDED.source").Set("care_offering_id = EXCLUDED.care_offering_id").Set("created_by = EXCLUDED.created_by").Set("entered_by_traeger = EXCLUDED.entered_by_traeger").Set("updated_at = EXCLUDED.updated_at").Returning("*").Scan(ctx)
 	stats.StatementDuration = time.Since(started)
 	if err != nil {
 		return careplan.PickupSchedule{}, stats, fmt.Errorf("care plan postgres: upsert pickup schedule: %w", err)
@@ -732,10 +738,10 @@ func mapRows[T any, R any](rows []T, convert func(T) R) []R {
 }
 
 func arrivalScheduleFromPublic(v careplan.ArrivalSchedule) arrivalScheduleRow {
-	return arrivalScheduleRow{ID: v.ID, TenantID: v.TenantID, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt, StudentID: v.StudentID, Weekday: v.Weekday, ExpectedArrival: v.ExpectedArrival, Notes: v.Notes, CreatedBy: v.CreatedBy}
+	return arrivalScheduleRow{ID: v.ID, TenantID: v.TenantID, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt, StudentID: v.StudentID, Weekday: v.Weekday, ExpectedArrival: v.ExpectedArrival, Notes: v.Notes, CreatedBy: v.CreatedBy, EnteredByTraeger: v.EnteredByTraeger}
 }
 func arrivalScheduleToPublic(v arrivalScheduleRow) careplan.ArrivalSchedule {
-	return careplan.ArrivalSchedule{ID: v.ID, TenantID: v.TenantID, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt, StudentID: v.StudentID, Weekday: v.Weekday, ExpectedArrival: v.ExpectedArrival, Notes: v.Notes, CreatedBy: v.CreatedBy}
+	return careplan.ArrivalSchedule{ID: v.ID, TenantID: v.TenantID, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt, StudentID: v.StudentID, Weekday: v.Weekday, ExpectedArrival: v.ExpectedArrival, Notes: v.Notes, CreatedBy: v.CreatedBy, EnteredByTraeger: v.EnteredByTraeger}
 }
 
 // arrivalExceptionFromPublic copies the arrival time: a create scans the
@@ -743,7 +749,7 @@ func arrivalScheduleToPublic(v arrivalScheduleRow) careplan.ArrivalSchedule {
 // shared pointer it would rewrite the caller's value to year 0, which the next
 // child of the same class report can no longer store (#5824).
 func arrivalExceptionFromPublic(v careplan.ArrivalException) arrivalExceptionRow {
-	return arrivalExceptionRow{ID: v.ID, TenantID: v.TenantID, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt, StudentID: v.StudentID, ExceptionDate: calendarDate(v.ExceptionDate), ExpectedArrival: copiedTime(v.ExpectedArrival), Reason: v.Reason, Source: v.Source, CreatedBy: v.CreatedBy, CreatedByGuardian: v.CreatedByGuardian}
+	return arrivalExceptionRow{ID: v.ID, TenantID: v.TenantID, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt, StudentID: v.StudentID, ExceptionDate: calendarDate(v.ExceptionDate), ExpectedArrival: copiedTime(v.ExpectedArrival), Reason: v.Reason, Source: v.Source, CreatedBy: v.CreatedBy, EnteredByTraeger: v.EnteredByTraeger, CreatedByGuardian: v.CreatedByGuardian}
 }
 
 func copiedTime(value *time.Time) *time.Time {
@@ -754,17 +760,17 @@ func copiedTime(value *time.Time) *time.Time {
 	return &copied
 }
 func arrivalExceptionToPublic(v arrivalExceptionRow) careplan.ArrivalException {
-	return careplan.ArrivalException{ID: v.ID, TenantID: v.TenantID, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt, StudentID: v.StudentID, ExceptionDate: careplan.Date(v.ExceptionDate), ExpectedArrival: v.ExpectedArrival, Reason: v.Reason, Source: v.Source, CreatedBy: v.CreatedBy, CreatedByGuardian: v.CreatedByGuardian}
+	return careplan.ArrivalException{ID: v.ID, TenantID: v.TenantID, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt, StudentID: v.StudentID, ExceptionDate: careplan.Date(v.ExceptionDate), ExpectedArrival: v.ExpectedArrival, Reason: v.Reason, Source: v.Source, CreatedBy: v.CreatedBy, EnteredByTraeger: v.EnteredByTraeger, CreatedByGuardian: v.CreatedByGuardian}
 }
 func arrivalNoteFromPublic(v careplan.ArrivalNote) arrivalNoteRow {
-	return arrivalNoteRow{ID: v.ID, TenantID: v.TenantID, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt, StudentID: v.StudentID, NoteDate: calendarDate(v.NoteDate), Content: v.Content, CreatedBy: v.CreatedBy}
+	return arrivalNoteRow{ID: v.ID, TenantID: v.TenantID, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt, StudentID: v.StudentID, NoteDate: calendarDate(v.NoteDate), Content: v.Content, CreatedBy: v.CreatedBy, EnteredByTraeger: v.EnteredByTraeger}
 }
 func arrivalNoteToPublic(v arrivalNoteRow) careplan.ArrivalNote {
-	return careplan.ArrivalNote{ID: v.ID, TenantID: v.TenantID, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt, StudentID: v.StudentID, NoteDate: careplan.Date(v.NoteDate), Content: v.Content, CreatedBy: v.CreatedBy}
+	return careplan.ArrivalNote{ID: v.ID, TenantID: v.TenantID, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt, StudentID: v.StudentID, NoteDate: careplan.Date(v.NoteDate), Content: v.Content, CreatedBy: v.CreatedBy, EnteredByTraeger: v.EnteredByTraeger}
 }
 func pickupScheduleFromPublic(v careplan.PickupSchedule) pickupScheduleRow {
-	return pickupScheduleRow{ID: v.ID, TenantID: v.TenantID, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt, StudentID: v.StudentID, Weekday: v.Weekday, PickupTime: v.PickupTime, Notes: v.Notes, CreatedBy: v.CreatedBy, Source: v.Source, CareOfferingID: v.CareOfferingID}
+	return pickupScheduleRow{ID: v.ID, TenantID: v.TenantID, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt, StudentID: v.StudentID, Weekday: v.Weekday, PickupTime: v.PickupTime, Notes: v.Notes, CreatedBy: v.CreatedBy, EnteredByTraeger: v.EnteredByTraeger, Source: v.Source, CareOfferingID: v.CareOfferingID}
 }
 func pickupScheduleToPublic(v pickupScheduleRow) careplan.PickupSchedule {
-	return careplan.PickupSchedule{ID: v.ID, TenantID: v.TenantID, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt, StudentID: v.StudentID, Weekday: v.Weekday, PickupTime: v.PickupTime, Notes: v.Notes, CreatedBy: v.CreatedBy, Source: v.Source, CareOfferingID: v.CareOfferingID}
+	return careplan.PickupSchedule{ID: v.ID, TenantID: v.TenantID, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt, StudentID: v.StudentID, Weekday: v.Weekday, PickupTime: v.PickupTime, Notes: v.Notes, CreatedBy: v.CreatedBy, EnteredByTraeger: v.EnteredByTraeger, Source: v.Source, CareOfferingID: v.CareOfferingID}
 }

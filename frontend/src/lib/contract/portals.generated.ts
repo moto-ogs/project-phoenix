@@ -816,6 +816,7 @@ export const portalRoutes = {
     operatorUnregisteredTagScans["POST /operator/unregistered-tag-scans/{id}/resolve"],
   ],
   public: [
+    authGuardianInvitations["GET /auth/guardian-invitations/{token}"],
     authGuardianInvitations["POST /auth/guardian-invitations/{token}/accept"],
     authHolidayParentSetups["GET /auth/holiday-parent-setups/{token}"],
     authHolidayParentSetups["POST /auth/holiday-parent-setups/{token}"],

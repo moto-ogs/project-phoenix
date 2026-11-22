@@ -33,11 +33,11 @@ type AccountTenantRole struct {
 // AccountTenantAccessEntry is one school an account has (or had) access to,
 // including the roles it holds there.
 type AccountTenantAccessEntry struct {
-	TenantID         common.ID           `json:"tenant_id"`
+	TenantID         ident.ID            `json:"tenant_id"`
 	SchoolName       string              `json:"school_name"`
 	SchoolSlug       string              `json:"school_slug"`
 	SchoolActive     bool                `json:"school_active"`
-	OrganizationID   common.ID           `json:"organization_id"`
+	OrganizationID   ident.ID            `json:"organization_id"`
 	OrganizationName string              `json:"organization_name"`
 	Status           string              `json:"status"`
 	ActivatedAt      *time.Time          `json:"activated_at,omitempty"`
@@ -57,11 +57,11 @@ type RoleOption struct {
 }
 
 type grantAccountTenantAccessRequest struct {
-	SchoolID  common.ID `json:"school_id"`
-	RoleID    common.ID `json:"role_id"`
-	FirstName string    `json:"first_name,omitempty"`
-	LastName  string    `json:"last_name,omitempty"`
-	Position  string    `json:"position,omitempty"`
+	SchoolID  ident.ID `json:"school_id"`
+	RoleID    ident.ID `json:"role_id"`
+	FirstName string   `json:"first_name,omitempty"`
+	LastName  string   `json:"last_name,omitempty"`
+	Position  string   `json:"position,omitempty"`
 }
 
 func (req *grantAccountTenantAccessRequest) Bind(_ *http.Request) error {
@@ -78,7 +78,7 @@ func (req *grantAccountTenantAccessRequest) Bind(_ *http.Request) error {
 }
 
 type updateAccountTenantRoleRequest struct {
-	RoleID common.ID `json:"role_id"`
+	RoleID ident.ID `json:"role_id"`
 }
 
 func (req *updateAccountTenantRoleRequest) Bind(_ *http.Request) error {

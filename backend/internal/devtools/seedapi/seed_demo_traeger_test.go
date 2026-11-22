@@ -8,6 +8,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -107,9 +108,9 @@ func TestTraegerStaffLinksLeaveTheVisitorOut(t *testing.T) {
 	suggestion := func(schoolID, staffID int64) seedTraegerStaffSuggestion {
 		var s seedTraegerStaffSuggestion
 		s.Members = append(s.Members, struct {
-			SchoolID apiID `json:"school_id"`
-			StaffID  apiID `json:"staff_id"`
-		}{apiID(schoolID), apiID(staffID)})
+			SchoolID ident.ID `json:"school_id"`
+			StaffID  ident.ID `json:"staff_id"`
+		}{ident.ID(schoolID), ident.ID(staffID)})
 		return s
 	}
 	kept := withoutVisitorStaff(rt, []seedTraegerStaffSuggestion{

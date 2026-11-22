@@ -214,7 +214,8 @@ func TestBillingLetterMailsReachEveryFamilyOnceAndShowTheirState(t *testing.T) {
 	for _, mail := range mails {
 		assert.Nil(t, mail.TenantID, "a mail of the Träger has no school")
 		var payload struct {
-			DocumentID  wireID `json:"document_id"`
+			// The outbox stores JSON with numbers (#7761).
+			DocumentID  int64  `json:"document_id"`
 			TraegerName string `json:"traeger_name"`
 			Number      string `json:"number"`
 			Filename    string `json:"filename"`

@@ -24,10 +24,10 @@ import (
 
 // editedOccurrenceItem is one individually-adjusted occurrence.
 type editedOccurrenceItem struct {
-	InstanceID common.ID `json:"instance_id"`
-	Date       string    `json:"date"`
-	StartTime  string    `json:"start_time"`
-	Title      string    `json:"title"`
+	InstanceID ident.ID `json:"instance_id"`
+	Date       string   `json:"date"`
+	StartTime  string   `json:"start_time"`
+	Title      string   `json:"title"`
 	// Changes lists the diverging field categories ("title", "notes", "room",
 	// "time", "staff", "students", "attendance") — stable machine-readable
 	// strings the frontend maps to German labels.

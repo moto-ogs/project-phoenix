@@ -501,10 +501,11 @@ jobs:
         run: node scripts/backend-package-budgets.mjs check backend/go-test.json
 
       # A route no test answers through its router can leave the contract
-      # unseen: the BFF then answers 502 (#7563). A full suite holds every
-      # registered route, a selection the routes this branch adds; both fail
-      # on a line of routesNoRouterTestAnswers a test answers now. Locally
-      # 3 s once the step above built the api test binary.
+      # unseen: the BFF then answers 502 (#7563). The check fails on any
+      # registered route no test answers: every route after a full suite,
+      # only the routes this branch adds after a selection. There is no
+      # exception list (#7808). Locally 3 s once the step above built the
+      # api test binary.
       - name: Check every registered route is answered
         if: ${{ success() && !inputs.backend-race && hashFiles('backend/go-test.json') != '' }}
         working-directory: backend

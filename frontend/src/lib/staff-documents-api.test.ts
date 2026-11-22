@@ -8,20 +8,29 @@ vi.mock("./session-cache", () => {
   return {
     getCachedSession,
     clearSessionCache: vi.fn(),
+    // The real sessionFetch's gate and transport, without its renewal.
     sessionFetch: vi.fn(async (url: string, init?: RequestInit) => {
-      // Same gate as the real sessionFetch (hasSessionAccess, #5005).
-      const session = (await getCachedSession()) as {
-        user?: { id?: string };
-        error?: string;
-      } | null;
+      const { ApiError, transportFetch, unavailableApiError } =
+        await vi.importActual<typeof import("./api-error")>("./api-error");
+      let session: { user?: { id?: string }; error?: string } | null;
+      try {
+        session = (await getCachedSession()) as typeof session;
+      } catch (error) {
+        throw error instanceof ApiError ? error : unavailableApiError(error);
+      }
       if (!session?.user || session.error)
-        throw new Error("No authentication token available");
-      return fetch(url, {
+        throw new ApiError("Authentication required", 401, {
+          code: "general.permission",
+        });
+      return transportFetch(url, {
         ...init,
-        headers: {
-          "Content-Type": "application/json",
-          ...(init?.headers as Record<string, string> | undefined),
-        },
+        headers:
+          init?.body instanceof FormData
+            ? init.headers
+            : {
+                "Content-Type": "application/json",
+                ...(init?.headers as Record<string, string> | undefined),
+              },
       });
     }),
   };
@@ -151,8 +160,8 @@ describe("staff-documents-api", () => {
         json: () => Promise.resolve({}),
       } as unknown as Response);
 
-      await expect(staffDocumentsService.list("7")).rejects.toThrow(
-        "Failed to fetch staff documents: Internal Server Error",
+      await expect(staffDocumentsService.list("7")).rejects.toBeInstanceOf(
+        ApiError,
       );
     });
   });
@@ -164,7 +173,10 @@ describe("staff-documents-api", () => {
 
     // The route reads the session cookie; the browser holds no token (#5005).
     it("posts multipart form data without Authorization or JSON content type", async () => {
-      mockFetch().mockResolvedValue({ ok: true } as unknown as Response);
+      mockFetch().mockResolvedValue({
+        ok: true,
+        status: 204,
+      } as unknown as Response);
 
       await staffDocumentsService.upload("7", file, "lohnabrechnung");
 
@@ -290,7 +302,10 @@ describe("staff-documents-api", () => {
 
   describe("delete", () => {
     it("issues a DELETE against the document route", async () => {
-      mockFetch().mockResolvedValue({ ok: true } as unknown as Response);
+      mockFetch().mockResolvedValue({
+        ok: true,
+        status: 204,
+      } as unknown as Response);
 
       await staffDocumentsService.delete("7", "42");
 

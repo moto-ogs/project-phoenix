@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-const { fetchOperator } = vi.hoisted(() => ({ fetchOperator: vi.fn() }));
-vi.mock("./api-helpers", () => ({ operatorFetch: fetchOperator }));
+const { mockBffJson } = vi.hoisted(() => ({ mockBffJson: vi.fn() }));
+vi.mock("~/lib/bff-fetch", () => ({ bffJson: mockBffJson }));
 import {
   executeStaffPersonMerges,
   previewStaffPersonMerges,
@@ -9,7 +9,7 @@ import {
 beforeEach(() => vi.clearAllMocks());
 describe("staff person repair API", () => {
   it("preserves bigint identity values through the read and confirmation request", async () => {
-    fetchOperator.mockResolvedValueOnce([
+    mockBffJson.mockResolvedValueOnce([
       {
         keeper: {
           person: {
@@ -44,12 +44,13 @@ describe("staff person repair API", () => {
     const cases = await previewStaffPersonMerges("6");
     expect(cases[0]?.keeper.accountId).toBe("9007199254740995");
     expect(cases[0]?.donor.staffId).toBe("9007199254741001");
-    fetchOperator.mockResolvedValueOnce(undefined);
+    mockBffJson.mockResolvedValueOnce(undefined);
     await executeStaffPersonMerges("6", cases, true);
-    expect(fetchOperator).toHaveBeenLastCalledWith(
-      "/api/operator/staff-person-merges/6",
+    expect(mockBffJson).toHaveBeenLastCalledWith(
+      "platform",
+      "POST /operator/staff-person-merges/{schoolId}",
       {
-        method: "POST",
+        params: { schoolId: "6" },
         body: {
           school_confirmed: true,
           cases: [

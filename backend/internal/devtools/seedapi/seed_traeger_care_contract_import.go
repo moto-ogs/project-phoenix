@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedTraegerCareContractImportStep takes over existing contracts of the
@@ -54,7 +55,7 @@ func seedImportedCareContracts(client *Client, auth AuthRef, school int64) (int,
 	}
 	var templates struct {
 		Data []struct {
-			SchoolID     apiID           `json:"school_id"`
+			SchoolID     ident.ID        `json:"school_id"`
 			SchoolName   string          `json:"school_name"`
 			OfferingName string          `json:"offering_name"`
 			Active       bool            `json:"active"`

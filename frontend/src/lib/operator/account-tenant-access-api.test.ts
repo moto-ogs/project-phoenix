@@ -185,7 +185,7 @@ describe("accountTenantAccessService", () => {
     await expect(
       accountTenantAccessService.updateRole("42", "7", "1"),
     ).rejects.toThrowError(
-      new ApiError("school access request failed (400)", 400, {
+      new ApiError("school access request failed", 400, {
         detail: "Diese Rolle existiert an der Zielschule nicht",
       }),
     );
@@ -195,7 +195,7 @@ describe("accountTenantAccessService", () => {
     mockFetch.mockResolvedValue(jsonResponse({ detail: "Unauthorized" }, 401));
 
     await expect(accountTenantAccessService.list("42")).rejects.toThrowError(
-      new ApiError("school access request failed (401)", 401, {
+      new ApiError("school access request failed", 401, {
         detail: "Unauthorized",
       }),
     );
@@ -207,7 +207,7 @@ describe("accountTenantAccessService", () => {
     );
 
     await expect(accountTenantAccessService.list("42")).rejects.toThrowError(
-      new ApiError("school access request failed (504)", 504),
+      new ApiError("school access request failed", 504),
     );
   });
 

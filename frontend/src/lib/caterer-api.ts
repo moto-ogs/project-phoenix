@@ -4,6 +4,7 @@
 // password reset need no session: the mailed link is the proof.
 
 import { authFetch } from "./api-helpers";
+import { bffJson } from "./bff-fetch";
 import { apiErrorFromResponse, transportFetch } from "./api-error";
 import { knownEnum } from "./contract/known-enum";
 import type * as catererInvitationsContract from "./contract/caterer-invitations.generated";
@@ -124,12 +125,10 @@ function mapCatererOrders(
 }
 
 export async function fetchCatererSchools(): Promise<CatererSchools> {
-  const response = await authFetch<
-    ApiResponse<catererSchoolsContract.SchoolsResponse>
-  >("/api/caterer/schools");
+  const data = await bffJson("caterer", "GET /caterer/schools");
   return {
-    catererName: response.data.caterer_name,
-    schools: response.data.schools ?? [],
+    catererName: data.caterer_name,
+    schools: data.schools ?? [],
   };
 }
 
@@ -138,22 +137,25 @@ export async function fetchCatererOrders(
   from: string,
   to: string,
 ): Promise<CatererOrders> {
-  const params = new URLSearchParams({ from, to });
-  const response = await authFetch<
-    ApiResponse<catererSchoolsContract.SchoolOrdersResponse>
-  >(
-    `/api/caterer/schools/${encodeURIComponent(schoolId)}/orders?${params.toString()}`,
+  const data = await bffJson(
+    "caterer",
+    "GET /caterer/schools/{schoolId}/orders",
+    {
+      params: { schoolId },
+      query: { from, to },
+    },
   );
-  return mapCatererOrders(response.data);
+  return mapCatererOrders(data);
 }
 
 export async function confirmCatererOrder(
   schoolId: string,
   orderId: string,
 ): Promise<void> {
-  await authFetch<unknown>(
-    `/api/caterer/schools/${encodeURIComponent(schoolId)}/orders/${encodeURIComponent(orderId)}/confirm`,
-    { method: "POST", body: {} },
+  await bffJson(
+    "caterer",
+    "POST /caterer/schools/{schoolId}/orders/{orderId}/confirm",
+    { params: { schoolId, orderId } },
   );
 }
 

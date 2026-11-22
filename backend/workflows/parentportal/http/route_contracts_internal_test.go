@@ -10,7 +10,7 @@ import (
 )
 
 // The identifiers of an enrollable phase were strings before they became
-// common.ID; the wire must not notice the change of type.
+// ident.ID; the wire must not notice the change of type.
 func TestEnrollablePhaseKeepsItsIdentifiersAsStrings(t *testing.T) {
 	t.Parallel()
 	rendered, err := wire.Marshal(EnrollablePhaseResponse{SchoolID: 9223372036854775807, PhaseID: 12, ServiceStartDate: "2026-08-01"})

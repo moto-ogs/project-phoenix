@@ -1,5 +1,4 @@
-import { operatorFetch } from "./api-helpers";
-import type * as operatorAnnouncementsContract from "~/lib/contract/operator-announcements.generated";
+import { bffJson } from "~/lib/bff-fetch";
 import type {
   Announcement,
   AnnouncementStats,
@@ -11,26 +10,23 @@ import { mapAnnouncement, mapViewDetail } from "./announcements-helpers";
 
 class OperatorAnnouncementsService {
   async fetchAll(includeInactive = true): Promise<Announcement[]> {
-    const data = await operatorFetch<
-      operatorAnnouncementsContract.OperatorAnnouncementResponse[]
-    >(`/api/operator/announcements?include_inactive=${includeInactive}`);
+    const data = await bffJson("platform", "GET /operator/announcements/", {
+      query: { include_inactive: includeInactive },
+    });
     return data.map(mapAnnouncement);
   }
 
   async fetchById(id: string): Promise<Announcement> {
-    const data =
-      await operatorFetch<operatorAnnouncementsContract.OperatorAnnouncementResponse>(
-        `/api/operator/announcements/${id}`,
-      );
+    const data = await bffJson("platform", "GET /operator/announcements/{id}", {
+      params: { id },
+    });
     return mapAnnouncement(data);
   }
 
   async create(data: CreateAnnouncementRequest): Promise<Announcement> {
-    const result =
-      await operatorFetch<operatorAnnouncementsContract.OperatorAnnouncementResponse>(
-        "/api/operator/announcements",
-        { method: "POST", body: data },
-      );
+    const result = await bffJson("platform", "POST /operator/announcements/", {
+      body: data,
+    });
     return mapAnnouncement(result);
   }
 
@@ -38,36 +34,38 @@ class OperatorAnnouncementsService {
     id: string,
     data: UpdateAnnouncementRequest,
   ): Promise<Announcement> {
-    const result =
-      await operatorFetch<operatorAnnouncementsContract.OperatorAnnouncementResponse>(
-        `/api/operator/announcements/${id}`,
-        { method: "PUT", body: data },
-      );
+    const result = await bffJson(
+      "platform",
+      "PUT /operator/announcements/{id}",
+      { params: { id }, body: data },
+    );
     return mapAnnouncement(result);
   }
 
   async delete(id: string): Promise<void> {
-    await operatorFetch(`/api/operator/announcements/${id}`, {
-      method: "DELETE",
+    await bffJson("platform", "DELETE /operator/announcements/{id}", {
+      params: { id },
     });
   }
 
   async publish(id: string): Promise<void> {
-    await operatorFetch(`/api/operator/announcements/${id}/publish`, {
-      method: "POST",
+    await bffJson("platform", "POST /operator/announcements/{id}/publish", {
+      params: { id },
     });
   }
 
   async fetchStats(id: string): Promise<AnnouncementStats> {
-    return operatorFetch<AnnouncementStats>(
-      `/api/operator/announcements/${id}/stats`,
-    );
+    return bffJson("platform", "GET /operator/announcements/{id}/stats", {
+      params: { id },
+    });
   }
 
   async fetchViewDetails(id: string): Promise<AnnouncementViewDetail[]> {
-    const data = await operatorFetch<
-      operatorAnnouncementsContract.AnnouncementViewDetailResponse[]
-    >(`/api/operator/announcements/${id}/views`);
+    const data = await bffJson(
+      "platform",
+      "GET /operator/announcements/{id}/views",
+      { params: { id } },
+    );
     return data.map(mapViewDetail);
   }
 }

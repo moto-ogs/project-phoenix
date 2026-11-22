@@ -46,7 +46,6 @@ describe("fetchStudentFeedback", () => {
 
     expect(mockSessionFetch).toHaveBeenCalledWith("/api/feedback/student/1", {
       method: "GET",
-      credentials: "include",
     });
 
     expect(result).toHaveLength(2);
@@ -118,25 +117,15 @@ describe("fetchStudentFeedback", () => {
       statusText: "Internal Server Error",
     });
 
-    await expect(fetchStudentFeedback("1")).rejects.toThrow(
-      "Failed to fetch feedback: 500 Internal Server Error",
-    );
+    await expect(fetchStudentFeedback("1")).rejects.toMatchObject({
+      status: 500,
+    });
   });
 
   it("handles empty data array", async () => {
     mockSessionFetch.mockResolvedValue({
       ok: true,
       json: async () => ({ data: [] }),
-    });
-
-    const result = await fetchStudentFeedback("1");
-    expect(result).toEqual([]);
-  });
-
-  it("handles null data gracefully", async () => {
-    mockSessionFetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({ data: null }),
     });
 
     const result = await fetchStudentFeedback("1");

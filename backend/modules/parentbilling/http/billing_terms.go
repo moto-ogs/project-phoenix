@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	capability "github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -93,7 +94,7 @@ func (req *ServiceTermsRequest) Bind(*http.Request) error { return nil }
 // FamilyBillingRequest is the body of PUT /traeger/family-billing: the
 // deviation of the family of a contract of the Träger.
 type FamilyBillingRequest struct {
-	ContractID      common.ID             `json:"contract_id"`
+	ContractID      ident.ID              `json:"contract_id"`
 	RecipientKind   string                `json:"recipient_kind"`
 	SecondFirstName string                `json:"second_first_name"`
 	SecondLastName  string                `json:"second_last_name"`

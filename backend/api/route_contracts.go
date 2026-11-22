@@ -74,6 +74,7 @@ import (
 	timeTrackingHTTP "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking"
 	workforceTraegerStaff "github.com/moto-ogs/project-phoenix/modules/workforce/http/traegerstaff"
 	worktimemodelsHTTP "github.com/moto-ogs/project-phoenix/modules/workforce/http/worktimemodels"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	catererPortalHTTP "github.com/moto-ogs/project-phoenix/workflows/catererportal/http"
 	holidayClosureHTTP "github.com/moto-ogs/project-phoenix/workflows/holidayclosurenotification/http"
 	parentAPI "github.com/moto-ogs/project-phoenix/workflows/parentportal/http"
@@ -256,7 +257,7 @@ func ContractDocument() (contract.Document, error) {
 	substitutions := substitutionsHTTP.RouteContractTypes()
 	options := contract.Options{
 		Identifiers: map[reflect.Type]string{
-			reflect.TypeFor[common.ID](): contract.KindID,
+			reflect.TypeFor[ident.ID](): contract.KindID,
 			// The device management renders its instants in whole seconds.
 			reflect.TypeFor[devicesAPI.WireTime](): contract.KindInstant,
 			// The answers of an enrollment form: an object of the form's own

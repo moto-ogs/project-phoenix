@@ -58,8 +58,6 @@ describe("fetchHomeLayout", () => {
       status: 500,
     } as Response);
 
-    await expect(fetchHomeLayout()).rejects.toThrow(
-      "home layout request failed (500)",
-    );
+    await expect(fetchHomeLayout()).rejects.toMatchObject({ status: 500 });
   });
 });

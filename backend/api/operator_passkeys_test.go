@@ -123,12 +123,13 @@ func TestOperatorPasskeyLoginRoutesArePublic(t *testing.T) {
 	t.Parallel()
 
 	svc := &operatorPasskeyServiceStub{}
-	router := testOperatorRouter(operatorIdentity{
+	router := chi.NewRouter()
+	router.Mount("/operator", testOperatorRouter(operatorIdentity{
 		passkeys: svc,
 		sessions: identityoperator.NewSessions(routetest.TestTokenAuth(t), nil),
-	}, nil)
+	}, nil))
 
-	req := operatorPasskeyJSONRequest("/auth/passkeys/login/options", `{}`)
+	req := operatorPasskeyJSONRequest("/operator/auth/passkeys/login/options", `{}`)
 	req.Header.Set("X-Moto-Frontend-Origin", "https://operator.localhost")
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
@@ -139,7 +140,7 @@ func TestOperatorPasskeyLoginRoutesArePublic(t *testing.T) {
 }
 
 // TestOperatorPasskeyListRouteServesOnlyContractForm: the list answers the
-// contract path GET /auth/passkeys (mounted under /operator), which the catalog
+// contract path GET /operator/auth/passkeys, which the catalog
 // proxy calls, for a signed-in operator. The trailing-slash form is no route:
 // it 404s before any middleware, so no second spelling of the list exists (#2352).
 func TestOperatorPasskeyListRouteServesOnlyContractForm(t *testing.T) {
@@ -153,11 +154,12 @@ func TestOperatorPasskeyListRouteServesOnlyContractForm(t *testing.T) {
 		},
 	}
 	svc := &operatorPasskeyServiceStub{}
-	router := testOperatorRouter(operatorIdentity{
+	router := chi.NewRouter()
+	router.Mount("/operator", testOperatorRouter(operatorIdentity{
 		access:   authService,
 		passkeys: svc,
 		sessions: operatorTestSessions(t, authService),
-	}, nil)
+	}, nil))
 	token := operatorRouteAccessToken(t, 21)
 
 	get := func(path, bearer string) *httptest.ResponseRecorder {
@@ -170,59 +172,72 @@ func TestOperatorPasskeyListRouteServesOnlyContractForm(t *testing.T) {
 		return w
 	}
 
-	w := get("/auth/passkeys", token)
+	w := get("/operator/auth/passkeys", token)
 	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
 	assert.EqualValues(t, 21, svc.listOperatorID)
 	assert.Contains(t, w.Body.String(), `"name":"Phone"`)
 
-	assert.Equal(t, http.StatusUnauthorized, get("/auth/passkeys", "").Code,
+	assert.Equal(t, http.StatusUnauthorized, get("/operator/auth/passkeys", "").Code,
 		"the list is protected")
-	assert.Equal(t, http.StatusNotFound, get("/auth/passkeys/", token).Code,
+	assert.Equal(t, http.StatusNotFound, get("/operator/auth/passkeys/", token).Code,
 		"the trailing-slash form is not registered")
 }
 
+// TestOperatorPasskeyAuthenticatedHandlers drives the signed-in passkey
+// routes through the operator router under its /operator mount, so each
+// answer is held to its registered route (#7808).
 func TestOperatorPasskeyAuthenticatedHandlers(t *testing.T) {
 	t.Parallel()
 
+	authService := &mockOperatorAuthService{
+		getOperatorFn: func(_ context.Context, id int64) (*identityaccess.Operator, error) {
+			op := &identityaccess.Operator{Active: true}
+			op.ID = id
+			return op, nil
+		},
+	}
 	svc := &operatorPasskeyServiceStub{}
-	rs := identityoperator.NewPasskeyResource(svc)
-	claims := routetest.Claims{ID: 21, Scope: "platform"}
+	router := chi.NewRouter()
+	router.Mount("/operator", testOperatorRouter(operatorIdentity{
+		access:   authService,
+		passkeys: svc,
+		sessions: operatorTestSessions(t, authService),
+	}, nil))
+	const operatorID = 21
+	token := operatorRouteAccessToken(t, operatorID)
+	serve := func(req *http.Request) *httptest.ResponseRecorder {
+		req.Header.Set("Authorization", "Bearer "+token)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		return w
+	}
 
-	w := httptest.NewRecorder()
-	rs.PasskeyEnrollmentChallenge(w, withOperatorPasskeyClaims(operatorPasskeyJSONRequest("/auth/passkeys/enrollment/challenge", `{}`), claims))
-	require.Equal(t, http.StatusOK, w.Code)
-	assert.EqualValues(t, claims.ID, svc.enrollmentOperatorID)
+	w := serve(operatorPasskeyJSONRequest("/operator/auth/passkeys/enrollment/challenge", `{}`))
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	assert.EqualValues(t, operatorID, svc.enrollmentOperatorID)
 	assert.JSONEq(t, `{"status":"success","message":"Passkey enrollment code sent","data":{"challenge_token":"operator-challenge-token","masked_email":"o***@example.test"}}`, w.Body.String())
 
-	w = httptest.NewRecorder()
-	req := withOperatorPasskeyClaims(operatorPasskeyJSONRequest("/auth/passkeys/register/options", `{"code":"654321","name":" Admin laptop "}`), claims)
+	req := operatorPasskeyJSONRequest("/operator/auth/passkeys/register/options", `{"code":"654321","name":" Admin laptop "}`)
 	req.Header.Set("Origin", "https://operator.localhost")
-	rs.PasskeyRegisterOptions(w, req)
-	require.Equal(t, http.StatusOK, w.Code)
-	assert.EqualValues(t, claims.ID, svc.beginRegistrationReq.OperatorID)
+	w = serve(req)
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	assert.EqualValues(t, operatorID, svc.beginRegistrationReq.OperatorID)
 	assert.Equal(t, "Admin laptop", svc.beginRegistrationReq.Name)
 
-	w = httptest.NewRecorder()
-	rs.PasskeyRegisterVerify(w, withOperatorPasskeyClaims(operatorPasskeyJSONRequest("/auth/passkeys/register/verify", `{"session_id":"operator-registration","name":"Phone","response":{"id":"credential"}}`), claims))
-	require.Equal(t, http.StatusOK, w.Code)
+	w = serve(operatorPasskeyJSONRequest("/operator/auth/passkeys/register/verify", `{"session_id":"operator-registration","name":"Phone","response":{"id":"credential"}}`))
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
 	assert.Equal(t, "operator-registration", svc.finishRegistrationReq.SessionID)
 	assert.JSONEq(t, `{"status":"success","message":"Passkey registered","data":{"id":"9","name":"Admin laptop","created_at":"1970-01-01T00:00:01Z"}}`, w.Body.String())
 
-	w = httptest.NewRecorder()
-	rs.PasskeyList(w, withOperatorPasskeyClaims(httptest.NewRequest(http.MethodGet, "/auth/passkeys", nil), claims))
-	require.Equal(t, http.StatusOK, w.Code)
-	assert.EqualValues(t, claims.ID, svc.listOperatorID)
+	w = serve(httptest.NewRequest(http.MethodGet, "/operator/auth/passkeys", nil))
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	assert.EqualValues(t, operatorID, svc.listOperatorID)
 	assert.JSONEq(t, `{"status":"success","message":"Passkeys retrieved","data":[{"id":"10","name":"Phone","created_at":"1970-01-01T00:00:02Z"}]}`, w.Body.String())
 
-	w = httptest.NewRecorder()
 	passkeyID := svc.enrollmentOperatorID + 1
-	rs.PasskeyRevoke(w, withOperatorPasskeyRouteParam(
-		withOperatorPasskeyClaims(httptest.NewRequest(http.MethodDelete, "/auth/passkeys/"+strconv.FormatInt(passkeyID, 10), nil), claims),
-		"passkeyId",
-		strconv.FormatInt(passkeyID, 10),
-	))
-	require.Equal(t, http.StatusNoContent, w.Code)
-	assert.EqualValues(t, claims.ID, svc.revokeOperatorID)
+	w = serve(httptest.NewRequest(http.MethodDelete, "/operator/auth/passkeys/"+strconv.FormatInt(passkeyID, 10), nil))
+	require.Equal(t, http.StatusNoContent, w.Code, w.Body.String())
+	assert.EqualValues(t, operatorID, svc.revokeOperatorID)
 	assert.Equal(t, passkeyID, svc.revokeCredentialID)
 }
 

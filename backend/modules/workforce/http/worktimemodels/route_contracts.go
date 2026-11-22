@@ -1,10 +1,13 @@
 package worktimemodels
 
-import "github.com/moto-ogs/project-phoenix/api/common"
+import (
+	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+)
 
 // DeletedResponse names the template a delete removed.
 type DeletedResponse struct {
-	ID common.ID `json:"id"`
+	ID ident.ID `json:"id"`
 }
 
 // RouteContracts registers the typed contract of the work-time templates

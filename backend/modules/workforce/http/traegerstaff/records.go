@@ -121,7 +121,7 @@ func (rs *RecordsResource) record(w http.ResponseWriter, r *http.Request) {
 // StaffLinkRequest names the employments to join and, per differing field, the
 // chosen source: "record" or the ID of a school.
 type StaffLinkRequest struct {
-	StaffRecordID *common.ID                        `json:"staff_record_id"`
+	StaffRecordID *ident.ID                         `json:"staff_record_id"`
 	Members       []workforce.TraegerStaffMemberRef `json:"members"`
 	Choices       map[string]string                 `json:"choices"`
 }

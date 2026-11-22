@@ -463,7 +463,6 @@ var coreActions = map[RouteKey]CoreAction{
 	{http.MethodPost, "/api/work-time-models/{id}/assignments"}:                                          notCaptured,
 
 	// OGS portal: sign-in, accounts, invitations.
-	{http.MethodPut, "/auth/accounts/{accountId}/"}:                        notCaptured,
 	{http.MethodDelete, "/auth/accounts/{accountId}/caregiver-capability"}: notCaptured,
 	{http.MethodPost, "/auth/accounts/{accountId}/caregiver-capability"}:   notCaptured,
 	{http.MethodDelete, "/auth/accounts/{accountId}/mfa/"}:                 notCaptured,
@@ -493,7 +492,6 @@ var coreActions = map[RouteKey]CoreAction{
 	{http.MethodPost, "/auth/password"}:                                    notCaptured,
 	{http.MethodPost, "/auth/password-reset"}:                              notCaptured,
 	{http.MethodPost, "/auth/password-reset/confirm"}:                      notCaptured,
-	{http.MethodPost, "/auth/permissions/"}:                                notCaptured,
 	{http.MethodPost, "/auth/refresh"}:                                     notCaptured,
 	{http.MethodPost, "/auth/register"}:                                    notCaptured,
 	{http.MethodPost, "/auth/roles/"}:                                      notCaptured,

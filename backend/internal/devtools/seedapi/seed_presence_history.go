@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // presenceHistoryDays is how far the presence history reaches back: the
@@ -56,9 +57,9 @@ type presenceHistoryStatusDay struct {
 }
 
 type presenceHistoryStatusDayResponse struct {
-	ID     apiID  `json:"id"`
-	Date   string `json:"date"`
-	Status string `json:"status"`
+	ID     ident.ID `json:"id"`
+	Date   string   `json:"date"`
+	Status string   `json:"status"`
 }
 
 // presenceHistoryPlan is the deterministic past of the school: who came on
@@ -500,8 +501,8 @@ func listPresenceHistoryStudents(rt *Runtime) ([]presenceHistoryStudent, error) 
 	for page := 1; ; page++ {
 		var envelope struct {
 			Data []struct {
-				ID         apiID  `json:"id"`
-				CareEndsOn string `json:"care_ends_on"`
+				ID         ident.ID `json:"id"`
+				CareEndsOn string   `json:"care_ends_on"`
 			} `json:"data"`
 			Pagination struct {
 				TotalPages int `json:"total_pages"`

@@ -22,7 +22,7 @@ type AbsenceDecisionRow = Omit<
   StaffAbsenceRow,
   "id" | "staff_id" | "approved_by"
 > & {
-  id: string | number;
+  id: string;
 };
 
 // Shared note-entry modal for the deny and Rückfrage decisions (#1419).

@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The Abwesenheitsarten and Kontingente of the demo Träger (#4710), seeded
@@ -25,8 +27,8 @@ const (
 )
 
 type seedTraegerAbsenceType struct {
-	ID   apiID  `json:"id"`
-	Name string `json:"name"`
+	ID   ident.ID `json:"id"`
+	Name string   `json:"name"`
 }
 
 type seedSchoolAbsenceType struct {
@@ -112,13 +114,13 @@ func seedTraegerAbsenceTypes(client *Client, auth AuthRef) (map[string]int64, er
 }
 
 type seedTraegerAbsenceRecord struct {
-	ID          apiID  `json:"id"`
-	FirstName   string `json:"first_name"`
-	LastName    string `json:"last_name"`
+	ID          ident.ID `json:"id"`
+	FirstName   string   `json:"first_name"`
+	LastName    string   `json:"last_name"`
 	Employments []struct {
-		SchoolID apiID `json:"school_id"`
-		StaffID  apiID `json:"staff_id"`
-		Active   bool  `json:"active"`
+		SchoolID ident.ID `json:"school_id"`
+		StaffID  ident.ID `json:"staff_id"`
+		Active   bool     `json:"active"`
 	} `json:"employments"`
 }
 

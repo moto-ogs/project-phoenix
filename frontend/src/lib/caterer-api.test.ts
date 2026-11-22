@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type * as catererSchoolsContract from "./contract/caterer-schools.generated";
 
-const { mockAuthFetch } = vi.hoisted(() => ({ mockAuthFetch: vi.fn() }));
-vi.mock("./api-helpers", () => ({ authFetch: mockAuthFetch }));
+const { mockBffJson } = vi.hoisted(() => ({ mockBffJson: vi.fn() }));
+vi.mock("./bff-fetch", () => ({ bffJson: mockBffJson }));
 
 import { fetchCatererOrders } from "./caterer-api";
 
@@ -21,11 +21,11 @@ function orders(
 }
 
 describe("fetchCatererOrders", () => {
-  beforeEach(() => mockAuthFetch.mockReset());
+  beforeEach(() => mockBffJson.mockReset());
 
   it("leaves values this build does not know undefined and empty lists empty", async () => {
-    mockAuthFetch.mockResolvedValueOnce({
-      data: orders({
+    mockBffJson.mockResolvedValueOnce(
+      orders({
         rhythm: "monthly",
         detail: "by_group",
         days: [
@@ -41,7 +41,7 @@ describe("fetchCatererOrders", () => {
           },
         ],
       }),
-    });
+    );
 
     const result = await fetchCatererOrders("4", "2026-09-07", "2026-09-11");
 

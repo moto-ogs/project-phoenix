@@ -141,11 +141,11 @@ func (rs *Resource) updateStudentArrivalSchedules(w http.ResponseWriter, r *http
 
 	staffID, err := rs.getStaffIDFromJWT(r)
 	if err != nil {
-		renderError(w, r, common.ErrorForbidden(err))
+		renderScheduleAuthorError(w, r, err)
 		return
 	}
 
-	schedules := toArrivalScheduleModels(req.Schedules, student.ID, staffID)
+	schedules := toArrivalScheduleModels(r.Context(), req.Schedules, student.ID, staffID)
 
 	tenantID := tenant.FromContext(r.Context())
 	if err := withinTenant(r.Context(), tenantID, func(ctx context.Context) error {
@@ -192,7 +192,7 @@ func (rs *Resource) createStudentArrivalException(w http.ResponseWriter, r *http
 
 	staffID, err := rs.getStaffIDFromJWT(r)
 	if err != nil {
-		renderError(w, r, common.ErrorForbidden(err))
+		renderScheduleAuthorError(w, r, err)
 		return
 	}
 
@@ -327,7 +327,7 @@ func (rs *Resource) createStudentArrivalNote(w http.ResponseWriter, r *http.Requ
 
 	staffID, err := rs.getStaffIDFromJWT(r)
 	if err != nil {
-		renderError(w, r, common.ErrorForbidden(err))
+		renderScheduleAuthorError(w, r, err)
 		return
 	}
 
@@ -336,7 +336,7 @@ func (rs *Resource) createStudentArrivalNote(w http.ResponseWriter, r *http.Requ
 		StudentID: student.ID,
 		NoteDate:  careplan.Date(noteDate),
 		Content:   req.Content,
-		CreatedBy: staffID,
+		CreatedBy: staffID, EnteredByTraeger: careplan.EnteredByTraeger(r.Context(), staffID),
 	}
 
 	tenantID := tenant.FromContext(r.Context())
@@ -384,7 +384,7 @@ func (rs *Resource) updateStudentArrivalNote(w http.ResponseWriter, r *http.Requ
 		StudentID: student.ID,
 		NoteDate:  careplan.Date(noteDate),
 		Content:   req.Content,
-		CreatedBy: existingNote.CreatedBy,
+		CreatedBy: existingNote.CreatedBy, EnteredByTraeger: existingNote.EnteredByTraeger,
 	}
 	note.ID = noteID
 	note.CreatedAt = existingNote.CreatedAt
@@ -447,7 +447,7 @@ func (rs *Resource) bulkUpsertArrivalSchedules(w http.ResponseWriter, r *http.Re
 
 	staffID, err := rs.getStaffIDFromJWT(r)
 	if err != nil {
-		renderError(w, r, common.ErrorForbidden(err))
+		renderScheduleAuthorError(w, r, err)
 		return
 	}
 
@@ -496,7 +496,7 @@ func (rs *Resource) bulkUpsertArrivalSchedules(w http.ResponseWriter, r *http.Re
 }
 
 type ArrivalScheduleStatusResponse struct {
-	StudentIDs []common.ID `json:"student_ids"`
+	StudentIDs []ident.ID `json:"student_ids"`
 }
 
 // getBulkArrivalScheduleStatus returns the selected children that have their

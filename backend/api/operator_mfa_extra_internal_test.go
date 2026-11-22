@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/tokenprimitives"
 
 	"github.com/stretchr/testify/assert"
@@ -384,4 +385,28 @@ func TestOperatorMFAListTrustedDevices_ServiceErrorReturns500(t *testing.T) {
 	rs.ListTrustedDevices(rr, r)
 
 	assert.Equal(t, http.StatusInternalServerError, rr.Code)
+}
+
+// The operator forgets a remembered device through the operator router under
+// its /operator mount, so the answer is held to its registered route (#7808).
+func TestOperatorMFARevokeTrustedDeviceThroughTheRouter(t *testing.T) {
+	t.Parallel()
+	authService := &mockOperatorAuthService{
+		getOperatorFn: func(_ context.Context, id int64) (*identityaccess.Operator, error) {
+			op := &identityaccess.Operator{Active: true}
+			op.ID = id
+			return op, nil
+		},
+	}
+	router := chi.NewRouter()
+	router.Mount("/operator", testOperatorRouter(operatorIdentity{
+		access:   authService,
+		mfa:      &stubOperatorMFAServiceExtra{},
+		sessions: operatorTestSessions(t, authService),
+	}, nil))
+	req := httptest.NewRequest(http.MethodDelete, "/operator/auth/mfa/trusted-devices/5", nil)
+	req.Header.Set("Authorization", "Bearer "+operatorRouteAccessToken(t, 42))
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusNoContent, rec.Code, rec.Body.String())
 }

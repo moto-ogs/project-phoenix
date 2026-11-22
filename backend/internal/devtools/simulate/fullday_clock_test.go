@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -135,8 +136,8 @@ func TestLoginTimesUseWallClock(t *testing.T) {
 		{"caregiver", func(rt *Runtime) (time.Time, error) {
 			block := dayBlock{}
 			block.Staff = append(block.Staff, struct {
-				StaffID  apiID `json:"staff_id"`
-				IsAbsent bool  `json:"is_absent"`
+				StaffID  ident.ID `json:"staff_id"`
+				IsAbsent bool     `json:"is_absent"`
 			}{StaffID: 10})
 			_, err := rt.blockClient(block)
 			return rt.staffLogins[10].at, err

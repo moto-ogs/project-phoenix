@@ -3,9 +3,9 @@ package parentbillinghttp
 import (
 	"time"
 
-	"github.com/moto-ogs/project-phoenix/api/common"
 	capability "github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // HolidayContributionResponse is capability.HolidayContribution as the
@@ -16,7 +16,7 @@ type HolidayContributionResponse struct {
 	TotalCents          int                                `json:"total_cents"`
 	ExemptionAvailable  bool                               `json:"exemption_available"`
 	BenefitsExemption   bool                               `json:"benefits_exemption"`
-	CostBearerID        *common.ID                         `json:"cost_bearer_id"`
+	CostBearerID        *ident.ID                          `json:"cost_bearer_id"`
 	CostBearerName      string                             `json:"cost_bearer_name"`
 	Frozen              bool                               `json:"frozen"`
 	ConfirmedAt         *time.Time                         `json:"confirmed_at"`
@@ -29,7 +29,7 @@ type HolidayContributionResponse struct {
 
 // HolidayChildContributionResponse is one child of the contribution.
 type HolidayChildContributionResponse struct {
-	ChildID    common.ID                         `json:"child_id"`
+	ChildID    ident.ID                          `json:"child_id"`
 	Position   int                               `json:"position"`
 	Lines      []HolidayContributionLineResponse `json:"lines"`
 	TotalCents int                               `json:"total_cents"`
@@ -46,7 +46,7 @@ type HolidayContributionLineResponse struct {
 	DiscountBasisPoints *int           `json:"discount_basis_points"`
 	DiscountCents       *int           `json:"discount_cents"`
 	Note                string         `json:"note"`
-	CostBearerID        *common.ID     `json:"cost_bearer_id"`
+	CostBearerID        *ident.ID      `json:"cost_bearer_id"`
 	CostBearerName      string         `json:"cost_bearer_name"`
 	BookedDays          *int           `json:"booked_days"`
 }
@@ -54,7 +54,7 @@ type HolidayContributionLineResponse struct {
 // HolidayConfirmationResponse is capability.HolidayConfirmation as the
 // route answers it.
 type HolidayConfirmationResponse struct {
-	RegistrationID common.ID                   `json:"id"`
+	RegistrationID ident.ID                    `json:"id"`
 	Status         string                      `json:"status"`
 	Contribution   HolidayContributionResponse `json:"contribution"`
 }

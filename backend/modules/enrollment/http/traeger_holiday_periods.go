@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -118,19 +119,19 @@ func (rs *HolidayPeriodResource) TraegerRouter(protectedTraegerRoutes func(chi.R
 }
 
 type HolidayTimeModelRequest struct {
-	ID         common.ID `json:"id"`
-	Name       string    `json:"name"`
-	StartsAt   string    `json:"starts_at"`
-	EndsAt     string    `json:"ends_at"`
-	PriceCents int       `json:"price_cents"`
-	Archived   bool      `json:"archived"`
+	ID         ident.ID `json:"id"`
+	Name       string   `json:"name"`
+	StartsAt   string   `json:"starts_at"`
+	EndsAt     string   `json:"ends_at"`
+	PriceCents int      `json:"price_cents"`
+	Archived   bool     `json:"archived"`
 }
 
 type HolidayWeekRequest struct {
-	ID           common.ID                 `json:"id"`
+	ID           ident.ID                  `json:"id"`
 	StartsOn     calendar.Date             `json:"starts_on"`
 	EndsOn       calendar.Date             `json:"ends_on"`
-	HostSchoolID common.ID                 `json:"host_school_id"`
+	HostSchoolID ident.ID                  `json:"host_school_id"`
 	TimeModels   []HolidayTimeModelRequest `json:"time_models"`
 	// BookingUnit is "week" or "day"; empty is a week (#4701).
 	BookingUnit string `json:"booking_unit"`

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Registered error codes (error-registry/) the simulation expects from
@@ -160,14 +161,14 @@ const isoDate = "2006-01-02"
 // window itself are what PUT /periods requires to echo a period back
 // unchanged except for is_active.
 type calendarPeriodWindow struct {
-	ID              apiID   `json:"id"`
-	Name            string  `json:"name"`
-	PeriodType      string  `json:"period_type"`
-	StartDate       string  `json:"start_date"`
-	EndDate         string  `json:"end_date"`
-	WeekCycleLength int     `json:"week_cycle_length"`
-	WeekCycleAnchor *string `json:"week_cycle_anchor,omitempty"`
-	IsActive        bool    `json:"is_active"`
+	ID              ident.ID `json:"id"`
+	Name            string   `json:"name"`
+	PeriodType      string   `json:"period_type"`
+	StartDate       string   `json:"start_date"`
+	EndDate         string   `json:"end_date"`
+	WeekCycleLength int      `json:"week_cycle_length"`
+	WeekCycleAnchor *string  `json:"week_cycle_anchor,omitempty"`
+	IsActive        bool     `json:"is_active"`
 }
 
 // firstFutureWeekday returns the earliest weekday after today that falls into
@@ -383,7 +384,7 @@ func (seedStaffFeedTombstoneAction) Run(_ context.Context, rt *Runtime) error {
 	}
 	var envelope struct {
 		Data struct {
-			ID apiID `json:"id"`
+			ID ident.ID `json:"id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(created, &envelope); err != nil {
