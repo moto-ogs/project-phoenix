@@ -333,7 +333,11 @@ slash is dropped and each parameter encoded.
 - **No contract:** a backend route without a contract gets one first
   (#7808); its client waits until then. A named `route.ts` the contract
   cannot carry (`activities/[id]/students`) keeps its own call.
-- Files and downloads keep their own path (`fetch` of the file URL).
+- **Files:** a route registered with `File: true` is called with
+  `bffFile(portal, route, options)` from the same module: the same path,
+  portal table and ApiError, resolving to the successful `Response` whose
+  body and `Content-Disposition` the caller reads. A link the browser opens
+  itself (`<a href>`) stays a plain URL.
 
 ### API clients and data mapping
 

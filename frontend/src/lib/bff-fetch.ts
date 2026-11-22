@@ -29,6 +29,23 @@ type KeyOf<R> = R extends {
   ? `${M} ${T}`
   : never;
 
+type FileRoute<P extends Portal> = Extract<
+  (typeof portalRoutes)[P][number],
+  { response: { kind: "file" } }
+>;
+
+/** A registered file route of the portal (`File: true` in Go). */
+export type FileRouteKey<P extends Portal> = KeyOf<FileRoute<P>>;
+
+type FileRouteOf<P extends Portal, K extends FileRouteKey<P>> =
+  FileRoute<P> extends infer R
+    ? R extends unknown
+      ? KeyOf<R> extends K
+        ? R
+        : never
+      : never
+    : never;
+
 /** A registered JSON route of the portal: `"GET /api/activities/categories"`. */
 export type RouteKey<P extends Portal> = KeyOf<JsonRoute<P>>;
 
@@ -235,6 +252,24 @@ export function bffPath(
   return qs ? `${path}?${qs}` : path;
 }
 
+/** Sends through the portal's row; a failure is the ApiError. */
+async function send(
+  portal: Portal,
+  method: Method,
+  url: string,
+  init: RequestInit,
+  options: CallOptions,
+): Promise<Response> {
+  const response = await PORTALS[portal].send(url, init, options);
+  if (!response.ok) {
+    throw await apiErrorFromResponse(
+      response,
+      options.errorMessage ?? `${method} ${url} failed (${response.status})`,
+    );
+  }
+  return response;
+}
+
 async function call<T>(
   portal: Portal,
   method: Method,
@@ -254,12 +289,9 @@ async function call<T>(
     }),
     ...(body !== undefined && { body: isForm ? body : JSON.stringify(body) }),
   };
-  const response = await PORTALS[portal].send(url, init, options);
+  const response = await send(portal, method, url, init, options);
   const message = (status: number) =>
     errorMessage ?? `${method} ${url} failed (${status})`;
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, message(response.status));
-  }
   if (response.status === 204) return null as T;
   let answer: unknown;
   try {
@@ -325,4 +357,30 @@ export function bffJson<
   };
   const url = bffPath(portal, route.slice(space + 1), opts.params, opts.query);
   return call(portal, method, url, opts);
+}
+
+/**
+ * Calls a registered file route through the portal's BFF and resolves to the
+ * successful Response, whose body the caller reads (`blob()`) together with
+ * its `Content-Disposition`. A failure is the same ApiError as in bffJson.
+ */
+export async function bffFile<P extends Portal, K extends FileRouteKey<P>>(
+  portal: P,
+  route: K,
+  ...[options]: OptionalArg<FileRouteOf<P, K>, never>
+): Promise<Response> {
+  const space = route.indexOf(" ");
+  const method = route.slice(0, space) as Method;
+  const opts = (options ?? {}) as CallOptions & {
+    params?: Record<string, string>;
+    query?: Record<string, QueryValue>;
+  };
+  const url = bffPath(portal, route.slice(space + 1), opts.params, opts.query);
+  return send(
+    portal,
+    method,
+    url,
+    { method, ...(opts.signal && { signal: opts.signal }) },
+    opts,
+  );
 }

@@ -20,7 +20,7 @@ vi.mock("./api-error", async (importOriginal) => ({
 }));
 
 import { ApiError } from "./api-error";
-import { bffJson, bffPath } from "./bff-fetch";
+import { bffFile, bffJson, bffPath } from "./bff-fetch";
 
 const ok = (data: unknown, extra: object = {}) =>
   Response.json({ status: "success", data, ...extra });
@@ -71,6 +71,50 @@ describe("bffPath", () => {
     expect(() => bffPath("tenant", "/api/activities/{id}", {})).toThrow(
       "missing path parameter id",
     );
+  });
+});
+
+describe("bffFile", () => {
+  it("hands the file answer to the caller", async () => {
+    mockSessionFetch.mockResolvedValueOnce(
+      new Response("pdf", { headers: { "Content-Disposition": "x.pdf" } }),
+    );
+
+    const response = await bffFile(
+      "tenant",
+      "GET /api/meal-plan/orders/month/export",
+      { query: { month: "2026-09", format: "pdf" } },
+    );
+
+    await expect(response.text()).resolves.toBe("pdf");
+    expect(mockSessionFetch).toHaveBeenCalledWith(
+      "/api/meal-plan/orders/month/export?month=2026-09&format=pdf",
+      { method: "GET" },
+    );
+  });
+
+  it("turns a refused file into the ApiError with the caller's text", async () => {
+    mockSessionFetch.mockResolvedValueOnce(
+      Response.json({ code: "general.permission" }, { status: 403 }),
+    );
+
+    await expect(
+      bffFile("tenant", "GET /api/meal-plan/orders/month/export", {
+        errorMessage: "Export fehlgeschlagen",
+      }),
+    ).rejects.toMatchObject({
+      status: 403,
+      code: "general.permission",
+      message: "Export fehlgeschlagen",
+    });
+  });
+
+  it("takes only file routes", () => {
+    const checks = () => {
+      // @ts-expect-error: a JSON route goes through bffJson
+      void bffFile("tenant", "GET /api/activities/categories");
+    };
+    expect(checks).toBeTypeOf("function");
   });
 });
 
