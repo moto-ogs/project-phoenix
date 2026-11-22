@@ -6,12 +6,19 @@ import {
   success,
 } from "./runtime";
 import {
+  LoginResponseSchema,
   PasskeyCeremonyOptionsSchema,
   PasskeyCredentialSummarySchema,
   PasskeyEnrollmentChallengeSchema,
   type PasskeyRegisterOptionsRequest,
   type PasskeyRegisterVerifyRequest,
+  type PasskeyVerifyRequest,
 } from "./shared.generated";
+
+/** Go: account.passkeyLoginOptionsRequest */
+export interface passkeyLoginOptionsRequest {
+  tenant_slug?: string;
+}
 
 export const routes = {
   "DELETE /auth/passkeys/{passkeyId}": {
@@ -32,6 +39,24 @@ export const routes = {
     portals: ["tenant"],
     noRetryAfterRenewal: "a renewed session would mail the code twice",
     response: success(PasskeyEnrollmentChallengeSchema),
+  },
+  "POST /auth/passkeys/login/options": {
+    method: "POST",
+    pattern: "/auth/passkeys/login/options",
+    portals: ["tenant"],
+    routeFile: "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+    plain: true,
+    request: requestBody<passkeyLoginOptionsRequest>(),
+    response: PasskeyCeremonyOptionsSchema,
+  },
+  "POST /auth/passkeys/login/verify": {
+    method: "POST",
+    pattern: "/auth/passkeys/login/verify",
+    portals: ["tenant"],
+    routeFile: "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+    plain: true,
+    request: requestBody<PasskeyVerifyRequest>(),
+    response: LoginResponseSchema,
   },
   "POST /auth/passkeys/register/options": {
     method: "POST",

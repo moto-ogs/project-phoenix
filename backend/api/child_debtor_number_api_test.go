@@ -97,6 +97,17 @@ func TestChildDebtorNumbersReachTheMonthlyInvoiceOfEachChild(t *testing.T) {
 	assert.Equal(t, common.CodeParentBillingChildNotFound, decodeProblem(t, rec).Code, "a child of no contract of the family")
 	assert.Equal(t, []listedChild{{"Mia", "Beispiel", "10 0001"}, {"Noah", "Beispiel", "10 0002"}},
 		listChildFamilies(t, f, f.office.token)[0].Children, "the names stay as the contract has them")
+	reads := func() (count int) {
+		require.NoError(t, f.db.NewRaw(`SELECT COUNT(*) FROM parent_billing.child_debtor_number_events WHERE organization_id = ? AND action = 'read'`,
+			f.office.organization).Scan(context.Background(), &count))
+		return count
+	}
+	before := reads()
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, "/traeger/billing-families/children?numbers=false", nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.Equal(t, []childListedFamily{{FamilyEmail: family, RecipientFirstName: "Eva", Children: []listedChild{}}},
+		decodeSchoolPortalData[[]childListedFamily](t, rec.Body.Bytes()), "without numbers the family of the contracts is listed and no child is named")
+	assert.Equal(t, before, reads(), "a read that shows no number records none")
 	var lastUsed string
 	require.NoError(t, f.db.NewRaw(`SELECT MIN(last_used_on)::text FROM parent_billing.child_debtor_numbers WHERE organization_id = ?`,
 		f.office.organization).Scan(context.Background(), &lastUsed))

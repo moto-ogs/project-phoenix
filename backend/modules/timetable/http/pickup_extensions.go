@@ -25,15 +25,15 @@ import (
 )
 
 type pickupExtensionBlockResponse struct {
-	ID        common.ID `json:"id"`
-	Title     string    `json:"title"`
-	StartTime string    `json:"start_time"`
-	EndTime   string    `json:"end_time"`
+	ID        ident.ID `json:"id"`
+	Title     string   `json:"title"`
+	StartTime string   `json:"start_time"`
+	EndTime   string   `json:"end_time"`
 }
 
 type pickupExtensionResponse struct {
-	ID                 common.ID                      `json:"id"`
-	StudentID          common.ID                      `json:"student_id"`
+	ID                 ident.ID                       `json:"id"`
+	StudentID          ident.ID                       `json:"student_id"`
 	StudentName        string                         `json:"student_name"`
 	Kind               string                         `json:"kind"`
 	Date               string                         `json:"date,omitempty"`
@@ -49,7 +49,7 @@ type pickupExtensionsResponse struct {
 }
 
 type resolvePickupExtensionRequest struct {
-	BlockIDs []common.ID `json:"block_ids"`
+	BlockIDs []ident.ID `json:"block_ids"`
 }
 
 func (req *resolvePickupExtensionRequest) Bind(_ *http.Request) error {
@@ -73,7 +73,7 @@ var errPickupExtensionTooManyBlocks = timetable.WithCode(errors.New("block_ids c
 	common.CodeTimetablePickupExtensionTooManyBlocks, timetable.RefusalValues{Max: maxPickupExtensionBlocks})
 
 type resolvePickupExtensionResponse struct {
-	StudentID      common.ID                      `json:"student_id"`
+	StudentID      ident.ID                       `json:"student_id"`
 	Kind           string                         `json:"kind"`
 	AssignedBlocks []pickupExtensionBlockResponse `json:"assigned_blocks"`
 	InstanceCount  int                            `json:"instance_count"`
@@ -222,7 +222,7 @@ func pickupExtensionBlocksToResponse(blocks []timetable.PickupExtensionBlock) []
 	result := make([]pickupExtensionBlockResponse, 0, len(blocks))
 	for _, block := range blocks {
 		result = append(result, pickupExtensionBlockResponse{
-			ID: common.ID(block.ID), Title: block.Title, StartTime: block.StartTime, EndTime: block.EndTime,
+			ID: ident.ID(block.ID), Title: block.Title, StartTime: block.StartTime, EndTime: block.EndTime,
 		})
 	}
 	return result

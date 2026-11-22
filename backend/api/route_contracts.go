@@ -74,6 +74,7 @@ import (
 	timeTrackingHTTP "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking"
 	workforceTraegerStaff "github.com/moto-ogs/project-phoenix/modules/workforce/http/traegerstaff"
 	worktimemodelsHTTP "github.com/moto-ogs/project-phoenix/modules/workforce/http/worktimemodels"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	catererPortalHTTP "github.com/moto-ogs/project-phoenix/workflows/catererportal/http"
 	holidayClosureHTTP "github.com/moto-ogs/project-phoenix/workflows/holidayclosurenotification/http"
 	parentAPI "github.com/moto-ogs/project-phoenix/workflows/parentportal/http"
@@ -119,6 +120,8 @@ func traegerBillingContractMounts() []contractMount {
 		{"/traeger/contract-changes", careContractHTTP.ChangeRouteContracts()},
 		{"/traeger/care-time-overruns", careContractHTTP.OverrunRouteContracts()},
 		{"/traeger/contract-imports", careContractHTTP.ImportRouteContracts()},
+		{"/traeger/contract-corrections", careContractHTTP.CorrectionRouteContracts()},
+		{"/traeger/contract-child-links", careContractHTTP.ChildLinkRouteContracts()},
 	}
 }
 
@@ -137,6 +140,7 @@ func contractRegistrations() ([]contract.Registration, error) {
 	mounts = append(mounts, publicContractMounts()...)
 	mounts = append(mounts, staffPortalInvitationContractMounts()...)
 	mounts = append(mounts, secondFactorContractMounts()...)
+	mounts = append(mounts, outsideContractMounts()...)
 	catalog, err := RouteCatalog()
 	if err != nil {
 		return nil, err
@@ -226,6 +230,7 @@ func operatorContractMounts() []contractMount {
 	return []contractMount{
 		{"/operator", provisioningOperatorAPI.ProvisioningRouteContracts()},
 		{"/operator", identityOperatorAPI.RouteContracts()},
+		{"/operator", identityOperatorAPI.SessionRouteContracts()},
 		{"/operator/announcements", operatorAnnouncementsHTTP.RouteContracts()},
 		{"/operator/unregistered-tag-scans", unregisteredTagScanRouteContracts()},
 		// Data Import fills a test Träger; its http role names no contract types.
@@ -255,7 +260,7 @@ func ContractDocument() (contract.Document, error) {
 	substitutions := substitutionsHTTP.RouteContractTypes()
 	options := contract.Options{
 		Identifiers: map[reflect.Type]string{
-			reflect.TypeFor[common.ID](): contract.KindID,
+			reflect.TypeFor[ident.ID](): contract.KindID,
 			// The device management renders its instants in whole seconds.
 			reflect.TypeFor[devicesAPI.WireTime](): contract.KindInstant,
 			// The answers of an enrollment form: an object of the form's own
@@ -265,17 +270,12 @@ func ContractDocument() (contract.Document, error) {
 		// The one route whose answer a query parameter shapes (ADR 0270 point 3).
 		QueryVariants: []string{"GET /api/students/"},
 	}
-	// Both student bodies only refuse retired keys before the plain decode;
-	// CompanionEntry takes its companion id as a number or a decimal string.
+	// Both student bodies only refuse retired keys before the plain decode.
 	options.Readers = map[reflect.Type]string{
 		reflect.TypeFor[careStudentsHTTP.StudentRequest]():       contract.ReadsFields,
 		reflect.TypeFor[careStudentsHTTP.UpdateStudentRequest](): contract.ReadsFields,
-		reflect.TypeFor[careStudentsHTTP.CompanionEntry]():       contract.ReadsLaxIDs,
-		// The absence bodies take absence_type_id as a number or a decimal string.
-		reflect.TypeFor[workforceModule.CreateAbsenceRequest](): contract.ReadsLaxIDs,
-		reflect.TypeFor[workforceModule.UpdateAbsenceRequest](): contract.ReadsLaxIDs,
-		// A corrected break names its id as a number or a decimal string.
-		reflect.TypeFor[workforceModule.BreakDurationUpdate](): contract.ReadsLaxIDs,
+		// An absence edit tells an absent absence_type_id from null.
+		reflect.TypeFor[workforceModule.UpdateAbsenceRequest](): contract.ReadsFields,
 		// A presence is an object or, from older clients, a bare staff id.
 		reflect.TypeFor[timetableHTTP.DeviationPresence](): contract.ReadsFields,
 		// The template writes tell an absent key from null.
@@ -289,6 +289,11 @@ func ContractDocument() (contract.Document, error) {
 		reflect.TypeFor[enrollmentHTTP.EnrollmentPhaseRequest](): contract.ReadsFields,
 		// A school update tells an absent child quota from null (#3567).
 		reflect.TypeFor[provisioningOperatorAPI.ChildQuotaField](): contract.ReadsValue,
+		// The staff-shift writes tell an absent key from null.
+		reflect.TypeFor[staffShiftsHTTP.OptionalID]():     contract.ReadsValue,
+		reflect.TypeFor[staffShiftsHTTP.OptionalBool]():   contract.ReadsValue,
+		reflect.TypeFor[staffShiftsHTTP.OptionalInt]():    contract.ReadsValue,
+		reflect.TypeFor[staffShiftsHTTP.OptionalString](): contract.ReadsValue,
 	}
 	// Appointments and the whole-day substitution keep their own day types.
 	options.Dates = []reflect.Type{reflect.TypeFor[appointments.Date](), reflect.TypeOf(substitutions.Day)}
@@ -369,7 +374,10 @@ func contractRegistration(prefix string, route common.RouteContract) contract.Re
 		NoRetryAfterRenewal: route.NoRetryAfterRenewal, MaxBodyBytes: route.MaxBodyBytes, NoCommit: route.NoCommit,
 		File: route.File, Multipart: route.Multipart, TooLargeCode: route.TooLargeCode, PublicFile: route.PublicFile, PublicUpload: route.PublicUpload,
 		FileCache: route.FileCache, ConditionalGet: route.ConditionalGet,
-		PrivateCache: route.PrivateCache,
+		PrivateCache: route.PrivateCache, RouteFile: route.RouteFile, Plain: route.Plain,
+	}
+	if route.Outside != nil {
+		registration.Outside = &contract.OutsideSpec{Reason: string(route.Outside.Reason), Why: route.Outside.Why}
 	}
 	for _, portal := range route.Portals {
 		registration.Portals = append(registration.Portals, string(portal))
@@ -405,6 +413,7 @@ func traegerContractMounts() []contractMount {
 		{"/traeger/profile", traegerPortalHTTP.ProfileRouteContracts()},
 		{"/traeger/school-sessions", traegerPortalHTTP.SchoolSessionRouteContracts()},
 		{"/traeger/auth", traegerPortalHTTP.AuthRouteContracts()},
+		{"/traeger/auth", traegerPortalHTTP.SessionRouteContracts()},
 		{"/traeger/schools", traegerViewHTTP.SchoolRouteContracts()},
 		{"/traeger/organization", traegerViewHTTP.OrganizationRouteContracts()},
 		{"/traeger/access-log", traegerViewHTTP.AccessLogRouteContracts()},
@@ -515,7 +524,10 @@ func guardianRouteContracts() []common.RouteContract {
 		{Method: "DELETE", Pattern: "/{id}", Portals: portals, Query: deleteQuery, NoData: true},
 		{Method: "GET", Pattern: "/{id}/delete-preview", Portals: portals, Response: types.DeletePreview},
 		{Method: "POST", Pattern: "/{id}/email-stop", Portals: portals, NoData: true},
-		{Method: "POST", Pattern: "/payment-overview/export", Portals: portals, File: true},
+		{
+			Method: "POST", Pattern: "/payment-overview/export", Portals: portals, Request: types.PaymentExport, File: true,
+			Enums: []common.EnumContract{{Name: "PaymentExportFormat", Fields: []string{"PaymentExportRequest.format"}, Values: types.PaymentExportFormats}},
+		},
 		{Method: "DELETE", Pattern: "/{id}/email-stop", Portals: portals, NoData: true},
 		{Method: "DELETE", Pattern: "/{id}/email-block", Portals: portals, NoData: true},
 		{Method: "POST", Pattern: "/{id}/invite", Portals: portals, Response: types.Invitation},
@@ -672,8 +684,11 @@ func staffPortalCalendarContractMounts() []contractMount {
 		{Method: "PATCH", Pattern: "/{deviceId}/status", Portals: portals, Request: devicesAPI.DeviceStatusRequest{}, NoData: true},
 	}
 	// The info-point display management (#7563). The screens' own dashboard
-	// read authenticates with its display token and stays unregistered.
+	// read authenticates with its display token in a header, which only its
+	// route file sends (#7808).
 	displays := []common.RouteContract{
+		{Method: "GET", Pattern: "/dashboard", Portals: portals, Plain: true, Response: displayHTTP.DashboardResponse{},
+			RouteFile: "the wall display sends its display token in a header, no session; its route file forwards it"},
 		{Method: "GET", Pattern: "/", Portals: portals, Response: []displayHTTP.InfoDisplayResponse{}},
 		{Method: "POST", Pattern: "/", Portals: portals, Request: displayHTTP.InfoDisplayWriteRequest{}, Response: displayHTTP.InfoDisplayCreatedResponse{}},
 		{Method: "PATCH", Pattern: "/{id}", Portals: portals, Request: displayHTTP.InfoDisplayWriteRequest{}, Response: displayHTTP.InfoDisplayResponse{}},

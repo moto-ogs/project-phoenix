@@ -1,6 +1,6 @@
+import { bffJson, bffJsonUncontracted } from "~/lib/bff-fetch";
 import { ApiError } from "../api-error";
-import { operatorFetch } from "./api-helpers";
-import type { SettingsSchema } from "~/lib/settings-api";
+import { toSettingsSchema, type SettingsSchema } from "~/lib/settings-api";
 import { createLogger } from "~/lib/logger";
 import type * as operatorSchoolsContract from "~/lib/contract/operator-schools.generated";
 
@@ -23,11 +23,11 @@ export interface BookingAuthorityImpact {
 export async function fetchBookingAuthorityImpact(
   schoolId: string,
 ): Promise<BookingAuthorityImpact> {
-  const wire =
-    await operatorFetch<operatorSchoolsContract.BookingAuthorityImpact>(
-      `/api/operator/schools/${schoolId}/settings/booking-authority-impact`,
-      { method: "GET" },
-    );
+  const wire = await bffJson(
+    "platform",
+    "GET /operator/schools/{id}/settings/booking-authority-impact",
+    { params: { id: schoolId } },
+  );
   return {
     referenceDate: wire.reference_date,
     blockingChildren: (wire.blocking_children ?? []).map(mapImpactChild),
@@ -56,9 +56,10 @@ export async function fetchOperatorSettingsSchema(
   schoolId: string,
 ): Promise<SettingsSchema> {
   try {
-    return await operatorFetch<SettingsSchema>(
-      `/api/operator/schools/${schoolId}/settings/schema`,
-      { method: "GET" },
+    return toSettingsSchema(
+      await bffJson("platform", "GET /operator/schools/{id}/settings/schema", {
+        params: { id: schoolId },
+      }),
     );
   } catch (error) {
     logger.error("fetch_operator_settings_schema_failed", {
@@ -68,6 +69,11 @@ export async function fetchOperatorSettingsSchema(
     throw error;
   }
 }
+
+// The BFF's own route: it writes the value and purges the cached tenant
+// lookup, so it has no catalog key (bff-fetch-uncontracted.test.ts).
+const settingValuePath = (schoolId: string, key: string) =>
+  `/api/operator/provisioning/schools/${encodeURIComponent(schoolId)}/settings/values/${encodeURIComponent(key)}`;
 
 /**
  * Set a setting value for a school. Throws the ApiError of a failed save,
@@ -79,9 +85,11 @@ export async function setOperatorSettingValue(
   value: unknown,
 ): Promise<void> {
   try {
-    await operatorFetch<unknown>(
-      `/api/operator/provisioning/schools/${schoolId}/settings/values/${key}`,
-      { method: "PUT", body: { value } },
+    await bffJsonUncontracted(
+      "platform",
+      "PUT",
+      settingValuePath(schoolId, key),
+      { body: { value } },
     );
   } catch (error) {
     logger.warn("set_operator_setting_value_failed", {
@@ -100,9 +108,10 @@ export async function resetOperatorSettingValue(
   key: string,
 ): Promise<void> {
   try {
-    await operatorFetch<unknown>(
-      `/api/operator/provisioning/schools/${schoolId}/settings/values/${key}`,
-      { method: "DELETE" },
+    await bffJsonUncontracted(
+      "platform",
+      "DELETE",
+      settingValuePath(schoolId, key),
     );
   } catch (error) {
     logger.warn("reset_operator_setting_value_failed", {
@@ -122,20 +131,15 @@ export async function revealOperatorSettingValue(
   schoolId: string,
   key: string,
 ): Promise<string | null> {
-  const result = await operatorFetch<{ value: unknown }>(
-    `/api/operator/schools/${schoolId}/settings/values/${key}/reveal`,
-    { method: "GET" },
+  const result = await bffJson(
+    "platform",
+    "GET /operator/schools/{id}/settings/values/{key}/reveal",
+    { params: { id: schoolId, key } },
   );
   return typeof result.value === "string" ? result.value : null;
 }
 
 // --- Träger-Einstellungen im Operator-Dashboard (#5748) ---
-
-const traegerSettingsPath = (organizationId: string) =>
-  `/api/operator/organizations/${encodeURIComponent(organizationId)}/traeger-settings`;
-
-const traegerSettingValuePath = (organizationId: string, key: string) =>
-  `${traegerSettingsPath(organizationId)}/values/${encodeURIComponent(key)}`;
 
 /**
  * The settings of one Träger, as the Träger portal shows them: only settings
@@ -145,11 +149,13 @@ const traegerSettingValuePath = (organizationId: string, key: string) =>
 export async function fetchOperatorTraegerSettingsSchema(
   organizationId: string,
 ): Promise<SettingsSchema> {
-  const schema = await operatorFetch<SettingsSchema | null>(
-    `${traegerSettingsPath(organizationId)}/schema`,
-    { method: "GET" },
+  return toSettingsSchema(
+    await bffJson(
+      "platform",
+      "GET /operator/organizations/{id}/traeger-settings/schema",
+      { params: { id: organizationId } },
+    ),
   );
-  return { tabs: schema?.tabs ?? [] };
 }
 
 /** Sets the Träger value of one setting. Throws the ApiError of a failure. */
@@ -159,10 +165,11 @@ export async function setOperatorTraegerSettingValue(
   value: unknown,
 ): Promise<void> {
   try {
-    await operatorFetch<unknown>(traegerSettingValuePath(organizationId, key), {
-      method: "PUT",
-      body: { value },
-    });
+    await bffJson(
+      "platform",
+      "PUT /operator/organizations/{id}/traeger-settings/values/{key}",
+      { params: { id: organizationId, key }, body: { value } },
+    );
   } catch (error) {
     logger.warn("set_operator_traeger_setting_value_failed", {
       organization_id: organizationId,
@@ -182,9 +189,11 @@ export async function resetOperatorTraegerSettingValue(
   key: string,
 ): Promise<void> {
   try {
-    await operatorFetch<unknown>(traegerSettingValuePath(organizationId, key), {
-      method: "DELETE",
-    });
+    await bffJson(
+      "platform",
+      "DELETE /operator/organizations/{id}/traeger-settings/values/{key}",
+      { params: { id: organizationId, key } },
+    );
   } catch (error) {
     logger.warn("reset_operator_traeger_setting_value_failed", {
       organization_id: organizationId,

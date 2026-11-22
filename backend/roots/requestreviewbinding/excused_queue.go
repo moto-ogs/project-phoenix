@@ -71,7 +71,7 @@ func excusedPendingRow(item *excusedrequests.ReviewItem, today excusedrequests.D
 		CurrentValueChanged:      item.CurrentValueChanged,
 		CurrentStatusByDate:      item.CurrentStatusByDate,
 		PartialAbsenceFromByDate: item.PartialAbsenceFromByDate,
-		Data:                     requestreview.ToStaffExcusedRequestResponse(item),
+		Payload:                  requestreview.Payload{Excused: new(requestreview.ToStaffExcusedRequestResponse(item))},
 	}
 }
 
@@ -87,6 +87,6 @@ func excusedHistoryRow(item *excusedrequests.HistoryItem) requestreview.Row {
 		Status:      item.Request.Status,
 		DecidedAt:   requestreview.HistoryDecidedAt(item.Request.ReviewedAt, item.Request.UpdatedAt),
 		CanCorrect:  item.Request.CanCorrect(),
-		Data:        requestreview.ToStaffExcusedHistoryResponse(item),
+		Payload:     requestreview.Payload{ExcusedHistory: new(requestreview.ToStaffExcusedHistoryResponse(item))},
 	}
 }

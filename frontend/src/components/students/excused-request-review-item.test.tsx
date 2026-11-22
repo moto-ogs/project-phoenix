@@ -7,6 +7,7 @@ import {
 import { ApiError } from "~/lib/api-error";
 import type { ReactElement } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type * as studentsContract from "~/lib/contract/students.generated";
 
 import { ToastProvider } from "~/contexts/ToastContext";
 import { catalogText } from "~/test/error-catalog-text";
@@ -101,7 +102,7 @@ describe("ExcusedRequestReviewItem", () => {
   });
 
   it("requires a reason before rejecting", async () => {
-    mockDecide.mockResolvedValue(row({ status: "rejected" }));
+    mockDecide.mockResolvedValue(decided(row({ status: "rejected" })));
     const onDecided = vi.fn();
 
     render(<ExcusedRequestReviewItem row={row()} onDecided={onDecided} />);
@@ -132,7 +133,7 @@ describe("ExcusedRequestReviewItem", () => {
   });
 
   it("approves without a reason and reports the notice", async () => {
-    mockDecide.mockResolvedValue(row({ status: "approved" }));
+    mockDecide.mockResolvedValue(decided(row({ status: "approved" })));
     const onDecided = vi.fn();
 
     render(<ExcusedRequestReviewItem row={row()} onDecided={onDecided} />);
@@ -151,7 +152,7 @@ describe("ExcusedRequestReviewItem", () => {
   // #5698: a day the OGS already excused from a time is named, and approving
   // replaces that entry only after the explicit confirmation.
   it("approves over a partial excusal only after confirming the replacement", async () => {
-    mockDecide.mockResolvedValue(row({ status: "approved" }));
+    mockDecide.mockResolvedValue(decided(row({ status: "approved" })));
     render(
       <ExcusedRequestReviewItem
         row={row({ absence_status: "sick", dates: ["2026-07-01"] })}
@@ -227,3 +228,10 @@ describe("ExcusedRequestReviewItem", () => {
     expect(screen.getByText("Lara Beispiel")).toBeInTheDocument();
   });
 });
+
+/** The decide route's answer: the generated type of the row. */
+function decided(
+  request: StaffExcusedRequest,
+): studentsContract.StaffExcusedRequestResponse {
+  return { ...request, dates: [...request.dates] };
+}

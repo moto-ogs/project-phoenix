@@ -353,6 +353,24 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/api/settings/login-image",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true,
+      "route_file": "the route file purges the cached tenant lookup after the write, so the login page shows the change"
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/settings/values/{key}",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true,
+      "route_file": "the route file purges the cached tenant lookup after the write, so the login page shows the change"
+    },
+    {
+      "method": "DELETE",
       "pattern": "/api/shift-types/{id}",
       "portals": [
         "tenant"
@@ -991,6 +1009,18 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/operator/schools/{id}/settings/values/{key}",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "schoolSettingMutationResponse"
+      },
+      "route_file": "the operator's route file purges the school's cached tenant lookup"
+    },
+    {
+      "method": "DELETE",
       "pattern": "/parent/me/children/{studentId}/care-exception",
       "portals": [
         "parent"
@@ -1302,6 +1332,20 @@
         "kind": "ref",
         "ref": "TraegerClosingDayDeleted"
       }
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/traeger/contract-child-links/{contractId}",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "student_id",
+          "kind": "id"
+        }
+      ],
+      "no_data": true
     },
     {
       "method": "DELETE",
@@ -2131,6 +2175,19 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/display/dashboard",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "DashboardResponse"
+      },
+      "route_file": "the wall display sends its display token in a header, no session; its route file forwards it",
+      "plain": true
+    },
+    {
+      "method": "GET",
       "pattern": "/api/enrollment/admin/change-requests/",
       "portals": [
         "tenant"
@@ -2457,6 +2514,24 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/enrollment/form-bootstrap/public/{tenantSlug}/{phaseId}",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "late_invite",
+          "kind": "string"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "PublicEnrollmentFormBootstrapResponse"
+      },
+      "route_file": "the route file adds the signed-in staff member's profile to the public form"
+    },
+    {
+      "method": "GET",
       "pattern": "/api/enrollment/legal/{tenantSlug}",
       "portals": [
         "public"
@@ -2488,6 +2563,18 @@
         "kind": "ref",
         "ref": "PublicLegalTextsResponse"
       }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/enrollment/me/profile",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "GuardianProfileResponse"
+      },
+      "route_file": "read only by the form bootstrap's route file"
     },
     {
       "method": "GET",
@@ -4130,6 +4217,18 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/settings/login-image",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "loginImageResponse"
+      },
+      "route_file": "served by the same route file as its writes"
+    },
+    {
+      "method": "GET",
       "pattern": "/api/settings/payroll-status",
       "portals": [
         "tenant"
@@ -5759,6 +5858,51 @@
       "response": {
         "kind": "ref",
         "ref": "changeRequestAccessResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/students/change-requests/history",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "cursor",
+          "kind": "string"
+        },
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "limit",
+          "kind": "int"
+        },
+        {
+          "name": "search",
+          "kind": "string"
+        },
+        {
+          "name": "status",
+          "kind": "string"
+        },
+        {
+          "name": "student_id",
+          "kind": "id"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        },
+        {
+          "name": "types",
+          "kind": "string"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "HistoryPage"
       }
     },
     {
@@ -7648,6 +7792,17 @@
           "kind": "ref",
           "ref": "RoleResponse"
         }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/auth/guardian-invitations/{token}",
+      "portals": [
+        "public"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "GuardianInvitationValidateResponse"
       }
     },
     {
@@ -10299,6 +10454,12 @@
       "portals": [
         "org"
       ],
+      "query": [
+        {
+          "name": "numbers",
+          "kind": "bool"
+        }
+      ],
       "response": {
         "kind": "array",
         "elem": {
@@ -11107,6 +11268,28 @@
     },
     {
       "method": "GET",
+      "pattern": "/traeger/contract-corrections/",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "ContractCorrectionEntry"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/contract-corrections/list",
+      "portals": [
+        "org"
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/contract-imports/",
       "portals": [
         "org"
@@ -11400,6 +11583,17 @@
           "kind": "ref",
           "ref": "FamilyBilling"
         }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/family-billing/contracts/{id}",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ContractFamilyBilling"
       }
     },
     {
@@ -13420,6 +13614,10 @@
       "portals": [
         "tenant"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "staffExportRequest"
+      },
       "file": true
     },
     {
@@ -13597,6 +13795,10 @@
       "portals": [
         "tenant"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "careUsageExportRequest"
+      },
       "file": true
     },
     {
@@ -13605,6 +13807,10 @@
       "portals": [
         "tenant"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "classRosterExportRequest"
+      },
       "file": true
     },
     {
@@ -13662,6 +13868,10 @@
       "portals": [
         "tenant"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "phaseExportRequest"
+      },
       "file": true
     },
     {
@@ -13729,6 +13939,10 @@
       "portals": [
         "tenant"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "phaseExportRequest"
+      },
       "file": true
     },
     {
@@ -13843,6 +14057,10 @@
       "portals": [
         "tenant"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "PublishSchemaRequest"
+      },
       "response": {
         "kind": "ref",
         "ref": "FormSchemaResponse"
@@ -13981,6 +14199,10 @@
       "portals": [
         "tenant"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "PaymentExportRequest"
+      },
       "file": true
     },
     {
@@ -14552,6 +14774,10 @@
       "portals": [
         "tenant"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "roomSnapshotExportRequest"
+      },
       "file": true
     },
     {
@@ -14594,6 +14820,21 @@
       "max_body_bytes": 10489856,
       "multipart": true,
       "too_large_code": "files.file_too_large"
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/settings/login-image",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "loginImageUploadResponse"
+      },
+      "max_body_bytes": 2098176,
+      "multipart": true,
+      "too_large_code": "files.file_too_large",
+      "route_file": "the route file purges the cached tenant lookup after the write, so the login page shows the change"
     },
     {
       "method": "POST",
@@ -14750,6 +14991,10 @@
       "portals": [
         "tenant"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "ShiftRequest"
+      },
       "response": {
         "kind": "ref",
         "ref": "ShiftResponse"
@@ -14761,6 +15006,10 @@
       "portals": [
         "tenant"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "PlanExportRequest"
+      },
       "file": true
     },
     {
@@ -14769,6 +15018,10 @@
       "portals": [
         "tenant"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "SeriesRequest"
+      },
       "response": {
         "kind": "ref",
         "ref": "SeriesResponse"
@@ -15974,6 +16227,10 @@
       "portals": [
         "tenant"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "betreuungsplanExportRequest"
+      },
       "file": true
     },
     {
@@ -16643,6 +16900,22 @@
     },
     {
       "method": "POST",
+      "pattern": "/auth/invitations/{token}/accept",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "AcceptInvitationRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "AcceptInvitationResponse"
+      },
+      "route_file": "the route file attaches the signed-in owner's session to the accept"
+    },
+    {
+      "method": "POST",
       "pattern": "/auth/link-to-tenant",
       "portals": [
         "tenant"
@@ -16658,6 +16931,96 @@
     },
     {
       "method": "POST",
+      "pattern": "/auth/login",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "LoginRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "LoginResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/auth/logout",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true,
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie"
+    },
+    {
+      "method": "POST",
+      "pattern": "/auth/mfa/enroll/confirm",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "MFAVerifyRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TokenResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/auth/mfa/enroll/start",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "EnrollStartResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/auth/mfa/resend",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "MFAResendRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "MFAResendResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/auth/mfa/verify",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "MFAVerifyRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TokenResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
       "pattern": "/auth/passkeys/enrollment/challenge",
       "portals": [
         "tenant"
@@ -16667,6 +17030,40 @@
         "ref": "PasskeyEnrollmentChallenge"
       },
       "no_retry_after_renewal": "a renewed session would mail the code twice"
+    },
+    {
+      "method": "POST",
+      "pattern": "/auth/passkeys/login/options",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "passkeyLoginOptionsRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "PasskeyCeremonyOptions"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/auth/passkeys/login/verify",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "PasskeyVerifyRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "LoginResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
     },
     {
       "method": "POST",
@@ -16740,6 +17137,19 @@
     },
     {
       "method": "POST",
+      "pattern": "/auth/refresh",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "TokenResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
       "pattern": "/auth/register",
       "portals": [
         "tenant"
@@ -16767,6 +17177,87 @@
         "kind": "ref",
         "ref": "RoleResponse"
       }
+    },
+    {
+      "method": "POST",
+      "pattern": "/auth/session/validate",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "SessionValidationRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "SessionClaimsResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/auth/staff-preview",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "StaffPreviewStartRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "StaffPreviewStartResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/auth/staff-preview/end",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "StaffPreviewEndRequest"
+      },
+      "no_data": true,
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie"
+    },
+    {
+      "method": "POST",
+      "pattern": "/auth/switch-tenant",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "SwitchTenantRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TokenResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/caterer/account/mfa/confirm",
+      "portals": [
+        "caterer"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "confirmMFARequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TokenResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
     },
     {
       "method": "POST",
@@ -16808,6 +17299,56 @@
     },
     {
       "method": "POST",
+      "pattern": "/caterer/auth/login",
+      "portals": [
+        "caterer"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "catererLoginRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "CatererLoginResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie"
+    },
+    {
+      "method": "POST",
+      "pattern": "/caterer/auth/mfa/resend",
+      "portals": [
+        "caterer"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "MFAResendRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "MFAResendResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/caterer/auth/mfa/verify",
+      "portals": [
+        "caterer"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "MFAVerifyRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TokenResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
       "pattern": "/caterer/auth/passkeys/enrollment/challenge",
       "portals": [
         "caterer"
@@ -16817,6 +17358,36 @@
         "ref": "PasskeyEnrollmentChallenge"
       },
       "no_retry_after_renewal": "a renewed session would mail the code twice"
+    },
+    {
+      "method": "POST",
+      "pattern": "/caterer/auth/passkeys/login/options",
+      "portals": [
+        "caterer"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "PasskeyCeremonyOptions"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/caterer/auth/passkeys/login/verify",
+      "portals": [
+        "caterer"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "PasskeyVerifyRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "CatererLoginResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
     },
     {
       "method": "POST",
@@ -16974,6 +17545,121 @@
     },
     {
       "method": "POST",
+      "pattern": "/operator/auth/invitations/accept",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "OperatorAcceptInvitationRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "OperatorResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie"
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/auth/invitations/validate",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ValidateInvitationRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "OperatorInvitationValidationResponse"
+      },
+      "route_file": "the route file reads the invitation token from the flow cookie, never from the URL"
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/auth/login",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "OperatorLoginRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "OperatorLoginResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie"
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/auth/logout",
+      "portals": [
+        "platform"
+      ],
+      "no_data": true,
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie"
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/auth/mfa/enroll/confirm",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "MFAEnrollConfirmRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TokenResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie"
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/auth/mfa/enroll/start",
+      "portals": [
+        "platform"
+      ],
+      "no_data": true,
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie"
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/auth/mfa/resend",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "MFAResendRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "MFAResendResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/auth/mfa/verify",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "MFAVerifyRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TokenResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie"
+    },
+    {
+      "method": "POST",
       "pattern": "/operator/auth/passkeys/enrollment/challenge",
       "portals": [
         "platform"
@@ -16983,6 +17669,36 @@
         "ref": "PasskeyEnrollmentChallenge"
       },
       "no_retry_after_renewal": "a renewed session would mail the code twice"
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/auth/passkeys/login/options",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "PasskeyCeremonyOptions"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/auth/passkeys/login/verify",
+      "portals": [
+        "platform"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "PasskeyVerifyRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "LoginResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
     },
     {
       "method": "POST",
@@ -17014,6 +17730,18 @@
         "kind": "ref",
         "ref": "PasskeyCredentialSummary"
       }
+    },
+    {
+      "method": "POST",
+      "pattern": "/operator/auth/refresh",
+      "portals": [
+        "platform"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "TokenResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie"
     },
     {
       "method": "POST",
@@ -17405,6 +18133,56 @@
     },
     {
       "method": "POST",
+      "pattern": "/parent/auth/login",
+      "portals": [
+        "parent"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "parentLoginRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "LoginResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie"
+    },
+    {
+      "method": "POST",
+      "pattern": "/parent/auth/mfa/resend",
+      "portals": [
+        "parent"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "MFAResendRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "MFAResendResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/parent/auth/mfa/verify",
+      "portals": [
+        "parent"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "MFAVerifyRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TokenResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
       "pattern": "/parent/auth/password-reset",
       "portals": [
         "public"
@@ -17757,6 +18535,23 @@
     },
     {
       "method": "POST",
+      "pattern": "/parent/me/mfa/confirm",
+      "portals": [
+        "parent"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "MFAVerifyRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TokenResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
       "pattern": "/parent/me/mfa/disable",
       "portals": [
         "parent"
@@ -17936,6 +18731,87 @@
       "max_body_bytes": 10489856,
       "multipart": true,
       "too_large_code": "files.file_too_large"
+    },
+    {
+      "method": "POST",
+      "pattern": "/school/auth/login",
+      "portals": [
+        "school"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "SchoolLoginRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "LoginResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/school/auth/mfa/enroll/confirm",
+      "portals": [
+        "school"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "MFAVerifyRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TokenResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/school/auth/mfa/enroll/start",
+      "portals": [
+        "school"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "EnrollStartResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/school/auth/mfa/resend",
+      "portals": [
+        "school"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "MFAResendRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "MFAResendResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/school/auth/mfa/verify",
+      "portals": [
+        "school"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "MFAVerifyRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TokenResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
     },
     {
       "method": "POST",
@@ -18292,6 +19168,70 @@
     },
     {
       "method": "POST",
+      "pattern": "/traeger/auth/login",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "TraegerLoginRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TraegerLoginResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/auth/mfa/enroll/confirm",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "TraegerMFAVerifyRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TokenResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/auth/mfa/enroll/start",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "EnrollStartResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/auth/mfa/resend",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "MFAResendRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "MFAResendResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
       "pattern": "/traeger/auth/mfa/step-up",
       "portals": [
         "org"
@@ -18301,6 +19241,40 @@
         "ref": "StepUpStartResponse"
       },
       "no_retry_after_renewal": "a renewed session would mail the code twice"
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/auth/mfa/step-up/verify",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "MFAVerifyRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TokenResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/auth/mfa/verify",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "TraegerMFAVerifyRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "TokenResponse"
+      },
+      "route_file": "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+      "plain": true
     },
     {
       "method": "POST",
@@ -18851,6 +19825,79 @@
     },
     {
       "method": "POST",
+      "pattern": "/traeger/contract-child-links/",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ChildLinking"
+      },
+      "max_body_bytes": 2359296,
+      "multipart": true,
+      "too_large_code": "care_contract.import_file_too_large"
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/contract-child-links/preview",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ChildLinking"
+      },
+      "max_body_bytes": 2359296,
+      "no_commit": "a link preview checks the file and links no contract",
+      "multipart": true,
+      "too_large_code": "care_contract.import_file_too_large"
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/contract-child-links/{contractId}/preview",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ChildLinkPreviewRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ChildLinkRow"
+      },
+      "no_commit": "a link preview compares the contract with the child record and links nothing"
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/contract-corrections/",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ContractCorrectionRun"
+      },
+      "max_body_bytes": 2359296,
+      "multipart": true,
+      "too_large_code": "care_contract.import_file_too_large"
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/contract-corrections/preview",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ContractCorrectionRun"
+      },
+      "max_body_bytes": 2359296,
+      "multipart": true,
+      "too_large_code": "care_contract.import_file_too_large"
+    },
+    {
+      "method": "POST",
       "pattern": "/traeger/contract-imports/",
       "portals": [
         "org"
@@ -18860,6 +19907,35 @@
         "ref": "ContractImport"
       },
       "max_body_bytes": 2359296,
+      "multipart": true,
+      "too_large_code": "care_contract.import_file_too_large"
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/contract-imports/offering-corrections",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "OfferingCorrection"
+      },
+      "max_body_bytes": 2359296,
+      "multipart": true,
+      "too_large_code": "care_contract.import_file_too_large"
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/contract-imports/offering-corrections/preview",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "OfferingCorrection"
+      },
+      "max_body_bytes": 2359296,
+      "no_commit": "a correction preview checks the file and saves no version",
       "multipart": true,
       "too_large_code": "care_contract.import_file_too_large"
     },
@@ -19974,6 +21050,10 @@
       "portals": [
         "tenant"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "UpdateSchemaRequest"
+      },
       "response": {
         "kind": "ref",
         "ref": "FormSchemaResponse"
@@ -20299,6 +21379,19 @@
     },
     {
       "method": "PUT",
+      "pattern": "/api/settings/values/{key}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "setValueRequest"
+      },
+      "no_data": true,
+      "route_file": "the route file purges the cached tenant lookup after the write, so the login page shows the change"
+    },
+    {
+      "method": "PUT",
       "pattern": "/api/shift-types/{id}",
       "portals": [
         "tenant"
@@ -20387,6 +21480,10 @@
       "portals": [
         "tenant"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "SeriesRequest"
+      },
       "response": {
         "kind": "ref",
         "ref": "SeriesResponse"
@@ -20398,6 +21495,10 @@
       "portals": [
         "tenant"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "ShiftRequest"
+      },
       "response": {
         "kind": "ref",
         "ref": "ShiftResponse"
@@ -20409,6 +21510,10 @@
       "portals": [
         "tenant"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "CancellationRequest"
+      },
       "response": {
         "kind": "ref",
         "ref": "CancellationResponse"
@@ -20420,6 +21525,10 @@
       "portals": [
         "tenant"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "MoveShiftRequest"
+      },
       "response": {
         "kind": "ref",
         "ref": "ShiftResponse"
@@ -21385,6 +22494,31 @@
     },
     {
       "method": "PUT",
+      "pattern": "/operator/schools/{id}/settings/values/{key}",
+      "portals": [
+        "platform"
+      ],
+      "query": [
+        {
+          "name": "force",
+          "kind": "string",
+          "values": [
+            "true"
+          ]
+        }
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "setSchoolSettingRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "schoolSettingMutationResponse"
+      },
+      "route_file": "the operator's route file purges the school's cached tenant lookup"
+    },
+    {
+      "method": "PUT",
       "pattern": "/parent/me/children/{studentId}/care-offerings/requests/{requestId}",
       "portals": [
         "parent"
@@ -22077,6 +23211,21 @@
     },
     {
       "method": "PUT",
+      "pattern": "/traeger/contract-child-links/{contractId}",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "ChildLinkRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "ChildLinkRow"
+      }
+    },
+    {
+      "method": "PUT",
       "pattern": "/traeger/contract-notices/{id}/ends-on",
       "portals": [
         "org"
@@ -22336,6 +23485,10 @@
       "portals": [
         "org"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "HolidayPeriodFormRequest"
+      },
       "response": {
         "kind": "ref",
         "ref": "HolidayFormEditor"
@@ -22671,6 +23824,464 @@
       }
     }
   ],
+  "outside": [
+    {
+      "method": "CONNECT",
+      "pattern": "/.well-known/caldav",
+      "reason": "webdav",
+      "why": "RFC 6764 discovery redirects every method"
+    },
+    {
+      "method": "CONNECT",
+      "pattern": "/api/caldav",
+      "reason": "webdav",
+      "why": "CalDAV clients send PROPFIND and REPORT with XML"
+    },
+    {
+      "method": "CONNECT",
+      "pattern": "/api/caldav/*",
+      "reason": "webdav",
+      "why": "CalDAV clients send PROPFIND and REPORT with XML"
+    },
+    {
+      "method": "CONNECT",
+      "pattern": "/internal/metrics",
+      "reason": "metrics",
+      "why": "Prometheus text exposition"
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/.well-known/caldav",
+      "reason": "webdav",
+      "why": "RFC 6764 discovery redirects every method"
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/caldav",
+      "reason": "webdav",
+      "why": "CalDAV clients send PROPFIND and REPORT with XML"
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/caldav/*",
+      "reason": "webdav",
+      "why": "CalDAV clients send PROPFIND and REPORT with XML"
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/iot/staff/{staffId}/rfid",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/students/{id}/rfid",
+      "reason": "device",
+      "why": "PyrePortal assigns and removes a tag with the device key and reads numeric IDs"
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/internal/metrics",
+      "reason": "metrics",
+      "why": "Prometheus text exposition"
+    },
+    {
+      "method": "GET",
+      "pattern": "/",
+      "reason": "probe",
+      "why": "the bare host answers a probe"
+    },
+    {
+      "method": "GET",
+      "pattern": "/.well-known/caldav",
+      "reason": "webdav",
+      "why": "RFC 6764 discovery redirects every method"
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/caldav",
+      "reason": "webdav",
+      "why": "CalDAV clients send PROPFIND and REPORT with XML"
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/caldav/*",
+      "reason": "webdav",
+      "why": "CalDAV clients send PROPFIND and REPORT with XML"
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/iot/activities",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/iot/config",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/iot/rfid/{tagId}",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/iot/rooms/available",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/iot/school-name",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/iot/session/current",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/iot/students",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/iot/teachers/",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/sse/events",
+      "reason": "stream",
+      "why": "event stream of the staff portal"
+    },
+    {
+      "method": "GET",
+      "pattern": "/health",
+      "reason": "probe",
+      "why": "liveness probe"
+    },
+    {
+      "method": "GET",
+      "pattern": "/internal/metrics",
+      "reason": "metrics",
+      "why": "Prometheus text exposition"
+    },
+    {
+      "method": "GET",
+      "pattern": "/parent-sse/events",
+      "reason": "stream",
+      "why": "event stream of the parents portal"
+    },
+    {
+      "method": "GET",
+      "pattern": "/public/data-return/openapi.json",
+      "reason": "public-api",
+      "why": "data return to the school authority, described by its own OpenAPI document"
+    },
+    {
+      "method": "GET",
+      "pattern": "/public/data-return/package",
+      "reason": "public-api",
+      "why": "data return to the school authority, described by its own OpenAPI document"
+    },
+    {
+      "method": "GET",
+      "pattern": "/public/data-return/package/archive",
+      "reason": "public-api",
+      "why": "data return to the school authority, described by its own OpenAPI document"
+    },
+    {
+      "method": "GET",
+      "pattern": "/public/data-return/register",
+      "reason": "public-api",
+      "why": "data return to the school authority, described by its own OpenAPI document"
+    },
+    {
+      "method": "GET",
+      "pattern": "/ready",
+      "reason": "probe",
+      "why": "readiness probe"
+    },
+    {
+      "method": "GET",
+      "pattern": "/school-sse/events",
+      "reason": "stream",
+      "why": "event stream of moto schule"
+    },
+    {
+      "method": "HEAD",
+      "pattern": "/.well-known/caldav",
+      "reason": "webdav",
+      "why": "RFC 6764 discovery redirects every method"
+    },
+    {
+      "method": "HEAD",
+      "pattern": "/api/caldav",
+      "reason": "webdav",
+      "why": "CalDAV clients send PROPFIND and REPORT with XML"
+    },
+    {
+      "method": "HEAD",
+      "pattern": "/api/caldav/*",
+      "reason": "webdav",
+      "why": "CalDAV clients send PROPFIND and REPORT with XML"
+    },
+    {
+      "method": "HEAD",
+      "pattern": "/internal/metrics",
+      "reason": "metrics",
+      "why": "Prometheus text exposition"
+    },
+    {
+      "method": "OPTIONS",
+      "pattern": "/.well-known/caldav",
+      "reason": "webdav",
+      "why": "RFC 6764 discovery redirects every method"
+    },
+    {
+      "method": "OPTIONS",
+      "pattern": "/api/caldav",
+      "reason": "webdav",
+      "why": "CalDAV clients send PROPFIND and REPORT with XML"
+    },
+    {
+      "method": "OPTIONS",
+      "pattern": "/api/caldav/*",
+      "reason": "webdav",
+      "why": "CalDAV clients send PROPFIND and REPORT with XML"
+    },
+    {
+      "method": "OPTIONS",
+      "pattern": "/internal/metrics",
+      "reason": "metrics",
+      "why": "Prometheus text exposition"
+    },
+    {
+      "method": "PATCH",
+      "pattern": "/.well-known/caldav",
+      "reason": "webdav",
+      "why": "RFC 6764 discovery redirects every method"
+    },
+    {
+      "method": "PATCH",
+      "pattern": "/api/caldav",
+      "reason": "webdav",
+      "why": "CalDAV clients send PROPFIND and REPORT with XML"
+    },
+    {
+      "method": "PATCH",
+      "pattern": "/api/caldav/*",
+      "reason": "webdav",
+      "why": "CalDAV clients send PROPFIND and REPORT with XML"
+    },
+    {
+      "method": "PATCH",
+      "pattern": "/internal/metrics",
+      "reason": "metrics",
+      "why": "Prometheus text exposition"
+    },
+    {
+      "method": "POST",
+      "pattern": "/.well-known/caldav",
+      "reason": "webdav",
+      "why": "RFC 6764 discovery redirects every method"
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/caldav",
+      "reason": "webdav",
+      "why": "CalDAV clients send PROPFIND and REPORT with XML"
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/caldav/*",
+      "reason": "webdav",
+      "why": "CalDAV clients send PROPFIND and REPORT with XML"
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/iot/attendance/toggle",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/iot/checkin",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/iot/error-reports",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/iot/feedback",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/iot/move-to-room",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/iot/pickup-query",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/iot/ping",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/iot/session/activity",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/iot/session/end",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/iot/session/start",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/iot/staff-clock",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/iot/staff-clock/state",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/iot/staff/{staffId}/rfid",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/students/{id}/rfid",
+      "reason": "device",
+      "why": "PyrePortal assigns and removes a tag with the device key and reads numeric IDs"
+    },
+    {
+      "method": "POST",
+      "pattern": "/internal/metrics",
+      "reason": "metrics",
+      "why": "Prometheus text exposition"
+    },
+    {
+      "method": "POST",
+      "pattern": "/webhooks/email/delivery/{provider}",
+      "reason": "webhook",
+      "why": "the mail provider posts delivery events, signed per provider"
+    },
+    {
+      "method": "PUT",
+      "pattern": "/.well-known/caldav",
+      "reason": "webdav",
+      "why": "RFC 6764 discovery redirects every method"
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/caldav",
+      "reason": "webdav",
+      "why": "CalDAV clients send PROPFIND and REPORT with XML"
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/caldav/*",
+      "reason": "webdav",
+      "why": "CalDAV clients send PROPFIND and REPORT with XML"
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/iot/session/{sessionId}/supervisors",
+      "reason": "device",
+      "why": "PyrePortal authenticates with the device key and staff PIN and reads numeric IDs (v1.11.5)"
+    },
+    {
+      "method": "PUT",
+      "pattern": "/internal/metrics",
+      "reason": "metrics",
+      "why": "Prometheus text exposition"
+    },
+    {
+      "method": "QUERY",
+      "pattern": "/.well-known/caldav",
+      "reason": "webdav",
+      "why": "RFC 6764 discovery redirects every method"
+    },
+    {
+      "method": "QUERY",
+      "pattern": "/api/caldav",
+      "reason": "webdav",
+      "why": "CalDAV clients send PROPFIND and REPORT with XML"
+    },
+    {
+      "method": "QUERY",
+      "pattern": "/api/caldav/*",
+      "reason": "webdav",
+      "why": "CalDAV clients send PROPFIND and REPORT with XML"
+    },
+    {
+      "method": "QUERY",
+      "pattern": "/internal/metrics",
+      "reason": "metrics",
+      "why": "Prometheus text exposition"
+    },
+    {
+      "method": "TRACE",
+      "pattern": "/.well-known/caldav",
+      "reason": "webdav",
+      "why": "RFC 6764 discovery redirects every method"
+    },
+    {
+      "method": "TRACE",
+      "pattern": "/api/caldav",
+      "reason": "webdav",
+      "why": "CalDAV clients send PROPFIND and REPORT with XML"
+    },
+    {
+      "method": "TRACE",
+      "pattern": "/api/caldav/*",
+      "reason": "webdav",
+      "why": "CalDAV clients send PROPFIND and REPORT with XML"
+    },
+    {
+      "method": "TRACE",
+      "pattern": "/internal/metrics",
+      "reason": "metrics",
+      "why": "Prometheus text exposition"
+    }
+  ],
   "enums": [
     {
       "name": "ApplicationContractConclusionMethod",
@@ -22849,6 +24460,15 @@
       ]
     },
     {
+      "name": "ListFormat",
+      "values": [
+        "csv",
+        "docx",
+        "pdf",
+        "xlsx"
+      ]
+    },
+    {
       "name": "MatchField",
       "values": [
         "class",
@@ -22867,6 +24487,14 @@
       "values": [
         "important",
         "info"
+      ]
+    },
+    {
+      "name": "PaymentExportFormat",
+      "values": [
+        "docx",
+        "pdf",
+        "xlsx"
       ]
     },
     {
@@ -23465,6 +25093,66 @@
         },
         {
           "name": "tenant_slug",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AcceptInvitationRequest",
+      "go_type": "account.AcceptInvitationRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "confirm_password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AcceptInvitationResponse",
+      "go_type": "account.AcceptInvitationResponse",
+      "fields": [
+        {
+          "name": "account_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "tenant_subdomain",
           "optional": true,
           "schema": {
             "kind": "string"
@@ -30498,6 +32186,18 @@
           }
         },
         {
+          "name": "family_payment_method",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "contract_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
           "name": "issued_cents",
           "schema": {
             "kind": "int"
@@ -30623,6 +32323,18 @@
           "name": "holiday_only",
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "family_payment_method",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "contract_id",
+          "schema": {
+            "kind": "id"
           }
         },
         {
@@ -32214,7 +33926,7 @@
           "name": "id",
           "optional": true,
           "schema": {
-            "kind": "lax_id"
+            "kind": "id"
           }
         },
         {
@@ -33004,6 +34716,83 @@
       ]
     },
     {
+      "name": "CancellationRequest",
+      "go_type": "staffshifts.CancellationRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "working_time_confirmed",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "working_time_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "cancelled",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "change_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "start_time",
+          "optional": true,
+          "schema": {
+            "kind": "clock"
+          }
+        },
+        {
+          "name": "end_time",
+          "optional": true,
+          "schema": {
+            "kind": "clock"
+          }
+        },
+        {
+          "name": "break_minutes",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "shift_type_id",
+          "optional": true,
+          "schema": {
+            "kind": "id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "replacements",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ReplacementRequest"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "CancellationResponse",
       "go_type": "staffshifts.CancellationResponse",
       "fields": [
@@ -33126,6 +34915,13 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        },
+        {
+          "name": "imported_contract_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
           }
         }
       ]
@@ -37230,6 +39026,12 @@
           }
         },
         {
+          "name": "sibling_all_children",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
           "name": "care_offering_ids",
           "schema": {
             "kind": "array",
@@ -37446,6 +39248,103 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "CareRequestHistoryResponse",
+      "go_type": "requestreview.CareRequestHistoryResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "request_kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "requested",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "CareRequestDiffResponse"
+            }
+          }
+        },
+        {
+          "name": "diff",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "CareRequestDiffResponse"
+            }
+          }
+        },
+        {
+          "name": "decision_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "decided_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "decided_by_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "signed",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -37752,6 +39651,13 @@
         },
         {
           "name": "counts_family_children",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "sibling_all_children",
           "optional": true,
           "schema": {
             "kind": "bool"
@@ -38951,6 +40857,60 @@
               "kind": "ref",
               "ref": "BlockerGroup"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "CatererLoginResponse",
+      "go_type": "catererauth.CatererLoginResponse",
+      "fields": [
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "access_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "refresh_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "challenge_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "masked_email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "trusted_device_enabled",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "trusted_device_days",
+          "optional": true,
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -40355,6 +42315,304 @@
       ]
     },
     {
+      "name": "ChildLinkColumns",
+      "go_type": "carecontract.ChildLinkColumns",
+      "fields": [
+        {
+          "name": "contract",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "child",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ChildLinkCounts",
+      "go_type": "carecontract.ChildLinkCounts",
+      "fields": [
+        {
+          "name": "ready",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "linked",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "stored",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "conflict",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "invalid",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ChildLinkPreviewRequest",
+      "go_type": "carecontracthttp.ChildLinkPreviewRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "student_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ChildLinkProblem",
+      "go_type": "carecontract.ChildLinkProblem",
+      "fields": [
+        {
+          "name": "field",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "code",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ChildLinkRequest",
+      "go_type": "carecontracthttp.ChildLinkRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "student_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "accept_difference",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ChildLinkRow",
+      "go_type": "carecontract.ChildLinkRow",
+      "fields": [
+        {
+          "name": "line",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "contract_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "student_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "school_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "contract_child_first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "contract_child_last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "contract_child_birth_date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "student_first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_birth_date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "problems",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ChildLinkProblem"
+            }
+          }
+        },
+        {
+          "name": "repeats_line",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "other_contract_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ChildLinking",
+      "go_type": "carecontract.ChildLinking",
+      "fields": [
+        {
+          "name": "encoding",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "delimiter",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "headers",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "columns",
+          "schema": {
+            "kind": "ref",
+            "ref": "ChildLinkColumns"
+          }
+        },
+        {
+          "name": "unmapped",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "applied",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "counts",
+          "schema": {
+            "kind": "ref",
+            "ref": "ChildLinkCounts"
+          }
+        },
+        {
+          "name": "rows",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ChildLinkRow"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "ChildParticipationResponse",
       "go_type": "mealplan.ChildParticipationResponse",
       "fields": [
@@ -41563,7 +43821,7 @@
           "name": "companion_student_id",
           "optional": true,
           "schema": {
-            "kind": "lax_id"
+            "kind": "id"
           }
         },
         {
@@ -41726,6 +43984,18 @@
           "name": "at",
           "schema": {
             "kind": "instant"
+          }
+        },
+        {
+          "name": "date_unknown",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "taken_over",
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -41952,6 +44222,322 @@
       ]
     },
     {
+      "name": "ContractCorrection",
+      "go_type": "carecontract.ContractCorrection",
+      "fields": [
+        {
+          "name": "corrected_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "file",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "evidence",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "changes",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "before",
+          "schema": {
+            "kind": "ref",
+            "ref": "ContractCorrectionValues"
+          }
+        },
+        {
+          "name": "after",
+          "schema": {
+            "kind": "ref",
+            "ref": "ContractCorrectionValues"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ContractCorrectionCounts",
+      "go_type": "carecontract.ContractCorrectionCounts",
+      "fields": [
+        {
+          "name": "change",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "unchanged",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "invalid",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "corrected",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ContractCorrectionEntry",
+      "go_type": "carecontract.ContractCorrectionEntry",
+      "fields": [
+        {
+          "name": "file",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "account_id",
+          "schema": {
+            "kind": "id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "corrected_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "contracts",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ContractCorrectionProblem",
+      "go_type": "carecontract.ContractCorrectionProblem",
+      "fields": [
+        {
+          "name": "field",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "code",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ContractCorrectionRow",
+      "go_type": "carecontract.ContractCorrectionRow",
+      "fields": [
+        {
+          "name": "line",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "contract_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "child_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "changes",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "before",
+          "schema": {
+            "kind": "ref",
+            "ref": "ContractCorrectionValues"
+          }
+        },
+        {
+          "name": "after",
+          "schema": {
+            "kind": "ref",
+            "ref": "ContractCorrectionValues"
+          }
+        },
+        {
+          "name": "evidence",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "problems",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ContractCorrectionProblem"
+            }
+          }
+        },
+        {
+          "name": "repeats_line",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ContractCorrectionRun",
+      "go_type": "carecontract.ContractCorrectionRun",
+      "fields": [
+        {
+          "name": "encoding",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "delimiter",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "headers",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "missing",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "applied",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "counts",
+          "schema": {
+            "kind": "ref",
+            "ref": "ContractCorrectionCounts"
+          }
+        },
+        {
+          "name": "rows",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ContractCorrectionRow"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ContractCorrectionValues",
+      "go_type": "carecontract.ContractCorrectionValues",
+      "fields": [
+        {
+          "name": "parties",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "method",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "concluded_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "date_unknown",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "ContractDetail",
       "go_type": "carecontract.ContractDetail",
       "fields": [
@@ -42062,6 +44648,12 @@
           }
         },
         {
+          "name": "imported",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
           "name": "version",
           "schema": {
             "kind": "ref",
@@ -42142,6 +44734,55 @@
           "name": "fee_text",
           "schema": {
             "kind": "string"
+          }
+        },
+        {
+          "name": "corrections",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ContractCorrection"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ContractFamilyBilling",
+      "go_type": "parentbilling.ContractFamilyBilling",
+      "fields": [
+        {
+          "name": "contract_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "family_email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "party_first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "party_last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "family",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "FamilyBilling"
           }
         }
       ]
@@ -43270,6 +45911,12 @@
             "kind": "date",
             "nullable": true
           }
+        },
+        {
+          "name": "imported",
+          "schema": {
+            "kind": "bool"
+          }
         }
       ]
     },
@@ -43551,6 +46198,12 @@
         },
         {
           "name": "counts_family_children",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "sibling_all_children",
           "schema": {
             "kind": "bool"
           }
@@ -44333,7 +46986,7 @@
           "name": "absence_type_id",
           "optional": true,
           "schema": {
-            "kind": "lax_id",
+            "kind": "id",
             "nullable": true
           }
         },
@@ -45923,6 +48576,93 @@
       ]
     },
     {
+      "name": "DashboardResponse",
+      "go_type": "display.DashboardResponse",
+      "fields": [
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "display_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "server_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "room_occupancy",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "RoomOccupancy"
+            }
+          }
+        },
+        {
+          "name": "running_activities",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "RunningActivity"
+            }
+          }
+        },
+        {
+          "name": "upcoming_activities",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "UpcomingActivity"
+            }
+          }
+        },
+        {
+          "name": "pickup_times",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "PickupBucket"
+            }
+          }
+        },
+        {
+          "name": "totals",
+          "schema": {
+            "kind": "ref",
+            "ref": "DashboardTotals"
+          }
+        }
+      ]
+    },
+    {
       "name": "DashboardSummary",
       "go_type": "workforce.DashboardSummary",
       "fields": [
@@ -45971,6 +48711,30 @@
         },
         {
           "name": "pending_requests_count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "DashboardTotals",
+      "go_type": "display.DashboardTotals",
+      "fields": [
+        {
+          "name": "students_present",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "rooms_occupied",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "activities_running",
           "schema": {
             "kind": "int"
           }
@@ -47696,6 +50460,59 @@
       ]
     },
     {
+      "name": "DirectCorrectionResponse",
+      "go_type": "requestreview.DirectCorrectionResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "changed_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "changed_by_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reason",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "diff",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OfferingRequestDiffResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "DirectoryPersonRequest",
       "go_type": "users.DirectoryPersonRequest",
       "request": true,
@@ -48638,6 +51455,18 @@
         {
           "name": "position",
           "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "EnrollStartResponse",
+      "go_type": "portalauth.EnrollStartResponse",
+      "fields": [
+        {
+          "name": "challenge_token",
           "schema": {
             "kind": "string"
           }
@@ -50457,6 +53286,12 @@
       "go_type": "parentbilling.FamilyChildNumbers",
       "fields": [
         {
+          "name": "contract_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
           "name": "family_email",
           "schema": {
             "kind": "string"
@@ -50668,6 +53503,12 @@
           "schema": {
             "kind": "string"
           }
+        },
+        {
+          "name": "valid_from",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -50728,6 +53569,13 @@
           "name": "school_id",
           "schema": {
             "kind": "id"
+          }
+        },
+        {
+          "name": "valid_from",
+          "schema": {
+            "kind": "date",
+            "nullable": true
           }
         }
       ]
@@ -50810,6 +53658,17 @@
           "schema": {
             "kind": "date",
             "nullable": true
+          }
+        },
+        {
+          "name": "later_valid_from",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "date",
+              "nullable": true
+            }
           }
         },
         {
@@ -51359,6 +54218,34 @@
       ]
     },
     {
+      "name": "FormAttachmentInput",
+      "go_type": "enrollment.FormAttachment",
+      "request": true,
+      "fields": [
+        {
+          "name": "document_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "label",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "document_url",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "FormField",
       "go_type": "enrollment.FormField",
       "fields": [
@@ -51505,6 +54392,165 @@
       ]
     },
     {
+      "name": "FormFieldInput",
+      "go_type": "enrollment.FormField",
+      "request": true,
+      "fields": [
+        {
+          "name": "attachments",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "FormAttachmentInput"
+            }
+          }
+        },
+        {
+          "name": "key",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "label",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "required",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "help_text",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "content",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "options",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "FormFieldOptionInput"
+            }
+          }
+        },
+        {
+          "name": "allowed_times",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "single_mode_grades",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "validation",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "FormFieldValidationInput"
+          }
+        },
+        {
+          "name": "file_options",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "FormFileOptionsInput"
+          }
+        },
+        {
+          "name": "sort_order",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "applies_to_child",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "target",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "visible_when",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "VisibilityConditionInput"
+          }
+        },
+        {
+          "name": "translations",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "map",
+              "nullable": true,
+              "elem": {
+                "kind": "ref",
+                "ref": "TranslatedTextInput"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "FormFieldOption",
       "go_type": "enrollment.FormFieldOption",
       "fields": [
@@ -51531,6 +54577,43 @@
               "elem": {
                 "kind": "ref",
                 "ref": "TranslatedText"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "FormFieldOptionInput",
+      "go_type": "enrollment.FormFieldOption",
+      "request": true,
+      "fields": [
+        {
+          "name": "label",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "value",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "translations",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "map",
+              "nullable": true,
+              "elem": {
+                "kind": "ref",
+                "ref": "TranslatedTextInput"
               }
             }
           }
@@ -51565,6 +54648,37 @@
       ]
     },
     {
+      "name": "FormFieldValidationInput",
+      "go_type": "enrollment.FormFieldValidation",
+      "request": true,
+      "fields": [
+        {
+          "name": "min",
+          "optional": true,
+          "schema": {
+            "kind": "number",
+            "nullable": true
+          }
+        },
+        {
+          "name": "max",
+          "optional": true,
+          "schema": {
+            "kind": "number",
+            "nullable": true
+          }
+        },
+        {
+          "name": "pattern",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
       "name": "FormFileOptions",
       "go_type": "enrollment.FormFileOptions",
       "fields": [
@@ -51580,6 +54694,38 @@
         },
         {
           "name": "max_size_mb",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "multiple",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "FormFileOptionsInput",
+      "go_type": "enrollment.FormFileOptions",
+      "request": true,
+      "fields": [
+        {
+          "name": "allowed_types",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "max_size_mb",
+          "optional": true,
           "schema": {
             "kind": "int"
           }
@@ -51833,6 +54979,125 @@
               "elem": {
                 "kind": "ref",
                 "ref": "TranslatedText"
+              }
+            }
+          }
+        },
+        {
+          "name": "guardian_agreement",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "FormLegalBlockInput",
+      "go_type": "enrollment.FormLegalBlock",
+      "request": true,
+      "fields": [
+        {
+          "name": "attachments",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "FormAttachmentInput"
+            }
+          }
+        },
+        {
+          "name": "key",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "kind",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "title",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "label",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "text",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "required",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "enabled",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "sort_order",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "source",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "display_mode",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "document_url",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "translations",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "map",
+              "nullable": true,
+              "elem": {
+                "kind": "ref",
+                "ref": "TranslatedTextInput"
               }
             }
           }
@@ -53328,6 +56593,59 @@
       ]
     },
     {
+      "name": "GuardianInvitationValidateResponse",
+      "go_type": "account.GuardianInvitationValidateResponse",
+      "fields": [
+        {
+          "name": "email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expires_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "school_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "tenant_slug",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_logo_url",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "GuardianLinkResponse",
       "go_type": "users.GuardianLinkResponse",
       "fields": [
@@ -54188,6 +57506,140 @@
             "elem": {
               "kind": "int"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "HistoryItem",
+      "go_type": "requestreview.HistoryItem",
+      "fields": [
+        {
+          "name": "request_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "occurred_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "group_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expected_version",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "can_correct",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "family_protected",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "submitted_by_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "submitted_by_relationship",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "master_data",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "MasterDataChangeRequestHistoryResponse"
+          }
+        },
+        {
+          "name": "care_schedule",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "CareRequestHistoryResponse"
+          }
+        },
+        {
+          "name": "offering",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "OfferingRequestHistoryResponse"
+          }
+        },
+        {
+          "name": "excused",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "StaffExcusedRequestHistoryResponse"
+          }
+        },
+        {
+          "name": "direct_correction",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "DirectCorrectionResponse"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HistoryPage",
+      "go_type": "requestreview.HistoryPage",
+      "fields": [
+        {
+          "name": "items",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "HistoryItem"
+            }
+          }
+        },
+        {
+          "name": "next_cursor",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -56462,6 +59914,179 @@
       ]
     },
     {
+      "name": "HolidayFormFieldInput",
+      "go_type": "enrollment.HolidayFormField",
+      "request": true,
+      "fields": [
+        {
+          "name": "attachments",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "FormAttachmentInput"
+            }
+          }
+        },
+        {
+          "name": "key",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "label",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "type",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "required",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "help_text",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "content",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "options",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "FormFieldOptionInput"
+            }
+          }
+        },
+        {
+          "name": "allowed_times",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "single_mode_grades",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "validation",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "FormFieldValidationInput"
+          }
+        },
+        {
+          "name": "file_options",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "FormFileOptionsInput"
+          }
+        },
+        {
+          "name": "sort_order",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "applies_to_child",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "target",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "visible_when",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "VisibilityConditionInput"
+          }
+        },
+        {
+          "name": "translations",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "map",
+              "nullable": true,
+              "elem": {
+                "kind": "ref",
+                "ref": "TranslatedTextInput"
+              }
+            }
+          }
+        },
+        {
+          "name": "health",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "share_with_host",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "HolidayGuardianInput",
       "go_type": "enrollment.HolidayGuardianInput",
       "fields": [
@@ -57316,6 +60941,51 @@
           "name": "created_at",
           "schema": {
             "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayPeriodFormRequest",
+      "go_type": "enrollmenthttp.HolidayPeriodFormRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "fields",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "HolidayFormFieldInput"
+            }
+          }
+        },
+        {
+          "name": "legal_blocks",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "FormLegalBlockInput"
+            }
+          }
+        },
+        {
+          "name": "address_requirement",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "health_requirement",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -61706,6 +65376,7 @@
         {
           "name": "can_correct",
           "optional": true,
+          "deprecated": true,
           "schema": {
             "kind": "bool"
           }
@@ -61732,9 +65403,42 @@
         },
         {
           "name": "data",
+          "deprecated": true,
           "schema": {
             "kind": "json",
             "nullable": true
+          }
+        },
+        {
+          "name": "master_data",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "MasterDataChangeRequestResponse"
+          }
+        },
+        {
+          "name": "care_schedule",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "CareRequestResponse"
+          }
+        },
+        {
+          "name": "offering",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "OfferingRequestResponse"
+          }
+        },
+        {
+          "name": "excused",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "StaffExcusedRequestResponse"
           }
         }
       ]
@@ -62512,6 +66216,113 @@
       ]
     },
     {
+      "name": "LoginOrganization",
+      "go_type": "traegerportal.LoginOrganization",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "LoginRequest",
+      "go_type": "account.LoginRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "tenant_slug",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "LoginResponse",
+      "go_type": "portalauth.LoginResponse",
+      "fields": [
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "access_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "refresh_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "challenge_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "masked_email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "mfa_enrollment_required",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "trusted_device_enabled",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "trusted_device_days",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "MFAAdminOverrideRequest",
       "go_type": "account.MFAAdminOverrideRequest",
       "request": true,
@@ -62579,6 +66390,27 @@
       ]
     },
     {
+      "name": "MFAEnrollConfirmRequest",
+      "go_type": "common.MFAEnrollConfirmRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "code",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "remember_device",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "MFAGlobalOverrideStateResponse",
       "go_type": "operator.MFAGlobalOverrideStateResponse",
       "fields": [
@@ -62592,6 +66424,60 @@
           "name": "override",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "MFAResendRequest",
+      "go_type": "common.MFAResendRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "challenge_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "MFAResendResponse",
+      "go_type": "common.MFAResendResponse",
+      "fields": [
+        {
+          "name": "challenge_token",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "MFAVerifyRequest",
+      "go_type": "common.MFAVerifyRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "challenge_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "code",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "remember_device",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -62743,6 +66629,102 @@
             "elem": {
               "kind": "string"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "MasterDataChangeRequestHistoryResponse",
+      "go_type": "requestreview.MasterDataChangeRequestHistoryResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "target",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "field_key",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "old_value",
+          "optional": true,
+          "schema": {
+            "kind": "json",
+            "nullable": true
+          }
+        },
+        {
+          "name": "new_value",
+          "schema": {
+            "kind": "json",
+            "nullable": true
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "reviewed_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "decided_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "decided_by_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "review_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -63867,6 +67849,77 @@
               "kind": "ref",
               "ref": "MorningAttendanceMarkRequest"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "MoveShiftRequest",
+      "go_type": "staffshifts.MoveShiftRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "working_time_confirmed",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "working_time_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "source_staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "target_staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "date",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "start_time",
+          "optional": true,
+          "schema": {
+            "kind": "clock"
+          }
+        },
+        {
+          "name": "end_time",
+          "optional": true,
+          "schema": {
+            "kind": "clock"
+          }
+        },
+        {
+          "name": "break_minutes",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "shift_type_id",
+          "optional": true,
+          "schema": {
+            "kind": "id",
+            "nullable": true
           }
         }
       ]
@@ -65171,6 +69224,272 @@
       ]
     },
     {
+      "name": "OfferingCorrection",
+      "go_type": "carecontract.OfferingCorrection",
+      "fields": [
+        {
+          "name": "encoding",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "delimiter",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "headers",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "missing_columns",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "effective_from",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "applied",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "counts",
+          "schema": {
+            "kind": "ref",
+            "ref": "OfferingCorrectionCounts"
+          }
+        },
+        {
+          "name": "contracts",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OfferingCorrectionContract"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "OfferingCorrectionChange",
+      "go_type": "carecontract.OfferingCorrectionChange",
+      "fields": [
+        {
+          "name": "weekdays",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "from",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "to",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OfferingCorrectionContract",
+      "go_type": "carecontract.OfferingCorrectionContract",
+      "fields": [
+        {
+          "name": "reference",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "line",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "contract_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "school_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "school_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "child_first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "child_last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "effective_from",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "version_number",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "changes",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OfferingCorrectionChange"
+            }
+          }
+        },
+        {
+          "name": "problems",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OfferingCorrectionProblem"
+            }
+          }
+        },
+        {
+          "name": "hints",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "OfferingCorrectionCounts",
+      "go_type": "carecontract.OfferingCorrectionCounts",
+      "fields": [
+        {
+          "name": "ready",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "unchanged",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "held",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "invalid",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "corrected",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OfferingCorrectionProblem",
+      "go_type": "carecontract.OfferingCorrectionProblem",
+      "fields": [
+        {
+          "name": "line",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "field",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "code",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "OfferingDecisionResponse",
       "go_type": "parent.OfferingDecisionResponse",
       "fields": [
@@ -65586,6 +69905,235 @@
       ]
     },
     {
+      "name": "OfferingRequestDiffResponse",
+      "go_type": "requestreview.OfferingRequestDiffResponse",
+      "fields": [
+        {
+          "name": "offering_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "label",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "old",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "new",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "automatic",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "automatic_days",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "rule_days",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "new_when_excluded",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "trigger_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "trigger_names",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "optoutable",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "is_course",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OfferingRequestHistoryResponse",
+      "go_type": "requestreview.OfferingRequestHistoryResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "effective_from",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "earliest_effective_from",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "latest_effective_from",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "requested_effective_from",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "diff",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OfferingRequestDiffResponse"
+            }
+          }
+        },
+        {
+          "name": "unchanged",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "OfferingRequestUnchangedResponse"
+            }
+          }
+        },
+        {
+          "name": "full_withdrawal",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "reviewed_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "decided_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "decided_by_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "requested",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "OfferingRequestRequestedResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "OfferingRequestPreviewResponse",
       "go_type": "careplanhttp.OfferingRequestPreviewResponse",
       "fields": [
@@ -65640,6 +70188,167 @@
           "optional": true,
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OfferingRequestRequestedResponse",
+      "go_type": "requestreview.OfferingRequestRequestedResponse",
+      "fields": [
+        {
+          "name": "offering_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "label",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "new",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OfferingRequestResponse",
+      "go_type": "requestreview.OfferingRequestResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "effective_from",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "earliest_effective_from",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "latest_effective_from",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "requested_effective_from",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "diff",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OfferingRequestDiffResponse"
+            }
+          }
+        },
+        {
+          "name": "unchanged",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "OfferingRequestUnchangedResponse"
+            }
+          }
+        },
+        {
+          "name": "full_withdrawal",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "reviewed_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OfferingRequestUnchangedResponse",
+      "go_type": "requestreview.OfferingRequestUnchangedResponse",
+      "fields": [
+        {
+          "name": "offering_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "label",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "days",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -67062,6 +71771,41 @@
       ]
     },
     {
+      "name": "OperatorAcceptInvitationRequest",
+      "go_type": "operator.OperatorAcceptInvitationRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "display_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "confirm_password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "OperatorAnnouncementResponse",
       "go_type": "operatorannouncements.OperatorAnnouncementResponse",
       "fields": [
@@ -67278,6 +72022,31 @@
       ]
     },
     {
+      "name": "OperatorInvitationValidationResponse",
+      "go_type": "operator.OperatorInvitationValidationResponse",
+      "fields": [
+        {
+          "name": "email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "display_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expires_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
       "name": "OperatorListItem",
       "go_type": "operator.OperatorListItem",
       "fields": [
@@ -67336,6 +72105,96 @@
           "name": "is_self",
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OperatorLoginRequest",
+      "go_type": "operator.OperatorLoginRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OperatorLoginResponse",
+      "go_type": "operator.OperatorLoginResponse",
+      "fields": [
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "access_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "refresh_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "challenge_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "masked_email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "mfa_enrollment_required",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "trusted_device_enabled",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "trusted_device_days",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "operator",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "OperatorResponse"
           }
         }
       ]
@@ -70034,6 +74893,28 @@
       ]
     },
     {
+      "name": "PasskeyVerifyRequest",
+      "go_type": "common.PasskeyVerifyRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "session_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "response",
+          "optional": true,
+          "schema": {
+            "kind": "json",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
       "name": "PasswordResetConfirmRequest",
       "go_type": "common.PasswordResetConfirmRequest",
       "request": true,
@@ -70102,6 +74983,21 @@
           "schema": {
             "kind": "json",
             "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "PaymentExportRequest",
+      "go_type": "users.PaymentExportRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "format",
+          "optional": true,
+          "schema": {
+            "kind": "enum",
+            "ref": "PaymentExportFormat"
           }
         }
       ]
@@ -72301,6 +77197,24 @@
       ]
     },
     {
+      "name": "PickupBucket",
+      "go_type": "display.PickupBucket",
+      "fields": [
+        {
+          "name": "time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "PickupChangeRequestResponse",
       "go_type": "parent.PickupChangeRequestResponse",
       "fields": [
@@ -72932,6 +77846,48 @@
           "name": "table",
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PlanExportRequest",
+      "go_type": "staffshifts.PlanExportRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "from",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "to",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "template",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "variant",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "format",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -75036,6 +79992,55 @@
       ]
     },
     {
+      "name": "PublishSchemaRequest",
+      "go_type": "enrollmenthttp.PublishSchemaRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "fields",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "FormFieldInput"
+            }
+          }
+        },
+        {
+          "name": "core_requirements",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "bool"
+            }
+          }
+        },
+        {
+          "name": "legal_blocks",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "FormLegalBlockInput"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "PushPublicKeyResponse",
       "go_type": "parent.PushPublicKeyResponse",
       "fields": [
@@ -76123,6 +81128,49 @@
             "elem": {
               "kind": "id"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ReplacementRequest",
+      "go_type": "staffshifts.ReplacementRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "start_time",
+          "optional": true,
+          "schema": {
+            "kind": "clock"
+          }
+        },
+        {
+          "name": "end_time",
+          "optional": true,
+          "schema": {
+            "kind": "clock"
+          }
+        },
+        {
+          "name": "break_minutes",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "shift_type_id",
+          "optional": true,
+          "schema": {
+            "kind": "id",
+            "nullable": true
           }
         }
       ]
@@ -77369,6 +82417,51 @@
       ]
     },
     {
+      "name": "RoomOccupancy",
+      "go_type": "display.RoomOccupancy",
+      "fields": [
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "group_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "category_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "capacity",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "is_occupied",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "RoomReferencesResponse",
       "go_type": "httpadapter.RoomReferencesResponse",
       "fields": [
@@ -78017,6 +83110,49 @@
               "kind": "ref",
               "ref": "RunDueDate"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "RunningActivity",
+      "go_type": "display.RunningActivity",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "category",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "room_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "participants",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "max_capacity",
+          "optional": true,
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -81724,6 +86860,34 @@
       ]
     },
     {
+      "name": "SchoolLoginRequest",
+      "go_type": "schoolportal.SchoolLoginRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "tenant_slug",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "SchoolOccupancy",
       "go_type": "traegerview.SchoolOccupancy",
       "fields": [
@@ -83564,6 +88728,134 @@
       ]
     },
     {
+      "name": "SeriesRequest",
+      "go_type": "staffshifts.SeriesRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "working_time_confirmed",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "working_time_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "weekdays",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "int"
+            }
+          }
+        },
+        {
+          "name": "start_time",
+          "optional": true,
+          "schema": {
+            "kind": "clock"
+          }
+        },
+        {
+          "name": "end_time",
+          "optional": true,
+          "schema": {
+            "kind": "clock"
+          }
+        },
+        {
+          "name": "break_minutes",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "shift_type_id",
+          "optional": true,
+          "schema": {
+            "kind": "id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "notes",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "calendar_period_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "week_pattern",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "valid_from",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "valid_until",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "effective_date",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "occurrence_shift_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "include_school_breaks",
+          "optional": true,
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
       "name": "SeriesResponse",
       "go_type": "staffshifts.SeriesResponse",
       "fields": [
@@ -84012,6 +89304,137 @@
           "optional": true,
           "schema": {
             "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SessionClaimsResponse",
+      "go_type": "account.SessionClaimsResponse",
+      "fields": [
+        {
+          "name": "id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "sub",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "username",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "roles",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "permissions",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "is_admin",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "scope",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "tenant_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "org_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "family_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "read_only",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "acting_admin_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "preview_id",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "via_traeger",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "exp",
+          "optional": true,
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -84487,6 +89910,34 @@
       ]
     },
     {
+      "name": "SessionValidationRequest",
+      "go_type": "account.SessionValidationRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "access_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "refresh_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "portal",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "SetAllowanceRequest",
       "go_type": "absencetypes.SetAllowanceRequest",
       "request": true,
@@ -84904,6 +90355,101 @@
           "name": "id",
           "schema": {
             "kind": "id"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ShiftRequest",
+      "go_type": "staffshifts.ShiftRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "working_time_confirmed",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "working_time_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "date",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "start_time",
+          "optional": true,
+          "schema": {
+            "kind": "clock"
+          }
+        },
+        {
+          "name": "end_time",
+          "optional": true,
+          "schema": {
+            "kind": "clock"
+          }
+        },
+        {
+          "name": "break_minutes",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "shift_type_id",
+          "optional": true,
+          "schema": {
+            "kind": "id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "notes",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "cancelled",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "change_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "origin_shift_id",
+          "optional": true,
+          "schema": {
+            "kind": "id",
+            "nullable": true
           }
         }
       ]
@@ -86746,6 +92292,97 @@
       ]
     },
     {
+      "name": "StaffExcusedRequestHistoryResponse",
+      "go_type": "requestreview.StaffExcusedRequestHistoryResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "absence_status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "dates",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "note",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "reviewed_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "decided_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "decided_by_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "StaffExcusedRequestResponse",
       "go_type": "requestreview.StaffExcusedRequestResponse",
       "fields": [
@@ -87972,6 +93609,71 @@
             "elem": {
               "kind": "string"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "StaffPreviewEndRequest",
+      "go_type": "account.StaffPreviewEndRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "preview_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "StaffPreviewStartRequest",
+      "go_type": "account.StaffPreviewStartRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "account_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "previous_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "StaffPreviewStartResponse",
+      "go_type": "account.StaffPreviewStartResponse",
+      "fields": [
+        {
+          "name": "access_token",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expires_in",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "target_account_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "target_name",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -93526,6 +99228,20 @@
       ]
     },
     {
+      "name": "SwitchTenantRequest",
+      "go_type": "account.SwitchTenantRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "tenant_slug",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "SystemRole",
       "go_type": "organizationtenancy.SystemRole",
       "fields": [
@@ -94547,6 +100263,24 @@
         {
           "name": "pickup_time",
           "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TokenResponse",
+      "go_type": "portalauth.TokenResponse",
+      "fields": [
+        {
+          "name": "access_token",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "refresh_token",
           "schema": {
             "kind": "string"
           }
@@ -96080,6 +101814,113 @@
       ]
     },
     {
+      "name": "TraegerLoginRequest",
+      "go_type": "traegerportal.TraegerLoginRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "organization_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerLoginResponse",
+      "go_type": "traegerportal.TraegerLoginResponse",
+      "fields": [
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "access_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "refresh_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "challenge_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "masked_email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "mfa_enrollment_required",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "trusted_device_enabled",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "trusted_device_days",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "organization_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "organizations",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "LoginOrganization"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "TraegerLogo",
       "go_type": "organizationtenancy.TraegerLogo",
       "fields": [
@@ -96111,6 +101952,41 @@
           "name": "updated_at",
           "schema": {
             "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerMFAVerifyRequest",
+      "go_type": "traegerportal.TraegerMFAVerifyRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "challenge_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "code",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "organization_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "remember_device",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -99535,6 +105411,27 @@
       ]
     },
     {
+      "name": "TranslatedTextInput",
+      "go_type": "enrollment.TranslatedText",
+      "request": true,
+      "fields": [
+        {
+          "name": "text",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "source",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "TrustedDeviceDTO",
       "go_type": "common.TrustedDeviceDTO",
       "fields": [
@@ -99611,6 +105508,42 @@
       ]
     },
     {
+      "name": "UpcomingActivity",
+      "go_type": "display.UpcomingActivity",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "category",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "room_name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "UpdateAbsenceRequest",
       "go_type": "workforce.UpdateAbsenceRequest",
       "request": true,
@@ -99627,7 +105560,7 @@
           "name": "absence_type_id",
           "optional": true,
           "schema": {
-            "kind": "lax_id",
+            "kind": "id",
             "nullable": true
           }
         },
@@ -99917,6 +105850,56 @@
           "schema": {
             "kind": "string",
             "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "UpdateSchemaRequest",
+      "go_type": "enrollmenthttp.UpdateSchemaRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "fields",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "FormFieldInput"
+            }
+          }
+        },
+        {
+          "name": "core_requirements",
+          "optional": true,
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "bool"
+            }
+          }
+        },
+        {
+          "name": "legal_blocks",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "FormLegalBlockInput"
+            }
           }
         }
       ]
@@ -100522,6 +106505,20 @@
       ]
     },
     {
+      "name": "ValidateInvitationRequest",
+      "go_type": "operator.ValidateInvitationRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "ValidationError",
       "go_type": "dataimport.ValidationError",
       "fields": [
@@ -100756,6 +106753,42 @@
         },
         {
           "name": "operator",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "value",
+          "optional": true,
+          "schema": {
+            "kind": "json",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "VisibilityConditionInput",
+      "go_type": "enrollment.VisibilityCondition",
+      "request": true,
+      "fields": [
+        {
+          "name": "source",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "field",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "operator",
+          "optional": true,
           "schema": {
             "kind": "string"
           }
@@ -102895,6 +108928,72 @@
       ]
     },
     {
+      "name": "betreuungsplanExportRequest",
+      "go_type": "timetablehttp.betreuungsplanExportRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "from",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "to",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "template",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "variant",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "format",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "group_id",
+          "optional": true,
+          "schema": {
+            "kind": "id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "room_id",
+          "optional": true,
+          "schema": {
+            "kind": "id",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
       "name": "billingKeyDateCountResponse",
       "go_type": "operator.billingKeyDateCountResponse",
       "fields": [
@@ -104058,6 +110157,112 @@
       ]
     },
     {
+      "name": "careUsageExportFiltersRequest",
+      "go_type": "enrollmenthttp.careUsageExportFiltersRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "phase_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "status",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "care_offering_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "care_offering_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "id"
+            }
+          }
+        },
+        {
+          "name": "day_count",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "grade_level",
+          "optional": true,
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "weekday",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "pickup_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "search",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "careUsageExportRequest",
+      "go_type": "enrollmenthttp.careUsageExportRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "format",
+          "optional": true,
+          "schema": {
+            "kind": "enum",
+            "ref": "ListFormat"
+          }
+        },
+        {
+          "name": "layout",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "filters",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "careUsageExportFiltersRequest"
+          }
+        }
+      ]
+    },
+    {
       "name": "careUsageFilterOptionsResponse",
       "go_type": "enrollmenthttp.careUsageFilterOptionsResponse",
       "fields": [
@@ -104489,6 +110694,27 @@
         },
         {
           "name": "resolved_at",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "catererLoginRequest",
+      "go_type": "catererauth.catererLoginRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "password",
           "optional": true,
           "schema": {
             "kind": "string"
@@ -105025,6 +111251,57 @@
       ]
     },
     {
+      "name": "classRosterExportFiltersRequest",
+      "go_type": "enrollmenthttp.classRosterExportFiltersRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "phase_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "school_class",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "all_classes",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "classRosterExportRequest",
+      "go_type": "enrollmenthttp.classRosterExportRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "format",
+          "optional": true,
+          "schema": {
+            "kind": "enum",
+            "ref": "ListFormat"
+          }
+        },
+        {
+          "name": "filters",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "classRosterExportFiltersRequest"
+          }
+        }
+      ]
+    },
+    {
       "name": "closingDayRangeResponse",
       "go_type": "timetracking.closingDayRangeResponse",
       "fields": [
@@ -105093,6 +111370,27 @@
         },
         {
           "name": "school_class",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "confirmMFARequest",
+      "go_type": "catererauth.confirmMFARequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "challenge_token",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "code",
           "optional": true,
           "schema": {
             "kind": "string"
@@ -110320,6 +116618,37 @@
       ]
     },
     {
+      "name": "loginImageResponse",
+      "go_type": "settingshttp.loginImageResponse",
+      "fields": [
+        {
+          "name": "login_image_url",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "can_edit",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "loginImageUploadResponse",
+      "go_type": "settingshttp.loginImageUploadResponse",
+      "fields": [
+        {
+          "name": "login_image_url",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "manualRosterRequest",
       "go_type": "timetablehttp.manualRosterRequest",
       "request": true,
@@ -112199,6 +118528,27 @@
       ]
     },
     {
+      "name": "parentLoginRequest",
+      "go_type": "parentauth.parentLoginRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "password",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "parentPreferenceRequest",
       "go_type": "parent.parentPreferenceRequest",
       "request": true,
@@ -112489,6 +118839,20 @@
       ]
     },
     {
+      "name": "passkeyLoginOptionsRequest",
+      "go_type": "account.passkeyLoginOptionsRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "tenant_slug",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "pendingApprovalResponse",
       "go_type": "users.pendingApprovalResponse",
       "fields": [
@@ -112554,6 +118918,28 @@
           "name": "role_upgrade",
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "phaseExportRequest",
+      "go_type": "enrollmenthttp.phaseExportRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "format",
+          "optional": true,
+          "schema": {
+            "kind": "enum",
+            "ref": "ListFormat"
+          }
+        },
+        {
+          "name": "child_status",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -114918,6 +121304,45 @@
       ]
     },
     {
+      "name": "roomSnapshotExportRequest",
+      "go_type": "httpadapter.roomSnapshotExportRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "format",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "title",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "room_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "id"
+            }
+          }
+        },
+        {
+          "name": "include_transit",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "rosterDeviationChildResponse",
       "go_type": "timetablehttp.rosterDeviationChildResponse",
       "fields": [
@@ -115634,6 +122059,19 @@
       ]
     },
     {
+      "name": "schoolSettingMutationResponse",
+      "go_type": "operator.schoolSettingMutationResponse",
+      "fields": [
+        {
+          "name": "school_slug",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "schoolVacationAcknowledgementRequest",
       "go_type": "timetablehttp.schoolVacationAcknowledgementRequest",
       "request": true,
@@ -116324,6 +122762,39 @@
       ]
     },
     {
+      "name": "staffExportRequest",
+      "go_type": "birthdays.staffExportRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "format",
+          "optional": true,
+          "schema": {
+            "kind": "enum",
+            "ref": "ListFormat"
+          }
+        },
+        {
+          "name": "title",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "months",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "stampRequest",
       "go_type": "parent.stampRequest",
       "request": true,
@@ -116951,7 +123422,8 @@
           "name": "format",
           "optional": true,
           "schema": {
-            "kind": "string"
+            "kind": "enum",
+            "ref": "ListFormat"
           }
         },
         {

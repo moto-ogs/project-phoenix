@@ -3,23 +3,8 @@
 import { defineEntityConfig } from "@/lib/database/types";
 import type { Group, GroupWire } from "@/lib/group-helpers";
 import { mapGroupResponse } from "@/lib/group-helpers";
-import { apiErrorFromResponse, unavailableApiError } from "~/lib/api-error";
+import { bffJson } from "~/lib/bff-fetch";
 import { groupsConcept } from "~/lib/concepts/groups";
-
-/**
- * Loads one option list of the group form. A failure throws the ApiError, so
- * the form shows the catalog text with retry instead of an empty choice
- * (#2517).
- */
-async function fetchOptionsJson(url: string): Promise<unknown> {
-  const response = await fetch(url).catch((error: unknown) => {
-    throw unavailableApiError(error);
-  });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, `failed to load ${url}`);
-  }
-  return response.json() as Promise<unknown>;
-}
 
 export const groupsConfig = defineEntityConfig<Group>({
   name: {
@@ -32,7 +17,13 @@ export const groupsConfig = defineEntityConfig<Group>({
   backUrl: "/database",
 
   api: {
-    basePath: "/api/groups",
+    routes: {
+      list: "GET /api/groups/",
+      get: "GET /api/groups/{id}",
+      create: "POST /api/groups/",
+      update: "PUT /api/groups/{id}",
+      delete: "DELETE /api/groups/{id}",
+    },
   },
 
   form: {
@@ -56,14 +47,19 @@ export const groupsConfig = defineEntityConfig<Group>({
             required: false,
             optionsResource: "group-room-choice",
             options: async () => {
-              const result = (await fetchOptionsJson("/api/rooms")) as {
-                data?: Array<{ id: number | string; name: string }>;
-              };
-              const rooms = result.data ?? [];
+              // A failure throws the ApiError: the form shows the catalog
+              // text with retry instead of an empty choice (#2517).
+              const { data: rooms } = await bffJson(
+                "tenant",
+                "GET /api/rooms/",
+                {
+                  errorMessage: "failed to load /api/rooms",
+                },
+              );
               return [
                 { value: "", label: "Kein Gruppenraum" },
                 ...rooms.map((room) => ({
-                  value: room.id.toString(),
+                  value: room.id,
                   label: room.name,
                 })),
               ];
@@ -78,32 +74,11 @@ export const groupsConfig = defineEntityConfig<Group>({
             optionsResource: "group-caregiver-choice",
             options: async () => {
               // Fetch active caregivers from the canonical caregiver pool.
-              const result = (await fetchOptionsJson(
-                "/api/staff/by-role?role=user",
-              )) as
-                | {
-                    data?: Array<{
-                      id: string;
-                      full_name: string;
-                      first_name: string;
-                      last_name: string;
-                      specialization?: string;
-                      teacher_id?: string;
-                    }>;
-                  }
-                | Array<{
-                    id: string;
-                    full_name: string;
-                    first_name: string;
-                    last_name: string;
-                    specialization?: string;
-                    teacher_id?: string;
-                  }>;
-
-              // Handle both array and wrapped response formats
-              const teachers = Array.isArray(result)
-                ? result
-                : (result.data ?? []);
+              const teachers =
+                (await bffJson("tenant", "GET /api/staff/by-role", {
+                  query: { role: "user" },
+                  errorMessage: "failed to load /api/staff/by-role?role=user",
+                })) ?? [];
 
               // Use teacher_id (not staff id) to match backend group teacher assignments
               return teachers
@@ -112,12 +87,7 @@ export const groupsConfig = defineEntityConfig<Group>({
                   const name =
                     teacher.full_name ||
                     `${teacher.first_name} ${teacher.last_name}`.trim();
-                  return {
-                    value: String(teacher.teacher_id!),
-                    label: teacher.specialization
-                      ? `${name} (${teacher.specialization})`
-                      : name,
-                  };
+                  return { value: teacher.teacher_id!, label: name };
                 });
             },
             placeholder: "Gruppenleitung auswählen…",
@@ -236,28 +206,12 @@ export const groupsConfig = defineEntityConfig<Group>({
   },
 
   service: {
-    mapResponse: (data: unknown): Group => {
-      // Handle wrapped response format (for consistency)
-      let actualData = data;
-      if (
-        data &&
-        typeof data === "object" &&
-        "status" in data &&
-        "data" in data
-      ) {
-        actualData = (data as { status: string; data: unknown }).data;
-      }
-
-      return mapGroupResponse(actualData as GroupWire);
-    },
+    mapResponse: (data: unknown): Group => mapGroupResponse(data as GroupWire),
 
     mapRequest: (data: Partial<Group>) => {
       const mapped: Record<string, unknown> = {
         ...data,
-        // Backend expects these as numbers, frontend stores as strings
-        room_id: data.room_id ? Number.parseInt(data.room_id, 10) : undefined,
-        teacher_ids:
-          data.teacher_ids?.map((id) => Number.parseInt(id, 10)) ?? undefined,
+        room_id: data.room_id || undefined,
       };
 
       return mapped;

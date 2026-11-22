@@ -19,7 +19,7 @@ const api = vi.hoisted(() => ({
 }));
 vi.mock("~/lib/notification-feed-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/notification-feed-api")>()),
-  ...api,
+  ...(await import("~/test/mocks/notification-feed-api")).portalFeedApis(api),
 }));
 
 // A small stand-in for the scoped SWR hook: readers of one key share one

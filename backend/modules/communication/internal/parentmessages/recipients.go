@@ -7,11 +7,10 @@ import (
 	deliveryPorts "github.com/moto-ogs/project-phoenix/modules/communication/internal/application"
 )
 
-// authorizeThreadParticipants enforces the shared precondition for opening or
-// starting a conversation: the staffer may read the child, messaging is enabled
-// for the tenant, and the chosen recipient is an account-holding guardian of the
-// child. StartThread and OpenThread both run it so their access rules cannot
-// drift apart. Must run inside the tenant transaction.
+// authorizeThreadParticipants enforces the precondition for opening a
+// conversation: the staffer may read the child, messaging is enabled for the
+// tenant, and the chosen recipient is an account-holding guardian of the child.
+// Must run inside the tenant transaction.
 func (s *Service) authorizeThreadParticipants(ctx context.Context, studentID, guardianAccountID int64) error {
 	if err := s.canReadStudent(ctx, studentID); err != nil {
 		return err

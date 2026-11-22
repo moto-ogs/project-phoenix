@@ -16,8 +16,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
-
-	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
@@ -115,7 +113,7 @@ type ModelRequest struct {
 
 // ModelResponse mirrors the model with its entries.
 type ModelResponse struct {
-	ID                 common.ID       `json:"id"`
+	ID                 ident.ID        `json:"id"`
 	Name               string          `json:"name"`
 	RotationLength     int             `json:"rotation_length"`
 	RotationAnchorDate string          `json:"rotation_anchor_date"`

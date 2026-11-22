@@ -143,7 +143,7 @@ func legacySessionUpdate(value workforce.SessionUpdateRequest) SessionUpdateRequ
 	if value.Breaks != nil {
 		result.Breaks = make([]BreakDurationUpdate, 0, len(value.Breaks))
 		for _, update := range value.Breaks {
-			result.Breaks = append(result.Breaks, BreakDurationUpdate(update))
+			result.Breaks = append(result.Breaks, BreakDurationUpdate{ID: update.ID.Int64(), DurationMinutes: update.DurationMinutes})
 		}
 	}
 	return result

@@ -18,7 +18,9 @@ import { ChevronRight, Lock } from "lucide-react";
 import { MotoDuotoneIcon } from "~/components/ui/moto-duotone-icon";
 import type { MotoConcept } from "~/lib/moto-concepts";
 import { DatabaseCardGridSkeleton } from "./page-skeleton";
-import { apiErrorFromResponse, transportFetch } from "~/lib/api-error";
+import { ApiError } from "~/lib/api-error";
+import { bffJson } from "~/lib/bff-fetch";
+import type * as databaseContract from "~/lib/contract/database.generated";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 
 import { hasEffectiveAdminScope } from "~/lib/auth-utils";
@@ -55,32 +57,7 @@ interface DataSection {
   cta?: string;
 }
 
-interface DatabasePermissions {
-  canViewStudents: boolean;
-  canViewTeachers: boolean;
-  canViewRooms: boolean;
-  canViewActivities: boolean;
-  canViewGroups: boolean;
-  canViewRoles: boolean;
-  canViewDevices: boolean;
-  canViewPermissions: boolean;
-  canViewTimetables: boolean;
-  canViewGradeTransitions: boolean;
-}
-
-interface DatabaseCounts {
-  students: number;
-  teachers: number;
-  rooms: number;
-  activities: number;
-  groups: number;
-  roles: number;
-  devices: number;
-  permissionCount: number;
-  permissions: DatabasePermissions;
-}
-
-const EMPTY_DATABASE_PERMISSIONS: DatabasePermissions = {
+const EMPTY_DATABASE_PERMISSIONS: databaseContract.StatsPermissions = {
   canViewStudents: false,
   canViewTeachers: false,
   canViewRooms: false,
@@ -93,7 +70,7 @@ const EMPTY_DATABASE_PERMISSIONS: DatabasePermissions = {
   canViewGradeTransitions: false,
 };
 
-const EMPTY_DATABASE_COUNTS: DatabaseCounts = {
+const EMPTY_DATABASE_COUNTS: databaseContract.StatsResponse = {
   students: 0,
   teachers: 0,
   rooms: 0,
@@ -105,23 +82,22 @@ const EMPTY_DATABASE_COUNTS: DatabaseCounts = {
   permissions: EMPTY_DATABASE_PERMISSIONS,
 };
 
-async function fetchDatabaseCounts(url: string): Promise<DatabaseCounts> {
-  const response = await transportFetch(url);
-  // Ohne Recht auf die Zähler bleiben sie still leer: welche Kachel jemand
-  // sieht, entscheidet das Recht der Route, nicht diese Abfrage.
-  if (response.status === 401 || response.status === 403) {
-    return EMPTY_DATABASE_COUNTS;
+async function fetchDatabaseCounts(): Promise<databaseContract.StatsResponse> {
+  try {
+    return await bffJson("tenant", "GET /api/database/stats", {
+      errorMessage: "Database counts request failed",
+    });
+  } catch (error) {
+    // Ohne Recht auf die Zähler bleiben sie still leer: welche Kachel jemand
+    // sieht, entscheidet das Recht der Route, nicht diese Abfrage.
+    if (
+      error instanceof ApiError &&
+      (error.status === 401 || error.status === 403)
+    ) {
+      return EMPTY_DATABASE_COUNTS;
+    }
+    throw error;
   }
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Database counts request failed (${response.status})`,
-    );
-  }
-  const result = (await response.json()) as {
-    data: DatabaseCounts;
-  };
-  return result.data;
 }
 
 const baseDataSections: DataSection[] = [
@@ -282,7 +258,7 @@ function DatabaseContent() {
     mutate: mutateCounts,
   } = useSWRAuth(
     session?.user ? databaseKeys.counts() : null,
-    () => fetchDatabaseCounts("/api/database/stats"),
+    () => fetchDatabaseCounts(),
     {
       keepPreviousData: false,
       onError: (error: unknown) => {

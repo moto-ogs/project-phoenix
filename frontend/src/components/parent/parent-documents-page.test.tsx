@@ -39,6 +39,7 @@ vi.mock("~/lib/parent-api", () => ({
 import { ParentDocumentsPage } from "./parent-documents-page";
 
 const letter: ParentDocument = {
+  replaced: false,
   id: "31",
   organization_id: "4",
   traeger_name: "Ganztag im Quartier e.V.",

@@ -85,17 +85,63 @@ func OverrunRouteContracts() []common.RouteContract {
 // with patterns relative to /traeger/contract-imports. The preview and the
 // import take the same upload: the file plus the form fields.
 func ImportRouteContracts() []common.RouteContract {
+	upload := func(pattern string, response any) common.RouteContract {
+		return common.RouteContract{Method: "POST", Pattern: pattern, Portals: traegerPortal, Multipart: true,
+			MaxBodyBytes: carecontract.MaxContractImportFileBytes + importFormOverhead,
+			TooLargeCode: common.CodeCareContractImportFileTooLarge, Response: response}
+	}
+	preview := upload("/preview", carecontract.ContractImport{})
+	preview.NoCommit = "an import preview checks the file and saves no row of it"
+	// The correction of the modules imported contracts book (#7764).
+	correctionPreview := upload("/offering-corrections/preview", carecontract.OfferingCorrection{})
+	correctionPreview.NoCommit = "a correction preview checks the file and saves no version"
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: []carecontract.ContractImportEntry{}},
+		upload("/", carecontract.ContractImport{}),
+		preview,
+		upload("/offering-corrections", carecontract.OfferingCorrection{}),
+		correctionPreview,
+	}
+}
+
+// CorrectionRouteContracts registers the correction of contracts from an
+// import (#7767), with patterns relative to /traeger/contract-corrections.
+// The preview and the correction take the same upload; the list to fill in
+// answers a file.
+func CorrectionRouteContracts() []common.RouteContract {
 	upload := func(pattern string) common.RouteContract {
 		return common.RouteContract{Method: "POST", Pattern: pattern, Portals: traegerPortal, Multipart: true,
 			MaxBodyBytes: carecontract.MaxContractImportFileBytes + importFormOverhead,
-			TooLargeCode: common.CodeCareContractImportFileTooLarge, Response: carecontract.ContractImport{}}
+			TooLargeCode: common.CodeCareContractImportFileTooLarge, Response: carecontract.ContractCorrectionRun{}}
+	}
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: []carecontract.ContractCorrectionEntry{}},
+		{Method: "GET", Pattern: "/list", Portals: traegerPortal, File: true},
+		upload("/"),
+		upload("/preview"),
+	}
+}
+
+// ChildLinkRouteContracts registers the link of imported contracts to child
+// records (#7760), with patterns relative to /traeger/contract-child-links.
+// The preview and the run of a file take the upload of the import.
+func ChildLinkRouteContracts() []common.RouteContract {
+	upload := func(pattern string) common.RouteContract {
+		return common.RouteContract{Method: "POST", Pattern: pattern, Portals: traegerPortal, Multipart: true,
+			MaxBodyBytes: carecontract.MaxContractImportFileBytes + importFormOverhead,
+			TooLargeCode: common.CodeCareContractImportFileTooLarge, Response: carecontract.ChildLinking{}}
 	}
 	preview := upload("/preview")
-	preview.NoCommit = "an import preview checks the file and saves no row of it"
+	preview.NoCommit = "a link preview checks the file and links no contract"
 	return []common.RouteContract{
-		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: []carecontract.ContractImportEntry{}},
 		upload("/"),
 		preview,
+		{Method: "POST", Pattern: "/{contractId}/preview", Portals: traegerPortal, Request: ChildLinkPreviewRequest{}, Response: carecontract.ChildLinkRow{},
+			NoCommit: "a link preview compares the contract with the child record and links nothing"},
+		{Method: "PUT", Pattern: "/{contractId}", Portals: traegerPortal, Request: ChildLinkRequest{}, Response: carecontract.ChildLinkRow{}},
+		// student_id is the child record the office saw on the contract.
+		{Method: "DELETE", Pattern: "/{contractId}", Portals: traegerPortal, NoData: true,
+			Query: []common.QueryParam{{Name: "student_id", Kind: common.QueryID}}},
 	}
 }
 

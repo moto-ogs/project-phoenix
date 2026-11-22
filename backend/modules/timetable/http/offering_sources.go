@@ -27,24 +27,24 @@ type offeringSourcesResponse struct {
 // offeringSourceOptionResponse mirrors timetable.OfferingSourceOption with
 // string-keyed grade counts (JSON objects cannot carry int keys).
 type offeringSourceOptionResponse struct {
-	ID                common.ID `json:"id"`
-	Name              string    `json:"name"`
-	PhaseID           common.ID `json:"phase_id"`
-	PhaseName         string    `json:"phase_name"`
-	PhaseServiceStart string    `json:"phase_service_start,omitempty"`
-	TotalCount        int       `json:"total_count"`
+	ID                ident.ID `json:"id"`
+	Name              string   `json:"name"`
+	PhaseID           ident.ID `json:"phase_id"`
+	PhaseName         string   `json:"phase_name"`
+	PhaseServiceStart string   `json:"phase_service_start,omitempty"`
+	TotalCount        int      `json:"total_count"`
 	// GradeCounts maps Jahrgang (as string) → approved children; key "0"
 	// collects children without a derivable grade.
 	GradeCounts            map[string]int                    `json:"grade_counts"`
 	SourcedTemplates       []offeringSourcedTemplateResponse `json:"sourced_templates"`
-	LegacyLinkedTemplateID *common.ID                        `json:"legacy_linked_template_id,omitempty"`
+	LegacyLinkedTemplateID *ident.ID                         `json:"legacy_linked_template_id,omitempty"`
 }
 
 type offeringSourcedTemplateResponse struct {
-	ID            common.ID `json:"id"`
-	Name          string    `json:"name"`
-	GradeLevels   []int     `json:"grade_levels,omitempty"`
-	SchoolClasses []string  `json:"school_classes,omitempty"`
+	ID            ident.ID `json:"id"`
+	Name          string   `json:"name"`
+	GradeLevels   []int    `json:"grade_levels,omitempty"`
+	SchoolClasses []string `json:"school_classes,omitempty"`
 }
 
 // listOfferingSources handles GET /api/timetable/offering-sources.
@@ -119,8 +119,8 @@ type combinedOfferingCountsResponse struct {
 }
 
 type combinedOfferingStudentResponse struct {
-	StudentID   common.ID `json:"student_id"`
-	SchoolClass string    `json:"school_class,omitempty"`
+	StudentID   ident.ID `json:"student_id"`
+	SchoolClass string   `json:"school_class,omitempty"`
 }
 
 // getCombinedOfferingSourceCounts handles

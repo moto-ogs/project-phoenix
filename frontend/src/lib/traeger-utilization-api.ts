@@ -1,3 +1,4 @@
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the Träger's utilization over time (#4713, ADR 0241): for a
  * window, one value per weekday for every school, care offering and room.
@@ -10,16 +11,14 @@ import {
   downloadTraegerList,
   type TraegerListFile,
   type TraegerListFormat,
+  listExportQuery,
 } from "./traeger-list-export";
 import type * as traegerSchoolsContract from "./contract/traeger-schools.generated";
 import { requiredDay } from "./contract/required-day";
 import type { TraegerSchool } from "./traeger-api";
-import { traegerRequest } from "./traeger-api";
 
 /** The right that opens the children of a school by name (ADR 0156, 0241). */
 export const UTILIZATION_NAMES_RIGHT = "traeger_contracts:manage";
-
-const UTILIZATION_PATH = "/api/traeger/schools/utilization";
 
 export interface UtilizationOffering {
   readonly id: string;
@@ -95,10 +94,8 @@ export interface UtilizationWindow {
   readonly to: string;
 }
 
-function windowQuery(window: UtilizationWindow, schoolId?: string): string {
-  const query = new URLSearchParams({ from: window.from, to: window.to });
-  if (schoolId) query.set("school", schoolId);
-  return query.toString();
+function windowQuery(window: UtilizationWindow, schoolId?: string) {
+  return { from: window.from, to: window.to, school: schoolId || undefined };
 }
 
 function utilizationFromBackend(
@@ -144,9 +141,9 @@ export async function fetchTraegerUtilization(
   window: UtilizationWindow,
 ): Promise<TraegerUtilization> {
   return utilizationFromBackend(
-    await traegerRequest<traegerSchoolsContract.Utilization>(
-      `${UTILIZATION_PATH}?${windowQuery(window)}`,
-    ),
+    await bffJson("org", "GET /traeger/schools/utilization", {
+      query: windowQuery(window),
+    }),
   );
 }
 
@@ -155,8 +152,10 @@ export async function fetchUtilizationChildren(
   schoolId: string,
   window: UtilizationWindow,
 ): Promise<UtilizationChildren> {
-  const body = await traegerRequest<traegerSchoolsContract.UtilizationChildren>(
-    `/api/traeger/schools/${encodeURIComponent(schoolId)}/utilization/children?${windowQuery(window)}`,
+  const body = await bffJson(
+    "org",
+    "GET /traeger/schools/{id}/utilization/children",
+    { params: { id: schoolId }, query: windowQuery(window) },
   );
   return {
     schoolId: body.school.id,
@@ -185,9 +184,13 @@ export function downloadTraegerUtilization(
   schoolId: string | undefined,
   format: TraegerListFormat,
 ): Promise<TraegerListFile> {
-  return downloadTraegerList(`${UTILIZATION_PATH}/export`, format, {
-    from: window.from,
-    to: window.to,
-    school: schoolId,
-  });
+  return downloadTraegerList(
+    bffFile("org", "GET /traeger/schools/utilization/export", {
+      query: listExportQuery(format, {
+        from: window.from,
+        to: window.to,
+        school: schoolId,
+      }),
+    }),
+  );
 }

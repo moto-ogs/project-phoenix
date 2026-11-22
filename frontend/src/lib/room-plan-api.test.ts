@@ -2,6 +2,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { fetchRoomPlanBlocks } from "./room-plan-api";
 
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 const originalFetch = globalThis.fetch;
 
 afterEach(() => {

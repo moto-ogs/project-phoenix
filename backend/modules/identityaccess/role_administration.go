@@ -201,7 +201,6 @@ type PermissionQuery interface {
 
 // PermissionCommand changes permissions and role selections. Role selections of system roles are immutable.
 type PermissionCommand interface {
-	CreatePermission(ctx context.Context, name, description, resource, action string) (Permission, error)
 	AssignPermissionToRole(ctx context.Context, roleID, permissionID int64) error
 	// ReplaceRolePermissions applies a complete selection atomically; an
 	// invalid request leaves the current selection untouched. A reserved

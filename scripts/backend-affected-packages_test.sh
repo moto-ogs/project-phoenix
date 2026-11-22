@@ -104,7 +104,7 @@ mkdir -p "$fixture/backend"/{testdata,sharedfixtureuser}
 printf 'package sharedfixtureuser\n\nconst path = "../testdata/shared-cases.json"\n' >"$fixture/backend/sharedfixtureuser/cases_test.go"
 printf 'package main\n\nfunc main() {}\n' >"$fixture/backend/cmd/main.go"
 printf 'package main\n' >"$fixture/backend/cmd/main_test.go"
-# Depth-2 import chain for the --direct (depth 1) mode, deliberately separate
+# Import chain for the --changed mode (no importers), deliberately separate
 # from the core chain so the existing closure assertions stay untouched.
 mkdir -p "$fixture/backend"/{chainbase,chainmid,chainleaf}
 printf 'package chainbase\n\nconst Value = 1\n' >"$fixture/backend/chainbase/chainbase.go"
@@ -159,9 +159,9 @@ select_packages() {
   (cd "$working_directory" && "$repo_root/scripts/backend-affected-packages.sh" HEAD)
 }
 
-select_packages_direct() {
+select_packages_changed() {
   working_directory=${1:-$fixture}
-  (cd "$working_directory" && "$repo_root/scripts/backend-affected-packages.sh" --direct HEAD)
+  (cd "$working_directory" && "$repo_root/scripts/backend-affected-packages.sh" --changed HEAD)
 }
 
 select_lint_packages() {
@@ -185,12 +185,12 @@ assert_output() {
   fi
 }
 
-assert_output_direct() {
+assert_output_changed() {
   expected=$1
   working_directory=${2:-$fixture}
-  actual=$(select_packages_direct "$working_directory")
+  actual=$(select_packages_changed "$working_directory")
   if [ "$actual" != "$expected" ]; then
-    printf 'expected (direct):\n%s\nactual:\n%s\n' "$expected" "$actual" >&2
+    printf 'expected (changed):\n%s\nactual:\n%s\n' "$expected" "$actual" >&2
     exit 1
   fi
 }
@@ -295,13 +295,13 @@ printf 'template\n' >"$fixture/backend/templates/email/probe.html"
 assert_output $'example.test/project/templates/email\nexample.test/project/test'
 rm "$fixture/backend/templates/email/probe.html"
 
-# Audit SQL has no import edge. CI selects its test package, while --direct
+# Audit SQL has no import edge. CI selects its test package, while --changed
 # leaves the targeted source-test selection to test-changed.sh.
 for audit in "${audit_names[@]}"; do
   audit_path="backend/database/audits/$audit.sql"
   printf '\n-- changed\n' >>"$fixture/$audit_path"
   assert_output 'example.test/project/test'
-  assert_output_direct ''
+  assert_output_changed ''
   git -C "$fixture" restore "$audit_path"
   rm "$fixture/$audit_path"
   assert_output 'example.test/project/test'
@@ -384,28 +384,28 @@ for artifact in command-effects passthrough; do
 done
 printf '{"changed":true}\n' >"$fixture/backend/test/query-budgets/api/students/list.json"
 assert_output $'example.test/project/budgetuser\nexample.test/project/internal/architecture\nexample.test/project/test\nexample.test/project/test/query-budgets'
-assert_output_direct $'example.test/project/budgetuser\nexample.test/project/internal/architecture\nexample.test/project/test/query-budgets'
+assert_output_changed $'example.test/project/internal/architecture\nexample.test/project/test/query-budgets'
 git -C "$fixture" restore backend/test/query-budgets/api/students/list.json
 
 
 printf '\n// changed\n' >>"$fixture/backend/go.mod"
 assert_output './...'
-assert_output_direct './...'
+assert_output_changed './...'
 git -C "$fixture" restore backend/go.mod
 
-# --direct: depth-1 importers only, and no auto-appended ./test package.
+# --changed: no importers at any depth, and no auto-appended ./test package.
 printf '\n// changed\n' >>"$fixture/backend/chainbase/chainbase.go"
 assert_output $'example.test/project/chainbase\nexample.test/project/chainleaf\nexample.test/project/chainmid\nexample.test/project/test'
-assert_output_direct $'example.test/project/chainbase\nexample.test/project/chainmid'
+assert_output_changed 'example.test/project/chainbase'
 git -C "$fixture" restore backend/chainbase/chainbase.go
 
 printf '\n// changed\n' >>"$fixture/backend/chainbase/chainbase_test.go"
-assert_output_direct 'example.test/project/chainbase'
+assert_output_changed 'example.test/project/chainbase'
 git -C "$fixture" restore backend/chainbase/chainbase_test.go
 
 printf '\n// changed\n' >>"$fixture/backend/graphbase/base.go"
 assert_output $'example.test/project/graphbase\nexample.test/project/legitimate.test\nexample.test/project/test\nexample.test/project/testonly'
-assert_output_direct $'example.test/project/graphbase\nexample.test/project/legitimate.test\nexample.test/project/testonly'
+assert_output_changed 'example.test/project/graphbase'
 git -C "$fixture" restore backend/graphbase/base.go
 
 # Removing an unused package must validate imports without compiling the whole

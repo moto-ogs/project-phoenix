@@ -1,5 +1,6 @@
 "use client";
 
+import type * as studentsContract from "~/lib/contract/students.generated";
 import {
   useCallback,
   useEffect,
@@ -76,8 +77,6 @@ import {
   applyStudentPickupAdjustment,
   previewStudentPickupAdjustment,
   replaceStudentWeekdayPickupNotes,
-  type PickupAdjustmentPayload,
-  type PickupAdjustmentPreview,
   resetStudentPickupToOffering,
   updateStudentPickupException,
   updateStudentPickupNote,
@@ -142,7 +141,7 @@ function weeklyPickupAdjustmentPayload(
   data: CarePlanWeeklySubmit,
   adjustment: CarePlanWeeklyAdjustment | undefined,
   effectiveFrom: string,
-): PickupAdjustmentPayload {
+): studentsContract.pickupAdjustmentRequest & { effective_from: string } {
   return {
     schedules: data.pickupSchedules.map((schedule) => ({
       weekday: schedule.weekday,
@@ -158,10 +157,12 @@ function weeklyPickupAdjustmentPayload(
 
 async function applyWeeklyPickupAdjustment(
   studentId: string,
-  payload: PickupAdjustmentPayload,
+  payload: studentsContract.pickupAdjustmentRequest & {
+    effective_from: string;
+  },
   adjustment?: CarePlanWeeklyAdjustment,
   onRosterImpact?: (impact: RosterImpact | null) => void,
-): Promise<PickupAdjustmentPreview | undefined> {
+): Promise<studentsContract.pickupAdjustmentPreviewResponse | undefined> {
   let preview = adjustment?.preview;
   if (!preview) {
     preview = await previewStudentPickupAdjustment(studentId, payload);

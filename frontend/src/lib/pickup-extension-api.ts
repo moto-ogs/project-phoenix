@@ -1,5 +1,5 @@
-import type * as wire from "~/lib/contract/timetable.generated";
-import { apiErrorFromBody, transportFetch } from "./api-error";
+import { bffJson } from "./bff-fetch";
+import type * as timetableContract from "./contract/timetable.generated";
 /**
  * Client for the later-pickup block decisions (#3261). A child who is picked
  * up later than before may be on no block for the extra time; the backend
@@ -34,25 +34,8 @@ export interface PickupExtension {
   readonly blocks: readonly PickupExtensionBlock[];
 }
 
-async function readData<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    let payload: unknown;
-    try {
-      payload = await response.json();
-    } catch {
-      // Body wasn't JSON; the status still classifies.
-    }
-    throw apiErrorFromBody(
-      `pickup extension request failed (${response.status})`,
-      response.status,
-      payload,
-    );
-  }
-  return (await response.json()) as T;
-}
-
 function mapPickupExtension(
-  raw: wire.pickupExtensionResponse,
+  raw: timetableContract.pickupExtensionResponse,
 ): PickupExtension {
   return {
     id: raw.id,
@@ -77,21 +60,15 @@ function mapPickupExtension(
 export async function fetchPickupExtensions(
   studentId?: string,
 ): Promise<PickupExtension[]> {
-  const query = studentId ? `?student_id=${encodeURIComponent(studentId)}` : "";
-  const response = await transportFetch(
-    `/api/timetable/pickup-extensions${query}`,
+  const data = await bffJson(
+    "tenant",
+    "GET /api/timetable/pickup-extensions/",
     {
-      method: "GET",
-      headers: { Accept: "application/json" },
-      credentials: "include",
+      query: { student_id: studentId || undefined },
+      errorMessage: "pickup extension request failed",
     },
   );
-  // The catalog proxy passes the backend's envelope through:
-  // { status, data: { tasks } } (#3776).
-  const responseData = await readData<{
-    data: wire.pickupExtensionsResponse;
-  }>(response);
-  return (responseData.data.tasks ?? []).map(mapPickupExtension);
+  return (data.tasks ?? []).map(mapPickupExtension);
 }
 
 /**
@@ -102,14 +79,13 @@ export async function resolvePickupExtension(
   taskId: string,
   blockIds: readonly string[],
 ): Promise<void> {
-  const response = await transportFetch(
-    `/api/timetable/pickup-extensions/${encodeURIComponent(taskId)}/resolve`,
+  await bffJson(
+    "tenant",
+    "POST /api/timetable/pickup-extensions/{id}/resolve",
     {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ block_ids: blockIds.map(Number) }),
+      params: { id: taskId },
+      body: { block_ids: [...blockIds] },
+      errorMessage: "pickup extension request failed",
     },
   );
-  await readData<unknown>(response);
 }

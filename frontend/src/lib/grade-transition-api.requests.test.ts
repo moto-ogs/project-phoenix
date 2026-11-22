@@ -4,8 +4,15 @@
 // fetch plumbing: request shape (method, URL, body), the { data } unwrapping,
 // and the error paths that must preserve the backend's stable error code.
 
-import type * as wire from "~/lib/contract/admin.generated";
+import type * as adminContract from "~/lib/contract/admin.generated";
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
+
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
+import { pagedJson } from "~/test/mocks/plain-session-fetch";
 import { ApiError } from "./api-error";
 import {
   createGradeTransition,
@@ -52,6 +59,13 @@ const okData = (data: unknown) => ({
   json: () => Promise.resolve({ data }),
 });
 
+/** An ok page of the paginated list route. */
+const okPage = (rows: unknown[] | null) => ({
+  ok: true,
+  status: 200,
+  json: () => Promise.resolve({ ...pagedJson(rows ?? []), data: rows }),
+});
+
 /** An ok response whose body IS the payload (no { data } envelope). */
 const okBare = (body: unknown) => ({
   ok: true,
@@ -76,7 +90,7 @@ const failUnparseable = (status: number) => ({
 const parseBody = (init?: RequestInit) =>
   JSON.parse(String(init?.body ?? "null")) as Record<string, unknown>;
 
-const transitionRow: wire.TransitionResponse = {
+const transitionRow: adminContract.TransitionResponse = {
   id: "7",
   academic_year: "2026-2027",
   status: "draft",
@@ -87,7 +101,7 @@ const transitionRow: wire.TransitionResponse = {
   can_revert: false,
 };
 
-const resultRow: wire.TransitionResultResponse = {
+const resultRow: adminContract.TransitionResultResponse = {
   warnings: null,
   transition_id: "7",
   status: "applied",
@@ -251,7 +265,7 @@ describe("deleteGradeTransition", () => {
 });
 
 describe("previewGradeTransition", () => {
-  const preview: wire.TransitionPreviewResponse = {
+  const preview: adminContract.TransitionPreviewResponse = {
     transition_id: "7",
     academic_year: "2026-2027",
     total_students: 50,
@@ -276,7 +290,9 @@ describe("previewGradeTransition", () => {
     const p = await previewGradeTransition("7");
 
     expect(calls[0]?.url).toBe(`${BASE}/7/preview`);
-    expect(calls[0]?.init?.cache).toBe("no-store");
+    // Uncached: the catalog proxy answers `private, no-store`
+    // (catalog-proxy.server.test.ts).
+    expect(calls[0]?.init?.method).toBe("GET");
     expect(p.fingerprint).toBe("sha256:abc");
     expect(p.unmappedClasses).toEqual([]);
     expect(p.warnings).toEqual([]);
@@ -290,10 +306,13 @@ describe("previewGradeTransition", () => {
     expect((await previewGradeTransition("7")).fingerprint).toBe("");
   });
 
-  it("accepts a bare payload without the { data } envelope", async () => {
+  it("refuses a bare payload without the { data } envelope", async () => {
     stubOnce(okBare(preview));
 
-    expect((await previewGradeTransition("7")).transitionId).toBe("7");
+    await expect(previewGradeTransition("7")).rejects.toMatchObject({
+      status: 502,
+      code: "general.unavailable",
+    });
   });
 
   it("uses the status fallback on failure", async () => {
@@ -338,10 +357,14 @@ describe("applyGradeTransition", () => {
     expect(parseBody(calls[0]?.init)).toEqual({});
   });
 
-  it("reads a result sent without the { data } envelope", async () => {
+  it("refuses a result sent without the { data } envelope", async () => {
     stubOnce(okBare(resultRow));
 
-    expect((await applyGradeTransition("7")).transitionId).toBe("7");
+    // A write may have happened: the person reloads before trying again.
+    await expect(applyGradeTransition("7")).rejects.toMatchObject({
+      status: 502,
+      code: "general.write_answer_unreadable",
+    });
   });
 
   it("keeps the graduates_checked_in code on a 409", async () => {
@@ -380,7 +403,8 @@ describe("applyGradeTransition", () => {
 });
 
 describe("revertGradeTransition", () => {
-  it("POSTs an empty body to the revert route", async () => {
+  // The route carries no request body in its contract; the handler reads none.
+  it("POSTs to the revert route without a body", async () => {
     stubOnce(
       okData({ ...resultRow, status: "reverted", warnings: ["hinweis"] }),
     );
@@ -389,7 +413,7 @@ describe("revertGradeTransition", () => {
 
     expect(calls[0]?.url).toBe(`${BASE}/7/revert`);
     expect(calls[0]?.init?.method).toBe("POST");
-    expect(parseBody(calls[0]?.init)).toEqual({});
+    expect(calls[0]?.init?.body).toBeUndefined();
     expect(r.status).toBe("reverted");
     expect(r.warnings).toEqual(["hinweis"]);
   });
@@ -428,7 +452,9 @@ describe("fetchTransitionClasses", () => {
 
     expect(await fetchTransitionClasses()).toEqual(["1a", "2a", "4b"]);
     expect(calls[0]?.url).toBe(`${BASE}/classes`);
-    expect(calls[0]?.init?.cache).toBe("no-store");
+    // Uncached: the catalog proxy answers `private, no-store`
+    // (catalog-proxy.server.test.ts).
+    expect(calls[0]?.init?.method).toBe("GET");
   });
 
   it("returns an empty list when the payload is null", async () => {
@@ -446,7 +472,7 @@ describe("fetchTransitionClasses", () => {
 
 describe("fetchSuggestedMappings", () => {
   it("maps every suggestion", async () => {
-    const suggestions: wire.SuggestedMappingResponse[] = [
+    const suggestions: adminContract.SuggestedMappingResponse[] = [
       {
         from_class: "1a",
         to_class: "2a",
@@ -480,7 +506,7 @@ describe("fetchSuggestedMappings", () => {
 
 describe("fetchTransitionHistory", () => {
   it("maps every ledger row for the escaped id", async () => {
-    const rows: wire.TransitionHistoryResponse[] = [
+    const rows: adminContract.TransitionHistoryResponse[] = [
       {
         id: "3",
         transition_id: "7",
@@ -498,7 +524,9 @@ describe("fetchTransitionHistory", () => {
     const history = await fetchTransitionHistory("7");
 
     expect(calls[0]?.url).toBe(`${BASE}/7/history`);
-    expect(calls[0]?.init?.cache).toBe("no-store");
+    // Uncached: the catalog proxy answers `private, no-store`
+    // (catalog-proxy.server.test.ts).
+    expect(calls[0]?.init?.method).toBe("GET");
     expect(history[0]?.studentState).toBe("purged");
   });
 
@@ -539,16 +567,18 @@ describe("purgeGraduatedStudent", () => {
 
 describe("listGradeTransitions request handling", () => {
   it("requests uncached keyset windows of 100", async () => {
-    stubOnce(okData([transitionRow]));
+    stubOnce(okPage([transitionRow]));
 
     await listGradeTransitions();
 
     expect(calls[0]?.url).toBe(`${BASE}?after_id=0&page_size=100`);
-    expect(calls[0]?.init?.cache).toBe("no-store");
+    // Uncached: the catalog proxy answers `private, no-store`
+    // (catalog-proxy.server.test.ts).
+    expect(calls[0]?.init?.method).toBe("GET");
   });
 
   it("tolerates a null payload", async () => {
-    stubOnce(okData(null));
+    stubOnce(okPage(null));
 
     expect(await listGradeTransitions()).toEqual([]);
     expect(calls).toHaveLength(1);
@@ -562,7 +592,7 @@ describe("listGradeTransitions request handling", () => {
       ...transitionRow,
       id: String(i + 1),
     }));
-    stubOnce(okData(fullPage));
+    stubOnce(okPage(fullPage));
 
     const result = await listGradeTransitions();
 

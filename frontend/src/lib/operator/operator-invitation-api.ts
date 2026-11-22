@@ -1,4 +1,4 @@
-import { operatorFetch } from "./api-helpers";
+import { bffJson } from "~/lib/bff-fetch";
 import type * as operatorInvitationsContract from "~/lib/contract/operator-invitations.generated";
 import type {
   InvitationValidationBody,
@@ -31,8 +31,7 @@ export async function createOperatorInvitation(
   data: CreateOperatorInvitationRequest,
 ): Promise<void> {
   // Convert camelCase frontend shape to the snake_case the backend expects.
-  await operatorFetch<unknown>("/api/operator/invitations", {
-    method: "POST",
+  await bffJson("platform", "POST /operator/invitations/", {
     body: {
       email: data.email,
       display_name: data.displayName,
@@ -41,10 +40,7 @@ export async function createOperatorInvitation(
 }
 
 export async function listOperatorInvitations(): Promise<OperatorInvitationsData> {
-  const raw =
-    await operatorFetch<operatorInvitationsContract.InvitationsListResponse>(
-      "/api/operator/invitations",
-    );
+  const raw = await bffJson("platform", "GET /operator/invitations/");
   // Go lists pointers; the contract types an entry nullable.
   return {
     invitations: (raw.invitations ?? [])
@@ -57,31 +53,27 @@ export async function listOperatorInvitations(): Promise<OperatorInvitationsData
 }
 
 export async function resendOperatorInvitation(id: string): Promise<void> {
-  await operatorFetch<unknown>(
-    `/api/operator/invitations/${encodeURIComponent(id)}/resend`,
-    { method: "POST" },
-  );
+  await bffJson("platform", "POST /operator/invitations/{id}/resend", {
+    params: { id },
+  });
 }
 
 export async function revokeOperatorInvitation(id: string): Promise<void> {
-  await operatorFetch<unknown>(
-    `/api/operator/invitations/${encodeURIComponent(id)}`,
-    { method: "DELETE" },
-  );
+  await bffJson("platform", "DELETE /operator/invitations/{id}", {
+    params: { id },
+  });
 }
 
 export async function deactivateOperator(id: string): Promise<void> {
-  await operatorFetch<unknown>(
-    `/api/operator/operators/${encodeURIComponent(id)}/deactivate`,
-    { method: "POST" },
-  );
+  await bffJson("platform", "POST /operator/operators/{id}/deactivate", {
+    params: { id },
+  });
 }
 
 export async function reactivateOperator(id: string): Promise<void> {
-  await operatorFetch<unknown>(
-    `/api/operator/operators/${encodeURIComponent(id)}/reactivate`,
-    { method: "POST" },
-  );
+  await bffJson("platform", "POST /operator/operators/{id}/reactivate", {
+    params: { id },
+  });
 }
 
 // --- Public (unauthenticated) API functions ---
@@ -103,17 +95,8 @@ export async function establishOperatorInvitationSession(
       `Invitation session failed (${response.status})`,
     );
   }
-  const body: unknown = await response.json();
-  if (
-    typeof body !== "object" ||
-    body === null ||
-    !("flow_id" in body) ||
-    typeof body.flow_id !== "string" ||
-    body.flow_id === ""
-  ) {
-    throw new Error("Einladungssitzung ist ungültig");
-  }
-  return body.flow_id;
+  const { data } = (await response.json()) as ApiResponse<{ flow_id: string }>;
+  return data.flow_id;
 }
 
 export async function validateOperatorInvitation(

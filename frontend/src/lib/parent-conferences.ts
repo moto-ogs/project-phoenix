@@ -4,36 +4,25 @@
 // Gesprächslänge und Pausen; diese Datei hält Typen, Aufrufe und die Prüfung
 // des Formulars. Die Aufrufe der Eltern-App liegen in `parent-api.ts`.
 
-import { authFetch } from "~/lib/api-helpers";
+import { bffJson } from "~/lib/bff-fetch";
+import { requiredDay } from "~/lib/contract/required-day";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
+import type * as schoolCalendarContract from "~/lib/contract/school-calendar.generated";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 
-interface ProxyResponse<T> {
-  readonly data: T;
-}
+export type ParentConferenceWindow = sharedContract.ParentConferenceWindow;
 
-export interface ParentConferenceWindow {
-  readonly start_time: string;
-  readonly end_time: string;
-}
-
-export interface ParentConferenceSlot extends ParentConferenceWindow {
-  readonly booked: boolean;
-  readonly student_id?: string;
-  readonly student_name?: string;
-}
+export type ParentConferenceSlot = schoolCalendarContract.ParentConferenceSlot;
 
 /** Ein Sprechtag, wie ihn die Lehrkraft sieht: mit Belegung. */
-export interface ParentConference {
-  readonly id: string;
-  readonly school_class: string;
+export type ParentConference = Omit<
+  schoolCalendarContract.ParentConferenceView,
+  "date" | "breaks" | "slots"
+> & {
   readonly date: string;
-  readonly start_time: string;
-  readonly end_time: string;
-  readonly slot_minutes: number;
   readonly breaks: readonly ParentConferenceWindow[];
-  readonly location?: string;
-  readonly booked_count: number;
   readonly slots: readonly ParentConferenceSlot[];
-}
+};
 
 export interface SchoolParentConferenceList {
   readonly conferences: readonly ParentConference[];
@@ -41,17 +30,15 @@ export interface SchoolParentConferenceList {
 }
 
 /** Ein Sprechtag, wie ihn die Eltern für ein Kind sehen. */
-export interface ParentConferenceOffer {
-  readonly id: string;
-  readonly school_class: string;
-  readonly teacher_name: string;
+export type ParentConferenceOffer = Omit<
+  parentMeContract.ParentConferenceOffer,
+  "date" | "free_slots"
+> & {
   readonly date: string;
-  readonly location?: string;
   readonly free_slots: readonly ParentConferenceWindow[];
-  readonly booking?: ParentConferenceWindow;
-  readonly can_change: boolean;
-}
+};
 
+/** What the form sends; the backend reads it as ParentConferenceRequest. */
 export interface ParentConferenceRequest {
   readonly school_class: string;
   readonly date: string;
@@ -62,48 +49,74 @@ export interface ParentConferenceRequest {
   readonly location?: string;
 }
 
+// Go always sets the day of a Sprechtag; the contract types calendar.Date as
+// nullable.
+function mapConference(
+  raw: schoolCalendarContract.ParentConferenceView,
+): ParentConference {
+  return {
+    ...raw,
+    date: requiredDay(raw.date, "parent_conference.date"),
+    breaks: raw.breaks ?? [],
+    slots: raw.slots ?? [],
+  };
+}
+
+export function mapParentConferenceOffer(
+  raw: parentMeContract.ParentConferenceOffer,
+): ParentConferenceOffer {
+  return {
+    ...raw,
+    date: requiredDay(raw.date, "parent_conference_offer.date"),
+    free_slots: raw.free_slots ?? [],
+  };
+}
+
 export const SCHOOL_PARENT_CONFERENCES_ROUTE = "/school/elternsprechtag";
-const SCHOOL_BASE = "/api/school/calendar/parent-conferences";
 
 export async function fetchSchoolParentConferences(): Promise<SchoolParentConferenceList> {
-  const response =
-    await authFetch<ProxyResponse<Partial<SchoolParentConferenceList>>>(
-      SCHOOL_BASE,
-    );
+  const data = await bffJson(
+    "school",
+    "GET /school/calendar/parent-conferences",
+  );
   return {
-    conferences: response.data.conferences ?? [],
-    classes: response.data.classes ?? [],
+    conferences: (data.conferences ?? []).map(mapConference),
+    classes: data.classes ?? [],
   };
 }
 
 export async function createSchoolParentConference(
   request: ParentConferenceRequest,
 ): Promise<ParentConference> {
-  const response = await authFetch<ProxyResponse<ParentConference>>(
-    SCHOOL_BASE,
-    {
-      method: "POST",
-      body: request,
-    },
+  return mapConference(
+    await bffJson("school", "POST /school/calendar/parent-conferences", {
+      body: { ...request, breaks: [...request.breaks] },
+    }),
   );
-  return response.data;
 }
 
 export async function updateSchoolParentConference(
   id: string,
   request: ParentConferenceRequest,
 ): Promise<ParentConference> {
-  const response = await authFetch<ProxyResponse<ParentConference>>(
-    `${SCHOOL_BASE}/${encodeURIComponent(id)}`,
-    { method: "PUT", body: request },
+  return mapConference(
+    await bffJson(
+      "school",
+      "PUT /school/calendar/parent-conferences/{conferenceId}",
+      {
+        params: { conferenceId: id },
+        body: { ...request, breaks: [...request.breaks] },
+      },
+    ),
   );
-  return response.data;
 }
 
 export async function deleteSchoolParentConference(id: string): Promise<void> {
-  await authFetch<unknown>(`${SCHOOL_BASE}/${encodeURIComponent(id)}`, {
-    method: "DELETE",
-  });
+  await bffJson(
+    "school",
+    "DELETE /school/calendar/parent-conferences/{conferenceId}",
+    { params: { conferenceId: id } },
+  );
 }
 
 export interface ParentConferenceDraft {

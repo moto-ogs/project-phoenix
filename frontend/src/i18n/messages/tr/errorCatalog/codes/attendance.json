@@ -1,4 +1,5 @@
 {
+  "checkin_staff_profile_required": "Çocukların giriş ve çıkışını yalnızca okul personeli kaydedebilir. Hesabınızın bu okulda personel profili yok.",
   "log_disabled": "{object} için erişim izniniz yok. Okulla iletişime geçin.",
   "web_disabled": "{object} için erişim izniniz yok. Okulla iletişime geçin."
 }

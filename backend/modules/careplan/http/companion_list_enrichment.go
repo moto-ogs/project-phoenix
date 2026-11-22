@@ -11,7 +11,7 @@ func toCompanionLinks(entries []CompanionEntry) []departure.CompanionLink {
 	links := make([]departure.CompanionLink, 0, len(entries))
 	for _, entry := range entries {
 		links = append(links, departure.CompanionLink{
-			CompanionStudentID: entry.CompanionStudentID,
+			CompanionStudentID: entry.CompanionStudentID.Int64(),
 			Weekdays:           entry.Weekdays,
 		})
 	}

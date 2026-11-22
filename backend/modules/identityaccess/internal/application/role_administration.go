@@ -723,23 +723,3 @@ func (r *RoleAdministration) AccountsHoldingRole(ctx context.Context, accountIDs
 	})
 	return
 }
-
-func (r *RoleAdministration) CreatePermission(ctx context.Context, name, description, resource, action string) (value0 identityaccess.Permission, err error) {
-	if r == nil {
-		return identityaccess.Permission{}, errRoleAdministrationUnavailable
-	}
-	operation := func(ctx context.Context) (identityaccess.Permission, error) {
-		permission, err := r.store.CreatePermission(bindRuntime(r.attach, ctx), domain.ManagedPermission{
-			Name: name, Description: description, Resource: resource, Action: action,
-		})
-		if err != nil {
-			return identityaccess.Permission{}, roleError(failed("create permission", err))
-		}
-		return identityaccess.Permission(permission), nil
-	}
-	err = globalIdentityRead(ctx, r.runtime, func(txCtx context.Context) error {
-		value0, err = operation(txCtx)
-		return err
-	})
-	return
-}

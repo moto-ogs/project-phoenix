@@ -29,7 +29,6 @@ import {
   stopChildRoomHistory,
   withdrawChildPhotoConsent,
   type ChildConsent,
-  type ChildConsentState,
   type ChildRoomHistoryStop,
 } from "~/lib/parent-api";
 import { confirmationsConcept } from "~/lib/concepts/confirmations";
@@ -360,7 +359,7 @@ export function ChildConsentsSection({
   );
 }
 
-function stateTone(state: ChildConsentState): StatusBadgeTone {
+function stateTone(state: string): StatusBadgeTone {
   if (state === "granted" || state === "recording") return "green";
   if (state === "withdrawn" || state === "stopped") return "orange";
   return "gray";

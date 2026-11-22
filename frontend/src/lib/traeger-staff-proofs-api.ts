@@ -1,3 +1,4 @@
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 /**
  * Nachweise am Personalstamm des Trägers (#4707, ADR 0089 Abschnitt 7,
  * ADR 0238).
@@ -14,13 +15,11 @@ import {
   downloadTraegerList,
   type TraegerListFile,
   type TraegerListFormat,
+  listExportQuery,
 } from "./traeger-list-export";
 import type * as traegerStaffProofsContract from "./contract/traeger-staff-proofs.generated";
 import type * as sharedContract from "./contract/shared.generated";
 import { knownEnum } from "./contract/known-enum";
-import { traegerRequest } from "~/lib/traeger-api";
-
-const BASE = "/api/traeger/staff-proofs";
 
 // Go does not register the set; the contract types it as string. A value
 // this build does not know stays undefined and shows as „–“.
@@ -172,10 +171,7 @@ function mapSchoolKinds(
 }
 
 export async function fetchStaffProofList(): Promise<StaffProofList> {
-  const data =
-    await traegerRequest<traegerStaffProofsContract.TraegerStaffProofList>(
-      BASE,
-    );
+  const data = await bffJson("org", "GET /traeger/staff-proofs/");
   return {
     today: data.today,
     types: (data.types ?? []).map(mapType),
@@ -217,18 +213,20 @@ export async function saveStaffProofType(
   input: StaffProofTypeInput,
 ): Promise<StaffProofType> {
   return mapType(
-    await traegerRequest<traegerStaffProofsContract.TraegerStaffProofType>(
-      id === null ? `${BASE}/types` : `${BASE}/types/${encodeURIComponent(id)}`,
-      { method: id === null ? "POST" : "PUT", body: typeBody(input) },
-    ),
+    await (id === null
+      ? bffJson("org", "POST /traeger/staff-proofs/types", {
+          body: typeBody(input),
+        })
+      : bffJson("org", "PUT /traeger/staff-proofs/types/{id}", {
+          params: { id },
+          body: typeBody(input),
+        })),
   );
 }
 
 export async function fetchSchoolProofKinds(): Promise<SchoolProofKinds[]> {
   return mapSchoolKinds(
-    await traegerRequest<traegerStaffProofsContract.TraegerSchoolProofKinds[]>(
-      `${BASE}/school-kinds`,
-    ),
+    await bffJson("org", "GET /traeger/staff-proofs/school-kinds"),
   );
 }
 
@@ -238,32 +236,26 @@ export async function mapSchoolProofKind(
   proofTypeId: string | null,
 ): Promise<SchoolProofKinds[]> {
   return mapSchoolKinds(
-    await traegerRequest<traegerStaffProofsContract.TraegerSchoolProofKinds[]>(
-      `${BASE}/school-kinds`,
-      {
-        method: "PUT",
-        body: {
-          school_id: schoolId,
-          school_type_id: schoolTypeId,
-          proof_type_id: proofTypeId === null ? null : proofTypeId,
-        } satisfies traegerStaffProofsContract.ProofMappingRequest,
-      },
-    ),
+    await bffJson("org", "PUT /traeger/staff-proofs/school-kinds", {
+      body: {
+        school_id: schoolId,
+        school_type_id: schoolTypeId,
+        proof_type_id: proofTypeId === null ? null : proofTypeId,
+      } satisfies traegerStaffProofsContract.ProofMappingRequest,
+    }),
   );
 }
-
-const proofPath = (recordId: string, typeId: string) =>
-  `${BASE}/records/${encodeURIComponent(recordId)}/${encodeURIComponent(typeId)}`;
 
 export async function saveStaffProof(
   recordId: string,
   typeId: string,
   input: StaffProofInput,
 ): Promise<StaffProof[]> {
-  const data = await traegerRequest<sharedContract.TraegerStaffProof[]>(
-    proofPath(recordId, typeId),
+  const data = await bffJson(
+    "org",
+    "PUT /traeger/staff-proofs/records/{id}/{typeId}",
     {
-      method: "PUT",
+      params: { id: recordId, typeId },
       body: {
         presented_on: input.presentedOn,
         issued_on: input.issuedOn,
@@ -279,9 +271,10 @@ export async function deleteStaffProof(
   recordId: string,
   typeId: string,
 ): Promise<StaffProof[]> {
-  const data = await traegerRequest<sharedContract.TraegerStaffProof[]>(
-    proofPath(recordId, typeId),
-    { method: "DELETE" },
+  const data = await bffJson(
+    "org",
+    "DELETE /traeger/staff-proofs/records/{id}/{typeId}",
+    { params: { id: recordId, typeId } },
   );
   return data.map(mapStaffProof);
 }
@@ -290,7 +283,11 @@ export async function deleteStaffProof(
 export function downloadStaffProofList(
   format: TraegerListFormat,
 ): Promise<TraegerListFile> {
-  return downloadTraegerList(`${BASE}/export`, format);
+  return downloadTraegerList(
+    bffFile("org", "GET /traeger/staff-proofs/export", {
+      query: listExportQuery(format),
+    }),
+  );
 }
 
 /** Name, Farbe und Satz je Stand, wie auf der Liste der Schule. */

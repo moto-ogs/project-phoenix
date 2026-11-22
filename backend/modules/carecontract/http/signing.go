@@ -102,7 +102,7 @@ func (rs *Resource) recordPaper(w http.ResponseWriter, r *http.Request) {
 		renderSignatureError(w, r, err)
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	common.RespondNoContent(w, r)
 }
 
 func (rs *Resource) paperDocument(w http.ResponseWriter, r *http.Request) {

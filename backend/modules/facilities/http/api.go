@@ -14,7 +14,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	validation "github.com/go-ozzo/ozzo-validation"
-	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/facilities"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
@@ -48,7 +47,7 @@ type RoomView struct {
 }
 
 type RoomSessionEntry struct {
-	SessionID       common.ID  `json:"session_id"`
+	SessionID       ident.ID   `json:"session_id"`
 	StartedAt       time.Time  `json:"started_at"`
 	EndedAt         *time.Time `json:"ended_at,omitempty"`
 	DurationMinutes *int       `json:"duration_minutes,omitempty"`
@@ -153,7 +152,7 @@ func (req *RoomRequest) Bind(_ *http.Request) error {
 }
 
 type RoomResponse struct {
-	ID              common.ID  `json:"id"`
+	ID              ident.ID   `json:"id"`
 	Name            string     `json:"name"`
 	Building        string     `json:"building,omitempty"`
 	Floor           *int       `json:"floor,omitempty"`

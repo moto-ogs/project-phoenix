@@ -170,12 +170,14 @@ func TestSeedFeedbackHistoryStepSkipsWithoutWriter(t *testing.T) {
 func TestOperatorFeedbackHistoryWriterUsesTheDemoRoute(t *testing.T) {
 	t.Parallel()
 	var path, authorization string
+	var raw json.RawMessage
 	var body struct {
 		Entries []PastFeedback `json:"entries"`
 	}
 	srv := newSeedHTTPTestServer(func(w seedHTTPResponseWriter, r *seedHTTPRequest) {
 		path, authorization = r.Method+" "+r.URL.Path, r.Header.Get("Authorization")
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&raw))
+		require.NoError(t, json.Unmarshal(raw, &body))
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = fmt.Fprintf(w, `{"status":"success","data":{"written":%d}}`, len(body.Entries))
 	})
@@ -189,6 +191,7 @@ func TestOperatorFeedbackHistoryWriterUsesTheDemoRoute(t *testing.T) {
 	assert.Equal(t, "POST /operator/schools/9/demo-feedback-history", path)
 	assert.Equal(t, "Bearer operator-token", authorization)
 	assert.Equal(t, entries, body.Entries)
+	assert.Contains(t, string(raw), `"student_id":"4"`, "the identifier travels as text")
 }
 
 // A profile that leaves feedback off sends no request: the API would refuse

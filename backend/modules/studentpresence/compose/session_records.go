@@ -28,7 +28,6 @@ type (
 	SessionStaffPerson        = ports.SessionStaffPerson
 	SupervisionStaffDirectory = ports.SupervisionStaffDirectory
 	RecordErrors              = ports.RecordErrors
-	CrossTenantStudent        = ports.CrossTenantStudent
 	SessionRow                = ports.ActiveGroup
 )
 

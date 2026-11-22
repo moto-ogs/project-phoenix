@@ -28,6 +28,8 @@ import {
   numberCountLabel,
 } from "./family-children-import-format";
 
+const GERMAN_LIST = new Intl.ListFormat("de", { type: "conjunction" });
+
 const IMPORT_PAGE_SIZE = 50;
 
 function NotesCell({ row }: Readonly<{ row: FamilyImportRow }>) {
@@ -55,7 +57,7 @@ function footerText(result: FamilyImportResult): string {
   if (left > 0) {
     return `${left === 1 ? "1 Zeile bleibt" : `${left} Zeilen bleiben`} draußen. Prüfe den Hinweis bei jeder offenen Zeile.`;
   }
-  return "Jede Zahl gilt als von dir bestätigt, ab dem ersten Tag des Vertrags.";
+  return "Jede Zahl gilt als von dir bestätigt, ab dem Tag in ihrer Zeile.";
 }
 
 export function FamilyChildrenImportPreviewCard({
@@ -137,6 +139,11 @@ export function FamilyChildrenImportPreviewCard({
             {row.validFrom ? (
               <span className="block text-xs whitespace-nowrap text-gray-500 tabular-nums">
                 {`ab ${formatDate(row.validFrom)}`}
+              </span>
+            ) : null}
+            {row.laterValidFrom.length > 0 ? (
+              <span className="block text-xs text-gray-500 tabular-nums">
+                {`Für weitere Verträge ab ${GERMAN_LIST.format(row.laterValidFrom.map((day) => formatDate(day)))}`}
               </span>
             ) : null}
           </span>

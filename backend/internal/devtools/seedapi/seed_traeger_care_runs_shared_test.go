@@ -12,8 +12,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/moto-ogs/project-phoenix/demoprofile"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedSharedTraegerRuns is the demo Träger after earlier demo orders: an
@@ -47,11 +47,11 @@ func (f *seedSharedTraegerRuns) serve(t *testing.T) func(w seedHTTPResponseWrite
 		case path == "POST /traeger/care-billing-runs/":
 			var start struct {
 				BillingMonth calendar.Date `json:"billing_month"`
-				SchoolIDs    []apiID       `json:"school_ids"`
+				SchoolIDs    []ident.ID    `json:"school_ids"`
 			}
 			require.NoError(t, json.NewDecoder(r.Body).Decode(&start))
-			f.started = append(f.started, demoprofile.IDs(start.SchoolIDs))
-			run := seedCareRunRef{ID: apiID(10 + len(f.started)), BillingMonth: start.BillingMonth, Status: "calculated", SchoolIDs: start.SchoolIDs}
+			f.started = append(f.started, ident.Int64s(start.SchoolIDs))
+			run := seedCareRunRef{ID: ident.ID(10 + len(f.started)), BillingMonth: start.BillingMonth, Status: "calculated", SchoolIDs: start.SchoolIDs}
 			f.runs = append([]seedCareRunRef{run}, f.runs...)
 			f.preview[int64(run.ID)] = 2
 			_, _ = fmt.Fprintf(w, `{"data":{"id":%d}}`, run.ID)
@@ -103,8 +103,8 @@ func TestSeedCareRunsBillTheSeededSchoolBesideLeftoverRunsOfOtherDemoSchools(t *
 	october, november := calendar.NewDate(2026, 10, 1), calendar.NewDate(2026, 11, 1)
 	traeger := &seedSharedTraegerRuns{
 		runs: []seedCareRunRef{
-			{ID: 4, BillingMonth: october, Status: "calculated", SchoolIDs: []apiID{53, 59, 60}},
-			{ID: 3, BillingMonth: october, Status: "released", SchoolIDs: []apiID{53, 59}},
+			{ID: 4, BillingMonth: october, Status: "calculated", SchoolIDs: []ident.ID{53, 59, 60}},
+			{ID: 3, BillingMonth: october, Status: "released", SchoolIDs: []ident.ID{53, 59}},
 		},
 		preview: map[int64]int{4: 0, 3: 0},
 	}

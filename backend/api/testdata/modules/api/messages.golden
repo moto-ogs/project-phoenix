@@ -16,7 +16,6 @@ POST /api/messages/group-threads -> eltern_app
 POST /api/messages/group-threads/{groupThreadId}/close -> eltern_app
 POST /api/messages/group-threads/{groupThreadId}/messages -> eltern_app
 POST /api/messages/mark-all-read -> eltern_app
-POST /api/messages/threads -> eltern_app
 POST /api/messages/threads/open -> eltern_app
 POST /api/messages/threads/{threadId} -> eltern_app
 POST /api/messages/threads/{threadId}/handled -> eltern_app

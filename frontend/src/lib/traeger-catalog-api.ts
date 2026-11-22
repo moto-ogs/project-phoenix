@@ -1,3 +1,4 @@
+import { bffJson } from "~/lib/bff-fetch";
 /**
  * Anmeldephasen und Betreuungsangebote des Trägers (#4704, ADR 0195).
  *
@@ -22,7 +23,6 @@ import {
   termsFromBackend,
   termsToBackend,
 } from "./traeger-care-contracts-api";
-import { traegerRequest } from "./traeger-api";
 
 /** Das letzte Ergebnis des Übertragens an eine Schule. */
 export type TraegerCatalogOutcome =
@@ -486,16 +486,8 @@ function offeringDraftToBackend(
 
 // --- Requests ----------------------------------------------------------------
 
-const BASE = "/api/traeger/catalog";
-
-function phasePath(id: string): string {
-  return `${BASE}/phases/${encodeURIComponent(id)}`;
-}
-
 export async function fetchTraegerPhases(): Promise<TraegerPhase[]> {
-  const phases = await traegerRequest<traegerCatalogContract.TraegerPhase[]>(
-    `${BASE}/phases`,
-  );
+  const phases = await bffJson("org", "GET /traeger/catalog/phases");
   return phases.map(phaseFromBackend);
 }
 
@@ -503,7 +495,9 @@ export async function fetchTraegerPhase(
   id: string,
 ): Promise<TraegerPhaseDetail> {
   return phaseDetailFromBackend(
-    await traegerRequest<traegerCatalogContract.PhaseDetail>(phasePath(id)),
+    await bffJson("org", "GET /traeger/catalog/phases/{id}", {
+      params: { id },
+    }),
   );
 }
 
@@ -511,8 +505,7 @@ export async function createTraegerPhase(
   input: TraegerPhaseInput,
 ): Promise<TraegerPhaseDetail> {
   return phaseDetailFromBackend(
-    await traegerRequest<traegerCatalogContract.PhaseDetail>(`${BASE}/phases`, {
-      method: "POST",
+    await bffJson("org", "POST /traeger/catalog/phases", {
       body: phaseInputToBackend(input),
     }),
   );
@@ -523,8 +516,8 @@ export async function updateTraegerPhase(
   input: TraegerPhaseInput,
 ): Promise<TraegerPhaseDetail> {
   return phaseDetailFromBackend(
-    await traegerRequest<traegerCatalogContract.PhaseDetail>(phasePath(id), {
-      method: "PUT",
+    await bffJson("org", "PUT /traeger/catalog/phases/{id}", {
+      params: { id },
       body: phaseInputToBackend(input),
     }),
   );
@@ -534,12 +527,9 @@ export async function withdrawTraegerPhase(
   id: string,
 ): Promise<TraegerPhaseDetail> {
   return phaseDetailFromBackend(
-    await traegerRequest<traegerCatalogContract.PhaseDetail>(
-      `${phasePath(id)}/withdraw`,
-      {
-        method: "POST",
-      },
-    ),
+    await bffJson("org", "POST /traeger/catalog/phases/{id}/withdraw", {
+      params: { id },
+    }),
   );
 }
 
@@ -548,13 +538,10 @@ export async function createTraegerOffering(
   draft: TraegerOfferingDraft,
 ): Promise<TraegerOffering> {
   return offeringFromBackend(
-    await traegerRequest<traegerCatalogContract.TraegerOffering>(
-      `${phasePath(phaseId)}/offerings`,
-      {
-        method: "POST",
-        body: offeringDraftToBackend(draft),
-      },
-    ),
+    await bffJson("org", "POST /traeger/catalog/phases/{id}/offerings", {
+      params: { id: phaseId },
+      body: offeringDraftToBackend(draft),
+    }),
   );
 }
 
@@ -563,10 +550,10 @@ export async function updateTraegerOffering(
   draft: TraegerOfferingDraft,
 ): Promise<TraegerOffering> {
   return offeringFromBackend(
-    await traegerRequest<traegerCatalogContract.TraegerOffering>(
-      `${BASE}/offerings/${encodeURIComponent(id)}`,
-      { method: "PUT", body: offeringDraftToBackend(draft) },
-    ),
+    await bffJson("org", "PUT /traeger/catalog/offerings/{id}", {
+      params: { id },
+      body: offeringDraftToBackend(draft),
+    }),
   );
 }
 
@@ -574,21 +561,19 @@ export async function withdrawTraegerOffering(
   id: string,
 ): Promise<TraegerOffering> {
   return offeringFromBackend(
-    await traegerRequest<traegerCatalogContract.TraegerOffering>(
-      `${BASE}/offerings/${encodeURIComponent(id)}/withdraw`,
-      { method: "POST" },
-    ),
+    await bffJson("org", "POST /traeger/catalog/offerings/{id}/withdraw", {
+      params: { id },
+    }),
   );
 }
 
 export async function previewTraegerPhase(
   id: string,
 ): Promise<TraegerCatalogPreview> {
-  const preview = await traegerRequest<traegerCatalogContract.Preview>(
-    `${phasePath(id)}/preview`,
-    {
-      method: "POST",
-    },
+  const preview = await bffJson(
+    "org",
+    "POST /traeger/catalog/phases/{id}/preview",
+    { params: { id } },
   );
   return {
     traegerPhaseId: preview.traeger_phase_id,
@@ -617,10 +602,11 @@ export async function rolloutTraegerPhase(
   id: string,
   fingerprint: string,
 ): Promise<TraegerRollout> {
-  const rollout = await traegerRequest<traegerCatalogContract.Rollout>(
-    `${phasePath(id)}/rollout`,
+  const rollout = await bffJson(
+    "org",
+    "POST /traeger/catalog/phases/{id}/rollout",
     {
-      method: "POST",
+      params: { id },
       body: { fingerprint } satisfies traegerCatalogContract.RolloutRequest,
     },
   );

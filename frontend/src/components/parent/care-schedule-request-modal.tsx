@@ -51,7 +51,7 @@ interface RequestedDayResult {
 }
 
 type Capabilities = ChildCareSchedule["request_capabilities"];
-type Weekdays = ChildCareSchedule["weekdays"];
+type Weekdays = NonNullable<ChildCareSchedule["weekdays"]>;
 type SubmitRequest = (
   payload: CareScheduleRequestInput,
   /** Nur gesetzt, wenn die Anfrage das Kind allein gehen lässt (#4780). */
@@ -120,7 +120,8 @@ function requestedDay(
   ) {
     change.pickup = draft.pickup;
   }
-  const currentMode = day.modes.length === 1 ? day.modes[0] : "";
+  const modes = day.modes ?? [];
+  const currentMode = modes.length === 1 ? modes[0] : "";
   if (capabilities.departure_mode && draft.mode && draft.mode !== currentMode) {
     change.mode = draft.mode;
   }
@@ -154,7 +155,7 @@ function draftsFromWeekdays(weekdays: Weekdays): Record<number, DayDraft> {
       day.weekday,
       {
         pickup: day.pickup ?? "",
-        mode: day.modes.length === 1 ? day.modes[0]! : "",
+        mode: (day.modes ?? []).length === 1 ? (day.modes ?? [])[0]! : "",
         scheduled: day.status === "scheduled",
       },
     ]),
@@ -388,7 +389,7 @@ function ScheduleFields({
   setDrafts: React.Dispatch<React.SetStateAction<Record<number, DayDraft>>>;
 }>) {
   const canChangeDay = capabilities.pickup && capabilities.departure_mode;
-  return weekdays
+  return (weekdays ?? [])
     .filter((day) => canChangeDay || day.status === "scheduled")
     .map((day) => (
       <ScheduleDayFields

@@ -1,6 +1,4 @@
-import { apiErrorFromResponse } from "~/lib/api-error";
-import type { StaffWithRoleResponse } from "~/lib/contract/staff.generated";
-import { sessionFetch } from "~/lib/session-cache";
+import { bffJson } from "~/lib/bff-fetch";
 
 export interface StaffGroupLeaderCandidate {
   id: string;
@@ -11,20 +9,11 @@ export interface StaffGroupLeaderCandidate {
 export async function fetchGroupLeaderCandidates(): Promise<
   StaffGroupLeaderCandidate[]
 > {
-  const response = await sessionFetch("/api/staff/by-role?role=user", {
-    method: "GET",
+  const staff = await bffJson("tenant", "GET /api/staff/by-role", {
+    query: { role: "user" },
+    errorMessage: "Group leader candidates failed",
   });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      "Group leader candidates failed",
-    );
-  }
-  const data = (await response.json()) as {
-    data: StaffWithRoleResponse[] | null;
-  };
-  // Go writes an empty result as null.
-  return (data.data ?? []).map((staff) => ({
+  return (staff ?? []).map((staff) => ({
     id: staff.id,
     teacherId: staff.teacher_id,
     fullName: staff.full_name,

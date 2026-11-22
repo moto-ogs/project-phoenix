@@ -87,7 +87,6 @@ function selectionMode(files) {
   if (frontend.some(file => !sourceModule.test(file) &&
     file !== "frontend/scripts/product-screenshots/quality.ts") ||
     ["scripts/test-frontend-changed.mjs", "scripts/test-frontend-changed.test.mjs",
-      "scripts/test-changed.sh", "scripts/test-changed_test.sh",
       ".github/workflows/main.yml", ".github/workflows/test.yml"].some(file => changed.has(file))) return "full";
   if (frontend.length) return "incremental";
   if ([...changed].some(file => file.startsWith("frontend/") && file.endsWith(".md") ||
@@ -135,6 +134,8 @@ const guards = [
   "src/app/api/credential-route-coverage.test.ts",
   "src/app/api/auth/session-cookie-inventory.test.ts",
   "src/lib/app-route-invariants.test.ts",
+  "src/lib/bff-fetch-uncontracted.test.ts",
+  "src/lib/old-fetch-helpers.test.ts",
   "src/lib/analytics-routes.test.ts",
   "src/lib/help-topics.test.ts",
   "src/lib/page-info.test.ts",

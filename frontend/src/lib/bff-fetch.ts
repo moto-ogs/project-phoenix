@@ -10,7 +10,11 @@ import type { ErrorCode } from "./error-codes.generated";
 import { sessionFetch } from "./session-cache";
 
 /** A portal by the scope of its session token (`portalRoutes`). */
-export type Portal = Exclude<keyof typeof portalRoutes, "public">;
+/**
+ * A portal by the scope of its session token (`portalRoutes`); `public` are
+ * the routes without a session (links, password reset, invitations).
+ */
+export type Portal = keyof typeof portalRoutes;
 
 type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -28,6 +32,23 @@ type KeyOf<R> = R extends {
 }
   ? `${M} ${T}`
   : never;
+
+type FileRoute<P extends Portal> = Extract<
+  (typeof portalRoutes)[P][number],
+  { response: { kind: "file" } }
+>;
+
+/** A registered file route of the portal (`File: true` in Go). */
+export type FileRouteKey<P extends Portal> = KeyOf<FileRoute<P>>;
+
+type FileRouteOf<P extends Portal, K extends FileRouteKey<P>> =
+  FileRoute<P> extends infer R
+    ? R extends unknown
+      ? KeyOf<R> extends K
+        ? R
+        : never
+      : never
+    : never;
 
 /** A registered JSON route of the portal: `"GET /api/activities/categories"`. */
 export type RouteKey<P extends Portal> = KeyOf<JsonRoute<P>>;
@@ -123,8 +144,8 @@ interface CallOptions {
    */
   errorMessage?: string;
   /**
-   * Tenant only: a 401 with one of these codes refuses this operation and
-   * leaves the session as it is; it becomes an ApiError without a renewal.
+   * Tenant and parent: a 401 with one of these codes refuses this operation
+   * and leaves the session as it is, without renewal or a login redirect.
    */
   authRefusals?: readonly ErrorCode[];
 }
@@ -161,7 +182,8 @@ function onLoginPage(path: string): boolean {
  * after the BFF renewed the session once:
  * - tenant: the session gate and one renewal with a retry (`sessionFetch`),
  *   then a sign-out;
- * - operator (`platform`) and parents: a switch to the portal's login;
+ * - operator (`platform`) and parents: a switch to the portal's login
+ *   (parents keep operation-specific `authRefusals` on the page);
  * - Träger (`org`), moto schule and caterer: the ApiError, as before.
  */
 const PORTALS: Readonly<Record<Portal, PortalRow>> = {
@@ -176,9 +198,17 @@ const PORTALS: Readonly<Record<Portal, PortalRow>> = {
   parent: {
     mount: "/parent",
     bff: "/api/parent",
-    send: async (url, init) => {
+    send: async (url, init, { authRefusals }) => {
       const response = await sendPlain(url, init);
       if (response.status === 401 && typeof window !== "undefined") {
+        if (authRefusals?.length) {
+          const refusal = await apiErrorFromResponse(
+            response.clone(),
+            "Request refused",
+          );
+          if (refusal.code && authRefusals.includes(refusal.code))
+            return response;
+        }
         window.location.assign("/parents/login");
       }
       return response;
@@ -187,6 +217,9 @@ const PORTALS: Readonly<Record<Portal, PortalRow>> = {
   school: { mount: "/school", bff: "/api/school", send: sendPlain },
   org: { mount: "/traeger", bff: "/api/traeger", send: sendPlain },
   caterer: { mount: "/caterer", bff: "/api/caterer", send: sendPlain },
+  // Without a session: no gate, no renewal, the error stays on the page.
+  // Its patterns name their portal themselves (`/caterer/invitations/…`).
+  public: { mount: "", bff: "/api", send: sendPlain },
   platform: {
     mount: "/operator",
     bff: "/api/operator",
@@ -220,9 +253,12 @@ export function bffPath(
     }
     return encodeURIComponent(value);
   });
-  const underMount = filled === mount || filled.startsWith(`${mount}/`);
+  const underMount =
+    mount !== "" && (filled === mount || filled.startsWith(`${mount}/`));
+  // A public pattern under /api (enrollment links) is its BFF path already.
+  const atBff = mount === "" && filled.startsWith(`${bff}/`);
   const path = (
-    bff + (underMount ? filled.slice(mount.length) : filled)
+    atBff ? filled : bff + (underMount ? filled.slice(mount.length) : filled)
   ).replace(/\/+$/, "");
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(query ?? {})) {
@@ -235,16 +271,32 @@ export function bffPath(
   return qs ? `${path}?${qs}` : path;
 }
 
-async function call<T>(
+/** Sends through the portal's row; a failure is the ApiError. */
+async function send(
   portal: Portal,
   method: Method,
   url: string,
-  options: CallOptions & { body?: unknown },
-): Promise<T> {
-  const { body, signal, headers, errorMessage } = options;
+  init: RequestInit,
+  options: CallOptions,
+): Promise<Response> {
+  const response = await PORTALS[portal].send(url, init, options);
+  if (!response.ok) {
+    throw await apiErrorFromResponse(
+      response,
+      options.errorMessage ?? `${method} ${url} failed (${response.status})`,
+    );
+  }
+  return response;
+}
+
+/** The fetch init of a call: JSON serialized, FormData as is. */
+function requestInit(
+  method: Method,
+  { body, signal, headers }: CallOptions & { body?: unknown },
+): RequestInit {
   const isForm = body instanceof FormData;
   const json = body !== undefined && !isForm;
-  const init: RequestInit = {
+  return {
     method,
     ...(signal && { signal }),
     ...((json || headers) && {
@@ -254,12 +306,19 @@ async function call<T>(
     }),
     ...(body !== undefined && { body: isForm ? body : JSON.stringify(body) }),
   };
-  const response = await PORTALS[portal].send(url, init, options);
+}
+
+async function call<T>(
+  portal: Portal,
+  method: Method,
+  url: string,
+  options: CallOptions & { body?: unknown },
+): Promise<T> {
+  const { errorMessage } = options;
+  const init = requestInit(method, options);
+  const response = await send(portal, method, url, init, options);
   const message = (status: number) =>
     errorMessage ?? `${method} ${url} failed (${status})`;
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, message(response.status));
-  }
   if (response.status === 204) return null as T;
   let answer: unknown;
   try {
@@ -325,4 +384,41 @@ export function bffJson<
   };
   const url = bffPath(portal, route.slice(space + 1), opts.params, opts.query);
   return call(portal, method, url, opts);
+}
+
+/**
+ * Calls a registered file route through the portal's BFF and resolves to the
+ * successful Response, whose body the caller reads (`blob()`) together with
+ * its `Content-Disposition`. A failure is the same ApiError as in bffJson.
+ */
+export async function bffFile<P extends Portal, K extends FileRouteKey<P>>(
+  portal: P,
+  route: K,
+  ...[options]: OptionalArg<FileRouteOf<P, K>, never>
+): Promise<Response> {
+  const space = route.indexOf(" ");
+  const method = route.slice(0, space) as Method;
+  const opts = (options ?? {}) as CallOptions & {
+    body?: unknown;
+    params?: Record<string, string>;
+    query?: Record<string, QueryValue>;
+  };
+  const url = bffPath(portal, route.slice(space + 1), opts.params, opts.query);
+  return send(portal, method, url, requestInit(method, opts), opts);
+}
+
+/**
+ * The same call for a BFF path no Go route registers: a named `route.ts`
+ * whose behavior belongs to the BFF (`settings/values/[key]` purges the
+ * cached tenant lookup). The caller names the answer's type. Every caller is
+ * listed with its reason in `bff-fetch-uncontracted.test.ts`, and the list
+ * only shrinks; a backend route without a contract gets one instead (#7808).
+ */
+export function bffJsonUncontracted<T>(
+  portal: Portal,
+  method: Method,
+  path: string,
+  options: CallOptions & { body?: unknown } = {},
+): Promise<T> {
+  return call(portal, method, path, options);
 }

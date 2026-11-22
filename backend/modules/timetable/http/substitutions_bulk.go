@@ -32,10 +32,10 @@ import (
 // bulkSubstitutionRequest is the POST body. substitute_staff_id omitted/null
 // marks the person absent on every selected date without assigning cover.
 type bulkSubstitutionRequest struct {
-	AbsentStaffID     common.ID  `json:"absent_staff_id"`
-	SubstituteStaffID *common.ID `json:"substitute_staff_id,omitempty"`
-	Dates             []string   `json:"dates"`
-	Reason            *string    `json:"reason,omitempty"`
+	AbsentStaffID     ident.ID  `json:"absent_staff_id"`
+	SubstituteStaffID *ident.ID `json:"substitute_staff_id,omitempty"`
+	Dates             []string  `json:"dates"`
+	Reason            *string   `json:"reason,omitempty"`
 }
 
 // BulkSubstitutionDayResponse is the per-day slice of the 200 body.

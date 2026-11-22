@@ -41,7 +41,7 @@ describe("permissionsConfig", () => {
   });
 
   it("has correct API configuration", () => {
-    expect(permissionsConfig.api.basePath).toBe("/api/auth/permissions");
+    expect(permissionsConfig.api.routes.list).toBe("GET /auth/permissions/");
   });
 
   it("has form sections configured", () => {

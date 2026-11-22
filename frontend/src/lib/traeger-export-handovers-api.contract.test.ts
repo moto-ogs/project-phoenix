@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { fetchExportRecipients } from "./traeger-export-handovers-api";
 
 const request = vi.hoisted(() => vi.fn());
-vi.mock("./traeger-api", () => ({ traegerRequest: request }));
+vi.mock("~/lib/bff-fetch", () => ({ bffJson: request }));
 afterEach(() => request.mockReset());
 
 // ADR 0270 point 6 (#2353): a format or state a newer backend adds is not

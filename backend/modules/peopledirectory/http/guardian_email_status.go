@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
@@ -35,10 +34,10 @@ const sendBlockStopped = "stopped"
 
 // guardianEmailStatusResponse is one guardian's line of the student's status.
 type guardianEmailStatusResponse struct {
-	GuardianProfileID common.ID `json:"guardian_profile_id"`
-	MailOutcome       string    `json:"mail_outcome,omitempty"`
-	AddressMark       string    `json:"address_mark,omitempty"`
-	EmailsStopped     bool      `json:"emails_stopped,omitempty"`
+	GuardianProfileID ident.ID `json:"guardian_profile_id"`
+	MailOutcome       string   `json:"mail_outcome,omitempty"`
+	AddressMark       string   `json:"address_mark,omitempty"`
+	EmailsStopped     bool     `json:"emails_stopped,omitempty"`
 	// StopShared: another holder of the address carries no stop, so mail to the
 	// address still goes out.
 	StopShared    bool       `json:"stop_shared,omitempty"`

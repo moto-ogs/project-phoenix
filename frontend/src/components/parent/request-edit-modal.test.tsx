@@ -175,6 +175,7 @@ describe("RequestEditModal", () => {
 
   it("changes a Stammdaten request through the same dialog", async () => {
     updateMasterData.mockResolvedValue({
+      is_self: false,
       id: "md-1",
       target: "person",
       field_key: "first_name",

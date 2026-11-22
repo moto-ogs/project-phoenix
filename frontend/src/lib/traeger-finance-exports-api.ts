@@ -1,3 +1,4 @@
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the finance exports (#4693): the field mapping of the
  * Sollstellung, the file numbers of the Träger, the released runs with
@@ -9,7 +10,6 @@
 import { knownEnum } from "./contract/known-enum";
 import { requiredDay } from "./contract/required-day";
 import type * as traegerFinanceExportsContract from "./contract/traeger-finance-exports.generated";
-import { traegerRequest } from "./traeger-api";
 import { type BillingFile, billingFile } from "./traeger-billing-api";
 
 // Go does not register these sets; the contract types them as string. A value
@@ -261,8 +261,6 @@ export interface InvoiceHistory {
   readonly steps: readonly InvoiceStep[];
 }
 
-const BASE = "/api/traeger/finance-exports";
-
 const PATH_KINDS: Record<ExportRunKind, ExportRunPathKind> = {
   care: "care-runs",
   holiday: "holiday-runs",
@@ -388,9 +386,7 @@ function entryFromBackend(
 /** The mapping of the Sollstellung and the file numbers of the Träger. */
 export async function fetchExportSettings(): Promise<ExportSettings> {
   return settingsFromBackend(
-    await traegerRequest<traegerFinanceExportsContract.ExportSettings>(
-      `${BASE}/settings`,
-    ),
+    await bffJson("org", "GET /traeger/finance-exports/settings"),
   );
 }
 
@@ -399,19 +395,15 @@ export async function saveSollMapping(
   mapping: SollMapping,
 ): Promise<ExportSettings> {
   return settingsFromBackend(
-    await traegerRequest<traegerFinanceExportsContract.ExportSettings>(
-      `${BASE}/settings/sollstellung`,
-      {
-        method: "PUT",
-        body: mappingToBackend(mapping),
-      },
-    ),
+    await bffJson("org", "PUT /traeger/finance-exports/settings/sollstellung", {
+      body: mappingToBackend(mapping),
+    }),
   );
 }
 
 /** Returns the Träger to the default mapping. */
 export async function resetSollMapping(): Promise<ExportSettings> {
-  await traegerRequest(`${BASE}/settings/sollstellung`, { method: "DELETE" });
+  await bffJson("org", "DELETE /traeger/finance-exports/settings/sollstellung");
   return fetchExportSettings();
 }
 
@@ -420,10 +412,10 @@ export async function setFileNumberStart(
   start: number,
 ): Promise<ExportSettings> {
   return settingsFromBackend(
-    await traegerRequest<traegerFinanceExportsContract.ExportSettings>(
-      `${BASE}/settings/file-number-start`,
+    await bffJson(
+      "org",
+      "PUT /traeger/finance-exports/settings/file-number-start",
       {
-        method: "PUT",
         body: {
           start,
         } satisfies traegerFinanceExportsContract.FileNumberStartRequest,
@@ -446,18 +438,13 @@ export interface FinanceExportRunPage extends FinanceExportPage<ExportRun> {
   readonly notExported: number;
 }
 
-function pagePath(path: string, offset: number): string {
-  return offset > 0 ? `${path}?offset=${offset}` : path;
-}
-
 /** A page of the released runs, newest first, with their last Sollstellung. */
 export async function fetchExportRuns(
   offset = 0,
 ): Promise<FinanceExportRunPage> {
-  const body =
-    await traegerRequest<traegerFinanceExportsContract.ExportRunPage>(
-      pagePath(`${BASE}/runs`, offset),
-    );
+  const body = await bffJson("org", "GET /traeger/finance-exports/runs", {
+    query: { offset: offset > 0 ? offset : undefined },
+  });
   return {
     // A run of a kind this build does not know has no page; it is left out.
     items: (body.runs ?? []).flatMap((run) => {
@@ -490,10 +477,9 @@ export async function fetchExportRuns(
 export async function fetchExportProtocol(
   offset = 0,
 ): Promise<FinanceExportPage<ExportProtocolEntry>> {
-  const body =
-    await traegerRequest<traegerFinanceExportsContract.ExportProtocolPage>(
-      pagePath(`${BASE}/files`, offset),
-    );
+  const body = await bffJson("org", "GET /traeger/finance-exports/files", {
+    query: { offset: offset > 0 ? offset : undefined },
+  });
   return {
     items: (body.files ?? []).flatMap((file) => {
       const entry = entryFromBackend(file);
@@ -510,8 +496,13 @@ export async function downloadSollstellung(
   runId: string,
 ): Promise<BillingFile> {
   return billingFile(
-    `${BASE}/runs/${kind}/${encodeURIComponent(runId)}/sollstellung`,
-    {},
+    bffFile(
+      "org",
+      "GET /traeger/finance-exports/runs/{kind}/{id}/sollstellung",
+      {
+        params: { kind, id: runId },
+      },
+    ),
     "sollstellung.csv",
   );
 }
@@ -538,13 +529,14 @@ export async function downloadDatevBatch(
   runId: string,
   options: DatevDownloadOptions = {},
 ): Promise<BillingFile> {
-  const query = new URLSearchParams();
-  if (options.all) query.set("mode", "all");
-  if (options.fiscalYear) query.set("fiscal_year", options.fiscalYear);
-  const search = query.size > 0 ? `?${query.toString()}` : "";
   return billingFile(
-    `${BASE}/runs/${kind}/${encodeURIComponent(runId)}/datev${search}`,
-    {},
+    bffFile("org", "GET /traeger/finance-exports/runs/{kind}/{id}/datev", {
+      params: { kind, id: runId },
+      query: {
+        mode: options.all ? "all" : undefined,
+        fiscal_year: options.fiscalYear || undefined,
+      },
+    }),
     "EXTF_Buchungsstapel.csv",
   );
 }
@@ -575,17 +567,14 @@ const DATEV_RUNS_PER_REQUEST = 50;
 async function fetchDatevRunPage(
   runs: readonly ExportRun[],
 ): Promise<traegerFinanceExportsContract.DatevRunOverviews> {
-  const query = new URLSearchParams();
-  for (const kind of ["care", "holiday"] as const) {
-    const ids = runs
+  const idsOf = (kind: "care" | "holiday") =>
+    runs
       .filter((run) => run.runKind === kind)
-      .map((run) => run.runId);
-    if (ids.length > 0) query.set(kind, ids.join(","));
-  }
-  if (query.size === 0) return { ready: true, runs: [] };
-  return traegerRequest<traegerFinanceExportsContract.DatevRunOverviews>(
-    `${BASE}/datev-runs?${query.toString()}`,
-  );
+      .map((run) => run.runId)
+      .join(",") || undefined;
+  const query = { care: idsOf("care"), holiday: idsOf("holiday") };
+  if (!query.care && !query.holiday) return { ready: true, runs: [] };
+  return bffJson("org", "GET /traeger/finance-exports/datev-runs", { query });
 }
 
 /**
@@ -675,10 +664,11 @@ export async function fetchInvoiceHistory(
   kind: InvoiceHistoryKind,
   invoiceId: string,
 ): Promise<InvoiceHistory> {
-  const body =
-    await traegerRequest<traegerFinanceExportsContract.InvoiceHistory>(
-      `${BASE}/invoice-history/${kind}/${encodeURIComponent(invoiceId)}`,
-    );
+  const body = await bffJson(
+    "org",
+    "GET /traeger/finance-exports/invoice-history/{kind}/{id}",
+    { params: { kind, id: invoiceId } },
+  );
   return {
     number: body.number,
     steps: (body.entries ?? []).map((entry) => ({
@@ -779,9 +769,7 @@ function bookingAccountsFromBackend(
 /** The revenue accounts and cost centers of the Träger (#4821). */
 export async function fetchBookingAccounts(): Promise<BookingAccounts> {
   return bookingAccountsFromBackend(
-    await traegerRequest<traegerFinanceExportsContract.BookingAccounts>(
-      `${BASE}/booking-accounts`,
-    ),
+    await bffJson("org", "GET /traeger/finance-exports/booking-accounts"),
   );
 }
 
@@ -792,10 +780,10 @@ export async function saveRevenueAccount(
   account: string,
 ): Promise<BookingAccounts> {
   return bookingAccountsFromBackend(
-    await traegerRequest<traegerFinanceExportsContract.BookingAccounts>(
-      `${BASE}/booking-accounts/revenue-accounts`,
+    await bffJson(
+      "org",
+      "PUT /traeger/finance-exports/booking-accounts/revenue-accounts",
       {
-        method: "PUT",
         body: {
           scope,
           scope_id: scopeId,
@@ -814,10 +802,10 @@ export async function addCostCenter(center: {
   code: string;
 }): Promise<BookingAccounts> {
   return bookingAccountsFromBackend(
-    await traegerRequest<traegerFinanceExportsContract.BookingAccounts>(
-      `${BASE}/booking-accounts/cost-centers`,
+    await bffJson(
+      "org",
+      "POST /traeger/finance-exports/booking-accounts/cost-centers",
       {
-        method: "POST",
         body: {
           scope: center.scope,
           scope_id: center.scopeId,
@@ -831,9 +819,10 @@ export async function addCostCenter(center: {
 
 /** Deletes a cost center; issued invoices keep it. */
 export async function deleteCostCenter(id: string): Promise<BookingAccounts> {
-  await traegerRequest<void>(
-    `${BASE}/booking-accounts/cost-centers/${encodeURIComponent(id)}`,
-    { method: "DELETE" },
+  await bffJson(
+    "org",
+    "DELETE /traeger/finance-exports/booking-accounts/cost-centers/{id}",
+    { params: { id } },
   );
   return fetchBookingAccounts();
 }

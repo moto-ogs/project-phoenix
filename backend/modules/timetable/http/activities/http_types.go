@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/moto-ogs/project-phoenix/api/common"
 	activityContract "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
@@ -18,14 +17,14 @@ const (
 
 // ActivityCategoryResponse represents a category API response
 type ActivityCategoryResponse struct {
-	ID          common.ID `json:"id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description,omitempty"`
-	Color       string    `json:"color,omitempty"`
+	ID          ident.ID `json:"id"`
+	Name        string   `json:"name"`
+	Description string   `json:"description,omitempty"`
+	Color       string   `json:"color,omitempty"`
 	// ShiftTypeID is the optional Dienstplan-Schichtart this category maps to
 	// (#1836/#1837 follow-up); nil = no mapping. Consumers resolve the shift
 	// type's name/color from the shift-types list.
-	ShiftTypeID *common.ID `json:"shift_type_id,omitempty"`
+	ShiftTypeID *ident.ID `json:"shift_type_id,omitempty"`
 	// IsSystem marks auto-provisioned infrastructure categories (Schulhof,
 	// WC). They are read-only for schools (#2131).
 	IsSystem bool `json:"is_system"`
@@ -41,26 +40,26 @@ type ActivityCategoryResponse struct {
 
 // ActivitySupervisorResponse represents a supervisor in activity response
 type ActivitySupervisorResponse struct {
-	ID        common.ID `json:"id"`
-	StaffID   common.ID `json:"staff_id"`
-	IsPrimary bool      `json:"is_primary"`
-	FirstName string    `json:"first_name,omitempty"`
-	LastName  string    `json:"last_name,omitempty"`
+	ID        ident.ID `json:"id"`
+	StaffID   ident.ID `json:"staff_id"`
+	IsPrimary bool     `json:"is_primary"`
+	FirstName string   `json:"first_name,omitempty"`
+	LastName  string   `json:"last_name,omitempty"`
 }
 
 // ActivityResponse represents an activity group API response
 type ActivityResponse struct {
-	ID              common.ID                    `json:"id"`
+	ID              ident.ID                     `json:"id"`
 	Name            string                       `json:"name"`
 	MaxParticipants *int                         `json:"max_participants"`
 	IsOpen          bool                         `json:"is_open"`
-	CategoryID      common.ID                    `json:"category_id"`
-	PlannedRoomID   *common.ID                   `json:"planned_room_id,omitempty"`
-	CreatedBy       *common.ID                   `json:"created_by"`
+	CategoryID      ident.ID                     `json:"category_id"`
+	PlannedRoomID   *ident.ID                    `json:"planned_room_id,omitempty"`
+	CreatedBy       *ident.ID                    `json:"created_by"`
 	CreatedByName   string                       `json:"created_by_name,omitempty"`
 	Category        *ActivityCategoryResponse    `json:"category,omitempty"`
-	SupervisorID    *common.ID                   `json:"supervisor_id,omitempty"`  // Primary supervisor
-	SupervisorIDs   []common.ID                  `json:"supervisor_ids,omitempty"` // All supervisors
+	SupervisorID    *ident.ID                    `json:"supervisor_id,omitempty"`  // Primary supervisor
+	SupervisorIDs   []ident.ID                   `json:"supervisor_ids,omitempty"` // All supervisors
 	Supervisors     []ActivitySupervisorResponse `json:"supervisors,omitempty"`    // Detailed supervisor info
 	Schedules       []ActivityScheduleResponse   `json:"schedules,omitempty"`
 	EnrollmentCount int                          `json:"enrollment_count,omitempty"`
@@ -70,12 +69,12 @@ type ActivityResponse struct {
 
 // ActivityScheduleResponse represents a schedule API response
 type ActivityScheduleResponse struct {
-	ID              common.ID  `json:"id"`
-	Weekday         int        `json:"weekday"`
-	TimeframeID     *common.ID `json:"timeframe_id,omitempty"`
-	ActivityGroupID common.ID  `json:"activity_group_id"`
-	CreatedAt       time.Time  `json:"created_at"`
-	UpdatedAt       time.Time  `json:"updated_at"`
+	ID              ident.ID  `json:"id"`
+	Weekday         int       `json:"weekday"`
+	TimeframeID     *ident.ID `json:"timeframe_id,omitempty"`
+	ActivityGroupID ident.ID  `json:"activity_group_id"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
 }
 
 // EnrolledStudentResponse is one student enrolled in an activity.
@@ -99,23 +98,23 @@ type ActivityRequest struct {
 	Name            string            `json:"name"`
 	MaxParticipants *int              `json:"max_participants"`
 	IsOpen          bool              `json:"is_open"`
-	CategoryID      common.ID         `json:"category_id"`
-	PlannedRoomID   *common.ID        `json:"planned_room_id,omitempty"`
+	CategoryID      ident.ID          `json:"category_id"`
+	PlannedRoomID   *ident.ID         `json:"planned_room_id,omitempty"`
 	Schedules       []ScheduleRequest `json:"schedules,omitempty"`
-	SupervisorIDs   []common.ID       `json:"supervisor_ids,omitempty"`
+	SupervisorIDs   []ident.ID        `json:"supervisor_ids,omitempty"`
 }
 
 // QuickActivityRequest represents a simplified activity creation request for mobile devices
 type QuickActivityRequest struct {
-	Name            string     `json:"name"`
-	CategoryID      common.ID  `json:"category_id"`
-	RoomID          *common.ID `json:"room_id,omitempty"`
-	MaxParticipants *int       `json:"max_participants"`
+	Name            string    `json:"name"`
+	CategoryID      ident.ID  `json:"category_id"`
+	RoomID          *ident.ID `json:"room_id,omitempty"`
+	MaxParticipants *int      `json:"max_participants"`
 }
 
 // QuickActivityResponse represents the response after creating an activity via quick-create
 type QuickActivityResponse struct {
-	ActivityID     common.ID `json:"activity_id"`
+	ActivityID     ident.ID  `json:"activity_id"`
 	Name           string    `json:"name"`
 	CategoryName   string    `json:"category_name"`
 	RoomName       string    `json:"room_name,omitempty"`
@@ -127,8 +126,8 @@ type QuickActivityResponse struct {
 
 // ScheduleRequest represents a schedule in activity creation/update request
 type ScheduleRequest struct {
-	Weekday     int        `json:"weekday"`
-	TimeframeID *common.ID `json:"timeframe_id,omitempty"`
+	Weekday     int       `json:"weekday"`
+	TimeframeID *ident.ID `json:"timeframe_id,omitempty"`
 }
 
 // Bind validates the activity request
@@ -188,7 +187,7 @@ func participantLimit(maxParticipants *int) int {
 // BatchEnrollmentRequest represents a request for updating enrollments in batch.
 // Each student ID reads a JSON number or a decimal string.
 type BatchEnrollmentRequest struct {
-	StudentIDs []common.ID `json:"student_ids"`
+	StudentIDs []ident.ID `json:"student_ids"`
 }
 
 // studentIDs returns the requested student IDs as int64s.

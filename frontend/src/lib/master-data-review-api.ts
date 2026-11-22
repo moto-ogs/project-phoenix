@@ -1,14 +1,12 @@
 /**
- * Staff client for the parent Stammdaten change-request review queue.
- * Calls the Next.js proxy routes under /api/students/master-data-change-requests
- * which forward (with the tenant session token) to the backend.
+ * Staff client for the parent Stammdaten change-request review queue: the
+ * registered routes under /api/students/master-data-change-requests, through
+ * the tenant BFF.
  */
 
-import {
-  apiErrorFromResponse,
-  type ApiError,
-  transportFetch,
-} from "~/lib/api-error";
+import { ApiError } from "~/lib/api-error";
+import { bffJson } from "~/lib/bff-fetch";
+import type * as studentsContract from "~/lib/contract/students.generated";
 import { createLogger } from "~/lib/logger";
 
 const logger = createLogger({ component: "MasterDataReviewAPI" });
@@ -31,52 +29,36 @@ export interface StaffMasterDataChange {
   readonly reviewed_at?: string;
 }
 
-interface Envelope<T> {
-  readonly data?: T;
-}
-
-function unwrap<T>(json: Envelope<T>): T {
-  if (json && typeof json === "object" && "data" in json) {
-    return json.data as T;
+function logFailure(error: unknown): never {
+  if (error instanceof ApiError) {
+    logger.error("master_data_review_request_failed", {
+      status: error.status,
+      ...(error.code ? { code: error.code } : {}),
+    });
   }
-  return json as unknown as T;
-}
-
-async function readError(
-  response: Response,
-  message: string,
-): Promise<ApiError> {
-  const error = await apiErrorFromResponse(response, message);
-  logger.error("master_data_review_request_failed", {
-    status: response.status,
-    ...(error.code ? { code: error.code } : {}),
-  });
-  return error;
+  throw error;
 }
 
 /** Approves (and applies) or rejects one change request. */
-export async function decideMasterDataChangeRequest(
+export function decideMasterDataChangeRequest(
   requestId: string,
   approve: boolean,
   reason?: string,
   expectedVersion?: string,
-): Promise<StaffMasterDataChange> {
-  const response = await transportFetch(
-    `/api/students/master-data-change-requests/${encodeURIComponent(requestId)}/decide`,
+): Promise<studentsContract.MasterDataChangeRequestResponse> {
+  return bffJson(
+    "tenant",
+    "POST /api/students/master-data-change-requests/{requestId}/decide",
     {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+      params: { requestId },
+      body: {
         approve,
         reason: reason ?? "",
         ...(expectedVersion ? { expected_version: expectedVersion } : {}),
-      }),
+      },
+      errorMessage: "master data decision failed",
     },
-  );
-  if (!response.ok) {
-    throw await readError(response, "master data decision failed");
-  }
-  return unwrap((await response.json()) as Envelope<StaffMasterDataChange>);
+  ).catch(logFailure);
 }
 
 /**

@@ -33,8 +33,12 @@ type DepartureException struct {
 	DepartureMode string
 	Reason        *string
 	// CreatedBy is the staff membership that set or approved the value. It is
-	// nil only after that membership was deleted.
+	// nil after that membership was deleted, and for a value the Träger-Büro
+	// entered.
 	CreatedBy *int64
+	// EnteredByTraeger marks a value a person of the Träger-Büro entered
+	// (#7766).
+	EnteredByTraeger bool
 }
 
 // DepartureExceptions is the owner's day-departure capability. Save replaces

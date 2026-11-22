@@ -10,6 +10,13 @@ import { ApiError } from "~/lib/api-error";
 const mockFetch = vi.fn();
 global.fetch = mockFetch as unknown as typeof fetch;
 
+// The session gate is sessionFetch's own concern.
+vi.mock("~/lib/session-cache", async () => {
+  const { transportFetch } =
+    await vi.importActual<typeof import("~/lib/api-error")>("~/lib/api-error");
+  return { sessionFetch: transportFetch };
+});
+
 // Mock mapGroupResponse
 vi.mock("@/lib/group-helpers", async () => {
   const actual = await vi.importActual("@/lib/group-helpers");
@@ -29,7 +36,7 @@ describe("groupsConfig", () => {
   });
 
   it("has correct API configuration", () => {
-    expect(groupsConfig.api.basePath).toBe("/api/groups");
+    expect(groupsConfig.api.routes.list).toBe("GET /api/groups/");
   });
 
   it("has form sections configured", () => {
@@ -101,8 +108,8 @@ describe("groupsConfig", () => {
     const mapped = groupsConfig.service?.mapRequest?.(data);
     expect(mapped).toEqual({
       name: "Test Group",
-      room_id: 5,
-      teacher_ids: [1, 2],
+      room_id: "5",
+      teacher_ids: ["1", "2"],
     });
   });
 
@@ -140,21 +147,16 @@ describe("groupsConfig", () => {
     expect(groupsConfig.labels?.deleteConfirmation).toContain("löschen");
   });
 
-  it("loads caregiver teacher options from wrapped responses", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
+  it("loads caregiver teacher options and skips staff without teacher ids", async () => {
+    mockFetch.mockResolvedValueOnce(
+      Response.json({
+        status: "success",
         data: [
-          {
-            id: "10",
-            first_name: "Ada",
-            last_name: "Lovelace",
-            specialization: "Springer",
-            teacher_id: "77",
-          },
+          { id: "10", full_name: "Ada Lovelace", teacher_id: "77" },
+          { id: "11", full_name: "Ignored Staff" },
         ],
       }),
-    });
+    );
 
     const teacherField = groupsConfig.form.sections[0]?.fields.find(
       (field) => field.name === "teacher_ids",
@@ -165,49 +167,16 @@ describe("groupsConfig", () => {
         : undefined;
     const options = await loadOptions?.();
 
-    expect(mockFetch).toHaveBeenCalledWith("/api/staff/by-role?role=user");
-    expect(options).toEqual([
-      { value: "77", label: "Ada Lovelace (Springer)" },
-    ]);
-  });
-
-  it("loads caregiver teacher options from array responses and skips staff without teacher ids", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => [
-        {
-          id: "10",
-          full_name: "Ada Lovelace",
-          teacher_id: "77",
-        },
-        {
-          id: "11",
-          full_name: "Ignored Staff",
-        },
-      ],
-    });
-
-    const teacherField = groupsConfig.form.sections[0]?.fields.find(
-      (field) => field.name === "teacher_ids",
-    );
-    const loadOptions =
-      teacherField && typeof teacherField.options === "function"
-        ? teacherField.options
-        : undefined;
-    const options = await loadOptions?.();
-
+    expect(mockFetch.mock.calls[0]?.[0]).toBe("/api/staff/by-role?role=user");
     expect(options).toEqual([{ value: "77", label: "Ada Lovelace" }]);
   });
 
   // An empty list would look like a school without caregivers; the form
   // shows the catalog text with retry instead (#2517).
   it("throws the ApiError when the caregiver lookup fails", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      status: 403,
-      text: async () =>
-        JSON.stringify({ status: "error", code: "general.permission" }),
-    });
+    mockFetch.mockResolvedValueOnce(
+      Response.json({ code: "general.permission" }, { status: 403 }),
+    );
 
     const teacherField = groupsConfig.form.sections[0]?.fields.find(
       (field) => field.name === "teacher_ids",
@@ -224,15 +193,21 @@ describe("groupsConfig", () => {
   });
 
   it("loads room options from the rooms api", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
+    mockFetch.mockResolvedValueOnce(
+      Response.json({
+        status: "success",
         data: [
-          { id: 7, name: "Raum Sonnenblume" },
-          { id: 9, name: "Raum Regenbogen" },
+          { id: "7", name: "Raum Sonnenblume" },
+          { id: "9", name: "Raum Regenbogen" },
         ],
+        pagination: {
+          current_page: 1,
+          page_size: 50,
+          total_pages: 1,
+          total_records: 2,
+        },
       }),
-    });
+    );
 
     const roomField = groupsConfig.form.sections[0]?.fields.find(
       (field) => field.name === "room_id",
@@ -243,7 +218,7 @@ describe("groupsConfig", () => {
         : undefined;
     const options = await loadOptions?.();
 
-    expect(mockFetch).toHaveBeenCalledWith("/api/rooms");
+    expect(mockFetch.mock.calls.at(-1)?.[0]).toBe("/api/rooms");
     expect(options).toEqual([
       { value: "", label: "Kein Gruppenraum" },
       { value: "7", label: "Raum Sonnenblume" },
@@ -267,17 +242,12 @@ describe("groupsConfig", () => {
     expect(caught).toMatchObject({ code: "general.unavailable" });
   });
 
-  it("unwraps wrapped response payloads before mapping", async () => {
+  it("maps the contract's group row", async () => {
     const { mapGroupResponse } = await import("@/lib/group-helpers");
+    const row = { id: "12", name: "Gruppe" };
 
-    groupsConfig.service?.mapResponse?.({
-      status: "success",
-      data: { id: 12, name: "Wrapped Group" },
-    });
+    groupsConfig.service?.mapResponse?.(row);
 
-    expect(vi.mocked(mapGroupResponse)).toHaveBeenCalledWith({
-      id: 12,
-      name: "Wrapped Group",
-    });
+    expect(vi.mocked(mapGroupResponse)).toHaveBeenCalledWith(row);
   });
 });

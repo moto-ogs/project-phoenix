@@ -11,6 +11,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	capability "github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
@@ -90,7 +91,7 @@ func (rs *BillingRunResource) NumberRangeRouter(protectedTraegerRoutes func(chi.
 
 // BillingRunRequest is the body of POST /traeger/billing-runs.
 type BillingRunRequest struct {
-	HolidayPeriodID common.ID `json:"holiday_period_id"`
+	HolidayPeriodID ident.ID `json:"holiday_period_id"`
 }
 
 // Bind accepts the body; the Owner checks the period.
@@ -100,10 +101,10 @@ func (req *BillingRunRequest) Bind(*http.Request) error { return nil }
 // /traeger/billing-runs/{id}/corrections: the new amount of one child in
 // whole cent and the reason.
 type BillingCorrectionRequest struct {
-	RegistrationID common.ID `json:"registration_id"`
-	ChildID        common.ID `json:"child_id"`
-	TotalCents     int64     `json:"total_cents" contract:"number"`
-	Reason         string    `json:"reason"`
+	RegistrationID ident.ID `json:"registration_id"`
+	ChildID        ident.ID `json:"child_id"`
+	TotalCents     int64    `json:"total_cents" contract:"number"`
+	Reason         string   `json:"reason"`
 }
 
 // Bind accepts the body; the Owner validates the correction.

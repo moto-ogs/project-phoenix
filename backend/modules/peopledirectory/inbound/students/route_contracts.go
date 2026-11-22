@@ -35,3 +35,11 @@ func RouteContracts() []common.RouteContract {
 		{Method: "DELETE", Pattern: "/{id}/photo", Portals: portals, NoData: true},
 	}
 }
+
+// DeviceRouteContracts keeps the kiosk's tag assignment outside the
+// contract (#7808), relative to /api/students: PyrePortal calls it with the
+// device key.
+func DeviceRouteContracts() []common.RouteContract {
+	return common.OutsideRoutes(common.OutsideDevice, "PyrePortal assigns and removes a tag with the device key and reads numeric IDs",
+		"POST /{id}/rfid", "DELETE /{id}/rfid")
+}

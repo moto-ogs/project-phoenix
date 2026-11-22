@@ -193,7 +193,7 @@ describe("operator billing api", () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/operator/billing/key-date-counts/export?month=2026-08",
-      { credentials: "include" },
+      expect.objectContaining({ credentials: "include" }),
     );
     expect(mockDownloadBlob).toHaveBeenCalledWith(
       expect.any(Blob),

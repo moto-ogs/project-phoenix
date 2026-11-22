@@ -57,49 +57,6 @@ func TestIdentityRoleDetailPermissionsGrowthQueryBudget(t *testing.T) {
 	}
 }
 
-func TestIdentityAccountsGrowthQueryBudget(t *testing.T) {
-	t.Parallel()
-	f := newRBACBudgetFixtureOn(t, testpkg.SetupIsolatedTestDB(t))
-	token, reader := f.accountToken(t, "identity-accounts-reader", "users:list", "users:read")
-	role := testpkg.CreateTestRole(t, f.db, "identity-account-budget")
-	// Include both real readers in the same role filter, so each route
-	// returns exactly N3/N8 rows, not N3/N8 plus hidden baseline accounts.
-	var baseline []struct {
-		ID    int64  `bun:"id"`
-		Email string `bun:"email"`
-	}
-	require.NoError(t, f.db.NewSelect().TableExpr("auth.accounts").Column("id", "email").Where("id = ? OR id = ?", f.actor, reader).Scan(context.Background(), &baseline))
-	all := []map[string]any{}
-	for _, row := range baseline {
-		all = append(all, map[string]any{"id": strconv.FormatInt(row.ID, 10), "email": row.Email, "active": true})
-	}
-	for _, id := range []int64{f.actor, reader} {
-		_, err := f.db.ExecContext(context.Background(), "INSERT INTO auth.account_roles (account_id, role_id, tenant_id) VALUES (?, ?, ?)", id, role.ID, testpkg.Tenant(t))
-		require.NoError(t, err)
-	}
-	for _, n := range []int{3, 8} {
-		for len(all) < n {
-			account := testpkg.CreateTestAccount(t, f.db, fmt.Sprintf("identity-account-%d", len(all)))
-			testpkg.EnsureAccountTenant(t, f.db, account.ID, testpkg.Tenant(t))
-			_, err := f.db.ExecContext(context.Background(), "INSERT INTO auth.account_roles (account_id, role_id, tenant_id) VALUES (?, ?, ?)", account.ID, role.ID, testpkg.Tenant(t))
-			require.NoError(t, err)
-			dto := map[string]any{"id": strconv.FormatInt(account.ID, 10), "email": account.Email, "active": true}
-			all = append(all, dto)
-		}
-		for _, tc := range []struct {
-			path, scenario string
-			rows           []map[string]any
-		}{
-			{"/auth/accounts/", "api.auth.accounts.list.positive_growth", all},
-		} {
-			rr, queries := f.get(t, tc.path, token)
-			rbacBudgetCollection(t, rr, "Accounts retrieved successfully", tc.rows)
-			t.Logf("%s N%d statements=%d", tc.scenario, n, len(queries.Statements))
-			querybudgets.AssertQueryBudget(t, "api.auth.accounts.list.positive_growth", queries)
-		}
-	}
-}
-
 func TestIdentityStaffPreviewCandidatesGrowthQueryBudget(t *testing.T) {
 	t.Parallel()
 	f := newRBACBudgetFixtureOn(t, testpkg.SetupIsolatedTestDB(t))

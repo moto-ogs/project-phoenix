@@ -34,7 +34,8 @@ func TestOperatorRecordsRetentionWindowsWithinTheirRange(t *testing.T) {
 	assert.Equal(t, "400", stored, "values outside the range never replace the recorded window")
 
 	reset := newOperatorRequest(t, http.MethodDelete, path, nil)
-	testutil.AssertSuccessResponse(t, testutil.ExecuteRequest(ctx.router, reset), http.StatusNoContent)
+	// Every reset answers one shape (#7808).
+	testutil.AssertSuccessResponse(t, testutil.ExecuteRequest(ctx.router, reset), http.StatusOK)
 }
 
 func TestOperatorSchemaShowsTheDeletionSwitchAndWritableRetentionWindows(t *testing.T) {

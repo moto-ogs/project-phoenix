@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"math/rand"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // LiveOptions configures the continuous live simulation.
@@ -550,8 +552,8 @@ func fetchCurrentSessionID(client Client, state *SeedState, device SeedDevice) (
 	}
 	var envelope struct {
 		Data struct {
-			ActiveGroupID *apiID `json:"active_group_id"`
-			IsActive      bool   `json:"is_active"`
+			ActiveGroupID *ident.ID `json:"active_group_id"`
+			IsActive      bool      `json:"is_active"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(resp, &envelope); err != nil {
@@ -571,8 +573,8 @@ func lookupSchulhofRoom(client Client) int64 {
 	}
 	var envelope struct {
 		Data []struct {
-			ID   apiID  `json:"id"`
-			Name string `json:"name"`
+			ID   ident.ID `json:"id"`
+			Name string   `json:"name"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(resp, &envelope); err != nil {
@@ -610,7 +612,7 @@ func bootstrapLiveState(client Client, ls *liveState, students []SeedStudent) er
 
 	var envelope struct {
 		Data []struct {
-			StudentID apiID `json:"student_id"`
+			StudentID ident.ID `json:"student_id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(resp, &envelope); err != nil {

@@ -1,3 +1,4 @@
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the SEPA direct debit file (#4697): the debits of an issued
  * monthly or holiday run, the PAIN.008 file the office submits to its bank,
@@ -10,7 +11,6 @@
 import type * as sharedContract from "./contract/shared.generated";
 import type * as traegerSepaDebitsContract from "./contract/traeger-sepa-debits.generated";
 import { knownEnum } from "./contract/known-enum";
-import { traegerRequest } from "./traeger-api";
 import { type BillingFile, billingFile } from "./traeger-billing-api";
 
 // Go does not register these sets; the contract types them as string.
@@ -136,19 +136,15 @@ function debitRunFromBackend(
   };
 }
 
-function runPath(kind: SepaDebitRunKind, runId: string): string {
-  return `/api/traeger/sepa-debits/${kind}/${encodeURIComponent(runId)}`;
-}
-
 /** The debit file of an issued run, without bank data of a family. */
 export async function fetchSepaDebitRun(
   kind: SepaDebitRunKind,
   runId: string,
 ): Promise<SepaDebitRun> {
   return debitRunFromBackend(
-    await traegerRequest<traegerSepaDebitsContract.SEPADebitRun>(
-      runPath(kind, runId),
-    ),
+    await bffJson("org", "GET /traeger/sepa-debits/{kind}/{id}", {
+      params: { kind, id: runId },
+    }),
   );
 }
 
@@ -157,7 +153,12 @@ export async function downloadSepaDebitFile(
   kind: SepaDebitRunKind,
   runId: string,
 ): Promise<BillingFile> {
-  return billingFile(`${runPath(kind, runId)}/file`, {}, "lastschrift.xml");
+  return billingFile(
+    bffFile("org", "GET /traeger/sepa-debits/{kind}/{id}/file", {
+      params: { kind, id: runId },
+    }),
+    "lastschrift.xml",
+  );
 }
 
 /**
@@ -175,15 +176,12 @@ export async function submitSepaDebits(
   messageId: string,
 ): Promise<SepaDebitRun> {
   return debitRunFromBackend(
-    await traegerRequest<traegerSepaDebitsContract.SEPADebitRun>(
-      `${runPath(kind, runId)}/submission`,
-      {
-        method: "POST",
-        body: {
-          message_id: messageId,
-        } satisfies traegerSepaDebitsContract.SEPADebitSubmissionRequest,
-      },
-    ),
+    await bffJson("org", "POST /traeger/sepa-debits/{kind}/{id}/submission", {
+      params: { kind, id: runId },
+      body: {
+        message_id: messageId,
+      } satisfies traegerSepaDebitsContract.SEPADebitSubmissionRequest,
+    }),
   );
 }
 
@@ -191,8 +189,10 @@ export async function submitSepaDebits(
 export async function fetchSepaMandateCollections(
   mandateId: string,
 ): Promise<SepaDebit[]> {
-  const debits = await traegerRequest<sharedContract.SEPADebit[]>(
-    `/api/traeger/sepa-mandates/${encodeURIComponent(mandateId)}/collections`,
+  const debits = await bffJson(
+    "org",
+    "GET /traeger/sepa-mandates/{id}/collections",
+    { params: { id: mandateId } },
   );
   return debits.map(debitFromBackend);
 }

@@ -167,17 +167,6 @@ type MFAResetByAdminMail struct {
 	Locale string
 }
 
-// LoginAddressChangedMail tells the previous address of an account that an
-// administrator moved the login to another one (#6862). TenantID is the
-// school whose administrator changed it; a platform change carries none.
-type LoginAddressChangedMail struct {
-	Recipient   string
-	ReferenceID int64
-	TenantID    int64
-	ChangedAt   string
-	ByOperator  bool
-}
-
 // MFAEvidence carries the metadata of one mfa_* authentication event.
 type MFAEvidence struct {
 	ChallengeID int64

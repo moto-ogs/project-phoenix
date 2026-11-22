@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedAccidentReportsStep records three accident reports (#4771) so the
@@ -102,7 +103,7 @@ func postAccidentReport(rt *Runtime, path string, body map[string]any) (int64, e
 	}
 	var envelope struct {
 		Data struct {
-			ID apiID `json:"id"`
+			ID ident.ID `json:"id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil || envelope.Data.ID <= 0 {

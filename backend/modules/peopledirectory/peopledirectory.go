@@ -138,12 +138,6 @@ type Query interface {
 	// ListPersonsByID returns the non-deleted persons of the current tenant
 	// (or of every tenant inside an admin transaction) for the given IDs.
 	ListPersonsByID(context.Context, []int64) ([]Person, error)
-	// ListPersonsAcrossTenantsByID resolves names for visiting students
-	// (holiday care at a partner school): it reads the given persons in a
-	// separate admin transaction, so the hosting tenant's row-level security
-	// does not hide the visitors' home-school rows. Callers must already hold
-	// a reference to the person (a visit row) and must only use the names.
-	ListPersonsAcrossTenantsByID(context.Context, []int64) ([]Person, error)
 	ListPersonsByTenantIDs(context.Context, []int64) ([]Person, error)
 	ListPersonsByAccount(context.Context, []int64) ([]Person, error)
 	SearchPersons(context.Context, PersonFilter) ([]Person, error)

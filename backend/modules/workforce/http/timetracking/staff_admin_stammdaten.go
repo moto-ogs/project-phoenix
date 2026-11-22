@@ -56,10 +56,10 @@ type StammdatenArbeitsvertragPayload struct {
 // StammdatenQualificationPayload is one qualification row received on the
 // wire. IDs accept legacy JSON numbers as well as decimal strings.
 type StammdatenQualificationPayload struct {
-	ID *common.ID `json:"id,omitempty"`
+	ID *ident.ID `json:"id,omitempty"`
 	// TypeID names the kind of proof (#4808); null is "Sonstiges" with the
 	// free-text name.
-	TypeID     *common.ID     `json:"type_id"`
+	TypeID     *ident.ID      `json:"type_id"`
 	Name       string         `json:"name"`
 	AcquiredOn *calendar.Date `json:"acquired_on"`
 	ExpiresOn  *calendar.Date `json:"expires_on"`
@@ -78,7 +78,7 @@ type StammdatenQualificationResponse struct {
 
 // StammdatenResponse is the aggregate GET for the non-sensitive sections.
 type StammdatenResponse struct {
-	StaffID         common.ID                         `json:"staff_id"`
+	StaffID         ident.ID                          `json:"staff_id"`
 	Person          StammdatenPersonPayload           `json:"person"`
 	Kontakt         StammdatenKontaktPayload          `json:"kontakt"`
 	Arbeitsvertrag  StammdatenArbeitsvertragPayload   `json:"arbeitsvertrag"`
@@ -148,10 +148,10 @@ func (r *StammdatenFinancialRequest) Bind(_ *http.Request) error { return nil }
 
 // StammdatenFinancialMaskedResponse is the default financial read.
 type StammdatenFinancialMaskedResponse struct {
-	StaffID                    common.ID `json:"staff_id"`
-	IBANMasked                 *string   `json:"iban_masked"`
-	TaxIDMasked                *string   `json:"tax_id_masked"`
-	SocialSecurityNumberMasked *string   `json:"social_security_number_masked"`
+	StaffID                    ident.ID `json:"staff_id"`
+	IBANMasked                 *string  `json:"iban_masked"`
+	TaxIDMasked                *string  `json:"tax_id_masked"`
+	SocialSecurityNumberMasked *string  `json:"social_security_number_masked"`
 	// KeptByTraeger is true when the Träger keeps the values in its staff
 	// record (#4705); the school then holds none.
 	KeptByTraeger bool `json:"kept_by_traeger"`
@@ -160,10 +160,10 @@ type StammdatenFinancialMaskedResponse struct {
 // StammdatenFinancialRevealResponse carries the unmasked values after the
 // audited reveal.
 type StammdatenFinancialRevealResponse struct {
-	StaffID              common.ID `json:"staff_id"`
-	IBAN                 *string   `json:"iban"`
-	TaxID                *string   `json:"tax_id"`
-	SocialSecurityNumber *string   `json:"social_security_number"`
+	StaffID              ident.ID `json:"staff_id"`
+	IBAN                 *string  `json:"iban"`
+	TaxID                *string  `json:"tax_id"`
+	SocialSecurityNumber *string  `json:"social_security_number"`
 }
 
 // --- handlers --------------------------------------------------------------
@@ -240,7 +240,7 @@ func newStammdatenResponse(data *workforce.StaffStammdaten, types []workforce.Qu
 // StammdatenAck is the uniform PUT response; the tab refetches the section
 // afterwards, so the ack carries no data.
 type StammdatenAck struct {
-	StaffID common.ID `json:"staff_id"`
+	StaffID ident.ID `json:"staff_id"`
 }
 
 // runStammdatenUpdate is the shared PUT shape for non-financial sections:

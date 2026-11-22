@@ -20,7 +20,7 @@ vi.mock("./api-error", async (importOriginal) => ({
 }));
 
 import { ApiError } from "./api-error";
-import { bffJson, bffPath } from "./bff-fetch";
+import { bffFile, bffJson, bffPath } from "./bff-fetch";
 
 const ok = (data: unknown, extra: object = {}) =>
   Response.json({ status: "success", data, ...extra });
@@ -54,6 +54,23 @@ describe("bffPath", () => {
     );
   });
 
+  it("puts a public pattern below /api unless it is there already", () => {
+    expect(
+      bffPath("public", "/caterer/invitations/{schoolId}/{token}", {
+        schoolId: "3",
+        token: "t",
+      }),
+    ).toBe("/api/caterer/invitations/3/t");
+    expect(bffPath("public", "/auth/password-reset")).toBe(
+      "/api/auth/password-reset",
+    );
+    expect(
+      bffPath("public", "/api/enrollment/phases/public/{tenantSlug}", {
+        tenantSlug: "ogs",
+      }),
+    ).toBe("/api/enrollment/phases/public/ogs");
+  });
+
   it("encodes parameters and drops empty query values", () => {
     expect(
       bffPath(
@@ -71,6 +88,64 @@ describe("bffPath", () => {
     expect(() => bffPath("tenant", "/api/activities/{id}", {})).toThrow(
       "missing path parameter id",
     );
+  });
+});
+
+describe("bffFile", () => {
+  it("hands the file answer to the caller", async () => {
+    mockSessionFetch.mockResolvedValueOnce(
+      new Response("pdf", { headers: { "Content-Disposition": "x.pdf" } }),
+    );
+
+    const response = await bffFile(
+      "tenant",
+      "GET /api/meal-plan/orders/month/export",
+      { query: { month: "2026-09", format: "pdf" } },
+    );
+
+    await expect(response.text()).resolves.toBe("pdf");
+    expect(mockSessionFetch).toHaveBeenCalledWith(
+      "/api/meal-plan/orders/month/export?month=2026-09&format=pdf",
+      { method: "GET" },
+    );
+  });
+
+  it("sends the body of a file route that takes one", async () => {
+    mockSessionFetch.mockResolvedValueOnce(new Response("xlsx"));
+
+    await bffFile("tenant", "POST /api/students/export", {
+      body: { format: "xlsx" },
+    });
+
+    expect(mockSessionFetch).toHaveBeenCalledWith("/api/students/export", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: '{"format":"xlsx"}',
+    });
+  });
+
+  it("turns a refused file into the ApiError with the caller's text", async () => {
+    mockSessionFetch.mockResolvedValueOnce(
+      Response.json({ code: "general.permission" }, { status: 403 }),
+    );
+
+    await expect(
+      bffFile("tenant", "GET /api/meal-plan/orders/month/export", {
+        errorMessage: "Export fehlgeschlagen",
+      }),
+    ).rejects.toMatchObject({
+      status: 403,
+      code: "general.permission",
+      message: "Export fehlgeschlagen",
+    });
+  });
+
+  it("takes only file routes", () => {
+    const checks = () => {
+      // @ts-expect-error: a JSON route goes through bffJson
+      void bffFile("tenant", "GET /api/activities/categories");
+    };
+    expect(checks).toBeTypeOf("function");
   });
 });
 
@@ -200,6 +275,21 @@ describe("bffJson", () => {
     });
   });
 
+  it("carries the wait of a refused request (Retry-After) on the ApiError", async () => {
+    mockTransportFetch.mockResolvedValueOnce(
+      Response.json(
+        { status: 429, code: "general.rate_limited" },
+        { status: 429, headers: { "Retry-After": "60" } },
+      ),
+    );
+
+    await expect(
+      bffJson("public", "GET /auth/invitations/{token}", {
+        params: { token: "t" },
+      }),
+    ).rejects.toMatchObject({ status: 429, retryAfterSeconds: 60 });
+  });
+
   it("refuses a success without data as an unreadable answer", async () => {
     mockSessionFetch
       .mockResolvedValueOnce(Response.json({ id: "7" }))
@@ -310,6 +400,20 @@ describe("bffJson", () => {
       code: "general.permission",
     });
     expect(assign).toHaveBeenCalledWith("/parents/login");
+  });
+
+  it("sends a public route without a session", async () => {
+    mockTransportFetch.mockResolvedValueOnce(ok({ valid: true }));
+
+    await bffJson("public", "GET /traeger/invitations/{token}", {
+      params: { token: "abc" },
+    });
+
+    expect(mockTransportFetch).toHaveBeenCalledWith(
+      "/api/traeger/invitations/abc",
+      { method: "GET", credentials: "include", cache: "no-store" },
+    );
+    expect(mockSessionFetch).not.toHaveBeenCalled();
   });
 
   it("leaves Träger, moto schule and caterer on the page on a 401", async () => {

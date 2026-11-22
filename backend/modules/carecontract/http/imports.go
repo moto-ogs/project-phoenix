@@ -56,6 +56,8 @@ func (rs *ImportResource) Router(protectedTraegerRoutes func(chi.Router, func(ch
 		open.Get("/", rs.log)
 		open.Post("/", rs.apply)
 		open.Post("/preview", rs.preview)
+		open.Post("/offering-corrections", rs.correctOfferings(true))
+		open.Post("/offering-corrections/preview", rs.correctOfferings(false))
 	})
 	return r
 }
@@ -102,34 +104,13 @@ func (rs *ImportResource) log(w http.ResponseWriter, r *http.Request) {
 	common.Respond(w, r, http.StatusOK, entries, "Contract imports retrieved")
 }
 
-// importRequestOf reads the upload: a file of at most
-// MaxContractImportFileBytes named .csv or .txt, and the mapping. The owner
-// checks the content: text with a header row, never a binary file.
+// importRequestOf reads the upload and the mapping.
 func importRequestOf(w http.ResponseWriter, r *http.Request) (carecontract.ContractImportRequest, error) {
-	limit := int64(carecontract.MaxContractImportFileBytes + importFormOverhead)
-	r.Body = http.MaxBytesReader(w, r.Body, limit)
-	if err := r.ParseMultipartForm(limit); err != nil {
-		var tooLarge *http.MaxBytesError
-		if errors.As(err, &tooLarge) {
-			return carecontract.ContractImportRequest{}, carecontract.ErrContractImportFileTooLarge
-		}
-		return carecontract.ContractImportRequest{}, carecontract.ErrContractImportFileInvalid
-	}
-	defer func() { _ = r.MultipartForm.RemoveAll() }()
-	file, header, err := r.FormFile("file")
+	upload, err := readImportUpload(w, r)
 	if err != nil {
-		return carecontract.ContractImportRequest{}, carecontract.ErrContractImportFileInvalid
+		return carecontract.ContractImportRequest{}, err
 	}
-	defer func() { _ = file.Close() }()
-	extension := strings.ToLower(filepath.Ext(header.Filename))
-	if extension != importExtensions[0] && extension != importExtensions[1] {
-		return carecontract.ContractImportRequest{}, errImportFileType
-	}
-	content, err := io.ReadAll(io.LimitReader(file, carecontract.MaxContractImportFileBytes+1))
-	if err != nil {
-		return carecontract.ContractImportRequest{}, carecontract.ErrContractImportFileInvalid
-	}
-	request := carecontract.ContractImportRequest{Content: content, FileName: header.Filename,
+	request := carecontract.ContractImportRequest{Content: upload.content, FileName: upload.fileName,
 		Delimiter: r.FormValue("delimiter"), Fingerprint: r.FormValue("fingerprint")}
 	if raw := r.FormValue("mapping"); raw != "" {
 		var mapping carecontract.ContractImportMapping
@@ -139,6 +120,44 @@ func importRequestOf(w http.ResponseWriter, r *http.Request) (carecontract.Contr
 		request.Mapping = &mapping
 	}
 	return request, nil
+}
+
+// importUpload is the file of an import form.
+type importUpload struct {
+	content  []byte
+	fileName string
+}
+
+// readImportUpload reads the file of an import form (#4723) or of a link of
+// imported contracts to child records (#7760): at most
+// MaxContractImportFileBytes, named .csv or .txt. The owner checks the
+// content: text with a header row, never a binary file. The form fields stay
+// readable through r.FormValue.
+func readImportUpload(w http.ResponseWriter, r *http.Request) (importUpload, error) {
+	limit := int64(carecontract.MaxContractImportFileBytes + importFormOverhead)
+	r.Body = http.MaxBytesReader(w, r.Body, limit)
+	if err := r.ParseMultipartForm(limit); err != nil {
+		var tooLarge *http.MaxBytesError
+		if errors.As(err, &tooLarge) {
+			return importUpload{}, carecontract.ErrContractImportFileTooLarge
+		}
+		return importUpload{}, carecontract.ErrContractImportFileInvalid
+	}
+	defer func() { _ = r.MultipartForm.RemoveAll() }()
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		return importUpload{}, carecontract.ErrContractImportFileInvalid
+	}
+	defer func() { _ = file.Close() }()
+	extension := strings.ToLower(filepath.Ext(header.Filename))
+	if extension != importExtensions[0] && extension != importExtensions[1] {
+		return importUpload{}, errImportFileType
+	}
+	content, err := io.ReadAll(io.LimitReader(file, carecontract.MaxContractImportFileBytes+1))
+	if err != nil {
+		return importUpload{}, carecontract.ErrContractImportFileInvalid
+	}
+	return importUpload{content: content, fileName: header.Filename}, nil
 }
 
 var importErrorRules = []struct {

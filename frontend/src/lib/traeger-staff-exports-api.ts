@@ -1,3 +1,4 @@
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 /**
  * Lohnexport und Zeitexport des Trägers über alle Schulen (#4712, ADR 0250).
  *
@@ -6,13 +7,9 @@
  * Arbeitsvertrags mit ihren eigenen Lohnarten. Jedes Laden steht im
  * Zugriffsprotokoll jeder Schule; nichts wird zwischengespeichert.
  */
-import { apiErrorFromBody, transportFetch } from "./api-error";
 import { filenameFromDisposition } from "./file-download";
 import type * as traegerStaffExportsContract from "./contract/traeger-staff-exports.generated";
 import { knownEnum } from "./contract/known-enum";
-import { readJson, traegerRequest } from "./traeger-api";
-
-const BASE = "/api/traeger/staff-exports";
 
 // Go does not register the set; the contract types it as string.
 const PAYROLL_FORMAT_VALUES = ["datev_lodas", "datev_lug"] as const;
@@ -145,18 +142,15 @@ function mapTimeReport(
   };
 }
 
-const monthQuery = (year: number, month: number) =>
-  `year=${year}&month=${month}`;
-
 export async function fetchPayrollReport(
   year: number,
   month: number,
   format: PayrollFormat,
 ): Promise<PayrollReport> {
   return mapPayrollReport(
-    await traegerRequest<traegerStaffExportsContract.TraegerPayrollReport>(
-      `${BASE}/payroll?${monthQuery(year, month)}&format=${format}`,
-    ),
+    await bffJson("org", "GET /traeger/staff-exports/payroll", {
+      query: { year, month, format },
+    }),
   );
 }
 
@@ -165,9 +159,9 @@ export async function fetchTimeReport(
   month: number,
 ): Promise<TimeReport> {
   return mapTimeReport(
-    await traegerRequest<traegerStaffExportsContract.TraegerTimeReport>(
-      `${BASE}/times?${monthQuery(year, month)}`,
-    ),
+    await bffJson("org", "GET /traeger/staff-exports/times", {
+      query: { year, month },
+    }),
   );
 }
 
@@ -176,18 +170,8 @@ export interface ExportDownload {
   readonly filename: string | null;
 }
 
-async function download(path: string): Promise<ExportDownload> {
-  const response = await transportFetch(path, {
-    credentials: "include",
-    cache: "no-store",
-  });
-  if (!response.ok) {
-    throw apiErrorFromBody(
-      `Request failed (${response.status})`,
-      response.status,
-      await readJson(response),
-    );
-  }
+async function download(file: Promise<Response>): Promise<ExportDownload> {
+  const response = await file;
   return {
     blob: await response.blob(),
     filename: filenameFromDisposition(response),
@@ -201,12 +185,18 @@ export const downloadPayrollFile = (
   format: PayrollFormat,
 ) =>
   download(
-    `${BASE}/payroll/export?${monthQuery(year, month)}&format=${format}`,
+    bffFile("org", "GET /traeger/staff-exports/payroll/export", {
+      query: { year, month, format },
+    }),
   );
 
 /** Der Zeitexport als CSV. */
 export const downloadTimeFile = (year: number, month: number) =>
-  download(`${BASE}/times/export?${monthQuery(year, month)}`);
+  download(
+    bffFile("org", "GET /traeger/staff-exports/times/export", {
+      query: { year, month },
+    }),
+  );
 
 /** Der Schlüssel der Lohnart einer Kategorie bei einer Art des Vertrags. */
 export const wageTypeKey = (category: PayrollCategory, kind: string) =>

@@ -9,8 +9,8 @@
 //           import policy for production and test packages (imports.forbidden),
 //           legacy baseline and pass-through evidence of the working tree.
 //           About 30 s warm; CI adds the comparison with the base (about 60 s).
-//   tests   scripts/test-changed.sh --fast: affected Go packages and their
-//           direct importers, affected source ratchets and selected frontend tests
+//   tests   scripts/test-changed.sh --fast: the changed Go packages without
+//           their importers, affected source ratchets and selected frontend tests
 // CI still runs the full affected closure and the full architecture ratchet.
 //
 //   scripts/run-go-toolchain.sh scripts/check-changed.mjs [--fast] [base]   (default origin/development)
@@ -18,7 +18,7 @@
 // Two steps run side by side when the machine has room (8 CPUs, 16 GB and a
 // load average below half the CPUs), otherwise one after the other, static
 // checks first because they fail faster. Each prints its output when it finishes; a
-// step running past PHX_CHECK_TIMEOUT_MINUTES (default 30) is stopped with its
+// step running past PHX_CHECK_TIMEOUT_MINUTES (default 10) is stopped with its
 // process group and reported as TIMEOUT. A rerun with byte-identical inputs
 // (every non-ignored file, the base, env files, installed dependencies, Node
 // and Go) prints the last passing summary instead; PHX_CACHE_VERIFY_RATE
@@ -56,7 +56,7 @@ export function stepsFor(root, base, paths) {
     ...(paths.includes(CONTRACT_MODEL_PATH)
       ? [{ name: 'contract', command: ['node', 'scripts/check-contract-compat.mjs', base] }]
       : []),
-    // Numeric identifiers and routes without a contract only shrink (#2353).
+    // Catalog lines outside the contract only shrink (#2353, #7808).
     ...(paths.some(path => path === CONTRACT_MODEL_PATH || path.startsWith(`${CATALOG_DIR}/`))
       ? [{ name: 'contract-registers', command: ['node', 'scripts/check-contract-shrink.mjs', base] }]
       : []),
@@ -243,7 +243,7 @@ async function main(argv) {
     console.error('check-changed: pnpm install --frozen-lockfile failed');
     return 1;
   }
-  const minutes = Number(process.env.PHX_CHECK_TIMEOUT_MINUTES || 30);
+  const minutes = Number(process.env.PHX_CHECK_TIMEOUT_MINUTES || 10);
   const concurrency = concurrencyFor();
   console.log(`check-changed: ${mergeBase.slice(0, 10)}..working tree, ${concurrency === 2 ? 'steps side by side' : 'one step at a time'}, timeout ${minutes} min per step`);
   const results = await runSteps(stepsFor(root, base, changedPaths(root, base)), { concurrency, timeoutMs: minutes * 60_000, cwd: root });
@@ -253,6 +253,9 @@ async function main(argv) {
     return 130;
   }
   console.log(`\n===== summary =====\n${summary}`);
+  if (results.some(result => result.status === 'TIMEOUT')) {
+    console.log(`TIMEOUT: stopped after ${minutes} min, not a check failure. A go.mod change or a loaded machine needs more: raise PHX_CHECK_TIMEOUT_MINUTES.`);
+  }
   const passed = results.every(result => result.status === 'ok');
   // PHX_PREPUSH=skip passes the static step without checking anything.
   if (passed && process.env.PHX_PREPUSH !== 'skip' && inputsKey(root, mergeBase) === key) {

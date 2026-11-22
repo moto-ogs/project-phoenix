@@ -1,6 +1,10 @@
 package common
 
-import "github.com/moto-ogs/project-phoenix/api/common/contractmodel"
+import (
+	"strings"
+
+	"github.com/moto-ogs/project-phoenix/api/common/contractmodel"
+)
 
 // PortalScope names a portal whose proxy may reach a route. For a session
 // portal the value is the scope claim of that portal's session token;
@@ -117,6 +121,67 @@ type RouteContract struct {
 	// If-Modified-Since to a GET file route and hand its 304 back with
 	// ETag, Last-Modified and FileCache. It needs FileCache.
 	ConditionalGet bool
+
+	// RouteFile says why the portal's own Next route file, not its catalog
+	// proxy, serves this JSON route (#7808): it turns a token pair into the
+	// session cookie, purges a cache after the write, or reads a flow
+	// cookie. The route is typed like any other, and no proxy allowlist
+	// names it, so the proxy never hands its answer to a browser.
+	RouteFile string
+	// Plain says the handler writes the data as the whole body
+	// (RenderJSON), without the envelope. Only a RouteFile route may.
+	Plain bool
+	// Outside keeps a catalog line out of the contract (#7808): no portal
+	// calls it for JSON. It names no portal, type or trait.
+	Outside *Outside
+}
+
+// RouteFileSession is the RouteFile reason of a sign-in, second-factor,
+// renewal, switch or end step: its answer carries or ends the tokens the
+// portal's route file turns into its session cookie.
+const RouteFileSession = "the answer carries or ends the tokens the portal's route file turns into its session cookie"
+
+// OutsideReason is why a catalog line stays outside the contract; the set
+// is closed (contractmodel.OutsideReasons).
+type OutsideReason string
+
+// The reasons a catalog line may stay outside the contract.
+const (
+	// OutsideDevice: the kiosk (PyrePortal) calls it with its device key and
+	// reads numeric identifiers.
+	OutsideDevice OutsideReason = contractmodel.OutsideDevice
+	// OutsideWebDAV: a calendar app speaks WebDAV with XML bodies.
+	OutsideWebDAV OutsideReason = contractmodel.OutsideWebDAV
+	// OutsideMetrics: Prometheus scrapes plain text.
+	OutsideMetrics OutsideReason = contractmodel.OutsideMetrics
+	// OutsideProbe: the load balancer and the container runtime probe the
+	// process.
+	OutsideProbe OutsideReason = contractmodel.OutsideProbe
+	// OutsideStream: a server-sent event stream.
+	OutsideStream OutsideReason = contractmodel.OutsideStream
+	// OutsidePublicAPI: a machine-to-machine API with its own published
+	// description.
+	OutsidePublicAPI OutsideReason = contractmodel.OutsidePublicAPI
+	// OutsideWebhook: a provider posts its events.
+	OutsideWebhook OutsideReason = contractmodel.OutsideWebhook
+)
+
+// Outside is the reason of a catalog line without a contract and one
+// sentence why it applies.
+type Outside struct {
+	Reason OutsideReason
+	Why    string
+}
+
+// OutsideRoutes registers catalog lines of one reason outside the contract,
+// each as "METHOD /pattern" relative to the mount.
+func OutsideRoutes(reason OutsideReason, why string, lines ...string) []RouteContract {
+	routes := make([]RouteContract, 0, len(lines))
+	for _, line := range lines {
+		method, pattern, _ := strings.Cut(line, " ")
+		routes = append(routes, RouteContract{Method: method, Pattern: pattern, Outside: &Outside{Reason: reason, Why: why}})
+	}
+	return routes
 }
 
 // The Cache-Control values a file route may name in FileCache; the handler

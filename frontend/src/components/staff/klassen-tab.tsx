@@ -24,7 +24,7 @@ import { SectionCard } from "~/components/ui/section-card";
 import { Skeleton } from "~/components/ui/skeleton";
 import { RemovableChip } from "~/components/ui/removable-chip";
 import { useApiFormError } from "~/contexts/ToastContext";
-import { authFetch } from "~/lib/api-helpers";
+import { bffJson } from "~/lib/bff-fetch";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { schoolClassLabel } from "~/lib/school-class-label";
@@ -32,34 +32,28 @@ import { fetchSchoolClasses } from "~/lib/student-api";
 import { useSWRAuth } from "~/lib/swr";
 import { studentKeys } from "~/lib/swr/portal-keys";
 import { staffAccessKeys } from "~/lib/swr/staff-keys";
-import type { ApiResponse } from "~/lib/api-envelope";
 
 const logger = createLogger({ component: "StaffKlassenTab" });
 
 const OBJECT = "die Zuweisung der Schulklassen";
 const NO_CLASSES: readonly string[] = [];
 
-interface SchoolClassesPayload {
-  staff_id: number | string;
-  school_classes: string[];
-}
-
 async function fetchAssignedClasses(staffId: string): Promise<string[]> {
-  const response = await authFetch<ApiResponse<SchoolClassesPayload>>(
-    `/api/staff/${staffId}/school-classes`,
-  );
-  return response.data.school_classes ?? [];
+  const data = await bffJson("tenant", "GET /api/staff/{id}/school-classes", {
+    params: { id: staffId },
+  });
+  return data.school_classes ?? [];
 }
 
 async function saveAssignedClasses(
   staffId: string,
   classes: string[],
 ): Promise<string[]> {
-  const response = await authFetch<ApiResponse<SchoolClassesPayload>>(
-    `/api/staff/${staffId}/school-classes`,
-    { method: "PUT", body: { school_classes: classes } },
-  );
-  return response.data.school_classes ?? [];
+  const data = await bffJson("tenant", "PUT /api/staff/{id}/school-classes", {
+    params: { id: staffId },
+    body: { school_classes: classes },
+  });
+  return data.school_classes ?? [];
 }
 
 function sameClassSet(a: readonly string[], b: readonly string[]): boolean {

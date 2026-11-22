@@ -29,7 +29,7 @@ describe("teachersConfig", () => {
   });
 
   it("has correct API configuration", () => {
-    expect(teachersConfig.api.basePath).toBe("/api/staff");
+    expect(teachersConfig.api.routes.list).toBe("GET /api/staff/");
   });
 
   it("has form sections configured", () => {
