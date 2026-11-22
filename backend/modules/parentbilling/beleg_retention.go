@@ -315,6 +315,10 @@ type RetainedContracts interface {
 	// TriggerContractConcluded) lies on or before lastEventOn, with
 	// everything that goes with them, and answers the IDs that went.
 	DeleteEndedContracts(ctx context.Context, organizationID int64, contractIDs []int64, today calendar.Date, event string, lastEventOn calendar.Date) ([]int64, error)
+	// RecipientEmails names per given contract past its draft the address
+	// its invoices go to, the family of the contract (FamilyKey); a contract
+	// without one is left out.
+	RecipientEmails(ctx context.Context, organizationID int64, contractIDs []int64) (map[int64]string, error)
 }
 
 // ContractRetentionFact is one contract past its draft: when it was
@@ -364,6 +368,21 @@ type BelegRecord struct {
 	InstructionID     int64
 	SuspensionID      int64
 	CollectionTrigger *calendar.Date
+}
+
+// FamilyOnContract is the deviation of a family (parent_billing.family_billing)
+// that hangs on a contract the retention is about to delete.
+type FamilyOnContract struct {
+	FamilyBillingID int64
+	FamilyEmail     string
+	ContractID      int64
+}
+
+// FamilyMove hangs the deviation of a family and its trail from a contract
+// that goes onto another contract of the same family (#7862).
+type FamilyMove struct {
+	FamilyBillingID int64
+	From, To        int64
 }
 
 // DueContract is a contract whose instructed period ended: Care Contract

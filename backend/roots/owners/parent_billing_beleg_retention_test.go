@@ -307,3 +307,86 @@ func TestPendingDebitGoesWithItsInvoice(t *testing.T) {
 	assert.True(t, belegExists(t, db, "parent_billing.care_invoices", f.careInvoice), "and keeps its invoice")
 	assert.True(t, belegExists(t, db, "parent_billing.sepa_mandates", f.mandate), "and its mandate")
 }
+
+// TestFamilyBillingOutlivesADeletedContractOfItsFamily (#7862): the
+// deviation of a family hangs on one contract. When the retention deletes
+// that contract while a sibling's contract of the family remains, the
+// deviation moves to the sibling's contract with its trail instead of going
+// with the cascade. A family whose last contract goes loses its row, as
+// before: the row lives no longer than the family's contracts.
+func TestFamilyBillingOutlivesADeletedContractOfItsFamily(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupIsolatedTestDB(t)
+	ctx := context.Background()
+	organization := testpkg.CreateTestOrganization(t, db, &testpkg.Organization{
+		Name: "Träger mit Geschwistern", Slug: fmt.Sprintf("geschwister-%d", testpkg.UniqueTestTenantID(t)),
+	}).ID
+	school := testpkg.CreateTestSchoolInOrganization(t, db, organization, "Geschwister OGS")
+	contract := func(status, email string, endsOn any) int64 {
+		t.Helper()
+		id := testpkg.CreateTestCareContract(t, db, organization, school, testpkg.UniqueTestTenantID(t), "versendet", calendar.NewDate(2026, time.August, 1))
+		_, err := db.ExecContext(ctx, `UPDATE care_contract.contracts SET concluded_at = '2026-08-01 10:00+02', conclusion_method = 'papier',
+			status = ?, ends_on = ?::date WHERE id = ?`, status, endsOn, id)
+		require.NoError(t, err)
+		_, err = db.ExecContext(ctx, `INSERT INTO care_contract.contract_parties (organization_id, contract_id, first_name, last_name, email)
+			VALUES (?, ?, 'Eva', 'Muster', ?)`, organization, id, email)
+		require.NoError(t, err)
+		return id
+	}
+	ended := contract("gekuendigt", "Familie.A@example.org", "2027-07-31")
+	sibling := contract("aktiv", " familie.a@example.org ", nil)
+	alone := contract("gekuendigt", "familie.b@example.org", "2027-07-31")
+	deviation := func(family string, contractID int64) int64 {
+		t.Helper()
+		var id int64
+		require.NoError(t, db.NewRaw(`INSERT INTO parent_billing.family_billing (organization_id, family_email, care_contract_id,
+				recipient_kind, payment_method, due_day) VALUES (?, ?, ?, 'applicant', 'direct_debit', 15) RETURNING id`,
+			organization, family, contractID).Scan(ctx, &id))
+		_, err := db.ExecContext(ctx, `INSERT INTO parent_billing.family_billing_events (organization_id, family_billing_id, care_contract_id, action)
+			VALUES (?, ?, ?, 'save')`, organization, id, contractID)
+		require.NoError(t, err)
+		return id
+	}
+	kept := deviation("familie.a@example.org", ended)
+	lost := deviation("familie.b@example.org", alone)
+
+	today := calendar.NewDate(2026, time.November, 9)
+	retention := NewBelegRetention(func() time.Time { return today.BerlinMidnight() })
+	admin := func(fn func(context.Context) error) {
+		t.Helper()
+		require.NoError(t, tenant.WithinAdmin(tenant.WithUnitOfWork(ctx, testpkg.TenantRuntime(t, db)), fn))
+	}
+	admin(func(adminCtx context.Context) error {
+		instruct(t, retention, adminCtx, organization)
+		return nil
+	})
+	today = calendar.NewDate(2034, time.January, 1)
+	admin(func(adminCtx context.Context) error {
+		_, err := retention.ApplyBelegRetention(adminCtx)
+		return err
+	})
+
+	var contracts []int64
+	require.NoError(t, db.NewRaw(`SELECT id FROM care_contract.contracts WHERE organization_id = ? ORDER BY id`, organization).Scan(ctx, &contracts))
+	require.Equal(t, []int64{sibling}, contracts, "both contracts ended in 2027 go after six years")
+
+	var row struct {
+		Contract      *int64 `bun:"care_contract_id"`
+		PaymentMethod string `bun:"payment_method"`
+		DueDay        *int   `bun:"due_day"`
+		Events        int    `bun:"events"`
+	}
+	require.NoError(t, db.NewRaw(`SELECT care_contract_id, COALESCE(payment_method, '') AS payment_method, due_day,
+			(SELECT count(*) FROM parent_billing.family_billing_events e WHERE e.family_billing_id = f.id AND e.care_contract_id = f.care_contract_id) AS events
+		FROM parent_billing.family_billing f WHERE f.id = ?`, kept).Scan(ctx, &row), "the deviation of a family with a remaining contract stays")
+	require.NotNil(t, row.Contract)
+	assert.Equal(t, sibling, *row.Contract, "it hangs on the sibling's contract now")
+	assert.Equal(t, "direct_debit", row.PaymentMethod, "the payment method survives")
+	require.NotNil(t, row.DueDay)
+	assert.Equal(t, 15, *row.DueDay)
+	assert.Equal(t, 1, row.Events, "its trail moves with it")
+
+	var gone bool
+	require.NoError(t, db.NewRaw(`SELECT NOT EXISTS (SELECT 1 FROM parent_billing.family_billing WHERE id = ?)`, lost).Scan(ctx, &gone))
+	assert.True(t, gone, "a family whose last contract goes loses its deviation with it")
+}

@@ -42,4 +42,10 @@ type ContractRetention interface {
 	// the delete. A draft, a contract in force on today and a contract
 	// without a day of its event are never deleted.
 	DeleteEndedContracts(ctx context.Context, organizationID int64, contractIDs []int64, today calendar.Date, event string, lastEventOn calendar.Date) ([]int64, error)
+	// RecipientEmails names per given contract of the Träger past its draft
+	// the e-mail address its invoices go to: the first party with one, as
+	// ContractBilling.BillingRecipients picks it. A contract without such a
+	// party is left out. The Elternabrechnung finds the family of a contract
+	// by it before the contract is deleted (#7862).
+	RecipientEmails(ctx context.Context, organizationID int64, contractIDs []int64) (map[int64]string, error)
 }

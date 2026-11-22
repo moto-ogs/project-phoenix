@@ -109,3 +109,54 @@ func (s *Store) DeleteExpiredBelegDeletions(ctx context.Context, years int) (int
 	affected, err := result.RowsAffected()
 	return int(affected), err
 }
+
+// FamiliesOnContracts lists the deviations of families that hang on one of
+// the contracts (#7862).
+func (s *Store) FamiliesOnContracts(ctx context.Context, organizationID int64, contractIDs []int64) ([]parentbilling.FamilyOnContract, error) {
+	db, err := adminDB(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var rows []struct {
+		ID          int64  `bun:"id"`
+		FamilyEmail string `bun:"family_email"`
+		ContractID  int64  `bun:"care_contract_id"`
+	}
+	if err := db.NewRaw(`SELECT id, family_email, care_contract_id FROM parent_billing.family_billing
+		WHERE organization_id = ? AND care_contract_id = ANY(?) ORDER BY id`,
+		organizationID, pgdialect.Array(contractIDs)).Scan(ctx, &rows); err != nil {
+		return nil, fmt.Errorf("parent billing postgres: list the families on deleted contracts: %w", err)
+	}
+	families := make([]parentbilling.FamilyOnContract, len(rows))
+	for i, row := range rows {
+		families[i] = parentbilling.FamilyOnContract{FamilyBillingID: row.ID, FamilyEmail: row.FamilyEmail, ContractID: row.ContractID}
+	}
+	return families, nil
+}
+
+// MoveFamilies hangs each deviation and its trail onto its new contract in
+// one statement each, only where it still hangs on the old one (#7862).
+func (s *Store) MoveFamilies(ctx context.Context, organizationID int64, moves []parentbilling.FamilyMove) error {
+	if len(moves) == 0 {
+		return nil
+	}
+	db, err := adminDB(ctx)
+	if err != nil {
+		return err
+	}
+	ids, from, to := make([]int64, len(moves)), make([]int64, len(moves)), make([]int64, len(moves))
+	for i, move := range moves {
+		ids[i], from[i], to[i] = move.FamilyBillingID, move.From, move.To
+	}
+	if _, err := db.NewRaw(`WITH move AS (SELECT * FROM unnest(?1::bigint[], ?2::bigint[], ?3::bigint[]) AS m(id, from_id, to_id)),
+		moved AS (
+			UPDATE parent_billing.family_billing AS family SET care_contract_id = move.to_id, updated_at = CURRENT_TIMESTAMP
+			FROM move WHERE family.organization_id = ?0 AND family.id = move.id AND family.care_contract_id = move.from_id
+			RETURNING family.id, move.from_id, move.to_id)
+		UPDATE parent_billing.family_billing_events AS event SET care_contract_id = moved.to_id
+		FROM moved WHERE event.organization_id = ?0 AND event.family_billing_id = moved.id AND event.care_contract_id = moved.from_id`,
+		organizationID, pgdialect.Array(ids), pgdialect.Array(from), pgdialect.Array(to)).Exec(ctx); err != nil {
+		return fmt.Errorf("parent billing postgres: move the families of deleted contracts: %w", err)
+	}
+	return nil
+}

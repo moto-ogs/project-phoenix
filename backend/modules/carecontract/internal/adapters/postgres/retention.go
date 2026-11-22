@@ -113,3 +113,32 @@ func (ContractRetention) DeleteEndedContracts(ctx context.Context, organizationI
 	}
 	return deleted, nil
 }
+
+// RecipientEmails answers the address of the first party with one per
+// given contract past its draft, in the order BillingRecipients reads the
+// parties.
+func (ContractRetention) RecipientEmails(ctx context.Context, organizationID int64, contractIDs []int64) (map[int64]string, error) {
+	emails := map[int64]string{}
+	if organizationID <= 0 || len(contractIDs) == 0 {
+		return emails, nil
+	}
+	db, err := retentionDB(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var rows []struct {
+		ContractID int64  `bun:"contract_id"`
+		Email      string `bun:"email"`
+	}
+	if err := db.NewRaw(`SELECT DISTINCT ON (c.id) c.id AS contract_id, p.email
+		FROM care_contract.contracts c
+		JOIN care_contract.contract_parties p ON p.organization_id = c.organization_id AND p.contract_id = c.id
+		WHERE c.organization_id = ? AND c.id = ANY(?) AND c.status <> 'entwurf' AND p.email <> ''
+		ORDER BY c.id, p.id`, organizationID, pgdialect.Array(contractIDs)).Scan(ctx, &rows); err != nil {
+		return nil, fmt.Errorf("care contract postgres: read the recipient addresses of retained contracts: %w", err)
+	}
+	for _, row := range rows {
+		emails[row.ContractID] = row.Email
+	}
+	return emails, nil
+}

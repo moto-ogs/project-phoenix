@@ -455,3 +455,29 @@ func TestSEPAMandateReadsWithoutChangeAreAudited(t *testing.T) {
 	assert.Equal(t, []string{"create:office", "read:office", "read:office", "read:office", "read:office"},
 		mandateEvents(t, f, int64(mandate.ID)), "every download is a read")
 }
+
+// A mandate hangs on its contract, and discarding a draft deletes the
+// draft with everything on it. A mandate is therefore refused on a draft
+// (#7862) and saved once the contract is no draft.
+func TestSEPAMandateIsRefusedOnADraftContract(t *testing.T) {
+	t.Parallel()
+	f := newCareBillingFixture(t, "Träger Entwurfsmandat")
+	saveCreditor(t, f, map[string]any{"creditor_id": sepaCreditorID, "prenotification_days": 14, "missing_mandate": "transfer"})
+	contract := careContract(t, f.db, f.office.organization, f.office.schools[0], "Lia", careMonth, sjrServices()...)
+	_, err := f.db.ExecContext(context.Background(), `UPDATE care_contract.contracts
+		SET status = 'entwurf', sent_at = NULL, concluded_at = NULL, conclusion_method = NULL WHERE id = ?`, contract)
+	require.NoError(t, err)
+
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, sepaMandatesPath, mandateBody(contract, ""))
+	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+	assert.Contains(t, rec.Body.String(), "parent_billing.sepa_mandate_contract_draft")
+	var mandates int
+	require.NoError(t, f.db.NewRaw(`SELECT count(*) FROM parent_billing.sepa_mandates WHERE care_contract_id = ?`, contract).
+		Scan(context.Background(), &mandates))
+	assert.Zero(t, mandates, "nothing hangs on the draft")
+
+	_, err = f.db.ExecContext(context.Background(), `UPDATE care_contract.contracts
+		SET status = 'aktiv', sent_at = NOW(), concluded_at = NOW(), conclusion_method = 'papier' WHERE id = ?`, contract)
+	require.NoError(t, err)
+	createMandate(t, f, mandateBody(contract, ""))
+}

@@ -165,7 +165,7 @@ func (m *SEPAMandates) ListSEPAMandates(ctx context.Context, reviewer parentbill
 	}
 	family := ""
 	if contractID > 0 {
-		key, err := m.familyOf(ctx, reviewer.OrganizationID, contractID)
+		key, _, err := m.familyOf(ctx, reviewer.OrganizationID, contractID)
 		if err != nil {
 			return nil, err
 		}
@@ -211,22 +211,22 @@ func (m *SEPAMandates) nameParties(ctx context.Context, organizationID int64, ma
 }
 
 // familyOf is the family of a contract of the Träger.
-func (m *SEPAMandates) familyOf(ctx context.Context, organizationID, contractID int64) (string, error) {
+func (m *SEPAMandates) familyOf(ctx context.Context, organizationID, contractID int64) (string, bool, error) {
 	if contractID <= 0 {
-		return "", parentbilling.ErrFamilyUnknown
+		return "", false, parentbilling.ErrFamilyUnknown
 	}
 	recipients, err := m.contracts.Recipients(ctx, organizationID, []int64{contractID})
 	if err != nil {
-		return "", fmt.Errorf("parent billing: read the contract party: %w", err)
+		return "", false, fmt.Errorf("parent billing: read the contract party: %w", err)
 	}
 	// A contract of another Träger is not among the recipients and names
 	// no family.
 	recipient, known := recipients[contractID]
 	key := parentbilling.ContractFamilyKey(recipient.Email, contractID)
 	if !known || key == "" {
-		return "", parentbilling.ErrFamilyUnknown
+		return "", false, parentbilling.ErrFamilyUnknown
 	}
-	return key, nil
+	return key, recipient.ContractDraft, nil
 }
 
 // CreateSEPAMandate validates the mandate, seals its IBAN and stores it for
@@ -239,9 +239,14 @@ func (m *SEPAMandates) CreateSEPAMandate(ctx context.Context, reviewer parentbil
 	if err != nil {
 		return parentbilling.SEPAMandate{}, err
 	}
-	family, err := m.familyOf(ctx, reviewer.OrganizationID, input.ContractID)
+	family, draft, err := m.familyOf(ctx, reviewer.OrganizationID, input.ContractID)
 	if err != nil {
 		return parentbilling.SEPAMandate{}, err
+	}
+	// A mandate hangs on its contract; a draft can be discarded and would
+	// take the signed mandate with it (#7862).
+	if draft {
+		return parentbilling.SEPAMandate{}, parentbilling.ErrSEPAMandateContractDraft
 	}
 	mandate.FamilyEmail, mandate.ContractID = family, ident.ID(input.ContractID)
 	// A mandate is given to the Träger's creditor identifier and stays bound

@@ -206,3 +206,46 @@ Weisung vor.
 - Offen: Rückgabe und Hinweis vor Trägerlöschung (Slice 3); Weisungen von
   SJR und Hardt; eine Kündigung mit offener außerordentlicher Entscheidung
   und ein `beendet` ohne letzten Tag stehen auf der Klärungsliste.
+
+## Nachtrag 2026-11-22: Die Abweichung der Familie geht mit ihrem letzten Vertrag (#7862)
+
+**Kontext.** Die Abweichung einer Familie bei Empfänger, Zahlungsweg und
+Zahltag (`parent_billing.family_billing`) gilt für alle Verträge der Familie,
+hängt im Schema aber an genau einem (`care_contract_id`, Cascade über
+`cascade_contract_id`, #6692). Löschte der Lauf diesen Vertrag, ging die
+Abweichung mit, auch wenn ein Geschwistervertrag derselben Familie noch lief;
+die nächste Rechnung fiel still auf Abrechnungsvorgaben und Antragsteller
+zurück. Die Auswahl beim Speichern (#7770) machte das nur seltener.
+
+**Entscheidung** (Yannick, 22.11.2026):
+
+1. Die Löschfrist der Zeile hängt am letzten Vertrag der Familie. Bevor Care
+   Contract die fälligen Verträge eines Trägers löscht, hängt die
+   Elternabrechnung im selben Lauf jede Abweichung, die an einem davon
+   hängt, samt ihrer Spur auf den Vertrag derselben Familie um, der am
+   längsten bleibt: ein Vertrag in Kraft, dann ein beendeter ohne letzten
+   Tag, dann das späteste Ende. Ein Entwurf zählt nicht. Die Familie ist der
+   Empfänger der Rechnung (`ContractFamilyKey`); Care Contract nennt dafür
+   über `ContractRetention.RecipientEmails` die Adresse je Vertrag in der
+   Admin-Transaktion, sonst keine Partei. Ohne weiteren Vertrag geht die
+   Zeile wie bisher per Cascade mit dem letzten; eine von der
+   Ferienbetreuung genutzte Zeile behält wie bisher nur ihre Nummer (#6692).
+   Es gibt keine neue Frist und keine neue Spalte.
+2. SEPA-Mandate bleiben unverändert: Sie halten ihren Vertrag (Abschnitt 6)
+   und haben ihre eigene Belegfrist. Weil das Verwerfen eines Entwurfs alles
+   mitnimmt, was an ihm hängt, lässt sich auf einem Entwurf kein Mandat
+   mehr eintragen (`parent_billing.sepa_mandate_contract_draft`, 409); die
+   Vertragsseite zeigt die Mandatskarte auf Entwürfen nicht.
+
+**Verworfen.** Eine eigene Frist ab der letzten Nutzung wie bei
+Ferienfamilien: Sie wäre eine neue Löschfrist, die der Träger anweisen
+müsste, und hielte Zahlerdaten länger als die Verträge. Mandate ebenfalls
+umhängen: unnötig, weil das Mandat seinen Vertrag hält, und es änderte die
+Zuordnung des Belegs.
+
+**Grenzen.** Ein Mandat, das schon vor #7862 auf einem Entwurf eingetragen
+wurde, geht weiter mit dem Verwerfen des Entwurfs. Das Umhängen läuft unter
+der Sperre der fälligen Verträge; ein gleichzeitiges Speichern derselben
+Familie lässt den Lauf an der Sperrgrenze von 100 ms scheitern, er versucht
+es in der nächsten Stunde erneut.
+
