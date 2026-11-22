@@ -486,9 +486,10 @@ describe("embedded enrollment analytics policy", () => {
       );
       // Let the real portal module consume the denied policy before enrollment mounts.
       await act(async () => {});
-      expect(fetch).toHaveBeenCalledWith(`/api/${scope}/analytics-policy`, {
-        cache: "no-store",
-      });
+      expect(fetch).toHaveBeenCalledWith(
+        `/api/${scope}/analytics-policy`,
+        expect.objectContaining({ cache: "no-store" }),
+      );
       view.rerender(
         <>
           <PortalAnalyticsSession surface={surface} consentCopy={COPY} />

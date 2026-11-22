@@ -15,7 +15,6 @@ import (
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/modules/devicefleet"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // Middleware is the chi middleware shape the composition root supplies.
@@ -45,6 +44,9 @@ type Runtime struct {
 	// Success writes the shared answer envelope around an admin route's data
 	// (#7563); the public dashboard keeps its bare body for the screens.
 	Success func(http.ResponseWriter, *http.Request, int, any, string)
+	// Plain writes the dashboard as the whole body, identifiers as strings
+	// (ADR 0300); the screens' route file reads it (#7808).
+	Plain   func(http.ResponseWriter, *http.Request, any)
 	Failure func(http.ResponseWriter, *http.Request, FailureKind, error, string)
 	// FeatureEnabled resolves the opt-in display.enabled toggle for the
 	// current tenant. It fails closed: a resolution error must not open the
@@ -63,7 +65,7 @@ type Resource struct {
 // NewResource constructs the display API resource.
 func NewResource(displays devicefleet.Capability, runtime Runtime) *Resource {
 	if displays == nil || runtime.Protected == nil || runtime.AnyPermission == nil ||
-		runtime.HasPermission == nil || runtime.ParseID == nil || runtime.Success == nil || runtime.Failure == nil ||
+		runtime.HasPermission == nil || runtime.ParseID == nil || runtime.Success == nil || runtime.Plain == nil || runtime.Failure == nil ||
 		runtime.FeatureEnabled == nil || runtime.Read == "" || runtime.Manage == "" {
 		panic("display HTTP: all dependencies are required")
 	}
@@ -159,7 +161,7 @@ func (rs *Resource) getDashboard(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, devicefleet.ErrDisplayInactive):
 			// A known-but-deactivated display is a valid screen state, not an
 			// error: the TV renders "Display deaktiviert" from this.
-			rs.writeAnswer(w, r, map[string]string{"status": "inactive"})
+			rs.runtime.Plain(w, r, InactiveDashboardResponse())
 		case errors.Is(err, devicefleet.ErrDisplayNotFound):
 			// Only a genuinely unknown/revoked token 404s — the TV replaces
 			// its dashboard with the deactivated-link screen on 404.
@@ -172,7 +174,7 @@ func (rs *Resource) getDashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rs.writeAnswer(w, r, NewDashboardResponse(payload))
+	rs.runtime.Plain(w, r, NewDashboardResponse(payload))
 }
 
 // ErrFeatureDisabled refuses every display route of a school that has not
@@ -321,19 +323,4 @@ func (rs *Resource) renderError(w http.ResponseWriter, r *http.Request, err erro
 	default:
 		rs.runtime.Failure(w, r, FailureInternal, err, "display operation failed")
 	}
-}
-
-// writeAnswer writes v as render.JSON does, with identifiers as strings like
-// every answer (ADR 0300, addendum); this package does not import api/common.
-func (rs *Resource) writeAnswer(w http.ResponseWriter, r *http.Request, v any) {
-	body, err := wire.Marshal(v)
-	if err != nil {
-		rs.runtime.Failure(w, r, FailureInternal, err, "display answer failed")
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	if status, ok := r.Context().Value(render.StatusCtxKey).(int); ok {
-		w.WriteHeader(status)
-	}
-	_, _ = w.Write(append(body, '\n'))
 }

@@ -124,7 +124,7 @@ describe("TraegerLoginPage", () => {
       status: "mfa_required",
       challengeToken: "challenge",
       maskedEmail: "b***@traeger.example",
-      organizationId: "7",
+      organizationId: "9007199254740993",
       trustedDeviceEnabled: true,
       trustedDeviceDays: 90,
     });
@@ -160,7 +160,7 @@ describe("TraegerLoginPage", () => {
       challenge_token: "challenge",
       code: "123456",
       remember_device: false,
-      organization_id: "7",
+      organization_id: "9007199254740993",
     });
     await waitFor(() =>
       expect(navigate).toHaveBeenCalledWith("/traeger/uebersicht"),
@@ -358,7 +358,7 @@ describe("TraegerLoginPage", () => {
       status: "mfa_enrollment_required",
       enrollmentToken: "enrollment",
       maskedEmail: "b***@traeger.example",
-      organizationId: "7",
+      organizationId: "9007199254740993",
     });
     fetchMock
       .mockResolvedValueOnce(jsonResponse({ challenge_token: "challenge" }))
@@ -391,7 +391,7 @@ describe("TraegerLoginPage", () => {
       code: "654321",
       remember_device: false,
       challenge_token: "challenge",
-      organization_id: "7",
+      organization_id: "9007199254740993",
     });
   });
 

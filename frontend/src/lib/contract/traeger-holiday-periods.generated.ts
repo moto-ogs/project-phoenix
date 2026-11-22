@@ -26,11 +26,18 @@ import {
   HolidayRegistrationChildSchema,
   HolidayRegistrationDetailSchema,
   HolidayRegistrationMailProblemSchema,
+  type FormAttachmentInput,
+  type FormFieldOptionInput,
+  type FormFieldValidationInput,
+  type FormFileOptionsInput,
   type FormLegalBlock,
+  type FormLegalBlockInput,
   type HolidayFormField,
   type HolidayNoCareDay,
   type HolidayRegistrationChild,
   type HolidayRegistrationMailProblem,
+  type TranslatedTextInput,
+  type VisibilityConditionInput,
   type holidayAddressRequest,
   type holidayContactRequest,
   type holidayGuardianRequest,
@@ -583,6 +590,37 @@ export interface HolidayCriteriaRequest {
   criteria?: holidayCriterionRequest[] | null;
 }
 
+/** Go: enrollment.HolidayFormField */
+export interface HolidayFormFieldInput {
+  attachments?: FormAttachmentInput[] | null;
+  key?: string;
+  label?: string;
+  type?: string;
+  required?: boolean;
+  help_text?: string;
+  content?: string;
+  options?: FormFieldOptionInput[] | null;
+  allowed_times?: string[] | null;
+  single_mode_grades?: number[] | null;
+  validation?: FormFieldValidationInput | null;
+  file_options?: FormFileOptionsInput | null;
+  sort_order?: number;
+  applies_to_child?: boolean;
+  target?: string;
+  visible_when?: VisibilityConditionInput | null;
+  translations?: Record<string, Record<string, TranslatedTextInput> | null> | null;
+  health?: boolean;
+  share_with_host?: boolean;
+}
+
+/** Go: enrollmenthttp.HolidayPeriodFormRequest */
+export interface HolidayPeriodFormRequest {
+  fields?: HolidayFormFieldInput[] | null;
+  legal_blocks?: FormLegalBlockInput[] | null;
+  address_requirement?: string;
+  health_requirement?: string;
+}
+
 /** Go: enrollmenthttp.HolidayWishRequest */
 export interface HolidayWishRequest {
   wish?: string;
@@ -873,6 +911,7 @@ export const routes = {
     method: "PUT",
     pattern: "/traeger/holiday-periods/{id}/form",
     portals: ["org"],
+    request: requestBody<HolidayPeriodFormRequest>(),
     response: success(HolidayFormEditorSchema),
   },
   "PUT /traeger/holiday-periods/{id}/registrations/{registrationId}/children/{childId}/holiday-wish": {

@@ -21,6 +21,7 @@ import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { Input } from "~/components/ui/input";
 import { SpinnerIcon } from "~/components/ui/icons";
 import { createLogger } from "~/lib/logger";
+import { useShellAuthSafe } from "~/lib/shell-auth-context";
 import { Info } from "lucide-react";
 import { SectionCard } from "~/components/ui/section-card";
 import { Loading } from "~/components/ui/loading";
@@ -60,6 +61,9 @@ export function QuickCreateActivityModal({
   onSuccess,
 }: QuickCreateActivityModalProps) {
   const { success: toastSuccess } = useToast();
+  // Das Träger-Büro hat an der Schule keinen Mitarbeitereintrag und wird
+  // deshalb nicht als Leitung eingetragen (#7818).
+  const viaTraeger = useShellAuthSafe()?.isViaTraeger === true;
   const save = useFormModalPending(isOpen);
   const isSubmitting = save.pending;
 
@@ -194,7 +198,11 @@ export function QuickCreateActivityModal({
         disabled={
           isSubmitting || loading || !form.name.trim() || !form.category_id
         }
-        tooltip="Legt die Aktivität sofort an und trägt dich als Leitung ein."
+        tooltip={
+          viaTraeger
+            ? "Die Aktivität wird ohne Leitung angelegt. Du kannst sie danach eintragen."
+            : "Legt die Aktivität sofort an und trägt dich als Leitung ein."
+        }
         disabledReason={quickCreateBlockedReason(
           isSubmitting || loading,
           form.name.trim() !== "",

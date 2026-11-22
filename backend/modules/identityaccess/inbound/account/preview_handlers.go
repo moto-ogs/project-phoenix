@@ -55,7 +55,7 @@ func (req *StaffPreviewEndRequest) Bind(_ *http.Request) error {
 // own session and dies with it.
 type StaffPreviewStartResponse struct {
 	AccessToken     string   `json:"access_token"`
-	ExpiresIn       int64    `json:"expires_in"`
+	ExpiresIn       int64    `json:"expires_in" contract:"number"`
 	TargetAccountID ident.ID `json:"target_account_id"`
 	TargetName      string   `json:"target_name"`
 }

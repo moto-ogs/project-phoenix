@@ -25,7 +25,6 @@ type ActiveTestRepositories struct {
 		LockSessionStart(context.Context, int64) error
 	}
 	GroupMapping studentpresence.Owner
-	CrossTenant  owners.CrossTenantQuery
 }
 
 // NewActiveTestRepositories composes the active suites' presence rows over
@@ -39,13 +38,8 @@ func NewActiveTestRepositories(db transactionruntime.Database, members owners.Me
 	if err != nil {
 		return ActiveTestRepositories{}, err
 	}
-	groups, err := owners.NewSchoolStructure(db)
-	if err != nil {
-		return ActiveTestRepositories{}, err
-	}
 	return ActiveTestRepositories{TimetablePresenceRows: presence,
-		SessionStartLock: owners.NewUnloggedStudentPresence(db), GroupMapping: owners.NewUnloggedStudentPresence(db),
-		CrossTenant: owners.NewCrossTenantQuery(owners.NewUnloggedStudentPresence(db), members.People, groups)}, nil
+		SessionStartLock: owners.NewUnloggedStudentPresence(db), GroupMapping: owners.NewUnloggedStudentPresence(db)}, nil
 }
 
 // NewActiveTestPeopleRows are the People Directory rows of the active suites:

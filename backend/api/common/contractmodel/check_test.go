@@ -102,3 +102,13 @@ func TestViolationsKnowsEveryEnvelope(t *testing.T) {
 	assert.NotEmpty(t, doc.Violations(variants, Answer{Status: 200, Body: body}), "no selector reads the default case")
 	assert.NotEmpty(t, doc.Violations(variants, Answer{Status: 200, Body: body, Variant: "unknown"}))
 }
+
+// A plain answer is the data itself, which only a route file reads (#7808).
+func TestViolationsReadsAPlainAnswerAsItsData(t *testing.T) {
+	t.Parallel()
+	doc, route := checkedDocument()
+	route.Plain = true
+	assert.Empty(t, doc.Violations(route, Answer{Status: 200, Body: []byte(`[` + checkedRow + `]`)}))
+	assert.Equal(t, []string{"body: want an array, found {\"status\":\"success\",\"data\":[]}"},
+		doc.Violations(route, Answer{Status: 200, Body: []byte(`{"status":"success","data":[]}`)}))
+}

@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	identityoperator "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/operator"
 )
@@ -102,10 +103,10 @@ func TestOperatorMFAVerify_SuccessReturnsTokenPair(t *testing.T) {
 	rs := identityoperator.NewMFAResource(auth, mfa)
 
 	rr := httptest.NewRecorder()
-	rs.Verify(rr, opVerifyRequest(t, identityoperator.MFAVerifyRequest{
+	testutil.ServeAtRoute(rr, opVerifyRequest(t, identityoperator.MFAVerifyRequest{
 		ChallengeToken: "challenge.tok",
 		Code:           "123456",
-	}))
+	}), "/operator/auth/mfa/verify", rs.Verify)
 
 	require.Equal(t, http.StatusOK, rr.Code)
 	assert.Equal(t, int64(4242), auth.gotOperatorID)
@@ -130,11 +131,11 @@ func TestOperatorMFAVerify_RememberDeviceIssuesCookie(t *testing.T) {
 	rs := identityoperator.NewMFAResource(auth, mfa)
 
 	rr := httptest.NewRecorder()
-	rs.Verify(rr, opVerifyRequest(t, identityoperator.MFAVerifyRequest{
+	testutil.ServeAtRoute(rr, opVerifyRequest(t, identityoperator.MFAVerifyRequest{
 		ChallengeToken: "challenge.tok",
 		Code:           "123456",
 		RememberDevice: true,
-	}))
+	}), "/operator/auth/mfa/verify", rs.Verify)
 
 	require.Equal(t, http.StatusOK, rr.Code)
 	cookies := rr.Result().Cookies()
@@ -164,11 +165,11 @@ func TestOperatorMFAVerify_RememberDeviceFailureDoesNotBreakLogin(t *testing.T) 
 	rs := identityoperator.NewMFAResource(auth, mfa)
 
 	rr := httptest.NewRecorder()
-	rs.Verify(rr, opVerifyRequest(t, identityoperator.MFAVerifyRequest{
+	testutil.ServeAtRoute(rr, opVerifyRequest(t, identityoperator.MFAVerifyRequest{
 		ChallengeToken: "challenge.tok",
 		Code:           "123456",
 		RememberDevice: true,
-	}))
+	}), "/operator/auth/mfa/verify", rs.Verify)
 
 	require.Equal(t, http.StatusOK, rr.Code,
 		"a cookie-issuance failure is a UX regression, not a security one — login must still succeed")
@@ -186,10 +187,10 @@ func TestOperatorMFAVerify_InactiveOperatorReturns403(t *testing.T) {
 	rs := identityoperator.NewMFAResource(auth, mfa)
 
 	rr := httptest.NewRecorder()
-	rs.Verify(rr, opVerifyRequest(t, identityoperator.MFAVerifyRequest{
+	testutil.ServeAtRoute(rr, opVerifyRequest(t, identityoperator.MFAVerifyRequest{
 		ChallengeToken: "challenge.tok",
 		Code:           "123456",
-	}))
+	}), "/operator/auth/mfa/verify", rs.Verify)
 
 	assert.Equal(t, http.StatusForbidden, rr.Code,
 		"inactive operators surface as 403, matching the rest of the operator surface")
@@ -205,10 +206,10 @@ func TestOperatorMFAVerify_NotFoundReturns401(t *testing.T) {
 	rs := identityoperator.NewMFAResource(auth, mfa)
 
 	rr := httptest.NewRecorder()
-	rs.Verify(rr, opVerifyRequest(t, identityoperator.MFAVerifyRequest{
+	testutil.ServeAtRoute(rr, opVerifyRequest(t, identityoperator.MFAVerifyRequest{
 		ChallengeToken: "challenge.tok",
 		Code:           "123456",
-	}))
+	}), "/operator/auth/mfa/verify", rs.Verify)
 
 	assert.Equal(t, http.StatusUnauthorized, rr.Code)
 }
@@ -223,10 +224,10 @@ func TestOperatorMFAVerify_IssueTokensUnknownErrorMapsTo500(t *testing.T) {
 	rs := identityoperator.NewMFAResource(auth, mfa)
 
 	rr := httptest.NewRecorder()
-	rs.Verify(rr, opVerifyRequest(t, identityoperator.MFAVerifyRequest{
+	testutil.ServeAtRoute(rr, opVerifyRequest(t, identityoperator.MFAVerifyRequest{
 		ChallengeToken: "challenge.tok",
 		Code:           "123456",
-	}))
+	}), "/operator/auth/mfa/verify", rs.Verify)
 
 	assert.Equal(t, http.StatusInternalServerError, rr.Code)
 }

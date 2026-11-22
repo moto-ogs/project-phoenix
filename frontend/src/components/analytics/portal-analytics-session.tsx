@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
+import { bffJson } from "~/lib/bff-fetch";
 import { setAnalyticsContext } from "~/lib/posthog-client";
 import { clearPortalSession, registerPortalSession } from "~/lib/analytics";
 import {
@@ -49,18 +50,14 @@ export function PortalAnalyticsSession({
       const refresh = () => {
         setAnalyticsContext({ surface, enabled: false });
         const sequence = ++requestSequence;
-        void fetch(
-          `/api/${scope === "parent" ? "parent" : "school"}/analytics-policy`,
-          { cache: "no-store" },
+        void (
+          scope === "parent"
+            ? bffJson("parent", "GET /analytics-policy")
+            : bffJson("school", "GET /analytics-policy")
         )
-          .then(async (response) =>
-            response.ok
-              ? (response.json() as Promise<{ data?: { enabled?: boolean } }>)
-              : null,
-          )
           .then((result) => {
             if (cancelled || sequence !== requestSequence) return;
-            setAnalyticsConsentSchool(consent, result?.data?.enabled === true);
+            setAnalyticsConsentSchool(consent, result?.enabled === true);
             // Account IDs stay local; a different account starts a fresh SDK session.
             const key = JSON.stringify([accountId, schoolId]);
             registerPortalSession(
@@ -68,7 +65,7 @@ export function PortalAnalyticsSession({
                 surface,
                 schoolId,
                 role,
-                enabled: result?.data?.enabled === true,
+                enabled: result?.enabled === true,
               },
               registeredRef.current !== null && registeredRef.current !== key,
             );

@@ -9,5 +9,6 @@
   "import_batch_failed": "Nuk u përpunua: {object}. Provoni përsëri më vonë.",
   "mode_forbidden": "Nuk keni qasje te: {object}. Kontaktoni shkollën.",
   "not_test_traeger": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
+  "staff_profile_required": "Fëmijët mund t'i importojë vetëm dikush me profil stafi. Llogaria juaj nuk ka ende një të tillë në këtë shkollë. Ju lutemi kërkoni nga administrata e shkollës ta krijojë.",
   "test_traeger_inactive": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale."
 }

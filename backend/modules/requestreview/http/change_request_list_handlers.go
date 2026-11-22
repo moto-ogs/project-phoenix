@@ -30,3 +30,23 @@ func (rs *Resource) listAggregatedChangeRequests(w http.ResponseWriter, r *http.
 	}
 	common.Respond(w, r, http.StatusOK, page, "Change requests retrieved")
 }
+
+// listChangeRequestHistory serves the decided requests and office corrections
+// with their history projection (#7808). The path names the view.
+func (rs *Resource) listChangeRequestHistory(w http.ResponseWriter, r *http.Request) {
+	if rs.RequestReview == nil {
+		renderError(w, r, common.ErrorInternalServer(errors.New("change request services not configured")))
+		return
+	}
+	q, err := requestreview.ParseHistoryQuery(r.URL.Query())
+	if err != nil {
+		renderError(w, r, common.ErrorInvalidRequest(err))
+		return
+	}
+	page, err := rs.RequestReview.ListRequests(r.Context(), q)
+	if err != nil {
+		renderError(w, r, rs.QueueError(err))
+		return
+	}
+	common.Respond(w, r, http.StatusOK, requestreview.HistoryPageOf(page), "Change request history retrieved")
+}

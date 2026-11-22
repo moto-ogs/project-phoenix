@@ -31,7 +31,7 @@ func actingStaffID(ctx context.Context, staff staffLookup, purpose string) (int6
 	if careplan.EnteredByTraeger(ctx, 0) {
 		return 0, nil
 	}
-	return 0, carerequests.ErrCareRequestForbidden
+	return 0, carerequests.ErrCareRequestStaffProfileRequired
 }
 
 // pickupRequestStaff is the purpose suffix of a pickup request decision.

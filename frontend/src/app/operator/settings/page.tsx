@@ -18,7 +18,7 @@ import { PasswordChangeModal } from "~/components/auth/password-change-modal";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { SectionCard } from "~/components/ui/section-card";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
-import type * as operatorProfileContract from "~/lib/contract/operator-profile.generated";
+import type { OperatorResponse } from "~/lib/contract/shared.generated";
 import { getSessionPersonName } from "~/lib/auth-utils";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
@@ -32,7 +32,7 @@ import { PasskeySettingsSection } from "~/components/settings/passkey-settings-s
 
 const logger = createLogger({ component: "OperatorSettingsPage" });
 
-function fetchOperatorProfile(): Promise<operatorProfileContract.OperatorResponse> {
+function fetchOperatorProfile(): Promise<OperatorResponse> {
   return bffJson("platform", "GET /operator/profile/", {
     errorMessage: "Operator profile load failed",
   });

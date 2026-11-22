@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 )
@@ -30,7 +31,7 @@ func runLogout(t *testing.T, sessions *logoutStub) *httptest.ResponseRecorder {
 	req := httptest.NewRequest(http.MethodPost, "/logout", nil)
 	req = req.WithContext(context.WithValue(req.Context(), sessiontoken.CtxRefreshToken, "refresh-token"))
 	rr := httptest.NewRecorder()
-	(&Resource{Sessions: sessions}).logout(rr, req)
+	testutil.ServeAtRoute(rr, req, "/auth/logout", (&Resource{Sessions: sessions}).logout)
 	return rr
 }
 

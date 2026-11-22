@@ -37,7 +37,9 @@ func publicRoutesStandApart(routes []Route) error {
 			return fmt.Errorf("%s: a public route has no session to renew; drop NoRetryAfterRenewal", where)
 		}
 		for _, other := range routes {
-			if other.Method == route.Method && !slices.Contains(other.Portals, PublicPortal) && patternsOverlap(route.Pattern, other.Pattern) {
+			// The proxy never serves a route file's route, so it takes no
+			// path from a public one.
+			if other.RouteFile == "" && other.Method == route.Method && !slices.Contains(other.Portals, PublicPortal) && patternsOverlap(route.Pattern, other.Pattern) {
 				return fmt.Errorf("%s overlaps the session route %s", where, other.Key())
 			}
 		}

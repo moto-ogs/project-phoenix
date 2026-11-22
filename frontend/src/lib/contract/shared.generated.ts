@@ -26,6 +26,9 @@ export type GuardianPhoneType = (typeof GUARDIAN_PHONE_TYPE_VALUES)[number];
 export const GUARDIAN_RELATIONSHIP_TYPE_VALUES = ["guardian", "other", "parent", "relative"] as const;
 export type GuardianRelationshipType = (typeof GUARDIAN_RELATIONSHIP_TYPE_VALUES)[number];
 
+export const LIST_FORMAT_VALUES = ["csv", "docx", "pdf", "xlsx"] as const;
+export type ListFormat = (typeof LIST_FORMAT_VALUES)[number];
+
 /** Go: absencetypes.AllowanceCarryResponse */
 export interface AllowanceCarryResponse {
   year: number;
@@ -111,6 +114,29 @@ export const SchoolIdentityResponseSchema: z.ZodType<SchoolIdentityResponse, unk
   teacher_id: optional(int64String),
 });
 
+/** Go: portalauth.LoginResponse */
+export interface LoginResponse {
+  status: string;
+  access_token?: string;
+  refresh_token?: string;
+  challenge_token?: string;
+  masked_email?: string;
+  mfa_enrollment_required?: boolean;
+  trusted_device_enabled?: boolean;
+  trusted_device_days?: number;
+}
+
+export const LoginResponseSchema: z.ZodType<LoginResponse, unknown> = object<LoginResponse>({
+  status: str,
+  access_token: optional(str),
+  refresh_token: optional(str),
+  challenge_token: optional(str),
+  masked_email: optional(str),
+  mfa_enrollment_required: optional(bool),
+  trusted_device_enabled: optional(bool),
+  trusted_device_days: optional(safeInt),
+});
+
 /** Go: common.TrustedDeviceDTO */
 export interface TrustedDeviceDTO {
   id: string;
@@ -128,6 +154,47 @@ export const TrustedDeviceDTOSchema: z.ZodType<TrustedDeviceDTO, unknown> = obje
   created_at: str,
   expires_at: str,
   last_used_at: optional(str),
+});
+
+/** Go: common.MFAVerifyRequest */
+export interface MFAVerifyRequest {
+  challenge_token?: string;
+  code?: string;
+  remember_device?: boolean;
+}
+
+/** Go: portalauth.TokenResponse */
+export interface TokenResponse {
+  access_token: string;
+  refresh_token: string;
+}
+
+export const TokenResponseSchema: z.ZodType<TokenResponse, unknown> = object<TokenResponse>({
+  access_token: str,
+  refresh_token: str,
+});
+
+/** Go: portalauth.EnrollStartResponse */
+export interface EnrollStartResponse {
+  challenge_token: string;
+}
+
+export const EnrollStartResponseSchema: z.ZodType<EnrollStartResponse, unknown> = object<EnrollStartResponse>({
+  challenge_token: str,
+});
+
+/** Go: common.MFAResendRequest */
+export interface MFAResendRequest {
+  challenge_token?: string;
+}
+
+/** Go: common.MFAResendResponse */
+export interface MFAResendResponse {
+  challenge_token: string;
+}
+
+export const MFAResendResponseSchema: z.ZodType<MFAResendResponse, unknown> = object<MFAResendResponse>({
+  challenge_token: str,
 });
 
 /** Go: identityaccess.PasskeyCredentialSummary */
@@ -156,12 +223,6 @@ export const PasskeyEnrollmentChallengeSchema: z.ZodType<PasskeyEnrollmentChalle
   masked_email: str,
 });
 
-/** Go: common.PasskeyRegisterOptionsRequest */
-export interface PasskeyRegisterOptionsRequest {
-  code?: string;
-  name?: string;
-}
-
 /** Go: identityaccess.PasskeyCeremonyOptions */
 export interface PasskeyCeremonyOptions {
   session_id: string;
@@ -172,6 +233,18 @@ export const PasskeyCeremonyOptionsSchema: z.ZodType<PasskeyCeremonyOptions, unk
   session_id: str,
   options: nullable(json),
 });
+
+/** Go: common.PasskeyVerifyRequest */
+export interface PasskeyVerifyRequest {
+  session_id?: string;
+  response?: unknown | null;
+}
+
+/** Go: common.PasskeyRegisterOptionsRequest */
+export interface PasskeyRegisterOptionsRequest {
+  code?: string;
+  name?: string;
+}
 
 /** Go: common.PasskeyRegisterVerifyRequest */
 export interface PasskeyRegisterVerifyRequest {
@@ -663,66 +736,6 @@ export const CareOfferingResponseSchema: z.ZodType<CareOfferingResponse, unknown
   updated_at: instant,
 });
 
-/** Go: enrollment.LegalBlock */
-export interface LegalBlock {
-  attachments?: FormAttachment[];
-  key: string;
-  kind: string;
-  title: string;
-  label: string;
-  text: string;
-  required: boolean;
-  sort_order?: number;
-  source?: string;
-  translations?: Record<string, Record<string, TranslatedText> | null>;
-  guardian_agreement?: boolean;
-}
-
-export const LegalBlockSchema: z.ZodType<LegalBlock, unknown> = object<LegalBlock>({
-  attachments: optional(arr(FormAttachmentSchema)),
-  key: str,
-  kind: str,
-  title: str,
-  label: str,
-  text: str,
-  required: bool,
-  sort_order: optional(safeInt),
-  source: optional(str),
-  translations: optional(rec(nullable(rec(TranslatedTextSchema)))),
-  guardian_agreement: optional(bool),
-});
-
-/** Go: enrollmenthttp.PublicLegalTextsResponse */
-export interface PublicLegalTextsResponse {
-  agb: string;
-  agb_document_url: string;
-  agb_display_mode: string;
-  dsgvo: string;
-  email_contact: string;
-  photo: string;
-  terms_enabled: boolean;
-  dsgvo_enabled: boolean;
-  email_contact_enabled: boolean;
-  photo_enabled: boolean;
-  blocks: LegalBlock[] | null;
-  health_consent?: LegalBlock;
-}
-
-export const PublicLegalTextsResponseSchema: z.ZodType<PublicLegalTextsResponse, unknown> = object<PublicLegalTextsResponse>({
-  agb: str,
-  agb_document_url: str,
-  agb_display_mode: str,
-  dsgvo: str,
-  email_contact: str,
-  photo: str,
-  terms_enabled: bool,
-  dsgvo_enabled: bool,
-  email_contact_enabled: bool,
-  photo_enabled: bool,
-  blocks: nullable(arr(LegalBlockSchema)),
-  health_consent: optional(LegalBlockSchema),
-});
-
 /** Go: enrollmenthttp.PublicPhase */
 export interface PublicPhase {
   id: string;
@@ -890,6 +903,66 @@ export const PublicCaptchaConfigResponseSchema: z.ZodType<PublicCaptchaConfigRes
   site_key: str,
 });
 
+/** Go: enrollment.LegalBlock */
+export interface LegalBlock {
+  attachments?: FormAttachment[];
+  key: string;
+  kind: string;
+  title: string;
+  label: string;
+  text: string;
+  required: boolean;
+  sort_order?: number;
+  source?: string;
+  translations?: Record<string, Record<string, TranslatedText> | null>;
+  guardian_agreement?: boolean;
+}
+
+export const LegalBlockSchema: z.ZodType<LegalBlock, unknown> = object<LegalBlock>({
+  attachments: optional(arr(FormAttachmentSchema)),
+  key: str,
+  kind: str,
+  title: str,
+  label: str,
+  text: str,
+  required: bool,
+  sort_order: optional(safeInt),
+  source: optional(str),
+  translations: optional(rec(nullable(rec(TranslatedTextSchema)))),
+  guardian_agreement: optional(bool),
+});
+
+/** Go: enrollmenthttp.PublicLegalTextsResponse */
+export interface PublicLegalTextsResponse {
+  agb: string;
+  agb_document_url: string;
+  agb_display_mode: string;
+  dsgvo: string;
+  email_contact: string;
+  photo: string;
+  terms_enabled: boolean;
+  dsgvo_enabled: boolean;
+  email_contact_enabled: boolean;
+  photo_enabled: boolean;
+  blocks: LegalBlock[] | null;
+  health_consent?: LegalBlock;
+}
+
+export const PublicLegalTextsResponseSchema: z.ZodType<PublicLegalTextsResponse, unknown> = object<PublicLegalTextsResponse>({
+  agb: str,
+  agb_document_url: str,
+  agb_display_mode: str,
+  dsgvo: str,
+  email_contact: str,
+  photo: str,
+  terms_enabled: bool,
+  dsgvo_enabled: bool,
+  email_contact_enabled: bool,
+  photo_enabled: bool,
+  blocks: nullable(arr(LegalBlockSchema)),
+  health_consent: optional(LegalBlockSchema),
+});
+
 /** Go: enrollmenthttp.PublicLateInvitePrefill */
 export interface PublicLateInvitePrefill {
   guardian_email: string;
@@ -930,6 +1003,53 @@ export const PublicEnrollmentFormBootstrapResponseSchema: z.ZodType<PublicEnroll
   captcha_config: PublicCaptchaConfigResponseSchema,
   legal_texts: PublicLegalTextsResponseSchema,
   late_invite: optional(PublicLateInvitePrefillSchema),
+});
+
+/** Go: common.GuardianProfileGuardian */
+export interface GuardianProfileGuardian {
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string;
+}
+
+export const GuardianProfileGuardianSchema: z.ZodType<GuardianProfileGuardian, unknown> = object<GuardianProfileGuardian>({
+  first_name: str,
+  last_name: str,
+  email: str,
+  phone: optional(str),
+});
+
+/** Go: common.GuardianProfileChild */
+export interface GuardianProfileChild {
+  id: string;
+  first_name: string;
+  last_name: string;
+  school_class: string;
+  grade_level?: number;
+  enrollment_submit: boolean;
+  status: string;
+}
+
+export const GuardianProfileChildSchema: z.ZodType<GuardianProfileChild, unknown> = object<GuardianProfileChild>({
+  id: str,
+  first_name: str,
+  last_name: str,
+  school_class: str,
+  grade_level: optional(safeInt),
+  enrollment_submit: bool,
+  status: str,
+});
+
+/** Go: common.GuardianProfileResponse */
+export interface GuardianProfileResponse {
+  guardian: GuardianProfileGuardian;
+  children: GuardianProfileChild[] | null;
+}
+
+export const GuardianProfileResponseSchema: z.ZodType<GuardianProfileResponse, unknown> = object<GuardianProfileResponse>({
+  guardian: GuardianProfileGuardianSchema,
+  children: nullable(arr(GuardianProfileChildSchema)),
 });
 
 /** Go: enrollment.FormLegalBlock */
@@ -1000,6 +1120,66 @@ export interface SubmitSignatureRequest {
   method?: string;
   image_png?: string;
   typed_name?: string;
+}
+
+/** Go: enrollment.FormAttachment */
+export interface FormAttachmentInput {
+  document_id?: string;
+  label?: string;
+  document_url?: string;
+}
+
+/** Go: enrollment.TranslatedText */
+export interface TranslatedTextInput {
+  text?: string;
+  source?: string;
+}
+
+/** Go: enrollment.FormFieldOption */
+export interface FormFieldOptionInput {
+  label?: string;
+  value?: string;
+  translations?: Record<string, Record<string, TranslatedTextInput> | null> | null;
+}
+
+/** Go: enrollment.FormFieldValidation */
+export interface FormFieldValidationInput {
+  min?: number | null;
+  max?: number | null;
+  pattern?: string | null;
+}
+
+/** Go: enrollment.FormFileOptions */
+export interface FormFileOptionsInput {
+  allowed_types?: string[] | null;
+  max_size_mb?: number;
+  multiple?: boolean;
+}
+
+/** Go: enrollment.VisibilityCondition */
+export interface VisibilityConditionInput {
+  source?: string;
+  field?: string;
+  operator?: string;
+  value?: unknown | null;
+}
+
+/** Go: enrollment.FormLegalBlock */
+export interface FormLegalBlockInput {
+  attachments?: FormAttachmentInput[] | null;
+  key?: string;
+  kind?: string;
+  title?: string;
+  label?: string;
+  text?: string;
+  required?: boolean;
+  enabled?: boolean;
+  sort_order?: number;
+  source?: string;
+  display_mode?: string;
+  document_url?: string;
+  translations?: Record<string, Record<string, TranslatedTextInput> | null> | null;
+  guardian_agreement?: boolean;
 }
 
 /** Go: enrollmenthttp.SubmitEnrollmentRequest */
@@ -1297,6 +1477,19 @@ export interface MFAAdminOverrideSetRequest {
   override?: string;
   reason?: string;
 }
+
+/** Go: operator.OperatorResponse */
+export interface OperatorResponse {
+  id: string;
+  email: string;
+  display_name: string;
+}
+
+export const OperatorResponseSchema: z.ZodType<OperatorResponse, unknown> = object<OperatorResponse>({
+  id: int64String,
+  email: str,
+  display_name: str,
+});
 
 /** Go: operator.MFAAdminResetRequest */
 export interface MFAAdminResetRequest {
@@ -1665,6 +1858,11 @@ export const SchoolSchema: z.ZodType<School, unknown> = object<School>({
   device_slots: nullable(safeInt),
   organization: optional(OrganizationSchema),
 });
+
+/** Go: operator.setSchoolSettingRequest */
+export interface setSchoolSettingRequest {
+  value?: unknown | null;
+}
 
 /** Go: announcement.deletedResponse */
 export interface deletedResponse {
@@ -2849,6 +3047,11 @@ export const HomeworkFeedbackResponseSchema: z.ZodType<HomeworkFeedbackResponse,
   status: str,
   note: optional(str),
 });
+
+/** Go: settingshttp.setValueRequest */
+export interface setValueRequest {
+  value?: unknown | null;
+}
 
 /** Go: workforce.StaffAbsenceResponse */
 export interface StaffAbsenceResponse {

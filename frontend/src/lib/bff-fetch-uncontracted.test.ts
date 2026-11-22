@@ -33,6 +33,8 @@ const UNCONTRACTED_CALLERS: Readonly<Record<string, string>> = {
     "POST traeger/auth/login, traeger/auth/mfa/step-up/verify: session steps of the BFF, no backend route of their own",
   "lib/traeger-holiday-form-api.ts":
     "PUT traeger/holiday-periods/[id]/form: the contract leaves the editor's own body undescribed",
+  "lib/operator/provisioning-api.ts":
+    "POST operator/provisioning/revalidate-tenant: the route purges the cached tenant lookup and the ISR pages, no backend route",
   "lib/operator/operator-settings-api.ts":
     "PUT/DELETE operator/provisioning/schools/[id]/settings/values/[key]: the route purges the cached tenant lookup",
 };
