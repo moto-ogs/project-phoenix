@@ -476,6 +476,17 @@ func TestSEPAMandateIsRefusedOnADraftContract(t *testing.T) {
 		Scan(context.Background(), &mandates))
 	assert.Zero(t, mandates, "nothing hangs on the draft")
 
+	// A draft without a party is a family of its own and still a draft.
+	alone := careContract(t, f.db, f.office.organization, f.office.schools[0], "Noah", careMonth, sjrServices()...)
+	_, err = f.db.ExecContext(context.Background(), `UPDATE care_contract.contracts
+		SET status = 'entwurf', sent_at = NULL, concluded_at = NULL, conclusion_method = NULL WHERE id = ?`, alone)
+	require.NoError(t, err)
+	_, err = f.db.ExecContext(context.Background(), `DELETE FROM care_contract.contract_parties WHERE contract_id = ?`, alone)
+	require.NoError(t, err)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, sepaMandatesPath, mandateBody(alone, ""))
+	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+	assert.Contains(t, rec.Body.String(), "parent_billing.sepa_mandate_contract_draft")
+
 	_, err = f.db.ExecContext(context.Background(), `UPDATE care_contract.contracts
 		SET status = 'aktiv', sent_at = NOW(), concluded_at = NOW(), conclusion_method = 'papier' WHERE id = ?`, contract)
 	require.NoError(t, err)

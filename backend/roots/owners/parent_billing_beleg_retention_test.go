@@ -337,6 +337,8 @@ func TestFamilyBillingOutlivesADeletedContractOfItsFamily(t *testing.T) {
 	ended := contract("gekuendigt", "Familie.A@example.org", "2027-07-31")
 	sibling := contract("aktiv", " familie.a@example.org ", nil)
 	alone := contract("gekuendigt", "familie.b@example.org", "2027-07-31")
+	holidayEnded := contract("gekuendigt", "familie.c@example.org", "2027-07-31")
+	holidaySibling := contract("aktiv", "familie.c@example.org", nil)
 	deviation := func(family string, contractID int64) int64 {
 		t.Helper()
 		var id int64
@@ -355,6 +357,11 @@ func TestFamilyBillingOutlivesADeletedContractOfItsFamily(t *testing.T) {
 		VALUES (?, ?, ?, 'read')`, organization, kept, older)
 	require.NoError(t, err)
 	lost := deviation("familie.b@example.org", alone)
+	// A row the holiday care used kept only its number when its contract
+	// went (#6692); with a sibling's contract it keeps its whole deviation.
+	holiday := deviation("familie.c@example.org", holidayEnded)
+	_, err = db.ExecContext(ctx, `UPDATE parent_billing.family_billing SET last_used_on = '2026-08-01' WHERE id = ?`, holiday)
+	require.NoError(t, err)
 
 	today := calendar.NewDate(2026, time.November, 9)
 	retention := NewBelegRetention(func() time.Time { return today.BerlinMidnight() })
@@ -374,7 +381,7 @@ func TestFamilyBillingOutlivesADeletedContractOfItsFamily(t *testing.T) {
 
 	var contracts []int64
 	require.NoError(t, db.NewRaw(`SELECT id FROM care_contract.contracts WHERE organization_id = ? ORDER BY id`, organization).Scan(ctx, &contracts))
-	require.Equal(t, []int64{sibling}, contracts, "the three contracts ended in 2027 go after six years")
+	require.Equal(t, []int64{sibling, holidaySibling}, contracts, "the contracts ended in 2027 go after six years")
 
 	var row struct {
 		Contract      *int64 `bun:"care_contract_id"`
@@ -391,6 +398,16 @@ func TestFamilyBillingOutlivesADeletedContractOfItsFamily(t *testing.T) {
 	require.NotNil(t, row.DueDay)
 	assert.Equal(t, 15, *row.DueDay)
 	assert.Equal(t, 2, row.Events, "its whole trail moves with it, also the entry an earlier save left on the older contract")
+
+	var used struct {
+		Contract      *int64 `bun:"care_contract_id"`
+		PaymentMethod string `bun:"payment_method"`
+	}
+	require.NoError(t, db.NewRaw(`SELECT care_contract_id, COALESCE(payment_method, '') AS payment_method
+		FROM parent_billing.family_billing WHERE id = ?`, holiday).Scan(ctx, &used))
+	require.NotNil(t, used.Contract)
+	assert.Equal(t, holidaySibling, *used.Contract, "the used row moves to the sibling's contract too")
+	assert.Equal(t, "direct_debit", used.PaymentMethod, "and keeps its payment method instead of being detached")
 
 	var gone bool
 	require.NoError(t, db.NewRaw(`SELECT NOT EXISTS (SELECT 1 FROM parent_billing.family_billing WHERE id = ?)`, lost).Scan(ctx, &gone))
