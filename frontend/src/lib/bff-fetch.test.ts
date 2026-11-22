@@ -219,6 +219,35 @@ describe("bffJson", () => {
     });
   });
 
+  it("preserves AbortError when cancelled while consuming the response body", async () => {
+    const controller = new AbortController();
+    const abortError = new DOMException("Request aborted", "AbortError");
+    const stream = new ReadableStream(
+      {
+        pull(streamController) {
+          controller.abort(abortError);
+          streamController.error(controller.signal.reason);
+        },
+      },
+      { highWaterMark: 0 },
+    );
+    mockSessionFetch.mockResolvedValueOnce(new Response(stream));
+
+    await expect(
+      bffJson("tenant", "GET /api/activities/categories", {
+        signal: controller.signal,
+      }),
+    ).rejects.toBe(abortError);
+  });
+
+  it("still reports malformed JSON as an unreadable answer", async () => {
+    mockSessionFetch.mockResolvedValueOnce(new Response("not JSON"));
+
+    await expect(
+      bffJson("tenant", "GET /api/activities/categories"),
+    ).rejects.toMatchObject({ status: 502, code: "general.unavailable" });
+  });
+
   it("passes signal and tenant auth refusals to the session fetch", async () => {
     const controller = new AbortController();
     mockSessionFetch.mockResolvedValueOnce(ok([]));

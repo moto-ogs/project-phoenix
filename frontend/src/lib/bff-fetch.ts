@@ -264,7 +264,15 @@ async function call<T>(
   let answer: unknown;
   try {
     answer = await response.json();
-  } catch {
+  } catch (error) {
+    if (
+      error !== null &&
+      typeof error === "object" &&
+      "name" in error &&
+      error.name === "AbortError"
+    ) {
+      throw error;
+    }
     answer = undefined;
   }
   if (answer === null || typeof answer !== "object" || !("data" in answer)) {
