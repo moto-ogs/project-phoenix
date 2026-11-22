@@ -146,7 +146,7 @@ func buildCareMonth(in careMonthInput) (careMonth, error) {
 		joined: joinedChildren(children, joined, byContract), freeBySchool: map[int64]int{}}
 	var chained []*careChainEntry
 	var unbilled []careContractPlace
-	childOf := childKeys(byContract, children, in.issuedChildIdentities())
+	childOf := childKeys(byContract, order, children, in.issuedChildIdentities())
 	for _, contractID := range order {
 		if _, issued := in.invoiced[contractID]; issued {
 			continue

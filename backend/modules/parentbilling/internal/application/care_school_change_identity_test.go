@@ -332,7 +332,7 @@ func TestCareChildKeysDoNotDependOnOtherFamilies(t *testing.T) {
 	byContract, order := versionsByContract(append(moved, twin(910, 9910, "Ida"), twin(911, 9911, "Ole")))
 	keysWith := func(second string) map[int64]string {
 		recipients := map[int64]parentbilling.CareRecipient{101: {Email: familyEva}, 102: {Email: second}}
-		return childKeys(byContract, childrenOf(byContract, order, contractFamilies(byContract, recipients)), nil)
+		return childKeys(byContract, order, childrenOf(byContract, order, contractFamilies(byContract, recipients)), nil)
 	}
 	apart, joined := keysWith(familyOther), keysWith(familyEva)
 	require.NotEqual(t, apart[101], apart[102], "two families: two children")
@@ -359,7 +359,7 @@ func TestCareIssuedIdentityDoesNotRegroupContractsInForce(t *testing.T) {
 	issued := map[int64]parentbilling.CareContractChild{203: {StudentID: ptr(int64(9999)), FirstName: "Noah", LastName: "Beispiel",
 		BirthDate: ptr(day(t, noahBirth))}}
 	children := childrenOf(byContract, order, families)
-	keys := childKeys(byContract, children, issued)
+	keys := childKeys(byContract, order, children, issued)
 	require.Len(t, children, 1, "E2 groups both contracts in force as one child")
 	assert.Equal(t, keys[201], keys[202], "the chain groups them the same way")
 	assert.NotEqual(t, keys[201], keys[203], "the issued contract of another record stays apart")
@@ -388,7 +388,7 @@ func TestCareIssuedContractWithoutRecordJoinsTheChildWithoutRecord(t *testing.T)
 	inForce.StudentID, inForce.ChildFirstName, inForce.ChildBirthDate = nil, "Noah", ptr(day(t, noahBirth))
 	byContract, order := versionsByContract([]parentbilling.CareContractVersion{inForce})
 	issued := map[int64]parentbilling.CareContractChild{302: {FirstName: "Noah", LastName: "Beispiel", BirthDate: ptr(day(t, noahBirth))}}
-	keys := childKeys(byContract, childrenOf(byContract, order, contractFamilies(byContract, nil)), issued)
+	keys := childKeys(byContract, order, childrenOf(byContract, order, contractFamilies(byContract, nil)), issued)
 	assert.Equal(t, keys[301], keys[302])
 }
 
@@ -454,7 +454,7 @@ func TestCareIssuedContractsJoinTheChildrenInForceAsE1Does(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			byContract, order := versionsByContract(tc.inForce)
-			keys := childKeys(byContract, childrenOf(byContract, order, contractFamilies(byContract, nil)), tc.issued)
+			keys := childKeys(byContract, order, childrenOf(byContract, order, contractFamilies(byContract, nil)), tc.issued)
 			for _, group := range tc.same {
 				for _, contractID := range group[1:] {
 					assert.Equal(t, keys[group[0]], keys[contractID], "contract %d", contractID)
@@ -479,8 +479,38 @@ func TestCareChildKeysKeepThePlacesOfE1(t *testing.T) {
 		versions = append(versions, version)
 	}
 	byContract, order := versionsByContract(versions)
-	keys := childKeys(byContract, childrenOf(byContract, order, contractFamilies(byContract, nil)), nil)
+	keys := childKeys(byContract, order, childrenOf(byContract, order, contractFamilies(byContract, nil)), nil)
 	for i, contractID := range order {
 		assert.Equal(t, "child:"+strconv.Itoa(i), keys[contractID])
 	}
+}
+
+// An issued second record of a name splits nothing in force here, yet the
+// children keep the places E1 gave them over the contracts in force and the
+// issued ones together (#7863): twins of another family keep their keys
+// and so their order against invoices already issued (#7874).
+func TestCareChildKeysKeepThePlacesOfE1WithIssuedNamesakes(t *testing.T) {
+	t.Parallel()
+	noah := func(contract int64, student *int64) parentbilling.CareContractVersion {
+		version := sjrVersion(t, contract, schoolIspringen, 1, billingMonth, "2027-01-31", mon1400)
+		version.StudentID, version.ChildFirstName, version.ChildBirthDate = student, "Noah", ptr(day(t, noahBirth))
+		return version
+	}
+	twin := func(contract, student int64, first string) parentbilling.CareContractVersion {
+		version := sjrVersion(t, contract, schoolIspringen, 1, billingMonth, "2027-01-31", mon1400)
+		version.StudentID, version.ChildFirstName, version.ChildBirthDate = ptr(student), first, ptr(day(t, "2017-02-03"))
+		return version
+	}
+	byContract, order := versionsByContract([]parentbilling.CareContractVersion{
+		noah(700, ptr(int64(9700))), noah(701, nil), twin(702, 9702, "Ida"), twin(703, 9703, "Ole"),
+	})
+	issued := map[int64]parentbilling.CareContractChild{799: {StudentID: ptr(int64(9799)), FirstName: "Noah", LastName: "Beispiel",
+		BirthDate: ptr(day(t, noahBirth))}}
+	keys := childKeys(byContract, order, childrenOf(byContract, order, contractFamilies(byContract, nil)), issued)
+	// E1 over both: Noah's record 0, Noah without a record 1, Ida 2, Ole 3.
+	assert.Equal(t, "child:0", keys[700])
+	assert.Equal(t, keys[700], keys[701], "the contracts in force stay one child")
+	assert.Equal(t, "child:2", keys[702])
+	assert.Equal(t, "child:3", keys[703])
+	assert.Equal(t, "contract:799", keys[799])
 }

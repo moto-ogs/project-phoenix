@@ -279,9 +279,10 @@ Datensatz sie trägt; ohne Datensatz zum einen Kind, dessen Datensätze ihren
 Namen und ihr Geburtsdatum tragen, sonst zum Kind der laufenden Verträge ohne
 Datensatz mit diesem Namen und Geburtsdatum. So gruppieren E2 bis E4 und die Geschwisterregel die
 laufenden Verträge gleich; der Monat berechnet die Gruppierung einmal. Die
-Schlüssel der Kette bleiben die Plätze aus E1: Ein zusammengelegtes Kind
-behält den Platz seines ersten Teils, die Plätze der übrigen Teile bleiben
-leer. So behält jedes andere Kind seinen Schlüssel und gleichrangige Kinder
+Schlüssel der Kette bleiben die Plätze, die E1 über laufende und ausgestellte
+Verträge zusammen vergibt (#7863): Jedes Kind nimmt den Platz seines ersten
+Vertrags, ein zusammengelegtes Kind den seines ersten Teils; ungenutzte
+Plätze bleiben leer. So behält jedes andere Kind seinen Schlüssel und gleichrangige Kinder
 ihre Reihenfolge, auch gegenüber Rechnungen, die ein Lauf des Monats schon
 ausgestellt hat. Dieselbe Gruppierung zählt die Kinder einer Familie
 in der Kinderzahl-Übersicht.

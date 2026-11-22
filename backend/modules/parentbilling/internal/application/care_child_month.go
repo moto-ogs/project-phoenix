@@ -146,13 +146,19 @@ func groupCareChildren(identities map[int64]parentbilling.CareContractChild, ord
 // their name and date of birth; they never regroup the contracts in force.
 // A key depends only on the contracts of its own child, so a change in one
 // family does not reorder the children of another.
-func childKeys(byContract map[int64][]parentbilling.CareContractVersion, children [][]int64, issued map[int64]parentbilling.CareContractChild) map[int64]string {
+func childKeys(byContract map[int64][]parentbilling.CareContractVersion, order []int64, children [][]int64,
+	issued map[int64]parentbilling.CareContractChild,
+) map[int64]string {
 	keys := map[int64]string{}
 	byRecord := map[int64]string{}
 	byPerson := map[string][]string{}
 	personless := map[string][]string{}
-	for i, child := range children {
-		key := "child:" + strconv.Itoa(i)
+	places := e1Places(byContract, order, issued)
+	for _, child := range children {
+		if len(child) == 0 {
+			continue
+		}
+		key := "child:" + strconv.Itoa(places[child[0]])
 		for _, contractID := range child {
 			keys[contractID] = key
 			identity := childOfVersion(byContract[contractID][0])
@@ -164,6 +170,33 @@ func childKeys(byContract map[int64][]parentbilling.CareContractVersion, childre
 	}
 	attachIssued(keys, childIndex{byRecord: byRecord, byPerson: byPerson, personless: personless}, byContract, issued)
 	return keys
+}
+
+// e1Places numbers the contracts in force as E1 numbered the children over
+// the contracts in force and the issued ones together (#7863): by the place
+// of each child's first contract in the order. The sibling chain breaks a
+// tie by that key, so a child keeps its place, and its order against the
+// invoices a run of the month already issued, whatever this grouping joins
+// or keeps together elsewhere. E1 over both only splits the children in
+// force further, so no two children in force share a place.
+func e1Places(byContract map[int64][]parentbilling.CareContractVersion, order []int64,
+	issued map[int64]parentbilling.CareContractChild,
+) map[int64]int {
+	identities := contractChildrenOf(byContract)
+	all := slices.Clone(order)
+	for _, contractID := range slices.Sorted(maps.Keys(issued)) {
+		if _, inForce := identities[contractID]; !inForce {
+			identities[contractID] = issued[contractID]
+			all = append(all, contractID)
+		}
+	}
+	places := map[int64]int{}
+	for place, child := range groupCareChildren(identities, all) {
+		for _, contractID := range child {
+			places[contractID] = place
+		}
+	}
+	return places
 }
 
 // childIndex finds the child of a contract by its record or by the name
