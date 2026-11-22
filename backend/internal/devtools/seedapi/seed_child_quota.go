@@ -3,6 +3,8 @@ package api
 import (
 	"context"
 	"fmt"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // childQuotaSeedHeadroom is how many places the demo school keeps free, so
@@ -66,18 +68,18 @@ func findOperatorSchool(rt *Runtime, schoolID int64) (map[string]any, error) {
 	}
 	var payload struct {
 		Data []struct {
-			ID             apiID  `json:"id"`
-			OrganizationID apiID  `json:"organization_id"`
-			Name           string `json:"name"`
-			Slug           string `json:"slug"`
-			Subdomain      string `json:"subdomain"`
-			Address        string `json:"address"`
-			City           string `json:"city"`
-			Zip            string `json:"zip"`
-			Phone          string `json:"phone"`
-			Email          string `json:"email"`
-			Active         bool   `json:"active"`
-			Hidden         bool   `json:"hidden"`
+			ID             ident.ID `json:"id"`
+			OrganizationID ident.ID `json:"organization_id"`
+			Name           string   `json:"name"`
+			Slug           string   `json:"slug"`
+			Subdomain      string   `json:"subdomain"`
+			Address        string   `json:"address"`
+			City           string   `json:"city"`
+			Zip            string   `json:"zip"`
+			Phone          string   `json:"phone"`
+			Email          string   `json:"email"`
+			Active         bool     `json:"active"`
+			Hidden         bool     `json:"hidden"`
 		} `json:"data"`
 	}
 	if err := parseJSON(raw, &payload); err != nil {

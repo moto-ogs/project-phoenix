@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"slices"
 	"strconv"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // regularLunchDaysKey holds the regular lunch weekdays (1 = Monday) of every
@@ -321,9 +323,9 @@ func primaryGuardianOf(rt *Runtime, auth AuthRef, studentID int64) (seedPrimaryG
 				LastName  string  `json:"last_name"`
 				Email     *string `json:"email"`
 			} `json:"guardian"`
-			RelationshipID   apiID  `json:"relationship_id"`
-			RelationshipType string `json:"relationship_type"`
-			IsPrimary        bool   `json:"is_primary"`
+			RelationshipID   ident.ID `json:"relationship_id"`
+			RelationshipType string   `json:"relationship_type"`
+			IsPrimary        bool     `json:"is_primary"`
 		} `json:"data"`
 	}
 	if err := parseJSON(raw, &response); err != nil {

@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedTraegerBillingCreditStep credits part of the first invoice of the
@@ -68,7 +70,7 @@ func seedReadBillingFamilies(rt *Runtime, auth AuthRef) error {
 	}
 	var envelope struct {
 		Data []struct {
-			ID apiID `json:"id"`
+			ID ident.ID `json:"id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil {
@@ -93,12 +95,12 @@ func seedCreditTarget(raw []byte) (int64, int64, error) {
 	var envelope struct {
 		Data struct {
 			Documents []struct {
-				ID       apiID                   `json:"id"`
+				ID       ident.ID                `json:"id"`
 				Kind     string                  `json:"kind"`
 				History  []seedCreditHistoryLink `json:"history"`
 				Children []struct {
-					ChildID    apiID `json:"child_id"`
-					TotalCents int64 `json:"total_cents" contract:"number"`
+					ChildID    ident.ID `json:"child_id"`
+					TotalCents int64    `json:"total_cents" contract:"number"`
 				} `json:"children"`
 			} `json:"documents"`
 		} `json:"data"`
