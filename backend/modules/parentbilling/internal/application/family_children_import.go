@@ -341,13 +341,14 @@ func countFamilyImportRow(counts *parentbilling.FamilyChildrenImportCounts, stat
 }
 
 // familyImportFingerprint names the mapping and every row with what the
-// import does with it and for which families. A change detector, not a
+// import does with it, for which families and on which contracts. A change detector, not a
 // secret, like the fingerprint of a mandate import.
 func familyImportFingerprint(mapping parentbilling.FamilyChildrenImportMapping, candidates []familyImportCandidate) string {
 	type target struct {
-		Family string        `json:"family"`
-		From   calendar.Date `json:"from"`
-		Status string        `json:"status"`
+		Family   string        `json:"family"`
+		Contract int64         `json:"contract"`
+		From     calendar.Date `json:"from"`
+		Status   string        `json:"status"`
 	}
 	type stateRow struct {
 		Row     parentbilling.FamilyChildrenImportRow `json:"row"`
@@ -357,7 +358,7 @@ func familyImportFingerprint(mapping parentbilling.FamilyChildrenImportMapping, 
 	for i, candidate := range candidates {
 		rows[i].Row = candidate.row
 		for _, decided := range candidate.decided {
-			rows[i].Targets = append(rows[i].Targets, target{decided.family, decided.number.ValidFrom, decided.status})
+			rows[i].Targets = append(rows[i].Targets, target{decided.family, decided.number.ContractID, decided.number.ValidFrom, decided.status})
 		}
 	}
 	// The values are plain data: encoding them cannot fail.
