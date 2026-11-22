@@ -135,15 +135,21 @@ describe("caregiverCapabilityService", () => {
   });
 
   it("throws parsed blocker details on API errors", async () => {
+    const problem = {
+      status: "error",
+      code: "general.business_rejection",
+      detail: "Betreuung kann nicht deaktiviert werden",
+      details: { count: 1 },
+      errors: [{ field: "account_id", reason: "blocked" }],
+      instance: "capability-request",
+      blockers: ["active_group_supervisions"],
+    };
     mockFetch.mockResolvedValue({
       ok: false,
       status: 409,
       statusText: "Conflict",
-      json: async () => ({
-        status: "error",
-        detail: "Betreuung kann nicht deaktiviert werden",
-        blockers: ["active_group_supervisions"],
-      }),
+      headers: new Headers({ "Retry-After": "30" }),
+      json: async () => problem,
     });
 
     await expect(
@@ -152,7 +158,64 @@ describe("caregiverCapabilityService", () => {
       name: "CaregiverCapabilityApiError",
       message: "Betreuung kann nicht deaktiviert werden",
       status: 409,
+      code: problem.code,
+      detail: problem.detail,
+      details: problem.details,
+      errors: problem.errors,
+      instance: problem.instance,
+      requestId: problem.instance,
+      retryAfterSeconds: 30,
+      problem,
       blockers: ["Aktive Gruppenaufsichten"],
+    });
+  });
+
+  it.each([
+    ["tenant", "POST", "not JSON"],
+    ["tenant", "DELETE", JSON.stringify({ status: "success" })],
+    ["operator", "POST", JSON.stringify({ status: "success" })],
+    ["operator", "DELETE", "not JSON"],
+  ])(
+    "preserves the reload-only error for %s %s with an unreadable answer",
+    async (scope, method, body) => {
+      mockFetch.mockResolvedValue(new Response(body, { status: 200 }));
+
+      const request =
+        scope === "tenant"
+          ? method === "POST"
+            ? caregiverCapabilityService.enableTenantAccountCapability("42", {})
+            : caregiverCapabilityService.disableTenantAccountCapability("42")
+          : method === "POST"
+            ? caregiverCapabilityService.enableOperatorAccountCapability(
+                "10",
+                "42",
+                {},
+              )
+            : caregiverCapabilityService.disableOperatorAccountCapability(
+                "10",
+                "42",
+              );
+
+      await expect(request).rejects.toMatchObject({
+        name: "CaregiverCapabilityApiError",
+        status: 502,
+        code: "general.write_answer_unreadable",
+        blockers: [],
+      });
+    },
+  );
+
+  it("preserves the no-response marker on a network failure", async () => {
+    mockFetch.mockRejectedValue(new TypeError("Failed to fetch"));
+
+    await expect(
+      caregiverCapabilityService.disableTenantAccountCapability("42"),
+    ).rejects.toMatchObject({
+      name: "CaregiverCapabilityApiError",
+      status: 503,
+      code: "general.unavailable",
+      noResponse: true,
+      blockers: [],
     });
   });
 

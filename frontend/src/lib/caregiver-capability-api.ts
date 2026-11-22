@@ -1,4 +1,4 @@
-import { ApiError, enrichApiError } from "./api-error";
+import { ApiError } from "./api-error";
 import { bffJson } from "./bff-fetch";
 import type * as authAccountsContract from "./contract/auth-accounts.generated";
 
@@ -178,14 +178,17 @@ function capabilityError(error: unknown): never {
         .filter((blocker): blocker is string => typeof blocker === "string")
         .map((blocker) => translateCapabilityBlocker(blocker))
     : [];
-  throw enrichApiError(
-    new CaregiverCapabilityApiError(
-      error.detail ?? error.message,
-      error.status ?? 500,
-      blockers,
-    ),
-    error.problem,
+  const wrapped = new CaregiverCapabilityApiError(
+    error.detail ?? error.message,
+    error.status ?? 500,
+    blockers,
   );
+  Object.assign(wrapped, error, { name: wrapped.name });
+  // The original problem body is deliberately non-enumerable on ApiError.
+  if (error.problem) {
+    Object.defineProperty(wrapped, "problem", { value: error.problem });
+  }
+  throw wrapped;
 }
 
 const FAILED = "Betreuung konnte nicht geändert werden";
