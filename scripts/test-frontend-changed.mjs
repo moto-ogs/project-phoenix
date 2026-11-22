@@ -136,6 +136,7 @@ const guards = [
   "src/app/api/auth/session-cookie-inventory.test.ts",
   "src/lib/app-route-invariants.test.ts",
   "src/lib/bff-fetch-uncontracted.test.ts",
+  "src/lib/old-fetch-helpers.test.ts",
   "src/lib/analytics-routes.test.ts",
   "src/lib/help-topics.test.ts",
   "src/lib/page-info.test.ts",
