@@ -87,7 +87,6 @@ function selectionMode(files) {
   if (frontend.some(file => !sourceModule.test(file) &&
     file !== "frontend/scripts/product-screenshots/quality.ts") ||
     ["scripts/test-frontend-changed.mjs", "scripts/test-frontend-changed.test.mjs",
-      "scripts/test-changed.sh", "scripts/test-changed_test.sh",
       ".github/workflows/main.yml", ".github/workflows/test.yml"].some(file => changed.has(file))) return "full";
   if (frontend.length) return "incremental";
   if ([...changed].some(file => file.startsWith("frontend/") && file.endsWith(".md") ||
