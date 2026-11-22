@@ -36,7 +36,7 @@ type (
 		PhaseRequestsHoldingStudents(ctx context.Context, phaseID int64, studentIDs, excludedChildIDs []int64) (map[int64]enrollmentNative.CandidatePhaseRequest, error)
 		// ContractEnrollmentHolders lists every request child of the phase
 		// that holds one of the students, with the source of its request
-		// (#7760, ADR 0308).
+		// (#7760, ADR 0309).
 		ContractEnrollmentHolders(ctx context.Context, phaseID int64, studentIDs []int64) ([]enrollmentNative.ContractEnrollmentHolder, error)
 	}
 	// DecisionChildren reads the request children with their offering
@@ -228,7 +228,7 @@ type DecisionDependencies struct {
 	// Reads is the per-account read state of the admin queue (#3778).
 	Reads enrollmentNative.RequestReads
 	// ContractRecords, CareBookings and Random serve the enrollment of the
-	// children of imported care contracts (#7760, ADR 0308): the request
+	// children of imported care contracts (#7760, ADR 0309): the request
 	// and its child, the bookings Care Plan records for it, and the entropy
 	// of its status token. Without the three the capability refuses.
 	ContractRecords ContractEnrollmentRecords

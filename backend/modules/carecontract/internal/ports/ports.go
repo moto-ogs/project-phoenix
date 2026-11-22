@@ -149,7 +149,7 @@ const (
 	ActionLinkChild   = "link_child"
 	ActionUnlinkChild = "unlink_child"
 	// ActionBindApplication records the binding of an imported contract to
-	// the application child of its child (#7760, ADR 0308).
+	// the application child of its child (#7760, ADR 0309).
 	ActionBindApplication = "bind_application"
 )
 

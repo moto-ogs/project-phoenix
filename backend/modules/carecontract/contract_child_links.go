@@ -88,7 +88,7 @@ var (
 	// keeps the child of its application.
 	ErrChildLinkNotImported = errors.New("only a contract from an import is linked to a child record here")
 	// ErrChildLinkBound reports an imported contract bound to the
-	// application of its child (ADR 0308): the enrollment and the bookings it
+	// application of its child (ADR 0309): the enrollment and the bookings it
 	// follows belong to that child record, so the link stays.
 	ErrChildLinkBound = errors.New("the contract is bound to the application of its child")
 )

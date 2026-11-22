@@ -11,7 +11,7 @@ import (
 )
 
 // The source of a request made for a child of an imported care contract
-// (#7760, ADR 0308) at every reader that tells sources apart: the school
+// (#7760, ADR 0309) at every reader that tells sources apart: the school
 // made it, no parent did.
 func TestContractImportSourceIsAStaffEnteredSourceWithoutParentEvidence(t *testing.T) {
 	t.Parallel()

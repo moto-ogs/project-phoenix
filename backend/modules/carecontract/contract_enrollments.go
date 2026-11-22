@@ -7,7 +7,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
-// The enrollment of the children of imported contracts (#7760, ADR 0308). An
+// The enrollment of the children of imported contracts (#7760, ADR 0309). An
 // imported contract linked to its child record (ADR 0307) still has no
 // enrollment and no bookings, so the daily care does not know the child. This
 // capability says, per imported contract of one school, which bookings an

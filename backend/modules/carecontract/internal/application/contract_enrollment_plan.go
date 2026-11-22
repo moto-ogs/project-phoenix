@@ -11,7 +11,7 @@ import (
 )
 
 // The bookings an imported contract stands for, and the proof that they are
-// the contract's (#7760, ADR 0308).
+// the contract's (#7760, ADR 0309).
 //
 // Bookings are half-open and the roster of an approved child is read at the
 // service start of its phase, so the booking of the version in force today

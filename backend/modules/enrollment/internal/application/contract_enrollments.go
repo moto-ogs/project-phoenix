@@ -14,7 +14,7 @@ import (
 )
 
 // The enrollment of the children of imported care contracts (#7760, ADR
-// 0308). It is the approval of a request no parent submitted, for a child
+// 0309). It is the approval of a request no parent submitted, for a child
 // record that exists: it takes the steps of an approval that derive care
 // from bookings and none that touch the child record, a guardian or a
 // parent. The steps it leaves out on purpose are the intake (Submit), the

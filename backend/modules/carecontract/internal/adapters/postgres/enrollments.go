@@ -15,7 +15,7 @@ import (
 )
 
 // The persistence of the enrollment of the children of imported contracts
-// (#7760, ADR 0308). Every statement runs in the Träger transaction and
+// (#7760, ADR 0309). Every statement runs in the Träger transaction and
 // names the Träger in its own filter; none depends on the number of
 // contracts.
 

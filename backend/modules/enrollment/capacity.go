@@ -94,7 +94,7 @@ func NormalizedSubmissionSource(source string) string {
 
 // StaffEnteredSubmissionSource tells that the school made the request and
 // no parent submitted it: a staff-entered enrollment, or the enrollment of a
-// child of an imported care contract (ADR 0308). Such a request has no
+// child of an imported care contract (ADR 0309). Such a request has no
 // parent signature and no parent identity whose authority over the child a
 // later change would have to hold.
 func StaffEnteredSubmissionSource(source string) bool {

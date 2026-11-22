@@ -18,7 +18,7 @@ type (
 	CorrectionPorts = application.CorrectionPorts
 	// ChildLinkPorts are the ports of the link of imported contracts to child records (#7760).
 	ChildLinkPorts = application.ChildLinkPorts
-	// EnrollmentPorts are the school reads of the enrollment of the children of imported contracts (#7760, ADR 0308).
+	// EnrollmentPorts are the school reads of the enrollment of the children of imported contracts (#7760, ADR 0309).
 	EnrollmentPorts = application.EnrollmentPorts
 )
 
@@ -60,7 +60,7 @@ func NewContractChildLinks(ports ChildLinkPorts, today func() calendar.Date) car
 	return application.NewContractChildLinks(postgres.NewStore(today), ports, today)
 }
 
-// NewContractEnrollments builds the plan and the binding of the enrollment of the children of imported contracts (#7760, ADR 0308); it opens no unit, the caller runs each step in its own. today: see NewIntake.
+// NewContractEnrollments builds the plan and the binding of the enrollment of the children of imported contracts (#7760, ADR 0309); it opens no unit, the caller runs each step in its own. today: see NewIntake.
 func NewContractEnrollments(ports EnrollmentPorts, today func() calendar.Date) carecontract.ContractEnrollments {
 	return application.NewContractEnrollments(postgres.NewStore(today), ports, today)
 }

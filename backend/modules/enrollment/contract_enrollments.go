@@ -7,7 +7,7 @@ import (
 )
 
 // The enrollment of a child whose care contract the Träger took over from a
-// file (#7760, ADR 0308). Such a child is in the school's child records and
+// file (#7760, ADR 0309). Such a child is in the school's child records and
 // has a contract, but no enrollment: the daily care reads approved bookings,
 // and it has none. This capability makes the enrollment afterwards, for an
 // existing child record and with the bookings the contract stands for.

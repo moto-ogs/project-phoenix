@@ -305,7 +305,7 @@ type ContractSummary struct {
 	// FollowsBookings tells that the contract has an application child: its
 	// versions follow the approved bookings of that child. Every contract
 	// from an application does, and an imported one once it is bound to the
-	// enrollment of its child (ADR 0308); such a contract keeps its child
+	// enrollment of its child (ADR 0309); such a contract keeps its child
 	// record and takes no offering correction from a file.
 	FollowsBookings bool `json:"follows_bookings"`
 }

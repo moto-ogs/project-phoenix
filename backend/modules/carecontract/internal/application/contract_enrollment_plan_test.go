@@ -11,7 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
-// The plan of the enrollment of an imported contract (#7760, ADR 0308): the
+// The plan of the enrollment of an imported contract (#7760, ADR 0309): the
 // bookings it derives, and the proof that the amendment after the binding
 // writes no version for them. Today is 22 November 2030 in every case; the
 // school year runs from 1 August 2030 to 31 July 2031.

@@ -22,7 +22,7 @@ func init() {
 }
 
 // careContractApplicationBindingUpSQL lets an imported contract carry the
-// application child of its child as well (#7760, ADR 0308):
+// application child of its child as well (#7760, ADR 0309):
 //
 //   - A contract names its origin by at least one key instead of exactly
 //     one. A contract from an application has request_child_id, an imported

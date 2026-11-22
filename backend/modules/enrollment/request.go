@@ -109,7 +109,7 @@ const (
 	RequestSourceLateInvite  = "late_invite"
 	RequestSourceAdminManual = "admin_manual"
 	// RequestSourceContractImport is the source of a request the school made
-	// for a child of an imported care contract (#7760, ADR 0308). No parent
+	// for a child of an imported care contract (#7760, ADR 0309). No parent
 	// submitted it: it names no guardian and carries no consent.
 	RequestSourceContractImport = "contract_import"
 )

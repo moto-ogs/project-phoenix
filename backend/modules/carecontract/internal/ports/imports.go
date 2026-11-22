@@ -17,7 +17,7 @@ import (
 // empty for one from an application. StudentID the child record of the
 // school it is linked to, nil without one (#7760). RequestChildID is the
 // application child of a contract from an application and of an imported
-// contract bound to one (ADR 0308), nil for an imported one that is not
+// contract bound to one (ADR 0309), nil for an imported one that is not
 // bound: with it the read also gives the keys of the contracts.
 type ContractChild struct {
 	ContractID   int64
@@ -43,7 +43,7 @@ type ChildLink struct {
 
 // ApplicationBinding names the application child an imported contract is
 // bound to, with the child record the contract must still have (#7760, ADR
-// 0308).
+// 0309).
 type ApplicationBinding struct {
 	ContractID     int64
 	StudentID      int64

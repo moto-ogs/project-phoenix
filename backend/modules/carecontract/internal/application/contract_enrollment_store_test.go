@@ -16,7 +16,7 @@ import (
 )
 
 // The enrollment of the child of an imported contract against the real
-// store (#7760, ADR 0308): the plan, the binding, and what the bound
+// store (#7760, ADR 0309): the plan, the binding, and what the bound
 // contract is to every reader afterwards.
 
 // enrolledSchool is the school of the cover fixture as the plan and the

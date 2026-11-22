@@ -12,7 +12,7 @@ import (
 
 // ContractEnrollmentHolders lists, for the students, every request child of
 // the phase that created or renews one of them and is neither rejected nor
-// withdrawn, with the source of its request (#7760, ADR 0308): one read for
+// withdrawn, with the source of its request (#7760, ADR 0309): one read for
 // a phase, however many students. A row holds the student it created or was
 // matched to, like PhaseRequestsHoldingStudents; either column counts.
 func (r *Store) ContractEnrollmentHolders(ctx context.Context, phaseID int64, studentIDs []int64) ([]enrollment.ContractEnrollmentHolder, error) {

@@ -309,7 +309,7 @@ func TestCareContractChildUnlinkCorrectsOnlyImportedContracts(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
 }
 
-// An imported contract bound to the enrollment of its child (ADR 0308) keeps
+// An imported contract bound to the enrollment of its child (ADR 0309) keeps
 // its child record: the enrollment and the bookings it follows belong to
 // that child. The unlink answers child_link_bound and changes nothing, and
 // the contract tells that it follows its bookings.

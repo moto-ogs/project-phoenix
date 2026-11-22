@@ -1013,12 +1013,12 @@
     },
     {
       "adr": "0083",
-      "approval_adr": "0308",
+      "approval_adr": "0309",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.Decisions.EnrollContractChildren",
       "classification": "debt",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.ContractEnrollments.EnrollContractChildren",
-      "reason": "Unreviewed cross-owner mutation, explicit coordination finding (not a leaf or E1-E5 grant): enrollment reaches modules/careplan.PickupAutoExcusal.ResyncFutureExceptions (care-plan) through modules/enrollment/internal/application.Decisions.EnrollContractChildren, the same resync of the pickup auto excusals an approval (Decide) makes once the bookings of an approved child exist, here without the announcement to the guardians (#7760). Approved for the silent enrollment of the children of imported contracts by ADR 0308; protocol review stays follow-up work (ADR 0098).",
+      "reason": "Unreviewed cross-owner mutation, explicit coordination finding (not a leaf or E1-E5 grant): enrollment reaches modules/careplan.PickupAutoExcusal.ResyncFutureExceptions (care-plan) through modules/enrollment/internal/application.Decisions.EnrollContractChildren, the same resync of the pickup auto excusals an approval (Decide) makes once the bookings of an approved child exist, here without the announcement to the guardians (#7760). Approved for the silent enrollment of the children of imported contracts by ADR 0309; protocol review stays follow-up work (ADR 0098).",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupAutoExcusal.ResyncFutureExceptions",
       "target_owner": "care-plan"
@@ -1035,12 +1035,12 @@
     },
     {
       "adr": "0083",
-      "approval_adr": "0308",
+      "approval_adr": "0309",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.Decisions.EnrollContractChildren",
       "classification": "debt",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.ContractEnrollments.EnrollContractChildren",
-      "reason": "Unreviewed cross-owner lock, explicit coordination finding (not a leaf or E1-E5 grant): enrollment reaches modules/timetable.RecurrenceWriteLock.LockRecurrenceWrites (timetable-activities) through modules/enrollment/internal/application.Decisions.EnrollContractChildren, the approval gates an approval (Decide) takes before its row locks and the gate the phase bounds reader takes again before it reads the phase (#7760). Approved for the silent enrollment of the children of imported contracts by ADR 0308; protocol review stays follow-up work (ADR 0098).",
+      "reason": "Unreviewed cross-owner lock, explicit coordination finding (not a leaf or E1-E5 grant): enrollment reaches modules/timetable.RecurrenceWriteLock.LockRecurrenceWrites (timetable-activities) through modules/enrollment/internal/application.Decisions.EnrollContractChildren, the approval gates an approval (Decide) takes before its row locks and the gate the phase bounds reader takes again before it reads the phase (#7760). Approved for the silent enrollment of the children of imported contracts by ADR 0309; protocol review stays follow-up work (ADR 0098).",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.RecurrenceWriteLock.LockRecurrenceWrites",
       "target_owner": "timetable-activities"
@@ -8753,7 +8753,7 @@
     },
     {
       "adr": "0067",
-      "approval_adr": "0308",
+      "approval_adr": "0309",
       "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.EnrollmentArrivalSchedules.CreateArrivalSchedule",
       "classification": "E1",
       "effect": "mutation",
@@ -8789,7 +8789,7 @@
     },
     {
       "adr": "0067",
-      "approval_adr": "0308",
+      "approval_adr": "0309",
       "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/internal/application.EnrollmentPickupSchedules.UpsertPickupSchedule",
       "classification": "E1",
       "effect": "mutation",

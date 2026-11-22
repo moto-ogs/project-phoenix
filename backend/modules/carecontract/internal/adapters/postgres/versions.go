@@ -66,7 +66,7 @@ func versionsOf(rows []versionRow) ([]carecontract.Version, error) {
 
 // AmendableContracts reads every active contract with an application child:
 // one from an application, and an imported one bound to the enrollment of
-// its child (ADR 0308). An imported contract that is not bound follows no
+// its child (ADR 0309). An imported contract that is not bound follows no
 // bookings (#4723). Each comes with its effective
 // versions by effective date, the start of version 1, which a fixed term
 // counts from even when a later change goes before it, and its next version

@@ -80,7 +80,7 @@ func (Store) LinkContractChildren(ctx context.Context, organizationID int64, lin
 // another child record is ErrChildLinkChanged: nothing is written then.
 // ErrContractNotFound for a contract the Träger does not have,
 // ErrChildLinkNotImported for one from an application, ErrChildLinkBound
-// for an imported one bound to the application of its child (ADR 0308): its
+// for an imported one bound to the application of its child (ADR 0309): its
 // enrollment and its bookings belong to that child record.
 func (Store) UnlinkContractChild(ctx context.Context, organizationID, contractID, studentID int64) (int64, bool, error) {
 	db, err := traegerDB(ctx, organizationID)

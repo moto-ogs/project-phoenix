@@ -113,7 +113,7 @@ Care Plan, und `AmendFromBookings` folgt nur Verträgen mit
    legt die Umsetzung fest und hält es im PR fest.
 
 Die Umsetzung hält
-[ADR 0308](0308-bestandskinder-bekommen-ihre-anmeldung-still-aus-dem-importierten-vertrag.md)
+[ADR 0309](0309-bestandskinder-bekommen-ihre-anmeldung-still-aus-dem-importierten-vertrag.md)
 fest: die stille Anmeldung, die Bindung, den Workflow und den Schritt für die
 Eltern.
 

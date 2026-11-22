@@ -11,7 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
-// The enrollment of the children of imported contracts (#7760, ADR 0308):
+// The enrollment of the children of imported contracts (#7760, ADR 0309):
 // the read of the contracts in the Träger transaction, the plan in the
 // school's tenant transaction and the binding in the Träger transaction. The
 // caller opens each unit; nothing here does.

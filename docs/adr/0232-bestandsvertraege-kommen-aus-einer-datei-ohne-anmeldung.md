@@ -190,4 +190,4 @@ Die Entscheidung ändert diese Register (ADR 0057 Punkt 5, ADR 0070):
 - Die Verknüpfung importierter Verträge mit Kindern der Schule gibt es seit
   #7760 (ADR 0307). Anmeldung und Buchungen der Bestandskinder kommen still
   aus dem importierten Vertrag
-  ([ADR 0308](0308-bestandskinder-bekommen-ihre-anmeldung-still-aus-dem-importierten-vertrag.md)).
+  ([ADR 0309](0309-bestandskinder-bekommen-ihre-anmeldung-still-aus-dem-importierten-vertrag.md)).

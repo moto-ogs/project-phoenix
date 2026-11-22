@@ -261,7 +261,7 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0232: the import of existing contracts and its ports (+6).
 	// ADR 0307 (#7760): the link of imported contracts
 	// to child records and its ports (+7).
-	// ADR 0308 (#7760): the plan and the binding of the enrollment of the
+	// ADR 0309 (#7760): the plan and the binding of the enrollment of the
 	// children of imported contracts and its ports (+7).
 	"modules/carecontract/compose": 195,
 	// Raised by ADR 0158: the monthly contribution constructor (+5);

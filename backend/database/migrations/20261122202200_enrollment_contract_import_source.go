@@ -19,7 +19,7 @@ func init() {
 }
 
 // enrollmentContractImportSourceUpSQL lets a request name an imported care
-// contract as its source (#7760, ADR 0308): the enrollment the school makes
+// contract as its source (#7760, ADR 0309): the enrollment the school makes
 // afterwards for a child whose contract the Träger took over from a file. No
 // parent submitted it, so it carries no guardian, no consent and no
 // evidence. Running it again changes nothing.
