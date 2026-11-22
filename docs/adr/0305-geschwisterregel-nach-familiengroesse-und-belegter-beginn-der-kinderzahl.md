@@ -66,9 +66,14 @@ Punkt 5 den Satz zum Beginn der Zahl.
 6. **Unverändert aus ADR 0288:** Eine geltende bestätigte Zahl wird nie
    überschrieben, eine abgelaufene erneuert die Datei frühestens ab dem Tag
    nach ihrem Ende, die Vorschau wird per Fingerabdruck bestätigt. Der Tag
-   steht im Fingerabdruck. Gehören die Verträge eines Kindes zu zwei Familien
-   und gilt die Zahl für sie ab verschiedenen Tagen, nennt die Zeile der
-   Vorschau beide Tage (`valid_from`, `later_valid_from`).
+   steht im Fingerabdruck. Gehören die Verträge eines Kindes zu mehreren
+   Familien und gilt die Zahl für sie ab verschiedenen Tagen, nennt die Zeile
+   der Vorschau jeden dieser Tage (`valid_from`, `later_valid_from`). Liegt
+   der Tag der Datei nach dem Ende einer noch geltenden Bestätigung, bleibt
+   die Zeile „schon bestätigt“ und speichert nichts: moto hält je Familie
+   eine Bestätigung, und ein Übernehmen würde die geltende überschreiben.
+   Das Büro verlängert sie über „Kinderzahl ändern“; eine Nachfolge je
+   Familie wäre ein eigenes Speichermodell.
 7. **Der Vertragsimport bleibt.** Dort nennt die Datei den Vertragsbeginn
    selbst, je Zeile oder für alle Zeilen, und die Kinderzahl steht in
    derselben Zeile (ADR 0288 Punkt 4).

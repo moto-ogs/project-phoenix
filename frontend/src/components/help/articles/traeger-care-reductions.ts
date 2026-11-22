@@ -75,7 +75,7 @@ export function traegerCareReductionsTopic(): HelpTopic {
           "Prüfe die Zeilen unter `Prüfen und übernehmen`. `Bereit` übernimmt moto. Bei `Fehlerhaft` und `Widerspruch in der Datei` steht der Grund in der Spalte `Hinweis`.",
           "`Andere Zahl bestätigt` heißt: Für die Familie gilt schon eine andere Zahl. moto ändert sie nicht. Ändere sie in der Liste über `Kinderzahl ändern`.",
           "`Verschiedene Angaben` heißt: Für die Familie sind verschiedene Kinderzahlen bestätigt. Bestätige die Kinderzahl in der Familienliste. Die Datei löst diesen Widerspruch nicht.",
-          "Ist die bisherige Zahl einer Familie abgelaufen? Dann übernimmt moto die Zahl aus der Datei. Sie gilt ab dem Tag nach dem Ablauf.",
+          "Ist die bisherige Zahl einer Familie abgelaufen? Dann übernimmt moto die Zahl aus der Datei. Sie gilt frühestens ab dem Tag nach dem Ablauf.",
           "Wähle unten `übernehmen`. Die Zahlen stehen danach in der Liste mit dem Stand `Bestätigt`.",
         ],
       },

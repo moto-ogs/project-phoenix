@@ -50972,8 +50972,12 @@
         {
           "name": "later_valid_from",
           "schema": {
-            "kind": "date",
-            "nullable": true
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "date",
+              "nullable": true
+            }
           }
         },
         {

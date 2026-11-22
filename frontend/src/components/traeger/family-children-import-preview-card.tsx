@@ -28,6 +28,8 @@ import {
   numberCountLabel,
 } from "./family-children-import-format";
 
+const GERMAN_LIST = new Intl.ListFormat("de", { type: "conjunction" });
+
 const IMPORT_PAGE_SIZE = 50;
 
 function NotesCell({ row }: Readonly<{ row: FamilyImportRow }>) {
@@ -139,9 +141,9 @@ export function FamilyChildrenImportPreviewCard({
                 {`ab ${formatDate(row.validFrom)}`}
               </span>
             ) : null}
-            {row.laterValidFrom ? (
+            {row.laterValidFrom.length > 0 ? (
               <span className="block text-xs text-gray-500 tabular-nums">
-                {`Für einen weiteren Vertrag ab ${formatDate(row.laterValidFrom)}`}
+                {`Für weitere Verträge ab ${GERMAN_LIST.format(row.laterValidFrom.map((day) => formatDate(day)))}`}
               </span>
             ) : null}
           </span>

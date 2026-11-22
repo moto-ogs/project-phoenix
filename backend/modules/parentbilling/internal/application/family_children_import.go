@@ -217,33 +217,27 @@ func takenFamilyImportRows(candidates []familyImportCandidate) []*importedChildr
 	return taken
 }
 
-// showDay names on a ready row the days its number counts from: the
-// earliest of the families that take it over and, when they differ, the
-// latest too, so the preview hides no day the import stores. Any other row
+// showDay names on a ready row every day its number counts from: the
+// earliest of the families that take it over and, when they differ, each
+// later one, so the preview hides no day the import stores. Any other row
 // names none: a confirmed number keeps its own validity, which the row does
 // not name.
 func (c *familyImportCandidate) showDay() {
-	c.row.ValidFrom, c.row.LaterValidFrom = nil, nil
+	c.row.ValidFrom, c.row.LaterValidFrom = nil, []calendar.Date{}
 	if c.row.Status != parentbilling.FamilyImportReady {
 		return
 	}
-	var first, last *calendar.Date
+	var days []calendar.Date
 	for _, row := range c.decided {
-		if row.status != parentbilling.ImportedChildrenNew {
-			continue
-		}
-		from := row.number.ValidFrom
-		if first == nil || from.Before(*first) {
-			first = &from
-		}
-		if last == nil || from.After(*last) {
-			last = &from
+		if row.status == parentbilling.ImportedChildrenNew && !slices.Contains(days, row.number.ValidFrom) {
+			days = append(days, row.number.ValidFrom)
 		}
 	}
-	c.row.ValidFrom = first
-	if first != nil && *last != *first {
-		c.row.LaterValidFrom = last
+	if len(days) == 0 {
+		return
 	}
+	slices.SortFunc(days, calendar.Date.Compare)
+	c.row.ValidFrom, c.row.LaterValidFrom = &days[0], days[1:]
 }
 
 // familyImportRows are the numbers of the candidates per family, with the

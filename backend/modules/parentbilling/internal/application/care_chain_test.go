@@ -831,6 +831,22 @@ func TestCareMonthRuleChainTable(t *testing.T) {
 			totals:    map[int64]int64{contractMia: 2000, contractNoah: 0},
 		},
 		{
+			// Noah books Tuesday at Birkenfeld, which has no price there: his
+			// contract gets no draft but is a contract at a school the rule
+			// counts. With Mia the family has two: Mia pays 20,00 €.
+			name: "family size: a child whose contract bills nothing yet counts",
+			children: []careChainChild{
+				{contractMia, schoolIspringen, familyEva, "2017-03-01", []parentbilling.CareContractService{mon1400}},
+				{contractNoah, schoolBirkenfeld, familyEva, "2015-03-01", []parentbilling.CareContractService{tue1400}},
+			},
+			rules: func(t *testing.T) []parentbilling.ContributionRule {
+				rules := familySizeRule(false, 2)(t)
+				rules[0].SchoolIDs = []ident.ID{ident.ID(schoolIspringen), ident.ID(schoolBirkenfeld)}
+				return rules
+			},
+			totals: map[int64]int64{contractMia: 2000},
+		},
+		{
 			// Only the afternoon module (102) is reduced. Mia books none,
 			// but she has a contract at the school: with Noah (60,00 € and
 			// Tue 40,00 €) the family has two, Noah's 102 costs 30,00 €.
