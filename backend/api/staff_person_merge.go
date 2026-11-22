@@ -40,12 +40,12 @@ func (a staffPersonMergeAudit) RecordStaffPersonMerge(ctx context.Context, opera
 		DonorStaffID    int64 `json:"donor_staff_id"`
 		KeeperStaffID   int64 `json:"keeper_staff_id"`
 		SchoolConfirmed bool  `json:"school_confirmed"`
-	}{schoolID, candidate.Donor.Person.ID, candidate.Keeper.Person.ID, candidate.Donor.Employment.ID, candidate.Keeper.Employment.ID, true})
+	}{schoolID, candidate.Donor.Person.ID.Int64(), candidate.Keeper.Person.ID.Int64(), candidate.Donor.Employment.ID.Int64(), candidate.Keeper.Employment.ID.Int64(), true})
 	if err != nil {
 		return err
 	}
 	id := candidate.Keeper.Person.ID
-	return a.create(ctx, &auditRecords.OperatorAuditEntry{OperatorID: operatorID, Action: "merge", ResourceType: "person", ResourceID: &id, Changes: changes})
+	return a.create(ctx, &auditRecords.OperatorAuditEntry{OperatorID: operatorID, Action: "merge", ResourceType: "person", ResourceID: (*int64)(&id), Changes: changes})
 }
 func newStaffPersonMergeRoutes(db transactionruntime.Database, now func() time.Time) (http.Handler, error) {
 	audit, err := auditCompose.NewPersistence(auditCompose.PersistenceDependencies{DB: db.Pool()})

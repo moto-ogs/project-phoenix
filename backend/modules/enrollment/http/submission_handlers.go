@@ -30,7 +30,7 @@ import (
 // selected_days is a non-empty subset of the offering's
 // available_days.
 type SubmitChildRequest struct {
-	ID                *int64                  `json:"id,omitempty,string"`
+	ID                *ident.ID               `json:"id,omitempty"`
 	FirstName         string                  `json:"first_name"`
 	LastName          string                  `json:"last_name"`
 	DateOfBirth       string                  `json:"date_of_birth"`
@@ -243,7 +243,7 @@ func buildServiceRequest(wireReq *SubmitEnrollmentRequest, tenantID int64, remot
 			})
 		}
 		out.Children = append(out.Children, SubmitChild{
-			ID:                deref(c.ID),
+			ID:                deref(c.ID).Int64(),
 			FirstName:         c.FirstName,
 			LastName:          c.LastName,
 			DateOfBirth:       dob,

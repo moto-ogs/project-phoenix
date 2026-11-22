@@ -56,16 +56,15 @@ function mapDocument(data: wire.StudentDocumentResponse): StudentDocument {
   };
 }
 
-function documentsPath(studentId: string, documentId?: string): string {
-  const base = `/api/students/${encodeURIComponent(studentId)}/documents`;
-  return documentId ? `${base}/${encodeURIComponent(documentId)}` : base;
+function documentsPath(studentId: string, documentId: string): string {
+  return `/api/students/${encodeURIComponent(studentId)}/documents/${encodeURIComponent(documentId)}`;
 }
 
 class StudentDocumentsService {
   async list(studentId: string): Promise<StudentDocumentList> {
-    const list = await bffJson<wire.StudentDocumentListResponse>(
-      documentsPath(studentId),
-    );
+    const list = await bffJson("tenant", "GET /api/students/{id}/documents", {
+      params: { id: studentId },
+    });
     return {
       documents: (list.documents ?? []).map(mapDocument),
       visibleCategories: list.visible_categories ?? [],
@@ -76,16 +75,20 @@ class StudentDocumentsService {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("category", category);
-    await bffJson<unknown>(documentsPath(studentId), {
-      method: "POST",
+    await bffJson("tenant", "POST /api/students/{id}/documents", {
+      params: { id: studentId },
       body: formData,
     });
   }
 
   async delete(studentId: string, documentId: string): Promise<void> {
-    await bffJson<unknown>(documentsPath(studentId, documentId), {
-      method: "DELETE",
-    });
+    await bffJson(
+      "tenant",
+      "DELETE /api/students/{id}/documents/{documentId}",
+      {
+        params: { id: studentId, documentId },
+      },
+    );
   }
 
   /** Same-origin proxy URL for the authenticated download. */

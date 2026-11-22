@@ -95,18 +95,6 @@ func TestScheduleRequest_NilTimeframeID(t *testing.T) {
 	assert.Nil(t, req.TimeframeID)
 }
 
-func TestSupervisorRequest_Fields(t *testing.T) {
-	t.Parallel()
-
-	req := httpadapter.SupervisorRequest{
-		StaffID:   123,
-		IsPrimary: true,
-	}
-
-	assert.Equal(t, int64(123), req.StaffID)
-	assert.True(t, req.IsPrimary)
-}
-
 func TestBatchEnrollmentRequest_Fields(t *testing.T) {
 	t.Parallel()
 

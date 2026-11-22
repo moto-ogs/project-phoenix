@@ -95,11 +95,11 @@ func TestWorkforceOwnerRuntime(t *testing.T) {
 				if err != nil {
 					return err
 				}
-				pause, err := capability.CreateWorkSessionBreak(txCtx, workforce.WorkSessionBreak{SessionID: session.ID, StartedAt: start.Add(4 * time.Hour)})
+				pause, err := capability.CreateWorkSessionBreak(txCtx, workforce.WorkSessionBreak{SessionID: ident.ID(session.ID), StartedAt: start.Add(4 * time.Hour)})
 				if err != nil {
 					return err
 				}
-				_, err = capability.EndWorkSessionBreak(txCtx, pause.ID, start.Add(4*time.Hour+30*time.Minute), 30)
+				_, err = capability.EndWorkSessionBreak(txCtx, pause.ID.Int64(), start.Add(4*time.Hour+30*time.Minute), 30)
 				if err != nil {
 					return err
 				}

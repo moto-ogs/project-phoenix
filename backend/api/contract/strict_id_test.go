@@ -11,7 +11,6 @@ import (
 type strictAnswer struct {
 	ID      wireID   `json:"id"`
 	Friends []wireID `json:"friend_ids"`
-	Quoted  int64    `json:"quoted_id,string"`
 }
 
 type laxAnswer struct {
@@ -42,7 +41,6 @@ func TestAnAnswerIdentifierIsOnlyAString(t *testing.T) {
 	source := files["strict.generated.ts"]
 	assert.Contains(t, source, "  id: int64String,")
 	assert.Contains(t, source, "  friend_ids: nullable(arr(int64String)),")
-	assert.Contains(t, source, "  quoted_id: int64String,")
 	assert.NotContains(t, source, "int64StringOrNumber", "no answer decoder takes a number")
 
 	readers := map[reflect.Type]string{reflect.TypeFor[ownReader](): ReadsLaxIDs}
@@ -60,6 +58,24 @@ func TestAnAnswerIdentifierIsOnlyAString(t *testing.T) {
 			t.Parallel()
 			_, err := Build([]Registration{get("/api/strict/", test.answer)}, Options{Identifiers: identifiers, Readers: readers})
 			assert.ErrorContains(t, err, test.want)
+		})
+	}
+}
+
+// TestTheJSONStringOptionMakesNoIdentifier feeds the generator the option
+// ,string as the walk hands it over, so no Go file of the backend has to
+// carry the tag (test/json_string_option_ratchet_test.go).
+func TestTheJSONStringOptionMakesNoIdentifier(t *testing.T) {
+	t.Parallel()
+	for name, answer := range map[string]reflect.Type{
+		"a bare int64":  reflect.TypeFor[bareAnswer](),
+		"an identifier": reflect.TypeFor[strictAnswer](),
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			b := &builder{identifiers: identifiers}
+			_, err := b.field(answer, answer, answer.Field(0), "id", []string{"string"}, "GET /api/strict/", false)
+			assert.ErrorContains(t, err, "the json option ,string does not make an identifier")
 		})
 	}
 }

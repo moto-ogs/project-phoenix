@@ -19,6 +19,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Limits of one search. A result list stops at its limit; the dialog shows a
@@ -145,7 +146,7 @@ type SearchMatch struct {
 
 // SearchChild is a child hit.
 type SearchChild struct {
-	ID          int64       `json:"id,string"`
+	ID          ident.ID    `json:"id"`
 	FirstName   string      `json:"first_name"`
 	LastName    string      `json:"last_name"`
 	SchoolClass string      `json:"school_class"`
@@ -158,16 +159,16 @@ type SearchChild struct {
 
 // SearchContactChild is a child a contact person belongs to.
 type SearchContactChild struct {
-	ID               int64  `json:"id,string"`
-	FirstName        string `json:"first_name"`
-	LastName         string `json:"last_name"`
-	SchoolClass      string `json:"school_class"`
-	RelationshipType string `json:"relationship_type"`
+	ID               ident.ID `json:"id"`
+	FirstName        string   `json:"first_name"`
+	LastName         string   `json:"last_name"`
+	SchoolClass      string   `json:"school_class"`
+	RelationshipType string   `json:"relationship_type"`
 }
 
 // SearchContact is a contact person hit with the children it belongs to.
 type SearchContact struct {
-	ID        int64                `json:"id,string"`
+	ID        ident.ID             `json:"id"`
 	FirstName string               `json:"first_name"`
 	LastName  string               `json:"last_name"`
 	Match     SearchMatch          `json:"match"`
@@ -176,22 +177,22 @@ type SearchContact struct {
 
 // SearchStaff is a staff hit.
 type SearchStaff struct {
-	ID        int64  `json:"id,string"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
+	ID        ident.ID `json:"id"`
+	FirstName string   `json:"first_name"`
+	LastName  string   `json:"last_name"`
 }
 
 // SearchRoom is a room hit.
 type SearchRoom struct {
-	ID       int64  `json:"id,string"`
-	Name     string `json:"name"`
-	Building string `json:"building,omitempty"`
+	ID       ident.ID `json:"id"`
+	Name     string   `json:"name"`
+	Building string   `json:"building,omitempty"`
 }
 
 // SearchGroup is an OGS group hit.
 type SearchGroup struct {
-	ID   int64  `json:"id,string"`
-	Name string `json:"name"`
+	ID   ident.ID `json:"id"`
+	Name string   `json:"name"`
 }
 
 // SearchResult is the answer of one search. Every list is present, empty when the

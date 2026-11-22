@@ -90,13 +90,13 @@ type SpontaneousStartAvailability struct {
 // session tab. The wire shape carries only what the page renders: the session
 // label, room label, color, and ids for selection.
 type DashboardGroup struct {
-	ID                       int64   `json:"id,string"`
-	Name                     string  `json:"name"`
-	RoomID                   *int64  `json:"room_id,string,omitempty"`
-	RoomName                 string  `json:"room_name,omitempty"`
-	RoomColor                *string `json:"room_color,omitempty"`
-	IsCurrentUserSupervising bool    `json:"is_current_user_supervising"`
-	CanAssign                bool    `json:"can_assign"`
+	ID                       ident.ID  `json:"id"`
+	Name                     string    `json:"name"`
+	RoomID                   *ident.ID `json:"room_id,omitempty"`
+	RoomName                 string    `json:"room_name,omitempty"`
+	RoomColor                *string   `json:"room_color,omitempty"`
+	IsCurrentUserSupervising bool      `json:"is_current_user_supervising"`
+	CanAssign                bool      `json:"can_assign"`
 	// ParticipantLimit is the started activity's limit; nil without one.
 	// The page compares it with the session's children (#3634).
 	ParticipantLimit *int `json:"participant_limit,omitempty"`
@@ -106,14 +106,14 @@ type DashboardGroup struct {
 }
 
 type UnclaimedGroup struct {
-	ID       int64  `json:"id,string"`
-	RoomName string `json:"room_name,omitempty"`
+	ID       ident.ID `json:"id"`
+	RoomName string   `json:"room_name,omitempty"`
 }
 
 type EducationalGroup struct {
-	ID       int64  `json:"id,string"`
-	Name     string `json:"name"`
-	RoomName string `json:"room_name,omitempty"`
+	ID       ident.ID `json:"id"`
+	Name     string   `json:"name"`
+	RoomName string   `json:"room_name,omitempty"`
 }
 
 // SchulhofStatus mirrors the Facilities owner's Schulhof workflow state on
@@ -255,11 +255,11 @@ type ConflictWarning struct {
 // Visit mirrors the fields the page renders from the former per-group
 // /active/groups/{id}/visits/display endpoint, restricted to open visits.
 type Visit struct {
-	StudentID         int64      `json:"student_id,string"`
+	StudentID         ident.ID   `json:"student_id"`
 	StudentName       string     `json:"student_name"`
 	SchoolClass       string     `json:"school_class"`
 	GroupName         string     `json:"group_name"`
-	ActiveGroupID     int64      `json:"active_group_id,string"`
+	ActiveGroupID     ident.ID   `json:"active_group_id"`
 	CheckInTime       time.Time  `json:"check_in_time"`
 	ActualArrivalTime *string    `json:"actual_arrival_time,omitempty"`
 	ActualPickupTime  *string    `json:"actual_pickup_time,omitempty"`
@@ -278,8 +278,8 @@ type DashboardTrackingIndicators struct {
 }
 
 type DashboardDayNote struct {
-	ID      int64  `json:"id,string"`
-	Content string `json:"content"`
+	ID      ident.ID `json:"id"`
+	Content string   `json:"content"`
 }
 
 type Capabilities struct {
@@ -290,9 +290,9 @@ type DashboardProjection struct {
 	BusinessDay                  Date                         `json:"business_day"`
 	SpontaneousStartAvailability SpontaneousStartAvailability `json:"spontaneous_start_availability"`
 	Groups                       []DashboardGroup             `json:"groups"`
-	SelectedGroupID              *int64                       `json:"selected_group_id,string,omitempty"`
+	SelectedGroupID              *ident.ID                    `json:"selected_group_id,omitempty"`
 	UnclaimedGroups              []UnclaimedGroup             `json:"unclaimed_groups"`
-	CurrentStaffID               *int64                       `json:"current_staff_id,string,omitempty"`
+	CurrentStaffID               *ident.ID                    `json:"current_staff_id,omitempty"`
 	EducationalGroups            []EducationalGroup           `json:"educational_groups"`
 	// Schulhof is nil only when the caller has no staff identity (and thus no
 	// Schulhof workflow) — never because a sub-load failed.
@@ -393,7 +393,7 @@ func (s *service) Dashboard(ctx context.Context, requestedGroupID int64) (*Dashb
 	if err != nil {
 		return nil, fmt.Errorf("load current staff: %w", err)
 	}
-	projection.CurrentStaffID = staffID
+	projection.CurrentStaffID = (*ident.ID)(staffID)
 
 	caller, err := s.deps.Access.Caller(ctx)
 	if err != nil {
@@ -422,7 +422,7 @@ func (s *service) Dashboard(ctx context.Context, requestedGroupID int64) (*Dashb
 	if err != nil {
 		return nil, err
 	}
-	projection.SelectedGroupID = selected
+	projection.SelectedGroupID = (*ident.ID)(selected)
 
 	if err := s.loadStaticSections(ctx, projection); err != nil {
 		return nil, err
@@ -464,9 +464,9 @@ func (s *service) resolveGroups(ctx context.Context, caller Caller, staffID *int
 	result := make([]DashboardGroup, 0, len(sessions))
 	for _, session := range sessions {
 		item := DashboardGroup{
-			ID:                       session.ID,
+			ID:                       ident.ID(session.ID),
 			Name:                     session.Name,
-			RoomID:                   session.RoomID,
+			RoomID:                   (*ident.ID)(session.RoomID),
 			RoomName:                 session.RoomName,
 			RoomColor:                session.RoomColor,
 			IsCurrentUserSupervising: !caller.OperationalOverview,
@@ -511,16 +511,16 @@ func selectGroup(groups []DashboardGroup, schulhof *SchulhofStatus, requestedGro
 		for _, group := range groups {
 			if group.IsCurrentUserSupervising {
 				id := group.ID
-				return &id, nil
+				return (*int64)(&id), nil
 			}
 		}
 		id := groups[0].ID
-		return &id, nil
+		return (*int64)(&id), nil
 	}
 	for _, group := range groups {
-		if group.ID == requestedGroupID {
+		if group.ID.Int64() == requestedGroupID {
 			id := group.ID
-			return &id, nil
+			return (*int64)(&id), nil
 		}
 	}
 	if schulhof != nil && schulhof.IsUserSupervising &&
@@ -670,11 +670,11 @@ func (s *service) buildVisits(rows []VisitRecord, attendance map[int64]Attendanc
 
 func (s *service) buildVisit(row VisitRecord, attendance map[int64]Attendance, fullAccess, photosEnabled bool) Visit {
 	visit := Visit{
-		StudentID:     row.StudentID,
+		StudentID:     ident.ID(row.StudentID),
 		StudentName:   strings.TrimSpace(row.FirstName + " " + row.LastName),
 		SchoolClass:   row.SchoolClass,
 		GroupName:     row.GroupName,
-		ActiveGroupID: row.ActiveGroupID,
+		ActiveGroupID: ident.ID(row.ActiveGroupID),
 		CheckInTime:   row.EntryTime,
 		Sick:          row.Sick,
 		SickSince:     row.SickSince,

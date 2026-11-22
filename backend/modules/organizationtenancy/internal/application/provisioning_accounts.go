@@ -210,7 +210,7 @@ func (p *Provisioning) ListSystemRoles(ctx context.Context) ([]organizationtenan
 		}
 		result := make([]organizationtenancy.SystemRole, 0, len(roles))
 		for _, role := range roles {
-			result = append(result, organizationtenancy.SystemRole{ID: role.ID, Name: role.Name, IsSystem: role.IsSystem})
+			result = append(result, organizationtenancy.SystemRole{ID: ident.ID(role.ID), Name: role.Name, IsSystem: role.IsSystem})
 		}
 		return result, nil
 	})

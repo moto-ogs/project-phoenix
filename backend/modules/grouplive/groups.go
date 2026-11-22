@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"slices"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 func (s *service) ListGroups(ctx context.Context) ([]NavigationGroup, error) {
@@ -31,7 +33,7 @@ func (s *service) attachLeaders(ctx context.Context, groups []NavigationGroup) {
 	}
 	ids := make([]int64, 0, len(groups))
 	for _, group := range groups {
-		ids = append(ids, group.ID)
+		ids = append(ids, group.ID.Int64())
 	}
 	leaders, err := s.deps.Groups.GroupLeaderNames(ctx, ids)
 	if err != nil {
@@ -39,7 +41,7 @@ func (s *service) attachLeaders(ctx context.Context, groups []NavigationGroup) {
 		return
 	}
 	for i := range groups {
-		names := slices.Clone(leaders[groups[i].ID])
+		names := slices.Clone(leaders[groups[i].ID.Int64()])
 		if len(names) == 0 {
 			continue
 		}
@@ -167,7 +169,7 @@ func (s *service) mapGroups(ctx context.Context, groups []GroupRecord, personalI
 	result := make([]NavigationGroup, 0, len(groups))
 	for _, group := range groups {
 		result = append(result, NavigationGroup{
-			ID: group.ID, Name: group.Name, RoomID: group.RoomID, RoomName: roomNames[group.ID],
+			ID: ident.ID(group.ID), Name: group.Name, RoomID: (*ident.ID)(group.RoomID), RoomName: roomNames[group.ID],
 			ViaSubstitution: substituted[group.ID], IsPersonal: personalIDs[group.ID],
 		})
 	}

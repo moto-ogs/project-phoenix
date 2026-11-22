@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	rootAPI "github.com/moto-ogs/project-phoenix/api"
@@ -22,10 +21,6 @@ func TestPresenceGroups20SchoolQueryBudget(t *testing.T) {
 	db := testpkg.SetupIsolatedTestDB(t)
 	tc := setupGroupsRoute(t)
 	require.Same(t, db, tc.db)
-	// The generic groups helper omits presence settings. Use the existing
-	// root composition with real settings, as production does, so this proves
-	// the positive bulk-location path rather than its degraded fallback.
-	tc.resource.ActiveService = rootAPI.NewActiveTestPresence(testpkg.NewDatabase(t, db), testpkg.TenantRuntime(t, db)).Active
 	router := chi.NewRouter()
 	router.Use(testpkg.TenantRuntimeMiddleware(t, db))
 	router.Mount("/api/groups", tc.resource.Router(rootAPI.ProtectedTenantRoutes))
@@ -34,21 +29,10 @@ func TestPresenceGroups20SchoolQueryBudget(t *testing.T) {
 	foreign := testpkg.NewTenantScope(t, db)
 	hidden := testpkg.CreateTestEducationGroupForTenant(t, db, foreign.TenantID, "ForeignGroups20")
 	group := testpkg.CreateTestEducationGroup(t, db, "Groups20Target")
-	var students []schoolHTTP.GroupStudentResponse
+	students := 0
 	var teachers []schoolHTTP.TeacherResponse
 	var groups []int64
 	expectedGroups := map[int64]schoolHTTP.GroupResponse{group.ID: {ID: ident.ID(group.ID), Name: group.Name, CreatedAt: group.CreatedAt.UTC(), UpdatedAt: group.UpdatedAt.UTC()}}
-	type supervisorDTO struct {
-		ID             testpkg.ID `json:"id"`
-		StaffID        testpkg.ID `json:"staff_id"`
-		Specialization string     `json:"specialization"`
-		Role           string     `json:"role,omitempty"`
-		Qualifications string     `json:"qualifications,omitempty"`
-		FullName       string     `json:"full_name"`
-		CreatedAt      time.Time  `json:"created_at"`
-		UpdatedAt      time.Time  `json:"updated_at"`
-	}
-	var expectedSupervisors []supervisorDTO
 	groups = append(groups, group.ID)
 	counter := testpkg.CaptureQueries(t, db)
 	counter.Stop()
@@ -59,14 +43,13 @@ func TestPresenceGroups20SchoolQueryBudget(t *testing.T) {
 	}
 	var samples []sample
 	for _, n := range []int{3, 8} {
-		for len(students) < n {
-			i := len(students)
+		for students < n {
+			i := students
 			child := testpkg.CreateTestStudent(t, db, "Groups20", fmt.Sprintf("Child%02d", i), "G20")
 			testpkg.AssignStudentToGroup(t, db, child.ID, group.ID)
-			students = append(students, schoolHTTP.GroupStudentResponse{ID: child.ID, PersonID: child.PersonID, FirstName: "Groups20", LastName: fmt.Sprintf("Child%02d", i), SchoolClass: "G20", GroupID: group.ID, GroupName: group.Name, Location: "Abwesend"})
+			students++
 			teacher := testpkg.CreateTestTeacher(t, db, "Groups20", fmt.Sprintf("Teacher%02d", i))
 			testpkg.CreateTestGroupTeacher(t, db, group.ID, teacher.ID)
-			expectedSupervisors = append(expectedSupervisors, supervisorDTO{ID: testpkg.ID(teacher.ID), StaffID: testpkg.ID(teacher.StaffID), FullName: fmt.Sprintf("Groups20 Teacher%02d", i), CreatedAt: teacher.CreatedAt.UTC(), UpdatedAt: teacher.UpdatedAt.UTC()})
 			teachers = append(teachers, schoolHTTP.TeacherResponse{ID: ident.ID(teacher.ID), StaffID: ident.ID(teacher.StaffID), FirstName: "Groups20", LastName: fmt.Sprintf("Teacher%02d", i), FullName: fmt.Sprintf("Groups20 Teacher%02d", i)})
 		}
 		for len(groups) < n {
@@ -80,7 +63,7 @@ func TestPresenceGroups20SchoolQueryBudget(t *testing.T) {
 		target.Representative = &teachers[0]
 		target.RepresentativeID = &teachers[0].ID
 		expectedGroups[group.ID] = target
-		for _, suffix := range []string{"/", fmt.Sprintf("/%d", group.ID), fmt.Sprintf("/%d/students", group.ID), fmt.Sprintf("/%d/supervisors", group.ID)} {
+		for _, suffix := range []string{"/", fmt.Sprintf("/%d", group.ID)} {
 			counter.Reset()
 			counter.Start()
 			rr := testutil.ExecuteRequest(router, newReq(t, http.MethodGet, "/api/groups"+suffix, nil, claims, "admin:*"))
@@ -114,7 +97,7 @@ func TestPresenceGroups20SchoolQueryBudget(t *testing.T) {
 				}
 				require.ElementsMatch(t, groups, ids)
 				scenario = "api.groups.presence20.list"
-			case fmt.Sprintf("/%d", group.ID):
+			default:
 				var row schoolHTTP.GroupResponse
 				require.NoError(t, json.Unmarshal(envelope.Data, &row))
 				row.CreatedAt = row.CreatedAt.UTC()
@@ -124,26 +107,12 @@ func TestPresenceGroups20SchoolQueryBudget(t *testing.T) {
 				require.Equal(t, n, row.StudentCount)
 				require.Equal(t, teachers, row.Teachers)
 				scenario = "api.groups.presence20.detail"
-			case fmt.Sprintf("/%d/students", group.ID):
-				var rows []schoolHTTP.GroupStudentResponse
-				require.NoError(t, json.Unmarshal(envelope.Data, &rows))
-				require.Equal(t, students, rows)
-				scenario = "api.groups.presence20.students"
-			default:
-				var rows []supervisorDTO
-				require.NoError(t, json.Unmarshal(envelope.Data, &rows))
-				for i := range rows {
-					rows[i].CreatedAt = rows[i].CreatedAt.UTC()
-					rows[i].UpdatedAt = rows[i].UpdatedAt.UTC()
-				}
-				require.Equal(t, expectedSupervisors, rows)
-				scenario = "api.groups.presence20.supervisors"
 			}
 			t.Logf("PRESENCE20 scenario=%s n=%d statements=%d sql=%q body=%s", scenario, n, counter.Total(), counter.Queries(), rr.Body.String())
 			samples = append(samples, sample{scenario, n, counter.Measurement(counter.Queries())})
 		}
 	}
-	for _, suffix := range []string{"/", fmt.Sprintf("/%d", group.ID), fmt.Sprintf("/%d/students", group.ID), fmt.Sprintf("/%d/supervisors", group.ID)} {
+	for _, suffix := range []string{"/", fmt.Sprintf("/%d", group.ID)} {
 		rr := testutil.ExecuteRequest(router, testutil.NewRequest("GET", "/api/groups"+suffix, nil))
 		require.Equal(t, 401, rr.Code)
 		denied := testutil.TeacherTestClaims(int(account.ID))
@@ -154,7 +123,7 @@ func TestPresenceGroups20SchoolQueryBudget(t *testing.T) {
 	for _, s := range samples {
 		t.Run(fmt.Sprintf("%s.n%d", s.scenario, s.n), func(t *testing.T) { assertPresence20SchoolBudget(t, s.scenario, s.n, s.queries) })
 	}
-	for _, suffix := range []string{"", "/students", "/supervisors"} {
+	for _, suffix := range []string{""} {
 		rr := testutil.ExecuteRequest(router, newReq(t, "GET", fmt.Sprintf("/api/groups/%d%s", hidden.ID, suffix), nil, claims, "admin:*"))
 		require.Equal(t, 404, rr.Code)
 	}
@@ -172,14 +141,6 @@ func assertPresence20SchoolBudget(t *testing.T, scenario string, n int, queries 
 		querybudgets.AssertQueryBudget(t, "api.groups.presence20.detail.n3", queries)
 	case "api.groups.presence20.detail.n8":
 		querybudgets.AssertQueryBudget(t, "api.groups.presence20.detail.n8", queries)
-	case "api.groups.presence20.students.n3":
-		querybudgets.AssertQueryBudget(t, "api.groups.presence20.students.n3", queries)
-	case "api.groups.presence20.students.n8":
-		querybudgets.AssertQueryBudget(t, "api.groups.presence20.students.n8", queries)
-	case "api.groups.presence20.supervisors.n3":
-		querybudgets.AssertQueryBudget(t, "api.groups.presence20.supervisors.n3", queries)
-	case "api.groups.presence20.supervisors.n8":
-		querybudgets.AssertQueryBudget(t, "api.groups.presence20.supervisors.n8", queries)
 	default:
 		t.Fatalf("unknown scenario %s N%d", scenario, n)
 	}

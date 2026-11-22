@@ -1793,6 +1793,20 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/activities/{id}/students",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "EnrolledStudentResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/admin/grade-transitions/",
       "portals": [
         "tenant"
@@ -13917,6 +13931,21 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/guardians/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "GuardianCreateRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "GuardianResponse"
+      }
+    },
+    {
+      "method": "POST",
       "pattern": "/api/guardians/bulk-invite",
       "portals": [
         "tenant"
@@ -14003,6 +14032,17 @@
         "tenant"
       ],
       "no_data": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/guardians/{id}/invite",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "GuardianInvitationResponse"
+      }
     },
     {
       "method": "POST",
@@ -19728,6 +19768,21 @@
       "response": {
         "kind": "ref",
         "ref": "ActivityResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/activities/{id}/students",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "BatchEnrollmentRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "EnrollmentUpdateResponse"
       }
     },
     {
@@ -29392,6 +29447,24 @@
           "name": "group_mode",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "BatchEnrollmentRequest",
+      "go_type": "httpadapter.BatchEnrollmentRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "student_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "id"
+            }
           }
         }
       ]
@@ -48647,6 +48720,30 @@
       ]
     },
     {
+      "name": "EnrolledStudentResponse",
+      "go_type": "httpadapter.EnrolledStudentResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "EnrollmentAnswerFilterResponse",
       "go_type": "presenceprojectionhttp.EnrollmentAnswerFilterResponse",
       "fields": [
@@ -48872,6 +48969,47 @@
                 "kind": "ref",
                 "ref": "PhaseTranslatedTextRequest"
               }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "EnrollmentUpdateResponse",
+      "go_type": "httpadapter.EnrollmentUpdateResponse",
+      "fields": [
+        {
+          "name": "activity_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "activity_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "enrollment_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "max_participants",
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "students_enrolled",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "id"
             }
           }
         }
@@ -52884,6 +53022,81 @@
       ]
     },
     {
+      "name": "GuardianCreateRequest",
+      "go_type": "users.GuardianCreateRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "first_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "email",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "address_street",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "address_city",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "address_postal_code",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "preferred_contact_method",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "language_preference",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "notes",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
       "name": "GuardianDeletePreview",
       "go_type": "users.GuardianDeletePreview",
       "fields": [
@@ -53047,6 +53260,43 @@
         },
         {
           "name": "language_preference",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "GuardianInvitationResponse",
+      "go_type": "users.GuardianInvitationResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "guardian_profile_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "expires_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "email_sent",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "token",
           "optional": true,
           "schema": {
             "kind": "string"
