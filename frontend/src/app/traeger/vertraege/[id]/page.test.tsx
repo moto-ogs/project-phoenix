@@ -194,6 +194,7 @@ const DRAFT: CareContractDetail = {
   signature: null,
   reminders: [],
   versions: [],
+  corrections: [],
 };
 
 function renderPage() {
@@ -790,6 +791,79 @@ describe("TraegerVertragPage", () => {
     });
     expect(within(dialog).getByText(/erika@example\.org/)).toBeInTheDocument();
     expect(api.resendCareContract).not.toHaveBeenCalled();
+  });
+
+  it("shows a completed imported contract without inventing its day", async () => {
+    api.fetchCareContract.mockResolvedValue({
+      ...DRAFT,
+      status: "aktiv",
+      concluded: {
+        method: "papier",
+        // A stand-in instant: the office does not know the day.
+        at: "2026-08-01T00:00:00Z",
+        takenOver: true,
+        dateUnknown: true,
+      },
+      parties: [
+        {
+          firstName: "Erika",
+          lastName: "Muster",
+          email: "erika@example.org",
+          hasAccount: true,
+        },
+        { firstName: "Jan", lastName: "Muster", email: "", hasAccount: false },
+      ],
+      documentFrozen: true,
+      corrections: [
+        {
+          correctedAt: "2026-09-08T10:00:00Z",
+          file: "vertraege-nachgepflegt.csv",
+          evidence: "Vertrag-Muster.pdf",
+          changes: ["parties", "concluded_on"],
+          before: {
+            parties: ["Erika Muster"],
+            method: "papier",
+            concludedOn: "2026-03-12",
+            dateUnknown: false,
+          },
+          after: {
+            parties: ["Erika Muster", "Jan Muster"],
+            method: "papier",
+            concludedOn: null,
+            dateUnknown: true,
+          },
+        },
+      ],
+    });
+    renderPage();
+
+    expect(
+      await screen.findByText("Abschlussdatum unbekannt, auf Papier"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/01\.08\.2026/)).not.toBeInTheDocument();
+    // Every party of the contract, not only the first.
+    const parents = screen
+      .getByRole("heading", { name: "Eltern" })
+      .closest("section");
+    if (!parents) throw new Error("card missing");
+    expect(within(parents).getByText("Erika Muster")).toBeInTheDocument();
+    expect(within(parents).getByText("Jan Muster")).toBeInTheDocument();
+    expect(
+      within(parents).getByText("Keine E-Mail-Adresse"),
+    ).toBeInTheDocument();
+
+    const card = screen
+      .getByRole("heading", { name: "Nachgepflegte Angaben" })
+      .closest("section");
+    if (!card) throw new Error("card missing");
+    const corrections = within(card);
+    expect(
+      corrections.getByText("Nachgepflegt am 08.09.2026"),
+    ).toBeInTheDocument();
+    expect(corrections.getByText("Vertrag-Muster.pdf")).toBeInTheDocument();
+    expect(corrections.getByText("12.03.2026").tagName).toBe("DEL");
+    expect(corrections.getByText("Unbekannt").tagName).toBe("INS");
+    expect(corrections.getByText("Jan Muster").tagName).toBe("INS");
   });
 
   it("follows the address after a tab click and browser navigation", async () => {

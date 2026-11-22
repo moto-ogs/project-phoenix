@@ -142,6 +142,8 @@ const (
 	ActionDiscard  = "discard"
 	ActionTemplate = "template"
 	ActionConclude = "conclude"
+	// ActionCorrect is a correction of a contract from an import (#7767).
+	ActionCorrect = "correct"
 )
 
 // VersionsDetail is the detail of a template entry of the trail with the
@@ -173,6 +175,9 @@ type Store interface {
 	// any other state is ErrContractNotConcludable.
 	MarkConcluded(ctx context.Context, organizationID, contractID, versionID int64, conclusion carecontract.Concluded) error
 	InsertEvents(ctx context.Context, organizationID int64, events []Event) error
+	// ContractCorrections reads the corrections of a contract from an import
+	// out of its trail, newest first (#7767).
+	ContractCorrections(ctx context.Context, organizationID, contractID int64) ([]carecontract.ContractCorrection, error)
 	// Versions reads every version of a contract, oldest first, with the
 	// last day each effective version holds.
 	Versions(ctx context.Context, organizationID, contractID int64) ([]carecontract.Version, error)

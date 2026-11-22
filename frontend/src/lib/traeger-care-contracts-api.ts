@@ -20,6 +20,12 @@ import { requiredDay } from "./contract/required-day";
 import type * as traegerContractTemplatesContract from "./contract/traeger-contract-templates.generated";
 import type * as traegerContractsContract from "./contract/traeger-contracts.generated";
 import { filenameFromDisposition } from "./file-download";
+import {
+  type ContractCorrectionChange,
+  type ContractCorrectionValues,
+  correctionChangesFromBackend,
+  correctionValuesFromBackend,
+} from "./traeger-contract-correction-api";
 
 export type { CareContractStatus } from "./care-contract-status";
 
@@ -219,7 +225,19 @@ export type ConclusionMethod = (typeof CONCLUSION_METHOD_VALUES)[number];
 export interface ContractConclusion {
   /** undefined: a method this build does not know. */
   readonly method: ConclusionMethod | undefined;
+  /**
+   * When it was concluded. For a contract with `dateUnknown` only a stand-in
+   * the backend needs: never show it as the day of the conclusion.
+   */
   readonly at: string;
+  /**
+   * The contract came from an import (#4723): it was concluded before moto,
+   * online in the previous program or on paper. Absent: a view that does not
+   * carry it (the school's application view), read as false.
+   */
+  readonly takenOver?: boolean;
+  /** The office does not know the day of the conclusion (#7767). */
+  readonly dateUnknown?: boolean;
 }
 
 /**
@@ -328,6 +346,21 @@ export interface CareContractDetail extends CareContractSummary {
   readonly termText: string;
   readonly noticeText: string;
   readonly feeText: string;
+  /**
+   * Values the office completed from the original documents after the
+   * import (#7767), in the order the backend lists them.
+   */
+  readonly corrections: readonly ContractCorrectionRecord[];
+}
+
+/** One completion of an imported contract: what changed, and the proof. */
+export interface ContractCorrectionRecord {
+  readonly correctedAt: string;
+  readonly file: string;
+  readonly evidence: string;
+  readonly changes: readonly ContractCorrectionChange[];
+  readonly before: ContractCorrectionValues;
+  readonly after: ContractCorrectionValues;
 }
 
 export interface ContractSignature {
@@ -519,6 +552,8 @@ function summaryFromBackend(
       ? {
           method: knownEnum(CONCLUSION_METHOD_VALUES, row.concluded.method),
           at: row.concluded.at,
+          takenOver: row.concluded.taken_over,
+          dateUnknown: row.concluded.date_unknown,
         }
       : null,
     endsOn: row.ends_on,
@@ -597,6 +632,14 @@ function detailFromBackend(
     termText: row.term_text,
     noticeText: row.notice_text,
     feeText: row.fee_text,
+    corrections: (row.corrections ?? []).map((correction) => ({
+      correctedAt: correction.corrected_at,
+      file: correction.file,
+      evidence: correction.evidence,
+      changes: correctionChangesFromBackend(correction.changes),
+      before: correctionValuesFromBackend(correction.before),
+      after: correctionValuesFromBackend(correction.after),
+    })),
   };
 }
 

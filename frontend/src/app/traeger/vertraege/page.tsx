@@ -9,7 +9,7 @@ import { bffFile } from "~/lib/bff-fetch";
 // nicht: ihr Vertrag entsteht von selbst und ist sofort aktiv. Nur die Rolle
 // mit dem Recht „Verträge verwalten“ sieht die Seite.
 
-import { Plus, Repeat, Send, Upload } from "lucide-react";
+import { FilePenLine, Plus, Repeat, Send, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type MouseEvent, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
@@ -22,6 +22,7 @@ import {
   contractStatusTone,
   SEND_SKIP_LABELS,
   childName,
+  knownConclusionAt,
 } from "~/components/traeger/care-contract-format";
 import { careContractTabs } from "~/components/traeger/care-contract-tabs";
 import { emptySearchText } from "~/components/traeger/empty-search";
@@ -236,9 +237,12 @@ const COLUMNS: DataTableColumn<CareContractSummary>[] = [
             Ende festlegen
           </span>
         ) : contract.status === "widerrufen" ? null : contract.concluded ? (
-          <span className="text-sm text-gray-500">
-            seit {formatBerlinDate(contract.concluded.at)}
-          </span>
+          // An unknown day of a taken-over contract (#7767) is no date.
+          knownConclusionAt(contract.concluded) ? (
+            <span className="text-sm text-gray-500">
+              seit {formatBerlinDate(contract.concluded.at)}
+            </span>
+          ) : null
         ) : contract.sentAt ? (
           <span className="text-sm text-gray-500">
             am {formatBerlinDate(contract.sentAt)}
@@ -618,6 +622,14 @@ export default function TraegerVertraegePage() {
             "Öffnet die neue Zuordnung der Module importierter Verträge aus einer CSV-Datei.",
           icon: <Repeat className="h-4 w-4" aria-hidden />,
           href: traegerPath("/traeger/vertraege/module-zuordnen"),
+          onClick: () => undefined,
+        },
+        {
+          label: "Vertragsangaben nachpflegen",
+          description:
+            "Öffnet die Seite, um Vertragsparteien, Abschlussart und Abschlussdatum importierter Verträge zu ergänzen.",
+          icon: <FilePenLine className="h-4 w-4" aria-hidden />,
+          href: traegerPath("/traeger/vertraege/nachpflege"),
           onClick: () => undefined,
         },
       ]}

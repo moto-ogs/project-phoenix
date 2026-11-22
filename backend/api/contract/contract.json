@@ -11124,6 +11124,28 @@
     },
     {
       "method": "GET",
+      "pattern": "/traeger/contract-corrections/",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "ContractCorrectionEntry"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/contract-corrections/list",
+      "portals": [
+        "org"
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/contract-imports/",
       "portals": [
         "org"
@@ -18876,6 +18898,34 @@
         "kind": "ref",
         "ref": "ContractChanges"
       }
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/contract-corrections/",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ContractCorrectionRun"
+      },
+      "max_body_bytes": 2359296,
+      "multipart": true,
+      "too_large_code": "care_contract.import_file_too_large"
+    },
+    {
+      "method": "POST",
+      "pattern": "/traeger/contract-corrections/preview",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ContractCorrectionRun"
+      },
+      "max_body_bytes": 2359296,
+      "multipart": true,
+      "too_large_code": "care_contract.import_file_too_large"
     },
     {
       "method": "POST",
@@ -41821,6 +41871,18 @@
           "schema": {
             "kind": "instant"
           }
+        },
+        {
+          "name": "date_unknown",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "taken_over",
+          "schema": {
+            "kind": "bool"
+          }
         }
       ]
     },
@@ -42046,6 +42108,322 @@
       ]
     },
     {
+      "name": "ContractCorrection",
+      "go_type": "carecontract.ContractCorrection",
+      "fields": [
+        {
+          "name": "corrected_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "file",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "evidence",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "changes",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "before",
+          "schema": {
+            "kind": "ref",
+            "ref": "ContractCorrectionValues"
+          }
+        },
+        {
+          "name": "after",
+          "schema": {
+            "kind": "ref",
+            "ref": "ContractCorrectionValues"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ContractCorrectionCounts",
+      "go_type": "carecontract.ContractCorrectionCounts",
+      "fields": [
+        {
+          "name": "change",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "unchanged",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "invalid",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "corrected",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ContractCorrectionEntry",
+      "go_type": "carecontract.ContractCorrectionEntry",
+      "fields": [
+        {
+          "name": "file",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "account_id",
+          "schema": {
+            "kind": "id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "corrected_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "contracts",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ContractCorrectionProblem",
+      "go_type": "carecontract.ContractCorrectionProblem",
+      "fields": [
+        {
+          "name": "field",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "code",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ContractCorrectionRow",
+      "go_type": "carecontract.ContractCorrectionRow",
+      "fields": [
+        {
+          "name": "line",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "contract_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "child_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "changes",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "before",
+          "schema": {
+            "kind": "ref",
+            "ref": "ContractCorrectionValues"
+          }
+        },
+        {
+          "name": "after",
+          "schema": {
+            "kind": "ref",
+            "ref": "ContractCorrectionValues"
+          }
+        },
+        {
+          "name": "evidence",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "problems",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ContractCorrectionProblem"
+            }
+          }
+        },
+        {
+          "name": "repeats_line",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ContractCorrectionRun",
+      "go_type": "carecontract.ContractCorrectionRun",
+      "fields": [
+        {
+          "name": "encoding",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "delimiter",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "headers",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "missing",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "applied",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "counts",
+          "schema": {
+            "kind": "ref",
+            "ref": "ContractCorrectionCounts"
+          }
+        },
+        {
+          "name": "rows",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ContractCorrectionRow"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ContractCorrectionValues",
+      "go_type": "carecontract.ContractCorrectionValues",
+      "fields": [
+        {
+          "name": "parties",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "method",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "concluded_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "date_unknown",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "ContractDetail",
       "go_type": "carecontract.ContractDetail",
       "fields": [
@@ -42236,6 +42614,17 @@
           "name": "fee_text",
           "schema": {
             "kind": "string"
+          }
+        },
+        {
+          "name": "corrections",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ContractCorrection"
+            }
           }
         }
       ]

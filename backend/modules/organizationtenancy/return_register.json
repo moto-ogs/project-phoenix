@@ -16181,6 +16181,12 @@
           "type": "text",
           "udt": "text",
           "nullable": true
+        },
+        {
+          "name": "conclusion_date_unknown",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
         }
       ],
       "relationships": [

@@ -30,6 +30,7 @@ const (
 	ActionDiscard  = ports.ActionDiscard
 	ActionTemplate = ports.ActionTemplate
 	ActionConclude = ports.ActionConclude
+	ActionCorrect  = ports.ActionCorrect
 	VersionsDetail = ports.VersionsDetail
 )
 

@@ -237,6 +237,11 @@ var traegerCoreActions = map[RouteKey]CoreAction{
 	// to a school; the preview stores nothing.
 	{http.MethodPost, "/traeger/contract-imports/"}:        notCaptured,
 	{http.MethodPost, "/traeger/contract-imports/preview"}: notCaptured,
+	// The correction of contracts from an import (#7767) completes a
+	// one-time takeover and belongs to the Träger; the preview stores
+	// nothing.
+	{http.MethodPost, "/traeger/contract-corrections/"}:        notCaptured,
+	{http.MethodPost, "/traeger/contract-corrections/preview"}: notCaptured,
 	// The correction of the modules imported contracts book (#7764) belongs
 	// to the Träger like the import; the preview stores nothing.
 	{http.MethodPost, "/traeger/contract-imports/offering-corrections"}:         notCaptured,

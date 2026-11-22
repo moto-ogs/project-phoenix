@@ -123,6 +123,7 @@ const NOT_A_LIST: Readonly<Record<string, string>> = {
   "/vertraege/[id]": "Einzelansicht",
   "/vertraege/bedingungen": "Einstellungen",
   "/vertraege/import": "Import",
+  "/vertraege/nachpflege": "Nachpflege aus einer Datei",
   "/vertraege/module-zuordnen": "Import",
 };
 

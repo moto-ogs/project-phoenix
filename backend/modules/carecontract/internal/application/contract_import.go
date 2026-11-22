@@ -508,24 +508,7 @@ func importSchoolChoices(schools []importSchool, templates templateIndex) []care
 // which of its contracts a file names, or stored new ones there (ADR 0084
 // section 7).
 func (i *ContractImports) logSchools(ctx context.Context, reviewer carecontract.Reviewer, view string, bySchool map[int64][]int64) error {
-	schools := make([]int64, 0, len(bySchool))
-	for school := range bySchool {
-		schools = append(schools, school)
-	}
-	slices.Sort(schools)
-	for _, school := range schools {
-		ids := bySchool[school]
-		err := i.ports.Runtime.WithinSchool(ctx, school, func(txCtx context.Context) error {
-			return i.ports.Access.RecordAccess(txCtx, carecontract.SchoolAccess{
-				OrganizationID: reviewer.OrganizationID, AccountID: reviewer.AccountID,
-				Data: carecontract.SchoolAccessContracts, View: view, Rows: len(ids), ContractIDs: ids,
-			})
-		})
-		if err != nil {
-			return fmt.Errorf("care contract: access log of school %d: %w", school, err)
-		}
-	}
-	return nil
+	return logContractSchools(ctx, i.ports.Runtime, i.ports.Access, reviewer, view, bySchool)
 }
 
 // ContractImportLog lists the imports of the Träger, newest first.

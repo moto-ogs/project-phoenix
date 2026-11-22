@@ -1,0 +1,4 @@
+GET /traeger/contract-corrections/ -> basis
+GET /traeger/contract-corrections/list -> basis
+POST /traeger/contract-corrections/ -> basis
+POST /traeger/contract-corrections/preview -> basis
