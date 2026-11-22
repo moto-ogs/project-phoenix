@@ -105,14 +105,10 @@ func TestAuthService_AssignPermissionToRole_SystemRoleProtection(t *testing.T) {
 		// ARRANGE
 		systemRole := testpkg.CreateTestSystemRole(t, db, "test-system")
 
-		permName := fmt.Sprintf("sys-role-perm-%d", time.Now().UnixNano())
-		resource := fmt.Sprintf("sys-role-res-%d", time.Now().UnixNano())
-		perm, err := rbac.CreatePermission(ctx, permName, "Test permission", resource, "read")
-		require.NoError(t, err)
-		testpkg.OwnTestPermission(t, db, perm.ID)
+		perm := testpkg.CreateTestPermission(t, db, "sys-role-perm", "sys-role-res", "read")
 
 		// ACT
-		err = rbac.AssignPermissionToRole(ctx, systemRole.ID, perm.ID)
+		err := rbac.AssignPermissionToRole(ctx, systemRole.ID, perm.ID)
 
 		// ASSERT
 		require.Error(t, err)
@@ -237,89 +233,6 @@ func TestAuthService_DeactivateAccount_Extended(t *testing.T) {
 
 		// ASSERT
 		require.NoError(t, err)
-	})
-}
-
-func TestAuthService_UpdateAccount_Extended(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-
-	service := setupAuthServiceWithDB(t, db)
-	ctx := testpkg.Ctx(t)
-
-	t.Run("preserves the credential", func(t *testing.T) {
-		// ARRANGE
-		email := fmt.Sprintf("preserve-hash-%d@test.local", time.Now().UnixNano())
-		account, err := service.Register(ctx, email, fmt.Sprintf("user-%d", testpkg.UniqueSuffix()), "Test1234%", nil, 0)
-		require.NoError(t, err)
-		testpkg.EnsureAccountTenant(t, db, account.ID, testpkg.Tenant(t))
-
-		originalHash := accountPasswordHash(t, db, account.ID)
-		require.NotEmpty(t, originalHash)
-
-		account.Email = fmt.Sprintf("preserved-hash-%d@test.local", time.Now().UnixNano())
-
-		// ACT
-		err = service.UpdateAccount(ctx, account)
-
-		// ASSERT
-		require.NoError(t, err)
-
-		// The identity update writes the address and the name; the
-		// credential is only ever replaced by a password change (#3332).
-		assert.Equal(t, originalHash, accountPasswordHash(t, db, account.ID))
-
-		updated, err := service.GetAccountByID(ctx, int(account.ID))
-		require.NoError(t, err)
-		assert.Equal(t, account.Email, updated.Email)
-		assert.True(t, updated.Active, "an identity update never disables an account")
-	})
-
-	t.Run("returns error for non-existent account", func(t *testing.T) {
-		// ARRANGE
-		fakeAccount := &testpkg.AccountFixture{}
-		fakeAccount.ID = 99999999
-
-		// ACT
-		err := service.UpdateAccount(ctx, fakeAccount)
-
-		// ASSERT
-		require.Error(t, err)
-	})
-}
-
-func TestAuthService_ListAccounts_Extended(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-
-	service := setupAuthServiceWithDB(t, db)
-	ctx := testpkg.Ctx(t)
-
-	t.Run("returns accounts with email filter", func(t *testing.T) {
-		// ARRANGE
-		email := fmt.Sprintf("filter-email-%d@test.local", time.Now().UnixNano())
-		account, err := service.Register(ctx, email, fmt.Sprintf("user-%d", testpkg.UniqueSuffix()), "Test1234%", nil, 0)
-		require.NoError(t, err)
-		testpkg.EnsureAccountTenant(t, db, account.ID, testpkg.Tenant(t))
-
-		// ACT
-		filters := map[string]interface{}{
-			"email": email,
-		}
-		result, err := service.ListAccounts(ctx, filters)
-
-		// ASSERT
-		require.NoError(t, err)
-		found := false
-		for _, acc := range result {
-			if acc.Email == email {
-				found = true
-				break
-			}
-		}
-		assert.True(t, found)
 	})
 }
 

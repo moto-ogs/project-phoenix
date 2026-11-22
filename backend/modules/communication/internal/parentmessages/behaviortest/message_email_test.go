@@ -127,15 +127,15 @@ func guardianEmail(t *testing.T, db *bun.DB, accountID int64) string {
 	return address
 }
 
-// TestStartThread_SendsGuardianEmail is the reported gap: the OGS writes, and the
+// TestFirstMessage_SendsGuardianEmail is the reported gap: the OGS writes, and the
 // guardian learns about it even without push.
-func TestStartThread_SendsGuardianEmail(t *testing.T) {
+func TestFirstMessage_SendsGuardianEmail(t *testing.T) {
 	t.Parallel()
 
 	f := newEmailFixture(t, nil)
 	db := testpkg.SetupTestDB(t)
 
-	_, err := testpkg.TenantQuery4(t, adminCtx(t, f.staff), f.db, f.svc.StartThread, f.chain.StudentID, f.chain.AccountID, "Guten Tag, Felix hat heute seine Jacke vergessen. Bitte melden Sie sich kurz bei uns.", "")
+	_, err := sendFirstMessage(t, adminCtx(t, f.staff), f.db, f.svc, f.chain.StudentID, f.chain.AccountID, "Guten Tag, Felix hat heute seine Jacke vergessen. Bitte melden Sie sich kurz bei uns.", "")
 	require.NoError(t, err)
 
 	rows := f.outbox.Requests()
@@ -154,7 +154,7 @@ func TestStartThread_SendsGuardianEmail(t *testing.T) {
 	assert.NotContains(t, rows[0].Payload, "body")
 }
 
-func TestStartThread_LocalizesGuardianEmail(t *testing.T) {
+func TestFirstMessage_LocalizesGuardianEmail(t *testing.T) {
 	t.Parallel()
 
 	f := newEmailFixture(t, nil)
@@ -166,7 +166,7 @@ func TestStartThread_LocalizesGuardianEmail(t *testing.T) {
 		Exec(context.Background())
 	require.NoError(t, err)
 
-	_, err = testpkg.TenantQuery4(t, adminCtx(t, f.staff), f.db, f.svc.StartThread, f.chain.StudentID, f.chain.AccountID, "Please reply", "")
+	_, err = sendFirstMessage(t, adminCtx(t, f.staff), f.db, f.svc, f.chain.StudentID, f.chain.AccountID, "Please reply", "")
 	require.NoError(t, err)
 	rows := f.outbox.Requests()
 	require.Len(t, rows, 1)
@@ -183,13 +183,13 @@ func TestStartThread_LocalizesGuardianEmail(t *testing.T) {
 
 // A school that calls its care GTS (#6082): the guardian's mail says GTS in
 // subject, intro and the logo stand-in, never OGS.
-func TestStartThread_GuardianEmailNamesTheSchoolsCareTerm(t *testing.T) {
+func TestFirstMessage_GuardianEmailNamesTheSchoolsCareTerm(t *testing.T) {
 	t.Parallel()
 
 	f := newEmailFixture(t, nil)
 	f.svc.Settings = settingsValues.NewParentMessagingValues(stubSettings{messagingEnabled: true, careTerm: "GTS"})
 
-	_, err := testpkg.TenantQuery4(t, adminCtx(t, f.staff), f.db, f.svc.StartThread, f.chain.StudentID, f.chain.AccountID, "Guten Tag", "")
+	_, err := sendFirstMessage(t, adminCtx(t, f.staff), f.db, f.svc, f.chain.StudentID, f.chain.AccountID, "Guten Tag", "")
 	require.NoError(t, err)
 
 	rows := f.outbox.Requests()
@@ -208,7 +208,7 @@ func TestPostMessage_QueuesAnotherDataMinimalEmail(t *testing.T) {
 	f := newEmailFixture(t, nil)
 	ctx := adminCtx(t, f.staff)
 
-	detail, err := testpkg.TenantQuery4(t, ctx, f.db, f.svc.StartThread, f.chain.StudentID, f.chain.AccountID, "Erste Nachricht", "")
+	detail, err := sendFirstMessage(t, ctx, f.db, f.svc, f.chain.StudentID, f.chain.AccountID, "Erste Nachricht", "")
 	require.NoError(t, err)
 	before := len(f.outbox.Requests())
 
@@ -222,15 +222,15 @@ func TestPostMessage_QueuesAnotherDataMinimalEmail(t *testing.T) {
 	assert.Contains(t, rows[0].IdempotencyKey, "parent_message:")
 }
 
-// TestStartThread_RespectsGuardianOptOut: who switched the notification off is
+// TestFirstMessage_RespectsGuardianOptOut: who switched the notification off is
 // not written to by e-mail either.
-func TestStartThread_RespectsGuardianOptOut(t *testing.T) {
+func TestFirstMessage_RespectsGuardianOptOut(t *testing.T) {
 	t.Parallel()
 
 	preferences := &stubMessagePreferences{declined: true}
 	f := newEmailFixture(t, preferences)
 
-	_, err := testpkg.TenantQuery4(t, adminCtx(t, f.staff), f.db, f.svc.StartThread, f.chain.StudentID, f.chain.AccountID, "Guten Tag", "")
+	_, err := sendFirstMessage(t, adminCtx(t, f.staff), f.db, f.svc, f.chain.StudentID, f.chain.AccountID, "Guten Tag", "")
 	require.NoError(t, err)
 
 	assert.Empty(t, f.outbox.Requests(), "kein Versand nach Widerspruch")

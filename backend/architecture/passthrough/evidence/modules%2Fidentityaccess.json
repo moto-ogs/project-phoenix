@@ -275,13 +275,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (a *AccountAdministration) UpdateManageableAccount(ctx context.Context, update identityaccess.AccountIdentityUpdate) error {\n\treturn runFlowErr(ctx, a.flow(), func(ctx context.Context) error {\n\t\treturn a.runtime.RunInTx(ctx, func(writeCtx context.Context) error {\n\t\t\treturn a.updateManageableAccount(writeCtx, domain.AccountIdentityUpdate{AccountID: update.AccountID, Email: update.Email, Username: update.Username})\n\t\t})\n\t})\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/identityaccess/internal/application/AccountAdministration.UpdateManageableAccount",
-      "owner": "modules/identityaccess"
-    },
-    {
-      "build": "production",
       "evidence": "func (s *AccountAuthentication) CountExpiredTokens(ctx context.Context) (int, error) {\n\treturn runFlow(ctx, s.flow(), func(ctx context.Context) (int, error) {\n\t\tcount, err := s.sessions.CountExpiredAccountSessions(ctx)\n\t\tif err != nil {\n\t\t\treturn 0, failed(\"count expired tokens\", err)\n\t\t}\n\t\treturn count, nil\n\t})\n}",
       "form": "unclassified-evidence",
       "id": "modules/identityaccess/internal/application/AccountAuthentication.CountExpiredTokens",

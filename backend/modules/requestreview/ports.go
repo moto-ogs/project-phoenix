@@ -90,8 +90,8 @@ type Row struct {
 	// DecidedAt is the display decision instant the history range filter
 	// reads (history).
 	DecidedAt time.Time
-	// Data is the unchanged per-type projection (the wire shapes in wire.go).
-	Data any
+	// Payload is the per-type projection (the wire shapes in wire.go).
+	Payload Payload
 }
 
 // Queue is one owner's request queue: its open requests, its decided

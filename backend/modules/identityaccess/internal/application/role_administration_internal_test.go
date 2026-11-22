@@ -211,10 +211,6 @@ func (s *raStore) DeleteRolePermissions(context.Context, int64) error {
 	return s.deleteRolePermsErr
 }
 
-func (s *raStore) CreatePermission(_ context.Context, permission domain.ManagedPermission) (domain.ManagedPermission, error) {
-	return permission, nil
-}
-
 func (s *raStore) FindPermission(_ context.Context, id int64) (domain.ManagedPermission, bool, error) {
 	if s.findPermissionErr != nil {
 		return domain.ManagedPermission{}, false, s.findPermissionErr

@@ -13,6 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/masterdatarequests"
+	"github.com/moto-ogs/project-phoenix/modules/requestreview"
 	"github.com/moto-ogs/project-phoenix/modules/settings"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -109,6 +110,33 @@ func TestAggregatedChangeRequests_RouterHistoryCursor(t *testing.T) {
 	// The history status filter runs server-side.
 	rejectedOnly := fetch(t, "view=history&types=master_data&search=Zaggreg&status=rejected")
 	assert.Equal(t, []string{idOf(middle)}, requestIDs(rejectedOnly))
+
+	// The dedicated history path carries the same decisions and cursor in
+	// typed members, without the legacy view parameter or data projection.
+	fetchHistory := func(query string) ([]string, string) {
+		t.Helper()
+		rr := authExec(t, tc, testutil.NewRequest("GET", "/change-requests/history?"+query, nil), claims, perms)
+		require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+		var env struct {
+			Data requestreview.HistoryPage `json:"data"`
+		}
+		require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &env))
+		ids := make([]string, 0, len(env.Data.Items))
+		for _, item := range env.Data.Items {
+			assert.Equal(t, requestreview.TypeMasterData, item.RequestType)
+			require.NotNil(t, item.MasterData)
+			ids = append(ids, item.MasterData.ID)
+		}
+		return ids, env.Data.NextCursor
+	}
+	ids, cursor := fetchHistory("types=master_data&search=Zaggreg&limit=2")
+	assert.Equal(t, []string{idOf(newest), idOf(middle)}, ids)
+	require.NotEmpty(t, cursor)
+	ids, cursor = fetchHistory("types=master_data&search=Zaggreg&limit=2&cursor=" + url.QueryEscape(cursor))
+	assert.Equal(t, []string{idOf(oldest)}, ids)
+	assert.Empty(t, cursor)
+	ids, _ = fetchHistory("types=master_data&search=Zaggreg&status=rejected")
+	assert.Equal(t, []string{idOf(middle)}, ids)
 }
 
 func TestAggregatedChangeRequests_RouterOpenSearchAndPermissions(t *testing.T) {

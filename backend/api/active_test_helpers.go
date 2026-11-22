@@ -197,10 +197,6 @@ func buildActiveTestModule(db transactionruntime.Database, unit tenant.UnitOfWor
 	if err != nil {
 		return fail(err)
 	}
-	organizations, err := owners.NewOrganizationTenancy(db)
-	if err != nil {
-		return fail(err)
-	}
 	tt, _, _, err := NewTimetableTestModule(db, unit, clocks...)
 	if err != nil {
 		return fail(err)
@@ -263,8 +259,8 @@ func buildActiveTestModule(db transactionruntime.Database, unit tenant.UnitOfWor
 		SchoolPresence:  owners.NewLoggedStudentPresence(db, logger),
 		YardRoomColor:   facilitiesModule.YardRoomColor(rooms),
 		GroupRepo:       sessionGroups, SessionStartLock: r.SessionStartLock, SupervisorRepo: sessionSupervisors,
-		StudentStatusRepo: rCare.StudentStatusDay, CrossTenantRepo: r.CrossTenant, Schools: owners.NewActiveSchoolQuery(organizations),
-		StudentRepo: owners.PresenceStudents(db, members.Student), StaffRepo: owners.NewAttendanceStaffDirectory(members.Staff), RoomRepo: facilitiesCompose.NewAttendanceRooms(rRooms.Room),
+		StudentStatusRepo: rCare.StudentStatusDay,
+		StudentRepo:       owners.PresenceStudents(db, members.Student), StaffRepo: owners.NewAttendanceStaffDirectory(members.Staff), RoomRepo: facilitiesCompose.NewAttendanceRooms(rRooms.Room),
 		ActivityGroupRepo: owners.NewSessionActivities(rt.GroupReads()), ActivityCatRepo: arrivalTimetable.NewCategoryCount(rt.ActivityCategory), EducationGroupRepo: owners.NewAttendanceEducationGroups(owners.NewSchoolStructureSuiteRepositories(db).Group, members.Student), DeviceRepo: owners.NewSessionDeviceDirectory(devices, settings.Settings, logger),
 		StaffNames: owners.NewAttendanceStaffNames(members.Staff), DB: db.Pool(), Broadcaster: owners.NewPresenceEvents(hub, logger), WorkSessionService: owners.PresenceAutoCheckIn{CheckIn: work.AutoCheckIn},
 		AttendanceSyncer:         attendanceMirror,

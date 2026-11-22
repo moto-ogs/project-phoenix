@@ -1519,6 +1519,7 @@ export const portalRoutes = {
     students["GET /api/students/care-withdrawals/{completionId}/deletion-impact"],
     students["GET /api/students/change-requests"],
     students["GET /api/students/change-requests/access"],
+    students["GET /api/students/change-requests/history"],
     students["GET /api/students/change-requests/pending-count"],
     students["GET /api/students/change-requests/rss-feed/"],
     students["GET /api/students/child-quota"],

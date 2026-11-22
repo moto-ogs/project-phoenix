@@ -12,7 +12,11 @@ import {
   safeInt,
   str,
   success,
+  type OpenEnum,
 } from "./runtime";
+import {
+  type ListFormat,
+} from "./shared.generated";
 
 /** Go: birthdays.celebrationResponse */
 export interface celebrationResponse {
@@ -69,6 +73,13 @@ export const optOutResponseSchema: z.ZodType<optOutResponse, unknown> = object<o
   opt_out: bool,
 });
 
+/** Go: birthdays.staffExportRequest */
+export interface staffExportRequest {
+  format?: OpenEnum<ListFormat>;
+  title?: string;
+  months?: string[] | null;
+}
+
 /** Go: birthdays.optOutRequest */
 export interface optOutRequest {
   opt_out?: boolean | null;
@@ -97,6 +108,7 @@ export const routes = {
     method: "POST",
     pattern: "/api/birthdays/staff-export",
     portals: ["tenant"],
+    request: requestBody<staffExportRequest>(),
     response: fileAnswer,
   },
   "PUT /api/birthdays/opt-out": {

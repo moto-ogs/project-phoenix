@@ -128,6 +128,11 @@ Same steps; the contract names the body type, and the client sends it typed
 
 - Go's `Bind` validates and answers 400 with field errors; the generated
   request type has only optional fields and repeats no rule.
+- Every route whose handler reads a body names its type in `Request`, a
+  file export too. A test that reaches a handler reading a body its contract
+  does not type fails the answer check (`api/common/answer_contract_test_helpers.go`).
+  A Go type that a body and an answer both carry is generated twice: the
+  answer keeps its name, the body is `<Name>Input` with optional fields.
 - A route without an answer body registers `NoData: true`.
 - A route whose body carries a password or a code names why it must not be
   sent twice in `NoRetryAfterRenewal`.
