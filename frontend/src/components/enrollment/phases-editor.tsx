@@ -1,5 +1,6 @@
 "use client";
 
+import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 import {
   enrollmentWindowIsOrdered,
   phaseHasPublicForm,
@@ -39,7 +40,6 @@ import { TranslationsSection } from "~/components/enrollment/translations-sectio
 import {
   type Phase,
   type PhaseAudience,
-  type PhaseDeleteImpact,
   type PhaseInput,
   type PhaseKind,
   type PhaseCareOverflowMode,
@@ -316,9 +316,8 @@ export function PhasesEditor({ info }: { readonly info?: string }) {
   // Delete-confirmation modal state. deleteTarget drives visibility;
   // deleteImpact holds the fetched blast-radius counts.
   const [deleteTarget, setDeleteTarget] = useState<Phase | null>(null);
-  const [deleteImpact, setDeleteImpact] = useState<PhaseDeleteImpact | null>(
-    null,
-  );
+  const [deleteImpact, setDeleteImpact] =
+    useState<enrollmentContract.PhaseDeleteImpactResponse | null>(null);
   const [impactLoading, setImpactLoading] = useState(false);
   // Preview-load failure (hard-blocks confirmation) vs. delete-call failure
   // (retryable) are tracked separately so a failed delete doesn't permanently
@@ -1255,7 +1254,7 @@ interface PhaseFormProps {
 // Löschen geht erst mit geladener Vorschau und nur ohne Anmeldungen (#6836).
 function canDeletePhase(
   loading: boolean,
-  impact: PhaseDeleteImpact | null,
+  impact: enrollmentContract.PhaseDeleteImpactResponse | null,
   loadError: unknown,
 ): boolean {
   return !loading && !loadError && impact !== null && impact.requests === 0;
@@ -1273,7 +1272,7 @@ function PhaseDeleteImpactAlert({
 }: Readonly<{
   loading: boolean;
   failed: boolean;
-  impact: PhaseDeleteImpact | null;
+  impact: enrollmentContract.PhaseDeleteImpactResponse | null;
 }>) {
   if (!loading && !failed && impact && impact.requests > 0) {
     return (

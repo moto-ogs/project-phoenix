@@ -6,17 +6,22 @@
  * every write; this copy only tells the family in advance.
  */
 
+import type * as sharedContract from "~/lib/contract/shared.generated";
 import { WEEKDAY_CODES } from "~/lib/weekdays";
 
 export const AT_MOST_ONE_PER_DAY = "at_most_one_per_day";
 
-export interface DayRuleOffering {
-  readonly id: string;
-  readonly days_of_week_mode: string;
-  readonly available_days: readonly string[];
-  readonly selection_group?: string | null;
-  readonly selection_rule?: string | null;
-}
+/**
+ * The parts of an offering the day rule reads, from the staff and public
+ * catalogs as from the parents' catalog.
+ */
+export type DayRuleOffering = Readonly<
+  Pick<
+    sharedContract.CareOfferingResponse,
+    "id" | "days_of_week_mode" | "selection_group"
+  > &
+    Partial<Pick<sharedContract.CareOfferingResponse, "selection_rule">>
+> & { readonly available_days: readonly string[] };
 
 export interface CareOfferingDayConflict {
   readonly group: string;

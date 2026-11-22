@@ -1,5 +1,6 @@
 "use client";
 
+import type * as sharedContract from "~/lib/contract/shared.generated";
 import {
   createContext,
   useCallback,
@@ -30,7 +31,6 @@ import {
   uploadValueKey,
   type EnrollmentFileType,
   type FileFieldOptions,
-  type NewUploadValue,
   type UploadValue,
 } from "~/lib/enrollment-uploads";
 
@@ -50,11 +50,11 @@ interface EnrollmentUploadTarget {
   readonly phaseId?: string;
   readonly lateInviteToken?: string;
   readonly statusToken?: string;
-  readonly uploadEndpoint?: string;
+  readonly uploadViaParentPortal?: boolean;
   readonly upload?: (
     file: File,
     signal: AbortSignal,
-  ) => Promise<NewUploadValue>;
+  ) => Promise<sharedContract.UploadReceipt>;
   readonly locale: string;
   /** Called with +1 when an upload starts and -1 when it settles. */
   readonly onPendingChange: (delta: number) => void;
@@ -73,7 +73,7 @@ export function useEnrollmentUploadTarget(params: {
   phaseId?: string;
   lateInviteToken?: string;
   statusToken?: string;
-  uploadEndpoint?: string;
+  uploadViaParentPortal?: boolean;
   upload?: EnrollmentUploadTarget["upload"];
   locale: string;
   previewMode: boolean;
@@ -88,7 +88,7 @@ export function useEnrollmentUploadTarget(params: {
     phaseId,
     lateInviteToken,
     statusToken,
-    uploadEndpoint,
+    uploadViaParentPortal,
     upload,
     locale,
     previewMode,
@@ -99,7 +99,7 @@ export function useEnrollmentUploadTarget(params: {
       phaseId: previewMode ? undefined : phaseId,
       lateInviteToken,
       statusToken,
-      uploadEndpoint,
+      uploadViaParentPortal,
       upload: previewMode ? undefined : upload,
       locale,
       onPendingChange,
@@ -109,7 +109,7 @@ export function useEnrollmentUploadTarget(params: {
       phaseId,
       lateInviteToken,
       statusToken,
-      uploadEndpoint,
+      uploadViaParentPortal,
       upload,
       previewMode,
       locale,
@@ -257,7 +257,7 @@ export function FileUploadInput({
             file,
             lateInviteToken: target.lateInviteToken,
             statusToken: target.statusToken,
-            uploadEndpoint: target.uploadEndpoint,
+            viaParentPortal: target.uploadViaParentPortal,
             signal: controller.signal,
           });
       selectionOrder.current.set(uploadValueKey(uploaded), id);
