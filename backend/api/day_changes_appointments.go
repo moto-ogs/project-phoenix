@@ -22,18 +22,23 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
-// maxAppointmentSpanDays bounds how far back a multi-day date of a series
-// may begin and still reach today; the dates the overrides are read for.
-const maxAppointmentSpanDays = 31
-
-// dayChangesAppointmentReads is Appointments' read of the caller's calendar.
+// dayChangesAppointmentReads is Appointments' read of the caller's calendar
+// on a day: the appointments with their rules and the overrides of the dates
+// that may reach the day, in one statement (#7903).
 type dayChangesAppointmentReads interface {
-	ListAppointmentsVisibleToStaff(ctx context.Context, staffID int64, from, to appointments.Date) ([]*appointments.Appointment, error)
-	FindRecurrenceRules(ctx context.Context, appointmentIDs []int64) ([]*appointments.RecurrenceRule, error)
-	FindOccurrenceOverrides(ctx context.Context, appointmentIDs []int64, dates []appointments.Date) ([]*appointments.AppointmentOccurrenceOverride, error)
+	ListStaffDayAppointments(ctx context.Context, staffID int64, day appointments.Date) ([]appointments.StaffDayAppointment, error)
+}
+
+// dayChangesAppointmentsOf is the staff day read of the composed
+// Appointments owner; nil without one, which NewDayChanges rejects.
+func dayChangesAppointmentsOf(owner appointments.Query) dayChangesAppointmentReads {
+	reads, err := appointments.StaffDayAppointmentsOf(owner)
+	if err != nil {
+		return nil
+	}
+	return reads
 }
 
 // dayChangesAppointments is the Termine source.
@@ -42,11 +47,11 @@ type dayChangesAppointments struct {
 	reads  dayChangesAppointmentReads
 }
 
-// AppointmentChanges reads today's appointments of the caller in at most
-// three statements besides the caller's staff record (which the Personal
-// source has resolved already; the request memoizes it): the appointments,
-// the overrides of the dates that may reach today, and the recurrence rules
-// only of a cancelled series, whose today the rule decides. A date moved onto
+// AppointmentChanges reads today's appointments of the caller in one
+// statement besides the caller's staff record (which the Personal source has
+// resolved already; the request memoizes it): the appointments with their
+// recurrence rules, whose today the rule decides for a cancelled series, and
+// the overrides of the dates that may reach today (#7903). A date moved onto
 // today from another day is not read; no calendar write moves a date yet.
 func (s dayChangesAppointments) AppointmentChanges(ctx context.Context, day calendar.Date) ([]daychangesview.SourceEntry, error) {
 	if !securityruntime.HasPermission(permissions.CalendarOwn, sessiontoken.PermissionsFromCtx(ctx)) {
@@ -61,77 +66,17 @@ func (s dayChangesAppointments) AppointmentChanges(ctx context.Context, day cale
 		return nil, nil
 	}
 	today := appointments.Date(day.String())
-	visible, err := s.reads.ListAppointmentsVisibleToStaff(ctx, staffID, today, today)
+	visible, err := s.reads.ListStaffDayAppointments(ctx, staffID, today)
 	if err != nil {
 		return nil, fmt.Errorf("list calendar appointments: %w", err)
 	}
-	overrides, err := s.todaysOverrides(ctx, visible, today)
-	if err != nil {
-		return nil, err
-	}
-	rules, err := s.cancelledSeriesRules(ctx, visible, today)
-	if err != nil {
-		return nil, err
-	}
 	entries := []daychangesview.SourceEntry{}
-	for _, appointment := range visible {
-		if entry, ok := appointmentChange(appointment, overrides[appointment.ID], rules, today); ok {
+	for _, value := range visible {
+		if entry, ok := appointmentChange(value.Appointment, value.Overrides, value.Rule, today); ok {
 			entries = append(entries, entry)
 		}
 	}
 	return entries, nil
-}
-
-// todaysOverrides reads the overrides of the dates that may reach today,
-// keyed by appointment. A non-recurring appointment has none: a single
-// date is cancelled on the appointment itself.
-func (s dayChangesAppointments) todaysOverrides(ctx context.Context, visible []*appointments.Appointment, today appointments.Date) (map[ident.ID][]*appointments.AppointmentOccurrenceOverride, error) {
-	ids := []int64{}
-	span := 0
-	for _, appointment := range visible {
-		ids = append(ids, appointment.ID.Int64())
-		span = max(span, min(appointment.StartDate.DaysUntil(appointment.EndDate), maxAppointmentSpanDays))
-	}
-	if len(ids) == 0 {
-		return nil, nil
-	}
-	dates := make([]appointments.Date, 0, span+1)
-	for back := 0; back <= span; back++ {
-		dates = append(dates, today.AddDays(-back))
-	}
-	rows, err := s.reads.FindOccurrenceOverrides(ctx, ids, dates)
-	if err != nil {
-		return nil, fmt.Errorf("list occurrence overrides: %w", err)
-	}
-	byAppointment := make(map[ident.ID][]*appointments.AppointmentOccurrenceOverride, len(rows))
-	for _, row := range rows {
-		byAppointment[ident.ID(row.AppointmentID)] = append(byAppointment[ident.ID(row.AppointmentID)], row)
-	}
-	return byAppointment, nil
-}
-
-// cancelledSeriesRules reads the rules of the cancelled appointments whose
-// own dates miss today: only a series reaches today then, and its rule
-// decides whether today is one of its dates.
-func (s dayChangesAppointments) cancelledSeriesRules(ctx context.Context, visible []*appointments.Appointment, today appointments.Date) (map[ident.ID]*appointments.RecurrenceRule, error) {
-	ids := []int64{}
-	for _, appointment := range visible {
-		if appointment.CancelledAt != nil && !overlapsDay(appointment, today) {
-			ids = append(ids, appointment.ID.Int64())
-		}
-	}
-	if len(ids) == 0 {
-		return nil, nil
-	}
-	rows, err := s.reads.FindRecurrenceRules(ctx, ids)
-	if err != nil {
-		return nil, fmt.Errorf("list recurrence rules: %w", err)
-	}
-	rules := make(map[ident.ID]*appointments.RecurrenceRule, len(rows))
-	for _, rule := range rows {
-		rules[rule.AppointmentID] = rule
-	}
-	return rules, nil
 }
 
 func overlapsDay(appointment *appointments.Appointment, day appointments.Date) bool {
@@ -143,7 +88,7 @@ func overlapsDay(appointment *appointments.Appointment, day appointments.Date) b
 // checks the date, and editing the series drops its overrides. Overrides that
 // change nothing are skipped, so another date of an overlapping series still
 // counts.
-func appointmentChange(appointment *appointments.Appointment, overrides []*appointments.AppointmentOccurrenceOverride, rules map[ident.ID]*appointments.RecurrenceRule, today appointments.Date) (daychangesview.SourceEntry, bool) {
+func appointmentChange(appointment *appointments.Appointment, overrides []*appointments.AppointmentOccurrenceOverride, rule *appointments.RecurrenceRule, today appointments.Date) (daychangesview.SourceEntry, bool) {
 	length := appointment.StartDate.DaysUntil(appointment.EndDate)
 	for _, override := range overrides {
 		if override.OccurrenceDate.AddDays(length).Before(today) {
@@ -159,7 +104,7 @@ func appointmentChange(appointment *appointments.Appointment, overrides []*appoi
 	if appointment.CancelledAt == nil {
 		return daychangesview.SourceEntry{}, false
 	}
-	occurrence, ok := cancelledOccurrence(appointment, rules[appointment.ID], today)
+	occurrence, ok := cancelledOccurrence(appointment, rule, today)
 	if !ok {
 		return daychangesview.SourceEntry{}, false
 	}

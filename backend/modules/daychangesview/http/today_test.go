@@ -434,11 +434,16 @@ func assertNoShiftReason(t *testing.T, body string) {
 }
 
 // TestDayChangesQueryBudget proves the statement count does not grow with
-// the number of absences, substitutions and changed shifts.
+// the number of absences, substitutions, changed shifts and appointment
+// exceptions. The caller is care staff with a group and its own calendar
+// (#7903): every source this lead reads, the Termine source included.
 func TestDayChangesQueryBudget(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupIsolatedTestDB(t)
 	tenantID := testpkg.Tenant(t)
+	writes, err := api.NewDayChangesTestCalendar(testpkg.NewDatabase(t, db))
+	require.NoError(t, err)
+	ctx := testpkg.Ctx(t)
 	carer, account := testpkg.CreateTestTeacherWithAccount(t, db, "Budget", "Betreuung")
 	group := testpkg.CreateTestEducationGroup(t, db, "Budget-Gruppe")
 	testpkg.CreateTestGroupTeacher(t, db, group.ID, carer.ID)
@@ -455,15 +460,32 @@ func TestDayChangesQueryBudget(t *testing.T) {
 			jumper := testpkg.CreateTestStaff(t, db, "Budget", fmt.Sprintf("Springer-%d", created))
 			testpkg.CreateTestGroupSubstitution(t, db, other.ID, nil, jumper.ID, day, day)
 			testpkg.CreateTestStaffShiftChange(t, db, jumper.ID, day, testpkg.StaffShiftChange{Cancelled: true})
+			// A weekly appointment of the caller with today's date cancelled:
+			// the overrides are read.
+			weekly, err := writes.Create(ctx, api.DayChangesTestAppointment{
+				Organizer: carer.StaffID, Title: fmt.Sprintf("Budget-Termin-%d", created),
+				Day: day.AddDays(-7), StartHour: 8, EndHour: 9, Weekly: true,
+			})
+			require.NoError(t, err)
+			require.NoError(t, writes.Except(ctx, weekly, day, api.DayChangesTestException{Cancel: true}))
+			// A weekly series cancelled as a whole: its rule decides today.
+			series, err := writes.Create(ctx, api.DayChangesTestAppointment{
+				Organizer: carer.StaffID, Title: fmt.Sprintf("Budget-Reihe-%d", created),
+				Day: day.AddDays(-7), StartHour: 10, EndHour: 11, Weekly: true,
+			})
+			require.NoError(t, err)
+			require.NoError(t, writes.Except(ctx, series, day, api.DayChangesTestException{Whole: true}))
 		}
 		baseline = n
 		counter.Reset()
 		// Without users:read neither the Kinder source (#7665) nor the
 		// notices read; children_test.go measures both with users:read. The
 		// Dienstplan right keeps its source in this budget and reads the
-		// closing days too (#7661, #7664).
-		overview, _ := read(t, router, account.ID, tenantID, "vacation:approve", "time_tracking:manage")
-		require.Len(t, overview.Entries, 3*n)
+		// closing days too (#7661, #7664); calendar:own reads the Termine
+		// source (#7663, #7903).
+		overview, body := read(t, router, account.ID, tenantID, "vacation:approve", "time_tracking:manage", "calendar:own")
+		require.Len(t, appointmentLines(t, body), 2*n)
+		require.Len(t, overview.Entries, 3*n+2*n)
 		measured := counter.Measurement(counter.Queries())
 		if round > 0 {
 			require.Len(t, measured.Statements, len(statements.Statements), "statements must not grow with the rows")

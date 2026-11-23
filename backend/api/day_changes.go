@@ -45,12 +45,17 @@ type dayChangesCaller interface {
 	MySchoolClasses(ctx context.Context) ([]string, error)
 }
 
-// dayChangesWorkforce is the Workforce read of absences, substitutions and
+// dayChangesWorkforce is the Workforce read of the caller's covers and the
 // planned shifts.
 type dayChangesWorkforce interface {
-	ListStaffAbsences(context.Context, workforce.StaffAbsenceFilter) ([]workforce.StaffAbsence, error)
 	ListGroupSubstitutions(context.Context, workforce.GroupSubstitutionFilter) ([]workforce.GroupSubstitution, error)
 	ListStaffShifts(context.Context, workforce.StaffShiftFilter) ([]workforce.StaffShift, error)
+}
+
+// dayChangesStaffDay is Workforce's read of the day's absences with plan
+// effect and group handovers in one statement (#7903).
+type dayChangesStaffDay interface {
+	StaffDay(ctx context.Context, day string) (workforce.StaffDay, error)
 }
 
 // dayChangesStaffNames maps staff ids to display names in one read.
@@ -92,7 +97,8 @@ type dayChangesGroups interface {
 
 // DayChangesSources are the owner reads of "Heute anders"; all required.
 type DayChangesSources struct {
-	Caller    dayChangesCaller
+	Caller dayChangesCaller
+	// Workforce is the work-time composition; it serves the staff day too.
 	Workforce dayChangesWorkforce
 	Names     dayChangesStaffNames
 	Groups    dayChangesGroups
@@ -115,7 +121,7 @@ type DayChangesSources struct {
 	ClassArrivals timetable.ClassArrivalQuery
 	// MealPlan is Meal Plan's change mark of a day (#7666).
 	MealPlan dayChangesMenuChanges
-	// Appointments is Appointments' read of the own calendar (#7663).
+	// Appointments is Appointments' read of the own calendar (#7663, #7903).
 	Appointments dayChangesAppointmentReads
 	Today        func() calendar.Date
 	Logger       *slog.Logger
@@ -150,6 +156,9 @@ func NewDayChanges(sources DayChangesSources) (daychangesview.Query, error) {
 	classDay, err := timetable.ClassArrivalDayOf(sources.ClassArrivals)
 	if err != nil {
 		return nil, err
+	}
+	if _, ok := sources.Workforce.(dayChangesStaffDay); !ok {
+		return nil, fmt.Errorf("%w: workforce staff day", daychangesview.ErrDependencies)
 	}
 	// One name read per request for the sources that name staff (#7675).
 	sources.Names = memoStaffNames{inner: sources.Names}
@@ -234,17 +243,14 @@ func (s dayChangesStaff) StaffChanges(ctx context.Context, day calendar.Date) ([
 		// Nothing of this source is visible to the account.
 		return nil, nil
 	}
-	handovers, err := s.handovers(ctx, day)
+	// The reported and approved absences and the group handovers of the day
+	// in one Workforce statement (#7903).
+	// NewDayChanges checked that the work-time composition serves it.
+	staffDay, err := s.sources.Workforce.(dayChangesStaffDay).StaffDay(ctx, day.String())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list staff absences and group handovers: %w", err)
 	}
-	absences, err := s.sources.Workforce.ListStaffAbsences(ctx, workforce.StaffAbsenceFilter{
-		Statuses:    []string{workforce.AbsenceStatusReported, workforce.AbsenceStatusApproved},
-		OverlapFrom: day.String(), OverlapTo: day.String(),
-	})
-	if err != nil {
-		return nil, fmt.Errorf("list staff absences: %w", err)
-	}
+	handovers, absences := staffDay.Handovers, staffDay.Absences
 	blocks, err := s.blockStaffChanges(ctx, day)
 	if err != nil {
 		return nil, err
@@ -275,16 +281,6 @@ func (s dayChangesStaff) StaffChanges(ctx context.Context, day calendar.Date) ([
 		builder.block(change, absentToday)
 	}
 	return builder.finish(ctx, s.sources.Names, s.sources.Groups)
-}
-
-func (s dayChangesStaff) handovers(ctx context.Context, day calendar.Date) ([]workforce.GroupSubstitution, error) {
-	rows, err := s.sources.Workforce.ListGroupSubstitutions(ctx, workforce.GroupSubstitutionFilter{
-		TargetType: workforce.GroupSubstitutionTypeGroupHandover, On: day.String(),
-	})
-	if err != nil {
-		return nil, fmt.Errorf("list group substitutions: %w", err)
-	}
-	return rows, nil
 }
 
 func (s dayChangesStaff) viewer(ctx context.Context) (staffViewer, error) {
