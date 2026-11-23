@@ -98,7 +98,6 @@ installSessionCookieExit();
 vi.mock("~/env", () => ({
   env: {
     API_URL: "http://server:8080",
-    NEXT_PUBLIC_API_URL: "http://localhost:8080",
     NEXTAUTH_URL: "http://localhost:3000",
     NEXTAUTH_SECRET: "test-secret",
     AUTH_SECRET: "test-auth-secret",
@@ -110,7 +109,6 @@ vi.mock("~/env", () => ({
 
 vi.mock("~/env.client", () => ({
   clientEnv: {
-    NEXT_PUBLIC_API_URL: "http://localhost:8080",
     NEXT_PUBLIC_TENANT_DOMAIN: "localhost",
     NEXT_PUBLIC_OPERATOR_HOSTNAME: "operator.localhost:3000",
     NEXT_PUBLIC_PARENTS_HOSTNAME: "parents.localhost:3000",

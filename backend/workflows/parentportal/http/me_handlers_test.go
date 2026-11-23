@@ -28,13 +28,21 @@ import (
 type fakeParentService struct {
 	claimedEmails []string
 
+	// The room history stop (#3844).
+	roomHistoryStop    parentService.ChildRoomHistoryStop
+	roomHistoryStopErr error
+	roomHistoryCall    string
+
 	sepaView     parentService.SEPAMandateView
 	sepaText     parentService.SEPAMandateText
 	sepaErr      error
 	gotSEPAInput parentService.SEPAMandateInput
 	gotSEPACall  string
+	// gotSEPAVersion is the expected_version of a revocation.
+	gotSEPAVersion string
 
 	declarationProof *parentService.DeclarationProof
+	pickupProof      *parentService.PickupProof
 
 	conferenceChild         *parentService.Child
 	conferenceChildErr      error
@@ -218,6 +226,21 @@ func (f *fakeParentService) GetChildConsents(_ context.Context, accountID, stude
 	f.gotConsentStudent = studentID
 	return f.consents, f.consentsErr
 }
+func (f *fakeParentService) GetChildRoomHistoryStop(_ context.Context, accountID, studentID int64) (parentService.ChildRoomHistoryStop, error) {
+	f.roomHistoryCall = "GetChildRoomHistoryStop"
+	f.gotConsentAccount, f.gotConsentStudent = accountID, studentID
+	return f.roomHistoryStop, f.roomHistoryStopErr
+}
+func (f *fakeParentService) StopChildRoomHistory(_ context.Context, accountID, studentID int64) (parentService.ChildRoomHistoryStop, error) {
+	f.roomHistoryCall = "StopChildRoomHistory"
+	f.gotConsentAccount, f.gotConsentStudent = accountID, studentID
+	return f.roomHistoryStop, f.roomHistoryStopErr
+}
+func (f *fakeParentService) ResumeChildRoomHistory(_ context.Context, accountID, studentID int64) (parentService.ChildRoomHistoryStop, error) {
+	f.roomHistoryCall = "ResumeChildRoomHistory"
+	f.gotConsentAccount, f.gotConsentStudent = accountID, studentID
+	return f.roomHistoryStop, f.roomHistoryStopErr
+}
 func (f *fakeParentService) WithdrawPhotoConsent(_ context.Context, accountID, studentID int64) ([]parentService.ChildConsent, error) {
 	f.gotConsentAccount = accountID
 	f.gotConsentStudent = studentID
@@ -264,8 +287,8 @@ func (f *fakeParentService) MealPlanWeek(context.Context, int64, int64, timezone
 func (f *fakeParentService) MealParticipation(context.Context, int64, int64, timezone.Date, timezone.Date) (parentService.MealParticipationPlan, error) {
 	return f.mealParticipation, f.mealParticipationErr
 }
-func (f *fakeParentService) ReplaceMealParticipationSchedule(context.Context, int64, int64, []parentService.MealWeekday) (string, error) {
-	return "2026-09-07", f.mealParticipationWriteErr
+func (f *fakeParentService) ReplaceMealParticipationSchedule(context.Context, int64, int64, []parentService.MealWeekday, string) (parentService.MealScheduleSaved, error) {
+	return parentService.MealScheduleSaved{EffectiveFrom: "2026-09-07", Version: "saved-version"}, f.mealParticipationWriteErr
 }
 func (f *fakeParentService) SetMealParticipationDay(context.Context, int64, int64, timezone.Date, bool) error {
 	return f.mealParticipationWriteErr
@@ -402,6 +425,9 @@ func (f *fakeParentService) PickupSignatureStatement(context.Context, int64, int
 }
 
 func (f *fakeParentService) PickupRequestProof(context.Context, int64, int64, int64) (*parentService.PickupProof, error) {
+	if f.pickupProof != nil {
+		return f.pickupProof, nil
+	}
 	return nil, parentService.ErrPickupProofNotFound
 }
 
@@ -662,7 +688,7 @@ func TestGetMealParticipation_ResponseContract(t *testing.T) {
 	t.Parallel()
 	rs := &Resource{ParentService: &fakeParentService{mealParticipation: parentService.MealParticipationPlan{
 		Weekdays: []parentService.MealWeekday{1, 3}, EffectiveFrom: "2026-08-24", CutoffTime: "09:00",
-		Model: "ongoing_split", ScheduleChangeable: true, SickCancels: true,
+		Model: "ongoing_split", ScheduleChangeable: true, SickCancels: true, Version: "read-version",
 		Days: []parentService.MealParticipationDay{{
 			Date: "2026-08-24", Participating: true, Regular: true, Source: "regular", Changeable: true, CanRegister: false, CanCancel: true,
 			RegisterUntil: time.Date(2026, 8, 20, 10, 0, 0, 0, time.UTC), CancelUntil: time.Date(2026, 8, 24, 6, 0, 0, 0, time.UTC),
@@ -673,7 +699,7 @@ func TestGetMealParticipation_ResponseContract(t *testing.T) {
 	rs.getMealParticipation(w, mealParticipationRequest())
 
 	require.Equal(t, http.StatusOK, w.Code)
-	assert.JSONEq(t, `{"status":"success","data":{"weekdays":[1,3],"effective_from":"2026-08-24","cutoff_time":"09:00","model":"ongoing_split","schedule_changeable":true,"sick_cancels_after_deadline":true,"days":[{"date":"2026-08-24","participating":true,"regular_participating":true,"source":"regular","changeable":true,"can_register":false,"can_cancel":true,"register_until":"2026-08-20T10:00:00Z","cancel_until":"2026-08-24T06:00:00Z"}]},"message":"Meal participation retrieved"}`, w.Body.String())
+	assert.JSONEq(t, `{"status":"success","data":{"weekdays":[1,3],"effective_from":"2026-08-24","cutoff_time":"09:00","model":"ongoing_split","schedule_changeable":true,"sick_cancels_after_deadline":true,"days":[{"date":"2026-08-24","participating":true,"regular_participating":true,"source":"regular","changeable":true,"can_register":false,"can_cancel":true,"register_until":"2026-08-20T10:00:00Z","cancel_until":"2026-08-24T06:00:00Z"}],"version":"read-version"},"message":"Meal participation retrieved"}`, w.Body.String())
 }
 
 func TestMealParticipationWrites_PermissionCodes(t *testing.T) {

@@ -4,7 +4,8 @@
 // ("Keine Betreuung"); Anwesenheit, Betreuungsplanung und Elternportal
 // kennen sie strukturell nicht.
 
-import { apiErrorFromBody, transportFetch } from "./api-error";
+import { bffJson } from "./bff-fetch";
+import type * as classListEntriesContract from "./contract/class-list-entries.generated";
 
 export interface ClassListEntry {
   id: string;
@@ -23,23 +24,9 @@ export interface ClassListEntryInput {
   schoolClass: string;
 }
 
-// Alle IDs reisen als JSON-Strings: als JSON-Zahl würden int64-IDs oberhalb
-// von 2^53 beim Parsen (Browser wie Next.js-Proxy) gerundet.
-interface WireEntry {
-  id: string;
-  first_name: string;
-  last_name: string;
-  school_class: string;
-  created_at: string;
-  matching_student_ids?: string[];
-}
-
-interface Envelope<T> {
-  data: T;
-  message?: string;
-}
-
-function mapEntry(wire: WireEntry): ClassListEntry {
+function mapEntry(
+  wire: classListEntriesContract.ClassListEntryResponse,
+): ClassListEntry {
   return {
     id: wire.id,
     firstName: wire.first_name,
@@ -50,38 +37,13 @@ function mapEntry(wire: WireEntry): ClassListEntry {
   };
 }
 
-// Eigener Fetch statt authFetch: die Backend-Fehlermeldungen (z.B. "existiert
-// in dieser Klasse bereits") sind deutschsprachige Nutzertexte und müssen die
-// aufrufende UI erreichen — authFetch wirft nur den generischen Statustext.
-async function request<T>(
-  url: string,
-  method: "GET" | "POST" | "PUT" | "DELETE",
-  body?: unknown,
-): Promise<T> {
-  const response = await transportFetch(url, {
-    method,
-    credentials: "include",
-    cache: "no-store",
-    ...(body !== undefined && {
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    }),
-  });
-  const payload = (await response.json().catch(() => null)) as
-    (Envelope<unknown> & Record<string, unknown>) | null;
-  if (!response.ok) {
-    // Code, field errors and request ID travel on for the shared error path
-    // (#2513); the message is the envelope's diagnostic `detail`.
-    throw apiErrorFromBody(
-      `API error (${response.status})`,
-      response.status,
-      payload,
-    );
-  }
-  return payload as T;
-}
+// Code, Feldfehler und Vorgangskennung reisen im ApiError weiter (#2513);
+// die Meldung des Backends steht in dessen `detail`.
+const errorMessage = "Klassenlisteneintrag: Anfrage fehlgeschlagen";
 
-function toWireInput(input: ClassListEntryInput) {
+function toWireInput(
+  input: ClassListEntryInput,
+): classListEntriesContract.ClassListEntryRequest {
   return {
     first_name: input.firstName.trim(),
     last_name: input.lastName.trim(),
@@ -90,51 +52,50 @@ function toWireInput(input: ClassListEntryInput) {
 }
 
 export async function fetchClassListEntries(): Promise<ClassListEntry[]> {
-  const envelope = await request<Envelope<WireEntry[]>>(
-    "/api/class-list-entries",
-    "GET",
-  );
-  return (envelope.data ?? []).map(mapEntry);
+  const entries = await bffJson("tenant", "GET /api/class-list-entries/", {
+    errorMessage,
+  });
+  return entries.map(mapEntry);
 }
 
 export async function createClassListEntry(
   input: ClassListEntryInput,
 ): Promise<ClassListEntry> {
-  const envelope = await request<Envelope<WireEntry>>(
-    "/api/class-list-entries",
-    "POST",
-    toWireInput(input),
+  return mapEntry(
+    await bffJson("tenant", "POST /api/class-list-entries/", {
+      body: toWireInput(input),
+      errorMessage,
+    }),
   );
-  return mapEntry(envelope.data);
 }
 
 export async function updateClassListEntry(
   id: string,
   input: ClassListEntryInput,
 ): Promise<ClassListEntry> {
-  const envelope = await request<Envelope<WireEntry>>(
-    `/api/class-list-entries/${id}`,
-    "PUT",
-    toWireInput(input),
+  return mapEntry(
+    await bffJson("tenant", "PUT /api/class-list-entries/{id}", {
+      params: { id },
+      body: toWireInput(input),
+      errorMessage,
+    }),
   );
-  return mapEntry(envelope.data);
 }
 
 export async function deleteClassListEntry(id: string): Promise<void> {
-  await request<Envelope<null>>(`/api/class-list-entries/${id}`, "DELETE");
+  await bffJson("tenant", "DELETE /api/class-list-entries/{id}", {
+    params: { id },
+    errorMessage,
+  });
 }
 
 export async function assignClassListEntry(
   id: string,
   studentId: string,
 ): Promise<void> {
-  await request<Envelope<null>>(
-    `/api/class-list-entries/${id}/assign`,
-    "POST",
-    // int64-IDs reisen als JSON-String (Backend bindet mit `,string`): als
-    // JSON-Zahl würden IDs oberhalb von 2^53 beim Parsen gerundet.
-    {
-      student_id: studentId,
-    },
-  );
+  await bffJson("tenant", "POST /api/class-list-entries/{id}/assign", {
+    params: { id },
+    body: { student_id: studentId },
+    errorMessage,
+  });
 }

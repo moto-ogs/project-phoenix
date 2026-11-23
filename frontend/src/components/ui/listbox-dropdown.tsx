@@ -26,6 +26,7 @@ import { CONTROL_PART } from "./control-geometry";
 import { CheckboxIndicator } from "./checkbox";
 import { MODAL_SCOPE_SELECTOR, SCROLL_AREA_PROPS } from "./overlay-stack";
 import { useAnchoredPanel, useMenuLayer } from "./anchored-panel";
+import { ResponsivePanel, useResponsivePanelSheet } from "./responsive-panel";
 import {
   clampPanelStart,
   PANEL_GAP,
@@ -269,6 +270,31 @@ interface ListboxDropdownProps<K extends string> {
   ) => ReactNode;
 }
 
+// Im Blatt (#7800) liegt die Liste ohne eigene Lage im Blatt. Ein fester,
+// nicht leerer Wert, damit das Öffnen den gewählten Eintrag wie im Popover
+// einmal in den sichtbaren Bereich holt.
+const SHEET_MENU_STYLE: CSSProperties = { position: "static" };
+
+/** Name eines Blatts aus den Elementen, auf die `aria-labelledby` zeigt. */
+function textOfIds(ids: string | undefined): string | undefined {
+  if (ids === undefined || typeof document === "undefined") return undefined;
+  const text = ids
+    .split(/\s+/u)
+    .map((id) => document.getElementById(id)?.textContent?.trim() ?? "")
+    .filter(Boolean)
+    .join(" ");
+  return text === "" ? undefined : text;
+}
+
+// Vaul/Radix schließen einen Dialog beim Druck außerhalb seines Inhalts; das
+// Popover hängt am `body`, also außerhalb. Siehe die Liste unten.
+const STOP_PRESS_PROPS = {
+  onPointerDown: (event: { stopPropagation: () => void }) =>
+    event.stopPropagation(),
+  onMouseDown: (event: { stopPropagation: () => void }) =>
+    event.stopPropagation(),
+};
+
 const TYPEAHEAD_RESET_MS = 500;
 const MENU_MAX_HEIGHT_PX = 288; // matches the previous max-h-72 menu cap
 
@@ -397,8 +423,13 @@ export function ListboxDropdown<K extends string>({
   renderOption,
 }: ListboxDropdownProps<K>) {
   const menuLayer = useMenuLayer();
+  // Unter `sm` öffnet die Liste als Blatt von unten (`ResponsivePanel`,
+  // #7800). Lage am Auslöser, Schließen beim Tippen daneben und Tab-Schließen
+  // gelten dann nicht; das regelt das Blatt.
+  const asSheet = useResponsivePanelSheet();
   const menuZIndex = menuZIndexProp ?? menuLayer;
   const generatedListboxId = useId();
+  const sheetId = useId();
   const listboxId = id ? `${id}-listbox` : generatedListboxId;
   const triggerContentId = `${listboxId}-value`;
   const isCombobox = triggerRole === "combobox";
@@ -555,7 +586,7 @@ export function ListboxDropdown<K extends string>({
   // focus. Scrolls inside the option list do not move the menu: a re-placement
   // would re-scroll the (possibly hover-moved) focus and undo the open reveal.
   useAnchoredPanel({
-    open,
+    open: open && !asSheet,
     onClose: () => setOpen(false),
     anchorRef: containerRef,
     panelRef: menuRef,
@@ -572,8 +603,12 @@ export function ListboxDropdown<K extends string>({
       setMenuStyle(null);
       return;
     }
+    if (asSheet) {
+      setMenuStyle(SHEET_MENU_STYLE);
+      return;
+    }
     updateMenuPosition();
-  }, [open, options, updateMenuPosition]);
+  }, [open, asSheet, options, updateMenuPosition]);
 
   // A layout change can push the trigger out of the visible area while the
   // menu is open, without any scroll or resize event: recipients that load
@@ -587,7 +622,7 @@ export function ListboxDropdown<K extends string>({
   // so opening and re-rendering never scroll, and a scroll by the person
   // stays theirs.
   useEffect(() => {
-    if (!open || typeof ResizeObserver === "undefined") return;
+    if (!open || asSheet || typeof ResizeObserver === "undefined") return;
     const trigger = buttonRef.current;
     if (!trigger) return;
     let initialReport = true;
@@ -603,7 +638,7 @@ export function ListboxDropdown<K extends string>({
     const content = scrollParent ? scrollParent.children : [document.body];
     for (const element of content) observer.observe(element);
     return () => observer.disconnect();
-  }, [open, updateMenuPosition]);
+  }, [open, asSheet, updateMenuPosition]);
 
   useEffect(() => {
     if (!open) {
@@ -614,7 +649,12 @@ export function ListboxDropdown<K extends string>({
     const option = optionRefs.current[focusIndex];
     // preventScroll: native focus scrolling would still jump the list on hover
     // even when we skip the explicit scrollIntoView below.
-    if (searchable && !optionsFocused) {
+    // Im Blatt liegt der Fokus beim Öffnen auf dem gewählten Wert, nicht in
+    // der Suche: Sie holte sonst sofort die Tastatur über die Liste. Erst wer
+    // in die Suche tippt, behält dort den Fokus.
+    const searchHoldsFocus =
+      searchable && document.activeElement === searchRef.current;
+    if (searchable && !optionsFocused && (!asSheet || searchHoldsFocus)) {
       // Only pull focus INTO the menu, never around inside it: a slot may own
       // focus (the rename field of the Abwesenheitsart select), and re-running
       // this effect must not yank it back to the search field mid-edit.
@@ -660,7 +700,7 @@ export function ListboxDropdown<K extends string>({
     }
 
     option?.scrollIntoView({ block: "nearest" });
-  }, [open, focusIndex, menuStyle, optionsFocused, searchable]);
+  }, [open, asSheet, focusIndex, menuStyle, optionsFocused, searchable]);
 
   // Every fresh opening starts in the search field again.
   useEffect(() => {
@@ -839,7 +879,8 @@ export function ListboxDropdown<K extends string>({
   };
 
   const handlePanelKeyDownCapture = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === "Tab") {
+    // Im Blatt hält dessen Fokusfalle Tab bei den Einträgen.
+    if (event.key === "Tab" && !asSheet) {
       // The panel is portaled, so its controls are not part of the trigger's
       // local focus order. Return to the trigger before the browser continues
       // tabbing, just as options do in a plain listbox.
@@ -889,7 +930,7 @@ export function ListboxDropdown<K extends string>({
         // default action: the browser then continues the Tab traversal
         // from the trigger, so keyboard users reach the next field instead
         // of being trapped inside the popup.
-        if (!hasPanel) {
+        if (!hasPanel && !asSheet) {
           closeAndReturnFocus();
         }
         break;
@@ -900,23 +941,28 @@ export function ListboxDropdown<K extends string>({
 
   // The option list itself. It is the whole menu for a plain select, and the
   // middle of the panel once a search field or a slot joins it.
+  // Allein das Menü ist die Liste nur im Popover ohne Suche und Slot; im
+  // Blatt trägt eine Hülle sie samt Suche.
+  const listIsMenu = !hasPanel && !asSheet;
   const optionList = (
     <ul
       ref={(node) => {
-        if (!hasPanel) menuRef.current = node;
+        if (listIsMenu) menuRef.current = node;
       }}
       id={listboxId}
       role="listbox"
       aria-multiselectable={isMulti || undefined}
       style={
-        hasPanel
-          ? undefined
-          : (menuStyle ?? { position: "fixed", visibility: "hidden" })
+        listIsMenu
+          ? (menuStyle ?? { position: "fixed", visibility: "hidden" })
+          : undefined
       }
       className={
-        hasPanel
-          ? cn("min-h-0 flex-1", LIST_SCROLL_CLASS)
-          : cn(LIST_SCROLL_CLASS, MENU_SURFACE_CLASS, menuClassName)
+        asSheet
+          ? "py-1"
+          : hasPanel
+            ? cn("min-h-0 flex-1", LIST_SCROLL_CLASS)
+            : cn(LIST_SCROLL_CLASS, MENU_SURFACE_CLASS, menuClassName)
       }
       // The menu is portaled to document.body, so it sits OUTSIDE the
       // modal's scroll area (SCROLL_AREA_PROPS). The scroll lock cancels every
@@ -934,8 +980,9 @@ export function ListboxDropdown<K extends string>({
       // reaching the document-level dismissal listeners; the option's
       // own onClick still fires. The internal outside-press handler
       // guards with menuRef.contains, so it is unaffected.
-      onPointerDown={(event) => event.stopPropagation()}
-      onMouseDown={(event) => event.stopPropagation()}
+      // Im Blatt steht die Liste in dessen Inhalt; Wischen nach unten soll es
+      // dort schließen können.
+      {...(asSheet ? {} : STOP_PRESS_PROPS)}
       aria-label={listboxAriaLabel ?? ariaLabel}
       // Points at the field's label element, never at the trigger: a
       // combobox referenced via aria-labelledby contributes its VALUE
@@ -1013,6 +1060,186 @@ export function ListboxDropdown<K extends string>({
     </ul>
   );
 
+  const sheetLabel =
+    listboxAriaLabel ??
+    ariaLabel ??
+    (open && asSheet ? textOfIds(ariaLabelledBy) : undefined) ??
+    placeholder;
+
+  const trigger = (
+    <button
+      ref={buttonRef}
+      id={id}
+      type="button"
+      onClick={(event) => {
+        event.preventDefault();
+        suppressFocusScrollRef.current = false;
+        // Ref write stays outside setOpen — React may re-run functional
+        // updaters, so side effects inside them are invalid (react-doctor).
+        if (!open) markOpenScrollTo(selectedIndex);
+        setOpen(!open);
+        setFocusIndex(selectedIndex);
+      }}
+      onKeyDown={handleTriggerKeyDown}
+      // Im Blatt öffnet der Auslöser einen Dialog, darin steht die Liste.
+      aria-haspopup={asSheet ? "dialog" : "listbox"}
+      aria-expanded={open}
+      aria-controls={open ? (asSheet ? sheetId : listboxId) : undefined}
+      // The menu is portaled to document.body, outside this combobox's DOM
+      // subtree. aria-owns re-parents it into the combobox in the a11y tree
+      // so the aria-activedescendant option is announced even when a modal
+      // focus trap keeps DOM focus on the trigger.
+      aria-owns={open && !asSheet ? listboxId : undefined}
+      // Focus traps (Radix FocusScope in Modal/FormModal) yank DOM focus
+      // back from the portaled options to this trigger; activedescendant
+      // keeps the highlighted option announced in that trigger-focused mode.
+      // Only a combobox may carry aria-activedescendant (ARIA 1.2); a
+      // button trigger moves DOM focus into the list instead.
+      aria-activedescendant={
+        triggerRole === "combobox" && open && !asSheet && focusIndex >= 0
+          ? `${listboxId}-option-${focusIndex}`
+          : undefined
+      }
+      // A combobox takes the field's name and announces its value apart.
+      // A button is named by its content, so the visible value leads the
+      // name instead of being replaced by the label (WCAG 2.5.3, #7112).
+      aria-label={isCombobox ? ariaLabel : undefined}
+      aria-labelledby={
+        isCombobox
+          ? ariaLabelledBy
+          : ariaLabelledBy && !renderTrigger
+            ? `${triggerContentId} ${ariaLabelledBy}`
+            : undefined
+      }
+      aria-describedby={ariaDescribedBy}
+      // aria-required / aria-invalid are not allowed on a button (axe
+      // aria-allowed-attr); its error reaches it through aria-describedby.
+      aria-required={(isCombobox && required) || undefined}
+      aria-invalid={(isCombobox && invalid) || undefined}
+      data-invalid={invalid || undefined}
+      role={isCombobox ? "combobox" : undefined}
+      disabled={disabled}
+      {...(embedded && CONTROL_PART)}
+      className={
+        unstyledTrigger
+          ? className
+          : selectTriggerClassName({
+              size: size ?? "compact",
+              invalid,
+              disabled,
+              embedded,
+              className,
+            })
+      }
+      data-testid={testId}
+    >
+      {renderTrigger ? (
+        renderTrigger({ selectedLabel, open })
+      ) : (
+        <>
+          {!isCombobox && ariaLabelledBy ? (
+            <span id={triggerContentId} className="contents">
+              <ListboxTriggerContent
+                label={selectedLabel}
+                placeholderShown={selectedOption === undefined}
+                open={open}
+              />
+            </span>
+          ) : (
+            <ListboxTriggerContent
+              label={selectedLabel}
+              placeholderShown={selectedOption === undefined}
+              open={open}
+            />
+          )}
+          {!isCombobox && ariaLabel ? (
+            <span className="sr-only">{`, ${ariaLabel}`}</span>
+          ) : null}
+        </>
+      )}
+    </button>
+  );
+
+  const searchField = searchable ? (
+    <input
+      ref={searchRef}
+      type="text"
+      value={searchValue ?? ""}
+      onChange={(event) => onSearchChange?.(event.target.value)}
+      onKeyDown={handleSearchKeyDown}
+      placeholder={searchPlaceholder}
+      aria-label={searchPlaceholder}
+      aria-controls={listboxId}
+      className="h-9 w-full rounded-lg border border-gray-500/80 bg-white px-3 text-sm text-gray-900 placeholder:text-gray-500 focus:border-gray-900 focus:outline-none"
+    />
+  ) : null;
+
+  // Im Blatt: Suche oben, beim Scrollen der Liste stehen bleibend, damit sie
+  // über der Tastatur sichtbar bleibt; darunter Slot und Liste.
+  const sheetMenu = (
+    <div
+      ref={(node) => {
+        menuRef.current = node;
+      }}
+      data-listbox-panel
+      role="presentation"
+      onKeyDownCapture={handlePanelKeyDownCapture}
+    >
+      {searchable ? (
+        <div className="sticky top-0 bg-white p-2 pb-1">{searchField}</div>
+      ) : null}
+      {menuHeader}
+      {optionList}
+    </div>
+  );
+
+  // Das Popover ab `sm`, wie bisher am Auslöser verankert.
+  const renderPopover = () =>
+    portalContainer
+      ? // Menus generally portal to document.body so scrollable/overflow-hidden
+        // ancestors cannot clip them. Calendar navigation instead supplies its
+        // own fixed panel as the portal scope to stay inside that FocusScope.
+        createPortal(
+          hasPanel ? (
+            <div
+              ref={(node) => {
+                menuRef.current = node;
+              }}
+              style={{
+                ...(menuStyle ?? {
+                  position: "fixed",
+                  visibility: "hidden",
+                }),
+                display: "flex",
+                flexDirection: "column",
+              }}
+              className={cn(
+                MENU_SURFACE_CLASS,
+                "overflow-hidden",
+                menuClassName,
+              )}
+              data-listbox-panel
+              {...SCROLL_AREA_PROPS}
+              // A pure container: the search field, the listbox and the slot
+              // content carry the semantics, this element only positions
+              // them and keeps the dismissal handlers off the dialog.
+              role="presentation"
+              {...STOP_PRESS_PROPS}
+              onKeyDownCapture={handlePanelKeyDownCapture}
+            >
+              {searchable ? (
+                <div className="p-2 pb-1">{searchField}</div>
+              ) : null}
+              {menuHeader}
+              {optionList}
+            </div>
+          ) : (
+            optionList
+          ),
+          portalContainer,
+        )
+      : null;
+
   return (
     <div
       ref={(node) => {
@@ -1022,150 +1249,17 @@ export function ListboxDropdown<K extends string>({
       className={containerClassName}
       style={containerStyle}
     >
-      <button
-        ref={buttonRef}
-        id={id}
-        type="button"
-        onClick={(event) => {
-          event.preventDefault();
-          suppressFocusScrollRef.current = false;
-          // Ref write stays outside setOpen — React may re-run functional
-          // updaters, so side effects inside them are invalid (react-doctor).
-          if (!open) markOpenScrollTo(selectedIndex);
-          setOpen(!open);
-          setFocusIndex(selectedIndex);
-        }}
-        onKeyDown={handleTriggerKeyDown}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        aria-controls={open ? listboxId : undefined}
-        // The menu is portaled to document.body, outside this combobox's DOM
-        // subtree. aria-owns re-parents it into the combobox in the a11y tree
-        // so the aria-activedescendant option is announced even when a modal
-        // focus trap keeps DOM focus on the trigger.
-        aria-owns={open ? listboxId : undefined}
-        // Focus traps (Radix FocusScope in Modal/FormModal) yank DOM focus
-        // back from the portaled options to this trigger; activedescendant
-        // keeps the highlighted option announced in that trigger-focused mode.
-        // Only a combobox may carry aria-activedescendant (ARIA 1.2); a
-        // button trigger moves DOM focus into the list instead.
-        aria-activedescendant={
-          triggerRole === "combobox" && open && focusIndex >= 0
-            ? `${listboxId}-option-${focusIndex}`
-            : undefined
-        }
-        // A combobox takes the field's name and announces its value apart.
-        // A button is named by its content, so the visible value leads the
-        // name instead of being replaced by the label (WCAG 2.5.3, #7112).
-        aria-label={isCombobox ? ariaLabel : undefined}
-        aria-labelledby={
-          isCombobox
-            ? ariaLabelledBy
-            : ariaLabelledBy && !renderTrigger
-              ? `${triggerContentId} ${ariaLabelledBy}`
-              : undefined
-        }
-        aria-describedby={ariaDescribedBy}
-        // aria-required / aria-invalid are not allowed on a button (axe
-        // aria-allowed-attr); its error reaches it through aria-describedby.
-        aria-required={(isCombobox && required) || undefined}
-        aria-invalid={(isCombobox && invalid) || undefined}
-        data-invalid={invalid || undefined}
-        role={isCombobox ? "combobox" : undefined}
-        disabled={disabled}
-        {...(embedded && CONTROL_PART)}
-        className={
-          unstyledTrigger
-            ? className
-            : selectTriggerClassName({
-                size: size ?? "compact",
-                invalid,
-                disabled,
-                embedded,
-                className,
-              })
-        }
-        data-testid={testId}
+      <ResponsivePanel
+        open={open}
+        onOpenChange={setOpen}
+        label={sheetLabel}
+        sheetId={sheetId}
+        returnFocusRef={buttonRef}
+        initialFocus={() => optionRefs.current[focusIndex] ?? null}
+        trigger={trigger}
       >
-        {renderTrigger ? (
-          renderTrigger({ selectedLabel, open })
-        ) : (
-          <>
-            {!isCombobox && ariaLabelledBy ? (
-              <span id={triggerContentId} className="contents">
-                <ListboxTriggerContent
-                  label={selectedLabel}
-                  placeholderShown={selectedOption === undefined}
-                  open={open}
-                />
-              </span>
-            ) : (
-              <ListboxTriggerContent
-                label={selectedLabel}
-                placeholderShown={selectedOption === undefined}
-                open={open}
-              />
-            )}
-            {!isCombobox && ariaLabel ? (
-              <span className="sr-only">{`, ${ariaLabel}`}</span>
-            ) : null}
-          </>
-        )}
-      </button>
-      {open && portalContainer
-        ? // Menus generally portal to document.body so scrollable/overflow-hidden
-          // ancestors cannot clip them. Calendar navigation instead supplies its
-          // own fixed panel as the portal scope to stay inside that FocusScope.
-          createPortal(
-            hasPanel ? (
-              <div
-                ref={(node) => {
-                  menuRef.current = node;
-                }}
-                style={{
-                  ...(menuStyle ?? { position: "fixed", visibility: "hidden" }),
-                  display: "flex",
-                  flexDirection: "column",
-                }}
-                className={cn(
-                  MENU_SURFACE_CLASS,
-                  "overflow-hidden",
-                  menuClassName,
-                )}
-                data-listbox-panel
-                {...SCROLL_AREA_PROPS}
-                // A pure container: the search field, the listbox and the slot
-                // content carry the semantics, this element only positions
-                // them and keeps the dismissal handlers off the dialog.
-                role="presentation"
-                onPointerDown={(event) => event.stopPropagation()}
-                onMouseDown={(event) => event.stopPropagation()}
-                onKeyDownCapture={handlePanelKeyDownCapture}
-              >
-                {searchable ? (
-                  <div className="p-2 pb-1">
-                    <input
-                      ref={searchRef}
-                      type="text"
-                      value={searchValue ?? ""}
-                      onChange={(event) => onSearchChange?.(event.target.value)}
-                      onKeyDown={handleSearchKeyDown}
-                      placeholder={searchPlaceholder}
-                      aria-label={searchPlaceholder}
-                      aria-controls={listboxId}
-                      className="h-9 w-full rounded-lg border border-gray-500/80 bg-white px-3 text-sm text-gray-900 placeholder:text-gray-500 focus:border-gray-900 focus:outline-none"
-                    />
-                  </div>
-                ) : null}
-                {menuHeader}
-                {optionList}
-              </div>
-            ) : (
-              optionList
-            ),
-            portalContainer,
-          )
-        : null}
+        {(inSheet) => (inSheet ? sheetMenu : renderPopover())}
+      </ResponsivePanel>
     </div>
   );
 }

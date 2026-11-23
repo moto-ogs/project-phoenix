@@ -10,13 +10,14 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
 // TenantAccountInfo holds flattened account data for a given tenant, used by operator dashboard.
 type TenantAccountInfo struct {
-	AccountID           int64
+	AccountID           ident.ID
 	Email               string
 	Active              bool
 	FirstName           string
@@ -98,7 +99,7 @@ func (r operatorAccountDirectory) identityRows(ctx context.Context, schoolIDs []
 	result := make([]listedAccount, 0, len(rows))
 	for _, row := range rows {
 		result = append(result, listedAccount{invitation: row.PendingInvitation(), OrgAccountInfo: OrgAccountInfo{SchoolID: row.SchoolID, TenantAccountInfo: TenantAccountInfo{
-			AccountID: row.AccountID, Email: row.Email, Active: row.Active,
+			AccountID: ident.ID(row.AccountID), Email: row.Email, Active: row.Active,
 			FirstName: row.FirstName, LastName: row.LastName, RoleName: row.RoleName,
 			Status: row.Status, HasAdminRole: row.HasAdminRole, HasUserRole: row.HasUserRole,
 		}}})
@@ -203,7 +204,7 @@ func (r operatorAccountDirectory) attachAccountPersons(ctx context.Context, entr
 	}
 	ids := make([]int64, 0, len(entries))
 	for _, entry := range entries {
-		ids = append(ids, entry.Info.AccountID)
+		ids = append(ids, entry.Info.AccountID.Int64())
 	}
 	persons, err := personsByAccountAndTenant(ctx, r.persons, ids)
 	if err != nil {
@@ -215,7 +216,7 @@ func (r operatorAccountDirectory) attachAccountPersons(ctx context.Context, entr
 	}
 	for index := range entries {
 		entry := &entries[index]
-		person, found := persons[peopledirectory.AccountSchool{AccountID: entry.Info.AccountID, TenantID: entry.TenantID}]
+		person, found := persons[peopledirectory.AccountSchool{AccountID: entry.Info.AccountID.Int64(), TenantID: entry.TenantID}]
 		if !found {
 			continue
 		}
@@ -321,7 +322,7 @@ func nonDeletedSchoolIDs(schools []organizationtenancy.School) []int64 {
 		if school.IsDeleted() {
 			continue
 		}
-		ids = append(ids, school.ID)
+		ids = append(ids, school.ID.Int64())
 	}
 	return ids
 }

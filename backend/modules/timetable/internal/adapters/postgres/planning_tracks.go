@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/modules/timetable/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
@@ -218,8 +219,10 @@ func applyPlanningTrackFields(row *planningTrackRow, fields timetable.PlanningTr
 }
 
 func planningTrackToDomain(row planningTrackRow) timetable.PlanningTrack {
-	return timetable.PlanningTrack{ID: row.ID, TenantID: row.TenantID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
+	track := timetable.PlanningTrack{ID: ident.ID(row.ID), TenantID: ident.ID(row.TenantID), CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
 		Name: row.Name, Color: row.Color, SortOrder: row.SortOrder, ArchivedAt: row.ArchivedAt}
+	track.Version = timetable.PlanningTrackVersion(track)
+	return track
 }
 
 func sameIDSet(left, right []int64) bool {

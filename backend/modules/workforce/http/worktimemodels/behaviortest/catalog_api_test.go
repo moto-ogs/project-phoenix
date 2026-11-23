@@ -21,10 +21,10 @@ import (
 )
 
 type catalogRow struct {
-	ID                 int64   `json:"id"`
-	Name               string  `json:"name"`
-	ArchivedAt         *string `json:"archived_at"`
-	AssignedStaffCount *int    `json:"assigned_staff_count"`
+	ID                 testpkg.ID `json:"id"`
+	Name               string     `json:"name"`
+	ArchivedAt         *string    `json:"archived_at"`
+	AssignedStaffCount *int       `json:"assigned_staff_count"`
 }
 
 func catalogRequest(t *testing.T, router chi.Router, method, path string) (*http.Response, json.RawMessage) {

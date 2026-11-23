@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Holiday guests in the daily care of the hosting school (spec #4611 user
@@ -49,8 +50,8 @@ type HolidayGuestContact struct {
 // parents named, if any. SchoolName is the school the hint „Gast aus …“
 // names (#5630).
 type HolidayGuestSheet struct {
-	StudentID       int64         `json:"student_id"`
-	WeekID          int64         `json:"week_id"`
+	StudentID       ident.ID      `json:"student_id"`
+	WeekID          ident.ID      `json:"week_id"`
 	StartsOn        calendar.Date `json:"starts_on"`
 	EndsOn          calendar.Date `json:"ends_on"`
 	TimeModelName   string        `json:"time_model_name"`
@@ -58,7 +59,7 @@ type HolidayGuestSheet struct {
 	TimeModelEnds   string        `json:"time_model_ends_at"`
 	// Lunch says the guest eats lunch on its care days (#5631).
 	Lunch           bool                  `json:"lunch"`
-	HomeSchoolID    *int64                `json:"home_school_id"`
+	HomeSchoolID    *ident.ID             `json:"home_school_id"`
 	GuestSchoolName string                `json:"guest_school_name"`
 	SchoolName      string                `json:"school_name"`
 	Emergency       []HolidayGuestContact `json:"emergency_contacts"`
@@ -87,16 +88,16 @@ func HolidayGuestSchoolName(homeSchoolID *int64, homeSchoolName, guestSchoolName
 // HolidayGuestBadge is the hint on a guest in the school's lists (#5630):
 // the child and the school „Gast aus …“ names, empty for „Feriengast“.
 type HolidayGuestBadge struct {
-	StudentID  int64  `json:"student_id"`
-	SchoolName string `json:"school_name"`
+	StudentID  ident.ID `json:"student_id"`
+	SchoolName string   `json:"school_name"`
 }
 
 // HolidayGuestTransfer is the result of picking the group of a hosted week:
 // the group and how many guests of the week it holds now.
 type HolidayGuestTransfer struct {
-	WeekID  int64 `json:"week_id"`
-	GroupID int64 `json:"group_id"`
-	Guests  int   `json:"guests"`
+	WeekID  ident.ID `json:"week_id"`
+	GroupID ident.ID `json:"group_id"`
+	Guests  int      `json:"guests"`
 	// OwnChildren counts the school's own children of the week whose booked
 	// days are planned now (#6678).
 	OwnChildren int `json:"own_children"`

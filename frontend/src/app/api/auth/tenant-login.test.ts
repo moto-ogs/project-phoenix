@@ -38,15 +38,16 @@ const { POST: passkey } = await import("./passkeys/login/verify/route");
 const { handlers } = (await import("~/server/auth")).tenantPortal;
 const backend = vi.fn();
 const claims = () => ({
-  id: 42,
+  id: "42",
   sub: "local@example.test",
-  tenant_id: 7,
+  tenant_id: "7",
   scope: "",
   exp: Math.floor(Date.now() / 1000) + 900,
 });
 const access = () =>
   `e30.${Buffer.from(JSON.stringify(claims())).toString("base64url")}.synthetic`;
 const pair = () => ({
+  status: "authenticated",
   access_token: access(),
   refresh_token: "synthetic-server-refresh",
 });
@@ -129,7 +130,10 @@ describe.each(paths)(
         ),
       );
       expect(response.status).toBe(200);
-      expect(await response.json()).toEqual({ status: "authenticated" });
+      expect(await response.json()).toEqual({
+        status: "success",
+        data: { status: "authenticated" },
+      });
       expect(response.headers.get("Cache-Control")).toBe("private, no-store");
       expect(backend.mock.calls[0]?.[0]).toBe(
         `http://server:8080${backendPath}`,
@@ -268,11 +272,14 @@ it("returns only an MFA challenge proof, with no session", async () => {
   );
   const response = await login(request("login"));
   expect(await response.json()).toEqual({
-    status: "mfa_required",
-    challenge_token: "challenge-proof",
-    masked_email: "l***@example.test",
-    trusted_device_enabled: false,
-    trusted_device_days: 30,
+    status: "success",
+    data: {
+      status: "mfa_required",
+      challenge_token: "challenge-proof",
+      masked_email: "l***@example.test",
+      trusted_device_enabled: false,
+      trusted_device_days: 30,
+    },
   });
   expect(backend).toHaveBeenCalledOnce();
   expect(response.headers.getSetCookie()).toEqual([]);
@@ -288,10 +295,13 @@ it("returns only the limited enrollment proof, never a refresh token", async () 
   );
   const response = await login(request("login"));
   expect(await response.json()).toEqual({
-    status: "mfa_enrollment_required",
-    access_token: "enrollment-proof",
-    masked_email: "l***@example.test",
-    mfa_enrollment_required: true,
+    status: "success",
+    data: {
+      status: "mfa_enrollment_required",
+      access_token: "enrollment-proof",
+      masked_email: "l***@example.test",
+      mfa_enrollment_required: true,
+    },
   });
   expect(backend).toHaveBeenCalledOnce();
   expect(response.headers.getSetCookie()).toEqual([]);

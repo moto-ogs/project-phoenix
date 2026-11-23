@@ -1,5 +1,6 @@
-import { describe, it, expect, vi } from "vitest";
-import type { BackendRoom, Room } from "./room-helpers";
+import { describe, it, expect } from "vitest";
+import type { RoomResponse } from "./contract/rooms.generated";
+import type { Room } from "./room-helpers";
 import {
   mapRoomResponse,
   mapRoomsResponse,
@@ -10,54 +11,63 @@ import {
   formatFloor,
 } from "./room-helpers";
 import { MOTO_COLOR_PALETTE } from "~/lib/kit-palette";
-import { suppressConsole } from "~/test/helpers/console";
-import { buildBackendRoom } from "~/test/fixtures/rooms";
+import { buildRoomResponse } from "~/test/fixtures/rooms";
 
-// Sample backend room for testing
-const sampleBackendRoom = buildBackendRoom({
-  id: 1,
+// A room as the catalog proxy hands it on (#7563).
+const sampleBackendRoom = buildRoomResponse({
+  id: "1",
   name: "Room 101",
   building: "Building A",
   floor: 2,
   capacity: 30,
   category: "classroom",
   color: "#FF0000",
-  device_id: "device-123",
   is_occupied: true,
-  activity_name: "Math Class",
   group_name: "Class 3A",
-  supervisor_name: "John Smith",
+  supervisor_names: "John Smith, Erika Muster",
   student_count: 25,
 });
 
 describe("mapRoomResponse", () => {
-  it("maps backend room to frontend room structure", () => {
+  it("maps the contract room to the frontend room structure", () => {
     const result = mapRoomResponse(sampleBackendRoom);
 
-    expect(result.id).toBe("1"); // int64 → string
+    expect(result.id).toBe("1");
     expect(result.name).toBe("Room 101");
     expect(result.building).toBe("Building A");
     expect(result.floor).toBe(2);
     expect(result.capacity).toBe(30);
     expect(result.category).toBe("classroom");
     expect(result.color).toBe("#FF0000");
-    expect(result.deviceId).toBe("device-123"); // snake_case → camelCase
     expect(result.isOccupied).toBe(true);
-    expect(result.activityName).toBe("Math Class");
     expect(result.groupName).toBe("Class 3A");
-    expect(result.supervisorName).toBe("John Smith");
+    // The backend names every supervisor of the room in one field.
+    expect(result.supervisorName).toBe("John Smith, Erika Muster");
     expect(result.studentCount).toBe(25);
     expect(result.createdAt).toBe("2024-01-15T10:00:00Z");
     expect(result.updatedAt).toBe("2024-01-15T12:00:00Z");
   });
 
-  it("converts null values to undefined for optional fields", () => {
-    const backendRoom: BackendRoom = {
+  it("keeps the release, system and archive flags", () => {
+    const result = mapRoomResponse({
       ...sampleBackendRoom,
-      floor: null,
-      capacity: null,
-      category: null,
-      color: null,
+      is_system: true,
+      is_open_room: true,
+      archived_at: "2026-09-01T08:00:00Z",
+    });
+
+    expect(result.isSystem).toBe(true);
+    expect(result.isOpenRoom).toBe(true);
+    expect(result.archivedAt).toBe("2026-09-01T08:00:00Z");
+  });
+
+  it("leaves absent optional fields undefined", () => {
+    const backendRoom: RoomResponse = {
+      ...sampleBackendRoom,
+      floor: undefined,
+      capacity: undefined,
+      category: undefined,
+      color: undefined,
     };
 
     const result = mapRoomResponse(backendRoom);
@@ -78,12 +88,16 @@ describe("mapRoomResponse", () => {
   });
 
   it("handles minimal backend room (required fields only)", () => {
-    const minimalRoom: BackendRoom = {
-      id: 2,
+    const minimalRoom: RoomResponse = {
+      id: "2",
       name: "Minimal Room",
       is_occupied: false,
+      student_count: 0,
+      is_system: false,
+      is_open_room: false,
       created_at: "2024-01-15T10:00:00Z",
       updated_at: "2024-01-15T10:00:00Z",
+      version: "v1",
     };
 
     const result = mapRoomResponse(minimalRoom);
@@ -97,10 +111,8 @@ describe("mapRoomResponse", () => {
 });
 
 describe("mapRoomsResponse", () => {
-  const consoleSpies = suppressConsole("warn", "log");
-
   it("maps array of backend rooms", () => {
-    const backendRooms = [sampleBackendRoom, { ...sampleBackendRoom, id: 2 }];
+    const backendRooms = [sampleBackendRoom, { ...sampleBackendRoom, id: "2" }];
 
     const result = mapRoomsResponse(backendRooms);
 
@@ -109,50 +121,8 @@ describe("mapRoomsResponse", () => {
     expect(result[1]?.id).toBe("2");
   });
 
-  it("handles nested API response structure { data: [...] }", () => {
-    const debugSpy = vi
-      .spyOn(console, "debug")
-      .mockImplementation(() => undefined);
-    const nestedResponse = {
-      data: [sampleBackendRoom, { ...sampleBackendRoom, id: 2 }],
-    };
-
-    const result = mapRoomsResponse(nestedResponse);
-
-    expect(result).toHaveLength(2);
-    expect(debugSpy).toHaveBeenCalledWith(
-      "handling nested API response for rooms",
-      undefined,
-    );
-    debugSpy.mockRestore();
-  });
-
-  it("returns empty array for null input", () => {
-    const result = mapRoomsResponse(null);
-
-    expect(result).toEqual([]);
-    expect(consoleSpies.warn).toHaveBeenCalledWith(
-      "received invalid response format for rooms",
-      { received: "object" },
-    );
-  });
-
-  it("returns empty array for undefined-like input", () => {
-    // TypeScript types prevent passing undefined directly, but runtime might receive it
-    const result = mapRoomsResponse(
-      undefined as unknown as BackendRoom[] | null,
-    );
-
-    expect(result).toEqual([]);
-  });
-
-  it("returns empty array for non-array input", () => {
-    const result = mapRoomsResponse(
-      "invalid" as unknown as BackendRoom[] | null,
-    );
-
-    expect(result).toEqual([]);
-    expect(consoleSpies.warn).toHaveBeenCalled();
+  it("reads Go's empty list (null) as no rooms", () => {
+    expect(mapRoomsResponse(null)).toEqual([]);
   });
 
   it("handles empty array", () => {
@@ -163,7 +133,7 @@ describe("mapRoomsResponse", () => {
 });
 
 describe("prepareRoomForBackend", () => {
-  it("converts frontend room to backend format", () => {
+  it("converts frontend room to the contract body", () => {
     const frontendRoom: Partial<Room> = {
       id: "1",
       name: "Room 101",
@@ -174,19 +144,22 @@ describe("prepareRoomForBackend", () => {
       color: "#FF0000",
       deviceId: "device-123",
       isOccupied: true,
+      version: "v1",
     };
 
     const result = prepareRoomForBackend(frontendRoom);
+    expect(result.expected_version).toBe("v1");
 
-    expect(result.id).toBe(1); // string → number
+    // The body carries only what the backend reads (RoomRequest).
+    expect(result).not.toHaveProperty("id");
     expect(result.name).toBe("Room 101");
     expect(result.building).toBe("Building A");
     expect(result.floor).toBe(2);
     expect(result.capacity).toBe(43);
     expect(result.category).toBe("classroom");
     expect(result.color).toBe("#FF0000");
-    expect(result.device_id).toBe("device-123"); // camelCase → snake_case
-    expect(result.is_occupied).toBe(true);
+    expect(result).not.toHaveProperty("device_id");
+    expect(result).not.toHaveProperty("is_occupied");
   });
 
   it("returns empty object when name is empty string", () => {
@@ -200,8 +173,7 @@ describe("prepareRoomForBackend", () => {
       name: "Test Room",
     });
 
-    expect(result.name).toBe("Test Room");
-    expect(result.is_occupied).toBe(false); // defaults to false
+    expect(result).toEqual({ name: "Test Room" });
     expect(result.building).toBeUndefined();
     expect(result.floor).toBeUndefined();
     expect(result.capacity).toBeUndefined();
@@ -221,7 +193,6 @@ describe("prepareRoomForBackend", () => {
     expect(result.building).toBeUndefined();
     expect(result.category).toBeUndefined();
     expect(result.color).toBeUndefined();
-    expect(result.device_id).toBeUndefined();
   });
 
   it("includes floor when explicitly set to 0", () => {
@@ -247,7 +218,7 @@ describe("prepareRoomForBackend", () => {
       name: "New Room",
     });
 
-    expect(result.id).toBeUndefined();
+    expect(result).not.toHaveProperty("id");
   });
 });
 

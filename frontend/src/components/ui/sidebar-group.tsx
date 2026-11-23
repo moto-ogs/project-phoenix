@@ -95,19 +95,37 @@ export function SidebarGroup({
         />
       </Button>
 
-      {/* Inhalt der Gruppe — Höhenwechsel über CSS-Grid, wie beim Akkordeon. */}
-      <div
-        className={`grid motion-safe:transition-[grid-template-rows] motion-safe:duration-200 motion-safe:ease-in-out ${
-          isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-        }`}
-      >
-        {/* inert: eine zugeklappte Gruppe bleibt im Baum, darf aber keinen
-            Tastaturfokus fangen. */}
-        <div className="overflow-hidden" inert={!isOpen}>
-          {/* Eingerückt hinter einer Linie, damit sich die Gruppe als Baum
-              liest, nicht als flache Liste mit Zwischenüberschrift. */}
-          <div className={sidebarGroupBodyClasses(collapsed)}>{children}</div>
-        </div>
+      <SidebarGroupCollapse isOpen={isOpen}>
+        {/* Eingerückt hinter einer Linie, damit sich die Gruppe als Baum
+            liest, nicht als flache Liste mit Zwischenüberschrift. */}
+        <div className={sidebarGroupBodyClasses(collapsed)}>{children}</div>
+      </SidebarGroupCollapse>
+    </div>
+  );
+}
+
+/**
+ * Der klappende Inhalt einer Gruppe der Seitenleiste: Höhenwechsel über
+ * CSS-Grid, wie beim Akkordeon. Die OGS-App (`SidebarGroup`) und das
+ * Träger-Portal (`PortalSidebarGroup`, #7647) teilen ihn.
+ */
+export function SidebarGroupCollapse({
+  isOpen,
+  children,
+}: {
+  readonly isOpen: boolean;
+  readonly children: ReactNode;
+}) {
+  return (
+    <div
+      className={`grid motion-safe:transition-[grid-template-rows] motion-safe:duration-200 motion-safe:ease-in-out ${
+        isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+      }`}
+    >
+      {/* inert: eine zugeklappte Gruppe bleibt im Baum, darf aber keinen
+          Tastaturfokus fangen. */}
+      <div className="overflow-hidden" inert={!isOpen}>
+        {children}
       </div>
     </div>
   );

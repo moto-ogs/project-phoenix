@@ -584,6 +584,35 @@ func TestFullDemoWorkflowSeedsParentLetterAfterParentAccounts(t *testing.T) {
 	require.Greater(t, parentPoll, parentAccounts, "parent poll must follow parent accounts")
 }
 
+// recordingHistoryWriters stand in for the dev tools' database writers.
+type recordingHistoryWriters struct {
+	mu              sync.Mutex
+	feedbackEntries []PastFeedback
+	vacationWindows []SchoolVacationWindow
+	keyDateCaptures int
+}
+
+func (w *recordingHistoryWriters) feedback(_ context.Context, _ int64, entries []PastFeedback) (int, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.feedbackEntries = append(w.feedbackEntries, entries...)
+	return len(entries), nil
+}
+
+func (w *recordingHistoryWriters) vacations(_ context.Context, windows []SchoolVacationWindow) (int, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.vacationWindows = windows
+	return len(windows) * 16, nil
+}
+
+func (w *recordingHistoryWriters) keyDateCounts(context.Context) (int, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.keyDateCaptures++
+	return 1, nil
+}
+
 func TestSeeder_Seed_FullWorkflow(t *testing.T) {
 	t.Parallel()
 	trace := &fullSeedAPITrace{}
@@ -593,10 +622,20 @@ func TestSeeder_Seed_FullWorkflow(t *testing.T) {
 	tmpDir := t.TempDir()
 	statePath := filepath.Join(tmpDir, DefaultSeedStatePath)
 
-	s := NewSeeder(newSeedTestAdapter(srv.URL), newSeedTestRandom(), false, SeedOptions{StatePath: statePath})
+	writers := &recordingHistoryWriters{}
+	s := NewSeeder(newSeedTestAdapter(srv.URL), newSeedTestRandom(), false, SeedOptions{
+		StatePath: statePath, FeedbackHistory: writers.feedback, SchoolVacations: writers.vacations, BillingKeyDateCounts: writers.keyDateCounts,
+	})
 	result, err := s.Seed(context.Background(), "admin@test.de", "pass", "1234")
 	require.NoError(t, err)
 	assert.NotNil(t, result)
+	// The bound writers of the dev tools (ADR 0298) carry what the removed
+	// seed routes wrote: the vacations and the billing snapshot. This mock
+	// serves no past care day, so the feedback history stays empty; its step
+	// has its own test.
+	assert.Empty(t, writers.feedbackEntries)
+	assert.Len(t, writers.vacationWindows, 4)
+	assert.Positive(t, writers.keyDateCaptures)
 	assert.NotNil(t, result.Fixed)
 	assert.Greater(t, result.Fixed.RoomCount, 0)
 	assert.Greater(t, result.Fixed.StaffCount, 0)
@@ -1271,14 +1310,9 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 		if weeklyMock.serve(t, w, r) {
 			return
 		}
-		if r.Method == seedHTTPMethodPost && r.URL.Path == "/api/feedback/batch" {
-			// The feedback history (#5029) sends its entries in one batch.
-			var body struct {
-				Entries []feedbackHistoryEntry `json:"entries"`
-			}
-			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
-			w.WriteHeader(seedHTTPStatusCreated)
-			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": map[string]any{"count": len(body.Entries)}})
+		if r.Method == seedHTTPMethodGet && strings.HasPrefix(r.URL.Path, "/api/feedback/student/") {
+			// The feedback history (#5029) asks one child for a present history.
+			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": []any{}})
 			return
 		}
 		if r.Method == seedHTTPMethodGet && r.URL.Path == "/api/timetable/periods/" {
@@ -1485,10 +1519,6 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 			})
 			return
 		}
-		if manualAuth && r.Method == seedHTTPMethodGet && strings.HasSuffix(r.URL.Path, "/visit-history") {
-			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": []any{}})
-			return
-		}
 		if manualAuth && r.Method == seedHTTPMethodGet && r.URL.Path == "/api/staff/" {
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"status": "success", "data": []map[string]any{{"id": 1}, {"id": 2}},
@@ -1572,6 +1602,13 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 			})
 			return
 		}
+		if r.Method == seedHTTPMethodGet && (strings.HasSuffix(r.URL.Path, "/manual-bootstrap") || strings.HasSuffix(r.URL.Path, "/edit-bootstrap")) {
+			// The form the seeder fills, with its read-state token (ADR 0311).
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"status": "success", "data": map[string]any{"schema": nil, "terms_fingerprint": "seed-form"},
+			})
+			return
+		}
 		if strings.HasPrefix(r.URL.Path, "/api/enrollment/phases/") && strings.HasSuffix(r.URL.Path, "/late-invites") {
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"status": "success", "data": map[string]any{"id": fmt.Sprintf("%d", idCounter), "token": "late-invite-token"},
@@ -1582,7 +1619,7 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"status": "success",
 				"data": map[string]any{
-					"account_id": idCounter,
+					"account_id": fmt.Sprintf("%d", idCounter),
 					"email":      "parent@example.test",
 				},
 			})
@@ -1620,6 +1657,13 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"status": "success",
 				"data":   map[string]any{"items": []map[string]any{{"id": "7001"}}},
+			})
+			return
+		}
+		if strings.HasPrefix(r.URL.Path, "/api/admin/grade-transitions/") && strings.HasSuffix(r.URL.Path, "/preview") {
+			// The apply confirms the fingerprint of this preview (ADR 0311).
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"status": "success", "data": map[string]any{"fingerprint": "grade-transition-preview"},
 			})
 			return
 		}
@@ -1753,6 +1797,13 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 			})
 			return
 		}
+		if r.URL.Path == "/api/staff-shifts" && r.Method == seedHTTPMethodGet {
+			// Today's Dienst the changed-shift step cancels (#7661).
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"status": "success", "data": []map[string]any{{"id": fmt.Sprint(idCounter), "start_time": "08:30", "end_time": "17:00", "cancelled": false}},
+			})
+			return
+		}
 		if r.URL.Path == "/api/timetable/instances" && r.Method == seedHTTPMethodGet {
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"status": "success", "data": map[string]any{"instances": []map[string]any{
@@ -1847,7 +1898,7 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 		}
 		if r.URL.Path == "/traeger/holiday-periods/criteria" {
 			// The criteria of the allocation as stored (#4700).
-			_, _ = fmt.Fprint(w, `{"status":"success","data":{"criteria":[{"id":71},{"id":72},{"id":73},{"id":74}],"periods":[]}}`)
+			_, _ = fmt.Fprint(w, `{"status":"success","data":{"criteria":[{"id":71},{"id":72},{"id":73},{"id":74}],"periods":[],"version":"criteria-read"}}`)
 			return
 		}
 		if strings.HasPrefix(r.URL.Path, "/traeger/holiday-periods/") && strings.HasSuffix(r.URL.Path, "/allocation") {
@@ -1911,6 +1962,10 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 		}
 		if r.URL.Path == "/api/staff" && r.Method == seedHTTPMethodPost && len(planningStaffIDs) < 2 {
 			planningStaffIDs = append(planningStaffIDs, map[string]any{"staff_id": idCounter})
+		}
+		if strings.HasPrefix(r.URL.Path, "/auth/roles/") && strings.HasSuffix(r.URL.Path, "/permission-selection") {
+			_, _ = fmt.Fprint(w, `{"data":{"permissions":[],"version":"empty"}}`)
+			return
 		}
 		if strings.HasPrefix(r.URL.Path, "/auth/roles/") && strings.HasSuffix(r.URL.Path, "/permissions") {
 			w.WriteHeader(seedHTTPStatusNoContent)
@@ -2091,19 +2146,27 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 				"data":   []map[string]any{{"id": idCounter, "name": "Betreuung"}},
 			})
 
-		case "/api/active/visits", "/api/time-tracking/holidays", "/api/timetable/closing-days/", "/api/feedback/date-range":
+		case "/api/calendar/appointments":
+			// The detail of the created appointment (#7663 reads its string id).
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"status": "success",
+				"data":   map[string]any{"appointment": map[string]any{"id": fmt.Sprint(idCounter)}},
+			})
+
+		case "/api/active/visits", "/api/time-tracking/holidays", "/api/timetable/closing-days/":
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"status": "success",
 				"data":   []any{},
 			})
 
 		case "/api/enrollment/phases":
-			_ = json.NewEncoder(w).Encode(map[string]any{
-				"status": "success",
-				"data": map[string]any{
-					"id": "1001",
-				},
-			})
+			// The list (the school change step looks for its phase) or a
+			// new phase.
+			var data any = map[string]any{"id": "1001"}
+			if r.Method == "GET" {
+				data = []any{}
+			}
+			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": data})
 
 		case "/api/enrollment/schema/":
 			_ = json.NewEncoder(w).Encode(map[string]any{
@@ -2118,22 +2181,11 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 				},
 			})
 
-		case "/api/guardians/invitations/pending":
-			// Three approvals left an open invitation; two stay open.
-			_ = json.NewEncoder(w).Encode(map[string]any{
-				"status": "success",
-				"data": []map[string]any{
-					{"id": 1, "guardian_profile_id": 703},
-					{"id": 2, "guardian_profile_id": 701},
-					{"id": 3, "guardian_profile_id": 702},
-				},
-			})
-
 		case "/api/import/students/import":
 			// The import audit upserts one child the school already has.
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"status": "success",
-				"data":   map[string]any{"CreatedCount": 0, "UpdatedCount": 1, "ErrorCount": 0},
+				"data":   map[string]any{"created_count": 0, "updated_count": 1, "error_count": 0},
 			})
 
 		case "/api/files/audience":
@@ -2238,9 +2290,12 @@ func serveRegularBookingSeedAPI(t *testing.T, w seedHTTPResponseWriter, r *seedH
 		studentIDsByName[body.FirstName+" "+body.LastName] = idCounter
 		_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": map[string]any{"id": idCounter}})
 	case r.Method == seedHTTPMethodGet && strings.HasPrefix(r.URL.Path, "/api/guardians/students/") && r.Header.Get("Authorization") != "Bearer manual-admin-token":
+		// One stable primary guardian per child: the relationship restore
+		// after the booking reads the same row with its version (ADR 0311).
+		studentID := strings.Split(r.URL.Path, "/")[4]
 		_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": []map[string]any{{
-			"guardian":        map[string]any{"id": idCounter, "first_name": "Demo", "last_name": "Elternteil", "email": "demo.elternteil@example.test"},
-			"relationship_id": idCounter, "relationship_type": "parent", "is_primary": true,
+			"guardian":        map[string]any{"id": "7" + studentID, "first_name": "Demo", "last_name": "Elternteil", "email": "demo.elternteil@example.test"},
+			"relationship_id": "9" + studentID, "relationship_type": "parent", "is_primary": true, "version": "v" + studentID,
 		}}})
 	case r.Method == seedHTTPMethodPost && strings.HasSuffix(r.URL.Path, "/manual-approved-enrollments"):
 		var body struct {

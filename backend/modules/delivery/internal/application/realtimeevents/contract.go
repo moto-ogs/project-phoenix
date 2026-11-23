@@ -34,4 +34,7 @@ const (
 	EventDashboardCountsChanged   = realtime.EventDashboardCountsChanged
 	EventStaffTimeTrackingChanged = realtime.EventStaffTimeTrackingChanged
 	EventGroupAccessChanged       = realtime.EventGroupAccessChanged
+	// EventCalendarAppointmentsChanged is the event of the tenant signal
+	// CalendarAppointmentsChanged (#7693).
+	EventCalendarAppointmentsChanged = realtime.EventCalendarAppointmentsChanged
 )

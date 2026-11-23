@@ -42,7 +42,18 @@ func (s *Service) ResolveOwnedChild(ctx context.Context, accountID, studentID in
 // concurrent care exit cannot turn an already-authorized operation into a
 // post-exit write.
 func (s *Service) RequireCareRunningForUpdate(ctx context.Context, studentID int64) error {
-	student, err := s.StudentRepo.FindByIDForUpdate(ctx, studentID)
+	return s.requireCareRunning(ctx, studentID, s.StudentRepo.FindByIDForUpdate)
+}
+
+// requireCareRunningForMealWrite is RequireCareRunningForUpdate under the
+// child's lock of a meal write (ChildWriteAccess.NoKeyUpdate), which it
+// must not raise to FOR UPDATE.
+func (s *Service) requireCareRunningForMealWrite(ctx context.Context, studentID int64) error {
+	return s.requireCareRunning(ctx, studentID, s.StudentRepo.FindByIDForNoKeyUpdate)
+}
+
+func (s *Service) requireCareRunning(ctx context.Context, studentID int64, lock func(context.Context, int64) (*PortalStudent, error)) error {
+	student, err := lock(ctx, studentID)
 	if err != nil {
 		return err
 	}

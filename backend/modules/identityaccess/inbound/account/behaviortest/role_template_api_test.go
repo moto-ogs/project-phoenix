@@ -31,10 +31,10 @@ func (e *accountIsolationEnv) createRole(t *testing.T, body map[string]string) a
 
 func (e *accountIsolationEnv) permissionNamesOf(t *testing.T, roleID int64) []string {
 	t.Helper()
-	permissions, err := e.tc.resource.Sessions.GetRolePermissions(tenant.WithTenantID(t.Context(), e.tenantID), roleID)
+	selection, err := e.tc.resource.Sessions.GetRolePermissions(tenant.WithTenantID(t.Context(), e.tenantID), roleID)
 	require.NoError(t, err)
-	names := make([]string, 0, len(permissions))
-	for _, permission := range permissions {
+	names := make([]string, 0, len(selection.Permissions))
+	for _, permission := range selection.Permissions {
 		names = append(names, permission.FullName())
 	}
 	return names
@@ -89,7 +89,7 @@ func TestCreateRoleFromTemplateCopiesTheTemplatePermissions(t *testing.T) {
 			}
 		}
 		assert.NotEmpty(t, want, template)
-		assert.ElementsMatch(t, want, e.permissionNamesOf(t, role.ID), template)
+		assert.ElementsMatch(t, want, e.permissionNamesOf(t, role.ID.Int64()), template)
 		require.NotNil(t, role.BaseRole, template)
 		assert.False(t, role.IsSystem, template)
 		// Only the Lehrkraft copy opens moto schule (#4574).
@@ -122,8 +122,11 @@ func TestReplaceRolePermissionsRefusesReservedPermissions(t *testing.T) {
 		platform, err := e.tc.resource.Sessions.GetPermissionByName(ctx, name)
 		require.NoError(t, err, name)
 
-		rr := e.execute(t, e.claims, http.MethodPut, fmt.Sprintf("/auth/roles/%d/permissions", role.ID), map[string][]string{
-			"permission_ids": {fmt.Sprint(groupsRead.ID), fmt.Sprint(platform.ID)},
+		read, err := e.tc.resource.Sessions.GetRolePermissions(ctx, role.ID)
+		require.NoError(t, err)
+		rr := e.execute(t, e.claims, http.MethodPut, fmt.Sprintf("/auth/roles/%d/permissions", role.ID), map[string]any{
+			"permission_ids":   []string{fmt.Sprint(groupsRead.ID), fmt.Sprint(platform.ID)},
+			"expected_version": read.Version,
 		})
 		require.Equal(t, http.StatusBadRequest, rr.Code, rr.Body.String())
 		var body struct {
@@ -135,6 +138,38 @@ func TestReplaceRolePermissionsRefusesReservedPermissions(t *testing.T) {
 		assert.Equal(t, name, body.Details["permission"])
 		assert.Empty(t, e.permissionNamesOf(t, role.ID), name)
 	}
+}
+
+// TestReplaceRolePermissionsRefusesAChangedSelection: a selection made from
+// an older read would revert a colleague's change; the route refuses it with
+// the general refusal (ADR 0311) and keeps the stored selection.
+func TestReplaceRolePermissionsRefusesAChangedSelection(t *testing.T) {
+	t.Parallel()
+	e := newAccountIsolationEnv(t)
+	ctx := tenant.WithTenantID(t.Context(), e.tenantID)
+	role := testpkg.CreateTestRoleForTenant(t, e.tc.db, "changed-selection", e.tenantID)
+	groupsRead, err := e.tc.resource.Sessions.GetPermissionByName(ctx, "groups:read")
+	require.NoError(t, err)
+	selection := e.execute(t, e.claims, http.MethodGet, fmt.Sprintf("/auth/roles/%d/permission-selection", role.ID), nil)
+	require.Equal(t, http.StatusOK, selection.Code, selection.Body.String())
+	var read struct {
+		Data authAPI.RolePermissionsResponse `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(selection.Body.Bytes(), &read))
+	require.Empty(t, read.Data.Permissions)
+	require.NotEmpty(t, read.Data.Version)
+	require.NoError(t, e.tc.resource.Sessions.AssignPermissionToRole(ctx, role.ID, groupsRead.ID))
+
+	rr := e.execute(t, e.claims, http.MethodPut, fmt.Sprintf("/auth/roles/%d/permissions", role.ID), map[string]any{
+		"permission_ids": []string{}, "expected_version": read.Data.Version,
+	})
+	require.Equal(t, http.StatusConflict, rr.Code, rr.Body.String())
+	var body struct {
+		Code string `json:"code"`
+	}
+	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &body))
+	assert.Equal(t, "general.changed_since_read", body.Code)
+	assert.Equal(t, []string{"groups:read"}, e.permissionNamesOf(t, role.ID))
 }
 
 // reservedPermissionNames is the reserved list #4574 names, written out

@@ -40,7 +40,7 @@ const FROM_TRAEGER: AbsenceType = {
   schoolLimitDays: 2,
 };
 
-const TENANT = { tenantId: 1, slug: "demo" } as TenantInfo;
+const TENANT = { tenantId: "1", slug: "demo" } as TenantInfo;
 
 describe("AbsenceTypesPage", () => {
   beforeEach(() => {

@@ -1,3 +1,4 @@
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the heatmap of arrival and pickup times of the Träger portal
  * (#4714): when the children of each school arrive and are picked up, per
@@ -5,12 +6,14 @@
  * child. Backend int64 IDs leave as strings.
  */
 
-import { apiErrorFromBody, transportFetch } from "./api-error";
 import {
   downloadTraegerList,
   type TraegerListFile,
   type TraegerListFormat,
+  listExportQuery,
 } from "./traeger-list-export";
+import type * as traegerSchoolsContract from "./contract/traeger-schools.generated";
+import { requiredDay } from "./contract/required-day";
 import type { TraegerSchool } from "./traeger-api";
 
 interface ArrivalPickupCell {
@@ -57,46 +60,9 @@ export interface ArrivalPickupPeriod {
   readonly to: string;
 }
 
-interface BackendHeatmap {
-  weekdays?: {
-    weekday: number;
-    days: number;
-    slots?: { start_minute: number; arrivals: number; pickups: number }[];
-  }[];
-}
-
-interface BackendTimes {
-  from: string;
-  to: string;
-  slot_minutes: number;
-  first_minute: number;
-  last_minute: number;
-  all: BackendHeatmap;
-  schools?: (BackendHeatmap & {
-    id: number;
-    name: string;
-    slug: string;
-    subdomain: string;
-    city?: string;
-    first_day: string | null;
-  })[];
-}
-
-async function readJson(response: Response): Promise<unknown> {
-  const text = await response.text();
-  if (!text) return null;
-  try {
-    return JSON.parse(text) as unknown;
-  } catch {
-    return null;
-  }
-}
-
-function query(period: ArrivalPickupPeriod): string {
-  return new URLSearchParams({ from: period.from, to: period.to }).toString();
-}
-
-function heatmapOf(heatmap: BackendHeatmap): ArrivalPickupHeatmap {
+function heatmapOf(heatmap: {
+  readonly weekdays: traegerSchoolsContract.ArrivalPickupWeekday[] | null;
+}): ArrivalPickupHeatmap {
   return {
     weekdays: (heatmap.weekdays ?? []).map((row) => ({
       weekday: row.weekday,
@@ -114,33 +80,27 @@ function heatmapOf(heatmap: BackendHeatmap): ArrivalPickupHeatmap {
 export async function fetchTraegerArrivalPickupTimes(
   period: ArrivalPickupPeriod,
 ): Promise<TraegerArrivalPickupTimes> {
-  const response = await transportFetch(
-    `/api/traeger/schools/arrival-pickup-times?${query(period)}`,
-    { credentials: "include", cache: "no-store" },
+  const times = await bffJson(
+    "org",
+    "GET /traeger/schools/arrival-pickup-times",
+    {
+      query: { from: period.from, to: period.to },
+    },
   );
-  const data = await readJson(response);
-  if (!response.ok) {
-    throw apiErrorFromBody(
-      `Request failed (${response.status})`,
-      response.status,
-      data,
-    );
-  }
-  const times = (data as { data: BackendTimes }).data;
   return {
-    from: times.from,
-    to: times.to,
+    from: requiredDay(times.from, "arrival_pickup_times.from"),
+    to: requiredDay(times.to, "arrival_pickup_times.to"),
     slotMinutes: times.slot_minutes,
     firstMinute: times.first_minute,
     lastMinute: times.last_minute,
     all: heatmapOf(times.all),
     schools: (times.schools ?? []).map((school) => ({
-      id: String(school.id),
+      id: school.id,
       name: school.name,
       slug: school.slug,
       subdomain: school.subdomain,
-      city: school.city ?? "",
-      firstDay: school.first_day ?? null,
+      city: school.city,
+      firstDay: school.first_day,
       ...heatmapOf(school),
     })),
   };
@@ -153,8 +113,12 @@ export function downloadTraegerArrivalPickupTimes(
   schoolId?: string,
 ): Promise<TraegerListFile> {
   return downloadTraegerList(
-    "/api/traeger/schools/arrival-pickup-times/export",
-    format,
-    { from: period.from, to: period.to, school: schoolId },
+    bffFile("org", "GET /traeger/schools/arrival-pickup-times/export", {
+      query: listExportQuery(format, {
+        from: period.from,
+        to: period.to,
+        school: schoolId,
+      }),
+    }),
   );
 }

@@ -10,6 +10,7 @@
  * line ~213). This modal is the only UI path to fix that today.
  */
 
+import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { Alert } from "~/components/ui/alert";
@@ -20,6 +21,7 @@ import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { ISODatePicker } from "~/components/ui/date-picker";
 import { FieldLabel } from "~/components/ui/field-label";
+import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { Input } from "~/components/ui/input";
 import {
   SlideOver,
@@ -34,6 +36,7 @@ import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { calendarPeriodService } from "~/lib/calendar-period-api";
 import {
   type CalendarPeriod,
+  type CalendarPeriodSaveResult,
   type CalendarPeriodWarning,
   PERIOD_TYPES,
   PERIOD_TYPE_LABELS,
@@ -41,7 +44,9 @@ import {
   formatPeriodUsage,
   formatShiftSeriesCount,
 } from "~/lib/calendar-period-helpers";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 import { FormFieldset } from "~/components/ui/form-fieldset";
 import {
@@ -103,16 +108,17 @@ interface CalendarPeriodModalProps {
 }
 
 /**
- * Structural subset of an enrollment phase — deliberately not imported
- * from the enrollment lib to keep this shared timetable component
- * decoupled from that domain.
+ * Structural subset of an enrollment phase, from the contract rather than
+ * the enrollment lib to keep this shared timetable component decoupled
+ * from that domain. A phase without a linked period carries null.
  */
-export interface LinkablePhase {
-  id: string;
-  name: string;
-  calendar_period_id?: string | null;
-  is_active: boolean;
-}
+export type LinkablePhase = Pick<
+  enrollmentContract.PhaseResponse,
+  "id" | "name" | "is_active"
+> & {
+  calendar_period_id?:
+    enrollmentContract.PhaseResponse["calendar_period_id"] | null;
+};
 
 interface FormState {
   name: string;
@@ -161,7 +167,8 @@ export function CalendarPeriodModal({
 }: CalendarPeriodModalProps) {
   const { success: toastSuccess } = useToast();
   const tenantPath = useTenantAwarePath();
-  const [form, setForm] = useState<FormState>(emptyForm);
+  // A new period's form; an existing one is the draft below.
+  const [createForm, setCreateForm] = useState<FormState>(emptyForm);
   // Speichern und Löschen sperren das Panel, bis der Server antwortet
   // (#6593); `pendingAction` sagt, welche der beiden Aktionen läuft.
   const save = useFormModalPending(isOpen, initial?.id);
@@ -190,7 +197,45 @@ export function CalendarPeriodModal({
   const [periodSaveNotified, setPeriodSaveNotified] = useState(false);
 
   const isEdit = Boolean(initial);
-  const persisted = initial ?? savedPeriod;
+  // The latest stored state this dialog knows: after a save, the answer
+  // carries the version the next save sends back (ADR 0311).
+  const persisted = savedPeriod ?? initial ?? null;
+  // The form of a stored period rests on its version (ADR 0311): after a
+  // refusal the stored period shows, and nothing is sent until it is read.
+  const edit = useDraftOn<
+    CalendarPeriod,
+    FormState,
+    string | undefined,
+    CalendarPeriodSaveResult
+  >(
+    {
+      opening: isOpen && persisted ? persisted.id : null,
+      data: persisted ?? undefined,
+      // The stored period becomes the dialog's newest read.
+      reload: async () => {
+        const stored = await calendarPeriodService.get(persisted?.id ?? "");
+        setSavedPeriod(stored);
+        return stored;
+      },
+      write: async (stored) => setSavedPeriod(stored),
+    },
+    {
+      token: (stored) => stored.version,
+      toDraft: formFromPeriod,
+      answer: (saved) => saved.period,
+    },
+  );
+  // A failed read of the stored period stays visible with its retry, also
+  // after an edit cleared the form's error (ADR 0311, rule 6).
+  const readForm = useReadDraftForm(
+    persisted ? edit : null,
+    formErrors,
+    "den Kalenderzeitraum",
+  );
+  const form = persisted
+    ? (edit.draft ?? formFromPeriod(persisted))
+    : createForm;
+  const setForm = persisted ? edit.setDraft : setCreateForm;
 
   // Most period links are nullable and get unlinked on delete. The server can
   // still reject the mutation when unpinning would invalidate a care-offering
@@ -225,9 +270,7 @@ export function CalendarPeriodModal({
 
   useEffect(() => {
     if (!isOpen) return;
-    setForm(
-      initial ? formFromPeriod(initial) : { ...emptyForm(), ...createDefaults },
-    );
+    if (!initial) setCreateForm({ ...emptyForm(), ...createDefaults });
     clearFormError();
     clearDeleteError();
     setDeleteConfirmOpen(false);
@@ -255,6 +298,7 @@ export function CalendarPeriodModal({
     form.name.trim().length > 0 &&
     form.startDate !== "" &&
     form.endDate !== "" &&
+    (persisted === null || edit.canSubmit) &&
     !save.pending;
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -299,25 +343,37 @@ export function CalendarPeriodModal({
     await save.run(async (op) => {
       setPendingAction("save");
       formErrors.clear();
-      let period: CalendarPeriod;
-      let warnings: CalendarPeriodWarning[];
-      try {
-        ({ period, warnings } = persisted
-          ? await calendarPeriodService.update(persisted.id, body)
-          : await calendarPeriodService.create(body));
-      } catch (err) {
+      const result = persisted
+        ? await edit.submit((version) =>
+            calendarPeriodService.update(persisted.id, {
+              ...body,
+              expected_version: version,
+            }),
+          )
+        : await calendarPeriodService.create(body).then(
+            (saved) => ({ ok: true, saved }) as const,
+            (error: unknown) =>
+              ({ ok: false, error, reload: undefined }) as const,
+          );
+      if (!result.ok) {
+        const err = result.error;
         logger.error("period_save_failed", {
           mode: isEdit ? "edit" : "create",
           error: err instanceof Error ? err.message : String(err),
         });
         // Protokolliert; eine späte Ablehnung zeigt kein neuerer Vorgang.
         if (!op.isCurrent()) return;
+        // Hat jemand den Zeitraum seit dem Öffnen geändert, zeigt `reload`
+        // dessen Stand im Formular; gespeichert wird erst eine neue
+        // Bearbeitung (ADR 0311).
         void formErrors.show(err, {
           object: "das Speichern des Kalenderzeitraums",
           retry: () => latestSubmitRef.current(),
+          reload: result.reload,
         });
         return;
       }
+      const { period, warnings } = result.saved;
 
       // Der Elternteil lädt neu, auch wenn das Panel inzwischen zu ist;
       // Formularzustand gehört nur zum Vorgang, der noch offen ist.
@@ -457,6 +513,7 @@ export function CalendarPeriodModal({
               onSubmit={(e) => void handleSubmit(e)}
               className="flex flex-col gap-4"
             >
+              <LoadErrorAlert error={readForm.loadError} />
               <Field label="Bezeichnung" htmlFor="name" required>
                 <Input
                   id="name"
@@ -699,7 +756,12 @@ export function CalendarPeriodModal({
                 loadingText="Speichere …"
                 disabled={!canSubmit}
                 disabledReason={
-                  save.pending ? undefined : missingFieldReason(form)
+                  save.pending
+                    ? undefined
+                    : (missingFieldReason(form) ??
+                      (edit.status === "loadFailed"
+                        ? "Lade zuerst den gespeicherten Stand neu."
+                        : "Der gespeicherte Stand wird geladen."))
                 }
                 tooltip={
                   persisted

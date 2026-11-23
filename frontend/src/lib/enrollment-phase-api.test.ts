@@ -1,3 +1,4 @@
+import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
 import {
@@ -13,12 +14,13 @@ import {
   phaseToInput,
   setPhaseCalendarPeriod,
   type Phase,
-  type PhaseDeleteImpact,
   type PhaseInput,
   type RolloverInput,
   type RolloverResult,
 } from "./enrollment-phase-api";
 import { ApiError } from "./api-error";
+
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 
 const originalFetch = globalThis.fetch;
 
@@ -49,15 +51,23 @@ function mkPhase(id: string, name: string): Phase {
     id,
     name,
     kind: "school_year",
+    version: "phase-read",
     service_start_date: "2026-09-01",
     service_end_date: "2027-07-31",
-    enrollment_open_at: null,
-    enrollment_close_at: null,
+    enrollment_open_at: undefined,
+    enrollment_close_at: undefined,
     form_schema_id: "7",
     show_status_reason_to_parent: false,
     care_overflow_mode: "waitlist",
     care_offering_selection_mode: "optional",
     is_active: true,
+    rollover_auto_approve: false,
+    rollover_bumps_grade: false,
+    available_school_classes: [],
+    require_school_class: false,
+    audience: "open",
+    eligible_school_classes: [],
+    eligible_grade_levels: [],
     created_at: "2026-04-01T12:00:00Z",
     updated_at: "2026-04-01T12:00:00Z",
   };
@@ -82,27 +92,6 @@ describe("listPhases", () => {
     const out = await listPhases();
     expect(out).toHaveLength(1);
     expect(out[0]!.id).toBe("1");
-  });
-
-  it("accepts a bare array response", async () => {
-    mockFetch(async () => jsonResponse([mkPhase("1", "X")]));
-    const out = await listPhases();
-    expect(out.map((phase) => phase.id)).toEqual(["1"]);
-  });
-
-  it("returns [] when the backend returns non-array data", async () => {
-    mockFetch(async () => jsonResponse({ data: null }));
-    expect(await listPhases()).toEqual([]);
-  });
-
-  it("uses cache: 'no-store'", async () => {
-    let seenInit: RequestInit | undefined;
-    mockFetch(async (_, init) => {
-      seenInit = init;
-      return jsonResponse({ data: [] });
-    });
-    await listPhases();
-    expect(seenInit?.cache).toBe("no-store");
   });
 
   it("throws with the German fallback message on non-OK + non-JSON body", async () => {
@@ -148,11 +137,11 @@ describe("phase calendar period helpers", () => {
       is_active: false,
       available_school_classes: [],
       require_school_class: false,
-      // Legacy phase (mkPhase omits audience/eligible_school_classes) defaults
-      // to the "open"/no-restriction eligibility, so a round-trip save never
+      // The eligibility goes back as read, so a round-trip save never
       // silently changes it (#1663).
       audience: "open",
       eligible_school_classes: [],
+      eligible_grade_levels: [],
     });
   });
 
@@ -163,7 +152,6 @@ describe("phase calendar period helpers", () => {
       enrollment_close_at: undefined,
       form_schema_id: undefined,
       calendar_period_id: undefined,
-      care_offering_selection_mode: undefined,
     } as unknown as Phase;
 
     expect(phaseToInput(phase)).toMatchObject({
@@ -171,7 +159,6 @@ describe("phase calendar period helpers", () => {
       enrollment_close_at: null,
       form_schema_id: null,
       calendar_period_id: null,
-      care_offering_selection_mode: "optional",
     });
   });
 
@@ -205,6 +192,8 @@ describe("phase calendar period helpers", () => {
     expect(calls[1]!.body).toEqual({
       ...phaseToInput(fresh),
       calendar_period_id: "period/2",
+      // The link goes onto the version just read (ADR 0311).
+      expected_version: fresh.version,
     });
     expect(out.calendar_period_id).toBe("period/2");
   });
@@ -305,10 +294,8 @@ describe("createPhase", () => {
 describe("fetchRolloverPreview", () => {
   it("GETs the grade bump choice and unwraps the preview", async () => {
     let seenURL = "";
-    let seenInit: RequestInit | undefined;
-    mockFetch(async (input, init) => {
+    mockFetch(async (input) => {
       seenURL = typeof input === "string" ? input : input.toString();
-      seenInit = init;
       return jsonResponse({
         data: {
           carry_candidate_count: 3,
@@ -325,7 +312,6 @@ describe("fetchRolloverPreview", () => {
     const preview = await fetchRolloverPreview("phase/1", true);
 
     expect(seenURL).toContain("/phase%2F1/rollover-preview?bumps_grade=true");
-    expect(seenInit?.cache).toBe("no-store");
     expect(preview.carried_count).toBe(2);
   });
 
@@ -343,12 +329,20 @@ describe("fetchRolloverPreview", () => {
 describe("updatePhase", () => {
   it("PUTs to the id-bearing URL and returns the unwrapped phase", async () => {
     let seenURL = "";
-    mockFetch(async (input) => {
+    let sent: unknown;
+    mockFetch(async (input, init) => {
       seenURL = typeof input === "string" ? input : input.toString();
+      sent = JSON.parse(String(init?.body));
       return jsonResponse({ data: mkPhase("1234", "Updated") });
     });
-    const out = await updatePhase("1234", { ...validInput, name: "Updated" });
+    const out = await updatePhase(
+      "1234",
+      { ...validInput, name: "Updated" },
+      "phase-read",
+    );
     expect(out.name).toBe("Updated");
+    // The save sends the version its draft rests on (ADR 0311).
+    expect(sent).toMatchObject({ expected_version: "phase-read" });
     expect(seenURL).toContain("/1234");
   });
 
@@ -372,7 +366,7 @@ describe("updatePhase", () => {
         },
       }),
     );
-    const out = await updatePhase("1234", validInput);
+    const out = await updatePhase("1234", validInput, "phase-read");
     expect(out.careBeyondEnd).toEqual([
       {
         studentId: "77",
@@ -393,7 +387,7 @@ describe("updatePhase", () => {
       seenURL = typeof input === "string" ? input : input.toString();
       return jsonResponse({ data: mkPhase("a/b", "X") });
     });
-    await updatePhase("a/b", validInput);
+    await updatePhase("a/b", validInput, "phase-read");
     expect(seenURL).toContain("a%2Fb");
   });
 
@@ -407,7 +401,9 @@ describe("updatePhase", () => {
         { status: 400 },
       ),
     );
-    await expect(updatePhase("1", validInput)).rejects.toMatchObject({
+    await expect(
+      updatePhase("1", validInput, "phase-read"),
+    ).rejects.toMatchObject({
       status: 400,
       code: "general.input",
       errors: [{ field: "enrollment_close_at", reason: "after_open" }],
@@ -418,7 +414,7 @@ describe("updatePhase", () => {
     mockFetch(async () =>
       jsonResponse({ error: "some other backend error" }, { status: 400 }),
     );
-    await expect(updatePhase("1", validInput)).rejects.toThrow(
+    await expect(updatePhase("1", validInput, "phase-read")).rejects.toThrow(
       /Phase konnte nicht gespeichert werden/,
     );
   });
@@ -466,7 +462,7 @@ describe("deletePhase", () => {
 
 describe("getPhaseDeleteImpact", () => {
   it("returns the impact counts on a successful response", async () => {
-    const impact: PhaseDeleteImpact = {
+    const impact: enrollmentContract.PhaseDeleteImpactResponse = {
       requests: 3,
       care_offerings: 2,
       students_kept: 5,
@@ -636,11 +632,6 @@ describe("listRolloverReview", () => {
     const out = await listRolloverReview("42");
     expect(out).toHaveLength(1);
     expect(out[0]!.first_name).toBe("Lara");
-  });
-
-  it("returns [] when backend returns non-array data", async () => {
-    mockFetch(async () => jsonResponse({ data: null }));
-    expect(await listRolloverReview("42")).toEqual([]);
   });
 
   it("throws with the German fallback on non-OK + non-JSON body", async () => {

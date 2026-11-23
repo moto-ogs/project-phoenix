@@ -124,6 +124,7 @@ func TestUpdateStudentPickupSchedules(t *testing.T) {
 				{"weekday": 1, "pickup_time": "15:30"},
 				{"weekday": 3, "pickup_time": "16:00"},
 			},
+			"expected_version": weeklyPlanVersion(t, tc, student.ID),
 		}
 		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d/pickup-schedules", student.ID), body)
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(int(account.ID)), []string{"admin:*"})
@@ -148,7 +149,8 @@ func TestUpdateStudentPickupSchedules(t *testing.T) {
 		})
 
 		body := map[string]any{
-			"schedules": []map[string]any{},
+			"schedules":        []map[string]any{},
+			"expected_version": weeklyPlanVersion(t, tc, student.ID),
 		}
 		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d/pickup-schedules", student.ID), body)
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(int(account.ID)), []string{"admin:*"})
@@ -202,6 +204,7 @@ func TestUpdateStudentPickupSchedules(t *testing.T) {
 			"schedules": []map[string]any{
 				{"weekday": 1, "pickup_time": "15:30"},
 			},
+			"expected_version": weeklyPlanVersion(t, tc, student.ID),
 		}
 		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d/pickup-schedules", student.ID), body)
 		claims := testutil.TeacherTestClaims(int(account.ID))
@@ -742,163 +745,6 @@ func TestDeleteStudentPickupException(t *testing.T) {
 	})
 }
 
-func TestGetBulkPickupTimes(t *testing.T) {
-	t.Parallel()
-
-	tc := setupStudentsRoute(t)
-
-	t.Run("bad_request_empty_student_ids", func(t *testing.T) {
-		body := map[string]any{
-			"student_ids": []int64{},
-		}
-		req := testutil.NewAuthenticatedRequest(t, "POST", "/pickup-times/bulk", body)
-		rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
-
-		testutil.AssertBadRequest(t, rr)
-	})
-
-	t.Run("success_with_valid_request", func(t *testing.T) {
-		student1 := testpkg.CreateTestStudent(t, tc.db, "BulkTest1", "Student", "BT1")
-		student2 := testpkg.CreateTestStudent(t, tc.db, "BulkTest2", "Student", "BT2")
-
-		body := map[string]any{
-			"student_ids": []int64{student1.ID, student2.ID},
-		}
-		req := testutil.NewAuthenticatedRequest(t, "POST", "/pickup-times/bulk", body)
-		rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
-
-		assert.Equal(t, http.StatusOK, rr.Code)
-	})
-
-	t.Run("success_with_specific_date", func(t *testing.T) {
-		student := testpkg.CreateTestStudent(t, tc.db, "BulkDateTest", "Student", "BDT1")
-
-		body := map[string]any{
-			"student_ids": []int64{student.ID},
-			"date":        "2026-01-27",
-		}
-		req := testutil.NewAuthenticatedRequest(t, "POST", "/pickup-times/bulk", body)
-		rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
-
-		assert.Equal(t, http.StatusOK, rr.Code)
-	})
-
-	t.Run("success_returns_empty_for_accounts_without_staff_record", func(t *testing.T) {
-		// #2329: the bulk filter answers "every requested child" for admins and
-		// verified staff and "none" for everyone else — a guest/guardian account
-		// holding users:read gets an empty result rather than a 403.
-		guest := testpkg.CreateTestAccount(t, tc.db, "bulk-pickup-guest@example.com")
-
-		student := testpkg.CreateTestStudent(t, tc.db, "UnauthorizedTest", "Student", "UTS1")
-
-		body := map[string]any{
-			"student_ids": []int64{student.ID},
-		}
-		req := testutil.NewAuthenticatedRequest(t, "POST", "/pickup-times/bulk", body)
-		claims := testutil.TeacherTestClaims(int(guest.ID))
-		rr := authExec(t, tc, req, claims, []string{"users:read"})
-
-		// Should return 200 OK with empty data (no authorized students)
-		assert.Equal(t, http.StatusOK, rr.Code)
-		assert.Contains(t, rr.Body.String(), "[]") // Empty array
-	})
-
-	t.Run("success_returns_data_for_staff_without_supervision", func(t *testing.T) {
-		_, account := testpkg.CreateTestStaffWithAccount(t, tc.db, "NoGroups", "Staff")
-
-		student := testpkg.CreateTestStudent(t, tc.db, "BulkAllowed", "Student", "BAS1")
-
-		body := map[string]any{
-			"student_ids": []int64{student.ID},
-		}
-		req := testutil.NewAuthenticatedRequest(t, "POST", "/pickup-times/bulk", body)
-		claims := testutil.TeacherTestClaims(int(account.ID))
-		rr := authExec(t, tc, req, claims, []string{"users:read"})
-
-		assert.Equal(t, http.StatusOK, rr.Code, "Body: %s", rr.Body.String())
-	})
-
-	t.Run("success_filters_nonexistent_student_ids", func(t *testing.T) {
-		// Admin requests non-existent students - should still succeed with empty results
-		body := map[string]any{
-			"student_ids": []int64{999998, 999999}, // Non-existent IDs
-		}
-		req := testutil.NewAuthenticatedRequest(t, "POST", "/pickup-times/bulk", body)
-		rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
-
-		assert.Equal(t, http.StatusOK, rr.Code)
-	})
-
-	t.Run("success_returns_pickup_times_with_data", func(t *testing.T) {
-		// Create a student with pickup schedule
-		student := testpkg.CreateTestStudent(t, tc.db, "BulkWithData", "Test", "BWD1")
-
-		// Insert a pickup schedule for Monday
-		pickupTime := time.Date(2000, 1, 1, 14, 30, 0, 0, time.UTC)
-		notes := "Regular pickup"
-		testpkg.InsertStudentPickupScheduleRow(t, tc.db, testpkg.StudentPickupScheduleRow{
-			TenantID:   testpkg.Tenant(t),
-			StudentID:  student.ID,
-			Weekday:    1, // Monday
-			PickupTime: pickupTime,
-			Notes:      &notes,
-			CreatedBy:  createStudentsAPITestStaffID(t, tc),
-		})
-
-		// Request for a Monday date
-		body := map[string]any{
-			"student_ids": []int64{student.ID},
-			"date":        "2026-01-26", // Monday
-		}
-		req := testutil.NewAuthenticatedRequest(t, "POST", "/pickup-times/bulk", body)
-		rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
-
-		assert.Equal(t, http.StatusOK, rr.Code)
-		assert.Contains(t, rr.Body.String(), "14:30", "Should contain pickup time")
-		assert.Contains(t, rr.Body.String(), "Montag", "Should contain weekday name")
-	})
-
-	t.Run("success_returns_exception_override", func(t *testing.T) {
-		// Create student with both schedule and exception
-		student := testpkg.CreateTestStudent(t, tc.db, "BulkException", "Test", "BEX1")
-
-		// Insert base schedule for Monday
-		baseTime := time.Date(2000, 1, 1, 15, 0, 0, 0, time.UTC)
-		testpkg.InsertStudentPickupScheduleRow(t, tc.db, testpkg.StudentPickupScheduleRow{
-			TenantID:   testpkg.Tenant(t),
-			StudentID:  student.ID,
-			Weekday:    1,
-			PickupTime: baseTime,
-			CreatedBy:  createStudentsAPITestStaffID(t, tc),
-		})
-
-		// Insert exception for specific date
-		exceptionDate := calendar.NewDate(2026, 1, 26) // Monday, noon to avoid day boundary issues
-		exceptionTime := time.Date(2000, 1, 1, 12, 0, 0, 0, time.UTC)
-		earlyPickupReason := "Early pickup"
-		testpkg.InsertStudentPickupExceptionRow(t, tc.db, testpkg.StudentPickupExceptionRow{
-			TenantID:      testpkg.Tenant(t),
-			StudentID:     student.ID,
-			ExceptionDate: exceptionDate,
-			PickupTime:    &exceptionTime,
-			Reason:        &earlyPickupReason,
-			CreatedBy:     createStudentsAPITestStaffID(t, tc),
-		})
-
-		body := map[string]any{
-			"student_ids": []int64{student.ID},
-			"date":        "2026-01-26",
-		}
-		req := testutil.NewAuthenticatedRequest(t, "POST", "/pickup-times/bulk", body)
-		rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
-
-		assert.Equal(t, http.StatusOK, rr.Code)
-		// Exception should override base time
-		assert.Contains(t, rr.Body.String(), "12:00", "Should contain exception pickup time")
-		assert.Contains(t, rr.Body.String(), "is_exception", "Should indicate exception")
-	})
-}
-
 func TestBulkUpsertPickupSchedules(t *testing.T) {
 	t.Parallel()
 
@@ -1039,8 +885,9 @@ func TestUpdateStudentPickupNote(t *testing.T) {
 		})
 
 		body := map[string]any{
-			"note_date": "2026-04-15",
-			"content":   "Updated content",
+			"note_date":        "2026-04-15",
+			"content":          "Updated content",
+			"expected_version": pickupNoteVersion(t, tc, student.ID, note.ID, "2026-04-15"),
 		}
 		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d/pickup-notes/%d", student.ID, note.ID), body)
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(int(account.ID)), []string{"admin:*"})

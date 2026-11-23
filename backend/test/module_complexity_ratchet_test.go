@@ -69,7 +69,7 @@ const moduleComplexityThreshold = 15
 var moduleComplexityAllowlist = map[string]int{
 	// ADR 0087.
 	"analytics/core_actions_middleware.go:CoreActionMiddleware":                                               18,
-	"api/active_test_helpers.go:buildActiveTestModule":                                                        31,
+	"api/active_test_helpers.go:buildActiveTestModule":                                                        30, // Lowered by #7808: the cross-tenant visitor read left the presence wiring.
 	"api/auth_test_helpers.go:NewAuthTestModule":                                                              25,
 	"api/enrollment_booking_repository_test_helpers.go:(EnrollmentBookingFixture).InsertRequestChildOffering": 18,
 	"api/enrollment_booking_repository_test_helpers.go:(EnrollmentBookingFixture).bookingCommandValues":       22,
@@ -271,7 +271,7 @@ var moduleComplexityAllowlist = map[string]int{
 	// ADR 0087.
 	"internal/devtools/seedapi/seeder.go:(*Seeder).printSuccessSummary": 17,
 	// ADR 0087.
-	"internal/devtools/seedapi/stammdaten.go:(*FixedSeeder).Seed": 22,
+	"internal/devtools/seedapi/stammdaten.go:(*FixedSeeder).Seed": 21,
 	// ADR 0087.
 	"internal/devtools/seedapi/stammdaten.go:(*FixedSeeder).seedGuardianPayments": 16,
 	// ADR 0087.

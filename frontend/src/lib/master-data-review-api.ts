@@ -1,91 +1,88 @@
 /**
- * Staff client for the parent Stammdaten change-request review queue.
- * Calls the Next.js proxy routes under /api/students/master-data-change-requests
- * which forward (with the tenant session token) to the backend.
+ * Staff client for the parent Stammdaten change-request review queue: the
+ * registered routes under /api/students/master-data-change-requests, through
+ * the tenant BFF.
  */
 
-import {
-  apiErrorFromResponse,
-  type ApiError,
-  transportFetch,
-} from "~/lib/api-error";
+import { ApiError } from "~/lib/api-error";
+import { bffJson } from "~/lib/bff-fetch";
+import type * as studentsContract from "~/lib/contract/students.generated";
+import { requiredEnum } from "~/lib/contract/known-enum";
 import { createLogger } from "~/lib/logger";
 
 const logger = createLogger({ component: "MasterDataReviewAPI" });
 
-type ChangeRequestStatus = "auto_applied" | "pending" | "approved" | "rejected";
+const CHANGE_REQUEST_STATUSES = [
+  "auto_applied",
+  "pending",
+  "approved",
+  "rejected",
+  "care_ended",
+] as const;
+type ChangeRequestStatus = (typeof CHANGE_REQUEST_STATUSES)[number];
 
-// One pending change request in the staff queue. Mirrors
-// api/students.MasterDataChangeRequestResponse.
-export interface StaffMasterDataChange {
-  readonly id: string;
-  readonly student_id: string;
-  readonly first_name: string;
-  readonly last_name: string;
-  readonly target: string;
-  readonly field_key: string;
-  readonly old_value?: unknown;
-  readonly new_value: unknown;
-  readonly status: ChangeRequestStatus;
-  readonly created_at: string;
-  readonly reviewed_at?: string;
+/** The generated change with its closed status. */
+export type StaffMasterDataChange = Omit<
+  studentsContract.MasterDataChangeRequestResponse,
+  "status"
+> & { readonly status: ChangeRequestStatus };
+
+export function toStaffMasterDataChange(
+  change: studentsContract.MasterDataChangeRequestResponse,
+): StaffMasterDataChange {
+  return {
+    ...change,
+    status: requiredEnum(CHANGE_REQUEST_STATUSES, change.status, "status"),
+  };
 }
 
-interface Envelope<T> {
-  readonly data?: T;
-}
-
-function unwrap<T>(json: Envelope<T>): T {
-  if (json && typeof json === "object" && "data" in json) {
-    return json.data as T;
+function logFailure(error: unknown): never {
+  if (error instanceof ApiError) {
+    logger.error("master_data_review_request_failed", {
+      status: error.status,
+      ...(error.code ? { code: error.code } : {}),
+    });
   }
-  return json as unknown as T;
-}
-
-async function readError(
-  response: Response,
-  message: string,
-): Promise<ApiError> {
-  const error = await apiErrorFromResponse(response, message);
-  logger.error("master_data_review_request_failed", {
-    status: response.status,
-    ...(error.code ? { code: error.code } : {}),
-  });
-  return error;
+  throw error;
 }
 
 /** Approves (and applies) or rejects one change request. */
-export async function decideMasterDataChangeRequest(
+export function decideMasterDataChangeRequest(
   requestId: string,
   approve: boolean,
-  reason?: string,
-  expectedVersion?: string,
-): Promise<StaffMasterDataChange> {
-  const response = await transportFetch(
-    `/api/students/master-data-change-requests/${encodeURIComponent(requestId)}/decide`,
+  reason: string | undefined,
+  /** Die Fassung der Anfrage aus der Liste (ADR 0311). */
+  expectedVersion: string,
+): Promise<studentsContract.MasterDataChangeRequestResponse> {
+  return bffJson(
+    "tenant",
+    "POST /api/students/master-data-change-requests/{requestId}/decide",
     {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+      params: { requestId },
+      body: {
         approve,
         reason: reason ?? "",
-        ...(expectedVersion ? { expected_version: expectedVersion } : {}),
-      }),
+        expected_version: expectedVersion,
+      },
+      errorMessage: "master data decision failed",
     },
-  );
-  if (!response.ok) {
-    throw await readError(response, "master data decision failed");
-  }
-  return unwrap((await response.json()) as Envelope<StaffMasterDataChange>);
+  ).catch(logFailure);
 }
 
 /**
  * One decided Stammdaten change request in the staff history. Mirrors
  * api/students.MasterDataChangeRequestHistoryResponse.
  */
-export interface StaffMasterDataHistoryEntry extends StaffMasterDataChange {
-  readonly decided_at: string;
-  /** Absent for auto-applied rows (no reviewer). */
-  readonly decided_by_name?: string;
-  readonly review_reason?: string;
+export type StaffMasterDataHistoryEntry = Omit<
+  studentsContract.MasterDataChangeRequestHistoryResponse,
+  "status"
+> & { readonly status: ChangeRequestStatus };
+
+export function toStaffMasterDataHistoryEntry(
+  entry: studentsContract.MasterDataChangeRequestHistoryResponse,
+): StaffMasterDataHistoryEntry {
+  return {
+    ...entry,
+    status: requiredEnum(CHANGE_REQUEST_STATUSES, entry.status, "status"),
+  };
 }

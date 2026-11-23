@@ -72,12 +72,14 @@ describe("target-school reauthentication", () => {
     expect(fetch).toHaveBeenCalledWith("/api/auth/logout", {
       method: "POST",
       signal: expect.any(AbortSignal),
+      credentials: "include",
+      cache: "no-store",
     });
     expect(window.location.href).toBe(
       "http://school-a.mfa.localhost:13845/home",
     );
     expect(signOut).not.toHaveBeenCalled();
-    revoke(new Response("{}"));
+    revoke(new Response(null, { status: 204 }));
     await vi.waitFor(() =>
       expect(signOut).toHaveBeenCalledWith(
         {
@@ -139,8 +141,8 @@ describe("target-school reauthentication", () => {
 
   it("allows a retry when revocation succeeded but cookie deletion failed", async () => {
     vi.spyOn(globalThis, "fetch")
-      .mockResolvedValue(new Response("{}"))
-      .mockResolvedValueOnce(new Response("{}"))
+      .mockResolvedValue(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
       .mockResolvedValueOnce(new Response("{}", { status: 401 }));
     signOut.mockRejectedValueOnce(new Error("cookie deletion failed"));
     await expect(reloginAtTenant("school-b")).rejects.toThrow(
@@ -157,7 +159,9 @@ describe("target-school reauthentication", () => {
     localStorage.setItem("sidebar-last-room-name:1:7", "Raum Sonne");
     localStorage.setItem("messages_unread_count:school-a:7", '{"count":3}');
     localStorage.setItem("sidebar-collapsed", "true");
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("{}"));
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(null, { status: 204 }),
+    );
     let leftAtSignOut: (string | null)[] = [];
     signOut.mockImplementation(
       async ({ callbackUrl }: { callbackUrl: string }) => {
@@ -178,7 +182,9 @@ describe("target-school reauthentication", () => {
   });
 
   it("still deletes a revoked cookie when SWR cleanup fails", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("{}"));
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(null, { status: 204 }),
+    );
     mutate.mockRejectedValueOnce(new Error("cache cleanup failed"));
     await reloginAtTenant("school-b");
     expect(signOut).toHaveBeenCalledWith(

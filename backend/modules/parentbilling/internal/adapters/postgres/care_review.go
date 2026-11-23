@@ -13,6 +13,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The review of a monthly run (#5916): the schools a run bills, its invoice
@@ -166,7 +167,7 @@ func (s *Store) CareRunExclusions(ctx context.Context, organizationID, runID int
 				delete(exclusions, key)
 				continue
 			}
-			exclusions[key] = parentbilling.CareExclusion{Reason: reason, AccountID: row.ActorAccountID, ExcludedAt: row.OccurredAt}
+			exclusions[key] = parentbilling.CareExclusion{Reason: reason, AccountID: (*ident.ID)(row.ActorAccountID), ExcludedAt: row.OccurredAt}
 		}
 	}
 	return exclusions, nil

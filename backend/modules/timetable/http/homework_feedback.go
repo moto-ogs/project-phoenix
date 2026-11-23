@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Homework feedback from a Lernzeit block (#4796): the OGS, or a Lehrkraft
@@ -39,6 +40,9 @@ var (
 type HomeworkFeedbackRequest struct {
 	Status string  `json:"status"`
 	Note   *string `json:"note,omitempty"`
+	// ExpectedVersion is the roster row's homework_feedback_version (ADR
+	// 0311).
+	ExpectedVersion string `json:"expected_version"`
 }
 
 // Bind implements render.Binder; the service validates status and note.
@@ -51,10 +55,12 @@ func (r *HomeworkFeedbackRequest) Bind(_ *http.Request) error {
 
 // HomeworkFeedbackResponse is the stored feedback on the wire.
 type HomeworkFeedbackResponse struct {
-	StudentID int64   `json:"student_id"`
-	Date      string  `json:"date"`
-	Status    string  `json:"status"`
-	Note      *string `json:"note,omitempty"`
+	StudentID ident.ID `json:"student_id"`
+	Date      string   `json:"date"`
+	Status    string   `json:"status"`
+	Note      *string  `json:"note,omitempty"`
+	// Version is the token of the stored feedback; a second save sends it.
+	Version string `json:"version"`
 }
 
 var homeworkFeedbackErrorRenderer = common.RulesRenderer([]common.ErrorRule{
@@ -99,14 +105,15 @@ func (rs *Resource) operationsPutHomeworkFeedback(w http.ResponseWriter, r *http
 	}
 	saved, err := rs.HomeworkFeedback.RecordHomeworkFeedback(r.Context(), timetable.HomeworkFeedbackInput{
 		StudentID: studentID, SchoolClass: row.SchoolClass, Date: calendar.Date(roster.Instance.Date),
-		Status: req.Status, Note: req.Note,
+		Status: req.Status, Note: req.Note, ExpectedVersion: req.ExpectedVersion,
 	})
 	if err != nil {
 		common.RenderError(w, r, homeworkFeedbackErrorRenderer(err))
 		return
 	}
 	common.Respond(w, r, http.StatusOK, HomeworkFeedbackResponse{
-		StudentID: saved.StudentID, Date: saved.Date.String(), Status: saved.Status, Note: saved.Note,
+		StudentID: ident.ID(saved.StudentID), Date: saved.Date.String(), Status: saved.Status, Note: saved.Note,
+		Version: timetable.HomeworkFeedbackVersion(&saved),
 	}, "Homework feedback saved")
 }
 
@@ -116,7 +123,7 @@ func homeworkFeedbackRow(roster *timetable.OperationRoster, studentID int64) (ti
 		return timetable.OperationRosterRow{}, errHomeworkFeedbackNotAllowed
 	}
 	for _, row := range roster.Rows {
-		if row.StudentID == studentID {
+		if row.StudentID == ident.ID(studentID) {
 			return row, nil
 		}
 	}

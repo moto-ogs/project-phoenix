@@ -58,6 +58,7 @@ export interface AllowanceSummaryResponse {
   booking_days: number;
   carried_in: AllowanceCarryResponse | null;
   kept_by_traeger: boolean;
+  version: string;
 }
 
 export const AllowanceSummaryResponseSchema: z.ZodType<AllowanceSummaryResponse, unknown> = object<AllowanceSummaryResponse>({
@@ -73,6 +74,7 @@ export const AllowanceSummaryResponseSchema: z.ZodType<AllowanceSummaryResponse,
   booking_days: num,
   carried_in: nullable(AllowanceCarryResponseSchema),
   kept_by_traeger: bool,
+  version: str,
 });
 
 /** Go: absencetypes.AllowancePreviewResponse */
@@ -104,14 +106,15 @@ export interface UpdateAbsenceTypeRequest {
   carryover_until?: string | null;
   requestable?: boolean | null;
   offered?: boolean | null;
-  school_limit_days?: unknown | null;
+  school_limit_days?: number | null;
 }
 
-/** Query of GET /api/absence-types/{id}/allowances/{staffId}/preview */
-export interface GetAbsenceTypesIdAllowancesStaffIdPreviewQuery {
-  date_end?: string;
-  date_start?: string;
-  half_day?: boolean;
+/** Go: absencetypes.SetAllowanceRequest */
+export interface SetAllowanceRequest {
+  year?: number;
+  entitled_days?: number;
+  reason?: string;
+  expected_version?: string;
 }
 
 export const routes = {
@@ -121,11 +124,24 @@ export const routes = {
     portals: ["tenant"],
     response: success(z.array(AbsenceTypeResponseSchema)),
   },
+  "GET /api/absence-types/{id}/allowances/{staffId}": {
+    method: "GET",
+    pattern: "/api/absence-types/{id}/allowances/{staffId}",
+    portals: ["tenant"],
+    query: {
+      "year": { kind: "int" },
+    },
+    response: success(AllowanceSummaryResponseSchema),
+  },
   "GET /api/absence-types/{id}/allowances/{staffId}/preview": {
     method: "GET",
     pattern: "/api/absence-types/{id}/allowances/{staffId}/preview",
     portals: ["tenant"],
-    query: ["date_end", "date_start", "half_day"],
+    query: {
+      "date_end": { kind: "date" },
+      "date_start": { kind: "date" },
+      "half_day": { kind: "bool" },
+    },
     response: success(AllowancePreviewResponseSchema),
   },
   "POST /api/absence-types/": {
@@ -141,5 +157,12 @@ export const routes = {
     portals: ["tenant"],
     request: requestBody<UpdateAbsenceTypeRequest>(),
     response: success(AbsenceTypeResponseSchema),
+  },
+  "PUT /api/absence-types/{id}/allowances/{staffId}": {
+    method: "PUT",
+    pattern: "/api/absence-types/{id}/allowances/{staffId}",
+    portals: ["tenant"],
+    request: requestBody<SetAllowanceRequest>(),
+    response: success(AllowanceSummaryResponseSchema),
   },
 } as const;

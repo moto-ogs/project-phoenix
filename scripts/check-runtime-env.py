@@ -25,6 +25,7 @@ OPTIONAL_VALUES = {
 # requires the whole group once EMAIL_PROVIDER names a provider. #5935 moves these
 # keys to the fail-fast forms. The upload group is required only in S3 mode.
 PENDING_SOPS_VALUES = {
+    "HUBSPOT_DEMO_TOKEN",
     "EMAIL_PROVIDER", "EMAIL_FROM_SECURITY_ADDRESS", "EMAIL_FROM_NOTICES_ADDRESS",
     "EMAIL_WEBHOOK_SECRETS", "LETTERMINT_TEAM_API_TOKEN", "LETTERMINT_WEBHOOK_ID",
     "EMAIL_FALLBACK_SMTP_HOST", "EMAIL_FALLBACK_SMTP_PORT", "EMAIL_FALLBACK_SMTP_USER",
@@ -96,6 +97,26 @@ def check(path, target, expected):
         raise ValueError("migrate: must use the serving backend image")
     check_bank_rekey_service(services)
     check_upload_seal_service(services)
+    if "worker" in expected:
+        check_worker_service(services)
+
+
+# Staging and production run the Worker as its own process, so the API can
+# run as several replicas (#7226). The demo keeps the embedded Worker: its
+# sidecar shares the network namespace of the one server container.
+def check_worker_service(services):
+    server, worker = services["server"], services.get("worker")
+    if worker is None:
+        raise ValueError("worker: staging and production run a standalone worker")
+    if worker.get("command") != ["./main", "worker"] or worker["image"] != server["image"]:
+        raise ValueError("worker: must run ./main worker from the serving backend image")
+    if worker["environment"] != server["environment"] or worker.get("volumes") != server.get("volumes"):
+        raise ValueError("worker: must receive exactly the server's environment and volumes")
+    if worker.get("ports") or worker.get("profiles"):
+        raise ValueError("worker: no published port; starts with the application")
+    command = server.get("command", [])
+    if "--embedded-worker=false" not in command or not any(arg.startswith("--drain-delay=") for arg in command):
+        raise ValueError("server: API replicas run without the embedded worker and drain on stop")
 
 
 def check_bank_rekey_service(services):
@@ -165,8 +186,13 @@ def main():
                     path.write_text(result.stdout)
                 # Only the demo stack carries the sidecar; revisions before #3482 lack it.
                 sidecar = target == "demo" and (not args.revision or "  demo-runtime:" in path.read_text())
-                check(path, target, {name: keys for name, keys in expected.items()
-                                     if sidecar or name != "demo-runtime"})
+                # Revisions before #7226 run the embedded Worker everywhere.
+                worker = target != "demo" and (not args.revision or "  worker:" in path.read_text())
+                omitted = ({"demo-runtime"} if not sidecar else set()) | ({"worker"} if not worker else set())
+                service_keys = {name: list(keys) for name, keys in expected.items() if name not in omitted and name != "server-demo-only"}
+                if target == "demo" and (not args.revision or "HUBSPOT_DEMO_TOKEN:" in path.read_text()):
+                    service_keys["server"] += expected["server-demo-only"]
+                check(path, target, service_keys)
                 check_missing_config(path, directory)
                 if sidecar:
                     check_demo_runtime(path, bool(args.revision))

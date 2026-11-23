@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type PlanningTrackViews struct {
@@ -104,14 +105,14 @@ func (a *PlanningTrackViews) ValidatePlanningTrackAssignment(ctx context.Context
 	if err != nil {
 		return err
 	}
-	if track.IsArchived() && (allowedArchivedID == nil || *allowedArchivedID != track.ID) {
+	if track.IsArchived() && (allowedArchivedID == nil || ident.ID(*allowedArchivedID) != track.ID) {
 		return timetable.ErrPlanningTrackArchived
 	}
 	return nil
 }
 
 func planningTrackInputOf(draft timetable.PlanningTrackDraft) timetable.PlanningTrackInput {
-	return timetable.PlanningTrackInput{Name: draft.Name, Color: draft.Color, SortOrder: draft.SortOrder}
+	return timetable.PlanningTrackInput{Name: draft.Name, Color: draft.Color, SortOrder: draft.SortOrder, ExpectedVersion: draft.ExpectedVersion}
 }
 
 // planningTrackNameTaken turns the owner's active-name conflict into the

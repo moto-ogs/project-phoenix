@@ -2,15 +2,13 @@ package timetracking
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"log/slog"
-	"strconv"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // ErrManagerControlledAbsence marks absence mutations that staff may view but
@@ -38,8 +36,10 @@ var ErrVacationQuotaExceeded = errors.New("vacation quota exceeded")
 // Comp_time absences may overdraw the Stundenkonto since #2873: the former
 // ErrCompTimeExceedsBalance overdraft rejection was replaced by the
 // PreviewCompTimeBalance projection, which the frontend shows before the
-// Leitung deliberately confirms a booking into the negative. The overdraft
-// guard on balance ADJUSTMENTS (payout etc.) is unchanged (#1420).
+// Leitung deliberately confirms a booking into the negative. The booking
+// computes the same projection under its lock and refuses a negative one the
+// Leitung did not confirm (ADR 0311). The overdraft guard on balance
+// ADJUSTMENTS (payout etc.) is unchanged (#1420).
 
 // CreateAbsenceRequest defines the request for creating an absence
 type CreateAbsenceRequest struct {
@@ -53,32 +53,11 @@ type CreateAbsenceRequest struct {
 	DateEnd       string `json:"date_end"`
 	HalfDay       bool   `json:"half_day"`
 	Note          string `json:"note"`
-}
-
-// UnmarshalJSON accepts decimal strings for int64 identifiers. JavaScript
-// cannot represent every database BIGINT as a number, so browser clients send
-// custom absence IDs as strings.
-func (r *CreateAbsenceRequest) UnmarshalJSON(data []byte) error {
-	var raw struct {
-		AbsenceType   string          `json:"absence_type"`
-		AbsenceTypeID json.RawMessage `json:"absence_type_id"`
-		DateStart     string          `json:"date_start"`
-		DateEnd       string          `json:"date_end"`
-		HalfDay       bool            `json:"half_day"`
-		Note          string          `json:"note"`
-	}
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	r.AbsenceType, r.DateStart, r.DateEnd, r.HalfDay, r.Note = raw.AbsenceType, raw.DateStart, raw.DateEnd, raw.HalfDay, raw.Note
-	if len(raw.AbsenceTypeID) != 0 {
-		id, err := parseAbsenceTypeID(raw.AbsenceTypeID)
-		if err != nil {
-			return err
-		}
-		r.AbsenceTypeID = id
-	}
-	return nil
+	// OverdraftFingerprint is the Fingerprint of the preview the Leitung
+	// confirmed a Freizeitausgleich below zero on (#2873), empty without a
+	// confirmation. Nil: the caller shows no preview (self-service), so no
+	// confirmation is asked.
+	OverdraftFingerprint *string `json:"-"`
 }
 
 // UpdateAbsenceRequest defines the request for updating an absence
@@ -94,46 +73,6 @@ type UpdateAbsenceRequest struct {
 	DateEnd          *string `json:"date_end"`
 	HalfDay          *bool   `json:"half_day"`
 	Note             *string `json:"note"`
-}
-
-func (r *UpdateAbsenceRequest) UnmarshalJSON(data []byte) error {
-	var raw struct {
-		AbsenceType   *string         `json:"absence_type"`
-		AbsenceTypeID json.RawMessage `json:"absence_type_id"`
-		DateStart     *string         `json:"date_start"`
-		DateEnd       *string         `json:"date_end"`
-		HalfDay       *bool           `json:"half_day"`
-		Note          *string         `json:"note"`
-	}
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	r.AbsenceType, r.DateStart, r.DateEnd, r.HalfDay, r.Note = raw.AbsenceType, raw.DateStart, raw.DateEnd, raw.HalfDay, raw.Note
-	if len(raw.AbsenceTypeID) == 0 {
-		return nil
-	}
-	r.AbsenceTypeIDSet = true
-	id, err := parseAbsenceTypeID(raw.AbsenceTypeID)
-	if err != nil {
-		return err
-	}
-	r.AbsenceTypeID = id
-	return nil
-}
-
-func parseAbsenceTypeID(raw json.RawMessage) (*int64, error) {
-	if string(raw) == "null" {
-		return nil, nil
-	}
-	var value string
-	if err := json.Unmarshal(raw, &value); err != nil {
-		value = string(raw)
-	}
-	id, err := strconv.ParseInt(value, 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("ungültige Abwesenheitsart-ID: %w", err)
-	}
-	return &id, nil
 }
 
 // maxSickAbsenceRangeDays bounds the synchronous plan cascade. Sick reports
@@ -181,12 +120,12 @@ type StaffAbsenceListFilter struct {
 // StartHalfDay/EndHalfDay are Personio-style boundary half-days: 0.5 day
 // off the first / last day of the range, full days for everything between.
 type RequestVacationRequest struct {
-	DateStart         string `json:"date_start"`
-	DateEnd           string `json:"date_end"`
-	StartHalfDay      bool   `json:"start_half_day"`
-	EndHalfDay        bool   `json:"end_half_day"`
-	Note              string `json:"note"`
-	SubstituteStaffID *int64 `json:"substitute_staff_id,omitempty"`
+	DateStart         string    `json:"date_start"`
+	DateEnd           string    `json:"date_end"`
+	StartHalfDay      bool      `json:"start_half_day"`
+	EndHalfDay        bool      `json:"end_half_day"`
+	Note              string    `json:"note"`
+	SubstituteStaffID *ident.ID `json:"substitute_staff_id,omitempty"`
 }
 
 // VacationDecisionRequest is the admin's approve/deny payload
@@ -210,6 +149,8 @@ type VacationQuotaSummary struct {
 	// Opening carries the takeover row for the summary's year, if any —
 	// Stichtag, entered Resturlaub, note, actor for the admin UI.
 	Opening *StaffVacationOpening `json:"opening,omitempty"`
+	// Version is the token of the stored claim (ADR 0311).
+	Version string `json:"version"`
 }
 
 // StaffAbsenceService defines operations for staff absence management

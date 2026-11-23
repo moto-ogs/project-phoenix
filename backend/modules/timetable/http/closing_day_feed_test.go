@@ -38,6 +38,9 @@ type closingFeedFixture struct {
 	closing  chi.Router
 	feed     chi.Router
 	consent  func(accountID int64, notificationType string, enabled bool)
+	// versions holds the last answered version of each closing day; an
+	// update sends it back (ADR 0311).
+	versions map[int64]string
 }
 
 type closingFeedPerson struct {
@@ -84,7 +87,8 @@ func newClosingFeedFixtureIn(t *testing.T, db *bun.DB, tenantID int64) *closingF
 	})
 	consent := api.NewNotificationConsentTestStore(database)
 	return &closingFeedFixture{
-		db: db, tenantID: tenantID,
+		versions: map[int64]string{},
+		db:       db, tenantID: tenantID,
 		closing: resource.Router(api.ProtectedTenantRoutes),
 		feed:    module.NotificationPreferenceRouterForTests(),
 		consent: func(accountID int64, notificationType string, enabled bool) {
@@ -144,6 +148,14 @@ func (f *closingFeedFixture) save(t *testing.T, actor closingFeedPerson, method 
 	if id != 0 {
 		path, want = fmt.Sprintf("/closing-days/%d", id), http.StatusOK
 	}
+	if method == http.MethodPut {
+		fields := map[string]string{}
+		require.NoError(t, json.Unmarshal([]byte(body), &fields))
+		fields["expected_version"] = f.versions[id]
+		encoded, err := json.Marshal(fields)
+		require.NoError(t, err)
+		body = string(encoded)
+	}
 	req := httptest.NewRequest(method, path, strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	claims := routetest.DefaultTestClaims()
@@ -159,7 +171,8 @@ func (f *closingFeedFixture) save(t *testing.T, actor closingFeedPerson, method 
 		Data timetablehttp.ClosingDayResponse `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &envelope), rec.Body.String())
-	return envelope.Data.ID
+	f.versions[envelope.Data.ID.Int64()] = envelope.Data.Version
+	return envelope.Data.ID.Int64()
 }
 
 func closingDayBody(from, until, reason string) string {
@@ -167,12 +180,12 @@ func closingDayBody(from, until, reason string) string {
 }
 
 type closingFeedEntry struct {
-	ID       int64   `json:"id"`
-	Type     string  `json:"type"`
-	Title    string  `json:"title"`
-	Body     string  `json:"body"`
-	DeepLink string  `json:"deep_link"`
-	ReadAt   *string `json:"read_at"`
+	ID       testpkg.ID `json:"id"`
+	Type     string     `json:"type"`
+	Title    string     `json:"title"`
+	Body     string     `json:"body"`
+	DeepLink string     `json:"deep_link"`
+	ReadAt   *string    `json:"read_at"`
 }
 
 // entries reads the feed of the account in the staff portal, in moto
@@ -323,7 +336,7 @@ func TestClosingDayFeedFollowsTheWindowBundlingAndTheSchoolSwitch(t *testing.T) 
 
 	// Read, then cancelled: a new entry, and a push since the day lies
 	// within 14 days.
-	f.markRead(t, staff.accountID, entries[0].ID)
+	f.markRead(t, staff.accountID, int64(entries[0].ID))
 	f.save(t, leitung, http.MethodDelete, far, "")
 	entries = f.entries(t, staff.accountID, f.tenantID, "staff")
 	require.Len(t, entries, 2)

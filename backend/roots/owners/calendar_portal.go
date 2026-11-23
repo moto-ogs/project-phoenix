@@ -3,6 +3,7 @@ package owners
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"time"
 
 	deliveryCompose "github.com/moto-ogs/project-phoenix/modules/delivery/compose"
@@ -13,6 +14,7 @@ import (
 	settingsValues "github.com/moto-ogs/project-phoenix/modules/settings"
 	configModels "github.com/moto-ogs/project-phoenix/modules/settings/records"
 	"github.com/moto-ogs/project-phoenix/modules/transactionruntime"
+	"github.com/moto-ogs/project-phoenix/realtime"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -40,6 +42,23 @@ func NewCalendarPortal(cfg calendarCompose.Config) calendarCompose.Application {
 		return errors.Is(err, deliveryCompose.ErrNoWebPushSubscribers) || calendarPushSuppressed(err)
 	}
 	return calendarCompose.New(cfg)
+}
+
+// CalendarAppointmentChanges is the calendar's change port in its own terms:
+// called inside an appointment write, it sends nothing before the commit.
+type CalendarAppointmentChanges interface {
+	Announce(context.Context)
+}
+
+// NewCalendarAppointmentChanges binds the calendar's change port to
+// Delivery's shared after-commit site for tenant-wide signals without content
+// (ADR 0310): calendar_appointments_changed to the staff sessions of the
+// school (#7693). Nil without a broadcaster.
+func NewCalendarAppointmentChanges(broadcaster realtime.Broadcaster, logger *slog.Logger) CalendarAppointmentChanges {
+	if broadcaster == nil {
+		return nil
+	}
+	return deliveryCompose.NewCalendarAppointmentsChanged(broadcaster, logger)
 }
 
 // BindCalendarCaller binds the calendar's identity port to Identity &
@@ -196,7 +215,7 @@ func (p calendarIdentityPort) GetCurrentUser(ctx context.Context) (*calendarComp
 	if err != nil {
 		return nil, err
 	}
-	return &calendarCompose.Account{ID: value.ID, Email: value.Email, Active: value.Active}, nil
+	return &calendarCompose.Account{ID: value.ID.Int64(), Email: value.Email, Active: value.Active}, nil
 }
 
 func (p calendarIdentityPort) MissingUser(err error) bool {

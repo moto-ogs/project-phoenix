@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -49,12 +50,6 @@ func (r *visitRepoForActiveWrapperTest) ListStudentDisplayFacts(context.Context,
 	return result, r.err
 }
 
-type crossTenantRepoForActiveWrapperTest struct {
-	students           []ports.CrossTenantStudent
-	err                error
-	gotHostingTenantID int64
-}
-
 type displayFactsForActiveTest struct {
 	rows []StudentDisplayFacts
 	err  error
@@ -90,22 +85,6 @@ func TestVisitDisplayOmitsUnknownStudentsAndPropagatesDirectoryFailure(t *testin
 	rows, err = svc.GetActiveGroupVisitsWithDisplay(context.Background(), 80)
 	require.ErrorIs(t, err, injected)
 	assert.Nil(t, rows)
-}
-
-func (r *crossTenantRepoForActiveWrapperTest) FindCrossTenantStudents(_ context.Context, hostingTenantID int64) ([]ports.CrossTenantStudent, error) {
-	r.gotHostingTenantID = hostingTenantID
-	return r.students, r.err
-}
-
-type schoolQueryForActiveWrapperTest struct {
-	schools []School
-	err     error
-	gotIDs  []int64
-}
-
-func (q *schoolQueryForActiveWrapperTest) ListSchoolsByID(_ context.Context, ids []int64) ([]School, error) {
-	q.gotIDs = append([]int64(nil), ids...)
-	return q.schools, q.err
 }
 
 type staffRepoForActiveWrapperTest struct {
@@ -337,8 +316,8 @@ func TestClaimActiveGroupUsesPresenceOwner(t *testing.T) {
 	}}
 	row, err := svc.ClaimActiveGroup(ctx, 42, 84, "")
 	require.NoError(t, err)
-	require.Equal(t, int64(42), row.GroupID)
-	require.Equal(t, int64(84), row.StaffID)
+	require.Equal(t, ident.ID(int64(42)), row.GroupID)
+	require.Equal(t, ident.ID(int64(84)), row.StaffID)
 	require.Equal(t, "supervisor", owner.claim.Role)
 	owner.err = errors.New("insert supervision: internal database detail")
 	_, err = svc.ClaimActiveGroup(ctx, 42, 84, "supervisor")
@@ -352,45 +331,4 @@ func TestClaimActiveGroupUsesPresenceOwner(t *testing.T) {
 	owner.err = studentpresence.ErrAlreadySupervising
 	_, err = svc.ClaimActiveGroup(ctx, 42, 84, "supervisor")
 	require.ErrorIs(t, err, ErrStaffAlreadySupervising)
-}
-
-func TestGetCrossTenantStudents_Branches(t *testing.T) {
-	t.Parallel()
-
-	ctx := context.Background()
-
-	t.Run("nil repository returns empty slice", func(t *testing.T) {
-		svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow}}
-
-		students, err := svc.GetCrossTenantStudents(ctx, 10)
-
-		require.NoError(t, err)
-		assert.Empty(t, students)
-	})
-
-	t.Run("repository error is wrapped", func(t *testing.T) {
-		expectedErr := errors.New("cross tenant lookup failed")
-		svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, CrossTenantRepo: &crossTenantRepoForActiveWrapperTest{err: expectedErr}}}
-
-		students, err := svc.GetCrossTenantStudents(ctx, 10)
-
-		require.Error(t, err)
-		assert.Nil(t, students)
-		assert.ErrorIs(t, err, expectedErr)
-	})
-
-	t.Run("returns repository rows", func(t *testing.T) {
-		rows := []ports.CrossTenantStudent{{StudentID: 20, HomeTenantID: 30}}
-		repo := &crossTenantRepoForActiveWrapperTest{students: rows}
-		schools := &schoolQueryForActiveWrapperTest{schools: []School{{ID: 30, Slug: "home"}}}
-		svc := &service{ServiceDependencies: ServiceDependencies{Now: presenceTestNow, PrincipalReader: testAttendancePrincipal, CrossTenantRepo: repo, Schools: schools}}
-
-		students, err := svc.GetCrossTenantStudents(ctx, 10)
-
-		require.NoError(t, err)
-		require.Len(t, students, 1)
-		assert.Equal(t, "home", students[0].HomeTenant)
-		assert.Equal(t, int64(10), repo.gotHostingTenantID)
-		assert.Equal(t, []int64{30}, schools.gotIDs)
-	})
 }

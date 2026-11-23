@@ -7,6 +7,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	timetableModule "github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Optional series end (#3594): a series may stop before its planning period
@@ -107,10 +108,10 @@ func (rs *Resource) prepareTemplateUpdate(
 		common.RenderError(w, r, bindErrorRenderer(err))
 		return false
 	}
-	parsed.req.CalendarPeriodID = updateCalendarPeriodID(
-		parsed.startDate, parsed.req.CalendarPeriodID, stored)
+	parsed.req.CalendarPeriodID = (*ident.ID)(updateCalendarPeriodID(
+		parsed.startDate, (*int64)(parsed.req.CalendarPeriodID), stored))
 	applyOfferingSourcePresence(parsed.req, stored)
-	if parsed.req.EndDate.Set && !rs.validateSeriesEnd(w, r, parsed.endDate, updateSeriesFirstDay(parsed.startDate, stored), parsed.req.CalendarPeriodID) {
+	if parsed.req.EndDate.Set && !rs.validateSeriesEnd(w, r, parsed.endDate, updateSeriesFirstDay(parsed.startDate, stored), (*int64)(parsed.req.CalendarPeriodID)) {
 		return false
 	}
 	return validateNotesOnlyPredecessorPropagation(w, r, parsed, stored)
@@ -153,10 +154,10 @@ func notesOnlyTemplateUpdate(parsed *parsedUpdateTemplate, stored templateRespon
 
 func sameTemplateFieldsExceptNotes(req *updateTemplateRequest, stored templateResponse) bool {
 	if req.Name != stored.Name || req.Type != stored.Type || req.CategoryID != stored.CategoryID ||
-		req.RoomID != optionalInt64Value(stored.RoomID) ||
-		!sameOptionalInt64(req.EducationGroupID, stored.EducationGroupID) ||
+		req.RoomID.Int64() != optionalInt64Value((*int64)(stored.RoomID)) ||
+		!sameOptionalInt64((*int64)(req.EducationGroupID), (*int64)(stored.EducationGroupID)) ||
 		!sameOptionalInt(req.RequiredStaff, stored.RequiredStaffOverride) ||
-		!sameOptionalInt64(req.CalendarPeriodID, effectiveTemplateCalendarPeriodID(stored)) ||
+		!sameOptionalInt64((*int64)(req.CalendarPeriodID), effectiveTemplateCalendarPeriodID(stored)) ||
 		req.TargetGroupType != stored.TargetGroupType ||
 		!sameOptionalInt16(req.TargetGradeLevel, stored.TargetGradeLevel) ||
 		!sameOptionalString(req.TargetSchoolClass, stored.TargetSchoolClass) ||
@@ -166,7 +167,7 @@ func sameTemplateFieldsExceptNotes(req *updateTemplateRequest, stored templateRe
 		!sameValues(req.SourceSchoolClasses.Value, stored.SourceSchoolClasses) {
 		return false
 	}
-	if req.PlanningTrackID.Set && !sameOptionalInt64(req.PlanningTrackID.Value, stored.PlanningTrackID) {
+	if req.PlanningTrackID.Set && !sameOptionalInt64((*int64)(req.PlanningTrackID.Value), (*int64)(stored.PlanningTrackID)) {
 		return false
 	}
 	if req.MaxParticipants.Set && derefInt(req.MaxParticipants.Value) != derefInt(stored.MaxParticipants) {
@@ -196,7 +197,7 @@ func sameTemplateRecurrence(req *updateTemplateRequest, parsed *parsedUpdateTemp
 		schedule, ok := byWeekday[weekday]
 		if !ok || schedule.StartTime != startTime || schedule.EndTime != endTime ||
 			schedule.WeekPattern != parsed.weekPattern ||
-			!sameOptionalInt64(effectiveScheduleCalendarPeriodID(schedule, stored), req.CalendarPeriodID) {
+			!sameOptionalInt64(effectiveScheduleCalendarPeriodID(schedule, stored), (*int64)(req.CalendarPeriodID)) {
 			return false
 		}
 	}
@@ -204,8 +205,8 @@ func sameTemplateRecurrence(req *updateTemplateRequest, parsed *parsedUpdateTemp
 }
 
 func sameTemplateRoster(req *updateTemplateRequest, stored templateResponse) bool {
-	if !sameIDSet(req.StudentIDs, stored.StudentIDs) || !sameIDSet(req.StaffIDs, stored.StaffIDs) ||
-		!sameOptionalInt64(req.PrimaryStaffID, stored.PrimaryStaffID) ||
+	if !sameIDSet(ident.Int64s(req.StudentIDs), ident.Int64s(stored.StudentIDs)) || !sameIDSet(ident.Int64s(req.StaffIDs), ident.Int64s(stored.StaffIDs)) ||
+		!sameOptionalInt64((*int64)(req.PrimaryStaffID), (*int64)(stored.PrimaryStaffID)) ||
 		len(req.WeekdayAssignments) != len(stored.WeekdayAssignments) {
 		return false
 	}
@@ -215,9 +216,9 @@ func sameTemplateRoster(req *updateTemplateRequest, stored templateResponse) boo
 	}
 	for _, assignment := range req.WeekdayAssignments {
 		storedAssignment, ok := byWeekday[assignment.Weekday]
-		if !ok || !sameIDSet(assignment.StudentIDs, storedAssignment.StudentIDs) ||
-			!sameIDSet(assignment.StaffIDs, storedAssignment.StaffIDs) ||
-			!sameOptionalInt64(assignment.PrimaryStaffID, storedAssignment.PrimaryStaffID) {
+		if !ok || !sameIDSet(ident.Int64s(assignment.StudentIDs), ident.Int64s(storedAssignment.StudentIDs)) ||
+			!sameIDSet(ident.Int64s(assignment.StaffIDs), ident.Int64s(storedAssignment.StaffIDs)) ||
+			!sameOptionalInt64((*int64)(assignment.PrimaryStaffID), (*int64)(storedAssignment.PrimaryStaffID)) {
 			return false
 		}
 	}
@@ -235,7 +236,7 @@ func sameTemplateTargets(requested []templateTargetRequest, stored []templateTar
 			if !matched[index] && target.Type == candidate.Type &&
 				sameOptionalInt16(target.GradeLevel, candidate.GradeLevel) &&
 				sameOptionalString(target.SchoolClass, candidate.SchoolClass) &&
-				sameOptionalInt64(target.EducationGroupID, candidate.EducationGroupID) {
+				sameOptionalInt64((*int64)(target.EducationGroupID), (*int64)(candidate.EducationGroupID)) {
 				matched[index], found = true, true
 				break
 			}

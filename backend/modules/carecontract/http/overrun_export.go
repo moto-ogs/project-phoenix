@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 )
@@ -15,7 +16,7 @@ func overrunHead(result carecontract.OverrunEvaluation, filter carecontract.Over
 	from, to := result.From.Format("02.01.2006"), result.To.Format("02.01.2006")
 	schoolName := ""
 	for _, school := range result.Schools {
-		if school.SchoolID == filter.SchoolID {
+		if school.SchoolID == ident.ID(filter.SchoolID) {
 			schoolName = school.SchoolName
 		}
 	}

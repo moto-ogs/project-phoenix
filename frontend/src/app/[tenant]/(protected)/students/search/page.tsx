@@ -9,6 +9,8 @@ import {
 import { studentKeys } from "~/lib/swr/portal-keys";
 import { rooms as roomKeys } from "~/lib/swr/rooms";
 import { groups as groupKeys } from "~/lib/swr/groups";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import {
   HANDOVER_ABSENT_WORDING,
   handoverDetail,
@@ -215,6 +217,8 @@ import { childrenConcept } from "~/lib/concepts/children";
 
 const EMPTY_STRING_ARRAY: string[] = [];
 const EMPTY_STUDENT_ARRAY: Student[] = [];
+const NO_GROUPS: Group[] = [];
+const NO_ROOMS: Room[] = [];
 
 type StatusFilter =
   | "all"
@@ -358,6 +362,33 @@ function enrollmentAnswerAccessOf(
   return options.error ? "granted" : "pending";
 }
 
+/** The filter value of an answer, "<question key>=<answer value>" (#6954). */
+function enrollmentAnswerValue(
+  question: EnrollmentAnswerFilter,
+  option: EnrollmentAnswerFilter["options"][number],
+): string {
+  return `${question.key}=${option.value}`;
+}
+
+/**
+ * The children an offered registration answer names, or null when the answer
+ * is off or not offered (#7645).
+ */
+function enrollmentAnswerChildrenOf(
+  questions: readonly EnrollmentAnswerFilter[],
+  answer: string,
+): ReadonlySet<string> | null {
+  if (!answer) return null;
+  for (const question of questions) {
+    for (const option of question.options) {
+      if (enrollmentAnswerValue(question, option) === answer) {
+        return new Set(option.studentIds);
+      }
+    }
+  }
+  return null;
+}
+
 type FilterQueryParam = (typeof FILTER_QUERY_PARAMS)[number];
 type PersistedSearchFilters = Partial<Record<FilterQueryParam, string>>;
 type SearchParamReader = Pick<URLSearchParams, "get" | "getAll" | "has">;
@@ -390,8 +421,8 @@ function readFilterParam(
 const STUDENT_SEARCH_FILTER_STORAGE_PREFIX = "student-search:last-filters";
 // This view shows every match at once — it has no pagination control, and the
 // grouping modes, the counts and the export selection all read the rendered
-// list. The proxy route caps a response at 1000 rows
-// (app/api/students/route.ts), so a selection larger than one page has to be
+// list. The backend caps a page of the child list at 1000 rows
+// (studentListMaxPageSize), so a selection larger than one page has to be
 // walked here; otherwise every child past the first page is unreachable
 // (#2218 review). The bound stops a bad total from looping forever: 20 pages
 // are 20.000 Kinder, far beyond any OGS, and hitting it is logged rather than
@@ -1553,19 +1584,38 @@ function SearchPageContent() {
   } = useStudentPhotosEnabled();
 
   // Fetch groups with SWR (immutable - only fetched once)
-  const { data: groups = [] } = useImmutableSWR<Group[]>(
-    groupKeys.key(),
-    groupKeys.fetcher,
+  const {
+    data: loadedGroups,
+    error: groupsError,
+    mutate: reloadGroups,
+  } = useImmutableSWR<Group[]>(groupKeys.key(), groupKeys.fetcher);
+  const groups = loadedGroups ?? NO_GROUPS;
+  const {
+    data: loadedRooms,
+    error: roomsError,
+    mutate: reloadRooms,
+  } = useSWRAuth<Room[]>(roomKeys.key({ page: 1, pageSize: 1000 }), () =>
+    roomKeys.fetcher({ page: 1, pageSize: 1000 }),
   );
-  const { data: rooms = [] } = useSWRAuth<Room[]>(
-    roomKeys.key({ page: 1, pageSize: 1000 }),
-    () => roomKeys.fetcher({ page: 1, pageSize: 1000 }),
-  );
+  const rooms = loadedRooms ?? NO_ROOMS;
 
-  const { data: schoolClassOptionsData } = useSWRAuth<unknown>(
-    studentKeys.schoolClasses(),
-    fetchSchoolClasses,
-    { revalidateOnFocus: false },
+  const {
+    data: schoolClassOptionsData,
+    error: schoolClassesError,
+    mutate: reloadSchoolClasses,
+  } = useSWRAuth<unknown>(studentKeys.schoolClasses(), fetchSchoolClasses, {
+    revalidateOnFocus: false,
+  });
+  // Ohne Gruppen, Räume oder Klassen fehlten Filter und Raumnamen, als gäbe
+  // es sie nicht (#2353): ein Fehler steht über der Liste.
+  const filterOptionsLoad = useSwrResourceLoadError(
+    [
+      { data: loadedGroups, error: groupsError },
+      { data: loadedRooms, error: roomsError },
+      { data: schoolClassOptionsData, error: schoolClassesError },
+    ],
+    "die Filterauswahl",
+    () => Promise.all([reloadGroups(), reloadRooms(), reloadSchoolClasses()]),
   );
   const schoolClassOptions = useMemo(
     () =>
@@ -1613,13 +1663,22 @@ function SearchPageContent() {
   // the server granted it, and a refused (403) account loses a filter from a
   // saved link or state instead of a whole list refused for it.
   const mayAskEnrollmentAnswers = hasPermission(session, "users:read");
+  // The answers name the children in care on the list's planning day
+  // (#7645). A new day waits for its own answers: the previous day's would
+  // filter and count the new day's children. The key names today's date too,
+  // so a tab open across midnight reads the new day's answers.
+  const enrollmentAnswerDay = isToday ? undefined : selectedDate;
+  const fetchEnrollmentAnswersOfDay = useCallback(
+    () => fetchEnrollmentAnswerFilters(enrollmentAnswerDay),
+    [enrollmentAnswerDay],
+  );
   // A session that is still loading names no permissions yet: deciding now
   // would refuse the account and drop its saved filter.
   const enrollmentAnswerFilters = useSWRAuth(
     status !== "loading" && mayAskEnrollmentAnswers
-      ? tenantListKeys.enrollmentAnswerFilters()
+      ? tenantListKeys.enrollmentAnswerFilters(enrollmentAnswerDay ?? todayIso)
       : null,
-    fetchEnrollmentAnswerFilters,
+    fetchEnrollmentAnswersOfDay,
   );
   const enrollmentAnswerAccess = enrollmentAnswerAccessOf(
     status === "loading",
@@ -1631,6 +1690,22 @@ function SearchPageContent() {
     NO_ENROLLMENT_ANSWER_QUESTIONS;
   const effectiveEnrollmentAnswer =
     enrollmentAnswerAccess === "granted" ? enrollmentAnswerFilter : "";
+  // The page narrows the loaded list by an offered answer itself, with the
+  // children the answer names (#7645). Counted against the list's other
+  // filters, the number beside an answer is then what choosing it shows, and
+  // switching answers needs no new request. An answer the server no longer
+  // offers (a saved link) still reaches the list as its own filter.
+  const activeEnrollmentAnswerChildren = useMemo(
+    () =>
+      enrollmentAnswerChildrenOf(
+        enrollmentAnswerQuestions,
+        effectiveEnrollmentAnswer,
+      ),
+    [enrollmentAnswerQuestions, effectiveEnrollmentAnswer],
+  );
+  const serverEnrollmentAnswer = activeEnrollmentAnswerChildren
+    ? ""
+    : effectiveEnrollmentAnswer;
   // A saved filter waits for the server's answer. Loaded before it, the list
   // would come once without the filter and again with it, and an export in
   // between would carry every child. The list and the export start when the
@@ -1657,7 +1732,7 @@ function SearchPageContent() {
     companions: wantsCompanions,
     years: selectedYears,
     pickupStatus: pickupStatusFilter,
-    enrollmentAnswer: effectiveEnrollmentAnswer,
+    enrollmentAnswer: serverEnrollmentAnswer,
   } satisfies StudentSearchFilterInput & { photoState: string };
   const studentsCacheKey = studentKeys.search(studentSearchParams);
 
@@ -1675,7 +1750,7 @@ function SearchPageContent() {
   // counts visible cards only) cannot be the retry surface then; the
   // failure dialog therefore carries its own retry that executes its named
   // snapshot regardless of what the current filters show (review #2372).
-  const selectionScopeSignature = `${studentsCacheKey}|${effectiveAttendanceFilter}|${encodeMultiValueParam(pickupTimeFilter)}|${arrivalTimeFilter}|${effectiveTrackingFilter}`;
+  const selectionScopeSignature = `${studentsCacheKey}|${effectiveEnrollmentAnswer}|${effectiveAttendanceFilter}|${encodeMultiValueParam(pickupTimeFilter)}|${arrivalTimeFilter}|${effectiveTrackingFilter}`;
   const clearCheckinSelection = schoolCheckin.clearSelection;
   useEffect(() => {
     clearCheckinSelection();
@@ -1952,12 +2027,24 @@ function SearchPageContent() {
     studentsData?.requestDate !== undefined &&
     (studentsData.requestDate !== selectedDate ||
       studentsData.requestIsToday !== isToday);
-  const students = useMemo(
+  const loadedStudents = useMemo(
     () =>
       studentsData === undefined || isDateTransition
         ? EMPTY_STUDENT_ARRAY
         : studentsData.students,
     [studentsData, isDateTransition],
+  );
+  // The children of the list's server filters and the registration answer:
+  // what every count, card and bulk action below works on, as when the server
+  // applied the answer.
+  const students = useMemo(
+    () =>
+      activeEnrollmentAnswerChildren
+        ? loadedStudents.filter((student) =>
+            activeEnrollmentAnswerChildren.has(student.id),
+          )
+        : loadedStudents,
+    [loadedStudents, activeEnrollmentAnswerChildren],
   );
 
   // Gated on the same staleness check as the rows themselves: a held response
@@ -1987,9 +2074,11 @@ function SearchPageContent() {
   }, [canUsePhotoConsentFilter, photoConsentFilter, updatePhotoConsentFilter]);
 
   // Tracking indicators for student cards
+  // Every loaded child, not only the answer's: the answer counts apply the
+  // tracking filter to the others too (#7645).
   const trackingStudentIds = useMemo(
-    () => students.map((s) => s.id),
-    [students],
+    () => loadedStudents.map((s) => s.id),
+    [loadedStudents],
   );
   const trackingStudentIdsKey = useMemo(
     () => trackingStudentIds.join(","),
@@ -2119,16 +2208,132 @@ function SearchPageContent() {
     [rooms, myGroupRooms, mySupervisedRooms],
   );
 
+  // These filters are applied after the backend result. The transit card uses
+  // the unfiltered loaded result because its target cannot apply these
+  // client-side filters.
+  const matchesNonStatusClientFilters = useCallback(
+    (student: Student) => {
+      if (
+        dayStatusFilter !== "all" &&
+        student.day_planning_status !== dayStatusFilter
+      ) {
+        return false;
+      }
+
+      // The school year (#2218), like bus / photo_consent / pickup_status below,
+      // is filtered server-side now, so the fetched page is already the filtered
+      // set and re-filtering here would only risk the two grammars drifting.
+
+      // bus / photo_consent / pickup_status (#1492) are filtered server-side now
+      // (see api/students applyAdministrativeFilters), so the page no longer
+      // re-filters them here. The fetched page is already the filtered set.
+
+      // Apply pickup time filter. For redacted students, missing pickup_time
+      // due to has_full_access=false is not the same as "no schedule")
+      if (pickupTimeFilter.length > 0) {
+        if (student.has_full_access === false) return false;
+        const matchesPickupTime = pickupTimeFilter.some((time) =>
+          time === "none"
+            ? !student.pickup_time && !student.pickup_is_exception
+            : student.pickup_time === time,
+        );
+        if (!matchesPickupTime) return false;
+      }
+
+      if (arrivalTimeFilter !== "all") {
+        if (student.has_full_access === false) return false;
+        if (arrivalTimeFilter === "none") {
+          if (student.arrival_time || student.arrival_is_exception)
+            return false;
+        } else if (student.arrival_time !== arrivalTimeFilter) {
+          return false;
+        }
+      }
+
+      if (
+        !matchesTrackingFilter(student, effectiveTrackingFilter, trackingData)
+      ) {
+        return false;
+      }
+
+      return true;
+    },
+    [
+      dayStatusFilter,
+      pickupTimeFilter,
+      arrivalTimeFilter,
+      effectiveTrackingFilter,
+      trackingData,
+    ],
+  );
+
+  // Apply additional client-side filtering for attendance statuses and year.
+  const matchesClientFilters = useCallback(
+    (student: Student) => {
+      // Apply attendance filter (neutralized for non-today planning dates)
+      if (effectiveAttendanceFilter !== "all") {
+        const isOnSite =
+          isPresentLocation(student.current_location) ||
+          isTransitLocation(student.current_location) ||
+          isSchoolyardLocation(student.current_location);
+
+        // Ein Ort, den keine andere Statusgruppe kennt, zählt wie in
+        // statusLabelForStudent als anwesend; sonst fiele das Kind durch jeden
+        // Statusfilter (#4588).
+        if (
+          effectiveAttendanceFilter === "anwesend" &&
+          !isOnSite &&
+          statusLabelForStudent(student) !== "Anwesend"
+        ) {
+          return false;
+        }
+
+        if (
+          effectiveAttendanceFilter !== "anwesend" &&
+          (effectiveAttendanceFilter === "entschuldigt-klassenfahrt"
+            ? !["Entschuldigt", "Klassenfahrt"].includes(
+                statusLabelForStudent(student),
+              )
+            : statusLabelForStudent(student) !==
+              STATUS_FILTER_LABELS[effectiveAttendanceFilter])
+        ) {
+          return false;
+        }
+      }
+
+      return matchesNonStatusClientFilters(student);
+    },
+    [effectiveAttendanceFilter, matchesNonStatusClientFilters],
+  );
+  const filteredStudents: Student[] = students.filter(matchesClientFilters);
+
   // The answers of the registration form as one choice each (#6954):
-  // "Seepferdchen vorhanden: Ja (12)". An active answer the list no longer
-  // offers (no child gave it any more) stays selectable so it can be undone.
+  // "Seepferdchen vorhanden: Ja (12)". The number is the children the list
+  // would show with that answer under its other filters (#7645). Until the
+  // rows are loaded, or while the server applies an answer it no longer
+  // offers, the page cannot count that and shows no number. An active answer
+  // the list no longer offers (no child gave it any more) stays selectable so
+  // it can be undone.
   const enrollmentAnswerOptions = useMemo(() => {
+    const shown =
+      rowsLoaded && serverEnrollmentAnswer === ""
+        ? new Set(
+            loadedStudents
+              .filter(matchesClientFilters)
+              .map((student) => student.id),
+          )
+        : null;
     const options = enrollmentAnswerQuestions.flatMap((question) =>
-      question.options.map((option) => ({
-        value: `${question.key}=${option.value}`,
-        label: `${answerQuestionLabel(question.label)}: ${option.label} (${option.count})`,
-        chip: `${answerQuestionLabel(question.label)}: ${option.label}`,
-      })),
+      question.options.map((option) => {
+        const answer = `${answerQuestionLabel(question.label)}: ${option.label}`;
+        return {
+          value: enrollmentAnswerValue(question, option),
+          label: shown
+            ? `${answer} (${option.studentIds.filter((id) => shown.has(id)).length})`
+            : answer,
+          chip: answer,
+        };
+      }),
     );
     if (
       effectiveEnrollmentAnswer &&
@@ -2141,7 +2346,14 @@ function SearchPageContent() {
       });
     }
     return options;
-  }, [enrollmentAnswerQuestions, effectiveEnrollmentAnswer]);
+  }, [
+    enrollmentAnswerQuestions,
+    effectiveEnrollmentAnswer,
+    rowsLoaded,
+    serverEnrollmentAnswer,
+    loadedStudents,
+    matchesClientFilters,
+  ]);
 
   // Grouping for the quiet filter popover. Lives here, not in the shared
   // panel: which student filters belong together is this page's domain
@@ -2833,101 +3045,6 @@ function SearchPageContent() {
     ],
   );
 
-  // These filters are applied after the backend result. The transit card uses
-  // the unfiltered loaded result because its target cannot apply these
-  // client-side filters.
-  const matchesNonStatusClientFilters = useCallback(
-    (student: Student) => {
-      if (
-        dayStatusFilter !== "all" &&
-        student.day_planning_status !== dayStatusFilter
-      ) {
-        return false;
-      }
-
-      // The school year (#2218), like bus / photo_consent / pickup_status below,
-      // is filtered server-side now, so the fetched page is already the filtered
-      // set and re-filtering here would only risk the two grammars drifting.
-
-      // bus / photo_consent / pickup_status (#1492) are filtered server-side now
-      // (see api/students applyAdministrativeFilters), so the page no longer
-      // re-filters them here. The fetched page is already the filtered set.
-
-      // Apply pickup time filter. For redacted students, missing pickup_time
-      // due to has_full_access=false is not the same as "no schedule")
-      if (pickupTimeFilter.length > 0) {
-        if (student.has_full_access === false) return false;
-        const matchesPickupTime = pickupTimeFilter.some((time) =>
-          time === "none"
-            ? !student.pickup_time && !student.pickup_is_exception
-            : student.pickup_time === time,
-        );
-        if (!matchesPickupTime) return false;
-      }
-
-      if (arrivalTimeFilter !== "all") {
-        if (student.has_full_access === false) return false;
-        if (arrivalTimeFilter === "none") {
-          if (student.arrival_time || student.arrival_is_exception)
-            return false;
-        } else if (student.arrival_time !== arrivalTimeFilter) {
-          return false;
-        }
-      }
-
-      if (
-        !matchesTrackingFilter(student, effectiveTrackingFilter, trackingData)
-      ) {
-        return false;
-      }
-
-      return true;
-    },
-    [
-      dayStatusFilter,
-      pickupTimeFilter,
-      arrivalTimeFilter,
-      effectiveTrackingFilter,
-      trackingData,
-    ],
-  );
-
-  // Apply additional client-side filtering for attendance statuses and year.
-  const filteredStudents: Student[] = students.filter((student) => {
-    // Apply attendance filter (neutralized for non-today planning dates)
-    if (effectiveAttendanceFilter !== "all") {
-      const isOnSite =
-        isPresentLocation(student.current_location) ||
-        isTransitLocation(student.current_location) ||
-        isSchoolyardLocation(student.current_location);
-
-      // Ein Ort, den keine andere Statusgruppe kennt, zählt wie in
-      // statusLabelForStudent als anwesend; sonst fiele das Kind durch jeden
-      // Statusfilter (#4588).
-      if (
-        effectiveAttendanceFilter === "anwesend" &&
-        !isOnSite &&
-        statusLabelForStudent(student) !== "Anwesend"
-      ) {
-        return false;
-      }
-
-      if (
-        effectiveAttendanceFilter !== "anwesend" &&
-        (effectiveAttendanceFilter === "entschuldigt-klassenfahrt"
-          ? !["Entschuldigt", "Klassenfahrt"].includes(
-              statusLabelForStudent(student),
-            )
-          : statusLabelForStudent(student) !==
-            STATUS_FILTER_LABELS[effectiveAttendanceFilter])
-      ) {
-        return false;
-      }
-    }
-
-    return matchesNonStatusClientFilters(student);
-  });
-
   // Apply sort mode (name = stable A-Z; arrival/pickup = daily operational order)
   const sortedStudents = useMemo(() => {
     if (sortMode === "name") return [...filteredStudents].sort(compareByName);
@@ -3334,6 +3451,7 @@ function SearchPageContent() {
           darunter Suche und Filter. */}
       <TenantPage
         title="Alle Kinder"
+        info="Hier findest du jedes Kind deiner OGS. Gib zuerst den Namen in die Suche ein. Wähle dann die Karte des Kindes, um seine Angaben zu sehen."
         tabs={childScope.tabs}
         stats={studentSummary}
         statsLoading={!hasFetchedOnce || isDateTransition}
@@ -3602,6 +3720,7 @@ function SearchPageContent() {
           <ForbiddenPage embedded message={load.error.message} />
         ) : null}
         <div hidden={isPermissionError}>
+          <LoadErrorAlert error={filterOptionsLoad.error} className="mb-3" />
           {/* Planning-date context banner (#1939). The day chooser itself lives in
           the filter panel, in the "Anwesenheit" section right above the
           Kommt/Kommt-nicht filter it scopes. This banner only appears for a

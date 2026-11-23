@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/api/testutil/routetest"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	identityoperator "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/operator"
@@ -206,7 +207,7 @@ func TestLogin_Success(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
-	resource.Login(rr, req)
+	testutil.ServeAtRoute(rr, req, "/operator/auth/login", resource.Login)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 
@@ -221,7 +222,7 @@ func TestLogin_Success(t *testing.T) {
 	assert.Equal(t, "refresh-token", data["refresh_token"])
 
 	operatorData := data["operator"].(map[string]interface{})
-	assert.Equal(t, float64(1), operatorData["id"])
+	assert.Equal(t, "1", operatorData["id"], "the operator id travels as a string")
 	assert.Equal(t, "test@example.com", operatorData["email"])
 	assert.Equal(t, "Test Operator", operatorData["display_name"])
 }
@@ -241,7 +242,7 @@ func TestLogin_EmptyEmail(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
-	resource.Login(rr, req)
+	testutil.ServeAtRoute(rr, req, "/operator/auth/login", resource.Login)
 
 	assert.Equal(t, http.StatusUnauthorized, rr.Code)
 	assert.Contains(t, rr.Body.String(), "Invalid email or password")
@@ -262,7 +263,7 @@ func TestLogin_EmptyPassword(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
-	resource.Login(rr, req)
+	testutil.ServeAtRoute(rr, req, "/operator/auth/login", resource.Login)
 
 	assert.Equal(t, http.StatusUnauthorized, rr.Code)
 	assert.Contains(t, rr.Body.String(), "Invalid email or password")
@@ -288,7 +289,7 @@ func TestLogin_InvalidCredentials(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
-	resource.Login(rr, req)
+	testutil.ServeAtRoute(rr, req, "/operator/auth/login", resource.Login)
 
 	assert.Equal(t, http.StatusUnauthorized, rr.Code)
 	assert.Contains(t, rr.Body.String(), "Invalid email or password")
@@ -314,7 +315,7 @@ func TestLogin_OperatorInactive(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
-	resource.Login(rr, req)
+	testutil.ServeAtRoute(rr, req, "/operator/auth/login", resource.Login)
 
 	assert.Equal(t, http.StatusForbidden, rr.Code)
 	assert.Contains(t, rr.Body.String(), "Operator account is inactive")
@@ -340,7 +341,7 @@ func TestLogin_OperatorNotFound(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
-	resource.Login(rr, req)
+	testutil.ServeAtRoute(rr, req, "/operator/auth/login", resource.Login)
 
 	assert.Equal(t, http.StatusUnauthorized, rr.Code)
 	assert.Contains(t, rr.Body.String(), "Invalid email or password")
@@ -366,7 +367,7 @@ func TestLogin_ServiceError(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
-	resource.Login(rr, req)
+	testutil.ServeAtRoute(rr, req, "/operator/auth/login", resource.Login)
 
 	assert.Equal(t, http.StatusInternalServerError, rr.Code)
 	assert.Contains(t, rr.Body.String(), "Authentication failed")
@@ -382,7 +383,7 @@ func TestLogin_InvalidJSON(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
-	resource.Login(rr, req)
+	testutil.ServeAtRoute(rr, req, "/operator/auth/login", resource.Login)
 
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
@@ -448,7 +449,7 @@ func TestLogin_ClientIPExtraction_IgnoresRawXRealIP(t *testing.T) {
 	req.RemoteAddr = "192.0.2.55:1234"
 	rr := httptest.NewRecorder()
 
-	resource.Login(rr, req)
+	testutil.ServeAtRoute(rr, req, "/operator/auth/login", resource.Login)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 	assert.Equal(t, "192.0.2.55", capturedIP)
@@ -465,7 +466,7 @@ func TestLoginRequest_Bind(t *testing.T) {
 	t.Parallel()
 
 	req := httptest.NewRequest(http.MethodPost, "/auth/login", nil)
-	loginReq := &identityoperator.LoginRequest{}
+	loginReq := &identityoperator.OperatorLoginRequest{}
 
 	err := loginReq.Bind(req)
 	assert.NoError(t, err)
@@ -510,7 +511,7 @@ func TestRefreshToken_Success(t *testing.T) {
 	req = req.WithContext(ctx)
 	rr := httptest.NewRecorder()
 
-	resource.RefreshToken(rr, req)
+	testutil.ServeAtRoute(rr, req, "/operator/auth/refresh", resource.RefreshToken)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 	assert.Equal(t, tokenString, handedThrough, "the handler hands the presented refresh JWT to the capability")
@@ -534,7 +535,7 @@ func TestRefreshToken_MissingTokenContext(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/auth/refresh", nil)
 	rr := httptest.NewRecorder()
 
-	resource.RefreshToken(rr, req)
+	testutil.ServeAtRoute(rr, req, "/operator/auth/refresh", resource.RefreshToken)
 
 	assert.Equal(t, http.StatusUnauthorized, rr.Code)
 	assert.Contains(t, rr.Body.String(), "Unauthorized")
@@ -567,7 +568,7 @@ func TestRefreshToken_ServiceError(t *testing.T) {
 	req = req.WithContext(ctx)
 	rr := httptest.NewRecorder()
 
-	resource.RefreshToken(rr, req)
+	testutil.ServeAtRoute(rr, req, "/operator/auth/refresh", resource.RefreshToken)
 
 	assert.Equal(t, http.StatusForbidden, rr.Code)
 	assert.Contains(t, rr.Body.String(), "Operator account is inactive")
@@ -597,7 +598,7 @@ func TestRefreshToken_InvalidRefreshSessionMapsToUnauthorized(t *testing.T) {
 	req = req.WithContext(ctx)
 	rr := httptest.NewRecorder()
 
-	resource.RefreshToken(rr, req)
+	testutil.ServeAtRoute(rr, req, "/operator/auth/refresh", resource.RefreshToken)
 
 	assert.Equal(t, http.StatusUnauthorized, rr.Code)
 	assert.Contains(t, rr.Body.String(), "Unauthorized")
@@ -610,6 +611,23 @@ func (m *mockOperatorAuthService) ChangeOperatorStatus(context.Context, identity
 
 func (m *mockOperatorAuthService) DeleteDeactivatedOperators(context.Context) (int, error) {
 	return 0, nil
+}
+
+// A confirmed revocation answers 204 (#5194).
+func TestOperatorLogout_RevokesTheSessionFamily(t *testing.T) {
+	t.Parallel()
+
+	resource := newIdentityResource(&mockOperatorAuthService{
+		logoutFn: func(context.Context, int64, string) error { return nil },
+	})
+	req := httptest.NewRequest(http.MethodPost, "/auth/logout", nil)
+	req = req.WithContext(context.WithValue(req.Context(), sessiontoken.CtxClaims,
+		sessiontoken.AppClaims{ID: 42, FamilyID: "family-42"}))
+	rr := httptest.NewRecorder()
+
+	testutil.ServeAtRoute(rr, req, "/operator/auth/logout", resource.Logout)
+
+	assert.Equal(t, http.StatusNoContent, rr.Code)
 }
 
 // A failed revocation answers with its code (#7209); the operator portal
@@ -631,7 +649,7 @@ func TestOperatorLogout_FailedRevocationCarriesItsCode(t *testing.T) {
 		sessiontoken.AppClaims{ID: 42, FamilyID: "family-42"}))
 	rr := httptest.NewRecorder()
 
-	resource.Logout(rr, req)
+	testutil.ServeAtRoute(rr, req, "/operator/auth/logout", resource.Logout)
 
 	assert.Equal(t, int64(42), gotOperator)
 	assert.Equal(t, "family-42", gotFamily)

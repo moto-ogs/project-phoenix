@@ -159,9 +159,9 @@ export function useSchulhofActions(
     try {
       await timetableOperationsApi.createAndStartSpontaneous({
         title: SCHULHOF_ROOM_NAME,
-        room_id: Number(schulhofState.roomId),
+        room_id: schulhofState.roomId,
         activity_group_id: schulhofState.activityGroupId
-          ? Number(schulhofState.activityGroupId)
+          ? schulhofState.activityGroupId
           : undefined,
         staff_ids: [currentStaffId],
       });

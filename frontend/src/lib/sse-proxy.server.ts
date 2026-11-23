@@ -1,9 +1,10 @@
 import { type NextRequest } from "next/server";
-import { getServerApiUrl } from "~/lib/server-api-url";
-import { clientIdentityHeaders } from "~/lib/client-headers.server";
+import { sendBackend } from "~/lib/backend-client.server";
+import { BackendUnavailableError } from "~/lib/api-response-error.server";
 import { type Logger } from "~/lib/logger";
 import { forwardBackendResponse } from "~/lib/backend-proxy-response.server";
 import { captureBffException } from "~/lib/sentry-bff.server";
+import { onDrain } from "~/lib/process-drain.server";
 
 function isAbortError(error: unknown): boolean {
   return error instanceof DOMException && error.name === "AbortError";
@@ -12,7 +13,7 @@ function isAbortError(error: unknown): boolean {
 export interface SSEProxyOptions {
   /** Bearer token injected server-side (EventSource cannot set headers). */
   readonly token: string;
-  /** Backend SSE path appended to getServerApiUrl(), e.g. "/api/sse/events". */
+  /** Backend SSE path, e.g. "/api/sse/events". */
   readonly upstreamPath: string;
   /** Per-portal logger so log lines keep their component name. */
   readonly logger: Logger;
@@ -58,18 +59,13 @@ export async function proxySSEStream(
   try {
     // Preserve query params (e.g. cache busters) though the backend ignores them.
     const qs = request.nextUrl.search ? request.nextUrl.search : "";
-    const backendResponse = await fetch(
-      `${getServerApiUrl()}${upstreamPath}${qs}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "text/event-stream",
-          ...clientIdentityHeaders(request.headers),
-        },
-        cache: "no-store",
-        signal: upstreamController.signal,
-      },
-    );
+    // The backend answers its headers at once (connected event); the
+    // header timeout of sendBackend does not cut off the running stream.
+    const backendResponse = await sendBackend(`${upstreamPath}${qs}`, token, {
+      headers: { Accept: "text/event-stream" },
+      request,
+      signal: upstreamController.signal,
+    });
 
     if (!backendResponse.ok) {
       cleanup();
@@ -86,13 +82,26 @@ export async function proxySSEStream(
 
     const reader = backendResponse.body.getReader();
     let downstreamCancelled = false;
+    let stopDrainWatch: () => void = () => undefined;
 
     const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        // This replica stops (#7226): end the stream cleanly, so the
+        // browser sees EOF and reconnects to another replica.
+        stopDrainWatch = onDrain(() => {
+          if (downstreamCancelled) return;
+          downstreamCancelled = true;
+          cleanup();
+          upstreamController.abort();
+          controller.close();
+        });
+      },
       async pull(controller) {
         try {
           const { done, value } = await reader.read();
 
           if (done) {
+            stopDrainWatch();
             cleanup();
             if (!downstreamCancelled) {
               controller.close();
@@ -104,6 +113,7 @@ export async function proxySSEStream(
             controller.enqueue(value);
           }
         } catch (error) {
+          stopDrainWatch();
           cleanup();
 
           if (
@@ -119,6 +129,7 @@ export async function proxySSEStream(
       },
       async cancel() {
         downstreamCancelled = true;
+        stopDrainWatch();
         cleanup();
         upstreamController.abort();
 
@@ -149,9 +160,12 @@ export async function proxySSEStream(
       return new Response(null, { status: 204 });
     }
 
-    captureBffException(error, request);
+    // sendBackend wraps an unreachable backend; report the network failure.
+    const failure =
+      error instanceof BackendUnavailableError ? error.cause : error;
+    captureBffException(failure, request);
     logger.error("SSE proxy error", {
-      error: error instanceof Error ? error.message : String(error),
+      error: failure instanceof Error ? failure.message : String(failure),
     });
     return new Response("Internal server error", { status: 500 });
   }

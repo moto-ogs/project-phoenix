@@ -2173,6 +2173,21 @@ describe("MobileBottomNav", () => {
       mockUsePathname.mockReturnValue("/operator/organizations");
     });
 
+    // The operator's own settings live at /settings on the operator host.
+    // They must not switch the bar to the school's settings sections, whose
+    // schema request (/api/settings/schema) has no route on that host.
+    it("keeps the operator items on the operator's /settings page", () => {
+      mockUsePathname.mockReturnValue("/settings");
+
+      render(<MobileBottomNav />);
+
+      const hrefs = screen
+        .getAllByRole("link")
+        .map((link) => link.getAttribute("href"));
+      expect(hrefs).toContain("/operator/organizations");
+      expect(screen.queryByText("Zurück zur App")).not.toBeInTheDocument();
+    });
+
     it("renders operator main items", () => {
       render(<MobileBottomNav />);
 

@@ -4,12 +4,12 @@ package presence
 import (
 	"context"
 	"errors"
-	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -26,83 +26,6 @@ func (s supervisionQueryStub) ListLiveGroups(ctx context.Context, ids []int64) (
 
 func (s supervisionQueryStub) QueryGroupSupervisions(ctx context.Context, filter studentpresence.GroupSupervisionFilter) ([]studentpresence.GroupSupervision, error) {
 	return s.query(ctx, filter)
-}
-
-func TestStaffSupervisionAccessGatesGroupLookup(t *testing.T) {
-	t.Parallel()
-	const staffID int64 = 9
-	for _, tc := range []struct {
-		name     string
-		groupID  int64
-		queryErr error
-		status   int
-		lookup   bool
-	}{
-		{name: "authorized", groupID: 7, status: 200, lookup: true},
-		{name: "other group", groupID: 8, status: 403},
-		{name: "partial failure", groupID: 7, queryErr: errors.New("storage unavailable"), status: 500},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
-			request := httptest.NewRequest("GET", "/groups/7", nil).WithContext(ctx)
-			response := httptest.NewRecorder()
-			lookedUp := false
-			rs := &Resource{runtime: RequestRuntime{Now: time.Now}, Presence: supervisionQueryStub{
-				query: func(ctx context.Context, filter studentpresence.GroupSupervisionFilter) ([]studentpresence.GroupSupervision, error) {
-					assert.Same(t, request.Context(), ctx)
-					require.NotNil(t, filter.StaffID)
-					assert.Equal(t, staffID, *filter.StaffID)
-					require.NotNil(t, filter.ActiveOn)
-					return []studentpresence.GroupSupervision{{StaffID: staffID, GroupID: tc.groupID, StartDate: "2020-01-01"}}, tc.queryErr
-				},
-				groups: func(ctx context.Context, ids []int64) ([]studentpresence.LiveGroup, error) {
-					lookedUp = true
-					assert.Same(t, request.Context(), ctx)
-					assert.Equal(t, []int64{7}, ids)
-					return []studentpresence.LiveGroup{{ID: 7}}, nil
-				},
-			}}
-			err := rs.verifyStaffSupervisionAccess(response, request, staffID, 7)
-			assert.Equal(t, tc.lookup, lookedUp)
-			assert.Equal(t, tc.status, response.Code)
-			if tc.status == 200 {
-				require.NoError(t, err)
-			} else {
-				require.Error(t, err)
-			}
-		})
-	}
-}
-
-func TestVisitAccessSupervisionsDiscardPartialFailures(t *testing.T) {
-	t.Parallel()
-	input := []studentpresence.GroupSupervision{{GroupID: 7, StaffID: 9}, {GroupID: 8, StaffID: 9}}
-	for _, fail := range []bool{false, true} {
-		ctx, cancel := context.WithCancel(context.Background())
-		queried := false
-		rs := &Resource{runtime: RequestRuntime{Now: time.Now}, Presence: supervisionQueryStub{query: func(got context.Context, filter studentpresence.GroupSupervisionFilter) ([]studentpresence.GroupSupervision, error) {
-			queried = true
-			assert.Same(t, ctx, got)
-			require.NotNil(t, filter.StaffID)
-			assert.Equal(t, input[0].StaffID, *filter.StaffID)
-			require.NotNil(t, filter.ActiveOn)
-			_, err := calendar.ParseDate(*filter.ActiveOn)
-			require.NoError(t, err)
-			if fail {
-				return input, errors.New("storage unavailable")
-			}
-			return input, nil
-		}}}
-		ids := (visitAccessQuery{resource: rs}).SupervisedActiveGroupIDs(ctx, input[0].StaffID)
-		assert.True(t, queried)
-		if fail {
-			assert.Nil(t, ids)
-		} else {
-			assert.Equal(t, []int64{input[0].GroupID, input[1].GroupID}, ids)
-		}
-		cancel()
-	}
 }
 
 func TestSessionSupervisorsPreserveExistenceGate(t *testing.T) {
@@ -150,8 +73,8 @@ func TestSessionSupervisorsPreserveExistenceGate(t *testing.T) {
 			}
 			require.NoError(t, err)
 			require.Len(t, rows, 1)
-			assert.Equal(t, supervision.ID, rows[0].ID)
-			assert.Equal(t, supervision.StaffID, rows[0].StaffID)
+			assert.Equal(t, ident.ID(supervision.ID), rows[0].ID)
+			assert.Equal(t, ident.ID(supervision.StaffID), rows[0].StaffID)
 		})
 	}
 }
@@ -185,9 +108,9 @@ func TestPresenceSupervisionResponseDateContract(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, tc.active, row.IsActive)
 			assert.Equal(t, tc.start+"T00:00:00Z", row.StartTime.Format(time.RFC3339))
-			assert.Equal(t, input.ID, row.ID)
-			assert.Equal(t, input.StaffID, row.StaffID)
-			assert.Equal(t, input.GroupID, row.ActiveGroupID)
+			assert.Equal(t, ident.ID(input.ID), row.ID)
+			assert.Equal(t, ident.ID(input.StaffID), row.StaffID)
+			assert.Equal(t, ident.ID(input.GroupID), row.ActiveGroupID)
 			assert.Equal(t, now, row.CreatedAt)
 			assert.Equal(t, now, row.UpdatedAt)
 			if tc.end == nil {

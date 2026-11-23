@@ -1,3 +1,4 @@
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the Träger's utilization over time (#4713, ADR 0241): for a
  * window, one value per weekday for every school, care offering and room.
@@ -10,14 +11,14 @@ import {
   downloadTraegerList,
   type TraegerListFile,
   type TraegerListFormat,
+  listExportQuery,
 } from "./traeger-list-export";
+import type * as traegerSchoolsContract from "./contract/traeger-schools.generated";
+import { requiredDay } from "./contract/required-day";
 import type { TraegerSchool } from "./traeger-api";
-import { traegerRequest } from "./traeger-api";
 
 /** The right that opens the children of a school by name (ADR 0156, 0241). */
 export const UTILIZATION_NAMES_RIGHT = "traeger_contracts:manage";
-
-const UTILIZATION_PATH = "/api/traeger/schools/utilization";
 
 export interface UtilizationOffering {
   readonly id: string;
@@ -88,110 +89,46 @@ export interface UtilizationChildren {
   readonly children: readonly UtilizationChild[];
 }
 
-interface BackendSchool {
-  id: number;
-  name: string;
-  slug: string;
-  subdomain: string;
-  city?: string;
-}
-
-interface BackendUtilization {
-  from: string;
-  to: string;
-  days?: string[] | null;
-  as_of: string;
-  schools?:
-    | (BackendSchool & {
-        places: number;
-        booked?: number[] | null;
-        booked_places?: number[] | null;
-        present?: (number | null)[] | null;
-        attendance_from: string | null;
-        room_data_from: string | null;
-        offerings?:
-          | {
-              id: number;
-              name: string;
-              capacity: number | null;
-              active: boolean;
-              booked?: number[] | null;
-            }[]
-          | null;
-        rooms?:
-          | {
-              id: number;
-              name: string;
-              capacity: number | null;
-              children?: (number | null)[] | null;
-              peak?: (number | null)[] | null;
-            }[]
-          | null;
-      })[]
-    | null;
-}
-
-interface BackendChildren {
-  school: BackendSchool;
-  from: string;
-  to: string;
-  children?:
-    | {
-        student_id: number;
-        first_name: string;
-        last_name: string;
-        school_class: string;
-        group_name: string;
-        care_days: number;
-        present_days: number;
-        sick_days: number;
-        excused_days: number;
-        unexplained_days: number;
-        attendance_rate: number | null;
-      }[]
-    | null;
-}
-
 export interface UtilizationWindow {
   readonly from: string;
   readonly to: string;
 }
 
-function windowQuery(window: UtilizationWindow, schoolId?: string): string {
-  const query = new URLSearchParams({ from: window.from, to: window.to });
-  if (schoolId) query.set("school", schoolId);
-  return query.toString();
+function windowQuery(window: UtilizationWindow, schoolId?: string) {
+  return { from: window.from, to: window.to, school: schoolId || undefined };
 }
 
-function utilizationFromBackend(body: BackendUtilization): TraegerUtilization {
+function utilizationFromBackend(
+  body: traegerSchoolsContract.Utilization,
+): TraegerUtilization {
   return {
-    from: body.from,
-    to: body.to,
-    days: body.days ?? [],
+    from: requiredDay(body.from, "utilization.from"),
+    to: requiredDay(body.to, "utilization.to"),
+    days: (body.days ?? []).map((day) => requiredDay(day, "utilization.days")),
     asOf: body.as_of,
     schools: (body.schools ?? []).map((school) => ({
-      id: String(school.id),
+      id: school.id,
       name: school.name,
       slug: school.slug,
       subdomain: school.subdomain,
-      city: school.city ?? "",
+      city: school.city,
       places: school.places,
       booked: school.booked ?? [],
       bookedPlaces: school.booked_places ?? [],
       present: school.present ?? [],
-      attendanceFrom: school.attendance_from ?? null,
-      roomDataFrom: school.room_data_from ?? null,
+      attendanceFrom: school.attendance_from,
+      roomDataFrom: school.room_data_from,
       offerings: (school.offerings ?? []).map((offering) => ({
-        id: String(offering.id),
+        id: offering.id,
         name: offering.name,
-        capacity: offering.capacity ?? null,
+        capacity: offering.capacity,
         active: offering.active,
         booked: offering.booked ?? [],
       })),
       rooms: (school.rooms ?? []).map((room) => ({
-        id: String(room.id),
+        id: room.id,
         name: room.name,
-        capacity: room.capacity ?? null,
+        capacity: room.capacity,
         children: room.children ?? [],
         peak: room.peak ?? [],
       })),
@@ -204,9 +141,9 @@ export async function fetchTraegerUtilization(
   window: UtilizationWindow,
 ): Promise<TraegerUtilization> {
   return utilizationFromBackend(
-    await traegerRequest<BackendUtilization>(
-      `${UTILIZATION_PATH}?${windowQuery(window)}`,
-    ),
+    await bffJson("org", "GET /traeger/schools/utilization", {
+      query: windowQuery(window),
+    }),
   );
 }
 
@@ -215,16 +152,18 @@ export async function fetchUtilizationChildren(
   schoolId: string,
   window: UtilizationWindow,
 ): Promise<UtilizationChildren> {
-  const body = await traegerRequest<BackendChildren>(
-    `/api/traeger/schools/${encodeURIComponent(schoolId)}/utilization/children?${windowQuery(window)}`,
+  const body = await bffJson(
+    "org",
+    "GET /traeger/schools/{id}/utilization/children",
+    { params: { id: schoolId }, query: windowQuery(window) },
   );
   return {
-    schoolId: String(body.school.id),
+    schoolId: body.school.id,
     schoolName: body.school.name,
-    from: body.from,
-    to: body.to,
+    from: requiredDay(body.from, "utilization_children.from"),
+    to: requiredDay(body.to, "utilization_children.to"),
     children: (body.children ?? []).map((child) => ({
-      studentId: String(child.student_id),
+      studentId: child.student_id,
       firstName: child.first_name,
       lastName: child.last_name,
       schoolClass: child.school_class,
@@ -234,7 +173,7 @@ export async function fetchUtilizationChildren(
       sickDays: child.sick_days,
       excusedDays: child.excused_days,
       unexplainedDays: child.unexplained_days,
-      attendanceRate: child.attendance_rate ?? null,
+      attendanceRate: child.attendance_rate,
     })),
   };
 }
@@ -245,9 +184,13 @@ export function downloadTraegerUtilization(
   schoolId: string | undefined,
   format: TraegerListFormat,
 ): Promise<TraegerListFile> {
-  return downloadTraegerList(`${UTILIZATION_PATH}/export`, format, {
-    from: window.from,
-    to: window.to,
-    school: schoolId,
-  });
+  return downloadTraegerList(
+    bffFile("org", "GET /traeger/schools/utilization/export", {
+      query: listExportQuery(format, {
+        from: window.from,
+        to: window.to,
+        school: schoolId,
+      }),
+    }),
+  );
 }

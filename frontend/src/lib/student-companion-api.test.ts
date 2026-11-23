@@ -8,16 +8,17 @@ import {
   formatCompanionWeekdays,
 } from "./student-companion-api";
 
-const { mockSessionFetch } = vi.hoisted(() => ({
-  mockSessionFetch:
-    vi.fn<(url: string, init?: RequestInit) => Promise<Response>>(),
-}));
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 
-vi.mock("./session-cache", () => ({ sessionFetch: mockSessionFetch }));
+const fetchMock =
+  vi.fn<(url: string, init?: RequestInit) => Promise<Response>>();
+beforeEach(() => {
+  vi.stubGlobal("fetch", fetchMock);
+});
 
 describe("student-companion-api", () => {
   beforeEach(() => {
-    mockSessionFetch.mockReset();
+    fetchMock.mockReset();
   });
 
   describe("COMPANION_WEEKDAYS", () => {
@@ -47,59 +48,72 @@ describe("student-companion-api", () => {
   });
 
   describe("fetchStudentCompanions", () => {
-    it("fetches the companion list and maps ids to strings", async () => {
-      mockSessionFetch.mockResolvedValueOnce(
+    it("fetches the companion list of the contract", async () => {
+      fetchMock.mockResolvedValueOnce(
         Response.json({
-          success: true,
-          data: [
-            {
-              // The backend serializes the int64 id as a JSON number …
-              companion_student_id: 7,
-              first_name: "Lina",
-              last_name: "Klein",
-              weekdays: ["mon", "tue"],
-            },
-            { companion_student_id: 8 },
-          ],
+          status: "success",
+          data: {
+            companions: [
+              {
+                companion_student_id: "7",
+                first_name: "Lina",
+                last_name: "Klein",
+                weekdays: ["mon", "tue"],
+              },
+              { companion_student_id: "8", weekdays: null },
+            ],
+            fingerprint: "server-token",
+          },
         }),
       );
 
       const result = await fetchStudentCompanions("42");
 
-      expect(mockSessionFetch).toHaveBeenCalledWith(
-        "/api/students/42/companions",
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/students/42/companion-links",
         expect.objectContaining({ method: "GET" }),
       );
-      // … and the client maps it to a string like every other backend id.
-      expect(result).toEqual([
-        {
-          companion_student_id: "7",
-          first_name: "Lina",
-          last_name: "Klein",
-          weekdays: ["mon", "tue"],
-        },
-        {
-          companion_student_id: "8",
-          first_name: undefined,
-          last_name: undefined,
-          weekdays: [],
-        },
-      ]);
+      // The fingerprint is the server's, passed on untouched (ADR 0311).
+      expect(result).toEqual({
+        fingerprint: "server-token",
+        companions: [
+          {
+            companion_student_id: "7",
+            first_name: "Lina",
+            last_name: "Klein",
+            weekdays: ["mon", "tue"],
+          },
+          {
+            companion_student_id: "8",
+            weekdays: [],
+          },
+        ],
+      });
     });
 
-    it("returns an empty array for a null list or a 204", async () => {
-      mockSessionFetch
-        .mockResolvedValueOnce(Response.json({ success: true, data: null }))
-        .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    it("drops a weekday this build does not know", async () => {
+      fetchMock.mockResolvedValueOnce(
+        Response.json({
+          status: "success",
+          data: {
+            companions: [
+              { companion_student_id: "7", weekdays: ["mon", "sat"] },
+            ],
+            fingerprint: "f",
+          },
+        }),
+      );
 
-      await expect(fetchStudentCompanions("42")).resolves.toEqual([]);
-      await expect(fetchStudentCompanions("42")).resolves.toEqual([]);
+      await expect(fetchStudentCompanions("42")).resolves.toEqual({
+        fingerprint: "f",
+        companions: [{ companion_student_id: "7", weekdays: ["mon"] }],
+      });
     });
   });
 
   describe("error handling", () => {
     it("keeps the backend diagnostic out of the message", async () => {
-      mockSessionFetch.mockResolvedValueOnce(
+      fetchMock.mockResolvedValueOnce(
         Response.json(
           {
             status: 400,
@@ -120,7 +134,7 @@ describe("student-companion-api", () => {
     });
 
     it("throws an ApiError with code and request ID for the shared error path", async () => {
-      mockSessionFetch.mockResolvedValueOnce(
+      fetchMock.mockResolvedValueOnce(
         Response.json(
           {
             detail: "unavailable",
@@ -143,7 +157,7 @@ describe("student-companion-api", () => {
     });
 
     it("classifies a body that is not JSON by its status", async () => {
-      mockSessionFetch.mockResolvedValueOnce(
+      fetchMock.mockResolvedValueOnce(
         new Response("server exploded", { status: 500 }),
       );
 

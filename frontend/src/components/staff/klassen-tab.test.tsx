@@ -33,43 +33,43 @@ const render = (ui: ReactNode) => renderRaw(ui, { wrapper: Providers });
 
 const OBJECT = "die Zuweisung der Schulklassen";
 
-const { mockAuthFetch, mockFetchSchoolClasses } = vi.hoisted(() => ({
-  mockAuthFetch: vi.fn(),
+const { mockBffJson, mockFetchSchoolClasses } = vi.hoisted(() => ({
+  mockBffJson: vi.fn(),
   mockFetchSchoolClasses: vi.fn(),
 }));
 
-vi.mock("~/lib/api-helpers", () => ({ authFetch: mockAuthFetch }));
+vi.mock("~/lib/bff-fetch", () => ({ bffJson: mockBffJson }));
 vi.mock("~/lib/student-api", () => ({
   fetchSchoolClasses: mockFetchSchoolClasses,
 }));
 
 function mockLoad(assigned: string[], known: string[] = ["1a", "2b", "3c"]) {
   mockFetchSchoolClasses.mockResolvedValue(known);
-  mockAuthFetch.mockImplementation(
-    (_url: string, init?: { method?: string }) => {
-      if (init?.method === "PUT") {
-        const body = (init as { body: { school_classes: string[] } }).body;
+  mockBffJson.mockImplementation(
+    (
+      _portal: string,
+      route: string,
+      options?: { body?: { school_classes: string[] } },
+    ) => {
+      if (route.startsWith("PUT ")) {
         return Promise.resolve({
-          success: true,
-          data: { staff_id: 7, school_classes: body.school_classes },
+          staff_id: "7",
+          school_classes: options?.body?.school_classes ?? [],
         });
       }
-      return Promise.resolve({
-        success: true,
-        data: { staff_id: 7, school_classes: assigned },
-      });
+      return Promise.resolve({ staff_id: "7", school_classes: assigned });
     },
   );
 }
 
 const putCalls = () =>
-  mockAuthFetch.mock.calls.filter(
-    ([, init]) => (init as { method?: string } | undefined)?.method === "PUT",
-  );
+  mockBffJson.mock.calls
+    .filter(([, route]) => String(route).startsWith("PUT "))
+    .map(([, route, options]) => [route, options]);
 
 describe("KlassenTab", () => {
   beforeEach(() => {
-    mockAuthFetch.mockReset();
+    mockBffJson.mockReset();
     mockFetchSchoolClasses.mockReset();
     mockFetchSchoolClasses.mockResolvedValue([]);
   });
@@ -116,9 +116,9 @@ describe("KlassenTab", () => {
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
     await waitFor(() => expect(putCalls()).toHaveLength(1));
-    expect(putCalls()[0]?.[0]).toBe("/api/staff/7/school-classes");
+    expect(putCalls()[0]?.[0]).toBe("PUT /api/staff/{id}/school-classes");
     expect(putCalls()[0]?.[1]).toMatchObject({
-      method: "PUT",
+      params: { id: "7" },
       body: { school_classes: ["2b"] },
     });
 
@@ -157,7 +157,7 @@ describe("KlassenTab", () => {
       screen.getByRole("button", { name: "Klasse 1a entfernen" }),
     );
 
-    mockAuthFetch.mockImplementationOnce(() =>
+    mockBffJson.mockImplementationOnce(() =>
       Promise.reject(
         new ApiError("boom", 500, {
           code: "general.server",
@@ -185,7 +185,7 @@ describe("KlassenTab", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Klasse 1a entfernen" }),
     );
-    mockAuthFetch.mockImplementationOnce(() =>
+    mockBffJson.mockImplementationOnce(() =>
       Promise.reject(
         new ApiError("down", 503, { code: "general.unavailable" }),
       ),
@@ -214,7 +214,7 @@ describe("KlassenTab", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Klasse 1a entfernen" }),
     );
-    mockAuthFetch.mockImplementationOnce(() =>
+    mockBffJson.mockImplementationOnce(() =>
       Promise.reject(
         new ApiError("invalid", 400, {
           code: "general.input",
@@ -235,19 +235,13 @@ describe("KlassenTab", () => {
 
   it("shows a failed load in place with a retry", async () => {
     let fail = true;
-    mockAuthFetch.mockImplementation((url: string) => {
-      if (url === "/api/students/school-classes") {
-        return Promise.resolve({ success: true, data: [] });
-      }
+    mockBffJson.mockImplementation(() => {
       if (fail) {
         return Promise.reject(
           new ApiError("down", 503, { code: "general.unavailable" }),
         );
       }
-      return Promise.resolve({
-        success: true,
-        data: { staff_id: 7, school_classes: ["4d"] },
-      });
+      return Promise.resolve({ staff_id: "7", school_classes: ["4d"] });
     });
     render(<KlassenTab staffId="7" canEdit />);
 

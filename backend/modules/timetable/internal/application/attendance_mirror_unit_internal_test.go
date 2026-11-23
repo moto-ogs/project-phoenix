@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -62,7 +63,7 @@ func (f *fakeInstanceRepo) FindByActiveGroups(_ context.Context, groupIDs []int6
 	}
 	instance := *f.instance
 	if instance.ActiveGroupID == nil && len(groupIDs) > 0 {
-		instance.ActiveGroupID = &groupIDs[0]
+		instance.ActiveGroupID = (*ident.ID)(&groupIDs[0])
 	}
 	return []*timetable.ScheduledInstance{&instance}, nil
 }
@@ -90,12 +91,6 @@ type fakeInstanceStudentRepo struct {
 	checkoutErr    error
 	checkoutCalls  int
 	checkoutID     int64
-	reconcileErr   error
-	reconcileCalls int
-	previousIn     time.Time
-	previousOut    *time.Time
-	updatedIn      time.Time
-	updatedOut     *time.Time
 
 	checkinBatchCalls  int
 	checkinBatchKeys   []timetable.InstanceStudentKey
@@ -149,22 +144,6 @@ func (f *fakeInstanceStudentRepo) UpdateAttendanceCheckout(_ context.Context, in
 	return f.checkoutErr
 }
 
-func (f *fakeInstanceStudentRepo) ReconcileAttendanceInterval(
-	_ context.Context,
-	_, _ int64,
-	previousIn time.Time,
-	previousOut *time.Time,
-	updatedIn time.Time,
-	updatedOut *time.Time,
-) (bool, error) {
-	f.reconcileCalls++
-	f.previousIn = previousIn
-	f.previousOut = previousOut
-	f.updatedIn = updatedIn
-	f.updatedOut = updatedOut
-	return f.reconcileErr == nil, f.reconcileErr
-}
-
 func (f *fakeInstanceStudentRepo) FindCurrentCandidates(context.Context, int64, calendar.Date, time.Time) ([]*timetable.ScheduledParticipant, error) {
 	if f.candidatePanic != nil {
 		panic(f.candidatePanic)
@@ -209,7 +188,7 @@ func validVisit() timetable.AttendanceVisit {
 
 func instanceWithID(id int64) *timetable.ScheduledInstance {
 	inst := &timetable.ScheduledInstance{}
-	inst.ID = id
+	inst.ID = ident.ID(id)
 	return inst
 }
 
@@ -803,82 +782,6 @@ func TestMirrorCheckOutAt_ClosesLatestOpenSlot(t *testing.T) {
 	assert.Equal(t, int64(88), isRepo.checkoutID)
 }
 
-func TestMirrorVisitRevision_ReconcilesExactPreviousInterval(t *testing.T) {
-	t.Parallel()
-
-	previous := validVisit()
-	previousExit := previous.EntryTime.Add(time.Hour)
-	previous.ExitTime = &previousExit
-	updated := previous
-	updated.EntryTime = previous.EntryTime.Add(10 * time.Minute)
-	updated.ExitTime = nil
-	isRepo := &fakeInstanceStudentRepo{}
-	syncer := newUnitSyncer(&fakeInstanceRepo{instance: instanceWithID(7)}, isRepo)
-
-	require.NoError(t, syncer.MirrorVisitRevision(context.Background(), previous, updated))
-
-	require.Equal(t, 1, isRepo.reconcileCalls)
-	assert.Equal(t, previous.EntryTime, isRepo.previousIn)
-	require.NotNil(t, isRepo.previousOut)
-	assert.Equal(t, previousExit, *isRepo.previousOut)
-	assert.Equal(t, updated.EntryTime, isRepo.updatedIn)
-	assert.Nil(t, isRepo.updatedOut)
-}
-
-func TestMirrorVisitRevision_IgnoresIdentityAndGroupChanges(t *testing.T) {
-	t.Parallel()
-
-	previous := validVisit()
-	tests := []struct {
-		name   string
-		mutate func(*timetable.AttendanceVisit)
-	}{
-		{name: "student", mutate: func(v *timetable.AttendanceVisit) { v.StudentID++ }},
-		{name: "group", mutate: func(v *timetable.AttendanceVisit) { v.ActiveGroupID++ }},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			updated := previous
-			tt.mutate(&updated)
-			isRepo := &fakeInstanceStudentRepo{}
-			require.NoError(t, newUnitSyncer(&fakeInstanceRepo{instance: instanceWithID(7)}, isRepo).
-				MirrorVisitRevision(context.Background(), previous, updated))
-			assert.Zero(t, isRepo.reconcileCalls)
-		})
-	}
-}
-
-func TestMirrorVisitRevision_PropagatesFailures(t *testing.T) {
-	t.Parallel()
-	injected := errors.New("revision failure")
-	for _, stage := range []string{"read", "write", "panic"} {
-		t.Run(stage, func(t *testing.T) {
-			instances := &fakeInstanceRepo{instance: instanceWithID(7)}
-			rows := &fakeInstanceStudentRepo{}
-			switch stage {
-			case "read":
-				instances.findErr = injected
-			case "write":
-				rows.reconcileErr = injected
-			case "panic":
-				instances.findPanic = "unexpected failure"
-			}
-			previous := validVisit()
-			updated := previous
-			updated.EntryTime = previous.EntryTime.Add(time.Minute)
-			err := newUnitSyncer(instances, rows).MirrorVisitRevision(context.Background(), previous, updated)
-			if stage == "panic" {
-				require.ErrorContains(t, err, "attendance visit revision panic")
-			} else {
-				require.ErrorIs(t, err, injected)
-			}
-			if stage != "write" {
-				assert.Zero(t, rows.reconcileCalls)
-			}
-		})
-	}
-}
-
 func TestMirrorCheckOutAt_HandlesFailures(t *testing.T) {
 	t.Parallel()
 
@@ -1212,5 +1115,5 @@ func mirrorInstanceCallbacks(rows *fakeInstanceRepo) *ports.MirrorInstances {
 }
 func mirrorParticipantCallbacks(rows *fakeInstanceStudentRepo) *ports.MirrorParticipants {
 	return &ports.MirrorParticipants{
-		FindByInstanceAndStudent: rows.FindByInstanceAndStudent, FindCurrentCandidates: rows.FindCurrentCandidates, FindCurrentCandidatesByStudentIDs: rows.FindCurrentCandidatesByStudentIDs, FindByStudentAndDateRange: rows.FindByStudentAndDateRange, FindByStudentIDsAndDate: rows.FindByStudentIDsAndDate, CreateUnplannedPresentIfAbsent: rows.CreateUnplannedPresentIfAbsent, UpdateAttendanceFromCheckin: rows.UpdateAttendanceFromCheckin, UpdateAttendanceFromCheckinBatch: rows.UpdateAttendanceFromCheckinBatch, UpdateAttendanceCheckout: rows.UpdateAttendanceCheckout, UpdateAttendanceCheckoutBatch: rows.UpdateAttendanceCheckoutBatch, ReconcileAttendanceInterval: rows.ReconcileAttendanceInterval}
+		FindByInstanceAndStudent: rows.FindByInstanceAndStudent, FindCurrentCandidates: rows.FindCurrentCandidates, FindCurrentCandidatesByStudentIDs: rows.FindCurrentCandidatesByStudentIDs, FindByStudentAndDateRange: rows.FindByStudentAndDateRange, FindByStudentIDsAndDate: rows.FindByStudentIDsAndDate, CreateUnplannedPresentIfAbsent: rows.CreateUnplannedPresentIfAbsent, UpdateAttendanceFromCheckin: rows.UpdateAttendanceFromCheckin, UpdateAttendanceFromCheckinBatch: rows.UpdateAttendanceFromCheckinBatch, UpdateAttendanceCheckout: rows.UpdateAttendanceCheckout, UpdateAttendanceCheckoutBatch: rows.UpdateAttendanceCheckoutBatch}
 }

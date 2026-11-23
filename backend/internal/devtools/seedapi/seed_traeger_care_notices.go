@@ -2,11 +2,11 @@ package api
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"slices"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The Jahresbescheid of the demo Träger (#6219): the template of the fee
@@ -39,13 +39,13 @@ const (
 )
 
 type seedCareNoticeRun struct {
-	ID           int64   `json:"id"`
-	Year         int     `json:"year"`
-	Status       string  `json:"status"`
-	SchoolIDs    []int64 `json:"school_ids"`
-	PreviewCount int     `json:"preview_count"`
-	PreviewCents int64   `json:"preview_cents"`
-	Fingerprint  string  `json:"fingerprint"`
+	ID           ident.ID   `json:"id"`
+	Year         int        `json:"year"`
+	Status       string     `json:"status"`
+	SchoolIDs    []ident.ID `json:"school_ids"`
+	PreviewCount int        `json:"preview_count"`
+	PreviewCents int64      `json:"preview_cents" contract:"number"`
+	Fingerprint  string     `json:"fingerprint"`
 }
 
 // seedCareNotices issues the Jahresbescheide of the months after current up
@@ -135,32 +135,7 @@ func monthAfter(month calendar.Date) calendar.Date {
 // seedNoticeTemplateOnce saves the template of the fee notice while the
 // Träger still writes with the standard one.
 func seedNoticeTemplateOnce(client *Client, auth AuthRef) error {
-	raw, err := client.GetWithAuth(auth, "/traeger/master-data/document-templates/bescheid")
-	if err != nil {
-		return fmt.Errorf("read the Träger template of the fee notice: %w", err)
-	}
-	var envelope struct {
-		Data struct {
-			Current struct {
-				Standard bool `json:"standard"`
-			} `json:"current"`
-		} `json:"data"`
-	}
-	if err := json.Unmarshal(raw, &envelope); err != nil {
-		return fmt.Errorf("read the Träger template of the fee notice: %w", err)
-	}
-	if !envelope.Data.Current.Standard {
-		return nil
-	}
-	_, err = client.PostWithAuth(auth, "/traeger/master-data/document-templates/bescheid/versions", seedTraegerNoticeTemplate)
-	var refused *APIError
-	if errors.As(err, &refused) && refused.Code == seedTraegerTemplateUnchanged {
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("save the Träger template of the fee notice: %w", err)
-	}
-	return nil
+	return seedTraegerTemplateOnce(client, auth, "bescheid", seedTraegerNoticeTemplate, "the fee notice")
 }
 
 // seedStartNoticeRun starts the notice run of the year for the school
@@ -201,8 +176,8 @@ func seedOpenNoticeRun(client *Client, auth AuthRef, school int64, year int) (in
 		if run.Year != year || run.Status != "calculated" {
 			continue
 		}
-		if slices.Contains(run.SchoolIDs, school) {
-			return run.ID, nil
+		if slices.Contains(run.SchoolIDs, ident.ID(school)) {
+			return int64(run.ID), nil
 		}
 		fmt.Printf("  Träger fee notices: the open notice run %d of %d assesses other schools; skipped\n", run.ID, year)
 		return 0, nil

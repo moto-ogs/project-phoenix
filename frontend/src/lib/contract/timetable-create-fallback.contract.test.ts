@@ -1,9 +1,9 @@
 import { NextRequest } from "next/server";
 import { describe, expect, it, vi } from "vitest";
 import { mapInstance } from "~/lib/timetable-helpers";
-import type { BackendEnrichedInstance } from "~/lib/timetable-types";
 import { makeCatalogProxy } from "./catalog-proxy.server";
 import { portalRoutes } from "./portals.generated";
+import type { enrichedInstance } from "./timetable.generated";
 
 /**
  * A created block whose enriched re-read failed (#2352): the backend answers
@@ -15,7 +15,7 @@ const createdWithoutEnrichment = {
   status: "success",
   data: {
     enrich_warning: "enrichment failed: read failed",
-    id: 41,
+    id: "41",
     date: "2026-11-18",
     start_time: "13:30",
     end_time: "14:15",
@@ -24,7 +24,7 @@ const createdWithoutEnrichment = {
     is_spontaneous: false,
     is_live: false,
     activity_type: "",
-    room_id: 7,
+    room_id: "7",
     room_name: "",
     staff: [],
     student_ids: [],
@@ -41,6 +41,7 @@ const createdWithoutEnrichment = {
     conflict_warnings: null,
     can_complete: false,
     complete_available_at: "",
+    version: "",
   },
   message: "Instance created (without enrichment)",
 };
@@ -48,17 +49,16 @@ const createdWithoutEnrichment = {
 type Handler = (...args: unknown[]) => Promise<unknown>;
 
 // Stands for the portal's handlers; makePortalHandlers has its own tests.
+// The catalog proxy answers a Response, which the portal hands on as it is.
 const withBody =
   (handler: Handler) =>
   async (request: NextRequest, context: { params: Promise<unknown> }) =>
-    Response.json({
-      data: await handler(
-        request,
-        await request.json(),
-        "token",
-        await context.params,
-      ),
-    });
+    (await handler(
+      request,
+      await request.json(),
+      "token",
+      await context.params,
+    )) as Response;
 
 describe("POST /api/timetable/instances without enrichment", () => {
   it("reaches the client as the created block, not as a 502", async () => {
@@ -88,9 +88,11 @@ describe("POST /api/timetable/instances without enrichment", () => {
       { title: "Hausaufgaben" },
       expect.anything(),
     );
-    const { data } = (await response.json()) as {
-      data: BackendEnrichedInstance;
+    const { status, data } = (await response.json()) as {
+      status: string;
+      data: enrichedInstance;
     };
+    expect(status).toBe("success");
     // The page shows the block with what was saved and nothing invented.
     expect(mapInstance(data)).toMatchObject({
       id: "41",

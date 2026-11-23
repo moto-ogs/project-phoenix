@@ -2,43 +2,46 @@ package contract
 
 import (
 	"reflect"
-	"slices"
 )
 
-// Options are the two legacy registers of ADR 0270. Both only shrink: an
-// entry leaves when its route is migrated, and Build fails on an entry that
-// no registration uses.
+// Options carry the types the root names and the one register of ADR 0270
+// point 3. Build fails on an entry that no registration uses. Every int64 on
+// a registered type is an ident.ID, or a count or an amount tagged
+// contract:"number" (ADR 0300).
 type Options struct {
-	// NumericIDs lists the identifier fields that existing routes still send
-	// as JSON numbers, as "package.Type.GoField". Every other int64 on a
-	// registered type must be a common.ID. On a request type the entry is a
-	// field Go reads only as a JSON number.
-	NumericIDs []string
 	// QueryVariants lists the routes whose response shape a query parameter
-	// selects, as "METHOD /pattern".
+	// selects, as "METHOD /pattern". It only shrinks: GET /api/students/ is
+	// the one named debt of ADR 0270 point 3, and no route joins it.
 	QueryVariants []string
-	// Identifiers maps the Go identifier types to KindID or KindLaxID. The
-	// root names them, so this package stays free of the HTTP packages.
+	// Identifiers maps the Go identifier types to KindID. The root names
+	// them, so this package stays free of the HTTP packages.
 	Identifiers map[reflect.Type]string
 	// Readers says what the own UnmarshalJSON of a request type reads:
-	// ReadsFields or ReadsLaxIDs. A request type with its own UnmarshalJSON
+	// ReadsFields or ReadsValue. A request type with its own UnmarshalJSON
 	// and no entry stops the generator; the root names them like the
 	// identifier types.
 	Readers map[reflect.Type]string
+	// Values names transparent JSON wrappers whose wire shape is their Value
+	// field in both directions. The mode is TypedValue or LegacyValue.
+	Values map[reflect.Type]string
 	// Dates names the day types beside calendar.Date that travel as
 	// "YYYY-MM-DD" and render their zero value as null. The root names them.
 	Dates []reflect.Type
+	// Instants names the instant types beside time.Time that write
+	// themselves as RFC 3339 with an offset. The root names them.
+	Instants []reflect.Type
 }
 
 const (
 	// ReadsFields: the reader takes the fields as encoding/json would.
 	ReadsFields = "fields"
-	// ReadsLaxIDs: as ReadsFields, and every int64 field takes a JSON number
-	// or a decimal string.
-	ReadsLaxIDs = "lax_ids"
 	// ReadsValue: the type is a wrapper that reads one JSON value, null
 	// included, into its field Value and notes that the key was present.
 	ReadsValue = "value"
+	// TypedValue writes its type; LegacyValue also preserves old JSON that
+	// does not fit that type, so each field using it must explain the fallback.
+	TypedValue  = "typed"
+	LegacyValue = "legacy"
 )
 
 // Registration is one route as the root hands it over: the owner's
@@ -56,10 +59,44 @@ type Registration struct {
 	Enums            []EnumSpec
 	Deprecated       bool
 	DeprecatedFields []string
+	// Refuses is the marker of common.RouteContract for a deprecated route
+	// that only refuses; it stays out of the document.
+	Refuses string
 	// NoRetryAfterRenewal and MaxBodyBytes are the proxy traits of
 	// common.RouteContract.
 	NoRetryAfterRenewal string
 	MaxBodyBytes        int
+	// NoCommit is the marker of common.RouteContract for a POST that commits
+	// nothing its caller asked for.
+	NoCommit string
+	// File, Multipart and TooLargeCode are the file traits of
+	// common.RouteContract.
+	File         bool
+	Multipart    bool
+	TooLargeCode string
+	// PublicFile is the marker of common.RouteContract that opens one
+	// file to the portal public.
+	PublicFile string
+	// PublicUpload is the marker that opens one upload to the portal public.
+	PublicUpload string
+
+	// FileCache and ConditionalGet are the cache traits of a file route.
+	FileCache      string
+	ConditionalGet bool
+	PrivateCache   bool
+
+	// RouteFile and Plain are the route file traits of
+	// common.RouteContract.
+	RouteFile string
+	Plain     bool
+	// Outside keeps the line out of the contract.
+	Outside *OutsideSpec
+}
+
+// OutsideSpec is the reason of a catalog line without a contract.
+type OutsideSpec struct {
+	Reason string
+	Why    string
 }
 
 // VariantSpec is a response whose shape a query parameter selects.
@@ -75,19 +112,4 @@ type EnumSpec struct {
 	Type   any
 	Fields []string
 	Values []string
-}
-
-// legacyNumericIDs names the fields that still travel as numbers on the
-// wire, as "package.Type.GoField".
-// The list is kept in two files by package name, sorted.
-var legacyNumericIDs = slices.Concat(legacyNumericIDsAToO, legacyNumericIDsPToZ)
-
-// Legacy returns the registers of the routes registered today, with the
-// identifier types the root names.
-func Legacy(identifiers map[reflect.Type]string) Options {
-	return Options{
-		Identifiers:   identifiers,
-		NumericIDs:    legacyNumericIDs,
-		QueryVariants: []string{"GET /api/students/"},
-	}
 }

@@ -1,18 +1,23 @@
 package timetracking
 
 import (
+	"errors"
+	"net/http"
+	"slices"
 	"time"
 
+	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // AdminSessionResponse is a work session as the admin session writes answer
 // it, with the IDs as decimal strings.
 type AdminSessionResponse struct {
-	ID             common.ID  `json:"id"`
-	TenantID       common.ID  `json:"tenant_id"`
-	StaffID        common.ID  `json:"staff_id"`
+	ID             ident.ID   `json:"id"`
+	TenantID       ident.ID   `json:"tenant_id"`
+	StaffID        ident.ID   `json:"staff_id"`
 	Date           string     `json:"date" contract:"date"`
 	Status         string     `json:"status"`
 	Source         string     `json:"source"`
@@ -21,22 +26,22 @@ type AdminSessionResponse struct {
 	BreakMinutes   int        `json:"break_minutes"`
 	Notes          string     `json:"notes,omitempty"`
 	AutoCheckedOut bool       `json:"auto_checked_out"`
-	CreatedBy      common.ID  `json:"created_by"`
-	UpdatedBy      *common.ID `json:"updated_by,omitempty"`
+	CreatedBy      ident.ID   `json:"created_by"`
+	UpdatedBy      *ident.ID  `json:"updated_by,omitempty"`
 	CreatedAt      time.Time  `json:"created_at"`
 	UpdatedAt      time.Time  `json:"updated_at"`
 }
 
 func newAdminSessionResponse(session *workforce.WorkSession) AdminSessionResponse {
 	response := AdminSessionResponse{
-		ID: common.ID(session.ID), TenantID: common.ID(session.TenantID), StaffID: common.ID(session.StaffID),
+		ID: ident.ID(session.ID), TenantID: ident.ID(session.TenantID), StaffID: ident.ID(session.StaffID),
 		Date: session.Date, Status: session.Status, Source: session.Source,
 		CheckInTime: session.CheckInTime, CheckOutTime: session.CheckOutTime, BreakMinutes: session.BreakMinutes,
-		Notes: session.Notes, AutoCheckedOut: session.AutoCheckedOut, CreatedBy: common.ID(session.CreatedBy),
+		Notes: session.Notes, AutoCheckedOut: session.AutoCheckedOut, CreatedBy: ident.ID(session.CreatedBy),
 		CreatedAt: session.CreatedAt, UpdatedAt: session.UpdatedAt,
 	}
 	if session.UpdatedBy != nil {
-		updatedBy := common.ID(*session.UpdatedBy)
+		updatedBy := ident.ID(*session.UpdatedBy)
 		response.UpdatedBy = &updatedBy
 	}
 	return response
@@ -64,17 +69,38 @@ func newExportTransferResponse(outcome ExportTransferOutcome) ExportTransferResp
 // or null to clear the number.
 type PayrollNumberBody struct {
 	PersonnelNumber *string `json:"personnel_number"`
+	ExpectedVersion string  `json:"expected_version"`
 	Note            string  `json:"note"`
 }
 
-// RebookAbsencesBody describes the body workforce.RebookAbsencesRequest
-// reads: the identifiers as JSON numbers or decimal strings.
+// RebookAbsencesBody is the body of a rebooking; decodeRebookAbsences turns
+// it into workforce.RebookAbsencesRequest.
 type RebookAbsencesBody struct {
-	AbsenceIDs    []common.JSONID `json:"absence_ids"`
-	AbsenceType   string          `json:"absence_type"`
-	AbsenceTypeID *common.JSONID  `json:"absence_type_id"`
-	Reason        string          `json:"reason"`
-	DryRun        bool            `json:"dry_run"`
+	AbsenceIDs    []ident.ID `json:"absence_ids"`
+	AbsenceType   string     `json:"absence_type"`
+	AbsenceTypeID *ident.ID  `json:"absence_type_id"`
+	Reason        string     `json:"reason"`
+	DryRun        bool       `json:"dry_run"`
+	// ExpectedFingerprint is the dry run's fingerprint; the write refuses
+	// another effect with general.changed_since_read (ADR 0311).
+	ExpectedFingerprint string `json:"expected_fingerprint"`
+}
+
+// decodeRebookAbsences reads a rebooking body. Every listed absence names
+// its id.
+func decodeRebookAbsences(r *http.Request) (workforce.RebookAbsencesRequest, error) {
+	var body RebookAbsencesBody
+	if err := render.DecodeJSON(r.Body, &body); err != nil {
+		return workforce.RebookAbsencesRequest{}, err
+	}
+	if slices.Contains(body.AbsenceIDs, 0) {
+		return workforce.RebookAbsencesRequest{}, errors.New("invalid absence_ids: id is required")
+	}
+	return workforce.RebookAbsencesRequest{
+		AbsenceIDs: ident.Int64s(body.AbsenceIDs), AbsenceType: body.AbsenceType,
+		AbsenceTypeID: (*int64)(body.AbsenceTypeID), Reason: body.Reason, DryRun: body.DryRun,
+		ExpectedFingerprint: body.ExpectedFingerprint,
+	}, nil
 }
 
 // StaffAdminRouteContracts registers the typed contract of the workforce
@@ -115,6 +141,15 @@ func StaffAdminRouteContracts() []common.RouteContract {
 		route("DELETE", "/{id}/absences/{absenceId}", nil, nil),
 		route("GET", "/absences/mails", nil, AbsenceDecisionMailsResponse{}, common.QueryParam{Name: "ids", Kind: common.QueryString}),
 		route("DELETE", "/{id}/documents/{documentId}", nil, StammdatenAck{}),
+		route("GET", "/{id}/documents", nil, StaffDocumentListResponse{}, common.QueryParam{Name: "category", Kind: common.QueryString}),
+		{Method: "POST", Pattern: "/{id}/documents", Portals: portals, Multipart: true,
+			MaxBodyBytes: maxStaffDocumentBody, TooLargeCode: common.CodeFilesFileTooLarge, Response: StaffDocumentResponse{}},
+		{Method: "GET", Pattern: "/{id}/time-tracking/export", Portals: portals, File: true, Query: []common.QueryParam{
+			{Name: "from", Kind: common.QueryDate}, {Name: "to", Kind: common.QueryDate},
+			{Name: "format", Kind: common.QueryString, Values: []string{"csv", "pdf", "xlsx"}},
+		}},
+		// Files stream through the portal's proxy (#2352).
+		{Method: "GET", Pattern: "/{id}/documents/{documentId}/download", Portals: portals, File: true},
 	}
 	routes = append(routes, staffAdminPersonnelContracts(route)...)
 	routes = append(routes, staffAdminCrossStaffContracts(route)...)
@@ -127,12 +162,12 @@ type contractRoute func(method, pattern string, request, response any, query ...
 func staffAdminPersonnelContracts(route contractRoute) []common.RouteContract {
 	return []common.RouteContract{
 		route("GET", "/{id}/stammdaten", nil, StammdatenResponse{}),
-		route("PUT", "/{id}/stammdaten/person", StammdatenPersonRequest{}, StammdatenAck{}),
-		route("PUT", "/{id}/stammdaten/kontakt", StammdatenKontaktRequest{}, StammdatenAck{}),
-		route("PUT", "/{id}/stammdaten/arbeitsvertrag", StammdatenArbeitsvertragRequest{}, StammdatenAck{}),
-		route("PUT", "/{id}/stammdaten/qualifikationen", StammdatenQualifikationenRequest{}, StammdatenAck{}),
+		route("PUT", "/{id}/stammdaten/person", StammdatenPersonRequest{}, StammdatenSectionAck{}),
+		route("PUT", "/{id}/stammdaten/kontakt", StammdatenKontaktRequest{}, StammdatenSectionAck{}),
+		route("PUT", "/{id}/stammdaten/arbeitsvertrag", StammdatenArbeitsvertragRequest{}, StammdatenSectionAck{}),
+		route("PUT", "/{id}/stammdaten/qualifikationen", StammdatenQualifikationenRequest{}, StammdatenSectionAck{}),
 		route("GET", "/{id}/stammdaten/bank-steuer", nil, StammdatenFinancialMaskedResponse{}),
-		route("PUT", "/{id}/stammdaten/bank-steuer", StammdatenFinancialRequest{}, StammdatenAck{}),
+		route("PUT", "/{id}/stammdaten/bank-steuer", StammdatenFinancialRequest{}, StammdatenSectionAck{}),
 		route("POST", "/{id}/stammdaten/bank-steuer/reveal", nil, StammdatenFinancialRevealResponse{}),
 		route("GET", "/qualification-types", nil, []QualificationTypeResponse{}),
 		route("POST", "/qualification-types", QualificationTypeRequest{}, QualificationTypeResponse{}),
@@ -159,6 +194,8 @@ func staffAdminCrossStaffContracts(route contractRoute) []common.RouteContract {
 			common.QueryParam{Name: "limit", Kind: common.QueryInt}, common.QueryParam{Name: "sources", Kind: common.QueryString},
 			common.QueryParam{Name: "cursor", Kind: common.QueryString}),
 		route("GET", "/time-tracking/export/datev-report", nil, workforce.DatevExportReport{}, export...),
+		// The export file of the same query (#1417 2b), through the portal's proxy (#2352).
+		{Method: "GET", Pattern: "/time-tracking/export", Portals: []common.PortalScope{common.PortalTenant}, Query: export, File: true},
 		route("GET", "/time-tracking/export/sftp-status", nil, ExportTransferStatus{}),
 		route("POST", "/time-tracking/export/sftp", TransferExportRequest{}, ExportTransferResponse{}),
 		route("GET", "/time-tracking/payroll-dispatch", nil, workforce.PayrollDispatchOverview{}),

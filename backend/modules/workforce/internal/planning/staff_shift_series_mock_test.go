@@ -13,6 +13,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -208,8 +209,12 @@ func unitSeries(t *testing.T) *StaffShiftSeries {
 		WeekPattern:      WeekPatternEvery,
 		ValidFrom:        calendar.Date(calendar.NewDate(2026, 8, 24).AddDays(-7)),
 		CreatedBy:        5,
+		UpdatedAt:        mockSeriesChanged,
 	}
 }
+
+// mockSeriesChanged is the updated_at every mocked series is stored with.
+var mockSeriesChanged = time.Date(2026, 8, 20, 8, 0, 0, 0, time.UTC)
 
 func TestCreateSeriesUnit_ErrorBranches(t *testing.T) {
 	t.Parallel()
@@ -549,11 +554,13 @@ func splitInput(t *testing.T, seriesID int64) SplitSeriesInput {
 	end, err := time.Parse("15:04", "14:00")
 	require.NoError(t, err)
 	return SplitSeriesInput{
-		SeriesID:      seriesID,
-		EffectiveDate: calendar.NewDate(2026, 8, 24).AddDays(3),
-		StartTime:     calendar.NormalizeWallClock(start),
-		EndTime:       calendar.NormalizeWallClock(end),
-		ActorStaffID:  5,
+		SeriesID: seriesID,
+		// The mocked series are read at mockSeriesChanged.
+		ExpectedVersion: readstate.Of(mockSeriesChanged),
+		EffectiveDate:   calendar.NewDate(2026, 8, 24).AddDays(3),
+		StartTime:       calendar.NormalizeWallClock(start),
+		EndTime:         calendar.NormalizeWallClock(end),
+		ActorStaffID:    5,
 	}
 }
 
@@ -561,6 +568,56 @@ func storedSeries(t *testing.T) *StaffShiftSeries {
 	series := unitSeries(t)
 	series.ID = 12
 	return series
+}
+
+// A series edit writes only onto the series the planner read (ADR 0311): a
+// colleague's end date that lands before the staff lock is not reverted by
+// the stale form, and an edit without a read version writes nothing.
+func TestSplitSeriesUnit_RefusesASeriesChangedSinceItWasRead(t *testing.T) {
+	t.Parallel()
+
+	read := time.Date(2026, 8, 20, 9, 0, 0, 123000, time.UTC)
+	ended := read.Add(time.Minute)
+	for name, tc := range map[string]struct {
+		expected string
+		refused  bool
+	}{
+		"edited in between": {readstate.Of(read), true},
+		"never read":        {"", true},
+		"current version":   {readstate.Of(ended), false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			loads, created := 0, false
+			repo := &seriesMockRepo{
+				findByIDFn: func(context.Context, any) (*StaffShiftSeries, error) {
+					loads++
+					series := storedSeries(t)
+					series.UpdatedAt = read
+					if loads > 1 {
+						// A colleague ended the series before the lock was taken.
+						until := calendar.NewDate(2026, 8, 24).AddDays(14)
+						series.ValidUntil, series.UpdatedAt = &until, ended
+					}
+					return series, nil
+				},
+				createFn: func(_ context.Context, successor *StaffShiftSeries) error {
+					created, successor.ID = true, 13
+					return nil
+				},
+			}
+			input := splitInput(t, 12)
+			input.ExpectedVersion = tc.expected
+			_, err := newSeriesServiceForTest(seriesServiceMocks{series: repo}).SplitSeries(context.Background(), input)
+			if tc.refused {
+				require.ErrorIs(t, err, readstate.ErrChanged)
+				assert.False(t, created, "a refused split writes no successor")
+				return
+			}
+			require.NoError(t, err)
+			assert.True(t, created)
+		})
+	}
 }
 
 func TestSplitSeriesUnit_ErrorBranches(t *testing.T) {

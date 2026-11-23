@@ -1,21 +1,22 @@
-// The student as the backend sends and receives it, and the one translation
-// to and from the browser's Student. The BFF routes are its callers; the
-// browser never sees these shapes.
+// The student as the contract sends and receives it, and the one translation
+// to and from the browser's Student. lib/student-api maps every answer of the
+// catalog proxy here (#7563).
 
 import { parseAttendanceActor } from "~/lib/attendance-actor";
-import { knownEnum } from "./contract/runtime";
-import {
-  DAY_PLANNING_STATUS_VALUES,
-  DEPARTURE_MODE_VALUES,
-  STUDENT_CONSENT_KEY_VALUES,
-  STUDENT_CONSENT_STATE_VALUES,
-  type NameStudentResponse,
-  type SlimStudentResponse,
-  type StudentConsentResponse,
-  type StudentDetailResponse,
-  type StudentResponse,
-  type UpdateStudentRequest,
-  type routes,
+// Types only: the browser loads this module, and a value import would pull
+// every decoder of the generated module into its bundle.
+import type {
+  DayPlanningStatus,
+  DepartureMode,
+  NameStudentResponse,
+  SlimStudentResponse,
+  StudentConsentKey,
+  StudentConsentResponse,
+  StudentConsentState,
+  StudentDetailResponse,
+  StudentResponse,
+  UpdateStudentRequest,
+  routes,
 } from "./contract/students.generated";
 import { normalizeLocation } from "./location-helper";
 import {
@@ -31,6 +32,46 @@ import {
   type DepartureDays,
 } from "./departure-plan";
 import type { Student, StudentConsent, StudentUpdate } from "./student-helpers";
+
+/**
+ * Every value of a generated closed set, checked by the compiler in both
+ * directions: a value the contract lacks and a value missing here fail.
+ */
+function allOf<T extends string>() {
+  return <const V extends readonly T[]>(
+    values: V & ([T] extends [V[number]] ? unknown : never),
+  ): readonly T[] => values;
+}
+
+export const DAY_PLANNING_STATUS_VALUES = allOf<DayPlanningStatus>()([
+  "comes_today",
+  "not_coming_today",
+]);
+const DEPARTURE_MODE_VALUES = allOf<DepartureMode>()([
+  "accompanied",
+  "alone",
+  "bus",
+  "pickup",
+]);
+const STUDENT_CONSENT_KEY_VALUES = allOf<StudentConsentKey>()([
+  "agb",
+  "data_processing",
+  "email_contact",
+  "photo",
+]);
+const STUDENT_CONSENT_STATE_VALUES = allOf<StudentConsentState>()([
+  "granted",
+  "not_recorded",
+  "withdrawn",
+]);
+
+/** The value of a closed set this build knows, else undefined. */
+function knownEnum<T extends string>(
+  values: readonly T[],
+  value: string | undefined,
+): T | undefined {
+  return values.find((known) => known === value);
+}
 
 /** The three projections of `GET /api/students`. */
 export type StudentView =
@@ -202,6 +243,7 @@ export function mapStudentDetailResponse(row: StudentDetailResponse): Student {
     feedback_enabled: row.feedback_enabled,
     privacy_consent_accepted: row.privacy_consent?.accepted,
     data_retention_days: row.privacy_consent?.data_retention_days,
+    version: row.version,
   };
 }
 
@@ -250,9 +292,7 @@ export function prepareStudentForBackend(student: StudentUpdate) {
       student.departure_days === undefined
         ? undefined
         : normalizeDepartureDays(student.departure_days),
-    group_id: student.group_id
-      ? Number.parseInt(String(student.group_id), 10)
-      : undefined,
+    group_id: student.group_id ? String(student.group_id) : undefined,
     address_street: student.address_street,
     address_city: student.address_city,
     address_postal_code: student.address_postal_code,
@@ -289,5 +329,8 @@ export function prepareStudentForBackend(student: StudentUpdate) {
     // The backend stamps a false→true change and clears photo and metadata on
     // true→false.
     photo_consent_given: student.photo_consent_given,
+    // The master data the form read (ADR 0311): a save of form fields is
+    // refused when they changed since. A pure absence toggle sends none.
+    expected_version: student.version,
   } satisfies UpdateStudentRequest;
 }

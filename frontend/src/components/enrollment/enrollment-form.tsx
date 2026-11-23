@@ -42,11 +42,7 @@ import germanEnrollmentFormMessages from "~/i18n/messages/de/enrollmentForm.json
 import { DEFAULT_LOCALE } from "~/i18n/locales";
 import {
   submitEnrollment,
-  type MeProfileChild,
-  type PublicCareOffering,
   type EnrollmentEditDraft,
-  type SubmitEnrollmentPayload,
-  type SubmitEnrollmentResult,
 } from "~/lib/enrollment-submission-api";
 import {
   holidayCareWishAsked,
@@ -56,6 +52,7 @@ import {
   type PublicLegalTexts,
 } from "~/lib/enrollment-form-schema-api";
 import {
+  consentsToUnchangedTexts,
   EmailContactNotice,
   EnrollmentConsent,
   LegalMarkdown,
@@ -96,7 +93,7 @@ import {
   FormErrorAlert,
   LoadErrorAlert,
 } from "~/components/ui/form-error-alert";
-import { ApiError } from "~/lib/api-error";
+import { ApiError, isChangedSinceRead } from "~/lib/api-error";
 import {
   SignaturePad,
   type SignaturePadLabels,
@@ -119,7 +116,7 @@ import {
   careOfferingAvailabilityReason,
   careOfferingRuleExcludesNobody,
 } from "~/lib/care-offering-availability";
-import { type CareOfferingBookingStats } from "~/lib/care-offering-booking-stats";
+import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 import {
   OfferingOccupancyLine,
   OfferingRowShell,
@@ -160,6 +157,8 @@ import {
   type EnrollmentFormValues,
 } from "~/components/enrollment/enrollment-form-validation";
 import { buildEnrollmentPayload } from "~/components/enrollment/enrollment-form-payload";
+import type * as sharedContract from "~/lib/contract/shared.generated";
+import type { CareOffering } from "~/lib/care-offering-api";
 
 const logger = createLogger({ component: "EnrollmentForm" });
 
@@ -188,8 +187,8 @@ interface PropsBase {
   readonly lateInviteToken?: string;
   /** Status-link authorization for file uploads while editing a request. */
   readonly statusToken?: string;
-  /** Authenticated parent-portal upload route for restricted phases. */
-  readonly uploadEndpoint?: string;
+  /** Uploads through the parent portal's session (restricted phases). */
+  readonly viaParentPortal?: boolean;
   readonly previewMode?: boolean;
   readonly previewSchema?: PublicFormSchema | null;
   /**
@@ -210,8 +209,8 @@ interface PropsBase {
    * `null` when it stopped before sending and shows the reason itself.
    */
   readonly submitter?: (
-    payload: SubmitEnrollmentPayload,
-  ) => Promise<SubmitEnrollmentResult | null>;
+    payload: sharedContract.SubmitEnrollmentRequest,
+  ) => Promise<sharedContract.SubmitEnrollmentResponse | null>;
   /**
    * Hides the captcha when the caller already authenticated the person
    * (parent session); the authenticated endpoint skips its verification.
@@ -245,12 +244,24 @@ interface PropsBase {
    * provided, each offering shows how full it is so a capacity rejection is
    * visible before the form is submitted rather than after.
    */
-  readonly offeringBookingStats?: Record<string, CareOfferingBookingStats>;
+  readonly offeringBookingStats?: Record<
+    string,
+    enrollmentContract.CareOfferingBookingStatsResponse
+  >;
   /**
    * Leaves the signature field out although the form requires one (#4786):
    * change requests and manual staff entries carry no parent signature.
    */
   readonly withoutSignature?: boolean;
+  /**
+   * Loads the current form after the server refused the one this form
+   * showed (`general.changed_since_read`, ADR 0311). The caller keeps the
+   * form it opened with until then and hands the new one in as
+   * `prefetchedData`; entered answers stay, consents to changed legal texts
+   * are cleared. It rejects when the current form does not load; the form
+   * then shows that load error instead of the refusal.
+   */
+  readonly onFormChanged?: () => Promise<void>;
 }
 
 /**
@@ -265,7 +276,7 @@ export function EnrollmentForm({
   prefetchedData,
   lateInviteToken,
   statusToken,
-  uploadEndpoint,
+  viaParentPortal,
   previewMode = false,
   previewSchema,
   previewOfferings,
@@ -282,6 +293,7 @@ export function EnrollmentForm({
   showBlockedOfferings = false,
   offeringBookingStats,
   withoutSignature = false,
+  onFormChanged,
 }: Props) {
   const intl = useCareTermTranslations("enrollmentForm");
   const careTerm = useCareFacilityTerm();
@@ -345,7 +357,7 @@ export function EnrollmentForm({
     phaseId: phaseID,
     lateInviteToken,
     statusToken,
-    uploadEndpoint,
+    viaParentPortal,
     locale: contentLocale,
     previewMode,
   });
@@ -472,7 +484,7 @@ export function EnrollmentForm({
   );
   // A confirmed signature only belongs to the values visible when it was
   // confirmed. Its own state update must not clear it; every later change to
-  // signed enrollment data does.
+  // signed enrollment data does, and so does another form (ADR 0311).
   const changeSignature = (value: SignatureValue | null) => {
     signatureJustConfirmed.current = value !== null;
     setSignature(value);
@@ -491,9 +503,19 @@ export function EnrollmentForm({
     children,
     additionalGuardians,
     customData,
+    config.termsFingerprint,
   ]);
 
+  // A consent holds only for the legal text the parent saw: a new form keeps
+  // the ticks of unchanged texts and clears the others (ADR 0311).
+  const shownLegalBlocks = useRef(initial.config.legalTexts?.blocks ?? []);
   const applyConfig = useCallback((next: EnrollmentFormConfig) => {
+    const before = shownLegalBlocks.current;
+    const after = next.legalTexts?.blocks ?? [];
+    shownLegalBlocks.current = after;
+    setLegalConsents((consents) =>
+      consentsToUnchangedTexts(consents, before, after),
+    );
     setConfig(next);
     setChildren((prev) => {
       const seeded = prev.map((child) =>
@@ -545,6 +567,7 @@ export function EnrollmentForm({
   // for the next one instead of sending without it (#6739).
   const [retryPending, setRetryPending] = useState(false);
   const captchaSectionRef = useRef<HTMLElement>(null);
+
   const retrySubmit = () => {
     setRetryPending(true);
     // A challenge the parent has to answer sits below the form: show it,
@@ -768,7 +791,9 @@ export function EnrollmentForm({
     );
   };
 
-  const adoptExistingChild = (existing: MeProfileChild) => {
+  const adoptExistingChild = (
+    existing: sharedContract.GuardianProfileChild,
+  ) => {
     // A stored grade the phase does not accept (#1663) would prefill a value
     // the select cannot show and fail the whole submit with
     // grade_not_eligible; the required check then asks for one instead.
@@ -916,6 +941,7 @@ export function EnrollmentForm({
       restrictToOfferings,
       captchaToken: captchaRequired ? captchaToken || undefined : undefined,
       lateInviteToken,
+      termsFingerprint: config.termsFingerprint,
     });
 
     setSubmitting(true);
@@ -941,6 +967,9 @@ export function EnrollmentForm({
     } catch (err) {
       setCaptchaToken("");
       captchaRef.current?.reset();
+      // The school changed the form meanwhile: the parent sees the current
+      // one, with the answers kept, and sends it again after checking it.
+      const formChanged = isChangedSinceRead(err);
       const code = err instanceof ApiError ? err.code : undefined;
       // A rejected input is expected; only server failures and crashes are
       // errors in the log.
@@ -981,10 +1010,13 @@ export function EnrollmentForm({
           ? pickupTimeMarks(schema, children, customData)
           : [];
       // "Wiederholen" submits the form again, so it sends what the parent
-      // sees now, not the draft of the failed attempt.
+      // sees now, not the draft of the failed attempt. A changed form
+      // (ADR 0311) loads the current one first; the message waits for it and
+      // names a failed load instead.
       const presentation = await formError.show(err, {
-        object: tr("errorObject"),
+        object: tr(formChanged ? "errorObjectForm" : "errorObject"),
         retry: retrySubmit,
+        reload: onFormChanged,
       });
       if (
         presentation &&
@@ -1372,10 +1404,7 @@ export function EnrollmentForm({
                 </SectionCard>
               );
             }
-            const offeringCard = (
-              offering: PublicCareOffering,
-              checked: boolean,
-            ) => (
+            const offeringCard = (offering: CareOffering, checked: boolean) => (
               <OfferingCard
                 key={offering.id}
                 offering={offering}
@@ -1986,19 +2015,19 @@ function interpolateMessage(value: string, values?: TranslationValues): string {
 }
 
 type OfferingBucket =
-  | { kind: "single"; offering: PublicCareOffering }
+  | { kind: "single"; offering: CareOffering }
   | {
       kind: "group";
       group: string;
       rule: string;
-      offerings: PublicCareOffering[];
+      offerings: CareOffering[];
     };
 
 // Buckets offerings for display: ungrouped offerings render individually (in
 // order); offerings sharing a non-empty selection_group collapse into one
 // bucket anchored at the group's first member. Mirrors the backend grouping
 // in backend/modules/careplan/selection/materialize.go.
-function groupOfferings(offerings: PublicCareOffering[]): OfferingBucket[] {
+function groupOfferings(offerings: CareOffering[]): OfferingBucket[] {
   const buckets: OfferingBucket[] = [];
   const indexByGroup = new Map<string, number>();
   for (const o of offerings) {
@@ -2043,10 +2072,10 @@ function BlockedOfferingCard({
   gradeLevelMax,
   stats,
 }: Readonly<{
-  offering: PublicCareOffering;
+  offering: CareOffering;
   gradeLevel: string;
   gradeLevelMax: number;
-  stats: CareOfferingBookingStats | undefined;
+  stats: enrollmentContract.CareOfferingBookingStatsResponse | undefined;
 }>) {
   const reason = careOfferingAvailabilityReason(
     offering,
@@ -2092,7 +2121,7 @@ function OfferingCard({
   onToggleDay,
   tr,
 }: {
-  readonly offering: PublicCareOffering;
+  readonly offering: CareOffering;
   readonly childIndex: number;
   readonly checked: boolean;
   readonly selectedDays: Set<string> | undefined;
@@ -2100,7 +2129,7 @@ function OfferingCard({
   readonly toggleLocked?: boolean;
   readonly dayError: boolean;
   /** Admin-only occupancy (#2186); undefined on the parent form. */
-  readonly stats?: CareOfferingBookingStats;
+  readonly stats?: enrollmentContract.CareOfferingBookingStatsResponse;
   readonly onToggle: () => void;
   readonly onToggleDay: (day: string) => void;
   readonly tr: EnrollmentFormTranslator;
@@ -2344,9 +2373,9 @@ function SectionHeading({
 }
 
 interface ExistingChildrenPanelProps {
-  readonly existing: MeProfileChild[];
+  readonly existing: sharedContract.GuardianProfileChild[];
   readonly usedIDs: Set<string>;
-  readonly onAdopt: (child: MeProfileChild) => void;
+  readonly onAdopt: (child: sharedContract.GuardianProfileChild) => void;
   readonly tr: EnrollmentFormTranslator;
 }
 

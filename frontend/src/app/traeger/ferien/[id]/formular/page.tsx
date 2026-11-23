@@ -37,6 +37,7 @@ export default function TraegerHolidayFormPage() {
     data: form,
     error: formError,
     mutate,
+    reloadOrThrow,
   } = useTraegerResource(
     id ? traegerKeys.holidayForm(id) : null,
     () => fetchHolidayForm(id),
@@ -95,10 +96,10 @@ export default function TraegerHolidayFormPage() {
     >
       {period && form ? (
         <HolidayFormEditor
-          key={form.version}
           periodId={id}
           form={form}
           onSaved={(saved) => void mutate(saved, { revalidate: false })}
+          reload={reloadOrThrow}
         />
       ) : null}
     </TenantPage>

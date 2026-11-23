@@ -33,11 +33,11 @@ import {
   declarationProofAttachmentDownloadUrl,
   downloadDeclarationProofPdf,
   fetchDeclarationProof,
-  type ParentDeclarationProof,
 } from "~/lib/parent-api";
 import { parentPath } from "~/lib/parent-url";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
 import { useParentCareTerms } from "~/lib/parent-care-term";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 const logger = createLogger({ component: "ParentDeclarationProof" });
 
@@ -147,7 +147,7 @@ function ProofDocument({
   studentId,
 }: Readonly<{
   announcementId: string;
-  proof: ParentDeclarationProof;
+  proof: parentMeContract.declarationProofResponse;
   studentId: string;
 }>) {
   // Der Nachweis gehört zu einer Schule; der Hinweis nennt ihre Betreuung.
@@ -187,7 +187,7 @@ function ProofDocument({
       <section className="space-y-3">
         <h3 className="text-lg font-semibold">{t("historyTitle")}</h3>
         <ol className="space-y-3">
-          {proof.submissions.map((entry) => (
+          {(proof.submissions ?? []).map((entry) => (
             <InsetPanel as="li" padding="md" className="text-sm" key={entry.id}>
               <p className="text-base font-semibold">
                 {t("entry", {
@@ -235,7 +235,7 @@ function ProofDocument({
 
       <section className="space-y-4">
         <h3 className="text-lg font-semibold">{t("versionsTitle")}</h3>
-        {proof.versions.map((version) => (
+        {(proof.versions ?? []).map((version) => (
           <div
             key={version.id}
             className="space-y-2 border-t border-gray-200 pt-3"
@@ -248,11 +248,11 @@ function ProofDocument({
             </p>
             <p className="font-semibold">{version.title}</p>
             <p className="whitespace-pre-line">{version.body}</p>
-            {version.attachments.length > 0 && (
+            {(version.attachments ?? []).length > 0 && (
               <div className="text-sm">
                 <p className="text-gray-600">{t("attachments")}</p>
                 <AttachmentList
-                  attachments={version.attachments}
+                  attachments={version.attachments ?? []}
                   downloadUrl={(attachmentId) =>
                     declarationProofAttachmentDownloadUrl(
                       announcementId,
@@ -268,7 +268,7 @@ function ProofDocument({
       </section>
 
       <footer className="space-y-1 border-t border-gray-200 pt-3 text-sm text-gray-600">
-        {proof.submissions.some((entry) => entry.signature) && (
+        {(proof.submissions ?? []).some((entry) => entry.signature) && (
           <p>{t("noteSigned")}</p>
         )}
         <p>{t("note")}</p>

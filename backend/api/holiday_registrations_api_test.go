@@ -102,23 +102,23 @@ type holidayOfferBody struct {
 	Open           bool   `json:"open"`
 	CaptchaSiteKey string `json:"captcha_site_key"`
 	Weeks          []struct {
-		ID             int64  `json:"id"`
+		ID             wireID `json:"id"`
 		StartsOn       string `json:"starts_on"`
 		HostSchoolName string `json:"host_school_name"`
 		TimeModels     []struct {
-			ID         int64  `json:"id"`
+			ID         wireID `json:"id"`
 			Name       string `json:"name"`
 			PriceCents int64  `json:"price_cents"`
 		} `json:"time_models"`
 	} `json:"weeks"`
 	Schools []struct {
-		ID   int64  `json:"id"`
+		ID   wireID `json:"id"`
 		Name string `json:"name"`
 	} `json:"schools"`
 }
 
 type traegerPeriodLink struct {
-	ID                int64             `json:"id"`
+	ID                wireID            `json:"id"`
 	PublicToken       string            `json:"public_token"`
 	RegistrationCount int               `json:"registration_count"`
 	Weeks             []holidayWeekBody `json:"weeks"`
@@ -136,7 +136,7 @@ func openHolidaysOf(t *testing.T, f holidayRegistrationFixture, office traegerOf
 	t.Helper()
 	body.RegistrationOpensOn, body.RegistrationClosesOn = "2020-01-01", "2099-12-31"
 	created := createHolidayPeriod(t, f.traeger, office, body)
-	rec := traegerJSON(t, f.traeger, office.token, http.MethodPost, holidayPeriodPath(created.ID)+"/publish", nil)
+	rec := traegerJSON(t, f.traeger, office.token, http.MethodPost, holidayPeriodPath(int64(created.ID))+"/publish", nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	return decodeSchoolPortalData[traegerPeriodLink](t, rec.Body.Bytes())
 }
@@ -213,7 +213,7 @@ func TestHolidayRegistrationLinkServesThePublishedPeriodForAllSchools(t *testing
 	body := januaryHolidays(office)
 	body.RegistrationOpensOn, body.RegistrationClosesOn = "2020-01-01", "2099-12-31"
 	draft := createHolidayPeriod(t, f.traeger, office, body)
-	rec := traegerJSON(t, f.traeger, office.token, http.MethodGet, holidayPeriodPath(draft.ID), nil)
+	rec := traegerJSON(t, f.traeger, office.token, http.MethodGet, holidayPeriodPath(int64(draft.ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	link := decodeSchoolPortalData[traegerPeriodLink](t, rec.Body.Bytes())
 	require.NotEmpty(t, link.PublicToken, "the Träger-Büro sees the link of its period")
@@ -223,7 +223,7 @@ func TestHolidayRegistrationLinkServesThePublishedPeriodForAllSchools(t *testing
 	code, _ := registrationRefusalOf(t, rec)
 	assert.Equal(t, "enrollment.holiday_registration_not_found", code)
 
-	rec = traegerJSON(t, f.traeger, office.token, http.MethodPost, holidayPeriodPath(draft.ID)+"/publish", nil)
+	rec = traegerJSON(t, f.traeger, office.token, http.MethodPost, holidayPeriodPath(int64(draft.ID))+"/publish", nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	rec = publicJSON(t, f.public, http.MethodGet, registrationPath(link.PublicToken), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
@@ -328,10 +328,10 @@ func TestHolidayRegistrationStoresSiblingsAndAHolidayGuestWithItsReceipt(t *test
 
 	assertHolidayRegistrationStatus(t, f, statusToken, "Träger Bissendorf Anmeldung")
 
-	rec = traegerJSON(t, f.traeger, office.token, http.MethodGet, holidayPeriodPath(period.ID), nil)
+	rec = traegerJSON(t, f.traeger, office.token, http.MethodGet, holidayPeriodPath(int64(period.ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, 1, decodeSchoolPortalData[traegerPeriodLink](t, rec.Body.Bytes()).RegistrationCount)
-	rec = traegerJSON(t, f.traeger, other.token, http.MethodGet, holidayPeriodPath(period.ID), nil)
+	rec = traegerJSON(t, f.traeger, other.token, http.MethodGet, holidayPeriodPath(int64(period.ID)), nil)
 	assert.Equal(t, http.StatusNotFound, rec.Code, "another Träger sees neither the period nor its registrations")
 }
 
@@ -481,7 +481,7 @@ func TestHolidayRegistrationRefusesInvalidClosedAndAbusiveSubmissions(t *testing
 	closedBody := januaryHolidays(office)
 	closedBody.RegistrationOpensOn, closedBody.RegistrationClosesOn = "2020-01-01", "2020-01-31"
 	closed := createHolidayPeriod(t, f.traeger, office, closedBody)
-	rec = traegerJSON(t, f.traeger, office.token, http.MethodPost, holidayPeriodPath(closed.ID)+"/publish", nil)
+	rec = traegerJSON(t, f.traeger, office.token, http.MethodPost, holidayPeriodPath(int64(closed.ID))+"/publish", nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	closedLink := decodeSchoolPortalData[traegerPeriodLink](t, rec.Body.Bytes())
 	closedOffer := holidayOffer(t, f, closedLink.PublicToken)
@@ -503,13 +503,13 @@ func TestHolidayWeekWithRegistrationsCannotBeRemoved(t *testing.T) {
 	rec := publicJSON(t, f.public, http.MethodPost, registrationPath(period.PublicToken), registration)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 
-	rec = traegerJSON(t, f.traeger, office.token, http.MethodGet, holidayPeriodPath(period.ID), nil)
+	rec = traegerJSON(t, f.traeger, office.token, http.MethodGet, holidayPeriodPath(int64(period.ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	current := decodeSchoolPortalData[holidayPeriodBody](t, rec.Body.Bytes())
 
 	withoutBookedWeek := current
 	withoutBookedWeek.Weeks = []holidayWeekBody{current.Weeks[1]}
-	rec = traegerJSON(t, f.traeger, office.token, http.MethodPut, holidayPeriodPath(period.ID), withoutBookedWeek)
+	rec = putHolidayPeriod(t, f.traeger, office.token, holidayPeriodPath(int64(period.ID)), withoutBookedWeek)
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	code, _ := registrationRefusalOf(t, rec)
 	assert.Equal(t, "enrollment.holiday_week_booked", code)
@@ -517,12 +517,12 @@ func TestHolidayWeekWithRegistrationsCannotBeRemoved(t *testing.T) {
 	withoutBookedModel := current
 	withoutBookedModel.Weeks = []holidayWeekBody{current.Weeks[0], current.Weeks[1]}
 	withoutBookedModel.Weeks[0].TimeModels = current.Weeks[0].TimeModels[:1]
-	rec = traegerJSON(t, f.traeger, office.token, http.MethodPut, holidayPeriodPath(period.ID), withoutBookedModel)
+	rec = putHolidayPeriod(t, f.traeger, office.token, holidayPeriodPath(int64(period.ID)), withoutBookedModel)
 	require.Equal(t, http.StatusConflict, rec.Code, "the booked time model stays: %s", rec.Body.String())
 
 	withoutFreeWeek := current
 	withoutFreeWeek.Weeks = []holidayWeekBody{current.Weeks[0]}
-	rec = traegerJSON(t, f.traeger, office.token, http.MethodPut, holidayPeriodPath(period.ID), withoutFreeWeek)
+	rec = putHolidayPeriod(t, f.traeger, office.token, holidayPeriodPath(int64(period.ID)), withoutFreeWeek)
 	require.Equal(t, http.StatusOK, rec.Code, "a week without registrations may go: %s", rec.Body.String())
 }
 
@@ -552,16 +552,16 @@ func TestHolidayRegistrationsGoThreeMonthsAfterTheirPeriod(t *testing.T) {
 		body.Weeks[0].StartsOn, body.Weeks[0].EndsOn = firstWeek[0], firstWeek[1]
 		body.Weeks[1].StartsOn, body.Weeks[1].EndsOn = secondWeek[0], secondWeek[1]
 		created := createHolidayPeriod(t, f.traeger, office, body)
-		rec := traegerJSON(t, f.traeger, office.token, http.MethodPost, holidayPeriodPath(created.ID)+"/publish", nil)
+		rec := traegerJSON(t, f.traeger, office.token, http.MethodPost, holidayPeriodPath(int64(created.ID))+"/publish", nil)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		period := decodeSchoolPortalData[traegerPeriodLink](t, rec.Body.Bytes())
 		offer := holidayOffer(t, f, period.PublicToken)
 		rec = publicJSON(t, f.public, http.MethodPost, registrationPath(period.PublicToken), siblingsRegistration(offer, "frist@example.org"))
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-		tokens[period.ID] = decodeSchoolPortalData[struct {
+		tokens[int64(period.ID)] = decodeSchoolPortalData[struct {
 			StatusToken string `json:"status_token"`
 		}](t, rec.Body.Bytes()).StatusToken
-		return period.ID
+		return int64(period.ID)
 	}
 	ended := register([2]string{"2020-07-06", "2020-07-10"}, [2]string{"2020-07-13", "2020-07-17"})
 	later := register([2]string{"2099-07-06", "2099-07-10"}, [2]string{"2099-07-13", "2099-07-17"})

@@ -83,6 +83,7 @@ func TestInstance_UpdatePlanned_RejectsGraduatedStudent(t *testing.T) {
 	graduate(t, s, s.student1)
 
 	_, err = s.svc.UpdatePlanned(s.ctx, inst.ID, timetable.UpdateInstanceInput{
+		ExpectedVersion: plannerVersion(t, s.ctx, s.timetableData.Data, inst.ID),
 		Date:            date,
 		StartTime:       inst.StartTime,
 		EndTime:         inst.EndTime,
@@ -128,6 +129,7 @@ func TestInstance_UpdatePlanned_PastDatedRosterKeepsGraduate(t *testing.T) {
 	graduate(t, s, s.student1)
 
 	updated, err := s.svc.UpdatePlanned(s.ctx, inst.ID, timetable.UpdateInstanceInput{
+		ExpectedVersion: plannerVersion(t, s.ctx, s.timetableData.Data, inst.ID),
 		Date:            past,
 		StartTime:       inst.StartTime,
 		EndTime:         inst.EndTime,

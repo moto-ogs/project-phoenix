@@ -15,8 +15,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 )
@@ -101,7 +101,7 @@ func TestFileStorageRuntimeEvidence(t *testing.T) {
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		var uploaded struct {
 			Data struct {
-				ID common.JSONID `json:"id"`
+				ID ident.ID `json:"id"`
 			} `json:"data"`
 		}
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &uploaded))

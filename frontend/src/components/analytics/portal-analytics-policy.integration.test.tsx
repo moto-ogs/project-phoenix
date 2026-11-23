@@ -22,6 +22,11 @@ const mocks = vi.hoisted(() => ({
   setConfig: vi.fn(),
 }));
 
+// The staff session gate lets the request through; fetch gets the answer on.
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
   useSearchParams: () => new URLSearchParams(),
@@ -85,11 +90,11 @@ vi.mock("~/components/enrollment/enrollment-form", () => ({
 }));
 
 const tenant: TenantInfo = {
-  tenantId: 42,
+  tenantId: "42",
   slug: "school-a",
   subdomain: "school-a",
   name: "School A",
-  organizationId: 10,
+  organizationId: "10",
   organizationName: "Test organization",
   settings: {},
   presenceMode: "detailed",
@@ -115,7 +120,7 @@ describe("embedded enrollment analytics policy", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: string) => {
-        if (input.startsWith("/api/tenant/resolve")) {
+        if (input.startsWith("/api/auth/tenant/resolve")) {
           return Response.json({
             data: {
               tenant_id: 42,
@@ -481,9 +486,10 @@ describe("embedded enrollment analytics policy", () => {
       );
       // Let the real portal module consume the denied policy before enrollment mounts.
       await act(async () => {});
-      expect(fetch).toHaveBeenCalledWith(`/api/${scope}/analytics-policy`, {
-        cache: "no-store",
-      });
+      expect(fetch).toHaveBeenCalledWith(
+        `/api/${scope}/analytics-policy`,
+        expect.objectContaining({ cache: "no-store" }),
+      );
       view.rerender(
         <>
           <PortalAnalyticsSession surface={surface} consentCopy={COPY} />
@@ -502,7 +508,10 @@ describe("embedded enrollment analytics policy", () => {
       await act(async () => {
         window.dispatchEvent(new Event("phoenix:tenant-settings-stale"));
       });
-      expect(fetch).toHaveBeenCalledWith("/api/tenant/resolve?slug=school-a");
+      expect(fetch).toHaveBeenCalledWith(
+        "/api/auth/tenant/resolve?slug=school-a",
+        expect.objectContaining({ method: "GET" }),
+      );
       await initializePostHog();
       capturePostHog("login_failed");
       expect(mocks.init).not.toHaveBeenCalled();
@@ -654,8 +663,14 @@ describe("embedded enrollment analytics policy", () => {
           }),
       );
       act(() => document.dispatchEvent(new Event("visibilitychange")));
-      expect(fetch).toHaveBeenCalledWith("/api/tenant/resolve?slug=school-a");
-      expect(fetch).toHaveBeenCalledWith("/api/tenant/resolve?slug=school-b");
+      expect(fetch).toHaveBeenCalledWith(
+        "/api/auth/tenant/resolve?slug=school-a",
+        expect.objectContaining({ method: "GET" }),
+      );
+      expect(fetch).toHaveBeenCalledWith(
+        "/api/auth/tenant/resolve?slug=school-b",
+        expect.objectContaining({ method: "GET" }),
+      );
       await act(async () =>
         resolveHost(
           Response.json({
@@ -711,7 +726,7 @@ describe("embedded enrollment analytics policy", () => {
           : "school-a";
         return Response.json({
           data: {
-            tenant_id: slug === "school-a" ? 42 : 43,
+            tenant_id: slug === "school-a" ? "42" : "43",
             slug,
             subdomain: slug,
             analytics_enabled: slug === "school-a" || enabled,
@@ -759,7 +774,10 @@ describe("embedded enrollment analytics policy", () => {
       // Anker: the token edit loaded its actual foreign-school form.
       expect(screen.getByText("Loaded enrollment form")).toBeInTheDocument();
       // Initial resolution must not depend on a settings or visibility event.
-      expect(fetch).toHaveBeenCalledWith("/api/tenant/resolve?slug=school-b");
+      expect(fetch).toHaveBeenCalledWith(
+        "/api/auth/tenant/resolve?slug=school-b",
+        expect.objectContaining({ method: "GET" }),
+      );
       capturePostHog("login_failed");
       expect(mocks.capture).toHaveBeenCalledTimes(enabled ? 1 : 0);
     },
@@ -779,11 +797,18 @@ describe("embedded enrollment analytics policy", () => {
         data: { user: { id: "7", scope: "parent" } },
       });
       mocks.fetchBootstrap.mockResolvedValue({ phase: {} });
-      let resolveTarget!: (response: Response) => void;
+      // The page and its school provider both resolve the target school,
+      // in either order; the answer reaches every waiting lookup.
+      const waitingTargets: ((response: Response) => void)[] = [];
+      const resolveTarget = (response: Response) => {
+        for (const resolve of waitingTargets.splice(0)) {
+          resolve(response.clone());
+        }
+      };
       vi.mocked(fetch).mockImplementation(async (input) => {
-        if (String(input).startsWith("/api/tenant/resolve")) {
+        if (String(input).startsWith("/api/auth/tenant/resolve")) {
           return new Promise<Response>((resolve) => {
-            resolveTarget = resolve;
+            waitingTargets.push(resolve);
           });
         }
         return Response.json({ data: { enabled: true } });
@@ -828,7 +853,10 @@ describe("embedded enrollment analytics policy", () => {
           </>,
         ),
       );
-      expect(fetch).toHaveBeenCalledWith("/api/tenant/resolve?slug=school-c");
+      expect(fetch).toHaveBeenCalledWith(
+        "/api/auth/tenant/resolve?slug=school-c",
+        expect.objectContaining({ method: "GET" }),
+      );
       capturePostHog("login_failed");
       expect(mocks.capture).not.toHaveBeenCalled();
       expect(beforeSend(event)).toBeNull();
@@ -1020,7 +1048,7 @@ describe("embedded enrollment analytics policy", () => {
         data: { user: { id: "7", scope: "parent" } },
       });
       vi.mocked(fetch).mockImplementation(async (input) => {
-        if (String(input).startsWith("/api/tenant/resolve")) {
+        if (String(input).startsWith("/api/auth/tenant/resolve")) {
           return Response.json({
             data: {
               tenant_id: 42,

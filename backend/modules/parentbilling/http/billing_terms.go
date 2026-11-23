@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	capability "github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -56,8 +57,8 @@ func (rs *BillingTermsResource) FamilyRouter(protectedTraegerRoutes func(chi.Rou
 	protectedTraegerRoutes(r, func(r chi.Router, withTx common.Middleware) {
 		billing := r.With(rs.requireBilling, withTx)
 		billing.Get("/", rs.listFamilies)
+		billing.Get("/contracts/{id}", rs.familyOfContract)
 		billing.Put("/", rs.saveFamily)
-		billing.Delete("/{id}", rs.deleteFamily)
 	})
 	return r
 }
@@ -86,6 +87,9 @@ type ServiceTermsRequest struct {
 	PaymentMethod string `json:"payment_method"`
 	DueDays       int    `json:"due_days"`
 	BundleWith    string `json:"bundle_with"`
+	// ExpectedVersion is the version of the terms as they were read (ADR
+	// 0311).
+	ExpectedVersion string `json:"expected_version"`
 }
 
 // Bind accepts the body; the Owner validates the terms.
@@ -94,7 +98,7 @@ func (req *ServiceTermsRequest) Bind(*http.Request) error { return nil }
 // FamilyBillingRequest is the body of PUT /traeger/family-billing: the
 // deviation of the family of a contract of the Träger.
 type FamilyBillingRequest struct {
-	ContractID      int64                 `json:"contract_id"`
+	ContractID      ident.ID              `json:"contract_id"`
 	RecipientKind   string                `json:"recipient_kind"`
 	SecondFirstName string                `json:"second_first_name"`
 	SecondLastName  string                `json:"second_last_name"`
@@ -105,6 +109,8 @@ type FamilyBillingRequest struct {
 	PaymentMethod   string                `json:"payment_method"`
 	DueDay          *int                  `json:"due_day"`
 	DebtorNumber    string                `json:"debtor_number"`
+	// ExpectedVersion is the version of GET /contracts/{id} the form read.
+	ExpectedVersion string `json:"expected_version"`
 }
 
 // Bind accepts the body; the Owner validates the deviation.
@@ -112,9 +118,10 @@ func (req *FamilyBillingRequest) Bind(*http.Request) error { return nil }
 
 func (req *FamilyBillingRequest) input() capability.FamilyBillingInput {
 	return capability.FamilyBillingInput{
-		ContractID: req.ContractID, RecipientKind: req.RecipientKind, SecondFirstName: req.SecondFirstName, SecondLastName: req.SecondLastName,
+		ContractID: req.ContractID.Int64(), RecipientKind: req.RecipientKind, SecondFirstName: req.SecondFirstName, SecondLastName: req.SecondLastName,
 		PayerFirstName: req.PayerFirstName, PayerLastName: req.PayerLastName, PayerEmail: req.PayerEmail,
 		PayerAddress: (*capability.PostalAddress)(req.PayerAddress), PaymentMethod: req.PaymentMethod, DueDay: req.DueDay, DebtorNumber: req.DebtorNumber,
+		ExpectedVersion: req.ExpectedVersion,
 	}
 }
 
@@ -129,6 +136,9 @@ type FamilyBillingResponse struct {
 // payment method; a method without a date falls back to the payment term.
 type RunDueDatesRequest struct {
 	DueDates []RunDueDateRequest `json:"due_dates"`
+	// ExpectedVersion is the due_dates_version of the run as it was read
+	// (ADR 0311).
+	ExpectedVersion string `json:"expected_version"`
 }
 
 // RunDueDateRequest is the due date of one payment method.
@@ -179,7 +189,7 @@ func (rs *BillingTermsResource) saveServiceTerms(w http.ResponseWriter, r *http.
 	}
 	terms, err := rs.terms.SaveServiceTerms(r.Context(), reviewer, capability.ServiceTerms{
 		Service: chi.URLParam(r, "service"), PaymentMethod: req.PaymentMethod, DueDays: req.DueDays, BundleWith: req.BundleWith,
-	})
+	}, req.ExpectedVersion)
 	if err != nil {
 		tenant.MarkRollback(r.Context())
 		renderTermsError(w, r, err, common.CodeParentBillingBillingTermsInvalid)
@@ -203,6 +213,33 @@ func (rs *BillingTermsResource) listFamilies(w http.ResponseWriter, r *http.Requ
 	common.Respond(w, r, http.StatusOK, families, "Family billing retrieved successfully")
 }
 
+// familyOfContract answers the family of a contract with its deviation, so
+// its payment method is set without an invoice (#7770). A contract of
+// another Träger names no family: 404.
+func (rs *BillingTermsResource) familyOfContract(w http.ResponseWriter, r *http.Request) {
+	reviewer, ok := reviewerOf(w, r)
+	if !ok {
+		return
+	}
+	contractID, err := common.ParseIDParam(r, "id")
+	if err != nil {
+		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeParentBillingFamilyBillingInvalid))
+		return
+	}
+	family, err := rs.terms.FamilyBillingOfContract(r.Context(), reviewer, contractID)
+	if errors.Is(err, capability.ErrFamilyUnknown) {
+		tenant.MarkRollback(r.Context())
+		common.RenderError(w, r, common.ErrorNotFoundWithCode(err, common.CodeParentBillingFamilyBillingNotFound))
+		return
+	}
+	if err != nil {
+		tenant.MarkRollback(r.Context())
+		renderTermsError(w, r, err, common.CodeParentBillingFamilyBillingInvalid)
+		return
+	}
+	common.Respond(w, r, http.StatusOK, family, "Family billing of the contract retrieved successfully")
+}
+
 func (rs *BillingTermsResource) saveFamily(w http.ResponseWriter, r *http.Request) {
 	reviewer, ok := reviewerOf(w, r)
 	if !ok {
@@ -222,24 +259,6 @@ func (rs *BillingTermsResource) saveFamily(w http.ResponseWriter, r *http.Reques
 	common.Respond(w, r, http.StatusOK, FamilyBillingResponse{Family: family}, "Family billing saved successfully")
 }
 
-func (rs *BillingTermsResource) deleteFamily(w http.ResponseWriter, r *http.Request) {
-	reviewer, ok := reviewerOf(w, r)
-	if !ok {
-		return
-	}
-	id, err := common.ParseIDParam(r, "id")
-	if err != nil {
-		common.RenderError(w, r, common.ErrorInvalidRequest(err))
-		return
-	}
-	if err := rs.terms.DeleteFamilyBilling(r.Context(), reviewer, id); err != nil {
-		tenant.MarkRollback(r.Context())
-		renderTermsError(w, r, err, common.CodeParentBillingFamilyBillingInvalid)
-		return
-	}
-	common.Respond(w, r, http.StatusOK, FamilyBillingResponse{}, "Family billing deleted successfully")
-}
-
 func (rs *BillingTermsResource) setCareDueDates(w http.ResponseWriter, r *http.Request) {
 	rs.setDueDates(w, r, rs.terms.SetCareRunDueDates)
 }
@@ -248,7 +267,8 @@ func (rs *BillingTermsResource) setHolidayDueDates(w http.ResponseWriter, r *htt
 	rs.setDueDates(w, r, rs.terms.SetHolidayRunDueDates)
 }
 
-type dueDateSetter func(ctx context.Context, reviewer capability.HolidayReviewer, runID int64, dates capability.RunDueDates) (capability.RunDueDates, error)
+type dueDateSetter func(ctx context.Context, reviewer capability.HolidayReviewer, runID int64, dates capability.RunDueDates,
+	expectedVersion string) (capability.RunDueDates, error)
 
 func (rs *BillingTermsResource) setDueDates(w http.ResponseWriter, r *http.Request, set dueDateSetter) {
 	reviewer, runID, ok := runKey(w, r)
@@ -260,7 +280,7 @@ func (rs *BillingTermsResource) setDueDates(w http.ResponseWriter, r *http.Reque
 		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeParentBillingDueDatesInvalid))
 		return
 	}
-	dates, err := set(r.Context(), reviewer, runID, req.dates())
+	dates, err := set(r.Context(), reviewer, runID, req.dates(), req.ExpectedVersion)
 	if err != nil {
 		tenant.MarkRollback(r.Context())
 		renderTermsError(w, r, err, common.CodeParentBillingDueDatesInvalid)

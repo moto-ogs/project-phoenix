@@ -17,7 +17,11 @@ function frontendGateFixture(t) {
     copyFileSync(join(source, file), join(f.root, 'scripts', file));
   }
   f.write('frontend/package.json', JSON.stringify({ scripts }));
+  f.write('frontend/.oxlintrc.json', '{}');
+  mkdirSync(join(f.root, 'frontend/scripts'));
+  copyFileSync(join(source, '../frontend/scripts/lint.mjs'), join(f.root, 'frontend/scripts/lint.mjs'));
   f.write('bin/node', `#!/bin/sh
+if [ "$1" = scripts/lint.mjs ]; then exec "$LINT_TEST_NODE" "$@"; fi
 printf '%s\\n' "$1" >>"$CALL_LOG"
 if [ "$1" = "$FAILED_STAGE" ]; then exit 7; fi
 echo 'expected error log from a passing tool' >&2
@@ -25,15 +29,18 @@ echo 'expected error log from a passing tool' >&2
   // A warning succeeds by default, just as oxlint does. Only a supplied
   // threshold can reject it; removing the gate must turn these tests red.
   f.write('bin/oxlint', `#!/bin/sh
-printf 'oxlint\\n' >>"$CALL_LOG"
-if [ "$LINT_ERRORS" = 1 ]; then exit 7; fi
+group=unsplit
 limit=-1
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --max-warnings) shift; limit=$1 ;;
+    --config) shift; group=\${1#.oxlint-}; group=\${group%.mjs} ;;
   esac
   shift
 done
+printf 'oxlint:%s\\n' "$group" >>"$CALL_LOG"
+if [ "$group" != "$LINT_GROUP" ]; then exit 0; fi
+if [ "$LINT_ERRORS" = 1 ]; then exit 7; fi
 if [ "$LINT_WARNINGS" -gt 0 ]; then echo 'warning: controlled lint diagnostic' >&2; fi
 if [ "$limit" -ge 0 ] && [ "$LINT_WARNINGS" -gt "$limit" ]; then exit 1; fi
 `);
@@ -48,7 +55,10 @@ const command = mode === 'exec' ? [name, ...args].join(' ')
 const result = spawnSync('sh', ['-c', command], { stdio: 'inherit' });
 process.exit(result.status ?? 1);
 `);
-  return f;
+  return {
+    ...f,
+    run: (command, env) => f.run(command, { LINT_TEST_NODE: process.execPath, ...env }),
+  };
 }
 
 const frontendGates = {
@@ -57,17 +67,45 @@ const frontendGates = {
   'CI frontend': 'bash ../scripts/check-quality.sh frontend',
 };
 
+test('lint leaves configs with overrides on a single pass', t => {
+  const f = frontendGateFixture(t);
+  f.write('frontend/.oxlintrc.json', JSON.stringify({
+    overrides: [{ files: ['**/*.ts'], rules: { 'swr/no-effect-load': 'off' } }],
+  }));
+  const result = f.run('cd frontend && node scripts/lint.mjs --max-warnings 0', {
+    LINT_GROUP: 'unsplit', LINT_WARNINGS: '0',
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(readFileSync(f.log, 'utf8').trim(), 'oxlint:unsplit');
+});
+
+test('fast frontend quality stops for stale BFF exceptions', t => {
+  const f = frontendGateFixture(t);
+  const result = f.run('cd frontend && bash ../scripts/check-quality.sh frontend-fast', {
+    FAILED_STAGE: '--test',
+  });
+  assert.equal(result.status, 7, result.stdout + result.stderr);
+  assert.match(result.stdout, /bff-exceptions/);
+  assert.equal(readFileSync(f.log, 'utf8').trim(), '--test');
+});
+
 for (const [name, command] of Object.entries(frontendGates)) {
   test(`${name} rejects warnings and errors but accepts clean tools with error logs`, t => {
     const f = frontendGateFixture(t);
-    for (const [warnings, errors, expected] of [[0, 0, 0], [1, 0, 1], [0, 1, 7]]) {
+    for (const [group, warnings, errors, expected] of [
+      ['regular', 0, 0, 0],
+      ['regular', 1, 0, 1],
+      ['numeric', 1, 0, 1],
+      ['regular', 0, 1, 7],
+      ['numeric', 0, 1, 7],
+    ]) {
       f.write('calls', '');
       const result = f.run(`cd frontend && ${command}`, {
-        LINT_WARNINGS: String(warnings), LINT_ERRORS: String(errors),
+        LINT_GROUP: group, LINT_WARNINGS: String(warnings), LINT_ERRORS: String(errors),
       });
       assert.equal(result.status, expected, result.stdout + result.stderr);
       const calls = readFileSync(f.log, 'utf8').trim().split('\n');
-      assert.ok(calls.includes('oxlint'));
+      assert.deepEqual(calls.filter(call => call.startsWith('oxlint:')).sort(), ['oxlint:numeric', 'oxlint:regular']);
       assert.equal(calls.includes('./node_modules/typescript-native/bin/tsc'), expected === 0);
       if (warnings) assert.match(result.stderr, /warning: controlled lint diagnostic/);
     }
@@ -82,7 +120,7 @@ for (const [name, command] of Object.entries(frontendGates)) {
       assert.equal(result.status, 7, result.stdout + result.stderr);
       const calls = readFileSync(f.log, 'utf8').trim().split('\n');
       assert.equal(calls.at(-1), failed);
-      if (failed === 'scripts/verify-error-catalog.mjs') assert.ok(!calls.includes('oxlint'));
+      if (failed === 'scripts/verify-error-catalog.mjs') assert.ok(!calls.some(call => call.startsWith('oxlint:')));
     });
   }
 }
@@ -126,14 +164,14 @@ function fixture(t) {
 // each failure must stop the chain, including tools that fail without output.
 for (const name of ['check', 'check:fresh']) {
   test(`${name} propagates each stage failure and stops before later tools`, async t => {
-    const stages = ['scripts/verify-locales.mjs', 'scripts/generate-help-index.mjs', 'scripts/generate-portal-pages.mjs', 'test:source-contracts', 'scripts/verify-error-catalog.mjs', 'oxlint', './node_modules/typescript-native/bin/tsc'];
+    const stages = ['../scripts/check-du-form.mjs', 'scripts/verify-locales.mjs', 'scripts/generate-help-index.mjs', 'scripts/generate-portal-pages.mjs', 'test:source-contracts', 'scripts/verify-error-catalog.mjs', 'oxlint', './node_modules/typescript-native/bin/tsc'];
     for (const failed of [...stages, '']) {
       await t.test(failed || 'passing tools with expected error logs', t => {
         const f = fixture(t);
         const tool = `#!/bin/sh
 stage=$1
 [ "$stage" != run ] || stage=$2
-[ "$stage" != . ] || stage=oxlint
+[ "$stage" != scripts/lint.mjs ] || stage=oxlint
 printf '%s\\n' "$stage" >>"$CALL_LOG"
 if [ "$stage" = "$FAILED_STAGE" ]; then exit 7; fi
 echo 'expected error log from a passing tool' >&2

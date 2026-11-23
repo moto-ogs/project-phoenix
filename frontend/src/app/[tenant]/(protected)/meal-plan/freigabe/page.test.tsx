@@ -160,6 +160,25 @@ describe("MealBillingReleasePage", () => {
     expect(screen.getAllByText("Albers, Mia").length).toBeGreaterThan(0);
   });
 
+  // ADR 0311 rule 6: a failed read of the month after a refused release
+  // says so instead of claiming the new counts show.
+  it("names a failed read of the month after a refused release", async () => {
+    releaseMealBillingMonth.mockRejectedValue(
+      new ApiError("changed", 409, { code: "meals.billing_month_changed" }),
+    );
+    renderPage();
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Monat freigeben" }),
+    );
+    fetchMealBillingMonth.mockRejectedValue(monthLoadError());
+    fireEvent.click(await screen.findByRole("button", { name: "Freigeben" }));
+
+    expect(
+      await screen.findByText(/Der neue Stand konnte nicht geladen werden/),
+    ).toBeInTheDocument();
+    expect(releaseMealBillingMonth).toHaveBeenCalledTimes(1);
+  });
+
   // #6346, decision B: a release is not taken back. A released month
   // states the correction path in steps and offers no button that pretends
   // to undo it; „Erneut freigeben“ appears only once the counts changed.

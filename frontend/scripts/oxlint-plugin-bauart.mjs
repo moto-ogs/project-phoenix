@@ -313,11 +313,11 @@ const ROW_ACTION_BASELINE = new Map(
     // Zeilenaktion dieselbe Ausnahme nutzen kann.
     // Ziele einer Ankündigung, die es nicht mehr gibt (#5604, Formularwert).
     "src/app/operator/announcements/page.tsx": [
-      "aus Zielen entfernen@752",
-      "aus Zielen entfernen@785",
+      "aus Zielen entfernen@750",
+      "aus Zielen entfernen@783",
     ],
     "src/app/[tenant]/(protected)/meal-plan/page.tsx": [
-      "Gericht entfernen@885",
+      "Gericht entfernen@955",
     ],
     "src/app/[tenant]/(protected)/parent-announcements/page.tsx": [
       "Antwort entfernen@1695",
@@ -327,8 +327,8 @@ const ROW_ACTION_BASELINE = new Map(
       "Bedingung löschen@2037",
     ],
     "src/components/guardians/guardian-form-modal.tsx": [
-      "Entfernen@596",
-      "Telefonnummer entfernen@862",
+      "Entfernen@647",
+      "Telefonnummer entfernen@918",
     ],
     "src/components/staff/shift-edit-modal.tsx": ["Entfernen@1310"],
     "src/components/staff/stammdaten-section-forms.tsx": [
@@ -336,7 +336,7 @@ const ROW_ACTION_BASELINE = new Map(
     ],
     "src/components/students/companion-picker.tsx": ["entfernen@282"],
     "src/components/students/student-create-modal.tsx": [
-      "Erziehungsberechtigte/n entfernen@818",
+      "Erziehungsberechtigte/n entfernen@814",
     ],
     "src/components/timetable/substitution-slide-over.tsx": [
       "Rückgängig Entfernen@810",
@@ -1222,7 +1222,7 @@ const OWN_OBJECT_ENTRY_EXCEPTIONS = new Map(
   Object.entries({
     // Teilentschuldigungen genau dieses Kindes an genau diesen Tagen.
     "src/components/students/planned-status-days-modal.tsx": [
-      "Bearbeiten@1356",
+      "Bearbeiten@1440",
     ],
   }),
 );
@@ -1588,13 +1588,13 @@ const EDIT_OVERLAY_BASELINE = new Map(
       "Termin bearbeiten Termin erstellen@1065",
     ],
     "src/app/[tenant]/(protected)/database/students/class-list/page.tsx": [
-      "edit Eintrag bearbeiten Klassenlisteneintrag anlegen@635",
+      "edit Eintrag bearbeiten Klassenlisteneintrag anlegen@613",
     ],
     // Seit #5604 gilt die Regel im Schul- und Operator-Portal. Diese Formulare
     // haben keine eigene Objektroute; ein Umbau geht über das Seitengerüst
     // hinaus und ist nicht Teil von #5604.
     "src/app/operator/announcements/page.tsx": [
-      "Ankündigung bearbeiten Neue Ankündigung@534",
+      "Ankündigung bearbeiten Neue Ankündigung@532",
     ],
     "src/app/operator/provisioning/edit-organization-modal.tsx": [
       "Träger bearbeiten@86",
@@ -1606,25 +1606,25 @@ const EDIT_OVERLAY_BASELINE = new Map(
       "Schultermin anlegen Schultermin bearbeiten@335",
     ],
     "src/components/database/grade-transitions/transition-editor.tsx": [
-      "Schuljahreswechsel bearbeiten Neuer Schuljahreswechsel@268",
+      "Schuljahreswechsel bearbeiten Neuer Schuljahreswechsel@369",
     ],
     "src/components/enrollment/care-offerings-editor.tsx": [
-      "Betreuungsangebot duplizieren new Neues Betreuungsangebot Betreuungsangebot bearbeiten@1012",
+      "Betreuungsangebot duplizieren new Neues Betreuungsangebot Betreuungsangebot bearbeiten@1013",
     ],
     "src/components/enrollment/phases-editor.tsx": [
-      "Anmeldephase übertragen new Neue Anmeldephase Anmeldephase bearbeiten@1039",
+      "Anmeldephase übertragen new Neue Anmeldephase Anmeldephase bearbeiten@1149",
     ],
     "src/components/files/folder-modal.tsx": [
       "Ordner bearbeiten Neuer Ordner@157",
     ],
     "src/components/planning/closing-day-modal.tsx": [
-      "Schließtag bearbeiten Schließtag anlegen@155",
+      "Schließtag bearbeiten Schließtag anlegen@232",
     ],
     "src/components/staff-notices/staff-notice-modal.tsx": [
       "Hinweis bearbeiten Neuer Hinweis@190",
     ],
     "src/components/timetable/calendar-period-modal.tsx": [
-      "Kalenderzeitraum bearbeiten Kalenderzeitraum anlegen@447",
+      "Kalenderzeitraum bearbeiten Kalenderzeitraum anlegen@503",
     ],
     // Kontoaktionen mit eigenem Ablauf (Begründung und Rückfrage bei der
     // Zwei-Faktor-Authentifizierung, Auflösen offener Zuordnungen bei der
@@ -1634,7 +1634,7 @@ const EDIT_OVERLAY_BASELINE = new Map(
       "Zwei-Faktor-Authentifizierung verwalten@328",
     ],
     "src/components/teachers/caregiver-capability-modal.tsx": [
-      "resolve Zuordnungen auflösen: Betreuung verwalten:@338",
+      "resolve Zuordnungen auflösen: Betreuung verwalten:@349",
     ],
   }),
 );

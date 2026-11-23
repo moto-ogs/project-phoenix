@@ -18,26 +18,32 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/portalauth"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Error messages (S1192 - avoid duplicate string literals)
 const errInvitationServiceUnavailable = "invitation service unavailable"
 
-type CreateInvitationRequest struct {
+type CreateSchoolInvitationRequest struct {
 	EmploymentAction    identityaccess.EmploymentAction `json:"employment_action"`
 	ResetMasterData     bool                            `json:"reset_master_data"`
 	ResetQualifications bool                            `json:"reset_qualifications"`
 	ResetWorkTime       bool                            `json:"reset_work_time"`
 	Email               string                          `json:"email"`
-	RoleID              common.JSONID                   `json:"role_id"`
+	RoleID              ident.ID                        `json:"role_id"`
 	FirstName           string                          `json:"first_name"`
 	LastName            string                          `json:"last_name"`
 	Position            string                          `json:"position"`
 	// Gender is the optional Stammdaten gender; empty leaves it unset.
 	Gender string `json:"gender"`
+	// ExpectedFormerEmployment is the version of the former-employment
+	// answer the dialog decided on; the invitation is refused with
+	// general.changed_since_read when the answer differs by now. Empty when
+	// no lookup succeeded: the ADR 0021 default applies.
+	ExpectedFormerEmployment string `json:"expected_former_employment,omitempty"`
 }
 
-func (req *CreateInvitationRequest) Bind(_ *http.Request) error {
+func (req *CreateSchoolInvitationRequest) Bind(_ *http.Request) error {
 	noResetForNew := validation.By(func(value interface{}) error {
 		if reset, ok := value.(bool); ok && reset && req.EmploymentAction == identityaccess.EmploymentActionNew {
 			return errors.New("resets require resumption")
@@ -53,7 +59,7 @@ func (req *CreateInvitationRequest) Bind(_ *http.Request) error {
 	return validation.ValidateStruct(req,
 		validation.Field(&req.Email, validation.Required, is.Email),
 		validation.Field(&req.RoleID, validation.Required, validation.By(func(value interface{}) error {
-			roleID, ok := value.(common.JSONID)
+			roleID, ok := value.(ident.ID)
 			if !ok || roleID.Int64() <= 0 {
 				return errors.New("role_id is required")
 			}
@@ -70,21 +76,21 @@ func (req *CreateInvitationRequest) Bind(_ *http.Request) error {
 	)
 }
 
-type InvitationResponse struct {
+type SchoolInvitationResponse struct {
 	EmploymentAction    identityaccess.EmploymentAction `json:"employment_action"`
 	ResetMasterData     bool                            `json:"reset_master_data"`
 	ResetQualifications bool                            `json:"reset_qualifications"`
 	ResetWorkTime       bool                            `json:"reset_work_time"`
-	ID                  int64                           `json:"id"`
+	ID                  ident.ID                        `json:"id"`
 	Email               string                          `json:"email"`
-	RoleID              int64                           `json:"role_id,string"`
+	RoleID              ident.ID                        `json:"role_id"`
 	RoleName            string                          `json:"role_name,omitempty"`
 	Token               string                          `json:"token,omitempty"`
 	ExpiresAt           time.Time                       `json:"expires_at"`
 	FirstName           *string                         `json:"first_name,omitempty"`
 	LastName            *string                         `json:"last_name,omitempty"`
 	Position            *string                         `json:"position,omitempty"`
-	CreatedBy           int64                           `json:"created_by"`
+	CreatedBy           ident.ID                        `json:"created_by"`
 	Creator             string                          `json:"creator,omitempty"`
 	DeliveryStatus      string                          `json:"delivery_status"`
 	EmailSentAt         *time.Time                      `json:"email_sent_at,omitempty"`
@@ -118,7 +124,7 @@ func (rs *Resource) createInvitation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	req := &CreateInvitationRequest{}
+	req := &CreateSchoolInvitationRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
@@ -142,10 +148,11 @@ func (rs *Resource) createInvitation(w http.ResponseWriter, r *http.Request) {
 // buildInvitationRequest maps the wire request into the module's invitation
 // request, resolving the tenant display name for the invitation email and
 // copying the optional name/position fields.
-func (rs *Resource) buildInvitationRequest(r *http.Request, req *CreateInvitationRequest, claims sessiontoken.AppClaims) identityaccess.SchoolInvitationRequest {
+func (rs *Resource) buildInvitationRequest(r *http.Request, req *CreateSchoolInvitationRequest, claims sessiontoken.AppClaims) identityaccess.SchoolInvitationRequest {
 	invitationReq := identityaccess.SchoolInvitationRequest{
-		EmploymentAction: req.EmploymentAction,
-		ResetMasterData:  req.ResetMasterData, ResetQualifications: req.ResetQualifications, ResetWorkTime: req.ResetWorkTime,
+		ExpectedFormerEmployment: strings.TrimSpace(req.ExpectedFormerEmployment),
+		EmploymentAction:         req.EmploymentAction,
+		ResetMasterData:          req.ResetMasterData, ResetQualifications: req.ResetQualifications, ResetWorkTime: req.ResetWorkTime,
 		Email:            req.Email,
 		RoleID:           req.RoleID.Int64(),
 		CreatedBy:        int64(claims.ID),
@@ -218,20 +225,20 @@ func renderCreateInvitationError(w http.ResponseWriter, r *http.Request, err err
 }
 
 // toInvitationResponse maps an invitation to its wire response shape.
-func toInvitationResponse(invitation identityaccess.SchoolInvitation) InvitationResponse {
-	return InvitationResponse{
+func toInvitationResponse(invitation identityaccess.SchoolInvitation) SchoolInvitationResponse {
+	return SchoolInvitationResponse{
 		EmploymentAction: invitation.EmploymentAction,
 		ResetMasterData:  invitation.ResetMasterData, ResetQualifications: invitation.ResetQualifications, ResetWorkTime: invitation.ResetWorkTime,
-		ID:              invitation.ID,
+		ID:              ident.ID(invitation.ID),
 		Email:           invitation.Email,
-		RoleID:          invitation.RoleID,
+		RoleID:          ident.ID(invitation.RoleID),
 		RoleName:        invitation.RoleName,
 		Token:           invitation.Token,
 		ExpiresAt:       invitation.ExpiresAt,
 		FirstName:       invitation.FirstName,
 		LastName:        invitation.LastName,
 		Position:        invitation.Position,
-		CreatedBy:       invitationCreatedByValue(invitation.CreatedBy),
+		CreatedBy:       ident.ID(invitationCreatedByValue(invitation.CreatedBy)),
 		Creator:         invitation.CreatorEmail,
 		DeliveryStatus:  deriveDeliveryStatus(invitation.Delivery.SentAt, invitation.Delivery.Error),
 		EmailSentAt:     invitation.Delivery.SentAt,
@@ -255,9 +262,11 @@ func (req *FormerEmploymentRequest) Bind(_ *http.Request) error {
 }
 
 // FormerEmploymentResponse answers the Einladen dialog (#3402): the former
-// employment an invitation would continue, or null.
+// employment an invitation would continue, or null, and the version of that
+// answer, which the invitation sends back as expected_former_employment.
 type FormerEmploymentResponse struct {
 	FormerEmployment *FormerEmploymentView `json:"former_employment"`
+	Version          string                `json:"version"`
 }
 
 // FormerEmploymentView is a former employment on the wire; the parts are
@@ -285,7 +294,7 @@ func (rs *Resource) findFormerEmployment(w http.ResponseWriter, r *http.Request)
 		common.RenderError(w, r, common.ErrorInternalServer(err))
 		return
 	}
-	response := FormerEmploymentResponse{}
+	response := FormerEmploymentResponse{Version: former.Version}
 	if found {
 		response.FormerEmployment = &FormerEmploymentView{
 			StartedOn: former.StartedOn.String(), EndedOn: former.EndedOn.String(),
@@ -365,9 +374,9 @@ func (req *AcceptInvitationRequest) Bind(_ *http.Request) error {
 }
 
 type AcceptInvitationResponse struct {
-	AccountID       int64  `json:"account_id"`
-	Email           string `json:"email"`
-	TenantSubdomain string `json:"tenant_subdomain,omitempty"`
+	AccountID       ident.ID `json:"account_id"`
+	Email           string   `json:"email"`
+	TenantSubdomain string   `json:"tenant_subdomain,omitempty"`
 }
 
 var acceptInvitationErrorRules = []common.ErrorRule{
@@ -448,7 +457,7 @@ func (rs *Resource) acceptInvitation(w http.ResponseWriter, r *http.Request) {
 		slog.Int64("account_id", account.ID))
 
 	resp := AcceptInvitationResponse{
-		AccountID: account.ID,
+		AccountID: ident.ID(account.ID),
 		Email:     account.Email,
 	}
 	if rs.SchoolService != nil && rs.transactions != nil {
@@ -511,7 +520,7 @@ func (rs *Resource) listPendingInvitations(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	responses := make([]InvitationResponse, 0, len(invitations))
+	responses := make([]SchoolInvitationResponse, 0, len(invitations))
 	for _, invitation := range invitations {
 		resp := toInvitationResponse(invitation)
 		// Copyable creation links are membership offers, not existing-account

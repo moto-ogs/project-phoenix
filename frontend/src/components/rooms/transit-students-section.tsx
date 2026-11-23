@@ -26,6 +26,8 @@ import {
 } from "~/lib/active-service";
 import { canUseAllMoveTargets } from "~/lib/move-targets";
 import type { ActiveGroup, Supervisor } from "~/lib/active-helpers";
+import { fetchActivities } from "~/lib/activity-api";
+import type { Activity } from "~/lib/activity-helpers";
 import { fetchStudents } from "~/lib/student-api";
 import type { Student } from "~/lib/student-helpers";
 import { ApiError, wireErrorCode } from "~/lib/api-error";
@@ -82,9 +84,16 @@ function movedMessage(count: number, skipped: number, where: string): string {
   }`;
 }
 
-function buildSessionLabel(group: ActiveGroup): string {
+// GET /api/active/groups sends no activity name (#2353): it comes from the
+// activity list, like the check-in target names its sessions.
+function buildSessionLabel(
+  group: ActiveGroup,
+  activityNames: ReadonlyMap<string, string>,
+): string {
   const roomName = group.room?.name ?? `Raum ${group.roomId}`;
-  const activityName = group.actualGroup?.name;
+  const activityName = group.groupId
+    ? activityNames.get(group.groupId)
+    : undefined;
   return activityName ? `${roomName} · ${activityName}` : roomName;
 }
 
@@ -216,6 +225,20 @@ export function TransitStudentsSection({
       ]),
   );
 
+  // The names only tell sessions in one room apart; without them each
+  // session is named by its room, so a failed load stays silent.
+  const { data: activities } = useSWRAuth<Activity[]>(
+    checkinTargetKeys.activities(),
+    () => fetchActivities(),
+  );
+  const activityNames = useMemo(
+    () =>
+      new Map(
+        (activities ?? []).map((activity) => [activity.id, activity.name]),
+      ),
+    [activities],
+  );
+
   const supervisedTargetGroupIds = useMemo(
     () =>
       new Set(
@@ -236,7 +259,7 @@ export function TransitStudentsSection({
       .map((group): TransitTargetOption => ({
         kind: "session",
         value: group.id,
-        label: buildSessionLabel(group),
+        label: buildSessionLabel(group, activityNames),
       }));
     const openRoomOptions = canTargetOpenRooms
       ? rooms
@@ -254,6 +277,7 @@ export function TransitStudentsSection({
     );
   }, [
     activeGroups,
+    activityNames,
     canTargetOpenRooms,
     rooms,
     showAllTargets,

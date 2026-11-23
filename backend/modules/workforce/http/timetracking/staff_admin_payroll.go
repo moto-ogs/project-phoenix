@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Personnel number maintenance (#1417 Tranche 2b). Gated on
@@ -20,7 +21,9 @@ import (
 // context for the audit trail.
 type PayrollNumberRequest struct {
 	PersonnelNumber json.RawMessage `json:"personnel_number"`
-	Note            string          `json:"note"`
+	// ExpectedVersion is the version of the read the form showed (ADR 0311).
+	ExpectedVersion string `json:"expected_version"`
+	Note            string `json:"note"`
 
 	personnelNumberValue *string
 }
@@ -37,11 +40,13 @@ func (p *PayrollNumberRequest) Bind(_ *http.Request) error {
 
 // PayrollNumberResponse mirrors the stored state after a read or write.
 type PayrollNumberResponse struct {
-	StaffID         int64   `json:"staff_id"`
-	PersonnelNumber *string `json:"personnel_number"`
+	StaffID         ident.ID `json:"staff_id"`
+	PersonnelNumber *string  `json:"personnel_number"`
 	// KeptByTraeger is true when the Träger keeps the number in its staff
 	// record (#4705); the school reads it and cannot change it.
 	KeptByTraeger bool `json:"kept_by_traeger"`
+	// Version is the token a change of the number sends back.
+	Version string `json:"version"`
 }
 
 // getPayrollNumber returns the staff member's Personalnummer. A separate
@@ -62,7 +67,7 @@ func (rs *StaffAdminResource) getPayrollNumber(w http.ResponseWriter, r *http.Re
 		common.RenderError(w, r, common.ErrorInternalServer(err))
 		return
 	}
-	common.Respond(w, r, http.StatusOK, &PayrollNumberResponse{StaffID: staff.ID, PersonnelNumber: staff.PersonnelNumber, KeptByTraeger: kept}, "Personnel number retrieved successfully")
+	common.Respond(w, r, http.StatusOK, &PayrollNumberResponse{StaffID: ident.ID(staff.ID), PersonnelNumber: staff.PersonnelNumber, KeptByTraeger: kept, Version: workforce.PersonnelNumberVersion(staff.PersonnelNumber)}, "Personnel number retrieved successfully")
 }
 
 // keptByTraeger reports whether the Träger keeps the employment in its
@@ -93,7 +98,7 @@ func (rs *StaffAdminResource) updatePayrollNumber(w http.ResponseWriter, r *http
 		return
 	}
 
-	staff, err := rs.PersonService.UpdatePersonnelNumber(r.Context(), id, req.personnelNumberValue, changedBy, req.Note)
+	staff, err := rs.PersonService.UpdatePersonnelNumber(r.Context(), id, req.personnelNumberValue, &req.ExpectedVersion, changedBy, req.Note)
 	if err != nil {
 		switch {
 		case errors.Is(err, workforce.ErrPersonnelNumberInvalid):
@@ -109,5 +114,5 @@ func (rs *StaffAdminResource) updatePayrollNumber(w http.ResponseWriter, r *http
 		}
 		return
 	}
-	common.Respond(w, r, http.StatusOK, &PayrollNumberResponse{StaffID: staff.ID, PersonnelNumber: staff.PersonnelNumber}, "Personnel number updated successfully")
+	common.Respond(w, r, http.StatusOK, &PayrollNumberResponse{StaffID: ident.ID(staff.ID), PersonnelNumber: staff.PersonnelNumber, Version: workforce.PersonnelNumberVersion(staff.PersonnelNumber)}, "Personnel number updated successfully")
 }

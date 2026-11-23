@@ -47,19 +47,21 @@ type ResourceConfig struct {
 	PickupAdjustmentService      careplan.PickupAdjustments
 	// PickupChangeNotices serves the reader's unread markers of changed
 	// pickup times (#6855).
-	PickupChangeNotices      careplan.PickupChangeTeamNotices
-	PickupScheduleService    careplan.PickupScheduleService
-	PickupSignatureProofs    PickupSignatureProofs
-	Reports                  ReportRenderer
-	Schools                  SchoolIdentity
-	SettingsService          TenantSettings
-	StudentAuditService      StudentChangeHistory
-	StudentAccidentReports   careplan.StudentAccidentReports
-	StudentConsents          StudentConsentCapability
-	StudentDocumentService   careplan.StudentDocuments
-	StudentPhotos            StudentPhotoLifecycle
-	UserContextService       CallerContext
-	WeekdayPickupNotes       WeekdayPickupNoteReplacer
+	PickupChangeNotices    careplan.PickupChangeTeamNotices
+	PickupScheduleService  careplan.PickupScheduleService
+	PickupSignatureProofs  PickupSignatureProofs
+	Reports                ReportRenderer
+	Schools                SchoolIdentity
+	SettingsService        TenantSettings
+	StudentAuditService    StudentChangeHistory
+	StudentAccidentReports careplan.StudentAccidentReports
+	StudentConsents        StudentConsentCapability
+	StudentDocumentService careplan.StudentDocuments
+	StudentPhotos          StudentPhotoLifecycle
+	UserContextService     CallerContext
+	// WeeklyPlans reads the token of a child's weekly plan and saves the plan
+	// without a pickup change (ADR 0311).
+	WeeklyPlans              careplan.WeeklyPlans
 	RespondCreatedStudent    func(http.ResponseWriter, *http.Request, *peopleModule.StudentState, *peopleModule.Person)
 	RespondUpdatedStudent    func(http.ResponseWriter, *http.Request, int64, *peopleModule.Person, bool, bool, time.Time)
 	ApplyProfileStatusChange func(context.Context, *peopleModule.StudentState, *bool, *bool, time.Time, *string) error
@@ -84,6 +86,7 @@ func NewResource(cfg ResourceConfig) *Resource {
 // today is the Berlin school day of the resource's clock.
 func (rs *Resource) today() calendar.Date { return calendar.DateFromTime(rs.Now()) }
 func (rs *Resource) Register(r chi.Router, withTx common.Middleware) {
+	r = r.With(markTraegerBueroAuthor)
 	r.With(common.RequiresPermission(permissions.UsersUpdate), withTx).Post("/master-data-change-requests/{requestId}/decide", rs.decideMasterDataChangeRequest)
 	r.With(common.RequiresPermission(permissions.UsersUpdate), withTx).Post("/care-schedule-change-requests/{requestId}/decide", rs.decideCareScheduleChangeRequest)
 	r.With(common.RequiresPermission(permissions.UsersUpdate), withTx).Get("/care-schedule-change-requests/{requestId}", rs.getCareScheduleChangeRequest)
@@ -111,6 +114,7 @@ func (rs *Resource) Register(r chi.Router, withTx common.Middleware) {
 	r.With(common.RequiresPermission(permissions.UsersDelete), withTx).Post("/{id}/care-end/resume", rs.resumeCare)
 	r.With(common.RequiresPermission(permissions.UsersDelete), withTx).Get("/ended-care", rs.listEndedCare)
 	r.With(common.RequiresPermission(permissions.UsersRead), withTx).Get("/{id}/companions", rs.getStudentCompanions)
+	r.With(common.RequiresPermission(permissions.UsersRead), withTx).Get("/{id}/companion-links", rs.getStudentCompanionList)
 	r.With(common.RequiresPermission(permissions.UsersRead), withTx).Get("/{id}/pickup-schedules", rs.getStudentPickupSchedules)
 	r.With(common.RequiresPermission(permissions.UsersRead), withTx).Get("/{id}/partial-absences", rs.getStudentPartialAbsences)
 	r.With(common.RequiresPermission(permissions.UsersUpdate), withTx).Put("/{id}/pickup-schedules", rs.updateStudentPickupSchedules)
@@ -130,7 +134,6 @@ func (rs *Resource) Register(r chi.Router, withTx common.Middleware) {
 	r.With(common.RequiresPermission(permissions.UsersUpdate), withTx).Put("/{id}/pickup-notes", rs.replaceStudentWeekdayPickupNotes)
 	r.With(common.RequiresPermission(permissions.UsersUpdate), withTx).Put("/{id}/pickup-notes/{noteId}", rs.updateStudentPickupNote)
 	r.With(common.RequiresPermission(permissions.UsersUpdate), withTx).Delete("/{id}/pickup-notes/{noteId}", rs.deleteStudentPickupNote)
-	r.With(common.RequiresPermission(permissions.UsersRead), withTx).Post("/pickup-times/bulk", rs.getBulkPickupTimes)
 	r.With(common.RequiresPermission(permissions.UsersRead), withTx).Get("/pickup-change-notices", rs.listPickupChangeNotices)
 	r.With(common.RequiresPermission(permissions.UsersRead), withTx).Post("/{id}/pickup-change-notices/read", rs.readPickupChangeNotices)
 	rs.registerArrivalRoutes(r, withTx)
@@ -158,7 +161,6 @@ func (rs *Resource) registerArrivalRoutes(r chi.Router, withTx common.Middleware
 	r.With(common.RequiresPermission(permissions.UsersUpdate), withTx).Delete("/{id}/arrival-notes/{noteId}", rs.deleteStudentArrivalNote)
 	r.With(common.RequiresPermission(permissions.UsersUpdate), withTx).Post("/arrival-schedules/bulk", rs.bulkUpsertArrivalSchedules)
 	r.With(common.RequiresPermission(permissions.UsersRead), withTx).Post("/arrival-schedules/status", rs.getBulkArrivalScheduleStatus)
-	r.With(common.RequiresPermission(permissions.UsersRead), withTx).Post("/arrival-times/bulk", rs.getBulkArrivalTimes)
 	r.With(common.RequiresPermission(permissions.UsersRead), withTx).Get("/class-arrival-times/{schoolClass}", rs.getClassArrivalTimes)
 	r.With(common.RequiresPermission(permissions.UsersRead), withTx).Get("/class-arrival-exceptions/{schoolClass}", rs.getClassArrivalExceptions)
 	r.With(common.RequiresPermission(permissions.UsersUpdate), withTx).Put("/class-arrival-exceptions/{schoolClass}/{date}", rs.putClassArrivalException)

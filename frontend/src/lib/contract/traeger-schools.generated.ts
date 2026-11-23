@@ -4,8 +4,9 @@ import {
   arr,
   bool,
   calendarDate,
+  fileAnswer,
   instant,
-  int64StringOrNumber,
+  int64String,
   nullable,
   num,
   object,
@@ -25,7 +26,7 @@ export interface TraegerSchool {
 }
 
 export const TraegerSchoolSchema: z.ZodType<TraegerSchool, unknown> = object<TraegerSchool>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   slug: str,
   subdomain: str,
@@ -79,7 +80,7 @@ export interface SchoolAlerts {
 }
 
 export const SchoolAlertsSchema: z.ZodType<SchoolAlerts, unknown> = object<SchoolAlerts>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   slug: str,
   subdomain: str,
@@ -149,7 +150,7 @@ export interface SchoolArrivalPickupTimes {
 }
 
 export const SchoolArrivalPickupTimesSchema: z.ZodType<SchoolArrivalPickupTimes, unknown> = object<SchoolArrivalPickupTimes>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   slug: str,
   subdomain: str,
@@ -190,7 +191,7 @@ export interface ComparedSchool {
 }
 
 export const ComparedSchoolSchema: z.ZodType<ComparedSchool, unknown> = object<ComparedSchool>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   slug: str,
   subdomain: str,
@@ -289,7 +290,7 @@ export interface SchoolDailyAttendance {
 }
 
 export const SchoolDailyAttendanceSchema: z.ZodType<SchoolDailyAttendance, unknown> = object<SchoolDailyAttendance>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   slug: str,
   subdomain: str,
@@ -327,7 +328,7 @@ export interface OccupancyGroup {
 }
 
 export const OccupancyGroupSchema: z.ZodType<OccupancyGroup, unknown> = object<OccupancyGroup>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   children: safeInt,
 });
@@ -342,7 +343,7 @@ export interface OccupancyCareForm {
 }
 
 export const OccupancyCareFormSchema: z.ZodType<OccupancyCareForm, unknown> = object<OccupancyCareForm>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   children: safeInt,
   capacity: nullable(safeInt),
@@ -364,7 +365,7 @@ export interface SchoolOccupancy {
 }
 
 export const SchoolOccupancySchema: z.ZodType<SchoolOccupancy, unknown> = object<SchoolOccupancy>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   slug: str,
   subdomain: str,
@@ -399,7 +400,7 @@ export interface UtilizationOffering {
 }
 
 export const UtilizationOfferingSchema: z.ZodType<UtilizationOffering, unknown> = object<UtilizationOffering>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   capacity: nullable(safeInt),
   active: bool,
@@ -416,7 +417,7 @@ export interface UtilizationRoom {
 }
 
 export const UtilizationRoomSchema: z.ZodType<UtilizationRoom, unknown> = object<UtilizationRoom>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   capacity: nullable(safeInt),
   children: nullable(arr(nullable(safeInt))),
@@ -441,7 +442,7 @@ export interface SchoolUtilization {
 }
 
 export const SchoolUtilizationSchema: z.ZodType<SchoolUtilization, unknown> = object<SchoolUtilization>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   slug: str,
   subdomain: str,
@@ -488,7 +489,7 @@ export interface SchoolView {
 }
 
 export const SchoolViewSchema: z.ZodType<SchoolView, unknown> = object<SchoolView>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   slug: str,
   subdomain: str,
@@ -516,7 +517,7 @@ export interface ChildAttendance {
 }
 
 export const ChildAttendanceSchema: z.ZodType<ChildAttendance, unknown> = object<ChildAttendance>({
-  student_id: int64StringOrNumber,
+  student_id: int64String,
   first_name: str,
   last_name: str,
   school_class: str,
@@ -544,37 +545,6 @@ export const UtilizationChildrenSchema: z.ZodType<UtilizationChildren, unknown> 
   children: nullable(arr(ChildAttendanceSchema)),
 });
 
-/** Query of GET /traeger/schools/arrival-pickup-times */
-export interface GetTraegerSchoolsArrivalPickupTimesQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /traeger/schools/comparison */
-export interface GetTraegerSchoolsComparisonQuery {
-  from?: string;
-  schools?: string;
-  to?: string;
-}
-
-/** Query of GET /traeger/schools/daily-attendance */
-export interface GetTraegerSchoolsDailyAttendanceQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /traeger/schools/utilization */
-export interface GetTraegerSchoolsUtilizationQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /traeger/schools/{id}/utilization/children */
-export interface GetTraegerSchoolsIdUtilizationChildrenQuery {
-  from?: string;
-  to?: string;
-}
-
 export const routes = {
   "GET /traeger/schools/": {
     method: "GET",
@@ -588,26 +558,91 @@ export const routes = {
     portals: ["org"],
     response: success(SchoolsAlertsSchema),
   },
+  "GET /traeger/schools/alerts/export": {
+    method: "GET",
+    pattern: "/traeger/schools/alerts/export",
+    portals: ["org"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+      "school": { kind: "id" },
+    },
+    response: fileAnswer,
+  },
   "GET /traeger/schools/arrival-pickup-times": {
     method: "GET",
     pattern: "/traeger/schools/arrival-pickup-times",
     portals: ["org"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(ArrivalPickupTimesSchema),
+  },
+  "GET /traeger/schools/arrival-pickup-times/export": {
+    method: "GET",
+    pattern: "/traeger/schools/arrival-pickup-times/export",
+    portals: ["org"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+      "from": { kind: "date" },
+      "school": { kind: "id" },
+      "to": { kind: "date" },
+    },
+    response: fileAnswer,
   },
   "GET /traeger/schools/comparison": {
     method: "GET",
     pattern: "/traeger/schools/comparison",
     portals: ["org"],
-    query: ["from", "schools", "to"],
+    query: {
+      "from": { kind: "date" },
+      "schools": { kind: "string" },
+      "to": { kind: "date" },
+    },
     response: success(SchoolComparisonSchema),
+  },
+  "GET /traeger/schools/comparison/export": {
+    method: "GET",
+    pattern: "/traeger/schools/comparison/export",
+    portals: ["org"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+      "from": { kind: "date" },
+      "metrics": { kind: "string" },
+      "schools": { kind: "string" },
+      "to": { kind: "date" },
+    },
+    response: fileAnswer,
   },
   "GET /traeger/schools/daily-attendance": {
     method: "GET",
     pattern: "/traeger/schools/daily-attendance",
     portals: ["org"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(DailyAttendanceSchema),
+  },
+  "GET /traeger/schools/daily-attendance/export": {
+    method: "GET",
+    pattern: "/traeger/schools/daily-attendance/export",
+    portals: ["org"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
+    response: fileAnswer,
+  },
+  "GET /traeger/schools/export": {
+    method: "GET",
+    pattern: "/traeger/schools/export",
+    portals: ["org"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
+    response: fileAnswer,
   },
   "GET /traeger/schools/occupancy": {
     method: "GET",
@@ -615,12 +650,37 @@ export const routes = {
     portals: ["org"],
     response: success(OccupancySchema),
   },
+  "GET /traeger/schools/occupancy/export": {
+    method: "GET",
+    pattern: "/traeger/schools/occupancy/export",
+    portals: ["org"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+      "school": { kind: "id" },
+    },
+    response: fileAnswer,
+  },
   "GET /traeger/schools/utilization": {
     method: "GET",
     pattern: "/traeger/schools/utilization",
     portals: ["org"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(UtilizationSchema),
+  },
+  "GET /traeger/schools/utilization/export": {
+    method: "GET",
+    pattern: "/traeger/schools/utilization/export",
+    portals: ["org"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+      "from": { kind: "date" },
+      "school": { kind: "id" },
+      "to": { kind: "date" },
+    },
+    response: fileAnswer,
   },
   "GET /traeger/schools/{id}": {
     method: "GET",
@@ -632,7 +692,10 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/schools/{id}/utilization/children",
     portals: ["org"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(UtilizationChildrenSchema),
   },
 } as const;

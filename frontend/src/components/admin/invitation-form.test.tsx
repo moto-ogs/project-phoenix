@@ -53,6 +53,16 @@ const mockGetRoles = vi.fn();
 const mockCreateInvitation = vi.fn();
 const mockFindFormerEmployment = vi.fn();
 
+// The lookup answers the former employment, or null, with the version the
+// invitation sends back as expectedFormerEmployment (ADR 0311).
+const NONE_VERSION = "none-version";
+const FOUND_VERSION = "found-version";
+const noFormerEmployment = { formerEmployment: null, version: NONE_VERSION };
+const foundFormerEmployment = (formerEmployment: object) => ({
+  formerEmployment,
+  version: FOUND_VERSION,
+});
+
 vi.mock("~/lib/auth-service", () => ({
   authService: {
     getRoles: (): unknown => mockGetRoles(),
@@ -122,7 +132,7 @@ describe("InvitationForm", () => {
       email: "test@example.com",
       token: "abc123",
     });
-    mockFindFormerEmployment.mockResolvedValue(null);
+    mockFindFormerEmployment.mockResolvedValue(noFormerEmployment);
   });
 
   it("shows loading state while fetching roles", async () => {
@@ -700,7 +710,7 @@ describe("InvitationForm former employment hint", () => {
     vi.useFakeTimers(FOLLOW_REAL_TIME);
     vi.clearAllMocks();
     mockGetRoles.mockResolvedValue(mockRoles);
-    mockFindFormerEmployment.mockResolvedValue(null);
+    mockFindFormerEmployment.mockResolvedValue(noFormerEmployment);
   });
 
   const typeEmail = async (value: string) => {
@@ -715,21 +725,23 @@ describe("InvitationForm former employment hint", () => {
   };
 
   it("names the period, what comes back and what does not", async () => {
-    mockFindFormerEmployment.mockResolvedValue({
-      startedOn: "2024-08-01",
-      endedOn: "2026-07-31",
-      resumes: [
-        "master_data",
-        "qualifications",
-        "work_time",
-        "past_shifts_and_absences",
-      ],
-      notReturning: [
-        "staff_documents",
-        "future_shifts_and_absences",
-        "groups_classes_substitutions",
-      ],
-    });
+    mockFindFormerEmployment.mockResolvedValue(
+      foundFormerEmployment({
+        startedOn: "2024-08-01",
+        endedOn: "2026-07-31",
+        resumes: [
+          "master_data",
+          "qualifications",
+          "work_time",
+          "past_shifts_and_absences",
+        ],
+        notReturning: [
+          "staff_documents",
+          "future_shifts_and_absences",
+          "groups_classes_substitutions",
+        ],
+      }),
+    );
 
     await typeEmail(" Former@Example.com ");
 
@@ -788,13 +800,13 @@ describe("InvitationForm former employment hint", () => {
     mockFindFormerEmployment.mockImplementation((email: string) =>
       Promise.resolve(
         email === "former@example.com"
-          ? {
+          ? foundFormerEmployment({
               startedOn: "2024-08-01",
               endedOn: "2026-07-31",
               resumes: ["master_data"],
               notReturning: ["staff_documents"],
-            }
-          : null,
+            })
+          : noFormerEmployment,
       ),
     );
 
@@ -815,15 +827,17 @@ describe("InvitationForm former employment hint", () => {
     });
   });
 
-  it("waits for a fresh lookup when returning to an address with a former employment", async () => {
+  it("shows the known answer at once when returning to an address", async () => {
     mockFindFormerEmployment.mockImplementation((email: string) => {
       if (email === "former@example.com") {
-        return Promise.resolve({
-          startedOn: "2024-08-01",
-          endedOn: "2026-07-31",
-          resumes: ["master_data"],
-          notReturning: ["staff_documents"],
-        });
+        return Promise.resolve(
+          foundFormerEmployment({
+            startedOn: "2024-08-01",
+            endedOn: "2026-07-31",
+            resumes: ["master_data"],
+            notReturning: ["staff_documents"],
+          }),
+        );
       }
       return new Promise(() => undefined);
     });
@@ -838,20 +852,106 @@ describe("InvitationForm former employment hint", () => {
     });
     skipLookupDebounce();
     await waitFor(() =>
-      expect(mockFindFormerEmployment).toHaveBeenCalledTimes(2),
-    );
-    await waitFor(() =>
       expect(screen.getByText("Adresse wird geprüft…")).toBeDisabled(),
     );
 
+    // Zurück zur ersten Adresse: Die Antwort steht im Cache; ist sie
+    // inzwischen falsch, lehnt das Backend die Einladung ab.
     fireEvent.change(screen.getByLabelText("E-Mail-Adresse"), {
       target: { value: "former@example.com" },
     });
+    skipLookupDebounce();
+    expect(
+      await screen.findByText("Diese Person war schon bei dir beschäftigt"),
+    ).toBeInTheDocument();
+  });
+
+  it("asks for the choice when the person turns out to have worked here", async () => {
+    mockFindFormerEmployment
+      .mockResolvedValueOnce(noFormerEmployment)
+      .mockResolvedValue(
+        foundFormerEmployment({
+          startedOn: "2024-08-01",
+          endedOn: "2026-07-31",
+          resumes: ["master_data"],
+          notReturning: ["staff_documents"],
+        }),
+      );
+    mockCreateInvitation
+      .mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      )
+      .mockResolvedValue({
+        id: 1,
+        email: "former@example.com",
+        token: "abc123",
+      });
+
+    await typeEmail("former@example.com");
+    fireEvent.click(await screen.findByText("Einladung senden"));
+    await waitFor(() =>
+      expect(mockCreateInvitation).toHaveBeenCalledWith(
+        expect.not.objectContaining({ employmentAction: expect.anything() }),
+      ),
+    );
+    // The invitation says which answer it decided on: "none".
+    expect(mockCreateInvitation).toHaveBeenCalledWith(
+      expect.objectContaining({ expectedFormerEmployment: NONE_VERSION }),
+    );
 
     expect(
-      screen.queryByText("Diese Person war schon bei dir beschäftigt"),
+      await screen.findByText("Diese Person war schon bei dir beschäftigt"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Wiederholen" }),
     ).not.toBeInTheDocument();
-    expect(screen.getByText("Adresse wird geprüft…")).toBeDisabled();
+    fireEvent.click(screen.getByText("Einladung senden"));
+    await waitFor(() =>
+      expect(mockCreateInvitation).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          employmentAction: "resume",
+          expectedFormerEmployment: FOUND_VERSION,
+        }),
+      ),
+    );
+  });
+
+  // SWR keeps the earlier answer next to the error of a failed reload. Its
+  // version is no longer the read: sending it would be refused again until
+  // the address changes.
+  it("sends no stale version when the lookup fails after a refusal", async () => {
+    mockFindFormerEmployment
+      .mockResolvedValueOnce(noFormerEmployment)
+      .mockRejectedValue(new Error("network"));
+    mockCreateInvitation
+      .mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      )
+      .mockResolvedValue({
+        id: 1,
+        email: "former@example.com",
+        token: "abc123",
+      });
+
+    await typeEmail("former@example.com");
+    fireEvent.click(await screen.findByText("Einladung senden"));
+    await waitFor(() =>
+      expect(mockCreateInvitation).toHaveBeenCalledWith(
+        expect.objectContaining({ expectedFormerEmployment: NONE_VERSION }),
+      ),
+    );
+    await waitFor(() =>
+      expect(mockFindFormerEmployment).toHaveBeenCalledTimes(2),
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Einladung senden")).not.toBeDisabled();
+    });
+    fireEvent.click(screen.getByText("Einladung senden"));
+    await waitFor(() => expect(mockCreateInvitation).toHaveBeenCalledTimes(2));
+    expect(mockCreateInvitation.mock.calls[1]?.[0]).not.toHaveProperty(
+      "expectedFormerEmployment",
+    );
   });
 
   it("keeps the dialog usable when the lookup fails", async () => {
@@ -873,6 +973,16 @@ describe("InvitationForm former employment hint", () => {
     await waitFor(() => {
       expect(screen.getByText("Einladung senden")).not.toBeDisabled();
     });
+    // Without an answer the invitation sends no version: the backend keeps
+    // the default of ADR 0021 instead of refusing it (no 409 loop).
+    fireEvent.click(screen.getByText("Einladung senden"));
+    await waitFor(() => expect(mockCreateInvitation).toHaveBeenCalled());
+    expect(mockCreateInvitation.mock.calls[0]?.[0]).not.toHaveProperty(
+      "expectedFormerEmployment",
+    );
+    expect(mockCreateInvitation.mock.calls[0]?.[0]).not.toHaveProperty(
+      "employmentAction",
+    );
   });
 
   it("falls back to the existing invitation behavior when the lookup times out", async () => {
@@ -911,8 +1021,13 @@ describe("InvitationForm former employment hint", () => {
       await act(async () => {
         await vi.advanceTimersByTimeAsync(0);
       });
-      expect(mockCreateInvitation).toHaveBeenCalledWith(
-        expect.not.objectContaining({ employmentAction: expect.anything() }),
+      // No answer was read, so no version goes out: the backend applies the
+      // ADR 0021 default instead of refusing the invitation.
+      expect(mockCreateInvitation.mock.calls[0]?.[0]).not.toHaveProperty(
+        "employmentAction",
+      );
+      expect(mockCreateInvitation.mock.calls[0]?.[0]).not.toHaveProperty(
+        "expectedFormerEmployment",
       );
     } finally {
       if (usesFakeTimers) releaseFakeTimers();
@@ -930,12 +1045,14 @@ describe("InvitationForm employment choice", () => {
       email: "former@example.com",
       token: "abc123",
     });
-    mockFindFormerEmployment.mockResolvedValue({
-      startedOn: "2024-08-01",
-      endedOn: "2026-07-31",
-      resumes: ["master_data", "work_time"],
-      notReturning: ["staff_documents"],
-    });
+    mockFindFormerEmployment.mockResolvedValue(
+      foundFormerEmployment({
+        startedOn: "2024-08-01",
+        endedOn: "2026-07-31",
+        resumes: ["master_data", "work_time"],
+        notReturning: ["staff_documents"],
+      }),
+    );
   });
 
   const openFormer = async () => {
@@ -951,10 +1068,10 @@ describe("InvitationForm employment choice", () => {
   };
 
   it("waits for the address lookup before sending", async () => {
-    let resolveLookup!: (value: null) => void;
+    let resolveLookup!: (value: typeof noFormerEmployment) => void;
     mockFindFormerEmployment.mockImplementation(
       () =>
-        new Promise<null>((resolve) => {
+        new Promise<typeof noFormerEmployment>((resolve) => {
           resolveLookup = resolve;
         }),
     );
@@ -969,7 +1086,7 @@ describe("InvitationForm employment choice", () => {
     skipLookupDebounce();
     await waitFor(() => expect(mockFindFormerEmployment).toHaveBeenCalled());
     expect(mockCreateInvitation).not.toHaveBeenCalled();
-    resolveLookup(null);
+    resolveLookup(noFormerEmployment);
     expect(await screen.findByText("Einladung senden")).not.toBeDisabled();
   });
 
@@ -1008,7 +1125,7 @@ describe("InvitationForm employment choice", () => {
   it("clears the choice when the address changes", async () => {
     await openFormer();
     fireEvent.click(screen.getByRole("button", { name: "Neuaufnahme" }));
-    mockFindFormerEmployment.mockResolvedValue(null);
+    mockFindFormerEmployment.mockResolvedValue(noFormerEmployment);
     fireEvent.change(screen.getByLabelText("E-Mail-Adresse"), {
       target: { value: "new@example.com" },
     });

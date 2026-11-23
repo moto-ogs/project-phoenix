@@ -1,191 +1,336 @@
-import type { FormAttachment } from "~/lib/enrollment-form-schema-api";
-import type {
-  EmailAddressMark,
-  MailOutcome,
+import { ApiError } from "~/lib/api-error";
+import { bffFile, bffJson } from "~/lib/bff-fetch";
+import { knownEnum, requiredEnum } from "~/lib/contract/known-enum";
+import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
+import type * as sharedContract from "~/lib/contract/shared.generated";
+import type * as studentsContract from "~/lib/contract/students.generated";
+import {
+  knownMailOutcome,
+  type EmailAddressMark,
+  type MailOutcome,
 } from "~/lib/email-delivery-status";
-import type { RosterImpactWire } from "~/lib/roster-impact";
 import { announceEnrollmentReadChange } from "~/lib/enrollment-unread-api";
 import { createLogger } from "~/lib/logger";
-import type {
-  PublicEnrollmentBootstrap,
-  SubmitEnrollmentPayload,
-  SubmitEnrollmentResult,
-} from "~/lib/enrollment-submission-api";
-import type { CareOfferingSelectionMode } from "~/lib/enrollment-phase-api";
-import { downloadBlob, filenameFromDisposition } from "~/lib/file-download";
-import type { EnrollmentSignature } from "~/lib/enrollment-submission-api";
-import type { EnrollmentFormLabels } from "~/lib/enrollment-change-request-diff";
 import {
-  enrollmentErrorReader,
-  readEnrollmentJSON,
-  sendEnrollmentRequest,
-} from "~/lib/enrollment-http";
-
-import type { ChangeRequestStatus, ChildStatus } from "~/lib/enrollment-status";
-
+  bootstrapFromContract,
+  changeRequestFromContract,
+  signatureFromContract,
+  type EnrollmentChangeRequest,
+  type EnrollmentSignature,
+  type PublicEnrollmentBootstrap,
+} from "~/lib/enrollment-submission-api";
+import {
+  SELECTION_MODES,
+  type CareOfferingSelectionMode,
+} from "~/lib/enrollment-phase-api";
+import { downloadBlob, filenameFromDisposition } from "~/lib/file-download";
+import {
+  formLabelsFromContract,
+  type EnrollmentFormLabels,
+} from "~/lib/enrollment-change-request-diff";
+import { logEnrollmentFailure } from "~/lib/enrollment-api-error";
+import {
+  CHILD_STATUSES,
+  type ChangeRequestStatus,
+  type ChildStatus,
+} from "~/lib/enrollment-status";
 import type { EnrollmentExportFormat } from "~/lib/enrollment-report-api";
 
 const logger = createLogger({ component: "EnrollmentAdminAPI" });
 
+// Go does not register these sets; the contract types them as string.
+const TERM_CHANGES = ["price", "days", "activity"] as const;
+const ADDRESS_MARKS = ["failed", "complained"] as const;
+
+/** An object answer the contract carries as unknown (form answers, consents). */
+
 export type DecisionStatus =
   "approved" | "waitlisted" | "rejected" | "under_review";
 
-type AdminEnrollmentChangeRequestMessageAuthor = "parent" | "staff" | "system";
-
-export interface AdminRequestChildOffering {
-  offering_id: string;
-  offering_name: string;
-  days_of_week_mode: string; // "fixed" | "parent_choice"
-  /** Parent's day picks. Present only for parent_choice offerings. */
-  selected_days?: string[];
-  manual_selected_days?: string[];
-  automatic_selected_days?: string[];
-  /**
-   * Offering's full day catalogue. For fixed offerings this is the
-   * authoritative schedule; for parent_choice it bounds the picker.
-   */
-  available_days?: string[];
-  /**
-   * Offering attributes as configured on the phase's care offering. The
-   * parents app renders these for the same booking, so staff must see them
-   * too — otherwise a guardian describes something staff cannot find (#2185).
-   */
-  includes_lunch?: boolean;
-  includes_holiday_care?: boolean;
-  price_cents?: number;
-  /** ISO "YYYY-MM-DD". Set when the booking starts later than the period. */
-  valid_from?: string;
-  /**
-   * ISO "YYYY-MM-DD", the INCLUSIVE last day the booking covers. The backend
-   * converts its exclusive column for the wire, same as the parent endpoint.
-   */
-  valid_until?: string;
-  /**
-   * True for a booking that has not taken effect yet (an approved change
-   * scheduled for a future date, or any booking while the phase is still
-   * ahead). Display only — which ARRAY a row arrives in says whether a
-   * correction replaces it, see `upcoming_offerings` on the child.
-   */
-  starts_later?: boolean;
-  /**
-   * The catalog terms the parents submitted and signed (#6837). Absent for
-   * a booking without a snapshot.
-   */
-  submitted_terms?: AdminSubmittedOfferingTerms;
-  /**
-   * What the catalog changed since the submission. While a current booking
-   * lists any, the approval needs `acceptOfferingChanges`.
-   */
-  changed_terms?: OfferingTermChange[];
-}
-
-type OfferingTermChange = "price" | "days" | "activity";
-
-interface AdminSubmittedOfferingTerms {
-  name: string;
-  price_cents?: number;
-  days_of_week_mode: string;
-  available_days: string[];
-}
-
-interface AdminOfferingAdjustmentSnapshot {
-  offering_id: string;
-  offering_name?: string;
-  days_of_week_mode?: string;
-  selected_days?: string[];
-  manual_selected_days?: string[];
-  automatic_selected_days?: string[];
-  available_days?: string[];
-}
-
-export interface AdminOfferingAdjustment {
-  id: string;
-  request_id: string;
-  request_child_id: string;
-  student_id: string;
-  actor_account_id: string;
-  actor_role: string;
-  actor_name_snapshot?: string | null;
-  actor_email_snapshot?: string | null;
-  reason: string;
-  before: AdminOfferingAdjustmentSnapshot[];
-  after: AdminOfferingAdjustmentSnapshot[];
-  changed_at: string;
-}
-
-interface AdminEnrollmentChangeRequestMessage {
-  id: string;
-  author_type: AdminEnrollmentChangeRequestMessageAuthor;
-  author_account_id?: number | string | null;
-  body: string;
-  internal_only: boolean;
-  created_at: string;
-}
-
-export interface AdminEnrollmentChangeRequest {
-  id: string;
-  request_id: string;
-  origin: "parent" | "admin";
-  status: ChangeRequestStatus;
-  parent_note?: string | null;
-  admin_decision_note?: string | null;
-  base_snapshot: Record<string, unknown>;
-  proposed_snapshot: Record<string, unknown>;
-  diff: Record<string, unknown>;
-  created_at: string;
-  updated_at: string;
-  reviewed_at?: string | null;
-  reviewed_by_account_id?: number | string | null;
-  request?: AdminRequestSummary;
-  messages?: AdminEnrollmentChangeRequestMessage[];
-  /** An approval that changed bookings reports its effect per child (#5102). */
-  roster_impacts?: Array<{
-    child_id: string;
-    student_id: string;
-    first_name: string;
-    roster_impact: RosterImpactWire;
-  }>;
-}
-
-export interface AdminChildDataCorrectionResult extends AdminEnrollmentChangeRequest {
-  request: AdminRequestSummary;
-}
+/** One offering of a correction; `extend_to_phase_end` extends a limited booking (#7929). */
+export type AdminOfferingChoice = Omit<
+  enrollmentContract.AdminUpdateOfferingSelection,
+  "offering_id" | "selected_days"
+> & { offering_id: string; selected_days?: string[] };
 
 export interface UpdateAdminChildOfferingsInput {
-  offerings: Array<{ offering_id: string; selected_days?: string[] }>;
+  offerings: AdminOfferingChoice[];
   reason: string;
   completeWithdrawalConfirmed?: boolean;
 }
 
-export interface CorrectAdminChildDataInput {
-  first_name: string;
-  last_name: string;
-  date_of_birth: string;
-  target_grade_level?: number;
-  target_school_class?: string;
-  reason: string;
+/**
+ * A booking of a request's child. The offering attributes match what the
+ * parents app shows for the same booking (#2185); `valid_until` is the
+ * inclusive last day; `starts_later` marks a booking not in effect yet,
+ * display only. `submitted_terms` are the catalog terms the parents signed
+ * (#6837); while a current booking lists `changed_terms`, the approval needs
+ * `acceptOfferingChanges`.
+ */
+export type AdminRequestChildOffering = Omit<
+  enrollmentContract.AdminRequestChildOffering,
+  "submitted_terms" | "changed_terms"
+> & {
+  submitted_terms?: Omit<
+    enrollmentContract.AdminSubmittedOfferingTerms,
+    "available_days"
+  > & { available_days: string[] };
+  /** The changes this build knows. */
+  changed_terms?: (typeof TERM_CHANGES)[number][];
+};
+
+function childOfferingFromContract(
+  offering: enrollmentContract.AdminRequestChildOffering,
+): AdminRequestChildOffering {
+  const { submitted_terms: terms, changed_terms: changes, ...rest } = offering;
+  return {
+    ...rest,
+    ...(terms && {
+      submitted_terms: { ...terms, available_days: terms.available_days ?? [] },
+    }),
+    ...(changes && {
+      changed_terms: changes.flatMap((change) => {
+        const known = knownEnum(TERM_CHANGES, change);
+        return known ? [known] : [];
+      }),
+    }),
+  };
 }
+
+export type AdminOfferingAdjustment = Omit<
+  enrollmentContract.AdminOfferingAdjustment,
+  "before" | "after"
+> & {
+  before: NonNullable<enrollmentContract.AdminOfferingAdjustment["before"]>;
+  after: NonNullable<enrollmentContract.AdminOfferingAdjustment["after"]>;
+};
 
 /**
  * The other active enrollment of the same phase that already created or
  * renews a candidate (#6247). The phase takes the child only once, so the
  * enrollment at hand duplicates that one.
  */
-export interface AdminCandidatePhaseRequest {
-  request_id: string;
-  child_status: ChildStatus;
-  guardian_first_name: string;
-  guardian_last_name: string;
-}
+export type AdminCandidatePhaseRequest = Omit<
+  enrollmentContract.AdminCandidatePhaseRequest,
+  "child_status"
+> & { child_status: ChildStatus };
 
 /** An enrolled child that may be the child of an enrollment (#6053). */
-export interface AdminExistingChildCandidate {
-  student_id: string;
-  first_name: string;
-  last_name: string;
-  date_of_birth?: string;
-  school_class?: string;
-  phase_request?: AdminCandidatePhaseRequest;
+export type AdminExistingChildCandidate = Omit<
+  enrollmentContract.AdminExistingChildCandidate,
+  "phase_request"
+> & { phase_request?: AdminCandidatePhaseRequest };
+
+function candidateFromContract(
+  candidate: enrollmentContract.AdminExistingChildCandidate,
+): AdminExistingChildCandidate {
+  const { phase_request: other, ...rest } = candidate;
+  return {
+    ...rest,
+    ...(other && {
+      phase_request: {
+        ...other,
+        child_status: requiredEnum(
+          CHILD_STATUSES,
+          other.child_status,
+          "AdminCandidatePhaseRequest.child_status",
+        ),
+      },
+    }),
+  };
+}
+
+/**
+ * A child of a request. While `possible_existing_children` is non-empty,
+ * approving needs the office's choice (#6053). `review_reason` names why an
+ * open enrollment was left to the school (#3570); `weekly_plan_on` is the
+ * day a renewal's weekly plan applies (#6043). `offerings` is what a
+ * correction replaces; `upcoming_offerings` take effect later and are
+ * display only (#2185); `offerings_unavailable` blocks corrections.
+ */
+export type AdminRequestChild = Omit<
+  enrollmentContract.AdminRequestChild,
+  "status" | "possible_existing_children" | "offerings" | "upcoming_offerings"
+> & {
+  status: ChildStatus;
+  possible_existing_children?: AdminExistingChildCandidate[];
+  offerings?: AdminRequestChildOffering[];
+  upcoming_offerings?: AdminRequestChildOffering[];
+};
+
+function requestChildFromContract(
+  child: enrollmentContract.AdminRequestChild,
+): AdminRequestChild {
+  const {
+    possible_existing_children: candidates,
+    offerings,
+    upcoming_offerings: upcoming,
+    ...rest
+  } = child;
+  return {
+    ...rest,
+    status: requiredEnum(
+      CHILD_STATUSES,
+      child.status,
+      "AdminRequestChild.status",
+    ),
+    ...(candidates && {
+      possible_existing_children: candidates.map(candidateFromContract),
+    }),
+    ...(offerings && { offerings: offerings.map(childOfferingFromContract) }),
+    ...(upcoming && {
+      upcoming_offerings: upcoming.map(childOfferingFromContract),
+    }),
+  };
+}
+
+/**
+ * A request in the staff lists. `is_unread` is per person (#3778). The
+ * detail endpoint also fills `custom_data`, `consent_flags` and the pinned
+ * schema's `schema_fields` and `schema_legal_blocks` that label them.
+ */
+export type AdminRequestSummary = Omit<
+  enrollmentContract.AdminRequestSummary,
+  "care_offering_selection_mode" | "children"
+> & {
+  care_offering_selection_mode: CareOfferingSelectionMode;
+  children: AdminRequestChild[];
+};
+
+/**
+ * A request the Träger office made from an imported care contract (ADR
+ * 0309): no parents filled it in, none are attached, and no parent status
+ * page belongs to it.
+ */
+export function fromImportedContract(request: {
+  readonly submission_source: string;
+}): boolean {
+  return request.submission_source === "contract_import";
+}
+
+function requestSummaryFromContract(
+  summary: enrollmentContract.AdminRequestSummary,
+): AdminRequestSummary {
+  const { children, ...rest } = summary;
+  return {
+    ...rest,
+    care_offering_selection_mode: requiredEnum(
+      SELECTION_MODES,
+      summary.care_offering_selection_mode,
+      "AdminRequestSummary.care_offering_selection_mode",
+    ),
+    children: (children ?? []).map(requestChildFromContract),
+  };
+}
+
+/** A change request with the request it belongs to. */
+export type AdminEnrollmentChangeRequest = Omit<
+  EnrollmentChangeRequest,
+  "request"
+> & {
+  request?: AdminRequestSummary;
+};
+
+function adminChangeRequestFromContract(
+  request: enrollmentContract.ChangeRequestResponse,
+): AdminEnrollmentChangeRequest {
+  const { request: summary, ...rest } = changeRequestFromContract(request);
+  return {
+    ...rest,
+    ...(summary && { request: requestSummaryFromContract(summary) }),
+  };
+}
+
+export type AdminChildDataCorrectionResult = AdminEnrollmentChangeRequest & {
+  request: AdminRequestSummary;
+};
+
+/** A legal block as the request's evidence recorded it. */
+export type AdminLegalEvidenceBlock = Omit<
+  enrollmentContract.LegalBlockSnapshot,
+  "translations"
+> & {
+  translations?: Record<
+    string,
+    { title?: string; label?: string; text?: string }
+  >;
+};
+
+export type AdminLegalEvidenceEntry = Omit<
+  enrollmentContract.AdminLegalEvidenceEntry,
+  "blocks"
+> & {
+  blocks: AdminLegalEvidenceBlock[] | null;
+};
+
+function evidenceFromContract(
+  entry: enrollmentContract.AdminLegalEvidenceEntry,
+): AdminLegalEvidenceEntry {
+  return {
+    ...entry,
+    blocks:
+      entry.blocks &&
+      entry.blocks.map(({ translations, ...block }) => ({
+        ...block,
+        ...(translations && {
+          translations: Object.fromEntries(
+            Object.entries(translations).flatMap(([locale, texts]) =>
+              texts ? [[locale, texts]] : [],
+            ),
+          ),
+        }),
+      })),
+  };
+}
+
+/** A request's detail, with its evidence, uploads and signature (#4786). */
+export type AdminRequestDetail = AdminRequestSummary &
+  Omit<
+    enrollmentContract.AdminRequestDetail,
+    | keyof enrollmentContract.AdminRequestSummary
+    | "legal_blocks_snapshot"
+    | "uploads"
+    | "signature"
+  > & {
+    legal_blocks_snapshot: AdminLegalEvidenceEntry[];
+    uploads: enrollmentContract.AdminRequestUpload[];
+    signature?: EnrollmentSignature;
+  };
+
+function requestDetailFromContract(
+  detail: enrollmentContract.AdminRequestDetail,
+): AdminRequestDetail {
+  const {
+    legal_blocks_snapshot: evidence,
+    uploads,
+    signature,
+    custom_data: _customData,
+    consent_flags: _consentFlags,
+    children: _children,
+    ...rest
+  } = detail;
+  return {
+    ...rest,
+    ...requestSummaryFromContract(detail),
+    legal_blocks_snapshot: (evidence ?? []).map(evidenceFromContract),
+    uploads: uploads ?? [],
+    ...(signature && { signature: signatureFromContract(signature) }),
+  };
+}
+
+/** What a deletion removes and keeps; `blocking_student_ids` stop it. */
+export type AdminEnrollmentDeletionImpact = Omit<
+  enrollmentContract.AdminEnrollmentDeletionImpact,
+  "blocking_student_ids"
+> & { blocking_student_ids: string[] };
+
+function deletionImpactFromContract(
+  impact: enrollmentContract.AdminEnrollmentDeletionImpact,
+): AdminEnrollmentDeletionImpact {
+  return {
+    ...impact,
+    blocking_student_ids: impact.blocking_student_ids ?? [],
+  };
 }
 
 /**
@@ -214,226 +359,6 @@ export function existingChildChoiceFields(
       };
 }
 
-export interface AdminRequestChild {
-  id: string;
-  first_name: string;
-  last_name: string;
-  date_of_birth: string;
-  target_grade_level?: number;
-  /** Concrete future class (e.g. "2a") when collected (#1833). */
-  target_school_class?: string;
-  /** The parents' holiday care wish when the form asked it (#4703). */
-  holiday_care_wish?: boolean;
-  status: ChildStatus;
-  status_reason?: string | null;
-  reviewed_at?: string | null;
-  reviewed_by?: number | string | null;
-  activation_mode: string;
-  created_student_id?: string;
-  /**
-   * Enrolled children with this child's name and birthday (#6053). While the
-   * list is non-empty, approving needs the office's choice: renew one of
-   * them or create a new child. Detail endpoint only.
-   */
-  possible_existing_children?: AdminExistingChildCandidate[];
-  existing_child_choice_required?: boolean;
-  /** The phase renews enrolled children only: no new child (#6053). */
-  existing_child_only?: boolean;
-  /** The enrolled child the approval renews (#1663, #6053). */
-  matched_student_id?: string;
-  /**
-   * Why an open enrollment was left to the school, e.g.
-   * "child_quota_reached" for a renewal the automatic approval skipped
-   * because the Kinderkontingent was full (#3570).
-   */
-  review_reason?: string | null;
-  /**
-   * Day the approved weekly plan of a renewal applies, "YYYY-MM-DD" (#6043).
-   * Set while the child's running pickup times, care days and Heimweg stay
-   * until its care starts.
-   */
-  weekly_plan_on?: string;
-  custom_data?: Record<string, unknown>;
-  /**
-   * The Betreuungsangebote selection on file RIGHT NOW — exactly what a
-   * correction replaces. Detail endpoint only.
-   */
-  offerings?: AdminRequestChildOffering[];
-  /**
-   * Bookings that only take effect on a later date. Display only: never
-   * feed these into a correction payload, or an untouched save applies a
-   * future change months early (#2185).
-   */
-  upcoming_offerings?: AdminRequestChildOffering[];
-  /**
-   * True when the booking lookup FAILED — as opposed to the child having
-   * no bookings. An empty editor plus a save deletes what the family
-   * actually booked, so corrections must be blocked in this state.
-   */
-  offerings_unavailable?: boolean;
-}
-
-/** Slim form-field shape, only what the admin detail UI needs. */
-export interface AdminRequestSchemaField {
-  key: string;
-  label: string;
-  type: string;
-  applies_to_child: boolean;
-  target?: string;
-  /**
-   * For select-type fields: the {label, value} pairs the admin
-   * defined. The renderer turns the stored value back into the
-   * label (e.g. "picked_up" → "Wird abgeholt").
-   */
-  options?: Array<{ label: string; value: string }>;
-}
-
-/** One proof file a parent attached to the request (#4783). */
-export interface AdminRequestUpload {
-  id: string;
-  field_key: string;
-  filename: string;
-  size_bytes: number;
-  content_type: string;
-  uploaded_at: string;
-}
-
-export interface AdminRequestSummary {
-  id: string;
-  phase_id: string;
-  phase_name: string;
-  care_offering_selection_mode: CareOfferingSelectionMode;
-  guardian_first_name: string;
-  guardian_last_name: string;
-  guardian_email: string;
-  guardian_phone?: string | null;
-  submitted_at: string;
-  withdrawn_at?: string | null;
-  /**
-   * Ungelesen für die angemeldete Person (#3778). Der Lesestatus gilt pro
-   * Person; die Detailseite markiert beim Öffnen als gelesen.
-   */
-  is_unread?: boolean;
-  /**
-   * Request-level custom field answers (everything where
-   * applies_to_child=false). Populated only on the detail endpoint.
-   */
-  custom_data?: Record<string, unknown>;
-  /** AGB / Datenschutz / Foto consents collected on the base form. */
-  consent_flags?: Record<string, unknown>;
-  /**
-   * The form schema's field definitions, used to render custom_data
-   * with their original labels. Populated only on the detail endpoint;
-   * empty when the phase didn't pin a schema.
-   */
-  schema_fields?: AdminRequestSchemaField[];
-  /**
-   * key→title pairs from the pinned schema's legal blocks, used to label
-   * custom consent flags instead of rendering raw keys. Detail endpoint
-   * only.
-   */
-  schema_legal_blocks?: Array<{ key: string; title: string }>;
-  /**
-   * The caller may open proof files (enrollment_uploads:read). Detail
-   * endpoint only; absent on endpoints that do not report uploads.
-   */
-  can_view_uploads?: boolean;
-  /**
-   * Proof files still stored for this request. An upload_id in custom_data
-   * that is missing here was deleted after the retention period.
-   */
-  uploads?: AdminRequestUpload[];
-  children: AdminRequestChild[];
-  /**
-   * Co-guardians the parent added beyond the primary guardian above.
-   * Empty/absent when none were added.
-   */
-  additional_guardians?: AdminRequestGuardian[];
-}
-
-export interface AdminLegalEvidenceBlock {
-  key: string;
-  kind: string;
-  title: string;
-  label: string;
-  text: string;
-  attachments?: FormAttachment[];
-  source?: string;
-  required?: boolean;
-  /** The custodian sentence the ticked checkbox carried (#2787). */
-  guardian_agreement_label?: string;
-  translations?: Record<
-    string,
-    { title?: string; label?: string; text?: string }
-  >;
-}
-
-export interface AdminLegalEvidenceEntry {
-  snapshot_at: string;
-  blocks: AdminLegalEvidenceBlock[] | null;
-  consent_flags: Record<string, unknown> | null;
-  version_mismatch?: boolean;
-  version_unknown?: boolean;
-  wording_unavailable?: boolean;
-  change_request?: boolean;
-  staff_recorded?: boolean;
-}
-
-export interface AdminRequestDetail extends AdminRequestSummary {
-  legal_blocks_snapshot?: AdminLegalEvidenceEntry[];
-  status_token: string;
-  late_invite_guardian_email?: string;
-  late_invite_email_mismatch?: boolean;
-  /** The parent's signature of the current version (#4786), with image. */
-  signature?: EnrollmentSignature;
-}
-
-interface AdminEnrollmentDeletionCounts {
-  requests: number;
-  request_children: number;
-  request_child_offerings: number;
-  request_guardians: number;
-  change_requests: number;
-  change_request_messages: number;
-  late_invites: number;
-  offering_adjustments: number;
-  email_outbox: number;
-  rollover_links_cleared: number;
-  student_source_links_cleared: number;
-  total: number;
-}
-
-export interface AdminEnrollmentDeletionImpact {
-  request_id: string;
-  child_id?: string;
-  deletes_request: boolean;
-  can_delete: boolean;
-  counts: AdminEnrollmentDeletionCounts;
-  blocking_student_ids: string[];
-  preserved_guardian_profiles: number;
-  preserved_parent_accounts: number;
-  unlinked_guardian_profiles: number;
-  parent_accounts_without_students: number;
-}
-
-/** One additional guardian (co-guardian) on a submission. */
-export interface AdminRequestGuardian {
-  id: string;
-  first_name: string;
-  last_name: string;
-  email?: string | null;
-  phone?: string | null;
-}
-
-const BASE = "/api/enrollment/admin/requests";
-const CHANGE_REQUEST_BASE = "/api/enrollment/admin/change-requests";
-const PHASE_BASE = "/api/enrollment/phases";
-
-const readError = enrollmentErrorReader(
-  logger,
-  "enrollment_admin_request_failed",
-);
-
 export interface ListAdminRequestsFilters {
   phaseId?: string;
   childStatus?: ChildStatus;
@@ -442,66 +367,53 @@ export interface ListAdminRequestsFilters {
 export async function listAdminRequests(
   filters: ListAdminRequestsFilters = {},
 ): Promise<AdminRequestSummary[]> {
-  const url = new URL(
-    BASE,
-    globalThis.window?.location.origin ?? "http://localhost",
+  const requests = await bffJson(
+    "tenant",
+    "GET /api/enrollment/admin/requests/",
+    {
+      query: {
+        phase_id: filters.phaseId || undefined,
+        child_status: filters.childStatus,
+      },
+      errorMessage: "Anmeldungen konnten nicht geladen werden",
+    },
   );
-  if (filters.phaseId) url.searchParams.set("phase_id", filters.phaseId);
-  if (filters.childStatus)
-    url.searchParams.set("child_status", filters.childStatus);
-  const path = `${url.pathname}${url.search}`;
-  const response = await sendEnrollmentRequest(path, { cache: "no-store" });
-  if (!response.ok) {
-    throw await readError(response, "Anmeldungen konnten nicht geladen werden");
-  }
-  const list = await readEnrollmentJSON<AdminRequestSummary[]>(response);
-  return Array.isArray(list) ? list : [];
+  return requests.map(requestSummaryFromContract);
 }
 
 export async function getAdminRequest(id: string): Promise<AdminRequestDetail> {
-  const response = await sendEnrollmentRequest(
-    `${BASE}/${encodeURIComponent(id)}`,
-    {
-      cache: "no-store",
-    },
+  return requestDetailFromContract(
+    await bffJson("tenant", "GET /api/enrollment/admin/requests/{id}/", {
+      params: { id },
+      errorMessage: "Anmeldung konnte nicht geladen werden",
+    }),
   );
-  if (!response.ok) {
-    throw await readError(response, "Anmeldung konnte nicht geladen werden");
-  }
-  return readEnrollmentJSON<AdminRequestDetail>(response);
 }
+
+const READ_FAILED =
+  "Das hat leider nicht geklappt. Bitte versuche es noch einmal.";
 
 /** Markiert eine Anmeldung für die Person als gelesen oder ungelesen. */
 export async function setAdminRequestRead(
   id: string,
   read: boolean,
 ): Promise<void> {
-  const response = await sendEnrollmentRequest(
-    `${BASE}/${encodeURIComponent(id)}/read`,
-    {
-      method: read ? "PUT" : "DELETE",
-    },
-  );
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Das hat leider nicht geklappt. Bitte versuche es noch einmal.",
-    );
-  }
+  const options = { params: { id }, errorMessage: READ_FAILED };
+  await (read
+    ? bffJson("tenant", "PUT /api/enrollment/admin/requests/{id}/read", options)
+    : bffJson(
+        "tenant",
+        "DELETE /api/enrollment/admin/requests/{id}/read",
+        options,
+      ));
   announceEnrollmentReadChange();
 }
 
 /** Markiert alle ungelesenen Anmeldungen der Person als gelesen. */
 export async function markAllAdminRequestsRead(): Promise<void> {
-  const response = await sendEnrollmentRequest(`${BASE}/mark-all-read`, {
-    method: "POST",
+  await bffJson("tenant", "POST /api/enrollment/admin/requests/mark-all-read", {
+    errorMessage: READ_FAILED,
   });
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Das hat leider nicht geklappt. Bitte versuche es noch einmal.",
-    );
-  }
   announceEnrollmentReadChange();
 }
 
@@ -510,255 +422,196 @@ export function announceAdminRequestOpened() {
   announceEnrollmentReadChange();
 }
 
-/** What became of one mail to the family of an application (#5934). */
-export interface AdminRequestMail {
-  kind: string;
-  outcome: MailOutcome;
+/**
+ * What became of one mail to the family of an application (#5934).
+ * `created_at` is set only for the holiday registrations (#6976).
+ */
+export type AdminRequestMail = Omit<
+  sharedContract.RequestMailOutcome,
+  "outcome" | "address_mark"
+> & {
+  /** undefined: an outcome this build does not know; no status shows. */
+  outcome: MailOutcome | undefined;
   address_mark?: EmailAddressMark;
-  stopped?: boolean;
-  outcome_at?: string;
-  /** When the mail came about; only the holiday registrations send it (#6976). */
-  created_at?: string;
-}
+};
 
 export async function getAdminRequestMails(
   requestId: string,
 ): Promise<AdminRequestMail[]> {
-  const response = await sendEnrollmentRequest(
-    `${BASE}/${encodeURIComponent(requestId)}/mails`,
-    { cache: "no-store" },
+  const mails = await bffJson(
+    "tenant",
+    "GET /api/enrollment/admin/requests/{id}/mails",
+    {
+      params: { id: requestId },
+      errorMessage: "Der Stand der E-Mails konnte nicht geladen werden",
+    },
   );
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Der Stand der E-Mails konnte nicht geladen werden",
-    );
-  }
-  return (await readEnrollmentJSON<AdminRequestMail[] | null>(response)) ?? [];
+  return mails.map(({ address_mark: mark, ...mail }) => {
+    const known = knownEnum(ADDRESS_MARKS, mark);
+    return {
+      ...mail,
+      outcome: knownMailOutcome(mail.outcome),
+      ...(known && { address_mark: known }),
+    };
+  });
 }
+
+const DELETE_IMPACT_FAILED =
+  "Auswirkungen der Löschung konnten nicht geladen werden";
 
 export async function getAdminRequestDeleteImpact(
   requestId: string,
 ): Promise<AdminEnrollmentDeletionImpact> {
-  const response = await sendEnrollmentRequest(
-    `${BASE}/${encodeURIComponent(requestId)}/delete-impact`,
-    { cache: "no-store" },
+  return deletionImpactFromContract(
+    await bffJson(
+      "tenant",
+      "GET /api/enrollment/admin/requests/{id}/delete-impact",
+      { params: { id: requestId }, errorMessage: DELETE_IMPACT_FAILED },
+    ),
   );
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Auswirkungen der Löschung konnten nicht geladen werden",
-    );
-  }
-  return readEnrollmentJSON<AdminEnrollmentDeletionImpact>(response);
 }
 
 export async function getAdminChildDeleteImpact(
   requestId: string,
   childId: string,
 ): Promise<AdminEnrollmentDeletionImpact> {
-  const response = await sendEnrollmentRequest(
-    `${BASE}/${encodeURIComponent(requestId)}/children/${encodeURIComponent(childId)}/delete-impact`,
-    { cache: "no-store" },
+  return deletionImpactFromContract(
+    await bffJson(
+      "tenant",
+      "GET /api/enrollment/admin/requests/{id}/children/{childId}/delete-impact",
+      {
+        params: { id: requestId, childId },
+        errorMessage: DELETE_IMPACT_FAILED,
+      },
+    ),
   );
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Auswirkungen der Löschung konnten nicht geladen werden",
-    );
-  }
-  return readEnrollmentJSON<AdminEnrollmentDeletionImpact>(response);
 }
 
+/**
+ * Deletes a request as its preview showed it: `expectedFingerprint` is the
+ * preview's fingerprint; a changed impact is refused with
+ * `general.changed_since_read` (ADR 0311).
+ */
 export async function deleteAdminRequest(
   requestId: string,
   reason: string,
+  expectedFingerprint: string,
 ): Promise<AdminEnrollmentDeletionImpact> {
-  const response = await sendEnrollmentRequest(
-    `${BASE}/${encodeURIComponent(requestId)}`,
-    {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ reason }),
-    },
+  return deletionImpactFromContract(
+    await bffJson("tenant", "DELETE /api/enrollment/admin/requests/{id}/", {
+      params: { id: requestId },
+      body: { reason, expected_fingerprint: expectedFingerprint },
+      errorMessage: "Anmeldung konnte nicht gelöscht werden",
+    }),
   );
-  if (!response.ok) {
-    throw await readError(response, "Anmeldung konnte nicht gelöscht werden");
-  }
-  return readEnrollmentJSON<AdminEnrollmentDeletionImpact>(response);
-}
-
-export interface AdminRestoreResult {
-  restored_children: number;
-  /**
-   * Subset of restored_children that came back as "waitlisted" because an
-   * offering is meanwhile full (the capacity gate re-runs on restore).
-   */
-  waitlisted_children: number;
 }
 
 /**
  * Restores a withdrawn request: every withdrawn child goes back to
- * "submitted" — or "waitlisted" when its offering is meanwhile full —
- * and withdrawn_at is cleared (#2157). Fails with a coded 409 when the
- * phase is inactive, an active duplicate request exists, or a reject-mode
- * phase's offering is full.
+ * "submitted" — or "waitlisted" when its offering is meanwhile full
+ * (`waitlisted_children`) — and withdrawn_at is cleared (#2157). Fails with
+ * a coded 409 when the phase is inactive, an active duplicate request
+ * exists, or a reject-mode phase's offering is full.
  */
 export async function restoreAdminRequest(
   requestId: string,
-): Promise<AdminRestoreResult> {
-  const response = await sendEnrollmentRequest(
-    `${BASE}/${encodeURIComponent(requestId)}/restore`,
-    { method: "POST" },
-  );
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Anmeldung konnte nicht wiederhergestellt werden",
-    );
-  }
-  return readEnrollmentJSON<AdminRestoreResult>(response);
+): Promise<enrollmentContract.AdminRestoreResponse> {
+  return bffJson("tenant", "POST /api/enrollment/admin/requests/{id}/restore", {
+    params: { id: requestId },
+    errorMessage: "Anmeldung konnte nicht wiederhergestellt werden",
+  });
 }
 
+/** Deletes one child as its preview showed it; see deleteAdminRequest. */
 export async function deleteAdminChild(
   requestId: string,
   childId: string,
   reason: string,
+  expectedFingerprint: string,
 ): Promise<AdminEnrollmentDeletionImpact> {
-  const response = await sendEnrollmentRequest(
-    `${BASE}/${encodeURIComponent(requestId)}/children/${encodeURIComponent(childId)}`,
-    {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ reason }),
-    },
+  return deletionImpactFromContract(
+    await bffJson(
+      "tenant",
+      "DELETE /api/enrollment/admin/requests/{id}/children/{childId}",
+      {
+        params: { id: requestId, childId },
+        body: { reason, expected_fingerprint: expectedFingerprint },
+        errorMessage: "Kind konnte nicht aus der Anmeldung gelöscht werden",
+      },
+    ),
   );
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Kind konnte nicht aus der Anmeldung gelöscht werden",
-    );
-  }
-  return readEnrollmentJSON<AdminEnrollmentDeletionImpact>(response);
-}
-
-export interface CreateLateInviteInput {
-  guardian_email: string;
-  reason?: string;
-  expires_at?: string;
-}
-
-export interface CreateLateInviteResult {
-  id: string;
-  phase_id: string;
-  guardian_email: string;
-  guardian_first_name?: string | null;
-  guardian_last_name?: string | null;
-  expires_at: string;
-  created_by: string;
-  reason?: string | null;
-  token: string;
 }
 
 export async function createLateInvite(
   phaseId: string,
-  input: CreateLateInviteInput,
-): Promise<CreateLateInviteResult> {
-  const response = await sendEnrollmentRequest(
-    `${PHASE_BASE}/${encodeURIComponent(phaseId)}/late-invites`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
-    },
-  );
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Nachzügler-Link konnte nicht erstellt werden",
-    );
-  }
-  return readEnrollmentJSON<CreateLateInviteResult>(response);
+  input: enrollmentContract.AdminCreateLateInviteRequest,
+): Promise<enrollmentContract.AdminCreateLateInviteResponse> {
+  return bffJson("tenant", "POST /api/enrollment/phases/{id}/late-invites", {
+    params: { id: phaseId },
+    body: input,
+    errorMessage: "Nachzügler-Link konnte nicht erstellt werden",
+  });
 }
 
 export async function fetchManualEnrollmentBootstrap(
   phaseId: string,
 ): Promise<PublicEnrollmentBootstrap> {
-  const response = await sendEnrollmentRequest(
-    `${PHASE_BASE}/${encodeURIComponent(phaseId)}/manual-bootstrap`,
-    { cache: "no-store" },
+  return bootstrapFromContract(
+    await bffJson(
+      "tenant",
+      "GET /api/enrollment/phases/{id}/manual-bootstrap",
+      {
+        params: { id: phaseId },
+        errorMessage: "Formularvorlage konnte nicht geladen werden",
+      },
+    ),
   );
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Formularvorlage konnte nicht geladen werden",
-    );
-  }
-  return readEnrollmentJSON<PublicEnrollmentBootstrap>(response);
-}
-
-export interface CreateManualApprovedEnrollmentInput extends SubmitEnrollmentPayload {
-  external_consent_confirmed: boolean;
-  reason: string;
-  send_notification: boolean;
-  /** The office's answer when the child may already be enrolled (#6148). */
-  existing_student_id?: string;
-  create_new_student?: true;
-  shown_existing_student_ids?: string[];
 }
 
 export async function createManualApprovedEnrollment(
   phaseId: string,
-  input: CreateManualApprovedEnrollmentInput,
-): Promise<SubmitEnrollmentResult> {
-  const response = await sendEnrollmentRequest(
-    `${PHASE_BASE}/${encodeURIComponent(phaseId)}/manual-approved-enrollments`,
+  input: enrollmentContract.AdminManualApprovedEnrollmentRequest,
+): Promise<enrollmentContract.AdminManualApprovedEnrollmentResponse> {
+  return bffJson(
+    "tenant",
+    "POST /api/enrollment/phases/{id}/manual-approved-enrollments",
     {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
+      params: { id: phaseId },
+      body: input,
+      errorMessage: "Manuelle Anmeldung konnte nicht freigegeben werden",
     },
   );
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Manuelle Anmeldung konnte nicht freigegeben werden",
-    );
-  }
-  return readEnrollmentJSON<SubmitEnrollmentResult>(response);
 }
 
 export async function listStudentEnrollmentRequests(
   studentId: string,
 ): Promise<AdminRequestSummary[]> {
-  const response = await sendEnrollmentRequest(
-    `/api/enrollment/admin/students/${encodeURIComponent(studentId)}/requests`,
-    { cache: "no-store" },
+  const requests = await bffJson(
+    "tenant",
+    "GET /api/enrollment/admin/students/{studentId}/requests/",
+    {
+      params: { studentId },
+      errorMessage: "Anmeldungen konnten nicht geladen werden",
+    },
   );
-  if (!response.ok) {
-    throw await readError(response, "Anmeldungen konnten nicht geladen werden");
-  }
-  const list = await readEnrollmentJSON<AdminRequestSummary[]>(response);
-  return Array.isArray(list) ? list : [];
+  return requests.map(requestSummaryFromContract);
 }
 
 export async function exportStudentEnrollmentRequests(
   studentId: string,
   format: EnrollmentExportFormat,
 ): Promise<void> {
-  const response = await sendEnrollmentRequest(
-    `/api/enrollment/admin/students/${encodeURIComponent(studentId)}/requests/export`,
+  const response = await bffFile(
+    "tenant",
+    "POST /api/enrollment/admin/students/{studentId}/requests/export",
     {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ format }),
+      params: { studentId },
+      body: { format },
+      errorMessage: "Export konnte nicht erstellt werden",
     },
+  ).catch((error: unknown) =>
+    logEnrollmentFailure(error, logger, "enrollment_admin_request_failed"),
   );
-
-  if (!response.ok) {
-    throw await readError(response, "Export konnte nicht erstellt werden");
-  }
-
   downloadBlob(
     await response.blob(),
     filenameFromDisposition(response) ?? `anmeldungen.${format}`,
@@ -769,13 +622,14 @@ export async function exportStudentEnrollmentRequests(
 export async function downloadAdminEnrollmentSignatureProof(
   requestId: string,
 ): Promise<void> {
-  const response = await sendEnrollmentRequest(
-    `${BASE}/${encodeURIComponent(requestId)}/signature-proof`,
-    { cache: "no-store" },
+  const response = await bffFile(
+    "tenant",
+    "GET /api/enrollment/admin/requests/{id}/signature-proof",
+    {
+      params: { id: requestId },
+      errorMessage: "Nachweis konnte nicht geladen werden",
+    },
   );
-  if (!response.ok) {
-    throw await readError(response, "Nachweis konnte nicht geladen werden");
-  }
   downloadBlob(
     await response.blob(),
     filenameFromDisposition(response) ?? "anmeldenachweis.pdf",
@@ -790,37 +644,30 @@ export async function decideAdminChild(
   existingChildChoice?: ExistingChildChoice,
   acceptOfferingChanges?: boolean,
 ): Promise<AdminRequestChild> {
-  // Flattened path: the proxy reads request_id/child_id from the body.
-  // The deep dynamic /requests/[id]/children/[childId]/decide path
-  // hits a Turbopack dev bug where the route disappears after cache
-  // compaction; this collapsed shape keeps Next dev stable.
-  const response = await sendEnrollmentRequest(`/api/enrollment/admin/decide`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      request_id: requestId,
-      child_id: childId,
-      status,
-      reason: reason ?? "",
-      ...existingChildChoiceFields(existingChildChoice),
-      // The office confirmed the offering changes since submission (#6837).
-      ...(acceptOfferingChanges === true
-        ? { accept_offering_changes: true }
-        : {}),
-    }),
-  });
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Entscheidung konnte nicht gespeichert werden",
-    );
-  }
-  return readEnrollmentJSON<AdminRequestChild>(response);
+  return requestChildFromContract(
+    await bffJson(
+      "tenant",
+      "POST /api/enrollment/admin/requests/{id}/children/{childId}/decide",
+      {
+        params: { id: requestId, childId },
+        body: {
+          status,
+          reason: reason ?? "",
+          ...existingChildChoiceFields(existingChildChoice),
+          // The office confirmed the offering changes since submission (#6837).
+          ...(acceptOfferingChanges === true
+            ? { accept_offering_changes: true }
+            : {}),
+        },
+        errorMessage: "Entscheidung konnte nicht gespeichert werden",
+      },
+    ),
+  );
 }
 
 /** The corrected child with its effect on the Regeltermine (#5102). */
 export type AdminChildOfferingsUpdate = AdminRequestChild & {
-  roster_impact?: RosterImpactWire;
+  roster_impact?: studentsContract.rosterImpactResponse;
 };
 
 export async function updateAdminChildOfferings(
@@ -828,77 +675,67 @@ export async function updateAdminChildOfferings(
   childId: string,
   input: UpdateAdminChildOfferingsInput,
 ): Promise<AdminChildOfferingsUpdate> {
-  const response = await sendEnrollmentRequest(
-    `/api/enrollment/admin/offerings`,
+  const { roster_impact: rosterImpact, ...child } = await bffJson(
+    "tenant",
+    "PUT /api/enrollment/admin/requests/{id}/children/{childId}/offerings",
     {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        request_id: requestId,
-        child_id: childId,
+      params: { id: requestId, childId },
+      body: {
         offerings: input.offerings,
         reason: input.reason,
         complete_withdrawal_confirmed:
           input.completeWithdrawalConfirmed === true,
-      }),
+      },
+      errorMessage: "Betreuungsangebote konnten nicht gespeichert werden",
     },
   );
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Betreuungsangebote konnten nicht gespeichert werden",
-    );
-  }
-  return readEnrollmentJSON<AdminChildOfferingsUpdate>(response);
+  return { ...requestChildFromContract(child), roster_impact: rosterImpact };
 }
 
 export async function correctAdminChildData(
   requestId: string,
   childId: string,
-  input: CorrectAdminChildDataInput,
+  input: enrollmentContract.AdminChildDataCorrectionRequest,
 ): Promise<AdminChildDataCorrectionResult> {
-  const response = await sendEnrollmentRequest(
-    `/api/enrollment/admin/data-correction`,
-    {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        request_id: requestId,
-        child_id: childId,
-        ...input,
-      }),
-    },
+  const corrected = adminChangeRequestFromContract(
+    await bffJson(
+      "tenant",
+      "PUT /api/enrollment/admin/requests/{id}/children/{childId}/data-correction",
+      {
+        params: { id: requestId, childId },
+        body: input,
+        errorMessage: "Anmeldedaten konnten nicht korrigiert werden",
+      },
+    ),
   );
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Anmeldedaten konnten nicht korrigiert werden",
-    );
+  const { request } = corrected;
+  if (!request) {
+    // The correction answers with its request; without it the page cannot
+    // show what was saved.
+    throw new ApiError("Anmeldedaten konnten nicht korrigiert werden", 502, {
+      code: "general.write_answer_unreadable",
+    });
   }
-  return readEnrollmentJSON<AdminChildDataCorrectionResult>(response);
+  return { ...corrected, request };
 }
 
 export async function listAdminChildOfferingAdjustments(
   requestId: string,
   childId: string,
 ): Promise<AdminOfferingAdjustment[]> {
-  const url = new URL(
-    "/api/enrollment/admin/offering-adjustments",
-    globalThis.window?.location.origin ?? "http://localhost",
+  const adjustments = await bffJson(
+    "tenant",
+    "GET /api/enrollment/admin/requests/{id}/children/{childId}/offering-adjustments",
+    {
+      params: { id: requestId, childId },
+      errorMessage: "Änderungshistorie konnte nicht geladen werden",
+    },
   );
-  url.searchParams.set("request_id", requestId);
-  url.searchParams.set("child_id", childId);
-  const response = await sendEnrollmentRequest(`${url.pathname}${url.search}`, {
-    cache: "no-store",
-  });
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Änderungshistorie konnte nicht geladen werden",
-    );
-  }
-  const list = await readEnrollmentJSON<AdminOfferingAdjustment[]>(response);
-  return Array.isArray(list) ? list : [];
+  return adjustments.map((adjustment) => ({
+    ...adjustment,
+    before: adjustment.before ?? [],
+    after: adjustment.after ?? [],
+  }));
 }
 
 export interface ListAdminEnrollmentChangeRequestsFilters {
@@ -909,40 +746,29 @@ export interface ListAdminEnrollmentChangeRequestsFilters {
 export async function listAdminEnrollmentChangeRequests(
   filters: ListAdminEnrollmentChangeRequestsFilters = {},
 ): Promise<AdminEnrollmentChangeRequest[]> {
-  const url = new URL(
-    CHANGE_REQUEST_BASE,
-    globalThis.window?.location.origin ?? "http://localhost",
+  const requests = await bffJson(
+    "tenant",
+    "GET /api/enrollment/admin/change-requests/",
+    {
+      query: {
+        request_id: filters.requestId || undefined,
+        status: filters.status,
+      },
+      errorMessage: "Änderungsanfragen konnten nicht geladen werden",
+    },
   );
-  if (filters.requestId) url.searchParams.set("request_id", filters.requestId);
-  if (filters.status) url.searchParams.set("status", filters.status);
-  const response = await sendEnrollmentRequest(`${url.pathname}${url.search}`, {
-    cache: "no-store",
-  });
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Änderungsanfragen konnten nicht geladen werden",
-    );
-  }
-  const list =
-    await readEnrollmentJSON<AdminEnrollmentChangeRequest[]>(response);
-  return Array.isArray(list) ? list : [];
+  return requests.map(adminChangeRequestFromContract);
 }
 
 export async function getAdminEnrollmentChangeRequest(
   id: string,
 ): Promise<AdminEnrollmentChangeRequest> {
-  const response = await sendEnrollmentRequest(
-    `${CHANGE_REQUEST_BASE}/${encodeURIComponent(id)}`,
-    { cache: "no-store" },
+  return adminChangeRequestFromContract(
+    await bffJson("tenant", "GET /api/enrollment/admin/change-requests/{id}/", {
+      params: { id },
+      errorMessage: "Änderungsanfrage konnte nicht geladen werden",
+    }),
   );
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Änderungsanfrage konnte nicht geladen werden",
-    );
-  }
-  return readEnrollmentJSON<AdminEnrollmentChangeRequest>(response);
 }
 
 /**
@@ -952,75 +778,66 @@ export async function getAdminEnrollmentChangeRequest(
 export async function getAdminEnrollmentFormLabels(
   requestId: string,
 ): Promise<EnrollmentFormLabels> {
-  const response = await sendEnrollmentRequest(
-    `${BASE}/${encodeURIComponent(requestId)}/form-labels`,
-    { cache: "no-store" },
+  return formLabelsFromContract(
+    await bffJson(
+      "tenant",
+      "GET /api/enrollment/admin/requests/{id}/form-labels",
+      {
+        params: { id: requestId },
+        errorMessage:
+          "Fragen des Anmeldeformulars konnten nicht geladen werden",
+      },
+    ),
   );
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Fragen des Anmeldeformulars konnten nicht geladen werden",
-    );
-  }
-  return readEnrollmentJSON<EnrollmentFormLabels>(response);
 }
 
 export async function askEnrollmentChangeRequestQuestion(
   id: string,
   body: string,
 ): Promise<AdminEnrollmentChangeRequest> {
-  const response = await sendEnrollmentRequest(
-    `${CHANGE_REQUEST_BASE}/${encodeURIComponent(id)}/question`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ body }),
-    },
+  return adminChangeRequestFromContract(
+    await bffJson(
+      "tenant",
+      "POST /api/enrollment/admin/change-requests/{id}/question",
+      {
+        params: { id },
+        body: { body },
+        errorMessage: "Rückfrage konnte nicht gesendet werden",
+      },
+    ),
   );
-  if (!response.ok) {
-    throw await readError(response, "Rückfrage konnte nicht gesendet werden");
-  }
-  return readEnrollmentJSON<AdminEnrollmentChangeRequest>(response);
 }
 
 export async function approveEnrollmentChangeRequest(
   id: string,
   note: string,
 ): Promise<AdminEnrollmentChangeRequest> {
-  const response = await sendEnrollmentRequest(
-    `${CHANGE_REQUEST_BASE}/${encodeURIComponent(id)}/approve`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ note }),
-    },
+  return adminChangeRequestFromContract(
+    await bffJson(
+      "tenant",
+      "POST /api/enrollment/admin/change-requests/{id}/approve",
+      {
+        params: { id },
+        body: { note },
+        errorMessage: "Änderungsanfrage konnte nicht freigegeben werden",
+      },
+    ),
   );
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Änderungsanfrage konnte nicht freigegeben werden",
-    );
-  }
-  return readEnrollmentJSON<AdminEnrollmentChangeRequest>(response);
 }
 
 export async function rejectEnrollmentChangeRequest(
   id: string,
   note: string,
 ): Promise<AdminEnrollmentChangeRequest> {
-  const response = await sendEnrollmentRequest(
-    `${CHANGE_REQUEST_BASE}/${encodeURIComponent(id)}/reject`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ note }),
-    },
+  return adminChangeRequestFromContract(
+    await bffJson(
+      "tenant",
+      "POST /api/enrollment/admin/change-requests/{id}/reject",
+      {
+        params: { id },
+        body: { note },
+        errorMessage: "Änderungsanfrage konnte nicht abgelehnt werden",
+      },
+    ),
   );
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Änderungsanfrage konnte nicht abgelehnt werden",
-    );
-  }
-  return readEnrollmentJSON<AdminEnrollmentChangeRequest>(response);
 }

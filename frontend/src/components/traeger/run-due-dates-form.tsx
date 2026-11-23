@@ -5,15 +5,20 @@
 // Leistung ab dem Rechnungsdatum; eine Familie mit eigenem Zahltag behält
 // ihren Tag. Nach der Freigabe ändern sich die Daten nicht mehr.
 
-import { Fragment, useRef, useState } from "react";
+import { Fragment, useMemo, useRef, useState } from "react";
 import { Alert } from "~/components/ui/alert";
 import { ISODatePicker } from "~/components/ui/date-picker";
 import { EditActions } from "~/components/ui/edit-actions";
-import { FormErrorAlert } from "~/components/ui/form-error-alert";
+import {
+  FormErrorAlert,
+  LoadErrorAlert,
+} from "~/components/ui/form-error-alert";
 import { SectionCard } from "~/components/ui/section-card";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { formatDate } from "~/lib/date-helpers";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import {
   PAYMENT_METHODS,
   type PaymentMethod,
@@ -37,8 +42,14 @@ const NO_DEBIT_ITEMS: readonly DebitItem[] = [];
 
 function draftOf(dates: readonly RunDueDate[]): Draft {
   const draft: Draft = { transfer: "", direct_debit: "" };
-  for (const due of dates) draft[due.paymentMethod] = due.dueOn;
+  for (const due of dates) draft[due.paymentMethod] = due.dueOn ?? "";
   return draft;
+}
+
+/** The due dates of a run as read, with their read-state token. */
+export interface StoredRunDueDates {
+  readonly dueDates: readonly RunDueDate[];
+  readonly version: string;
 }
 
 /** The form of the due dates of a calculated run, on its own page. */
@@ -46,6 +57,8 @@ export function RunDueDatesForm({
   kind,
   runId,
   dueDates,
+  version,
+  reload,
   debitItems = NO_DEBIT_ITEMS,
   prenotificationDays = null,
   issuedOn = null,
@@ -55,6 +68,10 @@ export function RunDueDatesForm({
   kind: "care" | "holiday";
   runId: string;
   dueDates: readonly RunDueDate[];
+  /** The run's `dueDatesVersion`, which the save sends back (ADR 0311). */
+  version: string;
+  /** Reads the run's dates again; rejects when the read fails. */
+  reload: () => Promise<StoredRunDueDates>;
   /** The run's invoices: the date that applies without one, and debits
    * that come too early (#4695). */
   debitItems?: readonly DebitItem[];
@@ -65,8 +82,22 @@ export function RunDueDatesForm({
   onCancel: () => void;
   onSaved: (dates: RunDueDate[]) => void;
 }>) {
-  const [draft, setDraft] = useState<Draft>(() => draftOf(dueDates));
-  const saved = draftOf(dueDates);
+  // The dates rest on the ones read (ADR 0311): a newer read refills the
+  // form only while untouched, the save sends their version, and after a
+  // refusal the stored dates show.
+  // One object per read: a failed read after a refusal ends only through a
+  // read that arrived later, which `useDraftOn` tells by identity (rule 6).
+  const shown = useMemo(() => ({ dueDates, version }), [dueDates, version]);
+  const edit = useDraftOn<StoredRunDueDates, Draft, string, RunDueDate[]>(
+    { opening: runId, data: shown, reload },
+    {
+      token: (read) => read.version,
+      toDraft: (read) => draftOf(read.dueDates),
+    },
+  );
+  const draft = edit.draft ?? draftOf(dueDates);
+  const setDraft = edit.setDraft;
+  const saved = draftOf(edit.base?.dueDates ?? dueDates);
   const termDates = termDueDates(debitItems);
   // The direct debits that come too early: while the saved day stands, the
   // families the preview found; for a new day, checked as it is typed
@@ -91,29 +122,42 @@ export function RunDueDatesForm({
   const [saving, setSaving] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(formRef);
+  const form = useReadDraftForm(edit, formErrors, "die Fälligkeiten");
   const { success } = useToast();
 
   const submit = async () => {
-    formErrors.clear();
+    // Enter submits too: nothing goes out before the stored state is
+    // read, and the shown error stays.
+    if (!form.begin()) return;
     setSaving(true);
-    try {
-      const saved = await saveRunDueDates(
+    const result = await edit.submit((token) =>
+      saveRunDueDates(
         kind,
         runId,
         PAYMENT_METHODS.filter((method) => draft[method] !== "").map(
           (method) => ({ paymentMethod: method, dueOn: draft[method] }),
         ),
-      );
+        token,
+      ),
+    );
+    setSaving(false);
+    if (result.ok) {
       success("Die Fälligkeiten sind gespeichert.");
-      onSaved(saved);
-    } catch (err) {
-      logger.error("run_due_dates_save_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      void formErrors.show(err, { object: "die Änderung der Fälligkeiten" });
-    } finally {
-      setSaving(false);
+      onSaved(result.saved);
+      return;
     }
+    logger.error("run_due_dates_save_failed", {
+      error:
+        result.error instanceof Error
+          ? result.error.message
+          : String(result.error),
+    });
+    // Changed since it was read: `reload` shows the stored dates instead of
+    // the draft, without a retry (ADR 0311).
+    void formErrors.show(result.error, {
+      object: "die Änderung der Fälligkeiten",
+      reload: result.reload,
+    });
   };
 
   return (
@@ -156,6 +200,7 @@ export function RunDueDatesForm({
           Familien mit eigenem Zahltag behalten ihren Tag.
         </p>
         <FormErrorAlert message={formErrors.error} />
+        <LoadErrorAlert error={form.loadError} />
         <EditActions onCancel={onCancel} saving={saving} />
       </form>
     </SectionCard>

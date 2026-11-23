@@ -21,14 +21,15 @@ import (
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	groupLiveHTTP "github.com/moto-ogs/project-phoenix/modules/grouplive/http"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 )
 
 type holidayGuestGroupBody struct {
-	GroupID  int64  `json:"group_id"`
-	WeekID   int64  `json:"week_id"`
+	GroupID  wireID `json:"group_id"`
+	WeekID   wireID `json:"week_id"`
 	StartsOn string `json:"starts_on"`
 	EndsOn   string `json:"ends_on"`
 	Guests   int    `json:"guests"`
@@ -67,7 +68,7 @@ func dailyGroups(t *testing.T, router http.Handler, token string) []int64 {
 		router.ServeHTTP(rec, req)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		type group struct {
-			ID int64 `json:"id,string"`
+			ID ident.ID `json:"id"`
 		}
 		var groups []group
 		if path == "/api/students/ogs-group-navigation" {
@@ -79,7 +80,7 @@ func dailyGroups(t *testing.T, router http.Handler, token string) []int64 {
 		}
 		ids := make([]int64, 0, len(groups))
 		for _, g := range groups {
-			ids = append(ids, g.ID)
+			ids = append(ids, g.ID.Int64())
 		}
 		return ids
 	}
@@ -109,9 +110,9 @@ func TestFeriengruppeWaitsOutsideTheDailyListsUntilItsWeek(t *testing.T) {
 
 	f.confirm(t, f.siblings, "confirm")
 	f.today.Store(calendar.NewDate(2099, 7, 1))
-	require.Equal(t, http.StatusOK, f.assign(t, lead, week.ID, f.group).Code)
+	require.Equal(t, http.StatusOK, f.assign(t, lead, int64(week.ID), f.group).Code)
 
-	assert.Equal(t, []holidayGuestGroupBody{{GroupID: f.group, WeekID: week.ID, StartsOn: "2099-07-06", EndsOn: "2099-07-10", Guests: 1}},
+	assert.Equal(t, []holidayGuestGroupBody{{GroupID: wireID(f.group), WeekID: week.ID, StartsOn: "2099-07-06", EndsOn: "2099-07-10", Guests: 1}},
 		f.guestGroups(t, lead), "the group management names the week and the guests waiting for it")
 	assert.Equal(t, []int64{regular}, dailyGroups(t, live, lead),
 		"before its week the empty Feriengruppe stays out of the daily lists")
@@ -141,7 +142,7 @@ func TestFeriengruppeWithAChildInCareTodayShowsBeforeItsWeek(t *testing.T) {
 	live := f.groupLiveRouter(t)
 
 	f.today.Store(calendar.NewDate(2099, 7, 1))
-	require.Equal(t, http.StatusOK, f.assign(t, lead, f.offer.Weeks[0].ID, f.group).Code)
+	require.Equal(t, http.StatusOK, f.assign(t, lead, int64(f.offer.Weeks[0].ID), f.group).Code)
 	assert.Empty(t, dailyGroups(t, live, lead), "the waiting Feriengruppe is the only group and stays back")
 
 	child := testpkg.CreateTestStudentForTenant(t, f.db, f.nord, "Lea", "Früh", "3b")
@@ -155,12 +156,12 @@ func TestHolidayGuestGroupsStayInTheirSchool(t *testing.T) {
 	f := newHolidayGuestFixture(t, "Träger Feriengruppe Zugriff")
 	lead := f.staffOf(t, f.nord, permissions.ConfigRead, permissions.UsersCreate, permissions.UsersRead)
 	f.today.Store(calendar.NewDate(2099, 7, 1))
-	require.Equal(t, http.StatusOK, f.assign(t, lead, f.offer.Weeks[0].ID, f.group).Code)
+	require.Equal(t, http.StatusOK, f.assign(t, lead, int64(f.offer.Weeks[0].ID), f.group).Code)
 
 	rec := f.do(t, f.staffOf(t, f.nord, permissions.StudentsRead), http.MethodGet, "/api/holiday-guests/groups", nil)
 	assert.Equal(t, http.StatusForbidden, rec.Code, "the Feriengruppen open with the permission of the group lists: %s", rec.Body.String())
 	assert.Len(t, f.guestGroups(t, f.staffOf(t, f.nord, permissions.GroupsRead)), 1)
-	assert.Empty(t, f.guestGroups(t, f.staffOf(t, f.offer.Schools[1].ID, permissions.GroupsRead)),
+	assert.Empty(t, f.guestGroups(t, f.staffOf(t, int64(f.offer.Schools[1].ID), permissions.GroupsRead)),
 		"another school of the Träger sees no Feriengruppe of the OGS Nord")
 }
 
@@ -182,7 +183,7 @@ func TestHolidayGuestGroupsQueryBudgetIsFlat(t *testing.T) {
 	f.today.Store(calendar.NewDate(2099, 7, 1))
 	none := read()
 	f.confirm(t, f.siblings, "confirm")
-	require.Equal(t, http.StatusOK, f.assign(t, lead, f.offer.Weeks[0].ID, f.group).Code)
+	require.Equal(t, http.StatusOK, f.assign(t, lead, int64(f.offer.Weeks[0].ID), f.group).Code)
 	require.Len(t, f.guestGroups(t, team), 1)
 	assert.Len(t, read().Statements, len(none.Statements), "the Feriengruppen read the same statements with or without weeks and guests")
 	querybudgets.AssertQueryBudget(t, "api.holiday_guests.groups", none)

@@ -1,3 +1,4 @@
+import type { offeringGapsResponse } from "./contract/timetable.generated";
 import { schoolClassesLabel } from "~/lib/school-class-label";
 
 /**
@@ -29,34 +30,17 @@ export interface OfferingGap {
   newSeriesPlansCovered: boolean;
 }
 
-interface BackendOfferingGap {
-  offering: { id: number; name: string };
-  student_count: number;
-  school_classes?: string[] | null;
-  weekdays?: number[] | null;
-  acknowledged: boolean;
-  acknowledged_classes?: string[] | null;
-  new_series_classes?: string[] | null;
-  new_series_plans_covered?: boolean | null;
-}
-
-export interface BackendOfferingGapsResponse {
-  gaps?: BackendOfferingGap[] | null;
-}
-
-export function mapOfferingGaps(
-  raw: BackendOfferingGapsResponse,
-): OfferingGap[] {
+// Wire type: the decoded response of the catalog proxy (#2353).
+export function mapOfferingGaps(raw: offeringGapsResponse): OfferingGap[] {
   return (raw.gaps ?? []).map((gap) => ({
-    offering: { id: String(gap.offering.id), name: gap.offering.name },
+    offering: { id: gap.offering.id, name: gap.offering.name },
     studentCount: gap.student_count,
     schoolClasses: gap.school_classes ?? [],
     weekdays: gap.weekdays ?? [],
     acknowledged: gap.acknowledged,
     acknowledgedClasses: gap.acknowledged_classes ?? [],
     newSeriesClasses: gap.new_series_classes ?? [],
-    // An unknown answer offers no creation rather than a second list.
-    newSeriesPlansCovered: gap.new_series_plans_covered ?? true,
+    newSeriesPlansCovered: gap.new_series_plans_covered,
   }));
 }
 

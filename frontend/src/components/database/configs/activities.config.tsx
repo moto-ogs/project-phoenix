@@ -1,14 +1,19 @@
 // Activity Entity Configuration
 
 import { defineEntityConfig } from "@/lib/database/types";
-import type { Activity, ActivitySupervisor } from "@/lib/activity-helpers";
-import { apiErrorFromResponse } from "~/lib/api-error";
-import { sessionFetch } from "~/lib/session-cache";
-import { createLogger } from "~/lib/logger";
+import {
+  mapActivityResponse,
+  mapSupervisorOption,
+  type Activity,
+  type ActivitySupervisor,
+} from "@/lib/activity-helpers";
+import type {
+  ActivityRequest,
+  ActivityUpdateRequest,
+} from "~/lib/contract/activities.generated";
+import { bffJson } from "~/lib/bff-fetch";
 import { activitiesConcept } from "~/lib/concepts/activities";
 import { staffConcept } from "~/lib/concepts/staff";
-
-const logger = createLogger({ component: "ActivitiesConfig" });
 
 // Emoji mapping rules: [emoji, ...keywords]
 // Rules are checked in order; first match wins
@@ -91,6 +96,65 @@ function getActivityEmoji(activity: Activity): string {
   );
 }
 
+// The available supervisors as select options. A failure rejects with the
+// catalog error; an empty list would look like a school without supervisors
+// (#2517, #2353).
+async function loadSupervisorOptions(): Promise<
+  Array<{ value: string; label: string }>
+> {
+  const supervisors = await bffJson(
+    "tenant",
+    "GET /api/activities/supervisors/available",
+    { errorMessage: "failed to load supervisors" },
+  );
+  return supervisors.map(mapSupervisorOption).map((sup) => ({
+    value: sup.id,
+    label: sup.name,
+  }));
+}
+
+/** The body of an activity write: the contract's names for the form's fields. */
+export function toActivityRequest(data: Partial<Activity>): ActivityRequest {
+  // A cleared number field holds "" instead of a number.
+  const limit: unknown = data.max_participant;
+  return {
+    name: data.name,
+    max_participants: typeof limit === "number" ? limit : null,
+    category_id: data.ag_category_id || undefined,
+    // Backend expects supervisor_ids as an array even for single primary
+    ...(data.supervisor_id ? { supervisor_ids: [data.supervisor_id] } : {}),
+  };
+}
+
+/**
+ * The body of a save from the database form, which shows the name, the
+ * limit, the category and the primary supervisor only. The route keeps what
+ * the body does not name (opening, planned room, schedules), and a changed
+ * primary supervisor travels with the co-supervisors the form read, so they
+ * stay. `version` is the stored state the form was filled from (ADR 0311).
+ */
+export function toActivityUpdateRequest(
+  data: Partial<Activity>,
+): ActivityUpdateRequest {
+  const limit: unknown = data.max_participant;
+  const request: ActivityUpdateRequest = {
+    name: data.name,
+    max_participants: typeof limit === "number" ? limit : null,
+    category_id: data.ag_category_id || undefined,
+    expected_version: data.version,
+  };
+  const read = data.supervisors ?? [];
+  const readPrimary = read.find((s) => s.is_primary)?.staff_id ?? "";
+  const primary = data.supervisor_id ?? "";
+  if (primary !== readPrimary) {
+    const others = read
+      .map((s) => s.staff_id)
+      .filter((id) => id !== primary && id !== readPrimary);
+    request.supervisor_ids = primary ? [primary, ...others] : others;
+  }
+  return request;
+}
+
 export const activitiesConfig = defineEntityConfig<Activity>({
   name: {
     singular: "Aktivität",
@@ -102,10 +166,34 @@ export const activitiesConfig = defineEntityConfig<Activity>({
   backUrl: "/database",
 
   api: {
-    basePath: "/api/activities",
-    // Admin view keeps showing system activities (Schulhof Freispiel, WC) —
-    // they are rendered greyed-out via isSystemActivity instead of hidden.
-    listParams: { include_system: "true" },
+    list: async () =>
+      (
+        await bffJson("tenant", "GET /api/activities/", {
+          // Admin view keeps showing system activities (Schulhof Freispiel,
+          // WC) — they are rendered greyed-out via isSystemActivity instead
+          // of hidden.
+          query: { include_system: true },
+        })
+      ).map(mapActivityResponse),
+    get: async (id) =>
+      mapActivityResponse(
+        await bffJson("tenant", "GET /api/activities/{id}", { params: { id } }),
+      ),
+    create: async (data) =>
+      mapActivityResponse(
+        await bffJson("tenant", "POST /api/activities/", {
+          body: toActivityRequest(data),
+        }),
+      ),
+    update: async (id, data) =>
+      mapActivityResponse(
+        await bffJson("tenant", "PUT /api/activities/{id}", {
+          params: { id },
+          body: toActivityUpdateRequest(data),
+        }),
+      ),
+    delete: (id) =>
+      bffJson("tenant", "DELETE /api/activities/{id}", { params: { id } }),
   },
 
   form: {
@@ -132,32 +220,13 @@ export const activitiesConfig = defineEntityConfig<Activity>({
             options: async () => {
               // A failure throws the ApiError: the form shows the catalog
               // text with retry instead of an empty choice (#2517).
-              const response = await sessionFetch("/api/activities/categories");
-              if (!response.ok) {
-                throw await apiErrorFromResponse(
-                  response,
-                  "failed to load activity categories",
-                );
-              }
-              const result = (await response.json()) as
-                | { data?: Array<{ id: number; name: string }> }
-                | Array<{ id: number; name: string }>;
-
-              // Handle both wrapped and direct response formats
-              let categories: Array<{ id: number; name: string }>;
-              if (Array.isArray(result)) {
-                categories = result;
-              } else if (
-                result &&
-                typeof result === "object" &&
-                "data" in result
-              ) {
-                categories = result.data ?? [];
-              } else {
-                categories = [];
-              }
+              const categories = await bffJson(
+                "tenant",
+                "GET /api/activities/categories",
+                { errorMessage: "failed to load activity categories" },
+              );
               return categories.map((cat) => ({
-                value: cat.id.toString(),
+                value: cat.id,
                 label: cat.name,
               }));
             },
@@ -183,29 +252,7 @@ export const activitiesConfig = defineEntityConfig<Activity>({
             required: false,
             placeholder: "Keine Hauptbetreuung",
             optionsResource: "activity-supervisor-choice",
-            options: async () => {
-              // Not getSupervisors(): it answers a failure with an empty
-              // list, which would look like a school without supervisors.
-              const response = await sessionFetch(
-                "/api/activities/supervisors",
-              );
-              if (!response.ok) {
-                throw await apiErrorFromResponse(
-                  response,
-                  "failed to load supervisors",
-                );
-              }
-              const result = (await response.json()) as
-                | { data?: Array<{ id: string; name: string }> }
-                | Array<{ id: string; name: string }>;
-              const supervisors = Array.isArray(result)
-                ? result
-                : (result.data ?? []);
-              return supervisors.map((sup) => ({
-                value: sup.id,
-                label: sup.name,
-              }));
-            },
+            options: loadSupervisorOptions,
           },
         ],
       },
@@ -315,46 +362,7 @@ export const activitiesConfig = defineEntityConfig<Activity>({
         id: "supervisor_id",
         label: "Betreuer",
         type: "select",
-        loadOptions: async () => {
-          try {
-            // Fetch supervisors from API; the route reads the session
-            // cookie (#5005).
-            const response = await fetch("/api/activities/supervisors");
-
-            if (!response.ok) {
-              logger.error("failed to fetch supervisors", {
-                status: response.status,
-              });
-              return [];
-            }
-
-            const result = (await response.json()) as
-              | { data?: Array<{ id: string; name: string }> }
-              | Array<{ id: string; name: string }>;
-
-            // Handle wrapped response from route wrapper
-            let supervisors: Array<{ id: string; name: string }> = [];
-            if (Array.isArray(result)) {
-              // Direct array response
-              supervisors = result;
-            } else if (
-              result &&
-              typeof result === "object" &&
-              "data" in result
-            ) {
-              // Response is wrapped in ApiResponse format
-              supervisors = result.data ?? [];
-            }
-
-            return supervisors.map((sup) => ({
-              value: sup.id,
-              label: sup.name,
-            }));
-          } catch (error) {
-            logger.error("error loading supervisors", { error: String(error) });
-            return [];
-          }
-        },
+        loadOptions: loadSupervisorOptions,
       },
     ],
 
@@ -377,37 +385,6 @@ export const activitiesConfig = defineEntityConfig<Activity>({
       avatar: {
         text: getActivityEmoji,
       },
-    },
-  },
-
-  service: {
-    mapRequest: (data: Partial<Activity>): Record<string, unknown> => {
-      const maxParticipants = data.max_participant as unknown;
-
-      // Convert frontend Activity to backend format
-      const request: Record<string, unknown> = {
-        name: data.name,
-        max_participants:
-          maxParticipants === "" || maxParticipants == null
-            ? null
-            : maxParticipants,
-        category_id: data.ag_category_id
-          ? Number.parseInt(data.ag_category_id, 10)
-          : undefined,
-      };
-
-      // Backend expects supervisor_ids as an array even for single primary
-      if (data.supervisor_id) {
-        request.supervisor_ids = [Number.parseInt(data.supervisor_id, 10)];
-      }
-
-      return request;
-    },
-
-    mapResponse: (responseData: unknown): Activity => {
-      // Simply cast the response data to Activity
-      // Supervisor data is preserved for display in detail view but not used for editing
-      return responseData as Activity;
     },
   },
 

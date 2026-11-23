@@ -3,6 +3,7 @@ package presenceprojectionhttp
 import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
+	lists "github.com/moto-ogs/project-phoenix/modules/documentrendering/lists"
 	peopleModule "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/departure"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
@@ -13,7 +14,7 @@ import (
 // here is decoded by the frontend against these types.
 func StudentRouteContracts() []common.RouteContract {
 	tenant := []common.PortalScope{common.PortalTenant}
-	return []common.RouteContract{
+	return append([]common.RouteContract{
 		{
 			Method: "GET", Pattern: "/", Portals: tenant, Paginated: true,
 			Query: studentListQuery(),
@@ -53,7 +54,17 @@ func StudentRouteContracts() []common.RouteContract {
 			),
 			Response: statusDayOverviewResponse{},
 		},
-	}
+		// The filter options of the child list; their reshaping route files
+		// left in #7563.
+		{Method: "GET", Pattern: "/care-offerings", Portals: tenant, Response: []CareOfferingOptionResponse{}},
+		// date is the list's planning day: the answers count the children in
+		// care that day (#7645).
+		{
+			Method: "GET", Pattern: "/enrollment-answer-filters", Portals: tenant,
+			Query:    []common.QueryParam{{Name: "date", Kind: common.QueryDate}},
+			Response: []EnrollmentAnswerFilterResponse{},
+		},
+	}, studentFileRouteContracts(tenant)...)
 }
 
 // statusDayRangeQuery is the day range both status-day reads take.
@@ -140,6 +151,31 @@ func studentEnums() []common.EnumContract {
 			Name:   "StudentConsentState",
 			Fields: []string{"StudentConsentResponse.state"},
 			Values: []string{peopleModule.StudentConsentStateGranted, peopleModule.StudentConsentStateWithdrawn, peopleModule.StudentConsentStateNotRecorded},
+		},
+	}
+}
+
+// studentFileRouteContracts registers the student files: exports that stream
+// through the portal's proxy (#2352).
+func studentFileRouteContracts(tenant []common.PortalScope) []common.RouteContract {
+	formats := []string{string(lists.FormatPDF), string(lists.FormatDOCX), string(lists.FormatXLSX)}
+	return []common.RouteContract{
+		{
+			Method: "GET", Pattern: "/{id}/attendance-history/export", Portals: tenant, File: true,
+			Query: []common.QueryParam{
+				{Name: "format", Kind: common.QueryString, Values: formats},
+				{Name: "from", Kind: common.QueryDate}, {Name: "to", Kind: common.QueryDate},
+			},
+		},
+		// The filter and column choice of the export, bounded like the
+		// former route file's body (1 MiB).
+		{Method: "POST", Pattern: "/export", Portals: tenant, Request: studentExportRequest{}, MaxBodyBytes: 1 << 20, File: true},
+		{
+			Method: "GET", Pattern: "/day-log/export", Portals: tenant, File: true,
+			Query: []common.QueryParam{
+				{Name: "date", Kind: common.QueryDate}, {Name: "group_id", Kind: common.QueryID},
+				{Name: "format", Kind: common.QueryString, Values: formats},
+			},
 		},
 	}
 }

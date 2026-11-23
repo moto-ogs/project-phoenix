@@ -3,8 +3,9 @@ import { z } from "zod";
 import {
   arr,
   bool,
+  fileAnswer,
   instant,
-  int64StringOrNumber,
+  int64String,
   noData,
   nullable,
   object,
@@ -15,10 +16,14 @@ import {
   safeInt,
   str,
   success,
+  type OpenEnum,
 } from "./runtime";
 import {
   type NewStudentGuardian,
 } from "./shared.generated";
+
+export const PAYMENT_EXPORT_FORMAT_VALUES = ["docx", "pdf", "xlsx"] as const;
+export type PaymentExportFormat = (typeof PAYMENT_EXPORT_FORMAT_VALUES)[number];
 
 /** Go: users.pendingApprovalResponse */
 export interface pendingApprovalResponse {
@@ -80,7 +85,7 @@ export interface GuardianPickerResponse {
 }
 
 export const GuardianPickerResponseSchema: z.ZodType<GuardianPickerResponse, unknown> = object<GuardianPickerResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   first_name: str,
   last_name: str,
   email: optional(str),
@@ -100,7 +105,7 @@ export interface guardianEmailStatusResponse {
 }
 
 export const guardianEmailStatusResponseSchema: z.ZodType<guardianEmailStatusResponse, unknown> = object<guardianEmailStatusResponse>({
-  guardian_profile_id: int64StringOrNumber,
+  guardian_profile_id: int64String,
   mail_outcome: optional(str),
   address_mark: optional(str),
   emails_stopped: optional(bool),
@@ -121,7 +126,7 @@ export interface PhoneNumberResponse {
 }
 
 export const PhoneNumberResponseSchema: z.ZodType<PhoneNumberResponse, unknown> = object<PhoneNumberResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   phone_number: str,
   phone_type: str,
   label: optional(str),
@@ -147,7 +152,7 @@ export interface GuardianResponse {
 }
 
 export const GuardianResponseSchema: z.ZodType<GuardianResponse, unknown> = object<GuardianResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   first_name: str,
   last_name: str,
   email: optional(str),
@@ -159,7 +164,7 @@ export const GuardianResponseSchema: z.ZodType<GuardianResponse, unknown> = obje
   language_preference: str,
   notes: optional(str),
   has_account: bool,
-  account_id: optional(int64StringOrNumber),
+  account_id: optional(int64String),
 });
 
 /** Go: users.GuardianWithRelationship */
@@ -176,11 +181,12 @@ export interface GuardianWithRelationship {
   emergency_priority: number;
   is_payer: boolean;
   account_status: string;
+  version: string;
 }
 
 export const GuardianWithRelationshipSchema: z.ZodType<GuardianWithRelationship, unknown> = object<GuardianWithRelationship>({
   guardian: nullable(GuardianResponseSchema),
-  relationship_id: int64StringOrNumber,
+  relationship_id: int64String,
   relationship_type: str,
   guardian_role: str,
   is_primary: bool,
@@ -191,6 +197,7 @@ export const GuardianWithRelationshipSchema: z.ZodType<GuardianWithRelationship,
   emergency_priority: safeInt,
   is_payer: bool,
   account_status: str,
+  version: str,
 });
 
 /** Go: users.GuardianDeletePreview */
@@ -213,19 +220,36 @@ export interface GuardianPaymentMaskedResponse {
   guardian_id: string;
   iban_masked: string | null;
   account_holder: string | null;
+  version: string;
 }
 
 export const GuardianPaymentMaskedResponseSchema: z.ZodType<GuardianPaymentMaskedResponse, unknown> = object<GuardianPaymentMaskedResponse>({
   guardian_id: str,
   iban_masked: nullable(str),
   account_holder: nullable(str),
+  version: str,
 });
+
+/** Go: users.GuardianCreateRequest */
+export interface GuardianCreateRequest {
+  first_name?: string;
+  last_name?: string;
+  email?: string | null;
+  address_street?: string | null;
+  address_city?: string | null;
+  address_postal_code?: string | null;
+  preferred_contact_method?: string;
+  language_preference?: string;
+  notes?: string | null;
+}
 
 /** Go: users.bulkInviteRequest */
 export interface bulkInviteRequest {
-  student_ids?: number[] | null;
+  student_ids?: string[] | null;
   resend_open?: boolean;
   dry_run?: boolean;
+  notify_active?: boolean;
+  expected_fingerprint?: string;
 }
 
 /** Go: users.bulkInviteProblemResponse */
@@ -252,7 +276,11 @@ export interface bulkInviteResponse {
   skipped_active: number;
   skipped_open: number;
   skipped_restricted: number;
+  notified: number;
+  already_notified: number;
+  without_visible_care: number;
   problems: bulkInviteProblemResponse[] | null;
+  fingerprint: string;
 }
 
 export const bulkInviteResponseSchema: z.ZodType<bulkInviteResponse, unknown> = object<bulkInviteResponse>({
@@ -263,12 +291,21 @@ export const bulkInviteResponseSchema: z.ZodType<bulkInviteResponse, unknown> = 
   skipped_active: safeInt,
   skipped_open: safeInt,
   skipped_restricted: safeInt,
+  notified: safeInt,
+  already_notified: safeInt,
+  without_visible_care: safeInt,
   problems: nullable(arr(bulkInviteProblemResponseSchema)),
+  fingerprint: str,
 });
+
+/** Go: users.PaymentExportRequest */
+export interface PaymentExportRequest {
+  format?: OpenEnum<PaymentExportFormat>;
+}
 
 /** Go: users.StudentGuardianLinkRequest */
 export interface StudentGuardianLinkRequest {
-  guardian_profile_id?: number;
+  guardian_profile_id?: string;
   relationship_type?: string;
   guardian_role?: string;
   is_primary?: boolean;
@@ -296,10 +333,10 @@ export interface GuardianLinkResponse {
 }
 
 export const GuardianLinkResponseSchema: z.ZodType<GuardianLinkResponse, unknown> = object<GuardianLinkResponse>({
-  id: int64StringOrNumber,
-  tenant_id: int64StringOrNumber,
-  student_id: int64StringOrNumber,
-  guardian_profile_id: int64StringOrNumber,
+  id: int64String,
+  tenant_id: int64String,
+  student_id: int64String,
+  guardian_profile_id: int64String,
   relationship_type: str,
   guardian_role: str,
   is_primary: bool,
@@ -342,17 +379,36 @@ export const inviteToStudentResponseSchema: z.ZodType<inviteToStudentResponse, u
   mail_held: optional(bool),
 });
 
+/** Go: users.GuardianInvitationResponse */
+export interface GuardianInvitationResponse {
+  id: string;
+  guardian_profile_id: string;
+  expires_at: string;
+  email_sent: boolean;
+  token?: string;
+}
+
+export const GuardianInvitationResponseSchema: z.ZodType<GuardianInvitationResponse, unknown> = object<GuardianInvitationResponse>({
+  id: int64String,
+  guardian_profile_id: int64String,
+  expires_at: instant,
+  email_sent: bool,
+  token: optional(str),
+});
+
 /** Go: users.GuardianPaymentRevealResponse */
 export interface GuardianPaymentRevealResponse {
   guardian_id: string;
   iban: string | null;
   account_holder: string | null;
+  version: string;
 }
 
 export const GuardianPaymentRevealResponseSchema: z.ZodType<GuardianPaymentRevealResponse, unknown> = object<GuardianPaymentRevealResponse>({
   guardian_id: str,
   iban: nullable(str),
   account_holder: nullable(str),
+  version: str,
 });
 
 /** Go: users.PhoneNumberCreateRequest */
@@ -374,11 +430,6 @@ export interface StudentGuardianUpdateRequest {
   emergency_priority?: number | null;
 }
 
-/** Go: users.StudentPayerRequest */
-export interface StudentPayerRequest {
-  guardian_id?: string | null;
-}
-
 /** Go: users.GuardianUpdateRequest */
 export interface GuardianUpdateRequest {
   first_name?: string | null;
@@ -392,11 +443,34 @@ export interface GuardianUpdateRequest {
   notes?: string | null;
 }
 
+/** Go: users.GuardianEntryPhone */
+export interface GuardianEntryPhone {
+  id?: string | null;
+  phone_number?: string;
+  phone_type?: string;
+  label?: string | null;
+  is_primary?: boolean;
+}
+
+/** Go: users.GuardianEntryRequest */
+export interface GuardianEntryRequest {
+  guardian?: GuardianUpdateRequest;
+  relationship?: StudentGuardianUpdateRequest;
+  phone_numbers?: GuardianEntryPhone[] | null;
+  expected_version?: string;
+}
+
+/** Go: users.StudentPayerRequest */
+export interface StudentPayerRequest {
+  guardian_id?: string | null;
+}
+
 /** Go: users.GuardianPaymentRequest */
 export interface GuardianPaymentRequest {
   iban?: string | null;
   account_holder?: string | null;
   note?: string;
+  expected_version?: string;
 }
 
 /** Go: users.PhoneNumberUpdateRequest */
@@ -406,19 +480,6 @@ export interface PhoneNumberUpdateRequest {
   label?: string | null;
   is_primary?: boolean | null;
   priority?: number | null;
-}
-
-/** Query of DELETE /api/guardians/{id} */
-export interface DeleteGuardiansIdQuery {
-  expected_link_ids?: string;
-  force?: string;
-}
-
-/** Query of GET /api/guardians/search */
-export interface GetGuardiansSearchQuery {
-  page?: number;
-  page_size?: number;
-  q?: string;
 }
 
 export const routes = {
@@ -432,7 +493,10 @@ export const routes = {
     method: "DELETE",
     pattern: "/api/guardians/{id}",
     portals: ["tenant"],
-    query: ["expected_link_ids", "force"],
+    query: {
+      "expected_link_ids": { kind: "string" },
+      "force": { kind: "string" },
+    },
     response: noData,
   },
   "DELETE /api/guardians/{id}/email-block": {
@@ -451,6 +515,7 @@ export const routes = {
     method: "DELETE",
     pattern: "/api/guardians/{id}/phone-numbers/{phoneId}",
     portals: ["tenant"],
+    deprecated: true,
     response: noData,
   },
   "GET /api/guardians/invitations/pending-approval": {
@@ -469,7 +534,11 @@ export const routes = {
     method: "GET",
     pattern: "/api/guardians/search",
     portals: ["tenant"],
-    query: ["page", "page_size", "q"],
+    query: {
+      "page": { kind: "int" },
+      "page_size": { kind: "int" },
+      "q": { kind: "string" },
+    },
     response: paginated(z.array(GuardianPickerResponseSchema)),
   },
   "GET /api/guardians/students/{studentId}/email-status": {
@@ -508,6 +577,13 @@ export const routes = {
     portals: ["tenant"],
     response: success(z.array(PhoneNumberResponseSchema)),
   },
+  "POST /api/guardians/": {
+    method: "POST",
+    pattern: "/api/guardians/",
+    portals: ["tenant"],
+    request: requestBody<GuardianCreateRequest>(),
+    response: success(GuardianResponseSchema),
+  },
   "POST /api/guardians/bulk-invite": {
     method: "POST",
     pattern: "/api/guardians/bulk-invite",
@@ -526,6 +602,13 @@ export const routes = {
     pattern: "/api/guardians/invitations/{invitationId}/reject",
     portals: ["tenant"],
     response: noData,
+  },
+  "POST /api/guardians/payment-overview/export": {
+    method: "POST",
+    pattern: "/api/guardians/payment-overview/export",
+    portals: ["tenant"],
+    request: requestBody<PaymentExportRequest>(),
+    response: fileAnswer,
   },
   "POST /api/guardians/students/{studentId}/guardians": {
     method: "POST",
@@ -554,6 +637,12 @@ export const routes = {
     portals: ["tenant"],
     response: noData,
   },
+  "POST /api/guardians/{id}/invite": {
+    method: "POST",
+    pattern: "/api/guardians/{id}/invite",
+    portals: ["tenant"],
+    response: success(GuardianInvitationResponseSchema),
+  },
   "POST /api/guardians/{id}/payment/reveal": {
     method: "POST",
     pattern: "/api/guardians/{id}/payment/reveal",
@@ -571,14 +660,23 @@ export const routes = {
     method: "POST",
     pattern: "/api/guardians/{id}/phone-numbers/{phoneId}/set-primary",
     portals: ["tenant"],
+    deprecated: true,
     response: success(PhoneNumberResponseSchema),
   },
   "PUT /api/guardians/relationships/{relationshipId}": {
     method: "PUT",
     pattern: "/api/guardians/relationships/{relationshipId}",
     portals: ["tenant"],
+    deprecated: true,
     request: requestBody<StudentGuardianUpdateRequest>(),
     response: noData,
+  },
+  "PUT /api/guardians/students/{studentId}/guardians/{guardianId}": {
+    method: "PUT",
+    pattern: "/api/guardians/students/{studentId}/guardians/{guardianId}",
+    portals: ["tenant"],
+    request: requestBody<GuardianEntryRequest>(),
+    response: success(GuardianWithRelationshipSchema),
   },
   "PUT /api/guardians/students/{studentId}/payer": {
     method: "PUT",
@@ -591,6 +689,7 @@ export const routes = {
     method: "PUT",
     pattern: "/api/guardians/{id}",
     portals: ["tenant"],
+    deprecated: true,
     request: requestBody<GuardianUpdateRequest>(),
     response: success(GuardianResponseSchema),
   },
@@ -605,6 +704,7 @@ export const routes = {
     method: "PUT",
     pattern: "/api/guardians/{id}/phone-numbers/{phoneId}",
     portals: ["tenant"],
+    deprecated: true,
     request: requestBody<PhoneNumberUpdateRequest>(),
     response: success(PhoneNumberResponseSchema),
   },

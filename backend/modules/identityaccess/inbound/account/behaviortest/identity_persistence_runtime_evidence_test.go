@@ -13,17 +13,18 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/api/testutil"
+	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 // TestIdentityPersistenceRuntimeEvidence measures the school account flows whose
 // persistence #3226 rewrote natively, through the auth router: login, refresh
-// rotation, the own-account reads and the administrative account and role
+// rotation, the own-account reads and the administrative role
 // reads. The harness only uses the router and fixtures that exist before and
 // after the cutover, so the same file ran against the merge base; the numbers
 // are recorded in docs/runtime-checkpoints/identity-persistence-3226.md, whose
-// measured permission reads and role assignment round trip are retired routes
-// since #4485 and #4431. Fixtures are outside the timer.
+// measured permission reads, role assignment round trip and account list are
+// retired routes since #4485, #4431 and #7808. Fixtures are outside the timer.
 func TestIdentityPersistenceRuntimeEvidence(t *testing.T) {
 	t.Parallel()
 	testpkg.RequireRuntimeEvidence(t)
@@ -41,6 +42,15 @@ func TestIdentityPersistenceRuntimeEvidence(t *testing.T) {
 	_, err := db.NewRaw("INSERT INTO auth.account_roles (account_id, role_id, tenant_id) VALUES (?, ?, ?)",
 		account.ID, adminRole.ID, testpkg.Tenant(t)).Exec(ctx)
 	require.NoError(t, err)
+
+	// Admin login requires MFA. Prepare a remembered device outside the timer.
+	module := setupAuthModuleOn(t, db)
+	require.NoError(t, module.MFA.EnrollMFA(ctx, identityaccess.VerifiedMFAChallenge{
+		AccountID: account.ID, TenantID: testpkg.Tenant(t), Scope: "tenant",
+	}))
+	trustedDevice, _, err := module.MFA.IssueTrustedDevice(ctx, account.ID, testpkg.Tenant(t), "", nil)
+	require.NoError(t, err)
+	require.NotEmpty(t, trustedDevice)
 
 	var postgres string
 	require.NoError(t, db.NewRaw("SHOW server_version").Scan(ctx, &postgres))
@@ -82,9 +92,7 @@ func TestIdentityPersistenceRuntimeEvidence(t *testing.T) {
 	operations := []operation{
 		{"login", http.MethodPost, "/auth/login", map[string]string{"email": email, "password": password}, nil, http.StatusOK, tokens},
 		{"refresh", http.MethodPost, "/auth/refresh", nil, func() string { return refreshToken }, http.StatusOK, tokens},
-		{"own_account", http.MethodGet, "/auth/account", nil, access, http.StatusOK, keep},
 		{"own_account_tenants", http.MethodGet, "/auth/account/tenants", nil, access, http.StatusOK, keep},
-		{"accounts_list", http.MethodGet, "/auth/accounts?email=identity-runtime", nil, access, http.StatusOK, keep},
 		{"account_roles", http.MethodGet, accountPath + "/roles", nil, access, http.StatusOK, keep},
 	}
 
@@ -102,6 +110,9 @@ func TestIdentityPersistenceRuntimeEvidence(t *testing.T) {
 	for i := range 35 {
 		for _, op := range operations {
 			req := testutil.NewJSONRequest(t, op.method, op.path, op.body)
+			if op.name == "login" {
+				req.AddCookie(&http.Cookie{Name: "mfa_trust_device", Value: trustedDevice})
+			}
 			if op.bearer != nil {
 				req.Header.Set("Authorization", "Bearer "+op.bearer())
 			}

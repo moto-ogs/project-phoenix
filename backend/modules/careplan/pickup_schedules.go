@@ -54,7 +54,8 @@ type PickupPlans interface {
 	DeleteAllStudentPickupSchedules(ctx context.Context, studentID int64) error
 }
 
-// PickupExceptions manages dated deviations from the weekly plan.
+// PickupExceptions manages dated deviations from the weekly plan. Its
+// resolveStaffID has the contract of ArrivalExceptions.
 type PickupExceptions interface {
 	GetStudentPickupExceptionByID(ctx context.Context, exceptionID int64) (*PickupException, error)
 	GetStudentPickupExceptionForDate(ctx context.Context, studentID int64, date calendar.Date) (*PickupException, error)
@@ -73,7 +74,9 @@ type PickupNotes interface {
 	GetStudentPickupNotes(ctx context.Context, studentID int64) ([]*PickupNote, error)
 	GetStudentPickupNotesForDate(ctx context.Context, studentID int64, date calendar.Date) ([]*PickupNote, error)
 	CreateStudentPickupNote(ctx context.Context, note *PickupNote) error
-	UpdateStudentPickupNote(ctx context.Context, note *PickupNote) error
+	// UpdateStudentPickupNote changes a note read at expectedVersion
+	// (PickupNoteVersion); a changed note is refused with readstate.ErrChanged.
+	UpdateStudentPickupNote(ctx context.Context, note *PickupNote, expectedVersion string) error
 	DeleteStudentPickupNote(ctx context.Context, noteID int64) error
 	DeleteAllStudentPickupNotes(ctx context.Context, studentID int64) error
 }

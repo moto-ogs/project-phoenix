@@ -4,7 +4,9 @@
 // der Anmeldung. Die Abrechnung des Trägers bestätigt die Zahl; erst dann
 // zählt sie für die Geschwisterermäßigung.
 
-import { apiErrorFromResponse, transportFetch } from "./api-error";
+import { bffJson } from "./bff-fetch";
+import type * as enrollmentContract from "./contract/enrollment.generated";
+import type * as parentMeContract from "./contract/parent-me.generated";
 
 /** Where the parents state the number. */
 export type FamilyChildrenSource =
@@ -36,36 +38,9 @@ export interface ParentFamilyChildren {
   readonly accepted: boolean;
 }
 
-interface BackendFamilyChildren {
-  stated_children: number | null;
-  stated_at: string | null;
-  confirmed_children: number | null;
-  confirmed_at: string | null;
-  valid_from: string | null;
-  valid_until: string | null;
-  can_state: boolean;
-}
-
-interface BackendRegistrationFamilyChildren {
-  children: number | null;
-  stated_at: string | null;
-  asked: boolean;
-  can_state: boolean;
-  accepted: boolean;
-}
-
-function path(source: FamilyChildrenSource): string {
-  switch (source.kind) {
-    case "inbox":
-      return `/api/parent/me/documents/${encodeURIComponent(source.organizationId)}/contracts/${encodeURIComponent(source.contractId)}/family-children`;
-    case "link":
-      return `/api/public/care-contract-signing/${encodeURIComponent(source.link)}/family-children`;
-    case "enrollment":
-      return `/api/enrollment/requests/${encodeURIComponent(source.token)}/family-children`;
-  }
-}
-
-function mapContract(data: BackendFamilyChildren): ParentFamilyChildren {
+function mapContract(
+  data: parentMeContract.ContractFamilyChildren,
+): ParentFamilyChildren {
   return {
     statedChildren: data.stated_children,
     statedAt: data.stated_at,
@@ -81,7 +56,7 @@ function mapContract(data: BackendFamilyChildren): ParentFamilyChildren {
 
 /** A registration has no confirmation yet: the contract brings it later. */
 function mapRegistration(
-  data: BackendRegistrationFamilyChildren,
+  data: enrollmentContract.RegistrationFamilyChildren,
 ): ParentFamilyChildren {
   return {
     statedChildren: data.children,
@@ -96,41 +71,84 @@ function mapRegistration(
   };
 }
 
-async function request(
-  source: FamilyChildrenSource,
-  init: RequestInit,
-): Promise<ParentFamilyChildren> {
-  const response = await transportFetch(path(source), {
-    ...init,
-    cache: "no-store",
-    headers: { "Content-Type": "application/json" },
-  });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Family children failed: ${response.status}`,
-    );
-  }
-  const { data } = (await response.json()) as { data: unknown };
-  return source.kind === "enrollment"
-    ? mapRegistration(data as BackendRegistrationFamilyChildren)
-    : mapContract(data as BackendFamilyChildren);
-}
+// The link and the status token are credentials: a failure names the step,
+// never the path that carries them.
+const errorMessage = "family children request failed";
 
 /** The number of the family at the given source. */
-export function fetchFamilyChildren(
+export async function fetchFamilyChildren(
   source: FamilyChildrenSource,
 ): Promise<ParentFamilyChildren> {
-  return request(source, { method: "GET" });
+  switch (source.kind) {
+    case "inbox":
+      return mapContract(
+        await bffJson(
+          "parent",
+          "GET /parent/me/documents/{organizationId}/contracts/{contractId}/family-children",
+          {
+            params: {
+              organizationId: source.organizationId,
+              contractId: source.contractId,
+            },
+          },
+        ),
+      );
+    case "link":
+      return mapContract(
+        await bffJson(
+          "public",
+          "GET /public/care-contract-signing/{link}/family-children",
+          { params: { link: source.link }, errorMessage },
+        ),
+      );
+    case "enrollment":
+      return mapRegistration(
+        await bffJson(
+          "public",
+          "GET /api/enrollment/requests/{statusToken}/family-children",
+          { params: { statusToken: source.token }, errorMessage },
+        ),
+      );
+  }
 }
 
 /** The parents state the number of their children. */
-export function stateFamilyChildren(
+export async function stateFamilyChildren(
   source: FamilyChildrenSource,
   children: number,
 ): Promise<ParentFamilyChildren> {
-  return request(source, {
-    method: "PUT",
-    body: JSON.stringify({ children }),
-  });
+  // One body for all three routes.
+  const body = { children };
+  switch (source.kind) {
+    case "inbox":
+      return mapContract(
+        await bffJson(
+          "parent",
+          "PUT /parent/me/documents/{organizationId}/contracts/{contractId}/family-children",
+          {
+            params: {
+              organizationId: source.organizationId,
+              contractId: source.contractId,
+            },
+            body,
+          },
+        ),
+      );
+    case "link":
+      return mapContract(
+        await bffJson(
+          "public",
+          "PUT /public/care-contract-signing/{link}/family-children",
+          { params: { link: source.link }, body, errorMessage },
+        ),
+      );
+    case "enrollment":
+      return mapRegistration(
+        await bffJson(
+          "public",
+          "PUT /api/enrollment/requests/{statusToken}/family-children",
+          { params: { statusToken: source.token }, body, errorMessage },
+        ),
+      );
+  }
 }

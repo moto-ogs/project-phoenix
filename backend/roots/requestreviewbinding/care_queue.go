@@ -6,8 +6,8 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
-	"github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests"
 	"github.com/moto-ogs/project-phoenix/modules/requestreview"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 type CareScheduleQueueQuery interface {
@@ -56,9 +56,9 @@ func (q careScheduleQueue) Open(ctx context.Context, filter requestreview.QueueF
 		rows = append(rows, requestreview.Row{
 			Type: requestreview.TypeCareSchedule, SortTime: item.Request.CreatedAt,
 			ID: item.Request.ID, StudentID: item.Request.StudentID, StudentName: item.FirstName + " " + item.LastName, SubmittedBy: item.Request.SubmittedBy, Status: item.Request.Status,
-			Version: excusedrequests.ParentRequestVersion(item.Request.UpdatedAt), UrgentToday: careplan.CareReviewUrgentOn(*item, today), Past: careplan.CareReviewPastOn(*item, today),
+			Version: readstate.Of(item.Request.UpdatedAt), UrgentToday: careplan.CareReviewUrgentOn(*item, today), Past: careplan.CareReviewPastOn(*item, today),
 			BulkIneligibleReason: "single_only", BulkIneligibleText: "Betreuungszeiten müssen einzeln geprüft werden.",
-			ConflictKeys: careplan.CareReviewConflictKeys(*item), Data: requestreview.ToCareRequestResponse(item),
+			ConflictKeys: careplan.CareReviewConflictKeys(*item), Payload: requestreview.Payload{CareSchedule: new(requestreview.ToCareRequestResponse(item))},
 		})
 	}
 	return rows, careQueueCursor(cursor), nil
@@ -74,8 +74,8 @@ func (q careScheduleQueue) History(ctx context.Context, filter requestreview.Que
 		row := item.Request
 		rows = append(rows, requestreview.Row{Type: requestreview.TypeCareSchedule, SortTime: row.UpdatedAt,
 			ID: row.ID, StudentID: row.StudentID, StudentName: item.FirstName + " " + item.LastName, SubmittedBy: row.SubmittedBy, Status: row.Status,
-			Version: excusedrequests.ParentRequestVersion(row.UpdatedAt), DecidedAt: requestreview.HistoryDecidedAt(row.ReviewedAt, row.UpdatedAt),
-			CanCorrect: (row.RequestKind == "pickup_change" || row.RequestKind == carerequests.KindPickupPermission) && (row.Status == "approved" || row.Status == "rejected"), Data: requestreview.ToCareRequestHistoryResponse(item),
+			Version: readstate.Of(row.UpdatedAt), DecidedAt: requestreview.HistoryDecidedAt(row.ReviewedAt, row.UpdatedAt),
+			CanCorrect: (row.RequestKind == "pickup_change" || row.RequestKind == carerequests.KindPickupPermission) && (row.Status == "approved" || row.Status == "rejected"), Payload: requestreview.Payload{CareScheduleHistory: new(requestreview.ToCareRequestHistoryResponse(item))},
 		})
 	}
 	return rows, careQueueCursor(cursor), nil

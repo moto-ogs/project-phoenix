@@ -32,6 +32,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/absencerecords"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -215,50 +216,27 @@ func TestAttendanceSync_MirrorCheckIn_CompletedWalkInPersistsClosedInterval(t *t
 func TestAttendanceSync_BulkSessionEndPersistsSlotCheckout(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name    string
-		timeout bool
-	}{
-		{name: "explicit session end"},
-		{name: "session timeout", timeout: true},
-	}
+	s := buildAttendanceSyncSetup(t)
+	student := testpkg.CreateTestStudent(t, s.db, "AS-Bulk", fmt.Sprintf("B-%d", time.Now().UnixNano()), "3a")
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := buildAttendanceSyncSetup(t)
-			student := testpkg.CreateTestStudent(t, s.db, "AS-Bulk", fmt.Sprintf("B-%d", time.Now().UnixNano()), "3a")
+	row := api.SeedAttendanceMirrorParticipant(func(err error) { require.NoError(t, err) }, s.ctx, s.TimetableOwnerRows, s.instance.ID, student.ID, testpkg.Tenant(t), studentpresence.SessionAttendanceExpected)
+	entryTime := time.Now().Add(-time.Hour)
+	checkInSnapshot5, checkInErr5 := s.syncer.MirrorCheckInForVisit(s.ctx, &studentpresence.Visit{
+		StudentID: student.ID, ActiveGroupID: s.activeGroup.ID, EntryTime: entryTime,
+	})
+	require.NoError(t, checkInErr5)
+	require.NotNil(t, checkInSnapshot5)
+	testpkg.CreateTestVisit(t, s.db, student.ID, s.activeGroup.ID, entryTime, nil)
 
-			row := api.SeedAttendanceMirrorParticipant(func(err error) { require.NoError(t, err) }, s.ctx, s.TimetableOwnerRows, s.instance.ID, student.ID, testpkg.Tenant(t), studentpresence.SessionAttendanceExpected)
-			entryTime := time.Now().Add(-time.Hour)
-			checkInSnapshot5, checkInErr5 := s.syncer.MirrorCheckInForVisit(s.ctx, &studentpresence.Visit{
-				StudentID: student.ID, ActiveGroupID: s.activeGroup.ID, EntryTime: entryTime,
-			})
-			require.NoError(t, checkInErr5)
-			require.NotNil(t, checkInSnapshot5)
-			testpkg.CreateTestVisit(t, s.db, student.ID, s.activeGroup.ID, entryTime, nil)
+	factoryActive, err := api.NewTestActivePresence(testpkg.NewDatabase(t, s.db), slog.Default())
+	require.NoError(t, err)
+	_, err = factoryActive.EndActivitySession(s.ctx, s.activeGroup.ID)
+	require.NoError(t, err)
 
-			factoryActive, err := api.NewTestActivePresence(testpkg.NewDatabase(t, s.db), slog.Default())
-			require.NoError(t, err)
-			if tt.timeout {
-				device := testpkg.CreateTestDevice(t, s.db, fmt.Sprintf("AS-Bulk-%d", time.Now().UnixNano()))
-				_, err = s.db.NewUpdate().
-					Table("active.groups").
-					Set("device_id = ?", device.ID).
-					Where("id = ?", s.activeGroup.ID).
-					Exec(s.ctx)
-				require.NoError(t, err)
-				_, err = factoryActive.ProcessSessionTimeout(s.ctx, device.ID)
-			} else {
-				_, err = factoryActive.EndActivitySession(s.ctx, s.activeGroup.ID)
-			}
-			require.NoError(t, err)
-
-			got, err := s.Participants.FindByID(s.ctx, row.ID)
-			require.NoError(t, err)
-			require.NotNil(t, got.CheckedOutAt, "bulk-ended visit must close its slot attendance")
-			assert.False(t, got.CheckedOutAt.Before(entryTime))
-		})
-	}
+	got, err := s.Participants.FindByID(s.ctx, row.ID)
+	require.NoError(t, err)
+	require.NotNil(t, got.CheckedOutAt, "bulk-ended visit must close its slot attendance")
+	assert.False(t, got.CheckedOutAt.Before(entryTime))
 }
 
 func TestAttendancePerCareSlot_MorningPresentAfternoonSickAndClearIndependent(t *testing.T) {
@@ -287,11 +265,11 @@ func TestAttendancePerCareSlot_MorningPresentAfternoonSickAndClearIndependent(t 
 	afternoonInstance.Title = fmt.Sprintf("AS-Afternoon-%d", time.Now().UnixNano())
 	afternoonInstance.StartTime = time.Date(1, 1, 1, 12, 0, 0, 0, time.UTC)
 	afternoonInstance.EndTime = time.Date(1, 1, 1, 16, 0, 0, 0, time.UTC)
-	afternoonInstance.RoomID = s.roomID
-	afternoonInstance.TenantID = testpkg.Tenant(t)
+	afternoonInstance.RoomID = ident.ID(s.roomID)
+	afternoonInstance.TenantID = ident.ID(testpkg.Tenant(t))
 	require.NoError(t, s.Instances.Create(s.ctx, afternoonInstance))
 	afternoon := api.NewAttendanceMirrorParticipant()
-	afternoon.InstanceID = afternoonInstance.ID
+	afternoon.InstanceID = afternoonInstance.ID.Int64()
 	afternoon.StudentID = student.ID
 	afternoon.Status = studentpresence.SessionAttendanceExpected
 	afternoon.TenantID = testpkg.Tenant(t)

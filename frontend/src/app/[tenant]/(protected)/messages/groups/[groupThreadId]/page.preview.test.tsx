@@ -7,6 +7,10 @@ import { ToastProvider } from "~/contexts/ToastContext";
 import GroupMessagePage from "./page";
 
 vi.unmock("swr");
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
 const owner = vi.hoisted(() => ({ account: "7", school: "schule" }));
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
@@ -73,7 +77,8 @@ it.each(["same", "school", "account"])(
     expect(
       screen.queryByRole("button", { name: "Schließen" }),
     ).not.toBeInTheDocument();
-    expect(fetch).toHaveBeenCalled();
+    // The staff session gate answers first; the load follows.
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
   },
 );
 

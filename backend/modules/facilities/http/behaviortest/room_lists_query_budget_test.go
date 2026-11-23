@@ -25,8 +25,8 @@ type roomListBudgetWant struct {
 
 // The existing root binding includes JWT, scope, permissions and the tenant
 // transaction, but not the outer host's live-session middleware. Only the
-// paginated list invokes Occupancy; available and by-category intentionally
-// return simple room responses, even for occupied rooms.
+// paginated list invokes Occupancy; by-category intentionally returns simple
+// room responses, even for occupied rooms.
 func TestRoomListsQueryBudget(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupIsolatedTestDB(t)
@@ -89,7 +89,6 @@ func TestRoomListsQueryBudget(t *testing.T) {
 		message   string
 	}{
 		{"/?page=1&page_size=100", true, "Rooms retrieved successfully"},
-		{"/available?capacity=1", false, "Available rooms retrieved successfully"},
 		{"/by-category?category=BudgetCategory", false, "Rooms retrieved successfully"},
 	}
 	counter := testpkg.CaptureQueriesForContext(t, db)
@@ -119,11 +118,11 @@ func TestRoomListsQueryBudget(t *testing.T) {
 			require.Len(t, body.Data, n)
 			seen := make(map[int64]bool, n)
 			for _, room := range body.Data {
-				want, ok := expected[room.ID]
+				want, ok := expected[room.ID.Int64()]
 				require.True(t, ok, "unexpected or foreign room %d", room.ID)
 				require.NotEqual(t, foreignRoom.ID, room.ID)
-				require.False(t, seen[room.ID], "duplicate room")
-				seen[room.ID] = true
+				require.False(t, seen[room.ID.Int64()], "duplicate room")
+				seen[room.ID.Int64()] = true
 				require.Equal(t, want.name, room.Name)
 				require.Equal(t, "Test Building", room.Building)
 				require.NotNil(t, room.Category)
@@ -191,8 +190,6 @@ func TestRoomListsQueryBudget(t *testing.T) {
 	}
 	querybudgets.AssertQueryBudget(t, "api.rooms.list", small["/?page=1&page_size=100"])
 	querybudgets.AssertQueryBudget(t, "api.rooms.list", large["/?page=1&page_size=100"])
-	querybudgets.AssertQueryBudget(t, "api.rooms.available", small["/available?capacity=1"])
-	querybudgets.AssertQueryBudget(t, "api.rooms.available", large["/available?capacity=1"])
 	querybudgets.AssertQueryBudget(t, "api.rooms.by_category", small["/by-category?category=BudgetCategory"])
 	querybudgets.AssertQueryBudget(t, "api.rooms.by_category", large["/by-category?category=BudgetCategory"])
 

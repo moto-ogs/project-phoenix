@@ -135,6 +135,8 @@ func (rs *Resource) Router(configureSession func(chi.Router)) chi.Router {
 	// Authenticated admin endpoints.
 	r.Group(func(r chi.Router) {
 		configureSession(r)
+		// After the session: the mark reads the authenticated claims.
+		r.Use(markTraegerBueroReviewer)
 
 		rs.mountConfigRoutes(r)
 		rs.mountPhaseRoutes(r)
@@ -165,6 +167,7 @@ func (rs *Resource) mountPublicRoutes(r chi.Router) {
 	r.Post("/{tenantSlug}/submit", rs.submitEnrollment)
 	r.Post("/{tenantSlug}/uploads", rs.uploadEnrollmentFile)
 	r.Get("/requests/{statusToken}", rs.getStatus)
+	r.Get("/requests/{statusToken}/signature-proof", rs.getStatusSignatureProof)
 	r.Get("/requests/{statusToken}/edit-bootstrap", rs.getEditBootstrap)
 	r.Patch("/requests/{statusToken}", rs.patchStatus)
 	r.Put("/requests/{statusToken}", rs.replaceStatus)
@@ -185,7 +188,6 @@ func (rs *Resource) mountConfigRoutes(r chi.Router) {
 		r.With(common.RequiresPermission("config:read")).Get("/", rs.getActiveSchema)
 		r.With(common.RequiresPermission("config:read")).Get("/versions", rs.listSchemaVersions)
 		r.With(common.RequiresPermission("config:read")).Get("/preview", rs.getSchemaPreviewBootstrap)
-		r.With(common.RequiresPermission("config:read")).Get("/{id}", rs.getSchemaByID)
 		r.With(common.RequiresPermission("config:manage")).Post("/", rs.publishSchema)
 		r.With(common.RequiresPermission("config:manage")).Put("/{id}", rs.updateSchema)
 		r.With(common.RequiresPermission("config:manage")).Patch("/{id}", rs.renameSchema)
@@ -285,6 +287,8 @@ func (rs *Resource) mountAdminRequestRoutes(r chi.Router) {
 		r.With(common.RequiresPermission("config:manage")).Post("/mark-all-read", rs.markAllAdminRequestsRead)
 		r.Route("/{id}", func(r chi.Router) {
 			r.With(common.RequiresPermission("config:manage")).Get("/", rs.getAdminRequest)
+			// The proof of the parent's signature as a PDF (#4786).
+			r.With(common.RequiresPermission("config:manage")).Get("/signature-proof", rs.getAdminSignatureProof)
 			// The questions of the request's form version, for the change
 			// request view (#6142); same permission as that view.
 			r.With(common.RequiresPermission("config:manage")).Get("/form-labels", rs.getAdminFormLabels)

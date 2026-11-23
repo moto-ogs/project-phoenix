@@ -156,7 +156,7 @@ func TestTimetableOperationsPlannedNowCarriesPlanningTrackColour(t *testing.T) {
 
 		byID := map[int64]timetable.OperationPlannedInstance{}
 		for _, planned := range result {
-			byID[planned.ID] = planned
+			byID[planned.ID.Int64()] = planned
 		}
 		require.Contains(t, byID, tracked.ID)
 		require.NotNil(t, byID[tracked.ID].PlanningTrackColor)

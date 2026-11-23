@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	capability "github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -62,7 +63,7 @@ func (rs *CareNoticeResource) Router(protectedTraegerRoutes func(chi.Router, fun
 type CareNoticeRunRequest struct {
 	Year       int            `json:"year"`
 	FromMonth  calendar.Date  `json:"from_month"`
-	SchoolIDs  []int64        `json:"school_ids"`
+	SchoolIDs  []ident.ID     `json:"school_ids"`
 	NoticeDate *calendar.Date `json:"notice_date"`
 }
 
@@ -93,7 +94,7 @@ func (rs *CareNoticeResource) start(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	run, err := rs.notices.StartCareNoticeRun(r.Context(), reviewer, capability.CareNoticeRunStart{
-		Year: req.Year, FromMonth: req.FromMonth, SchoolIDs: req.SchoolIDs, NoticeDate: req.NoticeDate})
+		Year: req.Year, FromMonth: req.FromMonth, SchoolIDs: ident.Int64s(req.SchoolIDs), NoticeDate: req.NoticeDate})
 	if err != nil {
 		tenant.MarkRollback(r.Context())
 		renderNoticeError(w, r, err)

@@ -12,12 +12,12 @@ GET /api/staff/absences/mails -> zeiterfassung
 GET /api/staff/absences/pending -> zeiterfassung
 GET /api/staff/absences/plan-gaps -> zeiterfassung
 GET /api/staff/absences/requests -> zeiterfassung
-GET /api/staff/available -> basis
 GET /api/staff/by-role -> basis
 GET /api/staff/dashboard-summary -> basis
 GET /api/staff/documents-directory -> personalakte
 GET /api/staff/documents-profile/{id} -> personalakte
 GET /api/staff/financial-profile/{id} -> personalakte
+GET /api/staff/former -> basis
 GET /api/staff/me/qualifications -> basis
 GET /api/staff/qualification-types -> basis
 GET /api/staff/qualifications -> basis
@@ -36,7 +36,6 @@ GET /api/staff/{id}/absences -> zeiterfassung
 GET /api/staff/{id}/avatar -> basis
 GET /api/staff/{id}/documents -> personalakte
 GET /api/staff/{id}/documents/{documentId}/download -> personalakte
-GET /api/staff/{id}/groups -> basis
 GET /api/staff/{id}/payroll-number -> zeiterfassung
 GET /api/staff/{id}/qualifications -> basis
 GET /api/staff/{id}/schedule -> zeiterfassung

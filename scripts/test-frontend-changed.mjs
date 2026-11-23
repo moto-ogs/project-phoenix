@@ -87,7 +87,6 @@ function selectionMode(files) {
   if (frontend.some(file => !sourceModule.test(file) &&
     file !== "frontend/scripts/product-screenshots/quality.ts") ||
     ["scripts/test-frontend-changed.mjs", "scripts/test-frontend-changed.test.mjs",
-      "scripts/test-changed.sh", "scripts/test-changed_test.sh",
       ".github/workflows/main.yml", ".github/workflows/test.yml"].some(file => changed.has(file))) return "full";
   if (frontend.length) return "incremental";
   if ([...changed].some(file => file.startsWith("frontend/") && file.endsWith(".md") ||
@@ -131,11 +130,13 @@ const guards = [
   "src/app/api/route-session-coverage.test.ts",
   "src/app/api/traeger/catalog-routing.test.ts",
   "src/app/api/catalog-route-selection.test.ts",
+  "src/app/api/route-backend-paths.test.ts",
   "src/app/api/credential-route-coverage.test.ts",
   "src/app/api/auth/session-cookie-inventory.test.ts",
   "src/lib/app-route-invariants.test.ts",
   "src/lib/analytics-routes.test.ts",
   "src/lib/help-topics.test.ts",
+  "src/lib/page-info.test.ts",
   "src/lib/loading-boundaries.test.ts",
   "src/lib/navigation-sync.test.ts",
   "src/lib/page-titles.test.ts",
@@ -162,7 +163,6 @@ const guards = [
   "src/proxy.test.ts",
   "src/sentry.config.test.ts",
   "src/test/phosphor-imports-plugin.test.ts",
-  "src/test/proxy-routes.table.test.ts",
   "src/test/session-cookie-writers.test.ts",
   "src/lib/moto-concepts.test.ts",
   "src/lib/hooks/chat-viewport-lock-consumers.test.ts",

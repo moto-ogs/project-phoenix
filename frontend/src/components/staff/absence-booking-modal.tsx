@@ -548,7 +548,6 @@ export function AbsenceBookingModal({
   const [dateEnd, setDateEnd] = useState(initialDate ?? berlinTodayISO());
   const [halfDay, setHalfDay] = useState(false);
   const [note, setNote] = useState("");
-  const [overdraftConfirmed, setOverdraftConfirmed] = useState(false);
   const [saving, setSaving] = useState(false);
   const formErrors = useApiFormError();
   const clearFormErrors = formErrors.clear;
@@ -569,12 +568,8 @@ export function AbsenceBookingModal({
   } = useYearAccounts(staff.id, types, years);
   const selected = options.find((option) => option.value === value);
   const isCompTime = selected?.kind === "comp_time";
-  const {
-    preview,
-    loading: previewLoading,
-    error: previewError,
-    reload: reloadPreview,
-  } = useCompTimePreview({
+  // The projection on screen and the confirmation of its minus (ADR 0311).
+  const compTime = useCompTimePreview({
     enabled: isCompTime,
     staffId: staff.id,
     dateStart,
@@ -582,9 +577,13 @@ export function AbsenceBookingModal({
     halfDay,
   });
 
-  // Eine geänderte Eingabe verwirft Bestätigung und alte Fehlermeldung.
+  // Ohne Projektion (auch nach einem gescheiterten Lesen) gibt es nichts zu
+  // bestätigen: der Server prüft genau die gezeigte.
+  const { preview, loading: previewLoading } = compTime;
+
+  // Eine geänderte Eingabe verwirft die alte Fehlermeldung; ein anderer
+  // Zeitraum ist eine neue Vorschau ohne Bestätigung.
   useEffect(() => {
-    setOverdraftConfirmed(false);
     clearFormErrors();
   }, [value, dateStart, effectiveEnd, halfDay, clearFormErrors]);
 
@@ -661,6 +660,7 @@ export function AbsenceBookingModal({
   }
   const isOverdraft =
     isCompTime && preview !== null && preview.projectedBalanceMinutes < 0;
+  const overdraftConfirmed = isOverdraft && compTime.draft === true;
   const firstAccount = years.length > 0 ? accounts.get(years[0]!) : undefined;
 
   const disabled =
@@ -673,7 +673,12 @@ export function AbsenceBookingModal({
       (loading || failed || shortfall !== undefined)) ||
     (customTypeId !== null &&
       (allowanceLoading || allowanceFailed || customBlocked)) ||
-    (isCompTime && (previewLoading || (isOverdraft && !overdraftConfirmed)));
+    // Ohne Vorschau gibt es nichts zu bestätigen: der Server fragt nach
+    // genau der Projektion, die der Dialog gezeigt hat.
+    (isCompTime &&
+      (preview === null ||
+        !compTime.canSubmit ||
+        (isOverdraft && !overdraftConfirmed)));
   // Der Grund am gesperrten Knopf; beim Speichern bleibt er nativ gesperrt.
   const quotaPending =
     (selected?.kind === "quota" && loading) ||
@@ -682,6 +687,9 @@ export function AbsenceBookingModal({
   const quotaFailed =
     (selected?.kind === "quota" && failed) ||
     (customTypeId !== null && allowanceFailed);
+  const previewFailed =
+    isCompTime &&
+    (compTime.status === "loadFailed" || (preview === null && !previewLoading));
   const blockedReason = saving
     ? undefined
     : !selected
@@ -694,20 +702,22 @@ export function AbsenceBookingModal({
             ? "moto rechnet die verfügbaren Tage noch aus."
             : quotaFailed
               ? "Lade zuerst die verfügbaren Tage oben neu."
-              : (selected.kind === "quota" && shortfall !== undefined) ||
-                  (customTypeId !== null && customBlocked)
-                ? "Ändere zuerst den Anspruch, die Tage reichen nicht."
-                : isOverdraft && !overdraftConfirmed
-                  ? "Bestätige zuerst das Minus im Stundenkonto."
-                  : undefined;
+              : previewFailed
+                ? "Lade zuerst das Stundenkonto oben neu."
+                : (selected.kind === "quota" && shortfall !== undefined) ||
+                    (customTypeId !== null && customBlocked)
+                  ? "Ändere zuerst den Anspruch, die Tage reichen nicht."
+                  : isOverdraft && !overdraftConfirmed
+                    ? "Bestätige zuerst das Minus im Stundenkonto."
+                    : undefined;
 
   const save = async () => {
     if (disabled || !selected) return;
     setSaving(true);
     formErrors.clear();
-    try {
-      const request = absenceRequestFor(value);
-      await staffAbsenceService.createAbsence(staff.id, {
+    const request = absenceRequestFor(value);
+    const book = (expectedFingerprint?: string) =>
+      staffAbsenceService.createAbsence(staff.id, {
         absence_type: request.absence_type,
         ...(request.absence_type_id
           ? { absence_type_id: request.absence_type_id }
@@ -716,22 +726,42 @@ export function AbsenceBookingModal({
         date_end: effectiveEnd,
         half_day: halfDay || undefined,
         note: note.trim() || undefined,
+        ...(expectedFingerprint
+          ? { expected_fingerprint: expectedFingerprint }
+          : {}),
       });
-      toast.success(`${selected.label} ist eingetragen.`);
-    } catch (error) {
+    // Freizeitausgleich: der Server rechnet das Stundenkonto unter seiner
+    // Sperre neu und bucht ein Minus nur auf die bestätigte Vorschau
+    // (ADR 0311).
+    const result = isCompTime
+      ? await compTime.submit((fingerprint, confirmed) =>
+          book(isOverdraft && confirmed ? fingerprint : undefined),
+        )
+      : await book().then(
+          () => ({ ok: true }) as const,
+          (error: unknown) =>
+            ({ ok: false, error, reload: undefined }) as const,
+        );
+    setSaving(false);
+    if (!result.ok) {
       logger.error("absence_booking_failed", {
         staff_id: staff.id,
         absence_type: value,
-        error: error instanceof Error ? error.message : String(error),
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
       });
-      await formErrors.show(error, {
+      // Das Stundenkonto hat sich seit der Vorschau geändert: `reload`
+      // zeigt die neue Vorschau, ohne „Wiederholen“ derselben Anfrage.
+      await formErrors.show(result.error, {
         object: "die Abwesenheit",
         retry: () => void latestSaveRef.current(),
+        reload: result.reload,
       });
-      setSaving(false);
       return;
     }
-    setSaving(false);
+    toast.success(`${selected.label} ist eingetragen.`);
     await onSaved();
   };
 
@@ -854,8 +884,10 @@ export function AbsenceBookingModal({
           <CompTimePreviewPanel
             preview={preview}
             loading={previewLoading}
-            error={previewError}
-            onRetry={reloadPreview}
+            // After a refusal the form's alert already names the failed
+            // read, with its retry.
+            error={formErrors.error ? null : compTime.error}
+            onRetry={compTime.reload}
           />
         ) : null}
         {isOverdraft ? (
@@ -871,9 +903,7 @@ export function AbsenceBookingModal({
               <Checkbox
                 id="comp-time-overdraft-confirm"
                 checked={overdraftConfirmed}
-                onChange={(event) =>
-                  setOverdraftConfirmed(event.target.checked)
-                }
+                onChange={(event) => compTime.setDraft(event.target.checked)}
               />
               <span className="text-sm font-medium text-gray-800">
                 Ich trage den Freizeitausgleich trotzdem ein.

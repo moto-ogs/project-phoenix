@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/classday"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Class handover through "moto schule" (#4794): after lessons the Lehrkraft
@@ -24,10 +25,12 @@ const maxHandoverChildren = 200
 
 // ClassHandoverRequest is the body of
 // PUT /school/class-day/handover/{schoolClass}/{date}: the children handed
-// over "da" and "nicht da", either list possibly empty.
+// over "da" and "nicht da", either list possibly empty, and the
+// handover_version of the class view it was read from (ADR 0311).
 type ClassHandoverRequest struct {
-	PresentStudentIDs []int64 `json:"present_student_ids"`
-	AbsentStudentIDs  []int64 `json:"absent_student_ids"`
+	PresentStudentIDs []ident.ID `json:"present_student_ids"`
+	AbsentStudentIDs  []ident.ID `json:"absent_student_ids"`
+	ExpectedVersion   string     `json:"expected_version"`
 }
 
 // Bind implements render.Binder.
@@ -35,7 +38,7 @@ func (r *ClassHandoverRequest) Bind(_ *http.Request) error {
 	if len(r.PresentStudentIDs)+len(r.AbsentStudentIDs) > maxHandoverChildren {
 		return errors.New("too many children")
 	}
-	for _, id := range append(append([]int64{}, r.PresentStudentIDs...), r.AbsentStudentIDs...) {
+	for _, id := range append(append([]int64{}, ident.Int64s(r.PresentStudentIDs)...), ident.Int64s(r.AbsentStudentIDs)...) {
 		if id <= 0 {
 			return errors.New("student ids must be positive")
 		}
@@ -69,7 +72,10 @@ func (rs *Resource) putClassHandover(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	rs.changeClassHandover(w, r, classday.ClassHandoverChange{PresentStudentIDs: req.PresentStudentIDs, AbsentStudentIDs: req.AbsentStudentIDs})
+	rs.changeClassHandover(w, r, classday.ClassHandoverChange{
+		PresentStudentIDs: ident.Int64s(req.PresentStudentIDs), AbsentStudentIDs: ident.Int64s(req.AbsentStudentIDs),
+		ExpectedVersion: req.ExpectedVersion,
+	})
 }
 
 // deleteClassHandover handles DELETE /school/class-day/handover/{schoolClass}/{date}.

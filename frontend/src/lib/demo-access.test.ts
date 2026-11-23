@@ -168,12 +168,9 @@ describe("takeDemoLinkFromFragment", () => {
 describe("waitForDemoSchool", () => {
   const fetchMock = vi.fn();
 
+  // The status route answers the BFF's `{ status, data }`.
   function answer(body: Record<string, unknown>) {
-    return Promise.resolve({
-      ok: true,
-      status: 200,
-      json: () => Promise.resolve(body),
-    } as Response);
+    return Promise.resolve(Response.json({ status: "success", data: body }));
   }
 
   beforeEach(() => {

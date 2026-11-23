@@ -18,6 +18,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	deliveryModule "github.com/moto-ogs/project-phoenix/modules/delivery/runtime"
+	facilitiesModule "github.com/moto-ogs/project-phoenix/modules/facilities"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	timetableModule "github.com/moto-ogs/project-phoenix/modules/timetable"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -109,10 +110,10 @@ func measureRuntimeCheckpoint(t *testing.T, production *Runtime) {
 	scenarios := []checkpointScenario{
 		{"timetable.not-found", "GET", fmt.Sprintf("/api/activities/%d", missingActivityID), 404, true, ""},
 		{"organization-tenancy.resolve", "GET", "/auth/tenant/resolve?slug=" + slug, 200, false, ""},
-		{"facilities.update", "PUT", fmt.Sprintf("/api/rooms/%d", writeRoom.ID), 200, true, `{"name":"Checkpoint Updated Room","capacity":40}`},
+		{"facilities.update", "PUT", fmt.Sprintf("/api/rooms/%d", writeRoom.ID), 200, true, `{"name":"Checkpoint Updated Room","capacity":40,"expected_version":"{{room_version}}"}`},
 		{"facilities.list", "GET", "/api/rooms/", 200, true, ""},
 		{"school-structure.list", "GET", "/api/groups/", 200, true, ""},
-		{"people-directory.guardians", "GET", "/api/guardians/", 200, true, ""},
+		{"people-directory.guardians", "GET", "/api/guardians/search?q=Checkpoint", 200, true, ""},
 		{"timetable.activities", "GET", "/api/activities/", 200, true, ""},
 		{"timetable.categories", "GET", "/api/activities/categories", 200, true, ""},
 		{"school-calendar.periods", "GET", "/api/timetable/periods/", 200, true, ""},
@@ -121,7 +122,7 @@ func measureRuntimeCheckpoint(t *testing.T, production *Runtime) {
 		{"appointments.calendar", "GET", "/api/calendar/my?from=2026-09-01&to=2026-09-30", 200, true, ""},
 		{"settings.schema", "GET", "/api/settings/schema", 200, true, ""},
 		{"meal-plan.list", "GET", "/api/meal-plan/?week_start=2026-08-31", 200, true, ""},
-		{"feedback.list", "GET", "/api/feedback/", http.StatusForbidden, true, ""},
+		{"feedback.student", "GET", "/api/feedback/student/1", http.StatusForbidden, true, ""},
 		{"school-membership.staff", "GET", "/api/staff/", 200, true, ""},
 		{"facilities.invalid-id", "GET", "/api/rooms/invalid", 400, true, ""},
 		{"timetable.invalid-id", "GET", "/api/activities/invalid", 400, true, ""},
@@ -208,10 +209,37 @@ func measureRuntimeCheckpoint(t *testing.T, production *Runtime) {
 				require.NoError(t, db.NewRaw("SELECT subdomain FROM platform.schools WHERE id = ?", testpkg.Tenant(t)).Scan(context.Background(), &parentSubdomain))
 				workloadVersion = "enrollment-2694-writes-v8"
 			}
+			// Every update saves over the version it read (ADR 0311). The
+			// workload repeats one update: it is stored once and read, and
+			// each repetition then saves the same state over its version.
+			phasePath := fmt.Sprintf("/api/enrollment/phases/%d", phase.ID)
+			phaseUpdate := fmt.Sprintf(`"name":"Checkpoint Updated Phase","kind":"school_year","service_start_date":%q,"service_end_date":%q,"care_overflow_mode":"waitlist","care_offering_selection_mode":"optional","is_active":true`, phaseStart, phaseEnd)
+			type storedPhase struct {
+				Version          string `json:"version"`
+				ServiceStartDate string `json:"service_start_date"`
+				ServiceEndDate   string `json:"service_end_date"`
+			}
+			readPhase := func() storedPhase {
+				read := checkpointRequest(production.Handler(), checkpointScenario{Method: "GET", Path: phasePath, Authenticated: true}, token)
+				require.Equal(t, http.StatusOK, read.Code, read.Body.String())
+				var stored struct {
+					Data storedPhase `json:"data"`
+				}
+				require.NoError(t, json.Unmarshal(read.Body.Bytes(), &stored))
+				return stored.Data
+			}
+			// The priming save takes the period the phase stores.
+			before := readPhase()
+			primed := checkpointRequest(production.Handler(), checkpointScenario{
+				Method: "PUT", Path: phasePath, Authenticated: true,
+				Body: fmt.Sprintf(`{"name":"Checkpoint Updated Phase","kind":"school_year","service_start_date":%q,"service_end_date":%q,"care_overflow_mode":"waitlist","care_offering_selection_mode":"optional","is_active":true,"expected_version":%q}`,
+					before.ServiceStartDate, before.ServiceEndDate, before.Version),
+			}, token)
+			require.Equal(t, http.StatusOK, primed.Code, primed.Body.String())
+			updated := readPhase().Version
 			scenarios = []checkpointScenario{
-				{"enrollment.phase-update", "PUT", fmt.Sprintf("/api/enrollment/phases/%d", phase.ID), 200, true,
-					fmt.Sprintf(`{"name":"Checkpoint Updated Phase","kind":"school_year","service_start_date":%q,"service_end_date":%q,"care_overflow_mode":"waitlist","care_offering_selection_mode":"optional","is_active":true}`, phaseStart, phaseEnd)},
-				{"enrollment.phase-update-invalid", "PUT", fmt.Sprintf("/api/enrollment/phases/%d", phase.ID), 400, true, `{}`},
+				{"enrollment.phase-update", "PUT", phasePath, 200, true, fmt.Sprintf(`{%s,"expected_version":%q}`, phaseUpdate, updated)},
+				{"enrollment.phase-update-invalid", "PUT", phasePath, 400, true, fmt.Sprintf(`{"expected_version":%q}`, updated)},
 				{"enrollment.schema-rename", "PATCH", "/api/enrollment/schema/" + checkpointSchemaID, 200, true, `{"name":"Checkpoint Renamed Schema"}`},
 				{"enrollment.schema-rename-conflict", "PATCH", "/api/enrollment/schema/" + checkpointSchemaID, 409, true, `{"name":"Checkpoint Reserved Schema"}`},
 				{"enrollment.schema-publish-version", "PUT", "/api/enrollment/schema/" + checkpointSchemaID, 201, true, `{"fields":[]}`},
@@ -322,6 +350,12 @@ func measureRuntimeCheckpoint(t *testing.T, production *Runtime) {
 			sequence = requestSequence
 		}
 		requestToken := token
+		if scenario.Name == "facilities.update" {
+			// Each save carries the version of the room as stored now (ADR 0311).
+			var room facilitiesModule.Room
+			require.NoError(t, db.NewRaw("SELECT updated_at FROM facilities.rooms WHERE id = ?", writeRoom.ID).Scan(context.Background(), &room.UpdatedAt))
+			scenario.Body = strings.ReplaceAll(scenario.Body, "{{room_version}}", facilitiesModule.RoomVersion(room))
+		}
 		if scenario.Name == "enrollment.parent-submit" {
 			requestToken = parentToken
 		}

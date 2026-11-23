@@ -32,6 +32,7 @@ import (
 	supervisiondashboardCompose "github.com/moto-ogs/project-phoenix/modules/supervisiondashboard/compose"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	calendarpkg "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // SupervisionCallerContext is the Identity & Access caller context the
@@ -168,12 +169,12 @@ func (y supervisionYard) Status(ctx context.Context, staffID int64) (*supervisio
 	}
 	result := &supervisiondashboard.SchulhofStatus{
 		Exists:            status.Exists,
-		RoomID:            status.RoomID,
+		RoomID:            (*ident.ID)(status.RoomID),
 		RoomName:          status.RoomName,
-		ActivityGroupID:   status.ActivityGroupID,
-		ActiveGroupID:     status.ActiveGroupID,
+		ActivityGroupID:   (*ident.ID)(status.ActivityGroupID),
+		ActiveGroupID:     (*ident.ID)(status.ActiveGroupID),
 		IsUserSupervising: status.IsUserSupervising,
-		SupervisionID:     status.SupervisionID,
+		SupervisionID:     (*ident.ID)(status.SupervisionID),
 		SupervisorCount:   status.SupervisorCount,
 		StudentCount:      status.StudentCount,
 	}
@@ -183,7 +184,7 @@ func (y supervisionYard) Status(ctx context.Context, staffID int64) (*supervisio
 		result.Supervisors = make([]supervisiondashboard.Supervisor, 0, len(status.Supervisors))
 		for _, supervisor := range status.Supervisors {
 			result.Supervisors = append(result.Supervisors, supervisiondashboard.Supervisor{
-				ID: supervisor.ID, StaffID: supervisor.StaffID, Name: supervisor.Name, IsCurrentUser: supervisor.IsCurrentUser,
+				ID: ident.ID(supervisor.ID), StaffID: ident.ID(supervisor.StaffID), Name: supervisor.Name, IsCurrentUser: supervisor.IsCurrentUser,
 			})
 		}
 	}
@@ -286,7 +287,7 @@ func (s supervisionSessions) Unclaimed(ctx context.Context) ([]supervisiondashbo
 	}
 	result := make([]supervisiondashboard.UnclaimedGroup, 0, len(unclaimed))
 	for _, group := range unclaimed {
-		item := supervisiondashboard.UnclaimedGroup{ID: group.ID}
+		item := supervisiondashboard.UnclaimedGroup{ID: ident.ID(group.ID)}
 		if group.Room != nil {
 			item.RoomName = group.Room.Name
 		}
@@ -414,7 +415,7 @@ func (g supervisionGroups) MyGroups(ctx context.Context) ([]supervisiondashboard
 	}
 	result := make([]supervisiondashboard.EducationalGroup, 0, len(myGroups))
 	for _, group := range myGroups {
-		result = append(result, supervisiondashboard.EducationalGroup{ID: group.ID, Name: group.Name, RoomName: roomNames[group.ID]})
+		result = append(result, supervisiondashboard.EducationalGroup{ID: ident.ID(group.ID), Name: group.Name, RoomName: roomNames[group.ID]})
 	}
 	return result, nil
 }
@@ -459,8 +460,8 @@ func (s supervisionSchedule) ActiveSessions(ctx context.Context, date supervisio
 	}
 	return owners.CalendarMapSlice(sessions, func(session timetable.OperationActiveSession) supervisiondashboard.ActiveSession {
 		return supervisiondashboard.ActiveSession{
-			ActiveGroupID: session.ActiveGroupID,
-			InstanceID:    session.InstanceID,
+			ActiveGroupID: ident.ID(session.ActiveGroupID),
+			InstanceID:    ident.ID(session.InstanceID),
 			Title:         session.Title,
 			StartTime:     session.StartTime,
 			EndTime:       session.EndTime,
@@ -692,8 +693,8 @@ func (p supervisionPlanning) Pickups(ctx context.Context, studentIDs []int64, da
 			PickupTime:  supervisionWallClock(pickup.PickupTime),
 			IsException: pickup.IsException, DayDepartureMode: pickup.DayDepartureMode,
 			Notes: pickup.Notes,
-			DayNotes: owners.CalendarMapSlice(pickup.DayNotes, func(note careplan.NoteData) supervisiondashboard.DayNote {
-				return supervisiondashboard.DayNote{ID: note.ID, Content: note.Content}
+			DayNotes: owners.CalendarMapSlice(pickup.DayNotes, func(note careplan.NoteData) supervisiondashboard.DashboardDayNote {
+				return supervisiondashboard.DashboardDayNote{ID: ident.ID(note.ID), Content: note.Content}
 			}),
 		}
 	}
@@ -720,8 +721,8 @@ func (p supervisionPlanning) Arrivals(ctx context.Context, studentIDs []int64, d
 			ArrivalTime: supervisionWallClock(arrival.ArrivalTime),
 			IsException: arrival.IsException,
 			Notes:       arrival.Notes,
-			DayNotes: owners.CalendarMapSlice(arrival.DayNotes, func(note careplan.ArrivalNoteData) supervisiondashboard.DayNote {
-				return supervisiondashboard.DayNote{ID: note.ID, Content: note.Content}
+			DayNotes: owners.CalendarMapSlice(arrival.DayNotes, func(note careplan.ArrivalNoteData) supervisiondashboard.DashboardDayNote {
+				return supervisiondashboard.DashboardDayNote{ID: ident.ID(note.ID), Content: note.Content}
 			}),
 		}
 	}
@@ -775,7 +776,7 @@ type supervisionTeacherHints struct {
 	hints peopledirectory.SchoolDayHintQuery
 }
 
-func (b supervisionTeacherHints) TeacherHints(ctx context.Context, studentIDs []int64, date supervisiondashboard.Date) ([]supervisiondashboard.TeacherHint, error) {
+func (b supervisionTeacherHints) TeacherHints(ctx context.Context, studentIDs []int64, date supervisiondashboard.Date) ([]supervisiondashboard.SupervisionTeacherHint, error) {
 	day, err := calendarpkg.ParseDate(string(date))
 	if err != nil {
 		return nil, err
@@ -784,10 +785,10 @@ func (b supervisionTeacherHints) TeacherHints(ctx context.Context, studentIDs []
 	if err != nil {
 		return nil, err
 	}
-	result := make([]supervisiondashboard.TeacherHint, 0, len(rows))
+	result := make([]supervisiondashboard.SupervisionTeacherHint, 0, len(rows))
 	for _, hint := range rows {
-		result = append(result, supervisiondashboard.TeacherHint{
-			StudentID: hint.StudentID, Body: hint.Body, AuthorName: hint.AuthorName, SchoolClass: hint.SchoolClass,
+		result = append(result, supervisiondashboard.SupervisionTeacherHint{
+			StudentID: ident.ID(hint.StudentID), Body: hint.Body, AuthorName: hint.AuthorName, SchoolClass: hint.SchoolClass,
 		})
 	}
 	return result, nil

@@ -445,7 +445,7 @@ func TestPhaseUpdate_WaitsForConcurrentApproval(t *testing.T) {
 	offering := createSourceOffering(t, env, "Bestaetigt", nil)
 	template := createSourcedTemplate(t, env, "BestaetigtTermin", offering.ID, nil, period.ID)
 	grade := int16(2)
-	submitted, err := testpkg.TenantQuery1(t, ctx, env.db, env.requestSvc.Submit, enrollmentTest.SubmitRequest{
+	submitted, err := testpkg.TenantQuery1(t, ctx, env.db, submitShown(env.requestSvc), enrollmentTest.SubmitRequest{
 		TenantID: testpkg.Tenant(t), PhaseID: env.sourcePhase.ID,
 		GuardianFirstName: "Eltern", GuardianLastName: "Quelle", GuardianEmail: "bestaetigt@example.com",
 		ConsentFlags: consentFlags(t),
@@ -500,7 +500,19 @@ func TestPhaseUpdate_WaitsForConcurrentApproval(t *testing.T) {
 // its report (#6598).
 func phaseEdit(phases *enrollmentTest.Phases) func(context.Context, *enrollmentTest.Phase) error {
 	return func(ctx context.Context, phase *enrollmentTest.Phase) error {
-		_, err := phases.UpdatePhase(ctx, phase)
+		_, err := phases.UpdatePhase(ctx, phase, readPhaseVersion(ctx, phases, phase.ID))
 		return err
 	}
+}
+
+// readPhaseVersion is the version of the phase as the edit reads it before
+// it saves (ADR 0311); a failed read sends none, so the edit is refused.
+func readPhaseVersion(ctx context.Context, phases interface {
+	PhaseByID(context.Context, int64) (*enrollmentTest.Phase, error)
+}, id int64) string {
+	stored, err := phases.PhaseByID(ctx, id)
+	if err != nil {
+		return ""
+	}
+	return enrollmentTest.PhaseVersion(stored)
 }

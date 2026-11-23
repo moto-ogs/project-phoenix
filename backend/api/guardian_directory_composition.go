@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	peopleCompose "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose"
 	peoplePorts "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // The guardian HTTP adapter's runtime (#2663): the identity, invitation and
@@ -39,17 +40,6 @@ type GuardianInvitationSummary struct {
 	ExpiresAt         time.Time
 	EmailSent         bool
 	Token             string
-}
-
-// PendingGuardianInvitation is one open invitation of the tenant.
-type PendingGuardianInvitation struct {
-	ID                int64
-	GuardianProfileID int64
-	CreatedAt         time.Time
-	ExpiresAt         time.Time
-	EmailSentAt       *time.Time
-	EmailError        *string
-	EmailRetryCount   int
 }
 
 // GuardianInviteInput invites a further guardian to a child by e-mail.
@@ -109,8 +99,7 @@ type GuardianDirectoryRuntime struct {
 	IsVerifiedStaff func(context.Context) bool
 	MarkRollback    func(context.Context)
 
-	SendInvitation         func(ctx context.Context, guardianID, actorAccountID int64) (GuardianInvitationSummary, error)
-	ListPendingInvitations func(context.Context) ([]PendingGuardianInvitation, error)
+	SendInvitation func(ctx context.Context, guardianID, actorAccountID int64) (GuardianInvitationSummary, error)
 
 	InviteGuardianToStudent func(context.Context, GuardianInviteInput) (GuardianInviteResult, error)
 	// BulkInviteGuardians invites the guardians of many children (#3378); a
@@ -155,7 +144,6 @@ func NewGuardianDirectoryRuntime(guardians peoplePorts.GuardianService, renderer
 		},
 		MarkRollback:               runtime.MarkRollback,
 		SendInvitation:             sendInvitation,
-		ListPendingInvitations:     pendingGuardianInvitations(guardians),
 		InviteGuardianToStudent:    inviteGuardian,
 		BulkInviteGuardians:        bulkInvite,
 		ListPendingApprovals:       listApprovals,
@@ -218,24 +206,6 @@ func guardianInvitationFlows(invitations GuardianDirectoryInvitations, runtime p
 		return result, err
 	}
 	return send, invite, bulk
-}
-
-// pendingGuardianInvitations lists the tenant's open invitations.
-func pendingGuardianInvitations(guardians peoplePorts.GuardianService) func(context.Context) ([]PendingGuardianInvitation, error) {
-	return func(ctx context.Context) ([]PendingGuardianInvitation, error) {
-		invitations, err := guardians.GuardianInvitationReads().ListRedeemable(ctx)
-		if err != nil {
-			return nil, err
-		}
-		result := make([]PendingGuardianInvitation, 0, len(invitations))
-		for _, invitation := range invitations {
-			result = append(result, PendingGuardianInvitation{
-				ID: invitation.ID, GuardianProfileID: invitation.GuardianProfileID, CreatedAt: invitation.CreatedAt,
-				ExpiresAt: invitation.ExpiresAt, EmailSentAt: invitation.EmailSentAt, EmailError: invitation.EmailError,
-			})
-		}
-		return result, nil
-	}
 }
 
 // guardianApprovalFlows list, approve and reject the parent-initiated
@@ -313,7 +283,10 @@ func guardianPaymentExport(renderer *lists.RendererService) func(rows []peopledi
 func ClassifyGuardianInvitationFailure(err error) GuardianFailureKind {
 	var validation *identityaccess.GuardianInvitationValidationError
 	switch {
-	case errors.Is(err, peopledirectory.ErrGuardianAccountConflict):
+	case errors.Is(err, peopledirectory.ErrGuardianAccountConflict),
+		// A run whose facts changed since its preview (ADR 0311): a 409
+		// business rejection, counted as one, never as a server error.
+		errors.Is(err, readstate.ErrChanged):
 		return GuardianFailureConflict
 	case errors.As(err, &validation),
 		errors.Is(err, identityaccess.ErrGuardianInvitationNotFound),

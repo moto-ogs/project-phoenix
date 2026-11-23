@@ -1,3 +1,4 @@
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 import type { ReactNode } from "react";
 import {
   act,
@@ -36,7 +37,8 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
   useSearchParams: () => params,
 }));
-const child: api.Child = {
+const child: parentMeContract.ChildResponse = {
+  care_ended: false,
   student_id: "42",
   tenant_id: "7",
   first_name: "Felix",
@@ -54,9 +56,35 @@ beforeEach(async () => {
   vi.restoreAllMocks();
   vi.spyOn(api, "listMyChildren").mockResolvedValue([child]);
   vi.spyOn(api, "getChildFeatures").mockResolvedValue({
+    conference_book_allowed: false,
+    care_ended: false,
+    excused_note_enabled: false,
+    sick_requires_approval: false,
+    excused_requires_approval: false,
+    request_submit_enabled: false,
+    pickup_change_enabled: false,
+    pickup_change_mode_enabled: false,
+    pickup_change_cutoff_time: "",
+    pickup_change_today_closed: false,
+    pickup_change_care_day_ended: false,
+    pickup_manage_allowed: false,
+    emergency_contact_manage_allowed: false,
+    guardian_contact_manage_allowed: false,
+    absence_request_edit_enabled: false,
+    related_accounts_invite_enabled: false,
+    related_accounts_remove_enabled: false,
+    master_data_edit_enabled: false,
+    master_data_contact_edit_enabled: false,
+    master_data_request_enabled: false,
+    meal_plan_enabled: false,
+    meal_registration_enabled: false,
+    has_open_change_request: false,
+    parent_news_enabled: false,
+    reason_required: false,
+    care_facility_term: "",
     sick_note_enabled: true,
     notes_enabled: true,
-  } as api.ChildFeatures);
+  } as parentMeContract.ChildFeaturesResponse);
   vi.spyOn(api, "getChildToday").mockResolvedValue(api.UNKNOWN_CHILD_TODAY);
   vi.spyOn(api, "getChildCareSchedule").mockResolvedValue({
     weekdays: [],
@@ -74,13 +102,15 @@ beforeEach(async () => {
   vi.spyOn(api, "listPickupChangeRequests").mockResolvedValue([]);
   vi.spyOn(api, "getChildMasterData").mockResolvedValue({
     pending_changes: [],
-  } as unknown as api.ChildMasterData);
+  } as unknown as parentMeContract.MasterDataResponse);
   vi.spyOn(api, "fetchChildParentConferences").mockResolvedValue([]);
   vi.spyOn(api, "getChildCareOfferings").mockResolvedValue({
     offerings: [],
     can_request: false,
   });
   vi.spyOn(api, "getChildCourses").mockResolvedValue({
+    can_request: false,
+    reason_required: false,
     enabled: false,
     items: [],
     pending_submitted_by_self: false,
@@ -164,7 +194,7 @@ describe("parent background refresh preserves mounted content", () => {
 it("keeps an unsaved master-data field after a feature background failure", async () => {
   vi.mocked(api.getChildFeatures).mockResolvedValue({
     master_data_edit_enabled: true,
-  } as api.ChildFeatures);
+  } as parentMeContract.ChildFeaturesResponse);
   vi.mocked(api.getChildMasterData).mockResolvedValue({
     student_id: "42",
     first_name: "Felix",
@@ -174,7 +204,7 @@ it("keeps an unsaved master-data field after a feature background failure", asyn
     status: "active",
     health_info: "Allergie",
     pending_changes: [],
-  } as unknown as api.ChildMasterData);
+  } as unknown as parentMeContract.MasterDataResponse);
   mount(
     <SharedParentFeaturesProvider linkedChildren={[child]}>
       <ChildMasterDataView studentId="42" childName="Felix" />

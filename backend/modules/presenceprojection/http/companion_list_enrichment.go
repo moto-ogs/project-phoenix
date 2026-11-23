@@ -9,6 +9,7 @@ import (
 	careplan "github.com/moto-ogs/project-phoenix/modules/careplan"
 	departure "github.com/moto-ogs/project-phoenix/modules/peopledirectory/departure"
 	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // enrichWithCompanions fills CompanionStudentIDs for the given day with the
@@ -47,8 +48,8 @@ func (rs *Resource) enrichWithCompanions(ctx context.Context, responses []Studen
 	}
 
 	for i := range responses {
-		if companions, ok := byStudent[responses[i].ID]; ok && len(companions) > 0 {
-			responses[i].CompanionStudentIDs = companions
+		if companions, ok := byStudent[responses[i].ID.Int64()]; ok && len(companions) > 0 {
+			responses[i].CompanionStudentIDs = ident.IDs(companions)
 		}
 	}
 	return nil
@@ -105,7 +106,7 @@ func (rs *Resource) enrichWithCompanionLinks(ctx context.Context, responses []St
 	}
 
 	for i := range responses {
-		if links, ok := byStudent[responses[i].ID]; ok && len(links) > 0 {
+		if links, ok := byStudent[responses[i].ID.Int64()]; ok && len(links) > 0 {
 			responses[i].DepartureCompanions = links
 		}
 	}

@@ -808,11 +808,11 @@ func TestTemplateSplitKeepsArchivedPlanningTrackAssignment(t *testing.T) {
 		Where("id = ?", s.template.ID).
 		Exec(s.ctx)
 	require.NoError(t, err)
-	_, err = scenarioPlanningTracks(t, s.db).ArchivePlanningTrack(s.ctx, track.ID)
+	_, err = scenarioPlanningTracks(t, s.db).ArchivePlanningTrack(s.ctx, track.ID.Int64())
 	require.NoError(t, err)
 
 	in := baseSplitInput(s, effective, fmt.Sprintf("Split-Track-%d", time.Now().UnixNano()))
-	in.PlanningTrackID = &track.ID
+	in.PlanningTrackID = (*int64)(&track.ID)
 	in.PlanningTrackIDProvided = true
 	result, err := s.timetableData.Templates.SplitTemplate(s.ctx, in)
 	require.NoError(t, err)
@@ -821,8 +821,8 @@ func TestTemplateSplitKeepsArchivedPlanningTrackAssignment(t *testing.T) {
 	successor := reloadSplitGroup(t, s, result.NewTemplateID)
 	require.NotNil(t, predecessor.PlanningTrackID)
 	require.NotNil(t, successor.PlanningTrackID)
-	assert.Equal(t, track.ID, *predecessor.PlanningTrackID)
-	assert.Equal(t, track.ID, *successor.PlanningTrackID)
+	assert.Equal(t, track.ID.Int64(), *predecessor.PlanningTrackID)
+	assert.Equal(t, track.ID.Int64(), *successor.PlanningTrackID)
 }
 
 func TestTemplateSplitPlanningTrackPresence(t *testing.T) {
@@ -861,7 +861,7 @@ func TestTemplateSplitPlanningTrackPresence(t *testing.T) {
 			successor := reloadSplitGroup(t, s, result.NewTemplateID)
 			if tt.wantTrack {
 				require.NotNil(t, successor.PlanningTrackID)
-				assert.Equal(t, track.ID, *successor.PlanningTrackID)
+				assert.Equal(t, track.ID.Int64(), *successor.PlanningTrackID)
 			} else {
 				assert.Nil(t, successor.PlanningTrackID)
 			}

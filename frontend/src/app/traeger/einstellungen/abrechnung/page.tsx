@@ -63,6 +63,14 @@ interface BillingDefaults {
 
 const BILLING_OBJECT = "die Übersicht der Abrechnungsvorgaben";
 
+const FRESH = { revalidate: false } as const;
+
+/** The list with `saved` in place of its stored entry. */
+function withSaved<T extends { readonly id: string }>(saved: T) {
+  return (list: T[] | undefined) =>
+    list?.map((entry) => (entry.id === saved.id ? saved : entry));
+}
+
 /** Only read with the right „Abrechnung“; without it nothing shows. */
 function useBillingDefaults(enabled: boolean) {
   const rules = useTraegerResource(
@@ -126,14 +134,13 @@ function useBillingDefaults(enabled: boolean) {
         fetchSepaCreditor(),
       ]);
     if (request !== latestRead.current) return;
-    const fresh = { revalidate: false } as const;
     await Promise.all([
-      mutateRules(rules, fresh),
-      mutateBearers(bearers, fresh),
-      mutateNumberRange(numberRange, fresh),
-      mutateCareNumberRange(careNumberRange, fresh),
-      mutateTerms(terms, fresh),
-      mutateCreditor(creditor, fresh),
+      mutateRules(rules, FRESH),
+      mutateBearers(bearers, FRESH),
+      mutateNumberRange(numberRange, FRESH),
+      mutateCareNumberRange(careNumberRange, FRESH),
+      mutateTerms(terms, FRESH),
+      mutateCreditor(creditor, FRESH),
     ]);
   }, [
     enabled,
@@ -166,6 +173,27 @@ function useBillingDefaults(enabled: boolean) {
     failure: readers.find((reader) => reader.failure)?.failure,
     error: readers.find((reader) => reader.error)?.error ?? null,
     read,
+    /**
+     * Read one default again and reject when the read fails, for a save
+     * the server refused as changed since it was read (ADR 0311).
+     */
+    reload: {
+      rules: rules.reloadOrThrow,
+      bearers: bearers.reloadOrThrow,
+      terms: terms.reloadOrThrow,
+      creditor: creditor.reloadOrThrow,
+    },
+    /**
+     * Hand a save's answer to its read (ADR 0311, rule 5): `read` changes
+     * nothing when one of the six reads fails, and the next change of the
+     * same entry would send the version the save replaced.
+     */
+    write: {
+      rule: (saved: ContributionRule) => mutateRules(withSaved(saved), FRESH),
+      bearer: (saved: CostBearer) => mutateBearers(withSaved(saved), FRESH),
+      terms: (saved: BillingTerms) => mutateTerms(saved, FRESH),
+      creditor: (saved: SepaCreditor) => mutateCreditor(saved, FRESH),
+    },
   };
 }
 
@@ -245,9 +273,13 @@ export default function TraegerAbrechnungsvorgabenPage() {
           <BillingTermsCard
             data={billing.data.terms}
             onChanged={afterBillingWrite.refresh}
+            reload={billing.reload.terms}
+            write={billing.write.terms}
           />
           <SepaCreditorCard
             creditor={billing.data.creditor}
+            reload={billing.reload.creditor}
+            write={billing.write.creditor}
             onlineMandate={
               typeof onlineMandate === "boolean" ? onlineMandate : null
             }
@@ -266,6 +298,8 @@ export default function TraegerAbrechnungsvorgabenPage() {
             kind="sibling"
             rules={billing.data.rules.filter((rule) => rule.kind === "sibling")}
             onChanged={afterBillingWrite.refresh}
+            reload={billing.reload.rules}
+            write={billing.write.rule}
           />
           <ContributionRulesCard
             kind="benefits_exemption"
@@ -273,10 +307,14 @@ export default function TraegerAbrechnungsvorgabenPage() {
               (rule) => rule.kind === "benefits_exemption",
             )}
             onChanged={afterBillingWrite.refresh}
+            reload={billing.reload.rules}
+            write={billing.write.rule}
           />
           <CostBearersCard
             bearers={billing.data.bearers}
             onChanged={afterBillingWrite.refresh}
+            reload={billing.reload.bearers}
+            write={billing.write.bearer}
           />
         </>
       ) : null}

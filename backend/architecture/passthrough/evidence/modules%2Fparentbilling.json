@@ -111,13 +111,6 @@
       "form": "unclassified-evidence",
       "id": "modules/parentbilling/internal/application/Rules.ListContributionRules",
       "owner": "modules/parentbilling"
-    },
-    {
-      "build": "production",
-      "evidence": "func (s *Rules) UpdateContributionRule(ctx context.Context, organizationID, ruleID int64, input parentbilling.ContributionRuleInput) (parentbilling.ContributionRule, error) {\n\tif organizationID \u003c= 0 {\n\t\treturn parentbilling.ContributionRule{}, errTraegerRequired\n\t}\n\tif ruleID \u003c= 0 {\n\t\treturn parentbilling.ContributionRule{}, parentbilling.ErrContributionRuleNotFound\n\t}\n\tinput, err := normalizeRule(input)\n\tif err != nil {\n\t\treturn parentbilling.ContributionRule{}, err\n\t}\n\treturn s.store.UpdateContributionRule(ctx, organizationID, ruleID, input)\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/parentbilling/internal/application/Rules.UpdateContributionRule",
-      "owner": "modules/parentbilling"
     }
   ]
 }

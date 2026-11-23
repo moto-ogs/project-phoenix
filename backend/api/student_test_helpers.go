@@ -51,6 +51,7 @@ type StudentTestModule struct {
 	CareRequests      carerequests.Service
 	OfferingChanges   careplan.OfferingChangeCapability
 	PickupAdjustments careplan.PickupAdjustments
+	WeeklyPlans       careplan.WeeklyPlans
 	ExcusedRequests   careplan.ExcusedAbsenceRequests
 	MasterDataReview  masterdatarequests.Decisions
 	ParentRequests    parentrequests.Coordinator
@@ -58,7 +59,7 @@ type StudentTestModule struct {
 	// NewPickupAdjustments rebinds the pickup adjustment to the caller's
 	// offering adjustments, so a route test can fail an apply after the
 	// offering write.
-	NewPickupAdjustments func(careplan.DirectOfferingAdjustments) (careplan.PickupAdjustments, error)
+	NewPickupAdjustments func(careplan.DirectOfferingAdjustments) (careplan.PickupAdjustments, careplan.WeeklyPlans, error)
 }
 
 // BindStudentTestPeople hands out the active graph's person directory with
@@ -263,14 +264,14 @@ func newStudentTestModule(db transactionruntime.Database, unit tenant.UnitOfWork
 	}
 	enrollmentDecisionService := enrollmentCompose.PublicDecisions(owners.NewEnrollmentDecisions(enrollmentCompose.DecisionDependencies{
 		Now: time.Now, Requests: repos.Enrollment(),
-		Children:       repos.Enrollment(),
-		Guardians:      repos.Enrollment(),
-		LateInvites:    repos.Enrollment(),
-		Phases:         repos.Enrollment(),
-		Schemas:        repos.Enrollment(),
-		Offerings:      enrollmentCompose.NewCareOfferingRecords(students.CarePlan),
-		Notifications:  owners.NewEnrollmentNotifications(repos.Enrollment(), settingsService, owners.OutboxEnqueuer{Outbox: emailOutboxService}, owners.EnrollmentSchoolDirectory{Schools: reposSchools.School}),
-		Bookings:       careBookings,
+		Children:      repos.Enrollment(),
+		Guardians:     repos.Enrollment(),
+		LateInvites:   repos.Enrollment(),
+		Phases:        repos.Enrollment(),
+		Schemas:       repos.Enrollment(),
+		Offerings:     enrollmentCompose.NewCareOfferingRecords(students.CarePlan),
+		Notifications: owners.NewEnrollmentNotifications(repos.Enrollment(), settingsService, owners.OutboxEnqueuer{Outbox: emailOutboxService}, owners.EnrollmentSchoolDirectory{Schools: reposSchools.School}),
+		Bookings:      careBookings, ContractStudents: owners.EnrollmentContractStudents{People: persons}, CareBookings: owners.BuildEnrollmentRows(owners.NewEnrollmentBookings(time.Now), students.CarePlan, persons).CareBookings,
 		GuardianAccess: guardianAccess, GuardianAuthorizer: repos.StudentGuardian, GuardianHold: owners.NewEnrollmentGuardianHold(db, repos.StudentGuardian, repos.Student, repos.GuardianProfile, nil),
 		People: owners.EnrollmentDecisionPeopleDirectory(
 			repos.Person, repos.Staff, repos.Student, repos.StudentGuardian, repos.GuardianProfile, repos.GuardianPhoneNumber, persons,
@@ -332,13 +333,13 @@ func newStudentTestModule(db transactionruntime.Database, unit tenant.UnitOfWork
 	if err != nil {
 		return StudentTestModule{}, ActiveTestModule{}, StudentTestPeople{}, nil, nil, nil, err
 	}
-	newPickupAdjustmentsFor := func(offerings careplan.DirectOfferingAdjustments) (careplan.PickupAdjustments, error) {
+	newPickupAdjustmentsFor := func(offerings careplan.DirectOfferingAdjustments) (careplan.PickupAdjustments, careplan.WeeklyPlans, error) {
 		return owners.NewPickupAdjustments(
 			students.CarePlan, pickupScheduleService, arrivalScheduleService, pickupBaselines, offerings,
 			settingsService, studentAuditService, repos.Student, today,
 		)
 	}
-	pickupAdjustments, err := newPickupAdjustmentsFor(offeringChanges)
+	pickupAdjustments, weeklyPlans, err := newPickupAdjustmentsFor(offeringChanges)
 	if err != nil {
 		return StudentTestModule{}, ActiveTestModule{}, StudentTestPeople{}, nil, nil, nil, err
 	}
@@ -425,7 +426,7 @@ func newStudentTestModule(db transactionruntime.Database, unit tenant.UnitOfWork
 	return StudentTestModule{
 			NewPickupAdjustments: newPickupAdjustmentsFor,
 			CareLifecycle:        careLifecycleService, PartialAbsence: partialAbsenceService, CareRequests: careRequestService,
-			OfferingChanges: offeringChanges, PickupAdjustments: pickupAdjustments, ExcusedRequests: excusedRequestService,
+			OfferingChanges: offeringChanges, PickupAdjustments: pickupAdjustments, WeeklyPlans: weeklyPlans, ExcusedRequests: excusedRequestService,
 			MasterDataReview: masterDataDecisions, ParentRequests: parentRequestCoordinator, OfferingDays: offeringDays,
 		}, live, StudentTestPeople{PeopleDirectory: persons, StudentAudit: studentAuditService, StudentPhotos: studentPhotoService},
 		auditCommand, enrollmentDecisionService, ogsGroupLiveService, nil

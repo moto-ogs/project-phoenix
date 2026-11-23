@@ -39,9 +39,17 @@ func (s seamStore) Delete(ctx context.Context, id int64) (bool, domain.Operation
 func (s seamStore) Archive(_ context.Context, id int64) (facilities.Room, domain.OperationStats, error) {
 	return facilities.Room{ID: id}, domain.OperationStats{}, nil
 }
+
+// seamRoomChanged is the updated_at of the room the seam store locks, and
+// seamRoomVersion its version.
+var (
+	seamRoomChanged = time.Date(2026, 11, 23, 8, 0, 0, 0, time.UTC)
+	seamRoomVersion = facilities.RoomVersion(facilities.Room{UpdatedAt: seamRoomChanged})
+)
+
 func (s seamStore) FindByID(ctx context.Context, id int64, lock string) (facilities.Room, bool, domain.OperationStats, error) {
 	if lock != "" {
-		return facilities.Room{ID: id, Name: "Igelraum"}, true, domain.OperationStats{}, nil
+		return facilities.Room{ID: id, Name: "Igelraum", UpdatedAt: seamRoomChanged}, true, domain.OperationStats{}, nil
 	}
 	r, err := s.e.FindRoom(ctx, id)
 	return r, err == nil, domain.OperationStats{}, err

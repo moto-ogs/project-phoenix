@@ -4,9 +4,12 @@ import {
   arr,
   bool,
   calendarDate,
+  fileAnswer,
   instant,
-  int64StringOrNumber,
+  int64String,
   json,
+  legacyJSON,
+  multipart,
   noData,
   nullable,
   object,
@@ -16,12 +19,15 @@ import {
   safeInt,
   str,
   success,
+  type LegacyJSON,
+  type OpenEnum,
 } from "./runtime";
 import {
   CareOfferingResponseSchema,
   FormAttachmentSchema,
   FormFieldSchema,
   FormLegalBlockSchema,
+  GuardianProfileResponseSchema,
   LegalBlockSchema,
   PublicEnrollmentFormBootstrapResponseSchema,
   PublicFormSchemaResponseSchema,
@@ -31,11 +37,18 @@ import {
   RequestMailOutcomeSchema,
   SubmitEnrollmentResponseSchema,
   TranslatedTextSchema,
+  UploadReceiptSchema,
   type CareOfferingResponse,
   type FormAttachment,
+  type FormAttachmentInput,
   type FormField,
+  type FormFieldOptionInput,
+  type FormFieldValidationInput,
+  type FormFileOptionsInput,
   type FormLegalBlock,
+  type FormLegalBlockInput,
   type LegalBlock,
+  type ListFormat,
   type PublicFormSchemaResponse,
   type PublicLegalTextsResponse,
   type PublicPhase,
@@ -45,11 +58,14 @@ import {
   type SubmitGuardianRequest,
   type SubmitSignatureRequest,
   type TranslatedText,
+  type TranslatedTextInput,
+  type VisibilityConditionInput,
 } from "./shared.generated";
 
 /** Go: enrollmenthttp.AdminEnrollmentDeleteRequest */
 export interface AdminEnrollmentDeleteRequest {
   reason?: string;
+  expected_fingerprint?: string;
 }
 
 /** Go: enrollmenthttp.AdminEnrollmentDeletionCounts */
@@ -95,6 +111,7 @@ export interface AdminEnrollmentDeletionImpact {
   preserved_parent_accounts: number;
   unlinked_guardian_profiles: number;
   parent_accounts_without_students: number;
+  fingerprint: string;
 }
 
 export const AdminEnrollmentDeletionImpactSchema: z.ZodType<AdminEnrollmentDeletionImpact, unknown> = object<AdminEnrollmentDeletionImpact>({
@@ -108,6 +125,96 @@ export const AdminEnrollmentDeletionImpactSchema: z.ZodType<AdminEnrollmentDelet
   preserved_parent_accounts: safeInt,
   unlinked_guardian_profiles: safeInt,
   parent_accounts_without_students: safeInt,
+  fingerprint: str,
+});
+
+/** Go: enrollmenthttp.ChangeRequestGuardian */
+export interface ChangeRequestGuardian {
+  first_name?: string | null;
+  last_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+}
+
+export const ChangeRequestGuardianSchema: z.ZodType<ChangeRequestGuardian, unknown> = object<ChangeRequestGuardian>({
+  first_name: optional(nullable(str)),
+  last_name: optional(nullable(str)),
+  email: optional(nullable(str)),
+  phone: optional(nullable(str)),
+});
+
+/** Go: enrollmenthttp.ChangeRequestOfferingDays */
+export interface ChangeRequestOfferingDays {
+  offering_id: string;
+  selected_days: string[] | null;
+}
+
+export const ChangeRequestOfferingDaysSchema: z.ZodType<ChangeRequestOfferingDays, unknown> = object<ChangeRequestOfferingDays>({
+  offering_id: str,
+  selected_days: nullable(arr(str)),
+});
+
+/** Go: enrollmenthttp.ChangeRequestChildSnapshot */
+export interface ChangeRequestChildSnapshot {
+  id?: string;
+  status?: string;
+  first_name?: string;
+  last_name?: string;
+  date_of_birth?: string;
+  target_grade_level?: number | null;
+  target_school_class?: string;
+  holiday_care_wish?: boolean;
+  custom_data?: Record<string, unknown | null> | null;
+  offering_ids?: string[] | null;
+  offering_days?: ChangeRequestOfferingDays[] | null;
+}
+
+export const ChangeRequestChildSnapshotSchema: z.ZodType<ChangeRequestChildSnapshot, unknown> = object<ChangeRequestChildSnapshot>({
+  id: optional(str),
+  status: optional(str),
+  first_name: optional(str),
+  last_name: optional(str),
+  date_of_birth: optional(str),
+  target_grade_level: optional(nullable(safeInt)),
+  target_school_class: optional(str),
+  holiday_care_wish: optional(bool),
+  custom_data: optional(nullable(rec(nullable(json)))),
+  offering_ids: optional(nullable(arr(str))),
+  offering_days: optional(nullable(arr(ChangeRequestOfferingDaysSchema))),
+});
+
+/** Go: enrollmenthttp.ChangeRequestSnapshot */
+export interface ChangeRequestSnapshot {
+  phase_id?: string;
+  guardian_first_name?: string;
+  guardian_last_name?: string;
+  guardian_email?: string | null;
+  guardian_phone?: string | null;
+  consent_flags?: Record<string, boolean | LegacyJSON> | null;
+  custom_data?: Record<string, unknown | null> | null;
+  additional_guardians?: (ChangeRequestGuardian | LegacyJSON)[] | null;
+  children?: (ChangeRequestChildSnapshot | LegacyJSON)[] | null;
+}
+
+export const ChangeRequestSnapshotSchema: z.ZodType<ChangeRequestSnapshot, unknown> = object<ChangeRequestSnapshot>({
+  phase_id: optional(str),
+  guardian_first_name: optional(str),
+  guardian_last_name: optional(str),
+  guardian_email: optional(nullable(str)),
+  guardian_phone: optional(nullable(str)),
+  consent_flags: optional(nullable(rec(legacyJSON(nullable(bool))))),
+  custom_data: optional(nullable(rec(nullable(json)))),
+  additional_guardians: optional(nullable(arr(legacyJSON(ChangeRequestGuardianSchema)))),
+  children: optional(nullable(arr(legacyJSON(ChangeRequestChildSnapshotSchema)))),
+});
+
+/** Go: enrollmenthttp.ChangeRequestDiff */
+export interface ChangeRequestDiff {
+  changed?: string[] | null;
+}
+
+export const ChangeRequestDiffSchema: z.ZodType<ChangeRequestDiff, unknown> = object<ChangeRequestDiff>({
+  changed: optional(nullable(arr(str))),
 });
 
 /** Go: enrollmenthttp.AdminRequestSchemaFieldOption */
@@ -215,6 +322,7 @@ export interface AdminRequestChildOffering {
   valid_from?: string;
   valid_until?: string;
   starts_later?: boolean;
+  extends_until?: string;
   submitted_terms?: AdminSubmittedOfferingTerms;
   changed_terms?: string[];
 }
@@ -233,6 +341,7 @@ export const AdminRequestChildOfferingSchema: z.ZodType<AdminRequestChildOfferin
   valid_from: optional(str),
   valid_until: optional(str),
   starts_later: optional(bool),
+  extends_until: optional(str),
   submitted_terms: optional(AdminSubmittedOfferingTermsSchema),
   changed_terms: optional(arr(str)),
 });
@@ -245,6 +354,7 @@ export interface AdminRequestChild {
   date_of_birth: string;
   target_grade_level?: number;
   target_school_class?: string;
+  version: string;
   holiday_care_wish?: boolean;
   status: string;
   status_reason?: string;
@@ -258,7 +368,7 @@ export interface AdminRequestChild {
   existing_child_only?: boolean;
   review_reason?: string;
   weekly_plan_on?: string;
-  custom_data?: unknown | null;
+  custom_data?: Record<string, unknown | null>;
   offerings?: AdminRequestChildOffering[];
   upcoming_offerings?: AdminRequestChildOffering[];
   offerings_unavailable?: boolean;
@@ -271,11 +381,12 @@ export const AdminRequestChildSchema: z.ZodType<AdminRequestChild, unknown> = ob
   date_of_birth: str,
   target_grade_level: optional(safeInt),
   target_school_class: optional(str),
+  version: str,
   holiday_care_wish: optional(bool),
   status: str,
   status_reason: optional(str),
   reviewed_at: optional(instant),
-  reviewed_by: optional(int64StringOrNumber),
+  reviewed_by: optional(int64String),
   activation_mode: str,
   created_student_id: optional(str),
   matched_student_id: optional(str),
@@ -284,7 +395,7 @@ export const AdminRequestChildSchema: z.ZodType<AdminRequestChild, unknown> = ob
   existing_child_only: optional(bool),
   review_reason: optional(str),
   weekly_plan_on: optional(str),
-  custom_data: optional(nullable(json)),
+  custom_data: optional(rec(nullable(json))),
   offerings: optional(arr(AdminRequestChildOfferingSchema)),
   upcoming_offerings: optional(arr(AdminRequestChildOfferingSchema)),
   offerings_unavailable: optional(bool),
@@ -317,10 +428,11 @@ export interface AdminRequestSummary {
   guardian_last_name: string;
   guardian_email: string;
   guardian_phone?: string;
+  submission_source: string;
   submitted_at: string;
   withdrawn_at?: string;
-  custom_data?: unknown | null;
-  consent_flags?: unknown | null;
+  custom_data?: Record<string, unknown | null>;
+  consent_flags?: Record<string, boolean | LegacyJSON>;
   schema_fields?: AdminRequestSchemaField[];
   schema_legal_blocks?: AdminRequestSchemaLegalBlock[];
   children: AdminRequestChild[] | null;
@@ -337,10 +449,11 @@ export const AdminRequestSummarySchema: z.ZodType<AdminRequestSummary, unknown> 
   guardian_last_name: str,
   guardian_email: str,
   guardian_phone: optional(str),
+  submission_source: str,
   submitted_at: instant,
   withdrawn_at: optional(instant),
-  custom_data: optional(nullable(json)),
-  consent_flags: optional(nullable(json)),
+  custom_data: optional(rec(nullable(json))),
+  consent_flags: optional(rec(legacyJSON(nullable(bool)))),
   schema_fields: optional(arr(AdminRequestSchemaFieldSchema)),
   schema_legal_blocks: optional(arr(AdminRequestSchemaLegalBlockSchema)),
   children: nullable(arr(AdminRequestChildSchema)),
@@ -361,7 +474,7 @@ export interface ChangeRequestMessageResponse {
 export const ChangeRequestMessageResponseSchema: z.ZodType<ChangeRequestMessageResponse, unknown> = object<ChangeRequestMessageResponse>({
   id: str,
   author_type: str,
-  author_account_id: optional(int64StringOrNumber),
+  author_account_id: optional(int64String),
   body: str,
   internal_only: bool,
   created_at: instant,
@@ -454,9 +567,9 @@ export interface ChangeRequestResponse {
   status: string;
   parent_note?: string;
   admin_decision_note?: string;
-  base_snapshot: Record<string, unknown | null> | null;
-  proposed_snapshot: Record<string, unknown | null> | null;
-  diff: Record<string, unknown | null> | null;
+  base_snapshot: ChangeRequestSnapshot | null;
+  proposed_snapshot: ChangeRequestSnapshot | null;
+  diff: ChangeRequestDiff | null;
   created_at: string;
   updated_at: string;
   reviewed_at?: string;
@@ -473,13 +586,13 @@ export const ChangeRequestResponseSchema: z.ZodType<ChangeRequestResponse, unkno
   status: str,
   parent_note: optional(str),
   admin_decision_note: optional(str),
-  base_snapshot: nullable(rec(nullable(json))),
-  proposed_snapshot: nullable(rec(nullable(json))),
-  diff: nullable(rec(nullable(json))),
+  base_snapshot: nullable(ChangeRequestSnapshotSchema),
+  proposed_snapshot: nullable(ChangeRequestSnapshotSchema),
+  diff: nullable(ChangeRequestDiffSchema),
   created_at: instant,
   updated_at: instant,
   reviewed_at: optional(instant),
-  reviewed_by_account_id: optional(int64StringOrNumber),
+  reviewed_by_account_id: optional(int64String),
   request: optional(AdminRequestSummarySchema),
   messages: optional(arr(ChangeRequestMessageResponseSchema)),
   roster_impacts: optional(arr(enrollmentChildRosterImpactResponseSchema)),
@@ -510,9 +623,9 @@ export interface ChangeRequestReviewEntry {
   guardian_name?: string;
   parent_note?: string;
   decision_note?: string;
-  base_snapshot: Record<string, unknown | null> | null;
-  proposed_snapshot: Record<string, unknown | null> | null;
-  diff: Record<string, unknown | null> | null;
+  base_snapshot: ChangeRequestSnapshot | null;
+  proposed_snapshot: ChangeRequestSnapshot | null;
+  diff: ChangeRequestDiff | null;
   created_at: string;
   decided_at?: string;
   decided_by_name?: string;
@@ -529,9 +642,9 @@ export const ChangeRequestReviewEntrySchema: z.ZodType<ChangeRequestReviewEntry,
   guardian_name: optional(str),
   parent_note: optional(str),
   decision_note: optional(str),
-  base_snapshot: nullable(rec(nullable(json))),
-  proposed_snapshot: nullable(rec(nullable(json))),
-  diff: nullable(rec(nullable(json))),
+  base_snapshot: nullable(ChangeRequestSnapshotSchema),
+  proposed_snapshot: nullable(ChangeRequestSnapshotSchema),
+  diff: nullable(ChangeRequestDiffSchema),
   created_at: instant,
   decided_at: optional(instant),
   decided_by_name: optional(str),
@@ -697,6 +810,7 @@ export interface careUsageRowResponse {
   guardian_last_name: string;
   guardian_email: string;
   guardian_phone?: string;
+  submission_source: string;
   submitted_at: string;
 }
 
@@ -717,6 +831,7 @@ export const careUsageRowResponseSchema: z.ZodType<careUsageRowResponse, unknown
   guardian_last_name: str,
   guardian_email: str,
   guardian_phone: optional(str),
+  submission_source: str,
   submitted_at: instant,
 });
 
@@ -784,7 +899,7 @@ export interface AdminLegalEvidenceEntry {
   wording_unavailable?: boolean;
   snapshot_at: string;
   blocks: LegalBlockSnapshot[] | null;
-  consent_flags: unknown | null;
+  consent_flags: Record<string, boolean | LegacyJSON> | null;
   version_unknown?: boolean;
   version_mismatch?: boolean;
   staff_recorded?: boolean;
@@ -795,7 +910,7 @@ export const AdminLegalEvidenceEntrySchema: z.ZodType<AdminLegalEvidenceEntry, u
   wording_unavailable: optional(bool),
   snapshot_at: instant,
   blocks: nullable(arr(LegalBlockSnapshotSchema)),
-  consent_flags: nullable(json),
+  consent_flags: nullable(rec(legacyJSON(nullable(bool)))),
   version_unknown: optional(bool),
   version_mismatch: optional(bool),
   staff_recorded: optional(bool),
@@ -852,10 +967,11 @@ export interface AdminRequestDetail {
   guardian_last_name: string;
   guardian_email: string;
   guardian_phone?: string;
+  submission_source: string;
   submitted_at: string;
   withdrawn_at?: string;
-  custom_data?: unknown | null;
-  consent_flags?: unknown | null;
+  custom_data?: Record<string, unknown | null>;
+  consent_flags?: Record<string, boolean | LegacyJSON>;
   schema_fields?: AdminRequestSchemaField[];
   schema_legal_blocks?: AdminRequestSchemaLegalBlock[];
   children: AdminRequestChild[] | null;
@@ -879,10 +995,11 @@ export const AdminRequestDetailSchema: z.ZodType<AdminRequestDetail, unknown> = 
   guardian_last_name: str,
   guardian_email: str,
   guardian_phone: optional(str),
+  submission_source: str,
   submitted_at: instant,
   withdrawn_at: optional(instant),
-  custom_data: optional(nullable(json)),
-  consent_flags: optional(nullable(json)),
+  custom_data: optional(rec(nullable(json))),
+  consent_flags: optional(rec(legacyJSON(nullable(bool)))),
   schema_fields: optional(arr(AdminRequestSchemaFieldSchema)),
   schema_legal_blocks: optional(arr(AdminRequestSchemaLegalBlockSchema)),
   children: nullable(arr(AdminRequestChildSchema)),
@@ -895,6 +1012,60 @@ export const AdminRequestDetailSchema: z.ZodType<AdminRequestDetail, unknown> = 
   can_view_uploads: bool,
   uploads: nullable(arr(AdminRequestUploadSchema)),
   signature: optional(RequestSignatureResponseSchema),
+});
+
+/** Go: enrollmenthttp.AdminOfferingAdjustmentSnapshot */
+export interface AdminOfferingAdjustmentSnapshot {
+  offering_id: string;
+  offering_name?: string;
+  days_of_week_mode?: string;
+  selected_days?: string[];
+  manual_selected_days?: string[];
+  automatic_selected_days?: string[];
+  available_days?: string[];
+  extended_until?: string;
+}
+
+export const AdminOfferingAdjustmentSnapshotSchema: z.ZodType<AdminOfferingAdjustmentSnapshot, unknown> = object<AdminOfferingAdjustmentSnapshot>({
+  offering_id: str,
+  offering_name: optional(str),
+  days_of_week_mode: optional(str),
+  selected_days: optional(arr(str)),
+  manual_selected_days: optional(arr(str)),
+  automatic_selected_days: optional(arr(str)),
+  available_days: optional(arr(str)),
+  extended_until: optional(calendarDate),
+});
+
+/** Go: enrollmenthttp.AdminOfferingAdjustment */
+export interface AdminOfferingAdjustment {
+  id: string;
+  request_id: string;
+  request_child_id: string;
+  student_id: string;
+  actor_account_id: string;
+  actor_role: string;
+  actor_name_snapshot?: string;
+  actor_email_snapshot?: string;
+  reason: string;
+  before: AdminOfferingAdjustmentSnapshot[] | null;
+  after: AdminOfferingAdjustmentSnapshot[] | null;
+  changed_at: string;
+}
+
+export const AdminOfferingAdjustmentSchema: z.ZodType<AdminOfferingAdjustment, unknown> = object<AdminOfferingAdjustment>({
+  id: str,
+  request_id: str,
+  request_child_id: str,
+  student_id: str,
+  actor_account_id: str,
+  actor_role: str,
+  actor_name_snapshot: optional(str),
+  actor_email_snapshot: optional(str),
+  reason: str,
+  before: nullable(arr(AdminOfferingAdjustmentSnapshotSchema)),
+  after: nullable(arr(AdminOfferingAdjustmentSnapshotSchema)),
+  changed_at: instant,
 });
 
 /** Go: enrollmenthttp.FormLabelOption */
@@ -996,6 +1167,7 @@ export interface PhaseResponse {
   translations?: Record<string, Record<string, TranslatedText> | null>;
   created_at: string;
   updated_at: string;
+  version: string;
 }
 
 export const PhaseResponseSchema: z.ZodType<PhaseResponse, unknown> = object<PhaseResponse>({
@@ -1025,6 +1197,7 @@ export const PhaseResponseSchema: z.ZodType<PhaseResponse, unknown> = object<Pha
   translations: optional(rec(nullable(rec(TranslatedTextSchema)))),
   created_at: str,
   updated_at: str,
+  version: str,
 });
 
 /** Go: enrollmenthttp.PhaseExpiryWarningResponse */
@@ -1136,8 +1309,8 @@ export interface ReviewItemResponse {
 }
 
 export const ReviewItemResponseSchema: z.ZodType<ReviewItemResponse, unknown> = object<ReviewItemResponse>({
-  child_id: int64StringOrNumber,
-  request_id: int64StringOrNumber,
+  child_id: int64String,
+  request_id: int64String,
   first_name: str,
   last_name: str,
   target_grade_level: optional(safeInt),
@@ -1299,7 +1472,7 @@ export interface EditDraftChildResponse {
   target_grade_level?: number;
   target_school_class?: string;
   holiday_care_wish?: boolean;
-  custom_data: unknown | null;
+  custom_data: Record<string, unknown | null> | null;
   offering_ids: string[] | null;
   offering_days?: EditDraftOfferingDayResponse[];
   locked: boolean;
@@ -1313,7 +1486,7 @@ export const EditDraftChildResponseSchema: z.ZodType<EditDraftChildResponse, unk
   target_grade_level: optional(safeInt),
   target_school_class: optional(str),
   holiday_care_wish: optional(bool),
-  custom_data: nullable(json),
+  custom_data: nullable(rec(nullable(json))),
   offering_ids: nullable(arr(str)),
   offering_days: optional(arr(EditDraftOfferingDayResponseSchema)),
   locked: bool,
@@ -1330,8 +1503,8 @@ export interface EditDraftResponse {
   guardian_last_name: string;
   guardian_email: string;
   guardian_phone?: string;
-  consent_flags: unknown | null;
-  custom_data: unknown | null;
+  consent_flags: Record<string, boolean | LegacyJSON> | null;
+  custom_data: Record<string, unknown | null> | null;
   additional_guardians?: EditDraftGuardianResponse[];
   children: EditDraftChildResponse[] | null;
 }
@@ -1346,8 +1519,8 @@ export const EditDraftResponseSchema: z.ZodType<EditDraftResponse, unknown> = ob
   guardian_last_name: str,
   guardian_email: str,
   guardian_phone: optional(str),
-  consent_flags: nullable(json),
-  custom_data: nullable(json),
+  consent_flags: nullable(rec(legacyJSON(nullable(bool)))),
+  custom_data: nullable(rec(nullable(json))),
   additional_guardians: optional(arr(EditDraftGuardianResponseSchema)),
   children: nullable(arr(EditDraftChildResponseSchema)),
 });
@@ -1367,6 +1540,7 @@ export interface EditBootstrapResponse {
   legal_texts: PublicLegalTextsResponse;
   draft: EditDraftResponse;
   edit_mode: string;
+  terms_fingerprint: string;
 }
 
 export const EditBootstrapResponseSchema: z.ZodType<EditBootstrapResponse, unknown> = object<EditBootstrapResponse>({
@@ -1383,6 +1557,7 @@ export const EditBootstrapResponseSchema: z.ZodType<EditBootstrapResponse, unkno
   legal_texts: PublicLegalTextsResponseSchema,
   draft: EditDraftResponseSchema,
   edit_mode: str,
+  terms_fingerprint: str,
 });
 
 /** Go: enrollment.RegistrationFamilyChildren */
@@ -1400,27 +1575,6 @@ export const RegistrationFamilyChildrenSchema: z.ZodType<RegistrationFamilyChild
   asked: bool,
   can_state: bool,
   accepted: bool,
-});
-
-/** Go: enrollmenthttp.PublicCareOfferingsResponse */
-export interface PublicCareOfferingsResponse {
-  offerings: CareOfferingResponse[] | null;
-  care_offering_selection_mode: string;
-  care_required: boolean;
-  school_class: PublicSchoolClassConfig;
-  collect_grade_level: boolean;
-  care_offerings_enabled: boolean;
-  eligible_grade_levels: number[] | null;
-}
-
-export const PublicCareOfferingsResponseSchema: z.ZodType<PublicCareOfferingsResponse, unknown> = object<PublicCareOfferingsResponse>({
-  offerings: nullable(arr(CareOfferingResponseSchema)),
-  care_offering_selection_mode: str,
-  care_required: bool,
-  school_class: PublicSchoolClassConfigSchema,
-  collect_grade_level: bool,
-  care_offerings_enabled: bool,
-  eligible_grade_levels: nullable(arr(safeInt)),
 });
 
 /** Go: enrollmenthttp.FormSchemaResponse */
@@ -1448,6 +1602,27 @@ export const FormSchemaResponseSchema: z.ZodType<FormSchemaResponse, unknown> = 
   created_at: instant,
 });
 
+/** Go: enrollmenthttp.PublicCareOfferingsResponse */
+export interface PublicCareOfferingsResponse {
+  offerings: CareOfferingResponse[] | null;
+  care_offering_selection_mode: string;
+  care_required: boolean;
+  school_class: PublicSchoolClassConfig;
+  collect_grade_level: boolean;
+  care_offerings_enabled: boolean;
+  eligible_grade_levels: number[] | null;
+}
+
+export const PublicCareOfferingsResponseSchema: z.ZodType<PublicCareOfferingsResponse, unknown> = object<PublicCareOfferingsResponse>({
+  offerings: nullable(arr(CareOfferingResponseSchema)),
+  care_offering_selection_mode: str,
+  care_required: bool,
+  school_class: PublicSchoolClassConfigSchema,
+  collect_grade_level: bool,
+  care_offerings_enabled: bool,
+  eligible_grade_levels: nullable(arr(safeInt)),
+});
+
 /** Go: enrollmenthttp.SchemaPreviewBootstrapResponse */
 export interface SchemaPreviewBootstrapResponse {
   enrollment_enabled?: boolean;
@@ -1470,7 +1645,7 @@ export interface EditPatchRequest {
   guardian_first_name?: string | null;
   guardian_last_name?: string | null;
   guardian_phone?: string | null;
-  consent_flags?: Record<string, unknown | null> | null;
+  consent_flags?: Record<string, boolean | null> | null;
   custom_data?: Record<string, unknown | null> | null;
 }
 
@@ -1483,6 +1658,11 @@ export const EditPatchResponseSchema: z.ZodType<EditPatchResponse, unknown> = ob
   message: str,
 });
 
+/** Go: enrollmenthttp.RenameSchemaRequest */
+export interface RenameSchemaRequest {
+  name?: string;
+}
+
 /** Go: enrollmenthttp.ReviewChangeRequestRequest */
 export interface ReviewChangeRequestRequest {
   note?: string;
@@ -1491,6 +1671,39 @@ export interface ReviewChangeRequestRequest {
 /** Go: enrollmenthttp.ChangeRequestMessageRequest */
 export interface ChangeRequestMessageRequest {
   body?: string;
+}
+
+/** Go: enrollmenthttp.careUsageExportFiltersRequest */
+export interface careUsageExportFiltersRequest {
+  phase_id?: string;
+  status?: string;
+  care_offering_id?: string;
+  care_offering_ids?: string[] | null;
+  day_count?: number | null;
+  grade_level?: number | null;
+  weekday?: string;
+  pickup_time?: string;
+  search?: string;
+}
+
+/** Go: enrollmenthttp.careUsageExportRequest */
+export interface careUsageExportRequest {
+  format?: OpenEnum<ListFormat>;
+  layout?: string;
+  filters?: careUsageExportFiltersRequest;
+}
+
+/** Go: enrollmenthttp.classRosterExportFiltersRequest */
+export interface classRosterExportFiltersRequest {
+  phase_id?: string;
+  school_class?: string;
+  all_classes?: boolean;
+}
+
+/** Go: enrollmenthttp.classRosterExportRequest */
+export interface classRosterExportRequest {
+  format?: OpenEnum<ListFormat>;
+  filters?: classRosterExportFiltersRequest;
 }
 
 /** Go: enrollmenthttp.RolloverReviewDecisionRequest */
@@ -1508,6 +1721,16 @@ export const RolloverReviewDecisionResponseSchema: z.ZodType<RolloverReviewDecis
   status: str,
 });
 
+/** Go: enrollmenthttp.AdminDecideRequest */
+export interface AdminDecideRequest {
+  status?: string;
+  reason?: string;
+  existing_student_id?: string;
+  create_new_student?: boolean;
+  shown_existing_student_ids?: string[] | null;
+  accept_offering_changes?: boolean;
+}
+
 /** Go: enrollmenthttp.AdminRestoreResponse */
 export interface AdminRestoreResponse {
   restored_children: number;
@@ -1518,6 +1741,12 @@ export const AdminRestoreResponseSchema: z.ZodType<AdminRestoreResponse, unknown
   restored_children: safeInt,
   waitlisted_children: safeInt,
 });
+
+/** Go: enrollmenthttp.phaseExportRequest */
+export interface phaseExportRequest {
+  format?: OpenEnum<ListFormat>;
+  child_status?: string;
+}
 
 /** Go: enrollmenthttp.CareOfferingAvailabilityConditionRequest */
 export interface CareOfferingAvailabilityConditionRequest {
@@ -1534,8 +1763,8 @@ export interface CareOfferingAvailabilityRuleRequest {
 
 /** Go: enrollmenthttp.CareOfferingRequest */
 export interface CareOfferingRequest {
-  phase_id?: number;
-  activity_group_id?: number | null;
+  phase_id?: string;
+  activity_group_id?: string | null;
   name?: string;
   description?: string | null;
   days_of_week_mode?: string;
@@ -1554,13 +1783,22 @@ export interface CareOfferingRequest {
   selection_group?: string;
   selection_rule?: string;
   pickup_times?: Record<string, string> | null;
-  translations?: unknown | null;
+  translations?: Record<string, Record<string, TranslatedTextInput> | null> | null;
 }
 
 /** Go: enrollmenthttp.CloneCareOfferingRequest */
 export interface CloneCareOfferingRequest {
-  target_phase_id?: number;
+  target_phase_id?: string;
 }
+
+/** Go: enrollmenthttp.enrollmentLegalDocumentResponse */
+export interface enrollmentLegalDocumentResponse {
+  document_url: string;
+}
+
+export const enrollmentLegalDocumentResponseSchema: z.ZodType<enrollmentLegalDocumentResponse, unknown> = object<enrollmentLegalDocumentResponse>({
+  document_url: str,
+});
 
 /** Go: enrollmenthttp.PhaseTranslatedTextRequest */
 export interface PhaseTranslatedTextRequest {
@@ -1588,6 +1826,7 @@ export interface EnrollmentPhaseRequest {
   eligible_school_classes?: string[] | null;
   eligible_grade_levels?: number[] | null;
   translations?: Record<string, Record<string, PhaseTranslatedTextRequest> | null> | null;
+  expected_version?: string;
 }
 
 /** Go: enrollmenthttp.AdminCreateLateInviteRequest */
@@ -1626,14 +1865,15 @@ export const AdminCreateLateInviteResponseSchema: z.ZodType<AdminCreateLateInvit
 
 /** Go: enrollmenthttp.AdminManualApprovedEnrollmentRequest */
 export interface AdminManualApprovedEnrollmentRequest {
-  phase_id?: number;
+  phase_id?: string;
   guardian_first_name?: string;
   guardian_last_name?: string;
   guardian_email?: string;
   guardian_phone?: string | null;
   additional_guardians?: SubmitGuardianRequest[] | null;
-  consent_flags?: Record<string, unknown | null> | null;
-  form_schema_id?: number;
+  consent_flags?: Record<string, boolean | null> | null;
+  form_schema_id?: string;
+  expected_terms_fingerprint?: string;
   custom_data?: Record<string, unknown | null> | null;
   children?: SubmitChildRequest[] | null;
   captcha_token?: string;
@@ -1672,7 +1912,7 @@ export interface RolloverCreateRequest {
   service_end_date?: string;
   enrollment_open_at?: string | null;
   enrollment_close_at?: string | null;
-  form_schema_id?: number | null;
+  form_schema_id?: string | null;
   rollover_mode?: string;
   rollover_auto_approve?: boolean;
   rollover_deadline?: string;
@@ -1713,14 +1953,15 @@ export const RolloverCreateResponseSchema: z.ZodType<RolloverCreateResponse, unk
 
 /** Go: enrollmenthttp.CreateChangeRequestRequest */
 export interface CreateChangeRequestRequest {
-  phase_id?: number;
+  phase_id?: string;
   guardian_first_name?: string;
   guardian_last_name?: string;
   guardian_email?: string;
   guardian_phone?: string | null;
   additional_guardians?: SubmitGuardianRequest[] | null;
-  consent_flags?: Record<string, unknown | null> | null;
-  form_schema_id?: number;
+  consent_flags?: Record<string, boolean | null> | null;
+  form_schema_id?: string;
+  expected_terms_fingerprint?: string;
   custom_data?: Record<string, unknown | null> | null;
   children?: SubmitChildRequest[] | null;
   captcha_token?: string;
@@ -1731,7 +1972,7 @@ export interface CreateChangeRequestRequest {
 
 /** Go: enrollmenthttp.ConfirmRenewalRequest */
 export interface ConfirmRenewalRequest {
-  consent_flags?: Record<string, unknown | null> | null;
+  consent_flags?: Record<string, boolean | null> | null;
   form_schema_id?: string;
   terms_fingerprint?: string;
 }
@@ -1749,6 +1990,118 @@ export const ConfirmRenewalResponseSchema: z.ZodType<ConfirmRenewalResponse, unk
 export interface WithdrawRequest {
   child_id?: string | null;
 }
+
+/** Go: enrollment.FormField */
+export interface FormFieldInput {
+  attachments?: FormAttachmentInput[] | null;
+  key?: string;
+  label?: string;
+  type?: string;
+  required?: boolean;
+  help_text?: string;
+  content?: string;
+  options?: FormFieldOptionInput[] | null;
+  allowed_times?: string[] | null;
+  single_mode_grades?: number[] | null;
+  validation?: FormFieldValidationInput | null;
+  file_options?: FormFileOptionsInput | null;
+  sort_order?: number;
+  applies_to_child?: boolean;
+  target?: string;
+  visible_when?: VisibilityConditionInput | null;
+  translations?: Record<string, Record<string, TranslatedTextInput> | null> | null;
+}
+
+/** Go: enrollmenthttp.PublishSchemaRequest */
+export interface PublishSchemaRequest {
+  name?: string;
+  fields?: FormFieldInput[] | null;
+  core_requirements?: Record<string, boolean> | null;
+  legal_blocks?: FormLegalBlockInput[] | null;
+}
+
+/** Go: enrollmenthttp.AdminChildDataCorrectionRequest */
+export interface AdminChildDataCorrectionRequest {
+  first_name?: string;
+  last_name?: string;
+  date_of_birth?: string;
+  target_grade_level?: number | null;
+  target_school_class?: string | null;
+  reason?: string;
+  expected_version?: string;
+}
+
+/** Go: enrollmenthttp.AdminUpdateOfferingSelection */
+export interface AdminUpdateOfferingSelection {
+  offering_id?: string;
+  selected_days?: string[] | null;
+  extend_to_phase_end?: boolean;
+}
+
+/** Go: enrollmenthttp.AdminUpdateOfferingsRequest */
+export interface AdminUpdateOfferingsRequest {
+  offerings?: AdminUpdateOfferingSelection[] | null;
+  reason?: string;
+  effective_from?: string;
+  complete_withdrawal_confirmed?: boolean;
+}
+
+/** Go: enrollmenthttp.AdminChildOfferingsResponse */
+export interface AdminChildOfferingsResponse {
+  id: string;
+  first_name: string;
+  last_name: string;
+  date_of_birth: string;
+  target_grade_level?: number;
+  target_school_class?: string;
+  version: string;
+  holiday_care_wish?: boolean;
+  status: string;
+  status_reason?: string;
+  reviewed_at?: string;
+  reviewed_by?: string;
+  activation_mode: string;
+  created_student_id?: string;
+  matched_student_id?: string;
+  possible_existing_children?: AdminExistingChildCandidate[];
+  existing_child_choice_required?: boolean;
+  existing_child_only?: boolean;
+  review_reason?: string;
+  weekly_plan_on?: string;
+  custom_data?: Record<string, unknown | null>;
+  offerings?: AdminRequestChildOffering[];
+  upcoming_offerings?: AdminRequestChildOffering[];
+  offerings_unavailable?: boolean;
+  roster_impact: enrollmentRosterImpactResponse;
+}
+
+export const AdminChildOfferingsResponseSchema: z.ZodType<AdminChildOfferingsResponse, unknown> = object<AdminChildOfferingsResponse>({
+  id: str,
+  first_name: str,
+  last_name: str,
+  date_of_birth: str,
+  target_grade_level: optional(safeInt),
+  target_school_class: optional(str),
+  version: str,
+  holiday_care_wish: optional(bool),
+  status: str,
+  status_reason: optional(str),
+  reviewed_at: optional(instant),
+  reviewed_by: optional(int64String),
+  activation_mode: str,
+  created_student_id: optional(str),
+  matched_student_id: optional(str),
+  possible_existing_children: optional(arr(AdminExistingChildCandidateSchema)),
+  existing_child_choice_required: optional(bool),
+  existing_child_only: optional(bool),
+  review_reason: optional(str),
+  weekly_plan_on: optional(str),
+  custom_data: optional(rec(nullable(json))),
+  offerings: optional(arr(AdminRequestChildOfferingSchema)),
+  upcoming_offerings: optional(arr(AdminRequestChildOfferingSchema)),
+  offerings_unavailable: optional(bool),
+  roster_impact: enrollmentRosterImpactResponseSchema,
+});
 
 /** Go: enrollmenthttp.CareBeyondEndResponse */
 export interface CareBeyondEndResponse {
@@ -1797,6 +2150,7 @@ export interface PhaseUpdateResponse {
   translations?: Record<string, Record<string, TranslatedText> | null>;
   created_at: string;
   updated_at: string;
+  version: string;
   care_beyond_end: CareBeyondEndResponse[] | null;
 }
 
@@ -1827,6 +2181,7 @@ export const PhaseUpdateResponseSchema: z.ZodType<PhaseUpdateResponse, unknown> 
   translations: optional(rec(nullable(rec(TranslatedTextSchema)))),
   created_at: str,
   updated_at: str,
+  version: str,
   care_beyond_end: nullable(arr(CareBeyondEndResponseSchema)),
 });
 
@@ -1835,77 +2190,12 @@ export interface StatusFamilyChildrenRequest {
   children?: number;
 }
 
-/** Query of GET /api/enrollment/admin/change-requests/ */
-export interface GetEnrollmentAdminChangeRequestsQuery {
-  request_id?: string;
-  status?: string;
-}
-
-/** Query of GET /api/enrollment/admin/change-requests/list */
-export interface GetEnrollmentAdminChangeRequestsListQuery {
-  cursor?: string;
-  from?: string;
-  limit?: number;
-  search?: string;
-  status?: string;
-  to?: string;
-  view?: string;
-}
-
-/** Query of GET /api/enrollment/admin/reports/care-usage */
-export interface GetEnrollmentAdminReportsCareUsageQuery {
-  care_offering_id?: string;
-  care_offering_ids?: string[];
-  day_count?: number;
-  grade_level?: number;
-  phase_id?: string;
-  pickup_time?: string;
-  search?: string;
-  status?: string;
-  weekday?: string;
-}
-
-/** Query of GET /api/enrollment/admin/requests/ */
-export interface GetEnrollmentAdminRequestsQuery {
-  child_status?: string;
-  phase_id?: string;
-}
-
-/** Query of GET /api/enrollment/care-offerings/ */
-export interface GetEnrollmentCareOfferingsQuery {
-  phase_id?: string;
-}
-
-/** Query of GET /api/enrollment/care-offerings/booking-stats */
-export interface GetEnrollmentCareOfferingsBookingStatsQuery {
-  phase_id?: string;
-}
-
-/** Query of GET /api/enrollment/legal/{tenantSlug} */
-export interface GetEnrollmentLegalTenantSlugQuery {
-  late_invite?: string;
-}
-
-/** Query of GET /api/enrollment/legal/{tenantSlug}/{phaseId} */
-export interface GetEnrollmentLegalTenantSlugPhaseIdQuery {
-  late_invite?: string;
-}
-
-/** Query of GET /api/enrollment/phases/{id}/rollover-preview */
-export interface GetEnrollmentPhasesIdRolloverPreviewQuery {
-  bumps_grade?: string;
-}
-
-/** Query of GET /api/enrollment/schema/preview */
-export interface GetEnrollmentSchemaPreviewQuery {
-  base?: string;
-  phaseId?: string;
-  schemaId?: string;
-}
-
-/** Query of POST /api/enrollment/{tenantSlug}/submit */
-export interface PostEnrollmentTenantSlugSubmitQuery {
-  late_invite?: string;
+/** Go: enrollmenthttp.UpdateSchemaRequest */
+export interface UpdateSchemaRequest {
+  name?: string | null;
+  fields?: FormFieldInput[] | null;
+  core_requirements?: Record<string, boolean> | null;
+  legal_blocks?: FormLegalBlockInput[] | null;
 }
 
 export const routes = {
@@ -1947,18 +2237,35 @@ export const routes = {
     portals: ["tenant"],
     response: noData,
   },
+  "DELETE /api/enrollment/schema/{id}": {
+    method: "DELETE",
+    pattern: "/api/enrollment/schema/{id}",
+    portals: ["tenant"],
+    response: noData,
+  },
   "GET /api/enrollment/admin/change-requests/": {
     method: "GET",
     pattern: "/api/enrollment/admin/change-requests/",
     portals: ["tenant"],
-    query: ["request_id", "status"],
+    query: {
+      "request_id": { kind: "id" },
+      "status": { kind: "string" },
+    },
     response: success(z.array(ChangeRequestResponseSchema)),
   },
   "GET /api/enrollment/admin/change-requests/list": {
     method: "GET",
     pattern: "/api/enrollment/admin/change-requests/list",
     portals: ["tenant"],
-    query: ["cursor", "from", "limit", "search", "status", "to", "view"],
+    query: {
+      "cursor": { kind: "string" },
+      "from": { kind: "date" },
+      "limit": { kind: "int" },
+      "search": { kind: "string" },
+      "status": { kind: "string" },
+      "to": { kind: "date" },
+      "view": { kind: "string" },
+    },
     response: success(ChangeRequestReviewPageSchema),
   },
   "GET /api/enrollment/admin/change-requests/pending-count": {
@@ -1977,14 +2284,27 @@ export const routes = {
     method: "GET",
     pattern: "/api/enrollment/admin/reports/care-usage",
     portals: ["tenant"],
-    query: ["care_offering_id", "care_offering_ids", "day_count", "grade_level", "phase_id", "pickup_time", "search", "status", "weekday"],
+    query: {
+      "care_offering_id": { kind: "id" },
+      "care_offering_ids": { kind: "id", repeated: true },
+      "day_count": { kind: "int" },
+      "grade_level": { kind: "int" },
+      "phase_id": { kind: "id" },
+      "pickup_time": { kind: "string" },
+      "search": { kind: "string" },
+      "status": { kind: "string" },
+      "weekday": { kind: "string" },
+    },
     response: success(CareUsageReportResponseSchema),
   },
   "GET /api/enrollment/admin/requests/": {
     method: "GET",
     pattern: "/api/enrollment/admin/requests/",
     portals: ["tenant"],
-    query: ["child_status", "phase_id"],
+    query: {
+      "child_status": { kind: "string" },
+      "phase_id": { kind: "id" },
+    },
     response: success(z.array(AdminRequestSummarySchema)),
   },
   "GET /api/enrollment/admin/requests/unread-count": {
@@ -2005,6 +2325,12 @@ export const routes = {
     portals: ["tenant"],
     response: success(AdminEnrollmentDeletionImpactSchema),
   },
+  "GET /api/enrollment/admin/requests/{id}/children/{childId}/offering-adjustments": {
+    method: "GET",
+    pattern: "/api/enrollment/admin/requests/{id}/children/{childId}/offering-adjustments",
+    portals: ["tenant"],
+    response: success(z.array(AdminOfferingAdjustmentSchema)),
+  },
   "GET /api/enrollment/admin/requests/{id}/delete-impact": {
     method: "GET",
     pattern: "/api/enrollment/admin/requests/{id}/delete-impact",
@@ -2023,6 +2349,18 @@ export const routes = {
     portals: ["tenant"],
     response: success(z.array(RequestMailOutcomeSchema)),
   },
+  "GET /api/enrollment/admin/requests/{id}/signature-proof": {
+    method: "GET",
+    pattern: "/api/enrollment/admin/requests/{id}/signature-proof",
+    portals: ["tenant"],
+    response: fileAnswer,
+  },
+  "GET /api/enrollment/admin/requests/{id}/uploads/{uploadId}": {
+    method: "GET",
+    pattern: "/api/enrollment/admin/requests/{id}/uploads/{uploadId}",
+    portals: ["tenant"],
+    response: fileAnswer,
+  },
   "GET /api/enrollment/admin/students/{studentId}/requests/": {
     method: "GET",
     pattern: "/api/enrollment/admin/students/{studentId}/requests/",
@@ -2033,35 +2371,61 @@ export const routes = {
     method: "GET",
     pattern: "/api/enrollment/care-offerings/",
     portals: ["tenant"],
-    query: ["phase_id"],
+    query: {
+      "phase_id": { kind: "id" },
+    },
     response: success(z.array(CareOfferingResponseSchema)),
   },
   "GET /api/enrollment/care-offerings/booking-stats": {
     method: "GET",
     pattern: "/api/enrollment/care-offerings/booking-stats",
     portals: ["tenant"],
-    query: ["phase_id"],
+    query: {
+      "phase_id": { kind: "id" },
+    },
     response: success(z.array(CareOfferingBookingStatsResponseSchema)),
   },
   "GET /api/enrollment/care-offerings/{id}/": {
     method: "GET",
     pattern: "/api/enrollment/care-offerings/{id}/",
     portals: ["tenant"],
+    deprecated: true,
     response: success(CareOfferingResponseSchema),
+  },
+  "GET /api/enrollment/form-bootstrap/public/{tenantSlug}/{phaseId}": {
+    method: "GET",
+    pattern: "/api/enrollment/form-bootstrap/public/{tenantSlug}/{phaseId}",
+    portals: ["tenant"],
+    routeFile: "the route file adds the signed-in staff member's profile to the public form",
+    query: {
+      "late_invite": { kind: "string" },
+    },
+    response: success(PublicEnrollmentFormBootstrapResponseSchema),
   },
   "GET /api/enrollment/legal/{tenantSlug}": {
     method: "GET",
     pattern: "/api/enrollment/legal/{tenantSlug}",
     portals: ["public"],
-    query: ["late_invite"],
+    query: {
+      "late_invite": { kind: "string" },
+    },
     response: success(PublicLegalTextsResponseSchema),
   },
   "GET /api/enrollment/legal/{tenantSlug}/{phaseId}": {
     method: "GET",
     pattern: "/api/enrollment/legal/{tenantSlug}/{phaseId}",
     portals: ["public"],
-    query: ["late_invite"],
+    query: {
+      "late_invite": { kind: "string" },
+    },
     response: success(PublicLegalTextsResponseSchema),
+  },
+  "GET /api/enrollment/me/profile": {
+    method: "GET",
+    pattern: "/api/enrollment/me/profile",
+    portals: ["tenant"],
+    routeFile: "read only by the form bootstrap's route file",
+    response: success(GuardianProfileResponseSchema),
   },
   "GET /api/enrollment/phases/": {
     method: "GET",
@@ -2115,7 +2479,9 @@ export const routes = {
     method: "GET",
     pattern: "/api/enrollment/phases/{id}/rollover-preview",
     portals: ["tenant"],
-    query: ["bumps_grade"],
+    query: {
+      "bumps_grade": { kind: "bool" },
+    },
     response: success(RolloverPreviewResponseSchema),
   },
   "GET /api/enrollment/requests/{statusToken}": {
@@ -2148,11 +2514,28 @@ export const routes = {
     portals: ["public"],
     response: success(FormLabelsResponseSchema),
   },
+  "GET /api/enrollment/requests/{statusToken}/signature-proof": {
+    method: "GET",
+    pattern: "/api/enrollment/requests/{statusToken}/signature-proof",
+    portals: ["public"],
+    publicFile: "the status link of the mail is the parents' only credential for their own proof",
+    response: fileAnswer,
+  },
+  "GET /api/enrollment/schema/": {
+    method: "GET",
+    pattern: "/api/enrollment/schema/",
+    portals: ["tenant"],
+    response: success(FormSchemaResponseSchema),
+  },
   "GET /api/enrollment/schema/preview": {
     method: "GET",
     pattern: "/api/enrollment/schema/preview",
     portals: ["tenant"],
-    query: ["base", "phaseId", "schemaId"],
+    query: {
+      "base": { kind: "string" },
+      "phaseId": { kind: "id" },
+      "schemaId": { kind: "id" },
+    },
     response: success(SchemaPreviewBootstrapResponseSchema),
   },
   "GET /api/enrollment/schema/versions": {
@@ -2168,6 +2551,13 @@ export const routes = {
     maxBodyBytes: 2097152,
     request: requestBody<EditPatchRequest>(),
     response: success(EditPatchResponseSchema),
+  },
+  "PATCH /api/enrollment/schema/{id}": {
+    method: "PATCH",
+    pattern: "/api/enrollment/schema/{id}",
+    portals: ["tenant"],
+    request: requestBody<RenameSchemaRequest>(),
+    response: success(FormSchemaResponseSchema),
   },
   "POST /api/enrollment/admin/change-requests/{id}/approve": {
     method: "POST",
@@ -2190,6 +2580,20 @@ export const routes = {
     request: requestBody<ReviewChangeRequestRequest>(),
     response: success(ChangeRequestResponseSchema),
   },
+  "POST /api/enrollment/admin/reports/care-usage/export": {
+    method: "POST",
+    pattern: "/api/enrollment/admin/reports/care-usage/export",
+    portals: ["tenant"],
+    request: requestBody<careUsageExportRequest>(),
+    response: fileAnswer,
+  },
+  "POST /api/enrollment/admin/reports/class-roster/export": {
+    method: "POST",
+    pattern: "/api/enrollment/admin/reports/class-roster/export",
+    portals: ["tenant"],
+    request: requestBody<classRosterExportRequest>(),
+    response: fileAnswer,
+  },
   "POST /api/enrollment/admin/request-children/{id}/rollover-review": {
     method: "POST",
     pattern: "/api/enrollment/admin/request-children/{id}/rollover-review",
@@ -2203,11 +2607,25 @@ export const routes = {
     portals: ["tenant"],
     response: noData,
   },
+  "POST /api/enrollment/admin/requests/{id}/children/{childId}/decide": {
+    method: "POST",
+    pattern: "/api/enrollment/admin/requests/{id}/children/{childId}/decide",
+    portals: ["tenant"],
+    request: requestBody<AdminDecideRequest>(),
+    response: success(AdminRequestChildSchema),
+  },
   "POST /api/enrollment/admin/requests/{id}/restore": {
     method: "POST",
     pattern: "/api/enrollment/admin/requests/{id}/restore",
     portals: ["tenant"],
     response: success(AdminRestoreResponseSchema),
+  },
+  "POST /api/enrollment/admin/students/{studentId}/requests/export": {
+    method: "POST",
+    pattern: "/api/enrollment/admin/students/{studentId}/requests/export",
+    portals: ["tenant"],
+    request: requestBody<phaseExportRequest>(),
+    response: fileAnswer,
   },
   "POST /api/enrollment/care-offerings/": {
     method: "POST",
@@ -2223,12 +2641,28 @@ export const routes = {
     request: requestBody<CloneCareOfferingRequest>(),
     response: success(CareOfferingResponseSchema),
   },
+  "POST /api/enrollment/legal-documents": {
+    method: "POST",
+    pattern: "/api/enrollment/legal-documents",
+    portals: ["tenant"],
+    maxBodyBytes: 10489856,
+    tooLargeCode: "enrollment.legal_document_invalid",
+    request: multipart,
+    response: success(enrollmentLegalDocumentResponseSchema),
+  },
   "POST /api/enrollment/phases/": {
     method: "POST",
     pattern: "/api/enrollment/phases/",
     portals: ["tenant"],
     request: requestBody<EnrollmentPhaseRequest>(),
     response: success(PhaseResponseSchema),
+  },
+  "POST /api/enrollment/phases/{id}/export": {
+    method: "POST",
+    pattern: "/api/enrollment/phases/{id}/export",
+    portals: ["tenant"],
+    request: requestBody<phaseExportRequest>(),
+    response: fileAnswer,
   },
   "POST /api/enrollment/phases/{id}/late-invites": {
     method: "POST",
@@ -2283,14 +2717,47 @@ export const routes = {
     request: requestBody<WithdrawRequest>(),
     response: noData,
   },
+  "POST /api/enrollment/schema/": {
+    method: "POST",
+    pattern: "/api/enrollment/schema/",
+    portals: ["tenant"],
+    request: requestBody<PublishSchemaRequest>(),
+    response: success(FormSchemaResponseSchema),
+  },
   "POST /api/enrollment/{tenantSlug}/submit": {
     method: "POST",
     pattern: "/api/enrollment/{tenantSlug}/submit",
     portals: ["public"],
     maxBodyBytes: 2097152,
-    query: ["late_invite"],
+    query: {
+      "late_invite": { kind: "string" },
+    },
     request: requestBody<SubmitEnrollmentRequest>(),
     response: success(SubmitEnrollmentResponseSchema),
+  },
+  "POST /api/enrollment/{tenantSlug}/uploads": {
+    method: "POST",
+    pattern: "/api/enrollment/{tenantSlug}/uploads",
+    portals: ["public"],
+    maxBodyBytes: 10551296,
+    tooLargeCode: "enrollment.upload_invalid",
+    publicUpload: "the public enrollment form takes proofs before any account exists; the backend limits attempts per IP and school",
+    request: multipart,
+    response: success(UploadReceiptSchema),
+  },
+  "PUT /api/enrollment/admin/requests/{id}/children/{childId}/data-correction": {
+    method: "PUT",
+    pattern: "/api/enrollment/admin/requests/{id}/children/{childId}/data-correction",
+    portals: ["tenant"],
+    request: requestBody<AdminChildDataCorrectionRequest>(),
+    response: success(ChangeRequestResponseSchema),
+  },
+  "PUT /api/enrollment/admin/requests/{id}/children/{childId}/offerings": {
+    method: "PUT",
+    pattern: "/api/enrollment/admin/requests/{id}/children/{childId}/offerings",
+    portals: ["tenant"],
+    request: requestBody<AdminUpdateOfferingsRequest>(),
+    response: success(AdminChildOfferingsResponseSchema),
   },
   "PUT /api/enrollment/admin/requests/{id}/read": {
     method: "PUT",
@@ -2327,5 +2794,12 @@ export const routes = {
     maxBodyBytes: 4096,
     request: requestBody<StatusFamilyChildrenRequest>(),
     response: success(RegistrationFamilyChildrenSchema),
+  },
+  "PUT /api/enrollment/schema/{id}": {
+    method: "PUT",
+    pattern: "/api/enrollment/schema/{id}",
+    portals: ["tenant"],
+    request: requestBody<UpdateSchemaRequest>(),
+    response: success(FormSchemaResponseSchema),
   },
 } as const;

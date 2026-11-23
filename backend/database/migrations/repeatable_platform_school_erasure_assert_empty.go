@@ -52,6 +52,8 @@ AS $function$
     UNION ALL
     SELECT 1 FROM active.presence_backfill_checkpoints AS r WHERE r.tenant_id = p_school_id
     UNION ALL
+    SELECT 1 FROM active.room_history_stops AS r WHERE r.tenant_id = p_school_id
+    UNION ALL
     SELECT 1 FROM active.scheduled_checkouts AS r WHERE r.tenant_id = p_school_id
     UNION ALL
     SELECT 1 FROM active.staff_absence_audit AS r WHERE r.tenant_id = p_school_id

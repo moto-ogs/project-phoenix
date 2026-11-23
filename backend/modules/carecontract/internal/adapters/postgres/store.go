@@ -19,6 +19,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	"github.com/moto-ogs/project-phoenix/modules/carecontract/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -77,7 +78,7 @@ type templateRow struct {
 }
 
 func (r templateRow) template() carecontract.ContractTemplate {
-	return carecontract.ContractTemplate{ID: r.ID, UpdatedAt: r.UpdatedAt, TemplateInput: carecontract.TemplateInput{
+	return carecontract.ContractTemplate{ID: ident.ID(r.ID), UpdatedAt: r.UpdatedAt, TemplateInput: carecontract.TemplateInput{
 		TermKind: r.TermKind, TermMonths: r.TermMonths, NoticeMonths: r.NoticeMonths, NoticeTo: r.NoticeTo,
 		SpecialTermination: r.SpecialTermination, SpecialTerminationNote: r.SpecialTerminationNote,
 		StatuteRequired: r.StatuteRequired, StatuteTitle: r.StatuteTitle, StatuteURL: r.StatuteURL,
@@ -157,27 +158,6 @@ func (Store) UpsertTemplate(ctx context.Context, organizationID, accountID, scho
 	return row.template(), nil
 }
 
-func (Store) ContractKeys(ctx context.Context, organizationID int64, schoolIDs []int64) (map[ports.ContractKey]bool, error) {
-	db, err := traegerDB(ctx, organizationID)
-	if err != nil {
-		return nil, err
-	}
-	var rows []struct {
-		SchoolID       int64 `bun:"school_id"`
-		RequestChildID int64 `bun:"request_child_id"`
-	}
-	// A contract from an import file (#4723) has no application child.
-	if err := db.NewRaw(`SELECT school_id, request_child_id FROM care_contract.contracts
-		WHERE organization_id = ? AND school_id = ANY(?) AND request_child_id IS NOT NULL`, organizationID, pgdialect.Array(schoolIDs)).Scan(ctx, &rows); err != nil {
-		return nil, fmt.Errorf("care contract postgres: contract keys: %w", err)
-	}
-	keys := make(map[ports.ContractKey]bool, len(rows))
-	for _, row := range rows {
-		keys[ports.ContractKey{SchoolID: row.SchoolID, RequestChildID: row.RequestChildID}] = true
-	}
-	return keys, nil
-}
-
 // InsertContract stores a draft with its first version, the version's
 // services and its party. A second contract for the same application child
 // is ErrContractExists.
@@ -220,7 +200,7 @@ func insertServices(ctx context.Context, db bun.IDB, organizationID, versionID i
 	weekdays, offerings := make([]string, len(services)), make([]int64, len(services))
 	names, ends, lastDays := make([]string, len(services)), make([]string, len(services)), make([]string, len(services))
 	for i, service := range services {
-		weekdays[i], offerings[i], names[i], ends[i] = service.Weekday, service.CareOfferingID, service.ModuleName, service.EndsAt
+		weekdays[i], offerings[i], names[i], ends[i] = service.Weekday, service.CareOfferingID.Int64(), service.ModuleName, service.EndsAt
 		if service.LastDay != nil {
 			lastDays[i] = service.LastDay.String()
 		}
@@ -247,7 +227,8 @@ const moduleNamesSQL = `ARRAY(SELECT s.module_name FROM care_contract.contract_v
 // summarySQL reads a contract with its current version (currentVersionOrderSQL) and its first
 // party; the filter follows. Bind order: today twice, then organization_id.
 const summarySQL = `SELECT c.id, c.status, c.school_id, c.student_id, c.created_at, c.sent_at, c.concluded_at, c.conclusion_method,
-	c.ends_on, c.early_start_requested,
+	c.conclusion_date_unknown, c.import_origin IS NOT NULL AS taken_over, c.ends_on, c.early_start_requested, c.import_origin IS NOT NULL AS imported,
+	c.request_child_id IS NOT NULL AS follows_bookings, c.request_child_id, c.updated_at,
 	v.school_name, v.child_first_name, v.child_last_name, ` + moduleNamesSQL + ` AS module_names, v.effective_from,
 	COALESCE(p.first_name || ' ' || p.last_name, '') AS party_name, COALESCE(p.email, '') AS party_email
 	FROM care_contract.contracts AS c
@@ -277,6 +258,8 @@ type summaryRow struct {
 	SentAt         *time.Time    `bun:"sent_at"`
 	ConcludedAt    *time.Time    `bun:"concluded_at"`
 	Method         *string       `bun:"conclusion_method"`
+	DateUnknown    bool          `bun:"conclusion_date_unknown"`
+	TakenOver      bool          `bun:"taken_over"`
 	SchoolName     string        `bun:"school_name"`
 	ChildFirstName string        `bun:"child_first_name"`
 	ChildLastName  string        `bun:"child_last_name"`
@@ -288,15 +271,23 @@ type summaryRow struct {
 	// parents' wish that care begins within the withdrawal period (#4682).
 	EndsOn     *calendar.Date `bun:"ends_on,type:date"`
 	EarlyStart bool           `bun:"early_start_requested"`
+	Imported   bool           `bun:"imported"`
+	// FollowsBookings tells that the contract has an application child,
+	// RequestChildID which.
+	FollowsBookings bool   `bun:"follows_bookings"`
+	RequestChildID  *int64 `bun:"request_child_id"`
+	// UpdatedAt is the stamp of the last write of the contract row.
+	UpdatedAt time.Time `bun:"updated_at"`
 }
 
 func (r summaryRow) summary() carecontract.ContractSummary {
 	return carecontract.ContractSummary{
-		ID: r.ID, StudentID: r.StudentID, Status: r.Status, SchoolID: r.SchoolID, SchoolName: r.SchoolName,
+		ID: ident.ID(r.ID), StudentID: (*ident.ID)(r.StudentID), Status: r.Status, SchoolID: ident.ID(r.SchoolID), SchoolName: r.SchoolName,
 		ChildFirstName: r.ChildFirstName, ChildLastName: r.ChildLastName, ModuleNames: nonNil(r.ModuleNames),
 		ModulesText: carecontract.JoinNames(r.ModuleNames),
 		PartyName:   strings.TrimSpace(r.PartyName), PartyEmail: r.PartyEmail, EffectiveFrom: r.EffectiveFrom,
 		CreatedAt: r.CreatedAt, SentAt: r.SentAt, Concluded: r.concluded(), EndsOn: r.EndsOn,
+		Imported: r.Imported, FollowsBookings: r.FollowsBookings, RequestChildID: (*ident.ID)(r.RequestChildID),
 	}
 }
 
@@ -304,7 +295,7 @@ func (r summaryRow) concluded() *carecontract.Concluded {
 	if r.ConcludedAt == nil || r.Method == nil {
 		return nil
 	}
-	return &carecontract.Concluded{Method: *r.Method, At: *r.ConcludedAt}
+	return &carecontract.Concluded{Method: *r.Method, At: *r.ConcludedAt, DateUnknown: r.DateUnknown, TakenOver: r.TakenOver}
 }
 
 // accountRef is the acting account, or NULL for the automatic conclusion,

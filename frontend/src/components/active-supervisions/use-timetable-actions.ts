@@ -134,6 +134,8 @@ export interface TimetableActions {
     row: TimetableRosterRow,
     body: HomeworkFeedbackBody,
   ) => Promise<void>;
+  /** Reads the roster again after a refused feedback; rejects on failure. */
+  readonly reloadRosterAfterRefusal: () => Promise<TimetableRoster | null>;
   readonly confirmCompleteTimetableInstance: () => Promise<void>;
   readonly handleCompleteTimetableInstance: () => Promise<void>;
   /**
@@ -358,15 +360,15 @@ export function useTimetableActions(
         setIsStartingInstance(instance.id);
         const result = await timetableOperationsApi.start(instance.id);
         const startedRoom = allRooms.find(
-          (room) => room.room_id === instance.roomId,
+          (room) => room.roomId === instance.roomId,
         );
         router.push(
           adoptSession(result.activeGroupId, instance.id, instance.roomId),
         );
         memory.write("supervision-last-session", result.activeGroupId);
         memory.write("sidebar-last-room", instance.roomId);
-        if (startedRoom?.room_name) {
-          memory.write("sidebar-last-room-name", startedRoom.room_name);
+        if (startedRoom?.roomName) {
+          memory.write("sidebar-last-room-name", startedRoom.roomName);
         } else {
           memory.remove("sidebar-last-room-name");
         }
@@ -419,9 +421,9 @@ export function useTimetableActions(
         setIsStartingSpontaneous(true);
         const result = await timetableOperationsApi.createAndStartSpontaneous({
           title: payload.title,
-          room_id: Number(payload.roomId),
+          room_id: payload.roomId,
           activity_group_id: payload.activityGroupId
-            ? Number(payload.activityGroupId)
+            ? payload.activityGroupId
             : undefined,
           staff_ids: staffIds,
         });
@@ -532,6 +534,17 @@ export function useTimetableActions(
     },
     [activeTimetableInstanceId, mutateRoster],
   );
+  // After a refused feedback (ADR 0311): the block's roster read anew,
+  // rejecting when that read fails (SWR's own mutate would resolve with the
+  // old roster).
+  const reloadRosterAfterRefusal = useCallback(async () => {
+    if (!activeTimetableInstanceId) return null;
+    const fresh = await timetableOperationsApi.roster(
+      activeTimetableInstanceId,
+    );
+    await mutateRoster(fresh, { revalidate: false });
+    return fresh;
+  }, [activeTimetableInstanceId, mutateRoster]);
 
   // „Rest des Tages“ (#3166): this block by hand, every later block of the day
   // through a partial absence from this block's start.
@@ -920,6 +933,7 @@ export function useTimetableActions(
     handleRosterAction,
     handleExcuseRestOfDay,
     handleSaveHomeworkFeedback,
+    reloadRosterAfterRefusal,
     confirmCompleteTimetableInstance,
     handleCompleteTimetableInstance,
     handleReopenTimetableInstance,

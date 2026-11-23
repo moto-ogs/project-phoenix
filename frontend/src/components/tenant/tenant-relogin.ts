@@ -1,4 +1,6 @@
-import { apiErrorFromResponse, transportFetch } from "~/lib/api-error";
+import { ApiError } from "~/lib/api-error";
+import { bffJson } from "~/lib/bff-fetch";
+import { sessionBff } from "~/lib/session-bff";
 import { clearSessionCache, DELIBERATE_LOGOUT_KEY } from "~/lib/session-cache";
 import { clearPersonalStorage } from "~/lib/personal-storage";
 import { mutate } from "~/lib/swr";
@@ -28,16 +30,20 @@ async function endSessionAndNavigate(
   // The response-aware BFF can refresh/reissue that cookie while logging out.
   // The revocation never waits for push (#5194); the backend drops the
   // family's push subscriptions with it.
-  const response = await transportFetch("/api/auth/logout", {
-    method: "POST",
-    signal: AbortSignal.any([signal, AbortSignal.timeout(5000)]),
-  });
-  signal.throwIfAborted();
-  // 401 means there is no live authenticated family left to revoke, e.g.
-  // retrying after cookie deletion failed. Still remove its Auth.js cookie.
-  if (!response.ok && response.status !== 401) {
-    throw await apiErrorFromResponse(response, "Tenant logout failed");
+  // A session step of the BFF: through `public`, so a 401 neither renews the
+  // session nor opens the login.
+  try {
+    await bffJson("public", sessionBff.logout("tenant"), {
+      signal: AbortSignal.any([signal, AbortSignal.timeout(5000)]),
+      errorMessage: "Tenant logout failed",
+    });
+  } catch (error) {
+    signal.throwIfAborted();
+    // 401 means there is no live authenticated family left to revoke, e.g.
+    // retrying after cookie deletion failed. Still remove its Auth.js cookie.
+    if (!isNothingToRevoke(error)) throw error;
   }
+  signal.throwIfAborted();
   // Cleanup must not hold navigation on a revoked session: other protected
   // requests can already redirect it to the source school's login (#5260).
   void unsubscribePushSilently("tenant", { signal, timeoutMs: 5000 });
@@ -59,4 +65,9 @@ async function endSessionAndNavigate(
     // Storage is optional; the server-side revocation and cookie deletion are not.
   }
   await signOutTenant({ callbackUrl }, signal);
+}
+
+/** A 401 answer of the logout: no live session family is left to revoke. */
+function isNothingToRevoke(error: unknown): boolean {
+  return error instanceof ApiError && !error.noResponse && error.status === 401;
 }

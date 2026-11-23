@@ -7,6 +7,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -187,7 +188,7 @@ func (s *service) lockStudentMovePlan(ctx context.Context, studentIDs []int64, a
 	if err != nil {
 		return nil, err
 	}
-	if lockedTargetRoomID > 0 && targetGroup.RoomID != lockedTargetRoomID {
+	if lockedTargetRoomID > 0 && targetGroup.RoomID != ident.ID(lockedTargetRoomID) {
 		return nil, &ActiveError{Op: opMoveStudents, Err: ErrDatabaseOperation}
 	}
 
@@ -222,10 +223,10 @@ func (p *studentMovePlan) dropStaleVisits(visitsBeforeLock map[int64]*studentpre
 // staleResult starts the move result with the stale children skipped as not
 // present, in request order.
 func (p *studentMovePlan) staleResult() *StudentMoveResult {
-	result := newStudentMoveResult(&p.target.ID, &p.target.RoomID)
+	result := newStudentMoveResult((*int64)(&p.target.ID), (*int64)(&p.target.RoomID))
 	for _, studentID := range p.requestedIDs {
 		if _, stale := p.stale[studentID]; stale {
-			result.Skipped = append(result.Skipped, StudentMoveSkipped{StudentID: studentID, Reason: StudentMoveSkipNotPresent})
+			result.Skipped = append(result.Skipped, StudentMoveSkipped{StudentID: ident.ID(studentID), Reason: StudentMoveSkipNotPresent})
 		}
 	}
 	return result
@@ -234,17 +235,17 @@ func (p *studentMovePlan) staleResult() *StudentMoveResult {
 // binaryResult answers a move in binary presence mode, which tracks no room
 // visits: nothing moves, and a child with a visit is reported as a conflict.
 func (p *studentMovePlan) binaryResult() *StudentMoveResult {
-	result := newStudentMoveResult(&p.target.ID, &p.target.RoomID)
+	result := newStudentMoveResult((*int64)(&p.target.ID), (*int64)(&p.target.RoomID))
 	for _, studentID := range p.requestedIDs {
 		if _, stale := p.stale[studentID]; stale {
-			result.Skipped = append(result.Skipped, StudentMoveSkipped{StudentID: studentID, Reason: StudentMoveSkipNotPresent})
+			result.Skipped = append(result.Skipped, StudentMoveSkipped{StudentID: ident.ID(studentID), Reason: StudentMoveSkipNotPresent})
 			continue
 		}
 		if p.currentVisits[studentID] != nil {
-			result.Skipped = append(result.Skipped, StudentMoveSkipped{StudentID: studentID, Reason: StudentMoveSkipConflict})
+			result.Skipped = append(result.Skipped, StudentMoveSkipped{StudentID: ident.ID(studentID), Reason: StudentMoveSkipConflict})
 			continue
 		}
-		result.Unchanged = append(result.Unchanged, studentID)
+		result.Unchanged = append(result.Unchanged, ident.ID(studentID))
 	}
 	return result
 }
@@ -262,7 +263,7 @@ func (s *service) applyStudentMovePlan(ctx context.Context, plan *studentMovePla
 	}
 
 	if len(result.Moved) > 0 {
-		if err := s.UpdateSessionActivity(ctx, plan.target.ID); err != nil {
+		if err := s.UpdateSessionActivity(ctx, plan.target.ID.Int64()); err != nil {
 			return nil, err
 		}
 	}
@@ -277,13 +278,13 @@ func (s *service) applyStudentMovePlan(ctx context.Context, plan *studentMovePla
 // target session, recording the outcome in result.
 func (s *service) moveStudentIntoGroup(ctx context.Context, plan *studentMovePlan, studentID int64, result *StudentMoveResult) error {
 	if !studentHasOpenAttendance(plan.openAttendance, studentID) {
-		result.Skipped = append(result.Skipped, StudentMoveSkipped{StudentID: studentID, Reason: StudentMoveSkipNotPresent})
+		result.Skipped = append(result.Skipped, StudentMoveSkipped{StudentID: ident.ID(studentID), Reason: StudentMoveSkipNotPresent})
 		return nil
 	}
 
 	currentVisit := plan.currentVisits[studentID]
-	if currentVisit != nil && currentVisit.ActiveGroupID == plan.target.ID {
-		result.Unchanged = append(result.Unchanged, studentID)
+	if currentVisit != nil && ident.ID(currentVisit.ActiveGroupID) == plan.target.ID {
+		result.Unchanged = append(result.Unchanged, ident.ID(studentID))
 		return nil
 	}
 
@@ -297,17 +298,17 @@ func (s *service) moveStudentIntoGroup(ctx context.Context, plan *studentMovePla
 
 	visit := &studentpresence.Visit{
 		StudentID:     studentID,
-		ActiveGroupID: plan.target.ID,
+		ActiveGroupID: plan.target.ID.Int64(),
 		EntryTime:     s.now(),
 	}
 	if err := s.createMoveVisit(ctx, visit, &plan.guard); err != nil {
 		if errors.Is(err, ErrStudentAlreadyActive) {
-			result.Skipped = append(result.Skipped, StudentMoveSkipped{StudentID: studentID, Reason: StudentMoveSkipConflict})
+			result.Skipped = append(result.Skipped, StudentMoveSkipped{StudentID: ident.ID(studentID), Reason: StudentMoveSkipConflict})
 			return nil
 		}
 		return err
 	}
-	result.Moved = append(result.Moved, studentID)
+	result.Moved = append(result.Moved, ident.ID(studentID))
 	if previousActiveGroupID > 0 {
 		result.PreviousActiveGroupIDs[studentID] = previousActiveGroupID
 	}
@@ -332,7 +333,7 @@ func (s *service) ensureCapacityForStudentMove(
 	openAttendance map[int64]studentpresence.Attendance,
 	currentVisits map[int64]*studentpresence.Visit,
 ) error {
-	groups, err := s.GroupRepo.FindByIDs(ctx, moveSourceGroupIDs(currentVisits, targetGroup.ID))
+	groups, err := s.GroupRepo.FindByIDs(ctx, moveSourceGroupIDs(currentVisits, targetGroup.ID.Int64()))
 	if err != nil {
 		return &ActiveError{Op: opMoveStudents, Err: ErrDatabaseOperation}
 	}
@@ -345,7 +346,7 @@ func (s *service) ensureCapacityForStudentMove(
 	}
 
 	if incoming > 0 {
-		if err := s.ensureRoomCapacity(ctx, targetGroup.RoomID, incoming); err != nil {
+		if err := s.ensureRoomCapacity(ctx, targetGroup.RoomID.Int64(), incoming); err != nil {
 			return err
 		}
 	}
@@ -370,7 +371,7 @@ func countStudentsEnteringSession(
 		if !studentHasOpenAttendance(openAttendance, studentID) {
 			continue
 		}
-		if visit := currentVisits[studentID]; visit != nil && visit.ActiveGroupID == targetGroup.ID {
+		if visit := currentVisits[studentID]; visit != nil && ident.ID(visit.ActiveGroupID) == targetGroup.ID {
 			continue
 		}
 		entering++
@@ -413,77 +414,11 @@ func studentEntersTargetRoom(
 	if currentVisit == nil {
 		return true
 	}
-	if currentVisit.ActiveGroupID == targetGroup.ID {
+	if ident.ID(currentVisit.ActiveGroupID) == targetGroup.ID {
 		return false
 	}
 	currentGroup := groups[currentVisit.ActiveGroupID]
 	return currentGroup == nil || currentGroup.RoomID != targetGroup.RoomID
-}
-
-// MoveStudentsToTransitAuthorized is the HTTP-facing transit move path. It
-// revalidates source-room access against the locked move state before ending
-// any current visit.
-func (s *service) MoveStudentsToTransitAuthorized(ctx context.Context, studentIDs []int64, auth StudentMoveAuthorization) (*StudentMoveResult, error) {
-	return s.moveStudentsToTransit(ctx, studentIDs, &auth)
-}
-
-func (s *service) moveStudentsToTransit(ctx context.Context, studentIDs []int64, auth *StudentMoveAuthorization) (*StudentMoveResult, error) {
-	var result *StudentMoveResult
-	err := s.runInSessionTx(ctx, func(txCtx context.Context) error {
-		var err error
-		result, err = s.moveStudentsToTransitLocked(txCtx, studentIDs, auth)
-		return err
-	})
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
-}
-
-func (s *service) moveStudentsToTransitLocked(ctx context.Context, studentIDs []int64, auth *StudentMoveAuthorization) (*StudentMoveResult, error) {
-	uniqueIDs, err := normalizeMoveStudentIDs(studentIDs, opMoveStudentsToTransit)
-	if err != nil {
-		return nil, err
-	}
-
-	mode, err := s.GetPresenceMode(ctx)
-	if err != nil {
-		return nil, &ActiveError{Op: opMoveStudentsToTransit, Err: errors.Join(ErrDatabaseOperation, err)}
-	}
-	if mode == PresenceModeBinary {
-		result := newStudentMoveResult(nil, nil)
-		result.Unchanged = append(result.Unchanged, uniqueIDs...)
-		return result, nil
-	}
-
-	openAttendance, currentVisits, err := s.loadMoveState(ctx, uniqueIDs, opMoveStudentsToTransit)
-	if err != nil {
-		return nil, err
-	}
-
-	result := newStudentMoveResult(nil, nil)
-	for _, studentID := range uniqueIDs {
-		if !studentHasOpenAttendance(openAttendance, studentID) {
-			result.Skipped = append(result.Skipped, StudentMoveSkipped{StudentID: studentID, Reason: StudentMoveSkipNotPresent})
-			continue
-		}
-
-		currentVisit := currentVisits[studentID]
-		if currentVisit == nil {
-			result.Unchanged = append(result.Unchanged, studentID)
-			continue
-		}
-
-		if err := s.endVisitForMove(ctx, currentVisit.ID); err != nil {
-			return nil, err
-		}
-		result.Moved = append(result.Moved, studentID)
-	}
-	if moveResultOnlySkippedNotPresent(result) {
-		return nil, &ActiveError{Op: opMoveStudentsToTransit, Err: ErrStudentsNotPresent}
-	}
-
-	return result, nil
 }
 
 func moveResultOnlySkippedNotPresent(result *StudentMoveResult) bool {
@@ -500,11 +435,11 @@ func moveResultOnlySkippedNotPresent(result *StudentMoveResult) bool {
 
 func newStudentMoveResult(activeGroupID, roomID *int64) *StudentMoveResult {
 	return &StudentMoveResult{
-		Moved:                  []int64{},
-		Unchanged:              []int64{},
+		Moved:                  []ident.ID{},
+		Unchanged:              []ident.ID{},
 		Skipped:                []StudentMoveSkipped{},
-		ActiveGroupID:          activeGroupID,
-		RoomID:                 roomID,
+		ActiveGroupID:          (*ident.ID)(activeGroupID),
+		RoomID:                 (*ident.ID)(roomID),
 		PreviousActiveGroupIDs: map[int64]int64{},
 	}
 }
@@ -588,10 +523,10 @@ func (s *service) lockMoveTargetRoom(ctx context.Context, activeGroupID int64, o
 	if group == nil || !group.IsActive() || group.RoomID <= 0 {
 		return 0, &ActiveError{Op: op, Err: ErrActiveGroupNotFound}
 	}
-	if err := s.SchoolPresence.LockRoomSessionWrites(ctx, group.RoomID); err != nil {
+	if err := s.SchoolPresence.LockRoomSessionWrites(ctx, group.RoomID.Int64()); err != nil {
 		return 0, &ActiveError{Op: op, Err: ErrDatabaseOperation}
 	}
-	return group.RoomID, nil
+	return group.RoomID.Int64(), nil
 }
 
 func (s *service) lockActiveGroupForMove(ctx context.Context, activeGroupID int64, op string) (*ports.ActiveGroup, error) {

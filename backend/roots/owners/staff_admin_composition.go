@@ -112,7 +112,7 @@ func (s staffAdminSubjects) LockStaff(ctx context.Context, staffID int64, withPe
 	if withPerson && staff.Person == nil {
 		// FindByIDForUpdate does not preload; lock the person row too so
 		// person-section diffs read the last committed values.
-		person, err := s.persons.rows.FindByIDForUpdate(ctx, staff.PersonID)
+		person, err := s.persons.rows.FindByIDForUpdate(ctx, staff.PersonID.Int64())
 		if err != nil {
 			return workforceModule.StaffProfile{}, err
 		}

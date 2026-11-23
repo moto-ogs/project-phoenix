@@ -37,6 +37,12 @@ func (m CalendarTestModule) ParentCalendarRouter() chi.Router {
 }
 
 func NewCalendarTestModule(db transactionruntime.Database, unit tenant.UnitOfWork) (CalendarTestModule, error) {
+	return newCalendarTestModule(db, unit, nil)
+}
+
+// newCalendarTestModule composes the calendar as NewCalendarTestModule does;
+// changes, when set, receives the change signal of every appointment write.
+func newCalendarTestModule(db transactionruntime.Database, unit tenant.UnitOfWork, changes owners.CalendarAppointmentChanges) (CalendarTestModule, error) {
 	command, err := auditCompose.NewCommand(owners.NewTestAuditStore(db), func(auditCompose.AppendObservation) {}, time.Now)
 	if err != nil {
 		return CalendarTestModule{}, err
@@ -85,19 +91,24 @@ func NewCalendarTestModule(db transactionruntime.Database, unit tenant.UnitOfWor
 	calendarConfig.Appointments = appointments
 	calendarConfig.Runtime = calendarCompose.NewTenantRuntime(db.Pool())
 	calendarConfig.CalendarRenderer = calendarCompose.NewCalendarRenderer(schoolCalendar)
-	calendarConfig.Outbox, calendarConfig.Mails = owners.NewCalendarOutbox(delivery.EmailOutbox), owners.CalendarAppointmentMails{Outcomes: delivery.Runtime.EmailOutcomes}
-	calendarConfig.PushOutbox = deliveryCompose.NewDurablePushOutbox(delivery.Runtime.Module)
+	calendarConfig = bindCalendarTestDelivery(calendarConfig, delivery)
 	calendarConfig.Settings = settings.Settings
 	calendarConfig.StaffFeedTombstoneRepo = NewCalendarFeedTestTombstones(db)
-	calendarConfig.ParentsURL = cfg.ParentsURL
-	calendarConfig.FrontendURL = cfg.FrontendURL
-	calendarConfig.Notifier = owners.NewCalendarNotifier(delivery.Notifications)
-	calendarConfig.ReminderNotifier = owners.NewCalendarReminderNotifier(delivery.Notifications)
-	calendarConfig.Preferences = delivery.NotificationPreferences
+	calendarConfig.ParentsURL, calendarConfig.FrontendURL = cfg.ParentsURL, cfg.FrontendURL
 	calendarConfig.Logger = logger.With("service", "calendar")
-	calendarSvc := owners.NewCalendarPortal(calendarConfig)
+	calendarConfig.Changes = changes
+	return CalendarTestModule{Calendar: owners.NewCalendarPortal(calendarConfig)}, nil
+}
 
-	return CalendarTestModule{Calendar: calendarSvc}, nil
+// bindCalendarTestDelivery binds the calendar's mails, pushes and guardian
+// notifications to Delivery as the serve root does.
+func bindCalendarTestDelivery(cfg calendarCompose.Config, delivery DeliveryTestModule) calendarCompose.Config {
+	cfg.Outbox, cfg.Mails = owners.NewCalendarOutbox(delivery.EmailOutbox), owners.CalendarAppointmentMails{Outcomes: delivery.Runtime.EmailOutcomes}
+	cfg.PushOutbox = deliveryCompose.NewDurablePushOutbox(delivery.Runtime.Module)
+	cfg.Notifier = owners.NewCalendarNotifier(delivery.Notifications)
+	cfg.ReminderNotifier = owners.NewCalendarReminderNotifier(delivery.Notifications)
+	cfg.Preferences = delivery.NotificationPreferences
+	return cfg
 }
 
 // The closing days and holidays moto schule reads are composed as the serve

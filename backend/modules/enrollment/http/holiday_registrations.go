@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // HolidayRegistrationResource serves the public holiday registration
@@ -70,8 +71,8 @@ func (rs *HolidayRegistrationResource) Router() chi.Router {
 
 // HolidayRegistrationSchool is a school of the Träger a child may attend.
 type HolidayRegistrationSchool struct {
-	ID   int64  `json:"id"`
-	Name string `json:"name"`
+	ID   ident.ID `json:"id"`
+	Name string   `json:"name"`
 }
 
 // HolidayRegistrationTimeModel is a bookable care time of a week with its
@@ -79,16 +80,16 @@ type HolidayRegistrationSchool struct {
 // writes for this booking in the summary (#4664); sibling and exemption
 // rules apply only there.
 type HolidayRegistrationTimeModel struct {
-	ID         int64  `json:"id"`
-	Name       string `json:"name"`
-	StartsAt   string `json:"starts_at"`
-	EndsAt     string `json:"ends_at"`
-	PriceCents int    `json:"price_cents"`
+	ID         ident.ID `json:"id"`
+	Name       string   `json:"name"`
+	StartsAt   string   `json:"starts_at"`
+	EndsAt     string   `json:"ends_at"`
+	PriceCents int      `json:"price_cents"`
 }
 
 // HolidayRegistrationWeek is a bookable week with the name of its host school.
 type HolidayRegistrationWeek struct {
-	ID             int64                          `json:"id"`
+	ID             ident.ID                       `json:"id"`
 	StartsOn       calendar.Date                  `json:"starts_on"`
 	EndsOn         calendar.Date                  `json:"ends_on"`
 	HostSchoolName string                         `json:"host_school_name"`
@@ -108,9 +109,9 @@ type HolidayRegistrationWeek struct {
 	LunchDays       int  `json:"lunch_days"`
 }
 
-// HolidayRegistrationOfferResponse is the body of GET
+// PublicHolidayRegistrationOfferResponse is the body of GET
 // /traeger/holiday-registrations/{token}.
-type HolidayRegistrationOfferResponse struct {
+type PublicHolidayRegistrationOfferResponse struct {
 	TraegerName          string                    `json:"traeger_name"`
 	Name                 string                    `json:"name"`
 	RegistrationOpensOn  calendar.Date             `json:"registration_opens_on"`
@@ -164,8 +165,8 @@ type holidayAddressRequest struct {
 }
 
 type holidayBookingRequest struct {
-	WeekID      int64           `json:"week_id"`
-	TimeModelID int64           `json:"time_model_id"`
+	WeekID      ident.ID        `json:"week_id"`
+	TimeModelID ident.ID        `json:"time_model_id"`
 	Days        []calendar.Date `json:"days"`
 	// Lunch books lunch on the care days of the booking (#5631).
 	Lunch bool `json:"lunch"`
@@ -175,13 +176,13 @@ type holidayChildRequest struct {
 	FirstName       string                    `json:"first_name"`
 	LastName        string                    `json:"last_name"`
 	BirthDate       calendar.Date             `json:"birth_date"`
-	HomeSchoolID    int64                     `json:"home_school_id"`
+	HomeSchoolID    ident.ID                  `json:"home_school_id"`
 	GuestSchoolName string                    `json:"guest_school_name"`
 	Allergies       string                    `json:"allergies"`
 	Medication      string                    `json:"medication"`
 	HealthNotes     string                    `json:"health_notes"`
 	Bookings        []holidayBookingRequest   `json:"bookings"`
-	CustomData      capability.HolidayAnswers `json:"custom_data"`
+	CustomData      capability.HolidayAnswers `json:"custom_data" contract_json:"Answer values follow the school's versioned form schema"`
 	// WishProof is the sealed statement of the holiday care wish from the
 	// prefill of a parent with an account (#4703).
 	WishProof string `json:"wish_proof"`
@@ -221,7 +222,7 @@ type HolidayRegistrationRequest struct {
 	BenefitsProofs    []string                  `json:"benefits_proof_tokens"`
 	CaptchaToken      string                    `json:"captcha_token"`
 	FormVersion       int                       `json:"form_version"`
-	CustomData        capability.HolidayAnswers `json:"custom_data"`
+	CustomData        capability.HolidayAnswers `json:"custom_data" contract_json:"Answer values follow the school's versioned form schema"`
 	LegalAcceptances  map[string]bool           `json:"legal_acceptances"`
 	ConsentVersion    int                       `json:"consent_version"`
 	// RetentionDays are the days the privacy text the parent agreed to
@@ -249,7 +250,7 @@ func (req *HolidayRegistrationRequest) input() capability.HolidayRegistrationInp
 		}
 		children[i] = capability.HolidayChildInput{
 			FirstName: child.FirstName, LastName: child.LastName, BirthDate: child.BirthDate,
-			HomeSchoolID: child.HomeSchoolID, GuestSchoolName: child.GuestSchoolName, Allergies: child.Allergies,
+			HomeSchoolID: child.HomeSchoolID.Int64(), GuestSchoolName: child.GuestSchoolName, Allergies: child.Allergies,
 			Medication: child.Medication, HealthNotes: child.HealthNotes, Bookings: bookings, CustomData: child.CustomData,
 			WishProof: child.WishProof,
 			Criteria:  child.Criteria,
@@ -291,7 +292,7 @@ func holidayContacts(contacts []holidayContactRequest) []capability.HolidayConta
 // HolidayRegistrationReceiptResponse confirms a stored registration without
 // repeating its personal data.
 type HolidayRegistrationReceiptResponse struct {
-	ID          int64     `json:"id"`
+	ID          ident.ID  `json:"id"`
 	SubmittedAt time.Time `json:"submitted_at"`
 	// Placements say for every booking whether the child got a place or is
 	// on the waiting list (#4699), by the child's position in the form.
@@ -304,27 +305,29 @@ type HolidayRegistrationReceiptResponse struct {
 	StatusToken string `json:"status_token"`
 }
 
-// seedHolidayReceiptResponse is the answer the local seeder alone receives:
-// the receipt with a setup link for the parent account the registration
-// offered (ADR 0216), issued for this answer only, so the seed redeems it
-// without waiting for the mail.
-type seedHolidayReceiptResponse struct {
+// HolidayRegistrationSubmitResponse is the answer of POST
+// /traeger/holiday-registrations/{token}: the receipt, and for the local
+// seeder alone a setup link for the parent account the registration offered
+// (ADR 0216), issued for this answer only, so the seed redeems it without
+// waiting for the mail. Every other caller gets the receipt without the key,
+// whether or not an offer went out.
+type HolidayRegistrationSubmitResponse struct {
 	HolidayRegistrationReceiptResponse
-	ParentAccountSetupURL string `json:"parent_account_setup_url"`
+	ParentAccountSetupURL string `json:"parent_account_setup_url,omitempty"`
 }
 
-// holidayReceiptBody is the answer of a stored registration. Every caller
-// but the local seeder gets the same body, whether or not an offer went out.
-func (rs *HolidayRegistrationResource) holidayReceiptBody(r *http.Request, receipt capability.HolidayRegistrationReceipt, organizationID int64, email string) (any, error) {
-	response := HolidayRegistrationReceiptResponse(receipt)
+// holidayReceiptBody is the answer of a stored registration.
+func (rs *HolidayRegistrationResource) holidayReceiptBody(r *http.Request, receipt capability.HolidayRegistrationReceipt, organizationID int64, email string) (HolidayRegistrationSubmitResponse, error) {
+	response := HolidayRegistrationSubmitResponse{HolidayRegistrationReceiptResponse: HolidayRegistrationReceiptResponse(receipt)}
 	if !response.ParentAccountOffered || !rs.exposeSeed(r) {
 		return response, nil
 	}
 	link, err := rs.seedLinks.HolidayParentAccountLink(strings.TrimSpace(email), organizationID)
 	if err != nil {
-		return nil, err
+		return HolidayRegistrationSubmitResponse{}, err
 	}
-	return seedHolidayReceiptResponse{HolidayRegistrationReceiptResponse: response, ParentAccountSetupURL: link.SetupURL}, nil
+	response.ParentAccountSetupURL = link.SetupURL
+	return response, nil
 }
 
 // resolveLink resolves the link in the administrative transaction.
@@ -362,11 +365,11 @@ func (rs *HolidayRegistrationResource) offer(w http.ResponseWriter, r *http.Requ
 	common.Respond(w, r, http.StatusOK, holidayOfferResponse(link, offer, siteKey), "Holiday registration retrieved")
 }
 
-func holidayOfferResponse(link capability.HolidayRegistrationLink, offer capability.HolidayRegistrationOffer, siteKey string) HolidayRegistrationOfferResponse {
+func holidayOfferResponse(link capability.HolidayRegistrationLink, offer capability.HolidayRegistrationOffer, siteKey string) PublicHolidayRegistrationOfferResponse {
 	names := map[int64]string{}
 	schools := make([]HolidayRegistrationSchool, 0, len(link.Traeger.Schools))
 	for _, school := range link.Traeger.Schools {
-		names[school.ID] = school.Name
+		names[school.ID.Int64()] = school.Name
 		schools = append(schools, HolidayRegistrationSchool(school))
 	}
 	weeks := make([]HolidayRegistrationWeek, 0, len(offer.Weeks))
@@ -380,16 +383,16 @@ func holidayOfferResponse(link capability.HolidayRegistrationLink, offer capabil
 		careDays, fullDays := []calendar.Date{}, []calendar.Date{}
 		if week.BookingUnit == capability.HolidayBookingUnitDay {
 			careDays = append(careDays, week.CareDays...)
-			fullDays = append(fullDays, offer.FullDays[week.ID]...)
+			fullDays = append(fullDays, offer.FullDays[week.ID.Int64()]...)
 		}
 		weeks = append(weeks, HolidayRegistrationWeek{
-			ID: week.ID, StartsOn: week.StartsOn, EndsOn: week.EndsOn, HostSchoolName: names[week.HostSchoolID], TimeModels: models,
+			ID: week.ID, StartsOn: week.StartsOn, EndsOn: week.EndsOn, HostSchoolName: names[week.HostSchoolID.Int64()], TimeModels: models,
 			BookingUnit: week.BookingUnit, CareDays: careDays, FullDays: fullDays,
 			NoCareDays:      noCareDaysOrEmpty(week.NoCareDays),
 			LunchPriceCents: week.LunchPriceCents, LunchDays: week.LunchDays,
 		})
 	}
-	return HolidayRegistrationOfferResponse{
+	return PublicHolidayRegistrationOfferResponse{
 		TraegerName: link.Traeger.Name, Name: offer.Name, RegistrationOpensOn: offer.RegistrationOpensOn,
 		RegistrationClosesOn: offer.RegistrationClosesOn, Binding: offer.Binding, Notes: offer.Notes, Open: offer.Open,
 		Weeks: weeks, Schools: schools, CaptchaSiteKey: siteKey, MaxDaysPerChild: offer.MaxDaysPerChild,

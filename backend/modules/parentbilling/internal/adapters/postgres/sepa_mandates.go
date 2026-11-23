@@ -13,6 +13,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The creditor of a Träger and the SEPA mandates of its families (#4695,
@@ -77,7 +78,7 @@ type sepaMandateRow struct {
 
 func (r sepaMandateRow) mandate() parentbilling.SEPAMandate {
 	mandate := parentbilling.SEPAMandate{
-		ID: r.ID, ContractID: r.CareContractID, FamilyEmail: r.FamilyEmail, Reference: r.Reference, SignedOn: r.SignedOn,
+		ID: ident.ID(r.ID), ContractID: ident.ID(r.CareContractID), FamilyEmail: r.FamilyEmail, Reference: r.Reference, SignedOn: r.SignedOn,
 		Kind: r.Kind, Sequence: r.Sequence, CreditorID: r.CreditorID, CreditorCurrent: r.CreditorCurrent,
 		LastCollectedOn: r.LastCollectedOn, HolderSealed: r.HolderSealed, IBANMasked: r.IBANMasked, BIC: r.BIC,
 		Source: r.Source, RevokedOn: r.RevokedOn, RevokedAt: r.RevokedAt, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,
@@ -202,7 +203,7 @@ func (s *Store) InsertSEPAMandate(ctx context.Context, organizationID, accountID
 	}
 	m, now := mandate.Mandate, s.now()
 	row := &sepaMandateRow{
-		OrganizationID: organizationID, FamilyEmail: m.FamilyEmail, CareContractID: m.ContractID, Reference: m.Reference,
+		OrganizationID: organizationID, FamilyEmail: m.FamilyEmail, CareContractID: m.ContractID.Int64(), Reference: m.Reference,
 		SignedOn: m.SignedOn, Kind: m.Kind, Sequence: m.Sequence, CreditorID: m.CreditorID, HolderSealed: mandate.Holder,
 		IBANMasked: m.IBANMasked, LastCollectedOn: m.LastCollectedOn,
 		BIC: m.BIC, Source: m.Source, CreatedByAccountID: accountRef(accountID), UpdatedByAccountID: accountRef(accountID),
@@ -216,33 +217,6 @@ func (s *Store) InsertSEPAMandate(ctx context.Context, organizationID, accountID
 			return parentbilling.SEPAMandate{}, parentbilling.ErrSEPAMandateInForce
 		}
 		return parentbilling.SEPAMandate{}, fmt.Errorf("insert SEPA mandate: %w", err)
-	}
-	return row.mandate(), nil
-}
-
-// UpdateSEPAMandate stores the account of a mandate; a nil IBAN keeps the
-// sealed one.
-func (s *Store) UpdateSEPAMandate(ctx context.Context, organizationID, accountID int64, mandate parentbilling.SealedSEPAMandate) (parentbilling.SEPAMandate, error) {
-	db, err := traegerDB(ctx, organizationID)
-	if err != nil {
-		return parentbilling.SEPAMandate{}, err
-	}
-	m := mandate.Mandate
-	row := &sepaMandateRow{}
-	query := db.NewUpdate().Model(row).Where("organization_id = ?", organizationID).Where("id = ?", m.ID).
-		Set("bic = ?", m.BIC).Set("sequence = ?", m.Sequence).
-		Set("updated_by_account_id = ?", accountRef(accountID)).Set("updated_at = ?", s.now())
-	if mandate.IBAN != nil {
-		query = query.Set("iban_sealed = ?", mandate.IBAN).Set("iban_masked = ?", m.IBANMasked)
-	}
-	if mandate.Holder != nil {
-		query = query.Set("account_holder_sealed = ?", mandate.Holder)
-	}
-	if err := query.Returning(mandateReturning).Scan(ctx); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return parentbilling.SEPAMandate{}, parentbilling.ErrSEPAMandateNotFound
-		}
-		return parentbilling.SEPAMandate{}, fmt.Errorf("update SEPA mandate: %w", err)
 	}
 	return row.mandate(), nil
 }
@@ -284,7 +258,7 @@ func (s *Store) InsertSEPAMandateEvents(ctx context.Context, organizationID, acc
 	}
 	rows := make([]sepaMandateEventRow, len(mandates))
 	for i, mandate := range mandates {
-		rows[i] = sepaMandateEventRow{OrganizationID: organizationID, MandateID: mandate.ID, CareContractID: mandate.ContractID,
+		rows[i] = sepaMandateEventRow{OrganizationID: organizationID, MandateID: mandate.ID.Int64(), CareContractID: mandate.ContractID.Int64(),
 			Action: action, Source: source, Fields: fields, ActorAccountID: accountRef(accountID)}
 	}
 	if _, err := db.NewInsert().Model(&rows).Exec(ctx); err != nil {
@@ -306,8 +280,8 @@ func (s *Store) SEPAMandateEvents(ctx context.Context, organizationID, id int64)
 	}
 	events := make([]parentbilling.SEPAMandateEvent, len(rows))
 	for i, row := range rows {
-		events[i] = parentbilling.SEPAMandateEvent{ID: row.ID, Action: row.Action, Source: row.Source, Fields: row.Fields,
-			AccountID: row.ActorAccountID, OccurredAt: row.OccurredAt, ImportFile: row.ImportFile, ImportLine: row.ImportLine}
+		events[i] = parentbilling.SEPAMandateEvent{ID: ident.ID(row.ID), Action: row.Action, Source: row.Source, Fields: row.Fields,
+			AccountID: (*ident.ID)(row.ActorAccountID), OccurredAt: row.OccurredAt, ImportFile: row.ImportFile, ImportLine: row.ImportLine}
 		if events[i].Fields == nil {
 			events[i].Fields = []string{}
 		}

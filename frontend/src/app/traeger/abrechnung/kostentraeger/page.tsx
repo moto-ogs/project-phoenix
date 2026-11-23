@@ -1,5 +1,7 @@
 "use client";
 
+import { bffFile } from "~/lib/bff-fetch";
+
 // Kostenträger-Anteile der Verträge (#4687): welcher Kostenträger (Bildung
 // und Teilhabe, Jugendamt, sonstiger Zuschuss) wie viel vom Monatsbeitrag
 // eines Kindes übernimmt, bis wann, und auf welchen Bescheid es sich stützt.
@@ -42,8 +44,12 @@ import {
   deleteCareCostShare,
   fetchCareCostShares,
 } from "~/lib/traeger-care-cost-shares-api";
-import { downloadTraegerList } from "~/lib/traeger-list-export";
+import {
+  downloadTraegerList,
+  listExportQuery,
+} from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
+import { labelOf } from "~/lib/label-of";
 
 // Menu icons as in the OGS menus; defined once, outside render.
 const PLUS_ICON = <Plus className="size-4" aria-hidden />;
@@ -93,7 +99,7 @@ function ShareCell({ share }: Readonly<{ share: CareCostShare }>) {
           {share.costBearerName}
         </span>
         <span className="text-gray-600">
-          {COST_SHARE_KIND_LABELS[share.kind]}
+          {labelOf(COST_SHARE_KIND_LABELS, share.kind, "–")}
         </span>
         <span className="font-semibold tabular-nums">
           {costShareAmountText(share)}
@@ -122,6 +128,7 @@ export default function TraegerKostentraegerPage() {
     loading,
     error: loadError,
     mutate,
+    reloadOrThrow,
   } = useTraegerResource(
     traegerBillingKeys.costShares(),
     fetchCareCostShares,
@@ -281,7 +288,11 @@ export default function TraegerKostentraegerPage() {
 
   const exportItems = useTraegerListExportItems({
     download: (format) =>
-      downloadTraegerList("/api/traeger/care-cost-shares/export", format),
+      downloadTraegerList(
+        bffFile("org", "GET /traeger/care-cost-shares/export", {
+          query: listExportQuery(format),
+        }),
+      ),
     scope:
       "Alle Anteile, ohne Suche und Filter. Jeder Download wird protokolliert.",
     fallbackName: "kostentraeger-anteile",
@@ -326,6 +337,7 @@ export default function TraegerKostentraegerPage() {
             <CareCostShareModal
               data={data}
               target={target}
+              reload={reloadOrThrow}
               onClose={() => setTarget(null)}
               onSaved={(next) => {
                 void mutate(next, { revalidate: false });

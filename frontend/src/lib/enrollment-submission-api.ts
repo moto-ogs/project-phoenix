@@ -1,257 +1,65 @@
-import type { SignatureRequestBody } from "~/lib/signature";
-import { createLogger } from "~/lib/logger";
+import { ApiError } from "~/lib/api-error";
+import { bffFile, bffJson, bffJsonUncontracted } from "~/lib/bff-fetch";
+import { knownEnum, requiredEnum } from "~/lib/contract/known-enum";
+import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 import { downloadBlob, filenameFromDisposition } from "~/lib/file-download";
 import type {
-  PublicCaptchaConfig,
   PublicFormSchema,
   PublicLegalBlock,
   PublicLegalTexts,
 } from "~/lib/enrollment-form-schema-api";
-import type { CareOfferingAvailabilityRule } from "~/lib/care-offering-api";
-import type { Translations } from "~/lib/enrollment-translations";
-import type { EnrollmentFormLabels } from "~/lib/enrollment-change-request-diff";
 import {
-  enrollmentErrorReader,
-  readEnrollmentJSON,
-  sendEnrollmentRequest,
-  withLateInviteQuery,
-} from "~/lib/enrollment-http";
-
-import type {
-  CareOfferingSelectionMode,
-  PhaseAudience,
+  careOfferingFromContract,
+  type CareOffering,
+} from "~/lib/care-offering-api";
+import type { Translations } from "~/lib/enrollment-translations";
+import {
+  formLabelsFromContract,
+  type EnrollmentFormLabels,
+} from "~/lib/enrollment-change-request-diff";
+import { withLateInviteQuery } from "~/lib/enrollment-http";
+import {
+  publicFormSchemaFromContract,
+  publicLegalBlockFromContract,
+  publicLegalTextsFromContract,
+  translationsFromContract,
+} from "~/lib/enrollment-form-schema-api";
+import {
+  PHASE_AUDIENCES,
+  PHASE_KINDS,
+  SELECTION_MODES,
+  type CareOfferingSelectionMode,
+  type PhaseAudience,
+  type PhaseKind,
 } from "~/lib/enrollment-phase-api";
-import type { ChangeRequestStatus, ChildStatus } from "~/lib/enrollment-status";
+import {
+  CHANGE_REQUEST_STATUSES,
+  CHILD_STATUSES,
+  type ChangeRequestStatus,
+  type ChildStatus,
+} from "~/lib/enrollment-status";
 
-const logger = createLogger({ component: "EnrollmentSubmissionAPI" });
+// Go does not register these sets; the contract types them as string.
+const EDIT_MODES = ["direct_edit", "change_request"] as const;
+const STATUS_EDIT_MODES = [...EDIT_MODES, "none"] as const;
+const PORTAL_ACCESS_VALUES = ["account", "invitation", "contact_ogs"] as const;
+const SIGNATURE_METHODS = ["drawn", "typed"] as const;
+const CHANGE_REQUEST_ORIGINS = ["parent", "admin"] as const;
+const MESSAGE_AUTHORS = ["parent", "staff", "system"] as const;
 
-export interface PublicCareOffering {
-  id: string;
-  phase_id?: string | null;
-  name: string;
-  description?: string | null;
-  days_of_week_mode: "fixed" | "parent_choice";
-  available_days: string[];
-  includes_holiday_care: boolean;
-  includes_lunch: boolean;
-  capacity?: number | null;
-  price_cents?: number | null;
-  is_active: boolean;
-  is_required: boolean;
-  counts_as_care?: boolean;
-  auto_add_grade_levels?: number[];
-  availability_rule?: CareOfferingAvailabilityRule | null;
-  auto_add_trigger_offering_ids?: string[];
-  /**
-   * Offerings sharing a non-empty selection_group are constrained
-   * together by selection_rule (exactly_one / at_least_one /
-   * at_most_one). Empty group = ungrouped, no constraint.
-   */
-  selection_group?: string | null;
-  selection_rule?:
-    | "optional"
-    | "exactly_one"
-    | "at_least_one"
-    | "at_most_one"
-    | "at_most_one_per_day";
-  /** Translations of `name` and `description` that still match (#3377). */
-  translations?: Translations;
-}
-
-interface SubmitOfferingDays {
-  offering_id: number;
-  selected_days: string[];
-}
-
-export interface SubmitChildPayload {
-  id?: string;
-  first_name: string;
-  last_name: string;
-  date_of_birth: string; // YYYY-MM-DD
-  target_grade_level?: number;
-  /**
-   * Concrete future class (e.g. "2a"), collected from grade 2 upwards
-   * when the tenant enables it (#1833). Omitted for grade 1 or when the
-   * parent leaves it open ("Klasse offen").
-   */
-  target_school_class?: string;
-  /** Holiday care wanted (#4703); only sent when the form asks it. */
-  holiday_care_wish?: boolean;
-  custom_data?: Record<string, unknown>;
-  offering_ids?: number[];
-  /**
-   * Per-offering day picks for offerings whose days_of_week_mode is
-   * "parent_choice". Omitted entirely when no such offerings are
-   * selected. Each entry's offering_id must also be in offering_ids.
-   */
-  offering_days?: SubmitOfferingDays[];
-}
+/** An object answer the contract carries as unknown (form answers, consents). */
 
 /**
- * One additional guardian (co-guardian) the parent added beyond the
- * primary guardian. Names are required; email and phone are optional —
- * a co-guardian (e.g. a grandparent) may be a contact-only record.
+ * Concrete-class config for a phase (#1833): whether the tenant collects a
+ * concrete class at all, the phase's pick list, whether it is mandatory from
+ * grade 2, and whether grade 1 declares one here (#1663): grade 1 is opt-in
+ * and the form cannot derive it from the pick list.
  */
-export interface SubmitGuardianPayload {
-  first_name: string;
-  last_name: string;
-  email?: string;
-  phone?: string;
-}
-
-export interface SubmitEnrollmentPayload {
-  phase_id: number;
-  guardian_first_name: string;
-  guardian_last_name: string;
-  guardian_email: string;
-  guardian_phone?: string;
-  /**
-   * Co-guardians beyond the primary guardian. Omitted (or empty) when
-   * the parent added none. On approval each becomes an additional
-   * users.students_guardians link to every enrolled child.
-   */
-  additional_guardians?: SubmitGuardianPayload[];
-  consent_flags?: Record<string, unknown>;
-  /**
-   * The form version the page showed. The server stores it beside the
-   * version in force, so the evidence shows the parent ticked exactly these
-   * legal texts (#4680).
-   */
-  form_schema_id?: number;
-  custom_data?: Record<string, unknown>;
-  children: SubmitChildPayload[];
-  captcha_token?: string;
-  late_invite_token?: string;
-  /** The parent's signature when the form requires one (#4786). */
-  signature?: SignatureRequestBody;
-}
-
-export interface SubmitEnrollmentResult {
-  request_id: string;
-  status_url: string;
-  warnings?: Array<{ code: string }>;
-}
-
-interface EnrollmentEditDraftOfferingDays {
-  offering_id: string;
-  selected_days: string[];
-  manual_selected_days?: string[];
-  automatic_selected_days?: string[];
-}
-
-interface EnrollmentEditDraftChild {
-  id: string;
-  first_name: string;
-  last_name: string;
-  date_of_birth: string;
-  target_grade_level?: number;
-  target_school_class?: string;
-  holiday_care_wish?: boolean;
-  custom_data?: Record<string, unknown>;
-  offering_ids: string[];
-  offering_days?: EnrollmentEditDraftOfferingDays[];
-  /** Taken over into care: the change form shows this child read-only. */
-  locked?: boolean;
-}
-
-interface EnrollmentEditDraftGuardian {
-  first_name: string;
-  last_name: string;
-  email?: string | null;
-  phone?: string | null;
-}
-
-export interface EnrollmentEditDraft {
-  request_id: string;
-  status_token: string;
-  tenant_id: string;
-  tenant_subdomain: string;
-  phase_id: string;
-  guardian_first_name: string;
-  guardian_last_name: string;
-  guardian_email: string;
-  guardian_phone?: string | null;
-  consent_flags: Record<string, unknown>;
-  custom_data: Record<string, unknown>;
-  additional_guardians?: EnrollmentEditDraftGuardian[];
-  children: EnrollmentEditDraftChild[];
-}
-
-type EnrollmentEditMode = "direct_edit" | "change_request";
-type EnrollmentStatusEditMode = EnrollmentEditMode | "none";
-
-export interface EnrollmentEditBootstrap {
-  edit_mode: EnrollmentEditMode;
-  phase: PublicPhase;
-  schema: PublicFormSchema | null;
-  offerings: PublicCareOffering[];
-  care_offering_selection_mode: CareOfferingSelectionMode;
-  care_required: boolean;
-  /** Concrete-class config (#1833) so reopened edits keep the class field. */
-  school_class?: PublicSchoolClassConfig;
-  collect_grade_level: boolean;
-  care_offerings_enabled: boolean;
-  /** Server-authoritative tenant cap (`enrollment.grade_level_max`). */
-  grade_level_max: number;
-  /** The school's term for its care in the form's fixed texts (#6042). */
-  care_facility_term?: string;
-  legal_texts: PublicLegalTexts;
-  draft: EnrollmentEditDraft;
-}
-
-type EnrollmentChangeRequestMessageAuthor = "parent" | "staff" | "system";
-
-interface EnrollmentChangeRequestMessage {
-  id: string;
-  author_type: EnrollmentChangeRequestMessageAuthor;
-  author_account_id?: number | null;
-  body: string;
-  internal_only: boolean;
-  created_at: string;
-}
-
-export interface EnrollmentChangeRequest {
-  id: string;
-  request_id: string;
-  origin: "parent" | "admin";
-  status: ChangeRequestStatus;
-  parent_note?: string | null;
-  admin_decision_note?: string | null;
-  base_snapshot: Record<string, unknown>;
-  proposed_snapshot: Record<string, unknown>;
-  diff: Record<string, unknown>;
-  created_at: string;
-  updated_at: string;
-  reviewed_at?: string | null;
-  reviewed_by_account_id?: number | null;
-  messages?: EnrollmentChangeRequestMessage[];
-}
-
-const readError = enrollmentErrorReader(
-  logger,
-  "enrollment_submission_api_failed",
-);
-
-/**
- * Concrete-class config for a phase (#1833): whether the tenant collects
- * a concrete class at all, the phase's pick list, and whether it is
- * mandatory from grade 2. Mirrors the backend PublicSchoolClassConfig
- * (`school_class` on the bootstrap + care-offerings responses).
- */
-export interface PublicSchoolClassConfig {
-  collect: boolean;
-  available_classes: string[];
-  require: boolean;
-  /**
-   * Server-authoritative "does grade 1 declare a concrete class here?" (#1663).
-   * Grade 1 is opt-in (#1833) and the form cannot derive the answer from the
-   * pick list: a phase restricted to a prefixless class ("Bienen") collects it
-   * for grade 1 too, yet its narrowed list looks like an unrestricted phase
-   * that merely offers a named class. Optional so a payload from a backend
-   * that does not send it keeps the old prefix-only rule.
-   */
-  collect_grade_1?: boolean;
-}
+export type PublicSchoolClassConfig = Omit<
+  sharedContract.PublicSchoolClassConfig,
+  "available_classes"
+> & { available_classes: string[] };
 
 export const EMPTY_SCHOOL_CLASS_CONFIG: PublicSchoolClassConfig = {
   collect: false,
@@ -260,39 +68,59 @@ export const EMPTY_SCHOOL_CLASS_CONFIG: PublicSchoolClassConfig = {
   collect_grade_1: false,
 };
 
+function schoolClassFromContract(
+  config: sharedContract.PublicSchoolClassConfig,
+): PublicSchoolClassConfig {
+  return { ...config, available_classes: config.available_classes ?? [] };
+}
+
 export interface LateInviteFetchOptions {
   lateInviteToken?: string;
 }
 
-export interface PublicPhase {
-  id: string;
-  name: string;
-  kind: "school_year" | "holiday" | "custom";
-  service_start_date: string;
-  service_end_date: string;
-  enrollment_open_at?: string;
-  enrollment_close_at?: string;
-  show_status_reason_to_parent: boolean;
+/**
+ * A phase of the public picker. `audience` names who may apply (#1663);
+ * the picker labels a restriction so anonymous parents see it before filling
+ * the form. `eligible_grade_levels` narrows the grade select ([] = no
+ * restriction).
+ */
+export type PublicPhase = Omit<
+  sharedContract.PublicPhase,
+  | "kind"
+  | "care_offering_selection_mode"
+  | "audience"
+  | "eligible_grade_levels"
+  | "translations"
+> & {
+  kind: PhaseKind;
   care_offering_selection_mode: CareOfferingSelectionMode;
-  /**
-   * Applicant restriction (#1663). "open" (or missing) = anyone may apply;
-   * "new_students" = only children not already enrolled at the school;
-   * "existing_students" = the inverse, only children already enrolled may
-   * apply (re-enrollment / renewal) — the public picker labels both so
-   * anonymous parents see the restriction before filling the form.
-   * "linked_parents" phases never reach the public picker (filtered
-   * server-side).
-   */
-  audience?: PhaseAudience;
-  /**
-   * Grade restriction (#1663). Empty (or missing) = no restriction;
-   * otherwise only children in one of these grades may apply. The form
-   * narrows its grade select to these values so a parent never fills in
-   * the whole form only to be rejected with grade_not_eligible.
-   */
-  eligible_grade_levels?: number[];
+  audience: PhaseAudience;
+  eligible_grade_levels: number[];
   /** Translations of `name` that still match the German name (#3377). */
   translations?: Translations;
+};
+
+function publicPhaseFromContract(
+  phase: sharedContract.PublicPhase,
+): PublicPhase {
+  const { translations, ...rest } = phase;
+  const named = translationsFromContract(translations);
+  return {
+    ...rest,
+    kind: requiredEnum(PHASE_KINDS, phase.kind, "PublicPhase.kind"),
+    care_offering_selection_mode: requiredEnum(
+      SELECTION_MODES,
+      phase.care_offering_selection_mode,
+      "PublicPhase.care_offering_selection_mode",
+    ),
+    audience: requiredEnum(
+      PHASE_AUDIENCES,
+      phase.audience,
+      "PublicPhase.audience",
+    ),
+    eligible_grade_levels: phase.eligible_grade_levels ?? [],
+    ...(named && { translations: named }),
+  };
 }
 
 /**
@@ -303,72 +131,97 @@ export interface PublicPhase {
 export async function fetchPublicPhases(
   tenantSlug: string,
 ): Promise<PublicPhase[]> {
-  const response = await sendEnrollmentRequest(
-    `/api/enrollment/phases/public/${encodeURIComponent(tenantSlug)}`,
-    { cache: "no-store" },
+  const phases = await bffJson(
+    "public",
+    "GET /api/enrollment/phases/public/{tenantSlug}",
+    {
+      params: { tenantSlug },
+      errorMessage: "Phasen konnten nicht geladen werden",
+    },
   );
-  if (!response.ok) {
-    throw await readError(response, "Phasen konnten nicht geladen werden");
-  }
-  const list = await readEnrollmentJSON<PublicPhase[]>(response);
-  return Array.isArray(list) ? list : [];
+  return phases.map(publicPhaseFromContract);
 }
 
-export interface MeProfileChild {
-  id: string;
-  first_name: string;
-  last_name: string;
-  school_class: string;
-  grade_level?: number;
-  /**
-   * Whether this guardian relationship grants
-   * `parent_portal.enrollment.submit` for this child (#1663). The reuse
-   * picker only offers children where this is true — a portal-visible but
-   * submit-revoked child would otherwise pass the picker and 403 at submit.
-   * Optional for backward compatibility with older payloads (treated as
-   * false when absent).
-   */
-  enrollment_submit?: boolean;
-  /**
-   * Lifecycle status of the linked student (`active` | `pending` |
-   * `inactive`). Only active/pending children count as enrolled, so the reuse
-   * picker offers no other status — an inactive child would be adopted into
-   * the form and then rejected by the existing_students submit gate (#1663).
-   * Optional for backward compatibility with older payloads (an absent status
-   * is not proof of enrollment, so it is treated as not reusable).
-   */
-  status?: string;
-}
+/**
+ * The signed-in guardian and the children the reuse picker offers. A child
+ * is offered only with `enrollment_submit` (#1663) and an active or pending
+ * `status`: an inactive child would be rejected by the existing_students
+ * gate.
+ */
+export type MeProfileResponse = Omit<
+  sharedContract.GuardianProfileResponse,
+  "children"
+> & { children: sharedContract.GuardianProfileChild[] };
 
-export interface MeProfileResponse {
-  guardian: {
-    first_name: string;
-    last_name: string;
-    email: string;
-    phone?: string;
-  };
-  children: MeProfileChild[];
-}
-
-export interface PublicLateInvitePrefill {
-  guardian_email: string;
-  guardian_first_name?: string;
-  guardian_last_name?: string;
-}
-
-export interface PublicEnrollmentBootstrap {
+/**
+ * The configuration of one phase's form: the phase, the active schema, its
+ * offerings and rules, the captcha and the legal texts. `profile` is set for
+ * a signed-in staff member or parent, `late_invite` for a late invitation.
+ */
+export type PublicEnrollmentBootstrap = Omit<
+  sharedContract.PublicEnrollmentFormBootstrapResponse,
+  | "phase"
+  | "schema"
+  | "offerings"
+  | "care_offering_selection_mode"
+  | "school_class"
+  | "legal_texts"
+> & {
   phase: PublicPhase;
   schema: PublicFormSchema | null;
-  offerings: PublicCareOffering[];
+  offerings: CareOffering[];
   care_offering_selection_mode: CareOfferingSelectionMode;
-  care_required: boolean;
-  school_class?: PublicSchoolClassConfig;
-  collect_grade_level: boolean;
-  care_offerings_enabled: boolean;
-  captcha_config: PublicCaptchaConfig | null;
+  school_class: PublicSchoolClassConfig;
   legal_texts: PublicLegalTexts;
   profile?: MeProfileResponse | null;
-  late_invite?: PublicLateInvitePrefill;
+};
+
+/** The parts every form bootstrap shares (public, parent, edit, preview). */
+export function formConfigurationFromContract<
+  T extends Pick<
+    sharedContract.PublicEnrollmentFormBootstrapResponse,
+    "schema" | "offerings" | "care_offering_selection_mode" | "school_class"
+  >,
+>(
+  bootstrap: T,
+): Omit<
+  T,
+  "schema" | "offerings" | "care_offering_selection_mode" | "school_class"
+> &
+  Pick<
+    PublicEnrollmentBootstrap,
+    "schema" | "offerings" | "care_offering_selection_mode" | "school_class"
+  > {
+  return {
+    ...bootstrap,
+    schema: bootstrap.schema && publicFormSchemaFromContract(bootstrap.schema),
+    offerings: (bootstrap.offerings ?? []).map(careOfferingFromContract),
+    care_offering_selection_mode: requiredEnum(
+      SELECTION_MODES,
+      bootstrap.care_offering_selection_mode,
+      "FormBootstrap.care_offering_selection_mode",
+    ),
+    school_class: schoolClassFromContract(bootstrap.school_class),
+  };
+}
+
+type BootstrapAnswer = sharedContract.PublicEnrollmentFormBootstrapResponse & {
+  profile?: sharedContract.GuardianProfileResponse | null;
+};
+
+export function bootstrapFromContract(
+  bootstrap: BootstrapAnswer,
+): PublicEnrollmentBootstrap {
+  const { profile, ...rest } = bootstrap;
+  const configured = formConfigurationFromContract(rest);
+  return {
+    ...configured,
+    phase: publicPhaseFromContract(rest.phase),
+    legal_texts: publicLegalTextsFromContract(rest.legal_texts),
+    ...(profile && {
+      profile: { ...profile, children: profile.children ?? [] },
+    }),
+  };
 }
 
 export async function fetchPublicEnrollmentBootstrap(
@@ -376,45 +229,44 @@ export async function fetchPublicEnrollmentBootstrap(
   phaseId: string,
   options: LateInviteFetchOptions = {},
 ): Promise<PublicEnrollmentBootstrap> {
-  let path = `/api/enrollment/form-bootstrap/public/${encodeURIComponent(
-    tenantSlug,
-  )}/${encodeURIComponent(phaseId)}`;
-  path = withLateInviteQuery(path, options.lateInviteToken);
-  const response = await sendEnrollmentRequest(path, { cache: "no-store" });
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Anmeldeformular konnte nicht geladen werden",
-    );
-  }
-  return readEnrollmentJSON<PublicEnrollmentBootstrap>(response);
+  // Its own route file adds the signed-in staff member's profile, so the
+  // path has no Go contract of its own.
+  const path = withLateInviteQuery(
+    `/api/enrollment/form-bootstrap/public/${encodeURIComponent(
+      tenantSlug,
+    )}/${encodeURIComponent(phaseId)}`,
+    options.lateInviteToken,
+  );
+  return bootstrapFromContract(
+    await bffJsonUncontracted<BootstrapAnswer>("public", "GET", path, {
+      errorMessage: "Anmeldeformular konnte nicht geladen werden",
+    }),
+  );
 }
 
 /**
  * Authenticated parents-portal form-load bootstrap. Hits the parent-scoped
- * endpoint (parent NextAuth session forwarded by the proxy) instead of the
- * anonymous public path, so audience-restricted (linked_parents) phases —
- * which the public endpoint refuses (#1663) — load for a logged-in
- * guardian. The response shape matches the public bootstrap (captcha is
- * empty; the parent JWT is the anti-bot signal).
+ * endpoint instead of the anonymous public path, so audience-restricted
+ * (linked_parents) phases — which the public endpoint refuses (#1663) — load
+ * for a logged-in guardian. The response shape matches the public bootstrap
+ * (captcha is empty; the parent JWT is the anti-bot signal).
  */
 export async function fetchParentEnrollmentBootstrap(
   tenantSlug: string,
   phaseId: string,
   options: LateInviteFetchOptions = {},
 ): Promise<PublicEnrollmentBootstrap> {
-  let path = `/api/parent/enrollments/${encodeURIComponent(
-    tenantSlug,
-  )}/bootstrap/${encodeURIComponent(phaseId)}`;
-  path = withLateInviteQuery(path, options.lateInviteToken);
-  const response = await sendEnrollmentRequest(path, { cache: "no-store" });
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Anmeldeformular konnte nicht geladen werden",
-    );
-  }
-  return readEnrollmentJSON<PublicEnrollmentBootstrap>(response);
+  return bootstrapFromContract(
+    await bffJson(
+      "parent",
+      "GET /parent/enrollments/{tenantSlug}/bootstrap/{phaseId}",
+      {
+        params: { tenantSlug, phaseId },
+        query: { late_invite: options.lateInviteToken?.trim() || undefined },
+        errorMessage: "Anmeldeformular konnte nicht geladen werden",
+      },
+    ),
+  );
 }
 
 /**
@@ -423,114 +275,112 @@ export async function fetchParentEnrollmentBootstrap(
  */
 export async function submitEnrollment(
   tenantSlug: string,
-  payload: SubmitEnrollmentPayload,
-): Promise<SubmitEnrollmentResult> {
-  const response = await sendEnrollmentRequest(
-    `/api/enrollment/${encodeURIComponent(tenantSlug)}/submit`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    },
-  );
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Anmeldung konnte nicht übermittelt werden",
-    );
-  }
-  return readEnrollmentJSON<SubmitEnrollmentResult>(response);
+  payload: sharedContract.SubmitEnrollmentRequest,
+): Promise<sharedContract.SubmitEnrollmentResponse> {
+  return bffJson("public", "POST /api/enrollment/{tenantSlug}/submit", {
+    params: { tenantSlug },
+    body: payload,
+    errorMessage: "Anmeldung konnte nicht übermittelt werden",
+  });
 }
 
-export interface StatusChild {
-  id: string;
-  first_name: string;
-  last_name: string;
-  status: ChildStatus;
-  status_reason?: string | null;
-  /**
-   * True once the child is taken over into care. Its data stays readable
-   * through the status link, but changes run through the parents app only
-   * (ADR 0003).
-   */
-  locked?: boolean;
-}
-
-/** One additional guardian (co-guardian) on the public status page. */
-export interface StatusGuardian {
-  first_name: string;
-  last_name: string;
-  email?: string | null;
-  phone?: string | null;
-}
-
-export interface StatusResponse {
-  request_id: string;
-  guardian_first_name: string;
-  guardian_last_name: string;
-  guardian_email: string;
-  guardian_phone?: string | null;
-  submitted_at: string;
-  withdrawn_at?: string | null;
-  edit_mode: EnrollmentStatusEditMode;
-  children: StatusChild[];
-  /** Co-guardians the parent added beyond the primary guardian. */
-  additional_guardians?: StatusGuardian[];
-  /**
-   * Whether the primary guardian can log in to the parents app. Sent only
-   * while a child is taken over into care, and left out when the backend
-   * could not check it.
-   */
-  has_parent_account?: boolean;
-  /**
-   * The useful next step for the primary guardian. The backend leaves this
-   * out when it could not determine the account state.
-   */
-  parent_portal_access?: "account" | "invitation" | "contact_ogs";
-  /**
-   * The form asks the parent to sign every edit (#4786); the page then
-   * offers only the full form, which carries the signature field.
-   */
-  signature_required?: boolean;
-  /** The signature of the current version, without the image. */
-  signature?: EnrollmentSignature;
-  /**
-   * The school's term for its care (#6042); the token page on the parents
-   * host has no school context of its own.
-   */
-  care_facility_term?: string;
-  /**
-   * The required blocks of the form in force for a renewal, which the
-   * parents accept for the new phase (#6456). Sent only while a child waits
-   * for its renewal.
-   */
-  renewal_terms?: StatusRenewalTerms;
-}
+/**
+ * A child on the status page. `locked` is true once the child is taken over
+ * into care: its data stays readable, but changes run through the parents
+ * app only (ADR 0003).
+ */
+export type StatusChild = Omit<
+  enrollmentContract.StatusChildResponse,
+  "status"
+> & { status: ChildStatus };
 
 /** The terms a renewal asks the parents to accept (#6456). */
-export interface StatusRenewalTerms {
-  /** The form version; "0" for the school-wide texts. Sent back on confirm. */
-  form_schema_id: string;
-  /** Server fingerprint of the displayed blocks, including PDF references. */
-  terms_fingerprint: string;
-  blocks: PublicLegalBlock[];
-  /** When the parents last accepted exactly these blocks. */
-  confirmed_at?: string | null;
-}
+export type StatusRenewalTerms = Omit<
+  enrollmentContract.StatusRenewalTermsResponse,
+  "blocks"
+> & { blocks: PublicLegalBlock[] };
 
 /**
  * A stored signature of an enrollment (#4786): a simple electronic
  * signature with a drawn signature. `image_png` (base64, no `data:` prefix)
  * reaches only the staff detail.
  */
-export interface EnrollmentSignature {
-  method: "drawn" | "typed";
-  typed_name?: string;
-  signer_name: string;
-  signed_at: string;
-  document_sha256: string;
-  integrity_ok: boolean;
-  image_png?: string;
+export type EnrollmentSignature = Omit<
+  enrollmentContract.RequestSignatureResponse,
+  "method"
+> & { method: (typeof SIGNATURE_METHODS)[number] };
+
+export function signatureFromContract(
+  signature: enrollmentContract.RequestSignatureResponse,
+): EnrollmentSignature {
+  return {
+    ...signature,
+    method: requiredEnum(
+      SIGNATURE_METHODS,
+      signature.method,
+      "EnrollmentSignature.method",
+    ),
+  };
+}
+
+/**
+ * The status behind a status link. `has_parent_account` and
+ * `parent_portal_access` are set only while a child is taken over into care
+ * and the backend could check the account; `signature_required` lets the
+ * page offer only the full form (#4786); `renewal_terms` are set while a
+ * child waits for its renewal (#6456).
+ */
+export type StatusResponse = Omit<
+  enrollmentContract.StatusResponse,
+  | "edit_mode"
+  | "children"
+  | "parent_portal_access"
+  | "signature"
+  | "renewal_terms"
+> & {
+  edit_mode: (typeof STATUS_EDIT_MODES)[number];
+  children: StatusChild[];
+  /** undefined: not determined, or a step this build does not know. */
+  parent_portal_access?: (typeof PORTAL_ACCESS_VALUES)[number];
+  signature?: EnrollmentSignature;
+  renewal_terms?: StatusRenewalTerms;
+};
+
+function statusFromContract(
+  status: enrollmentContract.StatusResponse,
+): StatusResponse {
+  const {
+    parent_portal_access: access,
+    signature,
+    renewal_terms: terms,
+    ...rest
+  } = status;
+  const known = knownEnum(PORTAL_ACCESS_VALUES, access);
+  return {
+    ...rest,
+    edit_mode: requiredEnum(
+      STATUS_EDIT_MODES,
+      status.edit_mode,
+      "Status.edit_mode",
+    ),
+    children: (status.children ?? []).map((child) => ({
+      ...child,
+      status: requiredEnum(CHILD_STATUSES, child.status, "StatusChild.status"),
+    })),
+    ...(known && { parent_portal_access: known }),
+    ...(signature && { signature: signatureFromContract(signature) }),
+    ...(terms && {
+      renewal_terms: {
+        ...terms,
+        blocks: (terms.blocks ?? []).map((block, index) =>
+          publicLegalBlockFromContract(
+            block,
+            `StatusRenewalTerms.blocks.${index}`,
+          ),
+        ),
+      },
+    }),
+  };
 }
 
 /**
@@ -540,105 +390,227 @@ export interface EnrollmentSignature {
 export async function fetchStatus(
   token: string,
 ): Promise<StatusResponse | null> {
-  const response = await sendEnrollmentRequest(
-    `/api/enrollment/requests/${encodeURIComponent(token)}`,
-    { cache: "no-store" },
-  );
-  if (response.status === 404) return null;
-  if (!response.ok) {
-    throw await readError(response, "Status konnte nicht geladen werden");
+  try {
+    return statusFromContract(
+      await bffJson("public", "GET /api/enrollment/requests/{statusToken}", {
+        params: { statusToken: token },
+        errorMessage: "Status konnte nicht geladen werden",
+      }),
+    );
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return null;
+    throw error;
   }
-  return readEnrollmentJSON<StatusResponse>(response);
 }
 
 /** Downloads the proof of the parent's signature behind the status link. */
 export async function downloadEnrollmentSignatureProof(
   token: string,
 ): Promise<void> {
-  const response = await sendEnrollmentRequest(
-    `/api/enrollment/requests/${encodeURIComponent(token)}/signature-proof`,
-    { cache: "no-store" },
+  const response = await bffFile(
+    "public",
+    "GET /api/enrollment/requests/{statusToken}/signature-proof",
+    {
+      params: { statusToken: token },
+      errorMessage: "Nachweis konnte nicht geladen werden",
+    },
   );
-  if (!response.ok) {
-    throw await readError(response, "Nachweis konnte nicht geladen werden");
-  }
   downloadBlob(
     await response.blob(),
     filenameFromDisposition(response) ?? "anmeldenachweis.pdf",
   );
 }
 
+type EnrollmentEditDraftChild = Omit<
+  enrollmentContract.EditDraftChildResponse,
+  "custom_data" | "offering_ids" | "offering_days"
+> & {
+  custom_data: Record<string, unknown>;
+  offering_ids: string[];
+  offering_days?: (Omit<
+    enrollmentContract.EditDraftOfferingDayResponse,
+    "selected_days"
+  > & { selected_days: string[] })[];
+};
+
+/** The stored enrollment a status link edits. */
+export type EnrollmentEditDraft = Omit<
+  enrollmentContract.EditDraftResponse,
+  "consent_flags" | "custom_data" | "children"
+> & {
+  consent_flags: NonNullable<
+    enrollmentContract.EditDraftResponse["consent_flags"]
+  >;
+  custom_data: Record<string, unknown>;
+  children: EnrollmentEditDraftChild[];
+};
+
+/**
+ * The form of a status-link edit: the configuration of the request's phase,
+ * the tenant cap `grade_level_max` and the stored draft.
+ */
+export type EnrollmentEditBootstrap = Omit<
+  enrollmentContract.EditBootstrapResponse,
+  | "phase"
+  | "schema"
+  | "offerings"
+  | "care_offering_selection_mode"
+  | "school_class"
+  | "legal_texts"
+  | "draft"
+  | "edit_mode"
+> &
+  Pick<
+    PublicEnrollmentBootstrap,
+    | "phase"
+    | "schema"
+    | "offerings"
+    | "care_offering_selection_mode"
+    | "school_class"
+    | "legal_texts"
+  > & {
+    draft: EnrollmentEditDraft;
+    edit_mode: (typeof EDIT_MODES)[number];
+  };
+
 export async function fetchEnrollmentEditBootstrap(
   token: string,
   fallback = "Anmeldung kann nicht bearbeitet werden",
 ): Promise<EnrollmentEditBootstrap> {
-  const response = await sendEnrollmentRequest(
-    `/api/enrollment/requests/${encodeURIComponent(token)}/edit-bootstrap`,
-    { cache: "no-store" },
+  const bootstrap = await bffJson(
+    "public",
+    "GET /api/enrollment/requests/{statusToken}/edit-bootstrap",
+    { params: { statusToken: token }, errorMessage: fallback },
   );
-  if (!response.ok) {
-    throw await readError(response, fallback);
-  }
-  return readEnrollmentJSON<EnrollmentEditBootstrap>(response);
+  const { draft } = bootstrap;
+  return {
+    ...formConfigurationFromContract(bootstrap),
+    phase: publicPhaseFromContract(bootstrap.phase),
+    legal_texts: publicLegalTextsFromContract(bootstrap.legal_texts),
+    edit_mode: requiredEnum(
+      EDIT_MODES,
+      bootstrap.edit_mode,
+      "EnrollmentEditBootstrap.edit_mode",
+    ),
+    draft: {
+      ...draft,
+      consent_flags: draft.consent_flags ?? {},
+      custom_data: draft.custom_data ?? {},
+      children: (draft.children ?? []).map(
+        ({ offering_days: days, ...child }) => ({
+          ...child,
+          custom_data: child.custom_data ?? {},
+          offering_ids: child.offering_ids ?? [],
+          ...(days && {
+            offering_days: days.map((day) => ({
+              ...day,
+              selected_days: day.selected_days ?? [],
+            })),
+          }),
+        }),
+      ),
+    },
+  };
 }
 
 export async function updateEnrollmentRequest(
   token: string,
-  payload: SubmitEnrollmentPayload,
+  payload: sharedContract.SubmitEnrollmentRequest,
   fallback = "Änderungen konnten nicht gespeichert werden",
-): Promise<SubmitEnrollmentResult> {
-  const response = await sendEnrollmentRequest(
-    `/api/enrollment/requests/${encodeURIComponent(token)}`,
-    {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    },
-  );
-  if (!response.ok) {
-    throw await readError(response, fallback);
-  }
-  return readEnrollmentJSON<SubmitEnrollmentResult>(response);
+): Promise<sharedContract.SubmitEnrollmentResponse> {
+  return bffJson("public", "PUT /api/enrollment/requests/{statusToken}", {
+    params: { statusToken: token },
+    body: payload,
+    errorMessage: fallback,
+  });
+}
+
+type EnrollmentChangeRequestMessage = Omit<
+  enrollmentContract.ChangeRequestMessageResponse,
+  "author_type"
+> & {
+  /** undefined: an author this build does not know. */
+  author_type: (typeof MESSAGE_AUTHORS)[number] | undefined;
+};
+
+/** A change request of an enrollment, with its snapshots and messages. */
+export type EnrollmentChangeRequest = Omit<
+  enrollmentContract.ChangeRequestResponse,
+  | "origin"
+  | "status"
+  | "base_snapshot"
+  | "proposed_snapshot"
+  | "diff"
+  | "messages"
+> & {
+  /** undefined: an origin this build does not know. */
+  origin: (typeof CHANGE_REQUEST_ORIGINS)[number] | undefined;
+  status: ChangeRequestStatus;
+  base_snapshot: NonNullable<
+    enrollmentContract.ChangeRequestResponse["base_snapshot"]
+  >;
+  proposed_snapshot: NonNullable<
+    enrollmentContract.ChangeRequestResponse["proposed_snapshot"]
+  >;
+  diff: NonNullable<enrollmentContract.ChangeRequestResponse["diff"]>;
+  messages?: EnrollmentChangeRequestMessage[];
+};
+
+export function changeRequestFromContract(
+  request: enrollmentContract.ChangeRequestResponse,
+): EnrollmentChangeRequest {
+  const { messages, ...rest } = request;
+  return {
+    ...rest,
+    origin: knownEnum(CHANGE_REQUEST_ORIGINS, request.origin),
+    status: requiredEnum(
+      CHANGE_REQUEST_STATUSES,
+      request.status,
+      "EnrollmentChangeRequest.status",
+    ),
+    base_snapshot: request.base_snapshot ?? {},
+    proposed_snapshot: request.proposed_snapshot ?? {},
+    diff: request.diff ?? {},
+    ...(messages && {
+      messages: messages.map((message) => ({
+        ...message,
+        author_type: knownEnum(MESSAGE_AUTHORS, message.author_type),
+      })),
+    }),
+  };
 }
 
 export async function createEnrollmentChangeRequest(
   token: string,
-  payload: SubmitEnrollmentPayload,
+  payload: sharedContract.SubmitEnrollmentRequest,
   parentNote = "",
   fallback = "Änderungsanfrage konnte nicht gespeichert werden",
 ): Promise<EnrollmentChangeRequest> {
-  const response = await sendEnrollmentRequest(
-    `/api/enrollment/requests/${encodeURIComponent(token)}/change-requests`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...payload,
-        parent_note: parentNote,
-      }),
-    },
+  return changeRequestFromContract(
+    await bffJson(
+      "public",
+      "POST /api/enrollment/requests/{statusToken}/change-requests",
+      {
+        params: { statusToken: token },
+        body: { ...payload, parent_note: parentNote },
+        errorMessage: fallback,
+      },
+    ),
   );
-  if (!response.ok) {
-    throw await readError(response, fallback);
-  }
-  return readEnrollmentJSON<EnrollmentChangeRequest>(response);
 }
 
 export async function listEnrollmentChangeRequests(
   token: string,
 ): Promise<EnrollmentChangeRequest[]> {
-  const response = await sendEnrollmentRequest(
-    `/api/enrollment/requests/${encodeURIComponent(token)}/change-requests`,
-    { cache: "no-store" },
+  const requests = await bffJson(
+    "public",
+    "GET /api/enrollment/requests/{statusToken}/change-requests",
+    {
+      params: { statusToken: token },
+      errorMessage: "Änderungsanfragen konnten nicht geladen werden",
+    },
   );
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Änderungsanfragen konnten nicht geladen werden",
-    );
-  }
-  const list = await readEnrollmentJSON<EnrollmentChangeRequest[]>(response);
-  return Array.isArray(list) ? list : [];
+  return requests.map(changeRequestFromContract);
 }
 
 /**
@@ -648,17 +620,17 @@ export async function listEnrollmentChangeRequests(
 export async function getEnrollmentFormLabels(
   token: string,
 ): Promise<EnrollmentFormLabels> {
-  const response = await sendEnrollmentRequest(
-    `/api/enrollment/requests/${encodeURIComponent(token)}/form-labels`,
-    { cache: "no-store" },
+  return formLabelsFromContract(
+    await bffJson(
+      "public",
+      "GET /api/enrollment/requests/{statusToken}/form-labels",
+      {
+        params: { statusToken: token },
+        errorMessage:
+          "Fragen des Anmeldeformulars konnten nicht geladen werden",
+      },
+    ),
   );
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Fragen des Anmeldeformulars konnten nicht geladen werden",
-    );
-  }
-  return readEnrollmentJSON<EnrollmentFormLabels>(response);
 }
 
 export async function replyEnrollmentChangeRequest(
@@ -666,65 +638,43 @@ export async function replyEnrollmentChangeRequest(
   changeRequestId: string,
   body: string,
 ): Promise<EnrollmentChangeRequest> {
-  const response = await sendEnrollmentRequest(
-    `/api/enrollment/requests/${encodeURIComponent(
-      token,
-    )}/change-requests/${encodeURIComponent(changeRequestId)}/messages`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ body }),
-    },
+  return changeRequestFromContract(
+    await bffJson(
+      "public",
+      "POST /api/enrollment/requests/{statusToken}/change-requests/{changeRequestId}/messages",
+      {
+        params: { statusToken: token, changeRequestId },
+        body: { body },
+        errorMessage: "Antwort konnte nicht gesendet werden",
+      },
+    ),
   );
-  if (!response.ok) {
-    throw await readError(response, "Antwort konnte nicht gesendet werden");
-  }
-  return readEnrollmentJSON<EnrollmentChangeRequest>(response);
 }
 
 export async function patchStatus(
   token: string,
-  patch: {
-    guardian_first_name?: string;
-    guardian_last_name?: string;
-    guardian_phone?: string;
-    consent_flags?: Record<string, unknown>;
-    custom_data?: Record<string, unknown>;
-  },
+  patch: enrollmentContract.EditPatchRequest,
 ): Promise<void> {
-  const response = await sendEnrollmentRequest(
-    `/api/enrollment/requests/${encodeURIComponent(token)}`,
-    {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(patch),
-    },
-  );
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Änderungen konnten nicht gespeichert werden",
-    );
-  }
+  await bffJson("public", "PATCH /api/enrollment/requests/{statusToken}", {
+    params: { statusToken: token },
+    body: patch,
+    errorMessage: "Änderungen konnten nicht gespeichert werden",
+  });
 }
 
 export async function withdrawStatus(
   token: string,
   childID?: string,
 ): Promise<void> {
-  const body = childID ? { child_id: childID } : {};
-  const response = await sendEnrollmentRequest(
-    `/api/enrollment/requests/${encodeURIComponent(token)}/withdraw`,
+  await bffJson(
+    "public",
+    "POST /api/enrollment/requests/{statusToken}/withdraw",
     {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      params: { statusToken: token },
+      body: childID ? { child_id: childID } : {},
+      errorMessage: "Rücknahme nicht möglich",
     },
   );
-  if (response.status === 204) return;
-  if (!response.ok) {
-    throw await readError(response, "Rücknahme nicht möglich");
-  }
 }
 
 /** The parents' answer to the renewal terms (#6456). */
@@ -746,22 +696,18 @@ export async function confirmRenewal(
   token: string,
   confirmation: RenewalConfirmation,
 ): Promise<number> {
-  const response = await sendEnrollmentRequest(
-    `/api/enrollment/requests/${encodeURIComponent(token)}/confirm-renewal`,
+  const { confirmed } = await bffJson(
+    "public",
+    "POST /api/enrollment/requests/{statusToken}/confirm-renewal",
     {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+      params: { statusToken: token },
+      body: {
         consent_flags: confirmation.consentFlags,
         form_schema_id: confirmation.formSchemaId,
         terms_fingerprint: confirmation.termsFingerprint,
-      }),
+      },
+      errorMessage: "Bestätigung nicht möglich",
     },
   );
-  if (!response.ok) {
-    throw await readError(response, "Bestätigung nicht möglich");
-  }
-  // The count travels in the envelope's data (#2352 found the top-level read).
-  const payload = await readEnrollmentJSON<{ confirmed?: number }>(response);
-  return payload.confirmed ?? 0;
+  return confirmed;
 }

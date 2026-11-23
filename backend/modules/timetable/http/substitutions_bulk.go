@@ -26,15 +26,16 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // bulkSubstitutionRequest is the POST body. substitute_staff_id omitted/null
 // marks the person absent on every selected date without assigning cover.
 type bulkSubstitutionRequest struct {
-	AbsentStaffID     int64    `json:"absent_staff_id"`
-	SubstituteStaffID *int64   `json:"substitute_staff_id,omitempty"`
-	Dates             []string `json:"dates"`
-	Reason            *string  `json:"reason,omitempty"`
+	AbsentStaffID     ident.ID  `json:"absent_staff_id"`
+	SubstituteStaffID *ident.ID `json:"substitute_staff_id,omitempty"`
+	Dates             []string  `json:"dates"`
+	Reason            *string   `json:"reason,omitempty"`
 }
 
 // BulkSubstitutionDayResponse is the per-day slice of the 200 body.
@@ -76,8 +77,8 @@ func (rs *Resource) applyBulkSubstitution(w http.ResponseWriter, r *http.Request
 	}
 
 	result, err := rs.Deviations.ApplyBulkSubstitution(ctx, timetable.BulkSubstitutionInput{
-		AbsentStaffID:     req.AbsentStaffID,
-		SubstituteStaffID: req.SubstituteStaffID,
+		AbsentStaffID:     req.AbsentStaffID.Int64(),
+		SubstituteStaffID: (*int64)(req.SubstituteStaffID),
 		Dates:             dates,
 		Reason:            req.Reason,
 		ActorAccountID:    sessiontoken.ActorAccountIDFromCtx(ctx),
@@ -89,7 +90,7 @@ func (rs *Resource) applyBulkSubstitution(w http.ResponseWriter, r *http.Request
 
 	rs.broadcastDeviationSaveEvents(ctx, result.ActiveTouched, result.AppliedWrites, false, result.ClearedAcks)
 	rs.getLogger().Info("bulk substitution applied",
-		slog.Int64("absent_staff_id", req.AbsentStaffID),
+		slog.Int64("absent_staff_id", req.AbsentStaffID.Int64()),
 		slog.Int("dates", len(result.Days)),
 		slog.Int("affected_instances", result.AppliedWrites),
 		slog.Bool("with_substitute", req.SubstituteStaffID != nil),
@@ -106,7 +107,7 @@ func bulkSubstitutionResponseOf(result *timetable.BulkSubstitutionResult) BulkSu
 		affected := make([]AffectedInstance, 0, len(day.Affected))
 		for _, a := range day.Affected {
 			affected = append(affected, AffectedInstance{
-				InstanceID: a.InstanceID,
+				InstanceID: ident.ID(a.InstanceID),
 				Title:      a.Title,
 				StartTime:  a.StartTime.Format("15:04"),
 				Action:     a.Action,

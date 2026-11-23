@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Import of children and their existing care contracts from a CSV file
@@ -20,6 +21,8 @@ import (
 //   - An imported contract is concluded: status aktiv, its first version
 //     wirksam from the day the file names, the method papier, with the name
 //     of the file, its line and the account that imported it in the trail.
+//     A file that names no day of the conclusion leaves it unknown; a
+//     correction (contract_corrections.go, #7767) completes it later.
 //   - It books modules of its school as every contract does, with the
 //     conditions the Träger keeps for them; a module without conditions
 //     takes over no contract.
@@ -31,6 +34,8 @@ import (
 //   - The file itself is never stored.
 //   - The import links no child of a school: a name and a date of birth do
 //     not prove who a child is (ADR 0214). The contract keeps its own copy.
+//     Linking it to a child record is a step of its own, in which the office
+//     names both by their identifiers (#7760, contract_child_links.go).
 
 // Fields of a contract a column of the file can be mapped to.
 const (
@@ -220,7 +225,7 @@ type ContractImportMapping struct {
 	Columns ContractImportColumns `json:"columns"`
 	// SchoolID is the school of every row of a file without a school
 	// column; 0 with a column.
-	SchoolID int64 `json:"school_id"`
+	SchoolID ident.ID `json:"school_id"`
 	// ModuleName is the module of every row of a file without a module
 	// column, by its name at the row's school; empty with a column.
 	ModuleName string `json:"module_name"`
@@ -264,7 +269,7 @@ type ContractImportRow struct {
 	ChildFirstName string                  `json:"child_first_name"`
 	ChildLastName  string                  `json:"child_last_name"`
 	ChildBirthDate *calendar.Date          `json:"child_birth_date"`
-	SchoolID       int64                   `json:"school_id,omitempty"`
+	SchoolID       ident.ID                `json:"school_id,omitempty"`
 	SchoolName     string                  `json:"school_name"`
 	ModuleNames    []string                `json:"module_names"`
 	Weekdays       []string                `json:"weekdays"`
@@ -276,7 +281,7 @@ type ContractImportRow struct {
 	Hints          []string                `json:"hints"`
 	// ContractID is the contract the import stored, or the running contract
 	// a duplicate row found.
-	ContractID int64 `json:"contract_id,omitempty"`
+	ContractID ident.ID `json:"contract_id,omitempty"`
 	// RepeatsLine is the line of the row that names the same child before
 	// this one (ContractImportProblemRepeated).
 	RepeatsLine int `json:"repeats_line,omitempty"`
@@ -312,9 +317,9 @@ type ContractImportCounts struct {
 
 // ContractImportModule is a module of a school the file can name.
 type ContractImportModule struct {
-	ID        int64  `json:"id"`
-	Name      string `json:"name"`
-	PhaseName string `json:"phase_name"`
+	ID        ident.ID `json:"id"`
+	Name      string   `json:"name"`
+	PhaseName string   `json:"phase_name"`
 	// HasConditions tells that the Träger keeps contract conditions for it.
 	HasConditions bool `json:"has_conditions"`
 }
@@ -322,7 +327,7 @@ type ContractImportModule struct {
 // ContractImportSchool is a school of the Träger with the modules a
 // contract can book there today or later.
 type ContractImportSchool struct {
-	ID      int64                  `json:"id"`
+	ID      ident.ID               `json:"id"`
 	Name    string                 `json:"name"`
 	Modules []ContractImportModule `json:"modules"`
 }
@@ -358,7 +363,7 @@ type ContractImport struct {
 // and how many contracts it took over.
 type ContractImportEntry struct {
 	File       string    `json:"file"`
-	AccountID  *int64    `json:"account_id"`
+	AccountID  *ident.ID `json:"account_id"`
 	ImportedAt time.Time `json:"imported_at"`
 	Contracts  int       `json:"contracts"`
 }
@@ -374,6 +379,10 @@ type ContractImports interface {
 	ImportContracts(ctx context.Context, reviewer Reviewer, request ContractImportRequest) (ContractImport, error)
 	// ContractImportLog lists the imports of the Träger, newest first.
 	ContractImportLog(ctx context.Context, reviewer Reviewer) ([]ContractImportEntry, error)
+	// CorrectOfferings reads a correction file and answers every contract it
+	// names; with Apply it gives the ready contracts a new version in one go
+	// (#7764).
+	CorrectOfferings(ctx context.Context, reviewer Reviewer, request OfferingCorrectionRequest) (OfferingCorrection, error)
 }
 
 // ImportedDebtorNumber is the debtor number a row of an import file names

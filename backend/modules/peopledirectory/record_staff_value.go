@@ -4,18 +4,19 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type Staff struct {
-	ID        int64     `json:"id"`
+	ID        ident.ID  `json:"id"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 
-	TenantID        int64   `json:"tenant_id"`
-	PersonID        int64   `json:"person_id"`
-	StaffNotes      string  `json:"staff_notes,omitempty"`
-	EmploymentType  *string `json:"employment_type,omitempty"`
-	WorkTimeModelID *int64  `json:"work_time_model_id,omitempty"`
+	TenantID        ident.ID  `json:"tenant_id"`
+	PersonID        ident.ID  `json:"person_id"`
+	StaffNotes      string    `json:"staff_notes,omitempty"`
+	EmploymentType  *string   `json:"employment_type,omitempty"`
+	WorkTimeModelID *ident.ID `json:"work_time_model_id,omitempty"`
 	// PersonnelNumber is the payroll system's Personalnummer (DATEV LODAS /
 	// Lohn und Gehalt match employees by it, #1417). Unique per tenant via
 	// partial index; NULL means "not assigned yet". School-scoped like the

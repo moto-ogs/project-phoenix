@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Operator endpoints for managing which schools an existing account may
@@ -21,10 +22,10 @@ import (
 // AccountTenantRole is one role an account holds at one school. IDs stay
 // decimal strings in JSON so the frontend never loses int64 precision.
 type AccountTenantRole struct {
-	ID       int64   `json:"id,string"`
-	Name     string  `json:"name"`
-	IsSystem bool    `json:"is_system"`
-	BaseRole *string `json:"base_role,omitempty"`
+	ID       ident.ID `json:"id"`
+	Name     string   `json:"name"`
+	IsSystem bool     `json:"is_system"`
+	BaseRole *string  `json:"base_role,omitempty"`
 	// SchoolPortal marks a school role made from the Lehrkraft template (#4574).
 	SchoolPortal bool `json:"school_portal"`
 }
@@ -32,11 +33,11 @@ type AccountTenantRole struct {
 // AccountTenantAccessEntry is one school an account has (or had) access to,
 // including the roles it holds there.
 type AccountTenantAccessEntry struct {
-	TenantID         int64               `json:"tenant_id"`
+	TenantID         ident.ID            `json:"tenant_id"`
 	SchoolName       string              `json:"school_name"`
 	SchoolSlug       string              `json:"school_slug"`
 	SchoolActive     bool                `json:"school_active"`
-	OrganizationID   int64               `json:"organization_id"`
+	OrganizationID   ident.ID            `json:"organization_id"`
 	OrganizationName string              `json:"organization_name"`
 	Status           string              `json:"status"`
 	ActivatedAt      *time.Time          `json:"activated_at,omitempty"`
@@ -44,23 +45,26 @@ type AccountTenantAccessEntry struct {
 	HasPerson        bool                `json:"has_person"`
 	HasStaff         bool                `json:"has_staff"`
 	Roles            []AccountTenantRole `json:"roles"`
+	// Version is the token of the roles at this school; a role change sends
+	// it back as expected_version (ADR 0311).
+	Version string `json:"version"`
 }
 
 // RoleOption is the role projection the operator role picker renders.
 type RoleOption struct {
-	ID       int64  `json:"id,string"`
-	Name     string `json:"name"`
-	IsSystem bool   `json:"is_system"`
+	ID       ident.ID `json:"id"`
+	Name     string   `json:"name"`
+	IsSystem bool     `json:"is_system"`
 	// SchoolPortal marks a school role made from the Lehrkraft template (#4574).
 	SchoolPortal bool `json:"school_portal"`
 }
 
 type grantAccountTenantAccessRequest struct {
-	SchoolID  int64         `json:"school_id"`
-	RoleID    common.JSONID `json:"role_id"`
-	FirstName string        `json:"first_name,omitempty"`
-	LastName  string        `json:"last_name,omitempty"`
-	Position  string        `json:"position,omitempty"`
+	SchoolID  ident.ID `json:"school_id"`
+	RoleID    ident.ID `json:"role_id"`
+	FirstName string   `json:"first_name,omitempty"`
+	LastName  string   `json:"last_name,omitempty"`
+	Position  string   `json:"position,omitempty"`
 }
 
 func (req *grantAccountTenantAccessRequest) Bind(_ *http.Request) error {
@@ -76,8 +80,12 @@ func (req *grantAccountTenantAccessRequest) Bind(_ *http.Request) error {
 	return nil
 }
 
+// updateAccountTenantRoleRequest names the new role and the version of the
+// entry the operator changed; roles changed since answer 409
+// general.changed_since_read.
 type updateAccountTenantRoleRequest struct {
-	RoleID common.JSONID `json:"role_id"`
+	RoleID          ident.ID `json:"role_id"`
+	ExpectedVersion string   `json:"expected_version"`
 }
 
 func (req *updateAccountTenantRoleRequest) Bind(_ *http.Request) error {
@@ -114,7 +122,7 @@ func (rs *Resource) ListAssignableSchoolRoles(w http.ResponseWriter, r *http.Req
 	}
 	options := make([]RoleOption, 0, len(roles))
 	for _, role := range roles {
-		options = append(options, RoleOption{ID: role.ID, Name: role.Name, IsSystem: role.IsSystem, SchoolPortal: role.SchoolPortal})
+		options = append(options, RoleOption{ID: ident.ID(role.ID), Name: role.Name, IsSystem: role.IsSystem, SchoolPortal: role.SchoolPortal})
 	}
 	common.Respond(w, r, http.StatusOK, options, "Assignable school roles retrieved successfully")
 }
@@ -131,7 +139,7 @@ func (rs *Resource) GrantAccountTenantAccess(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	entries, err := rs.identity.GrantAccountTenantAccess(r.Context(), identityaccess.GrantAccountTenantAccess{
-		AccountID: accountID, SchoolID: req.SchoolID, RoleID: req.RoleID.Int64(),
+		AccountID: accountID, SchoolID: req.SchoolID.Int64(), RoleID: req.RoleID.Int64(),
 		FirstName: req.FirstName, LastName: req.LastName, Position: req.Position,
 		OperatorID: operatorIDFromContext(r), ClientIP: clientIP(r),
 	})
@@ -150,7 +158,7 @@ func (rs *Resource) UpdateAccountTenantRole(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	entries, err := rs.identity.UpdateAccountTenantRole(
-		r.Context(), accountID, schoolID, req.RoleID.Int64(), operatorIDFromContext(r), clientIP(r),
+		r.Context(), accountID, schoolID, req.RoleID.Int64(), operatorIDFromContext(r), clientIP(r), req.ExpectedVersion,
 	)
 	rs.respondAccess(w, r, entries, err, http.StatusOK, "School role updated successfully")
 }
@@ -182,13 +190,13 @@ func accessEntries(entries []identityaccess.AccountTenantAccess) []AccountTenant
 	for _, entry := range entries {
 		roles := make([]AccountTenantRole, 0, len(entry.Roles))
 		for _, role := range entry.Roles {
-			roles = append(roles, AccountTenantRole{ID: role.ID, Name: role.Name, IsSystem: role.IsSystem, BaseRole: role.BaseRole, SchoolPortal: role.SchoolPortal})
+			roles = append(roles, AccountTenantRole{ID: ident.ID(role.ID), Name: role.Name, IsSystem: role.IsSystem, BaseRole: role.BaseRole, SchoolPortal: role.SchoolPortal})
 		}
 		result = append(result, AccountTenantAccessEntry{
-			TenantID: entry.TenantID, SchoolName: entry.SchoolName, SchoolSlug: entry.SchoolSlug, SchoolActive: entry.SchoolActive,
-			OrganizationID: entry.OrganizationID, OrganizationName: entry.OrganizationName, Status: entry.Status,
+			TenantID: ident.ID(entry.TenantID), SchoolName: entry.SchoolName, SchoolSlug: entry.SchoolSlug, SchoolActive: entry.SchoolActive,
+			OrganizationID: ident.ID(entry.OrganizationID), OrganizationName: entry.OrganizationName, Status: entry.Status,
 			ActivatedAt: entry.ActivatedAt, DeactivatedAt: entry.DeactivatedAt,
-			HasPerson: entry.HasPerson, HasStaff: entry.HasStaff, Roles: roles,
+			HasPerson: entry.HasPerson, HasStaff: entry.HasStaff, Roles: roles, Version: entry.Version,
 		})
 	}
 	return result

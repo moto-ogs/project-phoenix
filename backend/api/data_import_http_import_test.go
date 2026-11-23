@@ -665,8 +665,9 @@ func TestPreviewImport_AccountWithoutPerson(t *testing.T) {
 
 	rr := testutil.ExecuteRequest(router, req)
 
-	assert.Equal(t, http.StatusUnauthorized, rr.Code,
-		"Expected 401 when account has no person record")
+	// #7818: an account that is neither staff nor the Träger-Büro is refused
+	// with a code, not treated as unauthenticated.
+	assertStaffProfileRequired(t, rr.Code, rr.Body.String())
 }
 
 func TestPreviewImport_PersonWithoutStaff(t *testing.T) {
@@ -687,8 +688,7 @@ func TestPreviewImport_PersonWithoutStaff(t *testing.T) {
 
 	rr := testutil.ExecuteRequest(router, req)
 
-	assert.Equal(t, http.StatusUnauthorized, rr.Code,
-		"Expected 401 when person has no staff record")
+	assertStaffProfileRequired(t, rr.Code, rr.Body.String())
 }
 
 func TestImportStudents_AccountWithoutPerson(t *testing.T) {
@@ -709,9 +709,7 @@ func TestImportStudents_AccountWithoutPerson(t *testing.T) {
 
 	rr := testutil.ExecuteRequest(router, req)
 
-	// Import handler wraps staff resolution in WithTenantTx, so failure returns 500
-	assert.Equal(t, http.StatusInternalServerError, rr.Code,
-		"Expected 500 when account has no person record in import")
+	assertStaffProfileRequired(t, rr.Code, rr.Body.String())
 }
 
 func TestImportStudents_PersonWithoutStaff(t *testing.T) {
@@ -732,9 +730,7 @@ func TestImportStudents_PersonWithoutStaff(t *testing.T) {
 
 	rr := testutil.ExecuteRequest(router, req)
 
-	// Import handler wraps staff resolution in WithTenantTx, so failure returns 500
-	assert.Equal(t, http.StatusInternalServerError, rr.Code,
-		"Expected 500 when person has no staff record in import")
+	assertStaffProfileRequired(t, rr.Code, rr.Body.String())
 }
 
 // =============================================================================
@@ -1067,10 +1063,10 @@ func TestImportStudents_UpsertModeUpdatesExisting(t *testing.T) {
 	second := fmt.Sprintf("Vorname,Nachname,Klasse,Geburtstag,Ort,Datenschutz\nUps,Ert%d,2A,03.02.2018,Bonn,Ja\n", unique)
 	rr = testutil.ExecuteRequest(router, newMultipartRequestWithMode(t, "/students/preview", "k.csv", second, "upsert", claims))
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
-	assert.Contains(t, rr.Body.String(), `"UpdatedCount":1`)
+	assert.Contains(t, rr.Body.String(), `"updated_count":1`)
 	rr = testutil.ExecuteRequest(router, newMultipartRequestWithMode(t, "/students/import", "k.csv", second, "upsert", claims))
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
-	assert.Contains(t, rr.Body.String(), `"UpdatedCount":1`)
+	assert.Contains(t, rr.Body.String(), `"updated_count":1`)
 
 	var stored struct {
 		SchoolClass   string  `bun:"school_class"`
@@ -1116,7 +1112,7 @@ func TestImportStaff_FilesStammdatensatz(t *testing.T) {
 		testutil.WithClaims(t, testutil.AdminTestClaims(int(account.ID))))
 	rr := testutil.ExecuteRequest(router, req)
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
-	assert.Contains(t, rr.Body.String(), `"CreatedCount":2`)
+	assert.Contains(t, rr.Body.String(), `"created_count":2`)
 
 	type staffRow struct {
 		FirstName       string   `bun:"first_name"`

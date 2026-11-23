@@ -1,66 +1,47 @@
-import { apiErrorFromResponse } from "./api-error";
-import { sessionFetch } from "./session-cache";
+import type { FeedbackResponse } from "~/lib/contract/feedback.generated";
+import { knownEnum } from "~/lib/contract/known-enum";
+import { ApiError } from "./api-error";
+import { bffJson } from "./bff-fetch";
 import { createLogger } from "~/lib/logger";
 
 const logger = createLogger({ component: "FeedbackAPI" });
 
-interface BackendFeedbackEntry {
-  id: number | string;
-  value: "positive" | "neutral" | "negative";
-  day: string;
-  time: string;
-  student_id: number | string;
-  is_mensa_feedback: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
 export interface FeedbackEntry {
   id: string;
   timestamp: string;
-  feedback_type: "positive" | "neutral" | "negative";
-  is_mensa_feedback: boolean;
+  feedbackType: "positive" | "neutral" | "negative";
+  isMensaFeedback: boolean;
 }
 
-function mapFeedbackResponse(entry: BackendFeedbackEntry): FeedbackEntry {
+const FEEDBACK_VALUES: readonly FeedbackEntry["feedbackType"][] = [
+  "positive",
+  "neutral",
+  "negative",
+];
+
+function mapFeedbackResponse(entry: FeedbackResponse): FeedbackEntry {
   // Combine day + time into a timestamp
   // day is "2026-04-06", time is "15:30:23"
   const timestamp = `${entry.day}T${entry.time}`;
 
   return {
-    id: entry.id.toString(),
+    id: entry.id,
     timestamp,
-    feedback_type: entry.value,
-    is_mensa_feedback: entry.is_mensa_feedback,
+    feedbackType: knownEnum(FEEDBACK_VALUES, entry.value) ?? "neutral",
+    isMensaFeedback: entry.is_mensa_feedback,
   };
 }
 
 export async function fetchStudentFeedback(
   studentId: string,
 ): Promise<FeedbackEntry[]> {
-  const url = `/api/feedback/student/${studentId}`;
-
   try {
-    const response = await sessionFetch(url, {
-      method: "GET",
-      credentials: "include",
+    const entries = await bffJson("tenant", "GET /api/feedback/student/{id}", {
+      params: { id: studentId },
     });
-
-    if (!response.ok) {
-      if (response.status === 404) return [];
-      // The message is diagnosis only; callers read status and code.
-      throw await apiErrorFromResponse(
-        response,
-        `Failed to fetch feedback: ${response.status} ${response.statusText}`,
-      );
-    }
-
-    const responseData = (await response.json()) as {
-      data: BackendFeedbackEntry[];
-    };
-    const entries = responseData.data ?? [];
     return entries.map(mapFeedbackResponse);
   } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return [];
     logger.error("fetch_student_feedback_failed", {
       error: error instanceof Error ? error.message : String(error),
       student_id: studentId,

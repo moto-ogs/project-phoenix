@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedSharedTraegerRuns is the demo Träger after earlier demo orders: an
@@ -39,25 +40,27 @@ func (f *seedSharedTraegerRuns) serve(t *testing.T) func(w seedHTTPResponseWrite
 		switch {
 		case r.Method == http.MethodPut && (strings.HasPrefix(r.URL.Path, "/traeger/billing-terms/") ||
 			strings.HasPrefix(r.URL.Path, "/traeger/billing-run-due-dates/") || strings.HasPrefix(r.URL.Path, "/traeger/settings/values/") ||
-			r.URL.Path == "/traeger/sepa-creditor/" || strings.HasSuffix(r.URL.Path, "/invoice-date")):
+			r.URL.Path == "/traeger/sepa-creditor/" || strings.HasSuffix(r.URL.Path, "/invoice-date")),
+			// The versions a change sends back (ADR 0311).
+			path == "GET /traeger/billing-terms/", path == "GET /traeger/sepa-creditor/":
 			_, _ = fmt.Fprint(w, `{"data":{}}`)
 		case path == "GET /traeger/care-billing-runs/":
 			require.NoError(t, json.NewEncoder(w).Encode(map[string]any{"data": map[string]any{"runs": f.runs}}))
 		case path == "POST /traeger/care-billing-runs/":
 			var start struct {
 				BillingMonth calendar.Date `json:"billing_month"`
-				SchoolIDs    []int64       `json:"school_ids"`
+				SchoolIDs    []ident.ID    `json:"school_ids"`
 			}
 			require.NoError(t, json.NewDecoder(r.Body).Decode(&start))
-			f.started = append(f.started, start.SchoolIDs)
-			run := seedCareRunRef{ID: int64(10 + len(f.started)), BillingMonth: start.BillingMonth, Status: "calculated", SchoolIDs: start.SchoolIDs}
+			f.started = append(f.started, ident.Int64s(start.SchoolIDs))
+			run := seedCareRunRef{ID: ident.ID(10 + len(f.started)), BillingMonth: start.BillingMonth, Status: "calculated", SchoolIDs: start.SchoolIDs}
 			f.runs = append([]seedCareRunRef{run}, f.runs...)
-			f.preview[run.ID] = 2
+			f.preview[int64(run.ID)] = 2
 			_, _ = fmt.Fprintf(w, `{"data":{"id":%d}}`, run.ID)
 		case r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/release"):
 			f.released = append(f.released, runID)
 			for i := range f.runs {
-				if f.runs[i].ID == runID {
+				if int64(f.runs[i].ID) == runID {
 					f.runs[i].Status = "released"
 				}
 			}
@@ -102,8 +105,8 @@ func TestSeedCareRunsBillTheSeededSchoolBesideLeftoverRunsOfOtherDemoSchools(t *
 	october, november := calendar.NewDate(2026, 10, 1), calendar.NewDate(2026, 11, 1)
 	traeger := &seedSharedTraegerRuns{
 		runs: []seedCareRunRef{
-			{ID: 4, BillingMonth: october, Status: "calculated", SchoolIDs: []int64{53, 59, 60}},
-			{ID: 3, BillingMonth: october, Status: "released", SchoolIDs: []int64{53, 59}},
+			{ID: 4, BillingMonth: october, Status: "calculated", SchoolIDs: []ident.ID{53, 59, 60}},
+			{ID: 3, BillingMonth: october, Status: "released", SchoolIDs: []ident.ID{53, 59}},
 		},
 		preview: map[int64]int{4: 0, 3: 0},
 	}

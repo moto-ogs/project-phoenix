@@ -1,766 +1,325 @@
 /**
- * Tests for CRUD Service Factory
- * Tests service creation and CRUD operations
+ * The generic CRUD service of the Datenverwaltung: every operation runs the
+ * entity's call, which reaches its registered route through bffJson (#7806).
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import {
-  createCrudService,
-  MalformedCrudListResponseError,
-} from "./service-factory";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
+const fetchMock =
+  vi.fn<(url: string, init?: RequestInit) => Promise<Response>>();
+beforeEach(() => {
+  vi.stubGlobal("fetch", fetchMock);
+});
+
+import { createCrudService } from "./service-factory";
 import type { EntityConfig } from "./types";
 import { ApiError } from "~/lib/api-error";
+import { bffJson } from "~/lib/bff-fetch";
 import { childrenConcept } from "~/lib/concepts/children";
-
-// Mock next-auth
-const mockGetSession = vi.fn();
-vi.mock("next-auth/react", () => ({
-  getSession: (): unknown => mockGetSession(),
-}));
-
-// Mock global fetch
-global.fetch = vi.fn();
 
 interface TestEntity {
   id: string;
   name: string;
 }
 
-describe("createCrudService", () => {
-  const mockConfig: EntityConfig<TestEntity> = {
-    name: {
-      singular: "Test Entity",
-      plural: "Test Entities",
+const ok = (data: unknown, extra: object = {}) =>
+  Response.json({ status: "success", data, ...extra });
+
+const refusal = (status: number, body: object) =>
+  Response.json(body, { status });
+
+const entity = (room: { id: string; name: string }): TestEntity => ({
+  id: room.id,
+  name: room.name,
+});
+
+const config: EntityConfig<TestEntity> = {
+  name: { singular: "Raum", plural: "Räume" },
+  concept: childrenConcept,
+  labels: {},
+  api: {
+    list: async () => {
+      const page = await bffJson("tenant", "GET /api/rooms/", {
+        query: { include_system: true },
+      });
+      return { data: page.data.map(entity), pagination: page.pagination };
     },
-    concept: childrenConcept,
-    labels: {
-      createModalTitle: "Test erstellen",
-      editModalTitle: "Test bearbeiten",
-    },
-    api: {
-      basePath: "/api/test",
-    },
-    form: {
-      sections: [],
-    },
-    detail: {
-      sections: [],
-    },
-    list: {
-      title: "Test",
-      description: "Test description",
-      searchPlaceholder: "Search...",
-      item: {
-        title: () => "Test",
+    get: async (id) =>
+      entity(
+        await bffJson("tenant", "GET /api/rooms/{id}", { params: { id } }),
+      ),
+    create: async (data) =>
+      entity(
+        await bffJson("tenant", "POST /api/rooms/", {
+          body: { name: data.name },
+        }),
+      ),
+    update: async (id, data) =>
+      entity(
+        await bffJson("tenant", "PUT /api/rooms/{id}", {
+          params: { id },
+          body: { name: data.name },
+        }),
+      ),
+    // The room route confirms its removal preview (ADR 0311).
+    delete: (id) =>
+      bffJson("tenant", "DELETE /api/rooms/{id}", {
+        params: { id },
+        body: { expected_fingerprint: "vorschau" },
+      }),
+  },
+  form: { sections: [] },
+  detail: { sections: [] },
+  list: {
+    title: "Räume",
+    description: "",
+    searchPlaceholder: "",
+    item: { title: () => "Raum" },
+  },
+};
+
+const pagination = {
+  current_page: 2,
+  page_size: 10,
+  total_pages: 3,
+  total_records: 21,
+};
+
+function call(index = 0) {
+  const [url, init] = fetchMock.mock.calls[index] ?? [];
+  return { url, init };
+}
+
+beforeEach(() => {
+  fetchMock.mockReset();
+});
+
+describe("getList", () => {
+  it("keeps the page of a paginated route and maps every row", async () => {
+    fetchMock.mockResolvedValueOnce(
+      ok([{ id: "1", name: "A", building: "Alt" }], { pagination }),
+    );
+
+    await expect(createCrudService(config).getList()).resolves.toEqual({
+      data: [{ id: "1", name: "A" }],
+      pagination,
+    });
+    expect(call().url).toBe("/api/rooms?include_system=true");
+  });
+
+  it("gives a list without pages one page", async () => {
+    const service = createCrudService({
+      ...config,
+      api: {
+        list: () =>
+          Promise.resolve([
+            { id: "1", name: "A" },
+            { id: "2", name: "B" },
+          ]),
       },
-    },
-  };
+    });
 
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockGetSession.mockResolvedValue({
-      user: { id: "1" },
+    const result = await service.getList();
+
+    expect(result.pagination).toEqual({
+      current_page: 1,
+      page_size: 2,
+      total_pages: 1,
+      total_records: 2,
     });
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
+  it("refuses an answer without data instead of showing an empty list", async () => {
+    fetchMock.mockResolvedValueOnce(Response.json({ rooms: [] }));
 
-  describe("getList", () => {
-    it("fetches list of entities with pagination", async () => {
-      const mockResponse = {
-        data: [
-          { id: "1", name: "Test 1" },
-          { id: "2", name: "Test 2" },
-        ],
-        pagination: {
-          current_page: 1,
-          page_size: 10,
-          total_pages: 1,
-          total_records: 2,
-        },
-      };
-
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve(mockResponse),
-        headers: new Headers({
-          "content-type": "application/json",
-        }),
-      });
-
-      const service = createCrudService(mockConfig);
-      const result = await service.getList();
-
-      expect(result.data).toHaveLength(2);
-      expect(result.pagination.total_records).toBe(2);
-    });
-
-    it("handles wrapped API response", async () => {
-      const mockResponse = {
-        success: true,
-        data: {
-          data: [{ id: "1", name: "Test 1" }],
-          pagination: {
-            current_page: 1,
-            page_size: 10,
-            total_pages: 1,
-            total_records: 1,
-          },
-        },
-      };
-
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve(mockResponse),
-        headers: new Headers({
-          "content-type": "application/json",
-        }),
-      });
-
-      const service = createCrudService(mockConfig);
-      const result = await service.getList();
-
-      expect(result.data).toHaveLength(1);
-    });
-
-    it("handles direct array response", async () => {
-      const mockResponse = [
-        { id: "1", name: "Test 1" },
-        { id: "2", name: "Test 2" },
-      ];
-
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve(mockResponse),
-        headers: new Headers({
-          "content-type": "application/json",
-        }),
-      });
-
-      const service = createCrudService(mockConfig);
-      const result = await service.getList();
-
-      expect(result.data).toHaveLength(2);
-      expect(result.pagination.total_records).toBe(2);
-    });
-
-    it("applies mapResponse to each item", async () => {
-      const mockResponse = {
-        data: [{ id: 1, name: "Test 1" }],
-      };
-
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve(mockResponse),
-        headers: new Headers({
-          "content-type": "application/json",
-        }),
-      });
-
-      const configWithMapper: EntityConfig<TestEntity> = {
-        ...mockConfig,
-        service: {
-          mapResponse: (data: unknown) =>
-            ({
-              ...(data as Record<string, unknown>),
-              id: String((data as { id: number }).id),
-            }) as unknown as TestEntity,
-        },
-      };
-
-      const service = createCrudService(configWithMapper);
-      const result = await service.getList();
-
-      expect(result.data[0]?.id).toBe("1");
-    });
-
-    it("throws a typed error for malformed list responses", async () => {
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ unexpected: true }),
-        headers: new Headers({
-          "content-type": "application/json",
-        }),
-      });
-
-      const service = createCrudService(mockConfig);
-      const caught = await service.getList().catch((error: unknown) => error);
-
-      expect(caught).toBeInstanceOf(MalformedCrudListResponseError);
-      expect((caught as Error).message).toContain(
-        "Malformed CRUD list response for Test Entities from /api/test",
-      );
-      expect(caught).toMatchObject({
-        entity: "Test Entities",
-        endpoint: "/api/test",
-        responseShape: "object keys: unexpected",
-      });
-    });
-
-    it("throws a typed error when paginated response data is not an array", async () => {
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            data: { id: "1", name: "Not an array" },
-            pagination: {
-              current_page: 1,
-              page_size: 10,
-              total_pages: 1,
-              total_records: 1,
-            },
-          }),
-        headers: new Headers({
-          "content-type": "application/json",
-        }),
-      });
-
-      const service = createCrudService(mockConfig);
-
-      await expect(service.getList()).rejects.toThrow(
-        MalformedCrudListResponseError,
-      );
-    });
-
-    it("includes filters in query string", async () => {
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ data: [] }),
-        headers: new Headers({
-          "content-type": "application/json",
-        }),
-      });
-
-      const service = createCrudService(mockConfig);
-      await service.getList({ status: "active", page: 1 });
-
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining("status=active"),
-        expect.any(Object),
-      );
-    });
-
-    it("handles API errors", async () => {
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-        ok: false,
-        status: 500,
-        text: () => Promise.resolve("Internal Server Error"),
-      });
-
-      const service = createCrudService(mockConfig);
-
-      await expect(service.getList()).rejects.toThrow("API error");
+    await expect(createCrudService(config).getList()).rejects.toMatchObject({
+      status: 502,
     });
   });
+});
 
-  describe("getOne", () => {
-    it("fetches single entity", async () => {
-      const mockResponse = {
-        data: { id: "1", name: "Test 1" },
-      };
+describe("getOne", () => {
+  it("reads the entity's route with its ID", async () => {
+    fetchMock.mockResolvedValueOnce(ok({ id: "7", name: "Aula" }));
 
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve(mockResponse),
-        headers: new Headers({
-          "content-type": "application/json",
-        }),
-      });
+    await expect(createCrudService(config).getOne("7")).resolves.toEqual({
+      id: "7",
+      name: "Aula",
+    });
+    expect(call().url).toBe("/api/rooms/7");
+  });
+});
 
-      const service = createCrudService(mockConfig);
-      const result = await service.getOne("1");
-
-      expect(result.id).toBe("1");
-      expect(result.name).toBe("Test 1");
+describe("create", () => {
+  it("sends the mapped body after beforeCreate and calls afterCreate", async () => {
+    fetchMock.mockResolvedValueOnce(ok({ id: "1", name: "Neu" }));
+    const afterCreate = vi.fn(() => Promise.resolve());
+    const service = createCrudService({
+      ...config,
+      hooks: {
+        beforeCreate: (data) => Promise.resolve({ ...data, name: "Neu" }),
+        afterCreate,
+      },
     });
 
-    it("applies mapResponse", async () => {
-      const mockResponse = {
-        data: { id: 1, name: "Test 1" },
-      };
+    await service.create({ name: "x" });
 
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve(mockResponse),
-        headers: new Headers({
-          "content-type": "application/json",
-        }),
-      });
-
-      const configWithMapper: EntityConfig<TestEntity> = {
-        ...mockConfig,
-        service: {
-          mapResponse: (data: unknown) =>
-            ({
-              ...(data as Record<string, unknown>),
-              id: String((data as { id: number }).id),
-            }) as unknown as TestEntity,
-        },
-      };
-
-      const service = createCrudService(configWithMapper);
-      const result = await service.getOne("1");
-
-      expect(result.id).toBe("1");
+    expect(call().init).toMatchObject({
+      method: "POST",
+      body: JSON.stringify({ name: "Neu" }),
     });
-
-    it("uses custom getOne method if provided", async () => {
-      const mockGetOne = vi.fn().mockResolvedValue({ id: "1", name: "Test 1" });
-
-      const configWithCustom: EntityConfig<TestEntity> = {
-        ...mockConfig,
-        service: {
-          customMethods: {
-            getOne: mockGetOne,
-          },
-        },
-      };
-
-      const service = createCrudService(configWithCustom);
-      const result = await service.getOne("1");
-
-      expect(mockGetOne).toHaveBeenCalledWith("1");
-      expect(result.id).toBe("1");
-    });
+    expect(afterCreate).toHaveBeenCalledWith({ id: "1", name: "Neu" });
   });
 
-  describe("create", () => {
-    it("creates new entity", async () => {
-      const mockResponse = {
-        data: { id: "1", name: "New Entity" },
-      };
-
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve(mockResponse),
-        headers: new Headers({
-          "content-type": "application/json",
-        }),
-      });
-
-      const service = createCrudService(mockConfig);
-      const result = await service.create({ name: "New Entity" });
-
-      expect(result.id).toBe("1");
-      expect(result.name).toBe("New Entity");
+  it("hands the result of a custom create call to afterCreate", async () => {
+    const create = vi.fn().mockResolvedValue({ id: "1", name: "c" });
+    const afterCreate = vi.fn(() => Promise.resolve());
+    const service = createCrudService({
+      ...config,
+      api: { ...config.api, create },
+      hooks: { afterCreate },
     });
 
-    it("applies mapRequest before sending", async () => {
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ data: { id: "1", name: "Test" } }),
-        headers: new Headers({
-          "content-type": "application/json",
-        }),
-      });
+    await service.create({ name: "c" });
 
-      const configWithMapper: EntityConfig<TestEntity> = {
-        ...mockConfig,
-        service: {
-          mapRequest: (data: Record<string, unknown>) => ({
-            ...data,
-            transformed: true,
-          }),
-        },
-      };
-
-      const service = createCrudService(configWithMapper);
-      await service.create({ name: "Test" });
-
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({
-          method: "POST",
-          body: expect.stringContaining("transformed") as string,
-        }),
-      );
-    });
-
-    it("calls beforeCreate and afterCreate hooks", async () => {
-      const beforeCreate = vi.fn((data: Record<string, unknown>) =>
-        Promise.resolve(data),
-      );
-      const afterCreate = vi.fn((): Promise<void> => Promise.resolve());
-
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ data: { id: "1", name: "Test" } }),
-        headers: new Headers({
-          "content-type": "application/json",
-        }),
-      });
-
-      const configWithHooks: EntityConfig<TestEntity> = {
-        ...mockConfig,
-        hooks: {
-          beforeCreate,
-          afterCreate,
-        },
-      };
-
-      const service = createCrudService(configWithHooks);
-      await service.create({ name: "Test" });
-
-      expect(beforeCreate).toHaveBeenCalled();
-      expect(afterCreate).toHaveBeenCalled();
-    });
-
-    it("uses custom create method if provided", async () => {
-      const mockCreate = vi.fn().mockResolvedValue({ id: "1", name: "Test" });
-
-      const configWithCustom: EntityConfig<TestEntity> = {
-        ...mockConfig,
-        service: {
-          create: mockCreate,
-        },
-      };
-
-      const service = createCrudService(configWithCustom);
-      await service.create({ name: "Test" });
-
-      expect(mockCreate).toHaveBeenCalled();
-    });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(afterCreate).toHaveBeenCalledWith({ id: "1", name: "c" });
   });
 
-  describe("update", () => {
-    it("passes the loaded record to a custom update without fetching it again", async () => {
-      const current = { id: "1", name: "Original" };
-      const update = vi.fn().mockResolvedValue({ ...current, name: "Updated" });
-      const service = createCrudService({
-        ...mockConfig,
-        service: { update },
-      });
-
-      expect(await service.update("1", { name: "Updated" }, current)).toEqual({
-        id: "1",
-        name: "Updated",
-      });
-      expect(update).toHaveBeenCalledWith("1", { name: "Updated" }, current);
-      expect(global.fetch).not.toHaveBeenCalled();
-    });
-
-    it("updates existing entity", async () => {
-      const mockResponse = {
-        data: { id: "1", name: "Updated" },
-      };
-
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve(mockResponse),
-        headers: new Headers({
-          "content-type": "application/json",
-        }),
-      });
-
-      const service = createCrudService(mockConfig);
-      const result = await service.update("1", { name: "Updated" });
-
-      expect(result.id).toBe("1");
-      expect(result.name).toBe("Updated");
-    });
-
-    it("calls beforeUpdate and afterUpdate hooks", async () => {
-      const beforeUpdate = vi.fn((_id: string, data: Record<string, unknown>) =>
-        Promise.resolve(data),
-      );
-      const afterUpdate = vi.fn((): Promise<void> => Promise.resolve());
-
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ data: { id: "1", name: "Updated" } }),
-        headers: new Headers({
-          "content-type": "application/json",
-        }),
-      });
-
-      const configWithHooks: EntityConfig<TestEntity> = {
-        ...mockConfig,
-        hooks: {
-          beforeUpdate,
-          afterUpdate,
-        },
-      };
-
-      const service = createCrudService(configWithHooks);
-      await service.update("1", { name: "Updated" });
-
-      expect(beforeUpdate).toHaveBeenCalled();
-      expect(afterUpdate).toHaveBeenCalled();
-    });
-
-    it("uses custom update method if provided", async () => {
-      const mockUpdate = vi
-        .fn()
-        .mockResolvedValue({ id: "1", name: "Updated" });
-
-      const configWithCustom: EntityConfig<TestEntity> = {
-        ...mockConfig,
-        service: {
-          update: mockUpdate,
-        },
-      };
-
-      const service = createCrudService(configWithCustom);
-      await service.update("1", { name: "Updated" });
-
-      expect(mockUpdate).toHaveBeenCalledWith("1", { name: "Updated" });
-    });
-  });
-
-  describe("remove", () => {
-    it("deletes entity", async () => {
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-        ok: true,
-        status: 204,
-        headers: new Headers({
-          "content-length": "0",
-        }),
-      });
-
-      const service = createCrudService(mockConfig);
-      await expect(service.remove("1")).resolves.toBe(true);
-
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining("/api/test/1"),
-        expect.objectContaining({
-          method: "DELETE",
-        }),
-      );
-    });
-
-    it("calls beforeDelete and afterDelete hooks", async () => {
-      const beforeDelete = vi.fn((_id: string): Promise<boolean> =>
-        Promise.resolve(true),
-      );
-      const afterDelete = vi.fn((_id: string): Promise<void> =>
-        Promise.resolve(),
-      );
-
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-        ok: true,
-        status: 204,
-        headers: new Headers({
-          "content-length": "0",
-        }),
-      });
-
-      const configWithHooks: EntityConfig<TestEntity> = {
-        ...mockConfig,
-        hooks: {
-          beforeDelete,
-          afterDelete,
-        },
-      };
-
-      const service = createCrudService(configWithHooks);
-      await service.remove("1");
-
-      expect(beforeDelete).toHaveBeenCalledWith("1");
-      expect(afterDelete).toHaveBeenCalledWith("1");
-    });
-
-    it("resolves false when beforeDelete cancels", async () => {
-      const beforeDelete = vi.fn((_id: string): Promise<boolean> =>
-        Promise.resolve(false),
-      );
-
-      const configWithHooks: EntityConfig<TestEntity> = {
-        ...mockConfig,
-        hooks: {
-          beforeDelete,
-        },
-      };
-
-      const service = createCrudService(configWithHooks);
-
-      await expect(service.remove("1")).resolves.toBe(false);
-      expect(global.fetch).not.toHaveBeenCalled();
-    });
-
-    it("throws an ApiError with the code of a refused delete", async () => {
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-        ok: false,
-        status: 409,
-        text: () =>
-          Promise.resolve(
-            JSON.stringify({
-              status: "error",
-              detail: "group has students",
-              code: "general.business_rejection",
-              instance: "req-delete",
-            }),
-          ),
-      });
-      const afterDelete = vi.fn((_id: string): Promise<void> =>
-        Promise.resolve(),
-      );
-
-      const service = createCrudService({
-        ...mockConfig,
-        hooks: { afterDelete },
-      });
-      const caught = await service.remove("1").catch((error: unknown) => error);
-
-      expect(caught).toBeInstanceOf(ApiError);
-      expect(caught).toMatchObject({
-        status: 409,
-        code: "general.business_rejection",
-        requestId: "req-delete",
-      });
-      expect(afterDelete).not.toHaveBeenCalled();
-    });
-
-    it("throws an ApiError with the status class on a server error", async () => {
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-        ok: false,
-        status: 500,
-        text: () => Promise.resolve("Internal Server Error"),
-      });
-
-      const service = createCrudService(mockConfig);
-      const caught = await service.remove("1").catch((error: unknown) => error);
-
-      expect(caught).toBeInstanceOf(ApiError);
-      expect(caught).toMatchObject({ status: 500 });
-    });
-  });
-
-  describe("rejected requests", () => {
-    // The companion-plan 409 is the reason the raw body travels: the backend
-    // reports WHICH children and weekdays conflict as a top-level `conflicts`
-    // array next to `detail`. The ApiError keeps only the standard members,
-    // so a caller reading it alone can never name what the user confirmed —
-    // "Ergänzen und speichern" then re-sends an empty confirmation and earns
-    // the identical 409 forever.
-    const conflictBody = JSON.stringify({
-      detail:
-        "Der Heimweg des verknüpften Kindes erlaubt diese Tage noch nicht.",
-      conflicts: [{ student_id: 42, weekdays: ["mon", "tue"] }],
-    });
-
-    it("attaches status and the raw response body to the thrown error", async () => {
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-        ok: false,
-        status: 409,
-        text: () => Promise.resolve(conflictBody),
-      });
-
-      const service = createCrudService(mockConfig);
-      const caught = (await service
-        .update("1", { name: "Test" })
-        .catch((error: unknown) => error)) as Error & {
-        status?: number;
-        body?: string;
-      };
-
-      expect(caught).toBeInstanceOf(Error);
-      expect(caught.status).toBe(409);
-      expect(caught.body).toBe(conflictBody);
-      // The message stays a safe fallback; the raw body is retained for the
-      // caller's diagnostic handling.
-      expect(caught.message).toBe("API error: 409");
-      expect(caught.message).not.toContain("conflicts");
-    });
-
-    it("throws an ApiError with code and request ID for the shared error path", async () => {
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-        ok: false,
-        status: 409,
-        text: () =>
-          Promise.resolve(
-            JSON.stringify({
-              detail: "quota",
-              code: "students.child_quota_reached",
-              details: { booked_places: 10, occupied_places: 10 },
-              instance: "req-crud",
-            }),
-          ),
-      });
-
-      const service = createCrudService(mockConfig);
-      const caught = await service
-        .create({ name: "Test" })
-        .catch((error: unknown) => error);
-
-      expect(caught).toBeInstanceOf(ApiError);
-      expect(caught).toMatchObject({
-        status: 409,
+  it("throws the ApiError with code, details and request ID", async () => {
+    fetchMock.mockResolvedValueOnce(
+      refusal(409, {
+        detail: "quota",
         code: "students.child_quota_reached",
         details: { booked_places: 10, occupied_places: 10 },
-        requestId: "req-crud",
-      });
-    });
+        instance: "req-crud",
+      }),
+    );
 
-    it("attaches the body of a non-JSON server error too", async () => {
-      // No parsing, no guessing: whatever the server said is preserved, so a
-      // caller that knows the endpoint can still make sense of it while the
-      // generic message stays technical noise.
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-        ok: false,
-        status: 500,
-        text: () => Promise.resolve("Internal Server Error"),
-      });
+    const caught = await createCrudService(config)
+      .create({ name: "x" })
+      .catch((error: unknown) => error);
 
-      const service = createCrudService(mockConfig);
-      const caught = (await service
-        .getList()
-        .catch((error: unknown) => error)) as Error & {
-        status?: number;
-        body?: string;
-      };
-
-      expect(caught.status).toBe(500);
-      expect(caught.body).toBe("Internal Server Error");
+    expect(caught).toBeInstanceOf(ApiError);
+    expect(caught).toMatchObject({
+      status: 409,
+      code: "students.child_quota_reached",
+      details: { booked_places: 10, occupied_places: 10 },
+      requestId: "req-crud",
     });
   });
+});
 
-  describe("authentication", () => {
-    // The BFF reads the session cookie; the browser holds no token (#5005).
-    it("sends the session cookie and no Authorization header", async () => {
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ data: [] }),
-        headers: new Headers({
-          "content-type": "application/json",
-        }),
-      });
-
-      const service = createCrudService(mockConfig);
-      await service.getList();
-
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({
-          headers: expect.any(Headers) as unknown as Headers,
-        }),
-      );
-
-      const callArgs = (global.fetch as ReturnType<typeof vi.fn>).mock
-        .calls[0] as
-        | [string, { headers?: Headers; credentials?: RequestCredentials }]
-        | undefined;
-      const headers = callArgs?.[1]?.headers;
-      expect(callArgs?.[1]?.credentials).toBe("include");
-      expect(headers?.get("Content-Type")).toBe("application/json");
-      expect(headers?.has("Authorization")).toBe(false);
+describe("update", () => {
+  it("puts the body to the entity's route after beforeUpdate", async () => {
+    fetchMock.mockResolvedValueOnce(ok({ id: "1", name: "Neu" }));
+    const afterUpdate = vi.fn(() => Promise.resolve());
+    const service = createCrudService({
+      ...config,
+      hooks: {
+        beforeUpdate: (_id, data) => Promise.resolve({ ...data, name: "Neu" }),
+        afterUpdate,
+      },
     });
 
-    it("works without token when not authenticated", async () => {
-      mockGetSession.mockResolvedValue(null);
-
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ data: [] }),
-        headers: new Headers({
-          "content-type": "application/json",
-        }),
-      });
-
-      const service = createCrudService(mockConfig);
-      await service.getList();
-
-      expect(global.fetch).toHaveBeenCalled();
+    await expect(service.update("1", { name: "x" })).resolves.toEqual({
+      id: "1",
+      name: "Neu",
     });
+    expect(call().url).toBe("/api/rooms/1");
+    expect(call().init).toMatchObject({
+      method: "PUT",
+      body: JSON.stringify({ name: "Neu" }),
+    });
+    expect(afterUpdate).toHaveBeenCalled();
+  });
+
+  it("passes the loaded record to a custom update without a request", async () => {
+    const current = { id: "1", name: "Alt" };
+    const update = vi.fn().mockResolvedValue({ ...current, name: "Neu" });
+    const service = createCrudService({
+      ...config,
+      api: { ...config.api, update },
+    });
+
+    await service.update("1", { name: "Neu" }, current);
+
+    expect(update).toHaveBeenCalledWith("1", { name: "Neu" }, current);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps the body of a refusal for the caller", async () => {
+    const problem = {
+      detail: "conflict",
+      conflicts: [{ student_id: 42, weekdays: ["mon"] }],
+    };
+    fetchMock.mockResolvedValueOnce(refusal(409, problem));
+
+    const caught = await createCrudService(config)
+      .update("1", { name: "x" })
+      .catch((error: unknown) => error);
+
+    expect(caught).toMatchObject({ status: 409 });
+    expect((caught as ApiError).problem).toEqual(problem);
+  });
+});
+
+describe("remove", () => {
+  it("deletes through the entity's route and calls the hooks", async () => {
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
+    const afterDelete = vi.fn(() => Promise.resolve());
+    const service = createCrudService({
+      ...config,
+      hooks: { beforeDelete: () => Promise.resolve(true), afterDelete },
+    });
+
+    await expect(service.remove("3")).resolves.toBe(true);
+    expect(call().url).toBe("/api/rooms/3");
+    expect(call().init).toMatchObject({ method: "DELETE" });
+    expect(afterDelete).toHaveBeenCalledWith("3");
+  });
+
+  it("resolves false when beforeDelete cancels", async () => {
+    const service = createCrudService({
+      ...config,
+      hooks: { beforeDelete: () => Promise.resolve(false) },
+    });
+
+    await expect(service.remove("3")).resolves.toBe(false);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("throws the refusal and skips afterDelete", async () => {
+    fetchMock.mockResolvedValueOnce(
+      refusal(409, {
+        detail: "group has students",
+        code: "general.business_rejection",
+        instance: "req-delete",
+      }),
+    );
+    const afterDelete = vi.fn(() => Promise.resolve());
+    const service = createCrudService({ ...config, hooks: { afterDelete } });
+
+    const caught = await service.remove("1").catch((error: unknown) => error);
+
+    expect(caught).toMatchObject({
+      status: 409,
+      code: "general.business_rejection",
+      requestId: "req-delete",
+    });
+    expect(afterDelete).not.toHaveBeenCalled();
+  });
+
+  it("refuses an operation the entity has no route for", async () => {
+    const service = createCrudService({
+      ...config,
+      api: { list: config.api.list },
+    });
+
+    await expect(service.remove("1")).rejects.toThrow("no delete route");
   });
 });

@@ -89,7 +89,6 @@ var seedCoverageExemptions = map[string]string{
 	"auth.password_reset_tokens":                "empty in prod too",
 	"auth.parent_declaration_permission_grants": "one-time migration ledger; only upgrades with existing guardian relationships write it",
 
-	"calendar.appointment_occurrence_overrides":     "empty in prod too",
 	"calendar.appointment_reminder_push_deliveries": "empty in prod too",
 
 	"display.displays": "empty in prod too",
@@ -143,6 +142,7 @@ var seedCoverageDebt = map[string]string{}
 // its scheduled job runs. Unlike exemptions, populated entries are not stale
 // classification debt.
 var seedCoverageTransient = map[string]string{
+	"auth.demo_crm_jobs":                         "transient external CRM deliveries of real public demo requests; absent from school seed data",
 	"auth.account_avatar_file_cleanup":           "transient deletion intents for anonymized accounts; drained hourly, never create orphan files as demo data",
 	"auth.invitation_tokens":                     "short-lived invitation state; the seed accepts some and leaves some open",
 	"auth.request_rate_limits":                   "short-lived API traffic quotas; the seed can run with limiting disabled",

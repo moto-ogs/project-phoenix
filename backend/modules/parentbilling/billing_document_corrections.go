@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Storno, Gutschrift and Neuausstellung of an issued invoice (spec #4611
@@ -53,7 +54,7 @@ type BillingCancellationInput struct {
 // BillingCreditInput credits AmountCents of one child of an invoice, with
 // its reason.
 type BillingCreditInput struct {
-	ChildID     int64
+	ChildID     ident.ID
 	AmountCents int64
 	Reason      string
 }
@@ -62,11 +63,11 @@ type BillingCreditInput struct {
 // cancellation, its credits and the invoice that replaces it, which may be
 // part of another run.
 type BillingDocumentLink struct {
-	ID         int64         `json:"id"`
-	RunID      int64         `json:"run_id"`
+	ID         ident.ID      `json:"id"`
+	RunID      ident.ID      `json:"run_id"`
 	Kind       string        `json:"kind"`
 	Number     string        `json:"number"`
 	IssuedOn   calendar.Date `json:"issued_on"`
-	TotalCents int64         `json:"total_cents"`
+	TotalCents int64         `json:"total_cents" contract:"number"`
 	Reason     string        `json:"reason"`
 }

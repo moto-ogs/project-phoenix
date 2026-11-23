@@ -1,5 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
+import { pagedJson } from "~/test/mocks/plain-session-fetch";
+
 import { fetchPlannerGroups, fetchPlannerRooms } from "./planner-reference-api";
 
 const originalFetch = globalThis.fetch;
@@ -10,18 +17,18 @@ afterEach(() => {
 
 describe("planner reference lists", () => {
   it("unwraps the envelope of a successful answer", async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ data: [{ id: "1", name: "Mensa" }] }), {
-        status: 200,
-      }),
-    ) as unknown as typeof fetch;
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValue(
+        Response.json(pagedJson([{ id: "1", name: "Mensa" }])),
+      ) as unknown as typeof fetch;
 
     await expect(fetchPlannerRooms()).resolves.toEqual([
       { id: "1", name: "Mensa" },
     ]);
     expect(globalThis.fetch).toHaveBeenCalledWith(
       "/api/rooms?page=1&page_size=1000",
-      { credentials: "include" },
+      { method: "GET" },
     );
   });
 
@@ -32,7 +39,12 @@ describe("planner reference lists", () => {
         new Response(
           JSON.stringify({
             data: [{ id: "1", name: "Mensa" }],
-            pagination: { total_pages: 2 },
+            pagination: {
+              current_page: 1,
+              page_size: 1,
+              total_pages: 2,
+              total_records: 2,
+            },
           }),
           { status: 200 },
         ),
@@ -41,7 +53,12 @@ describe("planner reference lists", () => {
         new Response(
           JSON.stringify({
             data: [{ id: "2", name: "Werkraum" }],
-            pagination: { total_pages: 2 },
+            pagination: {
+              current_page: 1,
+              page_size: 1,
+              total_pages: 2,
+              total_records: 2,
+            },
           }),
           { status: 200 },
         ),
@@ -55,7 +72,7 @@ describe("planner reference lists", () => {
     expect(globalThis.fetch).toHaveBeenNthCalledWith(
       2,
       "/api/rooms?page=2&page_size=1000",
-      { credentials: "include" },
+      { method: "GET" },
     );
   });
 

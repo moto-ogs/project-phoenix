@@ -34,13 +34,13 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-hand-rolled-button",
     file: "src/components/ui/page-header/FilterPanel.tsx",
-    lines: [225],
+    lines: [240],
     reason: "Auswahloptionen eines Filters, kein Knopf",
   },
   {
     rule: "no-hand-rolled-button",
     file: "src/components/ui/date-picker.tsx",
-    lines: [400],
+    lines: [421],
     reason: "Auslöser des Datumsfelds (Eingabefeld, sieht aus wie ein Select)",
   },
   {
@@ -94,7 +94,7 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-button-override",
     file: "src/app/[tenant]/(protected)/time-tracking/page.tsx",
-    lines: [838, 875, 981, 1169],
+    lines: [839, 876, 982, 1170],
     reason:
       "Pausen-Stepper −/+ und Stempelknöpfe Abwesenheit/Ausstempeln der Zeiterfassung (#5529: nicht angleichen)",
   },
@@ -108,19 +108,19 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-hand-rolled-button",
     file: "src/components/active-supervisions/spontaneous-activity-start.tsx",
-    lines: [296],
+    lines: [294],
     reason: "Startkachel mit Symbol, Titel und Beschreibung: Kachel",
   },
   {
     rule: "no-hand-rolled-button",
     file: "src/components/calendar/personal-calendar.tsx",
-    lines: [1107],
+    lines: [1114],
     reason: "Termin-Block im Kalenderraster: Kalenderzelle",
   },
   {
     rule: "no-hand-rolled-button",
     file: "src/components/students/care-schedule-manager.tsx",
-    lines: [1615],
+    lines: [1662],
     reason: "Wochentagskarte, öffnet den Editor: Kachel",
   },
   {
@@ -138,7 +138,7 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-hand-rolled-button",
     file: "src/components/students/planned-status-days-modal.tsx",
-    lines: [1093],
+    lines: [1171],
     reason: "Kalendertag zum Umschalten: Kalender-/Auswahlzelle",
   },
   {
@@ -165,20 +165,20 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-hand-rolled-button",
     file: "src/components/parent/child/child-switcher.tsx",
-    lines: [55],
+    lines: [57],
     reason:
       "Kinderkarte im Elternportal (Ausnahme des Epics #5576, nicht anfassen): Kachel",
   },
   {
     rule: "no-hand-rolled-button",
     file: "src/components/students/care-schedule-manager.tsx",
-    lines: [1572],
+    lines: [1619],
     reason: "Statustag-Karte, öffnet das Entfernen: Kachel",
   },
   {
     rule: "no-hand-rolled-button",
     file: "src/components/calendar/personal-calendar.tsx",
-    lines: [1056],
+    lines: [1063],
     reason: "Termin-Block in der Wochenansicht: Kalenderzelle",
   },
   // #5574: hellgraue Fläche als gewählter Zustand einer Auswahl oder

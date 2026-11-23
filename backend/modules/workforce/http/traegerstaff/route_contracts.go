@@ -3,13 +3,14 @@ package traegerstaff
 import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 var traegerPortal = []common.PortalScope{common.PortalTraeger}
 
 // IDResponse names the record or type a write touched.
 type IDResponse struct {
-	ID int64 `json:"id"`
+	ID ident.ID `json:"id"`
 }
 
 // PersonnelNumberRequest is the body PUT /{id}/personnel-number reads: the
@@ -21,13 +22,14 @@ type PersonnelNumberRequest struct {
 
 // RecordRouteContracts registers the typed contract of the staff records
 // (ADR 0270), with patterns relative to /traeger/staff-records. The export
-// answers a file and keeps its route file.
+// answers a file (#2352).
 func RecordRouteContracts() []common.RouteContract {
 	month := []common.QueryParam{{Name: "year", Kind: common.QueryInt}, {Name: "month", Kind: common.QueryInt}}
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: workforce.TraegerStaffOverview{}},
+		{Method: "GET", Pattern: "/export", Portals: traegerPortal, Query: []common.QueryParam{common.ListFormatQuery}, File: true},
 		{Method: "POST", Pattern: "/", Portals: traegerPortal, Request: StaffLinkRequest{}, Response: workforce.TraegerStaffRecordDetail{}},
-		{Method: "POST", Pattern: "/link-preview", Portals: traegerPortal, Request: StaffLinkRequest{}, Response: workforce.TraegerStaffLinkPreview{}},
+		{Method: "POST", Pattern: "/link-preview", Portals: traegerPortal, NoCommit: "the preview shows which records a link would join and links nothing", Request: StaffLinkRequest{}, Response: workforce.TraegerStaffLinkPreview{}},
 		{Method: "POST", Pattern: "/hire", Portals: traegerPortal, Request: HireRequest{}, Response: workforce.TraegerStaffRecordDetail{}},
 		{Method: "GET", Pattern: "/{id}", Portals: traegerPortal, Response: workforce.TraegerStaffRecordDetail{}},
 		{Method: "DELETE", Pattern: "/{id}", Portals: traegerPortal, Response: IDResponse{}},
@@ -77,6 +79,7 @@ func AbsenceTypeRouteContracts() []common.RouteContract {
 func ProofRouteContracts() []common.RouteContract {
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: workforce.TraegerStaffProofList{}},
+		{Method: "GET", Pattern: "/export", Portals: traegerPortal, Query: []common.QueryParam{common.ListFormatQuery}, File: true},
 		{Method: "GET", Pattern: "/types", Portals: traegerPortal, Response: []workforce.TraegerStaffProofType{}},
 		{Method: "POST", Pattern: "/types", Portals: traegerPortal, Request: ProofTypeRequest{}, Response: workforce.TraegerStaffProofType{}},
 		{Method: "PUT", Pattern: "/types/{id}", Portals: traegerPortal, Request: ProofTypeRequest{}, Response: workforce.TraegerStaffProofType{}},
@@ -92,6 +95,7 @@ func ProofRouteContracts() []common.RouteContract {
 func PlanningRouteContracts() []common.RouteContract {
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: traegerPortal, Query: weekQuery, Response: workforce.TraegerPlanningWeek{}},
+		{Method: "GET", Pattern: "/export", Portals: traegerPortal, Query: weekExportQuery, File: true},
 		{Method: "GET", Pattern: "/future-shifts", Portals: traegerPortal, Response: []workforce.TraegerFutureShifts{}},
 		{Method: "POST", Pattern: "/records/{id}/shifts", Portals: traegerPortal, Request: PlanShiftRequest{}, Response: workforce.TraegerPlanningShift{}},
 		{Method: "PUT", Pattern: "/records/{id}/shifts/{shiftId}", Portals: traegerPortal, Request: PlanShiftRequest{}, Response: workforce.TraegerPlanningShift{}},
@@ -104,19 +108,43 @@ func PlanningRouteContracts() []common.RouteContract {
 func PoolRouteContracts() []common.RouteContract {
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: traegerPortal, Query: weekQuery, Response: workforce.PoolWeek{}},
+		{Method: "GET", Pattern: "/export", Portals: traegerPortal, Query: weekExportQuery, File: true},
 		{Method: "DELETE", Pattern: "/blocks/{id}", Portals: traegerPortal, NoData: true},
 	}
 }
 
 // ExportRouteContracts registers the checks before the payroll and time
-// exports, with patterns relative to /traeger/staff-exports. The files keep
-// their route files.
+// exports and the files themselves (#2352), with patterns relative to
+// /traeger/staff-exports.
 func ExportRouteContracts() []common.RouteContract {
 	month := []common.QueryParam{{Name: "year", Kind: common.QueryInt}, {Name: "month", Kind: common.QueryInt}, {Name: "format", Kind: common.QueryString}}
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/payroll", Portals: traegerPortal, Query: month, Response: workforce.TraegerPayrollReport{}},
+		{Method: "GET", Pattern: "/payroll/export", Portals: traegerPortal, Query: month, File: true},
 		{Method: "GET", Pattern: "/times", Portals: traegerPortal, Query: month, Response: workforce.TraegerTimeReport{}},
+		{Method: "GET", Pattern: "/times/export", Portals: traegerPortal, Query: month, File: true},
 	}
 }
 
-var weekQuery = []common.QueryParam{{Name: "week", Kind: common.QueryDate}}
+// ImportRouteContracts registers the Personal-Import (#4724), with patterns
+// relative to /traeger/staff-record-imports. The preview and the import take
+// the same upload: the file plus the form fields.
+func ImportRouteContracts() []common.RouteContract {
+	upload := func(pattern string) common.RouteContract {
+		return common.RouteContract{Method: "POST", Pattern: pattern, Portals: traegerPortal, Multipart: true,
+			MaxBodyBytes: workforce.MaxStaffImportFileBytes + importFormOverhead,
+			TooLargeCode: common.CodeWorkforceTraegerStaffImportFileTooLarge, Response: workforce.StaffImport{}}
+	}
+	preview := upload("/preview")
+	preview.NoCommit = "an import preview checks the file and saves no row of it"
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: []workforce.StaffImportEntry{}},
+		upload("/"),
+		preview,
+	}
+}
+
+var (
+	weekQuery       = []common.QueryParam{{Name: "week", Kind: common.QueryDate}}
+	weekExportQuery = []common.QueryParam{{Name: "week", Kind: common.QueryDate}, common.ListFormatQuery}
+)

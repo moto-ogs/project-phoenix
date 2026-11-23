@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedTraegerStaffStep seeds the Personalstamm of the demo Träger (#4705)
@@ -129,11 +131,11 @@ func seedTraegerStaffRelease(rt *Runtime) error {
 }
 
 type seedTraegerStaffSuggestion struct {
-	Reason   string `json:"reason"`
-	RecordID *int64 `json:"staff_record_id"`
+	Reason   string    `json:"reason"`
+	RecordID *ident.ID `json:"staff_record_id"`
 	Members  []struct {
-		SchoolID int64 `json:"school_id"`
-		StaffID  int64 `json:"staff_id"`
+		SchoolID ident.ID `json:"school_id"`
+		StaffID  ident.ID `json:"staff_id"`
 	} `json:"members"`
 }
 
@@ -150,7 +152,7 @@ func withoutVisitorStaff(rt *Runtime, suggestions []seedTraegerStaffSuggestion) 
 	for _, suggestion := range suggestions {
 		named := false
 		for _, member := range suggestion.Members {
-			if member.SchoolID == rt.Bootstrap.SchoolID && member.StaffID == visitorStaffID {
+			if int64(member.SchoolID) == rt.Bootstrap.SchoolID && int64(member.StaffID) == visitorStaffID {
 				named = true
 			}
 		}
@@ -182,7 +184,7 @@ func seedTraegerStaffSuggestions(client *Client, auth AuthRef) ([]seedTraegerSta
 func seedTraegerStaffLink(client *Client, auth AuthRef, suggestion seedTraegerStaffSuggestion) (int64, error) {
 	members := make([]map[string]int64, 0, len(suggestion.Members))
 	for _, member := range suggestion.Members {
-		members = append(members, map[string]int64{"school_id": member.SchoolID, "staff_id": member.StaffID})
+		members = append(members, map[string]int64{"school_id": int64(member.SchoolID), "staff_id": int64(member.StaffID)})
 	}
 	body := map[string]any{"members": members}
 	if suggestion.RecordID != nil {
@@ -197,7 +199,8 @@ func seedTraegerStaffLink(client *Client, auth AuthRef, suggestion seedTraegerSt
 	}
 	var preview struct {
 		Data struct {
-			Fields []struct {
+			Fingerprint string `json:"fingerprint"`
+			Fields      []struct {
 				Field    string `json:"field"`
 				Conflict bool   `json:"conflict"`
 				Options  []struct {
@@ -216,6 +219,8 @@ func seedTraegerStaffLink(client *Client, auth AuthRef, suggestion seedTraegerSt
 		}
 	}
 	body["choices"] = choices
+	// The link carries the fingerprint of the preview it chose on (ADR 0311).
+	body["expected_fingerprint"] = preview.Data.Fingerprint
 	raw, err = client.PostWithAuth(auth, "/traeger/staff-records/", body)
 	if seedTraegerStaffAlreadyLinked(err) {
 		return 0, nil
@@ -225,13 +230,13 @@ func seedTraegerStaffLink(client *Client, auth AuthRef, suggestion seedTraegerSt
 	}
 	var record struct {
 		Data struct {
-			ID int64 `json:"id"`
+			ID ident.ID `json:"id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &record); err != nil || record.Data.ID == 0 {
 		return 0, fmt.Errorf("decode a Träger staff record: %w", errors.Join(err, errors.New("no record id")))
 	}
-	return record.Data.ID, nil
+	return int64(record.Data.ID), nil
 }
 
 // seedTraegerStaffAlreadyLinked recognizes a proposal another school's run

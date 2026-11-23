@@ -25,29 +25,29 @@ import (
 
 type reviewBooking struct {
 	WaitlistPosition *int   `json:"waitlist_position"`
-	WeekID           int64  `json:"week_id"`
-	HostSchoolID     int64  `json:"host_school_id"`
-	TimeModelID      int64  `json:"time_model_id"`
+	WeekID           wireID `json:"week_id"`
+	HostSchoolID     wireID `json:"host_school_id"`
+	TimeModelID      wireID `json:"time_model_id"`
 	TimeModelName    string `json:"time_model_name"`
 	PriceCents       int64  `json:"price_cents"`
 }
 
 type reviewChild struct {
-	ID                       int64           `json:"id"`
+	ID                       wireID          `json:"id"`
 	FirstName                string          `json:"first_name"`
-	HomeSchoolID             *int64          `json:"home_school_id"`
+	HomeSchoolID             *wireID         `json:"home_school_id"`
 	GuestSchoolName          string          `json:"guest_school_name"`
 	Bookings                 []reviewBooking `json:"bookings"`
-	DuplicateRegistrationIDs []int64         `json:"duplicate_registration_ids"`
+	DuplicateRegistrationIDs []wireID        `json:"duplicate_registration_ids"`
 }
 
 type reviewRegistration struct {
-	ID       int64         `json:"id"`
+	ID       wireID        `json:"id"`
 	Status   string        `json:"status"`
 	Frozen   bool          `json:"frozen"`
 	Children []reviewChild `json:"children"`
 	Health   []struct {
-		ChildID   int64  `json:"child_id"`
+		ChildID   wireID `json:"child_id"`
 		Allergies string `json:"allergies"`
 	} `json:"health"`
 	Contacts []struct {
@@ -56,7 +56,7 @@ type reviewRegistration struct {
 	} `json:"contacts"`
 	History []struct {
 		Action         string         `json:"action"`
-		ActorAccountID *int64         `json:"actor_account_id"`
+		ActorAccountID *wireID        `json:"actor_account_id"`
 		Details        map[string]any `json:"details"`
 	} `json:"history"`
 }
@@ -95,9 +95,9 @@ func newReviewFixtureOf(t *testing.T, name string, holidays func(traegerOffice) 
 	submit := func(body map[string]any) int64 {
 		rec := publicJSON(t, f.public, http.MethodPost, registrationPath(period.PublicToken), body)
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-		return decodeSchoolPortalData[struct {
-			ID int64 `json:"id"`
-		}](t, rec.Body.Bytes()).ID
+		return int64(decodeSchoolPortalData[struct {
+			ID wireID `json:"id"`
+		}](t, rec.Body.Bytes()).ID)
 	}
 	siblings := submit(siblingsRegistration(offer, "eva.muster@example.org"))
 	again := siblingsRegistration(offer, "papa.muster@example.org")
@@ -113,7 +113,7 @@ func newReviewFixtureOf(t *testing.T, name string, holidays func(traegerOffice) 
 }
 
 func (f reviewFixture) path(suffix string) string {
-	return holidayPeriodPath(f.period.ID) + "/registrations" + suffix
+	return holidayPeriodPath(int64(f.period.ID)) + "/registrations" + suffix
 }
 
 func (f reviewFixture) registrationPath(id int64, suffix string) string {
@@ -135,9 +135,9 @@ func (f reviewFixture) act(t *testing.T, id int64, action string) *httptest.Resp
 	t.Helper()
 	switch action {
 	case "confirm":
-		return traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayConfirmPath(f.period.ID, id), nil)
+		return traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayConfirmPath(int64(f.period.ID), id), nil)
 	case "cancel":
-		return traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayCancelPath(f.period.ID, id), nil)
+		return traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayCancelPath(int64(f.period.ID), id), nil)
 	}
 	return traegerJSON(t, f.traeger, f.office.token, http.MethodPost, f.registrationPath(id, "/"+action), nil)
 }
@@ -173,7 +173,7 @@ func (f reviewFixture) auditActions(t *testing.T) []string {
 func registrationByID(t *testing.T, list reviewList, id int64) reviewRegistration {
 	t.Helper()
 	for _, registration := range list.Registrations {
-		if registration.ID == id {
+		if int64(registration.ID) == id {
 			return registration
 		}
 	}
@@ -184,7 +184,7 @@ func registrationByID(t *testing.T, list reviewList, id int64) reviewRegistratio
 func registrationIDs(list reviewList) []int64 {
 	ids := []int64{}
 	for _, registration := range list.Registrations {
-		ids = append(ids, registration.ID)
+		ids = append(ids, int64(registration.ID))
 	}
 	return ids
 }
@@ -203,14 +203,14 @@ func TestTraegerListsHolidayRegistrationsWithFiltersAndDuplicateHints(t *testing
 	siblings := registrationByID(t, all, f.siblings)
 	assert.False(t, siblings.Frozen, "the registration window is still open")
 	require.Len(t, siblings.Children, 2)
-	assert.Equal(t, []int64{f.again}, siblings.Children[0].DuplicateRegistrationIDs,
+	assert.Equal(t, []int64{f.again}, testpkg.IDs(siblings.Children[0].DuplicateRegistrationIDs),
 		"Lia was registered twice: same name in other letter case and the same date of birth")
 	assert.Empty(t, siblings.Children[1].DuplicateRegistrationIDs)
 	assert.Nil(t, siblings.Children[1].HomeSchoolID, "Ben is a holiday guest")
 	require.Len(t, siblings.Children[1].Bookings, 2)
 	assert.Equal(t, "bis 13 Uhr", siblings.Children[1].Bookings[0].TimeModelName)
-	assert.Equal(t, f.office.schools[1], siblings.Children[1].Bookings[1].HostSchoolID, "the second week is hosted by the second school")
-	assert.Equal(t, []int64{f.siblings}, registrationByID(t, all, f.again).Children[0].DuplicateRegistrationIDs)
+	assert.Equal(t, f.office.schools[1], int64(siblings.Children[1].Bookings[1].HostSchoolID), "the second week is hosted by the second school")
+	assert.Equal(t, []int64{f.siblings}, testpkg.IDs(registrationByID(t, all, f.again).Children[0].DuplicateRegistrationIDs))
 
 	assert.Equal(t, []int64{f.siblings}, registrationIDs(f.list(t, "?school=guest")))
 	assert.Equal(t, []int64{f.siblings, f.again}, registrationIDs(f.list(t, fmt.Sprintf("?school=%d", f.office.schools[0]))))
@@ -277,7 +277,7 @@ func TestTraegerConfirmsAndCancelsHolidayRegistrationsWithHistory(t *testing.T) 
 	other.Name = "Osterferien 2027"
 	otherPeriod := createHolidayPeriod(t, f.traeger, f.office, other)
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet,
-		fmt.Sprintf("%s/registrations/%d", holidayPeriodPath(otherPeriod.ID), f.siblings), nil)
+		fmt.Sprintf("%s/registrations/%d", holidayPeriodPath(int64(otherPeriod.ID)), f.siblings), nil)
 	require.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
 	code, _ = registrationRefusalOf(t, rec)
 	assert.Equal(t, "enrollment.holiday_registration_entry_not_found", code)
@@ -307,8 +307,8 @@ func TestTraegerFreezesReopensAndRebooksHolidayRegistrations(t *testing.T) {
 	code, _ := registrationRefusalOf(t, rec)
 	assert.Equal(t, "enrollment.holiday_registration_frozen", code)
 	rebook := map[string]any{"bookings": []map[string]any{{"week_id": f.offer.Weeks[0].ID, "time_model_id": f.offer.Weeks[0].TimeModels[1].ID}}}
-	bookingsPath := holidayRebookPath(f.period.ID, f.siblings, ben.ID)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, bookingsPath, rebook)
+	bookingsPath := holidayRebookPath(int64(f.period.ID), f.siblings, int64(ben.ID))
+	rec = putReadRegistration(t, f.traeger, f.office.token, bookingsPath, rebook)
 	require.Equal(t, http.StatusConflict, rec.Code, "a frozen registration is not rebooked: %s", rec.Body.String())
 	confirmed := f.detail(t, f.act(t, f.siblings, "confirm"))
 	assert.Equal(t, "confirmed", confirmed.Status, "a frozen registration can still be confirmed")
@@ -319,20 +319,35 @@ func TestTraegerFreezesReopensAndRebooksHolidayRegistrations(t *testing.T) {
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 
 	invalid := map[string]any{"bookings": []map[string]any{{"week_id": f.offer.Weeks[0].ID, "time_model_id": f.offer.Weeks[1].TimeModels[0].ID}}}
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, bookingsPath, invalid)
+	rec = putReadRegistration(t, f.traeger, f.office.token, bookingsPath, invalid)
 	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	code, fields := registrationRefusalOf(t, rec)
 	assert.Equal(t, "enrollment.holiday_registration_invalid", code)
 	assert.Equal(t, []string{"bookings.0"}, fields, "the time model of another week is refused at its booking")
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, bookingsPath, map[string]any{"bookings": []map[string]any{}})
+	rec = putReadRegistration(t, f.traeger, f.office.token, bookingsPath, map[string]any{"bookings": []map[string]any{}})
 	require.Equal(t, http.StatusBadRequest, rec.Code, "a child keeps at least one week: %s", rec.Body.String())
-	foreignChild := holidayRebookPath(f.period.ID, f.again, ben.ID)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, foreignChild, rebook)
+	foreignChild := holidayRebookPath(int64(f.period.ID), f.again, int64(ben.ID))
+	rec = putReadRegistration(t, f.traeger, f.office.token, foreignChild, rebook)
 	require.Equal(t, http.StatusNotFound, rec.Code, "the child belongs to another registration: %s", rec.Body.String())
 
-	rebooked := f.detail(t, traegerJSON(t, f.traeger, f.office.token, http.MethodPut, bookingsPath, rebook))
+	// Both weeks again, read before the rebooking below: refused afterwards
+	// (ADR 0311), like a rebooking without a read version.
+	both := map[string]any{"bookings": []map[string]any{
+		{"week_id": f.offer.Weeks[0].ID, "time_model_id": f.offer.Weeks[0].TimeModels[0].ID},
+		{"week_id": f.offer.Weeks[1].ID, "time_model_id": f.offer.Weeks[1].TimeModels[0].ID},
+	}}
+	stale := withRegistrationVersion(t, f.traeger, f.office.token, bookingsPath, both)
+	rebooked := f.detail(t, putReadRegistration(t, f.traeger, f.office.token, bookingsPath, rebook))
 	require.Len(t, rebooked.Children[1].Bookings, 1)
 	assert.Equal(t, "bis 16 Uhr", rebooked.Children[1].Bookings[0].TimeModelName)
+	for _, version := range []any{stale["expected_version"], ""} {
+		stale["expected_version"] = version
+		rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, bookingsPath, stale)
+		require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+		assert.Contains(t, rec.Body.String(), `"code":"general.changed_since_read"`)
+	}
+	unchanged := f.detail(t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(f.siblings, ""), nil))
+	require.Len(t, unchanged.Children[1].Bookings, 1, "a refused rebooking writes nothing")
 	last := rebooked.History[len(rebooked.History)-1]
 	assert.Equal(t, "rebook", last.Action)
 	assert.Len(t, last.Details["before"], 2, "the history keeps both weeks Ben was booked for")
@@ -345,11 +360,11 @@ func TestTraegerFreezesReopensAndRebooksHolidayRegistrations(t *testing.T) {
 
 	// The registration deadline passes: every registration without a
 	// decision of its own is frozen; the reopened one stays open.
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, holidayPeriodPath(f.period.ID), nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, holidayPeriodPath(int64(f.period.ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	closed := decodeSchoolPortalData[holidayPeriodBody](t, rec.Body.Bytes())
 	closed.RegistrationOpensOn, closed.RegistrationClosesOn = "2020-01-01", "2020-12-31"
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayPeriodPath(f.period.ID), closed)
+	rec = putHolidayPeriod(t, f.traeger, f.office.token, holidayPeriodPath(int64(f.period.ID)), closed)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	list := f.list(t, "")
 	assert.False(t, registrationByID(t, list, f.siblings).Frozen, "the reopened registration stays open")
@@ -422,7 +437,7 @@ func TestTraegerHolidayRegistrationReviewNeedsTheRightAndStaysWithItsTraeger(t *
 		{http.MethodGet, f.path("")},
 		{http.MethodGet, f.path("/export?format=csv")},
 		{http.MethodGet, f.registrationPath(f.siblings, "")},
-		{http.MethodPost, holidayConfirmPath(f.period.ID, f.siblings)},
+		{http.MethodPost, holidayConfirmPath(int64(f.period.ID), f.siblings)},
 		{http.MethodPost, f.registrationPath(f.siblings, "/freeze")},
 	} {
 		rec := traegerJSON(t, f.traeger, readOnly.token, request.method, request.path, nil)
@@ -470,7 +485,7 @@ func TestHolidayRegistrationAuditGoesWithItsPeriod(t *testing.T) {
 	body.Weeks[0].StartsOn, body.Weeks[0].EndsOn = "2020-07-06", "2020-07-10"
 	body.Weeks[1].StartsOn, body.Weeks[1].EndsOn = "2020-07-13", "2020-07-17"
 	ended := createHolidayPeriod(t, f.traeger, f.office, body)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, holidayPeriodPath(ended.ID)+"/registrations", nil)
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, holidayPeriodPath(int64(ended.ID))+"/registrations", nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	ctx := tenant.WithUnitOfWork(context.Background(), testpkg.TenantRuntime(t, f.db))
@@ -484,8 +499,8 @@ func TestHolidayRegistrationAuditGoesWithItsPeriod(t *testing.T) {
 			Scan(context.Background(), &rows))
 		return rows
 	}
-	assert.Zero(t, count(ended.ID), "the audit trail of the ended period is gone")
-	assert.Equal(t, 2, count(f.period.ID), "the audit trail of the running period stays")
+	assert.Zero(t, count(int64(ended.ID)), "the audit trail of the ended period is gone")
+	assert.Equal(t, 2, count(int64(f.period.ID)), "the audit trail of the running period stays")
 }
 
 // TestTimeModelOfAPastBookingIsNotRemoved pins the guard of migration
@@ -501,14 +516,14 @@ func TestTimeModelOfAPastBookingIsNotRemoved(t *testing.T) {
 	// Ben moves from "bis 13 Uhr" of both weeks to "bis 16 Uhr" of the first.
 	old := f.offer.Weeks[0].TimeModels[0].ID
 	rebook := map[string]any{"bookings": []map[string]any{{"week_id": f.offer.Weeks[0].ID, "time_model_id": f.offer.Weeks[0].TimeModels[1].ID}}}
-	f.detail(t, traegerJSON(t, f.traeger, f.office.token, http.MethodPut,
-		holidayRebookPath(f.period.ID, f.siblings, ben.ID), rebook))
+	f.detail(t, putReadRegistration(t, f.traeger, f.office.token,
+		holidayRebookPath(int64(f.period.ID), f.siblings, int64(ben.ID)), rebook))
 	var booked int
 	require.NoError(t, f.db.NewRaw(`SELECT COUNT(*) FROM enrollment.holiday_registration_bookings WHERE holiday_week_time_model_id = ?`, old).
 		Scan(context.Background(), &booked))
 	require.Zero(t, booked, "no booking points at the old time model any more")
 
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, holidayPeriodPath(f.period.ID), nil)
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, holidayPeriodPath(int64(f.period.ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	current := decodeSchoolPortalData[holidayPeriodBody](t, rec.Body.Bytes())
 	without := current
@@ -520,7 +535,7 @@ func TestTimeModelOfAPastBookingIsNotRemoved(t *testing.T) {
 		}
 	}
 	without.Weeks[0].TimeModels = kept
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayPeriodPath(f.period.ID), without)
+	rec = putHolidayPeriod(t, f.traeger, f.office.token, holidayPeriodPath(int64(f.period.ID)), without)
 	require.Equal(t, http.StatusConflict, rec.Code, "the time model of past booked days stays: %s", rec.Body.String())
 	code, _ := registrationRefusalOf(t, rec)
 	assert.Equal(t, "enrollment.holiday_week_booked", code)

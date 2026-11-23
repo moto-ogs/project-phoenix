@@ -1,6 +1,7 @@
 package careplanhttp
 
 import (
+	"context"
 	errors "errors"
 	http "net/http"
 	strconv "strconv"
@@ -8,54 +9,58 @@ import (
 
 	careplan "github.com/moto-ogs/project-phoenix/modules/careplan"
 	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // PickupScheduleResponse represents a pickup schedule in API responses
 type PickupScheduleResponse struct {
-	ID          int64   `json:"id"`
-	StudentID   int64   `json:"student_id"`
-	Weekday     int     `json:"weekday"`
-	WeekdayName string  `json:"weekday_name"`
-	PickupTime  string  `json:"pickup_time"` // HH:MM format
-	Notes       *string `json:"notes,omitempty"`
+	ID          ident.ID `json:"id"`
+	StudentID   ident.ID `json:"student_id"`
+	Weekday     int      `json:"weekday"`
+	WeekdayName string   `json:"weekday_name"`
+	PickupTime  string   `json:"pickup_time"` // HH:MM format
+	Notes       *string  `json:"notes,omitempty"`
 	// Source marks the row's provenance: "staff" (manually maintained) or
 	// "care_offering" (booking-derived Angebots-Gehzeit).
-	Source           string  `json:"source"`
-	CareOfferingID   *string `json:"care_offering_id,omitempty"`
-	CareOfferingName string  `json:"care_offering_name,omitempty"`
-	CreatedBy        int64   `json:"created_by"`
-	CreatedAt        string  `json:"created_at"`
-	UpdatedAt        string  `json:"updated_at"`
+	Source           string   `json:"source"`
+	CareOfferingID   *string  `json:"care_offering_id,omitempty"`
+	CareOfferingName string   `json:"care_offering_name,omitempty"`
+	CreatedBy        ident.ID `json:"created_by"`
+	CreatedAt        string   `json:"created_at"`
+	UpdatedAt        string   `json:"updated_at"`
 }
 
 // PickupExceptionResponse represents a pickup exception in API responses
 type PickupExceptionResponse struct {
-	ID            int64   `json:"id"`
-	StudentID     int64   `json:"student_id"`
-	ExceptionDate string  `json:"exception_date"` // YYYY-MM-DD format
-	PickupTime    *string `json:"pickup_time,omitempty"`
-	Reason        *string `json:"reason,omitempty"`
-	Source        string  `json:"source"` // "staff" or "guardian" (parent-set)
+	ID            ident.ID `json:"id"`
+	StudentID     ident.ID `json:"student_id"`
+	ExceptionDate string   `json:"exception_date"` // YYYY-MM-DD format
+	PickupTime    *string  `json:"pickup_time,omitempty"`
+	Reason        *string  `json:"reason,omitempty"`
+	Source        string   `json:"source"` // "staff" or "guardian" (parent-set)
 	// ExcusedFrom (HH:MM) is the partial-absence cutoff carried by this
 	// exception; ExcusedAuto marks it as derived from a pulled-forward pickup
 	// time (#2360) rather than a manual staff decision.
-	ExcusedFrom *string `json:"excused_from,omitempty"`
-	ExcusedAuto bool    `json:"excused_auto"`
-	CreatedBy   int64   `json:"created_by"`
-	CreatedAt   string  `json:"created_at"`
-	UpdatedAt   string  `json:"updated_at"`
+	ExcusedFrom *string  `json:"excused_from,omitempty"`
+	ExcusedAuto bool     `json:"excused_auto"`
+	CreatedBy   ident.ID `json:"created_by"`
+	CreatedAt   string   `json:"created_at"`
+	UpdatedAt   string   `json:"updated_at"`
 }
 
 // PickupNoteResponse represents a pickup note in API responses
 type PickupNoteResponse struct {
-	ID        int64  `json:"id"`
-	StudentID int64  `json:"student_id"`
-	NoteDate  string `json:"note_date,omitempty"` // YYYY-MM-DD format; empty for a recurring note
-	Weekday   int    `json:"weekday,omitempty"`   // 1-5; set for a recurring weekday note (#3369)
-	Content   string `json:"content"`
-	CreatedBy int64  `json:"created_by"`
-	CreatedAt string `json:"created_at"`
-	UpdatedAt string `json:"updated_at"`
+	ID        ident.ID `json:"id"`
+	StudentID ident.ID `json:"student_id"`
+	NoteDate  string   `json:"note_date,omitempty"` // YYYY-MM-DD format; empty for a recurring note
+	Weekday   int      `json:"weekday,omitempty"`   // 1-5; set for a recurring weekday note (#3369)
+	Content   string   `json:"content"`
+	CreatedBy ident.ID `json:"created_by"`
+	CreatedAt string   `json:"created_at"`
+	UpdatedAt string   `json:"updated_at"`
+	// Version is the note's read-state token (careplan.PickupNoteVersion);
+	// a change sends it back as expected_version (ADR 0311).
+	Version string `json:"version"`
 }
 
 // PickupDataResponse represents combined pickup data
@@ -67,6 +72,9 @@ type PickupDataResponse struct {
 	// DepartureExceptions is the Abholart of single days (#3945) in the same
 	// window as Exceptions.
 	DepartureExceptions []DepartureExceptionResponse `json:"departure_exceptions"`
+	// WeeklyPlanVersion is the token of the child's weekly plan the weekly
+	// editor sends back with its save (ADR 0311); only the read sets it.
+	WeeklyPlanVersion string `json:"weekly_plan_version,omitempty"`
 }
 
 type DatedPickupScheduleResponse struct {
@@ -83,13 +91,17 @@ type PickupScheduleRequest struct {
 }
 
 // BulkPickupScheduleRequest represents a request to update all weekly schedules
+// BulkPickupScheduleRequest replaces the weekly pickup rows. ExpectedVersion
+// is the weekly plan token the rows were read with (weekly_plan_version of
+// GET pickup-schedules, ADR 0311).
 type BulkPickupScheduleRequest struct {
-	Schedules     []PickupScheduleRequest `json:"schedules"`
-	EffectiveDate *calendar.Date          `json:"effective_date,omitempty"`
+	Schedules       []PickupScheduleRequest `json:"schedules"`
+	EffectiveDate   *calendar.Date          `json:"effective_date,omitempty"`
+	ExpectedVersion string                  `json:"expected_version"`
 }
 
 type BulkPickupSchedulePatchRequest struct {
-	StudentIDs         []int64                        `json:"student_ids"`
+	StudentIDs         []ident.ID                     `json:"student_ids"`
 	Schedules          []careplan.PickupScheduleInput `json:"schedules"`
 	ConfirmedException bool                           `json:"confirmed_exception"`
 }
@@ -114,8 +126,11 @@ type PickupNoteRequest struct {
 
 // WeekdayPickupNotesRequest replaces the notes that recur every week. Dated
 // notes stay owned by the single-day editor and are deliberately excluded.
+// ExpectedVersion is the weekly plan token the notes were read with
+// (weekly_plan_version of GET pickup-schedules, ADR 0311).
 type WeekdayPickupNotesRequest struct {
-	Notes []PickupNoteRequest `json:"notes"`
+	Notes           []PickupNoteRequest `json:"notes"`
+	ExpectedVersion string              `json:"expected_version"`
 }
 
 // Bind implements render.Binder.
@@ -123,8 +138,26 @@ func (r *WeekdayPickupNotesRequest) Bind(_ *http.Request) error {
 	if r.Notes == nil {
 		return errors.New("notes is required")
 	}
-	seen := make(map[int]struct{}, len(r.Notes))
-	for _, note := range r.Notes {
+	return validateWeekdayPickupNotes(r.Notes)
+}
+
+// weekdayPickupNoteMap keys recurring notes by weekday; nil stays nil, so a
+// request without notes leaves them as they are.
+func weekdayPickupNoteMap(notes *[]PickupNoteRequest) map[int]string {
+	if notes == nil {
+		return nil
+	}
+	byWeekday := make(map[int]string, len(*notes))
+	for _, note := range *notes {
+		byWeekday[note.Weekday] = note.Content
+	}
+	return byWeekday
+}
+
+// validateWeekdayPickupNotes checks a complete set of recurring notes.
+func validateWeekdayPickupNotes(notes []PickupNoteRequest) error {
+	seen := make(map[int]struct{}, len(notes))
+	for _, note := range notes {
 		if note.NoteDate != "" {
 			return errors.New("weekday notes cannot have note_date")
 		}
@@ -140,6 +173,24 @@ func (r *WeekdayPickupNotesRequest) Bind(_ *http.Request) error {
 		}
 	}
 	return nil
+}
+
+// PickupNoteUpdateRequest changes a pickup note read at ExpectedVersion
+// (version of the note in the read, ADR 0311).
+type PickupNoteUpdateRequest struct {
+	NoteDate        string `json:"note_date"` // YYYY-MM-DD format
+	Weekday         int    `json:"weekday"`   // 1 (Monday) to 5 (Friday)
+	Content         string `json:"content"`
+	ExpectedVersion string `json:"expected_version"`
+}
+
+func (r *PickupNoteUpdateRequest) note() *PickupNoteRequest {
+	return &PickupNoteRequest{NoteDate: r.NoteDate, Weekday: r.Weekday, Content: r.Content}
+}
+
+// Bind implements render.Binder.
+func (r *PickupNoteUpdateRequest) Bind(req *http.Request) error {
+	return r.note().Bind(req)
 }
 
 // Bind implements render.Binder
@@ -192,10 +243,10 @@ func (r *BulkPickupSchedulePatchRequest) Bind(_ *http.Request) error {
 		if id <= 0 {
 			return errors.New("student_ids must be positive")
 		}
-		if _, exists := seenIDs[id]; exists {
+		if _, exists := seenIDs[id.Int64()]; exists {
 			return errors.New("duplicate student_ids are not allowed")
 		}
-		seenIDs[id] = struct{}{}
+		seenIDs[id.Int64()] = struct{}{}
 	}
 	items := make([]PickupScheduleRequest, 0, len(r.Schedules))
 	for _, schedule := range r.Schedules {
@@ -225,16 +276,17 @@ func validatePickupScheduleItems(items []PickupScheduleRequest) error {
 // via their Bind): the parse error below is intentionally discarded because the
 // time format is already guaranteed valid at that point. Mapping unvalidated
 // items here would silently persist a zero time.
-func toPickupScheduleModels(items []PickupScheduleRequest, studentID, staffID int64) []*careplan.PickupSchedule {
+func toPickupScheduleModels(ctx context.Context, items []PickupScheduleRequest, studentID, staffID int64) []*careplan.PickupSchedule {
 	schedules := make([]*careplan.PickupSchedule, 0, len(items))
 	for _, s := range items {
 		pickupTime, _ := parseTimeOnly(s.PickupTime)
 		schedules = append(schedules, &careplan.PickupSchedule{
-			StudentID:  studentID,
-			Weekday:    s.Weekday,
-			PickupTime: pickupTime,
-			Notes:      s.Notes,
-			CreatedBy:  staffID,
+			StudentID:        studentID,
+			Weekday:          s.Weekday,
+			PickupTime:       pickupTime,
+			Notes:            s.Notes,
+			CreatedBy:        staffID,
+			EnteredByTraeger: careplan.EnteredByTraeger(ctx, staffID),
 		})
 	}
 	return schedules
@@ -248,15 +300,15 @@ func (r *PickupExceptionRequest) Bind(_ *http.Request) error {
 // mapScheduleToResponse converts a schedule model to API response
 func mapScheduleToResponse(s *careplan.PickupSchedule) PickupScheduleResponse {
 	resp := PickupScheduleResponse{
-		ID:               s.ID,
-		StudentID:        s.StudentID,
+		ID:               ident.ID(s.ID),
+		StudentID:        ident.ID(s.StudentID),
 		Weekday:          s.Weekday,
 		WeekdayName:      weekdayNames[s.Weekday],
 		PickupTime:       s.PickupTime.Format("15:04"),
 		Notes:            s.Notes,
 		Source:           s.Source,
 		CareOfferingName: s.CareOfferingName,
-		CreatedBy:        s.CreatedBy,
+		CreatedBy:        ident.ID(s.CreatedBy),
 		CreatedAt:        s.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:        s.UpdatedAt.Format(time.RFC3339),
 	}
@@ -273,13 +325,13 @@ func mapScheduleToResponse(s *careplan.PickupSchedule) PickupScheduleResponse {
 // mapExceptionToResponse converts an exception model to API response
 func mapExceptionToResponse(e *careplan.PickupException) PickupExceptionResponse {
 	resp := PickupExceptionResponse{
-		ID:            e.ID,
-		StudentID:     e.StudentID,
+		ID:            ident.ID(e.ID),
+		StudentID:     ident.ID(e.StudentID),
 		ExceptionDate: e.ExceptionDate.Format(dateFormatISO),
 		Reason:        e.Reason,
 		Source:        e.Source,
 		ExcusedAuto:   e.ExcusedAuto,
-		CreatedBy:     e.CreatedBy,
+		CreatedBy:     ident.ID(e.CreatedBy),
 		CreatedAt:     e.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:     e.UpdatedAt.Format(time.RFC3339),
 	}
@@ -297,14 +349,15 @@ func mapExceptionToResponse(e *careplan.PickupException) PickupExceptionResponse
 // mapNoteToResponse converts a note model to API response
 func mapNoteToResponse(n *careplan.PickupNote) PickupNoteResponse {
 	return PickupNoteResponse{
-		ID:        n.ID,
-		StudentID: n.StudentID,
+		ID:        ident.ID(n.ID),
+		StudentID: ident.ID(n.StudentID),
 		NoteDate:  n.NoteDate.String(),
 		Weekday:   n.Weekday,
 		Content:   n.Content,
-		CreatedBy: n.CreatedBy,
+		CreatedBy: ident.ID(n.CreatedBy),
 		CreatedAt: n.CreatedAt.Format(time.RFC3339),
 		UpdatedAt: n.UpdatedAt.Format(time.RFC3339),
+		Version:   careplan.PickupNoteVersion(*n),
 	}
 }
 
@@ -341,4 +394,11 @@ func (rs *Resource) verifyNoteOwnership(w http.ResponseWriter, r *http.Request, 
 var (
 	errPersonNotFoundForAccount = errors.New("person not found for account")
 	errUserNotStaff             = errors.New("user is not a staff member")
+	errNoSessionAccount         = errors.New("no valid JWT claims found")
+	// errPickupNoteWeekdayChange refuses a note update that changes the
+	// weekday: weekday notes change with the weekly plan (ADR 0311).
+	errPickupNoteWeekdayChange = errors.New("a note keeps its weekday here; weekday notes change with the weekly plan (PUT pickup-notes)")
+	// errScheduleUpdatePermissionRequired refuses weekly schedules attached to
+	// a new child without the right to edit Betreuungszeiten.
+	errScheduleUpdatePermissionRequired = errors.New("users:update permission required to create student schedules")
 )

@@ -2,14 +2,31 @@
 import { z } from "zod";
 import {
   bool,
+  fileAnswer,
   instant,
-  int64StringOrNumber,
+  int64String,
   object,
   optional,
+  paginated,
+  requestBody,
   safeInt,
   str,
   success,
 } from "./runtime";
+
+/** Go: httpadapter.RoomRemovalRequest */
+export interface RoomRemovalRequest {
+  expected_fingerprint?: string;
+}
+
+/** Go: httpadapter.RoomRemovalResponse */
+export interface RoomRemovalResponse {
+  outcome: string;
+}
+
+export const RoomRemovalResponseSchema: z.ZodType<RoomRemovalResponse, unknown> = object<RoomRemovalResponse>({
+  outcome: str,
+});
 
 /** Go: httpadapter.RoomResponse */
 export interface RoomResponse {
@@ -30,10 +47,11 @@ export interface RoomResponse {
   archived_at?: string;
   created_at: string;
   updated_at: string;
+  version: string;
 }
 
 export const RoomResponseSchema: z.ZodType<RoomResponse, unknown> = object<RoomResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   building: optional(str),
   floor: optional(safeInt),
@@ -50,6 +68,28 @@ export const RoomResponseSchema: z.ZodType<RoomResponse, unknown> = object<RoomR
   archived_at: optional(instant),
   created_at: instant,
   updated_at: instant,
+  version: str,
+});
+
+/** Go: httpadapter.RoomSessionEntry */
+export interface RoomSessionEntry {
+  session_id: string;
+  started_at: string;
+  ended_at?: string;
+  duration_minutes?: number;
+  activity_name: string;
+  supervisor_name: string;
+  student_count: number;
+}
+
+export const RoomSessionEntrySchema: z.ZodType<RoomSessionEntry, unknown> = object<RoomSessionEntry>({
+  session_id: int64String,
+  started_at: instant,
+  ended_at: optional(instant),
+  duration_minutes: optional(safeInt),
+  activity_name: str,
+  supervisor_name: str,
+  student_count: safeInt,
 });
 
 /** Go: httpadapter.RoomReferencesResponse */
@@ -79,6 +119,7 @@ export interface RoomRemovalImpactResponse {
   active_session: boolean;
   care_offering: boolean;
   references: RoomReferencesResponse;
+  fingerprint: string;
 }
 
 export const RoomRemovalImpactResponseSchema: z.ZodType<RoomRemovalImpactResponse, unknown> = object<RoomRemovalImpactResponse>({
@@ -86,25 +127,102 @@ export const RoomRemovalImpactResponseSchema: z.ZodType<RoomRemovalImpactRespons
   active_session: bool,
   care_offering: bool,
   references: RoomReferencesResponseSchema,
+  fingerprint: str,
 });
 
-/** Query of GET /api/rooms/by-category */
-export interface GetRoomsByCategoryQuery {
-  category?: string;
+/** Go: httpadapter.RoomRequest */
+export interface RoomRequest {
+  name?: string;
+  building?: string;
+  floor?: number | null;
+  capacity?: number | null;
+  category?: string | null;
+  color?: string | null;
+  is_open_room?: boolean | null;
+  expected_version?: string;
+}
+
+/** Go: httpadapter.roomSnapshotExportRequest */
+export interface roomSnapshotExportRequest {
+  format?: string;
+  title?: string;
+  room_ids?: string[] | null;
+  include_transit?: boolean;
 }
 
 export const routes = {
+  "DELETE /api/rooms/{id}": {
+    method: "DELETE",
+    pattern: "/api/rooms/{id}",
+    portals: ["tenant"],
+    request: requestBody<RoomRemovalRequest>(),
+    response: success(RoomRemovalResponseSchema),
+  },
+  "GET /api/rooms/": {
+    method: "GET",
+    pattern: "/api/rooms/",
+    portals: ["tenant"],
+    query: {
+      "building": { kind: "string" },
+      "category": { kind: "string" },
+      "include_system": { kind: "bool" },
+      "is_open_room": { kind: "bool" },
+      "page": { kind: "int" },
+      "page_size": { kind: "int" },
+    },
+    response: paginated(z.array(RoomResponseSchema)),
+  },
   "GET /api/rooms/by-category": {
     method: "GET",
     pattern: "/api/rooms/by-category",
     portals: ["tenant"],
-    query: ["category"],
+    deprecated: true,
+    query: {
+      "category": { kind: "string" },
+    },
     response: success(z.array(RoomResponseSchema)),
+  },
+  "GET /api/rooms/{id}": {
+    method: "GET",
+    pattern: "/api/rooms/{id}",
+    portals: ["tenant"],
+    response: success(RoomResponseSchema),
+  },
+  "GET /api/rooms/{id}/history": {
+    method: "GET",
+    pattern: "/api/rooms/{id}/history",
+    portals: ["tenant"],
+    query: {
+      "end": { kind: "string" },
+      "start": { kind: "string" },
+    },
+    response: success(z.array(RoomSessionEntrySchema)),
   },
   "GET /api/rooms/{id}/removal-impact": {
     method: "GET",
     pattern: "/api/rooms/{id}/removal-impact",
     portals: ["tenant"],
     response: success(RoomRemovalImpactResponseSchema),
+  },
+  "POST /api/rooms/": {
+    method: "POST",
+    pattern: "/api/rooms/",
+    portals: ["tenant"],
+    request: requestBody<RoomRequest>(),
+    response: success(RoomResponseSchema),
+  },
+  "POST /api/rooms/export": {
+    method: "POST",
+    pattern: "/api/rooms/export",
+    portals: ["tenant"],
+    request: requestBody<roomSnapshotExportRequest>(),
+    response: fileAnswer,
+  },
+  "PUT /api/rooms/{id}": {
+    method: "PUT",
+    pattern: "/api/rooms/{id}",
+    portals: ["tenant"],
+    request: requestBody<RoomRequest>(),
+    response: success(RoomResponseSchema),
   },
 } as const;

@@ -6,11 +6,12 @@ import (
 	"net/http"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type assignTransitStudentsRequest struct {
-	StudentIDs    []int64 `json:"student_ids"`
-	ActiveGroupID int64   `json:"active_group_id"`
+	StudentIDs    []ident.ID `json:"student_ids"`
+	ActiveGroupID ident.ID   `json:"active_group_id"`
 }
 
 func (rs *Resource) assignTransitStudents(w http.ResponseWriter, r *http.Request) {
@@ -29,7 +30,7 @@ func (rs *Resource) assignTransitStudents(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	result, err := rs.Operations.AssignTransitStudents(r.Context(), req.StudentIDs, req.ActiveGroupID, *auth)
+	result, err := rs.Operations.AssignTransitStudents(r.Context(), ident.Int64s(req.StudentIDs), req.ActiveGroupID.Int64(), *auth)
 	if err != nil {
 		rs.runtime.MarkRollback(r.Context())
 		common.RenderError(w, r, ErrorRenderer(err))

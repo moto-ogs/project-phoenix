@@ -15,12 +15,24 @@ type seamStore struct {
 	e *recordingEngine
 }
 
-func (s seamStore) ReplaceDay(ctx context.Context, date domain.Date, values []mealplan.Dish) (domain.OperationStats, error) {
+func (s seamStore) ReplaceDay(ctx context.Context, date domain.Date, values []mealplan.Dish, _ *time.Time) (domain.OperationStats, error) {
 	dishes := make([]mealplan.Dish, 0, len(values))
 	for _, v := range values {
 		dishes = append(dishes, mealplan.Dish{Dish: v.Dish, Note: v.Note, Allergens: v.Allergens})
 	}
 	return domain.OperationStats{}, s.e.Replace(ctx, date.String(), dishes)
+}
+
+func (s seamStore) LockDay(_ context.Context, date domain.Date) (domain.OperationStats, error) {
+	s.e.calls = append(s.e.calls, "lock "+date.String())
+	return domain.OperationStats{}, nil
+}
+
+// FindWeek reads the day the engine holds; without one every save in the
+// seam is a first publish.
+func (s seamStore) FindWeek(_ context.Context, start, _ domain.Date) ([]domain.Entry, domain.OperationStats, error) {
+	s.e.calls = append(s.e.calls, "read "+start.String())
+	return s.e.stored, domain.OperationStats{}, nil
 }
 
 type seamTransaction struct{}

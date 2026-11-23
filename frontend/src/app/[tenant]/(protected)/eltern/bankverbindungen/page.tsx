@@ -42,6 +42,9 @@ const PAYMENT_EXPORT_FORMATS: readonly PaymentExportFormat[] = [
 // scroll on both layouts and a lot of DOM on a phone.
 const ROWS_PER_PAGE = 25;
 
+const BANK_DETAILS_INFO =
+  "Hier siehst du je Kind, ob eine IBAN gespeichert ist. Wähle „Ohne IBAN“, um zu sehen, wo noch etwas fehlt.";
+
 function BankverbindungenContent() {
   const { data: session, status } = useSession({ required: true });
   const [searchValue, setSearchValue] = useState("");
@@ -175,6 +178,7 @@ function BankverbindungenContent() {
     return (
       <TenantPage
         title="Bankverbindungen"
+        info={BANK_DETAILS_INFO}
         stats="Kein Zugriff"
         empty={{
           icon: <Lock className="h-12 w-12" />,
@@ -196,6 +200,7 @@ function BankverbindungenContent() {
   return (
     <TenantPage
       title="Bankverbindungen"
+      info={BANK_DETAILS_INFO}
       stats={loadFailed ? null : statusLine}
       statsLoading={isLoading || awaitingErrorText}
       error={failedWithoutData ? loadError.error : null}

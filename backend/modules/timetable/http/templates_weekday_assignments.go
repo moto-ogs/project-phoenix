@@ -15,6 +15,7 @@ import (
 	"fmt"
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // weekdayAssignmentRequest is one weekday's roster deviation. It is a full
@@ -22,10 +23,10 @@ import (
 // `staff_ids` removes them from that weekday. That keeps the wire shape
 // explicit instead of encoding add/remove semantics into flat id arrays.
 type weekdayAssignmentRequest struct {
-	Weekday        int     `json:"weekday"` // ISO 8601: 1=Mon … 7=Sun
-	StaffIDs       []int64 `json:"staff_ids"`
-	StudentIDs     []int64 `json:"student_ids"`
-	PrimaryStaffID *int64  `json:"primary_staff_id,omitempty"`
+	Weekday        int        `json:"weekday"` // ISO 8601: 1=Mon … 7=Sun
+	StaffIDs       []ident.ID `json:"staff_ids"`
+	StudentIDs     []ident.ID `json:"student_ids"`
+	PrimaryStaffID *ident.ID  `json:"primary_staff_id,omitempty"`
 }
 
 // validateWeekdayAssignments checks the deviations against the template's own
@@ -52,7 +53,7 @@ func validateWeekdayAssignments(assignments []weekdayAssignmentRequest, weekdays
 			return fmt.Errorf("weekday_assignments lists weekday %d twice", assignment.Weekday)
 		}
 		seen[assignment.Weekday] = struct{}{}
-		if assignment.PrimaryStaffID != nil && !containsID(assignment.StaffIDs, *assignment.PrimaryStaffID) {
+		if assignment.PrimaryStaffID != nil && !containsID(ident.Int64s(assignment.StaffIDs), (*assignment.PrimaryStaffID).Int64()) {
 			return errors.New("primary_staff_id must be part of the same weekday's staff_ids")
 		}
 	}
@@ -77,9 +78,9 @@ func toServiceWeekdayAssignments(assignments []weekdayAssignmentRequest) []timet
 	for _, assignment := range assignments {
 		out = append(out, timetable.WeekdayRosterAssignment{
 			Weekday:        assignment.Weekday,
-			StudentIDs:     assignment.StudentIDs,
-			StaffIDs:       assignment.StaffIDs,
-			PrimaryStaffID: assignment.PrimaryStaffID,
+			StudentIDs:     ident.Int64s(assignment.StudentIDs),
+			StaffIDs:       ident.Int64s(assignment.StaffIDs),
+			PrimaryStaffID: (*int64)(assignment.PrimaryStaffID),
 		})
 	}
 	return out
@@ -89,18 +90,18 @@ func toServiceWeekdayAssignments(assignments []weekdayAssignmentRequest) []timet
 // read side. A template whose roster is identical on every weekday returns an
 // empty list, which is how clients tell "no deviations" from "deviations".
 type templateWeekdayAssignmentResponse struct {
-	Weekday        int     `json:"weekday"`
-	StaffIDs       []int64 `json:"staff_ids"`
-	StudentIDs     []int64 `json:"student_ids"`
-	PrimaryStaffID *int64  `json:"primary_staff_id,omitempty"`
+	Weekday        int        `json:"weekday"`
+	StaffIDs       []ident.ID `json:"staff_ids"`
+	StudentIDs     []ident.ID `json:"student_ids"`
+	PrimaryStaffID *ident.ID  `json:"primary_staff_id,omitempty"`
 }
 
 // templateProtectedStudentAssignmentResponse exposes the weekdays supplied by
 // enrollment-owned rows. The editor needs this read-only metadata when it
 // expands a shared child list into explicit weekday assignments.
 type templateProtectedStudentAssignmentResponse struct {
-	Weekday    int     `json:"weekday"`
-	StudentIDs []int64 `json:"student_ids"`
+	Weekday    int        `json:"weekday"`
+	StudentIDs []ident.ID `json:"student_ids"`
 }
 
 // buildTemplateWeekdayAssignments groups the flat, kind-tagged roster rows the
@@ -125,8 +126,8 @@ func buildTemplateWeekdayAssignments(
 		if !ok {
 			byTemplate[row.TemplateID] = append(byTemplate[row.TemplateID], templateWeekdayAssignmentResponse{
 				Weekday:    row.Weekday,
-				StaffIDs:   []int64{},
-				StudentIDs: []int64{},
+				StaffIDs:   ident.IDs([]int64{}),
+				StudentIDs: ident.IDs([]int64{}),
 			})
 			position = len(byTemplate[row.TemplateID]) - 1
 			perWeekday[row.Weekday] = position
@@ -136,13 +137,13 @@ func buildTemplateWeekdayAssignments(
 		case timetable.TemplateWeekdayRosterKindEmpty:
 			// The entry itself is the payload: no person belongs to this day.
 		case timetable.TemplateWeekdayRosterKindStaff:
-			entry.StaffIDs = append(entry.StaffIDs, row.PersonID)
+			entry.StaffIDs = append(entry.StaffIDs, ident.ID(row.PersonID))
 			if row.IsPrimary && entry.PrimaryStaffID == nil {
 				staffID := row.PersonID
-				entry.PrimaryStaffID = &staffID
+				entry.PrimaryStaffID = (*ident.ID)(&staffID)
 			}
 		case timetable.TemplateWeekdayRosterKindStudent:
-			entry.StudentIDs = append(entry.StudentIDs, row.PersonID)
+			entry.StudentIDs = append(entry.StudentIDs, ident.ID(row.PersonID))
 		}
 	}
 	return byTemplate
@@ -166,14 +167,14 @@ func buildTemplateProtectedStudentAssignments(
 		if !ok {
 			byTemplate[row.TemplateID] = append(byTemplate[row.TemplateID], templateProtectedStudentAssignmentResponse{
 				Weekday:    row.Weekday,
-				StudentIDs: []int64{},
+				StudentIDs: ident.IDs([]int64{}),
 			})
 			position = len(byTemplate[row.TemplateID]) - 1
 			perWeekday[row.Weekday] = position
 		}
 		byTemplate[row.TemplateID][position].StudentIDs = append(
 			byTemplate[row.TemplateID][position].StudentIDs,
-			row.PersonID,
+			ident.ID(row.PersonID),
 		)
 	}
 	return byTemplate

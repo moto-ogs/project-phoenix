@@ -101,6 +101,8 @@ interface Props {
    * (Anmeldephasen-Editor) und behält seinen eigenen Abschnittskopf.
    */
   readonly variant?: "page" | "embedded";
+  /** Erklärung hinter dem Info-Knopf; nur für `variant="page"`. */
+  readonly info?: string;
 }
 
 const ROLLOVER_DESCRIPTION =
@@ -112,6 +114,7 @@ export function RolloverForm({
   onSuccess,
   pending,
   variant = "embedded",
+  info,
 }: Props) {
   const [draft, setDraft] = useState<RolloverInput>(() =>
     prefillFromSource(source),
@@ -148,7 +151,7 @@ export function RolloverForm({
   };
 
   const excludedDetails = preview
-    ? Object.entries(preview.excluded_by_status)
+    ? Object.entries(preview.excluded_by_status ?? {})
         .map(
           ([status, count]) =>
             `${CHILD_STATUS_LABELS[status as ChildStatus] ?? status}: ${count}`,
@@ -156,7 +159,7 @@ export function RolloverForm({
         .join(" · ")
     : "";
   const reviewDetails = preview
-    ? Object.entries(preview.review_by_reason)
+    ? Object.entries(preview.review_by_reason ?? {})
         .map(
           ([reason, count]) =>
             `${PREVIEW_REVIEW_REASON_LABELS[reason] ?? reason}: ${count}`,
@@ -437,6 +440,7 @@ export function RolloverForm({
     return (
       <TenantPage
         title={title}
+        info={info}
         back
         backHref="/enrollment-phases"
         backLabel="Zurück zu den Anmeldephasen"
@@ -455,4 +459,5 @@ export function RolloverForm({
 const PREVIEW_REVIEW_REASON_LABELS: Record<string, string> = {
   grade_above_max: "Klassenstufe über der Höchstgrenze",
   no_grade_level: "Keine Klassenstufe hinterlegt",
+  no_guardian: "Keine Erziehungsberechtigten hinterlegt",
 };

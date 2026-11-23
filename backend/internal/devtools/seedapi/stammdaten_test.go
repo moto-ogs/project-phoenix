@@ -210,6 +210,9 @@ func TestFixedSeeder_RetireFormerStaffRemovesActiveReferences(t *testing.T) {
 		case seedHTTPMethodDelete:
 			retiredPath = r.URL.Path
 			_, _ = w.Write([]byte(`{"status":"success"}`))
+		case seedHTTPMethodGet:
+			require.Equal(t, "/api/staff/11/stammdaten", r.URL.Path)
+			_, _ = w.Write([]byte(`{"data":{"versions":{"kontakt":"k","qualifikationen":"q"}}}`))
 		default:
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
 		}
@@ -452,6 +455,8 @@ func TestFixedSeeder_SeedActivities(t *testing.T) {
 	fs.categoryIDs["Spiele"] = 15
 	fs.categoryIDs["Draußen"] = 16
 	fs.categoryIDs["Mensa"] = 17
+	firstStaffKey := fmt.Sprintf("%s %s", DemoStaff[0].FirstName, DemoStaff[0].LastName)
+	fs.staffIDs[firstStaffKey] = 1
 
 	result := &FixedResult{}
 	err := fs.seedActivities(context.TODO(), result)
@@ -477,32 +482,15 @@ func TestFixedSeeder_SeedActivities_MissingRoom(t *testing.T) {
 	assert.Contains(t, err.Error(), "room not found")
 }
 
-func TestFixedSeeder_AssignSupervisors(t *testing.T) {
-	t.Parallel()
-
-	srv := apiMock(t)
-	defer srv.Close()
-
-	client := newTestClient(srv.URL, false)
-	client.token = "test-token"
-
-	fs := NewFixedSeeder(client, true, "")
-
-	// Pre-populate staffIDs and activityIDs
-	firstStaffKey := fmt.Sprintf("%s %s", DemoStaff[0].FirstName, DemoStaff[0].LastName)
-	fs.staffIDs[firstStaffKey] = 1
-	fs.activityIDs["Fußball"] = 100
-	fs.activityIDs["Basteln"] = 101
-
-	err := fs.assignSupervisors(context.TODO())
-	require.NoError(t, err)
-}
-
-func TestFixedSeeder_AssignSupervisors_NoStaff(t *testing.T) {
+func TestFixedSeeder_SeedActivities_NoStaff(t *testing.T) {
 	t.Parallel()
 
 	fs := NewFixedSeeder(nil, false, "")
-	err := fs.assignSupervisors(context.TODO())
+	for _, act := range DemoActivities {
+		fs.roomIDs[act.DefaultRoom] = int64(len(fs.roomIDs) + 1)
+	}
+	fs.categoryIDs["Sport"] = 10
+	err := fs.seedActivities(context.TODO(), &FixedResult{})
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "no staff available")
 }
@@ -1027,17 +1015,30 @@ func TestFixedSeeder_SeedClassArrivalTimes(t *testing.T) {
 		} `json:"schedules"`
 	}
 	srv := newSeedHTTPTestServer(func(w seedHTTPResponseWriter, r *seedHTTPRequest) {
+		if r.Method == "GET" {
+			require.Contains(t, r.URL.Path, "/api/students/class-arrival-times/")
+			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": map[string]string{"version": "read-version"}})
+			return
+		}
 		require.Equal(t, "POST", r.Method)
 		require.Equal(t, "/api/students/arrival-schedules/bulk", r.URL.Path)
 		request := struct {
-			SchoolClass string `json:"school_class"`
-			Schedules   []struct {
+			SchoolClass     string `json:"school_class"`
+			ExpectedVersion string `json:"expected_version"`
+			Schedules       []struct {
 				Weekday int    `json:"weekday"`
 				Time    string `json:"expected_arrival"`
 			} `json:"schedules"`
 		}{}
 		require.NoError(t, json.NewDecoder(r.Body).Decode(&request))
-		requests = append(requests, request)
+		require.Equal(t, "read-version", request.ExpectedVersion)
+		requests = append(requests, struct {
+			SchoolClass string `json:"school_class"`
+			Schedules   []struct {
+				Weekday int    `json:"weekday"`
+				Time    string `json:"expected_arrival"`
+			} `json:"schedules"`
+		}{request.SchoolClass, request.Schedules})
 		_ = json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 	})
 	defer srv.Close()

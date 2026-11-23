@@ -44,10 +44,10 @@ func TestCalendarGuardianProjectionPreservesPermissionInterpretation(t *testing.
 				return
 			}
 			require.NoError(t, err)
-			audiences, err := service.GuardianNotificationAudiences(ctx, []int64{detail.Appointment.ID})
+			audiences, err := service.GuardianNotificationAudiences(ctx, []int64{detail.Appointment.ID.Int64()})
 			require.NoError(t, err)
-			require.Equal(t, []int64{chain.GuardianProfileID}, audiences[detail.Appointment.ID].GuardianIDs)
-			require.Equal(t, []int64{chain.StudentID}, audiences[detail.Appointment.ID].StudentsByGuardian[chain.GuardianProfileID])
+			require.Equal(t, []int64{chain.GuardianProfileID}, audiences[detail.Appointment.ID.Int64()].GuardianIDs)
+			require.Equal(t, []int64{chain.StudentID}, audiences[detail.Appointment.ID.Int64()].StudentsByGuardian[chain.GuardianProfileID])
 		})
 	}
 }

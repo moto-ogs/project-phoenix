@@ -789,8 +789,9 @@ func TestRegisterRoutes_UsersRoutesRunThroughProtectedGroup(t *testing.T) {
 	router.Use(testpkg.TenantRuntimeMiddleware(t, db))
 	router.Mount("/api/users", resource.Router())
 	person := testpkg.CreateTestPerson(t, db, "Wired", "Route")
+	personPath := "/api/users/" + strconv.FormatInt(person.ID, 10)
 
-	anonymous := httptest.NewRequest(http.MethodGet, "/api/users", nil)
+	anonymous := httptest.NewRequest(http.MethodGet, personPath, nil)
 	anonymousRecorder := httptest.NewRecorder()
 	router.ServeHTTP(anonymousRecorder, anonymous)
 	assert.Equal(t, http.StatusUnauthorized, anonymousRecorder.Code)
@@ -799,7 +800,7 @@ func TestRegisterRoutes_UsersRoutesRunThroughProtectedGroup(t *testing.T) {
 	forbiddenClaims.Roles = []string{"user"}
 	forbiddenClaims.IsAdmin = false
 	forbiddenClaims.Permissions = nil
-	forbidden := testutil.NewAuthenticatedRequest(t, http.MethodGet, "/api/users", nil,
+	forbidden := testutil.NewAuthenticatedRequest(t, http.MethodGet, personPath, nil,
 		testutil.WithJWTBearer(testutil.MintTestJWT(t, forbiddenClaims)))
 	forbiddenRecorder := httptest.NewRecorder()
 	router.ServeHTTP(forbiddenRecorder, forbidden)
@@ -809,7 +810,7 @@ func TestRegisterRoutes_UsersRoutesRunThroughProtectedGroup(t *testing.T) {
 	allowedClaims.Roles = []string{"user"}
 	allowedClaims.IsAdmin = false
 	allowedClaims.Permissions = []string{"users:read"}
-	allowed := testutil.NewAuthenticatedRequest(t, http.MethodGet, "/api/users/"+strconv.FormatInt(person.ID, 10), nil,
+	allowed := testutil.NewAuthenticatedRequest(t, http.MethodGet, personPath, nil,
 		testutil.WithJWTBearer(testutil.MintTestJWT(t, allowedClaims)))
 	allowedRecorder := httptest.NewRecorder()
 	router.ServeHTTP(allowedRecorder, allowed)
@@ -843,7 +844,7 @@ func checkTimetableConflictWiring(t *testing.T, graph *goldenRuntime) {
 	_, staff := testpkg.CreateTestTeacherWithAccount(t, db, "Conflict", "Probe")
 	token := testpkg.MintLiveSessionJWT(t, db, testutil.AdminTestClaimsForTenant(int(staff.ID), testpkg.Tenant(t)))
 	probe := checkpointRequest(graph, checkpointScenario{
-		Method: http.MethodGet, Path: "/api/timetable/exception-conflicts?date=2099-01-05", Authenticated: true,
+		Method: http.MethodGet, Path: "/api/timetable/conflicts?date=2099-01-05&start_time=10:00&end_time=11:00&room_id=1", Authenticated: true,
 	}, token)
 	require.Equal(t, http.StatusOK, probe.Code, probe.Body.String())
 }
@@ -923,6 +924,7 @@ func TestSendsAuthMailMatchesThePortalMailRoutes(t *testing.T) {
 		"/auth/mfa/resend": true, "/operator/auth/mfa/resend": true, "/school/mfa/resend": true,
 		"/traeger/auth/mfa/resend": true, "/caterer/auth/mfa/resend": true,
 		"/caterer/account/mfa/start": true, "/caterer/auth/passkeys/enrollment/challenge": true,
+		"/parent/me/mfa/start": true, "/parent/me/mfa/confirm": false, "/parent/me/mfa/disable": false,
 		"/traeger/auth/mfa/step-up": true, "/traeger/auth/mfa/step-up/verify": false,
 		"/auth/login": false, "/parent/auth/login": false, "/auth/password-reset/confirm": false,
 		"/auth/mfa/verify": false, "/auth/passkeys/login/verify": false, "/caterer/account/mfa/confirm": false,

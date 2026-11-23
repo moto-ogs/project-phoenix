@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Absence list of a class for the Klassenbuch and the Zeugnis (#4793): per
@@ -91,9 +92,9 @@ type AbsenceListReport struct {
 // a student record are listed, children without an OGS place (#4803) too;
 // class-list-only entries carry no report and stay out.
 type AbsenceListChild struct {
-	StudentID int64  `json:"student_id"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
+	StudentID ident.ID `json:"student_id"`
+	FirstName string   `json:"first_name"`
+	LastName  string   `json:"last_name"`
 	// SchoolMemberOnly marks a child without an OGS place (#4803): it
 	// belongs to the class from SchoolMemberFrom to SchoolMemberUntil (nil:
 	// open) without taking part in OGS care, and on any earlier day with a

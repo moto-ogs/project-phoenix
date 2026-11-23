@@ -1,16 +1,21 @@
 package traegerportal
 
-import "github.com/moto-ogs/project-phoenix/api/common"
+import (
+	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/portalauth"
+)
 
 var traegerPortal = []common.PortalScope{common.PortalTraeger}
 
 // AccountRouteContracts registers the Träger-Büro's account management
 // (ADR 0270), with patterns relative to /traeger/accounts. The exports
-// answer files and keep their route files.
+// answer files (#2352).
 func AccountRouteContracts() []common.RouteContract {
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: TraegerAccountsResponse{}},
+		{Method: "GET", Pattern: "/export", Portals: traegerPortal, Query: []common.QueryParam{common.ListFormatQuery}, File: true},
 		{Method: "GET", Pattern: "/history", Portals: traegerPortal, Query: []common.QueryParam{{Name: "before", Kind: common.QueryID}}, Response: TraegerHistoryResponse{}},
+		{Method: "GET", Pattern: "/history/export", Portals: traegerPortal, Query: []common.QueryParam{common.ListFormatQuery}, File: true},
 		{Method: "POST", Pattern: "/invitations", Portals: traegerPortal, Request: TraegerInviteRequest{}, Response: TraegerInvitationResponse{}},
 		{Method: "DELETE", Pattern: "/invitations/{invitationId}", Portals: traegerPortal, NoData: true},
 		{Method: "PUT", Pattern: "/{accountId}/roles", Portals: traegerPortal, Request: TraegerRolesRequest{}, Response: TraegerMemberResponse{}},
@@ -37,16 +42,15 @@ func SchoolSessionRouteContracts() []common.RouteContract {
 	}
 }
 
-// StepUpRouteContracts registers the code step in the running Träger session
-// (#7068), with patterns relative to /traeger/auth. Starting it mails a code,
-// so the proxy does not send it again after a session renewal.
-func StepUpRouteContracts() []common.RouteContract {
-	return []common.RouteContract{
-		{
-			Method: "POST", Pattern: "/mfa/step-up", Portals: traegerPortal, Response: StepUpStartResponse{},
-			NoRetryAfterRenewal: "a renewed session would mail the code twice",
-		},
-	}
+// AuthRouteContracts registers the member's own remembered devices (#2352)
+// and the code step in the running Träger session (#7068), with patterns
+// relative to /traeger/auth. Starting the step mails a code, so the proxy
+// does not send it again after a session renewal.
+func AuthRouteContracts() []common.RouteContract {
+	return append(portalauth.TrustedDeviceRouteContracts(common.PortalTraeger), common.RouteContract{
+		Method: "POST", Pattern: "/mfa/step-up", Portals: traegerPortal, Response: StepUpStartResponse{},
+		NoRetryAfterRenewal: "a renewed session would mail the code twice",
+	})
 }
 
 // invitationAcceptBodyBytes bounds the accept body: a name and two passwords.
@@ -60,5 +64,26 @@ func InvitationRouteContracts() []common.RouteContract {
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/{token}", Portals: portals, Response: InvitationPreviewResponse{}},
 		{Method: "POST", Pattern: "/{token}/accept", Portals: portals, Request: AcceptRequest{}, Response: AcceptResponse{}, MaxBodyBytes: invitationAcceptBodyBytes},
+	}
+}
+
+// SessionRouteContracts registers the Träger-Portal's sign-in, second
+// factor and step-up (#7808), relative to /traeger/auth. Each answer carries
+// tokens, so only the portal's route file reads it and no proxy allowlist
+// names the route.
+func SessionRouteContracts() []common.RouteContract {
+	step := func(pattern string, request, response any) common.RouteContract {
+		return common.RouteContract{
+			Method: "POST", Pattern: pattern, Portals: traegerPortal, RouteFile: common.RouteFileSession,
+			Request: request, Response: response, Plain: true,
+		}
+	}
+	return []common.RouteContract{
+		step("/login", TraegerLoginRequest{}, TraegerLoginResponse{}),
+		step("/mfa/verify", TraegerMFAVerifyRequest{}, portalauth.TokenResponse{}),
+		step("/mfa/resend", common.MFAResendRequest{}, common.MFAResendResponse{}),
+		step("/mfa/enroll/start", nil, portalauth.EnrollStartResponse{}),
+		step("/mfa/enroll/confirm", TraegerMFAVerifyRequest{}, portalauth.TokenResponse{}),
+		step("/mfa/step-up/verify", common.MFAVerifyRequest{}, portalauth.TokenResponse{}),
 	}
 }

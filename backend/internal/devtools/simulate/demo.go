@@ -9,6 +9,8 @@ import (
 	"maps"
 	"slices"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 const (
@@ -235,8 +237,8 @@ func (d *DemoTicker) ensureSessions(ctx context.Context) ([]int64, error) {
 		}
 		var response struct {
 			Data struct {
-				Active bool  `json:"is_active"`
-				RoomID int64 `json:"room_id"`
+				Active bool     `json:"is_active"`
+				RoomID ident.ID `json:"room_id"`
 			} `json:"data"`
 		}
 		if err := json.Unmarshal(raw, &response); err != nil {
@@ -244,7 +246,7 @@ func (d *DemoTicker) ensureSessions(ctx context.Context) ([]int64, error) {
 		}
 		room := response.Data.RoomID
 		if !response.Data.Active {
-			room = findRoomForActivity(activities[i], state.Rooms)
+			room = ident.ID(findRoomForActivity(activities[i], state.Rooms))
 			if room == 0 {
 				return nil, fmt.Errorf("demo activity %q has no room", activities[i])
 			}
@@ -262,7 +264,7 @@ func (d *DemoTicker) ensureSessions(ctx context.Context) ([]int64, error) {
 		if _, err := client.DevicePost("/api/iot/ping", nil, device.APIKey, state.DevicePIN); err != nil {
 			return nil, fmt.Errorf("keep demo session alive: %w", err)
 		}
-		rooms = append(rooms, room)
+		rooms = append(rooms, int64(room))
 	}
 	return rooms, nil
 }
@@ -333,7 +335,7 @@ func (d *DemoTicker) closeLeftovers(now time.Time) error {
 			if block.IsSpontaneous || block.Status != "active" {
 				continue
 			}
-			if err := completeBlock(d.options.Client, block.ID); err != nil {
+			if err := completeBlock(d.options.Client, int64(block.ID)); err != nil {
 				allClosed = false
 				slog.Info("demo day: leftover block not closed",
 					"instance_id", block.ID,
@@ -512,9 +514,10 @@ func (d *DemoTicker) sendHome(ctx context.Context, now time.Time, latest map[int
 			continue
 		}
 		sent++
-		// The staff checkout ends the room visit and the day's attendance;
-		// the kiosk could only do that inside a session of its own.
-		if _, err := d.options.Client.Post(fmt.Sprintf("/api/active/visits/student/%d/checkout", student.ID), nil); err != nil {
+		// The web checkout of the child list ends the day's attendance and
+		// any open room visit; the kiosk could only do that inside a session
+		// of its own. A child already gone answers unchanged, not an error.
+		if _, err := d.options.Client.Post(fmt.Sprintf("/api/students/%d/school-checkin", student.ID), map[string]any{"action": "out"}); err != nil {
 			// Also a child that already left on its own; nothing to undo.
 			slog.Debug("demo day: child not sent home",
 				"student_id", student.ID,

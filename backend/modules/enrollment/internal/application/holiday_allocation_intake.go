@@ -9,6 +9,7 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation"
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The allocation by criteria in the public registration (#4700): the form
@@ -72,12 +73,12 @@ func keepHolidayCriteria(questions []enrollment.HolidayCriterionQuestion, scope 
 		if question.Scope != scope {
 			continue
 		}
-		value, answered := given[question.ID]
+		value, answered := given[question.ID.Int64()]
 		if !answered {
-			missing[prefix+strconv.FormatInt(question.ID, 10)] = errors.New("answer yes or no")
+			missing[prefix+strconv.FormatInt(question.ID.Int64(), 10)] = errors.New("answer yes or no")
 			continue
 		}
-		kept[question.ID] = value
+		kept[question.ID.Int64()] = value
 	}
 	return kept
 }
@@ -88,7 +89,7 @@ func pendingHolidayPlacements(input enrollment.HolidayRegistrationInput) []enrol
 	placements := []enrollment.HolidayReceiptPlacement{}
 	for i, child := range input.Children {
 		for _, booking := range child.Bookings {
-			placements = append(placements, enrollment.HolidayReceiptPlacement{ChildPosition: i + 1, WeekID: booking.WeekID, Placement: enrollment.HolidayPlacementPending})
+			placements = append(placements, enrollment.HolidayReceiptPlacement{ChildPosition: i + 1, WeekID: ident.ID(booking.WeekID), Placement: enrollment.HolidayPlacementPending})
 		}
 	}
 	return placements

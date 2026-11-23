@@ -34,8 +34,8 @@ through `devbox run` when the current process has not loaded the project environ
 | Backend suite with immediate sweep | `scripts/run-go-toolchain.sh scripts/test-backend.sh` |
 | Backend unit-only loop | `cd backend && ../scripts/run-go-toolchain.sh go test -short ./...` (skips DB tests) |
 | Changed-code tests | `scripts/run-go-toolchain.sh scripts/test-changed.sh origin/development` |
-| Fast inner loop | `scripts/run-go-toolchain.sh scripts/test-changed.sh --fast origin/development` (enough before push; CI runs the full closure). Live output lists package results; a failure adds a summary and keeps the full output in the printed `test-changed-go.log.gz` |
-| Before push | `scripts/run-go-toolchain.sh scripts/check-changed.mjs [base]`: the pre-push static checks (`scripts/pre-push.sh --worktree`), `test-changed.sh --fast` and, when a Go, `go.mod`/`go.sum`, `backend/architecture/` or architecture-checker path changed, `scripts/backend-architecture.sh check` without the base comparison (import policy for production and test packages, about 30 s; CI adds the comparison with the base), for committed, uncommitted and untracked changes. Two steps run side by side only while the load average is below half the CPUs, each with a timeout (`PHX_CHECK_TIMEOUT_MINUTES`, default 30); a rerun with byte-identical inputs prints the last passing summary |
+| Fast inner loop | `scripts/run-go-toolchain.sh scripts/test-changed.sh --fast origin/development` (the changed packages without their importers; enough before push, CI runs the full closure). Live output lists package results; a failure adds a summary and keeps the full output in the printed `test-changed-go.log.gz` |
+| Before push | `scripts/run-go-toolchain.sh scripts/check-changed.mjs [base]`: the pre-push static checks (`scripts/pre-push.sh --worktree`), `test-changed.sh --fast` and, when a Go, `go.mod`/`go.sum`, `backend/architecture/` or architecture-checker path changed, `scripts/backend-architecture.sh check` without the base comparison (import policy for production and test packages, about 30 s; CI adds the comparison with the base), for committed, uncommitted and untracked changes. Two steps run side by side only while the load average is below half the CPUs, each with a timeout (`PHX_CHECK_TIMEOUT_MINUTES`, default 10); a rerun with byte-identical inputs prints the last passing summary |
 | Red PR check | `node scripts/ci-failures.mjs [branch or PR]`: failed jobs and steps, their error lines, the local reproduction, and a warning when the previous push failed in the same job |
 | Generate route docs | `scripts/dev-native.sh backend go run . gendoc --routes` |
 | Standalone background jobs | `scripts/dev-native.sh backend go run . worker` with a free `PORT`; it waits in standby while `serve` leads (lease, cutover and rollback: [worker lease runbook](../operations/worker-lease-2726.md)) |
@@ -705,6 +705,15 @@ that makes a new lookup to see the change.
 | Client log budget | Each Next.js process caps work and log volume for its own requests. No authorization depends on the count. |
 | Session refresh deduplication | Each Next.js process can coalesce its own refreshes. PostgreSQL governs token rotation and concurrent retries across the replicas. |
 
+## Scaling API and frontend replicas
+
+Staging and production run the Worker as its own `worker` service; the API
+(`server`) and the BFF (`frontend`) can each run as several replicas behind
+Caddy's pools. Draining, the PostgreSQL connection budget
+(`scripts/check-db-connection-budget.py`), the replica consistency check and
+the steps to scale each app up or down:
+[replicas runbook](../operations/replicas-7226.md).
+
 ## Caddy reverse proxy
 
 `deploy/caddy/Caddyfile` is the source of truth for `/etc/caddy/Caddyfile` on
@@ -720,7 +729,8 @@ change by serving the snippet from the server's Caddy version in Docker with a
 dead upstream, and attach desktop and phone screenshots to the PR.
 
 Checks: `node scripts/check-caddyfile.mjs` (CI, on every change) verifies that
-each `reverse_proxy` imports `client_ip_upstream`; `--cloudflare` also compares
+each `reverse_proxy` imports `client_ip_upstream` and every app proxy
+balances a replica pool with unbuffered streams (#7226); `--cloudflare` also compares
 `trusted_proxies` with https://www.cloudflare.com/ips-v4 and `ips-v6`.
 `caddy-cloudflare-ranges.yml` runs that comparison weekly and opens an issue
 with the diff and the corrected line.

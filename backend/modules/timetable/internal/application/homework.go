@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/timetable/internal/domain"
 	internalports "github.com/moto-ogs/project-phoenix/modules/timetable/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Homework of the classes and the OGS feedback on it (#4796). The service
@@ -100,10 +101,27 @@ func (s *Service) ChangeHomework(ctx context.Context, in timetable.HomeworkChang
 		return timetable.HomeworkEntry{}, err
 	}
 	in.Subject, in.Description = subject, description
-	err = s.existingHomework(ctx, "change_class_homework", func(ctx context.Context, store internalports.HomeworkStore) (bool, domain.OperationStats, error) {
-		value, found, queryStats, updateErr := store.UpdateClassHomework(ctx, in, key)
+	err = s.homeworkOperation(ctx, "change_class_homework", func(ctx context.Context, store internalports.HomeworkStore, stats *domain.OperationStats) error {
+		// The row lock comes first: the check and the update see the entry
+		// no other change of it is writing (ADR 0311).
+		stored, found, lockStats, lockErr := store.LockClassHomework(ctx, timetable.HomeworkRef{ID: in.ID, SchoolClass: in.SchoolClass}, key)
+		stats.Add(lockStats)
+		if lockErr != nil {
+			return lockErr
+		}
+		if !found {
+			return timetable.ErrHomeworkNotFound
+		}
+		if checkErr := readstate.Check(in.ExpectedVersion, timetable.HomeworkVersion(stored)); checkErr != nil {
+			return checkErr
+		}
+		value, updated, queryStats, updateErr := store.UpdateClassHomework(ctx, in, key)
+		stats.Add(queryStats)
+		if updateErr == nil && !updated {
+			return timetable.ErrHomeworkNotFound
+		}
 		result = value
-		return found, queryStats, updateErr
+		return updateErr
 	})
 	return result, err
 }
@@ -138,6 +156,17 @@ func (s *Service) RecordHomeworkFeedback(ctx context.Context, in timetable.Homew
 		}
 		if len(homework) == 0 {
 			return timetable.ErrHomeworkFeedbackWithoutHomework
+		}
+		// The child's day is locked before its feedback is read, also when
+		// there is none yet, so two first feedbacks do not both pass the
+		// check (ADR 0311).
+		stored, lockStats, lockErr := store.LockHomeworkFeedback(ctx, in.StudentID, in.Date)
+		stats.Add(lockStats)
+		if lockErr != nil {
+			return lockErr
+		}
+		if checkErr := readstate.Check(in.ExpectedVersion, timetable.HomeworkFeedbackVersion(stored)); checkErr != nil {
+			return checkErr
 		}
 		value, upsertStats, upsertErr := store.UpsertHomeworkFeedback(ctx, in)
 		stats.Add(upsertStats)

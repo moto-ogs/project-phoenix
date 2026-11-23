@@ -1,3 +1,4 @@
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the review of a monthly run before its release (#5916): the
  * schools a new run may bill, the invoice date, the exclusion of single
@@ -5,16 +6,13 @@
  * calendar dates stay "YYYY-MM-DD".
  */
 
-import { traegerRequest } from "./traeger-api";
+import type * as traegerCareBillingRunsContract from "./contract/traeger-care-billing-runs.generated";
 import { type BillingFile, billingFile } from "./traeger-billing-api";
 import {
-  type BackendRunDetail,
   type CareInvoice,
   type CareRunDetail,
   detailFromBackend,
 } from "./traeger-care-billing-api";
-
-const RUNS_PATH = "/api/traeger/care-billing-runs";
 
 /** A school of the Träger for a new run, with the open run that bills it. */
 export interface CareRunSchool {
@@ -26,26 +24,21 @@ export interface CareRunSchool {
 
 export type CareReviewFormat = "pdf" | "xlsx" | "csv";
 
-function runPath(runId: string): string {
-  return `${RUNS_PATH}/${encodeURIComponent(runId)}`;
-}
-
 /** The schools a new run of `month` ("YYYY-MM-01") may bill. */
 export async function fetchCareRunSchools(
   month: string,
 ): Promise<CareRunSchool[]> {
-  const schools = await traegerRequest<
-    | {
-        id: number | string;
-        name: string;
-        open_run_id: number | string | null;
-      }[]
-    | null
-  >(`${RUNS_PATH}/schools?month=${encodeURIComponent(month)}`);
+  const schools = await bffJson(
+    "org",
+    "GET /traeger/care-billing-runs/schools",
+    {
+      query: { month },
+    },
+  );
   return (schools ?? []).map((school) => ({
-    id: String(school.id),
+    id: school.id,
     name: school.name,
-    openRunId: school.open_run_id === null ? null : String(school.open_run_id),
+    openRunId: school.open_run_id,
   }));
 }
 
@@ -55,9 +48,11 @@ export async function setCareRunInvoiceDate(
   invoiceDate: string | null,
 ): Promise<CareRunDetail> {
   return detailFromBackend(
-    await traegerRequest<BackendRunDetail>(`${runPath(runId)}/invoice-date`, {
-      method: "PUT",
-      body: { invoice_date: invoiceDate },
+    await bffJson("org", "PUT /traeger/care-billing-runs/{id}/invoice-date", {
+      params: { id: runId },
+      body: {
+        invoice_date: invoiceDate,
+      } satisfies traegerCareBillingRunsContract.CareInvoiceDateRequest,
     }),
   );
 }
@@ -78,13 +73,13 @@ export async function excludeCareInvoice(
   reason: string,
 ): Promise<CareRunDetail> {
   return detailFromBackend(
-    await traegerRequest<BackendRunDetail>(`${runPath(runId)}/exclusions`, {
-      method: "POST",
+    await bffJson("org", "POST /traeger/care-billing-runs/{id}/exclusions", {
+      params: { id: runId },
       body: {
-        contract_id: Number(invoice.contractId),
+        contract_id: invoice.contractId,
         service: invoice.service,
         reason,
-      },
+      } satisfies traegerCareBillingRunsContract.CareExclusionRequest,
     }),
   );
 }
@@ -95,12 +90,12 @@ export async function includeCareInvoice(
   invoice: CareInvoiceRef,
 ): Promise<CareRunDetail> {
   return detailFromBackend(
-    await traegerRequest<BackendRunDetail>(`${runPath(runId)}/inclusions`, {
-      method: "POST",
+    await bffJson("org", "POST /traeger/care-billing-runs/{id}/inclusions", {
+      params: { id: runId },
       body: {
-        contract_id: Number(invoice.contractId),
+        contract_id: invoice.contractId,
         service: invoice.service,
-      },
+      } satisfies traegerCareBillingRunsContract.CareInclusionRequest,
     }),
   );
 }
@@ -111,8 +106,10 @@ export async function downloadCareRunReview(
   format: CareReviewFormat,
 ): Promise<BillingFile> {
   return billingFile(
-    `${runPath(runId)}/review-export?format=${format}`,
-    {},
+    bffFile("org", "GET /traeger/care-billing-runs/{id}/review-export", {
+      params: { id: runId },
+      query: { format },
+    }),
     `pruefliste.${format}`,
   );
 }

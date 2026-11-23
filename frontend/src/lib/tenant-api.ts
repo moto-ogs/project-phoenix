@@ -1,3 +1,4 @@
+import { sessionBff } from "./session-bff";
 /**
  * Tenant resolution and switching API client.
  * Provides public tenant resolution (pre-login) and authenticated
@@ -5,10 +6,10 @@
  */
 
 import { normalizeCareFacilityTerm } from "~/lib/care-facility-term-value";
-import { apiErrorFromResponse } from "./api-error";
-import { clearSessionCache, sessionFetch } from "./session-cache";
+import { bffJson } from "./bff-fetch";
+import { clearSessionCache } from "./session-cache";
 import { clearPersonalStorage } from "./personal-storage";
-import { mapAccountTenant, type AccountTenantBackend } from "./account-tenants";
+import { mapAccountTenant } from "./account-tenants";
 import { parseBookedModules, type ModuleKey } from "./modules";
 
 export interface TenantSettings {
@@ -48,11 +49,11 @@ export function loginImageSrc(storedPath: string): string {
 export type PresenceMode = "detailed" | "binary";
 
 export interface TenantInfo {
-  tenantId: number;
+  tenantId: string;
   slug: string;
   name: string;
   subdomain: string;
-  organizationId: number;
+  organizationId: string;
   organizationName: string;
   /**
    * The Träger the school portal names next to the school (#4656). Set only
@@ -220,49 +221,6 @@ export type TenantSummary = Pick<
   | "hidden"
 >;
 
-interface TenantResolveResponse {
-  tenant_id: number;
-  slug: string;
-  name: string;
-  subdomain: string;
-  organization_id: number;
-  organization_name: string;
-  traeger_name?: string;
-  hidden?: boolean;
-  settings: TenantSettings;
-  presence_mode?: string;
-  student_photos_enabled?: boolean;
-  booked_modules?: string[];
-  parent_messaging_enabled?: boolean;
-  parent_message_card_badge_enabled?: boolean;
-  staff_messaging_enabled?: boolean;
-  display_enabled?: boolean;
-  caldav_enabled?: boolean;
-  care_offerings_enabled?: boolean;
-  attendance_web_enabled?: boolean;
-  attendance_log_enabled?: boolean;
-  group_mode?: string;
-  operational_overview_scope?: string;
-  attendance_edit_scope?: string;
-  parent_request_reason_policy?: string;
-  show_timetable_counts?: boolean;
-  timetable_enabled?: boolean;
-  meal_plan_enabled?: boolean;
-  meal_registration_enabled?: boolean;
-  waitlist_enabled?: boolean;
-  grade_level_max: number;
-  analytics_enabled?: boolean;
-  analytics_freigabe?: boolean;
-  analytics_recording_sample_percent?: number;
-  early_checkout_note_enabled?: boolean;
-  early_checkout_note_tolerance_minutes?: number;
-  weekend_follows_friday?: boolean;
-  children_without_care_place?: boolean;
-  child_search_only_navigation?: boolean;
-  simple_staff_navigation?: boolean;
-  care_facility_term?: string;
-}
-
 /**
  * Normalize analytics_recording_sample_percent. Anything that is not a whole
  * percentage records nothing: an unreadable value must never widen the
@@ -355,88 +313,70 @@ export function normalizePresenceMode(raw: unknown): PresenceMode {
 
 /**
  * Resolve a tenant slug to its metadata.
- * This is a public (no-auth) call used before login.
+ * This is a public (no-auth) call used before login. A failed or refused
+ * answer rejects with its code and request ID (#2353); the caller decides
+ * what a missing school means on its screen.
  */
-export async function resolveTenant(slug: string): Promise<TenantInfo | null> {
-  try {
-    const response = await fetch(
-      `/api/tenant/resolve?slug=${encodeURIComponent(slug)}`,
-    );
-
-    if (!response.ok) {
-      return null;
-    }
-
-    const json = (await response.json()) as {
-      status: string;
-      data: TenantResolveResponse;
-    };
-    const data = json.data;
-    return {
-      tenantId: data.tenant_id,
-      slug: data.slug,
-      name: data.name,
-      subdomain: data.subdomain,
-      organizationId: data.organization_id,
-      organizationName: data.organization_name,
-      traegerName: data.traeger_name,
-      hidden: data.hidden === true,
-      settings: data.settings ?? {},
-      presenceMode: normalizePresenceMode(data.presence_mode),
-      studentPhotosEnabled: data.student_photos_enabled === true,
-      ...bookedModuleFields(data.booked_modules),
-      messagingEnabled: data.parent_messaging_enabled === true,
-      parentMessageCardBadgeEnabled:
-        data.parent_message_card_badge_enabled === true,
-      staffMessagingEnabled: data.staff_messaging_enabled === true,
-      displayEnabled: data.display_enabled === true,
-      caldavEnabled: data.caldav_enabled === true,
-      careOfferingsEnabled: data.care_offerings_enabled !== false,
-      attendanceWebEnabled: data.attendance_web_enabled === true,
-      attendanceLogEnabled: data.attendance_log_enabled === true,
-      groupMode: data.group_mode === "open_care" ? "open_care" : "fixed_groups",
-      operationalOverviewScope: normalizeOverviewScope(
-        data.operational_overview_scope,
-      ),
-      attendanceEditScope: normalizeAttendanceEditScope(
-        data.attendance_edit_scope,
-      ),
-      parentRequestReasonPolicy: normalizeReasonPolicy(
-        data.parent_request_reason_policy,
-      ),
-      showTimetableCounts: data.show_timetable_counts !== false,
-      timetableEnabled: data.timetable_enabled !== false,
-      mealPlanEnabled: data.meal_plan_enabled === true,
-      mealRegistrationEnabled: data.meal_registration_enabled === true,
-      waitlistEnabled: data.waitlist_enabled !== false,
-      gradeLevelMax: data.grade_level_max,
-      analyticsEnabled: data.analytics_enabled === true,
-      analyticsFreigabe:
-        data.analytics_enabled === true && data.analytics_freigabe === true,
-      analyticsRecordingSamplePercent: normalizeRecordingSamplePercent(
-        data.analytics_recording_sample_percent,
-      ),
-      earlyCheckoutNoteToleranceMinutes: normalizeEarlyCheckoutTolerance(
-        data.early_checkout_note_enabled,
-        data.early_checkout_note_tolerance_minutes,
-      ),
-      weekendFollowsFriday: data.weekend_follows_friday === true,
-      childrenWithoutCarePlace: data.children_without_care_place === true,
-      childSearchOnlyNavigation: data.child_search_only_navigation === true,
-      simpleStaffNavigation: data.simple_staff_navigation === true,
-      careFacilityTerm: normalizeCareFacilityTerm(data.care_facility_term),
-    };
-  } catch {
-    return null;
-  }
-}
-
-/** Public tenant response (no internal IDs) */
-interface PublicTenantBackend {
-  slug: string;
-  name: string;
-  subdomain: string;
-  organization_name: string;
+export async function resolveTenant(slug: string): Promise<TenantInfo> {
+  const data = await bffJson("public", "GET /auth/tenant/resolve", {
+    query: { slug },
+    errorMessage: "Failed to resolve tenant",
+  });
+  return {
+    tenantId: data.tenant_id,
+    slug: data.slug,
+    name: data.name,
+    subdomain: data.subdomain,
+    organizationId: data.organization_id,
+    organizationName: data.organization_name,
+    traegerName: data.traeger_name,
+    hidden: data.hidden === true,
+    // The contract types the school's settings map as open JSON.
+    settings: (data.settings ?? {}) as TenantSettings,
+    presenceMode: normalizePresenceMode(data.presence_mode),
+    studentPhotosEnabled: data.student_photos_enabled === true,
+    ...bookedModuleFields(data.booked_modules),
+    messagingEnabled: data.parent_messaging_enabled === true,
+    parentMessageCardBadgeEnabled:
+      data.parent_message_card_badge_enabled === true,
+    staffMessagingEnabled: data.staff_messaging_enabled === true,
+    displayEnabled: data.display_enabled === true,
+    caldavEnabled: data.caldav_enabled === true,
+    careOfferingsEnabled: data.care_offerings_enabled !== false,
+    attendanceWebEnabled: data.attendance_web_enabled === true,
+    attendanceLogEnabled: data.attendance_log_enabled === true,
+    groupMode: data.group_mode === "open_care" ? "open_care" : "fixed_groups",
+    operationalOverviewScope: normalizeOverviewScope(
+      data.operational_overview_scope,
+    ),
+    attendanceEditScope: normalizeAttendanceEditScope(
+      data.attendance_edit_scope,
+    ),
+    parentRequestReasonPolicy: normalizeReasonPolicy(
+      data.parent_request_reason_policy,
+    ),
+    showTimetableCounts: data.show_timetable_counts !== false,
+    timetableEnabled: data.timetable_enabled !== false,
+    mealPlanEnabled: data.meal_plan_enabled === true,
+    mealRegistrationEnabled: data.meal_registration_enabled === true,
+    waitlistEnabled: data.waitlist_enabled !== false,
+    gradeLevelMax: data.grade_level_max,
+    analyticsEnabled: data.analytics_enabled === true,
+    analyticsFreigabe:
+      data.analytics_enabled === true && data.analytics_freigabe === true,
+    analyticsRecordingSamplePercent: normalizeRecordingSamplePercent(
+      data.analytics_recording_sample_percent,
+    ),
+    earlyCheckoutNoteToleranceMinutes: normalizeEarlyCheckoutTolerance(
+      data.early_checkout_note_enabled,
+      data.early_checkout_note_tolerance_minutes,
+    ),
+    weekendFollowsFriday: data.weekend_follows_friday === true,
+    childrenWithoutCarePlace: data.children_without_care_place === true,
+    childSearchOnlyNavigation: data.child_search_only_navigation === true,
+    simpleStaffNavigation: data.simple_staff_navigation === true,
+    careFacilityTerm: normalizeCareFacilityTerm(data.care_facility_term),
+  };
 }
 
 export interface TenantListResult {
@@ -460,27 +400,16 @@ export async function listAllTenants(
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      const response = await fetch("/api/tenant/list");
-      if (!response.ok) {
-        lastError = new Error(`HTTP ${response.status}`);
-        if (attempt < maxAttempts) {
-          await delay(1000 * 2 ** (attempt - 1));
-          continue;
-        }
-        return { tenants: [], status: "error" };
-      }
-
-      const json = (await response.json()) as {
-        data?: PublicTenantBackend[];
-      };
-      const items = json.data ?? [];
+      const items = await bffJson("public", "GET /auth/tenants", {
+        errorMessage: "Tenant list load failed",
+      });
       return {
         tenants: items.map((t) => ({
-          tenantId: 0,
+          tenantId: "",
           slug: t.slug,
           name: t.name,
           subdomain: t.subdomain,
-          organizationId: 0,
+          organizationId: "",
           organizationName: t.organization_name,
           hidden: false,
         })),
@@ -510,12 +439,9 @@ function delay(ms: number): Promise<void> {
  * Requires an authenticated session.
  */
 export async function listAvailableTenants(): Promise<TenantSummary[]> {
-  const response = await sessionFetch("/api/auth/account-tenants");
-  if (!response.ok) {
-    return [];
-  }
-  const json = (await response.json()) as { data?: AccountTenantBackend[] };
-  return (json.data ?? []).map(mapAccountTenant);
+  // The backend path, through the staff portal's catalog proxy (#2352).
+  const tenants = await bffJson("tenant", "GET /auth/account/tenants");
+  return tenants.map(mapAccountTenant);
 }
 
 /** Switch server-side, then clear cross-tenant caches before navigation. */
@@ -546,23 +472,16 @@ export async function performTenantSwitch(
  * the slug 404s for schools where slug != subdomain (#1975).
  */
 export async function switchTenant(subdomain: string): Promise<void> {
-  const response = await sessionFetch(
-    "/api/auth/switch-tenant",
-    {
-      method: "POST",
-      body: JSON.stringify({ tenant_slug: subdomain }),
-    },
-    {
-      authRefusals: [
-        "identity.tenant_access_denied",
-        "identity.mfa_session_required",
-      ],
-    },
-  );
-  if (!response.ok) {
-    // The switch UI branches on the code: identity.tenant_access_denied
-    // (401, no access to that school) or identity.use_school_portal (a
-    // teacher account that belongs in the school portal).
-    throw await apiErrorFromResponse(response, "Failed to switch tenant");
-  }
+  // The switch is a session step of the BFF (app/api/auth/switch-tenant).
+  // The UI branches on the code: identity.tenant_access_denied (401, no
+  // access to that school) or identity.use_school_portal (a teacher account
+  // that belongs in the school portal).
+  await bffJson("tenant", sessionBff.switchTenant, {
+    body: { tenant_slug: subdomain },
+    errorMessage: "Failed to switch tenant",
+    authRefusals: [
+      "identity.tenant_access_denied",
+      "identity.mfa_session_required",
+    ],
+  });
 }

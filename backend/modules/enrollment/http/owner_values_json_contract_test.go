@@ -108,3 +108,49 @@ func TestAdminLegalEvidenceJSON(t *testing.T) {
 	require.NoError(t, err)
 	require.JSONEq(t, `[]`, string(empty))
 }
+
+func TestChangeRequestSnapshotsKeepNullsAndReadOldDiffKeys(t *testing.T) {
+	t.Parallel()
+	raw := json.RawMessage(`{
+		"guardian_first_name":"Anna","guardian_phone":null,
+		"additional_guardians":[{"first_name":"Coco","phone":null}],
+		"children":["legacy child",{"first_name":"Sven","target_grade_level":null,"custom_data":null}],
+		"consent_flags":{"photo":false,"legacy":"true"},"custom_data":null
+	}`)
+	row, err := changeRequestValue(&capability.ChangeRequest{
+		BaseSnapshot: raw, Diff: json.RawMessage(`{"guardian_phone":true,"children":true}`),
+	})
+	require.NoError(t, err)
+	got, err := json.Marshal(row.BaseSnapshot)
+	require.NoError(t, err)
+	require.JSONEq(t, string(raw), string(got))
+	require.Equal(t, []string{"children", "guardian_phone"}, row.Diff.Changed)
+
+	var diff ChangeRequestDiff
+	require.NoError(t, json.Unmarshal([]byte(`{"changed":["guardian_first_name",123,null,"children"],"guardian_phone":true}`), &diff))
+	require.Equal(t, []string{"guardian_first_name", "children"}, diff.Changed)
+}
+
+func TestEditDraftKeepsEmptyAnswerObjects(t *testing.T) {
+	t.Parallel()
+	request := &capability.Request{}
+	flags, err := json.Marshal(consentFlagsFromOwner(request.ConsentFlags))
+	require.NoError(t, err)
+	require.JSONEq(t, `{}`, string(flags))
+	answers, err := json.Marshal(formAnswerMap(request.CustomData))
+	require.NoError(t, err)
+	require.JSONEq(t, `{}`, string(answers))
+}
+
+func TestConsentInputKeepsLegacyFlagValuesForValidation(t *testing.T) {
+	t.Parallel()
+	var flags ConsentFlagsInput
+	raw := `{"photo":false,"evidence":null,"historic":"true"}`
+	require.NoError(t, json.Unmarshal([]byte(raw), &flags))
+	got, err := json.Marshal(flags)
+	require.NoError(t, err)
+	require.JSONEq(t, raw, string(got))
+	typed, err := json.Marshal(flags.Value)
+	require.NoError(t, err)
+	require.JSONEq(t, `{"photo":false,"evidence":null,"historic":null}`, string(typed))
+}

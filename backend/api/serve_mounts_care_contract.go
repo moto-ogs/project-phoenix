@@ -28,12 +28,18 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
+// careContractSigningPath is the one-time link of a contract mail (#4679).
+// The general request limiter leaves it to the shared limit of the public
+// links, which signingLink carries.
+const careContractSigningPath = "/public/care-contract-signing"
+
 // mountCareContractRoutes serves the Betreuungsvertrag (ADR 0088, ADR 0153,
 // #4678) behind the right "Verträge verwalten": the contracts at
 // /traeger/contracts, the templates of the offerings at
 // /traeger/contract-templates and withdrawal and termination at
-// /traeger/contract-notices (#4682).
-func mountCareContractRoutes(root chi.Router, organizations HolidayOrganizations, settings TraegerBrandingSettings,
+// /traeger/contract-notices (#4682). signingLink is root behind the limit of
+// the signing link.
+func mountCareContractRoutes(root, signingLink chi.Router, organizations HolidayOrganizations, settings TraegerBrandingSettings,
 	schoolSettings CareContractSchoolSettings, delivery deliveryRuntime.Capability, outcomes deliveryRuntime.EmailOutcomes, accessLog owners.DataAccessAppender,
 	addressees carecontract.NoticeAddressees, holidays carecontract.SchoolHolidays, parentsURL string, today func() calendar.Date, now func() time.Time) {
 	resource := NewCareContractHTTP(organizations, settings, schoolSettings, delivery, outcomes, accessLog, holidays, parentsURL, today, now)
@@ -41,9 +47,11 @@ func mountCareContractRoutes(root chi.Router, organizations HolidayOrganizations
 	root.Mount("/traeger/contract-templates", resource.TemplateRouter(ProtectedTraegerRoutes))
 	mountCareContractNoticeRoutes(root, organizations, settings, schoolSettings, delivery, outcomes, accessLog, addressees, holidays, parentsURL, now)
 	mountCareContractImportRoutes(root, organizations, settings, accessLog, today, now)
+	mountCareContractCorrectionRoutes(root, accessLog, today)
+	mountCareContractChildLinkRoutes(root, organizations, accessLog, today)
 	// The one-time link of a contract mail (#4679), without an account.
 	signing := careContractCompose.NewSigning(careContractSignaturePorts(organizations, settings, delivery, outcomes, holidays, parentsURL), now)
-	root.Mount("/public/care-contract-signing", careContractHTTP.NewSigningResource(signing).PublicRouter())
+	signingLink.Mount(careContractSigningPath, careContractHTTP.NewSigningResource(signing).PublicRouter())
 }
 
 // careContractSignaturePorts binds the signature of a contract (#4679): the
@@ -155,7 +163,7 @@ func (s careContractSchools) TraegerSchools(ctx context.Context, organizationID 
 	result := make([]carecontract.School, 0, len(schools))
 	for _, school := range schools {
 		if !school.IsDeleted() {
-			result = append(result, carecontract.School{ID: school.ID, Name: school.Name})
+			result = append(result, carecontract.School{ID: school.ID.Int64(), Name: school.Name})
 		}
 	}
 	slices.SortFunc(result, func(a, b carecontract.School) int {
@@ -191,6 +199,10 @@ func (a careContractApplications) AcceptedApplications(ctx context.Context, requ
 			GuardianLastName: application.GuardianLastName, GuardianEmail: application.GuardianEmail,
 			GuardianAccountID: application.GuardianAccountID, PhaseName: application.PhaseName,
 			ServiceStartDate: application.ServiceStartDate, ActivateOn: application.ActivateOn, Renewal: application.Renewal,
+			ContractImport: application.Source == enrollment.RequestSourceContractImport,
+		}
+		if result[i].ContractImport && application.SourceContractID != nil {
+			result[i].ImportContractID = *application.SourceContractID
 		}
 		if application.FamilyChildren != nil && application.FamilyChildrenStatedAt != nil {
 			result[i].FamilyChildren = &carecontract.FamilyStatement{Children: *application.FamilyChildren, StatedAt: *application.FamilyChildrenStatedAt}
@@ -198,6 +210,26 @@ func (a careContractApplications) AcceptedApplications(ctx context.Context, requ
 		for _, proof := range application.Acceptances {
 			result[i].Acceptances = append(result[i].Acceptances, carecontract.AcceptedText{Key: proof.Key, Text: proof.Text, SHA256: proof.SHA256, SubmittedAt: proof.SubmittedAt,
 				Required: proof.Required})
+		}
+	}
+	return result, nil
+}
+
+// AcceptedStudentApplications reads the accepted applications of the child
+// records for the plan of imported contracts (ADR 0309). It passes on the
+// application child, its child record and the source of the application,
+// and nothing of the guardians: the plan reads no more.
+func (a careContractApplications) AcceptedStudentApplications(ctx context.Context, studentIDs []int64) ([]carecontract.Application, error) {
+	found, err := a.applications.AcceptedStudentApplications(ctx, studentIDs)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]carecontract.Application, len(found))
+	for i, application := range found {
+		result[i] = carecontract.Application{RequestChildID: application.RequestChildID, StudentID: application.StudentID,
+			ContractImport: application.Source == enrollment.RequestSourceContractImport}
+		if result[i].ContractImport && application.SourceContractID != nil {
+			result[i].ImportContractID = *application.SourceContractID
 		}
 	}
 	return result, nil
@@ -285,6 +317,10 @@ func (l careContractAccessLog) RecordAccess(ctx context.Context, access carecont
 	case carecontract.SchoolAccessContracts:
 		resource = auditModels.ResourceTypeCareContracts
 		metadata["contract_ids"] = access.ContractIDs
+		if len(access.StudentIDs) > 0 {
+			// The child records a link of imported contracts showed (#7760).
+			metadata["student_ids"] = access.StudentIDs
+		}
 	case carecontract.SchoolAccessChanges:
 		resource = auditModels.ResourceTypeCareContractChanges
 		metadata["contract_ids"] = access.ContractIDs

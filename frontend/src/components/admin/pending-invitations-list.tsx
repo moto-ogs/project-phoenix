@@ -88,10 +88,10 @@ export function PendingInvitationsList({
   const invitations = data ?? NO_INVITATIONS;
   const loadFailed = loadError.failure !== undefined;
   const isLoading = (!data && !loadFailed) || refreshing;
-  const [actionLoading, setActionLoading] = useState<ReadonlySet<number>>(
+  const [actionLoading, setActionLoading] = useState<ReadonlySet<string>>(
     new Set(),
   );
-  const setInvitationLoading = (id: number, loading: boolean) => {
+  const setInvitationLoading = (id: string, loading: boolean) => {
     setActionLoading((current) => {
       const next = new Set(current);
       if (loading) next.add(id);
@@ -135,7 +135,7 @@ export function PendingInvitationsList({
     },
   );
 
-  const handleResend = async (id: number) => {
+  const handleResend = async (id: string) => {
     if (actionLoading.has(id)) return;
     try {
       setInvitationLoading(id, true);

@@ -45,6 +45,9 @@ import { roomsConcept } from "~/lib/concepts/rooms";
 
 const NO_ROOMS = [] as const;
 
+const ACTIVE_SUPERVISIONS_INFO =
+  "Hier führst du die Kinderliste deiner laufenden Aufsicht. Starte zuerst deinen Termin unter „Als Nächstes“ oder übernimm einen Raum. Halte die Liste aktuell, wenn Kinder kommen oder gehen.";
+
 function sessionHref(activeGroupId: string): string {
   return `/active-supervisions?session=${activeGroupId}`;
 }
@@ -76,7 +79,7 @@ function ownRunningBlocks(
       .filter((session) => !plannedIds.has(session.id))
       .map((session) => ({
         id: null,
-        title: session.name ?? session.room?.name ?? "Aktuelle Aufsicht",
+        title: session.room?.name ?? "Aktuelle Aufsicht",
         activeGroupId: session.id,
       })),
   ];
@@ -226,6 +229,7 @@ export function OwnSupervisionView() {
   return (
     <TenantPage
       title={title}
+      info={ACTIVE_SUPERVISIONS_INFO}
       stats={
         selected ? formatChildCount(presentCount, null) : "Keine Aufsicht aktiv"
       }
@@ -308,6 +312,7 @@ export function OwnSupervisionView() {
             onConfirmExpected={actions.handleConfirmExpectedStudents}
             onRosterAction={actions.handleRosterAction}
             onSaveHomeworkFeedback={actions.handleSaveHomeworkFeedback}
+            reloadAfterRefusal={actions.reloadRosterAfterRefusal}
             onSearchChange={actions.handleAddStudentSearchChange}
           />
         </>

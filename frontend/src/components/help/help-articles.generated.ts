@@ -36,6 +36,8 @@ import type { correctWorkTimeTopic as authored_correctWorkTimeTopic } from "./ar
 
 import type { createStudentTopic as authored_createStudentTopic } from "./articles/create-student";
 
+import type { dailyHandoversTopic as authored_dailyHandoversTopic } from "./articles/daily-handovers";
+
 import type { dataManagementTopic as authored_dataManagementTopic } from "./articles/data-management";
 
 import type { dayListsTopic as authored_dayListsTopic } from "./articles/day-lists";
@@ -156,6 +158,8 @@ import type { ownAbsenceTopic as authored_ownAbsenceTopic } from "./articles/own
 
 import type { ownGroupsTopic as authored_ownGroupsTopic } from "./articles/own-groups";
 
+import type { ownProfileTopic as authored_ownProfileTopic } from "./articles/own-profile";
+
 import type { ownShiftPlanTopic as authored_ownShiftPlanTopic } from "./articles/own-shift-plan";
 
 import type { parentAccountProblemTopic as authored_parentAccountProblemTopic } from "./articles/parent-account-problem";
@@ -257,6 +261,8 @@ import type { staffPermissionsTopic as authored_staffPermissionsTopic } from "./
 import type { staffQualificationsTopic as authored_staffQualificationsTopic } from "./articles/staff-qualifications";
 
 import type { staffRecordTopic as authored_staffRecordTopic } from "./articles/staff-record";
+
+import type { staffRemindersTopic as authored_staffRemindersTopic } from "./articles/staff-reminders";
 
 import type { staffSurveysTopic as authored_staffSurveysTopic } from "./articles/staff-surveys";
 
@@ -1012,6 +1018,51 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
         ],
       },
       {
+        // Baustein „Heute anders" (#7659), components/home/day-changes-block.tsx.
+        title: "Was heute anders ist",
+        description:
+          "Ganz oben auf der `Startseite` steht die Karte `Heute anders`. Sie zeigt, wer heute fehlt und wer vertritt. Sie zeigt auch Dienste, Angebote und AGs, die heute anders sind oder ausfallen. Dazu kommen die Hinweise der Leitung für heute.",
+        ordered: false,
+        steps: [
+          "Unter `Betrifft dich` steht, was dich selbst angeht: deine Gruppen, Vertretungen, Termine und Dienste.",
+          "Dort steht auch, ob du heute fehlst oder dein Dienst anders ist oder ausfällt.",
+          "Unter `Schule` steht der Rest der Schule.",
+          // Kinder in „Heute anders" (#7665): einzeln in den eigenen Gruppen,
+          // sonst eine aufklappbare Zeile pro Gruppe oder Klasse.
+          "Bei den Kindern steht, wer krank gemeldet oder entschuldigt ist, wer zu einer anderen Zeit geht, wer allein nach Hause geht und wer einen Hinweis zum Abholen hat.",
+          "Die Kinder deiner Gruppen stehen einzeln da. Für die übrige Schule gibt es eine Zeile pro Gruppe, etwa `Gruppe Igel` mit `4 krank, 1 geht allein`. Tippe auf den Namen der Gruppe, um die Kinder zu sehen.",
+          // Klassen in „Heute anders" (#7681): Ausflug aus dem Betreuungsplan,
+          // Unterrichtsschluss aus dem Stundenplan; nie Namen oder Gründe.
+          "Ist eine Klasse heute auf Ausflug oder endet ihr Unterricht zu einer anderen Zeit, steht das auch dort. Beispiel: `Bei Klasse 2c endet der Unterricht heute um 11:30 Uhr.`",
+          "Bist du einer Klasse zugeordnet oder ist ein Kind deiner Gruppe auf dem Ausflug, steht die Klasse unter `Betrifft dich`.",
+          // Darstellung über den Tag (#7660). Die Zeilen mit Uhrzeit und das
+          // eingeklappte „erledigt“ beschreibt erst die erste Quelle mit
+          // Uhrzeit (Termine, #7662/#7663), vorher gibt es sie nicht.
+          "Neue Änderungen stehen oben. Längere Änderungen stehen kurz darunter, zum Beispiel mit `seit 3.11.`.",
+          // Quelle Stundenplan (#7662): Uhrzeit und Raum.
+          "Bei Angeboten und AGs stehen Uhrzeit und Raum unter dem Satz. Sie stehen nach Beginn geordnet.",
+          // Abwesenheit und Vertretung bei einem Termin (#7675): Quelle
+          // Personal, Link in den Vertretungsplan mit schedules:manage.
+          "Auch wer nur bei einem Termin fehlt oder vertritt, steht mit Uhrzeit da. Beispiel: `Sara übernimmt heute „Chor“ für Ben.`",
+          "Darfst du den `Vertretungsplan` öffnen, führt dich der Eintrag zu diesem Termin.",
+          "Am Handy zeigt `Schule` nur die ersten 3 Einträge. Den Rest zeigt `Alle anzeigen`.",
+          // Termine aus dem eigenen Kalender (#7663), api/day_changes_appointments.go.
+          "Unter `Betrifft dich` stehen auch deine Termine aus `Mein Kalender`. Du siehst dort, welcher Termin heute ausfällt. Du siehst auch, welcher Termin heute woanders oder zu einer anderen Zeit ist.",
+          "Dienste, Termine, Angebote und AGs, die schon vorbei sind, stehen ganz unten unter `erledigt`. Wähle `erledigt`, um sie zu sehen.",
+          // Hinweise der Leitung in „Heute anders" (#7667), components/home/day-notice-row.tsx.
+          "Einen Hinweis der Leitung, den du noch bestätigen sollst, siehst du ganz oben. Wähle `Zur Kenntnis nehmen`. Danach steht er unter `Schule`.",
+          // Speiseplan in „Heute anders" (#7666): nur die Kurzinfo, ohne Gerichte.
+          "Steht dort `Der Speiseplan für heute wurde geändert.`, gibt es heute etwas anderes zu essen. Was es gibt, steht auf der Seite `Speiseplan`.",
+          "Tippe auf einen Eintrag, um die passende Seite zu öffnen.",
+          "Steht dort `Heute läuft alles wie geplant.`, gibt es heute nichts Besonderes.",
+          "Die Karte zeigt nie, warum jemand fehlt.",
+          "Ändert sich etwas, zeigt die Karte es ohne Neuladen.",
+          // Krank und Urlaub des Teams stehen seit #7668 nur noch hier, nicht
+          // mehr in „Personal heute“ (components/home/staff-today-block.tsx).
+          "Die Leitung sieht in `Personal heute`, wie viele in Aufsicht und eingestempelt sind. Wer krank oder im Urlaub ist, steht in `Heute anders`.",
+        ],
+      },
+      {
         // Labels aus home/page.tsx (Knopf „Anpassen", „Fertig") und
         // home-board.tsx („Bausteine", „Standardansicht wiederherstellen").
         title: "Die Startseite anpassen",
@@ -1028,7 +1079,7 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
         title: "Hilfe öffnen",
         steps: [
           "Siehst du oben rechts ein Fragezeichen? Es öffnet die passende Anleitung.",
-          "Am Handy oder Tablet steht es rechts im Seitenkopf.",
+          "Am Handy oder Tablet steht es rechts neben dem Seitennamen. Es steht vor den Knöpfen der Seite.",
           "Oder wähle `Hilfe`: am Computer unten in der Seitenleiste, auf dem Handy unter `Mehr`.",
         ],
       },
@@ -1037,14 +1088,36 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
       "Du weißt, wo du die wichtigsten Bereiche und die passende Hilfe findest.",
     differences: [
       "Welche Bereiche du siehst, hängt von deiner Rolle und den Einstellungen deiner OGS ab.",
+      // Menü mit einem Eintrag am Handy (#7799, OverflowMenu): die
+      // Anleitungen nennen weiter „das Menü mit den drei Punkten“.
+      "Eine Anleitung nennt das Menü mit den drei Punkten, aber am Handy steht dort ein Knopf wie `Einladen`? Hat das Menü nur einen Eintrag, zeigt moto am Handy gleich diesen Knopf. Tippe direkt darauf.",
       "Du siehst keine Überschriften wie `Tagesbetrieb` oder `Team`? Dann hat deine OGS die einfache Seitenleiste eingeschaltet. Alle Seiten zeigt `Alle Seiten anzeigen` ganz unten.",
       "Unter `Bausteine` fehlt eine Karte? Dann steht sie schon auf deiner Startseite. Oder deine Rolle oder deine OGS sieht sie nicht vor.",
+      // Sichtregel von „Heute anders" (#7659): Namen nur für die eigenen
+      // Gruppen, für die übrige Schule nur die Zahl; die Leitung sieht alle.
+      // Der Baustein „Hinweise der Leitung“ ist seit #7668 weg; Pflicht und
+      // Abschaltung der Schule gelten per Migration für „Heute anders“.
+      "Die Karte `Hinweise der Leitung` fehlt auf der Startseite? Ihre Hinweise stehen jetzt in `Heute anders`. Alle Hinweise, auch für andere Tage, findest du weiter in der Seitenleiste unter `Hinweise der Leitung`.",
+      // Kinder nur mit users:read, wie auf der Seite eines Kindes (#7665).
+      "In `Heute anders` fehlen die Kinder und Klassen? Du siehst sie nur, wenn du auch die Krankmeldungen auf der Seite eines Kindes sehen darfst.",
+      "In `Heute anders` stehen bei dir nur Zahlen statt Namen? Namen siehst du für deine eigenen Gruppen. Für den Rest der Schule zeigt die Karte nur, wie viele fehlen. Die Leitung sieht alle Namen.",
+      // Termin-Vertretungen in „Heute anders" (#7675): Namen für eigene
+      // Termine und das eigene Team, sonst nur die Zeile ohne Namen.
+      "In `Heute anders` steht bei Terminen nur `ändert sich heute, wer betreut`? Namen siehst du bei deinen Terminen und deinen Gruppen. Für die übrigen Termine zeigt die Karte nur, wie viele es sind. Die Leitung sieht alle Namen.",
+      // Dienste in „Heute anders" (#7661): die Betreuung sieht nur den
+      // eigenen, wer den Dienstplan der Schule öffnen darf, sieht alle.
+      "Du siehst in `Heute anders` nur deinen eigenen Dienst? Geänderte Dienste der anderen sieht nur, wer den `Dienstplan` der Schule öffnen darf.",
+      // Sichtregel der Quelle Stundenplan (#7662): wie im Tagesplan.
+      "In `Heute anders` fehlen Angebote anderer Leute? Die Karte zeigt die Termine, die du auch im Tagesplan siehst. Je nach Einstellung deiner Schule sind das nur deine eigenen.",
+      // Link zum Speiseplan nur mit Leserecht des Speiseplans (#7666).
+      "Du kannst `Der Speiseplan für heute wurde geändert.` nicht antippen? Dann darfst du den Speiseplan nicht öffnen. Frag in der Küche oder bei der Leitung, was es gibt.",
       // Kopfzeile aus BrandTraegerLine (#4656): nur bei einem Träger mit
       // mehreren Schulen, und nur am Computer, wo auch der Schulname steht.
       "Steht am Computer oben links unter dem Namen deiner Schule `Träger:` und ein Name? Das ist der Träger deiner Schule. Die Zeile gibt es nur, wenn dein Träger mehrere Schulen hat.",
     ],
     troubleshootingDetails: [
       "Das Anpassen der Startseite lädt nicht? Deine Karten bleiben lesbar. Wähle bei der Fehlermeldung `Wiederholen`.",
+      "In `Heute anders` steht, dass etwas gerade nicht geladen werden konnte? Dann fehlt dieser Teil gerade. Lade die Seite später neu.",
     ],
     notes: [
       "Die Karte `Kinder` zählt die Kinder nach `Anwesend`, `Schule`, `Im Unterricht`, `Zuhause`, `Krank` und `Entschuldigt`. Ein Klick auf eine Zahl öffnet `Alle Kinder` mit diesem Filter. `Entschuldigt` zeigt auch Kinder auf Klassenfahrt. `Zuhause` zeigt auch Kinder, die heute nicht kommen. Ein Kind, das da ist, zählt immer bei `Anwesend`, auch mit Krankmeldung. Ein Kind, das zum Unterricht abgemeldet ist, zählt bei `Im Unterricht`, auch mit Krankmeldung.",
@@ -1187,6 +1260,8 @@ export const calendarPeriodsTopic = function calendarPeriodsTopic(): HelpTopic {
           "Richtet deine OGS in dieser Zeit Ferienbetreuung für den Träger aus, zeigt der Dialog die Woche und wie viele Kinder gebucht haben. Die Buchungen bleiben.",
           "Wähle `Speichern`.",
           "Stehen an diesen Tagen schon Termine, fragt moto nach. Sage sie ab wie im nächsten Abschnitt.",
+          // „Heute anders“ (#7664) zeigt den Schließtag mit seinem Grund.
+          "Am Schließtag steht auf der `Startseite` unter `Heute anders`, dass die OGS geschlossen ist. Dort steht auch der `Grund`.",
         ],
       },
       {
@@ -1532,6 +1607,7 @@ export const caregiverFirstStepsTopic =
       differences: [
         "Welche Schritte du siehst, hängt von deiner OGS ab. Ohne feste Gruppen fehlt zum Beispiel `Meine Gruppe ansehen`.",
         "`Meine Gruppe ansehen` erscheint erst, wenn dir eine Gruppe zugeordnet ist.",
+        "In einem Chat ist `Erste Schritte` ausgeblendet, damit `Senden` frei bleibt. Auf jeder anderen Seite ist es wieder da.",
       ],
       troubleshootingDetails: [
         "Die Checkliste erscheint nicht? Sie kommt erst, wenn deine OGS eine Gruppe oder ein Kind in moto hat. Wer schon vor der Checkliste mit moto gearbeitet hat, bekommt sie nicht.",
@@ -1819,6 +1895,41 @@ export const createStudentTopic = function createStudentTopic(): HelpTopic {
     ],
   };
 } satisfies typeof authored_createStudentTopic;
+
+/**
+ * `/substitutions`, in der Seitenleiste `Übergaben` (#7568): laufende
+ * Betreuungen, die Vertretungen von heute und die Gruppenübergaben auf einer
+ * Seite. Den Vertretungsplan der Leitung beschreibt `substitution-plan.ts`.
+ */
+export const dailyHandoversTopic = function dailyHandoversTopic(): HelpTopic {
+  return {
+    id: HELP_TOPICS.dailyHandovers,
+    title: "Übergaben von heute",
+    question: "Wer übernimmt heute welche Gruppe oder Aufsicht?",
+    summary:
+      "Hier siehst du, wer heute eine Aufsicht, einen Termin oder eine Gruppe übernimmt.",
+    group: "gruppen",
+    audience: ["caregiver", "lead"],
+    icon: "Repeat",
+    steps: [
+      "Klappe in der Seitenleiste `Tagesbetrieb` auf und öffne `Übergaben`.",
+      "Unter `Laufende Betreuungen` wählst du `Betreuer hinzufügen`. So kommt eine weitere Person in die Aufsicht.",
+      "Unter `Vertretungen heute` siehst du, wer heute einen Termin übernimmt.",
+      "Unter `Gruppen` wählst du `Gruppe übergeben`. Wähle die Gruppe und die Betreuungskraft. Dann wähle `Zuweisen`.",
+      "Mit `Beenden` hörst du eine Übergabe vorzeitig auf. moto fragt vorher nach.",
+    ],
+    differences: [
+      "Steht unter `Gruppen` `Keine Gruppenübergabe nötig`? Dann arbeitet deine OGS ohne feste Gruppen.",
+      "Steht bei `Vertretungen heute` `Keine Vertretungen verfügbar`? Dann darfst du die Vertretungen nicht ansehen. Frage deine Leitung.",
+      "Fehlt `Betreuer hinzufügen`? Dann bist du für diese Aufsicht nicht zuständig.",
+      "Fehlt `Beenden` an einer Übergabe? Dann darfst du sie nicht beenden. Frage deine Leitung.",
+    ],
+    notes: [
+      "Vertretungen für andere Tage plant die Leitung im `Vertretungsplan`.",
+    ],
+    related: [HELP_TOPICS.transferGroup, HELP_TOPICS.activeSupervision],
+  };
+} satisfies typeof authored_dailyHandoversTopic;
 
 /**
  * Uebersichtsseite `/database`. Die Kacheln blenden sich nach Rechten,
@@ -2321,8 +2432,10 @@ export const editStudentTopic = function editStudentTopic(): HelpTopic {
       "Steht bei `Abholung` zum Beispiel `Gebucht 16:00 Uhr`? Dann gilt eine von Hand eingetragene Zeit statt der gebuchten. Wähle den Tag und dann `Gebuchte Abholzeit übernehmen`. Das gilt ab sofort für diesen Wochentag in jeder Woche, auch vor dem gewählten Tag. Braucht ein früherer Tag die eingetragene Zeit noch, nennt moto den Tag, ab dem das Übernehmen geht.",
     ],
     notes: [
-      // #6855: pickup-change-alert.tsx über den Bereichen der Kinderakte.
-      "Gilt ab heute an einzelnen Tagen eine andere Abholzeit, steht oben in der Kinderakte `Abholzeit an einzelnen Tagen geändert` mit Tag und Uhrzeit. Ein Tag, den du noch nicht gesehen hattest, trägt `Neu`. Mit dem Öffnen des Kindes geht der Zähler bei `Neu für dich` zurück.",
+      // #6855, #7707: pickup-change-alert.tsx über den Bereichen der Kinderakte,
+      // die Markierung in care-schedule-manager.tsx.
+      "Gibt es eine neue Abholzeit, die du noch nicht kennst? Dann steht oben in der Kinderakte `Abholzeit an einzelnen Tagen geändert`. Dort stehen Tag, Uhrzeit und `Neu`. Mit dem Öffnen des Kindes geht der Zähler bei `Neu für dich` zurück. Mit dem X schließt du den Hinweis. Er kommt erst bei einer neuen Änderung wieder.",
+      "Jeden geänderten Tag findest du unter `Betreuungszeiten`. Bei `Abholung` steht die neue Uhrzeit. Die normale Zeit ist durchgestrichen. Daneben steht `Ausnahme`. Liegt der Tag in einer späteren Woche, blättere mit `Nächste Woche` dorthin.",
       "Nach einem Widerruf löscht moto das Foto des Kindes. Nach dem letzten Betreuungstag löscht moto Foto und Foto-Einwilligung in der Nacht danach von selbst.",
       "Steht unter dem Feld `Ankunft` die Auswahl `Nach Schulstunde`? Wähle zum Beispiel `5. Stunde`. moto trägt die passende Uhrzeit ein.",
       // #3371: Knopf erscheint nur mit gepflegter Vorgabe unter einem leeren
@@ -2875,10 +2988,14 @@ export const enrollmentReviewTopic =
         "Auf der Seite der Phase steht unter `Freie Plätze je Angebot`, wie viele Plätze noch frei sind. `Belegt` zählt die Kinder am vollsten Tag bis zum Ende der Phase.",
         "Hochgeladene Nachweise stehen bei `Zusatzfragen (Eltern)`. Mit `Öffnen` siehst du die Datei in einem neuen Tab.",
         "Hat die Vorlage `Unterschrift erforderlich`, steht die Unterschrift der Eltern im Abschnitt `Unterschrift`. Mit `Nachweis als PDF` lädst du den Anmeldenachweis mit der Unterschrift herunter.",
+        // #4788: Vertragsstand je Kind, nur lesend.
+        "Hat der Träger aus der Anmeldung einen Betreuungsvertrag gemacht, steht er unter `Betreuungsverträge`. Dort siehst du je Kind den Stand und die gebuchten Tage mit Uhrzeit. Ändern kann den Vertrag nur der Träger.",
         "Unter `Rechtstexte und Antworten` findest du die Texte und Antworten jeder Einreichung. Öffne einen Text, um den Wortlaut zu lesen.",
         "Mit `Statusseite öffnen` siehst du, was die Eltern sehen.",
         // #5102: Auswirkung nach einer Korrektur unter `Nachbearbeitung`.
         "Angebote eines bestätigten Kindes änderst du unter `Nachbearbeitung` mit `Bearbeiten`. Danach steht dort `Auswirkung auf den Betreuungsplan`.",
+        // #7929: ein befristetes Angebot verlängern.
+        "Eine Korrektur behält das Ende einer Buchung. Endet ein Angebot früher, als die Betreuung des Kindes läuft, steht darunter `Gebucht bis`. Setze den Haken bei `Bis … verlängern`. Dann gilt das Angebot bis zu dem Tag, der dort steht: dem Ende der Phase, dem Betreuungsende des Kindes oder dem Tag vor einer geplanten Änderung.",
         "Unter `Automatisch angepasst` stehen Regeltermine, die moto selbst geändert hat.",
         "Unter `Nicht angepasst, weil von Hand gepflegt` steht das Kind an abgemeldeten Tagen weiter im Plan. Mit `Dort auch entfernen` nimmst du es dort ab diesem Datum heraus. Vergangene Termine bleiben.",
         "Unter `Abholzeit weicht von der Buchung ab` gilt an einem Tag noch eine von Hand eingetragene Abholzeit. Mit `Gebuchte Zeiten übernehmen` gilt die gebuchte Zeit. Steht ein Datum dabei, gilt sie erst ab diesem Tag.",
@@ -3222,6 +3339,9 @@ export const firstStepsTopic = function firstStepsTopic(): HelpTopic {
       "Du hast eine Liste aller Kinder? Starte die Tour zu `Erstes Kind anlegen`. Öffne dort das Menü mit den drei Punkten. Wähle `Importieren`. Dann zeigt die Tour den Import.",
       "Deine OGS nutzt die Eltern-App nicht? Dann überspringe `Erste Eltern einladen`.",
       "Der Stand gilt für die ganze OGS. Andere Leitungen sehen denselben Stand.",
+    ],
+    differences: [
+      "In einem Chat ist `Erste Schritte` ausgeblendet, damit `Senden` frei bleibt. Auf jeder anderen Seite ist es wieder da.",
     ],
     troubleshootingDetails: [
       "Die Tour ist plötzlich weg? Sie endet, wenn du eine andere Seite öffnest. Mit `Zeig es mir` startest du sie neu.",
@@ -3878,6 +3998,12 @@ export const invitationTopic = function invitationTopic(): HelpTopic {
  * Eine eingeschraenkte `Portalrolle` (`Notfallkontakt`, `Nur Abholung`,
  * `Sozialdienst`) hat keinen Portalzugriff. Eine Einladung stuft sie hoch
  * und fragt vorher `Vollen Zugriff gewähren?`.
+ *
+ * `Eltern mit Konto benachrichtigen` (#7760, ADR 0309 Abschnitt 5) steht in
+ * derselben Sammeleinladung, wenn die Auswahl Eltern mit Konto hat. Die Mail
+ * geht an die Anmeldeadresse des Kontos, nennt nur Kinder mit heute gebuchter
+ * Betreuung und geht je Elternteil und Kind einmal raus; der Zugang merkt
+ * sich, dass sie eingeplant wurde. Einen zweiten Versand gibt es nicht.
  */
 export const inviteGuardiansTopic = function inviteGuardiansTopic(): HelpTopic {
   return {
@@ -3932,6 +4058,19 @@ export const inviteGuardiansTopic = function inviteGuardiansTopic(): HelpTopic {
         ],
       },
       {
+        title: "Eltern mit Konto benachrichtigen",
+        description:
+          "Wurden Kinder aus einem importierten Vertrag angemeldet, sehen ihre Eltern die Betreuung jetzt im Elternportal. Eltern mit Konto sagst du das mit einer kurzen E-Mail.",
+        steps: [
+          "Öffne `Datenverwaltung` und danach `Kinderdaten`.",
+          "Wähle oben rechts das Menü mit den drei Punkten und dann `Auswählen`.",
+          "Hake die Kinder an und wähle `Eltern einladen`.",
+          "Setze den Haken bei `Eltern mit Konto benachrichtigen`.",
+          "Prüfe die Zahlen: `Werden eingeladen`, `Bekommen die Nachricht` und `Keine E-Mail-Adresse`. Kinder, die heute keine Betreuung gebucht haben, zählt `Kinder ohne gebuchte Betreuung: keine Nachricht`.",
+          "Wähle unten zum Beispiel `3 Eltern anschreiben`.",
+        ],
+      },
+      {
         title: "Eine Anfrage von Eltern freigeben",
         description:
           "Eltern können weitere Bezugspersonen einladen, zum Beispiel eine Großmutter. Je nach Einstellung landet das erst bei dir.",
@@ -3949,14 +4088,20 @@ export const inviteGuardiansTopic = function inviteGuardiansTopic(): HelpTopic {
       "Hinter dem Namen steht, wie weit die Person ist: `Kein Konto`, `Einladung offen`, `Link gilt nicht mehr` oder `Konto aktiv`.",
       "Bei `Einladung offen` heißt der Knopf `Erneut einladen`. Damit geht die E-Mail noch einmal raus.",
       "Eine Person mit mehreren Kindern lädst du nur einmal ein. Sie sieht danach alle ihre Kinder.",
+      "Die Nachricht geht an die E-Mail-Adresse, mit der sich die Eltern im Elternportal anmelden. Sie nennt nur die Vornamen der Kinder, die Schule und den Weg ins Elternportal. Geschwister stehen in einer Nachricht.",
+      "Die Nachricht nennt nur Kinder, die heute Betreuung gebucht haben. Buchungen, die erst später beginnen, zählen nicht, ein Wochenplan allein auch nicht. Jedes Elternteil bekommt sie pro Kind nur einmal. Wurde sie schon verschickt, steht das Elternteil unter `Nachricht schon verschickt`.",
+      "Holt jemand das Kind nur ab, wähle `Portalrolle` `Nur Abholung`. Dann sind `E-Mail` und Telefon freiwillig. Die Person bekommt keinen Zugang zur Eltern-App.",
     ],
     differences: [
+      "`Eltern mit Konto benachrichtigen` fehlt? Dann hat in der Auswahl niemand ein Konto. Eltern ohne Konto bekommen die Einladung.",
       "Steht bei der Person `Konto aktiv, kein Portalzugriff`, heißt der Knopf `Zugriff gewähren`.",
       "Bei einer eingeschränkten `Portalrolle` wie `Notfallkontakt` oder `Nur Abholung` fragt moto zuerst `Vollen Zugriff gewähren?`. Erst `Zugriff gewähren` erteilt den Zugang.",
       "Unter `Elternzugänge` steht `Einladungen gehen ohne Freigabe raus`? Dann laden Eltern direkt ein. Über `Zu den Einstellungen` änderst du das.",
       "Dort steht `Eltern können derzeit niemanden einladen`? Dann darfst nur du einladen.",
     ],
     troubleshootingDetails: [
+      "Jemand mit Konto bekommt keine Nachricht? Die Person darf das Kind im Elternportal nicht sehen, zum Beispiel mit `Portalrolle` `Nur Abholung`. Oder das Kind hat heute keine Betreuung gebucht. Oder die Nachricht für dieses Kind wurde schon verschickt.",
+      "Ein Elternteil sagt, die Nachricht ist nicht angekommen? moto schickt sie kein zweites Mal. Bitte die Person, im Spam-Ordner nachzusehen. Sonst sag ihr selbst: Die Betreuung steht im Elternportal beim Kind unter `Betreuung & Wochenplan`.",
       "`Einladen` bewirkt nichts? Dann fehlt die `E-Mail`. Trage sie über `Bearbeiten` nach.",
       "Bei der Person steht `Link gilt nicht mehr`? Zum Beispiel wurde die `E-Mail` nach der Einladung geändert. Wähle `Einladung neu senden`. Der neue Link geht an die Adresse, die jetzt eingetragen ist.",
       "Bei der Person steht `Adresse prüfen` oder `Verzögert`, und `Erneut einladen` fehlt? Der Hinweis dort sagt, was zu tun ist. Mehr dazu unter `Wenn eine E-Mail nicht ankommt`.",
@@ -4984,6 +5129,8 @@ export const mealPlanTopic = function mealPlanTopic(): HelpTopic {
     notes: [
       "Pro Tag sind mehrere Gerichte möglich.",
       "Änderst du einen Tag, der schon Gerichte hatte, bekommen die Eltern einen Hinweis in moto. Das gilt nur für Kinder, die an dem Tag ein Essen gebucht haben. Mehrere Änderungen einer Woche in 10 Minuten werden ein Hinweis.",
+      // „Heute anders“ zeigt dem Team den geänderten Tag (#7666).
+      "Am Tag selbst sieht das Team auf der `Startseite` unter `Heute anders`, dass der Speiseplan geändert wurde. Die Gerichte stehen dort nicht.",
       "Zur Auswahl stehen die 14 Hauptallergene, jedes mit einem festen Buchstaben. Die Liste ist für alle Schulen gleich.",
       "Eltern sehen die Buchstaben am Gericht und darunter die Erklärung. Dort steht auch, dass die Angaben von der Schule oder vom Caterer kommen.",
       "Mit `Vorwoche übernehmen` holst du die Gerichte der Vorwoche in diese Woche.",
@@ -5002,6 +5149,7 @@ export const mealPlanTopic = function mealPlanTopic(): HelpTopic {
     ],
     troubleshootingDetails: [
       "Bekommen Eltern keinen Hinweis zu Änderungen? Prüfe unter `Einstellungen` den Schalter `Hinweis bei geändertem Speiseplan`. Für vergangene Tage gibt es keinen Hinweis.",
+      "Meldet moto beim Speichern, dass jemand anderes den Speiseplan inzwischen geändert hat? Deine Änderungen bleiben stehen. Mit `Verwerfen` siehst du den neuen Stand. Mit `Speichern` ersetzt du ihn durch deine Änderungen.",
       "Fehlt `Speiseplan` in der Seitenleiste? Dann ist die Funktion für deine OGS ausgeschaltet, oder deiner Rolle fehlt das Recht `Mittagessen: Lesen`.",
     ],
     related: [
@@ -5746,6 +5894,39 @@ export const ownGroupsTopic = function ownGroupsTopic(
   };
 } satisfies typeof authored_ownGroupsTopic;
 
+/**
+ * `/profile`: die eigene Seite jeder Person im Team (#7568). Abschnitte aus
+ * `profile/page.tsx` und `components/settings/*-section.tsx`.
+ */
+export const ownProfileTopic = function ownProfileTopic(): HelpTopic {
+  return {
+    id: HELP_TOPICS.ownProfile,
+    title: "Dein Profil",
+    question: "Wo ändere ich meine eigenen Angaben?",
+    summary:
+      "Im Profil stehen deine Angaben, dein Passwort und deine Benachrichtigungen.",
+    group: "einstieg",
+    audience: ["caregiver", "lead"],
+    icon: "NotePencil",
+    steps: [
+      "Am Computer öffnest du oben rechts dein Profil. Auf dem Handy wählst du unten `Mehr` und dann `Profil`.",
+      "Unter `Persönliche Daten` wählst du `Bearbeiten`, um deinen Namen zu ändern. Dann wähle `Speichern`.",
+      "Unter `Passwort` wählst du `Ändern`.",
+      "Mit `Profilbild ändern` oben wählst du ein neues Bild.",
+      "Unter `Benachrichtigungen` legst du fest, worüber moto dich informiert.",
+    ],
+    notes: [
+      "Weiter unten stehen auch deine Nachweise, deine Passkeys und deine vertrauten Geräte.",
+      "Deine E-Mail-Adresse änderst du hier nicht. Frage dafür deine Leitung.",
+    ],
+    related: [
+      HELP_TOPICS.staffNotifications,
+      HELP_TOPICS.analyticsConsent,
+      HELP_TOPICS.login,
+    ],
+  };
+} satisfies typeof authored_ownProfileTopic;
+
 // Eigener Dienstplan (#3821): eigene Seite unter `Team`, nur lesend.
 export const ownShiftPlanTopic = function ownShiftPlanTopic(): HelpTopic {
   return {
@@ -6073,6 +6254,19 @@ export const parentChildDataTopic = function parentChildDataTopic(): HelpTopic {
           "Tippe auf `Jetzt widerrufen`.",
         ],
       },
+      {
+        // #3844: wenn der Träger den Eltern-Stopp eingeschaltet hat oder das Kind gestoppt ist.
+        title: "Raumverlauf und Stimmung stoppen",
+        description:
+          "Diese Zeile siehst du, wenn deine Schule das erlaubt oder dein Kind schon gestoppt ist.",
+        steps: [
+          "Gehe zum Abschnitt `Einwilligungen und Bestätigungen`.",
+          "Tippe bei `Raumverlauf und Stimmung` auf `Stoppen`.",
+          "Tippe auf `Jetzt stoppen`.",
+          "moto löscht sofort, in welchen Räumen dein Kind war. Danach speichert moto keine Räume und keine Stimmung mehr. Die Betreuung sieht weiter, wo dein Kind gerade ist. Schon gespeicherte Stimmungen löscht moto erst nach der üblichen Frist.",
+          "Mit `Wieder speichern` hebst du den Stopp für dein Kind auf. Deine Schule entscheidet, ob Raumverlauf und Stimmung gespeichert werden. Gelöschtes kommt nicht zurück.",
+        ],
+      },
     ],
     result:
       "Unter dem Feld steht dann `Beantragte Änderung` mit dem neuen Wert und `In Prüfung`. Bis zur Bestätigung gilt der Wert darüber.",
@@ -6084,6 +6278,7 @@ export const parentChildDataTopic = function parentChildDataTopic(): HelpTopic {
     ],
     differences: [
       "Unter einem Feld steht schon `Beantragte Änderung`? Dann wartet diese Änderung noch auf die OGS.",
+      "Bei `Raumverlauf und Stimmung` steht `Gestoppt`, aber es gibt keinen Knopf? Dann hebt die OGS den Stopp auf.",
     ],
     troubleshootingDetails: [
       "Du siehst bei `Foto-Einwilligung` kein `Widerrufen` oder hast kein Elternportal? Sage der OGS Bescheid. Die OGS trägt den Widerruf für dich ein.",
@@ -6635,6 +6830,9 @@ export const parentFirstStepsTopic =
         "`Angaben zu meinem Kind ändern` zeigt Angaben, Betreuungszeiten, den Heimweg und Kontakte.",
         "`moto als App auf dem Handy hinzufügen` und `Benachrichtigungen einschalten` sind zwei getrennte Touren.",
         "Der Stand gilt für dieses Elternkonto auf diesem Gerät.",
+      ],
+      differences: [
+        "In einem Chat ist `Erste Schritte` ausgeblendet, damit `Senden` frei bleibt. Auf jeder anderen Seite ist es wieder da.",
       ],
       troubleshootingDetails: [
         "Du hast `Erste Schritte ausblenden` gewählt? Dann erscheint die Checkliste auf diesem Gerät nicht mehr. Die einzelnen Anleitungen findest du weiterhin in der Hilfe.",
@@ -7691,7 +7889,9 @@ export const parentRequestsTopic = function parentRequestsTopic(
       // (Typ student_pickup_changed) und markiert die Kinderakte.
       "Gibst du eine neue Abholzeit für einen Tag frei, bekommt das Team des Kindes einen Hinweis. Er steht oben in der Kopfzeile unter `Neu für dich` mit rotem Zähler. Ist es eingeschaltet, kommt er auch aufs Handy. Ein Tippen darauf öffnet das Kind.",
       "Nimmst du die Freigabe mit `Entscheidung korrigieren` zurück, bekommt das Team wieder einen Hinweis: `wieder normale Abholzeit`.",
-      "Oben in der Kinderakte steht danach `Abholzeit an einzelnen Tagen geändert` mit Tag und Uhrzeit. Ist der Tag neu für die Person, steht `Neu` daneben. Der Hinweis verschwindet, wenn der Tag vorbei ist oder die Ausnahme gelöscht wird.",
+      // #7707: Banner nur für ungesehene Änderungen, der Stand in den Betreuungszeiten.
+      "Wer die Änderung noch nicht kennt, sieht oben in der Kinderakte `Abholzeit an einzelnen Tagen geändert`. Dort stehen Tag, Uhrzeit und `Neu`. Das X schließt den Hinweis. Er kommt erst bei einer neuen Änderung wieder.",
+      "Unter `Betreuungszeiten` bleibt der Tag markiert: neue Uhrzeit, die normale Zeit durchgestrichen und `Ausnahme`. Die Markierung verschwindet, wenn der Tag vorbei ist oder die Ausnahme gelöscht wird.",
       // #5102: von Hand gepflegte Regeltermine nach einer Angebotsanfrage.
       "Planen von Hand gepflegte Regeltermine das Kind nach einer Angebotsanfrage weiter ein? Dann bleibt die Anfrage nach dem Freigeben offen stehen. Sie zeigt `Nicht angepasst, weil von Hand gepflegt`. Wähle `Dort auch entfernen` oder `Fertig`.",
       // Von Hand eingetragene Abholzeiten überdecken eine neue Buchung.
@@ -8713,6 +8913,7 @@ export const staffNoticesTopic = function staffNoticesTopic(): HelpTopic {
       "Der Hinweis steht an seinen Tagen unter `Heute` für die gewählte Gruppe. Bei `Alle` und `Nur Betreuung` steht er außerdem sofort bei den Benachrichtigungen der Betreuung.",
     notes: [
       "Mit `Kenntnisnahme verlangen` siehst du später, wer den Hinweis bestätigt hat.",
+      "Das Team sieht den Hinweis an seinen Tagen auch auf der `Startseite` in `Heute anders`. Dort kann es ihn gleich mit `Zur Kenntnis nehmen` bestätigen.",
       "`Nur Lehrkräfte` erreicht die Lehrkräfte in moto schule. Unter `Für wen` steht das auch im Fenster.",
       "Du selbst bekommst zu deinem eigenen Hinweis keine Benachrichtigung. Ein Hinweis, der schon vorbei ist, auch nicht.",
       "Speicherst du einen Hinweis ohne Haken bei `Aktiv`, kommt die Benachrichtigung erst, wenn du den Haken setzt.",
@@ -9037,6 +9238,31 @@ export const staffRecordTopic = function staffRecordTopic(): HelpTopic {
   };
 } satisfies typeof authored_staffRecordTopic;
 
+/** Die ganze Liste der Erinnerungen unter `/reminders` (#7568). */
+export const staffRemindersTopic = function staffRemindersTopic(): HelpTopic {
+  return {
+    id: HELP_TOPICS.staffReminders,
+    title: "Erinnerungen ansehen",
+    question: "Was steht heute noch an?",
+    summary:
+      "Hier siehst du anstehende und überfällige Abholungen und Aktivitäten.",
+    group: "tagesplanung",
+    audience: ["caregiver", "lead"],
+    icon: "Bell",
+    steps: [
+      "Die Überschrift zeigt, worum es geht. Zum Beispiel `Anstehende Abholung`.",
+      "Die Uhrzeit rechts zeigt, wann etwas ansteht.",
+      "`Überfällige` heißt: Die Zeit ist schon vorbei.",
+      "Unter `AG dauert länger` stehen Aktivitäten, die noch laufen.",
+    ],
+    notes: [
+      "Am Computer öffnest du die Liste in der Glocke mit `Alle ansehen`.",
+      "Auf dem Handy wählst du `Mehr`, `Benachrichtigungen` und `Alle ansehen`.",
+    ],
+    related: [HELP_TOPICS.staffNotifications, HELP_TOPICS.dayPlan],
+  };
+} satisfies typeof authored_staffRemindersTopic;
+
 /**
  * `/umfragen`: Umfragen der Schule an das Team beantworten (#4781). Ob die
  * Umfrage anonym ist, steht vor der ersten Frage.
@@ -9340,6 +9566,21 @@ export const studentSearchTopic = function studentSearchTopic(
         ],
       },
       {
+        // #3844: Stopp je Kind, gesetzt und aufgehoben von der OGS-Verwaltung
+        // (config:manage) im Bereich `Historien`.
+        title: "Raumverlauf und Stimmung für ein Kind stoppen",
+        description: "Das kann nur die OGS-Verwaltung.",
+        steps: [
+          "Öffne beim Kind `Historie`.",
+          "Wähle bei `Historien` den Knopf `Stopp setzen`.",
+          "Gib zur Bestätigung `LÖSCHEN` ein. Wähle dann `Stoppen und löschen`.",
+          "moto löscht den bisherigen Raumverlauf des Kindes sofort.",
+          "Danach speichert moto für das Kind keine Räume und keine Stimmung mehr. Am Tablet fragt moto das Kind nicht nach seiner Stimmung.",
+          "Der aktuelle Raum bleibt für die Betreuung sichtbar. Frühere Stimmungen bleiben bis zum Ende ihrer Frist gespeichert.",
+          "Mit `Stopp aufheben` speichert moto ab jetzt wieder. Gelöschtes kommt nicht zurück.",
+        ],
+      },
+      {
         // #3834: derselbe Umschalter steht auch in `Gruppen` und in der
         // aktuellen Aufsicht, auch auf dem Handy.
         title: "Als Liste ansehen",
@@ -9348,7 +9589,7 @@ export const studentSearchTopic = function studentSearchTopic(
         steps: [
           "Wähle oben rechts das Listensymbol (drei Striche). Mit dem Kachelsymbol (vier Kästchen) kommen die Karten zurück.",
           "Spalten ein- oder ausblenden? Öffne oben rechts das Menü mit den drei Punkten. Wähle unter `Spalten in der Liste` die Spalten.",
-          "Auf dem Handy zeigt die Liste je Kind eine Zeile. Was unter dem Namen steht, wählst du im Menü mit den drei Punkten unter `In der Zeile zeigen`, zum Beispiel `Gehzeit` oder `Gruppe`.",
+          "Auf dem Handy zeigt die Liste je Kind eine Zeile. Was unter dem Namen steht, wählst du im Menü mit den drei Punkten unter `In der Zeile zeigen`, zum Beispiel `Gehzeit` oder `Gruppe`. Die übrigen Angaben siehst du mit dem Pfeil rechts in der Zeile.",
           "Kreuze links in der Zeile Kinder an. Oben erscheint eine Leiste mit `Exportieren`, `Anmelden` und `Abmelden`.",
           "Wähle `Aufheben`, um alle Kreuze zu entfernen.",
         ],
@@ -9357,14 +9598,14 @@ export const studentSearchTopic = function studentSearchTopic(
         // #6954: der Filter steht im Filterfeld unter `Anmeldung`, nur mit
         // Zugriff auf die Angaben der Kinderakte und nur bei eigenen Fragen
         // der Online-Anmeldung. Freitext, Zahl und Datum: `Angabe vorhanden`
-        // (#7012).
+        // (#7012). Die Zahl folgt den übrigen Filtern der Liste (#7645).
         title: "Nach Angaben aus der Anmeldung filtern",
         steps: [
           "Wähle rechts neben der Suche das Filtersymbol.",
           "Wähle unter `Anmeldung` bei `Angabe aus der Anmeldung` eine Antwort, zum Beispiel eine Frage mit `Ja`.",
           "Bei Fragen mit freiem Text, Zahl oder Datum wählst du `Angabe vorhanden`. Dann siehst du alle Kinder, bei denen die Eltern etwas eingetragen haben. Auch „keine“ zählt als Angabe.",
           "Haben die Eltern nur wenige verschiedene Antworten gegeben, steht jede Antwort darunter, zum Beispiel `keine`. So siehst du, wie viele Kinder welche Antwort haben.",
-          "Die Zahl in Klammern nennt, wie viele Kinder die Liste dann zeigt. Kinder, die die Schule verlassen haben, zählen nicht.",
+          "Die Zahl in Klammern nennt, wie viele Kinder die Liste mit dieser Antwort zeigt. Deine anderen Filter zählen mit, zum Beispiel Gruppe, Klasse oder Anwesenheit. Kinder, die die Schule verlassen haben, zählen nicht.",
           "`Alle Angaben` hebt den Filter wieder auf.",
         ],
       },
@@ -11558,6 +11799,18 @@ export const traegerBillingTermsTopic =
           ],
         },
         {
+          title: "Zahlungsweg einer Familie festlegen",
+          description:
+            "Das geht, sobald der Vertrag der Familie da ist, also schon vor der ersten Rechnung. Speichern erstellt keine Rechnung und bucht nichts ab.",
+          steps: [
+            "Wähle in der Navigation `Familien und Zahlung`. Der Reiter `Familien` ist schon offen.",
+            "Wähle in der Zeile der Familie das Menü mit den drei Punkten und dann `Empfänger und Zahlung ändern`. Es öffnet sich eine eigene Seite.",
+            "Wähle den `Zahlungsweg`: `Lastschrift` oder `Überweisung`. `Wie in den Abrechnungsvorgaben` nimmt den dort eingestellten Zahlungsweg.",
+            "Wähle `Speichern`. Du kommst zurück zur Liste. In der Spalte `Zahlung` steht jetzt `Festgelegt:` und der Zahlungsweg.",
+            "Wähle oben `Alle Zahlungswege` und dann `Zahlungsweg nicht festgelegt`. Dann siehst du nur die Familien, die noch fehlen.",
+          ],
+        },
+        {
           title: "Empfänger und Zahlung einer Familie ändern",
           description:
             "Das gilt für alle Rechnungen dieser Familie, auch für Geschwister. Die Familie ist die E-Mail-Adresse der Person im Vertrag.",
@@ -11566,9 +11819,9 @@ export const traegerBillingTermsTopic =
             "Wähle bei der Rechnung des Kindes das Menü mit den drei Punkten und dann `Empfänger und Zahlung`. Es öffnet sich eine eigene Seite.",
             "Wähle bei `Rechnung an`: `Person im Vertrag`, `Beide Eltern` oder `Andere Person`.",
             "Bei `Beide Eltern` trägst du den Namen des zweiten Elternteils ein. Beide Namen stehen dann auf der Rechnung.",
-            "Bei `Andere Person` trägst du Name, E-Mail-Adresse und Anschrift ein. Die Rechnung geht dann an diese Person.",
+            "Bei `Andere Person` trägst du Name, E-Mail-Adresse und Anschrift ein. Die Rechnung geht dann an diese Person. Mit dem Standardtext von moto beginnt das Schreiben mit „Guten Tag“ und ihrem Namen und spricht sie mit „du“ an. Eine eigene Vorlage behält ihren Wortlaut.",
             "Wähle bei Bedarf einen eigenen `Zahlungsweg`. `Wie in den Abrechnungsvorgaben` nimmt den dort eingestellten Zahlungsweg.",
-            "Wähle bei Bedarf einen `Eigenen Zahltag`, zum Beispiel den 15. des Monats.",
+            "Wähle bei Bedarf einen `Zahltag`, zum Beispiel den 15. des Monats.",
             "Wähle `Speichern`.",
           ],
         },
@@ -11582,11 +11835,13 @@ export const traegerBillingTermsTopic =
         "Den QR-Code schaltest du unter `Briefkopf und Vorlagen` bei `GiroCode drucken` aus. Dann steht er auf keinem neuen Schreiben.",
         "Der Verwendungszweck im QR-Code ist die Nummer der Rechnung. Hat die Familie eine Debitorennummer, steht sie dahinter. Bei einem Bescheid heißt sie Buchungszeichen.",
         "Keinen QR-Code haben: Schreiben mit `Lastschrift`, Schreiben mit 0 €, Storno, Gutschrift und Jahresbescheide. Ein Jahresbescheid wird in Raten bezahlt.",
-        "Unter `Familien und Zahlung` siehst du bei jeder Familie den Zahlungsweg ihrer Rechnungen.",
+        "Ein SEPA-Mandat allein stellt eine Familie nicht auf `Lastschrift` um. Den Zahlungsweg legst du selbst fest.",
+        "Unter `Familien und Zahlung` siehst du bei jeder Familie den festgelegten Zahlungsweg und den Zahlungsweg ihrer Rechnungen.",
         "Beim Erstellen der Schreiben stehen die Fälligkeiten bereits fest. Das Feld `Zahlen bis` gilt nur für ältere Rechnungen ohne eigenes Datum.",
         "Welches Datum gilt: zuerst der eigene Zahltag der Familie, dann das Datum des Laufs, sonst das Zahlungsziel der Leistung.",
       ],
       differences: [
+        "Die Familie steht nicht in der Liste? Öffne unter `Verträge` ihren Vertrag. Wähle in der Karte `Empfänger und Zahlung` den Knopf `Ändern`.",
         "Eine Rechnung zeigt keinen Zahlungsweg? Sie wurde ausgestellt, bevor es diese Angaben gab.",
         "Bei einem freigegebenen Lauf fehlt `Ändern` beim Feld `Fällig`? Ausgestellte Rechnungen ändern sich nicht mehr.",
         "Änderst du eine Fälligkeit, nachdem du die Prüfliste geprüft hast, lehnt moto die Freigabe ab. Lade die Seite neu und prüfe den Lauf noch einmal.",
@@ -11697,7 +11952,9 @@ export const traegerBriefkopfTopic =
  * der Eltern und den Papiervertrag erfassen; Versionen nach einer Änderung;
  * Kündigung und Widerruf (#4682); Änderungswünsche der Eltern freigeben (#5979);
  * Kinder und bestehende Verträge aus einer Datei importieren (#4723), auch
- * ohne Mail-Adresse der Eltern (#7360).
+ * ohne Mail-Adresse der Eltern (#7360), ihre Vertragsangaben aus den
+ * Originalunterlagen nachpflegen (#7767), importierte Verträge mit der
+ * Kinderakte verknüpfen und ihre Anmeldungen nachtragen (#7760).
  */
 export const traegerCareContractsTopic =
   function traegerCareContractsTopic(): HelpTopic {
@@ -11821,6 +12078,111 @@ export const traegerCareContractsTopic =
             "Prüfe die Zeilen unter `Prüfen und übernehmen`. `Bereit` übernimmt moto. `Schon vorhanden` heißt: Das Kind hat an der Schule schon einen Vertrag. Bei `Fehlerhaft` steht der Grund in der Spalte `Hinweis`.",
             "Wähle unten `übernehmen`. Die Verträge stehen danach in der Liste mit dem Status `Aktiv`.",
             "Fehler in der Datei? Korrigiere die Datei und lade sie noch einmal. moto legt kein Kind doppelt an.",
+            "Danach verknüpfst du die Verträge mit der Kinderakte. Wie das geht, steht im nächsten Abschnitt.",
+          ],
+        },
+        {
+          title: "Importierte Verträge mit der Kinderakte verknüpfen",
+          description:
+            "Ein importierter Vertrag kennt sein Kind zuerst nur über den Namen. Erst mit der Kinderakte weiß moto, welches Kind der Schule er meint. Das braucht der Soll-Ist-Vergleich, die genaue Zuordnung des Essens und das Elternpostfach für Rechnungen. Es verknüpfen nur die Nummern von Vertrag und Kinderakte. Name und Geburtsdatum vergleicht moto nur. Eltern bekommen keine Nachricht, und es startet kein Rechnungslauf.",
+          steps: [
+            "Stimmt bei einem Vertrag das Angebot nicht? Korrigiere das zuerst. Verknüpfe danach.",
+            "Die Vertragsnummer steht auf der Seite des Vertrags unter `Vertragsangaben`, im Feld `Vertrag Nr.` Alle Nummern auf einmal bekommst du in der Vertragsliste im Menü unter `Herunterladen`: Die Datei hat die Spalten `Vertrag Nr.` und `Kinderakte`.",
+            "Die Nummer der Kinderakte steht im OGS-Portal der Schule. Öffne dort `Datenverwaltung` › `Kinderdaten` und das Kind. Die Zahl am Ende der Adresse ist die Nummer, zum Beispiel …/students/123. Hast du keinen Zugang, frag die Schule.",
+            "Lege eine CSV-Datei an: eine Zeile je Vertrag, eine Spalte `Vertrag Nr.` und eine Spalte `Kinderakte`, wie im Export. Mit `Beispieldatei` bekommst du den Aufbau.",
+            "Wähle in der Navigation `Verträge`. Wähle oben rechts das Menü mit den drei Punkten und dann `Mit Kinderakten verknüpfen`. Nach einem Import führt dich auch `Mit Kinderakten verknüpfen` dorthin.",
+            "Ziehe die Datei in das Feld oder wähle `Datei wählen`. Erkennt moto die Spalten nicht, wählst du sie unter `Spalten zuordnen`.",
+            "Prüfe die Zeilen unter `Prüfen und verknüpfen`. `Bereit` verknüpft moto. `Schon verknüpft` ist schon erledigt. `Unklar` und `Nicht möglich` bleiben, wie sie sind. Den Grund nennt die Spalte `Hinweis`.",
+            "`Unklar` heißt zum Beispiel: Name oder Geburtsdatum in der Kinderakte sind anders als im Vertrag. Oder die Datei nennt einen Vertrag oder ein Kind zweimal. Oder das Kind hat in derselben Zeit schon einen anderen Vertrag an der Schule.",
+            "`Nicht möglich` heißt: Eine Nummer fehlt, ist keine Zahl, oder moto kennt sie nicht. Auch ein Vertrag aus einer Anmeldung steht hier. Er gehört schon zu seinem Kind und braucht keine Verknüpfung.",
+            "Wähle unten zum Beispiel `12 Verträge verknüpfen`.",
+            "Danach zeigt moto, wie viele Verträge verknüpft sind und welche Zeilen offen bleiben. Mit `Offene Zeilen herunterladen` bekommst du sie als Arbeitsliste.",
+            "Lädst du dieselbe Datei noch einmal, steht jede verknüpfte Zeile auf `Schon verknüpft`. Es passiert nichts doppelt.",
+          ],
+        },
+        {
+          title: "Einen Vertrag einzeln verknüpfen oder die Verknüpfung lösen",
+          steps: [
+            "Öffne den Vertrag. Unter `Vertragsangaben` steht bei `Kinderakte`, ob er verknüpft ist.",
+            "Wähle `Mit Kinderakte verknüpfen`, unter `Kinderakte` oder im Menü mit den drei Punkten oben rechts.",
+            "Gib die `Nummer der Kinderakte` ein und wähle `Prüfen`. moto zeigt nebeneinander, was im Vertrag und was in der Kinderakte steht.",
+            "Passt alles, wähle `Verknüpfen`.",
+            "Weichen Name oder Geburtsdatum ab, markiert moto das mit `Weicht ab`. Ist es sicher dasselbe Kind, wähle `Trotzdem verknüpfen`. Nur das geht hier, und nur einzeln.",
+            "Falsch verknüpft? Wähle im Menü mit den drei Punkten `Verknüpfung lösen` und bestätige. Sonst ändert sich nichts. Schon ausgestellte Rechnungen bleiben, wie sie sind.",
+            "Steht unter `Anmeldung` schon `Anmeldung nachgetragen`, fehlt `Verknüpfung lösen`. Löse dann zuerst die Bindung an die Anmeldung, siehe unten.",
+          ],
+        },
+        {
+          title: "Anmeldungen für importierte Verträge nachtragen",
+          description:
+            "Ein importierter Vertrag hat an der Schule noch keine Anmeldung. moto legt sie aus dem Vertrag an, schon genehmigt, und bindet den Vertrag daran. Die Kinder stehen dann in den Gruppenlisten. Eltern bekommen keine Mail und keine Einladung, die Kinderakte bleibt, wie sie ist. Die Reihenfolge: falls nötig `Module neu zuordnen`, dann `Mit Kinderakten verknüpfen`, dann `Anmeldungen nachtragen`.",
+          steps: [
+            "Wähle in der Navigation `Verträge`. Wähle oben rechts das Menü mit den drei Punkten und dann `Anmeldungen nachtragen`.",
+            "Hat dein Träger mehrere Schulen, wähle unter `Schule wählen` die Schule. moto trägt je Schule nach.",
+            "Prüfe unter `Vorschau prüfen` jede Zeile. Bei `Vertrag` steht das Kind, wie der Vertrag es nennt, bei `Kinderakte` das Kind der Schule. Steht dort `Name weicht ab`, prüfe zuerst die Verknüpfung.",
+            "Bei `Betreuung` stehen Modul, Wochentage mit Endzeit und Zeitraum. So bucht die Anmeldung das Kind.",
+            "`Bereit` trägt moto nach. Hat das Kind schon eine passende Anmeldung, bindet moto den Vertrag nur daran. `Erledigt` ist schon gebunden. Bei `Zurückgestellt` und `Hängt` steht in der Spalte `Hinweis`, was fehlt und wer es klärt. `Ohne Kinderakte` verknüpfst du zuerst.",
+            "Wähle unten zum Beispiel `Für 12 Verträge nachtragen`. moto fragt vorher nach. Bestätige mit `Jetzt nachtragen`.",
+            "Danach zeigt moto, wie viele Anmeldungen nachgetragen und wie viele Verträge nur gebunden sind. Die offenen Zeilen bleiben als Arbeitsliste stehen.",
+            "Mit `Neue Vorschau` holst du den neuen Stand. Erledigtes steht dann auf `Erledigt`. Es entsteht nichts doppelt.",
+            "Danach sind die Eltern dran. Das macht die Schule in ihrer Kinderliste mit `Eltern einladen`. Eltern ohne Konto bekommen die Einladung ins Elternportal. Mit `Eltern mit Konto benachrichtigen` bekommen Eltern mit Konto eine kurze Nachricht, für Kinder, die heute Betreuung gebucht haben. Jedes Elternteil bekommt sie pro Kind nur einmal.",
+          ],
+        },
+        {
+          title: "Warum ein Vertrag offen bleibt",
+          description:
+            "Für eine offene Zeile schreibt moto nichts. Ist der Grund geklärt, nimmt die nächste Vorschau sie mit.",
+          ordered: false,
+          steps: [
+            "Am Vertrag zu berichtigen: Ein Modul gibt es nicht mehr, die Module liegen in zwei Anmeldephasen, Wochentage oder Endzeit passen nicht zum Modul, oder der Vertrag ist nicht aktiv.",
+            "Mit der Schule zu klären: Das Kind hat schon eine andere Anmeldung, das Modul ist ausgeschaltet, die Kinderakte ist nicht mehr aktiv, ihr fehlt der Betreuungsplatz oder das Geburtsdatum, oder die Betreuung endet dort früher.",
+            "Kommt von selbst: Der Vertrag oder die Anmeldephase hat noch nicht begonnen, oder eine geplante Änderung gilt noch nicht.",
+            "`Hängt` heißt: Ein früherer Lauf hat die Anmeldung schon angelegt, aber der Vertrag passt nicht mehr dazu. Berichtige den Vertrag, oder die Schule berichtigt die Buchungen der Anmeldung. Dann bindet der nächste Lauf. Hast du die Module des Vertrags auf eine andere Anmeldephase umgestellt, ordne sie zurück auf ein Modul der Phase dieser Anmeldung. Die Anmeldung an der Schule zu beenden hilft nicht.",
+          ],
+        },
+        {
+          title: "Bindung an die Anmeldung lösen",
+          description:
+            "Ein gebundener Vertrag folgt den Buchungen seiner Anmeldung. Ändert die Schule eine Buchung, bekommt er eine neue Version. Auf der Vertragsseite steht unter `Anmeldung` dann `Anmeldung nachgetragen`.",
+          steps: [
+            "Öffne den Vertrag. Wähle im Menü mit den drei Punkten `Bindung an die Anmeldung lösen`.",
+            "Lies im Fenster, was passiert, und wähle `Bindung lösen`.",
+            "Der Vertrag folgt den Buchungen dann nicht mehr. Versionen, die schon entstanden sind, bleiben.",
+            "Die Anmeldung und ihre Buchungen bleiben an der Schule. Braucht das Kind sie nicht, nimmt die Schule die Buchungen heraus.",
+            "War die Verknüpfung falsch, wähle danach `Verknüpfung lösen` und verknüpfe die richtige Kinderakte. Sonst bindet `Anmeldungen nachtragen` den Vertrag wieder an dieselbe Anmeldung.",
+          ],
+        },
+        {
+          title: "Module importierter Verträge neu zuordnen",
+          description:
+            "Hast du deine Module nach dem Import neu geordnet? Dann buchen die importierten Verträge noch die alten Module. Mit einer CSV-Datei ordnest du die Buchungen den neuen Modulen zu. Jeder geänderte Vertrag bekommt eine neue Version. Wochentage und Endzeiten bleiben. Die Eltern bekommen keine Nachricht.",
+          steps: [
+            "Wähle in der Navigation `Verträge`. Wähle oben rechts das Menü mit den drei Punkten und dann `Module neu zuordnen`.",
+            "Du kennst den Aufbau noch nicht? Wähle `Beispieldatei`. Die Datei hat die Spalten `Vertrag`, `Wochentag`, `Bisheriges_Modul` und `Neues_Modul`.",
+            "Schreibe je Vertrag, Wochentag und bisherigem Modul eine Zeile. Bei `Vertrag` steht die Vertragsnummer aus moto. Bei `Wochentag` geht zum Beispiel `Mo`, `Mo-Fr` oder `Montag`.",
+            "Weißt du das neue Modul noch nicht? Lass `Neues_Modul` leer. moto stellt den ganzen Vertrag dann zurück und ändert ihn nicht.",
+            "Wähle bei `Gilt ab` den Tag, ab dem die neuen Module gelten. Vorgeschlagen ist der Erste des nächsten Monats. Frühestens geht heute.",
+            "Ziehe die Datei in das Feld oder wähle `Datei wählen`.",
+            "Prüfe die Verträge unter `Prüfen und ändern`. Bei `Änderung` steht links das bisherige und rechts das neue Modul. `Wird geändert` ändert moto. `Schon zugeordnet` bucht schon die neuen Module. `Zurückgestellt` wartet auf deine Entscheidung. Bei `Nicht möglich` steht der Grund mit der Zeile der Datei in der Spalte `Hinweis`.",
+            "Änderst du `Gilt ab`, prüft moto die Datei sofort neu.",
+            "Wähle unten den grünen Knopf, zum Beispiel `12 Verträge ändern`. moto fragt vorher nach. Bestätige im Fenster noch einmal.",
+            "Beim Vertrag steht die neue Version im Reiter `Versionen` mit `Module neu zugeordnet`. Frühere Versionen bleiben lesbar.",
+          ],
+        },
+        {
+          title: "Vertragsangaben importierter Verträge nachpflegen",
+          description:
+            "Der Import kennt nur einen Vertragspartner, den Abschluss auf Papier und ein Abschlussdatum. Aus den Originalunterlagen ergänzt du weitere Vertragsparteien, die Abschlussart und das Abschlussdatum. Es entsteht kein neuer Vertrag. Die Eltern bekommen keine Mail.",
+          steps: [
+            "Wähle in der Navigation `Verträge`. Wähle oben rechts das Menü mit den drei Punkten und dann `Vertragsangaben nachpflegen`.",
+            "Wähle bei `1. Liste herunterladen` den Knopf `Liste herunterladen`. Die Liste enthält jeden importierten Vertrag mit seinen Angaben in moto.",
+            "Ergänze die Liste. `Vertragsparteien`: Namen als „Nachname, Vorname“, getrennt mit „ | “. Ein weiterer Name kommt dazu. Schreibst du einen Namen anders, ändert moto die Schreibweise. Vor- oder Nachname muss dabei gleich bleiben. Ändere je Liste nur einen Namen pro Vertrag. Keine Partei fällt weg. Mail-Adresse und Elternkonto bleiben.",
+            "`Abschlussart`: „online“ oder „papier“. `Abschlussdatum`: ein Datum wie 12.03.2026, oder „unbekannt“, wenn du den Tag nicht belegen kannst.",
+            "Trage bei `Beleg` in jeder geänderten Zeile ein, woher die Angabe stammt, zum Beispiel den Namen der PDF mit dem Vertrag. Eine leere Zelle ändert nichts. `Vertrag-ID` und `Kind` änderst du nicht.",
+            "Speichere die Liste als CSV-Datei. Ziehe sie bei `2. Ausgefüllte Liste hochladen` in das Feld oder wähle `Datei wählen`.",
+            "Prüfe die Vorschau. Je Zeile steht der alte Wert durchgestrichen und daneben der neue. `Wird geändert` ändert moto. `Bereits aktuell` bleibt, wie es ist. Bei `Fehler` steht der Grund in der Spalte, zu der er gehört.",
+            "Wähle unten zum Beispiel `3 Verträge ändern`. moto fragt noch einmal. Bestätige.",
+            "Auf der Vertragsseite steht danach die Karte `Nachgepflegte Angaben` mit dem Tag, dem Beleg und der Änderung. Lädst du dieselbe Liste noch einmal hoch, ändert sich nichts.",
           ],
         },
         {
@@ -11862,7 +12224,8 @@ export const traegerCareContractsTopic =
       result:
         "Die Eltern bekommen den Vertrag als PDF per Mail. Haben sie ein Konto in der Eltern-App, liegt er dort auch unter `Dokumente`. Wer dort `Neues Dokument vom Träger` eingeschaltet hat, bekommt dazu eine Nachricht aufs Handy. Gilt der Vertrag bei der Annahme, ist sein Status `Aktiv`. Sonst wird er `Versendet`: Der Versand ist beauftragt. Ob die Mail gesendet wurde, siehst du unter `Versand`.",
       notes: [
-        "Ein importierter Vertrag beginnt frühestens mit dem Schuljahr seines Moduls. Er endet auch mit diesem Schuljahr, wenn das Modul ein Ende hat und die Datei kein früheres nennt. Lief der Vertrag schon vorher, steht der frühere Tag unter `Abgeschlossen`. Der Vertrag ist mit keinem Kind aus den `Kinderdaten` der Schule verknüpft: moto gleicht Kinder nicht über den Namen ab. Im Reiter `Versionen` steht bei ihm `Aus einer Datei importiert`.",
+        "Ein importierter Vertrag beginnt frühestens mit dem Schuljahr seines Moduls. Er endet auch mit diesem Schuljahr, wenn das Modul ein Ende hat und die Datei kein früheres nennt. Lief der Vertrag schon vorher, steht der frühere Tag unter `Abgeschlossen`. Der Vertrag ist mit keiner Kinderakte der Schule verknüpft, bis du ihn verknüpfst: moto gleicht Kinder nicht über den Namen ab. Im Reiter `Versionen` steht bei ihm `Aus einer Datei importiert`.",
+        "Hat ein Kind einen laufenden importierten Vertrag, bekommt es aus einer Anmeldung keinen zweiten Vertrag für dieselbe Zeit. Das gilt auch, solange der Vertrag noch nicht verknüpft ist: Dann zählen Name und Geburtsdatum. Das Kind steht in `Verträge erstellen` mit `Hat schon einen importierten Vertrag` und der Nummer des Vertrags. Stimmt das nicht, prüfe dort die Kinderakte und das Vertragsende. Endet der importierte Vertrag vor der gebuchten Betreuung, bekommt das Kind seinen neuen Vertrag wie sonst.",
         "Die Suche und die Filter gelten für alle Verträge. Mit `Weitere Verträge laden` zeigst du ältere Treffer an.",
         "Beim ersten Senden hält moto das PDF fest. Änderst du danach Bedingungen oder Brieftext, bleibt der versendete Vertrag gleich.",
         "Im Reiter `Unterschrift und Versand` siehst du in der Karte `Versand`, ob die Mail gesendet wurde. Mit `Versand aktualisieren` prüfst du den neuen Stand. Mit `Erneut senden` geht dasselbe PDF noch einmal an die Eltern; moto fragt vorher. Bei einem aktiven Vertrag steht `Erneut senden` im Menü mit den drei Punkten oben rechts. Eine zweite Nachricht aufs Handy gibt es dabei nicht. Nur eine korrigierte Mail-Adresse bekommt eine eigene Nachricht.",
@@ -11886,14 +12249,23 @@ export const traegerCareContractsTopic =
         "Ist schon eine spätere Version geplant, gilt eine frühere Änderung nur bis dahin. Die geplante Version übernimmt sie nicht von selbst.",
       ],
       differences: [
+        "`Schule wählen` fehlt bei `Anmeldungen nachtragen`? Dein Träger hat nur eine Schule. moto zeigt gleich ihre Vorschau.",
         "Du siehst `Verträge` nicht in der Navigation? Dir fehlt das Recht `Verträge verwalten`. Wende dich an eine Person mit der Rolle `Leitung`.",
       ],
       troubleshootingDetails: [
+        "Beim Nachtragen steht `Seit deiner Vorschau hat sich etwas geändert`? Ein Vertrag, die Schule oder der Tag ist neu. moto hat nichts eingetragen. Prüfe die neue Vorschau und trag noch einmal nach.",
+        "Beim Nachtragen steht `Das Nachtragen ist nicht ganz durchgelaufen`? Manche Kinder können schon angemeldet sein. Trag noch einmal nach. moto bindet dann die Verträge, es entsteht nichts doppelt.",
+        "Die Schule fragt, warum ein Kind ohne Eltern angemeldet ist? Die Anmeldung kommt aus dem importierten Vertrag. Die Schule lädt die Eltern in ihrer Kinderliste mit `Eltern einladen` ins Elternportal ein. Setzt sie dort den Haken bei `Eltern mit Konto benachrichtigen`, bekommen Eltern mit Konto eine kurze Nachricht: Die Betreuung ist jetzt im Elternportal sichtbar.",
         "Beim Import steht `Für das Modul fehlen die Vertragsbedingungen`? Trage unter `Vertragsbedingungen` Laufzeit und Frist für das Modul ein. Wähle danach im Import `Erneut prüfen` oder lade die Datei noch einmal.",
         "Beim Import steht `Dieses Modul gibt es an der Schule nicht`? Der Name in der Datei muss so heißen wie das Angebot der Schule. Ändere den Namen in der Datei, oder wähle `Modul für alle Zeilen`.",
         "Beim Import steht `„Kinder in der Familie“ ist keine ganze Zahl von 1 bis 20`? moto übernimmt die Zeile nicht. Korrigiere die Zahl in der Datei und lade die Datei noch einmal.",
-        "Ein importierter Vertrag ist falsch? Einen übernommenen Vertrag kannst du nicht löschen und nicht noch einmal importieren. Trage für ihn eine Kündigung ein. Prüfe die Vorschau deshalb, bevor du übernimmst.",
-        "In `Vertrag beenden` steht `Die Mitteilung zum Vertragsende ging nicht raus`? Der Hinweis nennt den Grund: Der Vertrag ist mit keinem Kind aus den `Kinderdaten` der Schule verknüpft. Oder keine Adresse des Vertrags gehört noch einer Bezugsperson, die für das Kind handeln darf. Bei älteren Entscheidungen kennt moto den Grund nicht. Die Entscheidung gilt trotzdem. Schicke den Eltern die Mitteilung per Brief. Sie steht darunter als `Mitteilung zum Vertragsende (nicht verschickt)`.",
+        "Beim Neuzuordnen der Module steht `Der Vertrag kommt aus einer Anmeldung`? Ändern lassen sich nur importierte Verträge. Die Module eines Vertrags aus einer Anmeldung folgen den Buchungen der Schule. Die Schule ändert dort die Buchung.",
+        "Beim Neuzuordnen der Module steht `Der Vertrag ändert sich schon später`? Für den Vertrag ist schon eine neue Version geplant. Wähle bei `Gilt ab` einen Tag ab dieser Version.",
+        "Ein importierter Vertrag ist falsch? Einen übernommenen Vertrag kannst du nicht löschen und nicht noch einmal importieren. Fehlen nur Vertragsparteien, die Abschlussart oder das Abschlussdatum, ergänze sie unter `Vertragsangaben nachpflegen`. Sonst trage für ihn eine Kündigung ein. Prüfe die Vorschau deshalb, bevor du übernimmst.",
+        "Beim Nachpflegen steht `Dieser Vertrag kommt nicht aus einem Import`? Nachpflegen geht nur für importierte Verträge. Die Angaben der anderen Verträge stammen aus moto.",
+        "Beim Nachpflegen steht `moto erkennt nicht sicher, welcher Name zu welcher vorhandenen Vertragspartei gehört`? Du hast in einer Zeile einen Namen geändert und zugleich einen ergänzt, oder zwei Namen geändert. Ändere erst einen Namen und lade die Liste hoch. Lade danach die Liste neu herunter und ergänze den nächsten. Ist es eine andere Person? Dann lass den alten Namen stehen und ergänze den neuen.",
+        "Beim Nachpflegen steht `Eine Vertragspartei fehlt`? Die Zeile nennt weniger Namen als der Vertrag hat. Nimm alle Namen aus der heruntergeladenen Liste und ergänze nur neue.",
+        "In `Vertrag beenden` steht `Die Mitteilung zum Vertragsende ging nicht raus`? Der Hinweis nennt den Grund: Der Vertrag ist mit keiner Kinderakte der Schule verknüpft. Einen importierten Vertrag verknüpfst du auf seiner Seite mit `Mit Kinderakte verknüpfen`. Oder keine Adresse des Vertrags gehört noch einer Bezugsperson, die für das Kind handeln darf. Bei älteren Entscheidungen kennt moto den Grund nicht. Die Entscheidung gilt trotzdem. Schicke den Eltern die Mitteilung per Brief. Sie steht darunter als `Mitteilung zum Vertragsende (nicht verschickt)`.",
         "`Vertragsende festlegen` oder `Grund nicht anerkennen` meldet, dass kein Ende mehr offen ist? Eine andere Person hat schon entschieden. Lade die Seite neu. Die Entscheidung steht in `Vertrag beenden`.",
         "Bei einem Änderungswunsch fehlt `Freigeben`? Die Eltern melden damit die ganze Betreuung ab. Das ist eine Kündigung. Trage sie unter `Vertrag beenden` ein, oder lehne den Wunsch ab.",
         "Nach der Freigabe bleiben Regeltermine oder Abholzeiten unverändert? Gib die angezeigten Hinweise an die Schule weiter. Die Schule muss sie prüfen.",
@@ -12138,6 +12510,9 @@ export const traegerCareMonthsTopic =
             "Prüfe die Rechnungen. Je Schule steht eine Karte. Jede Rechnung hat je Modul eine Zeile mit den gebuchten Wochentagen.",
             "Steht oben `Ohne Preis`, fehlt für einen gebuchten Wochentag oder eine Zahl von Tagen je Woche ein Preis. Wähle `Preis eintragen`. Danach kommt das Kind in den Lauf.",
             "Steht oben `Doppelter Vertrag – bitte prüfen`, rechnen zwei Verträge eines Kindes am selben Tag dasselbe Modul ab. Die Freigabe rechnet dieses Kind mit allen seinen Verträgen nicht ab, alle anderen Kinder schon. Nach der Freigabe steht es unter `Nicht abgerechnet – Doppelter Vertrag`. Beende oder ändere einen der Verträge. Starte dann einen neuen Monatslauf für diesen Monat. Er rechnet nur dieses Kind ab.",
+            "Steht `Ein Kind an zwei Schulen`, hat ein Kind die Schule gewechselt und an jeder Schule eine eigene Kinderakte. Name, Geburtstag und Familie sind gleich, die Verträge laufen nacheinander. moto rechnet beide Verträge darum ab wie die eines Kindes. Sind es doch zwei Kinder, gib den Lauf nicht frei und schreib dem moto-Support.",
+            "Steht `Kind hat schon eine Rechnung – bitte prüfen`, ist der Monat für das Kind schon abgerechnet: durch eine Rechnung oder einen Jahresbescheid eines anderen Vertrags. Der Lauf stellt keine zweite Rechnung aus. Wähle `Rechnung öffnen`, `Bescheid öffnen` oder `Jahresbescheid öffnen` und prüfe das Dokument. Stimmt es, musst du nichts tun. Eine falsche Rechnung stornierst du. Einen falschen Jahresbescheid änderst du mit einem neuen Jahreslauf. Öffne danach den Monatslauf wieder. Er rechnet das Kind jetzt ab.",
+            "Steht `Betreuung noch nicht abgerechnet – Rechnung nur mit Mensa`, enthält die Rechnung des Kindes nur die Mensa. Storniere sie. Danach rechnet der Lauf das Kind neu und zeigt, was noch offen ist. Ist der Lauf schon freigegeben, starte nach dem Storno einen neuen Monatslauf für diesen Monat. Das gilt für beide Karten.",
           ],
         },
         {
@@ -12377,6 +12752,7 @@ export const traegerCareNoticesTopic =
         "Ein Jahreslauf lässt sich nicht starten: Für dieses Jahr gibt es schon einen offenen Lauf. Öffne ihn in der Liste. Stelle die Bescheide aus, oder schließe oder verwirf den leeren Lauf.",
         "Die Vorschau ist leer, weil alle Bescheide noch gelten: Es gibt nichts Neues auszustellen. Wähle `Jahreslauf abschließen` und dann `Abschließen`. Danach kannst du einen neuen Jahreslauf für andere Schulen starten.",
         "Der Lauf zeigt `Dieser Lauf hat nichts abzurechnen`: Seine Schulen haben in diesem Jahr keinen Vertrag. Wähle `Leeren Lauf verwerfen` und dann `Verwerfen`. Der Lauf steht danach als `Verworfen` in der Liste, und das Jahr ist frei für einen neuen Jahreslauf.",
+        "Im Jahreslauf steht `Preis fehlt – Kind bekommt keinen neuen Bescheid`: Für einen Vertrag des Kindes fehlt ein Preis. Sein bisheriger Bescheid gilt weiter, auch für Tage eines anderen Vertrags. Damit der Jahreslauf keinen Tag doppelt abrechnet, bekommt der andere Vertrag keinen neuen Bescheid. Wähle `Preisliste öffnen` und trage den Preis ein. Öffne danach den Jahreslauf wieder.",
         "Im Monatslauf steht `Durch aufgehobenen Bescheid gesperrt`: Ein Änderungsbescheid hat den Monat auf 0,00 € gesetzt. Der Monat bleibt gesperrt, damit ihn niemand doppelt abrechnet. Willst du ihn abrechnen, stelle mit `Neuen Bescheid ausstellen` einen neuen Bescheid aus.",
       ],
       related: [
@@ -12424,12 +12800,14 @@ export const traegerCareReductionsTopic =
           description:
             "Geschwister sind Kinder mit derselben Rechnungsadresse. Das Kind mit dem höchsten Beitrag ist das 1. Kind. Bei gleichem Beitrag zählt das ältere Kind zuerst.",
           steps: [
-            "Wähle bei `Ab dem Kind`, ab welchem Kind die Ermäßigung gilt, zum Beispiel ab dem 2. Kind.",
-            "Wähle bei `Geschwister zählen an` die Schulen, deren Kinder mitzählen. Lässt du das Feld leer, zählen nur die Schulen der Regel.",
+            "Wähle bei `Wer zahlt weniger?`, für welche Kinder die Regel gilt.",
+            "`Nur weitere Kinder` heißt: Die ersten Kinder zahlen den vollen Beitrag. Wähle bei `Ab dem Kind`, ab welchem Kind die Familie weniger zahlt, zum Beispiel ab dem 2. Kind.",
+            "`Alle Kinder der Familie` heißt: Ab einer Kinderzahl zahlt jedes Kind mit Vertrag weniger, auch das erste. Wähle bei `Ab so vielen Kindern` die Kinderzahl, zum Beispiel 2.",
+            "Die Schulen der Regel zählen immer. Sollen auch Kinder an anderen Schulen mitzählen? Wähle diese Schulen bei `Geschwister zählen auch an`. Sonst lass das Feld leer.",
             "`Fester Preis` heißt: Das Kind zahlt genau diesen Betrag. `Betrag weniger` zieht den Betrag vom Preis ab.",
-            "`Preis laut Preisliste` heißt: Jedes weitere Kind zahlt je Modul und Tag den Preis unter `Jedes weitere Kind` der Preisliste. Die Zahl trägst du dort ein, nicht in der Regel.",
-            "Sollen Geschwister an zwei Standorten getrennt zählen, lege je Standort eine eigene Regel an. Lass `Geschwister zählen an` leer.",
-            "Sollen auch Geschwister ohne Betreuungsvertrag zählen? Schalte `Geschwister ohne Vertrag mitzählen` ein.",
+            "`Preis laut Preisliste` heißt: Jedes weitere Kind zahlt je Modul und Tag den Preis unter `Jedes weitere Kind` der Preisliste. Die Zahl trägst du dort ein, nicht in der Regel. Bei `Alle Kinder der Familie` zahlt auch das erste Kind diesen Preis.",
+            "Sollen Geschwister an zwei Standorten getrennt zählen, lege je Standort eine eigene Regel an. Lass `Geschwister zählen auch an` leer.",
+            "Sollen auch Geschwister ohne Betreuungsvertrag zählen? Schalte `Geschwister ohne Vertrag mitzählen` ein. Bei `Alle Kinder der Familie` zählt sonst nur, wie viele Kinder einen Vertrag haben.",
           ],
         },
         {
@@ -12455,11 +12833,14 @@ export const traegerCareReductionsTopic =
             "Du kennst den Aufbau noch nicht? Wähle `Beispieldatei`.",
             "Ziehe die Datei in das Feld oder wähle `Datei wählen`.",
             "Prüfe unter `Spalten zuordnen`, aus welcher Spalte jedes Feld kommt. Hat die Datei keine Spalte für die Schule, wähle `Schule für alle Zeilen`.",
+            "Wähle bei `Kinderzahl gilt ab` den Tag, ab dem die Zahlen der Datei belegt sind, zum Beispiel den Tag, an dem du die Liste erstellt hast. moto schlägt heute vor.",
+            "Nennt deine Datei den Tag je Kind? Ordne die Spalte `Gültig ab` zu. Eine Spalte mit dem Namen `Kinderzahl gilt ab` erkennt moto von selbst. Eine Zeile ohne Tag bekommt den Tag, den du für die ganze Datei gewählt hast. Nennen Geschwister verschiedene Tage, gilt der früheste Tag. moto zählt dabei nur Zeilen, die es übernimmt.",
+            "Der Tag darf höchstens neun Monate voraus liegen. Eine Zeile mit einem späteren Tag übernimmt moto nicht. Endet der Vertrag des Kindes, bevor die neue Kinderzahl gelten kann, übernimmt moto die Zeile auch nicht.",
             "Prüfe die Zeilen unter `Prüfen und übernehmen`. `Bereit` übernimmt moto. Bei `Fehlerhaft` und `Widerspruch in der Datei` steht der Grund in der Spalte `Hinweis`.",
             "`Andere Zahl bestätigt` heißt: Für die Familie gilt schon eine andere Zahl. moto ändert sie nicht. Ändere sie in der Liste über `Kinderzahl ändern`.",
             "`Verschiedene Angaben` heißt: Für die Familie sind verschiedene Kinderzahlen bestätigt. Bestätige die Kinderzahl in der Familienliste. Die Datei löst diesen Widerspruch nicht.",
-            "Ist die bisherige Zahl einer Familie abgelaufen? Dann übernimmt moto die Zahl aus der Datei. Sie gilt ab dem Tag nach dem Ablauf.",
-            "Wähle unten `übernehmen`. Die Zahlen stehen danach in der Liste mit dem Stand `Bestätigt`.",
+            "Ist die bisherige Zahl einer Familie abgelaufen? Oder endet sie vor dem Tag aus deiner Datei? Dann übernimmt moto die Zahl aus der Datei. Sie gilt frühestens ab dem Tag nach dem Ablauf.",
+            "Wähle unten `übernehmen`. Die Zahlen stehen danach in der Liste mit dem Stand `Bestätigt`. Beginnt eine Zahl erst später, steht dort bis dahin ein anderer Stand, zum Beispiel `Gilt später` oder `Abgelaufen`.",
           ],
         },
         {
@@ -12496,15 +12877,16 @@ export const traegerCareReductionsTopic =
         },
       ],
       result:
-        "Der nächste Monatslauf rechnet die Ermäßigungen aus. Jede Rechnung zeigt jede Ermäßigung mit Namen und Betrag. Bei Geschwistern steht dabei, das wievielte Kind es ist, zum Beispiel `2. Kind von 3`.",
+        "Der nächste Monatslauf rechnet die Ermäßigungen aus. Jede Rechnung zeigt jede Ermäßigung mit Namen und Betrag. Bei Geschwistern steht dabei, das wievielte Kind es ist, zum Beispiel `2. Kind von 3`. Gilt die Regel für alle Kinder der Familie, steht dort die Kinderzahl, zum Beispiel `2 Kinder in der Familie`.",
       differences: [
         "Geschwister erkennt moto an derselben E-Mail-Adresse der Rechnung. Haben zwei Familien dieselbe Adresse, zählen ihre Kinder zusammen. Hat eine Familie zwei Adressen, zählen ihre Kinder nicht als Geschwister. Gleiche die Adresse dann im Vertrag an.",
         "Gilt ein Nachweis erst ab Mitte des Monats, zählt er für den ganzen Monat.",
         "Zählt eine Regel die Kinderzahl, gilt die bestätigte Zahl. Es zählen aber immer mindestens die Kinder mit Vertrag. Geschwister ohne Vertrag stehen in der Reihe vorn: Bei 3 Kindern und einem Kind mit Vertrag ist es das 3. Kind.",
-        "Geschwister zählen je Schule getrennt. Ein Kind mit Vertrag an einer anderen Schule zählt bei der Kinderzahl nur mit, wenn die Regel unter `Geschwister zählen an` auch diese Schule nennt. Geschwister ohne Vertrag zählen an jeder Schule mit.",
+        "Geschwister zählen je Schule getrennt. Ein Kind mit Vertrag an einer anderen Schule zählt bei der Kinderzahl nur mit, wenn die Regel unter `Geschwister zählen auch an` diese Schule nennt. Geschwister ohne Vertrag zählen an jeder Schule mit.",
+        "Wechselt ein Kind im Monat die Schule, zählt es in diesem Monat an jeder Schule mit, die die Regel zählt.",
         "Eine Angabe der Eltern, die du noch nicht bestätigt hast, zählt nicht. Ist die Zahl abgelaufen, zählen nur die Kinder mit Vertrag. Der Monatslauf nennt diese Kinder dann unter `Kinderzahl der Familie fehlt`.",
         "Ein Vertrag ohne E-Mail-Adresse der Eltern ist eine eigene Familie, zum Beispiel nach einem Import. Die Liste nennt sie nach dem Kind und zeigt `Vertrag Nr.`. Sie bekommt ihre eigene Kinderzahl.",
-        "Aus einer Datei kommt die Zahl ab dem ersten Tag des Vertrags, frühestens ab drei Monaten zurück. Einen anderen Beginn wählst du über `Kinderzahl ändern`.",
+        "Aus einer Datei gilt die Zahl ab dem Tag, den du beim Nachtragen wählst. moto setzt den Beginn nie von selbst auf den Vertragsbeginn zurück. Für einen Monat zählt die Zahl, die am Ersten gilt. Gilt am Ersten keine, zählt die erste Zahl, die in dem Monat beginnt. Einen anderen Beginn wählst du später über `Kinderzahl ändern`.",
         "Steht bei einer Familie `Verschiedene Angaben`? Die Verträge der Familie nennen verschiedene Zahlen. Bestätige eine Zahl für die Familie. Oder wähle im Menü `Kinderzahl entfernen`. moto fragt vorher nach. Bis dahin zählen nur die Kinder mit Vertrag.",
         "Eine Rechnung, die schon ausgestellt ist, bleibt, wie sie ist. Eine geänderte Regel gilt ab dem nächsten Monatslauf.",
       ],
@@ -12816,7 +13198,7 @@ export const traegerDashboardTopic =
       audience: "traeger",
       icon: "BarChart3",
       steps: [
-        "Wähle in der Navigation `Dashboard`.",
+        "Nach der Anmeldung öffnet moto das Dashboard. Sonst wähle in der Navigation `Dashboard`.",
         "Lies oben die Summe für alle Schulen.",
         "Prüfe unter `Auffälligkeiten`, an welcher Schule etwas deine Grenzen erreicht.",
         "Wähle dort `Zur Schule`, um die Schule anzusehen.",
@@ -12827,6 +13209,7 @@ export const traegerDashboardTopic =
       result:
         "Du siehst für jede Schule, wie viele Kinder gerade da sind, wie viele heute krank sind, wie viele Betreuungskräfte angemeldet sind und wie viele Anmeldungen offen sind.",
       notes: [
+        "Ohne die Pflichtangaben erstellt moto nicht alle Verträge, Rechnungen und Bescheide. Der Hinweis verschwindet, sobald alles eingetragen ist.",
         "Die Zahlen aktualisieren sich jede Minute von selbst.",
         "Du siehst nur Zahlen, keine Namen.",
         "Ein Kind, das da ist, zählt nicht als krank. Das gilt auch mit Krankmeldung.",
@@ -12839,6 +13222,8 @@ export const traegerDashboardTopic =
         "`Offene Anmeldungen` zählt die Kinder aus der Online-Anmeldung, über die die Schule noch nicht entschieden hat.",
       ],
       differences: [
+        "Steht oben `Es fehlen noch Pflichtangaben`? Trage die genannten Angaben nach. Die Knöpfe im Hinweis führen zur passenden Seite.",
+        "Eine Angabe darfst du nicht eintragen? Dann nennt der Hinweis die Rolle, die das tut.",
         "`Betreuungskräfte` zählt nur, wer sich in der Zeiterfassung angemeldet hat. Homeoffice zählt nicht. Nutzt eine Schule die Zeiterfassung nicht, steht dort 0 und beim Schlüssel `–`.",
         "Ohne das Recht `In OGS wechseln` fehlt die Aktion `Schul-App öffnen`. Die Zahlen siehst du trotzdem.",
         "Ohne das Recht, Einstellungen zu ändern, steht dort `Grenzen ansehen` statt `Grenzen bearbeiten`.",
@@ -14146,7 +14531,7 @@ export const traegerInvitationTopic =
         "Wähle `Weiter zum Dashboard`.",
       ],
       result:
-        "moto öffnet die Seite `Schulen`. Was du siehst, hängt von deiner Rolle ab.",
+        "moto öffnet das `Dashboard`. Darfst du es nicht sehen, öffnet moto die Seite `Schulen`. Was du siehst, hängt von deiner Rolle ab.",
       notes: [
         "Mit derselben E-Mail-Adresse und demselben Passwort meldest du dich später an.",
         "Ein Konto in einer Schule brauchst du dafür nicht.",
@@ -14171,9 +14556,11 @@ export const traegerInvitationTopic =
 // Die Ablaeufe sind noch nicht Schritt fuer Schritt gegen die App geprueft,
 // deshalb bleiben es Entwuerfe.
 /**
- * `/traeger/login` (#4649): eigene Adresse, danach die Liste der Schulen.
+ * `/traeger/login` (#4649): eigene Adresse, danach das Dashboard; ohne
+ * dessen Recht die Liste der Schulen (#7646).
  * Der Code per E-Mail ist Pflicht, beim ersten Mal mit Einrichtung (#4651).
  * „Passwort vergessen?“ schickt den Link auf den Träger-Host (#5149).
+ * Die Suche nach Seiten und Schulen mit Strg+K (#7648).
  */
 export const traegerLoginTopic = function traegerLoginTopic(): HelpTopic {
   return {
@@ -14181,7 +14568,7 @@ export const traegerLoginTopic = function traegerLoginTopic(): HelpTopic {
     title: "Im Träger-Portal anmelden",
     question: "Wie melde ich mich im Träger-Portal an?",
     summary:
-      "Das Träger-Portal hat eine eigene Adresse. Dort siehst du alle Schulen deines Trägers.",
+      "Das Träger-Portal hat eine eigene Adresse. Dort siehst du alle Schulen deines Trägers auf einen Blick.",
     group: "einstieg",
     audience: "traeger",
     icon: "Building2",
@@ -14201,13 +14588,15 @@ export const traegerLoginTopic = function traegerLoginTopic(): HelpTopic {
       "Ist es dein eigenes Gerät? Wähle `Ja, merken und anmelden`. Dort fragt moto dann 90 Tage lang keinen Code ab.",
       "Nutzen mehrere Personen das Gerät? Wähle `Nein, nur anmelden`.",
     ],
-    result: "moto öffnet die Seite `Schulen` mit allen Schulen deines Trägers.",
+    result:
+      "moto öffnet das `Dashboard`. Dort siehst du die Zahlen von jetzt und was Aufmerksamkeit braucht.",
     notes: [
       "Lege dir die Adresse als Lesezeichen an.",
-      "Die Liste der Schulen lädst du über das Drei-Punkte-Menü oben rechts herunter. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
+      "Die Liste der Schulen findest du in der Navigation unter `Schulen`. Du lädst sie über das Drei-Punkte-Menü oben rechts herunter. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
       "Ein neues Passwort gilt auch für dein Konto in der OGS.",
     ],
     differences: [
+      "Darfst du das Dashboard nicht sehen? Dann öffnet moto die Seite `Schulen` mit allen Schulen deines Trägers.",
       "Oben steht `Willkommen im Träger-Portal`. So erkennst du, dass du richtig bist.",
       "Hast du auch ein Konto in einer OGS? Dann nutzt du dasselbe Konto. Ein zweites Passwort brauchst du nicht.",
       "Meldest du dich zum ersten Mal an? Dann richtest du den Code zuerst ein. Wähle `Code an meine E-Mail senden`. Gib danach den Code ein. Wähle `Weiter zum Dashboard`.",
@@ -14215,7 +14604,11 @@ export const traegerLoginTopic = function traegerLoginTopic(): HelpTopic {
       "Ein gemerktes Gerät gilt nur für das Träger-Portal und nur für diesen Träger. In einer OGS merkst du das Gerät dort noch einmal.",
       "Gemerkte Geräte stehen unter `Konto` bei `Meine vertrauten Geräte`. Dort entfernst du ein Gerät wieder.",
       "Am Computer stehen die Bereiche links in der Navigation. Auf dem Handy stehen sie unten. Was dort keinen Platz hat, findest du unter `Mehr`.",
+      "Am Computer stehen die Bereiche in Gruppen wie `Übersicht` oder `Finanzen`. Wähle den Namen einer Gruppe. Dann klappt sie zu oder auf. moto merkt sich das auf diesem Gerät. Öffnest du eine Seite, ist ihre Gruppe offen.",
+      "Suchst du eine Seite oder eine Schule? Drücke Strg und K. Am Mac drücke ⌘ und K. Oder wähle oben in der Navigation `Suchen`. Auf dem Handy wählst du unten die Lupe.",
+      "Gib den Namen einer Seite oder Schule ein. Auch der Ort einer Schule passt. Wähle einen Treffer, oder wähle ihn mit den Pfeiltasten und drücke Enter. Du findest nur Seiten, die du öffnen darfst.",
       "`Einstellungen` steht unten in der Navigation. Ein Klick darauf zeigt dort die Einstellungen. `Zurück zur App` führt zurück.",
+      "Ein Klick auf das Logo oben links führt zurück zum `Dashboard`. Ohne das Dashboard führt er zu `Schulen`.",
     ],
     troubleshootingDetails: [
       "Keine E-Mail mit Code? Schau im Spam-Ordner nach. Wähle sonst `Neuen Code anfordern`.",
@@ -14719,7 +15112,7 @@ export const traegerSepaMandatesTopic =
             "Je Familie gilt ein Mandat. Es gilt auch für Geschwister mit derselben E-Mail-Adresse im Vertrag. Stehen Geschwister mit demselben Konto und derselben Mandatsreferenz in mehreren Zeilen, legt moto das Mandat einmal an. Die Vorschau zeigt die weiteren Zeilen als `Gleiches Mandat`.",
           steps: [
             "Öffne den Vertrag des Kindes unter `Verträge`. Oder öffne im Monatslauf bei der Rechnung das Menü mit den drei Punkten und dann `Empfänger und Zahlung`.",
-            "Wähle in der Karte `SEPA-Lastschriftmandat` den Knopf `Mandat erfassen`. Es öffnet sich die Seite des Mandats.",
+            "Wähle in der Karte `SEPA-Lastschriftmandat` den Knopf `Mandat erfassen`. Es öffnet sich die Seite des Mandats. Bei einem Entwurf fehlt die Karte: Sende den Vertrag zuerst. Ein verworfener Entwurf würde das Mandat mitlöschen.",
             "Wähle dort `Mandat erfassen`.",
             "Übernimm `Kontoinhaber`, `IBAN` und `Unterschrieben am` aus dem unterschriebenen Mandat. Die `BIC` brauchst du nur bei Konten außerhalb der EU.",
             "Trage die `Mandatsreferenz` ein. Lässt du das Feld leer, vergibt moto eine.",
@@ -14845,6 +15238,8 @@ export const traegerSettingsTopic = function traegerSettingsTopic(): HelpTopic {
       "Der eigene Zahlungstext gilt für die Schreiben, die du danach erstellst. Fertige Schreiben bleiben, wie sie sind.",
       "Unter `Ferienbetreuung` legst du bei `Ferienanmeldungen löschen nach (Tagen)` fest, wie lange moto Ferienanmeldungen aufbewahrt. Möglich sind 92 bis 1095 Tage, der Standard ist 365 Tage. Die Frist steht im Einwilligungstext für die Eltern. Eine Änderung gilt nur für Anmeldungen, die danach eingehen.",
       "Unter `Datenschutz` legst du bei `Erziehungsberechtigte ohne Kind aufbewahren (Tage)` fest, wie lange moto Eltern ohne Kind aufbewahrt. Möglich sind 30 bis 365 Tage, der Standard ist 90 Tage. Eine Schule kann einen eigenen Wert eintragen.",
+      // #3844: Eltern-Stopp von Raumverlauf und Stimmung, nur Träger-Ebene.
+      "Unter `Datenschutz` legst du bei `Eltern dürfen Raumverlauf und Stimmung stoppen` fest, ob Eltern das im Elternportal selbst tun dürfen. Der Standard ist aus. Ist es an, löscht ein Stopp den bisherigen Raumverlauf des Kindes. Eine Schule kann hier keinen eigenen Wert eintragen.",
       "Im Bereich `Dashboard` legst du fest, ab wann das Dashboard eine Schule unter `Auffälligkeiten` zeigt: bei zu wenig Personal, bei vielen Krankmeldungen und bei offenen Anmeldungen. 0 schaltet einen Hinweis aus.",
       "Unter `Ferienbetreuung` legst du bei `Ferienbeitrag` auch fest, welches Kind das erste Kind ist und was ein Kostenträger bezahlt. Mehr dazu steht im Artikel `Ferienbeitrag festlegen`.",
     ],
@@ -15544,7 +15939,7 @@ export const traegerTestSystemTopic =
         "Melde dich im Träger-Portal an.",
         "Gehörst du auch zum echten Träger? Wähle den Test-Träger aus.",
         "Oben steht der Hinweis `Testsystem`. So erkennst du das Testsystem.",
-        "Die Seite `Schulen` zeigt die Test-Schulen. Probiere alles aus.",
+        "Unter `Schulen` in der Navigation stehen die Test-Schulen. Probiere alles aus.",
       ],
       result:
         "Wenn du fertig bist, löscht das moto-Team das Testsystem mit allen Test-Schulen.",

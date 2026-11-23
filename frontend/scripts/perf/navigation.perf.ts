@@ -55,7 +55,6 @@ const base = tenantBaseUrl(access);
 
 /** Endpunkte, die die Hülle beim vollen Seitenaufruf einmal lädt (#2973). */
 const SHELL_ENDPOINTS = [
-  "/api/user-context",
   "/api/me/profile",
   "/api/me/navigation",
   "/api/settings/schema",

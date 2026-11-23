@@ -46,6 +46,9 @@ type AccountTenantAccess struct {
 	HasPerson        bool
 	HasStaff         bool
 	Roles            []AccountTenantRole
+	// Version is the read-state token of the roles at this school
+	// (ADR 0311): a role change sends it back as its expected version.
+	Version string
 }
 
 // GrantAccountTenantAccess carries a grant: the school, the role and the
@@ -73,6 +76,9 @@ type OperatorAccountAccess interface {
 	// the mutation paths would accept.
 	ListAssignableSchoolRoles(ctx context.Context, schoolID int64) ([]AccountTenantRole, error)
 	GrantAccountTenantAccess(ctx context.Context, request GrantAccountTenantAccess) ([]AccountTenantAccess, error)
-	UpdateAccountTenantRole(ctx context.Context, accountID, schoolID, roleID, operatorID int64, clientIP string) ([]AccountTenantAccess, error)
+	// UpdateAccountTenantRole replaces the account's role at one school.
+	// expectedVersion is the Version of the entry the operator changed; roles
+	// changed at that school since are refused with readstate.ErrChanged.
+	UpdateAccountTenantRole(ctx context.Context, accountID, schoolID, roleID, operatorID int64, clientIP, expectedVersion string) ([]AccountTenantAccess, error)
 	RevokeAccountTenantAccess(ctx context.Context, accountID, schoolID, operatorID int64, clientIP string) ([]AccountTenantAccess, error)
 }

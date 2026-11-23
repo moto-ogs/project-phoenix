@@ -82,7 +82,7 @@ func (s birthdayStore) FindPersonByAccount(ctx context.Context, accountID int64)
 	if person == nil {
 		return 0, false, nil
 	}
-	return person.ID, true, nil
+	return person.ID.Int64(), true, nil
 }
 
 func (s birthdayStore) FindStaffByPerson(ctx context.Context, personID int64) (peopleCompose.BirthdayStaff, bool, error) {
@@ -96,7 +96,7 @@ func (s birthdayStore) FindStaffByPerson(ctx context.Context, personID int64) (p
 	if staff == nil {
 		return peopleCompose.BirthdayStaff{}, false, nil
 	}
-	return peopleCompose.BirthdayStaff{ID: staff.ID, OptOut: staff.BirthdayDisplayOptOut}, true, nil
+	return peopleCompose.BirthdayStaff{ID: staff.ID.Int64(), OptOut: staff.BirthdayDisplayOptOut}, true, nil
 }
 
 // BirthdaySettingsSource is the slice of the tenant settings service the

@@ -80,6 +80,22 @@ func (s *TraegerStaffStore) DeleteSchoolFinancialRow(ctx context.Context, staffI
 	return nil
 }
 
+// HoldSchoolFinancialRow stamps the school's bank row of a linked employment
+// that a link held back: its updated_at moves past the link's linked_at. The
+// row's update trigger stamps it on the database clock, the clock linked_at's
+// column default stamps the link on, so both sides of that comparison read one
+// clock (ADR 0280).
+func (s *TraegerStaffStore) HoldSchoolFinancialRow(ctx context.Context, staffID int64) error {
+	db, schoolID, err := schoolStaffDB(ctx)
+	if err != nil {
+		return err
+	}
+	if _, err := db.ExecContext(ctx, `UPDATE users.staff_financial_data SET updated_at = updated_at WHERE tenant_id = ? AND staff_id = ?`, schoolID, staffID); err != nil {
+		return fmt.Errorf("workforce postgres: hold school bank row: %w", err)
+	}
+	return nil
+}
+
 // InsertSchoolFinancialRow gives the school its bank and tax row back when
 // its Träger dissolves a record. A row the school has meanwhile kept stays.
 func (s *TraegerStaffStore) InsertSchoolFinancialRow(ctx context.Context, data domain.StaffFinancialData) error {

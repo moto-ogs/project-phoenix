@@ -17,6 +17,7 @@ import { catalogText } from "~/test/error-catalog-text";
 import type { HolidayRegistrationFilter } from "~/lib/traeger-holiday-registrations-api";
 import {
   HOLIDAY_PERIOD,
+  HOLIDAY_REGISTRATION,
   HOLIDAY_REGISTRATION_LIST,
   HOLIDAY_SCHOOLS,
 } from "~/test/fixtures/holiday-registrations";
@@ -178,6 +179,26 @@ describe("TraegerHolidayRegistrationsPage", () => {
       timeModel: "",
       wish: "",
     });
+  });
+
+  it("sorts by number without losing digits above 2^53", async () => {
+    // Number("9007199254740993") is 9007199254740992: the two rows tied.
+    const ids = ["9007199254740993", "10", "9007199254740992"];
+    mockFetchList.mockResolvedValue({
+      ...HOLIDAY_REGISTRATION_LIST,
+      registrations: ids.map((id) => ({ ...HOLIDAY_REGISTRATION, id })),
+    });
+    renderPage();
+    const table = within(await screen.findByRole("table"));
+    await table.findByText("10");
+
+    fireEvent.click(table.getByRole("button", { name: /^Nr\./ }));
+
+    const order = table
+      .getAllByRole("row")
+      .slice(1)
+      .map((row) => ids.find((id) => within(row).queryByText(id) !== null));
+    expect(order).toEqual(["10", "9007199254740992", "9007199254740993"]);
   });
 
   it("names the school that knows a registered child (#6683)", async () => {

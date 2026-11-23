@@ -16,6 +16,7 @@ import (
 	common "github.com/moto-ogs/project-phoenix/api/common"
 	peopleModule "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	studentpresence "github.com/moto-ogs/project-phoenix/modules/studentpresence"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // schoolCheckinRequest is the payload for POST /api/students/{id}/school-checkin.
@@ -37,7 +38,7 @@ type schoolCheckinRequest struct {
 // "Im Unterricht")
 // so PresenceBadge can update optimistically in the UI.
 type schoolCheckinResponse struct {
-	StudentID    int64      `json:"student_id"`
+	StudentID    ident.ID   `json:"student_id"`
 	Status       string     `json:"status"`
 	CheckInTime  *time.Time `json:"check_in_time,omitempty"`
 	CheckOutTime *time.Time `json:"check_out_time,omitempty"`
@@ -85,7 +86,7 @@ func (rs *Resource) schoolCheckinHandler(w http.ResponseWriter, r *http.Request)
 
 	staffID, err := rs.getStaffIDFromJWT(r)
 	if err != nil {
-		common.RenderError(w, r, common.ErrorForbidden(err))
+		renderSchoolCheckinActorError(w, r, err)
 		return
 	}
 
@@ -233,7 +234,7 @@ func (rs *Resource) schoolCheckinBatchHandler(w http.ResponseWriter, r *http.Req
 
 	staffID, err := rs.getStaffIDFromJWT(r)
 	if err != nil {
-		common.RenderError(w, r, common.ErrorForbidden(err))
+		renderSchoolCheckinActorError(w, r, err)
 		return
 	}
 
@@ -417,7 +418,7 @@ func (rs *Resource) applySchoolCheckinAction(
 // PresenceBadge without a follow-up snapshot fetch.
 func buildSchoolCheckinResponse(studentID int64, status *studentpresence.DailyAttendanceStatus, changed bool) *schoolCheckinResponse {
 	resp := &schoolCheckinResponse{
-		StudentID:    studentID,
+		StudentID:    ident.ID(studentID),
 		Status:       status.Status,
 		CheckInTime:  status.CheckInTime,
 		CheckOutTime: status.CheckOutTime,

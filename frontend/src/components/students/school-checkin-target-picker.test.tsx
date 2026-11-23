@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { CheckinTargetState } from "~/lib/hooks/use-checkin-target";
@@ -28,7 +28,6 @@ function state(
     target: null,
     setTargetValue: vi.fn(),
     lostTargetName: null,
-    dismissLost: vi.fn(),
     refresh: vi.fn(async () => undefined),
     ...overrides,
   };
@@ -57,18 +56,21 @@ describe("SchoolCheckinTargetPicker", () => {
     ).toHaveTextContent("Kinder sind nach dem Anmelden sofort in Mensa.");
   });
 
-  it("explains a target that is gone and lets the person close it", () => {
-    const dismissLost = vi.fn();
+  // A state, no X (#7704); the notice ends with a new choice
+  // (school-checkin-target-picker.lost.test.tsx).
+  it("explains a target that is gone without a close button", () => {
     render(
       <SchoolCheckinTargetPicker
-        state={state({ lostTargetName: "Werkraum", dismissLost })}
+        state={state({ lostTargetName: "Werkraum" })}
       />,
     );
+    // Anker: the notice on the lost target is shown.
     expect(
       screen.getByText(/In Werkraum läuft keine Aufsicht mehr/),
     ).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /schließen/i }));
-    expect(dismissLost).toHaveBeenCalledOnce();
+    expect(
+      screen.queryByRole("button", { name: /schließen/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("shows no choice where the school has no rooms to choose", () => {

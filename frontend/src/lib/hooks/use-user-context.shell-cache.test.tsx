@@ -9,8 +9,14 @@ import {
 import type { ShellBootstrap } from "~/lib/shell-seed";
 import { mutate } from "~/lib/swr";
 import { SWRConfig } from "~/lib/swr/testing";
+import type { NavigationResponse } from "~/lib/contract/me.generated";
 import type { UserContextResponse } from "~/lib/user-context-types";
 import { USER_CONTEXT_SWR_KEY, useUserContext } from "./use-user-context";
+
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
 
 // Der Nutzerkontext ist unveränderliches SWR mit Server-Seed. Ohne Eintrag im
 // Cache beantwortete die erste Invalidierung (Einstellungen, SSE-Ereignis)
@@ -43,11 +49,12 @@ const SEEDED: UserContextResponse = {
   schoolSwitches: null,
 };
 
+const AT = "2026-09-01T08:00:00Z";
 const fetchMock = vi.fn<typeof fetch>();
 
 function contextRequests(): number {
   return fetchMock.mock.calls.filter(
-    ([url]) => String(url) === "/api/user-context",
+    ([url]) => String(url) === "/api/me/navigation",
   ).length;
 }
 
@@ -82,7 +89,28 @@ beforeEach(() => {
   tenantState.slug = `schule-${nextSchool}`;
   fetchMock.mockReset();
   fetchMock.mockImplementation(async () =>
-    Response.json({ data: { ...SEEDED, educationalGroupIds: ["1", "2"] } }),
+    Response.json({
+      data: {
+        current_staff: null,
+        educational_groups: ["1", "2"].map((id) => ({
+          id,
+          created_at: AT,
+          updated_at: AT,
+          tenant_id: "3",
+          name: `Gruppe ${id}`,
+          via_substitution: false,
+        })),
+        incomplete: false,
+        school_switches: {
+          parent_news_enabled: false,
+          parent_invite_mode: "direct",
+          timetable_day_start_time: "08:00",
+          timetable_day_end_time: "16:00",
+        },
+        supervised_groups: [],
+        unavailable_sections: [],
+      } satisfies NavigationResponse,
+    }),
   );
   vi.stubGlobal("fetch", fetchMock);
 });

@@ -159,6 +159,7 @@ export function phase(overrides: Partial<Phase> = {}): Phase {
     id: "10",
     name: "Schuljahr 2026/27",
     kind: "school_year",
+    version: "phase-read",
     service_start_date: "2026-09-01",
     service_end_date: "2027-07-31",
     enrollment_open_at: "2026-02-01T08:00:00.000Z",
@@ -168,6 +169,13 @@ export function phase(overrides: Partial<Phase> = {}): Phase {
     care_overflow_mode: "waitlist",
     care_offering_selection_mode: "optional",
     is_active: true,
+    rollover_auto_approve: false,
+    rollover_bumps_grade: false,
+    available_school_classes: [],
+    require_school_class: false,
+    audience: "open",
+    eligible_school_classes: [],
+    eligible_grade_levels: [],
     created_at: "2026-01-01T00:00:00.000Z",
     updated_at: "2026-01-01T00:00:00.000Z",
     ...overrides,
@@ -201,7 +209,6 @@ export function offering(overrides: Partial<CareOffering> = {}): CareOffering {
   return {
     id: "offer-1",
     phase_id: "10",
-    activity_group_id: null,
     name: "Regelbetreuung",
     description: "Montag bis Freitag",
     days_of_week_mode: "fixed",
@@ -213,6 +220,8 @@ export function offering(overrides: Partial<CareOffering> = {}): CareOffering {
     is_active: true,
     is_required: false,
     counts_as_care: true,
+    auto_add_grade_levels: [],
+    auto_add_trigger_offering_ids: [],
     pickup_times: {
       mon: "14:30",
       tue: "14:30",
@@ -232,7 +241,6 @@ export function calendarPeriod(
 ): CalendarPeriod {
   return {
     id: "period-1",
-    tenantId: "1",
     name: "Schuljahr 2026/27",
     periodType: "school_year",
     startDate: "2026-08-01",

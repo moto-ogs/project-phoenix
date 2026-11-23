@@ -815,6 +815,14 @@ describe("StudentDetailPage", () => {
       expect(
         screen.getByRole("heading", { level: 1, name: "Kindakte" }),
       ).toBeInTheDocument();
+      fireEvent.click(
+        screen.getByRole("button", { name: "Erklärung zu Kindakte" }),
+      );
+      expect(
+        screen.getByText(
+          "Hier stehen alle Angaben zu diesem Kind. Oben siehst du, wo es gerade ist. Wähle darunter den Bereich, den du brauchst.",
+        ),
+      ).toBeInTheDocument();
       expect(screen.getByTestId("back-button")).toHaveAttribute(
         "data-referrer",
         "/test-tenant/students/search",
@@ -848,6 +856,14 @@ describe("StudentDetailPage", () => {
       expect(await screen.findByTestId("alert-error")).toHaveTextContent(
         "Die Kindakte konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
       );
+      fireEvent.click(
+        screen.getByRole("button", { name: "Erklärung zu Kindakte" }),
+      );
+      expect(
+        screen.getByText(
+          "Hier stehen alle Angaben zu diesem Kind. Oben siehst du, wo es gerade ist. Wähle darunter den Bereich, den du brauchst.",
+        ),
+      ).toBeInTheDocument();
     });
 
     it("says the child was not found for a 404", () => {
@@ -871,6 +887,9 @@ describe("StudentDetailPage", () => {
       expect(screen.getByTestId("alert-error")).toHaveTextContent(
         "Kind nicht gefunden",
       );
+      expect(
+        screen.getByRole("button", { name: "Erklärung zu Kindakte" }),
+      ).toBeInTheDocument();
     });
 
     it("shows error when student is null", () => {
@@ -940,6 +959,38 @@ describe("StudentDetailPage", () => {
         );
       },
     );
+
+    // #2353: failed status days are an error in the record, not a child
+    // who was never sick or excused.
+    it("shows failed status days as an error instead of no absences", async () => {
+      mockFetchStudentStatusDays.mockRejectedValue(
+        new ApiError("status days failed", 500, {
+          code: "general.server",
+          instance: "req-days",
+        }),
+      );
+
+      render(
+        <SWRConfig
+          value={{
+            provider: () => new Map(),
+            dedupingInterval: 0,
+            shouldRetryOnError: false,
+          }}
+        >
+          <StudentDetailPage />
+        </SWRConfig>,
+      );
+
+      expect(
+        await screen.findByText(
+          catalogText(
+            "general.server",
+            "die Liste der Abwesenheiten des Kindes",
+          ),
+        ),
+      ).toBeInTheDocument();
+    });
 
     it("uses Berlin's calendar day for the header plans", async () => {
       setTestClock("2026-09-12T12:00:00+02:00");
@@ -2866,7 +2917,7 @@ describe("StudentDetailPage", () => {
         vi.spyOn(globalThis, "fetch").mockImplementation(
           async (input, init) => {
             const path = new URL(String(input), "http://localhost").pathname;
-            if (path === "/api/students/change-requests") {
+            if (path === "/api/students/change-requests/history") {
               return json(200, { data: { items: [] } });
             }
             if (path === "/api/students/1/care-withdrawals") {
@@ -3016,7 +3067,9 @@ describe("StudentDetailPage", () => {
         render(<StudentDetailPage />);
 
         await waitFor(() =>
-          expect(requestedPaths()).toContain("/api/students/change-requests"),
+          expect(requestedPaths()).toContain(
+            "/api/students/change-requests/history",
+          ),
         );
         // Anker: das Protokoll ist geladen und zeigt seinen Leerzustand.
         expect(
@@ -3337,6 +3390,9 @@ describe("StudentDetailPage", () => {
       );
       expect(
         screen.queryByRole("tablist", { name: "Bereiche der Kindakte" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Erklärung zu Max Mustermann" }),
       ).not.toBeInTheDocument();
     });
 

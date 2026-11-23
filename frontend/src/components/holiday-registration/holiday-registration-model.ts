@@ -15,14 +15,13 @@ import type {
   HolidayFormVersion,
 } from "~/lib/holiday-form-field";
 import { looksLikeEmail } from "~/lib/email-format";
-import type { NewUploadValue } from "~/lib/enrollment-uploads";
+import type * as sharedContract from "~/lib/contract/shared.generated";
+import type * as traegerHolidayQuotesContract from "~/lib/contract/traeger-holiday-quotes.generated";
+import type * as traegerHolidayRegistrationsContract from "~/lib/contract/traeger-holiday-registrations.generated";
 import type {
-  HolidayContactPayload,
   HolidayKnownChild,
   HolidayKnownFamily,
-  HolidayQuoteChild,
   HolidayRegistrationOffer,
-  HolidayRegistrationPayload,
 } from "~/lib/holiday-registration-api";
 
 /**
@@ -207,7 +206,7 @@ export interface RegistrationDraft {
    * The proofs of the benefits the parent uploaded (#5238); optional, the
    * Träger-Büro may still collect them later.
    */
-  readonly benefitsProofs: readonly NewUploadValue[];
+  readonly benefitsProofs: readonly sharedContract.UploadReceipt[];
   /** Answers to the Träger's questions per family, by key (#5198). */
   readonly answers: Readonly<Record<string, unknown>>;
   /** Yes/no to the criteria of the family, by criterion ID (#4700). */
@@ -897,7 +896,9 @@ function healthPayload(values: ReturnType<typeof childHealthValues>) {
   };
 }
 
-function contactPayload(contact: ContactDraft): HolidayContactPayload {
+function contactPayload(
+  contact: ContactDraft,
+): sharedContract.holidayContactRequest {
   return {
     name: contact.name.trim(),
     phone: contact.phone.trim(),
@@ -909,11 +910,11 @@ function contactPayload(contact: ContactDraft): HolidayContactPayload {
 export function quoteBookings(
   child: ChildDraft,
   offer: HolidayRegistrationOffer,
-): HolidayQuoteChild {
+): traegerHolidayQuotesContract.holidayQuoteBookingRequest[] {
   return bookedWeeks(child, offer).map((booking) => ({
-    week_id: Number(booking.weekId),
-    time_model_id: Number(booking.timeModelId),
-    ...(booking.days.length > 0 ? { days: booking.days } : {}),
+    week_id: booking.weekId,
+    time_model_id: booking.timeModelId,
+    ...(booking.days.length > 0 ? { days: [...booking.days] } : {}),
     ...(booking.lunch ? { lunch: true } : {}),
   }));
 }
@@ -936,7 +937,7 @@ export function payloadFromDraft(
   draft: RegistrationDraft,
   offer: HolidayRegistrationOffer,
   captchaToken: string,
-): HolidayRegistrationPayload {
+) {
   return {
     guardian: {
       first_name: draft.guardian.firstName.trim(),
@@ -969,7 +970,7 @@ export function payloadFromDraft(
         first_name: child.firstName.trim(),
         last_name: child.lastName.trim(),
         birth_date: child.birthDate,
-        home_school_id: guest ? 0 : Number(child.school),
+        home_school_id: guest ? "0" : child.school,
         guest_school_name: guest ? child.guestSchoolName.trim() : "",
         ...healthPayload(childHealthValues(child, offer.form)),
         bookings: quoteBookings(child, offer),
@@ -1027,5 +1028,5 @@ export function payloadFromDraft(
     ...(draft.parentAccountProof
       ? { parent_account_proof: draft.parentAccountProof }
       : {}),
-  };
+  } satisfies traegerHolidayRegistrationsContract.HolidayRegistrationRequest;
 }

@@ -29,7 +29,7 @@ const (
 )
 
 type careRuleBody struct {
-	ID   int64  `json:"id"`
+	ID   wireID `json:"id"`
 	Kind string `json:"kind"`
 	Name string `json:"name"`
 }
@@ -40,30 +40,31 @@ type careRuleSetBody struct {
 
 type careEvidenceSetBody struct {
 	Contracts []struct {
-		ContractID int64 `json:"contract_id"`
+		ContractID wireID `json:"contract_id"`
 		Evidences  []struct {
-			ID     int64  `json:"id"`
-			Kind   string `json:"kind"`
-			RuleID *int64 `json:"rule_id"`
+			ID     wireID  `json:"id"`
+			Kind   string  `json:"kind"`
+			RuleID *wireID `json:"rule_id"`
 		} `json:"evidences"`
 	} `json:"contracts"`
 	Levels []careRuleBody `json:"levels"`
 }
 
 type careReductionRunBody struct {
-	UncountedFamilies int   `json:"uncounted_families"`
-	ID                int64 `json:"id"`
+	UncountedFamilies int    `json:"uncounted_families"`
+	ID                wireID `json:"id"`
 	Status            string
 	PreviewCount      int    `json:"preview_count"`
 	PreviewCents      int64  `json:"preview_cents"`
 	Fingerprint       string `json:"fingerprint"`
 	Invoices          []struct {
-		ContractID int64 `json:"contract_id"`
+		ContractID wireID `json:"contract_id"`
 		Reductions []struct {
 			Kind           string `json:"kind"`
 			Name           string `json:"name"`
 			ChildRank      *int   `json:"child_rank"`
 			FamilyChildren *int   `json:"family_children"`
+			AllChildren    bool   `json:"sibling_all_children"`
 			AmountCents    int64  `json:"amount_cents"`
 		} `json:"reductions"`
 		TotalCents int64 `json:"total_cents"`
@@ -89,7 +90,7 @@ func ruleNamed(t *testing.T, set careRuleSetBody, name string) int64 {
 	t.Helper()
 	for _, rule := range set.Rules {
 		if rule.Name == name {
-			return rule.ID
+			return int64(rule.ID)
 		}
 	}
 	t.Fatalf("no rule %q", name)
@@ -123,7 +124,7 @@ func TestCareReductionsRunTheWholeChainThroughTheRoutes(t *testing.T) {
 	mia := careContract(t, f.db, f.office.organization, school, "Mia", careReductionStart, sjrServices()...)
 	noah := careContract(t, f.db, f.office.organization, school, "Noah", careReductionStart, sjrServices()[0])
 	sameFamily(t, f, noah, mia)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	set := f.saveRule(t, careRule("income_level", "Stufe 2", []int64{school}, map[string]any{"discount_basis_points": 2000}))
@@ -140,7 +141,7 @@ func TestCareReductionsRunTheWholeChainThroughTheRoutes(t *testing.T) {
 	}
 
 	run := f.startRun(t, careMonth)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, careRunPath(run.ID, ""), nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, careRunPath(int64(run.ID), ""), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	preview := decodeSchoolPortalData[careReductionRunBody](t, rec.Body.Bytes())
 	// Mia 77,50 € − 20 % (15,50 €) = 62,00 €. Noah is second by base
@@ -149,9 +150,9 @@ func TestCareReductionsRunTheWholeChainThroughTheRoutes(t *testing.T) {
 	totals := map[int64]int64{}
 	reductions := map[int64][]string{}
 	for _, invoice := range preview.Invoices {
-		totals[invoice.ContractID] = invoice.TotalCents
+		totals[int64(invoice.ContractID)] = invoice.TotalCents
 		for _, reduction := range invoice.Reductions {
-			reductions[invoice.ContractID] = append(reductions[invoice.ContractID],
+			reductions[int64(invoice.ContractID)] = append(reductions[int64(invoice.ContractID)],
 				fmt.Sprintf("%s %d", reduction.Kind, reduction.AmountCents))
 		}
 	}
@@ -159,14 +160,14 @@ func TestCareReductionsRunTheWholeChainThroughTheRoutes(t *testing.T) {
 	assert.Equal(t, []string{"income_level -1550"}, reductions[mia])
 	assert.Equal(t, []string{"sibling -1600", "single_parent -500", "cap -300"}, reductions[noah])
 
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/release"),
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"),
 		map[string]any{"document_count": preview.PreviewCount, "total_cents": preview.PreviewCents, "fingerprint": preview.Fingerprint})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	released := decodeSchoolPortalData[careReductionRunBody](t, rec.Body.Bytes())
 	require.Len(t, released.Invoices, 2)
 	for _, invoice := range released.Invoices {
-		assert.Equal(t, totals[invoice.ContractID], invoice.TotalCents, "the issued invoice keeps the total")
-		if invoice.ContractID == noah {
+		assert.Equal(t, totals[int64(invoice.ContractID)], invoice.TotalCents, "the issued invoice keeps the total")
+		if int64(invoice.ContractID) == noah {
 			require.Len(t, invoice.Reductions, 3, "the issued invoice keeps each reduction")
 			assert.Equal(t, 2, *invoice.Reductions[0].ChildRank)
 			assert.Equal(t, 2, *invoice.Reductions[0].FamilyChildren)
@@ -175,23 +176,24 @@ func TestCareReductionsRunTheWholeChainThroughTheRoutes(t *testing.T) {
 	}
 	// A later change of a rule never reaches the issued invoice.
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careRulesPath+"/"+strconv.FormatInt(level, 10),
-		careRule("income_level", "Stufe 2 neu", []int64{school}, map[string]any{"discount_basis_points": 9000}))
+		withVersion(careRule("income_level", "Stufe 2 neu", []int64{school}, map[string]any{"discount_basis_points": 9000}),
+			careRuleVersion(t, f.traeger, f.office.token, level)))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	again := decodeSchoolPortalData[careReductionRunBody](t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet,
-		careRunPath(run.ID, ""), nil).Body.Bytes())
+		careRunPath(int64(run.ID), ""), nil).Body.Bytes())
 	for _, invoice := range again.Invoices {
-		assert.Equal(t, totals[invoice.ContractID], invoice.TotalCents)
+		assert.Equal(t, totals[int64(invoice.ContractID)], invoice.TotalCents)
 	}
 	// Already issued amounts consume the cap even after the income rule
 	// changes. A later child cannot make the family pay above 70 euros.
 	lea := careContract(t, f.db, f.office.organization, school, "Lea", careReductionStart, sjrServices()[0])
 	sameFamily(t, f, lea, mia)
 	nextRun := f.startRun(t, careMonth)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, careRunPath(nextRun.ID, ""), nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, careRunPath(int64(nextRun.ID), ""), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	next := decodeSchoolPortalData[careReductionRunBody](t, rec.Body.Bytes())
 	require.Len(t, next.Invoices, 1)
-	assert.Equal(t, lea, next.Invoices[0].ContractID)
+	assert.Equal(t, lea, int64(next.Invoices[0].ContractID))
 	assert.Zero(t, next.Invoices[0].TotalCents)
 
 }
@@ -208,7 +210,7 @@ func TestCareSiblingRulesPriceScopeAndCount(t *testing.T) {
 	sameFamily(t, f, noah, mia)
 	sameFamily(t, f, lea, mia)
 	for _, school := range []int64{ispringen, birkenfeld} {
-		rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+		rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, "2029-09-01", 3200))
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	}
 	// Ispringen: the second child pays a fixed 25,00 €. Birkenfeld: 10,00 €
@@ -217,10 +219,10 @@ func TestCareSiblingRulesPriceScopeAndCount(t *testing.T) {
 	f.saveRule(t, careRule("sibling", "Birkenfeld", []int64{birkenfeld}, map[string]any{"sibling_from_child": 2, "discount_cents": 1000}))
 	run := f.startRun(t, careMonth)
 	preview := decodeSchoolPortalData[careReductionRunBody](t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet,
-		careRunPath(run.ID, ""), nil).Body.Bytes())
+		careRunPath(int64(run.ID), ""), nil).Body.Bytes())
 	totals := map[int64]int64{}
 	for _, invoice := range preview.Invoices {
-		totals[invoice.ContractID] = invoice.TotalCents
+		totals[int64(invoice.ContractID)] = invoice.TotalCents
 	}
 	// Noah (32,00 €) is second in Ispringen and pays 25,00 €; Lea is alone
 	// in Birkenfeld and pays 32,00 €.
@@ -293,14 +295,17 @@ func TestCareReductionsAreCheckedBeforeTheyAreSaved(t *testing.T) {
 	assert.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "parent_billing.care_rule_in_use")
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careRulesPath+"/"+strconv.FormatInt(level, 10),
-		careRule("single_parent", "Stufe 1", []int64{school}, map[string]any{"discount_cents": 100}))
+		withVersion(careRule("single_parent", "Stufe 1", []int64{school}, map[string]any{"discount_cents": 100}),
+			careRuleVersion(t, f.traeger, f.office.token, level)))
 	assert.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "parent_billing.care_rule_in_use")
 
 	// The evidence is changed in place and deleted; then its level goes too.
 	evidencePath := careEvidencesPath + "/" + strconv.FormatInt(evidenceOf(t, decodeSchoolPortalData[careEvidenceSetBody](t, created.Body.Bytes()), contract), 10)
 	changed := careEvidence(contract, "single_parent", nil)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, evidencePath, changed)
+	evidenceID := evidenceOf(t, decodeSchoolPortalData[careEvidenceSetBody](t, created.Body.Bytes()), contract)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, evidencePath,
+		withVersion(changed, evidenceVersion(t, f.traeger, f.office.token, evidenceID)))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, []string{"single_parent"}, evidenceKinds(decodeSchoolPortalData[careEvidenceSetBody](t, rec.Body.Bytes()), contract))
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodDelete, evidencePath, nil)
@@ -309,7 +314,7 @@ func TestCareReductionsAreCheckedBeforeTheyAreSaved(t *testing.T) {
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodDelete, careRulesPath+"/"+strconv.FormatInt(level, 10), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	for _, rule := range decodeSchoolPortalData[careRuleSetBody](t, rec.Body.Bytes()).Rules {
-		assert.NotEqual(t, level, rule.ID, "the deleted level is gone")
+		assert.NotEqual(t, level, int64(rule.ID), "the deleted level is gone")
 	}
 }
 
@@ -317,8 +322,8 @@ func TestCareReductionsAreCheckedBeforeTheyAreSaved(t *testing.T) {
 func evidenceOf(t *testing.T, set careEvidenceSetBody, contractID int64) int64 {
 	t.Helper()
 	for _, contract := range set.Contracts {
-		if contract.ContractID == contractID && len(contract.Evidences) == 1 {
-			return contract.Evidences[0].ID
+		if int64(contract.ContractID) == contractID && len(contract.Evidences) == 1 {
+			return int64(contract.Evidences[0].ID)
 		}
 	}
 	t.Fatalf("no single evidence of contract %d", contractID)
@@ -329,7 +334,7 @@ func evidenceOf(t *testing.T, set careEvidenceSetBody, contractID int64) int64 {
 func evidenceKinds(set careEvidenceSetBody, contractID int64) []string {
 	var kinds []string
 	for _, contract := range set.Contracts {
-		if contract.ContractID == contractID {
+		if int64(contract.ContractID) == contractID {
 			for _, evidence := range contract.Evidences {
 				kinds = append(kinds, evidence.Kind)
 			}
@@ -353,9 +358,9 @@ func TestCareReductionsNeedTheRightStayWithTheTraegerAndAreRecorded(t *testing.T
 	evidences := decodeSchoolPortalData[careEvidenceSetBody](t, rec.Body.Bytes())
 	var evidenceID int64
 	for _, entry := range evidences.Contracts {
-		if entry.ContractID == contract {
+		if int64(entry.ContractID) == contract {
 			require.Len(t, entry.Evidences, 1)
-			evidenceID = entry.Evidences[0].ID
+			evidenceID = int64(entry.Evidences[0].ID)
 		}
 	}
 	require.NotZero(t, evidenceID, "the evidence page shows the contract with its evidence")

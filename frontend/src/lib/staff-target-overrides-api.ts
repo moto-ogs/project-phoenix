@@ -1,5 +1,5 @@
-import { apiErrorFromResponse } from "./api-error";
-import { sessionFetch } from "./session-cache";
+import { bffJson } from "./bff-fetch";
+import type * as staffContract from "./contract/staff.generated";
 
 // Sonderarbeitszeit (#3259): for every Monday to Friday in [startDate,
 // endDate] the staff member's daily Soll is dailyMinutes, or with
@@ -26,84 +26,66 @@ type StaffTargetOverrideInput = {
   | { weekdayMinutes: readonly number[]; dailyMinutes?: never }
 );
 
-interface BackendStaffTargetOverride {
-  id: number | string;
-  staff_id: number | string;
-  start_date: string;
-  end_date: string;
-  daily_minutes: number | null;
-  weekday_minutes?: number[] | null;
-  kept_by_traeger?: boolean;
-}
-
 function mapStaffTargetOverride(
-  row: BackendStaffTargetOverride,
+  row: staffContract.StaffTargetOverride,
 ): StaffTargetOverride {
   return {
-    id: String(row.id),
-    staffId: String(row.staff_id),
+    id: row.id,
+    staffId: row.staff_id,
     startDate: row.start_date.slice(0, 10),
     endDate: row.end_date.slice(0, 10),
     dailyMinutes: row.daily_minutes,
-    weekdayMinutes: row.weekday_minutes ?? null,
-    keptByTraeger: row.kept_by_traeger === true,
+    weekdayMinutes: row.weekday_minutes,
+    keptByTraeger: row.kept_by_traeger,
   };
 }
 
 const FAILED = "Failed to change target override";
 
-function toBody(input: StaffTargetOverrideInput): string {
-  return JSON.stringify({
+function toBody(input: StaffTargetOverrideInput) {
+  return {
     start_date: input.startDate,
     end_date: input.endDate,
     ...(input.weekdayMinutes
-      ? { weekday_minutes: input.weekdayMinutes }
+      ? { weekday_minutes: [...input.weekdayMinutes] }
       : { daily_minutes: input.dailyMinutes }),
-  });
+  };
 }
 
 class StaffTargetOverrideService {
   async list(staffId: string): Promise<StaffTargetOverride[]> {
-    const response = await sessionFetch(
-      `/api/staff/${staffId}/target-overrides`,
+    const rows = await bffJson(
+      "tenant",
+      "GET /api/staff/{id}/target-overrides",
+      {
+        params: { id: staffId },
+      },
     );
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        `Failed to fetch target overrides: ${response.statusText}`,
-      );
-    }
-    const json = (await response.json()) as {
-      data: BackendStaffTargetOverride[] | null;
-    };
-    return (json.data ?? []).map(mapStaffTargetOverride);
+    return (rows ?? []).map(mapStaffTargetOverride);
   }
 
   async create(
     staffId: string,
     input: StaffTargetOverrideInput,
   ): Promise<StaffTargetOverride> {
-    const response = await sessionFetch(
-      `/api/staff/${staffId}/target-overrides`,
+    const row = await bffJson(
+      "tenant",
+      "POST /api/staff/{id}/target-overrides",
       {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        params: { id: staffId },
         body: toBody(input),
+        errorMessage: FAILED,
       },
     );
-    if (!response.ok) throw await apiErrorFromResponse(response, FAILED);
-    const json = (await response.json()) as {
-      data: BackendStaffTargetOverride;
-    };
-    return mapStaffTargetOverride(json.data);
+    return mapStaffTargetOverride(row);
   }
 
   async delete(staffId: string, overrideId: string): Promise<void> {
-    const response = await sessionFetch(
-      `/api/staff/${staffId}/target-overrides/${overrideId}`,
-      { method: "DELETE" },
+    await bffJson(
+      "tenant",
+      "DELETE /api/staff/{id}/target-overrides/{overrideId}",
+      { params: { id: staffId, overrideId }, errorMessage: FAILED },
     );
-    if (!response.ok) throw await apiErrorFromResponse(response, FAILED);
   }
 }
 

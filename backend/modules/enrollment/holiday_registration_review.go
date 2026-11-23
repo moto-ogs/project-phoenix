@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Review of the holiday registrations of a Träger (spec #4611 user stories 35
@@ -110,11 +111,11 @@ type HolidayBookingReplacement struct {
 
 // HolidayRegistrationBooking is the time model a child books in one week.
 type HolidayRegistrationBooking struct {
-	WeekID        int64         `json:"week_id"`
+	WeekID        ident.ID      `json:"week_id"`
 	WeekStartsOn  calendar.Date `json:"week_starts_on"`
 	WeekEndsOn    calendar.Date `json:"week_ends_on"`
-	HostSchoolID  int64         `json:"host_school_id"`
-	TimeModelID   int64         `json:"time_model_id"`
+	HostSchoolID  ident.ID      `json:"host_school_id"`
+	TimeModelID   ident.ID      `json:"time_model_id"`
 	TimeModelName string        `json:"time_model_name"`
 	// PriceCents is the price the booking has now: the price of the time
 	// model, times the booked days in a week by days (#4701). The
@@ -145,14 +146,14 @@ type HolidayRegistrationBooking struct {
 // registrations of the period, not cancelled, with a child of the same name
 // and date of birth.
 type HolidayRegistrationChild struct {
-	ID                       int64                        `json:"id"`
+	ID                       ident.ID                     `json:"id"`
 	FirstName                string                       `json:"first_name"`
 	LastName                 string                       `json:"last_name"`
 	BirthDate                calendar.Date                `json:"birth_date"`
-	HomeSchoolID             *int64                       `json:"home_school_id"`
+	HomeSchoolID             *ident.ID                    `json:"home_school_id"`
 	GuestSchoolName          string                       `json:"guest_school_name"`
 	Bookings                 []HolidayRegistrationBooking `json:"bookings"`
-	DuplicateRegistrationIDs []int64                      `json:"duplicate_registration_ids"`
+	DuplicateRegistrationIDs []ident.ID                   `json:"duplicate_registration_ids"`
 	// HolidayWish and HolidayWishSource are what is known of the child's
 	// holiday care wish (#4703): yes or no from the prefill of a parent with
 	// an account or from the office, empty when unknown. HolidayWishCheck
@@ -167,7 +168,7 @@ type HolidayRegistrationChild struct {
 // HolidayRegistrationSummary is a registration in the list. It carries no
 // health information and no contacts.
 type HolidayRegistrationSummary struct {
-	ID          int64     `json:"id"`
+	ID          ident.ID  `json:"id"`
 	Status      string    `json:"status"`
 	Frozen      bool      `json:"frozen"`
 	SubmittedAt time.Time `json:"submitted_at"`
@@ -229,7 +230,7 @@ type HolidayRegistrationMailProblem struct {
 // HolidayRegistrationMails names the mails of one registration that did not
 // reach the parents.
 type HolidayRegistrationMails struct {
-	RegistrationID int64                            `json:"registration_id"`
+	RegistrationID ident.ID                         `json:"registration_id"`
 	MailProblems   []HolidayRegistrationMailProblem `json:"mail_problems"`
 }
 
@@ -276,11 +277,11 @@ type HolidayRegistrationList struct {
 // health information. Only the health read of a registration shows it
 // (#4722).
 type HolidayRegistrationHealth struct {
-	ChildID     int64          `json:"child_id"`
+	ChildID     ident.ID       `json:"child_id"`
 	Allergies   string         `json:"allergies"`
 	Medication  string         `json:"medication"`
 	HealthNotes string         `json:"health_notes"`
-	CustomData  HolidayAnswers `json:"custom_data"`
+	CustomData  HolidayAnswers `json:"custom_data" contract_json:"Answer values follow the school's versioned form schema"`
 }
 
 // HolidayRegistrationContact is an emergency contact or a person allowed to
@@ -294,8 +295,8 @@ type HolidayRegistrationContact struct {
 
 // HolidayBookingChange is a booking in the history of a rebooking.
 type HolidayBookingChange struct {
-	WeekID      int64 `json:"week_id"`
-	TimeModelID int64 `json:"time_model_id"`
+	WeekID      ident.ID `json:"week_id"`
+	TimeModelID ident.ID `json:"time_model_id"`
 	// Waitlisted marks a booking the rebooking replaced while it waited for
 	// a place (#4699); the host school's care windows skip it.
 	Waitlisted bool `json:"waitlisted,omitempty"`
@@ -324,15 +325,15 @@ type HolidayDebtorNumberChange struct {
 // and a check of an answer by criteria (#4700).
 type HolidayRegistrationEventDetails struct {
 	From         string                     `json:"from,omitempty"`
-	ChildID      int64                      `json:"child_id,omitempty"`
+	ChildID      ident.ID                   `json:"child_id,omitempty"`
 	Before       []HolidayBookingChange     `json:"before,omitempty"`
 	After        []HolidayBookingChange     `json:"after,omitempty"`
 	DebtorNumber *HolidayDebtorNumberChange `json:"debtor_number,omitempty"`
 	Fields       []string                   `json:"fields,omitempty"`
-	Siblings     []int64                    `json:"siblings,omitempty"`
+	Siblings     []ident.ID                 `json:"siblings,omitempty"`
 	// WeekIDs, Placement, Proposal and Reason name a decision of the Büro by
 	// criteria (#4700), Checks its checks of the parents' answers.
-	WeekIDs   []int64                 `json:"week_ids,omitempty"`
+	WeekIDs   []ident.ID              `json:"week_ids,omitempty"`
 	Placement string                  `json:"placement,omitempty"`
 	Proposal  string                  `json:"proposal,omitempty"`
 	Reason    string                  `json:"reason,omitempty"`
@@ -346,15 +347,15 @@ type HolidayRegistrationEventDetails struct {
 type HolidayRegistrationEvent struct {
 	Action         string                          `json:"action"`
 	OccurredAt     time.Time                       `json:"occurred_at"`
-	ActorAccountID *int64                          `json:"actor_account_id"`
+	ActorAccountID *ident.ID                       `json:"actor_account_id"`
 	Details        HolidayRegistrationEventDetails `json:"details"`
 }
 
 // HolidayChildAnswers are the answers of one child to the questions of the
 // form.
 type HolidayChildAnswers struct {
-	ChildID    int64          `json:"child_id"`
-	CustomData HolidayAnswers `json:"custom_data"`
+	ChildID    ident.ID       `json:"child_id"`
+	CustomData HolidayAnswers `json:"custom_data" contract_json:"Answer values follow the school's versioned form schema"`
 }
 
 // HolidayRegistrationAnswers are the form version and the answers of one
@@ -382,7 +383,7 @@ type HolidayRegistrationDetail struct {
 	LegalAcceptances map[string]time.Time         `json:"legal_acceptances"`
 	SecondGuardian   *HolidayGuardianInput        `json:"second_guardian,omitempty"`
 	Form             *HolidayPeriodForm           `json:"form"`
-	CustomData       HolidayAnswers               `json:"custom_data"`
+	CustomData       HolidayAnswers               `json:"custom_data" contract_json:"Answer values follow the school's versioned form schema"`
 	ChildCustomData  []HolidayChildAnswers        `json:"child_custom_data"`
 	Contacts         []HolidayRegistrationContact `json:"contacts"`
 	PrivacyConsentAt time.Time                    `json:"privacy_consent_at"`
@@ -414,6 +415,9 @@ type HolidayRegistrationDetail struct {
 	// the waiting list because of the change that answers with this detail:
 	// a cancellation or a rebooking (#4699). A read has none.
 	Promotions []HolidayPromotion `json:"promotions,omitempty"`
+	// Version is the token of what the Büro edits and rebooks on the
+	// registration; an edit and a rebooking send it back (ADR 0311).
+	Version string `json:"version"`
 }
 
 // HolidayRegistrationExportRow is one booking of the export: one row per
@@ -463,6 +467,9 @@ type HolidayRegistrationEdit struct {
 	// CustomData replaces the family's answers to the questions of the form
 	// without health information.
 	CustomData *HolidayAnswers
+	// ExpectedVersion is the Version of the registration the Büro read; an
+	// edit refuses another one (ADR 0311).
+	ExpectedVersion string
 }
 
 // HolidayGuardiansEdit are the parent who registered with the postal
@@ -556,7 +563,7 @@ type HolidayRegistrationReview interface {
 	SetHolidayDebtorNumber(ctx context.Context, reviewer HolidayReviewer, periodID, registrationID int64, debtorNumber string) (HolidayRegistrationDetail, error)
 	// RebookHolidayChild replaces the bookings of one child: one time model
 	// per week, at least one week.
-	RebookHolidayChild(ctx context.Context, reviewer HolidayReviewer, periodID, registrationID, childID int64, bookings []HolidayBookingInput) (HolidayRegistrationDetail, error)
+	RebookHolidayChild(ctx context.Context, reviewer HolidayReviewer, periodID, registrationID, childID int64, expectedVersion string, bookings []HolidayBookingInput) (HolidayRegistrationDetail, error)
 	// EditHolidayRegistration changes the details a family entered (#5629)
 	// with the checks of the public form; the answers are checked against the
 	// form version of the registration, and schools are the Träger's

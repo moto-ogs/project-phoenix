@@ -187,7 +187,7 @@ func TestSignatureStaysVisibleAfterAnApprovedChange(t *testing.T) {
 		// moves it below. A fixed far day keeps that true (#4027).
 		next.EffectiveFrom = calendar.NewDate(2099, 9, 1)
 		_, err = store.InsertVersion(txCtx, f.org, f.contract,
-			VersionStep{Supersede: record.Version.ID, Status: carecontract.VersionEffective}, next)
+			VersionStep{Supersede: record.Version.ID.Int64(), Status: carecontract.VersionEffective}, next)
 		return err
 	}))
 

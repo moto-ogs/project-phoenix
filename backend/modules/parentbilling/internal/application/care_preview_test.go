@@ -13,6 +13,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Modules of the SJR example (#4684, SJR alignment line 1): Monday until
@@ -54,7 +55,7 @@ func booked(weekday string, offeringID int64, name, endsAt string) parentbilling
 
 func price(t *testing.T, schoolID, offeringID int64, name, weekday, from string, cents int64) parentbilling.CareTariff {
 	t.Helper()
-	return parentbilling.CareTariff{SchoolID: schoolID, CareOfferingID: offeringID, ModuleName: name, Weekday: weekday,
+	return parentbilling.CareTariff{SchoolID: ident.ID(schoolID), CareOfferingID: ident.ID(offeringID), ModuleName: name, Weekday: weekday,
 		ValidFrom: day(t, from), MonthlyCents: cents}
 }
 
@@ -336,6 +337,10 @@ func (s *spanContracts) Recipients(context.Context, int64, []int64) (map[int64]p
 	return nil, nil
 }
 
+func (s *spanContracts) ChildrenOf(context.Context, int64, []int64) (map[int64]parentbilling.CareContractChild, error) {
+	return nil, nil
+}
+
 // TestPriceListReadsTheBookedModulesOfTheYearBefore asks for the modules a
 // year back as well, so a module whose contracts ended can still get the
 // price of a month that no invoice bills yet.
@@ -391,7 +396,7 @@ func TestCareMonthDuplicateContractsAreHeldForReview(t *testing.T) {
 	for _, duplicate := range month.duplicates {
 		assert.Equal(t, "Mia", duplicate.ChildFirstName)
 		assert.Equal(t, []int64{contractMia, contractNoah},
-			[]int64{duplicate.Contracts[0].ContractID, duplicate.Contracts[1].ContractID})
+			[]int64{duplicate.Contracts[0].ContractID.Int64(), duplicate.Contracts[1].ContractID.Int64()})
 	}
 
 	// Without a child record the name and the date of birth name the child.
@@ -562,7 +567,7 @@ func TestLargestRemainderKeepsTheTotal(t *testing.T) {
 func TestDuplicateChildrenCountsChildrenNotEntries(t *testing.T) {
 	t.Parallel()
 	pair := func(a, b int64) parentbilling.CareDuplicate {
-		return parentbilling.CareDuplicate{Contracts: []parentbilling.CareDuplicateContract{{ContractID: a}, {ContractID: b}}}
+		return parentbilling.CareDuplicate{Contracts: []parentbilling.CareDuplicateContract{{ContractID: ident.ID(a)}, {ContractID: ident.ID(b)}}}
 	}
 	assert.Zero(t, duplicateChildren(nil))
 	assert.Equal(t, 2, duplicateChildren([]parentbilling.CareDuplicate{pair(1, 2), pair(1, 2), pair(2, 3), pair(1, 3), pair(7, 8)}))
@@ -713,7 +718,7 @@ func TestCareMonthChildMonthTable(t *testing.T) {
 			require.NoError(t, err)
 			billed := map[int64]int64{}
 			for _, invoice := range month.invoices {
-				billed[invoice.ContractID] = invoice.TotalCents
+				billed[invoice.ContractID.Int64()] = invoice.TotalCents
 			}
 			assert.Equal(t, row.billed, billed)
 			assert.Equal(t, row.held, heldContracts(month.duplicates), "held contracts")
@@ -731,7 +736,7 @@ func TestCareMonthChildMonthTable(t *testing.T) {
 		require.Len(t, snapshot, 1, "one child, Mia")
 		var contracts []int64
 		for _, contract := range snapshot[0].Contracts {
-			contracts = append(contracts, contract.ContractID)
+			contracts = append(contracts, contract.ContractID.Int64())
 		}
 		assert.Equal(t, []int64{tableA, tableB, tableC}, contracts)
 		assert.Equal(t, []parentbilling.CareHeldSlot{{ModuleName: "Betreuung bis 14:00 Uhr", Weekday: "mon"}}, snapshot[0].Slots)
@@ -744,8 +749,8 @@ func heldContracts(duplicates []parentbilling.CareDuplicate) []int64 {
 	ids := []int64{}
 	for _, duplicate := range duplicates {
 		for _, contract := range duplicate.Contracts {
-			if !slices.Contains(ids, contract.ContractID) {
-				ids = append(ids, contract.ContractID)
+			if !slices.Contains(ids, contract.ContractID.Int64()) {
+				ids = append(ids, contract.ContractID.Int64())
 			}
 		}
 	}
@@ -758,8 +763,8 @@ func TestCareReviewCountsEarlierInvoicesOnlyForItsSchools(t *testing.T) {
 	month, err := buildCareMonth(careMonthInput{
 		month: day(t, january2027), rule: parentbilling.MonthRuleVersionOnFirst,
 		invoiced: map[int64]parentbilling.CareInvoice{
-			contractMia:  {SchoolID: schoolIspringen},
-			contractNoah: {SchoolID: schoolBirkenfeld},
+			contractMia:  {SchoolID: ident.ID(schoolIspringen)},
+			contractNoah: {SchoolID: ident.ID(schoolBirkenfeld)},
 		},
 	})
 	require.NoError(t, err)

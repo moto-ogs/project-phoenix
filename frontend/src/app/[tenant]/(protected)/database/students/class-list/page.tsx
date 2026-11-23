@@ -38,7 +38,6 @@ import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { formatCount } from "~/lib/format-utils";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
-import { apiErrorFromResponse, transportFetch } from "~/lib/api-error";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import {
   assignClassListEntry,
@@ -51,14 +50,17 @@ import {
 import { hasPermission } from "~/lib/auth-utils";
 import { createLogger } from "~/lib/logger";
 import { schoolClassName } from "~/lib/school-class-label";
-import type { Student } from "~/lib/student-helpers";
 import { useSWRAuth } from "~/lib/swr";
 import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 import { useChildrenWithoutCarePlace } from "~/lib/tenant-context";
 import { Alert } from "~/components/ui/alert";
-import { fetchSchoolClasses } from "~/lib/student-api";
+import { fetchSchoolClasses, fetchStudents } from "~/lib/student-api";
 import { ChoiceTile } from "~/components/ui/choice-tile";
+
+/** Info-Knopf am Seitentitel: wofür die Seite da ist und was man zuerst tut. */
+const CLASS_LIST_INFO =
+  "Hier siehst du alle Kinder im Klassenverband, nach Klassen sortiert. So sind die Klassenlisten vollständig. Über „Alle Klassen“ wählst du eine einzelne Klasse.";
 
 const logger = createLogger({ component: "ClassListEntriesPage" });
 
@@ -96,57 +98,32 @@ interface RosterStudent {
   schoolClass: string;
 }
 
-// The /api/students route maps the backend rows through mapStudentResponse,
-// which emits the surname as `second_name` (see ~/lib/student-helpers) —
-// pinning the wire type to that mapper output keeps this page honest about
-// what actually arrives.
-type RosterStudentWire = Pick<
-  Student,
-  "id" | "first_name" | "second_name" | "school_class"
->;
-
-interface RosterStudentsPage {
-  data?: {
-    data?: RosterStudentWire[];
-    pagination?: { total_pages?: number };
-  };
-}
-
 const ROSTER_PAGE_SIZE = 1000;
 
-// Loads EVERY student page: the /api/students route caps page_size at 1000,
-// so a larger school needs more than one request or the roster (and every
-// derived count) would silently stop at the first thousand children. A failed
-// page THROWS — a partial roster rendered as if complete would misreport who
-// is already in moto.
+// Loads EVERY student page: the backend caps page_size at 1000, so a larger
+// school needs more than one request or the roster (and every derived count)
+// would silently stop at the first thousand children. A failed page THROWS —
+// a partial roster rendered as if complete would misreport who is already in
+// moto.
 async function fetchRosterStudents(): Promise<RosterStudent[]> {
   const students: RosterStudent[] = [];
   let page = 1;
   let totalPages = 1;
   while (page <= totalPages) {
-    const response = await transportFetch(
-      `/api/students?page=${page}&page_size=${ROSTER_PAGE_SIZE}&include_pending_withdrawals=true`,
-      { credentials: "include", cache: "no-store" },
-    );
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        `Roster students failed (page ${page}, status ${response.status})`,
-      );
-    }
-    // The route wrapper wraps GET results, so the paginated list arrives as
-    // { data: { data: [...], pagination } }.
-    const payload = (await response.json()) as RosterStudentsPage;
-    const rows = payload.data?.data ?? [];
+    const result = await fetchStudents({
+      page,
+      pageSize: ROSTER_PAGE_SIZE,
+      includePendingWithdrawals: true,
+    });
     students.push(
-      ...rows.map((student) => ({
+      ...result.students.map((student) => ({
         id: String(student.id),
         firstName: student.first_name ?? "",
         lastName: student.second_name ?? "",
         schoolClass: student.school_class ?? "",
       })),
     );
-    totalPages = payload.data?.pagination?.total_pages ?? page;
+    totalPages = result.pagination.total_pages;
     page += 1;
   }
   return students;
@@ -593,6 +570,7 @@ export default function ClassListEntriesPage() {
   return (
     <TenantPage
       title="Klassenliste"
+      info={CLASS_LIST_INFO}
       stats={statusLine}
       statsLoading={isLoading && entries === undefined}
       // Ein Ladefehler ist ein Fehlerzustand des Geruests, kein Kasten im

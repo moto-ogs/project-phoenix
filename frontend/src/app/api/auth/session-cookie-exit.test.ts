@@ -54,11 +54,12 @@ beforeEach(() => {
   backend.mockImplementation(async (url) => {
     const target = String(url);
     if (target.endsWith("/auth/session/validate"))
-      return Response.json({ id: 7 }, { status: familyStatus });
+      return Response.json({ id: "7" }, { status: familyStatus });
     if (target.endsWith("/parent/auth/login"))
       return Response.json({
         status: "success",
         data: {
+          status: "authenticated",
           access_token: jwt({
             id: 7,
             sub: "erika@example.test",

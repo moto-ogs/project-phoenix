@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type parentEnrollmentSeedStep struct {
@@ -242,7 +244,7 @@ func (s parentEnrollmentSeedStep) acceptGuardianInvitation(rt *Runtime, token, p
 	}
 	var resp struct {
 		Data struct {
-			AccountID int64 `json:"account_id"`
+			AccountID ident.ID `json:"account_id"` // a decimal string (#2352)
 		} `json:"data"`
 	}
 	if err := parseJSON(respBody, &resp); err != nil {
@@ -251,7 +253,7 @@ func (s parentEnrollmentSeedStep) acceptGuardianInvitation(rt *Runtime, token, p
 	if resp.Data.AccountID == 0 {
 		return 0, fmt.Errorf("guardian invitation accept response did not include account_id")
 	}
-	return resp.Data.AccountID, nil
+	return int64(resp.Data.AccountID), nil
 }
 
 func (s parentEnrollmentSeedStep) seedEnrollment(rt *Runtime, adminAuth AuthRef, parents []ParentCredentials, parentAuths map[string]AuthRef) (SeedEnrollmentState, error) {
@@ -536,12 +538,13 @@ func (s parentEnrollmentSeedStep) seedOfferingChange(rt *Runtime, adminAuth, par
 	if err != nil {
 		return fmt.Errorf("request offering change: %w", err)
 	}
-	changeID, err := parsePendingOfferingRequestID(raw)
+	// The office decides on the request as the family just filed it.
+	changeID, expectedVersion, err := parsePendingOfferingRequest(raw)
 	if err != nil {
 		return fmt.Errorf("parse offering change request: %w", err)
 	}
 	_, err = rt.Client.PostWithAuth(adminAuth, fmt.Sprintf("/api/students/offering-change-requests/%d/decide", changeID), map[string]any{
-		"approve": true, "effective_from": effectiveFrom, "reason": "Wechsel bestätigt.",
+		"approve": true, "effective_from": effectiveFrom, "reason": "Wechsel bestätigt.", "expected_version": expectedVersion,
 	})
 	if err != nil {
 		return fmt.Errorf("approve offering change: %w", err)
@@ -563,7 +566,7 @@ func seedEnrollmentChangeConversation(rt *Runtime, adminAuth AuthRef, original m
 	children[0]["id"] = strconv.FormatInt(request.ChildIDs[0], 10)
 	body["children"] = children
 	body["parent_note"] = "Wir haben die Angaben ergänzt und bitten um erneute Prüfung."
-	raw, err := rt.Client.PostPublic(fmt.Sprintf("/api/enrollment/requests/%s/change-requests", request.StatusToken), body)
+	raw, err := postEditForm(rt, request.StatusToken, fmt.Sprintf("/api/enrollment/requests/%s/change-requests", request.StatusToken), body)
 	if err != nil {
 		return fmt.Errorf("create enrollment change request: %w", err)
 	}
@@ -580,34 +583,6 @@ func seedEnrollmentChangeConversation(rt *Runtime, adminAuth AuthRef, original m
 		"body": "Die Betreuungstage sind so richtig.",
 	}); err != nil {
 		return fmt.Errorf("reply to enrollment change question: %w", err)
-	}
-	return nil
-}
-
-func (s parentEnrollmentSeedStep) seedEnrollmentDeletion(rt *Runtime, auth AuthRef, phaseID int64, offerings map[string]int64, requestIndex int) error {
-	body := s.enrollmentSubmissionWithDays(
-		phaseID, offerings, "Tilda", "Löschdemo", "2019-08-13", 1,
-		"Mara", "Löschdemo", "mara.loeschdemo@example.test", "deletion-audit",
-		[]int64{offerings["ogs-kurz"]}, map[int64][]string{offerings["ogs-kurz"]: {"wed"}},
-	)
-	raw, err := rt.Client.PostPublicWithHeaders(
-		"/api/enrollment/"+rt.Bootstrap.TenantSlug+"/submit", body, publicEnrollmentSeedHeaders(requestIndex),
-	)
-	if err != nil {
-		return fmt.Errorf("submit enrollment deletion demo: %w", err)
-	}
-	request, err := parseEnrollmentSubmitResponse(raw, "deletion-audit")
-	if err != nil {
-		return err
-	}
-	requestPath := fmt.Sprintf("/api/enrollment/admin/requests/%d", request.RequestID)
-	if _, err := rt.Client.GetWithAuth(auth, requestPath+"/delete-impact"); err != nil {
-		return fmt.Errorf("preview enrollment deletion: %w", err)
-	}
-	if _, err := rt.Client.DeleteWithAuthBody(auth, requestPath, map[string]any{
-		"reason": "Löschung auf Wunsch der Familie",
-	}); err != nil {
-		return fmt.Errorf("delete enrollment demo request: %w", err)
 	}
 	return nil
 }
@@ -974,8 +949,8 @@ func (s parentEnrollmentSeedStep) loadEnrollmentRequestDetail(rt *Runtime, auth 
 		Data struct {
 			StatusToken string `json:"status_token"`
 			Children    []struct {
-				ID               string `json:"id"`
-				CreatedStudentID any    `json:"created_student_id"`
+				ID               ident.ID  `json:"id"`
+				CreatedStudentID *ident.ID `json:"created_student_id"`
 			} `json:"children"`
 		} `json:"data"`
 	}
@@ -984,40 +959,15 @@ func (s parentEnrollmentSeedStep) loadEnrollmentRequestDetail(rt *Runtime, auth 
 	}
 	detail := enrollmentRequestDetail{StatusToken: resp.Data.StatusToken}
 	for _, child := range resp.Data.Children {
-		childID, err := strconv.ParseInt(child.ID, 10, 64)
-		if err != nil || childID == 0 {
-			return enrollmentRequestDetail{}, fmt.Errorf("enrollment request %d has invalid child id %q", requestID, child.ID)
+		if child.ID == 0 {
+			return enrollmentRequestDetail{}, fmt.Errorf("enrollment request %d has a child without id", requestID)
 		}
-		detail.ChildIDs = append(detail.ChildIDs, childID)
-		if child.CreatedStudentID != nil {
-			createdID, parseErr := parseSeedID(child.CreatedStudentID)
-			if parseErr == nil && createdID > 0 {
-				detail.CreatedStudentIDs = append(detail.CreatedStudentIDs, createdID)
-			}
+		detail.ChildIDs = append(detail.ChildIDs, int64(child.ID))
+		if child.CreatedStudentID != nil && *child.CreatedStudentID > 0 {
+			detail.CreatedStudentIDs = append(detail.CreatedStudentIDs, int64(*child.CreatedStudentID))
 		}
 	}
 	return detail, nil
-}
-
-func parsePendingOfferingRequestID(raw []byte) (int64, error) {
-	var envelope struct {
-		Data struct {
-			PendingRequest *struct {
-				ID string `json:"id"`
-			} `json:"pending_request"`
-		} `json:"data"`
-	}
-	if err := parseJSON(raw, &envelope); err != nil {
-		return 0, err
-	}
-	if envelope.Data.PendingRequest == nil {
-		return 0, fmt.Errorf("pending_request missing")
-	}
-	id, err := strconv.ParseInt(envelope.Data.PendingRequest.ID, 10, 64)
-	if err != nil || id <= 0 {
-		return 0, fmt.Errorf("invalid pending request id")
-	}
-	return id, nil
 }
 
 func (s parentEnrollmentSeedStep) decideEnrollmentChild(rt *Runtime, auth AuthRef, requestID, childID int64, status, reason string) error {
@@ -1248,8 +1198,13 @@ func (s parentEnrollmentSeedStep) shareSeedPickupRequest(
 			continue
 		}
 		path := fmt.Sprintf("/parent/me/children/%d/request-sharing/pickup_change/%d", parent.StudentIDs[0], requestID)
+		version, err := readSeedRequestSharingVersion(rt, parentAuth, path)
+		if err != nil {
+			return err
+		}
 		_, err = rt.Client.PutWithAuth(parentAuth, path, map[string]any{
 			"recipient_guardian_profile_ids": []string{strconv.FormatInt(candidate.GuardianID, 10)},
+			"expected_version":               version,
 		})
 		if err != nil {
 			return fmt.Errorf("share seeded pickup request: %w", err)
@@ -1262,30 +1217,16 @@ func (s parentEnrollmentSeedStep) shareSeedPickupRequest(
 func parseEnvelopeStringID(respBody []byte) (int64, error) {
 	var resp struct {
 		Data struct {
-			ID any `json:"id"`
+			ID ident.ID `json:"id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(respBody, &resp); err != nil {
 		return 0, err
 	}
-	id, err := parseSeedID(resp.Data.ID)
-	if err != nil || id == 0 {
-		return 0, fmt.Errorf("invalid id %v", resp.Data.ID)
+	if resp.Data.ID == 0 {
+		return 0, fmt.Errorf("answer without id")
 	}
-	return id, nil
-}
-
-func parseSeedID(value any) (int64, error) {
-	switch v := value.(type) {
-	case string:
-		return strconv.ParseInt(v, 10, 64)
-	case float64:
-		return int64(v), nil
-	case json.Number:
-		return v.Int64()
-	default:
-		return 0, fmt.Errorf("unsupported id type %T", value)
-	}
+	return int64(resp.Data.ID), nil
 }
 
 func statusTokenFromURL(raw string) string {

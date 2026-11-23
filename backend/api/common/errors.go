@@ -17,8 +17,10 @@ import (
 // ServerErrorReporting, which reports the answer to Sentry once.
 func RenderError(w http.ResponseWriter, r *http.Request, renderer render.Renderer) {
 	// A business rejection is never a server error, even where a handler
-	// does not classify it yet: it keeps its 409, code and details (ADR 0006).
-	if errResp, ok := renderer.(*ErrResponse); ok && errResp.HTTPStatusCode >= 500 && IsBusinessRejection(errResp.Err) {
+	// does not classify it yet, and a handler's code-less 4xx fallback does
+	// not swallow it either: it keeps its 409, code and details (ADR 0006),
+	// so readstate.ErrChanged needs no case of its own (ADR 0311).
+	if errResp, ok := renderer.(*ErrResponse); ok && unclassifiedRejection(errResp) {
 		renderer = ErrorBusinessRejection(errResp.Err)
 	}
 	// A rejected input value is never a server error either: it keeps its
@@ -53,9 +55,35 @@ func RenderError(w http.ResponseWriter, r *http.Request, renderer render.Rendere
 		)
 		noteServerError(r.Context(), errResp.Err, errResp.Code)
 	}
+	noteRefusal(r, renderer)
 	if err := render.Render(w, r, renderer); err != nil {
 		slog.Default().Error("error rendering error response", slog.String("error", err.Error()))
 	}
+}
+
+// noteRefusal hands a refusal (a 4xx) to the test build's observer.
+func noteRefusal(r *http.Request, renderer render.Renderer) {
+	errResp, ok := renderer.(*ErrResponse)
+	if ok && refusalObserver != nil && errResp.HTTPStatusCode >= 400 && errResp.HTTPStatusCode < 500 {
+		refusalObserver(r)
+	}
+}
+
+// unclassifiedRejection reports whether errResp carries a BusinessRejection
+// its handler did not classify: as a server error, or as a code-less 400 or
+// 409 fallback (ErrorInvalidRequest, ErrorConflict). An input rejection keeps
+// its 400. Every other 4xx is the handler's answer: a 401, 403 or 404 may
+// hide that the resource exists (a parent portal collapses to 404), so it
+// never turns into the rejection's 409 and code.
+func unclassifiedRejection(errResp *ErrResponse) bool {
+	if !IsBusinessRejection(errResp.Err) {
+		return false
+	}
+	if errResp.HTTPStatusCode >= 500 {
+		return true
+	}
+	fallback := errResp.HTTPStatusCode == http.StatusBadRequest || errResp.HTTPStatusCode == http.StatusConflict
+	return fallback && errResp.Code == "" && !HasInputRejection(errResp.Err)
 }
 
 // ClientCanceled reports whether err is the cancellation of a request the
@@ -93,14 +121,13 @@ const statusClientClosedRequest = 499
 
 // Validation error messages
 const (
-	MsgInvalidGroupID      = "invalid group ID"
-	MsgInvalidStudentID    = "invalid student ID"
-	MsgInvalidStaffID      = "invalid staff ID"
-	MsgInvalidActivityID   = "invalid activity ID"
-	MsgInvalidRoleID       = "invalid role ID"
-	MsgInvalidAccountID    = "invalid account ID"
-	MsgInvalidPermissionID = "invalid permission ID"
-	MsgInvalidWeekday      = "invalid weekday"
+	MsgInvalidGroupID    = "invalid group ID"
+	MsgInvalidStudentID  = "invalid student ID"
+	MsgInvalidStaffID    = "invalid staff ID"
+	MsgInvalidActivityID = "invalid activity ID"
+	MsgInvalidRoleID     = "invalid role ID"
+	MsgInvalidAccountID  = "invalid account ID"
+	MsgInvalidWeekday    = "invalid weekday"
 )
 
 // Not found messages

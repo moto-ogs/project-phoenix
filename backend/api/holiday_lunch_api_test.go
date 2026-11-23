@@ -24,11 +24,11 @@ import (
 
 type lunchOfferBody struct {
 	Weeks []struct {
-		ID              int64  `json:"id"`
+		ID              wireID `json:"id"`
 		LunchPriceCents *int64 `json:"lunch_price_cents"`
 		LunchDays       int    `json:"lunch_days"`
 		TimeModels      []struct {
-			ID int64 `json:"id"`
+			ID wireID `json:"id"`
 		} `json:"time_models"`
 	} `json:"weeks"`
 }
@@ -80,7 +80,7 @@ func newLunchFixture(t *testing.T, name string) lunchFixture {
 	})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	created := decodeSchoolPortalData[traegerPeriodLink](t, rec.Body.Bytes())
-	rec = traegerJSON(t, f.traeger, office.token, http.MethodPost, holidayPeriodPath(created.ID)+"/publish", nil)
+	rec = traegerJSON(t, f.traeger, office.token, http.MethodPost, holidayPeriodPath(int64(created.ID))+"/publish", nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	period := decodeSchoolPortalData[traegerPeriodLink](t, rec.Body.Bytes())
 	l := lunchFixture{dayFixture: dayFixture{holidayRegistrationFixture: f, office: office, period: period}}
@@ -117,7 +117,7 @@ func (l lunchFixture) quote(t *testing.T, benefits bool, children ...[]map[strin
 
 func (l lunchFixture) confirm(t *testing.T, registrationID int64) lunchContributionBody {
 	t.Helper()
-	rec := traegerJSON(t, l.traeger, l.office.token, http.MethodPost, holidayConfirmPath(l.period.ID, registrationID), nil)
+	rec := traegerJSON(t, l.traeger, l.office.token, http.MethodPost, holidayConfirmPath(int64(l.period.ID), registrationID), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	return decodeSchoolPortalData[struct {
 		Contribution lunchContributionBody `json:"contribution"`
@@ -156,7 +156,7 @@ func TestHolidayLunchIsBilledAsAPositionOfItsOwn(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, rec.Code, "a week without lunch books no lunch: %s", rec.Body.String())
 
 	receipt := l.submit(t, l.registration("mit.essen@example.org", "Tom", bookings...))
-	frozen := l.confirm(t, receipt.ID)
+	frozen := l.confirm(t, int64(receipt.ID))
 	require.Len(t, frozen.Children, 1)
 	lines := frozen.Children[0].Lines
 	assert.Equal(t, []string{"base", "base", "base", "meal", "meal"}, lunchKinds(lines))
@@ -167,9 +167,9 @@ func TestHolidayLunchIsBilledAsAPositionOfItsOwn(t *testing.T) {
 
 	billing := traegerColleague(t, l.review, identityaccess.TraegerRoleBilling)
 	setNumberRange(t, l.review, billing, "FE-{NNNN}")
-	run := billingRun(t, l.review, billing, startBillingRun(t, l.review, billing, l.period.ID).ID)
+	run := billingRun(t, l.review, billing, int64(startBillingRun(t, l.review, billing, int64(l.period.ID)).ID))
 	assert.Equal(t, int64(15010), run.PreviewCents)
-	rec = traegerJSON(t, l.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/release"), releaseBody(run))
+	rec = traegerJSON(t, l.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/release"), releaseBody(run))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	var issued []struct {
 		Kind        string `bun:"kind"`
@@ -215,7 +215,7 @@ func TestHolidayLunchOfferStaysWhileBookedAndAFrozenPriceHolds(t *testing.T) {
 	t.Parallel()
 	l := newLunchFixture(t, "Mittagessen Angebot")
 	receipt := l.submit(t, l.registration("angebot.essen@example.org", "Tom", l.booking(1, true)))
-	assert.Equal(t, int64(4500+2150), l.confirm(t, receipt.ID).TotalCents)
+	assert.Equal(t, int64(4500+2150), l.confirm(t, int64(receipt.ID)).TotalCents)
 
 	update := func(lunchPrice any) *httptest.ResponseRecorder {
 		weeks := lunchWeeks(l.office, lunchPrice)
@@ -223,7 +223,7 @@ func TestHolidayLunchOfferStaysWhileBookedAndAFrozenPriceHolds(t *testing.T) {
 			weeks[i]["id"] = l.lunch.Weeks[i].ID
 			weeks[i]["time_models"].([]map[string]any)[0]["id"] = l.lunch.Weeks[i].TimeModels[0].ID
 		}
-		return traegerJSON(t, l.traeger, l.office.token, http.MethodPut, holidayPeriodPath(l.period.ID), map[string]any{
+		return putHolidayPeriod(t, l.traeger, l.office.token, holidayPeriodPath(int64(l.period.ID)), map[string]any{
 			"name": "Winterferien 2099", "registration_opens_on": "2020-01-01", "registration_closes_on": "2099-12-31",
 			"binding": true, "notes": "", "weeks": weeks,
 		})
@@ -237,7 +237,7 @@ func TestHolidayLunchOfferStaysWhileBookedAndAFrozenPriceHolds(t *testing.T) {
 	quoted, rec := l.quote(t, false, []map[string]any{l.booking(1, true)})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, int64(4500+2500), quoted.TotalCents, "a new registration pays the new price")
-	rec = traegerJSON(t, l.traeger, l.office.token, http.MethodGet, holidayContributionPath(l.period.ID, receipt.ID), nil)
+	rec = traegerJSON(t, l.traeger, l.office.token, http.MethodGet, holidayContributionPath(int64(l.period.ID), int64(receipt.ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, int64(4500+2150), decodeSchoolPortalData[lunchContributionBody](t, rec.Body.Bytes()).TotalCents,
 		"the confirmed contribution keeps the price of its confirmation")
@@ -250,13 +250,13 @@ func TestHolidayLunchRebookedAfterTheConfirmationChangesThePosition(t *testing.T
 	t.Parallel()
 	l := newLunchFixture(t, "Mittagessen Umbuchung")
 	receipt := l.submit(t, l.registration("umbuchung.essen@example.org", "Tom", l.booking(1, true)))
-	assert.Equal(t, int64(4500+2150), l.confirm(t, receipt.ID).TotalCents)
+	assert.Equal(t, int64(4500+2150), l.confirm(t, int64(receipt.ID)).TotalCents)
 
 	rebook := func(lunch bool) int64 {
-		rec := traegerJSON(t, l.traeger, l.office.token, http.MethodPut, holidayRebookPath(l.period.ID, receipt.ID, l.childOf(t, receipt.ID)),
+		rec := putReadRegistration(t, l.traeger, l.office.token, holidayRebookPath(int64(l.period.ID), int64(receipt.ID), l.childOf(t, int64(receipt.ID))),
 			map[string]any{"bookings": []map[string]any{l.booking(1, lunch)}})
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-		rec = traegerJSON(t, l.traeger, l.office.token, http.MethodGet, holidayContributionPath(l.period.ID, receipt.ID), nil)
+		rec = traegerJSON(t, l.traeger, l.office.token, http.MethodGet, holidayContributionPath(int64(l.period.ID), int64(receipt.ID)), nil)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		return decodeSchoolPortalData[lunchContributionBody](t, rec.Body.Bytes()).TotalCents
 	}
@@ -270,12 +270,12 @@ func TestHolidayLunchAddedByCrossWeekRebookingIsBilled(t *testing.T) {
 	t.Parallel()
 	l := newLunchFixture(t, "Mittagessen Wochenwechsel")
 	receipt := l.submit(t, l.registration("wochenwechsel.essen@example.org", "Tom", l.booking(2, false)))
-	assert.Equal(t, int64(4500), l.confirm(t, receipt.ID).TotalCents)
+	assert.Equal(t, int64(4500), l.confirm(t, int64(receipt.ID)).TotalCents)
 
-	rec := traegerJSON(t, l.traeger, l.office.token, http.MethodPut, holidayRebookPath(l.period.ID, receipt.ID, l.childOf(t, receipt.ID)),
+	rec := putReadRegistration(t, l.traeger, l.office.token, holidayRebookPath(int64(l.period.ID), int64(receipt.ID), l.childOf(t, int64(receipt.ID))),
 		map[string]any{"bookings": []map[string]any{l.booking(0, true, dayMonday, dayWednesday)}})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	rec = traegerJSON(t, l.traeger, l.office.token, http.MethodGet, holidayContributionPath(l.period.ID, receipt.ID), nil)
+	rec = traegerJSON(t, l.traeger, l.office.token, http.MethodGet, holidayContributionPath(int64(l.period.ID), int64(receipt.ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	contribution := decodeSchoolPortalData[lunchContributionBody](t, rec.Body.Bytes())
 	require.Len(t, contribution.Children, 1)
@@ -290,9 +290,9 @@ func TestHolidayLunchAddedByCrossWeekRebookingIsBilled(t *testing.T) {
 
 	billing := traegerColleague(t, l.review, identityaccess.TraegerRoleBilling)
 	setNumberRange(t, l.review, billing, "FE-{NNNN}")
-	run := billingRun(t, l.review, billing, startBillingRun(t, l.review, billing, l.period.ID).ID)
+	run := billingRun(t, l.review, billing, int64(startBillingRun(t, l.review, billing, int64(l.period.ID)).ID))
 	assert.Equal(t, int64(5360), run.PreviewCents)
-	rec = traegerJSON(t, l.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/release"), releaseBody(run))
+	rec = traegerJSON(t, l.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/release"), releaseBody(run))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	var issued []struct {
 		Kind        string `bun:"kind"`
@@ -320,10 +320,10 @@ func TestHolidayLunchShowsOnTheParticipantListOfTheHostingSchool(t *testing.T) {
 	max := l.submit(t, l.registration("max.essen@example.org", "Max", l.booking(0, true, dayMonday, dayFriday)))
 
 	// Before the confirmation the Büro takes Max's lunch off again.
-	rec := traegerJSON(t, l.traeger, l.office.token, http.MethodPut, holidayRebookPath(l.period.ID, max.ID, l.childOf(t, max.ID)),
+	rec := putReadRegistration(t, l.traeger, l.office.token, holidayRebookPath(int64(l.period.ID), int64(max.ID), l.childOf(t, int64(max.ID))),
 		map[string]any{"bookings": []map[string]any{l.booking(0, false, dayMonday, dayFriday)}})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	for _, id := range []int64{tom.ID, ida.ID, max.ID} {
+	for _, id := range []int64{int64(tom.ID), int64(ida.ID), int64(max.ID)} {
 		l.confirm(t, id)
 	}
 
@@ -395,7 +395,7 @@ func TestHolidayLunchCountsNoLunchOnADayWithoutCare(t *testing.T) {
 	l := newLunchFixture(t, "Mittagessen Schließtag")
 	receipt := l.submit(t, l.registration("schliesstag.essen@example.org", "Tom", l.booking(1, true)))
 	read := func(router http.Handler) lunchContributionBody {
-		rec := traegerJSON(t, router, l.office.token, http.MethodGet, holidayContributionPath(l.period.ID, receipt.ID), nil)
+		rec := traegerJSON(t, router, l.office.token, http.MethodGet, holidayContributionPath(int64(l.period.ID), int64(receipt.ID)), nil)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		return decodeSchoolPortalData[lunchContributionBody](t, rec.Body.Bytes())
 	}
@@ -417,7 +417,7 @@ func TestHolidayLunchCountsNoLunchOnADayWithoutCare(t *testing.T) {
 	assert.Equal(t, "meal", meal.Kind)
 	assert.Equal(t, 4, *meal.BookedDays)
 
-	rec = traegerJSON(t, closed, l.office.token, http.MethodPost, holidayConfirmPath(l.period.ID, receipt.ID), nil)
+	rec = traegerJSON(t, closed, l.office.token, http.MethodPost, holidayConfirmPath(int64(l.period.ID), int64(receipt.ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, int64(4500+1720), read(l.traeger).TotalCents, "the confirmation froze four lunches; the frozen contribution no longer follows the calendar")
 }
@@ -426,15 +426,15 @@ func TestHolidayFrozenLunchSurvivesAClosingDayAndRebooking(t *testing.T) {
 	t.Parallel()
 	l := newLunchFixture(t, "Mittagessen festgeschrieben")
 	receipt := l.submit(t, l.registration("festgeschrieben.essen@example.org", "Tom", l.booking(0, true, dayMonday)))
-	assert.Equal(t, int64(1500+430), l.confirm(t, receipt.ID).TotalCents)
+	assert.Equal(t, int64(1500+430), l.confirm(t, int64(receipt.ID)).TotalCents)
 
 	closed := parentBillingCalendarRouter(t, l.review, owners.HolidayTestSchoolCalendar{
 		{Date: calendar.NewDate(2099, 1, 5), Kind: enrollment.HolidayNoCareClosingDay, Name: "Betriebsausflug"},
 	})
-	rec := traegerJSON(t, closed, l.office.token, http.MethodPut, holidayRebookPath(l.period.ID, receipt.ID, l.childOf(t, receipt.ID)),
+	rec := putReadRegistrationVia(t, l.traeger, closed, l.office.token, holidayRebookPath(int64(l.period.ID), int64(receipt.ID), l.childOf(t, int64(receipt.ID))),
 		map[string]any{"bookings": []map[string]any{l.booking(0, true, dayMonday)}})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	rec = traegerJSON(t, closed, l.office.token, http.MethodGet, holidayContributionPath(l.period.ID, receipt.ID), nil)
+	rec = traegerJSON(t, closed, l.office.token, http.MethodGet, holidayContributionPath(int64(l.period.ID), int64(receipt.ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	contribution := decodeSchoolPortalData[lunchContributionBody](t, rec.Body.Bytes())
 	assert.Equal(t, int64(1500+430), contribution.TotalCents, "keeping lunch selected preserves the frozen lunch even when its only day has closed")
@@ -450,17 +450,17 @@ func TestHolidayLunchSelectedOnAClosedDayGainsNoChargeWhenTheDayOpensAgain(t *te
 	closed := parentBillingCalendarRouter(t, l.review, owners.HolidayTestSchoolCalendar{
 		{Date: calendar.NewDate(2099, 1, 7), Kind: enrollment.HolidayNoCareClosingDay, Name: "Betriebsausflug"},
 	})
-	rec := traegerJSON(t, closed, l.office.token, http.MethodPost, holidayConfirmPath(l.period.ID, receipt.ID), nil)
+	rec := traegerJSON(t, closed, l.office.token, http.MethodPost, holidayConfirmPath(int64(l.period.ID), int64(receipt.ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	read := func() lunchContributionBody {
-		rec := traegerJSON(t, l.traeger, l.office.token, http.MethodGet, holidayContributionPath(l.period.ID, receipt.ID), nil)
+		rec := traegerJSON(t, l.traeger, l.office.token, http.MethodGet, holidayContributionPath(int64(l.period.ID), int64(receipt.ID)), nil)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		return decodeSchoolPortalData[lunchContributionBody](t, rec.Body.Bytes())
 	}
 	confirmed := read().TotalCents
 
 	// The day is open again; the Büro saves the unchanged booking.
-	rec = traegerJSON(t, l.traeger, l.office.token, http.MethodPut, holidayRebookPath(l.period.ID, receipt.ID, l.childOf(t, receipt.ID)),
+	rec = putReadRegistration(t, l.traeger, l.office.token, holidayRebookPath(int64(l.period.ID), int64(receipt.ID), l.childOf(t, int64(receipt.ID))),
 		map[string]any{"bookings": []map[string]any{l.booking(0, true, dayWednesday)}})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, confirmed, read().TotalCents, "an unchanged selection adds no lunch to the confirmed contribution")

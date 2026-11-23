@@ -19,6 +19,9 @@ func RouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/", Portals: portals, Query: []common.QueryParam{class, date}, Response: classday.DayReport{}},
 		{Method: "GET", Pattern: "/school-day", Portals: portals, Query: []common.QueryParam{date}, Response: classday.SchoolDayReport{}},
 		{Method: "GET", Pattern: "/absence-list", Portals: portals, Query: []common.QueryParam{class, from, to}, Response: classday.AbsenceListReport{}},
+		{Method: "GET", Pattern: "/absence-list/export", Portals: portals, File: true, Query: []common.QueryParam{
+			class, from, to, {Name: "format", Kind: common.QueryString, Values: []string{string(classday.FormatPDF), string(classday.FormatXLSX)}},
+		}},
 		{Method: "GET", Pattern: "/shared-notes/{schoolClass}/students/{studentId}", Portals: portals, Response: classday.StudentSharedNotes{}},
 		{Method: "GET", Pattern: "/arrival-exceptions", Portals: portals, Query: []common.QueryParam{class, from, to}, Response: ArrivalExceptionListResponse{}},
 		{Method: "GET", Pattern: "/arrival-exceptions/block-start", Portals: portals, Query: []common.QueryParam{class, date}, Response: ArrivalExceptionBlockStartResponse{}},
@@ -31,7 +34,7 @@ func RouteContracts() []common.RouteContract {
 		{Method: "DELETE", Pattern: "/day-hints/{schoolClass}/{date}/students/{studentId}", Portals: portals, NoData: true},
 		{Method: "PUT", Pattern: "/morning-attendance/{schoolClass}/{date}", Portals: portals, Request: MorningAttendanceRequest{}, NoData: true},
 		{Method: "POST", Pattern: "/homework/{schoolClass}", Portals: portals, Request: HomeworkRequest{}, Response: classday.DayHomework{}},
-		{Method: "PUT", Pattern: "/homework/{schoolClass}/{homeworkId}", Portals: portals, Request: HomeworkRequest{}, Response: classday.DayHomework{}},
+		{Method: "PUT", Pattern: "/homework/{schoolClass}/{homeworkId}", Portals: portals, Request: HomeworkChangeRequest{}, Response: classday.DayHomework{}},
 		{Method: "DELETE", Pattern: "/homework/{schoolClass}/{homeworkId}", Portals: portals, NoData: true},
 		{Method: "PUT", Pattern: "/handover/{schoolClass}/{date}", Portals: portals, Request: ClassHandoverRequest{}, NoData: true},
 		{Method: "DELETE", Pattern: "/handover/{schoolClass}/{date}", Portals: portals, NoData: true},
@@ -46,7 +49,8 @@ func RouteContracts() []common.RouteContract {
 func SlotListRouteContracts() []common.RouteContract {
 	portals := []common.PortalScope{common.PortalTenant}
 	return []common.RouteContract{
-		{Method: "POST", Pattern: "/lists/options", Portals: portals, Request: slotListOptionsRequest{}, Response: classday.OptionsResult{}},
-		{Method: "POST", Pattern: "/lists/preview", Portals: portals, Request: slotListRequest{}, Response: classday.ClassdayResult{}},
+		{Method: "POST", Pattern: "/lists/options", Portals: portals, NoCommit: "reads the choices for a list the body describes", Request: slotListOptionsRequest{}, Response: classday.OptionsResult{}},
+		{Method: "POST", Pattern: "/lists/preview", Portals: portals, NoCommit: "builds the list the body describes and saves nothing", Request: slotListRequest{}, Response: classday.ClassdayResult{}},
+		{Method: "POST", Pattern: "/lists/export", Portals: portals, Request: slotListRequest{}, File: true},
 	}
 }

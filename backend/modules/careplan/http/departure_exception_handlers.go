@@ -12,6 +12,7 @@ import (
 	common "github.com/moto-ogs/project-phoenix/api/common"
 	careplan "github.com/moto-ogs/project-phoenix/modules/careplan"
 	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	tenant "github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -43,19 +44,19 @@ func (req *DepartureExceptionRequest) Bind(_ *http.Request) error {
 
 // DepartureExceptionResponse is the Abholart of one child on one day.
 type DepartureExceptionResponse struct {
-	ID            int64   `json:"id"`
-	StudentID     int64   `json:"student_id"`
-	ExceptionDate string  `json:"exception_date"`
-	DepartureMode string  `json:"departure_mode"`
-	Reason        *string `json:"reason,omitempty"`
-	CreatedBy     *int64  `json:"created_by,omitempty"`
-	UpdatedAt     string  `json:"updated_at"`
+	ID            ident.ID  `json:"id"`
+	StudentID     ident.ID  `json:"student_id"`
+	ExceptionDate string    `json:"exception_date"`
+	DepartureMode string    `json:"departure_mode"`
+	Reason        *string   `json:"reason,omitempty"`
+	CreatedBy     *ident.ID `json:"created_by,omitempty"`
+	UpdatedAt     string    `json:"updated_at"`
 }
 
 func mapDepartureExceptionToResponse(value careplan.DepartureException) DepartureExceptionResponse {
 	return DepartureExceptionResponse{
-		ID: value.ID, StudentID: value.StudentID, ExceptionDate: value.ExceptionDate.String(),
-		DepartureMode: value.DepartureMode, Reason: value.Reason, CreatedBy: value.CreatedBy,
+		ID: ident.ID(value.ID), StudentID: ident.ID(value.StudentID), ExceptionDate: value.ExceptionDate.String(),
+		DepartureMode: value.DepartureMode, Reason: value.Reason, CreatedBy: (*ident.ID)(value.CreatedBy),
 		UpdatedAt: value.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
 }
@@ -100,7 +101,7 @@ func (rs *Resource) putStudentDepartureException(w http.ResponseWriter, r *http.
 	}
 	staffID, err := rs.getStaffIDFromJWT(r)
 	if err != nil {
-		renderError(w, r, common.ErrorForbidden(err))
+		renderScheduleAuthorError(w, r, err)
 		return
 	}
 	saved, err := rs.PickupScheduleService.SetDayDeparture(r.Context(), student.ID, date, req.DepartureMode, req.Reason, staffID)

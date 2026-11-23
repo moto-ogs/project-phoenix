@@ -88,14 +88,19 @@ describe("looksLikePhoneNumber", () => {
 
 describe("searchSchool", () => {
   it("posts the query in the body, never in the address", async () => {
-    mockBffJson.mockResolvedValueOnce({});
+    mockBffJson.mockResolvedValueOnce({
+      staff: [{ id: "31", first_name: "Greta", last_name: "Wiesenthal" }],
+      scope: { staff: true },
+    });
     const controller = new AbortController();
-    await searchSchool("0170 1234567", controller.signal);
-    expect(mockBffJson).toHaveBeenCalledWith("/api/search", {
-      method: "POST",
+    const result = await searchSchool("0170 1234567", controller.signal);
+    expect(mockBffJson).toHaveBeenCalledWith("tenant", "POST /api/search/", {
       body: { query: "0170 1234567" },
       signal: controller.signal,
     });
+    expect(result.staff).toEqual([
+      { id: "31", firstName: "Greta", lastName: "Wiesenthal" },
+    ]);
   });
 });
 

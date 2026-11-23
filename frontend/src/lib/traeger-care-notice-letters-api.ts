@@ -1,27 +1,33 @@
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the stored originals of the Jahresbescheide (#6347): the office
  * stores the PDF of every issued notice once, then sends it by mail and to
  * the parents inbox, or prints it. Backend IDs leave here as strings.
  */
 
-import type {
-  MailOutcome,
-  MailProviderBlock,
+import {
+  type MailOutcome,
+  type MailProviderBlock,
+  knownMailOutcome,
+  knownMailProviderBlock,
 } from "~/lib/email-delivery-status";
+import type * as traegerCareNoticeRunsContract from "./contract/traeger-care-notice-runs.generated";
 import {
   type BillingFile,
   type LetterMailStatus,
   billingFile,
+  knownLetterMailStatus,
 } from "./traeger-billing-api";
-import type { CareNoticeKind } from "./traeger-care-notices-api";
-import { traegerRequest } from "./traeger-api";
-
-const RUNS_PATH = "/api/traeger/care-notice-runs";
+import {
+  type CareNoticeKind,
+  knownNoticeKind,
+} from "./traeger-care-notices-api";
 
 export interface CareNoticeMailing {
   readonly noticeId: string;
   readonly contractId: string;
-  readonly kind: CareNoticeKind;
+  /** undefined: a kind this build does not know. */
+  readonly kind: CareNoticeKind | undefined;
   readonly number: string;
   /** The number of the notice a change notice amends, empty otherwise. */
   readonly amendsNumber: string;
@@ -37,6 +43,7 @@ export interface CareNoticeMailing {
   readonly hasLetter: boolean;
   readonly sha256: string;
   readonly inInbox: boolean;
+  /** "unknown" also stands for a state this build does not know. */
   readonly status: LetterMailStatus;
   readonly sends: number;
   readonly createdAt: string | null;
@@ -69,51 +76,13 @@ export interface CareNoticeSeries {
   readonly recipientChanged: number;
 }
 
-interface BackendMailing {
-  notice_id: number | string;
-  contract_id: number | string;
-  kind: CareNoticeKind;
-  number: string;
-  amends_number?: string;
-  amended_by_number?: string;
-  child_first_name: string;
-  child_last_name: string;
-  school_name: string;
-  recipient_first_name: string;
-  recipient_last_name: string;
-  recipient_email: string;
-  total_cents: number;
-  has_letter: boolean;
-  sha256?: string;
-  in_inbox: boolean;
-  status: LetterMailStatus;
-  sends: number;
-  created_at: string | null;
-  requested_at: string | null;
-  sent_at: string | null;
-  mail_outcome?: MailOutcome;
-  provider_block?: MailProviderBlock;
-}
-
-interface BackendLetters {
-  notices: BackendMailing[];
-  summary: {
-    notices: number;
-    letters: number;
-    sent: number;
-    queued: number;
-    failed: number;
-    not_sent: number;
-    without_email: number;
-    without_inbox: number;
-  };
-}
-
-function mailingFromBackend(mailing: BackendMailing): CareNoticeMailing {
+function mailingFromBackend(
+  mailing: traegerCareNoticeRunsContract.CareNoticeMailing,
+): CareNoticeMailing {
   return {
-    noticeId: String(mailing.notice_id),
-    contractId: String(mailing.contract_id),
-    kind: mailing.kind,
+    noticeId: mailing.notice_id,
+    contractId: mailing.contract_id,
+    kind: knownNoticeKind(mailing.kind),
     number: mailing.number,
     amendsNumber: mailing.amends_number ?? "",
     amendedByNumber: mailing.amended_by_number ?? "",
@@ -127,17 +96,19 @@ function mailingFromBackend(mailing: BackendMailing): CareNoticeMailing {
     hasLetter: mailing.has_letter,
     sha256: mailing.sha256 ?? "",
     inInbox: mailing.in_inbox,
-    status: mailing.status,
+    status: knownLetterMailStatus(mailing.status),
     sends: mailing.sends,
     createdAt: mailing.created_at,
     requestedAt: mailing.requested_at,
     sentAt: mailing.sent_at,
-    mailOutcome: mailing.mail_outcome,
-    providerBlock: mailing.provider_block,
+    mailOutcome: knownMailOutcome(mailing.mail_outcome),
+    providerBlock: knownMailProviderBlock(mailing.provider_block),
   };
 }
 
-function lettersFromBackend(letters: BackendLetters): CareNoticeLetters {
+function lettersFromBackend(
+  letters: traegerCareNoticeRunsContract.CareNoticeLetters,
+): CareNoticeLetters {
   const { summary } = letters;
   return {
     notices: (letters.notices ?? []).map(mailingFromBackend),
@@ -154,20 +125,14 @@ function lettersFromBackend(letters: BackendLetters): CareNoticeLetters {
   };
 }
 
-function lettersPath(runId: string): string {
-  return `${RUNS_PATH}/${encodeURIComponent(runId)}/letters`;
-}
-
-function noticePath(runId: string, contractId: string): string {
-  return `${RUNS_PATH}/${encodeURIComponent(runId)}/notices/${encodeURIComponent(contractId)}`;
-}
-
 /** The originals of a released run with the state of every mail. */
 export async function fetchCareNoticeLetters(
   runId: string,
 ): Promise<CareNoticeLetters> {
   return lettersFromBackend(
-    await traegerRequest<BackendLetters>(lettersPath(runId)),
+    await bffJson("org", "GET /traeger/care-notice-runs/{id}/letters", {
+      params: { id: runId },
+    }),
   );
 }
 
@@ -176,8 +141,8 @@ export async function createCareNoticeLetters(
   runId: string,
 ): Promise<CareNoticeLetters> {
   return lettersFromBackend(
-    await traegerRequest<BackendLetters>(lettersPath(runId), {
-      method: "POST",
+    await bffJson("org", "POST /traeger/care-notice-runs/{id}/letters", {
+      params: { id: runId },
     }),
   );
 }
@@ -186,12 +151,11 @@ export async function createCareNoticeLetters(
 export async function mailCareNoticeLetters(
   runId: string,
 ): Promise<CareNoticeSeries> {
-  const series = await traegerRequest<{
-    queued: number;
-    already: number;
-    without_email: number;
-    recipient_changed?: number;
-  }>(`${lettersPath(runId)}/mail`, { method: "POST" });
+  const series = await bffJson(
+    "org",
+    "POST /traeger/care-notice-runs/{id}/letters/mail",
+    { params: { id: runId } },
+  );
   return {
     queued: series.queued,
     already: series.already,
@@ -206,9 +170,10 @@ export async function mailCareNoticeLetter(
   contractId: string,
 ): Promise<CareNoticeMailing> {
   return mailingFromBackend(
-    await traegerRequest<BackendMailing>(
-      `${noticePath(runId, contractId)}/mail`,
-      { method: "POST" },
+    await bffJson(
+      "org",
+      "POST /traeger/care-notice-runs/{id}/notices/{contractID}/mail",
+      { params: { id: runId, contractID: contractId } },
     ),
   );
 }
@@ -219,8 +184,13 @@ export async function downloadCareNoticePDF(
   contractId: string,
 ): Promise<BillingFile> {
   return billingFile(
-    `${noticePath(runId, contractId)}/pdf`,
-    {},
+    bffFile(
+      "org",
+      "GET /traeger/care-notice-runs/{id}/notices/{contractID}/pdf",
+      {
+        params: { id: runId, contractID: contractId },
+      },
+    ),
     "gebuehrenbescheid.pdf",
   );
 }
@@ -231,8 +201,10 @@ export async function printCareNoticeLetters(
   withoutEmailOnly = false,
 ): Promise<BillingFile> {
   return billingFile(
-    `${lettersPath(runId)}/print${withoutEmailOnly ? "?only=without_email" : ""}`,
-    {},
+    bffFile("org", "GET /traeger/care-notice-runs/{id}/letters/print", {
+      params: { id: runId },
+      query: { only: withoutEmailOnly ? "without_email" : undefined },
+    }),
     "jahresbescheide.pdf",
   );
 }

@@ -183,6 +183,13 @@ templates and volumes. No per-worktree teardown hook or personal machine service
 is needed. See [test-server operations](operations.md#test-database) for supported
 hosts, status, legacy-container migration and the startup/cleanup lock contract.
 
+A server whose data directory is a sized tmpfs admits a limited number of
+live clones: 24 on the shared local server, 94 in CI (ADR 0004, #7860). A
+clone waits for a slot; overlapping runs of several sessions get slower
+instead of filling the server. `wait for one of N clone slots` in a failure
+means the run waited past its deadline behind other runs, not that the
+server is broken.
+
 ## Test build context
 
 Cross-package test hooks compile only with `-tags=testhooks`. The test wrappers,

@@ -14,6 +14,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
@@ -189,6 +190,9 @@ func TestBulkCancelPlanned_CancelsAndRemovesPlannedOccurrences(t *testing.T) {
 	past, today, active, second, third, outside := mondays[0], mondays[1], mondays[2], mondays[3], mondays[4], mondays[5]
 	activeRows := listInstancesForDate(t, s.db, s.template.ID, active)
 	require.Len(t, activeRows, 1)
+	stale, err := s.instance.BulkCancelPlanned(s.ctx, past, third, timetable.BulkCancelOptions{DryRun: true}, nil)
+	require.NoError(t, err)
+	require.Equal(t, 4, stale.Count)
 	setInstanceStatus(t, s, activeRows[0].ID, fixtures.InstanceStatusActive())
 
 	preview, err := s.instance.BulkCancelPlanned(s.ctx, past, third, timetable.BulkCancelOptions{DryRun: true, IncludeClosingDaySeries: false}, nil)
@@ -205,7 +209,17 @@ func TestBulkCancelPlanned_CancelsAndRemovesPlannedOccurrences(t *testing.T) {
 	assert.Equal(t, map[string]int{today.String(): 1, second.String(): 1, third.String(): 1}, perDay)
 	assert.Len(t, listInstancesForDate(t, s.db, s.template.ID, second), 1, "a dry run changes nothing")
 
-	done, err := s.instance.BulkCancelPlanned(s.ctx, past, third, timetable.BulkCancelOptions{DryRun: false, IncludeClosingDaySeries: false}, nil)
+	// A real run removes only what its confirmed dry run named (ADR 0311):
+	// the count before the block started, or none, is refused unchanged.
+	for _, outdated := range []string{stale.Fingerprint, ""} {
+		_, err = s.instance.BulkCancelPlanned(s.ctx, past, third, timetable.BulkCancelOptions{ExpectedFingerprint: outdated}, nil)
+		require.ErrorIs(t, err, readstate.ErrChanged)
+		assert.Len(t, listInstancesForDate(t, s.db, s.template.ID, second), 1, "a refused run removes nothing")
+	}
+
+	done, err := s.instance.BulkCancelPlanned(s.ctx, past, third, timetable.BulkCancelOptions{
+		DryRun: false, IncludeClosingDaySeries: false, ExpectedFingerprint: preview.Fingerprint,
+	}, nil)
 	require.NoError(t, err)
 	assert.False(t, done.DryRun)
 	assert.Equal(t, 3, done.Count)
@@ -232,8 +246,7 @@ func TestBulkCancelPlanned_KeepsSeriesThatIncludeClosingDays(t *testing.T) {
 	s, mondays := bulkCancelScenario(t)
 	setSeriesIncludesClosingDays(t, s, true)
 
-	result, err := s.instance.BulkCancelPlanned(s.ctx, mondays[1], mondays[5], timetable.BulkCancelOptions{DryRun: false, IncludeClosingDaySeries: false}, nil)
-	require.NoError(t, err)
+	result := confirmBulkCancel(t, s, mondays[1], mondays[5], false)
 	assert.Zero(t, result.Count)
 	assert.Empty(t, result.Days)
 	assert.Equal(t, 5, result.Kept, "the dialog learns that holiday care stays")
@@ -259,7 +272,7 @@ func TestBulkCancelPlanned_IncludeClosingDaySeriesRemovesThem(t *testing.T) {
 	assert.Empty(t, preview.KeptSeries)
 
 	done, err := s.instance.BulkCancelPlanned(s.ctx, mondays[1], mondays[5],
-		timetable.BulkCancelOptions{DryRun: false, IncludeClosingDaySeries: true}, nil)
+		timetable.BulkCancelOptions{DryRun: false, IncludeClosingDaySeries: true, ExpectedFingerprint: preview.Fingerprint}, nil)
 	require.NoError(t, err)
 	assert.Equal(t, 5, done.Count)
 	for _, monday := range mondays[1:] {
@@ -275,13 +288,25 @@ func TestBulkCancelPlanned_StaysInsideTheTenant(t *testing.T) {
 	own, mondays := bulkCancelScenario(t)
 	other, _ := bulkCancelScenario(t)
 
-	result, err := own.instance.BulkCancelPlanned(own.ctx, mondays[1], mondays[5], timetable.BulkCancelOptions{DryRun: false, IncludeClosingDaySeries: false}, nil)
-	require.NoError(t, err)
+	result := confirmBulkCancel(t, own, mondays[1], mondays[5], false)
 	assert.Equal(t, 5, result.Count)
 	for _, monday := range mondays[1:] {
 		assert.Empty(t, listInstancesForDate(t, own.db, own.template.ID, monday))
 		assert.Len(t, listInstancesForDate(t, other.db, other.template.ID, monday), 1, "other tenant untouched on %s", monday)
 	}
+}
+
+// confirmBulkCancel runs the dry run and confirms its selection, as the
+// dialog does.
+func confirmBulkCancel(t *testing.T, s *scenarioSetup, from, to calendar.Date, includeClosingDaySeries bool) *timetable.BulkCancelResult {
+	t.Helper()
+	opts := timetable.BulkCancelOptions{DryRun: true, IncludeClosingDaySeries: includeClosingDaySeries}
+	preview, err := s.instance.BulkCancelPlanned(s.ctx, from, to, opts, nil)
+	require.NoError(t, err)
+	opts.DryRun, opts.ExpectedFingerprint = false, preview.Fingerprint
+	result, err := s.instance.BulkCancelPlanned(s.ctx, from, to, opts, nil)
+	require.NoError(t, err)
+	return result
 }
 
 func TestBulkCancelPlanned_RejectsInvalidRanges(t *testing.T) {

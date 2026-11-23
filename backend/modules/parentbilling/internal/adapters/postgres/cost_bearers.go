@@ -9,6 +9,8 @@ import (
 	"github.com/uptrace/bun"
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // The cost bearers of a Träger (#5627). A line of a frozen contribution,
@@ -55,7 +57,9 @@ type costBearerRow struct {
 
 func (r costBearerRow) costBearer() parentbilling.CostBearer {
 	return parentbilling.CostBearer{
-		ID: r.ID, Name: r.Name, Address: r.Address, FileReference: r.FileReference, Active: r.Active, UpdatedAt: r.UpdatedAt,
+		ID: ident.ID(r.ID), Name: r.Name, Address: r.Address, FileReference: r.FileReference, Active: r.Active, UpdatedAt: r.UpdatedAt,
+		// A trigger stamps updated_at on every change of the row.
+		Version: readstate.Of(r.UpdatedAt),
 	}
 }
 

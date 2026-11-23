@@ -167,6 +167,10 @@ vi.mock("lucide-react", () => ({
   Pencil: (props: Record<string, unknown>) => (
     <svg data-testid="pencil-icon" {...props} />
   ),
+  // Symbol des Info-Knopfs am Seitentitel (#7579).
+  Info: (props: Record<string, unknown>) => (
+    <svg data-testid="info-icon" {...props} />
+  ),
   // Used by the PushNotificationSection mounted on the profile page (#2003).
   BellRing: (props: Record<string, unknown>) => (
     <svg data-testid="bell-ring-icon" {...props} />

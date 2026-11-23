@@ -4,18 +4,9 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"time"
 
 	"github.com/go-chi/render"
 )
-
-// Time is a wrapper for time.Time that properly serializes to JSON in RFC3339 format
-type Time time.Time
-
-// MarshalJSON implements the json.Marshaler interface
-func (t Time) MarshalJSON() ([]byte, error) {
-	return []byte(`"` + time.Time(t).Format(time.RFC3339) + `"`), nil
-}
 
 // Response is the standard API response structure
 type Response struct {
@@ -42,6 +33,11 @@ func (r *Response) Render(_ http.ResponseWriter, _ *http.Request) error {
 // refuse it. Production installs none; the test build holds the answers
 // against the contract (answer_contract_test_helpers.go).
 var answerObserver func(r *http.Request, status int, data any, envelope any) error
+
+// refusalObserver sees every refusal (a 4xx) before it is written. Production
+// installs none; the test build counts it as the answer of a route that only
+// refuses (RouteContract.Refuses).
+var refusalObserver func(r *http.Request)
 
 // answerObserved reports whether the answer may be written. A refused answer
 // has been replaced by a 500 that names the reason.
@@ -110,7 +106,7 @@ func RespondNoContent(w http.ResponseWriter, r *http.Request) {
 // RespondWithJSON sends a JSON response with the given status code
 func RespondWithJSON(w http.ResponseWriter, r *http.Request, status int, data interface{}) {
 	render.Status(r, status)
-	render.JSON(w, r, data)
+	RenderJSON(w, r, data)
 }
 
 // Pagination represents pagination metadata for responses

@@ -164,11 +164,6 @@ vi.mock("~/components/sse/SSEErrorBoundary", () => ({
   ),
 }));
 
-// Mock UnclaimedRooms
-vi.mock("~/components/active/unclaimed-rooms", () => ({
-  UnclaimedRooms: () => <div data-testid="unclaimed-rooms" />,
-}));
-
 vi.mock("~/lib/activity-service", () => ({
   activityService: {
     getActivities: vi.fn(() => Promise.resolve([])),
@@ -309,7 +304,7 @@ vi.mock("~/lib/swr", () => ({
 
 import { useSWRAuth } from "~/lib/swr";
 import { TenantPageSearchRow } from "~/components/ui/tenant-page-search-row";
-import { useNFCEnabled } from "~/lib/tenant-context";
+import { useNFCEnabled, usePresenceMode } from "~/lib/tenant-context";
 import MeinRaumPage from "./page";
 import { useSupervisionDashboard } from "~/components/active-supervisions/use-supervision-dashboard";
 import type { PlannedTimetableInstance } from "~/lib/timetable-operations-types";
@@ -417,6 +412,24 @@ describe("MeinRaumPage (Active Supervisions) (1/5)", () => {
 
     expect(
       screen.getByLabelText("Aktuelle Aufsicht wird geladen…"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Erklärung zu Aktuelle Aufsicht" }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows binary-mode-specific page information", () => {
+    vi.mocked(usePresenceMode).mockReturnValueOnce("binary");
+
+    render(<MeinRaumPage />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Erklärung zu Aktuelle Aufsicht" }),
+    );
+    expect(
+      screen.getByText(
+        "Hier wäre die Kinderliste deiner Aufsicht. Deine Schule nutzt sie zurzeit nicht.",
+      ),
     ).toBeInTheDocument();
   });
 
@@ -528,29 +541,6 @@ describe("MeinRaumPage (Active Supervisions) (2/5)", () => {
       expect(
         screen.getByText("Keine aktive Raum-Aufsicht"),
       ).toBeInTheDocument();
-    });
-  });
-
-  it("shows unclaimed rooms component when user has groups to claim", async () => {
-    vi.mocked(useSWRAuth).mockReturnValue({
-      data: {
-        supervisedGroups: [],
-        unclaimedGroups: [{ id: "1", name: "Schulhof" }],
-        currentStaff: { id: "1" },
-        educationalGroups: [],
-        firstRoomVisits: [],
-        firstRoomId: null,
-      },
-      isLoading: false,
-      error: null,
-      mutate: mockMutate,
-      isValidating: false,
-    } as never);
-
-    render(<MeinRaumPage />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId("unclaimed-rooms")).toBeInTheDocument();
     });
   });
 });
@@ -750,7 +740,6 @@ describe("MeinRaumPage additional scenarios", () => {
     render(<MeinRaumPage />);
 
     await waitFor(() => {
-      expect(screen.getByTestId("unclaimed-rooms")).toBeInTheDocument();
       expect(
         screen.getByText("Keine aktive Raum-Aufsicht"),
       ).toBeInTheDocument();
@@ -1950,7 +1939,9 @@ describe("EmptyRoomsView without children lists", () => {
     render(<MeinRaumPage />);
 
     await waitFor(() => {
-      expect(screen.getByTestId("unclaimed-rooms")).toBeInTheDocument();
+      expect(
+        screen.getByText("Keine aktive Raum-Aufsicht"),
+      ).toBeInTheDocument();
     });
 
     // The search stands above the children lists; without one there is
@@ -2244,7 +2235,9 @@ describe("BFF dashboard data with students and Schulhof", () => {
     render(<MeinRaumPage />);
 
     await waitFor(() => {
-      expect(screen.getByTestId("unclaimed-rooms")).toBeInTheDocument();
+      expect(
+        screen.getByText("Keine aktive Raum-Aufsicht"),
+      ).toBeInTheDocument();
     });
   });
 });

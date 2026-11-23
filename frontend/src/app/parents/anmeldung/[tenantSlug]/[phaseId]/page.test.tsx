@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { SessionProvider } from "next-auth/react";
 import { SWRConfig } from "~/lib/swr/testing";
+import { ApiError } from "~/lib/api-error";
 
 // The form loads through real SWR under a parent session, a fresh cache per
 // render.
@@ -61,6 +62,7 @@ vi.mock("~/components/enrollment/enrollment-form", () => ({
   EnrollmentForm: (props: {
     gradeLevelMax: number;
     prefetchedData: { profile: unknown };
+    onFormChanged?: () => Promise<void>;
   }) => {
     mocks.enrollmentForm(props);
     return (
@@ -223,8 +225,130 @@ describe("ParentEnrollFormPage", () => {
     ).toBeInTheDocument();
   });
 
+  // ADR 0311: the parent fills the version the opening read. When the
+  // school published another one, the refused submit loads it, and the form
+  // gets the current version handed in.
+  it("loads the current form after a refused outdated version", async () => {
+    const published = { id: "schema-2", fields: [], legal_blocks: [] };
+    await act(async () => {
+      render(
+        <Suspense fallback={null}>
+          <ParentEnrollFormPage
+            params={Promise.resolve({ tenantSlug: "demo", phaseId: "5" })}
+          />
+        </Suspense>,
+        { wrapper: Providers },
+      );
+    });
+    await screen.findByTestId("parent-enrollment-form");
+    const shown = mocks.enrollmentForm.mock.lastCall?.[0] as {
+      prefetchedData: { schema: unknown };
+      onFormChanged: () => Promise<void>;
+    };
+    expect(shown.prefetchedData.schema).toBeNull();
+
+    mocks.fetchBootstrap.mockResolvedValue({ ...bootstrap, schema: published });
+    await act(() => shown.onFormChanged());
+
+    expect(mocks.enrollmentForm.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({
+        prefetchedData: expect.objectContaining({ schema: published }),
+      }),
+    );
+  });
+
+  it("rejects a failed reload after a refusal, so the form names it", async () => {
+    await act(async () => {
+      render(
+        <Suspense fallback={null}>
+          <ParentEnrollFormPage
+            params={Promise.resolve({ tenantSlug: "demo", phaseId: "5" })}
+          />
+        </Suspense>,
+        { wrapper: Providers },
+      );
+    });
+    await screen.findByTestId("parent-enrollment-form");
+    const shown = mocks.enrollmentForm.mock.lastCall?.[0] as {
+      onFormChanged: () => Promise<void>;
+    };
+
+    mocks.fetchBootstrap.mockRejectedValueOnce(
+      new ApiError("unavailable", 503, { code: "general.unavailable" }),
+    );
+    await act(async () => {
+      await expect(shown.onFormChanged()).rejects.toThrow("unavailable");
+    });
+    expect(screen.getByTestId("parent-enrollment-form")).toBeInTheDocument();
+  });
+
+  // A cached form shows at once, but the opening's own read decides: when
+  // the window closed or the invitation was revoked meanwhile, the page
+  // shows that failure instead of a form the server would refuse.
+  it("shows the failed first read of an opening over a cached form", async () => {
+    const cache = new Map();
+    function SharedCache({
+      children,
+    }: Readonly<{ children: React.ReactNode }>) {
+      return (
+        <SessionProvider
+          session={{
+            user: { id: "parent-1", scope: "parent" },
+            expires: "2099-01-01",
+          }}
+          refetchOnWindowFocus={false}
+        >
+          <SWRConfig
+            value={{
+              provider: () => cache,
+              errorRetryCount: 0,
+              dedupingInterval: 0,
+            }}
+          >
+            {children}
+          </SWRConfig>
+        </SessionProvider>
+      );
+    }
+    const open = async () => {
+      let unmount = () => undefined as void;
+      await act(async () => {
+        ({ unmount } = render(
+          <Suspense fallback={null}>
+            <ParentEnrollFormPage
+              params={Promise.resolve({ tenantSlug: "demo", phaseId: "5" })}
+            />
+          </Suspense>,
+          { wrapper: SharedCache },
+        ));
+      });
+      return unmount;
+    };
+    const closeFirst = await open();
+    await screen.findByTestId("parent-enrollment-form");
+    closeFirst();
+
+    mocks.fetchBootstrap.mockRejectedValue(
+      new ApiError("window closed", 404, { code: "enrollment.window_closed" }),
+    );
+    await open();
+
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("parent-enrollment-form"),
+      ).not.toBeInTheDocument();
+    });
+  });
+
   it("shows an error instead of falling back when tenant metadata is unavailable", async () => {
-    mocks.resolveTenant.mockResolvedValueOnce(null);
+    // #2353: the failed lookup carries its request ID to the parent.
+    mocks.resolveTenant.mockRejectedValueOnce(
+      new ApiError("tenant lookup failed", 500, {
+        code: "general.server",
+        instance: "req-tenant",
+      }),
+    );
 
     await act(async () => {
       render(
@@ -238,6 +362,9 @@ describe("ParentEnrollFormPage", () => {
     });
 
     expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Vorgangskennung: req-tenant"),
+    ).toBeInTheDocument();
     await waitFor(() => {
       expect(
         screen.queryByTestId("parent-enrollment-form"),

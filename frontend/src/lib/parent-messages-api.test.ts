@@ -9,6 +9,11 @@ const { mockGetRelationshipTypeLabel } = vi.hoisted(() => ({
   mockGetRelationshipTypeLabel: vi.fn((type: string) => `label:${type}`),
 }));
 
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 vi.mock("~/lib/guardian-helpers", () => ({
   getRelationshipTypeLabel: mockGetRelationshipTypeLabel,
 }));
@@ -51,12 +56,19 @@ function jsonOk(body: unknown, status = 200): Response {
   });
 }
 
+const TEAM_READERS = {
+  guardian: { account_id: "acc1", name: "Anna M." },
+  school: { kind: "all_staff" as const, names: [], unnamed_count: 0 },
+};
+
 function mkThread(overrides: Partial<InboxThread> = {}): InboxThread {
   return {
     thread_id: "t1",
     student_id: "42",
     student_name: "Max M.",
     guardian_name: "Anna M.",
+    audience: "team",
+    readers: TEAM_READERS,
     unread_count: 0,
     ...overrides,
   };
@@ -68,6 +80,8 @@ function mkDetail(overrides: Partial<ThreadDetail> = {}): ThreadDetail {
     student_id: "42",
     student_name: "Max M.",
     guardian_name: "Anna M.",
+    audience: "team",
+    readers: TEAM_READERS,
     messages: [],
     ...overrides,
   };
@@ -78,6 +92,8 @@ function mkGuardian(overrides: Partial<Guardian> = {}): Guardian {
     account_id: "acc1",
     name: "Anna M.",
     is_primary: true,
+    readers: TEAM_READERS,
+    leadership_available: false,
     ...overrides,
   };
 }
@@ -143,11 +159,14 @@ describe("fetchInboxWithFilters", () => {
     expect(seenURL).toBe("/api/messages?unread=true");
   });
 
-  it("returns empty array when data field is missing", async () => {
-    mockFetch(async () => jsonOk({ data: null }));
-    const out = await fetchInboxWithFilters({});
-    // null data falls through to ?? [] inside the wrapper
-    expect(Array.isArray(out)).toBe(true);
+  // #7806: the catalog proxy decodes every answer; one without `data` is a
+  // broken route, not an empty inbox.
+  it("refuses an answer without data", async () => {
+    mockFetch(async () => jsonOk({}));
+    await expect(fetchInboxWithFilters({})).rejects.toMatchObject({
+      status: 502,
+      message: "Nachrichten konnten nicht geladen werden",
+    });
   });
 
   it("throws with the backend error message on non-OK", async () => {
@@ -232,10 +251,12 @@ describe("fetchStudentThreads", () => {
     expect(seenURL).toContain("a%2Fb");
   });
 
-  it("returns empty array when data is null", async () => {
-    mockFetch(async () => jsonOk({ data: null }));
-    const out = await fetchStudentThreads("99");
-    expect(Array.isArray(out)).toBe(true);
+  it("refuses an answer without data", async () => {
+    mockFetch(async () => jsonOk({}));
+    await expect(fetchStudentThreads("99")).rejects.toMatchObject({
+      status: 502,
+      message: "Nachrichten konnten nicht geladen werden",
+    });
   });
 
   it("throws a coded error on non-OK", async () => {
@@ -290,20 +311,16 @@ describe("fetchUnreadCount", () => {
     expect(seenURL).toBe("/api/messages/unread-count");
   });
 
-  it("returns 0 when data.unread_count is missing", async () => {
-    mockFetch(async () => jsonOk({ data: {} }));
-    const count = await fetchUnreadCount();
-    expect(count).toBe(0);
-  });
-
-  it("returns 0 when data is missing entirely", async () => {
+  it("refuses an answer without data", async () => {
     mockFetch(async () => jsonOk({}));
-    const count = await fetchUnreadCount();
-    expect(count).toBe(0);
+    await expect(fetchUnreadCount()).rejects.toMatchObject({
+      status: 502,
+      message: "Ungelesene Nachrichten konnten nicht geladen werden",
+    });
   });
 
   it("throws with backend error on non-OK", async () => {
-    mockFetch(async () => jsonOk({ detail: "Keine Berechtigung" }, 401));
+    mockFetch(async () => jsonOk({ detail: "Keine Berechtigung" }, 403));
     await expect(fetchUnreadCount()).rejects.toThrow(
       /Ungelesene Nachrichten konnten nicht geladen werden/,
     );
@@ -367,6 +384,61 @@ describe("fetchThread", () => {
     expect(detail.messages).toHaveLength(1);
     expect(detail.messages[0]!.body).toBe("Hallo");
   });
+
+  it("reads enums, payload and attachments the way the parent client does", async () => {
+    const attachment = {
+      id: "9007199254740993",
+      filename: "basteln.png",
+      size_bytes: 4096,
+      content_type: "image/png",
+      width: 640,
+      height: 480,
+    };
+    const wire = (overrides: Record<string, unknown>) => ({
+      id: "m",
+      sender_name: "Anna",
+      body: "",
+      created_at: "2026-01-01T10:00:00Z",
+      kind: "message",
+      ...overrides,
+    });
+    mockFetch(async () =>
+      jsonOk({
+        data: {
+          ...mkDetail(),
+          messages: [
+            wire({
+              id: "m1",
+              sender_kind: "system",
+              kind: "event",
+              event_actor_kind: "staff",
+              request_type: "pickup_change",
+              request_status: "spaeter",
+              payload: { pickup_time: "15:30" },
+            }),
+            wire({
+              id: "m2",
+              sender_kind: "staff",
+              payload: ["not", "an object"],
+              attachments: [attachment],
+            }),
+            wire({ id: "m3", sender_kind: "robot" }),
+          ],
+        },
+      }),
+    );
+    const detail = await fetchThread("t1");
+    expect(detail.messages.map((message) => message.id)).toEqual(["m1", "m2"]);
+    expect(detail.messages[0]).toMatchObject({
+      kind: "event",
+      event_actor_kind: "staff",
+      request_type: "pickup_change",
+      payload: { pickup_time: "15:30" },
+    });
+    expect(detail.messages[0]!.request_status).toBeUndefined();
+    expect(detail.messages[1]!.payload).toBeUndefined();
+    expect(detail.messages[1]!.attachments).toEqual([attachment]);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -404,10 +476,14 @@ describe("postMessage", () => {
     );
   });
 
-  it("returns empty array when data is missing", async () => {
+  // A write whose answer is unreadable may have happened (#7806).
+  it("refuses an answer without data", async () => {
     mockFetch(async () => jsonOk({}));
-    const msgs = await postMessage("t1", "hi");
-    expect(msgs).toEqual([]);
+    await expect(postMessage("t1", "hi")).rejects.toMatchObject({
+      status: 502,
+      code: "general.write_answer_unreadable",
+      message: "Nachricht konnte nicht gesendet werden",
+    });
   });
 
   it("throws with backend error on non-OK", async () => {
@@ -531,10 +607,12 @@ describe("fetchGuardians", () => {
     expect(out[0]!.account_id).toBe("acc1");
   });
 
-  it("returns empty array when data is missing", async () => {
-    mockFetch(async () => jsonOk({ data: null }));
-    const out = await fetchGuardians("42");
-    expect(Array.isArray(out)).toBe(true);
+  it("refuses an answer without data", async () => {
+    mockFetch(async () => jsonOk({}));
+    await expect(fetchGuardians("42")).rejects.toMatchObject({
+      status: 502,
+      message: "Bezugspersonen konnten nicht geladen werden",
+    });
   });
 
   it("throws with backend error on non-OK", async () => {
@@ -584,7 +662,9 @@ describe("message count setting", () => {
   });
 
   it("falls back to all for an unknown scope", async () => {
-    mockFetch(async () => jsonOk({ data: { scope: "mine" } }));
+    mockFetch(async () =>
+      jsonOk({ data: { scope: "mine", has_own_groups: false } }),
+    );
     await expect(fetchMessageCountSetting()).resolves.toEqual({
       scope: "all",
       hasOwnGroups: false,

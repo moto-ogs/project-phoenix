@@ -6,7 +6,7 @@ describe("mapShiftType", () => {
   it("maps snake_case backend shape to camelCase with string id", () => {
     expect(
       mapShiftType({
-        id: 5,
+        id: "5",
         name: "Betreuung",
         color: "#83CD2D",
         description: "Zeit am Kind",
@@ -24,8 +24,12 @@ describe("mapShiftType", () => {
 
   it("defaults a missing description to an empty string", () => {
     expect(
-      mapShiftType({ id: 1, name: "Pause", color: "#6B7280", is_active: false })
-        .description,
+      mapShiftType({
+        id: "1",
+        name: "Pause",
+        color: "#6B7280",
+        is_active: false,
+      }).description,
     ).toBe("");
   });
 });

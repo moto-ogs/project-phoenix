@@ -317,13 +317,6 @@
     },
     {
       "build": "testhooks",
-      "evidence": "func (adapter fromCalendarPeriodRecords) Update(arg0 context.Context, arg1 *CalendarPeriod) error {\n\tresult0 := adapter.value.Update(arg0, toNative7(arg1))\n\treturn result0\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/timetable/fixturetest/fromCalendarPeriodRecords.Update",
-      "owner": "modules/timetable"
-    },
-    {
-      "build": "testhooks",
       "evidence": "func (adapter fromCalendarPeriodRecords) UsageCounts(arg0 context.Context) (map[int64]CalendarPeriodUsage, error) {\n\tresult0, result1 := adapter.value.UsageCounts(arg0)\n\treturn fromNative9(result0), result1\n}",
       "form": "unclassified-evidence",
       "id": "modules/timetable/fixturetest/fromCalendarPeriodRecords.UsageCounts",
@@ -376,13 +369,6 @@
       "evidence": "func (adapter fromDateframeRecords) Update(arg0 context.Context, arg1 *Dateframe) error {\n\tresult0 := adapter.value.Update(arg0, toNative29(arg1))\n\treturn result0\n}",
       "form": "unclassified-evidence",
       "id": "modules/timetable/fixturetest/fromDateframeRecords.Update",
-      "owner": "modules/timetable"
-    },
-    {
-      "build": "testhooks",
-      "evidence": "func (adapter fromInstanceLifecycle) AcknowledgeUnderstaffed(arg0 context.Context, arg1 int64, arg2 bool, arg3 *string, arg4 *int64) (*timetable.LifecycleInstance, error) {\n\tresult0, result1 := adapter.value.AcknowledgeUnderstaffed(arg0, arg1, arg2, arg3, arg4)\n\treturn result0, result1\n}",
-      "form": "unchanged-forward-evidence",
-      "id": "modules/timetable/fixturetest/fromInstanceLifecycle.AcknowledgeUnderstaffed",
       "owner": "modules/timetable"
     },
     {
@@ -726,13 +712,6 @@
       "evidence": "func (adapter fromInstanceStudentRecords) MarkNotScheduled(arg0 context.Context, arg1 []StudentInstanceRef) error {\n\tresult0 := adapter.value.MarkNotScheduled(arg0, toNative30(arg1))\n\treturn result0\n}",
       "form": "unclassified-evidence",
       "id": "modules/timetable/fixturetest/fromInstanceStudentRecords.MarkNotScheduled",
-      "owner": "modules/timetable"
-    },
-    {
-      "build": "testhooks",
-      "evidence": "func (adapter fromInstanceStudentRecords) ReconcileAttendanceInterval(arg0 context.Context, arg1 int64, arg2 int64, arg3 time.Time, arg4 *time.Time, arg5 time.Time, arg6 *time.Time) (bool, error) {\n\tresult0, result1 := adapter.value.ReconcileAttendanceInterval(arg0, arg1, arg2, arg3, arg4, arg5, arg6)\n\treturn result0, result1\n}",
-      "form": "unchanged-forward-evidence",
-      "id": "modules/timetable/fixturetest/fromInstanceStudentRecords.ReconcileAttendanceInterval",
       "owner": "modules/timetable"
     },
     {
@@ -1283,13 +1262,6 @@
     },
     {
       "build": "testhooks",
-      "evidence": "func (adapter intoCalendarPeriodRecords) Update(arg0 context.Context, arg1 *records.CalendarPeriod) error {\n\tfixtureArg1 := fromNative7(arg1)\n\tdefer func() {\n\t\tif arg1 != nil {\n\t\t\t*arg1 = fixtureArg1.CalendarPeriod\n\t\t}\n\t}()\n\tresult0 := adapter.value.Update(arg0, fixtureArg1)\n\treturn result0\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/timetable/fixturetest/intoCalendarPeriodRecords.Update",
-      "owner": "modules/timetable"
-    },
-    {
-      "build": "testhooks",
       "evidence": "func (adapter intoCalendarPeriodRecords) UsageCounts(arg0 context.Context) (map[int64]records.CalendarPeriodUsage, error) {\n\tresult0, result1 := adapter.value.UsageCounts(arg0)\n\treturn toNative9(result0), result1\n}",
       "form": "unclassified-evidence",
       "id": "modules/timetable/fixturetest/intoCalendarPeriodRecords.UsageCounts",
@@ -1461,13 +1433,6 @@
       "evidence": "func (s *ActivityService) GetGroupSupervisors(ctx context.Context, groupID int64) ([]*activityContract.SupervisorPlanned, error) {\n\tvalues, err := s.timetable.ListPlannedSupervisors(ctx, timetable.PlannedSupervisorFilter{GroupIDs: []int64{groupID}})\n\tif err != nil {\n\t\treturn nil, \u0026activityContract.ActivityError{Op: \"get group supervisors\", Err: legacyPlannedSupervisorError(\"find by group ID\", err)}\n\t}\n\tsupervisors, err := namePlannedSupervisors(ctx, s.directories, legacyPlannedSupervisors(values))\n\tif err != nil {\n\t\treturn nil, \u0026activityContract.ActivityError{Op: \"get group supervisors\", Err: err}\n\t}\n\treturn supervisors, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/timetable/internal/application/ActivityService.GetGroupSupervisors",
-      "owner": "modules/timetable"
-    },
-    {
-      "build": "production",
-      "evidence": "func (s *ActivityService) GetSchedule(ctx context.Context, id int64) (*activityContract.Schedule, error) {\n\tvalue, err := s.scheduleRepo.FindSchedule(ctx, id)\n\tif err != nil {\n\t\terr = legacyActivityScheduleError(\"find by id\", err)\n\t\tif isRepositoryNotFound(err) {\n\t\t\treturn nil, \u0026activityContract.ActivityError{Op: opGetSchedule, Err: activityContract.ErrScheduleNotFound}\n\t\t}\n\t\treturn nil, \u0026activityContract.ActivityError{Op: opGetSchedule, Err: err}\n\t}\n\treturn legacySchedule(value), nil\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/timetable/internal/application/ActivityService.GetSchedule",
       "owner": "modules/timetable"
     },
     {
@@ -1983,13 +1948,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *Service) FindTemplateStartTimes(ctx context.Context, groupIDs []int64) (result []timetable.TemplateStartTime, err error) {\n\terr = s.run(ctx, \"find_template_start_times\", func(ctx context.Context, stats *domain.OperationStats) error {\n\t\tvalues, queryStats, findErr := s.store.FindTemplateStartTimes(ctx, groupIDs)\n\t\tstats.Add(queryStats)\n\t\tresult = values\n\t\treturn findErr\n\t})\n\treturn result, err\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/timetable/internal/application/Service.FindTemplateStartTimes",
-      "owner": "modules/timetable"
-    },
-    {
-      "build": "production",
       "evidence": "func (s *Service) ListActivityExceptions(ctx context.Context, filter timetable.ActivityExceptionFilter) (result []timetable.ActivityException, err error) {\n\tif !validActivityExceptionFilter(filter) {\n\t\treturn nil, s.reject(\"list_activity_exceptions\", timetable.ErrInvalidActivityExceptionQuery)\n\t}\n\terr = s.run(ctx, \"list_activity_exceptions\", func(ctx context.Context, stats *domain.OperationStats) error {\n\t\tvalues, queryStats, listErr := s.store.ListActivityExceptions(ctx, filter)\n\t\tstats.Add(queryStats)\n\t\tresult = values\n\t\treturn listErr\n\t})\n\treturn result, err\n}",
       "form": "unclassified-evidence",
       "id": "modules/timetable/internal/application/Service.ListActivityExceptions",
@@ -2480,13 +2438,6 @@
     },
     {
       "build": "testhooks",
-      "evidence": "func (r closingDayCalendarRepository) Update(ctx context.Context, day *scheduleModels.ClosingDay) error {\n\tif day == nil {\n\t\treturn errors.New(\"ClosingDay cannot be nil or zero value\")\n\t}\n\tif err := day.Validate(); err != nil {\n\t\treturn err\n\t}\n\tupdated, err := r.calendar.UpdateClosingDay(ctx, schoolcalendar.UpdateClosingDay{ID: day.ID, ClosingDayFields: closingDayFieldsFromLegacy(day)})\n\tif err != nil {\n\t\treturn calendarError(\"update\", err)\n\t}\n\tapplyClosingDayToLegacy(day, updated)\n\treturn nil\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/timetable/internal/application/closingDayCalendarRepository.Update",
-      "owner": "modules/timetable"
-    },
-    {
-      "build": "testhooks",
       "evidence": "func (r dateframeCalendarRepository) Create(ctx context.Context, dateframe *scheduleModels.Dateframe) error {\n\tif dateframe == nil {\n\t\treturn fmt.Errorf(\"%s cannot be nil or zero value\", \"Dateframe\")\n\t}\n\tif err := dateframe.Validate(); err != nil {\n\t\treturn err\n\t}\n\tcreated, err := r.calendar.CreateDateframe(ctx, schoolcalendar.CreateDateframe{DateframeFields: dateframeFieldsFromLegacy(dateframe)})\n\tif err != nil {\n\t\treturn calendarError(\"create\", err)\n\t}\n\tapplyDateframeToLegacy(dateframe, created)\n\treturn nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/timetable/internal/application/dateframeCalendarRepository.Create",
@@ -2543,7 +2494,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (s enrollmentArrivalSchedules) CreateArrivalSchedule(ctx context.Context, studentID int64, weekday int, createdBy int64) error {\n\treturn s.repo.Create(ctx, \u0026scheduleModels.StudentArrivalSchedule{StudentID: studentID, Weekday: weekday, CreatedBy: createdBy})\n}",
+      "evidence": "func (s enrollmentArrivalSchedules) CreateArrivalSchedule(ctx context.Context, studentID int64, weekday int, createdBy int64, enteredByTraeger bool) error {\n\treturn s.repo.Create(ctx, \u0026scheduleModels.StudentArrivalSchedule{StudentID: studentID, Weekday: weekday, CreatedBy: createdBy, EnteredByTraeger: enteredByTraeger})\n}",
       "form": "unclassified-evidence",
       "id": "modules/timetable/internal/application/enrollmentArrivalSchedules.CreateArrivalSchedule",
       "owner": "modules/timetable"
@@ -2564,7 +2515,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (s enrollmentPickupSchedules) UpsertPickupSchedule(ctx context.Context, studentID int64, weekday int, pickupTime time.Time, createdBy int64) error {\n\treturn s.repo.UpsertSchedule(ctx, \u0026scheduleModels.StudentPickupSchedule{StudentID: studentID, Weekday: weekday, PickupTime: pickupTime, CreatedBy: createdBy})\n}",
+      "evidence": "func (s enrollmentPickupSchedules) UpsertPickupSchedule(ctx context.Context, studentID int64, weekday int, pickupTime time.Time, createdBy int64, enteredByTraeger bool) error {\n\treturn s.repo.UpsertSchedule(ctx, \u0026scheduleModels.StudentPickupSchedule{StudentID: studentID, Weekday: weekday, PickupTime: pickupTime, CreatedBy: createdBy, EnteredByTraeger: enteredByTraeger})\n}",
       "form": "unclassified-evidence",
       "id": "modules/timetable/internal/application/enrollmentPickupSchedules.UpsertPickupSchedule",
       "owner": "modules/timetable"

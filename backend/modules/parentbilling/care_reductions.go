@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The rule chain of the monthly care contribution (#4685, spec #4611 user
@@ -77,26 +78,32 @@ var (
 // either a share (DiscountBasisPoints), an amount (DiscountCents) or, for an
 // income level or a sibling rule, a fixed end price (PriceCents); a sibling
 // rule may instead take the sibling prices of the price list
-// (TariffSiblingPrice, #6196); a cap has CapCents.
+// (TariffSiblingPrice, #6196); a cap has CapCents. A sibling rule reduces
+// the children from the rank SiblingFromChild on or, with
+// SiblingAllChildren, every child of a family of at least that size.
 type CareRuleInput struct {
 	Kind                string         `json:"kind"`
 	Name                string         `json:"name"`
 	ValidFrom           calendar.Date  `json:"valid_from"`
 	ValidUntil          *calendar.Date `json:"valid_until"`
-	SchoolIDs           []int64        `json:"school_ids"`
-	CareOfferingIDs     []int64        `json:"care_offering_ids"`
-	CountSchoolIDs      []int64        `json:"count_school_ids"`
+	SchoolIDs           []ident.ID     `json:"school_ids"`
+	CareOfferingIDs     []ident.ID     `json:"care_offering_ids"`
+	CountSchoolIDs      []ident.ID     `json:"count_school_ids"`
 	SiblingFromChild    *int           `json:"sibling_from_child"`
 	DiscountBasisPoints *int           `json:"discount_basis_points"`
-	DiscountCents       *int64         `json:"discount_cents"`
-	PriceCents          *int64         `json:"price_cents"`
-	CapCents            *int64         `json:"cap_cents"`
+	DiscountCents       *int64         `json:"discount_cents" contract:"number"`
+	PriceCents          *int64         `json:"price_cents" contract:"number"`
+	CapCents            *int64         `json:"cap_cents" contract:"number"`
 	// TariffSiblingPrice is the price-list mode of a sibling rule (#6196):
 	// each further child pays the sibling price of the price list.
 	TariffSiblingPrice bool `json:"tariff_sibling_price"`
 	// CountsFamilyChildren lets a sibling rule count the family's number
 	// (#5918); other kinds never do.
 	CountsFamilyChildren bool `json:"counts_family_children"`
+	// SiblingAllChildren reads SiblingFromChild as the size of the family
+	// from which every child gets the reduction (#7765); other kinds never
+	// carry it.
+	SiblingAllChildren bool `json:"sibling_all_children"`
 }
 
 // CareRuleSet is what the rule page shows: the care rules by kind and
@@ -111,23 +118,26 @@ type CareRuleSet struct {
 // contract from ValidFrom on, with the kind of proof the Abrechnung checked
 // and the day it checked it. A nil ValidUntil is open.
 type CareEvidence struct {
-	ID         int64          `json:"id"`
-	ContractID int64          `json:"contract_id"`
+	ID         ident.ID       `json:"id"`
+	ContractID ident.ID       `json:"contract_id"`
 	Kind       string         `json:"kind"`
-	RuleID     *int64         `json:"rule_id"`
+	RuleID     *ident.ID      `json:"rule_id"`
 	ValidFrom  calendar.Date  `json:"valid_from"`
 	ValidUntil *calendar.Date `json:"valid_until"`
 	Evidence   string         `json:"evidence"`
 	CheckedOn  calendar.Date  `json:"checked_on"`
 	UpdatedAt  time.Time      `json:"updated_at"`
+	// Version is the read-state token of the evidence (ADR 0311): a
+	// change sends it back as expected_version.
+	Version string `json:"version"`
 }
 
 // CareEvidenceInput is an evidence as the Abrechnung writes it; RuleID
 // names the income level of an income evidence.
 type CareEvidenceInput struct {
-	ContractID int64          `json:"contract_id"`
+	ContractID ident.ID       `json:"contract_id"`
 	Kind       string         `json:"kind"`
-	RuleID     *int64         `json:"rule_id"`
+	RuleID     *ident.ID      `json:"rule_id"`
 	ValidFrom  calendar.Date  `json:"valid_from"`
 	ValidUntil *calendar.Date `json:"valid_until"`
 	Evidence   string         `json:"evidence"`
@@ -137,8 +147,8 @@ type CareEvidenceInput struct {
 // CareEvidenceContract is a contract of the Träger as the evidence page
 // shows it: the child, its school and the evidences of the contract.
 type CareEvidenceContract struct {
-	ContractID     int64          `json:"contract_id"`
-	SchoolID       int64          `json:"school_id"`
+	ContractID     ident.ID       `json:"contract_id"`
+	SchoolID       ident.ID       `json:"school_id"`
 	SchoolName     string         `json:"school_name"`
 	ChildFirstName string         `json:"child_first_name"`
 	ChildLastName  string         `json:"child_last_name"`
@@ -156,23 +166,28 @@ type CareEvidenceSet struct {
 // CareReduction is one reduction of an invoice by a rule of the chain, with
 // a copy of the rule. A sibling reduction names the child's rank among the
 // FamilyChildren its rule counted; the rank follows the base price, the
-// highest first, then the age, the oldest first.
+// highest first, then the age, the oldest first. A reduction for the size
+// of the family (SiblingAllChildren) keeps the rank too, but did not depend
+// on it.
 type CareReduction struct {
-	Kind                string `json:"kind"`
-	RuleID              int64  `json:"rule_id"`
-	Name                string `json:"name"`
-	ChildRank           *int   `json:"child_rank"`
-	FamilyChildren      *int   `json:"family_children"`
-	DiscountBasisPoints *int   `json:"discount_basis_points"`
-	DiscountCents       *int64 `json:"discount_cents"`
-	PriceCents          *int64 `json:"price_cents"`
-	CapCents            *int64 `json:"cap_cents"`
+	Kind                string   `json:"kind"`
+	RuleID              ident.ID `json:"rule_id"`
+	Name                string   `json:"name"`
+	ChildRank           *int     `json:"child_rank"`
+	FamilyChildren      *int     `json:"family_children"`
+	DiscountBasisPoints *int     `json:"discount_basis_points"`
+	DiscountCents       *int64   `json:"discount_cents" contract:"number"`
+	PriceCents          *int64   `json:"price_cents" contract:"number"`
+	CapCents            *int64   `json:"cap_cents" contract:"number"`
 	// TariffSiblingPrice copies the price-list mode of a sibling rule.
 	TariffSiblingPrice bool `json:"tariff_sibling_price"`
+	// SiblingAllChildren copies the family-size mode of a sibling rule
+	// (#7765): every child of the family got the reduction.
+	SiblingAllChildren bool `json:"sibling_all_children"`
 	// CareOfferingIDs are the modules the rule reduced, none for all; a
 	// later run of the month places an earlier reduction by them.
-	CareOfferingIDs []int64 `json:"care_offering_ids"`
-	AmountCents     int64   `json:"amount_cents"`
+	CareOfferingIDs []ident.ID `json:"care_offering_ids"`
+	AmountCents     int64      `json:"amount_cents" contract:"number"`
 }
 
 // CareReductions lets the Abrechnung of a Träger keep the rules of the
@@ -183,13 +198,16 @@ type CareReduction struct {
 type CareReductions interface {
 	CareRules(ctx context.Context, reviewer HolidayReviewer) (CareRuleSet, error)
 	// SaveCareRule creates a rule when ruleID is zero and changes that one
-	// otherwise.
-	SaveCareRule(ctx context.Context, reviewer HolidayReviewer, ruleID int64, input CareRuleInput) (CareRuleSet, error)
+	// otherwise, as the Abrechnung read it: a rule changed since
+	// expectedVersion is refused with readstate.ErrChanged (ADR 0311).
+	SaveCareRule(ctx context.Context, reviewer HolidayReviewer, ruleID int64, input CareRuleInput, expectedVersion string) (CareRuleSet, error)
 	DeleteCareRule(ctx context.Context, reviewer HolidayReviewer, ruleID int64) (CareRuleSet, error)
 	CareEvidences(ctx context.Context, reviewer HolidayReviewer) (CareEvidenceSet, error)
 	// SaveCareEvidence creates an evidence when evidenceID is zero and
-	// changes that one otherwise.
-	SaveCareEvidence(ctx context.Context, reviewer HolidayReviewer, evidenceID int64, input CareEvidenceInput) (CareEvidenceSet, error)
+	// changes that one otherwise, as the Abrechnung read it: an evidence
+	// changed since expectedVersion is refused with readstate.ErrChanged
+	// (ADR 0311).
+	SaveCareEvidence(ctx context.Context, reviewer HolidayReviewer, evidenceID int64, input CareEvidenceInput, expectedVersion string) (CareEvidenceSet, error)
 	DeleteCareEvidence(ctx context.Context, reviewer HolidayReviewer, evidenceID int64) (CareEvidenceSet, error)
 	CareCostShares
 	// The Abrechnung checks the children of the families (#5918).

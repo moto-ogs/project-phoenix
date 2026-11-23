@@ -249,16 +249,33 @@ func TestWeekProtocolRoutesNotesCloseAndPDF(t *testing.T) {
 	rr = routes.call(t, member, http.MethodPut, path+"/notes", `{"week_note":"x","days":[{"date":"2027-09-13","note":"y"}]}`, weekProtocolRead)
 	assert.Equal(t, http.StatusBadRequest, rr.Code, "a day of the following week is refused")
 
-	rr = routes.call(t, member, http.MethodPut, path+"/notes", `{"week_note":"Ruhige Woche","days":[{"date":"2027-09-10","note":"Ausflug in den Park"}]}`, weekProtocolRead)
+	rr = routes.call(t, member, http.MethodGet, path, "", weekProtocolRead)
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
-	assert.Equal(t, "Ruhige Woche", weekProtocolBody(t, rr)["week_note"])
+	read := weekProtocolBody(t, rr)["version"].(string)
+	require.NotEmpty(t, read)
 
-	rr = routes.call(t, member, http.MethodPost, path+"/close", "", weekProtocolRead)
+	rr = routes.call(t, member, http.MethodPut, path+"/notes", `{"week_note":"Ruhige Woche","days":[{"date":"2027-09-10","note":"Ausflug in den Park"}],"expected_version":"`+read+`"}`, weekProtocolRead)
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	saved := weekProtocolBody(t, rr)
+	assert.Equal(t, "Ruhige Woche", saved["week_note"])
+
+	// ADR 0311: the protocol read before these notes is neither saved over
+	// nor closed; nothing of it is disclosed or rendered.
+	rr = routes.call(t, member, http.MethodPut, path+"/notes", `{"week_note":"Überschrieben","expected_version":"`+read+`"}`, weekProtocolRead)
+	assert.Equal(t, http.StatusConflict, rr.Code, rr.Body.String())
+	assert.Contains(t, rr.Body.String(), "general.changed_since_read")
+	rr = routes.call(t, member, http.MethodPost, path+"/close", `{"expected_version":"`+read+`"}`, weekProtocolRead)
+	assert.Equal(t, http.StatusConflict, rr.Code, rr.Body.String())
+	assert.Contains(t, rr.Body.String(), "general.changed_since_read")
+	assert.Empty(t, routes.renderer.docs, "a refused closing renders nothing")
+
+	rr = routes.call(t, member, http.MethodPost, path+"/close", `{"expected_version":"`+saved["version"].(string)+`"}`, weekProtocolRead)
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 	closed := weekProtocolBody(t, rr)
 	assert.Equal(t, "closed", closed["status"])
 	assert.Equal(t, "Lea Leitung", closed["closed_by_name"])
-	require.Len(t, routes.accessLog.entries, 2, "the note and close responses are recorded as disclosures")
+	assert.Equal(t, "Ruhige Woche", closed["week_note"], "the refused notes were not saved")
+	require.Len(t, routes.accessLog.entries, 3, "the opening, the note and the close responses are recorded as disclosures")
 
 	rr = routes.call(t, member, http.MethodPut, path+"/notes", `{"week_note":"später"}`, weekProtocolRead)
 	assert.Equal(t, http.StatusConflict, rr.Code, "a closed protocol takes no notes")
@@ -272,7 +289,7 @@ func TestWeekProtocolRoutesNotesCloseAndPDF(t *testing.T) {
 		assert.Contains(t, rr.Header().Get("Content-Disposition"), "wochenprotokoll-baeren-2027-09-06.pdf")
 		assert.Equal(t, "%PDF-1.4", rr.Body.String(), "the stored file")
 	}
-	require.Len(t, routes.accessLog.entries, 4, "each PDF response is recorded as a disclosure")
+	require.Len(t, routes.accessLog.entries, 5, "each PDF response is recorded as a disclosure")
 	require.Len(t, routes.renderer.docs, 1, "a download serves the stored file and renders nothing")
 	doc := routes.renderer.docs[0]
 	assert.Equal(t, "Wochenprotokoll", doc.Title)
@@ -292,11 +309,15 @@ func TestWeekProtocolLeadershipCanWriteWithoutGroupMembership(t *testing.T) {
 	routes := setupWeekProtocolRoutes(t)
 	path := "/" + strconv.FormatInt(routes.protocolID, 10)
 
-	rr := routes.call(t, weekProtocolCaller{}, http.MethodPut, path+"/notes", `{"week_note":"Leitungsnotiz"}`, weekProtocolLeadership)
+	rr := routes.call(t, weekProtocolCaller{}, http.MethodGet, path, "", weekProtocolLeadership)
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
-	assert.Equal(t, "Leitungsnotiz", weekProtocolBody(t, rr)["week_note"])
+	read := weekProtocolBody(t, rr)["version"].(string)
+	rr = routes.call(t, weekProtocolCaller{}, http.MethodPut, path+"/notes", `{"week_note":"Leitungsnotiz","expected_version":"`+read+`"}`, weekProtocolLeadership)
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	saved := weekProtocolBody(t, rr)
+	assert.Equal(t, "Leitungsnotiz", saved["week_note"])
 
-	rr = routes.call(t, weekProtocolCaller{}, http.MethodPost, path+"/close", "", weekProtocolLeadership)
+	rr = routes.call(t, weekProtocolCaller{}, http.MethodPost, path+"/close", `{"expected_version":"`+saved["version"].(string)+`"}`, weekProtocolLeadership)
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 
 	rr = routes.call(t, weekProtocolCaller{}, http.MethodGet, path+"/pdf", "", weekProtocolLeadership)

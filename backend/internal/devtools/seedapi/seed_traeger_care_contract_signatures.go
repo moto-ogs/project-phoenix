@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedTraegerCareContractSignaturesStep signs the demo care contracts
@@ -85,8 +86,8 @@ func seedPaperContracts(client *Client, auth AuthRef, school int64, minimum int)
 	var drafts struct {
 		Data struct {
 			Contracts []struct {
-				ID        int64  `json:"id"`
-				PartyName string `json:"party_name"`
+				ID        ident.ID `json:"id"`
+				PartyName string   `json:"party_name"`
 			} `json:"contracts"`
 		} `json:"data"`
 	}
@@ -95,7 +96,7 @@ func seedPaperContracts(client *Client, auth AuthRef, school int64, minimum int)
 	}
 	count := min(missing, len(drafts.Data.Contracts))
 	for _, draft := range drafts.Data.Contracts[len(drafts.Data.Contracts)-count:] {
-		if err := seedPaperContractSignature(client, auth, draft.ID, draft.PartyName); err != nil {
+		if err := seedPaperContractSignature(client, auth, int64(draft.ID), draft.PartyName); err != nil {
 			return 0, err
 		}
 	}
@@ -173,8 +174,8 @@ func seedSendContractsToParents(rt *Runtime, auth AuthRef) error {
 	var drafts struct {
 		Data struct {
 			Contracts []struct {
-				ID         int64  `json:"id"`
-				PartyEmail string `json:"party_email"`
+				ID         ident.ID `json:"id"`
+				PartyEmail string   `json:"party_email"`
 			} `json:"contracts"`
 		} `json:"data"`
 	}
@@ -184,7 +185,7 @@ func seedSendContractsToParents(rt *Runtime, auth AuthRef) error {
 	ids := []int64{}
 	for _, draft := range drafts.Data.Contracts {
 		if emails[strings.ToLower(draft.PartyEmail)] {
-			ids = append(ids, draft.ID)
+			ids = append(ids, int64(draft.ID))
 		}
 	}
 	if len(ids) == 0 {

@@ -3,7 +3,8 @@ import { z } from "zod";
 import {
   arr,
   bool,
-  int64StringOrNumber,
+  fileAnswer,
+  int64String,
   nullable,
   object,
   optional,
@@ -11,7 +12,11 @@ import {
   safeInt,
   str,
   success,
+  type OpenEnum,
 } from "./runtime";
+import {
+  type ListFormat,
+} from "./shared.generated";
 
 /** Go: birthdays.celebrationResponse */
 export interface celebrationResponse {
@@ -27,7 +32,7 @@ export interface celebrationResponse {
 
 export const celebrationResponseSchema: z.ZodType<celebrationResponse, unknown> = object<celebrationResponse>({
   kind: str,
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   group_name: optional(str),
   school_class: optional(str),
@@ -68,14 +73,16 @@ export const optOutResponseSchema: z.ZodType<optOutResponse, unknown> = object<o
   opt_out: bool,
 });
 
+/** Go: birthdays.staffExportRequest */
+export interface staffExportRequest {
+  format?: OpenEnum<ListFormat>;
+  title?: string;
+  months?: string[] | null;
+}
+
 /** Go: birthdays.optOutRequest */
 export interface optOutRequest {
   opt_out?: boolean | null;
-}
-
-/** Query of GET /api/birthdays/ */
-export interface GetBirthdaysQuery {
-  week_start?: string;
 }
 
 export const routes = {
@@ -83,7 +90,9 @@ export const routes = {
     method: "GET",
     pattern: "/api/birthdays/",
     portals: ["tenant"],
-    query: ["week_start"],
+    query: {
+      "week_start": { kind: "date" },
+    },
     response: success(overviewResponseSchema),
   },
   "GET /api/birthdays/opt-out": {
@@ -91,6 +100,13 @@ export const routes = {
     pattern: "/api/birthdays/opt-out",
     portals: ["tenant"],
     response: success(optOutResponseSchema),
+  },
+  "POST /api/birthdays/staff-export": {
+    method: "POST",
+    pattern: "/api/birthdays/staff-export",
+    portals: ["tenant"],
+    request: requestBody<staffExportRequest>(),
+    response: fileAnswer,
   },
   "PUT /api/birthdays/opt-out": {
     method: "PUT",

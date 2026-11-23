@@ -4,6 +4,21 @@ Read the relevant section before changing auth, portal routing, enrollment,
 tenant scoping, IoT endpoints, or kiosk presence modes. Paths start at the
 repository root unless the section says otherwise.
 
+## Browser query parameters and request bodies
+
+Go's `RouteContracts()` declares each query key and its kind. Generated
+TypeScript route entries keep those kinds, allowed string values and
+repetition. `bffJson` and `bffFile` use them to type the query: dates are
+`YYYY-MM-DD` strings, IDs and text are strings, integers are numbers and
+booleans are booleans. The helpers serialize values to the URL; the catalog
+proxy filters names only and forwards every occurrence of each registered
+key to Go, which validates the values.
+
+Generated JSON body field types remain optional. The Go handler validates
+required fields and field combinations, as recorded in [ADR 0270](../adr/0270-der-vertrag-zwischen-go-und-frontend-entsteht-aus-der-go-registrierung.md).
+See [the route example](new-route.md) for `from` and `to` on
+`GET /api/students/{id}/partial-absences`.
+
 ## Ecosystem and IoT
 
 The sibling `../PyrePortal/` repository runs the React web kiosk on GKT/GKTL
@@ -409,8 +424,9 @@ Legacy plaintext counters are moved to hashed keys on their next request,
 without resetting the active quota. Rotating the signing secret starts new
 hashed windows, as it invalidates existing authentication material.
 The public routes retain their separate IP-based abuse limit. Auth,
-email confirmation, invitations, public enrollment and holiday links, and
-data-return retrieval share their IP-based quotas across API replicas. The
+email confirmation, invitations, public enrollment and holiday links, the
+signing link of a care contract mail, and data-return retrieval share their
+IP-based quotas across API replicas. The
 kiosk error-report quota is shared per device. The general request limiter
 remains per replica. See [replica runtime state](operations.md#replica-runtime-state).
 
@@ -432,7 +448,7 @@ line, and writes one WARN. It still counts in
 ## Portal session isolation
 
 Each portal has its own NextAuth instance, cookie, and base path.
-Operator, parents, school, and Träger cookies are host-only. The tenant cookie is
+Operator, parents, school, caterer, and Träger cookies are host-only. The tenant cookie is
 domain-scoped to support switching between school subdomains (localhost:
 host-only). The proxy redirects cross-host paths to their canonical subdomain.
 
@@ -463,13 +479,17 @@ proxy's `X-Moto-Original-Path`; the browser keeps the fragment), the BFF
 refuses a school's session on the bare domain, and `TenantGuard` moves a tab
 still on path mode to the subdomain.
 
+For browser callers, [One transport](frontend-api.md#browser-calls) names
+the lint rules for BFF calls, raw transport and keeping wire IDs as strings.
+The fetch observer, session renewal and client log shipping are transport
+infrastructure, not patterns to copy for new callers.
+
 All tabs of a portal also share one account: another account that signs in
 in tab B replaces tab A's session before tab A hears of it (#5183). Every
 browser request to the tab's own `/api/` therefore names the account its
 `SessionProvider` shows in `X-Moto-Session-Account`, set centrally by
-`SessionAccountBinding` (mounted first in every portal's providers), the
-fetch observer and the Axios interceptor of `api-transport.ts`; another
-origin never gets it. Every portal's route wrapper
+`SessionAccountBinding` (mounted first in every portal's providers) and the
+fetch observer; another origin never gets it. Every portal's route wrapper
 (`createResponseAwareAuth`, so `tenantPortal.withAuth` too) refuses a header that
 names another account than the cookie with 409
 `identity.session_account_mismatch` before the route runs
@@ -505,7 +525,9 @@ rows match every scope), not expired. Otherwise the token counts as
 unverified, so every Authenticator answers 401 and public routes treat the
 request as anonymous; a failed read answers 503 `general.unavailable` and
 never lets the token through. Operator tokens keep their own family check
-(`RequiresActiveOperator`); device keys, refresh, MFA and enrollment tokens
+(`RequiresActiveOperator`): an ended family (missing, gone, expired, foreign)
+answers 401 like the other portals, only a deactivated operator 403
+`identity.account_inactive`; device keys, refresh, MFA and enrollment tokens
 are not access tokens and pass unchanged. The check reads the database each
 time (one indexed statement in its own administrative transaction, budget
 `identity.access_session.verify`) and caches nothing, so a confirmed
@@ -739,11 +761,12 @@ old session back; the browser only saves requests.
    keeps the session unchanged, marks it `notBooked` (the session route
    carries the mark, the guards read it), asks again after a minute and
    clears the mark with the next rotation or a live family answer
-   (`token-refresh.ts`). Every other 401/403 of the refresh ends the session
-   and is remembered per process (#2952); a snapshot of a session whose
-   refresh is remembered as refused does not hydrate, so the login page
-   cannot send the browser back to a portal whose requests end it. A family that cannot be
-   read (503) and an expired
+   (`token-refresh.ts`). A refresh 401 or any other 403 with a complete body
+   ends the session and is remembered per process (#2952). An interrupted
+   403 body is retryable because it may have carried `module.not_booked`.
+   A snapshot of a session whose refresh is remembered as refused does not
+   hydrate, so the login page cannot send the browser back to a portal whose
+   requests end it. A family that cannot be read (503) and an expired
    access token, which the backend refuses before it reads the family, leave
    the shown session as it is; its own refresh decides.
 3. **Family check.** `POST /auth/session/validate` without a refresh token
@@ -807,6 +830,23 @@ installed. Other tabs, a tab started during a logout and the public tenant
 pages need no barrier: their answers pass the same server gates.
 
 ### Login, refresh, and MFA
+
+All six portals use generated `RouteFile` entries for session calls to Go.
+`frontend/src/server/auth/portals.ts` selects the login, refresh and
+logout contracts, including which bearer logout takes. Login and factor
+routes decode and install the pair server-side, then answer the browser
+through the shared types in `frontend/src/lib/session-bff.ts`. The only
+proofs sent before sign-in are limited enrollment or challenge proofs,
+never a session pair. These routes do not enter a catalog proxy allowlist.
+For the call syntax and error handling, see
+[Frontend API](frontend-api.md#generated-contract-adr-0270).
+
+The contract types closed Go fields and requires a field-local
+`contract_json` reason for open ones. The reason appears in `contract.json`.
+Refining a response must keep its existing wire data. A request may refine
+free JSON with `contract_refines` only when the previously accepted input
+still works; otherwise, add the new shape before retiring the old one.
+A password or code goes to Go once, not again after session renewal.
 
 Backend paths in this section are relative to `backend/`:
 
@@ -938,7 +978,7 @@ Backend paths in this section are relative to `backend/`:
   the session's account (pinned before the code is compared) and mints a new
   Träger family with `mfa_by_device` false through the session mint, which
   retires the presented family with the recovery grace and keeps its switch
-  lineage. The BFF installs the pair and answers `{session_renewed}`; when it
+  lineage. The BFF installs the pair and answers `{ status, data: { session_renewed } }`; when it
   cannot install it, the portal runs its logout and signs in once without
   the device cookie (the BFF drops it for `ignore_trusted_device`); the
   school app links to the Träger login with
@@ -1007,20 +1047,18 @@ Backend paths in this section are relative to `backend/`:
 
 #### Account-wide changes by a school administrator (#6862)
 
-The login address, the name and the second factor belong to the account, not
-to one school. A school administrator (`users:manage`) changes the address
-(`PUT /auth/accounts/{id}`) and resets the second factor
-(`DELETE /auth/accounts/{id}/mfa`) only while their school alone holds the
-account: it is the account's only active school and the account has neither
-a retained Träger-Büro membership nor parents-portal access at a Träger
-(ADR 0216) (`AccountOwnership` in
+The second factor belongs to the account, not to one school. A school
+administrator (`users:manage`) resets it (`DELETE /auth/accounts/{id}/mfa`)
+only while their school alone holds the account: it is the account's only
+active school and the account has neither a retained Träger-Büro membership
+nor parents-portal access at a Träger (ADR 0216) (`AccountOwnership` in
 `modules/identityaccess/internal/application/account_ownership.go`). Otherwise
-both answer 403 `identity.account_shared_across_schools`; the school-scoped
-override (`PUT …/mfa/override`) stays open, and the operator changes the rest.
-A changed address mails the previous address and a reset mails the holder
-(`account-login-address-changed.html`, `account-mfa-reset.html`), queued in the
-transaction of the change. The school administrator's account-wide MFA writes
-leave the request's school transaction for an administrative one.
+it answers 403 `identity.account_shared_across_schools`; the school-scoped
+override (`PUT …/mfa/override`) stays open, and the operator resets it. A
+reset mails the holder (`account-mfa-reset.html`), queued in the transaction
+of the reset. The school administrator's account-wide MFA writes leave the
+request's school transaction for an administrative one. No school route
+changes an account's login address.
 
 #### Privileged MFA floor (#3841, slice 3841-f)
 
@@ -1043,8 +1081,10 @@ issues no session. An account's own password change (`POST /auth/password`,
 at every school and portal ends, its reset links are spent and its remembered
 devices revoked; only the family of the access token the change is made with
 stays signed in. The caterer's own change ends its current session too.
-An operator's password change revokes the operator's remembered devices as
-well. The account's credential generation
+An operator's password change revokes every operator session family, the
+current one included, and the operator's remembered devices. Both portals
+then sign out to their login, which asks once for the new password
+(`markPasswordChanged`, `frontend/src/lib/login-session-notice.ts`). The account's credential generation
 (`auth.accounts.mfa_reset_generation`) binds every artifact a password check
 hands out. Exactly one function writes the account credential
 (`Store.WriteAccountCredential`: password hash, one-time flag, generation;
@@ -1152,7 +1192,8 @@ moved pages. The page list comes from the `app/<portal>/` folders:
 `pnpm generate:portal-pages` writes `src/proxy-pages.generated.ts`, and
 `pnpm run check` fails when it is stale. A portal host answers 404 for every
 `/api/*` path outside its allow-list, because the domain-scoped tenant cookie
-reaches it too; a new BFF route that a portal page calls belongs in that list.
+reaches it too; a portal's catalog routes pass under its prefix, and a path
+outside it that a portal page calls belongs in that list.
 `[tenant]/layout.tsx` resolves slugs through `/auth/tenant/resolve?slug=...`
 (cached five minutes). `POST /auth/switch-tenant` returns a tenant-session JWT
 for the target school, not a `scope=school` portal token.
@@ -1195,7 +1236,7 @@ not composed. The backend routes are public, take no cookies, and rely on
 
 | Route | Contract |
 |---|---|
-| `POST /demo/access-requests` | `email`, `school_name`, `first_name`, `last_name` (both required, at most 120 bytes each, whitespace runs collapsed; the demo school's caregiver and parent carry exactly these names), `contact_opt_in`, optional `phone` (callback number, free text; whitespace runs collapsed, at most 50 bytes; dropped without `contact_opt_in`; not stored, it reaches only the team's lead mail), optional `src` and `role` (a demo role, appended to the mailed link as `&role=`) → always `202 {link_sent: true}`, never the link itself; `422 demo_access_invalid`; `429 demo_access_rate_limited` with `Retry-After` (seconds); `503 demo_capacity_reached` |
+| `POST /demo/access-requests` | `email`, `school_name`, `first_name`, `last_name` (both required, at most 120 bytes each, whitespace runs collapsed; the demo school's caregiver and parent carry exactly these names), `contact_opt_in`, optional `phone` (callback number, free text; whitespace runs collapsed, at most 50 bytes; dropped without `contact_opt_in`; reaches the team's lead mail and, when configured, the temporary CRM queue described below), optional `src` and `role` (a demo role, appended to the mailed link as `&role=`) → always `202 {link_sent: true}`, never the link itself; `422 demo_access_invalid`; `429 demo_access_rate_limited` with `Retry-After` (seconds); `503 demo_capacity_reached` |
 | `GET /demo/access/status` | token in `Authorization: Bearer` → `{status: preparing\|ready\|failed, school_name}` (the OGS name the prospect gave, shown while waiting, #3464), plus `school_url` (origin of the demo school) when `ready` |
 | `POST /demo/access/sessions` | `{token, role?}` → `{access_token, refresh_token, demo: {access_id, role, src, fixed_role, traeger}}` (tenant session; parents portal session for `role: parent`, #3468; Träger-Portal session for `role: traeger`, #6193); `traeger` says whether the school has a Träger of its own; `409 demo_school_preparing`; `422 demo_access_invalid` for an unknown role or `traeger` without an own Träger |
 | `POST /demo/access/reset` | `{token}` → `202 {status: "preparing", entry_url}` (#3470): a fresh demo school is queued for the same access with the same names, the old one is soft-deleted and its sessions are revoked; `entry_url` is the waiting room with the token in the fragment, as in the mailed link. `409 demo_school_preparing` while the current school is still being seeded; `422 demo_access_invalid` for the shared standing school; `429 demo_access_rate_limited` with `Retry-After`, because a restart counts against the same per-address and per-IP windows as a request; `503 demo_capacity_reached` never for a restart, because the old school gives its place back first |
@@ -1205,6 +1246,37 @@ number. Requests during the cooldown still answer `202 {link_sent: true}`
 but send neither the access link nor the lead mail; the submitted number is
 discarded. Outside the cooldown, a request with a number and `contact_opt_in`
 sends the lead mail even for a known address with unchanged contact consent.
+
+HubSpot sync (#7677) is optional and runs only with `APP_ENV=demo` and a
+nonempty `HUBSPOT_DEMO_TOKEN`. Without the token, demo requests and sessions
+keep their existing behavior. A request queues a CRM event under the same
+conditions as the lead mail: a new address, changed contact consent, or a
+callback number. The cooldown queues nothing. Only contacts with
+`contact_opt_in=true` are sent. The first successful redemption
+(`use_count` 0 → 1) queues `started`; later redemptions, role switches and
+resets do not queue another start.
+
+Identity & Access owns `auth.demo_crm_jobs`. Events are inserted in the same
+transaction as the access creation or first redemption. The embedded demo
+Worker leases jobs and serializes them per email address. HTTP calls happen
+outside database transactions and request handlers. Failed transport, 429
+and 5xx responses retry within the existing outbox attempt budget, respecting
+`Retry-After`; permanent errors and exhausted retries erase the payload and
+report a sanitized Worker error. Successful and cancelled jobs are deleted.
+Access expiry deletes remaining jobs through the foreign key. The callback
+number exists only in the requested job payload until completion; it is not
+stored on `auth.demo_accesses` or copied into the started event.
+
+Before each delivery the Worker checks the latest unexpired access's consent.
+A request withdrawing consent deletes queued events for that address. A
+provider request already in flight cannot be retracted. This integration does
+not delete HubSpot contacts or manage HubSpot subscriptions or follow-up
+workflows; those require their separate consent and retention process.
+Contacts are matched by email. Maintained first and last names are preserved;
+blank names are filled. Demo properties record access ID, request/start
+instants, school name, source and contact opt-in. An already started contact
+is not downgraded to requested. Activation requires the private app token and
+matching HubSpot properties; see the runtime environment documentation.
 
 Demo roles (#3467): `caregiver`, `lead`, `all`. A role first becomes the only
 role of the visitor's own caregiver in its school (`user` for `caregiver`,
@@ -1414,6 +1486,11 @@ answer holds the state, the period and per child the first name with weeks,
 time models, host schools and placements; no health information, address,
 contact, last name or date of birth. The token lives in the registration row,
 so the link ends when the retention deletes the registration. Logs redact it.
+
+The browser reaches the link, its summary (`POST /traeger/holiday-quotes/{token}`)
+and the status at `/api/traeger/…` through the Träger proxy's public routes
+(#2352), which read no session; the parents host opens exactly
+`/api/traeger/holiday-registrations/` and `/api/traeger/holiday-quotes/`.
 
 The start page of the parents app reads
 `GET /parent/me/holiday-registrations` (#6671, ADR 0207): the published

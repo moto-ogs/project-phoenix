@@ -1,16 +1,14 @@
 "use client";
 
 import { Search } from "lucide-react";
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  useSyncExternalStore,
-} from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "~/components/ui/button";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
+import {
+  useSearchShortcut,
+  useSearchShortcutLabel,
+} from "~/lib/hooks/use-search-shortcut";
 import type { SchoolSearchScope } from "~/lib/school-search";
 import {
   SchoolSearchSlotContext,
@@ -47,27 +45,6 @@ const PRELOAD_DELAY_MS = 2000;
 const SEARCH_BUTTON_TOOLTIP =
   "Öffnet die Suche nach Kindern, Familien, Team, Räumen, Seiten, Einstellungen und Hilfe.";
 
-const subscribeNothing = () => () => undefined;
-
-/** "⌘ K" on a Mac, "Strg K" elsewhere; empty during server rendering. */
-function useShortcutLabel(): string {
-  return useSyncExternalStore(
-    subscribeNothing,
-    () => (/Mac|iPhone|iPad/.test(navigator.userAgent) ? "⌘ K" : "Strg K"),
-    () => "",
-  );
-}
-
-function isEditableTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false;
-  return (
-    target.isContentEditable ||
-    target.tagName === "INPUT" ||
-    target.tagName === "TEXTAREA" ||
-    target.tagName === "SELECT"
-  );
-}
-
 interface SchoolSearchButtonProps {
   readonly placement: SchoolSearchPlacement;
   readonly onOpen: () => void;
@@ -82,7 +59,7 @@ function SchoolSearchButton({
   placement,
   onOpen,
 }: Readonly<SchoolSearchButtonProps>) {
-  const shortcut = useShortcutLabel();
+  const shortcut = useSearchShortcutLabel();
   if (placement === "moreSheet") {
     return (
       <Button
@@ -168,25 +145,14 @@ export function SchoolSearchProvider({
   const [loadFailed, setLoadFailed] = useState(false);
   // What the server granted this account, from its last answer.
   const [scope, setScope] = useState<SchoolSearchScope | null>(null);
-  // The shortcut listener reads the open state without re-subscribing.
+  // The load callback reads the open state of the moment.
   const openRef = useRef(isOpen);
   useEffect(() => {
     openRef.current = isOpen;
   }, [isOpen]);
 
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key?.toLowerCase() !== "k") return;
-      if (!(event.metaKey || event.ctrlKey)) return;
-      if (event.altKey || event.shiftKey) return;
-      // Inside a field Cmd/Ctrl+K stays the field's own (a link in an editor).
-      if (isEditableTarget(event.target) && !openRef.current) return;
-      event.preventDefault();
-      setIsOpen((current) => !current);
-    };
-    globalThis.addEventListener("keydown", handleKeyDown);
-    return () => globalThis.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  const toggle = useCallback(() => setIsOpen((current) => !current), []);
+  useSearchShortcut(isOpen, toggle);
 
   useEffect(() => {
     if (hasDialog) return;

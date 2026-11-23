@@ -23,24 +23,25 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // DeviationHistoryEvent is one protocol row in the response.
 type DeviationHistoryEvent struct {
-	ID               int64           `json:"id"`
-	ActivityGroupID  *int64          `json:"activity_group_id,omitempty"`
+	ID               ident.ID        `json:"id"`
+	ActivityGroupID  *ident.ID       `json:"activity_group_id,omitempty"`
 	OccurrenceDate   string          `json:"occurrence_date"`
 	StartTime        string          `json:"start_time"`
-	InstanceID       *int64          `json:"instance_id,omitempty"`
+	InstanceID       *ident.ID       `json:"instance_id,omitempty"`
 	EventType        string          `json:"event_type"`
-	SubjectStaffID   *int64          `json:"subject_staff_id,omitempty"`
+	SubjectStaffID   *ident.ID       `json:"subject_staff_id,omitempty"`
 	SubjectStaffName *string         `json:"subject_staff_name,omitempty"`
-	RelatedStaffID   *int64          `json:"related_staff_id,omitempty"`
+	RelatedStaffID   *ident.ID       `json:"related_staff_id,omitempty"`
 	RelatedStaffName *string         `json:"related_staff_name,omitempty"`
-	ActorAccountID   *int64          `json:"actor_account_id,omitempty"`
+	ActorAccountID   *ident.ID       `json:"actor_account_id,omitempty"`
 	ActorName        *string         `json:"actor_name,omitempty"`
-	OldValue         json.RawMessage `json:"old_value,omitempty"`
-	NewValue         json.RawMessage `json:"new_value,omitempty"`
+	OldValue         json.RawMessage `json:"old_value,omitempty" contract_json:"The historical event's subject and field select the shape of its previous value"`
+	NewValue         json.RawMessage `json:"new_value,omitempty" contract_json:"The historical event's subject and field select the shape of its new value"`
 	Reason           *string         `json:"reason,omitempty"`
 	OccurredAt       string          `json:"occurred_at"` // RFC3339
 }
@@ -116,17 +117,17 @@ func (rs *Resource) getDeviationHistory(w http.ResponseWriter, r *http.Request) 
 	out := make([]DeviationHistoryEvent, 0, len(events))
 	for _, ev := range events {
 		out = append(out, DeviationHistoryEvent{
-			ID:               ev.ID,
-			ActivityGroupID:  ev.ActivityGroupID,
+			ID:               ident.ID(ev.ID),
+			ActivityGroupID:  (*ident.ID)(ev.ActivityGroupID),
 			OccurrenceDate:   ev.OccurrenceDate.String(),
 			StartTime:        ev.StartTime.Format("15:04"),
-			InstanceID:       ev.InstanceID,
+			InstanceID:       (*ident.ID)(ev.InstanceID),
 			EventType:        ev.EventType,
-			SubjectStaffID:   ev.SubjectStaffID,
+			SubjectStaffID:   (*ident.ID)(ev.SubjectStaffID),
 			SubjectStaffName: lookupName(staffNames, ev.SubjectStaffID),
-			RelatedStaffID:   ev.RelatedStaffID,
+			RelatedStaffID:   (*ident.ID)(ev.RelatedStaffID),
 			RelatedStaffName: lookupName(staffNames, ev.RelatedStaffID),
-			ActorAccountID:   ev.ActorAccountID,
+			ActorAccountID:   (*ident.ID)(ev.ActorAccountID),
 			ActorName:        lookupName(actorNames, ev.ActorAccountID),
 			OldValue:         ev.OldValue,
 			NewValue:         ev.NewValue,

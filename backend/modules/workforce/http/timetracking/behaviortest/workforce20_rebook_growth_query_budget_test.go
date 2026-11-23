@@ -22,14 +22,20 @@ func TestWorkforce20RebookGrowth(t *testing.T) {
 			testpkg.SetupIsolatedTestDB(t)
 			f := workforcetest.RebookGrowthFixture(t, n)
 			before := f.AugustBalance(t)
+			fingerprint := ""
 			for _, dryRun := range []bool{true, false} {
+				body := f.Body("Workforce20 rebooking", dryRun)
+				if !dryRun {
+					body["expected_fingerprint"] = fingerprint
+				}
 				counter := testpkg.CaptureQueries(t, f.DB)
-				rec := f.Rebook(t, f.Body("Workforce20 rebooking", dryRun))
+				rec := f.Rebook(t, body)
 				counter.Stop()
 				require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 				var result workforce20RebookResponse
 				require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &result), rec.Body.String())
 				require.Equal(t, !dryRun, result.Data.Applied)
+				fingerprint = result.Data.Fingerprint
 				require.Equal(t, float64(n), result.Data.Days)
 				require.Equal(t, n*480, result.Data.BalanceDeltaMinutes)
 				require.False(t, result.Data.AllowanceExceeded)
@@ -37,7 +43,7 @@ func TestWorkforce20RebookGrowth(t *testing.T) {
 				require.Len(t, result.Data.Allowances, 1)
 				require.Equal(t, float64(n), result.Data.Allowances[0].BookingDays)
 				for i, row := range result.Data.Absences {
-					require.Equal(t, f.Absences[i], row.ID)
+					require.Equal(t, f.Absences[i], int64(row.ID))
 					require.Equal(t, "other", row.AbsenceType)
 					require.Equal(t, strconv.FormatInt(f.TypeID, 10), row.AbsenceTypeID)
 				}
@@ -80,10 +86,10 @@ func TestWorkforce20RebookGrowth(t *testing.T) {
 type workforce20RebookResponse struct {
 	Data struct {
 		Absences []struct {
-			ID               int64  `json:"id"`
-			AbsenceType      string `json:"absence_type"`
-			AbsenceTypeID    string `json:"absence_type_id"`
-			AbsenceTypeLabel string `json:"absence_type_label"`
+			ID               testpkg.ID `json:"id"`
+			AbsenceType      string     `json:"absence_type"`
+			AbsenceTypeID    string     `json:"absence_type_id"`
+			AbsenceTypeLabel string     `json:"absence_type_label"`
 		} `json:"absences"`
 		Days                float64 `json:"days"`
 		BalanceDeltaMinutes int     `json:"balance_delta_minutes"`
@@ -92,7 +98,8 @@ type workforce20RebookResponse struct {
 			RemainingDays float64 `json:"remaining_days"`
 			BookingDays   float64 `json:"booking_days"`
 		} `json:"allowances"`
-		AllowanceExceeded bool `json:"allowance_exceeded"`
-		Applied           bool `json:"applied"`
+		AllowanceExceeded bool   `json:"allowance_exceeded"`
+		Applied           bool   `json:"applied"`
+		Fingerprint       string `json:"fingerprint"`
 	} `json:"data"`
 }

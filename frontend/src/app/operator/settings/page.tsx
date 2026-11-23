@@ -18,37 +18,24 @@ import { PasswordChangeModal } from "~/components/auth/password-change-modal";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { SectionCard } from "~/components/ui/section-card";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
-import { apiErrorFromResponse } from "~/lib/api-error";
+import type { OperatorResponse } from "~/lib/contract/shared.generated";
 import { getSessionPersonName } from "~/lib/auth-utils";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
-import { sessionFetch } from "~/lib/session-cache";
+import { bffJson } from "~/lib/bff-fetch";
 import { useSWRAuth } from "~/lib/swr";
+import { markPasswordChanged } from "~/lib/login-session-notice";
+import { useShellAuth } from "~/lib/shell-auth-context";
 import { operatorKeys } from "~/lib/swr/operator-keys";
 import { TrustedDevicesSection } from "~/components/settings/trusted-devices-section";
 import { PasskeySettingsSection } from "~/components/settings/passkey-settings-section";
 
 const logger = createLogger({ component: "OperatorSettingsPage" });
 
-interface OperatorProfile {
-  // The catalog proxy delivers the id as a string (#2352).
-  id: number | string;
-  email: string;
-  display_name: string;
-}
-
-async function fetchOperatorProfile(): Promise<OperatorProfile | null> {
-  const response = await sessionFetch("/api/operator/profile", {
-    method: "GET",
+function fetchOperatorProfile(): Promise<OperatorResponse> {
+  return bffJson("platform", "GET /operator/profile/", {
+    errorMessage: "Operator profile load failed",
   });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Operator profile load failed (${response.status})`,
-    );
-  }
-  const data = (await response.json()) as { data?: OperatorProfile };
-  return data.data ?? null;
 }
 
 function isEmail(value: string | null | undefined): value is string {
@@ -66,6 +53,7 @@ const operatorSettingsLoadingFallback = (
 function OperatorSettingsContent() {
   const { data: session, status, update: updateSession } = useSession();
   const { success: toastSuccess } = useToast();
+  const { logout } = useShellAuth();
   // An address is never a name (#7305); it stays in the email field only.
   const sessionName = getSessionPersonName(session);
   const sessionEmail = session?.user?.email ?? "";
@@ -120,31 +108,19 @@ function OperatorSettingsContent() {
     setIsSaving(true);
     clearProfileError();
     try {
-      const response = await sessionFetch("/api/operator/profile", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ display_name: draftDisplayName }),
+      const updatedProfile = await bffJson(
+        "platform",
+        "PUT /operator/profile/",
+        {
+          body: { display_name: draftDisplayName },
+          errorMessage: "Operator profile update failed",
+        },
+      );
+      await mutateProfile(updatedProfile, { revalidate: false });
+      await updateSession({
+        name: updatedProfile.display_name,
+        email: updatedProfile.email,
       });
-
-      if (!response.ok) {
-        throw await apiErrorFromResponse(
-          response,
-          `Operator profile update failed (${response.status})`,
-        );
-      }
-
-      const data = (await response.json()) as { data?: OperatorProfile };
-      const updatedProfile = data.data;
-      const nextDisplayName = updatedProfile?.display_name ?? draftDisplayName;
-      const nextEmail = updatedProfile?.email ?? email;
-
-      if (updatedProfile) {
-        await mutateProfile(updatedProfile, { revalidate: false });
-      } else {
-        void mutateProfile();
-      }
-
-      await updateSession({ name: nextDisplayName, email: nextEmail });
 
       setIsEditing(false);
       toastSuccess("Profil erfolgreich aktualisiert", { duration: 3000 });
@@ -170,24 +146,13 @@ function OperatorSettingsContent() {
     await emailChange.run(async (op) => {
       clearEmailChangeError();
       try {
-        const response = await sessionFetch(
-          "/api/operator/profile/email-change",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              new_email: emailChangeNewEmail,
-              current_password: emailChangePassword,
-            }),
+        await bffJson("platform", "POST /operator/profile/email-change", {
+          body: {
+            new_email: emailChangeNewEmail,
+            current_password: emailChangePassword,
           },
-        );
-
-        if (!response.ok) {
-          throw await apiErrorFromResponse(
-            response,
-            `Operator email change failed (${response.status})`,
-          );
-        }
+          errorMessage: "Operator email change failed",
+        });
 
         const confirmedEmail = emailChangeNewEmail;
         if (op.isCurrent()) handleCloseEmailDialog();
@@ -226,14 +191,17 @@ function OperatorSettingsContent() {
             <PasswordChangeModal
               isOpen={showPasswordModal}
               onClose={handleClosePasswordModal}
-              apiEndpoint="/api/operator/profile/password"
+              portal="platform"
               errorPath={passwordErrors}
               formRef={passwordFormRef}
+              // The change ended every operator session, this one too (the
+              // backend revokes all families). Sign out to the login, which
+              // asks for the new password. If the logout request fails, the
+              // revoked session still opens nothing (#5194).
               onSuccess={() => {
                 handleClosePasswordModal();
-                toastSuccess("Passwort erfolgreich geändert", {
-                  duration: 3000,
-                });
+                markPasswordChanged();
+                void logout().catch(() => undefined);
               }}
             />
           )}
@@ -386,7 +354,7 @@ function OperatorSettingsContent() {
 
       <SectionCard
         title="Passwort"
-        description="Aktualisiere dein Passwort regelmäßig für zusätzliche Sicherheit."
+        description="Nach dem Ändern meldest du dich auf allen Geräten neu an."
         actions={
           <Button
             type="button"

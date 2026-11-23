@@ -22,6 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	careplanhttp "github.com/moto-ogs/project-phoenix/modules/careplan/http"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 type conflictServiceStub struct {
@@ -132,7 +133,7 @@ func TestResolveRequestConflictErrorCodes(t *testing.T) {
 		want int
 		code string
 	}{
-		{name: "stale group", err: parentrequests.ErrStale, want: http.StatusConflict, code: common.CodeStudentsChangeRequestStale},
+		{name: "stale group", err: readstate.ErrChanged, want: http.StatusConflict, code: readstate.ChangedCode},
 		{name: "missing reason (Care Plan coordinator)", err: parentrequests.ErrReasonRequired, want: http.StatusBadRequest, code: common.CodeStudentsReasonRequired},
 		{name: "malformed command", err: parentrequests.ErrInvalidConflictResolution, want: http.StatusBadRequest},
 		{name: "kind without a domain", err: parentrequests.ErrConflictKindUnsupported, want: http.StatusBadRequest, code: common.CodeStudentsConflictKindUnsupported},

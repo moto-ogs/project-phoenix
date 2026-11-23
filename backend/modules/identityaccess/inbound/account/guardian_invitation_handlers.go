@@ -14,6 +14,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 const errGuardianInvitationServiceUnavailable = "guardian invitation service unavailable"
@@ -47,11 +48,12 @@ func (req *AcceptGuardianInvitationRequest) Bind(_ *http.Request) error {
 }
 
 // AcceptGuardianInvitationResponse mirrors AcceptInvitationResponse so the
-// frontend can reuse mapping helpers.
+// frontend can reuse mapping helpers. The account's ID travels as a string
+// (ADR 0270), as the contract of the public route requires.
 type AcceptGuardianInvitationResponse struct {
-	AccountID  int64  `json:"account_id"`
-	Email      string `json:"email"`
-	TenantSlug string `json:"tenant_slug,omitempty"`
+	AccountID  ident.ID `json:"account_id"`
+	Email      string   `json:"email"`
+	TenantSlug string   `json:"tenant_slug,omitempty"`
 }
 
 func (rs *Resource) validateGuardianInvitation(w http.ResponseWriter, r *http.Request) {
@@ -142,7 +144,7 @@ func (rs *Resource) acceptGuardianInvitation(w http.ResponseWriter, r *http.Requ
 		slog.Int64("account_id", account.ID))
 
 	resp := AcceptGuardianInvitationResponse{
-		AccountID: account.ID,
+		AccountID: ident.ID(account.ID),
 		Email:     account.Email,
 	}
 	if slug := rs.lookupTenantSlugForGuardianInvitation(r.Context(), token); slug != "" {
@@ -158,14 +160,4 @@ func (rs *Resource) lookupTenantSlugForGuardianInvitation(ctx context.Context, t
 		return ""
 	}
 	return rs.GuardianInvitations.GuardianInvitationSchoolSlug(ctx, token)
-}
-
-func (rs *Resource) resendGuardianInvitation(w http.ResponseWriter, r *http.Request) {
-	if rs.GuardianInvitations == nil {
-		common.RenderError(w, r, common.ErrorInternalServer(errors.New(errGuardianInvitationServiceUnavailable)))
-		return
-	}
-	rs.resendInvitationHandler(w, r,
-		rs.GuardianInvitations.ResendGuardianInvitation,
-		"guardian invitation resend requested", "Guardian invitation resent", "Guardian invitation resent successfully")
 }

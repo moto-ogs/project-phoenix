@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The states of a contract (ADR 0088 section 2). The Träger-Büro reaches
@@ -147,7 +148,7 @@ type TemplateInput struct {
 
 // ContractTemplate is the contract template of one offering.
 type ContractTemplate struct {
-	ID int64 `json:"id"`
+	ID ident.ID `json:"id"`
 	TemplateInput
 	UpdatedAt time.Time `json:"updated_at"`
 }
@@ -155,9 +156,9 @@ type ContractTemplate struct {
 // OfferingTemplate is one care offering of a school with its template, or
 // none yet.
 type OfferingTemplate struct {
-	SchoolID     int64             `json:"school_id"`
+	SchoolID     ident.ID          `json:"school_id"`
 	SchoolName   string            `json:"school_name"`
-	OfferingID   int64             `json:"offering_id"`
+	OfferingID   ident.ID          `json:"offering_id"`
 	OfferingName string            `json:"offering_name"`
 	PhaseName    string            `json:"phase_name"`
 	PriceCents   *int              `json:"price_cents"`
@@ -179,8 +180,8 @@ type OfferingTemplate struct {
 
 // CandidateKey names one accepted application child.
 type CandidateKey struct {
-	SchoolID       int64 `json:"school_id"`
-	RequestChildID int64 `json:"request_child_id"`
+	SchoolID       ident.ID `json:"school_id"`
+	RequestChildID ident.ID `json:"request_child_id"`
 }
 
 // Service is one booked service of a contract: on a weekday ("mon" to
@@ -189,10 +190,10 @@ type CandidateKey struct {
 // carry several modules, early and afternoon care for instance; a weekday
 // without a service has no care.
 type Service struct {
-	Weekday        string `json:"weekday"`
-	CareOfferingID int64  `json:"care_offering_id"`
-	ModuleName     string `json:"module_name"`
-	EndsAt         string `json:"ends_at"`
+	Weekday        string   `json:"weekday"`
+	CareOfferingID ident.ID `json:"care_offering_id"`
+	ModuleName     string   `json:"module_name"`
+	EndsAt         string   `json:"ends_at"`
 	// LastDay is the last day the module is booked, set only when it ends
 	// before the contract version does: the contract never promises a
 	// module beyond its booking. Nil means the module runs as long as the
@@ -229,6 +230,9 @@ type Candidate struct {
 	// now (#4680): MailBlockStopped or MailBlockAddress. The contract then
 	// waits until the school corrects or clears the address.
 	MailBlock string `json:"mail_block,omitempty"`
+	// ImportedContractID is the imported contract that covers the child
+	// (TemplateIssue SkipImportedContract).
+	ImportedContractID ident.ID `json:"imported_contract_id,omitempty"`
 }
 
 // CreateResult answers a creation of several drafts: the created contracts
@@ -255,6 +259,10 @@ const (
 	SkipConclusionAutomatic = "conclusion_automatic"
 	SkipAcceptanceMissing   = "acceptance_missing"
 	SkipAcceptanceChanged   = "acceptance_changed"
+	// SkipImportedContract: an imported contract covers the child in the
+	// time of its booked care (#7760), by its child record or, linked to
+	// none, by its names; no second contract is created for that time.
+	SkipImportedContract = "imported_contract"
 )
 
 type ContractFilter struct {
@@ -270,14 +278,14 @@ type ContractFilter struct {
 
 type ContractSummary struct {
 	// StudentID is the child linked to this contract, nil before takeover.
-	StudentID      *int64   `json:"student_id"`
-	ID             int64    `json:"id"`
-	Status         string   `json:"status"`
-	SchoolID       int64    `json:"school_id"`
-	SchoolName     string   `json:"school_name"`
-	ChildFirstName string   `json:"child_first_name"`
-	ChildLastName  string   `json:"child_last_name"`
-	ModuleNames    []string `json:"module_names"`
+	StudentID      *ident.ID `json:"student_id"`
+	ID             ident.ID  `json:"id"`
+	Status         string    `json:"status"`
+	SchoolID       ident.ID  `json:"school_id"`
+	SchoolName     string    `json:"school_name"`
+	ChildFirstName string    `json:"child_first_name"`
+	ChildLastName  string    `json:"child_last_name"`
+	ModuleNames    []string  `json:"module_names"`
 	// ModulesText names the modules as the contract does: "A, B und C".
 	ModulesText   string        `json:"modules_text"`
 	PartyName     string        `json:"party_name"`
@@ -290,6 +298,20 @@ type ContractSummary struct {
 	// EndsOn is the last day of a terminated contract (#4682); nil
 	// otherwise.
 	EndsOn *calendar.Date `json:"ends_on"`
+	// Imported tells a contract taken over from a file (ADR 0232) from one
+	// of an application: only an imported contract is linked to a child
+	// record by hand (ADR 0307).
+	Imported bool `json:"imported"`
+	// FollowsBookings tells that the contract has an application child: its
+	// versions follow the approved bookings of that child. Every contract
+	// from an application does, and an imported one once it is bound to the
+	// enrollment of its child (ADR 0309); such a contract keeps its child
+	// record and takes no offering correction from a file.
+	FollowsBookings bool `json:"follows_bookings"`
+	// RequestChildID is the application child the contract follows; nil
+	// without one. The office names it to take the binding of an imported
+	// contract off again (ADR 0309, "Der Weg zurück").
+	RequestChildID *ident.ID `json:"request_child_id"`
 }
 
 // ContractList is the filtered list with the count of every status over all
@@ -303,7 +325,7 @@ type ContractList struct {
 // Version is the frozen content of a contract version: the child, the
 // booked services per weekday and module, the terms and the effective date.
 type Version struct {
-	ID             int64          `json:"id"`
+	ID             ident.ID       `json:"id"`
 	Number         int            `json:"number"`
 	Status         string         `json:"status"`
 	EffectiveFrom  calendar.Date  `json:"effective_from"`
@@ -318,11 +340,12 @@ type Version struct {
 	// of its only module, nil when it has none or the contract has several
 	// modules (ADR 0088 section 2). The tariffs per weekday and module of
 	// #4684 price the rest.
-	PriceCents *int64        `json:"price_cents"`
+	PriceCents *int64        `json:"price_cents" contract:"number"`
 	Terms      TemplateInput `json:"terms"`
 	CreatedAt  time.Time     `json:"created_at"`
-	// Source tells where the version came from: SourceConclusion or
-	// SourceBookingChange (#4681).
+	// Source tells where the version came from: SourceConclusion,
+	// SourceBookingChange (#4681), SourceImport (#4723) or
+	// SourceOfferingCorrection (#7764).
 	Source string `json:"source"`
 	// ValidUntil is the last day the version holds: the day before the next
 	// effective version starts, else its own end. Nil while it holds open
@@ -335,6 +358,10 @@ type Party struct {
 	LastName   string `json:"last_name"`
 	Email      string `json:"email"`
 	HasAccount bool   `json:"has_account"`
+	// ContractDraft says the party's contract is still a draft. Only the
+	// billing reads (ContractBilling) fill it: a draft can be discarded, so
+	// nothing of the billing may hang on it (#7770).
+	ContractDraft bool `json:"-"`
 }
 
 // Mailing is one send of the contract with the state of its mail.
@@ -388,6 +415,9 @@ type ContractDetail struct {
 	TermText   string `json:"term_text"`
 	NoticeText string `json:"notice_text"`
 	FeeText    string `json:"fee_text"`
+	// Corrections are the corrections of a contract from an import, newest
+	// first (#7767, contract_corrections.go); empty for every other.
+	Corrections []ContractCorrection `json:"corrections"`
 }
 
 // File is a rendered PDF.
@@ -400,13 +430,13 @@ type File struct {
 }
 
 type SendResult struct {
-	Sent    []int64    `json:"sent"`
+	Sent    []ident.ID `json:"sent"`
 	Skipped []SendSkip `json:"skipped"`
 }
 
 type SendSkip struct {
-	ID     int64  `json:"id"`
-	Reason string `json:"reason"`
+	ID     ident.ID `json:"id"`
+	Reason string   `json:"reason"`
 }
 
 const (

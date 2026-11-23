@@ -1,10 +1,12 @@
 package platformannouncements
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/communication"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // AnnouncementsResource handles user-facing announcements endpoints
@@ -23,17 +25,21 @@ func NewAnnouncementsResource(announcementService communication.Capability, runt
 
 // PlatformAnnouncementResponse represents an announcement in the user-facing response
 type PlatformAnnouncementResponse struct {
-	ID          int64   `json:"id"`
-	Title       string  `json:"title"`
-	Content     string  `json:"content"`
-	Type        string  `json:"type"`
-	Severity    string  `json:"severity"`
-	Version     *string `json:"version,omitempty"`
-	PublishedAt string  `json:"published_at"`
+	ID          ident.ID `json:"id"`
+	Title       string   `json:"title"`
+	Content     string   `json:"content"`
+	Type        string   `json:"type"`
+	Severity    string   `json:"severity"`
+	Version     *string  `json:"version,omitempty"`
+	PublishedAt string   `json:"published_at"`
 }
 
 func (rs *AnnouncementsResource) internalError(w http.ResponseWriter, r *http.Request, message string, err error) {
-	rs.runtime.Failure(w, r, Failure{Message: message, Err: err})
+	status := http.StatusInternalServerError
+	if errors.Is(err, communication.ErrAnnouncementNotFound) {
+		status = http.StatusNotFound
+	}
+	rs.runtime.Failure(w, r, Failure{Message: message, Err: err, Status: status})
 }
 
 func (rs *AnnouncementsResource) announcementID(w http.ResponseWriter, r *http.Request) (int64, bool) {
@@ -57,7 +63,7 @@ func (rs *AnnouncementsResource) GetUnread(w http.ResponseWriter, r *http.Reques
 			publishedAt = a.PublishedAt.Format(time.RFC3339)
 		}
 		responses = append(responses, PlatformAnnouncementResponse{
-			ID:          a.ID,
+			ID:          ident.ID(a.ID),
 			Title:       a.Title,
 			Content:     a.Content,
 			Type:        a.Type,
@@ -70,19 +76,6 @@ func (rs *AnnouncementsResource) GetUnread(w http.ResponseWriter, r *http.Reques
 	rs.runtime.Success(w, r, http.StatusOK, responses, "Unread announcements retrieved successfully")
 }
 
-// GetUnreadCount handles getting the count of unread announcements
-func (rs *AnnouncementsResource) GetUnreadCount(w http.ResponseWriter, r *http.Request) {
-	viewer := rs.runtime.Viewer(r)
-
-	count, err := rs.announcementService.CountUnread(r.Context(), viewer.AccountID, viewer.Roles, viewer.TenantID, viewer.OrgID)
-	if err != nil {
-		rs.internalError(w, r, "failed to count announcements", err)
-		return
-	}
-
-	rs.runtime.Success(w, r, http.StatusOK, map[string]int{"count": count}, "")
-}
-
 // MarkSeen handles marking an announcement as seen
 func (rs *AnnouncementsResource) MarkSeen(w http.ResponseWriter, r *http.Request) {
 	viewer := rs.runtime.Viewer(r)
@@ -92,7 +85,7 @@ func (rs *AnnouncementsResource) MarkSeen(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if err := rs.announcementService.MarkSeen(r.Context(), viewer.AccountID, announcementID); err != nil {
+	if err := rs.announcementService.MarkSeen(r.Context(), viewer, announcementID); err != nil {
 		rs.internalError(w, r, "failed to mark announcement as seen", err)
 		return
 	}
@@ -109,7 +102,7 @@ func (rs *AnnouncementsResource) MarkDismissed(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	if err := rs.announcementService.MarkDismissed(r.Context(), viewer.AccountID, announcementID); err != nil {
+	if err := rs.announcementService.MarkDismissed(r.Context(), viewer, announcementID); err != nil {
 		rs.internalError(w, r, "failed to mark announcement as dismissed", err)
 		return
 	}

@@ -64,7 +64,7 @@ func getData(t *testing.T, tc *testContext, path string, accountID int64, messag
 	return response["data"]
 }
 
-func TestWireShape_CurrentUserAndProfile(t *testing.T) {
+func TestWireShape_CurrentProfile(t *testing.T) {
 	t.Parallel()
 	tc := setupUserContextRoute(t)
 
@@ -86,20 +86,6 @@ func TestWireShape_CurrentUserAndProfile(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	t.Run("GET /api/me", func(t *testing.T) {
-		data, ok := getData(t, tc, "/", account.ID, "Current user retrieved successfully").(map[string]any)
-		require.True(t, ok, "data must be an object")
-		assert.Equal(t, sorted(
-			"id", "created_at", "updated_at", "email", "avatar", "active", "last_login",
-			"username",
-			"is_password_otp",
-		), sortedKeys(data))
-		assert.Equal(t, float64(account.ID), data["id"])
-		assert.Equal(t, username, data["username"])
-		assert.Equal(t, avatar, data["avatar"])
-		assertInstant(t, lastLogin, data["last_login"])
-	})
-
 	t.Run("GET /api/me/profile with person", func(t *testing.T) {
 		data, ok := getData(t, tc, "/profile", account.ID, "Current profile retrieved successfully").(map[string]any)
 		require.True(t, ok, "data must be an object")
@@ -107,7 +93,7 @@ func TestWireShape_CurrentUserAndProfile(t *testing.T) {
 			"email", "username", "last_login", "avatar", "id", "first_name", "last_name",
 			"created_at", "updated_at", "rfid_card", "bio", "settings",
 		), sortedKeys(data))
-		assert.Equal(t, float64(person.ID), data["id"], "id is the person ID when a person exists")
+		assert.Equal(t, int64(person.ID), testpkg.JSONID(t, data["id"]), "id is the person ID when a person exists")
 		assert.Equal(t, "Wire", data["first_name"])
 		assert.Equal(t, "Shape", data["last_name"])
 		assert.Equal(t, card.ID, data["rfid_card"])
@@ -135,7 +121,7 @@ func TestWireShape_ProfileAccountFallback(t *testing.T) {
 	assert.Equal(t, sorted(
 		"email", "username", "last_login", "id", "first_name", "last_name", "created_at", "updated_at",
 	), sortedKeys(data))
-	assert.Equal(t, float64(account.ID), data["id"], "id falls back to the account ID")
+	assert.Equal(t, int64(account.ID), testpkg.JSONID(t, data["id"]), "id falls back to the account ID")
 	assert.Equal(t, "", data["first_name"])
 	assert.Equal(t, "", data["last_name"])
 	assert.Nil(t, data["username"])
@@ -164,7 +150,7 @@ func TestWireShape_GroupsAndNavigation(t *testing.T) {
 		item, ok := data[0].(map[string]any)
 		require.True(t, ok)
 		assert.Equal(t, groupKeys, sortedKeys(item), "the education group JSON is flattened next to via_substitution")
-		assert.Equal(t, float64(group.ID), item["id"])
+		assert.Equal(t, int64(group.ID), testpkg.JSONID(t, item["id"]))
 		assert.Equal(t, group.Name, item["name"])
 		assert.Equal(t, false, item["via_substitution"])
 	})
@@ -185,18 +171,18 @@ func TestWireShape_GroupsAndNavigation(t *testing.T) {
 		item, ok := groups[0].(map[string]any)
 		require.True(t, ok)
 		assert.Equal(t, groupKeys, sortedKeys(item))
-		assert.Equal(t, float64(group.ID), item["id"])
+		assert.Equal(t, int64(group.ID), testpkg.JSONID(t, item["id"]))
 
 		supervised, ok := data["supervised_groups"].([]any)
 		require.True(t, ok, "supervised_groups must be an array")
 		require.Len(t, supervised, 1)
 		sessionItem, ok := supervised[0].(map[string]any)
 		require.True(t, ok)
-		assert.Equal(t, float64(session.ID), sessionItem["id"])
+		assert.Equal(t, int64(session.ID), testpkg.JSONID(t, sessionItem["id"]))
 
 		staff, ok := data["current_staff"].(map[string]any)
 		require.True(t, ok, "current_staff must be an object for a staff member")
-		assert.Equal(t, float64(teacher.Staff.ID), staff["id"])
+		assert.Equal(t, int64(teacher.Staff.ID), testpkg.JSONID(t, staff["id"]))
 		assert.NotContains(t, staff, "personnel_number")
 	})
 }

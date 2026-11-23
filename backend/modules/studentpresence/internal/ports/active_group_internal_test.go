@@ -3,6 +3,8 @@ package ports
 import (
 	"testing"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 func TestGroupValidate(t *testing.T) {
@@ -28,8 +30,8 @@ func TestGroupValidate(t *testing.T) {
 			name: "Valid group with device",
 			group: &ActiveGroup{
 				StartTime: nowTime,
-				GroupID:   &templateID,
-				DeviceID:  &deviceID,
+				GroupID:   (*ident.ID)(&templateID),
+				DeviceID:  (*ident.ID)(&deviceID),
 				RoomID:    1,
 			},
 			wantErr: false,
@@ -38,7 +40,7 @@ func TestGroupValidate(t *testing.T) {
 			name: "Valid group without device (RFID system)",
 			group: &ActiveGroup{
 				StartTime: nowTime,
-				GroupID:   &templateID,
+				GroupID:   (*ident.ID)(&templateID),
 				DeviceID:  nil, // Optional for RFID
 				RoomID:    1,
 			},
@@ -49,8 +51,8 @@ func TestGroupValidate(t *testing.T) {
 			group: &ActiveGroup{
 				StartTime: nowTime,
 				EndTime:   &futureTime,
-				GroupID:   &templateID,
-				DeviceID:  &deviceID,
+				GroupID:   (*ident.ID)(&templateID),
+				DeviceID:  (*ident.ID)(&deviceID),
 				RoomID:    1,
 			},
 			wantErr: false,
@@ -58,8 +60,8 @@ func TestGroupValidate(t *testing.T) {
 		{
 			name: "Missing start time",
 			group: &ActiveGroup{
-				GroupID:  &templateID,
-				DeviceID: &deviceID,
+				GroupID:  (*ident.ID)(&templateID),
+				DeviceID: (*ident.ID)(&deviceID),
 				RoomID:   1,
 			},
 			wantErr: true,
@@ -69,8 +71,8 @@ func TestGroupValidate(t *testing.T) {
 			group: &ActiveGroup{
 				StartTime: nowTime,
 				EndTime:   &pastTime,
-				GroupID:   &templateID,
-				DeviceID:  &deviceID,
+				GroupID:   (*ident.ID)(&templateID),
+				DeviceID:  (*ident.ID)(&deviceID),
 				RoomID:    1,
 			},
 			wantErr: true,
@@ -84,7 +86,7 @@ func TestGroupValidate(t *testing.T) {
 			group: &ActiveGroup{
 				StartTime: nowTime,
 				GroupID:   nil,
-				DeviceID:  &deviceID,
+				DeviceID:  (*ident.ID)(&deviceID),
 				RoomID:    1,
 			},
 			wantErr: false,
@@ -93,8 +95,8 @@ func TestGroupValidate(t *testing.T) {
 			name: "Missing room ID",
 			group: &ActiveGroup{
 				StartTime: nowTime,
-				GroupID:   &templateID,
-				DeviceID:  &deviceID,
+				GroupID:   (*ident.ID)(&templateID),
+				DeviceID:  (*ident.ID)(&deviceID),
 			},
 			wantErr: true,
 		},
@@ -102,8 +104,8 @@ func TestGroupValidate(t *testing.T) {
 			name: "Invalid group ID (non-nil, non-positive)",
 			group: &ActiveGroup{
 				StartTime: nowTime,
-				GroupID:   &negativeTemplateID,
-				DeviceID:  &deviceID,
+				GroupID:   (*ident.ID)(&negativeTemplateID),
+				DeviceID:  (*ident.ID)(&deviceID),
 				RoomID:    1,
 			},
 			wantErr: true,
@@ -112,8 +114,8 @@ func TestGroupValidate(t *testing.T) {
 			name: "Invalid room ID",
 			group: &ActiveGroup{
 				StartTime: nowTime,
-				GroupID:   &templateID,
-				DeviceID:  &deviceID,
+				GroupID:   (*ident.ID)(&templateID),
+				DeviceID:  (*ident.ID)(&deviceID),
 				RoomID:    -5,
 			},
 			wantErr: true,
@@ -140,7 +142,7 @@ func TestGroupTemplateHelpers(t *testing.T) {
 	templateID := int64(42)
 
 	t.Run("template-backed group", func(t *testing.T) {
-		g := &ActiveGroup{GroupID: &templateID}
+		g := &ActiveGroup{GroupID: (*ident.ID)(&templateID)}
 
 		if g.IsSpontaneous() {
 			t.Errorf("IsSpontaneous() = true, want false for template-backed group")
@@ -183,21 +185,21 @@ func TestGroupIsIndependentRoomSession(t *testing.T) {
 	deviceID := int64(7)
 
 	t.Run("device-less system activity", func(t *testing.T) {
-		g := &ActiveGroup{GroupID: &templateID}
+		g := &ActiveGroup{GroupID: (*ident.ID)(&templateID)}
 		if !g.IsIndependentRoomSession(true) {
 			t.Errorf("IsIndependentRoomSession(true) = false, want true for a device-less system activity")
 		}
 	})
 
 	t.Run("regular activity", func(t *testing.T) {
-		g := &ActiveGroup{GroupID: &templateID}
+		g := &ActiveGroup{GroupID: (*ident.ID)(&templateID)}
 		if g.IsIndependentRoomSession(false) {
 			t.Errorf("IsIndependentRoomSession(false) = true, want false for a regular activity")
 		}
 	})
 
 	t.Run("device-bound system activity", func(t *testing.T) {
-		g := &ActiveGroup{GroupID: &templateID, DeviceID: &deviceID}
+		g := &ActiveGroup{GroupID: (*ident.ID)(&templateID), DeviceID: (*ident.ID)(&deviceID)}
 		if g.IsIndependentRoomSession(true) {
 			t.Errorf("IsIndependentRoomSession(true) = true, want false when a device owns the session")
 		}

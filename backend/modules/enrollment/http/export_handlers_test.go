@@ -39,7 +39,7 @@ func TestParsePhaseExportRequest(t *testing.T) {
 		{name: "lowercase body xlsx", body: `{"format":"xlsx"}`, want: lists.FormatXLSX},
 		{name: "lowercase body docx", body: `{"format":"docx"}`, want: lists.FormatDOCX},
 		{name: "uppercase body normalised", body: `{"format":"PDF"}`, want: lists.FormatPDF},
-		{name: "uppercase query normalised", query: "format=XLSX", want: lists.FormatXLSX},
+		{name: "query format ignored", query: "format=XLSX", want: lists.FormatPDF},
 		{name: "body wins over query", body: `{"format":"pdf"}`, query: "format=xlsx", want: lists.FormatPDF},
 		{name: "unsupported format rejected", body: `{"format":"csv"}`, wantErr: true},
 		{name: "malformed body rejected", body: `{`, wantErr: true},
@@ -47,7 +47,7 @@ func TestParsePhaseExportRequest(t *testing.T) {
 		{name: "valid child_status kept", body: `{"format":"xlsx","child_status":"approved"}`, want: lists.FormatXLSX, wantStatus: "approved"},
 		{name: "child_status uppercased normalised", body: `{"child_status":"WITHDRAWN"}`, want: lists.FormatPDF, wantStatus: "withdrawn"},
 		{name: "child_status all means no filter", body: `{"child_status":"all"}`, want: lists.FormatPDF, wantStatus: ""},
-		{name: "child_status from query", query: "child_status=waitlisted", want: lists.FormatPDF, wantStatus: "waitlisted"},
+		{name: "query child_status ignored", query: "child_status=waitlisted", want: lists.FormatPDF, wantStatus: ""},
 		{name: "unknown child_status rejected", body: `{"child_status":"bogus"}`, wantErr: true},
 	}
 	for _, tc := range cases {

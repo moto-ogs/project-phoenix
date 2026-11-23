@@ -1,5 +1,7 @@
 "use client";
 
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
+import { knownEnum } from "~/lib/contract/known-enum";
 import { useMemo } from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
@@ -8,7 +10,7 @@ import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { ListSkeleton } from "~/components/ui/page-skeletons";
 import { ParentPage, ParentPageHeader } from "~/components/parent/parent-page";
 import { useLocale } from "next-intl";
-import { type EnrollablePhase, listEnrollableSchools } from "~/lib/parent-api";
+import { listEnrollableSchools } from "~/lib/parent-api";
 import { PARENT_RESOURCE_OPTIONS } from "~/lib/hooks/use-parent-resources";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useSWRAuth } from "~/lib/swr";
@@ -23,13 +25,19 @@ import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 import { SectionCard } from "~/components/ui/section-card";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
 
-const NO_PHASES: EnrollablePhase[] = [];
+const PHASE_KINDS = [
+  "school_year",
+  "holiday",
+  "custom",
+] as const satisfies readonly parentMeContract.EnrollmentPhaseKind[];
+
+const NO_PHASES: parentMeContract.EnrollablePhaseResponse[] = [];
 
 interface SchoolGroup {
   readonly schoolId: string;
   readonly schoolName: string;
   readonly alreadyLinked: boolean;
-  readonly phases: EnrollablePhase[];
+  readonly phases: parentMeContract.EnrollablePhaseResponse[];
 }
 
 /**
@@ -37,7 +45,9 @@ interface SchoolGroup {
  * backend's order (already_linked DESC, school name, service start). Insertion
  * order of the Map keeps the first-seen school position.
  */
-function groupBySchool(phases: readonly EnrollablePhase[]): SchoolGroup[] {
+function groupBySchool(
+  phases: readonly parentMeContract.EnrollablePhaseResponse[],
+): SchoolGroup[] {
   const groups = new Map<string, SchoolGroup>();
   for (const phase of phases) {
     const existing = groups.get(phase.school_id);
@@ -171,14 +181,20 @@ function SchoolCard({
 function PhaseRow({
   phase,
   locale,
-}: Readonly<{ phase: EnrollablePhase; locale: string }>) {
+}: Readonly<{
+  phase: parentMeContract.EnrollablePhaseResponse;
+  locale: string;
+}>) {
   const t = useCareTermTranslations("parentEnroll");
 
-  const kindLabel = {
-    school_year: t("kindSchoolYear"),
-    holiday: t("kindHoliday"),
-    custom: t("kindCustom"),
-  }[phase.phase_kind];
+  const kind = knownEnum(PHASE_KINDS, phase.phase_kind);
+  const kindLabel =
+    kind &&
+    {
+      school_year: t("kindSchoolYear"),
+      holiday: t("kindHoliday"),
+      custom: t("kindCustom"),
+    }[kind];
 
   const range = `${formatLocalizedDate(phase.service_start_date, locale)} ${t(
     "rangeConnector",
@@ -211,7 +227,7 @@ function PhaseRow({
           <span className="text-sm font-semibold text-gray-900">
             {phaseDisplayName(phase, locale)}
           </span>
-          <StatusBadge tone="gray" compact label={kindLabel} />
+          {kindLabel && <StatusBadge tone="gray" compact label={kindLabel} />}
           {audienceLabel && (
             <StatusBadge tone="blue" compact wrap label={audienceLabel} />
           )}
@@ -235,6 +251,9 @@ function PhaseRow({
 }
 
 /** Phase name in the parent's language where the school translated it (#3377). */
-function phaseDisplayName(phase: EnrollablePhase, locale: string): string {
+function phaseDisplayName(
+  phase: parentMeContract.EnrollablePhaseResponse,
+  locale: string,
+): string {
   return phase.phase_name_translations?.[locale] ?? phase.phase_name;
 }

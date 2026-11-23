@@ -1,0 +1,22 @@
+[
+  {
+    "file": "auth/tokens.golden",
+    "routes": ["DELETE /auth/tokens/expired"],
+    "issue": 2352
+  },
+  {
+    "file": "parent/me/enrollments.golden",
+    "routes": ["GET /parent/me/enrollments"],
+    "issue": 2352
+  },
+  {
+    "file": "traeger/datev-export.golden",
+    "routes": ["GET /traeger/datev-export/readiness"],
+    "issue": 2352
+  },
+  {
+    "file": "api/schedules.golden",
+    "routes": ["GET /api/schedules/timeframes/"],
+    "issue": 2353
+  }
+]

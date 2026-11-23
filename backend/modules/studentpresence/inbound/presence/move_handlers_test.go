@@ -8,7 +8,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 
@@ -20,16 +23,80 @@ import (
 
 type moveAuthPersonService struct {
 	People
-	person *PersonIdentity
-	staff  *StaffIdentity
+	person    *PersonIdentity
+	staff     *StaffIdentity
+	lookupErr error
 }
 
 func (s moveAuthPersonService) FindByAccountID(_ context.Context, _ int64) (*PersonIdentity, error) {
-	return s.person, nil
+	return s.person, s.lookupErr
 }
 
 func (s moveAuthPersonService) GetStaffByPersonID(_ context.Context, _ int64) (*StaffIdentity, error) {
 	return s.staff, nil
+}
+
+// staffResolutionCases are the callers whose staff record cannot be named:
+// a valid session without a person or without a staff record is refused
+// (403, never 401), a failed lookup is the server's (#7818).
+var staffResolutionCases = []struct {
+	name   string
+	people moveAuthPersonService
+	status int
+}{
+	{name: "no person", people: moveAuthPersonService{}, status: testutil.StatusForbidden},
+	{name: "person without staff", people: moveAuthPersonService{person: &PersonIdentity{ID: 10}}, status: testutil.StatusForbidden},
+	{name: "lookup failure", people: moveAuthPersonService{lookupErr: errors.New("database unavailable")}, status: testutil.StatusInternalServerError},
+}
+
+// TestCheckInMoveActorRefusesAccountWithoutStaffRecord pins that checking
+// children in stays with the school's staff, for administrators and a
+// Träger-Büro session too, and answers with the check-in's own code.
+func TestCheckInMoveActorRefusesAccountWithoutStaffRecord(t *testing.T) {
+	t.Parallel()
+	for _, tc := range staffResolutionCases {
+		for name, withContext := range map[string]func(*testutil.Request) *testutil.Request{"admin": withAdminMoveContext, "staff": withStaffMoveContext} {
+			t.Run(tc.name+"/"+name, func(t *testing.T) {
+				t.Parallel()
+				rs := resourceForTest(Resource{PersonService: tc.people})
+				rr := httptest.NewRecorder()
+
+				staffID, auth, ok := rs.CheckInMoveActor(rr, withContext(httptest.NewRequest(testutil.MethodPost, "/visits/check-in-to-group", nil)))
+
+				require.False(t, ok)
+				assert.Zero(t, staffID)
+				assert.Nil(t, auth)
+				require.Equal(t, tc.status, rr.Code, rr.Body.String())
+				if tc.status == testutil.StatusForbidden {
+					assert.Contains(t, rr.Body.String(), `"code":"`+common.CodeAttendanceCheckinStaffProfileRequired+`"`)
+				}
+			})
+		}
+	}
+}
+
+// TestClaimGroupRefusesAccountWithoutStaffRecord pins that taking over a
+// supervision stays personal to staff, refused with 403 instead of 401.
+func TestClaimGroupRefusesAccountWithoutStaffRecord(t *testing.T) {
+	t.Parallel()
+	for _, tc := range staffResolutionCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			rs := resourceForTest(Resource{PersonService: tc.people, Operations: &stubPresenceOperations{}})
+			routeCtx := chi.NewRouteContext()
+			routeCtx.URLParams.Add("id", "99")
+			req := withAdminMoveContext(httptest.NewRequest(testutil.MethodPost, "/groups/99/claim", nil))
+			req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, routeCtx))
+			rr := httptest.NewRecorder()
+
+			rs.claimGroup(rr, req)
+
+			require.Equal(t, tc.status, rr.Code, rr.Body.String())
+			if tc.status == testutil.StatusForbidden {
+				assert.Contains(t, rr.Body.String(), `"code":"`+common.CodeTimetableNoStaffProfile+`"`)
+			}
+		})
+	}
 }
 
 func withAdminMoveContext(req *testutil.Request) *testutil.Request {
@@ -118,11 +185,11 @@ func TestMoveStudentsToActiveGroup(t *testing.T) {
 					capturedStudentIDs = studentIDs
 					capturedActiveGroupID = activeGroupID
 					return studentpresence.StudentMoveResult{
-						Moved:         []int64{42, 84},
-						Unchanged:     []int64{},
+						Moved:         []ident.ID{42, 84},
+						Unchanged:     []ident.ID{},
 						Skipped:       []studentpresence.StudentMoveSkipped{},
-						ActiveGroupID: &targetGroupID,
-						RoomID:        &targetRoomID,
+						ActiveGroupID: (*ident.ID)(&targetGroupID),
+						RoomID:        (*ident.ID)(&targetRoomID),
 					}, nil
 				},
 			},
@@ -249,11 +316,11 @@ func TestMoveStudentsToActiveGroup(t *testing.T) {
 				moveStudentsToSession: func(_ context.Context, studentIDs []int64, activeGroupID int64, _ studentpresence.StudentMoveAuthorization) (studentpresence.StudentMoveResult, error) {
 					calledMove = true
 					return studentpresence.StudentMoveResult{
-						Moved:         studentIDs,
-						Unchanged:     []int64{},
+						Moved:         ident.IDs(studentIDs),
+						Unchanged:     []ident.ID{},
 						Skipped:       []studentpresence.StudentMoveSkipped{},
-						ActiveGroupID: &activeGroupID,
-						RoomID:        &targetRoomID,
+						ActiveGroupID: (*ident.ID)(&activeGroupID),
+						RoomID:        (*ident.ID)(&targetRoomID),
 					}, nil
 				},
 			},
@@ -298,79 +365,5 @@ func TestMoveStudentsToActiveGroup(t *testing.T) {
 
 		require.Equal(t, testutil.StatusInternalServerError, w.Code)
 		assert.True(t, calledMove)
-	})
-}
-
-func TestMoveStudentsToTransit(t *testing.T) {
-	t.Parallel()
-
-	t.Run("moves selected students", func(t *testing.T) {
-		var capturedStudentIDs []int64
-		rs := resourceForTest(Resource{
-			Operations: &stubPresenceOperations{
-				moveStudentsToTransit: func(_ context.Context, studentIDs []int64, _ studentpresence.StudentMoveAuthorization) (studentpresence.StudentMoveResult, error) {
-					capturedStudentIDs = studentIDs
-					return studentpresence.StudentMoveResult{
-						Moved:     []int64{42},
-						Unchanged: []int64{84},
-						Skipped:   []studentpresence.StudentMoveSkipped{},
-					}, nil
-				},
-			},
-		})
-
-		req := httptest.NewRequest(
-			testutil.MethodPost,
-			"/api/active/visits/move-to-transit",
-			bytes.NewBufferString(`{"student_ids":[42,84]}`),
-		)
-		req = withAdminMoveContext(req)
-		w := httptest.NewRecorder()
-
-		rs.moveStudentsToTransit(w, req)
-
-		require.Equal(t, testutil.StatusOK, w.Code)
-		assert.Equal(t, []int64{42, 84}, capturedStudentIDs)
-		var body map[string]any
-		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
-		assert.Equal(t, "Students moved to transit successfully", body["message"])
-	})
-
-	t.Run("rejects malformed json", func(t *testing.T) {
-		rs := resourceForTest(Resource{Operations: &stubPresenceOperations{}})
-		req := httptest.NewRequest(
-			testutil.MethodPost,
-			"/api/active/visits/move-to-transit",
-			bytes.NewBufferString(`{"student_ids":[42]`),
-		)
-		w := httptest.NewRecorder()
-
-		rs.moveStudentsToTransit(w, req)
-
-		assert.Equal(t, testutil.StatusBadRequest, w.Code)
-	})
-
-	t.Run("rejects all-not-present moves as conflict", func(t *testing.T) {
-		rs := resourceForTest(Resource{
-			Operations: &stubPresenceOperations{
-				moveStudentsToTransit: func(_ context.Context, _ []int64, _ studentpresence.StudentMoveAuthorization) (studentpresence.StudentMoveResult, error) {
-					return studentpresence.StudentMoveResult{}, operationError("MoveStudentsToTransit", studentpresence.ErrStudentsNotPresent)
-				},
-			},
-		})
-		req := httptest.NewRequest(
-			testutil.MethodPost,
-			"/api/active/visits/move-to-transit",
-			bytes.NewBufferString(`{"student_ids":[42]}`),
-		)
-		req = withAdminMoveContext(req)
-		w := httptest.NewRecorder()
-
-		rs.moveStudentsToTransit(w, req)
-
-		require.Equal(t, testutil.StatusConflict, w.Code)
-		var body map[string]any
-		require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
-		assert.Equal(t, float64(testutil.StatusConflict), body["status"])
 	})
 }

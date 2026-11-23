@@ -109,15 +109,15 @@ func TestBillingLettersWithPaymentTextNeedTheDebtorNumberItNames(t *testing.T) {
 	askForDebtorNumber(t, f, false)
 	require.Equal(t, http.StatusOK, f.confirmWith(t, f.again, nil).Code)
 	setNumberRange(t, f, billing, "FE-{NNNN}")
-	run := billingRun(t, f, billing, startBillingRun(t, f, billing, f.period.ID).ID)
-	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/release"), releaseBody(run))
+	run := billingRun(t, f, billing, int64(startBillingRun(t, f, billing, int64(f.period.ID)).ID))
+	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/release"), releaseBody(run))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	documents := decodeSchoolPortalData[billingRunLettersBody](t, rec.Body.Bytes()).Documents
 	brandTraeger(t, f)
 	setPaymentText(t, f, bissendorfPaymentText)
 
 	for _, suffix := range []string{"/letters/preview", "/letters"} {
-		rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, suffix), lettersBody("2099-01-15"))
+		rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), suffix), lettersBody("2099-01-15"))
 		require.Equal(t, http.StatusConflict, rec.Code, "%s: %s", suffix, rec.Body.String())
 		var refusal paymentTextRefusal
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &refusal))
@@ -136,22 +136,22 @@ func TestBillingLettersWithPaymentTextNeedTheDebtorNumberItNames(t *testing.T) {
 	// Without the placeholder the letters go out; a text written later
 	// changes no finished letter.
 	setPaymentText(t, f, "Bitte überweisen Sie {Betrag} bis zum {Zahlungsfrist}. Verwendungszweck: {Rechnungsnummer}.")
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/letters/preview"), lettersBody("2099-01-15"))
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/letters/preview"), lettersBody("2099-01-15"))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/letters"), lettersBody("2099-01-15"))
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/letters"), lettersBody("2099-01-15"))
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	before := map[int64][]byte{}
 	for _, document := range documents {
-		rec := traegerJSON(t, f.traeger, billing, http.MethodGet, letterPath(run.ID, document.ID), nil)
+		rec := traegerJSON(t, f.traeger, billing, http.MethodGet, letterPath(int64(run.ID), int64(document.ID)), nil)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-		before[document.ID] = rec.Body.Bytes()
+		before[int64(document.ID)] = rec.Body.Bytes()
 	}
 	require.Len(t, before, 2)
 	setPaymentText(t, f, bissendorfPaymentText+" Ihre Rechnung: {Rechnungsnummer}.")
 	for _, document := range documents {
-		rec := traegerJSON(t, f.traeger, billing, http.MethodGet, letterPath(run.ID, document.ID), nil)
+		rec := traegerJSON(t, f.traeger, billing, http.MethodGet, letterPath(int64(run.ID), int64(document.ID)), nil)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-		assert.Equal(t, before[document.ID], rec.Body.Bytes(), "a finished letter keeps its payment text")
+		assert.Equal(t, before[int64(document.ID)], rec.Body.Bytes(), "a finished letter keeps its payment text")
 	}
 }
 
@@ -168,37 +168,37 @@ func TestBillingRunCountsTheInvoicesThePaymentTextWouldRefuse(t *testing.T) {
 	require.Equal(t, http.StatusOK, f.confirmWith(t, f.siblings, nil).Code)
 	require.Equal(t, http.StatusOK, f.confirmWith(t, f.again, nil).Code)
 	setNumberRange(t, f, billing, "FE-{NNNN}")
-	run := billingRun(t, f, billing, startBillingRun(t, f, billing, f.period.ID).ID)
+	run := billingRun(t, f, billing, int64(startBillingRun(t, f, billing, int64(f.period.ID)).ID))
 	require.Len(t, run.Documents, 2)
 	assert.Zero(t, run.PaymentTextMissingDebtorNumbers, "the built-in sentence names the invoice number")
 
 	setPaymentText(t, f, "Bitte überweisen Sie {Betrag} bis zum {Zahlungsfrist}. Verwendungszweck: {Rechnungsnummer}.")
-	assert.Zero(t, billingRun(t, f, billing, run.ID).PaymentTextMissingDebtorNumbers, "a text without the placeholder needs no number")
+	assert.Zero(t, billingRun(t, f, billing, int64(run.ID)).PaymentTextMissingDebtorNumbers, "a text without the placeholder needs no number")
 
 	setPaymentText(t, f, bissendorfPaymentText)
-	run = billingRun(t, f, billing, run.ID)
+	run = billingRun(t, f, billing, int64(run.ID))
 	assert.Equal(t, 2, run.PaymentTextMissingDebtorNumbers, "the text counts without the switch")
 	assert.Zero(t, run.MissingDebtorNumbers, "the hint of the switch stays off")
 
 	for _, document := range run.Documents {
-		if document.RegistrationID != f.again {
+		if int64(document.RegistrationID) != f.again {
 			continue
 		}
 		for _, child := range document.Children {
 			correction := map[string]any{"registration_id": f.again, "child_id": child.ChildID, "total_cents": 0, "reason": "Härtefall"}
-			rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/corrections"), correction)
+			rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/corrections"), correction)
 			require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		}
 	}
-	run = billingRun(t, f, billing, run.ID)
+	run = billingRun(t, f, billing, int64(run.ID))
 	assert.Equal(t, 1, run.PaymentTextMissingDebtorNumbers, "an invoice of 0 € prints the fixed sentence")
 
 	askForDebtorNumber(t, f, true)
-	run = billingRun(t, f, billing, run.ID)
+	run = billingRun(t, f, billing, int64(run.ID))
 	assert.Equal(t, 2, run.MissingDebtorNumbers, "the switch counts every invoice without a number")
 	assert.Equal(t, 1, run.PaymentTextMissingDebtorNumbers)
 
 	rec := f.changeDebtorNumber(t, f.office.token, f.siblings, "10 4711")
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.Zero(t, billingRun(t, f, billing, run.ID).PaymentTextMissingDebtorNumbers, "the number entered before the release ends the warning")
+	assert.Zero(t, billingRun(t, f, billing, int64(run.ID)).PaymentTextMissingDebtorNumbers, "the number entered before the release ends the warning")
 }

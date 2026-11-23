@@ -38,18 +38,14 @@ import { SectionCard } from "~/components/ui/section-card";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useErrorFixLink } from "~/components/ui/error-fix-slot";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
-import {
-  apiErrorFromResponse,
-  ApiError,
-  transportFetch,
-  wireErrorCode,
-} from "~/lib/api-error";
+import { ApiError, wireErrorCode } from "~/lib/api-error";
 import {
   DAY_LOG_STATUS_COLORS,
   DAY_LOG_STATUS_ORDER,
-  dayLogExportUrl,
   dayLogSourceLabel,
   fetchDayLog,
+  fetchDayLogExport,
+  type DayLogExportFormat,
   type DayLogGroup,
   type DayLogStatus,
   type DayLogStudent,
@@ -74,6 +70,9 @@ import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useMinuteClock } from "~/lib/pickup-helpers";
 import { useTenantAwarePath } from "~/lib/tenant-path";
+
+const DAY_LOG_INFO =
+  "Hier siehst du für heute, welche Kinder anwesend sind und welche fehlen. Mit „Details“ siehst du die Kinder einer Gruppe. Mit „Drucken“ gibst du die Auswertung aus.";
 
 const logger = createLogger({ component: "DayLogPage" });
 
@@ -122,8 +121,6 @@ const MODAL_SECTION_TITLES: Record<DayLogStatus, string> = {
   not_scheduled: "Nicht eingeplant",
   absent: "Unentschuldigt abwesend",
 };
-
-type ExportFormat = "pdf" | "docx" | "xlsx";
 
 function counterFor(
   counters: DayLogGroup["counters"],
@@ -359,15 +356,10 @@ export default function DayLogPage() {
   const maxDate = useMemo(() => parseISODate(todayISO), [todayISO]);
 
   const downloadExport = useCallback(
-    async (format: ExportFormat, groupId?: string) => {
+    async (format: DayLogExportFormat, groupId?: string) => {
       setExporting(`${format}-${groupId ?? "all"}`);
       try {
-        const res = await transportFetch(
-          dayLogExportUrl(dateISO, format, groupId),
-        );
-        if (!res.ok) {
-          throw await apiErrorFromResponse(res, "day log export failed");
-        }
+        const res = await fetchDayLogExport(dateISO, format, groupId);
         downloadBlob(
           await res.blob(),
           filenameFromDisposition(res) ??
@@ -400,12 +392,7 @@ export default function DayLogPage() {
       if (tab) tab.opener = null;
       setExporting(`print-${groupId ?? "all"}`);
       try {
-        const res = await transportFetch(
-          dayLogExportUrl(dateISO, "pdf", groupId),
-        );
-        if (!res.ok) {
-          throw await apiErrorFromResponse(res, "day log print failed");
-        }
+        const res = await fetchDayLogExport(dateISO, "pdf", groupId);
         // Without a tab (popup blocked even in the gesture) the helper makes
         // a last attempt itself and throws if that is blocked too.
         await openBlobForPrint(await res.blob(), tab);
@@ -502,6 +489,7 @@ export default function DayLogPage() {
   return (
     <TenantPage
       title="Tagesauswertung"
+      info={DAY_LOG_INFO}
       stats={statusLine}
       statsLoading={loading}
       loading={loading || (failed && load.error === null)}

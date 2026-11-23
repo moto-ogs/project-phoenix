@@ -18,6 +18,7 @@ import (
 
 	timetableModule "github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
@@ -124,7 +125,7 @@ func (s *rosterReviewSetup) createClassTemplate(t *testing.T, name, class string
 	}
 	w := doTemplateJSON(t, s.router, http.MethodPost, "/templates", body)
 	require.Equal(t, http.StatusCreated, w.Code, "body=%s", w.Body.String())
-	return decodeTemplateData[createTemplateResponse](t, w).TemplateID
+	return (decodeTemplateData[createTemplateResponse](t, w).TemplateID).Int64()
 }
 
 func createClassStudents(t *testing.T, db *bun.DB, class string, count int) []int64 {
@@ -192,9 +193,9 @@ func TestTemplateRosterDeviationsSchuleAmBerg(t *testing.T) {
 
 	require.Len(t, deviations, 1, "only the hand-kept Klasse Regeltermin deviates: %+v", deviations)
 	got := deviations[0]
-	assert.Equal(t, deviating, got.TemplateID)
+	assert.Equal(t, ident.ID(deviating), got.TemplateID)
 	assert.Equal(t, []templateRosterMaintenanceOfferingResponse{
-		{ID: randstunde, Name: "Randstunde"}, {ID: randstunde + 1, Name: "Ganztag"},
+		{ID: ident.ID(randstunde), Name: "Randstunde"}, {ID: ident.ID(randstunde + 1), Name: "Ganztag"},
 	}, got.Offerings)
 	assert.Equal(t, []string{"1a"}, got.SchoolClasses)
 	assert.Empty(t, got.GradeLevels)
@@ -202,7 +203,7 @@ func TestTemplateRosterDeviationsSchuleAmBerg(t *testing.T) {
 	assert.Zero(t, got.MissingCount)
 	// The hint names that child and its weekdays.
 	require.Len(t, got.Unbooked, 1)
-	assert.Equal(t, class[5], got.Unbooked[0].StudentID)
+	assert.Equal(t, ident.ID(class[5]), got.Unbooked[0].StudentID)
 	assert.Contains(t, got.Unbooked[0].Name, "Review-1a-5-")
 	assert.Equal(t, []int{timetableModule.WeekdayMonday, timetableModule.WeekdayWednesday}, got.Unbooked[0].Weekdays)
 	assert.Empty(t, got.Missing)
@@ -216,7 +217,7 @@ func TestTemplateRosterDeviationsSchuleAmBerg(t *testing.T) {
 		require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
 		ids := []int64{}
 		for _, deviation := range decodeTemplateData[rosterDeviationsResponse](t, w).Deviations {
-			ids = append(ids, deviation.TemplateID)
+			ids = append(ids, deviation.TemplateID.Int64())
 		}
 		slices.Sort(ids)
 		return ids
@@ -230,13 +231,13 @@ func TestTemplateRosterDeviationsSchuleAmBerg(t *testing.T) {
 	list := decodeTemplateData[listTemplatesResponse](t,
 		doTemplateJSON(t, s.router, http.MethodGet, fmt.Sprintf("/templates?period_id=%d", period.ID), nil)).Templates
 	for _, template := range list {
-		assert.Equal(t, template.ID == confirmed, template.ManualRosterConfirmed, "template %d", template.ID)
+		assert.Equal(t, template.ID == ident.ID(confirmed), template.ManualRosterConfirmed, "template %d", template.ID)
 	}
 	w = doTemplateJSON(t, s.router, http.MethodPut, fmt.Sprintf("/templates/%d/manual-roster", confirmed), map[string]any{"confirmed": false})
 	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
 	ids := []int64{}
 	for _, deviation := range s.listDeviations(t, period.ID) {
-		ids = append(ids, deviation.TemplateID)
+		ids = append(ids, deviation.TemplateID.Int64())
 	}
 	slices.Sort(ids)
 	assert.Equal(t, []int64{deviating, confirmed}, ids)
@@ -300,7 +301,7 @@ func (s *rosterReviewSetup) arrangeTwoSegmentSeries(t *testing.T) seriesFixture 
 	}
 	w := doTemplateJSON(t, s.router, http.MethodPost, fmt.Sprintf("/templates/%d/split", fixture.segmentA), splitRequest)
 	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
-	fixture.segmentB = decodeTemplateData[splitTemplateResponse](t, w).NewTemplateID
+	fixture.segmentB = (decodeTemplateData[splitTemplateResponse](t, w).NewTemplateID).Int64()
 
 	fixture.occurrences = map[int64][]int64{}
 	dates := map[int64][]calendar.Date{
@@ -337,7 +338,8 @@ func (s *rosterReviewSetup) occurrenceStudents(t *testing.T, instanceID int64) [
 // own boundary.
 func TestTemplateOfferingConnectionCoversEveryFutureSegment(t *testing.T) {
 	t.Parallel()
-	s := buildRosterReviewModule(t, &rosterMaintenanceSources{})
+	sources := &rosterMaintenanceSources{}
+	s := buildRosterReviewModule(t, sources)
 	fixture := s.arrangeTwoSegmentSeries(t)
 	s.booked = fixture.booked
 	effective := rosterReviewMonday.AddDays(2)
@@ -349,23 +351,46 @@ func TestTemplateOfferingConnectionCoversEveryFutureSegment(t *testing.T) {
 	preview := decodeTemplateData[offeringPreviewResponse](t, w)
 	assert.Equal(t, effective.String(), preview.From, "the preview starts at the next planned occurrence")
 	require.Len(t, preview.Segments, 2)
-	assert.Equal(t, fixture.segmentA, preview.Segments[0].TemplateID)
-	assert.Equal(t, fixture.segmentB, preview.Segments[1].TemplateID)
+	assert.Equal(t, ident.ID(fixture.segmentA), preview.Segments[0].TemplateID)
+	assert.Equal(t, ident.ID(fixture.segmentB), preview.Segments[1].TemplateID)
 	require.NotNil(t, preview.Segments[0].ValidUntil)
 	assert.Equal(t, fixture.split.String(), *preview.Segments[0].ValidUntil)
 	assert.Nil(t, preview.Segments[1].ValidUntil)
 
 	announcer := &recordingStaffingAnnouncer{}
 	s.res.Staffing = announcer
-	w = doTemplateJSON(t, s.router, http.MethodPost, fmt.Sprintf("/templates/%d/offering-connection", fixture.segmentB), map[string]any{
-		"offering_ids": []int64{rosterReviewOfferingID}, "school_classes": []string{"2c"}, "effective_date": effective.String(),
-	})
+	connect := func(fingerprint string) *httptest.ResponseRecorder {
+		return doTemplateJSON(t, s.router, http.MethodPost, fmt.Sprintf("/templates/%d/offering-connection", fixture.segmentB), map[string]any{
+			"offering_ids": []int64{rosterReviewOfferingID}, "school_classes": []string{"2c"}, "effective_date": effective.String(),
+			"expected_fingerprint": fingerprint,
+		})
+	}
+
+	// A child booked since the preview joins the series: the confirmed
+	// preview no longer says who comes, so nothing is connected (ADR 0311).
+	sources.bookings = []timetableModule.OfferingWeekdayBooking{{
+		OfferingID: rosterReviewOfferingID, StudentID: fixture.booked[0], SchoolClass: "2c",
+		Weekdays: []int{timetableModule.WeekdayMonday, timetableModule.WeekdayWednesday},
+	}}
+	for _, stale := range []string{preview.Fingerprint, ""} {
+		w = connect(stale)
+		require.Equal(t, http.StatusConflict, w.Code, "body=%s", w.Body.String())
+		assert.Contains(t, w.Body.String(), `"code":"general.changed_since_read"`)
+	}
+	assert.Empty(t, s.resyncs, "a refused connection writes nothing")
+	w = doTemplateJSON(t, s.router, http.MethodGet, fmt.Sprintf(
+		"/templates/%d/offering-preview?offering_ids=%d&school_classes=2c", fixture.segmentB, rosterReviewOfferingID), nil)
+	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
+	current := decodeTemplateData[offeringPreviewResponse](t, w)
+	require.NotEqual(t, preview.Fingerprint, current.Fingerprint)
+
+	w = connect(current.Fingerprint)
 	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
 	// Open planners and supervision views learn about the rewritten rosters
 	// after the commit (#5017).
 	assert.Equal(t, []string{"template_offering_connection"}, announcer.sources)
 	result := decodeTemplateData[offeringConnectionResponse](t, w)
-	assert.Equal(t, []int64{fixture.segmentA, fixture.segmentB}, result.TemplateIDs)
+	assert.Equal(t, []ident.ID{ident.ID(fixture.segmentA), ident.ID(fixture.segmentB)}, result.TemplateIDs)
 	assert.Equal(t, effective.String(), result.EffectiveDate)
 
 	require.Len(t, s.resyncs, 2)
@@ -528,7 +553,7 @@ func TestTemplateRosterDeviationsTiedCombinations(t *testing.T) {
 	class := createClassStudents(t, s.db, "1c", 7)
 	first := rosterReviewOfferingID
 	offerings := []templateRosterMaintenanceOfferingResponse{
-		{ID: first, Name: "A"}, {ID: first + 1, Name: "B"}, {ID: first + 2, Name: "C"}, {ID: first + 3, Name: "D"},
+		{ID: ident.ID(first), Name: "A"}, {ID: ident.ID(first + 1), Name: "B"}, {ID: ident.ID(first + 2), Name: "C"}, {ID: ident.ID(first + 3), Name: "D"},
 	}
 	pick := func(indexes ...int) []int64 {
 		ids := make([]int64, 0, len(indexes))

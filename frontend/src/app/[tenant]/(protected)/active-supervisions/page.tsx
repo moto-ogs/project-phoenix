@@ -42,7 +42,6 @@ import { useMinuteClock } from "~/lib/pickup-helpers";
 import { canReadSupervisionData, hasPermission } from "~/lib/auth-utils";
 import { canGrantExternalViewAccess } from "~/lib/external-caregiver-access";
 import { canReadStudents } from "~/lib/student-access";
-import { UnclaimedRooms } from "~/components/active/unclaimed-rooms";
 import { SSEErrorBoundary } from "~/components/sse/SSEErrorBoundary";
 import {
   ActiveSupervisionLoadingView,
@@ -120,6 +119,11 @@ import {
 import { OwnSupervisionView } from "~/components/active-supervisions/own-supervision-view";
 import { useSidebarMemory } from "~/lib/sidebar-memory";
 import { roomsConcept } from "~/lib/concepts/rooms";
+
+const ACTIVE_SUPERVISIONS_INFO =
+  "Hier führst du die Kinderliste deiner laufenden Aufsicht. Starte zuerst deinen Termin unter „Als Nächstes“ oder übernimm einen Raum. Halte die Liste aktuell, wenn Kinder kommen oder gehen.";
+const ACTIVE_SUPERVISIONS_BINARY_MODE_INFO =
+  "Hier wäre die Kinderliste deiner Aufsicht. Deine Schule nutzt sie zurzeit nicht.";
 
 function hasSameGroupNames(
   previous: readonly string[] | undefined,
@@ -309,7 +313,7 @@ function MeinRaumPageContent() {
   const occupiedRoomIds = useMemo(
     () =>
       occupiedRoomIdsForSpontaneousStart({
-        ownSupervisionRoomIds: allRooms.map((room) => room.room_id),
+        ownSupervisionRoomIds: allRooms.map((room) => room.roomId),
         openRooms,
       }),
     [allRooms, openRooms],
@@ -324,7 +328,7 @@ function MeinRaumPageContent() {
     currentOpenRoom !== null && !currentOpenRoom.isUserSupervising;
   useSetBreadcrumb({
     activeSupervisionName:
-      currentOpenRoom?.name ?? currentRoom?.name ?? currentRoom?.room_name,
+      currentOpenRoom?.name ?? currentRoom?.name ?? currentRoom?.roomName,
     activeSupervisionIsSharedRoom: isSharedRoomView || undefined,
   });
 
@@ -359,11 +363,11 @@ function MeinRaumPageContent() {
     if (room) {
       router.push(`/active-supervisions?session=${sessionId}`);
       memory.write("supervision-last-session", sessionId);
-      if (room.room_id) {
-        memory.write("sidebar-last-room", room.room_id);
+      if (room.roomId) {
+        memory.write("sidebar-last-room", room.roomId);
       }
-      if (room.room_name) {
-        memory.write("sidebar-last-room-name", room.room_name);
+      if (room.roomName) {
+        memory.write("sidebar-last-room-name", room.roomName);
       }
       void dashboard.switchToRoom(sessionId);
     }
@@ -385,15 +389,12 @@ function MeinRaumPageContent() {
   // wie viele Kinder in ihr geführt werden. Beides steht schon im geladenen
   // Dashboard-Zustand.
   const supervisionName =
-    currentOpenRoom?.name ??
-    currentRoom?.name ??
-    currentRoom?.room_name ??
-    null;
+    currentOpenRoom?.name ?? currentRoom?.name ?? currentRoom?.roomName ?? null;
   // Die Zahl kommt aus derselben Quelle wie früher der Zähler im Kopf: der
   // gemeldeten Belegung, ersatzweise den geladenen Kindern.
   const supervisionCount =
     currentOpenRoom?.studentCount ??
-    currentRoom?.student_count ??
+    currentRoom?.studentCount ??
     students.length;
   // Dazu Raum und wer die Aufsicht hat, für eigene Aufsichten wie für offene
   // Räume (#4354). Die Blockkarte darunter nennt den Raum dann nicht mehr.
@@ -401,8 +402,8 @@ function MeinRaumPageContent() {
   const headFacts = supervisionHeadFacts({
     title: supervisionName,
     currentRoom: currentRoom && {
-      room_name:
-        currentRoom.room_name ??
+      roomName:
+        currentRoom.roomName ??
         currentTimetableRoster?.instance.roomName ??
         undefined,
       supervisorNames: currentRoom.supervisorNames,
@@ -413,7 +414,7 @@ function MeinRaumPageContent() {
   // zeigt jeder Abschnitt seine eigene (#3634).
   const supervisionOccupancy: Occupancy = {
     count: supervisionCount,
-    limit: currentOpenRoom ? null : (currentRoom?.participant_limit ?? null),
+    limit: currentOpenRoom ? null : (currentRoom?.participantLimit ?? null),
   };
   const supervisionOverbookedHint = overbookedHintFor(
     supervisionOccupancy,
@@ -507,7 +508,7 @@ function MeinRaumPageContent() {
       canCreateExternalCaregiver={hasPermission(session, "users:create")}
       canGrantExternalView={canGrantExternalViewAccess(session)}
       currentStaffId={currentStaffId}
-      defaultRoomId={currentRoom?.room_id ?? currentOpenRoom?.roomId}
+      defaultRoomId={currentRoom?.roomId ?? currentOpenRoom?.roomId}
       disabled={dashboard.spontaneousStartAvailability?.available === false}
       disabledReason={spontaneousStartBlockedReason}
       isStarting={actions.isStartingSpontaneous}
@@ -837,6 +838,7 @@ function MeinRaumPageContent() {
             onConfirmExpected={actions.handleConfirmExpectedStudents}
             onRosterAction={actions.handleRosterAction}
             onSaveHomeworkFeedback={actions.handleSaveHomeworkFeedback}
+            reloadAfterRefusal={actions.reloadRosterAfterRefusal}
             onExcuseRestOfDay={
               hasPermission(session, "users:update")
                 ? actions.handleExcuseRestOfDay
@@ -870,6 +872,7 @@ function MeinRaumPageContent() {
       // Die Breadcrumb bleibt „Aktuelle Aufsicht > Name“, der Seitentitel
       // nennt deshalb nur den Namen statt die Aufsicht ein zweites Mal (#3312).
       title={supervisionName ?? "Aktuelle Aufsicht"}
+      info={ACTIVE_SUPERVISIONS_INFO}
       stats={supervisionSummary}
       back={isSharedRoomView}
       backHref={
@@ -997,11 +1000,7 @@ function MeinRaumPageContent() {
         <>
           {reopenBanner}
           {spontaneousStartBanner}
-          <EmptyRoomsView
-            onClaimed={refresh}
-            cachedActiveGroups={dashboard.cachedActiveGroups}
-            currentStaffId={currentStaffId}
-          />
+          <EmptyRoomsView />
           {/* The day review must survive the empty state: after the last block
               ends, supervisors land exactly here (#2335). */}
           <PastBlocksSection onReopen={reopenPastBlock} />
@@ -1009,17 +1008,6 @@ function MeinRaumPageContent() {
       ) : (
         <>
           {reopenBanner}
-          {/* Unclaimed Rooms Section - Shows rooms available for claiming */}
-          <UnclaimedRooms
-            onClaimed={refresh}
-            activeGroups={
-              dashboard.cachedActiveGroups.length > 0
-                ? dashboard.cachedActiveGroups
-                : undefined
-            }
-            currentStaffId={currentStaffId}
-          />
-
           <PlannedNowSection
             plannedNow={plannedNow}
             hasActiveTimetableSession={
@@ -1109,6 +1097,7 @@ function ActiveSupervisionGate({
     return (
       <TenantPage
         title="Aktuelle Aufsicht"
+        info={ACTIVE_SUPERVISIONS_INFO}
         statsLoading
         loading
         loadingLabel="Aktuelle Aufsicht wird geladen…"
@@ -1137,7 +1126,9 @@ function ActiveSupervisionGate({
 
   // Fehlendes Recht ist ein Zustand der Seite, kein Fehler: dieselbe
   // Kopfkarte mit demselben Titel, darunter der ruhige Leerzustand.
-  return <ForbiddenPage title="Aktuelle Aufsicht" />;
+  return (
+    <ForbiddenPage title="Aktuelle Aufsicht" info={ACTIVE_SUPERVISIONS_INFO} />
+  );
 }
 
 // Main component with Suspense wrapper. BinaryModeGuard runs first so
@@ -1145,11 +1136,15 @@ function ActiveSupervisionGate({
 // data that depends on detailed-mode room visits.
 export default function MeinRaumPage() {
   return (
-    <BinaryModeGuard title="Aktuelle Aufsicht">
+    <BinaryModeGuard
+      title="Aktuelle Aufsicht"
+      info={ACTIVE_SUPERVISIONS_BINARY_MODE_INFO}
+    >
       <Suspense
         fallback={
           <TenantPage
             title="Aktuelle Aufsicht"
+            info={ACTIVE_SUPERVISIONS_INFO}
             statsLoading
             loading
             loadingLabel="Aktuelle Aufsicht wird geladen…"

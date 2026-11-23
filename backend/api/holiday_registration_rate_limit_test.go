@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	customMiddleware "github.com/moto-ogs/project-phoenix/middleware"
 	"github.com/stretchr/testify/assert"
@@ -29,11 +30,21 @@ func TestPublicLinkLimitsAreNeverTighterThanTheGeneralLimiter(t *testing.T) {
 	}
 }
 
+// stoppedClockRateLimiter is the production limiter on a clock that stands
+// still. A burst test spends several hundred tokens; on a loaded runner the
+// wall clock would refill one before the request past the burst (#7644).
+func stoppedClockRateLimiter(limit, burst int) *customMiddleware.RateLimiter {
+	limiter := customMiddleware.NewRateLimiter(limit, burst)
+	stopped := time.Date(2026, time.November, 20, 12, 0, 0, 0, time.UTC)
+	limiter.Now = func() time.Time { return stopped }
+	return limiter
+}
+
 // A school network opens the link at once: every request of the burst
 // passes, the one after it is refused, reads and writes apart.
 func TestHolidayRegistrationRateLimitLetsItsBurstThrough(t *testing.T) {
 	t.Parallel()
-	limited := holidayRegistrationRateLimit(true, false, customMiddleware.NewRateLimiter)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	limited := holidayRegistrationRateLimit(true, false, stoppedClockRateLimiter)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	send := func(method string) int {
@@ -50,4 +61,28 @@ func TestHolidayRegistrationRateLimitLetsItsBurstThrough(t *testing.T) {
 	assert.Equal(t, http.StatusTooManyRequests, send(http.MethodGet), "the read past the burst")
 	assert.Equal(t, http.StatusOK, send(http.MethodPost), "writes have a budget of their own")
 	assert.Nil(t, holidayRegistrationRateLimit(false, false, customMiddleware.NewRateLimiter), "no limiter while rate limiting is off")
+}
+
+// The signing link of a contract mail has the shared limit of the public
+// links too, with buckets of its own: a family that opens the link and signs
+// does not spend the budget of the holiday link.
+func TestCareContractSigningRateLimitLetsItsBurstThrough(t *testing.T) {
+	t.Parallel()
+	limited := careContractSigningRateLimit(true, false, stoppedClockRateLimiter)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	send := func(method string) int {
+		rec := httptest.NewRecorder()
+		limited.ServeHTTP(rec, httptest.NewRequest(method, careContractSigningPath+"/link", nil))
+		return rec.Code
+	}
+	_, burst := publicLinkLimits(generalRateLimitFromEnv())
+	for i := range burst {
+		if code := send(http.MethodGet); code != http.StatusOK {
+			t.Fatalf("read %d of the burst of %d: status %d", i+1, burst, code)
+		}
+	}
+	assert.Equal(t, http.StatusTooManyRequests, send(http.MethodGet), "the read past the burst")
+	assert.Equal(t, http.StatusOK, send(http.MethodPost), "writes have a budget of their own")
+	assert.Nil(t, careContractSigningRateLimit(false, false, customMiddleware.NewRateLimiter), "no limiter while rate limiting is off")
 }

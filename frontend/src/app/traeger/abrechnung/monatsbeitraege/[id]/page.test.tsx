@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
+import { ApiError } from "~/lib/api-error";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type {
@@ -14,6 +15,7 @@ const { api } = vi.hoisted(() => ({
   api: {
     fetchCareRun: vi.fn(),
     fetchCareLetters: vi.fn(),
+    releaseCareRun: vi.fn(),
   },
 }));
 // The recipient of the handover (ADR 0218) is tested on its own.
@@ -70,6 +72,7 @@ const RUN: CareRunDetail = {
   unpriced: [],
   duplicates: [],
   duplicateChildren: 0,
+  joinedChildren: [],
   uncountedFamilies: 0,
   billed: 0,
   previewCount: 1,
@@ -244,6 +247,43 @@ describe("monthly run page letters card", () => {
     ).toBeInTheDocument();
   });
 
+  // ADR 0311 rule 6: a failed read of the run after a refused release says
+  // so instead of claiming the new state shows.
+  it("names a failed read of the run after a refused release", async () => {
+    api.fetchCareRun.mockResolvedValue({
+      ...RUN,
+      status: "calculated",
+      releasedAt: null,
+      issuedOn: null,
+    });
+    api.releaseCareRun.mockRejectedValue(
+      new ApiError("changed", 409, {
+        code: "parent_billing.billing_run_changed",
+      }),
+    );
+    renderPage();
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Lauf freigeben" }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "Monatslauf freigeben?",
+    });
+    api.fetchCareRun.mockRejectedValue(
+      new ApiError("down", 503, { code: "general.unavailable" }),
+    );
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: /^(Trotzdem f|F)reigeben$/ }),
+    );
+
+    expect(
+      await screen.findByText(/Der neue Stand konnte nicht geladen werden/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Du siehst jetzt den neuen Stand/),
+    ).not.toBeInTheDocument();
+    expect(api.releaseCareRun).toHaveBeenCalledTimes(1);
+  });
+
   // The release refuses a direct debit without mandate: the question names
   // it and offers no button that would fail.
   it("holds the release back while a direct debit lacks its mandate", async () => {
@@ -297,6 +337,78 @@ describe("monthly run page letters card", () => {
     expect(
       within(dialog).getByRole("button", { name: "Freigeben" }),
     ).toBeDisabled();
+  });
+});
+
+describe("monthly run page with a child an issued invoice already bills (#7892)", () => {
+  const held = {
+    childFirstName: "Noah",
+    childLastName: "Muster",
+    reason: "already_billed",
+    contracts: [{ contractId: "81", schoolId: "3", schoolName: "OGS Nord" }],
+    invoices: [
+      {
+        source: "care_run",
+        runId: "5",
+        contractId: "82",
+        schoolName: "OGS Süd",
+        number: "MB-0002",
+        documentKind: "invoice",
+      },
+    ],
+  } as const;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    api.fetchCareLetters.mockResolvedValue(letters());
+  });
+
+  it("names the child in the review and in the release question", async () => {
+    api.fetchCareRun.mockResolvedValue({
+      ...RUN,
+      status: "calculated",
+      releasedAt: null,
+      issuedOn: null,
+      billedChildren: [held],
+    });
+    renderPage();
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Kind hat schon eine Rechnung – bitte prüfen",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Rechnung MB-0002 · OGS Süd")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", {
+        name: "Rechnung öffnen: MB-0002, Noah Muster",
+      }),
+    ).toHaveAttribute(
+      "href",
+      "/traeger/abrechnung/monatsbeitraege/5/rechnung/82",
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Lauf freigeben" }));
+    const dialog = await screen.findByRole("dialog", {
+      name: "Monatslauf freigeben?",
+    });
+    expect(
+      within(dialog).getByText(
+        "1 Kind hat schon eine Rechnung und bekommt keine weitere.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps the child in sight under the released run", async () => {
+    api.fetchCareRun.mockResolvedValue({ ...RUN, billedChildren: [held] });
+    renderPage();
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Nicht abgerechnet – Kind hatte schon eine Rechnung",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Noah Muster")).toBeInTheDocument();
   });
 });
 

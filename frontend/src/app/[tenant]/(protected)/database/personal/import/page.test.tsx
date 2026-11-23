@@ -7,6 +7,11 @@ import {
 } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { plainFetch } from "~/test/mocks/plain-session-fetch";
+
+const fetchMock = vi.hoisted(() => vi.fn());
+import { requireTenantSession } from "~/lib/session-cache";
+import { ApiError } from "~/lib/api-error";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { SWRConfig } from "~/lib/swr/testing";
 import { catalogText } from "~/test/error-catalog-text";
@@ -35,6 +40,16 @@ const personnelSession = {
   },
   status: "authenticated",
 };
+// The session gate of bffJson is a spy over the plain gate, so a case
+// can let it refuse an expired session.
+vi.mock("~/lib/session-cache", async () => {
+  const plain = await import("~/test/mocks/plain-session-fetch");
+  return {
+    ...plain,
+    requireTenantSession: vi.fn(plain.requireTenantSession),
+  };
+});
+
 vi.mock("next-auth/react", () => ({
   useSession: vi.fn(() => personnelSession),
 }));
@@ -177,17 +192,18 @@ function previewRow(
   errors: { code: string; severity: string; message: string; field: string }[],
 ) {
   return {
-    RowNumber: 1,
-    Data: data,
-    Errors: errors,
-    Timestamp: new Date().toISOString(),
+    row_number: 1,
+    data: data,
+    errors: errors,
+    timestamp: new Date().toISOString(),
   };
 }
 
 describe("StaffImportPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    global.fetch = vi.fn();
+    // Plain answer objects of a case go out as Responses.
+    global.fetch = vi.fn(plainFetch(fetchMock));
   });
 
   afterEach(() => {
@@ -254,7 +270,7 @@ describe("StaffImportPage", () => {
 
   it("calls the teacher template endpoint on download", async () => {
     const mockBlob = new Blob(["test"], { type: "text/csv" });
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       blob: () => Promise.resolve(mockBlob),
     });
@@ -271,13 +287,13 @@ describe("StaffImportPage", () => {
       expect(global.fetch).toHaveBeenCalledWith(
         "/api/import/teachers/template?format=xlsx",
         // The route reads the session cookie (#5005).
-        { credentials: "include" },
+        expect.objectContaining({ method: "GET" }),
       );
     });
   });
 
   it("handles download error gracefully", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: false,
       status: 503,
     });
@@ -295,16 +311,16 @@ describe("StaffImportPage", () => {
   });
 
   it("posts to the teacher preview endpoint on file upload", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       json: () =>
         Promise.resolve({
           data: {
-            TotalRows: 2,
-            CreatedCount: 2,
-            UpdatedCount: 0,
-            ErrorCount: 0,
-            Errors: [],
+            total_rows: 2,
+            created_count: 2,
+            updated_count: 0,
+            error_count: 0,
+            errors: [],
           },
         }),
     });
@@ -321,7 +337,7 @@ describe("StaffImportPage", () => {
   });
 
   it("displays error when preview fails", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: false,
       status: 400,
       json: () =>
@@ -341,7 +357,7 @@ describe("StaffImportPage", () => {
   });
 
   it("retries the preview with the same file", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>)
+    fetchMock
       .mockResolvedValueOnce({
         ok: false,
         status: 503,
@@ -352,11 +368,11 @@ describe("StaffImportPage", () => {
         json: () =>
           Promise.resolve({
             data: {
-              TotalRows: 1,
-              CreatedCount: 1,
-              UpdatedCount: 0,
-              ErrorCount: 0,
-              Errors: [],
+              total_rows: 1,
+              created_count: 1,
+              updated_count: 0,
+              error_count: 0,
+              errors: [],
             },
           }),
       });
@@ -380,16 +396,16 @@ describe("StaffImportPage", () => {
   });
 
   it("shows a summary row when the preview has no issues", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       json: () =>
         Promise.resolve({
           data: {
-            TotalRows: 5,
-            CreatedCount: 5,
-            UpdatedCount: 0,
-            ErrorCount: 0,
-            Errors: [],
+            total_rows: 5,
+            created_count: 5,
+            updated_count: 0,
+            error_count: 0,
+            errors: [],
           },
         }),
     });
@@ -405,16 +421,16 @@ describe("StaffImportPage", () => {
   });
 
   it("shows the import button label with the new count", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       json: () =>
         Promise.resolve({
           data: {
-            TotalRows: 4,
-            CreatedCount: 4,
-            UpdatedCount: 0,
-            ErrorCount: 0,
-            Errors: [],
+            total_rows: 4,
+            created_count: 4,
+            updated_count: 0,
+            error_count: 0,
+            errors: [],
           },
         }),
     });
@@ -428,17 +444,17 @@ describe("StaffImportPage", () => {
   });
 
   it("renders a preview row with name, email and role", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       json: () =>
         Promise.resolve({
           data: {
-            TotalRows: 1,
-            CreatedCount: 1,
-            UpdatedCount: 0,
-            ErrorCount: 0,
-            WarningCount: 0,
-            Errors: [
+            total_rows: 1,
+            created_count: 1,
+            updated_count: 0,
+            error_count: 0,
+            warning_count: 0,
+            errors: [
               previewRow(
                 {
                   first_name: "Anna",
@@ -471,16 +487,16 @@ describe("StaffImportPage", () => {
   });
 
   it("disables the import button when there are errors", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       json: () =>
         Promise.resolve({
           data: {
-            TotalRows: 1,
-            CreatedCount: 0,
-            UpdatedCount: 0,
-            ErrorCount: 1,
-            Errors: [
+            total_rows: 1,
+            created_count: 0,
+            updated_count: 0,
+            error_count: 1,
+            errors: [
               previewRow(
                 {
                   first_name: "Bernd",
@@ -512,16 +528,16 @@ describe("StaffImportPage", () => {
   });
 
   it("resets the form on cancel", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       json: () =>
         Promise.resolve({
           data: {
-            TotalRows: 3,
-            CreatedCount: 3,
-            UpdatedCount: 0,
-            ErrorCount: 0,
-            Errors: [],
+            total_rows: 3,
+            created_count: 3,
+            updated_count: 0,
+            error_count: 0,
+            errors: [],
           },
         }),
     });
@@ -541,17 +557,17 @@ describe("StaffImportPage", () => {
   });
 
   it("imports staff and shows a success toast", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>)
+    fetchMock
       .mockResolvedValueOnce({
         ok: true,
         json: () =>
           Promise.resolve({
             data: {
-              TotalRows: 3,
-              CreatedCount: 3,
-              UpdatedCount: 0,
-              ErrorCount: 0,
-              Errors: [],
+              total_rows: 3,
+              created_count: 3,
+              updated_count: 0,
+              error_count: 0,
+              errors: [],
             },
           }),
       })
@@ -560,11 +576,11 @@ describe("StaffImportPage", () => {
         json: () =>
           Promise.resolve({
             data: {
-              TotalRows: 3,
-              CreatedCount: 3,
-              UpdatedCount: 0,
-              ErrorCount: 0,
-              Errors: [],
+              total_rows: 3,
+              created_count: 3,
+              updated_count: 0,
+              error_count: 0,
+              errors: [],
             },
           }),
       });
@@ -590,17 +606,17 @@ describe("StaffImportPage", () => {
   });
 
   it("shows a warning toast on partial import", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>)
+    fetchMock
       .mockResolvedValueOnce({
         ok: true,
         json: () =>
           Promise.resolve({
             data: {
-              TotalRows: 3,
-              CreatedCount: 3,
-              UpdatedCount: 0,
-              ErrorCount: 0,
-              Errors: [],
+              total_rows: 3,
+              created_count: 3,
+              updated_count: 0,
+              error_count: 0,
+              errors: [],
             },
           }),
       })
@@ -609,11 +625,11 @@ describe("StaffImportPage", () => {
         json: () =>
           Promise.resolve({
             data: {
-              TotalRows: 3,
-              CreatedCount: 2,
-              UpdatedCount: 0,
-              ErrorCount: 1,
-              Errors: [
+              total_rows: 3,
+              created_count: 2,
+              updated_count: 0,
+              error_count: 1,
+              errors: [
                 previewRow(
                   {
                     first_name: "Max",
@@ -653,17 +669,17 @@ describe("StaffImportPage", () => {
   });
 
   it("shows an error when the import call fails", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>)
+    fetchMock
       .mockResolvedValueOnce({
         ok: true,
         json: () =>
           Promise.resolve({
             data: {
-              TotalRows: 2,
-              CreatedCount: 2,
-              UpdatedCount: 0,
-              ErrorCount: 0,
-              Errors: [],
+              total_rows: 2,
+              created_count: 2,
+              updated_count: 0,
+              error_count: 0,
+              errors: [],
             },
           }),
       })
@@ -691,17 +707,17 @@ describe("StaffImportPage", () => {
   });
 
   it("shows saved rows and the blocking row on import_batch_failed", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>)
+    fetchMock
       .mockResolvedValueOnce({
         ok: true,
         json: () =>
           Promise.resolve({
             data: {
-              TotalRows: 205,
-              CreatedCount: 205,
-              UpdatedCount: 0,
-              ErrorCount: 0,
-              Errors: [],
+              total_rows: 205,
+              created_count: 205,
+              updated_count: 0,
+              error_count: 0,
+              errors: [],
             },
           }),
       })
@@ -714,20 +730,20 @@ describe("StaffImportPage", () => {
             code: "import.import_batch_failed",
             details: {
               result: {
-                TotalRows: 205,
-                CreatedCount: 100,
-                UpdatedCount: 0,
-                ErrorCount: 1,
-                Errors: [
+                total_rows: 205,
+                created_count: 100,
+                updated_count: 0,
+                error_count: 1,
+                errors: [
                   {
-                    RowNumber: 152,
-                    Data: {
+                    row_number: 152,
+                    data: {
                       first_name: "Refused",
                       last_name: "Batch",
                       email: "",
                       role_name: "Betreuung",
                     },
-                    Errors: [
+                    errors: [
                       {
                         field: "create",
                         message: "Anlegen fehlgeschlagen",
@@ -771,17 +787,17 @@ describe("StaffImportPage", () => {
   });
 
   it("keeps import enabled after re-uploading a file whose first rows already exist", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>)
+    fetchMock
       .mockResolvedValueOnce({
         ok: true,
         json: () =>
           Promise.resolve({
             data: {
-              TotalRows: 205,
-              CreatedCount: 205,
-              UpdatedCount: 0,
-              ErrorCount: 0,
-              Errors: [],
+              total_rows: 205,
+              created_count: 205,
+              updated_count: 0,
+              error_count: 0,
+              errors: [],
             },
           }),
       })
@@ -794,20 +810,20 @@ describe("StaffImportPage", () => {
             code: "import.import_batch_failed",
             details: {
               result: {
-                TotalRows: 205,
-                CreatedCount: 100,
-                UpdatedCount: 0,
-                ErrorCount: 1,
-                Errors: [
+                total_rows: 205,
+                created_count: 100,
+                updated_count: 0,
+                error_count: 1,
+                errors: [
                   {
-                    RowNumber: 152,
-                    Data: {
+                    row_number: 152,
+                    data: {
                       first_name: "Refused",
                       last_name: "Batch",
                       email: "",
                       role_name: "Betreuung",
                     },
-                    Errors: [
+                    errors: [
                       {
                         field: "create",
                         message: "Anlegen fehlgeschlagen",
@@ -826,19 +842,19 @@ describe("StaffImportPage", () => {
         json: () =>
           Promise.resolve({
             data: {
-              TotalRows: 205,
-              CreatedCount: 105,
-              UpdatedCount: 0,
-              ErrorCount: 100,
-              Errors: Array.from({ length: 100 }, (_, index) => ({
-                RowNumber: index + 2,
-                Data: {
+              total_rows: 205,
+              created_count: 105,
+              updated_count: 0,
+              error_count: 100,
+              errors: Array.from({ length: 100 }, (_, index) => ({
+                row_number: index + 2,
+                data: {
                   first_name: `Person${index}`,
                   last_name: "Batch",
                   email: "",
                   role_name: "Betreuung",
                 },
-                Errors: [
+                errors: [
                   {
                     code: "already_exists",
                     severity: "error",
@@ -874,16 +890,16 @@ describe("StaffImportPage", () => {
   });
 
   it("handles a valid file drop", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       json: () =>
         Promise.resolve({
           data: {
-            TotalRows: 1,
-            CreatedCount: 1,
-            UpdatedCount: 0,
-            ErrorCount: 0,
-            Errors: [],
+            total_rows: 1,
+            created_count: 1,
+            updated_count: 0,
+            error_count: 0,
+            errors: [],
           },
         }),
     });
@@ -949,6 +965,12 @@ describe("StaffImportPage", () => {
       .spyOn(window.location, "assign")
       .mockImplementation(() => undefined);
     const useSession = await import("next-auth/react");
+    // The gate reads the session cookie and refuses the expired session.
+    vi.mocked(requireTenantSession).mockRejectedValueOnce(
+      new ApiError("Authentication required", 401, {
+        code: "general.permission",
+      }),
+    );
     vi.mocked(useSession.useSession).mockReturnValueOnce({
       data: { user: { id: "1" }, error: "RefreshTokenError" },
       status: "authenticated",
@@ -972,16 +994,16 @@ describe("StaffImportPage", () => {
       status: "authenticated",
       update: vi.fn(),
     } as unknown as ReturnType<typeof useSession.useSession>);
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+    fetchMock.mockResolvedValue({
       ok: true,
       json: () =>
         Promise.resolve({
           data: {
-            TotalRows: 1,
-            CreatedCount: 1,
-            UpdatedCount: 0,
-            ErrorCount: 0,
-            Errors: [],
+            total_rows: 1,
+            created_count: 1,
+            updated_count: 0,
+            error_count: 0,
+            errors: [],
           },
         }),
     });
@@ -1017,16 +1039,16 @@ describe("StaffImportPage", () => {
   });
 
   it("sends the chosen import mode with the preview and relabels the button", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+    fetchMock.mockResolvedValue({
       ok: true,
       json: () =>
         Promise.resolve({
           data: {
-            TotalRows: 3,
-            CreatedCount: 1,
-            UpdatedCount: 2,
-            ErrorCount: 0,
-            Errors: [],
+            total_rows: 3,
+            created_count: 1,
+            updated_count: 2,
+            error_count: 0,
+            errors: [],
           },
         }),
     });
@@ -1040,7 +1062,6 @@ describe("StaffImportPage", () => {
         screen.getByText("3 Mitarbeitende übernehmen"),
       ).toBeInTheDocument();
     });
-    const fetchMock = global.fetch as ReturnType<typeof vi.fn>;
     const previewCall = fetchMock.mock.calls.find(
       (call) => call[0] === "/api/import/teachers/preview",
     );

@@ -1,5 +1,6 @@
 "use client";
 
+import type * as studentsContract from "~/lib/contract/students.generated";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, usePathname, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -19,14 +20,13 @@ import {
   FormErrorAlert,
   LoadErrorAlert,
 } from "~/components/ui/form-error-alert";
-import { ApiError } from "~/lib/api-error";
+import { ApiError, isChangedSinceRead } from "~/lib/api-error";
 import { ConfirmationModal, Modal } from "~/components/ui/modal";
 import { useTenantRouter } from "~/lib/tenant-router";
 import {
   resolveStudentReferrer,
   studentReferrerBackLabel,
 } from "./student-referrer";
-import { groupService } from "~/lib/api";
 import { updateStudent } from "~/lib/student-api";
 import {
   schoolCheckinStudent,
@@ -46,8 +46,12 @@ import { useSWRAuth, useTenantMutate, useSWRSeedFrom } from "~/lib/swr";
 import { studentKeys } from "~/lib/swr/portal-keys";
 import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
-import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import type { Student, SupervisorContact } from "~/lib/student-helpers";
+import { groups } from "~/lib/swr/groups";
+import {
+  useSwrLoadError,
+  useSwrResourceLoadError,
+} from "~/lib/hooks/use-swr-load-error";
+import type { Student } from "~/lib/student-helpers";
 import {
   allowedDepartureModesFromDeparture,
   allowedDepartureToDepartureDays,
@@ -100,6 +104,7 @@ import { CareExitModal } from "~/components/students/care-exit-modal";
 import {
   PlannedStatusDaysModal,
   type PlannedStatusSubmitOptions,
+  type EditedPartialAbsence,
 } from "~/components/students/planned-status-days-modal";
 import { fetchStudentPickupData } from "~/lib/pickup-schedule-api";
 import { StudentPickupChanges } from "~/components/students/pickup-change-alert";
@@ -125,13 +130,15 @@ import {
   deleteStudentPartialAbsence,
   fetchStudentPartialAbsences,
   saveStudentPartialAbsence,
+  type StudentPartialAbsence,
 } from "~/lib/student-partial-absences-api";
+import type { FormErrorInput } from "~/components/ui/form-error";
 import {
   CHECKOUT_HINTS,
   EarlyCheckoutNoteField,
   useEarlyCheckoutCheck,
 } from "~/components/students/early-checkout-note";
-import { StudentDetailLoadingPage } from "./page-skeleton";
+import { StudentDetailLoadingPage, STUDENT_DETAIL_INFO } from "./page-skeleton";
 import {
   announceChangeRequestsChanged,
   CHANGE_REQUESTS_REFRESH_EVENT,
@@ -154,6 +161,8 @@ const EXCUSED_STILL_ACTIVE =
   "Die Entschuldigung für heute ist noch eingetragen. Bitte versuche es noch einmal. Kommt das Kind doch, kannst du es auch anmelden.";
 
 const EMPTY_GROUP_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [];
+const NO_STATUS_DAYS: StudentStatusDay[] = [];
+const NO_PARTIAL_ABSENCES: StudentPartialAbsence[] = [];
 
 // Tabbed navigation for the student detail page (issue #1501). The cross-cutting
 // action bar (check-in/out, Krank/Entschuldigt) and the attendance header stay
@@ -511,6 +520,7 @@ function StudentDetailPageContent() {
     myGroupRooms,
     mySupervisedRooms,
     refreshData,
+    reloadOrThrow: reloadStudentOrThrow,
   } = useStudentData(studentId);
   const seedFrom = useSWRSeedFrom();
   const preview = useMemo(
@@ -572,14 +582,21 @@ function StudentDetailPageContent() {
   // Gruppen für das Auswahlfeld im Bearbeiten-Zustand der Stammdaten (#3115).
   // Derselbe Schlüssel wie im Register der Kinderdaten, damit beide denselben
   // Zwischenspeicher teilen; ohne Schreibrecht wird gar nicht erst geladen.
-  const { data: groupOptions = EMPTY_GROUP_OPTIONS } = useSWRAuth<
-    ReadonlyArray<{ value: string; label: string }>
-  >(hasWriteAccess ? tenantAdminKeys.groupOptions() : null, async () => {
-    const groups = await groupService.getGroups();
-    return groups
-      .map((group) => ({ value: String(group.id), label: group.name }))
-      .sort((a, b) => a.label.localeCompare(b.label, "de"));
-  });
+  const {
+    data: groupOptions = EMPTY_GROUP_OPTIONS,
+    error: groupOptionsError,
+    mutate: reloadGroupOptions,
+  } = useSWRAuth(
+    hasWriteAccess ? tenantAdminKeys.groupOptions() : null,
+    groups.optionsFetcher,
+  );
+  // Ohne Gruppen bliebe das Auswahlfeld leer, als hätte die Schule keine
+  // (#2353); der Fehler steht über dem Bearbeiten-Zustand.
+  const groupOptionsLoadError = useSwrLoadError(
+    groupOptionsError,
+    "die Gruppenauswahl",
+    () => reloadGroupOptions(),
+  );
   const refreshDataAndHistory = useCallback(async () => {
     await refreshData();
     // Best effort: the change history reloads with its own load error path
@@ -598,6 +615,11 @@ function StudentDetailPageContent() {
     refreshDataAndHistory,
   );
   const canViewEnrollments =
+    sessionStatus === "authenticated" &&
+    hasPermission(session, "config:manage");
+  // Den Stopp von Raumverlauf und Stimmung setzt die OGS-Verwaltung (#3844);
+  // das Backend verlangt dazu auch Schreibzugriff auf das Kind.
+  const canManageRoomHistoryStop =
     sessionStatus === "authenticated" &&
     hasPermission(session, "config:manage");
   const canViewCarePlan =
@@ -807,7 +829,11 @@ function StudentDetailPageContent() {
     hasWriteAccess &&
     sessionStatus === "authenticated" &&
     hasPermission(session, "users:update");
-  const { data: statusDays = [], mutate: mutateStatusDays } = useSWRAuth(
+  const {
+    data: loadedStatusDays,
+    error: statusDaysError,
+    mutate: mutateStatusDays,
+  } = useSWRAuth(
     (shouldFetchChildDetails || canReadStatusDays) && studentId
       ? studentKeys.statusDays(
           studentId,
@@ -819,23 +845,38 @@ function StudentDetailPageContent() {
       fetchStudentStatusDays(studentId, statusDayRange.from, statusDayRange.to),
     { revalidateOnFocus: false },
   );
-  const { data: partialAbsences = [], mutate: mutatePartialAbsences } =
-    useSWRAuth(
-      shouldFetchChildDetails && studentId
-        ? studentKeys.partialAbsences(
-            studentId,
-            statusDayRange.from,
-            statusDayRange.to,
-          )
-        : null,
-      async () =>
-        fetchStudentPartialAbsences(
+  const {
+    data: loadedPartialAbsences,
+    error: partialAbsencesError,
+    mutate: mutatePartialAbsences,
+  } = useSWRAuth(
+    shouldFetchChildDetails && studentId
+      ? studentKeys.partialAbsences(
           studentId,
           statusDayRange.from,
           statusDayRange.to,
-        ),
-      { revalidateOnFocus: false },
-    );
+        )
+      : null,
+    async () =>
+      fetchStudentPartialAbsences(
+        studentId,
+        statusDayRange.from,
+        statusDayRange.to,
+      ),
+    { revalidateOnFocus: false },
+  );
+  const statusDays = loadedStatusDays ?? NO_STATUS_DAYS;
+  const partialAbsences = loadedPartialAbsences ?? NO_PARTIAL_ABSENCES;
+  // Ohne die Tage sähe das Kind aus, als wäre es nie krank oder entschuldigt
+  // gewesen (#2353): der Fehler steht oben in der Akte.
+  const statusDaysLoad = useSwrResourceLoadError(
+    [
+      { data: loadedStatusDays, error: statusDaysError },
+      { data: loadedPartialAbsences, error: partialAbsencesError },
+    ],
+    "die Liste der Abwesenheiten des Kindes",
+    () => Promise.all([mutateStatusDays(), mutatePartialAbsences()]),
+  );
   const ensureStatusDayRange = useCallback((from: string, to: string) => {
     setStatusDayRange((current) => extendStatusDayRange(current, [from, to]));
   }, []);
@@ -1003,6 +1044,7 @@ function StudentDetailPageContent() {
     return (
       <TenantPage
         title="Kindakte"
+        info={STUDENT_DETAIL_INFO}
         back
         backHref={referrer}
         backLabel={backLabel}
@@ -1044,8 +1086,12 @@ function StudentDetailPageContent() {
         ? {
             privacy_consent_accepted: editedStudent.privacy_consent_accepted,
             data_retention_days: editedStudent.data_retention_days,
+            privacy_consent_version: editedStudent.privacy_consent_version,
           }
         : {}),
+      // Der Stand der Stammdaten, aus dem das Formular gefüllt wurde
+      // (ADR 0311): hat ihn inzwischen jemand geändert, lehnt das Backend ab.
+      version: editedStudent.version,
       // Nur mitschicken, wenn der Entwurf den Wert kennt: `undefined` lässt
       // das Backend die Einwilligung unangetastet, `false` nimmt sie zurück.
       ...(editedStudent.photo_consent_given === undefined
@@ -1357,17 +1403,18 @@ function StudentDetailPageContent() {
   };
 
   const handleSavePartialAbsence = async (
-    partialAbsenceId: string | null,
+    editing: EditedPartialAbsence | null,
     date: string,
     fromTime: string,
     reason?: string,
   ) => {
     if (!student) return;
+    const partialAbsenceId = editing?.id ?? null;
     setPlannedStatusLoading(true);
     try {
       await saveStudentPartialAbsence(
         studentId,
-        partialAbsenceId,
+        editing,
         date,
         fromTime,
         reason,
@@ -1389,6 +1436,9 @@ function StudentDetailPageContent() {
         partial_absence_id: partialAbsenceId,
         error: err instanceof Error ? err.message : String(err),
       });
+      // Changed since it was read: the page's window shows the stored entry
+      // again, the modal fills its form from it (ADR 0311).
+      if (isChangedSinceRead(err)) void mutatePartialAbsences();
       // The modal shows the failure in its error slot (Bauart 2 Regel 5).
       throw err;
     } finally {
@@ -1450,6 +1500,7 @@ function StudentDetailPageContent() {
       backLabel={backLabel}
       leading={<StudentHeaderAvatar student={student} />}
       title={studentHeaderTitle(student)}
+      info={isHolidayGuest ? undefined : STUDENT_DETAIL_INFO}
       actions={
         canManageRecord ? (
           <StudentRecordActions
@@ -1764,6 +1815,7 @@ function StudentDetailPageContent() {
       }
     >
       <LoadErrorAlert error={recordAfterWrite.error} />
+      <LoadErrorAlert error={statusDaysLoad.error} />
       {careWithdrawalLoad.error ? (
         <div>
           <LoadErrorAlert error={careWithdrawalLoad.error} />
@@ -1837,6 +1889,7 @@ function StudentDetailPageContent() {
           activeTab={activeTab}
           tabs={visibleTabs}
           canViewEnrollments={canViewEnrollments}
+          canManageRoomHistoryStop={canManageRoomHistoryStop}
           canViewCarePlan={canViewCarePlan}
           canRecordAccidents={canRecordAccidents}
           showParentRecords={showParentRecords}
@@ -1852,7 +1905,9 @@ function StudentDetailPageContent() {
           onClosePersonalInfoEdit={() => setShowPersonalInfoEdit(false)}
           onSavePersonal={handleSavePersonal}
           groupOptions={groupOptions}
+          groupOptionsLoadError={groupOptionsLoadError}
           onRefreshData={refreshDataAndHistory}
+          onReloadStudent={reloadStudentOrThrow}
         />
       )}
       {!isHolidayGuest && !hasFullAccess && (
@@ -1975,7 +2030,7 @@ interface LimitedAccessViewProps {
   studentId: string;
   attendanceLogEnabled: boolean;
   feedbackEnabled: boolean;
-  supervisors: SupervisorContact[];
+  supervisors: studentsContract.SupervisorContact[];
   activeTab: StudentTabId;
   tabs: StudentTabId[];
   canViewEnrollments: boolean;
@@ -2130,6 +2185,7 @@ interface FullAccessViewProps {
   activeTab: StudentTabId;
   tabs: StudentTabId[];
   canViewEnrollments: boolean;
+  canManageRoomHistoryStop: boolean;
   canViewCarePlan: boolean;
   /** student_accidents:manage: „Unfall erfassen“ (#4771). */
   canRecordAccidents: boolean;
@@ -2148,7 +2204,10 @@ interface FullAccessViewProps {
   onClosePersonalInfoEdit: () => void;
   onSavePersonal: (student: PersonalInfoSaveDraft) => Promise<void>;
   onRefreshData: () => void;
+  /** Reads the child again; rejects on failure (ADR 0311). */
+  onReloadStudent: () => Promise<unknown>;
   groupOptions: ReadonlyArray<{ value: string; label: string }>;
+  groupOptionsLoadError: FormErrorInput;
 }
 
 function FullAccessView({
@@ -2161,6 +2220,7 @@ function FullAccessView({
   activeTab,
   tabs,
   canViewEnrollments,
+  canManageRoomHistoryStop,
   canViewCarePlan,
   canRecordAccidents,
   showParentRecords,
@@ -2176,7 +2236,9 @@ function FullAccessView({
   onClosePersonalInfoEdit,
   onSavePersonal,
   onRefreshData,
+  onReloadStudent,
   groupOptions,
+  groupOptionsLoadError,
 }: Readonly<FullAccessViewProps>) {
   const historyRouter = useTenantRouter();
   const changeProtocolFilters = useMemo<AggregatedRequestFilters>(
@@ -2240,13 +2302,17 @@ function FullAccessView({
         {/* Bearbeitet wird am Objekt: der Reiter wechselt in den
             Bearbeiten-Zustand und zurück, kein Dialog über der Akte. */}
         {hasWriteAccess && showPersonalInfoEdit ? (
-          <PersonalInfoEditPanel
-            student={student}
-            onSave={onSavePersonal}
-            onCancel={onClosePersonalInfoEdit}
-            onStudentRefresh={onRefreshData}
-            groups={groupOptions}
-          />
+          <>
+            <LoadErrorAlert error={groupOptionsLoadError} className="mb-4" />
+            <PersonalInfoEditPanel
+              student={student}
+              onSave={onSavePersonal}
+              onCancel={onClosePersonalInfoEdit}
+              onStudentRefresh={onRefreshData}
+              onStudentReload={onReloadStudent}
+              groups={groupOptions}
+            />
+          </>
         ) : (
           <PersonalInfoReadOnly
             student={student}
@@ -2415,6 +2481,7 @@ function FullAccessView({
           attendanceLogEnabled={attendanceLogEnabled}
           feedbackEnabled={feedbackEnabled}
           canViewChangeHistory={hasWriteAccess}
+          canManageRoomHistoryStop={canManageRoomHistoryStop && hasWriteAccess}
           onNavigate={(path) => historyRouter.push(path)}
         />
       </StudentTabPanel>

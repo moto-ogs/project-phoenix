@@ -61,7 +61,7 @@ func TestTraegerCatalogCarriesActiveFlagsAndKeepsSchoolDeviations(t *testing.T) 
 	rec = traegerJSON(t, router, office.token, http.MethodPost, path+"/offerings", catalogOffering(20, 1600))
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	offeringID := decodeSchoolPortalData[struct {
-		ID int64 `json:"id"`
+		ID wireID `json:"id"`
 	}](t, rec.Body.Bytes()).ID
 	apply := func() {
 		p := catalogPreview(t, router, office.token, path)
@@ -72,11 +72,11 @@ func TestTraegerCatalogCarriesActiveFlagsAndKeepsSchoolDeviations(t *testing.T) 
 	}
 	apply()
 	fields["is_active"] = false
-	rec = traegerJSON(t, router, office.token, http.MethodPut, path, fields)
+	rec = catalogPut(t, router, office.token, path, fields)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	draft := catalogOffering(20, 1600)
 	draft["fields"].(map[string]any)["is_active"] = false
-	rec = traegerJSON(t, router, office.token, http.MethodPut, fmt.Sprintf("/traeger/catalog/offerings/%d", offeringID), draft)
+	rec = catalogPut(t, router, office.token, fmt.Sprintf("/traeger/catalog/offerings/%d", offeringID), draft)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	apply()
 	for _, table := range []string{"enrollment.phases", "enrollment.care_offerings"} {
@@ -87,10 +87,10 @@ func TestTraegerCatalogCarriesActiveFlagsAndKeepsSchoolDeviations(t *testing.T) 
 		require.NoError(t, err)
 	}
 	fields["name"] = "Aktiv geändert"
-	rec = traegerJSON(t, router, office.token, http.MethodPut, path, fields)
+	rec = catalogPut(t, router, office.token, path, fields)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	draft["fields"].(map[string]any)["name"] = "Modul geändert"
-	rec = traegerJSON(t, router, office.token, http.MethodPut, fmt.Sprintf("/traeger/catalog/offerings/%d", offeringID), draft)
+	rec = catalogPut(t, router, office.token, fmt.Sprintf("/traeger/catalog/offerings/%d", offeringID), draft)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	apply()
 	for _, table := range []string{"enrollment.phases", "enrollment.care_offerings"} {

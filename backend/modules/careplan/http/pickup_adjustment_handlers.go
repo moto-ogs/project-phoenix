@@ -23,16 +23,21 @@ type pickupAdjustmentSelectionRequest struct {
 }
 
 type pickupAdjustmentRequest struct {
-	Schedules                   []PickupScheduleRequest             `json:"schedules"`
-	ArrivalSchedules            *[]ArrivalScheduleRequestItem       `json:"arrival_schedules,omitempty"`
-	CareDays                    []int                               `json:"care_days"`
-	EffectiveFrom               *calendar.Date                      `json:"effective_from,omitempty"`
-	Selections                  *[]pickupAdjustmentSelectionRequest `json:"selections,omitempty"`
-	ExcludedAutoOfferingIDs     []string                            `json:"excluded_auto_offering_ids,omitempty"`
-	PreviewToken                string                              `json:"preview_token,omitempty"`
-	Resolution                  string                              `json:"resolution,omitempty"`
-	Reason                      string                              `json:"reason,omitempty"`
-	CompleteWithdrawalConfirmed bool                                `json:"complete_withdrawal_confirmed,omitempty"`
+	Schedules               []PickupScheduleRequest             `json:"schedules"`
+	ArrivalSchedules        *[]ArrivalScheduleRequestItem       `json:"arrival_schedules,omitempty"`
+	CareDays                []int                               `json:"care_days"`
+	EffectiveFrom           *calendar.Date                      `json:"effective_from,omitempty"`
+	Selections              *[]pickupAdjustmentSelectionRequest `json:"selections,omitempty"`
+	ExcludedAutoOfferingIDs []string                            `json:"excluded_auto_offering_ids,omitempty"`
+	// ExpectedVersion is the weekly plan token of the plan the change was
+	// made on (ADR 0311); WeekdayNotes replaces the recurring pickup notes in
+	// the same apply. The preview reads neither.
+	ExpectedVersion             string               `json:"expected_version,omitempty"`
+	WeekdayNotes                *[]PickupNoteRequest `json:"weekday_notes,omitempty"`
+	PreviewToken                string               `json:"preview_token,omitempty"`
+	Resolution                  string               `json:"resolution,omitempty"`
+	Reason                      string               `json:"reason,omitempty"`
+	CompleteWithdrawalConfirmed bool                 `json:"complete_withdrawal_confirmed,omitempty"`
 }
 
 func (r *pickupAdjustmentRequest) Bind(_ *http.Request) error {
@@ -44,6 +49,11 @@ func (r *pickupAdjustmentRequest) Bind(_ *http.Request) error {
 	}
 	if r.ArrivalSchedules != nil {
 		if err := validateArrivalScheduleItems(*r.ArrivalSchedules); err != nil {
+			return err
+		}
+	}
+	if r.WeekdayNotes != nil {
+		if err := validateWeekdayPickupNotes(*r.WeekdayNotes); err != nil {
 			return err
 		}
 	}
@@ -184,7 +194,7 @@ func (rs *Resource) applyStudentPickupAdjustment(w http.ResponseWriter, r *http.
 	}
 	staffID, err := rs.getStaffIDFromJWT(r)
 	if err != nil {
-		renderError(w, r, common.ErrorForbidden(err))
+		renderScheduleAuthorError(w, r, err)
 		return
 	}
 	applyInput := rs.pickupAdjustmentApplyInput(r, input, body, staffID)
@@ -201,7 +211,7 @@ func (rs *Resource) applyStudentPickupAdjustment(w http.ResponseWriter, r *http.
 			rs.broadcastArrivalScheduleChanged(tenantID, student.ID)
 		}
 	})
-	out := pickupAdjustmentResponse{Resolution: result.Resolution}
+	out := pickupAdjustmentResponse{Resolution: result.Resolution, WeeklyPlanVersion: result.Version}
 	if result.RosterImpact != nil {
 		wire := newRosterImpactResponse(*result.RosterImpact)
 		out.RosterImpact = &wire
@@ -212,8 +222,10 @@ func (rs *Resource) applyStudentPickupAdjustment(w http.ResponseWriter, r *http.
 // pickupAdjustmentResponse names the applied resolution; an offering switch
 // carries its effect on the child's Regeltermine (#5102).
 type pickupAdjustmentResponse struct {
-	Resolution   string                `json:"resolution"`
-	RosterImpact *rosterImpactResponse `json:"roster_impact,omitempty"`
+	Resolution string `json:"resolution"`
+	// WeeklyPlanVersion is the token of the saved weekly plan (ADR 0311).
+	WeeklyPlanVersion string                `json:"weekly_plan_version"`
+	RosterImpact      *rosterImpactResponse `json:"roster_impact,omitempty"`
 }
 
 func (rs *Resource) pickupAdjustmentApplyInput(
@@ -227,6 +239,7 @@ func (rs *Resource) pickupAdjustmentApplyInput(
 	return careplan.PickupAdjustmentApplyInput{
 		PickupAdjustmentPreviewInput: input,
 		PreviewToken:                 body.PreviewToken, Resolution: body.Resolution, Reason: body.Reason,
+		ExpectedVersion: body.ExpectedVersion, WeekdayNotes: weekdayPickupNoteMap(body.WeekdayNotes),
 		ActorAccountID: int64(claims.ID), ActorRole: strings.Join(claims.Roles, ","),
 		CreatedByStaffID:            staffID,
 		CompleteWithdrawalConfirmed: body.CompleteWithdrawalConfirmed,

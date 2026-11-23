@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/communication"
 	"github.com/moto-ogs/project-phoenix/modules/communication/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/uptrace/bun"
 )
 
@@ -43,10 +44,12 @@ type announcementRow struct {
 
 type viewRow struct {
 	bun.BaseModel  `bun:"table:platform.announcement_views,alias:view"`
-	UserID         int64     `bun:"user_id,pk"`
-	AnnouncementID int64     `bun:"announcement_id,pk"`
-	SeenAt         time.Time `bun:"seen_at,notnull"`
-	Dismissed      bool      `bun:"dismissed,notnull"`
+	UserID         int64      `bun:"user_id,pk"`
+	AnnouncementID int64      `bun:"announcement_id,pk"`
+	SeenAt         *time.Time `bun:"seen_at"`
+	ShownAt        *time.Time `bun:"shown_at"`
+	DismissedAt    *time.Time `bun:"dismissed_at"`
+	Dismissed      bool       `bun:"dismissed,notnull"`
 }
 
 // New builds the store; now stamps when an account saw an announcement.
@@ -192,14 +195,14 @@ func (s *Store) Unpublish(ctx context.Context, id int64) (domain.OperationStats,
 }
 
 func (s *Store) MarkSeen(ctx context.Context, userID, announcementID int64) (domain.OperationStats, error) {
-	return s.mark(ctx, userID, announcementID, false)
+	return s.mark(ctx, userID, announcementID, false, true)
 }
 
 func (s *Store) MarkDismissed(ctx context.Context, userID, announcementID int64) (domain.OperationStats, error) {
-	return s.mark(ctx, userID, announcementID, true)
+	return s.mark(ctx, userID, announcementID, true, false)
 }
 
-func (s *Store) mark(ctx context.Context, userID, announcementID int64, dismissed bool) (domain.OperationStats, error) {
+func (s *Store) mark(ctx context.Context, userID, announcementID int64, dismissed, shown bool) (domain.OperationStats, error) {
 	db, err := s.database(ctx)
 	if err != nil {
 		return domain.OperationStats{}, err
@@ -207,11 +210,30 @@ func (s *Store) mark(ctx context.Context, userID, announcementID int64, dismisse
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
 	var conflicted bool
-	row := viewRow{UserID: userID, AnnouncementID: announcementID, SeenAt: s.now(), Dismissed: dismissed}
-	query := db.NewInsert().Model(&row).ModelTableExpr("platform.announcement_views").
-		On("CONFLICT (user_id, announcement_id) DO UPDATE").Set("seen_at = EXCLUDED.seen_at")
+	row := viewRow{UserID: userID, AnnouncementID: announcementID, Dismissed: dismissed}
+	if shown {
+		seenAt := s.now()
+		row.SeenAt = &seenAt
+		row.ShownAt = &seenAt
+	}
 	if dismissed {
-		query = query.Set("dismissed = TRUE")
+		dismissedAt := s.now()
+		row.DismissedAt = &dismissedAt
+	}
+	query := db.NewInsert().Model(&row).ModelTableExpr("platform.announcement_views").
+		On("CONFLICT (user_id, announcement_id) DO UPDATE")
+	if !shown {
+		// Bun omits a nil model field, which would apply the legacy DEFAULT
+		// NOW(). A dismissal-only row must instead retain an empty seen_at.
+		query = query.Value("seen_at", "NULL")
+	}
+	if shown {
+		query = query.Set("seen_at = EXCLUDED.seen_at").
+			Set("shown_at = COALESCE(platform.announcement_views.shown_at, EXCLUDED.shown_at)")
+	}
+	if dismissed {
+		query = query.Set("dismissed = TRUE").
+			Set("dismissed_at = COALESCE(platform.announcement_views.dismissed_at, EXCLUDED.dismissed_at)")
 	}
 	err = query.Returning("(xmax <> 0) AS conflicted").Scan(ctx, &conflicted)
 	stats.StatementDuration = time.Since(started)
@@ -230,7 +252,7 @@ func (s *Store) ViewStats(ctx context.Context, announcementID int64) (communicat
 	if err != nil {
 		return communication.AnnouncementStats{}, domain.OperationStats{}, err
 	}
-	result := communication.AnnouncementStats{AnnouncementID: announcementID}
+	result := communication.AnnouncementStats{AnnouncementID: ident.ID(announcementID)}
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
 	err = db.NewRaw(`SELECT

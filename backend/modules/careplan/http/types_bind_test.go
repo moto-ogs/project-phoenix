@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"testing"
 
+	validation "github.com/go-ozzo/ozzo-validation"
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/departure"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/require"
 
 	careplanhttp "github.com/moto-ogs/project-phoenix/modules/careplan/http"
@@ -125,7 +127,7 @@ func TestUpdateStudentRequestBind_CompanionCount(t *testing.T) {
 		list := make([]careplanhttp.CompanionEntry, 0, n)
 		for i := range n {
 			list = append(list, careplanhttp.CompanionEntry{
-				CompanionStudentID: int64(i + 1),
+				CompanionStudentID: ident.ID(i + 1),
 				Weekdays:           []string{"mon"},
 			})
 		}
@@ -248,11 +250,11 @@ func TestCompanionEntryUnmarshal_AcceptsStringIDs(t *testing.T) {
 	t.Parallel()
 
 	// Above 2^53: a JS client cannot round-trip this through a number at all.
-	const beyondSafeInteger = int64(9007199254740993)
+	const beyondSafeInteger = ident.ID(9007199254740993)
 
 	cases := map[string]struct {
 		body string
-		want int64
+		want ident.ID
 	}{
 		"quoted id":  {`{"companion_student_id":"7","weekdays":["mon"]}`, 7},
 		"numeric id": {`{"companion_student_id":7,"weekdays":["mon"]}`, 7},
@@ -270,10 +272,10 @@ func TestCompanionEntryUnmarshal_AcceptsStringIDs(t *testing.T) {
 		})
 	}
 
-	t.Run("a non-numeric id is refused with the German sentinel", func(t *testing.T) {
+	t.Run("a non-numeric or empty id is refused", func(t *testing.T) {
 		var entry careplanhttp.CompanionEntry
-		err := json.Unmarshal([]byte(`{"companion_student_id":"abc","weekdays":["mon"]}`), &entry)
-		require.ErrorIs(t, err, careplan.ErrCompanionStudentIDRequired)
+		require.Error(t, json.Unmarshal([]byte(`{"companion_student_id":"abc","weekdays":["mon"]}`), &entry))
+		require.Error(t, json.Unmarshal([]byte(`{"companion_student_id":"","weekdays":["mon"]}`), &entry))
 	})
 
 	t.Run("a missing id stays zero for Bind to reject", func(t *testing.T) {
@@ -281,4 +283,20 @@ func TestCompanionEntryUnmarshal_AcceptsStringIDs(t *testing.T) {
 		require.NoError(t, json.Unmarshal([]byte(`{"weekdays":["mon"]}`), &entry))
 		require.Zero(t, entry.CompanionStudentID)
 	})
+}
+
+// A child without a name or class is refused with one field error per blank
+// field, also when the value is only spaces (#7563: the BFF route checked it
+// before).
+func TestStudentRequestBind_RefusesBlankNamesAsFieldErrors(t *testing.T) {
+	t.Parallel()
+	req := &careplanhttp.StudentRequest{FirstName: "  ", LastName: "Muster", SchoolClass: ""}
+	var missing validation.Errors
+	require.ErrorAs(t, req.Bind(nil), &missing)
+	require.Len(t, missing, 2)
+	require.Contains(t, missing, "first_name")
+	require.Contains(t, missing, "school_class")
+
+	req = &careplanhttp.StudentRequest{FirstName: "Max", LastName: "Muster", SchoolClass: "1a"}
+	require.NoError(t, req.Bind(nil))
 }

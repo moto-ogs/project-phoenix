@@ -7,6 +7,11 @@ import { afterEach, describe, it, expect, vi } from "vitest";
 import { teachersConfig } from "./teachers.config";
 import type { Teacher } from "@/lib/teacher-api";
 
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 // Mock teacher-api
 vi.mock("@/lib/teacher-api", () => ({
   teacherService: {
@@ -18,6 +23,7 @@ vi.mock("@/lib/teacher-api", () => ({
 describe("teachersConfig", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
   });
 
   it("exports a valid entity config", () => {
@@ -26,10 +32,6 @@ describe("teachersConfig", () => {
       singular: "Personal",
       plural: "Personal",
     });
-  });
-
-  it("has correct API configuration", () => {
-    expect(teachersConfig.api.basePath).toBe("/api/staff");
   });
 
   it("has form sections configured", () => {
@@ -216,7 +218,7 @@ describe("teachersConfig", () => {
         },
       });
 
-      const result = await teachersConfig.service!.create!({
+      const result = await teachersConfig.api.create!({
         first_name: "Test",
         last_name: "Teacher",
         password: "SecurePass123!",
@@ -245,7 +247,7 @@ describe("teachersConfig", () => {
         email: "exists@example.com",
       });
 
-      const result = await teachersConfig.service!.create!({
+      const result = await teachersConfig.api.create!({
         first_name: "Exists",
         last_name: "User",
         password: "SecurePass123!",
@@ -258,22 +260,38 @@ describe("teachersConfig", () => {
     });
   });
 
-  it("maps nested person fields including avatar and account id", () => {
-    const consoleDebug = vi
-      .spyOn(console, "debug")
-      .mockImplementation(() => {});
-    const mapped = teachersConfig.service?.mapResponse?.({
-      id: 42,
+  // The list and the record answer staff records of the contract (#7563);
+  // the person is nested and ids are decimal strings.
+  it("maps the nested person of a contract record including avatar and account id", async () => {
+    const record = {
+      started_on: "2024-09-02",
+      ended_on: null,
+      id: "42",
+      person_id: "7",
       account_role: "admin",
       specialization: "Mathematik",
+      is_teacher: true,
+      was_present_today: false,
+      is_external: false,
+      created_at: "2024-01-01T00:00:00Z",
+      updated_at: "2024-01-01T00:00:00Z",
       person: {
-        account_id: 55,
+        id: "7",
+        account_id: "55",
         email: "nested@example.com",
         first_name: "Nora",
         last_name: "Nested",
         avatar: "/uploads/avatars/global/nora.jpg",
+        created_at: "2024-01-01T00:00:00Z",
+        updated_at: "2024-01-01T00:00:00Z",
       },
-    }) as Teacher;
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(Response.json({ data: record }))),
+    );
+
+    const mapped = await teachersConfig.api.get!("42");
 
     expect(mapped).toMatchObject({
       id: "42",
@@ -284,46 +302,7 @@ describe("teachersConfig", () => {
       avatar: "/uploads/avatars/global/nora.jpg",
       account_role: "admin",
       account_id: "55",
-    });
-    expect(consoleDebug).toHaveBeenCalledWith("teacher_mapped", {
-      teacher_id: "42",
-      account_id: "55",
-    });
-    expect(JSON.stringify(consoleDebug.mock.calls)).not.toContain(
-      "nested@example.com",
-    );
-    consoleDebug.mockRestore();
-  });
-
-  it("prefers direct teacher fields over nested person fields", () => {
-    const mapped = teachersConfig.service?.mapResponse?.({
-      id: 99,
-      name: "Direkt Vorrang",
-      first_name: "Direkt",
-      last_name: "Lehrkraft",
-      email: "direct@example.com",
-      avatar: "/avatars/direct.png",
-      tag_id: "RFID-9",
-      account_id: 123,
-      person: {
-        first_name: "Nested",
-        last_name: "Ignored",
-        email: "nested@example.com",
-        avatar: "/avatars/nested.png",
-        tag_id: "RFID-nested",
-        account_id: 456,
-      },
-    }) as Teacher;
-
-    expect(mapped).toMatchObject({
-      id: "99",
-      name: "Direkt Vorrang",
-      first_name: "Direkt",
-      last_name: "Lehrkraft",
-      email: "direct@example.com",
-      avatar: "/avatars/direct.png",
-      tag_id: "RFID-9",
-      account_id: "123",
+      person_id: "7",
     });
   });
 
@@ -346,7 +325,7 @@ describe("teachersConfig", () => {
       person_id: "9007199254740993",
       is_teacher: false,
     };
-    const result = await teachersConfig.service!.update!(
+    const result = await teachersConfig.api.update!(
       "7",
       {
         first_name: "Updated",

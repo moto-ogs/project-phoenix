@@ -3,9 +3,12 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"slices"
 	"strconv"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // demoPersonnelNumberStart is the first invented Personalnummer. The demo
@@ -53,9 +56,16 @@ func (seedPayrollNumbersStep) Run(_ context.Context, rt *Runtime) error {
 		number := strconv.Itoa(next)
 		used[number] = true
 		path := fmt.Sprintf("/api/staff/%d/payroll-number", id)
+		// The change carries the version of the number it replaces (ADR 0311).
+		raw, err := rt.Client.GetWithAuth(rt.TenantAuth, path)
+		version, readErr := seedReadToken(raw, "version")
+		if err = errors.Join(err, readErr); err != nil {
+			return fmt.Errorf("read personnel number of staff %d: %w", id, err)
+		}
 		if _, err := rt.Client.PutWithAuth(rt.TenantAuth, path, map[string]any{
 			"personnel_number": number,
 			"note":             "Personalnummer aus der Lohnabrechnung übernommen",
+			"expected_version": version,
 		}); err != nil {
 			return fmt.Errorf("set personnel number of staff %d: %w", id, err)
 		}
@@ -74,7 +84,7 @@ func listSeedStaffIDs(rt *Runtime) ([]int64, error) {
 	}
 	var envelope struct {
 		Data []struct {
-			ID any `json:"id"`
+			ID ident.ID `json:"id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil {
@@ -82,10 +92,7 @@ func listSeedStaffIDs(rt *Runtime) ([]int64, error) {
 	}
 	ids := make([]int64, 0, len(envelope.Data))
 	for _, staff := range envelope.Data {
-		id, err := parseSeedID(staff.ID)
-		if err != nil {
-			return nil, fmt.Errorf("decode staff id for personnel numbers: %w", err)
-		}
+		id := int64(staff.ID)
 		if id == 0 {
 			return nil, fmt.Errorf("staff for personnel numbers has no id")
 		}

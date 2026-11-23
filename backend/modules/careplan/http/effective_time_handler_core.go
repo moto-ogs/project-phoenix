@@ -9,10 +9,9 @@ import (
 	strings "strings"
 	time "time"
 
-	render "github.com/go-chi/render"
 	common "github.com/moto-ogs/project-phoenix/api/common"
 	peopleModule "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
-	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 const dateFormatISO = "2006-01-02"
@@ -194,8 +193,8 @@ func verifyCareOwnership[T any](
 }
 
 type BulkEffectiveTimeRequest struct {
-	StudentIDs []int64 `json:"student_ids"`
-	Date       *string `json:"date,omitempty"`
+	StudentIDs []ident.ID `json:"student_ids"`
+	Date       *string    `json:"date,omitempty"`
 }
 
 func (r *BulkEffectiveTimeRequest) Bind(_ *http.Request) error {
@@ -211,46 +210,4 @@ func (r *BulkEffectiveTimeRequest) Bind(_ *http.Request) error {
 		}
 	}
 	return nil
-}
-
-func handleBulkEffectiveTimes[T, R any](
-	rs *Resource,
-	w http.ResponseWriter,
-	r *http.Request,
-	successMessage string,
-	fetch func(context.Context, []int64, calendar.Date) (map[int64]*T, error),
-	mapper func(int64, *T) R,
-) {
-	req := &BulkEffectiveTimeRequest{}
-	if err := render.Bind(r, req); err != nil {
-		renderError(w, r, common.ErrorInvalidRequest(err))
-		return
-	}
-
-	authorizedIDs, err := rs.filterAuthorizedStudentIDs(r, req.StudentIDs)
-	if err != nil {
-		renderError(w, r, common.ErrorInternalServer(err))
-		return
-	}
-	if len(authorizedIDs) == 0 {
-		common.Respond(w, r, http.StatusOK, []R{}, successMessage)
-		return
-	}
-
-	date := rs.today()
-	if req.Date != nil && *req.Date != "" {
-		date, _ = calendar.ParseDate(*req.Date)
-	}
-
-	values, err := fetch(r.Context(), authorizedIDs, date)
-	if err != nil {
-		renderError(w, r, common.ErrorInternalServer(err))
-		return
-	}
-
-	response := make([]R, 0, len(values))
-	for studentID, value := range values {
-		response = append(response, mapper(studentID, value))
-	}
-	common.Respond(w, r, http.StatusOK, response, successMessage)
 }

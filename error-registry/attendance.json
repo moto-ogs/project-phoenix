@@ -1,6 +1,12 @@
 {
   "codes": [
     {
+      "code": "attendance.checkin_staff_profile_required",
+      "class": "permission",
+      "parameters": [],
+      "legacy": "attendance.checkin_staff_profile_required"
+    },
+    {
       "code": "attendance.log_disabled",
       "class": "permission",
       "parameters": [],

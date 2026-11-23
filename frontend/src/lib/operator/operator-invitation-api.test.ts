@@ -1,18 +1,29 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type * as operatorInvitationsContract from "~/lib/contract/operator-invitations.generated";
 import { ApiError } from "~/lib/api-error";
-import type {
-  BackendInvitationsListResponse,
-  BackendInvitationValidation,
-} from "./operator-invitation-helpers";
+import type { OperatorInvitationValidationResponse } from "~/lib/contract/operator-auth.generated";
+import type { SessionBffRoute } from "~/lib/session-bff";
 
 // Hoist mocks
-const { mockOperatorFetch } = vi.hoisted(() => ({
-  mockOperatorFetch: vi.fn(),
+const { mockBffJson } = vi.hoisted(() => ({
+  mockBffJson: vi.fn(),
 }));
 
-vi.mock("./api-helpers", () => ({
-  operatorFetch: mockOperatorFetch,
-}));
+// Keep the public steps on real bffJson against the stubbed fetch.
+vi.mock("~/lib/bff-fetch", async (importOriginal) => {
+  const original = await importOriginal<typeof import("~/lib/bff-fetch")>();
+  return {
+    ...original,
+    bffJson: (
+      portal: "public",
+      route: string | SessionBffRoute<unknown>,
+      options?: { body?: unknown },
+    ) =>
+      typeof route === "string"
+        ? mockBffJson(portal, route, options)
+        : original.bffJson(portal, route, options),
+  };
+});
 
 // Must import after mocks
 import {
@@ -32,43 +43,41 @@ describe("operator invitation api", () => {
 
   describe("createOperatorInvitation", () => {
     it("converts camelCase frontend shape to snake_case backend body", async () => {
-      mockOperatorFetch.mockResolvedValue(undefined);
+      mockBffJson.mockResolvedValue(undefined);
 
       await createOperatorInvitation({
         email: "new@example.com",
         displayName: "New Op",
       });
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/invitations",
-        {
-          method: "POST",
-          body: { email: "new@example.com", display_name: "New Op" },
-        },
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "POST /operator/invitations/",
+        { body: { email: "new@example.com", display_name: "New Op" } },
       );
     });
   });
 
   describe("listInvitations", () => {
     it("returns mapped invitations and operators", async () => {
-      const raw: BackendInvitationsListResponse = {
+      const raw: operatorInvitationsContract.InvitationsListResponse = {
         invitations: [
           {
-            id: 1,
+            id: "1",
             email: "invited@example.com",
             display_name: "Test",
-            created_by: 2,
+            created_by: "2",
             creator_name: "Admin",
             expires_at: "2026-04-06T00:00:00Z",
             email_sent_at: "2026-04-04T00:00:00Z",
-            email_error: null,
+            email_error: undefined,
             email_retry_count: 0,
             created_at: "2026-04-04T00:00:00Z",
           },
         ],
         operators: [
           {
-            id: 2,
+            id: "2",
             email: "admin@example.com",
             display_name: "Admin",
             active: true,
@@ -78,7 +87,7 @@ describe("operator invitation api", () => {
           },
         ],
       };
-      mockOperatorFetch.mockResolvedValue(raw);
+      mockBffJson.mockResolvedValue(raw);
 
       const result = await listOperatorInvitations();
 
@@ -89,8 +98,31 @@ describe("operator invitation api", () => {
       expect(result.operators[0]!.id).toBe("2");
     });
 
+    it("skips null entries the contract allows in both lists (#2353)", async () => {
+      const raw: operatorInvitationsContract.InvitationsListResponse = {
+        invitations: [null],
+        operators: [
+          null,
+          {
+            id: "2",
+            email: "admin@example.com",
+            display_name: "Admin",
+            active: true,
+            created_at: "2026-01-01T00:00:00Z",
+            is_self: false,
+          },
+        ],
+      };
+      mockBffJson.mockResolvedValue(raw);
+
+      const result = await listOperatorInvitations();
+
+      expect(result.invitations).toEqual([]);
+      expect(result.operators.map((operator) => operator.id)).toEqual(["2"]);
+    });
+
     it("handles null invitations and operators arrays", async () => {
-      mockOperatorFetch.mockResolvedValue({
+      mockBffJson.mockResolvedValue({
         invitations: null,
         operators: null,
       });
@@ -104,26 +136,28 @@ describe("operator invitation api", () => {
 
   describe("resendOperatorInvitation", () => {
     it("sends POST to resend endpoint with encoded ID", async () => {
-      mockOperatorFetch.mockResolvedValue(undefined);
+      mockBffJson.mockResolvedValue(undefined);
 
       await resendOperatorInvitation("42");
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/invitations/42/resend",
-        { method: "POST" },
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "POST /operator/invitations/{id}/resend",
+        { params: { id: "42" } },
       );
     });
   });
 
   describe("revokeOperatorInvitation", () => {
     it("sends DELETE to invitation endpoint", async () => {
-      mockOperatorFetch.mockResolvedValue(undefined);
+      mockBffJson.mockResolvedValue(undefined);
 
       await revokeOperatorInvitation("42");
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/invitations/42",
-        { method: "DELETE" },
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "DELETE /operator/invitations/{id}",
+        { params: { id: "42" } },
       );
     });
   });
@@ -137,7 +171,7 @@ describe("public invitation session", () => {
   it("moves the URL token into the server-owned session", async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ flow_id: "flow-1" }),
+      json: async () => ({ status: "success", data: { flow_id: "flow-1" } }),
     });
 
     await expect(
@@ -177,7 +211,7 @@ describe("validateOperatorInvitation", () => {
   });
 
   it("returns mapped validation data on success", async () => {
-    const backendData: BackendInvitationValidation = {
+    const backendData: OperatorInvitationValidationResponse = {
       email: "invited@example.com",
       display_name: "Test User",
       expires_at: "2026-04-06T00:00:00Z",
@@ -250,16 +284,16 @@ describe("validateOperatorInvitation", () => {
     });
   });
 
-  it("handles unwrapped response (no envelope)", async () => {
-    const backendData: BackendInvitationValidation = {
+  it("maps an absent display name to undefined", async () => {
+    // Go omits a nil display name (`*string,omitempty`); it never sends null.
+    const backendData: OperatorInvitationValidationResponse = {
       email: "direct@example.com",
-      display_name: null,
       expires_at: "2026-04-06T00:00:00Z",
     };
 
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => backendData,
+      json: async () => ({ status: "success", data: backendData }),
     });
 
     const result = await validateOperatorInvitation("flow-1");
@@ -274,7 +308,11 @@ describe("acceptOperatorInvitation", () => {
   });
 
   it("sends POST with form data while the server supplies the token", async () => {
-    global.fetch = vi.fn().mockResolvedValue({ ok: true });
+    global.fetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ status: "success", data: { id: "5" } }), {
+        status: 201,
+      }),
+    );
 
     await acceptOperatorInvitation("flow-1", {
       displayName: "New Op",

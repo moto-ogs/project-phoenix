@@ -31,7 +31,6 @@ import { DienstplanHalbjahrGrid } from "./dienstplan-halbjahr-grid";
 // week cycle (no A/B), active, covers the anchor day 2026-09-16.
 const PERIOD_6W: CalendarPeriod = {
   id: "5",
-  tenantId: "1",
   name: "Halbjahr 1",
   periodType: "semester",
   startDate: "2026-09-07",

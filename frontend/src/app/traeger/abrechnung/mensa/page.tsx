@@ -18,7 +18,12 @@ import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
 import { EmptyState } from "~/components/ui/empty-state";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
-import { useApiFormError, useToast } from "~/contexts/ToastContext";
+import {
+  useApiErrorDisplay,
+  useApiFormError,
+  useToast,
+} from "~/contexts/ToastContext";
+import { isReadStateRefusal } from "~/lib/api-error";
 import { berlinTodayISO } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
 import { traegerBillingKeys } from "~/lib/swr/traeger-billing-keys";
@@ -43,17 +48,21 @@ export default function TraegerMensaPage() {
     loading,
     error: loadError,
     mutate,
+    reloadOrThrow,
   } = useTraegerResource(
     traegerBillingKeys.careMealTariffs(),
     fetchCareMealTariffs,
     "die Übersicht der Mensa-Preise",
   );
   const [editing, setEditing] = useState<SchoolRef | null>(null);
+  // The removal confirms what the dialog showed: the version is taken when
+  // it opens, so a background refresh cannot hand it a newer one (ADR 0311).
   const [deleting, setDeleting] = useState<
-    (SchoolRef & { tariff: CareMealTariff }) | null
+    (SchoolRef & { tariff: CareMealTariff; version: string }) | null
   >(null);
   const [busy, setBusy] = useState(false);
   const deleteErrors = useApiFormError();
+  const changedErrors = useApiErrorDisplay();
   const { success } = useToast();
 
   const remove = async () => {
@@ -62,7 +71,11 @@ export default function TraegerMensaPage() {
     deleteErrors.clear();
     try {
       await mutate(
-        await deleteCareMealTariff(deleting.id, deleting.tariff.validFrom),
+        await deleteCareMealTariff(
+          deleting.id,
+          deleting.tariff.validFrom,
+          deleting.version,
+        ),
         { revalidate: false },
       );
       success(
@@ -73,7 +86,20 @@ export default function TraegerMensaPage() {
       logger.error("care_meal_tariff_delete_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
-      void deleteErrors.show(err, { object: "die Preisangabe für die Mensa" });
+      if (isReadStateRefusal(err)) {
+        // A colleague changed the prices since: the dialog closes and the
+        // page shows them once read, so a second „Löschen“ cannot remove
+        // them unseen.
+        setDeleting(null);
+        void changedErrors.show(err, {
+          object: "die Preisangabe für die Mensa",
+          reload: reloadOrThrow,
+        });
+      } else {
+        void deleteErrors.show(err, {
+          object: "die Preisangabe für die Mensa",
+        });
+      }
     } finally {
       setBusy(false);
     }
@@ -114,6 +140,7 @@ export default function TraegerMensaPage() {
               data={data}
               school={editing}
               currentMonth={currentMonth}
+              reload={reloadOrThrow}
               onClose={() => setEditing(null)}
               onSaved={(next) => {
                 void mutate(next, { revalidate: false });
@@ -161,7 +188,13 @@ export default function TraegerMensaPage() {
               school={school}
               currentMonth={currentMonth}
               onEdit={() => setEditing(school)}
-              onDelete={(tariff) => setDeleting({ ...school, tariff })}
+              onDelete={(tariff) =>
+                setDeleting({
+                  ...school,
+                  tariff,
+                  version: data.versions[school.id] ?? "",
+                })
+              }
             />
           ))}
         </div>

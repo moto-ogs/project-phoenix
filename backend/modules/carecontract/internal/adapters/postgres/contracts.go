@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	"github.com/moto-ogs/project-phoenix/modules/carecontract/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type versionRow struct {
@@ -85,7 +86,7 @@ func (r versionRow) version() (carecontract.Version, error) {
 		return carecontract.Version{}, fmt.Errorf("care contract postgres: read services: %w", err)
 	}
 	return carecontract.Version{
-		ID: r.ID, Number: r.VersionNumber, Status: r.Status, EffectiveFrom: r.EffectiveFrom, EndsOn: r.EndsOn,
+		ID: ident.ID(r.ID), Number: r.VersionNumber, Status: r.Status, EffectiveFrom: r.EffectiveFrom, EndsOn: r.EndsOn,
 		ChildFirstName: r.ChildFirstName, ChildLastName: r.ChildLastName, ChildBirthDate: r.ChildBirthDate,
 		SchoolName: r.SchoolName, PhaseName: r.PhaseName, Services: services, PriceCents: r.PriceCents,
 		CreatedAt: r.CreatedAt, Source: r.Source, ValidUntil: r.ValidUntil,
@@ -147,7 +148,8 @@ func (s Store) Contract(ctx context.Context, organizationID, contractID int64, f
 		return ports.ContractRecord{}, err
 	}
 	record := ports.ContractRecord{Summary: summary.summary(), Version: current, Parties: []carecontract.Party{},
-		Concluded: summary.concluded(), EarlyStart: summary.EarlyStart}
+		Concluded: summary.concluded(), EarlyStart: summary.EarlyStart, RequestChildID: summary.RequestChildID,
+		UpdatedAt: summary.UpdatedAt}
 	for _, party := range parties {
 		record.Parties = append(record.Parties, carecontract.Party{
 			FirstName: party.FirstName, LastName: party.LastName, Email: party.Email, HasAccount: party.AccountID != nil,
@@ -174,7 +176,7 @@ func readDocuments(ctx context.Context, db bun.IDB, organizationID int64, record
 		if i == 0 {
 			record.SentDocument = &ports.SentDocument{ID: document.ID, VersionID: document.VersionID}
 		}
-		if document.VersionID == record.Version.ID && record.DocumentID == nil {
+		if ident.ID(document.VersionID) == record.Version.ID && record.DocumentID == nil {
 			id := document.ID
 			record.DocumentID = &id
 		}
@@ -308,7 +310,7 @@ const inboxSQL = `SELECT c.id, c.school_id, v.child_first_name, v.child_last_nam
 	(c.status = '` + carecontract.StatusActive + `' AND ` + inboxChildScopeSQL + `) AS can_end,
 	(SELECT MAX(s.signed_at) FROM care_contract.contract_signatures AS s
 		WHERE s.organization_id = c.organization_id AND s.contract_id = c.id) AS signed_at,
-	c.concluded_at, c.conclusion_method,
+	c.concluded_at, c.conclusion_method, c.conclusion_date_unknown, c.import_origin IS NOT NULL AS taken_over,
 	LEAST(c.withdrawal_informed_at, (SELECT CASE WHEN s.method <> '` + carecontract.SignaturePaper + `' THEN s.withdrawal_notice_at END
 		FROM care_contract.contract_signatures AS s WHERE s.organization_id = c.organization_id AND s.contract_id = c.id
 		ORDER BY s.signed_at DESC, s.id DESC LIMIT 1)) AS informed_at
@@ -346,6 +348,8 @@ func (Store) InboxContracts(ctx context.Context, organizationID int64, reader ca
 		CanEnd         bool           `bun:"can_end"`
 		ConcludedAt    *time.Time     `bun:"concluded_at"`
 		Method         *string        `bun:"conclusion_method"`
+		DateUnknown    bool           `bun:"conclusion_date_unknown"`
+		TakenOver      bool           `bun:"taken_over"`
 		InformedAt     *time.Time     `bun:"informed_at"`
 	}
 	schools, students := inboxChildScope(reader.Children)
@@ -360,7 +364,8 @@ func (Store) InboxContracts(ctx context.Context, organizationID int64, reader ca
 	for i, row := range rows {
 		result[i].SchoolID, result[i].InformedAt = row.SchoolID, row.InformedAt
 		if row.ConcludedAt != nil && row.Method != nil {
-			result[i].Concluded = &carecontract.Concluded{Method: *row.Method, At: *row.ConcludedAt}
+			result[i].Concluded = &carecontract.Concluded{Method: *row.Method, At: *row.ConcludedAt,
+				DateUnknown: row.DateUnknown, TakenOver: row.TakenOver}
 		}
 		result[i].Contract = carecontract.InboxContract{
 			ID: row.ID, ChildNames: []string{row.ChildFirstName}, ModuleNames: nonNil(row.ModuleNames),

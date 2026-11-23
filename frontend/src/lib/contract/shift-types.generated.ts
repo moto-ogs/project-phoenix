@@ -2,14 +2,29 @@
 import { z } from "zod";
 import {
   bool,
-  int64StringOrNumber,
+  int64String,
   object,
   optional,
   requestBody,
   safeInt,
   str,
   success,
+  type OpenEnum,
 } from "./runtime";
+
+export const SHIFT_TYPE_REMOVAL_OUTCOME_VALUES = ["archived", "deleted"] as const;
+export type ShiftTypeRemovalOutcome = (typeof SHIFT_TYPE_REMOVAL_OUTCOME_VALUES)[number];
+
+/** Go: shifttypes.ShiftTypeDeleteResponse */
+export interface ShiftTypeDeleteResponse {
+  id: string;
+  outcome: OpenEnum<ShiftTypeRemovalOutcome>;
+}
+
+export const ShiftTypeDeleteResponseSchema: z.ZodType<ShiftTypeDeleteResponse, unknown> = object<ShiftTypeDeleteResponse>({
+  id: int64String,
+  outcome: str,
+});
 
 /** Go: shifttypes.ShiftTypeUsageResponse */
 export interface ShiftTypeUsageResponse {
@@ -34,7 +49,7 @@ export interface ShiftTypeResponse {
 }
 
 export const ShiftTypeResponseSchema: z.ZodType<ShiftTypeResponse, unknown> = object<ShiftTypeResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   color: str,
   description: optional(str),
@@ -49,21 +64,24 @@ export interface ShiftTypeRequest {
   color?: string;
   description?: string;
   is_active?: boolean | null;
-  category_ids?: number[] | null;
-}
-
-/** Query of GET /api/shift-types/ */
-export interface GetShiftTypesQuery {
-  include_archived?: boolean;
-  with_usage?: boolean;
+  category_ids?: string[] | null;
 }
 
 export const routes = {
+  "DELETE /api/shift-types/{id}": {
+    method: "DELETE",
+    pattern: "/api/shift-types/{id}",
+    portals: ["tenant"],
+    response: success(ShiftTypeDeleteResponseSchema),
+  },
   "GET /api/shift-types/": {
     method: "GET",
     pattern: "/api/shift-types/",
     portals: ["tenant"],
-    query: ["include_archived", "with_usage"],
+    query: {
+      "include_archived": { kind: "bool" },
+      "with_usage": { kind: "bool" },
+    },
     response: success(z.array(ShiftTypeResponseSchema)),
   },
   "POST /api/shift-types/": {
@@ -78,5 +96,12 @@ export const routes = {
     pattern: "/api/shift-types/defaults",
     portals: ["tenant"],
     response: success(z.array(ShiftTypeResponseSchema)),
+  },
+  "PUT /api/shift-types/{id}": {
+    method: "PUT",
+    pattern: "/api/shift-types/{id}",
+    portals: ["tenant"],
+    request: requestBody<ShiftTypeRequest>(),
+    response: success(ShiftTypeResponseSchema),
   },
 } as const;

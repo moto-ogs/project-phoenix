@@ -354,7 +354,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 		func() (err error) { feedback, err = BuildServeFeedback(db, feedbackSettings); return },
 		func() (err error) {
 			structure = BuildStructureRows(db, persons, people, peopleIdentity, rooms, membership, workTime)
-			presencePeople = BuildPresencePeopleReads(db, env.Logger, persons, groups, organizations, people, env.Now)
+			presencePeople = BuildPresencePeopleReads(db, persons, groups, people)
 			careRows = BuildTimetableCareRows(carePlan)
 			devices, err = NewDeviceFleet(db, env.Now)
 			return StepError("compose device fleet", err)
@@ -447,7 +447,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 			return
 		},
 		func() (err error) {
-			shifts, err = BuildShiftPlanning(db, env, hub, workTime, people, calendar, audit, timetableRows, rooms, activities, settings.Service)
+			shifts, err = BuildShiftPlanning(db, env, hub, workTime, membership, people, calendar, audit, timetableRows, rooms, activities, settings.Service)
 			return
 		},
 		func() (err error) {
@@ -503,7 +503,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 			chat = BuildCommunicationMessaging(db, env, hub, settings.Service, messaging, services.Users, StaffStudentReads{Caller: caller.Caller()},
 				notifications, delivery.Outbox, delivery.Runtime.EmailOutcomes, people, SchoolNameDirectory{Schools: organizations}, communicationSession, identity)
 			calendarApp = BuildCalendarApp(db, env, people, structure, portalReads, timetableRows, rooms, workTime, organizations,
-				identity, caller.Caller(), appointments, calendar, delivery, notifications, settings.Service, persons)
+				identity, caller.Caller(), appointments, calendar, delivery, notifications, settings.Service, persons, hub)
 			return nil
 		},
 		func() (err error) {

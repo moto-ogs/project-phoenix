@@ -60,7 +60,7 @@ func TestExistingCareScheduleRequestSurvivesBookingAuthorityChange(t *testing.T)
 	// path that replaced it, and it must stay open after the switch.
 	edited, err := bookingLed.EditCareScheduleRequest(
 		testpkg.WithPackageTenantRuntime(context.Background()),
-		chain.AccountID, chain.StudentID, view.PendingRequest.ID, carePayload(), "",
+		chain.AccountID, chain.StudentID, view.PendingRequest.ID, carePayload(), view.PendingRequest.Version,
 	)
 	require.NoError(t, err)
 	require.NotNil(t, edited.PendingRequest)
@@ -91,6 +91,7 @@ func TestExistingCareScheduleRequestCanBeDecidedAfterAuthorityChange(t *testing.
 		var decideErr error
 		decided, decideErr = requests.Decide(txCtx, carerequests.DecideInput{
 			RequestID: view.PendingRequest.ID, Approve: true, ReviewedBy: staffAccount.ID,
+			ExpectedVersion: view.PendingRequest.Version,
 		})
 		return decideErr
 	})

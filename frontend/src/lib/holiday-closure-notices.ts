@@ -7,11 +7,28 @@
  * Zahl der Familien, nie Namen oder Kontakte. IDs kommen als Strings heraus.
  */
 
-import { apiErrorFromBody, transportFetch } from "~/lib/api-error";
+import { bffJson } from "./bff-fetch";
+import { knownEnum } from "./contract/known-enum";
+import { requiredDay } from "./contract/required-day";
+import type * as holidayClosureNoticesContract from "./contract/holiday-closure-notices.generated";
+import type * as sharedContract from "./contract/shared.generated";
 
-/** Der Stand eines Hinweises, an beiden Stellen derselbe. */
-type HolidayClosureNoticeStatus =
-  "suggested" | "sending" | "no_mail" | "sent" | "failed" | "unknown";
+// Go meldet die Menge nicht an; der Vertrag führt sie als string.
+const NOTICE_STATUS_VALUES = [
+  "suggested",
+  "sending",
+  "no_mail",
+  "sent",
+  "failed",
+  "unknown",
+] as const;
+
+/**
+ * Der Stand eines Hinweises, an beiden Stellen derselbe. "unknown" steht
+ * auch für einen Stand, den diese Version nicht kennt: das Backend nennt
+ * einen unlesbaren Stand selbst so.
+ */
+type HolidayClosureNoticeStatus = (typeof NOTICE_STATUS_VALUES)[number];
 
 /** Ein Zeitraum des Schließtags, Kalendertage als „YYYY-MM-DD“. */
 interface HolidayClosureRange {
@@ -44,55 +61,39 @@ export interface HolidayClosureNotice {
   readonly updatedAt: string;
 }
 
-interface BackendRange {
-  start_date: string;
-  end_date: string;
-}
-
-export interface BackendHolidayClosureNotice {
-  id: number | string;
-  school_id: number | string;
-  school_name?: string;
-  closing_day_id: number | string;
-  reason: string;
-  previous?: BackendRange | null;
-  current?: BackendRange | null;
-  revision: number;
-  token?: string;
-  status: HolidayClosureNoticeStatus;
-  changed?: boolean;
-  can_notify?: boolean;
-  families?: number;
-  confirmed_at?: string | null;
-  updated_at: string;
-}
-
 function mapRange(
-  range: BackendRange | null | undefined,
+  range: sharedContract.Range | null,
 ): HolidayClosureRange | null {
   return range
-    ? { startDate: range.start_date, endDate: range.end_date }
+    ? {
+        startDate: requiredDay(range.start_date, "closure_range.start_date"),
+        endDate: requiredDay(range.end_date, "closure_range.end_date"),
+      }
     : null;
 }
 
+/**
+ * Ein Hinweis, wie die Schule und das Träger-Büro ihn bekommen; beide Routen
+ * senden dieselbe Form.
+ */
 export function mapHolidayClosureNotice(
-  notice: BackendHolidayClosureNotice,
+  notice: holidayClosureNoticesContract.NoticeResponse,
 ): HolidayClosureNotice {
   return {
-    id: String(notice.id),
-    schoolId: String(notice.school_id),
+    id: notice.id,
+    schoolId: notice.school_id,
     schoolName: notice.school_name ?? "",
-    closingDayId: String(notice.closing_day_id),
+    closingDayId: notice.closing_day_id,
     reason: notice.reason,
     previous: mapRange(notice.previous),
     current: mapRange(notice.current),
     revision: notice.revision,
-    token: notice.token ?? "",
-    status: notice.status,
-    changed: notice.changed ?? false,
-    canNotify: notice.can_notify ?? false,
-    families: notice.families ?? 0,
-    confirmedAt: notice.confirmed_at ?? null,
+    token: notice.token,
+    status: knownEnum(NOTICE_STATUS_VALUES, notice.status) ?? "unknown",
+    changed: notice.changed,
+    canNotify: notice.can_notify,
+    families: notice.families,
+    confirmedAt: notice.confirmed_at,
     updatedAt: notice.updated_at,
   };
 }
@@ -116,39 +117,16 @@ export function isNoticeDone(
   return notice.status === "sent" || notice.status === "no_mail";
 }
 
-async function noticeRequest<T>(
-  path: string,
-  init: { method: string; body?: unknown } = { method: "GET" },
-): Promise<T> {
-  const response = await transportFetch(path, {
-    method: init.method,
-    credentials: "include",
-    cache: "no-store",
-    headers:
-      init.body === undefined
-        ? { Accept: "application/json" }
-        : { Accept: "application/json", "Content-Type": "application/json" },
-    body: init.body === undefined ? undefined : JSON.stringify(init.body),
-  });
-  const data: unknown = await response.json().catch(() => undefined);
-  if (!response.ok) {
-    throw apiErrorFromBody(
-      `Anfrage fehlgeschlagen (HTTP ${response.status})`,
-      response.status,
-      data,
-    );
-  }
-  return (data as { data?: T } | undefined)?.data as T;
-}
-
-const schoolPath = "/api/holiday-closure-notices";
+const errorMessage = "Anfrage fehlgeschlagen";
 
 /** Die Hinweise der eigenen Schule. */
 export async function fetchHolidayClosureNotices(): Promise<
   HolidayClosureNotice[]
 > {
-  const data = await noticeRequest<BackendHolidayClosureNotice[]>(schoolPath);
-  return (data ?? []).map(mapHolidayClosureNotice);
+  const data = await bffJson("tenant", "GET /api/holiday-closure-notices/", {
+    errorMessage,
+  });
+  return data.map(mapHolidayClosureNotice);
 }
 
 /**
@@ -162,9 +140,10 @@ export async function notifyHolidayClosureNotice(
   token: string,
 ): Promise<HolidayClosureNotice> {
   return mapHolidayClosureNotice(
-    await noticeRequest<BackendHolidayClosureNotice>(
-      `${schoolPath}/${encodeURIComponent(id)}/notify`,
-      { method: "POST", body: { revision, token } },
-    ),
+    await bffJson("tenant", "POST /api/holiday-closure-notices/{id}/notify", {
+      params: { id },
+      body: { revision, token },
+      errorMessage,
+    }),
   );
 }

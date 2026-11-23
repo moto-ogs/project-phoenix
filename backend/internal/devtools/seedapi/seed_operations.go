@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type seedOperationsDemoStep struct{}
@@ -84,9 +86,18 @@ var demoMeals = [10][]map[string]any{
 // just ended; that is the week the meal plan opens on.
 func seedMealPlan(rt *Runtime, today seedDate) error {
 	monday := seedDate{Time: mostRecentWeekday(today.Time, time.Monday)}
+	var versions map[string]string
 	for index, dishes := range demoMeals {
-		day := monday.AddDays(index + 2*(index/5)).String()
-		if _, err := rt.Client.Put("/api/meal-plan/"+day, map[string]any{"dishes": dishes}); err != nil {
+		date := monday.AddDays(index + 2*(index/5))
+		if index%5 == 0 {
+			read, err := mealPlanVersions(rt, date)
+			if err != nil {
+				return err
+			}
+			versions = read
+		}
+		day := date.String()
+		if err := saveMealPlanDay(rt, day, versions[day], dishes); err != nil {
 			return fmt.Errorf("seed meal plan %s: %w", day, err)
 		}
 	}
@@ -116,7 +127,7 @@ func seedStaffShift(rt *Runtime, today seedDate, staffID int64) error {
 	preparationID := int64(0)
 	for _, shiftType := range shiftTypes {
 		if strings.Contains(shiftType.Name, "Verfügung") {
-			preparationID = shiftType.ID
+			preparationID = int64(shiftType.ID)
 		}
 	}
 	if preparationID == 0 {
@@ -138,8 +149,8 @@ func seedStaffShift(rt *Runtime, today seedDate, staffID int64) error {
 
 // seedShiftType is one default Schichtart as the defaults endpoint returns it.
 type seedShiftType struct {
-	ID   int64  `json:"id"`
-	Name string `json:"name"`
+	ID   ident.ID `json:"id"`
+	Name string   `json:"name"`
 }
 
 func createDefaultShiftTypes(rt *Runtime) ([]seedShiftType, error) {
@@ -172,15 +183,15 @@ func seedDutyShiftTypes(rt *Runtime) (seedDutyTypes, error) {
 	if err != nil {
 		return seedDutyTypes{}, err
 	}
-	types := seedDutyTypes{care: shiftTypes[0].ID}
+	types := seedDutyTypes{care: int64(shiftTypes[0].ID)}
 	for _, shiftType := range shiftTypes {
 		switch {
 		case strings.HasPrefix(shiftType.Name, "Betreuung"):
-			types.care = shiftType.ID
+			types.care = int64(shiftType.ID)
 		case shiftType.Name == "Frühdienst":
-			types.early = shiftType.ID
+			types.early = int64(shiftType.ID)
 		case shiftType.Name == "Spätdienst":
-			types.late = shiftType.ID
+			types.late = int64(shiftType.ID)
 		}
 	}
 	for _, missing := range []struct {

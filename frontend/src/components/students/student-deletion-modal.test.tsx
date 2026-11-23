@@ -1,3 +1,4 @@
+import type { studentDeleteImpactResponse } from "~/lib/contract/students.generated";
 import {
   act,
   fireEvent,
@@ -12,7 +13,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ModalProvider } from "~/components/ui/modal-context";
 import { ApiError } from "~/lib/api-error";
-import type { StudentDeletionImpact } from "~/lib/student-api";
 import { StudentDeletionModal } from "./student-deletion-modal";
 
 vi.unmock("swr");
@@ -59,7 +59,7 @@ vi.mock("~/lib/student-api", async (importOriginal) => {
   };
 });
 
-const impact: StudentDeletionImpact = {
+const impact: studentDeleteImpactResponse = {
   confirmation_name: "Mia Muster",
   fingerprint: "abc123",
   total: 5,
@@ -137,7 +137,10 @@ describe("StudentDeletionModal", () => {
     mockDeleteStudent.mockResolvedValue(undefined);
   });
 
-  it("waits for a fresh impact on every opening before fixing the confirmation", async () => {
+  // ADR 0311: the impact reads through the shared cache. A reopened dialog
+  // shows the known impact at once, reads it again and confirms the newer
+  // one; the delete carries that impact's fingerprint.
+  it("reads the impact again on every opening before fixing the confirmation", async () => {
     const props = {
       studentId: "42",
       displayName: "Mia Muster",
@@ -160,18 +163,14 @@ describe("StudentDeletionModal", () => {
       total: 8,
       counts: { ...impact.counts, timetable_assignments: 5 },
     };
-    let resolve!: (value: StudentDeletionImpact) => void;
+    let resolve!: (value: studentDeleteImpactResponse) => void;
     mockFetchImpact.mockReturnValueOnce(
-      new Promise<StudentDeletionImpact>((done) => {
+      new Promise<studentDeleteImpactResponse>((done) => {
         resolve = done;
       }),
     );
     rerender(view(true));
     await waitFor(() => expect(mockFetchImpact).toHaveBeenCalledTimes(2));
-    expect(screen.getByText("Auswirkungen werden geladen…")).toBeVisible();
-    expect(
-      screen.queryByText("Was wird gelöscht oder gelöst? (5)"),
-    ).not.toBeInTheDocument();
     await act(async () => resolve(fresh));
     expect(
       await screen.findByText("Was wird gelöscht oder gelöst? (8)"),
@@ -269,6 +268,33 @@ describe("StudentDeletionModal", () => {
     expect(screen.getByRole("button", { name: "Ja, löschen" })).toBeDisabled();
   });
 
+  // ADR 0311 rule 6: a failed read of the impact after a refusal says so
+  // instead of claiming the new impact shows.
+  it("names a failed read of the impact after a conflict", async () => {
+    mockDeleteStudent.mockRejectedValueOnce(
+      new ApiError("changed", 409, {
+        code: "students.deletion_preview_changed",
+      }),
+    );
+    mockFetchImpact
+      .mockResolvedValueOnce(impact)
+      .mockRejectedValue(
+        new ApiError("down", 503, { code: "general.unavailable" }),
+      );
+    renderModal();
+
+    fireEvent.click(await advanceToFinalConfirmation());
+
+    expect(
+      await screen.findByText(/Der neue Stand konnte nicht geladen werden/),
+    ).toBeVisible();
+    expect(
+      screen.queryByText(/wurde inzwischen geändert/),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(mockDeleteStudent).toHaveBeenCalledTimes(1);
+  });
+
   it("does not expose the destructive controls when the preview fails", async () => {
     mockFetchImpact.mockRejectedValueOnce(
       new ApiError("Vorschau nicht verfügbar", 503, {
@@ -343,7 +369,10 @@ describe("StudentDeletionModal", () => {
     fireEvent.click(await advanceToFinalConfirmation());
 
     await waitFor(() => expect(onDeleted).toHaveBeenCalledTimes(1));
-    expect(await screen.findByRole("button", { name: CONFIRM })).toBeEnabled();
+    // Out of the deleting state: the button carries its label again, not
+    // „Wird gelöscht…“. (The acknowledgement belonged to the deleted
+    // impact, so a second deletion stays locked.)
+    expect(await screen.findByRole("button", { name: CONFIRM })).toBeDisabled();
     expect(mockDeleteStudent).toHaveBeenCalledTimes(1);
   });
 });

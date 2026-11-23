@@ -12,21 +12,6 @@
     },
     {
       "decision": "0090",
-      "id": "api/AttendanceRoutePeople.GetStudentByID",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "api/AttendanceRoutePeople.GetStudentByPersonID",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "api/AttendanceRoutePeople.GetTeacherByStaffID",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "api/ClassDayHomework.AddHomework",
       "reason": "Root translation of Class Day View's homework port onto Timetable's HomeworkBook (#4796): maps the projection's types and refusals; no forwarding without translation."
     },
@@ -307,21 +292,6 @@
     },
     {
       "decision": "0090",
-      "id": "api/activePeople.GetStudentByID",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "api/activePeople.GetStudentByPersonID",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "api/activePeople.GetTeacherByStaffID",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "api/activeStaffAccess.GetCurrentStaff",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -419,6 +389,11 @@
       "decision": "0153",
       "id": "api/careContractModes.ConclusionMode",
       "reason": "ADR 0153 (#4680): Consumer-port adapter that resolves care_contract.conclusion_mode of the school through the settings and refuses any value the Betreuungsvertrag does not know."
+    },
+    {
+      "decision": "0232",
+      "id": "api/careContractSchoolChildren.SchoolChildren",
+      "reason": "Consumer-port adapter of the Betreuungsvertrag (#7760, ADR 0067): it reads the child records a link of imported contracts names at People Directory in the school's tenant transaction and maps them onto the Betreuungsvertrag's SchoolChild; no forwarding without translation."
     },
     {
       "decision": "0075",
@@ -556,6 +531,31 @@
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
+      "decision": "0309",
+      "id": "api/contractEnrollmentAccessLog.RecordAccess",
+      "reason": "Consumer-port adapter of the contract enrollment workflow (#7760, ADR 0309 section 4, ADR 0067): it translates the workflow's read of a school onto Care Contract's access-log entry of a read of care contracts with the child records shown (ADR 0084 section 7), under the view contract_enrollment; no forwarding without translation."
+    },
+    {
+      "decision": "0309",
+      "id": "api/contractEnrollmentChildren.SchoolChildren",
+      "reason": "Consumer-port adapter of the contract enrollment workflow (#7760, ADR 0309 section 4, ADR 0067): it reads the child records the rows name at People Directory in the school's tenant transaction and maps them onto the workflow's Child; no forwarding without translation."
+    },
+    {
+      "decision": "0309",
+      "id": "api/contractEnrollmentSchools.HoldTraegerSchool",
+      "reason": "Consumer-port adapter of the contract enrollment workflow (#7760, ADR 0309 section 4, ADR 0067): it reads the school under Organisation \u0026 Tenancy's share lock in the school's tenant transaction and answers whether it is an undeleted school of the Träger, a missing school as not held; no forwarding without translation."
+    },
+    {
+      "decision": "0309",
+      "id": "api/contractEnrollmentSchools.TraegerSchoolIDs",
+      "reason": "Consumer-port adapter of the contract enrollment workflow (#7760, ADR 0309 section 4, ADR 0067): it lists the schools of the Träger at Organisation \u0026 Tenancy and keeps the identifiers of the undeleted ones; no forwarding without translation."
+    },
+    {
+      "decision": "0299",
+      "id": "api/dayChangesMealPlan.MealPlanChanges",
+      "reason": "Owner-edge translation (ADR 0075): turns Meal Plan's change mark of the day into the Essen entry of „Heute anders“ (#7666); no forward."
+    },
+    {
       "decision": "0090",
       "id": "api/emergencySnapshotPersonNames.ByIDs",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
@@ -684,11 +684,6 @@
       "decision": "0090",
       "id": "api/groupLiveSettings.StudentPhotosEnabled",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0075",
-      "id": "api/groupStudentsInClassDay.InClassStillHolds",
-      "reason": "#5710: Consumer-port adapter that reads the school's care day end and applies the day-planning owner's rule for „Im Unterricht“, so the group student list ends the status like the staff views (ADR 0075 consumer-port adapter form)."
     },
     {
       "decision": "0214",
@@ -879,6 +874,11 @@
       "decision": "0119",
       "id": "api/parentBillingBillingRegistrations.HolidayWeekHosts",
       "reason": "ADR 0119 (#6624): Consumer-port adapter of the billing run's host schools; it reads the host school of each week of the period through Enrollment's narrow read in the caller's Träger transaction and copies the four values into the port's type."
+    },
+    {
+      "decision": "0305",
+      "id": "api/parentBillingCareContracts.ChildrenOf",
+      "reason": "ADR 0305 (#7863), ADR 0158 E1: Translates retained child identities from Care Contract's billing query into Parent Billing's contract port so issued and unbilled contracts can share a child key."
     },
     {
       "decision": "0158",
@@ -1532,11 +1532,6 @@
     },
     {
       "decision": "0090",
-      "id": "roots/owners/CallerRows.ActivityGroupRows",
-      "reason": "Finite named forwarding debt under ADR 0090, not a new floor; removal/deepening pending."
-    },
-    {
-      "decision": "0090",
       "id": "roots/owners/CallerRows.CurrentPersonName",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -1614,11 +1609,6 @@
       "decision": "0090",
       "id": "roots/owners/CallerRows.StudentAccessFacts",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/CallerRows.TeacherRow",
-      "reason": "Finite named forwarding debt under ADR 0090, not a new floor; removal/deepening pending."
     },
     {
       "decision": "0088",
@@ -2297,11 +2287,6 @@
     },
     {
       "decision": "0090",
-      "id": "roots/owners/PresenceAttendanceMirror.MirrorVisitRevision",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "roots/owners/PresenceAutoCheckIn.EnsureCheckedIn",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -2917,11 +2902,6 @@
     },
     {
       "decision": "0090",
-      "id": "roots/owners/activeSchoolQuery.ListSchoolsByID",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "roots/owners/announcementApplicants.PendingAnnouncementApplicants",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -3278,16 +3258,6 @@
     {
       "decision": "0090",
       "id": "roots/owners/callerSessions.OpenSessionIDsForActivities",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/callerSessions.SessionExists",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/callerSessions.SessionVisits",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
@@ -4397,11 +4367,6 @@
     },
     {
       "decision": "0090",
-      "id": "roots/owners/guardianDirectory.FindStudents",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "roots/owners/guardianDirectory.LinkGuardianProfileToAccount",
       "reason": "Finite named forwarding debt under ADR 0090, not a new floor; removal/deepening pending."
     },
@@ -4443,11 +4408,6 @@
     {
       "decision": "0090",
       "id": "roots/owners/guardianInvitationReads.ListOpen",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/guardianInvitationReads.ListRedeemable",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
@@ -4598,6 +4558,11 @@
     {
       "decision": "0090",
       "id": "roots/owners/offeringChangeEnrollment.Request",
+      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+    },
+    {
+      "decision": "0090",
+      "id": "roots/owners/offeringChangeEnrollment.SelectionHistory",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
@@ -4929,6 +4894,16 @@
       "decision": "0126",
       "id": "roots/owners/parentReleaseSchools.TraegerSchoolIDs",
       "reason": "ADR 0126 (#5941): Consumer-port adapter of the parents portal's release push onto Organisation \u0026 Tenancy; it keeps the undeleted schools of the Träger and maps them onto their IDs."
+    },
+    {
+      "decision": "0090",
+      "id": "roots/owners/parentRoomHistoryStops.ResumeRoomHistory",
+      "reason": "Owner-edge translation: maps the parent portal's stop request onto Student Presence's change with the parent portal as source (#3844); exact evidence, semantic form review pending."
+    },
+    {
+      "decision": "0090",
+      "id": "roots/owners/parentRoomHistoryStops.StopRoomHistory",
+      "reason": "Owner-edge translation: maps the parent portal's stop request onto Student Presence's change with the parent portal as source (#3844); exact evidence, semantic form review pending."
     },
     {
       "decision": "0171",

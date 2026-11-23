@@ -17,6 +17,7 @@ import { InsetPanel } from "~/components/ui/inset-panel";
 import { SectionCard } from "~/components/ui/section-card";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ApiError } from "~/lib/api-error";
+import { knownEnum } from "~/lib/contract/known-enum";
 import { FileText } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 
@@ -35,22 +36,23 @@ import { formatBerlinDate, formatChatDateTime } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
 import { parentPath } from "~/lib/parent-url";
 import {
-  type ParentAnnouncement,
-  type ParentDeclaration,
   type ParentDeclarationAction,
-  type ParentDeclarationChild,
+  PARENT_DECLARATION_STATES,
   type ParentDeclarationState,
   declarationProofPath,
   submitDeclaration,
 } from "~/lib/parent-api";
 import type { SignatureValue } from "~/lib/signature";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 const logger = createLogger({ component: "ParentDeclaration" });
 
 /** True when the item is an Einverständnis with its declaration block. */
 export function isDeclarationItem(
-  item: ParentAnnouncement,
-): item is ParentAnnouncement & { declaration: ParentDeclaration } {
+  item: parentMeContract.AnnouncementResponse,
+): item is parentMeContract.AnnouncementResponse & {
+  declaration: parentMeContract.AnnouncementDeclarationResponse;
+} {
   return item.delivery_mode === "declaration" && item.declaration !== undefined;
 }
 
@@ -59,7 +61,9 @@ export function isDeclarationItem(
  * feed for the children this guardian answered for, so a consent can still be
  * revoked (#6290); it asks for nothing and has no live attachments.
  */
-export function isEndedDeclaration(item: ParentAnnouncement): boolean {
+export function isEndedDeclaration(
+  item: parentMeContract.AnnouncementResponse,
+): boolean {
   return isDeclarationItem(item) && item.declaration.ended;
 }
 
@@ -70,9 +74,11 @@ export function isEndedDeclaration(item: ParentAnnouncement): boolean {
  * another guardian settles the child, so no "Antwort nötig" then, although
  * the buttons stay (a decline still wins). Same rule as the unread count.
  */
-export function isOpenDeclaration(item: ParentAnnouncement): boolean {
+export function isOpenDeclaration(
+  item: parentMeContract.AnnouncementResponse,
+): boolean {
   if (!isDeclarationItem(item) || item.declaration.closed) return false;
-  return item.declaration.children.some(
+  return (item.declaration.children ?? []).some(
     (child) =>
       child.can_submit &&
       child.my_action === null &&
@@ -155,19 +161,21 @@ export function declarationErrorOutcome(err: unknown): {
  * with "all" the child stays partial while another person is still open.
  */
 function stateAfter(
-  declaration: ParentDeclaration,
-  child: ParentDeclarationChild,
+  declaration: parentMeContract.AnnouncementDeclarationResponse,
+  child: parentMeContract.parentDeclarationChildResponse,
   action: ParentDeclarationAction,
 ): ParentDeclarationState {
   if (action === "declined" || action === "revoked") return action;
   if (declaration.signers === "any") return action;
-  const othersOpen = child.other_signers.some((other) => other.action === null);
+  const othersOpen = (child.other_signers ?? []).some(
+    (other) => other.action === null,
+  );
   return othersOpen ? "partial" : action;
 }
 
 /** True when this action of this Einverständnis needs a signature. */
 function declarationNeedsSignature(
-  declaration: ParentDeclaration,
+  declaration: parentMeContract.AnnouncementDeclarationResponse,
   action: ParentDeclarationAction,
 ): boolean {
   return declaration.requires_signature && action === "agreed";
@@ -178,7 +186,7 @@ function declarationNeedsSignature(
 const SIGNATURE_FIELD = "declaration-signature";
 
 interface PendingAction {
-  readonly child: ParentDeclarationChild;
+  readonly child: parentMeContract.parentDeclarationChildResponse;
   readonly action: ParentDeclarationAction;
   /** The wording acted on; the current one unless an earlier consent is revoked. */
   readonly version: { readonly id: string; readonly version_no: number };
@@ -189,11 +197,11 @@ interface PendingAction {
  * to the Einverständnis, also one to an older wording (#6303).
  */
 function childAfter(
-  declaration: ParentDeclaration,
-  child: ParentDeclarationChild,
+  declaration: parentMeContract.AnnouncementDeclarationResponse,
+  child: parentMeContract.parentDeclarationChildResponse,
   action: ParentDeclarationAction,
   submittedAt: string,
-): ParentDeclarationChild {
+): parentMeContract.parentDeclarationChildResponse {
   if (action === "revoked" && child.my_action !== "agreed") {
     return { ...child, earlier_consent: null };
   }
@@ -214,8 +222,13 @@ export function DeclarationSection({
   onReload,
   onBusyChange,
 }: Readonly<{
-  item: ParentAnnouncement & { declaration: ParentDeclaration };
-  onUpdated: (id: string, patch: Partial<ParentAnnouncement>) => void;
+  item: parentMeContract.AnnouncementResponse & {
+    declaration: parentMeContract.AnnouncementDeclarationResponse;
+  };
+  onUpdated: (
+    id: string,
+    patch: Partial<parentMeContract.AnnouncementResponse>,
+  ) => void;
   /** Reload the feed; the server has the authoritative state. */
   onReload?: (id: string) => void;
   /** Locks the surrounding dialog while a confirmation is open or running. */
@@ -253,10 +266,12 @@ export function DeclarationSection({
   }, [pending, saving, onBusyChange]);
 
   const open = (
-    child: ParentDeclarationChild,
+    child: parentMeContract.parentDeclarationChildResponse,
     action: ParentDeclarationAction,
-    version: PendingAction["version"] = declaration.version,
+    version: PendingAction["version"] | null = declaration.version,
   ) => {
+    // A declaration without a version offers no action.
+    if (!version) return;
     setPassword("");
     setSignature(null);
     dialogError.clear();
@@ -302,7 +317,7 @@ export function DeclarationSection({
         read: true,
         declaration: {
           ...declaration,
-          children: declaration.children.map((candidate) =>
+          children: (declaration.children ?? []).map((candidate) =>
             candidate.student_id === child.student_id
               ? childAfter(declaration, candidate, action, submittedAt)
               : candidate,
@@ -359,8 +374,9 @@ export function DeclarationSection({
     submitRef.current = submit;
   });
 
-  const children = declaration.children;
-  if (children.length === 0) return null;
+  const children = declaration.children ?? [];
+  const version = declaration.version;
+  if (children.length === 0 || !version) return null;
 
   return (
     <section aria-labelledby={`declaration-${item.id}`} className="space-y-3">
@@ -377,9 +393,7 @@ export function DeclarationSection({
             : `${declaration.signers === "all" ? t("signersAll") : t("signersAny")} ${t("nothingPreselected")}`}
         </p>
         <p className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm text-gray-600">
-          <span>
-            {t("version", { version: declaration.version.version_no })}
-          </span>
+          <span>{t("version", { version: version.version_no })}</span>
           {/* An ended request says so in the line above. */}
           {declaration.ended ? null : declaration.closed ? (
             <span className="text-moto-red-strong font-semibold">
@@ -505,9 +519,9 @@ function DeclarationChildCard({
   busy,
   onAction,
 }: Readonly<{
-  item: ParentAnnouncement;
-  declaration: ParentDeclaration;
-  child: ParentDeclarationChild;
+  item: parentMeContract.AnnouncementResponse;
+  declaration: parentMeContract.AnnouncementDeclarationResponse;
+  child: parentMeContract.parentDeclarationChildResponse;
   busy: boolean;
   onAction: (
     action: ParentDeclarationAction,
@@ -517,9 +531,9 @@ function DeclarationChildCard({
   const t = useTranslations("parentDeclaration");
   const locale = useLocale();
   const decisions = DECISION_ACTIONS.filter((action) =>
-    child.allowed_actions.includes(action),
+    (child.allowed_actions ?? []).includes(action),
   );
-  const canRevoke = child.allowed_actions.includes("revoked");
+  const canRevoke = (child.allowed_actions ?? []).includes("revoked");
   const earlier = child.earlier_consent ?? null;
   // With "any", one submission settles the child. Another guardian did that
   // already: say so first, and keep the buttons as a quiet second option (a
@@ -527,9 +541,11 @@ function DeclarationChildCard({
   const settledByOther =
     declaration.signers === "any" &&
     child.my_action === null &&
-    SETTLED_STATES.has(child.state);
+    SETTLED_STATES.has(
+      knownEnum(PARENT_DECLARATION_STATES, child.state) ?? "open",
+    );
   const settler = settledByOther
-    ? child.other_signers.find((other) => other.action !== null)
+    ? (child.other_signers ?? []).find((other) => other.action !== null)
     : undefined;
   const name = `${child.first_name} ${child.last_name}`.trim();
 
@@ -541,7 +557,11 @@ function DeclarationChildCard({
         </span>
         <StatusBadge
           label={t(`state.${child.state}`)}
-          tone={STATE_TONE[child.state] ?? "gray"}
+          tone={
+            STATE_TONE[
+              knownEnum(PARENT_DECLARATION_STATES, child.state) ?? "open"
+            ]
+          }
         />
       </div>
 
@@ -575,26 +595,27 @@ function DeclarationChildCard({
         </InsetPanel>
       )}
 
-      {declaration.signers === "all" && child.other_signers.length > 0 && (
-        <div className="mt-3">
-          <p className="text-sm font-medium text-gray-700">
-            {t("othersTitle")}
-          </p>
-          <ul className="mt-1 space-y-0.5 text-sm text-gray-600">
-            {child.other_signers.map((other, index) => (
-              <li
-                // Other guardians carry no id in the feed; the list is fixed
-                // per load, so position is stable.
-                // eslint-disable-next-line react/no-array-index-key
-                key={`${other.first_name}-${other.last_name}-${index}`}
-              >
-                {`${other.first_name} ${other.last_name}`.trim()}:{" "}
-                {other.action ? t(`done.${other.action}`) : t("otherOpen")}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      {declaration.signers === "all" &&
+        (child.other_signers ?? []).length > 0 && (
+          <div className="mt-3">
+            <p className="text-sm font-medium text-gray-700">
+              {t("othersTitle")}
+            </p>
+            <ul className="mt-1 space-y-0.5 text-sm text-gray-600">
+              {(child.other_signers ?? []).map((other, index) => (
+                <li
+                  // Other guardians carry no id in the feed; the list is fixed
+                  // per load, so position is stable.
+                  // eslint-disable-next-line react/no-array-index-key
+                  key={`${other.first_name}-${other.last_name}-${index}`}
+                >
+                  {`${other.first_name} ${other.last_name}`.trim()}:{" "}
+                  {other.action ? t(`done.${other.action}`) : t("otherOpen")}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
       {settledByOther && (
         <InsetPanel
@@ -682,34 +703,39 @@ function DeclarationChildCard({
         </div>
       )}
 
-      {earlier && !canRevoke && earlier.allowed_actions.includes("revoked") && (
-        <div className="mt-3 space-y-2 border-t border-gray-100 pt-3">
-          <p className="text-sm leading-6 text-gray-800">
-            {t("earlierConsent.title", {
-              version: earlier.version.version_no,
-              date: formatChatDateTime(earlier.submitted_at, locale),
-            })}{" "}
-            {t("earlierConsent.note")}
-          </p>
-          <InsetPanel padding="md" className="text-sm leading-6 text-gray-800">
-            <p className="font-semibold">{earlier.version.title}</p>
-            <p className="whitespace-pre-line">{earlier.version.body}</p>
-          </InsetPanel>
-          <Button
-            type="button"
-            size="md"
-            variant="outline_danger"
-            className="w-full sm:w-auto"
-            disabled={busy}
-            onClick={() => onAction("revoked", earlier.version)}
-            tooltip={t("actionTooltip.revokeEarlier", {
-              version: earlier.version.version_no,
-            })}
-          >
-            {t("action.revoked")}
-          </Button>
-        </div>
-      )}
+      {earlier &&
+        !canRevoke &&
+        (earlier.allowed_actions ?? []).includes("revoked") && (
+          <div className="mt-3 space-y-2 border-t border-gray-100 pt-3">
+            <p className="text-sm leading-6 text-gray-800">
+              {t("earlierConsent.title", {
+                version: earlier.version.version_no,
+                date: formatChatDateTime(earlier.submitted_at, locale),
+              })}{" "}
+              {t("earlierConsent.note")}
+            </p>
+            <InsetPanel
+              padding="md"
+              className="text-sm leading-6 text-gray-800"
+            >
+              <p className="font-semibold">{earlier.version.title}</p>
+              <p className="whitespace-pre-line">{earlier.version.body}</p>
+            </InsetPanel>
+            <Button
+              type="button"
+              size="md"
+              variant="outline_danger"
+              className="w-full sm:w-auto"
+              disabled={busy}
+              onClick={() => onAction("revoked", earlier.version)}
+              tooltip={t("actionTooltip.revokeEarlier", {
+                version: earlier.version.version_no,
+              })}
+            >
+              {t("action.revoked")}
+            </Button>
+          </div>
+        )}
 
       {child.can_submit &&
         decisions.length === 0 &&

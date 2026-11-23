@@ -9,7 +9,6 @@ const authConfig = createPortalAuthConfig(PORTALS.tenant);
 vi.mock("~/env", () => ({
   env: {
     API_URL: "http://server:8080",
-    NEXT_PUBLIC_API_URL: "http://localhost:8080",
     AUTH_JWT_EXPIRY: "15m",
     AUTH_JWT_REFRESH_EXPIRY: "1h",
     NEXTAUTH_SECRET: "test-auth-secret-with-sufficient-entropy",
@@ -81,7 +80,7 @@ describe("JWT callback — forced renewal after a backend 401", () => {
   });
 
   it("ends the session when the revoked family refuses its refresh", async () => {
-    mockFetch.mockResolvedValueOnce({ ok: false, status: 401 });
+    mockFetch.mockResolvedValueOnce(new Response(null, { status: 401 }));
 
     const result = await withForcedSessionRenewal(async () =>
       callJwt(liveToken("revoked")),
@@ -98,7 +97,7 @@ describe("JWT callback — forced renewal after a backend 401", () => {
   });
 
   it("ends a written-back copy of the refused cookie without a backend call", async () => {
-    mockFetch.mockResolvedValueOnce({ ok: false, status: 401 });
+    mockFetch.mockResolvedValueOnce(new Response(null, { status: 401 }));
     await withForcedSessionRenewal(async () => callJwt(liveToken("late")));
     mockFetch.mockClear();
 
@@ -143,7 +142,7 @@ describe("JWT callback — forced renewal after a backend 401", () => {
     mockFetch.mockImplementation(async (url: string) =>
       url.endsWith("/auth/staff-preview/end")
         ? { ok: true, status: 200 }
-        : { ok: false, status: 401 },
+        : new Response(null, { status: 401 }),
     );
     const preview = {
       ...liveToken("admin"),

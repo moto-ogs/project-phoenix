@@ -15,6 +15,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/documentrendering/templates"
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The runs of the Jahresbescheide (#6219, ADR 0182). A run assesses the
@@ -151,13 +152,13 @@ func (n *CareFeeNotices) StartCareNoticeRun(ctx context.Context, reviewer parent
 	}
 	run, err := n.store.InsertCareNoticeRun(ctx, reviewer.OrganizationID, reviewer.AccountID, parentbilling.CareNoticeRun{
 		Year: start.Year, PeriodFrom: start.FromMonth, PeriodUntil: calendar.NewDate(start.Year, 12, 31),
-		SchoolIDs: schools, NoticeDate: start.NoticeDate,
+		SchoolIDs: ident.IDs(schools), NoticeDate: start.NoticeDate,
 	})
 	if err != nil {
 		return parentbilling.CareNoticeRun{}, err
 	}
-	if err := n.store.InsertCareNoticeRunEvent(ctx, reviewer.OrganizationID, run.ID, reviewer.AccountID, runEventCreate,
-		map[string]any{"school_ids": run.SchoolIDs}); err != nil {
+	if err := n.store.InsertCareNoticeRunEvent(ctx, reviewer.OrganizationID, run.ID.Int64(), reviewer.AccountID, runEventCreate,
+		map[string]any{"school_ids": ident.Int64s(run.SchoolIDs)}); err != nil {
 		return parentbilling.CareNoticeRun{}, fmt.Errorf("parent billing: record notice run: %w", err)
 	}
 	return run, nil
@@ -185,7 +186,7 @@ func (n *CareFeeNotices) noticeSchools(ctx context.Context, organizationID int64
 	}
 	own := make([]int64, 0, len(schools))
 	for _, school := range schools {
-		own = append(own, school.ID)
+		own = append(own, school.ID.Int64())
 	}
 	if len(requested) == 0 {
 		requested = own
@@ -223,8 +224,8 @@ func (n *CareFeeNotices) CareNoticeRun(ctx context.Context, reviewer parentbilli
 	if err != nil {
 		return parentbilling.CareNoticeRunDetail{}, err
 	}
-	if err := n.store.InsertCareNoticeRunEvent(ctx, reviewer.OrganizationID, run.ID, reviewer.AccountID, runEventRead,
-		map[string]any{"contract_ids": noticeContracts(detail.Notices)}); err != nil {
+	if err := n.store.InsertCareNoticeRunEvent(ctx, reviewer.OrganizationID, run.ID.Int64(), reviewer.AccountID, runEventRead,
+		map[string]any{"contract_ids": shownNoticeContracts(detail)}); err != nil {
 		return parentbilling.CareNoticeRunDetail{}, fmt.Errorf("parent billing: record notice run read: %w", err)
 	}
 	return detail, nil
@@ -267,11 +268,11 @@ func (n *CareFeeNotices) ReleaseCareNoticeRun(ctx context.Context, reviewer pare
 	if err := n.issue(ctx, reviewer.OrganizationID, run, issuedOn, preview.notices); err != nil {
 		return parentbilling.CareNoticeRunDetail{}, err
 	}
-	released, err := n.store.MarkCareNoticeRunReleased(ctx, reviewer.OrganizationID, run.ID, issuedOn, len(preview.notices), preview.total())
+	released, err := n.store.MarkCareNoticeRunReleased(ctx, reviewer.OrganizationID, run.ID.Int64(), issuedOn, len(preview.notices), preview.total())
 	if err != nil {
 		return parentbilling.CareNoticeRunDetail{}, err
 	}
-	if err := n.store.InsertCareNoticeRunEvent(ctx, reviewer.OrganizationID, run.ID, reviewer.AccountID, runEventRelease,
+	if err := n.store.InsertCareNoticeRunEvent(ctx, reviewer.OrganizationID, run.ID.Int64(), reviewer.AccountID, runEventRelease,
 		map[string]any{"notice_count": len(preview.notices), "total_cents": preview.total(), "issued_on": issuedOn.String(),
 			"contract_ids": noticeContracts(preview.notices)}); err != nil {
 		return parentbilling.CareNoticeRunDetail{}, fmt.Errorf("parent billing: record notice release: %w", err)
@@ -321,7 +322,7 @@ func (n *CareFeeNotices) CareNoticeLetter(ctx context.Context, reviewer parentbi
 	if err != nil {
 		return parentbilling.CareNoticeLetter{}, err
 	}
-	index := slices.IndexFunc(detail.Notices, func(notice parentbilling.CareNotice) bool { return notice.ContractID == contractID })
+	index := slices.IndexFunc(detail.Notices, func(notice parentbilling.CareNotice) bool { return notice.ContractID == ident.ID(contractID) })
 	if index < 0 {
 		return parentbilling.CareNoticeLetter{}, parentbilling.ErrCareNoticeNotFound
 	}
@@ -329,7 +330,7 @@ func (n *CareFeeNotices) CareNoticeLetter(ctx context.Context, reviewer parentbi
 	if err != nil {
 		return parentbilling.CareNoticeLetter{}, fmt.Errorf("parent billing: read the letterhead: %w", err)
 	}
-	if err := n.store.InsertCareNoticeRunEvent(ctx, reviewer.OrganizationID, run.ID, reviewer.AccountID, runEventLetter,
+	if err := n.store.InsertCareNoticeRunEvent(ctx, reviewer.OrganizationID, run.ID.Int64(), reviewer.AccountID, runEventLetter,
 		map[string]any{"contract_ids": []int64{contractID}}); err != nil {
 		return parentbilling.CareNoticeLetter{}, fmt.Errorf("parent billing: record notice letter: %w", err)
 	}
@@ -409,13 +410,14 @@ func logoMIME(logo []byte) string {
 // range the release uses.
 func (n *CareFeeNotices) detail(ctx context.Context, organizationID int64, run parentbilling.CareNoticeRun) (parentbilling.CareNoticeRunDetail, error) {
 	detail := parentbilling.CareNoticeRunDetail{CareNoticeRun: run, Notices: []parentbilling.CareNotice{},
-		Unpriced: []parentbilling.CareUnpriced{}, Duplicates: []parentbilling.CareDuplicate{}}
+		Unpriced: []parentbilling.CareUnpriced{}, Duplicates: []parentbilling.CareDuplicate{},
+		JoinedChildren: []parentbilling.CareJoinedChild{}, BilledChildren: []parentbilling.CareBilledChild{}}
 	if run.Status == parentbilling.RunDiscarded {
 		// A discarded run issued nothing and reads no contract again (#6626).
 		return detail, nil
 	}
 	if run.Status == parentbilling.RunReleased {
-		notices, err := n.store.CareNoticeRunNotices(ctx, organizationID, run.ID)
+		notices, err := n.store.CareNoticeRunNotices(ctx, organizationID, run.ID.Int64())
 		if err != nil {
 			return parentbilling.CareNoticeRunDetail{}, err
 		}
@@ -427,6 +429,7 @@ func (n *CareFeeNotices) detail(ctx context.Context, organizationID int64, run p
 		}
 		detail.Notices, detail.Unchanged, detail.Billed = preview.notices, preview.unchanged, preview.billed
 		detail.Unpriced, detail.Duplicates = preview.unpriced, preview.duplicates
+		detail.JoinedChildren, detail.BilledChildren = preview.joined, preview.billedChildren
 		detail.Fingerprint, detail.LegalRemedyMissing = preview.fingerprint, preview.legalRemedyMissing
 	}
 	for _, notice := range detail.Notices {
@@ -448,9 +451,19 @@ func (n *CareFeeNotices) detail(ctx context.Context, organizationID int64, run p
 func noticeContracts(notices []parentbilling.CareNotice) []int64 {
 	ids := make([]int64, len(notices))
 	for i, notice := range notices {
-		ids[i] = notice.ContractID
+		ids[i] = notice.ContractID.Int64()
 	}
 	return ids
+}
+
+// shownNoticeContracts names the contracts whose child a notice run shows:
+// on a notice or joined across schools (#7874).
+func shownNoticeContracts(detail parentbilling.CareNoticeRunDetail) []int64 {
+	ids := noticeContracts(detail.Notices)
+	for _, child := range detail.JoinedChildren {
+		ids = appendContracts(ids, child.Contracts)
+	}
+	return appendBilledChildren(ids, detail.BilledChildren)
 }
 
 // legalRemedyOf reads the legal remedy of the template of the fee notice:
@@ -461,6 +474,6 @@ func (n *CareFeeNotices) legalRemedyOf(ctx context.Context, organizationID int64
 	if err != nil {
 		return "", "", false, fmt.Errorf("parent billing: read the template of the fee notice: %w", err)
 	}
-	missing := templates.LacksLegalRemedy(templates.KindFeeNotice, letterTemplate(template, templates.KindFeeNotice))
+	missing := templates.LacksLegalRemedy(templates.KindFeeNotice, letterTemplate(template, templates.KindFeeNotice, letterAddressee{}))
 	return template.LegalRemedy, fmt.Sprintf("%d:%s", template.Version, template.LegalRemedy), missing, nil
 }

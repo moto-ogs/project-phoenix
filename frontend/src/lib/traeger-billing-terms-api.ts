@@ -1,3 +1,4 @@
+import { bffJson } from "~/lib/bff-fetch";
 /**
  * Client of who gets an invoice, how it is paid and by when (#4689): the
  * payment method, payment term and bundling per service, the deviation of a
@@ -6,20 +7,49 @@
  * Backend int64 IDs leave here as strings; calendar dates stay "YYYY-MM-DD".
  */
 
-import { traegerRequest } from "./traeger-api";
+import { knownEnum } from "./contract/known-enum";
+import type * as sharedContract from "./contract/shared.generated";
+import type * as traegerBillingRunDueDatesContract from "./contract/traeger-billing-run-due-dates.generated";
+import type * as traegerBillingTermsContract from "./contract/traeger-billing-terms.generated";
+import type * as traegerFamilyBillingContract from "./contract/traeger-family-billing.generated";
 
-export type PaymentMethod = "transfer" | "direct_debit";
-export type BillingService = "care" | "meal" | "holiday";
+// Go does not register these sets; the contract types them as string. A value
+// this build does not know stays undefined instead of passing as a known one.
+const PAYMENT_METHOD_VALUES = ["transfer", "direct_debit"] as const;
+const BILLING_SERVICE_VALUES = ["care", "meal", "holiday"] as const;
+const RECIPIENT_KIND_VALUES = ["applicant", "both", "payer"] as const;
+const DUE_SOURCE_VALUES = ["family", "run", "term"] as const;
+const DEBIT_GAP_VALUES = [
+  "mandate_missing",
+  "creditor_missing",
+  "creditor_changed",
+  "mandate_expired",
+] as const;
+const SEQUENCE_TYPE_VALUES = ["FRST", "RCUR", "OOFF"] as const;
+
+export type PaymentMethod = (typeof PAYMENT_METHOD_VALUES)[number];
+export type BillingService = (typeof BILLING_SERVICE_VALUES)[number];
 /** Who an invoice goes to; empty on an invoice issued before #4689. */
-export type RecipientKind = "applicant" | "both" | "payer";
+export type RecipientKind = (typeof RECIPIENT_KIND_VALUES)[number];
 /** Where the due date of an invoice comes from. */
-type DueSource = "family" | "run" | "term";
+type DueSource = (typeof DUE_SOURCE_VALUES)[number];
 
 /** The payment methods in the order the forms show them. */
-export const PAYMENT_METHODS: readonly PaymentMethod[] = [
-  "transfer",
-  "direct_debit",
-];
+export const PAYMENT_METHODS: readonly PaymentMethod[] = PAYMENT_METHOD_VALUES;
+
+/** The payment method a value names, undefined when unknown. */
+export function knownPaymentMethod(
+  value: string | undefined,
+): PaymentMethod | undefined {
+  return knownEnum(PAYMENT_METHOD_VALUES, value);
+}
+
+/** The recipient kind a value names, or undefined for one this build does not know. */
+export function knownRecipientKind(
+  value: string | undefined,
+): RecipientKind | undefined {
+  return knownEnum(RECIPIENT_KIND_VALUES, value);
+}
 
 /** The longest payment term in days. */
 export const MAX_DUE_DAYS = 120;
@@ -28,13 +58,16 @@ export const MAX_DUE_DAY = 28;
 
 export interface ServiceTerms {
   readonly service: BillingService;
-  readonly paymentMethod: PaymentMethod;
+  /** undefined: a payment method this build does not know. */
+  readonly paymentMethod: PaymentMethod | undefined;
   readonly dueDays: number;
   /** The service whose invoice carries this one's positions; "" = own invoice. */
   readonly bundleWith: string;
   /** False while the Träger keeps the defaults. */
   readonly custom: boolean;
   readonly updatedAt: string | null;
+  /** The read-state token a change sends back (ADR 0311). */
+  readonly version: string;
 }
 
 interface BillingServiceOption {
@@ -65,20 +98,41 @@ export interface FamilyBilling {
   readonly id: string;
   readonly familyEmail: string;
   readonly contractId: string;
-  readonly recipientKind: RecipientKind;
+  /** undefined: a recipient kind this build does not know. */
+  readonly recipientKind: RecipientKind | undefined;
   readonly secondFirstName: string;
   readonly secondLastName: string;
   readonly payerFirstName: string;
   readonly payerLastName: string;
   readonly payerEmail: string;
   readonly payerAddress: PostalAddress | null;
-  /** "" keeps the payment method of the service. */
-  readonly paymentMethod: PaymentMethod | "";
+  /** "" keeps the payment method of the service; undefined: one this build does not know. */
+  readonly paymentMethod: PaymentMethod | "" | undefined;
   /** Day of the month 1–28; null keeps the date of the run. */
   readonly dueDay: number | null;
   /** Number of the family in the finance system of the Träger, "" without one (#4693). */
   readonly debtorNumber: string;
   readonly updatedAt: string;
+}
+
+/**
+ * The family of a care contract with the deviation it has (#7770): what the
+ * Abrechnung sets without a run, before the first invoice.
+ */
+export interface ContractFamilyBilling {
+  readonly contractId: string;
+  /** The key of the family: its mail address, or the contract without one. */
+  readonly familyEmail: string;
+  /** The person in the contract, e.g. "Anna Muster"; "" without a name. */
+  readonly partyName: string;
+  readonly partyLastName: string;
+  /** null while the family has the terms of the contract and the services. */
+  readonly family: FamilyBilling | null;
+  /**
+   * Read-state token of the family's deviation, also of none: the save
+   * sends it back (ADR 0311).
+   */
+  readonly version: string;
 }
 
 export interface FamilyBillingInput {
@@ -98,92 +152,41 @@ export interface FamilyBillingInput {
 /** The due date of a run for one payment method. */
 export interface RunDueDate {
   readonly paymentMethod: PaymentMethod;
-  /** Calendar date "YYYY-MM-DD". */
-  readonly dueOn: string;
+  /** Calendar date "YYYY-MM-DD"; null when the backend has none. */
+  readonly dueOn: string | null;
 }
 
-/** Why an invoice of a family that pays by direct debit is not collected (#4695). */
-type DebitGap =
-  | "mandate_missing"
-  | "creditor_missing"
-  | "creditor_changed"
-  | "mandate_expired";
+/**
+ * Why an invoice of a family that pays by direct debit is not collected
+ * (#4695). "other": a reason this build does not know; it is still not
+ * collected.
+ */
+type DebitGap = (typeof DEBIT_GAP_VALUES)[number] | "other";
 
 /** The SEPA mandate an invoice by direct debit is collected with (#4695). */
 interface InvoiceMandate {
   readonly reference: string;
-  readonly signedOn: string;
+  readonly signedOn: string | null;
   readonly creditorId: string;
   readonly ibanMasked: string;
-  readonly sequenceType: "FRST" | "RCUR" | "OOFF";
+  readonly sequenceType: (typeof SEQUENCE_TYPE_VALUES)[number] | undefined;
   /** The debit comes sooner than the pre-notification days of the Träger. */
   readonly noticeShort: boolean;
 }
 
 /** How and by when an invoice is paid, with where the date came from. */
 export interface InvoicePayment {
-  readonly method: PaymentMethod;
-  readonly dueOn: string;
-  readonly dueSource: DueSource;
+  readonly method: PaymentMethod | undefined;
+  readonly dueOn: string | null;
+  readonly dueSource: DueSource | undefined;
   /** The SEPA mandate a direct debit is collected with (#4695). */
   readonly mandate?: InvoiceMandate | null;
   /** Why a family that pays by direct debit is not collected; null if it is. */
   readonly debitGap?: DebitGap | null;
 }
 
-interface BackendServiceTerms {
-  service: BillingService;
-  payment_method: PaymentMethod;
-  due_days: number;
-  bundle_with: string;
-  custom: boolean;
-  updated_at: string | null;
-}
-
-interface BackendBillingTerms {
-  services: { service: BillingService; bundle_with: string[] | null }[] | null;
-  terms: BackendServiceTerms[] | null;
-}
-
-interface BackendAddress {
-  street: string;
-  postal_code: string;
-  city: string;
-}
-
-interface BackendFamilyBilling {
-  id: number | string;
-  family_email: string;
-  contract_id: number | string;
-  recipient_kind: RecipientKind;
-  second_first_name: string;
-  second_last_name: string;
-  payer_first_name: string;
-  payer_last_name: string;
-  payer_email: string;
-  payer_address: BackendAddress | null;
-  payment_method: PaymentMethod | "";
-  due_day: number | null;
-  debtor_number?: string;
-  updated_at: string;
-}
-
-export interface BackendRunDueDate {
-  payment_method: PaymentMethod;
-  due_on: string;
-}
-
-interface BackendInvoiceMandate {
-  reference: string;
-  signed_on: string;
-  creditor_id: string;
-  iban_masked: string;
-  sequence_type: "FRST" | "RCUR" | "OOFF";
-  notice_short?: boolean;
-}
-
 function invoiceMandateFromBackend(
-  mandate: BackendInvoiceMandate | null | undefined,
+  mandate: sharedContract.InvoiceMandate | undefined,
 ): InvoiceMandate | null {
   if (!mandate) return null;
   return {
@@ -191,129 +194,157 @@ function invoiceMandateFromBackend(
     signedOn: mandate.signed_on,
     creditorId: mandate.creditor_id,
     ibanMasked: mandate.iban_masked,
-    sequenceType: mandate.sequence_type,
+    sequenceType: knownEnum(SEQUENCE_TYPE_VALUES, mandate.sequence_type),
     noticeShort: mandate.notice_short ?? false,
   };
 }
 
-export interface BackendInvoicePayment {
-  method: PaymentMethod;
-  due_on: string;
-  due_source: DueSource;
-  mandate?: BackendInvoiceMandate | null;
-  debit_gap?: DebitGap | "";
-}
-
-function termsFromBackend(body: BackendBillingTerms): BillingTerms {
+// A service this build does not know has no form: its entry is left out.
+function termsFromBackend(
+  body: traegerBillingTermsContract.BillingTermsResponse,
+): BillingTerms {
   return {
-    services: (body.services ?? []).map((option) => ({
-      service: option.service,
-      bundleWith: option.bundle_with ?? [],
-    })),
-    terms: (body.terms ?? []).map((terms) => ({
-      service: terms.service,
-      paymentMethod: terms.payment_method,
-      dueDays: terms.due_days,
-      bundleWith: terms.bundle_with,
-      custom: terms.custom,
-      updatedAt: terms.updated_at,
-    })),
+    services: (body.services ?? []).flatMap((option) => {
+      const service = knownEnum(BILLING_SERVICE_VALUES, option.service);
+      return service ? [{ service, bundleWith: option.bundle_with ?? [] }] : [];
+    }),
+    terms: (body.terms ?? []).flatMap((terms) => {
+      const service = knownEnum(BILLING_SERVICE_VALUES, terms.service);
+      if (!service) return [];
+      return [
+        {
+          service,
+          paymentMethod: knownEnum(PAYMENT_METHOD_VALUES, terms.payment_method),
+          dueDays: terms.due_days,
+          bundleWith: terms.bundle_with,
+          custom: terms.custom,
+          updatedAt: terms.updated_at,
+          version: terms.version,
+        },
+      ];
+    }),
   };
 }
 
-function familyFromBackend(family: BackendFamilyBilling): FamilyBilling {
+function addressFromBackend(
+  address: sharedContract.PostalAddress,
+): PostalAddress {
   return {
-    id: String(family.id),
+    street: address.street,
+    postalCode: address.postal_code,
+    city: address.city,
+  };
+}
+
+function familyFromBackend(
+  family: traegerFamilyBillingContract.FamilyBilling,
+): FamilyBilling {
+  return {
+    id: family.id,
     familyEmail: family.family_email,
-    contractId:
-      String(family.contract_id) === "0" ? "" : String(family.contract_id),
-    recipientKind: family.recipient_kind,
+    contractId: family.contract_id === "0" ? "" : family.contract_id,
+    recipientKind: knownRecipientKind(family.recipient_kind),
     secondFirstName: family.second_first_name,
     secondLastName: family.second_last_name,
     payerFirstName: family.payer_first_name,
     payerLastName: family.payer_last_name,
     payerEmail: family.payer_email,
     payerAddress: family.payer_address
-      ? {
-          street: family.payer_address.street,
-          postalCode: family.payer_address.postal_code,
-          city: family.payer_address.city,
-        }
+      ? addressFromBackend(family.payer_address)
       : null,
-    paymentMethod: family.payment_method,
+    paymentMethod:
+      family.payment_method === ""
+        ? ""
+        : knownEnum(PAYMENT_METHOD_VALUES, family.payment_method),
     dueDay: family.due_day,
-    debtorNumber: family.debtor_number ?? "",
+    debtorNumber: family.debtor_number,
     updatedAt: family.updated_at,
   };
 }
 
+// A due date for a payment method this build does not know is left out.
 export function runDueDatesFromBackend(
-  dates: readonly BackendRunDueDate[] | null | undefined,
+  dates: readonly sharedContract.RunDueDate[] | null,
 ): RunDueDate[] {
-  return (dates ?? []).map((due) => ({
-    paymentMethod: due.payment_method,
-    dueOn: due.due_on,
-  }));
+  return (dates ?? []).flatMap((due) => {
+    const paymentMethod = knownEnum(PAYMENT_METHOD_VALUES, due.payment_method);
+    return paymentMethod ? [{ paymentMethod, dueOn: due.due_on }] : [];
+  });
 }
 
 export function invoicePaymentFromBackend(
-  payment: BackendInvoicePayment | null | undefined,
+  payment: sharedContract.InvoicePayment | null,
 ): InvoicePayment | null {
   if (!payment) return null;
   return {
-    method: payment.method,
+    method: knownEnum(PAYMENT_METHOD_VALUES, payment.method),
     dueOn: payment.due_on,
-    dueSource: payment.due_source,
+    dueSource: knownEnum(DUE_SOURCE_VALUES, payment.due_source),
     mandate: invoiceMandateFromBackend(payment.mandate),
-    debitGap: payment.debit_gap ? payment.debit_gap : null,
+    debitGap: payment.debit_gap
+      ? (knownEnum(DEBIT_GAP_VALUES, payment.debit_gap) ?? "other")
+      : null,
   };
 }
 
-const TERMS_PATH = "/api/traeger/billing-terms";
-const FAMILY_PATH = "/api/traeger/family-billing";
-const DUE_DATES_PATH = "/api/traeger/billing-run-due-dates";
-
 /** The terms of every service, the defaults where the Träger set none. */
 export async function fetchBillingTerms(): Promise<BillingTerms> {
-  return termsFromBackend(
-    await traegerRequest<BackendBillingTerms>(TERMS_PATH),
-  );
+  return termsFromBackend(await bffJson("org", "GET /traeger/billing-terms/"));
 }
 
-/** Sets the terms of one service; answers the terms of every service. */
+/**
+ * Sets the terms of one service from the `version` they were read at (ADR
+ * 0311); answers the terms of every service.
+ */
 export async function saveServiceTerms(
   service: BillingService,
   input: ServiceTermsInput,
+  version: string,
 ): Promise<BillingTerms> {
   return termsFromBackend(
-    await traegerRequest<BackendBillingTerms>(
-      `${TERMS_PATH}/${encodeURIComponent(service)}`,
-      {
-        method: "PUT",
-        body: {
-          payment_method: input.paymentMethod,
-          due_days: input.dueDays,
-          bundle_with: input.bundleWith,
-        },
-      },
-    ),
+    await bffJson("org", "PUT /traeger/billing-terms/{service}", {
+      params: { service },
+      body: {
+        payment_method: input.paymentMethod,
+        due_days: input.dueDays,
+        bundle_with: input.bundleWith,
+        expected_version: version,
+      } satisfies traegerBillingTermsContract.ServiceTermsRequest,
+    }),
   );
 }
 
-/** The deviations of the families of the Träger. */
-export async function fetchFamilyBillings(): Promise<FamilyBilling[]> {
-  const families = await traegerRequest<BackendFamilyBilling[] | null>(
-    FAMILY_PATH,
+/**
+ * The family of a contract with its deviation, read on every opening: the
+ * backend records each read of a deviation in its trail. A sibling's
+ * contract answers the same deviation; the save writes exactly this one.
+ */
+export async function fetchContractFamilyBilling(
+  contractId: string,
+): Promise<ContractFamilyBilling> {
+  const body = await bffJson(
+    "org",
+    "GET /traeger/family-billing/contracts/{id}",
+    { params: { id: contractId } },
   );
-  return (families ?? []).map(familyFromBackend);
+  return {
+    contractId: body.contract_id,
+    familyEmail: body.family_email,
+    partyName: `${body.party_first_name} ${body.party_last_name}`.trim(),
+    partyLastName: body.party_last_name,
+    family: body.family ? familyFromBackend(body.family) : null,
+    version: body.version,
+  };
 }
 
 /** The request body of a deviation; exported for its test. */
-export function familyBillingBody(input: FamilyBillingInput) {
+export function familyBillingBody(
+  input: FamilyBillingInput,
+): traegerFamilyBillingContract.FamilyBillingRequest {
   const both = input.recipientKind === "both";
   const payer = input.recipientKind === "payer";
   return {
-    contract_id: Number(input.contractId),
+    contract_id: input.contractId,
     recipient_kind: input.recipientKind,
     second_first_name: both ? input.secondFirstName.trim() : "",
     second_last_name: both ? input.secondLastName.trim() : "",
@@ -335,37 +366,47 @@ export function familyBillingBody(input: FamilyBillingInput) {
 }
 
 /**
- * Sets the deviation of the family of a contract. Null when nothing
- * deviates any more: then the family has no deviation.
+ * Sets the deviation of the family of a contract over the `version` the
+ * form read; a deviation saved since is refused with
+ * `general.changed_since_read` (ADR 0311). Null when nothing deviates any
+ * more: then the family has no deviation.
  */
 export async function saveFamilyBilling(
   input: FamilyBillingInput,
+  version: string,
 ): Promise<FamilyBilling | null> {
-  const body = await traegerRequest<{
-    family: BackendFamilyBilling | null;
-  } | null>(FAMILY_PATH, { method: "PUT", body: familyBillingBody(input) });
-  return body?.family ? familyFromBackend(body.family) : null;
+  const body = await bffJson("org", "PUT /traeger/family-billing/", {
+    body: { ...familyBillingBody(input), expected_version: version },
+  });
+  return body.family ? familyFromBackend(body.family) : null;
 }
 
 /**
- * Replaces the due dates of a calculated run; a payment method without a
- * date falls back to the payment term of the service.
+ * Replaces the due dates of a calculated run, read at `version` (the run's
+ * `dueDatesVersion`, ADR 0311); a payment method without a date falls back
+ * to the payment term of the service.
  */
 export async function saveRunDueDates(
   kind: "care" | "holiday",
   runId: string,
   dates: readonly RunDueDate[],
+  version: string,
 ): Promise<RunDueDate[]> {
-  const body = await traegerRequest<{
-    due_dates: BackendRunDueDate[] | null;
-  } | null>(`${DUE_DATES_PATH}/${kind}/${encodeURIComponent(runId)}`, {
-    method: "PUT",
-    body: {
-      due_dates: dates.map((due) => ({
-        payment_method: due.paymentMethod,
-        due_on: due.dueOn,
-      })),
+  const body = await bffJson(
+    "org",
+    kind === "care"
+      ? "PUT /traeger/billing-run-due-dates/care/{id}"
+      : "PUT /traeger/billing-run-due-dates/holiday/{id}",
+    {
+      params: { id: runId },
+      body: {
+        due_dates: dates.map((due) => ({
+          payment_method: due.paymentMethod,
+          due_on: due.dueOn,
+        })),
+        expected_version: version,
+      } satisfies traegerBillingRunDueDatesContract.RunDueDatesRequest,
     },
-  });
-  return runDueDatesFromBackend(body?.due_dates);
+  );
+  return runDueDatesFromBackend(body.due_dates);
 }

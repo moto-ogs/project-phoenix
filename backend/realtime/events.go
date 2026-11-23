@@ -168,6 +168,26 @@ const (
 	// high-frequency check-in/out traffic — so listeners can refetch unconditionally.
 	EventChangeRequestsChanged EventType = "change_requests_changed"
 
+	// EventStaffNoticesChanged is a tenant-wide staff signal that a Hinweis
+	// der Leitung was created, changed or deleted (#7667). It carries no
+	// content: the notices have an audience, and readers refetch their own
+	// view („Heute anders“, Tagesinformationen, the sidebar count).
+	EventStaffNoticesChanged EventType = "staff_notices_changed"
+
+	// EventCalendarAppointmentsChanged is a tenant-wide staff signal that an
+	// appointment of the school was created, changed, cancelled or deleted,
+	// or that one date of a series was cancelled (#7693). It carries no
+	// content: appointments have recipients, and readers refetch their own
+	// view („Heute anders“, the own calendar). Delivery emits it through its
+	// shared after-commit site for content-free tenant signals (ADR 0310).
+	EventCalendarAppointmentsChanged EventType = "calendar_appointments_changed"
+
+	// EventMealPlanChanged is a tenant-wide staff signal that the menu of a
+	// day was saved or cleared (#7666). It carries no content: the menu stays
+	// behind the meal plan's permission, and readers refetch their own view
+	// („Heute anders“ shows only that today's menu changed).
+	EventMealPlanChanged EventType = "meal_plan_changed"
+
 	// Tenant-scoped settings change. Fires when a setting whose value travels
 	// through /auth/tenant/resolve (currently operations.student_photos_enabled)
 	// is written or reset. Already-open tabs at the affected tenant pick this

@@ -77,7 +77,7 @@ func TestChildDebtorNumbersReachTheMonthlyInvoiceOfEachChild(t *testing.T) {
 	f := newCareBillingFixture(t, "Träger Nummer je Kind")
 	school := f.office.schools[0]
 	mia, noah, family := siblingContracts(t, f, school)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, careMonth, 3200))
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, careMonth, 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, debtorNumberFormatPath, nil)
@@ -97,22 +97,33 @@ func TestChildDebtorNumbersReachTheMonthlyInvoiceOfEachChild(t *testing.T) {
 	assert.Equal(t, common.CodeParentBillingChildNotFound, decodeProblem(t, rec).Code, "a child of no contract of the family")
 	assert.Equal(t, []listedChild{{"Mia", "Beispiel", "10 0001"}, {"Noah", "Beispiel", "10 0002"}},
 		listChildFamilies(t, f, f.office.token)[0].Children, "the names stay as the contract has them")
+	reads := func() (count int) {
+		require.NoError(t, f.db.NewRaw(`SELECT COUNT(*) FROM parent_billing.child_debtor_number_events WHERE organization_id = ? AND action = 'read'`,
+			f.office.organization).Scan(context.Background(), &count))
+		return count
+	}
+	before := reads()
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, "/traeger/billing-families/children?numbers=false", nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.Equal(t, []childListedFamily{{FamilyEmail: family, RecipientFirstName: "Eva", Children: []listedChild{}}},
+		decodeSchoolPortalData[[]childListedFamily](t, rec.Body.Bytes()), "without numbers the family of the contracts is listed and no child is named")
+	assert.Equal(t, before, reads(), "a read that shows no number records none")
 	var lastUsed string
 	require.NoError(t, f.db.NewRaw(`SELECT MIN(last_used_on)::text FROM parent_billing.child_debtor_numbers WHERE organization_id = ?`,
 		f.office.organization).Scan(context.Background(), &lastUsed))
 	assert.Greater(t, lastUsed, careMonth, "a number prepared for a contract ahead is kept until the contract needs it")
 
 	run := f.startRun(t, careMonth)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, careRunPath(run.ID, ""), nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, careRunPath(int64(run.ID), ""), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	numbers := map[int64]string{}
 	for _, invoice := range decodeSchoolPortalData[struct {
 		Invoices []struct {
-			ContractID   int64  `json:"contract_id"`
+			ContractID   wireID `json:"contract_id"`
 			DebtorNumber string `json:"debtor_number"`
 		} `json:"invoices"`
 	}](t, rec.Body.Bytes()).Invoices {
-		numbers[invoice.ContractID] = invoice.DebtorNumber
+		numbers[int64(invoice.ContractID)] = invoice.DebtorNumber
 	}
 	assert.Equal(t, map[int64]string{mia: "10 0001", noah: "10 0002"}, numbers, "each sibling's invoice carries the child's own number")
 

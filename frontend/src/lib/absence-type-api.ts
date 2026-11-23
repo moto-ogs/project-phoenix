@@ -1,4 +1,3 @@
-import { apiErrorFromResponse, type ApiError } from "./api-error";
 // API client for the school's own Abwesenheitsarten (#2403).
 //
 // These sit next to the five standard types (Urlaub, Krank, Fortbildung,
@@ -11,20 +10,12 @@ import { apiErrorFromResponse, type ApiError } from "./api-error";
 // time_tracking:manage. There is no delete: a used art is deactivated, so it
 // stays readable on the absences already filed under it.
 
-import { sessionFetch } from "./session-cache";
-
-interface BackendAbsenceType {
-  id: string;
-  name: string;
-  base_type: string;
-  is_active: boolean;
-  allowance_enabled: boolean;
-  carryover_until?: string | null;
-  requestable?: boolean;
-  kept_by_traeger?: boolean;
-  offered?: boolean;
-  school_limit_days?: number | null;
-}
+import { bffJson } from "./bff-fetch";
+import { knownEnum } from "./contract/known-enum";
+import type {
+  AbsenceTypeResponse,
+  AllowanceSummaryResponse,
+} from "./contract/absence-types.generated";
 
 export interface AbsenceType {
   /** Backend int64 as a string, matching the repo-wide ID convention. */
@@ -56,53 +47,27 @@ export interface AbsenceType {
   readonly schoolLimitDays: number | null;
 }
 
-function mapAbsenceType(data: BackendAbsenceType): AbsenceType {
+function mapAbsenceType(data: AbsenceTypeResponse): AbsenceType {
   return {
     id: data.id,
     name: data.name,
     baseType: data.base_type,
     isActive: data.is_active,
     allowanceEnabled: data.allowance_enabled,
-    carryoverUntil: data.carryover_until ?? null,
-    requestable: data.requestable ?? false,
-    keptByTraeger: data.kept_by_traeger ?? false,
+    carryoverUntil: data.carryover_until,
+    requestable: data.requestable,
+    keptByTraeger: data.kept_by_traeger,
     offered: data.offered ?? true,
-    schoolLimitDays: data.school_limit_days ?? null,
+    schoolLimitDays: data.school_limit_days,
   };
-}
-
-function readError(response: Response, fallback: string): Promise<ApiError> {
-  return apiErrorFromResponse(response, fallback);
-}
-
-async function readList(response: Response): Promise<AbsenceType[]> {
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Abwesenheitsarten konnten nicht geladen werden",
-    );
-  }
-  const json = (await response.json()) as {
-    data: BackendAbsenceType[] | null;
-  };
-  return (json.data ?? []).map(mapAbsenceType);
-}
-
-async function readOne(response: Response): Promise<AbsenceType> {
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Abwesenheitsart konnte nicht gespeichert werden",
-    );
-  }
-  const json = (await response.json()) as { data: BackendAbsenceType };
-  return mapAbsenceType(json.data);
 }
 
 class AbsenceTypeService {
   async getAbsenceTypes(): Promise<AbsenceType[]> {
-    const response = await sessionFetch("/api/absence-types");
-    return readList(response);
+    const types = await bffJson("tenant", "GET /api/absence-types/", {
+      errorMessage: "Abwesenheitsarten konnten nicht geladen werden",
+    });
+    return types.map(mapAbsenceType);
   }
 
   async createAbsenceType(
@@ -113,19 +78,18 @@ class AbsenceTypeService {
       requestable?: boolean;
     },
   ): Promise<AbsenceType> {
-    const response = await sessionFetch("/api/absence-types", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const type = await bffJson("tenant", "POST /api/absence-types/", {
+      body: {
         name,
         allowance_enabled: config.allowanceEnabled,
         requestable: config.requestable ?? false,
         ...(config.carryoverUntil !== undefined
           ? { carryover_until: config.carryoverUntil ?? "" }
           : {}),
-      }),
+      },
+      errorMessage: "Abwesenheitsart konnte nicht gespeichert werden",
     });
-    return readOne(response);
+    return mapAbsenceType(type);
   }
 
   /**
@@ -145,10 +109,10 @@ class AbsenceTypeService {
       schoolLimitDays?: number | null;
     },
   ): Promise<AbsenceType> {
-    const response = await sessionFetch(`/api/absence-types/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const type = await bffJson("tenant", "PUT /api/absence-types/{id}", {
+      params: { id },
+      errorMessage: "Abwesenheitsart konnte nicht gespeichert werden",
+      body: {
         ...(changes.name !== undefined ? { name: changes.name } : {}),
         ...(changes.isActive !== undefined
           ? { is_active: changes.isActive }
@@ -166,9 +130,9 @@ class AbsenceTypeService {
         ...(changes.schoolLimitDays !== undefined
           ? { school_limit_days: changes.schoolLimitDays }
           : {}),
-      }),
+      },
     });
-    return readOne(response);
+    return mapAbsenceType(type);
   }
 
   async getAllowance(
@@ -176,10 +140,16 @@ class AbsenceTypeService {
     staffId: string,
     year: number,
   ): Promise<AbsenceTypeAllowanceSummary> {
-    const response = await sessionFetch(
-      `/api/staff/absence-types/${absenceTypeId}/allowances/${staffId}?year=${year}`,
+    const allowance = await bffJson(
+      "tenant",
+      "GET /api/absence-types/{id}/allowances/{staffId}",
+      {
+        params: { id: absenceTypeId, staffId },
+        query: { year },
+        errorMessage: "Kontingent konnte nicht gespeichert werden",
+      },
     );
-    return readAllowance(response);
+    return mapAllowance(allowance);
   }
 
   /**
@@ -191,32 +161,24 @@ class AbsenceTypeService {
     staffId: string,
     booking: { dateStart: string; dateEnd: string; halfDay: boolean },
   ): Promise<AbsenceTypeAllowancePreview> {
-    const query = new URLSearchParams({
-      date_start: booking.dateStart,
-      date_end: booking.dateEnd,
-      half_day: String(booking.halfDay),
-    });
-    const response = await sessionFetch(
-      `/api/absence-types/${absenceTypeId}/allowances/${staffId}/preview?${query.toString()}`,
+    const preview = await bffJson(
+      "tenant",
+      "GET /api/absence-types/{id}/allowances/{staffId}/preview",
+      {
+        params: { id: absenceTypeId, staffId },
+        query: {
+          date_start: booking.dateStart,
+          date_end: booking.dateEnd,
+          half_day: booking.halfDay,
+        },
+        errorMessage: "Die Vorschau konnte nicht berechnet werden",
+      },
     );
-    if (!response.ok) {
-      throw await readError(
-        response,
-        "Die Vorschau konnte nicht berechnet werden",
-      );
-    }
-    const json = (await response.json()) as {
-      data: {
-        years: BackendAbsenceTypeAllowanceSummary[] | null;
-        blocked: boolean;
-        blocked_by?: "allowance" | "school_limit";
-      };
-    };
     return {
-      years: (json.data.years ?? []).map(mapAllowance),
-      blocked: json.data.blocked,
-      blockedBy: json.data.blocked
-        ? (json.data.blocked_by ?? "allowance")
+      years: (preview.years ?? []).map(mapAllowance),
+      blocked: preview.blocked,
+      blockedBy: preview.blocked
+        ? (knownEnum(BLOCKED_BY, preview.blocked_by) ?? "allowance")
         : null,
     };
   }
@@ -224,42 +186,30 @@ class AbsenceTypeService {
   async setAllowance(
     absenceTypeId: string,
     staffId: string,
-    payload: { year: number; entitledDays: number; reason: string },
+    payload: {
+      year: number;
+      entitledDays: number;
+      reason: string;
+      /** The version of the summary the form showed (ADR 0311). */
+      expectedVersion: string;
+    },
   ): Promise<AbsenceTypeAllowanceSummary> {
-    const response = await sessionFetch(
-      `/api/staff/absence-types/${absenceTypeId}/allowances/${staffId}`,
+    const allowance = await bffJson(
+      "tenant",
+      "PUT /api/absence-types/{id}/allowances/{staffId}",
       {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        params: { id: absenceTypeId, staffId },
+        body: {
           year: payload.year,
           entitled_days: payload.entitledDays,
           reason: payload.reason,
-        }),
+          expected_version: payload.expectedVersion,
+        },
+        errorMessage: "Kontingent konnte nicht gespeichert werden",
       },
     );
-    return readAllowance(response);
+    return mapAllowance(allowance);
   }
-}
-
-export interface BackendAbsenceTypeAllowanceSummary {
-  staff_id: string;
-  absence_type_id: string;
-  year: number;
-  entitled_days: number;
-  taken_days: number;
-  reserved_days: number;
-  remaining_days: number;
-  expires_on?: string;
-  expired_days?: number;
-  booking_days?: number;
-  carried_in?: {
-    year: number;
-    remaining_days: number;
-    expired_days: number;
-    expires_on: string;
-  } | null;
-  kept_by_traeger?: boolean;
 }
 
 /** The previous year's rest as seen from the year it is carried into. */
@@ -269,6 +219,8 @@ interface AbsenceTypeAllowanceCarry {
   readonly expiredDays: number;
   readonly expiresOn: string;
 }
+
+const BLOCKED_BY = ["allowance", "school_limit"] as const;
 
 interface AbsenceTypeAllowancePreview {
   readonly years: readonly AbsenceTypeAllowanceSummary[];
@@ -300,10 +252,12 @@ export interface AbsenceTypeAllowanceSummary {
    * Schule liest es nur.
    */
   readonly keptByTraeger: boolean;
+  /** Der gespeicherte Anspruch; seine Änderung schickt ihn zurück. */
+  readonly version: string;
 }
 
 export function mapAllowance(
-  data: BackendAbsenceTypeAllowanceSummary,
+  data: AllowanceSummaryResponse,
 ): AbsenceTypeAllowanceSummary {
   return {
     staffId: data.staff_id,
@@ -314,8 +268,8 @@ export function mapAllowance(
     reservedDays: data.reserved_days,
     remainingDays: data.remaining_days,
     expiresOn: data.expires_on ?? `${data.year}-12-31`,
-    expiredDays: data.expired_days ?? 0,
-    bookingDays: data.booking_days ?? 0,
+    expiredDays: data.expired_days,
+    bookingDays: data.booking_days,
     carriedIn: data.carried_in
       ? {
           year: data.carried_in.year,
@@ -324,23 +278,9 @@ export function mapAllowance(
           expiresOn: data.carried_in.expires_on,
         }
       : null,
-    keptByTraeger: data.kept_by_traeger ?? false,
+    keptByTraeger: data.kept_by_traeger,
+    version: data.version,
   };
-}
-
-async function readAllowance(
-  response: Response,
-): Promise<AbsenceTypeAllowanceSummary> {
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Kontingent konnte nicht gespeichert werden",
-    );
-  }
-  const json = (await response.json()) as {
-    data: BackendAbsenceTypeAllowanceSummary;
-  };
-  return mapAllowance(json.data);
 }
 
 export const absenceTypeService = new AbsenceTypeService();

@@ -1,4 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
 import {
   getPhaseResponseOverview,
   mapPhaseResponseOverview,
@@ -55,12 +60,30 @@ describe("mapPhaseResponseOverview", () => {
     expect(overview.excluded).toEqual([{ reason: "graduating", count: 3 }]);
   });
 
+  it("keeps children of an unknown exclusion reason excluded as other (#2353)", () => {
+    const overview = mapPhaseResponseOverview({
+      applicable: true,
+      expected: 0,
+      responded: 0,
+      children: null,
+      excluded: [
+        { reason: "moved_away", count: 2 },
+        { reason: "graduating", count: 1 },
+      ],
+    });
+    expect(overview.excluded).toEqual([
+      { reason: "other", count: 2 },
+      { reason: "graduating", count: 1 },
+    ]);
+  });
+
   it("treats missing lists as empty", () => {
     const overview = mapPhaseResponseOverview({
       applicable: false,
       expected: 0,
       responded: 0,
       children: null,
+      excluded: null,
     });
     expect(overview.children).toEqual([]);
     expect(overview.excluded).toEqual([]);
@@ -84,7 +107,7 @@ describe("getPhaseResponseOverview", () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/enrollment/phases/12/responses",
-      { cache: "no-store" },
+      expect.objectContaining({ method: "GET" }),
     );
     expect(overview.applicable).toBe(true);
     expect(overview.expected).toBe(1);

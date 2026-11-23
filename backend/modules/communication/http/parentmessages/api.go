@@ -57,7 +57,6 @@ func (rs *Resource) Router(protectedTenantRoutes func(chi.Router, func(chi.Route
 		// inbox is the only permission it needs.
 		r.With(read, withTx).Get("/count-scope", rs.getCountScope)
 		r.With(read, withTx).Put("/count-scope", rs.setCountScope)
-		r.With(read, withTx).Post("/threads", rs.startThread)
 		r.With(read, withTx).Post("/threads/open", rs.openThread)
 		r.With(read, withTx).Get("/threads/{threadId}", rs.getThread)
 		r.With(read, withTx).Post("/threads/{threadId}", rs.postMessage)
@@ -146,7 +145,7 @@ type ParentChatMessageResponse struct {
 	EventActorKind  string          `json:"event_actor_kind,omitempty"`
 	RequestType     string          `json:"request_type,omitempty"`
 	RequestStatus   string          `json:"request_status,omitempty"`
-	Payload         json.RawMessage `json:"payload,omitempty"`
+	Payload         json.RawMessage `json:"payload,omitempty" contract_json:"The message kind selects an extensible event payload, including historical kinds"`
 	RefTable        string          `json:"ref_table,omitempty"`
 	RefID           string          `json:"ref_id,omitempty"`
 	AppliedAt       *time.Time      `json:"applied_at,omitempty"`
@@ -159,7 +158,7 @@ type ParentChatMessageResponse struct {
 	GroupThreadID    string `json:"group_thread_id,omitempty"`
 	GroupThreadTitle string `json:"group_thread_title,omitempty"`
 	// Attachments are the photos and files of the message (#6685).
-	Attachments json.RawMessage `json:"attachments,omitempty"`
+	Attachments []ParentMessageAttachmentResponse `json:"attachments,omitempty"`
 }
 
 type ParentChatThreadDetailResponse struct {
@@ -193,18 +192,6 @@ type MessageableGuardianResponse struct {
 	LeadershipAvailable bool            `json:"leadership_available"`
 }
 
-// StartThreadRequest and OpenThreadRequest take an optional audience,
-// "team" (default) or "leadership" (#5200).
-type StartThreadRequest struct {
-	ClientMessageID   string `json:"client_message_id,omitempty"`
-	StudentID         string `json:"student_id"`
-	GuardianAccountID string `json:"guardian_account_id"`
-	Body              string `json:"body"`
-	Audience          string `json:"audience,omitempty"`
-	// AttachmentIDs names the uploads the message carries (#6685).
-	AttachmentIDs []string `json:"attachment_ids,omitempty"`
-}
-
 type ParentChatPostMessageRequest struct {
 	ClientMessageID      string `json:"client_message_id,omitempty"`
 	Body                 string `json:"body"`
@@ -213,6 +200,8 @@ type ParentChatPostMessageRequest struct {
 	AttachmentIDs []string `json:"attachment_ids,omitempty"`
 }
 
+// OpenThreadRequest takes an optional audience, "team" (default) or
+// "leadership" (#5200).
 type OpenThreadRequest struct {
 	StudentID         string `json:"student_id"`
 	GuardianAccountID string `json:"guardian_account_id"`
@@ -251,7 +240,7 @@ func toMessageResponses(messages []communication.ParentMessage, viewer ...int64)
 			ReadByGuardian:   m.ReadByGuardian,
 			GroupThreadID:    optionalIDString(m.GroupThreadID),
 			GroupThreadTitle: m.GroupThreadTitle,
-			Attachments:      m.Attachments,
+			Attachments:      toAttachmentResponses(m.Attachments),
 		})
 	}
 	return out
@@ -479,36 +468,6 @@ func (rs *Resource) postMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	common.Respond(w, r, http.StatusCreated, toMessageResponses(messages, messageViewer(r)), "Message sent")
-}
-
-func (rs *Resource) startThread(w http.ResponseWriter, r *http.Request) {
-	var req StartThreadRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
-		return
-	}
-	studentID, err := strconv.ParseInt(req.StudentID, 10, 64)
-	if err != nil || studentID <= 0 {
-		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid student ID")))
-		return
-	}
-	guardianID, err := strconv.ParseInt(req.GuardianAccountID, 10, 64)
-	if err != nil || guardianID <= 0 {
-		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid guardian ID")))
-		return
-	}
-	attachmentIDs, ok := common.ParseMessageSend(w, r, req.ClientMessageID, req.AttachmentIDs, communication.MaxMessageAttachments)
-	if !ok {
-		return
-	}
-	sendCtx := communication.WithMessageSend(r.Context(), req.ClientMessageID, attachmentIDs)
-
-	detail, err := rs.Service.StartParentMessageThread(sendCtx, studentID, guardianID, req.Body, req.Audience)
-	if err != nil {
-		renderMessagingError(w, r, err)
-		return
-	}
-	common.Respond(w, r, http.StatusCreated, toThreadDetail(detail, messageViewer(r)), "Thread created")
 }
 
 func (rs *Resource) openThread(w http.ResponseWriter, r *http.Request) {

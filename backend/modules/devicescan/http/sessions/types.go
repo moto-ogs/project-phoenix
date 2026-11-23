@@ -9,11 +9,14 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/devicescan"
 )
 
+// The identifiers of the kiosk device API stay JSON numbers and say so with
+// contract:"number": PyrePortal v1.11.5 reads them as numbers (#7808).
+
 // SessionStartRequest represents a request to start an activity session
 type SessionStartRequest struct {
-	ActivityID    int64   `json:"activity_id"`
-	RoomID        *int64  `json:"room_id,omitempty"`        // Optional: Override the activity's planned room
-	SupervisorIDs []int64 `json:"supervisor_ids,omitempty"` // Multiple supervisors support
+	ActivityID    int64   `json:"activity_id" contract:"number"`
+	RoomID        *int64  `json:"room_id,omitempty" contract:"number"`        // Optional: Override the activity's planned room
+	SupervisorIDs []int64 `json:"supervisor_ids,omitempty" contract:"number"` // Multiple supervisors support
 	Force         bool    `json:"force,omitempty"`
 }
 
@@ -40,12 +43,6 @@ type SessionStartResponse = devicescan.SessionStartResponse
 // ConflictInfoResponse represents conflict information for API responses
 type ConflictInfoResponse = devicescan.ConflictInfoResponse
 
-// SessionTimeoutResponse represents the result of processing a session timeout.
-// ActivityID is nullable (WP-B6): a timed-out spontaneous session has no parent
-// template. Serialized as `null` on the wire (no omitempty) so clients must
-// handle both shapes explicitly.
-type SessionTimeoutResponse = devicescan.SessionTimeoutResponse
-
 // SessionActivityRequest represents a session activity update request
 type SessionActivityRequest struct {
 	ActivityType string    `json:"activity_type"` // "rfid_scan", "button_press", "ui_interaction"
@@ -63,30 +60,12 @@ func (req *SessionActivityRequest) Bind(_ *http.Request) error {
 	return nil
 }
 
-// TimeoutValidationRequest represents a timeout validation request
-type TimeoutValidationRequest struct {
-	TimeoutMinutes int       `json:"timeout_minutes"`
-	LastActivity   time.Time `json:"last_activity"`
-}
-
-// Bind validates the timeout validation request
-func (req *TimeoutValidationRequest) Bind(_ *http.Request) error {
-	return validation.ValidateStruct(req,
-		validation.Field(&req.TimeoutMinutes, validation.Required, validation.Min(1), validation.Max(480)),
-		validation.Field(&req.LastActivity, validation.Required),
-	)
-}
-
-// SessionTimeoutInfoResponse provides comprehensive timeout information.
-// ActivityID is nullable per WP-B6 — see SessionTimeoutResponse above.
-type SessionTimeoutInfoResponse = devicescan.SessionTimeoutInfoResponse
-
 // SessionCurrentResponse represents the current session information
 type SessionCurrentResponse = devicescan.SessionCurrentResponse
 
 // UpdateSupervisorsRequest represents a request to update supervisors for an active session
 type UpdateSupervisorsRequest struct {
-	SupervisorIDs []int64 `json:"supervisor_ids"`
+	SupervisorIDs []int64 `json:"supervisor_ids" contract:"number"`
 }
 
 // Bind validates the update supervisors request

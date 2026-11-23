@@ -4,13 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"strings"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports"
-	identityPorts "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports"
 )
 
 // Operation names the administration flows report. They are the envelope
@@ -18,7 +15,6 @@ import (
 const (
 	opGetAccount                = "get account"
 	opUpdateAccount             = "update account"
-	opListAccounts              = "list accounts"
 	opAccountsByRole            = "get accounts by role"
 	opActivateAccount           = "activate account"
 	opDeactivateAccount         = "deactivate account"
@@ -29,29 +25,21 @@ const (
 	opRevokeAfterPasswordChange = "revoke access after password change"
 )
 
-// AccountAdministration administers platform accounts (#3332): the account
-// listing and the by-role listing behind the staff screens, the address and
-// name change, activation and deactivation, and the credential change an
-// account holder makes for themselves.
+// AccountAdministration administers platform accounts (#3332): the read of
+// one manageable account, activation and deactivation, and the credential
+// change an account holder makes for themselves.
 //
 // Accounts are platform-wide rows without a tenant, so every administrative
 // read and write carries the caller's visibility predicate in the same
 // statement. That is the school boundary here: it cannot be lost between a
-// read and the write it authorizes, which is what the retained service
-// achieved by pairing FindManageableByID with UpdateManageable.
+// read and the write it authorizes.
 type AccountAdministration struct {
 	auth      *AccountAuthentication
 	store     ports.AccountAdministrationStore
 	verifier  ports.PasswordVerifier
 	passwords ports.PasswordPolicy
-	// ownership keeps a school administrator from rewriting the login of an
-	// account another school or a Träger also holds (#6862).
-	ownership *AccountOwnership
-	// notice mails the previous address a changed login; nil sends none.
-	notice  identityPorts.AccountSecurityNotice
-	runtime ports.Runtime
-	logger  *slog.Logger
-	now     func() time.Time
+	runtime   ports.Runtime
+	logger    *slog.Logger
 }
 
 // AccountAdministrationDependencies are the ports the flows consume.
@@ -59,11 +47,8 @@ type AccountAdministrationDependencies struct {
 	Store     ports.AccountAdministrationStore
 	Verifier  ports.PasswordVerifier
 	Passwords ports.PasswordPolicy
-	// Notice mails the previous address a changed login (#6862); nil
-	// sends none.
-	Notice  identityPorts.AccountSecurityNotice
-	Runtime ports.Runtime
-	Logger  *slog.Logger
+	Runtime   ports.Runtime
+	Logger    *slog.Logger
 }
 
 // NewAccountAdministration composes the flows over the account
@@ -85,22 +70,7 @@ func NewAccountAdministration(auth *AccountAuthentication, deps AccountAdministr
 	return &AccountAdministration{
 		auth: auth, store: deps.Store, verifier: deps.Verifier,
 		passwords: deps.Passwords, runtime: deps.Runtime, logger: logger,
-		ownership: NewAccountOwnership(auth.store, auth.traeger), notice: deps.Notice, now: auth.sessions.now,
 	}, nil
-}
-
-// FindOwnAccount reads the account without the administration predicate.
-// The caller's own account is their own business; who may ask for it is the
-// request boundary's decision, not this one's.
-func (a *AccountAdministration) findOwnAccount(ctx context.Context, accountID int64) (domain.ManagedAccountRecord, error) {
-	account, found, _, err := a.store.FindAccountRecord(ctx, accountID)
-	if err != nil {
-		return domain.ManagedAccountRecord{}, failed(opGetAccount, err)
-	}
-	if !found {
-		return domain.ManagedAccountRecord{}, failed(opGetAccount, domain.ErrAccountNotFound)
-	}
-	return account, nil
 }
 
 func (a *AccountAdministration) AnonymizeAccountForDeletion(ctx context.Context, accountID int64, email string) error {
@@ -125,7 +95,7 @@ func (a *AccountAdministration) findManageableAccount(ctx context.Context, accou
 	if err != nil {
 		return domain.ManagedAccountRecord{}, failed(opGetAccount, err)
 	}
-	account, found, _, err := a.store.FindManageableAccountRecord(ctx, accountID, visibility, false)
+	account, found, _, err := a.store.FindManageableAccountRecord(ctx, accountID, visibility)
 	if err != nil {
 		return domain.ManagedAccountRecord{}, failed(opGetAccount, err)
 	}
@@ -133,125 +103,6 @@ func (a *AccountAdministration) findManageableAccount(ctx context.Context, accou
 		return domain.ManagedAccountRecord{}, failed(opGetAccount, domain.ErrAccountNotFound)
 	}
 	return account, nil
-}
-
-// ListManageableAccounts lists the accounts the caller may administer.
-func (a *AccountAdministration) listManageableAccounts(ctx context.Context, filter domain.AccountListFilter) ([]domain.ManagedAccountRecord, error) {
-	visibility, err := a.visibility(ctx)
-	if err != nil {
-		return nil, failed(opListAccounts, err)
-	}
-	accounts, _, err := a.store.ListManageableAccountRecords(ctx, filter, visibility)
-	if err != nil {
-		return nil, failed(opListAccounts, err)
-	}
-	return accounts, nil
-}
-
-// ListManageableAccountsByRole lists the accounts holding the named role at
-// a school the caller may administer.
-//
-// An organisation-scoped caller reads it administratively: the assignment
-// and mapping rows it has to join belong to several schools, and the
-// caller's own school transaction cannot see past its own.
-func (a *AccountAdministration) ListManageableAccountsByRole(ctx context.Context, roleName string) ([]identityaccess.ManagedAccount, error) {
-	return runFlow(ctx, a.flow(), func(ctx context.Context) ([]identityaccess.ManagedAccount, error) {
-		visibility, err := a.visibility(ctx)
-		if err != nil {
-			return nil, failed(opAccountsByRole, err)
-		}
-		read := func(readCtx context.Context) ([]domain.ManagedAccountRecord, error) {
-			accounts, _, listErr := a.store.ListManageableAccountRecordsByRole(readCtx, roleName, visibility)
-			return accounts, listErr
-		}
-		var accounts []domain.ManagedAccountRecord
-		listErr := a.runtime.RunInTx(ctx, func(txCtx context.Context) error { var err error; accounts, err = read(txCtx); return err })
-		if listErr != nil {
-			return nil, failed(opAccountsByRole, listErr)
-		}
-		return publicManagedAccounts(accounts), nil
-	})
-}
-
-// UpdateManageableAccount writes the address and, when the caller supplied
-// one, the name. Only those columns: the retained write replaced every
-// mapped column of the row it had read, which could undo a PIN or MFA
-// counter another request changed in between.
-//
-// The address and the name are the account's, not one school's (#6862): a
-// school administrator changes them only while their school alone holds the
-// account, and the previous address learns of a changed login in the same
-// transaction.
-func (a *AccountAdministration) updateManageableAccount(ctx context.Context, update domain.AccountIdentityUpdate) error {
-	email, err := domain.NormalizeAccountEmail(update.Email)
-	if err != nil {
-		return failed(opUpdateAccount, err)
-	}
-	update.Email = email
-	visibility, err := a.visibility(ctx)
-	if err != nil {
-		return failed(opUpdateAccount, err)
-	}
-	// The row lock holds the ownership check, the previous address and the
-	// write together: a second edit waits for this one, and so does a school
-	// mapping or role insert, whose foreign key takes a key share lock on the
-	// account; one committed before is visible to the check.
-	previous, found, _, err := a.store.FindManageableAccountRecord(ctx, update.AccountID, visibility, true)
-	if err != nil {
-		return failed(opUpdateAccount, err)
-	}
-	if !found {
-		return failed(opUpdateAccount, domain.ErrAccountNotFound)
-	}
-	if err := a.requireSchoolHoldsAccount(ctx, update.AccountID, visibility); err != nil {
-		return failed(opUpdateAccount, err)
-	}
-	found, _, err = a.store.UpdateManageableAccountIdentity(ctx, update, visibility)
-	if err != nil {
-		return failed(opUpdateAccount, err)
-	}
-	if !found {
-		return failed(opUpdateAccount, domain.ErrAccountNotFound)
-	}
-	if err := a.notifyLoginAddressChanged(ctx, previous, email, visibility); err != nil {
-		return failed(opUpdateAccount, err)
-	}
-	return nil
-}
-
-// requireSchoolHoldsAccount refuses a school administrator's change to an
-// account another school or a Träger also holds. A platform caller and an
-// administrative transaction are not bound to one school.
-func (a *AccountAdministration) requireSchoolHoldsAccount(ctx context.Context, accountID int64, visibility domain.AccountVisibility) error {
-	if visibility.Kind != domain.AccountVisibilityTenant {
-		return nil
-	}
-	alone, err := a.ownership.HeldBySchoolAlone(ctx, accountID, visibility.TenantID)
-	if err != nil {
-		return err
-	}
-	if !alone {
-		return identityaccess.ErrAccountSharedAcrossSchools
-	}
-	return nil
-}
-
-// notifyLoginAddressChanged queues the notice to the address the login
-// left, in the transaction of the change: without the notice the address
-// stays as it was. An unchanged address, a name-only edit, sends none.
-func (a *AccountAdministration) notifyLoginAddressChanged(ctx context.Context, previous domain.ManagedAccountRecord, email string, visibility domain.AccountVisibility) error {
-	if a.notice == nil || previous.Email == "" || strings.EqualFold(previous.Email, email) {
-		return nil
-	}
-	changedAt := a.now()
-	message := identityaccess.LoginAddressChangedMail{
-		Recipient: previous.Email, ReferenceID: previous.ID,
-		ChangedAt: changedAt.Format("02.01.2006 15:04"), ByOperator: true,
-	}
-	if visibility.Kind == domain.AccountVisibilityTenant {
-		message.TenantID, message.ByOperator = visibility.TenantID, false
-	}
-	return a.notice.NotifyLoginAddressChanged(ctx, message, fmt.Sprintf("%d:%d", previous.ID, changedAt.UnixNano()))
 }
 
 // ActivateAccount re-enables the account and clears the account-wide
@@ -411,18 +262,6 @@ func (a *AccountAdministration) markWipeCompleted(ctx context.Context, accountID
 	})
 }
 
-func (a *AccountAdministration) FindOwnAccount(ctx context.Context, accountID int64) (identityaccess.ManagedAccount, error) {
-	return runFlow(ctx, a.flow(), func(ctx context.Context) (identityaccess.ManagedAccount, error) {
-		var result domain.ManagedAccountRecord
-		err := globalIdentityRead(ctx, a.runtime, func(txCtx context.Context) error {
-			var err error
-			result, err = a.findOwnAccount(txCtx, accountID)
-			return err
-		})
-		return publicManagedAccount(result), err
-	})
-}
-
 func (a *AccountAdministration) FindManageableAccount(ctx context.Context, accountID int64) (identityaccess.ManagedAccount, error) {
 	return runFlow(ctx, a.flow(), func(ctx context.Context) (identityaccess.ManagedAccount, error) {
 		var result domain.ManagedAccountRecord
@@ -432,29 +271,6 @@ func (a *AccountAdministration) FindManageableAccount(ctx context.Context, accou
 			return err
 		})
 		return publicManagedAccount(result), err
-	})
-}
-
-func (a *AccountAdministration) ListManageableAccounts(ctx context.Context, filter identityaccess.AccountListFilter) ([]identityaccess.ManagedAccount, error) {
-	return runFlow(ctx, a.flow(), func(ctx context.Context) ([]identityaccess.ManagedAccount, error) {
-		var result []domain.ManagedAccountRecord
-		err := a.runtime.RunInTx(ctx, func(readCtx context.Context) error {
-			var err error
-			result, err = a.listManageableAccounts(readCtx, domain.AccountListFilter{Email: filter.Email, Active: filter.Active})
-			return err
-		})
-		if err != nil {
-			return nil, err
-		}
-		return publicManagedAccounts(result), nil
-	})
-}
-
-func (a *AccountAdministration) UpdateManageableAccount(ctx context.Context, update identityaccess.AccountIdentityUpdate) error {
-	return runFlowErr(ctx, a.flow(), func(ctx context.Context) error {
-		return a.runtime.RunInTx(ctx, func(writeCtx context.Context) error {
-			return a.updateManageableAccount(writeCtx, domain.AccountIdentityUpdate{AccountID: update.AccountID, Email: update.Email, Username: update.Username})
-		})
 	})
 }
 
@@ -477,14 +293,6 @@ func publicManagedAccount(account domain.ManagedAccountRecord) identityaccess.Ma
 		ID: account.ID, Email: account.Email, Username: account.Username, Active: account.Active,
 		CreatedAt: account.CreatedAt, UpdatedAt: account.UpdatedAt, LastLogin: account.LastLogin,
 	}
-}
-
-func publicManagedAccounts(accounts []domain.ManagedAccountRecord) []identityaccess.ManagedAccount {
-	result := make([]identityaccess.ManagedAccount, 0, len(accounts))
-	for _, account := range accounts {
-		result = append(result, publicManagedAccount(account))
-	}
-	return result
 }
 
 // administrationError translates a flow error to the public contract. The

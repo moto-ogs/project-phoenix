@@ -4,7 +4,7 @@ import {
   arr,
   calendarDate,
   instant,
-  int64StringOrNumber,
+  int64String,
   nullable,
   object,
   rec,
@@ -30,8 +30,8 @@ export interface CareMealTariff {
 }
 
 export const CareMealTariffSchema: z.ZodType<CareMealTariff, unknown> = object<CareMealTariff>({
-  id: int64StringOrNumber,
-  school_id: int64StringOrNumber,
+  id: int64String,
+  school_id: int64String,
   valid_from: nullable(calendarDate),
   valid_until: nullable(calendarDate),
   mode: str,
@@ -44,20 +44,23 @@ export interface CareMealTariffs {
   schools: CareSchool[] | null;
   tariffs: CareMealTariff[] | null;
   billed_until: Record<string, string | null> | null;
+  versions: Record<string, string> | null;
 }
 
 export const CareMealTariffsSchema: z.ZodType<CareMealTariffs, unknown> = object<CareMealTariffs>({
   schools: nullable(arr(CareSchoolSchema)),
   tariffs: nullable(arr(CareMealTariffSchema)),
   billed_until: nullable(rec(nullable(calendarDate))),
+  versions: nullable(rec(str)),
 });
 
 /** Go: parentbillinghttp.CareMealPriceRequest */
 export interface CareMealPriceRequest {
-  school_id?: number;
+  school_id?: string;
   valid_from?: string | null;
   mode?: string;
   amount_cents?: number;
+  expected_version?: string;
 }
 
 export const routes = {
@@ -65,6 +68,9 @@ export const routes = {
     method: "DELETE",
     pattern: "/traeger/care-meal-tariffs/{schoolID}/{validFrom}",
     portals: ["org"],
+    query: {
+      "expected_version": { kind: "string" },
+    },
     response: success(CareMealTariffsSchema),
   },
   "GET /traeger/care-meal-tariffs/": {

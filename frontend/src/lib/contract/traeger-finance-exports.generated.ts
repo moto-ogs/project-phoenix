@@ -4,8 +4,9 @@ import {
   arr,
   bool,
   calendarDate,
+  fileAnswer,
   instant,
-  int64StringOrNumber,
+  int64String,
   nullable,
   object,
   optional,
@@ -27,8 +28,8 @@ export interface BookingOffering {
 }
 
 export const BookingOfferingSchema: z.ZodType<BookingOffering, unknown> = object<BookingOffering>({
-  school_id: int64StringOrNumber,
-  care_offering_id: int64StringOrNumber,
+  school_id: int64String,
+  care_offering_id: int64String,
   module_names: nullable(arr(str)),
 });
 
@@ -42,7 +43,7 @@ export interface RevenueAccount {
 
 export const RevenueAccountSchema: z.ZodType<RevenueAccount, unknown> = object<RevenueAccount>({
   scope: str,
-  scope_id: int64StringOrNumber,
+  scope_id: int64String,
   account: str,
   updated_at: instant,
 });
@@ -58,9 +59,9 @@ export interface CostCenter {
 }
 
 export const CostCenterSchema: z.ZodType<CostCenter, unknown> = object<CostCenter>({
-  id: int64StringOrNumber,
+  id: int64String,
   scope: str,
-  scope_id: int64StringOrNumber,
+  scope_id: int64String,
   valid_from: nullable(calendarDate),
   code: str,
   created_at: instant,
@@ -124,12 +125,14 @@ export interface SollstellungSettings {
   mapping: SollstellungMapping;
   custom: boolean;
   updated_at: string | null;
+  version: string;
 }
 
 export const SollstellungSettingsSchema: z.ZodType<SollstellungSettings, unknown> = object<SollstellungSettings>({
   mapping: SollstellungMappingSchema,
   custom: bool,
   updated_at: nullable(instant),
+  version: str,
 });
 
 /** Go: parentbilling.ExportFileNumbers */
@@ -179,7 +182,7 @@ export interface DatevRunOverview {
 
 export const DatevRunOverviewSchema: z.ZodType<DatevRunOverview, unknown> = object<DatevRunOverview>({
   run_kind: str,
-  run_id: int64StringOrNumber,
+  run_id: int64String,
   new_bookings: safeInt,
   fiscal_years: nullable(arr(nullable(calendarDate))),
 });
@@ -259,11 +262,11 @@ export interface ExportProtocolEntry {
 }
 
 export const ExportProtocolEntrySchema: z.ZodType<ExportProtocolEntry, unknown> = object<ExportProtocolEntry>({
-  id: int64StringOrNumber,
+  id: int64String,
   file_number: safeInt,
   format: str,
   run_kind: str,
-  run_id: int64StringOrNumber,
+  run_id: int64String,
   run_label: str,
   file_name: str,
   fingerprint: str,
@@ -274,7 +277,7 @@ export const ExportProtocolEntrySchema: z.ZodType<ExportProtocolEntry, unknown> 
   datev_all: optional(bool),
   resolved_positions: optional(safeInt),
   cost_center_fallbacks: nullable(arr(CostCenterFallbackSchema)),
-  exported_by_account_id: nullable(int64StringOrNumber),
+  exported_by_account_id: nullable(int64String),
   exported_by_you: bool,
   exported_by_name: str,
   exported_at: instant,
@@ -310,7 +313,7 @@ export interface InvoiceHistoryEntry {
 export const InvoiceHistoryEntrySchema: z.ZodType<InvoiceHistoryEntry, unknown> = object<InvoiceHistoryEntry>({
   kind: str,
   at: instant,
-  account_id: nullable(int64StringOrNumber),
+  account_id: nullable(int64String),
   by_you: bool,
   account_name: str,
   positions: optional(safeInt),
@@ -328,7 +331,7 @@ export interface InvoiceHistory {
 
 export const InvoiceHistorySchema: z.ZodType<InvoiceHistory, unknown> = object<InvoiceHistory>({
   kind: str,
-  id: int64StringOrNumber,
+  id: int64String,
   number: str,
   entries: nullable(arr(InvoiceHistoryEntrySchema)),
 });
@@ -348,7 +351,7 @@ export interface ExportRun {
 
 export const ExportRunSchema: z.ZodType<ExportRun, unknown> = object<ExportRun>({
   run_kind: str,
-  run_id: int64StringOrNumber,
+  run_id: int64String,
   label: str,
   issued_on: nullable(calendarDate),
   invoice_count: safeInt,
@@ -376,7 +379,7 @@ export const ExportRunPageSchema: z.ZodType<ExportRunPage, unknown> = object<Exp
 /** Go: parentbillinghttp.CostCenterRequest */
 export interface CostCenterRequest {
   scope?: string;
-  scope_id?: number;
+  scope_id?: string;
   valid_from?: string;
   code?: string;
 }
@@ -384,7 +387,7 @@ export interface CostCenterRequest {
 /** Go: parentbillinghttp.RevenueAccountRequest */
 export interface RevenueAccountRequest {
   scope?: string;
-  scope_id?: number;
+  scope_id?: string;
   account?: string;
 }
 
@@ -409,24 +412,7 @@ export interface SollstellungMappingRequest {
   encoding?: string;
   header_row?: boolean;
   file_name_pattern?: string;
-}
-
-/** Query of GET /traeger/finance-exports/datev-runs */
-export interface GetTraegerFinanceExportsDatevRunsQuery {
-  care?: string;
-  holiday?: string;
-}
-
-/** Query of GET /traeger/finance-exports/files */
-export interface GetTraegerFinanceExportsFilesQuery {
-  offset?: number;
-  run_id?: string;
-  run_kind?: string;
-}
-
-/** Query of GET /traeger/finance-exports/runs */
-export interface GetTraegerFinanceExportsRunsQuery {
-  offset?: number;
+  expected_version?: string;
 }
 
 export const routes = {
@@ -452,15 +438,33 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/finance-exports/datev-runs",
     portals: ["org"],
-    query: ["care", "holiday"],
+    query: {
+      "care": { kind: "string" },
+      "holiday": { kind: "string" },
+    },
     response: success(DatevRunOverviewsSchema),
   },
   "GET /traeger/finance-exports/files": {
     method: "GET",
     pattern: "/traeger/finance-exports/files",
     portals: ["org"],
-    query: ["offset", "run_id", "run_kind"],
+    query: {
+      "offset": { kind: "int" },
+      "run_id": { kind: "id" },
+      "run_kind": { kind: "string" },
+    },
     response: success(ExportProtocolPageSchema),
+  },
+  "GET /traeger/finance-exports/files/export": {
+    method: "GET",
+    pattern: "/traeger/finance-exports/files/export",
+    portals: ["org"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+      "run_id": { kind: "id" },
+      "run_kind": { kind: "string" },
+    },
+    response: fileAnswer,
   },
   "GET /traeger/finance-exports/invoice-history/{kind}/{id}": {
     method: "GET",
@@ -472,8 +476,35 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/finance-exports/runs",
     portals: ["org"],
-    query: ["offset"],
+    query: {
+      "offset": { kind: "int" },
+    },
     response: success(ExportRunPageSchema),
+  },
+  "GET /traeger/finance-exports/runs/export": {
+    method: "GET",
+    pattern: "/traeger/finance-exports/runs/export",
+    portals: ["org"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
+    response: fileAnswer,
+  },
+  "GET /traeger/finance-exports/runs/{kind}/{id}/datev": {
+    method: "GET",
+    pattern: "/traeger/finance-exports/runs/{kind}/{id}/datev",
+    portals: ["org"],
+    query: {
+      "fiscal_year": { kind: "date" },
+      "mode": { kind: "string", values: ["all", "new"] },
+    },
+    response: fileAnswer,
+  },
+  "GET /traeger/finance-exports/runs/{kind}/{id}/sollstellung": {
+    method: "GET",
+    pattern: "/traeger/finance-exports/runs/{kind}/{id}/sollstellung",
+    portals: ["org"],
+    response: fileAnswer,
   },
   "GET /traeger/finance-exports/settings": {
     method: "GET",

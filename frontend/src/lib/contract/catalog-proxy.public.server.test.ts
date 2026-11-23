@@ -7,7 +7,7 @@ import {
   type CatalogMethod,
   type CatalogRoute,
 } from "./catalog-proxy.server";
-import { noData, success } from "./runtime";
+import { fileAnswer, multipart, noData, success } from "./runtime";
 
 // The public path of the catalog proxy (#2352) on the real backend client:
 // fetch stands for the backend. The portal's handlers stand for a session
@@ -43,7 +43,7 @@ const publicRoutes: CatalogRoute[] = [
   {
     method: "GET",
     pattern: "/api/rows/public/{token}",
-    query: ["late_invite"],
+    query: { late_invite: { kind: "bool" } },
     response: row,
   },
   {
@@ -59,6 +59,58 @@ const publicRoutes: CatalogRoute[] = [
     response: noData,
   },
   { method: "GET", pattern: "/links/{link}", response: row },
+  // Public files: served only with the contract's marker (#2352).
+  {
+    method: "GET",
+    pattern: "/api/rows/public/{token}/proof",
+    response: fileAnswer,
+    publicFile: "the status link is the credential",
+  },
+  {
+    method: "POST",
+    pattern: "/links/{link}/download",
+    response: fileAnswer,
+    publicFile: "the one-time link is the credential",
+  },
+  // A public upload its contract marks (#2352).
+  {
+    method: "POST",
+    pattern: "/api/rows/public/{token}/proofs",
+    request: multipart,
+    maxBodyBytes: 64,
+    tooLargeCode: "enrollment.upload_invalid",
+    response: success(z.object({ token: z.string() })),
+    publicUpload: "the public form takes proofs",
+  },
+  // A public asset any cache may keep, and a feed its client keeps (#2352).
+  {
+    method: "GET",
+    pattern: "/api/rows/public/assets/{filename}",
+    response: fileAnswer,
+    publicFile: "a school's public asset",
+    fileCache: "public, max-age=86400",
+  },
+  {
+    method: "GET",
+    pattern: "/api/rows/public/{token}/feed",
+    response: fileAnswer,
+    publicFile: "the feed token is the credential",
+    fileCache: "private, max-age=3600",
+  },
+  // A public file without the marker, and a public upload, stay refused.
+  {
+    method: "GET",
+    pattern: "/api/rows/public/{token}/file",
+    response: fileAnswer,
+  },
+  {
+    method: "POST",
+    pattern: "/api/rows/public/{token}/upload",
+    request: multipart,
+    maxBodyBytes: 1024,
+    response: row,
+    publicFile: "an upload is never a public file",
+  },
   // Beside the mount, but not on the public list of heads.
   { method: "GET", pattern: "/hidden/{link}", response: row },
 ];
@@ -66,13 +118,24 @@ const publicRoutes: CatalogRoute[] = [
 function call(
   method: CatalogMethod,
   path: string[],
-  init: { body?: string; headers?: Record<string, string> } = {},
+  init: {
+    body?: string;
+    headers?: Record<string, string>;
+    stream?: boolean;
+  } = {},
 ) {
+  // A streamed body keeps the Content-Length the test names, as a browser's
+  // upload does; a string body would get its own.
+  const body =
+    init.stream && init.body !== undefined
+      ? new Blob([init.body]).stream()
+      : init.body;
   const request = new NextRequest(
     `http://school-a.localhost/api/${path.join("/")}?late_invite=t&debug=1`,
     {
       method,
-      body: init.body,
+      body,
+      ...(init.stream && { duplex: "half" }),
       headers: {
         "x-forwarded-for": "203.0.113.10, 172.20.0.4",
         "Idempotency-Key": "key-1",
@@ -92,6 +155,35 @@ const answer = (body: unknown, init: ResponseInit = {}) =>
     headers: { "Content-Type": "application/json" },
     ...init,
   });
+
+const pdf = new Uint8Array([37, 80, 68, 70, 45, 49]);
+
+const fileAnswerOf = (init: ResponseInit = {}) =>
+  new Response(pdf, {
+    status: 200,
+    headers: {
+      "Content-Type": "application/pdf",
+      "Content-Disposition": 'inline; filename="vertrag.pdf"',
+      "Content-Length": String(pdf.length),
+      // A mistaken upstream policy must not make a link's file cacheable.
+      "Cache-Control": "public, max-age=3600",
+      ETag: '"v1"',
+    },
+    ...init,
+  });
+
+const problem = (
+  status: number,
+  code: string,
+  headers: Record<string, string> = {},
+) =>
+  answer(
+    { type: "about:blank", title: "x", status, code, detail: "x" },
+    {
+      status,
+      headers: { "Content-Type": "application/problem+json", ...headers },
+    },
+  );
 
 function sentHeaders(): Record<string, string> {
   const init = fetchMock.mock.calls[0]?.[1];
@@ -118,8 +210,7 @@ describe("makeCatalogProxy, public routes", () => {
     const response = await call("GET", ["rows", "public", "tok"]);
 
     expect(await response.json()).toEqual({
-      success: true,
-      message: "Success",
+      status: "success",
       data: { name: "Ada" },
     });
     expect(response.headers.get("Cache-Control")).toBe("private, no-store");
@@ -240,6 +331,297 @@ describe("makeCatalogProxy, public routes", () => {
     );
     await call("GET", ["links", "abc"]);
     expect(fetchMock.mock.calls[0]?.[0]).toBe("http://backend.test/links/abc");
+  });
+
+  describe("public files", () => {
+    const credentials = {
+      Cookie: "authjs.session-token=staff-session; __Secure-x=1",
+      Authorization: "Bearer device-staff-token",
+    };
+
+    it("streams a marked file with its headers, privately and uncached", async () => {
+      fetchMock.mockResolvedValueOnce(fileAnswerOf());
+      const response = await call("GET", ["rows", "public", "tok", "proof"], {
+        headers: credentials,
+      });
+
+      expect(response.status).toBe(200);
+      expect(new Uint8Array(await response.arrayBuffer())).toEqual(pdf);
+      expect(response.headers.get("Content-Type")).toBe("application/pdf");
+      expect(response.headers.get("Content-Disposition")).toBe(
+        'inline; filename="vertrag.pdf"',
+      );
+      expect(response.headers.get("Content-Length")).toBe(String(pdf.length));
+      expect(response.headers.get("X-Content-Type-Options")).toBe("nosniff");
+      expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+      expect(response.headers.get("ETag")).toBeNull();
+      // Only registered query parameters travel; this route has none.
+      expect(fetchMock.mock.calls[0]?.[0]).toBe(
+        "http://backend.test/api/rows/public/tok/proof",
+      );
+      expect(sessionReads).toBe(0);
+    });
+
+    it("sends neither the device's session cookie nor its Authorization", async () => {
+      fetchMock.mockResolvedValueOnce(fileAnswerOf());
+      await call("GET", ["rows", "public", "tok", "proof"], {
+        headers: credentials,
+      });
+      const names = Object.keys(sentHeaders()).map((name) =>
+        name.toLowerCase(),
+      );
+      expect(names).not.toContain("authorization");
+      expect(names).not.toContain("cookie");
+      expect(JSON.stringify(sentHeaders())).not.toMatch(
+        /staff-session|device-staff-token/,
+      );
+      // The backend's limiter of the link keys on the client address.
+      expect(sentHeaders()["X-Forwarded-For"]).toBe("172.20.0.4");
+      expect(portal.api).not.toHaveBeenCalled();
+    });
+
+    it("opens a POST link without a body or idempotency key", async () => {
+      fetchMock.mockResolvedValueOnce(fileAnswerOf());
+      const response = await call("POST", ["links", "7.secret", "download"], {
+        body: JSON.stringify({ forged: true }),
+        headers: credentials,
+      });
+      expect(response.status).toBe(200);
+      const init = fetchMock.mock.calls[0]?.[1];
+      expect(fetchMock.mock.calls[0]?.[0]).toBe(
+        "http://backend.test/links/7.secret/download",
+      );
+      expect(init?.method).toBe("POST");
+      expect(init?.body).toBeUndefined();
+      expect(sentHeaders()).not.toHaveProperty("Idempotency-Key");
+      expect(sentHeaders()).not.toHaveProperty("Content-Type");
+      expect(sentHeaders()).not.toHaveProperty("Authorization");
+    });
+
+    it.each([
+      ["an unknown or altered token", 404, "enrollment.status_link_invalid"],
+      ["a used or expired link", 410, "care_contract.signing_link_invalid"],
+    ])(
+      "passes the backend's answer to %s on, privately",
+      async (_name, status, code) => {
+        fetchMock.mockResolvedValueOnce(problem(status, code));
+        const response = await call("GET", ["rows", "public", "tok", "proof"]);
+        expect(response.status).toBe(status);
+        expect(await response.json()).toMatchObject({ code });
+        expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+        expect(fetchMock).toHaveBeenCalledOnce();
+        expect(sessionReads).toBe(0);
+      },
+    );
+
+    it("keeps the route's public cache on a public asset only when served", async () => {
+      fetchMock.mockResolvedValueOnce(
+        new Response(pdf, {
+          headers: { "Content-Type": "image/png", "Cache-Control": "no-store" },
+        }),
+      );
+      const served = await call("GET", ["rows", "public", "assets", "a.png"], {
+        headers: credentials,
+      });
+      expect(served.status).toBe(200);
+      expect(served.headers.get("Content-Type")).toBe("image/png");
+      expect(served.headers.get("Cache-Control")).toBe("public, max-age=86400");
+      expect(sentHeaders()).not.toHaveProperty("Authorization");
+      expect(sentHeaders()).not.toHaveProperty("Cookie");
+
+      fetchMock.mockResolvedValueOnce(problem(404, "general.not_found"));
+      const missing = await call("GET", ["rows", "public", "assets", "b.png"]);
+      expect(missing.status).toBe(404);
+      expect(missing.headers.get("Cache-Control")).toBe("private, no-store");
+    });
+
+    it("keeps a feed's private cache on the feed, never on its refusal", async () => {
+      fetchMock.mockResolvedValueOnce(
+        new Response("BEGIN:VCALENDAR", {
+          headers: { "Content-Type": "text/calendar; charset=utf-8" },
+        }),
+      );
+      const feed = await call("GET", ["rows", "public", "tok", "feed"]);
+      expect(feed.status).toBe(200);
+      expect(feed.headers.get("Content-Type")).toBe(
+        "text/calendar; charset=utf-8",
+      );
+      expect(feed.headers.get("Cache-Control")).toBe("private, max-age=3600");
+      expect(await feed.text()).toBe("BEGIN:VCALENDAR");
+
+      fetchMock.mockResolvedValueOnce(problem(404, "general.not_found"));
+      const unknown = await call("GET", ["rows", "public", "tok", "feed"]);
+      expect(unknown.headers.get("Cache-Control")).toBe("private, no-store");
+    });
+
+    it("keeps the backend limiter's 429 and Retry-After", async () => {
+      fetchMock.mockResolvedValueOnce(
+        problem(429, "general.rate_limited", { "Retry-After": "60" }),
+      );
+      const response = await call("POST", ["links", "7.secret", "download"]);
+      expect(response.status).toBe(429);
+      expect(response.headers.get("Retry-After")).toBe("60");
+      expect(await response.json()).toMatchObject({
+        code: "general.rate_limited",
+      });
+      expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+    });
+
+    it("answers an unreachable backend privately as well", async () => {
+      fetchMock.mockRejectedValueOnce(new TypeError("fetch failed"));
+      const response = await call("GET", ["rows", "public", "tok", "proof"]);
+      expect(response.status).toBeGreaterThanOrEqual(500);
+      expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+    });
+
+    it("returns the file before the backend has sent all of it", async () => {
+      let controller!: ReadableStreamDefaultController<Uint8Array>;
+      const body = new ReadableStream<Uint8Array>({
+        start(c) {
+          controller = c;
+        },
+      });
+      fetchMock.mockResolvedValueOnce(
+        new Response(body, { headers: { "Content-Type": "application/pdf" } }),
+      );
+      const response = await call("GET", ["rows", "public", "tok", "proof"]);
+      expect(response.status).toBe(200);
+      const reader = response.body!.getReader();
+      controller.enqueue(new Uint8Array([1, 2]));
+      expect((await reader.read()).value).toEqual(new Uint8Array([1, 2]));
+      controller.enqueue(new Uint8Array([3]));
+      controller.close();
+      expect((await reader.read()).value).toEqual(new Uint8Array([3]));
+      expect((await reader.read()).done).toBe(true);
+    });
+
+    it.each([
+      ["a missing token", "GET", ["rows", "public", "", "proof"]],
+      ["a dot token", "GET", ["rows", "public", "..", "proof"]],
+      [
+        "a public file without the marker",
+        "GET",
+        ["rows", "public", "tok", "file"],
+      ],
+      ["a public upload", "POST", ["rows", "public", "tok", "upload"]],
+    ] as const)(
+      "answers 404 for %s without a backend call",
+      async (_name, method, path) => {
+        const response = await call(method, [...path], {
+          headers: credentials,
+        });
+        expect(response.status).toBe(404);
+        expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+        expect(fetchMock).not.toHaveBeenCalled();
+        expect(sessionReads).toBe(0);
+      },
+    );
+  });
+
+  describe("public uploads", () => {
+    const multipartHeaders = (length: number) => ({
+      "content-type": "multipart/form-data; boundary=x",
+      "content-length": String(length),
+      Cookie: "authjs.session-token=staff-session",
+      Authorization: "Bearer device-staff-token",
+    });
+    const proofs = ["rows", "public", "tok", "proofs"];
+
+    it("streams a marked upload without the device's session", async () => {
+      fetchMock.mockResolvedValueOnce(
+        answer({ status: "success", data: { token: "up-1" } }, { status: 201 }),
+      );
+      const response = await call("POST", proofs, {
+        body: "--x--",
+        stream: true,
+        headers: multipartHeaders(5),
+      });
+
+      expect(response.status).toBe(201);
+      expect(await response.json()).toMatchObject({ data: { token: "up-1" } });
+      expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+      const init = fetchMock.mock.calls[0]?.[1];
+      expect(fetchMock.mock.calls[0]?.[0]).toBe(
+        "http://backend.test/api/rows/public/tok/proofs",
+      );
+      expect(
+        new TextDecoder().decode(
+          new Uint8Array(await new Response(init?.body).arrayBuffer()),
+        ),
+      ).toBe("--x--");
+      expect(sentHeaders()["Content-Type"]).toBe(
+        "multipart/form-data; boundary=x",
+      );
+      const names = Object.keys(sentHeaders()).map((name) =>
+        name.toLowerCase(),
+      );
+      expect(names).not.toContain("authorization");
+      expect(names).not.toContain("cookie");
+      expect(names).not.toContain("idempotency-key");
+      expect(sentHeaders()["X-Forwarded-For"]).toBe("172.20.0.4");
+      expect(sessionReads).toBe(0);
+      expect(portal.api).not.toHaveBeenCalled();
+    });
+
+    it("answers a body over the limit 413 with the route's code, before the backend", async () => {
+      const response = await call("POST", proofs, {
+        body: "x".repeat(65),
+        stream: true,
+        headers: multipartHeaders(65),
+      });
+      expect(response.status).toBe(413);
+      expect(await response.json()).toMatchObject({
+        code: "enrollment.upload_invalid",
+        details: { max_bytes: 64 },
+      });
+      expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it("answers 413 when the body is longer than it said", async () => {
+      fetchMock.mockImplementationOnce(async (_url, init) => {
+        await new Response(init?.body).arrayBuffer();
+        return answer({ status: "success", data: { token: "x" } });
+      });
+      const response = await call("POST", proofs, {
+        body: "x".repeat(65),
+        stream: true,
+        headers: multipartHeaders(4),
+      });
+      expect(response.status).toBe(413);
+    });
+
+    it("refuses an upload without a length or a multipart body, before the backend", async () => {
+      const { "content-length": _length, ...withoutLength } =
+        multipartHeaders(5);
+      const missing = await call("POST", proofs, {
+        body: "--x--",
+        stream: true,
+        headers: withoutLength,
+      });
+      expect(missing.status).toBe(411);
+      const json = await call("POST", proofs, {
+        body: "{}",
+        stream: true,
+        headers: { "content-type": "application/json", "content-length": "2" },
+      });
+      expect(json.status).toBe(400);
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it("keeps the backend limiter's 429 and Retry-After", async () => {
+      fetchMock.mockResolvedValueOnce(
+        problem(429, "general.rate_limited", { "Retry-After": "30" }),
+      );
+      const response = await call("POST", proofs, {
+        body: "--x--",
+        stream: true,
+        headers: multipartHeaders(5),
+      });
+      expect(response.status).toBe(429);
+      expect(response.headers.get("Retry-After")).toBe("30");
+      expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+    });
   });
 
   it.each([

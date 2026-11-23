@@ -143,7 +143,6 @@
     "editedAt": "Geändert am {date}",
     "saveEdit": "Änderung speichern",
     "noteRequired": "Bitte gib kurz an, warum sich die Betreuung ändern soll.",
-    "staleError": "Die Anfrage wurde inzwischen bearbeitet. Bitte lade die Seite neu.",
     "intro": "Wähle, welche Angebote dein Kind künftig besuchen soll, und ab wann die Änderung gelten soll. Das Team prüft deine Anfrage.",
     "noOfferings": "Für diesen Zeitraum ist keine Betreuung buchbar.",
     "effectiveFromLabel": "Änderung gilt ab",

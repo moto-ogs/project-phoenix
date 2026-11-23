@@ -36,6 +36,14 @@ type ContractApplication struct {
 	// acceptance of the new phase comes only from the parents' confirmation
 	// of its terms (#6456).
 	Renewal bool
+	// Source is the submission source of the request (RequestSource...):
+	// contract_import for the enrollment the school made for the child of
+	// an imported care contract (ADR 0309).
+	Source string
+	// SourceContractID is the imported care contract a contract_import
+	// request was made for, as the silent enrollment stored it with the
+	// request; nil for every other source.
+	SourceContractID *int64
 }
 
 // ContractPhase is an offering phase's name and inclusive service window.
@@ -50,6 +58,9 @@ type ContractPhase struct {
 // requestChildIDs keeps only those. It reads nothing else.
 type ContractApplications interface {
 	AcceptedContractApplications(ctx context.Context, requestChildIDs []int64) ([]ContractApplication, error)
+	// AcceptedStudentApplications reads the accepted application children
+	// of the given child records and of no other; none for no child record.
+	AcceptedStudentApplications(ctx context.Context, studentIDs []int64) ([]ContractApplication, error)
 	// ContractPhases reads phase names and service bounds by ID.
 	ContractPhases(ctx context.Context, phaseIDs []int64) (map[int64]ContractPhase, error)
 }

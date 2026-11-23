@@ -4,6 +4,7 @@ package account_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -115,7 +116,7 @@ func (s roleSetAccount) state(t *testing.T, db *bun.DB) roleSetState {
 func (s roleSetAccount) replace(t *testing.T, f *rbacBudgetFixture, token string) int {
 	t.Helper()
 	req := testutil.NewJSONRequest(t, http.MethodPut, fmt.Sprintf("/auth/accounts/%d/roles/", s.accountID),
-		map[string]string{"role_id": fmt.Sprint(s.target)})
+		map[string]string{"role_id": fmt.Sprint(s.target), "expected_version": s.rolesVersion(t, f, token)})
 	req.Header.Set("Authorization", "Bearer "+token)
 	rr := testutil.ExecuteRequestForTest(t, f.router, req)
 	return rr.Code
@@ -225,7 +226,7 @@ func dropFailingTrigger(t *testing.T, db *bun.DB, table string) {
 func (s roleSetAccount) replaceAsync(t *testing.T, f *rbacBudgetFixture, token string) <-chan int {
 	t.Helper()
 	req := testutil.NewJSONRequest(t, http.MethodPut, fmt.Sprintf("/auth/accounts/%d/roles/", s.accountID),
-		map[string]string{"role_id": fmt.Sprint(s.target)})
+		map[string]string{"role_id": fmt.Sprint(s.target), "expected_version": s.rolesVersion(t, f, token)})
 	req.Header.Set("Authorization", "Bearer "+token)
 	status := make(chan int, 1)
 	go func() { status <- testutil.ExecuteRequestForTest(t, f.router, req).Code }()
@@ -406,4 +407,21 @@ func TestReplaceAccountRoleRevokesWhenEveryListedRoleVanishes(t *testing.T) {
 	require.Empty(t, got.PushHere, "the revoked families' and this school's unbound subscriptions go after commit")
 	require.Equal(t, 1, got.TokensOther, "the other school keeps its session")
 	require.Equal(t, []string{s.pB}, got.PushOther, "the other school keeps its subscription")
+}
+
+// rolesVersion reads the version of the account's roles the way the staff
+// file does before a role change (ADR 0311).
+func (s roleSetAccount) rolesVersion(t *testing.T, f *rbacBudgetFixture, token string) string {
+	t.Helper()
+	req := testutil.NewJSONRequest(t, http.MethodGet, fmt.Sprintf("/auth/accounts/%d/role-selection/", s.accountID), nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rr := testutil.ExecuteRequestForTest(t, f.router, req)
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	var body struct {
+		Data struct {
+			Version string `json:"version"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &body))
+	return body.Data.Version
 }

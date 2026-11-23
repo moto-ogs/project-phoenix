@@ -4,7 +4,8 @@ import {
   SettingsReturnPathMemory,
   useSettingsReturnHref,
 } from "~/components/ui/settings-return-path";
-import { traegerPath } from "~/lib/traeger-url";
+import { useSession } from "next-auth/react";
+import { traegerHomeHref } from "~/lib/traeger-home";
 import { isTraegerSettingsPath } from "./traeger-nav-active";
 
 const RETURN_PATH_KEY = "traeger-settings-return-path";
@@ -19,7 +20,14 @@ export function TraegerReturnPathMemory() {
   );
 }
 
-/** Das Ziel von „Zurück zur App"; ohne gemerkte Seite die Startseite. */
+/**
+ * Das Ziel von „Zurück zur App"; ohne gemerkte Seite das Startziel (#7646):
+ * das Dashboard mit seinem Recht, sonst die Schulliste.
+ */
 export function useTraegerReturnHref(): string {
-  return useSettingsReturnHref(RETURN_PATH_KEY, traegerPath("/traeger"));
+  const { data: session } = useSession();
+  return useSettingsReturnHref(
+    RETURN_PATH_KEY,
+    traegerHomeHref(session ?? null),
+  );
 }

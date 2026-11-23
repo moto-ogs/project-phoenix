@@ -65,11 +65,12 @@ func (rs *StaffResource) setStepState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	step := chi.URLParam(r, "step")
-	if err := rs.service.SetStaffStepState(r.Context(), tenantID, accountID, step, req.State); err != nil {
+	changed, err := rs.service.SetStaffStepState(r.Context(), tenantID, accountID, step, req.State)
+	if err != nil {
 		rs.fail(w, r, err)
 		return
 	}
-	rs.respondStatus(w, r, tenantID, accountID)
+	rs.respondWriteStatus(w, r, tenantID, accountID, changed)
 }
 
 func (rs *StaffResource) dismiss(w http.ResponseWriter, r *http.Request) {
@@ -82,15 +83,16 @@ func (rs *StaffResource) dismiss(w http.ResponseWriter, r *http.Request) {
 		rs.runtime.Failure(w, r, http.StatusBadRequest, err)
 		return
 	}
-	if err := rs.service.SetStaffDismissed(r.Context(), tenantID, accountID, req.Dismissed); err != nil {
+	changed, err := rs.service.SetStaffDismissed(r.Context(), tenantID, accountID, req.Dismissed)
+	if err != nil {
 		rs.fail(w, r, err)
 		return
 	}
-	rs.respondStatus(w, r, tenantID, accountID)
+	rs.respondWriteStatus(w, r, tenantID, accountID, changed)
 }
 
-// respondStatus answers every write with the fresh state, so the client
-// renders one source of truth.
+// respondStatus answers the current state, so the client renders one source
+// of truth.
 func (rs *StaffResource) respondStatus(w http.ResponseWriter, r *http.Request, tenantID, accountID int64) {
 	status, err := rs.service.StaffStatus(r.Context(), tenantID, accountID)
 	if err != nil {
@@ -98,6 +100,15 @@ func (rs *StaffResource) respondStatus(w http.ResponseWriter, r *http.Request, t
 		return
 	}
 	rs.runtime.Respond(w, r, http.StatusOK, status, "")
+}
+
+func (rs *StaffResource) respondWriteStatus(w http.ResponseWriter, r *http.Request, tenantID, accountID int64, changed bool) {
+	status, err := rs.service.StaffStatus(r.Context(), tenantID, accountID)
+	if err != nil {
+		rs.fail(w, r, err)
+		return
+	}
+	rs.runtime.Respond(w, r, http.StatusOK, schoolsetup.StaffWriteStatus{StaffStatus: status, Changed: changed}, "")
 }
 
 func (rs *StaffResource) actor(w http.ResponseWriter, r *http.Request) (int64, int64, bool) {

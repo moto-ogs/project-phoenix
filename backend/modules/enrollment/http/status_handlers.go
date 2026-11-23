@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -108,6 +109,10 @@ type EditBootstrapResponse struct {
 	LegalTexts                PublicLegalTextsResponse  `json:"legal_texts"`
 	Draft                     EditDraftResponse         `json:"draft"`
 	EditMode                  string                    `json:"edit_mode"`
+	// TermsFingerprint is the read-state token of the form and its legal
+	// texts (ADR 0311); an edit or change request sends it back as
+	// expected_terms_fingerprint.
+	TermsFingerprint string `json:"terms_fingerprint"`
 }
 
 type EditDraftResponse struct {
@@ -120,8 +125,8 @@ type EditDraftResponse struct {
 	GuardianLastName    string                      `json:"guardian_last_name"`
 	GuardianEmail       string                      `json:"guardian_email"`
 	GuardianPhone       *string                     `json:"guardian_phone,omitempty"`
-	ConsentFlags        capability.FormValues       `json:"consent_flags"`
-	CustomData          capability.FormValues       `json:"custom_data"`
+	ConsentFlags        ConsentFlags                `json:"consent_flags" contract_json:"Preserve the recorded value of historical non-boolean checkbox answers"`
+	CustomData          map[string]any              `json:"custom_data" contract_json:"Answer values follow the school's versioned form schema"`
 	AdditionalGuardians []EditDraftGuardianResponse `json:"additional_guardians,omitempty"`
 	Children            []EditDraftChildResponse    `json:"children"`
 }
@@ -141,7 +146,7 @@ type EditDraftChildResponse struct {
 	TargetGradeLevel  *int16                         `json:"target_grade_level,omitempty"`
 	TargetSchoolClass *string                        `json:"target_school_class,omitempty"`
 	HolidayCareWish   *bool                          `json:"holiday_care_wish,omitempty"`
-	CustomData        capability.FormValues          `json:"custom_data"`
+	CustomData        map[string]any                 `json:"custom_data" contract_json:"Answer values follow the school's versioned form schema"`
 	OfferingIDs       []string                       `json:"offering_ids"`
 	OfferingDays      []EditDraftOfferingDayResponse `json:"offering_days,omitempty"`
 	// Locked marks a child that is already taken over into care: the change
@@ -154,6 +159,16 @@ type EditDraftOfferingDayResponse struct {
 	SelectedDays          []string `json:"selected_days"`
 	ManualSelectedDays    []string `json:"manual_selected_days,omitempty"`
 	AutomaticSelectedDays []string `json:"automatic_selected_days,omitempty"`
+}
+
+// getStatusSignatureProof answers GET /requests/{statusToken}/signature-proof:
+// the proof of the parent's signature on a path of its own, which the
+// frontend's catalog proxy serves as a public file (#2352). It is the status
+// read with ?format=pdf, so token resolution and its transaction stay one.
+func (rs *Resource) getStatusSignatureProof(w http.ResponseWriter, r *http.Request) {
+	proof := r.Clone(r.Context())
+	proof.URL.RawQuery = url.Values{"format": {"pdf"}}.Encode()
+	rs.getStatus(w, proof)
 }
 
 // getStatus returns the per-child status for a token-bearing parent.
@@ -177,7 +192,7 @@ func (rs *Resource) getStatus(w http.ResponseWriter, r *http.Request) {
 		statusErr   error
 	)
 	err := withinAdmin(r.Context(), func(adminCtx context.Context) error {
-		view, invalidLink, statusErr = rs.loadPublicStatusView(adminCtx, token, wantsProofPDF(r))
+		view, invalidLink, statusErr = rs.loadPublicStatusView(adminCtx, token, wantsStatusProofPDF(r))
 		return statusErr
 	})
 	if err != nil {
@@ -188,7 +203,7 @@ func (rs *Resource) getStatus(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInternalServerWrap("failed to load enrollment status", err))
 		return
 	}
-	if wantsProofPDF(r) {
+	if wantsStatusProofPDF(r) {
 		rs.writeStatusSignatureProof(w, r, view)
 		return
 	}
@@ -437,8 +452,9 @@ func (rs *Resource) getEditBootstrap(w http.ResponseWriter, r *http.Request) {
 			PhotoEnabled:        draft.LegalTexts.PhotoEnabled,
 			Blocks:              draft.LegalTexts.Blocks,
 		},
-		Draft:    toEditDraftResponse(draft),
-		EditMode: draft.EditMode,
+		Draft:            toEditDraftResponse(draft),
+		EditMode:         draft.EditMode,
+		TermsFingerprint: capability.FormTermsFingerprint(draft.Schema, draft.LegalTexts.Blocks),
 	}, "Enrollment edit bootstrap retrieved")
 }
 
@@ -452,8 +468,8 @@ func toEditDraftResponse(draft *EditDraft) EditDraftResponse {
 		GuardianLastName:    draft.Request.GuardianLastName,
 		GuardianEmail:       draft.Request.GuardianEmail,
 		GuardianPhone:       draft.Request.GuardianPhone,
-		ConsentFlags:        draft.Request.ConsentFlags,
-		CustomData:          draft.Request.CustomData,
+		ConsentFlags:        consentFlagsFromOwner(draft.Request.ConsentFlags),
+		CustomData:          formAnswerMap(draft.Request.CustomData),
 		AdditionalGuardians: toEditDraftGuardianResponses(draft.Guardians),
 		Children:            toEditDraftChildResponses(draft),
 	}
@@ -499,7 +515,7 @@ func toEditDraftChildResponse(child *capability.RequestChild, offeringLinks []*R
 		TargetGradeLevel:  child.TargetGradeLevel,
 		TargetSchoolClass: child.TargetSchoolClass,
 		HolidayCareWish:   child.HolidayCareWish,
-		CustomData:        child.CustomData,
+		CustomData:        formAnswerMap(child.CustomData),
 		OfferingIDs:       []string{},
 		Locked:            ChildTakenOver(child),
 	}
@@ -530,11 +546,11 @@ func toEditDraftOfferingDayResponse(link *RequestChildOffering) *EditDraftOfferi
 
 // EditPatchRequest is the wire shape for PATCH /requests/{token}.
 type EditPatchRequest struct {
-	GuardianFirstName *string        `json:"guardian_first_name,omitempty"`
-	GuardianLastName  *string        `json:"guardian_last_name,omitempty"`
-	GuardianPhone     *string        `json:"guardian_phone,omitempty"`
-	ConsentFlags      map[string]any `json:"consent_flags,omitempty"`
-	CustomData        map[string]any `json:"custom_data,omitempty"`
+	GuardianFirstName *string           `json:"guardian_first_name,omitempty"`
+	GuardianLastName  *string           `json:"guardian_last_name,omitempty"`
+	GuardianPhone     *string           `json:"guardian_phone,omitempty"`
+	ConsentFlags      ConsentFlagsInput `json:"consent_flags,omitzero" contract_refines:"The typed checkbox input still reads the full legacy JSON value domain"`
+	CustomData        map[string]any    `json:"custom_data,omitempty" contract_json:"Answer values follow the school's versioned form schema"`
 }
 
 // Bind makes EditPatchRequest a render.Binder so the chi binder helper
@@ -566,7 +582,7 @@ func (rs *Resource) patchStatus(w http.ResponseWriter, r *http.Request) {
 		GuardianFirstName: patchReq.GuardianFirstName,
 		GuardianLastName:  patchReq.GuardianLastName,
 		GuardianPhone:     patchReq.GuardianPhone,
-		ConsentFlags:      patchFormValues(patchReq.ConsentFlags),
+		ConsentFlags:      patchFormValues(patchReq.ConsentFlags.values()),
 		CustomData:        patchFormValues(patchReq.CustomData),
 	}
 	err := withinAdmin(r.Context(), func(adminCtx context.Context) error {
@@ -680,7 +696,7 @@ func (rs *Resource) withdrawStatus(w http.ResponseWriter, r *http.Request) {
 // ConfirmRenewalRequest carries the parents' ticks of the renewal terms and
 // the form version and content fingerprint the page showed (#6456).
 type ConfirmRenewalRequest struct {
-	ConsentFlags map[string]any `json:"consent_flags"`
+	ConsentFlags ConsentFlagsInput `json:"consent_flags,omitzero" contract_refines:"The typed checkbox input still reads the full legacy JSON value domain"`
 	// FormSchemaID is the renewal_terms.form_schema_id the page showed; "0"
 	// for the tenant-wide blocks.
 	FormSchemaID     string `json:"form_schema_id"`
@@ -704,7 +720,7 @@ func renewalConfirmation(r *http.Request) (capability.RenewalConfirmation, error
 	if err != nil || formSchemaID < 0 {
 		return capability.RenewalConfirmation{}, errors.New("form_schema_id is required")
 	}
-	return capability.RenewalConfirmation{ConsentFlags: formValues(body.ConsentFlags), DisplayedFormSchemaID: formSchemaID, TermsFingerprint: body.TermsFingerprint}, nil
+	return capability.RenewalConfirmation{ConsentFlags: formValues(body.ConsentFlags.values()), DisplayedFormSchemaID: formSchemaID, TermsFingerprint: body.TermsFingerprint}, nil
 }
 
 // confirmRenewal handles POST /requests/{statusToken}/confirm-renewal: the

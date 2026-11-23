@@ -177,13 +177,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (r nativeGuardianProfileRepository) FindWithoutAccount(ctx context.Context) ([]*directory.GuardianProfileSnapshot, error) {\n\tout0, out1 := r.rawGuardianProfileRepository.FindWithoutAccount(ctx)\n\treturn mapRecordSlice(out0, func(value *models.GuardianProfile) *directory.GuardianProfileSnapshot {\n\t\treturn NativeGuardianProfile(value)\n\t}), out1\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/peopledirectory/internal/adapters/peoplepostgres/nativeGuardianProfileRepository.FindWithoutAccount",
-      "owner": "modules/peopledirectory"
-    },
-    {
-      "build": "production",
       "evidence": "func (r nativeGuardianProfileRepository) ListWithOptions(ctx context.Context, options *ports.QueryOptions) ([]*directory.GuardianProfileSnapshot, error) {\n\tout0, out1 := r.rawGuardianProfileRepository.ListWithOptions(ctx, options)\n\treturn mapRecordSlice(out0, func(value *models.GuardianProfile) *directory.GuardianProfileSnapshot {\n\t\treturn NativeGuardianProfile(value)\n\t}), out1\n}",
       "form": "unclassified-evidence",
       "id": "modules/peopledirectory/internal/adapters/peoplepostgres/nativeGuardianProfileRepository.ListWithOptions",
@@ -765,13 +758,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (p GroupRoutePeople) FindPerson(ctx context.Context, personID int64) (peopleModule.Person, error) {\n\tperson, err := p.persons.Get(ctx, personID)\n\tif err != nil {\n\t\treturn peopleModule.Person{}, err\n\t}\n\tif person == nil {\n\t\treturn peopleModule.Person{}, fmt.Errorf(\"person %d: %w\", personID, peopleModule.ErrPersonNotFound)\n\t}\n\treturn studentRoutePerson(person), nil\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/peopledirectory/internal/application/GroupRoutePeople.FindPerson",
-      "owner": "modules/peopledirectory"
-    },
-    {
-      "build": "production",
       "evidence": "func (p GroupRoutePeople) GroupStudents(ctx context.Context, groupID int64) ([]peopleModule.StudentRecord, error) {\n\tstudents, err := p.persons.StudentRows().FindByGroupID(ctx, groupID)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]peopleModule.StudentRecord, 0, len(students))\n\tfor _, student := range students {\n\t\tif student != nil {\n\t\t\tresult = append(result, studentRouteRecord(student))\n\t\t}\n\t}\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/peopledirectory/internal/application/GroupRoutePeople.GroupStudents",
@@ -779,23 +765,9 @@
     },
     {
       "build": "production",
-      "evidence": "func (p GroupRoutePeople) ListPersonsByID(ctx context.Context, personIDs []int64) (map[int64]peopleModule.Person, error) {\n\tpersons, err := p.persons.GetByIDs(ctx, personIDs)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make(map[int64]peopleModule.Person, len(persons))\n\tfor id, person := range persons {\n\t\tif person != nil {\n\t\t\tresult[id] = studentRoutePerson(person)\n\t\t}\n\t}\n\treturn result, nil\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/peopledirectory/internal/application/GroupRoutePeople.ListPersonsByID",
-      "owner": "modules/peopledirectory"
-    },
-    {
-      "build": "production",
       "evidence": "func (p *GuardianDirectory) AddGuardiansToStudent(ctx context.Context, studentID int64, guardians []peopledirectory.NewStudentGuardian) error {\n\treturn mapGuardianError(p.inTenantTx(ctx, func(txCtx context.Context) error {\n\t\treturn p.guardians.AddGuardiansToStudent(txCtx, studentID, toNewStudentGuardians(guardians))\n\t}))\n}",
       "form": "unclassified-evidence",
       "id": "modules/peopledirectory/internal/application/GuardianDirectory.AddGuardiansToStudent",
-      "owner": "modules/peopledirectory"
-    },
-    {
-      "build": "production",
-      "evidence": "func (p *GuardianDirectory) DeleteGuardianPhone(ctx context.Context, phoneID int64) error {\n\treturn mapGuardianPhoneError(p.inTenantTx(ctx, func(txCtx context.Context) error {\n\t\treturn p.guardians.DeletePhoneNumber(txCtx, phoneID)\n\t}))\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/peopledirectory/internal/application/GuardianDirectory.DeleteGuardianPhone",
       "owner": "modules/peopledirectory"
     },
     {
@@ -828,14 +800,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (p *GuardianDirectory) FindGuardianPhone(ctx context.Context, phoneID int64) (peopledirectory.GuardianPhone, error) {\n\tphone, err := p.guardians.GuardianPhoneNumbers().FindByID(ctx, phoneID)\n\tif err != nil {\n\t\treturn peopledirectory.GuardianPhone{}, mapGuardianPhoneError(err)\n\t}\n\treturn toDirectoryPhone(phone), nil\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/peopledirectory/internal/application/GuardianDirectory.FindGuardianPhone",
-      "owner": "modules/peopledirectory"
-    },
-    {
-      "build": "production",
-      "evidence": "func (p *GuardianDirectory) GuardianPaymentMasked(ctx context.Context, guardianID int64, actor peopledirectory.GuardianPaymentActor) (peopledirectory.GuardianPayment, error) {\n\tmasked, err := p.guardians.GetGuardianPaymentMasked(ctx, guardianID, actor.AccountID, actor.Role)\n\tif err != nil {\n\t\treturn peopledirectory.GuardianPayment{}, mapGuardianPaymentError(err)\n\t}\n\treturn peopledirectory.GuardianPayment{GuardianProfileID: masked.GuardianProfileID, IBAN: masked.IBANMasked, AccountHolder: masked.AccountHolder}, nil\n}",
+      "evidence": "func (p *GuardianDirectory) GuardianPaymentMasked(ctx context.Context, guardianID int64, actor peopledirectory.GuardianPaymentActor) (peopledirectory.GuardianPayment, error) {\n\tmasked, err := p.guardians.GetGuardianPaymentMasked(ctx, guardianID, actor.AccountID, actor.Role)\n\tif err != nil {\n\t\treturn peopledirectory.GuardianPayment{}, mapGuardianPaymentError(err)\n\t}\n\treturn peopledirectory.GuardianPayment{GuardianProfileID: masked.GuardianProfileID, IBAN: masked.IBANMasked, AccountHolder: masked.AccountHolder, Version: masked.Version}, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/peopledirectory/internal/application/GuardianDirectory.GuardianPaymentMasked",
       "owner": "modules/peopledirectory"
@@ -863,20 +828,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (p *GuardianDirectory) ListGuardiansWithoutAccount(ctx context.Context) ([]peopledirectory.Guardian, error) {\n\tprofiles, err := p.guardians.GuardianProfiles().FindWithoutAccount(ctx)\n\tif err != nil {\n\t\treturn nil, mapGuardianError(err)\n\t}\n\treturn toDirectoryGuardians(profiles), nil\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/peopledirectory/internal/application/GuardianDirectory.ListGuardiansWithoutAccount",
-      "owner": "modules/peopledirectory"
-    },
-    {
-      "build": "production",
-      "evidence": "func (p *GuardianDirectory) ListInvitableGuardians(ctx context.Context) ([]peopledirectory.Guardian, error) {\n\tprofiles, err := p.guardians.GuardianProfiles().FindInvitable(ctx)\n\tif err != nil {\n\t\treturn nil, mapGuardianError(err)\n\t}\n\treturn toDirectoryGuardians(profiles), nil\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/peopledirectory/internal/application/GuardianDirectory.ListInvitableGuardians",
-      "owner": "modules/peopledirectory"
-    },
-    {
-      "build": "production",
       "evidence": "func (p *GuardianDirectory) ListPaymentExportRows(ctx context.Context, actor peopledirectory.GuardianPaymentActor, format string) ([]peopledirectory.GuardianPaymentRow, error) {\n\trows, err := p.guardians.ListPaymentExportRows(ctx, actor.AccountID, actor.Role, format)\n\tif err != nil {\n\t\treturn nil, mapGuardianPaymentError(err)\n\t}\n\treturn toDirectoryPaymentRows(rows), nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/peopledirectory/internal/application/GuardianDirectory.ListPaymentExportRows",
@@ -898,7 +849,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (p *GuardianDirectory) RevealGuardianPayment(ctx context.Context, guardianID int64, actor peopledirectory.GuardianPaymentActor) (peopledirectory.GuardianPayment, error) {\n\tplain, err := p.guardians.RevealGuardianPayment(ctx, guardianID, actor.AccountID, actor.Role)\n\tif err != nil {\n\t\treturn peopledirectory.GuardianPayment{}, mapGuardianPaymentError(err)\n\t}\n\treturn peopledirectory.GuardianPayment{GuardianProfileID: plain.GuardianProfileID, IBAN: plain.IBAN, AccountHolder: plain.AccountHolder}, nil\n}",
+      "evidence": "func (p *GuardianDirectory) RevealGuardianPayment(ctx context.Context, guardianID int64, actor peopledirectory.GuardianPaymentActor) (peopledirectory.GuardianPayment, error) {\n\tplain, err := p.guardians.RevealGuardianPayment(ctx, guardianID, actor.AccountID, actor.Role)\n\tif err != nil {\n\t\treturn peopledirectory.GuardianPayment{}, mapGuardianPaymentError(err)\n\t}\n\treturn peopledirectory.GuardianPayment{GuardianProfileID: plain.GuardianProfileID, IBAN: plain.IBAN, AccountHolder: plain.AccountHolder, Version: plain.Version}, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/peopledirectory/internal/application/GuardianDirectory.RevealGuardianPayment",
       "owner": "modules/peopledirectory"
@@ -908,13 +859,6 @@
       "evidence": "func (p *GuardianDirectory) SearchGuardians(ctx context.Context, text string, limit int) ([]peopledirectory.GuardianMatch, error) {\n\tmatches, err := p.guardians.SearchGuardiansForPicker(ctx, text, limit)\n\tif err != nil {\n\t\treturn nil, mapGuardianError(err)\n\t}\n\tresult := make([]peopledirectory.GuardianMatch, 0, len(matches))\n\tfor _, match := range matches {\n\t\tresult = append(result, peopledirectory.GuardianMatch{Guardian: toDirectoryGuardian(match.Profile), LinkedChildrenCount: len(match.Children)})\n\t}\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/peopledirectory/internal/application/GuardianDirectory.SearchGuardians",
-      "owner": "modules/peopledirectory"
-    },
-    {
-      "build": "production",
-      "evidence": "func (p *GuardianDirectory) SetPrimaryGuardianPhone(ctx context.Context, phoneID int64) error {\n\treturn mapGuardianPhoneError(p.inTenantTx(ctx, func(txCtx context.Context) error {\n\t\treturn p.guardians.SetPrimaryPhone(txCtx, phoneID)\n\t}))\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/peopledirectory/internal/application/GuardianDirectory.SetPrimaryGuardianPhone",
       "owner": "modules/peopledirectory"
     },
     {
@@ -933,6 +877,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (p *GuardianDirectory) UpdateGuardianEntry(ctx context.Context, edit peopledirectory.GuardianEntryEdit) error {\n\treturn mapGuardianError(p.guardians.UpdateGuardianEntry(ctx, edit, func(profile *peopledirectory.GuardianProfileSnapshot, link *peopledirectory.GuardianRelationshipSnapshot) error {\n\t\tstored := peopledirectory.GuardianWithLink{Guardian: toDirectoryGuardian(profile), Link: toDirectoryLink(link, p.permissionGranted)}\n\t\treturn readstate.Check(edit.ExpectedVersion, peopledirectory.GuardianEntryVersion(stored))\n\t}))\n}",
+      "form": "unclassified-evidence",
+      "id": "modules/peopledirectory/internal/application/GuardianDirectory.UpdateGuardianEntry",
+      "owner": "modules/peopledirectory"
+    },
+    {
+      "build": "production",
       "evidence": "func (p *GuardianDirectory) UpdateGuardianLink(ctx context.Context, linkID int64, input peopledirectory.GuardianLinkUpdate) error {\n\treturn mapGuardianLinkError(p.inTenantTx(ctx, func(txCtx context.Context) error {\n\t\treturn p.guardians.UpdateStudentGuardianRelationship(txCtx, linkID, peoplePorts.StudentGuardianUpdateRequest{RelationshipType: input.RelationshipType, GuardianRole: input.GuardianRole, IsPrimary: input.IsPrimary, IsEmergencyContact: input.IsEmergencyContact, CanPickup: input.CanPickup, PickupNotes: input.PickupNotes, EmergencyPriority: input.EmergencyPriority})\n\t}))\n}",
       "form": "unclassified-evidence",
       "id": "modules/peopledirectory/internal/application/GuardianDirectory.UpdateGuardianLink",
@@ -940,16 +891,9 @@
     },
     {
       "build": "production",
-      "evidence": "func (p *GuardianDirectory) UpdateGuardianPayment(ctx context.Context, guardianID int64, input peopledirectory.GuardianPaymentInput) error {\n\treturn mapGuardianPaymentError(p.guardians.UpdateGuardianPayment(ctx, guardianID, peoplePorts.GuardianPaymentInput{IBAN: input.IBAN, AccountHolder: input.AccountHolder}, input.ActorAccountID, input.Note))\n}",
+      "evidence": "func (p *GuardianDirectory) UpdateGuardianPayment(ctx context.Context, guardianID int64, input peopledirectory.GuardianPaymentInput) error {\n\treturn mapGuardianPaymentError(p.guardians.UpdateGuardianPayment(ctx, guardianID, peoplePorts.GuardianPaymentInput{IBAN: input.IBAN, AccountHolder: input.AccountHolder, ExpectedVersion: input.ExpectedVersion}, input.ActorAccountID, input.Note))\n}",
       "form": "unclassified-evidence",
       "id": "modules/peopledirectory/internal/application/GuardianDirectory.UpdateGuardianPayment",
-      "owner": "modules/peopledirectory"
-    },
-    {
-      "build": "production",
-      "evidence": "func (p *GuardianDirectory) UpdateGuardianPhone(ctx context.Context, phoneID int64, input peopledirectory.GuardianPhoneUpdate) error {\n\treturn mapGuardianPhoneError(p.inTenantTx(ctx, func(txCtx context.Context) error {\n\t\treturn p.guardians.UpdatePhoneNumber(txCtx, phoneID, peoplePorts.PhoneNumberUpdateRequest{PhoneNumber: input.PhoneNumber, PhoneType: input.PhoneType, Label: input.Label, IsPrimary: input.IsPrimary, Priority: input.Priority})\n\t}))\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/peopledirectory/internal/application/GuardianDirectory.UpdateGuardianPhone",
       "owner": "modules/peopledirectory"
     },
     {
@@ -1108,7 +1052,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (p RoomSnapshotPeople) PersonsByIDs(ctx context.Context, ids []int64) (map[int64]peopledirectory.Person, error) {\n\tpersons, err := p.source.GetByIDs(ctx, ids)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make(map[int64]peopledirectory.Person, len(persons))\n\tfor id, person := range persons {\n\t\tif person != nil {\n\t\t\tresult[id] = peopledirectory.Person{ID: person.ID, FirstName: person.FirstName, LastName: person.LastName}\n\t\t}\n\t}\n\treturn result, nil\n}",
+      "evidence": "func (p RoomSnapshotPeople) PersonsByIDs(ctx context.Context, ids []int64) (map[int64]peopledirectory.Person, error) {\n\tpersons, err := p.source.GetByIDs(ctx, ids)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make(map[int64]peopledirectory.Person, len(persons))\n\tfor id, person := range persons {\n\t\tif person != nil {\n\t\t\tresult[id] = peopledirectory.Person{ID: person.ID.Int64(), FirstName: person.FirstName, LastName: person.LastName}\n\t\t}\n\t}\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/peopledirectory/internal/application/RoomSnapshotPeople.PersonsByIDs",
       "owner": "modules/peopledirectory"
@@ -1290,13 +1234,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *Service) ListAcrossTenantsByIDs(ctx context.Context, ids []int64) (result []peopledirectory.Person, err error) {\n\terr = observeRun(ctx, s.observe, \"list_persons_across_tenants_by_id\", s.tx.RunAdminRead, func(txCtx context.Context, stats *domain.OperationStats) error {\n\t\tvar queryStats domain.OperationStats\n\t\tresult, queryStats, err = s.store.ListByIDs(txCtx, ids)\n\t\tstats.Add(queryStats)\n\t\treturn err\n\t})\n\treturn result, err\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/peopledirectory/internal/application/Service.ListAcrossTenantsByIDs",
-      "owner": "modules/peopledirectory"
-    },
-    {
-      "build": "production",
       "evidence": "func (s *Service) ListAllStudentIDs(ctx context.Context) ([]int64, error) {\n\tids, err := s.students.ListAllIDs(ctx)\n\treturn ids, MapError(err)\n}",
       "form": "unclassified-evidence",
       "id": "modules/peopledirectory/internal/application/Service.ListAllStudentIDs",
@@ -1451,13 +1388,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *Service) ListStudentsAcrossTenantsByID(ctx context.Context, ids []int64) ([]peopledirectory.Student, error) {\n\tids = peopledirectory.PositiveIDs(ids)\n\tif len(ids) == 0 {\n\t\treturn []peopledirectory.Student{}, nil\n\t}\n\tvalues, err := s.students.ListAcrossTenantsByIDs(ctx, ids)\n\treturn nonNilStudents(values), MapError(err)\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/peopledirectory/internal/application/Service.ListStudentsAcrossTenantsByID",
-      "owner": "modules/peopledirectory"
-    },
-    {
-      "build": "production",
       "evidence": "func (s *Service) ListStudentsByClasses(ctx context.Context, classes []string) ([]peopledirectory.Student, error) {\n\tclasses = peopledirectory.SchoolClasses(classes)\n\tif len(classes) == 0 {\n\t\treturn []peopledirectory.Student{}, nil\n\t}\n\tvalues, err := s.students.ListByClasses(ctx, classes)\n\treturn nonNilStudents(values), MapError(err)\n}",
       "form": "unclassified-evidence",
       "id": "modules/peopledirectory/internal/application/Service.ListStudentsByClasses",
@@ -1496,6 +1426,13 @@
       "evidence": "func (s *Service) LockStudent(ctx context.Context, id int64) error {\n\tif id \u003c= 0 {\n\t\treturn invalidStudent(\"student ID is required\")\n\t}\n\treturn MapError(s.students.Lock(ctx, id))\n}",
       "form": "unclassified-evidence",
       "id": "modules/peopledirectory/internal/application/Service.LockStudent",
+      "owner": "modules/peopledirectory"
+    },
+    {
+      "build": "production",
+      "evidence": "func (s *Service) LockStudentNoKeyUpdate(ctx context.Context, id int64) error {\n\tif id \u003c= 0 {\n\t\treturn invalidStudent(\"student ID is required\")\n\t}\n\treturn MapError(s.students.LockNoKeyUpdate(ctx, id))\n}",
+      "form": "unclassified-evidence",
+      "id": "modules/peopledirectory/internal/application/Service.LockStudentNoKeyUpdate",
       "owner": "modules/peopledirectory"
     },
     {
@@ -1745,13 +1682,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (r *StudentRecords) FindByIDForUpdate(ctx context.Context, id int64) (*peopleModule.StudentState, error) {\n\tif id \u003c= 0 {\n\t\treturn nil, peoplePorts.MissingStudentError(\"find by id for update\")\n\t}\n\trecord, err := r.directory.FindRecord(ctx, id, \"UPDATE\")\n\tif err != nil {\n\t\treturn nil, RetainedStudentReadError(\"find by id for update\", MapError(err))\n\t}\n\treturn peopleModule.StudentStateFromRecord(peopleModule.StudentRecord(record)), nil\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/peopledirectory/internal/application/StudentRecords.FindByIDForUpdate",
-      "owner": "modules/peopledirectory"
-    },
-    {
-      "build": "production",
       "evidence": "func (r *StudentRecords) FindByIDs(ctx context.Context, ids []int64) (map[int64]*peopleModule.StudentState, error) {\n\tids = peopleModule.PositiveIDs(ids)\n\tif len(ids) == 0 {\n\t\treturn map[int64]*peopleModule.StudentState{}, nil\n\t}\n\trecords, err := r.directory.ListRecordsByIDs(ctx, ids)\n\tif err != nil {\n\t\treturn nil, RetainedStudentReadError(\"find by ids\", MapError(err))\n\t}\n\treturn studentRecordsByID(records), nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/peopledirectory/internal/application/StudentRecords.FindByIDs",
@@ -1843,7 +1773,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (p StudentRoutePersons) CreatePerson(ctx context.Context, input peopleModule.CreatePerson) (peopleModule.Person, error) {\n\tperson := \u0026peopleModule.DirectoryPersonSnapshot{FirstName: input.FirstName, LastName: input.LastName, Birthday: peopleModule.OptionalCalendarDate(input.Birthday), TagID: input.TagID, AccountID: input.AccountID}\n\tif err := p.persons.Create(ctx, person); err != nil {\n\t\treturn peopleModule.Person{}, err\n\t}\n\treturn studentRoutePerson(person), nil\n}",
+      "evidence": "func (p StudentRoutePersons) CreatePerson(ctx context.Context, input peopleModule.CreatePerson) (peopleModule.Person, error) {\n\tperson := \u0026peopleModule.DirectoryPersonSnapshot{FirstName: input.FirstName, LastName: input.LastName, Birthday: peopleModule.OptionalCalendarDate(input.Birthday), TagID: input.TagID, AccountID: (*ident.ID)(input.AccountID)}\n\tif err := p.persons.Create(ctx, person); err != nil {\n\t\treturn peopleModule.Person{}, err\n\t}\n\treturn studentRoutePerson(person), nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/peopledirectory/internal/application/StudentRoutePersons.CreatePerson",
       "owner": "modules/peopledirectory"
@@ -1857,14 +1787,14 @@
     },
     {
       "build": "production",
-      "evidence": "func (p StudentRoutePersons) StaffIDForPerson(ctx context.Context, personID int64) (int64, bool, error) {\n\tstaff, err := p.persons.StaffRows().FindByPersonID(ctx, personID)\n\tif err != nil {\n\t\tvar notFound interface{ RepositoryNotFound() }\n\t\tif errors.As(err, \u0026notFound) {\n\t\t\treturn 0, false, nil\n\t\t}\n\t\treturn 0, false, err\n\t}\n\tif staff == nil {\n\t\treturn 0, false, nil\n\t}\n\treturn staff.ID, true, nil\n}",
+      "evidence": "func (p StudentRoutePersons) StaffIDForPerson(ctx context.Context, personID int64) (int64, bool, error) {\n\tstaff, err := p.persons.StaffRows().FindByPersonID(ctx, personID)\n\tif err != nil {\n\t\tvar notFound interface{ RepositoryNotFound() }\n\t\tif errors.As(err, \u0026notFound) {\n\t\t\treturn 0, false, nil\n\t\t}\n\t\treturn 0, false, err\n\t}\n\tif staff == nil {\n\t\treturn 0, false, nil\n\t}\n\treturn staff.ID.Int64(), true, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/peopledirectory/internal/application/StudentRoutePersons.StaffIDForPerson",
       "owner": "modules/peopledirectory"
     },
     {
       "build": "production",
-      "evidence": "func (p StudentRoutePersons) UpdatePerson(ctx context.Context, input peopleModule.UpdatePerson) (peopleModule.Person, error) {\n\tperson := \u0026peopleModule.DirectoryPersonSnapshot{FirstName: input.FirstName, LastName: input.LastName, Birthday: peopleModule.OptionalCalendarDate(input.Birthday), TagID: input.TagID, AccountID: input.AccountID}\n\tperson.ID = input.ID\n\tif err := p.persons.Update(ctx, person); err != nil {\n\t\treturn peopleModule.Person{}, err\n\t}\n\treturn studentRoutePerson(person), nil\n}",
+      "evidence": "func (p StudentRoutePersons) UpdatePerson(ctx context.Context, input peopleModule.UpdatePerson) (peopleModule.Person, error) {\n\tperson := \u0026peopleModule.DirectoryPersonSnapshot{FirstName: input.FirstName, LastName: input.LastName, Birthday: peopleModule.OptionalCalendarDate(input.Birthday), TagID: input.TagID, AccountID: (*ident.ID)(input.AccountID)}\n\tperson.ID = ident.ID(input.ID)\n\tif err := p.persons.Update(ctx, person); err != nil {\n\t\treturn peopleModule.Person{}, err\n\t}\n\treturn studentRoutePerson(person), nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/peopledirectory/internal/application/StudentRoutePersons.UpdatePerson",
       "owner": "modules/peopledirectory"
@@ -1902,13 +1832,6 @@
       "evidence": "func (s *StudentService) Delete(ctx context.Context, id int64) (rows int64, err error) {\n\terr = s.run(ctx, \"delete_student\", s.tx.RunWrite, func(txCtx context.Context, stats *domain.OperationStats) error {\n\t\tvar writeStats domain.OperationStats\n\t\trows, writeStats, err = s.store.Delete(txCtx, id)\n\t\tstats.Add(writeStats)\n\t\treturn err\n\t})\n\treturn rows, err\n}",
       "form": "unclassified-evidence",
       "id": "modules/peopledirectory/internal/application/StudentService.Delete",
-      "owner": "modules/peopledirectory"
-    },
-    {
-      "build": "production",
-      "evidence": "func (s *StudentService) ListAcrossTenantsByIDs(ctx context.Context, ids []int64) (result []peopledirectory.Student, err error) {\n\terr = s.run(ctx, \"list_students_across_tenants_by_id\", s.tx.RunAdminRead, func(txCtx context.Context, stats *domain.OperationStats) error {\n\t\tvar queryStats domain.OperationStats\n\t\tresult, queryStats, err = s.store.ListByIDs(txCtx, ids)\n\t\tstats.Add(queryStats)\n\t\treturn err\n\t})\n\treturn result, err\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/peopledirectory/internal/application/StudentService.ListAcrossTenantsByIDs",
       "owner": "modules/peopledirectory"
     },
     {

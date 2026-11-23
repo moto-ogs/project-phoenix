@@ -175,6 +175,13 @@ import {
 import { closingDaysConcept } from "~/lib/concepts/closingDays";
 
 const logger = createLogger({ component: "TimetablesPage" });
+
+// Info-Knopf am Titel (#7566). Ohne schedules:manage ist der Plan eine
+// Leseansicht, auch als Reiter in „Mein Kalender“.
+const BETREUUNGSPLAN_INFO =
+  "Hier legst du fest, wer wann welche Kinder betreut. Mit „Neu“ legst du einen Termin an, einmalig oder regelmäßig. Dein Team sieht seine Termine in „Mein Kalender“.";
+const BETREUUNGSPLAN_READ_INFO =
+  "Hier siehst du, wer wann welche Kinder betreut. Wähle oben die Ansicht und blättere zum gewünschten Tag. Änderungen trägt deine Leitung ein.";
 const PERIODS_SWR_KEY = databaseKeys.calendarPeriods();
 const PHASES_SWR_KEY = enrollmentKeys.phases();
 const CONFLICT_ACKS_SWR_KEY = tenantDailyKeys.conflictAcks();
@@ -262,6 +269,14 @@ function viewToTab(view: TimetableView): ViewParam {
 // Die Legenden-Ableitung teilen sich Betreuungsplan und Vertretung, damit
 // beide Raster dieselben Farben mit denselben Wörtern erklären. Der Re-Export
 // hält den bestehenden Import-Pfad dieser Datei stabil.
+
+/** Who a conflict names when the name lookup has no entry. */
+const CONFLICT_PERSON_FALLBACK = {
+  student: "Kind",
+  staff: "Personal",
+  other: "Person",
+} as const;
+
 export { buildPlanningTrackLegend };
 
 // Dichte-Umschalter des Wochenrasters (reiner Component-State, nie in der URL).
@@ -931,12 +946,7 @@ function TimetablesContent() {
     () =>
       canFilterByRoom
         ? sortedFilterOptions(
-            new Map(
-              (filterRooms ?? []).map((room) => [
-                String(room.id),
-                room.name ?? room.room_name ?? "",
-              ]),
-            ),
+            new Map((filterRooms ?? []).map((room) => [room.id, room.name])),
           )
         : null,
     [canFilterByRoom, filterRooms],
@@ -1036,6 +1046,27 @@ function TimetablesContent() {
   }, [calendarPeriods, dayISO, pinnedPeriodID]);
   const templatePeriodID = visiblePeriod?.id ?? assignedPeriods[0]?.id;
   const focusedPeriodID = templatePeriodID ?? null;
+  // A series edit starts from the series' editing read: it answers the
+  // version the save sends back (ADR 0311), which the list does not carry.
+  const openTemplateEdit = async (template: TimetableTemplate) => {
+    const periodID =
+      resolveTemplateCalendarPeriodId(template) ?? templatePeriodID;
+    if (!periodID) return;
+    try {
+      const detail = await timetableService.getTemplate(template.id, periodID);
+      setEditingInstance(null);
+      setConvertingInstance(null);
+      setEditingTemplate(detail);
+      setEventDefaultRepeat("weekly");
+      setEventModalOpen(true);
+    } catch (err) {
+      logger.error("template_edit_read_failed", {
+        template_id: template.id,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      void showActionError(err, { object: "der Regeltermin" });
+    }
+  };
   const {
     data: templateData,
     error: templatesError,
@@ -1239,11 +1270,15 @@ function TimetablesContent() {
           }
           continue;
         }
+        const names =
+          warning.kind === "student"
+            ? studentNames
+            : warning.kind === "staff"
+              ? staffNames
+              : undefined;
         const personName =
-          (warning.kind === "student"
-            ? studentNames.get(warning.resourceId)
-            : staffNames.get(warning.resourceId)) ??
-          (warning.kind === "student" ? "Kind" : "Personal");
+          names?.get(warning.resourceId) ??
+          CONFLICT_PERSON_FALLBACK[warning.kind];
         byFingerprint.set(warning.fingerprint, {
           fingerprint: warning.fingerprint,
           kind: warning.kind,
@@ -1526,7 +1561,7 @@ function TimetablesContent() {
             toast.success(LIFECYCLE_SUCCESS.start);
           }
         } else if (action === "complete") {
-          await timetableService.complete(instanceId, []);
+          await timetableService.complete(instanceId);
           toast.success(LIFECYCLE_SUCCESS.complete);
         } else if (action === "reopen") {
           await timetableService.reopen(instanceId);
@@ -2484,6 +2519,7 @@ function TimetablesContent() {
     <TenantPage
       overlays={overlays}
       title="Betreuungsplan"
+      info={canManageSchedules ? BETREUUNGSPLAN_INFO : BETREUUNGSPLAN_READ_INFO}
       stats={statusLine}
       statsLoading={statsLoading}
       actions={
@@ -2770,13 +2806,7 @@ function TimetablesContent() {
           templates={templates}
           canManage={canManageSchedules}
           onCreate={openSeriesCreate}
-          onEdit={(template) => {
-            setEditingInstance(null);
-            setConvertingInstance(null);
-            setEditingTemplate(template);
-            setEventDefaultRepeat("weekly");
-            setEventModalOpen(true);
-          }}
+          onEdit={(template) => void openTemplateEdit(template)}
           onApply={(template) => void handleApplyTemplate(template)}
           onArchive={openArchiveConfirm}
           deviations={rosterDeviations}

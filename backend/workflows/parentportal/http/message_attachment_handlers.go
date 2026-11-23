@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
 
@@ -52,13 +53,43 @@ func (rs *Resource) uploadChildMessageAttachment(w http.ResponseWriter, r *http.
 		return
 	}
 	if _, err := files.Save(r.Context(), stored.TenantID, stored.StoredName, parsed.Content); err != nil {
-		if discardErr := rs.ParentService.DiscardChildMessageAttachment(r.Context(), accountID, studentID, stored.Attachment.ID); discardErr != nil {
+		if discardErr := rs.ParentService.DiscardChildMessageAttachment(r.Context(), accountID, studentID, stored.Attachment.ID.Int64()); discardErr != nil {
 			err = errors.Join(err, discardErr)
 		}
 		common.RenderError(w, r, common.ErrorInternalServer(fmt.Errorf("write message attachment: %w", err)))
 		return
 	}
-	common.Respond(w, r, http.StatusCreated, stored.Attachment, "Attachment stored")
+	common.Respond(w, r, http.StatusCreated, messageAttachmentResponse{
+		ID: ident.ID(stored.Attachment.ID), Filename: stored.Attachment.Filename,
+		// A file is at most maxMessageAttachmentBytes, so its size fits an int.
+		SizeBytes: int(stored.Attachment.SizeBytes), ContentType: stored.Attachment.ContentType,
+		Width: stored.Attachment.Width, Height: stored.Attachment.Height,
+	}, "Attachment stored")
+}
+
+// messageAttachmentResponse is a stored attachment as the upload answers it:
+// the attachment the guardian's next message names by its ID.
+type messageAttachmentResponse struct {
+	ID          ident.ID `json:"id"`
+	Filename    string   `json:"filename"`
+	SizeBytes   int      `json:"size_bytes"`
+	ContentType string   `json:"content_type"`
+	Width       int      `json:"width,omitempty"`
+	Height      int      `json:"height,omitempty"`
+}
+
+// toMessageAttachmentResponses reads the snapshot a message stores, which has
+// the upload answer's form (communication.MessageAttachment). A message
+// without files has none, so its JSON omits the member as before.
+func toMessageAttachmentResponses(snapshot json.RawMessage) []messageAttachmentResponse {
+	if len(snapshot) == 0 {
+		return nil
+	}
+	var out []messageAttachmentResponse
+	if err := json.Unmarshal(snapshot, &out); err != nil || len(out) == 0 {
+		return nil
+	}
+	return out
 }
 
 // downloadChildMessageAttachment streams one file of the guardian's

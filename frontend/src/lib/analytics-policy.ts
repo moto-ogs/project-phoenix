@@ -28,12 +28,74 @@ import {
   UNKNOWN_ANALYTICS_PATH,
   type AnalyticsRouteSurface,
 } from "~/lib/analytics-routes";
+import type * as dayChangesContract from "~/lib/contract/day-changes.generated";
 import { NOTIFICATION_FEED_ANALYTICS_TYPES } from "~/lib/notification-feed-helpers";
 
 /** Reiterarten auf „Alle Kinder“ (#5046); ein Aufsichtsreiter nennt keinen Raum. */
 const CHILD_SCOPE_ANALYTICS_VALUES = ["all", "groups", "room"] as const;
 export type ChildScopeAnalyticsValue =
   (typeof CHILD_SCOPE_ANALYTICS_VALUES)[number];
+
+// This module is part of the global analytics client bundle. Keep the
+// generated contract import type-only: importing its runtime enum would also
+// pull Zod and every route schema into every portal.
+const DAY_CHANGE_KINDS = [
+  "child_absent",
+  "child_goes_alone",
+  "child_pickup_changed",
+  "child_pickup_note",
+  "activity_cancelled",
+  "activity_lead_changed",
+  "activity_reinstated",
+  "activity_room_changed",
+  "block_change_count",
+  "block_staff_absent",
+  "block_substitution",
+  "group_substitution",
+  "group_substitution_count",
+  "shift_cancelled",
+  "shift_changed",
+  "shift_replacement",
+  "staff_absent",
+  "staff_absent_count",
+  "staff_notice",
+  "meal_plan_changed",
+] as const satisfies readonly dayChangesContract.Kind[];
+
+/**
+ * Selbstöffnende Flächen des Einstiegs (#7541). Ein Wert je Fläche; eine
+ * neue Fläche braucht einen Wert hier und ihren Namen in
+ * ONBOARDING_SURFACE_LABELS (scripts/posthog-dashboards.mjs).
+ */
+const ONBOARDING_SURFACES = [
+  "announcement",
+  "setup_checklist",
+  "staff_first_steps",
+  "parent_first_steps",
+  "notification_setup",
+  "install_hint",
+  "samsung_hint",
+] as const;
+export type OnboardingSurface = (typeof ONBOARDING_SURFACES)[number];
+
+/**
+ * Checklisten des Einstiegs, deren Zustand nur im Browser liegt (#7557): nur
+ * die Ersten Schritte der Eltern. Checklisten mit Zustand auf dem Server
+ * melden ihre Ereignisse aus dem Backend (Kernaktionen, #7541).
+ */
+const ONBOARDING_CHECKLISTS = ["parent_first_steps"] as const;
+export type OnboardingChecklist = (typeof ONBOARDING_CHECKLISTS)[number];
+
+/** Feste Schritt-Schlüssel der Ersten Schritte der Eltern (#7557). */
+const ONBOARDING_CHECKLIST_STEPS = [
+  "start",
+  "child_data",
+  "messages_news",
+  "install_app",
+  "notifications",
+] as const;
+export type OnboardingChecklistStep =
+  (typeof ONBOARDING_CHECKLIST_STEPS)[number];
 
 const ANALYTICS_SURFACES = [
   "ogs",
@@ -494,6 +556,22 @@ const CUSTOM_EVENTS: ReadonlySet<string> = new Set([
   "notification_feed_all_read",
   // Reiter auf „Alle Kinder“ (#5046): nur die Art des Reiters, nie ein Raum.
   "child_scope_tab_selected",
+  // „Heute anders“ (#7659): Klick auf einen Eintrag nur mit seiner Art,
+  // „Alle anzeigen“ und das Aufklappen von „erledigt“ (#7660) ohne
+  // Eigenschaft.
+  "day_changes_entry_clicked",
+  "day_changes_show_all",
+  "day_changes_done_expanded",
+  // Selbstöffnende Flächen des Einstiegs (#7541): nur die Fläche
+  // (onboarding_surface); das Portal steht in `surface`.
+  "onboarding_surface_shown",
+  "onboarding_surface_accepted",
+  "onboarding_surface_dismissed",
+  // Erste Schritte der Eltern (#7557): nur die Checkliste und der feste
+  // Schritt-Schlüssel, ihr Zustand liegt nur im Browser.
+  "onboarding_checklist_step_done",
+  "onboarding_checklist_dismissed",
+  "onboarding_checklist_completed",
 ]);
 
 const SAFE_VALUES: Readonly<Record<string, ReadonlySet<string>>> = {
@@ -506,6 +584,10 @@ const SAFE_VALUES: Readonly<Record<string, ReadonlySet<string>>> = {
   $dead_swipe_direction: new Set(["up", "down", "left", "right"]),
   notification_type: new Set(NOTIFICATION_FEED_ANALYTICS_TYPES),
   child_scope: new Set(CHILD_SCOPE_ANALYTICS_VALUES),
+  day_change_kind: new Set(DAY_CHANGE_KINDS),
+  onboarding_surface: new Set(ONBOARDING_SURFACES),
+  checklist: new Set(ONBOARDING_CHECKLISTS),
+  checklist_step: new Set(ONBOARDING_CHECKLIST_STEPS),
 };
 
 /** SDK identifiers: anonymous runtime IDs, UUIDs, the project token. */

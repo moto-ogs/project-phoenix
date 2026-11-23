@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Report templates of a Träger (#4716, spec #4611 user stories 115 and 116,
@@ -47,8 +49,8 @@ var (
 
 // TraegerReportDistrict assigns one school of the Träger to a Sozialraum.
 type TraegerReportDistrict struct {
-	SchoolID int64  `json:"school_id"`
-	District string `json:"district"`
+	SchoolID ident.ID `json:"school_id"`
+	District string   `json:"district"`
 }
 
 // TraegerReportTemplateInput is a template as the Träger-Büro writes it.
@@ -65,7 +67,7 @@ type TraegerReportTemplateInput struct {
 // TraegerReportTemplate is a stored template. Districts are ordered by
 // school ID.
 type TraegerReportTemplate struct {
-	ID           int64                   `json:"id"`
+	ID           ident.ID                `json:"id"`
 	Name         string                  `json:"name"`
 	Sections     []string                `json:"sections"`
 	KeyDateMonth int                     `json:"key_date_month"`

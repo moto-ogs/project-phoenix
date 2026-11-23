@@ -1,22 +1,13 @@
-import { operatorFetch } from "./api-helpers";
+import { bffJson, bffJsonUncontracted } from "~/lib/bff-fetch";
+import type * as operatorDevicesContract from "~/lib/contract/operator-devices.generated";
+import type * as operatorSchoolsContract from "~/lib/contract/operator-schools.generated";
+import type * as operatorUnregisteredTagScansContract from "~/lib/contract/operator-unregistered-tag-scans.generated";
 import {
   mapDeviceHistoryEntry,
   type DeviceHistoryEntry,
 } from "~/lib/device-history";
 import type {
-  BackendOrganization,
-  BackendOrganizationSummary,
-  BackendProvisioningStats,
-  BackendSchool,
-  BackendSchoolSummary,
-  BackendSchoolRequiredDetails,
   SchoolRequiredDetails,
-  BackendInvitation,
-  BackendSchoolAccount,
-  BackendOrgAccount,
-  BackendOperatorDevice,
-  BackendOperatorPerson,
-  BackendUnregisteredTagScan,
   Organization,
   OrganizationSummary,
   ProvisioningStats,
@@ -30,9 +21,7 @@ import type {
   UnregisteredTagScan,
   CreateOrganizationRequest,
   CreateTestTraegerRequest,
-  BackendTestTraeger,
   TestTraeger,
-  BackendSampleChildrenResult,
   SampleChildrenResult,
   CreateSchoolRequest,
   CreateDeviceRequest,
@@ -40,15 +29,10 @@ import type {
   CreateAccountRequest,
   UpdateOrganizationRequest,
   UpdateSchoolRequest,
-  BackendDeviceTransferStatus,
   DeviceTransferStatus,
-  BackendSchoolPWAUsage,
   SchoolPWAUsage,
   AssignTraegerMemberRequest,
-  BackendOperatorCaterer,
   InviteTraegerMemberRequest,
-  BackendTraegerMember,
-  BackendTraegerInvitation,
   TraegerInvitation,
   OperatorCaterer,
   TraegerMember,
@@ -74,7 +58,6 @@ import {
   mapTraegerMember,
   mapTraegerInvitation,
   mapOperatorCaterer,
-  isBackendTraegerErasureOrder,
   mapTraegerErasureOrder,
   mapTestTraeger,
   mapSampleChildrenResult,
@@ -82,29 +65,27 @@ import {
 
 class OperatorProvisioningService {
   async getStats(): Promise<ProvisioningStats> {
-    const data = await operatorFetch<BackendProvisioningStats>(
-      "/api/operator/stats",
-    );
+    const data = await bffJson("platform", "GET /operator/stats");
     return mapProvisioningStats(data);
   }
 
   async listOrganizationSummaries(): Promise<OrganizationSummary[]> {
-    const data = await operatorFetch<BackendOrganizationSummary[]>(
-      "/api/operator/organizations/summaries",
+    const data = await bffJson(
+      "platform",
+      "GET /operator/organizations/summaries",
     );
     return data.map(mapOrganizationSummary);
   }
 
   async listSchoolSummaries(): Promise<SchoolSummary[]> {
-    const data = await operatorFetch<BackendSchoolSummary[]>(
-      "/api/operator/schools/summaries",
-    );
+    const data = await bffJson("platform", "GET /operator/schools/summaries");
     return data.map(mapSchoolSummary);
   }
 
   async listSchoolRequiredDetails(): Promise<SchoolRequiredDetails[]> {
-    const data = await operatorFetch<BackendSchoolRequiredDetails[]>(
-      "/api/operator/schools/required-details",
+    const data = await bffJson(
+      "platform",
+      "GET /operator/schools/required-details",
     );
     return data.map(mapSchoolRequiredDetails);
   }
@@ -112,37 +93,35 @@ class OperatorProvisioningService {
   async listOrganizationSchools(
     organizationId: string,
   ): Promise<SchoolSummary[]> {
-    const data = await operatorFetch<BackendSchoolSummary[]>(
-      `/api/operator/organizations/${encodeURIComponent(organizationId)}/schools`,
+    const data = await bffJson(
+      "platform",
+      "GET /operator/organizations/{id}/schools",
+      { params: { id: organizationId } },
     );
     return data.map(mapSchoolSummary);
   }
 
   async listOrganizations(): Promise<Organization[]> {
-    const data = await operatorFetch<BackendOrganization[]>(
-      "/api/operator/organizations",
-    );
+    const data = await bffJson("platform", "GET /operator/organizations/");
     return data.map(mapOrganization);
   }
 
   async createOrganization(
     data: CreateOrganizationRequest,
   ): Promise<Organization> {
-    const result = await operatorFetch<BackendOrganization>(
-      "/api/operator/organizations",
-      { method: "POST", body: data },
-    );
+    const result = await bffJson("platform", "POST /operator/organizations/", {
+      body: data,
+    });
     return mapOrganization(result);
   }
 
   async listSchools(): Promise<School[]> {
-    const data = await operatorFetch<BackendSchool[]>("/api/operator/schools");
+    const data = await bffJson("platform", "GET /operator/schools/");
     return data.map(mapSchool);
   }
 
   async createSchool(data: CreateSchoolRequest): Promise<School> {
-    const result = await operatorFetch<BackendSchool>("/api/operator/schools", {
-      method: "POST",
+    const result = await bffJson("platform", "POST /operator/schools/", {
       body: data,
     });
     return mapSchool(result);
@@ -152,46 +131,51 @@ class OperatorProvisioningService {
     id: string,
     data: UpdateOrganizationRequest,
   ): Promise<Organization> {
-    const result = await operatorFetch<BackendOrganization>(
-      `/api/operator/organizations/${encodeURIComponent(id)}`,
-      { method: "PUT", body: data },
+    const result = await bffJson(
+      "platform",
+      "PUT /operator/organizations/{id}",
+      { params: { id }, body: data },
     );
     return mapOrganization(result);
   }
 
   async updateSchool(id: string, data: UpdateSchoolRequest): Promise<School> {
-    const result = await operatorFetch<BackendSchool>(
-      `/api/operator/schools/${encodeURIComponent(id)}`,
-      { method: "PUT", body: data },
-    );
+    const result = await bffJson("platform", "PUT /operator/schools/{id}", {
+      params: { id },
+      body: data,
+    });
     return mapSchool(result);
   }
 
   async listSchoolAccounts(schoolId: string): Promise<SchoolAccount[]> {
-    const data = await operatorFetch<BackendSchoolAccount[]>(
-      `/api/operator/schools/${encodeURIComponent(schoolId)}/accounts`,
+    const data = await bffJson(
+      "platform",
+      "GET /operator/schools/{id}/accounts",
+      { params: { id: schoolId } },
     );
     return data.map(mapSchoolAccount);
   }
 
   async listOrganizationAccounts(orgId: string): Promise<OrgAccount[]> {
-    const data = await operatorFetch<BackendOrgAccount[]>(
-      `/api/operator/organizations/${encodeURIComponent(orgId)}/accounts`,
+    const data = await bffJson(
+      "platform",
+      "GET /operator/organizations/{id}/accounts",
+      { params: { id: orgId } },
     );
     return data.map(mapOrgAccount);
   }
 
   /** The caterers with the state of their two-factor sign-in (#4497). */
   async listCaterers(): Promise<OperatorCaterer[]> {
-    const data = await operatorFetch<BackendOperatorCaterer[]>(
-      "/api/operator/caterers",
-    );
+    const data = await bffJson("platform", "GET /operator/caterers");
     return data.map(mapOperatorCaterer);
   }
 
   async listTraegerMembers(orgId: string): Promise<TraegerMember[]> {
-    const data = await operatorFetch<BackendTraegerMember[]>(
-      `/api/operator/organizations/${encodeURIComponent(orgId)}/traeger-members`,
+    const data = await bffJson(
+      "platform",
+      "GET /operator/organizations/{id}/traeger-members",
+      { params: { id: orgId } },
     );
     return data.map(mapTraegerMember);
   }
@@ -200,9 +184,10 @@ class OperatorProvisioningService {
     orgId: string,
     data: AssignTraegerMemberRequest,
   ): Promise<TraegerMember> {
-    const result = await operatorFetch<BackendTraegerMember>(
-      `/api/operator/organizations/${encodeURIComponent(orgId)}/traeger-members`,
-      { method: "POST", body: data },
+    const result = await bffJson(
+      "platform",
+      "POST /operator/organizations/{id}/traeger-members",
+      { params: { id: orgId }, body: data },
     );
     return mapTraegerMember(result);
   }
@@ -215,16 +200,19 @@ class OperatorProvisioningService {
     orgId: string,
     data: InviteTraegerMemberRequest,
   ): Promise<void> {
-    await operatorFetch<unknown>(
-      `/api/operator/organizations/${encodeURIComponent(orgId)}/traeger-members/invitations`,
-      { method: "POST", body: data },
+    await bffJson(
+      "platform",
+      "POST /operator/organizations/{id}/traeger-members/invitations",
+      { params: { id: orgId }, body: data },
     );
   }
 
   /** Open and expired invitations into the Träger-Büro (#5749). */
   async listTraegerInvitations(orgId: string): Promise<TraegerInvitation[]> {
-    const data = await operatorFetch<BackendTraegerInvitation[]>(
-      `/api/operator/organizations/${encodeURIComponent(orgId)}/traeger-members/invitations`,
+    const data = await bffJson(
+      "platform",
+      "GET /operator/organizations/{id}/traeger-members/invitations",
+      { params: { id: orgId } },
     );
     return data.map(mapTraegerInvitation);
   }
@@ -237,9 +225,10 @@ class OperatorProvisioningService {
     orgId: string,
     invitationId: string,
   ): Promise<TraegerInvitation> {
-    const result = await operatorFetch<BackendTraegerInvitation>(
-      `/api/operator/organizations/${encodeURIComponent(orgId)}/traeger-members/invitations/${encodeURIComponent(invitationId)}/resend`,
-      { method: "POST" },
+    const result = await bffJson(
+      "platform",
+      "POST /operator/organizations/{id}/traeger-members/invitations/{invitationId}/resend",
+      { params: { id: orgId, invitationId } },
     );
     return mapTraegerInvitation(result);
   }
@@ -249,34 +238,34 @@ class OperatorProvisioningService {
     orgId: string,
     invitationId: string,
   ): Promise<void> {
-    await operatorFetch<unknown>(
-      `/api/operator/organizations/${encodeURIComponent(orgId)}/traeger-members/invitations/${encodeURIComponent(invitationId)}`,
-      { method: "DELETE" },
+    await bffJson(
+      "platform",
+      "DELETE /operator/organizations/{id}/traeger-members/invitations/{invitationId}",
+      { params: { id: orgId, invitationId } },
     );
   }
 
   async getTraegerErasureOrder(
     orgId: string,
   ): Promise<TraegerErasureOrder | null> {
-    const data = await operatorFetch<unknown>(
-      `/api/operator/organizations/${encodeURIComponent(orgId)}/erasure-order`,
+    // The backend answers without an order when none is open.
+    const data = await bffJson(
+      "platform",
+      "GET /operator/organizations/{id}/erasure-order",
+      { params: { id: orgId } },
     );
-    return isBackendTraegerErasureOrder(data)
-      ? mapTraegerErasureOrder(data)
-      : null;
+    return data ? mapTraegerErasureOrder(data) : null;
   }
 
   async recordTraegerErasureOrder(
     orgId: string,
     data: RecordTraegerErasureOrderRequest,
   ): Promise<TraegerErasureOrder> {
-    const result = await operatorFetch<unknown>(
-      `/api/operator/organizations/${encodeURIComponent(orgId)}/erasure-order`,
-      { method: "POST", body: data },
+    const result = await bffJson(
+      "platform",
+      "POST /operator/organizations/{id}/erasure-order",
+      { params: { id: orgId }, body: data },
     );
-    if (!isBackendTraegerErasureOrder(result)) {
-      throw new Error("erasure order response without order");
-    }
     return mapTraegerErasureOrder(result);
   }
 
@@ -284,91 +273,96 @@ class OperatorProvisioningService {
     orgId: string,
     data: RecordTraegerErasureOrderRecordsRequest,
   ): Promise<TraegerErasureOrder> {
-    const result = await operatorFetch<unknown>(
-      `/api/operator/organizations/${encodeURIComponent(orgId)}/erasure-order/records`,
-      { method: "PUT", body: data },
+    const result = await bffJson(
+      "platform",
+      "PUT /operator/organizations/{id}/erasure-order/records",
+      { params: { id: orgId }, body: data },
     );
-    if (!isBackendTraegerErasureOrder(result)) {
-      throw new Error("erasure order records response without order");
-    }
     return mapTraegerErasureOrder(result);
   }
 
   async withdrawTraegerErasureOrder(orgId: string): Promise<void> {
-    await operatorFetch<unknown>(
-      `/api/operator/organizations/${encodeURIComponent(orgId)}/erasure-order`,
-      { method: "DELETE" },
+    await bffJson(
+      "platform",
+      "DELETE /operator/organizations/{id}/erasure-order",
+      { params: { id: orgId } },
     );
   }
 
   async createTestTraeger(
     data: CreateTestTraegerRequest,
   ): Promise<TestTraeger> {
-    const result = await operatorFetch<BackendTestTraeger>(
-      "/api/operator/organizations/test-traeger",
-      { method: "POST", body: data },
+    const result = await bffJson(
+      "platform",
+      "POST /operator/organizations/test-traeger",
+      { body: data },
     );
     return mapTestTraeger(result);
   }
 
   async createSampleChildren(orgId: string): Promise<SampleChildrenResult> {
-    const result = await operatorFetch<BackendSampleChildrenResult>(
-      `/api/operator/organizations/${encodeURIComponent(orgId)}/sample-children`,
-      { method: "POST", body: {} },
+    const result = await bffJson(
+      "platform",
+      "POST /operator/organizations/{id}/sample-children",
+      { params: { id: orgId } },
     );
     return mapSampleChildrenResult(result);
   }
 
   async listAllAccounts(): Promise<OrgAccount[]> {
-    const data = await operatorFetch<BackendOrgAccount[]>(
-      "/api/operator/accounts",
-    );
+    const data = await bffJson("platform", "GET /operator/accounts");
     return data.map(mapOrgAccount);
   }
 
   async listAllDevices(): Promise<OperatorDevice[]> {
-    const data = await operatorFetch<BackendOperatorDevice[]>(
-      "/api/operator/devices",
-    );
+    const data = await bffJson("platform", "GET /operator/devices/");
     return data.map((device) => mapOperatorDevice(device));
   }
 
   async listSchoolDevices(schoolId: string): Promise<OperatorDevice[]> {
-    const data = await operatorFetch<BackendOperatorDevice[]>(
-      `/api/operator/schools/${encodeURIComponent(schoolId)}/devices`,
+    const data = await bffJson(
+      "platform",
+      "GET /operator/schools/{id}/devices",
+      { params: { id: schoolId } },
     );
     return data.map((device) => mapOperatorDevice(device));
   }
 
   async listOrganizationDevices(orgId: string): Promise<OperatorDevice[]> {
-    const data = await operatorFetch<BackendOperatorDevice[]>(
-      `/api/operator/organizations/${encodeURIComponent(orgId)}/devices`,
+    const data = await bffJson(
+      "platform",
+      "GET /operator/organizations/{id}/devices",
+      { params: { id: orgId } },
     );
     return data.map((device) => mapOperatorDevice(device));
   }
 
   async createDevice(data: CreateDeviceRequest): Promise<OperatorDevice> {
-    const result = await operatorFetch<BackendOperatorDevice>(
-      "/api/operator/devices",
-      { method: "POST", body: data },
-    );
+    const result = await bffJson("platform", "POST /operator/devices/", {
+      body: data,
+    });
     return mapOperatorDevice(result, true);
   }
 
   async deleteDevice(deviceId: string): Promise<void> {
-    await operatorFetch<null>(
-      `/api/operator/devices/${encodeURIComponent(deviceId)}`,
-      { method: "DELETE" },
-    );
+    await bffJson("platform", "DELETE /operator/devices/{id}", {
+      params: { id: deviceId },
+    });
   }
 
   async setDeviceAPIKey(
     deviceId: string,
     apiKey?: string,
   ): Promise<OperatorDevice> {
-    const result = await operatorFetch<BackendOperatorDevice>(
-      `/api/operator/devices/${encodeURIComponent(deviceId)}/set-api-key`,
-      { method: "POST", body: apiKey ? { api_key: apiKey } : {} },
+    const result = await bffJson(
+      "platform",
+      "POST /operator/devices/{id}/set-api-key",
+      {
+        params: { id: deviceId },
+        body: (apiKey
+          ? { api_key: apiKey }
+          : {}) satisfies operatorDevicesContract.setDeviceAPIKeyRequest,
+      },
     );
     return mapOperatorDevice(result, true);
   }
@@ -376,8 +370,10 @@ class OperatorProvisioningService {
   async getDeviceTransferStatus(
     deviceId: string,
   ): Promise<DeviceTransferStatus> {
-    const result = await operatorFetch<BackendDeviceTransferStatus>(
-      `/api/operator/devices/${encodeURIComponent(deviceId)}/transfer-status`,
+    const result = await bffJson(
+      "platform",
+      "GET /operator/devices/{id}/transfer-status",
+      { params: { id: deviceId } },
     );
     return mapDeviceTransferStatus(result);
   }
@@ -387,10 +383,12 @@ class OperatorProvisioningService {
    * first (#2321). Each entry names its school; staff stay unnamed.
    */
   async listDeviceHistory(deviceId: string): Promise<DeviceHistoryEntry[]> {
-    const result = await operatorFetch<
-      Parameters<typeof mapDeviceHistoryEntry>[0][] | null
-    >(`/api/operator/devices/${encodeURIComponent(deviceId)}/history`);
-    return (result ?? []).map(mapDeviceHistoryEntry);
+    const result = await bffJson(
+      "platform",
+      "GET /operator/devices/{id}/history",
+      { params: { id: deviceId } },
+    );
+    return result.map(mapDeviceHistoryEntry);
   }
 
   /**
@@ -398,9 +396,12 @@ class OperatorProvisioningService {
    * without data; the caller reloads the device list.
    */
   async setDeviceBlocked(deviceId: string, blocked: boolean): Promise<void> {
-    await operatorFetch<null>(
-      `/api/operator/devices/${encodeURIComponent(deviceId)}/${blocked ? "block" : "unblock"}`,
-      { method: "POST" },
+    await bffJson(
+      "platform",
+      blocked
+        ? "POST /operator/devices/{id}/block"
+        : "POST /operator/devices/{id}/unblock",
+      { params: { id: deviceId } },
     );
   }
 
@@ -413,21 +414,26 @@ class OperatorProvisioningService {
     schoolId: string,
     deviceSlots: number | null,
   ): Promise<void> {
-    await operatorFetch<null>(
-      `/api/operator/schools/${encodeURIComponent(schoolId)}/device-slots`,
-      { method: "PUT", body: { device_slots: deviceSlots } },
-    );
+    await bffJson("platform", "PUT /operator/schools/{id}/device-slots", {
+      params: { id: schoolId },
+      body: {
+        device_slots: deviceSlots,
+      } satisfies operatorSchoolsContract.deviceSlotsRequest,
+    });
   }
 
   async transferDevice(
     deviceId: string,
     targetSchoolId: string,
   ): Promise<OperatorDevice> {
-    const result = await operatorFetch<BackendOperatorDevice>(
-      `/api/operator/devices/${encodeURIComponent(deviceId)}/transfer`,
+    const result = await bffJson(
+      "platform",
+      "POST /operator/devices/{id}/transfer",
       {
-        method: "POST",
-        body: { target_school_id: Number(targetSchoolId) },
+        params: { id: deviceId },
+        body: {
+          target_school_id: targetSchoolId,
+        } satisfies operatorDevicesContract.transferDeviceRequest,
       },
     );
     return mapOperatorDevice(result);
@@ -437,9 +443,10 @@ class OperatorProvisioningService {
     schoolId: string,
     data: InviteAdminRequest,
   ): Promise<Invitation> {
-    const result = await operatorFetch<BackendInvitation>(
-      `/api/operator/schools/${encodeURIComponent(schoolId)}/invite-admin`,
-      { method: "POST", body: data },
+    const result = await bffJson(
+      "platform",
+      "POST /operator/schools/{id}/invite-admin",
+      { params: { id: schoolId }, body: data },
     );
     return mapInvitation(result);
   }
@@ -448,23 +455,28 @@ class OperatorProvisioningService {
     schoolId: string,
     data: CreateAccountRequest,
   ): Promise<{ id: string; email: string }> {
-    const result = await operatorFetch<{ id: number | string; email: string }>(
-      `/api/operator/schools/${encodeURIComponent(schoolId)}/create-account`,
-      { method: "POST", body: data },
+    const result = await bffJson(
+      "platform",
+      "POST /operator/schools/{id}/create-account",
+      { params: { id: schoolId }, body: data },
     );
-    return { id: result.id.toString(), email: result.email };
+    return { id: result.id, email: result.email };
   }
 
   async getSchoolPWAUsage(schoolId: string): Promise<SchoolPWAUsage> {
-    const data = await operatorFetch<BackendSchoolPWAUsage>(
-      `/api/operator/schools/${encodeURIComponent(schoolId)}/pwa-usage`,
+    const data = await bffJson(
+      "platform",
+      "GET /operator/schools/{id}/pwa-usage",
+      { params: { id: schoolId } },
     );
     return mapSchoolPWAUsage(data);
   }
 
   async listSchoolPersons(schoolId: string): Promise<OperatorPerson[]> {
-    const data = await operatorFetch<BackendOperatorPerson[]>(
-      `/api/operator/schools/${encodeURIComponent(schoolId)}/persons`,
+    const data = await bffJson(
+      "platform",
+      "GET /operator/schools/{id}/persons",
+      { params: { id: schoolId } },
     );
     return data.map(mapOperatorPerson);
   }
@@ -472,17 +484,18 @@ class OperatorProvisioningService {
   async listOrganizationPersons(
     organizationId: string,
   ): Promise<OperatorPerson[]> {
-    const data = await operatorFetch<BackendOperatorPerson[]>(
-      `/api/operator/organizations/${encodeURIComponent(organizationId)}/persons`,
+    const data = await bffJson(
+      "platform",
+      "GET /operator/organizations/{id}/persons",
+      { params: { id: organizationId } },
     );
     return data.map(mapOperatorPerson);
   }
 
   async softDeletePerson(personId: string): Promise<void> {
-    await operatorFetch<null>(
-      `/api/operator/persons/${encodeURIComponent(personId)}`,
-      { method: "DELETE" },
-    );
+    await bffJson("platform", "DELETE /operator/persons/{id}", {
+      params: { id: personId },
+    });
   }
 
   async listUnregisteredTagScans(options: {
@@ -490,65 +503,58 @@ class OperatorProvisioningService {
     schoolId?: string;
     resolved?: "unresolved" | "all";
   }): Promise<UnregisteredTagScan[]> {
-    const params = new URLSearchParams();
-    if (options.organizationId) {
-      params.set("organization_id", options.organizationId);
-    }
-    if (options.schoolId) {
-      params.set("school_id", options.schoolId);
-    }
-    if (options.resolved === "all") {
-      params.set("resolved", "all");
-    }
-    const suffix = params.toString() ? `?${params.toString()}` : "";
-    const data = await operatorFetch<BackendUnregisteredTagScan[]>(
-      `/api/operator/unregistered-tag-scans${suffix}`,
+    const data = await bffJson(
+      "platform",
+      "GET /operator/unregistered-tag-scans/",
+      {
+        query: {
+          organization_id: options.organizationId || undefined,
+          school_id: options.schoolId || undefined,
+          resolved: options.resolved === "all" ? "all" : undefined,
+        },
+      },
     );
     return data.map(mapUnregisteredTagScan);
   }
 
   async resolveUnregisteredTagScan(id: string, note?: string): Promise<void> {
-    const body = note ? { note } : {};
-    await operatorFetch<BackendUnregisteredTagScan>(
-      `/api/operator/unregistered-tag-scans/${encodeURIComponent(id)}/resolve`,
-      { method: "POST", body },
+    const body: operatorUnregisteredTagScansContract.resolveUnregisteredTagScanRequest =
+      note ? { note } : {};
+    await bffJson(
+      "platform",
+      "POST /operator/unregistered-tag-scans/{id}/resolve",
+      { params: { id }, body },
     );
   }
 
   async softDeleteOrganization(id: string): Promise<void> {
-    await operatorFetch(
-      `/api/operator/organizations/${encodeURIComponent(id)}`,
-      { method: "DELETE" },
-    );
+    await bffJson("platform", "DELETE /operator/organizations/{id}", {
+      params: { id },
+    });
   }
 
   async restoreOrganization(id: string): Promise<void> {
-    await operatorFetch(
-      `/api/operator/organizations/${encodeURIComponent(id)}/restore`,
-      { method: "POST" },
-    );
+    await bffJson("platform", "POST /operator/organizations/{id}/restore", {
+      params: { id },
+    });
   }
 
   async softDeleteSchool(id: string): Promise<void> {
-    await operatorFetch(`/api/operator/schools/${encodeURIComponent(id)}`, {
-      method: "DELETE",
+    await bffJson("platform", "DELETE /operator/schools/{id}", {
+      params: { id },
     });
   }
 
   async restoreSchool(id: string): Promise<void> {
-    await operatorFetch(
-      `/api/operator/schools/${encodeURIComponent(id)}/restore`,
-      { method: "POST" },
-    );
+    await bffJson("platform", "POST /operator/schools/{id}/restore", {
+      params: { id },
+    });
   }
 
   async listSystemRoles(): Promise<
     { id: string; name: string; isSystem: boolean }[]
   > {
-    const result =
-      await operatorFetch<{ id: string; name: string; is_system: boolean }[]>(
-        `/api/operator/roles`,
-      );
+    const result = await bffJson("platform", "GET /operator/roles");
     return result.map((r) => ({
       id: r.id,
       name: r.name,
@@ -568,11 +574,12 @@ export const operatorProvisioningService = new OperatorProvisioningService();
 export async function revalidateTenantCache(slugs: string[]): Promise<void> {
   if (slugs.length === 0) return;
   try {
-    await fetch("/api/operator/provisioning/revalidate-tenant", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ slugs }),
-    });
+    await bffJsonUncontracted<unknown>(
+      "platform",
+      "POST",
+      "/api/operator/provisioning/revalidate-tenant",
+      { body: { slugs } },
+    );
   } catch {
     // Cache self-heals in ≤5 min; don't block the success flow.
   }

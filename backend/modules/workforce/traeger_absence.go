@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The Abwesenheitsarten and Kontingente of a Träger (#4710, ADR 0089
@@ -52,8 +54,8 @@ func (e *TraegerAbsenceTypeError) Unwrap() error { return ErrTraegerAbsenceTypeI
 // TraegerAbsenceTypeSchool is how one school carries a type of its Träger:
 // the school's own type it took over, if any, and its deviation.
 type TraegerAbsenceTypeSchool struct {
-	SchoolID   int64  `json:"school_id"`
-	SchoolName string `json:"school_name"`
+	SchoolID   ident.ID `json:"school_id"`
+	SchoolName string   `json:"school_name"`
 	// Carried is false while the school does not have the type yet; the next
 	// change of the type brings it there.
 	Carried         bool     `json:"carried"`
@@ -63,10 +65,10 @@ type TraegerAbsenceTypeSchool struct {
 
 // TraegerAbsenceType is one Abwesenheitsart of the Träger.
 type TraegerAbsenceType struct {
-	ID               int64   `json:"id"`
-	Name             string  `json:"name"`
-	AllowanceEnabled bool    `json:"allowance_enabled"`
-	StandardDays     float64 `json:"standard_days"`
+	ID               ident.ID `json:"id"`
+	Name             string   `json:"name"`
+	AllowanceEnabled bool     `json:"allowance_enabled"`
+	StandardDays     float64  `json:"standard_days"`
 	// CarryoverUntil is "MM-DD" in the following year until which a rest
 	// stays usable; "" lets it expire on 31.12.
 	CarryoverUntil string                     `json:"carryover_until"`
@@ -98,10 +100,10 @@ type TraegerAbsenceTypeList struct {
 // TraegerAbsenceSchoolUse is what one school's bookings take from an
 // account.
 type TraegerAbsenceSchoolUse struct {
-	SchoolID     int64   `json:"school_id"`
-	SchoolName   string  `json:"school_name"`
-	TakenDays    float64 `json:"taken_days"`
-	ReservedDays float64 `json:"reserved_days"`
+	SchoolID     ident.ID `json:"school_id"`
+	SchoolName   string   `json:"school_name"`
+	TakenDays    float64  `json:"taken_days"`
+	ReservedDays float64  `json:"reserved_days"`
 	// LimitDays is the school's deviation for the type, nil without one.
 	LimitDays *float64 `json:"limit_days"`
 	Offered   bool     `json:"offered"`
@@ -110,10 +112,10 @@ type TraegerAbsenceSchoolUse struct {
 // TraegerAbsenceAccount is the Kontingent of one Personalakte for one type
 // and year over all schools.
 type TraegerAbsenceAccount struct {
-	AbsenceTypeID   int64   `json:"absence_type_id"`
-	AbsenceTypeName string  `json:"absence_type_name"`
-	Year            int     `json:"year"`
-	EntitledDays    float64 `json:"entitled_days"`
+	AbsenceTypeID   ident.ID `json:"absence_type_id"`
+	AbsenceTypeName string   `json:"absence_type_name"`
+	Year            int      `json:"year"`
+	EntitledDays    float64  `json:"entitled_days"`
 	// Individual is true when the Personalverwaltung set the days for this
 	// person; otherwise the type's standard applies.
 	Individual    bool                      `json:"individual"`
@@ -125,6 +127,9 @@ type TraegerAbsenceAccount struct {
 	ExpiredDays   float64                   `json:"expired_days"`
 	CarriedIn     *TraegerAbsenceCarry      `json:"carried_in"`
 	Schools       []TraegerAbsenceSchoolUse `json:"schools"`
+	// Version is the token of the person's claim of the type and year; the
+	// change of the days sends it back as expected_version (ADR 0311).
+	Version string `json:"version"`
 }
 
 // TraegerAbsenceCarry is the previous year's rest still usable in the
@@ -149,6 +154,9 @@ type SetTraegerAbsenceAllowance struct {
 	Year          int
 	EntitledDays  float64
 	Reason        string
+	// ExpectedVersion is the Version of the account the form was read from
+	// (ADR 0311); a claim changed since is not overwritten.
+	ExpectedVersion string
 }
 
 // TraegerAbsenceTypes is the Träger-Portal's part of the types and

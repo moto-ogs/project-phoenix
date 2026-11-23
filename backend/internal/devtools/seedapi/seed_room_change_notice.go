@@ -48,7 +48,8 @@ func (seedRoomChangeNoticeStep) Run(_ context.Context, rt *Runtime) error {
 	}
 	var created struct {
 		Data struct {
-			ID json.Number `json:"id"`
+			ID      json.Number `json:"id"`
+			Version string      `json:"version"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &created); err != nil {
@@ -59,6 +60,9 @@ func (seedRoomChangeNoticeStep) Run(_ context.Context, rt *Runtime) error {
 		return fmt.Errorf("%s response carries no id", name)
 	}
 	body["room_id"] = to
+	// The create answers the block's version; the move saves back that
+	// block (ADR 0311).
+	body["expected_version"] = created.Data.Version
 	if _, err := rt.Client.Put(fmt.Sprintf("/api/timetable/instances/%d", instanceID), body); err != nil {
 		return fmt.Errorf("move %s to another room: %w", name, err)
 	}

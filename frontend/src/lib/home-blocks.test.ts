@@ -151,7 +151,10 @@ describe("resolveHomeLayout — Standardansicht", () => {
 
     expect(homeProfileFor(leadCareAccess)).toBe("lead_care");
     const keys = keysOf(placements);
-    expect(keys[0]).toBe("section.my_day");
+    // „Heute anders“ steht in jedem Profil ganz oben (#7659), darunter der
+    // eigene Tag.
+    expect(keys[0]).toBe("section.day_changes");
+    expect(keys[1]).toBe("section.my_day");
     expect(keys).toContain("section.my_group");
     expect(keys).toContain("section.open_requests");
     expect(keys).toContain("section.day_flow");
@@ -174,11 +177,11 @@ describe("resolveHomeLayout — Standardansicht", () => {
       return [entry.col, entry.row];
     };
     expect(keysOf(placements)).not.toContain("section.reminders");
-    expect(cell("section.my_day")).toEqual([0, 0]);
-    expect(cell("section.my_group")).toEqual([0, 3]);
-    // Die Tagesinformationen nehmen den Platz der Erinnerungen.
-    expect(cell("section.staff_notices")).toEqual([2, 3]);
-    expect(cell("section.birthdays")).toEqual([0, 5]);
+    expect(cell("section.day_changes")).toEqual([0, 0]);
+    expect(cell("section.my_day")).toEqual([0, 2]);
+    expect(cell("section.my_group")).toEqual([0, 5]);
+    // Die Geburtstage rücken direkt unter die Gruppe.
+    expect(cell("section.birthdays")).toEqual([0, 7]);
   });
 
   // Die Startseite der Betreuungskraft hatte unten rechts ein Loch: ohne
@@ -333,7 +336,7 @@ describe("resolveHomeLayout — eigene Anordnung", () => {
     const { placements, customized } = resolveHomeLayout(
       fullContext,
       [
-        { key: "section.staff_notices", span: 4, col: 0, row: 0 },
+        { key: "section.staff_today", span: 4, col: 0, row: 0 },
         { key: "tile.students_sick", span: 1, col: 0, row: 0 },
       ],
       {},
@@ -341,7 +344,7 @@ describe("resolveHomeLayout — eigene Anordnung", () => {
     );
 
     expect(placements[0]).toEqual({
-      key: "section.staff_notices",
+      key: "section.staff_today",
       span: 4,
       col: 0,
       row: 0,
@@ -362,16 +365,23 @@ describe("resolveHomeLayout — eigene Anordnung", () => {
     // Startseite längst eingerichtet hat.
     const { placements } = resolveHomeLayout(
       fullContext,
-      [{ key: "section.staff_notices", span: 2, col: 0, row: 0 }],
+      [{ key: "section.staff_today", span: 2, col: 0, row: 0 }],
       {},
       {},
     );
 
-    expect(placements[0]?.key).toBe("section.staff_notices");
+    expect(placements[0]?.key).toBe("section.staff_today");
+    // Der neue Baustein „Heute anders“ (#7659) erreicht so auch Konten mit
+    // eigener Anordnung: er hängt als Erster der Standardansicht hinten an.
     expect(placements[1]).toMatchObject({
-      key: "tile.students_present",
+      key: "section.day_changes",
       col: 0,
       row: 2,
+    });
+    expect(placements[2]).toMatchObject({
+      key: "tile.students_present",
+      col: 0,
+      row: 4,
     });
     expect(keysOf(placements)).toContain("section.open_requests");
   });
@@ -379,7 +389,7 @@ describe("resolveHomeLayout — eigene Anordnung", () => {
   it("lässt entfernte Bausteine entfernt", () => {
     const { placements, addable } = resolveHomeLayout(
       fullContext,
-      [{ key: "section.staff_notices", span: 2, col: 0, row: 0 }],
+      [{ key: "section.staff_today", span: 2, col: 0, row: 0 }],
       { "section.open_requests": false },
       {},
     );
@@ -430,15 +440,15 @@ describe("resolveHomeLayout — eigene Anordnung", () => {
     const { placements } = resolveHomeLayout(
       fullContext,
       [
-        { key: "section.staff_notices", span: 2, col: 0, row: 0 },
-        { key: "section.staff_notices", span: 4, col: 0, row: 0 },
+        { key: "section.staff_today", span: 2, col: 0, row: 0 },
+        { key: "section.staff_today", span: 4, col: 0, row: 0 },
       ],
       {},
       {},
     );
 
     expect(
-      keysOf(placements).filter((key) => key === "section.staff_notices"),
+      keysOf(placements).filter((key) => key === "section.staff_today"),
     ).toHaveLength(1);
   });
 });
@@ -473,8 +483,8 @@ describe("resolveHomeLayout — Berechtigung", () => {
     expect(keys).not.toContain("tile.students_present");
     expect(keys).not.toContain("section.active_groups");
     expect(keysOf(placements)).not.toContain("tile.students_present");
-    // users:read trägt die Tagesinformationen — die bleiben.
-    expect(keysOf(placements)).toContain("section.staff_notices");
+    // users:read trägt die Erinnerungen — die bleiben.
+    expect(keysOf(placements)).toContain("section.reminders");
   });
 
   // Dieselbe Quelle wie der Tagesplan, also dasselbe Recht.
@@ -559,7 +569,7 @@ describe("resolveHomeLayout — Vorgabe der Einrichtung", () => {
   it("stellt einen verpflichtenden Baustein auf, auch wenn er entfernt wurde", () => {
     const { placements, addable } = resolveHomeLayout(
       fullContext,
-      [{ key: "section.staff_notices", span: 2, col: 0, row: 0 }],
+      [{ key: "section.staff_today", span: 2, col: 0, row: 0 }],
       { "section.birthdays": false },
       { "section.birthdays": "required" },
     );
@@ -589,10 +599,10 @@ describe("resolveHomeLayout — Vorgabe der Einrichtung", () => {
       fullContext,
       [],
       {},
-      { "section.staff_notices": "optional" },
+      { "section.day_changes": "optional" },
     );
 
-    expect(keysOf(placements)).toContain("section.staff_notices");
+    expect(keysOf(placements)).toContain("section.day_changes");
   });
 });
 
@@ -619,15 +629,15 @@ describe("sanitize", () => {
   it("räumt eine gespeicherte Anordnung auf", () => {
     expect(
       sanitizeHomeBlockPlacements([
-        { key: "section.staff_notices", span: 4, col: 0, row: 0 },
-        { key: "section.staff_notices", span: 2, col: 0, row: 0 },
+        { key: "section.staff_today", span: 4, col: 0, row: 0 },
+        { key: "section.staff_today", span: 2, col: 0, row: 0 },
         { key: "tile.does_not_exist", span: 1, col: 0, row: 0 },
         { key: "tile.students_sick", span: 3 },
         "kaputt",
         null,
       ]),
     ).toEqual([
-      { key: "section.staff_notices", span: 4, col: 0, row: 0 },
+      { key: "section.staff_today", span: 4, col: 0, row: 0 },
       // Eine Breite, die es für eine Kennzahl nicht gibt, wird korrigiert;
       // ohne Zelle landet sie oben links und rückt unter die Karte dort.
       { key: "tile.students_sick", span: 1, col: 0, row: 2 },

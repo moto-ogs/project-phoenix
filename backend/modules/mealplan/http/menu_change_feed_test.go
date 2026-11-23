@@ -115,29 +115,51 @@ func (f *menuChangeFixture) family(t *testing.T, booked bool) testpkg.ParentChai
 	return chain
 }
 
-// setMenu saves the dishes of a day through the school's route.
+// setMenu saves the dishes of a day through the school's route, with the
+// version the week read gives just before (ADR 0311).
 func (f *menuChangeFixture) setMenu(t *testing.T, date string, dishes ...string) {
 	t.Helper()
 	items := make([]string, 0, len(dishes))
 	for _, dish := range dishes {
 		items = append(items, fmt.Sprintf(`{"dish":%q}`, dish))
 	}
-	req := httptest.NewRequest(http.MethodPut, "/"+date, strings.NewReader(`{"dishes":[`+strings.Join(items, ",")+`]}`))
+	body := fmt.Sprintf(`{"dishes":[%s],"expected_version":%q}`, strings.Join(items, ","), f.dayVersion(t, date))
+	req := httptest.NewRequest(http.MethodPut, "/days/"+date, strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	f.mealRequest(t, req)
 }
 
 func (f *menuChangeFixture) clearMenu(t *testing.T, date string) {
 	t.Helper()
-	f.mealRequest(t, httptest.NewRequest(http.MethodDelete, "/"+date, nil))
+	f.setMenu(t, date)
 }
 
-func (f *menuChangeFixture) mealRequest(t *testing.T, req *http.Request) {
+// dayVersion is the version the week read gives for the day now.
+func (f *menuChangeFixture) dayVersion(t *testing.T, date string) string {
 	t.Helper()
-	f.mealRequestAs(t, req, f.staffID)
+	rec := f.mealRequest(t, httptest.NewRequest(http.MethodGet, "/days?week_start="+date, nil))
+	var response struct {
+		Data []struct {
+			Date    string `json:"date"`
+			Version string `json:"version"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+	for _, day := range response.Data {
+		if day.Date == date {
+			return day.Version
+		}
+	}
+	t.Fatalf("the week read has no day %s", date)
+	return ""
 }
 
-func (f *menuChangeFixture) mealRequestAs(t *testing.T, req *http.Request, accountID int64) {
+func (f *menuChangeFixture) mealRequest(t *testing.T, req *http.Request) *httptest.ResponseRecorder {
+	t.Helper()
+	return f.mealRequestAs(t, req, f.staffID)
+}
+
+func (f *menuChangeFixture) mealRequestAs(t *testing.T, req *http.Request, accountID int64) *httptest.ResponseRecorder {
 	t.Helper()
 	claims := routetest.DefaultTestClaims()
 	claims.ID = int(accountID)
@@ -146,15 +168,16 @@ func (f *menuChangeFixture) mealRequestAs(t *testing.T, req *http.Request, accou
 	claims.TenantID = f.tenantID
 	rec := routetest.ExecuteWithAuthPermissions(t, testpkg.MountedQueryBudgetRouter("/api/meal-plan", f.meals), req, claims, []string{"admin:*"})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	return rec
 }
 
 type menuChangeEntry struct {
-	ID       int64   `json:"id"`
-	Type     string  `json:"type"`
-	Title    string  `json:"title"`
-	Body     string  `json:"body"`
-	DeepLink string  `json:"deep_link"`
-	ReadAt   *string `json:"read_at"`
+	ID       testpkg.ID `json:"id"`
+	Type     string     `json:"type"`
+	Title    string     `json:"title"`
+	Body     string     `json:"body"`
+	DeepLink string     `json:"deep_link"`
+	ReadAt   *string    `json:"read_at"`
 }
 
 func (f *menuChangeFixture) entries(t *testing.T, accountID int64) []menuChangeEntry {
@@ -284,7 +307,8 @@ func TestMenuChangeFollowsWindowAndSchoolSwitch(t *testing.T) {
 	// Who changes the menu hears nothing about it, also as a guardian with
 	// a booking.
 	for _, dish := range []string{"Fisch", "Gemüse"} {
-		req := httptest.NewRequest(http.MethodPut, "/2030-06-19", strings.NewReader(fmt.Sprintf(`{"dishes":[{"dish":%q}]}`, dish)))
+		body := fmt.Sprintf(`{"dishes":[{"dish":%q}],"expected_version":%q}`, dish, f.dayVersion(t, "2030-06-19"))
+		req := httptest.NewRequest(http.MethodPut, "/days/2030-06-19", strings.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
 		f.mealRequestAs(t, req, family.AccountID)
 	}

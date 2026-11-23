@@ -1,5 +1,7 @@
 // lib/usercontext-helpers.ts
 
+import type * as studentsContract from "~/lib/contract/students.generated";
+import type * as meContract from "./contract/me.generated";
 import type { EducationalGroup } from "./user-context-types";
 
 // Frontend types for UserContext (EducationalGroup is shared with the
@@ -8,7 +10,6 @@ export type { EducationalGroup };
 
 export interface ActiveGroup {
   id: string;
-  name: string;
   room_id?: string;
   room?: {
     id: string;
@@ -16,93 +17,37 @@ export interface ActiveGroup {
   };
 }
 
-interface Person {
-  id: string;
-  first_name: string;
-  last_name: string;
-  date_of_birth?: string;
-}
+/** The name of the staff member as the navigation shows it. */
+type Person = Pick<
+  meContract.DirectoryPersonSnapshot,
+  "id" | "first_name" | "last_name"
+>;
 
+/**
+ * The staff record of the signed-in account. The contract sends no phone,
+ * mail or emergency contact here; the staff page reads those.
+ */
 export interface Staff {
   id: string;
   person_id: string;
-  phone?: string;
-  email?: string;
-  emergency_contact?: string;
-  emergency_phone?: string;
   person?: Person;
-}
-
-// Backend types (what comes from the API)
-export interface BackendEducationalGroup {
-  id: number;
-  name: string;
-  via_substitution?: boolean;
-  room_id?: number;
-  room?: {
-    id: number;
-    name: string;
-  };
-}
-
-export interface NavigationEducationalGroup {
-  id: string;
-  name: string;
-  via_substitution?: boolean;
-  is_personal?: boolean;
-  room_id?: string;
-  room_name?: string;
-  /** Namen der Gruppenleitung, nur wenn eine zugeordnet ist (#4351). */
-  leaders?: string[];
-}
-
-export interface BackendActiveGroup {
-  id: number;
-  name: string;
-  room_id?: number;
-  room?: {
-    id: number;
-    name: string;
-  };
-}
-
-export interface BackendPerson {
-  id: number;
-  first_name: string;
-  last_name: string;
-  date_of_birth?: string;
-}
-
-export interface BackendStaff {
-  id: number;
-  person_id: number;
-  phone?: string;
-  email?: string;
-  emergency_contact?: string;
-  emergency_phone?: string;
-  person?: BackendPerson;
 }
 
 // Helper functions to transform backend data to frontend types
 export function mapEducationalGroupResponse(
-  data: BackendEducationalGroup,
+  data: meContract.CallerGroupRow,
 ): EducationalGroup {
   return {
-    id: data.id.toString(),
+    id: data.id,
     name: data.name,
-    roomId: data.room_id?.toString(),
-    room: data.room
-      ? {
-          id: data.room.id.toString(),
-          name: data.room.name,
-        }
-      : undefined,
-    viaSubstitution: data.via_substitution ?? false,
+    roomId: data.room_id,
+    room: data.room ? { id: data.room.id, name: data.room.name } : undefined,
+    viaSubstitution: data.via_substitution,
   };
 }
 
 export function mapNavigationEducationalGroupResponse(
-  data: NavigationEducationalGroup,
+  data: studentsContract.NavigationGroup,
 ): EducationalGroup {
   return {
     id: data.id,
@@ -116,56 +61,30 @@ export function mapNavigationEducationalGroupResponse(
   };
 }
 
-// Shared mapper for group responses with room information
-function mapGroupWithRoom<
-  T extends {
-    id: number;
-    name: string;
-    room_id?: number | null;
-    room?: { id: number; name: string } | null;
-  },
->(
-  data: T,
-): {
-  id: string;
-  name: string;
-  room_id?: string;
-  room?: { id: string; name: string };
-} {
+/**
+ * A supervised session. Go sends no name of its own; the view names it by
+ * its room.
+ */
+export function mapActiveGroupResponse(
+  data: meContract.ActiveGroup,
+): ActiveGroup {
   return {
-    id: data.id.toString(),
-    name: data.name,
-    room_id: data.room_id?.toString(),
-    room: data.room
+    id: data.id,
+    room_id: data.room_id,
+    room: data.room ? { id: data.room.id, name: data.room.name } : undefined,
+  };
+}
+
+export function mapStaffResponse(data: meContract.Staff): Staff {
+  return {
+    id: data.id,
+    person_id: data.person_id,
+    person: data.person
       ? {
-          id: data.room.id.toString(),
-          name: data.room.name,
+          id: data.person.id,
+          first_name: data.person.first_name,
+          last_name: data.person.last_name,
         }
       : undefined,
-  };
-}
-
-export function mapActiveGroupResponse(data: BackendActiveGroup): ActiveGroup {
-  return mapGroupWithRoom(data);
-}
-
-export function mapPersonResponse(data: BackendPerson): Person {
-  return {
-    id: data.id.toString(),
-    first_name: data.first_name,
-    last_name: data.last_name,
-    date_of_birth: data.date_of_birth,
-  };
-}
-
-export function mapStaffResponse(data: BackendStaff): Staff {
-  return {
-    id: data.id.toString(),
-    person_id: data.person_id.toString(),
-    phone: data.phone,
-    email: data.email,
-    emergency_contact: data.emergency_contact,
-    emergency_phone: data.emergency_phone,
-    person: data.person ? mapPersonResponse(data.person) : undefined,
   };
 }

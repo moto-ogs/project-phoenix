@@ -65,11 +65,10 @@ describe("shared resource factories", () => {
     expect(roomKeys.key({ page: 1, pageSize: 500 })).toBe(
       roomKeys.key({ pageSize: 500, page: 1 }),
     );
-    expect(roomKeys.key({ search: undefined })).toBe(roomKeys.key());
+    expect(roomKeys.key({ building: undefined })).toBe(roomKeys.key());
     expect(groupKeys.key({ pageSize: 500, page: 1 })).toBe(
       groupKeys.key({ page: 1, pageSize: 500 }),
     );
-    expect(staffKeys.key()).toBe(staffKeys.key({}, { strict: false }));
     expect(new Set(factories.map((f) => f.key())).size).toBe(4);
     expect(roomKeys.key({ includeSystem: true })).not.toBe(roomKeys.key());
     expect(roomKeys.key({ pageSize: 500 })).not.toBe(

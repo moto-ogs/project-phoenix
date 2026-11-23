@@ -1,55 +1,18 @@
-// Generic CRUD Service Factory
+// Generic CRUD service of the Datenverwaltung. Each entity's config calls
+// bffJson with its registered routes and their generated types (#7806); the
+// factory adds the hooks, the logging and one page for an unpaginated list.
 
 import { createLogger } from "~/lib/logger";
-import {
-  apiErrorFromText,
-  transportFetch,
-  type ApiError,
-} from "~/lib/api-error";
+import type {
+  CrudService,
+  EntityApi,
+  EntityConfig,
+  PaginatedResponse,
+} from "./types";
 
 const logger = createLogger({ component: "ServiceFactory" });
-import type { EntityConfig, CrudService, PaginatedResponse } from "./types";
 
-export class MalformedCrudListResponseError extends Error {
-  readonly entity: string;
-  readonly endpoint: string;
-  readonly responseShape: string;
-
-  constructor(entity: string, endpoint: string, responseShape: string) {
-    super(
-      `Malformed CRUD list response for ${entity} from ${endpoint}: expected an array or an object with a data array. Received ${responseShape}.`,
-    );
-    this.name = "MalformedCrudListResponseError";
-    this.entity = entity;
-    this.endpoint = endpoint;
-    this.responseShape = responseShape;
-  }
-}
-
-// Helper functions extracted to reduce cognitive complexity (S3776)
-
-function describeResponseShape(response: unknown): string {
-  if (response === null) {
-    return "null";
-  }
-
-  if (Array.isArray(response)) {
-    return "array";
-  }
-
-  if (typeof response === "object") {
-    return `object keys: ${Object.keys(response).join(",")}`;
-  }
-
-  return typeof response;
-}
-
-/**
- * Creates a default pagination object for non-paginated responses
- */
-function createDefaultPagination(
-  length: number,
-): PaginatedResponse<never>["pagination"] {
+function onePage(length: number): PaginatedResponse<never>["pagination"] {
   return {
     current_page: 1,
     page_size: length,
@@ -58,219 +21,22 @@ function createDefaultPagination(
   };
 }
 
-/**
- * Maps an array of items using an optional mapper function
- */
-function mapDataArray<T>(
-  data: unknown[],
-  mapResponse?: (item: unknown) => T,
-): T[] {
-  return mapResponse ? data.map((item) => mapResponse(item)) : (data as T[]);
-}
-
-/**
- * Type guard to check if object is a paginated response
- */
-function isPaginatedResponse(obj: unknown): obj is {
-  data: unknown[];
-  pagination: PaginatedResponse<unknown>["pagination"];
-} {
-  return (
-    obj !== null &&
-    typeof obj === "object" &&
-    "data" in obj &&
-    Array.isArray((obj as { data: unknown }).data) &&
-    "pagination" in obj
-  );
-}
-
-/**
- * Type guard to check if object has a data array
- */
-function hasDataArray(obj: unknown): obj is {
-  data: unknown[];
-  pagination?: PaginatedResponse<unknown>["pagination"];
-} {
-  return (
-    obj !== null &&
-    typeof obj === "object" &&
-    "data" in obj &&
-    Array.isArray((obj as { data: unknown[] }).data)
-  );
-}
-
-/**
- * Type guard for API wrapper response with success/data structure
- */
-function isApiWrapper(
-  obj: unknown,
-): obj is { success: boolean; data: unknown } {
-  return (
-    obj !== null && typeof obj === "object" && "success" in obj && "data" in obj
-  );
-}
-
 export function createCrudService<T>(config: EntityConfig<T>): CrudService<T> {
-  const { api: apiConfig, service } = config;
+  const { api, hooks } = config;
+  const entity = config.name.singular;
 
-  // Helper to make fetch requests with auth. The BFF routes read the
-  // session cookie; the browser holds no token (#5005).
-  const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
-    const headers = new Headers();
-    headers.set("Content-Type", "application/json");
-    if (options.headers) {
-      const optionHeaders = new Headers(options.headers);
-      optionHeaders.forEach((value, key) => {
-        headers.set(key, value);
-      });
-    }
-
-    // A request that never reached the API becomes general.unavailable.
-    const response = await transportFetch(url, {
-      ...options,
-      headers,
-      credentials: "include",
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-
-      // 4xx = expected business errors (conflict, not found, etc.) → warn
-      // 5xx = unexpected server errors → error
-      if (response.status >= 500) {
-        logger.error("api_server_error", {
-          status: response.status,
-          error: errorText,
-        });
-      } else {
-        logger.warn("api_request_rejected", {
-          status: response.status,
-          error: errorText,
-        });
-      }
-
-      // An ApiError keeps status, code, field errors and request ID for the
-      // shared error path (#2513); its message is the envelope's diagnostic
-      // `detail`.
-      const apiError: ApiError & { body?: string } = apiErrorFromText(
-        `API error: ${response.status}`,
-        response.status,
-        errorText,
-      );
-      // Carry the RAW response body too. The ApiError keeps only the
-      // envelope's standard members, which silently drops every structured
-      // sibling field the proxy forwards — notably the companion-plan 409's
-      // top-level `conflicts` array. Without it the student Stammdaten form
-      // cannot name what the user confirmed, so "Ergänzen und speichern"
-      // re-sends an empty confirmation and gets the same 409 forever.
-      apiError.body = errorText;
-      throw apiError;
-    }
-
-    // Handle empty responses (204 No Content, or empty body from DELETE)
-    const contentType = response.headers.get("content-type");
-    const hasJson = contentType?.includes("application/json");
-    const contentLength = response.headers.get("content-length");
-
-    if (response.status === 204 || contentLength === "0" || !hasJson) {
-      return null;
-    }
-
-    return response.json() as Promise<unknown>;
-  };
-
-  // Build endpoint URLs
-  const endpoints = {
-    list: apiConfig.endpoints?.list ?? apiConfig.basePath,
-    get: apiConfig.endpoints?.get ?? `${apiConfig.basePath}/{id}`,
-    create: apiConfig.endpoints?.create ?? apiConfig.basePath,
-    update: apiConfig.endpoints?.update ?? `${apiConfig.basePath}/{id}`,
-    delete: apiConfig.endpoints?.delete ?? `${apiConfig.basePath}/{id}`,
-  };
+  function missing(operation: keyof EntityApi<T>): never {
+    throw new Error(`${entity}: no ${operation} route`);
+  }
 
   return {
-    async getList(
-      filters?: Record<string, unknown>,
-    ): Promise<PaginatedResponse<T>> {
+    async getList(): Promise<PaginatedResponse<T>> {
       try {
-        // Build query string
-        const params = new URLSearchParams();
-        if (apiConfig.listParams) {
-          Object.entries(apiConfig.listParams).forEach(([key, value]) => {
-            params.append(key, value);
-          });
-        }
-        if (filters) {
-          Object.entries(filters).forEach(([key, value]) => {
-            if (value !== undefined && value !== null) {
-              let stringValue: string;
-              if (typeof value === "object") {
-                stringValue = JSON.stringify(value);
-              } else if (typeof value === "boolean") {
-                stringValue = value.toString();
-              } else if (typeof value === "number") {
-                stringValue = value.toString();
-              } else {
-                stringValue = value as string;
-              }
-              params.append(key, stringValue);
-            }
-          });
-        }
-
-        const queryString = params.toString();
-        const url = queryString
-          ? `${endpoints.list}?${queryString}`
-          : endpoints.list;
-        const response = await fetchWithAuth(url);
-
-        // Parse response using helper functions to reduce complexity
-        const dataSource = isApiWrapper(response) ? response.data : response;
-
-        // Handle paginated response
-        if (isPaginatedResponse(dataSource)) {
-          const mappedData = mapDataArray<T>(
-            dataSource.data,
-            service?.mapResponse,
-          );
-          return { ...dataSource, data: mappedData } as PaginatedResponse<T>;
-        }
-
-        // Handle direct array response
-        if (Array.isArray(dataSource)) {
-          const mappedData = mapDataArray<T>(dataSource, service?.mapResponse);
-          return {
-            data: mappedData,
-            pagination: createDefaultPagination(mappedData.length),
-          };
-        }
-
-        // Handle wrapped response with data array
-        if (hasDataArray(dataSource)) {
-          const mappedData = mapDataArray<T>(
-            dataSource.data,
-            service?.mapResponse,
-          );
-          return {
-            data: mappedData,
-            pagination:
-              dataSource.pagination ??
-              createDefaultPagination(mappedData.length),
-          } as PaginatedResponse<T>;
-        }
-
-        const responseShape = describeResponseShape(dataSource);
-        const malformedResponseError = new MalformedCrudListResponseError(
-          config.name.plural,
-          endpoints.list,
-          responseShape,
-        );
-        logger.warn("malformed_crud_list_response", {
-          entity: malformedResponseError.entity,
-          endpoint: malformedResponseError.endpoint,
-          responseShape: malformedResponseError.responseShape,
-        });
-        throw malformedResponseError;
+        const answer = await api.list();
+        // A paginated route answers its page beside the data (#2353).
+        return Array.isArray(answer)
+          ? { data: answer, pagination: onePage(answer.length) }
+          : answer;
       } catch (error) {
         logger.error("error fetching entities", {
           entity: config.name.plural,
@@ -282,20 +48,10 @@ export function createCrudService<T>(config: EntityConfig<T>): CrudService<T> {
 
     async getOne(id: string): Promise<T> {
       try {
-        // Check if there's a custom getOne method
-        if (service?.customMethods?.getOne) {
-          const result = await service.customMethods.getOne(id);
-          return result as T;
-        }
-
-        const url = endpoints.get.replace("{id}", id);
-        const response = await fetchWithAuth(url);
-
-        const data = (response as { data?: unknown })?.data ?? response;
-        return service?.mapResponse ? service.mapResponse(data) : (data as T);
+        return await (api.get ?? missing("get"))(id);
       } catch (error) {
         logger.error("error fetching entity", {
-          entity: config.name.singular,
+          entity,
           id,
           error: String(error),
         });
@@ -305,98 +61,36 @@ export function createCrudService<T>(config: EntityConfig<T>): CrudService<T> {
 
     async create(data: Partial<T>): Promise<T> {
       try {
-        // Check if there's a custom create method
-        if (service?.create) {
-          const result = await service.create(data);
-
-          // Apply after hook
-          if (config.hooks?.afterCreate) {
-            await config.hooks.afterCreate(result);
-          }
-
-          return result;
-        }
-
-        // Apply hooks
-        if (config.hooks?.beforeCreate) {
-          data = await config.hooks.beforeCreate(data);
-        }
-
-        const requestData = service?.mapRequest
-          ? service.mapRequest(data)
+        const input = hooks?.beforeCreate
+          ? await hooks.beforeCreate(data)
           : data;
-
-        const response = await fetchWithAuth(endpoints.create, {
-          method: "POST",
-          body: JSON.stringify(requestData),
-        });
-
-        const responseData = (response as { data?: unknown })?.data ?? response;
-        const result = service?.mapResponse
-          ? service.mapResponse(responseData)
-          : (responseData as T);
-
-        // Apply after hook
-        if (config.hooks?.afterCreate) {
-          await config.hooks.afterCreate(result);
-        }
-
+        const result = await (api.create ?? missing("create"))(input);
+        if (hooks?.afterCreate) await hooks.afterCreate(result);
         return result;
       } catch (error) {
         logger.error("error creating entity", {
-          entity: config.name.singular,
+          entity,
           error: String(error),
         });
         throw error;
       }
     },
 
-    async update(id: string, data: Partial<T>, current?: T): Promise<T> {
+    async update(id: string, data: Partial<T>, current?: T): Promise<T | null> {
       try {
-        // Check if there's a custom update method
-        if (service?.update) {
-          const result =
-            current === undefined
-              ? await service.update(id, data)
-              : await service.update(id, data, current);
-
-          // Apply after hook
-          if (config.hooks?.afterUpdate) {
-            await config.hooks.afterUpdate(result);
-          }
-
-          return result;
-        }
-
-        // Apply hooks
-        if (config.hooks?.beforeUpdate) {
-          data = await config.hooks.beforeUpdate(id, data);
-        }
-
-        const url = endpoints.update.replace("{id}", id);
-        const requestData = service?.mapRequest
-          ? service.mapRequest(data)
+        const input = hooks?.beforeUpdate
+          ? await hooks.beforeUpdate(id, data)
           : data;
-
-        const response = await fetchWithAuth(url, {
-          method: "PUT",
-          body: JSON.stringify(requestData),
-        });
-
-        const responseData = (response as { data?: unknown })?.data ?? response;
-        const result = service?.mapResponse
-          ? service.mapResponse(responseData)
-          : (responseData as T);
-
-        // Apply after hook
-        if (config.hooks?.afterUpdate) {
-          await config.hooks.afterUpdate(result);
-        }
-
+        const result = await (api.update ?? missing("update"))(
+          id,
+          input,
+          current,
+        );
+        if (hooks?.afterUpdate) await hooks.afterUpdate(result);
         return result;
       } catch (error) {
         logger.error("error updating entity", {
-          entity: config.name.singular,
+          entity,
           id,
           error: String(error),
         });
@@ -405,25 +99,21 @@ export function createCrudService<T>(config: EntityConfig<T>): CrudService<T> {
     },
 
     async remove(id: string): Promise<boolean> {
-      if (config.hooks?.beforeDelete) {
-        const shouldDelete = await config.hooks.beforeDelete(id);
+      if (hooks?.beforeDelete) {
+        const shouldDelete = await hooks.beforeDelete(id);
         if (!shouldDelete) return false;
       }
       try {
-        await fetchWithAuth(endpoints.delete.replace("{id}", id), {
-          method: "DELETE",
-        });
+        await (api.delete ?? missing("delete"))(id);
       } catch (error) {
         logger.warn("entity_delete_failed", {
-          entity: config.name.singular,
+          entity,
           id,
           error: error instanceof Error ? error.message : String(error),
         });
         throw error;
       }
-      if (config.hooks?.afterDelete) {
-        await config.hooks.afterDelete(id);
-      }
+      if (hooks?.afterDelete) await hooks.afterDelete(id);
       return true;
     },
   };

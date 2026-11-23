@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -28,21 +29,21 @@ func TestStaffAbsenceMapContract(t *testing.T) {
 		today := absenceMapDay
 
 		absence1 := workforce.StaffAbsence{
-			StaffID:     staff1.ID,
+			StaffID:     ident.ID(staff1.ID),
 			AbsenceType: workforce.AbsenceTypeSick,
 			DateStart:   today.String(),
 			DateEnd:     today.String(),
 			Status:      workforce.AbsenceStatusReported,
-			CreatedBy:   staff1.ID,
+			CreatedBy:   ident.ID(staff1.ID),
 		}
 
 		absence2 := workforce.StaffAbsence{
-			StaffID:     staff2.ID,
+			StaffID:     ident.ID(staff2.ID),
 			AbsenceType: workforce.AbsenceTypeVacation,
 			DateStart:   today.String(),
 			DateEnd:     today.String(),
 			Status:      workforce.AbsenceStatusApproved,
-			CreatedBy:   staff2.ID,
+			CreatedBy:   ident.ID(staff2.ID),
 		}
 
 		_, err := repo.CreateStaffAbsence(ctx, &absence1)
@@ -62,21 +63,21 @@ func TestStaffAbsenceMapContract(t *testing.T) {
 
 		// Create two overlapping absences for same staff
 		absence1 := workforce.StaffAbsence{
-			StaffID:     staff3.ID,
+			StaffID:     ident.ID(staff3.ID),
 			AbsenceType: workforce.AbsenceTypeVacation,
 			DateStart:   today.String(),
 			DateEnd:     today.String(),
 			Status:      workforce.AbsenceStatusApproved,
-			CreatedBy:   staff3.ID,
+			CreatedBy:   ident.ID(staff3.ID),
 		}
 
 		absence2 := workforce.StaffAbsence{
-			StaffID:     staff3.ID,
+			StaffID:     ident.ID(staff3.ID),
 			AbsenceType: workforce.AbsenceTypeSick,
 			DateStart:   today.String(),
 			DateEnd:     today.String(),
 			Status:      workforce.AbsenceStatusReported,
-			CreatedBy:   staff3.ID,
+			CreatedBy:   ident.ID(staff3.ID),
 		}
 
 		_, err := repo.CreateStaffAbsence(ctx, &absence1)
@@ -94,12 +95,12 @@ func TestStaffAbsenceMapContract(t *testing.T) {
 		staff1 := testpkg.CreateTestStaff(t, db, "Staff", "One")
 		requestedDate := absenceMapDay.AddDays(30)
 		absence := workforce.StaffAbsence{
-			StaffID:     staff1.ID,
+			StaffID:     ident.ID(staff1.ID),
 			AbsenceType: workforce.AbsenceTypeTraining,
 			DateStart:   requestedDate.String(),
 			DateEnd:     requestedDate.String(),
 			Status:      workforce.AbsenceStatusApproved,
-			CreatedBy:   staff1.ID,
+			CreatedBy:   ident.ID(staff1.ID),
 		}
 
 		_, createErr := repo.CreateStaffAbsence(ctx, &absence)
@@ -121,21 +122,21 @@ func TestStaffAbsenceMapContract(t *testing.T) {
 		require.NoError(t, err)
 
 		customAbsence := workforce.StaffAbsence{
-			StaffID:       staff1.ID,
+			StaffID:       ident.ID(staff1.ID),
 			AbsenceType:   workforce.AbsenceTypeOther,
-			AbsenceTypeID: &absenceType.ID,
+			AbsenceTypeID: (*ident.ID)(&absenceType.ID),
 			DateStart:     today.String(),
 			DateEnd:       today.String(),
 			Status:        workforce.AbsenceStatusApproved,
-			CreatedBy:     staff1.ID,
+			CreatedBy:     ident.ID(staff1.ID),
 		}
 		standardAbsence := workforce.StaffAbsence{
-			StaffID:     staff1.ID,
+			StaffID:     ident.ID(staff1.ID),
 			AbsenceType: workforce.AbsenceTypeOther,
 			DateStart:   today.String(),
 			DateEnd:     today.String(),
 			Status:      workforce.AbsenceStatusApproved,
-			CreatedBy:   staff1.ID,
+			CreatedBy:   ident.ID(staff1.ID),
 		}
 		_, err = repo.CreateStaffAbsence(ctx, &customAbsence)
 		require.NoError(t, err)

@@ -26,6 +26,11 @@ vi.mock("~/lib/traeger-list-export", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/traeger-list-export")>()),
   downloadTraegerList: vi.fn(),
 }));
+// downloadTraegerList is mocked; the file request it would read never runs.
+vi.mock("~/lib/bff-fetch", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/bff-fetch")>()),
+  bffFile: () => new Promise<Response>(() => undefined),
+}));
 
 const api = vi.hoisted(() => ({
   fetchTraegerBuero: vi.fn(),
@@ -200,6 +205,8 @@ describe("TraegerAccountsPage", () => {
       const view = render(<View open />, { wrapper: Providers });
       expect(await screen.findByText("Lea Leitung")).toBeVisible();
       expect((await screen.findAllByText("Rollen geändert"))[0]).toBeVisible();
+      expect(office.readCurrent?.().data).toEqual(BUERO);
+      expect(history.readCurrent?.().data).toEqual(HISTORY);
       await openDownload(downloadLabel);
       fireEvent.click(await screen.findByRole("menuitem", { name: /Excel/ }));
       expect(
@@ -209,8 +216,11 @@ describe("TraegerAccountsPage", () => {
           )
         )[0],
       ).toBeVisible();
-      expect(office.readCurrent?.().data).toBeUndefined();
-      expect(history.readCurrent?.().data).toBeUndefined();
+      // The toast can render before the effect withdraws the cached data.
+      await waitFor(() => {
+        expect(office.readCurrent?.().data).toBeUndefined();
+        expect(history.readCurrent?.().data).toBeUndefined();
+      });
       view.rerender(<View open={false} />);
       api.fetchTraegerBuero.mockRejectedValue(new ApiError("offline", 503));
       api.fetchTraegerAccountHistory.mockRejectedValue(

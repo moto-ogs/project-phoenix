@@ -18,35 +18,31 @@ counts alone do not establish correct command effects or runtime protocols.
 
 ---
 
-## 1. Layer Discipline — Handler → Service → Repository → Database
+## 1. Handlers Call Capabilities, Never Persistence
 
-**RULE: Handlers in `api/` MUST NOT access repositories directly.** Not as struct fields, not via service `.Repository()` getters, not via direct package import.
+**RULE: A handler (`api/`, `modules/*/http`, `modules/*/inbound`, `workflows/*/http`) depends on its owner's capability or a consumer-owned port, never on a store, a repository or a query.**
 
 ### Forbidden
 
 ```go
-// FORBIDDEN — repo as a handler struct field
+// FORBIDDEN — persistence as a handler struct field
 type Resource struct {
-    StaffRepo users.StaffRepository
+    store postgres.Store // an owner adapter
 }
 
-// FORBIDDEN — handler reaching through service to grab the repo
-staff, err := rs.UsersService.StaffRepository().FindByPersonID(ctx, personID)
-
-// FORBIDDEN — direct import of repositories from api/ files (except base.go + testutil)
-import "github.com/moto-ogs/project-phoenix/database/repositories/..."
+// FORBIDDEN — a query built in the handler
+err := db.NewSelect().Model(&rows).Where("person_id = ?", id).Scan(ctx)
 ```
 
 ### Required
 
 ```go
-// CORRECT — handler depends on a service interface
+// CORRECT — the handler holds the capability its owner exposes
+// (modules/timetable/http/activities/http.go)
 type Resource struct {
-    UsersService users.Service
+    ActivityService activityContract.ActivityService
+    UserService     SupervisorDirectory // consumer-owned port
 }
-
-// CORRECT — service exposes a business operation
-staff, err := rs.UsersService.GetStaffByPersonID(ctx, personID)
 ```
 
 ### Enforcement — CI ratchet, currently at ZERO violations
@@ -341,7 +337,7 @@ querybudgets.AssertQueryBudget(t, "api.students.list", counter.Queries())
 ```
 
 - **One counter.** `testpkg.QueryCounter` (`backend/test/query_counter.go`) is the only bun hook tests may define: `CaptureQueries(t, db)` attaches it to a DB, `NewQueryCounter()` feeds `db.WithQueryHook` for a private clone. It buckets by operation (`Operation("SELECT")`), table (`Selects("config.setting_values")`) or predicate (`Matching`). Tests that count own their database (`SetupIsolatedTestDB`) or a `WithQueryHook` clone before they run in parallel.
-- **The register is the budget.** It and `AssertQueryBudget` live in package `test/query-budgets` (import alias `querybudgets`), not in `testpkg`, so a budget edit retests only the packages that assert budgets. `queryBudgets` maps a scenario name to a statement count: `max` entries are ceilings, `exact` entries pin a dedup contract (one bulk load, one settings snapshot). Shrink-only: lower a number when a fix removes statements, never raise one. A scenario that needs more statements is an N+1 until proven otherwise; batch-load by ID set (`modules/timetable/internal/application/exception_conflicts.go` is the reference shape).
+- **The register is the budget.** It and `AssertQueryBudget` live in package `test/query-budgets` (import alias `querybudgets`), not in `testpkg`, so a budget edit retests only the packages that assert budgets. `queryBudgets` maps a scenario name to a statement count: `max` entries are ceilings, `exact` entries pin a dedup contract (one bulk load, one settings snapshot). Shrink-only: lower a number when a fix removes statements, never raise one. A scenario that needs more statements is an N+1 until proven otherwise; batch-load by ID set (`= ANY(?)`) and resolve in memory.
 - **Two CI halves.** `TestQueryBudgetRatchet` (source-level, runs in the no-database ratchet step) fails on register entries no test references, scenario names no entry defines, and any `_test.go` file defining its own `BeforeQuery` hook. The budget tests themselves run with the full backend suite.
 
 ---
@@ -413,9 +409,6 @@ cd backend
 
 # Rule 16 — source gates are backend-wide; other ratchets keep their named scopes
 ../scripts/run-go-toolchain.sh go test -tags=testhooks ./test/ -run 'TestModule' -count=1
-
-# Rule 1 — manual sweep (should be zero)
-rg --type go -g '!*_test.go' '^\s+\w+\s+[\w\.]*Repository\b|\.\w+Repository\(\)' api/
 
 # Rule 3 — review unnecessary getters in owner-private implementations
 rg --type go -c 'func \([^)]+\) GetID\(\)' modules/ workflows/ | awk -F: '{s+=$2} END {print s}'

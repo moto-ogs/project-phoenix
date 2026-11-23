@@ -13,6 +13,7 @@ import {
 } from "@testing-library/react";
 import type { ReactElement, ReactNode } from "react";
 import { ToastProvider } from "~/contexts/ToastContext";
+import { ApiError } from "~/lib/api-error";
 import { SWRConfig } from "~/lib/swr/testing";
 import { useSWRAuth } from "~/lib/swr";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
@@ -67,7 +68,10 @@ const api = {
   updateGradeTransition: vi.fn(),
   deleteGradeTransition: vi.fn(),
   previewGradeTransition: vi.fn<(id: string) => Promise<TransitionPreview>>(),
-  applyGradeTransition: vi.fn<(id: string) => Promise<TransitionResult>>(),
+  applyGradeTransition:
+    vi.fn<
+      (id: string, expectedFingerprint: string) => Promise<TransitionResult>
+    >(),
   revertGradeTransition: vi.fn<(id: string) => Promise<TransitionResult>>(),
   fetchTransitionHistory: vi.fn(),
 };
@@ -92,7 +96,7 @@ vi.mock("~/lib/grade-transition-api", async (importOriginal) => {
     previewGradeTransition: (...args: unknown[]) =>
       api.previewGradeTransition(...(args as [string])),
     applyGradeTransition: (...args: unknown[]) =>
-      api.applyGradeTransition(...(args as [string])),
+      api.applyGradeTransition(...(args as [string, string])),
     revertGradeTransition: (...args: unknown[]) =>
       api.revertGradeTransition(...(args as [string])),
     fetchTransitionHistory: (...args: unknown[]) =>
@@ -136,6 +140,7 @@ const draftTransition: GradeTransition = {
   canModify: true,
   canApply: true,
   canRevert: false,
+  version: "v1",
 };
 
 const appliedTransition: GradeTransition = {
@@ -146,6 +151,7 @@ const appliedTransition: GradeTransition = {
   canModify: false,
   canApply: false,
   canRevert: true,
+  version: "v1",
 };
 
 const suggestions: SuggestedMapping[] = [
@@ -503,6 +509,45 @@ describe("GradeTransitionsManager", () => {
     await waitFor(() => {
       expect(api.deleteGradeTransition).toHaveBeenCalledWith("7");
     });
+  });
+
+  // Hat eine Kollegin den Entwurf inzwischen angewendet, bleibt kein
+  // Entwurf zum Bearbeiten: der Editor schließt, die Liste zeigt den
+  // gespeicherten Stand und die Meldung sagt warum (ADR 0311).
+  it("shows the applied transition instead of the stale draft after a not_draft refusal", async () => {
+    api.listGradeTransitions.mockResolvedValue([draftTransition]);
+    api.updateGradeTransition.mockImplementation(() => {
+      api.listGradeTransitions.mockResolvedValue([
+        { ...appliedTransition, id: draftTransition.id, version: "v2" },
+      ]);
+      return Promise.reject(
+        new ApiError("not a draft", 409, {
+          code: "grade_transition.not_draft",
+        }),
+      );
+    });
+    render(<GradeTransitionsManager />);
+
+    await screen.findByText("2026-2027");
+    openRowMenu();
+    fireEvent.click(screen.getByRole("menuitem", { name: /Bearbeiten/i }));
+    await screen.findByLabelText("Schuljahr (neu)");
+    fireEvent.click(
+      screen.getByRole("button", { name: /Weiter zur Vorschau/i }),
+    );
+
+    await waitFor(() =>
+      expect(
+        screen.queryByLabelText("Schuljahr (neu)"),
+      ).not.toBeInTheDocument(),
+    );
+    expect(await screen.findByText("Angewendet")).toBeInTheDocument();
+    expect(screen.queryByText("Entwurf")).not.toBeInTheDocument();
+    // Die Meldung steht als Hinweis über der Liste, nicht im geschlossenen
+    // Editor.
+    expect(
+      await screen.findByText(/inzwischen von einer anderen Person angewendet/),
+    ).toBeInTheDocument();
   });
 });
 

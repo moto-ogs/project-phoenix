@@ -5,7 +5,7 @@ import {
   bool,
   calendarDate,
   instant,
-  int64StringOrNumber,
+  int64String,
   noData,
   nullable,
   object,
@@ -17,6 +17,8 @@ import {
 } from "./runtime";
 import {
   HolidayRegistrationDetailSchema,
+  HolidaySiblingSchema,
+  type HolidaySibling,
 } from "./shared.generated";
 
 /** Go: parentbilling.DebtorNumberFormat */
@@ -39,7 +41,7 @@ export interface CostBearerChoice {
 }
 
 export const CostBearerChoiceSchema: z.ZodType<CostBearerChoice, unknown> = object<CostBearerChoice>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
 });
 
@@ -82,7 +84,7 @@ export const HolidayContributionLineResponseSchema: z.ZodType<HolidayContributio
   discount_basis_points: nullable(safeInt),
   discount_cents: nullable(safeInt),
   note: str,
-  cost_bearer_id: nullable(int64StringOrNumber),
+  cost_bearer_id: nullable(int64String),
   cost_bearer_name: str,
   booked_days: nullable(safeInt),
 });
@@ -96,36 +98,10 @@ export interface HolidayChildContributionResponse {
 }
 
 export const HolidayChildContributionResponseSchema: z.ZodType<HolidayChildContributionResponse, unknown> = object<HolidayChildContributionResponse>({
-  child_id: int64StringOrNumber,
+  child_id: int64String,
   position: safeInt,
   lines: nullable(arr(HolidayContributionLineResponseSchema)),
   total_cents: safeInt,
-});
-
-/** Go: parentbilling.HolidaySiblingChild */
-export interface HolidaySiblingChild {
-  id: string;
-  first_name: string;
-  last_name: string;
-}
-
-export const HolidaySiblingChildSchema: z.ZodType<HolidaySiblingChild, unknown> = object<HolidaySiblingChild>({
-  id: int64StringOrNumber,
-  first_name: str,
-  last_name: str,
-});
-
-/** Go: parentbilling.HolidaySibling */
-export interface HolidaySibling {
-  registration_id: string;
-  status: string;
-  children: HolidaySiblingChild[] | null;
-}
-
-export const HolidaySiblingSchema: z.ZodType<HolidaySibling, unknown> = object<HolidaySibling>({
-  registration_id: int64StringOrNumber,
-  status: str,
-  children: nullable(arr(HolidaySiblingChildSchema)),
 });
 
 /** Go: parentbillinghttp.HolidayContributionResponse */
@@ -150,7 +126,7 @@ export const HolidayContributionResponseSchema: z.ZodType<HolidayContributionRes
   total_cents: safeInt,
   exemption_available: bool,
   benefits_exemption: bool,
-  cost_bearer_id: nullable(int64StringOrNumber),
+  cost_bearer_id: nullable(int64String),
   cost_bearer_name: str,
   frozen: bool,
   confirmed_at: nullable(instant),
@@ -170,7 +146,7 @@ export interface HolidayChildDebtorNumber {
 }
 
 export const HolidayChildDebtorNumberSchema: z.ZodType<HolidayChildDebtorNumber, unknown> = object<HolidayChildDebtorNumber>({
-  child_id: int64StringOrNumber,
+  child_id: int64String,
   first_name: str,
   last_name: str,
   debtor_number: str,
@@ -194,8 +170,8 @@ export interface HolidaySiblingGroup {
 }
 
 export const HolidaySiblingGroupSchema: z.ZodType<HolidaySiblingGroup, unknown> = object<HolidaySiblingGroup>({
-  id: int64StringOrNumber,
-  registration_ids: nullable(arr(int64StringOrNumber)),
+  id: int64String,
+  registration_ids: nullable(arr(int64String)),
 });
 
 /** Go: parentbilling.HolidayCancellation */
@@ -206,21 +182,21 @@ export interface HolidayCancellation {
 }
 
 export const HolidayCancellationSchema: z.ZodType<HolidayCancellation, unknown> = object<HolidayCancellation>({
-  id: int64StringOrNumber,
+  id: int64String,
   status: str,
-  moved_up: nullable(arr(int64StringOrNumber)),
+  moved_up: nullable(arr(int64String)),
 });
 
 /** Go: parentbilling.HolidayChildDebtorNumberInput */
 export interface HolidayChildDebtorNumberInput {
-  child_id?: number;
+  child_id?: string;
   debtor_number?: string;
 }
 
 /** Go: parentbillinghttp.HolidayConfirmRequest */
 export interface HolidayConfirmRequest {
   benefits_exemption?: boolean;
-  cost_bearer_id?: number;
+  cost_bearer_id?: string;
   debtor_number?: string;
   family_debtor_number?: string;
   child_debtor_numbers?: HolidayChildDebtorNumberInput[] | null;
@@ -234,14 +210,14 @@ export interface HolidayConfirmationResponse {
 }
 
 export const HolidayConfirmationResponseSchema: z.ZodType<HolidayConfirmationResponse, unknown> = object<HolidayConfirmationResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   status: str,
   contribution: HolidayContributionResponseSchema,
 });
 
 /** Go: parentbillinghttp.HolidaySiblingMergeRequest */
 export interface HolidaySiblingMergeRequest {
-  registration_ids?: number[] | null;
+  registration_ids?: string[] | null;
 }
 
 /** Go: parentbillinghttp.HolidayChildDebtorNumbersRequest */
@@ -251,8 +227,8 @@ export interface HolidayChildDebtorNumbersRequest {
 
 /** Go: parentbilling.HolidayBookingChoice */
 export interface HolidayBookingChoice {
-  week_id?: number;
-  time_model_id?: number;
+  week_id?: string;
+  time_model_id?: string;
   days?: (string | null)[] | null;
   lunch?: boolean;
 }
@@ -260,6 +236,7 @@ export interface HolidayBookingChoice {
 /** Go: parentbillinghttp.HolidayRebookingRequest */
 export interface HolidayRebookingRequest {
   bookings?: HolidayBookingChoice[] | null;
+  expected_version?: string;
 }
 
 /** Go: parentbillinghttp.HolidayDebtorNumberRequest */
@@ -275,7 +252,7 @@ export interface HolidayDebtorNumber {
 }
 
 export const HolidayDebtorNumberSchema: z.ZodType<HolidayDebtorNumber, unknown> = object<HolidayDebtorNumber>({
-  id: int64StringOrNumber,
+  id: int64String,
   debtor_number: str,
 });
 
@@ -293,17 +270,11 @@ export interface HolidayPlaceChange {
 }
 
 export const HolidayPlaceChangeSchema: z.ZodType<HolidayPlaceChange, unknown> = object<HolidayPlaceChange>({
-  registration_id: optional(int64StringOrNumber),
-  week_id: optional(int64StringOrNumber),
+  registration_id: optional(int64String),
+  week_id: optional(int64String),
   capacity: nullable(safeInt),
-  moved_up: nullable(arr(int64StringOrNumber)),
+  moved_up: nullable(arr(int64String)),
 });
-
-/** Query of GET /traeger/holiday-contributions/{periodId}/registrations/{registrationId} */
-export interface GetTraegerHolidayContributionsPeriodIdRegistrationsRegistrationIdQuery {
-  benefits_exemption?: boolean;
-  cost_bearer_id?: string;
-}
 
 export const routes = {
   "DELETE /traeger/holiday-contributions/{periodId}/sibling-groups/registrations/{registrationId}": {
@@ -322,7 +293,10 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/holiday-contributions/{periodId}/registrations/{registrationId}",
     portals: ["org"],
-    query: ["benefits_exemption", "cost_bearer_id"],
+    query: {
+      "benefits_exemption": { kind: "bool" },
+      "cost_bearer_id": { kind: "id" },
+    },
     response: success(HolidayContributionResponseSchema),
   },
   "GET /traeger/holiday-contributions/{periodId}/registrations/{registrationId}/family-debtor-number": {

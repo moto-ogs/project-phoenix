@@ -4,7 +4,7 @@ import {
   bool,
   calendarDate,
   instant,
-  int64StringOrNumber,
+  int64String,
   nullable,
   object,
   optional,
@@ -67,7 +67,7 @@ export interface NoticeOptions {
 }
 
 export const NoticeOptionsSchema: z.ZodType<NoticeOptions, unknown> = object<NoticeOptions>({
-  contract_id: int64StringOrNumber,
+  contract_id: int64String,
   status: str,
   child_name: str,
   modules: str,
@@ -101,17 +101,14 @@ export interface NoticeEndRequest {
   ends_on?: string | null;
 }
 
-/** Query of GET /traeger/contract-notices/{id} */
-export interface GetTraegerContractNoticesIdQuery {
-  received_on?: string;
-}
-
 export const routes = {
   "GET /traeger/contract-notices/{id}": {
     method: "GET",
     pattern: "/traeger/contract-notices/{id}",
     portals: ["org"],
-    query: ["received_on"],
+    query: {
+      "received_on": { kind: "date" },
+    },
     response: success(NoticeOptionsSchema),
   },
   "POST /traeger/contract-notices/{id}": {

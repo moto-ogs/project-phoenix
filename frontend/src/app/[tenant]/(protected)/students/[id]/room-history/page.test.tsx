@@ -76,15 +76,10 @@ vi.mock("next-auth/react", () => ({
 }));
 
 // The session gate is passed; requests reach the stubbed fetch.
-vi.mock("~/lib/session-cache", async () => {
-  const { transportFetch } =
-    await vi.importActual<typeof import("~/lib/api-error")>("~/lib/api-error");
-  // The session gate is tested in session-cache; here only the transport.
-  return {
-    sessionFetch: (url: string, init?: RequestInit) =>
-      transportFetch(url, init),
-  };
-});
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
 
 vi.mock("~/lib/breadcrumb-context", () => ({
   useStudentHistoryBreadcrumb: vi.fn(),
@@ -157,6 +152,7 @@ function dayCountStat(): string | null {
 }
 global.fetch = mockFetch;
 
+// The child as the contract answers it; the client maps it once.
 function mockStudentResponse(overrides?: Record<string, unknown>) {
   return {
     ok: true,
@@ -165,8 +161,7 @@ function mockStudentResponse(overrides?: Record<string, unknown>) {
       data: {
         id: "42",
         first_name: "Test",
-        second_name: "Student",
-        name: "Test Student",
+        last_name: "Student",
         school_class: "Klasse 2a",
         group_name: "Sterne",
         ...overrides,
@@ -599,7 +594,7 @@ describe("StudentRoomHistoryPage", () => {
       expect.stringContaining(
         `/api/students/42/attendance-history/export?format=pdf&from=${testClockDay(-29)}&to=${TEST_CLOCK_TODAY}`,
       ),
-      undefined,
+      { method: "GET" },
     );
   });
 

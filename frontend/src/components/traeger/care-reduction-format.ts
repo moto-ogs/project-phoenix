@@ -19,7 +19,7 @@ export const CARE_RULE_KIND_PURPOSE: Record<CareRuleKind, string> = {
   income_level:
     "Stufen laut Satzung. Ein Kind bekommt die Stufe über einen Nachweis.",
   sibling:
-    "Für den Monatsbeitrag: Ab dem 2. oder 3. Kind einer Familie zahlt die Familie weniger.",
+    "Für den Monatsbeitrag: Familien mit mehreren Kindern zahlen weniger, ab einem bestimmten Kind oder für alle Kinder.",
   single_parent: "Weniger für Kinder mit Nachweis „alleinerziehend“.",
   cap: "So viel zahlt eine Familie höchstens im Monat.",
 };
@@ -51,15 +51,21 @@ export function ruleEffect(
 
 /** The line under a reduction on the invoice. */
 export function reductionExplanation(reduction: CareReduction): string {
-  switch (reduction.kind) {
+  const { kind } = reduction;
+  if (kind === undefined) return reduction.name;
+  const known = { ...reduction, kind };
+  switch (kind) {
     case "sibling":
-      return `${reduction.childRank ?? "?"}. Kind von ${reduction.familyChildren ?? "?"} · ${ruleEffect(reduction)} · zuerst zählt das Kind mit dem höchsten Beitrag`;
+      if (reduction.siblingAllChildren) {
+        return `${reduction.familyChildren ?? "?"} Kinder in der Familie · ${ruleEffect(known)}`;
+      }
+      return `${reduction.childRank ?? "?"}. Kind von ${reduction.familyChildren ?? "?"} · ${ruleEffect(known)} · zuerst zählt das Kind mit dem höchsten Beitrag`;
     case "cap":
       return `Höchstbetrag ${formatEuro(reduction.capCents ?? 0)} je Familie und Monat erreicht`;
     case "income_level":
-      return `Einkommensstufe · ${ruleEffect(reduction)}`;
+      return `Einkommensstufe · ${ruleEffect(known)}`;
     case "single_parent":
-      return `Alleinerziehend · ${ruleEffect(reduction)}`;
+      return `Alleinerziehend · ${ruleEffect(known)}`;
   }
 }
 

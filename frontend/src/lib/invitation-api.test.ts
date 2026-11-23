@@ -1,10 +1,13 @@
+import type { SchoolInvitationResponse } from "./contract/auth-invitations.generated";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
+
 import type {
   InvitationAcceptRequest,
   CreateInvitationRequest,
-  BackendInvitationValidation,
-  BackendInvitation,
 } from "./invitation-helpers";
+import type { InvitationValidationResponse } from "./contract/auth-invitations.generated";
 import {
   validateInvitation,
   acceptInvitation,
@@ -23,7 +26,7 @@ vi.mock("./invitation-helpers", async () => {
   return {
     ...actual,
     mapInvitationValidationResponse: vi.fn(
-      (data: BackendInvitationValidation) => ({
+      (data: InvitationValidationResponse) => ({
         email: data.email,
         roleName: data.role_name,
         firstName: data.first_name,
@@ -32,7 +35,7 @@ vi.mock("./invitation-helpers", async () => {
         expiresAt: data.expires_at,
       }),
     ),
-    mapPendingInvitationResponse: vi.fn((data: BackendInvitation) => ({
+    mapPendingInvitationResponse: vi.fn((data: SchoolInvitationResponse) => ({
       id: data.id,
       email: data.email,
       roleId: data.role_id,
@@ -49,23 +52,32 @@ vi.mock("./invitation-helpers", async () => {
 });
 
 // Sample test data
-const sampleBackendValidation: BackendInvitationValidation = {
+const sampleBackendValidation: InvitationValidationResponse = {
   email: "teacher@example.com",
   role_name: "Teacher",
   first_name: "John",
   last_name: "Doe",
   position: "Math Teacher",
   expires_at: "2025-12-31T23:59:59Z",
+  target_portal: "",
+  requires_account_login: false,
+  caregiver_enabled: false,
 };
 
-const sampleBackendInvitation: BackendInvitation = {
-  id: 1,
+const sampleBackendInvitation: SchoolInvitationResponse = {
+  employment_action: "",
+  reset_master_data: false,
+  reset_qualifications: false,
+  reset_work_time: false,
+  id: "1",
   email: "teacher@example.com",
   role_id: "2",
   role_name: "Teacher",
   token: "invitation-token-123",
   expires_at: "2025-12-31T23:59:59Z",
-  created_by: 1,
+  created_by: "1",
+  delivery_status: "sent",
+  email_retry_count: 0,
   first_name: "John",
   last_name: "Doe",
   position: "Math Teacher",
@@ -84,29 +96,6 @@ describe("invitation-api", () => {
   });
 
   describe("validateInvitation", () => {
-    it("validates invitation successfully with direct data response", async () => {
-      global.fetch = vi.fn().mockResolvedValueOnce({
-        ok: true,
-        json: async () => sampleBackendValidation,
-      });
-
-      const result = await validateInvitation("test-token-123");
-
-      expect(global.fetch).toHaveBeenCalledWith(
-        "/api/invitations/validate?token=test-token-123",
-        // transportFetch hands fetch an explicit init.
-        undefined,
-      );
-      expect(result).toEqual({
-        email: "teacher@example.com",
-        roleName: "Teacher",
-        firstName: "John",
-        lastName: "Doe",
-        position: "Math Teacher",
-        expiresAt: "2025-12-31T23:59:59Z",
-      });
-    });
-
     it("validates invitation successfully with wrapped data response", async () => {
       global.fetch = vi.fn().mockResolvedValueOnce({
         ok: true,
@@ -122,15 +111,17 @@ describe("invitation-api", () => {
     it("handles URL encoding of token", async () => {
       global.fetch = vi.fn().mockResolvedValueOnce({
         ok: true,
-        json: async () => sampleBackendValidation,
+        json: async () => ({
+          status: "success",
+          data: sampleBackendValidation,
+        }),
       });
 
       await validateInvitation("token with spaces & special=chars");
 
       expect(global.fetch).toHaveBeenCalledWith(
-        "/api/invitations/validate?token=token%20with%20spaces%20%26%20special%3Dchars",
-        // transportFetch hands fetch an explicit init.
-        undefined,
+        "/api/auth/invitations/token%20with%20spaces%20%26%20special%3Dchars",
+        { method: "GET", credentials: "include", cache: "no-store" },
       );
     });
 
@@ -149,7 +140,7 @@ describe("invitation-api", () => {
       );
     });
 
-    it("throws error with text error message when validation fails", async () => {
+    it("keeps a plain-text refusal as diagnostics, not as the message", async () => {
       global.fetch = vi.fn().mockResolvedValueOnce({
         ok: false,
         status: 410,
@@ -159,9 +150,10 @@ describe("invitation-api", () => {
 
       vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
-      await expect(validateInvitation("expired-token")).rejects.toThrow(
-        "Invitation expired",
-      );
+      await expect(validateInvitation("expired-token")).rejects.toMatchObject({
+        status: 410,
+        message: "Einladung konnte nicht geprüft werden.",
+      });
     });
 
     it("uses fallback message when response body is empty", async () => {
@@ -343,10 +335,15 @@ describe("invitation-api", () => {
     it("accepts invitation successfully", async () => {
       global.fetch = vi.fn().mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ status: "success" }),
+        json: async () => ({
+          status: "success",
+          data: { account_id: "77", email: "test@example.com" },
+        }),
       });
 
-      await acceptInvitation("test-token-123", acceptRequest);
+      await expect(
+        acceptInvitation("test-token-123", acceptRequest),
+      ).resolves.toEqual({ tenantSubdomain: undefined });
 
       expect(global.fetch).toHaveBeenCalledWith("/api/invitations/accept", {
         method: "POST",
@@ -357,6 +354,8 @@ describe("invitation-api", () => {
           token: "test-token-123",
           ...acceptRequest,
         }),
+        credentials: "include",
+        cache: "no-store",
       });
     });
 
@@ -366,7 +365,7 @@ describe("invitation-api", () => {
         json: async () => ({
           status: "success",
           data: {
-            account_id: 77,
+            account_id: "77",
             email: "test@example.com",
             tenant_subdomain: "burbach",
           },
@@ -418,27 +417,9 @@ describe("invitation-api", () => {
       position: "Science Teacher",
     };
 
-    it("creates invitation successfully with direct data response", async () => {
-      global.fetch = vi.fn().mockResolvedValueOnce({
-        ok: true,
-        json: async () => sampleBackendInvitation,
-      });
-
-      const result = await createInvitation(createRequest);
-
-      expect(global.fetch).toHaveBeenCalledWith("/api/invitations", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(createRequest),
-        credentials: "include",
-      });
-      expect(result.email).toBe("teacher@example.com");
-      expect(result.roleId).toBe("2");
-    });
-
-    it("creates invitation successfully with wrapped data response", async () => {
+    // The catalog proxy serves /auth/invitations in the contract's field
+    // names (#7563); the client names the fields once, here.
+    it("posts the contract body through the catalog proxy and maps the answer", async () => {
       global.fetch = vi.fn().mockResolvedValueOnce({
         ok: true,
         json: async () => ({ data: sampleBackendInvitation }),
@@ -446,7 +427,23 @@ describe("invitation-api", () => {
 
       const result = await createInvitation(createRequest);
 
-      expect(result.id).toBe(1);
+      expect(global.fetch).toHaveBeenCalledWith("/api/auth/invitations", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: expect.any(String),
+      });
+      const init = vi.mocked(global.fetch).mock.calls[0]![1]!;
+      expect(JSON.parse(init.body as string)).toEqual({
+        email: "newteacher@example.com",
+        role_id: "2",
+        first_name: "Jane",
+        last_name: "Smith",
+        position: "Science Teacher",
+      });
+      expect(result.id).toBe("1");
+      expect(result.roleId).toBe("2");
       expect(result.token).toBe("invitation-token-123");
     });
 
@@ -485,11 +482,15 @@ describe("invitation-api", () => {
     it("forwards cancellation to the former employment lookup", async () => {
       global.fetch = vi.fn().mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ data: { former_employment: null } }),
+        json: async () => ({
+          data: { former_employment: null, version: "none-version" },
+        }),
       });
       const controller = new AbortController();
 
-      await findFormerEmployment("former@example.com", controller.signal);
+      await expect(
+        findFormerEmployment("former@example.com", controller.signal),
+      ).resolves.toEqual({ formerEmployment: null, version: "none-version" });
 
       expect(global.fetch).toHaveBeenCalledWith(
         "/api/auth/invitations/former-employment",
@@ -509,34 +510,11 @@ describe("invitation-api", () => {
 
       const result = await listPendingInvitations();
 
-      expect(global.fetch).toHaveBeenCalledWith("/api/invitations", {
-        credentials: "include",
+      expect(global.fetch).toHaveBeenCalledWith("/api/auth/invitations", {
+        method: "GET",
       });
       expect(result).toHaveLength(1);
       expect(result[0]?.email).toBe("teacher@example.com");
-    });
-
-    it("lists invitations with direct data array", async () => {
-      global.fetch = vi.fn().mockResolvedValueOnce({
-        ok: true,
-        json: async () => [sampleBackendInvitation],
-      });
-
-      const result = await listPendingInvitations();
-
-      expect(result).toHaveLength(1);
-    });
-
-    it("handles single invitation response as array", async () => {
-      global.fetch = vi.fn().mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ data: sampleBackendInvitation }),
-      });
-
-      const result = await listPendingInvitations();
-
-      expect(result).toHaveLength(1);
-      expect(result[0]?.id).toBe(1);
     });
 
     it("throws error when fetch fails", async () => {
@@ -574,16 +552,15 @@ describe("invitation-api", () => {
     it("resends invitation successfully", async () => {
       global.fetch = vi.fn().mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ status: "success" }),
+        json: async () => ({ status: "success", data: { message: "sent" } }),
       });
 
-      await resendInvitation(123);
+      await resendInvitation("123");
 
       expect(global.fetch).toHaveBeenCalledWith(
         "/api/auth/invitations/123/resend",
         {
           method: "POST",
-          credentials: "include",
         },
       );
     });
@@ -598,7 +575,7 @@ describe("invitation-api", () => {
 
       vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
-      await expect(resendInvitation(999)).rejects.toThrow(
+      await expect(resendInvitation("999")).rejects.toThrow(
         "Einladung konnte nicht erneut gesendet werden.",
       );
     });
@@ -613,7 +590,7 @@ describe("invitation-api", () => {
 
       vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
-      await expect(resendInvitation(123)).rejects.toThrow(
+      await expect(resendInvitation("123")).rejects.toThrow(
         "Einladung konnte nicht erneut gesendet werden.",
       );
     });
@@ -623,14 +600,13 @@ describe("invitation-api", () => {
     it("revokes invitation successfully", async () => {
       global.fetch = vi.fn().mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ status: "success" }),
+        json: async () => ({ status: "success", data: null }),
       });
 
-      await revokeInvitation(123);
+      await revokeInvitation("123");
 
       expect(global.fetch).toHaveBeenCalledWith("/api/auth/invitations/123", {
         method: "DELETE",
-        credentials: "include",
       });
     });
 
@@ -644,7 +620,7 @@ describe("invitation-api", () => {
 
       vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
-      await expect(revokeInvitation(999)).rejects.toThrow(
+      await expect(revokeInvitation("999")).rejects.toThrow(
         "Einladung konnte nicht widerrufen werden.",
       );
     });
@@ -659,7 +635,7 @@ describe("invitation-api", () => {
 
       vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
-      await expect(revokeInvitation(123)).rejects.toThrow(
+      await expect(revokeInvitation("123")).rejects.toThrow(
         "Einladung konnte nicht widerrufen werden.",
       );
     });

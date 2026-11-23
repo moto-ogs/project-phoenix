@@ -1,4 +1,7 @@
 import { describe, it, expect } from "vitest";
+import type * as operatorSchoolsContract from "~/lib/contract/operator-schools.generated";
+import type * as operatorUnregisteredTagScansContract from "~/lib/contract/operator-unregistered-tag-scans.generated";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 import {
   generateSlug,
   isValidSlug,
@@ -12,19 +15,13 @@ import {
   mapUnregisteredTagScan,
   mapSchoolPWAUsage,
   mapSchoolSummary,
+  mapSampleChildrenResult,
+  mapTraegerErasureOrder,
+  mapTraegerMember,
   summaryToOrganization,
   summaryToSchool,
 } from "./provisioning-helpers";
 import type {
-  BackendOrganization,
-  BackendSchool,
-  BackendInvitation,
-  BackendSchoolAccount,
-  BackendSchoolSummary,
-  BackendOrgAccount,
-  BackendOperatorDevice,
-  BackendOperatorPerson,
-  BackendUnregisteredTagScan,
   OrganizationSummary,
   SchoolSummary,
 } from "./provisioning-helpers";
@@ -133,13 +130,14 @@ describe("isValidSlug", () => {
 
 describe("mapOrganization", () => {
   it("maps backend organization to frontend format", () => {
-    const backend: BackendOrganization = {
-      id: 42,
+    const backend: sharedContract.Organization = {
+      test_system: false,
+      id: "42",
       name: "Test Org",
       slug: "test-org",
       active: true,
-      deleted_at: null,
-      settings: null,
+      deleted_at: undefined,
+      settings: undefined,
       created_at: "2025-01-01T00:00:00Z",
       updated_at: "2025-01-02T00:00:00Z",
     };
@@ -157,9 +155,12 @@ describe("mapOrganization", () => {
 
 describe("mapSchool", () => {
   it("maps backend school to frontend format", () => {
-    const backend: BackendSchool = {
-      id: 10,
-      organization_id: 42,
+    const backend: sharedContract.School = {
+      child_quota_bundles: null,
+      child_quota_bundle_size: 0,
+      device_slots: null,
+      id: "10",
+      organization_id: "42",
       name: "Test School",
       slug: "test-school",
       subdomain: "test",
@@ -170,8 +171,8 @@ describe("mapSchool", () => {
       email: "info@test.de",
       active: true,
       hidden: false,
-      deleted_at: null,
-      settings: null,
+      deleted_at: undefined,
+      settings: undefined,
       created_at: "2025-01-01T00:00:00Z",
       updated_at: "2025-01-02T00:00:00Z",
     };
@@ -188,9 +189,12 @@ describe("mapSchool", () => {
   });
 
   it("maps hidden: true correctly", () => {
-    const backend: BackendSchool = {
-      id: 10,
-      organization_id: 42,
+    const backend: sharedContract.School = {
+      child_quota_bundles: null,
+      child_quota_bundle_size: 0,
+      device_slots: null,
+      id: "10",
+      organization_id: "42",
       name: "Hidden School",
       slug: "hidden-school",
       subdomain: "hidden",
@@ -201,8 +205,8 @@ describe("mapSchool", () => {
       email: "",
       active: true,
       hidden: true,
-      deleted_at: null,
-      settings: null,
+      deleted_at: undefined,
+      settings: undefined,
       created_at: "2025-01-01T00:00:00Z",
       updated_at: "2025-01-02T00:00:00Z",
     };
@@ -213,9 +217,12 @@ describe("mapSchool", () => {
   });
 
   it("maps deleted_at timestamp correctly", () => {
-    const backend: BackendSchool = {
-      id: 10,
-      organization_id: 42,
+    const backend: sharedContract.School = {
+      child_quota_bundles: null,
+      child_quota_bundle_size: 0,
+      device_slots: null,
+      id: "10",
+      organization_id: "42",
       name: "Deleted School",
       slug: "deleted-school",
       subdomain: "deleted",
@@ -227,7 +234,7 @@ describe("mapSchool", () => {
       active: false,
       hidden: false,
       deleted_at: "2026-03-15T10:00:00Z",
-      settings: null,
+      settings: undefined,
       created_at: "2025-01-01T00:00:00Z",
       updated_at: "2025-01-02T00:00:00Z",
     };
@@ -238,9 +245,12 @@ describe("mapSchool", () => {
   });
 
   it("maps deleted_at: null correctly", () => {
-    const backend: BackendSchool = {
-      id: 10,
-      organization_id: 42,
+    const backend: sharedContract.School = {
+      child_quota_bundles: null,
+      child_quota_bundle_size: 0,
+      device_slots: null,
+      id: "10",
+      organization_id: "42",
       name: "Active School",
       slug: "active-school",
       subdomain: "active",
@@ -251,8 +261,8 @@ describe("mapSchool", () => {
       email: "",
       active: true,
       hidden: false,
-      deleted_at: null,
-      settings: null,
+      deleted_at: undefined,
+      settings: undefined,
       created_at: "2025-01-01T00:00:00Z",
       updated_at: "2025-01-02T00:00:00Z",
     };
@@ -263,9 +273,12 @@ describe("mapSchool", () => {
   });
 
   it("maps nested organization when present", () => {
-    const backend: BackendSchool = {
-      id: 10,
-      organization_id: 42,
+    const backend: sharedContract.School = {
+      child_quota_bundles: null,
+      child_quota_bundle_size: 0,
+      device_slots: null,
+      id: "10",
+      organization_id: "42",
       name: "Test School",
       slug: "test-school",
       subdomain: "test",
@@ -276,17 +289,18 @@ describe("mapSchool", () => {
       email: "",
       active: true,
       hidden: false,
-      deleted_at: null,
-      settings: null,
+      deleted_at: undefined,
+      settings: undefined,
       created_at: "2025-01-01T00:00:00Z",
       updated_at: "2025-01-02T00:00:00Z",
       organization: {
-        id: 42,
+        test_system: false,
+        id: "42",
         name: "Parent Org",
         slug: "parent-org",
         active: true,
-        deleted_at: null,
-        settings: null,
+        deleted_at: undefined,
+        settings: undefined,
         created_at: "2025-01-01T00:00:00Z",
         updated_at: "2025-01-02T00:00:00Z",
       },
@@ -302,21 +316,21 @@ describe("mapSchool", () => {
 
 describe("mapInvitation", () => {
   it("maps backend invitation to frontend format", () => {
-    const backend: BackendInvitation = {
-      id: 5,
+    const backend: operatorSchoolsContract.operatorInvitationResponse = {
+      id: "5",
       email: "admin@test.de",
-      role_id: 1,
+      role_id: "1",
       role_name: "admin",
       expires_at: "2025-12-31T00:00:00Z",
       first_name: "Max",
       last_name: "Mustermann",
       position: "Schulleiter",
       caregiver_enabled: true,
-      created_by: 3,
+      created_by: "3",
       creator: "operator@test.de",
       delivery_status: "sent",
       email_sent_at: "2025-01-01T00:00:00Z",
-      email_error: null,
+      email_error: undefined,
       email_retry_count: 0,
     };
 
@@ -337,12 +351,13 @@ describe("mapInvitation", () => {
   });
 
   it("handles null optional fields", () => {
-    const backend: BackendInvitation = {
-      id: 5,
+    const backend: operatorSchoolsContract.operatorInvitationResponse = {
+      caregiver_enabled: false,
+      id: "5",
       email: "admin@test.de",
-      role_id: 1,
+      role_id: "1",
       expires_at: "2025-12-31T00:00:00Z",
-      created_by: 3,
+      created_by: "3",
       delivery_status: "pending",
       email_retry_count: 0,
     };
@@ -360,12 +375,13 @@ describe("mapInvitation", () => {
   });
 
   it("handles email_error when present", () => {
-    const backend: BackendInvitation = {
-      id: 6,
+    const backend: operatorSchoolsContract.operatorInvitationResponse = {
+      caregiver_enabled: false,
+      id: "6",
       email: "fail@test.de",
-      role_id: 1,
+      role_id: "1",
       expires_at: "2025-12-31T00:00:00Z",
-      created_by: 3,
+      created_by: "3",
       delivery_status: "failed",
       email_retry_count: 2,
       email_error: "SMTP connection refused",
@@ -455,9 +471,10 @@ describe("summary adapters", () => {
 });
 
 describe("mapSchoolSummary", () => {
-  const backend: BackendSchoolSummary = {
-    id: 10,
-    organization_id: 5,
+  const backend: sharedContract.SchoolSummary = {
+    device_slots: null,
+    id: "10",
+    organization_id: "5",
     organization_name: "Stadt Köln",
     name: "GGS Europaschule",
     slug: "ggs-europa",
@@ -471,7 +488,7 @@ describe("mapSchoolSummary", () => {
     zip: "",
     phone: "",
     email: "",
-    settings: null,
+    settings: undefined,
     konten_count: 12,
     geraete_count: 4,
     personen_count: 80,
@@ -499,8 +516,12 @@ describe("mapSchoolSummary", () => {
 
 describe("mapSchoolAccount", () => {
   it("maps all fields from backend to frontend format", () => {
-    const backend: BackendSchoolAccount = {
-      account_id: 55,
+    const backend: operatorSchoolsContract.SchoolAccount = {
+      has_admin_role: false,
+      has_user_role: false,
+      has_caregiver_profile: false,
+      is_active_caregiver: false,
+      account_id: "55",
       email: "teacher@school.de",
       active: true,
       first_name: "Anna",
@@ -529,8 +550,12 @@ describe("mapSchoolAccount", () => {
   });
 
   it("converts numeric account_id to string", () => {
-    const backend: BackendSchoolAccount = {
-      account_id: 0,
+    const backend: operatorSchoolsContract.SchoolAccount = {
+      has_admin_role: false,
+      has_user_role: false,
+      has_caregiver_profile: false,
+      is_active_caregiver: false,
+      account_id: "0",
       email: "",
       active: false,
       first_name: "",
@@ -544,8 +569,12 @@ describe("mapSchoolAccount", () => {
   });
 
   it("preserves boolean active field", () => {
-    const backend: BackendSchoolAccount = {
-      account_id: 1,
+    const backend: operatorSchoolsContract.SchoolAccount = {
+      has_admin_role: false,
+      has_user_role: false,
+      has_caregiver_profile: false,
+      is_active_caregiver: false,
+      account_id: "1",
       email: "inactive@school.de",
       active: false,
       first_name: "Max",
@@ -561,8 +590,12 @@ describe("mapSchoolAccount", () => {
 
 describe("mapOrgAccount", () => {
   it("maps all fields including school info", () => {
-    const backend: BackendOrgAccount = {
-      account_id: 77,
+    const backend: sharedContract.OrganizationAccount = {
+      has_admin_role: false,
+      has_user_role: false,
+      has_caregiver_profile: false,
+      is_active_caregiver: false,
+      account_id: "77",
       email: "org-admin@org.de",
       active: true,
       first_name: "Klaus",
@@ -570,7 +603,7 @@ describe("mapOrgAccount", () => {
       role_name: "OrgAdmin",
       pedagogic_role: "",
       status: "active",
-      school_id: 10,
+      school_id: "10",
       school_name: "Test School",
     };
 
@@ -595,8 +628,12 @@ describe("mapOrgAccount", () => {
   });
 
   it("converts school_id to string", () => {
-    const backend: BackendOrgAccount = {
-      account_id: 1,
+    const backend: sharedContract.OrganizationAccount = {
+      has_admin_role: false,
+      has_user_role: false,
+      has_caregiver_profile: false,
+      is_active_caregiver: false,
+      account_id: "1",
       email: "",
       active: true,
       first_name: "",
@@ -604,7 +641,7 @@ describe("mapOrgAccount", () => {
       role_name: "",
       pedagogic_role: "",
       status: "active",
-      school_id: 999,
+      school_id: "999",
       school_name: "School 999",
     };
 
@@ -612,8 +649,12 @@ describe("mapOrgAccount", () => {
   });
 
   it("includes all SchoolAccount fields via spread", () => {
-    const backend: BackendOrgAccount = {
-      account_id: 88,
+    const backend: sharedContract.OrganizationAccount = {
+      has_admin_role: false,
+      has_user_role: false,
+      has_caregiver_profile: false,
+      is_active_caregiver: false,
+      account_id: "88",
       email: "test@org.de",
       active: false,
       first_name: "Test",
@@ -621,7 +662,7 @@ describe("mapOrgAccount", () => {
       role_name: "Teacher",
       pedagogic_role: "Pädagoge",
       status: "pending",
-      school_id: 5,
+      school_id: "5",
       school_name: "My School",
     };
 
@@ -641,8 +682,8 @@ describe("mapOrgAccount", () => {
 });
 
 describe("mapOperatorDevice", () => {
-  const fullBackendDevice: BackendOperatorDevice = {
-    id: 200,
+  const fullBackendDevice: sharedContract.OperatorDevice = {
+    id: "200",
     device_id: "dev-001",
     device_type: "raspberry_pi",
     name: "Entrance Reader",
@@ -651,9 +692,9 @@ describe("mapOperatorDevice", () => {
     masked_api_key: "sec***123",
     last_seen: "2026-03-20T15:30:00Z",
     is_online: true,
-    school_id: 10,
+    school_id: "10",
     school_name: "Test School",
-    organization_id: 5,
+    organization_id: "5",
     organization_name: "Test Org",
     created_at: "2026-01-15T00:00:00Z",
     updated_at: "2026-03-20T15:30:00Z",
@@ -682,7 +723,7 @@ describe("mapOperatorDevice", () => {
   });
 
   it("defaults name to empty string when undefined", () => {
-    const backend: BackendOperatorDevice = {
+    const backend: sharedContract.OperatorDevice = {
       ...fullBackendDevice,
       name: undefined,
     };
@@ -698,7 +739,7 @@ describe("mapOperatorDevice", () => {
   });
 
   it("defaults api_key to empty string when undefined", () => {
-    const backend: BackendOperatorDevice = {
+    const backend: sharedContract.OperatorDevice = {
       ...fullBackendDevice,
       api_key: undefined,
     };
@@ -707,7 +748,7 @@ describe("mapOperatorDevice", () => {
   });
 
   it("defaults last_seen to null when undefined", () => {
-    const backend: BackendOperatorDevice = {
+    const backend: sharedContract.OperatorDevice = {
       ...fullBackendDevice,
       last_seen: undefined,
     };
@@ -716,7 +757,7 @@ describe("mapOperatorDevice", () => {
   });
 
   it("handles offline device with missing optional fields", () => {
-    const backend: BackendOperatorDevice = {
+    const backend: sharedContract.OperatorDevice = {
       ...fullBackendDevice,
       is_online: false,
       last_seen: undefined,
@@ -742,8 +783,8 @@ describe("mapOperatorDevice", () => {
 });
 
 describe("mapOperatorPerson", () => {
-  const fullBackendPerson: BackendOperatorPerson = {
-    id: 42,
+  const fullBackendPerson: sharedContract.OperatorPerson = {
+    id: "42",
     first_name: "Max",
     last_name: "Mustermann",
     has_account: true,
@@ -751,9 +792,9 @@ describe("mapOperatorPerson", () => {
     has_rfid_card: true,
     is_staff: true,
     is_student: false,
-    school_id: 10,
+    school_id: "10",
     school_name: "Testschule",
-    organization_id: 5,
+    organization_id: "5",
     organization_name: "Testträger",
     created_at: "2026-01-01T00:00:00Z",
   };
@@ -792,16 +833,16 @@ describe("mapOperatorPerson", () => {
   });
 
   it("handles null account_email", () => {
-    const backend: BackendOperatorPerson = {
+    const backend: sharedContract.OperatorPerson = {
       ...fullBackendPerson,
-      account_email: null,
+      account_email: undefined,
     };
 
     expect(mapOperatorPerson(backend).accountEmail).toBeNull();
   });
 
   it("handles undefined account_email", () => {
-    const backend: BackendOperatorPerson = {
+    const backend: sharedContract.OperatorPerson = {
       ...fullBackendPerson,
       account_email: undefined,
     };
@@ -810,12 +851,12 @@ describe("mapOperatorPerson", () => {
   });
 
   it("maps student-only person correctly", () => {
-    const backend: BackendOperatorPerson = {
+    const backend: sharedContract.OperatorPerson = {
       ...fullBackendPerson,
       is_staff: false,
       is_student: true,
       has_account: false,
-      account_email: null,
+      account_email: undefined,
       has_rfid_card: false,
     };
 
@@ -828,7 +869,7 @@ describe("mapOperatorPerson", () => {
   });
 
   it("preserves boolean fields accurately", () => {
-    const backend: BackendOperatorPerson = {
+    const backend: sharedContract.OperatorPerson = {
       ...fullBackendPerson,
       has_account: false,
       has_rfid_card: false,
@@ -845,20 +886,20 @@ describe("mapOperatorPerson", () => {
 });
 
 describe("mapUnregisteredTagScan", () => {
-  const fullBackendScan: BackendUnregisteredTagScan = {
-    id: 300,
-    tenant_id: 10,
+  const fullBackendScan: operatorUnregisteredTagScansContract.scanResponse = {
+    id: "300",
+    tenant_id: "10",
     tag_uid: "04AABBCCDD",
-    device_id: 200,
+    device_id: "200",
     scanned_at: "2026-05-01T08:00:00Z",
     resolved_at: "2026-05-01T09:00:00Z",
-    resolved_by_operator_id: 15,
+    resolved_by_operator_id: "15",
     resolution_note: "Issued replacement card",
     created_at: "2026-05-01T08:00:00Z",
     updated_at: "2026-05-01T09:00:00Z",
-    school_id: 10,
+    school_id: "10",
     school_name: "Testschule",
-    organization_id: 5,
+    organization_id: "5",
     organization_name: "Testträger",
     device_identifier: "reader-entrance",
     device_name: "Eingang",
@@ -886,14 +927,14 @@ describe("mapUnregisteredTagScan", () => {
   });
 
   it("normalizes nullable backend fields to null", () => {
-    const backend: BackendUnregisteredTagScan = {
+    const backend: operatorUnregisteredTagScansContract.scanResponse = {
       ...fullBackendScan,
-      device_id: null,
+      device_id: undefined,
       resolved_at: undefined,
-      resolved_by_operator_id: null,
+      resolved_by_operator_id: undefined,
       resolution_note: undefined,
       device_identifier: undefined,
-      device_name: null,
+      device_name: undefined,
     };
 
     const result = mapUnregisteredTagScan(backend);
@@ -920,5 +961,53 @@ describe("mapSchoolPWAUsage", () => {
       staff: { standaloneUsers: 3, eligibleUsers: 12 },
       parent: { standaloneUsers: 47, eligibleUsers: 210 },
     });
+  });
+});
+
+// The catalog proxy decodes every answer with the contract (ADR 0270
+// point 6): nested lists may be null, open enums carry values this build
+// does not know.
+describe("mapping the decoded contract shapes (#2353)", () => {
+  it("counts no skipped children when the schools list is null", () => {
+    expect(
+      mapSampleChildrenResult({ created_count: 0, schools: null }),
+    ).toEqual({ createdCount: 0, skippedCount: 0 });
+  });
+
+  it("keeps an unknown records choice recorded but unknown", () => {
+    const order = mapTraegerErasureOrder({
+      id: "3",
+      organization_id: "5",
+      order_reference: "LOESCH-1",
+      confirmed_on: "2026-01-02",
+      erase_not_before: "2099-12-31",
+      recorded_by: "7",
+      recorded_at: "2026-01-03T10:00:00Z",
+      records_choice: "archived_elsewhere",
+    });
+    expect(order.recordsChoice).toBeUndefined();
+    expect(
+      mapTraegerErasureOrder({
+        id: "3",
+        organization_id: "5",
+        order_reference: "LOESCH-1",
+        confirmed_on: "2026-01-02",
+        erase_not_before: "2099-12-31",
+        recorded_by: "7",
+        recorded_at: "2026-01-03T10:00:00Z",
+      }).recordsChoice,
+    ).toBeNull();
+  });
+
+  it("leaves an unknown member status unknown", () => {
+    expect(
+      mapTraegerMember({
+        account_id: "9",
+        email: "buero@traeger.de",
+        status: "suspended",
+        roles: null,
+        activated_at: null,
+      }),
+    ).toMatchObject({ accountId: "9", status: undefined, roles: [] });
   });
 });

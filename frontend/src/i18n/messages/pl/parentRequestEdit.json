@@ -13,6 +13,7 @@
   "valueRequired": "Proszę wpisać wartość.",
   "submit": "Zapisz zmianę",
   "saving": "Zapisywanie …",
+  "reloading": "Wczytywanie zapisanej wersji …",
   "cancel": "Anuluj",
   "close": "Zamknij okno",
   "errorObject": "prośba",

@@ -1,3 +1,4 @@
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 /**
  * Einsatzplanung des Trägers über alle Standorte (#4708, ADR 0242).
  *
@@ -12,16 +13,17 @@ import {
   downloadTraegerList,
   type TraegerListFile,
   type TraegerListFormat,
+  listExportQuery,
 } from "./traeger-list-export";
-import { traegerRequest } from "~/lib/traeger-api";
+import type * as sharedContract from "~/lib/contract/shared.generated";
+import type * as traegerStaffPlanningContract from "~/lib/contract/traeger-staff-planning.generated";
+import { requiredDay } from "~/lib/contract/required-day";
 import {
   mapWorkingTimeWarnings,
   workingTimeBody,
   type WorkingTimeConfirmation,
   type WorkingTimeWarning,
 } from "~/lib/working-time";
-
-const BASE = "/api/traeger/staff-planning";
 
 /** Die Werte, gegen die moto die Woche prüft, alle in Minuten. */
 export interface TraegerPlanningRules {
@@ -127,73 +129,22 @@ export interface TraegerFutureShifts {
   readonly shifts: number;
 }
 
-interface BackendShift {
-  id: number | string;
-  school_id: number | string;
-  school_name: string;
-  staff_id: number | string;
-  date: string;
-  start_time: string;
-  end_time: string;
-  break_minutes: number;
-  notes?: string;
-  cancelled: boolean;
-  shift_type_name?: string;
-  shift_type_color?: string;
-  planned_by_traeger: boolean;
-  from_series: boolean;
-}
-
-interface BackendPerson {
-  staff_record_id: number | string;
-  first_name: string;
-  last_name: string;
-  sites:
-    | {
-        school_id: number | string;
-        school_name: string;
-        staff_id: number | string;
-      }[]
-    | null;
-  shifts: BackendShift[] | null;
-  planned_minutes: number;
-  soll_minutes: number | null;
-  soll_days?:
-    { school_id: number | string; date: string; minutes: number }[] | null;
-  absent_days?: { school_id: number | string; date: string }[] | null;
-  warnings: unknown;
-}
-
-interface BackendSchool {
-  id: number | string;
-  name: string;
-}
-
-interface BackendWeek {
-  week_start: string;
-  rules: {
-    enabled: boolean;
-    max_daily_minutes: number;
-    min_rest_minutes: number;
-    check_breaks: boolean;
-  };
-  schools: BackendSchool[] | null;
-  people: BackendPerson[] | null;
-  unreached: BackendSchool[] | null;
-}
-
-const mapSchool = (school: BackendSchool): TraegerPlanningSchool => ({
-  id: String(school.id),
+const mapSchool = (
+  school: sharedContract.TraegerStaffSchool,
+): TraegerPlanningSchool => ({
+  id: school.id,
   name: school.name,
 });
 
-function mapPlanningShift(shift: BackendShift): TraegerPlanningShift {
+function mapPlanningShift(
+  shift: traegerStaffPlanningContract.TraegerPlanningShift,
+): TraegerPlanningShift {
   return {
-    id: String(shift.id),
-    schoolId: String(shift.school_id),
+    id: shift.id,
+    schoolId: shift.school_id,
     schoolName: shift.school_name,
-    staffId: String(shift.staff_id),
-    date: shift.date.slice(0, 10),
+    staffId: shift.staff_id,
+    date: requiredDay(shift.date, "traeger_planning_shift.date"),
     startTime: shift.start_time.slice(0, 5),
     endTime: shift.end_time.slice(0, 5),
     breakMinutes: shift.break_minutes,
@@ -206,9 +157,11 @@ function mapPlanningShift(shift: BackendShift): TraegerPlanningShift {
   };
 }
 
-function mapPlanningWeek(week: BackendWeek): TraegerPlanningWeek {
+function mapPlanningWeek(
+  week: traegerStaffPlanningContract.TraegerPlanningWeek,
+): TraegerPlanningWeek {
   return {
-    weekStart: week.week_start.slice(0, 10),
+    weekStart: requiredDay(week.week_start, "traeger_planning_week.week_start"),
     rules: {
       enabled: week.rules.enabled,
       maxDailyMinutes: week.rules.max_daily_minutes,
@@ -218,32 +171,34 @@ function mapPlanningWeek(week: BackendWeek): TraegerPlanningWeek {
     schools: (week.schools ?? []).map(mapSchool),
     unreached: (week.unreached ?? []).map(mapSchool),
     people: (week.people ?? []).map((person) => ({
-      recordId: String(person.staff_record_id),
+      recordId: person.staff_record_id,
       firstName: person.first_name,
       lastName: person.last_name,
       sites: (person.sites ?? []).map((site) => ({
-        schoolId: String(site.school_id),
+        schoolId: site.school_id,
         schoolName: site.school_name,
-        staffId: String(site.staff_id),
+        staffId: site.staff_id,
       })),
       shifts: (person.shifts ?? []).map(mapPlanningShift),
       plannedMinutes: person.planned_minutes,
       sollMinutes: person.soll_minutes,
       sollDays: (person.soll_days ?? []).map((day) => ({
-        schoolId: String(day.school_id),
-        date: day.date.slice(0, 10),
+        schoolId: day.school_id,
+        date: requiredDay(day.date, "traeger_planning_soll_day.date"),
         minutes: day.minutes,
       })),
       absentDays: (person.absent_days ?? []).map((day) => ({
-        schoolId: String(day.school_id),
-        date: day.date.slice(0, 10),
+        schoolId: day.school_id,
+        date: requiredDay(day.date, "traeger_planning_absent_day.date"),
       })),
       warnings: mapWorkingTimeWarnings(person.warnings),
     })),
   };
 }
 
-function shiftBody(input: TraegerPlanShiftInput) {
+function shiftBody(
+  input: TraegerPlanShiftInput,
+): traegerStaffPlanningContract.PlanShiftRequest {
   return {
     school_id: input.schoolId,
     date: input.date,
@@ -255,16 +210,13 @@ function shiftBody(input: TraegerPlanShiftInput) {
   };
 }
 
-const recordPath = (recordId: string) =>
-  `${BASE}/records/${encodeURIComponent(recordId)}`;
-
 /** Die Woche, in der `weekStart` liegt, Montag bis Sonntag. */
 export async function fetchTraegerPlanningWeek(
   weekStart: string,
 ): Promise<TraegerPlanningWeek> {
-  const week = await traegerRequest<BackendWeek>(
-    `${BASE}?week=${encodeURIComponent(weekStart)}`,
-  );
+  const week = await bffJson("org", "GET /traeger/staff-planning/", {
+    query: { week: weekStart },
+  });
   return mapPlanningWeek(week);
 }
 
@@ -276,16 +228,21 @@ export function downloadTraegerPlanningWeek(
   weekStart: string,
   format: TraegerListFormat,
 ): Promise<TraegerListFile> {
-  return downloadTraegerList(`${BASE}/export`, format, { week: weekStart });
+  return downloadTraegerList(
+    bffFile("org", "GET /traeger/staff-planning/export", {
+      query: listExportQuery(format, { week: weekStart }),
+    }),
+  );
 }
 
 export async function planTraegerShift(
   recordId: string,
   input: TraegerPlanShiftInput,
 ): Promise<TraegerPlanningShift> {
-  const shift = await traegerRequest<BackendShift>(
-    `${recordPath(recordId)}/shifts`,
-    { method: "POST", body: shiftBody(input) },
+  const shift = await bffJson(
+    "org",
+    "POST /traeger/staff-planning/records/{id}/shifts",
+    { params: { id: recordId }, body: shiftBody(input) },
   );
   return mapPlanningShift(shift);
 }
@@ -295,9 +252,10 @@ export async function changeTraegerShift(
   shiftId: string,
   input: TraegerPlanShiftInput,
 ): Promise<TraegerPlanningShift> {
-  const shift = await traegerRequest<BackendShift>(
-    `${recordPath(recordId)}/shifts/${encodeURIComponent(shiftId)}`,
-    { method: "PUT", body: shiftBody(input) },
+  const shift = await bffJson(
+    "org",
+    "PUT /traeger/staff-planning/records/{id}/shifts/{shiftId}",
+    { params: { id: recordId, shiftId }, body: shiftBody(input) },
   );
   return mapPlanningShift(shift);
 }
@@ -307,9 +265,10 @@ export async function removeTraegerShift(
   schoolId: string,
   shiftId: string,
 ): Promise<void> {
-  await traegerRequest<null>(
-    `${recordPath(recordId)}/schools/${encodeURIComponent(schoolId)}/shifts/${encodeURIComponent(shiftId)}`,
-    { method: "DELETE" },
+  await bffJson(
+    "org",
+    "DELETE /traeger/staff-planning/records/{id}/schools/{schoolId}/shifts/{shiftId}",
+    { params: { id: recordId, schoolId, shiftId } },
   );
 }
 
@@ -317,11 +276,12 @@ export async function removeTraegerShift(
 export async function fetchTraegerFutureShifts(): Promise<
   TraegerFutureShifts[]
 > {
-  const schools = await traegerRequest<
-    { school_id: number | string; school_name: string; shifts: number }[] | null
-  >(`${BASE}/future-shifts`);
-  return (schools ?? []).map((school) => ({
-    schoolId: String(school.school_id),
+  const schools = await bffJson(
+    "org",
+    "GET /traeger/staff-planning/future-shifts",
+  );
+  return schools.map((school) => ({
+    schoolId: school.school_id,
     schoolName: school.school_name,
     shifts: school.shifts,
   }));

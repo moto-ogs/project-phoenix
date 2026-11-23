@@ -64,31 +64,35 @@ vi.mock("~/lib/teacher-api", () => ({
   },
 }));
 
+// Der Datensatz in der Form des Vertrags (#7563): Person verschachtelt,
+// Kennungen als Dezimalzeichenfolgen.
 function staffPayload(id: string) {
   return {
     id,
     person_id: "9007199254740993",
     is_teacher: false,
+    was_present_today: false,
+    is_external: false,
     started_on: "2024-09-02",
     ended_on: null,
-    name: `${server.firstName} Muster`,
-    firstName: server.firstName,
-    lastName: "Muster",
-    first_name: server.firstName,
-    last_name: "Muster",
+    person: {
+      id: "9007199254740993",
+      first_name: server.firstName,
+      last_name: "Muster",
+      email: "mila@example.test",
+      account_id: "7",
+      created_at: "2024-09-02T08:00:00Z",
+      updated_at: "2024-09-02T08:00:00Z",
+    },
     role: "Betreuung",
     account_role: "teacher",
-    qualifications: null,
-    staff_notes: server.notes,
-    email: "mila@example.test",
-    tag_id: null,
-    account_id: "7",
+    ...(server.notes === null ? {} : { staff_notes: server.notes }),
     created_at: "2024-09-02T08:00:00Z",
     updated_at: "2024-09-02T08:00:00Z",
   };
 }
 
-// Beide Wege der Seite zur API (sessionFetch und der CRUD-Dienst der
+// Beide Wege der Seite zur API (bffJson und der CRUD-Dienst der
 // Datenverwaltung) landen hier und werden mitgeschrieben.
 function respond(input: RequestInfo | URL): Promise<Response> {
   const raw =
@@ -125,15 +129,10 @@ function respond(input: RequestInfo | URL): Promise<Response> {
   );
 }
 
-vi.mock("~/lib/session-cache", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/lib/session-cache")>()),
-  getCachedSession: () =>
-    Promise.resolve({
-      user: { id: "7" },
-      expires: "2099-01-01T00:00:00.000Z",
-    }),
-  sessionFetch: (input: string) => respond(input),
-}));
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
 
 function signIn(permissions: string[]) {
   vi.mocked(useSession).mockReturnValue({
@@ -239,7 +238,10 @@ describe("StaffDetailContent: Personal-Datensatz (#4993)", () => {
     expect(
       view.container.querySelector(".animate-pulse.h-4.w-56"),
     ).toBeInTheDocument();
-    expect(server.requests).toContain("/api/staff/financial-profile/106");
+    // The request leaves after the asynchronous session gate.
+    await waitFor(() =>
+      expect(server.requests).toContain("/api/staff/financial-profile/106"),
+    );
     const tools = renderHook(
       () => useTenantMutateMatching([staffKeys.profileKey("106")]),
       { wrapper },

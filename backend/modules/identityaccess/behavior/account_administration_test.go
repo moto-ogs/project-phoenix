@@ -3,7 +3,6 @@ package behavior_test
 import (
 	"context"
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
@@ -13,86 +12,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
-
-// The caller's own account is readable without the management predicate,
-// because the account holder proves who they are with their session, not
-// with a school membership. Every other account is only readable inside the
-// predicate — and an account outside it reads as missing, so the boundary
-// never reveals that it exists (#3332).
-func TestFindOwnAccountIgnoresTheManagementBoundary(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-	administration := setupAuthFactory(t, db)
-
-	// An account with no membership at the school in context: the
-	// administration may not touch it, its holder may still read it.
-	account := testpkg.CreateTestAccount(t, db, "own-account-unmapped")
-	testpkg.UnclaimTestAccount(t, db, account.ID)
-	testpkg.OwnTestAccount(t, db, account.ID)
-	ctx := testpkg.Ctx(t)
-
-	own, err := administration.FindOwnAccount(ctx, account.ID)
-	require.NoError(t, err)
-	assert.Equal(t, account.ID, own.ID)
-	assert.Equal(t, account.Email, own.Email)
-
-	_, err = administration.FindManageableAccount(ctx, account.ID)
-	require.ErrorIs(t, err, identityaccess.ErrAccountNotFound)
-}
-
-// The address rule the retained account model applied on every write still
-// applies: an update normalizes it, so a capitalized input can never create
-// a second spelling of the same address.
-func TestUpdateManageableAccountNormalisesTheAddress(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-	administration := setupAuthFactory(t, db)
-	tenantID := testpkg.Tenant(t)
-
-	account := testpkg.CreateTestAccount(t, db, "update-normalised")
-	testpkg.MapAccountToTenant(t, db, account.ID, tenantID)
-
-	mixed := fmt.Sprintf("  Updated-%d@Test.Local  ", time.Now().UnixNano())
-	require.NoError(t, administration.UpdateManageableAccount(testpkg.Ctx(t), identityaccess.AccountIdentityUpdate{
-		AccountID: account.ID, Email: mixed,
-	}))
-
-	var stored string
-	require.NoError(t, db.NewSelect().
-		ColumnExpr("email").
-		TableExpr("auth.accounts").
-		Where("id = ?", account.ID).
-		Scan(context.Background(), &stored))
-	assert.Equal(t, strings.ToLower(strings.TrimSpace(mixed)), stored)
-}
-
-// An update without an address is refused before it writes: an account row
-// with an empty e-mail is one nobody can sign in to, because every lookup
-// matches on the address.
-func TestUpdateManageableAccountRefusesAnEmptyAddress(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-	administration := setupAuthFactory(t, db)
-	tenantID := testpkg.Tenant(t)
-
-	account := testpkg.CreateTestAccount(t, db, "update-nameless")
-	testpkg.MapAccountToTenant(t, db, account.ID, tenantID)
-
-	require.Error(t, administration.UpdateManageableAccount(testpkg.Ctx(t), identityaccess.AccountIdentityUpdate{
-		AccountID: account.ID,
-	}))
-
-	var stored string
-	require.NoError(t, db.NewSelect().
-		ColumnExpr("email").
-		TableExpr("auth.accounts").
-		Where("id = ?", account.ID).
-		Scan(context.Background(), &stored))
-	assert.Equal(t, account.Email, stored, "a refused update writes nothing")
-}
 
 // A password change is authorized by the current password, so a wrong one
 // leaves the stored credential exactly as it was.
@@ -132,24 +51,8 @@ func TestAccountAdministrationIgnoresErasedAccounts(t *testing.T) {
 	_, err = db.NewRaw(`UPDATE auth.accounts SET personal_data_erased_at = NOW() WHERE id = ?`, account.ID).Exec(ctx)
 	require.NoError(t, err)
 
-	_, err = administration.FindOwnAccount(ctx, account.ID)
-	require.ErrorIs(t, err, identityaccess.ErrAccountNotFound)
 	_, err = administration.FindManageableAccount(ctx, account.ID)
 	require.ErrorIs(t, err, identityaccess.ErrAccountNotFound)
-	listed, err := administration.ListManageableAccounts(ctx, identityaccess.AccountListFilter{})
-	require.NoError(t, err)
-	for _, listedAccount := range listed {
-		assert.NotEqual(t, account.ID, listedAccount.ID)
-	}
-	byRole, err := administration.ListManageableAccountsByRole(ctx, role.Name)
-	require.NoError(t, err)
-	for _, listedAccount := range byRole {
-		assert.NotEqual(t, account.ID, listedAccount.ID)
-	}
-
-	require.ErrorIs(t, administration.UpdateManageableAccount(ctx, identityaccess.AccountIdentityUpdate{
-		AccountID: account.ID, Email: "changed-after-erasure@test.local",
-	}), identityaccess.ErrAccountNotFound)
 	require.ErrorIs(t, administration.ActivateAccount(ctx, account.ID), identityaccess.ErrAccountNotFound)
 	require.ErrorIs(t, administration.DeactivateAccount(ctx, account.ID), identityaccess.ErrAccountNotFound)
 	require.ErrorIs(t, administration.ChangeAccountPassword(ctx, identityaccess.OwnPasswordChange{AccountID: account.ID, CurrentPassword: testPassword, NewPassword: testNewPassword}), identityaccess.ErrAccountNotFound)

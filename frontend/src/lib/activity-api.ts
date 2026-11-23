@@ -1,8 +1,17 @@
 // lib/activity-api.ts
-import { sessionFetch } from "./session-cache";
-import api from "./api";
+import { bffJson } from "./bff-fetch";
+import type { ActivityUpdateRequest } from "./contract/activities.generated";
 import { handleDomainApiError } from "./api-helpers";
-import { ApiError, apiErrorFromResponse } from "./api-error";
+import { ApiError } from "./api-error";
+import {
+  mapEnrolledStudentResponse,
+  mapActivityCategoryResponse,
+  mapActivityResponse,
+  type Activity,
+  type ActivityCategory,
+  type ActivityFilter,
+  type ActivityParticipant,
+} from "./activity-helpers";
 
 // Error handler using shared utility. A structured ApiError (browser path)
 // passes through unchanged, so code, field errors and request ID reach the
@@ -11,463 +20,73 @@ function handleActivityApiError(error: unknown, context: string): never {
   if (error instanceof ApiError) throw error;
   handleDomainApiError(error, context);
 }
-import {
-  mapActivityCategoryResponse,
-  mapActivityScheduleResponse,
-  mapTimeframeResponse,
-  mapStudentEnrollmentResponse,
-  type Activity,
-  type ActivityCategory,
-  type UpdateActivityRequest,
-  type ActivityFilter,
-  type BackendActivityCategory,
-  type ActivityStudent,
-  type BackendStudentEnrollment,
-  type ActivitySchedule,
-  type BackendActivitySchedule,
-  type Timeframe,
-  type BackendTimeframe,
-} from "./activity-helpers";
 
 // Re-export types for external use
 export type { Activity, ActivityCategory } from "./activity-helpers";
 
-// Generic API response interface
-interface ApiResponse<T> {
-  data: T;
-  message?: string;
-  status?: string;
-}
-
-function isBrowserApiContext(): boolean {
-  return globalThis.window !== undefined;
-}
-
-async function resolveActivityApiUrl(path: string): Promise<string> {
-  if (isBrowserApiContext()) {
-    return path;
-  }
-
-  const { getServerApiUrl } = await import("~/lib/server-api-url");
-  return `${getServerApiUrl()}${path}`;
-}
-
-// Helper: Build URL with query params for activities
-function buildActivitiesUrl(baseUrl: string, filters?: ActivityFilter): string {
-  const params = new URLSearchParams();
-  if (filters?.search) params.append("search", filters.search);
-  if (filters?.category_id) params.append("category_id", filters.category_id);
-  if (filters?.is_open_ags !== undefined) {
-    params.append("is_open_ags", filters.is_open_ags.toString());
-  }
-  const queryString = params.toString();
-  return queryString ? `${baseUrl}?${queryString}` : baseUrl;
-}
-
-// Helper: Check if response has nested data.data structure
-function hasNestedDataStructure(
-  data: unknown,
-): data is { data: { data: Activity[] } } {
-  if (!data || typeof data !== "object" || !("data" in data)) return false;
-  const outer = data as { data: unknown };
-  if (!outer.data || typeof outer.data !== "object" || !("data" in outer.data))
-    return false;
-  const inner = outer.data as { data: unknown };
-  return Array.isArray(inner.data);
-}
-
-// Helper: Check if response has direct data array structure
-function hasDirectDataStructure(data: unknown): data is { data: Activity[] } {
-  return (
-    !!data &&
-    typeof data === "object" &&
-    "data" in data &&
-    Array.isArray((data as { data: unknown }).data)
-  );
-}
-
-// Helper: Parse activity response from browser fetch
-function parseActivitiesResponse(responseData: unknown): Activity[] {
-  if (hasNestedDataStructure(responseData)) {
-    return responseData.data.data;
-  }
-  if (hasDirectDataStructure(responseData)) {
-    return responseData.data;
-  }
-  if (Array.isArray(responseData)) {
-    return responseData as Activity[];
-  }
-  return [];
-}
-
-// Helper: Parse enrolled students response
-// Backend returns StudentResponse with {id, first_name, last_name}
-// We use mapStudentEnrollmentResponse which handles this structure
-function parseEnrolledStudentsResponse(
-  responseData: unknown,
-): ActivityStudent[] {
-  const isActivityStudent = (value: unknown): value is ActivityStudent => {
-    if (!value || typeof value !== "object") {
-      return false;
-    }
-
-    return "student_id" in value && "name" in value;
-  };
-
-  const normalizeActivityStudent = (
-    student: ActivityStudent,
-  ): ActivityStudent => ({
-    ...student,
-    id: String(student.id),
-    student_id: String(student.student_id),
-    created_at:
-      student.created_at instanceof Date
-        ? student.created_at
-        : new Date(student.created_at),
-    updated_at:
-      student.updated_at instanceof Date
-        ? student.updated_at
-        : new Date(student.updated_at),
-  });
-
-  // Check for wrapped response with data property
-  if (
-    responseData &&
-    typeof responseData === "object" &&
-    "data" in responseData
-  ) {
-    const wrapped = responseData as { data: unknown };
-    if (!Array.isArray(wrapped.data)) {
-      return [];
-    }
-
-    return wrapped.data.map((item) =>
-      isActivityStudent(item)
-        ? normalizeActivityStudent(item)
-        : mapStudentEnrollmentResponse(item as BackendStudentEnrollment),
-    );
-  }
-  // Handle direct array response
-  return Array.isArray(responseData)
-    ? responseData.map((item) =>
-        isActivityStudent(item)
-          ? normalizeActivityStudent(item)
-          : mapStudentEnrollmentResponse(item as BackendStudentEnrollment),
-      )
-    : [];
-}
-
-// Helper: Parse schedules response (wrapped or direct array)
-function parseSchedulesResponse(responseData: unknown): ActivitySchedule[] {
-  // Check for wrapped response with data property
-  if (
-    responseData &&
-    typeof responseData === "object" &&
-    "data" in responseData
-  ) {
-    const wrapped = responseData as { data: unknown };
-    return Array.isArray(wrapped.data)
-      ? wrapped.data.map(mapActivityScheduleResponse)
-      : [];
-  }
-  // Handle direct array response
-  return Array.isArray(responseData)
-    ? responseData.map(mapActivityScheduleResponse)
-    : [];
-}
-
-// Helper: Check if item is a valid timeframe-like object (has "id" property)
-function isValidTimeframeObject(item: unknown): boolean {
-  return item !== null && typeof item === "object" && "id" in item;
-}
-
-// Helper: Check if timeframe item is already frontend type (has string ID)
-function isAlreadyFrontendTimeframe(item: unknown): boolean {
-  return (
-    isValidTimeframeObject(item) &&
-    typeof (item as { id: unknown }).id === "string"
-  );
-}
-
-// Helper: Parse timeframe array for wrapped response (always maps if not frontend type)
-function parseTimeframeArrayWrapped(data: unknown[]): Timeframe[] {
-  if (data.length === 0) {
-    return [];
-  }
-  if (isAlreadyFrontendTimeframe(data[0])) {
-    return data as Timeframe[];
-  }
-  return (data as BackendTimeframe[]).map(mapTimeframeResponse);
-}
-
-// Helper: Parse timeframe array for direct response (validates first, then maps)
-function parseTimeframeArrayDirect(data: unknown[]): Timeframe[] {
-  if (data.length === 0) {
-    return [];
-  }
-  // Original behavior: direct arrays require valid timeframe object with "id"
-  if (!isValidTimeframeObject(data[0])) {
-    return [];
-  }
-  if (isAlreadyFrontendTimeframe(data[0])) {
-    return data as Timeframe[];
-  }
-  return (data as BackendTimeframe[]).map(mapTimeframeResponse);
-}
-
-// Helper: Parse timeframes response (handles wrapped, direct array, and type detection)
-function parseTimeframesResponse(responseData: unknown): Timeframe[] {
-  // Not an object - can't process
-  if (!responseData || typeof responseData !== "object") {
-    return [];
-  }
-
-  // Direct array response - uses stricter validation (original behavior)
-  if (Array.isArray(responseData)) {
-    return parseTimeframeArrayDirect(responseData);
-  }
-
-  // Wrapped response with data property - maps without extra validation (original behavior)
-  if ("data" in responseData && responseData.data) {
-    const wrappedData = (responseData as { data: unknown }).data;
-    if (Array.isArray(wrappedData)) {
-      return parseTimeframeArrayWrapped(wrappedData);
-    }
-  }
-
-  return [];
-}
-
-// Get all activities
+/** Every activity of the school, optionally of one category. */
 export async function fetchActivities(
   filters?: ActivityFilter,
 ): Promise<Activity[]> {
-  const baseUrl = "/api/activities";
-  const url = buildActivitiesUrl(baseUrl, filters);
-
-  // Browser environment: use fetch with our Next.js API route
-  const response = await sessionFetch(url, {
-    method: "GET",
+  const activities = await bffJson("tenant", "GET /api/activities/", {
+    query: { category_id: filters?.category_id },
   });
-
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, `API error: ${response.status}`);
-  }
-
-  const responseData = (await response.json()) as unknown;
-  return parseActivitiesResponse(responseData);
+  return activities.map(mapActivityResponse);
 }
 
-// Get enrolled students for an activity
+/** The students enrolled in an activity. */
 export async function getEnrolledStudents(
   activityId: string,
-): Promise<ActivityStudent[]> {
-  const url = `/api/activities/${activityId}/students`;
-
-  try {
-    const response = await sessionFetch(url, {
-      method: "GET",
-    });
-
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        `API error: ${response.status}`,
-      );
-    }
-
-    const responseData = (await response.json()) as unknown;
-    return parseEnrolledStudentsResponse(responseData);
-  } catch (error) {
-    handleActivityApiError(error, "fetch enrolled students");
-  }
+): Promise<ActivityParticipant[]> {
+  const students = await bffJson(
+    "tenant",
+    "GET /api/activities/{id}/students",
+    {
+      params: { id: activityId },
+    },
+  );
+  return students.map(mapEnrolledStudentResponse);
 }
 
-// Update an activity
+/**
+ * One activity as its detail read shows it, with its schedules, its
+ * supervisors and the `version` a save sends back (ADR 0311).
+ */
+export async function fetchActivity(id: string): Promise<Activity> {
+  return mapActivityResponse(
+    await bffJson("tenant", "GET /api/activities/{id}", { params: { id } }),
+  );
+}
+
+/**
+ * Saves an activity's master data. The route keeps what the body does not
+ * name; `expected_version` is the version the editor read.
+ */
 export async function updateActivity(
   id: string,
-  data: UpdateActivityRequest,
+  data: ActivityUpdateRequest,
 ): Promise<Activity> {
-  const url = `/api/activities/${id}`;
-
-  const response = await sessionFetch(url, {
-    method: "PUT",
-    body: JSON.stringify(data),
+  const activity = await bffJson("tenant", "PUT /api/activities/{id}", {
+    params: { id },
+    body: data,
   });
-
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, `API error: ${response.status}`);
-  }
-
-  const responseData = (await response.json()) as
-    ApiResponse<Activity> | Activity;
-
-  // Extract the data from the response wrapper if needed
-  if (
-    responseData &&
-    typeof responseData === "object" &&
-    "data" in responseData
-  ) {
-    return responseData.data;
-  }
-  return responseData;
+  return mapActivityResponse(activity);
 }
 
 // Delete an activity
 export async function deleteActivity(id: string): Promise<void> {
-  const url = `/api/activities/${id}`;
-
-  const response = await sessionFetch(url, {
-    method: "DELETE",
-  });
-
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, `API error: ${response.status}`);
-  }
+  await bffJson("tenant", "DELETE /api/activities/{id}", { params: { id } });
 }
 
 // Get all categories
 export async function getCategories(): Promise<ActivityCategory[]> {
-  const url = "/api/activities/categories";
-
   try {
-    const response = await sessionFetch(url, {
-      method: "GET",
-    });
-
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        `API error: ${response.status}`,
-      );
-    }
-
-    const responseData = (await response.json()) as
-      ApiResponse<BackendActivityCategory[]> | BackendActivityCategory[];
-
-    // Extract the array from the response wrapper, then map to the frontend
-    // shape. The browser path previously returned the raw backend payload
-    // (snake_case shift_type_id, numeric id), which broke consumers relying
-    // on the mapped ActivityCategory contract (e.g. the shift-type mapping
-    // modal preselecting category.shiftTypeId).
-    const rawCategories =
-      responseData && typeof responseData === "object" && "data" in responseData
-        ? responseData.data
-        : responseData;
-    return Array.isArray(rawCategories)
-      ? rawCategories.map(mapActivityCategoryResponse)
-      : [];
+    const categories = await bffJson(
+      "tenant",
+      "GET /api/activities/categories",
+    );
+    return categories.map(mapActivityCategoryResponse);
   } catch (error) {
     handleActivityApiError(error, "fetch categories");
-  }
-}
-
-// Get schedules for an activity
-export async function getActivitySchedules(
-  activityId: string,
-): Promise<ActivitySchedule[]> {
-  const useProxyApi = isBrowserApiContext();
-  const url = await resolveActivityApiUrl(
-    `/api/activities/${activityId}/schedules`,
-  );
-
-  try {
-    if (useProxyApi) {
-      const response = await sessionFetch(url, {
-        method: "GET",
-      });
-
-      if (!response.ok) {
-        throw await apiErrorFromResponse(
-          response,
-          `API error: ${response.status}`,
-        );
-      }
-
-      const responseData = (await response.json()) as unknown;
-      return parseSchedulesResponse(responseData);
-    }
-
-    const response = await api.get<ApiResponse<BackendActivitySchedule[]>>(url);
-    return parseSchedulesResponse(response.data);
-  } catch {
-    // Bewusst still: die leere Liste meldet den Fehlschlag, der Aufrufer
-    // entscheidet über die Anzeige.
-    return [];
-  }
-}
-
-// Get a single schedule for an activity
-export async function getActivitySchedule(
-  activityId: string,
-  scheduleId: string,
-): Promise<ActivitySchedule | null> {
-  const useProxyApi = isBrowserApiContext();
-  const url = await resolveActivityApiUrl(
-    `/api/activities/${activityId}/schedules/${scheduleId}`,
-  );
-
-  try {
-    if (useProxyApi) {
-      const response = await sessionFetch(url, {
-        method: "GET",
-      });
-
-      if (!response.ok) {
-        throw await apiErrorFromResponse(
-          response,
-          `API error: ${response.status}`,
-        );
-      }
-
-      const responseData = (await response.json()) as
-        ApiResponse<BackendActivitySchedule> | BackendActivitySchedule;
-
-      // Extract the data from the response wrapper if needed
-      if (
-        responseData &&
-        typeof responseData === "object" &&
-        "data" in responseData
-      ) {
-        return mapActivityScheduleResponse(responseData.data);
-      }
-      return mapActivityScheduleResponse(responseData);
-    } else {
-      const response = await api.get<ApiResponse<BackendActivitySchedule>>(url);
-      return mapActivityScheduleResponse(response.data.data);
-    }
-  } catch {
-    // Bewusst still: null meldet den Fehlschlag, der Aufrufer entscheidet
-    // über die Anzeige.
-    return null;
-  }
-}
-
-// Get all available timeframes
-export async function getTimeframes(): Promise<Timeframe[]> {
-  const useProxyApi = isBrowserApiContext();
-  const url = await resolveActivityApiUrl("/api/schedules/timeframes");
-
-  try {
-    if (useProxyApi) {
-      const response = await sessionFetch(url, {
-        method: "GET",
-      });
-
-      if (!response.ok) {
-        throw await apiErrorFromResponse(
-          response,
-          `API error: ${response.status}`,
-        );
-      }
-
-      const responseData = (await response.json()) as unknown;
-      return parseTimeframesResponse(responseData);
-    }
-
-    const response = await api.get<ApiResponse<BackendTimeframe[]>>(url);
-    return parseTimeframesResponse(response.data);
-  } catch (error) {
-    handleActivityApiError(error, "fetch timeframes");
   }
 }

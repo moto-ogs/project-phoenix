@@ -79,6 +79,7 @@ const NOT_A_LIST: Readonly<Record<string, string>> = {
   "/abrechnung/exporte/empfaenger/neu": "Formular",
   "/abrechnung/exporte/feldzuordnung": "Einstellungen",
   "/abrechnung/exporte/konten": "Einstellungen",
+  "/abrechnung/familien/zahlung/[contractId]": "Formular",
   "/abrechnung/jahresbescheide/[id]/bescheid/[contractId]": "Dokument",
   "/abrechnung/jahresbescheide/[id]/lastschrift": "Schritt eines Laufs",
   "/abrechnung/kinderzahl/import": "Import",
@@ -122,6 +123,10 @@ const NOT_A_LIST: Readonly<Record<string, string>> = {
   "/vertraege/[id]": "Einzelansicht",
   "/vertraege/bedingungen": "Einstellungen",
   "/vertraege/import": "Import",
+  "/vertraege/nachpflege": "Nachpflege aus einer Datei",
+  "/vertraege/module-zuordnen": "Import",
+  "/vertraege/verknuepfen": "Import",
+  "/vertraege/anmeldungen": "Vorschau",
 };
 
 function collectPages(directory: string): string[] {

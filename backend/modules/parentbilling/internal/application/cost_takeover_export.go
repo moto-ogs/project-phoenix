@@ -12,6 +12,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The list for the reimbursement by a cost bearer (#5627): every child of a
@@ -72,8 +73,8 @@ func (b *BillingRuns) ExportCostTakeovers(ctx context.Context, reviewer parentbi
 	if err != nil {
 		return parentbilling.ExportFile{}, fmt.Errorf("parent billing: render cost takeover list: %w", err)
 	}
-	if err := b.store.InsertRunEvent(ctx, reviewer.OrganizationID, run.ID, reviewer.AccountID, runEventExport,
-		map[string]any{"format": format, "list": parentbilling.LineCostTakeover, "cost_bearer_id": bearer.ID, "document_count": documents}); err != nil {
+	if err := b.store.InsertRunEvent(ctx, reviewer.OrganizationID, run.ID.Int64(), reviewer.AccountID, runEventExport,
+		map[string]any{"format": format, "list": parentbilling.LineCostTakeover, "cost_bearer_id": bearer.ID.Int64(), "document_count": documents}); err != nil {
 		return parentbilling.ExportFile{}, fmt.Errorf("parent billing: record cost takeover export: %w", err)
 	}
 	return file, nil
@@ -89,15 +90,15 @@ type costTakeoverInput struct {
 }
 
 func (b *BillingRuns) costTakeoverInput(ctx context.Context, reviewer parentbilling.HolidayReviewer, run parentbilling.BillingRun, bearer parentbilling.CostBearer) (costTakeoverInput, error) {
-	documents, err := b.store.RunDocuments(ctx, reviewer.OrganizationID, run.ID)
+	documents, err := b.store.RunDocuments(ctx, reviewer.OrganizationID, run.ID.Int64())
 	if err != nil {
 		return costTakeoverInput{}, fmt.Errorf("parent billing: read invoices: %w", err)
 	}
-	proofs, err := b.registrations.HolidayProofRegistrations(ctx, reviewer, run.HolidayPeriodID)
+	proofs, err := b.registrations.HolidayProofRegistrations(ctx, reviewer, run.HolidayPeriodID.Int64())
 	if err != nil {
 		return costTakeoverInput{}, fmt.Errorf("parent billing: read proofs: %w", err)
 	}
-	confirmed, err := b.store.RegistrationConfirmations(ctx, reviewer.OrganizationID, run.HolidayPeriodID)
+	confirmed, err := b.store.RegistrationConfirmations(ctx, reviewer.OrganizationID, run.HolidayPeriodID.Int64())
 	if err != nil {
 		return costTakeoverInput{}, fmt.Errorf("parent billing: read confirmations: %w", err)
 	}
@@ -120,7 +121,7 @@ func costTakeoverList(in costTakeoverInput) (ExportTable, int) {
 		}
 		billed := false
 		for _, child := range document.Children {
-			row, takeover, ok := costTakeoverRow(child, in.bearer.ID)
+			row, takeover, ok := costTakeoverRow(child, in.bearer.ID.Int64())
 			if !ok {
 				continue
 			}
@@ -128,7 +129,7 @@ func costTakeoverList(in costTakeoverInput) (ExportTable, int) {
 			children += sign
 			total += takeover
 			row["number"] = takeoverDocumentNumber(document)
-			row["proof"], row["confirmed"] = registrationFacts(in, document.RegistrationID)
+			row["proof"], row["confirmed"] = registrationFacts(in, document.RegistrationID.Int64())
 			rows = append(rows, row)
 		}
 		if billed {
@@ -188,7 +189,7 @@ func costTakeoverRow(child parentbilling.BillingChild, costBearerID int64) (map[
 		case parentbilling.LineSibling:
 			sibling += position.AmountCents
 		case parentbilling.LineCostTakeover:
-			if position.CostBearerID != nil && *position.CostBearerID == costBearerID {
+			if position.CostBearerID != nil && *position.CostBearerID == ident.ID(costBearerID) {
 				found = true
 				takeover -= position.AmountCents
 			}

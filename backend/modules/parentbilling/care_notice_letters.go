@@ -3,6 +3,8 @@ package parentbilling
 import (
 	"context"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The stored original of a Jahresbescheid and its delivery (#6347, decision
@@ -60,20 +62,20 @@ type CareNoticeLetters struct {
 // CareNoticeMailing is one issued notice with its stored PDF and the state of
 // its last mail; Status is LetterMailNotSent before the first mail.
 type CareNoticeMailing struct {
-	NoticeID       int64  `json:"notice_id"`
-	ContractID     int64  `json:"contract_id"`
-	Kind           string `json:"kind"`
-	Number         string `json:"number"`
-	AmendsNumber   string `json:"amends_number,omitempty"`
-	AmendedBy      string `json:"amended_by_number,omitempty"`
-	ChildFirstName string `json:"child_first_name"`
-	ChildLastName  string `json:"child_last_name"`
-	SchoolName     string `json:"school_name"`
+	NoticeID       ident.ID `json:"notice_id"`
+	ContractID     ident.ID `json:"contract_id"`
+	Kind           string   `json:"kind"`
+	Number         string   `json:"number"`
+	AmendsNumber   string   `json:"amends_number,omitempty"`
+	AmendedBy      string   `json:"amended_by_number,omitempty"`
+	ChildFirstName string   `json:"child_first_name"`
+	ChildLastName  string   `json:"child_last_name"`
+	SchoolName     string   `json:"school_name"`
 	// Recipient is the party the notice copied at its release.
 	RecipientFirstName string `json:"recipient_first_name"`
 	RecipientLastName  string `json:"recipient_last_name"`
 	RecipientEmail     string `json:"recipient_email"`
-	TotalCents         int64  `json:"total_cents"`
+	TotalCents         int64  `json:"total_cents" contract:"number"`
 	HasLetter          bool   `json:"has_letter"`
 	// SHA256 identifies the stored PDF; every download and every mail
 	// carries these bytes.

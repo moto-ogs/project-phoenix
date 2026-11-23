@@ -290,7 +290,7 @@ type calendarGroupPort struct {
 func (p calendarGroupPort) List(ctx context.Context) ([]*calendarCompose.Group, error) {
 	value, err := p.source.List(ctx, nil)
 	return CalendarMapSlice(value, func(v *educationRepo.Group) *calendarCompose.Group {
-		return &calendarCompose.Group{ID: v.ID, Name: v.Name}
+		return &calendarCompose.Group{ID: v.ID.Int64(), Name: v.Name}
 	}), err
 }
 
@@ -356,14 +356,14 @@ func calendarPerson(value *peopledirectory.DirectoryPersonSnapshot) *calendarCom
 	if value == nil {
 		return nil
 	}
-	return &calendarCompose.Person{ID: value.ID, FirstName: value.FirstName, LastName: value.LastName}
+	return &calendarCompose.Person{ID: value.ID.Int64(), FirstName: value.FirstName, LastName: value.LastName}
 }
 
 func calendarStaff(value *peopledirectory.Staff) *calendarCompose.Staff {
 	if value == nil {
 		return nil
 	}
-	return &calendarCompose.Staff{ID: value.ID, Person: calendarPerson(value.Person)}
+	return &calendarCompose.Staff{ID: value.ID.Int64(), Person: calendarPerson(value.Person)}
 }
 
 func calendarStudent(value *peopledirectory.StudentState) *calendarCompose.Student {

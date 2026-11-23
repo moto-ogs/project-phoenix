@@ -2,11 +2,12 @@ package supervisiondashboard
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -384,7 +385,7 @@ func TestResolveGroupsSupervisedScope(t *testing.T) {
 func TestSelectGroup(t *testing.T) {
 	t.Parallel()
 
-	groups := []Group{{ID: 10}, {ID: 20}}
+	groups := []DashboardGroup{{ID: 10}, {ID: 20}}
 	yardGroupID := int64(30)
 
 	tests := []struct {
@@ -396,8 +397,8 @@ func TestSelectGroup(t *testing.T) {
 	}{
 		{name: "defaults to the first group", want: int64Ptr(10)},
 		{name: "uses a requested group", requested: 20, want: int64Ptr(20)},
-		{name: "permits the supervised yard group", requested: 30, yard: &SchulhofStatus{IsUserSupervising: true, ActiveGroupID: &yardGroupID}, want: int64Ptr(30)},
-		{name: "rejects an unsupervised yard group", requested: 30, yard: &SchulhofStatus{ActiveGroupID: &yardGroupID}, wantErr: ErrForbiddenGroup},
+		{name: "permits the supervised yard group", requested: 30, yard: &SchulhofStatus{IsUserSupervising: true, ActiveGroupID: (*ident.ID)(&yardGroupID)}, want: int64Ptr(30)},
+		{name: "rejects an unsupervised yard group", requested: 30, yard: &SchulhofStatus{ActiveGroupID: (*ident.ID)(&yardGroupID)}, wantErr: ErrForbiddenGroup},
 		{name: "rejects an unsupervised group", requested: 40, wantErr: ErrForbiddenGroup},
 	}
 
@@ -423,7 +424,7 @@ func TestSelectGroup(t *testing.T) {
 func TestSelectGroupPrefersOwnSessionForOverviewCaller(t *testing.T) {
 	t.Parallel()
 
-	groups := []Group{
+	groups := []DashboardGroup{
 		{ID: 10, RoomName: "Atelier"},
 		{ID: 20, RoomName: "Bibliothek", IsCurrentUserSupervising: true},
 		{ID: 30, RoomName: "Werkraum", IsCurrentUserSupervising: true},
@@ -545,18 +546,18 @@ func TestBuildVisitsAndEffectiveTimes(t *testing.T) {
 
 	pickup := "15:30"
 	pickupItem := pickupTimeFromEffective(1, Pickup{
-		Date: "2026-08-19", PickupTime: &pickup, WeekdayName: "Mittwoch", IsException: true, Notes: "Oma", DayNotes: []DayNote{{ID: 3, Content: "Klingeln"}},
+		Date: "2026-08-19", PickupTime: &pickup, WeekdayName: "Mittwoch", IsException: true, Notes: "Oma", DayNotes: []DashboardDayNote{{ID: 3, Content: "Klingeln"}},
 	})
 	assert.Equal(t, "15:30", *pickupItem.PickupTime)
 	assert.Equal(t, "2026-08-19", pickupItem.Date)
-	assert.Equal(t, []DayNote{{ID: 3, Content: "Klingeln"}}, pickupItem.DayNotes)
+	assert.Equal(t, []DashboardDayNote{{ID: 3, Content: "Klingeln"}}, pickupItem.DayNotes)
 
 	arrival := "11:45"
 	arrivalItem := arrivalTimeFromEffective(1, Arrival{
-		Date: "2026-08-19", ArrivalTime: &arrival, WeekdayName: "Mittwoch", Notes: "Bus", DayNotes: []DayNote{{ID: 4, Content: "Verspätung"}},
+		Date: "2026-08-19", ArrivalTime: &arrival, WeekdayName: "Mittwoch", Notes: "Bus", DayNotes: []DashboardDayNote{{ID: 4, Content: "Verspätung"}},
 	})
 	assert.Equal(t, "11:45", *arrivalItem.ExpectedArrival)
-	assert.Equal(t, []DayNote{{ID: 4, Content: "Verspätung"}}, arrivalItem.DayNotes)
+	assert.Equal(t, []DashboardDayNote{{ID: 4, Content: "Verspätung"}}, arrivalItem.DayNotes)
 }
 
 func TestBuildPhotoURL(t *testing.T) {
@@ -624,11 +625,11 @@ func TestLoadPlanningTimesProjectsPickupException(t *testing.T) {
 
 	require.NoError(t, svc.loadPlanningTimes(context.Background(), projection, Caller{CanReadStudents: true}, []int64{42, 43}, true, date))
 	require.Len(t, projection.PickupTimes, 1)
-	assert.Equal(t, int64(42), projection.PickupTimes[0].StudentID)
+	assert.Equal(t, int64(42), projection.PickupTimes[0].StudentID.Int64())
 	assert.Equal(t, "15:30", *projection.PickupTimes[0].PickupTime)
 	assert.True(t, projection.PickupTimes[0].IsException)
 	require.Len(t, projection.ArrivalTimes, 1)
-	assert.Equal(t, int64(43), projection.ArrivalTimes[0].StudentID)
+	assert.Equal(t, int64(43), projection.ArrivalTimes[0].StudentID.Int64())
 	assert.Nil(t, projection.ArrivalTimes[0].ExpectedArrival, "a timeless exception keeps its time nil")
 	assert.Equal(t, "Zahnarzt", projection.ArrivalTimes[0].Notes)
 
@@ -791,7 +792,7 @@ func TestDashboardCapturesOneServerTimeSnapshot(t *testing.T) {
 	assert.Equal(t, projection.BusinessDay, arrivalDay)
 	assert.Equal(t, beforeMidnight, plannedInstant)
 	assert.Nil(t, projection.Schulhof, "no staff identity, no Schulhof workflow")
-	assert.Equal(t, int64Ptr(activeGroupID), projection.SelectedGroupID)
+	assert.Equal(t, int64Ptr(activeGroupID), (*int64)(projection.SelectedGroupID))
 	require.Len(t, projection.Visits, 1)
 	assert.True(t, projection.Capabilities.WebSpontaneousActivitiesEnabled)
 }
@@ -814,7 +815,7 @@ func TestDashboardSelectedGroupSectionsFollowAccess(t *testing.T) {
 		},
 		yard: func(_ context.Context, staffID int64) (*SchulhofStatus, error) {
 			assert.Equal(t, int64(77), staffID)
-			return &SchulhofStatus{Exists: true, IsUserSupervising: true, ActiveGroupID: &yardGroupID}, nil
+			return &SchulhofStatus{Exists: true, IsUserSupervising: true, ActiveGroupID: (*ident.ID)(&yardGroupID)}, nil
 		},
 		groupVisits: func(_ context.Context, activeGroupID int64) ([]VisitRecord, error) {
 			assert.Equal(t, yardGroupID, activeGroupID)
@@ -841,8 +842,8 @@ func TestDashboardSelectedGroupSectionsFollowAccess(t *testing.T) {
 	projection, err := newService(f).Dashboard(context.Background(), yardGroupID)
 
 	require.NoError(t, err)
-	assert.Equal(t, int64Ptr(77), projection.CurrentStaffID)
-	assert.Equal(t, int64Ptr(yardGroupID), projection.SelectedGroupID, "a supervised Schulhof session is selectable")
+	assert.Equal(t, int64Ptr(77), (*int64)(projection.CurrentStaffID))
+	assert.Equal(t, int64Ptr(yardGroupID), (*int64)(projection.SelectedGroupID), "a supervised Schulhof session is selectable")
 	require.Len(t, projection.Visits, 2)
 	assert.Equal(t, "Erika Muster", projection.Visits[0].StudentName)
 	assert.Equal(t, "08:05", *projection.Visits[0].ActualArrivalTime)
@@ -898,10 +899,10 @@ func TestProjectionWireShape(t *testing.T) {
 	projection := emptyProjection()
 	projection.BusinessDay = "2026-08-19"
 	projection.SpontaneousStartAvailability = SpontaneousStartAvailability{Available: true}
-	projection.Groups = []Group{{ID: 11, Name: "Malen", RoomID: &roomID, RoomName: "Zebra", RoomColor: &color, IsCurrentUserSupervising: true, CanAssign: true, ParticipantLimit: intPtr(45), Supervisors: []SessionSupervisor{{StaffID: 7, Name: "Erika"}}}, {ID: 12, Name: "Adler"}}
-	projection.SelectedGroupID = int64Ptr(11)
+	projection.Groups = []DashboardGroup{{ID: 11, Name: "Malen", RoomID: (*ident.ID)(&roomID), RoomName: "Zebra", RoomColor: &color, IsCurrentUserSupervising: true, CanAssign: true, ParticipantLimit: intPtr(45), Supervisors: []SessionSupervisor{{StaffID: 7, Name: "Erika"}}}, {ID: 12, Name: "Adler"}}
+	projection.SelectedGroupID = (*ident.ID)(int64Ptr(11))
 	projection.UnclaimedGroups = []UnclaimedGroup{{ID: 13, RoomName: "Igel"}}
-	projection.CurrentStaffID = int64Ptr(7)
+	projection.CurrentStaffID = (*ident.ID)(int64Ptr(7))
 	projection.EducationalGroups = []EducationalGroup{{ID: 41, Name: "Bären", RoomName: "Igel"}}
 	projection.Schulhof = &SchulhofStatus{Exists: true, RoomName: "Schulhof", Supervisors: []Supervisor{{ID: 1, StaffID: 7, Name: "Erika", IsCurrentUser: true}}}
 	projection.OpenRooms = []OpenRoom{{RoomID: 31, Name: "Schulhof", IsUserSupervising: true, ActiveGroupIDs: []string{"11", "14"}, HasOccupyingSession: true, StudentCount: 1,
@@ -913,15 +914,15 @@ func TestProjectionWireShape(t *testing.T) {
 	projection.Capabilities = Capabilities{WebSpontaneousActivitiesEnabled: true}
 	projection.ActiveSessions = []ActiveSession{{ActiveGroupID: 11, InstanceID: 5, Title: "Malen", StartTime: "14:00", EndTime: "15:00"}}
 	projection.PlannedNow = []PlannedInstance{{ID: 5, Title: "Malen", Date: "2026-08-19", StartTime: "14:00", EndTime: "15:00", RoomID: 21, Status: "planned",
-		AssignedStaffIDs: []int64{7}, RosterPreview: []RosterRow{{StudentID: 1, StudentName: "Erika Muster", Status: "expected", PickupTime: &clock, CareDayStatus: "scheduled"}},
+		AssignedStaffIDs: []ident.ID{7}, RosterPreview: []RosterRow{{StudentID: 1, StudentName: "Erika Muster", Status: "expected", PickupTime: &clock, CareDayStatus: "scheduled"}},
 		PickupTimesLoaded: true, Warnings: []ConflictWarning{}, StartAvailableAt: "13:45", StartExpiresAt: "15:00"}}
 	projection.Visits = []Visit{{StudentID: 1, StudentName: "Erika Muster", SchoolClass: "4a", GroupName: "Bären", ActiveGroupID: 11, CheckInTime: entry, ActualArrivalTime: &clock, Sick: false, PhotoURL: "/api/students/1/photo/p.jpg"}}
-	projection.TrackingIndicators = TrackingIndicators{Labels: []string{"Hausaufgaben"}, Results: map[int64][]bool{1: {true}}}
-	projection.PickupTimes = []PickupTime{{StudentID: 1, Date: "2026-08-19", WeekdayName: "Mittwoch", PickupTime: &clock, IsException: true, Notes: "Oma", DayNotes: []DayNote{{ID: 3, Content: "Klingeln"}}}}
+	projection.TrackingIndicators = DashboardTrackingIndicators{Labels: []string{"Hausaufgaben"}, Results: map[int64][]bool{1: {true}}}
+	projection.PickupTimes = []DashboardPickupTime{{StudentID: 1, Date: "2026-08-19", WeekdayName: "Mittwoch", PickupTime: &clock, IsException: true, Notes: "Oma", DayNotes: []DashboardDayNote{{ID: 3, Content: "Klingeln"}}}}
 	projection.ArrivalTimes = []ArrivalTime{{StudentID: 1, Date: "2026-08-19", WeekdayName: "Mittwoch"}}
-	projection.TeacherHints = []TeacherHint{{StudentID: 1, Body: "Heute Sportzeug vergessen", AuthorName: "Frau Kurz", SchoolClass: "4a"}}
+	projection.TeacherHints = []SupervisionTeacherHint{{StudentID: 1, Body: "Heute Sportzeug vergessen", AuthorName: "Frau Kurz", SchoolClass: "4a"}}
 
-	got, err := json.Marshal(projection)
+	got, err := wire.Marshal(projection)
 	require.NoError(t, err)
 
 	want := `{"business_day":"2026-08-19","spontaneous_start_availability":{"available":true},` +
@@ -929,17 +930,17 @@ func TestProjectionWireShape(t *testing.T) {
 		`{"id":"12","name":"Adler","is_current_user_supervising":false,"can_assign":false}],` +
 		`"selected_group_id":"11","unclaimed_groups":[{"id":"13","room_name":"Igel"}],"current_staff_id":"7",` +
 		`"educational_groups":[{"id":"41","name":"Bären","room_name":"Igel"}],` +
-		`"schulhof_status":{"exists":true,"room_name":"Schulhof","is_user_supervising":false,"supervisor_count":0,"student_count":0,"supervisors":[{"id":1,"staff_id":7,"name":"Erika","is_current_user":true}]},` +
+		`"schulhof_status":{"exists":true,"room_name":"Schulhof","is_user_supervising":false,"supervisor_count":0,"student_count":0,"supervisors":[{"id":"1","staff_id":"7","name":"Erika","is_current_user":true}]},` +
 		`"open_rooms":[{"room_id":"31","name":"Schulhof","is_user_supervising":true,"active_group_ids":["11","14"],"has_occupying_session":true,"student_count":1,` +
 		`"students":[{"student_id":"2","student_name":"Max Hof","school_class":"","group_name":"","active_group_id":"14","check_in_time":"2026-08-19T06:00:00Z","sick":false,"excused":false,"independent":true}],` +
 		`"sessions":[{"active_group_id":"11","title":"Malen","independent":false,"is_user_supervising":true,"can_assign":true,"student_count":0,"participant_limit":45,"supervisors":[{"staff_id":"7","name":"Erika"}],` +
 		`"block":{"instance_id":"5","start_time":"14:00","end_time":"15:00","is_spontaneous":false,"is_user_assigned":true,"can_operate":true}},` +
 		`{"active_group_id":"14","title":"","independent":true,"is_user_supervising":false,"can_assign":false,"student_count":1,"block":null}]}],` +
 		`"capabilities":{"web_spontaneous_activities_enabled":true},` +
-		`"active_sessions":[{"active_group_id":11,"instance_id":5,"title":"Malen","start_time":"14:00","end_time":"15:00"}],` +
-		`"planned_now":[{"id":5,"title":"Malen","date":"2026-08-19","start_time":"14:00","end_time":"15:00","room_id":21,"status":"planned","is_overdue":false,"minutes_until_start":0,` +
-		`"expected_students_count":0,"present_students_count":0,"not_scheduled_students_count":0,"current_students_count":0,"planned_students_count":0,"is_spontaneous":false,"assigned_staff_ids":[7],"is_assigned":false,"is_primary":false,"is_substitute":false,"is_absent":false,` +
-		`"roster_preview":[{"student_id":1,"student_name":"Erika Muster","school_class":"","group_name":"","planned":false,"is_unplanned":false,"currently_present":false,"status":"expected","pickup_time":"08:00","care_day_status":"scheduled"}],` +
+		`"active_sessions":[{"active_group_id":"11","instance_id":"5","title":"Malen","start_time":"14:00","end_time":"15:00"}],` +
+		`"planned_now":[{"id":"5","title":"Malen","date":"2026-08-19","start_time":"14:00","end_time":"15:00","room_id":"21","status":"planned","is_overdue":false,"minutes_until_start":0,` +
+		`"expected_students_count":0,"present_students_count":0,"not_scheduled_students_count":0,"current_students_count":0,"planned_students_count":0,"is_spontaneous":false,"assigned_staff_ids":["7"],"is_assigned":false,"is_primary":false,"is_substitute":false,"is_absent":false,` +
+		`"roster_preview":[{"student_id":"1","student_name":"Erika Muster","school_class":"","group_name":"","planned":false,"is_unplanned":false,"currently_present":false,"status":"expected","pickup_time":"08:00","care_day_status":"scheduled"}],` +
 		`"pickup_times_loaded":true,"warnings":[],"can_start":false,"start_available_at":"13:45","start_expires_at":"15:00"}],` +
 		`"visits":[{"student_id":"1","student_name":"Erika Muster","school_class":"4a","group_name":"Bären","active_group_id":"11","check_in_time":"2026-08-19T06:00:00Z","actual_arrival_time":"08:00","sick":false,"excused":false,"photo_url":"/api/students/1/photo/p.jpg"}],` +
 		`"tracking_indicators":{"labels":["Hausaufgaben"],"results":{"1":[true]}},` +
@@ -949,7 +950,7 @@ func TestProjectionWireShape(t *testing.T) {
 	assert.JSONEq(t, want, string(got))
 	assert.Equal(t, want, string(got), "key order is part of the golden contract")
 
-	empty, err := json.Marshal(emptyProjection())
+	empty, err := wire.Marshal(emptyProjection())
 	require.NoError(t, err)
 	assert.Equal(t, `{"business_day":"","spontaneous_start_availability":{"available":false},"groups":[],"unclaimed_groups":[],"educational_groups":[],"schulhof_status":null,`+
 		`"open_rooms":[],"capabilities":{"web_spontaneous_activities_enabled":false},"active_sessions":[],"planned_now":[],"visits":[],"tracking_indicators":{"labels":[],"results":{}},"pickup_times":[],"arrival_times":[],"teacher_hints":[]}`, string(empty))

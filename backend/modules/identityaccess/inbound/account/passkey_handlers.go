@@ -81,7 +81,7 @@ func (rs *Resource) passkeyLoginOptions(w http.ResponseWriter, r *http.Request) 
 		mapPasskeyError(w, r, err)
 		return
 	}
-	render.JSON(w, r, options)
+	common.RenderJSON(w, r, options)
 }
 
 func (rs *Resource) passkeyLoginVerify(w http.ResponseWriter, r *http.Request) {
@@ -103,7 +103,7 @@ func (rs *Resource) passkeyLoginVerify(w http.ResponseWriter, r *http.Request) {
 		mapPasskeyLoginError(w, r, err)
 		return
 	}
-	render.JSON(w, r, portalauth.LoginBody(identityaccess.LoginResult{
+	common.RenderJSON(w, r, portalauth.LoginBody(identityaccess.LoginResult{
 		Status: identityaccess.LoginStatusAuthenticated, AccessToken: result.AccessToken, RefreshToken: result.RefreshToken,
 	}))
 }
@@ -121,7 +121,7 @@ func (rs *Resource) passkeyEnrollmentChallenge(w http.ResponseWriter, r *http.Re
 		mapPasskeyError(w, r, err)
 		return
 	}
-	render.JSON(w, r, result)
+	common.Respond(w, r, http.StatusOK, result, "Passkey enrollment code sent")
 }
 
 func (rs *Resource) passkeyRegisterOptions(w http.ResponseWriter, r *http.Request) {
@@ -159,7 +159,7 @@ func (rs *Resource) passkeyRegisterOptions(w http.ResponseWriter, r *http.Reques
 		mapPasskeyError(w, r, err)
 		return
 	}
-	render.JSON(w, r, options)
+	common.Respond(w, r, http.StatusOK, options, "Passkey registration started")
 }
 
 func (rs *Resource) passkeyRegisterVerify(w http.ResponseWriter, r *http.Request) {
@@ -185,7 +185,7 @@ func (rs *Resource) passkeyRegisterVerify(w http.ResponseWriter, r *http.Request
 		mapPasskeyError(w, r, err)
 		return
 	}
-	render.JSON(w, r, credential)
+	common.Respond(w, r, http.StatusOK, credential, "Passkey registered")
 }
 
 func (rs *Resource) passkeyList(w http.ResponseWriter, r *http.Request) {
@@ -201,7 +201,7 @@ func (rs *Resource) passkeyList(w http.ResponseWriter, r *http.Request) {
 		mapPasskeyError(w, r, err)
 		return
 	}
-	render.JSON(w, r, credentials)
+	common.Respond(w, r, http.StatusOK, credentials, "Passkeys retrieved")
 }
 
 func (rs *Resource) passkeyRevoke(w http.ResponseWriter, r *http.Request) {

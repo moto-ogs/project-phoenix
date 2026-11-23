@@ -4,8 +4,9 @@ import {
   arr,
   bool,
   calendarDate,
+  fileAnswer,
   instant,
-  int64StringOrNumber,
+  int64String,
   json,
   nullable,
   object,
@@ -55,7 +56,7 @@ export interface TraegerCatalogSchool {
 }
 
 export const TraegerCatalogSchoolSchema: z.ZodType<TraegerCatalogSchool, unknown> = object<TraegerCatalogSchool>({
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   selected: bool,
   applied_version: optional(safeInt),
   outcome: optional(str),
@@ -74,11 +75,12 @@ export interface TraegerPhase {
   withdrawn_at?: string;
   schools: TraegerCatalogSchool[] | null;
   updated_at: string;
+  version: string;
 }
 
 export const TraegerPhaseSchema: z.ZodType<TraegerPhase, unknown> = object<TraegerPhase>({
-  id: int64StringOrNumber,
-  organization_id: int64StringOrNumber,
+  id: int64String,
+  organization_id: int64String,
   draft: TraegerPhaseFieldsSchema,
   all_schools: bool,
   released_version: optional(safeInt),
@@ -86,6 +88,7 @@ export const TraegerPhaseSchema: z.ZodType<TraegerPhase, unknown> = object<Traeg
   withdrawn_at: optional(instant),
   schools: nullable(arr(TraegerCatalogSchoolSchema)),
   updated_at: instant,
+  version: str,
 });
 
 /** Go: careplan.TraegerOfferingFields */
@@ -192,7 +195,7 @@ export interface TraegerOfferingSchool {
 }
 
 export const TraegerOfferingSchoolSchema: z.ZodType<TraegerOfferingSchool, unknown> = object<TraegerOfferingSchool>({
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   applied_version: optional(safeInt),
   outcome: optional(str),
   error_code: optional(str),
@@ -210,18 +213,20 @@ export interface TraegerOffering {
   withdrawn_at?: string;
   schools: TraegerOfferingSchool[] | null;
   updated_at: string;
+  version: string;
 }
 
 export const TraegerOfferingSchema: z.ZodType<TraegerOffering, unknown> = object<TraegerOffering>({
-  id: int64StringOrNumber,
-  organization_id: int64StringOrNumber,
-  traeger_phase_id: int64StringOrNumber,
+  id: int64String,
+  organization_id: int64String,
+  traeger_phase_id: int64String,
   draft: TraegerOfferingDraftSchema,
   released_version: optional(safeInt),
   released: optional(TraegerOfferingDraftSchema),
   withdrawn_at: optional(instant),
   schools: nullable(arr(TraegerOfferingSchoolSchema)),
   updated_at: instant,
+  version: str,
 });
 
 /** Go: traegercataloghttp.PhaseDetail */
@@ -235,12 +240,13 @@ export interface PhaseDetail {
   withdrawn_at?: string;
   schools: TraegerCatalogSchool[] | null;
   updated_at: string;
+  version: string;
   offerings: TraegerOffering[] | null;
 }
 
 export const PhaseDetailSchema: z.ZodType<PhaseDetail, unknown> = object<PhaseDetail>({
-  id: int64StringOrNumber,
-  organization_id: int64StringOrNumber,
+  id: int64String,
+  organization_id: int64String,
   draft: TraegerPhaseFieldsSchema,
   all_schools: bool,
   released_version: optional(safeInt),
@@ -248,6 +254,7 @@ export const PhaseDetailSchema: z.ZodType<PhaseDetail, unknown> = object<PhaseDe
   withdrawn_at: optional(instant),
   schools: nullable(arr(TraegerCatalogSchoolSchema)),
   updated_at: instant,
+  version: str,
   offerings: nullable(arr(TraegerOfferingSchema)),
 });
 
@@ -264,7 +271,8 @@ export interface PhaseRequest {
   care_overflow_mode?: string;
   care_offering_selection_mode?: string;
   all_schools?: boolean;
-  school_ids?: number[] | null;
+  school_ids?: string[] | null;
+  expected_version?: string;
 }
 
 /** Go: traegercataloghttp.OfferingFieldsRequest */
@@ -314,6 +322,7 @@ export interface OfferingRequest {
   fields?: OfferingFieldsRequest;
   prices?: OfferingPriceRequest[] | null;
   contract_template?: OfferingContractTemplateRequest | null;
+  expected_version?: string;
 }
 
 /** Go: enrollment.TraegerFieldChange */
@@ -357,7 +366,7 @@ export interface OfferingPlan {
 }
 
 export const OfferingPlanSchema: z.ZodType<OfferingPlan, unknown> = object<OfferingPlan>({
-  traeger_offering_id: int64StringOrNumber,
+  traeger_offering_id: int64String,
   name: str,
   action: str,
   fields: nullable(arr(TraegerOfferingFieldChangeSchema)),
@@ -377,7 +386,7 @@ export interface SchoolPlan {
 }
 
 export const SchoolPlanSchema: z.ZodType<SchoolPlan, unknown> = object<SchoolPlan>({
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   action: str,
   outcome: str,
   error_code: optional(str),
@@ -395,7 +404,7 @@ export interface Preview {
 }
 
 export const PreviewSchema: z.ZodType<Preview, unknown> = object<Preview>({
-  traeger_phase_id: int64StringOrNumber,
+  traeger_phase_id: int64String,
   version: safeInt,
   fingerprint: str,
   schools: nullable(arr(SchoolPlanSchema)),
@@ -415,7 +424,7 @@ export interface SchoolResult {
 }
 
 export const SchoolResultSchema: z.ZodType<SchoolResult, unknown> = object<SchoolResult>({
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   outcome: str,
   error_code: optional(str),
   care_beyond_end: safeInt,
@@ -429,7 +438,7 @@ export interface Rollout {
 }
 
 export const RolloutSchema: z.ZodType<Rollout, unknown> = object<Rollout>({
-  traeger_phase_id: int64StringOrNumber,
+  traeger_phase_id: int64String,
   version: safeInt,
   schools: nullable(arr(SchoolResultSchema)),
 });
@@ -440,6 +449,15 @@ export const routes = {
     pattern: "/traeger/catalog/phases",
     portals: ["org"],
     response: success(z.array(TraegerPhaseSchema)),
+  },
+  "GET /traeger/catalog/phases/export": {
+    method: "GET",
+    pattern: "/traeger/catalog/phases/export",
+    portals: ["org"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
+    response: fileAnswer,
   },
   "GET /traeger/catalog/phases/{id}": {
     method: "GET",
@@ -471,6 +489,7 @@ export const routes = {
     method: "POST",
     pattern: "/traeger/catalog/phases/{id}/preview",
     portals: ["org"],
+    noCommit: "the preview shows what publishing the phase would change and saves nothing",
     response: success(PreviewSchema),
   },
   "POST /traeger/catalog/phases/{id}/rollout": {

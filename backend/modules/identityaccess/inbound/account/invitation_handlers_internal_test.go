@@ -10,12 +10,15 @@ import (
 	"testing"
 	"time"
 
+	testpkg "github.com/moto-ogs/project-phoenix/test"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/settings"
 	transactionFailures "github.com/moto-ogs/project-phoenix/modules/transactionruntime"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -121,7 +124,7 @@ func TestInvitationHandlers_CreateInvitationAndListPending(t *testing.T) {
 	body := decodeJSONBody(t, rr)
 	data := body["data"].(map[string]any)
 	assert.Equal(t, "9007199254740993", data["role_id"])
-	assert.Equal(t, float64(0), data["created_by"])
+	assert.Equal(t, int64(0), testpkg.JSONID(t, data["created_by"]))
 	assert.Equal(t, "failed", data["delivery_status"])
 	assert.Equal(t, creator, data["creator"])
 
@@ -134,7 +137,7 @@ func TestInvitationHandlers_CreateInvitationAndListPending(t *testing.T) {
 	require.Len(t, items, 1)
 	item := items[0].(map[string]any)
 	assert.Equal(t, "sent", item["delivery_status"])
-	assert.Equal(t, float64(0), item["created_by"])
+	assert.Equal(t, int64(0), testpkg.JSONID(t, item["created_by"]))
 }
 
 func TestInvitationHandlers_CreateInvitation_AccountAlreadyHasTenantAccess(t *testing.T) {
@@ -160,6 +163,37 @@ func TestInvitationHandlers_CreateInvitation_AccountAlreadyHasTenantAccess(t *te
 	body := decodeJSONBody(t, rr)
 	assert.Equal(t, float64(rr.Code), body["status"])
 	assert.Equal(t, "identity.account_already_has_tenant_access", body["code"])
+}
+
+// The dialog's former-employment version reaches the application only when
+// the dialog read one; without it (failed or timed-out lookup) the request
+// carries none and the ADR 0021 default applies.
+func TestInvitationHandlers_CreateInvitation_PassesTheFormerEmploymentVersion(t *testing.T) {
+	t.Parallel()
+	for name, tc := range map[string]struct{ body, want string }{
+		"read":          {`{"email":"a@example.com","role_id":1,"expected_former_employment":" v-1 "}`, "v-1"},
+		"lookup failed": {`{"email":"a@example.com","role_id":1}`, ""},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			var got *string
+			service := &invitationsStub{
+				createSchool: func(_ context.Context, request identityaccess.SchoolInvitationRequest) (identityaccess.SchoolInvitation, error) {
+					got = &request.ExpectedFormerEmployment
+					return identityaccess.SchoolInvitation{ID: 1, Email: request.Email, RoleID: request.RoleID}, nil
+				},
+			}
+			resource := NewResource(nil, service, nil, nil, nil, transactionFailures.IsConstraintViolation, unusedTenantSettings{})
+			req := httptest.NewRequest(http.MethodPost, "/auth/invitations", bytes.NewBufferString(tc.body))
+			req.Header.Set("Content-Type", "application/json")
+			req = req.WithContext(testutil.WithAuthenticatedContext(req.Context(), testutil.Claims{ID: 1}, nil))
+			rr := httptest.NewRecorder()
+			resource.createInvitation(rr, req)
+			require.Equal(t, http.StatusCreated, rr.Code, rr.Body.String())
+			require.NotNil(t, got)
+			assert.Equal(t, tc.want, *got)
+		})
+	}
 }
 
 func TestInvitationHandlers_CreateInvitation_EmailAlreadyExistsNamesTheField(t *testing.T) {
@@ -251,7 +285,7 @@ func TestInvitationHandlers_ValidateAndAccept(t *testing.T) {
 	var acceptResp AcceptInvitationResponse
 	err := json.Unmarshal([]byte(extractDataJSON(t, acceptRR.Body.Bytes())), &acceptResp)
 	assert.NoError(t, err)
-	assert.Equal(t, int64(77), acceptResp.AccountID)
+	assert.Equal(t, ident.ID(77), acceptResp.AccountID)
 	assert.Equal(t, "invitee@example.com", acceptResp.Email)
 	assert.Empty(t, acceptResp.TenantSubdomain, "tenant_subdomain should be empty when SchoolRepo is nil")
 }
@@ -325,6 +359,7 @@ func TestInvitationHandlers_FindFormerEmployment(t *testing.T) {
 		findFormer: func(_ context.Context, email string) (identityaccess.FormerEmployment, bool, error) {
 			asked = email
 			return identityaccess.FormerEmployment{
+				Version:      "found-version",
 				StartedOn:    calendar.NewDate(2024, time.August, 1),
 				EndedOn:      calendar.NewDate(2026, time.July, 31),
 				Resumes:      []identityaccess.FormerEmploymentPart{identityaccess.FormerEmploymentMasterData},
@@ -345,6 +380,7 @@ func TestInvitationHandlers_FindFormerEmployment(t *testing.T) {
 		"resumes":       []any{"master_data"},
 		"not_returning": []any{"staff_documents"},
 	}, data["former_employment"])
+	assert.Equal(t, "found-version", data["version"])
 }
 
 // Without a former employment the answer carries nothing, whether or not an
@@ -354,7 +390,7 @@ func TestInvitationHandlers_FindFormerEmployment_NoneIsNull(t *testing.T) {
 
 	service := &invitationsStub{
 		findFormer: func(context.Context, string) (identityaccess.FormerEmployment, bool, error) {
-			return identityaccess.FormerEmployment{}, false, nil
+			return identityaccess.FormerEmployment{Version: "none-version"}, false, nil
 		},
 	}
 	resource := NewResource(nil, service, nil, nil, nil, transactionFailures.IsConstraintViolation, unusedTenantSettings{})
@@ -365,6 +401,7 @@ func TestInvitationHandlers_FindFormerEmployment_NoneIsNull(t *testing.T) {
 	data := decodeJSONBody(t, rr)["data"].(map[string]any)
 	assert.Contains(t, data, "former_employment")
 	assert.Nil(t, data["former_employment"])
+	assert.Equal(t, "none-version", data["version"], "the answer \"none\" has a version too")
 }
 
 func TestInvitationHandlers_FindFormerEmployment_InvalidEmail(t *testing.T) {
@@ -392,7 +429,7 @@ func postFormerEmployment(resource *Resource, body string) *httptest.ResponseRec
 func TestInvitationEmploymentActionWireContract(t *testing.T) {
 	t.Parallel()
 	for _, action := range []identityaccess.EmploymentAction{"", identityaccess.EmploymentActionResume, identityaccess.EmploymentActionNew, "unknown"} {
-		req := CreateInvitationRequest{Email: "invitee@example.com", RoleID: 42, EmploymentAction: action}
+		req := CreateSchoolInvitationRequest{Email: "invitee@example.com", RoleID: 42, EmploymentAction: action}
 		err := req.Bind(httptest.NewRequest(http.MethodPost, "/auth/invitations", nil))
 		if action == "unknown" {
 			require.Error(t, err)
@@ -417,7 +454,7 @@ func TestInvitationEmploymentActionWireContract(t *testing.T) {
 func TestInvitationResetWireContract(t *testing.T) {
 	t.Parallel()
 	for _, action := range []identityaccess.EmploymentAction{"", identityaccess.EmploymentActionResume, identityaccess.EmploymentActionNew} {
-		req := CreateInvitationRequest{Email: "return@example.test", RoleID: 42, EmploymentAction: action, ResetMasterData: true, ResetQualifications: true, ResetWorkTime: true}
+		req := CreateSchoolInvitationRequest{Email: "return@example.test", RoleID: 42, EmploymentAction: action, ResetMasterData: true, ResetQualifications: true, ResetWorkTime: true}
 		err := req.Bind(httptest.NewRequest(http.MethodPost, "/auth/invitations", nil))
 		if action == identityaccess.EmploymentActionNew {
 			require.Error(t, err)
@@ -439,7 +476,7 @@ func TestInvitationResetWireContract(t *testing.T) {
 func TestInvitationGenderWireContract(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct{ wire, want string }{{" female ", "female"}, {"male", "male"}, {"diverse", "diverse"}, {"", ""}, {"  ", ""}} {
-		req := CreateInvitationRequest{Email: "invitee@example.com", RoleID: 42, Gender: tc.wire}
+		req := CreateSchoolInvitationRequest{Email: "invitee@example.com", RoleID: 42, Gender: tc.wire}
 		require.NoError(t, req.Bind(httptest.NewRequest(http.MethodPost, "/auth/invitations", nil)))
 		mapped := (&Resource{}).buildInvitationRequest(httptest.NewRequest(http.MethodPost, "/auth/invitations", nil), &req, testutil.DefaultTestClaims())
 		if tc.want == "" {

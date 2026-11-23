@@ -81,15 +81,17 @@ describe.each([
         }),
       );
       expect(setter).toHaveBeenCalledOnce();
-      expect(await response.json()).toEqual(
-        path === "switch-tenant"
-          ? { success: true }
-          : {
-              expires_in: 900,
-              target_account_id: "42",
-              target_name: "Erika",
-            },
-      );
+      expect(await response.json()).toEqual({
+        status: "success",
+        data:
+          path === "switch-tenant"
+            ? null
+            : {
+                expires_in: 900,
+                target_account_id: "42",
+                target_name: "Erika",
+              },
+      });
       if (path === "switch-tenant")
         expect(setter).toHaveBeenCalledWith("server-access", "server-refresh");
       else

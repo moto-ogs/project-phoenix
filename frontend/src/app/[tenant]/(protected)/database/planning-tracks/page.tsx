@@ -28,11 +28,15 @@ import {
 } from "~/lib/planning-track-api";
 import { ApiError } from "~/lib/api-error";
 import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
-import { useSWRAuth, useTenantMutate } from "~/lib/swr";
+import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { useTimetableEnabled } from "~/lib/tenant-context";
 import { carePlanConcept } from "~/lib/concepts/carePlan";
 import { TenantPageStats } from "~/components/ui/tenant-page";
+
+/** Info-Knopf am Titel: wofür die Seite da ist und was man zuerst tut. */
+const PLANNING_TRACKS_INFO =
+  "Hier legst du Planungsspuren an, zum Beispiel eine je Jahrgang. Jede Planungsspur hat eine Farbe. Im Betreuungsplan erkennst du daran, zu welcher Planungsspur ein Regeltermin gehört.";
 
 const CACHE_KEY = tenantAdminKeys.planningTracks();
 const DEFAULT_COLOR: string = LOCATION_COLORS.OTHER_ROOM;
@@ -83,18 +87,14 @@ function planningTrackStats(tracks: readonly PlanningTrack[]) {
 
 function PlanningTracksPageContent() {
   const searchParams = useSearchParams();
-  const tenantMutate = useTenantMutate();
   const timetableEnabled = useTimetableEnabled();
 
   const discardRefused = useDiscardRefusedEntity();
-  const {
-    data: cachedData,
-    isLoading,
-    error: swrError,
-    mutate,
-  } = useSWRAuth<PlanningTrack[]>(timetableEnabled ? CACHE_KEY : null, () =>
-    planningTrackService.list(),
+  const list = useSWRAuth<PlanningTrack[]>(
+    timetableEnabled ? CACHE_KEY : null,
+    () => planningTrackService.list(),
   );
+  const { data: cachedData, isLoading, error: swrError, mutate } = list;
   const accessRefused =
     swrError instanceof ApiError && isAccessRefusal(swrError);
   const data = accessRefused ? undefined : cachedData;
@@ -114,7 +114,9 @@ function PlanningTracksPageContent() {
     data === undefined ? undefined : STALE_DATA_SUFFIX,
   );
 
-  const onChanged = useCallback(() => tenantMutate(CACHE_KEY), [tenantMutate]);
+  // Lehnt ab, wenn das Lesen scheitert (ADR 0311), mit der Liste als
+  // Antwort.
+  const onChanged = useCallback(() => revalidateOrThrow(list), [list]);
 
   // Die Liste kommt bereits in Sortierreihenfolge; die Pfeile in der Sammlung
   // schreiben genau diese Folge zurück.
@@ -167,6 +169,7 @@ function PlanningTracksPageContent() {
           color:
             typeof values.color === "string" ? values.color : DEFAULT_COLOR,
           sort_order: track.sortOrder,
+          expected_version: track.version,
         }),
       reorder: (orderedIds) => planningTrackService.reorder(orderedIds),
       retire: {
@@ -192,6 +195,7 @@ function PlanningTracksPageContent() {
     return (
       <PlanningDisabledState
         pageTitle="Planungsspuren"
+        info={PLANNING_TRACKS_INFO}
         heading="Planungsspuren sind nicht verfügbar"
         description="Der Betreuungsplan ist für diese Schule ausgeschaltet."
         testId="planning-tracks-disabled-state"
@@ -201,6 +205,7 @@ function PlanningTracksPageContent() {
 
   return (
     <CatalogPage
+      info={PLANNING_TRACKS_INFO}
       config={config}
       items={items}
       // Bis der Katalogtext des Ladefehlers da ist, bleibt das Skelett

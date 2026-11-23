@@ -1,47 +1,28 @@
-import { transportFetch } from "~/lib/api-error";
-import { buildApiError } from "~/lib/api-error-response";
+import { bffJson, bffJsonUncontracted } from "~/lib/bff-fetch";
+import type * as authInvitationsContract from "~/lib/contract/auth-invitations.generated";
 import type {
   InvitationValidation,
   InvitationAcceptRequest,
   CreateInvitationRequest,
   PendingInvitation,
-  BackendInvitationValidation,
-  BackendInvitation,
-  BackendFormerEmployment,
-  FormerEmployment,
+  FormerEmploymentAnswer,
 } from "./invitation-helpers";
 import {
   mapFormerEmploymentResponse,
   mapInvitationValidationResponse,
   mapPendingInvitationResponse,
+  toCreateInvitationBody,
 } from "./invitation-helpers";
-
-const hasDataProperty = <T>(value: unknown): value is { data: T } => {
-  return typeof value === "object" && value !== null && "data" in value;
-};
-
-const extractData = <T>(payload: unknown): T => {
-  if (hasDataProperty<T>(payload)) {
-    return payload.data;
-  }
-  return payload as T;
-};
 
 export async function validateInvitation(
   token: string,
 ): Promise<InvitationValidation> {
-  const response = await transportFetch(
-    `/api/invitations/validate?token=${encodeURIComponent(token)}`,
+  return mapInvitationValidationResponse(
+    await bffJson("public", "GET /auth/invitations/{token}", {
+      params: { token },
+      errorMessage: "Einladung konnte nicht geprüft werden.",
+    }),
   );
-  if (!response.ok) {
-    throw await buildApiError(
-      response,
-      "Einladung konnte nicht geprüft werden.",
-    );
-  }
-  const raw = (await response.json()) as unknown;
-  const data = extractData<BackendInvitationValidation>(raw);
-  return mapInvitationValidationResponse(data);
 }
 
 interface AcceptInvitationResult {
@@ -53,129 +34,76 @@ export async function acceptInvitation(
   token: string,
   data: InvitationAcceptRequest,
 ): Promise<AcceptInvitationResult> {
-  const response = await transportFetch("/api/invitations/accept", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ token, ...data }),
-  });
-
-  if (!response.ok) {
-    throw await buildApiError(
-      response,
-      "Einladung konnte nicht angenommen werden.",
+  // A new account accepts without a session, an existing one with the
+  // owner's: the route file decides by `existingAccount` and forwards the
+  // backend's answer. No portal of the route's contract carries both, so
+  // bff-boundary/only-listed-uncontracted names this caller.
+  const result =
+    await bffJsonUncontracted<authInvitationsContract.AcceptInvitationResponse>(
+      "public",
+      "POST",
+      "/api/invitations/accept",
+      {
+        body: { token, ...data },
+        errorMessage: "Einladung konnte nicht angenommen werden.",
+      },
     );
-  }
-
-  const raw = (await response.json()) as Record<string, unknown>;
-  const result = (raw.data ?? raw) as Record<string, unknown>;
-  return {
-    tenantSubdomain:
-      typeof result.tenant_subdomain === "string"
-        ? result.tenant_subdomain
-        : undefined,
-  };
+  return { tenantSubdomain: result.tenant_subdomain || undefined };
 }
 
 export async function createInvitation(
   data: CreateInvitationRequest,
 ): Promise<PendingInvitation> {
-  const response = await transportFetch("/api/invitations", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(data),
-    credentials: "include",
-  });
-
-  if (!response.ok) {
-    throw await buildApiError(
-      response,
-      "Einladung konnte nicht erstellt werden.",
-    );
-  }
-
-  const raw = (await response.json()) as unknown;
-  const invitationData = extractData<BackendInvitation>(raw);
-  return mapPendingInvitationResponse(invitationData);
+  return mapPendingInvitationResponse(
+    await bffJson("tenant", "POST /auth/invitations/", {
+      body: toCreateInvitationBody(data),
+      errorMessage: "Einladung konnte nicht erstellt werden.",
+    }),
+  );
 }
 
 /**
  * Asks whether an invitation to the address would continue a former
  * employment at this school; null when it would not, also for an address
- * without an account. The address goes in the body, never into a URL.
+ * without an account. The answer carries its version either way. The address
+ * goes in the body, never into a URL.
  */
 export async function findFormerEmployment(
   email: string,
   signal?: AbortSignal,
-): Promise<FormerEmployment | null> {
-  const response = await transportFetch(
-    "/api/auth/invitations/former-employment",
+): Promise<FormerEmploymentAnswer> {
+  const data = await bffJson(
+    "tenant",
+    "POST /auth/invitations/former-employment",
     {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ email }),
-      credentials: "include",
+      body: { email },
       signal,
+      errorMessage: "Frühere Beschäftigung konnte nicht geprüft werden.",
     },
   );
-  if (!response.ok) {
-    throw await buildApiError(
-      response,
-      "Frühere Beschäftigung konnte nicht geprüft werden.",
-    );
-  }
-  const raw = (await response.json()) as unknown;
-  const data = extractData<{
-    former_employment?: BackendFormerEmployment | null;
-  }>(raw);
-  return mapFormerEmploymentResponse(data.former_employment);
+  return {
+    formerEmployment: mapFormerEmploymentResponse(data.former_employment),
+    version: data.version,
+  };
 }
 
 export async function listPendingInvitations(): Promise<PendingInvitation[]> {
-  const response = await transportFetch("/api/invitations", {
-    credentials: "include",
+  const rows = await bffJson("tenant", "GET /auth/invitations/", {
+    errorMessage: "Offene Einladungen konnten nicht geladen werden.",
   });
-  if (!response.ok) {
-    throw await buildApiError(
-      response,
-      "Offene Einladungen konnten nicht geladen werden.",
-    );
-  }
-  const raw = (await response.json()) as unknown;
-  const extracted = extractData<BackendInvitation[] | BackendInvitation>(raw);
-  if (Array.isArray(extracted)) {
-    return extracted.map(mapPendingInvitationResponse);
-  }
-  return [mapPendingInvitationResponse(extracted)];
+  return rows.map(mapPendingInvitationResponse);
 }
 
-export async function resendInvitation(id: number): Promise<void> {
-  const response = await transportFetch(`/api/auth/invitations/${id}/resend`, {
-    method: "POST",
-    credentials: "include",
+export async function resendInvitation(id: string): Promise<void> {
+  await bffJson("tenant", "POST /auth/invitations/{id}/resend", {
+    params: { id },
+    errorMessage: "Einladung konnte nicht erneut gesendet werden.",
   });
-  if (!response.ok) {
-    throw await buildApiError(
-      response,
-      "Einladung konnte nicht erneut gesendet werden.",
-    );
-  }
 }
 
-export async function revokeInvitation(id: number): Promise<void> {
-  const response = await transportFetch(`/api/auth/invitations/${id}`, {
-    method: "DELETE",
-    credentials: "include",
+export async function revokeInvitation(id: string): Promise<void> {
+  await bffJson("tenant", "DELETE /auth/invitations/{id}/", {
+    params: { id },
+    errorMessage: "Einladung konnte nicht widerrufen werden.",
   });
-  if (!response.ok) {
-    throw await buildApiError(
-      response,
-      "Einladung konnte nicht widerrufen werden.",
-    );
-  }
 }

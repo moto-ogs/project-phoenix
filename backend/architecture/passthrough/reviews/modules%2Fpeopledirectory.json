@@ -127,11 +127,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/peopledirectory/internal/adapters/peoplepostgres/nativeGuardianProfileRepository.FindWithoutAccount",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/peopledirectory/internal/adapters/peoplepostgres/nativeGuardianProfileRepository.ListWithOptions",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -547,27 +542,12 @@
     },
     {
       "decision": "0090",
-      "id": "modules/peopledirectory/internal/application/GroupRoutePeople.FindPerson",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/peopledirectory/internal/application/GroupRoutePeople.GroupStudents",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
       "decision": "0090",
-      "id": "modules/peopledirectory/internal/application/GroupRoutePeople.ListPersonsByID",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/peopledirectory/internal/application/GuardianDirectory.AddGuardiansToStudent",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/peopledirectory/internal/application/GuardianDirectory.DeleteGuardianPhone",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
@@ -592,11 +572,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/peopledirectory/internal/application/GuardianDirectory.FindGuardianPhone",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/peopledirectory/internal/application/GuardianDirectory.GuardianPaymentMasked",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -613,16 +588,6 @@
     {
       "decision": "0090",
       "id": "modules/peopledirectory/internal/application/GuardianDirectory.ListGuardians",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/peopledirectory/internal/application/GuardianDirectory.ListGuardiansWithoutAccount",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/peopledirectory/internal/application/GuardianDirectory.ListInvitableGuardians",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
@@ -652,17 +617,17 @@
     },
     {
       "decision": "0090",
-      "id": "modules/peopledirectory/internal/application/GuardianDirectory.SetPrimaryGuardianPhone",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/peopledirectory/internal/application/GuardianDirectory.SetStudentPayer",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
       "decision": "0090",
       "id": "modules/peopledirectory/internal/application/GuardianDirectory.UpdateGuardian",
+      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+    },
+    {
+      "decision": "0251",
+      "id": "modules/peopledirectory/internal/application/GuardianDirectory.UpdateGuardianEntry",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
@@ -673,11 +638,6 @@
     {
       "decision": "0090",
       "id": "modules/peopledirectory/internal/application/GuardianDirectory.UpdateGuardianPayment",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/peopledirectory/internal/application/GuardianDirectory.UpdateGuardianPhone",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
@@ -922,11 +882,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/peopledirectory/internal/application/Service.ListAcrossTenantsByIDs",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/peopledirectory/internal/application/Service.ListAllStudentIDs",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -1037,11 +992,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/peopledirectory/internal/application/Service.ListStudentsAcrossTenantsByID",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/peopledirectory/internal/application/Service.ListStudentsByClasses",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -1069,6 +1019,11 @@
       "decision": "0090",
       "id": "modules/peopledirectory/internal/application/Service.LockStudent",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+    },
+    {
+      "decision": "0313",
+      "id": "modules/peopledirectory/internal/application/Service.LockStudentNoKeyUpdate",
+      "reason": "ADR 0313 (#7956): the People Directory's student row lock FOR NO KEY UPDATE, beside LockStudent; it validates the ID and maps the owner's error, the same shape as the registered LockStudent."
     },
     {
       "decision": "0090",
@@ -1247,11 +1202,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/peopledirectory/internal/application/StudentRecords.FindByIDForUpdate",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/peopledirectory/internal/application/StudentRecords.FindByIDs",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -1358,11 +1308,6 @@
     {
       "decision": "0090",
       "id": "modules/peopledirectory/internal/application/StudentService.Delete",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/peopledirectory/internal/application/StudentService.ListAcrossTenantsByIDs",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {

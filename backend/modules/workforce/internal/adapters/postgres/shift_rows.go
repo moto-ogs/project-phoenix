@@ -24,6 +24,8 @@ type staffShiftRow struct {
 	Detached             bool          `bun:"detached,notnull,default:false"`
 	SeriesOverride       bool          `bun:"series_override,notnull,default:false"`
 	SeriesOccurrenceDate *calendarDate `bun:"series_occurrence_date,type:date"`
+	SeriesStartTime      *time.Time    `bun:"series_start_time,scanonly"`
+	SeriesEndTime        *time.Time    `bun:"series_end_time,scanonly"`
 	Cancelled            bool          `bun:"cancelled,notnull,default:false"`
 	ChangeReason         *string       `bun:"change_reason"`
 	OriginShiftID        *int64        `bun:"origin_shift_id"`
@@ -54,10 +56,12 @@ type staffShiftSeriesRow struct {
 	SeriesRootID              *int64        `bun:"series_root_id"`
 	RetainedOccurrenceShiftID *int64        `bun:"retained_occurrence_shift_id"`
 	IncludeSchoolBreaks       bool          `bun:"include_school_breaks,notnull,default:false"`
-	CreatedBy                 int64         `bun:"created_by,notnull"`
-	UpdatedBy                 *int64        `bun:"updated_by"`
-	CreatedAt                 time.Time     `bun:"created_at,nullzero,notnull"`
-	UpdatedAt                 time.Time     `bun:"updated_at,nullzero,notnull"`
+	// CreatedBy is NULL for a series the Träger-Büro planned (#7818).
+	CreatedBy        int64     `bun:"created_by,nullzero"`
+	UpdatedBy        *int64    `bun:"updated_by"`
+	PlannedByTraeger bool      `bun:"planned_by_traeger,notnull,default:false"`
+	CreatedAt        time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt        time.Time `bun:"updated_at,nullzero,notnull"`
 }
 
 type staffShiftSeriesExceptionRow struct {
@@ -66,9 +70,12 @@ type staffShiftSeriesExceptionRow struct {
 	TenantID      int64        `bun:"tenant_id,notnull"`
 	SeriesID      int64        `bun:"series_id,notnull"`
 	Date          calendarDate `bun:"date,notnull,type:date"`
-	CreatedBy     int64        `bun:"created_by,notnull"`
-	CreatedAt     time.Time    `bun:"created_at,nullzero,notnull"`
-	UpdatedAt     time.Time    `bun:"updated_at,nullzero,notnull"`
+	// CreatedBy is NULL for an occurrence of a series the Träger-Büro
+	// planned (#7818).
+	CreatedBy        int64     `bun:"created_by,nullzero"`
+	PlannedByTraeger bool      `bun:"planned_by_traeger,notnull,default:false"`
+	CreatedAt        time.Time `bun:"created_at,nullzero,notnull"`
+	UpdatedAt        time.Time `bun:"updated_at,nullzero,notnull"`
 }
 
 type shiftTypeRow struct {
@@ -124,7 +131,7 @@ func staffShiftFromDomain(value domain.StaffShift) (*staffShiftRow, error) {
 }
 
 func staffShiftToDomain(row staffShiftRow) domain.StaffShift {
-	return domain.StaffShift{
+	value := domain.StaffShift{
 		ID: row.ID, TenantID: row.TenantID, StaffID: row.StaffID, Date: string(row.Date),
 		StartTime: wallClockString(row.StartTime), EndTime: wallClockString(row.EndTime), BreakMinutes: row.BreakMinutes,
 		ShiftTypeID: row.ShiftTypeID, Notes: row.Notes, SeriesID: row.SeriesID, Detached: row.Detached, SeriesOverride: row.SeriesOverride,
@@ -133,6 +140,13 @@ func staffShiftToDomain(row staffShiftRow) domain.StaffShift {
 		CreatedBy: row.CreatedBy, UpdatedBy: row.UpdatedBy, PlannedByTraeger: row.PlannedByTraeger,
 		CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
 	}
+	if row.SeriesStartTime != nil {
+		value.SeriesStartTime = wallClockString(*row.SeriesStartTime)
+	}
+	if row.SeriesEndTime != nil {
+		value.SeriesEndTime = wallClockString(*row.SeriesEndTime)
+	}
+	return value
 }
 
 func staffShiftsToDomain(rows []staffShiftRow) []domain.StaffShift {

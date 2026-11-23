@@ -34,6 +34,18 @@ type (
 	// active request of the phase that created or renews it (#6247).
 	DecisionPhaseHolders interface {
 		PhaseRequestsHoldingStudents(ctx context.Context, phaseID int64, studentIDs, excludedChildIDs []int64) (map[int64]enrollmentNative.CandidatePhaseRequest, error)
+		// ContractEnrollmentHolders lists every request child of the phase
+		// that holds one of the students, with the source of its request,
+		// and the request children of the source contract_import of these
+		// students in every other phase (#7760, ADR 0309).
+		ContractEnrollmentHolders(ctx context.Context, phaseID int64, studentIDs []int64) ([]enrollmentNative.ContractEnrollmentHolder, error)
+		// InsertContractEnrollments stores the requests, their children and
+		// the submitted choices of a contract enrollment run in three
+		// statements, however many children, and fills in the ids.
+		InsertContractEnrollments(ctx context.Context, writes []enrollmentNative.ContractEnrollmentWrite, stamp enrollmentNative.ContractEnrollmentStamp) error
+		// ApproveContractChildren approves the children of a run in one
+		// statement.
+		ApproveContractChildren(ctx context.Context, approvals []enrollmentNative.ContractChildApproval, stamp enrollmentNative.ContractEnrollmentStamp) error
 	}
 	// DecisionChildren reads the request children with their offering
 	// selections and writes the decision state.
@@ -222,16 +234,24 @@ type DecisionDependencies struct {
 	// The owner's composition binds its own store.
 	PhaseHolders DecisionPhaseHolders
 	// Reads is the per-account read state of the admin queue (#3778).
-	Reads          enrollmentNative.RequestReads
-	Children       DecisionChildren
-	Guardians      DecisionGuardians
-	LateInvites    DecisionLateInvites
-	Phases         DecisionPhases
-	Schemas        DecisionSchemas
-	Offerings      CareOfferingCatalog
-	Notifications  enrollmentNative.Notifications
-	Bookings       DecisionBookings
-	GuardianAccess DecisionGuardianAccess
+	Reads enrollmentNative.RequestReads
+	// ContractStudents, CareBookings and Random serve the enrollment of the
+	// children of imported care contracts (#7760, ADR 0309): the child
+	// records with their persons, the bookings Care Plan records for a
+	// child, and the entropy of its status token. Without the three the
+	// capability refuses.
+	ContractStudents ContractStudents
+	CareBookings     enrollmentNative.CareBookingCommands
+	Random           func([]byte) error
+	Children         DecisionChildren
+	Guardians        DecisionGuardians
+	LateInvites      DecisionLateInvites
+	Phases           DecisionPhases
+	Schemas          DecisionSchemas
+	Offerings        CareOfferingCatalog
+	Notifications    enrollmentNative.Notifications
+	Bookings         DecisionBookings
+	GuardianAccess   DecisionGuardianAccess
 	// GuardianInvitations creates the invitation an approval owes. Nil
 	// leaves it uncreated (focused tests).
 	GuardianInvitations DecisionGuardianInvitations
@@ -247,8 +267,11 @@ type DecisionDependencies struct {
 	StudentAudit        StudentAudit
 	StudentConsents     StudentConsents
 	CareWithdrawal      CareWithdrawalReconciler
-	Broadcasts          StudentPlanBroadcasts
-	Settings            DecisionSettings
+	// CareStudents reads the care ends behind the bookings the office can
+	// extend (#7929). Nil offers no extension.
+	CareStudents enrollmentNative.PhaseCareStudents
+	Broadcasts   StudentPlanBroadcasts
+	Settings     DecisionSettings
 	// LockTemplateRecurrence takes the tenant recurrence gate before an
 	// approval rewrites an existing student's class, the same gate Care
 	// Plan's booking materialization serializes its roster writes with.

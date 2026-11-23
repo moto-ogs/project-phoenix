@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	"github.com/moto-ogs/project-phoenix/modules/carecontract/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -34,9 +35,12 @@ const accessViewImport = "care_contract_import"
 type ImportStore interface {
 	Templates(ctx context.Context, organizationID int64) ([]TemplateRow, error)
 	ContractChildren(ctx context.Context, organizationID int64, schoolIDs []int64) ([]ports.ContractChild, error)
+	LockChildLinks(ctx context.Context, organizationID int64) error
 	InsertImportedContracts(ctx context.Context, organizationID, accountID int64, contracts []ports.ImportedContract) (map[int]int64, error)
 	ContractImportEvents(ctx context.Context, organizationID int64) ([]carecontract.ContractImportEntry, error)
 	InsertEvents(ctx context.Context, organizationID int64, events []Event) error
+	CorrectableContracts(ctx context.Context, organizationID int64, ids []int64, lock bool) ([]ports.CorrectableContract, error)
+	InsertCorrectedVersions(ctx context.Context, organizationID int64, corrected []ports.CorrectedVersion) (map[int64]int64, error)
 }
 
 // ImportPorts are the root-bound ports of the import.
@@ -139,7 +143,7 @@ func (i *ContractImports) ImportContracts(ctx context.Context, reviewer carecont
 	if err != nil {
 		return carecontract.ContractImport{}, err
 	}
-	if err := i.logSchools(ctx, reviewer, shown); err != nil {
+	if err := i.logSchools(ctx, reviewer, accessViewImport, shown); err != nil {
 		return carecontract.ContractImport{}, err
 	}
 	return result, nil
@@ -167,7 +171,7 @@ func (i *ContractImports) evaluate(ctx context.Context, reviewer carecontract.Re
 	for n, school := range schools {
 		ids[n] = school.school.ID
 	}
-	running, err := i.store.ContractChildren(ctx, organizationID, ids)
+	running, err := i.runningContracts(ctx, organizationID, ids, request.Apply)
 	if err != nil {
 		return nil, err
 	}
@@ -197,6 +201,20 @@ func (i *ContractImports) evaluate(ctx context.Context, reviewer carecontract.Re
 		map[string]any{"view": "import", "rows": len(candidates), "applied": result.Applied})
 }
 
+// runningContracts reads the children of the contracts at the schools. An
+// import that stores takes, before it reads, the lock a creation of a
+// contract and a link run take (#7760): what the import finds as running is
+// decided under it, so an import and a contract from an application of one
+// child cannot both pass.
+func (i *ContractImports) runningContracts(ctx context.Context, organizationID int64, schoolIDs []int64, apply bool) ([]ports.ContractChild, error) {
+	if apply {
+		if err := i.store.LockChildLinks(ctx, organizationID); err != nil {
+			return nil, err
+		}
+	}
+	return i.store.ContractChildren(ctx, organizationID, schoolIDs)
+}
+
 // summarizeContractImport puts the rows into the answer and counts them. It
 // answers per school the contracts the rows name: stored ones and the
 // running contracts of duplicates.
@@ -214,7 +232,7 @@ func summarizeContractImport(result *carecontract.ContractImport, candidates []i
 			families[debtorNumberTarget(carecontract.ContractDebtorNumberPerPayer, row)] = true
 		}
 		if row.ContractID > 0 {
-			shown[row.SchoolID] = append(shown[row.SchoolID], row.ContractID)
+			shown[row.SchoolID.Int64()] = append(shown[row.SchoolID.Int64()], row.ContractID.Int64())
 		}
 	}
 	result.Counts.DebtorNumbers, result.Counts.FamilyChildren = len(numbers), len(families)
@@ -241,7 +259,7 @@ func (i *ContractImports) apply(ctx context.Context, reviewer carecontract.Revie
 		if !ok {
 			continue
 		}
-		candidate.row.Status, candidate.row.ContractID = carecontract.ContractImportImported, id
+		candidate.row.Status, candidate.row.ContractID = carecontract.ContractImportImported, ident.ID(id)
 		contractID, schoolID := id, candidate.contract.SchoolID
 		events = append(events, Event{ContractID: &contractID, SchoolID: &schoolID, AccountID: reviewer.AccountID, Action: ActionCreate,
 			Details: map[string]any{ports.ImportActionDetail: file, "import_line": candidate.row.Line,
@@ -259,8 +277,8 @@ func (i *ContractImports) apply(ctx context.Context, reviewer carecontract.Revie
 func versionOfferings(version carecontract.Version) []int64 {
 	ids := []int64{}
 	for _, service := range version.Services {
-		if !slices.Contains(ids, service.CareOfferingID) {
-			ids = append(ids, service.CareOfferingID)
+		if !slices.Contains(ids, service.CareOfferingID.Int64()) {
+			ids = append(ids, service.CareOfferingID.Int64())
 		}
 	}
 	return ids
@@ -288,7 +306,7 @@ func (i *ContractImports) decideNumbers(ctx context.Context, reviewer carecontra
 		at[row.Line] = n
 		numbers = append(numbers, carecontract.ImportedDebtorNumber{Line: row.Line, FamilyEmail: row.PartyEmail,
 			ChildFirstName: row.ChildFirstName, ChildLastName: row.ChildLastName, ChildBirthDate: row.ChildBirthDate,
-			DebtorNumber: row.DebtorNumber, Until: candidate.until, ContractID: row.ContractID})
+			DebtorNumber: row.DebtorNumber, Until: candidate.until, ContractID: row.ContractID.Int64()})
 	}
 	if len(numbers) == 0 {
 		return nil
@@ -356,11 +374,11 @@ func contractFamilyImportRows(candidates []importCandidate, save bool) ([]careco
 		}
 		at[row.Line] = n
 		number := carecontract.ImportedFamilyChildren{Line: row.Line, FamilyEmail: row.PartyEmail,
-			ContractID: row.ContractID, Children: *row.FamilyChildren, ValidFrom: *row.EffectiveFrom, Witness: witness}
+			ContractID: row.ContractID.Int64(), Children: *row.FamilyChildren, ValidFrom: *row.EffectiveFrom, Witness: witness}
 		if witness && row.PartyEmail == "" {
 			if original, ok := at[row.RepeatsLine]; ok {
 				first := candidates[original].row
-				number.Line, number.ContractID, number.FamilyEmail = first.Line, first.ContractID, first.PartyEmail
+				number.Line, number.ContractID, number.FamilyEmail = first.Line, first.ContractID.Int64(), first.PartyEmail
 			}
 		}
 		numbers = append(numbers, number)
@@ -482,7 +500,7 @@ func (i *ContractImports) importSchools(ctx context.Context, organizationID int6
 func importSchoolChoices(schools []importSchool, templates templateIndex) []carecontract.ContractImportSchool {
 	choices := make([]carecontract.ContractImportSchool, len(schools))
 	for n, school := range schools {
-		choices[n] = carecontract.ContractImportSchool{ID: school.school.ID, Name: school.school.Name, Modules: []carecontract.ContractImportModule{}}
+		choices[n] = carecontract.ContractImportSchool{ID: ident.ID(school.school.ID), Name: school.school.Name, Modules: []carecontract.ContractImportModule{}}
 		at := map[string]int{}
 		for _, module := range school.modules {
 			_, has := templates[[2]int64{school.school.ID, module.ID}]
@@ -492,7 +510,7 @@ func importSchoolChoices(schools []importSchool, templates templateIndex) []care
 				continue
 			}
 			at[key] = len(choices[n].Modules)
-			choices[n].Modules = append(choices[n].Modules, carecontract.ContractImportModule{ID: module.ID, Name: module.Name,
+			choices[n].Modules = append(choices[n].Modules, carecontract.ContractImportModule{ID: ident.ID(module.ID), Name: module.Name,
 				PhaseName: module.PhaseName, HasConditions: has})
 		}
 		slices.SortStableFunc(choices[n].Modules, func(a, b carecontract.ContractImportModule) int { return strings.Compare(a.Name, b.Name) })
@@ -504,25 +522,8 @@ func importSchoolChoices(schools []importSchool, templates templateIndex) []care
 // logSchools records in the access log of each school that the office saw
 // which of its contracts a file names, or stored new ones there (ADR 0084
 // section 7).
-func (i *ContractImports) logSchools(ctx context.Context, reviewer carecontract.Reviewer, bySchool map[int64][]int64) error {
-	schools := make([]int64, 0, len(bySchool))
-	for school := range bySchool {
-		schools = append(schools, school)
-	}
-	slices.Sort(schools)
-	for _, school := range schools {
-		ids := bySchool[school]
-		err := i.ports.Runtime.WithinSchool(ctx, school, func(txCtx context.Context) error {
-			return i.ports.Access.RecordAccess(txCtx, carecontract.SchoolAccess{
-				OrganizationID: reviewer.OrganizationID, AccountID: reviewer.AccountID,
-				Data: carecontract.SchoolAccessContracts, View: accessViewImport, Rows: len(ids), ContractIDs: ids,
-			})
-		})
-		if err != nil {
-			return fmt.Errorf("care contract: access log of school %d: %w", school, err)
-		}
-	}
-	return nil
+func (i *ContractImports) logSchools(ctx context.Context, reviewer carecontract.Reviewer, view string, bySchool map[int64][]int64) error {
+	return logContractSchools(ctx, i.ports.Runtime, i.ports.Access, reviewer, view, bySchool)
 }
 
 // ContractImportLog lists the imports of the Träger, newest first.

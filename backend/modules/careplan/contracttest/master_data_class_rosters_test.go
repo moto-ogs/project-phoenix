@@ -11,12 +11,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/api"
-	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	careplanCompose "github.com/moto-ogs/project-phoenix/modules/careplan/compose"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/masterdatarequests"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/parentrequests"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -100,7 +100,7 @@ func TestMasterDataReview_ClassApprovalFollowsTargetedTemplates(t *testing.T) {
 	f := newClassRosterFixture(t)
 	row := f.insert(t, peopledirectory.DataChangeTargetStudent, "school_class", `"1a"`, `"2b"`)
 
-	_, err := f.decide(t, f.decisions(t), masterdatarequests.DecideInput{RequestID: row.ID, Approve: true, ReviewedBy: f.chain.AccountID})
+	_, err := f.decide(t, f.decisions(t), masterdatarequests.DecideInput{ExpectedVersion: testpkg.MasterDataRequestVersion(t, row.ID), RequestID: row.ID, Approve: true, ReviewedBy: f.chain.AccountID})
 	require.NoError(t, err)
 
 	f.assertFollowed(t)
@@ -128,8 +128,8 @@ func TestParentRequestCoordinator_BulkClassApprovalFollowsTargetedTemplates(t *t
 	require.NoError(t, f.inTx(t, func(ctx context.Context) error {
 		return coordinator.BulkApprove(ctx, parentrequests.BulkApproveInput{
 			Requests: []parentrequests.Ref{
-				{Kind: parentrequests.KindMasterData, ID: row.ID, ExpectedVersion: careplan.ParentRequestVersion(row.UpdatedAt)},
-				{Kind: parentrequests.KindMasterData, ID: rename.ID, ExpectedVersion: careplan.ParentRequestVersion(rename.UpdatedAt)},
+				{Kind: parentrequests.KindMasterData, ID: row.ID, ExpectedVersion: readstate.Of(row.UpdatedAt)},
+				{Kind: parentrequests.KindMasterData, ID: rename.ID, ExpectedVersion: readstate.Of(rename.UpdatedAt)},
 			},
 			Reason: "Gemeinsam geprüft", ReviewerID: f.chain.AccountID,
 		})

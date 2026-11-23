@@ -5,34 +5,13 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Permission management (#3314): the permission catalog, direct account
 // grants and the permission selection of custom roles.
 
 const opAssignPermissionToRole = "assign permission to role"
-
-func (r *RoleAdministration) GetPermission(ctx context.Context, id int64) (value0 identityaccess.Permission, err error) {
-	if r == nil {
-		return identityaccess.Permission{}, errRoleAdministrationUnavailable
-	}
-	operation := func(ctx context.Context) (domain.ManagedPermission, error) {
-		permission, found, err := r.store.FindPermission(ctx, id)
-		if err != nil {
-			return domain.ManagedPermission{}, failed("get permission", err)
-		}
-		if !found {
-			return domain.ManagedPermission{}, failed("get permission", identityaccess.ErrPermissionNotFound)
-		}
-		return permission, nil
-	}
-	err = r.runtime.RunInTx(ctx, func(txCtx context.Context) error {
-		result, err := operation(bindRuntime(r.attach, txCtx))
-		value0 = identityaccess.Permission(result)
-		return roleError(err)
-	})
-	return
-}
 
 func (r *RoleAdministration) GetPermissionByName(ctx context.Context, name string) (value0 identityaccess.Permission, err error) {
 	if r == nil {
@@ -51,16 +30,6 @@ func (r *RoleAdministration) GetPermissionByName(ctx context.Context, name strin
 		return roleError(err)
 	})
 	return
-}
-
-func (r *RoleAdministration) deletePermission(ctx context.Context, id int64) error {
-	if err := r.store.DeletePermissionAssignments(ctx, id); err != nil {
-		return failed("delete role permissions", err)
-	}
-	if err := r.store.DeletePermission(ctx, id); err != nil {
-		return failed("delete permission", err)
-	}
-	return nil
 }
 
 // AssignPermissionToRole adds a permission to a custom role.
@@ -118,32 +87,57 @@ func (r *RoleAdministration) lockMutableRole(ctx context.Context, roleID int64, 
 // current selection is changed, so an invalid request leaves it untouched.
 // A reserved permission the role does not hold yet is refused (#4574); one it
 // already holds may stay or be removed, so a role from before the rule stays
-// editable.
-func (r *RoleAdministration) ReplaceRolePermissions(ctx context.Context, roleID int64, permissionIDs []int64) error {
-	return runFlowErr(ctx, r.flow(), func(ctx context.Context) error {
-		const op = "replace role permissions"
+// editable. A selection changed since the caller read expectedVersion is
+// refused with readstate.ErrChanged (ADR 0311) before the request is
+// validated: the replacement would otherwise revert a colleague's change, a
+// removal revokes sessions, and a stale request naming a permission deleted
+// since is a stale read, not an invalid input. It answers the version of the
+// stored selection, so the caller never has to read it again to save again.
+func (r *RoleAdministration) ReplaceRolePermissions(ctx context.Context, roleID int64, permissionIDs []int64, expectedVersion string) (version string, err error) {
+	err = runFlowErr(ctx, r.flow(), func(ctx context.Context) error {
 		return r.runtime.RunInTx(ctx, func(txCtx context.Context) error {
-			// The role row serializes full replacements and the one-at-a-time
-			// mutations. Lock it before loading mappings so each operation observes
-			// the preceding committed selection.
-			if err := r.lockMutableRole(txCtx, roleID, op); err != nil {
-				return err
-			}
-
-			desired, err := r.desiredRolePermissions(txCtx, permissionIDs)
-			if err != nil {
-				return err
-			}
-			current, err := r.rolePermissions(txCtx, roleID, op)
-			if err != nil {
-				return err
-			}
-			if err := requireNoNewReservedPermission(desired, current, op); err != nil {
-				return err
-			}
-			return r.applyRolePermissionSelection(txCtx, roleID, desired, current, op)
+			version, err = r.replaceRolePermissionsInTx(txCtx, roleID, permissionIDs, expectedVersion)
+			return err
 		})
 	})
+	if err != nil {
+		return "", err
+	}
+	return version, nil
+}
+
+// replaceRolePermissionsInTx runs the replacement in the caller's
+// transaction and answers the stored selection's version.
+func (r *RoleAdministration) replaceRolePermissionsInTx(txCtx context.Context, roleID int64, permissionIDs []int64, expectedVersion string) (string, error) {
+	const op = "replace role permissions"
+	// The role row serializes full replacements and the one-at-a-time
+	// mutations. Lock it before loading mappings so each operation observes
+	// the preceding committed selection.
+	if err := r.lockMutableRole(txCtx, roleID, op); err != nil {
+		return "", err
+	}
+	current, err := r.rolePermissions(txCtx, roleID, op)
+	if err != nil {
+		return "", err
+	}
+	if err := readstate.Check(expectedVersion, rolePermissionsVersion(current)); err != nil {
+		return "", failed(op, err)
+	}
+	desired, err := r.desiredRolePermissions(txCtx, permissionIDs)
+	if err != nil {
+		return "", err
+	}
+	if err := requireNoNewReservedPermission(desired, current, op); err != nil {
+		return "", err
+	}
+	if err := r.applyRolePermissionSelection(txCtx, roleID, desired, current, op); err != nil {
+		return "", err
+	}
+	stored := make([]int64, 0, len(desired))
+	for id := range desired {
+		stored = append(stored, id)
+	}
+	return identityaccess.IDSetVersion(stored), nil
 }
 
 // applyRolePermissionSelection removes the current permissions the selection
@@ -205,9 +199,10 @@ func (r *RoleAdministration) removeHeldRolePermission(ctx context.Context, roleI
 	return nil
 }
 
-func (r *RoleAdministration) GetRolePermissions(ctx context.Context, roleID int64) (value0 []identityaccess.Permission, err error) {
+// GetRolePermissions reads a visible role's selection and its version.
+func (r *RoleAdministration) GetRolePermissions(ctx context.Context, roleID int64) (value0 identityaccess.RolePermissions, err error) {
 	if r == nil {
-		return nil, errRoleAdministrationUnavailable
+		return identityaccess.RolePermissions{}, errRoleAdministrationUnavailable
 	}
 	operation := func(ctx context.Context) ([]domain.ManagedPermission, error) {
 		permissions, found, err := r.store.ListVisibleRolePermissions(ctx, roleID)
@@ -221,10 +216,21 @@ func (r *RoleAdministration) GetRolePermissions(ctx context.Context, roleID int6
 	}
 	err = r.runtime.RunInTx(ctx, func(txCtx context.Context) error {
 		result, err := operation(bindRuntime(r.attach, txCtx))
-		value0 = publicPermissions(result)
+		value0 = identityaccess.RolePermissions{Permissions: publicPermissions(result), Version: rolePermissionsVersion(result)}
 		return roleError(err)
 	})
 	return
+}
+
+// rolePermissionsVersion is the read-state token of a role's selection
+// (identityaccess.IDSetVersion over its permission IDs). The read, the
+// replacement's check and its answer derive it from the same mapping rows.
+func rolePermissionsVersion(permissions []domain.ManagedPermission) string {
+	ids := make([]int64, 0, len(permissions))
+	for _, permission := range permissions {
+		ids = append(ids, permission.ID)
+	}
+	return identityaccess.IDSetVersion(ids)
 }
 
 func (r *RoleAdministration) desiredRolePermissions(txCtx context.Context, permissionIDs []int64) (map[int64]domain.ManagedPermission, error) {

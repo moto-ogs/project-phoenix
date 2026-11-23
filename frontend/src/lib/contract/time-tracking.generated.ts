@@ -4,7 +4,6 @@ import {
   bool,
   instant,
   int64String,
-  int64StringOrNumber,
   noData,
   nullable,
   num,
@@ -46,6 +45,7 @@ export interface OwnAllowanceResponse {
   booking_days: number;
   carried_in: AllowanceCarryResponse | null;
   kept_by_traeger: boolean;
+  version: string;
 }
 
 export const OwnAllowanceResponseSchema: z.ZodType<OwnAllowanceResponse, unknown> = object<OwnAllowanceResponse>({
@@ -62,6 +62,7 @@ export const OwnAllowanceResponseSchema: z.ZodType<OwnAllowanceResponse, unknown
   booking_days: num,
   carried_in: nullable(AllowanceCarryResponseSchema),
   kept_by_traeger: bool,
+  version: str,
 });
 
 /** Go: timetracking.AbsenceRequestMailsResponse */
@@ -94,7 +95,7 @@ export interface assignmentResponse {
 }
 
 export const assignmentResponseSchema: z.ZodType<assignmentResponse, unknown> = object<assignmentResponse>({
-  instance_id: int64StringOrNumber,
+  instance_id: int64String,
   title: str,
   group_name: optional(str),
   room_name: optional(str),
@@ -210,7 +211,7 @@ export interface RequestVacationRequest {
   start_half_day?: boolean;
   end_half_day?: boolean;
   note?: string;
-  substitute_staff_id?: number | null;
+  substitute_staff_id?: string | null;
 }
 
 /** Go: workforce.UpdateAbsenceRequest */
@@ -221,65 +222,6 @@ export interface UpdateAbsenceRequest {
   date_end?: string | null;
   half_day?: boolean | null;
   note?: string | null;
-}
-
-/** Query of GET /api/time-tracking/absence-allowances */
-export interface GetTimeTrackingAbsenceAllowancesQuery {
-  year?: number;
-}
-
-/** Query of GET /api/time-tracking/absences */
-export interface GetTimeTrackingAbsencesQuery {
-  from?: string;
-  status?: string;
-  to?: string;
-}
-
-/** Query of GET /api/time-tracking/assignments */
-export interface GetTimeTrackingAssignmentsQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /api/time-tracking/closing-days */
-export interface GetTimeTrackingClosingDaysQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /api/time-tracking/history */
-export interface GetTimeTrackingHistoryQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /api/time-tracking/holidays */
-export interface GetTimeTrackingHolidaysQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /api/time-tracking/month-summary */
-export interface GetTimeTrackingMonthSummaryQuery {
-  month?: number;
-  year?: number;
-}
-
-/** Query of GET /api/time-tracking/schedule-targets */
-export interface GetTimeTrackingScheduleTargetsQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /api/time-tracking/shifts */
-export interface GetTimeTrackingShiftsQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /api/time-tracking/vacation/quota */
-export interface GetTimeTrackingVacationQuotaQuery {
-  year?: number;
 }
 
 export const routes = {
@@ -293,14 +235,20 @@ export const routes = {
     method: "GET",
     pattern: "/api/time-tracking/absence-allowances",
     portals: ["tenant"],
-    query: ["year"],
+    query: {
+      "year": { kind: "int" },
+    },
     response: success(z.array(OwnAllowanceResponseSchema)),
   },
   "GET /api/time-tracking/absences": {
     method: "GET",
     pattern: "/api/time-tracking/absences",
     portals: ["tenant"],
-    query: ["from", "status", "to"],
+    query: {
+      "from": { kind: "date" },
+      "status": { kind: "string" },
+      "to": { kind: "date" },
+    },
     response: success(z.array(StaffAbsenceResponseSchema)),
   },
   "GET /api/time-tracking/absences/mails": {
@@ -313,7 +261,10 @@ export const routes = {
     method: "GET",
     pattern: "/api/time-tracking/assignments",
     portals: ["tenant"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(z.array(assignmentResponseSchema)),
   },
   "GET /api/time-tracking/breaks/{sessionId}": {
@@ -326,7 +277,10 @@ export const routes = {
     method: "GET",
     pattern: "/api/time-tracking/closing-days",
     portals: ["tenant"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(z.array(closingDayRangeResponseSchema)),
   },
   "GET /api/time-tracking/config": {
@@ -345,42 +299,59 @@ export const routes = {
     method: "GET",
     pattern: "/api/time-tracking/history",
     portals: ["tenant"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(HistoryResponseSchema),
   },
   "GET /api/time-tracking/holidays": {
     method: "GET",
     pattern: "/api/time-tracking/holidays",
     portals: ["tenant"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(z.array(PublicHolidaySchema)),
   },
   "GET /api/time-tracking/month-summary": {
     method: "GET",
     pattern: "/api/time-tracking/month-summary",
     portals: ["tenant"],
-    query: ["month", "year"],
+    query: {
+      "month": { kind: "int" },
+      "year": { kind: "int" },
+    },
     response: success(MonthSummarySchema),
   },
   "GET /api/time-tracking/schedule-targets": {
     method: "GET",
     pattern: "/api/time-tracking/schedule-targets",
     portals: ["tenant"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(z.array(DailyProjectionSchema)),
   },
   "GET /api/time-tracking/shifts": {
     method: "GET",
     pattern: "/api/time-tracking/shifts",
     portals: ["tenant"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(z.array(ShiftResponseSchema)),
   },
   "GET /api/time-tracking/vacation/quota": {
     method: "GET",
     pattern: "/api/time-tracking/vacation/quota",
     portals: ["tenant"],
-    query: ["year"],
+    query: {
+      "year": { kind: "int" },
+    },
     response: success(VacationQuotaSummarySchema),
   },
   "GET /api/time-tracking/{id}/edits": {

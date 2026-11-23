@@ -19,6 +19,8 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/communication/http/operatorannouncements"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 // Test constants used in mock assertions (not DB-dependent)
@@ -89,15 +91,11 @@ func (m *mockAnnouncementService) GetUnreadForUser(ctx context.Context, userID i
 	return nil, nil
 }
 
-func (m *mockAnnouncementService) CountUnread(ctx context.Context, userID int64, userRoles []string, tenantID int64, orgID int64) (int, error) {
-	return 0, nil
-}
-
-func (m *mockAnnouncementService) MarkSeen(ctx context.Context, userID, announcementID int64) error {
+func (m *mockAnnouncementService) MarkSeen(ctx context.Context, viewer platform.AnnouncementViewer, announcementID int64) error {
 	return nil
 }
 
-func (m *mockAnnouncementService) MarkDismissed(ctx context.Context, userID, announcementID int64) error {
+func (m *mockAnnouncementService) MarkDismissed(ctx context.Context, viewer platform.AnnouncementViewer, announcementID int64) error {
 	return nil
 }
 
@@ -416,11 +414,11 @@ func TestGetAnnouncement_ResponseIncludesTargetingFields(t *testing.T) {
 	var response map[string]any
 	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
 	data := response["data"].(map[string]any)
-	assert.Equal(t, float64(3), data["target_org_ids"].([]any)[0])
+	assert.Equal(t, []int64{3}, testpkg.JSONIDs(t, data["target_org_ids"]))
 	tenantIDs := data["target_tenant_ids"].([]any)
 	assert.Len(t, tenantIDs, 2)
-	assert.Equal(t, float64(7), tenantIDs[0])
-	assert.Equal(t, float64(8), tenantIDs[1])
+	assert.Equal(t, "7", tenantIDs[0])
+	assert.Equal(t, "8", tenantIDs[1])
 }
 
 // --- List includes org/tenant IDs ---
@@ -455,7 +453,7 @@ func TestListAnnouncements_IncludesOrgAndTenantIDs(t *testing.T) {
 	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
 	item := response["data"].([]any)[0].(map[string]any)
 	orgIDs := item["target_org_ids"].([]any)
-	assert.Equal(t, float64(1), orgIDs[0])
+	assert.Equal(t, "1", orgIDs[0])
 	tenantIDs := item["target_tenant_ids"].([]any)
 	assert.Len(t, tenantIDs, 2)
 }
@@ -874,7 +872,7 @@ func TestGetStats_ResponseStructure(t *testing.T) {
 	mock := &mockAnnouncementService{
 		getStatsFn: func(_ context.Context, id int64) (*platform.AnnouncementStats, error) {
 			return &platform.AnnouncementStats{
-				AnnouncementID: id,
+				AnnouncementID: ident.ID(id),
 				TargetCount:    42,
 				SeenCount:      10,
 				DismissedCount: 3,
@@ -905,11 +903,13 @@ func TestGetViewDetails_ResponseStructure(t *testing.T) {
 	t.Parallel()
 
 	now := operatorTestNow
+	shownAt := now
+	dismissedAt := now.Add(time.Minute)
 	mock := &mockAnnouncementService{
 		getViewDetailsFn: func(_ context.Context, _ int64) ([]*platform.AnnouncementViewDetail, error) {
 			return []*platform.AnnouncementViewDetail{
-				{UserID: 10, UserName: "Max Mustermann", SeenAt: now, Dismissed: false},
-				{UserID: 20, UserName: "Erika Muster", SeenAt: now, Dismissed: true},
+				{UserID: 10, UserName: "Max Mustermann", SeenAt: now, ShownAt: &shownAt, Dismissed: false},
+				{UserID: 20, UserName: "Erika Muster", SeenAt: dismissedAt, DismissedAt: &dismissedAt, Dismissed: true},
 			}, nil
 		},
 	}
@@ -923,12 +923,16 @@ func TestGetViewDetails_ResponseStructure(t *testing.T) {
 	require.Len(t, data, 2)
 
 	first := data[0].(map[string]any)
-	assert.Equal(t, float64(10), first["user_id"])
+	assert.Equal(t, int64(10), testpkg.JSONID(t, first["user_id"]))
 	assert.Equal(t, "Max Mustermann", first["user_name"])
 	assert.NotEmpty(t, first["seen_at"])
+	assert.Equal(t, shownAt.Format(time.RFC3339), first["shown_at"])
 	assert.Equal(t, false, first["dismissed"])
 
 	second := data[1].(map[string]any)
+	assert.Equal(t, dismissedAt.Format(time.RFC3339), second["seen_at"])
+	assert.Nil(t, second["shown_at"])
+	assert.Equal(t, dismissedAt.Format(time.RFC3339), second["dismissed_at"])
 	assert.Equal(t, true, second["dismissed"])
 }
 

@@ -14,11 +14,11 @@ function makeTenant(
   presenceMode: "detailed" | "binary" = "detailed",
 ): TenantInfo {
   return {
-    tenantId: 1,
+    tenantId: "1",
     slug: "demo",
     name: "Demo",
     subdomain: "demo",
-    organizationId: 10,
+    organizationId: "10",
     organizationName: "Org",
     settings: {},
     presenceMode,

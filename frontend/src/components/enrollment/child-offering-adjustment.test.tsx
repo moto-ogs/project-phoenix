@@ -9,6 +9,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
+import { CHANGE_REQUESTS_REFRESH_EVENT } from "~/lib/change-requests-refresh";
 import { catalogText } from "~/test/error-catalog-text";
 import type { CareOffering } from "~/lib/care-offering-api";
 import type { AdminRequestChild } from "~/lib/enrollment-admin-api";
@@ -89,6 +90,9 @@ function catalogOffering(overrides: Partial<CareOffering> = {}): CareOffering {
     includes_lunch: false,
     is_active: true,
     is_required: false,
+    counts_as_care: true,
+    auto_add_grade_levels: [],
+    auto_add_trigger_offering_ids: [],
     sort_order: 1,
     created_at: "2026-06-18T11:15:00Z",
     updated_at: "2026-06-18T11:15:00Z",
@@ -104,6 +108,7 @@ function adjustmentChild(
     first_name: "Lina",
     last_name: "Kind",
     date_of_birth: "2018-01-01",
+    version: "v1",
     status: "approved",
     activation_mode: "scheduled",
     ...overrides,
@@ -183,6 +188,8 @@ describe("ChildOfferingAdjustment", () => {
             selected_days: ["mon"],
             manual_selected_days: ["mon"],
             available_days: ["mon", "tue"],
+            includes_lunch: false,
+            includes_holiday_care: false,
           },
         ],
       }),
@@ -245,6 +252,8 @@ describe("ChildOfferingAdjustment", () => {
             offering_name: "Ganztag",
             days_of_week_mode: "fixed",
             available_days: ["mon"],
+            includes_lunch: false,
+            includes_holiday_care: false,
           },
           {
             offering_id: "b",
@@ -253,6 +262,8 @@ describe("ChildOfferingAdjustment", () => {
             available_days: ["mon", "tue"],
             selected_days: ["tue"],
             manual_selected_days: ["tue"],
+            includes_lunch: false,
+            includes_holiday_care: false,
           },
         ],
       }),
@@ -338,6 +349,8 @@ describe("ChildOfferingAdjustment", () => {
             selected_days: ["mon", "fri"],
             manual_selected_days: ["mon", "fri"],
             available_days: ["mon", "fri"],
+            includes_lunch: false,
+            includes_holiday_care: false,
           },
         ],
       }),
@@ -430,6 +443,8 @@ describe("ChildOfferingAdjustment", () => {
             selected_days: ["mon"],
             manual_selected_days: ["mon"],
             available_days: ["mon"],
+            includes_lunch: false,
+            includes_holiday_care: false,
           },
         ],
       }),
@@ -484,6 +499,8 @@ describe("ChildOfferingAdjustment", () => {
             selected_days: ["mon"],
             manual_selected_days: ["mon"],
             available_days: ["mon"],
+            includes_lunch: false,
+            includes_holiday_care: false,
           },
         ],
       }),
@@ -560,6 +577,7 @@ describe("ChildOfferingAdjustment", () => {
           first_name: "Lina",
           last_name: "Kind",
           date_of_birth: "2018-01-01",
+          version: "v1",
           status: "approved",
           activation_mode: "scheduled",
         }}
@@ -605,6 +623,7 @@ describe("ChildOfferingAdjustment", () => {
           first_name: "Lina",
           last_name: "Kind",
           date_of_birth: "2018-01-01",
+          version: "v1",
           status: "approved",
           activation_mode: "scheduled",
           offerings: [
@@ -615,6 +634,8 @@ describe("ChildOfferingAdjustment", () => {
               selected_days: ["mon"],
               manual_selected_days: ["mon"],
               available_days: ["mon", "tue"],
+              includes_lunch: false,
+              includes_holiday_care: false,
             },
           ],
         }}
@@ -677,6 +698,7 @@ describe("ChildOfferingAdjustment", () => {
           first_name: "Lina",
           last_name: "Kind",
           date_of_birth: "2018-01-01",
+          version: "v1",
           target_grade_level: 3,
           status: "approved",
           activation_mode: "scheduled",
@@ -688,6 +710,8 @@ describe("ChildOfferingAdjustment", () => {
               selected_days: ["mon"],
               manual_selected_days: ["mon"],
               available_days: ["mon"],
+              includes_lunch: false,
+              includes_holiday_care: false,
             },
           ],
         }}
@@ -741,6 +765,8 @@ describe("ChildOfferingAdjustment", () => {
             selected_days: ["mon"],
             manual_selected_days: ["mon"],
             available_days: ["mon"],
+            includes_lunch: false,
+            includes_holiday_care: false,
           },
         ],
       }),
@@ -831,6 +857,8 @@ describe("ChildOfferingAdjustment", () => {
             selected_days: ["mon"],
             manual_selected_days: ["mon"],
             available_days: ["mon"],
+            includes_lunch: false,
+            includes_holiday_care: false,
           },
         ],
       }),
@@ -880,6 +908,8 @@ describe("ChildOfferingAdjustment", () => {
             selected_days: ["mon"],
             manual_selected_days: ["mon"],
             available_days: ["mon"],
+            includes_lunch: false,
+            includes_holiday_care: false,
           },
           {
             offering_id: "grade-1-only",
@@ -889,6 +919,8 @@ describe("ChildOfferingAdjustment", () => {
             manual_selected_days: [],
             automatic_selected_days: ["mon"],
             available_days: ["mon", "tue"],
+            includes_lunch: false,
+            includes_holiday_care: false,
           },
         ],
       }),
@@ -951,6 +983,8 @@ describe("ChildOfferingAdjustment", () => {
             selected_days: ["mon"],
             manual_selected_days: ["mon"],
             available_days: ["mon"],
+            includes_lunch: false,
+            includes_holiday_care: false,
           },
         ],
       }),
@@ -987,7 +1021,7 @@ describe("ChildOfferingAdjustment", () => {
     const checkbox = await screen.findByRole("checkbox", {
       name: /Verpflichtender Ganztag/,
     });
-    expect(checkbox).toBeChecked();
+    await waitFor(() => expect(checkbox).toBeChecked());
     fireEvent.click(screen.getByRole("button", { name: "Abbrechen" }));
     fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
 
@@ -1034,6 +1068,8 @@ describe("ChildOfferingAdjustment", () => {
             selected_days: ["mon"],
             manual_selected_days: ["mon"],
             available_days: ["mon"],
+            includes_lunch: false,
+            includes_holiday_care: false,
           },
         ],
       }),
@@ -1063,6 +1099,7 @@ describe("ChildOfferingAdjustment", () => {
           first_name: "Lina",
           last_name: "Kind",
           date_of_birth: "2018-01-01",
+          version: "v1",
           status: "approved",
           activation_mode: "scheduled",
           offerings: [
@@ -1073,6 +1110,8 @@ describe("ChildOfferingAdjustment", () => {
               selected_days: ["mon"],
               manual_selected_days: ["mon"],
               available_days: ["mon", "tue"],
+              includes_lunch: false,
+              includes_holiday_care: false,
             },
           ],
         }}
@@ -1138,6 +1177,8 @@ describe("ChildOfferingAdjustment", () => {
             offering_name: "Ganztag",
             days_of_week_mode: "fixed",
             available_days: ["mon"],
+            includes_lunch: false,
+            includes_holiday_care: false,
           },
         ],
         upcoming_offerings: [
@@ -1148,6 +1189,8 @@ describe("ChildOfferingAdjustment", () => {
             available_days: ["mon"],
             valid_from: "2026-09-01",
             starts_later: true,
+            includes_lunch: false,
+            includes_holiday_care: false,
           },
         ],
       }),
@@ -1215,6 +1258,8 @@ describe("ChildOfferingAdjustment", () => {
             // The phase has not started yet: not in effect, but on file.
             valid_from: "2026-10-06",
             starts_later: true,
+            includes_lunch: false,
+            includes_holiday_care: false,
           },
         ],
       }),
@@ -1238,6 +1283,203 @@ describe("ChildOfferingAdjustment", () => {
         }),
       );
     });
+  });
+});
+
+// Ein befristetes Angebot lässt sich bis zum Ende der Phase verlängern
+// (#7929). Das Backend nennt in `extends_until` den Tag, bis zu dem die
+// Korrektur bucht; ohne den Wert gibt es nichts zu verlängern.
+describe("ChildOfferingAdjustment booking end", () => {
+  const limitedBooking = (extendsUntil?: string) =>
+    adjustmentChild({
+      offerings: [
+        {
+          offering_id: "offering-1",
+          offering_name: "Ganztag",
+          days_of_week_mode: "fixed",
+          selected_days: ["mon"],
+          manual_selected_days: ["mon"],
+          available_days: ["mon"],
+          includes_lunch: false,
+          includes_holiday_care: false,
+          valid_until: "2027-02-28",
+          ...(extendsUntil ? { extends_until: extendsUntil } : {}),
+        },
+      ],
+    });
+
+  it("extends a limited booking to the end of the phase", async () => {
+    mocks.listCareOfferings.mockResolvedValue([catalogOffering()]);
+    mocks.updateAdminChildOfferings.mockResolvedValue({});
+    renderAdjustment(limitedBooking("2027-07-31"));
+
+    fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    expect(await screen.findByText("Gebucht bis 28.02.2027")).toBeVisible();
+    const extend = screen.getByRole("checkbox", {
+      name: "Bis 31.07.2027 verlängern",
+    });
+    expect(extend).not.toBeChecked();
+    fireEvent.click(extend);
+    fireEvent.change(screen.getByLabelText("Begründung"), {
+      target: { value: "Betreuung läuft weiter" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() => {
+      expect(mocks.updateAdminChildOfferings).toHaveBeenCalledWith(
+        "request-1",
+        "child-1",
+        expect.objectContaining({
+          offerings: [{ offering_id: "offering-1", extend_to_phase_end: true }],
+        }),
+      );
+    });
+  });
+
+  it("keeps the end when the office does not extend it", async () => {
+    mocks.listCareOfferings.mockResolvedValue([catalogOffering()]);
+    mocks.updateAdminChildOfferings.mockResolvedValue({});
+    renderAdjustment(limitedBooking("2027-07-31"));
+
+    fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    await screen.findByText("Gebucht bis 28.02.2027");
+    fireEvent.change(screen.getByLabelText("Begründung"), {
+      target: { value: "Korrektur" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() => {
+      expect(mocks.updateAdminChildOfferings).toHaveBeenCalledWith(
+        "request-1",
+        "child-1",
+        expect.objectContaining({ offerings: [{ offering_id: "offering-1" }] }),
+      );
+    });
+  });
+
+  it("shows no end for a booking it cannot extend", async () => {
+    mocks.listCareOfferings.mockResolvedValue([catalogOffering()]);
+    renderAdjustment(limitedBooking());
+
+    fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+
+    expect(
+      await screen.findByRole("checkbox", { name: /Ganztag/ }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("checkbox", { name: /verlängern/ }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/Gebucht bis/)).not.toBeInTheDocument();
+  });
+
+  it("extends a booked offering the child's grade no longer allows", async () => {
+    mocks.listCareOfferings.mockResolvedValue([
+      catalogOffering({
+        id: "grade-1-only",
+        name: "Randstunde",
+        availability_rule: {
+          match: "all",
+          conditions: [{ source: "grade_level", operator: "in", value: [1] }],
+        },
+      }),
+    ]);
+    mocks.updateAdminChildOfferings.mockResolvedValue({});
+    renderAdjustment(
+      adjustmentChild({
+        target_grade_level: 3,
+        offerings: [
+          {
+            offering_id: "grade-1-only",
+            offering_name: "Randstunde",
+            days_of_week_mode: "fixed",
+            selected_days: ["mon"],
+            manual_selected_days: ["mon"],
+            available_days: ["mon"],
+            includes_lunch: false,
+            includes_holiday_care: false,
+            valid_until: "2027-02-28",
+            extends_until: "2027-07-31",
+          },
+        ],
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    fireEvent.click(
+      await screen.findByRole("checkbox", {
+        name: "Bis 31.07.2027 verlängern",
+      }),
+    );
+    fireEvent.change(screen.getByLabelText("Begründung"), {
+      target: { value: "Betreuung läuft weiter" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() => {
+      expect(mocks.updateAdminChildOfferings).toHaveBeenCalledWith(
+        "request-1",
+        "child-1",
+        expect.objectContaining({
+          offerings: [
+            { offering_id: "grade-1-only", extend_to_phase_end: true },
+          ],
+        }),
+      );
+    });
+  });
+
+  it("tells open request lists to reload after an extension", async () => {
+    mocks.listCareOfferings.mockResolvedValue([catalogOffering()]);
+    mocks.updateAdminChildOfferings.mockResolvedValue({});
+    const reloads = vi.fn();
+    window.addEventListener(CHANGE_REQUESTS_REFRESH_EVENT, reloads);
+    renderAdjustment(limitedBooking("2027-07-31"));
+
+    fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    fireEvent.click(
+      await screen.findByRole("checkbox", {
+        name: "Bis 31.07.2027 verlängern",
+      }),
+    );
+    fireEvent.change(screen.getByLabelText("Begründung"), {
+      target: { value: "Betreuung läuft weiter" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() => expect(reloads).toHaveBeenCalledTimes(1));
+    window.removeEventListener(CHANGE_REQUESTS_REFRESH_EVENT, reloads);
+  });
+
+  it("names the extension in the history", async () => {
+    const row = {
+      offering_id: "offering-1",
+      offering_name: "Ganztag",
+      days_of_week_mode: "fixed",
+      available_days: ["mon"],
+    };
+    mocks.listAdminChildOfferingAdjustments.mockResolvedValue([
+      {
+        id: "adjustment-1",
+        request_id: "request-1",
+        request_child_id: "child-1",
+        student_id: "student-1",
+        actor_account_id: "account-1",
+        actor_role: "admin",
+        actor_name_snapshot: "Ada Admin",
+        reason: "Betreuung läuft weiter",
+        before: [row],
+        after: [{ ...row, extended_until: "2027-07-31" }],
+        changed_at: "2026-09-24T13:59:00Z",
+      },
+    ]);
+    vi.mocked(useCareOfferingsEnabled).mockReturnValue(false);
+
+    renderAdjustment();
+
+    expect(
+      await screen.findByText("Ganztag bis 31.07.2027 verlängert"),
+    ).toBeVisible();
+    expect(screen.queryByText("Angebote unverändert")).not.toBeInTheDocument();
   });
 });
 

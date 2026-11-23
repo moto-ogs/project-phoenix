@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedHolidayWishes lets the period take the holiday care wish of the OGS
@@ -28,6 +30,8 @@ func seedHolidayWishes(rt *Runtime, auth AuthRef, token string, periodID int64, 
 		return fmt.Errorf("decode the holiday period: %w", err)
 	}
 	period.Data["holiday_wish_rule"] = true
+	// The save carries the version of the period it changes (ADR 0311).
+	period.Data["expected_version"] = period.Data["version"]
 	if _, err := rt.Client.PutWithAuth(auth, path, period.Data); err != nil {
 		return fmt.Errorf("switch on the holiday care wish of the period: %w", err)
 	}
@@ -62,12 +66,12 @@ func seedHolidayWishDecision(rt *Runtime, auth AuthRef, periodID int64, firstNam
 	var list struct {
 		Data struct {
 			Registrations []struct {
-				ID       int64 `json:"id"`
+				ID       ident.ID `json:"id"`
 				Children []struct {
-					ID        int64  `json:"id"`
-					FirstName string `json:"first_name"`
-					LastName  string `json:"last_name"`
-					Check     bool   `json:"holiday_wish_check"`
+					ID        ident.ID `json:"id"`
+					FirstName string   `json:"first_name"`
+					LastName  string   `json:"last_name"`
+					Check     bool     `json:"holiday_wish_check"`
 				} `json:"children"`
 			} `json:"registrations"`
 		} `json:"data"`

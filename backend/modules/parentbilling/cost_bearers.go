@@ -3,6 +3,8 @@ package parentbilling
 import (
 	"errors"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The cost takeover of the holiday contribution (#5627, ADR 0115 addendum).
@@ -47,13 +49,16 @@ var (
 // it: then it can only be switched off. The Abrechnung keeps its cost
 // bearers with its contribution rules (ContributionRules).
 type CostBearer struct {
-	ID            int64     `json:"id"`
+	ID            ident.ID  `json:"id"`
 	Name          string    `json:"name"`
 	Address       string    `json:"address"`
 	FileReference string    `json:"file_reference"`
 	Active        bool      `json:"active"`
 	InUse         bool      `json:"in_use"`
 	UpdatedAt     time.Time `json:"updated_at"`
+	// Version is the read-state token of the cost bearer (ADR 0311): a
+	// change sends it back as expected_version.
+	Version string `json:"version"`
 }
 
 // CostBearerInput is a cost bearer as the Abrechnung writes it.

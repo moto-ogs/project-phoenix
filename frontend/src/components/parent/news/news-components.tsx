@@ -44,9 +44,6 @@ import { formatBerlinDate, formatDate } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
 import { AttachmentList } from "~/components/ui/attachment-list";
 import {
-  type ParentAnnouncement,
-  type ParentAnnouncementAttachment,
-  type ParentAnnouncementPollChild,
   acknowledgeAnnouncement,
   announcementAttachmentDownloadUrl,
   listAnnouncementAttachments,
@@ -70,6 +67,8 @@ import { schoolClassName } from "~/lib/school-class-label";
 import { confirmationsConcept } from "~/lib/concepts/confirmations";
 import { newsConcept } from "~/lib/concepts/news";
 import { pollsConcept } from "~/lib/concepts/polls";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 
 const logger = createLogger({ component: "ParentNews" });
 
@@ -89,13 +88,13 @@ function isStaleAnnouncementError(err: unknown): boolean {
 }
 
 /** True when the announcement asks a question the parent can still answer. */
-function isPoll(item: ParentAnnouncement): boolean {
+function isPoll(item: parentMeContract.AnnouncementResponse): boolean {
   // An Umfrage with Fragebogen (#4781) has its own questions, never the
   // per-child answer rows of a poll.
   return item.response_type !== "none" && item.system_kind !== "survey";
 }
 
-function isPollClosed(item: ParentAnnouncement): boolean {
+function isPollClosed(item: parentMeContract.AnnouncementResponse): boolean {
   return (
     item.response_deadline !== undefined &&
     new Date(item.response_deadline) <= new Date()
@@ -107,15 +106,19 @@ function isPollClosed(item: ParentAnnouncement): boolean {
  * of the guardian's children has none yet. The "you still owe the school an
  * answer" state the dashboard sorts on.
  */
-export function isOpenPoll(item: ParentAnnouncement): boolean {
+export function isOpenPoll(
+  item: parentMeContract.AnnouncementResponse,
+): boolean {
   if (!isPoll(item) || isPollClosed(item)) return false;
   return (item.children ?? []).some(
-    (child) => child.selected_options.length === 0,
+    (child) => (child.selected_options ?? []).length === 0,
   );
 }
 
 /** One shared definition for the list hierarchy and the sidebar count. */
-export function isOutstandingAnnouncement(item: ParentAnnouncement): boolean {
+export function isOutstandingAnnouncement(
+  item: parentMeContract.AnnouncementResponse,
+): boolean {
   // An ended Einverständnis stays only so a consent can be revoked; it asks
   // for nothing, read or not.
   if (isEndedDeclaration(item)) return false;
@@ -129,14 +132,14 @@ export function isOutstandingAnnouncement(item: ParentAnnouncement): boolean {
 }
 
 function pollAnswerSummary(
-  item: ParentAnnouncement,
-  child: ParentAnnouncementPollChild,
+  item: parentMeContract.AnnouncementResponse,
+  child: parentMeContract.AnnouncementPollChild,
   format: (name: string, answer: string) => string,
 ): string | null {
   const optionLabels = new Map(
     (item.options ?? []).map((option) => [option.id, option.label]),
   );
-  const answer = child.selected_options
+  const answer = (child.selected_options ?? [])
     .map((optionId) => optionLabels.get(optionId))
     .filter((label): label is string => label !== undefined)
     .join(", ");
@@ -155,7 +158,7 @@ function pollAnswerSummary(
  */
 function NewsCardType({
   item,
-}: Readonly<{ item: ParentAnnouncement }>): React.ReactNode {
+}: Readonly<{ item: parentMeContract.AnnouncementResponse }>): React.ReactNode {
   const t = useTranslations("parentDashboard");
   if (item.system_kind === "care_cancellation") {
     return (
@@ -183,7 +186,7 @@ function NewsCardType({
  * confirmation in the portal is the one that counts. Older announcements have no
  * delivery_mode at all, which correctly reads as "not a letter".
  */
-function isBindingLetter(item: ParentAnnouncement): boolean {
+function isBindingLetter(item: parentMeContract.AnnouncementResponse): boolean {
   return item.delivery_mode === "letter";
 }
 
@@ -197,7 +200,7 @@ function isBindingLetter(item: ParentAnnouncement): boolean {
  */
 function NewsCardState({
   item,
-}: Readonly<{ item: ParentAnnouncement }>): React.ReactNode {
+}: Readonly<{ item: parentMeContract.AnnouncementResponse }>): React.ReactNode {
   const t = useTranslations("parentDashboard");
   const locale = useLocale();
 
@@ -232,7 +235,7 @@ function NewsCardState({
   if (children.length === 0) return null;
 
   const answered = children.filter(
-    (child) => child.selected_options.length > 0,
+    (child) => (child.selected_options ?? []).length > 0,
   );
   const answerSummaries = answered
     .map((child) =>
@@ -298,8 +301,8 @@ function NewsCardState({
 function SurveyCardState({
   item,
 }: Readonly<{
-  item: ParentAnnouncement & {
-    survey: NonNullable<ParentAnnouncement["survey"]>;
+  item: parentMeContract.AnnouncementResponse & {
+    survey: NonNullable<parentMeContract.AnnouncementResponse["survey"]>;
   };
 }>): React.ReactNode {
   const t = useTranslations("parentDashboard");
@@ -342,8 +345,10 @@ function SurveyCardState({
 function DeclarationCardState({
   item,
 }: Readonly<{
-  item: ParentAnnouncement & {
-    declaration: NonNullable<ParentAnnouncement["declaration"]>;
+  item: parentMeContract.AnnouncementResponse & {
+    declaration: NonNullable<
+      parentMeContract.AnnouncementResponse["declaration"]
+    >;
   };
 }>): React.ReactNode {
   const t = useTranslations("parentDashboard");
@@ -351,7 +356,7 @@ function DeclarationCardState({
   const locale = useLocale();
   const declaration = item.declaration;
   const children = declaration.children;
-  if (children.length === 0) return null;
+  if ((children ?? []).length === 0) return null;
 
   const deadline =
     declaration.deadline && !declaration.closed ? (
@@ -371,14 +376,14 @@ function DeclarationCardState({
     );
   }
 
-  const summary = children
+  const summary = (children ?? [])
     .map((child) =>
-      children.length === 1
+      (children ?? []).length === 1
         ? td(`state.${child.state}`)
         : `${child.first_name}: ${td(`state.${child.state}`)}`,
     )
     .join(" · ");
-  const settled = children.every((child) => child.state === "agreed");
+  const settled = (children ?? []).every((child) => child.state === "agreed");
 
   return (
     <>
@@ -413,8 +418,11 @@ function DeclarationCardState({
  * commitment the school plans with, so it gets a deliberate confirmation.
  */
 function usePollAnswers(
-  item: ParentAnnouncement,
-  onUpdated: (id: string, patch: Partial<ParentAnnouncement>) => void,
+  item: parentMeContract.AnnouncementResponse,
+  onUpdated: (
+    id: string,
+    patch: Partial<parentMeContract.AnnouncementResponse>,
+  ) => void,
   onStale?: (id: string) => void,
   onSaved?: () => void,
 ) {
@@ -439,13 +447,13 @@ function usePollAnswers(
   ].join("|");
   const [draft, setDraft] = useState<Record<string, string[]>>(() =>
     Object.fromEntries(
-      children.map((c) => [c.student_id, [...c.selected_options]]),
+      children.map((c) => [c.student_id, [...(c.selected_options ?? [])]]),
     ),
   );
   useEffect(() => {
     setDraft(
       Object.fromEntries(
-        children.map((c) => [c.student_id, [...c.selected_options]]),
+        children.map((c) => [c.student_id, [...(c.selected_options ?? [])]]),
       ),
     );
     clearError();
@@ -454,10 +462,14 @@ function usePollAnswers(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pollVersionSignature]);
 
-  const selectionFor = (child: ParentAnnouncementPollChild): string[] =>
-    draft[child.student_id] ?? [];
+  const selectionFor = (
+    child: parentMeContract.AnnouncementPollChild,
+  ): string[] => draft[child.student_id] ?? [];
 
-  const toggle = (child: ParentAnnouncementPollChild, optionId: string) => {
+  const toggle = (
+    child: parentMeContract.AnnouncementPollChild,
+    optionId: string,
+  ) => {
     if (closed) return;
     const selected = selectionFor(child);
     const next = multi
@@ -470,8 +482,8 @@ function usePollAnswers(
     setDraft((prev) => ({ ...prev, [child.student_id]: next }));
   };
 
-  const isDirty = (child: ParentAnnouncementPollChild): boolean => {
-    const saved = [...child.selected_options]
+  const isDirty = (child: parentMeContract.AnnouncementPollChild): boolean => {
+    const saved = [...(child.selected_options ?? [])]
       .sort((a, b) => a.localeCompare(b))
       .join(",");
     const current = [...selectionFor(child)]
@@ -554,10 +566,10 @@ type PollAnswers = ReturnType<typeof usePollAnswers>;
 type PollOption = PollAnswers["options"][number];
 
 function initiallyOpenPollChild(
-  children: readonly ParentAnnouncementPollChild[],
+  children: readonly parentMeContract.AnnouncementPollChild[],
 ): ReadonlySet<string> {
   const first =
-    children.find((child) => child.selected_options.length === 0) ??
+    children.find((child) => (child.selected_options ?? []).length === 0) ??
     children[0];
   return new Set(first ? [first.student_id] : []);
 }
@@ -621,11 +633,11 @@ function PollAnswerRows({ poll }: Readonly<{ poll: PollAnswers }>) {
 
 function usePollChildStatus(
   poll: PollAnswers,
-  child: ParentAnnouncementPollChild,
+  child: parentMeContract.AnnouncementPollChild,
 ) {
   const t = useTranslations("parentDashboard");
   const dirty = poll.isDirty(child);
-  const answered = child.selected_options.length > 0;
+  const answered = (child.selected_options ?? []).length > 0;
   if (dirty) return { label: t("newsPollUnsaved"), tone: "warning" as const };
   if (answered) return { label: t("newsPollAnswered"), tone: "green" as const };
   return { label: t("newsPollOpen"), tone: "gray" as const };
@@ -638,7 +650,7 @@ function PollChildCard({
   long,
 }: Readonly<{
   poll: PollAnswers;
-  child: ParentAnnouncementPollChild;
+  child: parentMeContract.AnnouncementPollChild;
   long: boolean;
 }>) {
   const status = usePollChildStatus(poll, child);
@@ -673,7 +685,7 @@ function PollChildCollapsible({
   onOpenChange,
 }: Readonly<{
   poll: PollAnswers;
-  child: ParentAnnouncementPollChild;
+  child: parentMeContract.AnnouncementPollChild;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }>) {
@@ -707,7 +719,10 @@ function PollChildCollapsible({
 function PollSelectionSummary({
   poll,
   child,
-}: Readonly<{ poll: PollAnswers; child: ParentAnnouncementPollChild }>) {
+}: Readonly<{
+  poll: PollAnswers;
+  child: parentMeContract.AnnouncementPollChild;
+}>) {
   const t = useTranslations("parentDashboard");
   return t("newsPollSelectedCount", {
     count: poll.selectionFor(child).length,
@@ -721,7 +736,7 @@ function PollOptionList({
   compact,
 }: Readonly<{
   poll: PollAnswers;
-  child: ParentAnnouncementPollChild;
+  child: parentMeContract.AnnouncementPollChild;
   compact: boolean;
 }>) {
   const t = useTranslations("parentDashboard");
@@ -785,7 +800,7 @@ function itemSafeId(value: string): string {
  * and the school; a letter of the OGS the school alone.
  */
 function senderLabel(
-  item: ParentAnnouncement,
+  item: parentMeContract.AnnouncementResponse,
   t: ReturnType<typeof useTranslations<"parentDashboard">>,
 ): string {
   if (!item.sender_name || !item.sender_school_class) return item.school_name;
@@ -809,8 +824,8 @@ export function NewsCard({
   item,
   onOpen,
 }: Readonly<{
-  item: ParentAnnouncement;
-  onOpen: (item: ParentAnnouncement) => void;
+  item: parentMeContract.AnnouncementResponse;
+  onOpen: (item: parentMeContract.AnnouncementResponse) => void;
 }>) {
   const t = useTranslations("parentDashboard");
   const locale = useLocale();
@@ -889,11 +904,11 @@ export function NewsCard({
  * is one message's attachment, not the entrance to a folder the family could
  * browse.
  */
-const NO_ATTACHMENTS: ParentAnnouncementAttachment[] = [];
+const NO_ATTACHMENTS: sharedContract.AnnouncementAttachmentResponse[] = [];
 
 function NewsAttachments({
   item,
-}: Readonly<{ item: ParentAnnouncement }>): React.ReactNode {
+}: Readonly<{ item: parentMeContract.AnnouncementResponse }>): React.ReactNode {
   const t = useTranslations("parentDashboard");
   const resource = useSWRAuth(
     parentInboxKeys.announcementAttachments(item.id),
@@ -978,7 +993,7 @@ function NewsReminderNote({
  */
 function NewsLetterText({
   item,
-}: Readonly<{ item: ParentAnnouncement }>): React.ReactNode {
+}: Readonly<{ item: parentMeContract.AnnouncementResponse }>): React.ReactNode {
   const t = useTranslations("parentDashboard");
   const letters = item.letters ?? [];
   const [chosen, setChosen] = useState(letters[0]?.student_id ?? "");
@@ -1010,7 +1025,7 @@ function NewsLetterText({
 
 function NewsMessageSection({
   item,
-}: Readonly<{ item: ParentAnnouncement }>): React.ReactNode {
+}: Readonly<{ item: parentMeContract.AnnouncementResponse }>): React.ReactNode {
   const t = useTranslations("parentDashboard");
   const locale = useLocale();
   return (
@@ -1071,7 +1086,7 @@ function NewsMessageSection({
 
 function NewsActionContext({
   item,
-}: Readonly<{ item: ParentAnnouncement }>): React.ReactNode {
+}: Readonly<{ item: parentMeContract.AnnouncementResponse }>): React.ReactNode {
   const t = useTranslations("parentDashboard");
   const locale = useLocale();
   const poll = isPoll(item);
@@ -1135,9 +1150,12 @@ export function NewsDetailModal({
   onUpdated,
   onStale,
 }: Readonly<{
-  item: ParentAnnouncement;
+  item: parentMeContract.AnnouncementResponse;
   onClose: () => void;
-  onUpdated: (id: string, patch: Partial<ParentAnnouncement>) => void;
+  onUpdated: (
+    id: string,
+    patch: Partial<parentMeContract.AnnouncementResponse>,
+  ) => void;
   /**
    * Invoked when the backend rejects a read/ack because the announcement is no
    * longer current (retracted/expired or corrected since it loaded). The parent

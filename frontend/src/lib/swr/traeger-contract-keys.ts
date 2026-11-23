@@ -4,6 +4,9 @@
  */
 const changesFamily = (contractId: string) =>
   `traeger-care-contract-changes-${encodeURIComponent(contractId)}-`;
+// Every contract's detail; a correction of imported contracts (#7767)
+// changes many at once.
+const detailFamily = "traeger-care-contract-detail-";
 const noticeFamily = (contractId: string) =>
   `traeger-care-contract-notice-${encodeURIComponent(contractId)}-`;
 
@@ -20,8 +23,8 @@ export const traegerContractKeys = {
   candidates: () => "traeger-care-contract-candidates",
   // „Wann gilt der Vertrag?“ je Schule.
   conclusionModes: () => "traeger-care-contract-conclusion-modes",
-  contract: (id: string) =>
-    `traeger-care-contract-detail-${encodeURIComponent(id)}`,
+  detailFamily,
+  contract: (id: string) => `${detailFamily}${encodeURIComponent(id)}`,
   // Das PDF eines Vertrags; ein neues gibt es nur nach dem ersten Versand
   // oder mit einer anderen geltenden Version.
   contractPdf: (id: string, version: number, frozen: boolean) =>
@@ -43,8 +46,14 @@ export const traegerContractKeys = {
   // Die Termine für einen Eingangstag.
   noticeOn: (contractId: string, day: string) =>
     `${noticeFamily(contractId)}on-${day}`,
+  // Vorschau „Anmeldungen nachtragen“ einer Schule (#7760): jedes Lesen steht
+  // im Zugriffsprotokoll der Schule, die Seite liest sie je Öffnen neu.
+  enrollmentPreview: (schoolId: string) =>
+    `traeger-care-contract-enrollment-preview-${encodeURIComponent(schoolId)}`,
   // Vertragsbedingungen je Angebot.
   templates: () => "traeger-care-contract-templates",
   // Bisherige Vertragsimporte (#4723): Datei, Zeitpunkt, Konto, Anzahl.
   importLog: () => "traeger-care-contract-import-log",
+  // Bisher nachgepflegte Vertragsangaben (#7767): Datei, Zeitpunkt, Konto, Anzahl.
+  correctionLog: () => "traeger-care-contract-correction-log",
 } as const;

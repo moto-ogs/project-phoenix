@@ -52,11 +52,6 @@ const UNMAPPED_HELP_PAGE_BASELINE: readonly string[] = [
   // Startseite und ihre Alt-Adresse: dazu gibt es noch keinen Artikel.
   "/dashboard",
   "/home",
-  "/profile",
-  "/reminders",
-  // Tagesübersicht der Vertretungen; der Artikel deckt bisher nur den
-  // Vertretungsplan der Leitung ab.
-  "/substitutions",
 ];
 
 describe("getHelpTopicForPath", () => {
@@ -93,6 +88,9 @@ describe("getHelpTopicForPath", () => {
     ["/staff", HELP_TOPICS.findStaff],
     ["/dateien", HELP_TOPICS.sharedFiles],
     ["/time-tracking", HELP_TOPICS.trackWorkTime],
+    ["/profile", HELP_TOPICS.ownProfile],
+    ["/reminders", HELP_TOPICS.staffReminders],
+    ["/substitutions", HELP_TOPICS.dailyHandovers],
   ])("maps %s to %s", (pathname, expectedTopic) => {
     expect(getHelpTopicForPath(pathname)).toBe(expectedTopic);
   });
@@ -253,8 +251,8 @@ describe("getParentHelpTopicForPath", () => {
       group: "einstieg",
     });
     // Am Computer, Wie die Seitenleiste geordnet ist, Die einfache
-    // Seitenleiste (#6956), Auf dem Handy oder Tablet, Die Startseite
-    // anpassen (#4347), Hilfe öffnen.
+    // Seitenleiste (#6956), Auf dem Handy oder Tablet, Was heute anders
+    // ist (#7659), Die Startseite anpassen (#4347), Hilfe öffnen.
     expect(
       caregiverTopics[3]?.instructionGroups?.map((group) => group.title),
     ).toEqual([
@@ -262,6 +260,7 @@ describe("getParentHelpTopicForPath", () => {
       "Wie die Seitenleiste geordnet ist",
       "Die einfache Seitenleiste",
       "Auf dem Handy oder Tablet",
+      "Was heute anders ist",
       "Die Startseite anpassen",
       "Hilfe öffnen",
     ]);
@@ -315,13 +314,17 @@ describe("getParentHelpTopicForPath", () => {
       id: HELP_TOPICS.studentSearch,
       group: "kinder",
     });
-    expect(caregiverTopics[9]?.instructionGroups).toHaveLength(6);
+    expect(caregiverTopics[9]?.instructionGroups).toHaveLength(7);
     expect(caregiverTopics[9]?.instructionGroups?.[3]).toMatchObject({
       title: "Ein Anwesenheitsprotokoll herunterladen",
       steps: expect.arrayContaining([
         "Möglich sind nur die sichtbaren Tage bis heute.",
         "Wähle das Format und danach `Herunterladen`.",
       ]),
+    });
+    expect(caregiverTopics[9]?.instructionGroups?.[4]).toMatchObject({
+      title: "Raumverlauf und Stimmung für ein Kind stoppen",
+      description: "Das kann nur die OGS-Verwaltung.",
     });
     expect(caregiverTopics[9]?.troubleshooting).toBe(
       HELP_TOPICS.missingChildOrGroup,
@@ -362,7 +365,9 @@ describe("getParentHelpTopicForPath", () => {
     // 50 seit #4769 („Das Wochenprotokoll ergänzen“, Betreuung und Leitung).
     // 51 seit #6954 („Mit der Suche finden“, Betreuung und Leitung).
     // 52 seit #7148 („Hinweise und Erinnerungen in der Glocke“).
-    expect(caregiverTopics).toHaveLength(52);
+    // 55 seit #7568 („Dein Profil“, „Übergaben von heute“,
+    // „Erinnerungen ansehen“).
+    expect(caregiverTopics).toHaveLength(55);
     expect([...new Set(caregiverTopics.map((topic) => topic.group))]).toEqual([
       "einstieg",
       "tagesplanung",
@@ -571,7 +576,7 @@ describe("getParentHelpTopicForPath", () => {
           // unter die NFC- und die Anwesenheitsregel, wird also nur
           // einmal abgezogen.
           const expectedLength =
-            52 -
+            55 -
             (nfcEnabled ? 0 : 7) -
             (presenceMode === "binary" ? (nfcEnabled ? 6 : 5) : 0) -
             (groupMode === "open_care" ? 2 : 0);
@@ -629,7 +634,8 @@ describe("getParentHelpTopicForPath", () => {
     // 108 seit #7148: Hinweise und Erinnerungen in der Glocke.
     // 109 seit #4813: Elternbrief mit den Angaben jedes Kindes.
     // 110 seit #4709: Springer des Trägers blocken.
-    expect(leadTopics).toHaveLength(110);
+    // 113 seit #7568: Dein Profil, Übergaben von heute, Erinnerungen ansehen.
+    expect(leadTopics).toHaveLength(113);
     expect(
       leadTopics.every(
         (topic) =>

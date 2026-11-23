@@ -109,7 +109,8 @@ var (
 	// ErrNoRoomAvailable narrows ErrInvalid: a session start without a room
 	// for an activity that has none planned.
 	ErrNoRoomAvailable = errors.New("presence no room available")
-	// ErrNoActiveSession narrows ErrNotFound for the timeout refusal.
+	// ErrNoActiveSession narrows ErrNotFound for the attendance refusal of a
+	// kiosk without a session.
 	ErrNoActiveSession = errors.New("presence no active session")
 )
 
@@ -192,6 +193,9 @@ const (
 type Settings interface {
 	GetPresenceMode(ctx context.Context) (string, error)
 	FeedbackEnabled(ctx context.Context) (bool, error)
+	// MoodCaptureStopped tells whether the child's mood capture is stopped
+	// (#3844); a stopped child gets no feedback prompt.
+	MoodCaptureStopped(ctx context.Context, studentID int64) (bool, error)
 	CapacityDetailsDisclosed(ctx context.Context, kind CapacityKind) (bool, error)
 	// DailyCheckoutTime is the raw "HH:MM" gate or empty when unset.
 	DailyCheckoutTime(ctx context.Context) (string, error)

@@ -2,13 +2,109 @@
 import { z } from "zod";
 import {
   arr,
+  bool,
+  instant,
+  int64String,
   noData,
   nullable,
   object,
+  optional,
   requestBody,
+  safeInt,
   str,
   success,
 } from "./runtime";
+
+/** Go: account.SchoolInvitationResponse */
+export interface SchoolInvitationResponse {
+  employment_action: string;
+  reset_master_data: boolean;
+  reset_qualifications: boolean;
+  reset_work_time: boolean;
+  id: string;
+  email: string;
+  role_id: string;
+  role_name?: string;
+  token?: string;
+  expires_at: string;
+  first_name?: string;
+  last_name?: string;
+  position?: string;
+  created_by: string;
+  creator?: string;
+  delivery_status: string;
+  email_sent_at?: string;
+  email_error?: string;
+  email_retry_count: number;
+  mail_outcome?: string;
+  address_mark?: string;
+  provider_block?: string;
+}
+
+export const SchoolInvitationResponseSchema: z.ZodType<SchoolInvitationResponse, unknown> = object<SchoolInvitationResponse>({
+  employment_action: str,
+  reset_master_data: bool,
+  reset_qualifications: bool,
+  reset_work_time: bool,
+  id: int64String,
+  email: str,
+  role_id: int64String,
+  role_name: optional(str),
+  token: optional(str),
+  expires_at: instant,
+  first_name: optional(str),
+  last_name: optional(str),
+  position: optional(str),
+  created_by: int64String,
+  creator: optional(str),
+  delivery_status: str,
+  email_sent_at: optional(instant),
+  email_error: optional(str),
+  email_retry_count: safeInt,
+  mail_outcome: optional(str),
+  address_mark: optional(str),
+  provider_block: optional(str),
+});
+
+/** Go: account.InvitationValidationResponse */
+export interface InvitationValidationResponse {
+  target_portal: string;
+  requires_account_login: boolean;
+  email: string;
+  role_name: string;
+  first_name?: string;
+  last_name?: string;
+  position?: string;
+  caregiver_enabled: boolean;
+  expires_at: string;
+}
+
+export const InvitationValidationResponseSchema: z.ZodType<InvitationValidationResponse, unknown> = object<InvitationValidationResponse>({
+  target_portal: str,
+  requires_account_login: bool,
+  email: str,
+  role_name: str,
+  first_name: optional(str),
+  last_name: optional(str),
+  position: optional(str),
+  caregiver_enabled: bool,
+  expires_at: instant,
+});
+
+/** Go: account.CreateSchoolInvitationRequest */
+export interface CreateSchoolInvitationRequest {
+  employment_action?: string;
+  reset_master_data?: boolean;
+  reset_qualifications?: boolean;
+  reset_work_time?: boolean;
+  email?: string;
+  role_id?: string;
+  first_name?: string;
+  last_name?: string;
+  position?: string;
+  gender?: string;
+  expected_former_employment?: string;
+}
 
 /** Go: account.FormerEmploymentRequest */
 export interface FormerEmploymentRequest {
@@ -33,10 +129,12 @@ export const FormerEmploymentViewSchema: z.ZodType<FormerEmploymentView, unknown
 /** Go: account.FormerEmploymentResponse */
 export interface FormerEmploymentResponse {
   former_employment: FormerEmploymentView | null;
+  version: string;
 }
 
 export const FormerEmploymentResponseSchema: z.ZodType<FormerEmploymentResponse, unknown> = object<FormerEmploymentResponse>({
   former_employment: nullable(FormerEmploymentViewSchema),
+  version: str,
 });
 
 /** Go: account.InvitationResendResponse */
@@ -48,12 +146,52 @@ export const InvitationResendResponseSchema: z.ZodType<InvitationResendResponse,
   message: str,
 });
 
+/** Go: account.AcceptInvitationRequest */
+export interface AcceptInvitationRequest {
+  first_name?: string;
+  last_name?: string;
+  password?: string;
+  confirm_password?: string;
+}
+
+/** Go: account.AcceptInvitationResponse */
+export interface AcceptInvitationResponse {
+  account_id: string;
+  email: string;
+  tenant_subdomain?: string;
+}
+
+export const AcceptInvitationResponseSchema: z.ZodType<AcceptInvitationResponse, unknown> = object<AcceptInvitationResponse>({
+  account_id: int64String,
+  email: str,
+  tenant_subdomain: optional(str),
+});
+
 export const routes = {
   "DELETE /auth/invitations/{id}/": {
     method: "DELETE",
     pattern: "/auth/invitations/{id}/",
     portals: ["tenant"],
     response: noData,
+  },
+  "GET /auth/invitations/": {
+    method: "GET",
+    pattern: "/auth/invitations/",
+    portals: ["tenant"],
+    response: success(z.array(SchoolInvitationResponseSchema)),
+  },
+  "GET /auth/invitations/{token}": {
+    method: "GET",
+    pattern: "/auth/invitations/{token}",
+    portals: ["public"],
+    response: success(InvitationValidationResponseSchema),
+  },
+  "POST /auth/invitations/": {
+    method: "POST",
+    pattern: "/auth/invitations/",
+    portals: ["tenant"],
+    request: requestBody<CreateSchoolInvitationRequest>(),
+    response: success(SchoolInvitationResponseSchema),
   },
   "POST /auth/invitations/former-employment": {
     method: "POST",
@@ -67,5 +205,13 @@ export const routes = {
     pattern: "/auth/invitations/{id}/resend",
     portals: ["tenant"],
     response: success(InvitationResendResponseSchema),
+  },
+  "POST /auth/invitations/{token}/accept": {
+    method: "POST",
+    pattern: "/auth/invitations/{token}/accept",
+    portals: ["tenant"],
+    routeFile: "the route file attaches the signed-in owner's session to the accept",
+    request: requestBody<AcceptInvitationRequest>(),
+    response: success(AcceptInvitationResponseSchema),
   },
 } as const;

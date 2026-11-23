@@ -11,6 +11,8 @@ import (
 	"github.com/uptrace/bun/driver/pgdriver"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -90,6 +92,11 @@ const traegerOfferingSelect = `SELECT offering.id, offering.organization_id, off
 const (
 	traegerOfferingsOfPhaseSelect = traegerOfferingSelect + ` AND offering.traeger_phase_id = ? ORDER BY offering.id`
 	traegerOfferingByIDSelect     = traegerOfferingSelect + ` AND offering.id = ?`
+	// traegerOfferingByIDLockSelect holds the row FOR NO KEY UPDATE: the
+	// draft save under it changes no key column. Every other writer of the
+	// row still waits for it; only the key share of an insert that refers to
+	// the offering (a released version) passes.
+	traegerOfferingByIDLockSelect = traegerOfferingByIDSelect + ` FOR NO KEY UPDATE OF offering`
 )
 
 // ListTraegerOfferings returns the offerings of one Träger phase with their
@@ -108,12 +115,26 @@ func (s *TraegerOfferingStore) ListTraegerOfferings(ctx context.Context, organiz
 
 // TraegerOffering returns one offering of the Träger.
 func (s *TraegerOfferingStore) TraegerOffering(ctx context.Context, organizationID, id int64) (careplan.TraegerOffering, error) {
+	return s.readTraegerOffering(ctx, organizationID, id, false)
+}
+
+// LockTraegerOffering returns one offering of the Träger under its row lock.
+func (s *TraegerOfferingStore) LockTraegerOffering(ctx context.Context, organizationID, id int64) (careplan.TraegerOffering, error) {
+	return s.readTraegerOffering(ctx, organizationID, id, true)
+}
+
+func (s *TraegerOfferingStore) readTraegerOffering(ctx context.Context, organizationID, id int64, lock bool) (careplan.TraegerOffering, error) {
 	db, err := traegerDB(ctx, organizationID)
 	if err != nil {
 		return careplan.TraegerOffering{}, err
 	}
 	var rows []traegerOfferingRow
-	if err := db.NewRaw(traegerOfferingByIDSelect, organizationID, id).Scan(ctx, &rows); err != nil {
+	if lock {
+		err = db.NewRaw(traegerOfferingByIDLockSelect, organizationID, id).Scan(ctx, &rows)
+	} else {
+		err = db.NewRaw(traegerOfferingByIDSelect, organizationID, id).Scan(ctx, &rows)
+	}
+	if err != nil {
 		return careplan.TraegerOffering{}, fmt.Errorf("care plan postgres: read träger care offering: %w", err)
 	}
 	offerings, err := s.withSchools(ctx, db, organizationID, rows)
@@ -173,7 +194,7 @@ func (s *TraegerOfferingStore) withSchools(ctx context.Context, db bun.IDB, orga
 }
 
 func (row traegerOfferingSchoolRow) value() careplan.TraegerOfferingSchool {
-	school := careplan.TraegerOfferingSchool{SchoolID: row.SchoolID, AppliedVersion: row.AppliedVersion, AppliedCopyID: row.AppliedCopyID, RecordedAt: row.RecordedAt}
+	school := careplan.TraegerOfferingSchool{SchoolID: ident.ID(row.SchoolID), AppliedVersion: row.AppliedVersion, AppliedCopyID: row.AppliedCopyID, RecordedAt: row.RecordedAt}
 	if row.Outcome != nil {
 		school.Outcome = *row.Outcome
 	}
@@ -185,8 +206,9 @@ func (row traegerOfferingSchoolRow) value() careplan.TraegerOfferingSchool {
 
 func (row traegerOfferingRow) value() (careplan.TraegerOffering, error) {
 	offering := careplan.TraegerOffering{
-		ID: row.ID, OrganizationID: row.OrganizationID, TraegerPhaseID: row.TraegerPhaseID,
+		ID: ident.ID(row.ID), OrganizationID: ident.ID(row.OrganizationID), TraegerPhaseID: ident.ID(row.TraegerPhaseID),
 		ReleasedVersion: row.ReleasedVersion, WithdrawnAt: row.WithdrawnAt, UpdatedAt: row.UpdatedAt,
+		Version: readstate.Of(row.UpdatedAt),
 	}
 	if err := json.Unmarshal(row.Draft, &offering.Draft); err != nil {
 		return offering, fmt.Errorf("care plan postgres: decode träger care offering draft: %w", err)

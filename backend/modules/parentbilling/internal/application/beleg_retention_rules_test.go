@@ -28,7 +28,7 @@ func TestBookingBelegEndsEightYearsAfterTheEndOfItsIssueYear(t *testing.T) {
 		assert.Equal(t, parentbilling.RetentionScheduled, decision.State, issued.String())
 		assert.Equal(t, datePtr(2035, 1, 1), decision.DeletableOn, issued.String())
 		assert.Equal(t, &issued, decision.TriggerDate)
-		assert.Equal(t, eightYears("").ID, decision.InstructionID)
+		assert.Equal(t, (eightYears("").ID).Int64(), decision.InstructionID)
 		assert.False(t, due(decision, date(2034, 12, 31)), "the last day of 2034 still keeps it")
 		assert.True(t, due(decision, date(2035, 1, 1)), "the first day of 2035 deletes it")
 	}
@@ -119,7 +119,7 @@ func TestSuspensionHoldsTheDeletion(t *testing.T) {
 	hold := &parentbilling.RetentionSuspension{ID: 11}
 	decision := DecideBelegRetention(parentbilling.BelegFact{BelegType: parentbilling.BelegSEPADebit, Issued: &issued}, eightYears(parentbilling.BelegSEPADebit), hold, date(2036, 1, 1))
 	assert.Equal(t, parentbilling.RetentionSuspended, decision.State)
-	assert.Equal(t, hold.ID, decision.SuspensionID)
+	assert.Equal(t, hold.ID.Int64(), decision.SuspensionID)
 	assert.Equal(t, datePtr(2035, 1, 1), decision.DeletableOn)
 	assert.False(t, due(decision, date(2036, 1, 1)))
 }

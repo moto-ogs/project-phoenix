@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -30,7 +31,7 @@ func TestAllowanceSummaryNativeContract(t *testing.T) {
 		{DateStart: "2026-01-06", DateEnd: "2026-01-06", Status: workforce.AbsenceStatusCanceled},
 		{DateStart: "2026-01-07", DateEnd: "2026-01-07", Status: workforce.AbsenceStatusDeclined},
 	} {
-		row.StaffID, row.CreatedBy, row.AbsenceTypeID = staff.ID, staff.ID, &absenceType.ID
+		row.StaffID, row.CreatedBy, row.AbsenceTypeID = ident.ID(staff.ID), ident.ID(staff.ID), (*ident.ID)(&absenceType.ID)
 		row.AbsenceType = workforce.AbsenceTypeOther
 		_, err := capability.CreateStaffAbsence(ctx, &row)
 		require.NoError(t, err)
@@ -40,8 +41,9 @@ func TestAllowanceSummaryNativeContract(t *testing.T) {
 	assert.Equal(t, workforce.AbsenceTypeAllowanceSummary{
 		StaffID: staff.ID, AbsenceTypeID: absenceType.ID, Year: 2026,
 		EntitledDays: 4.5, TakenDays: 1.5, ReservedDays: 0.5, RemainingDays: 2.5,
-		ExpiresOn: "2026-12-31",
+		ExpiresOn: "2026-12-31", Version: summary.Version,
 	}, summary)
+	assert.NotEmpty(t, summary.Version, "the summary carries the claim's token")
 	previous, err := capability.AllowanceSummary(ctx, staff.ID, absenceType.ID, 2025)
 	require.NoError(t, err)
 	assert.Zero(t, previous.EntitledDays, "a missing claim means zero")

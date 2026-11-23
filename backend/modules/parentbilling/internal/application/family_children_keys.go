@@ -5,6 +5,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // familyRecipientContracts includes contracts outside the billing or import
@@ -18,11 +19,11 @@ func familyRecipientContracts(ids []int64, counts []parentbilling.FamilyChildCou
 	for _, count := range counts {
 		id := count.ContractID
 		if contractID, ok := parentbilling.ContractOfFamily(count.FamilyEmail); ok {
-			id = contractID
+			id = ident.ID(contractID)
 		}
-		if !seen[id] {
-			ids = append(ids, id)
-			seen[id] = true
+		if !seen[id.Int64()] {
+			ids = append(ids, id.Int64())
+			seen[id.Int64()] = true
 		}
 	}
 	return ids
@@ -85,18 +86,9 @@ func numbersByFamily(counts []parentbilling.FamilyChildCount, recipients map[int
 // contractID is a contract the family's numbers hang on.
 func (n *familyNumbers) contractID() int64 {
 	if n.own != nil {
-		return n.own.ContractID
+		return n.own.ContractID.Int64()
 	}
-	return n.brought[0].ContractID
-}
-
-// confirmed is the number the Abrechnung confirmed for the family, nil
-// without one or while its contracts brought different numbers.
-func (n *familyNumbers) confirmed() *parentbilling.FamilyChildCount {
-	if count, differing := n.count(); !differing && count != nil && count.ConfirmedChildren != nil {
-		return count
-	}
-	return nil
+	return n.brought[0].ContractID.Int64()
 }
 
 // all are the stored numbers of the family: its own and those its
@@ -134,9 +126,49 @@ func (n *familyNumbers) count() (count *parentbilling.FamilyChildCount, differin
 	return first, false
 }
 
+// confirmedForImport resolves the confirmation and any conflict on day.
+// If nothing holds on that day, keep the stored confirmations as fallback
+// so the file cannot overwrite a planned count, and renewals follow expiry.
+func (n *familyNumbers) confirmedForImport(day calendar.Date) (*parentbilling.FamilyChildCount, bool) {
+	if n == nil {
+		return nil, false
+	}
+	if n.decided() {
+		if _, started := n.own.InForceOn(day); started {
+			// An own confirmation supersedes the carried ones even after expiry.
+			return confirmationOnDay(n.own, day), false
+		}
+	}
+	if n.broughtDifferOn(day) {
+		return nil, true
+	}
+	if held := n.broughtOn(day); held != nil && !confirmationExpired(held, day) {
+		return held, false
+	}
+	return n.count()
+}
+
+// confirmationOnDay is the count with the confirmation valid on day as its
+// current one, so an import compares with the number that holds then and not
+// with one planned for later (#7863). Without one, the count stays as stored:
+// a planned confirmation is never overwritten and an expired one renews.
+func confirmationOnDay(count *parentbilling.FamilyChildCount, day calendar.Date) *parentbilling.FamilyChildCount {
+	if count == nil {
+		return nil
+	}
+	confirmation, started := count.InForceOn(day)
+	if _, valid := validFamilyConfirmation(confirmation, day); !started || !valid {
+		return count
+	}
+	held := *count
+	held.ConfirmedChildren, held.ValidFrom, held.ValidUntil = confirmation.Children, confirmation.ValidFrom, confirmation.ValidUntil
+	return &held
+}
+
 // countOn combines the current confirmation with the latest parental
 // statement for the office. Import decisions keep count's longest validity
-// so that they also protect confirmations scheduled for a later day.
+// so that they also protect confirmations scheduled for a later day; they
+// compare with the number in force on their day (confirmedForImport).
 func (n *familyNumbers) countOn(day calendar.Date) (*parentbilling.FamilyChildCount, bool) {
 	count, _ := n.count()
 	ownStarted := false

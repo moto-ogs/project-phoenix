@@ -69,13 +69,13 @@ func checkCheckInToTarget(t *testing.T, graph *goldenRuntime) {
 	require.Equal(t, http.StatusOK, code, body)
 	var placed struct {
 		Data struct {
-			Moved     []int64 `json:"moved"`
-			CheckedIn []int64 `json:"checked_in"`
+			Moved     []wireID `json:"moved"`
+			CheckedIn []wireID `json:"checked_in"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal([]byte(body), &placed))
-	assert.Equal(t, []int64{child}, placed.Data.CheckedIn)
-	assert.Equal(t, []int64{child}, placed.Data.Moved)
+	assert.Equal(t, []int64{child}, testpkg.IDs(placed.Data.CheckedIn))
+	assert.Equal(t, []int64{child}, testpkg.IDs(placed.Data.Moved))
 	assert.Equal(t, 1, openAttendance(child))
 	assert.Equal(t, []int64{supervised.ID}, openVisitSessions(t, db, child), "the child is in the room, not in transit")
 
@@ -85,15 +85,15 @@ func checkCheckInToTarget(t *testing.T, graph *goldenRuntime) {
 	require.Equal(t, http.StatusOK, code, body)
 	var stay struct {
 		Data struct {
-			CheckedIn     []int64 `json:"checked_in"`
-			ActiveGroupID int64   `json:"active_group_id"`
-			RoomID        int64   `json:"room_id"`
+			CheckedIn     []wireID `json:"checked_in"`
+			ActiveGroupID wireID   `json:"active_group_id"`
+			RoomID        wireID   `json:"room_id"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal([]byte(body), &stay))
-	assert.Equal(t, []int64{yardChild}, stay.Data.CheckedIn)
-	assert.Equal(t, gym.ID, stay.Data.RoomID)
-	assert.Equal(t, []int64{stay.Data.ActiveGroupID}, openVisitSessions(t, db, yardChild),
+	assert.Equal(t, []int64{yardChild}, testpkg.IDs(stay.Data.CheckedIn))
+	assert.Equal(t, gym.ID, int64(stay.Data.RoomID))
+	assert.Equal(t, []int64{int64(stay.Data.ActiveGroupID)}, openVisitSessions(t, db, yardChild),
 		"a released room needs no supervision")
 
 	// The placed child moves on into the released room, ending its stay in
@@ -104,13 +104,13 @@ func checkCheckInToTarget(t *testing.T, graph *goldenRuntime) {
 	require.Equal(t, http.StatusOK, code, body)
 	var moved struct {
 		Data struct {
-			Moved         []int64 `json:"moved"`
-			ActiveGroupID int64   `json:"active_group_id"`
+			Moved         []wireID `json:"moved"`
+			ActiveGroupID wireID   `json:"active_group_id"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal([]byte(body), &moved))
-	assert.Equal(t, []int64{child}, moved.Data.Moved)
-	assert.Equal(t, []int64{moved.Data.ActiveGroupID}, openVisitSessions(t, db, child))
+	assert.Equal(t, []int64{child}, testpkg.IDs(moved.Data.Moved))
+	assert.Equal(t, []int64{int64(moved.Data.ActiveGroupID)}, openVisitSessions(t, db, child))
 
 	// A child checked in to the school without a room is in transit until the
 	// assignment places it.
@@ -121,12 +121,12 @@ func checkCheckInToTarget(t *testing.T, graph *goldenRuntime) {
 	require.Equal(t, http.StatusOK, code, body)
 	var assigned struct {
 		Data struct {
-			Assigned      []int64 `json:"assigned"`
-			ActiveGroupID int64   `json:"active_group_id"`
+			Assigned      []wireID `json:"assigned"`
+			ActiveGroupID wireID   `json:"active_group_id"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal([]byte(body), &assigned))
-	assert.Equal(t, []int64{transitChild}, assigned.Data.Assigned)
-	assert.Equal(t, supervised.ID, assigned.Data.ActiveGroupID)
+	assert.Equal(t, []int64{transitChild}, testpkg.IDs(assigned.Data.Assigned))
+	assert.Equal(t, supervised.ID, int64(assigned.Data.ActiveGroupID))
 	assert.Equal(t, []int64{supervised.ID}, openVisitSessions(t, db, transitChild))
 }

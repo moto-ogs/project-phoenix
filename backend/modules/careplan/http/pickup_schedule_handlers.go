@@ -16,21 +16,29 @@ import (
 	securityruntime "github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	realtime "github.com/moto-ogs/project-phoenix/realtime"
 	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	tenant "github.com/moto-ogs/project-phoenix/tenant"
 )
 
-// getStaffIDFromJWT extracts the staff ID from JWT claims by looking up the person and staff
+// getStaffIDFromJWT resolves the staff member who enters Betreuungszeiten in
+// this request, by the account's person and staff record at the school.
+//
+// A person of the Träger-Büro in a school they opened through the Absprung
+// has neither (ADR 0084 section 5): the result is 0 without an error, and the
+// rows the request writes carry the mark of the Träger-Büro
+// (careplan.EnteredByTraeger). Everybody else without a staff record is
+// refused with errUserNotStaff or errPersonNotFoundForAccount.
 func (rs *Resource) getStaffIDFromJWT(r *http.Request) (int64, error) {
 	claims := sessiontoken.ClaimsFromCtx(r.Context())
 	if claims.ID == 0 {
-		return 0, errors.New("no valid JWT claims found")
+		return 0, errNoSessionAccount
 	}
 
 	// Get person from account ID
 	person, err := rs.PeopleDirectory.FindPersonByAccount(r.Context(), int64(claims.ID))
 	if err != nil {
 		if errors.Is(err, peopleModule.ErrPersonNotFound) {
-			return 0, errPersonNotFoundForAccount
+			return withoutStaffRecord(r, errPersonNotFoundForAccount)
 		}
 		return 0, fmt.Errorf("find person by account: %w", err)
 	}
@@ -41,10 +49,63 @@ func (rs *Resource) getStaffIDFromJWT(r *http.Request) (int64, error) {
 		return 0, fmt.Errorf("find staff by person: %w", err)
 	}
 	if !found {
-		return 0, errUserNotStaff
+		return withoutStaffRecord(r, errUserNotStaff)
 	}
 
 	return staffID, nil
+}
+
+// exceptionTakeoverStaffID is the resolver a guardian's exception is taken
+// over with, in the contract careplan declares for it: (0, nil) for an
+// account without a staff record, an error only for a failed lookup (#7818).
+// Care Plan then refuses a missing author with its own sentinel, and a failed
+// lookup stays a server error.
+func (rs *Resource) exceptionTakeoverStaffID(r *http.Request) func() (int64, error) {
+	return func() (int64, error) {
+		staffID, err := rs.getStaffIDFromJWT(r)
+		if errors.Is(err, errPersonNotFoundForAccount) || errors.Is(err, errUserNotStaff) {
+			return 0, nil
+		}
+		return staffID, err
+	}
+}
+
+// withoutStaffRecord answers a request whose account has no staff record at
+// the school: the Träger-Büro writes without one, everybody else is refused.
+func withoutStaffRecord(r *http.Request, refusal error) (int64, error) {
+	if careplan.EnteredByTraeger(r.Context(), 0) {
+		return 0, nil
+	}
+	return 0, refusal
+}
+
+// markTraegerBueroAuthor marks the request of a school session the
+// Träger-Büro opened through the Absprung, so that the rows it writes without
+// a staff author carry the mark of the Träger-Büro (#7766). The token's
+// via_traeger is minted and re-checked by Identity & Access only for a person
+// with the Träger right "In OGS wechseln"; the routes keep their own
+// permission checks.
+func markTraegerBueroAuthor(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if sessiontoken.ClaimsFromCtx(r.Context()).ViaTraeger {
+			r = r.WithContext(careplan.WithTraegerBueroAuthor(r.Context()))
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// renderScheduleAuthorError answers a failed author resolution. Only a
+// missing staff record or a missing right is the caller's to fix (403); a
+// failed lookup is the server's (500) and must not read as a missing right.
+func renderScheduleAuthorError(w http.ResponseWriter, r *http.Request, err error) {
+	switch {
+	case errors.Is(err, errPersonNotFoundForAccount), errors.Is(err, errUserNotStaff):
+		renderError(w, r, common.ErrorForbiddenWithCode(err, common.CodeStudentsScheduleStaffProfileRequired))
+	case errors.Is(err, errNoSessionAccount), errors.Is(err, errScheduleUpdatePermissionRequired):
+		renderError(w, r, common.ErrorForbidden(err))
+	default:
+		renderError(w, r, common.ErrorInternalServer(err))
+	}
 }
 
 // requirePickupReadAccess parses the student from URL params and checks read
@@ -86,6 +147,16 @@ func (rs *Resource) getStudentPickupSchedules(w http.ResponseWriter, r *http.Req
 		renderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
+	// The token is read BEFORE the rows (ADR 0311). Under READ COMMITTED a
+	// plan saved in between then shows in the rows but not in the token, so
+	// a save made on these rows is refused; never the other way round, which
+	// would accept a save on rows older than its token. The editor reads its
+	// arrival rows after this read for the same reason.
+	weeklyPlanVersion, err := rs.WeeklyPlans.WeeklyPlanVersion(r.Context(), student.ID)
+	if err != nil {
+		renderError(w, r, common.ErrorInternalServer(err))
+		return
+	}
 	var data *careplan.StudentPickupData
 	if hasRange {
 		data, err = rs.PickupScheduleService.GetStudentPickupDataForRange(r.Context(), student.ID, from, to)
@@ -103,6 +174,7 @@ func (rs *Resource) getStudentPickupSchedules(w http.ResponseWriter, r *http.Req
 		renderError(w, r, common.ErrorInternalServer(err))
 		return
 	}
+	response.WeeklyPlanVersion = weeklyPlanVersion
 
 	common.Respond(w, r, http.StatusOK, response, "Pickup schedules retrieved successfully")
 }
@@ -243,25 +315,27 @@ func (rs *Resource) updateStudentPickupSchedules(w http.ResponseWriter, r *http.
 		renderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	// Get staff ID from JWT
 	staffID, err := rs.getStaffIDFromJWT(r)
 	if err != nil {
-		renderError(w, r, common.ErrorForbidden(err))
+		renderScheduleAuthorError(w, r, err)
 		return
 	}
 
-	// Convert requests to schedule models
-	schedules := toPickupScheduleModels(req.Schedules, student.ID, staffID)
+	schedules := toPickupScheduleModels(r.Context(), req.Schedules, student.ID, staffID)
+	date := rs.todayDate()
+	if req.EffectiveDate != nil {
+		date = *req.EffectiveDate
+	}
 
+	// A wholesale replacement of the weekly pickup rows is a save of the
+	// weekly plan: it carries the token of the plan it was made on (ADR 0311).
 	tenantID := tenant.FromContext(r.Context())
-	if err := withinTenant(r.Context(), tenantID, func(ctx context.Context) error {
-		date := rs.todayDate()
-		if req.EffectiveDate != nil {
-			date = *req.EffectiveDate
-		}
-		return rs.PickupScheduleService.UpsertBulkStudentPickupSchedulesForDate(ctx, student.ID, date, schedules)
-	}); err != nil {
-		renderError(w, r, common.ErrorInternalServer(err))
+	version, err := rs.WeeklyPlans.SaveWeeklyPlan(r.Context(), careplan.WeeklyPlanInput{
+		StudentID: student.ID, PickupSchedules: &schedules, PickupEffectiveDate: date,
+		CreatedByStaffID: staffID, ExpectedVersion: req.ExpectedVersion,
+	})
+	if err != nil {
+		renderPickupAdjustmentError(w, r, err)
 		return
 	}
 
@@ -285,6 +359,7 @@ func (rs *Resource) updateStudentPickupSchedules(w http.ResponseWriter, r *http.
 	}
 
 	response := buildPickupDataResponse(data)
+	response.WeeklyPlanVersion = version
 
 	common.Respond(w, r, http.StatusOK, response, "Pickup schedules updated successfully")
 }
@@ -297,7 +372,7 @@ func (rs *Resource) bulkUpsertPickupSchedules(w http.ResponseWriter, r *http.Req
 	}
 	staffID, err := rs.getStaffIDFromJWT(r)
 	if err != nil {
-		renderError(w, r, common.ErrorForbidden(err))
+		renderScheduleAuthorError(w, r, err)
 		return
 	}
 	if rs.PickupAdjustmentService == nil {
@@ -308,7 +383,7 @@ func (rs *Resource) bulkUpsertPickupSchedules(w http.ResponseWriter, r *http.Req
 	claims := sessiontoken.ClaimsFromCtx(r.Context())
 	result, err := rs.PickupAdjustmentService.ApplyBulkExceptions(
 		r.Context(), careplan.PickupAdjustmentBulkInput{
-			StudentIDs: req.StudentIDs, Schedules: req.Schedules,
+			StudentIDs: ident.Int64s(req.StudentIDs), Schedules: req.Schedules,
 			ConfirmedException: req.ConfirmedException, CreatedByStaffID: staffID,
 			ActorAccountID: int64(claims.ID),
 			Authorize: func(ctx context.Context, student careplan.ScheduleStudent) (bool, error) {
@@ -361,7 +436,7 @@ func (rs *Resource) createStudentPickupException(w http.ResponseWriter, r *http.
 
 	staffID, err := rs.getStaffIDFromJWT(r)
 	if err != nil {
-		renderError(w, r, common.ErrorForbidden(err))
+		renderScheduleAuthorError(w, r, err)
 		return
 	}
 
@@ -375,7 +450,7 @@ func (rs *Resource) createStudentPickupException(w http.ResponseWriter, r *http.
 	tenantID := tenant.FromContext(r.Context())
 	exception, err := rs.PickupScheduleService.CreateOrReclaimException(
 		r.Context(), student.ID, exceptionDate, pickupTime, req.Reason, staffID,
-		func() (int64, error) { return rs.getStaffIDFromJWT(r) },
+		rs.exceptionTakeoverStaffID(r),
 	)
 	if err != nil {
 		renderExceptionWriteError(w, r, err)
@@ -434,7 +509,7 @@ func (rs *Resource) updateStudentPickupException(w http.ResponseWriter, r *http.
 	tenantID := tenant.FromContext(r.Context())
 	exception, err := rs.PickupScheduleService.UpdateException(
 		r.Context(), exceptionID, student.ID, exceptionDate, req.Reason, pickupTime, req.ClearPickupTime,
-		func() (int64, error) { return rs.getStaffIDFromJWT(r) },
+		rs.exceptionTakeoverStaffID(r),
 	)
 	if err != nil {
 		renderExceptionWriteError(w, r, err)
@@ -507,11 +582,12 @@ func (rs *Resource) createStudentPickupNote(w http.ResponseWriter, r *http.Reque
 
 	staffID, err := rs.getStaffIDFromJWT(r)
 	if err != nil {
-		renderError(w, r, common.ErrorForbidden(err))
+		renderScheduleAuthorError(w, r, err)
 		return
 	}
 
 	note := req.toModel(student.ID, staffID)
+	note.EnteredByTraeger = careplan.EnteredByTraeger(r.Context(), staffID)
 
 	tenantID := tenant.FromContext(r.Context())
 	if err := withinTenant(r.Context(), tenantID, func(ctx context.Context) error {
@@ -548,20 +624,15 @@ func (rs *Resource) replaceStudentWeekdayPickupNotes(w http.ResponseWriter, r *h
 
 	staffID, err := rs.getStaffIDFromJWT(r)
 	if err != nil {
-		renderError(w, r, common.ErrorForbidden(err))
+		renderScheduleAuthorError(w, r, err)
 		return
 	}
 
-	if rs.WeekdayPickupNotes == nil {
-		renderError(w, r, common.ErrorInternalServer(errors.New("weekday pickup notes are not configured")))
-		return
-	}
-	notes := make(map[int]string, len(req.Notes))
-	for _, note := range req.Notes {
-		notes[note.Weekday] = note.Content
-	}
-	if err := rs.WeekdayPickupNotes.ReplaceWeekdayPickupNotes(r.Context(), student.ID, staffID, notes); err != nil {
-		renderError(w, r, common.ErrorInternalServer(err))
+	if _, err := rs.WeeklyPlans.SaveWeeklyPlan(r.Context(), careplan.WeeklyPlanInput{
+		StudentID: student.ID, WeekdayNotes: weekdayPickupNoteMap(&req.Notes),
+		CreatedByStaffID: staffID, ExpectedVersion: req.ExpectedVersion,
+	}); err != nil {
+		renderPickupAdjustmentError(w, r, err)
 		return
 	}
 
@@ -589,20 +660,29 @@ func (rs *Resource) updateStudentPickupNote(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	req := &PickupNoteRequest{}
+	req := &PickupNoteUpdateRequest{}
 	if err := render.Bind(r, req); err != nil {
 		renderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
+	// A weekday note belongs to the weekly plan, whose save checks the weekly
+	// plan token (ADR 0311). This route checks one note's token only, so it
+	// keeps the note's weekday: it neither turns a dated note into a weekday
+	// note nor moves one to another weekday.
+	if req.Weekday != existingNote.Weekday {
+		renderError(w, r, common.ErrorInvalidRequest(errPickupNoteWeekdayChange))
+		return
+	}
 
-	note := req.toModel(student.ID, existingNote.CreatedBy) // Preserve original creator
+	note := req.note().toModel(student.ID, existingNote.CreatedBy) // Preserve original creator
+	note.EnteredByTraeger = existingNote.EnteredByTraeger
 	note.ID = noteID
 	note.CreatedAt = existingNote.CreatedAt // Preserve original creation timestamp
 	note.SetTenantID(existingNote.TenantID)
 
 	tenantID := tenant.FromContext(r.Context())
 	if err := withinTenant(r.Context(), tenantID, func(ctx context.Context) error {
-		return rs.PickupScheduleService.UpdateStudentPickupNote(ctx, note)
+		return rs.PickupScheduleService.UpdateStudentPickupNote(ctx, note, req.ExpectedVersion)
 	}); err != nil {
 		renderError(w, r, common.ErrorInternalServer(err))
 		return
@@ -645,63 +725,6 @@ func (rs *Resource) deleteStudentPickupNote(w http.ResponseWriter, r *http.Reque
 	})
 
 	common.Respond(w, r, http.StatusOK, nil, "Pickup note deleted successfully")
-}
-
-// BulkDayNoteResponse represents a single day note in bulk pickup time responses
-type BulkDayNoteResponse struct {
-	ID      int64  `json:"id"`
-	Content string `json:"content"`
-}
-
-// BulkPickupTimeResponse represents pickup time data for a single student
-type BulkPickupTimeResponse struct {
-	StudentID   int64                 `json:"student_id"`
-	Date        string                `json:"date"`
-	WeekdayName string                `json:"weekday_name"`
-	PickupTime  *string               `json:"pickup_time,omitempty"` // HH:MM format or null
-	IsException bool                  `json:"is_exception"`
-	Notes       string                `json:"notes,omitempty"`
-	DayNotes    []BulkDayNoteResponse `json:"day_notes,omitempty"`
-}
-
-// getBulkPickupTimes handles POST /students/pickup-times/bulk
-// Returns effective pickup times for multiple students on a given date
-func (rs *Resource) getBulkPickupTimes(w http.ResponseWriter, r *http.Request) {
-	handleBulkEffectiveTimes(
-		rs,
-		w,
-		r,
-		"Bulk pickup times retrieved successfully",
-		rs.PickupScheduleService.GetBulkEffectivePickupTimesForDate,
-		mapBulkPickupTimeResponse,
-	)
-}
-
-func mapBulkPickupTimeResponse(
-	studentID int64,
-	effectiveTime *careplan.EffectivePickupTime,
-) BulkPickupTimeResponse {
-	response := BulkPickupTimeResponse{
-		StudentID:   studentID,
-		Date:        effectiveTime.Date.Format(dateFormatISO),
-		WeekdayName: effectiveTime.WeekdayName,
-		IsException: effectiveTime.IsException,
-		Notes:       effectiveTime.Notes,
-	}
-	if effectiveTime.PickupTime != nil {
-		formatted := effectiveTime.PickupTime.Format("15:04")
-		response.PickupTime = &formatted
-	}
-	if len(effectiveTime.DayNotes) > 0 {
-		response.DayNotes = make([]BulkDayNoteResponse, 0, len(effectiveTime.DayNotes))
-		for _, note := range effectiveTime.DayNotes {
-			response.DayNotes = append(response.DayNotes, BulkDayNoteResponse{
-				ID:      note.ID,
-				Content: note.Content,
-			})
-		}
-	}
-	return response
 }
 
 // filterAuthorizedStudentIDs filters the requested student IDs to only those

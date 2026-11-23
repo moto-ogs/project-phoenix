@@ -9,6 +9,7 @@ import (
 	"time"
 
 	reviewbindings "github.com/moto-ogs/project-phoenix/roots/requestreviewbinding"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -227,14 +228,14 @@ func TestOpenRowsCarryTheOwnerRules(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, master, 1)
 	assert.Equal(t, requestreview.TypeMasterData, master[0].Type)
-	assert.Equal(t, excusedrequests.ParentRequestVersion(created.Add(time.Minute)), master[0].Version)
+	assert.Equal(t, readstate.Of(created.Add(time.Minute)), master[0].Version)
 	assert.Equal(t, created, master[0].SortTime)
 	assert.Equal(t, "Anna Adler", master[0].StudentName)
 	assert.True(t, master[0].BulkEligible)
 	assert.False(t, master[0].Past, "Stammdaten have no effective scope")
 	assert.Equal(t, &changed, master[0].CurrentValueChanged)
 	assert.Equal(t, []string{"md:person:first_name"}, master[0].ConflictKeys)
-	assert.Equal(t, requestreview.ToMasterDataChangeRequestResponse(f.master.pending[0]), master[0].Data)
+	assert.Equal(t, new(requestreview.ToMasterDataChangeRequestResponse(f.master.pending[0])), master[0].Payload.MasterData)
 
 	care, _, err := queues.CareSchedule.Open(context.Background(), requestreview.QueueFilter{})
 	require.NoError(t, err)
@@ -248,7 +249,7 @@ func TestOpenRowsCarryTheOwnerRules(t *testing.T) {
 	assert.False(t, pickup.UrgentToday)
 	assert.True(t, pickup.Past, "yesterday's pickup change is past")
 	assert.Equal(t, []string{"pickup:" + today.AddDays(-1).String()}, pickup.ConflictKeys)
-	assert.Equal(t, requestreview.ToCareRequestResponse(f.care.pending[1]), pickup.Data)
+	assert.Equal(t, new(requestreview.ToCareRequestResponse(f.care.pending[1])), pickup.Payload.CareSchedule)
 
 	offering, _, err := queues.Offering.Open(context.Background(), requestreview.QueueFilter{})
 	require.NoError(t, err)
@@ -258,8 +259,8 @@ func TestOpenRowsCarryTheOwnerRules(t *testing.T) {
 	assert.Equal(t, "Cara Cruz", offering[0].StudentName)
 	assert.Equal(t, "Angebote müssen einzeln geprüft werden.", offering[0].BulkIneligibleText)
 	assert.Equal(t, []string{"offer:5"}, offering[0].ConflictKeys)
-	data, ok := offering[0].Data.(requestreview.OfferingRequestResponse)
-	require.True(t, ok)
+	data := offering[0].Payload.Offering
+	require.NotNil(t, data)
 	assert.Equal(t, "Mo, Di", data.Diff[0].New)
 	assert.Equal(t, "nicht gebucht", data.Diff[0].Old)
 
@@ -271,7 +272,7 @@ func TestOpenRowsCarryTheOwnerRules(t *testing.T) {
 	assert.True(t, excused[0].BulkEligible)
 	assert.Equal(t, map[string]string{today.String(): "present"}, excused[0].CurrentStatusByDate)
 	assert.Equal(t, []string{"absence:" + today.AddDays(-2).String(), "absence:" + today.String()}, excused[0].ConflictKeys)
-	assert.Equal(t, requestreview.ToStaffExcusedRequestResponse(f.excused.pending[0]), excused[0].Data)
+	assert.Equal(t, new(requestreview.ToStaffExcusedRequestResponse(f.excused.pending[0])), excused[0].Payload.Excused)
 }
 
 func TestHistoryRowsCarryDecisionFactsAndCorrectability(t *testing.T) {
@@ -292,7 +293,7 @@ func TestHistoryRowsCarryDecisionFactsAndCorrectability(t *testing.T) {
 		{Request: &careplan.OfferingChangeRequest{ID: 5, UpdatedAt: updated, StudentID: 3, Status: "withdrawn"}, StudentName: "Cara Cruz"},
 	}
 	f.offering.corrections = []requestreview.Row{{Type: requestreview.TypeDirectCorrection, ID: 6, StudentID: 3, StudentName: "Cara Cruz", SortTime: decided, DecidedAt: decided,
-		Data: requestreview.DirectCorrectionResponse{ID: "6", StudentID: "3", StudentName: "Cara Cruz", ChangedAt: decided, Reason: "Tippfehler", ChangedByName: "Olga Office", Diff: []requestreview.OfferingRequestDiffResponse{}},
+		Payload: requestreview.Payload{DirectCorrection: &requestreview.DirectCorrectionResponse{ID: "6", StudentID: "3", StudentName: "Cara Cruz", ChangedAt: decided, Reason: "Tippfehler", ChangedByName: "Olga Office", Diff: []requestreview.OfferingRequestDiffResponse{}}},
 	}}
 	f.excused.history = []*excusedrequests.HistoryItem{
 		{Request: &excusedrequests.Request{ID: 7, UpdatedAt: updated, StudentID: 4, Status: "done"}, FirstName: "Dora", LastName: "Dahl"},
@@ -306,7 +307,7 @@ func TestHistoryRowsCarryDecisionFactsAndCorrectability(t *testing.T) {
 	assert.True(t, master[0].CanCorrect)
 	assert.Equal(t, updated, master[1].DecidedAt, "auto-applied rows fall back to updated_at")
 	assert.False(t, master[1].CanCorrect)
-	assert.Equal(t, requestreview.ToMasterDataHistoryResponse(f.master.history[0]), master[0].Data)
+	assert.Equal(t, new(requestreview.ToMasterDataHistoryResponse(f.master.history[0])), master[0].Payload.MasterDataHistory)
 
 	care, _, err := queues.CareSchedule.History(context.Background(), requestreview.QueueFilter{})
 	require.NoError(t, err)
@@ -325,7 +326,7 @@ func TestHistoryRowsCarryDecisionFactsAndCorrectability(t *testing.T) {
 	assert.Equal(t, decided, corrections[0].SortTime)
 	assert.Equal(t, decided, corrections[0].DecidedAt)
 	assert.Empty(t, corrections[0].Status)
-	assert.Equal(t, f.offering.corrections[0].Data, corrections[0].Data)
+	assert.Equal(t, f.offering.corrections[0].Payload, corrections[0].Payload)
 
 	excused, _, err := queues.Excused.History(context.Background(), requestreview.QueueFilter{})
 	require.NoError(t, err)

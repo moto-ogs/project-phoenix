@@ -1,6 +1,7 @@
-import { ApiError, apiErrorFromResponse } from "./api-error";
+import { ApiError } from "./api-error";
+import { bffJson } from "./bff-fetch";
+import type { StaffStatus } from "./contract/staff-onboarding.generated";
 import { createLogger } from "./logger";
-import { sessionFetch } from "./session-cache";
 
 const logger = createLogger({ component: "StaffOnboardingApi" });
 
@@ -33,50 +34,41 @@ export interface StaffOnboardingState {
   skippedSteps: readonly StaffOnboardingStepKey[];
 }
 
-interface BackendState {
-  dismissed?: unknown;
-  school_ready?: unknown;
-  done_steps?: unknown;
-  skipped_steps?: unknown;
-}
-
-function stepKeys(raw: unknown): StaffOnboardingStepKey[] {
-  if (!Array.isArray(raw)) return [];
-  return raw.filter((key): key is StaffOnboardingStepKey =>
+function stepKeys(raw: readonly string[] | null): StaffOnboardingStepKey[] {
+  return (raw ?? []).filter((key): key is StaffOnboardingStepKey =>
     STAFF_ONBOARDING_STEP_KEYS.includes(key as StaffOnboardingStepKey),
   );
 }
 
 export function mapStaffOnboardingState(
-  raw: BackendState,
+  raw: StaffStatus,
 ): StaffOnboardingState {
   return {
-    dismissed: raw.dismissed === true,
-    schoolReady: raw.school_ready === true,
+    dismissed: raw.dismissed,
+    schoolReady: raw.school_ready,
     doneSteps: stepKeys(raw.done_steps),
     skippedSteps: stepKeys(raw.skipped_steps),
   };
 }
 
+/** Runs a call of the checklist; a failure is logged under its event. */
 async function readState(
-  response: Response,
+  call: Promise<StaffStatus>,
   event: string,
 ): Promise<StaffOnboardingState> {
-  if (!response.ok) {
-    logger.error(event, { status: response.status });
-    throw await apiErrorFromResponse(
-      response,
-      `staff onboarding request failed (${response.status})`,
-    );
+  let data: StaffStatus;
+  try {
+    data = await call;
+  } catch (error) {
+    logger.error(event, {
+      status: error instanceof ApiError ? error.status : undefined,
+    });
+    throw error;
   }
-  const body = (await response.json()) as
-    { data?: BackendState } | BackendState;
-  const data = "data" in body && body.data ? body.data : (body as BackendState);
   // Ohne die beiden Listen ist die Antwort nicht die erwartete. Sie darf den
   // Stand nicht ersetzen, sonst stünde jeder Schritt wieder offen.
   if (!Array.isArray(data.done_steps) || !Array.isArray(data.skipped_steps)) {
     logger.error(event, { reason: "unexpected_shape" });
-    // Eine unbrauchbare Antwort ist ein Serverfehler, kein Eingabefehler.
     throw new ApiError(
       "staff onboarding response has an unexpected shape",
       500,
@@ -90,45 +82,49 @@ async function readState(
  * (401/403) gibt es keine Checkliste: dann `null`.
  */
 export async function fetchStaffOnboarding(): Promise<StaffOnboardingState | null> {
-  const response = await sessionFetch("/api/staff-onboarding", {
-    method: "GET",
-  });
-  if (response.status === 401 || response.status === 403) {
-    return null;
+  try {
+    return await readState(
+      bffJson("tenant", "GET /api/staff-onboarding/"),
+      "fetch_staff_onboarding_failed",
+    );
+  } catch (error) {
+    if (
+      error instanceof ApiError &&
+      (error.status === 401 || error.status === 403)
+    ) {
+      return null;
+    }
+    throw error;
   }
-  return readState(response, "fetch_staff_onboarding_failed");
-}
-
-async function put(
-  path: string,
-  body: unknown,
-  event: string,
-): Promise<StaffOnboardingState> {
-  const response = await sessionFetch(path, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  return readState(response, event);
 }
 
 export function setStaffOnboardingStepState(
   step: StaffOnboardingStepKey,
   state: StaffOnboardingStepState,
 ): Promise<StaffOnboardingState> {
-  return put(
-    `/api/staff-onboarding/steps/${step}`,
-    { state },
+  return readState(
+    bffJson("tenant", "PUT /api/staff-onboarding/steps/{step}", {
+      params: { step },
+      body: { state },
+    }),
     "set_staff_onboarding_step_failed",
   );
 }
 
+/**
+ * Blendet die Checkliste aus. `completed` heißt: die Person hat sie über
+ * „Abschließen“ beendet, nicht vorher über „Ausblenden“. Das liest nur die
+ * Nutzungsanalyse der Schule (#7553); gespeichert wird beides gleich.
+ */
 export function setStaffOnboardingDismissed(
   dismissed: boolean,
+  options: { completed?: boolean } = {},
 ): Promise<StaffOnboardingState> {
-  return put(
-    "/api/staff-onboarding/dismissal",
-    { dismissed },
+  return readState(
+    bffJson("tenant", "PUT /api/staff-onboarding/dismissal", {
+      query: { outcome: options.completed ? "completed" : undefined },
+      body: { dismissed },
+    }),
     "dismiss_staff_onboarding_failed",
   );
 }

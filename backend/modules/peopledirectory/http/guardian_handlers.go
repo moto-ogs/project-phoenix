@@ -12,22 +12,11 @@ import (
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/collation"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 var validPhoneTypes = map[string]bool{"mobile": true, "home": true, "work": true, "other": true}
-
-func (rs *GuardianResource) listGuardians(w http.ResponseWriter, r *http.Request) {
-	page, pageSize := rs.runtime.ParsePagination(r)
-	guardians, err := rs.directory.ListGuardians(r.Context(), page, pageSize)
-	if err != nil {
-		rs.moduleFailure(w, r, err)
-		return
-	}
-	responses := newGuardianResponses(guardians)
-	// The total is the page length; the legacy list never counted.
-	rs.runtime.SuccessPaginated(w, r, http.StatusOK, responses, Pagination{Page: page, PageSize: pageSize, Total: len(responses)}, "Guardians retrieved successfully")
-	rs.runtime.ObserveResponse(http.StatusOK, "none")
-}
 
 // minGuardianPickerQueryLength is the server-side floor for picker searches
 // so a non-admin cannot enumerate the guardian pool one character at a
@@ -72,7 +61,7 @@ func (rs *GuardianResource) searchGuardiansForPicker(w http.ResponseWriter, r *h
 	responses := make([]*GuardianPickerResponse, 0, len(matches))
 	for _, match := range matches {
 		responses = append(responses, &GuardianPickerResponse{
-			ID: match.Guardian.ID, FirstName: match.Guardian.FirstName, LastName: match.Guardian.LastName,
+			ID: ident.ID(match.Guardian.ID), FirstName: match.Guardian.FirstName, LastName: match.Guardian.LastName,
 			Email: match.Guardian.Email, LinkedChildrenCount: match.LinkedChildrenCount,
 		})
 	}
@@ -129,73 +118,12 @@ func (rs *GuardianResource) createGuardian(w http.ResponseWriter, r *http.Reques
 	rs.succeed(w, r, http.StatusCreated, newGuardianResponse(guardian), "Guardian created successfully")
 }
 
-func (rs *GuardianResource) updateGuardian(w http.ResponseWriter, r *http.Request) {
-	id, ok := rs.parseGuardianID(w, r)
-	if !ok {
-		return
-	}
-	if canModify, err := rs.canModifyGuardian(r, id); !canModify {
-		rs.fail(w, r, FailureForbidden, err)
-		return
-	}
-	req := &GuardianUpdateRequest{}
-	if err := render.Bind(r, req); err != nil {
-		rs.fail(w, r, FailureInvalidRequest, err)
-		return
-	}
-	existing, err := rs.directory.FindGuardian(r.Context(), id)
-	if err != nil {
-		rs.guardianLookupFailure(w, r, err)
-		return
-	}
-	if err := rs.directory.UpdateGuardian(r.Context(), id, mergeGuardianUpdate(existing, req)); err != nil {
-		rs.moduleFailure(w, r, err)
-		return
-	}
-	updated, err := rs.directory.FindGuardian(r.Context(), id)
-	if err != nil {
-		rs.moduleFailure(w, r, err)
-		return
-	}
-	rs.succeed(w, r, http.StatusOK, newGuardianResponse(updated), "Guardian updated successfully")
-}
-
-// mergeGuardianUpdate applies the non-nil fields of the partial update onto
-// the stored profile; phone numbers are managed separately.
-func mergeGuardianUpdate(existing peopledirectory.Guardian, req *GuardianUpdateRequest) peopledirectory.GuardianInput {
-	input := peopledirectory.GuardianInput{
-		FirstName: existing.FirstName, LastName: existing.LastName, Email: existing.Email,
-		AddressStreet: existing.AddressStreet, AddressCity: existing.AddressCity, AddressPostalCode: existing.AddressPostalCode,
-		PreferredContactMethod: existing.PreferredContactMethod, LanguagePreference: existing.LanguagePreference, Notes: existing.Notes,
-	}
-	if req.FirstName != nil {
-		input.FirstName = *req.FirstName
-	}
-	if req.LastName != nil {
-		input.LastName = *req.LastName
-	}
-	if req.Email != nil {
-		input.Email = req.Email
-	}
-	if req.AddressStreet != nil {
-		input.AddressStreet = req.AddressStreet
-	}
-	if req.AddressCity != nil {
-		input.AddressCity = req.AddressCity
-	}
-	if req.AddressPostalCode != nil {
-		input.AddressPostalCode = req.AddressPostalCode
-	}
-	if req.PreferredContactMethod != nil {
-		input.PreferredContactMethod = *req.PreferredContactMethod
-	}
-	if req.LanguagePreference != nil {
-		input.LanguagePreference = *req.LanguagePreference
-	}
-	if req.Notes != nil {
-		input.Notes = req.Notes
-	}
-	return input
+// refuseUnversionedEdit answers the single-field edit routes the staff form
+// used before it saved a guardian as one entry (ADR 0311). They carry no read
+// state, so a tab opened before the release is refused and shows the stored
+// state; the routes go after one release (ADR 0270, #7953).
+func (rs *GuardianResource) refuseUnversionedEdit(w http.ResponseWriter, r *http.Request) {
+	rs.fail(w, r, FailureConflict, readstate.ErrChanged)
 }
 
 // guardianFullDeleteWarning describes what a full delete WOULD do, so it
@@ -319,9 +247,11 @@ func (rs *GuardianResource) renderGuardianDeleteError(w http.ResponseWriter, r *
 		rs.failMessage(w, r, FailureConflict, message)
 	case errors.Is(err, peopledirectory.ErrGuardianForceDeleteRequiresAdmin):
 		rs.fail(w, r, FailureForbidden, err)
-	case errors.Is(err, peopledirectory.ErrGuardianDeletePreviewChanged):
+	case errors.Is(err, readstate.ErrChanged):
+		// The links changed since the preview: general.changed_since_read
+		// lets the dialog read the new set (ADR 0311).
 		rs.runtime.MarkRollback(r.Context())
-		rs.failMessage(w, r, FailureConflict, peopledirectory.ErrGuardianDeletePreviewChanged.Error())
+		rs.fail(w, r, FailureConflict, err)
 	case errors.Is(err, peopledirectory.ErrGuardianLinkConflict):
 		// A link added between the check and the delete trips the RESTRICT
 		// constraint; surface it as the same 409 rather than a 500.
@@ -332,24 +262,6 @@ func (rs *GuardianResource) renderGuardianDeleteError(w http.ResponseWriter, r *
 	default:
 		rs.fail(w, r, FailureInternal, err)
 	}
-}
-
-func (rs *GuardianResource) listGuardiansWithoutAccount(w http.ResponseWriter, r *http.Request) {
-	guardians, err := rs.directory.ListGuardiansWithoutAccount(r.Context())
-	if err != nil {
-		rs.moduleFailure(w, r, err)
-		return
-	}
-	rs.succeed(w, r, http.StatusOK, newGuardianResponses(guardians), "Guardians without accounts retrieved successfully")
-}
-
-func (rs *GuardianResource) listInvitableGuardians(w http.ResponseWriter, r *http.Request) {
-	guardians, err := rs.directory.ListInvitableGuardians(r.Context())
-	if err != nil {
-		rs.moduleFailure(w, r, err)
-		return
-	}
-	rs.succeed(w, r, http.StatusOK, newGuardianResponses(guardians), "Invitable guardians retrieved successfully")
 }
 
 // sendInvitation is the staff-initiated per-guardian invitation. The raw
@@ -368,14 +280,14 @@ func (rs *GuardianResource) sendInvitation(w http.ResponseWriter, r *http.Reques
 		rs.fail(w, r, FailureInternal, err)
 		return
 	}
-	response := map[string]any{
-		"id":                  invitation.ID,
-		"guardian_profile_id": invitation.GuardianProfileID,
-		"expires_at":          invitation.ExpiresAt,
-		"email_sent":          invitation.EmailSent,
+	response := GuardianInvitationResponse{
+		ID:                ident.ID(invitation.ID),
+		GuardianProfileID: ident.ID(invitation.GuardianProfileID),
+		ExpiresAt:         invitation.ExpiresAt,
+		EmailSent:         invitation.EmailSent,
 	}
 	if rs.runtime.ExposeInvitationToken(r) {
-		response["token"] = invitation.Token
+		response.Token = invitation.Token
 	}
 	rs.succeed(w, r, http.StatusCreated, response, "Invitation sent successfully")
 }
@@ -402,77 +314,86 @@ func (rs *GuardianResource) getStudentGuardians(w http.ResponseWriter, r *http.R
 	}
 	responses := make([]*GuardianWithRelationship, 0, len(rows))
 	for _, row := range rows {
-		responses = append(responses, &GuardianWithRelationship{
-			Guardian:           newGuardianResponse(row.Guardian),
-			RelationshipID:     row.Link.ID,
-			RelationshipType:   row.Link.RelationshipType,
-			GuardianRole:       row.Link.GuardianRole,
-			IsPrimary:          row.Link.IsPrimary,
-			IsEmergencyContact: row.Link.IsEmergencyContact,
-			CanPickup:          row.Link.CanPickup,
-			PickupNotes:        row.Link.PickupNotes,
-			PickupWeekdays:     row.Link.PickupWeekdays,
-			EmergencyPriority:  row.Link.EmergencyPriority,
-			IsPayer:            canSeePayment && row.Link.IsPayer,
-			AccountStatus: guardianAccountStatus(
-				row.Guardian.HasAccount,
-				row.Link.HasPermission(peopledirectory.GuardianPermissionPortalAccess),
-				row.InvitationPending,
-				row.InvitationLinkEnded,
-			),
-		})
+		responses = append(responses, newGuardianWithRelationship(row, canSeePayment))
 	}
 	rs.succeed(w, r, http.StatusOK, responses, "Student guardians retrieved successfully")
 }
 
-func (rs *GuardianResource) getGuardianStudents(w http.ResponseWriter, r *http.Request) {
-	guardianID, ok := rs.parseGuardianID(w, r)
+// newGuardianWithRelationship is one row of a child's guardian list with the
+// version a save of the staff form sends back.
+func newGuardianWithRelationship(row peopledirectory.GuardianWithLink, canSeePayment bool) *GuardianWithRelationship {
+	return &GuardianWithRelationship{
+		Guardian:           newGuardianResponse(row.Guardian),
+		RelationshipID:     ident.ID(row.Link.ID),
+		RelationshipType:   row.Link.RelationshipType,
+		GuardianRole:       row.Link.GuardianRole,
+		IsPrimary:          row.Link.IsPrimary,
+		IsEmergencyContact: row.Link.IsEmergencyContact,
+		CanPickup:          row.Link.CanPickup,
+		PickupNotes:        row.Link.PickupNotes,
+		PickupWeekdays:     row.Link.PickupWeekdays,
+		EmergencyPriority:  row.Link.EmergencyPriority,
+		IsPayer:            canSeePayment && row.Link.IsPayer,
+		AccountStatus: guardianAccountStatus(
+			row.Guardian.HasAccount,
+			row.Link.HasPermission(peopledirectory.GuardianPermissionPortalAccess),
+			row.InvitationPending,
+			row.InvitationLinkEnded,
+		),
+		Version: peopledirectory.GuardianEntryVersion(row),
+	}
+}
+
+// updateStudentGuardian saves the staff form of a child's guardian in one
+// unit of work: profile, this child's link and the phone list, refused when
+// the form read an older state (ADR 0311). The answer is the stored row with
+// its new version.
+func (rs *GuardianResource) updateStudentGuardian(w http.ResponseWriter, r *http.Request) {
+	studentID, ok := rs.parseStudentID(w, r)
 	if !ok {
 		return
 	}
-	rows, err := rs.directory.ListGuardianStudents(r.Context(), guardianID)
+	guardianID, ok := rs.parseIDParam(w, r, "guardianId", msgInvalidGuardianID)
+	if !ok {
+		return
+	}
+	if canModify, err := rs.canModifyStudent(r, studentID); !canModify {
+		rs.fail(w, r, FailureForbidden, err)
+		return
+	}
+	if canModify, err := rs.canModifyGuardian(r, guardianID); !canModify {
+		rs.fail(w, r, FailureForbidden, err)
+		return
+	}
+	req := &GuardianEntryRequest{}
+	if err := render.Bind(r, req); err != nil {
+		rs.fail(w, r, FailureInvalidRequest, err)
+		return
+	}
+	if err := rs.directory.UpdateGuardianEntry(r.Context(), req.edit(studentID, guardianID)); err != nil {
+		// A refusal after the profile write must not keep it.
+		rs.runtime.MarkRollback(r.Context())
+		rs.moduleFailure(w, r, err)
+		return
+	}
+	rs.respondStudentGuardian(w, r, studentID, guardianID)
+}
+
+// respondStudentGuardian answers the saved row as the list reads it.
+func (rs *GuardianResource) respondStudentGuardian(w http.ResponseWriter, r *http.Request, studentID, guardianID int64) {
+	rows, err := rs.directory.ListStudentGuardians(r.Context(), studentID)
 	if err != nil {
 		rs.moduleFailure(w, r, err)
 		return
 	}
-	personIDs := make([]int64, 0, len(rows))
 	for _, row := range rows {
-		personIDs = append(personIDs, row.Student.PersonID)
-	}
-	persons, err := rs.directory.ListPersonsByID(r.Context(), personIDs)
-	if err != nil {
-		rs.moduleFailure(w, r, err)
-		return
-	}
-	byID := make(map[int64]peopledirectory.Person, len(persons))
-	for _, person := range persons {
-		byID[person.ID] = person
-	}
-	responses := make([]*StudentWithRelationship, 0, len(rows))
-	for _, row := range rows {
-		person, found := byID[row.Student.PersonID]
-		if !found {
-			rs.runtime.Log.Error("failed to get person for student",
-				"student_id", row.Student.ID,
-				"person_id", row.Student.PersonID)
-			continue
+		if row.Guardian.ID == guardianID {
+			canSeePayment := rs.runtime.HasPermission(r, permissions.GuardiansFinancial)
+			rs.succeed(w, r, http.StatusOK, newGuardianWithRelationship(row, canSeePayment), "Guardian saved successfully")
+			return
 		}
-		responses = append(responses, &StudentWithRelationship{
-			StudentID:          row.Student.ID,
-			FirstName:          person.FirstName,
-			LastName:           person.LastName,
-			SchoolClass:        row.Student.SchoolClass,
-			RelationshipID:     row.Link.ID,
-			RelationshipType:   row.Link.RelationshipType,
-			GuardianRole:       row.Link.GuardianRole,
-			IsPrimary:          row.Link.IsPrimary,
-			IsEmergencyContact: row.Link.IsEmergencyContact,
-			CanPickup:          row.Link.CanPickup,
-			PickupNotes:        row.Link.PickupNotes,
-			EmergencyPriority:  row.Link.EmergencyPriority,
-		})
 	}
-	rs.succeed(w, r, http.StatusOK, responses, "Guardian students retrieved successfully")
+	rs.failMessage(w, r, FailureNotFound, msgRelationshipNotFound)
 }
 
 func (rs *GuardianResource) linkGuardianToStudent(w http.ResponseWriter, r *http.Request) {
@@ -490,7 +411,7 @@ func (rs *GuardianResource) linkGuardianToStudent(w http.ResponseWriter, r *http
 		return
 	}
 	link, err := rs.directory.LinkGuardianToStudent(r.Context(), peopledirectory.LinkGuardian{
-		StudentID: studentID, GuardianProfileID: req.GuardianProfileID,
+		StudentID: studentID, GuardianProfileID: req.GuardianProfileID.Int64(),
 		RelationshipType: req.RelationshipType, GuardianRole: req.GuardianRole,
 		IsPrimary: req.IsPrimary, IsEmergencyContact: req.IsEmergencyContact, CanPickup: req.CanPickup,
 		PickupNotes: req.PickupNotes, EmergencyPriority: req.EmergencyPriority,
@@ -547,36 +468,6 @@ func batchCreatesGuardian(guardians []peopledirectory.NewStudentGuardian) bool {
 	return false
 }
 
-func (rs *GuardianResource) updateStudentGuardianRelationship(w http.ResponseWriter, r *http.Request) {
-	relationshipID, ok := rs.parseIDParam(w, r, "relationshipId", msgInvalidRelationshipID)
-	if !ok {
-		return
-	}
-	link, err := rs.directory.FindGuardianLink(r.Context(), relationshipID)
-	if err != nil {
-		rs.failMessage(w, r, FailureNotFound, msgRelationshipNotFound)
-		return
-	}
-	if canModify, err := rs.canModifyStudent(r, link.StudentID); !canModify {
-		rs.fail(w, r, FailureForbidden, err)
-		return
-	}
-	req := &StudentGuardianUpdateRequest{}
-	if err := render.Bind(r, req); err != nil {
-		rs.fail(w, r, FailureInvalidRequest, err)
-		return
-	}
-	if err := rs.directory.UpdateGuardianLink(r.Context(), relationshipID, peopledirectory.GuardianLinkUpdate{
-		RelationshipType: req.RelationshipType, GuardianRole: req.GuardianRole,
-		IsPrimary: req.IsPrimary, IsEmergencyContact: req.IsEmergencyContact, CanPickup: req.CanPickup,
-		PickupNotes: req.PickupNotes, EmergencyPriority: req.EmergencyPriority,
-	}); err != nil {
-		rs.fail(w, r, FailureInternal, err)
-		return
-	}
-	rs.succeed(w, r, http.StatusOK, nil, "Relationship updated successfully")
-}
-
 func (rs *GuardianResource) removeGuardianFromStudent(w http.ResponseWriter, r *http.Request) {
 	studentID, ok := rs.parseStudentID(w, r)
 	if !ok {
@@ -611,33 +502,6 @@ func (rs *GuardianResource) removeGuardianFromStudent(w http.ResponseWriter, r *
 }
 
 // --- phone number handlers ---
-
-// validatePhoneAccess parses both IDs, runs the guardian write gate and
-// checks that the phone belongs to the guardian in the URL.
-func (rs *GuardianResource) validatePhoneAccess(w http.ResponseWriter, r *http.Request) (peopledirectory.GuardianPhone, bool) {
-	guardianID, ok := rs.parseGuardianID(w, r)
-	if !ok {
-		return peopledirectory.GuardianPhone{}, false
-	}
-	phoneID, ok := rs.parseIDParam(w, r, "phoneId", msgInvalidPhoneID)
-	if !ok {
-		return peopledirectory.GuardianPhone{}, false
-	}
-	if canModify, err := rs.canModifyGuardian(r, guardianID); !canModify {
-		rs.fail(w, r, FailureForbidden, err)
-		return peopledirectory.GuardianPhone{}, false
-	}
-	phone, err := rs.directory.FindGuardianPhone(r.Context(), phoneID)
-	if err != nil {
-		rs.failMessage(w, r, FailureNotFound, msgPhoneNotFound)
-		return peopledirectory.GuardianPhone{}, false
-	}
-	if phone.GuardianProfileID != guardianID {
-		rs.failMessage(w, r, FailureForbidden, msgPhoneNotBelongsGuard)
-		return peopledirectory.GuardianPhone{}, false
-	}
-	return phone, true
-}
 
 func (rs *GuardianResource) listGuardianPhoneNumbers(w http.ResponseWriter, r *http.Request) {
 	guardianID, ok := rs.parseGuardianID(w, r)
@@ -678,58 +542,4 @@ func (rs *GuardianResource) addPhoneNumber(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	rs.succeed(w, r, http.StatusCreated, newPhoneNumberResponse(phone), "Phone number added successfully")
-}
-
-func (rs *GuardianResource) updatePhoneNumber(w http.ResponseWriter, r *http.Request) {
-	phone, ok := rs.validatePhoneAccess(w, r)
-	if !ok {
-		return
-	}
-	req := &PhoneNumberUpdateRequest{}
-	if err := render.Bind(r, req); err != nil {
-		rs.fail(w, r, FailureInvalidRequest, err)
-		return
-	}
-	if err := rs.directory.UpdateGuardianPhone(r.Context(), phone.ID, peopledirectory.GuardianPhoneUpdate{
-		PhoneNumber: req.PhoneNumber, PhoneType: req.PhoneType, Label: req.Label, IsPrimary: req.IsPrimary, Priority: req.Priority,
-	}); err != nil {
-		rs.moduleFailure(w, r, err)
-		return
-	}
-	rs.respondPhone(w, r, phone.ID, "Phone number updated successfully")
-}
-
-func (rs *GuardianResource) deletePhoneNumber(w http.ResponseWriter, r *http.Request) {
-	phone, ok := rs.validatePhoneAccess(w, r)
-	if !ok {
-		return
-	}
-	if err := rs.directory.DeleteGuardianPhone(r.Context(), phone.ID); err != nil {
-		rs.moduleFailure(w, r, err)
-		return
-	}
-	rs.succeed(w, r, http.StatusOK, nil, "Phone number deleted successfully")
-}
-
-func (rs *GuardianResource) setPrimaryPhone(w http.ResponseWriter, r *http.Request) {
-	phone, ok := rs.validatePhoneAccess(w, r)
-	if !ok {
-		return
-	}
-	if err := rs.directory.SetPrimaryGuardianPhone(r.Context(), phone.ID); err != nil {
-		rs.moduleFailure(w, r, err)
-		return
-	}
-	rs.respondPhone(w, r, phone.ID, "Phone number set as primary successfully")
-}
-
-// respondPhone re-reads the phone after a write so the response carries the
-// stored state.
-func (rs *GuardianResource) respondPhone(w http.ResponseWriter, r *http.Request, phoneID int64, message string) {
-	updated, err := rs.directory.FindGuardianPhone(r.Context(), phoneID)
-	if err != nil {
-		rs.moduleFailure(w, r, err)
-		return
-	}
-	rs.succeed(w, r, http.StatusOK, newPhoneNumberResponse(updated), message)
 }

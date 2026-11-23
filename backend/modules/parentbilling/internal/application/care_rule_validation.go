@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // normalizeCareRule checks a care rule as a whole: a name, whole months,
@@ -31,21 +32,26 @@ func normalizeCareRule(input parentbilling.CareRuleInput, schools []parentbillin
 	}
 	own := make([]int64, len(schools))
 	for i, school := range schools {
-		own[i] = school.ID
+		own[i] = school.ID.Int64()
 	}
-	input.SchoolIDs = uniqueIDs(input.SchoolIDs)
-	input.CountSchoolIDs = uniqueIDs(input.CountSchoolIDs)
-	input.CareOfferingIDs = uniqueIDs(input.CareOfferingIDs)
+	input.SchoolIDs = ident.IDs(uniqueIDs(ident.Int64s(input.SchoolIDs)))
+	input.CountSchoolIDs = ident.IDs(uniqueIDs(ident.Int64s(input.CountSchoolIDs)))
+	if input.Kind == parentbilling.RuleSibling {
+		// A sibling rule always counts its own schools (#7863): the choice
+		// keeps the schools it counts with them.
+		input.CountSchoolIDs = slices.DeleteFunc(input.CountSchoolIDs, func(id ident.ID) bool { return slices.Contains(input.SchoolIDs, id) })
+	}
+	input.CareOfferingIDs = ident.IDs(uniqueIDs(ident.Int64s(input.CareOfferingIDs)))
 	switch {
 	case len(input.SchoolIDs) == 0:
 		errs["school_ids"] = errors.New("needs at least one school")
-	case len(input.SchoolIDs) > parentbilling.MaxCareRuleSchools || !allIn(input.SchoolIDs, own):
+	case len(input.SchoolIDs) > parentbilling.MaxCareRuleSchools || !allIn(ident.Int64s(input.SchoolIDs), own):
 		errs["school_ids"] = errors.New("must name schools of the Träger")
 	}
-	if len(input.CountSchoolIDs) > parentbilling.MaxCareRuleSchools || !allIn(input.CountSchoolIDs, own) {
+	if len(input.CountSchoolIDs) > parentbilling.MaxCareRuleSchools || !allIn(ident.Int64s(input.CountSchoolIDs), own) {
 		errs["count_school_ids"] = errors.New("must name schools of the Träger")
 	}
-	if len(input.CareOfferingIDs) > parentbilling.MaxCareRuleModules || slices.ContainsFunc(input.CareOfferingIDs, func(id int64) bool { return id <= 0 }) {
+	if len(input.CareOfferingIDs) > parentbilling.MaxCareRuleModules || slices.ContainsFunc(input.CareOfferingIDs, func(id ident.ID) bool { return id <= 0 }) {
 		errs["care_offering_ids"] = errors.New("must name modules")
 	}
 	validateCareRuleKind(&input, errs)
@@ -61,6 +67,7 @@ func validateCareRuleKind(input *parentbilling.CareRuleInput, errs validation.Er
 		input.SiblingFromChild = nil
 		input.TariffSiblingPrice = false
 		input.CountsFamilyChildren = false
+		input.SiblingAllChildren = false
 		if len(input.CountSchoolIDs) > 0 {
 			errs["count_school_ids"] = errors.New("only a sibling rule counts other schools")
 		}

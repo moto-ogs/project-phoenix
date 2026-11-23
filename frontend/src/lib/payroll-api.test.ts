@@ -1,10 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ApiError } from "./api-error";
 
-vi.mock("./session-cache", () => ({
-  sessionFetch: vi.fn(),
-}));
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 
-import { sessionFetch } from "./session-cache";
+const fetchMock = vi.fn();
+beforeEach(() => {
+  vi.stubGlobal("fetch", fetchMock);
+});
+
 import {
   duplicateLohnartNumbers,
   fetchPayrollDispatch,
@@ -17,8 +20,7 @@ import {
   savePayrollSetting,
   type PayrollStatus,
 } from "./payroll-api";
-
-const mockedSessionFetch = vi.mocked(sessionFetch);
+import { routes } from "./contract/settings.generated";
 
 const backendStatus = {
   categories: [
@@ -81,7 +83,7 @@ describe("fetchPayrollTargetCoverage", () => {
   });
 
   it("fetches the current month's counts without names", async () => {
-    mockedSessionFetch.mockResolvedValue({
+    fetchMock.mockResolvedValue({
       ok: true,
       json: () =>
         Promise.resolve({
@@ -100,8 +102,9 @@ describe("fetchPayrollTargetCoverage", () => {
       staffTotal: 12,
       staffWithoutTarget: 3,
     });
-    expect(mockedSessionFetch).toHaveBeenCalledWith(
+    expect(fetchMock).toHaveBeenCalledWith(
       "/api/staff/time-tracking/target-coverage",
+      { method: "GET" },
     );
   });
 });
@@ -112,16 +115,16 @@ describe("fetchPayrollStatus", () => {
   });
 
   it("fetches and maps the payroll status", async () => {
-    mockedSessionFetch.mockResolvedValue({
+    fetchMock.mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ data: backendStatus }),
     } as Response);
 
     const status = await fetchPayrollStatus();
 
-    expect(mockedSessionFetch).toHaveBeenCalledWith(
-      "/api/settings/payroll-status",
-    );
+    expect(fetchMock).toHaveBeenCalledWith("/api/settings/payroll-status", {
+      method: "GET",
+    });
     expect(status.categories[0]?.settingKey).toBe(
       "payroll.lohnart_regelarbeit",
     );
@@ -129,14 +132,12 @@ describe("fetchPayrollStatus", () => {
   });
 
   it("reports a failed status request", async () => {
-    mockedSessionFetch.mockResolvedValue({
+    fetchMock.mockResolvedValue({
       ok: false,
       statusText: "Forbidden",
     } as Response);
 
-    await expect(fetchPayrollStatus()).rejects.toThrow(
-      "Failed to fetch payroll status: Forbidden",
-    );
+    await expect(fetchPayrollStatus()).rejects.toBeInstanceOf(ApiError);
   });
 });
 
@@ -177,14 +178,19 @@ describe("mapPayrollStatus dispatch (#4805)", () => {
     });
   });
 
-  it("falls back to the backend defaults when the block is missing or unknown", () => {
+  // An answer without the block never reaches the client: the catalog
+  // proxy's decoder requires it and answers 502.
+  it("refuses a status without the dispatch block at the proxy", () => {
     const { dispatch: _dispatch, ...withoutDispatch } = backendStatus;
-    expect(mapPayrollStatus(withoutDispatch).dispatch).toEqual({
-      auto: false,
-      channel: "sftp",
-      format: "csv",
-      email: "",
-    });
+    expect(
+      routes["GET /api/settings/payroll-status"].response.safeParse({
+        status: "success",
+        data: withoutDispatch,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("falls back to the backend defaults for an unknown channel or format", () => {
     expect(
       mapPayrollStatus({
         ...backendStatus,
@@ -200,12 +206,12 @@ describe("savePayrollSetting", () => {
   });
 
   it("sends the value in its schema type", async () => {
-    mockedSessionFetch.mockResolvedValue({ ok: true } as Response);
+    fetchMock.mockResolvedValue({ ok: true, status: 204 } as Response);
 
     await savePayrollSetting("payroll.dispatch_auto", true);
     await savePayrollSetting("payroll.dispatch_channel", "email");
 
-    expect(mockedSessionFetch).toHaveBeenNthCalledWith(
+    expect(fetchMock).toHaveBeenNthCalledWith(
       1,
       "/api/settings/values/payroll.dispatch_auto",
       expect.objectContaining({
@@ -213,7 +219,7 @@ describe("savePayrollSetting", () => {
         body: JSON.stringify({ value: true }),
       }),
     );
-    expect(mockedSessionFetch).toHaveBeenNthCalledWith(
+    expect(fetchMock).toHaveBeenNthCalledWith(
       2,
       "/api/settings/values/payroll.dispatch_channel",
       expect.objectContaining({ body: JSON.stringify({ value: "email" }) }),
@@ -227,7 +233,7 @@ describe("fetchPayrollDispatch", () => {
   });
 
   it("maps the latest dispatch", async () => {
-    mockedSessionFetch.mockResolvedValue({
+    fetchMock.mockResolvedValue({
       ok: true,
       json: () =>
         Promise.resolve({
@@ -254,8 +260,9 @@ describe("fetchPayrollDispatch", () => {
 
     const latest = await fetchPayrollDispatch();
 
-    expect(mockedSessionFetch).toHaveBeenCalledWith(
+    expect(fetchMock).toHaveBeenCalledWith(
       "/api/staff/time-tracking/payroll-dispatch",
+      { method: "GET" },
     );
     expect(latest).toEqual({
       year: 2026,
@@ -278,7 +285,7 @@ describe("fetchPayrollDispatch", () => {
   });
 
   it("answers null before the first dispatch", async () => {
-    mockedSessionFetch.mockResolvedValue({
+    fetchMock.mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ data: { latest: null } }),
     } as Response);

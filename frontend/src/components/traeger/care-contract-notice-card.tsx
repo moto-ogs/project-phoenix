@@ -34,6 +34,7 @@ import {
 } from "~/lib/date-helpers";
 import { traegerContractKeys } from "~/lib/swr/traeger-contract-keys";
 import { useTraegerResource } from "./use-traeger-resource";
+import { labelOf } from "~/lib/label-of";
 
 // The entry form carries the date picker; it loads when the office opens it,
 // so the contract page stays as light as before (bundle budget).
@@ -92,9 +93,12 @@ export function CareContractNoticeCard({
   onChanged,
 }: Readonly<{
   contractId: string;
-  status: CareContractStatus;
-  /** When the contract was concluded: no declaration can be older. */
-  concludedAt: string;
+  status: CareContractStatus | undefined;
+  /**
+   * When the contract was concluded: no declaration can be older. null: a
+   * taken-over contract whose day nobody knows (#7767), without a bound.
+   */
+  concludedAt: string | null;
   onChanged: () => void;
 }>) {
   const {
@@ -313,7 +317,7 @@ const END_NOTICE_NOT_SENT_REASONS = {
   letterhead_missing:
     "Im Briefkopf fehlt der Absender. Trage ihn unter „Briefkopf und Vorlagen“ ein.",
   missing_student:
-    "Der Vertrag ist mit keinem Kind aus den „Kinderdaten“ der Schule verknüpft.",
+    "Der Vertrag ist mit keiner Kinderakte der Schule verknüpft.",
   no_permitted_address:
     "Keine Adresse des Vertrags gehört noch einer Bezugsperson, die für das Kind handeln darf.",
   unknown: "moto hat keine Adresse gefunden, an die die Mitteilung gehen darf.",
@@ -369,7 +373,7 @@ function NoticeFacts({
         <DataField label="Eingegangen am">
           {formatDate(notice.receivedOn)}
           <span className="block text-sm font-normal text-gray-500">
-            {CHANNEL_LABELS[notice.channel]},{" "}
+            {labelOf(CHANNEL_LABELS, notice.channel, "–")},{" "}
             {formatBerlinDate(notice.declaredAt)} um{" "}
             {formatBerlinTime(notice.declaredAt)} Uhr
           </span>

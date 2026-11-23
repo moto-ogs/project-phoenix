@@ -50,6 +50,10 @@ type GroupAssignment struct {
 	UpdatedAt time.Time `json:"updated_at"`
 	GroupID   int64     `json:"group_id"`
 	TeacherID int64     `json:"teacher_id"`
+	// TeacherStaffID is the live teacher's staff record; only
+	// GroupAssignmentFilter.WithTeacherStaff fills it, zero for a deleted
+	// teacher.
+	TeacherStaffID int64 `json:"-"`
 }
 
 type CreateGroupAssignment struct {
@@ -68,6 +72,13 @@ type GroupAssignmentFilter struct {
 	GroupIDs        []int64
 	TeacherIDs      []int64
 	TeacherStaffIDs []int64
+	// GroupsOfTeacherStaffIDs widens GroupIDs: it also matches every
+	// assignment of a group a live teacher with one of these staff records is
+	// assigned to, so a group's team and the caller's own groups come in one
+	// statement ("Heute anders", #7666).
+	GroupsOfTeacherStaffIDs []int64
+	// WithTeacherStaff fills TeacherStaffID in the same statement.
+	WithTeacherStaff bool
 }
 
 // ValidateClassAssignment requires the staff member and a non-blank class.

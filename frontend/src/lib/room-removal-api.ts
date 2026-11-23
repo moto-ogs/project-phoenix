@@ -1,42 +1,45 @@
 import { bffJson } from "./bff-fetch";
+import { knownEnum } from "./contract/known-enum";
+import type { RoomRemovalImpactResponse } from "./contract/rooms.generated";
 
 /** Was das Entfernen eines Raums bewirkt (#6845). */
 export type RoomRemovalOutcome = "delete" | "archive" | "blocked";
 
-interface RoomReferences {
-  /** Aktivitäten und Regeltermine, die den Raum planen. */
-  readonly activity_groups: number;
-  /** Geplante oder laufende Termine ab heute. */
-  readonly upcoming_blocks: number;
-  readonly education_groups: number;
-  readonly devices: number;
-  readonly past_blocks: number;
-  readonly archived_activity_groups: number;
-  readonly has_session_history: boolean;
-}
+const OUTCOMES: readonly RoomRemovalOutcome[] = [
+  "delete",
+  "archive",
+  "blocked",
+];
 
-export interface RoomRemovalImpact {
+export type RoomRemovalImpact = Omit<RoomRemovalImpactResponse, "outcome"> & {
   readonly outcome: RoomRemovalOutcome;
-  readonly active_session: boolean;
-  readonly care_offering: boolean;
-  readonly references: RoomReferences;
-}
+};
 
-export function fetchRoomRemovalImpact(
+/** Was das Entfernen bewirken würde; ein unbekanntes Ergebnis sperrt es. */
+export async function fetchRoomRemovalImpact(
   roomId: string,
 ): Promise<RoomRemovalImpact> {
-  return bffJson<RoomRemovalImpact>(
-    `/api/rooms/${encodeURIComponent(roomId)}/removal-impact`,
-  );
+  const impact = await bffJson("tenant", "GET /api/rooms/{id}/removal-impact", {
+    params: { id: roomId },
+  });
+  return {
+    ...impact,
+    outcome: knownEnum(OUTCOMES, impact.outcome) ?? "blocked",
+  };
 }
 
-/** Löscht oder archiviert den Raum; das Ergebnis sagt, was geschah. */
+/**
+ * Löscht oder archiviert den Raum, wie die bestätigte Vorschau es sagt: ihr
+ * `fingerprint` reist mit, und der Server lehnt ab, wenn sich der Raum seither
+ * geändert hat (ADR 0311). Das Ergebnis sagt, was geschah.
+ */
 export async function removeRoom(
   roomId: string,
+  fingerprint: string,
 ): Promise<Exclude<RoomRemovalOutcome, "blocked">> {
-  const result = await bffJson<{ outcome?: RoomRemovalOutcome } | undefined>(
-    `/api/rooms/${encodeURIComponent(roomId)}`,
-    { method: "DELETE" },
-  );
-  return result?.outcome === "archive" ? "archive" : "delete";
+  const result = await bffJson("tenant", "DELETE /api/rooms/{id}", {
+    params: { id: roomId },
+    body: { expected_fingerprint: fingerprint },
+  });
+  return result.outcome === "archive" ? "archive" : "delete";
 }

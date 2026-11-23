@@ -30,14 +30,12 @@ import {
   useState,
 } from "react";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
-import { MobilePageHelpTarget } from "~/components/ui/mobile-page-help-target";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { Button } from "~/components/ui/button";
-import { EmptyState } from "~/components/ui/empty-state";
-import { LoadErrorAlert } from "~/components/ui/form-error-alert";
+import { errorAlertActions } from "~/components/ui/form-error-alert";
 import { ListRowLink } from "~/components/ui/list-row-link";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { SectionCard } from "~/components/ui/section-card";
-import { Skeleton } from "~/components/ui/skeleton";
 import { StatusColorBadge } from "~/components/ui/status-color-badge";
 import {
   OwnBlockHint,
@@ -49,7 +47,6 @@ import {
   type TagesplanGroup,
   groupParallelBlocks,
 } from "~/components/timetable/tagesplan-groups";
-import { PlanningDisabledState } from "~/components/planning/planning-disabled-state";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { blockChildrenLabel, blockEndLine } from "~/lib/block-children";
 import {
@@ -76,8 +73,14 @@ import { timetableOperationsApi } from "~/lib/timetable-operations-api";
 import type { PlannedTimetableInstance } from "~/lib/timetable-operations-types";
 import { roomsConcept } from "~/lib/concepts/rooms";
 import { staffConcept } from "~/lib/concepts/staff";
+import { closingDaysConcept } from "~/lib/concepts/closingDays";
 
 const logger = createLogger({ component: "TagesplanView" });
+
+const TAGESPLAN_INFO =
+  "Hier siehst du die Betreuung des Tages nach Uhrzeit. Eine Linie zeigt, wo du gerade im Tag stehst. Tippe auf einen laufenden Block, um seine Kinderliste zu öffnen.";
+const TAGESPLAN_DISABLED_INFO =
+  "Deine Schule nutzt den Betreuungsplan zurzeit nicht. Deine Aufsichten findest du unter „Aktuelle Aufsicht“.";
 
 // Zwischen Navigationen gemerkte Scrollposition (#2383): wer aus einer
 // Kinderliste zurückkommt, landet wieder beim Block, den er angetippt hat.
@@ -606,135 +609,126 @@ export function TagesplanView() {
 
   if (!timetableEnabled) {
     return (
-      <PlanningDisabledState
-        pageTitle={STAFF_FLAT_PAGES.tagesplan.label}
-        heading="Der Betreuungsplan ist ausgeschaltet"
-        description="Deine Schule nutzt den Betreuungsplan zurzeit nicht. Deine Aufsichten findest du unter „Aktuelle Aufsicht“."
+      <TenantPage
+        title={STAFF_FLAT_PAGES.tagesplan.label}
+        info={TAGESPLAN_DISABLED_INFO}
         testId="tagesplan-disabled"
+        empty={{
+          title: "Der Betreuungsplan ist ausgeschaltet",
+          description:
+            "Deine Schule nutzt den Betreuungsplan zurzeit nicht. Deine Aufsichten findest du unter „Aktuelle Aufsicht“.",
+          icon: <MotoConceptIcon concept={closingDaysConcept} size={42} />,
+        }}
       />
     );
   }
 
   // Die Liste erklärt sich selbst (Chevron am laufenden Block, Starten-Knopf
-  // am eigenen). Nur die eingeschränkte Sicht (#2380) muss gesagt werden,
-  // sonst fehlen scheinbar Termine.
-  const description =
-    overviewScope === "all_staff"
-      ? undefined
-      : "Deine Einsätze. Du siehst nur Termine, für die du eingeteilt bist.";
+  // am eigenen). Nur die eingeschränkte Sicht (#2380) muss jeden Tag sichtbar
+  // sein, sonst fehlen scheinbar Termine. Sie steht als Zustand in der
+  // Statuszeile, nicht als Erklärsatz und nicht hinter dem Info-Knopf.
+  const scopeHint = overviewScope === "all_staff" ? null : "Nur deine Einsätze";
+  // Welcher Tag „Heute“ ist, steht direkt unter dem Titel (#4348). Ein
+  // anderer Tag trägt sein Datum schon im Titel.
+  const statsItems = [
+    ...(isToday ? [{ label: formatStatusDate(day) }] : []),
+    ...(scopeHint ? [{ label: scopeHint }] : []),
+  ];
+  // Solange die Session lädt, fetcht useSWRAuth noch nicht — dann ist
+  // isLoading false UND instances leer. Ohne diese Bedingung würde kurz
+  // "keine Betreuung geplant" aufblitzen, obwohl nie geladen wurde. Bis der
+  // Katalogtext eines Erstladefehlers da ist, bleibt das Skelett stehen; bei
+  // einem fehlgeschlagenen Neuladen bleiben bestätigte Termine sichtbar.
+  const showSkeleton =
+    instances == null && (isLoading || !listError || !listLoadError);
+  const pageError =
+    listLoadError && instances != null
+      ? {
+          ...listLoadError,
+          action: errorAlertActions(listLoadError),
+          keepContent: true,
+        }
+      : listLoadError;
 
   return (
-    <div className="w-full space-y-4">
-      <SectionCard
-        title={isToday ? "Heute" : formatDate(day)}
-        // Welcher Tag „Heute“ ist, steht direkt daneben (#4348). Ein anderer
-        // Tag trägt sein Datum schon im Titel.
-        titleBadge={
-          isToday ? (
-            <span className="text-sm text-gray-500 tabular-nums">
-              {formatStatusDate(day)}
-            </span>
-          ) : undefined
-        }
-        description={description}
-        headingLevel={1}
-        actions={
-          <div className="flex items-center gap-1">
+    <TenantPage
+      title={isToday ? "Heute" : formatDate(day)}
+      info={TAGESPLAN_INFO}
+      stats={
+        statsItems.length > 0 ? (
+          <TenantPageStats items={statsItems} />
+        ) : undefined
+      }
+      actions={
+        <div className="flex items-center gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label="Vorheriger Tag"
+            tooltip="Zeigt den Plan des vorherigen Betreuungstags."
+            onClick={() => goToDay(previousCareDayISO(day, weekendOpen, today))}
+          >
+            <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+          </Button>
+          {!isToday ? (
             <Button
               type="button"
               variant="ghost"
-              size="icon"
-              aria-label="Vorheriger Tag"
-              tooltip="Zeigt den Plan des vorherigen Betreuungstags."
-              onClick={() =>
-                goToDay(previousCareDayISO(day, weekendOpen, today))
-              }
+              size="compact"
+              tooltip="Zeigt den Plan von heute."
+              onClick={() => goToDay(today)}
             >
-              <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+              Heute
             </Button>
-            {!isToday ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="compact"
-                tooltip="Zeigt den Plan von heute."
-                onClick={() => goToDay(today)}
-              >
-                Heute
-              </Button>
-            ) : null}
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-label="Nächster Tag"
-              tooltip="Zeigt den Plan des nächsten Betreuungstags."
-              onClick={() => goToDay(nextCareDayISO(day, weekendOpen, today))}
-            >
-              <ChevronRight className="h-4 w-4" aria-hidden="true" />
-            </Button>
-            <MobilePageHelpTarget />
-          </div>
-        }
-      >
-        {/* Solange die Session lädt, fetcht useSWRAuth noch nicht — dann ist
-            isLoading false UND instances leer. Ohne diese Bedingung würde
-            kurz "keine Betreuung geplant" aufblitzen, obwohl nie geladen
-            wurde. */}
-        {/* Bis der Katalogtext eines Ladefehlers da ist, bleibt das Skelett
-            stehen: kein kurzer Leerzustand ohne Daten. */}
-        {isLoading ||
-        (instances == null && !listError) ||
-        (listError && !listLoadError) ? (
-          <Skeleton className="h-64 w-full" />
-        ) : null}
-
-        {!isLoading && listError ? (
-          <LoadErrorAlert error={listLoadError} />
-        ) : null}
-
-        {!isLoading &&
-        !listError &&
-        instances != null &&
-        groups.length === 0 ? (
-          <EmptyState
-            title={
-              isToday
+          ) : null}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label="Nächster Tag"
+            tooltip="Zeigt den Plan des nächsten Betreuungstags."
+            onClick={() => goToDay(nextCareDayISO(day, weekendOpen, today))}
+          >
+            <ChevronRight className="h-4 w-4" aria-hidden="true" />
+          </Button>
+        </div>
+      }
+      loading={showSkeleton}
+      error={pageError}
+      empty={
+        instances != null && listError == null && groups.length === 0
+          ? {
+              title: isToday
                 ? "Heute ist keine Betreuung geplant"
-                : "An diesem Tag ist keine Betreuung geplant"
+                : "An diesem Tag ist keine Betreuung geplant",
+              description:
+                overviewScope === "all_staff"
+                  ? "Sobald für diesen Tag Termine im Betreuungsplan stehen, siehst du sie hier."
+                  : "Für diesen Tag bist du im Betreuungsplan nicht eingeteilt. Die Einteilung machen die Admins deiner Schule.",
             }
-            description={
-              overviewScope === "all_staff"
-                ? "Sobald für diesen Tag Termine im Betreuungsplan stehen, siehst du sie hier."
-                : "Für diesen Tag bist du im Betreuungsplan nicht eingeteilt. Die Einteilung machen die Admins deiner Schule."
-            }
-          />
-        ) : null}
-
-        {!isLoading && !listError && groups.length > 0 ? (
-          <SectionCard padding="none">
-            <ul>
-              {groups.map((group, index) => (
-                <Fragment key={group.key}>
-                  {index === nowIndex ? <NowDivider nowHHMM={nowHHMM} /> : null}
-                  {group.cells.length === 1 ? (
-                    renderRow(
-                      group.cells[0]!.instance,
-                      undefined,
-                      group.cells[0]!.effectiveEndTime,
-                    )
-                  ) : (
-                    <ParallelGroup group={group} renderRow={renderRow} />
-                  )}
-                </Fragment>
-              ))}
-              {nowIndex === groups.length ? (
-                <NowDivider nowHHMM={nowHHMM} />
-              ) : null}
-            </ul>
-          </SectionCard>
-        ) : null}
+          : null
+      }
+    >
+      <SectionCard padding="none">
+        <ul>
+          {groups.map((group, index) => (
+            <Fragment key={group.key}>
+              {index === nowIndex ? <NowDivider nowHHMM={nowHHMM} /> : null}
+              {group.cells.length === 1 ? (
+                renderRow(
+                  group.cells[0]!.instance,
+                  undefined,
+                  group.cells[0]!.effectiveEndTime,
+                )
+              ) : (
+                <ParallelGroup group={group} renderRow={renderRow} />
+              )}
+            </Fragment>
+          ))}
+          {nowIndex === groups.length ? <NowDivider nowHHMM={nowHHMM} /> : null}
+        </ul>
       </SectionCard>
-    </div>
+    </TenantPage>
   );
 }

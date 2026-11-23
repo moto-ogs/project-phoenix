@@ -11,6 +11,8 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // The cost bearer shares of the contracts (#4687, ADR 0169). The share page
@@ -57,7 +59,7 @@ func (c *CareReductions) CareCostShares(ctx context.Context, reviewer parentbill
 	contracts := make([]parentbilling.CareCostShareContract, len(evidenceContracts))
 	ids := make([]int64, len(evidenceContracts))
 	for i, contract := range evidenceContracts {
-		ids[i] = contract.ContractID
+		ids[i] = contract.ContractID.Int64()
 		contracts[i] = parentbilling.CareCostShareContract{
 			ContractID: contract.ContractID, SchoolID: contract.SchoolID, SchoolName: contract.SchoolName,
 			ChildFirstName: contract.ChildFirstName, ChildLastName: contract.ChildLastName, Shares: []parentbilling.CareCostShare{},
@@ -78,10 +80,10 @@ func (c *CareReductions) CareCostShares(ctx context.Context, reviewer parentbill
 		if share.Status == parentbilling.CostShareExpiring {
 			set.Expiring++
 		}
-		byContract[share.ContractID] = append(byContract[share.ContractID], share)
+		byContract[share.ContractID.Int64()] = append(byContract[share.ContractID.Int64()], share)
 	}
 	for i := range set.Contracts {
-		if list, ok := byContract[set.Contracts[i].ContractID]; ok {
+		if list, ok := byContract[set.Contracts[i].ContractID.Int64()]; ok {
 			set.Contracts[i].Shares = list
 		}
 	}
@@ -119,7 +121,9 @@ func costShareStatus(share parentbilling.CareCostShare, all []parentbilling.Care
 
 // SaveCareCostShare validates and stores a share under the lock of the
 // monthly billing and records the change.
-func (c *CareReductions) SaveCareCostShare(ctx context.Context, reviewer parentbilling.HolidayReviewer, shareID int64, input parentbilling.CareCostShareInput) (parentbilling.CareCostShareSet, error) {
+func (c *CareReductions) SaveCareCostShare(ctx context.Context, reviewer parentbilling.HolidayReviewer, shareID int64, input parentbilling.CareCostShareInput,
+	expectedVersion string,
+) (parentbilling.CareCostShareSet, error) {
 	if err := validReviewer(reviewer); err != nil {
 		return parentbilling.CareCostShareSet{}, err
 	}
@@ -136,11 +140,14 @@ func (c *CareReductions) SaveCareCostShare(ctx context.Context, reviewer parentb
 	if err := c.bearerOffered(ctx, reviewer.OrganizationID, shareID, input); err != nil {
 		return parentbilling.CareCostShareSet{}, err
 	}
+	if err := c.costShareAsRead(ctx, reviewer.OrganizationID, shareID, input.ContractID.Int64(), expectedVersion); err != nil {
+		return parentbilling.CareCostShareSet{}, err
+	}
 	action := evidenceEventCreate
 	var contractID int64
 	if shareID == 0 {
 		shareID, err = c.store.InsertCareCostShare(ctx, reviewer.OrganizationID, reviewer.AccountID, input)
-		contractID = input.ContractID
+		contractID = input.ContractID.Int64()
 	} else {
 		action = evidenceEventUpdate
 		contractID, err = c.store.UpdateCareCostShare(ctx, reviewer.OrganizationID, reviewer.AccountID, shareID, input)
@@ -154,6 +161,25 @@ func (c *CareReductions) SaveCareCostShare(ctx context.Context, reviewer parentb
 	return c.CareCostShares(ctx, reviewer)
 }
 
+// costShareAsRead refuses a change of a share changed since the Abrechnung
+// read it at expectedVersion (ADR 0311). Every writer of the shares holds
+// the lock of the monthly billing, which the caller holds. A new share
+// (shareID zero) has no read state.
+func (c *CareReductions) costShareAsRead(ctx context.Context, organizationID, shareID, contractID int64, expectedVersion string) error {
+	if shareID == 0 {
+		return nil
+	}
+	stored, err := c.store.CareCostShares(ctx, organizationID, []int64{contractID})
+	if err != nil {
+		return err
+	}
+	index := slices.IndexFunc(stored, func(share parentbilling.CareCostShare) bool { return share.ID == ident.ID(shareID) })
+	if index < 0 {
+		return parentbilling.ErrCareCostShareNotFound
+	}
+	return readstate.Check(expectedVersion, stored[index].Version)
+}
+
 // bearerOffered holds the cost bearer of the Träger the share names under a
 // shared row lock until the transaction ends, so a deletion of the cost
 // bearer waits and then sees the share (#5627: the share names it without a
@@ -161,7 +187,7 @@ func (c *CareReductions) SaveCareCostShare(ctx context.Context, reviewer parentb
 // Träger switched off, unless the share already names it: a switched-off
 // cost bearer stays on the shares that have it but is offered for no new one.
 func (c *CareReductions) bearerOffered(ctx context.Context, organizationID, shareID int64, input parentbilling.CareCostShareInput) error {
-	bearer, err := c.store.LockCostBearer(ctx, organizationID, input.CostBearerID, false)
+	bearer, err := c.store.LockCostBearer(ctx, organizationID, input.CostBearerID.Int64(), false)
 	if errors.Is(err, parentbilling.ErrCostBearerNotFound) {
 		return validation.Errors{"cost_bearer_id": errors.New("must name a cost bearer of the Träger")}
 	}
@@ -175,12 +201,12 @@ func (c *CareReductions) bearerOffered(ctx context.Context, organizationID, shar
 	if shareID == 0 {
 		return switchedOff
 	}
-	shares, err := c.store.CareCostShares(ctx, organizationID, []int64{input.ContractID})
+	shares, err := c.store.CareCostShares(ctx, organizationID, []int64{input.ContractID.Int64()})
 	if err != nil {
 		return err
 	}
 	if slices.ContainsFunc(shares, func(share parentbilling.CareCostShare) bool {
-		return share.ID == shareID && share.CostBearerID == input.CostBearerID
+		return share.ID == ident.ID(shareID) && share.CostBearerID == input.CostBearerID
 	}) {
 		return nil
 	}

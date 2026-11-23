@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -31,7 +32,7 @@ const traegerTrustedDevicesPath = "/traeger/auth/mfa/trusted-devices"
 // cookie.
 func traegerLoginWithDevice(t *testing.T, router http.Handler, email, password string, organizationID int64, cookie string) (int, traegerLoginAnswer) {
 	t.Helper()
-	body, err := json.Marshal(map[string]any{"email": email, "password": password, "organization_id": organizationID})
+	body, err := json.Marshal(map[string]any{"email": email, "password": password, "organization_id": strconv.FormatInt(organizationID, 10)})
 	require.NoError(t, err)
 	req := httptest.NewRequest(http.MethodPost, "/traeger/auth/login", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -68,9 +69,11 @@ func traegerDevices(t *testing.T, router http.Handler, bearer string, counter *t
 	if rec.Code != http.StatusOK {
 		return rec.Code, nil
 	}
-	var devices []common.TrustedDeviceDTO
-	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &devices), rec.Body.String())
-	return rec.Code, devices
+	var answer struct {
+		Data []common.TrustedDeviceDTO `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &answer), rec.Body.String())
+	return rec.Code, answer.Data
 }
 
 func traegerRevokeDevice(t *testing.T, router http.Handler, bearer string, deviceID int64) *httptest.ResponseRecorder {
@@ -120,7 +123,7 @@ func TestTraegerRemembersTheDeviceOnlyWhenAsked(t *testing.T) {
 	assert.Equal(t, 90, *login.TrustedDeviceDays, "the registry default lifetime")
 
 	rec := traegerRequest(t, portal, "/traeger/auth/mfa/verify", map[string]any{
-		"challenge_token": login.ChallengeToken, "code": lastTraegerCode(t, portal, account.Email), "organization_id": organization,
+		"challenge_token": login.ChallengeToken, "code": lastTraegerCode(t, portal, account.Email), "organization_id": strconv.FormatInt(organization, 10),
 	})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Empty(t, traegerDeviceCookie(rec), "without the choice no device is remembered")
@@ -164,7 +167,7 @@ func TestTraegerRemembersTheDeviceOnlyWhenAsked(t *testing.T) {
 	assert.NotEmpty(t, devices[0].ExpiresAt)
 	assert.NotNil(t, devices[0].LastUsedAt, "the sign-in on it counts as a use")
 
-	rec = traegerRevokeDevice(t, portal, remembered.AccessToken, devices[0].ID)
+	rec = traegerRevokeDevice(t, portal, remembered.AccessToken, devices[0].ID.Int64())
 	require.Equal(t, http.StatusNoContent, rec.Code, rec.Body.String())
 	_, devices = traegerDevices(t, portal, remembered.AccessToken, nil)
 	assert.Empty(t, devices)
@@ -204,7 +207,7 @@ func TestTraegerDeviceOpensOnlyItsPortalAndItsTraeger(t *testing.T) {
 	assert.Equal(t, "authenticated", own.Status)
 
 	code, secondSession := traegerPost(t, portal, "/traeger/auth/mfa/verify", "", map[string]any{
-		"challenge_token": other.ChallengeToken, "code": lastTraegerCode(t, portal, account.Email), "organization_id": second,
+		"challenge_token": other.ChallengeToken, "code": lastTraegerCode(t, portal, account.Email), "organization_id": strconv.FormatInt(second, 10),
 	})
 	require.Equal(t, http.StatusOK, code)
 	code, devices := traegerDevices(t, portal, secondSession.AccessToken, nil)
@@ -212,7 +215,7 @@ func TestTraegerDeviceOpensOnlyItsPortalAndItsTraeger(t *testing.T) {
 	assert.Empty(t, devices, "Träger B lists none of Träger A's devices")
 	_, firstDevices := traegerDevices(t, portal, own.AccessToken, nil)
 	require.Len(t, firstDevices, 1)
-	rec := traegerRevokeDevice(t, portal, secondSession.AccessToken, firstDevices[0].ID)
+	rec := traegerRevokeDevice(t, portal, secondSession.AccessToken, firstDevices[0].ID.Int64())
 	assert.Equal(t, http.StatusForbidden, rec.Code, "a device of another Träger answers like a foreign one: %s", rec.Body.String())
 	assert.Contains(t, rec.Body.String(), `"code":"general.permission"`)
 	assert.True(t, verified(identityaccess.WithTraegerDevice(ctx, first), 0), "and stays remembered")

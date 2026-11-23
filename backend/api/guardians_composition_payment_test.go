@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -31,6 +32,16 @@ const (
 	accessGuardianPaymentOverview = "guardian_payment_overview"
 	accessGuardianPaymentExport   = "guardian_payment_export"
 )
+
+// savePayment saves the bank section against the version its read hands out
+// (ADR 0311); the read is an audited view.
+func (c *guardianCompositionContext) savePayment(t *testing.T, guardianID int64, body map[string]any, perms ...string) (int, string) {
+	t.Helper()
+	code, read := c.paymentRequest(t, http.MethodGet, fmt.Sprintf("/%d/payment", guardianID), nil, perms...)
+	require.Equal(t, http.StatusOK, code, read)
+	body["expected_version"] = dataObject(t, []byte(read))["version"]
+	return c.paymentRequest(t, http.MethodPut, fmt.Sprintf("/%d/payment", guardianID), body, perms...)
+}
 
 func (c *guardianCompositionContext) paymentRequest(t *testing.T, method, path string, body any, perms ...string) (int, string) {
 	t.Helper()
@@ -65,7 +76,7 @@ func (c *guardianCompositionContext) assertPayer(t *testing.T, studentID int64, 
 	var payers []int64
 	for _, row := range c.studentGuardians(t, studentID) {
 		if row.IsPayer {
-			payers = append(payers, row.Guardian.ID)
+			payers = append(payers, int64(row.Guardian.ID))
 		}
 	}
 	if want == nil {
@@ -151,7 +162,7 @@ func TestGuardianComposition_RemovePayerNeedsFinancialPermission(t *testing.T) {
 	linked := ctx.studentGuardians(t, studentID)
 	require.Len(t, linked, 2, "a refused unlink must leave both relationships in place")
 	for _, row := range linked {
-		assert.Equal(t, row.Guardian.ID == payerID, row.IsPayer, "the payer mark must be untouched")
+		assert.Equal(t, int64(row.Guardian.ID) == payerID, row.IsPayer, "the payer mark must be untouched")
 	}
 
 	code, body = unlink(directoryClaims, otherID)
@@ -170,7 +181,7 @@ func TestGuardianComposition_PaymentMaskedByDefaultRevealOnDemand(t *testing.T) 
 	guardianID, _ := ctx.createGuardian("payment-masked")
 	ctx.link(studentID, guardianID, "custom")
 
-	code, body := ctx.paymentRequest(t, http.MethodPut, fmt.Sprintf("/%d/payment", guardianID), map[string]any{"iban": "de89 3704 0044 0532 0130 00"}, financialPerm)
+	code, body := ctx.savePayment(t, guardianID, map[string]any{"iban": "de89 3704 0044 0532 0130 00"}, financialPerm)
 	require.Equal(t, http.StatusOK, code, body)
 
 	code, body = ctx.paymentRequest(t, http.MethodGet, fmt.Sprintf("/%d/payment", guardianID), nil, financialPerm)
@@ -182,7 +193,7 @@ func TestGuardianComposition_PaymentMaskedByDefaultRevealOnDemand(t *testing.T) 
 	require.Equal(t, http.StatusOK, code, body)
 	assert.Contains(t, body, fmt.Sprintf(`"iban":"%s"`, testIBAN))
 
-	assert.Equal(t, 1, ctx.accessLogs(accessGuardianFinancialView))
+	assert.Equal(t, 2, ctx.accessLogs(accessGuardianFinancialView), "the save reads the version first, then the test reads the stored value")
 	assert.Equal(t, 1, ctx.accessLogs(accessGuardianFinancialReveal))
 }
 
@@ -195,8 +206,7 @@ func TestGuardianComposition_PaymentAccessAuditSurvivesDecryptionFailure(t *test
 	guardianID, _ := c.createGuardian("payment-unreadable")
 	c.link(studentID, guardianID, "custom")
 	c.requirePayerSet(t, studentID, &guardianID)
-	code, body := c.paymentRequest(t, http.MethodPut, fmt.Sprintf("/%d/payment", guardianID),
-		map[string]any{"iban": testIBAN, "account_holder": "Synthetic holder"}, financialPerm)
+	code, body := c.savePayment(t, guardianID, map[string]any{"iban": testIBAN, "account_holder": "Synthetic holder"}, financialPerm)
 	require.Equal(t, http.StatusOK, code, body)
 	_, err := db.NewRaw(`UPDATE users.guardian_financial_data
 SET iban_sealed = ?, account_holder_sealed = ? WHERE guardian_profile_id = ?`,
@@ -213,11 +223,13 @@ SET iban_sealed = ?, account_holder_sealed = ? WHERE guardian_profile_id = ?`,
 		{"export", http.MethodPost, "/payment-overview/export", accessGuardianPaymentExport, map[string]any{"format": "xlsx"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			// The setup save read the section once already.
+			before := c.accessLogs(tc.resource)
 			code, body := c.paymentRequest(t, tc.method, tc.path, tc.body, financialPerm)
 			require.Equal(t, http.StatusInternalServerError, code, body)
 			assert.NotContains(t, body, testIBAN)
 			assert.NotContains(t, body, "Synthetic holder")
-			assert.Equal(t, 1, c.accessLogs(tc.resource), "the access attempt must remain committed after an HTTP failure")
+			assert.Equal(t, before+1, c.accessLogs(tc.resource), "the access attempt must remain committed after an HTTP failure")
 		})
 	}
 }
@@ -234,7 +246,7 @@ func TestGuardianComposition_PaymentRejectsMalformedIBAN(t *testing.T) {
 		"DE8937040044",           // too short
 		"370400440532013000",     // no country code
 	} {
-		code, body := ctx.paymentRequest(t, http.MethodPut, fmt.Sprintf("/%d/payment", guardianID), map[string]any{"iban": iban}, financialPerm)
+		code, body := ctx.savePayment(t, guardianID, map[string]any{"iban": iban}, financialPerm)
 		assert.Equal(t, http.StatusBadRequest, code, "IBAN %q must be refused", iban)
 		assert.Contains(t, body, "Die IBAN ist nicht gültig", "IBAN %q", iban)
 		// Own code and the field to mark (#2517).
@@ -250,9 +262,9 @@ func TestGuardianComposition_PaymentClearingRemovesTheStoredIBAN(t *testing.T) {
 	guardianID, _ := ctx.createGuardian("payment-cleared")
 	ctx.link(studentID, guardianID, "custom")
 
-	code, _ := ctx.paymentRequest(t, http.MethodPut, fmt.Sprintf("/%d/payment", guardianID), map[string]any{"iban": testIBAN}, financialPerm)
+	code, _ := ctx.savePayment(t, guardianID, map[string]any{"iban": testIBAN}, financialPerm)
 	require.Equal(t, http.StatusOK, code)
-	code, _ = ctx.paymentRequest(t, http.MethodPut, fmt.Sprintf("/%d/payment", guardianID), map[string]any{"iban": ""}, financialPerm)
+	code, _ = ctx.savePayment(t, guardianID, map[string]any{"iban": ""}, financialPerm)
 	require.Equal(t, http.StatusOK, code)
 
 	_, body := ctx.paymentRequest(t, http.MethodGet, fmt.Sprintf("/%d/payment", guardianID), nil, financialPerm)
@@ -335,7 +347,7 @@ func TestGuardianComposition_SiblingsShareOneMaintainedIBAN(t *testing.T) {
 	ctx.link(olderID, parentID, "custom")
 	ctx.link(youngerID, parentID, "custom")
 
-	code, _ := ctx.paymentRequest(t, http.MethodPut, fmt.Sprintf("/%d/payment", parentID), map[string]any{"iban": testIBAN}, financialPerm)
+	code, _ := ctx.savePayment(t, parentID, map[string]any{"iban": testIBAN}, financialPerm)
 	require.Equal(t, http.StatusOK, code)
 	for _, studentID := range []int64{olderID, youngerID} {
 		ctx.requirePayerSet(t, studentID, &parentID)
@@ -391,7 +403,7 @@ func TestGuardianComposition_PaymentExportRendersFileAndIsAuditedSeparately(t *t
 	studentID, _ := ctx.createStudent("Export", "Child", "1a")
 	guardianID, _ := ctx.createGuardian("export-child")
 	ctx.link(studentID, guardianID, "custom")
-	code, _ := ctx.paymentRequest(t, http.MethodPut, fmt.Sprintf("/%d/payment", guardianID), map[string]any{"iban": testIBAN}, financialPerm)
+	code, _ := ctx.savePayment(t, guardianID, map[string]any{"iban": testIBAN}, financialPerm)
 	require.Equal(t, http.StatusOK, code)
 	ctx.requirePayerSet(t, studentID, &guardianID)
 
@@ -415,7 +427,7 @@ func TestGuardianComposition_PaymentExportNamesTheGaps(t *testing.T) {
 	paidID, _ := ctx.createStudent("Export", "Paid", "1a")
 	paidGuardianID, _ := ctx.createGuardian("export-paid")
 	ctx.link(paidID, paidGuardianID, "custom")
-	code, _ := ctx.paymentRequest(t, http.MethodPut, fmt.Sprintf("/%d/payment", paidGuardianID), map[string]any{"iban": testIBAN, "account_holder": "Sabine Export"}, financialPerm)
+	code, _ := ctx.savePayment(t, paidGuardianID, map[string]any{"iban": testIBAN, "account_holder": "Sabine Export"}, financialPerm)
 	require.Equal(t, http.StatusOK, code)
 	ctx.requirePayerSet(t, paidID, &paidGuardianID)
 
@@ -468,7 +480,7 @@ func TestGuardianComposition_PaymentChangesAreAuditedWithMaskedValues(t *testing
 	guardianID, _ := ctx.createGuardian("audit-child")
 	ctx.link(studentID, guardianID, "custom")
 
-	code, _ := ctx.paymentRequest(t, http.MethodPut, fmt.Sprintf("/%d/payment", guardianID), map[string]any{"iban": testIBAN}, financialPerm)
+	code, _ := ctx.savePayment(t, guardianID, map[string]any{"iban": testIBAN}, financialPerm)
 	require.Equal(t, http.StatusOK, code)
 
 	rows := ctx.financialChanges(guardianID)
@@ -487,10 +499,40 @@ func TestGuardianComposition_PaymentExportUnknownFormatLeavesNoAccessLog(t *test
 	studentID, _ := ctx.createStudent("Format", "Child", "1a")
 	guardianID, _ := ctx.createGuardian("format-child")
 	ctx.link(studentID, guardianID, "custom")
-	code, _ := ctx.paymentRequest(t, http.MethodPut, fmt.Sprintf("/%d/payment", guardianID), map[string]any{"iban": testIBAN}, financialPerm)
+	code, _ := ctx.savePayment(t, guardianID, map[string]any{"iban": testIBAN}, financialPerm)
 	require.Equal(t, http.StatusOK, code)
 
 	code, body := ctx.paymentRequest(t, http.MethodPost, "/payment-overview/export", map[string]any{"format": "csv"}, financialPerm)
 	require.Equal(t, http.StatusBadRequest, code, body)
 	assert.Equal(t, 0, ctx.accessLogs(accessGuardianPaymentExport), "a refused export must not be logged as a full-IBAN access")
+}
+
+// A bank form opened before a colleague's save is refused with the read-state
+// code and keeps the stored account; a save without a read version is
+// refused too (ADR 0311). The version is the row's change time, never a
+// value derived from the IBAN.
+func TestGuardianComposition_PaymentRefusesAStaleVersion(t *testing.T) {
+	t.Parallel()
+	ctx := setupGuardiansCompositionRoute(t)
+	studentID, _ := ctx.createStudent("Payment", "Stale", "1a")
+	guardianID, _ := ctx.createGuardian("payment-stale")
+	ctx.link(studentID, guardianID, "custom")
+	path := fmt.Sprintf("/%d/payment", guardianID)
+
+	code, read := ctx.paymentRequest(t, http.MethodGet, path, nil, financialPerm)
+	require.Equal(t, http.StatusOK, code, read)
+	opened := dataObject(t, []byte(read))["version"]
+	require.NotEmpty(t, opened, "a guardian without bank data has a version too")
+
+	code, body := ctx.savePayment(t, guardianID, map[string]any{"iban": testIBAN}, financialPerm)
+	require.Equal(t, http.StatusOK, code, body)
+
+	for name, version := range map[string]any{"older read": opened, "no read": nil} {
+		code, body = ctx.paymentRequest(t, http.MethodPut, path, map[string]any{"iban": "DE02120300000000202051", "expected_version": version}, financialPerm)
+		require.Equal(t, http.StatusConflict, code, "%s: %s", name, body)
+		assert.Contains(t, body, `"code":"`+readstate.ChangedCode+`"`)
+	}
+	_, body = ctx.paymentRequest(t, http.MethodGet, path, nil, financialPerm)
+	assert.Contains(t, body, `"iban_masked":"•••• 3000"`, "the refused saves keep the colleague's account")
+	assert.NotContains(t, body, testIBAN)
 }

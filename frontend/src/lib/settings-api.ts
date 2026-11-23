@@ -1,5 +1,6 @@
-import { ApiError, apiErrorFromResponse } from "./api-error";
-import { sessionFetch } from "./session-cache";
+import { ApiError } from "./api-error";
+import { bffJson } from "./bff-fetch";
+import type * as wire from "./contract/shared.generated";
 import { createLogger } from "./logger";
 import { shellResourceKeys } from "./swr/shell-keys";
 
@@ -42,65 +43,50 @@ type SettingLevels = "schule" | "beide" | "traeger";
 /** Where the effective value comes from: registry default, Träger, school. */
 type SettingSource = "default" | "traeger" | "school";
 
-export interface ResolvedSetting {
-  key: string;
-  label: string;
-  description: string;
-  /** Grey example of an empty textarea; never a value (#5693). */
-  placeholder?: string;
-  type:
-    | "boolean"
-    | "number"
-    | "time"
-    | "date"
-    | "text"
-    | "textarea"
-    | "color"
-    | "password"
-    | "select"
-    | "multiselect";
-  default: unknown;
-  value: unknown;
-  /**
-   * School schema: the school has no value of its own, so a reset changes
-   * nothing (booleans: the value equals the inherited one). Träger schema:
-   * the Träger has no value.
-   */
-  is_default: boolean;
-  writable: boolean;
-  visible: boolean;
-  sort_order: number;
-  access_policy: AccessPolicy;
-  levels: SettingLevels;
-  source: SettingSource;
-  /**
-   * Last change of the Träger value (ISO timestamp). Absent without a Träger
-   * value; stays set beneath a school deviation.
-   */
-  traeger_changed_at?: string | null;
-  validation?: {
-    required?: boolean;
-    min?: number;
-    max?: number;
-    pattern?: string;
-    allow_empty?: boolean;
-    max_length?: number;
-  } | null;
-  depends_on?: {
-    key: string;
-    condition: string;
-    value: unknown;
-  } | null;
-  options?: {
-    static?: { label: string; value: unknown }[];
-  } | null;
-}
+type Nullable<T> = { [K in keyof T]: T[K] | null };
 
-interface ApiResponse<T> {
-  status: string;
-  data: T;
-  message?: string;
-}
+/**
+ * One setting of the schema, with its closed value sets known. `is_default`:
+ * school schema: the school has no value of its own, so a reset changes
+ * nothing (booleans: the value equals the inherited one); Träger schema: the
+ * Träger has no value. `placeholder` is the grey example of an empty
+ * textarea, never a value (#5693). `traeger_changed_at` is the last change of
+ * the Träger value; it stays set beneath a school deviation.
+ */
+export type ResolvedSetting = Omit<
+  wire.ResolvedSetting,
+  | "type"
+  | "access_policy"
+  | "levels"
+  | "source"
+  | "traeger_changed_at"
+  | "validation"
+  | "depends_on"
+  | "options"
+> &
+  Partial<
+    Nullable<
+      Pick<
+        wire.ResolvedSetting,
+        "traeger_changed_at" | "validation" | "depends_on" | "options"
+      >
+    >
+  > & {
+    type:
+      | "boolean"
+      | "number"
+      | "time"
+      | "date"
+      | "text"
+      | "textarea"
+      | "color"
+      | "password"
+      | "select"
+      | "multiselect";
+    access_policy: AccessPolicy;
+    levels: SettingLevels;
+    source: SettingSource;
+  };
 
 // --- Optimistic Update Helper ---
 
@@ -220,43 +206,66 @@ export function applyOptimisticSchemaUpdate(
 // --- API Functions ---
 
 /**
+ * The schema as the screens read it, for every portal that loads one
+ * (school, operator): Go's nil lists arrive as null. The
+ * value sets of a setting (type, policy, levels, source) are the registry's,
+ * which the backend renders verbatim; this build narrows them as before.
+ */
+export function toSettingsSchema(schema: wire.SettingsSchema): SettingsSchema {
+  return {
+    tabs: (schema.tabs ?? []).flatMap((tab) =>
+      tab
+        ? [
+            {
+              key: tab.key,
+              label: tab.label,
+              categories: (tab.categories ?? []).flatMap((category) =>
+                category
+                  ? [
+                      {
+                        key: category.key,
+                        label: category.label,
+                        items: (category.items ?? []).flatMap((item) =>
+                          item ? [item as unknown as ResolvedSetting] : [],
+                        ),
+                      },
+                    ]
+                  : [],
+              ),
+            },
+          ]
+        : [],
+    ),
+  };
+}
+
+/**
  * Fetch the settings schema. Returns null when no session is ready yet or the
  * account may not read settings (401/403, expected, no error logged).
  * Any other failure throws an ApiError (#2517): a network failure must not
  * look like "no settings for your role".
  */
 export async function fetchSettingsSchema(): Promise<SettingsSchema | null> {
-  let response: Response;
   try {
-    response = await sessionFetch("/api/settings/schema", { method: "GET" });
+    return toSettingsSchema(
+      await bffJson("tenant", "GET /api/settings/schema", {
+        errorMessage: "Einstellungen konnten nicht geladen werden",
+      }),
+    );
   } catch (error) {
-    // No token yet: the session is still starting, not an error.
-    if (error instanceof ApiError && error.status === 401) {
+    // 401/403: not signed in yet or no permission, expected, not an error.
+    if (
+      error instanceof ApiError &&
+      (error.status === 401 || error.status === 403)
+    ) {
       return null;
     }
-    logger.error("fetch_settings_schema_network_error", {
+    logger.error("fetch_settings_schema_failed", {
+      status: error instanceof ApiError ? error.status : undefined,
       error: error instanceof Error ? error.message : String(error),
     });
     throw error;
   }
-
-  // 401/403 = not authenticated or no permission — expected, not an error
-  if (response.status === 401 || response.status === 403) {
-    return null;
-  }
-
-  if (!response.ok) {
-    logger.error("fetch_settings_schema_failed", {
-      status: response.status,
-    });
-    throw await apiErrorFromResponse(
-      response,
-      `Einstellungen konnten nicht geladen werden (${response.status})`,
-    );
-  }
-
-  const result = (await response.json()) as ApiResponse<SettingsSchema>;
-  return result.data;
 }
 
 /**
@@ -267,37 +276,34 @@ export async function saveSettingValue(
   key: string,
   value: unknown,
 ): Promise<void> {
-  const response = await sessionFetch(`/api/settings/values/${key}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ value }),
-  });
-  if (!response.ok) {
+  try {
+    await bffJson("tenant", "PUT /api/settings/values/{key}", {
+      params: { key },
+      body: { value },
+      errorMessage: `Setting ${key} could not be saved`,
+    });
+  } catch (error) {
     logger.warn("save_setting_value_rejected", {
       key,
-      status: response.status,
+      status: error instanceof ApiError ? error.status : undefined,
     });
-    throw await apiErrorFromResponse(
-      response,
-      `Setting ${key} could not be saved (${response.status})`,
-    );
+    throw error;
   }
 }
 
 /** Reset a setting to its default (#2517). Throws an ApiError on failure. */
 export async function clearSettingValue(key: string): Promise<void> {
-  const response = await sessionFetch(`/api/settings/values/${key}`, {
-    method: "DELETE",
-  });
-  if (!response.ok && response.status !== 204) {
+  try {
+    await bffJson("tenant", "DELETE /api/settings/values/{key}", {
+      params: { key },
+      errorMessage: `Setting ${key} could not be reset`,
+    });
+  } catch (error) {
     logger.warn("clear_setting_value_rejected", {
       key,
-      status: response.status,
+      status: error instanceof ApiError ? error.status : undefined,
     });
-    throw await apiErrorFromResponse(
-      response,
-      `Setting ${key} could not be reset (${response.status})`,
-    );
+    throw error;
   }
 }
 
@@ -307,25 +313,20 @@ export async function clearSettingValue(key: string): Promise<void> {
  * A failed request throws an ApiError (#2517); the field shows it.
  */
 export async function revealSettingValue(key: string): Promise<string | null> {
-  const response = await sessionFetch(`/api/settings/values/${key}/reveal`, {
-    method: "GET",
-  });
-
-  if (!response.ok) {
+  try {
+    const revealed = await bffJson(
+      "tenant",
+      "GET /api/settings/values/{key}/reveal",
+      { params: { key }, errorMessage: `Setting ${key} could not be revealed` },
+    );
+    return typeof revealed.value === "string" ? revealed.value : null;
+  } catch (error) {
     logger.warn("reveal_setting_value_failed", {
       key,
-      status: response.status,
+      status: error instanceof ApiError ? error.status : undefined,
     });
-    throw await apiErrorFromResponse(
-      response,
-      `Setting ${key} could not be revealed (${response.status})`,
-    );
+    throw error;
   }
-
-  // The portal's catalog proxy answers { success, data: { value } } (#2352).
-  const json = (await response.json()) as { data?: { value?: unknown } };
-  const value = json?.data?.value;
-  return typeof value === "string" ? value : null;
 }
 
 /**
@@ -341,19 +342,10 @@ export type DevicePinSetupReason = "missing" | "too_simple";
  * never sends the PIN itself.
  */
 export async function fetchDevicePinSetupReason(): Promise<DevicePinSetupReason | null> {
-  const response = await sessionFetch("/api/settings/device-pin-status");
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Failed to fetch device PIN status: ${response.statusText}`,
-    );
-  }
-  const json = (await response.json()) as {
-    data?: { setup_required?: boolean; reason?: string };
-  };
-  if (json.data?.setup_required !== true) return null;
+  const status = await bffJson("tenant", "GET /api/settings/device-pin-status");
+  if (status.setup_required !== true) return null;
   // An unknown reason from a newer backend still asks for a PIN.
-  return json.data.reason === "too_simple" ? "too_simple" : "missing";
+  return status.reason === "too_simple" ? "too_simple" : "missing";
 }
 
 /**
@@ -362,15 +354,10 @@ export async function fetchDevicePinSetupReason(): Promise<DevicePinSetupReason 
  * has none. A failed request throws an ApiError.
  */
 export async function fetchSchoolContactEmail(): Promise<string> {
-  const response = await sessionFetch("/api/settings/school-contact-email", {
-    method: "GET",
-  });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `School contact address could not be loaded (${response.status})`,
-    );
-  }
-  const json = (await response.json()) as ApiResponse<{ email?: string }>;
-  return json.data?.email ?? "";
+  const contact = await bffJson(
+    "tenant",
+    "GET /api/settings/school-contact-email",
+    { errorMessage: "School contact address could not be loaded" },
+  );
+  return contact.email ?? "";
 }

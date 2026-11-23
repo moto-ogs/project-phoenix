@@ -5,6 +5,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // applyMealCostShares lets the cost bearer shares that cover the Mensa take
@@ -35,13 +36,13 @@ func applyMealCostShares(month *careMonth, shares []parentbilling.CareCostShare,
 		}
 		left := meals
 		for _, kind := range parentbilling.CostShareKinds {
-			share := careCostShareInMonth(shares, invoice.ContractID, kind, billingMonth)
+			share := careCostShareInMonth(shares, invoice.ContractID.Int64(), kind, billingMonth)
 			if share == nil || !parentbilling.CostShareCoversMeal(share.Scope) {
 				continue
 			}
 			want := costShareOf(meals, share)
 			if share.ShareCents != nil {
-				want -= fixedShareTaken(month, invoiced, invoice.ContractID, share)
+				want -= fixedShareTaken(month, invoiced, invoice.ContractID.Int64(), share)
 			}
 			part := min(want, left)
 			if part <= 0 {
@@ -68,7 +69,7 @@ func fixedShareTaken(month *careMonth, invoiced map[int64]parentbilling.CareInvo
 		}
 	}
 	for _, invoice := range month.invoices {
-		if invoice.ContractID == contractID {
+		if invoice.ContractID == ident.ID(contractID) {
 			count(invoice)
 		}
 	}

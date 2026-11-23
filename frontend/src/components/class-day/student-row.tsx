@@ -15,10 +15,12 @@ import { StatusColorBadge } from "~/components/ui/status-color-badge";
 import {
   HOMEWORK_FEEDBACK_COLORS,
   HOMEWORK_FEEDBACK_LABELS,
+  HOMEWORK_FEEDBACK_STATUSES,
 } from "~/lib/homework-feedback";
+import { knownEnum } from "~/lib/contract/known-enum";
 import { LOCATION_COLORS } from "~/lib/location-helper";
 import { dayHintAuthorSuffix } from "~/lib/class-day-api";
-import type { ClassDayRow, MorningAttendanceStatus } from "~/lib/class-day-api";
+import type { MorningAttendanceStatus } from "~/lib/class-day-api";
 import { reportedTodayLabel } from "./day-changes";
 import {
   missingWithoutReport,
@@ -26,15 +28,20 @@ import {
   type MorningAttendanceDraft,
 } from "./morning-attendance";
 import { statusColor, statusLabel } from "./status-labels";
+import type * as schoolClassDayContract from "~/lib/contract/school-class-day.generated";
 
-function rowDetailLine(row: ClassDayRow, enrollmentKnown: boolean): string {
+function rowDetailLine(
+  row: schoolClassDayContract.DayRow,
+  enrollmentKnown: boolean,
+): string {
   // Klassenlisteneintrag (#2382): "Keine Betreuung" ist die ganze Aussage —
   // das Badge rechts trägt sie, die Detailzeile bleibt leer (keine erfundene
   // Gehregel, keine Abholzeit).
   if (row.list_entry || row.without_care_place) return "";
   const parts: string[] = [];
-  if (row.stays_today && row.offerings.length > 0) {
-    parts.push(row.offerings.join(", "));
+  const offerings = row.offerings ?? [];
+  if (row.stays_today && offerings.length > 0) {
+    parts.push(offerings.join(", "));
   }
   if (row.departure) parts.push(row.departure);
   // Ohne abdeckende Anmeldephase ist "keine OGS-Anmeldung" keine Aussage,
@@ -56,7 +63,7 @@ const MORNING_ITEMS: readonly SegmentedControlItem<MorningAttendanceStatus>[] =
 export interface StudentRowMorning {
   readonly draft: MorningAttendanceDraft;
   readonly onChange?: (
-    row: ClassDayRow,
+    row: schoolClassDayContract.DayRow,
     status: MorningAttendanceStatus,
   ) => void;
   readonly disabled?: boolean;
@@ -66,7 +73,9 @@ export interface StudentRowMorning {
  * Adresse der Beobachtungen der OGS zu einem Kind (#4797), nur für die
  * Lehrkraft der Klasse. Ohne Adresse zeigt die Zeile keinen Link.
  */
-export type SharedNotesHref = (row: ClassDayRow) => string | undefined;
+export type SharedNotesHref = (
+  row: schoolClassDayContract.DayRow,
+) => string | undefined;
 
 export function StudentRow({
   row,
@@ -75,7 +84,7 @@ export function StudentRow({
   morning,
   sharedNotesHref,
 }: {
-  readonly row: ClassDayRow;
+  readonly row: schoolClassDayContract.DayRow;
   readonly enrollmentKnown: boolean;
   readonly now: Date;
   readonly morning?: StudentRowMorning;
@@ -84,6 +93,10 @@ export function StudentRow({
   const detail = rowDetailLine(row, enrollmentKnown);
   const notesHref = sharedNotesHref?.(row);
   const attendance = morning ? morningStatus(row, morning.draft) : null;
+  const homeworkFeedback = knownEnum(
+    HOMEWORK_FEEDBACK_STATUSES,
+    row.homework_feedback?.status,
+  );
   // Fehlt ohne Meldung: das Kennzeichen, das sofort auffallen soll.
   const unreported = missingWithoutReport(row, attendance);
   // Nur bei Meldungen von heute: dann ist der Zeitpunkt eine Neuigkeit.
@@ -204,10 +217,10 @@ export function StudentRow({
             color={LOCATION_COLORS.WARNING}
           />
         ) : null}
-        {row.homework_feedback ? (
+        {homeworkFeedback ? (
           <StatusColorBadge
-            label={`Hausaufgaben: ${HOMEWORK_FEEDBACK_LABELS[row.homework_feedback.status]}`}
-            color={HOMEWORK_FEEDBACK_COLORS[row.homework_feedback.status]}
+            label={`Hausaufgaben: ${HOMEWORK_FEEDBACK_LABELS[homeworkFeedback]}`}
+            color={HOMEWORK_FEEDBACK_COLORS[homeworkFeedback]}
           />
         ) : null}
         {/* Übergabe nach dem Unterricht (#4794): die Lehrkraft hat das Kind
@@ -250,7 +263,7 @@ export function Section({
 }: Readonly<{
   title: string;
   count: number;
-  rows: ClassDayRow[];
+  rows: schoolClassDayContract.DayRow[];
   enrollmentKnown?: boolean;
   now: Date;
   morning?: StudentRowMorning;

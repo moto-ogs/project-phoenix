@@ -20,12 +20,6 @@ import {
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { MotoDuotoneIcon } from "~/components/ui/moto-duotone-icon";
 import {
-  type ChildGuardian,
-  type CreateGuardianContactPayload,
-  type GuardianContactPayload,
-  type GuardianRelationshipPayload,
-  type PickupPermissionRequest,
-  type RelatedAccount,
   createGuardianContact,
   inviteRelatedAccount,
   listChildGuardians,
@@ -82,11 +76,13 @@ import { enrollmentsConcept } from "~/lib/concepts/enrollments";
 import { peopleConcept } from "~/lib/concepts/people";
 import { permissionsConcept } from "~/lib/concepts/permissions";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
+import { knownEnum } from "~/lib/contract/known-enum";
 import {
   SALUTATIONS,
   type Salutation,
   salutationTitle,
 } from "~/lib/salutation";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 const logger = createLogger({ component: "GuardiansPanel" });
 
@@ -137,8 +133,9 @@ interface GuardiansPanelProps {
   readonly withoutCarePlace?: boolean;
 }
 
-const NO_PICKUP_PERMISSION_REQUESTS: Promise<PickupPermissionRequest[]> =
-  Promise.resolve([]);
+const NO_PICKUP_PERMISSION_REQUESTS: Promise<
+  parentMeContract.pickupPermissionRequestResponse[]
+> = Promise.resolve([]);
 
 export default function GuardiansPanel({
   studentId,
@@ -192,21 +189,18 @@ export default function GuardiansPanel({
     [guardiansResource.error, accountsResource.error].some(
       (error) => error instanceof ApiError && isAccessRefusal(error),
     );
-  const guardians: ChildGuardian[] = accessRefused
+  const guardians: parentMeContract.childGuardianResponse[] = accessRefused
     ? []
     : (guardiansResource.data ?? []);
-  const accounts: RelatedAccount[] = accessRefused
+  const accounts: parentMeContract.relatedAccountResponse[] = accessRefused
     ? []
     : (accountsResource.data ?? []);
-  const permissionRequests: PickupPermissionRequest[] = accessRefused
-    ? []
-    : (requestsResource.data ?? []);
-  const [editingContact, setEditingContact] = useState<ChildGuardian | null>(
-    null,
-  );
-  const [editingPickup, setEditingPickup] = useState<ChildGuardian | null>(
-    null,
-  );
+  const permissionRequests: parentMeContract.pickupPermissionRequestResponse[] =
+    accessRefused ? [] : (requestsResource.data ?? []);
+  const [editingContact, setEditingContact] =
+    useState<parentMeContract.childGuardianResponse | null>(null);
+  const [editingPickup, setEditingPickup] =
+    useState<parentMeContract.childGuardianResponse | null>(null);
   const [addMode, setAddMode] = useState<"contact" | "access" | null>(null);
   const [inviteEmail, setInviteEmail] = useState("");
   const inviteFormRef = useRef<HTMLFormElement>(null);
@@ -242,7 +236,7 @@ export default function GuardiansPanel({
     (resource) =>
       resource.data === undefined && (!resource.error || resource.isValidating),
   );
-  const { show: showActionError } = useApiErrorDisplay();
+  const { show: showActionError, showMessage } = useApiErrorDisplay();
   const [busy, setBusy] = useState(false);
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
   // Bestaetigung fuer den Ausbau eines eingeschraenkten Kontakts (#2172).
@@ -601,6 +595,23 @@ export default function GuardiansPanel({
           mode="edit"
           studentId={studentId}
           guardian={editingContact}
+          onReload={async () => {
+            // After a refusal (ADR 0311) the form shows the stored contact;
+            // a failed read rejects and shows as a load error.
+            const fresh = await listChildGuardians(studentId);
+            await mutateGuardians(fresh, { revalidate: false });
+            const stored = fresh.find(
+              (g) =>
+                g.guardian_profile_id === editingContact.guardian_profile_id,
+            );
+            if (!stored) {
+              // Removed from the child since: nothing stored to show, so
+              // the form closes instead of keeping the refused input.
+              setEditingContact(null);
+              showMessage(t("guardians.contactGone"));
+            }
+            return stored;
+          }}
           onClose={() => setEditingContact(null)}
           onSaved={() => handleSaved(t("guardians.contactSaved"))}
         />
@@ -764,7 +775,7 @@ function ConnectedAccountRow({
   onCancelRemove,
   onConfirmRemove,
 }: Readonly<{
-  account: RelatedAccount;
+  account: parentMeContract.relatedAccountResponse;
   canRemove: boolean;
   busy: boolean;
   confirmingRemove: boolean;
@@ -856,10 +867,10 @@ function GuardianRow({
   onEditPickup,
   onGrantAccess,
 }: Readonly<{
-  guardian: ChildGuardian;
+  guardian: parentMeContract.childGuardianResponse;
   withoutCarePlace?: boolean;
-  access?: RelatedAccount;
-  pendingPermission?: PickupPermissionRequest;
+  access?: parentMeContract.relatedAccountResponse;
+  pendingPermission?: parentMeContract.pickupPermissionRequestResponse;
   canInvite: boolean;
   busy: boolean;
   onEditContact: () => void;
@@ -878,7 +889,7 @@ function GuardianRow({
     : t("guardians.relationships.contact");
   const email = displayEmail(g.email);
   const hasContact =
-    g.phones.length > 0 ||
+    (g.phones ?? []).length > 0 ||
     Boolean(email) ||
     Boolean(g.address_street ?? g.address_city ?? g.address_postal_code);
   const hasDetails = hasContact || Boolean(g.pickup_notes);
@@ -942,8 +953,8 @@ function GuardianRow({
                   compact
                   label={tPermission("pending", {
                     days:
-                      pendingPermission.weekdays.length > 0
-                        ? weekdayList(pendingPermission.weekdays)
+                      (pendingPermission.weekdays ?? []).length > 0
+                        ? weekdayList(pendingPermission.weekdays ?? [])
                         : tPermission("days.all"),
                   })}
                 />
@@ -961,7 +972,7 @@ function GuardianRow({
             <div className="mt-2 space-y-1.5 text-sm text-gray-600">
               {hasContact && (
                 <>
-                  {g.phones.map((p) => (
+                  {(g.phones ?? []).map((p) => (
                     <ContactLine
                       key={`${p.phone_number}-${p.phone_type}`}
                       icon={
@@ -1103,7 +1114,9 @@ function GuardianRow({
   );
 }
 
-function accessTone(status: RelatedAccount["status"]): StatusBadgeTone {
+function accessTone(
+  status: parentMeContract.relatedAccountResponse["status"],
+): StatusBadgeTone {
   if (status === "active") return "green";
   if (status === "pending") return "warning";
   return "gray";
@@ -1121,18 +1134,41 @@ function ContactLine({
   );
 }
 
-interface PhoneDraft {
+// One phone row of the form: the request's entry with every field set, and
+// a key that stays stable while the number is typed.
+type PhoneDraft = Required<parentMeContract.guardianPhoneRequest> & {
   id: string;
-  phone_number: string;
-  phone_type: string;
-  label: string | null;
-  is_primary: boolean;
+};
+
+// The form's phone rows of a stored contact, or one empty row.
+function phoneDrafts(
+  guardian: parentMeContract.childGuardianResponse | undefined,
+): PhoneDraft[] {
+  if (guardian?.phones && guardian.phones.length > 0) {
+    return guardian.phones.map((p) => ({
+      id: `${guardian.guardian_profile_id}-${p.phone_number}-${p.phone_type}`,
+      phone_number: p.phone_number,
+      phone_type: p.phone_type || "mobile",
+      label: p.label ?? null,
+      is_primary: p.is_primary,
+    }));
+  }
+  return [
+    {
+      id: newPhoneDraftId(),
+      phone_number: "",
+      phone_type: "mobile",
+      label: null,
+      is_primary: true,
+    },
+  ];
 }
 
 function ContactModal({
   mode,
   studentId,
   guardian,
+  onReload,
   withoutCarePlace = false,
   canManagePickup = false,
   canManageEmergencyContact = canManagePickup,
@@ -1141,7 +1177,12 @@ function ContactModal({
 }: Readonly<{
   mode: "create" | "edit";
   studentId: string;
-  guardian?: ChildGuardian;
+  guardian?: parentMeContract.childGuardianResponse;
+  /**
+   * Edit: reads the stored contact after a refused save; rejects when the
+   * read fails (ADR 0311).
+   */
+  onReload?: () => Promise<parentMeContract.childGuardianResponse | undefined>;
   withoutCarePlace?: boolean;
   canManagePickup?: boolean;
   canManageEmergencyContact?: boolean;
@@ -1156,7 +1197,7 @@ function ContactModal({
   // Die Anrede wählt jede Person nur für sich selbst (#7362).
   const ownProfile = mode === "edit" && guardian?.is_self === true;
   const [salutation, setSalutation] = useState<Salutation | "">(
-    guardian?.salutation ?? "",
+    knownEnum(SALUTATIONS, guardian?.salutation) ?? "",
   );
   const [email, setEmail] = useState(guardian?.email ?? "");
   const [street, setStreet] = useState(guardian?.address_street ?? "");
@@ -1171,25 +1212,23 @@ function ContactModal({
   );
   const [isEmergency, setIsEmergency] = useState(false);
   const [pickupNotes, setPickupNotes] = useState("");
-  const [phones, setPhones] = useState<PhoneDraft[]>(
-    guardian && guardian.phones.length > 0
-      ? guardian.phones.map((p) => ({
-          id: `${guardian.guardian_profile_id}-${p.phone_number}-${p.phone_type}`,
-          phone_number: p.phone_number,
-          phone_type: p.phone_type || "mobile",
-          label: p.label ?? null,
-          is_primary: p.is_primary,
-        }))
-      : [
-          {
-            id: newPhoneDraftId(),
-            phone_number: "",
-            phone_type: "mobile",
-            label: null,
-            is_primary: true,
-          },
-        ],
+  const [phones, setPhones] = useState<PhoneDraft[]>(() =>
+    phoneDrafts(guardian),
   );
+  // The version of the contact the form shows; the save sends it back.
+  const [version, setVersion] = useState(guardian?.version ?? "");
+  // After a refusal: the stored contact replaces the input.
+  const showStored = (stored: parentMeContract.childGuardianResponse) => {
+    setFirstName(stored.first_name);
+    setLastName(stored.last_name);
+    setSalutation(knownEnum(SALUTATIONS, stored.salutation) ?? "");
+    setEmail(stored.email ?? "");
+    setStreet(stored.address_street ?? "");
+    setCity(stored.address_city ?? "");
+    setPostal(stored.address_postal_code ?? "");
+    setPhones(phoneDrafts(stored));
+    setVersion(stored.version ?? "");
+  };
   const [busy, setBusy] = useState(false);
   const tError = useTranslations("errorCatalog");
   const formRef = useRef<HTMLDivElement>(null);
@@ -1246,7 +1285,7 @@ function ContactModal({
     const fallbackPrimaryIndex = cleaned.length > 0 ? 0 : -1;
     const effectivePrimaryIndex =
       primaryIndex >= 0 ? primaryIndex : fallbackPrimaryIndex;
-    const payload: GuardianContactPayload = {
+    const payload: parentMeContract.updateGuardianContactRequest = {
       first_name: firstName.trim(),
       last_name: lastName.trim(),
       ...(ownProfile ? { salutation } : {}),
@@ -1263,7 +1302,7 @@ function ContactModal({
     };
     try {
       if (mode === "create") {
-        const createPayload: CreateGuardianContactPayload = {
+        const createPayload: parentMeContract.createGuardianContactRequest = {
           ...payload,
           relationship_type: relationshipType,
           can_pickup: requestsPickup,
@@ -1281,11 +1320,10 @@ function ContactModal({
         };
         await createGuardianContact(studentId, createPayload);
       } else if (guardian) {
-        await updateGuardianContact(
-          studentId,
-          guardian.guardian_profile_id,
-          payload,
-        );
+        await updateGuardianContact(studentId, guardian.guardian_profile_id, {
+          ...payload,
+          expected_version: version,
+        });
       }
       onSaved(requestsPickup);
     } catch (err) {
@@ -1295,6 +1333,13 @@ function ContactModal({
       void show(err, {
         object: t("guardians.errorObjectContact"),
         retry: () => void saveRef.current(),
+        // Changed since the form opened: it shows the stored contact.
+        reload: onReload
+          ? async () => {
+              const stored = await onReload();
+              if (stored) showStored(stored);
+            }
+          : undefined,
       });
     } finally {
       setBusy(false);
@@ -1608,9 +1653,9 @@ function PickupModal({
   onSaved,
 }: Readonly<{
   studentId: string;
-  guardian: ChildGuardian;
+  guardian: parentMeContract.childGuardianResponse;
   withoutCarePlace?: boolean;
-  pendingPermission?: PickupPermissionRequest;
+  pendingPermission?: parentMeContract.pickupPermissionRequestResponse;
   onClose: () => void;
   /** requested: die Abholerlaubnis ging als Anfrage an die OGS (#4780). */
   onSaved: (requested: boolean) => void;
@@ -1682,7 +1727,7 @@ function PickupModal({
       !withoutCarePlace &&
       g.can_edit_contact &&
       normalizedNotes !== originalNotes;
-    const payload: GuardianRelationshipPayload = {
+    const payload: parentMeContract.updateGuardianRelationshipRequest = {
       ...(revokes ? { can_pickup: false } : {}),
       ...(isEmergency !== g.is_emergency_contact
         ? { is_emergency_contact: isEmergency }
@@ -1811,8 +1856,8 @@ function PickupModal({
                     type="info"
                     message={`${tPermission("pending", {
                       days:
-                        pendingPermission.weekdays.length > 0
-                          ? weekdayList(pendingPermission.weekdays)
+                        (pendingPermission.weekdays ?? []).length > 0
+                          ? weekdayList(pendingPermission.weekdays ?? [])
                           : tPermission("days.all"),
                     })}. ${tPermission("waitsForOgs")}`}
                   />

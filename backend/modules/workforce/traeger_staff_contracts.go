@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The Arbeitsvertrag of ADR 0089 section 1 (#4706): a contract of a
@@ -70,8 +71,8 @@ func (e *TraegerContractError) Unwrap() error { return e.Kind }
 
 // TraegerContractSite names one Einsatzort of a contract.
 type TraegerContractSite struct {
-	SchoolID int64 `json:"school_id"`
-	StaffID  int64 `json:"staff_id"`
+	SchoolID ident.ID `json:"school_id"`
+	StaffID  ident.ID `json:"staff_id"`
 }
 
 // TraegerContractSoll is a Soll from ValidFrom on, Monday to Friday in
@@ -104,7 +105,7 @@ type TraegerContractHolidayWeek struct {
 // TraegerStaffContract is one contract of a record. EndsOn is its last day,
 // nil while open.
 type TraegerStaffContract struct {
-	ID       int64          `json:"id"`
+	ID       ident.ID       `json:"id"`
 	Kind     string         `json:"kind"`
 	StartsOn calendar.Date  `json:"starts_on"`
 	EndsOn   *calendar.Date `json:"ends_on"`

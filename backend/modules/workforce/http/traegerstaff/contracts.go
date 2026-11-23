@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The Arbeitsverträge of a record (#4706) at
@@ -27,16 +28,16 @@ func (rs *RecordsResource) contractRoutes(staff chi.Router) {
 
 // SiteSollPayload is the Soll of one Einsatzort, Monday to Friday in minutes.
 type SiteSollPayload struct {
-	SchoolID       common.JSONID `json:"school_id"`
-	StaffID        common.JSONID `json:"staff_id"`
-	WeekdayMinutes []int         `json:"weekday_minutes"`
+	SchoolID       ident.ID `json:"school_id"`
+	StaffID        ident.ID `json:"staff_id"`
+	WeekdayMinutes []int    `json:"weekday_minutes"`
 }
 
 func sitesInput(sites []SiteSollPayload) []workforce.TraegerContractSiteSoll {
 	result := make([]workforce.TraegerContractSiteSoll, 0, len(sites))
 	for _, site := range sites {
 		result = append(result, workforce.TraegerContractSiteSoll{
-			TraegerContractSite: workforce.TraegerContractSite{SchoolID: int64(site.SchoolID), StaffID: int64(site.StaffID)},
+			TraegerContractSite: workforce.TraegerContractSite{SchoolID: ident.ID(int64(site.SchoolID)), StaffID: ident.ID(int64(site.StaffID))},
 			WeekdayMinutes:      site.WeekdayMinutes,
 		})
 	}
@@ -134,8 +135,8 @@ func (rs *RecordsResource) changeContractSoll(w http.ResponseWriter, r *http.Req
 }
 
 type HolidayWeeksRequest struct {
-	SchoolID       common.JSONID `json:"school_id"`
-	StaffID        common.JSONID `json:"staff_id"`
+	SchoolID       ident.ID      `json:"school_id"`
+	StaffID        ident.ID      `json:"staff_id"`
 	FromWeek       calendar.Date `json:"from_week"`
 	ToWeek         calendar.Date `json:"to_week"`
 	WeekdayMinutes []int         `json:"weekday_minutes"`
@@ -159,7 +160,7 @@ func (rs *RecordsResource) addHolidayWeeks(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	detail, err := rs.contracts.AddHolidayWeeks(r.Context(), session, id, contractID, workforce.TraegerHolidayWeeksInput{
-		TraegerContractSite: workforce.TraegerContractSite{SchoolID: int64(req.SchoolID), StaffID: int64(req.StaffID)},
+		TraegerContractSite: workforce.TraegerContractSite{SchoolID: ident.ID(int64(req.SchoolID)), StaffID: ident.ID(int64(req.StaffID))},
 		FromWeek:            req.FromWeek, ToWeek: req.ToWeek, WeekdayMinutes: req.WeekdayMinutes,
 	})
 	respondContract(w, r, http.StatusCreated, detail, err, "Holiday weeks added successfully")
@@ -179,7 +180,7 @@ func (rs *RecordsResource) deleteHolidayWeek(w http.ResponseWriter, r *http.Requ
 		common.RenderError(w, r, common.ErrorInvalidOnField(err, common.CodeWorkforceTraegerContractInvalid, "week_start"))
 		return
 	}
-	detail, err := rs.contracts.DeleteHolidayWeek(r.Context(), session, id, contractID, workforce.TraegerContractSite{SchoolID: schoolID}, weekStart)
+	detail, err := rs.contracts.DeleteHolidayWeek(r.Context(), session, id, contractID, workforce.TraegerContractSite{SchoolID: ident.ID(schoolID)}, weekStart)
 	respondContract(w, r, http.StatusOK, detail, err, "Holiday week deleted successfully")
 }
 

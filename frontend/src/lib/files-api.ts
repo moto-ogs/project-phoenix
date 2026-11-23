@@ -1,12 +1,16 @@
-import { ApiError, apiErrorFromResponse, transportFetch } from "./api-error";
 // Dateiablage (#2596): API client + type mapping for the school file
 // storage. The backend decides everything about authority (folder
 // visibility, files:manage, files.staff_upload_enabled) and tells the UI what
 // the caller may do via can_manage / can_upload / can_delete — the page
 // renders exactly that, no client-side authority.
 
-import { hasSessionAccess } from "./session-access";
-import { getCachedSession, sessionFetch } from "./session-cache";
+import { bffJson } from "./bff-fetch";
+import { knownEnum } from "./contract/known-enum";
+import type {
+  FileResponse,
+  FolderRequest,
+  FolderResponse,
+} from "./contract/files.generated";
 
 export type FolderVisibility = "all_staff" | "admins" | "selected";
 
@@ -47,7 +51,8 @@ export interface StoredFile {
 }
 
 export interface FolderFiles {
-  folder: FileFolder;
+  /** null: a visibility this build does not know. */
+  folder: FileFolder | null;
   files: StoredFile[];
 }
 
@@ -74,54 +79,24 @@ interface FolderInput {
   accountIds: string[];
 }
 
-// Ids arrive as decimal strings: they are PostgreSQL bigints, and JSON.parse
-// rounds anything past Number.MAX_SAFE_INTEGER silently — a rounded id
-// addresses a different folder or file.
-interface BackendFolder {
-  id: string;
-  name: string;
-  visibility: FolderVisibility;
-  file_count: number;
-  role_ids: string[];
-  account_ids: string[];
-  created_at: string;
-}
+const FOLDER_VISIBILITIES: readonly FolderVisibility[] = [
+  "all_staff",
+  "admins",
+  "selected",
+];
 
-interface BackendFolderList {
-  folders: BackendFolder[];
-  can_manage: boolean;
-  can_upload: boolean;
-  staff_upload_enabled: boolean;
-  used_bytes: number;
-  max_bytes: number;
-}
-
-interface BackendFile {
-  id: string;
-  folder_id: string;
-  filename: string;
-  size_bytes: number;
-  content_type: string;
-  uploaded_at: string;
-  uploaded_by: string;
-  can_delete: boolean;
-}
-
-interface BackendFolderFiles {
-  folder: BackendFolder;
-  files: BackendFile[];
-}
-
-interface BackendAudience {
-  roles: { id: string; name: string }[];
-  accounts: { account_id: string; first_name: string; last_name: string }[];
-}
-
-function mapFolder(data: BackendFolder): FileFolder {
+/**
+ * null: a visibility this build does not know (#2353). The list leaves such
+ * a folder out: the edit form would otherwise save a default visibility and
+ * open the folder to more people.
+ */
+function mapFolder(data: FolderResponse): FileFolder | null {
+  const visibility = knownEnum(FOLDER_VISIBILITIES, data.visibility);
+  if (!visibility) return null;
   return {
     id: data.id,
     name: data.name,
-    visibility: data.visibility,
+    visibility,
     fileCount: data.file_count,
     roleIds: data.role_ids ?? [],
     accountIds: data.account_ids ?? [],
@@ -129,7 +104,7 @@ function mapFolder(data: BackendFolder): FileFolder {
   };
 }
 
-function mapFile(data: BackendFile): StoredFile {
+function mapFile(data: FileResponse): StoredFile {
   return {
     id: data.id,
     folderId: data.folder_id,
@@ -147,14 +122,8 @@ function mapFile(data: BackendFile): StoredFile {
  * and request ID (#2517). The screen shows the catalog text for the code; the
  * message is a developer diagnostic only.
  */
-async function throwFilesError(
-  response: Response,
-  fallback: string,
-): Promise<never> {
-  throw await apiErrorFromResponse(response, fallback);
-}
 
-function toBackendFolderInput(input: FolderInput) {
+function toBackendFolderInput(input: FolderInput): FolderRequest {
   return {
     name: input.name,
     visibility: input.visibility,
@@ -165,75 +134,63 @@ function toBackendFolderInput(input: FolderInput) {
 
 class FilesService {
   async listFolders(): Promise<FolderOverview> {
-    const response = await sessionFetch("/api/files/folders");
-    if (!response.ok) {
-      await throwFilesError(response, "Ordner konnten nicht geladen werden.");
-    }
-    const json = (await response.json()) as { data: BackendFolderList };
+    const list = await bffJson("tenant", "GET /api/files/folders", {
+      errorMessage: "Ordner konnten nicht geladen werden.",
+    });
     return {
-      folders: json.data.folders.map(mapFolder),
-      canManage: json.data.can_manage,
-      canUpload: json.data.can_upload,
-      staffUploadEnabled: json.data.staff_upload_enabled,
-      usedBytes: json.data.used_bytes,
-      maxBytes: json.data.max_bytes,
+      folders: (list.folders ?? []).flatMap((folder) => {
+        const mapped = mapFolder(folder);
+        return mapped ? [mapped] : [];
+      }),
+      canManage: list.can_manage,
+      canUpload: list.can_upload,
+      staffUploadEnabled: list.staff_upload_enabled,
+      usedBytes: list.used_bytes,
+      maxBytes: list.max_bytes,
     };
   }
 
-  async createFolder(input: FolderInput): Promise<FileFolder> {
-    const response = await sessionFetch("/api/files/folders", {
-      method: "POST",
-      body: JSON.stringify(toBackendFolderInput(input)),
+  async createFolder(input: FolderInput): Promise<FileFolder | null> {
+    const folder = await bffJson("tenant", "POST /api/files/folders", {
+      body: toBackendFolderInput(input),
+      errorMessage: "Ordner konnte nicht angelegt werden.",
     });
-    if (!response.ok) {
-      await throwFilesError(response, "Ordner konnte nicht angelegt werden.");
-    }
-    const json = (await response.json()) as { data: BackendFolder };
-    return mapFolder(json.data);
+    return mapFolder(folder);
   }
 
   async updateFolder(
     folderId: string,
     input: FolderInput,
-  ): Promise<FileFolder> {
-    const response = await sessionFetch(`/api/files/folders/${folderId}`, {
-      method: "PUT",
-      body: JSON.stringify(toBackendFolderInput(input)),
-    });
-    if (!response.ok) {
-      await throwFilesError(
-        response,
-        "Ordner konnte nicht gespeichert werden.",
-      );
-    }
-    const json = (await response.json()) as { data: BackendFolder };
-    return mapFolder(json.data);
+  ): Promise<FileFolder | null> {
+    const folder = await bffJson(
+      "tenant",
+      "PUT /api/files/folders/{folderId}",
+      {
+        params: { folderId },
+        body: toBackendFolderInput(input),
+        errorMessage: "Ordner konnte nicht gespeichert werden.",
+      },
+    );
+    return mapFolder(folder);
   }
 
   async deleteFolder(folderId: string): Promise<void> {
-    const response = await sessionFetch(`/api/files/folders/${folderId}`, {
-      method: "DELETE",
+    await bffJson("tenant", "DELETE /api/files/folders/{folderId}", {
+      params: { folderId },
+      errorMessage: "Ordner konnte nicht gelöscht werden.",
     });
-    if (!response.ok) {
-      await throwFilesError(response, "Ordner konnte nicht gelöscht werden.");
-    }
   }
 
   async listAudience(): Promise<AudienceOptions> {
-    const response = await sessionFetch("/api/files/audience");
-    if (!response.ok) {
-      await throwFilesError(
-        response,
-        "Rollen und Personen konnten nicht geladen werden.",
-      );
-    }
-    const json = (await response.json()) as { data: BackendAudience };
+    const audience = await bffJson("tenant", "GET /api/files/audience", {
+      errorMessage: "Rollen und Personen konnten nicht geladen werden.",
+    });
     return {
-      roles: json.data.roles.map((role) => ({
+      roles: (audience.roles ?? []).map((role) => ({
         id: role.id,
         name: role.name,
       })),
-      accounts: json.data.accounts.map((account) => ({
+      accounts: (audience.accounts ?? []).map((account) => ({
         accountId: account.account_id,
         firstName: account.first_name,
         lastName: account.last_name,
@@ -242,55 +199,42 @@ class FilesService {
   }
 
   async listFiles(folderId: string): Promise<FolderFiles> {
-    const response = await sessionFetch(`/api/files/folders/${folderId}/files`);
-    if (!response.ok) {
-      await throwFilesError(response, "Dateien konnten nicht geladen werden.");
-    }
-    const json = (await response.json()) as { data: BackendFolderFiles };
+    const list = await bffJson(
+      "tenant",
+      "GET /api/files/folders/{folderId}/files",
+      {
+        params: { folderId },
+        errorMessage: "Dateien konnten nicht geladen werden.",
+      },
+    );
     return {
-      folder: mapFolder(json.data.folder),
-      files: json.data.files.map(mapFile),
+      folder: mapFolder(list.folder),
+      files: (list.files ?? []).map(mapFile),
     };
   }
 
   async upload(folderId: string, file: File): Promise<void> {
     const formData = new FormData();
     formData.append("file", file);
-
-    if (!hasSessionAccess(await getCachedSession())) {
-      throw new ApiError("Authentication required", 401, {
-        code: "general.permission",
-      });
-    }
-
-    // Raw fetch on purpose — sessionFetch forces Content-Type
-    // application/json, which would clobber the multipart boundary.
-    const response = await transportFetch(
-      `/api/files/folders/${folderId}/files`,
-      {
-        method: "POST",
-        body: formData,
-      },
-    );
-    if (!response.ok) {
-      await throwFilesError(
-        response,
+    await bffJson("tenant", "POST /api/files/folders/{folderId}/files", {
+      params: { folderId },
+      body: formData,
+      errorMessage:
         "Die Datei konnte nicht hochgeladen werden. Erlaubt sind PDF, DOCX, XLSX, PPTX, PNG und JPEG bis 25 MB.",
-      );
-    }
+    });
   }
 
   async deleteFile(folderId: string, fileId: string): Promise<void> {
-    const response = await sessionFetch(
-      `/api/files/folders/${folderId}/files/${fileId}`,
-      { method: "DELETE" },
+    await bffJson(
+      "tenant",
+      "DELETE /api/files/folders/{folderId}/files/{fileId}",
+      {
+        params: { folderId, fileId },
+        errorMessage: "Datei konnte nicht gelöscht werden.",
+      },
     );
-    if (!response.ok) {
-      await throwFilesError(response, "Datei konnte nicht gelöscht werden.");
-    }
   }
 
-  /** Same-origin proxy URL for the authenticated download. */
   downloadUrl(folderId: string, fileId: string): string {
     return `/api/files/folders/${folderId}/files/${fileId}/download`;
   }

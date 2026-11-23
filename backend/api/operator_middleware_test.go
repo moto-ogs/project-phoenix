@@ -117,9 +117,10 @@ func TestRequiresActiveOperator_LiveSessionPasses(t *testing.T) {
 	assert.True(t, nextCalled, "next handler should have been called")
 }
 
-// The owner's refusals keep their answers: an inactive operator or an ended
-// family is 403, an unknown operator answers like wrong credentials, and a
-// check that could not run fails closed with 503.
+// The owner's refusals keep their answers: an inactive operator is 403, an
+// ended family 401 (the portal renews and signs out), an unknown operator
+// answers like wrong credentials, and a check that could not run fails
+// closed with 503.
 func TestRequiresActiveOperator_RefusalsAndFailures(t *testing.T) {
 	t.Parallel()
 
@@ -129,7 +130,8 @@ func TestRequiresActiveOperator_RefusalsAndFailures(t *testing.T) {
 		status  int
 		body    string
 	}{
-		{"inactive or ended family", identityaccess.ErrOperatorInactive, http.StatusForbidden, "Operator account is inactive"},
+		{"inactive operator", identityaccess.ErrOperatorInactive, http.StatusForbidden, "Operator account is inactive"},
+		{"ended family", identityaccess.ErrOperatorSessionEnded, http.StatusUnauthorized, "Unauthorized"},
 		{"unknown operator", identityaccess.ErrOperatorNotFound, http.StatusUnauthorized, "Invalid email or password"},
 		{"lookup failed", errors.New("database unavailable"), http.StatusServiceUnavailable, "Operator status temporarily unavailable"},
 	}

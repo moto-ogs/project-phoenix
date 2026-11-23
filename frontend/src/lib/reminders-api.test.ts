@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const mockAuthFetch = vi.fn();
-vi.mock("./api-helpers", () => ({
-  authFetch: (...args: unknown[]) => mockAuthFetch(...args),
+const mockBffJson = vi.fn();
+vi.mock("./bff-fetch", () => ({
+  bffJson: (...args: unknown[]) => mockBffJson(...args),
 }));
 
 import { fetchReminders, REMINDERS_SWR_KEY } from "./reminders-api";
@@ -25,11 +25,11 @@ describe("reminders-api", () => {
       count: 1,
       enabled: true,
     };
-    mockAuthFetch.mockResolvedValue({ success: true, data: payload });
+    mockBffJson.mockResolvedValue(payload);
 
     const result = await fetchReminders();
 
-    expect(mockAuthFetch).toHaveBeenCalledWith("/api/reminders");
+    expect(mockBffJson).toHaveBeenCalledWith("tenant", "GET /api/reminders/");
     expect(result).toEqual(payload);
   });
 

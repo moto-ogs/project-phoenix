@@ -13,6 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	activitiesHTTP "github.com/moto-ogs/project-phoenix/modules/timetable/http/activities"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 	"github.com/stretchr/testify/require"
@@ -36,14 +37,14 @@ func TestPresenceGroups20ActivitiesQueryBudget(t *testing.T) {
 	expectedGroup := func(g *testpkg.ActivityGroup) activitiesHTTP.ActivityResponse {
 		var category testpkg.ActivityCategory
 		require.NoError(t, db.NewSelect().Model(&category).Where("id = ?", g.CategoryID).Scan(testpkg.Ctx(t)))
-		return activitiesHTTP.ActivityResponse{ID: g.ID, Name: g.Name, MaxParticipants: &g.MaxParticipants, IsOpen: g.IsOpen, CategoryID: g.CategoryID, CreatedBy: g.CreatedBy, CreatedAt: g.CreatedAt.UTC(), UpdatedAt: g.UpdatedAt.UTC(), Category: &activitiesHTTP.CategoryResponse{ID: category.ID, Name: category.Name, Color: category.Color, CreatedAt: category.CreatedAt.UTC(), UpdatedAt: category.UpdatedAt.UTC()}}
+		return activitiesHTTP.ActivityResponse{ID: ident.ID(g.ID), Name: g.Name, MaxParticipants: &g.MaxParticipants, IsOpen: g.IsOpen, CategoryID: ident.ID(g.CategoryID), CreatedBy: (*ident.ID)(g.CreatedBy), CreatedAt: g.CreatedAt.UTC(), UpdatedAt: g.UpdatedAt.UTC(), Category: &activitiesHTTP.ActivityCategoryResponse{ID: ident.ID(category.ID), Name: category.Name, Color: category.Color, CreatedAt: category.CreatedAt.UTC(), UpdatedAt: category.UpdatedAt.UTC()}}
 	}
 	expectedGroups := map[int64]activitiesHTTP.ActivityResponse{group.ID: expectedGroup(group)}
 	var groups []int64
 	groups = append(groups, group.ID)
-	var students []activitiesHTTP.StudentResponse
-	var supervisors []activitiesHTTP.SupervisorResponse
-	var schedules []activitiesHTTP.ScheduleResponse
+	var students []activitiesHTTP.EnrolledStudentResponse
+	var supervisors []activitiesHTTP.ActivitySupervisorResponse
+	var schedules []activitiesHTTP.ActivityScheduleResponse
 	counter := testpkg.CaptureQueries(t, db)
 	counter.Stop()
 	type sample struct {
@@ -58,17 +59,17 @@ func TestPresenceGroups20ActivitiesQueryBudget(t *testing.T) {
 			child := testpkg.CreateTestStudent(t, db, "Activities20", fmt.Sprintf("Child%02d", i), "A20")
 			_, err := module.Timetable.CreateStudentEnrollment(testpkg.Ctx(t), timetable.StudentEnrollmentInput{StudentID: child.ID, ActivityGroupID: group.ID, ValidFrom: "2026-01-01"})
 			require.NoError(t, err)
-			students = append(students, activitiesHTTP.StudentResponse{ID: child.ID, FirstName: "Activities20", LastName: fmt.Sprintf("Child%02d", i)})
+			students = append(students, activitiesHTTP.EnrolledStudentResponse{ID: ident.ID(child.ID), FirstName: "Activities20", LastName: fmt.Sprintf("Child%02d", i)})
 			staff := testpkg.CreateTestStaff(t, db, "Activities20", fmt.Sprintf("Staff%02d", i))
 			supervisor, err := module.Timetable.CreatePlannedSupervisor(testpkg.Ctx(t), timetable.PlannedSupervisorInput{StaffID: staff.ID, GroupID: group.ID, ValidFrom: "2026-01-01"})
 			require.NoError(t, err)
-			supervisors = append(supervisors, activitiesHTTP.SupervisorResponse{ID: supervisor.ID, StaffID: staff.ID, FirstName: "Activities20", LastName: fmt.Sprintf("Staff%02d", i)})
+			supervisors = append(supervisors, activitiesHTTP.ActivitySupervisorResponse{ID: ident.ID(supervisor.ID), StaffID: ident.ID(staff.ID), FirstName: "Activities20", LastName: fmt.Sprintf("Staff%02d", i)})
 			end := fmt.Sprintf("%02d:45:00", 8+i)
 			timeframe, err := module.Timetable.CreateTimeframe(testpkg.Ctx(t), timetable.TimeframeInput{StartTime: fmt.Sprintf("%02d:15:00", 8+i), EndTime: &end, IsActive: true})
 			require.NoError(t, err)
 			schedule, err := module.Timetable.CreateSchedule(testpkg.Ctx(t), timetable.ScheduleInput{Weekday: i%5 + 1, ActivityGroupID: group.ID, TimeframeID: &timeframe.ID})
 			require.NoError(t, err)
-			schedules = append(schedules, activitiesHTTP.ScheduleResponse{ID: schedule.ID, Weekday: schedule.Weekday, ActivityGroupID: group.ID, TimeframeID: &timeframe.ID, CreatedAt: schedule.CreatedAt.UTC(), UpdatedAt: schedule.UpdatedAt.UTC()})
+			schedules = append(schedules, activitiesHTTP.ActivityScheduleResponse{ID: ident.ID(schedule.ID), Weekday: schedule.Weekday, ActivityGroupID: ident.ID(group.ID), TimeframeID: (*ident.ID)(&timeframe.ID), CreatedAt: schedule.CreatedAt.UTC(), UpdatedAt: schedule.UpdatedAt.UTC()})
 		}
 		for len(groups) < n {
 			g := testpkg.CreateTestActivityGroup(t, db, fmt.Sprintf("Activities20List%02d", len(groups)))
@@ -85,7 +86,7 @@ func TestPresenceGroups20ActivitiesQueryBudget(t *testing.T) {
 		target.EnrollmentCount = n
 		target.Supervisors = supervisors
 		expectedGroups[group.ID] = target
-		for _, route := range []struct{ key, path string }{{"list", "/"}, {"detail", fmt.Sprintf("/%d", group.ID)}, {"schedules", fmt.Sprintf("/%d/schedules", group.ID)}, {"students", fmt.Sprintf("/%d/students", group.ID)}, {"supervisors", fmt.Sprintf("/%d/supervisors", group.ID)}} {
+		for _, route := range []struct{ key, path string }{{"list", "/"}, {"detail", fmt.Sprintf("/%d", group.ID)}, {"students", fmt.Sprintf("/%d/students", group.ID)}} {
 			path := "/api/activities" + route.path
 			counter.Reset()
 			counter.Start()
@@ -102,21 +103,9 @@ func TestPresenceGroups20ActivitiesQueryBudget(t *testing.T) {
 			require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &envelope))
 			switch route.key {
 			case "students":
-				var rows []activitiesHTTP.StudentResponse
+				var rows []activitiesHTTP.EnrolledStudentResponse
 				require.NoError(t, json.Unmarshal(envelope.Data, &rows))
 				require.Equal(t, students, rows)
-			case "supervisors":
-				var rows []activitiesHTTP.SupervisorResponse
-				require.NoError(t, json.Unmarshal(envelope.Data, &rows))
-				require.Equal(t, supervisors, rows)
-			case "schedules":
-				var rows []activitiesHTTP.ScheduleResponse
-				require.NoError(t, json.Unmarshal(envelope.Data, &rows))
-				for i := range rows {
-					rows[i].CreatedAt = rows[i].CreatedAt.UTC()
-					rows[i].UpdatedAt = rows[i].UpdatedAt.UTC()
-				}
-				require.Equal(t, schedules, rows)
 			case "detail":
 				var row activitiesHTTP.ActivityResponse
 				require.NoError(t, json.Unmarshal(envelope.Data, &row))
@@ -133,6 +122,8 @@ func TestPresenceGroups20ActivitiesQueryBudget(t *testing.T) {
 				for _, supervisor := range supervisors {
 					want.SupervisorIDs = append(want.SupervisorIDs, supervisor.StaffID)
 				}
+				require.NotEmpty(t, row.Version, "the detail read carries the activity's version (ADR 0311)")
+				want.Version = row.Version
 				require.Equal(t, want, row)
 				require.Equal(t, group.Name, row.Name)
 				require.Equal(t, n, row.EnrollmentCount)
@@ -144,14 +135,14 @@ func TestPresenceGroups20ActivitiesQueryBudget(t *testing.T) {
 				require.Len(t, rows, n)
 				var ids []int64
 				for _, row := range rows {
-					ids = append(ids, row.ID)
+					ids = append(ids, row.ID.Int64())
 					row.CreatedAt = row.CreatedAt.UTC()
 					row.UpdatedAt = row.UpdatedAt.UTC()
 					row.Category.CreatedAt = row.Category.CreatedAt.UTC()
 					row.Category.UpdatedAt = row.Category.UpdatedAt.UTC()
-					require.Equal(t, expectedGroups[row.ID], row)
+					require.Equal(t, expectedGroups[row.ID.Int64()], row)
 					require.NotEqual(t, hidden.ID, row.ID)
-					if row.ID == group.ID {
+					if row.ID == ident.ID(group.ID) {
 						require.Equal(t, n, row.EnrollmentCount)
 						require.ElementsMatch(t, supervisors, row.Supervisors)
 					}
@@ -165,12 +156,12 @@ func TestPresenceGroups20ActivitiesQueryBudget(t *testing.T) {
 			require.Equal(t, 401, denied.Code)
 		}
 	}
-	for _, suffix := range []string{"", "/students", "/supervisors", "/schedules"} {
+	for _, suffix := range []string{"", "/students"} {
 		path := fmt.Sprintf("/api/activities/%d%s", hidden.ID, suffix)
 		rr := testutil.ExecuteRequest(router, testutil.NewAuthenticatedRequest(t, "GET", path, nil, testutil.WithJWTBearer(token)))
 		require.Equal(t, 404, rr.Code)
 	}
-	for _, suffix := range []string{"/", fmt.Sprintf("/%d", group.ID), fmt.Sprintf("/%d/students", group.ID), fmt.Sprintf("/%d/supervisors", group.ID)} {
+	for _, suffix := range []string{"/", fmt.Sprintf("/%d", group.ID), fmt.Sprintf("/%d/students", group.ID)} {
 		denied := testutil.TeacherTestClaims(int(account.ID))
 		denied.Permissions = nil
 		rr := testutil.ExecuteRequest(router, testutil.NewAuthenticatedRequest(t, "GET", "/api/activities"+suffix, nil, testutil.WithJWTBearer(testutil.MintTestJWT(t, denied))))
@@ -192,18 +183,10 @@ func assertPresence20ActivitiesBudget(t *testing.T, key string, n int, queries q
 		querybudgets.AssertQueryBudget(t, "api.activities.presence20.detail.n3", queries)
 	case "detail.n8":
 		querybudgets.AssertQueryBudget(t, "api.activities.presence20.detail.n8", queries)
-	case "schedules.n3":
-		querybudgets.AssertQueryBudget(t, "api.activities.presence20.schedules.n3", queries)
-	case "schedules.n8":
-		querybudgets.AssertQueryBudget(t, "api.activities.presence20.schedules.n8", queries)
 	case "students.n3":
 		querybudgets.AssertQueryBudget(t, "api.activities.presence20.students.n3", queries)
 	case "students.n8":
 		querybudgets.AssertQueryBudget(t, "api.activities.presence20.students.n8", queries)
-	case "supervisors.n3":
-		querybudgets.AssertQueryBudget(t, "api.activities.presence20.supervisors.n3", queries)
-	case "supervisors.n8":
-		querybudgets.AssertQueryBudget(t, "api.activities.presence20.supervisors.n8", queries)
 	default:
 		t.Fatalf("unknown key %s N%d", key, n)
 	}

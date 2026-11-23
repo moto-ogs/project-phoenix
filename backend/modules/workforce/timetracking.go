@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"strconv"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // This file is the public time-tracking contract the web adapters consume
@@ -70,27 +72,11 @@ func formatOptionalID(id *int64) *string {
 }
 
 // BreakDurationUpdate corrects one break's duration inside a session edit.
+// ident.ID reads the break id as a decimal string, so a browser never rounds
+// it while correcting recorded intervals.
 type BreakDurationUpdate struct {
-	ID              int64 `json:"id"`
-	DurationMinutes int   `json:"duration_minutes"`
-}
-
-// UnmarshalJSON accepts exact decimal strings and legacy numeric break IDs.
-// Browsers must not round int64 IDs while correcting recorded intervals.
-func (b *BreakDurationUpdate) UnmarshalJSON(data []byte) error {
-	var wire struct {
-		ID              json.Number `json:"id"`
-		DurationMinutes int         `json:"duration_minutes"`
-	}
-	if err := json.Unmarshal(data, &wire); err != nil {
-		return err
-	}
-	id, err := strconv.ParseInt(wire.ID.String(), 10, 64)
-	if err != nil {
-		return fmt.Errorf("invalid break ID: %w", err)
-	}
-	b.ID, b.DurationMinutes = id, wire.DurationMinutes
-	return nil
+	ID              ident.ID `json:"id"`
+	DurationMinutes int      `json:"duration_minutes"`
 }
 
 // SessionUpdateRequest is the body of a session edit; nil leaves a field
@@ -103,6 +89,10 @@ type SessionUpdateRequest struct {
 	Status       *string               `json:"status"`
 	Notes        *string               `json:"notes"`
 	Breaks       []BreakDurationUpdate `json:"breaks"`
+	// ExpectedVersion is the version of the history row the form showed
+	// (ADR 0311). The routes refuse an omitted one; nil is a write that
+	// showed no row.
+	ExpectedVersion *string `json:"expected_version"`
 }
 
 // AdminCreateSessionRequest is the body of the admin nachtragen flow. Date
@@ -135,15 +125,20 @@ type SessionResponse struct {
 	// change the rounding made. Both are 0 for an open block.
 	PackUpMinutes   int `json:"pack_up_minutes"`
 	RoundingMinutes int `json:"rounding_minutes"`
+	// Version is the token of the block and its breaks; a correction sends
+	// it back as expected_version (ADR 0311).
+	Version string `json:"version"`
 }
 
 // MarshalJSON preserves exact history IDs and the calculated break-minute field.
 func (sr SessionResponse) MarshalJSON() ([]byte, error) {
+	// wire.Marshal keeps the identifiers of the breaks strings, as the
+	// answer writes them (ADR 0300).
 	type alias SessionResponse
 	if sr.WorkSession == nil {
-		return json.Marshal(alias(sr))
+		return wire.Marshal(alias(sr))
 	}
-	return json.Marshal(struct {
+	return wire.Marshal(struct {
 		alias
 		ID        string  `json:"id"`
 		TenantID  string  `json:"tenant_id"`
@@ -200,11 +195,11 @@ type HistoryResponse struct {
 
 // WorkSessionEdit is one audit row of a session edit.
 type WorkSessionEdit struct {
-	ID        int64     `json:"id"`
-	TenantID  int64     `json:"tenant_id"`
-	SessionID int64     `json:"session_id"`
-	StaffID   int64     `json:"staff_id"`
-	EditedBy  int64     `json:"edited_by"`
+	ID        ident.ID  `json:"id"`
+	TenantID  ident.ID  `json:"tenant_id"`
+	SessionID ident.ID  `json:"session_id"`
+	StaffID   ident.ID  `json:"staff_id"`
+	EditedBy  ident.ID  `json:"edited_by"`
 	FieldName string    `json:"field_name"`
 	OldValue  *string   `json:"old_value"`
 	NewValue  *string   `json:"new_value"`
@@ -308,76 +303,60 @@ type StaffAbsenceRequestItem struct {
 
 // CreateAbsenceRequest files an absence.
 type CreateAbsenceRequest struct {
-	AbsenceType   string `json:"absence_type"`
-	AbsenceTypeID *int64 `json:"absence_type_id"`
-	DateStart     string `json:"date_start"`
-	DateEnd       string `json:"date_end"`
-	HalfDay       bool   `json:"half_day"`
-	Note          string `json:"note"`
+	AbsenceType   string    `json:"absence_type"`
+	AbsenceTypeID *ident.ID `json:"absence_type_id"`
+	DateStart     string    `json:"date_start"`
+	DateEnd       string    `json:"date_end"`
+	HalfDay       bool      `json:"half_day"`
+	Note          string    `json:"note"`
+	// ExpectedFingerprint confirms a Freizeitausgleich that takes the
+	// Stundenkonto below zero (#2873): the Fingerprint of the preview the
+	// Leitung confirmed. The Leitung's booking refuses an overdraft whose
+	// projection differs with general.changed_since_read (ADR 0311); a staff
+	// member's own request asks no confirmation and ignores it.
+	ExpectedFingerprint string `json:"expected_fingerprint"`
 }
 
 // UpdateAbsenceRequest edits an absence; nil leaves a field untouched.
 // AbsenceTypeIDSet distinguishes an omitted absence_type_id from JSON null,
 // which clears a previously selected school-defined art.
 type UpdateAbsenceRequest struct {
-	AbsenceType      *string `json:"absence_type"`
-	AbsenceTypeID    *int64  `json:"absence_type_id"`
-	AbsenceTypeIDSet bool    `json:"-"`
-	DateStart        *string `json:"date_start"`
-	DateEnd          *string `json:"date_end"`
-	HalfDay          *bool   `json:"half_day"`
-	Note             *string `json:"note"`
+	AbsenceType      *string   `json:"absence_type"`
+	AbsenceTypeID    *ident.ID `json:"absence_type_id"`
+	AbsenceTypeIDSet bool      `json:"-"`
+	DateStart        *string   `json:"date_start"`
+	DateEnd          *string   `json:"date_end"`
+	HalfDay          *bool     `json:"half_day"`
+	Note             *string   `json:"note"`
 }
 
-// UnmarshalJSON accepts absence_type_id as decimal string: browser clients
-// cannot hold every BIGINT as a number.
-func (r *CreateAbsenceRequest) UnmarshalJSON(data []byte) error {
-	type plain CreateAbsenceRequest
-	var raw struct {
-		plain
-		AbsenceTypeID json.RawMessage `json:"absence_type_id"`
-	}
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	typeID, err := decimalID(raw.AbsenceTypeID)
-	if err != nil {
-		return fmt.Errorf("ungültige Abwesenheitsart-ID: %w", err)
-	}
-	*r = CreateAbsenceRequest(raw.plain)
-	r.AbsenceTypeID = typeID
-	return nil
-}
-
-// UnmarshalJSON accepts absence_type_id as decimal string and records whether
-// the field was sent at all, so JSON null can clear a school-defined type.
+// UnmarshalJSON reads the fields as encoding/json does and records whether
+// absence_type_id was sent at all, so JSON null can clear a school-defined
+// type.
 func (r *UpdateAbsenceRequest) UnmarshalJSON(data []byte) error {
 	type plain UpdateAbsenceRequest
-	var raw struct {
-		plain
+	var presence struct {
 		AbsenceTypeID json.RawMessage `json:"absence_type_id"`
 	}
-	if err := json.Unmarshal(data, &raw); err != nil {
+	if err := json.Unmarshal(data, (*plain)(r)); err != nil {
 		return err
 	}
-	typeID, err := decimalID(raw.AbsenceTypeID)
-	if err != nil {
-		return fmt.Errorf("ungültige Abwesenheitsart-ID: %w", err)
+	if err := json.Unmarshal(data, &presence); err != nil {
+		return err
 	}
-	*r = UpdateAbsenceRequest(raw.plain)
-	r.AbsenceTypeID, r.AbsenceTypeIDSet = typeID, len(raw.AbsenceTypeID) != 0
+	r.AbsenceTypeIDSet = len(presence.AbsenceTypeID) != 0
 	return nil
 }
 
 // RequestVacationRequest is what a staff member submits via "Urlaub
 // beantragen"; the half-day flags cover the first and last day only.
 type RequestVacationRequest struct {
-	DateStart         string `json:"date_start"`
-	DateEnd           string `json:"date_end"`
-	StartHalfDay      bool   `json:"start_half_day"`
-	EndHalfDay        bool   `json:"end_half_day"`
-	Note              string `json:"note"`
-	SubstituteStaffID *int64 `json:"substitute_staff_id,omitempty"`
+	DateStart         string    `json:"date_start"`
+	DateEnd           string    `json:"date_end"`
+	StartHalfDay      bool      `json:"start_half_day"`
+	EndHalfDay        bool      `json:"end_half_day"`
+	Note              string    `json:"note"`
+	SubstituteStaffID *ident.ID `json:"substitute_staff_id,omitempty"`
 }
 
 // VacationDecisionRequest is the Leitung's approve/deny/question payload.
@@ -404,7 +383,7 @@ type AbsenceRequestListQuery struct {
 // VacationQuotaSummary aggregates entitled, taken and reserved vacation days
 // of one staff member and year.
 type VacationQuotaSummary struct {
-	StaffID         int64                 `json:"staff_id"`
+	StaffID         ident.ID              `json:"staff_id"`
 	Year            int                   `json:"year"`
 	EntitledDays    float64               `json:"entitled_days"`
 	CarryoverDays   float64               `json:"carryover_days"`
@@ -413,6 +392,9 @@ type VacationQuotaSummary struct {
 	ReservedDays    float64               `json:"reserved_days"`
 	RemainingDays   float64               `json:"remaining_days"`
 	Opening         *StaffVacationOpening `json:"opening,omitempty"`
+	// Version is the token of the stored claim (entitled and carryover
+	// days); the change sends it back as expected_version (ADR 0311).
+	Version string `json:"version"`
 }
 
 // SetVacationOpeningRequest carries the vacation takeover: the Resturlaub as
@@ -432,62 +414,22 @@ type CompTimeBalancePreview struct {
 	FutureCommitmentMinutes  int `json:"future_commitment_minutes"`
 	FutureAdjustmentMinutes  int `json:"future_adjustment_minutes"`
 	ProjectedBalanceMinutes  int `json:"projected_balance_minutes"`
+	// Fingerprint is the token of this projection (ADR 0311): a booking that
+	// confirms an overdraft sends it back as expected_fingerprint.
+	Fingerprint string `json:"fingerprint"`
 }
 
 // RebookAbsencesRequest moves stored absences of one staff member to another
-// type (#3258). Browser clients send the BIGINT identifiers as decimal
-// strings; numbers are accepted too.
+// type (#3258). The handler reads it from timetracking.RebookAbsencesBody.
 type RebookAbsencesRequest struct {
 	AbsenceIDs    []int64
 	AbsenceType   string
 	AbsenceTypeID *int64
 	Reason        string
 	DryRun        bool
-}
-
-func (r *RebookAbsencesRequest) UnmarshalJSON(data []byte) error {
-	var raw struct {
-		AbsenceIDs    []json.RawMessage `json:"absence_ids"`
-		AbsenceType   string            `json:"absence_type"`
-		AbsenceTypeID json.RawMessage   `json:"absence_type_id"`
-		Reason        string            `json:"reason"`
-		DryRun        bool              `json:"dry_run"`
-	}
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	r.AbsenceType, r.Reason, r.DryRun = raw.AbsenceType, raw.Reason, raw.DryRun
-	r.AbsenceIDs = make([]int64, 0, len(raw.AbsenceIDs))
-	for _, value := range raw.AbsenceIDs {
-		id, err := decimalID(value)
-		if err != nil || id == nil {
-			return fmt.Errorf("invalid absence_ids: %w", errors.Join(err, errors.New("id is required")))
-		}
-		r.AbsenceIDs = append(r.AbsenceIDs, *id)
-	}
-	typeID, err := decimalID(raw.AbsenceTypeID)
-	if err != nil {
-		return fmt.Errorf("invalid absence_type_id: %w", err)
-	}
-	r.AbsenceTypeID = typeID
-	return nil
-}
-
-// decimalID reads a BIGINT sent as JSON number or decimal string; absent and
-// null yield nil.
-func decimalID(raw json.RawMessage) (*int64, error) {
-	if len(raw) == 0 || string(raw) == "null" {
-		return nil, nil
-	}
-	var text string
-	if err := json.Unmarshal(raw, &text); err != nil {
-		text = string(raw)
-	}
-	id, err := strconv.ParseInt(text, 10, 64)
-	if err != nil {
-		return nil, err
-	}
-	return &id, nil
+	// ExpectedFingerprint is the dry run's Fingerprint the write was
+	// confirmed against (ADR 0311).
+	ExpectedFingerprint string
 }
 
 // AbsenceRebookingResult is what a rebooking does: the entries with their new
@@ -501,6 +443,9 @@ type AbsenceRebookingResult struct {
 	Vacation            []RebookingVacationYear  `json:"vacation,omitempty"`
 	VacationExceeded    bool                     `json:"vacation_exceeded"`
 	Applied             bool                     `json:"applied"`
+	// Fingerprint is the token of the effect (ADR 0311): the write sends
+	// the dry run's back as expected_fingerprint.
+	Fingerprint string `json:"fingerprint"`
 }
 
 // RebookingAllowanceYear is the target allowance of one year after the
@@ -576,20 +521,20 @@ type StaffAbsences interface {
 
 // AdjustmentView is one Stundenkonto transaction as the Monatskarte shows it.
 type AdjustmentView struct {
-	ID            int64     `json:"id"`
+	ID            ident.ID  `json:"id"`
 	Type          string    `json:"type"`
 	MinutesDelta  int       `json:"minutes_delta"`
 	EffectiveDate string    `json:"effective_date"`
 	Note          string    `json:"note"`
-	DecidedBy     int64     `json:"decided_by"`
+	DecidedBy     ident.ID  `json:"decided_by"`
 	DecidedAt     time.Time `json:"decided_at"`
 }
 
 // MonthSummary is the Monatskarte of one staff member and month.
 type MonthSummary struct {
-	StaffID int64 `json:"staff_id"`
-	Year    int   `json:"year"`
-	Month   int   `json:"month"`
+	StaffID ident.ID `json:"staff_id"`
+	Year    int      `json:"year"`
+	Month   int      `json:"month"`
 
 	CarryInMinutes      int `json:"carry_in_minutes"`
 	TargetMinutes       int `json:"target_minutes"`
@@ -621,7 +566,7 @@ type MonthSummary struct {
 
 	IsClosed bool       `json:"is_closed"`
 	ClosedAt *time.Time `json:"closed_at,omitempty"`
-	ClosedBy *int64     `json:"closed_by,omitempty"`
+	ClosedBy *ident.ID  `json:"closed_by,omitempty"`
 	// ClosedByTraeger marks a close of the Personalverwaltung of the
 	// Träger (#4711); only the Träger reopens it.
 	ClosedByTraeger             bool    `json:"closed_by_traeger"`
@@ -659,11 +604,11 @@ type BalanceAdjustments interface {
 
 // StaffMonthBalanceSnapshot is one frozen month of one staff member.
 type StaffMonthBalanceSnapshot struct {
-	ID                    int64      `json:"id"`
+	ID                    ident.ID   `json:"id"`
 	CreatedAt             time.Time  `json:"created_at"`
 	UpdatedAt             time.Time  `json:"updated_at"`
-	TenantID              int64      `json:"tenant_id"`
-	StaffID               int64      `json:"staff_id"`
+	TenantID              ident.ID   `json:"tenant_id"`
+	StaffID               ident.ID   `json:"staff_id"`
 	Year                  int        `json:"year"`
 	Month                 int        `json:"month"`
 	ClosingBalanceMinutes int        `json:"closing_balance_minutes"`
@@ -673,12 +618,12 @@ type StaffMonthBalanceSnapshot struct {
 	CreditedMinutes       int        `json:"credited_minutes"`
 	AdjustmentMinutes     int        `json:"adjustment_minutes"`
 	ClosedAt              time.Time  `json:"closed_at"`
-	ClosedBy              int64      `json:"closed_by"`
+	ClosedBy              ident.ID   `json:"closed_by"`
 	ClosedByAccountID     int64      `json:"-"`
 	CloseReason           string     `json:"close_reason,omitempty"`
 	Source                string     `json:"source"`
 	ReopenedAt            *time.Time `json:"reopened_at,omitempty"`
-	ReopenedBy            *int64     `json:"reopened_by,omitempty"`
+	ReopenedBy            *ident.ID  `json:"reopened_by,omitempty"`
 	ReopenedByAccountID   *int64     `json:"-"`
 	ReopenReason          string     `json:"reopen_reason,omitempty"`
 	// PayrollRules is the JSON of the wage types, rules and absence type
@@ -754,6 +699,9 @@ type VacationQuotaChange struct {
 	CarryoverDays float64
 	Reason        string
 	ChangedBy     int64
+	// ExpectedVersion is the Version of the summary the form was read from
+	// (ADR 0311); a claim changed since is not overwritten.
+	ExpectedVersion string
 }
 
 // MonthCloseStaff is one staff member a school-wide month close may cover.

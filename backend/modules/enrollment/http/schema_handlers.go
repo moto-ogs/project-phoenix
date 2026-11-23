@@ -11,7 +11,6 @@ import (
 
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
@@ -364,39 +363,6 @@ func (rs *Resource) listSchemaVersions(w http.ResponseWriter, r *http.Request) {
 	common.Respond(w, r, http.StatusOK, out, "Form schema versions retrieved")
 }
 
-// getSchemaByID surfaces a specific version (used to render an
-// already-submitted request against its pinned schema).
-func (rs *Resource) getSchemaByID(w http.ResponseWriter, r *http.Request) {
-	if rs.FormSchemaService == nil {
-		common.RenderError(w, r, common.ErrorInternalServer(errors.New("form schema service not configured")))
-		return
-	}
-
-	idParam := chi.URLParam(r, "id")
-	id, err := strconv.ParseInt(idParam, 10, 64)
-	if err != nil || id <= 0 {
-		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid schema id")))
-		return
-	}
-
-	var schema *capability.FormSchema
-	txErr := rs.runInTenantTx(r, func(ctx context.Context) error {
-		s, innerErr := rs.FormSchemaService.SchemaVersion(ctx, id)
-		schema = s
-		return innerErr
-	})
-	if txErr != nil {
-		if errors.Is(txErr, capability.ErrFormSchemaNotFound) {
-			common.RenderError(w, r, common.ErrorNotFoundWithCode(txErr, common.CodeEnrollmentSchemaNotFound))
-			return
-		}
-		common.RenderError(w, r, common.ErrorInternalServer(txErr))
-		return
-	}
-
-	common.Respond(w, r, http.StatusOK, toFormSchemaResponse(schema), "Form schema retrieved")
-}
-
 // publishSchema creates a schema. When the request body carries a
 // name, this routes to CreateSchema (new named schema, version 1).
 // When the name is omitted, it updates the active schema (or creates
@@ -448,8 +414,9 @@ func (rs *Resource) publishSchema(w http.ResponseWriter, r *http.Request) {
 }
 
 // updateSchema publishes a new version of an existing named schema.
-// PUT /schema/{id} — id refers to any prior version of the schema;
-// the new row inherits its name and is written with version+1.
+// PUT /schema/{id} — id is the version the editor read, which must still
+// be the newest of its lineage (ADR 0311); the new row inherits its name
+// and is written with version+1.
 func (rs *Resource) updateSchema(w http.ResponseWriter, r *http.Request) {
 	if rs.FormSchemaService == nil {
 		common.RenderError(w, r, common.ErrorInternalServer(errors.New("form schema service not configured")))
@@ -505,7 +472,9 @@ func (rs *Resource) updateSchema(w http.ResponseWriter, r *http.Request) {
 // missing lineage is a 404 — same as the PATCH route, regardless of which
 // step raised it. A rename failure beyond those sentinels is infrastructure
 // (lock/read/exec), mapped to 5xx like the PATCH handler; publish/validation
-// errors keep the 400 contract shared with POST /schema.
+// errors keep the 400 contract shared with POST /schema. A version published
+// since the editor read {id} is a business rejection that RenderError answers
+// with 409 general.changed_since_read through any of these (ADR 0311).
 func renderSchemaVersionError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.Is(err, capability.ErrFormSchemaNameExists):

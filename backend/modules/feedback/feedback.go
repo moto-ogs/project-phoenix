@@ -82,14 +82,10 @@ var (
 	ErrStudentNotFound   = errors.New("student not found")
 	ErrInvalidDateRange  = errors.New("invalid date range")
 	ErrInvalidParameters = errors.New("invalid parameters")
+	// ErrMoodCaptureStopped refuses a rating for a child whose room history
+	// and mood capture are stopped (#3844).
+	ErrMoodCaptureStopped = errors.New("mood capture stopped for student")
 )
-
-type EntryNotFoundError struct{ EntryID int64 }
-
-func (e *EntryNotFoundError) Error() string {
-	return fmt.Sprintf("feedback entry not found: %d", e.EntryID)
-}
-func (e *EntryNotFoundError) Unwrap() error { return ErrEntryNotFound }
 
 type InvalidEntryDataError struct{ Err error }
 
@@ -129,17 +125,26 @@ func ErrorCode(err error) string {
 		return "invalid_date_range"
 	case errors.Is(err, ErrInvalidParameters):
 		return "invalid_parameters"
+	case errors.Is(err, ErrMoodCaptureStopped):
+		return "mood_capture_stopped"
 	default:
 		return "internal_error"
 	}
 }
 
+// FeedbackHistory records the past ratings of a demo school (ADR 0298). It is
+// no part of Capability: only the dev tools seed and the public demo's
+// operator route compose it, and no school can reach it.
+type FeedbackHistory interface {
+	// RecordFeedbackHistory writes ratings of days before today as one batch
+	// in one transaction of the tenant in context and returns how many it
+	// wrote. An invalid rating rejects the whole batch before persistence.
+	RecordFeedbackHistory(context.Context, []CreateEntry) (int, error)
+}
+
 type Capability interface {
 	Available(context.Context) (bool, error)
 	Submit(context.Context, CreateEntry) (Entry, error)
-	SubmitBatch(context.Context, []CreateEntry) ([]Entry, error)
-	LookupEntry(context.Context, int64) (Entry, error)
-	EraseEntry(context.Context, int64) error
 	FindEntries(context.Context, Filter) ([]Entry, error)
 	DeleteExpired(context.Context) (int, error)
 	CountForStudent(context.Context, int64) (int, error)

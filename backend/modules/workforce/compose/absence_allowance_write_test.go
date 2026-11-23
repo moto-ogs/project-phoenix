@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -114,4 +115,35 @@ func TestCustomAbsenceAllowanceSerializesConcurrentCorrections(t *testing.T) {
 	require.NotNil(t, rows[2].OldEntitledDays)
 	assert.Equal(t, 1.0, *rows[1].OldEntitledDays)
 	assert.Equal(t, rows[1].NewEntitledDays, *rows[2].OldEntitledDays)
+}
+
+// ADR 0311: a claim saved over a read a colleague changed since is refused
+// with nothing written; the summary's current version saves.
+func TestAllowanceRefusesAClaimChangedSinceItWasRead(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	ctx := testpkg.Ctx(t)
+	capability := buildWorkforce(t, db)
+	staff := testpkg.CreateTestStaff(t, db, "Claim", "Stale")
+	actor := testpkg.CreateTestStaff(t, db, "Claim", "Colleague")
+	absenceType, err := capability.CreateAbsenceType(ctx, workforce.CreateAbsenceType{Name: "Read state", AllowanceEnabled: true})
+	require.NoError(t, err)
+	read, err := capability.AllowanceSummary(ctx, staff.ID, absenceType.ID, 2026)
+	require.NoError(t, err)
+
+	_, err = capability.SetAllowance(ctx, workforce.SetAbsenceTypeAllowance{StaffID: staff.ID, AbsenceTypeID: absenceType.ID, Year: 2026, EntitledDays: 3, Reason: "Kollegin", ChangedBy: actor.ID})
+	require.NoError(t, err)
+	for _, stale := range []string{read.Version, ""} {
+		_, err = capability.SetAllowance(ctx, workforce.SetAbsenceTypeAllowance{StaffID: staff.ID, AbsenceTypeID: absenceType.ID, Year: 2026, EntitledDays: 5, Reason: "Ich", ChangedBy: actor.ID, ExpectedVersion: &stale})
+		require.ErrorIs(t, err, readstate.ErrChanged, "token %q", stale)
+	}
+	require.Len(t, readAllowanceAudit(t, db, staff.ID, absenceType.ID), 1, "nothing is written")
+
+	current, err := capability.AllowanceSummary(ctx, staff.ID, absenceType.ID, 2026)
+	require.NoError(t, err)
+	assert.Equal(t, 3.0, current.EntitledDays)
+	saved, err := capability.SetAllowance(ctx, workforce.SetAbsenceTypeAllowance{StaffID: staff.ID, AbsenceTypeID: absenceType.ID, Year: 2026, EntitledDays: 5, Reason: "Ich", ChangedBy: actor.ID, ExpectedVersion: &current.Version})
+	require.NoError(t, err)
+	assert.Equal(t, 5.0, saved.EntitledDays)
+	assert.NotEqual(t, current.Version, saved.Version, "the answer carries the token of the saved claim")
 }

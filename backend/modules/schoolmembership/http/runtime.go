@@ -51,12 +51,6 @@ type Person struct {
 	UpdatedAt time.Time
 }
 
-// Group is one group a Betreuungskraft is assigned to.
-type Group struct {
-	ID   int64
-	Name string
-}
-
 // TeacherAction describes the teacher-record outcome of an update; it mirrors
 // the service-side outcome the root translates.
 type TeacherAction string
@@ -228,7 +222,6 @@ type Runtime struct {
 	// cleanups; the directory listing triggers it with source "directory".
 	RetryQueuedDocumentCleanups func(context.Context, string)
 
-	TeacherGroups    func(context.Context, int64) ([]Group, error)
 	SchoolClasses    func(context.Context, int64) ([]string, error)
 	SetSchoolClasses func(context.Context, int64, []string, int64) error
 	ActiveCaregivers func(context.Context) ([]StaffWithRoleResponse, error)
@@ -272,7 +265,7 @@ func NewResource(membership schoolmembership.Capability, runtime Runtime) *Resou
 		runtime.AbsenceLabelMap == nil || runtime.StaffGenders == nil || runtime.AccountRoles == nil || runtime.AccountEmails == nil ||
 		runtime.PersonAccountID == nil || runtime.AccountAvatars == nil || runtime.AccountHasRole == nil || runtime.AccountsHoldingRole == nil ||
 		runtime.RetryQueuedDocumentCleanups == nil ||
-		runtime.TeacherGroups == nil || runtime.SchoolClasses == nil || runtime.SetSchoolClasses == nil ||
+		runtime.SchoolClasses == nil || runtime.SetSchoolClasses == nil ||
 		runtime.ActiveCaregivers == nil || runtime.StaffByRoles == nil ||
 		runtime.CreateStaff == nil || runtime.UpdateStaff == nil || runtime.Offboard == nil ||
 		runtime.PlanExit == nil || runtime.WithdrawExit == nil || runtime.ExitFailure == nil ||
@@ -308,15 +301,14 @@ func (rs *Resource) Register(r chi.Router, withTx Middleware) {
 	usersRead := rs.runtime.Permission(permissions.UsersRead)
 
 	r.With(directoryGate, withTx).Get("/", rs.listStaff)
+	r.With(directoryGate, withTx).Get("/former", rs.listFormerStaff)
 	r.With(documentsGate, withTx).Get("/documents-directory", rs.listDocumentDirectory)
 	r.With(rs.runtime.Permission(permissions.StaffFinancial), withTx).Get("/financial-profile/{id}", rs.getFinancialProfile)
 	r.With(documentsGate, withTx).Get("/documents-profile/{id}", rs.getDocumentProfile)
 	r.With(profileGate, withTx).Get("/{id}", rs.getStaff)
 	r.With(profileGate, withTx).Get("/{id}/avatar", rs.serveStaffAvatar)
-	r.With(usersRead, withTx).Get("/{id}/groups", rs.getStaffGroups)
 	r.With(usersRead, withTx).Get("/{id}/school-classes", rs.getStaffSchoolClasses)
 	r.With(rs.runtime.Permission(permissions.UsersManage), withTx).Put("/{id}/school-classes", rs.updateStaffSchoolClasses)
-	r.With(usersRead, withTx).Get("/available", rs.getAvailableStaff)
 	r.With(usersRead, withTx).Get("/by-role", rs.getStaffByRole)
 
 	r.With(rs.runtime.Permission(permissions.UsersCreate), withTx).Post("/", rs.createStaff)

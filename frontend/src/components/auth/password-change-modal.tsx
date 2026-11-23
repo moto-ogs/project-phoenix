@@ -13,12 +13,53 @@ import { Button } from "~/components/ui/button";
 import { Alert } from "~/components/ui/alert";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import type { DatabaseFormErrorPath } from "~/components/database/database-form";
-import { apiErrorFromResponse, transportFetch } from "~/lib/api-error";
+import { bffJson } from "~/lib/bff-fetch";
+import type * as authPasswordContract from "~/lib/contract/auth-password.generated";
 import { CheckIcon, SpinnerIcon } from "~/components/ui/icons";
 import { Input } from "~/components/ui/input";
 import { createLogger } from "~/lib/logger";
 
 const logger = createLogger({ component: "PasswordChange" });
+
+/** The portals with a "Passwort ändern" of their own. */
+export type PasswordChangePortal = "tenant" | "platform" | "caterer";
+
+/**
+ * Sends the change through the portal's registered route. In the staff
+ * portal a wrong current password answers 401 with its own code: that
+ * refuses the change and leaves the session as it is.
+ */
+async function changePassword(
+  portal: PasswordChangePortal,
+  change: Required<authPasswordContract.ChangePasswordRequest>,
+): Promise<void> {
+  const errorMessage = "password change failed";
+  switch (portal) {
+    case "tenant":
+      await bffJson("tenant", "POST /auth/password", {
+        body: change,
+        authRefusals: ["identity.current_password_wrong"],
+        errorMessage,
+      });
+      return;
+    case "platform":
+      // The operator's route has no confirmation field.
+      await bffJson("platform", "POST /operator/profile/password", {
+        body: {
+          current_password: change.current_password,
+          new_password: change.new_password,
+        },
+        errorMessage,
+      });
+      return;
+    case "caterer":
+      await bffJson("caterer", "POST /caterer/account/password", {
+        body: change,
+        errorMessage,
+      });
+      return;
+  }
+}
 
 /** Default for `mapError`: the error as it came. */
 function keepError(error: unknown): unknown {
@@ -29,7 +70,8 @@ interface PasswordChangeModalProps {
   readonly isOpen: boolean;
   readonly onClose: () => void;
   readonly onSuccess?: () => void;
-  readonly apiEndpoint?: string;
+  /** The portal whose own route changes the password (#4496). */
+  readonly portal?: PasswordChangePortal;
   /**
    * The owner's shared API error path (`useApiFormError`), handed in by the
    * page (#2517). A refused change shows the
@@ -96,7 +138,7 @@ export function PasswordChangeModal({
   isOpen,
   onClose,
   onSuccess,
-  apiEndpoint = "/api/auth/password",
+  portal = "tenant",
   errorPath,
   formRef,
   mapError = keepError,
@@ -128,19 +170,11 @@ export function PasswordChangeModal({
     setIsLoading(true);
 
     try {
-      const response = await transportFetch(apiEndpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          currentPassword,
-          newPassword,
-          confirmPassword,
-        }),
+      await changePassword(portal, {
+        current_password: currentPassword,
+        new_password: newPassword,
+        confirm_password: confirmPassword,
       });
-
-      if (!response.ok) {
-        throw await apiErrorFromResponse(response, "password change failed");
-      }
 
       setSuccess(true);
       setTimeout(() => {

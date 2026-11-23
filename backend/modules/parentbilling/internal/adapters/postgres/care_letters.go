@@ -284,7 +284,7 @@ func cancelledInvoicesToReplace(ctx context.Context, db bun.IDB, organizationID 
 ) (map[replacedKey]*int64, error) {
 	contracts := make([]int64, 0, len(invoices))
 	for _, invoice := range invoices {
-		contracts = append(contracts, invoice.ContractID)
+		contracts = append(contracts, invoice.ContractID.Int64())
 	}
 	var rows []struct {
 		ContractID int64  `bun:"care_contract_id"`

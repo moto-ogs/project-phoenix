@@ -13,6 +13,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -28,10 +29,13 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
+	schoolCalendarHTTP "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/http"
 	presenceCompose "github.com/moto-ogs/project-phoenix/modules/studentpresence/compose"
+	timetableHTTP "github.com/moto-ogs/project-phoenix/modules/timetable/http"
 	"github.com/moto-ogs/project-phoenix/modules/traegerview"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
@@ -68,6 +72,17 @@ func newTraegerPortalAt(t *testing.T, today func() calendar.Date, now func() tim
 	require.NoError(t, err)
 	routes := traegerPortalRoutesOn(t, db, auth.Auth, unit, owners.HolidayTestSchoolCalendar{}, today, now)
 	return db, &traegerPortalHandler{Handler: testpkg.SessionVerifier(routes), mail: mail}, auth.Auth, unit
+}
+
+func newTraegerPortalWithStaffing(t *testing.T, staffing timetableHTTP.StaffingAnnouncer) (*bun.DB, *traegerPortalHandler) {
+	t.Helper()
+	db := testpkg.SetupTestDB(t)
+	unit := testpkg.TenantRuntime(t, db)
+	mail := testpkg.NewCapturingMailer()
+	auth, err := NewAuthTestModule(testpkg.NewDatabase(t, db), unit, WithAuthTestMailer(mail))
+	require.NoError(t, err)
+	routes := traegerPortalRoutesOnWithStaffing(t, db, auth.Auth, unit, owners.HolidayTestSchoolCalendar{}, calendar.TodayDate, time.Now, newTraegerClosingDayStaffingQueue(staffing, slog.Default()))
+	return db, &traegerPortalHandler{Handler: testpkg.SessionVerifier(routes), mail: mail}
 }
 
 // traegerPortalOn composes Identity & Access over db with a capturing
@@ -125,6 +140,10 @@ func traegerPortalRoutes(t *testing.T, db *bun.DB, identity TraegerPortalIdentit
 // the contract and billing routes compare their stamps with PostgreSQL's
 // now(), as before #7104.
 func traegerPortalRoutesOn(t *testing.T, db *bun.DB, identity TraegerPortalIdentity, unit tenant.UnitOfWork, days owners.HolidayTestSchoolCalendar, today func() calendar.Date, now func() time.Time) http.Handler {
+	return traegerPortalRoutesOnWithStaffing(t, db, identity, unit, days, today, now, nil)
+}
+
+func traegerPortalRoutesOnWithStaffing(t *testing.T, db *bun.DB, identity TraegerPortalIdentity, unit tenant.UnitOfWork, days owners.HolidayTestSchoolCalendar, today func() calendar.Date, now func() time.Time, staffing schoolCalendarHTTP.StaffingChangeQueue) http.Handler {
 	t.Helper()
 	database := testpkg.NewDatabase(t, db)
 	organizations, err := owners.NewOrganizationTenancy(database)
@@ -161,10 +180,10 @@ func traegerPortalRoutesOn(t *testing.T, db *bun.DB, identity TraegerPortalIdent
 	require.NoError(t, err)
 	mountParentBillingRoutes(router, router, organizations, settings, schoolSettings.Settings, presence, delivery.Module, providerBlockOutcomes{delivery.EmailOutcomes}, testHealthCipher(), bankCipher, days, today, now, slog.Default())
 	mountTraegerClosingDayRoutes(router, owners.NewTraegerCalendarSchools(organizations, schoolSettings.Settings), organizations,
-		owners.HolidayClosureMail{Delivery: delivery.Module, TraegerMails: delivery.TraegerMails}, days, closureTestHolidays{}, now)
+		owners.HolidayClosureMail{Delivery: delivery.Module, TraegerMails: delivery.TraegerMails}, days, closureTestHolidays{}, staffing, now)
 	mountHolidayClosureNotificationRoutes(router, router, organizations,
 		owners.HolidayClosureMail{Delivery: delivery.Module, TraegerMails: delivery.TraegerMails}, days, closureTestHolidays{}, slog.Default(), now)
-	mountCareContractRoutes(router, organizations, settings, schoolSettings.Settings, delivery.Module, providerBlockOutcomes{delivery.EmailOutcomes}, audit.DataAccessLog,
+	mountCareContractRoutes(router, router, organizations, settings, schoolSettings.Settings, delivery.Module, providerBlockOutcomes{delivery.EmailOutcomes}, audit.DataAccessLog,
 		owners.NewCareContractNoticeAddressees(owners.MustNewPeopleDirectory(database), identity), owners.CareContractTestHolidays{}, "http://parents.localhost:3000", today, now)
 	return router
 }
@@ -189,25 +208,25 @@ func traegerAccount(t *testing.T, db *bun.DB, password string) *testpkg.AccountF
 // traegerLoginAnswer reads both answer shapes: status is the login state of
 // a success and the HTTP status number of a refusal.
 type traegerLoginAnswer struct {
-	Status         any    `json:"status"`
-	AccessToken    string `json:"access_token"`
-	RefreshToken   string `json:"refresh_token"`
-	ChallengeToken string `json:"challenge_token"`
-	MaskedEmail    string `json:"masked_email"`
-	OrganizationID int64  `json:"organization_id"`
+	Status         any      `json:"status"`
+	AccessToken    string   `json:"access_token"`
+	RefreshToken   string   `json:"refresh_token"`
+	ChallengeToken string   `json:"challenge_token"`
+	MaskedEmail    string   `json:"masked_email"`
+	OrganizationID ident.ID `json:"organization_id"`
 	// The remember-device offer of the code step (#6955).
 	TrustedDeviceEnabled *bool `json:"trusted_device_enabled"`
 	TrustedDeviceDays    *int  `json:"trusted_device_days"`
 	Organizations        []struct {
-		ID   int64  `json:"id"`
-		Name string `json:"name"`
+		ID   ident.ID `json:"id"`
+		Name string   `json:"name"`
 	} `json:"organizations"`
 	Code string `json:"code"`
 }
 
 func traegerLogin(t *testing.T, router http.Handler, email, password string, organizationID int64) (int, traegerLoginAnswer) {
 	t.Helper()
-	body, err := json.Marshal(map[string]any{"email": email, "password": password, "organization_id": organizationID})
+	body, err := json.Marshal(map[string]any{"email": email, "password": password, "organization_id": strconv.FormatInt(organizationID, 10)})
 	require.NoError(t, err)
 	req := httptest.NewRequest(http.MethodPost, "/traeger/auth/login", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -283,18 +302,18 @@ func traegerSignIn(t *testing.T, portal *traegerPortalHandler, email, password s
 		started, start := traegerPost(t, portal, "/traeger/auth/mfa/enroll/start", answer.AccessToken, map[string]any{})
 		require.Equal(t, http.StatusOK, started)
 		return traegerPost(t, portal, "/traeger/auth/mfa/enroll/confirm", answer.AccessToken, map[string]any{
-			"challenge_token": start.ChallengeToken, "code": lastTraegerCode(t, portal, email), "organization_id": answer.OrganizationID,
+			"challenge_token": start.ChallengeToken, "code": lastTraegerCode(t, portal, email), "organization_id": answer.OrganizationID.String(),
 		})
 	case "mfa_required":
 		return traegerPost(t, portal, "/traeger/auth/mfa/verify", "", map[string]any{
-			"challenge_token": answer.ChallengeToken, "code": lastTraegerCode(t, portal, email), "organization_id": answer.OrganizationID,
+			"challenge_token": answer.ChallengeToken, "code": lastTraegerCode(t, portal, email), "organization_id": answer.OrganizationID.String(),
 		})
 	}
 	return code, answer
 }
 
 type traegerSchool struct {
-	ID   int64  `json:"id"`
+	ID   wireID `json:"id"`
 	Name string `json:"name"`
 }
 
@@ -347,7 +366,7 @@ func TestTraegerPortalLoginShowsOnlyTheSchoolsOfTheTraeger(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	var ids []int64
 	for _, school := range schools {
-		ids = append(ids, school.ID)
+		ids = append(ids, int64(school.ID))
 	}
 	assert.Equal(t, []int64{firstSchool, secondSchool}, ids, "both schools of the Träger, ordered by name")
 	assert.NotContains(t, ids, foreignSchool, "a Träger sees no school of another Träger")
@@ -400,8 +419,8 @@ func TestTraegerPortalLoginAsksAMemberOfSeveralTraegerToChoose(t *testing.T) {
 	assert.Equal(t, "organization_selection_required", answer.Status)
 	assert.Empty(t, answer.AccessToken, "no session before the choice")
 	require.Len(t, answer.Organizations, 2)
-	assert.Equal(t, first, answer.Organizations[0].ID)
-	assert.Equal(t, second, answer.Organizations[1].ID)
+	assert.Equal(t, first, int64(answer.Organizations[0].ID))
+	assert.Equal(t, second, int64(answer.Organizations[1].ID))
 
 	code, answer = traegerSignIn(t, router, account.Email, password, second)
 	require.Equal(t, http.StatusOK, code)

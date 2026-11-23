@@ -32,6 +32,8 @@ func displayHTTPRuntime(displayEnabled func(context.Context) (bool, error)) disp
 			return err == nil && principal.HasPermission(permission)
 		},
 		ParseID:        apiCommon.ParseInt64IDWithError,
+		Success:        apiCommon.Respond,
+		Plain:          apiCommon.RenderJSON,
 		Failure:        renderDisplayFailure,
 		FeatureEnabled: displayEnabled,
 		Read:           permissions.DisplayRead,

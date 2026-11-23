@@ -18,12 +18,12 @@ import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import { deferred } from "~/test/helpers/form-modal-pending";
 import { catalogText } from "~/test/error-catalog-text";
-import { type ChildGuardian, type RelatedAccount } from "~/lib/parent-api";
 import {
   expectPageReloadedAfterRefusal,
   resetPageReloads,
 } from "~/test/helpers/refused-refresh";
 import { reloadDocument } from "~/lib/reload-document";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 // The shared error path reports row actions through the toast provider
 // (#2518).
@@ -82,7 +82,7 @@ async function signByTyping(container: HTMLElement, name = "Sabine Muster") {
   );
 }
 
-const editableGuardian: ChildGuardian = {
+const editableGuardian: parentMeContract.childGuardianResponse = {
   guardian_profile_id: "7",
   student_guardian_id: "70",
   first_name: "Helga",
@@ -118,6 +118,7 @@ const editableGuardian: ChildGuardian = {
   contact_locked_shared: false,
   contact_locked_social_worker: false,
   contact_locked_full_guardian: false,
+  version: "c-read",
 };
 
 describe("GuardiansPanel", () => {
@@ -151,7 +152,7 @@ describe("GuardiansPanel", () => {
         status: "active",
         is_self: false,
       },
-    ] satisfies RelatedAccount[]);
+    ] satisfies parentMeContract.relatedAccountResponse[]);
     let reload!: () => Promise<unknown>;
     function Probe() {
       const { mutate } = useSWRAuth(parentKeys.guardians("42"), () =>
@@ -226,6 +227,8 @@ describe("GuardiansPanel", () => {
       "7",
       expect.objectContaining({
         email: "neu@example.test",
+        // The version of the contact the form opened with (ADR 0311).
+        expected_version: "c-read",
         phones: [
           {
             phone_number: "0211 111111",
@@ -505,7 +508,7 @@ describe("GuardiansPanel", () => {
   });
 
   it("lists only active or invited accounts in connected accounts", async () => {
-    const relatedAccounts: RelatedAccount[] = [
+    const relatedAccounts: parentMeContract.relatedAccountResponse[] = [
       {
         guardian_profile_id: "21",
         first_name: "Jürgen",
@@ -609,7 +612,7 @@ describe("GuardiansPanel", () => {
         status: "no_account",
         is_self: false,
       },
-    ] satisfies RelatedAccount[]);
+    ] satisfies parentMeContract.relatedAccountResponse[]);
 
     render(<GuardiansPanel studentId="42" canInvite canRemove={false} />);
 
@@ -631,7 +634,7 @@ describe("GuardiansPanel", () => {
         status: "active",
         is_self: false,
       },
-    ] satisfies RelatedAccount[]);
+    ] satisfies parentMeContract.relatedAccountResponse[]);
 
     render(
       <GuardiansPanel studentId="42" canInvite={false} canRemove={false} />,
@@ -679,12 +682,87 @@ describe("GuardiansPanel", () => {
     expect(screen.queryByText(/parent: guardian/)).not.toBeInTheDocument();
   });
 
+  // ADR 0311: a contact the school corrected since the form opened is
+  // refused; the form shows the stored contact with the refusal and no
+  // retry, and the next save sends the new version.
+  it("shows the stored contact after a save refused as changed", async () => {
+    mocks.updateGuardianContact.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    render(
+      <GuardiansPanel studentId="42" canInvite={false} canRemove={false} />,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Bearbeiten" }));
+    const dialog = screen.getByRole("dialog");
+    const emailInput = dialog.querySelector<HTMLInputElement>(
+      'input[type="email"]',
+    );
+    fireEvent.change(emailInput!, { target: { value: "alt@example.test" } });
+
+    mocks.listChildGuardians.mockResolvedValue([
+      {
+        ...editableGuardian,
+        email: "korrigiert@example.test",
+        version: "c-stored",
+      },
+    ]);
+    fireEvent.click(within(dialog).getByRole("button", { name: "Speichern" }));
+
+    expect(
+      await within(dialog).findByText(
+        catalogText("general.changed_since_read", "die Änderung am Kontakt"),
+      ),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(emailInput).toHaveValue("korrigiert@example.test"),
+    );
+    expect(
+      within(dialog).queryByRole("button", { name: "Wiederholen" }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(mocks.updateGuardianContact).toHaveBeenLastCalledWith(
+        "42",
+        "7",
+        expect.objectContaining({
+          email: "korrigiert@example.test",
+          expected_version: "c-stored",
+        }),
+      ),
+    );
+  });
+
+  // Removed from the child since the form opened: nothing stored to show,
+  // so the form closes and says so instead of keeping the refused input.
+  it("closes the form when the refused contact no longer exists", async () => {
+    mocks.updateGuardianContact.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    render(
+      <GuardiansPanel studentId="42" canInvite={false} canRemove={false} />,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Bearbeiten" }));
+    const dialog = screen.getByRole("dialog");
+
+    mocks.listChildGuardians.mockResolvedValue([]);
+    fireEvent.click(within(dialog).getByRole("button", { name: "Speichern" }));
+
+    expect(
+      await screen.findByText(
+        "Diesen Kontakt gibt es bei deinem Kind nicht mehr. Deine Änderung ist nicht gespeichert.",
+      ),
+    ).toBeInTheDocument();
+    await waitFor(() => expect(dialog).not.toBeInTheDocument());
+    expect(mocks.updateGuardianContact).toHaveBeenCalledTimes(1);
+  });
+
   it("reaches the pickup-note action without exposing pickup flags for an edit-only guardian", async () => {
     // can_edit_contact without can_manage_pickup (e.g. the caller's own row):
     // the backend permits a pickup_notes edit but not the safety-critical flags.
     // The relationship action must be reachable for the note, while the
     // can_pickup / emergency controls stay hidden.
-    const noteOnlyGuardian: ChildGuardian = {
+    const noteOnlyGuardian: parentMeContract.childGuardianResponse = {
       ...editableGuardian,
       // Flags off so the row renders no pickup/emergency badges — keeps the
       // "controls hidden" assertions scoped to the modal (the badge labels are
@@ -727,7 +805,7 @@ describe("GuardiansPanel", () => {
     // Option B: the pickup note follows contact editability. A guardian whose
     // contact is locked (account holder) exposes neither the contact pencil nor
     // the pickup-note action; the backend would reject a note edit there too.
-    const lockedGuardian: ChildGuardian = {
+    const lockedGuardian: parentMeContract.childGuardianResponse = {
       ...editableGuardian,
       guardian_profile_id: "9",
       student_guardian_id: "90",
@@ -761,7 +839,7 @@ describe("GuardiansPanel", () => {
   it("sends an empty string (not null) when an existing pickup note is cleared", async () => {
     // Finding #1: clearing a note must send "" so the backend stores NULL. A
     // null would unmarshal to a nil *string the backend treats as "unchanged".
-    const noteEditableGuardian: ChildGuardian = {
+    const noteEditableGuardian: parentMeContract.childGuardianResponse = {
       ...editableGuardian,
       can_pickup: false,
       is_emergency_contact: false,
@@ -797,7 +875,7 @@ describe("GuardiansPanel", () => {
     // surrounding whitespace, the note must NOT travel — gating on
     // can_edit_contact (and trimming the original) keeps a flag-only edit from
     // tripping the guardian.edit gate and failing an otherwise valid toggle.
-    const manageOnlyGuardian: ChildGuardian = {
+    const manageOnlyGuardian: parentMeContract.childGuardianResponse = {
       ...editableGuardian,
       guardian_profile_id: "11",
       student_guardian_id: "110",
@@ -849,7 +927,7 @@ describe("GuardiansPanel", () => {
   it("offers no edit affordance for a redacted account-holder guardian", async () => {
     // A guardian with their own account is redacted (no contact data) and
     // read-only to other parents — the row lists the name but no edit button.
-    const lockedGuardian: ChildGuardian = {
+    const lockedGuardian: parentMeContract.childGuardianResponse = {
       ...editableGuardian,
       guardian_profile_id: "8",
       student_guardian_id: "80",
@@ -1026,7 +1104,7 @@ describe("GuardiansPanel", () => {
   // #4780: eine Abholerlaubnis für bestimmte Wochentage geht unterschrieben an
   // die OGS. Ohne Unterschrift wird nichts gesendet.
   describe("Abholerlaubnis (#4780)", () => {
-    const contact: ChildGuardian = {
+    const contact: parentMeContract.childGuardianResponse = {
       ...editableGuardian,
       guardian_profile_id: "12",
       student_guardian_id: "120",
@@ -1235,7 +1313,7 @@ describe("GuardiansPanel", () => {
     )} ${SAVED_BUT_STALE_SUFFIX}`;
     const down = () =>
       new ApiError("down", 503, { code: "general.unavailable" });
-    const petra: RelatedAccount = {
+    const petra: parentMeContract.relatedAccountResponse = {
       guardian_profile_id: "24",
       first_name: "Petra",
       last_name: "Schulze",
@@ -1310,7 +1388,7 @@ describe("GuardiansPanel", () => {
     it.each(["newer contact", "access refusal"])(
       "ignores a superseded contact reload after %s",
       async (outcome) => {
-        const older = deferred<ChildGuardian[]>();
+        const older = deferred<parentMeContract.childGuardianResponse[]>();
         render(<GuardiansPanel studentId="42" canInvite canRemove />);
         fireEvent.click(
           await screen.findByRole("button", { name: "Bearbeiten" }),
@@ -1348,7 +1426,7 @@ describe("GuardiansPanel", () => {
     );
 
     it("ignores a post-save reload overtaken by an initial load that refuses access", async () => {
-      const older = deferred<ChildGuardian[]>();
+      const older = deferred<parentMeContract.childGuardianResponse[]>();
       const { rerender } = render(
         <GuardiansPanel studentId="42" canInvite canRemove />,
       );

@@ -12,6 +12,8 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -236,7 +238,7 @@ func (s *HolidayPeriodStore) withWeeks(ctx context.Context, db bun.IDB, organiza
 	models := map[int64][]enrollment.HolidayTimeModel{}
 	for _, row := range modelRows {
 		models[row.WeekID] = append(models[row.WeekID], enrollment.HolidayTimeModel{
-			ID: row.ID, Name: row.Name, StartsAt: row.StartsAt, EndsAt: row.EndsAt, PriceCents: row.PriceCents,
+			ID: ident.ID(row.ID), Name: row.Name, StartsAt: row.StartsAt, EndsAt: row.EndsAt, PriceCents: row.PriceCents,
 			Archived: row.Archived, Protected: row.Protected,
 		})
 	}
@@ -247,7 +249,7 @@ func (s *HolidayPeriodStore) withWeeks(ctx context.Context, db bun.IDB, organiza
 			timeModels = []enrollment.HolidayTimeModel{}
 		}
 		weeks[row.HolidayPeriodID] = append(weeks[row.HolidayPeriodID], enrollment.HolidayWeek{
-			ID: row.ID, StartsOn: row.StartsOn, EndsOn: row.EndsOn, HostSchoolID: row.HostSchoolID, TimeModels: timeModels,
+			ID: ident.ID(row.ID), StartsOn: row.StartsOn, EndsOn: row.EndsOn, HostSchoolID: ident.ID(row.HostSchoolID), TimeModels: timeModels,
 			Capacity: row.Capacity, BookingUnit: row.BookingUnit,
 			LunchPriceCents: row.LunchPriceCents, LunchBooked: row.LunchBooked,
 		})
@@ -258,15 +260,53 @@ func (s *HolidayPeriodStore) withWeeks(ctx context.Context, db bun.IDB, organiza
 			periodWeeks = []enrollment.HolidayWeek{}
 		}
 		periods = append(periods, enrollment.HolidayPeriod{
-			ID: row.ID, Name: row.Name, RegistrationOpensOn: row.RegistrationOpensOn,
+			ID: ident.ID(row.ID), Name: row.Name, RegistrationOpensOn: row.RegistrationOpensOn,
 			RegistrationClosesOn: row.RegistrationClosesOn, Binding: row.Binding, Notes: row.Notes, AcceptanceMailText: row.AcceptanceMailText, HolidayWishRule: row.HolidayWishRule,
 			Status: row.Status, PublishedAt: row.PublishedAt, UpdatedAt: row.UpdatedAt,
 			PublicToken: row.PublicToken, RegistrationCount: row.RegistrationCount, Weeks: periodWeeks,
 			MaxDaysPerChild: row.MaxDaysPerChild,
 			AllocationMode:  row.AllocationMode, AllocationModeLocked: row.RegistrationCount > 0,
 		})
+		periods[len(periods)-1].Version = holidayPeriodVersion(periods[len(periods)-1])
 	}
 	return periods, nil
+}
+
+// holidayPeriodVersion is the token of a period as the Büro edits it (ADR
+// 0311): its fields, its status and every week with its time models. What
+// parents and other routes change is left out: the registrations, the
+// places of a week (HolidayPlaces), the lunch and time models booked.
+func holidayPeriodVersion(period enrollment.HolidayPeriod) string {
+	type model struct {
+		ID                   int64
+		Name, StartsAt, Ends string
+		PriceCents           int
+		Archived             bool
+	}
+	type week struct {
+		ID, HostSchoolID int64
+		StartsOn, EndsOn calendar.Date
+		BookingUnit      string
+		LunchPriceCents  *int
+		Models           []model
+	}
+	weeks := make([]week, len(period.Weeks))
+	for i, w := range period.Weeks {
+		weeks[i] = week{ID: w.ID.Int64(), HostSchoolID: w.HostSchoolID.Int64(), StartsOn: w.StartsOn, EndsOn: w.EndsOn,
+			BookingUnit: w.BookingUnit, LunchPriceCents: w.LunchPriceCents, Models: make([]model, len(w.TimeModels))}
+		for j, m := range w.TimeModels {
+			weeks[i].Models[j] = model{m.ID.Int64(), m.Name, m.StartsAt, m.EndsAt, m.PriceCents, m.Archived}
+		}
+	}
+	return readstate.Fingerprint(struct {
+		Name, Notes, AcceptanceMailText, Status, AllocationMode string
+		RegistrationOpensOn, RegistrationClosesOn               calendar.Date
+		Binding, HolidayWishRule                                bool
+		MaxDaysPerChild                                         *int
+		Weeks                                                   []week
+	}{period.Name, period.Notes, period.AcceptanceMailText, period.Status, period.AllocationMode,
+		period.RegistrationOpensOn, period.RegistrationClosesOn, period.Binding, period.HolidayWishRule,
+		period.MaxDaysPerChild, weeks})
 }
 
 const insertHolidayPeriodQuery = `INSERT INTO enrollment.holiday_periods
@@ -410,7 +450,7 @@ func (s *HolidayPeriodStore) HolidayChildBookings(ctx context.Context, organizat
 			last = key
 		}
 		at := len(children) - 1
-		children[at] = append(children[at], enrollment.HolidayBookingInput{WeekID: row.WeekID, TimeModelID: row.TimeModelID, Days: days})
+		children[at] = append(children[at], enrollment.HolidayBookingInput{WeekID: ident.ID(row.WeekID), TimeModelID: ident.ID(row.TimeModelID), Days: days})
 	}
 	return children, nil
 }
@@ -489,7 +529,7 @@ func writeHolidayTimeModels(ctx context.Context, db bun.IDB, organizationID, wee
 	keep := make([]int64, 0, len(models))
 	for _, model := range models {
 		if model.ID != 0 {
-			keep = append(keep, model.ID)
+			keep = append(keep, model.ID.Int64())
 		}
 	}
 	if _, err := db.NewRaw(deleteHolidayTimeModelsQuery, organizationID, weekID, pgdialect.Array(keep)).Exec(ctx); err != nil {

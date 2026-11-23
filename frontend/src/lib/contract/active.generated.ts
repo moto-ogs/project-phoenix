@@ -4,8 +4,9 @@ import {
   arr,
   bool,
   instant,
-  int64StringOrNumber,
+  int64String,
   nullable,
+  num,
   object,
   optional,
   rec,
@@ -15,6 +16,112 @@ import {
   success,
 } from "./runtime";
 
+/** Go: presence.RecentActivityItem */
+export interface RecentActivityItem {
+  type: string;
+  group_name: string;
+  room_name: string;
+  count: number;
+  timestamp: string;
+}
+
+export const RecentActivityItemSchema: z.ZodType<RecentActivityItem, unknown> = object<RecentActivityItem>({
+  type: str,
+  group_name: str,
+  room_name: str,
+  count: safeInt,
+  timestamp: instant,
+});
+
+/** Go: presence.CurrentActivityItem */
+export interface CurrentActivityItem {
+  id: string;
+  name: string;
+  category: string;
+  participants: number;
+  max_capacity: number | null;
+  status: string;
+}
+
+export const CurrentActivityItemSchema: z.ZodType<CurrentActivityItem, unknown> = object<CurrentActivityItem>({
+  id: str,
+  name: str,
+  category: str,
+  participants: safeInt,
+  max_capacity: nullable(safeInt),
+  status: str,
+});
+
+/** Go: presence.ActiveGroupSummary */
+export interface ActiveGroupSummary {
+  name: string;
+  type: string;
+  student_count: number;
+  max_capacity?: number;
+  location: string;
+  status: string;
+}
+
+export const ActiveGroupSummarySchema: z.ZodType<ActiveGroupSummary, unknown> = object<ActiveGroupSummary>({
+  name: str,
+  type: str,
+  student_count: safeInt,
+  max_capacity: optional(safeInt),
+  location: str,
+  status: str,
+});
+
+/** Go: presence.DashboardAnalyticsResponse */
+export interface DashboardAnalyticsResponse {
+  students_present: number;
+  students_in_transit: number;
+  students_on_playground: number;
+  students_in_rooms: number;
+  students_sick: number;
+  students_excused: number;
+  students_home: number;
+  students_at_school: number;
+  students_in_class: number;
+  active_activities: number;
+  free_rooms: number;
+  total_rooms: number;
+  capacity_utilization: number;
+  activity_categories: number;
+  active_ogs_groups: number;
+  students_in_group_rooms: number;
+  supervisors_today: number;
+  students_in_home_room: number;
+  recent_activity: RecentActivityItem[] | null;
+  current_activities: CurrentActivityItem[] | null;
+  active_groups_summary: ActiveGroupSummary[] | null;
+  last_updated: string;
+}
+
+export const DashboardAnalyticsResponseSchema: z.ZodType<DashboardAnalyticsResponse, unknown> = object<DashboardAnalyticsResponse>({
+  students_present: safeInt,
+  students_in_transit: safeInt,
+  students_on_playground: safeInt,
+  students_in_rooms: safeInt,
+  students_sick: safeInt,
+  students_excused: safeInt,
+  students_home: safeInt,
+  students_at_school: safeInt,
+  students_in_class: safeInt,
+  active_activities: safeInt,
+  free_rooms: safeInt,
+  total_rooms: safeInt,
+  capacity_utilization: num,
+  activity_categories: safeInt,
+  active_ogs_groups: safeInt,
+  students_in_group_rooms: safeInt,
+  supervisors_today: safeInt,
+  students_in_home_room: safeInt,
+  recent_activity: nullable(arr(RecentActivityItemSchema)),
+  current_activities: nullable(arr(CurrentActivityItemSchema)),
+  active_groups_summary: nullable(arr(ActiveGroupSummarySchema)),
+  last_updated: instant,
+});
+
 /** Go: presence.GroupSupervisorSimple */
 export interface GroupSupervisorSimple {
   staff_id: string;
@@ -22,7 +129,7 @@ export interface GroupSupervisorSimple {
 }
 
 export const GroupSupervisorSimpleSchema: z.ZodType<GroupSupervisorSimple, unknown> = object<GroupSupervisorSimple>({
-  staff_id: int64StringOrNumber,
+  staff_id: int64String,
   role: optional(str),
 });
 
@@ -34,7 +141,7 @@ export interface RoomSimple {
 }
 
 export const RoomSimpleSchema: z.ZodType<RoomSimple, unknown> = object<RoomSimple>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   color: optional(str),
 });
@@ -56,9 +163,9 @@ export interface ActiveGroupResponse {
 }
 
 export const ActiveGroupResponseSchema: z.ZodType<ActiveGroupResponse, unknown> = object<ActiveGroupResponse>({
-  id: int64StringOrNumber,
-  group_id: nullable(int64StringOrNumber),
-  room_id: int64StringOrNumber,
+  id: int64String,
+  group_id: nullable(int64String),
+  room_id: int64String,
   start_time: instant,
   end_time: optional(instant),
   is_active: bool,
@@ -85,9 +192,9 @@ export interface SupervisorResponse {
 }
 
 export const SupervisorResponseSchema: z.ZodType<SupervisorResponse, unknown> = object<SupervisorResponse>({
-  id: int64StringOrNumber,
-  staff_id: int64StringOrNumber,
-  active_group_id: int64StringOrNumber,
+  id: int64String,
+  staff_id: int64String,
+  active_group_id: int64String,
   start_time: instant,
   end_time: optional(instant),
   is_active: bool,
@@ -106,8 +213,8 @@ export interface SupervisorInfoResponse {
 }
 
 export const SupervisorInfoResponseSchema: z.ZodType<SupervisorInfoResponse, unknown> = object<SupervisorInfoResponse>({
-  id: int64StringOrNumber,
-  staff_id: int64StringOrNumber,
+  id: int64String,
+  staff_id: int64String,
   name: str,
   is_current_user: bool,
 });
@@ -128,15 +235,626 @@ export interface SchulhofStatusResponse {
 
 export const SchulhofStatusResponseSchema: z.ZodType<SchulhofStatusResponse, unknown> = object<SchulhofStatusResponse>({
   exists: bool,
-  room_id: optional(int64StringOrNumber),
+  room_id: optional(int64String),
   room_name: str,
-  activity_group_id: optional(int64StringOrNumber),
-  active_group_id: optional(int64StringOrNumber),
+  activity_group_id: optional(int64String),
+  active_group_id: optional(int64String),
   is_user_supervising: bool,
-  supervision_id: optional(int64StringOrNumber),
+  supervision_id: optional(int64String),
   supervisor_count: safeInt,
   student_count: safeInt,
   supervisors: nullable(arr(SupervisorInfoResponseSchema)),
+});
+
+/** Go: supervisiondashboard.SpontaneousStartAvailability */
+export interface SpontaneousStartAvailability {
+  available: boolean;
+  blocked_reason?: string;
+}
+
+export const SpontaneousStartAvailabilitySchema: z.ZodType<SpontaneousStartAvailability, unknown> = object<SpontaneousStartAvailability>({
+  available: bool,
+  blocked_reason: optional(str),
+});
+
+/** Go: supervisiondashboard.SessionSupervisor */
+export interface SessionSupervisor {
+  staff_id: string;
+  name: string;
+}
+
+export const SessionSupervisorSchema: z.ZodType<SessionSupervisor, unknown> = object<SessionSupervisor>({
+  staff_id: int64String,
+  name: str,
+});
+
+/** Go: supervisiondashboard.DashboardGroup */
+export interface DashboardGroup {
+  id: string;
+  name: string;
+  room_id?: string;
+  room_name?: string;
+  room_color?: string;
+  is_current_user_supervising: boolean;
+  can_assign: boolean;
+  participant_limit?: number;
+  supervisors?: SessionSupervisor[];
+}
+
+export const DashboardGroupSchema: z.ZodType<DashboardGroup, unknown> = object<DashboardGroup>({
+  id: int64String,
+  name: str,
+  room_id: optional(int64String),
+  room_name: optional(str),
+  room_color: optional(str),
+  is_current_user_supervising: bool,
+  can_assign: bool,
+  participant_limit: optional(safeInt),
+  supervisors: optional(arr(SessionSupervisorSchema)),
+});
+
+/** Go: supervisiondashboard.UnclaimedGroup */
+export interface UnclaimedGroup {
+  id: string;
+  room_name?: string;
+}
+
+export const UnclaimedGroupSchema: z.ZodType<UnclaimedGroup, unknown> = object<UnclaimedGroup>({
+  id: int64String,
+  room_name: optional(str),
+});
+
+/** Go: supervisiondashboard.EducationalGroup */
+export interface EducationalGroup {
+  id: string;
+  name: string;
+  room_name?: string;
+}
+
+export const EducationalGroupSchema: z.ZodType<EducationalGroup, unknown> = object<EducationalGroup>({
+  id: int64String,
+  name: str,
+  room_name: optional(str),
+});
+
+/** Go: supervisiondashboard.Supervisor */
+export interface Supervisor {
+  id: string;
+  staff_id: string;
+  name: string;
+  is_current_user: boolean;
+}
+
+export const SupervisorSchema: z.ZodType<Supervisor, unknown> = object<Supervisor>({
+  id: int64String,
+  staff_id: int64String,
+  name: str,
+  is_current_user: bool,
+});
+
+/** Go: supervisiondashboard.SchulhofStatus */
+export interface SchulhofStatus {
+  exists: boolean;
+  room_id?: string;
+  room_name: string;
+  activity_group_id?: string;
+  active_group_id?: string;
+  is_user_supervising: boolean;
+  supervision_id?: string;
+  supervisor_count: number;
+  student_count: number;
+  supervisors: Supervisor[] | null;
+}
+
+export const SchulhofStatusSchema: z.ZodType<SchulhofStatus, unknown> = object<SchulhofStatus>({
+  exists: bool,
+  room_id: optional(int64String),
+  room_name: str,
+  activity_group_id: optional(int64String),
+  active_group_id: optional(int64String),
+  is_user_supervising: bool,
+  supervision_id: optional(int64String),
+  supervisor_count: safeInt,
+  student_count: safeInt,
+  supervisors: nullable(arr(SupervisorSchema)),
+});
+
+/** Go: supervisiondashboard.SupervisionClassHandover */
+export interface SupervisionClassHandover {
+  school_class: string;
+  handed_over_at: string;
+  handed_over_by?: string;
+  absent: boolean;
+}
+
+export const SupervisionClassHandoverSchema: z.ZodType<SupervisionClassHandover, unknown> = object<SupervisionClassHandover>({
+  school_class: str,
+  handed_over_at: instant,
+  handed_over_by: optional(str),
+  absent: bool,
+});
+
+/** Go: supervisiondashboard.OpenRoomStudent */
+export interface OpenRoomStudent {
+  student_id: string;
+  student_name: string;
+  school_class: string;
+  group_name: string;
+  active_group_id: string;
+  check_in_time: string;
+  actual_arrival_time?: string;
+  actual_pickup_time?: string;
+  sick: boolean;
+  sick_since?: string;
+  excused: boolean;
+  excused_since?: string;
+  photo_url?: string;
+  class_handover?: SupervisionClassHandover;
+  activity_name?: string;
+  independent: boolean;
+}
+
+export const OpenRoomStudentSchema: z.ZodType<OpenRoomStudent, unknown> = object<OpenRoomStudent>({
+  student_id: int64String,
+  student_name: str,
+  school_class: str,
+  group_name: str,
+  active_group_id: int64String,
+  check_in_time: instant,
+  actual_arrival_time: optional(str),
+  actual_pickup_time: optional(str),
+  sick: bool,
+  sick_since: optional(instant),
+  excused: bool,
+  excused_since: optional(instant),
+  photo_url: optional(str),
+  class_handover: optional(SupervisionClassHandoverSchema),
+  activity_name: optional(str),
+  independent: bool,
+});
+
+/** Go: supervisiondashboard.OpenRoomBlock */
+export interface OpenRoomBlock {
+  instance_id: string;
+  start_time: string;
+  end_time: string;
+  is_spontaneous: boolean;
+  is_user_assigned: boolean;
+  can_operate: boolean;
+}
+
+export const OpenRoomBlockSchema: z.ZodType<OpenRoomBlock, unknown> = object<OpenRoomBlock>({
+  instance_id: int64String,
+  start_time: str,
+  end_time: str,
+  is_spontaneous: bool,
+  is_user_assigned: bool,
+  can_operate: bool,
+});
+
+/** Go: supervisiondashboard.OpenRoomSession */
+export interface OpenRoomSession {
+  active_group_id: string;
+  title: string;
+  independent: boolean;
+  is_user_supervising: boolean;
+  can_assign: boolean;
+  student_count: number;
+  participant_limit?: number;
+  supervisors?: SessionSupervisor[];
+  block: OpenRoomBlock | null;
+}
+
+export const OpenRoomSessionSchema: z.ZodType<OpenRoomSession, unknown> = object<OpenRoomSession>({
+  active_group_id: int64String,
+  title: str,
+  independent: bool,
+  is_user_supervising: bool,
+  can_assign: bool,
+  student_count: safeInt,
+  participant_limit: optional(safeInt),
+  supervisors: optional(arr(SessionSupervisorSchema)),
+  block: nullable(OpenRoomBlockSchema),
+});
+
+/** Go: supervisiondashboard.OpenRoom */
+export interface OpenRoom {
+  room_id: string;
+  name: string;
+  is_user_supervising: boolean;
+  active_group_ids: string[] | null;
+  has_occupying_session: boolean;
+  student_count: number;
+  students: OpenRoomStudent[] | null;
+  sessions: OpenRoomSession[] | null;
+}
+
+export const OpenRoomSchema: z.ZodType<OpenRoom, unknown> = object<OpenRoom>({
+  room_id: int64String,
+  name: str,
+  is_user_supervising: bool,
+  active_group_ids: nullable(arr(str)),
+  has_occupying_session: bool,
+  student_count: safeInt,
+  students: nullable(arr(OpenRoomStudentSchema)),
+  sessions: nullable(arr(OpenRoomSessionSchema)),
+});
+
+/** Go: supervisiondashboard.Capabilities */
+export interface Capabilities {
+  web_spontaneous_activities_enabled: boolean;
+}
+
+export const CapabilitiesSchema: z.ZodType<Capabilities, unknown> = object<Capabilities>({
+  web_spontaneous_activities_enabled: bool,
+});
+
+/** Go: supervisiondashboard.ActiveSession */
+export interface ActiveSession {
+  active_group_id: string;
+  instance_id: string;
+  title: string;
+  start_time: string;
+  end_time: string;
+}
+
+export const ActiveSessionSchema: z.ZodType<ActiveSession, unknown> = object<ActiveSession>({
+  active_group_id: int64String,
+  instance_id: int64String,
+  title: str,
+  start_time: str,
+  end_time: str,
+});
+
+/** Go: supervisiondashboard.RosterWarning */
+export interface RosterWarning {
+  kind: string;
+  message: string;
+  expected_arrival?: string;
+  slot_start?: string;
+  expected_group_id?: string;
+  expected_group_name?: string;
+  current_education_group_id?: string;
+}
+
+export const RosterWarningSchema: z.ZodType<RosterWarning, unknown> = object<RosterWarning>({
+  kind: str,
+  message: str,
+  expected_arrival: optional(str),
+  slot_start: optional(str),
+  expected_group_id: optional(int64String),
+  expected_group_name: optional(str),
+  current_education_group_id: optional(int64String),
+});
+
+/** Go: supervisiondashboard.ParallelPresence */
+export interface ParallelPresence {
+  instance_id: string;
+  title: string;
+  start_time: string;
+  end_time: string;
+}
+
+export const ParallelPresenceSchema: z.ZodType<ParallelPresence, unknown> = object<ParallelPresence>({
+  instance_id: int64String,
+  title: str,
+  start_time: str,
+  end_time: str,
+});
+
+/** Go: supervisiondashboard.RosterRow */
+export interface RosterRow {
+  student_id: string;
+  student_name: string;
+  school_class: string;
+  group_name: string;
+  planned: boolean;
+  is_unplanned: boolean;
+  currently_present: boolean;
+  visit_id?: string;
+  status: string;
+  substatus?: string;
+  note?: string;
+  checked_in_at?: string;
+  checked_out_at?: string;
+  visit_entry_time?: string;
+  pickup_time: string | null;
+  warnings?: RosterWarning[];
+  parallel_present_in?: ParallelPresence;
+  care_day_status: string;
+  class_handover?: SupervisionClassHandover;
+}
+
+export const RosterRowSchema: z.ZodType<RosterRow, unknown> = object<RosterRow>({
+  student_id: int64String,
+  student_name: str,
+  school_class: str,
+  group_name: str,
+  planned: bool,
+  is_unplanned: bool,
+  currently_present: bool,
+  visit_id: optional(int64String),
+  status: str,
+  substatus: optional(str),
+  note: optional(str),
+  checked_in_at: optional(str),
+  checked_out_at: optional(str),
+  visit_entry_time: optional(str),
+  pickup_time: nullable(str),
+  warnings: optional(arr(RosterWarningSchema)),
+  parallel_present_in: optional(ParallelPresenceSchema),
+  care_day_status: str,
+  class_handover: optional(SupervisionClassHandoverSchema),
+});
+
+/** Go: supervisiondashboard.ConflictWarning */
+export interface ConflictWarning {
+  kind: string;
+  resource_id: string;
+  message: string;
+  can_override: boolean;
+  fingerprint?: string;
+  conflicting_instance_id?: string;
+  conflicting_title?: string;
+  overlap_start?: string;
+  overlap_end?: string;
+}
+
+export const ConflictWarningSchema: z.ZodType<ConflictWarning, unknown> = object<ConflictWarning>({
+  kind: str,
+  resource_id: int64String,
+  message: str,
+  can_override: bool,
+  fingerprint: optional(str),
+  conflicting_instance_id: optional(int64String),
+  conflicting_title: optional(str),
+  overlap_start: optional(str),
+  overlap_end: optional(str),
+});
+
+/** Go: supervisiondashboard.StaffName */
+export interface StaffName {
+  staff_id: string;
+  display_name: string;
+  is_substitute: boolean;
+}
+
+export const StaffNameSchema: z.ZodType<StaffName, unknown> = object<StaffName>({
+  staff_id: int64String,
+  display_name: str,
+  is_substitute: bool,
+});
+
+/** Go: supervisiondashboard.PlannedInstance */
+export interface PlannedInstance {
+  id: string;
+  title: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  room_id: string;
+  room_name?: string;
+  status: string;
+  is_overdue: boolean;
+  minutes_until_start: number;
+  expected_students_count: number;
+  present_students_count: number;
+  not_scheduled_students_count: number;
+  current_students_count: number;
+  planned_students_count: number;
+  is_spontaneous: boolean;
+  assigned_staff_ids: string[] | null;
+  is_assigned: boolean;
+  is_primary: boolean;
+  is_substitute: boolean;
+  is_absent: boolean;
+  roster_preview?: RosterRow[];
+  pickup_times_loaded: boolean;
+  pickup_times_redacted?: boolean;
+  warnings: ConflictWarning[] | null;
+  can_start: boolean;
+  start_available_at: string;
+  start_expires_at: string;
+  active_group_id?: string;
+  cancel_reason?: string;
+  planning_track_name?: string;
+  planning_track_color?: string;
+  group_name?: string;
+  staff_names?: StaffName[];
+}
+
+export const PlannedInstanceSchema: z.ZodType<PlannedInstance, unknown> = object<PlannedInstance>({
+  id: int64String,
+  title: str,
+  date: str,
+  start_time: str,
+  end_time: str,
+  room_id: int64String,
+  room_name: optional(str),
+  status: str,
+  is_overdue: bool,
+  minutes_until_start: safeInt,
+  expected_students_count: safeInt,
+  present_students_count: safeInt,
+  not_scheduled_students_count: safeInt,
+  current_students_count: safeInt,
+  planned_students_count: safeInt,
+  is_spontaneous: bool,
+  assigned_staff_ids: nullable(arr(int64String)),
+  is_assigned: bool,
+  is_primary: bool,
+  is_substitute: bool,
+  is_absent: bool,
+  roster_preview: optional(arr(RosterRowSchema)),
+  pickup_times_loaded: bool,
+  pickup_times_redacted: optional(bool),
+  warnings: nullable(arr(ConflictWarningSchema)),
+  can_start: bool,
+  start_available_at: str,
+  start_expires_at: str,
+  active_group_id: optional(int64String),
+  cancel_reason: optional(str),
+  planning_track_name: optional(str),
+  planning_track_color: optional(str),
+  group_name: optional(str),
+  staff_names: optional(arr(StaffNameSchema)),
+});
+
+/** Go: supervisiondashboard.Visit */
+export interface Visit {
+  student_id: string;
+  student_name: string;
+  school_class: string;
+  group_name: string;
+  active_group_id: string;
+  check_in_time: string;
+  actual_arrival_time?: string;
+  actual_pickup_time?: string;
+  sick: boolean;
+  sick_since?: string;
+  excused: boolean;
+  excused_since?: string;
+  photo_url?: string;
+  class_handover?: SupervisionClassHandover;
+}
+
+export const VisitSchema: z.ZodType<Visit, unknown> = object<Visit>({
+  student_id: int64String,
+  student_name: str,
+  school_class: str,
+  group_name: str,
+  active_group_id: int64String,
+  check_in_time: instant,
+  actual_arrival_time: optional(str),
+  actual_pickup_time: optional(str),
+  sick: bool,
+  sick_since: optional(instant),
+  excused: bool,
+  excused_since: optional(instant),
+  photo_url: optional(str),
+  class_handover: optional(SupervisionClassHandoverSchema),
+});
+
+/** Go: supervisiondashboard.DashboardTrackingIndicators */
+export interface DashboardTrackingIndicators {
+  labels: string[] | null;
+  results: Record<string, boolean[] | null> | null;
+}
+
+export const DashboardTrackingIndicatorsSchema: z.ZodType<DashboardTrackingIndicators, unknown> = object<DashboardTrackingIndicators>({
+  labels: nullable(arr(str)),
+  results: nullable(rec(nullable(arr(bool)))),
+});
+
+/** Go: supervisiondashboard.DashboardDayNote */
+export interface DashboardDayNote {
+  id: string;
+  content: string;
+}
+
+export const DashboardDayNoteSchema: z.ZodType<DashboardDayNote, unknown> = object<DashboardDayNote>({
+  id: int64String,
+  content: str,
+});
+
+/** Go: supervisiondashboard.DashboardPickupTime */
+export interface DashboardPickupTime {
+  student_id: string;
+  date: string;
+  weekday_name: string;
+  pickup_time?: string;
+  is_exception: boolean;
+  notes?: string;
+  day_notes?: DashboardDayNote[];
+  day_departure_mode?: string;
+}
+
+export const DashboardPickupTimeSchema: z.ZodType<DashboardPickupTime, unknown> = object<DashboardPickupTime>({
+  student_id: int64String,
+  date: str,
+  weekday_name: str,
+  pickup_time: optional(str),
+  is_exception: bool,
+  notes: optional(str),
+  day_notes: optional(arr(DashboardDayNoteSchema)),
+  day_departure_mode: optional(str),
+});
+
+/** Go: supervisiondashboard.ArrivalTime */
+export interface ArrivalTime {
+  student_id: string;
+  date: string;
+  weekday_name: string;
+  expected_arrival?: string;
+  is_exception: boolean;
+  notes?: string;
+  day_notes?: DashboardDayNote[];
+}
+
+export const ArrivalTimeSchema: z.ZodType<ArrivalTime, unknown> = object<ArrivalTime>({
+  student_id: int64String,
+  date: str,
+  weekday_name: str,
+  expected_arrival: optional(str),
+  is_exception: bool,
+  notes: optional(str),
+  day_notes: optional(arr(DashboardDayNoteSchema)),
+});
+
+/** Go: supervisiondashboard.SupervisionTeacherHint */
+export interface SupervisionTeacherHint {
+  student_id: string;
+  body: string;
+  author_name?: string;
+  school_class?: string;
+}
+
+export const SupervisionTeacherHintSchema: z.ZodType<SupervisionTeacherHint, unknown> = object<SupervisionTeacherHint>({
+  student_id: int64String,
+  body: str,
+  author_name: optional(str),
+  school_class: optional(str),
+});
+
+/** Go: supervisiondashboard.DashboardProjection */
+export interface DashboardProjection {
+  business_day: string;
+  spontaneous_start_availability: SpontaneousStartAvailability;
+  groups: DashboardGroup[] | null;
+  selected_group_id?: string;
+  unclaimed_groups: UnclaimedGroup[] | null;
+  current_staff_id?: string;
+  educational_groups: EducationalGroup[] | null;
+  schulhof_status: SchulhofStatus | null;
+  open_rooms: OpenRoom[] | null;
+  capabilities: Capabilities;
+  active_sessions: ActiveSession[] | null;
+  planned_now: PlannedInstance[] | null;
+  visits: Visit[] | null;
+  tracking_indicators: DashboardTrackingIndicators;
+  pickup_times: DashboardPickupTime[] | null;
+  arrival_times: ArrivalTime[] | null;
+  teacher_hints: SupervisionTeacherHint[] | null;
+}
+
+export const DashboardProjectionSchema: z.ZodType<DashboardProjection, unknown> = object<DashboardProjection>({
+  business_day: str,
+  spontaneous_start_availability: SpontaneousStartAvailabilitySchema,
+  groups: nullable(arr(DashboardGroupSchema)),
+  selected_group_id: optional(int64String),
+  unclaimed_groups: nullable(arr(UnclaimedGroupSchema)),
+  current_staff_id: optional(int64String),
+  educational_groups: nullable(arr(EducationalGroupSchema)),
+  schulhof_status: nullable(SchulhofStatusSchema),
+  open_rooms: nullable(arr(OpenRoomSchema)),
+  capabilities: CapabilitiesSchema,
+  active_sessions: nullable(arr(ActiveSessionSchema)),
+  planned_now: nullable(arr(PlannedInstanceSchema)),
+  visits: nullable(arr(VisitSchema)),
+  tracking_indicators: DashboardTrackingIndicatorsSchema,
+  pickup_times: nullable(arr(DashboardPickupTimeSchema)),
+  arrival_times: nullable(arr(ArrivalTimeSchema)),
+  teacher_hints: nullable(arr(SupervisionTeacherHintSchema)),
 });
 
 /** Go: presence.VisitResponse */
@@ -154,9 +872,9 @@ export interface VisitResponse {
 }
 
 export const VisitResponseSchema: z.ZodType<VisitResponse, unknown> = object<VisitResponse>({
-  id: int64StringOrNumber,
-  student_id: int64StringOrNumber,
-  active_group_id: int64StringOrNumber,
+  id: int64String,
+  student_id: int64String,
+  active_group_id: int64String,
   check_in_time: instant,
   check_out_time: optional(instant),
   is_active: bool,
@@ -179,19 +897,19 @@ export interface claimedSupervisionResponse {
 }
 
 export const claimedSupervisionResponseSchema: z.ZodType<claimedSupervisionResponse, unknown> = object<claimedSupervisionResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   created_at: instant,
   updated_at: instant,
-  tenant_id: int64StringOrNumber,
-  staff_id: int64StringOrNumber,
-  group_id: int64StringOrNumber,
+  tenant_id: int64String,
+  staff_id: int64String,
+  group_id: int64String,
   role: str,
   start_date: str,
 });
 
 /** Go: presence.TrackingIndicatorsRequest */
 export interface TrackingIndicatorsRequest {
-  student_ids?: number[] | null;
+  student_ids?: string[] | null;
 }
 
 /** Go: presence.TrackingIndicatorsResponse */
@@ -207,8 +925,8 @@ export const TrackingIndicatorsResponseSchema: z.ZodType<TrackingIndicatorsRespo
 
 /** Go: presence.checkInStudentsToSessionRequest */
 export interface checkInStudentsToSessionRequest {
-  student_ids?: number[] | null;
-  target_active_group_id?: number;
+  student_ids?: string[] | null;
+  target_active_group_id?: string;
   keep_present?: boolean;
 }
 
@@ -219,7 +937,7 @@ export interface StudentMoveSkipped {
 }
 
 export const StudentMoveSkippedSchema: z.ZodType<StudentMoveSkipped, unknown> = object<StudentMoveSkipped>({
-  student_id: int64StringOrNumber,
+  student_id: int64String,
   reason: str,
 });
 
@@ -234,37 +952,37 @@ export interface StudentMoveResult {
 }
 
 export const StudentMoveResultSchema: z.ZodType<StudentMoveResult, unknown> = object<StudentMoveResult>({
-  moved: nullable(arr(int64StringOrNumber)),
-  unchanged: nullable(arr(int64StringOrNumber)),
+  moved: nullable(arr(int64String)),
+  unchanged: nullable(arr(int64String)),
   skipped: nullable(arr(StudentMoveSkippedSchema)),
-  active_group_id: optional(int64StringOrNumber),
-  room_id: optional(int64StringOrNumber),
-  checked_in: optional(arr(int64StringOrNumber)),
+  active_group_id: optional(int64String),
+  room_id: optional(int64String),
+  checked_in: optional(arr(int64String)),
 });
 
 /** Go: openroommovehttp.checkInStudentsToOpenRoomRequest */
 export interface checkInStudentsToOpenRoomRequest {
-  student_ids?: number[] | null;
-  target_room_id?: number;
+  student_ids?: string[] | null;
+  target_room_id?: string;
   keep_present?: boolean;
 }
 
 /** Go: presence.moveStudentsToActiveGroupRequest */
 export interface moveStudentsToActiveGroupRequest {
-  student_ids?: number[] | null;
-  target_active_group_id?: number;
+  student_ids?: string[] | null;
+  target_active_group_id?: string;
 }
 
 /** Go: openroommovehttp.moveStudentsToOpenRoomRequest */
 export interface moveStudentsToOpenRoomRequest {
-  student_ids?: number[] | null;
-  target_room_id?: number;
+  student_ids?: string[] | null;
+  target_room_id?: string;
 }
 
 /** Go: presence.assignTransitStudentsRequest */
 export interface assignTransitStudentsRequest {
-  student_ids?: number[] | null;
-  active_group_id?: number;
+  student_ids?: string[] | null;
+  active_group_id?: string;
 }
 
 /** Go: studentpresence.TransitAssignSkipped */
@@ -274,7 +992,7 @@ export interface TransitAssignSkipped {
 }
 
 export const TransitAssignSkippedSchema: z.ZodType<TransitAssignSkipped, unknown> = object<TransitAssignSkipped>({
-  student_id: int64StringOrNumber,
+  student_id: int64String,
   reason: str,
 });
 
@@ -287,30 +1005,27 @@ export interface TransitAssignResult {
 }
 
 export const TransitAssignResultSchema: z.ZodType<TransitAssignResult, unknown> = object<TransitAssignResult>({
-  assigned: nullable(arr(int64StringOrNumber)),
+  assigned: nullable(arr(int64String)),
   skipped: nullable(arr(TransitAssignSkippedSchema)),
-  active_group_id: int64StringOrNumber,
-  room_id: int64StringOrNumber,
+  active_group_id: int64String,
+  room_id: int64String,
 });
 
-/** Query of GET /api/active/groups/ */
-export interface GetActiveGroupsQuery {
-  active?: string;
-  is_active?: string;
-}
-
-/** Query of GET /api/active/visits/ */
-export interface GetActiveVisitsQuery {
-  active?: string;
-  active_group_ids?: string;
-}
-
 export const routes = {
+  "GET /api/active/analytics/dashboard": {
+    method: "GET",
+    pattern: "/api/active/analytics/dashboard",
+    portals: ["tenant"],
+    response: success(DashboardAnalyticsResponseSchema),
+  },
   "GET /api/active/groups/": {
     method: "GET",
     pattern: "/api/active/groups/",
     portals: ["tenant"],
-    query: ["active", "is_active"],
+    query: {
+      "active": { kind: "bool" },
+      "is_active": { kind: "bool" },
+    },
     response: success(z.array(ActiveGroupResponseSchema)),
   },
   "GET /api/active/groups/{id}/supervisors": {
@@ -324,6 +1039,15 @@ export const routes = {
     pattern: "/api/active/schulhof/status",
     portals: ["tenant"],
     response: success(SchulhofStatusResponseSchema),
+  },
+  "GET /api/active/supervision-dashboard": {
+    method: "GET",
+    pattern: "/api/active/supervision-dashboard",
+    portals: ["tenant"],
+    query: {
+      "group_id": { kind: "id" },
+    },
+    response: success(DashboardProjectionSchema),
   },
   "GET /api/active/supervisors/all": {
     method: "GET",
@@ -341,7 +1065,10 @@ export const routes = {
     method: "GET",
     pattern: "/api/active/visits/",
     portals: ["tenant"],
-    query: ["active", "active_group_ids"],
+    query: {
+      "active": { kind: "bool" },
+      "active_group_ids": { kind: "string" },
+    },
     response: success(z.array(VisitResponseSchema)),
   },
   "POST /api/active/groups/{id}/claim": {

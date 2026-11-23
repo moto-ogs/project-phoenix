@@ -13,6 +13,8 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // The rule chain of the monthly contribution (#4685, 1.15.807): the care
@@ -32,12 +34,13 @@ const (
 func newCareRuleRow(organizationID int64, input parentbilling.CareRuleInput) *ruleRow {
 	return &ruleRow{
 		OrganizationID: organizationID, Service: parentbilling.ServiceCare, Kind: input.Kind, Name: input.Name,
-		ValidFrom: input.ValidFrom, ValidUntil: input.ValidUntil, SchoolIDs: idsOrEmpty(input.SchoolIDs),
-		CareOfferingIDs: idsOrEmpty(input.CareOfferingIDs), CountSchoolIDs: idsOrEmpty(input.CountSchoolIDs),
+		ValidFrom: input.ValidFrom, ValidUntil: input.ValidUntil, SchoolIDs: idsOrEmpty(ident.Int64s(input.SchoolIDs)),
+		CareOfferingIDs: idsOrEmpty(ident.Int64s(input.CareOfferingIDs)), CountSchoolIDs: idsOrEmpty(ident.Int64s(input.CountSchoolIDs)),
 		SiblingFromChild: input.SiblingFromChild, DiscountBasisPoints: input.DiscountBasisPoints,
 		DiscountCents: input.DiscountCents, PriceCents: input.PriceCents, CapCents: input.CapCents,
 		TariffSiblingPrice:   input.TariffSiblingPrice,
 		CountsFamilyChildren: input.CountsFamilyChildren,
+		SiblingAllChildren:   input.SiblingAllChildren,
 	}
 }
 
@@ -59,6 +62,7 @@ var careRuleColumns = []string{
 	"sibling_from_child", "discount_basis_points", "discount_cents", "price_cents", "cap_cents",
 	"tariff_sibling_price",
 	"counts_family_children",
+	"sibling_all_children",
 }
 
 // UpdateCareRule replaces a care rule of the Träger. A holiday rule is no
@@ -138,15 +142,20 @@ type careEvidenceRow struct {
 }
 
 func (r careEvidenceRow) evidence() parentbilling.CareEvidence {
-	return parentbilling.CareEvidence{
-		ID: r.ID, ContractID: r.CareContractID, Kind: r.Kind, RuleID: r.RuleID, ValidFrom: r.ValidFrom,
+	evidence := parentbilling.CareEvidence{
+		ID: ident.ID(r.ID), ContractID: ident.ID(r.CareContractID), Kind: r.Kind, RuleID: (*ident.ID)(r.RuleID), ValidFrom: r.ValidFrom,
 		ValidUntil: r.ValidUntil, Evidence: r.Evidence, CheckedOn: r.CheckedOn, UpdatedAt: r.UpdatedAt,
 	}
+	// The stored evidence as the form shows it: updated_at has no trigger
+	// and takes the clock of the writer (ADR 0311).
+	evidence.Version = readstate.Fingerprint(parentbilling.CareEvidenceInput{ContractID: evidence.ContractID, Kind: r.Kind,
+		RuleID: evidence.RuleID, ValidFrom: r.ValidFrom, ValidUntil: r.ValidUntil, Evidence: r.Evidence, CheckedOn: r.CheckedOn})
+	return evidence
 }
 
 func newCareEvidenceRow(organizationID, accountID int64, input parentbilling.CareEvidenceInput) *careEvidenceRow {
 	return &careEvidenceRow{
-		OrganizationID: organizationID, CareContractID: input.ContractID, Kind: input.Kind, RuleID: input.RuleID,
+		OrganizationID: organizationID, CareContractID: input.ContractID.Int64(), Kind: input.Kind, RuleID: (*int64)(input.RuleID),
 		ValidFrom: input.ValidFrom, ValidUntil: input.ValidUntil, Evidence: input.Evidence, CheckedOn: input.CheckedOn,
 		RecordedByAccountID: &accountID,
 	}
@@ -293,6 +302,7 @@ type careInvoiceReductionRow struct {
 	PriceCents          *int64  `bun:"price_cents"`
 	CapCents            *int64  `bun:"cap_cents"`
 	TariffSiblingPrice  bool    `bun:"tariff_sibling_price"`
+	SiblingAllChildren  bool    `bun:"sibling_all_children"`
 	CareOfferingIDs     []int64 `bun:"care_offering_ids,array"`
 	AmountCents         int64   `bun:"amount_cents"`
 }
@@ -305,10 +315,10 @@ func insertCareReductions(ctx context.Context, db bun.IDB, organizationID int64,
 		for j, reduction := range invoice.Reductions {
 			reductions = append(reductions, careInvoiceReductionRow{
 				OrganizationID: organizationID, InvoiceID: rows[i].ID, Position: j + 1, Kind: reduction.Kind,
-				RuleID: reduction.RuleID, Name: reduction.Name, ChildRank: reduction.ChildRank,
+				RuleID: reduction.RuleID.Int64(), Name: reduction.Name, ChildRank: reduction.ChildRank,
 				FamilyChildren: reduction.FamilyChildren, DiscountBasisPoints: reduction.DiscountBasisPoints,
 				DiscountCents: reduction.DiscountCents, PriceCents: reduction.PriceCents, CapCents: reduction.CapCents,
-				TariffSiblingPrice: reduction.TariffSiblingPrice, CareOfferingIDs: idsOrEmpty(reduction.CareOfferingIDs), AmountCents: reduction.AmountCents,
+				TariffSiblingPrice: reduction.TariffSiblingPrice, SiblingAllChildren: reduction.SiblingAllChildren, CareOfferingIDs: idsOrEmpty(ident.Int64s(reduction.CareOfferingIDs)), AmountCents: reduction.AmountCents,
 			})
 		}
 	}
@@ -332,9 +342,9 @@ func careReductionsOf(ctx context.Context, db bun.IDB, organizationID int64, inv
 	byInvoice := map[int64][]parentbilling.CareReduction{}
 	for _, row := range rows {
 		byInvoice[row.InvoiceID] = append(byInvoice[row.InvoiceID], parentbilling.CareReduction{
-			Kind: row.Kind, RuleID: row.RuleID, Name: row.Name, ChildRank: row.ChildRank, FamilyChildren: row.FamilyChildren,
+			Kind: row.Kind, RuleID: ident.ID(row.RuleID), Name: row.Name, ChildRank: row.ChildRank, FamilyChildren: row.FamilyChildren,
 			DiscountBasisPoints: row.DiscountBasisPoints, DiscountCents: row.DiscountCents, PriceCents: row.PriceCents,
-			CapCents: row.CapCents, TariffSiblingPrice: row.TariffSiblingPrice, CareOfferingIDs: idsOrEmpty(row.CareOfferingIDs), AmountCents: row.AmountCents,
+			CapCents: row.CapCents, TariffSiblingPrice: row.TariffSiblingPrice, SiblingAllChildren: row.SiblingAllChildren, CareOfferingIDs: ident.IDs(idsOrEmpty(row.CareOfferingIDs)), AmountCents: row.AmountCents,
 		})
 	}
 	return byInvoice, nil

@@ -30,16 +30,16 @@ func TestEmptyCareRunIsDiscardedAndFreesItsMonth(t *testing.T) {
 	t.Parallel()
 	f := newCareBillingFixture(t, "Träger leerer Monatslauf")
 	run := f.startRun(t, careMonth)
-	require.Empty(t, f.run(t, run.ID).Invoices)
+	require.Empty(t, f.run(t, int64(run.ID)).Invoices)
 
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/discard"), nil)
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/discard"), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	discarded := decodeSchoolPortalData[discardedRunBody](t, rec.Body.Bytes())
 	assert.Equal(t, "discarded", discarded.Status)
 	require.NotNil(t, discarded.DiscardedAt, "the run names when it was discarded")
 	assert.NotNil(t, discarded.Invoices, "a discarded run shows an empty list, never null")
 	assert.Empty(t, discarded.Invoices)
-	assert.Equal(t, "discarded", f.run(t, run.ID).Status, "the run stays, nothing is deleted")
+	assert.Equal(t, "discarded", f.run(t, int64(run.ID)).Status, "the run stays, nothing is deleted")
 
 	var actor *int64
 	require.NoError(t, f.db.NewRaw(`SELECT actor_account_id FROM parent_billing.care_run_events
@@ -50,9 +50,9 @@ func TestEmptyCareRunIsDiscardedAndFreesItsMonth(t *testing.T) {
 		method, path string
 		body         map[string]any
 	}{
-		{http.MethodPost, careRunPath(run.ID, "/discard"), nil},
-		{http.MethodPost, careRunPath(run.ID, "/release"), map[string]any{"document_count": 0, "total_cents": 0, "fingerprint": "x"}},
-		{http.MethodPut, careRunPath(run.ID, "/invoice-date"), map[string]any{"invoice_date": "2030-01-30"}},
+		{http.MethodPost, careRunPath(int64(run.ID), "/discard"), nil},
+		{http.MethodPost, careRunPath(int64(run.ID), "/release"), map[string]any{"document_count": 0, "total_cents": 0, "fingerprint": "x"}},
+		{http.MethodPut, careRunPath(int64(run.ID), "/invoice-date"), map[string]any{"invoice_date": "2030-01-30"}},
 	} {
 		rec := traegerJSON(t, f.traeger, f.office.token, change.method, change.path, change.body)
 		assert.Equal(t, http.StatusConflict, rec.Code, "%s %s: %s", change.method, change.path, rec.Body.String())
@@ -74,20 +74,20 @@ func TestCareRunWithContentIsNeverDiscarded(t *testing.T) {
 	run := f.startRun(t, careMonth)
 	refused := func(why string) {
 		t.Helper()
-		code, body := f.discardRun(t, careRunPath(run.ID, "/discard"))
+		code, body := f.discardRun(t, careRunPath(int64(run.ID), "/discard"))
 		assert.Equal(t, http.StatusConflict, code, "%s: %s", why, body)
 		assert.Contains(t, body, "parent_billing.billing_run_not_empty", why)
-		assert.Equal(t, "calculated", f.run(t, run.ID).Status, why)
+		assert.Equal(t, "calculated", f.run(t, int64(run.ID)).Status, why)
 	}
-	require.NotEmpty(t, f.run(t, run.ID).Unpriced)
+	require.NotEmpty(t, f.run(t, int64(run.ID)).Unpriced)
 	refused("a booking without a price waits for its price")
 
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	require.Len(t, f.run(t, run.ID).Invoices, 1)
+	require.Len(t, f.run(t, int64(run.ID)).Invoices, 1)
 	refused("an invoice")
 
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/exclusions"),
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/exclusions"),
 		map[string]any{"contract_id": mia, "service": "care", "reason": "Rückfrage"})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	refused("an excluded invoice is content the release closes")
@@ -100,10 +100,10 @@ func TestCareRunDiscardWaitsForAChangeOfTheMonthlyBilling(t *testing.T) {
 	t.Parallel()
 	f := newCareBillingFixture(t, "Träger Verwerfen wartet")
 	school := f.office.schools[0]
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	run := f.startRun(t, careMonth)
-	require.Empty(t, f.run(t, run.ID).Invoices)
+	require.Empty(t, f.run(t, int64(run.ID)).Invoices)
 
 	change := holdCareBilling(t, f.db, f.office.organization)
 	careContract(t, change, f.office.organization, school, "Mia", careMonth, sjrServices()...)
@@ -113,14 +113,14 @@ func TestCareRunDiscardWaitsForAChangeOfTheMonthlyBilling(t *testing.T) {
 	var body string
 	go func() {
 		defer close(done)
-		code, body = f.discardRun(t, careRunPath(run.ID, "/discard"))
+		code, body = f.discardRun(t, careRunPath(int64(run.ID), "/discard"))
 	}()
 	waitForCareBilling(t, f.db, f.office.organization, done)
 	require.NoError(t, change.Commit())
 	<-done
 	assert.Equal(t, http.StatusConflict, code, body)
 	assert.Contains(t, body, "parent_billing.billing_run_not_empty")
-	assert.Equal(t, "calculated", f.run(t, run.ID).Status)
+	assert.Equal(t, "calculated", f.run(t, int64(run.ID)).Status)
 }
 
 func TestCareRunDiscardedTwiceAtOnceIsDiscardedOnce(t *testing.T) {
@@ -133,7 +133,7 @@ func TestCareRunDiscardedTwiceAtOnceIsDiscardedOnce(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			codes[i], _ = f.discardRun(t, careRunPath(run.ID, "/discard"))
+			codes[i], _ = f.discardRun(t, careRunPath(int64(run.ID), "/discard"))
 		}()
 	}
 	wg.Wait()
@@ -152,27 +152,27 @@ func TestEmptyNoticeRunIsDiscardedAndFreesTheYear(t *testing.T) {
 	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunsPath,
 		map[string]any{"year": 2030, "from_month": "2030-09-01", "school_ids": []int64{f.office.schools[1]}})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-	empty := f.noticeRun(t, decodeSchoolPortalData[careNoticeRunBody](t, rec.Body.Bytes()).ID)
+	empty := f.noticeRun(t, int64(decodeSchoolPortalData[careNoticeRunBody](t, rec.Body.Bytes()).ID))
 	require.Zero(t, empty.PreviewCount)
 
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(empty.ID, "/discard"), nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(int64(empty.ID), "/discard"), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, "discarded", decodeSchoolPortalData[careNoticeRunBody](t, rec.Body.Bytes()).Status)
 	var actor *int64
 	require.NoError(t, f.db.NewRaw(`SELECT actor_account_id FROM parent_billing.care_notice_run_events
 		WHERE run_id = ? AND action = 'discard'`, empty.ID).Scan(context.Background(), &actor))
 	assert.NotNil(t, actor, "the trail names who discarded the run")
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(empty.ID, "/release"), careNoticeRelease(empty))
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careNoticeRunPath(int64(empty.ID), "/release"), careNoticeRelease(empty))
 	assert.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "parent_billing.billing_run_discarded")
 	_, err := f.db.ExecContext(context.Background(),
 		`UPDATE parent_billing.care_notice_runs SET status = 'calculated', discarded_at = NULL WHERE id = ?`, empty.ID)
 	assert.Error(t, err, "the trigger keeps a discarded notice run as it is")
 
-	full := f.noticeRun(t, f.startNoticeRun(t, "2030-09-01", "").ID)
+	full := f.noticeRun(t, int64(f.startNoticeRun(t, "2030-09-01", "").ID))
 	require.Len(t, full.Notices, 1, "the year is free for a new run")
-	code, body := f.discardRun(t, careNoticeRunPath(full.ID, "/discard"))
+	code, body := f.discardRun(t, careNoticeRunPath(int64(full.ID), "/discard"))
 	assert.Equal(t, http.StatusConflict, code, body)
 	assert.Contains(t, body, "parent_billing.billing_run_not_empty")
-	assert.Equal(t, "calculated", f.noticeRun(t, full.ID).Status)
+	assert.Equal(t, "calculated", f.noticeRun(t, int64(full.ID)).Status)
 }

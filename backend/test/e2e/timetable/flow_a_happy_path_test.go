@@ -84,9 +84,9 @@ func TestFlowA_PlanToReport(t *testing.T) {
 	require.Equal(t, http.StatusOK, rr.Code, "start body=%s", rr.Body.String())
 
 	var startResp struct {
-		InstanceID    int64             `json:"instance_id"`
+		InstanceID    testpkg.ID        `json:"instance_id"`
 		Status        string            `json:"status"`
-		ActiveGroupID int64             `json:"active_group_id"`
+		ActiveGroupID testpkg.ID        `json:"active_group_id"`
 		Warnings      []json.RawMessage `json:"warnings"`
 	}
 	decodeResponse(t, rr, &startResp)
@@ -101,8 +101,8 @@ func TestFlowA_PlanToReport(t *testing.T) {
 	// Materialize a web-manual device so the visits have a deviceID to be
 	// attributed to, matching what the web check-in path does.
 	kiosk := testutil.WithDeviceActor(s.tenantCtx(), testpkg.EnsureWebManualDevice(t, s.db), staff1.ID)
-	checkInStudent(kiosk, t, s, student1.ID, startResp.ActiveGroupID)
-	checkInStudent(kiosk, t, s, student2.ID, startResp.ActiveGroupID)
+	checkInStudent(kiosk, t, s, student1.ID, int64(startResp.ActiveGroupID))
+	checkInStudent(kiosk, t, s, student2.ID, int64(startResp.ActiveGroupID))
 
 	// --- Step 5: assert attendance sync flipped instance_students ----------
 	instStudents = fetchInstanceStudents(t, s, instance.ID)
@@ -124,9 +124,9 @@ func TestFlowA_PlanToReport(t *testing.T) {
 	require.Equal(t, http.StatusOK, rr.Code, "complete body=%s", rr.Body.String())
 
 	var completeResp struct {
-		InstanceID  int64  `json:"instance_id"`
-		Status      string `json:"status"`
-		CompletedAt string `json:"completed_at"`
+		InstanceID  testpkg.ID `json:"instance_id"`
+		Status      string     `json:"status"`
+		CompletedAt string     `json:"completed_at"`
 	}
 	decodeResponse(t, rr, &completeResp)
 	assert.Equal(t, testpkg.ScheduleInstanceStatusCompleted, completeResp.Status)
@@ -153,9 +153,9 @@ func TestFlowA_PlanToReport(t *testing.T) {
 			"/student/%d/day body=%s", studentID, rr.Body.String())
 
 		var dayResp struct {
-			StudentID int64 `json:"student_id"`
+			StudentID testpkg.ID `json:"student_id"`
 			Instances []struct {
-				ID         int64 `json:"id"`
+				ID         testpkg.ID `json:"id"`
 				Status     string
 				Attendance struct {
 					Status      string
@@ -166,7 +166,7 @@ func TestFlowA_PlanToReport(t *testing.T) {
 		decodeResponse(t, rr, &dayResp)
 		require.Len(t, dayResp.Instances, 1, "student %d day: exactly one instance", studentID)
 		entry := dayResp.Instances[0]
-		assert.Equal(t, instance.ID, entry.ID)
+		assert.Equal(t, instance.ID, int64(entry.ID))
 		assert.Equal(t, testpkg.ScheduleInstanceStatusCompleted, entry.Status)
 		assert.False(t, entry.Attendance.IsUnplanned)
 

@@ -39,7 +39,7 @@ vi.stubGlobal("fetch", mockFetch);
 vi.mock("~/lib/tenant-resolve.server", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/tenant-resolve.server")>()),
   resolveTenantCached: async (slug: string) => ({
-    tenant_id: slug === "schule-b" ? 8 : 7,
+    tenant_id: slug === "schule-b" ? "8" : "7",
   }),
 }));
 
@@ -47,12 +47,12 @@ const PRIVATE_NO_STORE = "private, no-store";
 
 type Route = (
   request: NextRequest,
-  context: { params: Promise<Record<string, string>> },
+  context: { params: Promise<Record<string, string | string[]>> },
 ) => Promise<Response>;
 
 // On the subdomain of the session's own school (7), so the tenant wrapper's
 // school check (#5130) lets the request through to the cache policy.
-function call(route: Route, params: Record<string, string> = {}) {
+function call(route: Route, params: Record<string, string | string[]> = {}) {
   return route(
     new NextRequest("http://schule-a.localhost:3000/api/example", {
       headers: { host: "schule-a.localhost:3000" },
@@ -127,19 +127,12 @@ const routes: Array<[string, () => Promise<Route>]> = [
     },
   ],
   [
-    "public pass-through (token routes)",
-    async () =>
-      (await import("~/lib/backend-proxy-route.server")).createPublicJsonProxy({
-        method: "GET",
-        path: "/api/x",
-      }),
-  ],
-  [
     "public login step",
     async () =>
       (await import("~/lib/auth-proxy.server")).authStepProxy(
-        "/api/x",
-        "optional-json",
+        (await import("~/lib/contract/auth-mfa.generated")).routes[
+          "POST /auth/mfa/resend"
+        ],
       ) as Route,
   ],
 ];
@@ -156,9 +149,14 @@ afterEach(() => {
 });
 
 describe("portal route wrappers send private, no-store", () => {
-  it.each(routes)("%s: JSON success", async (_portal, load) => {
+  it.each(routes)("%s: JSON success", async (portal, load) => {
     mockFetch.mockResolvedValue(
-      backendJson(200, { status: "success", data: { id: 1 } }),
+      backendJson(
+        200,
+        portal === "public login step"
+          ? { challenge_token: "challenge" }
+          : { status: "success", data: { id: 1 } },
+      ),
     );
 
     const response = await call(await load());
@@ -179,6 +177,41 @@ describe("portal route wrappers send private, no-store", () => {
     const response = await call(await load());
 
     expect(response.status).toBe(404);
+    expect(response.headers.get("Cache-Control")).toBe(PRIVATE_NO_STORE);
+  });
+});
+
+describe("the Träger portal's catalog proxy sends private, no-store", () => {
+  it("also on an answer outside the contract (502)", async () => {
+    // Formerly asserted for the hand-off file
+    // traeger/billing-families/debtor-number-format, which wrapped itself;
+    // the catch-all serves the path now (#2352).
+    mockFetch.mockResolvedValue(
+      backendJson(200, {
+        status: "success",
+        data: {
+          digits_only: true,
+          min_digits: "4",
+          max_digits: 10,
+          scope: "payer",
+        },
+      }),
+    );
+    const { portalRoutes } = await import("~/lib/contract/portals.generated");
+    const { catalogProxy } = await import("~/lib/traeger/route-wrapper.server");
+
+    const response = await catalogProxy(portalRoutes.org, "GET")(
+      new NextRequest(
+        "http://localhost:3000/api/traeger/billing-families/debtor-number-format",
+      ),
+      {
+        params: Promise.resolve({
+          path: ["billing-families", "debtor-number-format"],
+        }),
+      },
+    );
+
+    expect(response.status).toBe(502);
     expect(response.headers.get("Cache-Control")).toBe(PRIVATE_NO_STORE);
   });
 });
@@ -261,15 +294,24 @@ describe("tenant routes on a school subdomain (#5130)", () => {
 });
 
 describe("file and stream routes keep their own headers", () => {
-  it("serves a staff avatar with its image cache policy", async () => {
+  it("serves a staff avatar with the backend's private image cache policy", async () => {
     mockFetch.mockResolvedValue(
       new Response(new Uint8Array([1, 2, 3]), {
-        headers: { "Content-Type": "image/png" },
+        headers: {
+          "Content-Type": "image/png",
+          "Cache-Control": "private, max-age=300",
+        },
       }),
     );
-    const { GET } = await import("~/app/api/staff/[id]/avatar/route");
+    // The catalog proxy serves it; the contract marks it `privateCache`.
+    const { GET } = await import("~/app/api/[...path]/route");
 
-    const response = await call(GET as Route, { id: "5" });
+    const response = await call(
+      GET as Route,
+      {
+        path: ["staff", "5", "avatar"],
+      } as unknown as Record<string, string>,
+    );
 
     expect(response.headers.get("Content-Type")).toBe("image/png");
     expect(response.headers.get("Cache-Control")).toBe("private, max-age=300");
@@ -284,10 +326,12 @@ describe("file and stream routes keep their own headers", () => {
         },
       }),
     );
-    const { GET } =
-      await import("~/app/api/students/[id]/documents/[documentId]/download/route");
+    // The download streams through the portal's catalog proxy (#2352).
+    const { GET } = await import("~/app/api/[...path]/route");
 
-    const response = await call(GET as Route, { id: "5", documentId: "9" });
+    const response = await call(GET as Route, {
+      path: ["students", "5", "documents", "9", "download"],
+    });
 
     expect(response.headers.get("Content-Type")).toBe("application/pdf");
     expect(response.headers.get("Content-Disposition")).toBe(

@@ -95,28 +95,38 @@ func NewSettingsResource(cfg SettingsConfig) *SettingsResource {
 }
 
 type setSchoolSettingRequest struct {
-	Value any `json:"value"`
+	Value any `json:"value" contract_json:"The route's setting key selects the value type in the settings registry"`
 }
 
 // revealedSettingValue is the unmasked value of a password or PIN setting.
 type revealedSettingValue struct {
-	Value any `json:"value"`
+	Value any `json:"value" contract_json:"The revealed setting's registered kind determines its value type"`
 }
 
-// requiresPhotoMutationResponse gates which keys carry a body in set/reset
-// responses (vs. an empty 204 / generic 200). Today only the photo-feature
-// flag needs the slug for cache busting; other settings stay on the
-// development-era empty-body response.
+// requiresPhotoMutationResponse gates which keys name the school slug in
+// the set/reset answer. Today only the photo-feature flag needs the slug for
+// cache busting.
 func requiresPhotoMutationResponse(key string) bool {
 	return key == settings.KeyStudentPhotosEnabled
 }
 
-// schoolSettingMutationResponse carries the school slug back to the frontend
-// so the operator proxy can bust the `tenant-${slug}` Next.js cache. The
-// slug is omitted when the lookup fails (the mutation already committed by
-// then — failing the response would lie about the underlying state).
+// schoolSettingMutationResponse is the answer of a set or reset: one shape
+// for every key (#7808). It carries the school slug back to the frontend
+// for the photo-feature flag so the operator proxy can bust the
+// `tenant-${slug}` Next.js cache. The slug is omitted for every other key
+// and when the lookup fails (the mutation already committed by then —
+// failing the response would lie about the underlying state).
 type schoolSettingMutationResponse struct {
 	SchoolSlug string `json:"school_slug,omitempty"`
+}
+
+// mutationResponse answers a set or reset of key; only the photo-feature
+// flag names the slug.
+func (rs *SettingsResource) mutationResponse(ctx context.Context, schoolID int64, key string) schoolSettingMutationResponse {
+	if !requiresPhotoMutationResponse(key) {
+		return schoolSettingMutationResponse{}
+	}
+	return schoolSettingMutationResponse{SchoolSlug: rs.resolveSchoolSlug(ctx, schoolID)}
 }
 
 // resolveSchoolSlug fetches the school's slug for inclusion in the mutation
@@ -199,13 +209,7 @@ func (rs *SettingsResource) SetSchoolSettingValue(w http.ResponseWriter, r *http
 		return
 	}
 
-	if !requiresPhotoMutationResponse(key) {
-		common.Respond(w, r, http.StatusOK, nil, "Value updated successfully")
-		return
-	}
-
-	resp := schoolSettingMutationResponse{SchoolSlug: rs.resolveSchoolSlug(r.Context(), schoolID)}
-	common.Respond(w, r, http.StatusOK, resp, "Value updated successfully")
+	common.Respond(w, r, http.StatusOK, rs.mutationResponse(r.Context(), schoolID, key), "Value updated successfully")
 }
 
 // ResetSchoolSettingValue resets a setting value for a specific school to its default.
@@ -229,15 +233,7 @@ func (rs *SettingsResource) ResetSchoolSettingValue(w http.ResponseWriter, r *ht
 		return
 	}
 
-	if !requiresPhotoMutationResponse(key) {
-		common.RespondNoContent(w, r)
-		return
-	}
-
-	// Photo reset returns a body so the proxy can read the slug and bust
-	// the tenant-resolve cache immediately.
-	resp := schoolSettingMutationResponse{SchoolSlug: rs.resolveSchoolSlug(r.Context(), schoolID)}
-	common.Respond(w, r, http.StatusOK, resp, "Value reset successfully")
+	common.Respond(w, r, http.StatusOK, rs.mutationResponse(r.Context(), schoolID, key), "Value reset successfully")
 }
 
 // RevealSchoolSettingValue reveals the unmasked value of a password/PIN setting for a school.

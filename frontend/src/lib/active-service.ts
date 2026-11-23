@@ -1,13 +1,7 @@
 // lib/active-service.ts
-import { hasSessionAccess } from "./session-access";
-import { getCachedSession, sessionFetch } from "./session-cache";
-import api from "./api";
+import { ApiError } from "~/lib/api-error";
+import { bffJson } from "~/lib/bff-fetch";
 import { createLogger } from "~/lib/logger";
-import {
-  apiErrorFromBody,
-  transportFetch,
-  type ApiError,
-} from "~/lib/api-error";
 
 const logger = createLogger({ component: "ActiveService" });
 import {
@@ -19,46 +13,42 @@ import {
   type Visit,
   type Supervisor,
   type SchulhofStatus,
-  type BackendActiveGroup,
-  type BackendVisit,
-  type BackendSupervisor,
-  type BackendSchulhofStatus,
   type TrackingIndicatorsResponse,
 } from "./active-helpers";
+import type * as active from "./contract/active.generated";
 
-// Generic API response interface
-interface ApiResponse<T> {
-  data: T;
-  message?: string;
-  status?: string;
+/** The decoded result with its lists present; Go always sends them (#2353). */
+type WithLists<T, K extends keyof T> = Omit<T, K> & {
+  [P in K]-?: NonNullable<T[P]>;
+};
+
+type TransitAssignResult = WithLists<
+  active.TransitAssignResult,
+  "assigned" | "skipped"
+>;
+
+export type StudentMoveResult = WithLists<
+  active.StudentMoveResult,
+  "moved" | "unchanged" | "skipped"
+>;
+
+function transitAssignResult(
+  wire: active.TransitAssignResult,
+): TransitAssignResult {
+  return {
+    ...wire,
+    assigned: wire.assigned ?? [],
+    skipped: wire.skipped ?? [],
+  };
 }
 
-interface TransitAssignSkipped {
-  student_id: number | string;
-  reason: string;
-}
-
-// Identifiers arrive as decimal strings through the catalog proxy (#2352).
-interface TransitAssignResult {
-  assigned: (number | string)[];
-  skipped: TransitAssignSkipped[];
-  active_group_id: number | string;
-  room_id: number | string;
-}
-
-interface StudentMoveSkipped {
-  student_id: number | string;
-  reason: string;
-}
-
-export interface StudentMoveResult {
-  moved: (number | string)[];
-  unchanged: (number | string)[];
-  skipped: StudentMoveSkipped[];
-  active_group_id?: number | string | null;
-  room_id?: number | string | null;
-  /** Children a check-in into the target opened today's attendance for (#6953). */
-  checked_in?: (number | string)[];
+function studentMoveResult(wire: active.StudentMoveResult): StudentMoveResult {
+  return {
+    ...wire,
+    moved: wire.moved ?? [],
+    unchanged: wire.unchanged ?? [],
+    skipped: wire.skipped ?? [],
+  };
 }
 
 export interface StudentMoveSummary {
@@ -80,276 +70,29 @@ export function summarizeStudentMoveResult(
   };
 }
 
-// Helper to extract array from potentially paginated response
-function extractArrayFromResponse<T>(response: unknown): T[] {
-  if (!response || typeof response !== "object") {
-    return [];
+/** Labels and per-student matches; Go sends both, never null (#2353). */
+function trackingIndicators(
+  wire: active.TrackingIndicatorsResponse,
+): TrackingIndicatorsResponse {
+  const results: Record<string, boolean[]> = {};
+  for (const [studentId, matches] of Object.entries(wire.results ?? {})) {
+    results[studentId] = matches ?? [];
   }
-
-  const obj = response as Record<string, unknown>;
-
-  // Check if response.data is an array (simple response)
-  if (Array.isArray(obj.data)) {
-    return obj.data as T[];
-  }
-
-  // Check if response.data.data is an array (paginated response)
-  if (obj.data && typeof obj.data === "object") {
-    const dataObj = obj.data as Record<string, unknown>;
-    if (Array.isArray(dataObj.data)) {
-      return dataObj.data as T[];
-    }
-  }
-
-  return [];
+  return { labels: wire.labels ?? [], results };
 }
 
-// ============================================================================
-// Proxy Fetch Helpers - Reduce boilerplate for proxy/backend API calls
-// ============================================================================
-
-type HttpMethod = "GET" | "POST" | "PUT" | "DELETE";
-
-/**
- * Execute proxy fetch request (browser context).
- * Handles session auth, headers, and error responses.
- */
-async function executeProxyFetch(
-  method: HttpMethod,
-  url: string,
-  operationName: string,
-  body?: unknown,
-): Promise<Response> {
-  const response = await sessionFetch(url, {
-    method,
-    ...(body !== undefined && { body: JSON.stringify(body) }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
+/** A failed call is logged under its operation and rethrown. */
+async function logged<T>(operation: string, call: Promise<T>): Promise<T> {
+  try {
+    return await call;
+  } catch (error) {
     logger.error("proxy fetch failed", {
-      operation: operationName,
-      status: response.status,
-      error: errorText,
-    });
-    // Code and details stay on the error (ADR 0006), so a refusal such as a
-    // full room or activity can name itself in the UI.
-    throw proxyError(
-      `${operationName} failed: ${response.status}`,
-      response.status,
-      errorText,
-    );
-  }
-
-  return response;
-}
-
-function proxyError(
-  message: string,
-  status: number,
-  errorText: string,
-): ApiError {
-  let body: unknown;
-  try {
-    body = JSON.parse(errorText);
-  } catch {
-    body = undefined;
-  }
-  return apiErrorFromBody(message, status, body);
-}
-
-/**
- * Execute backend axios request (server context).
- */
-async function executeBackendFetch<T>(
-  method: HttpMethod,
-  url: string,
-  body?: unknown,
-): Promise<T> {
-  let response: { data: unknown };
-  switch (method) {
-    case "GET":
-      response = await api.get(url);
-      break;
-    case "POST":
-      response =
-        body === undefined ? await api.post(url) : await api.post(url, body);
-      break;
-    case "PUT":
-      response = await api.put(url, body);
-      break;
-    case "DELETE":
-      response = await api.delete(url);
-      break;
-  }
-  return response.data as T;
-}
-
-/**
- * Core fetch function that handles proxy vs backend routing, auth, errors, and response parsing.
- */
-async function coreFetch<T>(
-  method: HttpMethod,
-  proxyPath: string,
-  backendPath: string,
-  operationName: string,
-  body?: unknown,
-): Promise<T> {
-  const useProxyApi = globalThis.window !== undefined;
-
-  try {
-    if (useProxyApi) {
-      const response = await executeProxyFetch(
-        method,
-        proxyPath,
-        operationName,
-        body,
-      );
-      const responseData = (await response.json()) as ApiResponse<T>;
-      return responseData.data;
-    } else {
-      const responseData = await executeBackendFetch<ApiResponse<T>>(
-        method,
-        proxyPath,
-        body,
-      );
-      return responseData.data;
-    }
-  } catch (error) {
-    logger.error("core fetch failed", {
-      operation: operationName,
-      error: String(error),
+      operation,
+      status: error instanceof ApiError ? error.status : undefined,
+      code: error instanceof ApiError ? error.code : undefined,
     });
     throw error;
   }
-}
-
-/** Core fetch for void operations (DELETE, POST without response). */
-async function coreFetchVoid(
-  method: HttpMethod,
-  proxyPath: string,
-  backendPath: string,
-  operationName: string,
-  body?: unknown,
-): Promise<void> {
-  const useProxyApi = globalThis.window !== undefined;
-
-  try {
-    if (useProxyApi) {
-      await executeProxyFetch(method, proxyPath, operationName, body);
-    } else {
-      await executeBackendFetch<unknown>(method, proxyPath, body);
-    }
-  } catch (error) {
-    logger.error("core fetch void failed", {
-      operation: operationName,
-      error: String(error),
-    });
-    throw error;
-  }
-}
-
-/** GET request returning a single mapped item */
-async function proxyGet<TBackend, TFrontend>(
-  proxyPath: string,
-  backendPath: string,
-  mapper: (data: TBackend) => TFrontend,
-  operationName: string,
-): Promise<TFrontend> {
-  const data = await coreFetch<TBackend>(
-    "GET",
-    proxyPath,
-    backendPath,
-    operationName,
-  );
-  return mapper(data);
-}
-
-/** GET request returning an array of mapped items */
-async function proxyGetArray<TBackend, TFrontend>(
-  proxyPath: string,
-  backendPath: string,
-  mapper: (data: TBackend) => TFrontend,
-  operationName: string,
-): Promise<TFrontend[]> {
-  const data = await coreFetch<TBackend[]>(
-    "GET",
-    proxyPath,
-    backendPath,
-    operationName,
-  );
-  return data.map(mapper);
-}
-
-/** GET request returning paginated array (extracts from nested response) */
-async function proxyGetPaginated<TBackend, TFrontend>(
-  proxyPath: string,
-  backendPath: string,
-  mapper: (data: TBackend) => TFrontend,
-  operationName: string,
-): Promise<TFrontend[]> {
-  const useProxyApi = globalThis.window !== undefined;
-
-  try {
-    if (useProxyApi) {
-      const response = await executeProxyFetch("GET", proxyPath, operationName);
-      const responseData = (await response.json()) as unknown;
-      const items = extractArrayFromResponse<TBackend>(responseData);
-      return items.map(mapper);
-    } else {
-      const response = await executeBackendFetch<unknown>("GET", proxyPath);
-      const items = extractArrayFromResponse<TBackend>(response);
-      return items.map(mapper);
-    }
-  } catch (error) {
-    logger.error("paginated fetch failed", {
-      operation: operationName,
-      error: String(error),
-    });
-    throw error;
-  }
-}
-
-/** POST request without body, returning a single mapped item */
-async function proxyPostNoBody<TBackend, TFrontend>(
-  proxyPath: string,
-  backendPath: string,
-  mapper: (data: TBackend) => TFrontend,
-  operationName: string,
-): Promise<TFrontend> {
-  const data = await coreFetch<TBackend>(
-    "POST",
-    proxyPath,
-    backendPath,
-    operationName,
-  );
-  return mapper(data);
-}
-
-/** POST request with body, returning void */
-async function proxyPostVoid(
-  proxyPath: string,
-  backendPath: string,
-  body: unknown,
-  operationName: string,
-): Promise<void> {
-  await coreFetchVoid("POST", proxyPath, backendPath, operationName, body);
-}
-
-/** Build query string suffix for active filter */
-function buildActiveFilterSuffix(filters?: {
-  active?: boolean;
-  activeGroupIds?: readonly string[];
-}): string {
-  const params = new URLSearchParams();
-  if (filters?.active !== undefined) {
-    params.set("active", filters.active.toString());
-  }
-  if (filters?.activeGroupIds && filters.activeGroupIds.length > 0) {
-    params.set("active_group_ids", filters.activeGroupIds.join(","));
-  }
-  const query = params.toString();
-  return query ? `?${query}` : "";
 }
 
 export const activeService = {
@@ -357,22 +100,23 @@ export const activeService = {
   getActiveGroups: async (filters?: {
     active?: boolean;
   }): Promise<ActiveGroup[]> => {
-    const suffix = buildActiveFilterSuffix(filters);
-    return proxyGetPaginated<BackendActiveGroup, ActiveGroup>(
-      `/api/active/groups${suffix}`,
-      `/active/groups${suffix}`,
-      mapActiveGroupResponse,
+    const groups = await logged(
       "Get active groups",
+      bffJson("tenant", "GET /api/active/groups/", {
+        query: { active: filters?.active },
+      }),
     );
+    return groups.map(mapActiveGroupResponse);
   },
 
   getActiveGroupSupervisors: async (id: string): Promise<Supervisor[]> => {
-    return proxyGetPaginated<BackendSupervisor, Supervisor>(
-      `/api/active/groups/${id}/supervisors`,
-      `/active/groups/${id}/supervisors`,
-      mapSupervisorResponse,
+    const supervisors = await logged(
       "Get active group supervisors",
+      bffJson("tenant", "GET /api/active/groups/{id}/supervisors", {
+        params: { id },
+      }),
     );
+    return supervisors.map(mapSupervisorResponse);
   },
 
   // Visits
@@ -380,42 +124,49 @@ export const activeService = {
     active?: boolean;
     activeGroupIds?: readonly string[];
   }): Promise<Visit[]> => {
-    const suffix = buildActiveFilterSuffix(filters);
-    return proxyGetArray<BackendVisit, Visit>(
-      `/api/active/visits${suffix}`,
-      `/active/visits${suffix}`,
-      mapVisitResponse,
+    const visits = await logged(
       "Get visits",
+      bffJson("tenant", "GET /api/active/visits/", {
+        query: {
+          active: filters?.active,
+          active_group_ids: filters?.activeGroupIds?.length
+            ? filters.activeGroupIds.join(",")
+            : undefined,
+        },
+      }),
     );
+    return visits.map(mapVisitResponse);
   },
 
   getStaffActiveSupervisions: async (
     staffId: string,
   ): Promise<Supervisor[]> => {
-    return proxyGetArray<BackendSupervisor, Supervisor>(
-      `/api/active/supervisors/staff/${staffId}/active`,
-      `/active/supervisors/staff/${staffId}/active`,
-      mapSupervisorResponse,
+    const supervisions = await logged(
       "Get staff active supervisions",
+      bffJson("tenant", "GET /api/active/supervisors/staff/{staffId}/active", {
+        params: { staffId },
+      }),
     );
+    return supervisions.map(mapSupervisorResponse);
   },
 
   /** The ended supervision; null when the backend could not read it back. */
   endSupervision: async (id: string): Promise<Supervisor | null> => {
-    return proxyPostNoBody<BackendSupervisor | null, Supervisor | null>(
-      `/api/active/supervisors/${id}/end`,
-      `/active/supervisors/${id}/end`,
-      (data) => (data ? mapSupervisorResponse(data) : null),
+    const supervisor = await logged(
       "End supervision",
+      bffJson("tenant", "POST /api/active/supervisors/{id}/end", {
+        params: { id },
+      }),
     );
+    return supervisor ? mapSupervisorResponse(supervisor) : null;
   },
 
   claimActiveGroup: async (groupId: string): Promise<void> => {
-    return proxyPostVoid(
-      `/api/active/groups/${groupId}/claim`,
-      `/active/groups/${groupId}/claim`,
-      { role: "supervisor" },
+    await logged(
       "Claim group",
+      bffJson("tenant", "POST /api/active/groups/{id}/claim", {
+        params: { id: groupId },
+      }),
     );
   },
 
@@ -423,15 +174,16 @@ export const activeService = {
     studentIds: string[],
     activeGroupId: string,
   ): Promise<TransitAssignResult> => {
-    return coreFetch<TransitAssignResult>(
-      "POST",
-      "/api/active/visits/transit/assign",
-      "/active/visits/transit/assign",
-      "Assign transit students",
-      {
-        student_ids: studentIds.map((id) => Number.parseInt(id, 10)),
-        active_group_id: Number.parseInt(activeGroupId, 10),
-      },
+    return transitAssignResult(
+      await logged(
+        "Assign transit students",
+        bffJson("tenant", "POST /api/active/visits/transit/assign", {
+          body: {
+            student_ids: [...studentIds],
+            active_group_id: activeGroupId,
+          },
+        }),
+      ),
     );
   },
 
@@ -439,15 +191,16 @@ export const activeService = {
     studentIds: string[],
     activeGroupId: string,
   ): Promise<StudentMoveResult> => {
-    return coreFetch<StudentMoveResult>(
-      "POST",
-      "/api/active/visits/move-to-group",
-      "/active/visits/move-to-group",
-      "Move students to active group",
-      {
-        student_ids: studentIds.map((id) => Number.parseInt(id, 10)),
-        target_active_group_id: Number.parseInt(activeGroupId, 10),
-      },
+    return studentMoveResult(
+      await logged(
+        "Move students to active group",
+        bffJson("tenant", "POST /api/active/visits/move-to-group", {
+          body: {
+            student_ids: [...studentIds],
+            target_active_group_id: activeGroupId,
+          },
+        }),
+      ),
     );
   },
 
@@ -461,28 +214,14 @@ export const activeService = {
     studentIds: string[],
     roomId: string,
   ): Promise<StudentMoveResult> => {
-    const response = await sessionFetch("/api/active/visits/move-to-room", {
-      method: "POST",
-      body: JSON.stringify({
-        student_ids: studentIds.map((id) => Number.parseInt(id, 10)),
-        target_room_id: Number.parseInt(roomId, 10),
-      }),
-    });
-    if (!response.ok) {
-      const error = proxyError(
-        `Move students to open room failed: ${response.status}`,
-        response.status,
-        await response.text(),
-      );
-      logger.error("proxy fetch failed", {
-        operation: "Move students to open room",
-        status: response.status,
-        code: error.code,
-      });
-      throw error;
-    }
-    const payload = (await response.json()) as ApiResponse<StudentMoveResult>;
-    return payload.data;
+    return studentMoveResult(
+      await logged(
+        "Move students to open room",
+        bffJson("tenant", "POST /api/active/visits/move-to-room", {
+          body: { student_ids: [...studentIds], target_room_id: roomId },
+        }),
+      ),
+    );
   },
 
   /**
@@ -495,16 +234,17 @@ export const activeService = {
     activeGroupId: string,
     keepPresent: boolean,
   ): Promise<StudentMoveResult> => {
-    return coreFetch<StudentMoveResult>(
-      "POST",
-      "/api/active/visits/check-in-to-group",
-      "/active/visits/check-in-to-group",
-      "Check students in to active group",
-      {
-        student_ids: studentIds.map((id) => Number.parseInt(id, 10)),
-        target_active_group_id: Number.parseInt(activeGroupId, 10),
-        keep_present: keepPresent,
-      },
+    return studentMoveResult(
+      await logged(
+        "Check students in to active group",
+        bffJson("tenant", "POST /api/active/visits/check-in-to-group", {
+          body: {
+            student_ids: [...studentIds],
+            target_active_group_id: activeGroupId,
+            keep_present: keepPresent,
+          },
+        }),
+      ),
     );
   },
 
@@ -517,16 +257,17 @@ export const activeService = {
     roomId: string,
     keepPresent: boolean,
   ): Promise<StudentMoveResult> => {
-    return coreFetch<StudentMoveResult>(
-      "POST",
-      "/api/active/visits/check-in-to-room",
-      "/active/visits/check-in-to-room",
-      "Check students in to open room",
-      {
-        student_ids: studentIds.map((id) => Number.parseInt(id, 10)),
-        target_room_id: Number.parseInt(roomId, 10),
-        keep_present: keepPresent,
-      },
+    return studentMoveResult(
+      await logged(
+        "Check students in to open room",
+        bffJson("tenant", "POST /api/active/visits/check-in-to-room", {
+          body: {
+            student_ids: [...studentIds],
+            target_room_id: roomId,
+            keep_present: keepPresent,
+          },
+        }),
+      ),
     );
   },
 
@@ -536,11 +277,11 @@ export const activeService = {
    * Get the current Schulhof status including room info, supervisors, and student count.
    */
   getSchulhofStatus: async (): Promise<SchulhofStatus> => {
-    return proxyGet<BackendSchulhofStatus, SchulhofStatus>(
-      "/api/active/schulhof/status",
-      "/active/schulhof/status",
-      mapSchulhofStatusResponse,
-      "Get Schulhof status",
+    return mapSchulhofStatusResponse(
+      await logged(
+        "Get Schulhof status",
+        bffJson("tenant", "GET /api/active/schulhof/status"),
+      ),
     );
   },
 
@@ -554,30 +295,19 @@ export const activeService = {
   ): Promise<TrackingIndicatorsResponse> => {
     const empty: TrackingIndicatorsResponse = { labels: [], results: {} };
     if (studentIds.length === 0) return empty;
-
-    if (!hasSessionAccess(await getCachedSession())) return empty;
-
-    const response = await transportFetch("/api/active/tracking-indicators", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        student_ids: studentIds.map((id) => Number.parseInt(id, 10)),
-      }),
-    });
-
-    if (!response.ok) {
+    try {
+      return trackingIndicators(
+        await bffJson("tenant", "POST /api/active/tracking-indicators", {
+          body: { student_ids: [...studentIds] },
+        }),
+      );
+    } catch (error) {
       // Bewusst still: die Markierungen sind eine Zusatzinfo; ohne sie zeigt
       // die Liste die Kinder unverändert.
       logger.warn("tracking_indicators_fetch_failed", {
-        status: response.status,
+        status: error instanceof ApiError ? error.status : undefined,
       });
       return empty;
     }
-
-    const data =
-      (await response.json()) as ApiResponse<TrackingIndicatorsResponse>;
-    return data.data;
   },
 };

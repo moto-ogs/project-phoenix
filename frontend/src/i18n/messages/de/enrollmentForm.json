@@ -10,6 +10,7 @@
     "popupBlocked": "Bitte erlaube das Öffnen eines neuen Fensters."
   },
   "errorObject": "die Anmeldung",
+  "errorObjectForm": "das Anmeldeformular",
   "loading": "Formular wird geladen…",
   "legalGermanNotice": "Diese rechtlichen Texte liegen verbindlich auf Deutsch vor.",
   "previewError": "Dies ist eine Vorschau. Aus dieser Ansicht wird keine Anmeldung abgeschickt.",

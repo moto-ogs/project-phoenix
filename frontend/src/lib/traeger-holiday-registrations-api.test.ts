@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "./api-error";
+import type * as sharedContract from "./contract/shared.generated";
+import type * as traegerHolidayPeriodsContract from "./contract/traeger-holiday-periods.generated";
 import {
   changeHolidayRegistration,
   downloadHolidayRegistrationPdf,
@@ -11,6 +13,7 @@ import {
   withHolidayHealthAnswers,
   fetchHolidayRegistrations,
   fetchHolidayRegistrationMailProblems,
+  fetchHolidayWeekPlaces,
   editHolidayRegistration,
   rebookHolidayChild,
 } from "./traeger-holiday-registrations-api";
@@ -22,36 +25,73 @@ function jsonResponse(status: number, body: unknown): Response {
   });
 }
 
-const BACKEND_DETAIL = {
-  id: 7,
-  status: "confirmed",
-  frozen: true,
-  submitted_at: "2026-11-03T08:00:00Z",
+// Answers in the shape the catalog proxy hands on: decoded by the route's
+// contract, IDs as strings, every required field present.
+const BACKEND_BOOKING = {
+  week_id: "51",
+  week_starts_on: "2027-01-04",
+  week_ends_on: "2027-01-08",
+  host_school_id: "31",
+  time_model_id: "61",
+  time_model_name: "bis 13 Uhr",
+  price_cents: 4500,
+  lunch: false,
+  lunch_days: 0,
+  lunch_price_cents: 0,
+  placement: "placed",
+} satisfies sharedContract.HolidayRegistrationBooking;
+
+const BACKEND_SUMMARY = {
+  id: "7",
+  status: "received",
+  frozen: false,
+  submitted_at: "2026-09-03T08:00:00Z",
   guardian_first_name: "Eva",
   guardian_last_name: "Muster",
   guardian_email: "eva@example.org",
+  guardian_phone: "0151",
+  children: [],
+  benefits_declared: false,
+  debtor_number: "",
+  retention_days: 60,
+  deletes_on: null,
+  health_deletes_on: null,
+} satisfies traegerHolidayPeriodsContract.HolidayRegistrationSummary;
+
+function event(
+  action: string,
+  occurredAt: string,
+  details: sharedContract.HolidayRegistrationEvent["details"],
+): sharedContract.HolidayRegistrationEvent {
+  return { action, occurred_at: occurredAt, actor_account_id: null, details };
+}
+
+const BACKEND_DETAIL = {
+  ...BACKEND_SUMMARY,
+  status: "confirmed",
+  frozen: true,
+  submitted_at: "2026-11-03T08:00:00Z",
   guardian_phone: "0151 2345678",
   children: [
     {
-      id: 9,
+      id: "9",
       first_name: "Ben",
       last_name: "Muster",
       birth_date: "2016-09-12",
       home_school_id: null,
       guest_school_name: "Grundschule Melle",
-      bookings: [
-        {
-          week_id: 51,
-          week_starts_on: "2027-01-04",
-          week_ends_on: "2027-01-08",
-          host_school_id: 31,
-          time_model_id: 61,
-          time_model_name: "bis 13 Uhr",
-        },
-      ],
-      duplicate_registration_ids: [8],
+      bookings: [BACKEND_BOOKING],
+      duplicate_registration_ids: ["8"],
+      holiday_wish: "",
+      holiday_wish_source: "",
+      holiday_wish_check: false,
     },
   ],
+  guardian_address: null,
+  legal_acceptances: null,
+  form: null,
+  custom_data: null,
+  child_custom_data: null,
   contacts: [
     {
       kind: "emergency",
@@ -62,24 +102,23 @@ const BACKEND_DETAIL = {
   ],
   privacy_consent_at: "2026-11-03T08:00:00Z",
   health_consent_at: null,
+  consent_version: 0,
+  consent_texts: null,
   binding_confirmed_at: "2026-11-03T08:00:00Z",
+  custody_confirmed_at: null,
+  declaration_name: "",
+  benefits_proofs: null,
   history: [
-    {
-      action: "rebook",
-      occurred_at: "2026-11-04T09:00:00Z",
-      details: {
-        child_id: 9,
-        before: [{ week_id: 52, time_model_id: 63 }],
-        after: [{ week_id: 51, time_model_id: 61 }],
-      },
-    },
-    {
-      action: "confirm",
-      occurred_at: "2026-11-05T09:00:00Z",
-      details: { from: "received" },
-    },
+    event("rebook", "2026-11-04T09:00:00Z", {
+      child_id: "9",
+      before: [{ week_id: "52", time_model_id: "63" }],
+      after: [{ week_id: "51", time_model_id: "61" }],
+    }),
+    event("confirm", "2026-11-05T09:00:00Z", { from: "received" }),
   ],
-};
+  criteria: null,
+  version: "registration-read",
+} satisfies sharedContract.HolidayRegistrationDetail;
 
 describe("traeger-holiday-registrations-api", () => {
   const fetchMock = vi.fn<typeof fetch>();
@@ -232,21 +271,13 @@ describe("traeger-holiday-registrations-api", () => {
           ...BACKEND_DETAIL,
           debtor_number: "10 4711",
           history: [
-            {
-              action: "confirm",
-              occurred_at: "2026-11-05T09:00:00Z",
-              details: {
-                from: "received",
-                debtor_number: { before: "", after: "10 4710" },
-              },
-            },
-            {
-              action: "debtor_number",
-              occurred_at: "2026-11-06T09:00:00Z",
-              details: {
-                debtor_number: { before: "10 4710", after: "10 4711" },
-              },
-            },
+            event("confirm", "2026-11-05T09:00:00Z", {
+              from: "received",
+              debtor_number: { before: "", after: "10 4710" },
+            }),
+            event("debtor_number", "2026-11-06T09:00:00Z", {
+              debtor_number: { before: "10 4710", after: "10 4711" },
+            }),
           ],
         },
       }),
@@ -270,13 +301,26 @@ describe("traeger-holiday-registrations-api", () => {
         data: {
           ...BACKEND_DETAIL,
           form: {
+            legal_blocks: null,
             version: 4,
             fields: [
-              { key: "quelle", label: "Quelle", type: "text", sort_order: 0 },
+              {
+                key: "quelle",
+                label: "Quelle",
+                type: "text",
+                sort_order: 0,
+                health: false,
+                share_with_host: false,
+              },
             ],
+            address_requirement: "off",
+            health_requirement: "optional",
+            created_at: "2026-08-20T10:00:00Z",
           },
           custom_data: { quelle: "Elternbrief" },
-          child_custom_data: [{ child_id: 9, custom_data: { tetanus: "ja" } }],
+          child_custom_data: [
+            { child_id: "9", custom_data: { tetanus: "ja" } },
+          ],
         },
       }),
     );
@@ -346,9 +390,16 @@ describe("traeger-holiday-registrations-api", () => {
     );
 
     await changeHolidayRegistration("5", "7", "reopen");
-    await rebookHolidayChild("5", "7", "9", [
-      { weekId: "51", timeModelId: "61" },
-    ]);
+    await rebookHolidayChild(
+      "5",
+      "7",
+      "9",
+      [
+        { weekId: "51", timeModelId: "61" },
+        { weekId: "9007199254740993", timeModelId: "9007199254740995" },
+      ],
+      "registration-read",
+    );
 
     expect(fetchMock.mock.calls[0]?.[0]).toBe(
       "/api/traeger/holiday-periods/5/registrations/7/reopen",
@@ -359,7 +410,11 @@ describe("traeger-holiday-registrations-api", () => {
     );
     expect(fetchMock.mock.calls[1]?.[1]?.method).toBe("PUT");
     expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toEqual({
-      bookings: [{ week_id: 51, time_model_id: 61 }],
+      expected_version: "registration-read",
+      bookings: [
+        { week_id: "51", time_model_id: "61" },
+        { week_id: "9007199254740993", time_model_id: "9007199254740995" },
+      ],
     });
   });
 
@@ -371,48 +426,58 @@ describe("traeger-holiday-registrations-api", () => {
           data: {
             ...BACKEND_DETAIL,
             history: [
-              {
-                action: "edit",
-                occurred_at: "2026-11-06T09:00:00Z",
-                details: { fields: ["guardian.phone", "second_guardian"] },
-              },
+              event("edit", "2026-11-06T09:00:00Z", {
+                fields: ["guardian.phone", "second_guardian"],
+              }),
             ],
           },
         }),
       ),
     );
 
-    const detail = await editHolidayRegistration("5", "7", {
-      guardians: {
-        guardian: {
-          firstName: "Eva",
+    const detail = await editHolidayRegistration(
+      "5",
+      "7",
+      {
+        guardians: {
+          guardian: {
+            firstName: "Eva",
+            lastName: "Muster",
+            email: "eva@example.org",
+            phone: "0151 9999999",
+          },
+          address: {
+            street: "Neue Straße 3",
+            postalCode: "49143",
+            city: "Bissendorf",
+          },
+          secondGuardian: null,
+        },
+      },
+      "registration-read",
+    );
+    await editHolidayRegistration(
+      "5",
+      "7",
+      {
+        child: {
+          id: "9",
+          firstName: "Ben",
           lastName: "Muster",
-          email: "eva@example.org",
-          phone: "0151 9999999",
+          birthDate: "2016-09-12",
+          homeSchoolId: null,
+          guestSchoolName: "Grundschule Melle",
+          answers: { lieblingsessen: "Nudeln" },
         },
-        address: {
-          street: "Neue Straße 3",
-          postalCode: "49143",
-          city: "Bissendorf",
+        contacts: {
+          emergency: [
+            { name: "Oma Muster", phone: "05402 1", relationship: "" },
+          ],
+          pickup: [],
         },
-        secondGuardian: null,
       },
-    });
-    await editHolidayRegistration("5", "7", {
-      child: {
-        id: "9",
-        firstName: "Ben",
-        lastName: "Muster",
-        birthDate: "2016-09-12",
-        homeSchoolId: null,
-        guestSchoolName: "Grundschule Melle",
-        answers: { lieblingsessen: "Nudeln" },
-      },
-      contacts: {
-        emergency: [{ name: "Oma Muster", phone: "05402 1", relationship: "" }],
-        pickup: [],
-      },
-    });
+      "registration-read",
+    );
 
     expect(fetchMock.mock.calls[0]?.[0]).toBe(
       "/api/traeger/holiday-periods/5/registrations/7/details",
@@ -431,15 +496,17 @@ describe("traeger-holiday-registrations-api", () => {
         city: "Bissendorf",
       },
       second_guardian: null,
+      expected_version: "registration-read",
     });
     expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toEqual({
+      expected_version: "registration-read",
       children: [
         {
-          id: 9,
+          id: "9",
           first_name: "Ben",
           last_name: "Muster",
           birth_date: "2016-09-12",
-          home_school_id: 0,
+          home_school_id: "0",
           guest_school_name: "Grundschule Melle",
           custom_data: { lieblingsessen: "Nudeln" },
         },
@@ -552,17 +619,9 @@ describe("traeger-holiday-registrations-api", () => {
         data: {
           registrations: [
             {
-              id: 7,
-              status: "received",
-              frozen: false,
-              submitted_at: "2026-09-03T08:00:00Z",
-              guardian_first_name: "Eva",
-              guardian_last_name: "Muster",
-              guardian_email: "eva@example.org",
-              guardian_phone: "0151",
+              ...BACKEND_SUMMARY,
               deletes_on: "2028-01-09",
               health_deletes_on: "2027-04-11",
-              children: [],
             },
           ],
           total: 1,
@@ -581,17 +640,7 @@ describe("traeger-holiday-registrations-api", () => {
   });
 
   it("names the mails that did not reach the parents, none when the backend omits them (#6737)", async () => {
-    const registration = {
-      id: 7,
-      status: "received",
-      frozen: false,
-      submitted_at: "2026-09-03T08:00:00Z",
-      guardian_first_name: "Eva",
-      guardian_last_name: "Muster",
-      guardian_email: "eva@example.org",
-      guardian_phone: "0151",
-      children: [],
-    };
+    const registration = BACKEND_SUMMARY;
     fetchMock.mockResolvedValue(
       jsonResponse(200, {
         data: {
@@ -602,7 +651,7 @@ describe("traeger-holiday-registrations-api", () => {
                 { kind: "holiday_registration_received", state: "failed" },
               ],
             },
-            { ...registration, id: 8 },
+            { ...registration, id: "8" },
           ],
           total: 2,
           status_counts: { received: 2 },
@@ -627,13 +676,13 @@ describe("traeger-holiday-registrations-api", () => {
         data: {
           registrations: [
             {
-              registration_id: 7,
+              registration_id: "7",
               mail_problems: [
                 { kind: "holiday_registration_accepted", state: "blocked" },
               ],
             },
           ],
-        },
+        } satisfies traegerHolidayPeriodsContract.HolidayMailProblemsResponse,
       }),
     );
 
@@ -674,14 +723,14 @@ describe("traeger-holiday-registrations-api", () => {
           custom_data: { krankenkasse: "AOK" },
           children: [
             {
-              child_id: 9,
+              child_id: "9",
               allergies: "Erdnüsse",
               medication: "",
               health_notes: "",
               custom_data: { tetanus: "ja" },
             },
           ],
-        },
+        } satisfies traegerHolidayPeriodsContract.HolidayRegistrationHealthDetail,
       }),
     );
 
@@ -711,5 +760,210 @@ describe("traeger-holiday-registrations-api", () => {
     );
     expect(merged.answers).toMatchObject({ krankenkasse: "AOK" });
     expect(merged.childAnswers["9"]).toMatchObject({ tetanus: "ja" });
+  });
+  // #2353: values the build does not know. development passed them through
+  // as if they were known.
+  it.each([
+    ["status", { ...BACKEND_DETAIL, status: "archived" }],
+    [
+      "placement",
+      {
+        ...BACKEND_DETAIL,
+        children: BACKEND_DETAIL.children.map((child) => ({
+          ...child,
+          bookings: [{ ...BACKEND_BOOKING, placement: "reserved" }],
+        })),
+      },
+    ],
+    [
+      "contact kind",
+      {
+        ...BACKEND_DETAIL,
+        contacts: [
+          {
+            kind: "doctor",
+            name: "Dr. Kurz",
+            phone: "05402",
+            relationship: "",
+          },
+        ],
+      },
+    ],
+    [
+      "booked day",
+      {
+        ...BACKEND_DETAIL,
+        children: BACKEND_DETAIL.children.map((child) => ({
+          ...child,
+          bookings: [{ ...BACKEND_BOOKING, week_starts_on: null }],
+        })),
+      },
+    ],
+  ])(
+    "fails the read of a registration with an unknown %s instead of guessing it",
+    async (_field, backend) => {
+      fetchMock.mockResolvedValue(jsonResponse(200, { data: backend }));
+      await expect(fetchHolidayRegistration("5", "7")).rejects.toThrow(
+        /contract:/,
+      );
+    },
+  );
+
+  it("drops a registration with an unknown status or placement from the list", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse(200, {
+        data: {
+          registrations: [
+            { ...BACKEND_SUMMARY, id: "7", status: "archived" },
+            {
+              ...BACKEND_SUMMARY,
+              id: "8",
+              children: [
+                {
+                  ...BACKEND_DETAIL.children[0]!,
+                  bookings: [{ ...BACKEND_BOOKING, placement: "reserved" }],
+                },
+              ],
+            },
+            { ...BACKEND_SUMMARY, id: "9" },
+          ],
+          total: 3,
+          status_counts: { received: 2 },
+        },
+      }),
+    );
+
+    const list = await fetchHolidayRegistrations(
+      "5",
+      EMPTY_HOLIDAY_REGISTRATION_FILTER,
+    );
+
+    expect(list.registrations.map((registration) => registration.id)).toEqual([
+      "9",
+    ]);
+  });
+
+  it("drops history entries, criteria and mails it would have to guess", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse(200, {
+        data: {
+          ...BACKEND_DETAIL,
+          history: [
+            event("merge_away", "2026-11-04T09:00:00Z", {}),
+            event("allocate", "2026-11-04T09:00:00Z", {
+              week_ids: ["51"],
+              placement: "reserved",
+            }),
+            event("wish", "2026-11-04T09:00:00Z", {
+              child_id: "9",
+              wish: "maybe",
+            }),
+            event("criteria_check", "2026-11-05T09:00:00Z", {
+              checks: [
+                { criterion_id: "3", child_id: null, checked: "yes" },
+                { criterion_id: "4", child_id: null, checked: "partly" },
+              ],
+            }),
+          ],
+          criteria: [
+            {
+              criterion_id: "3",
+              name: "Berufstätig",
+              question: "Sind beide berufstätig?",
+              scope: "family",
+              child_id: null,
+              stated: "yes",
+              checked: null,
+              checked_at: null,
+            },
+            {
+              criterion_id: "4",
+              name: "Neu",
+              question: "Neu?",
+              scope: "class",
+              child_id: null,
+              stated: "yes",
+              checked: null,
+              checked_at: null,
+            },
+            {
+              criterion_id: "5",
+              name: "Geprüft",
+              question: "Geprüft?",
+              scope: "family",
+              child_id: null,
+              stated: "yes",
+              checked: "partly",
+              checked_at: "2026-11-05T09:00:00Z",
+            },
+          ],
+          mail_problems: [
+            { kind: "holiday_registration_received", state: "failed" },
+            { kind: "holiday_invoice", state: "failed" },
+            { kind: "holiday_registration_received", state: "lost" },
+          ],
+          mails: [
+            { kind: "holiday_registration_received", outcome: "delivered" },
+            { kind: "holiday_invoice", outcome: "delivered" },
+            { kind: "holiday_place_granted", outcome: "teleported" },
+          ],
+        },
+      }),
+    );
+
+    const detail = await fetchHolidayRegistration("5", "7");
+
+    expect(detail.history.map((entry) => entry.action)).toEqual([
+      "criteria_check",
+    ]);
+    expect(detail.history[0]?.checks).toEqual([
+      { criterionId: "3", childId: null, checked: "yes" },
+    ]);
+    expect(detail.criteria?.map((criterion) => criterion.criterionId)).toEqual([
+      "3",
+    ]);
+    expect(detail.mailProblems).toEqual([
+      { kind: "holiday_registration_received", state: "failed" },
+    ]);
+    expect(detail.mails).toEqual([
+      {
+        kind: "holiday_registration_received",
+        outcome: "delivered",
+        createdAt: null,
+      },
+    ]);
+  });
+
+  it("reads the places of a week with an unknown waiting status as unknown", async () => {
+    const week = {
+      week_id: "51",
+      starts_on: "2027-01-04",
+      ends_on: "2027-01-08",
+      host_school_id: "31",
+      capacity: 10,
+      placed: 10,
+      waitlist: [
+        {
+          position: 1,
+          registration_id: "7",
+          registration_status: "archived",
+          submitted_at: "2026-09-03T08:00:00Z",
+          child_id: "9",
+          child_first_name: "Ben",
+          child_last_name: "Muster",
+          time_model_name: "bis 13 Uhr",
+          deferred: false,
+        },
+      ],
+      pending: 0,
+      booking_unit: "week",
+      days: null,
+    } satisfies traegerHolidayPeriodsContract.HolidayWeekPlaces;
+    fetchMock.mockResolvedValue(jsonResponse(200, { data: [week] }));
+
+    const [places] = await fetchHolidayWeekPlaces("5");
+
+    expect(places?.waitlist[0]?.registrationId).toBe("7");
+    expect(places?.waitlist[0]?.registrationStatus).toBeUndefined();
   });
 });

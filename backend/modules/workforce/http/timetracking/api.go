@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -16,7 +15,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -52,7 +50,6 @@ func (rs *Resource) Router(protectedTenantRoutes func(chi.Router, func(chi.Route
 		r.With(common.RequiresPermission(permissions.TimeTrackingOwn), withTx).Get("/breaks/{sessionId}", rs.getBreaks)
 
 		// Export
-		r.With(common.RequiresPermission(permissions.TimeTrackingOwn), withTx).Get("/export", rs.exportSessions)
 
 		// Own planned shifts (Dienstplan, #1376/#1798)
 		r.With(common.RequiresPermission(permissions.TimeTrackingOwn), withTx).Get("/shifts", rs.getOwnShifts)
@@ -76,9 +73,6 @@ func (rs *Resource) Router(protectedTenantRoutes func(chi.Router, func(chi.Route
 		r.With(common.RequiresPermission(permissions.TimeTrackingOwn), withTx).Get("/vacation/quota", rs.getOwnVacationQuota)
 		// Own Kontingente of the school's absence types, read-only (#4971)
 		r.With(common.RequiresPermission(permissions.TimeTrackingOwn), withTx).Get("/absence-allowances", rs.getOwnAbsenceAllowances)
-
-		// Presence map - for internal use by staff page
-		r.With(common.RequiresPermission(permissions.UsersRead), withTx).Get("/presence-map", rs.getPresenceMap)
 	})
 
 	return r
@@ -321,6 +315,11 @@ func (rs *Resource) updateSession(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
+	// A correction without the history row's token is refused like an
+	// outdated one (ADR 0311).
+	if updates.ExpectedVersion == nil {
+		updates.ExpectedVersion = new(string)
+	}
 
 	// Call service to update session
 	tenantID := tenant.FromContext(r.Context())
@@ -466,45 +465,6 @@ func parseSessionExportFormat(r *http.Request) (string, error) {
 	}
 }
 
-// exportSessions handles GET /api/time-tracking/export?from=...&to=...&format=csv|xlsx
-func (rs *Resource) exportSessions(w http.ResponseWriter, r *http.Request) {
-	// Get staff ID from JWT claims
-	userClaims := rs.identity(r.Context())
-	staffID, err := rs.getStaffIDFromClaims(r.Context(), userClaims)
-	if err != nil {
-		common.RenderError(w, r, ownStaffError(err))
-		return
-	}
-
-	from, to, ok := parseDateRange(w, r)
-	if !ok {
-		return
-	}
-
-	format, err := parseSessionExportFormat(r)
-	if err != nil {
-		common.RenderError(w, r, common.ErrorInvalidRequest(err))
-		return
-	}
-
-	file, err := rs.WorkSessionService.ExportSessions(r.Context(), staffID, from.String(), to.String(), format)
-	if err != nil {
-		common.RenderError(w, r, common.ErrorInternalServer(err))
-		return
-	}
-
-	// Set response headers for file download
-	w.Header().Set("Content-Type", file.ContentType)
-	w.Header().Set("Content-Disposition", textnorm.ContentDisposition("attachment", file.Filename))
-	w.Header().Set("Content-Length", strconv.Itoa(len(file.Data)))
-
-	if _, err := w.Write(file.Data); err != nil {
-		// Response already started, just log the error
-		slog.Default().Error("failed to write export response", slog.String("error", err.Error()))
-		return
-	}
-}
-
 // requestVacation handles POST /api/time-tracking/vacation/request
 func (rs *Resource) requestVacation(w http.ResponseWriter, r *http.Request) {
 	userClaims := rs.identity(r.Context())
@@ -623,18 +583,6 @@ func parseYearParam(r *http.Request, today calendar.Date) (int, error) {
 		return 0, errors.New("invalid year parameter, expected 2000-2100")
 	}
 	return year, nil
-}
-
-// getPresenceMap handles GET /api/time-tracking/presence-map
-func (rs *Resource) getPresenceMap(w http.ResponseWriter, r *http.Request) {
-	// Get today's presence map
-	presenceMap, err := rs.WorkSessionService.GetTodayPresenceMap(r.Context())
-	if err != nil {
-		common.RenderError(w, r, common.ErrorInternalServer(err))
-		return
-	}
-
-	common.Respond(w, r, http.StatusOK, presenceMap, "Presence map retrieved successfully")
 }
 
 // getOwnShifts handles GET /api/time-tracking/shifts — the staff member's

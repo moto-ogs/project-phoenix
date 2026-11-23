@@ -25,17 +25,6 @@ export const emailSubscriptionResponseSchema: z.ZodType<emailSubscriptionRespons
   enabled: bool,
 });
 
-/** Query of DELETE /api/notifications/push/subscriptions */
-export interface DeleteNotificationsPushSubscriptionsQuery {
-  endpoint?: string;
-}
-
-/** Query of GET /api/notifications/feed/ */
-export interface GetNotificationsFeedQuery {
-  cursor?: string;
-  limit?: number;
-}
-
 export const routes = {
   "DELETE /api/notifications/preferences/": {
     method: "DELETE",
@@ -47,7 +36,9 @@ export const routes = {
     method: "DELETE",
     pattern: "/api/notifications/push/subscriptions",
     portals: ["tenant"],
-    query: ["endpoint"],
+    query: {
+      "endpoint": { kind: "string" },
+    },
     response: noData,
   },
   "GET /api/notifications/email-subscriptions/{type}": {
@@ -60,7 +51,10 @@ export const routes = {
     method: "GET",
     pattern: "/api/notifications/feed/",
     portals: ["tenant"],
-    query: ["cursor", "limit"],
+    query: {
+      "cursor": { kind: "string" },
+      "limit": { kind: "int" },
+    },
     response: success(feedPageResponseSchema),
   },
   "GET /api/notifications/feed/unread-count": {

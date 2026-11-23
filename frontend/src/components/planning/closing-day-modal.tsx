@@ -26,6 +26,7 @@ import { Input } from "~/components/ui/input";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { closingDayService } from "~/lib/closing-day-api";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import { type ClosingDay } from "~/lib/closing-day-helpers";
 import { createLogger } from "~/lib/logger";
 import { timetableService } from "~/lib/timetable-api";
@@ -36,6 +37,7 @@ export function ClosingDayModal({
   isOpen,
   onClose,
   onSaved,
+  reload,
   initial,
   onOfferCancel,
   onSave,
@@ -47,11 +49,61 @@ export function ClosingDayModal({
   saveLabel = "Speichern",
   saveBlocked = false,
 }: ClosingDayModalProps) {
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [reason, setReason] = useState("");
-  const [schoolIds, setSchoolIds] = useState<readonly string[]>([]);
-  const initializedRecord = useRef<string | null>(null);
+  const allSchoolIds = () => schools?.map((school) => school.id) ?? [];
+  const formOf = (day: StoredClosingDay): ClosingDayForm => ({
+    startDate: day.startDate,
+    endDate: day.endDate,
+    reason: day.reason,
+    schoolIds: day.schoolIds ?? allSchoolIds(),
+  });
+  // A new closing day's form; an existing one is the draft below.
+  const [createForm, setCreateForm] = useState<ClosingDayForm>(() => ({
+    startDate: defaultDate,
+    endDate: defaultDate,
+    reason: "",
+    schoolIds: allSchoolIds(),
+  }));
+  // The stored closing day a refusal read, until the caller's list brings
+  // it as `initial`.
+  const [reread, setReread] = useState<{
+    readonly from: StoredClosingDay | null;
+    readonly stored: StoredClosingDay;
+  } | null>(null);
+  const stored =
+    reread !== null && reread.from === initial ? reread.stored : initial;
+  // The form of a stored closing day rests on its version (ADR 0311): a
+  // later read of the list refills it only while untouched; after a refusal
+  // the stored closing day shows, and nothing is sent until it is read.
+  const edit = useDraftOn<
+    StoredClosingDay,
+    ClosingDayForm,
+    string | undefined,
+    void
+  >(
+    {
+      opening: isOpen && initial ? initial.id : null,
+      data: stored ?? undefined,
+      reload: async () => {
+        if (!reload) throw new Error("closing day cannot be read again");
+        const day = await reload();
+        setReread({ from: initial, stored: day });
+        return day;
+      },
+    },
+    {
+      token: (day) => day.version,
+      toDraft: formOf,
+      // The dialog closes after a save: no read of the old state.
+      answer: (_saved, shown) => shown,
+    },
+  );
+  const form = initial ? (edit.draft ?? formOf(initial)) : createForm;
+  const setForm = initial ? edit.setDraft : setCreateForm;
+  const { startDate, endDate, reason, schoolIds } = form;
+  const setField = <K extends keyof ClosingDayForm>(
+    key: K,
+    value: ClosingDayForm[K],
+  ) => setForm((current) => ({ ...current, [key]: value }));
   const save = useFormModalPending(isOpen);
   const saving = save.pending;
   const formRef = useRef<HTMLDivElement>(null);
@@ -59,20 +111,23 @@ export function ClosingDayModal({
   const clearErrors = formErrors.clear;
   const latestSaveRef = useRef<() => void>(() => undefined);
 
+  const opened = useRef(false);
   useEffect(() => {
     if (!isOpen) {
-      initializedRecord.current = null;
+      opened.current = false;
       return;
     }
-    const record = initial?.id ?? "new";
-    if (initializedRecord.current === record) return;
-    initializedRecord.current = record;
-    setStartDate(initial?.startDate ?? defaultDate);
-    setEndDate(initial?.endDate ?? defaultDate);
-    setReason(initial?.reason ?? "");
-    setSchoolIds(
-      initial?.schoolIds ?? schools?.map((school) => school.id) ?? [],
-    );
+    if (opened.current) return;
+    opened.current = true;
+    if (!initial) {
+      setCreateForm({
+        startDate: defaultDate,
+        endDate: defaultDate,
+        reason: "",
+        schoolIds: schools?.map((school) => school.id) ?? [],
+      });
+    }
+    setReread(null);
     clearErrors();
   }, [isOpen, initial, schools, defaultDate, clearErrors]);
 
@@ -95,9 +150,12 @@ export function ClosingDayModal({
     (schools?.length ?? 0) > 0 &&
     (schools?.every((s) => schoolIds.includes(s.id)) ?? false);
   const toggleSchool = (id: string, checked: boolean) =>
-    setSchoolIds((current) =>
-      checked ? [...current, id] : current.filter((value) => value !== id),
-    );
+    setForm((current) => ({
+      ...current,
+      schoolIds: checked
+        ? [...current.schoolIds, id]
+        : current.schoolIds.filter((value) => value !== id),
+    }));
 
   const handleSave = async () => {
     const fields = closingDayFieldErrors(reason, startDate, endDate);
@@ -114,36 +172,55 @@ export function ClosingDayModal({
     };
     await save.run(async (op) => {
       formErrors.clear();
-      try {
-        if (onSave) {
-          await onSave({
-            startDate,
-            endDate,
-            reason: reason.trim(),
-            schoolIds,
-          });
-        } else if (initial) {
-          await closingDayService.update(initial.id, body);
-        } else {
-          await closingDayService.create(body);
-        }
-        onSaved();
-        // Eine späte Antwort schließt keinen inzwischen neuen Dialog (#6533).
-        if (!op.isCurrent()) return;
-        onClose();
-        // #3594: Termine, die vor dem Schließtag geplant waren, bleiben im Plan.
-        // Stehen noch welche im Zeitraum, bietet der Editor das Absagen an.
-        await offerCancel(onOfferCancel, startDate, endDate);
-      } catch (err) {
+      const send = (expectedVersion: string | undefined) =>
+        onSave
+          ? onSave({
+              startDate,
+              endDate,
+              reason: reason.trim(),
+              schoolIds,
+              expectedVersion,
+            })
+          : initial
+            ? closingDayService
+                .update(initial.id, {
+                  ...body,
+                  expected_version: expectedVersion,
+                })
+                .then(() => undefined)
+            : closingDayService.create(body).then(() => undefined);
+      const result = initial
+        ? await edit.submit((version) => send(version))
+        : await send(undefined).then(
+            () => ({ ok: true }) as const,
+            (error: unknown) =>
+              ({ ok: false, error, reload: undefined }) as const,
+          );
+      if (!result.ok) {
         logger.error("closing_day_save_failed", {
-          error: err instanceof Error ? err.message : String(err),
+          error:
+            result.error instanceof Error
+              ? result.error.message
+              : String(result.error),
         });
         if (!op.isCurrent()) return;
-        await formErrors.show(err, {
+        // Hat jemand den Schließtag seit dem Öffnen geändert, zeigt
+        // `reload` dessen Stand im Formular; gespeichert wird erst eine neue
+        // Bearbeitung (ADR 0311).
+        await formErrors.show(result.error, {
           object: "das Speichern des Schließtags",
           retry: () => latestSaveRef.current(),
+          reload: result.reload,
         });
+        return;
       }
+      onSaved();
+      // Eine späte Antwort schließt keinen inzwischen neuen Dialog (#6533).
+      if (!op.isCurrent()) return;
+      onClose();
+      // #3594: Termine, die vor dem Schließtag geplant waren, bleiben im Plan.
+      // Stehen noch welche im Zeitraum, bietet der Editor das Absagen an.
+      await offerCancel(onOfferCancel, startDate, endDate);
     });
   };
   // „Wiederholen“ sendet den Stand, der dann im Formular steht.
@@ -175,7 +252,9 @@ export function ClosingDayModal({
             variant="primary"
             size="md"
             onClick={() => void handleSave()}
-            disabled={saving || saveBlocked}
+            disabled={
+              saving || saveBlocked || (initial !== null && !edit.canSubmit)
+            }
             tooltip={saveTooltip(onOfferCancel, schools)}
           >
             {saving ? "Speichern..." : saveLabel}
@@ -191,7 +270,7 @@ export function ClosingDayModal({
           label="Grund"
           value={reason}
           maxLength={reasonMaxLength}
-          onChange={(e) => setReason(e.target.value)}
+          onChange={(e) => setField("reason", e.target.value)}
           error={formErrors.fieldError("reason")}
           placeholder="z. B. Pädagogischer Tag, Sommerschließung"
         />
@@ -203,10 +282,16 @@ export function ClosingDayModal({
             label="Von"
             controlSize="large"
             value={startDate}
-            onChange={(value) => {
-              setStartDate(value);
-              if (schools && (!endDate || endDate < value)) setEndDate(value);
-            }}
+            onChange={(value) =>
+              setForm((current) => ({
+                ...current,
+                startDate: value,
+                endDate:
+                  schools && (!current.endDate || current.endDate < value)
+                    ? value
+                    : current.endDate,
+              }))
+            }
             error={formErrors.fieldError("start_date")}
             calendarLayout="popover"
           />
@@ -218,7 +303,7 @@ export function ClosingDayModal({
             value={endDate}
             min={startDate || undefined}
             defaultMonth={startDate}
-            onChange={setEndDate}
+            onChange={(value) => setField("endDate", value)}
             error={formErrors.fieldError("end_date")}
             calendarLayout="popover"
           />
@@ -235,7 +320,8 @@ export function ClosingDayModal({
                 <Checkbox
                   checked={allSelected}
                   onChange={(event) =>
-                    setSchoolIds(
+                    setField(
+                      "schoolIds",
                       event.target.checked ? schools.map((s) => s.id) : [],
                     )
                   }
@@ -286,12 +372,28 @@ export interface ClosingDayDraft {
   readonly schoolIds: readonly string[];
 }
 
+type StoredClosingDay = ClosingDay & {
+  readonly schoolIds?: readonly string[];
+};
+
+interface ClosingDayForm {
+  readonly startDate: string;
+  readonly endDate: string;
+  readonly reason: string;
+  readonly schoolIds: readonly string[];
+}
+
 interface ClosingDayModalProps {
   readonly isOpen: boolean;
   readonly onClose: () => void;
   readonly onSaved: () => void;
-  readonly initial:
-    (ClosingDay & { readonly schoolIds?: readonly string[] }) | null;
+  /**
+   * Reads the stored `initial` again after a save refused as changed since
+   * it was read (ADR 0311); rejects when the read fails or it is gone. The
+   * dialog then shows that state.
+   */
+  readonly reload?: () => Promise<StoredClosingDay>;
+  readonly initial: StoredClosingDay | null;
   readonly schools?: readonly { readonly id: string; readonly name: string }[];
   readonly defaultDate?: string;
   readonly reasonMaxLength?: number;
@@ -301,6 +403,8 @@ interface ClosingDayModalProps {
     endDate: string;
     reason: string;
     schoolIds: readonly string[];
+    /** The version an edit replaces; undefined when creating. */
+    expectedVersion?: string;
   }) => Promise<void>;
   /** Reports the draft as it changes, so the page can show its effects. */
   readonly onDraftChange?: (draft: ClosingDayDraft) => void;

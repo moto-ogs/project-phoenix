@@ -26,7 +26,7 @@ import {
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useFreshSWR } from "~/lib/swr";
+import { useSWRAuth } from "~/lib/swr";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { createLogger } from "~/lib/logger";
 import {
@@ -60,17 +60,19 @@ export function TransitionPreviewModal({
   onBackToEditor,
   onApplied,
 }: TransitionPreviewModalProps) {
-  // Applied against exactly the cohort shown: each opening and each reload
-  // after a refusal waits for its own answer, never a cached preview.
+  // The preview comes from the shared cache and is read again on opening.
+  // The apply carries its fingerprint, and the backend refuses a cohort that
+  // changed since (ADR 0311, #405), so a cached preview never applies to
+  // other children than it shows.
   const {
-    data: freshData,
+    data: cachedData,
     error: previewError,
     mutate,
-  } = useFreshSWR(tenantAdminKeys.gradeTransitionPreview(transition.id), () =>
+  } = useSWRAuth(tenantAdminKeys.gradeTransitionPreview(transition.id), () =>
     previewGradeTransition(transition.id),
   );
   // A failed load shows its error, not the preview it was meant to replace.
-  const data = previewError ? undefined : freshData;
+  const data = previewError ? undefined : cachedData;
   const preview = data ?? null;
   // Ladefehler und Anwendefehler bleiben im Panel, mit Katalogtext und
   // Wiederholen (#2517).

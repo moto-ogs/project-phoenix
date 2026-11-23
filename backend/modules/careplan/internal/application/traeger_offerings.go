@@ -10,6 +10,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // TraegerOfferingReads read the Träger care offerings; the administration
@@ -24,6 +25,8 @@ type TraegerOfferingReads interface {
 type TraegerOfferingStore interface {
 	TraegerOfferingReads
 	InsertTraegerOffering(ctx context.Context, organizationID, traegerPhaseID int64, draft careplan.TraegerOfferingDraft) (int64, error)
+	// LockTraegerOffering reads the offering under its row lock.
+	LockTraegerOffering(ctx context.Context, organizationID, id int64) (careplan.TraegerOffering, error)
 	UpdateTraegerOfferingDraft(ctx context.Context, organizationID, id int64, draft careplan.TraegerOfferingDraft) (bool, error)
 	WithdrawTraegerOffering(ctx context.Context, organizationID, id int64) (bool, error)
 	InsertTraegerOfferingVersions(ctx context.Context, organizationID int64, versions map[int64]careplan.TraegerOffering, accountID int64) error
@@ -59,16 +62,20 @@ func (s *TraegerOfferings) CreateTraegerOffering(ctx context.Context, organizati
 }
 
 // UpdateTraegerOffering replaces the draft of an offering that is not
-// withdrawn. No school notices before the next release.
-func (s *TraegerOfferings) UpdateTraegerOffering(ctx context.Context, organizationID, id int64, draft careplan.TraegerOfferingDraft) (careplan.TraegerOffering, error) {
-	current, err := s.store.TraegerOffering(ctx, organizationID, id)
+// withdrawn, under the row lock and only over the version its author read
+// (ADR 0311). No school notices before the next release.
+func (s *TraegerOfferings) UpdateTraegerOffering(ctx context.Context, organizationID, id int64, expectedVersion string, draft careplan.TraegerOfferingDraft) (careplan.TraegerOffering, error) {
+	current, err := s.store.LockTraegerOffering(ctx, organizationID, id)
 	if err != nil {
+		return careplan.TraegerOffering{}, err
+	}
+	if err := readstate.Check(expectedVersion, current.Version); err != nil {
 		return careplan.TraegerOffering{}, err
 	}
 	if current.WithdrawnAt != nil {
 		return careplan.TraegerOffering{}, careplan.ErrTraegerOfferingWithdrawn
 	}
-	normalized, err := normalizeTraegerOfferingDraft(current.TraegerPhaseID, draft)
+	normalized, err := normalizeTraegerOfferingDraft(current.TraegerPhaseID.Int64(), draft)
 	if err != nil {
 		return careplan.TraegerOffering{}, err
 	}
@@ -118,7 +125,7 @@ func (s *TraegerOfferings) ReleaseTraegerOfferings(ctx context.Context, organiza
 		}
 		draft := offering.Draft
 		offerings[index].ReleasedVersion, offerings[index].Released = &next, &draft
-		versions[offering.ID] = offerings[index]
+		versions[offering.ID.Int64()] = offerings[index]
 	}
 	if err := s.store.InsertTraegerOfferingVersions(ctx, organizationID, versions, accountID); err != nil {
 		return nil, err

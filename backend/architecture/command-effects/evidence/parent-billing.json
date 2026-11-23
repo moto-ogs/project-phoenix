@@ -257,8 +257,32 @@
       "target_owner": "settings-platform"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingCareContracts.ChildrenOf",
+      "binding_digest": "294b58825cc02a5a1d80c9577c6b5f89",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareContracts.ChildrenOf",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractBilling.BillingChildren",
+      "target_owner": "care-contract"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingTermContracts.ChildrenOf",
+      "binding_digest": "294b58825cc02a5a1d80c9577c6b5f89",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareContracts.ChildrenOf",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractBilling.BillingChildren",
+      "target_owner": "care-contract"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingCareContracts.Recipients",
-      "binding_digest": "07058974f2251c1c4ab9ac133ce07606",
+      "binding_digest": "505ff39d2c92b92ea5a412573b0c3703",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareContracts.Recipients",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractBilling.BillingRecipients",
+      "target_owner": "care-contract"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingTermContracts.Recipients",
+      "binding_digest": "1c07bc5b593be4d2e948ef7dddba3b44",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareContracts.Recipients",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractBilling.BillingRecipients",
@@ -266,7 +290,15 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingCareContracts.VersionsInForce",
-      "binding_digest": "8a588f241a5498af836442ca4545cc48",
+      "binding_digest": "c416e12e4458d0427960188977f89e06",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareContracts.VersionsInForce",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractBilling.VersionsInForce",
+      "target_owner": "care-contract"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingTermContracts.VersionsInForce",
+      "binding_digest": "c416e12e4458d0427960188977f89e06",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareContracts.VersionsInForce",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractBilling.VersionsInForce",
@@ -378,7 +410,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.parentMandateParties.Recipients",
-      "binding_digest": "2746650c3b49c19b1e9b9ad455d67f2e",
+      "binding_digest": "f69ffb6388cf02fbf0b9b291f2824e37",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.ContractParties.Recipients",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractBilling.BillingRecipients",
@@ -530,7 +562,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingBillingRegistrations.ConfirmedHolidayRegistrations",
-      "binding_digest": "8dee8ac53ee0f8fd6c667eb0ff1605f5",
+      "binding_digest": "038deea1836a1bf6b7908d8b294dff64",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.HolidayBillingRegistrations.ConfirmedHolidayRegistrations",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayRegistrationReview.ListHolidayRegistrationRecipients",
@@ -554,7 +586,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingBillingRegistrations.HolidayProofRegistrations",
-      "binding_digest": "2899d854d6a99991f62d08c7f0bccb50",
+      "binding_digest": "22d6e48784980f95b61af900cb7bc9a2",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.HolidayBillingRegistrations.HolidayProofRegistrations",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayRegistrationReview.ListHolidayRegistrationRecipients",
@@ -666,7 +698,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingHolidayRegistrations.HolidayWeeks",
-      "binding_digest": "a889b75f68c2283c309a3fe8bb02d2a7",
+      "binding_digest": "d627f75d75f7a4ce0240fa9213b1cc6f",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.HolidayRegistrations.HolidayWeeks",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayRegistrations.HolidayRegistrationOffer",
@@ -737,11 +769,27 @@
       "target_owner": "care-contract"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.retainedContracts.DeletableContracts",
+      "binding_digest": "fb87f8cae06562f8d83d8ef103d8c0f5",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.RetainedContracts.DeletableContracts",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractRetention.DeletableContracts",
+      "target_owner": "care-contract"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.retainedContracts.DeleteEndedContracts",
       "binding_digest": "710dabcdb4cfe0e64fb3e200cfa9df1e",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.RetainedContracts.DeleteEndedContracts",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractRetention.DeleteEndedContracts",
+      "target_owner": "care-contract"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.retainedContracts.RecipientEmails",
+      "binding_digest": "bdd8cb93b071a18c8066ba8a51d90f2a",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.RetainedContracts.RecipientEmails",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractRetention.RecipientEmails",
       "target_owner": "care-contract"
     },
     {
@@ -786,7 +834,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingPlaceChanges.RebookHolidayChild",
-      "binding_digest": "9263355ee0714bdaac28b90a58bc104d",
+      "binding_digest": "5f1ce720c2a5bd7be1b3f32069d7c987",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling/http.HolidayPlaceChanges.RebookHolidayChild",
       "source_owner": "parent-billing",
       "target": "*github.com/moto-ogs/project-phoenix/workflows/holidayallocation.Workflow.RebookHolidayChild",
@@ -794,7 +842,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingPlaceChanges.SetHolidayWeekCapacity",
-      "binding_digest": "70f7cb6e961a10785b36c84181d2af2d",
+      "binding_digest": "7282681ffbd5c71a13f4f5fc61b3c43a",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling/http.HolidayPlaceChanges.SetHolidayWeekCapacity",
       "source_owner": "parent-billing",
       "target": "*github.com/moto-ogs/project-phoenix/workflows/holidayallocation.Workflow.SetHolidayWeekCapacity",
@@ -802,7 +850,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareContracts.Recipients",
-      "binding_digest": "07058974f2251c1c4ab9ac133ce07606",
+      "binding_digest": "608bfc018d5b7dbd06bc0e2fc3eb9e5c",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling/internal/application.CareLetterRecipients.Recipients",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractBilling.BillingRecipients",

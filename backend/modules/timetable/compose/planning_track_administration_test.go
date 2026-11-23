@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -35,9 +36,9 @@ type planningTrackOwnerStub struct {
 func newPlanningTrackOwnerStub(tracks ...timetable.PlanningTrack) *planningTrackOwnerStub {
 	stub := &planningTrackOwnerStub{tracks: map[int64]timetable.PlanningTrack{}, nextID: 1}
 	for _, track := range tracks {
-		stub.tracks[track.ID] = track
-		if track.ID >= stub.nextID {
-			stub.nextID = track.ID + 1
+		stub.tracks[track.ID.Int64()] = track
+		if track.ID >= ident.ID(stub.nextID) {
+			stub.nextID = (track.ID + 1).Int64()
 		}
 	}
 	return stub
@@ -77,9 +78,9 @@ func (s *planningTrackOwnerStub) CreatePlanningTrack(_ context.Context, input ti
 	if s.createErr != nil {
 		return timetable.PlanningTrack{}, s.createErr
 	}
-	track := timetable.PlanningTrack{ID: s.nextID, Name: input.Name, Color: input.Color, SortOrder: input.SortOrder}
+	track := timetable.PlanningTrack{ID: ident.ID(s.nextID), Name: input.Name, Color: input.Color, SortOrder: input.SortOrder}
 	s.nextID++
-	s.tracks[track.ID] = track
+	s.tracks[track.ID.Int64()] = track
 	return track, nil
 }
 
@@ -134,7 +135,7 @@ func (s *planningTrackOwnerStub) RestorePlanningTrackAtEnd(_ context.Context, id
 
 func archivedPlanningTrack(id int64, name string) timetable.PlanningTrack {
 	archivedAt := time.Now()
-	return timetable.PlanningTrack{ID: id, Name: name, Color: "#83CD2D", ArchivedAt: &archivedAt}
+	return timetable.PlanningTrack{ID: ident.ID(id), Name: name, Color: "#83CD2D", ArchivedAt: &archivedAt}
 }
 
 func TestPlanningTrackAdministrationValidatesDrafts(t *testing.T) {
@@ -149,7 +150,7 @@ func TestPlanningTrackAdministrationValidatesDrafts(t *testing.T) {
 	assert.Equal(t, "#F78C10", created.Color)
 	assert.Equal(t, 2, created.SortOrder)
 
-	_, err = admin.EditPlanningTrack(ctx, created.ID, timetable.PlanningTrackDraft{Name: "Mittag", Color: "orange", SortOrder: 2})
+	_, err = admin.EditPlanningTrack(ctx, created.ID.Int64(), timetable.PlanningTrackDraft{Name: "Mittag", Color: "orange", SortOrder: 2})
 	require.ErrorIs(t, err, timetable.ErrInvalidPlanningTrack)
 	assert.EqualError(t, err, "invalid planning track: planning track color must use #RRGGBB")
 
@@ -194,7 +195,7 @@ func TestPlanningTrackAdministrationMissingTracks(t *testing.T) {
 
 func TestPlanningTrackAdministrationListAndGet(t *testing.T) {
 	t.Parallel()
-	track := timetable.PlanningTrack{ID: time.Now().UnixNano(), Name: "Früh", Color: "#5080D8"}
+	track := timetable.PlanningTrack{ID: ident.ID(time.Now().UnixNano()), Name: "Früh", Color: "#5080D8"}
 	owner := newPlanningTrackOwnerStub(track)
 	admin := NewPlanningTrackAdministration(owner, nil, time.Now)
 	ctx := context.Background()
@@ -203,7 +204,7 @@ func TestPlanningTrackAdministrationListAndGet(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []timetable.PlanningTrack{track}, tracks)
 	assert.Equal(t, timetable.PlanningTrackFilter{Ordered: true}, owner.lastListFilter)
-	found, err := admin.GetPlanningTrack(ctx, track.ID)
+	found, err := admin.GetPlanningTrack(ctx, track.ID.Int64())
 	require.NoError(t, err)
 	assert.Equal(t, track, found)
 
@@ -212,7 +213,7 @@ func TestPlanningTrackAdministrationListAndGet(t *testing.T) {
 	_, err = admin.ListAllPlanningTracks(ctx)
 	require.ErrorIs(t, err, wantErr)
 	owner.findErr = wantErr
-	_, err = admin.GetPlanningTrack(ctx, track.ID)
+	_, err = admin.GetPlanningTrack(ctx, track.ID.Int64())
 	require.ErrorIs(t, err, wantErr)
 }
 
@@ -234,43 +235,43 @@ func TestPlanningTrackAdministrationWriteFailures(t *testing.T) {
 	created, err := admin.AddPlanningTrack(ctx, draft)
 	require.NoError(t, err)
 
-	updated, err := admin.EditPlanningTrack(ctx, created.ID, timetable.PlanningTrackDraft{Name: "Süd", Color: "#83CD2D", SortOrder: 2})
+	updated, err := admin.EditPlanningTrack(ctx, created.ID.Int64(), timetable.PlanningTrackDraft{Name: "Süd", Color: "#83CD2D", SortOrder: 2})
 	require.NoError(t, err)
 	assert.Equal(t, "Süd", updated.Name)
 	assert.Equal(t, 2, updated.SortOrder)
 
 	owner.updateActiveErr = wantErr
-	_, err = admin.EditPlanningTrack(ctx, created.ID, draft)
+	_, err = admin.EditPlanningTrack(ctx, created.ID.Int64(), draft)
 	require.ErrorIs(t, err, wantErr)
 	owner.updateActiveErr = timetable.ErrPlanningTrackNameExists
-	_, err = admin.EditPlanningTrack(ctx, created.ID, draft)
+	_, err = admin.EditPlanningTrack(ctx, created.ID.Int64(), draft)
 	require.ErrorIs(t, err, timetable.ErrPlanningTrackNameTaken)
 	owner.updateActiveErr = nil
 	notUpdated := false
 	owner.updateActiveResult = &notUpdated
-	_, err = admin.EditPlanningTrack(ctx, created.ID, draft)
+	_, err = admin.EditPlanningTrack(ctx, created.ID.Int64(), draft)
 	require.ErrorIs(t, err, timetable.ErrPlanningTrackArchived)
 
-	archived := archivedPlanningTrack(created.ID+1, "Alt")
+	archived := archivedPlanningTrack(created.ID.Int64()+1, "Alt")
 	archivedAdmin := NewPlanningTrackAdministration(newPlanningTrackOwnerStub(archived), nil, time.Now)
-	_, err = archivedAdmin.EditPlanningTrack(ctx, archived.ID, draft)
+	_, err = archivedAdmin.EditPlanningTrack(ctx, archived.ID.Int64(), draft)
 	require.ErrorIs(t, err, timetable.ErrPlanningTrackArchived)
 }
 
 func TestPlanningTrackAdministrationArchiveAndRestore(t *testing.T) {
 	t.Parallel()
 	base := time.Now().UnixNano()
-	remaining := timetable.PlanningTrack{ID: base, Name: "Mittag", Color: "#F78C10", SortOrder: 0}
-	track := timetable.PlanningTrack{ID: base + 1, Name: "Früh", Color: "#83CD2D", SortOrder: 0}
+	remaining := timetable.PlanningTrack{ID: ident.ID(base), Name: "Mittag", Color: "#F78C10", SortOrder: 0}
+	track := timetable.PlanningTrack{ID: ident.ID(base + 1), Name: "Früh", Color: "#83CD2D", SortOrder: 0}
 	owner := newPlanningTrackOwnerStub(remaining, track)
 	admin := NewPlanningTrackAdministration(owner, nil, time.Now)
 	ctx := context.Background()
 
-	archived, err := admin.ArchivePlanningTrack(ctx, track.ID)
+	archived, err := admin.ArchivePlanningTrack(ctx, track.ID.Int64())
 	require.NoError(t, err)
 	require.NotNil(t, archived.ArchivedAt)
 	assert.Equal(t, owner.archivedAtOnArchived, archived.ArchivedAt)
-	restored, err := admin.RestorePlanningTrack(ctx, track.ID)
+	restored, err := admin.RestorePlanningTrack(ctx, track.ID.Int64())
 	require.NoError(t, err)
 	assert.Nil(t, restored.ArchivedAt)
 	assert.Equal(t, 1, restored.SortOrder)
@@ -279,35 +280,35 @@ func TestPlanningTrackAdministrationArchiveAndRestore(t *testing.T) {
 func TestPlanningTrackAdministrationArchiveRestoreEdges(t *testing.T) {
 	t.Parallel()
 	base := time.Now().UnixNano()
-	active := timetable.PlanningTrack{ID: base, Name: "Früh", Color: "#5080D8"}
+	active := timetable.PlanningTrack{ID: ident.ID(base), Name: "Früh", Color: "#5080D8"}
 	archived := archivedPlanningTrack(base+1, "Alt")
 	owner := newPlanningTrackOwnerStub(active, archived)
 	admin := NewPlanningTrackAdministration(owner, nil, time.Now)
 	ctx := context.Background()
 
-	unchanged, err := admin.ArchivePlanningTrack(ctx, archived.ID)
+	unchanged, err := admin.ArchivePlanningTrack(ctx, archived.ID.Int64())
 	require.NoError(t, err)
 	assert.Equal(t, archived, unchanged)
-	unchanged, err = admin.RestorePlanningTrack(ctx, active.ID)
+	unchanged, err = admin.RestorePlanningTrack(ctx, active.ID.Int64())
 	require.NoError(t, err)
 	assert.Equal(t, active, unchanged)
 
 	wantErr := errors.New("database unavailable")
 	owner.archiveErr = wantErr
-	_, err = admin.ArchivePlanningTrack(ctx, active.ID)
+	_, err = admin.ArchivePlanningTrack(ctx, active.ID.Int64())
 	require.ErrorIs(t, err, wantErr)
 	owner.restoreErr = wantErr
-	_, err = admin.RestorePlanningTrack(ctx, archived.ID)
+	_, err = admin.RestorePlanningTrack(ctx, archived.ID.Int64())
 	require.ErrorIs(t, err, wantErr)
 	owner.restoreErr = timetable.ErrPlanningTrackNameExists
-	_, err = admin.RestorePlanningTrack(ctx, archived.ID)
+	_, err = admin.RestorePlanningTrack(ctx, archived.ID.Int64())
 	require.ErrorIs(t, err, timetable.ErrPlanningTrackNameTaken)
 }
 
 func TestPlanningTrackAdministrationValidatesAssignments(t *testing.T) {
 	t.Parallel()
 	base := time.Now().UnixNano()
-	active := timetable.PlanningTrack{ID: base, Name: "Früh", Color: "#5080D8"}
+	active := timetable.PlanningTrack{ID: ident.ID(base), Name: "Früh", Color: "#5080D8"}
 	archived := archivedPlanningTrack(base+1, "Alt")
 	owner := newPlanningTrackOwnerStub(active, archived)
 	admin := NewPlanningTrackAdministration(owner, nil, time.Now)
@@ -316,17 +317,17 @@ func TestPlanningTrackAdministrationValidatesAssignments(t *testing.T) {
 	require.NoError(t, admin.ValidatePlanningTrackAssignment(ctx, nil, nil))
 	zero := int64(0)
 	require.ErrorIs(t, admin.ValidatePlanningTrackAssignment(ctx, &zero, nil), timetable.ErrPlanningTrackNotFound)
-	require.NoError(t, admin.ValidatePlanningTrackAssignment(ctx, &active.ID, nil))
-	require.ErrorIs(t, admin.ValidatePlanningTrackAssignment(ctx, &archived.ID, nil), timetable.ErrPlanningTrackArchived)
-	require.ErrorIs(t, admin.ValidatePlanningTrackAssignment(ctx, &archived.ID, &active.ID), timetable.ErrPlanningTrackArchived)
-	require.NoError(t, admin.ValidatePlanningTrackAssignment(ctx, &archived.ID, &archived.ID),
+	require.NoError(t, admin.ValidatePlanningTrackAssignment(ctx, (*int64)(&active.ID), nil))
+	require.ErrorIs(t, admin.ValidatePlanningTrackAssignment(ctx, (*int64)(&archived.ID), nil), timetable.ErrPlanningTrackArchived)
+	require.ErrorIs(t, admin.ValidatePlanningTrackAssignment(ctx, (*int64)(&archived.ID), (*int64)(&active.ID)), timetable.ErrPlanningTrackArchived)
+	require.NoError(t, admin.ValidatePlanningTrackAssignment(ctx, (*int64)(&archived.ID), (*int64)(&archived.ID)),
 		"a template keeps the archived track it already has")
 	missing := base + 2
 	require.ErrorIs(t, admin.ValidatePlanningTrackAssignment(ctx, &missing, nil), timetable.ErrPlanningTrackNotFound)
 
 	wantErr := errors.New("database unavailable")
 	owner.findForShareErr = wantErr
-	require.ErrorIs(t, admin.ValidatePlanningTrackAssignment(ctx, &active.ID, nil), wantErr)
+	require.ErrorIs(t, admin.ValidatePlanningTrackAssignment(ctx, (*int64)(&active.ID), nil), wantErr)
 }
 
 func TestPlanningTrackAdministrationReorder(t *testing.T) {
@@ -365,15 +366,15 @@ func TestPlanningTrackAdministrationNameConflictAndArchiveLifecycle(t *testing.T
 	require.NoError(t, err)
 	_, err = admin.AddPlanningTrack(ctx, timetable.PlanningTrackDraft{Name: " nord ", Color: "#83CD2D", SortOrder: 1})
 	require.ErrorIs(t, err, timetable.ErrPlanningTrackNameTaken)
-	_, err = admin.ArchivePlanningTrack(ctx, first.ID)
+	_, err = admin.ArchivePlanningTrack(ctx, first.ID.Int64())
 	require.NoError(t, err)
 	second, err := admin.AddPlanningTrack(ctx, draft)
 	require.NoError(t, err)
 	third, err := admin.AddPlanningTrack(ctx, timetable.PlanningTrackDraft{Name: "Süd", Color: "#F78C10", SortOrder: 1})
 	require.NoError(t, err)
-	_, err = admin.EditPlanningTrack(ctx, third.ID, timetable.PlanningTrackDraft{Name: "NORD", Color: "#83CD2D", SortOrder: 1})
+	_, err = admin.EditPlanningTrack(ctx, third.ID.Int64(), timetable.PlanningTrackDraft{Name: "NORD", Color: "#83CD2D", SortOrder: 1, ExpectedVersion: third.Version})
 	require.ErrorIs(t, err, timetable.ErrPlanningTrackNameTaken)
-	_, err = admin.RestorePlanningTrack(ctx, first.ID)
+	_, err = admin.RestorePlanningTrack(ctx, first.ID.Int64())
 	require.ErrorIs(t, err, timetable.ErrPlanningTrackNameTaken)
 	assert.NotEqual(t, first.ID, second.ID)
 }
@@ -393,31 +394,31 @@ func TestPlanningTrackAdministrationAgainstOwner(t *testing.T) {
 	require.NoError(t, err)
 	_, err = admin.AddPlanningTrack(ctx, timetable.PlanningTrackDraft{Name: " früh ", Color: "#83CD2D", SortOrder: 2})
 	require.ErrorIs(t, err, timetable.ErrPlanningTrackNameTaken)
-	_, err = admin.EditPlanningTrack(ctx, late.ID, timetable.PlanningTrackDraft{Name: "Früh", Color: "#F78C10", SortOrder: 1})
+	_, err = admin.EditPlanningTrack(ctx, late.ID.Int64(), timetable.PlanningTrackDraft{Name: "Früh", Color: "#F78C10", SortOrder: 1, ExpectedVersion: late.Version})
 	require.ErrorIs(t, err, timetable.ErrPlanningTrackNameTaken)
 
-	archived, err := admin.ArchivePlanningTrack(ctx, early.ID)
+	archived, err := admin.ArchivePlanningTrack(ctx, early.ID.Int64())
 	require.NoError(t, err)
 	require.NotNil(t, archived.ArchivedAt)
-	_, err = admin.EditPlanningTrack(ctx, early.ID, timetable.PlanningTrackDraft{Name: "Früher", Color: "#5080D8", SortOrder: 0})
+	_, err = admin.EditPlanningTrack(ctx, early.ID.Int64(), timetable.PlanningTrackDraft{Name: "Früher", Color: "#5080D8", SortOrder: 0})
 	require.ErrorIs(t, err, timetable.ErrPlanningTrackArchived)
-	require.ErrorIs(t, admin.ValidatePlanningTrackAssignment(ctx, &early.ID, nil), timetable.ErrPlanningTrackArchived)
-	require.NoError(t, admin.ValidatePlanningTrackAssignment(ctx, &early.ID, &early.ID))
+	require.ErrorIs(t, admin.ValidatePlanningTrackAssignment(ctx, (*int64)(&early.ID), nil), timetable.ErrPlanningTrackArchived)
+	require.NoError(t, admin.ValidatePlanningTrackAssignment(ctx, (*int64)(&early.ID), (*int64)(&early.ID)))
 
 	replacement, err := admin.AddPlanningTrack(ctx, timetable.PlanningTrackDraft{Name: "Früh", Color: "#83CD2D", SortOrder: 2})
 	require.NoError(t, err, "an archived track frees its name")
-	_, err = admin.RestorePlanningTrack(ctx, early.ID)
+	_, err = admin.RestorePlanningTrack(ctx, early.ID.Int64())
 	require.ErrorIs(t, err, timetable.ErrPlanningTrackNameTaken)
-	renamed, err := admin.EditPlanningTrack(ctx, replacement.ID, timetable.PlanningTrackDraft{Name: "Früh neu", Color: "#83CD2D", SortOrder: 2})
+	renamed, err := admin.EditPlanningTrack(ctx, replacement.ID.Int64(), timetable.PlanningTrackDraft{Name: "Früh neu", Color: "#83CD2D", SortOrder: 2, ExpectedVersion: replacement.Version})
 	require.NoError(t, err)
 	assert.Equal(t, "Früh neu", renamed.Name)
-	restored, err := admin.RestorePlanningTrack(ctx, early.ID)
+	restored, err := admin.RestorePlanningTrack(ctx, early.ID.Int64())
 	require.NoError(t, err)
 	assert.Nil(t, restored.ArchivedAt)
 	assert.Equal(t, 3, restored.SortOrder)
 
-	require.NoError(t, admin.OrderPlanningTracks(ctx, []int64{restored.ID, replacement.ID, late.ID}))
+	require.NoError(t, admin.OrderPlanningTracks(ctx, []int64{restored.ID.Int64(), replacement.ID.Int64(), late.ID.Int64()}))
 	listed, err := admin.ListAllPlanningTracks(ctx)
 	require.NoError(t, err)
-	assert.Equal(t, []int64{restored.ID, replacement.ID, late.ID}, planningTrackIDs(listed))
+	assert.Equal(t, []int64{restored.ID.Int64(), replacement.ID.Int64(), late.ID.Int64()}, planningTrackIDs(listed))
 }

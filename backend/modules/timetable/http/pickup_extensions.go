@@ -20,19 +20,20 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
 type pickupExtensionBlockResponse struct {
-	ID        int64  `json:"id"`
-	Title     string `json:"title"`
-	StartTime string `json:"start_time"`
-	EndTime   string `json:"end_time"`
+	ID        ident.ID `json:"id"`
+	Title     string   `json:"title"`
+	StartTime string   `json:"start_time"`
+	EndTime   string   `json:"end_time"`
 }
 
 type pickupExtensionResponse struct {
-	ID                 int64                          `json:"id"`
-	StudentID          int64                          `json:"student_id"`
+	ID                 ident.ID                       `json:"id"`
+	StudentID          ident.ID                       `json:"student_id"`
 	StudentName        string                         `json:"student_name"`
 	Kind               string                         `json:"kind"`
 	Date               string                         `json:"date,omitempty"`
@@ -48,7 +49,7 @@ type pickupExtensionsResponse struct {
 }
 
 type resolvePickupExtensionRequest struct {
-	BlockIDs []int64 `json:"block_ids"`
+	BlockIDs []ident.ID `json:"block_ids"`
 }
 
 func (req *resolvePickupExtensionRequest) Bind(_ *http.Request) error {
@@ -72,7 +73,7 @@ var errPickupExtensionTooManyBlocks = timetable.WithCode(errors.New("block_ids c
 	common.CodeTimetablePickupExtensionTooManyBlocks, timetable.RefusalValues{Max: maxPickupExtensionBlocks})
 
 type resolvePickupExtensionResponse struct {
-	StudentID      int64                          `json:"student_id"`
+	StudentID      ident.ID                       `json:"student_id"`
 	Kind           string                         `json:"kind"`
 	AssignedBlocks []pickupExtensionBlockResponse `json:"assigned_blocks"`
 	InstanceCount  int                            `json:"instance_count"`
@@ -159,7 +160,7 @@ func (rs *Resource) resolvePickupExtension(w http.ResponseWriter, r *http.Reques
 		common.RenderError(w, r, common.ErrorInternalServerWrap("lock template recurrence failed", err))
 		return
 	}
-	result, err := rs.PickupExtensions.ResolvePickupExtension(ctx, taskID, req.BlockIDs)
+	result, err := rs.PickupExtensions.ResolvePickupExtension(ctx, taskID, ident.Int64s(req.BlockIDs))
 	if err != nil {
 		tenant.MarkRollback(ctx)
 		renderPickupExtensionError(w, r, err)
@@ -168,7 +169,7 @@ func (rs *Resource) resolvePickupExtension(w http.ResponseWriter, r *http.Reques
 	// Resolving rewrites the rosters of the assigned blocks (#5017).
 	rs.broadcastStaffingDeviationChanged(ctx, "pickup_extension")
 	common.Respond(w, r, http.StatusOK, resolvePickupExtensionResponse{
-		StudentID:      result.StudentID,
+		StudentID:      ident.ID(result.StudentID),
 		Kind:           result.Kind,
 		AssignedBlocks: pickupExtensionBlocksToResponse(result.AssignedBlocks),
 		InstanceCount:  len(result.InstanceIDs),
@@ -204,8 +205,8 @@ func pickupExtensionStudentIDs(tasks []timetable.PickupExtensionTask) []int64 {
 
 func pickupExtensionToResponse(task timetable.PickupExtensionTask, studentName string) pickupExtensionResponse {
 	return pickupExtensionResponse{
-		ID:                 task.ID,
-		StudentID:          task.StudentID,
+		ID:                 ident.ID(task.ID),
+		StudentID:          ident.ID(task.StudentID),
 		StudentName:        studentName,
 		Kind:               task.Kind,
 		Date:               task.Date,
@@ -220,7 +221,9 @@ func pickupExtensionToResponse(task timetable.PickupExtensionTask, studentName s
 func pickupExtensionBlocksToResponse(blocks []timetable.PickupExtensionBlock) []pickupExtensionBlockResponse {
 	result := make([]pickupExtensionBlockResponse, 0, len(blocks))
 	for _, block := range blocks {
-		result = append(result, pickupExtensionBlockResponse(block))
+		result = append(result, pickupExtensionBlockResponse{
+			ID: ident.ID(block.ID), Title: block.Title, StartTime: block.StartTime, EndTime: block.EndTime,
+		})
 	}
 	return result
 }

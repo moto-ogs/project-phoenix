@@ -7,19 +7,6 @@ const INT64 = /^(0|-?[1-9]\d{0,18})$/;
 /** An int64 identifier sent as a JSON string. Kept verbatim, never a number. */
 export const int64String = z.string().regex(INT64);
 
-/**
- * An identifier that a route sends as a JSON number today and as a string
- * one release later. JSON.parse has already rounded a number beyond 2^53, so
- * an unsafe integer fails here instead of naming a different row.
- */
-export const int64StringOrNumber = z.union([
-  int64String,
-  z
-    .number()
-    .refine(Number.isSafeInteger, "identifier beyond 2^53 lost precision")
-    .transform(String),
-]);
-
 export const safeInt = z.number().refine(Number.isSafeInteger);
 
 /** calendar.Date: a real day as YYYY-MM-DD. */
@@ -42,13 +29,7 @@ export function openEnum<T extends string>() {
   return z.string() as unknown as z.ZodType<OpenEnum<T>, unknown>;
 }
 
-/** Narrows an open enum to the values this build knows. */
-export function knownEnum<T extends string>(
-  values: readonly T[],
-  value: string | undefined,
-): T | undefined {
-  return values.find((known) => known === value);
-}
+export { knownEnum } from "./known-enum";
 
 /**
  * The body a registered route binds. It carries no value: the route entry
@@ -69,6 +50,9 @@ const pagination = z.object({
   total_pages: safeInt,
   total_records: safeInt,
 });
+
+/** The page of a paginated list (`common.Pagination`). */
+export type Pagination = z.infer<typeof pagination>;
 
 /**
  * z.object for a generated schema. The generator writes the interface and
@@ -93,6 +77,17 @@ export const str: Field = z.string();
 export const bool: Field = z.boolean();
 export const num: Field = z.number();
 export const json: Field = z.unknown();
+// The Go field names the typed form and documents why historical values
+// must still travel. An open fallback is JSON, not an unchecked JS value.
+const historicalJSON = z.json();
+export type LegacyJSON = z.output<typeof historicalJSON>;
+export const legacyJSON = (current: Field): Field =>
+  // Keep the original value: a current object decoder can accept a
+  // historical row but strip keys the review screen still displays.
+  z.custom(
+    (raw) =>
+      current.safeParse(raw).success || historicalJSON.safeParse(raw).success,
+  );
 export const arr = (item: Field): Field => z.array(item);
 export const rec = (value: Field): Field => z.record(z.string(), value);
 export const nullable = (value: Field): Field => value.nullable();
@@ -109,14 +104,27 @@ export function success<T>(
 
 /**
  * A route that answers no data: a 204, which the backend client reads as
- * undefined, or the envelope without a data member.
+ * undefined, or the envelope without a data member. The catalog proxy
+ * answers it as `{ status: "success", data: null }`, a DELETE as 204.
  */
 export const noData = z
   .union([
     z.undefined(),
     z.object({ status: z.literal("success"), data: z.null().optional() }),
   ])
-  .transform(() => ({ data: null }));
+  .transform(() => ({ status: "success" as const, data: null }));
+
+/**
+ * A route that answers a file (`File` in the Go registration): the proxy
+ * streams the bytes with their file headers and decodes nothing.
+ */
+export const fileAnswer = { kind: "file" } as const;
+
+/**
+ * A route that takes a multipart/form-data upload (`Multipart`): the proxy
+ * streams the body to the backend within the route's `maxBodyBytes`.
+ */
+export const multipart = { kind: "multipart" } as const;
 
 /** common.PaginatedResponse */
 export function paginated<T>(

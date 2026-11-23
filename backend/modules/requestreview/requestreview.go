@@ -143,13 +143,72 @@ type Item struct {
 	// no relationship; the client then names nobody rather than guessing.
 	SubmittedByName         string `json:"submitted_by_name,omitempty"`
 	SubmittedByRelationship string `json:"submitted_by_relationship,omitempty"`
-	Data                    any    `json:"data"`
+	// Data is the projection of the open list under the old member name; the
+	// typed members below replace it, and the history has its own path.
+	// Deprecated for one release (#7808).
+	Data any `json:"data" contract_json:"The originating request owner supplies a different DTO for each inbox item kind"`
+	// MasterData, CareSchedule, Offering and Excused carry the projection
+	// of the open list: the member named like RequestType is set.
+	MasterData   *MasterDataChangeRequestResponse `json:"master_data,omitempty"`
+	CareSchedule *CareRequestResponse             `json:"care_schedule,omitempty"`
+	Offering     *OfferingRequestResponse         `json:"offering,omitempty"`
+	Excused      *StaffExcusedRequestResponse     `json:"excused,omitempty"`
+	// payload is Row.Payload, kept for the history item.
+	payload Payload
 	// studentID is StudentID as the owner queues report it. The wire carries
 	// the string (backend int64 IDs map to frontend strings); the decorations
 	// key on this instead of parsing the string back.
 	studentID int64
 	// submittedBy is Row.SubmittedBy; the wire carries the name instead.
 	submittedBy int64
+}
+
+// HistoryItem is one decided request, or an office correction, of
+// GET /change-requests/history. The member named like RequestType carries
+// its projection.
+type HistoryItem struct {
+	RequestType     string    `json:"request_type"`
+	OccurredAt      time.Time `json:"occurred_at"`
+	StudentID       string    `json:"student_id"`
+	StudentName     string    `json:"student_name"`
+	GroupName       string    `json:"group_name,omitempty"`
+	ExpectedVersion string    `json:"expected_version"`
+	// CanCorrect marks a decision staff can still rewrite.
+	CanCorrect              bool                                    `json:"can_correct,omitempty"`
+	FamilyProtected         bool                                    `json:"family_protected"`
+	SubmittedByName         string                                  `json:"submitted_by_name,omitempty"`
+	SubmittedByRelationship string                                  `json:"submitted_by_relationship,omitempty"`
+	MasterData              *MasterDataChangeRequestHistoryResponse `json:"master_data,omitempty"`
+	CareSchedule            *CareRequestHistoryResponse             `json:"care_schedule,omitempty"`
+	Offering                *OfferingRequestHistoryResponse         `json:"offering,omitempty"`
+	Excused                 *StaffExcusedRequestHistoryResponse     `json:"excused,omitempty"`
+	DirectCorrection        *DirectCorrectionResponse               `json:"direct_correction,omitempty"`
+}
+
+// HistoryPage is the cursor envelope of the history.
+type HistoryPage struct {
+	Items []HistoryItem `json:"items"`
+	// NextCursor is absent on the last page. It is only valid for the exact
+	// filter set it was produced with.
+	NextCursor string `json:"next_cursor,omitempty"`
+}
+
+// HistoryPageOf turns a page of the history view into the history's own
+// envelope.
+func HistoryPageOf(page Page) HistoryPage {
+	history := HistoryPage{Items: make([]HistoryItem, 0, len(page.Items)), NextCursor: page.NextCursor}
+	for _, item := range page.Items {
+		history.Items = append(history.Items, HistoryItem{
+			RequestType: item.RequestType, OccurredAt: item.OccurredAt, StudentID: item.StudentID,
+			StudentName: item.StudentName, GroupName: item.GroupName, ExpectedVersion: item.ExpectedVersion,
+			CanCorrect: item.CanCorrect, FamilyProtected: item.FamilyProtected,
+			SubmittedByName: item.SubmittedByName, SubmittedByRelationship: item.SubmittedByRelationship,
+			MasterData: item.payload.MasterDataHistory, CareSchedule: item.payload.CareScheduleHistory,
+			Offering: item.payload.OfferingHistory, Excused: item.payload.ExcusedHistory,
+			DirectCorrection: item.payload.DirectCorrection,
+		})
+	}
+	return history
 }
 
 // Page is the cursor envelope of the list.

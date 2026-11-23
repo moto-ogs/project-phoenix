@@ -10,10 +10,13 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	usersHTTP "github.com/moto-ogs/project-phoenix/modules/peopledirectory/http"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -109,9 +112,9 @@ type guardianHarness struct {
 	bulkInvites []usersHTTP.GuardianBulkInvite
 	bulkResult  usersHTTP.GuardianBulkInviteResult
 	bulkErr     error
-	pending     []usersHTTP.PendingGuardianInvitation
 	observed    []string
 	rendered    []string
+	lastFailure error
 }
 
 func newGuardianHarness(t *testing.T, directory *fakeGuardianDirectory) *guardianHarness {
@@ -150,6 +153,7 @@ func newGuardianHarness(t *testing.T, directory *fakeGuardianDirectory) *guardia
 		},
 		Failure: func(w http.ResponseWriter, r *http.Request, kind usersHTTP.FailureKind, err error) {
 			h.rendered = append(h.rendered, string(kind))
+			h.lastFailure = err
 			_ = render.Render(w, r, errorResponse{StatusCode: statusOf[kind], Status: statusOf[kind], Kind: string(kind), Detail: err.Error()})
 		},
 		ObserveResponse: func(status int, code string) { h.observed = append(h.observed, http.StatusText(status)+":"+code) },
@@ -166,7 +170,6 @@ func newGuardianHarness(t *testing.T, directory *fakeGuardianDirectory) *guardia
 		SendInvitation: func(_ context.Context, guardianID, actorID int64) (usersHTTP.GuardianInvitation, error) {
 			return usersHTTP.GuardianInvitation{ID: 5, GuardianProfileID: guardianID, EmailSent: true, Token: "secret-token"}, nil
 		},
-		ListPendingInvitations: func(context.Context) ([]usersHTTP.PendingGuardianInvitation, error) { return h.pending, nil },
 		InviteGuardianToStudent: func(context.Context, usersHTTP.GuardianInvite) (usersHTTP.GuardianInviteResult, error) {
 			return usersHTTP.GuardianInviteResult{}, errors.New("managed contact")
 		},
@@ -208,7 +211,7 @@ func TestGuardianRoutesAreGatedByPermission(t *testing.T) {
 	t.Parallel()
 	h := newGuardianHarness(t, &fakeGuardianDirectory{})
 
-	assert.Equal(t, http.StatusForbidden, h.do(t, http.MethodGet, "/guardians/", nil).Code)
+	assert.Equal(t, http.StatusForbidden, h.do(t, http.MethodGet, "/guardians/search?q=Muster", nil).Code)
 	assert.Equal(t, http.StatusForbidden, h.do(t, http.MethodGet, "/guardians/payment-overview", nil).Code)
 	h.permitted["users:read"] = true
 	assert.Equal(t, http.StatusBadRequest, h.do(t, http.MethodGet, "/guardians/abc", nil).Code)
@@ -258,10 +261,12 @@ func TestDeleteGuardianRendersAudienceSpecificConflicts(t *testing.T) {
 	require.Len(t, directory.deleted, 1)
 	assert.Equal(t, peopledirectory.GuardianDelete{GuardianID: 7, ActorAccountID: 42, WithLinks: true, ExpectedLinkIDs: []int64{11}}, directory.deleted[0])
 
-	directory.deleteErr = peopledirectory.ErrGuardianDeletePreviewChanged
+	// The links changed since the preview: the read-state refusal lets the
+	// dialog read the new set (ADR 0311).
+	directory.deleteErr = readstate.ErrChanged
 	recorder = h.do(t, http.MethodDelete, "/guardians/7?force=true&expected_link_ids=11", nil)
 	require.Equal(t, http.StatusConflict, recorder.Code)
-	assert.Contains(t, recorder.Body.String(), "Vorschau")
+	assert.ErrorIs(t, h.lastFailure, readstate.ErrChanged)
 	assert.Equal(t, 1, h.rollbacks, "a stale preview rolls the request back")
 }
 
@@ -308,7 +313,7 @@ func TestBatchCreateRequiresCreatePermissionOnlyForNewProfiles(t *testing.T) {
 	require.Equal(t, http.StatusCreated, recorder.Code, recorder.Body.String())
 	require.Len(t, directory.added, 1)
 	require.NotNil(t, directory.added[0].GuardianProfileID)
-	assert.Equal(t, existing, *directory.added[0].GuardianProfileID)
+	assert.Equal(t, ident.ID(existing), *directory.added[0].GuardianProfileID)
 
 	h.staff = false
 	assert.Equal(t, http.StatusForbidden, h.do(t, http.MethodPost, "/guardians/students/3/guardians/batch", map[string]any{
@@ -351,20 +356,6 @@ func TestInvitationTokenIsOnlyExposedWhenTheRootAllowsIt(t *testing.T) {
 
 	h.actorID = 0
 	assert.Equal(t, http.StatusUnauthorized, h.do(t, http.MethodPost, "/guardians/7/invite", nil).Code)
-}
-
-// The link of a pending invitation is stored as hash only (#4902), so the
-// listing carries no token even where the root allows seed exposure.
-func TestPendingInvitationListCarriesNoToken(t *testing.T) {
-	t.Parallel()
-	h := newGuardianHarness(t, &fakeGuardianDirectory{})
-	h.permitted["users:read"] = true
-	h.exposeToken = true
-	h.pending = []usersHTTP.PendingGuardianInvitation{{ID: 7, GuardianProfileID: 9}}
-
-	recorder := h.do(t, http.MethodGet, "/guardians/invitations/pending", nil)
-	require.Equal(t, http.StatusOK, recorder.Code, recorder.Body.String())
-	assert.NotContains(t, recorder.Body.String(), `"token"`)
 }
 
 func TestInviteFailuresUseTheRootClassification(t *testing.T) {

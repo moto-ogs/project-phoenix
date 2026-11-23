@@ -13,13 +13,16 @@ import (
 // offeringAdjustmentWork carries one adjustment from its validation through
 // the persisted rows.
 type offeringAdjustmentWork struct {
-	input                                  careplan.OfferingAdjustment
-	reason                                 string
-	child                                  ports.BookingChild
-	student                                ports.BookingStudent
-	phase                                  ports.BookingPhase
-	effectiveFrom                          *calendar.Date
-	selectionDate                          calendar.Date
+	input         careplan.OfferingAdjustment
+	reason        string
+	child         ports.BookingChild
+	student       ports.BookingStudent
+	phase         ports.BookingPhase
+	effectiveFrom *calendar.Date
+	selectionDate calendar.Date
+	// startsWithFirstBooking is ports.BookingRequest.StartsWithFirstBooking
+	// of the child's request.
+	startsWithFirstBooking                 bool
 	offeringByID                           map[int64]*careplan.CareOffering
 	activeOfferingByID, beforeOfferingByID map[int64]*careplan.CareOffering
 	beforeLinks                            []*careplan.BookedOffering
@@ -29,6 +32,10 @@ type offeringAdjustmentWork struct {
 	overridden                             []careplan.OfferingOverride
 	authoritative, afterHasCareDays        bool
 	isCompleteWithdrawal                   bool
+	// keptEnds are the stored ends a change found before the office's
+	// extensions (#7929; only an undated correction extends); see
+	// keepUnextendedBookingEnds.
+	keptEnds map[int64]calendar.Date
 }
 
 func (m *BookingMaterialization) AdjustOfferings(ctx context.Context, in careplan.OfferingAdjustment) (*careplan.OfferingAdjustmentResult, error) {
@@ -41,6 +48,9 @@ func (m *BookingMaterialization) AdjustOfferings(ctx context.Context, in carepla
 		return nil, err
 	}
 	if err := m.persistOfferingAdjustment(ctx, work); err != nil {
+		return nil, err
+	}
+	if err := recordExtendedEnds(work); err != nil {
 		return nil, err
 	}
 	adjustmentID, err := m.recordOfferingAdjustment(ctx, work)
@@ -102,6 +112,9 @@ func (m *BookingMaterialization) validateOfferingAdjustmentInput(ctx context.Con
 	if reason == "" {
 		return "", fmt.Errorf("%w: reason is required", careplan.ErrOfferingAdjustmentInvalid)
 	}
+	if in.EffectiveFrom != nil && len(extendedOfferings(in.Offerings)) > 0 {
+		return "", fmt.Errorf("%w: ein Ende lässt sich nur in einer Korrektur ohne Datum verlängern", careplan.ErrOfferingAdjustmentInvalid)
+	}
 	return reason, nil
 }
 
@@ -117,7 +130,7 @@ func (m *BookingMaterialization) loadOfferingAdjustmentSubject(ctx context.Conte
 	if !child.Approved || child.CreatedStudentID == nil || *child.CreatedStudentID <= 0 {
 		return fmt.Errorf("%w: only approved children with a linked student can be adjusted", careplan.ErrOfferingAdjustmentInvalid)
 	}
-	work.child = child
+	work.child, work.startsWithFirstBooking = child, request.StartsWithFirstBooking
 	// All callers, including the admin correction, acquire gates before rows.
 	if err := m.LockOfferingDerivedWrites(ctx); err != nil {
 		return err
@@ -207,7 +220,7 @@ func (m *BookingMaterialization) loadOfferingAdjustmentCatalog(ctx context.Conte
 		beforeOfferingByID = offeringsByID(beforeOfferings)
 		addOfferingMap(offeringByID, beforeOfferingByID)
 	}
-	beforeJSON, err := adjustmentSnapshotJSON(beforeLinks, offeringByID)
+	beforeJSON, err := adjustmentSnapshotJSON(beforeLinks, offeringByID, nil)
 	if err != nil {
 		return err
 	}

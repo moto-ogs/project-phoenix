@@ -1,14 +1,17 @@
+import { sessionBff } from "./session-bff";
 // Client-side API of a second factor a person switches on in their own
-// account: the caterer's (#4497) and the parents' (#7051). Every call goes
-// through a Next.js route under the portal's base path, which forwards it
-// with the portal's session.
+// account: the caterer's (#4497) and the parents' (#7051).
 
-import { authFetch } from "./api-helpers";
+import { bffJson } from "./bff-fetch";
 
 /** The second factor as the account settings show it. */
 interface EmailCodeFactorStatus {
   enabled: boolean;
-  /** False when the factor cannot be switched on for this account. */
+  /**
+   * False when the factor cannot be switched on for this account. Only the
+   * parents portal sends it (an account that is a parent at no school); the
+   * caterer's factor is always available, so a missing value reads as true.
+   */
   available: boolean;
   maskedEmail: string;
 }
@@ -32,43 +35,83 @@ export interface EmailCodeFactorApi {
   disable(currentPassword: string): Promise<void>;
 }
 
-/** The factor's routes under `base` (`/api/caterer/account/mfa`, …). */
-export function emailCodeFactorApi(base: string): EmailCodeFactorApi {
-  return {
-    async status() {
-      const data = await authFetch<{
-        enabled: boolean;
-        available?: boolean;
-        masked_email?: string;
-      }>(base);
-      return {
-        enabled: data.enabled,
-        available: data.available ?? true,
-        maskedEmail: data.masked_email ?? "",
-      };
+/** The factor of the caterer's account (#4497). */
+const catererFactor: EmailCodeFactorApi = {
+  async status() {
+    const data = await bffJson("caterer", "GET /caterer/account/mfa");
+    // The caterer's factor is always available.
+    return {
+      enabled: data.enabled,
+      available: true,
+      maskedEmail: data.masked_email,
+    };
+  },
+  async start() {
+    const data = await bffJson("caterer", "POST /caterer/account/mfa/start");
+    return {
+      challengeToken: data.challenge_token,
+      maskedEmail: data.masked_email,
+    };
+  },
+  confirm: (challengeToken, code) =>
+    confirmFactor("caterer", challengeToken, code),
+  async disable(currentPassword) {
+    await bffJson("caterer", "POST /caterer/account/mfa/disable", {
+      body: { current_password: currentPassword },
+    });
+  },
+};
+
+/** The factor of a parent account (#7051). */
+const parentFactor: EmailCodeFactorApi = {
+  async status() {
+    const data = await bffJson("parent", "GET /parent/me/mfa");
+    return {
+      enabled: data.enabled,
+      available: data.available,
+      maskedEmail: data.masked_email,
+    };
+  },
+  async start() {
+    const data = await bffJson("parent", "POST /parent/me/mfa/start");
+    return {
+      challengeToken: data.challenge_token,
+      maskedEmail: data.masked_email,
+    };
+  },
+  confirm: (challengeToken, code) =>
+    confirmFactor("parent", challengeToken, code),
+  async disable(currentPassword) {
+    await bffJson("parent", "POST /parent/me/mfa/disable", {
+      body: { current_password: currentPassword },
+      authRefusals: ["identity.current_password_wrong"],
+    });
+  },
+};
+
+// The confirm step installs the renewed session in its own route.ts
+// (createFactorConfirmRoute), so it has no catalog contract.
+async function confirmFactor(
+  portal: "caterer" | "parent",
+  challengeToken: string,
+  code: string,
+): Promise<{ sessionRenewed: boolean }> {
+  const data = await bffJson(
+    portal,
+    portal === "caterer"
+      ? sessionBff.confirmCatererFactor
+      : sessionBff.confirmParentFactor,
+    {
+      body: { challenge_token: challengeToken, code },
+      authRefusals: ["identity.mfa_code_invalid"],
     },
-    async start() {
-      const data = await authFetch<{
-        challenge_token: string;
-        masked_email?: string;
-      }>(`${base}/start`, { method: "POST", body: {} });
-      return {
-        challengeToken: data.challenge_token,
-        maskedEmail: data.masked_email ?? "",
-      };
-    },
-    async confirm(challengeToken, code) {
-      const data = await authFetch<{ session_renewed: boolean }>(
-        `${base}/confirm`,
-        { method: "POST", body: { challenge_token: challengeToken, code } },
-      );
-      return { sessionRenewed: data.session_renewed };
-    },
-    async disable(currentPassword) {
-      await authFetch<unknown>(`${base}/disable`, {
-        method: "POST",
-        body: { currentPassword },
-      });
-    },
-  };
+  );
+  return { sessionRenewed: data.session_renewed };
+}
+
+/** The factor's calls of the portal. */
+export function emailCodeFactorApi(
+  portal: "caterer" | "parent",
+): EmailCodeFactorApi {
+  return portal === "caterer" ? catererFactor : parentFactor;
 }

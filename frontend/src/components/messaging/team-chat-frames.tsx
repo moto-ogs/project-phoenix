@@ -18,6 +18,7 @@ export function renderInboxFrame(parts: TeamChatInboxParts) {
   return (
     <TenantPage
       title={parts.title}
+      info={parts.info}
       stats={parts.stats}
       statsLoading={parts.statsLoading}
       badge={

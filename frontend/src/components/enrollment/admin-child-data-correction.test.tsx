@@ -33,6 +33,7 @@ describe("AdminChildDataCorrection", () => {
       last_name: "Falsch",
       date_of_birth: "2018-04-15",
       target_grade_level: 1,
+      version: "v1",
       status: "approved" as const,
       activation_mode: "scheduled",
       created_student_id: "student-1",
@@ -42,6 +43,7 @@ describe("AdminChildDataCorrection", () => {
       last_name: "Richtig",
       date_of_birth: "2018-05-16",
       target_grade_level: 2,
+      version: "v2",
     };
     mocks.correctAdminChildData.mockResolvedValue({
       request: { children: [correctedChild] },
@@ -51,6 +53,7 @@ describe("AdminChildDataCorrection", () => {
       <AdminChildDataCorrection
         requestId="request-1"
         onSaved={onSaved}
+        onChangedSinceRead={vi.fn()}
         child={initialChild}
       />,
     );
@@ -87,6 +90,7 @@ describe("AdminChildDataCorrection", () => {
           target_grade_level: 2,
           target_school_class: undefined,
           reason: "Nach Rücksprache korrigiert",
+          expected_version: "v1",
         },
       );
       expect(onSaved).toHaveBeenCalledWith(correctedChild);
@@ -96,6 +100,7 @@ describe("AdminChildDataCorrection", () => {
       <AdminChildDataCorrection
         requestId="request-1"
         onSaved={onSaved}
+        onChangedSinceRead={vi.fn()}
         child={correctedChild}
       />,
     );
@@ -120,12 +125,14 @@ describe("AdminChildDataCorrection", () => {
       <AdminChildDataCorrection
         requestId="request-1"
         onSaved={vi.fn()}
+        onChangedSinceRead={vi.fn()}
         child={{
           id: "child-1",
           first_name: "Lina",
           last_name: "Falsch",
           date_of_birth: "2018-04-15",
           target_grade_level: 1,
+          version: "v1",
           status: "approved",
           activation_mode: "scheduled",
           created_student_id: "student-1",
@@ -162,12 +169,14 @@ describe("AdminChildDataCorrection", () => {
       <AdminChildDataCorrection
         requestId="request-1"
         onSaved={vi.fn()}
+        onChangedSinceRead={vi.fn()}
         child={{
           id: "child-1",
           first_name: "Lina",
           last_name: "Falsch",
           date_of_birth: "2018-04-15",
           target_grade_level: 1,
+          version: "v1",
           status: "approved",
           activation_mode: "scheduled",
           created_student_id: "student-1",
@@ -199,5 +208,126 @@ describe("AdminChildDataCorrection", () => {
       "true",
     );
     expect(mocks.correctAdminChildData).not.toHaveBeenCalled();
+  });
+
+  // ADR 0311: a colleague corrected the child after the form was filled.
+  // The server refuses the older read; the page reads the request again and
+  // the form shows the stored data, without offering the same request.
+  it("shows the colleague's correction after a refused older read", async () => {
+    const child = {
+      id: "child-1",
+      first_name: "Lina",
+      last_name: "Falsch",
+      date_of_birth: "2018-04-15",
+      target_grade_level: 1,
+      version: "v1",
+      status: "approved" as const,
+      activation_mode: "scheduled",
+      created_student_id: "student-1",
+    };
+    mocks.correctAdminChildData.mockRejectedValue(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    const onChangedSinceRead = vi.fn();
+    const { rerender } = render(
+      <AdminChildDataCorrection
+        requestId="request-1"
+        onSaved={vi.fn()}
+        onChangedSinceRead={onChangedSinceRead}
+        child={child}
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Anmeldedaten korrigieren" }),
+    );
+    fireEvent.change(screen.getByLabelText("Grund der Korrektur"), {
+      target: { value: "Tippfehler" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Korrektur speichern" }),
+    );
+
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", "der Eintrag des Kindes"),
+      ),
+    ).toBeVisible();
+    expect(onChangedSinceRead).toHaveBeenCalledOnce();
+    expect(
+      screen.queryByRole("button", { name: "Wiederholen" }),
+    ).not.toBeInTheDocument();
+
+    rerender(
+      <AdminChildDataCorrection
+        requestId="request-1"
+        onSaved={vi.fn()}
+        onChangedSinceRead={onChangedSinceRead}
+        child={{ ...child, last_name: "Kollegin", version: "v2" }}
+      />,
+    );
+    await waitFor(() =>
+      expect(screen.getByLabelText("Nachname")).toHaveValue("Kollegin"),
+    );
+    expect(screen.getByLabelText("Grund der Korrektur")).toHaveValue(
+      "Tippfehler",
+    );
+  });
+
+  // Without the stored data the form names the failed read, not a new state
+  // it does not show; its retry reads again and then names the refusal.
+  it("names a failed read of the stored data after a refusal", async () => {
+    const child = {
+      id: "child-1",
+      first_name: "Lina",
+      last_name: "Falsch",
+      date_of_birth: "2018-04-15",
+      target_grade_level: 1,
+      version: "v1",
+      status: "approved" as const,
+      activation_mode: "scheduled",
+      created_student_id: "student-1",
+    };
+    mocks.correctAdminChildData.mockRejectedValue(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    const onChangedSinceRead = vi
+      .fn()
+      .mockRejectedValueOnce(
+        new ApiError("down", 503, { code: "general.unavailable" }),
+      )
+      .mockResolvedValue(undefined);
+    render(
+      <AdminChildDataCorrection
+        requestId="request-1"
+        onSaved={vi.fn()}
+        onChangedSinceRead={onChangedSinceRead}
+        child={child}
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Anmeldedaten korrigieren" }),
+    );
+    fireEvent.change(screen.getByLabelText("Grund der Korrektur"), {
+      target: { value: "Tippfehler" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Korrektur speichern" }),
+    );
+
+    expect(
+      await screen.findByText(
+        // ADR 0311: the failed read after a refusal says that the new state
+        // is missing, before the load error itself.
+        `Der neue Stand konnte nicht geladen werden. ${catalogText("general.unavailable", "der Eintrag des Kindes")}`,
+      ),
+    ).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", "der Eintrag des Kindes"),
+      ),
+    ).toBeVisible();
+    expect(onChangedSinceRead).toHaveBeenCalledTimes(2);
+    expect(mocks.correctAdminChildData).toHaveBeenCalledOnce();
   });
 });

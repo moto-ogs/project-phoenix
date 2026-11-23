@@ -17,11 +17,6 @@ export interface blockRequest {
   end_time?: string;
 }
 
-/** Query of GET /api/staff-pool/ */
-export interface GetStaffPoolQuery {
-  week?: string;
-}
-
 export const routes = {
   "DELETE /api/staff-pool/blocks/{id}": {
     method: "DELETE",
@@ -33,7 +28,9 @@ export const routes = {
     method: "GET",
     pattern: "/api/staff-pool/",
     portals: ["tenant"],
-    query: ["week"],
+    query: {
+      "week": { kind: "date" },
+    },
     response: success(PoolWeekSchema),
   },
   "POST /api/staff-pool/blocks": {

@@ -13,6 +13,7 @@
   "valueRequired": "Lütfen bir değer girin.",
   "submit": "Değişikliği kaydet",
   "saving": "Kaydediliyor …",
+  "reloading": "Kaydedilmiş sürüm yükleniyor …",
   "cancel": "İptal",
   "close": "Pencereyi kapat",
   "errorObject": "talep",

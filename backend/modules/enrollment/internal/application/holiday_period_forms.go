@@ -13,6 +13,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // The form of a holiday period (#5198). Invariants:
@@ -68,13 +69,23 @@ func (h *HolidayPeriods) HolidayPeriodForm(ctx context.Context, organizationID, 
 
 // SaveHolidayPeriodForm checks the fields, the legal blocks and the
 // building blocks "Anschrift" and "Gesundheit" and writes them as the next
-// version under the lock of the period's row.
-func (h *HolidayPeriods) SaveHolidayPeriodForm(ctx context.Context, organizationID, periodID, accountID int64, fields []enrollment.HolidayFormField, blocks []enrollment.FormLegalBlock, address enrollment.HolidayAddressRequirement, health enrollment.HolidayHealthRequirement) (enrollment.HolidayFormEditor, error) {
+// version under the lock of the period's row. expectedVersion is the
+// version the Büro edited; once another one is current the save is refused
+// (ADR 0311): every save writes a new version (invariant 2), so the version
+// number is the token of the form.
+func (h *HolidayPeriods) SaveHolidayPeriodForm(ctx context.Context, organizationID, periodID, accountID int64, expectedVersion int, fields []enrollment.HolidayFormField, blocks []enrollment.FormLegalBlock, address enrollment.HolidayAddressRequirement, health enrollment.HolidayHealthRequirement) (enrollment.HolidayFormEditor, error) {
 	if err := holidayPeriodKey(organizationID, periodID); err != nil {
 		return enrollment.HolidayFormEditor{}, err
 	}
 	if _, err := foundHolidayPeriod(h.store.FindHolidayPeriod(ctx, organizationID, periodID, true)); err != nil {
 		return enrollment.HolidayFormEditor{}, err
+	}
+	current, err := foundHolidayForm(periodID)(h.forms.CurrentHolidayPeriodForm(ctx, organizationID, periodID))
+	if err != nil {
+		return enrollment.HolidayFormEditor{}, err
+	}
+	if expectedVersion != current.Version {
+		return enrollment.HolidayFormEditor{}, readstate.ErrChanged
 	}
 	if fields == nil {
 		fields = []enrollment.HolidayFormField{}
@@ -82,7 +93,7 @@ func (h *HolidayPeriods) SaveHolidayPeriodForm(ctx context.Context, organization
 	if err := enrollment.ValidateHolidayFormFields(fields); err != nil {
 		return enrollment.HolidayFormEditor{}, err
 	}
-	address, err := enrollment.ValidateHolidayAddressRequirement(address)
+	address, err = enrollment.ValidateHolidayAddressRequirement(address)
 	if err != nil {
 		return enrollment.HolidayFormEditor{}, err
 	}

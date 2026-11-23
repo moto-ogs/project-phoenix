@@ -216,8 +216,15 @@ describe("real Auth.js server actions under the response wrapper", () => {
           const access = (
             JSON.parse(init!.body as string) as { access_token: string }
           ).access_token;
-          if (access === freshAccess) return Response.json(claims);
-          if (access === previewAccess) return Response.json(previewClaims);
+          if (access === freshAccess)
+            return Response.json({ ...claims, id: "1", tenant_id: "7" });
+          if (access === previewAccess)
+            return Response.json({
+              ...previewClaims,
+              id: "42",
+              tenant_id: "7",
+              acting_admin_id: "1",
+            });
         }
         return new Response(null, { status: 401 });
       });

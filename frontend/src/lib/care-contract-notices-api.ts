@@ -1,3 +1,4 @@
+import { bffJson } from "~/lib/bff-fetch";
 /**
  * The Träger-Büro's client of withdrawal and termination (#4682): what a
  * contract allows today, and a declaration the office received by mail or
@@ -5,27 +6,21 @@
  */
 
 import {
-  type BackendNoticeOptions,
   type ContractNoticeOptions,
   declarationBody,
   type NoticeDeclaration,
   noticeOptionsFromBackend,
 } from "./care-contract-notices";
-import { traegerRequest } from "./traeger-api";
-
-const officePath = (id: string) =>
-  `/api/traeger/contract-notices/${encodeURIComponent(id)}`;
 
 export async function fetchContractNoticeOptions(
   id: string,
   receivedOn?: string,
 ): Promise<ContractNoticeOptions> {
   return noticeOptionsFromBackend(
-    await traegerRequest<BackendNoticeOptions>(
-      receivedOn
-        ? `${officePath(id)}?${new URLSearchParams({ received_on: receivedOn })}`
-        : officePath(id),
-    ),
+    await bffJson("org", "GET /traeger/contract-notices/{id}", {
+      params: { id },
+      query: { received_on: receivedOn || undefined },
+    }),
   );
 }
 
@@ -38,8 +33,8 @@ export async function setContractNoticeEnd(
   endsOn: string,
 ): Promise<ContractNoticeOptions> {
   return noticeOptionsFromBackend(
-    await traegerRequest<BackendNoticeOptions>(`${officePath(id)}/ends-on`, {
-      method: "PUT",
+    await bffJson("org", "PUT /traeger/contract-notices/{id}/ends-on", {
+      params: { id },
       body: { ends_on: endsOn },
     }),
   );
@@ -55,9 +50,10 @@ export async function rejectContractNoticeReason(
   expectedEndsOn: string,
 ): Promise<ContractNoticeOptions> {
   return noticeOptionsFromBackend(
-    await traegerRequest<BackendNoticeOptions>(
-      `${officePath(id)}/reason-rejection`,
-      { method: "POST", body: { expected_ends_on: expectedEndsOn } },
+    await bffJson(
+      "org",
+      "POST /traeger/contract-notices/{id}/reason-rejection",
+      { params: { id }, body: { expected_ends_on: expectedEndsOn } },
     ),
   );
 }
@@ -71,8 +67,8 @@ export async function recordContractNotice(
   },
 ): Promise<ContractNoticeOptions> {
   return noticeOptionsFromBackend(
-    await traegerRequest<BackendNoticeOptions>(officePath(id), {
-      method: "POST",
+    await bffJson("org", "POST /traeger/contract-notices/{id}", {
+      params: { id },
       body: {
         ...declarationBody(declaration),
         received_on: declaration.receivedOn,

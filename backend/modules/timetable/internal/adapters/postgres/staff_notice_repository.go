@@ -8,6 +8,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/timetable/internal/domain"
 	schedule "github.com/moto-ogs/project-phoenix/modules/timetable/internal/domain/schedulerecords"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // staffNoticeRepository ist der mandantengebundene Datenzugriff für
@@ -56,6 +57,10 @@ func (r staffNoticeRepository) Update(ctx context.Context, notice *schedule.Staf
 		return &domain.StoreError{Op: "update", Err: err}
 	}
 	*notice = *staffNoticeModel(row)
+	if affected == 0 {
+		// The row was found before; it changed or went since.
+		return readstate.ErrChanged
+	}
 	if affected != 1 {
 		return &domain.StoreError{
 			Op:  "update StaffNotice",

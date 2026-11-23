@@ -1,36 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mockSessionData } from "~/test/mocks/next-auth";
 
-// Mock session-cache before importing the module under test.
-vi.mock("./session-cache", () => {
-  const getCachedSession = vi.fn();
-  return {
-    getCachedSession,
-    clearSessionCache: vi.fn(),
-    sessionFetch: vi.fn(async (url: string, init?: RequestInit) => {
-      // Same gate as the real sessionFetch (hasSessionAccess, #5005).
-      const session = (await getCachedSession()) as {
-        user?: { id?: string };
-        error?: string;
-      } | null;
-      if (!session?.user || session.error)
-        throw new Error("No authentication token available");
-      return fetch(url, {
-        ...init,
-        headers: {
-          "Content-Type": "application/json",
-          ...(init?.headers as Record<string, string> | undefined),
-        },
-      });
-    }),
-  };
-});
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 
-import { getCachedSession } from "./session-cache";
 import { ApiError } from "./api-error";
 import { filesService } from "./files-api";
-
-const mockedGetSession = vi.mocked(getCachedSession);
 
 // #2517: the client keeps the error identity (code, status, request ID); the
 // screen turns it into the catalog text. No wording is decided here.
@@ -41,7 +14,6 @@ describe("files-api errors", () => {
     vi.clearAllMocks();
     originalFetch = globalThis.fetch;
     globalThis.fetch = vi.fn();
-    mockedGetSession.mockResolvedValue(mockSessionData());
   });
 
   afterEach(() => {
@@ -131,5 +103,50 @@ describe("files-api errors", () => {
     await expect(
       filesService.upload("3", new File(["x"], "Liste.pdf")),
     ).rejects.toMatchObject({ code: "general.unavailable" });
+  });
+});
+
+// The contract sends a folder's visibility as an open string (#2353).
+describe("files-api folder visibility", () => {
+  let originalFetch: typeof fetch;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    originalFetch = globalThis.fetch;
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  // The edit form would save a default visibility and open the folder to
+  // more people, so the list leaves such a folder out.
+  it("leaves out a folder whose visibility this build does not know", async () => {
+    const folder = (id: string, visibility: string) => ({
+      id,
+      name: `Ordner ${id}`,
+      visibility,
+      file_count: 0,
+      role_ids: [],
+      account_ids: [],
+      created_at: "2026-09-01T10:00:00Z",
+    });
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      Response.json({
+        status: "success",
+        data: {
+          folders: [folder("1", "admins"), folder("2", "parents")],
+          can_manage: true,
+          can_upload: true,
+          staff_upload_enabled: true,
+          used_bytes: 0,
+          max_bytes: 100,
+        },
+      }),
+    );
+
+    const overview = await filesService.listFolders();
+
+    expect(overview.folders.map((entry) => entry.id)).toEqual(["1"]);
   });
 });

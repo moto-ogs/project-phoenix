@@ -155,18 +155,22 @@ func (f *classFeedFixture) dayChange(t *testing.T, actor classFeedPerson, day ca
 func (f *classFeedFixture) weekly(t *testing.T, actor classFeedPerson, inputs ...careplan.ArrivalScheduleInput) {
 	t.Helper()
 	f.as(t, actor, func(ctx context.Context) error {
-		_, err := f.service.BulkUpsertArrivalSchedules(ctx, careplan.ArrivalScheduleBulkFilter{SchoolClass: classFeedClass}, inputs, actor.staffID)
+		read, err := f.service.GetClassArrivalTimes(ctx, classFeedClass)
+		if err != nil {
+			return err
+		}
+		_, err = f.service.BulkUpsertArrivalSchedules(ctx, careplan.ArrivalScheduleBulkFilter{SchoolClass: classFeedClass, ExpectedVersion: read.Version}, inputs, actor.staffID)
 		return err
 	})
 }
 
 type classFeedEntry struct {
-	ID       int64   `json:"id"`
-	Type     string  `json:"type"`
-	Title    string  `json:"title"`
-	Body     string  `json:"body"`
-	DeepLink string  `json:"deep_link"`
-	ReadAt   *string `json:"read_at"`
+	ID       testpkg.ID `json:"id"`
+	Type     string     `json:"type"`
+	Title    string     `json:"title"`
+	Body     string     `json:"body"`
+	DeepLink string     `json:"deep_link"`
+	ReadAt   *string    `json:"read_at"`
 }
 
 func (f *classFeedFixture) read(t *testing.T, claims sessiontoken.AppClaims, method, path string) []classFeedEntry {

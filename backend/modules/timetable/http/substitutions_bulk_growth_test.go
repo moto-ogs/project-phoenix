@@ -93,7 +93,7 @@ func TestBulkSubstitutionPlanningGrowth(t *testing.T) {
 				assert.Equal(t, day.date.String(), got.Date)
 				ids := make([]int64, 0, len(got.AffectedInstances))
 				for _, affected := range got.AffectedInstances {
-					ids = append(ids, affected.InstanceID)
+					ids = append(ids, affected.InstanceID.Int64())
 				}
 				want := []int64{day.alone, day.shared}
 				if withSubstitute {

@@ -13,6 +13,8 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Actions of the trail of a family deviation.
@@ -52,6 +54,9 @@ type TermsStore interface {
 	ServiceTerms(ctx context.Context, organizationID int64) ([]parentbilling.ServiceTerms, error)
 	FamilyBillings(ctx context.Context, organizationID int64) ([]parentbilling.FamilyBilling, error)
 	SaveServiceTerms(ctx context.Context, organizationID, accountID int64, terms parentbilling.ServiceTerms) error
+	// LockBillingSetting holds one setting of the Abrechnung of the Träger
+	// until the transaction ends.
+	LockBillingSetting(ctx context.Context, organizationID int64, setting string) error
 	// SaveFamilyBilling inserts or replaces the deviation of its family.
 	SaveFamilyBilling(ctx context.Context, organizationID, accountID int64, family parentbilling.FamilyBilling) (parentbilling.FamilyBilling, error)
 	// DeleteFamilyBilling removes a deviation by its ID or, with id zero, by
@@ -59,6 +64,9 @@ type TermsStore interface {
 	DeleteFamilyBilling(ctx context.Context, organizationID, id int64, familyEmail string) (*parentbilling.FamilyBilling, error)
 	// FamilyBillingOf reads the row of a family, nil without one.
 	FamilyBillingOf(ctx context.Context, organizationID int64, familyEmail string) (*parentbilling.FamilyBilling, error)
+	// LockFamilyBilling holds the family until the transaction ends, also
+	// while it has no row, and reads its row, nil without one.
+	LockFamilyBilling(ctx context.Context, organizationID int64, familyEmail string) (*parentbilling.FamilyBilling, error)
 	// ReplaceRunDueDates replaces the due dates of a run; the database
 	// refuses it for a released run.
 	ReplaceRunDueDates(ctx context.Context, organizationID, accountID, careRunID, holidayRunID int64, dates parentbilling.RunDueDates) error
@@ -72,17 +80,19 @@ type BillingTerms struct {
 	store     TermsStore
 	contracts parentbilling.CareContracts
 	formats   parentbilling.DebtorNumberFormats
+	// today is the Berlin day a contract still runs on.
+	today func() calendar.Date
 }
 
 var _ parentbilling.BillingTerms = (*BillingTerms)(nil)
 
 // NewBillingTerms builds the terms; a family's debtor number has the
 // format of the Träger (#6675).
-func NewBillingTerms(store TermsStore, contracts parentbilling.CareContracts, formats parentbilling.DebtorNumberFormats) *BillingTerms {
-	if store == nil || contracts == nil || formats == nil {
-		panic("parent billing: the store, the care contracts and the debtor number format are required")
+func NewBillingTerms(store TermsStore, contracts parentbilling.CareContracts, formats parentbilling.DebtorNumberFormats, today func() calendar.Date) *BillingTerms {
+	if store == nil || contracts == nil || formats == nil || today == nil {
+		panic("parent billing: the store, the care contracts, the debtor number format and the day clock are required")
 	}
-	return &BillingTerms{store: store, contracts: contracts, formats: formats}
+	return &BillingTerms{store: store, contracts: contracts, formats: formats, today: today}
 }
 
 // ServiceTerms answers the terms of every service, the defaults where the
@@ -104,9 +114,26 @@ func termsList(stored []parentbilling.ServiceTerms) []parentbilling.ServiceTerms
 	set := termsSetOf(stored)
 	list := make([]parentbilling.ServiceTerms, 0, len(parentbilling.BillingServices))
 	for _, service := range parentbilling.BillingServices {
-		list = append(list, set.Of(service.Service))
+		terms := set.Of(service.Service)
+		terms.Version = serviceTermsVersion(terms)
+		list = append(list, terms)
 	}
 	return list
+}
+
+// settingServiceTerms names the lock of the service terms.
+const settingServiceTerms = "service_terms"
+
+// serviceTermsVersion is the read-state token of the terms of one service
+// (ADR 0311): what the form shows, the defaults where the Träger set none.
+func serviceTermsVersion(terms parentbilling.ServiceTerms) string {
+	return readstate.Fingerprint(struct {
+		Service       string `json:"service"`
+		PaymentMethod string `json:"payment_method"`
+		DueDays       int    `json:"due_days"`
+		BundleWith    string `json:"bundle_with"`
+		Custom        bool   `json:"custom"`
+	}{terms.Service, terms.PaymentMethod, terms.DueDays, terms.BundleWith, terms.Custom})
 }
 
 // termsSetOf keys the stored terms of a Träger by service.
@@ -119,13 +146,27 @@ func termsSetOf(stored []parentbilling.ServiceTerms) parentbilling.TermsSet {
 	return set
 }
 
-// SaveServiceTerms validates and stores the terms of one service.
-func (t *BillingTerms) SaveServiceTerms(ctx context.Context, reviewer parentbilling.HolidayReviewer, terms parentbilling.ServiceTerms) ([]parentbilling.ServiceTerms, error) {
+// SaveServiceTerms validates and stores the terms of one service as the
+// Abrechnung read them: under the lock of the terms, terms changed since
+// expectedVersion are refused with readstate.ErrChanged (ADR 0311).
+func (t *BillingTerms) SaveServiceTerms(ctx context.Context, reviewer parentbilling.HolidayReviewer, terms parentbilling.ServiceTerms,
+	expectedVersion string,
+) ([]parentbilling.ServiceTerms, error) {
 	if err := validReviewer(reviewer); err != nil {
 		return nil, err
 	}
 	normalized, err := normalizeServiceTerms(terms)
 	if err != nil {
+		return nil, err
+	}
+	if err := t.store.LockBillingSetting(ctx, reviewer.OrganizationID, settingServiceTerms); err != nil {
+		return nil, fmt.Errorf("parent billing: hold the service terms: %w", err)
+	}
+	before, err := t.store.ServiceTerms(ctx, reviewer.OrganizationID)
+	if err != nil {
+		return nil, fmt.Errorf("parent billing: read the service terms: %w", err)
+	}
+	if err := readstate.Check(expectedVersion, serviceTermsVersion(termsSetOf(before).Of(normalized.Service))); err != nil {
 		return nil, err
 	}
 	if err := t.store.SaveServiceTerms(ctx, reviewer.OrganizationID, reviewer.AccountID, normalized); err != nil {
@@ -175,30 +216,88 @@ func (t *BillingTerms) ListFamilyBilling(ctx context.Context, reviewer parentbil
 	return families, nil
 }
 
+// familyOfContract names the party a contract's invoice goes to and the key
+// of its family. A contract of another Träger is not among the recipients
+// and names no family: ErrFamilyUnknown. Neither is a draft (the root
+// leaves it out): it can be discarded, and a deviation set through it would
+// go with it.
+func (t *BillingTerms) familyOfContract(ctx context.Context, organizationID, contractID int64) (parentbilling.CareRecipient, string, error) {
+	if contractID <= 0 {
+		return parentbilling.CareRecipient{}, "", parentbilling.ErrFamilyUnknown
+	}
+	recipients, err := t.contracts.Recipients(ctx, organizationID, []int64{contractID})
+	if err != nil {
+		return parentbilling.CareRecipient{}, "", fmt.Errorf("parent billing: read the contract party: %w", err)
+	}
+	recipient, known := recipients[contractID]
+	key := parentbilling.ContractFamilyKey(recipient.Email, contractID)
+	if !known || key == "" {
+		return parentbilling.CareRecipient{}, "", parentbilling.ErrFamilyUnknown
+	}
+	return recipient, key, nil
+}
+
+// FamilyBillingOfContract reads the family of a contract with the deviation
+// it has, so the Abrechnung sets it without a run (#7770), and records the
+// read of a deviation in its trail. The deviation is the family's: a
+// sibling's contract answers the same one.
+func (t *BillingTerms) FamilyBillingOfContract(ctx context.Context, reviewer parentbilling.HolidayReviewer, contractID int64) (parentbilling.ContractFamilyBilling, error) {
+	if err := validReviewer(reviewer); err != nil {
+		return parentbilling.ContractFamilyBilling{}, err
+	}
+	recipient, key, err := t.familyOfContract(ctx, reviewer.OrganizationID, contractID)
+	if err != nil {
+		return parentbilling.ContractFamilyBilling{}, err
+	}
+	stored, err := t.store.FamilyBillingOf(ctx, reviewer.OrganizationID, key)
+	if err != nil {
+		return parentbilling.ContractFamilyBilling{}, err
+	}
+	if stored != nil {
+		if err := t.store.InsertFamilyBillingEvents(ctx, reviewer.OrganizationID, reviewer.AccountID, familyBillingRead,
+			[]parentbilling.FamilyBilling{*stored}); err != nil {
+			return parentbilling.ContractFamilyBilling{}, fmt.Errorf("parent billing: record the read of the family billing: %w", err)
+		}
+	}
+	return parentbilling.ContractFamilyBilling{ContractID: ident.ID(contractID), FamilyEmail: key,
+		PartyFirstName: recipient.FirstName, PartyLastName: recipient.LastName, Family: stored, Version: familyBillingVersion(key, stored)}, nil
+}
+
+// familyBillingVersion is the read-state token of a family and its row,
+// nil without one (ADR 0311). It names the family: a contract whose party
+// moved to another family without a deviation reads another token, so a
+// save never lands on a family the form did not name. It covers the whole
+// row: not every writer moves updated_at (the retention moves the contract
+// of a family without it).
+func familyBillingVersion(key string, stored *parentbilling.FamilyBilling) string {
+	state := struct {
+		Key string                       `json:"key"`
+		Row *parentbilling.FamilyBilling `json:"row"`
+	}{Key: key}
+	if stored != nil {
+		canonical := *stored
+		canonical.UpdatedAt = canonical.UpdatedAt.UTC()
+		state.Row = &canonical
+	}
+	return readstate.Fingerprint(state)
+}
+
 // SaveFamilyBilling validates the deviation and stores it for the family of
 // the contract. A deviation that deviates in nothing removes the stored one,
 // so the family falls back to the registration and the terms; a family the
 // holiday care knows keeps its row without the deviation (#6692), so its
-// parent and its period stay.
+// parent and its period stay. The office saves over the deviation it read:
+// under the lock of the family, a deviation stored differently since is
+// refused with readstate.ErrChanged (ADR 0311).
 func (t *BillingTerms) SaveFamilyBilling(ctx context.Context, reviewer parentbilling.HolidayReviewer, input parentbilling.FamilyBillingInput) (*parentbilling.FamilyBilling, error) {
 	if err := validReviewer(reviewer); err != nil {
 		return nil, err
 	}
-	if input.ContractID <= 0 {
-		return nil, parentbilling.ErrFamilyUnknown
-	}
-	recipients, err := t.contracts.Recipients(ctx, reviewer.OrganizationID, []int64{input.ContractID})
+	_, key, err := t.familyOfContract(ctx, reviewer.OrganizationID, input.ContractID)
 	if err != nil {
-		return nil, fmt.Errorf("parent billing: read the contract party: %w", err)
+		return nil, err
 	}
-	// A contract of another Träger is not among the recipients and names
-	// no family.
-	recipient, known := recipients[input.ContractID]
-	key := parentbilling.ContractFamilyKey(recipient.Email, input.ContractID)
-	if !known || key == "" {
-		return nil, parentbilling.ErrFamilyUnknown
-	}
-	stored, err := t.store.FamilyBillingOf(ctx, reviewer.OrganizationID, key)
+	stored, err := t.store.LockFamilyBilling(ctx, reviewer.OrganizationID, key)
 	if err != nil {
 		return nil, err
 	}
@@ -214,7 +313,14 @@ func (t *BillingTerms) SaveFamilyBilling(ctx context.Context, reviewer parentbil
 	if err != nil {
 		return nil, err
 	}
-	family.FamilyEmail, family.ContractID = key, input.ContractID
+	if err := readstate.Check(input.ExpectedVersion, familyBillingVersion(key, stored)); err != nil {
+		return nil, err
+	}
+	binding, err := t.bindingContract(ctx, reviewer.OrganizationID, key, input.ContractID, stored)
+	if err != nil {
+		return nil, err
+	}
+	family.FamilyEmail, family.ContractID = key, ident.ID(binding)
 	if !deviates(family) && (stored == nil || stored.LastUsedOn == nil) {
 		return nil, t.removeFamilyBilling(ctx, reviewer, key)
 	}
@@ -227,6 +333,91 @@ func (t *BillingTerms) SaveFamilyBilling(ctx context.Context, reviewer parentbil
 		return nil, fmt.Errorf("parent billing: record the family billing: %w", err)
 	}
 	return &saved, nil
+}
+
+// familyContract is a contract of a family in force around today.
+type familyContract struct {
+	id int64
+	// from and until are its first and last day within the window read; a
+	// contract without an end is clipped to the window's.
+	from, until calendar.Date
+}
+
+// bindingContract answers the contract the deviation of the family hangs
+// on. The row goes when that contract is deleted (#6692), so it is the
+// family's contract that runs longest, whichever contract the office saved
+// through (#7770).
+func (t *BillingTerms) bindingContract(ctx context.Context, organizationID int64, family string, saved int64, stored *parentbilling.FamilyBilling) (int64, error) {
+	versions, err := contractVersionsAround(ctx, t.contracts, organizationID, t.today())
+	if err != nil {
+		return 0, err
+	}
+	first, until, ids := contractSpans(versions)
+	recipients, err := t.contracts.Recipients(ctx, organizationID, ids)
+	if err != nil {
+		return 0, fmt.Errorf("parent billing: read the contract parties: %w", err)
+	}
+	var contracts []familyContract
+	for _, id := range ids {
+		if parentbilling.ContractFamilyKey(recipients[id].Email, id) == family {
+			contracts = append(contracts, familyContract{id: id, from: first[id].From, until: until[id]})
+		}
+	}
+	held := int64(0)
+	if stored != nil {
+		held = stored.ContractID.Int64()
+	}
+	return bindingContractOf(contracts, saved, held, t.today()), nil
+}
+
+// bindingContractOf picks the contract of the family that runs today and
+// ends last; a contract that only starts later does not count, it can
+// still be withdrawn. Among contracts ending on the same day (two without
+// an end look alike) the one saved through wins, then the one the
+// deviation hangs on. Without a running contract, a contract saved through
+// that is signed and starts later takes it; else the deviation stays on
+// the contract it hangs on, and a new one takes the contract saved
+// through: nothing tells an old contract from one that is only sent.
+func bindingContractOf(contracts []familyContract, saved, held int64, today calendar.Date) int64 {
+	if running := longestRunning(contracts, saved, held, today); running != 0 {
+		return running
+	}
+	startsLater := slices.ContainsFunc(contracts, func(contract familyContract) bool {
+		return contract.id == saved && contract.from.After(today)
+	})
+	if held != 0 && !startsLater {
+		return held
+	}
+	return saved
+}
+
+// longestRunning answers the contract that runs on the day and ends last,
+// 0 for none; among equal ends saved wins, then held, then the first.
+func longestRunning(contracts []familyContract, saved, held int64, today calendar.Date) int64 {
+	var last calendar.Date
+	for _, contract := range contracts {
+		if contract.runsOn(today) && contract.until.After(last) {
+			last = contract.until
+		}
+	}
+	best := int64(0)
+	for _, contract := range contracts {
+		if !contract.runsOn(today) || contract.until != last {
+			continue
+		}
+		if contract.id == saved {
+			return saved
+		}
+		if best == 0 || contract.id == held {
+			best = contract.id
+		}
+	}
+	return best
+}
+
+// runsOn tells whether the contract has started and has not ended.
+func (c familyContract) runsOn(day calendar.Date) bool {
+	return !c.from.After(day) && !c.until.Before(day)
 }
 
 // removeFamilyBilling removes the row of a family that deviates in nothing
@@ -247,29 +438,6 @@ func (t *BillingTerms) removeFamilyBilling(ctx context.Context, reviewer parentb
 func deviates(family parentbilling.FamilyBilling) bool {
 	return family.RecipientKind != parentbilling.RecipientApplicant || family.PaymentMethod != "" || family.DueDay != nil ||
 		family.DebtorNumber != ""
-}
-
-// DeleteFamilyBilling removes a deviation; a missing one is
-// ErrFamilyBillingNotFound.
-func (t *BillingTerms) DeleteFamilyBilling(ctx context.Context, reviewer parentbilling.HolidayReviewer, id int64) error {
-	if err := validReviewer(reviewer); err != nil {
-		return err
-	}
-	if id <= 0 {
-		return parentbilling.ErrFamilyBillingNotFound
-	}
-	removed, err := t.store.DeleteFamilyBilling(ctx, reviewer.OrganizationID, id, "")
-	if err != nil {
-		return err
-	}
-	if removed == nil {
-		return parentbilling.ErrFamilyBillingNotFound
-	}
-	if err := t.store.InsertFamilyBillingEvents(ctx, reviewer.OrganizationID, reviewer.AccountID, familyBillingDelete,
-		[]parentbilling.FamilyBilling{*removed}); err != nil {
-		return fmt.Errorf("parent billing: record the family billing: %w", err)
-	}
-	return nil
 }
 
 var postalCodePattern = regexp.MustCompile(`^[0-9]{5}$`)
@@ -343,69 +511,6 @@ func normalizeAddress(errs validation.Errors, field string, address *parentbilli
 		errs[field+".city"] = errors.New("is required, at most 100 characters")
 	}
 	return normalized
-}
-
-// SetCareRunDueDates replaces the due dates of a calculated monthly run.
-func (t *BillingTerms) SetCareRunDueDates(ctx context.Context, reviewer parentbilling.HolidayReviewer, runID int64, dates parentbilling.RunDueDates) (parentbilling.RunDueDates, error) {
-	if err := validReviewer(reviewer); err != nil {
-		return nil, err
-	}
-	if err := validDueDates(dates); err != nil {
-		return nil, err
-	}
-	if runID <= 0 {
-		return nil, parentbilling.ErrCareRunNotFound
-	}
-	run, err := t.store.CareRun(ctx, reviewer.OrganizationID, runID, true)
-	if err != nil {
-		return nil, err
-	}
-	if run.Status != parentbilling.RunCalculated {
-		return nil, closedRunError(run.Status)
-	}
-	if err := t.store.ReplaceRunDueDates(ctx, reviewer.OrganizationID, reviewer.AccountID, run.ID, 0, dates); err != nil {
-		return nil, err
-	}
-	return dates, nil
-}
-
-// SetHolidayRunDueDates replaces the due dates of a calculated holiday run.
-func (t *BillingTerms) SetHolidayRunDueDates(ctx context.Context, reviewer parentbilling.HolidayReviewer, runID int64, dates parentbilling.RunDueDates) (parentbilling.RunDueDates, error) {
-	if err := validReviewer(reviewer); err != nil {
-		return nil, err
-	}
-	if err := validDueDates(dates); err != nil {
-		return nil, err
-	}
-	if runID <= 0 {
-		return nil, parentbilling.ErrBillingRunNotFound
-	}
-	run, err := t.store.LockBillingRun(ctx, reviewer.OrganizationID, runID)
-	if err != nil {
-		return nil, err
-	}
-	if run.Status != parentbilling.RunCalculated {
-		return nil, closedRunError(run.Status)
-	}
-	if err := t.store.ReplaceRunDueDates(ctx, reviewer.OrganizationID, reviewer.AccountID, 0, run.ID, dates); err != nil {
-		return nil, err
-	}
-	return dates, nil
-}
-
-func validDueDates(dates parentbilling.RunDueDates) error {
-	errs := validation.Errors{}
-	for method, due := range dates {
-		if !slices.Contains(parentbilling.PaymentMethods, method) {
-			errs[method] = errors.New("is no payment method")
-		} else if due.IsZero() {
-			errs[method] = errors.New("must be a date")
-		}
-	}
-	if len(errs) > 0 {
-		return errs
-	}
-	return nil
 }
 
 // invoicePayments is what decides the payment and the recipient of the
@@ -505,7 +610,7 @@ func (p invoicePayments) debit(payment parentbilling.InvoicePayment, terms paren
 	}
 	mandate := p.mandates[familyEmail]
 	if mandate != nil {
-		p.usedMandates[mandate.ID] = *mandate
+		p.usedMandates[mandate.ID.Int64()] = *mandate
 	}
 	return parentbilling.ResolveDebit(payment, terms, p.run, family, issuedOn, p.creditor, mandate)
 }
@@ -540,7 +645,7 @@ func (p invoicePayments) deviationsRead() []parentbilling.FamilyBilling {
 func (p invoicePayments) family(key string) *parentbilling.FamilyBilling {
 	family := p.families[key]
 	if family != nil {
-		p.used[family.ID] = *family
+		p.used[family.ID.Int64()] = *family
 	}
 	return family
 }
@@ -619,7 +724,7 @@ func (p invoicePayments) careInvoice(invoice *parentbilling.CareInvoice, issuedO
 		Email: recipient.Email, Kind: recipient.Kind, SecondName: recipient.SecondName, Address: recipient.Address}
 	switch {
 	case p.perChild():
-		invoice.DebtorNumber = p.childNumber(invoice.FamilyEmail, p.contractChildren[invoice.ContractID])
+		invoice.DebtorNumber = p.childNumber(invoice.FamilyEmail, p.contractChildren[invoice.ContractID.Int64()])
 	case family != nil:
 		invoice.DebtorNumber = family.DebtorNumber
 	}

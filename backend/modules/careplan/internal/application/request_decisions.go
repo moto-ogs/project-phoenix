@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports"
 	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 const maxDecisionReasonRunes = 2000
@@ -226,11 +227,18 @@ func lockCareRequestStudent(ctx context.Context, records ports.RequestConflictRe
 }
 
 func validatePendingCareRequest(row carerequests.Request, version string) error {
+	if err := requirePendingCareRequest(row); err != nil {
+		return err
+	}
+	return readstate.Check(version, readstate.Of(row.UpdatedAt))
+}
+
+// requirePendingCareRequest checks the status only. The conflict lock uses
+// it: the coordinator compares the group's versions itself, and each
+// decision of the group compares its own again (ADR 0311).
+func requirePendingCareRequest(row carerequests.Request) error {
 	if row.Status != "pending" {
 		return careplan.ErrCareScheduleRequestNotPending
-	}
-	if version != "" && careplan.ParentRequestVersion(row.UpdatedAt) != version {
-		return careplan.ErrParentRequestStale
 	}
 	return nil
 }

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -191,7 +192,7 @@ func TestToAdminRequestSummary_TargetGradeLevelPassesThrough(t *testing.T) {
 	require.NotNil(t, out.Children[0].StatusReason)
 	assert.Equal(t, "Grade level above max", *out.Children[0].StatusReason)
 	require.NotNil(t, out.Children[0].ReviewedBy)
-	assert.Equal(t, int64(42), *out.Children[0].ReviewedBy)
+	assert.Equal(t, ident.ID(int64(42)), *out.Children[0].ReviewedBy)
 }
 
 func TestToAdminRequestSummary_PreservesCustomDataMap(t *testing.T) {
@@ -209,5 +210,5 @@ func TestToAdminRequestSummary_PreservesCustomDataMap(t *testing.T) {
 	}
 	out := toAdminRequestSummary(in)
 	require.Len(t, out.Children, 1)
-	assert.Equal(t, "Nüsse", formValue(out.Children[0].CustomData, "allergies"))
+	assert.Equal(t, "Nüsse", out.Children[0].CustomData["allergies"])
 }

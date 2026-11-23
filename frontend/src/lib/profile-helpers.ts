@@ -1,3 +1,4 @@
+import type * as meContract from "./contract/me.generated";
 import { createLogger } from "~/lib/logger";
 
 const logger = createLogger({ component: "ProfileHelpers" });
@@ -45,37 +46,18 @@ export interface ProfileUpdateRequest {
   settings?: ProfileSettings;
 }
 
-// Backend response mapping
-export interface BackendProfile {
-  id: number;
-  first_name: string;
-  last_name: string;
-  email: string;
-  username?: string;
-  avatar?: string;
-  bio?: string;
-  rfid_card?: string;
-  settings?: string | Record<string, unknown>;
-  created_at: string;
-  updated_at: string;
-  last_login?: string;
-}
-
-export function mapProfileResponse(data: BackendProfile): Profile {
-  // Parse settings if it's a string
+// The decoded answer of the catalog proxy (#2353), mapped to the view.
+export function mapProfileResponse(data: meContract.ProfileResponse): Profile {
+  // Go sends the settings as a JSON string.
   let settings: ProfileSettings | undefined;
   if (data.settings) {
-    if (typeof data.settings === "string") {
-      try {
-        settings = JSON.parse(data.settings) as ProfileSettings;
-      } catch (error) {
-        logger.debug("failed to parse profile settings JSON", {
-          error: String(error),
-        });
-        settings = undefined;
-      }
-    } else {
-      settings = data.settings as ProfileSettings;
+    try {
+      settings = JSON.parse(data.settings) as ProfileSettings;
+    } catch (error) {
+      logger.debug("failed to parse profile settings JSON", {
+        error: String(error),
+      });
+      settings = undefined;
     }
   }
 
@@ -91,11 +73,11 @@ export function mapProfileResponse(data: BackendProfile): Profile {
   }
 
   return {
-    id: data.id.toString(),
-    firstName: data.first_name ?? "",
-    lastName: data.last_name ?? "",
+    id: data.id,
+    firstName: data.first_name,
+    lastName: data.last_name,
     email: data.email,
-    username: data.username,
+    username: data.username ?? undefined,
     avatar: avatarUrl,
     bio: data.bio,
     rfidCard: data.rfid_card,

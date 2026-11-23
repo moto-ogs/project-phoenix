@@ -1,25 +1,23 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "./api-error";
 
-vi.mock("./session-cache", async () => {
-  const { transportFetch } =
-    await vi.importActual<typeof import("./api-error")>("./api-error");
-  return { sessionFetch: transportFetch };
-});
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 import {
   deleteStudentPartialAbsence,
   fetchStudentPartialAbsences,
   saveStudentPartialAbsence,
 } from "./student-partial-absences-api";
 
+// The decoded answer of the catalog proxy: string IDs, `auto` always sent.
 const backendRow = {
-  id: 9,
-  student_id: 42,
+  id: "9",
+  student_id: "42",
   date: "2026-05-27",
   from_time: "13:30",
   reason: "Arzttermin",
   pickup_time: "13:30",
-  created_by: 5,
+  auto: false,
+  created_by: "5",
   created_at: "2026-05-20T08:00:00Z",
   updated_at: "2026-05-20T08:00:00Z",
 };
@@ -31,7 +29,7 @@ describe("student-partial-absences-api", () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValue(
-        new Response(JSON.stringify({ success: true, data: [backendRow] })),
+        new Response(JSON.stringify({ status: "success", data: [backendRow] })),
       );
     vi.stubGlobal("fetch", fetchMock);
 
@@ -58,7 +56,7 @@ describe("student-partial-absences-api", () => {
       .fn()
       .mockImplementation(() =>
         Promise.resolve(
-          new Response(JSON.stringify({ success: true, data: backendRow })),
+          new Response(JSON.stringify({ status: "success", data: backendRow })),
         ),
       );
     vi.stubGlobal("fetch", fetchMock);
@@ -70,17 +68,30 @@ describe("student-partial-absences-api", () => {
       "13:30",
       "Arzttermin",
     );
-    await saveStudentPartialAbsence("42", "9", "2026-05-27", "14:00");
+    await saveStudentPartialAbsence(
+      "42",
+      { id: "9", version: "read-version" },
+      "2026-05-27",
+      "14:00",
+    );
 
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
       "/api/students/42/partial-absences",
       expect.objectContaining({ method: "POST" }),
     );
+    // An update sends the version of the entry the form read (ADR 0311).
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
       "/api/students/42/partial-absences/9",
-      expect.objectContaining({ method: "PUT" }),
+      expect.objectContaining({
+        method: "PUT",
+        body: JSON.stringify({
+          date: "2026-05-27",
+          from_time: "14:00",
+          expected_version: "read-version",
+        }),
+      }),
     );
   });
 

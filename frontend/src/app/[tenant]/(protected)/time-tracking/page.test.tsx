@@ -39,6 +39,11 @@ const mockTimeTrackingService = vi.hoisted(() => ({
 }));
 
 const mockTenantMutate = vi.hoisted(() => vi.fn());
+// The rejecting reload of `~/lib/swr` (ADR 0311, rule 6); by default the
+// read's own mutate, a test lets it fail.
+const mockRevalidateOrThrow = vi.hoisted(() =>
+  vi.fn((read: { mutate: () => Promise<unknown> }) => read.mutate()),
+);
 
 vi.mock("next-auth/react", () => ({
   useSession: vi.fn(),
@@ -79,6 +84,7 @@ vi.mock("~/lib/swr", async (importOriginal) => {
     useTenantMutate: vi.fn(() => mockTenantMutate),
     useTenantMutateMatching: vi.fn(() => vi.fn()),
     useInvalidateMatching: () => vi.fn(),
+    revalidateOrThrow: mockRevalidateOrThrow,
   };
 });
 
@@ -482,6 +488,8 @@ vi.mock("lucide-react", () => ({
   ChevronRight: () => <span data-testid="chevron-right" />,
   Download: () => <span data-testid="download-icon" />,
   ExternalLink: () => <span data-testid="external-link" />,
+  // Info-Knopf am Seitentitel (#7565).
+  Info: () => <span data-testid="info-icon" />,
   MoreVertical: () => <span data-testid="more-vertical" />,
   Pencil: () => <span data-testid="pencil-icon" />,
   Plus: () => <span data-testid="plus-icon" />,
@@ -569,10 +577,10 @@ const mockCheckedOutSession: WorkSession = {
 
 const mockHistorySession: WorkSessionHistory = {
   ...mockCheckedOutSession,
+  version: "v-history",
   netMinutes: 480,
   isOvertime: false,
   isBreakCompliant: true,
-  restPeriodWarning: null,
   breaks: [],
   editCount: 0,
 };
@@ -902,13 +910,15 @@ function setupDefaultMocks(overrides?: {
   // Default: getSessionBreaks returns empty
   vi.mocked(timeTrackingService.getSessionBreaks).mockResolvedValue([]);
   vi.mocked(timeTrackingService.getVacationQuota).mockResolvedValue({
-    staff_id: 10,
+    staff_id: "10",
     year: today.getFullYear(),
     entitled_days: 30,
     carryover_days: 0,
     taken_days: 0,
+    taken_before_days: 0,
     reserved_days: 0,
     remaining_days: 30,
+    version: "quota-1",
   });
   vi.mocked(timeTrackingService.getAbsences).mockResolvedValue(absences);
   vi.mocked(timeTrackingService.getQuestionedAbsences).mockResolvedValue([]);
@@ -947,6 +957,9 @@ describe("TimeTrackingPage", () => {
       ).toBeInTheDocument();
       expect(
         screen.getByRole("link", { name: "Zur Startseite" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Erklärung zu Zeiterfassung" }),
       ).toBeInTheDocument();
       expect(screen.queryByText("Stempeluhr")).not.toBeInTheDocument();
     });
@@ -3095,6 +3108,56 @@ describe("TimeTrackingPage", () => {
           });
         }
       }
+    });
+  });
+
+  // ADR 0311, rule 6: after a refused correction the table the block came
+  // from reads again; when that read fails, the refusal shows the load
+  // error instead of claiming the stored block shows.
+  describe("refused correction", () => {
+    it("shows the load error when the table does not load again", async () => {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yISO = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, "0")}-${String(yesterday.getDate()).padStart(2, "0")}`;
+      setupDefaultMocks({
+        history: [
+          {
+            ...mockHistorySession,
+            date: yISO,
+            checkInTime: testTimestamp(yISO, "08:00"),
+            checkOutTime: testTimestamp(yISO, "16:30"),
+          },
+        ],
+      });
+      vi.mocked(timeTrackingService.updateSession).mockRejectedValue(
+        new ApiError("changed since it was read", 409, {
+          code: "general.changed_since_read",
+        }),
+      );
+      vi.mocked(timeTrackingService.getSessionEdits).mockResolvedValue([]);
+      mockRevalidateOrThrow.mockRejectedValueOnce(
+        new ApiError("down", 503, { code: "general.unavailable" }),
+      );
+
+      render(<TimeTrackingPage />);
+      fireEvent.click(screen.getAllByLabelText("Eintrag bearbeiten")[0]!);
+      await waitFor(() => {
+        expect(screen.getByTestId("modal")).toBeInTheDocument();
+      });
+      clickQuickEditReason("Zeitkorrektur");
+      fireEvent.change(screen.getByLabelText("Ende"), {
+        target: { value: "16:45" },
+      });
+      const saveBtn = await waitForLastSaveButtonEnabled();
+      await act(async () => {
+        fireEvent.click(saveBtn);
+      });
+
+      expect(
+        await screen.findByText(/Der neue Stand konnte nicht geladen werden\./),
+      ).toBeInTheDocument();
+      expect(mockRevalidateOrThrow).toHaveBeenCalled();
+      expect(screen.queryByText(/wurde inzwischen geändert/)).toBeNull();
     });
   });
 

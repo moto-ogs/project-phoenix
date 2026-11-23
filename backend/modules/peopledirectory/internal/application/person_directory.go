@@ -11,6 +11,7 @@ import (
 	peoplePorts "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports"
 	"github.com/moto-ogs/project-phoenix/modules/transactionruntime"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -70,6 +71,9 @@ func (s *RetainedPersonDirectory) WithCareParticipation(resolve peoplePorts.Care
 func (s *RetainedPersonDirectory) Get(ctx context.Context, id interface{}) (*peopleValues.DirectoryPersonSnapshot, error) {
 	// Convert id to int64
 	var personID int64
+	if typed, ok := id.(ident.ID); ok {
+		id = typed.Int64()
+	}
 	switch v := id.(type) {
 	case int:
 		personID = int64(v)
@@ -115,7 +119,7 @@ func (s *RetainedPersonDirectory) Create(ctx context.Context, person *peopleValu
 
 	// Check if the account exists if AccountID is set
 	if person.AccountID != nil {
-		exists, err := s.deps.AccountExists(ctx, *person.AccountID)
+		exists, err := s.deps.AccountExists(ctx, (*person.AccountID).Int64())
 		if err != nil {
 			return &userscontract.UsersError{Op: opCreatePerson, Err: err}
 		}
@@ -202,7 +206,7 @@ func validateChangedRef[T comparable](ctx context.Context, newID, oldID *T, find
 
 // validateAccountIfChanged validates account exists if AccountID is being changed
 func (s *RetainedPersonDirectory) validateAccountIfChanged(ctx context.Context, person, existingPerson *peopleValues.DirectoryPersonSnapshot) error {
-	return validateChangedRef(ctx, person.AccountID, existingPerson.AccountID,
+	return validateChangedRef(ctx, (*int64)(person.AccountID), (*int64)(existingPerson.AccountID),
 		s.deps.AccountExists, userscontract.ErrAccountNotFound)
 }
 
@@ -229,7 +233,7 @@ func (s *RetainedPersonDirectory) Delete(ctx context.Context, id interface{}) er
 	if s.deps.PersonDirectory == nil {
 		return &userscontract.UsersError{Op: opDeletePerson, Err: errPersonDirectoryUnwired}
 	}
-	if err := s.deps.PersonDirectory.DeletePerson(ctx, person.ID); err != nil {
+	if err := s.deps.PersonDirectory.DeletePerson(ctx, person.ID.Int64()); err != nil {
 		return &userscontract.UsersError{Op: opDeletePerson, Err: translateMissingPerson(err)}
 	}
 	return nil
@@ -290,7 +294,7 @@ func (s *RetainedPersonDirectory) LinkToAccount(ctx context.Context, personID in
 	if err != nil {
 		return &userscontract.UsersError{Op: opLinkToAccount, Err: err}
 	}
-	if existingPerson != nil && existingPerson.ID != personID {
+	if existingPerson != nil && existingPerson.ID != ident.ID(personID) {
 		return &userscontract.UsersError{Op: opLinkToAccount, Err: userscontract.ErrAccountAlreadyLinked}
 	}
 
@@ -327,9 +331,9 @@ func (s *RetainedPersonDirectory) LinkToRFIDCard(ctx context.Context, personID i
 	if err != nil {
 		return &userscontract.UsersError{Op: opLinkToRFIDCard, Err: err}
 	}
-	if existingPerson != nil && existingPerson.ID != personID {
+	if existingPerson != nil && existingPerson.ID != ident.ID(personID) {
 		// Auto-unlink from previous person (tag override behavior)
-		if err := s.deps.PersonRepo.UnlinkFromRFIDCard(ctx, existingPerson.ID); err != nil {
+		if err := s.deps.PersonRepo.UnlinkFromRFIDCard(ctx, existingPerson.ID.Int64()); err != nil {
 			return &userscontract.UsersError{Op: opLinkToRFIDCard, Err: err}
 		}
 	}
@@ -573,11 +577,11 @@ func (s *RetainedPersonDirectory) ResolveStaffIDByAccountID(ctx context.Context,
 	if err != nil {
 		return 0, fmt.Errorf("person not found for account: %w", err)
 	}
-	staff, err := s.StaffRows().FindByPersonID(ctx, person.ID)
+	staff, err := s.StaffRows().FindByPersonID(ctx, person.ID.Int64())
 	if err != nil {
 		return 0, fmt.Errorf("staff not found for editor account: %w", err)
 	}
-	return staff.ID, nil
+	return staff.ID.Int64(), nil
 }
 
 // ListActiveCaregivers is the canonical operational caregiver lookup.

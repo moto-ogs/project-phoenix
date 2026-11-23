@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/realtime"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -135,6 +137,7 @@ func TestUpdateStudentArrivalSchedules(t *testing.T) {
 				{"weekday": 1, "expected_arrival": "07:45"},
 				{"weekday": 3, "expected_arrival": "08:00"},
 			},
+			"expected_version": weeklyPlanVersion(t, tc, student.ID),
 		}
 		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d/arrival-schedules", student.ID), body)
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(int(account.ID)), []string{"admin:*"})
@@ -159,7 +162,8 @@ func TestUpdateStudentArrivalSchedules(t *testing.T) {
 		})
 
 		body := map[string]any{
-			"schedules": []map[string]any{},
+			"schedules":        []map[string]any{},
+			"expected_version": weeklyPlanVersion(t, tc, student.ID),
 		}
 		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d/arrival-schedules", student.ID), body)
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(int(account.ID)), []string{"admin:*"})
@@ -227,6 +231,7 @@ func TestUpdateStudentArrivalSchedules(t *testing.T) {
 			"schedules": []map[string]any{
 				{"weekday": 1},
 			},
+			"expected_version": weeklyPlanVersion(t, tc, student.ID),
 		}
 		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d/arrival-schedules", student.ID), body)
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(int(account.ID)), []string{"admin:*"})
@@ -864,8 +869,9 @@ func TestUpdateStudentArrivalNote(t *testing.T) {
 		})
 
 		body := map[string]any{
-			"note_date": "2026-04-15",
-			"content":   "Updated content",
+			"note_date":        "2026-04-15",
+			"content":          "Updated content",
+			"expected_version": arrivalNoteVersion(t, tc, student.ID, note.ID, "2026-04-15"),
 		}
 		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d/arrival-notes/%d", student.ID, note.ID), body)
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(int(account.ID)), []string{"admin:*"})
@@ -1021,7 +1027,8 @@ func TestBulkUpsertArrivalSchedules(t *testing.T) {
 		_, account := testpkg.CreateTestTeacherWithAccount(t, tc.db, "BulkArr", "Teacher")
 
 		body := map[string]any{
-			"school_class": "BAR1",
+			"school_class":     "BAR1",
+			"expected_version": readstate.Absent,
 			"schedules": []map[string]any{
 				{"weekday": 1, "expected_arrival": "07:45"},
 				{"weekday": 3, "expected_arrival": "08:15"},
@@ -1031,6 +1038,26 @@ func TestBulkUpsertArrivalSchedules(t *testing.T) {
 		rr := authExec(t, tc, req, testutil.AdminTestClaims(int(account.ID)), []string{"admin:*"})
 
 		assert.Equal(t, http.StatusOK, rr.Code, "Expected 200 OK. Body: %s", rr.Body.String())
+	})
+
+	t.Run("class_save_against_an_outdated_read_is_refused", func(t *testing.T) {
+		testpkg.CreateTestStudent(t, tc.db, "BulkArrivalStale", "Test", "BAR2")
+		_, account := testpkg.CreateTestTeacherWithAccount(t, tc.db, "BulkArrStale", "Teacher")
+		save := func(version string, clock string) *httptest.ResponseRecorder {
+			req := testutil.NewAuthenticatedRequest(t, "POST", "/arrival-schedules/bulk", map[string]any{
+				"school_class": "BAR2", "expected_version": version,
+				"schedules": []map[string]any{{"weekday": 2, "expected_arrival": clock}},
+			})
+			return authExec(t, tc, req, testutil.AdminTestClaims(int(account.ID)), []string{"admin:*"})
+		}
+		unstored := readstate.Absent
+		require.Equal(t, http.StatusOK, save(unstored, "12:00").Code)
+
+		rr := save(unstored, "13:00")
+		require.Equal(t, http.StatusConflict, rr.Code, rr.Body.String())
+		assert.Contains(t, rr.Body.String(), `"code":"general.changed_since_read"`)
+		read := authExec(t, tc, testutil.NewRequest("GET", "/class-arrival-times/BAR2", nil), testutil.AdminTestClaims(1), []string{"users:read"})
+		assert.Contains(t, read.Body.String(), `"tue":"12:00"`)
 	})
 
 	t.Run("success_with_group_filter", func(t *testing.T) {
@@ -1073,85 +1100,6 @@ func TestBulkUpsertArrivalSchedules(t *testing.T) {
 	})
 }
 
-func TestGetBulkArrivalTimes(t *testing.T) {
-	t.Parallel()
-
-	tc := setupStudentsRoute(t)
-
-	t.Run("bad_request_empty_student_ids", func(t *testing.T) {
-		body := map[string]any{
-			"student_ids": []int64{},
-		}
-		req := testutil.NewAuthenticatedRequest(t, "POST", "/arrival-times/bulk", body)
-		rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
-
-		testutil.AssertBadRequest(t, rr)
-	})
-
-	t.Run("bad_request_too_many_student_ids", func(t *testing.T) {
-		ids := make([]int64, 501)
-		for i := range ids {
-			ids[i] = int64(i + 1)
-		}
-		body := map[string]any{
-			"student_ids": ids,
-		}
-		req := testutil.NewAuthenticatedRequest(t, "POST", "/arrival-times/bulk", body)
-		rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
-
-		testutil.AssertBadRequest(t, rr)
-	})
-
-	t.Run("bad_request_invalid_date_format", func(t *testing.T) {
-		body := map[string]any{
-			"student_ids": []int64{1, 2, 3},
-			"date":        "27-01-2026",
-		}
-		req := testutil.NewAuthenticatedRequest(t, "POST", "/arrival-times/bulk", body)
-		rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
-
-		testutil.AssertBadRequest(t, rr)
-	})
-
-	t.Run("success_with_valid_request", func(t *testing.T) {
-		student1 := testpkg.CreateTestStudent(t, tc.db, "BulkArrTime1", "Student", "BAT1")
-		student2 := testpkg.CreateTestStudent(t, tc.db, "BulkArrTime2", "Student", "BAT2")
-
-		body := map[string]any{
-			"student_ids": []int64{student1.ID, student2.ID},
-		}
-		req := testutil.NewAuthenticatedRequest(t, "POST", "/arrival-times/bulk", body)
-		rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
-
-		assert.Equal(t, http.StatusOK, rr.Code)
-	})
-
-	t.Run("success_with_specific_date", func(t *testing.T) {
-		student := testpkg.CreateTestStudent(t, tc.db, "BulkArrDateTest", "Student", "BADT1")
-
-		body := map[string]any{
-			"student_ids": []int64{student.ID},
-			"date":        "2026-01-27",
-		}
-		req := testutil.NewAuthenticatedRequest(t, "POST", "/arrival-times/bulk", body)
-		rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
-
-		assert.Equal(t, http.StatusOK, rr.Code)
-	})
-}
-
-// TestStaffArrivalWrite_BroadcastsArrivalScheduleChanged pins that every staff
-// arrival write reaches the staff SSE bus at all — the broadcasts now run from
-// tenant.RegisterAfterCommit hooks, and a hook that is never registered or never
-// drained produces no event here, so this fails loudly if the wiring is dropped.
-//
-// Scope, stated plainly: it does NOT prove the broadcast happens AFTER the
-// commit — an inline call would satisfy it too. Ordering itself is covered by
-// the tenant package (aftercommit_test.go / rollback_middleware_test.go); the
-// contract for callers is documented on broadcastArrivalScheduleChanged.
-//
-// The note paths are covered explicitly: they carried no after-commit hook at
-// all before, so they are the easiest place for the wiring to be dropped again.
 func TestStaffArrivalWrite_BroadcastsArrivalScheduleChanged(t *testing.T) {
 	t.Parallel()
 
@@ -1173,9 +1121,11 @@ func TestStaffArrivalWrite_BroadcastsArrivalScheduleChanged(t *testing.T) {
 	t.Run("weekly_schedule_update", func(t *testing.T) {
 		student := testpkg.CreateTestStudent(t, tc.db, "ArrCast", "Weekly", "AC1")
 
+		version := weeklyPlanVersion(t, tc, student.ID)
 		tc.broadcaster.Reset()
 		body := map[string]any{
-			"schedules": []map[string]any{{"weekday": 1, "expected_arrival": "07:45"}},
+			"schedules":        []map[string]any{{"weekday": 1, "expected_arrival": "07:45"}},
+			"expected_version": version,
 		}
 		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d/arrival-schedules", student.ID), body)
 		rr := authExec(t, tc, req, claims, []string{"admin:*"})

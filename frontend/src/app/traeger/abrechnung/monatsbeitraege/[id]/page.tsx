@@ -1,5 +1,7 @@
 "use client";
 
+import { bffFile } from "~/lib/bff-fetch";
+
 // Ein Monatslauf (#4684): die Vorschau aller Rechnungen eines Monats nach
 // dem gültigen Vertrag und der Preisliste, und die Freigabe, die jede
 // Rechnung mit ihrer Nummer ausstellt. Danach ändern sich die Rechnungen
@@ -25,6 +27,12 @@ import {
   CareDuplicatesCard,
   CareUnpricedCard,
 } from "~/components/traeger/care-run-invoices";
+import { CareBilledChildrenCard } from "~/components/traeger/care-billed-children-card";
+import {
+  emptyCareRunText,
+  releaseBilledLines,
+} from "~/components/traeger/care-billed-children-format";
+import { CareJoinedChildrenCard } from "~/components/traeger/care-joined-children-card";
 import { CareUncountedCard } from "~/components/traeger/care-uncounted-card";
 import {
   careDebitItems,
@@ -35,6 +43,8 @@ import {
 } from "~/components/traeger/care-debit-hints";
 import { usePrenotificationDays } from "~/components/traeger/use-prenotification-days";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
+import { useDraftOn } from "~/lib/swr/read-draft";
+import { isReadStateRefusal } from "~/lib/api-error";
 import { CareLettersSummaryCard } from "~/components/traeger/care-letters-summary-card";
 import {
   type OpenPoint,
@@ -81,11 +91,15 @@ import {
   releaseCareRun,
 } from "~/lib/traeger-care-billing-api";
 import { includeCareInvoice } from "~/lib/traeger-care-review-api";
-import { downloadTraegerList } from "~/lib/traeger-list-export";
+import {
+  downloadTraegerList,
+  listExportQuery,
+} from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
 import { TraegerListExportMenu } from "~/components/traeger/traeger-list-export-menu";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 import { EmptyRunCard } from "~/components/traeger/empty-run-card";
+import { labelOf } from "~/lib/label-of";
 
 const logger = createLogger({ component: "TraegerCareRunPage" });
 
@@ -178,6 +192,10 @@ function notBilledLabel(children: number, released = false): string {
   return `${children} Kinder mit doppeltem Vertrag ${released ? "sind" : "werden"} nicht abgerechnet.`;
 }
 
+/** Was die Seite ist und was man dort zuerst tut (#7596). */
+const CARE_RUN_INFO =
+  "Hier findest du die Rechnungen dieses Monats. Betreuungsmodule rechnet moto nach dem Vertrag ab. Bei „Je Essen“ rechnet moto die Mensa nach den gemeldeten Essen ab.";
+
 export default function TraegerCareRunPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -188,6 +206,7 @@ export default function TraegerCareRunPage() {
     error: loadError,
     mutate,
     reload,
+    reloadOrThrow,
   } = useTraegerResource(
     runId ? traegerBillingRunKeys.careRun(runId) : null,
     () => fetchCareRun(runId),
@@ -195,6 +214,26 @@ export default function TraegerCareRunPage() {
   );
   const invalidateFamily = useInvalidateFamily();
   const [confirming, setConfirming] = useState(false);
+  // The release confirms the run as the dialog opened on it (ADR 0311):
+  // a newer read in the background does not change what is confirmed, and
+  // after a refusal the stored run shows.
+  const releaseRead = useDraftOn<CareRunDetail, CareRunDetail, string, unknown>(
+    {
+      opening: confirming && run ? run.id : null,
+      data: run ?? undefined,
+      reload: reloadOrThrow,
+    },
+    // The dialog closes after the release or its refusal; reopened, it
+    // confirms the run then on screen.
+    { token: (shown) => shown.fingerprint, follow: false },
+  );
+  const releaseShown = async <A,>(
+    send: (shown: CareRunDetail) => Promise<A>,
+  ) => {
+    const shown = releaseRead.base ?? run;
+    if (!shown) throw new Error("no run to release");
+    return send(shown);
+  };
   const [releasing, setReleasing] = useState(false);
   const [confirmingDiscard, setConfirmingDiscard] = useState(false);
   const [discarding, setDiscarding] = useState(false);
@@ -226,7 +265,7 @@ export default function TraegerCareRunPage() {
     if (!run) return;
     setReleasing(true);
     try {
-      const released = await releaseCareRun(run);
+      const released = await releaseShown(releaseCareRun);
       await changed(released);
       // The exports list the released run.
       void invalidateFamily(traegerBillingKeys.exportRuns());
@@ -243,8 +282,11 @@ export default function TraegerCareRunPage() {
         error: err instanceof Error ? err.message : String(err),
       });
       setConfirming(false);
-      void releaseErrors.show(err, { object: "der Monatslauf" });
-      reload();
+      void releaseErrors.show(err, {
+        object: "der Monatslauf",
+        reload: reloadOrThrow,
+      });
+      if (!isReadStateRefusal(err)) reload();
     } finally {
       setReleasing(false);
     }
@@ -264,8 +306,11 @@ export default function TraegerCareRunPage() {
         error: err instanceof Error ? err.message : String(err),
       });
       setConfirmingDiscard(false);
-      void releaseErrors.show(err, { object: "der Monatslauf" });
-      reload();
+      void releaseErrors.show(err, {
+        object: "der Monatslauf",
+        reload: reloadOrThrow,
+      });
+      if (!isReadStateRefusal(err)) reload();
     } finally {
       setDiscarding(false);
     }
@@ -285,8 +330,11 @@ export default function TraegerCareRunPage() {
       logger.error("traeger_care_invoice_include_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
-      void reviewErrors.show(err, { object: "die Rechnung" });
-      reload();
+      void reviewErrors.show(err, {
+        object: "die Rechnung",
+        reload: reloadOrThrow,
+      });
+      if (!isReadStateRefusal(err)) reload();
     } finally {
       setReturning(null);
     }
@@ -417,6 +465,7 @@ export default function TraegerCareRunPage() {
 
   return (
     <TenantPage
+      info={CARE_RUN_INFO}
       leading={<ConceptIconTile concept={billingConcept} size="page" />}
       title={
         run ? `Monatsbeitrag ${formatMonth(run.billingMonth)}` : "Monatslauf"
@@ -446,8 +495,8 @@ export default function TraegerCareRunPage() {
         <>
           {run ? (
             <StatusBadge
-              label={CARE_RUN_STATUS_LABELS[run.status]}
-              tone={CARE_RUN_STATUS_TONES[run.status]}
+              label={labelOf(CARE_RUN_STATUS_LABELS, run.status, "–")}
+              tone={labelOf(CARE_RUN_STATUS_TONES, run.status, "gray")}
             />
           ) : null}
           {empty ? (
@@ -553,6 +602,11 @@ export default function TraegerCareRunPage() {
                 neuen Lauf nach, wenn ein Vertrag beendet ist.
               </p>
             ) : null}
+            {releaseBilledLines(run.billedChildren ?? []).map((line) => (
+              <p key={line} className="mt-3 text-sm text-gray-700">
+                {line}
+              </p>
+            ))}
             <ReleaseOpenPoints points={releaseOpenPoints} />
           </ConfirmationModal>
         ) : null
@@ -583,7 +637,10 @@ export default function TraegerCareRunPage() {
             description={
               discarded
                 ? `Er hatte nichts abzurechnen und hat nichts ausgestellt. Für ${formatMonth(run.billingMonth)} kannst du einen neuen Lauf starten.`
-                : `Für ${formatMonth(run.billingMonth)} gibt es keine Rechnung. Es fehlt auch kein Preis. Du kannst den Lauf verwerfen. Danach ist der Monat frei für einen neuen Lauf.`
+                : emptyCareRunText(
+                    formatMonth(run.billingMonth),
+                    run.billedChildren ?? [],
+                  )
             }
             createdAt={run.createdAt}
             discardedAt={run.discardedAt}
@@ -595,6 +652,16 @@ export default function TraegerCareRunPage() {
               {run.schools.map((school) => school.name).join(", ") || "–"}
             </DataField>
           </EmptyRunCard>
+          {/* A child billed at another school of the run's month (#7874):
+              the empty run says why it has no invoice here. */}
+          {empty ? (
+            <CareJoinedChildrenCard childrenJoined={run.joinedChildren} />
+          ) : null}
+          {/* A child whose month an issued invoice already bills (#7892):
+              the empty run says why it has no invoice for it. */}
+          {empty ? (
+            <CareBilledChildrenCard childrenBilled={run.billedChildren ?? []} />
+          ) : null}
           {/* Mensa months a school has not released yet come with a later
               run; the empty run still names them. */}
           {empty ? (
@@ -660,8 +727,14 @@ export default function TraegerCareRunPage() {
                 <TraegerListExportMenu
                   download={(format) =>
                     downloadTraegerList(
-                      `/api/traeger/care-billing-runs/${run.id}/invoices/export`,
-                      format,
+                      bffFile(
+                        "org",
+                        "GET /traeger/care-billing-runs/{id}/invoices/export",
+                        {
+                          params: { id: run.id },
+                          query: listExportQuery(format),
+                        },
+                      ),
                     )
                   }
                   scope="Alle Rechnungen des Laufs"
@@ -843,6 +916,13 @@ export default function TraegerCareRunPage() {
             />
           ) : null}
           <CareDuplicatesCard duplicates={run.duplicates} released={!preview} />
+          <CareBilledChildrenCard
+            childrenBilled={run.billedChildren ?? []}
+            released={!preview}
+          />
+          {preview ? (
+            <CareJoinedChildrenCard childrenJoined={run.joinedChildren} />
+          ) : null}
           {preview ? <CareUnpricedCard unpriced={run.unpriced} /> : null}
           {preview ? (
             <CareRunMealsCard

@@ -54,9 +54,12 @@ func (seedAnnouncementsStep) Run(ctx context.Context, rt *Runtime) error {
 		}
 	}
 	if firstAnnouncementID != 0 {
+		if _, err := rt.Client.Post(fmt.Sprintf("/operator/announcements/%d/publish", firstAnnouncementID), nil); err != nil {
+			return fmt.Errorf("publish operator announcement: %w", err)
+		}
 		rt.Client.BindAuth(rt.TenantAuth)
-		if _, err := rt.Client.Post(fmt.Sprintf("/api/platform/announcements/%d/seen", firstAnnouncementID), nil); err != nil {
-			return fmt.Errorf("mark operator announcement seen: %w", err)
+		if _, err := rt.Client.Post(fmt.Sprintf("/api/platform/announcements/%d/dismiss", firstAnnouncementID), nil); err != nil {
+			return fmt.Errorf("dismiss operator announcement: %w", err)
 		}
 	}
 
@@ -82,7 +85,13 @@ func (seedPrivacyConsentsStep) Run(ctx context.Context, rt *Runtime) error {
 		}
 		_ = student // used only for index
 
-		_, err := rt.Client.Put(fmt.Sprintf("/api/students/%d/privacy-consent", studentID), map[string]any{
+		// A save sends the version of the consents it read (ADR 0311).
+		version, err := readDataVersion(rt.Client.Get, fmt.Sprintf("/api/students/%d/privacy-consent", studentID))
+		if err != nil {
+			return err
+		}
+		_, err = rt.Client.Put(fmt.Sprintf("/api/students/%d/privacy-consent", studentID), map[string]any{
+			"expected_version":    version,
 			"policy_version":      "1.0",
 			"accepted":            true,
 			"duration_days":       365,

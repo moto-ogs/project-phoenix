@@ -1,10 +1,16 @@
-import { describe, expect, it, vi } from "vitest";
-import * as sessionCache from "./session-cache";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fetchSchoolSetup, mapSchoolSetupState } from "./school-setup-api";
+
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
+
+const fetchMock = vi.fn<typeof fetch>();
+beforeEach(() => {
+  vi.stubGlobal("fetch", fetchMock);
+});
 
 describe("fetchSchoolSetup", () => {
   it("refuses a state without steps instead of showing 0 of 0", async () => {
-    vi.spyOn(sessionCache, "sessionFetch").mockResolvedValue(
+    fetchMock.mockResolvedValue(
       new Response(JSON.stringify({ data: { status: "success", data: {} } }), {
         status: 200,
       }),
@@ -48,11 +54,13 @@ describe("mapSchoolSetupState", () => {
 
   it("falls back to the registry defaults and drops unknown steps", () => {
     const state = mapSchoolSetupState({
-      basics: {},
+      completed: false,
+      dismissed: false,
+      basics: { presence_mode: "", group_mode: "" },
       // „basics“ war der gestrichene erste Schritt; ein alter Stand zeigt ihn nicht.
       steps: [
-        { key: "someday", applies: true },
-        { key: "basics", applies: true },
+        { key: "someday", applies: true, done: false, skipped: false },
+        { key: "basics", applies: true, done: false, skipped: false },
       ],
     });
     expect(state.basics).toEqual({

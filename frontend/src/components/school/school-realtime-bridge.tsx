@@ -10,6 +10,7 @@ import {
 } from "~/lib/notification-events";
 import { schoolTeamChatDeepLink } from "~/lib/school-team-chat-links";
 import { schoolPath } from "~/lib/school-url";
+import { STAFF_NOTICES_REFRESH_EVENT } from "~/lib/staff-notices-api";
 import type { SSEEvent } from "~/lib/sse-types";
 
 /**
@@ -37,6 +38,9 @@ import type { SSEEvent } from "~/lib/sse-types";
  * Auf `notification_feed_changed` (#7139) löst sie dasselbe Fenster-Ereignis
  * aus wie die OGS-Verbindung: die Glocke lädt Zähler und Hinweise neu, etwa
  * nach einem neuen Eintrag oder einem Gelesen-Status von einem anderen Gerät.
+ *
+ * Auf `staff_notices_changed` (#7667) lädt sie die heutigen Hinweise neu;
+ * Karte, Badge und offene Tagesinformationen teilen dafür einen SWR-Eintrag.
  *
  * Die Verbindung hängt an der angemeldeten Sitzung (Schule und Konto): der
  * Server ordnet den Stream dem Konto des mitgeschickten Zugangs zu, und die
@@ -78,6 +82,10 @@ export function SchoolRealtimeBridge() {
     }
     if (event.type === "notification_feed_changed") {
       window.dispatchEvent(new CustomEvent(NOTIFICATION_FEED_REFRESH_EVENT));
+      return;
+    }
+    if (event.type === "staff_notices_changed") {
+      window.dispatchEvent(new CustomEvent(STAFF_NOTICES_REFRESH_EVENT));
       return;
     }
     if (event.type !== "staff_message") return;

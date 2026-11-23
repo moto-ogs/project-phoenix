@@ -9,6 +9,8 @@ import (
 	"net"
 	"strings"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 const (
@@ -130,10 +132,10 @@ func IsAnnouncementExpired(a *Announcement, now time.Time) bool {
 }
 
 type AnnouncementStats struct {
-	AnnouncementID int64 `json:"announcement_id"`
-	TargetCount    int   `json:"target_count"`
-	SeenCount      int   `json:"seen_count"`
-	DismissedCount int   `json:"dismissed_count"`
+	AnnouncementID ident.ID `json:"announcement_id"`
+	TargetCount    int      `json:"target_count"`
+	SeenCount      int      `json:"seen_count"`
+	DismissedCount int      `json:"dismissed_count"`
 }
 
 type AnnouncementViewDetail struct {
@@ -141,7 +143,18 @@ type AnnouncementViewDetail struct {
 	AccountEmail string
 	UserName     string
 	SeenAt       time.Time
+	ShownAt      *time.Time
+	DismissedAt  *time.Time
 	Dismissed    bool
+}
+
+// AnnouncementViewer is the authenticated school-session scope that may act
+// on a platform announcement.
+type AnnouncementViewer struct {
+	AccountID int64
+	Roles     []string
+	TenantID  int64
+	OrgID     int64
 }
 
 // Query exposes platform-announcement reads without write authority.
@@ -149,7 +162,6 @@ type Query interface {
 	GetAnnouncement(context.Context, int64) (*Announcement, error)
 	ListAnnouncements(context.Context, bool) ([]*Announcement, error)
 	GetUnreadForUser(context.Context, int64, []string, int64, int64) ([]*Announcement, error)
-	CountUnread(context.Context, int64, []string, int64, int64) (int, error)
 	GetStats(context.Context, int64) (*AnnouncementStats, error)
 	GetViewDetails(context.Context, int64) ([]*AnnouncementViewDetail, error)
 }
@@ -161,8 +173,8 @@ type Command interface {
 	DeleteAnnouncement(context.Context, int64, int64, net.IP) error
 	PublishAnnouncement(context.Context, int64, int64, net.IP) error
 	UnpublishAnnouncement(context.Context, int64, int64, net.IP) error
-	MarkSeen(context.Context, int64, int64) error
-	MarkDismissed(context.Context, int64, int64) error
+	MarkSeen(context.Context, AnnouncementViewer, int64) error
+	MarkDismissed(context.Context, AnnouncementViewer, int64) error
 }
 
 // Capability is the combined Communication platform-announcement facade.

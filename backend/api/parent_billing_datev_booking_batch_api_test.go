@@ -56,7 +56,7 @@ func setDatevSettings(t *testing.T, f careBillingFixture) {
 
 func setDebtor(t *testing.T, f careBillingFixture, contract int64, debtor string) {
 	t.Helper()
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyBillingPath,
+	rec := putFamilyBilling(t, f.traeger, f.office.token,
 		map[string]any{"contract_id": contract, "recipient_kind": "applicant", "debtor_number": debtor})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 }
@@ -216,7 +216,7 @@ type datevRunsBody struct {
 	Ready bool `json:"ready"`
 	Runs  []struct {
 		RunKind     string   `json:"run_kind"`
-		RunID       int64    `json:"run_id"`
+		RunID       wireID   `json:"run_id"`
 		NewBookings int      `json:"new_bookings"`
 		FiscalYears []string `json:"fiscal_years"`
 	} `json:"runs"`

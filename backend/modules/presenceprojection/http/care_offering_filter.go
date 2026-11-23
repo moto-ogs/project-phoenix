@@ -7,6 +7,7 @@ import (
 	strconv "strconv"
 
 	common "github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // errCareOfferingFilter refuses a care_offering_id that is no positive id or
@@ -51,8 +52,8 @@ func (rs *Resource) resolveCareOfferingFilter(ctx context.Context, params *stude
 // CareOfferingOptionResponse is one entry of the care_offering_id filter's
 // selection field.
 type CareOfferingOptionResponse struct {
-	ID   int64  `json:"id"`
-	Name string `json:"name"`
+	ID   ident.ID `json:"id"`
+	Name string   `json:"name"`
 }
 
 // listCareOfferingOptions answers the active care offerings that count as
@@ -70,7 +71,7 @@ func (rs *Resource) listCareOfferingOptions(w http.ResponseWriter, r *http.Reque
 	}
 	out := make([]CareOfferingOptionResponse, 0, len(offerings))
 	for _, offering := range offerings {
-		out = append(out, CareOfferingOptionResponse{ID: offering.ID, Name: offering.Name})
+		out = append(out, CareOfferingOptionResponse{ID: ident.ID(offering.ID), Name: offering.Name})
 	}
 	common.Respond(w, r, http.StatusOK, out, "Care offerings retrieved successfully")
 }

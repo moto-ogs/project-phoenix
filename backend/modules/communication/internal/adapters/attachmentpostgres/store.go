@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/communication"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/uptrace/bun"
 )
 
@@ -52,7 +53,7 @@ type attachmentRow struct {
 }
 
 func (r *attachmentRow) attachment() communication.MessageAttachment {
-	value := communication.MessageAttachment{ID: r.ID, Filename: r.FilenameDisplay, SizeBytes: r.SizeBytes, ContentType: r.ContentType}
+	value := communication.MessageAttachment{ID: ident.ID(r.ID), Filename: r.FilenameDisplay, SizeBytes: r.SizeBytes, ContentType: r.ContentType}
 	if r.Width != nil && r.Height != nil {
 		value.Width, value.Height = *r.Width, *r.Height
 	}

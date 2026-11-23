@@ -10,6 +10,8 @@
  * compile until both are updated.
  */
 
+import type * as messagesContract from "~/lib/contract/messages.generated";
+import { knownEnum } from "~/lib/contract/known-enum";
 import type { MessageAttachment } from "~/lib/message-attachments";
 import { formatDate } from "~/lib/date-helpers";
 
@@ -38,74 +40,114 @@ type WireRequestType =
 type RequestStatus = "offen" | "erledigt" | "abgelehnt" | "zurueckgezogen";
 
 /**
- * One field a still-open request would change, rendered "current → requested".
- * Shared by both portals so their wire types stay aligned.
+ * One message/event/request in a parent-OGS conversation, as the screens read
+ * it. Derived from the staff answer (`ParentChatMessageResponse`), the wider of
+ * the two; the parents' answer (`ParentMessageResponse`) carries a subset of its
+ * fields. Shared by the staff client (parent-messages-api `Message`) and the
+ * parent client (parent-api `ParentMessage`); both read the wire through
+ * `chatMessageFieldsOf`. For staff messages on the parent side `sender_name` is
+ * the "OGS [Schulname]" label.
+ *
+ * The contract types the enums as plain strings (#7808); this type names the
+ * values this build knows. `payload` stays open on the wire because its keys
+ * depend on the event or request type; the reader keeps only an object.
  */
-export interface RequestDiffEntry {
-  readonly label: string;
-  readonly old: string;
-  readonly new: string;
-  // Structured discriminators the backend sends so the localized parents portal
-  // can render the label in the guardian's language instead of the German
-  // `label` (authoritative only for the German-only staff portal). `weekday`
-  // (1-5) + `care_kind` identify a care-schedule row. Absent on the staff side /
-  // legacy payloads → fall back to `label`.
-  readonly weekday?: number;
-  readonly care_kind?:
-    "arrival" | "pickup" | "departure_mode" | "pickup_person";
-  // Raw departure-mode keys behind `old`/`new` for `departure_mode` rows, so the
-  // localized parents portal renders mode names in the guardian's language
-  // instead of the German `old`/`new` strings. `old_modes` is the day's allowed
-  // set (an "alone" entry stands in for an empty set); `new_mode` is the single
-  // requested mode. Absent for arrival/pickup rows (times are language-neutral)
-  // and for legacy payloads → fall back to `old`/`new`.
-  readonly old_modes?: string[];
-  readonly new_mode?: string;
-  // Staff side only: what the family saw when it filed a weekly request,
-  // present only when the plan changed since (#6990).
-  readonly submitted_old?: string;
-}
-
-/**
- * One message/event/request in a parent-OGS conversation, as it arrives over the
- * wire (int64 ids already stringified by the backend). Shared verbatim by the
- * staff client (parent-messages-api `Message`) and the parent client (parent-api
- * `ParentMessage`). For staff messages on the parent side `sender_name` is the
- * "OGS [Schulname]" label.
- */
-export interface ChatMessage {
-  client_message_id?: string;
-  readonly id: string;
+export type ChatMessage = Omit<
+  messagesContract.ParentChatMessageResponse,
+  ChatMessageFieldKey | "attachments"
+> & {
   readonly sender_kind: MessageSenderKind;
-  readonly sender_name: string;
-  readonly body: string;
-  readonly created_at: string; // ISO timestamp
   // A plain message ("message"), a system event ("event"), or a structured
   // change-request ("request"). Defaults to a plain message when absent so an
   // older payload still renders as a bubble.
   readonly kind?: MessageKind;
-  readonly event_type?: string;
   readonly event_actor_kind?: MessageSenderKind;
   readonly request_type?: WireRequestType;
   readonly request_status?: RequestStatus;
-  // Deep-link reference to the underlying request row (e.g.
-  // "users.student_data_change_requests" / "schedule.care_schedule_change_requests"
-  // + row id, both stringified). A request_created pill and the request_status
-  // pill that resolves it carry the SAME ref, so open/closed is tracked per row
-  // — essential for multi-row master-data submissions where several rows of the
-  // same request_type are pending at once. Optional (older/non-request events).
-  readonly ref_table?: string;
-  readonly ref_id?: string;
   readonly payload?: Record<string, unknown>;
-  readonly decision_reason?: string;
-  // read_by_staff: a guardian message the OGS has read ("Gelesen", shown to the
-  // parent). read_by_guardian: a staff message the guardian has read ("Gelesen",
-  // shown to staff). Each side renders the receipt for its OWN messages the other
-  // side has read.
-  readonly read_by_staff?: boolean;
-  readonly read_by_guardian?: boolean;
   /** Fotos und Dateien der Nachricht (#6685). */
   readonly attachments?: readonly MessageAttachment[];
+};
+
+/** The fields chatMessageFieldsOf reads out of a wire message. */
+type ChatMessageFieldKey =
+  | "sender_kind"
+  | "kind"
+  | "event_actor_kind"
+  | "request_type"
+  | "request_status"
+  | "payload";
+
+const SENDER_KINDS = [
+  "guardian",
+  "staff",
+  "system",
+] as const satisfies readonly MessageSenderKind[];
+const MESSAGE_KINDS = [
+  "message",
+  "event",
+  "request",
+] as const satisfies readonly MessageKind[];
+const REQUEST_TYPES = [
+  "care_schedule",
+  "pickup_change",
+  "master_data",
+  "excused_absence",
+  "sick_absence",
+  "care_offering",
+] as const satisfies readonly WireRequestType[];
+const REQUEST_STATUSES = [
+  "offen",
+  "erledigt",
+  "abgelehnt",
+  "zurueckgezogen",
+] as const satisfies readonly RequestStatus[];
+
+/**
+ * The fields the reader narrows, as the staff answer types them; the parents'
+ * answer (`ParentMessageResponse`) fits, it only lacks `event_actor_kind`.
+ */
+type WireChatMessageFields = Pick<
+  messagesContract.ParentChatMessageResponse,
+  ChatMessageFieldKey
+>;
+
+/** Reads a sender kind the conversation list shows; unknown ones drop. */
+export function knownSenderKind(
+  value: string | undefined,
+): MessageSenderKind | undefined {
+  return knownEnum(SENDER_KINDS, value);
+}
+
+/** Reads a last-message kind of a conversation row. */
+export function knownMessageKind(
+  value: string | undefined,
+): MessageKind | undefined {
+  return knownEnum(MESSAGE_KINDS, value);
+}
+
+/**
+ * Narrows the string enums and the payload of one wire message to the values
+ * ChatMessage names. Null for a sender this build does not know: such a
+ * message is left out rather than shown under a guessed sender.
+ */
+export function chatMessageFieldsOf(
+  raw: WireChatMessageFields,
+): { readonly [K in ChatMessageFieldKey]: ChatMessage[K] } | null {
+  const senderKind = knownEnum(SENDER_KINDS, raw.sender_kind);
+  if (!senderKind) return null;
+  const payload = raw.payload;
+  return {
+    sender_kind: senderKind,
+    kind: knownEnum(MESSAGE_KINDS, raw.kind),
+    event_actor_kind: knownEnum(SENDER_KINDS, raw.event_actor_kind),
+    request_type: knownEnum(REQUEST_TYPES, raw.request_type),
+    request_status: knownEnum(REQUEST_STATUSES, raw.request_status),
+    payload:
+      payload !== null && typeof payload === "object" && !Array.isArray(payload)
+        ? (payload as Record<string, unknown>)
+        : undefined,
+  };
 }
 
 /**
@@ -366,7 +408,7 @@ export type MessageAudience = "team" | "leadership";
 export const LEADERSHIP_AUDIENCE_LABEL = "Nur Leitung";
 
 /** `?audience=leadership` for the leadership conversation, "" for the team. */
-export function audienceQuery(audience: MessageAudience = "team"): string {
+function audienceQuery(audience: MessageAudience = "team"): string {
   return audience === "leadership" ? "?audience=leadership" : "";
 }
 

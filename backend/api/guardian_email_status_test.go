@@ -14,7 +14,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
-	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 	"github.com/stretchr/testify/assert"
@@ -68,7 +67,7 @@ func emailStatusLine(t *testing.T, rr *httptest.ResponseRecorder, guardianID int
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 	for _, raw := range dataArray(t, rr.Body.Bytes()) {
 		line := raw.(map[string]any)
-		if int64(line["guardian_profile_id"].(float64)) == guardianID {
+		if testpkg.JSONID(t, line["guardian_profile_id"]) == guardianID {
 			return line
 		}
 	}
@@ -113,10 +112,6 @@ func TestGuardianInvitationWaitsForTheFamilysReturn(t *testing.T) {
 	assert.Equal(t, "departed", line["send_block"])
 	refused := c.do(t, account.ID, http.MethodPost, invitePath, permissions.UsersCreate)
 	assert.Equal(t, http.StatusConflict, refused.Code, refused.Body.String())
-	auth, err := NewAuthTestModule(testpkg.NewDatabase(t, c.db), testpkg.TenantRuntime(t, c.db))
-	require.NoError(t, err)
-	err = auth.GuardianInvitation.ResendGuardianInvitation(testpkg.Ctx(t), before[0].ID, account.ID)
-	require.ErrorIs(t, err, identityaccess.ErrGuardianEmailAddressBlocked)
 	after := testpkg.GuardianInvitationsByProfile(t, c.db, guardian.ID)
 	require.Len(t, after, 1, "no replacement invitation is issued")
 	assert.Equal(t, before[0].Token, after[0].Token, "the previous link is preserved")
@@ -229,8 +224,13 @@ func TestSavingAGuardianKeepsTheStop(t *testing.T) {
 	testpkg.CreateTestStudentGuardianLink(t, c.db, student.ID, guardian.ID, "primary_guardian")
 	require.Equal(t, http.StatusOK, c.do(t, account.ID, http.MethodPost, fmt.Sprintf("/%d/email-stop", guardian.ID), permissions.UsersUpdate).Code)
 
-	req := testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/guardians/%d", guardian.ID),
-		map[string]any{"first_name": "Neu", "email": "neu-" + *guardian.Email}, bearer(t, guardianStaffClaims(account.ID, permissions.UsersUpdate)))
+	// The staff form saves the guardian against the version it read (ADR 0311).
+	list := c.do(t, account.ID, http.MethodGet, fmt.Sprintf("/students/%d/guardians", student.ID), permissions.UsersRead)
+	require.Equal(t, http.StatusOK, list.Code, list.Body.String())
+	version := dataArray(t, list.Body.Bytes())[0].(map[string]any)["version"]
+	req := testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/guardians/students/%d/guardians/%d", student.ID, guardian.ID),
+		map[string]any{"guardian": map[string]any{"first_name": "Neu", "email": "neu-" + *guardian.Email}, "expected_version": version},
+		bearer(t, guardianStaffClaims(account.ID, permissions.UsersUpdate)))
 	rr := testutil.ExecuteRequest(testpkg.MountedQueryBudgetRouter("/api", c.router), req)
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 

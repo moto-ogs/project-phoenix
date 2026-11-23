@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling/compose"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -144,7 +145,7 @@ func TestPublicParentBillingContractFreezesTheHolidayContribution(t *testing.T) 
 		if confirmation, err = contributions.ConfirmHolidayRegistration(txCtx, reviewer, period, registration, true, 0, "", "", nil); err != nil {
 			return err
 		}
-		if err = rules.DeleteContributionRule(txCtx, organization, exemption.ID); err != nil {
+		if err = rules.DeleteContributionRule(txCtx, organization, exemption.ID.Int64()); err != nil {
 			return err
 		}
 		later, err = contributions.HolidayContribution(txCtx, reviewer, period, registration, nil, 0)
@@ -160,5 +161,5 @@ func TestPublicParentBillingContractFreezesTheHolidayContribution(t *testing.T) 
 		{Kind: parentbilling.LineBase, AmountCents: 6750, WeekStartsOn: &week, WeekEndsOn: new(week.AddDays(4)), TimeModelName: "bis 16 Uhr", WeekID: 1},
 		{Kind: parentbilling.LineBenefitsExemption, AmountCents: -6750, Note: "Beitragsfrei wegen Leistungsbezug"},
 	}, later.Children[0].Lines, "the frozen contribution keeps its exemption after the rule is gone")
-	require.Equal(t, child, later.Children[0].ChildID)
+	require.Equal(t, ident.ID(child), later.Children[0].ChildID)
 }

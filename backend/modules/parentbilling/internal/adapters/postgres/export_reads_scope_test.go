@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -164,7 +165,7 @@ func TestFinanceExportReadsKeepTheTraegerBelowRLS(t *testing.T) {
 			id   int64
 		}{{parentbilling.HistoryCareInvoice, invoice}, {parentbilling.HistoryHolidayDocument, document}} {
 			assertOwnHistory(t, ctx, store, own.organization, history.kind, history.id, cancellationNumber,
-				ownFile.ID, []int64{careLabelFile, holidayLabelFile})
+				ownFile.ID.Int64(), []int64{careLabelFile, holidayLabelFile})
 		}
 
 		mapping, _, err := store.ExportMapping(ctx, own.organization, parentbilling.ExportFormatSollstellung)
@@ -195,8 +196,8 @@ func assertOwnRuns(t *testing.T, ctx context.Context, store *Store, organization
 	assert.Len(t, runs, 2, "only the own monthly and holiday run, not the other Träger's run with an own invoice")
 	assert.Equal(t, 2, page.Total)
 	monthly := runs[parentbilling.DebitRunCare]
-	assert.Equal(t, careRun, monthly.RunID)
-	assert.Equal(t, holidayRun, runs[parentbilling.DebitRunHoliday].RunID)
+	assert.Equal(t, ident.ID(careRun), monthly.RunID)
+	assert.Equal(t, ident.ID(holidayRun), runs[parentbilling.DebitRunHoliday].RunID)
 	assert.Equal(t, 1, monthly.InvoiceCount, "the other Träger's invoice and Storno in the run are not counted")
 	assert.EqualValues(t, 7750, monthly.TotalCents)
 	require.NotNil(t, monthly.LastSollstellung)
@@ -251,7 +252,7 @@ func assertOwnHistory(t *testing.T, ctx context.Context, store *Store, organizat
 	}
 	labels := map[int64]string{}
 	for _, file := range exports {
-		labels[file.ID] = file.RunLabel
+		labels[file.ID.Int64()] = file.RunLabel
 		assert.Zero(t, file.RepeatOf, "%s: the other Träger's earlier file with the same content is no earlier file", kind)
 	}
 	ids := []int64{}

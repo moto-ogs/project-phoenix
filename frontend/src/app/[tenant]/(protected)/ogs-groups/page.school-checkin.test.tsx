@@ -330,12 +330,12 @@ vi.mock("./ogs-group-helpers", () => ({
     students.filter((student) => student.current_location !== "Zuhause").length,
   formatGroupLabelWithAttendance: (group: {
     name: string;
-    present_count?: number;
-    student_count?: number;
+    presentCount?: number;
+    studentCount?: number;
   }) =>
-    group.student_count === undefined
+    group.studentCount === undefined
       ? group.name
-      : `${group.name} ${group.present_count ?? 0}/${group.student_count}`,
+      : `${group.name} ${group.presentCount ?? 0}/${group.studentCount}`,
   isStudentInGroupRoom: () => true,
   matchesSearchFilter: () => true,
   matchesAttendanceFilter: () => true,
@@ -354,7 +354,7 @@ describe("OGSGroupPage — school check-in wiring", () => {
     global.fetch = vi.fn(() =>
       Promise.resolve({
         ok: true,
-        json: async () => ({ success: true, data: {} }),
+        json: async () => ({ status: "success", data: {} }),
       }),
     ) as unknown as typeof fetch;
 

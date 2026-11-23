@@ -21,6 +21,11 @@ const { activityForm } = vi.hoisted(() => ({
     validateForm: () => null,
   },
 }));
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 vi.mock("~/hooks/useActivityForm", () => ({
   parseParticipantLimit: (value: string) =>
     value ? Number.parseInt(value, 10) : null,
@@ -75,6 +80,8 @@ describe("QuickCreateActivityModal pending lock (#6533)", () => {
 
   it("refreshes the data but closes nothing when the answer arrives after unmount", async () => {
     const { answer, onClose, onSuccess, unmount } = renderAndCreate();
+    // The staff portal sends after its session gate, a microtask later.
+    await act(() => new Promise((done) => setTimeout(done, 0)));
     expect(fetch).toHaveBeenCalledOnce();
 
     unmount();

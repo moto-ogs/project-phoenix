@@ -198,6 +198,28 @@
       "target_owner": "enrollment"
     },
     {
+      "adr": "0067",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.arrivalScheduleService.UpdateStudentArrivalNote",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ArrivalScheduleService.UpdateStudentArrivalNote",
+      "reason": "Guarded leaf command (lock) under ADR 0067: care-plan reaches modules/peopledirectory.Capability.FindStudentRecordForMutation (people-directory) through *modules/careplan/internal/application.arrivalScheduleService.UpdateStudentArrivalNote. It takes the student lock every weekly plan and care note writer takes before it compares the read-state token (#7904); the call participates in the caller unit.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindStudentRecordForMutation",
+      "target_owner": "people-directory"
+    },
+    {
+      "adr": "0067",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.arrivalScheduleService.UpdateStudentArrivalNote",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ArrivalScheduleService.UpdateStudentArrivalNote",
+      "reason": "Guarded leaf command (lock) under ADR 0067: care-plan reaches modules/peopledirectory.Owner.FindStudentRecordForMutation (people-directory) through *modules/careplan/internal/application.arrivalScheduleService.UpdateStudentArrivalNote. It takes the student lock every weekly plan and care note writer takes before it compares the read-state token (#7904); the call participates in the caller unit.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.FindStudentRecordForMutation",
+      "target_owner": "people-directory"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.arrivalScheduleService.UpsertBulkStudentArrivalSchedules",
       "classification": "query",
       "effect": "query",
@@ -5905,19 +5927,9 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ClassTimetableNotices.NotifyClassTimetableChanged",
-      "reason": "Read-only target: care-plan reaches modules/schoolmembership.Capability.ListGroupAssignments (school-membership) through roots/owners.classTimetableNotices.NotifyClassTimetableChanged (#7142). No persistent, lock or scope effect.",
+      "reason": "Read-only target: care-plan reaches modules/schoolmembership.Capability.ListGroupAssignments (school-membership) through roots/owners.classTimetableNotices.NotifyClassTimetableChanged (#7142), with the group teachers' staff records joined in the same read (#7675). No persistent, lock or scope effect.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListGroupAssignments",
-      "target_owner": "school-membership"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.classTimetableNotices.NotifyClassTimetableChanged",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ClassTimetableNotices.NotifyClassTimetableChanged",
-      "reason": "Read-only target: care-plan reaches modules/schoolmembership.Capability.ListTeachers (school-membership) through roots/owners.classTimetableNotices.NotifyClassTimetableChanged (#7142). No persistent, lock or scope effect.",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListTeachers",
       "target_owner": "school-membership"
     },
     {
@@ -5935,7 +5947,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ClassTimetableNotices.NotifyClassTimetableChanged",
-      "reason": "Read-only target: care-plan reaches modules/schoolmembership.Owner.ListGroupAssignments (school-membership) through roots/owners.classTimetableNotices.NotifyClassTimetableChanged (#7142). No persistent, lock or scope effect.",
+      "reason": "Read-only target: care-plan reaches modules/schoolmembership.Owner.ListGroupAssignments (school-membership) through roots/owners.classTimetableNotices.NotifyClassTimetableChanged (#7142), with the group teachers' staff records joined in the same read (#7675). No persistent, lock or scope effect.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListGroupAssignments",
       "target_owner": "school-membership"
@@ -5945,29 +5957,9 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ClassTimetableNotices.NotifyClassTimetableChanged",
-      "reason": "Read-only target: care-plan reaches modules/schoolmembership.Owner.ListTeachers (school-membership) through roots/owners.classTimetableNotices.NotifyClassTimetableChanged (#7142). No persistent, lock or scope effect.",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListTeachers",
-      "target_owner": "school-membership"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.classTimetableNotices.NotifyClassTimetableChanged",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ClassTimetableNotices.NotifyClassTimetableChanged",
-      "reason": "Read-only target: care-plan reaches modules/schoolmembership.Query.ListGroupAssignments (school-membership) through roots/owners.classTimetableNotices.NotifyClassTimetableChanged (#7142). No persistent, lock or scope effect.",
+      "reason": "Read-only target: care-plan reaches modules/schoolmembership.Query.ListGroupAssignments (school-membership) through roots/owners.classTimetableNotices.NotifyClassTimetableChanged (#7142), with the group teachers' staff records joined in the same read (#7675). No persistent, lock or scope effect.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Query.ListGroupAssignments",
-      "target_owner": "school-membership"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.classTimetableNotices.NotifyClassTimetableChanged",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.ClassTimetableNotices.NotifyClassTimetableChanged",
-      "reason": "Read-only target: care-plan reaches modules/schoolmembership.Query.ListTeachers (school-membership) through roots/owners.classTimetableNotices.NotifyClassTimetableChanged (#7142). No persistent, lock or scope effect.",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Query.ListTeachers",
       "target_owner": "school-membership"
     },
     {
@@ -10465,6 +10457,38 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "adr": "0067",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.pickupScheduleService.CreateStudentPickupNote",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupScheduleService.CreateStudentPickupNote",
+      "reason": "Guarded leaf command (lock) under ADR 0067: care-plan reaches modules/peopledirectory.Capability.LockStudent (people-directory) through *modules/careplan/internal/application.pickupScheduleService.CreateStudentPickupNote. A dated or weekday pickup note is written under the student lock every weekly plan writer takes, so a weekly plan save compares its token against a plan no note write can change in between (#7960, ADR 0311); the call participates in the caller unit.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudent",
+      "target_owner": "people-directory"
+    },
+    {
+      "adr": "0067",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.pickupScheduleService.CreateStudentPickupNote",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupScheduleService.CreateStudentPickupNote",
+      "reason": "Guarded leaf command (lock) under ADR 0067: care-plan reaches modules/peopledirectory.Owner.LockStudent (people-directory) through *modules/careplan/internal/application.pickupScheduleService.CreateStudentPickupNote. A dated or weekday pickup note is written under the student lock every weekly plan writer takes, so a weekly plan save compares its token against a plan no note write can change in between (#7960, ADR 0311); the call participates in the caller unit.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudent",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.pickupScheduleService.CreateStudentPickupNote",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupScheduleService.CreateStudentPickupNote",
+      "reason": "Read-only target already reviewed as query: care-plan reaches modules/peopledirectory/compose.CareStudentLock (people-directory) through *modules/careplan/internal/application.pickupScheduleService.CreateStudentPickupNote. No persistent, lock or scope effect; reached since PUT pickup-schedules saves the weekly pickup rows through this command (#7960).",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.CareStudentLock",
+      "target_owner": "people-directory"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.pickupScheduleService.DeleteAllStudentPickupSchedules",
       "classification": "query",
       "effect": "query",
@@ -10682,6 +10706,38 @@
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithTenantTx",
       "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0067",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.pickupScheduleService.DeleteStudentPickupNote",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupScheduleService.DeleteStudentPickupNote",
+      "reason": "Guarded leaf command (lock) under ADR 0067: care-plan reaches modules/peopledirectory.Capability.LockStudent (people-directory) through *modules/careplan/internal/application.pickupScheduleService.DeleteStudentPickupNote. A dated or weekday pickup note is written under the student lock every weekly plan writer takes, so a weekly plan save compares its token against a plan no note write can change in between (#7960, ADR 0311); the call participates in the caller unit.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudent",
+      "target_owner": "people-directory"
+    },
+    {
+      "adr": "0067",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.pickupScheduleService.DeleteStudentPickupNote",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupScheduleService.DeleteStudentPickupNote",
+      "reason": "Guarded leaf command (lock) under ADR 0067: care-plan reaches modules/peopledirectory.Owner.LockStudent (people-directory) through *modules/careplan/internal/application.pickupScheduleService.DeleteStudentPickupNote. A dated or weekday pickup note is written under the student lock every weekly plan writer takes, so a weekly plan save compares its token against a plan no note write can change in between (#7960, ADR 0311); the call participates in the caller unit.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudent",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.pickupScheduleService.DeleteStudentPickupNote",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupScheduleService.DeleteStudentPickupNote",
+      "reason": "Read-only target already reviewed as query: care-plan reaches modules/peopledirectory/compose.CareStudentLock (people-directory) through *modules/careplan/internal/application.pickupScheduleService.DeleteStudentPickupNote. No persistent, lock or scope effect; reached since PUT pickup-schedules saves the weekly pickup rows through this command (#7960).",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.CareStudentLock",
+      "target_owner": "people-directory"
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.pickupScheduleService.DeleteStudentPickupSchedule",
@@ -10971,6 +11027,38 @@
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithTenantTx",
       "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0067",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.pickupScheduleService.UpdateStudentPickupNote",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupScheduleService.UpdateStudentPickupNote",
+      "reason": "Guarded leaf command (lock) under ADR 0067: care-plan reaches modules/peopledirectory.Capability.LockStudent (people-directory) through *modules/careplan/internal/application.pickupScheduleService.UpdateStudentPickupNote. It takes the student lock every weekly plan and care note writer takes before it compares the read-state token (#7904); the call participates in the caller unit.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudent",
+      "target_owner": "people-directory"
+    },
+    {
+      "adr": "0067",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.pickupScheduleService.UpdateStudentPickupNote",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupScheduleService.UpdateStudentPickupNote",
+      "reason": "Guarded leaf command (lock) under ADR 0067: care-plan reaches modules/peopledirectory.Owner.LockStudent (people-directory) through *modules/careplan/internal/application.pickupScheduleService.UpdateStudentPickupNote. It takes the student lock every weekly plan and care note writer takes before it compares the read-state token (#7904); the call participates in the caller unit.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudent",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.pickupScheduleService.UpdateStudentPickupNote",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.PickupScheduleService.UpdateStudentPickupNote",
+      "reason": "Read-only target already reviewed as query: care-plan reaches modules/peopledirectory/compose.CareStudentLock (people-directory) through *modules/careplan/internal/application.pickupScheduleService.UpdateStudentPickupNote. No persistent, lock or scope effect.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.CareStudentLock",
+      "target_owner": "people-directory"
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.pickupScheduleService.UpsertBulkStudentPickupSchedules",
@@ -11818,6 +11906,152 @@
       "source_owner": "care-plan",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.CareOfferingCatalogDependencies.LockTemplateRecurrence",
       "target_owner": ""
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.WeeklyPlans.SaveWeeklyPlan",
+      "reason": "Read-only target already reviewed as query: care-plan reaches *modules/enrollment/compose.ApprovedOfferingProjection.ListApprovedByStudentIDsInRange (enrollment) through *modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan. No persistent, lock or scope effect.",
+      "source_owner": "care-plan",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/enrollment/compose.ApprovedOfferingProjection.ListApprovedByStudentIDsInRange",
+      "target_owner": "enrollment"
+    },
+    {
+      "adr": "0067",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.WeeklyPlans.SaveWeeklyPlan",
+      "reason": "Guarded leaf command (lock) under ADR 0067: care-plan reaches modules/peopledirectory.Capability.FindStudentRecordForMutation (people-directory) through *modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan. It takes the student lock every weekly plan and care note writer takes before it compares the read-state token (#7904); the call participates in the caller unit.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindStudentRecordForMutation",
+      "target_owner": "people-directory"
+    },
+    {
+      "adr": "0067",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.WeeklyPlans.SaveWeeklyPlan",
+      "reason": "Guarded leaf command (lock) under ADR 0067: care-plan reaches modules/peopledirectory.Capability.LockStudent (people-directory) through *modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan. The weekly plan save takes the student lock before it compares the weekly plan token and replaces arrival rows, pickup rows and weekday notes; PUT pickup-schedules now saves through it (#7960, ADR 0311); the call participates in the caller unit.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudent",
+      "target_owner": "people-directory"
+    },
+    {
+      "adr": "0067",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.WeeklyPlans.SaveWeeklyPlan",
+      "reason": "Guarded leaf command (lock) under ADR 0067: care-plan reaches modules/peopledirectory.Owner.FindStudentRecordForMutation (people-directory) through *modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan. It takes the student lock every weekly plan and care note writer takes before it compares the read-state token (#7904); the call participates in the caller unit.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.FindStudentRecordForMutation",
+      "target_owner": "people-directory"
+    },
+    {
+      "adr": "0067",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.WeeklyPlans.SaveWeeklyPlan",
+      "reason": "Guarded leaf command (lock) under ADR 0067: care-plan reaches modules/peopledirectory.Owner.LockStudent (people-directory) through *modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan. The weekly plan save takes the student lock before it compares the weekly plan token and replaces arrival rows, pickup rows and weekday notes; PUT pickup-schedules now saves through it (#7960, ADR 0311); the call participates in the caller unit.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudent",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.WeeklyPlans.SaveWeeklyPlan",
+      "reason": "Read-only target already reviewed as query: care-plan reaches modules/peopledirectory/compose.CareStudentLock (people-directory) through *modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan. No persistent, lock or scope effect; reached since PUT pickup-schedules saves the weekly pickup rows through this command (#7960).",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.CareStudentLock",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.WeeklyPlans.SaveWeeklyPlan",
+      "reason": "Read-only target already reviewed as query: care-plan reaches modules/settings.DisplaySettingsSource.ResolveBool (settings-platform) through *modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan. No persistent, lock or scope effect; reached since PUT pickup-schedules saves the weekly pickup rows through this command (#7960).",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings.DisplaySettingsSource.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.WeeklyPlans.SaveWeeklyPlan",
+      "reason": "Read-only target already reviewed as query: care-plan reaches modules/settings.Resolver.ResolveBool (settings-platform) through *modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan. No persistent, lock or scope effect; reached since PUT pickup-schedules saves the weekly pickup rows through this command (#7960).",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings.Resolver.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.WeeklyPlans.SaveWeeklyPlan",
+      "reason": "Read-only target already reviewed as query: care-plan reaches modules/settings/records.BatchSettingsService.ResolveBool (settings-platform) through *modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan. No persistent, lock or scope effect; reached since PUT pickup-schedules saves the weekly pickup rows through this command (#7960).",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.WeeklyPlans.SaveWeeklyPlan",
+      "reason": "Read-only target already reviewed as query: care-plan reaches modules/settings/records.SettingsService.ResolveBool (settings-platform) through *modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan. No persistent, lock or scope effect; reached since PUT pickup-schedules saves the weekly pickup rows through this command (#7960).",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.WeeklyPlans.SaveWeeklyPlan",
+      "reason": "Read-only target already reviewed as query: care-plan reaches modules/studentpresence/http.TenantSettings.ResolveBool (student-presence) through *modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan. No persistent, lock or scope effect; reached since PUT pickup-schedules saves the weekly pickup rows through this command (#7960).",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence/http.TenantSettings.ResolveBool",
+      "target_owner": "student-presence"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.WeeklyPlans.SaveWeeklyPlan",
+      "reason": "Read-only target already reviewed as query: care-plan reaches tenant.CurrentTransaction (tenant-runtime) through *modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan. No persistent, lock or scope effect; reached since PUT pickup-schedules saves the weekly pickup rows through this command (#7960).",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTransaction",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.WeeklyPlans.SaveWeeklyPlan",
+      "reason": "Platform protocol participation (scope): care-plan reaches tenant.MarkRollback (tenant-runtime) through *modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.MarkRollback",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan.WeeklyPlans.SaveWeeklyPlan",
+      "reason": "Platform protocol participation (scope): care-plan reaches tenant.WithTenantTx (tenant-runtime) through *modules/careplan/internal/application.PickupAdjustments.SaveWeeklyPlan. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithTenantTx",
+      "target_owner": "tenant-runtime"
     },
     {
       "adr": "0098",
@@ -13789,49 +14023,6 @@
       "target_owner": "settings-platform"
     },
     {
-      "adr": "0067",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.Capability.ReplaceWeekdayPickupNotes",
-      "classification": "leaf",
-      "effect": "lock",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/http.WeekdayPickupNoteReplacer.ReplaceWeekdayPickupNotes",
-      "reason": "Guarded leaf command (lock) already reviewed as leaf for this target: care-plan reaches modules/peopledirectory.Capability.LockStudent (people-directory) through modules/careplan.Capability.ReplaceWeekdayPickupNotes. Participates in the caller unit; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Own-child bulk planning review: the three engine lock adapters now live in Care Plan's postgres package and are promoted by the same runtime. They still call LockEngineStudentDay, careplanning.LockExceptionDay and careplanning.LockStudent with the same database and IDs. The registered WithinTenant boundary, caller transaction and lock order are unchanged.",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudent",
-      "target_owner": "people-directory"
-    },
-    {
-      "adr": "0067",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.Capability.ReplaceWeekdayPickupNotes",
-      "classification": "leaf",
-      "effect": "lock",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/http.WeekdayPickupNoteReplacer.ReplaceWeekdayPickupNotes",
-      "reason": "Guarded leaf command (lock) already reviewed as leaf for this target: care-plan reaches modules/peopledirectory.Owner.LockStudent (people-directory) through modules/careplan.Capability.ReplaceWeekdayPickupNotes. Participates in the caller unit; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Own-child bulk planning review: the three engine lock adapters now live in Care Plan's postgres package and are promoted by the same runtime. They still call LockEngineStudentDay, careplanning.LockExceptionDay and careplanning.LockStudent with the same database and IDs. The registered WithinTenant boundary, caller transaction and lock order are unchanged.",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudent",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.Capability.ReplaceWeekdayPickupNotes",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/http.WeekdayPickupNoteReplacer.ReplaceWeekdayPickupNotes",
-      "reason": "Read-only target already reviewed as query: care-plan reaches modules/peopledirectory/compose.CareStudentLock (people-directory) through modules/careplan.Capability.ReplaceWeekdayPickupNotes. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Own-child bulk planning review: the three engine lock adapters now live in Care Plan's postgres package and are promoted by the same runtime. They still call LockEngineStudentDay, careplanning.LockExceptionDay and careplanning.LockStudent with the same database and IDs. The registered WithinTenant boundary, caller transaction and lock order are unchanged.",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.CareStudentLock",
-      "target_owner": "people-directory"
-    },
-    {
-      "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.Capability.ReplaceWeekdayPickupNotes",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/http.WeekdayPickupNoteReplacer.ReplaceWeekdayPickupNotes",
-      "reason": "Platform protocol participation (scope): care-plan reaches tenant.WithinTenant (tenant-runtime) through modules/careplan.Capability.ReplaceWeekdayPickupNotes. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenant",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.IdentityAccountDirectory.AccountEmail",
       "classification": "query",
       "effect": "query",
@@ -15249,7 +15440,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.BookingEnrollment.Request",
-      "reason": "Batch form of the existing offering-roster command; same owner, tenant transaction and guards. Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.BookingProjection.RequestByID; modules/enrollment.BookingProjection (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Batch form of the existing offering-roster command; same owner, tenant transaction and guards. Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.BookingProjection.RequestByID; modules/enrollment.BookingProjection (supplied contract method). May-bind method surface, not a production-call/liveness claim. Re-reviewed for #7760 (ADR 0309): the binding also hands on whether the request books from the first day of its bookings (its source, read from the same row); still no write and no locking read.",
       "source_owner": "care-plan",
       "target": "*github.com/moto-ogs/project-phoenix/modules/enrollment.BookingProjection.RequestByID",
       "target_owner": "enrollment"
@@ -15259,7 +15450,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.BookingEnrollment.Request",
-      "reason": "Batch form of the existing offering-roster command; same owner, tenant transaction and guards. Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.Owner.RequestByID; modules/enrollment.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Batch form of the existing offering-roster command; same owner, tenant transaction and guards. Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.Owner.RequestByID; modules/enrollment.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. Re-reviewed for #7760 (ADR 0309): the binding also hands on whether the request books from the first day of its bookings (its source, read from the same row); still no write and no locking read.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/enrollment.Owner.RequestByID",
       "target_owner": "enrollment"
@@ -15269,7 +15460,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.BookingEnrollment.Request",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.BookingProjection.RequestByID; modules/enrollment.BookingProjection (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.BookingProjection.RequestByID; modules/enrollment.BookingProjection (supplied contract method). May-bind method surface, not a production-call/liveness claim. Re-reviewed for #7760 (ADR 0309): the binding also hands on whether the request books from the first day of its bookings (its source, read from the same row); still no write and no locking read.",
       "source_owner": "care-plan",
       "target": "*github.com/moto-ogs/project-phoenix/modules/enrollment.BookingProjection.RequestByID",
       "target_owner": "enrollment"
@@ -15279,7 +15470,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.BookingEnrollment.Request",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.Owner.RequestByID; modules/enrollment.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.Owner.RequestByID; modules/enrollment.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. Re-reviewed for #7760 (ADR 0309): the binding also hands on whether the request books from the first day of its bookings (its source, read from the same row); still no write and no locking read.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/enrollment.Owner.RequestByID",
       "target_owner": "enrollment"
@@ -15832,17 +16023,6 @@
     },
     {
       "adr": "0067",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.rosterBatch.SaveRosterChanges",
-      "classification": "leaf",
-      "effect": "mutation",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.BookingRosters.SaveRosterChanges",
-      "reason": "Validated tenant-local roster diff or source update through the narrow SourcedRosterCommands capability. The target validates fields and writes only Timetable rows in the ambient transaction; the caller holds the recurrence gate.",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/timetable.SourcedRosterCommands.SaveSourcedRosterChanges",
-      "target_owner": "timetable-activities"
-    },
-    {
-      "adr": "0067",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.bookingRosters.SaveRosterChanges",
       "classification": "leaf",
       "effect": "mutation",
@@ -15990,12 +16170,12 @@
     },
     {
       "adr": "0067",
-      "approval_adr": "0083",
+      "approval_adr": "0312",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.bookingStudents.Student",
       "classification": "E4",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.BookingStudents.Student",
-      "reason": "E4 named Care booking/roster reconciliation, offering adjustment, master-data approval or HTTP child-creation surface (not a general Care exception). Preserve class/recurrence/child order, in-lock authorization, request state rechecks and child-creation rollback. Hand rows 29-32, ADR 0067 E4. Target modules/peopledirectory/compose.Directory.ReadEnrollmentStudent; modules/peopledirectory/internal/application/capability_student_enrollment.go:11. ",
+      "reason": "E4 named Care booking/roster reconciliation, offering adjustment, master-data approval or HTTP child-creation surface (not a general Care exception). Preserve class/recurrence/child order, in-lock authorization, request state rechecks and child-creation rollback. Hand rows 29-32, ADR 0067 E4. Target modules/peopledirectory/compose.Directory.ReadEnrollmentStudent; modules/peopledirectory/internal/application/capability_student_enrollment.go:11. #7908: the binding also returns the school class of the row it already reads, for the sources' Klassen filter on approval (ADR 0312); effect, lock and target unchanged.",
       "source_owner": "care-plan",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ReadEnrollmentStudent",
       "target_owner": "people-directory"
@@ -16005,31 +16185,31 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.BookingStudents.Student",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.SchoolClassGradeLevel; modules/enrollment/school_class_grades.go:19. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.SchoolClassGradeLevel; modules/enrollment/school_class_grades.go:19. May-bind method surface, not a production-call/liveness claim. #7908: the binding also returns the school class of the row it already reads, for the sources' Klassen filter on approval (ADR 0312); effect, lock and target unchanged.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/enrollment.SchoolClassGradeLevel",
       "target_owner": "enrollment"
     },
     {
       "adr": "0067",
-      "approval_adr": "0083",
+      "approval_adr": "0312",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.bookingStudents.Student",
       "classification": "E4",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.BookingStudents.Student",
-      "reason": "E4 named Care booking/roster reconciliation, offering adjustment, master-data approval or HTTP child-creation surface (not a general Care exception). Preserve class/recurrence/child order, in-lock authorization, request state rechecks and child-creation rollback. Hand rows 29-32, ADR 0067 E4. Target modules/peopledirectory.Capability.ReadEnrollmentStudent; modules/peopledirectory.Capability (supplied contract method). ",
+      "reason": "E4 named Care booking/roster reconciliation, offering adjustment, master-data approval or HTTP child-creation surface (not a general Care exception). Preserve class/recurrence/child order, in-lock authorization, request state rechecks and child-creation rollback. Hand rows 29-32, ADR 0067 E4. Target modules/peopledirectory.Capability.ReadEnrollmentStudent; modules/peopledirectory.Capability (supplied contract method). #7908: the binding also returns the school class of the row it already reads, for the sources' Klassen filter on approval (ADR 0312); effect, lock and target unchanged.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ReadEnrollmentStudent",
       "target_owner": "people-directory"
     },
     {
       "adr": "0067",
-      "approval_adr": "0083",
+      "approval_adr": "0312",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.bookingStudents.Student",
       "classification": "E4",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.BookingStudents.Student",
-      "reason": "E4 named Care booking/roster reconciliation, offering adjustment, master-data approval or HTTP child-creation surface (not a general Care exception). Preserve class/recurrence/child order, in-lock authorization, request state rechecks and child-creation rollback. Hand rows 29-32, ADR 0067 E4. Target modules/peopledirectory.Owner.ReadEnrollmentStudent; modules/peopledirectory.Owner (supplied contract method). ",
+      "reason": "E4 named Care booking/roster reconciliation, offering adjustment, master-data approval or HTTP child-creation surface (not a general Care exception). Preserve class/recurrence/child order, in-lock authorization, request state rechecks and child-creation rollback. Hand rows 29-32, ADR 0067 E4. Target modules/peopledirectory.Owner.ReadEnrollmentStudent; modules/peopledirectory.Owner (supplied contract method). #7908: the binding also returns the school class of the row it already reads, for the sources' Klassen filter on approval (ADR 0312); effect, lock and target unchanged.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ReadEnrollmentStudent",
       "target_owner": "people-directory"
@@ -19098,6 +19278,16 @@
       "target_owner": "enrollment"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeEnrollment.SelectionHistory",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.OfferingChangeEnrollment.SelectionHistory",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.BookingProjection.RequestChildOfferingHistory; modules/enrollment/booking_reads.go:8. May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "care-plan",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/enrollment.BookingProjection.RequestChildOfferingHistory",
+      "target_owner": "enrollment"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeEnrollment.SelectionsAt",
       "classification": "query",
       "effect": "query",
@@ -19670,6 +19860,49 @@
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence/http.TenantSettings.ResolveBool",
       "target_owner": "student-presence"
+    },
+    {
+      "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.Capability.ReplaceWeekdayPickupNotes",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.PickupAdjustmentSchedules.ReplaceWeekdayPickupNotes",
+      "reason": "Guarded leaf command (lock) under ADR 0067: care-plan reaches modules/peopledirectory.Capability.LockStudent (people-directory) through modules/careplan.Capability.ReplaceWeekdayPickupNotes. It takes the student lock every weekly plan and care note writer takes before it compares the read-state token (#7904); the call participates in the caller unit.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudent",
+      "target_owner": "people-directory"
+    },
+    {
+      "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.Capability.ReplaceWeekdayPickupNotes",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.PickupAdjustmentSchedules.ReplaceWeekdayPickupNotes",
+      "reason": "Guarded leaf command (lock) under ADR 0067: care-plan reaches modules/peopledirectory.Owner.LockStudent (people-directory) through modules/careplan.Capability.ReplaceWeekdayPickupNotes. It takes the student lock every weekly plan and care note writer takes before it compares the read-state token (#7904); the call participates in the caller unit.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudent",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.Capability.ReplaceWeekdayPickupNotes",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.PickupAdjustmentSchedules.ReplaceWeekdayPickupNotes",
+      "reason": "Read-only target already reviewed as query: care-plan reaches modules/peopledirectory/compose.CareStudentLock (people-directory) through modules/careplan.Capability.ReplaceWeekdayPickupNotes. No persistent, lock or scope effect.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.CareStudentLock",
+      "target_owner": "people-directory"
+    },
+    {
+      "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.Capability.ReplaceWeekdayPickupNotes",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.PickupAdjustmentSchedules.ReplaceWeekdayPickupNotes",
+      "reason": "Platform protocol participation (scope): care-plan reaches tenant.WithinTenant (tenant-runtime) through modules/careplan.Capability.ReplaceWeekdayPickupNotes. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenant",
+      "target_owner": "tenant-runtime"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.offeringChangeSettings.PickupOfferingReviewRequired",
@@ -21491,7 +21724,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.RequestLedger.Record",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.ParentRequestEvents.AppendParentRequestEvent; modules/peopledirectory/parent_request_events.go:26. ",
+      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.ParentRequestEvents.AppendParentRequestEvent; modules/peopledirectory/parent_request_events.go:26. Re-reviewed with #7954: the binding stamps the request version with readstate.Of instead of the removed careplan.ParentRequestVersion pass-through; same value, no new effect.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.ParentRequestEvents.AppendParentRequestEvent",
       "target_owner": "people-directory"
@@ -21501,7 +21734,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.RequestLedger.Record",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.ValidateParentRequestEvent; modules/peopledirectory/parent_request_events.go:37. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.ValidateParentRequestEvent; modules/peopledirectory/parent_request_events.go:37. May-bind method surface, not a production-call/liveness claim. Re-reviewed with #7954: the binding stamps the request version with readstate.Of instead of the removed careplan.ParentRequestVersion pass-through; same value, no new effect.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.ValidateParentRequestEvent",
       "target_owner": "people-directory"
@@ -21512,7 +21745,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.RequestLedger.Record",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory/ports.ParentRequestEventRecords.AppendParentRequestEvent; modules/peopledirectory/internal/adapters/peoplepostgres/parent_request_event_snapshots.go:50. ",
+      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory/ports.ParentRequestEventRecords.AppendParentRequestEvent; modules/peopledirectory/internal/adapters/peoplepostgres/parent_request_event_snapshots.go:50. Re-reviewed with #7954: the binding stamps the request version with readstate.Of instead of the removed careplan.ParentRequestVersion pass-through; same value, no new effect.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.ParentRequestEventRecords.AppendParentRequestEvent",
       "target_owner": "people-directory"
@@ -22873,7 +23106,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/ports.ParentPortalSchools.ListParentPortalSchools",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Capability.ListSchoolsByID; modules/organizationtenancy.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Capability.ListSchoolsByID; modules/organizationtenancy.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.ListSchoolsByID",
       "target_owner": "organization-tenancy"
@@ -22883,7 +23116,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/ports.ParentPortalSchools.ListParentPortalSchools",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Query.ListSchoolsByID; modules/organizationtenancy.Query (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Query.ListSchoolsByID; modules/organizationtenancy.Query (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.ListSchoolsByID",
       "target_owner": "organization-tenancy"
@@ -22893,7 +23126,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/ports.ParentPortalSchools.ListParentPortalSchools",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.School.IsDeleted; modules/organizationtenancy/school.go:49. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.School.IsDeleted; modules/organizationtenancy/school.go:49. May-bind method surface, not a production-call/liveness claim. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.School.IsDeleted",
       "target_owner": "organization-tenancy"
@@ -24532,50 +24765,6 @@
     },
     {
       "adr": "0067",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.DeleteGuardianPhone",
-      "classification": "leaf",
-      "effect": "mutation",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.DeleteGuardianPhone",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory/compose.Directory.DeleteGuardianPhone; modules/peopledirectory/internal/application/capability_guardians.go:259.  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "care-plan",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.DeleteGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "adr": "0067",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.DeleteGuardianPhone",
-      "classification": "leaf",
-      "effect": "mutation",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.DeleteGuardianPhone",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.Capability.DeleteGuardianPhone; modules/peopledirectory.Capability (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.DeleteGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "adr": "0067",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.DeleteGuardianPhone",
-      "classification": "leaf",
-      "effect": "mutation",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.DeleteGuardianPhone",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.Owner.DeleteGuardianPhone; modules/peopledirectory.Owner (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.DeleteGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "adr": "0067",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.DeleteGuardianPhone",
-      "classification": "leaf",
-      "effect": "mutation",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.DeleteGuardianPhone",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.Owner.DeleteGuardianPhone; modules/peopledirectory.Owner (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.DeleteGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "adr": "0067",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.DeleteGuardianPhoneRecord",
       "classification": "leaf",
       "effect": "mutation",
@@ -25040,46 +25229,6 @@
       "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.FindGuardianLink; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.FindGuardianLink",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.FindGuardianPhone",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindGuardianPhone",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/compose.Directory.FindGuardianPhone; modules/peopledirectory/internal/application/capability_guardians.go:78. May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "care-plan",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.FindGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindGuardianPhone",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindGuardianPhone",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Capability.FindGuardianPhone; modules/peopledirectory.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindGuardianPhone",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindGuardianPhone",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.FindGuardianPhone; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.FindGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.FindGuardianPhone",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindGuardianPhone",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.FindGuardianPhone; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.FindGuardianPhone",
       "target_owner": "people-directory"
     },
     {
@@ -26207,86 +26356,6 @@
       "target_owner": "people-directory"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListGuardiansWithoutAccount",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListGuardiansWithoutAccount",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/compose.Directory.ListGuardiansWithoutAccount; modules/peopledirectory/internal/application/capability_guardians.go:28. May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "care-plan",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListGuardiansWithoutAccount",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListGuardiansWithoutAccount",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListGuardiansWithoutAccount",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Capability.ListGuardiansWithoutAccount; modules/peopledirectory.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListGuardiansWithoutAccount",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListGuardiansWithoutAccount",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListGuardiansWithoutAccount",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.ListGuardiansWithoutAccount; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListGuardiansWithoutAccount",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListGuardiansWithoutAccount",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListGuardiansWithoutAccount",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.ListGuardiansWithoutAccount; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListGuardiansWithoutAccount",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListInvitableGuardians",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListInvitableGuardians",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/compose.Directory.ListInvitableGuardians; modules/peopledirectory/internal/application/capability_guardians.go:34. May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "care-plan",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListInvitableGuardians",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListInvitableGuardians",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListInvitableGuardians",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Capability.ListInvitableGuardians; modules/peopledirectory.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListInvitableGuardians",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListInvitableGuardians",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListInvitableGuardians",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.ListInvitableGuardians; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListInvitableGuardians",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListInvitableGuardians",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListInvitableGuardians",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.ListInvitableGuardians; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListInvitableGuardians",
-      "target_owner": "people-directory"
-    },
-    {
       "adr": "0067",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListPaymentExportRows",
       "classification": "leaf",
@@ -26372,46 +26441,6 @@
       "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.Owner.ListPaymentOverview; modules/peopledirectory.Owner (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListPaymentOverview",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListPersonsAcrossTenantsByID",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListPersonsAcrossTenantsByID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/compose.Directory.ListPersonsAcrossTenantsByID; modules/peopledirectory/internal/application/capability_peopledirectory.go:111. May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "care-plan",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListPersonsAcrossTenantsByID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListPersonsAcrossTenantsByID",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListPersonsAcrossTenantsByID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Capability.ListPersonsAcrossTenantsByID; modules/peopledirectory.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListPersonsAcrossTenantsByID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListPersonsAcrossTenantsByID",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListPersonsAcrossTenantsByID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.ListPersonsAcrossTenantsByID; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListPersonsAcrossTenantsByID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListPersonsAcrossTenantsByID",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListPersonsAcrossTenantsByID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.ListPersonsAcrossTenantsByID; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListPersonsAcrossTenantsByID",
       "target_owner": "people-directory"
     },
     {
@@ -27332,46 +27361,6 @@
       "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.ListStudentRosterOverlapping; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentRosterOverlapping",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListStudentsAcrossTenantsByID",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentsAcrossTenantsByID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/compose.Directory.ListStudentsAcrossTenantsByID; modules/peopledirectory/internal/application/capability_student.go:30. May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "care-plan",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListStudentsAcrossTenantsByID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentsAcrossTenantsByID",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentsAcrossTenantsByID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Capability.ListStudentsAcrossTenantsByID; modules/peopledirectory.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentsAcrossTenantsByID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentsAcrossTenantsByID",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentsAcrossTenantsByID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.ListStudentsAcrossTenantsByID; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentsAcrossTenantsByID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentsAcrossTenantsByID",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ListStudentsAcrossTenantsByID",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.Owner.ListStudentsAcrossTenantsByID; modules/peopledirectory.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ListStudentsAcrossTenantsByID",
       "target_owner": "people-directory"
     },
     {
@@ -28628,50 +28617,6 @@
     },
     {
       "adr": "0067",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.SetPrimaryGuardianPhone",
-      "classification": "leaf",
-      "effect": "mutation",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.SetPrimaryGuardianPhone",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory/compose.Directory.SetPrimaryGuardianPhone; modules/peopledirectory/internal/application/capability_guardians.go:266.  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "care-plan",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.SetPrimaryGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "adr": "0067",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.SetPrimaryGuardianPhone",
-      "classification": "leaf",
-      "effect": "mutation",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.SetPrimaryGuardianPhone",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.Capability.SetPrimaryGuardianPhone; modules/peopledirectory.Capability (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.SetPrimaryGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "adr": "0067",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.SetPrimaryGuardianPhone",
-      "classification": "leaf",
-      "effect": "mutation",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.SetPrimaryGuardianPhone",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.Owner.SetPrimaryGuardianPhone; modules/peopledirectory.Owner (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.SetPrimaryGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "adr": "0067",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.SetPrimaryGuardianPhone",
-      "classification": "leaf",
-      "effect": "mutation",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.SetPrimaryGuardianPhone",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.Owner.SetPrimaryGuardianPhone; modules/peopledirectory.Owner (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.SetPrimaryGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "adr": "0067",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.SetSchoolDayHint",
       "classification": "leaf",
       "effect": "mutation",
@@ -29020,6 +28965,50 @@
     },
     {
       "adr": "0067",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.UpdateGuardianEntry",
+      "classification": "leaf",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianEntry",
+      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory/compose.Directory.UpdateGuardianEntry; modules/peopledirectory/internal/application/capability_guardians.go.  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here. Reviewed for #7904: UpdateGuardianEntry saves profile, link and phone list of the staff form in one owner command in the caller's unit against the read version (ADR 0311); it runs the same guarded contact edit, link update and phone writes as the former single routes.",
+      "source_owner": "care-plan",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.UpdateGuardianEntry",
+      "target_owner": "people-directory"
+    },
+    {
+      "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianEntry",
+      "classification": "leaf",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianEntry",
+      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.Capability.UpdateGuardianEntry; modules/peopledirectory.Capability (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here. Reviewed for #7904: UpdateGuardianEntry saves profile, link and phone list of the staff form in one owner command in the caller's unit against the read version (ADR 0311); it runs the same guarded contact edit, link update and phone writes as the former single routes.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianEntry",
+      "target_owner": "people-directory"
+    },
+    {
+      "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianEntry",
+      "classification": "leaf",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianEntry",
+      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.Owner.UpdateGuardianEntry; modules/peopledirectory.Owner (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here. Reviewed for #7904: UpdateGuardianEntry saves profile, link and phone list of the staff form in one owner command in the caller's unit against the read version (ADR 0311); it runs the same guarded contact edit, link update and phone writes as the former single routes.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.UpdateGuardianEntry",
+      "target_owner": "people-directory"
+    },
+    {
+      "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.UpdateGuardianEntry",
+      "classification": "leaf",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianEntry",
+      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.Owner.UpdateGuardianEntry; modules/peopledirectory.Owner (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here. Reviewed for #7904: UpdateGuardianEntry saves profile, link and phone list of the staff form in one owner command in the caller's unit against the read version (ADR 0311); it runs the same guarded contact edit, link update and phone writes as the former single routes.",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.UpdateGuardianEntry",
+      "target_owner": "people-directory"
+    },
+    {
+      "adr": "0067",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.UpdateGuardianLink",
       "classification": "leaf",
       "effect": "mutation",
@@ -29104,50 +29093,6 @@
       "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.Owner.UpdateGuardianPayment; modules/peopledirectory.Owner (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.UpdateGuardianPayment",
-      "target_owner": "people-directory"
-    },
-    {
-      "adr": "0067",
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.UpdateGuardianPhone",
-      "classification": "leaf",
-      "effect": "mutation",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianPhone",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory/compose.Directory.UpdateGuardianPhone; modules/peopledirectory/internal/application/capability_guardians.go:252.  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "care-plan",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.UpdateGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "adr": "0067",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianPhone",
-      "classification": "leaf",
-      "effect": "mutation",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianPhone",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.Capability.UpdateGuardianPhone; modules/peopledirectory.Capability (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "adr": "0067",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianPhone",
-      "classification": "leaf",
-      "effect": "mutation",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianPhone",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.Owner.UpdateGuardianPhone; modules/peopledirectory.Owner (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.UpdateGuardianPhone",
-      "target_owner": "people-directory"
-    },
-    {
-      "adr": "0067",
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.UpdateGuardianPhone",
-      "classification": "leaf",
-      "effect": "mutation",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.UpdateGuardianPhone",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/peopledirectory.Owner.UpdateGuardianPhone; modules/peopledirectory.Owner (supplied contract method).  Full native contract surface (including production-compiled fixture support); this label does not claim this exposed method is called by a production source flow. The target owner's own coordination is inventoried at that owner, not flattened here.",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.UpdateGuardianPhone",
       "target_owner": "people-directory"
     },
     {

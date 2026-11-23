@@ -12,6 +12,7 @@ DELETE /api/students/{id}/pickup-exceptions/{exceptionId} -> basis
 DELETE /api/students/{id}/pickup-notes/{noteId} -> basis
 DELETE /api/students/{id}/purge -> basis
 DELETE /api/students/{id}/rfid -> nfc_anwesenheit
+DELETE /api/students/{id}/room-history-stop -> basis
 DELETE /api/students/{id}/status-days/{statusDayId} -> basis
 GET /api/students/ -> basis
 GET /api/students/arrival-settings -> basis
@@ -22,6 +23,7 @@ GET /api/students/care-withdrawals -> basis
 GET /api/students/care-withdrawals/{completionId}/deletion-impact -> basis
 GET /api/students/change-requests -> basis
 GET /api/students/change-requests/access -> basis
+GET /api/students/change-requests/history -> basis
 GET /api/students/change-requests/pending-count -> basis
 GET /api/students/change-requests/rss-feed/ -> basis
 GET /api/students/child-quota -> basis
@@ -46,8 +48,8 @@ GET /api/students/{id}/attendance-history -> basis
 GET /api/students/{id}/attendance-history/export -> basis
 GET /api/students/{id}/care-withdrawals -> basis
 GET /api/students/{id}/change-history -> basis
+GET /api/students/{id}/companion-links -> basis
 GET /api/students/{id}/companions -> basis
-GET /api/students/{id}/current-visit -> basis
 GET /api/students/{id}/delete-impact -> basis
 GET /api/students/{id}/documents -> basis
 GET /api/students/{id}/documents/{documentId}/download -> basis
@@ -59,12 +61,11 @@ GET /api/students/{id}/partial-absences -> basis
 GET /api/students/{id}/photo/{filename} -> basis
 GET /api/students/{id}/pickup-schedules -> basis
 GET /api/students/{id}/privacy-consent -> basis
+GET /api/students/{id}/room-history-stop -> basis
 GET /api/students/{id}/status-days -> basis
-GET /api/students/{id}/visit-history -> basis
 POST /api/students/ -> basis
 POST /api/students/arrival-schedules/bulk -> basis
 POST /api/students/arrival-schedules/status -> basis
-POST /api/students/arrival-times/bulk -> basis
 POST /api/students/care-end -> basis
 POST /api/students/care-end/cancel -> basis
 POST /api/students/care-end/preview -> basis
@@ -83,7 +84,6 @@ POST /api/students/master-data-change-requests/{requestId}/decide -> basis
 POST /api/students/offering-change-requests/{requestId}/decide -> basis
 POST /api/students/offering-change-requests/{requestId}/preview -> basis
 POST /api/students/pickup-schedules/bulk -> basis
-POST /api/students/pickup-times/bulk -> basis
 POST /api/students/school-checkin/batch -> basis
 POST /api/students/status-days/bulk -> basis
 POST /api/students/{id}/accident-reports -> basis
@@ -123,3 +123,4 @@ PUT /api/students/{id}/pickup-notes -> basis
 PUT /api/students/{id}/pickup-notes/{noteId} -> basis
 PUT /api/students/{id}/pickup-schedules -> basis
 PUT /api/students/{id}/privacy-consent -> basis
+PUT /api/students/{id}/room-history-stop -> basis

@@ -2,7 +2,7 @@
 # env-check.sh — Verify environment variable consistency across all config sources.
 #
 # Checks:
-#   1. All SOPS environment files have the same keys
+#   1. SOPS environments share keys, with explicit demo-only exceptions
 #   2. .env.example contains all keys from SOPS files (and vice versa)
 #   3. Deployed Compose services enforce runtime environment allowlists
 #
@@ -28,6 +28,7 @@ exit_code=0
 
 # Keys that only exist in local dev (.env.example), not in deployed environments
 DEV_ONLY_KEYS="COMPOSE_BAKE COMPOSE_DOCKER_CLI_BUILD DB_DEBUG DOCKER_BUILDKIT FRONTEND_HOST_PORT MAILPIT_HOST_PORT MAILPIT_SMTP_HOST_PORT POSTGRES_HOST_PORT SERVER_HOST_PORT TEST_DB_DSN TEST_DB_PORT"
+DEMO_ONLY_KEYS="HUBSPOT_DEMO_TOKEN"
 
 # Keys that only exist in deployed environments, not in local dev
 DEPLOY_ONLY_KEYS=""
@@ -51,6 +52,14 @@ get_keys() {
     | grep -v '^sops_' \
     | cut -d'=' -f1 \
     | sort
+}
+
+get_shared_sops_keys() {
+  get_keys "$1" | while IFS= read -r key; do
+    if ! is_excluded "$key" "$DEMO_ONLY_KEYS"; then
+      printf '%s\n' "$key"
+    fi
+  done
 }
 
 # Extract environment keys from a docker-compose file (under environment: blocks)
@@ -94,10 +103,20 @@ else
   done
 fi
 
+for env in "${ENVS[@]}"; do
+  [[ "$env" == "demo" ]] && continue
+  while IFS= read -r key; do
+    if is_excluded "$key" "$DEMO_ONLY_KEYS"; then
+      echo "❌ ${env}: ${key} is only allowed in demo"
+      exit_code=1
+    fi
+  done < <(get_keys "${ENV_DIR}/${env}.sops.env")
+done
+
 if [[ ${#ENVS[@]} -ge 2 ]]; then
   REFERENCE="${ENVS[0]}"
   ref_file="${ENV_DIR}/${REFERENCE}.sops.env"
-  ref_keys=$(get_keys "$ref_file")
+  ref_keys=$(get_shared_sops_keys "$ref_file")
   ref_count=$(echo "$ref_keys" | wc -l | tr -d ' ')
 
   echo "Reference: ${REFERENCE} (${ref_count} keys)"
@@ -107,7 +126,7 @@ if [[ ${#ENVS[@]} -ge 2 ]]; then
     env_file="${ENV_DIR}/${env}.sops.env"
     [[ -f "$env_file" ]] || { echo "❌ ${env}: file not found"; exit_code=1; continue; }
 
-    env_keys=$(get_keys "$env_file")
+    env_keys=$(get_shared_sops_keys "$env_file")
     missing=$(comm -23 <(echo "$ref_keys") <(echo "$env_keys") || true)
     extra=$(comm -13 <(echo "$ref_keys") <(echo "$env_keys") || true)
 
@@ -165,7 +184,7 @@ if [[ -f "$ENV_EXAMPLE" && ${#ENVS[@]} -ge 1 ]]; then
     has_real_missing=false
     while IFS= read -r key; do
       [[ -z "$key" ]] && continue
-      if ! is_excluded "$key" "$DEV_ONLY_KEYS"; then
+      if ! is_excluded "$key" "$DEV_ONLY_KEYS $DEMO_ONLY_KEYS"; then
         if [[ "$has_real_missing" == false ]]; then
           echo "❌ ${ENVS[0]}.sops.env is missing keys (present in .env.example):"
           has_real_missing=true
@@ -190,6 +209,10 @@ echo "=== Check 3: Runtime environment boundaries ==="
 if ! python3 "${SCRIPT_DIR}/check-runtime-env.py"; then
   exit_code=1
 fi
+
+# Connection budgets require the actual pool sizes, which are encrypted in
+# SOPS, not the unrelated local .env.example. Each deploy job checks the
+# resolved stack with its decrypted environment before copying it to the host.
 
 # ============================================================
 # CHECK 4: Fail-fast config guard

@@ -21,10 +21,12 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/collation"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 type rosterDeviationResponse struct {
-	TemplateID int64 `json:"template_id"`
+	TemplateID ident.ID `json:"template_id"`
 	// Offerings is the suggested source; several offerings combine (#5139).
 	Offerings     []templateRosterMaintenanceOfferingResponse `json:"offerings"`
 	GradeLevels   []int                                       `json:"grade_levels"`
@@ -45,9 +47,9 @@ type rosterDeviationResponse struct {
 }
 
 type rosterDeviationChildResponse struct {
-	StudentID int64  `json:"student_id"`
-	Name      string `json:"name"`
-	Weekdays  []int  `json:"weekdays"`
+	StudentID ident.ID `json:"student_id"`
+	Name      string   `json:"name"`
+	Weekdays  []int    `json:"weekdays"`
 }
 
 type rosterDeviationsResponse struct {
@@ -155,8 +157,8 @@ func (rs *Resource) detectTemplateRosterDeviations(ctx context.Context, periodID
 	kinds := make(map[int64]timetable.RosterOfferingKind, len(templates))
 	ends := make(map[int64]map[int]string, len(templates))
 	for _, template := range templates {
-		kinds[template.ID] = timetable.RosterOfferingKindFor(template.Type, template.ListKind)
-		ends[template.ID] = templateWeekdayEnds(template.Schedules, today)
+		kinds[template.ID.Int64()] = timetable.RosterOfferingKindFor(template.Type, template.ListKind)
+		ends[template.ID.Int64()] = templateWeekdayEnds(template.Schedules, today)
 	}
 	detected := []templateRosterDeviation{}
 	for _, templateID := range reviewed {
@@ -195,7 +197,7 @@ func namedDeviationChildren(children []timetable.RosterDeviationChild, names map
 	result := make([]rosterDeviationChildResponse, 0, len(children))
 	for _, child := range children {
 		if name, found := names[child.StudentID]; found {
-			result = append(result, rosterDeviationChildResponse{StudentID: child.StudentID, Name: name, Weekdays: child.Weekdays})
+			result = append(result, rosterDeviationChildResponse{StudentID: ident.ID(child.StudentID), Name: name, Weekdays: child.Weekdays})
 		}
 	}
 	slices.SortFunc(result, func(left, right rosterDeviationChildResponse) int {
@@ -232,12 +234,12 @@ func templateWeekdayEnds(schedules []templateScheduleResponse, today calendar.Da
 func reviewableTemplateIDs(templates []templateResponse, named *int64) []int64 {
 	ids := make([]int64, 0, len(templates))
 	for _, template := range templates {
-		confirmed := template.ManualRosterConfirmed && (named == nil || template.ID != *named)
+		confirmed := template.ManualRosterConfirmed && (named == nil || template.ID.Int64() != *named)
 		if template.Type == timetable.GroupTypeDuty || confirmed ||
 			template.RosterMaintenance == nil || template.RosterMaintenance.Mode == "automatic" {
 			continue
 		}
-		ids = append(ids, template.ID)
+		ids = append(ids, template.ID.Int64())
 	}
 	return ids
 }
@@ -252,7 +254,7 @@ func rosterDeviationResponseFrom(templateID int64, deviation *timetable.RosterDe
 		schoolClasses = []string{}
 	}
 	return rosterDeviationResponse{
-		TemplateID:    templateID,
+		TemplateID:    ident.ID(templateID),
 		Offerings:     rosterMaintenanceOfferings(deviation.Offerings),
 		GradeLevels:   gradeLevels,
 		SchoolClasses: schoolClasses,
@@ -275,16 +277,16 @@ func rosterMaintenanceCombinations(combinations [][]timetable.OfferingRef) [][]t
 }
 
 type offeringPreviewStudentResponse struct {
-	StudentID int64  `json:"student_id"`
-	Name      string `json:"name"`
+	StudentID ident.ID `json:"student_id"`
+	Name      string   `json:"name"`
 }
 
 // offeringPreviewDroppedResponse is a child the preview drops, with the
 // weekdays the selection books it on, or the filter that leaves it out.
 type offeringPreviewDroppedResponse struct {
-	StudentID      int64  `json:"student_id"`
-	Name           string `json:"name"`
-	BookedWeekdays []int  `json:"booked_weekdays"`
+	StudentID      ident.ID `json:"student_id"`
+	Name           string   `json:"name"`
+	BookedWeekdays []int    `json:"booked_weekdays"`
 	// ExcludedBy is "school_class" or "grade_level" when the Klassen or
 	// Jahrgang filter leaves out a child the selection books.
 	ExcludedBy string `json:"excluded_by,omitempty"`
@@ -298,17 +300,17 @@ type offeringPreviewWeekdayResponse struct {
 }
 
 type offeringPreviewSegmentResponse struct {
-	TemplateID int64   `json:"template_id"`
-	ValidFrom  *string `json:"valid_from"`
-	ValidUntil *string `json:"valid_until"`
+	TemplateID ident.ID `json:"template_id"`
+	ValidFrom  *string  `json:"valid_from"`
+	ValidUntil *string  `json:"valid_until"`
 }
 
 // offeringPreviewAlternativeResponse is an offering outside the selection
 // that would keep children the preview drops.
 type offeringPreviewAlternativeResponse struct {
-	OfferingID int64  `json:"offering_id"`
-	Name       string `json:"name"`
-	ChildCount int    `json:"child_count"`
+	OfferingID ident.ID `json:"offering_id"`
+	Name       string   `json:"name"`
+	ChildCount int      `json:"child_count"`
 }
 
 type offeringPreviewResponse struct {
@@ -318,6 +320,9 @@ type offeringPreviewResponse struct {
 	// OtherOfferings name the offerings of the same phase that book dropped
 	// children on the day they drop.
 	OtherOfferings []offeringPreviewAlternativeResponse `json:"other_offerings"`
+	// Fingerprint names who joins and leaves from which segment on; the
+	// connection sends it back as expected_fingerprint (ADR 0311).
+	Fingerprint string `json:"fingerprint"`
 }
 
 func offeringPreviewAlternatives(kind timetable.RosterOfferingKind, filter timetable.OfferingSourceFilter, bookings []timetable.OfferingWeekdayBooking, changes []timetable.OfferingSourceWeekdayChange) []offeringPreviewAlternativeResponse {
@@ -325,7 +330,7 @@ func offeringPreviewAlternatives(kind timetable.RosterOfferingKind, filter timet
 	result := make([]offeringPreviewAlternativeResponse, 0, len(alternatives))
 	for _, alternative := range alternatives {
 		result = append(result, offeringPreviewAlternativeResponse{
-			OfferingID: alternative.OfferingID, Name: alternative.OfferingName, ChildCount: alternative.ChildCount,
+			OfferingID: ident.ID(alternative.OfferingID), Name: alternative.OfferingName, ChildCount: alternative.ChildCount,
 		})
 	}
 	return result
@@ -382,36 +387,66 @@ func (rs *Resource) offeringPreviewFrom(r *http.Request, templateID int64) (cale
 	return *next, nil
 }
 
-func (rs *Resource) offeringSourcePreview(ctx context.Context, templateID int64, filter timetable.OfferingSourceFilter, from calendar.Date) (offeringPreviewResponse, error) {
+// offeringSourceOutcome is what connecting the offerings from a day on
+// changes: the series segments it switches and, per weekday, who joins and
+// who leaves.
+type offeringSourceOutcome struct {
+	from     calendar.Date
+	segments []timetable.TemplateSeriesSegment
+	bookings []timetable.OfferingWeekdayBooking
+	changes  []timetable.OfferingSourceWeekdayChange
+}
+
+// fingerprint is the token of the outcome (ADR 0311): the preview answers
+// it, the connection compares it under the recurrence gate. The names and
+// the other offerings only explain it and stay out.
+func (o offeringSourceOutcome) fingerprint() string {
+	return readstate.Fingerprint([]any{o.from, offeringPreviewSegments(o.segments), o.changes})
+}
+
+func (rs *Resource) offeringSourceOutcome(ctx context.Context, templateID int64, filter timetable.OfferingSourceFilter, from calendar.Date) (offeringSourceOutcome, error) {
 	segments, err := rs.RosterReview.SeriesSegments(ctx, templateID, from)
 	if err != nil {
-		return offeringPreviewResponse{}, err
+		return offeringSourceOutcome{}, err
 	}
 	if len(segments) == 0 {
-		return offeringPreviewResponse{}, timetable.ErrTemplateSegmentNotEditable
+		return offeringSourceOutcome{}, timetable.ErrTemplateSegmentNotEditable
 	}
 	living := segments[len(segments)-1]
 	if _, err := rs.OfferingSourceOptions.CombinedOfferingSourceCounts(ctx, filter.OfferingIDs, living.CalendarPeriodID); err != nil {
-		return offeringPreviewResponse{}, err
+		return offeringSourceOutcome{}, err
 	}
 	bookings, err := rs.OfferingSourceOptions.OfferingWeekdayBookings(ctx, living.CalendarPeriodID, from)
 	if err != nil {
-		return offeringPreviewResponse{}, err
+		return offeringSourceOutcome{}, err
 	}
 	rosters, err := rs.RosterReview.FutureRosters(ctx, []int64{living.TemplateID}, from)
 	if err != nil {
+		return offeringSourceOutcome{}, err
+	}
+	return offeringSourceOutcome{
+		from: from, segments: segments, bookings: bookings,
+		changes: timetable.PreviewOfferingSource(rosters[living.TemplateID], filter, bookings),
+	}, nil
+}
+
+func (rs *Resource) offeringSourcePreview(ctx context.Context, templateID int64, filter timetable.OfferingSourceFilter, from calendar.Date) (offeringPreviewResponse, error) {
+	outcome, err := rs.offeringSourceOutcome(ctx, templateID, filter, from)
+	if err != nil {
 		return offeringPreviewResponse{}, err
 	}
-	changes := timetable.PreviewOfferingSource(rosters[living.TemplateID], filter, bookings)
+	changes, bookings := outcome.changes, outcome.bookings
 	names, err := rs.studentNames(ctx, changedStudentIDs(changes), from)
 	if err != nil {
 		return offeringPreviewResponse{}, err
 	}
+	living := outcome.segments[len(outcome.segments)-1]
 	return offeringPreviewResponse{
 		From:           from.String(),
 		Weekdays:       offeringPreviewWeekdays(changes, names, timetable.DroppedChildrenBookings(filter, bookings, changes)),
-		Segments:       offeringPreviewSegments(segments),
+		Segments:       offeringPreviewSegments(outcome.segments),
 		OtherOfferings: offeringPreviewAlternatives(living.OfferingKind, filter, bookings, changes),
+		Fingerprint:    outcome.fingerprint(),
 	}, nil
 }
 
@@ -470,7 +505,7 @@ func offeringPreviewWeekdays(changes []timetable.OfferingSourceWeekdayChange, na
 func droppedPreviewStudents(studentIDs []int64, names map[int64]string, dropped map[int64]timetable.DroppedChildBooking) []offeringPreviewDroppedResponse {
 	students := make([]offeringPreviewDroppedResponse, 0, len(studentIDs))
 	for _, student := range namedPreviewStudents(studentIDs, names) {
-		reason := dropped[student.StudentID]
+		reason := dropped[student.StudentID.Int64()]
 		weekdays := reason.Weekdays
 		if weekdays == nil {
 			weekdays = []int{}
@@ -487,7 +522,7 @@ func namedPreviewStudents(studentIDs []int64, names map[int64]string) []offering
 	students := make([]offeringPreviewStudentResponse, 0, len(studentIDs))
 	for _, studentID := range studentIDs {
 		if name, found := names[studentID]; found {
-			students = append(students, offeringPreviewStudentResponse{StudentID: studentID, Name: name})
+			students = append(students, offeringPreviewStudentResponse{StudentID: ident.ID(studentID), Name: name})
 		}
 	}
 	slices.SortFunc(students, func(left, right offeringPreviewStudentResponse) int {
@@ -500,7 +535,7 @@ func offeringPreviewSegments(segments []timetable.TemplateSeriesSegment) []offer
 	result := make([]offeringPreviewSegmentResponse, 0, len(segments))
 	for _, segment := range segments {
 		result = append(result, offeringPreviewSegmentResponse{
-			TemplateID: segment.TemplateID,
+			TemplateID: ident.ID(segment.TemplateID),
 			ValidFrom:  optionalDateString(segment.ValidFrom),
 			ValidUntil: optionalDateString(segment.ValidUntil),
 		})
@@ -559,17 +594,20 @@ func commaSeparatedInts(raw string) ([]int64, error) {
 }
 
 type offeringConnectionRequest struct {
-	OfferingIDs   []int64  `json:"offering_ids"`
-	GradeLevels   []int    `json:"grade_levels"`
-	SchoolClasses []string `json:"school_classes"`
-	EffectiveDate string   `json:"effective_date"`
+	OfferingIDs   []ident.ID `json:"offering_ids"`
+	GradeLevels   []int      `json:"grade_levels"`
+	SchoolClasses []string   `json:"school_classes"`
+	EffectiveDate string     `json:"effective_date"`
+	// ExpectedFingerprint is the fingerprint of the preview the school
+	// confirmed for these offerings from effective_date on (ADR 0311).
+	ExpectedFingerprint string `json:"expected_fingerprint,omitempty"`
 }
 
 func (*offeringConnectionRequest) Bind(*http.Request) error { return nil }
 
 type offeringConnectionResponse struct {
-	TemplateIDs   []int64 `json:"template_ids"`
-	EffectiveDate string  `json:"effective_date"`
+	TemplateIDs   []ident.ID `json:"template_ids"`
+	EffectiveDate string     `json:"effective_date"`
 }
 
 // connectTemplateOfferingSource handles POST
@@ -594,10 +632,12 @@ func (rs *Resource) connectTemplateOfferingSource(w http.ResponseWriter, r *http
 		common.RenderError(w, r, common.ErrorInvalidOnField(errors.New("effective_date must be YYYY-MM-DD"), common.CodeTimetableTemplateInvalid, "effective_date"))
 		return
 	}
-	result, err := rs.RosterReview.ConnectOfferingSource(r.Context(), timetable.ConnectOfferingSourceCommand{
-		TemplateID: id, OfferingIDs: req.OfferingIDs, GradeLevels: req.GradeLevels,
+	cmd := timetable.ConnectOfferingSourceCommand{
+		TemplateID: id, OfferingIDs: ident.Int64s(req.OfferingIDs), GradeLevels: req.GradeLevels,
 		SchoolClasses: req.SchoolClasses, EffectiveDate: effectiveDate,
-	})
+	}
+	cmd.ConfirmPreview = rs.confirmOfferingPreview(cmd, req.ExpectedFingerprint)
+	result, err := rs.RosterReview.ConnectOfferingSource(r.Context(), cmd)
 	if err != nil {
 		renderRosterReviewError(w, r, err)
 		return
@@ -605,8 +645,25 @@ func (rs *Resource) connectTemplateOfferingSource(w http.ResponseWriter, r *http
 	// Connecting the offering rewrites the materialized rosters (#5017).
 	rs.broadcastStaffingDeviationChanged(r.Context(), "template_offering_connection")
 	common.Respond(w, r, http.StatusOK, offeringConnectionResponse{
-		TemplateIDs: result.TemplateIDs, EffectiveDate: result.EffectiveDate.String(),
+		TemplateIDs: ident.IDs(result.TemplateIDs), EffectiveDate: result.EffectiveDate.String(),
 	}, "Template connected to offering")
+}
+
+// confirmOfferingPreview compares the confirmed preview with the one the
+// stored state gives now, computed like GET offering-preview. The connection
+// runs it under its recurrence gate, before it writes.
+func (rs *Resource) confirmOfferingPreview(cmd timetable.ConnectOfferingSourceCommand, expected string) func(context.Context) error {
+	return func(ctx context.Context) error {
+		if rs.OfferingSourceOptions == nil {
+			return errors.New("offering source options not wired")
+		}
+		filter := timetable.OfferingSourceFilter{OfferingIDs: cmd.OfferingIDs, GradeLevels: cmd.GradeLevels, SchoolClasses: cmd.SchoolClasses}
+		outcome, err := rs.offeringSourceOutcome(ctx, cmd.TemplateID, filter, cmd.EffectiveDate)
+		if err != nil {
+			return err
+		}
+		return readstate.Check(expected, outcome.fingerprint())
+	}
 }
 
 type manualRosterRequest struct {

@@ -16,6 +16,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -23,26 +24,20 @@ import (
 // that applies to every school and the monthly key-date counts, as JSON and
 // as a CSV download.
 type BillingResource struct {
-	service            organizationtenancy.BillingReport
-	logger             *slog.Logger
-	isLocalSeedRequest func(*http.Request) bool
-	now                func() time.Time
+	service organizationtenancy.BillingReport
+	logger  *slog.Logger
 }
 
-// NewBillingResource creates the billing routes' handlers; now is the
-// root's clock the demo capture stamps its snapshot with; it is required.
-// A nil logger falls back to slog.Default.
-func NewBillingResource(service organizationtenancy.BillingReport, logger *slog.Logger, isLocalSeedRequest func(*http.Request) bool, now func() time.Time) *BillingResource {
+// NewBillingResource creates the billing routes' handlers. A nil logger
+// falls back to slog.Default.
+func NewBillingResource(service organizationtenancy.BillingReport, logger *slog.Logger) *BillingResource {
 	if service == nil {
 		panic("organization tenancy operator: billing report is required")
 	}
 	if logger == nil {
 		logger = slog.Default()
 	}
-	if now == nil {
-		panic("organization tenancy operator: billing clock is required")
-	}
-	return &BillingResource{service: service, logger: logger, isLocalSeedRequest: isLocalSeedRequest, now: now}
+	return &BillingResource{service: service, logger: logger}
 }
 
 type billingKeyDayResponse struct {
@@ -126,21 +121,6 @@ func (rs *BillingResource) ListKeyDateCounts(w http.ResponseWriter, r *http.Requ
 	common.Respond(w, r, http.StatusOK, result, "Billing key-date counts retrieved successfully")
 }
 
-// SeedKeyDateCounts writes the deterministic demo snapshot. It is only
-// reachable by the local API seeder and never enables a production capture.
-func (rs *BillingResource) SeedKeyDateCounts(w http.ResponseWriter, r *http.Request) {
-	if rs.isLocalSeedRequest == nil || !rs.isLocalSeedRequest(r) {
-		common.RenderError(w, r, common.OperatorForbidden("Die Demo-Erfassung ist nur lokal verfügbar."))
-		return
-	}
-	written, err := rs.service.SeedBillingKeyDateCounts(r.Context(), rs.now())
-	if err != nil {
-		common.RenderError(w, r, rs.billingError(r, err))
-		return
-	}
-	common.Respond(w, r, http.StatusCreated, map[string]int{"written": written}, "Demo-Stichtagszahlen erfasst")
-}
-
 // The scopes of an own key day.
 const (
 	BillingKeyDayScopeOrganization = "organization"
@@ -153,8 +133,8 @@ const (
 // and empty for a Träger.
 type billingKeyDayOverrideResponse struct {
 	Scope            string    `json:"scope"`
-	ID               common.ID `json:"id"`
-	OrganizationID   common.ID `json:"organization_id"`
+	ID               ident.ID  `json:"id"`
+	OrganizationID   ident.ID  `json:"organization_id"`
 	Name             string    `json:"name"`
 	OrganizationName string    `json:"organization_name"`
 	KeyDay           int       `json:"key_day"`
@@ -166,15 +146,15 @@ func toBillingKeyDayOverrideResponses(overrides []organizationtenancy.BillingKey
 	result := make([]billingKeyDayOverrideResponse, 0, len(overrides))
 	for _, override := range overrides {
 		response := billingKeyDayOverrideResponse{
-			Scope: BillingKeyDayScopeOrganization, OrganizationID: common.ID(override.TraegerID),
+			Scope: BillingKeyDayScopeOrganization, OrganizationID: ident.ID(override.TraegerID),
 			Name: override.Name, OrganizationName: override.OrganizationName,
 			KeyDay: override.Day, NextKeyDate: override.NextKeyDate, UpdatedAt: override.UpdatedAt,
 		}
 		switch {
 		case override.SchoolID != nil:
-			response.Scope, response.ID = BillingKeyDayScopeSchool, common.ID(*override.SchoolID)
+			response.Scope, response.ID = BillingKeyDayScopeSchool, ident.ID(*override.SchoolID)
 		case override.OrganizationID != nil:
-			response.ID = common.ID(*override.OrganizationID)
+			response.ID = ident.ID(*override.OrganizationID)
 		}
 		result = append(result, response)
 	}

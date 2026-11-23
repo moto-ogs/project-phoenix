@@ -137,17 +137,23 @@ interface DetailSection<T = Record<string, unknown>> {
   columns?: 1 | 2;
 }
 
-// API configuration
-interface ApiConfig {
-  basePath: string;
-  listParams?: Record<string, string>;
-  endpoints?: {
-    list?: string;
-    get?: string;
-    create?: string;
-    update?: string;
-    delete?: string;
-  };
+/**
+ * The calls of an entity (#7806). Each calls `bffJson` with its registered
+ * route and maps the generated answer, so the compiler checks path
+ * parameters, query, body and answer against the contract; the factory adds
+ * only hooks and logging. An operation without a call is not offered.
+ */
+export interface EntityApi<T> {
+  /** Every record; a paginated route also answers its page. */
+  list: () => Promise<T[] | PaginatedResponse<T>>;
+  get?: (id: string) => Promise<T>;
+  create?: (data: Partial<T>) => Promise<T>;
+  /**
+   * `current` is the loaded record, for a call that needs unchanged fields.
+   * Resolves to null when the route answers without the record.
+   */
+  update?: (id: string, data: Partial<T>, current?: T) => Promise<T | null>;
+  delete?: (id: string) => Promise<unknown>;
 }
 
 // List item configuration
@@ -188,8 +194,8 @@ export interface EntityConfig<T = Record<string, unknown>> {
   // Navigation
   backUrl?: string;
 
-  // API configuration
-  api: ApiConfig;
+  // The registered routes of the entity, called with their generated types
+  api: EntityApi<T>;
 
   // Form configuration
   form: {
@@ -252,31 +258,12 @@ export interface EntityConfig<T = Record<string, unknown>> {
     };
   };
 
-  // Service configuration
-  service?: {
-    // Map API responses to frontend models
-    mapResponse?: (data: unknown) => T;
-    // Map frontend models to API requests
-    mapRequest?: (data: Partial<T>) => Record<string, unknown>;
-    // Custom CRUD methods
-    create?: (data: Partial<T>) => Promise<T>;
-    update?: (id: string, data: Partial<T>, current?: T) => Promise<T>;
-    delete?: (id: string) => Promise<void>;
-    // Custom service methods
-    customMethods?: Record<
-      string,
-      (id?: string, data?: Record<string, unknown>) => Promise<unknown>
-    >;
-    // Get one method with explicit typing
-    getOne?: (id?: string, data?: Record<string, unknown>) => Promise<unknown>;
-  };
-
   // Custom hooks for business logic
   hooks?: {
     beforeCreate?: (data: Partial<T>) => Promise<Partial<T>>;
     afterCreate?: (entity: T) => Promise<void>;
     beforeUpdate?: (id: string, data: Partial<T>) => Promise<Partial<T>>;
-    afterUpdate?: (entity: T) => Promise<void>;
+    afterUpdate?: (entity: T | null) => Promise<void>;
     beforeDelete?: (id: string) => Promise<boolean>;
     afterDelete?: (id: string) => Promise<void>;
   };
@@ -349,11 +336,14 @@ export interface PaginatedResponse<T> {
 
 // Generic CRUD service interface
 export interface CrudService<T> {
-  getList(filters?: Record<string, unknown>): Promise<PaginatedResponse<T>>;
+  getList(): Promise<PaginatedResponse<T>>;
   getOne(id: string): Promise<T>;
   create(data: Partial<T>): Promise<T>;
-  /** Pass the loaded record when a custom update needs unchanged fields. */
-  update(id: string, data: Partial<T>, current?: T): Promise<T>;
+  /**
+   * Pass the loaded record when the update needs unchanged fields. Resolves
+   * to null when the route answers without the record.
+   */
+  update(id: string, data: Partial<T>, current?: T): Promise<T | null>;
   /**
    * Throws an `ApiError` with code, field errors and request ID instead of
    * returning a sentence. Resolves `false` when the `beforeDelete` hook

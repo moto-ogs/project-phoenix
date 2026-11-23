@@ -1,15 +1,10 @@
 import type { StatusBadgeTone } from "~/components/ui/status-badge";
-import type { ClassHandover } from "~/lib/class-handover";
-import type { Student, TeacherHint } from "~/lib/student-helpers";
+import type { Student } from "~/lib/student-helpers";
 import type { TimetableRoster } from "~/lib/timetable-operations-types";
 import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
+import type * as studentsContract from "~/lib/contract/students.generated";
 
 export const SCHULHOF_ROOM_NAME = "Schulhof";
-
-export interface MinimalActiveGroup {
-  id: string;
-  room?: { name?: string };
-}
 
 export interface ActiveSupervisionStudent extends Student {
   activeGroupId: string;
@@ -22,12 +17,12 @@ export interface ActiveSupervisionStudent extends Student {
 export interface ActiveSupervisionRoom {
   id: string;
   name: string;
-  room_name?: string;
-  room_id?: string;
-  room_color?: string;
-  student_count?: number;
+  roomName?: string;
+  roomId?: string;
+  roomColor?: string;
+  studentCount?: number;
   /** The started activity's limit; null without one (#3634). */
-  participant_limit?: number | null;
+  participantLimit?: number | null;
   /** Wer die Sitzung gerade beaufsichtigt (#4354). */
   supervisorNames?: readonly string[];
   isCurrentUserSupervising?: boolean;
@@ -315,10 +310,10 @@ export function resolveSupervisionSelection(options: {
   const sessionTarget = (
     session: ActiveSupervisionRoom,
   ): SupervisionSelectionTarget => {
-    if (session.room_id && openRoomIds.has(session.room_id)) {
-      return session.room_id === currentOpenRoomId
+    if (session.roomId && openRoomIds.has(session.roomId)) {
+      return session.roomId === currentOpenRoomId
         ? { kind: "none" }
-        : { kind: "open-room", roomId: session.room_id };
+        : { kind: "open-room", roomId: session.roomId };
     }
     if (session.id === currentSessionId) return { kind: "none" };
     return { kind: "session", sessionId: session.id };
@@ -332,7 +327,7 @@ export function resolveSupervisionSelection(options: {
         ? { kind: "none" }
         : { kind: "open-room", roomId };
     }
-    const inRoom = rooms.filter((room) => room.room_id === roomId);
+    const inRoom = rooms.filter((room) => room.roomId === roomId);
     if (inRoom.length === 0) return null;
     if (inRoom.some((room) => room.id === currentSessionId)) {
       // A session in this room is already selected — never silently switch
@@ -372,14 +367,14 @@ export function resolveSupervisionSelection(options: {
     const ownSession = rooms.find(
       (room) =>
         room.isCurrentUserSupervising === true &&
-        (!room.room_id || !openRoomIds.has(room.room_id)),
+        (!room.roomId || !openRoomIds.has(room.roomId)),
     );
     if (ownSession) return sessionTarget(ownSession);
     const ownOpenRoomSession = rooms.find(
       (room) =>
         room.isCurrentUserSupervising === true &&
-        room.room_id !== undefined &&
-        openRoomIds.has(room.room_id),
+        room.roomId !== undefined &&
+        openRoomIds.has(room.roomId),
     );
     if (ownOpenRoomSession) return sessionTarget(ownOpenRoomSession);
   }
@@ -407,9 +402,7 @@ export function sessionsOutsideOpenRooms(
   openRoomIds: ReadonlySet<string>,
 ): ActiveSupervisionRoom[] {
   if (openRoomIds.size === 0) return [...rooms];
-  return rooms.filter(
-    (room) => !room.room_id || !openRoomIds.has(room.room_id),
-  );
+  return rooms.filter((room) => !room.roomId || !openRoomIds.has(room.roomId));
 }
 
 /**
@@ -452,7 +445,7 @@ export interface VisitDisplayLike {
   sickSince?: string;
   excused?: boolean;
   excusedSince?: string;
-  classHandover?: ClassHandover;
+  classHandover?: studentsContract.ClassHandover;
   photoUrl?: string;
 }
 
@@ -492,11 +485,11 @@ export function mapSupervisedGroupsToRooms(
     .map((group) => ({
       id: group.id,
       name: group.name,
-      room_name: group.room?.name,
-      room_id: group.room_id,
-      room_color: group.room?.color ?? undefined,
-      student_count: undefined,
-      participant_limit: group.participantLimit ?? null,
+      roomName: group.room?.name,
+      roomId: group.room_id,
+      roomColor: group.room?.color ?? undefined,
+      studentCount: undefined,
+      participantLimit: group.participantLimit ?? null,
       supervisorNames: group.supervisorNames ?? [],
       isCurrentUserSupervising: group.isCurrentUserSupervising === true,
       canAssign: group.canAssign === true,
@@ -512,8 +505,8 @@ export function mapSupervisedGroupsToRooms(
         // compare defensively.
         Number(b.isCurrentUserSupervising) -
           Number(a.isCurrentUserSupervising) ||
-        (a.room_name ?? a.name ?? "").localeCompare(
-          b.room_name ?? b.name ?? "",
+        (a.roomName ?? a.name ?? "").localeCompare(
+          b.roomName ?? b.name ?? "",
           "de",
         ) ||
         (a.name ?? "").localeCompare(b.name ?? "", "de"),
@@ -542,7 +535,7 @@ export function supervisionTabLabel(
     label = `${liveSession.title} · ${liveSession.timeRange}`;
   } else {
     const sessionName: string | undefined = room.name;
-    const roomName = room.room_name;
+    const roomName = room.roomName;
     label =
       sessionName && roomName && sessionName !== roomName
         ? `${sessionName} · ${roomName}`
@@ -576,7 +569,7 @@ export function supervisionHeadFacts(options: {
   readonly title: string | null;
   readonly currentRoom: Pick<
     ActiveSupervisionRoom,
-    "room_name" | "supervisorNames"
+    "roomName" | "supervisorNames"
   > | null;
   readonly currentOpenRoom: {
     readonly sessions?: readonly Pick<OpenRoomSessionView, "supervisorNames">[];
@@ -594,7 +587,7 @@ export function supervisionHeadFacts(options: {
       supervisorNames: [...names].sort((a, b) => a.localeCompare(b, "de")),
     };
   }
-  const roomName = currentRoom?.room_name ?? null;
+  const roomName = currentRoom?.roomName ?? null;
   return {
     roomName: roomName && roomName !== title ? roomName : null,
     supervisorNames: [...(currentRoom?.supervisorNames ?? [])],
@@ -648,7 +641,7 @@ function mapVisitToSupervisionStudent(
     roomName?: string;
     roomColor?: string | null;
     groupNameToId?: Map<string, string>;
-    teacherHints?: ReadonlyMap<string, TeacherHint[]>;
+    teacherHints?: ReadonlyMap<string, studentsContract.TeacherHint[]>;
   },
 ): ActiveSupervisionStudent {
   const nameParts = visit.studentName?.split(" ") ?? ["", ""];
@@ -697,7 +690,7 @@ export function mapVisitsToSupervisionStudents(
     roomColor?: string | null;
     groupNameToId?: Map<string, string>;
     /** Hinweise der Lehrkraft für heute (#4795), je Kind. */
-    teacherHints?: ReadonlyMap<string, TeacherHint[]>;
+    teacherHints?: ReadonlyMap<string, studentsContract.TeacherHint[]>;
   },
 ): ActiveSupervisionStudent[] {
   return visits

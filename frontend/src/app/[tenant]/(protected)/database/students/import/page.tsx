@@ -35,10 +35,7 @@ import {
   readImportBatchFailure,
   readImportBatchRejection,
 } from "~/lib/import-batch-result";
-import {
-  importChildQuotaNotice,
-  type ImportChildQuota,
-} from "~/lib/child-quota-import";
+import { importChildQuotaNotice } from "~/lib/child-quota-import";
 import { childQuotaMessage } from "~/lib/child-quota-error";
 import {
   useApiErrorDisplay,
@@ -47,63 +44,17 @@ import {
 } from "~/contexts/ToastContext";
 import {
   downloadImportTemplate,
-  importResponseError,
-  postImportFile,
+  importFailureBody,
 } from "~/lib/import-request";
+import { bffJson } from "~/lib/bff-fetch";
+import type * as importContract from "~/lib/contract/import.generated";
 import { createLogger } from "~/lib/logger";
 
+/** Info-Knopf am Seitentitel: wofür die Seite da ist und was man zuerst tut. */
+const STUDENTS_IMPORT_INFO =
+  "Hier legst du viele Kinder auf einmal aus einer Datei an. Lade zuerst die Vorlage herunter und fülle sie aus.";
+
 const logger = createLogger({ component: "StudentImportPage" });
-
-// Types matching backend API response
-interface ImportError {
-  field: string;
-  message: string;
-  code: string;
-  severity: "error" | "warning" | "info";
-}
-
-interface ImportRowResult {
-  RowNumber: number;
-  Data: {
-    first_name: string;
-    last_name: string;
-    school_class: string;
-    group_name: string;
-    birthday: string;
-    guardians: Array<{
-      first_name: string;
-      last_name: string;
-      email: string;
-      phone: string;
-      relationship_type: string;
-      is_primary: boolean;
-    }>;
-    health_info?: string;
-    supervisor_notes?: string;
-    extra_info?: string;
-    privacy_accepted: boolean;
-    data_retention_days: number;
-    bus_permission: boolean;
-  };
-  Errors: ImportError[];
-  Timestamp: string;
-}
-
-interface ImportResult {
-  StartedAt: string;
-  CompletedAt: string;
-  TotalRows: number;
-  CreatedCount: number;
-  UpdatedCount: number;
-  SkippedCount: number;
-  ErrorCount: number;
-  WarningCount: number;
-  Errors: ImportRowResult[];
-  BulkActions: string[];
-  DryRun: boolean;
-  /** Nur in der Vorschau einer Schule mit Kinderkontingent (#3571). */
-  child_quota?: ImportChildQuota;
-}
 
 // Status types for display
 type RowStatus = "new" | "existing" | "error" | "warning";
@@ -113,12 +64,12 @@ interface DisplayStudent {
   status: RowStatus;
   errors: string[];
   notes: string[];
-  first_name: string;
-  last_name: string;
-  school_class: string;
-  group_name: string;
-  guardian_info: string;
-  health_info: string;
+  firstName: string;
+  lastName: string;
+  schoolClass: string;
+  groupName: string;
+  guardianInfo: string;
+  healthInfo: string;
 }
 
 function childCountLabel(count: number): string {
@@ -126,42 +77,47 @@ function childCountLabel(count: number): string {
 }
 
 /** Blocking and warning messages in red; plain hints stay gray. */
-function splitMessages(errors: ImportError[]): {
+function splitMessages(
+  findings: readonly importContract.ValidationError[] | null,
+): {
   errors: string[];
   notes: string[];
 } {
+  const errors = findings ?? [];
   return {
     errors: errors.filter((e) => e.severity !== "info").map((e) => e.message),
     notes: errors.filter((e) => e.severity === "info").map((e) => e.message),
   };
 }
 
-function toDisplayStudent(row: ImportRowResult): DisplayStudent {
+function toDisplayStudent(
+  row: importContract.StudentImportError,
+): DisplayStudent {
   return {
-    row: row.RowNumber,
-    status: row.Errors.some(
+    row: row.row_number,
+    status: (row.errors ?? []).some(
       (error) =>
         error.code === "already_exists" || error.code === "will_update",
     )
       ? "existing"
-      : row.Errors.some((error) => error.severity === "error")
+      : (row.errors ?? []).some((error) => error.severity === "error")
         ? "error"
-        : row.Errors.some((error) => error.severity === "warning")
+        : (row.errors ?? []).some((error) => error.severity === "warning")
           ? "warning"
           : "new",
-    ...splitMessages(row.Errors),
-    first_name: row.Data.first_name,
-    last_name: row.Data.last_name,
-    school_class: row.Data.school_class,
-    group_name: row.Data.group_name ?? "",
-    guardian_info: guardianLabel(row.Data.guardians),
-    health_info: row.Data.health_info ?? "",
+    ...splitMessages(row.errors),
+    firstName: row.data.first_name,
+    lastName: row.data.last_name,
+    schoolClass: row.data.school_class,
+    groupName: row.data.group_name ?? "",
+    guardianInfo: guardianLabel(row.data.guardians),
+    healthInfo: row.data.health_info ?? "",
   };
 }
 
 /** "Maria Muster (Mutter)" from whatever parts the row carries; empty when none. */
 function guardianLabel(
-  guardians: ImportRowResult["Data"]["guardians"] | undefined,
+  guardians: importContract.StudentImportError["data"]["guardians"] | undefined,
 ): string {
   const first = guardians?.[0];
   if (!first) return "";
@@ -181,7 +137,8 @@ export default function StudentImportPage() {
   const [isImporting, setIsImporting] = useState(false);
   const [importComplete, setImportComplete] = useState(false);
   const [importInterrupted, setImportInterrupted] = useState(false);
-  const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [importResult, setImportResult] =
+    useState<importContract.StudentPreviewResponse | null>(null);
   // Fehler der Datei und des Imports stehen im Kasten über der Vorlage,
   // mit Wiederholen (#2517). Ein angehaltener Stapel steht dort auch, mit
   // oder ohne gespeicherte Zeilen: der Import als Ganzes ist gescheitert.
@@ -192,7 +149,7 @@ export default function StudentImportPage() {
   const [templateFormat, setTemplateFormat] = useState<"csv" | "xlsx">("xlsx");
   const [mode, setMode] = useState<ImportMode>("create");
 
-  const { data: session, status } = useSession({
+  const { status } = useSession({
     required: true,
     onUnauthenticated() {
       redirect("/");
@@ -218,8 +175,8 @@ export default function StudentImportPage() {
   const handleDownloadTemplate = async () => {
     try {
       await downloadImportTemplate(
-        `/api/import/students/template?format=${templateFormat}`,
-        session,
+        "GET /api/import/students/template",
+        templateFormat,
         templateFormat === "xlsx"
           ? "schueler-import-vorlage.xlsx"
           : "schueler-import-vorlage.csv",
@@ -254,29 +211,23 @@ export default function StudentImportPage() {
         formData.append("file", file);
         formData.append("mode", importMode);
 
-        const response = await postImportFile(
-          "/api/import/students/preview",
-          session,
-          formData,
+        const importData: importContract.StudentPreviewResponse = await bffJson(
+          "tenant",
+          "POST /api/import/students/preview",
+          { body: formData, errorMessage: "Student import preview failed" },
         );
-        const result = response.body;
-
-        if (!response.ok) {
-          throw importResponseError(response, "Student import preview failed");
-        }
-
-        // Transform backend response to display format
-        const importData = result.data as ImportResult;
         const displayData: DisplayStudent[] = [];
 
         // Process errors (rows with issues)
-        if (importData.Errors) {
-          for (const row of importData.Errors) {
-            const hasErrors = row.Errors.some((e) => e.severity === "error");
-            const hasWarnings = row.Errors.some(
+        if (importData.errors) {
+          for (const row of importData.errors) {
+            const hasErrors = (row.errors ?? []).some(
+              (e) => e.severity === "error",
+            );
+            const hasWarnings = (row.errors ?? []).some(
               (e) => e.severity === "warning",
             );
-            const isExisting = row.Errors.some(
+            const isExisting = (row.errors ?? []).some(
               (e) => e.code === "already_exists" || e.code === "will_update",
             );
 
@@ -291,21 +242,21 @@ export default function StudentImportPage() {
             };
 
             displayData.push({
-              row: row.RowNumber,
+              row: row.row_number,
               status: getRowStatus(),
-              ...splitMessages(row.Errors),
-              first_name: row.Data.first_name,
-              last_name: row.Data.last_name,
-              school_class: row.Data.school_class,
-              group_name: row.Data.group_name ?? "",
-              guardian_info: guardianLabel(row.Data.guardians),
-              health_info: row.Data.health_info ?? "",
+              ...splitMessages(row.errors),
+              firstName: row.data.first_name,
+              lastName: row.data.last_name,
+              schoolClass: row.data.school_class,
+              groupName: row.data.group_name ?? "",
+              guardianInfo: guardianLabel(row.data.guardians),
+              healthInfo: row.data.health_info ?? "",
             });
           }
         }
 
         // Calculate how many are new (total - errors)
-        const newCount = importData.TotalRows - displayData.length;
+        const newCount = importData.total_rows - displayData.length;
 
         // Add placeholder entries for successful rows (they're not in Errors array)
         // Note: In a real implementation, we'd want the backend to return all rows
@@ -316,16 +267,16 @@ export default function StudentImportPage() {
             status: "new",
             errors: [],
             notes: [],
-            first_name: `${importData.TotalRows} Kinder`,
+            firstName: `${importData.total_rows} Kinder`,
             // Passt die Datei nicht ins Kinderkontingent, ist nichts bereit.
-            last_name:
+            lastName:
               importData.child_quota?.fits === false
                 ? "neu in der Datei"
                 : "bereit zum Import",
-            school_class: "",
-            group_name: "",
-            guardian_info: "",
-            health_info: "",
+            schoolClass: "",
+            groupName: "",
+            guardianInfo: "",
+            healthInfo: "",
           });
         }
 
@@ -346,7 +297,7 @@ export default function StudentImportPage() {
         if (generation === previewGeneration.current) setIsLoading(false);
       }
     },
-    [session, mode, importErrors],
+    [mode, importErrors],
   );
 
   // A new mode changes what the preview means, so the uploaded file is
@@ -372,19 +323,22 @@ export default function StudentImportPage() {
       formData.append("file", uploadedFile);
       formData.append("mode", mode);
 
-      const response = await postImportFile(
-        "/api/import/students/import",
-        session,
-        formData,
-      );
-      const result = response.body;
-
-      if (!response.ok) {
-        const interrupted = readImportBatchFailure<ImportRowResult>(result);
+      let importData: importContract.StudentPreviewResponse;
+      try {
+        importData = await bffJson(
+          "tenant",
+          "POST /api/import/students/import",
+          { body: formData, errorMessage: "Student import failed" },
+        );
+      } catch (error) {
+        // A stopped batch carries the rows already saved in its error body.
+        const result = importFailureBody(error);
+        const interrupted =
+          readImportBatchFailure<importContract.StudentImportError>(result);
         if (interrupted) {
-          setImportResult(interrupted as ImportResult);
+          setImportResult(interrupted as importContract.StudentPreviewResponse);
           setImportInterrupted(true);
-          setPreviewData((interrupted.Errors ?? []).map(toDisplayStudent));
+          setPreviewData((interrupted.errors ?? []).map(toDisplayStudent));
           // Ein Stapel kann am Kinderkontingent scheitern, wenn zwischen
           // Vorschau und Start andere Kinder dazukamen.
           setBatchNotice(
@@ -394,9 +348,9 @@ export default function StudentImportPage() {
             ),
           );
           logger.error("student_import_batch_failed", {
-            created: interrupted.CreatedCount,
-            updated: interrupted.UpdatedCount,
-            errors: interrupted.ErrorCount,
+            created: interrupted.created_count,
+            updated: interrupted.updated_count,
+            errors: interrupted.error_count,
           });
           return;
         }
@@ -408,26 +362,24 @@ export default function StudentImportPage() {
           await handleFileUpload(uploadedFile);
           return;
         }
-        throw importResponseError(response, "Student import failed");
+        throw error;
       }
-
-      const importData = result.data as ImportResult;
       setImportResult(importData);
       setImportInterrupted(false);
 
       // Handle partial failures vs full success
-      if (importData.ErrorCount > 0) {
+      if (importData.error_count > 0) {
         // Partial success: Show warning and keep form to display error details
         // Don't set importComplete - keep preview visible so user sees which rows failed
-        setPreviewData(importData.Errors.map(toDisplayStudent));
+        setPreviewData((importData.errors ?? []).map(toDisplayStudent));
         toast.warning(
-          `Der Import ist fertig: ${childCountLabel(importData.CreatedCount)} importiert, ${importData.UpdatedCount} aktualisiert, ${importData.ErrorCount} übersprungen.`,
+          `Der Import ist fertig: ${childCountLabel(importData.created_count)} importiert, ${importData.updated_count} aktualisiert, ${importData.error_count} übersprungen.`,
         );
       } else {
         // Full success: Mark complete, show success toast and reset form for next import
         setImportComplete(true);
         toast.success(
-          `Der Import ist fertig: ${childCountLabel(importData.CreatedCount)} importiert, ${importData.UpdatedCount} aktualisiert.`,
+          `Der Import ist fertig: ${childCountLabel(importData.created_count)} importiert, ${importData.updated_count} aktualisiert.`,
         );
         resetForm();
       }
@@ -469,17 +421,18 @@ export default function StudentImportPage() {
 
   // already_exists is a skip, not a blocking preview error. Create-mode
   // recovery re-uploads count committed rows that way; they must not disable Import.
-  const alreadyExists = countAlreadyExistsRows(importResult?.Errors);
+  const alreadyExists = countAlreadyExistsRows(importResult?.errors);
   const stats = {
-    total: importResult?.TotalRows ?? 0,
-    new: importResult?.CreatedCount ?? 0,
-    existing: (importResult?.UpdatedCount ?? 0) + alreadyExists,
-    errors: (importResult?.ErrorCount ?? 0) - alreadyExists,
+    total: importResult?.total_rows ?? 0,
+    new: importResult?.created_count ?? 0,
+    existing: (importResult?.updated_count ?? 0) + alreadyExists,
+    errors: (importResult?.error_count ?? 0) - alreadyExists,
   };
   const importable =
     mode === "update"
-      ? (importResult?.UpdatedCount ?? 0)
-      : stats.new + (mode === "upsert" ? (importResult?.UpdatedCount ?? 0) : 0);
+      ? (importResult?.updated_count ?? 0)
+      : stats.new +
+        (mode === "upsert" ? (importResult?.updated_count ?? 0) : 0);
   const importLabel = importInterrupted
     ? "Erneut versuchen"
     : mode === "create"
@@ -523,6 +476,7 @@ export default function StudentImportPage() {
     return (
       <TenantPage
         title="Kinder importieren"
+        info={STUDENTS_IMPORT_INFO}
         stats={statusLine}
         back
         backHref="/database/students"
@@ -538,6 +492,7 @@ export default function StudentImportPage() {
   return (
     <TenantPage
       title="Kinder importieren"
+      info={STUDENTS_IMPORT_INFO}
       stats={statusLine}
       back
       backHref="/database/students"
@@ -652,12 +607,12 @@ export default function StudentImportPage() {
                       status: student.status,
                       errors: student.errors,
                       notes: student.notes,
-                      first_name: student.first_name,
-                      last_name: student.last_name,
+                      firstName: student.firstName,
+                      lastName: student.lastName,
                       meta: [
-                        student.school_class,
-                        student.group_name,
-                        student.guardian_info,
+                        student.schoolClass,
+                        student.groupName,
+                        student.guardianInfo,
                       ],
                     }}
                     index={idx}

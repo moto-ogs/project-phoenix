@@ -17,6 +17,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -40,13 +41,13 @@ func TestRequestSharingRejectsUnlinkedRecipientAndNonOwner(t *testing.T) {
 	require.NoError(t, api.CreateParentDataRequestFixture(repos.CarePlan(), ctx, request))
 	sharing := buildRequestSharing(db, repos, reposPeople)
 
-	_, err := sharing.SetRequestSharing(ctx, author.AccountID, author.StudentID, parentportal.RequestShareMasterData, request.ID, []int64{other.GuardianProfileID})
+	_, err := sharing.SetRequestSharing(ctx, author.AccountID, author.StudentID, parentportal.RequestShareMasterData, request.ID, []int64{other.GuardianProfileID}, "")
 	assert.ErrorIs(t, err, parentportal.ErrRequestSharingInvalid)
-	_, err = sharing.SetRequestSharing(ctx, author.AccountID, author.StudentID, parentportal.RequestShareMasterData, request.ID, []int64{author.GuardianProfileID})
+	_, err = sharing.SetRequestSharing(ctx, author.AccountID, author.StudentID, parentportal.RequestShareMasterData, request.ID, []int64{author.GuardianProfileID}, "")
 	assert.ErrorIs(t, err, parentportal.ErrRequestSharingInvalid)
-	_, err = sharing.SetRequestSharing(ctx, author.AccountID, author.StudentID, parentportal.RequestShareMasterData, request.ID, []int64{author.GuardianProfileID, author.GuardianProfileID})
+	_, err = sharing.SetRequestSharing(ctx, author.AccountID, author.StudentID, parentportal.RequestShareMasterData, request.ID, []int64{author.GuardianProfileID, author.GuardianProfileID}, "")
 	assert.ErrorIs(t, err, parentportal.ErrRequestSharingInvalid)
-	_, err = sharing.SetRequestSharing(ctx, other.AccountID, other.StudentID, parentportal.RequestShareMasterData, request.ID, nil)
+	_, err = sharing.SetRequestSharing(ctx, other.AccountID, other.StudentID, parentportal.RequestShareMasterData, request.ID, nil, "")
 	assert.Error(t, err)
 }
 
@@ -68,7 +69,8 @@ func buildRequestSharing(db *bun.DB, repos *api.RepositoryTestFactory, reposPeop
 }
 
 // TestSetRequestSharingRequiresTheRequestTypesSubmitPermission pins that
-// changing who sees an open request is an edit of that request: once the
+// changing who sees an open request is an edit of that request: it carries
+// the version of the sharing the author read (ADR 0311), and once the
 // school withdraws the submit permission of its type, the author can still
 // read the sharing state but no longer change it, and no share event is
 // written.
@@ -96,7 +98,16 @@ func TestSetRequestSharingRequiresTheRequestTypesSubmitPermission(t *testing.T) 
 		return count
 	}
 
-	_, err := sharing.SetRequestSharing(ctx, author.AccountID, author.StudentID, parentportal.RequestShareMasterData, request.ID, nil)
+	read, err := sharing.GetRequestSharing(ctx, author.AccountID, author.StudentID, parentportal.RequestShareMasterData, request.ID)
+	require.NoError(t, err)
+	require.NotEmpty(t, read.Version)
+	for _, expected := range []string{"", "outdated"} {
+		_, err = sharing.SetRequestSharing(ctx, author.AccountID, author.StudentID, parentportal.RequestShareMasterData, request.ID, nil, expected)
+		require.ErrorIs(t, err, readstate.ErrChanged, "a choice made on another read than the stored one is refused")
+	}
+	require.Zero(t, shareEvents(), "a refused choice writes no share event")
+
+	changed, err := sharing.SetRequestSharing(ctx, author.AccountID, author.StudentID, parentportal.RequestShareMasterData, request.ID, nil, read.Version)
 	require.NoError(t, err, "the author with the submit permission changes the sharing")
 	require.EqualValues(t, 1, shareEvents())
 
@@ -105,7 +116,7 @@ func TestSetRequestSharingRequiresTheRequestTypesSubmitPermission(t *testing.T) 
 		Where("student_id = ? AND guardian_profile_id = ?", author.StudentID, author.GuardianProfileID).Scan(ctx, &linkID))
 	require.NoError(t, testpkg.SetTestStudentGuardianPermissions(ctx, db, linkID, map[string]interface{}{"parent_portal.access": true}))
 
-	_, err = sharing.SetRequestSharing(ctx, author.AccountID, author.StudentID, parentportal.RequestShareMasterData, request.ID, nil)
+	_, err = sharing.SetRequestSharing(ctx, author.AccountID, author.StudentID, parentportal.RequestShareMasterData, request.ID, nil, changed.Version)
 	require.ErrorIs(t, err, parentportal.ErrGuardianPermissionDenied)
 	assert.EqualValues(t, 1, shareEvents(), "a refused change writes no share event")
 

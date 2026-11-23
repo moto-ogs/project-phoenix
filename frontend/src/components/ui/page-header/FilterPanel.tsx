@@ -1,7 +1,14 @@
 "use client";
 
 import { Z_LAYER } from "../overlay-styles";
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type RefObject,
+} from "react";
 import { createPortal } from "react-dom";
 import {
   normalizeFilterValues,
@@ -15,7 +22,9 @@ import { FieldLabel } from "../field-label";
 import { MultiSelect } from "../multi-select";
 import { InfoSection } from "../info-section";
 import { Button } from "../button";
+import { cn } from "~/lib/utils";
 import { FIXED_LAYER_SHIFT } from "../hooks/useFixedLayersFollowViewport";
+import { ResponsivePanel, useResponsivePanelSheet } from "../responsive-panel";
 
 // Viewport Y just below the sticky app topbar — the line the panel docks to.
 // Measured live so it tracks the topbar's responsive + scroll-shrink heights.
@@ -128,6 +137,11 @@ export function FilterPanel({
   testId,
 }: Readonly<FilterPanelProps>) {
   const isDesktopPlacement = placement === "desktop";
+  // Unter `sm` öffnen die Filter als Blatt von unten (`ResponsivePanel`,
+  // #7800); Lage am Auslöser, eigene Abdunklung und Escape regelt dann das
+  // Blatt. Eine Auswahlliste darin öffnet als zweites Blatt darüber.
+  const asSheet = useResponsivePanelSheet();
+  const returnFocusRef = useAnchorButton(anchorRef);
   const wasOpenRef = useRef(false);
   const isOpening = isOpen && !wasOpenRef.current;
   // Resolved fixed position. Seeded from the open-time anchor snapshot so the
@@ -141,20 +155,20 @@ export function FilterPanel({
   // Escape key closes the panel — only attached while open so we don't pay
   // the listener cost on every page that mounts a panel.
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || asSheet) return;
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [isOpen, onClose]);
+  }, [isOpen, asSheet, onClose]);
 
   // Track the trigger: re-measure on scroll (rAF-throttled) and resize, plus
   // whenever the topbar changes size (e.g. the session warning appearing),
   // which shifts the trigger in document flow.
   useEffect(() => {
     const trigger = anchorRef?.current;
-    if (!isOpen || !trigger) return;
+    if (!isOpen || asSheet || !trigger) return;
     let rafId = 0;
     let lastKey = "";
     const measure = () => {
@@ -193,9 +207,10 @@ export function FilterPanel({
       if (rafId !== 0) window.cancelAnimationFrame(rafId);
       observer?.disconnect();
     };
-  }, [isOpen, anchorRef, isDesktopPlacement]);
+  }, [isOpen, asSheet, anchorRef, isDesktopPlacement]);
 
-  if (!isOpen) {
+  // Das Blatt bleibt beim Schließen stehen, bis es ausgeblendet ist.
+  if (!isOpen && !asSheet) {
     return null;
   }
 
@@ -377,6 +392,72 @@ export function FilterPanel({
       : "inset-x-3 md:inset-x-auto md:right-4 md:w-96"
     : `fixed inset-x-3 bottom-[calc(6rem+env(safe-area-inset-bottom))] max-h-[calc(100dvh-7rem-env(safe-area-inset-bottom))] md:inset-x-auto md:top-[6rem] md:right-4 md:bottom-auto md:w-96 ${FIXED_LAYER_SHIFT}`;
 
+  const fields = useSections ? (
+    // Sectioned layout reuses the detail-modal InfoSection so the filter
+    // panel speaks the same calm visual language as the room/enrollment
+    // detail views — no bespoke section chrome.
+    <div className="space-y-4">
+      {filterSections.map((section) => (
+        <InfoSection
+          key={section.title}
+          title={section.title}
+          icon={section.icon}
+        >
+          <div className="grid gap-3 md:grid-cols-2">
+            {section.filters.map(renderFilterField)}
+          </div>
+        </InfoSection>
+      ))}
+    </div>
+  ) : (
+    <div className="space-y-4">{filters.map(renderFilterField)}</div>
+  );
+
+  // Im Blatt bleiben die Knöpfe beim Scrollen der Filter unten stehen.
+  const actions = (onApply ?? onReset) && (
+    <div
+      className={cn(
+        "flex gap-2 border-t border-gray-100 bg-white p-3",
+        asSheet && "sticky bottom-0",
+      )}
+    >
+      {onReset && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="md"
+          onClick={onReset}
+          tooltip="Entfernt alle gewählten Filter."
+          className="flex-1"
+        >
+          Zurücksetzen
+        </Button>
+      )}
+      {onApply && (
+        <Button
+          type="button"
+          size="md"
+          onClick={() => {
+            onApply();
+            onClose();
+          }}
+          tooltip="Zeigt die Liste mit den gewählten Filtern."
+          className="flex-1"
+        >
+          {applyLabel}
+        </Button>
+      )}
+    </div>
+  );
+
+  // Das Blatt am Telefon: Filter und Knöpfe, ohne eigene Fläche und Lage.
+  const sheet = (
+    <div data-testid={testId}>
+      <div className="p-2">{fields}</div>
+      {actions}
+    </div>
+  );
+
   const panel = (
     <>
       {/* Click-outside backdrop. Transparent so the page content stays
@@ -413,58 +494,10 @@ export function FilterPanel({
         className={`${Z_LAYER.sheet} flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl ${panelPositionClass}`}
       >
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">
-          {useSections ? (
-            // Sectioned layout reuses the detail-modal InfoSection so the filter
-            // panel speaks the same calm visual language as the room/enrollment
-            // detail views — no bespoke section chrome.
-            <div className="space-y-4">
-              {filterSections.map((section) => (
-                <InfoSection
-                  key={section.title}
-                  title={section.title}
-                  icon={section.icon}
-                >
-                  <div className="grid gap-3 md:grid-cols-2">
-                    {section.filters.map(renderFilterField)}
-                  </div>
-                </InfoSection>
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-4">{filters.map(renderFilterField)}</div>
-          )}
+          {fields}
         </div>
 
-        {(onApply ?? onReset) && (
-          <div className="flex gap-2 border-t border-gray-100 bg-white p-3">
-            {onReset && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="md"
-                onClick={onReset}
-                tooltip="Entfernt alle gewählten Filter."
-                className="flex-1"
-              >
-                Zurücksetzen
-              </Button>
-            )}
-            {onApply && (
-              <Button
-                type="button"
-                size="md"
-                onClick={() => {
-                  onApply();
-                  onClose();
-                }}
-                tooltip="Zeigt die Liste mit den gewählten Filtern."
-                className="flex-1"
-              >
-                {applyLabel}
-              </Button>
-            )}
-          </div>
-        )}
+        {actions}
       </div>
     </>
   );
@@ -475,9 +508,42 @@ export function FilterPanel({
   // an outside tap closes the panel rather than firing a FAB/nav action),
   // while the panel itself is Z_LAYER.sheet so it paints above the backdrop. The panel still
   // never geometrically covers the bottom nav (MOBILE_BOTTOM_NAV_CLEARANCE).
-  if (typeof document !== "undefined") {
-    return createPortal(panel, document.body);
-  }
+  const popover =
+    typeof document !== "undefined"
+      ? createPortal(panel, document.body)
+      : panel;
 
-  return panel;
+  return (
+    <ResponsivePanel
+      open={isOpen}
+      onOpenChange={(next) => {
+        if (!next) onClose();
+      }}
+      label="Filter"
+      returnFocusRef={returnFocusRef}
+      // Den Filter-Knopf rendert die Suchzeile selbst.
+      trigger={null}
+    >
+      {(inSheet) => (inSheet ? sheet : popover)}
+    </ResponsivePanel>
+  );
+}
+
+/**
+ * Der Anker ist die Hülle um den Filter-Knopf; den Fokus bekommt beim
+ * Schließen des Blatts der Knopf darin.
+ */
+function useAnchorButton(
+  anchorRef: RefObject<HTMLElement | null> | undefined,
+): RefObject<HTMLElement | null> {
+  return useMemo(
+    () => ({
+      get current() {
+        const anchor = anchorRef?.current ?? null;
+        if (anchor === null || anchor.matches("button")) return anchor;
+        return anchor.querySelector<HTMLElement>("button") ?? anchor;
+      },
+    }),
+    [anchorRef],
+  );
 }

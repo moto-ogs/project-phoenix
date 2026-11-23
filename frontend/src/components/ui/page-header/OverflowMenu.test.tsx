@@ -1,7 +1,16 @@
 import { afterEach, describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import {
+  act,
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+} from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
+import { useState } from "react";
 
+import { usePhoneViewport } from "~/test/helpers/viewport";
+import { Modal } from "../modal";
 import { OverflowMenu } from "./OverflowMenu";
 
 describe("OverflowMenu", () => {
@@ -801,5 +810,188 @@ describe("OverflowMenu", () => {
     fireEvent.scroll(window);
 
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+});
+
+describe("OverflowMenu am Handy", () => {
+  usePhoneViewport();
+
+  function MenuWithDialog({ onExport }: { readonly onExport: () => void }) {
+    const [dialogOpen, setDialogOpen] = useState(false);
+    return (
+      <>
+        <OverflowMenu
+          items={[
+            {
+              label: "Exportieren",
+              noDescription: "Test",
+              onClick: onExport,
+            },
+            {
+              label: "Umbenennen",
+              noDescription: "Test",
+              href: "/umbenennen",
+              onClick: () => setDialogOpen(true),
+            },
+          ]}
+        />
+        <Modal
+          isOpen={dialogOpen}
+          onClose={() => setDialogOpen(false)}
+          title="Umbenennen"
+        >
+          <input aria-label="Name" />
+        </Modal>
+      </>
+    );
+  }
+
+  /** Vaul hält das Blatt bis zum Ende seiner Animation; happy-dom spielt keine. */
+  async function finishSheetClosing() {
+    const sheet = screen.queryByRole("dialog", { name: "Weitere Aktionen" });
+    if (sheet !== null) {
+      await waitFor(() =>
+        expect(sheet).toHaveAttribute("data-state", "closed"),
+      );
+      const end = new Event("animationend");
+      Object.assign(end, {
+        animationName: getComputedStyle(sheet).animationName,
+      });
+      act(() => {
+        sheet.dispatchEvent(end);
+      });
+    }
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Weitere Aktionen" }),
+      ).not.toBeInTheDocument(),
+    );
+  }
+
+  it("öffnet als Blatt; ein Eintrag führt seine Aktion aus oder öffnet seinen Dialog und schließt das Blatt", async () => {
+    const onExport = vi.fn();
+    render(<MenuWithDialog onExport={onExport} />);
+    const trigger = screen.getByRole("button", { name: "Weitere Aktionen" });
+    expect(trigger).toHaveAttribute("aria-haspopup", "dialog");
+
+    fireEvent.click(trigger);
+    const sheet = await screen.findByRole("dialog", {
+      name: "Weitere Aktionen",
+    });
+    expect(sheet).toHaveAttribute("id");
+    expect(trigger).toHaveAttribute("aria-controls", sheet.id);
+    expect(sheet).toContainElement(
+      screen.getByRole("menu", { name: "Weitere Aktionen" }),
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByRole("menuitem", { name: "Exportieren" }),
+      ).toHaveFocus(),
+    );
+
+    fireEvent.click(screen.getByRole("menuitem", { name: "Exportieren" }));
+    expect(onExport).toHaveBeenCalledTimes(1);
+    await finishSheetClosing();
+    expect(trigger).toHaveFocus();
+
+    fireEvent.click(trigger);
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Umbenennen" }),
+    );
+    const dialog = await screen.findByRole("dialog", { name: "Umbenennen" });
+    await finishSheetClosing();
+    expect(dialog).toContainElement(document.activeElement as HTMLElement);
+
+    // Der Dialog gibt den Fokus an den Auslöser zurück, nicht ins Leere.
+    fireEvent.click(screen.getByRole("button", { name: "Modal schließen" }));
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Umbenennen" }),
+      ).not.toBeInTheDocument(),
+    );
+    expect(trigger).toHaveFocus();
+  });
+
+  it("zeigt ein Menü mit nur einer Aktion als beschrifteten Knopf mit dem Tour-Ziel des Eintrags (#7799)", () => {
+    const onRemove = vi.fn();
+    const { container } = render(
+      <OverflowMenu
+        ariaLabel="Aktionen für Mia"
+        tourTarget="row-menu"
+        items={[
+          { kind: "separator" },
+          {
+            label: "Entfernen",
+            description: "moto fragt vorher nach.",
+            destructive: true,
+            tourTarget: "row-remove",
+            onClick: onRemove,
+          },
+        ]}
+      />,
+    );
+
+    const button = screen.getByRole("button", {
+      name: /^Entfernen ?, Aktionen für Mia$/,
+    });
+    expect(
+      screen.queryByRole("button", { name: "Aktionen für Mia" }),
+    ).not.toBeInTheDocument();
+    expect(button).not.toHaveAttribute("aria-haspopup");
+    expect(button).toHaveAttribute("data-setup-tour", "row-remove");
+    expect(
+      container.querySelector('[data-setup-tour="row-menu"]'),
+    ).toContainElement(button);
+
+    fireEvent.click(button);
+    expect(onRemove).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    // Ein Name für den Auslöser selbst nennt kein Objekt und entfällt.
+    const { unmount } = render(
+      <OverflowMenu
+        ariaLabel="Menü öffnen"
+        items={[
+          { label: "Exportieren", noDescription: "Test", onClick: vi.fn() },
+        ]}
+      />,
+    );
+    expect(
+      screen.getByRole("button", { name: "Exportieren" }),
+    ).toBeInTheDocument();
+    unmount();
+
+    // Zwei Aktionen, eine Auswahl oder ein eigener Auslöser bleiben Menü.
+    const { rerender } = render(
+      <OverflowMenu
+        items={[
+          { label: "Exportieren", noDescription: "Test", onClick: vi.fn() },
+          { label: "Umbenennen", noDescription: "Test", onClick: vi.fn() },
+        ]}
+      />,
+    );
+    expect(
+      screen.getByRole("button", { name: "Weitere Aktionen" }),
+    ).toHaveAttribute("aria-haspopup", "dialog");
+    rerender(
+      <OverflowMenu
+        items={[
+          { kind: "radio", label: "Liste", checked: true, onClick: vi.fn() },
+        ]}
+      />,
+    );
+    expect(
+      screen.getByRole("button", { name: "Weitere Aktionen" }),
+    ).toHaveAttribute("aria-haspopup", "dialog");
+    rerender(
+      <OverflowMenu
+        triggerContent="+ Anlegen"
+        items={[{ label: "Kind", noDescription: "Test", onClick: vi.fn() }]}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "+ Anlegen" })).toHaveAttribute(
+      "aria-haspopup",
+      "dialog",
+    );
   });
 });

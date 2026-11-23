@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedBookingAccounts gives the demo Träger revenue accounts and cost
@@ -23,10 +24,10 @@ func seedBookingAccounts(client *Client, auth AuthRef, from calendar.Date) (int,
 	var envelope struct {
 		Data struct {
 			Schools []struct {
-				ID int64 `json:"id"`
+				ID ident.ID `json:"id"`
 			} `json:"schools"`
 			Offerings []struct {
-				CareOfferingID int64 `json:"care_offering_id"`
+				CareOfferingID ident.ID `json:"care_offering_id"`
 			} `json:"offerings"`
 		} `json:"data"`
 	}

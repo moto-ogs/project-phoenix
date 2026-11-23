@@ -52,6 +52,8 @@ import { HolidayDebitHintsCard } from "~/components/traeger/care-run-review-lazy
 import { formatEuro } from "~/components/traeger/contribution-format";
 import { formatDateRange } from "~/components/traeger/holiday-period-format";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
+import { useDraftOn } from "~/lib/swr/read-draft";
+import { isReadStateRefusal } from "~/lib/api-error";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { DataField, DataGrid } from "~/components/ui/data-field";
@@ -83,6 +85,7 @@ import {
 import { TRAEGER_HOLIDAY_TAB } from "~/lib/traeger-payment-text";
 import { traegerPath } from "~/lib/traeger-url";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
+import { labelOf } from "~/lib/label-of";
 
 // The direct debit file of a released run (#4697) loads with the run.
 const SepaDebitCard = dynamic(
@@ -184,6 +187,10 @@ function PaymentTextWarningLinks({
   );
 }
 
+/** Was die Seite ist und was man dort zuerst tut (#7596). */
+const HOLIDAY_RUN_INFO =
+  "Hier findest du die Rechnungen dieses Ferienzeitraums. Vor der Freigabe kannst du sie prüfen und ändern. Danach bleiben sie festgeschrieben.";
+
 export default function TraegerBillingRunPage() {
   const params = useParams<{ id: string }>();
   const runId = params?.id ?? "";
@@ -193,6 +200,7 @@ export default function TraegerBillingRunPage() {
     error: loadError,
     mutate,
     reload,
+    reloadOrThrow,
   } = useTraegerResource(
     runId ? traegerBillingKeys.holidayRun(runId) : null,
     () => fetchBillingRun(runId),
@@ -205,6 +213,31 @@ export default function TraegerBillingRunPage() {
     null,
   );
   const [confirmingRelease, setConfirmingRelease] = useState(false);
+  // The release confirms the run as the dialog opened on it (ADR 0311):
+  // a newer read in the background does not change what is confirmed, and
+  // after a refusal the stored run shows.
+  const releaseRead = useDraftOn<
+    BillingRunDetail,
+    BillingRunDetail,
+    string,
+    unknown
+  >(
+    {
+      opening: confirmingRelease && run ? run.id : null,
+      data: run ?? undefined,
+      reload: reloadOrThrow,
+    },
+    // The dialog closes after the release or its refusal; reopened, it
+    // confirms the run then on screen.
+    { token: (shown) => shown.fingerprint, follow: false },
+  );
+  const releaseShown = async <A,>(
+    send: (shown: BillingRunDetail) => Promise<A>,
+  ) => {
+    const shown = releaseRead.base ?? run;
+    if (!shown) throw new Error("no run to release");
+    return send(shown);
+  };
   const router = useRouter();
   const reissueErrors = useApiErrorDisplay();
   const [releasing, setReleasing] = useState(false);
@@ -223,7 +256,9 @@ export default function TraegerBillingRunPage() {
     if (!run) return;
     setReleasing(true);
     try {
-      await mutate(await releaseBillingRun(run), { revalidate: false });
+      await mutate(await releaseShown(releaseBillingRun), {
+        revalidate: false,
+      });
       // The list shows the issued run, the exports its files.
       void invalidate(traegerKeys.billingRuns());
       void invalidate(traegerBillingKeys.exportRuns());
@@ -234,8 +269,11 @@ export default function TraegerBillingRunPage() {
         error: err instanceof Error ? err.message : String(err),
       });
       setConfirmingRelease(false);
-      void releaseErrors.show(err, { object: "der Lauf" });
-      reload();
+      void releaseErrors.show(err, {
+        object: "der Lauf",
+        reload: reloadOrThrow,
+      });
+      if (!isReadStateRefusal(err)) reload();
     } finally {
       setReleasing(false);
     }
@@ -256,8 +294,11 @@ export default function TraegerBillingRunPage() {
         error: err instanceof Error ? err.message : String(err),
       });
       setConfirmingDiscard(false);
-      void releaseErrors.show(err, { object: "der Lauf" });
-      reload();
+      void releaseErrors.show(err, {
+        object: "der Lauf",
+        reload: reloadOrThrow,
+      });
+      if (!isReadStateRefusal(err)) reload();
     } finally {
       setDiscarding(false);
     }
@@ -374,6 +415,7 @@ export default function TraegerBillingRunPage() {
 
   return (
     <TenantPage
+      info={HOLIDAY_RUN_INFO}
       title={run?.periodName ?? "Abrechnungslauf"}
       leading={<ConceptIconTile concept={holidayWeeksConcept} size="page" />}
       back
@@ -406,8 +448,8 @@ export default function TraegerBillingRunPage() {
         <>
           {run ? (
             <StatusBadge
-              label={BILLING_RUN_STATUS_LABELS[run.status]}
-              tone={BILLING_RUN_STATUS_TONES[run.status]}
+              label={labelOf(BILLING_RUN_STATUS_LABELS, run.status, "–")}
+              tone={labelOf(BILLING_RUN_STATUS_TONES, run.status, "gray")}
             />
           ) : null}
           {empty ? (

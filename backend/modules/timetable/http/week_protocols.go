@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -121,7 +122,7 @@ func (rs *WeekProtocolResource) seed(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInternalServerWrap("seed week protocols", err))
 		return
 	}
-	render.JSON(w, r, map[string]any{"data": map[string]bool{"seeded": true}})
+	common.RenderJSON(w, r, map[string]any{"data": map[string]bool{"seeded": true}})
 }
 
 var weekProtocolErrorRules = []common.ErrorRule{
@@ -239,6 +240,13 @@ func (rs *WeekProtocolResource) close(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
+	// A closing without a body names no read protocol; the owner refuses it
+	// as changed since read.
+	var req weekProtocolCloseRequest
+	if err := render.DecodeJSON(r.Body, &req); err != nil && !errors.Is(err, io.EOF) {
+		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
+		return
+	}
 	reach, err := rs.reach(ctx)
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInternalServer(err))
@@ -249,7 +257,7 @@ func (rs *WeekProtocolResource) close(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInternalServer(err))
 		return
 	}
-	protocol, err := rs.cfg.Service.CloseWeekProtocol(ctx, reach, id, actor, rs.cfg.Renderer)
+	protocol, err := rs.cfg.Service.CloseWeekProtocol(ctx, reach, id, req.ExpectedVersion, actor, rs.cfg.Renderer)
 	if err != nil {
 		common.RenderError(w, r, renderWeekProtocolError(err))
 		return
@@ -366,6 +374,14 @@ func weekProtocolFilterOf(r *http.Request) (timetable.WeekProtocolFilter, error)
 type weekProtocolNotesRequest struct {
 	WeekNote string                     `json:"week_note"`
 	Days     []weekProtocolDayNoteInput `json:"days"`
+	// ExpectedVersion is the protocol's version its editor read (ADR 0311).
+	ExpectedVersion string `json:"expected_version"`
+}
+
+// weekProtocolCloseRequest names the protocol the closing person read (ADR
+// 0311).
+type weekProtocolCloseRequest struct {
+	ExpectedVersion string `json:"expected_version"`
 }
 
 // weekProtocolDayNoteInput is the note of one day; Date is YYYY-MM-DD.
@@ -379,7 +395,7 @@ func decodeWeekProtocolNotes(r *http.Request) (timetable.WeekProtocolNotes, erro
 	if err := render.DecodeJSON(r.Body, &req); err != nil {
 		return timetable.WeekProtocolNotes{}, errors.New("invalid request body")
 	}
-	notes := timetable.WeekProtocolNotes{WeekNote: req.WeekNote, Days: map[calendar.Date]string{}}
+	notes := timetable.WeekProtocolNotes{WeekNote: req.WeekNote, Days: map[calendar.Date]string{}, ExpectedVersion: req.ExpectedVersion}
 	for _, day := range req.Days {
 		date, err := calendar.ParseDate(day.Date)
 		if err != nil {

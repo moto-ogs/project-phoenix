@@ -1,14 +1,14 @@
 import { ApiError } from "./api-error";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("./session-cache", () => ({
-  sessionFetch: vi.fn(),
-}));
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 
-import { sessionFetch } from "./session-cache";
+const fetchMock = vi.fn();
+beforeEach(() => {
+  vi.stubGlobal("fetch", fetchMock);
+});
+
 import { staffPayrollNumberService } from "./staff-api";
-
-const mockedSessionFetch = vi.mocked(sessionFetch);
 
 function jsonResponse(data: unknown): Response {
   return {
@@ -30,7 +30,7 @@ describe("staffPayrollNumberService", () => {
   });
 
   it("reads that the Träger keeps the number in its staff record", async () => {
-    mockedSessionFetch.mockResolvedValue(
+    fetchMock.mockResolvedValue(
       jsonResponse({ personnel_number: "70001", kept_by_traeger: true }),
     );
 
@@ -41,48 +41,44 @@ describe("staffPayrollNumberService", () => {
   });
 
   it("fetches the current personnel number", async () => {
-    mockedSessionFetch.mockResolvedValue(
-      jsonResponse({ personnel_number: "90001" }),
-    );
+    fetchMock.mockResolvedValue(jsonResponse({ personnel_number: "90001" }));
 
     await expect(staffPayrollNumberService.get("42")).resolves.toEqual({
       personnelNumber: "90001",
       keptByTraeger: false,
     });
-    expect(mockedSessionFetch).toHaveBeenCalledWith(
-      "/api/staff/42/payroll-number",
-    );
+    expect(fetchMock).toHaveBeenCalledWith("/api/staff/42/payroll-number", {
+      method: "GET",
+    });
   });
 
   it("updates the personnel number and note", async () => {
-    mockedSessionFetch.mockResolvedValue(
-      jsonResponse({ personnel_number: "90002" }),
+    fetchMock.mockResolvedValue(
+      jsonResponse({ personnel_number: "90002", version: "v-new" }),
     );
 
     await expect(
-      staffPayrollNumberService.update("42", "90002", "Korrektur"),
-    ).resolves.toBe("90002");
-    expect(mockedSessionFetch).toHaveBeenCalledWith(
-      "/api/staff/42/payroll-number",
-      {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          personnel_number: "90002",
-          note: "Korrektur",
-        }),
-      },
-    );
+      staffPayrollNumberService.update("42", "90002", "Korrektur", "v-read"),
+    ).resolves.toEqual({ personnelNumber: "90002", version: "v-new" });
+    expect(fetchMock).toHaveBeenCalledWith("/api/staff/42/payroll-number", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        personnel_number: "90002",
+        note: "Korrektur",
+        expected_version: "v-read",
+      }),
+    });
   });
 
   it("reports a failed read", async () => {
-    mockedSessionFetch.mockResolvedValue({
+    fetchMock.mockResolvedValue({
       ok: false,
       statusText: "Forbidden",
     } as Response);
 
-    await expect(staffPayrollNumberService.get("42")).rejects.toThrow(
-      "Failed to fetch payroll number: Forbidden",
+    await expect(staffPayrollNumberService.get("42")).rejects.toBeInstanceOf(
+      ApiError,
     );
   });
 
@@ -91,18 +87,18 @@ describe("staffPayrollNumberService", () => {
     ["workforce.personnel_number_taken"],
     ["workforce.personnel_number_invalid"],
   ])("keeps the update error code %s", async (code) => {
-    mockedSessionFetch.mockResolvedValue(errorResponse(code));
+    fetchMock.mockResolvedValue(errorResponse(code));
 
-    const failure = staffPayrollNumberService.update("42", "90002", "");
+    const failure = staffPayrollNumberService.update("42", "90002", "", "v-read");
     await expect(failure).rejects.toBeInstanceOf(ApiError);
     await expect(failure).rejects.toMatchObject({ code });
   });
 
   it("uses the update fallback for an uncoded error", async () => {
-    mockedSessionFetch.mockResolvedValue(errorResponse("other"));
+    fetchMock.mockResolvedValue(errorResponse("other"));
 
     await expect(
-      staffPayrollNumberService.update("42", "90002", ""),
+      staffPayrollNumberService.update("42", "90002", "", "v-read"),
     ).rejects.toThrow("Personalnummer konnte nicht gespeichert werden");
   });
 });

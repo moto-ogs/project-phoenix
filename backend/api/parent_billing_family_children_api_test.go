@@ -24,11 +24,11 @@ const familyChildrenPath = "/traeger/family-children"
 
 type familyChildrenSetBody struct {
 	Families []struct {
-		ContractID     int64  `json:"contract_id"`
+		ContractID     wireID `json:"contract_id"`
 		RecipientEmail string `json:"recipient_email"`
 		Status         string `json:"status"`
 		Children       []struct {
-			ContractID int64 `json:"contract_id"`
+			ContractID wireID `json:"contract_id"`
 		} `json:"children"`
 		Count *struct {
 			ConfirmedChildren *int `json:"confirmed_children"`
@@ -50,13 +50,13 @@ func TestFamilyChildrenCountInTheSiblingRuleThroughTheRoutes(t *testing.T) {
 	f := newCareBillingFixture(t, "Träger Kinderzahl Kette")
 	school := f.office.schools[0]
 	mia := careContract(t, f.db, f.office.organization, school, "Mia", careReductionStart, sjrServices()...)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	rules := f.saveRule(t, careRule("sibling", "Geschwister mit Familie", []int64{school},
 		map[string]any{"sibling_from_child": 2, "discount_basis_points": 5000, "counts_family_children": true}))
 	require.Len(t, rules.Rules, 1)
 
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyChildrenPath, familyChildren(mia, 3, "2026-09-01"))
+	rec = confirmFamily(t, f.traeger, f.office.token, familyChildren(mia, 3, "2026-09-01"))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	set := decodeSchoolPortalData[familyChildrenSetBody](t, rec.Body.Bytes())
 	require.Len(t, set.Families, 1)
@@ -68,7 +68,7 @@ func TestFamilyChildrenCountInTheSiblingRuleThroughTheRoutes(t *testing.T) {
 
 	run := f.startRun(t, careMonth)
 	preview := decodeSchoolPortalData[careReductionRunBody](t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet,
-		careRunPath(run.ID, ""), nil).Body.Bytes())
+		careRunPath(int64(run.ID), ""), nil).Body.Bytes())
 	require.Len(t, preview.Invoices, 1)
 	invoice := preview.Invoices[0]
 	assert.Equal(t, int64(3875), invoice.TotalCents)
@@ -77,10 +77,10 @@ func TestFamilyChildrenCountInTheSiblingRuleThroughTheRoutes(t *testing.T) {
 	assert.Equal(t, 3, *invoice.Reductions[0].FamilyChildren, "of three")
 
 	// A future confirmation must not remove the current draft's discount.
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyChildrenPath, familyChildren(mia, 2, "2030-02-01"))
+	rec = confirmFamily(t, f.traeger, f.office.token, familyChildren(mia, 2, "2030-02-01"))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	preview = decodeSchoolPortalData[careReductionRunBody](t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet,
-		careRunPath(run.ID, ""), nil).Body.Bytes())
+		careRunPath(int64(run.ID), ""), nil).Body.Bytes())
 	require.Len(t, preview.Invoices, 1)
 	assert.Equal(t, int64(3875), preview.Invoices[0].TotalCents, "a future confirmation preserves the draft discount")
 	require.NotEmpty(t, preview.Invoices[0].Reductions)
@@ -89,30 +89,73 @@ func TestFamilyChildrenCountInTheSiblingRuleThroughTheRoutes(t *testing.T) {
 	// Correcting the successor's end must not revive either open interval.
 	correction := familyChildren(mia, 2, "2030-02-01")
 	correction["valid_until"] = "2030-02-28"
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyChildrenPath, correction)
+	rec = confirmFamily(t, f.traeger, f.office.token, correction)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	marchRun := f.startRun(t, "2030-03-01")
 	march := decodeSchoolPortalData[careReductionRunBody](t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet,
-		careRunPath(marchRun.ID, ""), nil).Body.Bytes())
+		careRunPath(int64(marchRun.ID), ""), nil).Body.Bytes())
 	require.Len(t, march.Invoices, 1)
 	assert.Equal(t, int64(7750), march.Invoices[0].TotalCents, "the corrected expiry ends the sibling discount")
 	assert.Empty(t, march.Invoices[0].Reductions)
 	assert.Equal(t, 1, march.UncountedFamilies, "the expired family needs a new confirmation")
 	preview = decodeSchoolPortalData[careReductionRunBody](t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet,
-		careRunPath(run.ID, ""), nil).Body.Bytes())
+		careRunPath(int64(run.ID), ""), nil).Body.Bytes())
 	require.Len(t, preview.Invoices, 1)
 	assert.Equal(t, int64(3875), preview.Invoices[0].TotalCents, "the correction preserves the earlier billing period")
 
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/release"),
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"),
 		map[string]any{"document_count": preview.PreviewCount, "total_cents": preview.PreviewCents, "fingerprint": preview.Fingerprint})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodDelete, familyChildrenPath+"/"+strconv.FormatInt(mia, 10), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	released := decodeSchoolPortalData[careReductionRunBody](t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet,
-		careRunPath(run.ID, ""), nil).Body.Bytes())
+		careRunPath(int64(run.ID), ""), nil).Body.Bytes())
 	require.Len(t, released.Invoices, 1)
 	assert.Equal(t, int64(3875), released.Invoices[0].TotalCents, "the released run keeps the amount")
 	assert.Equal(t, 3, *released.Invoices[0].Reductions[0].FamilyChildren, "and the number it counted")
+}
+
+// Birkenfeld (#7765): a rule of the family's size reduces every child of a
+// family of two, the first too. Mia and Noah are siblings with a contract
+// each (77,50 € each): both pay 38,75 €. The rule keeps its mode through
+// the routes and the release keeps it on both reductions.
+func TestFamilySizeSiblingRuleReducesEveryChildThroughTheRoutes(t *testing.T) {
+	t.Parallel()
+	f := newCareBillingFixture(t, "Träger Familiengröße")
+	school := f.office.schools[0]
+	mia := careContract(t, f.db, f.office.organization, school, "Mia", careReductionStart, sjrServices()...)
+	noah := careContract(t, f.db, f.office.organization, school, "Noah", careReductionStart, sjrServices()...)
+	_, err := f.db.ExecContext(context.Background(),
+		`UPDATE care_contract.contract_parties SET email = 'geschwister@example.org' WHERE contract_id IN (?, ?)`, mia, noah)
+	require.NoError(t, err)
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, "2029-09-01", 3200))
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	f.saveRule(t, careRule("sibling", "Familienermäßigung", []int64{school}, map[string]any{
+		"sibling_from_child": 2, "discount_basis_points": 5000, "counts_family_children": true, "sibling_all_children": true}))
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, careRulesPath, nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.Contains(t, rec.Body.String(), `"sibling_all_children":true`, "the rule keeps its mode")
+	rec = confirmFamily(t, f.traeger, f.office.token, familyChildren(mia, 2, "2026-09-01"))
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	run := f.startRun(t, careMonth)
+	preview := decodeSchoolPortalData[careReductionRunBody](t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet,
+		careRunPath(int64(run.ID), ""), nil).Body.Bytes())
+	require.Len(t, preview.Invoices, 2)
+	for _, invoice := range preview.Invoices {
+		assert.Equal(t, int64(3875), invoice.TotalCents, "contract %d pays half, the first child too", invoice.ContractID)
+	}
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"),
+		map[string]any{"document_count": preview.PreviewCount, "total_cents": preview.PreviewCents, "fingerprint": preview.Fingerprint})
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	released := decodeSchoolPortalData[careReductionRunBody](t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet,
+		careRunPath(int64(run.ID), ""), nil).Body.Bytes())
+	require.Len(t, released.Invoices, 2)
+	for _, invoice := range released.Invoices {
+		require.Len(t, invoice.Reductions, 1)
+		assert.True(t, invoice.Reductions[0].AllChildren, "the issued reduction keeps the mode of its rule")
+		assert.Equal(t, 2, *invoice.Reductions[0].FamilyChildren)
+	}
 }
 
 // The routes check the number and the Träger, need
@@ -130,17 +173,17 @@ func TestFamilyChildrenAreCheckedNeedTheRightAndAreRecorded(t *testing.T) {
 		{"contract_id": mia, "children": 3, "valid_from": "2026-09-01", "valid_until": "2026-08-31"},
 		{"contract_id": mia, "children": 2.5, "valid_from": "2026-09-01"},
 	} {
-		rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyChildrenPath, body)
+		rec := confirmFamily(t, f.traeger, f.office.token, body)
 		assert.Equal(t, http.StatusBadRequest, rec.Code, "%v: %s", body, rec.Body.String())
 		assert.Contains(t, rec.Body.String(), "parent_billing.family_children_invalid")
 	}
 	foreign := newTraegerOffice(t, f.db, f.traeger, "Träger Kinderzahl Prüfung Fremd", identityaccess.TraegerRoleBilling)
 	testpkg.OwnTraegerCareContracts(t, f.db, foreign.organization)
-	rec := traegerJSON(t, f.traeger, foreign.token, http.MethodPut, familyChildrenPath, familyChildren(mia, 2, "2026-09-01"))
+	rec := confirmFamily(t, f.traeger, foreign.token, familyChildren(mia, 2, "2026-09-01"))
 	assert.Equal(t, http.StatusNotFound, rec.Code, "another Träger finds no family of the contract: %s", rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "parent_billing.family_children_not_found")
 
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyChildrenPath, familyChildren(mia, 2, "2026-09-01"))
+	rec = confirmFamily(t, f.traeger, f.office.token, familyChildren(mia, 2, "2026-09-01"))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	rec = traegerJSON(t, f.traeger, foreign.token, http.MethodDelete, familyChildrenPath+"/"+strconv.FormatInt(mia, 10), nil)
 	assert.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
@@ -208,19 +251,19 @@ func TestFamilyChildrenOfContractsWithoutAMailAddressThroughTheRoutes(t *testing
 	noah := careContract(t, f.db, f.office.organization, school, "Noah", careReductionStart, sjrServices()...)
 	_, err := f.db.ExecContext(context.Background(), `UPDATE care_contract.contract_parties SET email = '' WHERE contract_id IN (?, ?)`, mia, noah)
 	require.NoError(t, err)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	f.saveRule(t, careRule("sibling", "Geschwister mit Familie", []int64{school},
 		map[string]any{"sibling_from_child": 2, "discount_basis_points": 5000, "counts_family_children": true}))
 
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyChildrenPath, familyChildren(mia, 2, "2026-09-01"))
+	rec = confirmFamily(t, f.traeger, f.office.token, familyChildren(mia, 2, "2026-09-01"))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	set := decodeSchoolPortalData[familyChildrenSetBody](t, rec.Body.Bytes())
 	require.Len(t, set.Families, 2, "each contract without an address is a family of its own")
 	states := map[int64]string{}
 	for _, family := range set.Families {
 		assert.Empty(t, family.RecipientEmail)
-		states[family.ContractID] = family.Status
+		states[int64(family.ContractID)] = family.Status
 	}
 	assert.Equal(t, map[int64]string{mia: "confirmed", noah: "missing"}, states)
 
@@ -228,17 +271,17 @@ func TestFamilyChildrenOfContractsWithoutAMailAddressThroughTheRoutes(t *testing
 	type reviewBody struct {
 		careReductionRunBody
 		UncountedContracts []struct {
-			ContractID     int64  `json:"contract_id"`
+			ContractID     wireID `json:"contract_id"`
 			ChildFirstName string `json:"child_first_name"`
 			Status         string `json:"status"`
 		} `json:"uncounted_contracts"`
 	}
 	review := func() (map[int64]int64, reviewBody) {
 		body := decodeSchoolPortalData[reviewBody](t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet,
-			careRunPath(run.ID, ""), nil).Body.Bytes())
+			careRunPath(int64(run.ID), ""), nil).Body.Bytes())
 		totals := map[int64]int64{}
 		for _, invoice := range body.Invoices {
-			totals[invoice.ContractID] = invoice.TotalCents
+			totals[int64(invoice.ContractID)] = invoice.TotalCents
 		}
 		return totals, body
 	}
@@ -246,7 +289,7 @@ func TestFamilyChildrenOfContractsWithoutAMailAddressThroughTheRoutes(t *testing
 	assert.Equal(t, map[int64]int64{mia: 3875, noah: 7750}, totals, "Mia pays the sibling price, Noah the full one")
 	assert.Equal(t, 1, preview.UncountedFamilies)
 	require.Len(t, preview.UncountedContracts, 1)
-	assert.Equal(t, noah, preview.UncountedContracts[0].ContractID)
+	assert.Equal(t, noah, int64(preview.UncountedContracts[0].ContractID))
 	assert.Equal(t, "missing", preview.UncountedContracts[0].Status)
 
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodDelete, familyChildrenPath+"/"+strconv.FormatInt(mia, 10), nil)
@@ -278,12 +321,12 @@ func TestFamilyChildrenListQueryBudgetIsFlat(t *testing.T) {
 		return counter.Measurement(counter.Queries())
 	}
 	first := careContract(t, f.db, f.office.organization, school, "Mia", careReductionStart, sjrServices()...)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyChildrenPath, familyChildren(first, 2, "2026-09-01"))
+	rec := confirmFamily(t, f.traeger, f.office.token, familyChildren(first, 2, "2026-09-01"))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	measured := list()
 	for _, child := range []string{"Noah", "Lea"} {
 		contract := careContract(t, f.db, f.office.organization, f.office.schools[1], child, careReductionStart, sjrServices()...)
-		rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyChildrenPath, familyChildren(contract, 3, "2026-09-01"))
+		rec := confirmFamily(t, f.traeger, f.office.token, familyChildren(contract, 3, "2026-09-01"))
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	}
 	assert.Len(t, list().Statements, len(measured.Statements), "the page reads the same statements for any number of families")

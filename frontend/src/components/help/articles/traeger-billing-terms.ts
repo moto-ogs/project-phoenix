@@ -40,6 +40,18 @@ export function traegerBillingTermsTopic(): HelpTopic {
         ],
       },
       {
+        title: "Zahlungsweg einer Familie festlegen",
+        description:
+          "Das geht, sobald der Vertrag der Familie da ist, also schon vor der ersten Rechnung. Speichern erstellt keine Rechnung und bucht nichts ab.",
+        steps: [
+          "Wähle in der Navigation `Familien und Zahlung`. Der Reiter `Familien` ist schon offen.",
+          "Wähle in der Zeile der Familie das Menü mit den drei Punkten und dann `Empfänger und Zahlung ändern`. Es öffnet sich eine eigene Seite.",
+          "Wähle den `Zahlungsweg`: `Lastschrift` oder `Überweisung`. `Wie in den Abrechnungsvorgaben` nimmt den dort eingestellten Zahlungsweg.",
+          "Wähle `Speichern`. Du kommst zurück zur Liste. In der Spalte `Zahlung` steht jetzt `Festgelegt:` und der Zahlungsweg.",
+          "Wähle oben `Alle Zahlungswege` und dann `Zahlungsweg nicht festgelegt`. Dann siehst du nur die Familien, die noch fehlen.",
+        ],
+      },
+      {
         title: "Empfänger und Zahlung einer Familie ändern",
         description:
           "Das gilt für alle Rechnungen dieser Familie, auch für Geschwister. Die Familie ist die E-Mail-Adresse der Person im Vertrag.",
@@ -48,9 +60,9 @@ export function traegerBillingTermsTopic(): HelpTopic {
           "Wähle bei der Rechnung des Kindes das Menü mit den drei Punkten und dann `Empfänger und Zahlung`. Es öffnet sich eine eigene Seite.",
           "Wähle bei `Rechnung an`: `Person im Vertrag`, `Beide Eltern` oder `Andere Person`.",
           "Bei `Beide Eltern` trägst du den Namen des zweiten Elternteils ein. Beide Namen stehen dann auf der Rechnung.",
-          "Bei `Andere Person` trägst du Name, E-Mail-Adresse und Anschrift ein. Die Rechnung geht dann an diese Person.",
+          "Bei `Andere Person` trägst du Name, E-Mail-Adresse und Anschrift ein. Die Rechnung geht dann an diese Person. Mit dem Standardtext von moto beginnt das Schreiben mit „Guten Tag“ und ihrem Namen und spricht sie mit „du“ an. Eine eigene Vorlage behält ihren Wortlaut.",
           "Wähle bei Bedarf einen eigenen `Zahlungsweg`. `Wie in den Abrechnungsvorgaben` nimmt den dort eingestellten Zahlungsweg.",
-          "Wähle bei Bedarf einen `Eigenen Zahltag`, zum Beispiel den 15. des Monats.",
+          "Wähle bei Bedarf einen `Zahltag`, zum Beispiel den 15. des Monats.",
           "Wähle `Speichern`.",
         ],
       },
@@ -64,11 +76,13 @@ export function traegerBillingTermsTopic(): HelpTopic {
       "Den QR-Code schaltest du unter `Briefkopf und Vorlagen` bei `GiroCode drucken` aus. Dann steht er auf keinem neuen Schreiben.",
       "Der Verwendungszweck im QR-Code ist die Nummer der Rechnung. Hat die Familie eine Debitorennummer, steht sie dahinter. Bei einem Bescheid heißt sie Buchungszeichen.",
       "Keinen QR-Code haben: Schreiben mit `Lastschrift`, Schreiben mit 0 €, Storno, Gutschrift und Jahresbescheide. Ein Jahresbescheid wird in Raten bezahlt.",
-      "Unter `Familien und Zahlung` siehst du bei jeder Familie den Zahlungsweg ihrer Rechnungen.",
+      "Ein SEPA-Mandat allein stellt eine Familie nicht auf `Lastschrift` um. Den Zahlungsweg legst du selbst fest.",
+      "Unter `Familien und Zahlung` siehst du bei jeder Familie den festgelegten Zahlungsweg und den Zahlungsweg ihrer Rechnungen.",
       "Beim Erstellen der Schreiben stehen die Fälligkeiten bereits fest. Das Feld `Zahlen bis` gilt nur für ältere Rechnungen ohne eigenes Datum.",
       "Welches Datum gilt: zuerst der eigene Zahltag der Familie, dann das Datum des Laufs, sonst das Zahlungsziel der Leistung.",
     ],
     differences: [
+      "Die Familie steht nicht in der Liste? Öffne unter `Verträge` ihren Vertrag. Wähle in der Karte `Empfänger und Zahlung` den Knopf `Ändern`.",
       "Eine Rechnung zeigt keinen Zahlungsweg? Sie wurde ausgestellt, bevor es diese Angaben gab.",
       "Bei einem freigegebenen Lauf fehlt `Ändern` beim Feld `Fällig`? Ausgestellte Rechnungen ändern sich nicht mehr.",
       "Änderst du eine Fälligkeit, nachdem du die Prüfliste geprüft hast, lehnt moto die Freigabe ab. Lade die Seite neu und prüfe den Lauf noch einmal.",

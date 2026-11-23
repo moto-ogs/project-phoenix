@@ -11,6 +11,7 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation"
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The Träger-Büro changes the details a family entered (#5629, ADR 0114
@@ -24,10 +25,13 @@ import (
 var errHolidayHealthAnswerNotEditable = errors.New("an answer with health information cannot be changed here")
 
 // EditHolidayRegistration changes the details of a registration that is not
-// cancelled. The history names the changed fields without their values; an
+// cancelled, over the version its author read (ADR 0311). The history names the changed fields without their values; an
 // edit that changes nothing writes nothing.
 func (h *HolidayRegistrationReview) EditHolidayRegistration(ctx context.Context, reviewer enrollment.HolidayReviewer, periodID, registrationID int64, edit enrollment.HolidayRegistrationEdit, schools []enrollment.HolidaySchool) (enrollment.HolidayRegistrationDetail, error) {
 	return h.change(ctx, reviewer, periodID, registrationID, func(period enrollment.HolidayPeriod, current holidayRegistrationState) (string, any, error) {
+		if err := h.checkReadRegistration(ctx, reviewer.OrganizationID, period, current.ID, edit.ExpectedVersion); err != nil {
+			return "", nil, err
+		}
 		fields, err := h.edit(ctx, reviewer.OrganizationID, period, current, edit, schools)
 		if err != nil || len(fields) == 0 {
 			return "", nil, err
@@ -59,7 +63,7 @@ func (h *HolidayRegistrationReview) edit(ctx context.Context, organizationID int
 	if current.Status == enrollment.HolidayRegistrationCancelled {
 		return nil, enrollment.ErrHolidayRegistrationStateConflict
 	}
-	stored, err := h.storedDetails(ctx, organizationID, period.ID, current.ID)
+	stored, err := h.storedDetails(ctx, organizationID, period.ID.Int64(), current.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +130,7 @@ func (h *HolidayRegistrationReview) storedDetails(ctx context.Context, organizat
 func holidayStoredFromDetail(detail enrollment.HolidayRegistrationDetail) holidayStoredDetails {
 	childAnswers := map[int64]enrollment.HolidayAnswers{}
 	for _, child := range detail.ChildCustomData {
-		childAnswers[child.ChildID] = child.CustomData
+		childAnswers[child.ChildID.Int64()] = child.CustomData
 	}
 	stored := holidayStoredDetails{form: *detail.Form, input: enrollment.HolidayRegistrationInput{
 		Guardian: enrollment.HolidayGuardianInput{
@@ -139,16 +143,16 @@ func holidayStoredFromDetail(detail enrollment.HolidayRegistrationDetail) holida
 	for _, child := range detail.Children {
 		var homeSchoolID int64
 		if child.HomeSchoolID != nil {
-			homeSchoolID = *child.HomeSchoolID
+			homeSchoolID = (*child.HomeSchoolID).Int64()
 		}
-		stored.childIDs = append(stored.childIDs, child.ID)
+		stored.childIDs = append(stored.childIDs, child.ID.Int64())
 		bookings := make([]enrollment.HolidayBookingInput, len(child.Bookings))
 		for i, booking := range child.Bookings {
 			bookings[i] = enrollment.HolidayBookingInput{WeekID: booking.WeekID, TimeModelID: booking.TimeModelID, Days: booking.Days, Lunch: booking.Lunch}
 		}
 		stored.input.Children = append(stored.input.Children, enrollment.HolidayChildInput{
 			FirstName: child.FirstName, LastName: child.LastName, BirthDate: child.BirthDate, Bookings: bookings,
-			HomeSchoolID: homeSchoolID, GuestSchoolName: child.GuestSchoolName, CustomData: childAnswers[child.ID],
+			HomeSchoolID: homeSchoolID, GuestSchoolName: child.GuestSchoolName, CustomData: childAnswers[child.ID.Int64()],
 		})
 	}
 	for _, contact := range detail.Contacts {
@@ -239,10 +243,10 @@ func (h *HolidayRegistrationReview) checkHolidayEdit(stored holidayStoredDetails
 // chosen anew.
 func holidayEditChildSchools(schools []enrollment.HolidaySchool, before, after enrollment.HolidayChildInput) []enrollment.HolidaySchool {
 	if after.HomeSchoolID == 0 || after.HomeSchoolID != before.HomeSchoolID ||
-		slices.ContainsFunc(schools, func(school enrollment.HolidaySchool) bool { return school.ID == after.HomeSchoolID }) {
+		slices.ContainsFunc(schools, func(school enrollment.HolidaySchool) bool { return school.ID == ident.ID(after.HomeSchoolID) }) {
 		return schools
 	}
-	return append(slices.Clone(schools), enrollment.HolidaySchool{ID: after.HomeSchoolID})
+	return append(slices.Clone(schools), enrollment.HolidaySchool{ID: ident.ID(after.HomeSchoolID)})
 }
 
 // addHolidayGuardianErrors checks the parent, the postal address against

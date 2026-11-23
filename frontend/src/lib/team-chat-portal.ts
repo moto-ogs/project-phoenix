@@ -28,4 +28,10 @@ export interface TeamChatPortal {
   readonly title: string;
   readonly emptyDescription: string;
   readonly recipientHint: string;
+  /**
+   * Erklärung des Posteingangs hinter dem Info-Knopf am Titel (#7567). Steht
+   * nur bei eingeschaltetem Team-Chat; im Aus-Zustand erklärt sich die Seite
+   * selbst.
+   */
+  readonly info?: string;
 }

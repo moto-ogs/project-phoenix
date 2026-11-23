@@ -11,44 +11,45 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/portalauth"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
-// LoginRequest represents the login request body
-type LoginRequest struct {
+// OperatorLoginRequest represents the login request body
+type OperatorLoginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
 // Bind validates the login request
-func (req *LoginRequest) Bind(_ *http.Request) error {
+func (req *OperatorLoginRequest) Bind(_ *http.Request) error {
 	return nil
 }
 
-// LoginResponse is the account portals' login answer with the operator on
+// OperatorLoginResponse is the account portals' login answer with the operator on
 // the authenticated and the enrollment branches.
-type LoginResponse struct {
+type OperatorLoginResponse struct {
 	portalauth.LoginResponse
 	Operator *OperatorResponse `json:"operator,omitempty"`
 }
 
 // OperatorResponse represents an operator in the response
 type OperatorResponse struct {
-	ID          int64  `json:"id"`
-	Email       string `json:"email"`
-	DisplayName string `json:"display_name"`
+	ID          ident.ID `json:"id"`
+	Email       string   `json:"email"`
+	DisplayName string   `json:"display_name"`
 }
 
 func operatorResponse(operator *identityaccess.Operator) *OperatorResponse {
 	if operator == nil {
 		return nil
 	}
-	return &OperatorResponse{ID: operator.ID, Email: operator.Email, DisplayName: operator.DisplayName}
+	return &OperatorResponse{ID: ident.ID(operator.ID), Email: operator.Email, DisplayName: operator.DisplayName}
 }
 
 // Login signs an operator in behind the mandatory MFA gate. The
 // trusted-device cookie lets the gate skip the code on a remembered device.
 func (rs *Resource) Login(w http.ResponseWriter, r *http.Request) {
-	req := &LoginRequest{}
+	req := &OperatorLoginRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.OperatorInvalidRequest(err))
 		return
@@ -70,7 +71,7 @@ func (rs *Resource) Login(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, AuthErrorRenderer(err))
 		return
 	}
-	body := LoginResponse{LoginResponse: portalauth.LoginBody(identityaccess.LoginResult{
+	body := OperatorLoginResponse{LoginResponse: portalauth.LoginBody(identityaccess.LoginResult{
 		Status: result.Status, AccessToken: result.AccessToken, RefreshToken: result.RefreshToken,
 		ChallengeToken: result.ChallengeToken, MaskedEmail: result.MaskedEmail,
 		TrustedDeviceEnabled: result.TrustedDeviceEnabled, TrustedDeviceDays: result.TrustedDeviceDays,

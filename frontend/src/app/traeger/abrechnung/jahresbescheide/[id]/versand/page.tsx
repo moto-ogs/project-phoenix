@@ -1,5 +1,7 @@
 "use client";
 
+import { bffFile } from "~/lib/bff-fetch";
+
 // Versand der Jahresbescheide eines ausgestellten Laufs (#6347): moto
 // speichert jeden Bescheid einmal als PDF. Dieses Original geht per E-Mail an
 // die Familie und liegt danach in der Eltern-App unter „Dokumente“, aber erst,
@@ -42,7 +44,10 @@ import {
   REFRESH_WHILE_QUEUED_MS,
   traegerBillingRunKeys,
 } from "~/lib/swr/traeger-billing-run-keys";
-import { downloadTraegerList } from "~/lib/traeger-list-export";
+import {
+  downloadTraegerList,
+  listExportQuery,
+} from "~/lib/traeger-list-export";
 import {
   type CareNoticeLetterSummary,
   type CareNoticeMailing,
@@ -56,6 +61,7 @@ import {
 } from "~/lib/traeger-care-notice-letters-api";
 import { fetchCareNoticeRun } from "~/lib/traeger-care-notices-api";
 import { traegerPath } from "~/lib/traeger-url";
+import { labelOf } from "~/lib/label-of";
 
 const logger = createLogger({ component: "TraegerCareNoticeDeliveryPage" });
 
@@ -182,8 +188,8 @@ function noticeColumns(
         <div className="flex min-w-0 flex-col items-start gap-1">
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge
-              label={NOTICE_KIND_LABELS[notice.kind]}
-              tone={NOTICE_KIND_TONES[notice.kind]}
+              label={labelOf(NOTICE_KIND_LABELS, notice.kind, "Bescheid")}
+              tone={labelOf(NOTICE_KIND_TONES, notice.kind, "gray")}
             />
             <span className="text-sm text-gray-900 tabular-nums">
               {notice.number}
@@ -252,6 +258,10 @@ function noticeColumns(
     },
   ];
 }
+
+/** Was die Seite ist und was man dort zuerst tut (#7596). */
+const NOTICE_DISPATCH_INFO =
+  "Hier sendest du die Jahresbescheide an die Familien. Das geht erst, wenn der Jahreslauf ausgestellt ist. Dann speicherst du die Originale und wählst „An alle senden“.";
 
 export default function TraegerCareNoticeDeliveryPage() {
   const params = useParams<{ id: string }>();
@@ -380,8 +390,10 @@ export default function TraegerCareNoticeDeliveryPage() {
   const exportItems = useTraegerListExportItems({
     download: (format) =>
       downloadTraegerList(
-        `/api/traeger/care-notice-runs/${runId}/letters/export`,
-        format,
+        bffFile("org", "GET /traeger/care-notice-runs/{id}/letters/export", {
+          params: { id: runId },
+          query: listExportQuery(format),
+        }),
       ),
     scope: traegerExportScope(),
     fallbackName: `bescheid-versand-${run?.year ?? ""}`,
@@ -391,6 +403,7 @@ export default function TraegerCareNoticeDeliveryPage() {
 
   return (
     <TenantPage
+      info={NOTICE_DISPATCH_INFO}
       title={run ? `Versand der Jahresbescheide ${run.year}` : "Versand"}
       back
       backHref={runPath}
@@ -434,7 +447,9 @@ export default function TraegerCareNoticeDeliveryPage() {
             <CareLetterPanel
               letter={shown}
               title={
-                shown ? `${NOTICE_KIND_LABELS[shown.kind]} ${shown.number}` : ""
+                shown
+                  ? `${labelOf(NOTICE_KIND_LABELS, shown.kind, "Bescheid")} ${shown.number}`
+                  : ""
               }
               fileKey={shown ? `notice-${shown.noticeId}` : ""}
               load={(notice) =>

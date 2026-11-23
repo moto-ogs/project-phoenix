@@ -244,6 +244,7 @@ export function StepPersonalKinder({
     expanded &&
       isSeriesFlow &&
       !isDuty &&
+      form.type !== undefined &&
       form.targetGroupType !== "angebot" &&
       form.calendarPeriodId !== "" &&
       !loadingStudents &&
@@ -465,7 +466,7 @@ export function StepPersonalKinder({
           <SegmentedControl
             ariaLabel="Zielgruppe"
             className="max-w-full"
-            value={form.targetGroupType}
+            value={form.targetGroupType ?? null}
             onChange={(value) =>
               changeTargetGroupType(value as TargetGroupType)
             }

@@ -25,14 +25,14 @@ func TestGuardianComposition_EmailCorrectionEndsTheMailedLink(t *testing.T) {
 		Outbox: NewCapturingOutbox(),
 	})
 	require.NoError(t, err)
-	guardianID, _ := ctx.createGuardian("staff-email-correction")
+	guardianID, studentID, _ := ctx.createLinkedGuardian(t, "staff-email-correction")
 	invitation, err := invitations.CreateGuardianInvitation(testpkg.Ctx(t), identityaccess.GuardianInvitationRequest{
 		GuardianProfileID: guardianID, CreatedBy: ctx.account("staff-email-correction-inviter"),
 	})
 	require.NoError(t, err)
 
 	corrected := fmt.Sprintf("staff-corrected-%d@example.test", time.Now().UnixNano())
-	rr := ctx.do(t, testutil.AdminTestClaims(999), http.MethodPut, fmt.Sprintf("/%d", guardianID), map[string]any{"email": corrected})
+	rr := ctx.saveEntry(t, testutil.AdminTestClaims(999), studentID, guardianID, map[string]any{"guardian": map[string]any{"email": corrected}})
 	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
 
 	password := testpkg.NewTestPassword()
@@ -61,7 +61,7 @@ func TestGuardianComposition_ListMarksDeadInvitationLinks(t *testing.T) {
 	statusOf := func(studentID, guardianID int64) string {
 		t.Helper()
 		for _, row := range ctx.studentGuardians(t, studentID) {
-			if row.Guardian.ID == guardianID {
+			if int64(row.Guardian.ID) == guardianID {
 				return row.AccountStatus
 			}
 		}
@@ -78,7 +78,7 @@ func TestGuardianComposition_ListMarksDeadInvitationLinks(t *testing.T) {
 		require.Equal(t, "pending", statusOf(studentID, guardianID))
 
 		corrected := fmt.Sprintf("dead-link-corrected-%d@example.test", time.Now().UnixNano())
-		rr := ctx.do(t, testutil.AdminTestClaims(999), http.MethodPut, fmt.Sprintf("/%d", guardianID), map[string]any{"email": corrected})
+		rr := ctx.saveEntry(t, testutil.AdminTestClaims(999), studentID, guardianID, map[string]any{"guardian": map[string]any{"email": corrected}})
 		testutil.AssertSuccessResponse(t, rr, http.StatusOK)
 		assert.Equal(t, "link_invalid", statusOf(studentID, guardianID))
 	})

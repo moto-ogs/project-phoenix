@@ -45,7 +45,7 @@ describe("login error bodies", () => {
     await expect(rejection).rejects.toMatchObject({
       status: 403,
       code: "identity.use_parent_portal",
-      message: "Request failed (403)",
+      message: "POST /api/auth/login failed (403)",
       detail: "guardian accounts must log in at the parents portal",
     });
   });
@@ -94,9 +94,16 @@ describe("caterer second factor (#4497)", () => {
   it("uses the caterer MFA and trusted-device routes", async () => {
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce(Response.json({ status: "authenticated" }))
-      .mockResolvedValueOnce(Response.json({ challenge_token: "renewed" }))
-      .mockResolvedValueOnce(Response.json([]))
+      .mockResolvedValueOnce(
+        Response.json({ status: "success", data: { status: "authenticated" } }),
+      )
+      .mockResolvedValueOnce(
+        Response.json({
+          status: "success",
+          data: { challenge_token: "renewed" },
+        }),
+      )
+      .mockResolvedValueOnce(Response.json({ status: "success", data: [] }))
       .mockResolvedValueOnce(new Response(null, { status: 204 }));
     global.fetch = fetchMock as unknown as typeof global.fetch;
 
@@ -111,7 +118,7 @@ describe("caterer second factor (#4497)", () => {
       resendChallenge("caterer", { challengeToken: "c" }),
     ).resolves.toBe("renewed");
     await listTrustedDevices("caterer");
-    await revokeTrustedDevice("caterer", 7);
+    await revokeTrustedDevice("caterer", "7");
 
     expect(fetchMock.mock.calls.map((call) => call[0])).toEqual([
       "/api/caterer/auth/mfa/verify",
@@ -120,6 +127,75 @@ describe("caterer second factor (#4497)", () => {
       "/api/caterer/auth/mfa/trusted-devices/7",
     ]);
   });
+
+  it("reads the parents' devices at the backend path in the envelope", async () => {
+    const device = {
+      id: "3",
+      created_at: "2026-09-01T10:00:00Z",
+      expires_at: "2026-12-01T10:00:00Z",
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        Response.json({ status: "success", data: [device] }),
+      )
+      .mockResolvedValueOnce(Response.json({ status: "success", data: null }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    global.fetch = fetchMock as unknown as typeof global.fetch;
+
+    await expect(listTrustedDevices("parent")).resolves.toEqual([device]);
+    await expect(listTrustedDevices("parent")).resolves.toEqual([]);
+    await revokeTrustedDevice("parent", "3");
+
+    expect(fetchMock.mock.calls.map((call) => call[0])).toEqual([
+      "/api/parent/me/mfa/trusted-devices",
+      "/api/parent/me/mfa/trusted-devices",
+      "/api/parent/me/mfa/trusted-devices/3",
+    ]);
+  });
+});
+
+describe("Träger organization IDs", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it.each(["verify", "enroll/confirm"] as const)(
+    "preserves a bigint ID in %s",
+    async (step) => {
+      const fetchMock = vi.fn().mockResolvedValue(
+        Response.json({
+          status: "success",
+          data: { status: "authenticated" },
+        }),
+      );
+      vi.stubGlobal("fetch", fetchMock);
+
+      const organizationId = "9007199254740993";
+      const result =
+        step === "verify"
+          ? await verifyMFA("traeger", {
+              challengeToken: "challenge",
+              code: "123456",
+              rememberDevice: true,
+              organizationId,
+            })
+          : await enrollConfirm(
+              "traeger",
+              "enrollment",
+              "123456",
+              "challenge",
+              organizationId,
+            );
+
+      expect(result).toEqual({ status: "authenticated" });
+      const [url, init] = fetchMock.mock.calls[0]!;
+      expect(url).toBe(`/api/traeger/auth/mfa/${step}`);
+      expect(JSON.parse(init.body as string)).toMatchObject({
+        organization_id: organizationId,
+      });
+    },
+  );
 });
 
 it("all portal MFA results exclude completed session credentials", () => {

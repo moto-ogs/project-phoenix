@@ -16,7 +16,7 @@ import (
 
 type neverSearch struct{}
 
-func (neverSearch) SearchSchool(context.Context, schoolsearchview.Query) (schoolsearchview.Result, error) {
+func (neverSearch) SearchSchool(context.Context, schoolsearchview.Query) (schoolsearchview.SearchResult, error) {
 	panic("an invalid query never reaches the search")
 }
 

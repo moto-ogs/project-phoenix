@@ -180,7 +180,7 @@ func (n demoNeighbourSchool) seedChild(rt *Runtime, index int, groupID, phaseID,
 	if err != nil {
 		return 0, err
 	}
-	raw, err = rt.Client.Post(fmt.Sprintf("/api/enrollment/phases/%d/manual-approved-enrollments", phaseID), map[string]any{
+	raw, err = postShownForm(rt.Client.Get, map[string]any{
 		"guardian_first_name": guardian, "guardian_last_name": lastName, "guardian_email": email,
 		"consent_flags": map[string]bool{"data_processing": true},
 		"children": []map[string]any{{
@@ -188,7 +188,9 @@ func (n demoNeighbourSchool) seedChild(rt *Runtime, index int, groupID, phaseID,
 			"target_grade_level": grade, "offering_ids": []int64{offeringID},
 			"custom_data": seedEnrollmentChildAnswers(firstName, lastName),
 		}},
-		"reason": "Buchung für das laufende Schuljahr", "external_consent_confirmed": true,
+		"reason": "Buchung für das laufende Schuljahr", "external_consent_confirmed": true, "phase_id": phaseID,
+	}, func(b map[string]any) ([]byte, error) {
+		return rt.Client.Post(fmt.Sprintf("/api/enrollment/phases/%d/manual-approved-enrollments", phaseID), b)
 	})
 	if err != nil {
 		return 0, fmt.Errorf("book care of neighbour school child %d: %w", index+1, err)

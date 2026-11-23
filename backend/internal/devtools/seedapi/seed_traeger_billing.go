@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedBillingNumberPattern is the number range of the holiday invoices the
@@ -25,13 +26,13 @@ const (
 // preview and the first child of the first invoice.
 type seedBillingRunDetail struct {
 	PreviewCount int    `json:"preview_count"`
-	PreviewCents int64  `json:"preview_cents"`
+	PreviewCents int64  `json:"preview_cents" contract:"number"`
 	Fingerprint  string `json:"fingerprint"`
 	Documents    []struct {
-		RegistrationID int64 `json:"registration_id"`
+		RegistrationID ident.ID `json:"registration_id"`
 		Children       []struct {
-			ChildID    int64 `json:"child_id"`
-			TotalCents int64 `json:"total_cents"`
+			ChildID    ident.ID `json:"child_id"`
+			TotalCents int64    `json:"total_cents" contract:"number"`
 		} `json:"children"`
 	} `json:"documents"`
 }

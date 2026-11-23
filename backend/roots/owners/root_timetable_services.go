@@ -38,6 +38,11 @@ type TimetableLifecycle struct {
 	Operations      timetable.OperationCapability
 	// BlockMetadata names each planned block's room and planning track (#4413).
 	BlockMetadata timetablePorts.BlockDisplayMetadata
+	// BlockDayChanges reads the day's changed blocks for "Heute anders" (#7662).
+	BlockDayChanges timetable.BlockDayChangeQuery
+	// BlockStaffChanges reads the day's blocks with an absent or covering
+	// supervisor for the Personal source of "Heute anders" (#7675).
+	BlockStaffChanges timetable.BlockStaffChangeQuery
 }
 
 // BuildTimetableMaterialization binds the recurrence engine: it turns
@@ -156,7 +161,16 @@ func BuildTimetableDay(
 	if err != nil {
 		return TimetableLifecycle{}, fmt.Errorf("compose timetable operations: %w", err)
 	}
+	dayChanges, err := timetable.BlockDayChangesOf(operations)
+	if err != nil {
+		return TimetableLifecycle{}, fmt.Errorf("compose timetable day changes: %w", err)
+	}
 	lifecycle.Cleanup, lifecycle.AutoStart, lifecycle.AutoEnd, lifecycle.Operations = cleanup, autoStart, autoEnd, operations
+	staffChanges, err := timetable.BlockStaffChangesOf(operations)
+	if err != nil {
+		return TimetableLifecycle{}, fmt.Errorf("compose timetable block staff changes: %w", err)
+	}
+	lifecycle.BlockDayChanges, lifecycle.BlockStaffChanges = dayChanges, staffChanges
 	return lifecycle, nil
 }
 

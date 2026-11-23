@@ -1,7 +1,15 @@
 // grade-transition-api.test.ts
 // Mapper tests for the Jahrgangsstufenwechsel admin API client (#405)
 
+import type * as adminContract from "~/lib/contract/admin.generated";
 import { describe, it, expect, vi, afterEach } from "vitest";
+
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
+import { pagedJson } from "~/test/mocks/plain-session-fetch";
 import {
   listGradeTransitions,
   mapTransition,
@@ -9,28 +17,24 @@ import {
   mapResult,
   mapSuggestion,
   mapHistoryEntry,
-  type BackendGradeTransition,
-  type BackendTransitionPreview,
-  type BackendTransitionResult,
-  type BackendSuggestedMapping,
-  type BackendTransitionHistoryEntry,
 } from "./grade-transition-api";
 
 describe("mapTransition", () => {
-  const backend: BackendGradeTransition = {
-    id: 7,
+  const backend: adminContract.TransitionResponse = {
+    id: "7",
     academic_year: "2026-2027",
     status: "draft",
     created_at: "2026-07-24T09:00:00Z",
-    created_by: 42,
+    created_by: "42",
     notes: "Sommer-Wechsel",
     mappings: [
-      { id: 1, from_class: "1a", to_class: "2a", action: "promote" },
-      { id: 2, from_class: "4a", to_class: null, action: "graduate" },
+      { id: "1", from_class: "1a", to_class: "2a", action: "promote" },
+      { id: "2", from_class: "4a", to_class: undefined, action: "graduate" },
     ],
     can_modify: true,
     can_apply: true,
     can_revert: false,
+    version: "v1",
   };
 
   it("maps snake_case to camelCase and ids to strings", () => {
@@ -56,16 +60,17 @@ describe("mapTransition", () => {
 
   it("handles missing optional fields", () => {
     const t = mapTransition({
-      id: 8,
+      id: "8",
       academic_year: "2026-2027",
       status: "applied",
       created_at: "2026-07-24T09:00:00Z",
-      created_by: 42,
+      created_by: "42",
       applied_at: "2026-08-01T06:00:00Z",
-      applied_by: 42,
+      applied_by: "42",
       can_modify: false,
       can_apply: false,
       can_revert: true,
+      version: "v1",
     });
     expect(t.mappings).toEqual([]);
     expect(t.notes).toBeNull();
@@ -75,8 +80,9 @@ describe("mapTransition", () => {
 });
 
 describe("mapPreview", () => {
-  const backend: BackendTransitionPreview = {
-    transition_id: 7,
+  const backend: adminContract.TransitionPreviewResponse = {
+    fingerprint: "",
+    transition_id: "7",
     academic_year: "2026-2027",
     total_students: 50,
     to_promote: 40,
@@ -113,8 +119,8 @@ describe("mapPreview", () => {
 });
 
 describe("mapResult", () => {
-  const backend: BackendTransitionResult = {
-    transition_id: 7,
+  const backend: adminContract.TransitionResultResponse = {
+    transition_id: "7",
     status: "applied",
     students_promoted: 40,
     students_graduated: 10,
@@ -135,7 +141,7 @@ describe("mapResult", () => {
 
 describe("mapSuggestion", () => {
   it("maps a promotion suggestion", () => {
-    const backend: BackendSuggestedMapping = {
+    const backend: adminContract.SuggestedMappingResponse = {
       from_class: "1a",
       to_class: "2a",
       student_count: 20,
@@ -150,7 +156,7 @@ describe("mapSuggestion", () => {
   });
 
   it("maps a graduation suggestion (no to_class)", () => {
-    const backend: BackendSuggestedMapping = {
+    const backend: adminContract.SuggestedMappingResponse = {
       from_class: "4b",
       student_count: 12,
       is_graduating: true,
@@ -163,13 +169,14 @@ describe("mapSuggestion", () => {
 
 describe("mapHistoryEntry", () => {
   it("maps a history row", () => {
-    const backend: BackendTransitionHistoryEntry = {
-      id: 3,
-      transition_id: 7,
-      student_id: 99,
+    const backend: adminContract.TransitionHistoryResponse = {
+      student_state: "alumnus",
+      id: "3",
+      transition_id: "7",
+      student_id: "99",
       person_name: "Mika Muster",
       from_class: "4a",
-      to_class: null,
+      to_class: undefined,
       action: "graduated",
       created_at: "2026-08-01T06:00:00Z",
     };
@@ -198,13 +205,13 @@ describe("mapHistoryEntry", () => {
     const states = ["alumnus", "restored", "purged"] as const;
 
     for (const state of states) {
-      const backend: BackendTransitionHistoryEntry = {
-        id: 3,
-        transition_id: 7,
-        student_id: 99,
+      const backend: adminContract.TransitionHistoryResponse = {
+        id: "3",
+        transition_id: "7",
+        student_id: "99",
         person_name: "Mika Muster",
         from_class: "4a",
-        to_class: null,
+        to_class: undefined,
         action: "graduated",
         created_at: "2026-08-01T06:00:00Z",
         student_state: state,
@@ -237,6 +244,7 @@ describe("int64 ids on the wire", () => {
       can_modify: true,
       can_apply: false,
       can_revert: false,
+      version: "v1",
     });
     expect(t.id).toBe(big);
     expect(t.mappings[0]?.id).toBe(bigger);
@@ -247,6 +255,9 @@ describe("int64 ids on the wire", () => {
   it("keeps preview, result and history ids exact", () => {
     expect(
       mapPreview({
+        unmapped_classes: null,
+        warnings: null,
+        fingerprint: "",
         transition_id: big,
         academic_year: "2026-2027",
         total_students: 0,
@@ -258,6 +269,7 @@ describe("int64 ids on the wire", () => {
 
     expect(
       mapResult({
+        warnings: null,
         transition_id: big,
         status: "applied",
         students_promoted: 0,
@@ -267,6 +279,7 @@ describe("int64 ids on the wire", () => {
     ).toBe(big);
 
     const history = mapHistoryEntry({
+      student_state: "alumnus",
       id: big,
       transition_id: bigger,
       student_id: big,
@@ -281,15 +294,16 @@ describe("int64 ids on the wire", () => {
   });
 
   it("does not collapse two ids that share a double", async () => {
-    const row = (id: string): BackendGradeTransition => ({
+    const row = (id: string): adminContract.TransitionResponse => ({
       id,
       academic_year: "2026-2027",
       status: "applied",
       created_at: "2026-07-24T09:00:00Z",
-      created_by: 1,
+      created_by: "1",
       can_modify: false,
       can_apply: false,
       can_revert: true,
+      version: "v1",
     });
     expect(Number(big)).toBe(Number("9007199254740992"));
 
@@ -299,7 +313,7 @@ describe("int64 ids on the wire", () => {
       vi.fn(async () => ({
         ok: true,
         status: 200,
-        json: async () => ({ data: rows }),
+        json: async () => pagedJson(rows),
       })) as unknown as typeof fetch,
     );
 
@@ -309,15 +323,16 @@ describe("int64 ids on the wire", () => {
 });
 
 describe("listGradeTransitions", () => {
-  const makeRow = (id: number): BackendGradeTransition => ({
-    id,
+  const makeRow = (id: number): adminContract.TransitionResponse => ({
+    id: String(id),
     academic_year: "2026-2027",
     status: "applied",
     created_at: "2026-07-24T09:00:00Z",
-    created_by: 1,
+    created_by: "1",
     can_modify: false,
     can_apply: false,
     can_revert: true,
+    version: "v1",
   });
 
   const rows = (from: number, count: number) =>
@@ -328,7 +343,7 @@ describe("listGradeTransitions", () => {
   // after a window has been served and before the next request, modelling a
   // concurrent writer.
   const stubFetch = (
-    store: BackendGradeTransition[],
+    store: adminContract.TransitionResponse[],
     afterRequest?: (requestIndex: number) => void,
   ) => {
     const urls: string[] = [];
@@ -347,7 +362,7 @@ describe("listGradeTransitions", () => {
         afterRequest?.(urls.length - 1);
         return Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({ data }),
+          json: () => Promise.resolve(pagedJson(data)),
         } as unknown as Response);
       }),
     );

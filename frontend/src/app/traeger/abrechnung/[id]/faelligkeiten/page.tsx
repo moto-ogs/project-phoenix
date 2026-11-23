@@ -16,6 +16,10 @@ import { traegerBillingKeys } from "~/lib/swr/traeger-billing-keys";
 import { fetchBillingRun } from "~/lib/traeger-billing-api";
 import { traegerPath } from "~/lib/traeger-url";
 
+/** Was die Seite ist und was man dort zuerst tut (#7596). */
+const DUE_DATES_INFO =
+  "Hier legst du fest, wann die Rechnungen dieses Laufs fällig sind. Ohne Datum gilt je Zahlungsweg das Zahlungsziel der Leistung. Das geht nur, bis der Lauf freigegeben ist.";
+
 export default function TraegerHolidayRunDueDatesPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -25,6 +29,7 @@ export default function TraegerHolidayRunDueDatesPage() {
     loading,
     error,
     reload,
+    reloadOrThrow,
   } = useTraegerResource(
     runId ? traegerBillingKeys.holidayRun(runId) : null,
     () => fetchBillingRun(runId),
@@ -37,6 +42,7 @@ export default function TraegerHolidayRunDueDatesPage() {
 
   return (
     <TenantPage
+      info={DUE_DATES_INFO}
       title="Fälligkeiten"
       back
       backHref={runHref}
@@ -57,6 +63,14 @@ export default function TraegerHolidayRunDueDatesPage() {
           kind="holiday"
           runId={run.id}
           dueDates={run.dueDates ?? []}
+          version={run.dueDatesVersion ?? ""}
+          reload={async () => {
+            const stored = await reloadOrThrow();
+            return {
+              dueDates: stored.dueDates ?? [],
+              version: stored.dueDatesVersion ?? "",
+            };
+          }}
           debitItems={holidayDebitItems(run.documents)}
           prenotificationDays={prenotificationDays}
           onCancel={() => router.push(runHref)}

@@ -25,18 +25,6 @@ func (s *Service) ListGuardians(ctx context.Context, page, pageSize int) ([]peop
 	})
 }
 
-func (s *Service) ListGuardiansWithoutAccount(ctx context.Context) ([]peopledirectory.Guardian, error) {
-	return guardianQuery(s, "list_guardians_without_account", func(p peopledirectory.GuardianProvider) ([]peopledirectory.Guardian, error) {
-		return p.ListGuardiansWithoutAccount(ctx)
-	})
-}
-
-func (s *Service) ListInvitableGuardians(ctx context.Context) ([]peopledirectory.Guardian, error) {
-	return guardianQuery(s, "list_invitable_guardians", func(p peopledirectory.GuardianProvider) ([]peopledirectory.Guardian, error) {
-		return p.ListInvitableGuardians(ctx)
-	})
-}
-
 func (s *Service) SearchGuardians(ctx context.Context, text string, limit int) ([]peopledirectory.GuardianMatch, error) {
 	text = strings.TrimSpace(text)
 	if text == "" || limit <= 0 {
@@ -72,15 +60,6 @@ func (s *Service) ListGuardianPhones(ctx context.Context, guardianID int64) ([]p
 	}
 	return guardianQuery(s, "list_guardian_phones", func(p peopledirectory.GuardianProvider) ([]peopledirectory.GuardianPhone, error) {
 		return p.ListGuardianPhones(ctx, guardianID)
-	})
-}
-
-func (s *Service) FindGuardianPhone(ctx context.Context, phoneID int64) (peopledirectory.GuardianPhone, error) {
-	if phoneID <= 0 {
-		return peopledirectory.GuardianPhone{}, invalidGuardian("phone ID is required")
-	}
-	return guardianQuery(s, "find_guardian_phone", func(p peopledirectory.GuardianProvider) (peopledirectory.GuardianPhone, error) {
-		return p.FindGuardianPhone(ctx, phoneID)
 	})
 }
 
@@ -249,27 +228,6 @@ func (s *Service) AddGuardianPhone(ctx context.Context, guardianID int64, input 
 	})
 }
 
-func (s *Service) UpdateGuardianPhone(ctx context.Context, phoneID int64, input peopledirectory.GuardianPhoneUpdate) error {
-	if phoneID <= 0 {
-		return invalidGuardian("phone ID is required")
-	}
-	return guardianCommand(s, "update_guardian_phone", func(p peopledirectory.GuardianProvider) error { return p.UpdateGuardianPhone(ctx, phoneID, input) })
-}
-
-func (s *Service) DeleteGuardianPhone(ctx context.Context, phoneID int64) error {
-	if phoneID <= 0 {
-		return invalidGuardian("phone ID is required")
-	}
-	return guardianCommand(s, "delete_guardian_phone", func(p peopledirectory.GuardianProvider) error { return p.DeleteGuardianPhone(ctx, phoneID) })
-}
-
-func (s *Service) SetPrimaryGuardianPhone(ctx context.Context, phoneID int64) error {
-	if phoneID <= 0 {
-		return invalidGuardian("phone ID is required")
-	}
-	return guardianCommand(s, "set_primary_guardian_phone", func(p peopledirectory.GuardianProvider) error { return p.SetPrimaryGuardianPhone(ctx, phoneID) })
-}
-
 func (s *Service) LinkGuardianToStudent(ctx context.Context, input peopledirectory.LinkGuardian) (peopledirectory.GuardianLink, error) {
 	if input.StudentID <= 0 || input.GuardianProfileID <= 0 {
 		return peopledirectory.GuardianLink{}, invalidGuardian("student ID and guardian ID are required")
@@ -300,6 +258,29 @@ func (s *Service) UpdateGuardianLink(ctx context.Context, linkID int64, input pe
 		return invalidGuardian("relationship ID is required")
 	}
 	return guardianCommand(s, "update_guardian_link", func(p peopledirectory.GuardianProvider) error { return p.UpdateGuardianLink(ctx, linkID, input) })
+}
+
+func (s *Service) UpdateGuardianEntry(ctx context.Context, edit peopledirectory.GuardianEntryEdit) error {
+	if edit.StudentID <= 0 || edit.GuardianProfileID <= 0 {
+		return invalidGuardian("student ID and guardian ID are required")
+	}
+	if edit.Phones != nil {
+		for _, phone := range *edit.Phones {
+			if strings.TrimSpace(phone.PhoneNumber) == "" {
+				return invalidGuardian("Telefonnummer ist erforderlich")
+			}
+		}
+	}
+	// The save joins the caller's unit: the locks it takes and the version it
+	// checks hold until the caller commits, and a refusal rolls back with it.
+	if err := s.tx.RequireTransaction(ctx); err != nil {
+		return err
+	}
+	provider, err := s.guardianProvider()
+	if err != nil {
+		return err
+	}
+	return provider.UpdateGuardianEntry(ctx, edit)
 }
 
 func (s *Service) RemoveGuardianFromStudent(ctx context.Context, input peopledirectory.RemoveGuardian) error {

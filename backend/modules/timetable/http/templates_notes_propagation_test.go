@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -64,7 +65,7 @@ func TestValidateNotesOnlyPredecessorPropagation(t *testing.T) {
 		{
 			name: "changed roster",
 			change: func(parsed *parsedUpdateTemplate) {
-				parsed.req.StudentIDs = []int64{101}
+				parsed.req.StudentIDs = []ident.ID{101}
 			},
 		},
 		{
@@ -123,25 +124,25 @@ func notesPropagationStoredTemplate() templateResponse {
 		Name:                  "Frühbetreuung",
 		Type:                  "care",
 		CategoryID:            2,
-		PlanningTrackID:       notesPropagationInt64(3),
-		RoomID:                notesPropagationInt64(4),
-		EducationGroupID:      notesPropagationInt64(5),
+		PlanningTrackID:       (*ident.ID)(notesPropagationInt64(3)),
+		RoomID:                (*ident.ID)(notesPropagationInt64(4)),
+		EducationGroupID:      (*ident.ID)(notesPropagationInt64(5)),
 		MaxParticipants:       notesPropagationInt(20),
-		CalendarPeriodID:      notesPropagationInt64(6),
+		CalendarPeriodID:      (*ident.ID)(notesPropagationInt64(6)),
 		TargetGroupType:       "none",
 		ListKind:              notesPropagationString("anwesenheit"),
 		Notes:                 notesPropagationString("Alt"),
 		IncludeClosingDays:    true,
 		RequiredStaffOverride: notesPropagationInt(2),
-		StudentIDs:            []int64{101, 102},
-		StaffIDs:              []int64{201},
-		PrimaryStaffID:        notesPropagationInt64(201),
+		StudentIDs:            []ident.ID{101, 102},
+		StaffIDs:              []ident.ID{201},
+		PrimaryStaffID:        (*ident.ID)(notesPropagationInt64(201)),
 		Schedules: []templateScheduleResponse{{
 			Weekday:          1,
 			StartTime:        "14:00",
 			EndTime:          "15:00",
 			WeekPattern:      0,
-			CalendarPeriodID: notesPropagationInt64(6),
+			CalendarPeriodID: (*ident.ID)(notesPropagationInt64(6)),
 		}},
 	}
 }

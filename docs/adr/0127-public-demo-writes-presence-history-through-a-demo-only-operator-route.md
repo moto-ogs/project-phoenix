@@ -70,3 +70,14 @@ demo one of them is needed.
 - The router golden stays unchanged because it is built outside
   `APP_ENV=demo`. The core-action table stays unchanged because the operator
   routes are outside it (`.claude/rules/usage-analytics.md`).
+
+## Addendum 2026-11-20 (#2352)
+
+[ADR 0298](0298-seed-schreibt-ohne-seed-routen-im-produktionsrouter.md) uses
+the same pattern for two more seed writes: the past ratings
+(`POST /operator/schools/{id}/demo-feedback-history`) and the seeded school
+vacations (`POST /operator/demo-school-vacations`). Both are mounted under
+`APP_ENV=demo` only, behind the operator session, by `newDemoOperatorRoutes`,
+which also builds this ADR's route; `TestRouter` asserts that no other
+environment mounts any of them. The billing key-date snapshot gets no demo
+route. `SeedOptions.PresenceHistoryRoute` selects all three demo routes.

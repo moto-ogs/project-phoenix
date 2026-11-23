@@ -6,33 +6,10 @@
  * weggefallenen Wochentagen weiter einplanen, weil sie von Hand gepflegt
  * werden. Die Oberflächen zeigen sie nur an.
  */
-import { apiErrorFromBody, transportFetch } from "~/lib/api-error";
+import { bffJson } from "~/lib/bff-fetch";
+import type * as studentsContract from "~/lib/contract/students.generated";
+import type * as traegerContractChangesContract from "~/lib/contract/traeger-contract-changes.generated";
 import { formatDate, parseISODate, toISODate } from "~/lib/date-helpers";
-
-/** Wire-Form wie im Backend (`roster_impact`). Wochentage nach ISO, 1 = Montag. */
-export interface RosterImpactWire {
-  readonly effective_from: string;
-  readonly adjusted?: ReadonlyArray<{
-    readonly template_id: string;
-    readonly name: string;
-    readonly removed_weekdays?: readonly number[];
-    readonly added_weekdays?: readonly number[];
-  }>;
-  readonly not_adjusted?: ReadonlyArray<{
-    readonly template_id: string;
-    readonly name: string;
-    readonly weekdays?: readonly number[];
-    readonly via_target?: boolean;
-    readonly until?: string | null;
-  }>;
-  readonly pickup_overrides?: ReadonlyArray<{
-    readonly weekday: number;
-    readonly date: string;
-    readonly stored_time: string;
-    readonly booked_time: string;
-    readonly reset_now?: boolean;
-  }>;
-}
 
 export interface AdjustedRosterTemplate {
   readonly templateId: string;
@@ -85,7 +62,11 @@ export interface RosterImpact {
 
 /** Wandelt die Wire-Form um; fehlt sie, gibt es keine Auswirkung zu zeigen. */
 export function mapRosterImpact(
-  wire: RosterImpactWire | null | undefined,
+  wire:
+    | studentsContract.rosterImpactResponse
+    | traegerContractChangesContract.ChangeImpact
+    | null
+    | undefined,
 ): RosterImpact | null {
   if (!wire?.effective_from) return null;
   return {
@@ -103,13 +84,20 @@ export function mapRosterImpact(
       viaTarget: template.via_target === true,
       until: template.until ?? null,
     })),
-    pickupOverrides: (wire.pickup_overrides ?? []).map((override) => ({
-      weekday: override.weekday,
-      date: override.date,
-      storedTime: override.stored_time,
-      bookedTime: override.booked_time,
-      resetNow: override.reset_now === true,
-    })),
+    // An override without its first day names no day to show.
+    pickupOverrides: (wire.pickup_overrides ?? []).flatMap((override) =>
+      override.date
+        ? [
+            {
+              weekday: override.weekday,
+              date: override.date,
+              storedTime: override.stored_time,
+              bookedTime: override.booked_time,
+              resetNow: override.reset_now === true,
+            },
+          ]
+        : [],
+    ),
   };
 }
 
@@ -158,27 +146,19 @@ export async function removeStudentTemplateDays(input: {
   /** Exklusives Ende (#5497): ab hier bleibt das Kind eingeplant. */
   effectiveUntil?: string | null;
 }): Promise<void> {
-  const response = await transportFetch(
-    `/api/timetable/templates/${encodeURIComponent(input.templateId)}/students/${encodeURIComponent(input.studentId)}/remove-days`,
+  await bffJson(
+    "tenant",
+    "POST /api/timetable/templates/{id}/students/{studentId}/remove-days",
     {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        weekdays: input.weekdays,
+      params: { id: input.templateId, studentId: input.studentId },
+      body: {
+        weekdays: [...input.weekdays],
         effective_from: input.effectiveFrom,
-        ...(input.effectiveUntil
-          ? { effective_until: input.effectiveUntil }
-          : {}),
-      }),
+        effective_until: input.effectiveUntil || undefined,
+      },
+      errorMessage: "Das Kind konnte nicht aus dem Regeltermin entfernt werden",
     },
   );
-  if (!response.ok) {
-    throw apiErrorFromBody(
-      "Das Kind konnte nicht aus dem Regeltermin entfernt werden",
-      response.status,
-      await response.json().catch(() => undefined),
-    );
-  }
 }
 
 /**

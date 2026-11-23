@@ -34,12 +34,13 @@ import {
   SEVERITY_LABELS,
   ANNOUNCEMENT_STATUS_LABELS,
   SYSTEM_ROLE_LABELS,
+  systemRoleLabel,
+  announcementTypeForDisplay,
+  announcementSeverityForDisplay,
 } from "~/lib/operator/announcements-helpers";
 import type {
   Announcement,
   AnnouncementType,
-  AnnouncementSeverity,
-  SystemRole,
   CreateAnnouncementRequest,
   UpdateAnnouncementRequest,
 } from "~/lib/operator/announcements-helpers";
@@ -77,11 +78,11 @@ const TYPE_ITEMS: readonly SegmentedControlItem<AnnouncementType>[] = (
 interface FormData {
   title: string;
   content: string;
-  type: AnnouncementType;
-  severity: AnnouncementSeverity;
+  type: string;
+  severity: string;
   version: string;
   expiresAt: string;
-  targetRoles: SystemRole[];
+  targetRoles: string[];
   targetOrgIds: string[];
   targetTenantIds: string[];
 }
@@ -300,11 +301,10 @@ export default function OperatorAnnouncementsPage() {
     (announcement: Announcement) => {
       clearSaveError();
       setEditTarget(announcement);
-      // Preserve historical targets verbatim — do NOT filter out IDs that now
-      // point at soft-deleted orgs/schools. Stripping them would convert a
-      // scoped announcement into a globally-visible one the moment the operator
-      // saves any unrelated change, since empty target arrays mean "no filter"
-      // in the backend. A warning banner surfaces the situation instead.
+      // Preserve wire values and historical targets when editing. Dropping
+      // deleted-org/school IDs would make a scoped announcement global:
+      // empty target arrays mean "no filter" in the backend. The warning
+      // banner surfaces unavailable targets without changing them.
       setFormData({
         title: announcement.title,
         content: announcement.content,
@@ -333,12 +333,10 @@ export default function OperatorAnnouncementsPage() {
         // mean "visible to all" in the backend). The backend enforces the
         // soft-delete invariant server-side by rejecting NEW additions via
         // CountByIDs; historical targets pass through via a diff on update.
-        const targetOrgIdsNum = formData.targetOrgIds
-          .map((id) => parseInt(id, 10))
-          .filter((id) => !isNaN(id));
-        const targetTenantIdsNum = formData.targetTenantIds
-          .map((id) => parseInt(id, 10))
-          .filter((id) => !isNaN(id));
+        const idList = (ids: string[]) =>
+          ids.map((id) => id.trim()).filter((id) => /^\d+$/.test(id));
+        const targetOrgIdList = idList(formData.targetOrgIds);
+        const targetTenantIdList = idList(formData.targetTenantIds);
 
         if (editTarget) {
           const updateData: UpdateAnnouncementRequest = {
@@ -349,8 +347,8 @@ export default function OperatorAnnouncementsPage() {
             version: formData.version || null,
             expires_at: formData.expiresAt || null,
             target_roles: formData.targetRoles,
-            target_org_ids: targetOrgIdsNum,
-            target_tenant_ids: targetTenantIdsNum,
+            target_org_ids: targetOrgIdList,
+            target_tenant_ids: targetTenantIdList,
           };
           await operatorAnnouncementsService.update(editTarget.id, updateData);
         } else {
@@ -360,8 +358,8 @@ export default function OperatorAnnouncementsPage() {
             type: formData.type,
             severity: formData.severity,
             target_roles: formData.targetRoles,
-            target_org_ids: targetOrgIdsNum,
-            target_tenant_ids: targetTenantIdsNum,
+            target_org_ids: targetOrgIdList,
+            target_tenant_ids: targetTenantIdList,
             ...(formData.version && { version: formData.version }),
             ...(formData.expiresAt && { expires_at: formData.expiresAt }),
           };
@@ -617,7 +615,7 @@ export default function OperatorAnnouncementsPage() {
                 <SegmentedControl
                   ariaLabel="Typ"
                   items={TYPE_ITEMS}
-                  value={formData.type}
+                  value={announcementTypeForDisplay(formData.type)}
                   onChange={(type) =>
                     setFormData((prev) => ({ ...prev, type }))
                   }
@@ -628,14 +626,14 @@ export default function OperatorAnnouncementsPage() {
               <CustomSelect
                 id="announcement-severity"
                 label="Dringlichkeit"
-                value={formData.severity}
+                value={announcementSeverityForDisplay(formData.severity)}
                 options={Object.entries(SEVERITY_LABELS).map(
                   ([value, label]) => ({ value, label }),
                 )}
                 onChange={(value) =>
                   setFormData((prev) => ({
                     ...prev,
-                    severity: value as AnnouncementSeverity,
+                    severity: value,
                   }))
                 }
               />
@@ -1076,9 +1074,9 @@ function AnnouncementCard({
           {announcement.title}
         </h3>
         <StatusBadge
-          tone={TYPE_BADGE_TONES[announcement.type]}
+          tone={TYPE_BADGE_TONES[announcementTypeForDisplay(announcement.type)]}
           compact
-          label={TYPE_LABELS[announcement.type]}
+          label={TYPE_LABELS[announcementTypeForDisplay(announcement.type)]}
         />
         {announcement.status === "draft" && (
           <StatusBadge tone="outline" compact label="Entwurf" />
@@ -1113,9 +1111,7 @@ function AnnouncementCard({
             />
           </svg>
           <span>
-            {announcement.targetRoles
-              .map((r) => SYSTEM_ROLE_LABELS[r])
-              .join(", ")}
+            {announcement.targetRoles.map(systemRoleLabel).join(", ")}
           </span>
         </div>
       )}

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	notification "github.com/moto-ogs/project-phoenix/workflows/holidayclosurenotification"
 )
 
@@ -23,10 +24,10 @@ func TraegerRouteContracts() []common.RouteContract {
 // notification.ClosureNotice, with the revision as the count it is.
 type NoticeResponse struct {
 	Token        string              `json:"token"`
-	ID           int64               `json:"id"`
-	SchoolID     int64               `json:"school_id"`
+	ID           ident.ID            `json:"id"`
+	SchoolID     ident.ID            `json:"school_id"`
 	SchoolName   string              `json:"school_name,omitempty"`
-	ClosingDayID int64               `json:"closing_day_id"`
+	ClosingDayID ident.ID            `json:"closing_day_id"`
 	Reason       string              `json:"reason"`
 	Previous     *notification.Range `json:"previous"`
 	Current      *notification.Range `json:"current"`

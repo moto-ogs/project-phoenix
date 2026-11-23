@@ -8,6 +8,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	activeSvc "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -60,8 +61,8 @@ func TestActiveService_AssignTransitAttendanceScope(t *testing.T) {
 			result, err := service.AssignTransitStudentsToActiveGroupAuthorized(ctx, []int64{student.ID, alreadyPlaced.ID}, target.ID, activeSvc.StudentMoveAuthorization{StaffID: staff.ID, SchoolWideAttendanceEligible: true})
 			if tc.allowed {
 				require.NoError(t, err)
-				require.Equal(t, []int64{student.ID}, result.Assigned)
-				require.Equal(t, []activeSvc.TransitAssignSkipped{{StudentID: alreadyPlaced.ID, Reason: "not_in_transit"}}, result.Skipped)
+				require.Equal(t, []ident.ID{ident.ID(student.ID)}, result.Assigned)
+				require.Equal(t, []activeSvc.TransitAssignSkipped{{StudentID: ident.ID(alreadyPlaced.ID), Reason: "not_in_transit"}}, result.Skipped)
 				visit, err := service.GetStudentCurrentVisit(ctx, student.ID)
 				require.NoError(t, err)
 				require.Equal(t, target.ID, visit.ActiveGroupID)
@@ -137,7 +138,7 @@ func TestActiveService_SchoolWideAttendanceMove(t *testing.T) {
 			})
 			if tc.allowed {
 				require.NoError(t, err)
-				require.Equal(t, []int64{student.ID}, result.Moved)
+				require.Equal(t, []ident.ID{ident.ID(student.ID)}, result.Moved)
 				visit, err := service.GetStudentCurrentVisit(ctx, student.ID)
 				require.NoError(t, err)
 				require.Equal(t, target.ID, visit.ActiveGroupID)
@@ -284,13 +285,13 @@ func TestActiveService_MoveStudentsToActiveGroup_PreservesVisitHistory(t *testin
 	require.NotNil(t, result)
 	require.NotNil(t, result.ActiveGroupID)
 	require.NotNil(t, result.RoomID)
-	assert.Equal(t, targetGroup.ID, *result.ActiveGroupID)
-	assert.Equal(t, targetRoom.ID, *result.RoomID)
-	assert.ElementsMatch(t, []int64{inSourceStudent.ID, transitStudent.ID}, result.Moved)
-	assert.Equal(t, []int64{inTargetStudent.ID}, result.Unchanged)
+	assert.Equal(t, ident.ID(targetGroup.ID), *result.ActiveGroupID)
+	assert.Equal(t, ident.ID(targetRoom.ID), *result.RoomID)
+	assert.ElementsMatch(t, []int64{inSourceStudent.ID, transitStudent.ID}, ident.Int64s(result.Moved))
+	assert.Equal(t, []ident.ID{ident.ID(inTargetStudent.ID)}, result.Unchanged)
 	assert.Equal(t, map[int64]int64{inSourceStudent.ID: sourceGroup.ID}, result.PreviousActiveGroupIDs)
 	require.Len(t, result.Skipped, 1)
-	assert.Equal(t, absentStudent.ID, result.Skipped[0].StudentID)
+	assert.Equal(t, ident.ID(absentStudent.ID), result.Skipped[0].StudentID)
 	assert.Equal(t, activeSvc.StudentMoveSkipNotPresent, result.Skipped[0].Reason)
 
 	endedSourceVisit, err := testSchoolPresence(t, db).FindVisit(ctx, sourceVisit.ID)
@@ -412,9 +413,8 @@ func TestActiveService_MoveStudentsToActiveGroup_EndedTargetFails(t *testing.T) 
 	room := testpkg.CreateTestRoom(t, db, "Move Ended Target Room")
 	targetGroup := testpkg.CreateTestActiveGroup(t, db, activity.ID, room.ID)
 	student := testpkg.CreateTestStudent(t, db, "Move", "Blocked", "MET1")
-	endTime := time.Now()
-	targetGroup.EndTime = &endTime
-	require.NoError(t, service.UpdateActiveGroup(ctx, sessionOf(targetGroup)))
+	_, err := db.NewRaw("UPDATE active.groups SET end_time = ? WHERE id = ?", time.Now(), targetGroup.ID).Exec(ctx)
+	require.NoError(t, err)
 
 	result, err := service.MoveStudentsToActiveGroupAuthorized(ctx, []int64{student.ID}, targetGroup.ID, activeSvcBypassAuth)
 
@@ -452,7 +452,7 @@ func TestActiveService_MoveStudentsToActiveGroupAuthorized_AllowsUnsupervisedSou
 	// must be a group the caller supervises (which it is here).
 	require.NoError(t, err)
 	require.NotNil(t, result)
-	assert.Contains(t, result.Moved, student.ID)
+	assert.Contains(t, result.Moved, ident.ID(student.ID))
 
 	currentVisit, err := service.GetStudentCurrentVisit(ctx, student.ID)
 	require.NoError(t, err)
@@ -486,7 +486,7 @@ func TestActiveService_MoveStudentsToActiveGroupAuthorized_AllowsSupervisedSourc
 
 	require.NoError(t, err)
 	require.NotNil(t, result)
-	assert.Equal(t, []int64{student.ID}, result.Moved)
+	assert.Equal(t, []ident.ID{ident.ID(student.ID)}, result.Moved)
 
 	endedSourceVisit, err := testSchoolPresence(t, db).FindVisit(ctx, sourceVisit.ID)
 	require.NoError(t, err)
@@ -519,42 +519,11 @@ func TestActiveService_MoveStudentsToActiveGroupAuthorized_AllowsOpenTransitInto
 
 	require.NoError(t, err)
 	require.NotNil(t, result)
-	assert.Equal(t, []int64{student.ID}, result.Moved)
+	assert.Equal(t, []ident.ID{ident.ID(student.ID)}, result.Moved)
 
 	currentVisit, err := service.GetStudentCurrentVisit(ctx, student.ID)
 	require.NoError(t, err)
 	assert.Equal(t, targetGroup.ID, currentVisit.ActiveGroupID)
-}
-
-func TestActiveService_MoveStudentsToTransitAuthorized_AllowsUnsupervisedSource(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-
-	service := setupActiveService(t, db)
-	ctx := testpkg.Ctx(t)
-	now := time.Now()
-
-	activity := testpkg.CreateTestActivityGroup(t, db, "move-transit-auth-source")
-	room := testpkg.CreateTestRoom(t, db, "Move Transit Auth Source Room")
-	activeGroup := testpkg.CreateTestActiveGroup(t, db, activity.ID, room.ID)
-	staff := testpkg.CreateTestStaff(t, db, "MoveTransitAuth", "Staff")
-	device := testpkg.CreateTestDevice(t, db, "move-transit-auth-device")
-	student := testpkg.CreateTestStudent(t, db, "MoveTransitAuth", "Rejected", "MTAR1")
-	testpkg.CreateTestAttendance(t, db, student.ID, staff.ID, device.ID, now.Add(-30*time.Minute), nil)
-	visit := testpkg.CreateTestVisit(t, db, student.ID, activeGroup.ID, now.Add(-20*time.Minute), nil)
-
-	result, err := service.MoveStudentsToTransitAuthorized(ctx, []int64{student.ID}, activeSvc.StudentMoveAuthorization{StaffID: staff.ID})
-
-	// #2329: sending a child to transit no longer requires supervising their
-	// current room — any staff member may move any child.
-	require.NoError(t, err)
-	require.NotNil(t, result)
-	assert.Contains(t, result.Moved, student.ID)
-
-	reloadedVisit, err := testSchoolPresence(t, db).FindVisit(ctx, visit.ID)
-	require.NoError(t, err)
-	assert.NotNil(t, reloadedVisit.ExitTime, "the transit move closes the source visit")
 }
 
 func TestActiveService_MoveStudentsToActiveGroup_BinaryModeReturnsUnchanged(t *testing.T) {
@@ -587,10 +556,10 @@ func TestActiveService_MoveStudentsToActiveGroup_BinaryModeReturnsUnchanged(t *t
 	require.NotNil(t, result)
 	require.NotNil(t, result.ActiveGroupID)
 	require.NotNil(t, result.RoomID)
-	assert.Equal(t, targetGroup.ID, *result.ActiveGroupID)
-	assert.Equal(t, room.ID, *result.RoomID)
+	assert.Equal(t, ident.ID(targetGroup.ID), *result.ActiveGroupID)
+	assert.Equal(t, ident.ID(room.ID), *result.RoomID)
 	assert.Empty(t, result.Moved)
-	assert.ElementsMatch(t, []int64{studentA, studentB}, result.Unchanged)
+	assert.ElementsMatch(t, []int64{studentA, studentB}, ident.Int64s(result.Unchanged))
 	assert.Empty(t, result.Skipped)
 }
 
@@ -629,131 +598,11 @@ func TestActiveService_MoveStudentsToActiveGroup_BinaryModeRejectsStaleVisit(t *
 	require.NotNil(t, result)
 	assert.Empty(t, result.Moved)
 	assert.Empty(t, result.Unchanged)
-	assert.Equal(t, []activeSvc.StudentMoveSkipped{{StudentID: student.ID, Reason: activeSvc.StudentMoveSkipConflict}}, result.Skipped)
+	assert.Equal(t, []activeSvc.StudentMoveSkipped{{StudentID: ident.ID(student.ID), Reason: activeSvc.StudentMoveSkipConflict}}, result.Skipped)
 
 	reloadedVisit, err := testSchoolPresence(t, db).FindVisit(ctx, visit.ID)
 	require.NoError(t, err)
 	assert.Nil(t, reloadedVisit.ExitTime, "rejecting the binary no-op must leave the source visit unchanged")
-}
-
-func TestActiveService_MoveStudentsToTransit_EndsVisitKeepsAttendanceOpen(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-
-	service := setupActiveService(t, db)
-	ctx := testpkg.Ctx(t)
-	now := time.Now()
-
-	activity := testpkg.CreateTestActivityGroup(t, db, "move-transit-source")
-	room := testpkg.CreateTestRoom(t, db, "Move Transit Source Room")
-	activeGroup := testpkg.CreateTestActiveGroup(t, db, activity.ID, room.ID)
-	staff := testpkg.CreateTestStaff(t, db, "MoveTransit", "Staff")
-	device := testpkg.CreateTestDevice(t, db, "move-transit-device")
-
-	inRoomStudent := testpkg.CreateTestStudent(t, db, "TransitMove", "InRoom", "TMI1")
-	alreadyTransitStudent := testpkg.CreateTestStudent(t, db, "TransitMove", "Already", "TMA1")
-	checkedOutStudent := testpkg.CreateTestStudent(t, db, "TransitMove", "CheckedOut", "TMC1")
-	absentStudent := testpkg.CreateTestStudent(t, db, "TransitMove", "Absent", "TMA2")
-
-	inRoomAttendance := testpkg.CreateTestAttendance(t, db, inRoomStudent.ID, staff.ID, device.ID, now.Add(-30*time.Minute), nil)
-	testpkg.CreateTestAttendance(t, db, alreadyTransitStudent.ID, staff.ID, device.ID, now.Add(-30*time.Minute), nil)
-	checkOutTime := now.Add(-5 * time.Minute)
-	testpkg.CreateTestAttendance(t, db, checkedOutStudent.ID, staff.ID, device.ID, now.Add(-30*time.Minute), &checkOutTime)
-	visit := testpkg.CreateTestVisit(t, db, inRoomStudent.ID, activeGroup.ID, now.Add(-20*time.Minute), nil)
-
-	result, err := service.MoveStudentsToTransitAuthorized(ctx, []int64{inRoomStudent.ID, alreadyTransitStudent.ID, checkedOutStudent.ID, absentStudent.ID}, activeSvcBypassAuth)
-
-	require.NoError(t, err)
-	require.NotNil(t, result)
-	assert.Nil(t, result.ActiveGroupID)
-	assert.Nil(t, result.RoomID)
-	assert.Equal(t, []int64{inRoomStudent.ID}, result.Moved)
-	assert.Equal(t, []int64{alreadyTransitStudent.ID}, result.Unchanged)
-	require.Len(t, result.Skipped, 2)
-	assert.ElementsMatch(t, []activeSvc.StudentMoveSkipped{
-		{StudentID: checkedOutStudent.ID, Reason: activeSvc.StudentMoveSkipNotPresent},
-		{StudentID: absentStudent.ID, Reason: activeSvc.StudentMoveSkipNotPresent},
-	}, result.Skipped)
-
-	endedVisit, err := testSchoolPresence(t, db).FindVisit(ctx, visit.ID)
-	require.NoError(t, err)
-	require.NotNil(t, endedVisit.ExitTime)
-
-	_, err = service.GetStudentCurrentVisit(ctx, inRoomStudent.ID)
-	assert.ErrorIs(t, err, activeSvc.ErrVisitNotFound)
-
-	reloaded, err := testSchoolPresence(t, db).FindAttendance(ctx, inRoomAttendance.ID)
-	require.NoError(t, err)
-	require.NotNil(t, reloaded)
-	assert.Nil(t, reloaded.CheckOutTime, "moving to transit must not perform a daily checkout")
-}
-
-func TestActiveService_MoveStudentsToTransit_RejectsWhenNoStudentsPresent(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-
-	service := setupActiveService(t, db)
-	ctx := testpkg.Ctx(t)
-
-	absentStudent := testpkg.CreateTestStudent(t, db, "TransitMove", "AllAbsent", "TMA3")
-
-	result, err := service.MoveStudentsToTransitAuthorized(ctx, []int64{absentStudent.ID}, activeSvcBypassAuth)
-
-	require.Error(t, err)
-	assert.Nil(t, result)
-	assert.ErrorIs(t, err, activeSvc.ErrStudentsNotPresent)
-}
-
-func TestActiveService_MoveStudentsToTransit_InvalidInput(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-
-	service := setupActiveService(t, db)
-	ctx := testpkg.Ctx(t)
-
-	result, err := service.MoveStudentsToTransitAuthorized(ctx, nil, activeSvcBypassAuth)
-	require.Error(t, err)
-	assert.Nil(t, result)
-	assert.ErrorIs(t, err, activeSvc.ErrInvalidData)
-
-	result, err = service.MoveStudentsToTransitAuthorized(ctx, []int64{-42}, activeSvcBypassAuth)
-	require.Error(t, err)
-	assert.Nil(t, result)
-	assert.ErrorIs(t, err, activeSvc.ErrInvalidData)
-}
-
-func TestActiveService_MoveStudentsToTransit_BinaryModeReturnsUnchanged(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-
-	service := setupActiveService(t, db)
-	ctx := testpkg.Ctx(t)
-
-	_, err := db.NewRaw(`
-		INSERT INTO config.setting_values (tenant_id, setting_key, value, updated_by)
-		VALUES (?, 'operations.presence_mode', '"binary"', NULL)
-		ON CONFLICT (tenant_id, setting_key)
-		DO UPDATE SET value = EXCLUDED.value, updated_at = now()
-	`, testpkg.Tenant(t)).Exec(ctx)
-	require.NoError(t, err)
-
-	const (
-		studentA int64 = 60001
-		studentB int64 = 60002
-	)
-	result, err := service.MoveStudentsToTransitAuthorized(ctx, []int64{studentA, studentB, studentA}, activeSvcBypassAuth)
-
-	require.NoError(t, err)
-	require.NotNil(t, result)
-	assert.Nil(t, result.ActiveGroupID)
-	assert.Nil(t, result.RoomID)
-	assert.Empty(t, result.Moved)
-	assert.ElementsMatch(t, []int64{studentA, studentB}, result.Unchanged)
-	assert.Empty(t, result.Skipped)
 }
 
 func TestActiveService_AssignTransitStudentsToActiveGroup(t *testing.T) {
@@ -784,12 +633,12 @@ func TestActiveService_AssignTransitStudentsToActiveGroup(t *testing.T) {
 
 	require.NoError(t, err)
 	require.NotNil(t, result)
-	assert.Equal(t, targetGroup.ID, result.ActiveGroupID)
-	assert.Equal(t, targetRoom.ID, result.RoomID)
-	assert.Equal(t, []int64{transitStudent.ID}, result.Assigned)
+	assert.Equal(t, ident.ID(targetGroup.ID), result.ActiveGroupID)
+	assert.Equal(t, ident.ID(targetRoom.ID), result.RoomID)
+	assert.Equal(t, []ident.ID{ident.ID(transitStudent.ID)}, result.Assigned)
 	require.Len(t, result.Skipped, 1)
 	assert.Equal(t, activeSvc.TransitSkipNotInTransit, result.Skipped[0].Reason)
-	assert.Equal(t, inRoomStudent.ID, result.Skipped[0].StudentID)
+	assert.Equal(t, ident.ID(inRoomStudent.ID), result.Skipped[0].StudentID)
 
 	currentVisit, err := service.GetStudentCurrentVisit(ctx, transitStudent.ID)
 	require.NoError(t, err)
@@ -845,12 +694,12 @@ func TestActiveService_AssignTransitStudentsToActiveGroup_BinaryModeSkipsAll(t *
 
 	require.NoError(t, err)
 	require.NotNil(t, result)
-	assert.Equal(t, targetGroup.ID, result.ActiveGroupID)
-	assert.Equal(t, room.ID, result.RoomID)
+	assert.Equal(t, ident.ID(targetGroup.ID), result.ActiveGroupID)
+	assert.Equal(t, ident.ID(room.ID), result.RoomID)
 	assert.Empty(t, result.Assigned)
 	require.Len(t, result.Skipped, 1)
 	assert.Equal(t, activeSvc.TransitSkipNotInTransit, result.Skipped[0].Reason)
-	assert.Equal(t, student.ID, result.Skipped[0].StudentID)
+	assert.Equal(t, ident.ID(student.ID), result.Skipped[0].StudentID)
 
 	// Binary-mode tenants must not gain room-visit rows through this path.
 	currentVisit, err := service.GetStudentCurrentVisit(ctx, student.ID)
@@ -871,9 +720,8 @@ func TestActiveService_AssignTransitStudentsToActiveGroup_EndedTargetFails(t *te
 	room := testpkg.CreateTestRoom(t, db, "Transit Ended Target Room")
 	targetGroup := testpkg.CreateTestActiveGroup(t, db, activity.ID, room.ID)
 	student := testpkg.CreateTestStudent(t, db, "Transit", "Blocked", "TES1")
-	endTime := time.Now()
-	targetGroup.EndTime = &endTime
-	require.NoError(t, service.UpdateActiveGroup(ctx, sessionOf(targetGroup)))
+	_, err := db.NewRaw("UPDATE active.groups SET end_time = ? WHERE id = ?", time.Now(), targetGroup.ID).Exec(ctx)
+	require.NoError(t, err)
 
 	result, err := service.AssignTransitStudentsToActiveGroup(ctx, []int64{student.ID}, targetGroup.ID)
 
@@ -936,7 +784,7 @@ func TestActiveService_MoveStudentsToActiveGroupAuthorized_AllowsSupervisedSourc
 
 	require.NoError(t, err)
 	require.NotNil(t, result)
-	assert.Equal(t, []int64{fx.studentID}, result.Moved)
+	assert.Equal(t, []ident.ID{ident.ID(fx.studentID)}, result.Moved)
 
 	currentVisit, err := service.GetStudentCurrentVisit(ctx, fx.studentID)
 	require.NoError(t, err)
@@ -996,11 +844,11 @@ func TestActiveService_MoveStudentsToActiveGroupAuthorized_RejectsPushIntoTarget
 	// The caller supervises the source room. The target's assignment begins
 	// tomorrow, so it cannot make the target room safe for a push today.
 	sourceSupervision := testpkg.CreateTestGroupSupervisor(t, db, fx.staff, fx.sourceGroup.ID, "supervisor")
-	sourceSupervision.StartDate = moveDay
-	require.NoError(t, service.UpdateGroupSupervisor(ctx, supervisorOf(sourceSupervision)))
+	_, err := db.NewRaw("UPDATE active.group_supervisors SET start_date = ? WHERE id = ?", moveDay, sourceSupervision.ID).Exec(ctx)
+	require.NoError(t, err)
 	targetSupervision := testpkg.CreateTestGroupSupervisor(t, db, fx.colleague, fx.targetGroup.ID, "supervisor")
-	targetSupervision.StartDate = moveDay.AddDays(1)
-	require.NoError(t, service.UpdateGroupSupervisor(ctx, supervisorOf(targetSupervision)))
+	_, err = db.NewRaw("UPDATE active.group_supervisors SET start_date = ? WHERE id = ?", moveDay.AddDays(1), targetSupervision.ID).Exec(ctx)
+	require.NoError(t, err)
 
 	result, err := service.MoveStudentsToActiveGroupAuthorized(ctx, []int64{fx.studentID}, fx.targetGroup.ID, activeSvc.StudentMoveAuthorization{StaffID: fx.staff})
 
@@ -1051,7 +899,7 @@ func TestActiveService_MoveStudentsToActiveGroupAuthorized_PullIgnoresAmbiguousT
 
 	require.NoError(t, err)
 	require.NotNil(t, result)
-	assert.Equal(t, []int64{fx.studentID}, result.Moved)
+	assert.Equal(t, []ident.ID{ident.ID(fx.studentID)}, result.Moved)
 }
 
 func TestActiveService_MoveStudentsToActiveGroupAuthorized_RejectsPushOfTransitChild(t *testing.T) {

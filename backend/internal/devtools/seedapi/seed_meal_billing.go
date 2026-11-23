@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedMealBillingStep gives the demo its Mensa billing (#4686) through the
@@ -72,11 +73,13 @@ func seedMealPrices(client *Client, auth AuthRef, month calendar.Date) (int, err
 	var envelope struct {
 		Data struct {
 			Schools []struct {
-				ID int64 `json:"id"`
+				ID ident.ID `json:"id"`
 			} `json:"schools"`
 			Tariffs []struct {
-				SchoolID int64 `json:"school_id"`
+				SchoolID ident.ID `json:"school_id"`
 			} `json:"tariffs"`
+			// Versions is per school the read-state token of its prices.
+			Versions map[string]string `json:"versions"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil {
@@ -84,15 +87,16 @@ func seedMealPrices(client *Client, auth AuthRef, month calendar.Date) (int, err
 	}
 	priced := map[int64]bool{}
 	for _, tariff := range envelope.Data.Tariffs {
-		priced[tariff.SchoolID] = true
+		priced[int64(tariff.SchoolID)] = true
 	}
 	saved := 0
 	for _, school := range envelope.Data.Schools {
-		if priced[school.ID] {
+		if priced[int64(school.ID)] {
 			continue
 		}
 		if _, err := client.PutWithAuth(auth, "/traeger/care-meal-tariffs/", map[string]any{
 			"school_id": school.ID, "valid_from": month.String(), "mode": "per_meal", "amount_cents": seedMealPriceCents,
+			"expected_version": envelope.Data.Versions[school.ID.String()],
 		}); err != nil {
 			return saved, fmt.Errorf("set the Mensa price of school %d: %w", school.ID, err)
 		}

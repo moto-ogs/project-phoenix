@@ -39,7 +39,7 @@ const (
 // ListChildParentConferences lists the coming days of the child's class.
 func (s *service) ListChildParentConferences(ctx context.Context, child ParentConferenceChild) ([]ParentConferenceOffer, error) {
 	var offers []ParentConferenceOffer
-	err := s.withinChildTenant(ctx, child, func(txCtx context.Context, store schoolcalendar.ParentConferences, class string) error {
+	err := s.withinChildTenant(ctx, child, s.cfg.Runtime.WithinAppointmentWrite, func(txCtx context.Context, store schoolcalendar.ParentConferences, class string) error {
 		conferences, err := store.ListParentConferences(txCtx, schoolcalendar.ParentConferenceFilter{From: s.conferenceToday()})
 		if err != nil {
 			return err
@@ -59,7 +59,7 @@ func (s *service) BookParentConference(ctx context.Context, child ParentConferen
 		return nil, err
 	}
 	var offer *ParentConferenceOffer
-	err = s.withinChildTenant(ctx, child, func(txCtx context.Context, store schoolcalendar.ParentConferences, class string) error {
+	err = s.withinChildTenant(ctx, child, s.withinAppointmentWrite, func(txCtx context.Context, store schoolcalendar.ParentConferences, class string) error {
 		conference, booking, err := s.childParentConference(txCtx, store, conferenceID, class, child.StudentID)
 		if err != nil {
 			return err
@@ -90,7 +90,7 @@ func (s *service) BookParentConference(ctx context.Context, child ParentConferen
 
 // CancelParentConferenceBooking cancels the child's booking of the day.
 func (s *service) CancelParentConferenceBooking(ctx context.Context, child ParentConferenceChild, conferenceID int64) error {
-	return s.withinChildTenant(ctx, child, func(txCtx context.Context, store schoolcalendar.ParentConferences, class string) error {
+	return s.withinChildTenant(ctx, child, s.withinAppointmentWrite, func(txCtx context.Context, store schoolcalendar.ParentConferences, class string) error {
 		conference, booking, err := s.childParentConference(txCtx, store, conferenceID, class, child.StudentID)
 		if err != nil {
 			return err
@@ -111,10 +111,11 @@ func (s *service) CancelParentConferenceBooking(ctx context.Context, child Paren
 	})
 }
 
-// withinChildTenant runs fn in the transaction the caller opened for the
-// child's school, with the child's class. A child without a class, or one
-// no longer active, has no Sprechtag.
-func (s *service) withinChildTenant(ctx context.Context, child ParentConferenceChild, fn func(context.Context, schoolcalendar.ParentConferences, string) error) error {
+// withinChildTenant runs fn through within, in the transaction the caller
+// opened for the child's school, with the child's class. A child without a
+// class, or one no longer active, has no Sprechtag. Reads pass the runtime's
+// plain unit, writes withinAppointmentWrite, which announces the change.
+func (s *service) withinChildTenant(ctx context.Context, child ParentConferenceChild, within func(context.Context, func(context.Context) error) error, fn func(context.Context, schoolcalendar.ParentConferences, string) error) error {
 	store, err := s.parentConferences()
 	if err != nil {
 		return err
@@ -122,7 +123,7 @@ func (s *service) withinChildTenant(ctx context.Context, child ParentConferenceC
 	if child.TenantID <= 0 || child.StudentID <= 0 {
 		return fmt.Errorf("%w: child is required", ErrForbidden)
 	}
-	return s.withinAppointmentWrite(ctx, func(txCtx context.Context) error {
+	return within(ctx, func(txCtx context.Context) error {
 		if s.cfg.Runtime.TenantID(txCtx) != child.TenantID {
 			return fmt.Errorf("%w: the child belongs to another school", ErrForbidden)
 		}
@@ -242,7 +243,7 @@ func (s *service) createParentConferenceAppointment(ctx context.Context, confere
 	if err != nil {
 		return 0, err
 	}
-	return detail.Appointment.ID, nil
+	return detail.Appointment.ID.Int64(), nil
 }
 
 // moveParentConferenceAppointment moves the booking's appointment to the
@@ -275,13 +276,13 @@ func (s *service) cancelParentConferenceAppointment(ctx context.Context, booking
 	if err != nil || appointment == nil {
 		return err
 	}
-	transitioned, err := s.cfg.Appointments.CancelAppointment(ctx, appointment.ID)
+	transitioned, err := s.cfg.Appointments.CancelAppointment(ctx, appointment.ID.Int64())
 	if err != nil || !transitioned {
 		return err
 	}
 	now := s.now()
 	appointment.CancelledAt = &now
-	if err := s.cancelPendingNotifications(ctx, appointment.ID, "parent conference booking cancelled"); err != nil {
+	if err := s.cancelPendingNotifications(ctx, appointment.ID.Int64(), "parent conference booking cancelled"); err != nil {
 		return err
 	}
 	return s.notifyGuardianLifecycle(ctx, appointment, portal.EmailKindAppointmentCancelled)

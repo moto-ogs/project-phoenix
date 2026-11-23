@@ -154,12 +154,6 @@ export interface ParentConferenceRequest {
   location?: string | null;
 }
 
-/** Query of GET /school/calendar/my */
-export interface GetSchoolCalendarMyQuery {
-  from?: string;
-  to?: string;
-}
-
 export const routes = {
   "DELETE /school/calendar/appointments/{appointmentId}": {
     method: "DELETE",
@@ -183,7 +177,10 @@ export const routes = {
     method: "GET",
     pattern: "/school/calendar/my",
     portals: ["school"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(SchoolCalendarResponseSchema),
   },
   "GET /school/calendar/parent-conferences": {
@@ -196,6 +193,7 @@ export const routes = {
     method: "GET",
     pattern: "/school/calendar/parent-conferences/{conferenceId}",
     portals: ["school"],
+    deprecated: true,
     response: success(ParentConferenceViewSchema),
   },
   "POST /school/calendar/appointments": {

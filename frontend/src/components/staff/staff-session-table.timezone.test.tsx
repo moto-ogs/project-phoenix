@@ -10,6 +10,9 @@ import { setTestClock } from "~/test/clock";
 
 import { StaffSessionTable } from "./staff-session-table";
 
+// The read of the shown sessions; it answers (ADR 0311, rule 6).
+const reloadSessions = () => Promise.resolve();
+
 // Runs in `school-date-dom`: only forked processes apply a runtime TZ change.
 afterEach(() => vi.unstubAllEnvs());
 
@@ -50,6 +53,7 @@ describe("StaffSessionTable in a browser outside Germany (#6293)", () => {
 
     render(
       <StaffSessionTable
+        reloadSessions={reloadSessions}
         staffId="7"
         from={new Date(2026, 9, 19)}
         to={new Date(2026, 9, 25)}
@@ -87,6 +91,7 @@ describe("StaffSessionTable across the March clock change", () => {
 
     render(
       <StaffSessionTable
+        reloadSessions={reloadSessions}
         staffId="7"
         from={new Date(2026, 2, 1)}
         to={new Date(2026, 2, 31)}

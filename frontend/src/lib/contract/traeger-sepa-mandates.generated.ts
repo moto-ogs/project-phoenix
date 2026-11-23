@@ -4,8 +4,10 @@ import {
   arr,
   bool,
   calendarDate,
+  fileAnswer,
   instant,
-  int64StringOrNumber,
+  int64String,
+  multipart,
   nullable,
   object,
   optional,
@@ -44,8 +46,8 @@ export interface SEPAMandate {
 }
 
 export const SEPAMandateSchema: z.ZodType<SEPAMandate, unknown> = object<SEPAMandate>({
-  id: int64StringOrNumber,
-  contract_id: int64StringOrNumber,
+  id: int64String,
+  contract_id: int64String,
   family_email: str,
   party_first_name: str,
   party_last_name: str,
@@ -67,6 +69,21 @@ export const SEPAMandateSchema: z.ZodType<SEPAMandate, unknown> = object<SEPAMan
   updated_at: instant,
 });
 
+/** Go: parentbilling.SEPAMandateImportEntry */
+export interface SEPAMandateImportEntry {
+  file: string;
+  account_id: string | null;
+  imported_at: string;
+  mandates: number;
+}
+
+export const SEPAMandateImportEntrySchema: z.ZodType<SEPAMandateImportEntry, unknown> = object<SEPAMandateImportEntry>({
+  file: str,
+  account_id: nullable(int64String),
+  imported_at: instant,
+  mandates: safeInt,
+});
+
 /** Go: parentbilling.SEPAMandateEvent */
 export interface SEPAMandateEvent {
   id: string;
@@ -80,11 +97,11 @@ export interface SEPAMandateEvent {
 }
 
 export const SEPAMandateEventSchema: z.ZodType<SEPAMandateEvent, unknown> = object<SEPAMandateEvent>({
-  id: int64StringOrNumber,
+  id: int64String,
   action: str,
   source: str,
   fields: nullable(arr(str)),
-  account_id: nullable(int64StringOrNumber),
+  account_id: nullable(int64String),
   occurred_at: instant,
   import_file: optional(str),
   import_line: optional(safeInt),
@@ -92,7 +109,7 @@ export const SEPAMandateEventSchema: z.ZodType<SEPAMandateEvent, unknown> = obje
 
 /** Go: parentbillinghttp.SEPAMandateRequest */
 export interface SEPAMandateRequest {
-  contract_id?: number;
+  contract_id?: string;
   reference?: string;
   signed_on?: string | null;
   kind?: string;
@@ -102,14 +119,159 @@ export interface SEPAMandateRequest {
   bic?: string;
 }
 
+/** Go: parentbilling.SEPAMandateImportColumns */
+export interface SEPAMandateImportColumns {
+  reference: string;
+  signed_on: string;
+  iban: string;
+  bic: string;
+  account_holder: string;
+  payer: string;
+  creditor_id: string;
+  sequence: string;
+  last_collected_on: string;
+  debtor_number: string;
+}
+
+export const SEPAMandateImportColumnsSchema: z.ZodType<SEPAMandateImportColumns, unknown> = object<SEPAMandateImportColumns>({
+  reference: str,
+  signed_on: str,
+  iban: str,
+  bic: str,
+  account_holder: str,
+  payer: str,
+  creditor_id: str,
+  sequence: str,
+  last_collected_on: str,
+  debtor_number: str,
+});
+
+/** Go: parentbilling.SEPAMandateImportMapping */
+export interface SEPAMandateImportMapping {
+  columns: SEPAMandateImportColumns;
+  payer_key: string;
+  creditor_from_traeger: boolean;
+  confirmed_creditor_id: string;
+}
+
+export const SEPAMandateImportMappingSchema: z.ZodType<SEPAMandateImportMapping, unknown> = object<SEPAMandateImportMapping>({
+  columns: SEPAMandateImportColumnsSchema,
+  payer_key: str,
+  creditor_from_traeger: bool,
+  confirmed_creditor_id: str,
+});
+
+/** Go: parentbilling.SEPAMandateImportCounts */
+export interface SEPAMandateImportCounts {
+  ready: number;
+  clarify: number;
+  duplicate: number;
+  same_mandate: number;
+  conflict: number;
+  invalid: number;
+  imported: number;
+  without_mandate: number;
+  debtor_numbers: number;
+  debtor_conflicts: number;
+}
+
+export const SEPAMandateImportCountsSchema: z.ZodType<SEPAMandateImportCounts, unknown> = object<SEPAMandateImportCounts>({
+  ready: safeInt,
+  clarify: safeInt,
+  duplicate: safeInt,
+  same_mandate: safeInt,
+  conflict: safeInt,
+  invalid: safeInt,
+  imported: safeInt,
+  without_mandate: safeInt,
+  debtor_numbers: safeInt,
+  debtor_conflicts: safeInt,
+});
+
+/** Go: parentbilling.SEPAMandateImportProblem */
+export interface SEPAMandateImportProblem {
+  field: string;
+  code: string;
+}
+
+export const SEPAMandateImportProblemSchema: z.ZodType<SEPAMandateImportProblem, unknown> = object<SEPAMandateImportProblem>({
+  field: str,
+  code: str,
+});
+
+/** Go: parentbilling.SEPAMandateImportRow */
+export interface SEPAMandateImportRow {
+  line: number;
+  status: string;
+  reference: string;
+  signed_on: string | null;
+  iban_masked: string;
+  bic: string;
+  account_holder: string;
+  contract_id?: string;
+  payer_first_name: string;
+  payer_last_name: string;
+  sequence: string;
+  last_collected_on: string | null;
+  mandate_id?: string;
+  problems: SEPAMandateImportProblem[] | null;
+  hints: string[] | null;
+  debtor_number?: string;
+  debtor_number_status?: string;
+  same_mandate_line?: number;
+}
+
+export const SEPAMandateImportRowSchema: z.ZodType<SEPAMandateImportRow, unknown> = object<SEPAMandateImportRow>({
+  line: safeInt,
+  status: str,
+  reference: str,
+  signed_on: nullable(calendarDate),
+  iban_masked: str,
+  bic: str,
+  account_holder: str,
+  contract_id: optional(int64String),
+  payer_first_name: str,
+  payer_last_name: str,
+  sequence: str,
+  last_collected_on: nullable(calendarDate),
+  mandate_id: optional(int64String),
+  problems: nullable(arr(SEPAMandateImportProblemSchema)),
+  hints: nullable(arr(str)),
+  debtor_number: optional(str),
+  debtor_number_status: optional(str),
+  same_mandate_line: optional(safeInt),
+});
+
+/** Go: parentbilling.SEPAMandateImport */
+export interface SEPAMandateImport {
+  encoding: string;
+  delimiter: string;
+  headers: string[] | null;
+  mapping: SEPAMandateImportMapping;
+  unmapped: string[] | null;
+  creditor_id: string;
+  fingerprint?: string;
+  applied: boolean;
+  counts: SEPAMandateImportCounts;
+  rows: SEPAMandateImportRow[] | null;
+}
+
+export const SEPAMandateImportSchema: z.ZodType<SEPAMandateImport, unknown> = object<SEPAMandateImport>({
+  encoding: str,
+  delimiter: str,
+  headers: nullable(arr(str)),
+  mapping: SEPAMandateImportMappingSchema,
+  unmapped: nullable(arr(str)),
+  creditor_id: str,
+  fingerprint: optional(str),
+  applied: bool,
+  counts: SEPAMandateImportCountsSchema,
+  rows: nullable(arr(SEPAMandateImportRowSchema)),
+});
+
 /** Go: parentbillinghttp.SEPAMandateRevokeRequest */
 export interface SEPAMandateRevokeRequest {
   revoked_on?: string | null;
-}
-
-/** Query of GET /traeger/sepa-mandates/ */
-export interface GetTraegerSepaMandatesQuery {
-  contract_id?: string;
 }
 
 export const routes = {
@@ -117,8 +279,25 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/sepa-mandates/",
     portals: ["org"],
-    query: ["contract_id"],
+    query: {
+      "contract_id": { kind: "id" },
+    },
     response: success(z.array(SEPAMandateSchema)),
+  },
+  "GET /traeger/sepa-mandates/export": {
+    method: "GET",
+    pattern: "/traeger/sepa-mandates/export",
+    portals: ["org"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
+    response: fileAnswer,
+  },
+  "GET /traeger/sepa-mandates/imports": {
+    method: "GET",
+    pattern: "/traeger/sepa-mandates/imports",
+    portals: ["org"],
+    response: success(z.array(SEPAMandateImportEntrySchema)),
   },
   "GET /traeger/sepa-mandates/{id}/collections": {
     method: "GET",
@@ -138,6 +317,25 @@ export const routes = {
     portals: ["org"],
     request: requestBody<SEPAMandateRequest>(),
     response: success(SEPAMandateSchema),
+  },
+  "POST /traeger/sepa-mandates/imports": {
+    method: "POST",
+    pattern: "/traeger/sepa-mandates/imports",
+    portals: ["org"],
+    maxBodyBytes: 2359296,
+    tooLargeCode: "parent_billing.sepa_import_file_too_large",
+    request: multipart,
+    response: success(SEPAMandateImportSchema),
+  },
+  "POST /traeger/sepa-mandates/imports/preview": {
+    method: "POST",
+    pattern: "/traeger/sepa-mandates/imports/preview",
+    portals: ["org"],
+    noCommit: "an import preview checks the file and saves no row of it",
+    maxBodyBytes: 2359296,
+    tooLargeCode: "parent_billing.sepa_import_file_too_large",
+    request: multipart,
+    response: success(SEPAMandateImportSchema),
   },
   "POST /traeger/sepa-mandates/{id}/revoke": {
     method: "POST",

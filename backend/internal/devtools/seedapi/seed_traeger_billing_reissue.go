@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedTraegerBillingReissueStep cancels the corrected invoice of the second
@@ -21,17 +23,17 @@ const seedReissueReason = "Anschrift war falsch. Neue Rechnung folgt."
 
 // seedReissueRun is what the step reads of a run.
 type seedReissueRun struct {
-	HolidayPeriodID int64 `json:"holiday_period_id"`
+	HolidayPeriodID ident.ID `json:"holiday_period_id"`
 	Documents       []struct {
-		ID              int64  `json:"id"`
-		Kind            string `json:"kind"`
-		ReferenceNumber string `json:"reference_number"`
+		ID              ident.ID `json:"id"`
+		Kind            string   `json:"kind"`
+		ReferenceNumber string   `json:"reference_number"`
 		Children        []struct {
 			Positions []struct {
 				Kind string `json:"kind"`
 			} `json:"positions"`
 			CarriedCorrections []struct {
-				PositionID int64 `json:"position_id"`
+				PositionID ident.ID `json:"position_id"`
 			} `json:"carried_corrections"`
 		} `json:"children"`
 	} `json:"documents"`
@@ -117,7 +119,7 @@ func seedReissueTarget(run seedReissueRun) int64 {
 		for _, child := range document.Children {
 			for _, position := range child.Positions {
 				if position.Kind == "correction" {
-					return document.ID
+					return int64(document.ID)
 				}
 			}
 		}
@@ -131,7 +133,7 @@ func seedProposedCorrection(run seedReissueRun) int64 {
 	for _, document := range run.Documents {
 		for _, child := range document.Children {
 			for _, carried := range child.CarriedCorrections {
-				return carried.PositionID
+				return int64(carried.PositionID)
 			}
 		}
 	}

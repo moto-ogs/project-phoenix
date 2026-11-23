@@ -74,6 +74,7 @@ vi.mock("~/lib/swr", () => ({
     );
   },
   useTenantMutate: () => mockTenantMutate,
+  revalidateOrThrow: (read: { data: unknown }) => Promise.resolve(read.data),
 }));
 
 const SHIFT_TYPES = [

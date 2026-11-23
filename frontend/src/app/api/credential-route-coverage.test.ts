@@ -22,12 +22,18 @@ const RENEWING_ROOT = path.join(SRC, "lib/portal-handlers.server.ts");
 
 /** Credential routes whose retry is wanted, by route directory. */
 const RETRY_KEPT: Record<string, string> = {
-  "auth/passkeys/register/verify":
-    "a WebAuthn attestation of a one-time challenge, no password or code the account lock counts",
-  "caterer/auth/passkeys/register/verify":
-    "a WebAuthn attestation of a one-time challenge, no password or code the account lock counts",
-  "operator/auth/passkeys/register/verify":
-    "a WebAuthn attestation of a one-time challenge, no password or code the account lock counts",
+  "auth/password/[[...path]]":
+    "a catalog hand-off (#2352): the contract switches the retry off, see the catalog cases below",
+  "auth/password-reset/[[...path]]":
+    "a public route (#2352): the catalog proxy reads no session for it, so no renewal can repeat it",
+  "caterer/auth/password-reset/[[...path]]":
+    "a public route (#2352): the catalog proxy reads no session for it, so no renewal can repeat it",
+  "parent/auth/password-reset/[[...path]]":
+    "a public route (#2352): the catalog proxy reads no session for it, so no renewal can repeat it",
+  "school/auth/password-reset/[[...path]]":
+    "a public route (#2352): the catalog proxy reads no session for it, so no renewal can repeat it",
+  "traeger/auth/password-reset/[[...path]]":
+    "a public route (#2352): the catalog proxy reads no session for it, so no renewal can repeat it",
 };
 
 function filesUnder(dir: string, match: (file: string) => boolean): string[] {
@@ -88,13 +94,8 @@ describe("routes that forward a password or a code", () => {
   it("finds the routes credential-retry.test.ts runs", () => {
     expect(credentialRoutes).toEqual(
       expect.arrayContaining([
-        "auth/password",
-        "operator/profile/password",
-        "operator/profile/email-change",
-        "caterer/account/password",
-        "caterer/account/mfa/disable",
+        "auth/password/[[...path]]",
         "caterer/account/mfa/confirm",
-        "parent/me/mfa/disable",
         "parent/me/mfa/confirm",
       ]),
     );
@@ -121,6 +122,14 @@ describe("catalog routes that forward a password or a code", () => {
   it.each([
     ["parent", "POST /parent/me/news/{announcementId}/declaration"],
     ["org", "POST /traeger/auth/mfa/step-up"],
+    ["platform", "POST /operator/profile/email-change"],
+    ["tenant", "POST /auth/password"],
+    ["platform", "POST /operator/profile/password"],
+    ["caterer", "POST /caterer/account/password"],
+    ["caterer", "POST /caterer/account/mfa/disable"],
+    ["parent", "POST /parent/me/mfa/disable"],
+    ["caterer", "POST /caterer/account/mfa/start"],
+    ["parent", "POST /parent/me/mfa/start"],
   ] as const)("%s %s turns the retry off", (portal, key) => {
     const route = portalRoutes[portal].find(
       (entry) => `${entry.method} ${entry.pattern}` === key,

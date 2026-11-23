@@ -36,6 +36,9 @@ func (rs *CareReductionResource) CostShareRouter(protectedTraegerRoutes func(chi
 // whole cent.
 type CareCostShareRequest struct {
 	capability.CareCostShareInput
+	// ExpectedVersion is the version of the share as it was read; a change
+	// sends it (ADR 0311).
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 // Bind accepts the body; the Owner validates the share.
@@ -82,7 +85,7 @@ func (rs *CareReductionResource) saveCostShare(w http.ResponseWriter, r *http.Re
 		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeParentBillingCareCostShareInvalid))
 		return
 	}
-	set, err := rs.reductions.SaveCareCostShare(r.Context(), reviewer, shareID, req.CareCostShareInput)
+	set, err := rs.reductions.SaveCareCostShare(r.Context(), reviewer, shareID, req.CareCostShareInput, req.ExpectedVersion)
 	if err != nil {
 		tenant.MarkRollback(r.Context())
 		renderCostShareError(w, r, err)

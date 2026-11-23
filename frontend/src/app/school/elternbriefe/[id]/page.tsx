@@ -39,6 +39,10 @@ import { StatusBadge } from "~/components/ui/status-badge";
 
 type LifecycleAction = "publish" | "unpublish" | "delete" | null;
 
+// Info-Knopf am Titel (#7579), auch solange der Brief lädt.
+const PARENT_LETTER_INFO =
+  "Hier siehst du deinen Elternbrief und den Stand bei den Eltern. Unter „Status“ steht, wer ihn gelesen oder bestätigt hat. Einen gesendeten Brief kannst du zurückziehen oder löschen.";
+
 export default function SchoolParentLetterPage() {
   const params = useParams();
   const letterId = params.id as string;
@@ -79,6 +83,7 @@ export default function SchoolParentLetterPage() {
     return (
       <TenantPage
         title="Elternbrief"
+        info={PARENT_LETTER_INFO}
         {...back}
         loading={isLoading}
         loadingLabel="Elternbrief wird geladen…"
@@ -114,6 +119,7 @@ export default function SchoolParentLetterPage() {
   return (
     <TenantPage
       title={letter.title}
+      info={PARENT_LETTER_INFO}
       {...back}
       stats={statusLine}
       actions={

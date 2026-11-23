@@ -13,54 +13,23 @@ import (
 // the Student Presence owner's public contract, so this package classifies
 // outcomes without the retained service.
 type PresenceOperations interface {
-	// Sessions
-	StartSession(context.Context, studentpresence.LiveGroup) (studentpresence.LiveGroup, error)
-	ReviseSession(context.Context, studentpresence.LiveGroup) (studentpresence.LiveGroup, error)
-	DeleteActiveGroup(context.Context, int64) error
-	EndActiveGroupSession(context.Context, int64) error
-	// UpdateSessionActivity refreshes the session's last activity so web check-ins
-	// keep the session from timing out.
-	UpdateSessionActivity(context.Context, int64) error
-
-	// Visits
-	AdmitVisit(context.Context, studentpresence.Visit) (studentpresence.Visit, error)
-	AmendVisit(context.Context, studentpresence.Visit) error
-	DeleteVisit(context.Context, int64) error
-	EndVisit(context.Context, int64) error
-	GetPresenceMode(context.Context) (string, error)
-
 	// Supervision
-	AssignSupervision(context.Context, studentpresence.GroupSupervision) (studentpresence.GroupSupervision, error)
-	AmendSupervision(context.Context, studentpresence.GroupSupervision) error
-	DeleteGroupSupervisor(context.Context, int64) error
 	EndSupervision(context.Context, int64) error
 	ClaimSupervision(context.Context, int64, int64, string) (studentpresence.ClaimedSupervision, error)
-	UnclaimedSessions(context.Context) ([]studentpresence.UnclaimedSession, error)
-
-	// Combinations
-	CreateCombination(context.Context, studentpresence.CombinedGroup, []int64) (studentpresence.CombinedGroup, error)
-	AmendCombination(context.Context, studentpresence.CombinedGroup) (studentpresence.CombinedGroup, error)
-	DeleteCombinedGroup(context.Context, int64) error
-	EndCombinedGroup(context.Context, int64) error
 
 	// Attendance
 	StudentAttendanceStatus(context.Context, int64) (*studentpresence.AttendanceStatus, error)
-	StudentsAttendanceStatuses(context.Context, []int64) (map[int64]*studentpresence.AttendanceStatus, error)
-	CheckOutStudent(context.Context, int64, int64) (studentpresence.CheckoutOutcome, error)
 
 	// Moves
 	AssignTransitStudents(context.Context, []int64, int64, studentpresence.StudentMoveAuthorization) (studentpresence.TransitAssignResult, error)
 	MoveStudentsToSession(context.Context, []int64, int64, studentpresence.StudentMoveAuthorization) (studentpresence.StudentMoveResult, error)
-	MoveStudentsToTransit(context.Context, []int64, studentpresence.StudentMoveAuthorization) (studentpresence.StudentMoveResult, error)
 	// CheckInStudentsToSessionAuthorized checks children in and places them
 	// in a running session in one unit (#6953).
 	CheckInStudentsToSessionAuthorized(ctx context.Context, studentIDs []int64, activeGroupID, staffID int64, auth studentpresence.StudentMoveAuthorization, keepPresent bool) (*studentpresence.StudentMoveResult, error)
 
 	// Reads
-	SessionVisitsWithDisplay(context.Context, int64) ([]studentpresence.VisitDisplay, error)
 	SessionRooms(context.Context, []int64) ([]studentpresence.SessionRoomSummary, error)
 	DashboardAnalytics(context.Context) (studentpresence.DashboardAnalytics, error)
-	CrossTenantStudents(context.Context, int64) ([]studentpresence.CrossTenantStudent, error)
 	GetTrackingIndicators(context.Context, []int64, []string) (map[int64][]bool, error)
 }
 

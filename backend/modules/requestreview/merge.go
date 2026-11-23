@@ -54,7 +54,12 @@ func newItem(row *Row) Item {
 		CurrentStatusByDate:      row.CurrentStatusByDate,
 		PartialAbsenceFromByDate: row.PartialAbsenceFromByDate,
 		CanCorrect:               row.CanCorrect,
-		Data:                     row.Data,
+		Data:                     row.Payload.value(),
+		MasterData:               row.Payload.MasterData,
+		CareSchedule:             row.Payload.CareSchedule,
+		Offering:                 row.Payload.Offering,
+		Excused:                  row.Payload.Excused,
+		payload:                  row.Payload,
 	}
 	if row.Past {
 		item.BulkEligible = false

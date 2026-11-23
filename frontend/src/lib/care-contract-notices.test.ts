@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   noticeOptionsFromBackend,
-  type BackendNoticeOptions,
+  type NoticeOptionsWire,
 } from "./care-contract-notices";
 
 describe("end-notice reason mapping", () => {
@@ -11,8 +11,8 @@ describe("end-notice reason mapping", () => {
     "no_permitted_address",
     undefined,
   ] as const)("preserves the recorded reason %s", (reason) => {
-    const row: BackendNoticeOptions = {
-      contract_id: 25,
+    const row: NoticeOptionsWire = {
+      contract_id: "25",
       status: "gekuendigt",
       child_name: "Bente Jansen",
       modules: "Kurzbetreuung",
@@ -43,8 +43,8 @@ describe("end-notice reason mapping", () => {
   });
 
   it("reads a reason it does not know as no recorded reason", () => {
-    const row: BackendNoticeOptions = {
-      contract_id: 25,
+    const row: NoticeOptionsWire = {
+      contract_id: "25",
       status: "gekuendigt",
       child_name: "Bente Jansen",
       modules: "Kurzbetreuung",
@@ -71,6 +71,40 @@ describe("end-notice reason mapping", () => {
     expect(noticeOptionsFromBackend(row).notice).toMatchObject({
       endNoticeSent: false,
       endNoticeNotSentReason: null,
+    });
+  });
+});
+
+// ADR 0270 point 6 (#2353): a kind or channel a newer backend adds is not
+// passed on as a known one.
+describe("notice values a newer backend adds", () => {
+  it("keeps an unknown kind and channel apart", () => {
+    const row: NoticeOptionsWire = {
+      contract_id: "25",
+      status: "ruhend",
+      child_name: "Bente Jansen",
+      modules: "Kurzbetreuung",
+      school_name: "OGS Sonnenhof",
+      terms: "",
+      ordinary_ends_on: null,
+      special_ends_on: null,
+      withdrawal_until: null,
+      early_start: false,
+      notice: {
+        kind: "anfechtung",
+        channel: "post",
+        declared_at: "2026-11-07T09:30:00Z",
+        received_on: "2026-11-07",
+        ends_on: null,
+        recipient: "birgit@example.org",
+        confirmation_text: "",
+      },
+    };
+    const options = noticeOptionsFromBackend(row);
+    expect(options.status).toBeUndefined();
+    expect(options.notice).toMatchObject({
+      kind: undefined,
+      channel: undefined,
     });
   });
 });

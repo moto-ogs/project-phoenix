@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/facilities"
 	"github.com/moto-ogs/project-phoenix/modules/facilities/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/facilities/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -77,29 +78,41 @@ func (s *Service) UpdateRoom(ctx context.Context, input facilities.UpdateRoom) (
 		return facilities.Room{}, err
 	}
 	err = s.runWrite(ctx, "update_room", func(txCtx context.Context, stats *domain.OperationStats) error {
-		if err := s.lockRoomName(txCtx, input.Name); err != nil {
-			return err
-		}
-		existing, found, queryStats, findErr := s.store.FindByID(txCtx, input.ID, "UPDATE")
-		stats.Add(queryStats)
-		if findErr != nil {
-			return findErr
-		}
-		if !found {
-			return facilities.ErrRoomNotFound
-		}
-		if err := validateRoomUpdate(existing, &input); err != nil {
-			return err
-		}
-		if err := s.ensureUpdateNameAvailable(txCtx, existing, input, stats); err != nil {
-			return err
-		}
-		result, queryStats, err = s.store.Update(txCtx, input)
-		stats.Add(queryStats)
-		return err
+		var writeErr error
+		result, writeErr = s.updateLockedRoom(txCtx, input, stats)
+		return writeErr
 	})
 	return result, err
 }
+
+// updateLockedRoom locks the name and the room, refuses an edit of a room
+// changed since its editor read it (ADR 0311) and writes the update.
+func (s *Service) updateLockedRoom(ctx context.Context, input facilities.UpdateRoom, stats *domain.OperationStats) (facilities.Room, error) {
+	if err := s.lockRoomName(ctx, input.Name); err != nil {
+		return facilities.Room{}, err
+	}
+	existing, found, queryStats, err := s.store.FindByID(ctx, input.ID, "UPDATE")
+	stats.Add(queryStats)
+	if err != nil {
+		return facilities.Room{}, err
+	}
+	if !found {
+		return facilities.Room{}, facilities.ErrRoomNotFound
+	}
+	if err := validateRoomUpdate(existing, &input); err != nil {
+		return facilities.Room{}, err
+	}
+	if err := readstate.Check(input.ExpectedVersion, facilities.RoomVersion(existing)); err != nil {
+		return facilities.Room{}, err
+	}
+	if err := s.ensureUpdateNameAvailable(ctx, existing, input, stats); err != nil {
+		return facilities.Room{}, err
+	}
+	updated, queryStats, err := s.store.Update(ctx, input)
+	stats.Add(queryStats)
+	return updated, err
+}
+
 func (s *Service) FindRoom(ctx context.Context, id int64) (result facilities.Room, err error) {
 	if err := s.requireTenant(ctx, "find_room"); err != nil {
 		return facilities.Room{}, err

@@ -1,23 +1,13 @@
-// Client des Benachrichtigungs-Feeds. Die Routen der Staff-Glocke, von moto
-// schule (#7139) und des Elternportals (#7140) reichen an das Backend weiter;
-// der Wrapper antwortet mit { success, message, data }. `apiBase` wählt die
-// Staff- oder Schulroute; das Elternportal hält seinen eigenen Client.
+// Client des Benachrichtigungs-Feeds je Portal: Staff-Glocke (#7148), moto
+// schule (#7139), Elternportal (#7140), Träger (#7146) und Caterer (#7147).
+// Jedes Portal liest seinen Feed über die eigenen Routen; die Glocke bekommt
+// die Aufrufe ihres Portals über `notification-feed-portal.ts`.
 
-import { authFetch } from "./api-helpers";
+import { bffJson } from "./bff-fetch";
 import {
   mapNotificationFeedPage,
   type NotificationFeedPage,
-  type NotificationFeedPageWire,
 } from "./notification-feed-helpers";
-
-interface ProxyResponse<T> {
-  success: boolean;
-  data: T;
-}
-
-interface UnreadCountWire {
-  unread_count: number;
-}
 
 /** Einträge je Seite; die Glocke lädt beim Scrollen die nächste. */
 const NOTIFICATION_FEED_PAGE_SIZE = 20;
@@ -34,87 +24,117 @@ export interface NotificationFeedApi {
   markAllRead(): Promise<number>;
 }
 
-function notificationFeedApi(basePath: string): NotificationFeedApi {
-  return {
-    async fetchPage(cursor) {
-      const query = new URLSearchParams({
-        limit: String(NOTIFICATION_FEED_PAGE_SIZE),
-      });
-      if (cursor) query.set("cursor", cursor);
-      const response = await authFetch<ProxyResponse<NotificationFeedPageWire>>(
-        `${basePath}?${query.toString()}`,
-      );
-      return mapNotificationFeedPage(response.data);
-    },
-    async fetchUnreadCount() {
-      const response = await authFetch<ProxyResponse<UnreadCountWire>>(
-        `${basePath}/unread-count`,
-      );
-      return response.data.unread_count;
-    },
-    async markRead(id) {
-      const response = await authFetch<ProxyResponse<UnreadCountWire>>(
-        `${basePath}/${encodeURIComponent(id)}/read`,
-        { method: "POST" },
-      );
-      return response.data.unread_count;
-    },
-    async markAllRead() {
-      const response = await authFetch<ProxyResponse<UnreadCountWire>>(
-        `${basePath}/read-all`,
-        { method: "POST" },
-      );
-      return response.data.unread_count;
-    },
-  };
-}
+const page = (cursor?: string | null) => ({
+  limit: NOTIFICATION_FEED_PAGE_SIZE,
+  cursor: cursor || undefined,
+});
+
+/** Der Feed des Staff-Portals. */
+export const tenantNotificationFeedApi: NotificationFeedApi = {
+  fetchPage: async (cursor) =>
+    mapNotificationFeedPage(
+      await bffJson("tenant", "GET /api/notifications/feed/", {
+        query: page(cursor),
+      }),
+    ),
+  fetchUnreadCount: async () =>
+    (await bffJson("tenant", "GET /api/notifications/feed/unread-count"))
+      .unread_count,
+  markRead: async (id) =>
+    (
+      await bffJson("tenant", "POST /api/notifications/feed/{id}/read", {
+        params: { id },
+      })
+    ).unread_count,
+  markAllRead: async () =>
+    (await bffJson("tenant", "POST /api/notifications/feed/read-all"))
+      .unread_count,
+};
+
+/** Der Feed von moto schule (#7139). */
+export const schoolNotificationFeedApi: NotificationFeedApi = {
+  fetchPage: async (cursor) =>
+    mapNotificationFeedPage(
+      await bffJson("school", "GET /school/notifications/feed/", {
+        query: page(cursor),
+      }),
+    ),
+  fetchUnreadCount: async () =>
+    (await bffJson("school", "GET /school/notifications/feed/unread-count"))
+      .unread_count,
+  markRead: async (id) =>
+    (
+      await bffJson("school", "POST /school/notifications/feed/{id}/read", {
+        params: { id },
+      })
+    ).unread_count,
+  markAllRead: async () =>
+    (await bffJson("school", "POST /school/notifications/feed/read-all"))
+      .unread_count,
+};
+
+/** Der Feed des Träger-Portals über alle Schulen des Trägers (#7146). */
+export const traegerNotificationFeedApi: NotificationFeedApi = {
+  fetchPage: async (cursor) =>
+    mapNotificationFeedPage(
+      await bffJson("org", "GET /traeger/notifications/feed/", {
+        query: page(cursor),
+      }),
+    ),
+  fetchUnreadCount: async () =>
+    (await bffJson("org", "GET /traeger/notifications/feed/unread-count"))
+      .unread_count,
+  markRead: async (id) =>
+    (
+      await bffJson("org", "POST /traeger/notifications/feed/{id}/read", {
+        params: { id },
+      })
+    ).unread_count,
+  markAllRead: async () =>
+    (await bffJson("org", "POST /traeger/notifications/feed/read-all"))
+      .unread_count,
+};
+
+/** Der Feed des Caterer-Portals (#7147). */
+export const catererNotificationFeedApi: NotificationFeedApi = {
+  fetchPage: async (cursor) =>
+    mapNotificationFeedPage(
+      await bffJson("caterer", "GET /caterer/notifications/feed/", {
+        query: page(cursor),
+      }),
+    ),
+  fetchUnreadCount: async () =>
+    (await bffJson("caterer", "GET /caterer/notifications/feed/unread-count"))
+      .unread_count,
+  markRead: async (id) =>
+    (
+      await bffJson("caterer", "POST /caterer/notifications/feed/{id}/read", {
+        params: { id },
+      })
+    ).unread_count,
+  markAllRead: async () =>
+    (await bffJson("caterer", "POST /caterer/notifications/feed/read-all"))
+      .unread_count,
+};
 
 /** Der Feed des Elternkontos über alle Schulen der Familie (#7140). */
-export const parentNotificationFeedApi = notificationFeedApi(
-  "/api/parent/me/notifications/feed",
-);
-export async function fetchNotificationFeed(
-  apiBase: string,
-  cursor?: string | null,
-): Promise<NotificationFeedPage> {
-  const query = new URLSearchParams({
-    limit: String(NOTIFICATION_FEED_PAGE_SIZE),
-  });
-  if (cursor) query.set("cursor", cursor);
-  const response = await authFetch<ProxyResponse<NotificationFeedPageWire>>(
-    `${apiBase}?${query.toString()}`,
-  );
-  return mapNotificationFeedPage(response.data);
-}
-
-export async function fetchNotificationFeedUnreadCount(
-  apiBase: string,
-): Promise<number> {
-  const response = await authFetch<ProxyResponse<UnreadCountWire>>(
-    `${apiBase}/unread-count`,
-  );
-  return response.data.unread_count;
-}
-
-/** Markiert einen Eintrag als gelesen; liefert den neuen Zähler. */
-export async function markNotificationFeedEntryRead(
-  apiBase: string,
-  id: string,
-): Promise<number> {
-  const response = await authFetch<ProxyResponse<UnreadCountWire>>(
-    `${apiBase}/${encodeURIComponent(id)}/read`,
-    { method: "POST" },
-  );
-  return response.data.unread_count;
-}
-
-/** Markiert alle Einträge als gelesen; liefert den neuen Zähler. */
-export async function markAllNotificationFeedRead(
-  apiBase: string,
-): Promise<number> {
-  const response = await authFetch<ProxyResponse<UnreadCountWire>>(
-    `${apiBase}/read-all`,
-    { method: "POST" },
-  );
-  return response.data.unread_count;
-}
+export const parentNotificationFeedApi: NotificationFeedApi = {
+  fetchPage: async (cursor) =>
+    mapNotificationFeedPage(
+      await bffJson("parent", "GET /parent/me/notifications/feed/", {
+        query: page(cursor),
+      }),
+    ),
+  fetchUnreadCount: async () =>
+    (await bffJson("parent", "GET /parent/me/notifications/feed/unread-count"))
+      .unread_count,
+  markRead: async (id) =>
+    (
+      await bffJson("parent", "POST /parent/me/notifications/feed/{id}/read", {
+        params: { id },
+      })
+    ).unread_count,
+  markAllRead: async () =>
+    (await bffJson("parent", "POST /parent/me/notifications/feed/read-all"))
+      .unread_count,
+};

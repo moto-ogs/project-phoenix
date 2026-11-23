@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // RecordsResource serves the staff records of the session's Träger. Every
@@ -120,9 +121,13 @@ func (rs *RecordsResource) record(w http.ResponseWriter, r *http.Request) {
 // StaffLinkRequest names the employments to join and, per differing field, the
 // chosen source: "record" or the ID of a school.
 type StaffLinkRequest struct {
-	StaffRecordID *int64                            `json:"staff_record_id"`
+	StaffRecordID *ident.ID                         `json:"staff_record_id"`
 	Members       []workforce.TraegerStaffMemberRef `json:"members"`
 	Choices       map[string]string                 `json:"choices"`
+	// ExpectedFingerprint is the fingerprint of the preview the choices were
+	// made on; the link refuses values changed since with
+	// general.changed_since_read (ADR 0311). The preview ignores it.
+	ExpectedFingerprint string `json:"expected_fingerprint"`
 }
 
 func (req *StaffLinkRequest) Bind(*http.Request) error {
@@ -133,7 +138,10 @@ func (req *StaffLinkRequest) Bind(*http.Request) error {
 }
 
 func (req *StaffLinkRequest) toInput() workforce.TraegerStaffLinkRequest {
-	return workforce.TraegerStaffLinkRequest{RecordID: req.StaffRecordID, Members: req.Members, Choices: req.Choices}
+	return workforce.TraegerStaffLinkRequest{
+		RecordID: (*int64)(req.StaffRecordID), Members: req.Members, Choices: req.Choices,
+		ExpectedFingerprint: req.ExpectedFingerprint,
+	}
 }
 
 func (rs *RecordsResource) preview(w http.ResponseWriter, r *http.Request) {
@@ -181,7 +189,7 @@ func (rs *RecordsResource) dissolve(w http.ResponseWriter, r *http.Request) {
 		renderError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, IDResponse{ID: id}, "Staff record dissolved successfully")
+	common.Respond(w, r, http.StatusOK, IDResponse{ID: ident.ID(id)}, "Staff record dissolved successfully")
 }
 
 // personnelNumberRequest sets or, with null, clears the Träger's number.
@@ -297,7 +305,7 @@ func (rs *RecordsResource) updateFinancial(w http.ResponseWriter, r *http.Reques
 		renderError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, IDResponse{ID: id}, "Financial data updated successfully")
+	common.Respond(w, r, http.StatusOK, IDResponse{ID: ident.ID(id)}, "Financial data updated successfully")
 }
 
 // renderError maps the Personalstamm's refusals onto their codes.

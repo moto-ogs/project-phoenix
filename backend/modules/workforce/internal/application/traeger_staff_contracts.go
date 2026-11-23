@@ -8,6 +8,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The Arbeitsverträge of a record (#4706). Every write reads the record and
@@ -32,7 +33,7 @@ func (t *TraegerStaff) CreateContract(ctx context.Context, actor workforce.Traeg
 	}
 	for _, site := range input.Sites {
 		contract.Targets = append(contract.Targets, domain.ContractTarget{
-			ContractSite: domain.ContractSite{SchoolID: site.SchoolID, StaffID: site.StaffID}, ValidFrom: input.StartsOn, WeekdayMinutes: site.WeekdayMinutes,
+			ContractSite: domain.ContractSite{SchoolID: site.SchoolID.Int64(), StaffID: site.StaffID.Int64()}, ValidFrom: input.StartsOn, WeekdayMinutes: site.WeekdayMinutes,
 		})
 	}
 	return t.writeContract(ctx, actor, recordID, false, func(scene contractScene) (contractWrite, error) {
@@ -146,7 +147,7 @@ func withSoll(scene contractScene, current domain.TraegerStaffContract, input wo
 	targets := make([]domain.ContractTarget, 0, len(input.Sites))
 	named := make(map[domain.ContractSite]bool, len(input.Sites))
 	for _, site := range input.Sites {
-		contractSite := domain.ContractSite{SchoolID: site.SchoolID, StaffID: site.StaffID}
+		contractSite := domain.ContractSite{SchoolID: site.SchoolID.Int64(), StaffID: site.StaffID.Int64()}
 		if named[contractSite] {
 			return changed, nil, &domain.ContractError{Kind: domain.ErrContractInvalid, Field: "sites", Reason: "an Einsatzort is named twice"}
 		}
@@ -200,11 +201,11 @@ func (t *TraegerStaff) AddHolidayWeeks(ctx context.Context, actor workforce.Trae
 		if err != nil {
 			return contractWrite{}, err
 		}
-		site := domain.ContractSite{SchoolID: input.SchoolID, StaffID: input.StaffID}
+		site := domain.ContractSite{SchoolID: input.SchoolID.Int64(), StaffID: input.StaffID.Int64()}
 		if err := scene.rejectClosed("week_start", weeks[0].WeekStart, []domain.ContractSite{site}); err != nil {
 			return contractWrite{}, err
 		}
-		if err := rejectOwnWeeks(scene.ownWeeks[input.SchoolID], weeks); err != nil {
+		if err := rejectOwnWeeks(scene.ownWeeks[input.SchoolID.Int64()], weeks); err != nil {
 			return contractWrite{}, err
 		}
 		changed := current
@@ -231,7 +232,7 @@ func holidayWeeks(input workforce.TraegerHolidayWeeksInput) ([]domain.ContractHo
 	var weeks []domain.ContractHolidayWeek
 	for start := input.FromWeek; !start.After(input.ToWeek); start = start.AddDays(7) {
 		weeks = append(weeks, domain.ContractHolidayWeek{
-			ContractSite: domain.ContractSite{SchoolID: input.SchoolID, StaffID: input.StaffID}, WeekStart: start, WeekdayMinutes: input.WeekdayMinutes,
+			ContractSite: domain.ContractSite{SchoolID: input.SchoolID.Int64(), StaffID: input.StaffID.Int64()}, WeekStart: start, WeekdayMinutes: input.WeekdayMinutes,
 		})
 		if len(weeks) > maxHolidayWeeks {
 			return nil, &domain.ContractError{Kind: domain.ErrContractInvalid, Field: "to_week", Reason: fmt.Sprintf("at most %d weeks at once", maxHolidayWeeks)}
@@ -273,7 +274,7 @@ func (t *TraegerStaff) DeleteHolidayWeek(ctx context.Context, actor workforce.Tr
 		}
 		var found *domain.ContractHolidayWeek
 		for _, week := range current.HolidayWeeks {
-			if week.SchoolID == site.SchoolID && week.WeekStart == weekStart {
+			if ident.ID(week.SchoolID) == site.SchoolID && week.WeekStart == weekStart {
 				found = &week
 			}
 		}
@@ -285,7 +286,7 @@ func (t *TraegerStaff) DeleteHolidayWeek(ctx context.Context, actor workforce.Tr
 		}
 		return contractWrite{
 			apply: func(ctx context.Context) error {
-				_, err := t.store.DeleteContractHolidayWeek(ctx, actor.OrganizationID, contractID, site.SchoolID, weekStart)
+				_, err := t.store.DeleteContractHolidayWeek(ctx, actor.OrganizationID, contractID, site.SchoolID.Int64(), weekStart)
 				return err
 			},
 			changes: weekChanges(domain.StaffChangeRemoved, []domain.ContractHolidayWeek{*found}),

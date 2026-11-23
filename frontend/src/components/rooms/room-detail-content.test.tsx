@@ -35,6 +35,11 @@ function RoomDetailHarness({ roomId }: { readonly roomId: string }) {
 // loader states) rather than session/SSE plumbing.
 // ----------------------------------------------------------------------------
 
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
     data: { user: { token: "test-token" } },
@@ -137,9 +142,8 @@ vi.mock("~/lib/date-helpers", async (importOriginal) => ({
   formatDuration: (m: number) => `${m}m`,
 }));
 
-// Pull ROOM_HISTORY_STATUS_FEATURE_DISABLED (and any other future exports)
-// from the real module so a backend/frontend constant rename can't silently
-// desync the test. Only the formatting helpers need stubbing — keep them
+// Pull the real exports from the real module so a backend/frontend constant
+// rename can't silently desync the test. Only the formatting helpers need stubbing — keep them
 // deterministic so timeline cards render without hitting transitive imports.
 vi.mock("~/lib/room-helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("~/lib/room-helpers")>();
@@ -194,33 +198,39 @@ const notOk = (): FetchResponse => ({
 // ----------------------------------------------------------------------------
 
 describe("useRoomDetail (via harness)", () => {
-  it("maps a room with the bare-array history shape (aggregated sessions)", async () => {
+  it("maps a room and its aggregated sessions from the contract envelope", async () => {
     mockFetch
       .mockResolvedValueOnce(
         okJson({
-          id: 1001,
-          name: "Schmetterlingsraum",
-          building: "Hauptgebäude",
-          floor: 2,
-          category: "Gruppenraum",
-          is_occupied: true,
-          group_name: "Schildkröten",
-          supervisor_names: "Birgit Braun",
-          student_count: 4,
+          status: "success",
+          data: {
+            id: "1001",
+            name: "Schmetterlingsraum",
+            building: "Hauptgebäude",
+            floor: 2,
+            category: "Gruppenraum",
+            is_occupied: true,
+            group_name: "Schildkröten",
+            supervisor_names: "Birgit Braun",
+            student_count: 4,
+          },
         }),
       )
       .mockResolvedValueOnce(
-        okJson([
-          {
-            session_id: 7001,
-            started_at: "2026-04-30T08:00:00Z",
-            ended_at: "2026-04-30T09:00:00Z",
-            duration_minutes: 60,
-            activity_name: "Freispiel",
-            supervisor_name: "Birgit Braun",
-            student_count: 4,
-          },
-        ]),
+        okJson({
+          status: "success",
+          data: [
+            {
+              session_id: "7001",
+              started_at: "2026-04-30T08:00:00Z",
+              ended_at: "2026-04-30T09:00:00Z",
+              duration_minutes: 60,
+              activity_name: "Freispiel",
+              supervisor_name: "Birgit Braun",
+              student_count: 4,
+            },
+          ],
+        }),
       );
 
     render(
@@ -280,7 +290,9 @@ describe("useRoomDetail (via harness)", () => {
   it("hides history when the wrapper carries data:null (#1374 regression guard)", async () => {
     mockFetch
       .mockResolvedValueOnce(
-        okJson({ id: 3003, name: "Kleiner Raum", is_occupied: false }),
+        okJson({
+          data: { id: 3003, name: "Kleiner Raum", is_occupied: false },
+        }),
       )
       .mockResolvedValueOnce(
         okJson({
@@ -302,39 +314,43 @@ describe("useRoomDetail (via harness)", () => {
     expect(screen.queryByText("Belegungshistorie")).not.toBeInTheDocument();
   });
 
-  it("hides history deliberately when the tenant has gdpr.attendance_log_enabled = false", async () => {
-    // Issue #1425 follow-up: the proxy route translates the backend's 403
-    // into { status: "feature_disabled", data: [] }. The hook must surface
-    // historyDisabled so the section is hidden EXPLICITLY (not just
-    // because `data` happens to be empty). A future placeholder for the
-    // empty-history case must not accidentally render here.
+  it("hides history without an error when the backend refuses it with attendance.log_disabled", async () => {
+    // Through the catalog proxy the backend's own refusal arrives (#7563).
+    const body = { status: 403, code: "attendance.log_disabled" };
     mockFetch
       .mockResolvedValueOnce(
-        okJson({ id: 5005, name: "GDPR-Off Raum", is_occupied: false }),
-      )
-      .mockResolvedValueOnce(
         okJson({
-          status: "feature_disabled",
-          data: [],
+          data: { id: "5006", name: "Protokoll-aus Raum", is_occupied: false },
         }),
-      );
+      )
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+        json: async () => body,
+        text: async () => JSON.stringify(body),
+      });
 
     render(
       <Wrapper>
-        <RoomDetailHarness roomId="feature-disabled" />
+        <RoomDetailHarness roomId="history-code-disabled" />
       </Wrapper>,
     );
 
     await waitFor(() =>
-      expect(screen.getAllByText("GDPR-Off Raum")[0]).toBeInTheDocument(),
+      expect(screen.getAllByText("Protokoll-aus Raum")[0]).toBeInTheDocument(),
     );
     expect(screen.queryByText("Belegungshistorie")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        catalogText("general.permission", "die Belegungshistorie"),
+      ),
+    ).not.toBeInTheDocument();
   });
 
   it("shows an error when the history request fails", async () => {
     mockFetch
       .mockResolvedValueOnce(
-        okJson({ id: 4004, name: "Sporthalle", is_occupied: false }),
+        okJson({ data: { id: 4004, name: "Sporthalle", is_occupied: false } }),
       )
       .mockResolvedValueOnce(notOk());
 
@@ -394,24 +410,6 @@ describe("useRoomDetail (via harness)", () => {
     expect(
       screen.queryByText(catalogText("general.input", "die Raumseite")),
     ).not.toBeInTheDocument();
-  });
-
-  it("falls back through name → room_name → '' when name is missing", async () => {
-    mockFetch
-      .mockResolvedValueOnce(
-        okJson({ id: 5005, room_name: "Garten", is_occupied: false }),
-      )
-      .mockResolvedValueOnce(okJson([]));
-
-    render(
-      <Wrapper>
-        <RoomDetailHarness roomId="name-fallback" />
-      </Wrapper>,
-    );
-
-    await waitFor(() =>
-      expect(screen.getAllByText("Garten")[0]).toBeInTheDocument(),
-    );
   });
 });
 

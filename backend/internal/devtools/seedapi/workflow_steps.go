@@ -117,6 +117,29 @@ func (seedFamilyProtectionStep) Run(_ context.Context, rt *Runtime) error {
 	return nil
 }
 
+// seedRoomHistoryStopIndex is the demo child whose room history and mood are
+// stopped (#3844), so the child page shows the stop on every dev machine.
+const seedRoomHistoryStopIndex = 4
+
+type seedRoomHistoryStopStep struct{}
+
+func (seedRoomHistoryStopStep) Name() string { return "Seeding a room history stop" }
+
+func (seedRoomHistoryStopStep) Run(_ context.Context, rt *Runtime) error {
+	if rt.FixedSeeder == nil {
+		return fmt.Errorf("fixed seeder not available")
+	}
+	studentID, ok := rt.FixedSeeder.studentIDByIndex[seedRoomHistoryStopIndex]
+	if !ok {
+		return fmt.Errorf("room history stop demo student not available")
+	}
+	if _, err := rt.Client.Put(fmt.Sprintf("/api/students/%d/room-history-stop", studentID), nil); err != nil {
+		return fmt.Errorf("seed room history stop: %w", err)
+	}
+	fmt.Println("  1 room history stop set")
+	return nil
+}
+
 type buildStateStep struct {
 	seeder *Seeder
 }
@@ -223,7 +246,7 @@ func fullDemoWorkflow(seeder *Seeder) Workflow {
 		steps = append(steps, parentRequestsSeedStep{seeder: seeder}, seedEnrollmentPlacementStep{}, seedEnrollmentIncomeProofStep{}, seedEnrollmentSignatureStep{}, seedOfferingRosterStep{seeder: seeder}, seedBookingLeftoverStep{seeder: seeder}, seedFamilyAppAccountsStep{seeder: seeder})
 	}
 	steps = append(steps,
-		seedParentEngagementStep{}, seedParentCancellationNoticeStep{}, seedRoomChangeNoticeStep{}, seedAnalyticsConsentStep{}, seedSchoolLifeStep{},
+		seedParentEngagementStep{}, seedParentCancellationNoticeStep{}, seedRoomChangeNoticeStep{}, seedAnalyticsConsentStep{}, seedSchoolLifeStep{}, seedTodaysCalendarChangesStep{},
 		// After the parents: it orders lunch for the children they registered.
 		seedMealOrdersStep{seeder: seeder}, seedMealPlanChangeStep{}, seedEmailStopStep{},
 	)
@@ -265,7 +288,7 @@ func fullDemoWorkflow(seeder *Seeder) Workflow {
 	steps = append(append(steps, seedStaffPersonMergeStep{}, seedDemoNeighbourSchoolsStep{seeder: seeder}), traegerSteps(seeder)...)
 	if !seeder.options.DeferHistory {
 		// Erst jetzt sind alle Kinder der Schule angelegt (#5031).
-		steps = append(steps, seedPresenceHistoryStep{seeder: seeder}, seedFeedbackHistoryStep{seeder: seeder}, seedChildrenWithoutCarePlaceStep{}, seedChildQuotaStep{}, seedDeviceSlotsStep{}, seedBillingKeyDateCountsStep{})
+		steps = append(steps, seedPresenceHistoryStep{seeder: seeder}, seedFeedbackHistoryStep{seeder: seeder}, seedChildrenWithoutCarePlaceStep{}, seedChildQuotaStep{}, seedDeviceSlotsStep{}, seedBillingKeyDateCountsStep{seeder: seeder})
 	}
 	if seeder.options.SeedWeekProtocols {
 		steps = append(steps, seedWeekProtocolStep{})
@@ -301,7 +324,7 @@ func traegerSetupSteps(seeder *Seeder) []Step {
 // applications, then seed the Träger work that follows the billing in a
 // full seed. They follow the applications and the booked care.
 func traegerCareSteps(seeder *Seeder) []Step {
-	return traegerSerial(seedTraegerCareContractsStep{}, seedTraegerCareContractSignaturesStep{}, seedMealBillingStep{seeder: seeder}, seedTraegerCareMonthsStep{}, seedTraegerChildDebtorNumbersStep{}, seedTraegerCareLettersStep{}, seedParentSEPAMandateStep{}, seedTraegerDocumentsStep{}, seedTraegerBillingLettersStep{}, seedTraegerBillingReissueStep{}, seedTraegerBillingCreditStep{}, seedBelegRetentionStep{}, seedTraegerCareContractImportStep{}, seedHolidayClosuresStep{}, seedTestTraegerStep{})
+	return traegerSerial(seedTraegerCareContractsStep{}, seedTraegerCareContractSignaturesStep{}, seedMealBillingStep{seeder: seeder}, seedTraegerCareMonthsStep{}, seedTraegerChildDebtorNumbersStep{}, seedTraegerCareLettersStep{}, seedParentSEPAMandateStep{}, seedParentRoomHistoryStopStep{}, seedTraegerDocumentsStep{}, seedTraegerBillingLettersStep{}, seedTraegerBillingReissueStep{}, seedTraegerBillingCreditStep{}, seedBelegRetentionStep{}, seedTraegerCareContractImportStep{}, seedTraegerCareContractOfferingCorrectionStep{}, seedHolidayClosuresStep{}, seedTestTraegerStep{}, seedTraegerSchoolChangeStep{})
 }
 
 func appendPayrollRuleSteps(steps []Step, seeder *Seeder) []Step {
@@ -326,6 +349,12 @@ func deferredPastSteps() []Step {
 		// Nach der Historie und den Diensten der Woche: Die Krankmeldung
 		// sagt den Dienst ab und braucht die Sollzeiten der Historie.
 		seedTodaysAbsencesStep{},
+		// Nach den Ausfällen von heute: sagt einen Termin ab, nimmt eine
+		// Absage zurück und verlegt einen Termin für „Heute anders“ (#7662).
+		seedTodaysBlockChangesStep{},
+		// Nach den geänderten Terminen: eine Kraft fehlt bei einem Termin,
+		// einen anderen übernimmt eine Vertretung (#7675).
+		seedTodaysBlockStaffStep{},
 		seedDataAccessAuditStep{},
 		// Rührt weder an der Zeiterfassung noch am NFC-Block: legt nur
 		// vergangene Kurstermine samt Anwesenheit an (#2891).
@@ -362,7 +391,7 @@ func deferredDemoSteps(seeder *Seeder) []Step {
 		seedPresenceHistoryStep{seeder: seeder},
 		// The feedback the children gave on those days (#5029).
 		seedFeedbackHistoryStep{seeder: seeder},
-		seedChildrenWithoutCarePlaceStep{}, seedChildQuotaStep{}, seedDeviceSlotsStep{}, seedBillingKeyDateCountsStep{})
+		seedChildrenWithoutCarePlaceStep{}, seedChildQuotaStep{}, seedDeviceSlotsStep{}, seedBillingKeyDateCountsStep{seeder: seeder})
 }
 
 // fullDemoSetupSteps prepares the school before its history and parent flows.
@@ -377,13 +406,15 @@ func fullDemoSetupSteps(seeder *Seeder) []Step {
 		seedMasterDataStep{seeder: seeder},
 		seedPlanningDemoStep{},
 		seedStudentStatusVariantsStep{},
+		// Class trips of today for "Heute anders" (#7681).
+		seedDayChangesClassesStep{},
 		seedOperationsDemoStep{},
 		// Before the parents' invitations queue up in the outbox.
 		seedMealCatererInvitationStep{seeder: seeder},
 		seedShiftSeriesStep{},
 		// After the shift series: its autumn holiday period is the seeded
 		// autumn vacation (#5345).
-		seedSchoolVacationsStep{},
+		seedSchoolVacationsStep{seeder: seeder},
 		seedVisitorDayStep{},
 		seedHomeLayoutStep{},
 		seedStaffMasterDataStep{},
@@ -393,6 +424,7 @@ func fullDemoSetupSteps(seeder *Seeder) []Step {
 		seedPrivacyConsentsStep{},
 		seedAccidentReportsStep{},
 		seedFamilyProtectionStep{},
+		seedRoomHistoryStopStep{},
 		markStudentsSickStep{},
 		seedAnnouncementsStep{},
 		seedStaffMessagingStep{},
@@ -411,6 +443,9 @@ func fullDemoSetupSteps(seeder *Seeder) []Step {
 		// Nach den Live-Stempeln: deren sofortiges Ausstempeln wiche sonst vom
 		// geplanten Dienst ab und bräuchte eine Begründung.
 		seedTodaysShiftsStep{},
+		// Nach den Diensten der Woche: sagt einen davon für heute ab und
+		// lässt ihn teilweise vertreten („Heute anders“, #7661).
+		seedTodaysShiftChangesStep{},
 	}
 	// Die Produkt-Screenshots simulieren den ganzen Tag, der die Statistik
 	// füllt. Die Statistik-Sitzung stünde dort als Hausaufgaben-Block von

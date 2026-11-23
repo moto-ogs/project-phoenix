@@ -1,113 +1,52 @@
 // lib/activity-helpers.ts
 // Type definitions and helper functions for activities
 
-import { normalizeLocation } from "./location-helper";
+import type {
+  ActivityCategoryResponse,
+  ActivityResponse,
+  ActivityScheduleResponse,
+  ActivitySupervisorResponse,
+  EnrolledStudentResponse,
+} from "./contract/activities.generated";
 
-// Backend supervisor response type from API
-export interface BackendActivitySupervisor {
-  id: number;
-  staff_id: number;
-  is_primary: boolean;
-  first_name?: string;
-  last_name?: string;
-}
-
-// Backend types (from Go structs)
-export interface BackendActivity {
-  id: number;
-  name: string;
-  max_participants: number | null;
-  is_open: boolean;
-  category_id: number;
-  planned_room_id?: number;
-  supervisor_id?: number; // Primary supervisor from API
-  supervisor_ids?: number[]; // Array of supervisors from API
-  supervisors?: BackendActivitySupervisor[]; // Detailed supervisor info
-  enrollment_count?: number; // Number of enrolled students
-  created_at: string;
-  updated_at: string;
-  category?: BackendActivityCategory;
-  schedules?: BackendActivitySchedule[];
-}
-
-export interface BackendActivityCategory {
-  id: number;
-  name: string;
-  description?: string;
-  color?: string;
-  shift_type_id?: number;
-  is_system?: boolean;
-  archived_at?: string;
-  usage_count?: number;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface BackendActivitySchedule {
-  id: number;
-  weekday: number; // ISO 8601 integers 1-7 (1=Monday, 7=Sunday)
-  timeframe_id?: number;
-  activity_group_id: number;
-  created_at: string;
-  updated_at: string;
-}
-
-// Actual backend structure for enrolled students from /api/activities/{id}/students
-// Backend returns a simplified StudentResponse with id, first_name, last_name
-export interface BackendStudentEnrollment {
-  id: number; // This is the student ID
-  student_id?: number; // Backend doesn't actually return this field
-  activity_group_id?: number;
-  enrollment_date?: string;
-  attendance_status?: string;
-  created_at?: string;
-  updated_at?: string;
-  // Direct person fields (backend processed)
-  first_name?: string;
-  last_name?: string;
-  school_class?: string;
-  current_location?: string | null;
-  // Fallback: Flattened fields in case backend changes
-  student__school_class?: string;
-  student__current_location?: string | null;
-  person__first_name?: string;
-  person__last_name?: string;
-}
-
-// Frontend supervisor type
-export interface ActivitySupervisor {
-  id: string;
-  staff_id: string;
-  is_primary: boolean;
-  first_name?: string;
-  last_name?: string;
+/** A supervisor of an activity, with the name the lists show. */
+export type ActivitySupervisor = ActivitySupervisorResponse & {
   full_name?: string;
-}
+};
 
-// Frontend types
-export interface Activity {
-  id: string;
-  name: string;
-  max_participant: number | null;
-  is_open_ags: boolean;
+/**
+ * The activity as the browser holds it. The fields the screens and forms
+ * name differently from the contract (`max_participant`, `is_open_ags`,
+ * `ag_category_id`) are mapped once, in mapActivityResponse.
+ */
+export type Activity = Pick<
+  ActivityResponse,
+  "id" | "name" | "planned_room_id"
+> & {
+  max_participant: ActivityResponse["max_participants"];
+  is_open_ags: ActivityResponse["is_open"];
+  /** The primary supervisor's staff id, empty without one. */
   supervisor_id: string;
   supervisor_name?: string;
   supervisors?: ActivitySupervisor[];
-  ag_category_id: string;
+  ag_category_id: ActivityResponse["category_id"];
   category_name?: string;
-  planned_room_id?: string;
+  // Parsed instants.
   created_at: Date;
   updated_at: Date;
   participant_count?: number;
   times?: ActivitySchedule[];
-  students?: ActivityStudent[];
-}
+  /**
+   * The stored state of the detail read (ADR 0311); a save sends it back.
+   * The list carries none.
+   */
+  version?: string;
+};
 
-export interface ActivityCategory {
-  id: string;
-  name: string;
-  description?: string;
-  color?: string;
+export type ActivityCategory = Pick<
+  ActivityCategoryResponse,
+  "id" | "name" | "description" | "color"
+> & {
   /** Optional Dienstplan-Schichtart this category maps to (#1837 follow-up). */
   shiftTypeId?: string;
   /**
@@ -126,57 +65,38 @@ export interface ActivityCategory {
    * list endpoint reports it.
    */
   usageCount?: number;
+  // Parsed instants.
   created_at: Date;
   updated_at: Date;
-}
+};
 
-export interface ActivitySchedule {
-  id: string;
+type ActivitySchedule = Pick<
+  ActivityScheduleResponse,
+  "id" | "timeframe_id"
+> & {
+  /** The backend's activity_group_id. */
   activity_id: string;
+  /** The weekday number as text, as the forms hold it. */
   weekday: string;
-  timeframe_id?: string;
   created_at: Date;
   updated_at: Date;
-}
+};
 
-export interface Timeframe {
+/** A student enrolled in an activity, as the activity's roster lists them. */
+export interface ActivityParticipant {
   id: string;
   name: string;
-  start_time: string;
-  end_time: string;
-  description?: string;
-  display_name?: string;
 }
 
-export interface BackendTimeframe {
-  id: number;
-  name: string;
-  start_time: string;
-  end_time: string;
-  description?: string;
-  display_name?: string;
-}
-
-export interface ActivityStudent {
-  id: string;
-  activity_id: string;
-  student_id: string;
-  name?: string;
-  school_class?: string;
-  current_location: string;
-  created_at: Date;
-  updated_at: Date;
-}
-
-// Added: Frontend supervisor type
-interface Supervisor {
+/** A staff member offered as an activity supervisor. */
+export interface SupervisorOption {
   id: string;
   name: string;
 }
 
 // Helper function to map backend supervisor to frontend supervisor
 function mapActivitySupervisor(
-  supervisor: BackendActivitySupervisor,
+  supervisor: ActivitySupervisorResponse,
 ): ActivitySupervisor {
   const fullName =
     supervisor.first_name && supervisor.last_name
@@ -213,14 +133,13 @@ export function formatSupervisorList(
 }
 
 // Helper: Extract supervisor info from backend activity
-type SupervisorInfo = {
-  supervisor_id: string;
-  supervisor_name?: string;
-  supervisors?: ActivitySupervisor[];
-};
+type SupervisorInfo = Pick<
+  Activity,
+  "supervisor_id" | "supervisor_name" | "supervisors"
+>;
 
 function extractSupervisorInfo(
-  backendActivity: BackendActivity,
+  backendActivity: ActivityResponse,
 ): SupervisorInfo {
   // Has detailed supervisor array
   if (backendActivity.supervisors && backendActivity.supervisors.length > 0) {
@@ -256,7 +175,7 @@ function extractSupervisorInfo(
 
 // Helper: Map backend schedule to frontend ActivitySchedule
 function mapScheduleToTime(
-  schedule: BackendActivitySchedule,
+  schedule: ActivityScheduleResponse,
 ): ActivitySchedule {
   return {
     id: String(schedule.id),
@@ -286,7 +205,7 @@ export function isSystemActivity(
 
 // Mapping functions for backend to frontend types
 export function mapActivityResponse(
-  backendActivity: BackendActivity,
+  backendActivity: ActivityResponse,
 ): Activity {
   const supervisorInfo = extractSupervisorInfo(backendActivity);
 
@@ -303,16 +222,16 @@ export function mapActivityResponse(
     updated_at: new Date(backendActivity.updated_at),
     participant_count: backendActivity.enrollment_count ?? 0,
     times: backendActivity.schedules?.map(mapScheduleToTime) ?? [],
-    students: [],
     planned_room_id: backendActivity.planned_room_id
       ? String(backendActivity.planned_room_id)
       : undefined,
     category_name: backendActivity.category?.name,
+    version: backendActivity.version,
   };
 }
 
 export function mapActivityCategoryResponse(
-  backendCategory: BackendActivityCategory,
+  backendCategory: ActivityCategoryResponse,
 ): ActivityCategory {
   return {
     id: String(backendCategory.id),
@@ -332,83 +251,14 @@ export function mapActivityCategoryResponse(
   };
 }
 
-/**
- * Body the category proxy routes accept — mirrors the backend CategoryRequest
- * (#2131). is_system/archived_at are server-managed and deliberately absent.
- */
-export interface CategoryWriteRequest {
-  name: string;
-  description?: string;
-  color?: string;
-}
-
-/**
- * Narrows an incoming proxy body to the fields the backend accepts, so POST
- * and PUT can never drift apart or forward a server-managed field.
- */
-export function toCategoryWriteBody(
-  body: CategoryWriteRequest,
-): CategoryWriteRequest {
+/** The view of one enrolled student of GET /api/activities/{id}/students. */
+export function mapEnrolledStudentResponse(
+  student: EnrolledStudentResponse,
+): ActivityParticipant {
   return {
-    name: body.name,
-    description: body.description,
-    color: body.color,
+    id: student.id,
+    name: `${student.first_name} ${student.last_name}`.trim(),
   };
-}
-
-export function mapActivityScheduleResponse(
-  backendSchedule: BackendActivitySchedule,
-): ActivitySchedule {
-  return {
-    id: String(backendSchedule.id),
-    activity_id: String(backendSchedule.activity_group_id),
-    weekday: String(backendSchedule.weekday),
-    timeframe_id: backendSchedule.timeframe_id
-      ? String(backendSchedule.timeframe_id)
-      : undefined,
-    created_at: new Date(backendSchedule.created_at),
-    updated_at: new Date(backendSchedule.updated_at),
-  };
-}
-
-// Map enrolled students from backend enrollment structure
-export function mapStudentEnrollmentResponse(
-  enrollment: BackendStudentEnrollment,
-): ActivityStudent {
-  // Handle both direct and flattened person fields
-  const firstName =
-    enrollment.first_name ?? enrollment.person__first_name ?? "";
-  const lastName = enrollment.last_name ?? enrollment.person__last_name ?? "";
-  const fullName = `${firstName} ${lastName}`.trim() || "Unnamed Student";
-  const current_location = normalizeLocation(
-    enrollment.current_location ?? enrollment.student__current_location,
-  );
-
-  return {
-    id: String(enrollment.id),
-    activity_id: enrollment.activity_group_id
-      ? String(enrollment.activity_group_id)
-      : "",
-    // Backend returns 'id' as the student ID, not 'student_id'
-    student_id: String(enrollment.id),
-    name: fullName,
-    school_class:
-      enrollment.school_class ?? enrollment.student__school_class ?? "",
-    current_location,
-    created_at: enrollment.created_at
-      ? new Date(enrollment.created_at)
-      : new Date(),
-    updated_at: enrollment.updated_at
-      ? new Date(enrollment.updated_at)
-      : new Date(),
-  };
-}
-
-// Map an array of enrolled students
-export function mapStudentEnrollmentsResponse(
-  enrollments: BackendStudentEnrollment[],
-): ActivityStudent[] {
-  return enrollments.map(mapStudentEnrollmentResponse);
 }
 
 // Check if a user (staff member) is the creator of an activity
@@ -429,143 +279,20 @@ export function isActivityCreator(
   return creator?.staff_id === staffId;
 }
 
-// Helper: Safely extract ID from unknown object
-function extractIdFromUnknown(data: unknown): string {
-  if (!data || typeof data !== "object" || !("id" in data)) {
-    return "0";
-  }
-  const rawId = data.id;
-  if (rawId === undefined || rawId === null) {
-    return "0";
-  }
-  if (typeof rawId === "string" || typeof rawId === "number") {
-    return String(rawId);
-  }
-  return "0";
-}
-
-// Helper: Format first and last name safely
-function formatFullNameSafe(firstName: unknown, lastName: unknown): string {
-  const first = typeof firstName === "string" ? firstName : "";
-  const last = typeof lastName === "string" ? lastName : "";
-  return `${first} ${last}`.trim();
-}
-
-// Helper: Check if object has person property with names
-function hasPersonWithNames(
-  data: unknown,
-): data is { person: { first_name: unknown; last_name: unknown } } {
-  if (data == null || typeof data !== "object") {
-    return false;
-  }
-  const obj = data as { person?: unknown };
-  return (
-    "person" in obj &&
-    obj.person != null &&
-    typeof obj.person === "object" &&
-    "first_name" in obj.person &&
-    "last_name" in obj.person
-  );
-}
-
-// Helper: Check if object has direct first_name/last_name
-function hasDirectNames(
-  data: unknown,
-): data is { first_name: unknown; last_name: unknown } {
-  if (data == null || typeof data !== "object") {
-    return false;
-  }
-  const obj = data as { first_name?: unknown; last_name?: unknown };
-  return (
-    "first_name" in obj &&
-    "last_name" in obj &&
-    !!obj.first_name &&
-    !!obj.last_name
-  );
-}
-
-// Helper: Check if object has name property
-function hasNameProperty(data: unknown): data is { name: unknown } {
-  if (data == null || typeof data !== "object") {
-    return false;
-  }
-  const obj = data as { name?: unknown };
-  return "name" in obj && !!obj.name;
-}
-
-// Helper: Extract name from unknown supervisor data
-function extractSupervisorName(data: unknown, id: string): string {
-  if (hasPersonWithNames(data)) {
-    return formatFullNameSafe(data.person.first_name, data.person.last_name);
-  }
-  if (hasDirectNames(data)) {
-    return formatFullNameSafe(data.first_name, data.last_name);
-  }
-  if (hasNameProperty(data)) {
-    const name = data.name;
-    if (typeof name === "string") return name;
-    if (typeof name === "number") return String(name);
-    return "Unknown";
-  }
-  return `Supervisor ${id}`;
-}
-
-// Added: Map supervisor response
-export function mapSupervisorResponse(backendSupervisor: unknown): Supervisor {
-  if (!backendSupervisor) {
-    return { id: "0", name: "Unknown Supervisor" };
-  }
-
-  const id = extractIdFromUnknown(backendSupervisor);
-  const name = extractSupervisorName(backendSupervisor, id);
-
-  return { id, name };
-}
-
-// Map a timeframe from backend to frontend format
-export function mapTimeframeResponse(
-  backendTimeframe: BackendTimeframe,
-): Timeframe {
-  return {
-    id: String(backendTimeframe.id),
-    name: backendTimeframe.name,
-    start_time: backendTimeframe.start_time,
-    end_time: backendTimeframe.end_time,
-    description: backendTimeframe.description,
-    display_name: backendTimeframe.display_name,
-  };
-}
-
-// Request/Response types
-export interface CreateActivityRequest {
-  name: string;
-  max_participants: number | null;
-  is_open: boolean;
-  category_id: number;
-  planned_room_id?: number;
-  supervisor_ids?: number[];
-  schedules?: {
-    weekday: number;
-    timeframe_id?: number;
-  }[];
-}
-
-export interface UpdateActivityRequest {
-  name: string;
-  max_participants: number | null;
-  is_open: boolean;
-  category_id: number;
-  planned_room_id?: number;
-  supervisor_ids?: number[];
-  schedules?: {
-    weekday: number;
-    timeframe_id?: number;
-  }[];
+/**
+ * An available supervisor (`GET /api/activities/supervisors/available`) as a
+ * choice: the id is the staff id an activity write sends back.
+ */
+export function mapSupervisorOption(
+  supervisor: ActivitySupervisorResponse,
+): SupervisorOption {
+  const id = supervisor.id;
+  const name =
+    `${supervisor.first_name ?? ""} ${supervisor.last_name ?? ""}`.trim();
+  return { id, name: name || `Supervisor ${id}` };
 }
 
 // Added: Activity filter type
 export interface ActivityFilter {
-  search?: string;
   category_id?: string;
-  is_open_ags?: boolean;
 }

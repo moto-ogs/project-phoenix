@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // SEPA direct debit of the families (#4695, spec #4611 user stories 82, 84,
@@ -99,6 +100,10 @@ var (
 	// ErrSEPAMandateInForce reports a family that already has a mandate in
 	// force; it has to be revoked first.
 	ErrSEPAMandateInForce = errors.New("the family already has a SEPA mandate in force")
+	// ErrSEPAMandateContractDraft reports a mandate for a contract that is
+	// still a draft: discarding the draft would take the mandate with it
+	// (#7862).
+	ErrSEPAMandateContractDraft = errors.New("a SEPA mandate needs a contract that is no draft")
 	// ErrSEPAMandateReferenceTaken reports a reference the Träger already
 	// gave another mandate.
 	ErrSEPAMandateReferenceTaken = errors.New("the Träger already has a SEPA mandate with this reference")
@@ -122,6 +127,9 @@ type SEPACreditor struct {
 	PrenotificationDays int        `json:"prenotification_days"`
 	MissingMandate      string     `json:"missing_mandate"`
 	UpdatedAt           *time.Time `json:"updated_at"`
+	// Version is the read-state token of the creditor (ADR 0311): a change
+	// sends it back as expected_version.
+	Version string `json:"version"`
 }
 
 // DefaultSEPACreditor is the creditor of a Träger that set nothing.
@@ -136,8 +144,8 @@ func DefaultSEPACreditor() SEPACreditor {
 // the day of the last collection (#4697 sets it; FRST becomes RCUR, and 36
 // months without one end the mandate).
 type SEPAMandate struct {
-	ID              int64          `json:"id"`
-	ContractID      int64          `json:"contract_id"`
+	ID              ident.ID       `json:"id"`
+	ContractID      ident.ID       `json:"contract_id"`
 	FamilyEmail     string         `json:"family_email"`
 	PartyFirstName  string         `json:"party_first_name"`
 	PartyLastName   string         `json:"party_last_name"`
@@ -220,11 +228,11 @@ type SEPAMandateChange struct {
 // from where, which fields a change touched, who and when. It holds no
 // bank value. An imported creation also names its file and line.
 type SEPAMandateEvent struct {
-	ID         int64     `json:"id"`
+	ID         ident.ID  `json:"id"`
 	Action     string    `json:"action"`
 	Source     string    `json:"source"`
 	Fields     []string  `json:"fields"`
-	AccountID  *int64    `json:"account_id"`
+	AccountID  *ident.ID `json:"account_id"`
 	OccurredAt time.Time `json:"occurred_at"`
 	ImportFile string    `json:"import_file,omitempty"`
 	ImportLine int       `json:"import_line,omitempty"`
@@ -254,7 +262,7 @@ type SealedSEPAMandate struct {
 // with, as the release copies it onto the invoice and the pre-notification
 // prints it (ADR 0119 point 7).
 type InvoiceMandate struct {
-	MandateID    int64         `json:"mandate_id"`
+	MandateID    ident.ID      `json:"mandate_id"`
 	Reference    string        `json:"reference"`
 	SignedOn     calendar.Date `json:"signed_on"`
 	CreditorID   string        `json:"creditor_id"`
@@ -335,14 +343,14 @@ type SEPAMandates interface {
 	SEPACreditor(ctx context.Context, organizationID int64) (SEPACreditor, error)
 	// SaveSEPACreditor sets the creditor identifier, the pre-notification
 	// days and the choice for a direct debit without a mandate.
-	SaveSEPACreditor(ctx context.Context, reviewer HolidayReviewer, creditor SEPACreditor) (SEPACreditor, error)
+	// A creditor changed since expectedVersion is refused with
+	// readstate.ErrChanged (ADR 0311).
+	SaveSEPACreditor(ctx context.Context, reviewer HolidayReviewer, creditor SEPACreditor, expectedVersion string) (SEPACreditor, error)
 	// ListSEPAMandates lists the mandates, newest first; contractID > 0
 	// keeps those of the family of that contract.
 	ListSEPAMandates(ctx context.Context, reviewer HolidayReviewer, contractID int64) ([]SEPAMandate, error)
 	// CreateSEPAMandate stores the mandate of the family of a contract.
 	CreateSEPAMandate(ctx context.Context, reviewer HolidayReviewer, input SEPAMandateInput) (SEPAMandate, error)
-	// ChangeSEPAMandate changes the account of a mandate in force.
-	ChangeSEPAMandate(ctx context.Context, reviewer HolidayReviewer, id int64, change SEPAMandateChange) (SEPAMandate, error)
 	// RevokeSEPAMandate ends a mandate in force on the day the revocation
 	// arrived, at most today.
 	RevokeSEPAMandate(ctx context.Context, reviewer HolidayReviewer, id int64, revokedOn calendar.Date) (SEPAMandate, error)

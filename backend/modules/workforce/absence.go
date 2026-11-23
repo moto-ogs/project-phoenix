@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // MaxSickAbsenceRangeDays bounds the synchronous sick-report plan cascade.
@@ -94,13 +96,13 @@ func (e *ConflictError) Unwrap() error        { return e.Cause }
 // StaffAbsence is one absence record of a staff member. Calendar dates are in
 // DateLayout; instants are timestamps.
 type StaffAbsence struct {
-	ID          int64  `json:"id"`
-	TenantID    int64  `json:"tenant_id"`
-	StaffID     int64  `json:"staff_id"`
-	AbsenceType string `json:"absence_type"`
+	ID          ident.ID `json:"id"`
+	TenantID    ident.ID `json:"tenant_id"`
+	StaffID     ident.ID `json:"staff_id"`
+	AbsenceType string   `json:"absence_type"`
 	// AbsenceTypeID optionally names the absence with a school-defined
 	// Abwesenheitsart; nil means one of the five standard types.
-	AbsenceTypeID *int64 `json:"absence_type_id,omitempty"`
+	AbsenceTypeID *ident.ID `json:"absence_type_id,omitempty"`
 	// AbsenceTypeLabel is the school's own wording of that art, resolved on
 	// read; empty for the standard types.
 	AbsenceTypeLabel  string     `json:"absence_type_label,omitempty"`
@@ -111,13 +113,13 @@ type StaffAbsence struct {
 	EndHalfDay        bool       `json:"end_half_day"`
 	Note              string     `json:"note,omitempty"`
 	Status            string     `json:"status"`
-	ApprovedBy        *int64     `json:"approved_by,omitempty"`
+	ApprovedBy        *ident.ID  `json:"approved_by,omitempty"`
 	ApprovedAt        *time.Time `json:"approved_at,omitempty"`
-	CreatedBy         int64      `json:"created_by"`
+	CreatedBy         ident.ID   `json:"created_by"`
 	WorkingDays       *float64   `json:"working_days,omitempty"`
 	DecisionNote      string     `json:"decision_note,omitempty"`
 	RequestedAt       time.Time  `json:"requested_at"`
-	SubstituteStaffID *int64     `json:"substitute_staff_id,omitempty"`
+	SubstituteStaffID *ident.ID  `json:"substitute_staff_id,omitempty"`
 	CreatedAt         time.Time  `json:"created_at"`
 	UpdatedAt         time.Time  `json:"updated_at"`
 }
@@ -330,6 +332,9 @@ type AbsenceTypeAllowanceSummary struct {
 	// KeptByTraeger is true when the Träger keeps this account: a type of
 	// the Träger for a person with a Personalakte, over all schools (#4710).
 	KeptByTraeger bool
+	// Version is the token of the person's stored claim in Year; a change
+	// of the claim sends it back (ADR 0311).
+	Version string
 }
 
 // AbsenceTypeAllowanceAccount is one active school-defined type with an
@@ -391,6 +396,9 @@ type SetAbsenceTypeAllowance struct {
 	EntitledDays  float64
 	Reason        string
 	ChangedBy     int64
+	// ExpectedVersion is the Version of the summary the form showed; nil
+	// only for a write that showed no claim (the seeder).
+	ExpectedVersion *string
 }
 
 // AbsenceTypeAdministration is the capability the absence-type administration

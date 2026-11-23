@@ -79,9 +79,10 @@ type homeworkReport struct {
 		ID          string `json:"id"`
 		Subject     string `json:"subject"`
 		Description string `json:"description"`
+		Version     string `json:"version"`
 	} `json:"homework"`
 	Rows []struct {
-		StudentID int64 `json:"student_id"`
+		StudentID testpkg.ID `json:"student_id"`
 		Feedback  *struct {
 			Status string `json:"status"`
 			Note   string `json:"note"`
@@ -128,11 +129,23 @@ func TestHomeworkRoundTrip(t *testing.T) {
 	assert.Equal(t, "Seite 12, Nummer 3", report.Homework[0].Description)
 	assert.Empty(t, report.Homework[1].Subject, "the subject is optional")
 
-	rec := f.do(t, f.lehrkraft, http.MethodPut, "/homework/"+f.class+"/"+id, `{"subject":"Deutsch","description":"Diktat üben"}`, homeworkPermission)
+	read := report.Homework[0].Version
+	require.NotEmpty(t, read, "the class view answers each entry's version")
+	rec := f.do(t, f.lehrkraft, http.MethodPut, "/homework/"+f.class+"/"+id, `{"subject":"Deutsch","description":"Diktat üben","expected_version":"`+read+`"}`, homeworkPermission)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	report = f.report(t, f.lehrkraft, classDayReadPermission)
 	assert.False(t, report.CanWrite, "the verdict needs the permission")
 	assert.Equal(t, "Diktat üben", report.Homework[0].Description)
+
+	// ADR 0311: a change from the entry read before this one, or without a
+	// version, writes nothing.
+	for _, body := range []string{`{"description":"Überschrieben","expected_version":"` + read + `"}`, `{"description":"Überschrieben"}`} {
+		rec = f.do(t, f.lehrkraft, http.MethodPut, "/homework/"+f.class+"/"+id, body, homeworkPermission)
+		assert.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+		assert.Contains(t, rec.Body.String(), "general.changed_since_read")
+	}
+	report = f.report(t, f.lehrkraft, classDayReadPermission)
+	assert.Equal(t, "Diktat üben", report.Homework[0].Description, "a refused change writes nothing")
 
 	rec = f.do(t, f.lehrkraft, http.MethodDelete, "/homework/"+f.class+"/"+id, "", homeworkPermission)
 	require.Equal(t, http.StatusNoContent, rec.Code, rec.Body.String())
@@ -221,7 +234,7 @@ func TestHomeworkColleagueOfTheClass(t *testing.T) {
 	assert.True(t, report.CanWrite, "the colleague may write the class's homework")
 	require.Len(t, report.Homework, 1)
 
-	rec := f.do(t, f.colleague, http.MethodPut, "/homework/"+f.class+"/"+id, `{"subject":"Deutsch","description":"Diktat üben"}`, homeworkPermission)
+	rec := f.do(t, f.colleague, http.MethodPut, "/homework/"+f.class+"/"+id, `{"subject":"Deutsch","description":"Diktat üben","expected_version":"`+report.Homework[0].Version+`"}`, homeworkPermission)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	report = f.report(t, f.lehrkraft, classDayReadPermission)
 	require.Len(t, report.Homework, 1)
@@ -247,7 +260,7 @@ func TestHomeworkFeedbackShowsInTheClassView(t *testing.T) {
 	report := f.report(t, f.lehrkraft, classDayReadPermission)
 	var found bool
 	for _, row := range report.Rows {
-		if row.StudentID == f.child {
+		if int64(row.StudentID) == f.child {
 			found = true
 			require.NotNil(t, row.Feedback)
 			assert.Equal(t, "difficult", row.Feedback.Status)

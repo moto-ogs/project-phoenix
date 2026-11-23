@@ -15,6 +15,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	"github.com/moto-ogs/project-phoenix/modules/carecontract/internal/adapters/postgres"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -489,7 +490,7 @@ func TestFailedMailAndCorrectedResendWaitForActualProvision(t *testing.T) {
 	require.NoError(t, testpkg.WithinTraeger(f.ctx, f.org, func(ctx context.Context) error {
 		result, err := f.contracts.ResendContract(ctx, f.reviewer, f.contract, "corrected@example.org")
 		require.NoError(t, err)
-		require.Equal(t, []int64{f.contract}, result.Sent)
+		require.Equal(t, []ident.ID{ident.ID(f.contract)}, result.Sent)
 		return nil
 	}))
 	store, post := postgres.NewStore(calendar.TodayDate), &noticePost{}

@@ -234,7 +234,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.careContractAccessLog.RecordAccess",
-      "binding_digest": "e3a5ab16089f25206e886f1ebe44017c",
+      "binding_digest": "07778e3433c1ed2eab679634894c1fac",
       "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolAccessLog.RecordAccess",
       "source_owner": "care-contract",
       "target": "*github.com/moto-ogs/project-phoenix/modules/auditlog/compose.Command.Append",
@@ -242,7 +242,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.careContractAccessLog.RecordAccess",
-      "binding_digest": "6a37ed2b127e004f60e233501cbb59f5",
+      "binding_digest": "c5581edcc51b87c387cb53b5ae32ff65",
       "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolAccessLog.RecordAccess",
       "source_owner": "care-contract",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.AppendStore.Append",
@@ -250,7 +250,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.careContractAccessLog.RecordAccess",
-      "binding_digest": "811e556971435792964f8ac0489143f5",
+      "binding_digest": "3a9e2a2f893581303fb09ec2fc3c4845",
       "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolAccessLog.RecordAccess",
       "source_owner": "care-contract",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.Command.Append",
@@ -258,7 +258,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.careContractAccessLog.RecordAccess",
-      "binding_digest": "74554ee20080be193cc1a7dd6e979839",
+      "binding_digest": "3401bfa949fcdcf3e360402444127fe9",
       "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolAccessLog.RecordAccess",
       "source_owner": "care-contract",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DataAccessLogRepository.Create",
@@ -266,7 +266,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.careContractApplications.AcceptedApplications",
-      "binding_digest": "99aabd966f7c279ead02b2f2538d2f65",
+      "binding_digest": "788ce2ae294c72fa29f0b83832b431f1",
       "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolApplications.AcceptedApplications",
       "source_owner": "care-contract",
       "target": "github.com/moto-ogs/project-phoenix/modules/enrollment.ContractApplications.AcceptedContractApplications",
@@ -354,14 +354,6 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CareContractChangeRequests.PendingChanges",
-      "binding_digest": "eb906ad15b712121c9566937a8a706b2",
-      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolChangeRequests.PendingChanges",
-      "source_owner": "care-contract",
-      "target": "github.com/moto-ogs/project-phoenix/modules/careplan.ParentRequestVersion",
-      "target_owner": "care-plan"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CareContractChangeRequests.PendingChanges",
       "binding_digest": "f10e433ce84e00950bb871871f3eca43",
       "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolChangeRequests.PendingChanges",
       "source_owner": "care-contract",
@@ -375,6 +367,14 @@
       "source_owner": "care-contract",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveString",
       "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.careContractSchoolChildren.SchoolChildren",
+      "binding_digest": "6e096348e7d2dcb85b23e222082fae25",
+      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolChildren.SchoolChildren",
+      "source_owner": "care-contract",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentRecordIdentities.StudentRecordIdentities",
+      "target_owner": "people-directory"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.careContractSchoolHolidays.SchoolHolidayDates",
@@ -465,8 +465,24 @@
       "target_owner": "identity-access"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/api.careContractApplications.AcceptedStudentApplications",
+      "binding_digest": "eea675514a6ffa90ff7fb71b82a90a6d",
+      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.StudentApplications.AcceptedStudentApplications",
+      "source_owner": "care-contract",
+      "target": "github.com/moto-ogs/project-phoenix/modules/enrollment.ContractApplications.AcceptedStudentApplications",
+      "target_owner": "enrollment"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.careContractApplications.NamePhases",
+      "binding_digest": "cbe1c8acdaed3984806d370b0ec3da72",
+      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.StudentApplications.NamePhases",
+      "source_owner": "care-contract",
+      "target": "github.com/moto-ogs/project-phoenix/modules/enrollment.ContractApplications.ContractPhases",
+      "target_owner": "enrollment"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.careContractTraeger.ActiveTraegerIDs",
-      "binding_digest": "f07cb6a9eb49dc51c63531af8920c6d8",
+      "binding_digest": "2e15fb2a101c101505011861d3a5d486",
       "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.TraegerOrganizations.ActiveTraegerIDs",
       "source_owner": "care-contract",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.ListOrganizations",
@@ -474,7 +490,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.careContractTraeger.ActiveTraegerIDs",
-      "binding_digest": "15aaf3bca36bf448936a981535b10dd4",
+      "binding_digest": "efc6249e84de604db1a384071e256b3a",
       "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.TraegerOrganizations.ActiveTraegerIDs",
       "source_owner": "care-contract",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.ListOrganizations",
@@ -482,7 +498,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.careContractSchools.TraegerSchools",
-      "binding_digest": "2f82bb7b68d86a13cd7a2f415381e2a0",
+      "binding_digest": "7519878fd4963492ed520b35a6e684b5",
       "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.TraegerSchools.TraegerSchools",
       "source_owner": "care-contract",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.ListSchoolsByOrganization",
@@ -490,7 +506,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.careContractSchools.TraegerSchools",
-      "binding_digest": "6f8d20bdbd9cea6afb5d9e965015d65a",
+      "binding_digest": "90a10970287dfafb1bda6e90ca017b49",
       "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.TraegerSchools.TraegerSchools",
       "source_owner": "care-contract",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.ListSchoolsByOrganization",
@@ -498,7 +514,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.careContractSchools.TraegerSchools",
-      "binding_digest": "c64697fbc24f71f22199ae4f3d4dfef2",
+      "binding_digest": "ee5f5a4394ee278d4144b822b26b95c5",
       "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.TraegerSchools.TraegerSchools",
       "source_owner": "care-contract",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.School.IsDeleted",
@@ -527,6 +543,46 @@
       "source_owner": "care-contract",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.TraegerMasterData.DocumentContact",
       "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.applicationContractAccessLog.RecordApplicationContractAccess",
+      "binding_digest": "baa6c9b2e8386e33a7d13a8cbbac749b",
+      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract/http.ApplicationContractAccessLog.RecordApplicationContractAccess",
+      "source_owner": "care-contract",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/auditlog/compose.Command.Append",
+      "target_owner": "audit-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.applicationContractAccessLog.RecordApplicationContractAccess",
+      "binding_digest": "6f9a80e520a90bbd0f933751344558f4",
+      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract/http.ApplicationContractAccessLog.RecordApplicationContractAccess",
+      "source_owner": "care-contract",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.AppendStore.Append",
+      "target_owner": "audit-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.applicationContractAccessLog.RecordApplicationContractAccess",
+      "binding_digest": "74433fe77792564bbd0e8fbc458d7b08",
+      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract/http.ApplicationContractAccessLog.RecordApplicationContractAccess",
+      "source_owner": "care-contract",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.Command.Append",
+      "target_owner": "audit-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.applicationContractAccessLog.RecordApplicationContractAccess",
+      "binding_digest": "7ae9cb48d011fdd0965244419e063da4",
+      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract/http.ApplicationContractAccessLog.RecordApplicationContractAccess",
+      "source_owner": "care-contract",
+      "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.DataAccessLogRepository.Create",
+      "target_owner": "audit-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.applicationContractAccessLog.RecordApplicationContractAccess",
+      "binding_digest": "acfbcfa8c151065db4c50d17886a99c2",
+      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract/http.ApplicationContractAccessLog.RecordApplicationContractAccess",
+      "source_owner": "care-contract",
+      "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken.ClaimsFromCtx",
+      "target_owner": "identity-access"
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/documentrendering/internal/application/listrenderer.RendererService.CombineLetters",

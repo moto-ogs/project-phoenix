@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -374,7 +375,7 @@ func TestRoomPlan_TriesTheBlockRoomFirstThenTheSessionsInTurn(t *testing.T) {
 	t.Parallel()
 
 	plan := newRoomPlan()
-	plan.openBlock(dayBlock{RoomID: 8, StudentIDs: []int64{1}})
+	plan.openBlock(dayBlock{RoomID: 8, StudentIDs: []ident.ID{1}})
 	plan.openSession(6, "d1")
 	plan.openSession(7, "d2")
 
@@ -387,7 +388,7 @@ func TestRoomPlan_TriesTheBlockRoomFirstThenTheSessionsInTurn(t *testing.T) {
 	plan.openBlock(dayBlock{RoomID: 9})
 	assert.True(t, plan.isOpen(9), "a block without a roster still holds its room")
 
-	plan.closeBlock(dayBlock{RoomID: 8, StudentIDs: []int64{1}})
+	plan.closeBlock(dayBlock{RoomID: 8, StudentIDs: []ident.ID{1}})
 	assert.False(t, plan.isOpen(8))
 }
 

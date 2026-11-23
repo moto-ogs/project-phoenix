@@ -103,11 +103,8 @@ type CaregiverProfiles interface {
 // Statements use the caller's connection and scope; application flows own locking and transactions.
 type PermissionStore interface {
 	DeleteRolePermissions(ctx context.Context, roleID int64) error
-	CreatePermission(ctx context.Context, permission domain.ManagedPermission) (domain.ManagedPermission, error)
 	FindPermission(ctx context.Context, id int64) (domain.ManagedPermission, bool, error)
 	FindPermissionByName(ctx context.Context, name string) (domain.ManagedPermission, error)
-	UpdatePermission(ctx context.Context, permission domain.ManagedPermission) error
-	DeletePermission(ctx context.Context, id int64) error
 	ListPermissions(ctx context.Context, filter domain.PermissionFilter) ([]domain.ManagedPermission, error)
 	ListRolePermissions(ctx context.Context, roleID int64) ([]domain.ManagedPermission, error)
 	// ListVisibleRolePermissions reports found=false when the role is not
@@ -117,7 +114,6 @@ type PermissionStore interface {
 	// AssignRolePermissions skips listed permissions the catalog no longer holds.
 	AssignRolePermissions(ctx context.Context, roleID int64, permissionIDs []int64) error
 	RemoveRolePermission(ctx context.Context, roleID, permissionID int64) error
-	DeletePermissionAssignments(ctx context.Context, permissionID int64) error
 }
 
 // ManageableAccounts applies the account administration's visibility rules.

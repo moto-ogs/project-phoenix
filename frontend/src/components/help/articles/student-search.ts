@@ -95,6 +95,21 @@ export function studentSearchTopic(
         ],
       },
       {
+        // #3844: Stopp je Kind, gesetzt und aufgehoben von der OGS-Verwaltung
+        // (config:manage) im Bereich `Historien`.
+        title: "Raumverlauf und Stimmung für ein Kind stoppen",
+        description: "Das kann nur die OGS-Verwaltung.",
+        steps: [
+          "Öffne beim Kind `Historie`.",
+          "Wähle bei `Historien` den Knopf `Stopp setzen`.",
+          "Gib zur Bestätigung `LÖSCHEN` ein. Wähle dann `Stoppen und löschen`.",
+          "moto löscht den bisherigen Raumverlauf des Kindes sofort.",
+          "Danach speichert moto für das Kind keine Räume und keine Stimmung mehr. Am Tablet fragt moto das Kind nicht nach seiner Stimmung.",
+          "Der aktuelle Raum bleibt für die Betreuung sichtbar. Frühere Stimmungen bleiben bis zum Ende ihrer Frist gespeichert.",
+          "Mit `Stopp aufheben` speichert moto ab jetzt wieder. Gelöschtes kommt nicht zurück.",
+        ],
+      },
+      {
         // #3834: derselbe Umschalter steht auch in `Gruppen` und in der
         // aktuellen Aufsicht, auch auf dem Handy.
         title: "Als Liste ansehen",
@@ -103,7 +118,7 @@ export function studentSearchTopic(
         steps: [
           "Wähle oben rechts das Listensymbol (drei Striche). Mit dem Kachelsymbol (vier Kästchen) kommen die Karten zurück.",
           "Spalten ein- oder ausblenden? Öffne oben rechts das Menü mit den drei Punkten. Wähle unter `Spalten in der Liste` die Spalten.",
-          "Auf dem Handy zeigt die Liste je Kind eine Zeile. Was unter dem Namen steht, wählst du im Menü mit den drei Punkten unter `In der Zeile zeigen`, zum Beispiel `Gehzeit` oder `Gruppe`.",
+          "Auf dem Handy zeigt die Liste je Kind eine Zeile. Was unter dem Namen steht, wählst du im Menü mit den drei Punkten unter `In der Zeile zeigen`, zum Beispiel `Gehzeit` oder `Gruppe`. Die übrigen Angaben siehst du mit dem Pfeil rechts in der Zeile.",
           "Kreuze links in der Zeile Kinder an. Oben erscheint eine Leiste mit `Exportieren`, `Anmelden` und `Abmelden`.",
           "Wähle `Aufheben`, um alle Kreuze zu entfernen.",
         ],
@@ -112,14 +127,14 @@ export function studentSearchTopic(
         // #6954: der Filter steht im Filterfeld unter `Anmeldung`, nur mit
         // Zugriff auf die Angaben der Kinderakte und nur bei eigenen Fragen
         // der Online-Anmeldung. Freitext, Zahl und Datum: `Angabe vorhanden`
-        // (#7012).
+        // (#7012). Die Zahl folgt den übrigen Filtern der Liste (#7645).
         title: "Nach Angaben aus der Anmeldung filtern",
         steps: [
           "Wähle rechts neben der Suche das Filtersymbol.",
           "Wähle unter `Anmeldung` bei `Angabe aus der Anmeldung` eine Antwort, zum Beispiel eine Frage mit `Ja`.",
           "Bei Fragen mit freiem Text, Zahl oder Datum wählst du `Angabe vorhanden`. Dann siehst du alle Kinder, bei denen die Eltern etwas eingetragen haben. Auch „keine“ zählt als Angabe.",
           "Haben die Eltern nur wenige verschiedene Antworten gegeben, steht jede Antwort darunter, zum Beispiel `keine`. So siehst du, wie viele Kinder welche Antwort haben.",
-          "Die Zahl in Klammern nennt, wie viele Kinder die Liste dann zeigt. Kinder, die die Schule verlassen haben, zählen nicht.",
+          "Die Zahl in Klammern nennt, wie viele Kinder die Liste mit dieser Antwort zeigt. Deine anderen Filter zählen mit, zum Beispiel Gruppe, Klasse oder Anwesenheit. Kinder, die die Schule verlassen haben, zählen nicht.",
           "`Alle Angaben` hebt den Filter wieder auf.",
         ],
       },

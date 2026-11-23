@@ -69,6 +69,79 @@ describe("forwardBackendResponse", () => {
     expect(body).not.toContain("refused the connection");
   });
 
+  // The saved part of an import whose later batch failed is written for the
+  // person who imported (#3184); its detail text stays on the server.
+  it("keeps the details of a failed import batch, not its diagnostics", async () => {
+    const errors = [
+      "creation_failed",
+      "update_failed",
+      "duplicate_check_failed",
+      "existing_lookup_failed",
+      "rfid_lookup_failed",
+      "role_lookup_failed",
+      "opening_preflight_failed",
+      "vacation_opening_preflight_failed",
+    ].map((code, index) => ({
+      row_number: index + 4,
+      data: { first_name: "Ada", last_name: "Test" },
+      errors: [
+        {
+          field: "write",
+          code,
+          severity: "error",
+          message: "database db.internal: constraint failed",
+        },
+      ],
+    }));
+    const result = {
+      total_rows: errors.length + 3,
+      created_count: 2,
+      updated_count: 1,
+      error_count: errors.length,
+      errors,
+    };
+    const response = forwardBackendResponse(
+      new Response(
+        JSON.stringify({
+          type: "about:blank",
+          title: "Internal Server Error",
+          status: 500,
+          detail: "batch 2 failed at db.internal",
+          code: "import.import_batch_failed",
+          details: { result },
+        }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/problem+json" },
+        },
+      ),
+    );
+
+    const body = await response.text();
+    expect(JSON.parse(body)).toMatchObject({
+      status: 500,
+      detail: "Internal Server Error",
+      code: "import.import_batch_failed",
+      details: {
+        result: {
+          ...result,
+          errors: errors.map((row) => ({
+            ...row,
+            errors: [
+              {
+                ...row.errors[0],
+                message: expect.stringMatching(
+                  /^Die (?:Zeile|Karte|Rolle|Übernahme) konnte nicht/,
+                ),
+              },
+            ],
+          })),
+        },
+      },
+    });
+    expect(body).not.toContain("db.internal");
+  });
+
   it("adds the request ID to a sanitized backend error", async () => {
     const response = forwardBackendResponse(
       new Response("upstream diagnostics", { status: 502 }),

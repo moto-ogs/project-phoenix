@@ -35,7 +35,7 @@ func (rs *DocumentsResource) export(w http.ResponseWriter, r *http.Request) {
 	}
 	names := make(map[int64]string, len(schools))
 	for _, school := range schools {
-		names[school.ID] = school.Name
+		names[school.ID.Int64()] = school.Name
 	}
 	rows := make([][]string, 0, len(documents))
 	for _, document := range documents {
@@ -66,7 +66,7 @@ func (rs *DocumentsResource) export(w http.ResponseWriter, r *http.Request) {
 func releaseAudience(release organizationtenancy.TraegerDocumentRelease, names map[int64]string) string {
 	school := ""
 	if release.SchoolID != nil {
-		school = names[*release.SchoolID]
+		school = names[(*release.SchoolID).Int64()]
 		if school == "" {
 			school = "eine Schule"
 		}

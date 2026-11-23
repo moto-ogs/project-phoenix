@@ -13,6 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -166,7 +167,7 @@ func planExportPlannedShift(id, staffID int64, date calendar.Date) workforce.Pla
 
 func planExportScheduledBlock(id int64, date calendar.Date, title, status string) *timetable.ScheduledInstance {
 	return &timetable.ScheduledInstance{
-		ID: id, Date: date, Title: title, StartTime: planExportClock(12, 0), EndTime: planExportClock(13, 0), RoomID: 3, Status: status,
+		ID: ident.ID(id), Date: date, Title: title, StartTime: planExportClock(12, 0), EndTime: planExportClock(13, 0), RoomID: 3, Status: status,
 	}
 }
 
@@ -231,7 +232,7 @@ func TestPlanExportInstancesMapCancellationFromStatus(t *testing.T) {
 	cancelled.CancelReason = planExportPtr("Personalmangel")
 	cancelled.Notes = planExportPtr("Ersatz")
 	cancelled.UnderstaffedNote = planExportPtr("eine Kraft fehlt")
-	cancelled.ActivityGroupID = planExportPtr[int64](41)
+	cancelled.ActivityGroupID = (*ident.ID)(planExportPtr[int64](41))
 	// A block whose session ran keeps its session state in the status; it
 	// still prints as an ordinary block.
 	completed := planExportScheduledBlock(12, planExportMonday.AddDays(1), "Lernzeit", "completed")
@@ -324,7 +325,7 @@ func TestNewRendersTheBetreuungsplanOverOwnerRecords(t *testing.T) {
 	t.Parallel()
 
 	block := planExportScheduledBlock(11, planExportMonday, "Mensa", timetable.InstanceStatusPlanned)
-	block.ActivityGroupID = planExportPtr[int64](5)
+	block.ActivityGroupID = (*ident.ID)(planExportPtr[int64](5))
 	renderer := &planExportCaptureRenderer{}
 	service := newPlanExport(planExportSources{Now: func() time.Time { return time.Date(2026, time.November, 2, 9, 0, 0, 0, time.UTC) },
 		Overview:       &planExportFakeOverview{},

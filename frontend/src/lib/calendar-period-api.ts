@@ -1,13 +1,10 @@
-import { apiErrorFromBody, transportFetch } from "./api-error";
-// Calendar period API client. Talks to the Next.js proxy at
-// /api/timetable/periods, which forwards to the Go backend
-// /api/timetable/periods (CRUD via SchedulesRead/Create/Update/Delete).
-
+// Calendar period API client: the tenant routes under /api/timetable/periods
+// (CRUD via SchedulesRead/Create/Update/Delete).
+import { bffJson } from "./bff-fetch";
+import type * as timetableContract from "./contract/timetable.generated";
 import { createLogger } from "~/lib/logger";
 import {
-  type BackendCalendarPeriod,
   type CalendarPeriod,
-  type CalendarPeriodInput,
   type CalendarPeriodSaveResult,
   mapPeriod,
   mapPeriods,
@@ -16,48 +13,17 @@ import {
 
 const logger = createLogger({ component: "CalendarPeriodApi" });
 
-interface ApiEnvelope<T> {
-  status?: string;
-  message?: string;
-  data: T;
-}
-
-async function unwrap<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    throw apiErrorFromBody(
-      `Anfrage fehlgeschlagen (HTTP ${response.status})`,
-      response.status,
-      await response.json().catch(() => undefined),
-    );
-  }
-
-  if (response.status === 204) {
-    return undefined as T;
-  }
-
-  const envelope = (await response.json()) as ApiEnvelope<T>;
-  return envelope.data;
-}
-
 class CalendarPeriodService {
   async list(): Promise<CalendarPeriod[]> {
-    const response = await transportFetch("/api/timetable/periods", {
-      method: "GET",
-      headers: { Accept: "application/json" },
-      credentials: "include",
-    });
-    const raw = await unwrap<BackendCalendarPeriod[]>(response);
-    return mapPeriods(raw ?? []);
+    return mapPeriods(await bffJson("tenant", "GET /api/timetable/periods/"));
   }
 
   async get(id: string): Promise<CalendarPeriod> {
-    const response = await transportFetch(`/api/timetable/periods/${id}`, {
-      method: "GET",
-      headers: { Accept: "application/json" },
-      credentials: "include",
-    });
-    const raw = await unwrap<BackendCalendarPeriod>(response);
-    return mapPeriod(raw);
+    return mapPeriod(
+      await bffJson("tenant", "GET /api/timetable/periods/{id}", {
+        params: { id },
+      }),
+    );
   }
 
   /**
@@ -67,19 +33,10 @@ class CalendarPeriodService {
    * this call.
    */
   async bootstrap(): Promise<{ periods: CalendarPeriod[]; created: boolean }> {
-    const response = await transportFetch("/api/timetable/periods/bootstrap", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      credentials: "include",
-      body: JSON.stringify({}),
-    });
-    const raw = await unwrap<{
-      periods: BackendCalendarPeriod[];
-      created: boolean;
-    }>(response);
+    const raw = await bffJson(
+      "tenant",
+      "POST /api/timetable/periods/bootstrap",
+    );
     logger.info("periods_bootstrapped", {
       period_count: (raw.periods ?? []).length,
       created: raw.created,
@@ -90,17 +47,12 @@ class CalendarPeriodService {
     };
   }
 
-  async create(body: CalendarPeriodInput): Promise<CalendarPeriodSaveResult> {
-    const response = await transportFetch("/api/timetable/periods", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      credentials: "include",
-      body: JSON.stringify(body),
+  async create(
+    body: timetableContract.CalendarPeriodRequest,
+  ): Promise<CalendarPeriodSaveResult> {
+    const raw = await bffJson("tenant", "POST /api/timetable/periods/", {
+      body,
     });
-    const raw = await unwrap<BackendCalendarPeriod>(response);
     logger.info("period_created", {
       period_id: raw.id,
       period_type: raw.period_type,
@@ -111,18 +63,12 @@ class CalendarPeriodService {
 
   async update(
     id: string,
-    body: CalendarPeriodInput,
+    body: timetableContract.CalendarPeriodRequest,
   ): Promise<CalendarPeriodSaveResult> {
-    const response = await transportFetch(`/api/timetable/periods/${id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      credentials: "include",
-      body: JSON.stringify(body),
+    const raw = await bffJson("tenant", "PUT /api/timetable/periods/{id}", {
+      params: { id },
+      body,
     });
-    const raw = await unwrap<BackendCalendarPeriod>(response);
     logger.info("period_updated", {
       period_id: raw.id,
       warning_count: (raw.warnings ?? []).length,
@@ -131,18 +77,9 @@ class CalendarPeriodService {
   }
 
   async delete(id: string): Promise<void> {
-    const response = await transportFetch(`/api/timetable/periods/${id}`, {
-      method: "DELETE",
-      headers: { Accept: "application/json" },
-      credentials: "include",
+    await bffJson("tenant", "DELETE /api/timetable/periods/{id}", {
+      params: { id },
     });
-    if (!response.ok && response.status !== 204) {
-      throw apiErrorFromBody(
-        `Anfrage fehlgeschlagen (HTTP ${response.status})`,
-        response.status,
-        await response.json().catch(() => undefined),
-      );
-    }
     logger.info("period_deleted", { period_id: id });
   }
 }

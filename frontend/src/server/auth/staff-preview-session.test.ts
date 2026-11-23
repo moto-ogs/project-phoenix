@@ -13,7 +13,6 @@ const authConfig = createPortalAuthConfig(PORTALS.tenant);
 vi.mock("~/env", () => ({
   env: {
     API_URL: "http://server:8080",
-    NEXT_PUBLIC_API_URL: "http://localhost:8080",
     AUTH_JWT_EXPIRY: "15m",
     AUTH_JWT_REFRESH_EXPIRY: "1h",
     NEXTAUTH_SECRET: "test-auth-secret-with-sufficient-entropy",
@@ -311,6 +310,7 @@ describe("JWT callback — staff preview (#2893)", () => {
         Promise.resolve({
           access_token: remintedJwt,
           expires_in: 900,
+          target_account_id: "42",
           target_name: "Erika Beispiel",
         }),
     });
@@ -358,6 +358,7 @@ describe("JWT callback — staff preview (#2893)", () => {
           Promise.resolve({
             access_token: previewJwt(),
             expires_in: 900,
+            target_account_id: "42",
             target_name: "Erika Beispiel",
           }),
       });
@@ -385,13 +386,9 @@ describe("JWT callback — staff preview (#2893)", () => {
     started.tokenExpiry = Date.now() + 60 * 1000;
     const previewAccess = started.token;
 
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      status: 403,
-      json: () => Promise.resolve({}),
-    });
+    mockFetch.mockResolvedValueOnce(new Response(null, { status: 403 }));
     // the automatic ending records itself just like a clicked one
-    mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
+    mockFetch.mockResolvedValueOnce(new Response(null, { status: 204 }));
 
     const result = (await callJwt(started)) as unknown as Record<
       string,
@@ -421,11 +418,7 @@ describe("JWT callback — staff preview (#2893)", () => {
     const started = await startPreview(token);
     started.tokenExpiry = Date.now() + 60 * 1000;
 
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      status: 403,
-      json: () => Promise.resolve({}),
-    });
+    mockFetch.mockResolvedValueOnce(new Response(null, { status: 403 }));
     mockFetch.mockRejectedValueOnce(new Error("audit endpoint down"));
 
     const result = (await callJwt(started)) as unknown as Record<
@@ -445,8 +438,8 @@ describe("JWT callback — staff preview (#2893)", () => {
     started.tokenExpiry = Date.now() + 60 * 1000;
     started.previewAdminTokenExpiry = Date.now() - 1000;
 
-    mockFetch.mockResolvedValueOnce({ ok: false, status: 401 });
-    mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
+    mockFetch.mockResolvedValueOnce(new Response(null, { status: 401 }));
+    mockFetch.mockResolvedValueOnce(new Response(null, { status: 204 }));
 
     const result = (await callJwt(started)) as unknown as Record<
       string,
@@ -469,7 +462,7 @@ describe("JWT callback — staff preview (#2893)", () => {
     const previewAccess = started.token as string;
     started.refreshTokenExpiry = Date.now() - 1000;
 
-    mockFetch.mockResolvedValueOnce({ ok: true, status: 200 });
+    mockFetch.mockResolvedValueOnce(new Response(null, { status: 204 }));
 
     const result = (await callJwt(started)) as unknown as Record<
       string,

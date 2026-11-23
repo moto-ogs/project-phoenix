@@ -10,7 +10,10 @@ import { CheckboxCard } from "~/components/ui/checkbox-card";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { EditActions } from "~/components/ui/edit-actions";
 import { FieldLabel } from "~/components/ui/field-label";
-import { FormErrorAlert } from "~/components/ui/form-error-alert";
+import {
+  FormErrorAlert,
+  LoadErrorAlert,
+} from "~/components/ui/form-error-alert";
 import { FormFieldset } from "~/components/ui/form-fieldset";
 import { Input } from "~/components/ui/input";
 import { SectionCard } from "~/components/ui/section-card";
@@ -24,7 +27,9 @@ import {
   type CareSelectionRule,
   type DaysOfWeekMode,
 } from "~/lib/care-offering-api";
+import { useReadDraftLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import { type DraftSource, useDraftOn } from "~/lib/swr/read-draft";
 import type { CareWeekday } from "~/lib/traeger-care-billing-api";
 import type {
   TraegerCarePrice,
@@ -239,22 +244,53 @@ export function offeringDraftFromForm(form: OfferingFormDraft): {
   };
 }
 
+/** No offering to change: the form creates one and sends no version. */
+const NEW_OFFERING: DraftSource<TraegerOffering> = {
+  opening: null,
+  data: undefined,
+  reload: () => Promise.resolve(undefined),
+};
+
 export function CatalogOfferingForm({
-  offering,
+  source,
   saveLabel,
   onSave,
   onSaved,
   onCancel,
 }: Readonly<{
-  offering?: TraegerOffering;
+  /**
+   * The read of the offering to change; without it the form creates one.
+   * The draft rests on the version read when editing starts (ADR 0311).
+   */
+  source?: DraftSource<TraegerOffering>;
   saveLabel: string;
-  onSave: (draft: TraegerOfferingDraft) => Promise<TraegerOffering>;
+  /** Saves the draft; an edit sends the version it rests on. */
+  onSave: (
+    draft: TraegerOfferingDraft,
+    version?: string,
+  ) => Promise<TraegerOffering>;
   onSaved: (offering: TraegerOffering) => void;
   onCancel: () => void;
 }>) {
-  const [form, setForm] = useState<OfferingFormDraft>(() =>
-    offering ? offeringFormDraftOf(offering) : blankOfferingDraft(),
+  // An edit rests on the read version: a newer read refills it only while
+  // untouched, after a refusal the stored offering shows, and nothing is
+  // sent until it was read.
+  const editor = useDraftOn<
+    TraegerOffering,
+    OfferingFormDraft,
+    string,
+    TraegerOffering
+  >(source ?? NEW_OFFERING, {
+    token: (stored) => stored.version,
+    toDraft: offeringFormDraftOf,
+    answer: (saved) => saved,
+  });
+  const [blank, setBlank] = useState<OfferingFormDraft>(() =>
+    blankOfferingDraft(),
   );
+  const form = (source ? editor.draft : undefined) ?? blank;
+  const setForm = source ? editor.setDraft : setBlank;
+  const loadError = useReadDraftLoadError(editor, "das Angebot");
   const [saving, setSaving] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(formRef);
@@ -310,6 +346,29 @@ export function CatalogOfferingForm({
       formErrors.invalid("Bitte prüfe die markierten Felder.", errors);
       return;
     }
+    if (source) {
+      if (!editor.canSubmit) return;
+      setSaving(true);
+      const result = await editor.submit((version) => onSave(draft, version));
+      setSaving(false);
+      if (result.ok) {
+        onSaved(result.saved);
+        return;
+      }
+      logger.error("traeger_catalog_offering_save_failed", {
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
+      });
+      // Changed since it was read: the stored offering shows once it is
+      // read again, without offering the same save once more.
+      void formErrors.show(result.error, {
+        object: "das Angebot",
+        ...(result.refused ? { reload: result.reload } : {}),
+      });
+      return;
+    }
     setSaving(true);
     try {
       onSaved(await onSave(draft));
@@ -329,10 +388,22 @@ export function CatalogOfferingForm({
       description="Jede Schule dieser Anmeldephase bekommt das Angebot als eigenes Angebot. Die Schule kann es danach ändern oder ausschalten."
       footer={
         <EditActions
-          onCancel={onCancel}
+          onCancel={() => {
+            if (source) editor.discard();
+            onCancel();
+          }}
           onSave={() => formRef.current?.requestSubmit()}
           saving={saving}
           saveLabel={saveLabel}
+          {...(source && !editor.canSubmit
+            ? {
+                disabled: true,
+                disabledReason:
+                  editor.status === "loadFailed"
+                    ? "Lade zuerst den gespeicherten Stand neu."
+                    : "Der gespeicherte Stand wird geladen.",
+              }
+            : {})}
         />
       }
     >
@@ -345,6 +416,7 @@ export function CatalogOfferingForm({
           void submit();
         }}
       >
+        {loadError ? <LoadErrorAlert error={loadError} /> : null}
         <FormErrorAlert message={formErrors.error} />
         <Input
           controlSize="compact"

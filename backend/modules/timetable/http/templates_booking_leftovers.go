@@ -20,15 +20,16 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type bookingLeftoverResponse struct {
-	TemplateID     int64  `json:"template_id"`
-	TemplateName   string `json:"template_name"`
-	StudentID      int64  `json:"student_id"`
-	StudentName    string `json:"student_name"`
-	Weekdays       []int  `json:"weekdays"`
-	BookingEndedOn string `json:"booking_ended_on"`
+	TemplateID     ident.ID `json:"template_id"`
+	TemplateName   string   `json:"template_name"`
+	StudentID      ident.ID `json:"student_id"`
+	StudentName    string   `json:"student_name"`
+	Weekdays       []int    `json:"weekdays"`
+	BookingEndedOn string   `json:"booking_ended_on"`
 	// From is the first day "Entfernen" changes, tomorrow at the earliest.
 	From string `json:"from"`
 	// Until is the day a later booking carries the Regeltermin again
@@ -164,7 +165,7 @@ func (rs *Resource) bookingLeftoverTemplates(ctx context.Context, periodID int64
 	})
 	ids := make([]int64, 0, len(templates))
 	for _, template := range templates {
-		ids = append(ids, template.ID)
+		ids = append(ids, template.ID.Int64())
 	}
 	rosters, err := rs.RosterReview.PlannedRosters(ctx, ids)
 	if err != nil {
@@ -180,9 +181,9 @@ func (rs *Resource) bookingLeftoverTemplates(ctx context.Context, periodID int64
 	result := make([]timetable.BookingLeftoverTemplate, 0, len(templates))
 	for _, template := range templates {
 		result = append(result, timetable.BookingLeftoverTemplate{
-			ID: template.ID, Name: template.Name, Kind: timetable.RosterOfferingKindFor(template.Type, template.ListKind),
-			Occurrences: leftoverOccurrences(projection.Dates[template.ID], projection.Times[template.ID]),
-			Roster:      rosters[template.ID],
+			ID: template.ID.Int64(), Name: template.Name, Kind: timetable.RosterOfferingKindFor(template.Type, template.ListKind),
+			Occurrences: leftoverOccurrences(projection.Dates[template.ID.Int64()], projection.Times[template.ID.Int64()]),
+			Roster:      rosters[template.ID.Int64()],
 		})
 	}
 	return result, nil
@@ -226,8 +227,8 @@ func (rs *Resource) namedBookingLeftovers(ctx context.Context, leftovers []timet
 			continue
 		}
 		response := bookingLeftoverResponse{
-			TemplateID: leftover.TemplateID, TemplateName: leftover.TemplateName,
-			StudentID: leftover.StudentID, StudentName: name, Weekdays: leftover.Weekdays,
+			TemplateID: ident.ID(leftover.TemplateID), TemplateName: leftover.TemplateName,
+			StudentID: ident.ID(leftover.StudentID), StudentName: name, Weekdays: leftover.Weekdays,
 			BookingEndedOn: leftover.BookingEndedOn.String(), From: leftover.From.String(), Kept: leftover.Kept,
 		}
 		if leftover.Until != nil {

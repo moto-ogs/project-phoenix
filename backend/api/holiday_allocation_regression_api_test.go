@@ -16,39 +16,57 @@ func TestHolidayAllocationCriterionScopeStaysAfterTheFirstAnswer(t *testing.T) {
 	a := newAllocationFixture(t, "Träger Kriterienbezug")
 	// The editor opened before the first answer was submitted.
 	stale := map[string]any{"criteria": []map[string]any{{"id": a.working, "name": "Berufstätig", "question": "Sind Sie berufstätig?", "scope": "child", "active": true}}}
+	read := criteriaVersion(t, a.traeger, a.office.token)
 	a.submitCriteria(t, "bezug@example.org", true, false)
-	rec := traegerJSON(t, a.traeger, a.office.token, http.MethodPut, "/traeger/holiday-periods/criteria", stale)
+	rec := saveHolidayCriteria(t, a.traeger, a.office.token, read, stale)
 	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	_, fields := registrationRefusalOf(t, rec)
 	assert.Contains(t, fields, "criteria.0.scope")
 	board := a.board(t)
 	require.Len(t, board.Criteria, 2, "a refused save also rolls back archiving")
 	assert.Equal(t, "yes", board.Weeks[0].Pending[0].Criteria[0].Value, "the answer keeps its allocation priority")
+
+	// A colleague renames the criteria; a save over the version read before
+	// is refused and writes nothing (ADR 0311).
+	renamed := map[string]any{"criteria": []map[string]any{
+		{"id": a.working, "name": "Beide berufstätig", "question": "Sind Sie berufstätig?", "scope": "family", "active": true},
+		{"id": a.sibling, "name": "Geschwister", "question": "Ist ein Geschwisterkind schon in der OGS?", "scope": "child", "active": true},
+	}}
+	rec = saveHolidayCriteria(t, a.traeger, a.office.token, read, renamed)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	for _, version := range []string{read, ""} {
+		rec = saveHolidayCriteria(t, a.traeger, a.office.token, version, map[string]any{"criteria": []map[string]any{}})
+		require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+		assert.Contains(t, rec.Body.String(), `"code":"general.changed_since_read"`)
+	}
+	board = a.board(t)
+	require.Len(t, board.Criteria, 2, "a refused save archives nothing")
+	assert.Equal(t, "Beide berufstätig", board.Criteria[0].Name)
 }
 
 func TestHolidayAllocationNotifiesAgainAfterAddingDays(t *testing.T) {
 	t.Parallel()
 	d := newDayFixture(t, "Träger erneute Vergabe")
-	rec := traegerJSON(t, d.traeger, d.office.token, http.MethodGet, holidayPeriodPath(d.period.ID), nil)
+	rec := traegerJSON(t, d.traeger, d.office.token, http.MethodGet, holidayPeriodPath(int64(d.period.ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	body := decodeSchoolPortalData[holidayPeriodBody](t, rec.Body.Bytes())
 	body.AllocationMode = "criteria"
-	rec = traegerJSON(t, d.traeger, d.office.token, http.MethodPut, holidayPeriodPath(d.period.ID), body)
+	rec = putHolidayPeriod(t, d.traeger, d.office.token, holidayPeriodPath(int64(d.period.ID)), body)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	a := allocationFixture{reviewFixture: reviewFixture{holidayRegistrationFixture: d.holidayRegistrationFixture, office: d.office, period: d.period}}
 	registration := d.submit(t, d.registration("erneut@example.org", "Tom", d.days(dayMonday)))
 	first := a.board(t).Weeks[0].Pending[0]
 	rec = a.decide(t, decision(first, "placed", ""))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	detail := a.detail(t, traegerJSON(t, a.traeger, a.office.token, http.MethodGet, a.registrationPath(registration.ID, ""), nil))
-	rec = traegerJSON(t, d.traeger, d.office.token, http.MethodPut, holidayRebookPath(d.period.ID, registration.ID, detail.Children[0].ID),
+	detail := a.detail(t, traegerJSON(t, a.traeger, a.office.token, http.MethodGet, a.registrationPath(int64(registration.ID), ""), nil))
+	rec = putReadRegistration(t, d.traeger, d.office.token, holidayRebookPath(int64(d.period.ID), int64(registration.ID), int64(detail.Children[0].ID)),
 		map[string]any{"bookings": []map[string]any{d.days(dayMonday, dayTuesday)}})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	second := a.board(t).Weeks[0].Pending[0]
 	require.Equal(t, first.BookingID, second.BookingID, "adding days preserves the booking identity")
 	rec = a.decide(t, decision(second, "placed", ""))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.Equal(t, 2, a.mails(t, "holiday_place_granted", registration.ID), "each persisted decision has its own mail")
+	assert.Equal(t, 2, a.mails(t, "holiday_place_granted", int64(registration.ID)), "each persisted decision has its own mail")
 	var payloads []string
 	require.NoError(t, a.db.NewRaw(`SELECT payload::text FROM platform.email_outbox
   WHERE organization_id = ? AND kind = 'holiday_place_granted' AND related_entity_id = ? ORDER BY id`, a.office.organization, registration.ID).Scan(t.Context(), &payloads))
@@ -63,11 +81,11 @@ func TestHolidayAllocationKeepsTheLastWaitlistDecision(t *testing.T) {
 	candidate := a.board(t).Weeks[0].Pending[0]
 	rec := a.decide(t, decision(candidate, "waitlisted", "Familie benötigt vorerst keinen Platz"))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	places := a.places(t)[a.offer.Weeks[0].ID]
+	places := a.places(t)[int64(a.offer.Weeks[0].ID)]
 	assert.Zero(t, places.Placed, "the decision must not immediately promote its own booking")
 	require.Len(t, places.Waitlist, 1)
 	assert.Equal(t, registration.ID, places.Waitlist[0].RegistrationID)
-	assert.Equal(t, 1, a.mails(t, "holiday_place_granted", registration.ID), "only the office decision notifies the parents")
+	assert.Equal(t, 1, a.mails(t, "holiday_place_granted", int64(registration.ID)), "only the office decision notifies the parents")
 }
 
 // A received child with a new direct place participates in its sibling group
@@ -80,9 +98,9 @@ func TestHolidayAllocationDirectPlaceRefreezesSiblings(t *testing.T) {
 	first := a.submitCriteria(t, "erstes.geschwister@example.org", false, false)
 	rec := a.decide(t, decision(a.board(t).Weeks[0].Pending[0], "placed", ""))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	rec = a.act(t, first.ID, "confirm")
+	rec = a.act(t, int64(first.ID), "confirm")
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	require.Equal(t, []int64{4500}, a.contributionVersions(t, first.ID))
+	require.Equal(t, []int64{4500}, a.contributionVersions(t, int64(first.ID)))
 
 	body := placesRegistration(a.reviewFixture, "zweites.geschwister@example.org", map[string][]int{"Ida": {0}})
 	body["criteria"] = map[string]bool{fmt.Sprint(a.working): true}
@@ -92,19 +110,19 @@ func TestHolidayAllocationDirectPlaceRefreezesSiblings(t *testing.T) {
 	rec = publicJSON(t, a.public, http.MethodPost, registrationPath(a.period.PublicToken), body)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	second := decodeSchoolPortalData[receiptBody](t, rec.Body.Bytes())
-	rec = a.merge(t, a.office.token, first.ID, second.ID)
+	rec = a.merge(t, a.office.token, int64(first.ID), int64(second.ID))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	require.Equal(t, []int64{4500}, a.contributionVersions(t, first.ID), "a pending child does not affect the confirmed sibling")
-	a.setCapacity(t, a.offer.Weeks[0].ID, 2)
+	require.Equal(t, []int64{4500}, a.contributionVersions(t, int64(first.ID)), "a pending child does not affect the confirmed sibling")
+	a.setCapacity(t, int64(a.offer.Weeks[0].ID), 2)
 	candidate := a.board(t).Weeks[0].Pending[0]
 	require.Equal(t, "placed", candidate.Proposal)
 	rec = a.decide(t, decision(candidate, "placed", ""))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
-	assert.Equal(t, []int64{4500, 2250}, a.contributionVersions(t, first.ID), "the direct place changes the confirmed sibling's frozen discount before the new child is confirmed")
-	contribution := a.siblingContribution(t, first.ID)
+	assert.Equal(t, []int64{4500, 2250}, a.contributionVersions(t, int64(first.ID)), "the direct place changes the confirmed sibling's frozen discount before the new child is confirmed")
+	contribution := a.siblingContribution(t, int64(first.ID))
 	assert.Equal(t, int64(2250), contribution.TotalCents)
 	require.Len(t, contribution.Children, 1)
 	assert.Equal(t, []string{"base:4500", "sibling:-2250"}, lineKinds(contribution.Children[0].Lines))
-	assert.Empty(t, a.contributionVersions(t, second.ID), "the received registration does not freeze a contribution yet")
+	assert.Empty(t, a.contributionVersions(t, int64(second.ID)), "the received registration does not freeze a contribution yet")
 }

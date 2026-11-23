@@ -11,6 +11,7 @@ import (
 
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	transactionFailures "github.com/moto-ogs/project-phoenix/modules/transactionruntime"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
@@ -169,7 +170,6 @@ func buildSchemaRouter(svc capability.FormSchemaAdministration) chi.Router {
 	r.Use(render.SetContentType(render.ContentTypeJSON))
 	r.Get("/enrollment/schema", rs.getActiveSchema)
 	r.Get("/enrollment/schema/versions", rs.listSchemaVersions)
-	r.Get("/enrollment/schema/{id}", rs.getSchemaByID)
 	r.Post("/enrollment/schema", rs.publishSchema)
 	r.Put("/enrollment/schema/{id}", rs.updateSchema)
 	r.Patch("/enrollment/schema/{id}", rs.renameSchema)
@@ -284,60 +284,6 @@ func TestListSchemaVersionsHandler_ServiceErrorReturns500(t *testing.T) {
 	mock := &mockFormSchemaService{listErr: errors.New("synthetic boom")}
 	router := buildSchemaRouter(mock)
 	w := executeSchemaJSON(t, router, http.MethodGet, "/enrollment/schema/versions", nil)
-	assert.Equal(t, http.StatusInternalServerError, w.Code)
-}
-
-// --- getSchemaByID -----------------------------------------------------
-
-func TestGetSchemaByIDHandler_NilServiceReturns500(t *testing.T) {
-	t.Parallel()
-
-	router := buildSchemaRouter(nil)
-	w := executeSchemaJSON(t, router, http.MethodGet, "/enrollment/schema/1234", nil)
-	assert.Equal(t, http.StatusInternalServerError, w.Code)
-}
-
-func TestGetSchemaByIDHandler_InvalidIDRejected(t *testing.T) {
-	t.Parallel()
-
-	router := buildSchemaRouter(&mockFormSchemaService{})
-	w := executeSchemaJSON(t, router, http.MethodGet, "/enrollment/schema/notanumber", nil)
-	assert.Equal(t, http.StatusBadRequest, w.Code)
-}
-
-func TestGetSchemaByIDHandler_ZeroIDRejected(t *testing.T) {
-	t.Parallel()
-
-	router := buildSchemaRouter(&mockFormSchemaService{})
-	w := executeSchemaJSON(t, router, http.MethodGet, "/enrollment/schema/0", nil)
-	assert.Equal(t, http.StatusBadRequest, w.Code)
-}
-
-func TestGetSchemaByIDHandler_HappyPath(t *testing.T) {
-	t.Parallel()
-
-	mock := &mockFormSchemaService{getByIDResult: makeFormSchema(1234, "Standardformular", 1)}
-	router := buildSchemaRouter(mock)
-	w := executeSchemaJSON(t, router, http.MethodGet, "/enrollment/schema/1234", nil)
-	require.Equal(t, http.StatusOK, w.Code)
-	assert.Equal(t, int64(1234), mock.getByIDID, "URL id must be passed to GetByID verbatim")
-	assert.Contains(t, w.Body.String(), `"id":"1234"`)
-}
-
-func TestGetSchemaByIDHandler_MissingSchemaMappedAs404(t *testing.T) {
-	t.Parallel()
-
-	mock := &mockFormSchemaService{getByIDErr: capability.ErrFormSchemaNotFound}
-	router := buildSchemaRouter(mock)
-	w := executeSchemaJSON(t, router, http.MethodGet, "/enrollment/schema/1234", nil)
-	assert.Equal(t, http.StatusNotFound, w.Code)
-}
-
-func TestGetSchemaByIDHandler_ReadFailureMappedAs500(t *testing.T) {
-	t.Parallel()
-	mock := &mockFormSchemaService{getByIDErr: errors.New("schema storage unavailable")}
-	router := buildSchemaRouter(mock)
-	w := executeSchemaJSON(t, router, http.MethodGet, "/enrollment/schema/1234", nil)
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }
 
@@ -592,6 +538,20 @@ func TestUpdateSchemaHandler_RenameNameCollisionReturns409WithCode(t *testing.T)
 		})
 	require.Equal(t, http.StatusConflict, w.Code)
 	assert.Contains(t, w.Body.String(), "enrollment.schema_name_exists")
+}
+
+// A version published since the editor read {id} answers 409
+// general.changed_since_read, so the editor reloads instead of reverting it
+// (ADR 0311).
+func TestUpdateSchemaHandler_OutdatedVersionReturns409(t *testing.T) {
+	t.Parallel()
+
+	mock := &mockFormSchemaService{publishVersionErr: readstate.ErrChanged}
+	router := buildSchemaRouter(mock)
+	w := executeSchemaJSON(t, router, http.MethodPut, "/enrollment/schema/1234",
+		map[string]any{"fields": []map[string]any{{"key": "x", "label": "X", "type": "text", "sort_order": 0}}})
+	require.Equal(t, http.StatusConflict, w.Code)
+	assert.Contains(t, w.Body.String(), readstate.ChangedCode)
 }
 
 func TestUpdateSchemaHandler_RenameNotFoundReturns404(t *testing.T) {

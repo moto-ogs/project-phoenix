@@ -201,6 +201,8 @@ func TestVacationQuotaWriteStaysOnTheTimeTrackingTier(t *testing.T) {
 	claims.Permissions = []string{"time_tracking:manage"}
 	leitung := testutil.MintTestJWT(t, claims)
 
+	// The form sends the version of the claim it read (ADR 0311).
+	body["expected_version"] = vacationQuotaVersion(t, ctx, leitung, colleague.ID, testpkg.TodayDate().Year())
 	allowed := testutil.ExecuteRequest(ctx.router, testutil.NewAuthenticatedRequest(
 		t, http.MethodPut, path, body, testutil.WithJWTBearer(leitung)))
 	assert.Equal(t, http.StatusOK, allowed.Code, allowed.Body.String())

@@ -5,6 +5,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // SlotResponse describes an arrival or pickup slot for a single day.
@@ -43,19 +44,19 @@ type AttendanceDayResponse struct {
 // InstanceDayResponse is one scheduled instance as it appears in a student's
 // day view. active_group_id is nil for planned/cancelled instances.
 type InstanceDayResponse struct {
-	ID            int64                 `json:"id"`
+	ID            ident.ID              `json:"id"`
 	Title         string                `json:"title"`
 	StartTime     string                `json:"start_time"`
 	EndTime       string                `json:"end_time"`
-	RoomID        int64                 `json:"room_id"`
+	RoomID        ident.ID              `json:"room_id"`
 	Status        string                `json:"status"`
-	ActiveGroupID *int64                `json:"active_group_id"`
+	ActiveGroupID *ident.ID             `json:"active_group_id"`
 	Attendance    AttendanceDayResponse `json:"attendance"`
 }
 
 // StudentDayResponse is the body returned by GET /student/{id}/day.
 type StudentDayResponse struct {
-	StudentID int64                 `json:"student_id"`
+	StudentID ident.ID              `json:"student_id"`
 	Date      string                `json:"date"`
 	Weekday   int                   `json:"weekday"`
 	Arrival   SlotResponse          `json:"arrival"`
@@ -67,7 +68,7 @@ type StudentDayResponse struct {
 // is always inclusive-inclusive across the requested range, one entry per
 // date (including dates with no instances).
 type StudentWeekResponse struct {
-	StudentID int64                `json:"student_id"`
+	StudentID ident.ID             `json:"student_id"`
 	From      string               `json:"from"`
 	To        string               `json:"to"`
 	Days      []StudentDayResponse `json:"days"`
@@ -82,13 +83,13 @@ type StudentWeekResponse struct {
 func mapEnrolledInstance(row timetable.StudentWeekEntry) InstanceDayResponse {
 	att := row.Attendance
 	resp := InstanceDayResponse{
-		ID:            row.Instance.ID,
+		ID:            ident.ID(row.Instance.ID),
 		Title:         row.Instance.Title,
 		StartTime:     row.Instance.StartTime.Format("15:04"),
 		EndTime:       row.Instance.EndTime.Format("15:04"),
-		RoomID:        row.Instance.RoomID,
+		RoomID:        ident.ID(row.Instance.RoomID),
 		Status:        row.Instance.Status,
-		ActiveGroupID: row.Instance.ActiveGroupID,
+		ActiveGroupID: (*ident.ID)(row.Instance.ActiveGroupID),
 		Attendance: AttendanceDayResponse{
 			Status:       att.Status,
 			Substatus:    att.Substatus,
@@ -108,13 +109,13 @@ func mapEnrolledInstance(row timetable.StudentWeekEntry) InstanceDayResponse {
 func mapUnplannedInstance(inst timetable.ScheduledInstance, visit timetable.StudentWeekVisit) InstanceDayResponse {
 	checkedIn := formatOptionalRFC3339(&visit.EntryTime)
 	return InstanceDayResponse{
-		ID:            inst.ID,
+		ID:            ident.ID(inst.ID),
 		Title:         inst.Title,
 		StartTime:     inst.StartTime.Format("15:04"),
 		EndTime:       inst.EndTime.Format("15:04"),
-		RoomID:        inst.RoomID,
+		RoomID:        ident.ID(inst.RoomID),
 		Status:        inst.Status,
-		ActiveGroupID: inst.ActiveGroupID,
+		ActiveGroupID: (*ident.ID)(inst.ActiveGroupID),
 		Attendance: AttendanceDayResponse{
 			Status:       timetable.SlotAttendancePresent,
 			Substatus:    nil,

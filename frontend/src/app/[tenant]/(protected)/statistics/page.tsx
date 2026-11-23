@@ -43,11 +43,8 @@ import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { CareTimeOverrunsSection } from "~/components/statistics/care-time-overruns-section";
 import { useApiErrorDisplay, useApiLoadError } from "~/contexts/ToastContext";
-import {
-  ApiError,
-  apiErrorFromResponse,
-  transportFetch,
-} from "~/lib/api-error";
+import { ApiError } from "~/lib/api-error";
+import type * as statisticsContract from "~/lib/contract/statistics.generated";
 import { LOCATION_COLORS } from "~/lib/location-helper";
 import { getAccessibleTextColor } from "~/lib/kit-palette";
 import {
@@ -64,17 +61,12 @@ import {
   formatHours,
   formatRate,
   EXPORT_FILENAME_STEM,
-  statisticsExportUrl,
-  type StatisticsCourseRow,
-  type StatisticsCourseStudentRow,
+  fetchStatisticsExport,
   type StatisticsExportFormat,
   type StatisticsExportSection,
   type StatisticsFilter,
-  type StatisticsGroupRow,
   type StatisticsReport,
   type StatisticsReportSection,
-  type StatisticsRoomRow,
-  type StatisticsStudentRow,
 } from "~/lib/statistics-api";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 import { OccupancySection } from "~/components/statistics/occupancy-section";
@@ -118,6 +110,8 @@ const COURSE_VIEW_ITEMS: readonly { value: CourseView; label: string }[] = [
 /** Fehlendes Recht ist ein Zustand mit eigener Seite, kein Ladefehler. */
 const FORBIDDEN_MESSAGE =
   "Dein Konto darf die Statistik nicht sehen. Bitte wende dich an deine Administration.";
+const STATISTICS_INFO =
+  "Hier siehst du, wie oft Kinder in einem Zeitraum da waren. Wähle oben den Bereich, zum Beispiel „Gruppen“ oder „Kinder“. Dann wählst du den Zeitraum.";
 
 function addDays(d: Date, days: number): Date {
   const r = new Date(d);
@@ -152,7 +146,7 @@ export default function StatisticsPage() {
   }));
   const [groupIds, setGroupIds] = useState<string[]>([]);
   const [availableGroups, setAvailableGroups] = useState<
-    readonly StatisticsGroupRow[]
+    readonly statisticsContract.groupResponse[]
   >([]);
   const [schoolClasses, setSchoolClasses] = useState<string[]>([]);
   const [availableClasses, setAvailableClasses] = useState<readonly string[]>(
@@ -340,12 +334,13 @@ export default function StatisticsPage() {
       if (!fromISO || !toISO) return;
       setExporting(`${section}-${format}`);
       try {
-        const res = await transportFetch(
-          statisticsExportUrl(fromISO, toISO, format, filter, section),
+        const res = await fetchStatisticsExport(
+          fromISO,
+          toISO,
+          format,
+          filter,
+          section,
         );
-        if (!res.ok) {
-          throw await apiErrorFromResponse(res, "statistics export failed");
-        }
         downloadBlob(
           await res.blob(),
           filenameFromDisposition(res) ??
@@ -410,7 +405,7 @@ export default function StatisticsPage() {
 
   const resetWindow = () => setRange({ from: addDays(today, -29), to: today });
 
-  const groupColumns: DataTableColumn<StatisticsGroupRow>[] = [
+  const groupColumns: DataTableColumn<statisticsContract.groupResponse>[] = [
     {
       key: "name",
       header: "Gruppe",
@@ -479,85 +474,86 @@ export default function StatisticsPage() {
     },
   ];
 
-  const studentColumns: DataTableColumn<StatisticsStudentRow>[] = [
-    {
-      key: "name",
-      header: "Kind",
-      render: (row) => (
-        <Link
-          href={tenantPath(`/students/${row.student_id}`)}
-          className="font-medium text-gray-900 hover:underline"
-        >
-          {row.last_name}, {row.first_name}
-        </Link>
-      ),
-      sortValue: (row) => `${row.last_name} ${row.first_name}`,
-    },
-    {
-      key: "class",
-      header: "Klasse",
-      render: (row) => row.school_class,
-      sortValue: (row) => row.school_class,
-    },
-    {
-      key: "group",
-      header: "Gruppe",
-      render: (row) => row.group_name || "Ohne Gruppe",
-      sortValue: (row) => row.group_name,
-    },
-    {
-      key: "present",
-      header: "Anwesend",
-      align: "right",
-      render: (row) => row.present_days,
-      sortValue: (row) => row.present_days,
-    },
-    {
-      key: "sick",
-      header: "Krank",
-      align: "right",
-      render: (row) => row.sick_days,
-      sortValue: (row) => row.sick_days,
-    },
-    {
-      key: "excused",
-      header: "Entschuldigt",
-      align: "right",
-      render: (row) => row.excused_days,
-      sortValue: (row) => row.excused_days,
-    },
-    {
-      key: "unexplained",
-      header: "Ohne Meldung",
-      align: "right",
-      render: (row) => (
-        <span
-          className={
-            // Offene Fälle brauchen Aufmerksamkeit, sie sind aber kein
-            // Fehler: Orange ist dafür die Farbe, Rot gehört Krank und
-            // echten Fehlern (siehe Farbtabelle im UI-Kit).
-            row.unexplained_days > 0 ? "text-moto-orange-strong" : undefined
-          }
-        >
-          {row.unexplained_days}
-        </span>
-      ),
-      sortValue: (row) => row.unexplained_days,
-    },
-    {
-      key: "rate",
-      header: "Quote",
-      align: "right",
-      render: (row) => (
-        <span className="font-medium text-gray-900">
-          {formatRate(row.attendance_rate)}
-        </span>
-      ),
-      sortValue: (row) => row.attendance_rate ?? -1,
-    },
-  ];
+  const studentColumns: DataTableColumn<statisticsContract.studentResponse>[] =
+    [
+      {
+        key: "name",
+        header: "Kind",
+        render: (row) => (
+          <Link
+            href={tenantPath(`/students/${row.student_id}`)}
+            className="font-medium text-gray-900 hover:underline"
+          >
+            {row.last_name}, {row.first_name}
+          </Link>
+        ),
+        sortValue: (row) => `${row.last_name} ${row.first_name}`,
+      },
+      {
+        key: "class",
+        header: "Klasse",
+        render: (row) => row.school_class,
+        sortValue: (row) => row.school_class,
+      },
+      {
+        key: "group",
+        header: "Gruppe",
+        render: (row) => row.group_name || "Ohne Gruppe",
+        sortValue: (row) => row.group_name,
+      },
+      {
+        key: "present",
+        header: "Anwesend",
+        align: "right",
+        render: (row) => row.present_days,
+        sortValue: (row) => row.present_days,
+      },
+      {
+        key: "sick",
+        header: "Krank",
+        align: "right",
+        render: (row) => row.sick_days,
+        sortValue: (row) => row.sick_days,
+      },
+      {
+        key: "excused",
+        header: "Entschuldigt",
+        align: "right",
+        render: (row) => row.excused_days,
+        sortValue: (row) => row.excused_days,
+      },
+      {
+        key: "unexplained",
+        header: "Ohne Meldung",
+        align: "right",
+        render: (row) => (
+          <span
+            className={
+              // Offene Fälle brauchen Aufmerksamkeit, sie sind aber kein
+              // Fehler: Orange ist dafür die Farbe, Rot gehört Krank und
+              // echten Fehlern (siehe Farbtabelle im UI-Kit).
+              row.unexplained_days > 0 ? "text-moto-orange-strong" : undefined
+            }
+          >
+            {row.unexplained_days}
+          </span>
+        ),
+        sortValue: (row) => row.unexplained_days,
+      },
+      {
+        key: "rate",
+        header: "Quote",
+        align: "right",
+        render: (row) => (
+          <span className="font-medium text-gray-900">
+            {formatRate(row.attendance_rate)}
+          </span>
+        ),
+        sortValue: (row) => row.attendance_rate ?? -1,
+      },
+    ];
 
-  const roomColumns: DataTableColumn<StatisticsRoomRow>[] = [
+  const roomColumns: DataTableColumn<statisticsContract.roomResponse>[] = [
     {
       key: "name",
       header: "Raum",
@@ -614,7 +610,7 @@ export default function StatisticsPage() {
     },
   ];
 
-  const courseColumns: DataTableColumn<StatisticsCourseRow>[] = [
+  const courseColumns: DataTableColumn<statisticsContract.courseResponse>[] = [
     {
       key: "name",
       header: "Kurs",
@@ -698,65 +694,66 @@ export default function StatisticsPage() {
     },
   ];
 
-  const courseStudentColumns: DataTableColumn<StatisticsCourseStudentRow>[] = [
-    {
-      key: "name",
-      header: "Kind",
-      render: (row) => (
-        <Link
-          href={tenantPath(`/students/${row.student_id}`)}
-          className="font-medium text-gray-900 hover:underline"
-        >
-          {row.last_name}, {row.first_name}
-        </Link>
-      ),
-      sortValue: (row) => `${row.last_name} ${row.first_name}`,
-    },
-    {
-      key: "class",
-      header: "Klasse",
-      render: (row) => row.school_class,
-      sortValue: (row) => row.school_class,
-    },
-    {
-      key: "course",
-      header: "Kurs",
-      render: (row) => row.course_name,
-      sortValue: (row) => row.course_name,
-    },
-    {
-      key: "present",
-      header: "Teilnahme",
-      align: "right",
-      render: (row) => row.present_days,
-      sortValue: (row) => row.present_days,
-    },
-    {
-      key: "absent",
-      header: "Fehltage",
-      align: "right",
-      render: (row) => row.absent_days,
-      sortValue: (row) => row.absent_days,
-    },
-    {
-      key: "open",
-      header: "Offen",
-      align: "right",
-      render: (row) => row.open_days,
-      sortValue: (row) => row.open_days,
-    },
-    {
-      key: "rate",
-      header: "Quote",
-      align: "right",
-      render: (row) => (
-        <span className="font-medium text-gray-900">
-          {formatRate(row.participation_rate)}
-        </span>
-      ),
-      sortValue: (row) => row.participation_rate ?? -1,
-    },
-  ];
+  const courseStudentColumns: DataTableColumn<statisticsContract.courseStudentResponse>[] =
+    [
+      {
+        key: "name",
+        header: "Kind",
+        render: (row) => (
+          <Link
+            href={tenantPath(`/students/${row.student_id}`)}
+            className="font-medium text-gray-900 hover:underline"
+          >
+            {row.last_name}, {row.first_name}
+          </Link>
+        ),
+        sortValue: (row) => `${row.last_name} ${row.first_name}`,
+      },
+      {
+        key: "class",
+        header: "Klasse",
+        render: (row) => row.school_class,
+        sortValue: (row) => row.school_class,
+      },
+      {
+        key: "course",
+        header: "Kurs",
+        render: (row) => row.course_name,
+        sortValue: (row) => row.course_name,
+      },
+      {
+        key: "present",
+        header: "Teilnahme",
+        align: "right",
+        render: (row) => row.present_days,
+        sortValue: (row) => row.present_days,
+      },
+      {
+        key: "absent",
+        header: "Fehltage",
+        align: "right",
+        render: (row) => row.absent_days,
+        sortValue: (row) => row.absent_days,
+      },
+      {
+        key: "open",
+        header: "Offen",
+        align: "right",
+        render: (row) => row.open_days,
+        sortValue: (row) => row.open_days,
+      },
+      {
+        key: "rate",
+        header: "Quote",
+        align: "right",
+        render: (row) => (
+          <span className="font-medium text-gray-900">
+            {formatRate(row.participation_rate)}
+          </span>
+        ),
+        sortValue: (row) => row.participation_rate ?? -1,
+      },
+    ];
 
   // Export liegt auf jeder anderen Seite im Kebab-Menü und nicht als
   // Knopfreihe in der Titelzeile. Drei Formate ergaben dort drei Knöpfe, die
@@ -966,12 +963,19 @@ export default function StatisticsPage() {
   // Fehlendes Recht ist ein Zustand, kein Fehler: eigener ruhiger Leerzustand
   // statt einer roten Fehlermeldung (Querregel "Zustände").
   if (forbidden) {
-    return <ForbiddenPage title="Statistik" message={FORBIDDEN_MESSAGE} />;
+    return (
+      <ForbiddenPage
+        title="Statistik"
+        info={STATISTICS_INFO}
+        message={FORBIDDEN_MESSAGE}
+      />
+    );
   }
 
   return (
     <TenantPage
       title="Statistik"
+      info={STATISTICS_INFO}
       stats={statusLine}
       statsLoading={loading}
       // Bis der Katalogtext des Ladefehlers da ist, bleibt das Skelett.

@@ -11,6 +11,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -28,17 +29,20 @@ func (rs *HolidayPeriodResource) allocationRoutes(r chi.Router, withTx common.Mi
 }
 
 type holidayCriterionRequest struct {
-	ID       int64  `json:"id"`
-	Name     string `json:"name"`
-	Question string `json:"question"`
-	Scope    string `json:"scope"`
-	Active   bool   `json:"active"`
+	ID       ident.ID `json:"id"`
+	Name     string   `json:"name"`
+	Question string   `json:"question"`
+	Scope    string   `json:"scope"`
+	Active   bool     `json:"active"`
 }
 
 // HolidayCriteriaRequest is the body of PUT /traeger/holiday-periods/criteria:
 // every criterion of the Träger in the order of its priority.
 type HolidayCriteriaRequest struct {
 	Criteria []holidayCriterionRequest `json:"criteria"`
+	// ExpectedVersion is the version of the criteria the Büro read; a list
+	// saved since is refused (ADR 0311).
+	ExpectedVersion string `json:"expected_version"`
 }
 
 // Bind accepts the body; the Owner validates the list.
@@ -71,7 +75,7 @@ func (rs *HolidayPeriodResource) saveCriteria(w http.ResponseWriter, r *http.Req
 	for i, criterion := range req.Criteria {
 		input[i] = capability.HolidayCriterionInput(criterion)
 	}
-	criteria, err := rs.allocation.SaveHolidayCriteria(r.Context(), reviewer, input)
+	criteria, err := rs.allocation.SaveHolidayCriteria(r.Context(), reviewer, req.ExpectedVersion, input)
 	var fields validation.Errors
 	if errors.As(err, &fields) {
 		tenant.MarkRollback(r.Context())
@@ -104,10 +108,10 @@ func (rs *HolidayPeriodResource) allocationBoard(w http.ResponseWriter, r *http.
 }
 
 type holidayAllocationChoiceRequest struct {
-	BookingID int64  `json:"booking_id"`
-	Placement string `json:"placement"`
-	Proposal  string `json:"proposal"`
-	Reason    string `json:"reason"`
+	BookingID ident.ID `json:"booking_id"`
+	Placement string   `json:"placement"`
+	Proposal  string   `json:"proposal"`
+	Reason    string   `json:"reason"`
 }
 
 // HolidayAllocationRequest is the body of POST
@@ -156,9 +160,9 @@ type HolidayCriteriaCheckRequest struct {
 // HolidayCriterionCheckRequest is one check of the body: the criterion, the
 // child for a criterion per child, and the day checked or null for unchecked.
 type HolidayCriterionCheckRequest struct {
-	CriterionID int64   `json:"criterion_id"`
-	ChildID     *int64  `json:"child_id"`
-	Checked     *string `json:"checked"`
+	CriterionID ident.ID  `json:"criterion_id"`
+	ChildID     *ident.ID `json:"child_id"`
+	Checked     *string   `json:"checked"`
 }
 
 func (req *HolidayCriteriaCheckRequest) checks() []capability.HolidayCriterionCheck {

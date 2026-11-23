@@ -2,13 +2,6 @@
   "sites": [
     {
       "build": "testhooks",
-      "evidence": "func (r *TeacherGroupIDs) TeacherGroupIDs(ctx context.Context, teacherID int64) ([]int64, error) {\n\tgroups, err := r.records.GetTeacherGroups(ctx, teacherID)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tids := make([]int64, 0, len(groups))\n\tfor _, group := range groups {\n\t\tif group != nil {\n\t\t\tids = append(ids, group.ID)\n\t\t}\n\t}\n\treturn ids, nil\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/schoolstructure/compose/TeacherGroupIDs.TeacherGroupIDs",
-      "owner": "modules/schoolstructure"
-    },
-    {
-      "build": "testhooks",
       "evidence": "func (s *legacyGroupManagement) CountGroups(ctx context.Context, query *domain.GroupListQuery) (int, error) {\n\tcount, err := s.capability.CountGroups(ctx, legacyGroupQuery(query))\n\treturn count, legacyGroupError(err)\n}",
       "form": "unclassified-evidence",
       "id": "modules/schoolstructure/compose/legacyGroupManagement.CountGroups",
@@ -100,13 +93,6 @@
     },
     {
       "build": "testhooks",
-      "evidence": "func (s *legacyGroupManagement) UpdateGroup(ctx context.Context, row *domain.Group) error {\n\tvalue := groups.PublicGroup(row)\n\terr := s.capability.UpdateGroup(ctx, value)\n\tif row != nil \u0026\u0026 value != nil {\n\t\t*row = *groups.LegacyGroup(value)\n\t}\n\treturn legacyGroupError(err)\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/schoolstructure/compose/legacyGroupManagement.UpdateGroup",
-      "owner": "modules/schoolstructure"
-    },
-    {
-      "build": "testhooks",
       "evidence": "func (s *legacyGroupManagement) UpdateGroupTeachers(ctx context.Context, id int64, ids []int64) error {\n\treturn legacyGroupError(s.capability.UpdateGroupTeachers(ctx, id, ids))\n}",
       "form": "unclassified-evidence",
       "id": "modules/schoolstructure/compose/legacyGroupManagement.UpdateGroupTeachers",
@@ -128,7 +114,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (r *GroupRoomDirectory) ListGroupRooms(ctx context.Context) ([]*schoolstructure.GroupRoomAssignment, error) {\n\trows, err := r.records.List(ctx, nil)\n\tif rows == nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]*schoolstructure.GroupRoomAssignment, len(rows))\n\tfor i, row := range rows {\n\t\tif row != nil {\n\t\t\tresult[i] = \u0026schoolstructure.GroupRoomAssignment{ID: row.ID, RoomID: row.RoomID}\n\t\t}\n\t}\n\treturn result, err\n}",
+      "evidence": "func (r *GroupRoomDirectory) ListGroupRooms(ctx context.Context) ([]*schoolstructure.GroupRoomAssignment, error) {\n\trows, err := r.records.List(ctx, nil)\n\tif rows == nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]*schoolstructure.GroupRoomAssignment, len(rows))\n\tfor i, row := range rows {\n\t\tif row != nil {\n\t\t\tresult[i] = \u0026schoolstructure.GroupRoomAssignment{ID: row.ID.Int64(), RoomID: (*int64)(row.RoomID)}\n\t\t}\n\t}\n\treturn result, err\n}",
       "form": "unclassified-evidence",
       "id": "modules/schoolstructure/internal/application/GroupRoomDirectory.ListGroupRooms",
       "owner": "modules/schoolstructure"
@@ -240,7 +226,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *groupManagement) UpdateGroup(ctx context.Context, value *schoolstructure.Group) error {\n\trow := LegacyGroup(value)\n\terr := s.service.UpdateGroup(ctx, row)\n\tif value != nil \u0026\u0026 row != nil {\n\t\t*value = *PublicGroup(row)\n\t}\n\treturn PublicGroupError(err)\n}",
+      "evidence": "func (s *groupManagement) UpdateGroup(ctx context.Context, edit schoolstructure.GroupEdit) error {\n\treturn PublicGroupError(s.service.EditGroup(ctx, edit))\n}",
       "form": "unclassified-evidence",
       "id": "modules/schoolstructure/internal/application/groups/groupManagement.UpdateGroup",
       "owner": "modules/schoolstructure"

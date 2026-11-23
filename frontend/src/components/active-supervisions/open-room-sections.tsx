@@ -399,6 +399,7 @@ function OpenRoomBlock({
           onConfirmExpected={actions.handleConfirmExpectedStudents}
           onRosterAction={actions.handleRosterAction}
           onSaveHomeworkFeedback={actions.handleSaveHomeworkFeedback}
+          reloadAfterRefusal={actions.reloadRosterAfterRefusal}
           onExcuseRestOfDay={
             canExcuseRestOfDay ? actions.handleExcuseRestOfDay : undefined
           }

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"testing"
 	"time"
 
@@ -56,54 +57,6 @@ func TestIdentityRoleDetailPermissionsGrowthQueryBudget(t *testing.T) {
 	}
 }
 
-func TestIdentityAccountsGrowthQueryBudget(t *testing.T) {
-	t.Parallel()
-	f := newRBACBudgetFixtureOn(t, testpkg.SetupIsolatedTestDB(t))
-	token, reader := f.accountToken(t, "identity-accounts-reader", "users:list", "users:read")
-	role := testpkg.CreateTestRole(t, f.db, "identity-account-budget")
-	// Include both real readers in the same role filter, so each route
-	// returns exactly N3/N8 rows, not N3/N8 plus hidden baseline accounts.
-	var baseline []struct {
-		ID    int64  `bun:"id"`
-		Email string `bun:"email"`
-	}
-	require.NoError(t, f.db.NewSelect().TableExpr("auth.accounts").Column("id", "email").Where("id = ? OR id = ?", f.actor, reader).Scan(context.Background(), &baseline))
-	all := []map[string]any{}
-	for _, row := range baseline {
-		all = append(all, map[string]any{"id": float64(row.ID), "email": row.Email, "active": true})
-	}
-	for _, id := range []int64{f.actor, reader} {
-		_, err := f.db.ExecContext(context.Background(), "INSERT INTO auth.account_roles (account_id, role_id, tenant_id) VALUES (?, ?, ?)", id, role.ID, testpkg.Tenant(t))
-		require.NoError(t, err)
-	}
-	for _, n := range []int{3, 8} {
-		for len(all) < n {
-			account := testpkg.CreateTestAccount(t, f.db, fmt.Sprintf("identity-account-%d", len(all)))
-			testpkg.EnsureAccountTenant(t, f.db, account.ID, testpkg.Tenant(t))
-			_, err := f.db.ExecContext(context.Background(), "INSERT INTO auth.account_roles (account_id, role_id, tenant_id) VALUES (?, ?, ?)", account.ID, role.ID, testpkg.Tenant(t))
-			require.NoError(t, err)
-			dto := map[string]any{"id": float64(account.ID), "email": account.Email, "active": true}
-			all = append(all, dto)
-		}
-		for _, tc := range []struct {
-			path, scenario string
-			rows           []map[string]any
-		}{
-			{"/auth/accounts/", "api.auth.accounts.list.positive_growth", all},
-			{"/auth/accounts/by-role/" + role.Name, "api.auth.accounts.by_role.positive_growth", all},
-		} {
-			rr, queries := f.get(t, tc.path, token)
-			rbacBudgetCollection(t, rr, "Accounts retrieved successfully", tc.rows)
-			t.Logf("%s N%d statements=%d", tc.scenario, n, len(queries.Statements))
-			if tc.scenario == "api.auth.accounts.list.positive_growth" {
-				querybudgets.AssertQueryBudget(t, "api.auth.accounts.list.positive_growth", queries)
-			} else {
-				querybudgets.AssertQueryBudget(t, "api.auth.accounts.by_role.positive_growth", queries)
-			}
-		}
-	}
-}
-
 func TestIdentityStaffPreviewCandidatesGrowthQueryBudget(t *testing.T) {
 	t.Parallel()
 	f := newRBACBudgetFixtureOn(t, testpkg.SetupIsolatedTestDB(t))
@@ -126,26 +79,6 @@ func TestIdentityStaffPreviewCandidatesGrowthQueryBudget(t *testing.T) {
 	}
 }
 
-func TestIdentityAccountTokensGrowthQueryBudget(t *testing.T) {
-	t.Parallel()
-	f := newRBACBudgetFixtureOn(t, testpkg.SetupIsolatedTestDB(t))
-	token, _ := f.accountToken(t, "identity-token-reader", "users:manage")
-	account := testpkg.CreateTestAccount(t, f.db, "identity-token-owner")
-	want := []map[string]any{}
-	for _, n := range []int{3, 8} {
-		for len(want) < n {
-			fixture := testpkg.CreateTestToken(t, f.db, account.ID, "refresh")
-			var created, expiry time.Time
-			require.NoError(t, f.db.NewSelect().TableExpr("auth.tokens").Column("created_at", "expiry").Where("id = ?", fixture.ID).Scan(context.Background(), &created, &expiry))
-			want = append(want, map[string]any{"id": float64(fixture.ID), "expiry": expiry.Format(time.RFC3339), "mobile": false, "created_at": created.Format(time.RFC3339)})
-		}
-		rr, queries := f.get(t, fmt.Sprintf("/auth/accounts/%d/tokens/", account.ID), token)
-		rbacBudgetCollection(t, rr, "Active tokens retrieved successfully", want)
-		t.Logf("identity tokens N%d statements=%d", n, len(queries.Statements))
-		querybudgets.AssertQueryBudget(t, "api.auth.accounts.tokens.positive_growth", queries)
-	}
-}
-
 func TestIdentityAccountPasskeysGrowthQueryBudget(t *testing.T) {
 	t.Parallel()
 	f := newRBACBudgetFixtureOn(t, testpkg.SetupIsolatedTestDB(t))
@@ -159,7 +92,8 @@ func TestIdentityAccountPasskeysGrowthQueryBudget(t *testing.T) {
 		}
 		rr, queries := f.get(t, "/auth/passkeys/", f.token)
 		require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
-		raw, err := json.Marshal(want)
+		// The list answers in the envelope the catalog proxy reads (#2352).
+		raw, err := json.Marshal(map[string]any{"status": "success", "data": want, "message": "Passkeys retrieved"})
 		require.NoError(t, err)
 		require.JSONEq(t, string(raw), rr.Body.String())
 		t.Logf("identity passkeys N%d statements=%d", n, len(queries.Statements))
@@ -182,14 +116,18 @@ func TestIdentityTrustedDevicesGrowthQueryBudget(t *testing.T) {
 			agent := fmt.Sprintf("Budget browser %d", len(want))
 			var id int64
 			require.NoError(t, f.db.NewRaw("INSERT INTO auth.mfa_trusted_devices (account_id, tenant_id, token_hash, user_agent, ip_address, created_at, expires_at) VALUES (?, ?, ?, ?, '127.0.0.1', ?, ?) RETURNING id", f.actor, testpkg.Tenant(t), fmt.Sprintf("example-token-hash-fixture-%d", len(want)), agent, created, expires).Scan(context.Background(), &id))
-			want = append(want, map[string]any{"id": float64(id), "user_agent": agent, "ip_address": "127.0.0.1", "created_at": created.Format(time.RFC3339), "expires_at": expires.Format(time.RFC3339)})
+			want = append(want, map[string]any{"id": strconv.FormatInt(id, 10), "user_agent": agent, "ip_address": "127.0.0.1", "created_at": created.Format(time.RFC3339), "expires_at": expires.Format(time.RFC3339)})
 		}
 		rr, queries := f.get(t, "/auth/mfa/trusted-devices", f.token)
 		require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 		raw, err := json.Marshal(want)
 		require.NoError(t, err)
-		var rows []map[string]any
-		require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &rows))
+		// The list answers in the envelope the catalog proxy reads (#2352).
+		var envelope struct {
+			Data []map[string]any `json:"data"`
+		}
+		require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &envelope))
+		rows := envelope.Data
 		require.ElementsMatch(t, want, rows, string(raw))
 		t.Logf("identity trusted devices N%d statements=%d", n, len(queries.Statements))
 		querybudgets.AssertQueryBudget(t, "api.auth.mfa.trusted_devices.positive_growth", queries)

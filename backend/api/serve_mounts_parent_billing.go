@@ -57,8 +57,7 @@ import (
 // right (#6219),
 // and the SEPA mandates and the creditor at /traeger/sepa-mandates and
 // /traeger/sepa-creditor behind the same right (#4695), and the SEPA direct
-// debit file of the issued runs at /traeger/sepa-debits (#4697), and the
-// check of the DATEV settings at /traeger/datev-export (#4694), the finance
+// debit file of the issued runs at /traeger/sepa-debits (#4697), the finance
 // exports with their protocol at /traeger/finance-exports (#4693), and the
 // details the Träger still has to enter at /traeger/required-details (#7177).
 func mountParentBillingRoutes(root, publicLink chi.Router, organizations HolidayOrganizations, settings TraegerBrandingSettings, schoolSettings owners.MealAttendanceSchoolSettings, marks owners.MealAttendanceMarks, delivery deliveryRuntime.Capability, outcomes deliveryRuntime.EmailOutcomes, healthData enrollmentOwner.HolidayHealthCipher, bankData parentbilling.BankDataCipher, holidayCalendar enrollmentOwner.HolidaySchoolCalendar, today func() calendar.Date, now func() time.Time, logger *slog.Logger) {
@@ -89,7 +88,7 @@ func mountParentBillingRoutes(root, publicLink chi.Router, organizations Holiday
 	root.Mount("/traeger/care-cost-shares", reductions.CostShareRouter(ProtectedTraegerRoutes))
 	root.Mount("/traeger/family-children", familyChildren.Router(ProtectedTraegerRoutes))
 	root.Mount("/traeger/care-notice-runs", NewCareNoticeHTTP(organizations, settings, schoolSettings, marks, delivery, outcomes, today, now).Router(ProtectedTraegerRoutes))
-	terms, datev, required := NewBillingTermsHTTP(settings, requiredDetailSources(organizations, settings, schoolSettings), today, now)
+	terms, required := NewBillingTermsHTTP(settings, requiredDetailSources(organizations, settings, schoolSettings), now)
 	root.Mount("/traeger/billing-terms", terms.TermsRouter(ProtectedTraegerRoutes))
 	root.Mount("/traeger/family-billing", terms.FamilyRouter(ProtectedTraegerRoutes))
 	root.Mount("/traeger/billing-run-due-dates", terms.DueDateRouter(ProtectedTraegerRoutes))
@@ -98,7 +97,6 @@ func mountParentBillingRoutes(root, publicLink chi.Router, organizations Holiday
 	root.Mount("/traeger/sepa-mandates", mandates.MandateRouter(ProtectedTraegerRoutes))
 	debits := parentBillingCompose.NewSEPADebits(newParentBillingLetterheads(settings), bankData, securityruntime.Fingerprint, today, now)
 	root.Mount("/traeger/sepa-debits", newSEPADebitResource(debits).Router(ProtectedTraegerRoutes))
-	root.Mount("/traeger/datev-export", datev.Router(ProtectedTraegerRoutes))
 	root.Mount("/traeger/finance-exports", NewFinanceExportHTTP(financeExports, bookingAccounts).Router(ProtectedTraegerRoutes))
 	transfers := NewTraegerExportTransfers(bankData, now, logger)
 	root.Mount("/traeger/finance-handovers", NewExportHandoverHTTP(financeExports, debits, transfers).Router(ProtectedTraegerRoutes))
@@ -124,17 +122,14 @@ func NewSEPAMandateHTTP(settings TraegerBrandingSettings, cipher parentbilling.B
 // NewBillingTermsHTTP binds the payment terms, the bundling, the family
 // deviations and the due dates of the runs (#4689, ADR 0167) to the right
 // "Abrechnung" and to the parties of the Betreuungsvertrag, which name the
-// family of a contract, in the caller's Träger transaction, and the DATEV
-// booking batch (#4694) to the same right and the DATEV settings of the
-// Träger, and the details the Träger still has to enter (#7177) to every
-// member of the Träger and the sources of details; today and now are the
-// root's clocks.
-func NewBillingTermsHTTP(settings TraegerBrandingSettings, details parentbilling.RequiredDetailSources, today func() calendar.Date, now func() time.Time) (*parentBillingHTTP.BillingTermsResource, *parentBillingHTTP.DatevExportResource, *parentBillingHTTP.RequiredDetailsResource) {
-	contracts := parentBillingCareContracts{contracts: careContractCompose.NewContractVersions()}
-	terms, datev, required := parentBillingCompose.NewBillingTerms(contracts, parentBillingSettings{settings: settings}, parentBillingSettings{settings: settings}, details, today, now)
+// family of a contract, in the caller's Träger transaction, and the details
+// the Träger still has to enter (#7177) to every member of the Träger and the
+// sources of details; now is the root's clock.
+func NewBillingTermsHTTP(settings TraegerBrandingSettings, details parentbilling.RequiredDetailSources, now func() time.Time) (*parentBillingHTTP.BillingTermsResource, *parentBillingHTTP.RequiredDetailsResource) {
+	contracts := parentBillingTermContracts{parentBillingCareContracts{contracts: careContractCompose.NewContractVersions()}}
+	terms, required := parentBillingCompose.NewBillingTerms(contracts, parentBillingSettings{settings: settings}, details, now)
 	requireBilling := common.RequiresPermission(identityaccess.TraegerRightBillingManage)
-	return parentBillingHTTP.NewBillingTermsResource(terms, requireBilling), parentBillingHTTP.NewDatevExportResource(datev, requireBilling),
-		parentBillingHTTP.NewRequiredDetailsResource(required)
+	return parentBillingHTTP.NewBillingTermsResource(terms, requireBilling), parentBillingHTTP.NewRequiredDetailsResource(required)
 }
 
 // NewCareBillingHTTP binds the monthly contribution of the care contract
@@ -219,7 +214,7 @@ func (s parentBillingCareSchools) TraegerSchools(ctx context.Context, organizati
 }
 
 // parentBillingCareContracts translates the Betreuungsvertrag's versions in
-// force and invoice recipients into the Elternabrechnung's port.
+// force, invoice recipients and contract children into the Elternabrechnung's port.
 type parentBillingCareContracts struct {
 	contracts carecontract.ContractBilling
 }
@@ -233,7 +228,7 @@ func (c parentBillingCareContracts) VersionsInForce(ctx context.Context, organiz
 	for i, period := range periods {
 		services := make([]parentbilling.CareContractService, len(period.Version.Services))
 		for j, service := range period.Version.Services {
-			services[j] = parentbilling.CareContractService{Weekday: service.Weekday, CareOfferingID: service.CareOfferingID,
+			services[j] = parentbilling.CareContractService{Weekday: service.Weekday, CareOfferingID: service.CareOfferingID.Int64(),
 				ModuleName: service.ModuleName, EndsAt: service.EndsAt, LastDay: service.LastDay}
 		}
 		versions[i] = parentbilling.CareContractVersion{
@@ -254,6 +249,48 @@ func (c parentBillingCareContracts) Recipients(ctx context.Context, organization
 	}
 	recipients := make(map[int64]parentbilling.CareRecipient, len(parties))
 	for contractID, party := range parties {
+		recipients[contractID] = parentbilling.CareRecipient{FirstName: party.FirstName, LastName: party.LastName, Email: party.Email,
+			ContractDraft: party.ContractDraft}
+	}
+	return recipients, nil
+}
+
+func (c parentBillingCareContracts) ChildrenOf(ctx context.Context, organizationID int64, contractIDs []int64) (map[int64]parentbilling.CareContractChild, error) {
+	children, err := c.contracts.BillingChildren(ctx, organizationID, contractIDs)
+	if err != nil {
+		return nil, err
+	}
+	result := make(map[int64]parentbilling.CareContractChild, len(children))
+	for contractID, child := range children {
+		result[contractID] = parentbilling.CareContractChild(child)
+	}
+	return result, nil
+}
+
+// parentBillingTermContracts are the contracts the deviation of a family may
+// hang on: a draft is none. It can be discarded, and the deviation goes with
+// the contract it was set from (#7770).
+type parentBillingTermContracts struct {
+	parentBillingCareContracts
+}
+
+// Recipients names the party of each contract that is no draft.
+func (c parentBillingTermContracts) Recipients(ctx context.Context, organizationID int64, contractIDs []int64) (map[int64]parentbilling.CareRecipient, error) {
+	return concludedRecipients(ctx, c.contracts, organizationID, contractIDs)
+}
+
+// concludedRecipients translates the invoice recipients and leaves out the
+// contracts that are still drafts.
+func concludedRecipients(ctx context.Context, contracts carecontract.ContractBilling, organizationID int64, contractIDs []int64) (map[int64]parentbilling.CareRecipient, error) {
+	parties, err := contracts.BillingRecipients(ctx, organizationID, contractIDs)
+	if err != nil {
+		return nil, err
+	}
+	recipients := make(map[int64]parentbilling.CareRecipient, len(parties))
+	for contractID, party := range parties {
+		if party.ContractDraft {
+			continue
+		}
 		recipients[contractID] = parentbilling.CareRecipient{FirstName: party.FirstName, LastName: party.LastName, Email: party.Email}
 	}
 	return recipients, nil
@@ -518,9 +555,9 @@ func (b parentBillingHolidayRegistrations) HolidayWeeks(ctx context.Context, lin
 	for i, week := range offer.Weeks {
 		models := make([]parentbilling.HolidayTimeModel, len(week.TimeModels))
 		for j, model := range week.TimeModels {
-			models[j] = parentbilling.HolidayTimeModel{ID: model.ID, Name: model.Name, PriceCents: int64(model.PriceCents)}
+			models[j] = parentbilling.HolidayTimeModel{ID: model.ID.Int64(), Name: model.Name, PriceCents: int64(model.PriceCents)}
 		}
-		weeks[i] = parentbilling.HolidayWeek{ID: week.ID, StartsOn: week.StartsOn, EndsOn: week.EndsOn, TimeModels: models}
+		weeks[i] = parentbilling.HolidayWeek{ID: week.ID.Int64(), StartsOn: week.StartsOn, EndsOn: week.EndsOn, TimeModels: models}
 		weeks[i].CareDays = week.CareDays
 		if week.LunchPriceCents != nil {
 			cents := int64(*week.LunchPriceCents)
@@ -654,11 +691,11 @@ func (b parentBillingBillingRegistrations) ConfirmedHolidayRegistrations(ctx con
 	for i, registration := range confirmed {
 		children := make([]parentbilling.HolidayBillingChild, len(registration.Children))
 		for j, child := range registration.Children {
-			children[j] = parentbilling.HolidayBillingChild{ID: child.ID, FirstName: child.FirstName, LastName: child.LastName,
+			children[j] = parentbilling.HolidayBillingChild{ID: child.ID.Int64(), FirstName: child.FirstName, LastName: child.LastName,
 				BirthDate: child.BirthDate}
 		}
 		registrations[i] = parentbilling.HolidayBillingRegistration{
-			ID: registration.ID, GuardianFirstName: registration.GuardianFirstName, GuardianLastName: registration.GuardianLastName,
+			ID: registration.ID.Int64(), GuardianFirstName: registration.GuardianFirstName, GuardianLastName: registration.GuardianLastName,
 			GuardianEmail: registration.GuardianEmail, DebtorNumber: registration.DebtorNumber, Children: children,
 		}
 		if address := registration.GuardianAddress; address != nil {
@@ -680,14 +717,14 @@ func (b parentBillingBillingRegistrations) HolidayProofRegistrations(ctx context
 	}
 	proofs := make(map[int64]bool, len(registrations))
 	for _, registration := range registrations {
-		proofs[registration.ID] = registration.HasBenefitsProof
+		proofs[registration.ID.Int64()] = registration.HasBenefitsProof
 	}
 	return proofs, nil
 }
 
 func parentBillingRegistration(detail enrollmentOwner.HolidayRegistrationDetail) parentbilling.HolidayRegistration {
 	registration := parentbilling.HolidayRegistration{
-		ID: detail.ID, Status: detail.Status, SubmittedAt: detail.SubmittedAt, BenefitsDeclared: detail.BenefitsDeclared,
+		ID: detail.ID.Int64(), Status: detail.Status, SubmittedAt: detail.SubmittedAt, BenefitsDeclared: detail.BenefitsDeclared,
 		DebtorNumber: detail.DebtorNumber, Children: make([]parentbilling.HolidayChild, len(detail.Children)),
 		MovedUp:           promotedRegistrations(detail.Promotions),
 		GuardianFirstName: detail.GuardianFirstName, GuardianLastName: detail.GuardianLastName, GuardianEmail: detail.GuardianEmail,
@@ -700,8 +737,8 @@ func parentBillingRegistration(detail enrollmentOwner.HolidayRegistrationDetail)
 				replacements[k] = parentbilling.HolidayBookingReplacement{WeekID: previous.WeekID, WeekStartsOn: previous.WeekStartsOn, WeekEndsOn: previous.WeekEndsOn}
 			}
 			bookings[j] = parentbilling.HolidayBooking{
-				WeekID: booking.WeekID, WeekStartsOn: booking.WeekStartsOn, WeekEndsOn: booking.WeekEndsOn,
-				TimeModelID: booking.TimeModelID, TimeModelName: booking.TimeModelName, PriceCents: int64(booking.PriceCents),
+				WeekID: booking.WeekID.Int64(), WeekStartsOn: booking.WeekStartsOn, WeekEndsOn: booking.WeekEndsOn,
+				TimeModelID: booking.TimeModelID.Int64(), TimeModelName: booking.TimeModelName, PriceCents: int64(booking.PriceCents),
 				BookedDays:    len(booking.Days),
 				Days:          booking.Days,
 				Waitlisted:    booking.Placement != enrollmentOwner.HolidayPlacementPlaced,
@@ -713,7 +750,7 @@ func parentBillingRegistration(detail enrollmentOwner.HolidayRegistrationDetail)
 			}
 		}
 		registration.Children[i] = parentbilling.HolidayChild{
-			ID: child.ID, Position: i + 1, FirstName: child.FirstName, LastName: child.LastName, BirthDate: child.BirthDate, Bookings: bookings,
+			ID: child.ID.Int64(), Position: i + 1, FirstName: child.FirstName, LastName: child.LastName, BirthDate: child.BirthDate, Bookings: bookings,
 		}
 	}
 	return registration

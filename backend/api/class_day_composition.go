@@ -162,7 +162,7 @@ func classDayRoster(roster *enrollmentOwner.ClassRosterDay) *classdayCompose.Day
 	for _, row := range roster.Rows {
 		out.Rows = append(out.Rows, classdayCompose.DayRosterRow{
 			StudentID: row.StudentID, SchoolClass: row.SchoolClass, FirstName: row.FirstName, LastName: row.LastName,
-			ListEntry: row.ListEntry, ListEntryID: row.ListEntryID, WithoutCarePlace: row.WithoutCarePlace,
+			ListEntry: row.ListEntry, ListEntryID: row.ListEntryID.Int64(), WithoutCarePlace: row.WithoutCarePlace,
 			GroupName: row.GroupName, Registered: row.Registered,
 			OfferingsByDay: row.OfferingsByDay, ArrivalByDay: row.ArrivalByDay, PickupByDay: row.PickupByDay,
 		})
@@ -246,7 +246,7 @@ func (b classDaySheetStudents) PersonsByID(ctx context.Context, personIDs []int6
 	out := make(map[int64]classdayCompose.SheetPerson, len(persons))
 	for _, person := range persons {
 		if person != nil {
-			out[person.ID] = classdayCompose.SheetPerson{FirstName: person.FirstName, LastName: person.LastName}
+			out[person.ID.Int64()] = classdayCompose.SheetPerson{FirstName: person.FirstName, LastName: person.LastName}
 		}
 	}
 	return out, nil

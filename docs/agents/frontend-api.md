@@ -6,6 +6,103 @@ resolution, or response mapping. Paths beginning with `src/` are relative to
 `.claude/`, `frontend/`, and `docs/` paths start at the repository root.
 Env files are relative to `frontend/`.
 
+## Browser calls
+
+Browser JSON calls to routes with a shared entry use
+`bffJson(portal, route, options)` (`lib/bff-fetch.ts`, #7806). `route` is the
+catalog key of a registered route for the portal, or the BFF entry of a
+session step. A catalog entry types `params`, `query`, `body` and the answer. The
+import is type-only, so no decoder reaches the browser bundle: the catalog
+proxy or named route file has decoded the Go answer already.
+
+| Portal | Example | In the code |
+|---|---|---|
+| Staff (`tenant`) | `bffJson("tenant", "GET /api/students/{id}/partial-absences", { params: { id }, query: { from, to } })` | [`student-partial-absences-api.ts`](../../frontend/src/lib/student-partial-absences-api.ts) |
+| Parents (`parent`) | `bffJson("parent", "GET /parent/me/notifications/feed/", { query: { limit, cursor } })` | [`notification-feed-api.ts`](../../frontend/src/lib/notification-feed-api.ts) `parentNotificationFeedApi` |
+| moto schule (`school`) | `bffJson("school", "GET /school/notifications/feed/", { query: { limit, cursor } })` | [`notification-feed-api.ts`](../../frontend/src/lib/notification-feed-api.ts) `schoolNotificationFeedApi` |
+| Träger (`org`) | `bffJson("org", "GET /traeger/notifications/feed/unread-count")` | [`notification-feed-api.ts`](../../frontend/src/lib/notification-feed-api.ts) `traegerNotificationFeedApi` |
+| Caterer (`caterer`) | `bffJson("caterer", "POST /caterer/notifications/feed/{id}/read", { params: { id } })` | [`notification-feed-api.ts`](../../frontend/src/lib/notification-feed-api.ts) `catererNotificationFeedApi` |
+| Operator (`platform`) | `bffJson("platform", "GET /operator/invitations/")` | [`operator-invitation-api.ts`](../../frontend/src/lib/operator/operator-invitation-api.ts) |
+| Ohne Sitzung (`public`) | `bffJson("public", "GET /auth/invitations/{token}", { params: { token } })` | [`invitation-api.ts`](../../frontend/src/lib/invitation-api.ts) `validateInvitation` |
+
+The path is the pattern below the portal's BFF prefix, a route outside the
+portal's mount (`/analytics-policy`) below the prefix as a whole; a trailing
+slash is dropped and each parameter encoded.
+
+- **Answer:** the `data` of the envelope; a paginated list resolves to
+  `{ data, pagination }`; a route without data and a 204 resolve to `null`.
+- **Query:** use the types in the route entry, not pre-serialized values.
+  For `GET /api/students/{id}/partial-absences`, `params.id` is a string,
+  and `query.from` and `query.to` are `YYYY-MM-DD` strings. The same
+  rules apply to `bffFile`: `id` and `string` take strings, `int` takes a
+  number, and `bool` takes a boolean. Registered string choices narrow the
+  type; repeated keys take arrays. The catalog proxy forwards registered
+  keys without validating or changing their values. Go validates them.
+- **Variants:** a route with response variants (`GET /api/students/`) takes
+  the variant in its query (`query: { view: "names" }`), and the answer has
+  that variant's type; without it the route's default variant.
+- **Missing `data`:** a 2xx answer without a `data` member
+  is an `ApiError` 502, `general.write_answer_unreadable` for a write (as
+  `decodeContract`). There is no fallback value.
+- **Failure:** an `ApiError` with the backend's code, field errors and
+  request ID. `errorMessage` sets its message, so a client keeps its text.
+- **`public`:** the routes without a session (links, password reset,
+  invitations) go without gate and renewal; a pattern names its portal
+  (`/caterer/…` → `/api/caterer/…`), one under `/api` stays as it is.
+- **401:** one table in `bff-fetch.ts` holds where the portals differ. Staff:
+  the session gate before the request and one renewal with a retry
+  (`requireTenantSession`, `renewTenantSession` in `lib/session-cache.ts`),
+  then sign-out; `authRefusals` names codes that refuse
+  only the operation. Operator: to `/operator/login`. Parents: to
+  `/parents/login`, except for the call's explicit `authRefusals` (e.g. a
+  wrong MFA confirmation code or current password). Träger, moto schule and
+  caterer: the error stays on the page. A parent client that reports refusals
+  (`PARENT_ACCESS_REFUSED_EVENT`) catches the `ApiError` itself.
+- **Route files:** use the generated key if the BFF keeps the Go path and
+  envelope. For session steps, use the shared BFF entry from
+  [`session-bff.ts`](../../frontend/src/lib/session-bff.ts), for example
+  `bffJson("public", sessionBff.login(scope), { body })`. The session route
+  and its client share `SignInReply`; the Go session tokens are not part of
+  this type. Use `bffJsonUncontracted` only for the remaining callers and
+  reasons in the [BFF boundary rules](../../frontend/scripts/oxlint-plugin-bff-boundary.mjs).
+  `bff-boundary/only-listed-uncontracted` rejects access outside that list
+  and forwarding the helper, including renamed imports and re-exports.
+  The list only shrinks.
+- **Wait:** a refusal with `Retry-After` (429, 503) carries the wait as
+  `retryAfterSeconds` on the `ApiError` (`apiErrorFromResponse`).
+- **Keepalive cleanup:** `keepalive: true` starts the request immediately.
+  Staff cleanup skips the browser session gate and its 401 renewal, because
+  that lookup cannot outlive an unloading page. The BFF authenticates the
+  cookie as usual; a refusal still reaches the caller as its `ApiError`.
+- **Lists Go writes as `null`:** the generated type says so (`T[] | null`).
+  Read it as an empty list where the screen needs one, once, in the client
+  (`slot-lists-api.ts` derives `WithLists<…>` from the generated type); do not
+  copy the answer into a hand-written type.
+- **One transport:** use `bffJson` for JSON and `bffFile` for files.
+  `bff-boundary/no-raw-browser-transport` rejects access to global `fetch`,
+  `XMLHttpRequest` and `navigator.sendBeacon` outside the same plugin's
+  shrink-only infrastructure list. It also rejects names of retired fetch
+  helpers. `bff-boundary/no-numeric-identifier` rejects coercions such as
+  `Number(room.id)`, `+room.id`, arithmetic and `BigInt(id)`. For generated
+  fields the Go contract's kind wins over the name; where an ordinary string
+  has no contract provenance, ID-shaped names are a fallback. Keep IDs as
+  text and use `compareIds` for ordering decimal IDs without rounding.
+  All three rules run in `pnpm run check`.
+  `scripts/backend-wire-types.mjs`
+  finds hand-written wire types by their form (two `snake_case` fields of
+  their own, a generated type imported under another name, a type that only
+  renames a generated one); its baseline only shrinks.
+- **Tests:** a client test stubs the global `fetch` and mocks the session
+  gate with
+  `vi.mock("~/lib/session-cache", () => import("~/test/mocks/plain-session-fetch"))`;
+  answers of a paginated route carry `pagination` (`pagedJson`), plain
+  answer objects become Responses through `plainResponse`/`plainFetch`.
+- **Files:** a route registered with `File: true` is called with
+  `bffFile(portal, route, options)` from the same module: the same path,
+  portal table and ApiError, resolving to the successful `Response` whose
+  body and `Content-Disposition` the caller reads. A link the browser opens
+  itself (`<a href>`) stays a plain URL.
+
 ## Environment & API URLs — Fail Fast, No Defaults
 
 Required values fail fast through `src/env.js` and `src/lib/env-validation.js`.
@@ -14,12 +111,12 @@ checklist. Local values belong in `.env.local` using `.env.example` as the templ
 
 | Variable                           | Scope           | Purpose                                                       |
 | ---------------------------------- | --------------- | ------------------------------------------------------------- |
-| `NEXT_PUBLIC_API_URL`              | Client + Server | Browser-accessible backend URL (axios `baseURL`)              |
+| `NEXT_PUBLIC_API_URL`              | Client + Server | Public backend URL; validated, read by no frontend code       |
 | `API_URL`                          | Server only     | Backend URL for route handlers (Docker: `http://server:8080`) |
 | `NEXTAUTH_URL` / `NEXTAUTH_SECRET` | Server          | NextAuth base URL + JWT secret                                |
 | `SKIP_ENV_VALIDATION`              | Build           | `true` skips env validation (Docker builds)                   |
 
-**`getServerApiUrl()`** (`lib/server-api-url.ts`) returns the startup-validated `process.env.API_URL` — no fallback chain. Route handlers must use it; never `NEXT_PUBLIC_API_URL` on the server.
+**`getServerApiUrl()`** (`lib/server-api-url.ts`) returns the startup-validated `process.env.API_URL` — no fallback chain; never `NEXT_PUBLIC_API_URL` on the server. Every server call to the backend goes through `sendBackend` (`lib/backend-client.server.ts`), its only reader: base URL, bearer, client identity, timeout, log line and metric in one place. Depcruise (`backend-only-through-send-backend`) rejects importing `server-api-url.ts` elsewhere; oxlint (`backend-url/only-server-api-url`) rejects reading `API_URL` from `process.env` or `~/env` outside it. Browser code calls only the BFF under `/api/`.
 
 ### Server-Only Import Isolation (`.server.ts`)
 
@@ -36,265 +133,10 @@ The same applies to `auth` and any other server-only import in mixed files.
 
 ## Architecture Patterns
 
-### Route Handlers (Next.js 16)
-
-Every portal's route handlers come from one factory,
-`makePortalHandlers(portal)` (`lib/portal-handlers.server.ts`), bound once per
-portal in `lib/route-wrapper.server.ts` (tenant) and
-`lib/{operator,parent,school,caterer,traeger}/route-wrapper.server.ts` from the
-portal object its entry module exports (`tenantPortal`, `parentPortal`, …).
-It builds handlers (`get`, `post`, …, `del`), pure proxies (`proxyGet`, …),
-the verbatim `jsonProxy`, `proxyFile`/`downloadFile` and `proxyUpload`, all
-inside the portal's response wrapper. The helpers that read the session
-(`backendFetch`, `downloadFile`, `forwardToBackend`, `runWithRenewal`) throw
-outside that wrapper; `src/app/api/route-session-coverage.test.ts` runs every
-route and fails on a session read outside it. One response contract: data answers
-`{ success, message, data }`, a DELETE without a result answers 204, the
-envelope's `data` is unwrapped in one place, a handler may return a Response
-as it is. Public JSON routes use `createPublicJsonProxy`
-(`lib/backend-proxy-route.server.ts`), login steps before a session
-`authStepProxy` (`lib/auth-proxy.server.ts`). Do not move a route across
-portal auth boundaries to share code. Streaming SSE uses its documented
-exception in [the SSE contract](realtime.md).
-
-Every backend call goes through `sendBackend` (`lib/backend-client.server.ts`):
-base URL, bearer, one client identity set (`backendIdentityHeaders`: client
-IP, User-Agent, analytics session, Vorgangskennung, frontend origin),
-`cache: "no-store"`, Idempotency-Key, a header timeout from
-`BACKEND_TIMEOUTS_MS` (90 s by default; login, logout, session upkeep and
-public assets shorter), a refused `.`/`..` path segment, one log line and
-metric. Without a session (`bearer` null: public routes, login steps,
-refresh, token checks) the same path applies. The portal's `backendFetch`
-binds it to the request's session: a backend 401 repeats once with the
-renewed session. No session answers 401 "Unauthorized"; a renewal the backend
-refused (revoked or foreign family, invalid refresh token) answers 401
-"Token expired", so the browser signs out (#5194); a renewal that could not
-be decided (refresh unreachable, timeout, 5xx) answers 503
-`general.unavailable` and leaves the session as it is; a second 401 for the
-renewed token is the backend's own answer and passes through. An unreachable
-backend or a header timeout answers 503 `general.unavailable` everywhere.
-Retry is on by default; every
-route that carries the current password or a code (password change, e-mail
-change, MFA off, confirm code, a declaration with the account password)
-passes `retry: { off: "<reason>" }`, whichever helper sends it;
-`src/app/api/credential-retry.test.ts` proves each sends it once after a 401.
-The JSON of a call goes through `backendJson`: the portal handlers' `api`
-and the tenant's `apiGet`/`apiPost`/… in `lib/api-helpers.server.ts` are
-projections of it and run inside a portal route handler, whose retry policy
-applies. Only the SSE stream
-and the cached tenant resolve fetch the backend themselves; they add
-`clientIdentityHeaders(request.headers)` or the headers handed in. A route
-param in a backend path is encoded (`requirePathSegmentParam`,
-`encodeURIComponent`); a query key never replaces a route param. Why and
-the full chain:
-[Client IP and rate limits](contracts.md#client-ip-and-rate-limits).
-
-Backend error responses have one wire contract: the portal handlers
-(`makePortalHandlers`) propagate `ApiResponseError` through `handleApiError`;
-the JSON proxies, file responses and the audited direct-fetch exceptions use
-`forwardBackendResponse`. These paths retain the
-backend status, body bytes, `Content-Type`, and `Retry-After`. Do not parse and
-rebuild an error body, infer status from an error string, or substitute a
-message when the backend returned an empty body. Locally generated errors
-(validation, missing session, network failure) are separate from backend
-responses.
-
-Cache policy (#4999): every BFF answer that is JSON or bodyless and sets no
-`Cache-Control` of its own leaves as `private, no-store`
-(`lib/private-no-store.ts`). The portal auth handlers
-(`server/auth/route-handler.ts`), `forwardBackendResponse` and the public
-proxy factories apply it; a route that builds its answer itself (login, MFA,
-passkeys, demo access, invitations, Auth.js endpoints) wraps its handler in
-`withPrivateNoStore`. `src/app/api/route-cache-policy.test.ts` fails for an
-exported handler that is neither built by a policy factory nor listed with a
-reason in its exception table, and for every re-export (`export * from`,
-`export { GET } from`) in a route file. Files, images and event streams keep their own
-headers. Private file responses additionally use `withPrivateDownloadNoStore`
-around the outer portal handler. This explicit download policy sets
-`Cache-Control: private, no-store` for every MIME type and error status, even
-when the backend supplies a different cache policy. It does not read the
-response body or change download headers, status or session cookies.
-
-Sentry ownership follows the same boundary: forwarding a backend HTTP error,
-including 5xx, creates no BFF event. A caught network failure or BFF exception
-uses `captureBffException(error, request)` once at the handler boundary so the
-event carries the proxy-assigned `X-Request-ID`. `logger.error` records context
-and a breadcrumb, never an event. Uncaught Next.js exceptions use
-`onRequestError` in `src/instrumentation.ts`.
-
-The following response paths intentionally do not use the ordinary JSON
-success wrapper. Their **backend errors still use the shared error path**:
-
-| Route(s)                                                                                                                                                                                                                                                   | Success-path reason                                                                                                         |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `api/sse/events`, `api/parent/sse/events`, `api/school/sse/events`                                                                                                                                                                                         | `proxySSEStream` preserves a live event stream and abort propagation; a buffered JSON wrapper would prevent streaming.      |
-| `api/meal-plan/participants/export`, `api/students/export`, `api/statistics/export`, `api/students/day-log/export`, `api/students/[id]/attendance-history/export`                                                                                          | CSV/PDF export bytes and download headers must remain intact.                                                               |
-| `api/staff/time-tracking/export`, `api/staff/[id]/time-tracking/export`, `api/birthdays/staff-export`, `api/emergency/snapshot/export`, `api/guardians/payment-overview/export`, `api/operator/billing/key-date-counts/export` | CSV/PDF export bytes and download headers must remain intact; portal auth stays distinct.                                   |
-| `api/enrollment/phases/[id]/export`, `api/enrollment/admin/reports/care-usage/export`, `api/enrollment/admin/reports/class-roster/export`, `api/enrollment/admin/students/[studentId]/requests/export`                                                     | Enrollment export formats and filenames come from backend headers.                                                          |
-| `api/import/{students,teachers,class-list-entries,opening-balances}/template`                                                                                                                                                                              | Template file bytes and backend filenames cannot be JSON-wrapped.                                                           |
-| `api/announcement-attachments/[announcementId]/[attachmentId]/download`, `api/files/folders/[folderId]/files/[fileId]/download`, `api/staff/[id]/documents/[documentId]/download`, `api/students/[id]/documents/[documentId]/download`                     | Attachment bytes, MIME types, and dispositions are passed through.                                                          |
-| `api/parent/me/news/[announcementId]/attachments/[attachmentId]/download`                                                                                                                                                                                  | Parent attachment bytes retain disposition and `nosniff` headers; parent relationship authorization remains in the backend. |
-| `api/parent-announcements/[announcementId]/declaration-export`, `api/parent/me/news/[announcementId]/declaration/proof/pdf`                                                                                                                                | Declaration exports and parent proof PDFs retain backend download headers and portal-specific session refresh behavior. |
-| `api/public/enrollment-form-legal-documents/[filename]`, `api/public/enrollment-legal-documents/[filename]`, `api/public/login-image/[filename]`, `api/me/profile/avatar/[filename]`, `api/staff/[id]/avatar`, `api/students/[id]/photo/[filename]`        | Public or user image/PDF responses retain content-type and caching behavior.                                                |
-| `api/calendar-feed/[token]`, `api/request-feed/[token]`                                                                                                                                                                                                    | iCalendar/RSS subscriptions retain their wire format and cache policy; the path token is the subscription credential.       |
-
-### Private download inventory (#5119)
-
-The complete route/method inventory lives in
-`frontend/src/test/private-download-routes.ts` (57 handlers). The download
-rule in `route-cache-policy.test.ts` requires the explicit wrapper on each
-entry; an ordinary JSON or portal wrapper does not satisfy it. It also scans
-file constructors, file factories and download paths for missing entries.
-
-| Private download family | Coverage and reason |
-| --- | --- |
-| Tenant exports | Students, birthdays, emergency snapshot, enrollment phase/reports/student requests, guardian payments, attendance history/day log, statistics, staff time tracking, rooms, shifts, timetable, surveys, holiday participants: school/person data, including CSV/PDF/XLSX. |
-| Meal exports | Tenant meal plan participants/week/month orders, meal-caterer orders and caterer delivery lists: session-bound school/participant data. |
-| Documents and proofs | Staff/student/folder files, announcement attachments/declarations, enrollment uploads and signed proofs, care/pickup proofs, parent inbox PDFs: personal data, including arbitrary binary and image attachments. |
-| School and operator | School parent-letter declarations and operator billing counts: portal-bound exports, without changing their auth boundary. |
-| Träger | Access log, billing exports/letters/preview/print, holiday registration export and form documents: organization-session-bound files. |
-| Token-bound downloads | Enrollment signature proof, holiday-form documents and the payroll office's one-time month file (`public/payroll-download/[link]`, POST only so a mail scanner cannot spend the link): access-link scope is still private, even without a browser session. |
-| Appointment ICS downloads | Tenant and parent single-appointment files are session-bound downloads, unlike subscription feeds. |
-
-Non-download responses retain their existing policies. The reasoned resource
-inventory is `NON_DOWNLOAD_RESOURCES` in `route-cache-policy.test.ts`:
-
-| Excluded resource | Retained policy and reason |
-| --- | --- |
-| Public login images and enrollment legal/form PDFs | Public assets, `public, max-age=86400` or the form PDF's upstream policy. |
-| Profile/staff avatars and student photos | Existing private image cache/revalidation policy; these are display resources, not exports. |
-| Träger logo | Brand image through `proxyFile`, existing `no-store` policy. |
-| Calendar and request subscription feeds | Existing `private, max-age=3600` and `private, no-store`, respectively; subscription wire format unchanged. |
-| Tenant, parent and school SSE | Existing SSE headers, live streaming and abort behavior unchanged. |
-| Parent declaration proof metadata | JSON, protected by the ordinary policy; the sibling `proof/pdf` is a private download. |
-
-### Audited direct-fetch exceptions
-
-The routes below still call `fetch` directly
-because they stream non-JSON content, use the shared file-upload wrapper, or
-perform a route-specific business/session adaptation. Client-visible backend
-errors use `forwardBackendResponse`; the demo
-readiness probe and optional profile prefetch are intentionally consumed by
-their surrounding BFF flow.
-A direct fetch outside this inventory needs a reason and a shared proxy path.
-
-| Route under `app/api/` | Reason the transparent JSON factory is not used |
-| --- | --- |
-| `activities/[id]/supervisors/[supervisorId]` | Refreshes the session before forwarding; an exhausted refresh answers 401 with `general.permission`. |
-| `announcement-attachments/[announcementId]` | Multipart attachment upload uses the shared file-upload validator. |
-| `announcement-attachments/[announcementId]/[attachmentId]/download` | Streams attachment bytes and disposition for a browser download. |
-| `auth/login` | Relays login response cookies as well as the backend body. |
-| `auth/logout` | Uses the tenant refresh token for revocation; the browser still clears its local session. |
-| `birthdays/staff-export` | Streams the staff-birthday export file. |
-| `calendar-feed/[token]` | Returns iCalendar text; the path token is the subscription credential. |
-| `demo/access/handoff` | Checks readiness and returns a portal redirect, not backend JSON. |
-| `demo/access/reset` | Validates a demo credential and maps a reset result to the entry URL. |
-| `demo/access/sessions` | Accepts a link or cookie token and stores a new httpOnly demo cookie on success. |
-| `demo/access/status` | Uses the shared demo-token forwarding helper for credential-scoped status. |
-| `emergency/snapshot/export` | Streams emergency-snapshot export bytes and filename. |
-| `enrollment/admin/data-correction` | Maps flattened request/child IDs and a corrected payload to the backend child route. |
-| `enrollment/admin/decide` | Maps flattened request/child IDs and decision fields to the backend child route. |
-| `enrollment/admin/offerings` | Maps flattened request/child IDs and offering edits to the backend child route. |
-| `enrollment/admin/reports/care-usage/export` | Streams the care-usage export with backend filename. |
-| `enrollment/admin/reports/class-roster/export` | Streams the class-roster export with backend filename. |
-| `enrollment/admin/students/[studentId]/requests/export` | Streams one student’s enrollment requests export. |
-| `enrollment/form-bootstrap/public/[tenantSlug]/[phaseId]` | Combines public form metadata with optional session-backed profile prefetch. |
-| `enrollment/legal-documents` | Multipart legal-document upload uses the shared file-upload validator. |
-| `enrollment/phases/[id]/export` | Streams a phase export in its backend-selected format. |
-| `files/folders/[folderId]/files` | Multipart folder-file upload uses the shared file-upload validator. |
-| `files/folders/[folderId]/files/[fileId]/download` | Streams folder-file bytes and disposition. |
-| `guardian-invitations/[token]/accept` | Maps invitation password fields and forwards the client headers. |
-| `guardians/payment-overview/export` | Streams payment-overview export bytes with backend disposition. |
-| `import/class-list-entries/template` | Returns the class-list CSV template and backend filename. |
-| `import/opening-balances/template` | Returns the opening-balance CSV template and backend filename. |
-| `import/students/template` | Returns the student CSV template and backend filename. |
-| `import/teachers/template` | Returns the teacher CSV template and backend filename. |
-| `invitations/accept` | Maps signup fields and chooses the signed invitation-owner session when an existing account accepts. |
-| `me/profile/avatar` | Validates image magic bytes and MIME before upload through the shared upload wrapper. |
-| `me/profile/avatar/[filename]` | Serves avatar image bytes with MIME and cache headers. |
-| `meal-plan/participants/export` | Streams meal-plan CSV bytes with the backend filename. |
-| `operator/billing/key-date-counts/export` | Streams operator billing export bytes with no-store caching and operator refresh. |
-| `parent/me/news/[announcementId]/attachments/[attachmentId]/download` | Streams a parent-authorized attachment with disposition and nosniff headers. |
-| `parent-announcements/[announcementId]/declaration-export` | Streams a declaration PDF or CSV report with tenant-session refresh. |
-| `parent/me/news/[announcementId]/declaration/proof/pdf` | Streams a parent-authorized declaration proof PDF with parent-session refresh. |
-| `public/enrollment-form-legal-documents/[filename]` | Serves a public form PDF as a body stream. |
-| `public/enrollment-legal-documents/[filename]` | Serves a public legal PDF with MIME validation and cache policy. |
-| `public/login-image/[filename]` | Serves a public login image with MIME validation and cache policy. |
-| `request-feed/[token]` | Returns RSS/XML with subscription-token scope and private no-store cache policy. |
-| `school/auth/logout` | Uses the school refresh token, not the access token, to revoke the scoped session. |
-| `settings/enrollment/legal-agb-document` | Multipart legal PDF upload uses the shared file-upload validator. |
-| `settings/login-image` | Uploads validated tenant image data and invalidates the tenant cache. |
-| `staff/[id]/avatar` | Returns image bytes, MIME type, and cache headers. |
-| `staff/[id]/documents` | Multipart staff-document upload uses the shared file-upload validator. |
-| `staff/[id]/documents/[documentId]/download` | Streams one staff document with its MIME type and disposition. |
-| `staff/[id]/time-tracking/export` | Streams one staff member’s time-tracking export. |
-| `staff/time-tracking/export` | Streams staff time-tracking export bytes. |
-| `statistics/export` | Streams statistics export bytes with no-store caching. |
-| `students/[id]/photo/[filename]` | Serves student photo bytes with MIME, cache headers and the 304 revalidation path. |
-| `traeger/auth/logout` | Uses the Träger refresh token, not the access token, to revoke the `org` session. |
-
-File routes of every portal answer through one builder, `fileResponse`
-(`lib/file-response.server.ts`: streaming, the backend's file headers,
-`nosniff` by default, `no-store` unless the route names a cache policy, a
-backend error as its problem body). Routes without route-specific logic use
-the factory instead of a direct fetch: downloads `proxyFile` (client
-identity, one refreshed retry; the route wraps it in
-`withPrivateDownloadNoStore`), uploads `proxyFileUpload`
-(`lib/file-upload-wrapper.server.ts`: file validation, listed form fields,
-client identity, one refreshed retry). Under `students/` these are the six
-downloads (accident-report PDF, attendance-history and day-log exports,
-document download, care-request proof, student export) and the three uploads
-(documents, photo, accident-report paper copy).
-
-The three SSE routes (`sse/events`, `parent/sse/events`, and
-`school/sse/events`) use `proxySSEStream` separately: each must keep its own
-portal credential and abortable event stream, which a JSON factory would buffer.
-
-Helper-backed custom handlers without a direct `fetch` have narrower reasons:
-`rooms/[id]/history` applies the documented empty/disabled BFF mapping;
-`statistics/report` whitelists audit-sensitive queries, retries refreshed
-tenant sessions, and keeps its established no-store success envelope
-(`students/day-log` and `students/[id]/attendance-history` forward only their
-audit-sensitive query keys through `proxyGet` with `forwardQuery`);
-`auth/password` validates and renames password fields before `apiPost`;
-`auth/token` renews the tenant session and answers 204 without a token;
-`auth/staff-preview/end` takes the running preview's token from the session
-cookie; `logs` and `parent/logs` ingest client
-telemetry. `enrollment/legal-documents/[filename]` retries deletion with a
-refreshed tenant token. `timetable/betreuungsplan/export`,
-`timetable/lists/export`, `rooms/export`, `staff-shifts/export`,
-`calendar/appointments/[appointmentId]/ics`, and
-`parent/calendar/appointments/[appointmentId]/ics` retain downloadable bytes
-and headers. The remaining helper-backed routes use their portal's
-`create*Handler` or `proxy*` factories, including the operator and parent
-wrappers; they are not handwritten auth/fetch/error loops.
-
-Business adapters are not transparent proxies: room history maps the
-documented 404 and `feature_disabled` 403 to an empty/disabled view;
-student PUT marks a consent write that succeeded before a later student write
-failed. The student routes own the backend wire shape (`lib/student-wire.ts`);
-the browser client `lib/student-api.ts` receives mapped `Student` objects. Demo handoff produces a redirect after checking readiness. An exhausted
-auth refresh/retry answers 401 with `general.permission`. All other
-backend errors in those routes retain the shared error contract. Logout
-forwards backend errors unchanged even though the browser always clears its
-local session.
-
-Read [the tenant route wrapper](../../frontend/src/lib/route-wrapper.server.ts)
-and the affected portal's wrapper before changing a handler. Existing consumers
-such as [the rooms route](../../frontend/src/app/api/rooms/route.ts) show the
-request/response wiring; retain the affected endpoint's error contract.
-
-Context params are async in Next.js 16: `params: Promise<...>` — always `await`.
-
-### API Clients & Data Mapping
-
-- `lib/{domain}-api.ts` — backend calls; `lib/{domain}-helpers.ts` — type mapping
-- Backend `int64` IDs → frontend `string` (`data.id.toString()`); `snake_case` → `camelCase`
-- Paginated lists arrive as `{ status, data, pagination: { current_page, page_size, total_pages, total_records } }` (`PaginatedResponse<T>` in `lib/api.ts`)
-
-Inspect the domain's existing mapper, such as
-[room response mapping](../../frontend/src/lib/room-helpers.ts), rather than
-copying a generic mapper. Preserve nullability and date-vs-instant semantics.
+One way across the seam: a Go route registered with `common.RouteContract`,
+generated types and decoders, one catalog proxy per portal, a named
+`route.ts` only for browser-specific behavior. Steps and ownership:
+[new API route](new-route.md).
 
 ### Generated contract (ADR 0270)
 
@@ -302,40 +144,68 @@ A backend route that is registered in Go has generated TypeScript types and
 zod decoders in `lib/contract/<resource>.generated.ts`. Never edit these files
 or write a `Backend*` interface for a registered route.
 
-- Register a route in its owner's `http` role (`StudentRouteContracts` in
-  `backend/modules/presenceprojection/http/student_contracts.go` is the
-  example) and add its mount in `backend/api/route_contracts.go`.
-- Regenerate with `scripts/run-go-toolchain.sh go -C backend run . gencontract`.
+- Registering, mounting and regenerating: [new API route](new-route.md).
   `TestTheCommittedContractIsCurrent` (`backend/cmd`) and the backend quality
   job fail on a stale file.
-- Read a registered route with `contractGet` (`lib/contract/client.server.ts`).
-  It returns the decoded value or a typed failure with status, registry code
-  and request ID; rethrow `error.cause` so the handler boundary forwards the
-  backend error unchanged. An answer outside the contract is a 502, never an
-  empty value.
-- Write to a registered route with `contractWrite` (same file): it takes the
-  generated route entry, checks the body against the route's request type at
-  compile time and decodes the answer like `contractGet`. A request type has
-  only optional fields, because Go reads an absent key as the zero value;
-  what is required stays Go's `Bind` and reaches the client through the error
-  contract.
+- A portal forwards its backend routes through one catalog proxy, so a new
+  backend route needs no pass-through `route.ts`. `app/api/proxy-routes.test.ts`
+  fails on a `route.ts` whose only code is `proxyGet(...)` and its siblings.
+- Read with `contractGet(entry, options)`; write with
+  `contractWrite(entry, body, options)`. Import the entry from its
+  generated resource file. The entry types the write body and decodes the
+  full answer, with or without an envelope. A malformed answer is a 502,
+  never an empty value. A request type has optional fields because Go
+  reads absent keys as zero values; Go's `Bind` still validates the body.
+- Pass `token` when the caller holds the bearer, or omit it for a public
+  or pre-session step. Pass `endpoint` for the path with its parameters
+  filled in, or to add query parameters. For a session-bound route that
+  uses `backendFetch`, hand that transport to the contract helper as
+  `send`; it keeps the portal's renewal policy.
+- Return `contractResponse(reply, request)` for decoded JSON that the BFF
+  forwards. If the route projects the answer, return
+  `contractError(reply, request)` on refusal, then project the decoded
+  value. In a portal handler that owns error handling, rethrow
+  `reply.error.cause`. See
+  [school switching](../../frontend/src/app/api/auth/switch-tenant/route.ts):
+  the route decodes the token pair, installs it and returns only
+  `successResponse(null)`.
 - A portal other than `tenant` uses its own route wrapper with the same
   helpers; the route entry names its portals.
-- Identifiers leave the decoder as strings. A registered enum is typed as its
+- Import generated wire types for closed fields, including nested
+  snapshots and maps. An `unknown` value is intentionally open only where
+  `contract_json` on the Go field explains the protocol or configuration
+  that determines its shape. Narrow such values at the point of use.
+  A typed response may also carry a documented `LegacyJSON` alternative
+  when recorded data predates the typed shape.
+- A registered enum is typed as its
   known values but decodes any string; narrow it with `knownEnum`.
 - A day is a `calendar.Date`, an instant a `time.Time`. A string field that
   carries a day or a wall-clock time says so in its tag: `contract:"date"`
   (`YYYY-MM-DD`) or `contract:"clock"` (`HH:MM`); the decoder then rejects
   another form. Closed value sets are registered in `Enums`.
-- A new identifier is a `common.ID`, a count an `int`; the generator rejects a
-  bare `int64` and a response shape that depends on a query parameter.
-- In a request type an identifier is a `string`, except a field Go still
-  reads only as a JSON number (`NumericIDs`): that one is a `number`. A
-  request type with its own `UnmarshalJSON` needs an entry in `Readers`
-  (`backend/api/route_contracts.go`), or the generator stops.
+- An identifier is an `ident.ID` in every role, a count an `int`; the
+  generator rejects a bare `int64` and a response shape that
+  depends on a query parameter. Every answer sends identifiers as strings,
+  and the generated decoder (`int64String`) takes nothing else (ADR 0300).
+  A sign-in step or another route its portal's route file serves is typed
+  too (`RouteFile`) and stays out of every proxy allowlist. The catalog
+  lines outside the contract (`Outside`: a device, webhook or protocol
+  endpoint) only shrink: `scripts/check-contract-shrink.mjs <base>` fails on
+  a new one unless a new ADR names its catalog line
+  ([new route](new-route.md#routes-outside-the-contract)).
+- In a request type an identifier is a `string`; for one release Go still
+  reads a JSON number there (`ident.ID`). A request type with its own
+  `UnmarshalJSON` needs an entry in `Readers`
+  (`backend/api/route_contracts.go`), or the generator stops; an own reader
+  does not make an `int64` an identifier.
 - Removing or renaming a registered field or route needs one release as
   deprecated (`DeprecatedFields`, `Deprecated`);
-  `scripts/check-contract-compat.mjs <base>` fails otherwise.
+  `scripts/check-contract-compat.mjs <base>` fails otherwise. Typing an open
+  request field in place needs `contract_refines:"<compatibility evidence>"`
+  and a reader that either accepts the previous input domain or already
+  rejected everything outside the new shape. Expand first when callers need
+  to move to a new wire shape.
+
 
 #### Portal proxy (#2352)
 
@@ -356,43 +226,209 @@ The key is the scope claim of the portal's session token
 (`common.PortalScope`).
 
 - The allowlist is `portalRoutes.<key>` in the generated
-  `lib/contract/portals.generated.ts`: the routes whose registration names
-  the portal. A path outside it is a 404 before the session is read and
-  before any backend call.
+  `lib/contract/portals.generated.ts`. It contains only the portal's proxied
+  registrations; named handlers are listed separately in `routeFileRoutes`.
+  A path outside the allowlist is a 404 from the proxy before it reads the
+  session or calls the backend.
 - Only the registered query parameters are forwarded, every path segment is
   encoded again, and the answer is checked against the route's decoder.
-  Session, the single 401 renewal, body limit, `Idempotency-Key` and the
-  response envelope come from the portal's handlers (`makePortalHandlers`).
+  Session, the single 401 renewal, body limit and `Idempotency-Key` come
+  from the portal's handlers (`makePortalHandlers`). The answer is the
+  backend's envelope with the decoded data: `{ status, data, message }`, a
+  paginated list also `pagination`, as `common.Response` writes them.
 - The BFF path must equal the backend path below the portal's prefix. A
   route whose BFF path differs (`/api/operator/provisioning/schools` for
   `/operator/schools`) moves its callers to the backend's path first.
 - Next prefers an existing route file over the proxy. Keep a file only for
-  what is specific to the browser: portal policy, session handling, files,
-  uploads, login/MFA, the SSE pipe, or an aggregation without a Go view.
-- To move a pure proxy route: register its Go route for the portal,
-  regenerate, delete the route file and its row in
-  `src/test/proxy-routes/**`. A file is deleted only when every method it
-  exports is registered. `TestARegisteredRouteRunsBehindTheScopeOfItsOnePortal`
+  what is specific to the browser: portal policy, session handling, a file
+  or upload with behavior the contract cannot name, login/MFA, or the SSE
+  pipe. Reshaping or aggregating reads for a screen belongs in a Go view;
+  see [when a route needs its own file](new-route.md#when-a-route-needs-its-own-routets).
+- A file answer registers `File: true`, a multipart upload `Multipart: true`
+  with `MaxBodyBytes` and `TooLargeCode` (ADR 0270, addendum 2026-11-19).
+  The proxy streams both unread: the file with the headers of
+  `fileResponse`, every answer `private, no-store`; the upload once, without
+  a retry after a renewal, and 413 with `TooLargeCode` above the limit. Such
+  a route has no entry in `src/test/private-download-routes.ts`. The backend
+  names the file's `Content-Type` and `Content-Disposition` itself; the proxy
+  adds no fallback. A BFF-side ID, query or format check moves to the Go
+  handler, and the client sends the backend's parameters and body as they are.
+  A file the browser may keep (an avatar, the Träger logo, whose address names
+  its version) registers `PrivateCache: true`; the handler sets its private
+  Cache-Control, and the proxy passes it on only for such a route and only
+  when it says `private` and not `public`. Every refusal stays
+  `private, no-store`.
+- A file of the portal `public` (a token link) needs `PublicFile`, the reason
+  its link alone may open it; the generator refuses an unmarked public file,
+  a public upload, and a marker on any other route. The proxy fetches it
+  without session, bearer, body and `Idempotency-Key`, `sendBackend` adds the
+  client IP for the backend's limiter of the link, and every answer is
+  `private, no-store` (ADR 0270, addendum "Öffentliche Datei-Routen"). The
+  link's path prefix needs log redaction in `lib/log-redaction.ts` and
+  `backend/middleware/log_redaction.go`.
+- A file the browser may keep names its Cache-Control in `FileCache`, one
+  of the reviewed `FileCache*` values; a public value needs `PublicFile`.
+  `ConditionalGet` forwards `If-None-Match`/`If-Modified-Since` and hands a
+  304 back with `ETag` and `Last-Modified`. Only the served file keeps the
+  value; refusals stay `private, no-store` (ADR 0270, addendum of
+  2026-11-20). `FileCache` takes precedence over `PrivateCache` when both
+  are present. A subscription address that predates its backend path is a
+  `beforeFiles` rewrite in `next.config.js`, never a route file.
+- To move an old route file onto the proxy: register its Go route for the
+  portal, regenerate and delete the route file. A file is deleted only when
+  every method it exports is registered. `TestARegisteredRouteRunsBehindTheScopeOfItsOnePortal`
   (`backend/api`) fails when the route does not run behind that portal's
   scope middleware.
 - A route file with a dynamic segment wins over the proxy too:
   `billing-families/[id]` answers `billing-families/debtor-number-format`.
-  Such a registered route keeps a literal route file that hands the request
-  to `catalogProxy` (see that Träger route);
-  `app/api/catalog-route-selection.test.ts` fails when one is missing.
-- Not served by a proxy: a route with response variants
-  (`GET /api/students/`).
+  No route file may stand in front of a path on the catalog proxy allowlist;
+  only the hand-off files below `/api/auth` that pass the request to
+  `catalogProxyUnder` do. `app/api/catalog-route-selection.test.ts` fails
+  otherwise.
+- A route file that calls the backend itself must name at least one backend
+  path outside the catalog proxy allowlists, such as a `RouteFile` sign-in
+  step or an `Outside` stream. `app/api/route-backend-paths.test.ts` fails a
+  file whose backend paths are all on the allowlists.
+- A route with response variants (`GET /api/students/`) names its
+  `variantParam`; the proxy decodes the answer with the variant the query
+  asks for, else the default variant.
 - A Go type two resources answer with (the staff portal and moto schule
   mount the same notification feed) is written once, in
   `lib/contract/shared.generated.ts`, and imported by both resource files.
 - A route that answers 204 or the envelope without data registers
   `NoData: true` in place of a response type. Its decoder (`noData`) takes
-  exactly those two answers, and the BFF answers `data: null` (a DELETE: 204).
-- An identifier in `NumericIDs` leaves the proxy as a string, whatever Go
-  sends. A client type for such a route reads `string`, never `number`.
+  exactly those two answers, and the BFF answers `{ status: "success",
+  data: null }` with the backend's message (a DELETE: 204).
+- A client type reads an identifier as `string`, never `number`.
 
 The registered routes are the entries of `portals.generated.ts`.
 
+### Named route handlers
+
+A route file exists only for behavior the catalog proxy cannot carry; the
+list of allowed reasons is in [new API route](new-route.md#when-a-route-needs-its-own-routets).
+Its handlers come from the portal's route wrapper: `makePortalHandlers(portal)`
+(`lib/portal-handlers.server.ts`), bound once per portal in
+`lib/route-wrapper.server.ts` (tenant) and
+`lib/{operator,parent,school,caterer,traeger}/route-wrapper.server.ts` from
+the portal object its entry module exports (`tenantPortal`, `parentPortal`,
+…). The same object builds the portal's `catalogProxy`. A handler (`get`,
+`post`, `put`, `patch`, `del`) runs inside the portal's `withAuth`, reads the
+session, renews it once on a backend 401 and answers errors through
+`handleApiError`. The helpers that read the session (`backendFetch`,
+`forwardToBackend`, `runWithRenewal`) throw outside that wrapper;
+`src/app/api/route-session-coverage.test.ts` runs every route and fails on a
+session read outside it. Success answers the backend's envelope
+`{ status: "success", data }` (`successResponse` in
+`lib/route-wrapper-utils.server.ts`, type `ApiResponse` in `lib/api-envelope.ts`), a DELETE without a result answers 204, and a handler
+may return a Response as it is. No BFF route invents another success
+envelope (#2353); a sign-in step the BFF answers itself (password, code,
+enrollment confirmation, second factor) answers `successResponse` too.
+Pre-session steps that forward a limited proof use `authStepProxy`: it calls
+`contractWrite` with the generated entry and wraps its decoded answer in
+`successResponse`. A 204 stays bodyless. A `RouteFile` JSON answer must
+pass through the generated decoder; `route-backend-paths.test.ts` rejects
+a raw call. The demo access routes have no Go contract and wrap plain
+success with `envelopedBackendSuccess`. Do not move a route across
+portal auth boundaries to share code. Streaming SSE uses its documented
+exception in [the SSE contract](realtime.md).
+
+No route file calls `fetch`; both contract helpers go through `sendBackend`. A file a named route answers goes through `fileResponse`
+(`lib/file-response.server.ts`: streaming, the backend's file headers,
+`nosniff` by default, `no-store` unless the route names a cache policy, a
+backend error as its problem body). An upload the BFF must check before
+forwarding uses `createFileUploadHandler` (`lib/file-upload-wrapper.server.ts`;
+`settings/login-image` checks the image and purges the tenant cache).
+
+Read the affected portal's route wrapper before changing a handler; retain the
+affected endpoint's error contract. Logout forwards backend errors unchanged
+even though the browser always clears its local session.
+
+Context params are async in Next.js 16: `params: Promise<...>` — always `await`.
+
+### Backend calls
+
+Every backend call goes through `sendBackend` (`lib/backend-client.server.ts`):
+base URL, bearer, one client identity set (`backendIdentityHeaders`: client
+IP, User-Agent, analytics session, Vorgangskennung, frontend origin),
+`cache: "no-store"`, Idempotency-Key, a timeout from `BACKEND_TIMEOUTS_MS`
+(90 s for headers by default; login, logout and public assets shorter;
+session upkeep has 5 s for headers and body), a refused `.`/`..` path
+segment, one log line and metric. Without a session (`bearer` null: public
+routes and login steps) the same path applies. The portal's `backendFetch`
+binds it to the request's session: a backend 401 repeats once with the
+renewed session. No session answers 401 "Unauthorized"; a renewal the backend
+refused (revoked or foreign family, invalid refresh token) answers 401
+"Token expired", so the browser signs out (#5194); a renewal that could not
+be decided (refresh unreachable, timeout, 5xx) answers 503
+`general.unavailable` and leaves the session as it is; a second 401 for the
+renewed token is the backend's own answer and passes through. An unreachable
+backend or a header timeout answers 503 `general.unavailable` everywhere.
+Retry is on by default; every
+route that carries the current password or a code (password change, e-mail
+change, MFA off, confirm code, a declaration with the account password)
+sets `NoRetryAfterRenewal` for a catalog route or passes
+`retry: { off: "<reason>" }` to the named route's session transport;
+`src/app/api/credential-retry.test.ts` proves the credential goes out once
+after a 401. `contractGet` and `contractWrite` send once by default. Only a
+portal's session transport or wrapper can renew and repeat the call. The SSE stream
+and the cached tenant resolve call `sendBackend` without that wrapper; the
+stream keeps its connection open past the header timeout. A route
+param in a backend path is encoded (`requirePathSegmentParam`,
+`encodeURIComponent`); a query key never replaces a route param. Why and
+the full chain:
+[Client IP and rate limits](contracts.md#client-ip-and-rate-limits).
+
+### Errors, cache and Sentry
+
+Backend error responses have one wire contract: the portal handlers
+(`makePortalHandlers`, under the catalog proxy and every named route)
+propagate `ApiResponseError` through `handleApiError`; the public JSON
+proxies and file responses use `forwardBackendResponse`. These paths retain the
+backend status, body bytes, `Content-Type`, and `Retry-After`. Do not parse and
+rebuild an error body, infer status from an error string, or substitute a
+message when the backend returned an empty body. Locally generated errors
+(validation, missing session, network failure) are separate from backend
+responses.
+
+Cache policy (#4999): every BFF answer that is JSON or bodyless and sets no
+`Cache-Control` of its own leaves as `private, no-store`
+(`lib/private-no-store.ts`). The portal auth handlers
+(`server/auth/route-handler.ts`), `forwardBackendResponse` and the public
+proxy factories apply it; a route that builds its answer itself (login, MFA,
+passkeys, demo access, invitations, Auth.js endpoints) wraps its handler in
+`withPrivateNoStore`. `src/app/api/route-cache-policy.test.ts` fails for an
+exported handler that is neither built by a policy factory nor listed with a
+reason in its exception table, and for every re-export (`export * from`,
+`export { GET } from`) in a route file. Files, images and event streams keep their own
+headers. A private file a route file answers additionally uses
+`withPrivateDownloadNoStore` around the outer portal handler and an entry in
+`src/test/private-download-routes.ts` (empty: every private file is a catalog
+route, answered `private, no-store` by the proxy). `route-cache-policy.test.ts`
+scans file constructors and download paths for missing entries; the SSE routes
+are its only `NON_DOWNLOAD_RESOURCES`.
+
+Sentry ownership follows the same boundary: forwarding a backend HTTP error,
+including 5xx, creates no BFF event. A caught network failure or BFF exception
+uses `captureBffException(error, request)` once at the handler boundary so the
+event carries the proxy-assigned `X-Request-ID`. `logger.error` records context
+and a breadcrumb, never an event. Uncaught Next.js exceptions use
+`onRequestError` in `src/instrumentation.ts`.
+
+### API clients and data mapping
+
+- `lib/{domain}-api.ts` — browser calls to the portal's BFF paths;
+  `lib/{domain}-helpers.ts` — mapping to view types. A registered route's
+  answer is typed with its generated type; identifiers already arrive as
+  strings, `snake_case` maps to `camelCase` in the helper.
+
+Inspect the domain's existing mapper, such as
+[room response mapping](../../frontend/src/lib/room-helpers.ts), rather than
+copying a generic mapper. Preserve nullability and date-vs-instant semantics.
+
 ### Auth Token Flow
 
-Login (per portal — see `docs/agents/contracts.md`) returns access + refresh tokens with configured lifetimes; NextAuth stores them in the session; route handlers extract the token and forward it as `Authorization: Bearer`; refresh happens automatically on expiry. MFA can insert a challenge step between credentials and session. Invitation/password-reset token flows live at `app/invite/`, `app/[tenant]/(public)/invite/`, `app/reset-password/`, with API clients in `lib/invitation-api.ts` / `lib/invitation-helpers.ts` — use these instead of hitting backend routes directly.
+Go sends the access and refresh tokens to the BFF, not to the browser.
+Auth.js stores them in the encrypted httpOnly cookie. Server handlers forward
+the bearer to Go and renew it as needed. For password, MFA, and passkey
+steps, see [Login, refresh, and MFA](contracts.md#login-refresh-and-mfa). Invitation/password-reset token flows live at `app/invite/`, `app/[tenant]/(public)/invite/`, `app/reset-password/`, with API clients in `lib/invitation-api.ts` / `lib/invitation-helpers.ts` — use these instead of hitting backend routes directly.

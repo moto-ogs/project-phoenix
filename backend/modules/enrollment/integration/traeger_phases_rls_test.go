@@ -143,28 +143,28 @@ func TestTraegerPhaseLifecycle(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Len(t, phase.Schools, 1)
-		version, err := phases.ReleaseTraegerPhase(ctx, own.organization, phase.ID, 0)
+		version, err := phases.ReleaseTraegerPhase(ctx, own.organization, phase.ID.Int64(), 0)
 		require.NoError(t, err)
 		assert.Equal(t, 1, version)
-		version, err = phases.ReleaseTraegerPhase(ctx, own.organization, phase.ID, 0)
+		version, err = phases.ReleaseTraegerPhase(ctx, own.organization, phase.ID.Int64(), 0)
 		require.NoError(t, err)
 		assert.Equal(t, 1, version, "an unchanged draft writes no version")
-		_, err = phases.UpdateTraegerPhase(ctx, own.organization, phase.ID, enrollment.TraegerPhaseInput{
-			Fields: traegerPhaseFields("Schuljahr 27/28"), SchoolIDs: []int64{own.school},
+		_, err = phases.UpdateTraegerPhase(ctx, own.organization, phase.ID.Int64(), enrollment.TraegerPhaseInput{
+			Fields: traegerPhaseFields("Schuljahr 27/28"), SchoolIDs: []int64{own.school}, ExpectedVersion: phase.Version,
 		})
 		require.NoError(t, err)
-		version, err = phases.ReleaseTraegerPhase(ctx, own.organization, phase.ID, 0)
+		version, err = phases.ReleaseTraegerPhase(ctx, own.organization, phase.ID.Int64(), 0)
 		require.NoError(t, err)
 		assert.Equal(t, 2, version, "a changed draft writes the next version")
 
 		applied := 2
-		require.NoError(t, phases.RecordTraegerPhaseOutcomes(ctx, own.organization, phase.ID, []enrollment.TraegerCopyOutcome{
+		require.NoError(t, phases.RecordTraegerPhaseOutcomes(ctx, own.organization, phase.ID.Int64(), []enrollment.TraegerCopyOutcome{
 			{SchoolID: own.school, AppliedVersion: &applied, Outcome: enrollment.TraegerOutcomeApplied},
 		}))
-		require.NoError(t, phases.RecordTraegerPhaseOutcomes(ctx, own.organization, phase.ID, []enrollment.TraegerCopyOutcome{
+		require.NoError(t, phases.RecordTraegerPhaseOutcomes(ctx, own.organization, phase.ID.Int64(), []enrollment.TraegerCopyOutcome{
 			{SchoolID: own.school, Outcome: enrollment.TraegerOutcomeRejected, ErrorCode: "enrollment.phase_invalid"},
 		}))
-		read, err := phases.TraegerPhase(ctx, own.organization, phase.ID)
+		read, err := phases.TraegerPhase(ctx, own.organization, phase.ID.Int64())
 		require.NoError(t, err)
 		require.Len(t, read.Schools, 1)
 		assert.Equal(t, enrollment.TraegerOutcomeRejected, read.Schools[0].Outcome)
@@ -172,16 +172,20 @@ func TestTraegerPhaseLifecycle(t *testing.T) {
 		assert.Equal(t, 2, *read.Schools[0].AppliedVersion)
 		assert.Equal(t, "Schuljahr 27/28", read.Released.Name)
 
-		_, err = phases.UpdateTraegerPhase(ctx, own.organization, phase.ID, enrollment.TraegerPhaseInput{Fields: traegerPhaseFields("Schuljahr 27/28")})
+		_, err = phases.UpdateTraegerPhase(ctx, own.organization, phase.ID.Int64(), enrollment.TraegerPhaseInput{
+			Fields: traegerPhaseFields("Schuljahr 27/28"), ExpectedVersion: read.Version,
+		})
 		require.NoError(t, err)
-		read, err = phases.TraegerPhase(ctx, own.organization, phase.ID)
+		read, err = phases.TraegerPhase(ctx, own.organization, phase.ID.Int64())
 		require.NoError(t, err)
 		require.Len(t, read.Schools, 1, "a school with a copy stays until the copy is withdrawn")
 		assert.False(t, read.Schools[0].Selected)
 
-		_, err = phases.WithdrawTraegerPhase(ctx, own.organization, phase.ID)
+		withdrawn, err := phases.WithdrawTraegerPhase(ctx, own.organization, phase.ID.Int64())
 		require.NoError(t, err)
-		_, err = phases.UpdateTraegerPhase(ctx, own.organization, phase.ID, enrollment.TraegerPhaseInput{Fields: traegerPhaseFields("Neu")})
+		_, err = phases.UpdateTraegerPhase(ctx, own.organization, phase.ID.Int64(), enrollment.TraegerPhaseInput{
+			Fields: traegerPhaseFields("Neu"), ExpectedVersion: withdrawn.Version,
+		})
 		assert.ErrorIs(t, err, enrollment.ErrTraegerPhaseWithdrawn)
 		return nil
 	}))

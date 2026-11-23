@@ -140,6 +140,12 @@ func (d guardianInvitationDelivery) EnqueueExistingAccountEmail(ctx context.Cont
 	return d.mailer().EnqueueExistingAccount(ctx, guardianMailRecipient(profile), schoolName)
 }
 
+// EnqueueCareVisibleEmail queues the care notice of the bulk invitation
+// (#7760) with a link to the parents portal login.
+func (d guardianInvitationDelivery) EnqueueCareVisibleEmail(ctx context.Context, notice identityaccess.GuardianCareNotice) error {
+	return d.mailer().EnqueueCareVisible(ctx, notice)
+}
+
 // EnqueueWelcomeEmail queues the welcome that follows a new access (#3534).
 // Settings failures return a complete help URL without the unresolved
 // parameters, but their transaction must be rolled back before enqueueing.
@@ -186,14 +192,6 @@ func NewGuardianInvitationReads(reads identityaccess.GuardianInvitationReads) gu
 
 func (r guardianInvitationReads) ListOpen(ctx context.Context, guardianProfileIDs []int64) ([]peoplePorts.GuardianInvitationRecord, error) {
 	invitations, err := r.reads.ListOpenGuardianInvitations(ctx, guardianProfileIDs)
-	if err != nil {
-		return nil, err
-	}
-	return guardianListRecords(invitations), nil
-}
-
-func (r guardianInvitationReads) ListRedeemable(ctx context.Context) ([]peoplePorts.GuardianInvitationRecord, error) {
-	invitations, err := r.reads.ListRedeemableGuardianInvitations(ctx)
 	if err != nil {
 		return nil, err
 	}

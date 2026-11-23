@@ -1,7 +1,6 @@
 package presence
 
 import (
-	"context"
 	"log/slog"
 
 	"github.com/go-chi/chi/v5"
@@ -14,7 +13,6 @@ type Resource struct {
 	Operations         PresenceOperations
 	Presence           PresenceQueries
 	PersonService      People
-	EducationService   func(context.Context, int64) ([]int64, error)
 	UserContextService StaffAccess
 	SettingsService    Settings
 	displaySettings    DisplaySettings
@@ -31,7 +29,7 @@ func (rs *Resource) getLogger() *slog.Logger {
 }
 
 // NewResource creates a new active resource
-func NewResource(operations PresenceOperations, personService People, educationService func(context.Context, int64) ([]int64, error), userContextService StaffAccess, settingsService Settings, protectedRoutes func(chi.Router, func(chi.Router, common.Middleware)), logger *slog.Logger, presence PresenceQueries, runtime RequestRuntime, authorization Authorization, displaySettings DisplaySettings) *Resource {
+func NewResource(operations PresenceOperations, personService People, userContextService StaffAccess, settingsService Settings, protectedRoutes func(chi.Router, func(chi.Router, common.Middleware)), logger *slog.Logger, presence PresenceQueries, runtime RequestRuntime, authorization Authorization, displaySettings DisplaySettings) *Resource {
 	if logger == nil {
 		panic("active API: logger is required")
 	}
@@ -47,14 +45,8 @@ func NewResource(operations PresenceOperations, personService People, educationS
 	if runtime.TenantID == nil || runtime.MarkRollback == nil || runtime.Now == nil {
 		panic("active API: tenant request runtime is required")
 	}
-	if authorization.Visit == nil {
-		panic("active API: visit authorization is required")
-	}
 	if authorization.OperationalOverview == nil {
 		panic("active API: overview authorization is required")
-	}
-	if authorization.StudentDataAccess == nil {
-		panic("active API: student data authorization is required")
 	}
 	if displaySettings == nil {
 		panic("active API: display settings facts are required")
@@ -63,7 +55,6 @@ func NewResource(operations PresenceOperations, personService People, educationS
 		Operations:         operations,
 		Presence:           presence,
 		PersonService:      personService,
-		EducationService:   educationService,
 		UserContextService: userContextService,
 		SettingsService:    settingsService,
 		displaySettings:    displaySettings,
@@ -75,9 +66,7 @@ func NewResource(operations PresenceOperations, personService People, educationS
 }
 
 // Router returns a configured router for active endpoints
-func (rs *Resource) Router() chi.Router { return rs.RouterWithOwnerRoutes() }
-
-func (rs *Resource) RouterWithOwnerRoutes(mounts ...func(chi.Router, common.Middleware)) chi.Router {
+func (rs *Resource) Router(mounts ...func(chi.Router, common.Middleware)) chi.Router {
 	r := chi.NewRouter()
 	r.Use(render.SetContentType(render.ContentTypeJSON))
 
@@ -91,8 +80,6 @@ func (rs *Resource) RouterWithOwnerRoutes(mounts ...func(chi.Router, common.Midd
 		rs.registerActiveGroupRoutes(r, withTx)
 		rs.registerVisitRoutes(r, withTx)
 		rs.registerSupervisorRoutes(r, withTx)
-		rs.registerCombinedRoutes(r, withTx)
-		rs.registerMappingRoutes(r, withTx)
 		rs.registerAnalyticsRoutes(r, withTx)
 
 	})
@@ -105,19 +92,9 @@ func (rs *Resource) registerActiveGroupRoutes(r chi.Router, withTx common.Middle
 	r.Route("/groups", func(r chi.Router) {
 		// Read operations
 		r.With(common.RequireActiveGroupRead(), withTx).Get("/", rs.listActiveGroups)
-		r.With(common.RequireActiveGroupRead(), withTx).Get("/unclaimed", rs.listUnclaimedGroups)
-		r.With(common.RequireActiveGroupRead(), withTx).Get("/{id}", rs.getActiveGroup)
-		r.With(common.RequireActiveGroupRead(), withTx).Get("/room/{roomId}", rs.getActiveGroupsByRoom)
-		r.With(common.RequireActiveGroupRead(), withTx).Get(routeGroupByGroupID, rs.getActiveGroupsByGroup)
-		r.With(common.RequireActiveGroupRead(), withTx).Get("/{id}/visits", rs.getActiveGroupVisits)
-		r.With(common.RequireActiveGroupRead(), withTx).Get("/{id}/visits/display", rs.getActiveGroupVisitsWithDisplay)
 		r.With(common.RequireActiveGroupRead(), withTx).Get("/{id}/supervisors", rs.getActiveGroupSupervisors)
 
 		// Write operations
-		r.With(common.RequireActiveGroupCreate(), withTx).Post("/", rs.createActiveGroup)
-		r.With(common.RequireActiveGroupUpdate(), withTx).Put("/{id}", rs.updateActiveGroup)
-		r.With(common.RequireActiveGroupDelete(), withTx).Delete("/{id}", rs.deleteActiveGroup)
-		r.With(common.RequireActiveGroupUpdate(), withTx, common.RequireWebAttendanceEnabled(rs.displaySettings.WebAttendanceEnabledReader())).Post(routeEndByID, rs.endActiveGroup)
 		r.With(common.RequireActiveGroupUpdate(), withTx).Post("/{id}/claim", rs.claimGroup)
 	})
 
@@ -128,26 +105,12 @@ func (rs *Resource) registerVisitRoutes(r chi.Router, withTx common.Middleware) 
 	r.Route("/visits", func(r chi.Router) {
 		// Read operations
 		r.With(common.RequireActiveGroupRead(), withTx).Get("/", rs.listVisits)
-		// RequireVisitView needs DB → withTx goes before the access check
-		r.With(withTx, rs.requireVisitView).Get("/{id}", rs.getVisit)
-		r.With(common.RequireActiveGroupRead(), withTx).Get("/student/{studentId}", rs.getStudentVisits)
-		r.With(common.RequireActiveGroupRead(), withTx).Get("/student/{studentId}/current", rs.getStudentCurrentVisit)
-		r.With(common.RequireActiveGroupRead(), withTx).Get(routeGroupByGroupID, rs.getVisitsByGroup)
 
 		// Write operations
-		r.With(common.RequireActiveGroupCreate(), withTx, common.RequireWebAttendanceEnabled(rs.displaySettings.WebAttendanceEnabledReader())).Post("/", rs.createVisit)
-		r.With(common.RequireActiveGroupUpdate(), withTx, common.RequireWebAttendanceEnabled(rs.displaySettings.WebAttendanceEnabledReader())).Put("/{id}", rs.updateVisit)
-		r.With(common.RequireActiveGroupDelete(), withTx, common.RequireWebAttendanceEnabled(rs.displaySettings.WebAttendanceEnabledReader())).Delete("/{id}", rs.deleteVisit)
-		r.With(common.RequireActiveGroupUpdate(), withTx, common.RequireWebAttendanceEnabled(rs.displaySettings.WebAttendanceEnabledReader())).Post(routeEndByID, rs.endVisit)
-
-		// Immediate checkout for students
-		r.With(common.RequireVisitUpdate(), withTx, common.RequireWebAttendanceEnabled(rs.displaySettings.WebAttendanceEnabledReader())).Post("/student/{studentId}/checkout", rs.checkoutStudent)
 
 		// Bulk assign checked-in students without a room visit to an active room session.
 		r.With(common.RequireVisitUpdate(), withTx, common.RequireWebAttendanceEnabled(rs.displaySettings.WebAttendanceEnabledReader())).Post("/transit/assign", rs.assignTransitStudents)
 		r.With(common.RequireVisitUpdate(), withTx, common.RequireWebAttendanceEnabled(rs.displaySettings.WebAttendanceEnabledReader())).Post("/move-to-group", rs.moveStudentsToActiveGroup)
-
-		r.With(common.RequireVisitUpdate(), withTx, common.RequireWebAttendanceEnabled(rs.displaySettings.WebAttendanceEnabledReader())).Post("/move-to-transit", rs.moveStudentsToTransit)
 		// Check children in and place them in a running session in one step
 		// (#6953): needs the check-in and the move right.
 		r.With(common.RequireSchoolCheckin(), common.RequireVisitUpdate(), withTx, common.RequireWebAttendanceEnabled(rs.displaySettings.WebAttendanceEnabledReader())).Post("/check-in-to-group", rs.checkInStudentsToSession)
@@ -159,50 +122,11 @@ func (rs *Resource) registerSupervisorRoutes(r chi.Router, withTx common.Middlew
 	// Supervisors
 	r.Route("/supervisors", func(r chi.Router) {
 		// Read operations
-		r.With(common.RequireActiveGroupRead(), withTx).Get("/", rs.listSupervisors)
-		r.With(common.RequireActiveGroupRead(), withTx).Get("/{id}", rs.getSupervisor)
-		r.With(common.RequireActiveGroupRead(), withTx).Get("/staff/{staffId}", rs.getStaffSupervisions)
 		r.With(common.RequireActiveGroupRead(), withTx).Get("/staff/{staffId}/active", rs.getStaffActiveSupervisions)
 		r.With(common.RequireActiveGroupRead(), withTx).Get("/all", rs.getAllActiveSupervisions)
-		r.With(common.RequireActiveGroupRead(), withTx).Get(routeGroupByGroupID, rs.getSupervisorsByGroup)
 
 		// Write operations
-		r.With(common.RequireActiveGroupAssign(), withTx).Post("/", rs.createSupervisor)
-		r.With(common.RequireActiveGroupAssign(), withTx).Put("/{id}", rs.updateSupervisor)
-		r.With(common.RequireActiveGroupAssign(), withTx).Delete("/{id}", rs.deleteSupervisor)
 		r.With(common.RequireActiveGroupUpdate(), withTx).Post(routeEndByID, rs.endSupervision)
-	})
-
-}
-
-func (rs *Resource) registerCombinedRoutes(r chi.Router, withTx common.Middleware) {
-	// Combined Groups
-	r.Route("/combined", func(r chi.Router) {
-		// Read operations
-		r.With(common.RequireActiveGroupRead(), withTx).Get("/", rs.listCombinedGroups)
-		r.With(common.RequireActiveGroupRead(), withTx).Get("/active", rs.getActiveCombinedGroups)
-		r.With(common.RequireActiveGroupRead(), withTx).Get("/{id}", rs.getCombinedGroup)
-		r.With(common.RequireActiveGroupRead(), withTx).Get("/{id}/groups", rs.getCombinedGroupGroups)
-
-		// Write operations
-		r.With(common.RequireActiveGroupCreate(), withTx).Post("/", rs.createCombinedGroup)
-		r.With(common.RequireActiveGroupUpdate(), withTx).Put("/{id}", rs.updateCombinedGroup)
-		r.With(common.RequireActiveGroupDelete(), withTx).Delete("/{id}", rs.deleteCombinedGroup)
-		r.With(common.RequireActiveGroupUpdate(), withTx).Post(routeEndByID, rs.endCombinedGroup)
-	})
-
-}
-
-func (rs *Resource) registerMappingRoutes(r chi.Router, withTx common.Middleware) {
-	// Group Mappings
-	r.Route("/mappings", func(r chi.Router) {
-		// Read operations
-		r.With(common.RequireActiveGroupRead(), withTx).Get(routeGroupByGroupID, rs.getGroupMappings)
-		r.With(common.RequireActiveGroupRead(), withTx).Get("/combined/{combinedId}", rs.getCombinedGroupMappings)
-
-		// Write operations
-		r.With(common.RequireActiveGroupUpdate(), withTx).Post("/add", rs.addGroupToCombination)
-		r.With(common.RequireActiveGroupUpdate(), withTx).Post("/remove", rs.removeGroupFromCombination)
 	})
 
 }
@@ -217,6 +141,5 @@ func (rs *Resource) registerAnalyticsRoutes(r chi.Router, withTx common.Middlewa
 	r.With(common.RequireActiveGroupRead(), withTx).Post("/tracking-indicators", rs.getTrackingIndicators)
 
 	// Cross-tenant students (Ferienbetreuung / holiday care)
-	r.With(common.RequireActiveGroupRead(), withTx).Get("/cross-tenant-students", rs.getCrossTenantStudents)
 
 }

@@ -6,6 +6,7 @@ import { DEMO_TOKEN_COOKIE, demoBackendPath } from "../forward";
 import { forwardBackendResponse } from "~/lib/backend-proxy-response.server";
 import { problemResponse } from "~/lib/api-helpers.server";
 import { withPrivateNoStore } from "~/lib/private-no-store";
+import { successResponse } from "~/lib/route-wrapper-utils.server";
 
 const logger = createLogger({ component: "DemoResetRoute" });
 
@@ -44,12 +45,16 @@ async function POSTHandler(request: NextRequest) {
       entry_url?: unknown;
     };
     if (typeof payload.entry_url !== "string") {
-      return NextResponse.json(payload, { status: backend.status });
+      return NextResponse.json(successResponse(payload), {
+        status: backend.status,
+      });
     }
     const fragment = new URLSearchParams({ restarted: "1" });
     if (role) fragment.set("role", role);
     return NextResponse.json(
-      { entry_url: `${payload.entry_url}&${fragment.toString()}` },
+      successResponse({
+        entry_url: `${payload.entry_url}&${fragment.toString()}`,
+      }),
       { status: backend.status, headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {

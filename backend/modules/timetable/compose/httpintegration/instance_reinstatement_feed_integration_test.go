@@ -52,7 +52,7 @@ func TestReinstatementFeedReachesThePlannedStaffAndBundles(t *testing.T) {
 	f.consentDB(quiet.accountID, false)
 	instanceID := f.block(t, calendar.NewDate(2030, 6, 11), actor, unread, read, quiet)
 	f.cancel(t, instanceID, actor)
-	f.markRead(t, read, f.feed(t, read, "").Data.Entries[0].ID)
+	f.markRead(t, read, int64(f.feed(t, read, "").Data.Entries[0].ID))
 
 	instance := f.reinstated(t, instanceID, actor)
 
@@ -147,7 +147,7 @@ func TestReinstatementPushesWhenTheCancellationDidAndOnlyBeforeTheEnd(t *testing
 	// so does its reinstatement.
 	far := f.block(t, calendar.NewDate(2030, 6, 25), actor, planned)
 	f.cancel(t, far, actor)
-	f.markRead(t, planned, f.feed(t, planned, "").Data.Entries[0].ID)
+	f.markRead(t, planned, int64(f.feed(t, planned, "").Data.Entries[0].ID))
 	f.reinstated(t, far, actor)
 	assert.Len(t, f.feed(t, planned, "").Data.Entries, 2)
 	assert.Zero(t, f.pushesOf(t, planned, "instance_reinstated"))

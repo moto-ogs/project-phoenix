@@ -4,7 +4,8 @@
 // Art um, zum Beispiel vergangene Freitage von Freizeitausgleich auf
 // Krank-Urlaubstage. Die Einträge bleiben stehen. Vor dem Speichern zeigt der
 // Dialog, was sich am Stundenkonto und an den Kontingenten ändert; was nicht
-// reicht oder gesperrt ist, lässt sich nicht speichern.
+// reicht oder gesperrt ist, lässt sich nicht speichern. Das Speichern trägt
+// den Fingerabdruck dieser Vorschau (ADR 0311).
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
@@ -40,9 +41,14 @@ import type { AbsenceType } from "~/lib/absence-type-api";
 import { LOCATION_COLORS } from "~/lib/location-helper";
 import type { RefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
-import { staffAbsenceService, type StaffAbsenceRow } from "~/lib/staff-api";
-import { useFreshSWR } from "~/lib/swr";
-import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import {
+  staffAbsenceService,
+  type AbsenceRebooking,
+  type StaffAbsenceRow,
+} from "~/lib/staff-api";
+import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
+import { useDraftOn } from "~/lib/swr/read-draft";
+import { useReadDraftLoadError } from "~/lib/hooks/use-swr-load-error";
 import { staffAbsenceKeys } from "~/lib/swr/staff-keys";
 import { InsetPanel } from "~/components/ui/inset-panel";
 
@@ -60,11 +66,16 @@ function useRebookingPreview(args: {
 }) {
   const { staffId, absenceIds, value } = args;
   // Eine gesperrte Umbuchung (workforce.rebooking_*) ist kein Defekt; sie
-  // steht wie jeder andere Fehler der Vorschau im Dialog.
-  const { data, error, mutate, isValidating } = useFreshSWR(
+  // steht wie jeder andere Fehler der Vorschau im Dialog. Die Vorschau darf
+  // aus dem Cache kommen: das Speichern schickt den Fingerabdruck der
+  // gezeigten Wirkung mit, und der Server lehnt eine inzwischen andere ab
+  // (ADR 0311).
+  const key =
     value && absenceIds.length > 0
       ? staffAbsenceKeys.rebookingPreview(staffId, absenceIds, value)
-      : null,
+      : null;
+  const read = useSWRAuth(
+    key,
     () => {
       const request = absenceRequestFor(value);
       return staffAbsenceService.rebookAbsences(staffId, {
@@ -77,16 +88,30 @@ function useRebookingPreview(args: {
     },
     { keepPreviousData: false },
   );
-  // A dry run is a save prerequisite, not merely a read-only display.
-  const preview = isValidating || error ? undefined : data;
-  const load = useSwrResourceLoadError(
-    [{ data: preview, error: isValidating ? undefined : error }],
-    "die Änderung der Art",
-    () => mutate(),
+  // A failed read shows no older effect as the basis of a save.
+  const failure = read.isValidating ? undefined : read.error;
+  const draft = useDraftOn<AbsenceRebooking, AbsenceRebooking, string>(
+    {
+      opening: key,
+      data: failure ? undefined : read.data,
+      error: failure,
+      reload: () => revalidateOrThrow(read),
+    },
+    {
+      token: (effect) => effect.fingerprint,
+      follow: false,
+      // The dialog closes after a save: no read of the old effect.
+      answer: (_saved, shown) => shown,
+    },
   );
-  const loading =
-    Boolean(value) && preview === undefined && load.error === null;
-  return { preview: preview ?? null, error: load.error, loading };
+  const error = useReadDraftLoadError(draft, "die Änderung der Art");
+  const failed = draft.status === "loadFailed";
+  return {
+    draft,
+    preview: failed ? null : (draft.base ?? null),
+    error: failed ? error : null,
+    loading: Boolean(value) && draft.status === "loading",
+  };
 }
 
 function BalanceLine({ minutes }: { readonly minutes: number }) {
@@ -194,6 +219,7 @@ export function AbsenceRebookModal({
   );
   const selected = options.find((option) => option.value === value);
   const {
+    draft: effect,
     preview,
     error: previewError,
     loading,
@@ -235,6 +261,7 @@ export function AbsenceRebookModal({
     saving ||
     !selected ||
     !preview ||
+    !effect.canSubmit ||
     loading ||
     Boolean(previewError) ||
     exceeded;
@@ -243,7 +270,7 @@ export function AbsenceRebookModal({
     ? undefined
     : !selected
       ? "Wähle zuerst eine neue Art aus."
-      : loading
+      : loading || (!effect.canSubmit && !previewError)
         ? "moto rechnet die Folgen der Änderung noch aus."
         : previewError
           ? "Lade zuerst die Vorschau oben neu."
@@ -264,7 +291,7 @@ export function AbsenceRebookModal({
       .join(" ") || null;
 
   const save = async () => {
-    if (disabled || !selected) return;
+    if (disabled || !selected || !preview) return;
     if (reason.trim() === "") {
       formErrors.invalid("Bitte prüfe die markierten Felder.", {
         reason: "Bitte kurz sagen, warum sich die Art ändert.",
@@ -273,34 +300,42 @@ export function AbsenceRebookModal({
     }
     setSaving(true);
     formErrors.clear();
-    try {
-      const request = absenceRequestFor(value);
-      await staffAbsenceService.rebookAbsences(staff.id, {
+    const request = absenceRequestFor(value);
+    // The fingerprint of the effect on screen (ADR 0311).
+    const result = await effect.submit((expectedFingerprint) =>
+      staffAbsenceService.rebookAbsences(staff.id, {
         absenceIds,
         absenceType: request.absence_type,
         absenceTypeId: request.absence_type_id,
         reason: reason.trim(),
         dryRun: false,
-      });
-      toast.success(
-        absences.length === 1
-          ? `Der Eintrag ist jetzt ${selected.label}.`
-          : `${absences.length} Einträge sind jetzt ${selected.label}.`,
-      );
-    } catch (error) {
+        expectedFingerprint,
+      }),
+    );
+    setSaving(false);
+    if (!result.ok) {
       logger.error("rebooking_failed", {
         staff_id: staff.id,
         absence_count: absences.length,
-        error: error instanceof Error ? error.message : String(error),
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
       });
-      await formErrors.show(error, {
+      // Changed since the preview: `reload` shows the new effect, without a
+      // retry of the refused fingerprint.
+      await formErrors.show(result.error, {
         object: "die Änderung der Art",
         retry: () => void latestSaveRef.current(),
+        reload: result.reload,
       });
-      setSaving(false);
       return;
     }
-    setSaving(false);
+    toast.success(
+      absences.length === 1
+        ? `Der Eintrag ist jetzt ${selected.label}.`
+        : `${absences.length} Einträge sind jetzt ${selected.label}.`,
+    );
     await onSaved();
   };
 
@@ -342,7 +377,8 @@ export function AbsenceRebookModal({
       }
     >
       <div className="space-y-4">
-        <LoadErrorAlert error={previewError} />
+        {/* After a refusal the form's alert already names the failed read. */}
+        {formErrors.error ? null : <LoadErrorAlert error={previewError} />}
         <FormErrorAlert message={allowanceBlocker ?? formErrors.error} />
         <p className="text-sm text-gray-600">
           Die Einträge bleiben stehen. Nur ihre Art ändert sich.

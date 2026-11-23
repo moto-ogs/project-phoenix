@@ -972,3 +972,130 @@ describe("useGlobalSSE — companion announcements", () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// „Heute anders“ (#7659)
+// ---------------------------------------------------------------------------
+
+describe("useGlobalSSE — Heute anders", () => {
+  const dayChangesKey = "t1:home-day-changes:u1";
+  const dayChangesReloads = () =>
+    mockMutate.mock.calls
+      .map(([matcher]) => matcher)
+      .filter(
+        (matcher): matcher is (key: unknown) => boolean =>
+          typeof matcher === "function" && matcher(dayChangesKey),
+      ).length;
+
+  it.each([
+    "staffing_deviation_changed",
+    "group_access_changed",
+    "staff_time_tracking_changed",
+    "student_updated",
+    "pickup_schedule_changed",
+    "staff_notices_changed",
+    // A cancelled activity block (#7662).
+    "instance_cancelled",
+    // A day outing or a changed Unterrichtsschluss of a class (#7681).
+    "arrival_schedule_changed",
+    // A written appointment of the school (#7693).
+    "calendar_appointments_changed",
+    // A saved or deleted menu (#7666).
+    "meal_plan_changed",
+  ] as const)("reloads the block on %s", (type) => {
+    renderHook(() => useGlobalSSE());
+
+    fireSSE(makeEvent(type));
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+
+    expect(dayChangesReloads()).toBe(1);
+  });
+
+  it("reloads once for a burst and not on unrelated events", () => {
+    renderHook(() => useGlobalSSE());
+
+    fireSSE(makeEvent("student_checkin", { student_id: "s1" }, "grp1"));
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    expect(dayChangesReloads()).toBe(0);
+
+    fireSSE(makeEvent("staffing_deviation_changed"));
+    fireSSE(makeEvent("group_access_changed"));
+    fireSSE(makeEvent("staff_time_tracking_changed"));
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    expect(dayChangesReloads()).toBe(1);
+  });
+
+  it("reloads the notices of the day on staff_notices_changed (#7667)", () => {
+    const noticesKey = "t1:staff-notices-today:u1";
+    const allNoticesKey = "t1:staff-notices:u1";
+    renderHook(() => useGlobalSSE());
+
+    fireSSE(makeEvent("staff_notices_changed"));
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+
+    const noticeReloads = (key: string) =>
+      mockMutate.mock.calls.filter(
+        ([matcher]) => typeof matcher === "function" && matcher(key),
+      ).length;
+    expect(noticeReloads(noticesKey)).toBe(1);
+    expect(noticeReloads(allNoticesKey)).toBe(1);
+  });
+
+  const calendarKey = "t1:staff-calendar-week-2026-09-07-2026-09-13:u1";
+  const reloadsOf = (key: string) =>
+    mockMutate.mock.calls.filter(
+      ([matcher]) => typeof matcher === "function" && matcher(key),
+    ).length;
+
+  it("reloads the own calendar on calendar_appointments_changed (#7693)", () => {
+    renderHook(() => useGlobalSSE());
+
+    fireSSE(makeEvent("staff_notices_changed"));
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    expect(reloadsOf(dayChangesKey)).toBe(1);
+    expect(reloadsOf(calendarKey)).toBe(0);
+
+    fireSSE(makeEvent("calendar_appointments_changed"));
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    expect(reloadsOf(dayChangesKey)).toBe(2);
+    expect(reloadsOf(calendarKey)).toBe(1);
+  });
+
+  it("reloads „Heute anders“ and the own calendar after a reconnect (#7693)", () => {
+    let status: "idle" | "connected" | "reconnecting" = "connected";
+    mockUseSSE.mockImplementation(
+      (_url: string, opts: typeof capturedOptions) => {
+        Object.assign(capturedOptions, opts);
+        return {
+          isConnected: status === "connected",
+          error: null,
+          reconnectAttempts: status === "reconnecting" ? 1 : 0,
+          status,
+        };
+      },
+    );
+    const view = renderHook(() => useGlobalSSE());
+    mockMutate.mockClear();
+
+    status = "reconnecting";
+    view.rerender();
+    status = "connected";
+    view.rerender();
+
+    // No event and no timer: the reconcile sets the flag itself.
+    expect(reloadsOf(dayChangesKey)).toBe(1);
+    expect(reloadsOf(calendarKey)).toBe(1);
+  });
+});

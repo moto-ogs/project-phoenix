@@ -11,7 +11,15 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
+
+// closingDayChangeSource names a saved closing day in the tenant-wide
+// staffing_deviation_changed signal (#7664). Series skip a closing day when
+// they plan, and the open pages that show the day („Heute anders“, the
+// planner, the calendar periods) refetch on that signal. It carries no
+// content and runs after the commit.
+const closingDayChangeSource = "closing_days"
 
 // ClosingDayRequest represents a create/update request for a closing day
 // range (#1418 3b).
@@ -19,6 +27,10 @@ type ClosingDayRequest struct {
 	StartDate string `json:"start_date"`
 	EndDate   string `json:"end_date"`
 	Reason    string `json:"reason"`
+	// ExpectedVersion is the version of the closing day an update edits
+	// (ADR 0311); an update of a closing day changed since is refused. A
+	// create ignores it.
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 // Bind validates the request
@@ -42,12 +54,14 @@ func (req *ClosingDayRequest) Bind(_ *http.Request) error {
 
 // ClosingDayResponse represents a closing day in API responses
 type ClosingDayResponse struct {
-	ID        int64  `json:"id"`
-	StartDate string `json:"start_date"`
-	EndDate   string `json:"end_date"`
-	Reason    string `json:"reason"`
-	CreatedAt string `json:"created_at"`
-	UpdatedAt string `json:"updated_at"`
+	ID        ident.ID `json:"id"`
+	StartDate string   `json:"start_date"`
+	EndDate   string   `json:"end_date"`
+	Reason    string   `json:"reason"`
+	CreatedAt string   `json:"created_at"`
+	UpdatedAt string   `json:"updated_at"`
+	// Version is the token an update sends back as expected_version.
+	Version string `json:"version"`
 	// Traeger marks a closing day the school's Träger planned (#4702): it
 	// counts like the school's own, but only the Träger-Büro changes it.
 	Traeger bool `json:"traeger"`
@@ -55,12 +69,13 @@ type ClosingDayResponse struct {
 
 func mapClosingDayToResponse(d schoolcalendar.ClosingDay) ClosingDayResponse {
 	return ClosingDayResponse{
-		ID:        d.ID,
+		ID:        ident.ID(d.ID),
 		StartDate: d.StartDate,
 		EndDate:   d.EndDate,
 		Reason:    d.Reason,
 		CreatedAt: d.CreatedAt.Format(time.RFC3339),
 		UpdatedAt: d.UpdatedAt.Format(time.RFC3339),
+		Version:   schoolcalendar.ClosingDayVersion(d),
 		Traeger:   d.Traeger,
 	}
 }
@@ -128,6 +143,7 @@ func (rs *Resource) createClosingDay(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	rs.broadcastStaffingDeviationChanged(r.Context(), closingDayChangeSource)
 	common.Respond(w, r, http.StatusCreated, mapClosingDayToResponse(day), "Closing day created successfully")
 }
 
@@ -163,12 +179,13 @@ func (rs *Resource) updateClosingDay(w http.ResponseWriter, r *http.Request) {
 		StartDate: startDate.String(),
 		EndDate:   endDate.String(),
 		Reason:    req.Reason,
-	}})
+	}, ExpectedVersion: req.ExpectedVersion})
 	if err != nil {
 		common.RenderError(w, r, closingDayWriteErrorRenderer(err, "Schließtag konnte nicht aktualisiert werden"))
 		return
 	}
 
+	rs.broadcastStaffingDeviationChanged(r.Context(), closingDayChangeSource)
 	common.Respond(w, r, http.StatusOK, mapClosingDayToResponse(updated), "Closing day updated successfully")
 }
 
@@ -193,6 +210,7 @@ func (rs *Resource) deleteClosingDay(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	rs.broadcastStaffingDeviationChanged(r.Context(), closingDayChangeSource)
 	common.Respond(w, r, http.StatusOK, nil, "Closing day deleted successfully")
 }
 

@@ -5,6 +5,7 @@ import (
 	"slices"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The children of the families (#5918): the Abrechnung confirms a number for
@@ -14,14 +15,16 @@ import (
 // placeholder sibling rule counts the family (seedCareReductions).
 
 type seedFamilyChild struct {
-	ContractID int64 `json:"contract_id"`
+	ContractID ident.ID `json:"contract_id"`
 }
 
 type seedFamilyChildrenSet struct {
 	Families []struct {
 		Children []seedFamilyChild `json:"children"`
-		Count    *struct {
-			ID int64 `json:"id"`
+		// Version is the read-state token a confirmation sends back.
+		Version string `json:"version"`
+		Count   *struct {
+			ID ident.ID `json:"id"`
 		} `json:"count"`
 	} `json:"families"`
 }
@@ -48,12 +51,13 @@ func seedFamilyChildren(client *Client, auth AuthRef, own []int64, month calenda
 		if kept == len(numbers) {
 			break
 		}
-		child := slices.IndexFunc(family.Children, func(child seedFamilyChild) bool { return slices.Contains(own, child.ContractID) })
+		child := slices.IndexFunc(family.Children, func(child seedFamilyChild) bool { return slices.Contains(own, int64(child.ContractID)) })
 		if family.Count != nil || child < 0 {
 			continue
 		}
 		body := numbers[kept]
 		body["contract_id"] = family.Children[child].ContractID
+		body["expected_version"] = family.Version
 		if _, err := client.PutWithAuth(auth, "/traeger/family-children/", body); err != nil {
 			return kept, fmt.Errorf("confirm the children of a family: %w", err)
 		}

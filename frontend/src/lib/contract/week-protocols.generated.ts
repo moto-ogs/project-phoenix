@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   arr,
   bool,
+  fileAnswer,
   nullable,
   object,
   optional,
@@ -105,6 +106,7 @@ export interface weekProtocolResponse {
   closed_by_name?: string;
   closed_automatically: boolean;
   days?: weekProtocolDayResponse[];
+  version?: string;
 }
 
 export const weekProtocolResponseSchema: z.ZodType<weekProtocolResponse, unknown> = object<weekProtocolResponse>({
@@ -123,7 +125,13 @@ export const weekProtocolResponseSchema: z.ZodType<weekProtocolResponse, unknown
   closed_by_name: optional(str),
   closed_automatically: bool,
   days: optional(arr(weekProtocolDayResponseSchema)),
+  version: optional(str),
 });
+
+/** Go: timetablehttp.weekProtocolCloseRequest */
+export interface weekProtocolCloseRequest {
+  expected_version?: string;
+}
 
 /** Go: timetablehttp.weekProtocolDayNoteInput */
 export interface weekProtocolDayNoteInput {
@@ -135,11 +143,7 @@ export interface weekProtocolDayNoteInput {
 export interface weekProtocolNotesRequest {
   week_note?: string;
   days?: weekProtocolDayNoteInput[] | null;
-}
-
-/** Query of GET /api/week-protocols/ */
-export interface GetWeekProtocolsQuery {
-  group_id?: string;
+  expected_version?: string;
 }
 
 export const routes = {
@@ -147,7 +151,9 @@ export const routes = {
     method: "GET",
     pattern: "/api/week-protocols/",
     portals: ["tenant"],
-    query: ["group_id"],
+    query: {
+      "group_id": { kind: "id" },
+    },
     response: success(z.array(weekProtocolResponseSchema)),
   },
   "GET /api/week-protocols/{protocolId}": {
@@ -156,10 +162,17 @@ export const routes = {
     portals: ["tenant"],
     response: success(weekProtocolResponseSchema),
   },
+  "GET /api/week-protocols/{protocolId}/pdf": {
+    method: "GET",
+    pattern: "/api/week-protocols/{protocolId}/pdf",
+    portals: ["tenant"],
+    response: fileAnswer,
+  },
   "POST /api/week-protocols/{protocolId}/close": {
     method: "POST",
     pattern: "/api/week-protocols/{protocolId}/close",
     portals: ["tenant"],
+    request: requestBody<weekProtocolCloseRequest>(),
     response: success(weekProtocolResponseSchema),
   },
   "PUT /api/week-protocols/{protocolId}/notes": {

@@ -148,10 +148,13 @@ type ParentMandateProof struct {
 }
 
 // ParentMandateSummary is the mandate of the family without bank data but
-// the mask of its IBAN.
+// the mask of its IBAN. Version is the read-state token of the mandate
+// (ADR 0311): a revocation sends it back, so it never ends a mandate
+// another member of the family gave since this one was read.
 type ParentMandateSummary struct {
 	CollectionEligible bool                `json:"collection_eligible"`
 	ID                 int64               `json:"id"`
+	Version            string              `json:"version"`
 	Reference          string              `json:"reference"`
 	SignedOn           calendar.Date       `json:"signed_on"`
 	Kind               string              `json:"kind"`
@@ -193,7 +196,10 @@ type ParentSEPAMandates interface {
 	ParentSEPAMandate(ctx context.Context, organizationID int64, reader ParentMandateReader) (ParentMandate, error)
 	PreviewParentSEPAMandate(ctx context.Context, organizationID int64, reader ParentMandateReader, input ParentMandateInput) (ParentMandateText, error)
 	GrantParentSEPAMandate(ctx context.Context, organizationID int64, reader ParentMandateReader, input ParentMandateInput) (ParentMandate, error)
-	RevokeParentSEPAMandate(ctx context.Context, organizationID int64, reader ParentMandateReader) (ParentMandate, error)
+	// RevokeParentSEPAMandate ends the mandate in force whose Version the
+	// parents read (expectedVersion); another one is refused with
+	// readstate.ErrChanged.
+	RevokeParentSEPAMandate(ctx context.Context, organizationID int64, reader ParentMandateReader, expectedVersion string) (ParentMandate, error)
 }
 
 // SEPAMandateConsent is the proof of a mandate the parents gave online as

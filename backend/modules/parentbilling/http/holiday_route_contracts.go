@@ -28,3 +28,17 @@ func HolidayRouteContracts(registration any) []common.RouteContract {
 		{Method: "DELETE", Pattern: "/{periodId}/sibling-groups/registrations/{registrationId}", Portals: portals, NoData: true},
 	}
 }
+
+// holidayQuoteBodyBytes bounds the bookings of the public summary, which no
+// session bounds: a few children with their weeks and days.
+const holidayQuoteBodyBytes = 64 << 10
+
+// HolidayQuoteRouteContracts registers the contribution the public holiday
+// registration shows before it is sent (#4664), relative to
+// /traeger/holiday-quotes. It runs without a session; the link names the
+// Träger.
+func HolidayQuoteRouteContracts() []common.RouteContract {
+	return []common.RouteContract{
+		{Method: "POST", Pattern: "/{token}", Portals: []common.PortalScope{common.PortalPublic}, Request: HolidayQuoteRequest{}, Response: capability.HolidayContribution{}, MaxBodyBytes: holidayQuoteBodyBytes},
+	}
+}

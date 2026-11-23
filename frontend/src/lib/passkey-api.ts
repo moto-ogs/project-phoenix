@@ -1,5 +1,8 @@
-import { ApiError, apiErrorFromBody, transportFetch } from "./api-error";
-import { portalAuthPath, type PortalKey } from "./portal-paths";
+import { ApiError } from "./api-error";
+import { bffJson } from "./bff-fetch";
+import type * as sharedContract from "./contract/shared.generated";
+import type { PortalKey } from "./portal-paths";
+import { sessionBff, type SessionAuthenticated } from "./session-bff";
 import {
   browserSupportsWebAuthn,
   startAuthentication,
@@ -9,7 +12,6 @@ import type {
   AuthenticationResponseJSON,
   PublicKeyCredentialCreationOptionsJSON,
   PublicKeyCredentialRequestOptionsJSON,
-  RegistrationResponseJSON,
 } from "@simplewebauthn/browser";
 import { hasSessionAccess } from "./session-access";
 import { getCachedSession } from "./session-cache";
@@ -19,33 +21,9 @@ export type PasskeyScope = Extract<
   "tenant" | "operator" | "caterer"
 >;
 
-interface PasskeyLoginResponse {
-  status: "authenticated";
-}
-
-export interface PasskeyCredentialSummary {
-  id: string;
-  name: string;
-  created_at: string;
-  last_used_at?: string;
-}
-
-interface CeremonyResponse<TOptions> {
-  session_id: string;
-  options: { publicKey: TOptions } | TOptions;
-}
-
-interface EnrollmentChallengeResponse {
-  challenge_token: string;
-  masked_email: string;
-}
-
-function basePath(scope: PasskeyScope): string {
-  return portalAuthPath(scope, "passkeys");
-}
-
+/** The options of a ceremony; the backend may wrap them in `publicKey`. */
 function extractOptions<TOptions>(
-  response: CeremonyResponse<TOptions>,
+  response: sharedContract.PasskeyCeremonyOptions,
 ): TOptions {
   const maybeWrapped = response.options as { publicKey?: TOptions };
   return maybeWrapped.publicKey ?? (response.options as TOptions);
@@ -61,45 +39,20 @@ async function requireSession(): Promise<void> {
   }
 }
 
-async function requestJson<T>(
-  url: string,
-  body?: unknown,
-  method: "GET" | "POST" | "DELETE" = "POST",
-): Promise<T> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
+const PASSKEY_ERROR = "Passkey-Anfrage fehlgeschlagen.";
 
-  // A request that never reaches the API is general.unavailable (#2517);
-  // an AbortError stays an AbortError.
-  const response = await transportFetch(url, {
-    method,
-    headers,
-    credentials: "include",
-    body: body === undefined ? undefined : JSON.stringify(body),
+/**
+ * The login options: a step before the session, whose route forwards the
+ * browser's request (`authStepProxy`) and answers `{ status, data }`.
+ */
+function requestLoginOptions(
+  scope: PasskeyScope,
+  tenantSlug: string,
+): Promise<sharedContract.PasskeyCeremonyOptions> {
+  return bffJson("public", sessionBff.passkeyOptions(scope), {
+    body: { tenant_slug: tenantSlug },
+    errorMessage: PASSKEY_ERROR,
   });
-
-  if (response.status === 204) {
-    return undefined as T;
-  }
-
-  const text = await response.text();
-  let data: unknown = null;
-  try {
-    data = text ? (JSON.parse(text) as unknown) : null;
-  } catch {
-    data = null;
-  }
-
-  if (!response.ok) {
-    throw apiErrorFromBody(
-      `Passkey-Anfrage fehlgeschlagen (${response.status}).`,
-      response.status,
-      data,
-    );
-  }
-
-  return data as T;
 }
 
 export function isPasskeyCeremonyIncompleteError(error: unknown): boolean {
@@ -117,83 +70,145 @@ export function isPasskeySupported(): boolean {
 export async function loginWithPasskey(
   scope: PasskeyScope,
   params: { tenantSlug?: string } = {},
-): Promise<PasskeyLoginResponse> {
-  const start = await requestJson<
-    CeremonyResponse<PublicKeyCredentialRequestOptionsJSON>
-  >(`${basePath(scope)}/login/options`, {
-    tenant_slug: params.tenantSlug ?? "",
-  });
+): Promise<SessionAuthenticated> {
+  const start = await requestLoginOptions(scope, params.tenantSlug ?? "");
   const assertion = await startAuthentication({
-    optionsJSON: extractOptions(start),
+    optionsJSON: extractOptions<PublicKeyCredentialRequestOptionsJSON>(start),
   });
   return finishPasskeyLogin(scope, start.session_id, assertion);
 }
 
+/** The sign-in step of the BFF: it installs the session (`public`). */
 async function finishPasskeyLogin(
   scope: PasskeyScope,
   sessionID: string,
   response: AuthenticationResponseJSON,
-): Promise<PasskeyLoginResponse> {
-  return requestJson<PasskeyLoginResponse>(`${basePath(scope)}/login/verify`, {
-    session_id: sessionID,
-    response,
+): Promise<SessionAuthenticated> {
+  return bffJson("public", sessionBff.verifyPasskey(scope), {
+    body: { session_id: sessionID, response },
+    errorMessage: PASSKEY_ERROR,
   });
 }
 
 export async function startPasskeyEnrollment(
   scope: PasskeyScope,
-): Promise<EnrollmentChallengeResponse> {
+): Promise<sharedContract.PasskeyEnrollmentChallenge> {
   await requireSession();
-  return requestJson<EnrollmentChallengeResponse>(
-    `${basePath(scope)}/enrollment/challenge`,
-    {},
-  );
+  const options = { errorMessage: PASSKEY_ERROR };
+  switch (scope) {
+    case "tenant":
+      return bffJson(
+        "tenant",
+        "POST /auth/passkeys/enrollment/challenge",
+        options,
+      );
+    case "operator":
+      return bffJson(
+        "platform",
+        "POST /operator/auth/passkeys/enrollment/challenge",
+        options,
+      );
+    case "caterer":
+      return bffJson(
+        "caterer",
+        "POST /caterer/auth/passkeys/enrollment/challenge",
+        options,
+      );
+  }
+}
+
+function registerOptions(
+  scope: PasskeyScope,
+  body: sharedContract.PasskeyRegisterOptionsRequest,
+): Promise<sharedContract.PasskeyCeremonyOptions> {
+  // A wrong mailed code answers 401 identity.mfa_code_invalid: it refuses
+  // this step and leaves the session as it is.
+  const options = {
+    body,
+    errorMessage: PASSKEY_ERROR,
+    authRefusals: ["identity.mfa_code_invalid"] as const,
+  };
+  switch (scope) {
+    case "tenant":
+      return bffJson("tenant", "POST /auth/passkeys/register/options", options);
+    case "operator":
+      return bffJson(
+        "platform",
+        "POST /operator/auth/passkeys/register/options",
+        options,
+      );
+    case "caterer":
+      return bffJson(
+        "caterer",
+        "POST /caterer/auth/passkeys/register/options",
+        options,
+      );
+  }
+}
+
+function registerVerify(
+  scope: PasskeyScope,
+  body: sharedContract.PasskeyRegisterVerifyRequest,
+): Promise<sharedContract.PasskeyCredentialSummary> {
+  // An expired ceremony refuses registration, not the signed-in session.
+  const options = {
+    body,
+    errorMessage: PASSKEY_ERROR,
+    authRefusals: ["identity.passkey_login_failed"] as const,
+  };
+  switch (scope) {
+    case "tenant":
+      return bffJson("tenant", "POST /auth/passkeys/register/verify", options);
+    case "operator":
+      return bffJson(
+        "platform",
+        "POST /operator/auth/passkeys/register/verify",
+        options,
+      );
+    case "caterer":
+      return bffJson(
+        "caterer",
+        "POST /caterer/auth/passkeys/register/verify",
+        options,
+      );
+  }
 }
 
 export async function registerPasskey(
   scope: PasskeyScope,
   params: { code: string; name: string },
-): Promise<PasskeyCredentialSummary> {
+): Promise<sharedContract.PasskeyCredentialSummary> {
   await requireSession();
-  const start = await requestJson<
-    CeremonyResponse<PublicKeyCredentialCreationOptionsJSON>
-  >(`${basePath(scope)}/register/options`, {
+  const start = await registerOptions(scope, {
     code: params.code,
     name: params.name,
   });
   const registration = await startRegistration({
-    optionsJSON: extractOptions(start),
+    optionsJSON: extractOptions<PublicKeyCredentialCreationOptionsJSON>(start),
   });
-  return finishPasskeyRegistration(scope, start.session_id, {
+  return registerVerify(scope, {
+    session_id: start.session_id,
     name: params.name,
     response: registration,
   });
 }
 
-async function finishPasskeyRegistration(
-  scope: PasskeyScope,
-  sessionID: string,
-  params: { name: string; response: RegistrationResponseJSON },
-): Promise<PasskeyCredentialSummary> {
-  return requestJson<PasskeyCredentialSummary>(
-    `${basePath(scope)}/register/verify`,
-    {
-      session_id: sessionID,
-      name: params.name,
-      response: params.response,
-    },
-  );
-}
-
 export async function listPasskeys(
   scope: PasskeyScope,
-): Promise<PasskeyCredentialSummary[]> {
+): Promise<sharedContract.PasskeyCredentialSummary[]> {
   await requireSession();
-  return requestJson<PasskeyCredentialSummary[]>(
-    basePath(scope),
-    undefined,
-    "GET",
-  );
+  const options = { errorMessage: PASSKEY_ERROR };
+  const passkeys = await (() => {
+    switch (scope) {
+      case "tenant":
+        return bffJson("tenant", "GET /auth/passkeys/", options);
+      case "operator":
+        return bffJson("platform", "GET /operator/auth/passkeys", options);
+      case "caterer":
+        return bffJson("caterer", "GET /caterer/auth/passkeys", options);
+    }
+  })();
+  return passkeys ?? [];
 }
 
 export async function revokePasskey(
@@ -201,5 +216,24 @@ export async function revokePasskey(
   id: string,
 ): Promise<void> {
   await requireSession();
-  await requestJson<void>(`${basePath(scope)}/${id}`, undefined, "DELETE");
+  const options = { params: { passkeyId: id }, errorMessage: PASSKEY_ERROR };
+  switch (scope) {
+    case "tenant":
+      await bffJson("tenant", "DELETE /auth/passkeys/{passkeyId}", options);
+      return;
+    case "operator":
+      await bffJson(
+        "platform",
+        "DELETE /operator/auth/passkeys/{passkeyId}",
+        options,
+      );
+      return;
+    case "caterer":
+      await bffJson(
+        "caterer",
+        "DELETE /caterer/auth/passkeys/{passkeyId}",
+        options,
+      );
+      return;
+  }
 }

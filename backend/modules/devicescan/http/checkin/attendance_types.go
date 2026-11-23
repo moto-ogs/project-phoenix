@@ -10,15 +10,12 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/devicescan"
 )
 
-// AttendanceStatusResponse represents the response for checking a student's attendance status
-type AttendanceStatusResponse struct {
-	Student    AttendanceStudentInfo `json:"student"`
-	Attendance AttendanceInfo        `json:"attendance"`
-}
+// The identifiers of the kiosk device API stay JSON numbers and say so with
+// contract:"number": PyrePortal v1.11.5 reads them as numbers (#7808).
 
 // AttendanceStudentInfo represents student information in attendance responses
 type AttendanceStudentInfo struct {
-	ID        int64                `json:"id"`
+	ID        int64                `json:"id" contract:"number"`
 	FirstName string               `json:"first_name"`
 	LastName  string               `json:"last_name"`
 	Group     *AttendanceGroupInfo `json:"group,omitempty"`
@@ -39,8 +36,8 @@ type AttendanceInfo struct {
 
 // AttendanceGroupInfo represents group information from education.groups table
 type AttendanceGroupInfo struct {
-	ID   int64  `json:"id"`   // From education.groups.id
-	Name string `json:"name"` // From education.groups.name (NOT student.SchoolClass)
+	ID   int64  `json:"id" contract:"number"` // From education.groups.id
+	Name string `json:"name"`                 // From education.groups.name (NOT student.SchoolClass)
 }
 
 // AttendanceToggleRequest represents a request to toggle student attendance

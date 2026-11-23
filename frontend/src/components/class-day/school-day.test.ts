@@ -1,8 +1,5 @@
+import type * as schoolClassDayContract from "~/lib/contract/school-class-day.generated";
 import { describe, expect, it } from "vitest";
-import type {
-  SchoolDayReport,
-  SchoolDayTotals,
-} from "~/lib/school-class-day-api";
 import {
   schoolDayChildrenByClass,
   type SchoolDayListKey,
@@ -11,9 +8,10 @@ import {
   visibleSchoolDayLists,
 } from "./school-day";
 
-const zero: SchoolDayTotals = {
+const zero: schoolClassDayContract.SchoolDayTotals = {
   students: 0,
   missing: 0,
+  unreported: 0,
   absent: 0,
   sick: 0,
   excused: 0,
@@ -24,11 +22,12 @@ const zero: SchoolDayTotals = {
   changes: 0,
 };
 
-const report: SchoolDayReport = {
+const report: schoolClassDayContract.SchoolDayReport = {
   date: "2026-09-09",
   weekday: "wed",
   school_day: true,
   enrollment_known: true,
+  can_report_absences: false,
   totals: { ...zero, students: 3, missing: 1, sick: 1, staying: 1, leaving: 1 },
   classes: [
     {
@@ -87,7 +86,7 @@ describe("school day lists", () => {
 
   it("groups the children of a list by class and leaves out empty classes", () => {
     expect(schoolDayChildrenByClass(report, list("krank"))).toEqual([
-      { schoolClass: "1a", children: [report.classes[0]!.children[1]] },
+      { schoolClass: "1a", children: [report.classes![0]!.children![1]] },
     ]);
     expect(
       schoolDayChildrenByClass(report, list("kinder")).map(
@@ -102,7 +101,7 @@ describe("school day lists", () => {
   });
 
   it("hides the stays and goes-home split without an enrollment phase", () => {
-    const keys = (r: SchoolDayReport) =>
+    const keys = (r: schoolClassDayContract.SchoolDayReport) =>
       visibleSchoolDayLists(r).map((list) => list.key);
     expect(keys(report)).toContain("bleiben");
     expect(keys({ ...report, enrollment_known: false })).toEqual([
@@ -116,7 +115,7 @@ describe("school day lists", () => {
   });
 
   it("lists the children missing without a report (#4791)", () => {
-    const withUnreported: SchoolDayReport = {
+    const withUnreported: schoolClassDayContract.SchoolDayReport = {
       ...report,
       totals: { ...report.totals, unreported: 1 },
       classes: [
@@ -149,7 +148,10 @@ describe("school day lists", () => {
     expect(unreported.count(withUnreported.totals)).toBe(1);
     expect(unreported.count(zero)).toBe(0);
     expect(schoolDayChildrenByClass(withUnreported, unreported)).toEqual([
-      { schoolClass: "4d", children: [withUnreported.classes[0]!.children[0]] },
+      {
+        schoolClass: "4d",
+        children: [withUnreported.classes![0]!.children![0]],
+      },
     ]);
   });
 });

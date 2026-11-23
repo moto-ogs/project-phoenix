@@ -419,6 +419,7 @@ func TestFullProductionRouterGolden(t *testing.T) {
 		// Wait for parallel contract subtests before WithRuntime closes its resources.
 		t.Run("contracts", func(t *testing.T) {
 			t.Run("student detail read budget", func(t *testing.T) { checkStudentDetailReadBudget(t, api) })
+			t.Run("student form saves the version its detail read", func(t *testing.T) { checkStudentFormSavesTheVersionItsDetailRead(t, api) })
 			t.Run("readiness", func(t *testing.T) {
 				rec := httptest.NewRecorder()
 				api.router.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/ready", nil))
@@ -429,7 +430,14 @@ func TestFullProductionRouterGolden(t *testing.T) {
 			t.Run("core action classification", func(t *testing.T) { checkCoreActionClassification(t, api) })
 			t.Run("email webhook outside the sessions", func(t *testing.T) { checkEmailWebhookIsNotBehindASession(t, api, db) })
 			t.Run("IoT auth matrix", func(t *testing.T) { checkIoTAuthMatrixGolden(t, api) })
+			t.Run("checkpoint PIN rejections", func(t *testing.T) { checkRuntimeCheckpointPINRejections(t, api) })
 			t.Run("error envelope on every route", func(t *testing.T) { checkErrorEnvelopeOnEveryRoute(t, api) })
+			if !*updateGoldens {
+				// It reads the route catalog embedded at compile time, which
+				// this run rewrites on disk; a new route is not in it yet. The
+				// run after gencontract checks it (#7811).
+				t.Run("query reads of every handler are registered", func(t *testing.T) { checkHandlerQueryReadsAreRegistered(t, api) })
+			}
 			t.Run("IoT error code declarations", checkIoTErrorCodesGolden)
 			t.Run("IoT error reports relay", func(t *testing.T) { checkIoTErrorReportsRelay(t, api, sentryFake, newKiosk) })
 			t.Run("school scope matrix", func(t *testing.T) { checkSchoolScopeMatrix(t, api) })
@@ -442,6 +450,7 @@ func TestFullProductionRouterGolden(t *testing.T) {
 			t.Run("timetable staff routes", func(t *testing.T) { checkTimetableStaffRoutes(t, api) })
 			t.Run("meal plan read query budgets", func(t *testing.T) { checkMealPlanReadQueryBudgets(t, api) })
 			t.Run("meal plan allergens", func(t *testing.T) { checkMealPlanAllergens(t, api) })
+			t.Run("meal plan stale save", func(t *testing.T) { checkMealPlanStaleSave(t, api) })
 			t.Run("class list entry administration", func(t *testing.T) { checkClassListEntryAdministration(t, api) })
 			t.Run("request feed controls", func(t *testing.T) { checkRequestFeedControls(t, api) })
 			t.Run("substitution routes", func(t *testing.T) { checkSubstitutionRoutes(t, api) })

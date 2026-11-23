@@ -16,7 +16,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/spf13/viper"
 
-	apiCommon "github.com/moto-ogs/project-phoenix/api/common"
 	carePlanModule "github.com/moto-ogs/project-phoenix/modules/careplan"
 	classdayHTTP "github.com/moto-ogs/project-phoenix/modules/classday/http"
 	communicationModule "github.com/moto-ogs/project-phoenix/modules/communication"
@@ -132,7 +131,7 @@ func mountSchoolPortalRoutes(
 	planExport planexport.Service, chat owners.CommunicationMessaging, persons peopledirectory.Capability, notifications owners.DeliveryNotifications,
 	devices owners.DeliveryDevices, classDay ClassDayViews, identity identityaccess.Owner, calendarApp calendarCompose.Application,
 	announcements communicationModule.ParentAnnouncementCapability, shiftSeries workforceModule.ShiftPlanReferenceQuery, staff owners.StaffPermissionHolders,
-	now func() time.Time,
+	hub realtime.Broadcaster, now func() time.Time,
 ) error {
 	pickupExtensions, err := careexit.NewPickupExtensions(timetableOwner, presence)
 	if err != nil {
@@ -167,7 +166,7 @@ func mountSchoolPortalRoutes(
 	// (#3418). All staff read them, admins write them; a new one reaches the feed (#7143).
 	staffNotices := timetableAPI.NewStaffNoticeResource(timetableCompose.NewStaffNotices(timetableCompose.StaffNoticeDependencies{
 		DB: db.Pool(), Periods: timetableCompose.NewCalendarPeriodRepository(calendar, newCalendarPeriodUsage(timetableOwner)), Names: staffNoticeNames(persons), Now: now,
-		Publications: owners.NewTimetableStaffNoticePublications(staff, notifications), Logger: logger.With("service", "staffnotice"),
+		Publications: owners.NewTimetableStaffNoticePublications(staff, notifications), Changes: owners.NewStaffNoticeAnnouncer(hub), Logger: logger.With("service", "staffnotice"),
 	}), func(ctx context.Context) int64 { return timeTrackingIdentity(ctx).AccountID }, timezone.CalendarDateClock(now))
 	// Notification abstraction (#1624).
 	notificationRoutes := NewNotificationHTTP(notifications.Notifier, devices.PushSubscriptions, notifications.Preferences, notifications.Feed)
@@ -222,7 +221,6 @@ func newTimetableResource(
 		ClosingDays:             calendar,
 		Holidays:                calendar,
 		SchoolVacations:         vacations,
-		IsLocalSeed:             func(r *http.Request) bool { return apiCommon.IsLocalSeedRequest(r, viper.GetString("app_env")) },
 		SchoolVacationHints:     vacationHints,
 		CalendarPeriodUsage:     calendarPeriodUsage{usage: newCalendarPeriodUsage(timetableOwner), shiftSeries: shiftSeries},
 		MaterializationService:  materialization,
@@ -285,7 +283,7 @@ func mountSchoolRoutes(
 		Users: peopleCompose.NewRoomSnapshotPeople(users), Education: education,
 		ListExport: renderer, Now: now,
 	}, logger.With("handler", "rooms"), ProtectedTenantRoutes, transactionFailures.IsConstraintViolation).Router())
-	tenant.Mount("/groups", groupsHTTP.NewResource(education, active, peopleCompose.NewGroupRoutePeople(users), caller, newGroupStudentsInClassDay(settings, now), transactionFailures.IsConstraintViolation).Router(ProtectedTenantRoutes))
+	tenant.Mount("/groups", groupsHTTP.NewResource(education, peopleCompose.NewGroupRoutePeople(users), transactionFailures.IsConstraintViolation).Router(ProtectedTenantRoutes))
 	tenant.Mount("/activities", timetableHTTPAdapter.NewResource(activities, timetableOwner, NewTimetableSupervisorDirectory(users), caller, TimetableHTTPTransactions).Router(ProtectedTenantRoutes))
 	// Parent enrollment (PR 5+).
 	tenant.Mount(enrollmentMount, enrollment.Router(TenantSessionChain))
@@ -296,8 +294,6 @@ func mountSchoolRoutes(
 	// point: the root composes it and the IoT service hands it back here
 	// (#2676).
 	tenant.Mount("/display", NewDisplayHTTPRouter(iot.Fleet(), DisplayFeatureEnabled(settings)))
-	// The timeframe list the activity forms offer (Timetable owner).
-	tenant.Mount("/schedules", timetableHTTPAdapter.NewSchedulesResource(timetableOwner).Router(ProtectedTenantRoutes))
 	// The schema-driven settings system.
 	homeLayouts := requireHomeLayoutOperations(settings)
 	tenant.Mount("/settings", newSettingsResource(db, settingsWrites.Tenant, homeLayouts, requireDevicePINOperations(settings), owners.NewEnrollmentBookings(enrollment.Now).SchemaReferencesLegalDocument, enrollment.Now, schools, uploads).SettingsRouter())

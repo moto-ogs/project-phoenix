@@ -26,6 +26,9 @@ type HolidayPeriodFormRequest struct {
 	LegalBlocks        []capability.FormLegalBlock          `json:"legal_blocks"`
 	AddressRequirement capability.HolidayAddressRequirement `json:"address_requirement"`
 	HealthRequirement  capability.HolidayHealthRequirement  `json:"health_requirement"`
+	// ExpectedVersion is the version of the form the Büro edits; a version
+	// saved since is refused (ADR 0311).
+	ExpectedVersion int `json:"expected_version"`
 }
 
 // Bind accepts the body; the Owner validates the form as a whole.
@@ -64,7 +67,7 @@ func (rs *HolidayPeriodResource) saveForm(w http.ResponseWriter, r *http.Request
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	form, err := rs.periods.SaveHolidayPeriodForm(r.Context(), reviewer.OrganizationID, periodID, reviewer.AccountID, req.Fields, req.LegalBlocks, req.AddressRequirement, req.HealthRequirement)
+	form, err := rs.periods.SaveHolidayPeriodForm(r.Context(), reviewer.OrganizationID, periodID, reviewer.AccountID, req.ExpectedVersion, req.Fields, req.LegalBlocks, req.AddressRequirement, req.HealthRequirement)
 	if err != nil {
 		renderHolidayFormError(w, r, err)
 		return

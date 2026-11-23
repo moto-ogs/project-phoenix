@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 const bulkPickupOperation = "bulk upsert pickup schedules"
@@ -136,7 +137,7 @@ func (s *pickupScheduleService) patchPickupWeek(ctx context.Context, student por
 		byWeekday[row.Weekday] = row
 	}
 	for _, input := range inputs {
-		row := &careplan.PickupSchedule{StudentID: student.ID, Weekday: input.Weekday, PickupTime: parsed[input.Weekday], CreatedBy: createdBy}
+		row := &careplan.PickupSchedule{StudentID: student.ID, Weekday: input.Weekday, PickupTime: parsed[input.Weekday], CreatedBy: createdBy, EnteredByTraeger: careplan.EnteredByTraeger(ctx, createdBy)}
 		if err := s.preservePickupNotes(ctx, student, row, byWeekday[input.Weekday], result); err != nil {
 			return err
 		}
@@ -168,7 +169,7 @@ func (s *pickupScheduleService) preservePickupNotes(ctx context.Context, student
 		return err
 	}
 	result.OverwrittenStudents = append(result.OverwrittenStudents, careplan.OverwriteWarning{
-		StudentID: student.ID, StudentName: name, Weekday: row.Weekday, WeekdayName: domain.WeekdayName(row.Weekday),
+		StudentID: ident.ID(student.ID), StudentName: name, Weekday: row.Weekday, WeekdayName: domain.WeekdayName(row.Weekday),
 		PreviousTime: previous.PickupTime.Format("15:04"), NewTime: row.PickupTime.Format("15:04"),
 	})
 	return nil

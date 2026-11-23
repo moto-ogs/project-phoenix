@@ -7,6 +7,7 @@
 // (#5238). Der Upload ist freiwillig; ohne ihn sammelt das Träger-Büro den
 // Nachweis wie bisher ein.
 
+import type * as sharedContract from "~/lib/contract/shared.generated";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "~/components/ui/button";
@@ -20,7 +21,6 @@ import type { FormField } from "~/lib/enrollment-form-schema-api";
 import {
   ENROLLMENT_FILE_TYPES,
   MAX_UPLOAD_MB,
-  type NewUploadValue,
   type UploadValue,
 } from "~/lib/enrollment-uploads";
 import {
@@ -43,8 +43,12 @@ import {
 const logger = createLogger({ component: "HolidayRegistrationContribution" });
 
 /** The uploads of this form session; a proof is never stored before. */
-function newUploads(values: readonly UploadValue[]): NewUploadValue[] {
-  return values.filter((value): value is NewUploadValue => "token" in value);
+function newUploads(
+  values: readonly UploadValue[],
+): sharedContract.UploadReceipt[] {
+  return values.filter(
+    (value): value is sharedContract.UploadReceipt => "token" in value,
+  );
 }
 
 export function HolidayRegistrationContribution({
@@ -59,7 +63,7 @@ export function HolidayRegistrationContribution({
   offer: HolidayRegistrationOffer;
   onBenefitsDeclaredChange: (declared: boolean) => void;
   /** The upload sits in an `EnrollmentUploadScope` of the summary. */
-  onBenefitsProofsChange: (proofs: NewUploadValue[]) => void;
+  onBenefitsProofsChange: (proofs: sharedContract.UploadReceipt[]) => void;
 }>) {
   const t = useTranslations("holidayRegistration");
   // The upload control speaks with the texts of the online registration's
@@ -196,6 +200,9 @@ export function HolidayRegistrationContribution({
         // The quote before sending never has one; only the Träger-Büro
         // chooses a cost bearer at the confirmation (#5627).
         return line.costBearerName ?? "";
+      case undefined:
+        // A line this build does not know: its amount still counts.
+        return "–";
     }
   };
   const childName = (position: number) => {

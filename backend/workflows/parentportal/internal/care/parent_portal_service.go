@@ -51,6 +51,9 @@ type MealParticipationPlan struct {
 	ScheduleChangeable bool
 	SickCancels        bool
 	Days               []MealParticipationDay
+	// Version is the read-state token of the child's regular days (ADR
+	// 0311); a change of them sends it back.
+	Version string
 }
 
 // ChildFeatureFlags reports the resolved per-tenant parent-portal feature
@@ -474,48 +477,4 @@ func (s *Service) GetEnrollmentSubmitStatus(ctx context.Context, accountID, scho
 		return nil, fmt.Errorf("parent: enrollment submit status: %w", err)
 	}
 	return status, nil
-}
-
-// ListEnrollmentsForAccount returns the parent's enrollment.requests
-// rows joined to phase + school + child summaries. Same admin-tx wrap
-// as the other parent queries — this crosses tenant_id boundaries.
-func (s *Service) ListEnrollmentsForAccount(ctx context.Context, accountID int64) ([]*EnrollmentRequestSummary, error) {
-	if accountID <= 0 {
-		return nil, fmt.Errorf("parent: account_id must be positive")
-	}
-	if s.EnrollmentRequestRepo == nil {
-		return nil, fmt.Errorf("parent: enrollment request repo not wired")
-	}
-
-	var requests []*EnrollmentRequestSummary
-	err := s.Runtime.WithinAdmin(ctx, func(adminCtx context.Context) error {
-		list, listErr := s.EnrollmentRequestRepo.ListByAccount(adminCtx, accountID)
-		if listErr != nil {
-			return listErr
-		}
-		requests = list
-		return nil
-	})
-	if err != nil {
-		return nil, fmt.Errorf("parent: list enrollments: %w", err)
-	}
-
-	// Redact admin-internal status reasons unless the owning phase opts
-	// in via show_status_reason_to_parent. Same gate the public status
-	// page and the decision email apply — keeps internal rejection /
-	// waitlist notes out of the parent dashboard payload.
-	for _, req := range requests {
-		if req.ShowStatusReasonToParent {
-			continue
-		}
-		for i := range req.Children {
-			req.Children[i].StatusReason = nil
-		}
-	}
-
-	s.Logger.Debug("parent: listed enrollment requests",
-		slog.Int64("account_id", accountID),
-		slog.Int("count", len(requests)),
-	)
-	return requests, nil
 }

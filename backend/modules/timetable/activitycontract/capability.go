@@ -44,10 +44,13 @@ type GroupOperations interface {
 	CreateGroup(ctx context.Context, group *Group, supervisorIDs []int64, schedules []*Schedule) (*Group, error)
 	GetGroup(ctx context.Context, id int64) (*Group, error)
 	UpdateGroup(ctx context.Context, group *Group, requestingStaffID int64, hasManagePermission bool) (*Group, error)
-	// UpdateGroupWithDetails updates group fields + supervisor set + schedule
-	// replacement as one failing-together unit; run inside a tenant tx so a
-	// partial failure rolls everything back (issue #575 B10).
-	UpdateGroupWithDetails(ctx context.Context, group *Group, requestingStaffID int64, hasManagePermission bool, supervisorIDs []int64, schedules []*Schedule) (*Group, error)
+	// UpdateGroupWithDetails applies an edit to the group fields and, where
+	// the edit names them, the supervisor set and the schedules, as one
+	// failing-together unit; run inside a tenant tx so a partial failure
+	// rolls everything back (issue #575 B10). It refuses an edit whose
+	// ExpectedVersion is not the stored GroupVersion with
+	// readstate.ErrChanged (ADR 0311).
+	UpdateGroupWithDetails(ctx context.Context, edit GroupEdit, requestingStaffID int64, hasManagePermission bool) (*Group, error)
 	DeleteGroup(ctx context.Context, id int64, requestingStaffID int64, hasManagePermission bool) error
 	ListGroups(ctx context.Context, query *GroupListQuery) ([]*Group, error)
 	GetGroupWithDetails(ctx context.Context, id int64) (*Group, []*SupervisorPlanned, []*Schedule, error)
@@ -62,8 +65,6 @@ type GroupOperations interface {
 type ScheduleOperations interface {
 	// Schedule operations
 	AddSchedule(ctx context.Context, groupID int64, schedule *Schedule) (*Schedule, error)
-	GetSchedule(ctx context.Context, id int64) (*Schedule, error)
-	GetGroupSchedules(ctx context.Context, groupID int64) ([]*Schedule, error)
 	DeleteSchedule(ctx context.Context, id int64) error
 }
 
@@ -74,8 +75,6 @@ type SupervisorOperations interface {
 	GetGroupSupervisors(ctx context.Context, groupID int64) ([]*SupervisorPlanned, error)
 	GetSupervisorsForGroups(ctx context.Context, groupIDs []int64) (map[int64][]*SupervisorPlanned, error)
 	DeleteSupervisor(ctx context.Context, id int64) error
-	SetPrimarySupervisor(ctx context.Context, id int64) error
-	UpdateSupervisor(ctx context.Context, supervisor *SupervisorPlanned) (*SupervisorPlanned, error)
 	UpdateGroupSupervisors(ctx context.Context, groupID int64, staffIDs []int64) error
 	ReplaceSupervisor(ctx context.Context, activityID, supervisorID int64, replacementStaffID *int64) error
 }
@@ -86,10 +85,10 @@ type EnrollmentOperations interface {
 	UnenrollStudent(ctx context.Context, groupID, studentID int64) error
 	UpdateGroupEnrollments(ctx context.Context, groupID int64, studentIDs []int64) error
 	GetEnrolledStudents(ctx context.Context, groupID int64) ([]*timetable.OperationStudent, error)
-	// GetEnrollmentCounts counts roster occurrences with the same visibility and
-	// reader failures as GetEnrolledStudents, in the supplied group order.
+	// GetEnrollmentCounts counts the children on each roster, each once, with
+	// the same visibility and reader failures as GetEnrolledStudents, in the
+	// supplied group order.
 	GetEnrollmentCounts(ctx context.Context, groupIDs []int64) (map[int64]int, error)
 	GetStudentEnrollments(ctx context.Context, studentID int64) ([]*Group, error)
 	GetActiveStudentEnrollmentsByStudentIDs(ctx context.Context, studentIDs []int64, onDate calendar.Date) (map[int64][]*Group, error)
-	GetAvailableGroups(ctx context.Context, studentID int64) ([]*Group, error)
 }

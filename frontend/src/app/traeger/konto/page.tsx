@@ -34,6 +34,10 @@ import {
 
 const logger = createLogger({ component: "TraegerAccountPage" });
 
+/** Was die Seite ist und was man dort zuerst tut (#7595). */
+const ACCOUNT_INFO =
+  "Hier siehst du dein Konto: die E-Mail-Adresse für die Anmeldung und deinen Namen. Trage zuerst bei „Name“ deinen Namen ein. Entfernst du ein Gerät unter „Meine vertrauten Geräte“, fragt moto dort wieder nach dem Code.";
+
 const NAME_FIELD_ID = "traeger-profile-name";
 
 /**
@@ -170,7 +174,12 @@ export default function TraegerAccountPage() {
   const invalidateFamily = useInvalidateFamily();
 
   return (
-    <TenantPage title="Konto" loading={loading} error={error}>
+    <TenantPage
+      title="Konto"
+      info={ACCOUNT_INFO}
+      loading={loading}
+      error={error}
+    >
       {profile ? (
         <>
           <SectionCard

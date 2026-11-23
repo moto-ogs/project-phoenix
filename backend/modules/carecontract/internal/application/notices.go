@@ -101,7 +101,7 @@ func (n *Notices) NoticeOptions(ctx context.Context, reviewer carecontract.Revie
 		if err != nil {
 			return err
 		}
-		schoolID = record.Summary.SchoolID
+		schoolID = record.Summary.SchoolID.Int64()
 		day := n.today()
 		if !receivedOn.IsZero() && record.Concluded != nil {
 			if day, err = n.receivedOn(record, receivedOn); err != nil {
@@ -267,12 +267,13 @@ func (n *Notices) newNotice(ctx context.Context, record ContractRecord, state po
 // the period at the contract's school (§ 355 Abs. 1 BGB, #6350).
 func (n *Notices) dateWithdrawal(ctx context.Context, notice *ports.NewNotice, record ContractRecord, state ports.NoticeState,
 	input carecontract.NoticeInput, received calendar.Date) error {
-	dispatched, err := withdrawalDispatch(input.DispatchedOn, received, calendar.DateFromTime(record.Concluded.At))
+	concluded, _ := conclusionDay(record.Concluded)
+	dispatched, err := withdrawalDispatch(input.DispatchedOn, received, concluded)
 	if err != nil {
 		return err
 	}
 	notice.DispatchedOn = &dispatched
-	until, err := n.periods.until(ctx, record.Summary.SchoolID, record.Concluded, state.InformedAt)
+	until, err := n.periods.until(ctx, record.Summary.SchoolID.Int64(), record.Concluded, state.InformedAt)
 	if err != nil {
 		return err
 	}
@@ -318,17 +319,18 @@ func withdrawalDispatch(dispatched, received, concluded calendar.Date) (calendar
 	if dispatched.IsZero() {
 		dispatched = received
 	}
-	if dispatched.After(received) || dispatched.Before(concluded) {
+	if dispatched.After(received) || (!concluded.IsZero() && dispatched.Before(concluded)) {
 		return calendar.Date(""), &carecontract.ValidationError{Fields: map[string]string{"dispatched_on": "out_of_range"}}
 	}
 	return dispatched, nil
 }
 
 // receivedOn is the day the declaration reached the Träger: not before the
-// conclusion and not in the future.
+// conclusion, where its day is known (#7767), and not in the future.
 func (n *Notices) receivedOn(record ContractRecord, received calendar.Date) (calendar.Date, error) {
 	today := n.today()
-	if received.IsZero() || received.After(today) || received.Before(calendar.DateFromTime(record.Concluded.At)) {
+	concluded, known := conclusionDay(record.Concluded)
+	if received.IsZero() || received.After(today) || (known && received.Before(concluded)) {
 		return calendar.Date(""), &carecontract.ValidationError{Fields: map[string]string{"received_on": "out_of_range"}}
 	}
 	return received, nil
@@ -380,7 +382,7 @@ func (n *Notices) confirm(ctx context.Context, record ContractRecord, d declarat
 	if err := n.notices.SetNoticeOutbox(ctx, d.organizationID, noticeID, outboxID); err != nil {
 		return err
 	}
-	action, details := noticeTrail(*notice, d.channel, record.Version.ID, noticeID, outboxID)
+	action, details := noticeTrail(*notice, d.channel, record.Version.ID.Int64(), noticeID, outboxID)
 	return trailContract(ctx, n.store, d.organizationID, d.accountID, record, action, details)
 }
 
@@ -430,7 +432,7 @@ func noticeTrail(notice ports.NewNotice, channel string, versionID, noticeID, ou
 // options calculates declaration choices on the receipt day, or returns
 // the declaration already made.
 func (n *Notices) options(ctx context.Context, organizationID int64, record ContractRecord, day calendar.Date, includeExpiredWithdrawal bool) (carecontract.NoticeOptions, error) {
-	state, err := n.noticeState(ctx, organizationID, record.Summary.ID)
+	state, err := n.noticeState(ctx, organizationID, record.Summary.ID.Int64())
 	if err != nil {
 		return carecontract.NoticeOptions{}, err
 	}
@@ -449,7 +451,7 @@ func (n *Notices) options(ctx context.Context, organizationID int64, record Cont
 	}
 	ordinary, special := noticeDates(record.Version.Terms, day, state.ContractEnd)
 	options.OrdinaryEndsOn, options.SpecialEndsOn = &ordinary, special
-	until, err := n.periods.until(ctx, record.Summary.SchoolID, record.Concluded, state.InformedAt)
+	until, err := n.periods.until(ctx, record.Summary.SchoolID.Int64(), record.Concluded, state.InformedAt)
 	if err != nil {
 		return carecontract.NoticeOptions{}, err
 	}

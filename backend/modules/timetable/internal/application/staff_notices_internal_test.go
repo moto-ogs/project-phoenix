@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	scheduleModels "github.com/moto-ogs/project-phoenix/modules/timetable/internal/domain/schedulerecords"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Reine Logiktests mit Attrappen: geprüft wird, WAS an einem Tag gilt und was
@@ -436,15 +437,25 @@ func TestStaffNoticeUpdateAcknowledgesForTheAuthor(t *testing.T) {
 	t.Parallel()
 	notice := newNotice(t, 61, nil, 0)
 	notice.CreatedBy = 7
+	notice.UpdatedAt = time.Date(2026, 8, 1, 9, 0, 0, 0, time.UTC)
 	repo := &fakeNoticeRepo{notices: []*scheduleModels.StaffNotice{notice}}
 	svc := newStaffNotices(repo, StaffNoticeDependencies{CurrentDate: staffNoticeTestToday})
-
-	_, err := svc.UpdateStaffNotice(context.Background(), 61, 0, timetable.StaffNoticeInput{
+	read, err := svc.FindStaffNotice(context.Background(), 61)
+	require.NoError(t, err)
+	edit := timetable.StaffNoticeInput{
 		Title:                   "Hinweis",
 		ValidFrom:               "2026-08-01",
 		RequiresAcknowledgement: true,
 		Active:                  true,
-	})
+	}
+
+	// ADR 0311: without the read version the change writes nothing.
+	_, err = svc.UpdateStaffNotice(context.Background(), 61, 0, edit)
+	require.ErrorIs(t, err, readstate.ErrChanged)
+	assert.Empty(t, repo.ackedBy)
+
+	edit.ExpectedVersion = timetable.StaffNoticeVersion(read)
+	_, err = svc.UpdateStaffNotice(context.Background(), 61, 0, edit)
 	require.NoError(t, err)
 	assert.Equal(t, []int64{7}, repo.ackedBy)
 }

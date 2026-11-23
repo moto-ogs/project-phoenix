@@ -40,9 +40,9 @@ import {
 } from "~/contexts/ToastContext";
 import {
   downloadImportTemplate,
-  importResponseError,
-  postImportFile,
+  importFailureBody,
 } from "~/lib/import-request";
+import { bffJson } from "~/lib/bff-fetch";
 import { hasPermission } from "~/lib/auth-utils";
 import {
   importBatchFailureMessage,
@@ -51,49 +51,17 @@ import {
 } from "~/lib/import-batch-result";
 import { formatDate, parseISODate, toISODate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
+import type * as importContract from "~/lib/contract/import.generated";
 import { createLogger } from "~/lib/logger";
+
+/** Info-Knopf am Seitentitel: wofür die Seite da ist und was man zuerst tut. */
+const OPENING_BALANCES_INFO =
+  "Hier übernimmst du Stundensaldo und Urlaub aus dem Altsystem. Lade zuerst die Vorlage herunter. Danach wählst du Stichtag und Begründung.";
 
 const OPENING_BALANCES_DESCRIPTION =
   "Übernimmt die Stände aus dem Altsystem: Stundenkonto-Saldo, Urlaubsanspruch samt Vorjahresübertrag und den Resturlaub zum Stichtag. Aus dem Resturlaub errechnet moto die vor der Einführung genommenen Urlaubstage. Pro Person ist nur eine Übernahme möglich.";
 
 const logger = createLogger({ component: "OpeningBalanceImportPage" });
-
-// Wire-Format des generischen Imports (PascalCase, siehe
-// services/import/import_service.go). Zeilen ohne Befund tauchen NICHT in
-// `Errors` auf, nur fehlerhafte und mit Hinweisen versehene Zeilen.
-interface ImportValidationError {
-  field: string;
-  message: string;
-  code: string;
-  severity: "error" | "warning";
-}
-
-interface OpeningBalanceRowData {
-  personnel_number?: string;
-  first_name?: string;
-  last_name?: string;
-  hours_balance?: string;
-  vacation_entitled?: string;
-  vacation_carryover?: string;
-  vacation_remaining?: string;
-}
-
-interface ImportRowResult {
-  RowNumber: number;
-  Data: OpeningBalanceRowData;
-  Errors: ImportValidationError[];
-  Timestamp: string;
-}
-
-interface ImportResult {
-  TotalRows: number;
-  CreatedCount: number;
-  UpdatedCount: number;
-  ErrorCount: number;
-  WarningCount: number;
-  Errors: ImportRowResult[];
-  DryRun: boolean;
-}
 
 type RowStatus = "ok" | "warning" | "error";
 
@@ -114,7 +82,10 @@ const STATUS_TONE = {
   error: { tone: "red", label: "Fehler" },
 } as const;
 
-function rowStatusFor(errors: readonly ImportValidationError[]): RowStatus {
+function rowStatusFor(
+  findings: readonly importContract.ValidationError[] | null,
+): RowStatus {
+  const errors = findings ?? [];
   if (errors.some((e) => e.severity === "error")) return "error";
   if (errors.length > 0) return "warning";
   return "ok";
@@ -126,13 +97,15 @@ function cellValue(raw: string | undefined): string {
   return trimmed === "" ? "–" : trimmed;
 }
 
-function toDisplayRow(row: ImportRowResult): DisplayRow {
-  const data = row.Data ?? {};
+function toDisplayRow(
+  row: importContract.OpeningBalanceImportError,
+): DisplayRow {
+  const data = row.data ?? {};
   const name = `${data.first_name ?? ""} ${data.last_name ?? ""}`.trim();
   return {
-    key: `row-${row.RowNumber}`,
-    rowNumber: row.RowNumber,
-    status: rowStatusFor(row.Errors),
+    key: `row-${row.row_number}`,
+    rowNumber: row.row_number,
+    status: rowStatusFor(row.errors),
     name: name === "" ? "Ohne Namen" : name,
     personnelNumber: data.personnel_number?.trim() ?? "",
     values: [
@@ -141,7 +114,7 @@ function toDisplayRow(row: ImportRowResult): DisplayRow {
       { label: "Übertrag", value: cellValue(data.vacation_carryover) },
       { label: "Resturlaub", value: cellValue(data.vacation_remaining) },
     ],
-    messages: row.Errors.map((e) => e.message),
+    messages: (row.errors ?? []).map((e) => e.message),
     isSummary: false,
   };
 }
@@ -164,9 +137,11 @@ function summaryRow(count: number): DisplayRow {
   };
 }
 
-function buildDisplayRows(result: ImportResult): DisplayRow[] {
-  const listed = (result.Errors ?? []).map(toDisplayRow);
-  const untouched = result.TotalRows - listed.length;
+function buildDisplayRows(
+  result: importContract.OpeningBalanceImportResult,
+): DisplayRow[] {
+  const listed = (result.errors ?? []).map(toDisplayRow);
+  const untouched = result.total_rows - listed.length;
   return untouched > 0 ? [...listed, summaryRow(untouched)] : listed;
 }
 
@@ -244,9 +219,11 @@ function OpeningBalanceImportPageContent() {
   const [note, setNote] = useState("");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [previewRows, setPreviewRows] = useState<DisplayRow[]>([]);
-  const [previewResult, setPreviewResult] = useState<ImportResult | null>(null);
+  const [previewResult, setPreviewResult] =
+    useState<importContract.OpeningBalanceImportResult | null>(null);
   const [previewStale, setPreviewStale] = useState(false);
-  const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [importResult, setImportResult] =
+    useState<importContract.OpeningBalanceImportResult | null>(null);
   const [importInterrupted, setImportInterrupted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -299,8 +276,8 @@ function OpeningBalanceImportPageContent() {
   const handleDownloadTemplate = useCallback(async () => {
     try {
       await downloadImportTemplate(
-        `/api/import/opening-balances/template?format=${templateFormat}`,
-        session,
+        "GET /api/import/opening-balances/template",
+        templateFormat,
         templateFormat === "xlsx"
           ? "eroeffnungssalden-import-vorlage.xlsx"
           : "eroeffnungssalden-import-vorlage.csv",
@@ -316,7 +293,7 @@ function OpeningBalanceImportPageContent() {
         retry: () => void handleDownloadTemplate(),
       });
     }
-  }, [session, templateFormat, showTemplateError]);
+  }, [templateFormat, showTemplateError]);
 
   const runPreview = useCallback(
     async (file: File) => {
@@ -328,17 +305,14 @@ function OpeningBalanceImportPageContent() {
       setPreviewStale(false);
 
       try {
-        const response = await postImportFile(
-          "/api/import/opening-balances/preview",
-          session,
-          buildFormData(file),
+        const result: importContract.OpeningBalanceImportResult = await bffJson(
+          "tenant",
+          "POST /api/import/opening-balances/preview",
+          {
+            body: buildFormData(file),
+            errorMessage: "Opening balance preview failed",
+          },
         );
-        const payload = response.body;
-        if (!response.ok) {
-          throw importResponseError(response, "Opening balance preview failed");
-        }
-
-        const result = payload.data as ImportResult;
         if (requestVersion !== previewRequestVersion.current) return;
         setPreviewResult(result);
         setPreviewRows(buildDisplayRows(result));
@@ -359,7 +333,7 @@ function OpeningBalanceImportPageContent() {
           setIsLoading(false);
       }
     },
-    [buildFormData, session, clearImportErrors, showImportError],
+    [buildFormData, clearImportErrors, showImportError],
   );
 
   const handleFileSelect = useCallback(
@@ -408,45 +382,54 @@ function OpeningBalanceImportPageContent() {
     setBatchNotice(null);
 
     try {
-      const response = await postImportFile(
-        "/api/import/opening-balances/import",
-        session,
-        buildFormData(uploadedFile),
-      );
-      const payload = response.body;
-      if (!response.ok) {
-        const interrupted = readImportBatchFailure<ImportRowResult>(payload);
+      let result: importContract.OpeningBalanceImportResult;
+      try {
+        result = await bffJson(
+          "tenant",
+          "POST /api/import/opening-balances/import",
+          {
+            body: buildFormData(uploadedFile),
+            errorMessage: "Opening balance import failed",
+          },
+        );
+      } catch (error) {
+        // A stopped batch carries the rows already saved in its error body.
+        const payload = importFailureBody(error);
+        const interrupted =
+          readImportBatchFailure<importContract.OpeningBalanceImportError>(
+            payload,
+          );
         if (interrupted) {
-          setImportResult(interrupted as ImportResult);
+          setImportResult(
+            interrupted as importContract.OpeningBalanceImportResult,
+          );
           setImportInterrupted(true);
           setPreviewResult(null);
-          setPreviewRows((interrupted.Errors ?? []).map(toDisplayRow));
+          setPreviewRows((interrupted.errors ?? []).map(toDisplayRow));
           setBatchNotice(importBatchFailureMessage(interrupted));
           logger.error("opening_balance_import_batch_failed", {
-            created: interrupted.CreatedCount,
-            updated: interrupted.UpdatedCount,
-            errors: interrupted.ErrorCount,
+            created: interrupted.created_count,
+            updated: interrupted.updated_count,
+            errors: interrupted.error_count,
           });
           return;
         }
-        throw importResponseError(response, "Opening balance import failed");
+        throw error;
       }
-
-      const result = payload.data as ImportResult;
       setImportResult(result);
       setImportInterrupted(false);
       setPreviewResult(null);
-      setPreviewRows((result.Errors ?? []).map(toDisplayRow));
+      setPreviewRows((result.errors ?? []).map(toDisplayRow));
 
-      if (result.ErrorCount > 0) {
+      if (result.error_count > 0) {
         toast.warning(
-          `Die Übernahme ist fertig: ${result.CreatedCount} übernommen, ${result.ErrorCount} übersprungen.`,
+          `Die Übernahme ist fertig: ${result.created_count} übernommen, ${result.error_count} übersprungen.`,
         );
       } else {
         toast.success(
-          result.CreatedCount === 1
+          result.created_count === 1
             ? "1 Übernahme ist gebucht."
-            : `${result.CreatedCount} Übernahmen sind gebucht.`,
+            : `${result.created_count} Übernahmen sind gebucht.`,
         );
       }
     } catch (err) {
@@ -460,14 +443,7 @@ function OpeningBalanceImportPageContent() {
     } finally {
       setIsImporting(false);
     }
-  }, [
-    buildFormData,
-    session,
-    toast,
-    uploadedFile,
-    clearImportErrors,
-    showImportError,
-  ]);
+  }, [buildFormData, toast, uploadedFile, clearImportErrors, showImportError]);
 
   // Wiederholen übernimmt die Datei mit Stichtag und Begründung von dann.
   useLayoutEffect(() => {
@@ -505,12 +481,13 @@ function OpeningBalanceImportPageContent() {
               }
             : { label: "Übernahme abgeschlossen" }
           : {
-              value: balanceResult?.TotalRows ?? 0,
-              label: (balanceResult?.TotalRows ?? 0) === 1 ? "Zeile" : "Zeilen",
+              value: balanceResult?.total_rows ?? 0,
+              label:
+                (balanceResult?.total_rows ?? 0) === 1 ? "Zeile" : "Zeilen",
             },
         ...((!importResult || importInterrupted) &&
-        (balanceResult?.ErrorCount ?? 0) > 0
-          ? [{ value: balanceResult?.ErrorCount, label: "Fehler" }]
+        (balanceResult?.error_count ?? 0) > 0
+          ? [{ value: balanceResult?.error_count, label: "Fehler" }]
           : []),
         ...(effectiveDate
           ? [{ label: `Stichtag ${formatDate(effectiveDate)}` }]
@@ -527,6 +504,7 @@ function OpeningBalanceImportPageContent() {
     return (
       <TenantPage
         title="Eröffnungssalden"
+        info={OPENING_BALANCES_INFO}
         stats={statusLine}
         back
         backHref="/database/personal"
@@ -548,8 +526,8 @@ function OpeningBalanceImportPageContent() {
     );
   }
 
-  const importable = previewResult?.CreatedCount ?? 0;
-  const previewErrors = previewResult?.ErrorCount ?? 0;
+  const importable = previewResult?.created_count ?? 0;
+  const previewErrors = previewResult?.error_count ?? 0;
   const showPreview = previewResult !== null && importResult === null;
   const importButtonLabel = isImporting
     ? "Wird übernommen…"
@@ -558,6 +536,7 @@ function OpeningBalanceImportPageContent() {
   return (
     <TenantPage
       title="Eröffnungssalden"
+      info={OPENING_BALANCES_INFO}
       stats={statusLine}
       back
       backHref="/database/personal"
@@ -674,13 +653,13 @@ function OpeningBalanceImportPageContent() {
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
             <StatCard
               label="Zeilen"
-              value={previewResult.TotalRows}
+              value={previewResult.total_rows}
               tone="neutral"
             />
             <StatCard label="Übernehmbar" value={importable} tone="neutral" />
             <StatCard
               label="Hinweise"
-              value={previewResult.WarningCount}
+              value={previewResult.warning_count}
               tone="neutral"
             />
             <StatCard label="Fehler" value={previewErrors} tone="neutral" />
@@ -730,22 +709,22 @@ function OpeningBalanceImportPageContent() {
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
             <StatCard
               label="Zeilen"
-              value={importResult.TotalRows}
+              value={importResult.total_rows}
               tone="neutral"
             />
             <StatCard
               label="Übernommen"
-              value={importResult.CreatedCount}
+              value={importResult.created_count}
               tone="neutral"
             />
             <StatCard
               label="Hinweise"
-              value={importResult.WarningCount ?? 0}
+              value={importResult.warning_count ?? 0}
               tone="neutral"
             />
             <StatCard
               label="Fehler"
-              value={importResult.ErrorCount}
+              value={importResult.error_count}
               tone="neutral"
             />
           </div>

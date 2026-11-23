@@ -32,17 +32,17 @@ func assignmentClock() time.Time {
 }
 
 type assignmentFact struct {
-	StaffID           int64   `json:"staff_id"`
-	WorkTimeModelID   *int64  `json:"work_time_model_id"`
-	HasSchedule       bool    `json:"has_schedule"`
-	SollKeptByTraeger bool    `json:"soll_kept_by_traeger"`
-	ClosedThrough     *string `json:"closed_through"`
+	StaffID           testpkg.ID  `json:"staff_id"`
+	WorkTimeModelID   *testpkg.ID `json:"work_time_model_id"`
+	HasSchedule       bool        `json:"has_schedule"`
+	SollKeptByTraeger bool        `json:"soll_kept_by_traeger"`
+	ClosedThrough     *string     `json:"closed_through"`
 }
 
 type assignmentResult struct {
-	Assigned  []int64 `json:"assigned_staff_ids"`
-	Unchanged []int64 `json:"unchanged_staff_ids"`
-	ValidFrom string  `json:"valid_from"`
+	Assigned  []testpkg.ID `json:"assigned_staff_ids"`
+	Unchanged []testpkg.ID `json:"unchanged_staff_ids"`
+	ValidFrom string       `json:"valid_from"`
 }
 
 type scheduleVersion struct {
@@ -110,7 +110,7 @@ func (h *assignmentHarness) facts() map[int64]assignmentFact {
 	require.NoError(h.t, json.Unmarshal(data, &rows))
 	byStaff := make(map[int64]assignmentFact, len(rows))
 	for _, row := range rows {
-		byStaff[row.StaffID] = row
+		byStaff[int64(row.StaffID)] = row
 	}
 	return byStaff
 }
@@ -152,13 +152,13 @@ func TestWorkTimeModelAssignmentBindsSeveralPeopleFromToday(t *testing.T) {
 	facts := h.facts()
 	assert.True(t, facts[custom.ID].HasSchedule, "a running schedule is reported")
 	require.NotNil(t, facts[already.ID].WorkTimeModelID)
-	assert.Equal(t, template.ID, *facts[already.ID].WorkTimeModelID)
+	assert.Equal(t, template.ID, int64(*facts[already.ID].WorkTimeModelID))
 	assert.NotContains(t, facts, fresh.ID, "a person without any fact is absent")
 
 	status, result, _ := h.assign(template.ID, "", custom.ID, fresh.ID, already.ID, fresh.ID)
 	require.Equal(t, http.StatusOK, status)
-	assert.Equal(t, sortedIDs(fresh.ID, custom.ID), result.Assigned)
-	assert.Equal(t, []int64{already.ID}, result.Unchanged)
+	assert.Equal(t, sortedIDs(fresh.ID, custom.ID), testpkg.IDs(result.Assigned))
+	assert.Equal(t, []int64{already.ID}, testpkg.IDs(result.Unchanged))
 	assert.Equal(t, assignmentToday, result.ValidFrom)
 	assert.Equal(t, 1, h.notified)
 

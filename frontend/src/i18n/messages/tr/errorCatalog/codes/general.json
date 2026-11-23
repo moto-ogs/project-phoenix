@@ -1,8 +1,11 @@
 {
   "business_rejection": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "changed_since_read": "{object} bu arada değiştirildi. Şimdi güncel durumu görüyorsunuz. Kontrol edin ve tekrar deneyin.",
   "input": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "permission": "{object} için erişim izniniz yok. Okulla iletişime geçin.",
   "request_too_large": "{object} işlenemedi. Lütfen tarayıcınızda bu sitenin çerezlerini silin. Ardından yeniden giriş yapın.",
+  "route_not_found": "{object} işlenemedi. moto'nun yeni bir sürümü var. Sayfayı yeniden yükleyin.",
   "server": "{object} işlenemedi. Daha sonra yeniden deneyin.",
-  "unavailable": "{object} şu anda kullanılamıyor. Yeniden deneyin."
+  "unavailable": "{object} şu anda kullanılamıyor. Yeniden deneyin.",
+  "write_answer_unreadable": "{object} kabul edildi ancak gösterilemedi. Tekrar denemeden önce sayfayı yeniden yükleyin."
 }

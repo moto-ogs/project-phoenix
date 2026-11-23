@@ -116,7 +116,7 @@ func TestTemplateCreateLocksCompleteRosterInAscendingOrder(t *testing.T) {
 			require.Equal(t, http.StatusCreated, w.Code, "body=%s", w.Body.String())
 			created := decodeTemplateData[createTemplateResponse](t, w)
 			var staffIDs []int64
-			for _, row := range templateSupervisors(t, s, created.TemplateID) {
+			for _, row := range templateSupervisors(t, s, created.TemplateID.Int64()) {
 				staffIDs = append(staffIDs, row.StaffID)
 			}
 			require.ElementsMatch(t, []int64{s.staffA, s.staffB}, staffIDs)

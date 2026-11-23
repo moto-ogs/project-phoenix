@@ -35,7 +35,7 @@ func TestUpdateGuardianContact_EmailCorrectionEndsTheMailedLink(t *testing.T) {
 	require.NoError(t, err)
 
 	corrected := fmt.Sprintf("oma-corrected-%d@example.test", time.Now().UnixNano())
-	_, err = svc.UpdateGuardianContact(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, contactID, parentService.GuardianContactInput{
+	_, err = editContact(t, svc, testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, contactID, parentService.GuardianContactInput{
 		FirstName: "Helga", LastName: "Schneider", Email: &corrected,
 	})
 	require.NoError(t, err)
@@ -63,7 +63,7 @@ func TestUpdateGuardianContact_ReturningToOldEmailDoesNotReviveLink(t *testing.T
 	require.NoError(t, err)
 	changed := "corrected-" + preview.Email
 	for _, address := range []string{changed, preview.Email} {
-		_, err := svc.UpdateGuardianContact(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, contactID, parentService.GuardianContactInput{FirstName: "Helga", LastName: "Schneider", Email: &address})
+		_, err := editContact(t, svc, testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, contactID, parentService.GuardianContactInput{FirstName: "Helga", LastName: "Schneider", Email: &address})
 		require.NoError(t, err)
 	}
 	_, err = invitations.ValidateGuardianInvitation(context.Background(), invitation.Token)

@@ -18,6 +18,8 @@ vi.mock("~/lib/traeger-time-account-api", () => api);
 
 import { StaffTimeAccountCard } from "./staff-time-account-card";
 import { TEST_CLOCK_TODAY } from "~/test/clock";
+import { ApiError } from "~/lib/api-error";
+import { catalogText } from "~/test/error-catalog-text";
 
 /** The month before the test day: the card opens on it. */
 const [todayYear = 0, todayMonth = 1] = TEST_CLOCK_TODAY.split("-").map(Number);
@@ -70,6 +72,7 @@ function account(
     state: "open",
     ended: true,
     schools: [school("OGS Nord"), school("OGS Süd")],
+    fingerprint: "month-1",
     ...overrides,
   };
 }
@@ -122,6 +125,7 @@ describe("StaffTimeAccountCard", () => {
         year: LAST_MONTH.year,
         month: LAST_MONTH.month,
         reason: "Lohnabrechnung August",
+        expectedFingerprint: "month-1",
       }),
     );
     expect(
@@ -130,6 +134,77 @@ describe("StaffTimeAccountCard", () => {
     expect(
       screen.getByRole("button", { name: /Wieder öffnen/ }),
     ).toBeInTheDocument();
+  });
+
+  it("reads the month again without a retry when it changed since the read", async () => {
+    api.fetchTraegerTimeAccount.mockResolvedValue(account());
+    api.closeTraegerTimeAccountMonth.mockRejectedValueOnce(
+      new ApiError("changed since it was read", 409, {
+        code: "general.changed_since_read",
+      }),
+    );
+    renderCard();
+    expect(await screen.findByText("Saldo des Monats")).toBeInTheDocument();
+    const reads = api.fetchTraegerTimeAccount.mock.calls.length;
+    fireEvent.click(screen.getByRole("button", { name: /Monat abschließen/ }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText(/Begründung/), {
+      target: { value: "Lohnabrechnung August" },
+    });
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Monat abschließen" }),
+    );
+
+    // The dialog closes: a second click would freeze balances the person has
+    // not seen. The refusal stands beside the month read again.
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", "das Abschließen des Monats"),
+      ),
+    ).toBeInTheDocument();
+    await vi.waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+    expect(
+      screen.queryByRole("button", { name: "Wiederholen" }),
+    ).not.toBeInTheDocument();
+    await vi.waitFor(() =>
+      expect(api.fetchTraegerTimeAccount.mock.calls.length).toBeGreaterThan(
+        reads,
+      ),
+    );
+    expect(api.closeTraegerTimeAccountMonth).toHaveBeenCalledTimes(1);
+  });
+
+  // ADR 0311 rule 6: a failed read of the month after a refusal says so.
+  it("names a failed read of the month after a refusal", async () => {
+    api.fetchTraegerTimeAccount.mockResolvedValue(account());
+    api.closeTraegerTimeAccountMonth.mockRejectedValueOnce(
+      new ApiError("changed since it was read", 409, {
+        code: "general.changed_since_read",
+      }),
+    );
+    renderCard();
+    expect(await screen.findByText("Saldo des Monats")).toBeInTheDocument();
+    api.fetchTraegerTimeAccount.mockRejectedValue(
+      new ApiError("down", 503, { code: "general.unavailable" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Monat abschließen/ }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText(/Begründung/), {
+      target: { value: "Lohnabrechnung August" },
+    });
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Monat abschließen" }),
+    );
+
+    expect(
+      await screen.findByText(/Der neue Stand konnte nicht geladen werden/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Du siehst jetzt den neuen Stand/),
+    ).not.toBeInTheDocument();
+    expect(api.closeTraegerTimeAccountMonth).toHaveBeenCalledTimes(1);
   });
 
   it("names the school whose later month blocks the close", async () => {

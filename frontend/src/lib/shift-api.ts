@@ -1,17 +1,14 @@
-import { ApiError, enrichApiError, problemDetail } from "./api-error";
 // API clients for planned staff shifts (Dienstplan, #1376 core slice).
-// Admin CRUD goes through /api/staff-shifts (time_tracking:manage); the
-// series read and end keep their routes under /api/staff/shifts. Staff read
-// their own shifts via /api/time-tracking/shifts (time_tracking:own).
+// Admin CRUD, the series rule and its end go through /api/staff-shifts
+// (time_tracking:manage) and the catalog proxy. Staff read their own shifts
+// via /api/time-tracking/shifts (time_tracking:own).
 
-import { sessionFetch } from "./session-cache";
+import { bffJson } from "./bff-fetch";
+import type * as staffShiftsContract from "./contract/staff-shifts.generated";
 import {
   mapOwnAssignment,
   mapStaffScheduleOverview,
   mapStaffShift,
-  type BackendOwnAssignment,
-  type BackendStaffScheduleOverview,
-  type BackendStaffShift,
   type OwnAssignment,
   type StaffScheduleOverview,
   type StaffShift,
@@ -136,6 +133,9 @@ interface SeriesSplitPayload {
   includeSchoolBreaks?: boolean;
   /** Answer to the working-time warnings of a refused save (#4708). */
   workingTime?: WorkingTimeConfirmation;
+  /** Version of the series the planner read (ADR 0311); the split refuses
+   *  a series changed since. */
+  expectedVersion: string;
 }
 
 /** The stored rule behind a series shift — weekdays, rhythm, window, and
@@ -158,21 +158,8 @@ export interface SeriesRule {
   validUntil: string | null;
   /** Also planned in the Ferien and on closing days (#3820). */
   includeSchoolBreaks: boolean;
-}
-
-interface BackendSeriesRule {
-  id: string;
-  staff_id: number;
-  weekdays: number[] | null;
-  start_time: string;
-  end_time: string;
-  break_minutes: number;
-  shift_type_id: number | null;
-  calendar_period_id: number;
-  week_pattern: number;
-  valid_from: string;
-  valid_until: string | null;
-  include_school_breaks?: boolean;
+  /** Token of the stored series; an edit sends it back (ADR 0311). */
+  version: string;
 }
 
 export interface SeriesResult {
@@ -184,32 +171,29 @@ export interface SeriesResult {
   skippedNonWorkingDays: number;
 }
 
-interface BackendSeriesResult {
-  series_id: string;
-  created: number;
-  skipped_dates: string[] | null;
-  skipped_non_working_days?: number;
-}
-
-function mapSeriesRule(data: BackendSeriesRule): SeriesRule {
+function mapSeriesRule(
+  data: staffShiftsContract.SeriesDetailResponse,
+): SeriesRule {
   return {
-    id: data.id.toString(),
-    staffId: data.staff_id.toString(),
+    id: data.id,
+    staffId: data.staff_id,
     weekdays: data.weekdays ?? [],
     startTime: data.start_time,
     endTime: data.end_time,
     breakMinutes: data.break_minutes,
-    shiftTypeId:
-      data.shift_type_id != null ? data.shift_type_id.toString() : null,
-    calendarPeriodId: data.calendar_period_id.toString(),
+    shiftTypeId: data.shift_type_id,
+    calendarPeriodId: data.calendar_period_id,
     weekPattern: data.week_pattern,
     validFrom: data.valid_from,
     validUntil: data.valid_until,
-    includeSchoolBreaks: data.include_school_breaks ?? false,
+    includeSchoolBreaks: data.include_school_breaks,
+    version: data.version,
   };
 }
 
-function toBackendBody(payload: ShiftPayload) {
+function toBackendBody(
+  payload: ShiftPayload,
+): staffShiftsContract.ShiftRequest {
   // The flexible-change fields are only sent when they carry meaning, so a
   // plain create/edit stays byte-for-byte the classic Dienstplan body (#1841):
   //  - cancelled omitted → the backend treats it as false (no absence)
@@ -217,15 +201,12 @@ function toBackendBody(payload: ShiftPayload) {
   //    mirrors the field; omitted leaves the stored reason untouched on update
   //  - origin_shift_id sent only for a replacement shift
   return {
-    staff_id: Number.parseInt(payload.staffId, 10),
+    staff_id: payload.staffId,
     date: payload.date,
     start_time: payload.startTime,
     end_time: payload.endTime,
     break_minutes: payload.breakMinutes,
-    shift_type_id:
-      payload.shiftTypeId != null
-        ? Number.parseInt(payload.shiftTypeId, 10)
-        : null,
+    shift_type_id: payload.shiftTypeId,
     ...(payload.notes !== undefined ? { notes: payload.notes } : {}),
     ...(payload.cancelled ? { cancelled: true } : {}),
     ...(payload.changeReason !== undefined
@@ -238,73 +219,13 @@ function toBackendBody(payload: ShiftPayload) {
   };
 }
 
-async function readShiftError(
-  response: Response,
-  fallback: string,
-): Promise<ApiError> {
-  let detail = "";
-  let payload: unknown;
-  const contentType = response.headers.get("content-type") ?? "";
-  if (contentType.includes("json")) {
-    try {
-      const body: unknown = await response.json();
-      detail = problemDetail(body) ?? "";
-      payload = body;
-    } catch {
-      detail = "";
-    }
-  } else {
-    detail = await response.text();
-  }
-  return enrichApiError(
-    new ApiError(detail || fallback, response.status),
-    payload,
-  );
-}
-
-async function readShiftList(response: Response): Promise<StaffShift[]> {
-  if (!response.ok) {
-    throw await readShiftError(
-      response,
-      "Schichten konnten nicht geladen werden",
-    );
-  }
-  const json = (await response.json()) as { data: BackendStaffShift[] | null };
-  return (json.data ?? []).map(mapStaffShift);
-}
-
-async function readShift(response: Response): Promise<StaffShift> {
-  if (!response.ok) {
-    throw await readShiftError(
-      response,
-      "Schicht konnte nicht gespeichert werden",
-    );
-  }
-  const json = (await response.json()) as { data: BackendStaffShift };
-  return mapStaffShift(json.data);
-}
-
-async function readOverview(
-  response: Response,
-): Promise<StaffScheduleOverview> {
-  if (!response.ok) {
-    throw await readShiftError(
-      response,
-      "Dienstplan konnte nicht geladen werden",
-    );
-  }
-  const json = (await response.json()) as {
-    data: BackendStaffScheduleOverview;
-  };
-  return mapStaffScheduleOverview(json.data);
-}
-
 class StaffShiftService {
   async getShifts(from: string, to: string): Promise<StaffShift[]> {
-    const response = await sessionFetch(
-      `/api/staff-shifts?from=${from}&to=${to}`,
-    );
-    return readShiftList(response);
+    const rows = await bffJson("tenant", "GET /api/staff-shifts/", {
+      query: { from, to },
+      errorMessage: "Schichten konnten nicht geladen werden",
+    });
+    return (rows ?? []).map(mapStaffShift);
   }
 
   /** One staff member's planned shifts in the range — backs the admin
@@ -314,38 +235,42 @@ class StaffShiftService {
     from: string,
     to: string,
   ): Promise<StaffShift[]> {
-    const response = await sessionFetch(
-      `/api/staff-shifts?staff_id=${staffId}&from=${from}&to=${to}`,
-    );
-    return readShiftList(response);
+    const rows = await bffJson("tenant", "GET /api/staff-shifts/", {
+      query: { staff_id: staffId, from, to },
+      errorMessage: "Schichten konnten nicht geladen werden",
+    });
+    return (rows ?? []).map(mapStaffShift);
   }
 
   async getOverview(from: string, to: string): Promise<StaffScheduleOverview> {
-    const response = await sessionFetch(
-      `/api/staff-shifts/overview?from=${from}&to=${to}`,
+    return mapStaffScheduleOverview(
+      await bffJson("tenant", "GET /api/staff-shifts/overview", {
+        query: { from, to },
+        errorMessage: "Dienstplan konnte nicht geladen werden",
+      }),
     );
-    return readOverview(response);
   }
 
   async createShift(payload: ShiftPayload): Promise<StaffShift> {
-    const response = await sessionFetch("/api/staff-shifts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(toBackendBody(payload)),
-    });
-    return readShift(response);
+    return mapStaffShift(
+      await bffJson("tenant", "POST /api/staff-shifts/", {
+        body: toBackendBody(payload),
+        errorMessage: "Schicht konnte nicht gespeichert werden",
+      }),
+    );
   }
 
   async updateShift(
     shiftId: string,
     payload: ShiftPayload,
   ): Promise<StaffShift> {
-    const response = await sessionFetch(`/api/staff-shifts/${shiftId}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(toBackendBody(payload)),
-    });
-    return readShift(response);
+    return mapStaffShift(
+      await bffJson("tenant", "PUT /api/staff-shifts/{id}", {
+        params: { id: shiftId },
+        body: toBackendBody(payload),
+        errorMessage: "Schicht konnte nicht gespeichert werden",
+      }),
+    );
   }
 
   /** Atomically move one concrete shift while preserving its row identity. */
@@ -353,36 +278,29 @@ class StaffShiftService {
     shiftId: string,
     payload: MoveShiftPayload,
   ): Promise<StaffShift> {
-    const response = await sessionFetch(`/api/staff-shifts/${shiftId}/move`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        source_staff_id: Number.parseInt(payload.sourceStaffId, 10),
-        target_staff_id: Number.parseInt(payload.targetStaffId, 10),
-        date: payload.date,
-        start_time: payload.startTime,
-        end_time: payload.endTime,
-        break_minutes: payload.breakMinutes,
-        shift_type_id:
-          payload.shiftTypeId != null
-            ? Number.parseInt(payload.shiftTypeId, 10)
-            : null,
-        ...workingTimeBody(payload.workingTime),
+    return mapStaffShift(
+      await bffJson("tenant", "PUT /api/staff-shifts/{id}/move", {
+        params: { id: shiftId },
+        body: {
+          source_staff_id: payload.sourceStaffId,
+          target_staff_id: payload.targetStaffId,
+          date: payload.date,
+          start_time: payload.startTime,
+          end_time: payload.endTime,
+          break_minutes: payload.breakMinutes,
+          shift_type_id: payload.shiftTypeId,
+          ...workingTimeBody(payload.workingTime),
+        },
+        errorMessage: "Schicht konnte nicht gespeichert werden",
       }),
-    });
-    return readShift(response);
+    );
   }
 
   async deleteShift(shiftId: string): Promise<void> {
-    const response = await sessionFetch(`/api/staff-shifts/${shiftId}`, {
-      method: "DELETE",
+    await bffJson("tenant", "DELETE /api/staff-shifts/{id}", {
+      params: { id: shiftId },
+      errorMessage: "Schicht konnte nicht gelöscht werden",
     });
-    if (!response.ok) {
-      throw await readShiftError(
-        response,
-        "Schicht konnte nicht gelöscht werden",
-      );
-    }
   }
 
   /** Atomically cancel/reactivate a shift and rebuild its replacement set. */
@@ -390,109 +308,81 @@ class StaffShiftService {
     shiftId: string,
     payload: CancellationPayload,
   ): Promise<void> {
-    const response = await sessionFetch(
-      `/api/staff-shifts/${shiftId}/cancellation`,
-      {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          cancelled: payload.cancelled,
-          change_reason: payload.changeReason,
-          start_time: payload.startTime,
-          end_time: payload.endTime,
-          break_minutes: payload.breakMinutes,
-          shift_type_id:
-            payload.shiftTypeId != null
-              ? Number.parseInt(payload.shiftTypeId, 10)
-              : null,
-          replacements: payload.replacements.map((r) => ({
-            staff_id: Number.parseInt(r.staffId, 10),
-            start_time: r.startTime,
-            end_time: r.endTime,
-            break_minutes: r.breakMinutes,
-            shift_type_id:
-              r.shiftTypeId != null ? Number.parseInt(r.shiftTypeId, 10) : null,
-          })),
-          ...workingTimeBody(payload.workingTime),
-        }),
+    await bffJson("tenant", "PUT /api/staff-shifts/{id}/cancellation", {
+      params: { id: shiftId },
+      body: {
+        cancelled: payload.cancelled,
+        change_reason: payload.changeReason,
+        start_time: payload.startTime,
+        end_time: payload.endTime,
+        break_minutes: payload.breakMinutes,
+        shift_type_id: payload.shiftTypeId,
+        replacements: payload.replacements.map((r) => ({
+          staff_id: r.staffId,
+          start_time: r.startTime,
+          end_time: r.endTime,
+          break_minutes: r.breakMinutes,
+          shift_type_id: r.shiftTypeId,
+        })),
+        ...workingTimeBody(payload.workingTime),
       },
-    );
-    if (!response.ok) {
-      throw await readShiftError(
-        response,
-        "Änderung konnte nicht gespeichert werden",
-      );
-    }
+      errorMessage: "Änderung konnte nicht gespeichert werden",
+    });
   }
 }
 
-async function readSeriesResult(response: Response): Promise<SeriesResult> {
-  if (!response.ok) {
-    throw await readShiftError(
-      response,
-      "Schicht-Serie konnte nicht gespeichert werden",
-    );
-  }
-  const json = (await response.json()) as { data: BackendSeriesResult };
+const SERIES_SAVE_FAILED = "Schicht-Serie konnte nicht gespeichert werden";
+
+function mapSeriesResult(
+  data: staffShiftsContract.SeriesResponse,
+): SeriesResult {
   return {
-    seriesId: json.data.series_id.toString(),
-    created: json.data.created,
-    skippedDates: json.data.skipped_dates ?? [],
-    skippedNonWorkingDays: json.data.skipped_non_working_days ?? 0,
+    seriesId: data.series_id,
+    created: data.created,
+    skippedDates: data.skipped_dates ?? [],
+    skippedNonWorkingDays: data.skipped_non_working_days,
   };
 }
 
 class StaffShiftSeriesService {
   async createSeries(payload: SeriesPayload): Promise<SeriesResult> {
-    const response = await sessionFetch("/api/staff-shifts/series", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        staff_id: Number.parseInt(payload.staffId, 10),
-        weekdays: payload.weekdays,
-        start_time: payload.startTime,
-        end_time: payload.endTime,
-        break_minutes: payload.breakMinutes,
-        shift_type_id:
-          payload.shiftTypeId != null
-            ? Number.parseInt(payload.shiftTypeId, 10)
-            : null,
-        calendar_period_id: Number.parseInt(payload.calendarPeriodId, 10),
-        week_pattern: payload.weekPattern,
-        valid_from: payload.validFrom,
-        valid_until: payload.validUntil,
-        include_school_breaks: payload.includeSchoolBreaks,
-        ...workingTimeBody(payload.workingTime),
+    return mapSeriesResult(
+      await bffJson("tenant", "POST /api/staff-shifts/series", {
+        body: {
+          staff_id: payload.staffId,
+          weekdays: payload.weekdays,
+          start_time: payload.startTime,
+          end_time: payload.endTime,
+          break_minutes: payload.breakMinutes,
+          shift_type_id: payload.shiftTypeId,
+          calendar_period_id: payload.calendarPeriodId,
+          week_pattern: payload.weekPattern,
+          valid_from: payload.validFrom,
+          valid_until: payload.validUntil,
+          include_school_breaks: payload.includeSchoolBreaks,
+          ...workingTimeBody(payload.workingTime),
+        },
+        errorMessage: SERIES_SAVE_FAILED,
       }),
-    });
-    return readSeriesResult(response);
+    );
   }
 
   async splitSeries(
     seriesId: string,
     payload: SeriesSplitPayload,
   ): Promise<SeriesResult> {
-    const response = await sessionFetch(
-      `/api/staff-shifts/series/${seriesId}/split`,
-      {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+    return mapSeriesResult(
+      await bffJson("tenant", "PUT /api/staff-shifts/series/{id}/split", {
+        params: { id: seriesId },
+        body: {
           effective_date: payload.effectiveDate,
           ...(payload.occurrenceShiftId !== undefined
-            ? {
-                // Backend IDs are int64 values; serializing this as a number
-                // would round values beyond Number.MAX_SAFE_INTEGER.
-                occurrence_shift_id: payload.occurrenceShiftId,
-              }
+            ? { occurrence_shift_id: payload.occurrenceShiftId }
             : {}),
           start_time: payload.startTime,
           end_time: payload.endTime,
           break_minutes: payload.breakMinutes,
-          shift_type_id:
-            payload.shiftTypeId != null
-              ? Number.parseInt(payload.shiftTypeId, 10)
-              : null,
+          shift_type_id: payload.shiftTypeId,
           // Only sent when the caller actually edited the rule: an absent key
           // means "keep what the series already has" on the backend.
           ...(payload.weekdays !== undefined
@@ -508,67 +398,50 @@ class StaffShiftSeriesService {
             ? { include_school_breaks: payload.includeSchoolBreaks }
             : {}),
           ...workingTimeBody(payload.workingTime),
-        }),
-      },
+          expected_version: payload.expectedVersion,
+        },
+        errorMessage: SERIES_SAVE_FAILED,
+      }),
     );
-    return readSeriesResult(response);
   }
 
   /** The stored rule behind a series shift, so the modal can show and edit
    *  weekdays, rhythm, and validity instead of only one occurrence (#2028). */
   async getSeries(seriesId: string): Promise<SeriesRule> {
-    const response = await sessionFetch(`/api/staff/shifts/series/${seriesId}`);
-    if (!response.ok) {
-      throw await readShiftError(response, "Serie konnte nicht geladen werden");
-    }
-    const json = (await response.json()) as { data: BackendSeriesRule };
-    return mapSeriesRule(json.data);
+    return mapSeriesRule(
+      await bffJson("tenant", "GET /api/staff-shifts/series/{id}", {
+        params: { id: seriesId },
+        errorMessage: "Serie konnte nicht geladen werden",
+      }),
+    );
   }
 
   async endSeries(seriesId: string, from: string): Promise<void> {
-    const response = await sessionFetch(
-      `/api/staff/shifts/series/${seriesId}?from=${from}`,
-      { method: "DELETE" },
-    );
-    if (!response.ok) {
-      throw await readShiftError(
-        response,
-        "Schicht-Serie konnte nicht beendet werden",
-      );
-    }
+    await bffJson("tenant", "DELETE /api/staff-shifts/series/{id}", {
+      params: { id: seriesId },
+      query: { from },
+      errorMessage: "Schicht-Serie konnte nicht beendet werden",
+    });
   }
-}
-
-async function readAssignmentList(
-  response: Response,
-): Promise<OwnAssignment[]> {
-  if (!response.ok) {
-    throw await readShiftError(
-      response,
-      "Einsätze konnten nicht geladen werden",
-    );
-  }
-  const json = (await response.json()) as {
-    data: BackendOwnAssignment[] | null;
-  };
-  return (json.data ?? []).map(mapOwnAssignment);
 }
 
 class OwnShiftService {
   async getOwnShifts(from: string, to: string): Promise<StaffShift[]> {
-    const response = await sessionFetch(
-      `/api/time-tracking/shifts?from=${from}&to=${to}`,
-    );
-    return readShiftList(response);
+    const rows = await bffJson("tenant", "GET /api/time-tracking/shifts", {
+      query: { from, to },
+      errorMessage: "Schichten konnten nicht geladen werden",
+    });
+    return (rows ?? []).map(mapStaffShift);
   }
 
   /** The staff member's own Betreuungsplan blocks (Ort/Aufgabe + Vertretungen)
    *  for the range — "Mein Tag" (#1844). */
   async getOwnAssignments(from: string, to: string): Promise<OwnAssignment[]> {
-    const response = await sessionFetch(
-      `/api/time-tracking/assignments?from=${from}&to=${to}`,
-    );
-    return readAssignmentList(response);
+    const rows = await bffJson("tenant", "GET /api/time-tracking/assignments", {
+      query: { from, to },
+      errorMessage: "Einsätze konnten nicht geladen werden",
+    });
+    return (rows ?? []).map(mapOwnAssignment);
   }
 }
 

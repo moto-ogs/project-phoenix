@@ -3,6 +3,8 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // demoBlockedDevice is a retired tablet the school blocked (Gerätesperre,
@@ -29,7 +31,7 @@ func (s *FixedSeeder) seedBlockedDevice() error {
 	}
 	var device struct {
 		Data struct {
-			ID int64 `json:"id"`
+			ID ident.ID `json:"id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(created, &device); err != nil {

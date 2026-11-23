@@ -65,14 +65,14 @@
     },
     {
       "build": "production",
-      "evidence": "func (rs *PasskeyResource) PasskeyEnrollmentChallenge(w http.ResponseWriter, r *http.Request) {\n\tif !rs.requirePasskey(w, r) {\n\t\treturn\n\t}\n\tclaims := sessiontoken.ClaimsFromCtx(r.Context())\n\tresult, err := rs.passkeyService.StartOperatorPasskeyEnrollment(r.Context(), int64(claims.ID), common.ParseClientIP(r))\n\tif err != nil {\n\t\tmapOperatorPasskeyError(w, r, err)\n\t\treturn\n\t}\n\trender.JSON(w, r, result)\n}",
+      "evidence": "func (rs *PasskeyResource) PasskeyEnrollmentChallenge(w http.ResponseWriter, r *http.Request) {\n\tif !rs.requirePasskey(w, r) {\n\t\treturn\n\t}\n\tclaims := sessiontoken.ClaimsFromCtx(r.Context())\n\tresult, err := rs.passkeyService.StartOperatorPasskeyEnrollment(r.Context(), int64(claims.ID), common.ParseClientIP(r))\n\tif err != nil {\n\t\tmapOperatorPasskeyError(w, r, err)\n\t\treturn\n\t}\n\tcommon.Respond(w, r, http.StatusOK, result, \"Passkey enrollment code sent\")\n}",
       "form": "unclassified-evidence",
       "id": "modules/identityaccess/inbound/operator/PasskeyResource.PasskeyEnrollmentChallenge",
       "owner": "modules/identityaccess"
     },
     {
       "build": "production",
-      "evidence": "func (rs *PasskeyResource) PasskeyList(w http.ResponseWriter, r *http.Request) {\n\tif !rs.requirePasskey(w, r) {\n\t\treturn\n\t}\n\tclaims := sessiontoken.ClaimsFromCtx(r.Context())\n\tcredentials, err := rs.passkeyService.ListOperatorPasskeyCredentials(r.Context(), int64(claims.ID))\n\tif err != nil {\n\t\tmapOperatorPasskeyError(w, r, err)\n\t\treturn\n\t}\n\trender.JSON(w, r, credentials)\n}",
+      "evidence": "func (rs *PasskeyResource) PasskeyList(w http.ResponseWriter, r *http.Request) {\n\tif !rs.requirePasskey(w, r) {\n\t\treturn\n\t}\n\tclaims := sessiontoken.ClaimsFromCtx(r.Context())\n\tcredentials, err := rs.passkeyService.ListOperatorPasskeyCredentials(r.Context(), int64(claims.ID))\n\tif err != nil {\n\t\tmapOperatorPasskeyError(w, r, err)\n\t\treturn\n\t}\n\tcommon.Respond(w, r, http.StatusOK, credentials, \"Passkeys retrieved\")\n}",
       "form": "unclassified-evidence",
       "id": "modules/identityaccess/inbound/operator/PasskeyResource.PasskeyList",
       "owner": "modules/identityaccess"
@@ -275,13 +275,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (a *AccountAdministration) UpdateManageableAccount(ctx context.Context, update identityaccess.AccountIdentityUpdate) error {\n\treturn runFlowErr(ctx, a.flow(), func(ctx context.Context) error {\n\t\treturn a.runtime.RunInTx(ctx, func(writeCtx context.Context) error {\n\t\t\treturn a.updateManageableAccount(writeCtx, domain.AccountIdentityUpdate{AccountID: update.AccountID, Email: update.Email, Username: update.Username})\n\t\t})\n\t})\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/identityaccess/internal/application/AccountAdministration.UpdateManageableAccount",
-      "owner": "modules/identityaccess"
-    },
-    {
-      "build": "production",
       "evidence": "func (s *AccountAuthentication) CountExpiredTokens(ctx context.Context) (int, error) {\n\treturn runFlow(ctx, s.flow(), func(ctx context.Context) (int, error) {\n\t\tcount, err := s.sessions.CountExpiredAccountSessions(ctx)\n\t\tif err != nil {\n\t\t\treturn 0, failed(\"count expired tokens\", err)\n\t\t}\n\t\treturn count, nil\n\t})\n}",
       "form": "unclassified-evidence",
       "id": "modules/identityaccess/internal/application/AccountAuthentication.CountExpiredTokens",
@@ -429,20 +422,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (e CallerEngine) GroupStudentIDs(ctx context.Context, sessionID int64) ([]int64, error) {\n\tids, err := e.App.GroupStudentIDs(ctx, sessionID)\n\treturn ids, mapCallerError(err)\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/identityaccess/internal/application/CallerEngine.GroupStudentIDs",
-      "owner": "modules/identityaccess"
-    },
-    {
-      "build": "production",
-      "evidence": "func (e CallerEngine) GroupVisits(ctx context.Context, sessionID int64) ([]identityaccess.CallerVisit, error) {\n\tvisits, err := e.App.GroupVisits(ctx, sessionID)\n\tif err != nil {\n\t\treturn nil, mapCallerError(err)\n\t}\n\tvar result []identityaccess.CallerVisit\n\tfor _, visit := range visits {\n\t\tresult = append(result, identityaccess.CallerVisit(visit))\n\t}\n\treturn result, nil\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/identityaccess/internal/application/CallerEngine.GroupVisits",
-      "owner": "modules/identityaccess"
-    },
-    {
-      "build": "production",
       "evidence": "func (e CallerEngine) HasCurrentStaff(ctx context.Context) (bool, error) {\n\tfound, err := e.App.HasCurrentStaff(ctx)\n\treturn found, mapCallerError(err)\n}",
       "form": "unclassified-evidence",
       "id": "modules/identityaccess/internal/application/CallerEngine.HasCurrentStaff",
@@ -558,13 +537,6 @@
       "evidence": "func (p CallerPeople) FindPersonByAccount(ctx context.Context, accountID int64) (domain.CallerPerson, bool, error) {\n\tperson, found, err := p.CallerPeople.FindPersonByAccount(ctx, accountID)\n\treturn domain.CallerPerson(person), found, err\n}",
       "form": "unclassified-evidence",
       "id": "modules/identityaccess/internal/application/CallerPeople.FindPersonByAccount",
-      "owner": "modules/identityaccess"
-    },
-    {
-      "build": "production",
-      "evidence": "func (s CallerSessions) SessionVisits(ctx context.Context, sessionID int64) ([]domain.CallerVisit, error) {\n\tvisits, err := s.CallerSessions.SessionVisits(ctx, sessionID)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]domain.CallerVisit, 0, len(visits))\n\tfor _, visit := range visits {\n\t\tresult = append(result, domain.CallerVisit(visit))\n\t}\n\treturn result, nil\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/identityaccess/internal/application/CallerSessions.SessionVisits",
       "owner": "modules/identityaccess"
     },
     {
@@ -1003,13 +975,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (r GuardianInvitationReads) ListRedeemableGuardianInvitations(ctx context.Context) ([]identityaccess.GuardianInvitation, error) {\n\tvar invitations []domain.GuardianInvitation\n\terr := r.run(ctx, func(txCtx context.Context) error {\n\t\tvar err error\n\t\tinvitations, err = r.invitations.ListRedeemableGuardianInvitations(txCtx)\n\t\treturn err\n\t})\n\treturn guardianInvitationList(invitations, err)\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/identityaccess/internal/application/GuardianInvitationReads.ListRedeemableGuardianInvitations",
-      "owner": "modules/identityaccess"
-    },
-    {
-      "build": "production",
       "evidence": "func (p InvitationGrantPolicy) CanGrantRole(role domain.RoleFacts, actorPermissions, rolePermissions []string) bool {\n\treturn p.Source.CanGrantRole(identityaccess.RoleFacts(role), actorPermissions, rolePermissions)\n}",
       "form": "unclassified-evidence",
       "id": "modules/identityaccess/internal/application/InvitationGrantPolicy.CanGrantRole",
@@ -1416,7 +1381,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (r *RoleAdministration) ReplaceAccountRole(ctx context.Context, accountID, roleID int64) error {\n\treturn runFlowErr(ctx, r.flow(), func(ctx context.Context) error {\n\t\treturn r.runtime.RunInTx(ctx, func(txCtx context.Context) error {\n\t\t\treturn r.replaceAccountRoleInTx(txCtx, accountID, roleID)\n\t\t})\n\t})\n}",
+      "evidence": "func (r *RoleAdministration) ReplaceAccountRole(ctx context.Context, accountID, roleID int64, expectedVersion string) error {\n\treturn runFlowErr(ctx, r.flow(), func(ctx context.Context) error {\n\t\treturn r.runtime.RunInTx(ctx, func(txCtx context.Context) error {\n\t\t\treturn r.replaceAccountRoleInTx(txCtx, accountID, roleID, expectedVersion)\n\t\t})\n\t})\n}",
       "form": "unclassified-evidence",
       "id": "modules/identityaccess/internal/application/RoleAdministration.ReplaceAccountRole",
       "owner": "modules/identityaccess"

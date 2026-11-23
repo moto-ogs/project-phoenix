@@ -6,6 +6,7 @@ import {
 } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type * as studentsContract from "~/lib/contract/students.generated";
 
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
@@ -119,10 +120,17 @@ describe("CareRequestReviewItem", () => {
   });
 
   it("renders the weekly diff plus summary and approves without requiring a reason", async () => {
-    mockDecide.mockResolvedValue(row({ status: "approved" }));
+    mockDecide.mockResolvedValue(decided(row({ status: "approved" })));
     const onDecided = vi.fn();
 
-    render(<CareRequestReviewItem row={row()} onDecided={onDecided} />);
+    render(
+      <CareRequestReviewItem
+        row={row()}
+        onDecided={onDecided}
+        expectedVersion="v1"
+        onStale={vi.fn()}
+      />,
+    );
 
     // Collapsed summary: Geltungstag vorn, dahinter die Arten aus den
     // Diff-Labels.
@@ -143,6 +151,7 @@ describe("CareRequestReviewItem", () => {
         true,
         undefined,
         "impact-v1",
+        "v1",
       ),
     );
     expect(onDecided).toHaveBeenCalledWith(
@@ -171,7 +180,12 @@ describe("CareRequestReviewItem", () => {
       ],
     });
     const { rerender } = render(
-      <CareRequestReviewItem row={changed} onDecided={vi.fn()} />,
+      <CareRequestReviewItem
+        row={changed}
+        onDecided={vi.fn()}
+        expectedVersion="v1"
+        onStale={vi.fn()}
+      />,
     );
     expand();
 
@@ -182,7 +196,14 @@ describe("CareRequestReviewItem", () => {
     expect(screen.getAllByText(/^Eltern sahen /)).toHaveLength(1);
     expect(screen.getByText("Eltern sahen 15:00")).toBeInTheDocument();
 
-    rerender(<CareRequestReviewItem row={row()} onDecided={vi.fn()} />);
+    rerender(
+      <CareRequestReviewItem
+        row={row()}
+        onDecided={vi.fn()}
+        expectedVersion="v1"
+        onStale={vi.fn()}
+      />,
+    );
     expect(screen.getByText("Montag · Abholzeit:")).toBeInTheDocument();
     expect(
       screen.queryByText(/Der Plan wurde nach der Anfrage geändert/),
@@ -192,7 +213,12 @@ describe("CareRequestReviewItem", () => {
 
   it("preserves the request kind in an empty collapsed summary", () => {
     const { rerender } = render(
-      <CareRequestReviewItem row={row({ diff: [] })} onDecided={vi.fn()} />,
+      <CareRequestReviewItem
+        row={row({ diff: [] })}
+        onDecided={vi.fn()}
+        expectedVersion="v1"
+        onStale={vi.fn()}
+      />,
     );
     expect(
       screen.getByRole("button", {
@@ -204,6 +230,8 @@ describe("CareRequestReviewItem", () => {
       <CareRequestReviewItem
         row={pickupRow({ diff: [] })}
         onDecided={vi.fn()}
+        expectedVersion="v1"
+        onStale={vi.fn()}
       />,
     );
     expect(
@@ -233,6 +261,8 @@ describe("CareRequestReviewItem", () => {
           ],
         })}
         onDecided={vi.fn()}
+        expectedVersion="v1"
+        onStale={vi.fn()}
       />,
     );
 
@@ -243,7 +273,14 @@ describe("CareRequestReviewItem", () => {
   });
 
   it("nennt bei einer Tages-Anfrage den Geltungstag und kennzeichnet sie als einzelnen Tag", () => {
-    render(<CareRequestReviewItem row={pickupRow()} onDecided={vi.fn()} />);
+    render(
+      <CareRequestReviewItem
+        row={pickupRow()}
+        onDecided={vi.fn()}
+        expectedVersion="v1"
+        onStale={vi.fn()}
+      />,
+    );
 
     // Ohne Klick muss die Zeile sagen, dass die Änderung nur für diesen einen
     // Tag gilt — sonst liest sie sich wie eine dauerhafte Änderung (#2480).
@@ -263,6 +300,8 @@ describe("CareRequestReviewItem", () => {
           ],
         })}
         onDecided={vi.fn()}
+        expectedVersion="v1"
+        onStale={vi.fn()}
       />,
     );
 
@@ -285,6 +324,8 @@ describe("CareRequestReviewItem", () => {
           ],
         })}
         onDecided={vi.fn()}
+        expectedVersion="v1"
+        onStale={vi.fn()}
       />,
     );
 
@@ -294,10 +335,17 @@ describe("CareRequestReviewItem", () => {
   });
 
   it("requires a reason before rejecting", async () => {
-    mockDecide.mockResolvedValue(row({ status: "rejected" }));
+    mockDecide.mockResolvedValue(decided(row({ status: "rejected" })));
     const onDecided = vi.fn();
 
-    render(<CareRequestReviewItem row={row()} onDecided={onDecided} />);
+    render(
+      <CareRequestReviewItem
+        row={row()}
+        onDecided={onDecided}
+        expectedVersion="v1"
+        onStale={vi.fn()}
+      />,
+    );
 
     expand();
     fireEvent.click(screen.getByRole("button", { name: "Ablehnen" }));
@@ -322,6 +370,7 @@ describe("CareRequestReviewItem", () => {
         false,
         "zu kurzfristig",
         "impact-v1",
+        "v1",
       ),
     );
     expect(onDecided).toHaveBeenCalledWith(
@@ -330,10 +379,17 @@ describe("CareRequestReviewItem", () => {
   });
 
   it("shows the parent's mandatory reason for a pickup change and reports the pickup notice", async () => {
-    mockDecide.mockResolvedValue(row({ status: "approved" }));
+    mockDecide.mockResolvedValue(decided(row({ status: "approved" })));
     const onDecided = vi.fn();
 
-    render(<CareRequestReviewItem row={pickupRow()} onDecided={onDecided} />);
+    render(
+      <CareRequestReviewItem
+        row={pickupRow()}
+        onDecided={onDecided}
+        expectedVersion="v1"
+        onStale={vi.fn()}
+      />,
+    );
 
     expand();
     expect(screen.getByText("Grund der Eltern:")).toBeInTheDocument();
@@ -360,6 +416,8 @@ describe("CareRequestReviewItem", () => {
       <CareRequestReviewItem
         row={pickupRow({ affected_blocks: [] })}
         onDecided={vi.fn()}
+        expectedVersion="v1"
+        onStale={vi.fn()}
       />,
     );
 
@@ -376,6 +434,8 @@ describe("CareRequestReviewItem", () => {
       <CareRequestReviewItem
         row={pickupRow({ impact_available: false, affected_blocks: [] })}
         onDecided={vi.fn()}
+        expectedVersion="v1"
+        onStale={vi.fn()}
       />,
     );
     expand();
@@ -406,7 +466,7 @@ describe("CareRequestReviewItem", () => {
   ])(
     "approves a day request without a time leg ($care_kind)",
     async (entry) => {
-      mockDecide.mockResolvedValue(pickupRow({ status: "approved" }));
+      mockDecide.mockResolvedValue(decided(pickupRow({ status: "approved" })));
       const onDecided = vi.fn();
       render(
         <CareRequestReviewItem
@@ -417,6 +477,8 @@ describe("CareRequestReviewItem", () => {
             diff: [entry],
           })}
           onDecided={onDecided}
+          expectedVersion="v1"
+          onStale={vi.fn()}
         />,
       );
       expand();
@@ -432,7 +494,14 @@ describe("CareRequestReviewItem", () => {
     );
     const onDecided = vi.fn();
 
-    render(<CareRequestReviewItem row={row()} onDecided={onDecided} />);
+    render(
+      <CareRequestReviewItem
+        row={row()}
+        onDecided={onDecided}
+        expectedVersion="v1"
+        onStale={vi.fn()}
+      />,
+    );
 
     expand();
     fireEvent.click(screen.getByRole("button", { name: "Freigeben" }));
@@ -450,7 +519,14 @@ describe("CareRequestReviewItem", () => {
         code: "students.pickup_change_impact_changed",
       }),
     );
-    render(<CareRequestReviewItem row={pickupRow()} onDecided={vi.fn()} />);
+    render(
+      <CareRequestReviewItem
+        row={pickupRow()}
+        onDecided={vi.fn()}
+        expectedVersion="v1"
+        onStale={vi.fn()}
+      />,
+    );
 
     expand();
     fireEvent.click(screen.getByRole("button", { name: "Freigeben" }));
@@ -466,7 +542,14 @@ describe("CareRequestReviewItem", () => {
         code: "students.care_request_plan_changed",
       }),
     );
-    render(<CareRequestReviewItem row={row()} onDecided={vi.fn()} />);
+    render(
+      <CareRequestReviewItem
+        row={row()}
+        onDecided={vi.fn()}
+        expectedVersion="v1"
+        onStale={vi.fn()}
+      />,
+    );
 
     expand();
     fireEvent.click(screen.getByRole("button", { name: "Freigeben" }));
@@ -488,6 +571,8 @@ describe("CareRequestReviewItem", () => {
       <CareRequestReviewItem
         row={row({ request_kind: "pickup_change" })}
         onDecided={onDecided}
+        expectedVersion="v1"
+        onStale={vi.fn()}
       />,
     );
 
@@ -509,7 +594,14 @@ describe("CareRequestReviewItem", () => {
       ),
     );
 
-    render(<CareRequestReviewItem row={row()} onDecided={vi.fn()} />);
+    render(
+      <CareRequestReviewItem
+        row={row()}
+        onDecided={vi.fn()}
+        expectedVersion="v1"
+        onStale={vi.fn()}
+      />,
+    );
     expand();
     fireEvent.click(screen.getByRole("button", { name: "Freigeben" }));
 
@@ -525,7 +617,7 @@ describe("CareRequestReviewItem", () => {
   it("offers the proof of a signed pickup permission", async () => {
     vi.mocked(downloadCareRequestProofPdf).mockResolvedValue(undefined);
     mockDecide.mockResolvedValue(
-      row({ request_kind: "pickup_permission", status: "approved" }),
+      decided(row({ request_kind: "pickup_permission", status: "approved" })),
     );
     const onDecided = vi.fn();
     render(
@@ -542,6 +634,8 @@ describe("CareRequestReviewItem", () => {
           ],
         })}
         onDecided={onDecided}
+        expectedVersion="v1"
+        onStale={vi.fn()}
       />,
     );
     expand();
@@ -565,7 +659,14 @@ describe("CareRequestReviewItem", () => {
   });
 
   it("offers no proof for an unsigned request", () => {
-    render(<CareRequestReviewItem row={row()} onDecided={vi.fn()} />);
+    render(
+      <CareRequestReviewItem
+        row={row()}
+        onDecided={vi.fn()}
+        expectedVersion="v1"
+        onStale={vi.fn()}
+      />,
+    );
     expand();
     expect(screen.getByText("Montag · Abholzeit:")).toBeInTheDocument();
     expect(
@@ -581,6 +682,8 @@ describe("CareRequestReviewItem", () => {
       <CareRequestReviewItem
         row={pickupRow({ signed: true })}
         onDecided={vi.fn()}
+        expectedVersion="v1"
+        onStale={vi.fn()}
       />,
     );
     expand();
@@ -588,5 +691,46 @@ describe("CareRequestReviewItem", () => {
     await expectErrorToast(
       catalogText("students.pickup_proof_not_found", "Der Nachweis"),
     );
+  });
+});
+
+/** The decide route's answer: the generated type of the row. */
+function decided(
+  request: StaffCareRequest,
+): studentsContract.CareRequestResponse {
+  return {
+    ...request,
+    diff: [...request.diff],
+    affected_blocks: [...request.affected_blocks],
+  };
+}
+
+// ADR 0311: a request stored differently since the list was read is refused.
+// The card names it without a retry and the list reloads.
+describe("CareRequestReviewItem on an outdated read", () => {
+  it("reloads instead of retrying the decision", async () => {
+    mockDecide.mockRejectedValueOnce(
+      new ApiError("changed since it was read", 409, {
+        code: "general.changed_since_read",
+      }),
+    );
+    const onStale = vi.fn();
+    render(
+      <CareRequestReviewItem
+        row={row()}
+        onDecided={vi.fn()}
+        expectedVersion="v1"
+        onStale={onStale}
+      />,
+    );
+
+    expand();
+    fireEvent.click(screen.getByRole("button", { name: "Freigeben" }));
+
+    await expectErrorToast(/wurde inzwischen geändert/);
+    expect(onStale).toHaveBeenCalledOnce();
+    expect(
+      screen.queryByRole("button", { name: /Wiederholen/ }),
+    ).not.toBeInTheDocument();
   });
 });

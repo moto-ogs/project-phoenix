@@ -25,7 +25,9 @@ func TestDeleteArchivesAReferencedRoomAndKeepsItsReferences(t *testing.T) {
 	_, err = db.NewRaw(`UPDATE education.groups SET room_id = ? WHERE id = ?`, room.ID, group.ID).Exec(context.Background())
 	require.NoError(t, err)
 
-	removal, err := module.DeleteRoom(ctx, room.ID)
+	impact, err := module.RoomRemovalImpact(ctx, room.ID)
+	require.NoError(t, err)
+	removal, err := module.DeleteRoom(ctx, room.ID, impact.Fingerprint())
 
 	require.NoError(t, err)
 	assert.Equal(t, facilities.RoomRemovalArchive, removal.Outcome)
@@ -66,10 +68,10 @@ func TestSelfMadeToiletRoomIsASystemRoom(t *testing.T) {
 	require.NoError(t, err)
 	require.False(t, room.IsSystem)
 
-	toilet, err := module.UpdateRoom(ctx, facilities.UpdateRoom{ID: room.ID, Name: facilities.WCRoomName})
+	toilet, err := module.UpdateRoom(ctx, facilities.UpdateRoom{ID: room.ID, Name: facilities.WCRoomName, ExpectedVersion: facilities.RoomVersion(room)})
 	require.NoError(t, err)
 	assert.True(t, toilet.IsSystem)
-	_, err = module.DeleteRoom(ctx, toilet.ID)
+	_, err = module.DeleteRoom(ctx, toilet.ID, "")
 	require.ErrorIs(t, err, facilities.ErrSystemRoomProtected)
 
 	otherTenant := testpkg.UniqueTestTenantID(t)

@@ -20,9 +20,9 @@ import {
   fetchNotificationPreferences,
   setNotificationPreference,
   type NotificationPreferences,
-  type NotificationPreferenceType,
   type PreferencePortal,
 } from "~/lib/notification-preferences-api";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 import { notificationsConcept } from "~/lib/concepts/notifications";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
 
@@ -46,10 +46,11 @@ const GROUP_LABELS: Record<string, string> = {
   dienstplan: "Dienstplan und Vertretung",
 };
 
-const NO_TYPES: NotificationPreferenceType[] = [];
+const NO_TYPES: sharedContract.PreferenceState[] = [];
 
 const PARENT_GROUPS = new Set(["kinder", "mitteilungen", "termine"]);
-const PARENT_TYPES = new Set([
+/** Types the parent portal names from its own catalog, in the reader's language. */
+export const PARENT_TYPES: ReadonlySet<string> = new Set([
   "parent_announcement",
   "parent_message",
   "parent_appointment",
@@ -142,15 +143,15 @@ function NotificationPreferencesSectionContent({
   const loading = data === undefined && !failure;
   const { show: showActionError } = useApiErrorDisplay();
   const latestToggleRef = useRef<
-    (type: NotificationPreferenceType, enabled: boolean) => void
+    (type: sharedContract.PreferenceState, enabled: boolean) => void
   >(() => undefined);
   const latestDisableAllRef = useRef<() => void>(() => undefined);
   const latestEnableAllRef = useRef<() => void>(() => undefined);
 
   const setTypes = (
     update: (
-      current: NotificationPreferenceType[],
-    ) => NotificationPreferenceType[],
+      current: sharedContract.PreferenceState[],
+    ) => sharedContract.PreferenceState[],
   ) =>
     void mutate(
       (current: NotificationPreferences | undefined) =>
@@ -158,13 +159,16 @@ function NotificationPreferencesSectionContent({
       { revalidate: false },
     );
 
-  function typeLabel(type: NotificationPreferenceType): string {
+  function typeLabel(type: sharedContract.PreferenceState): string {
     return isParentPortal && PARENT_TYPES.has(type.key)
       ? t(`types.${type.key}.label`)
       : type.label;
   }
 
-  const toggle = async (type: NotificationPreferenceType, enabled: boolean) => {
+  const toggle = async (
+    type: sharedContract.PreferenceState,
+    enabled: boolean,
+  ) => {
     // Optimistic: the switch answers immediately and rolls back on failure.
     setBusy(true);
     setTypes((current) =>

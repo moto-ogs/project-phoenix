@@ -27,6 +27,27 @@
       "role": "contract",
       "internal_test_role": "module-internal-test",
       "external_test_role": "module-behavior-test"
+    },
+    {
+      "path": "sharedkernel/ident",
+      "owner": "shared-kernel",
+      "role": "contract",
+      "internal_test_role": "module-internal-test",
+      "external_test_role": "module-behavior-test"
+    },
+    {
+      "path": "sharedkernel/ident/wire",
+      "owner": "shared-kernel",
+      "role": "contract",
+      "internal_test_role": "module-internal-test",
+      "external_test_role": "module-behavior-test"
+    },
+    {
+      "path": "sharedkernel/readstate",
+      "owner": "shared-kernel",
+      "role": "contract",
+      "internal_test_role": "module-internal-test",
+      "external_test_role": "module-behavior-test"
     }
   ]
 }

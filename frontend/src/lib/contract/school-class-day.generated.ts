@@ -4,9 +4,9 @@ import {
   arr,
   bool,
   calendarDate,
+  fileAnswer,
   instant,
   int64String,
-  int64StringOrNumber,
   noData,
   nullable,
   object,
@@ -99,7 +99,7 @@ export interface DayRow {
 }
 
 export const DayRowSchema: z.ZodType<DayRow, unknown> = object<DayRow>({
-  student_id: int64StringOrNumber,
+  student_id: int64String,
   first_name: str,
   last_name: str,
   list_entry: optional(bool),
@@ -142,12 +142,14 @@ export interface DayHomework {
   id: string;
   subject?: string;
   description: string;
+  version: string;
 }
 
 export const DayHomeworkSchema: z.ZodType<DayHomework, unknown> = object<DayHomework>({
   id: int64String,
   subject: optional(str),
   description: str,
+  version: str,
 });
 
 /** Go: classday.DayHandover */
@@ -181,6 +183,7 @@ export interface DayReport {
   can_write_homework: boolean;
   can_read_shared_notes: boolean;
   handover?: DayHandover;
+  handover_version?: string;
   can_hand_over: boolean;
   can_report_absences: boolean;
 }
@@ -202,6 +205,7 @@ export const DayReportSchema: z.ZodType<DayReport, unknown> = object<DayReport>(
   can_write_homework: bool,
   can_read_shared_notes: bool,
   handover: optional(DayHandoverSchema),
+  handover_version: optional(str),
   can_hand_over: bool,
   can_report_absences: bool,
 });
@@ -218,7 +222,7 @@ export interface AbsenceListChild {
 }
 
 export const AbsenceListChildSchema: z.ZodType<AbsenceListChild, unknown> = object<AbsenceListChild>({
-  student_id: int64StringOrNumber,
+  student_id: int64String,
   first_name: str,
   last_name: str,
   absent_days: safeInt,
@@ -471,7 +475,7 @@ export const StudentSharedNotesSchema: z.ZodType<StudentSharedNotes, unknown> = 
 export interface ClassTripRequest {
   from?: string;
   to?: string;
-  student_ids?: number[] | null;
+  student_ids?: string[] | null;
   return_time?: string | null;
   reason?: string | null;
 }
@@ -514,13 +518,22 @@ export interface DayHintRequest {
 
 /** Go: classdayhttp.ClassHandoverRequest */
 export interface ClassHandoverRequest {
-  present_student_ids?: number[] | null;
-  absent_student_ids?: number[] | null;
+  present_student_ids?: string[] | null;
+  absent_student_ids?: string[] | null;
+  expected_version?: string;
+}
+
+/** Go: classdayhttp.HomeworkChangeRequest */
+export interface HomeworkChangeRequest {
+  date?: string;
+  subject?: string | null;
+  description?: string;
+  expected_version?: string;
 }
 
 /** Go: classdayhttp.MorningAttendanceMarkRequest */
 export interface MorningAttendanceMarkRequest {
-  student_id?: number;
+  student_id?: string;
   list_entry_id?: string;
   status?: string;
 }
@@ -528,37 +541,6 @@ export interface MorningAttendanceMarkRequest {
 /** Go: classdayhttp.MorningAttendanceRequest */
 export interface MorningAttendanceRequest {
   marks?: MorningAttendanceMarkRequest[] | null;
-}
-
-/** Query of GET /school/class-day/ */
-export interface GetSchoolClassDayQuery {
-  class?: string;
-  date?: string;
-}
-
-/** Query of GET /school/class-day/absence-list */
-export interface GetSchoolClassDayAbsenceListQuery {
-  class?: string;
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /school/class-day/arrival-exceptions */
-export interface GetSchoolClassDayArrivalExceptionsQuery {
-  class?: string;
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /school/class-day/arrival-exceptions/block-start */
-export interface GetSchoolClassDayArrivalExceptionsBlockStartQuery {
-  class?: string;
-  date?: string;
-}
-
-/** Query of GET /school/class-day/school-day */
-export interface GetSchoolClassDaySchoolDayQuery {
-  date?: string;
 }
 
 export const routes = {
@@ -602,28 +584,54 @@ export const routes = {
     method: "GET",
     pattern: "/school/class-day/",
     portals: ["school"],
-    query: ["class", "date"],
+    query: {
+      "class": { kind: "string" },
+      "date": { kind: "date" },
+    },
     response: success(DayReportSchema),
   },
   "GET /school/class-day/absence-list": {
     method: "GET",
     pattern: "/school/class-day/absence-list",
     portals: ["school"],
-    query: ["class", "from", "to"],
+    query: {
+      "class": { kind: "string" },
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(AbsenceListReportSchema),
+  },
+  "GET /school/class-day/absence-list/export": {
+    method: "GET",
+    pattern: "/school/class-day/absence-list/export",
+    portals: ["school"],
+    query: {
+      "class": { kind: "string" },
+      "format": { kind: "string", values: ["pdf", "xlsx"] },
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
+    response: fileAnswer,
   },
   "GET /school/class-day/arrival-exceptions": {
     method: "GET",
     pattern: "/school/class-day/arrival-exceptions",
     portals: ["school"],
-    query: ["class", "from", "to"],
+    query: {
+      "class": { kind: "string" },
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(ArrivalExceptionListResponseSchema),
   },
   "GET /school/class-day/arrival-exceptions/block-start": {
     method: "GET",
     pattern: "/school/class-day/arrival-exceptions/block-start",
     portals: ["school"],
-    query: ["class", "date"],
+    query: {
+      "class": { kind: "string" },
+      "date": { kind: "date" },
+    },
     response: success(ArrivalExceptionBlockStartResponseSchema),
   },
   "GET /school/class-day/classes": {
@@ -636,7 +644,9 @@ export const routes = {
     method: "GET",
     pattern: "/school/class-day/school-day",
     portals: ["school"],
-    query: ["date"],
+    query: {
+      "date": { kind: "date" },
+    },
     response: success(SchoolDayReportSchema),
   },
   "GET /school/class-day/shared-notes/{schoolClass}/students/{studentId}": {
@@ -698,7 +708,7 @@ export const routes = {
     method: "PUT",
     pattern: "/school/class-day/homework/{schoolClass}/{homeworkId}",
     portals: ["school"],
-    request: requestBody<HomeworkRequest>(),
+    request: requestBody<HomeworkChangeRequest>(),
     response: success(DayHomeworkSchema),
   },
   "PUT /school/class-day/morning-attendance/{schoolClass}/{date}": {

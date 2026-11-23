@@ -14,6 +14,7 @@ import (
 	parentBillingCompose "github.com/moto-ogs/project-phoenix/modules/parentbilling/compose"
 	configModels "github.com/moto-ogs/project-phoenix/modules/settings/records"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
 
@@ -62,7 +63,8 @@ func (p parentMandateParties) Recipients(ctx context.Context, organizationID int
 	}
 	recipients := make(map[int64]parentbilling.CareRecipient, len(parties))
 	for contractID, party := range parties {
-		recipients[contractID] = parentbilling.CareRecipient{FirstName: party.FirstName, LastName: party.LastName, Email: party.Email}
+		recipients[contractID] = parentbilling.CareRecipient{FirstName: party.FirstName, LastName: party.LastName, Email: party.Email,
+			ContractDraft: party.ContractDraft}
 	}
 	return recipients, nil
 }
@@ -97,8 +99,10 @@ func (m parentSEPAMandates) GrantSEPAMandate(ctx context.Context, organizationID
 	return parentMandateView(view), parentMandateError(err)
 }
 
-func (m parentSEPAMandates) RevokeSEPAMandate(ctx context.Context, organizationID int64, reader parentportal.SEPAMandateReader) (parentportal.SEPAMandateView, error) {
-	view, err := m.mandates.RevokeParentSEPAMandate(ctx, organizationID, parentbilling.ParentMandateReader(reader))
+func (m parentSEPAMandates) RevokeSEPAMandate(ctx context.Context, organizationID int64, reader parentportal.SEPAMandateReader,
+	expectedVersion string,
+) (parentportal.SEPAMandateView, error) {
+	view, err := m.mandates.RevokeParentSEPAMandate(ctx, organizationID, parentbilling.ParentMandateReader(reader), expectedVersion)
 	return parentMandateView(view), parentMandateError(err)
 }
 
@@ -113,7 +117,7 @@ func parentMandateView(view parentbilling.ParentMandate) parentportal.SEPAMandat
 		out.Prefill = &prefill
 	}
 	if mandate := view.Mandate; mandate != nil {
-		summary := parentportal.SEPAMandateSummary{ID: mandate.ID, Reference: mandate.Reference, SignedOn: mandate.SignedOn,
+		summary := parentportal.SEPAMandateSummary{ID: ident.ID(mandate.ID), Version: mandate.Version, Reference: mandate.Reference, SignedOn: mandate.SignedOn,
 			Kind: mandate.Kind, AccountHolder: mandate.AccountHolder, IBANMasked: mandate.IBANMasked, BIC: mandate.BIC,
 			Source: mandate.Source, CollectionEligible: mandate.CollectionEligible, CreditorID: mandate.CreditorID, RevokedOn: mandate.RevokedOn}
 		if mandate.Proof != nil {

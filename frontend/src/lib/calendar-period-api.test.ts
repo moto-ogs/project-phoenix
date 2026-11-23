@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 vi.mock("~/lib/logger", () => ({
   createLogger: () => ({
     info: vi.fn(),
@@ -19,7 +24,7 @@ function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
 }
 
 const backendPeriod = {
-  id: 5,
+  id: "5",
   name: "Schuljahr 2026/2027",
   period_type: "school_year",
   start_date: "2026-08-01",
@@ -56,7 +61,7 @@ describe("calendarPeriodService", () => {
     ]);
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/timetable/periods",
-      expect.objectContaining({ method: "GET", credentials: "include" }),
+      expect.objectContaining({ method: "GET" }),
     );
   });
 
@@ -72,7 +77,7 @@ describe("calendarPeriodService", () => {
               {
                 code: "overlapping_active_periods",
                 message: "Überschneidung mit aktiven Zeiträumen",
-                overlapping_period_ids: [3],
+                overlapping_period_ids: ["3"],
                 overlapping_period_names: ["Halbjahr 1"],
               },
             ],
@@ -134,14 +139,9 @@ describe("calendarPeriodService", () => {
       periods: [expect.objectContaining({ id: "5" })],
       created: true,
     });
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/api/timetable/periods/bootstrap",
-      expect.objectContaining({
-        method: "POST",
-        credentials: "include",
-        body: "{}",
-      }),
-    );
+    expect(fetchMock).toHaveBeenCalledWith("/api/timetable/periods/bootstrap", {
+      method: "POST",
+    });
   });
 
   it("deletes periods and accepts 204 without JSON", async () => {
@@ -162,7 +162,7 @@ describe("calendarPeriodService", () => {
       ),
     );
     await expect(calendarPeriodService.list()).rejects.toMatchObject({
-      message: "Anfrage fehlgeschlagen (HTTP 409)",
+      message: expect.not.stringContaining("Periode ueberlappt"),
       detail: "Periode ueberlappt",
       status: 409,
       code: "PERIOD_OVERLAP",
@@ -175,7 +175,6 @@ describe("calendarPeriodService", () => {
       }),
     );
     await expect(calendarPeriodService.delete("5")).rejects.toMatchObject({
-      message: "Anfrage fehlgeschlagen (HTTP 502)",
       status: 502,
     });
   });

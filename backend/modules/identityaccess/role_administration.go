@@ -3,8 +3,11 @@ package identityaccess
 import (
 	"context"
 	"errors"
+	"slices"
 	"strings"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Role and permission administration (#3314): role and permission CRUD,
@@ -187,30 +190,42 @@ type RoleCommand interface {
 	// a staff-tier role owes, in one transaction.
 	AssignRoleToAccount(ctx context.Context, accountID, roleID int64) error
 	// ReplaceAccountRole makes roleID the account's only staff role at the
-	// school; guardian-tier roles stay.
-	ReplaceAccountRole(ctx context.Context, accountID, roleID int64) error
+	// school; guardian-tier roles stay. expectedVersion is the
+	// AccountRolesVersion of the roles the caller read; roles changed since
+	// are refused with readstate.ErrChanged (ADR 0311).
+	ReplaceAccountRole(ctx context.Context, accountID, roleID int64, expectedVersion string) error
 	RemoveRoleFromAccount(ctx context.Context, accountID, roleID int64) error
 }
 
 // PermissionQuery reads permissions and role selections.
 type PermissionQuery interface {
-	GetPermission(ctx context.Context, id int64) (Permission, error)
 	GetPermissionByName(ctx context.Context, name string) (Permission, error)
 	ListPermissions(ctx context.Context, filter PermissionFilter) ([]Permission, error)
-	GetRolePermissions(ctx context.Context, roleID int64) ([]Permission, error)
+	// GetRolePermissions reads a role's selection with its version, the
+	// token ReplaceRolePermissions expects back (ADR 0311).
+	GetRolePermissions(ctx context.Context, roleID int64) (RolePermissions, error)
+}
+
+// RolePermissions is a role's permission selection as one read saw it.
+// Version is the read-state token of the selection (ADR 0311): opaque to
+// the client, which sends it back as the expected version of a replacement.
+type RolePermissions struct {
+	Permissions []Permission
+	Version     string
 }
 
 // PermissionCommand changes permissions and role selections. Role selections of system roles are immutable.
 type PermissionCommand interface {
-	CreatePermission(ctx context.Context, name, description, resource, action string) (Permission, error)
-	UpdatePermission(ctx context.Context, permission Permission) error
-	DeletePermission(ctx context.Context, id int64) error
 	AssignPermissionToRole(ctx context.Context, roleID, permissionID int64) error
 	// ReplaceRolePermissions applies a complete selection atomically; an
 	// invalid request leaves the current selection untouched. A reserved
 	// permission the role does not hold yet is refused with
 	// ErrReservedPermissionNotAllowed; one it already holds may stay or go.
-	ReplaceRolePermissions(ctx context.Context, roleID int64, permissionIDs []int64) error
+	// expectedVersion is the Version of the selection the replacement was
+	// made from; a selection changed since is refused with
+	// readstate.ErrChanged, so nobody reverts a colleague's change unseen.
+	// It answers the Version of the selection it stored.
+	ReplaceRolePermissions(ctx context.Context, roleID int64, permissionIDs []int64, expectedVersion string) (string, error)
 	RemovePermissionFromRole(ctx context.Context, roleID, permissionID int64) error
 }
 
@@ -244,4 +259,27 @@ func PlatformSystemRole(roles []Role, name string) (Role, bool) {
 		}
 	}
 	return Role{}, false
+}
+
+// IDSetVersion is the read-state token of a set of IDs (ADR 0311): the
+// fingerprint of the IDs in ascending order, so the order a store returns
+// them in does not change it. A role's permission selection and the roles
+// an account holds at one school both use it.
+func IDSetVersion(ids []int64) string {
+	// Never nil, so no IDs and an empty read give one token.
+	sorted := append(make([]int64, 0, len(ids)), ids...)
+	slices.Sort(sorted)
+	return readstate.Fingerprint(sorted)
+}
+
+// AccountRolesVersion is the read-state token of the roles an account holds
+// at one school, guardian-tier roles included. The school's role read and
+// ReplaceAccountRole's check, the operator's access listing and its role
+// change derive it from the same assignments.
+func AccountRolesVersion(roles []Role) string {
+	ids := make([]int64, 0, len(roles))
+	for _, role := range roles {
+		ids = append(ids, role.ID)
+	}
+	return IDSetVersion(ids)
 }

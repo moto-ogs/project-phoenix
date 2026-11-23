@@ -78,6 +78,7 @@ type RowFilter = ((row: TimetableRosterRow) => boolean) | null;
 function rosterView(value: TimetableRoster, rowFilter: RowFilter = null) {
   return (
     <TimetableRosterContent
+      reloadAfterRefusal={vi.fn().mockResolvedValue(null)}
       rowFilter={rowFilter}
       addStudentSearch=""
       attendanceWebEnabled={false}

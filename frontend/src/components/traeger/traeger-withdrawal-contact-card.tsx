@@ -222,6 +222,7 @@ export function TraegerWithdrawalContactCard({
         <figure aria-label="Vorschau der Widerrufsbelehrung">
           <InsetPanel padding="md" className="space-y-3">
             <SectionLabel as="p">So lesen Eltern die Belehrung</SectionLabel>
+            {/* sie-anrede-erlaubt (ADR 0294): Auszug der gesetzlichen Muster-Widerrufsbelehrung, wörtlich. */}
             <blockquote className="text-sm leading-relaxed text-pretty text-gray-700">
               Um Ihr Widerrufsrecht auszuüben, müssen Sie uns (
               <span className="font-medium text-gray-900">

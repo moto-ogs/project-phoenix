@@ -34,8 +34,8 @@ func TestCreatedWithoutEnrichmentAnswersTheRegisteredType(t *testing.T) {
 	}
 	require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &answer))
 	for key, want := range map[string]any{
-		"id": float64(41), "date": "2026-11-18", "start_time": "13:30", "end_time": "14:15",
-		"title": "Hausaufgaben", "status": "planned", "is_spontaneous": false, "room_id": float64(7),
+		"id": "41", "date": "2026-11-18", "start_time": "13:30", "end_time": "14:15",
+		"title": "Hausaufgaben", "status": "planned", "is_spontaneous": false, "room_id": "7",
 		"enrich_warning": "enrichment failed: read failed",
 	} {
 		assert.Equal(t, want, answer.Data[key], key)

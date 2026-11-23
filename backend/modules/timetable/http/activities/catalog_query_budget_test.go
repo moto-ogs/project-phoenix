@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"strconv"
 	"testing"
 	"time"
 
@@ -64,7 +65,7 @@ func TestActivityCategoriesListQueryBudgetIsFlat(t *testing.T) {
 			category := insertCatalogCategory(t, db, index)
 			insertCatalogUsage(t, db, testpkg.Tenant(t), category.ID, index%3)
 			expected = append(expected, map[string]any{
-				"id": category.ID, "name": category.Name, "description": category.Description,
+				"id": strconv.FormatInt(category.ID, 10), "name": category.Name, "description": category.Description,
 				"color": category.Color, "is_system": false, "usage_count": index % 3,
 				"created_at": category.CreatedAt, "updated_at": category.UpdatedAt,
 			})
@@ -147,55 +148,6 @@ func catalogExpectedUsage(expected []map[string]any, withUsage bool) []map[strin
 		want = append(want, row)
 	}
 	return want
-}
-
-func TestActivityTimespansListQueryBudgetIsFlat(t *testing.T) {
-	t.Parallel()
-	db := testpkg.SetupIsolatedTestDB(t)
-	router, owner, token := activitiesCatalogBudgetRouter(t, db)
-	foreign := testpkg.NewTenantScope(t, db)
-	_, err := owner.CreateTimeframe(foreign.Context(), timetable.TimeframeInput{StartTime: "06:00:00", IsActive: true, Description: "Foreign"})
-	require.NoError(t, err)
-	_, err = owner.CreateTimeframe(testpkg.Ctx(t), timetable.TimeframeInput{StartTime: "05:00:00", IsActive: false, Description: "Inactive"})
-	require.NoError(t, err)
-	expected := []map[string]any{}
-	counter := testpkg.CaptureQueries(t, db)
-	var previous int
-	for _, size := range []int{0, 3, 8} {
-		for len(expected) < size {
-			index := len(expected)
-			start := fmt.Sprintf("%02d:15:00", 16-index)
-			end := fmt.Sprintf("%02d:45:00", 16-index)
-			input := timetable.TimeframeInput{StartTime: start, EndTime: &end, IsActive: true, Description: fmt.Sprintf("Window %d", index)}
-			wireEnd := end[:5]
-			if index == 0 {
-				input.EndTime, input.Description, wireEnd = nil, "", ""
-			}
-			created, createErr := owner.CreateTimeframe(testpkg.Ctx(t), input)
-			require.NoError(t, createErr)
-			row := map[string]any{"id": created.ID, "name": input.Description, "start_time": start[:5], "end_time": wireEnd}
-			if input.Description != "" {
-				row["description"] = input.Description
-			}
-			expected = append(expected, row)
-		}
-		t.Run(fmt.Sprintf("n=%d", size), func(t *testing.T) {
-			counter.Reset()
-			request := testutil.NewAuthenticatedRequest(t, http.MethodGet, "/api/activities/timespans", nil, testutil.WithJWTBearer(token))
-			response := testutil.ExecuteRequestForTest(t, router, request)
-			queries := counter.Measurement(counter.Queries())
-			logCatalogQueries(t, "timespans", size, queries.Statements)
-			require.Equal(t, http.StatusOK, response.Code, response.Body.String())
-			assertCatalogData(t, response.Body.Bytes(), expected, "Time spans retrieved successfully")
-			assertCatalogReadOnly(t, counter)
-			require.Len(t, counter.Selects("schedule.timeframes"), 1, "one active-only tenant read")
-			if size != 0 {
-				require.Len(t, queries.Statements, previous, "statement count must not grow with N")
-			}
-			previous = len(queries.Statements)
-			querybudgets.AssertQueryBudget(t, "api.activities.timespans", queries)
-		})
-	}
 }
 
 func assertCatalogData(t *testing.T, body []byte, expected []map[string]any, message string) {

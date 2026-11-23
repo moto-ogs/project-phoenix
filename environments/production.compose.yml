@@ -63,14 +63,19 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    command: ["./main", "serve"]
+    # API replicas run no embedded Worker; the worker service below runs the
+    # jobs (#2726, #7226). On stop, a replica answers /health with 503 for 5 s
+    # so Caddy drops it, ends its event streams, then drains its requests.
+    command: ["./main", "serve", "--embedded-worker=false", "--drain-delay=5s"]
+    # Drain delay (5 s) plus the request drain deadline (30 s), with margin.
+    stop_grace_period: 45s
     ports:
       - "127.0.0.1:8080:8080"
-    volumes:
+    volumes: &server-volumes
       - production-avatar-uploads:/app/public/uploads
       # Encrypted return packages released for retrieval (ADR 0203).
       - production-data-return:/app/data-return
-    environment:
+    environment: &server-environment
       UPLOADS_BACKEND: ${UPLOADS_BACKEND-}
       UPLOADS_S3_ENDPOINT: ${UPLOADS_S3_ENDPOINT-}
       UPLOADS_S3_REGION: ${UPLOADS_S3_REGION-}
@@ -156,6 +161,33 @@ services:
     networks:
       - production
 
+  # The background jobs in their own process (#2726, #7226). It leads only
+  # while it holds the Worker lease and needs the server's configuration.
+  # /health answers while it lives, /ready only while it leads.
+  worker:
+    image: ghcr.io/moto-ogs/phoenix-server:main
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["./main", "worker"]
+    # A graceful stop drains the running jobs, then releases the lease.
+    stop_grace_period: 45s
+    volumes: *server-volumes
+    environment: *server-environment
+    logging:
+      driver: journald
+      options:
+        tag: prod-worker
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    networks:
+      - production
+
   frontend:
     image: ghcr.io/moto-ogs/phoenix-frontend:main
     restart: unless-stopped
@@ -163,6 +195,8 @@ services:
       - server
     ports:
       - "127.0.0.1:3000:3000"
+    # A stopping replica ends its event streams at once (#7226).
+    stop_grace_period: 20s
     environment:
       # Allowlist: browser build values and frontend-owned runtime secrets only.
       TZ: ${TZ:?TZ is required}
@@ -173,7 +207,6 @@ services:
       METRICS_BEARER_TOKEN: ${METRICS_BEARER_TOKEN:?METRICS_BEARER_TOKEN is required}
       TENANT_DOMAIN: ${TENANT_DOMAIN:?TENANT_DOMAIN is required}
       NEXT_PUBLIC_APP_ENV: ${NEXT_PUBLIC_APP_ENV:?NEXT_PUBLIC_APP_ENV is required}
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?NEXT_PUBLIC_API_URL is required}
       NEXT_PUBLIC_LOG_LEVEL: ${NEXT_PUBLIC_LOG_LEVEL:?NEXT_PUBLIC_LOG_LEVEL is required}
       NEXT_PUBLIC_TENANT_DOMAIN: ${NEXT_PUBLIC_TENANT_DOMAIN:?NEXT_PUBLIC_TENANT_DOMAIN is required}
       NEXT_PUBLIC_POSTHOG_KEY: ${NEXT_PUBLIC_POSTHOG_KEY?NEXT_PUBLIC_POSTHOG_KEY is required}

@@ -8,8 +8,6 @@ import {
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { deferred } from "~/test/helpers/form-modal-pending";
-import { catalogText } from "~/test/error-catalog-text";
 import { ApiError } from "~/lib/api-error";
 import { SWRConfig } from "~/lib/swr/testing";
 import { duplicateIds } from "~/test/helpers/duplicate-ids";
@@ -92,6 +90,7 @@ const preview: OfferingPreview = {
     { templateId: "8", validFrom: "2026-09-01", validUntil: "2026-10-30" },
     { templateId: "9", validFrom: "2026-10-30" },
   ],
+  fingerprint: "vorschau-1",
 };
 
 describe("ConnectOfferingModal (#5103)", () => {
@@ -145,7 +144,10 @@ describe("ConnectOfferingModal (#5103)", () => {
       expect(mockConnect).toHaveBeenCalledWith(
         "9",
         { offeringIds: ["3"], gradeLevels: [], schoolClasses: ["1b"] },
-        "2026-10-28",
+        expect.objectContaining({
+          from: "2026-10-28",
+          fingerprint: "vorschau-1",
+        }),
       ),
     );
     await waitFor(() => expect(onConnected).toHaveBeenCalled());
@@ -215,7 +217,7 @@ describe("ConnectOfferingModal (#5103)", () => {
       expect(mockConnect).toHaveBeenCalledWith(
         "9",
         { offeringIds: ["3"], gradeLevels: [], schoolClasses: ["1b"] },
-        preview.from,
+        expect.objectContaining({ from: preview.from }),
       );
       expect(mockPreview).toHaveBeenCalledTimes(1);
     } finally {
@@ -277,7 +279,7 @@ describe("ConnectOfferingModal (#5103)", () => {
       expect(mockConnect).toHaveBeenCalledWith(
         "9",
         { offeringIds: ["3"], gradeLevels: [], schoolClasses: ["3a"] },
-        "2026-10-28",
+        expect.objectContaining({ from: "2026-10-28" }),
       ),
     );
   });
@@ -375,7 +377,7 @@ describe("ConnectOfferingModal (#5103)", () => {
       expect(mockConnect).toHaveBeenCalledWith(
         "9",
         { offeringIds: ["3", "4"], gradeLevels: [], schoolClasses: ["1a"] },
-        "2026-10-28",
+        expect.objectContaining({ from: "2026-10-28" }),
       ),
     );
     await waitFor(() =>
@@ -386,46 +388,96 @@ describe("ConnectOfferingModal (#5103)", () => {
   });
 });
 
-it("requires a fresh successful preview before connecting on reopening", async () => {
-  mockPreview.mockReset().mockResolvedValue(preview);
-  mockConnect.mockReset().mockResolvedValue(undefined);
-  const props = {
-    templateName: "RDST 1b",
-    deviation,
-    onClose: vi.fn(),
-    onConnected: vi.fn(),
-  };
-  const view = render(<ConnectOfferingModal {...props} isOpen />, {
-    wrapper: SWRTestCache,
-  });
-  await waitFor(() =>
-    expect(screen.getByRole("button", { name: "Verbinden" })).toBeEnabled(),
+it("shows the new preview instead of a retry when the children changed since it was read", async () => {
+  mockPreview
+    .mockReset()
+    .mockResolvedValueOnce(preview)
+    .mockResolvedValue({
+      ...preview,
+      weekdays: [{ ...preview.weekdays[0]!, keptCount: 5 }],
+      fingerprint: "vorschau-2",
+    });
+  mockConnect
+    .mockReset()
+    .mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    )
+    .mockResolvedValue(undefined);
+  const onConnected = vi.fn();
+  render(
+    <ConnectOfferingModal
+      isOpen
+      templateName="RDST 1b"
+      deviation={deviation}
+      onClose={vi.fn()}
+      onConnected={onConnected}
+    />,
+    { wrapper: SWRTestCache },
   );
-  view.rerender(<ConnectOfferingModal {...props} isOpen={false} />);
-  const fresh = deferred<OfferingPreview>();
-  mockPreview.mockReturnValue(fresh.promise);
-  view.rerender(<ConnectOfferingModal {...props} isOpen />);
-  expect(screen.getByRole("button", { name: "Verbinden" })).toBeDisabled();
+  expect(await screen.findByText("Bleibt (4)")).toBeInTheDocument();
+
   fireEvent.click(screen.getByRole("button", { name: "Verbinden" }));
-  expect(mockConnect).not.toHaveBeenCalled();
-  await act(async () => fresh.reject(new ApiError("offline", 503)));
+
+  expect(await screen.findByText("Bleibt (5)")).toBeInTheDocument();
+  expect(mockConnect).toHaveBeenCalledWith(
+    "9",
+    { offeringIds: ["3"], gradeLevels: [], schoolClasses: ["1b"] },
+    expect.objectContaining({ fingerprint: "vorschau-1" }),
+  );
+  expect(await screen.findByRole("alert")).toBeInTheDocument();
   expect(
-    await screen.findByText(
-      catalogText("general.unavailable", "die Vorschau der Kinderliste"),
-    ),
-  ).toBeVisible();
-  expect(screen.getByRole("button", { name: "Verbinden" })).toBeDisabled();
-  mockPreview.mockResolvedValue({ ...preview, from: "2026-10-29" });
-  fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
-  await waitFor(() =>
-    expect(screen.getByRole("button", { name: "Verbinden" })).toBeEnabled(),
-  );
+    screen.queryByRole("button", { name: /Wiederholen|Erneut versuchen/ }),
+  ).not.toBeInTheDocument();
+  expect(onConnected).not.toHaveBeenCalled();
+
   fireEvent.click(screen.getByRole("button", { name: "Verbinden" }));
   await waitFor(() =>
-    expect(mockConnect).toHaveBeenCalledWith(
+    expect(mockConnect).toHaveBeenLastCalledWith(
       "9",
       { offeringIds: ["3"], gradeLevels: [], schoolClasses: ["1b"] },
-      "2026-10-29",
+      expect.objectContaining({ fingerprint: "vorschau-2" }),
     ),
   );
+  await waitFor(() => expect(onConnected).toHaveBeenCalled());
+});
+
+// ADR 0311 rule 6: a failed read of the new preview after a refusal says
+// so, and the refused preview is not confirmed again.
+it("names a failed read of the preview after a refusal and connects nothing", async () => {
+  mockPreview
+    .mockReset()
+    .mockResolvedValueOnce(preview)
+    .mockRejectedValue(
+      new ApiError("down", 503, { code: "general.unavailable" }),
+    );
+  mockConnect
+    .mockReset()
+    .mockRejectedValue(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+  render(
+    <ConnectOfferingModal
+      isOpen
+      templateName="RDST 1b"
+      deviation={deviation}
+      onClose={vi.fn()}
+      onConnected={vi.fn()}
+    />,
+    { wrapper: SWRTestCache },
+  );
+  expect(await screen.findByText("Bleibt (4)")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Verbinden" }));
+
+  expect(
+    await screen.findByText(/Der neue Stand konnte nicht geladen werden/),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByText(/Du siehst jetzt den neuen Stand/),
+  ).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Verbinden" })).toHaveAttribute(
+    "aria-disabled",
+    "true",
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Verbinden" }));
+  expect(mockConnect).toHaveBeenCalledTimes(1);
 });

@@ -21,18 +21,18 @@ import { formatDate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { PARENT_RESOURCE_OPTIONS } from "~/lib/hooks/use-parent-resources";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useSWRAuth } from "~/lib/swr";
+import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
 import { parentKeys } from "~/lib/swr/parent-keys";
 import {
   getChildCareOfferings,
   getChildCareSchedule,
   submitOfferingChangeRequest,
-  type ChildCareOfferings,
   type OfferingChangesDisabledReason,
 } from "~/lib/parent-api";
 import { calendarConcept } from "~/lib/concepts/calendar";
 import { carePlanConcept } from "~/lib/concepts/carePlan";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 const DAY_KEY_TO_WEEKDAY: Record<string, number> = {
   mon: 1,
@@ -51,6 +51,12 @@ const DISABLED_REASON_KEYS: Record<OfferingChangesDisabledReason, string> = {
   no_time_remaining: "careOfferings.disabledPeriodOver",
   period_over: "careOfferings.disabledPeriodOver",
 };
+
+function isDisabledReason(
+  reason: string,
+): reason is OfferingChangesDisabledReason {
+  return Object.hasOwn(DISABLED_REASON_KEYS, reason);
+}
 
 /**
  * "Betreuung in der OGS": was gebucht ist, an welchen Tagen und wann das Kind
@@ -103,24 +109,32 @@ export function BookedCareSection({
     () => mutateSchedule(),
   );
   const [modalOpen, setModalOpen] = useState(false);
-  const [editRequest, setEditRequest] = useState<string | null>(null);
+  const [editRequest, setEditRequest] = useState<{
+    id: string;
+    version: string;
+  } | null>(null);
   // `parent-conversation-refresh` reaches these readers through useChildCare
   // of the same child page, which refreshes the child's whole status family.
-  const refresh = useCallback(() => {
-    void mutateOfferings();
-    void mutateSchedule();
-  }, [mutateOfferings, mutateSchedule]);
+  // Rejects when a read fails, so a refused edit can say so (ADR 0311).
+  const reloadOrThrow = useCallback(
+    () =>
+      Promise.all([
+        revalidateOrThrow(offeringsResource),
+        revalidateOrThrow(scheduleResource),
+      ]),
+    [offeringsResource, scheduleResource],
+  );
 
   const weekdayList = useCallback(
-    (weekdays: number[]) =>
-      weekdays.length === 0
+    (weekdays: readonly number[] | null) =>
+      !weekdays || weekdays.length === 0
         ? t("careOfferings.allDays")
         : weekdays.map((day) => t(`weekdayShort.${day}`)).join(", "),
     [t],
   );
 
   const dayKeyList = useCallback(
-    (days: string[]) =>
+    (days: readonly string[]) =>
       weekdayList(
         days.flatMap((day) => {
           const weekday = DAY_KEY_TO_WEEKDAY[day];
@@ -131,10 +145,10 @@ export function BookedCareSection({
   );
 
   const diffValue = useCallback(
-    (state: "not_booked" | "removed" | "booked", days: string[]) => {
+    (state: string, days: readonly string[] | null) => {
       if (state === "not_booked") return t("careOfferings.notBooked");
       if (state === "removed") return t("careOfferings.removed");
-      return dayKeyList(days);
+      return dayKeyList(days ?? []);
     },
     [dayKeyList, t],
   );
@@ -164,19 +178,21 @@ export function BookedCareSection({
   const pendingRequest = offerings?.pending_request;
   const pending =
     pendingRequest &&
-    pendingRequest.diff.length > 0 &&
-    pendingRequest.diff.every(
+    (pendingRequest.diff ?? []).length > 0 &&
+    (pendingRequest.diff ?? []).every(
       (line) => line.is_course === true || isAutomaticallyDerivedAddition(line),
     )
       ? undefined
       : pendingRequest;
   const decision = offerings?.last_decision;
-  const hasScheduledCare =
-    schedule?.weekdays.some((weekday) => weekday.status === "scheduled") ??
-    false;
+  const reason = offerings?.changes_disabled_reason;
+  const disabledReason = reason && isDisabledReason(reason) ? reason : null;
+  const hasScheduledCare = (schedule?.weekdays ?? []).some(
+    (weekday) => weekday.status === "scheduled",
+  );
   const showDisabledNotice =
     offerings !== null &&
-    offerings.offerings.length > 0 &&
+    (offerings.offerings ?? []).length > 0 &&
     pending === undefined &&
     decision === undefined &&
     !offerings.can_request &&
@@ -231,7 +247,7 @@ export function BookedCareSection({
             ) : undefined
           }
         >
-          {offerings.offerings.length === 0 ? (
+          {(offerings.offerings ?? []).length === 0 ? (
             <EmptyState
               className="border-t border-gray-100"
               icon={
@@ -260,7 +276,7 @@ export function BookedCareSection({
             />
           ) : (
             <ul className="space-y-2">
-              {offerings.offerings.map((offering) => (
+              {(offerings.offerings ?? []).map((offering) => (
                 <InsetPanel
                   as="li"
                   framed
@@ -320,9 +336,9 @@ export function BookedCareSection({
                   })}
                 </p>
               </div>
-              {pending.diff.length > 0 && (
+              {(pending.diff ?? []).length > 0 && (
                 <DataGrid columns={1}>
-                  {pending.diff.map((line) => (
+                  {(pending.diff ?? []).map((line) => (
                     <DataField key={line.label} label={line.label}>
                       <span className="font-normal text-gray-500 line-through">
                         {diffValue(line.old_state, line.old_days)}
@@ -352,7 +368,9 @@ export function BookedCareSection({
                   variant="outline"
                   size="md"
                   tooltip={t("requestEditTooltip")}
-                  onClick={() => setEditRequest(pending.id)}
+                  onClick={() =>
+                    setEditRequest({ id: pending.id, version: pending.version })
+                  }
                 >
                   {t("careOfferings.edit")}
                 </Button>
@@ -414,13 +432,13 @@ export function BookedCareSection({
                   })}
                 </p>
               )}
-              {decision.requested.length > 0 && (
+              {(decision.requested ?? []).length > 0 && (
                 <div>
                   <p className="text-sm text-gray-500">
                     {t("careOfferings.decisionRequested")}
                   </p>
                   <ul className="mt-1 space-y-0.5">
-                    {decision.requested.map((item) => (
+                    {(decision.requested ?? []).map((item) => (
                       <li key={item.id} className="text-sm text-gray-700">
                         <span className="font-medium text-gray-900">
                           {item.name}
@@ -441,9 +459,9 @@ export function BookedCareSection({
             </ParentSubsection>
           )}
 
-          {showDisabledNotice && offerings.changes_disabled_reason && (
+          {showDisabledNotice && disabledReason && (
             <p className="text-sm text-gray-500">
-              {t(DISABLED_REASON_KEYS[offerings.changes_disabled_reason])}
+              {t(DISABLED_REASON_KEYS[disabledReason])}
             </p>
           )}
         </ParentSection>
@@ -480,9 +498,9 @@ export function BookedCareSection({
           studentId={studentId}
           childName={childFirstName}
           reasonRequired={reasonRequired}
-          editRequestId={editRequest}
+          editRequest={editRequest}
           onClose={() => setEditRequest(null)}
-          onEdited={refresh}
+          onEdited={reloadOrThrow}
         />
       )}
     </div>
@@ -490,12 +508,16 @@ export function BookedCareSection({
 }
 
 function isAutomaticallyDerivedAddition(
-  line: NonNullable<ChildCareOfferings["pending_request"]>["diff"][number],
+  line: NonNullable<
+    NonNullable<
+      parentMeContract.CareOfferingsResponse["pending_request"]
+    >["diff"]
+  >[number],
 ) {
   return (
     line.old_state === "not_booked" &&
     line.new_state === "booked" &&
-    line.new_days.length > 0 &&
-    line.new_automatic_days?.length === line.new_days.length
+    (line.new_days ?? []).length > 0 &&
+    line.new_automatic_days?.length === (line.new_days ?? []).length
   );
 }

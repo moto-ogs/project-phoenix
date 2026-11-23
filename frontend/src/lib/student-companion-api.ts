@@ -1,4 +1,6 @@
 import { bffJson } from "./bff-fetch";
+import { knownEnum } from "./contract/known-enum";
+import type { CompanionResponse } from "./contract/students.generated";
 import { DEPARTURE_WEEKDAYS, type DepartureDayKey } from "./departure-plan";
 
 /**
@@ -26,19 +28,10 @@ export const COMPANION_WEEKDAYS: {
 export const ALL_COMPANION_WEEKDAYS: CompanionWeekday[] =
   COMPANION_WEEKDAYS.map((day) => day.value);
 
-/** One companion as returned by the API. */
-export interface StudentCompanion {
-  /**
-   * Backend int64 id, carried as a string like every other id in the frontend
-   * (see the type-mapping rule in CLAUDE.md). It also travels back to the
-   * backend as a string — modeling it as a JS number would silently round ids
-   * above Number.MAX_SAFE_INTEGER into a DIFFERENT child's id.
-   */
-  companion_student_id: string;
-  first_name?: string;
-  last_name?: string;
+/** One companion of a child: a "läuft mit" link and its weekdays. */
+export type StudentCompanion = Omit<CompanionResponse, "weekdays"> & {
   weekdays: CompanionWeekday[];
-}
+};
 
 /**
  * One confirmed answer to "may we add 'Anderes Kind' to this child's own
@@ -77,30 +70,19 @@ export function mergeCompanionConfirmations(
 }
 
 /**
- * Order-independent fingerprint of a companion list, so reordering (or a
- * re-fetch handing the same links back in another order) is not mistaken for an
- * edit.
+ * Order-independent key of a companion list, so reordering (or a re-fetch
+ * handing the same links back in another order) is not mistaken for an edit.
  *
  * Every form that can submit the list needs it: the submitted list REPLACES the
  * stored one, so it may only travel when the user actually edited it — sending
  * the loaded snapshot on an unrelated save would overwrite whatever someone
  * else changed in the meantime.
- */
-/**
- * Orders two entries by code point, exactly like Go's sort.Strings.
  *
- * Deliberately NOT localeCompare: the fingerprint is compared byte for byte
- * against the one CompanionLinksFingerprint builds in
- * backend/models/users/student_companion.go, and a collator reorders the ":"
- * and "," separators the entries are built from — every save would then be
- * refused as a stale list.
+ * It only compares two lists in this browser. The state a save claims is the
+ * `fingerprint` the read returned beside the list (ADR 0311); the browser
+ * never builds that one.
  */
-function compareCodePoints(a: string, b: string): number {
-  if (a < b) return -1;
-  return a > b ? 1 : 0;
-}
-
-export function companionsFingerprint(companions: StudentCompanion[]): string {
+export function companionListKey(companions: StudentCompanion[]): string {
   return companions
     .map((companion) => {
       const days = ALL_COMPANION_WEEKDAYS.filter((day) =>
@@ -108,18 +90,11 @@ export function companionsFingerprint(companions: StudentCompanion[]): string {
       );
       return `${companion.companion_student_id}:${days.join(",")}`;
     })
-    .sort(compareCodePoints)
+    .sort()
     .join("|");
 }
 
 /** The companion entry as it arrives on the wire (backend int64 → JSON number). */
-interface RawStudentCompanion {
-  companion_student_id: number | string;
-  first_name?: string;
-  last_name?: string;
-  weekdays?: CompanionWeekday[];
-}
-
 /**
  * Consumers that want to be told when the stored "läuft mit" links may have
  * changed. Module-level and process-wide on purpose — see
@@ -201,18 +176,38 @@ export function notifyStudentCompanionDisplayChanged(): void {
   for (const listener of [...companionDisplayListeners]) listener();
 }
 
+/**
+ * A child's Laufgemeinschaft as stored, with the fingerprint of exactly this
+ * read: a save that replaces or trims the links sends it back as
+ * `companions_fingerprint`, and the backend refuses it when someone changed
+ * the links since (`general.changed_since_read`, ADR 0311).
+ */
+export interface StudentCompanionList {
+  companions: StudentCompanion[];
+  fingerprint: string;
+}
+
 export async function fetchStudentCompanions(
   studentId: string,
-): Promise<StudentCompanion[]> {
-  const raw = await bffJson<RawStudentCompanion[] | null>(
-    `/api/students/${encodeURIComponent(studentId)}/companions`,
+): Promise<StudentCompanionList> {
+  const list = await bffJson(
+    "tenant",
+    "GET /api/students/{id}/companion-links",
+    {
+      params: { id: studentId },
+    },
   );
-  return (raw ?? []).map((companion) => ({
-    companion_student_id: String(companion.companion_student_id),
-    first_name: companion.first_name,
-    last_name: companion.last_name,
-    weekdays: companion.weekdays ?? [],
-  }));
+  return {
+    fingerprint: list.fingerprint,
+    companions: (list.companions ?? []).map((companion) => ({
+      ...companion,
+      // A weekday this build does not know drops out.
+      weekdays: (companion.weekdays ?? []).flatMap((day) => {
+        const known = knownEnum(ALL_COMPANION_WEEKDAYS, day);
+        return known ? [known] : [];
+      }),
+    })),
+  };
 }
 
 /** Full name of a companion, falling back to the id when names are missing. */

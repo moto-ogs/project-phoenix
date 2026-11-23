@@ -84,6 +84,8 @@ function importedChangeText(change: StaffChange): string {
 
 /** Ein Eintrag im Verlauf als ein Satz. */
 export function staffChangeText(change: StaffChange): string {
+  // An entry this build cannot read says nothing it cannot back up.
+  if (change.kind === undefined || change.field === undefined) return "–";
   const school = change.schoolName || "einer Schule";
   if (
     change.field === "contract" ||

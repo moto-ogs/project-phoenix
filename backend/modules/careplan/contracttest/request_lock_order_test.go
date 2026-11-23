@@ -16,6 +16,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/parentrequests"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
@@ -121,16 +122,27 @@ func newRequestLockFixture(t *testing.T, db *bun.DB) requestLockFixture {
 
 func (f requestLockFixture) decision(t *testing.T, kind string, approve bool) func(context.Context) error {
 	t.Helper()
+	// The reviewer read the request before deciding: the version is taken
+	// now, not when the decision runs.
+	var version string
+	switch kind {
+	case "care":
+		version = testpkg.CareRequestVersion(t, f.careRow.ID)
+	case "excused":
+		version = testpkg.ExcusedRequestVersion(t, f.excusedRow.ID)
+	default:
+		version = testpkg.MasterDataRequestVersion(t, f.masterRow.ID)
+	}
 	return func(ctx context.Context) error {
 		switch kind {
 		case "care":
-			_, err := f.care.svc.Decide(ctx, carerequests.DecideInput{RequestID: f.careRow.ID, Approve: approve, Reason: "Reviewed", ReviewedBy: f.care.staffAccount})
+			_, err := f.care.svc.Decide(ctx, carerequests.DecideInput{ExpectedVersion: version, RequestID: f.careRow.ID, Approve: approve, Reason: "Reviewed", ReviewedBy: f.care.staffAccount})
 			return err
 		case "excused":
-			_, err := f.excused.Decide(ctx, careplan.ExcusedRequestDecideInput{RequestID: f.excusedRow.ID, Approve: approve, Reason: "Reviewed", ReviewedBy: f.care.staffAccount})
+			_, err := f.excused.Decide(ctx, careplan.ExcusedRequestDecideInput{ExpectedVersion: version, RequestID: f.excusedRow.ID, Approve: approve, Reason: "Reviewed", ReviewedBy: f.care.staffAccount})
 			return err
 		default:
-			_, err := f.master.Decide(ctx, masterdatarequests.DecideInput{RequestID: f.masterRow.ID, Approve: approve, Reason: "Reviewed", ReviewedBy: f.care.staffAccount})
+			_, err := f.master.Decide(ctx, masterdatarequests.DecideInput{ExpectedVersion: version, RequestID: f.masterRow.ID, Approve: approve, Reason: "Reviewed", ReviewedBy: f.care.staffAccount})
 			return err
 		}
 	}
@@ -167,12 +179,12 @@ func TestRequestDecisionRechecksStateAfterWaitingForChild(t *testing.T) {
 				ctx, cancel := context.WithTimeout(f.care.staffCtx(f.care.staffAccount), 20*time.Second)
 				defer cancel()
 				people := owners.MustNewPeopleDirectory(testpkg.NewDatabase(t, db))
-				version := careplan.ParentRequestVersion(f.careRow.UpdatedAt)
+				version := readstate.Of(f.careRow.UpdatedAt)
 				if kind == "excused" {
-					version = careplan.ParentRequestVersion(f.excusedRow.UpdatedAt)
+					version = readstate.Of(f.excusedRow.UpdatedAt)
 				}
 				if kind == "master" {
-					version = careplan.ParentRequestVersion(f.masterRow.UpdatedAt)
+					version = readstate.Of(f.masterRow.UpdatedAt)
 				}
 				done := make(chan error, 1)
 				err := testpkg.WithTenantTx(t, ctx, db, testpkg.Tenant(t), func(editCtx context.Context, tx bun.Tx) error {
@@ -197,10 +209,7 @@ func TestRequestDecisionRechecksStateAfterWaitingForChild(t *testing.T) {
 					return err
 				})
 				require.NoError(t, err)
-				want := parentrequests.ErrStale
-				if kind == "excused" {
-					want = careplan.ErrParentRequestStale
-				}
+				want := readstate.ErrChanged
 				if change == "status" {
 					switch kind {
 					case "care":
@@ -246,8 +255,8 @@ func TestBulkRequestLocksAllChildrenBeforeRequests(t *testing.T) {
 		go func() {
 			done <- testpkg.WithTenantTx(t, ctx, db, testpkg.Tenant(t), func(writeCtx context.Context, _ bun.Tx) error {
 				return coordinator.BulkApprove(writeCtx, parentrequests.BulkApproveInput{Requests: []parentrequests.Ref{
-					{Kind: parentrequests.KindMasterData, ID: low.masterRow.ID, ExpectedVersion: careplan.ParentRequestVersion(low.masterRow.UpdatedAt)},
-					{Kind: parentrequests.KindExcused, ID: high.excusedRow.ID, ExpectedVersion: careplan.ParentRequestVersion(high.excusedRow.UpdatedAt)},
+					{Kind: parentrequests.KindMasterData, ID: low.masterRow.ID, ExpectedVersion: readstate.Of(low.masterRow.UpdatedAt)},
+					{Kind: parentrequests.KindExcused, ID: high.excusedRow.ID, ExpectedVersion: readstate.Of(high.excusedRow.UpdatedAt)},
 				}, Reason: "Reviewed", ReviewerID: low.care.staffAccount})
 			})
 		}()
@@ -316,13 +325,15 @@ func (f requestLockFixture) writer(t *testing.T, ctx context.Context, operation 
 	switch operation {
 	case "care mark done":
 		mutate("schedule.care_schedule_change_requests", `request_kind = 'pickup_change', payload = '{"date":"2026-08-20","pickup_time":"14:00"}'`)
+		version := testpkg.CareRequestVersion(t, f.careRow.ID)
 		return func(ctx context.Context) error {
-			return f.care.svc.MarkDone(ctx, f.careRow.ID, "", "Done", f.care.staffAccount)
+			return f.care.svc.MarkDone(ctx, f.careRow.ID, version, "Done", f.care.staffAccount)
 		}
 	case "care correction":
 		mutate("schedule.care_schedule_change_requests", `request_kind = 'pickup_change', status = 'rejected', payload = '{"date":"2026-08-25","pickup_time":"14:00"}'`)
+		version := testpkg.CareRequestVersion(t, f.careRow.ID)
 		return func(ctx context.Context) error {
-			return f.care.svc.(carerequests.Corrections).Correct(ctx, f.careRow.ID, false, "", "Corrected", f.care.staffAccount)
+			return f.care.svc.(carerequests.Corrections).Correct(ctx, f.careRow.ID, false, version, "Corrected", f.care.staffAccount)
 		}
 	case "care conflict":
 		return func(ctx context.Context) error {
@@ -330,25 +341,29 @@ func (f requestLockFixture) writer(t *testing.T, ctx context.Context, operation 
 		}
 	case "excused mark done":
 		mutate("active.excused_absence_requests", `dates = '["2026-08-20"]'::jsonb`)
+		version := testpkg.ExcusedRequestVersion(t, f.excusedRow.ID)
 		return func(ctx context.Context) error {
-			return f.excused.MarkDone(ctx, f.excusedRow.ID, "", "Done", f.care.staffAccount)
+			return f.excused.MarkDone(ctx, f.excusedRow.ID, version, "Done", f.care.staffAccount)
 		}
 	case "excused correction":
 		mutate("active.excused_absence_requests", `status = 'rejected'`)
+		version := testpkg.ExcusedRequestVersion(t, f.excusedRow.ID)
 		return func(ctx context.Context) error {
-			return f.excused.Correct(ctx, f.excusedRow.ID, false, "", "Corrected", f.care.staffAccount)
+			return f.excused.Correct(ctx, f.excusedRow.ID, false, version, "Corrected", f.care.staffAccount)
 		}
 	case "excused conflict":
 		return func(ctx context.Context) error { return f.excused.LockConflictRequest(ctx, f.excusedRow.ID) }
 	case "excused edit":
+		version := testpkg.ExcusedRequestVersion(t, f.excusedRow.ID)
 		return func(ctx context.Context) error {
-			_, err := f.excused.EditRequest(ctx, careplan.ExcusedRequestEditInput{RequestID: f.excusedRow.ID, StudentID: f.care.chain.StudentID, GuardianAccountID: f.care.chain.AccountID, Dates: []excusedrequests.Date{"2026-08-26"}, Note: "Edited"})
+			_, err := f.excused.EditRequest(ctx, careplan.ExcusedRequestEditInput{ExpectedVersion: version, RequestID: f.excusedRow.ID, StudentID: f.care.chain.StudentID, GuardianAccountID: f.care.chain.AccountID, Dates: []excusedrequests.Date{"2026-08-26"}, Note: "Edited"})
 			return err
 		}
 	case "master correction":
 		mutate("users.student_data_change_requests", `status = 'rejected'`)
+		version := testpkg.MasterDataRequestVersion(t, f.masterRow.ID)
 		return func(ctx context.Context) error {
-			return f.master.Correct(ctx, f.masterRow.ID, false, "", "Corrected", f.care.staffAccount)
+			return f.master.Correct(ctx, f.masterRow.ID, false, version, "Corrected", f.care.staffAccount)
 		}
 	case "master conflict":
 		return func(ctx context.Context) error { return f.master.LockConflictRequest(ctx, f.masterRow.ID) }
@@ -363,8 +378,8 @@ func (f requestLockFixture) writer(t *testing.T, ctx context.Context, operation 
 	if operation == "bulk" {
 		return func(ctx context.Context) error {
 			return coordinator.BulkApprove(ctx, parentrequests.BulkApproveInput{Requests: []parentrequests.Ref{
-				{Kind: parentrequests.KindMasterData, ID: f.masterRow.ID, ExpectedVersion: careplan.ParentRequestVersion(f.masterRow.UpdatedAt)},
-				{Kind: parentrequests.KindExcused, ID: f.excusedRow.ID, ExpectedVersion: careplan.ParentRequestVersion(f.excusedRow.UpdatedAt)},
+				{Kind: parentrequests.KindMasterData, ID: f.masterRow.ID, ExpectedVersion: readstate.Of(f.masterRow.UpdatedAt)},
+				{Kind: parentrequests.KindExcused, ID: f.excusedRow.ID, ExpectedVersion: readstate.Of(f.excusedRow.UpdatedAt)},
 			}, Reason: "Reviewed", ReviewerID: f.care.staffAccount})
 		}
 	}
@@ -382,7 +397,7 @@ func (f requestLockFixture) writer(t *testing.T, ctx context.Context, operation 
 				return err
 			}
 			input.Kind, input.ConflictKey = parentrequests.KindCareSchedule, "care:pickup:1"
-			input.RequestIDs, input.ExpectedVersions = []int64{other.ID, f.careRow.ID}, []string{careplan.ParentRequestVersion(other.UpdatedAt), careplan.ParentRequestVersion(f.careRow.UpdatedAt)}
+			input.RequestIDs, input.ExpectedVersions = []int64{other.ID, f.careRow.ID}, []string{readstate.Of(other.UpdatedAt), readstate.Of(f.careRow.UpdatedAt)}
 		case "resolve excused":
 			row := f.excusedRow
 			row.ID = 0
@@ -391,7 +406,7 @@ func (f requestLockFixture) writer(t *testing.T, ctx context.Context, operation 
 				return err
 			}
 			input.Kind, input.ConflictKey = parentrequests.KindExcused, "absence:2026-08-25"
-			input.RequestIDs, input.ExpectedVersions = []int64{other.ID, f.excusedRow.ID}, []string{careplan.ParentRequestVersion(other.UpdatedAt), careplan.ParentRequestVersion(f.excusedRow.UpdatedAt)}
+			input.RequestIDs, input.ExpectedVersions = []int64{other.ID, f.excusedRow.ID}, []string{readstate.Of(other.UpdatedAt), readstate.Of(f.excusedRow.UpdatedAt)}
 		case "resolve master":
 			row := f.masterRow
 			row.ID = 0
@@ -404,7 +419,7 @@ func (f requestLockFixture) writer(t *testing.T, ctx context.Context, operation 
 				return err
 			}
 			input.Kind, input.ConflictKey = parentrequests.KindMasterData, "master_data:person:first_name"
-			input.RequestIDs, input.ExpectedVersions = []int64{other.ID, f.masterRow.ID}, []string{careplan.ParentRequestVersion(other.UpdatedAt), careplan.ParentRequestVersion(f.masterRow.UpdatedAt)}
+			input.RequestIDs, input.ExpectedVersions = []int64{other.ID, f.masterRow.ID}, []string{readstate.Of(other.UpdatedAt), readstate.Of(f.masterRow.UpdatedAt)}
 		}
 		return nil
 	}))

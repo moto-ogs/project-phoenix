@@ -27,7 +27,7 @@ type DecideOfferingRequestBody struct {
 	ExcludedOfferingIDs         []string `json:"excluded_offering_ids,omitempty"`
 	CompleteWithdrawalConfirmed bool     `json:"complete_withdrawal_confirmed,omitempty"`
 	// ExpectedVersion is the expected_version the list emitted for this row.
-	// Empty is accepted (old clients) and skips the check.
+	// An empty or different one is refused with readstate.ErrChanged.
 	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 

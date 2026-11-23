@@ -44,7 +44,7 @@ type exportEntryBody struct {
 
 type exportRunBody struct {
 	RunKind          string           `json:"run_kind"`
-	RunID            int64            `json:"run_id"`
+	RunID            wireID           `json:"run_id"`
 	Label            string           `json:"label"`
 	InvoiceCount     int              `json:"invoice_count"`
 	Exports          int              `json:"exports"`
@@ -111,7 +111,7 @@ func TestFinanceExportsOfAReleasedRun(t *testing.T) {
 	f := sepaDebitFixture(t, "Träger Sollstellung SJR")
 	lia := careContract(t, f.db, f.office.organization, f.office.schools[0], "Lia", sepaDebitMonth, sjrServices()...)
 	createMandate(t, f, mandateBody(lia, "SJR-X-LIA"))
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyBillingPath,
+	rec := putFamilyBilling(t, f.traeger, f.office.token,
 		map[string]any{"contract_id": lia, "recipient_kind": "applicant", "debtor_number": " 10 4711 "})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), `"debtor_number":"10 4711"`, "a family with only a debtor number keeps it")
@@ -135,7 +135,7 @@ func TestFinanceExportsOfAReleasedRun(t *testing.T) {
 
 	runs := exportRuns(t, f)
 	require.Len(t, runs, 1)
-	assert.Equal(t, run, runs[0].RunID)
+	assert.Equal(t, run, int64(runs[0].RunID))
 	assert.Nil(t, runs[0].LastSollstellung, "not yet exported")
 
 	first, content := sollstellung(t, f, run)
@@ -266,7 +266,7 @@ func TestFinanceExportsRightsAndTraeger(t *testing.T) {
 		f.office.organization, other.office.organization).Scan(context.Background(), &files))
 	assert.Zero(t, files, "a refused download leaves no protocol entry")
 
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, financeExportsPath+"/settings/sollstellung", map[string]any{
+	rec = putSollstellung(t, f.traeger, f.office.token, map[string]any{
 		"columns": []map[string]any{{"field": "iban", "header": "IBAN"}}, "delimiter": ";", "decimal_separator": ",",
 		"date_format": "dd.mm.yyyy", "encoding": "utf-8", "header_row": true, "file_name_pattern": "s.csv",
 	})

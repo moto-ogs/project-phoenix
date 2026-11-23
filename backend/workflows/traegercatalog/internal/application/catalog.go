@@ -109,8 +109,8 @@ func (s snapshot) targets() []target {
 	}
 	for _, school := range s.phase.Schools {
 		copied := (school.AppliedVersion != nil || school.Outcome != "") && school.Outcome != enrollment.TraegerOutcomeWithdrawn
-		if copied && own[school.SchoolID] && !selected[school.SchoolID] {
-			targets = append(targets, target{schoolID: school.SchoolID, action: traegercatalog.ActionWithdraw})
+		if copied && own[school.SchoolID.Int64()] && !selected[school.SchoolID.Int64()] {
+			targets = append(targets, target{schoolID: school.SchoolID.Int64(), action: traegercatalog.ActionWithdraw})
 		}
 	}
 	slices.SortFunc(targets, func(a, b target) int { return int(a.schoolID - b.schoolID) })
@@ -125,7 +125,7 @@ func (s snapshot) selected(own map[int64]bool) map[int64]bool {
 		return selected
 	}
 	for _, school := range s.phase.Schools {
-		selected[school.SchoolID] = school.Selected && own[school.SchoolID]
+		selected[school.SchoolID.Int64()] = school.Selected && own[school.SchoolID.Int64()]
 	}
 	if s.phase.AllSchools {
 		for _, id := range s.schools {
@@ -141,7 +141,7 @@ func (s snapshot) prospective() release {
 	next := release{month: s.month, phase: s.phase.Draft, phaseVersion: nextVersion(s.phase.ReleasedVersion, s.phase.Released != nil && sameJSON(*s.phase.Released, s.phase.Draft)), offerings: map[int64]offeringRelease{}}
 	for _, offering := range s.offerings {
 		unchanged := offering.Released != nil && sameJSON(*offering.Released, offering.Draft)
-		next.offerings[offering.ID] = offeringRelease{version: nextVersion(offering.ReleasedVersion, unchanged), draft: offering.Draft}
+		next.offerings[offering.ID.Int64()] = offeringRelease{version: nextVersion(offering.ReleasedVersion, unchanged), draft: offering.Draft}
 	}
 	return next
 }

@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type {
@@ -101,6 +107,17 @@ function renderPage() {
   );
 }
 
+/** Happy DOM beendet Vauls Ausblend-Animation nicht selbst. */
+async function finishClosingSheet(sheet: HTMLElement): Promise<void> {
+  await waitFor(() => expect(sheet).toHaveAttribute("data-state", "closed"));
+  const end = new Event("animationend");
+  Object.assign(end, { animationName: getComputedStyle(sheet).animationName });
+  act(() => {
+    sheet.dispatchEvent(end);
+  });
+  await waitFor(() => expect(sheet).not.toBeInTheDocument());
+}
+
 describe("TraegerCareNoticeDeliveryPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -191,9 +208,13 @@ describe("TraegerCareNoticeDeliveryPage", () => {
             name: "Aktionen für den Bescheid von Mia Beispiel",
           }),
         );
+        const sheet = screen.getByRole("dialog", {
+          name: "Aktionen für den Bescheid von Mia Beispiel",
+        });
         fireEvent.click(
           await screen.findByRole("menuitem", { name: "Original ansehen" }),
         );
+        await finishClosingSheet(sheet);
         expect(
           await screen.findByRole("heading", { name: "Bescheid MB-2030-0001" }),
         ).toBeInTheDocument();

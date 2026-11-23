@@ -46,6 +46,7 @@ function run(
     billed: 0,
     unpricedCount: 0,
     duplicateCount: 0,
+    joinedChildren: [],
     previewCount: 0,
     previewCents: 0,
     previewDeltaCents: 0,
@@ -93,6 +94,71 @@ describe("discarding an empty notice run", () => {
     ).toBeInTheDocument();
     expect(api.discardCareNoticeRun).toHaveBeenCalledWith("4");
     expect(screen.getByText("Verworfen am 11.11.2026")).toBeInTheDocument();
+  });
+
+  it("names a child billed at another school in an empty run (#7874)", async () => {
+    api.fetchCareNoticeRun.mockResolvedValue(
+      run({
+        joinedChildren: [
+          {
+            childFirstName: "Noah",
+            childLastName: "Muster",
+            contracts: [
+              { contractId: "81", schoolId: "3", schoolName: "OGS Nord" },
+              { contractId: "82", schoolId: "5", schoolName: "OGS Süd" },
+            ],
+          },
+        ],
+      }),
+    );
+    renderPage();
+
+    expect(
+      await screen.findByText("Dieser Lauf hat nichts abzurechnen"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Ein Kind an zwei Schulen" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("OGS Nord, dann OGS Süd")).toBeInTheDocument();
+  });
+
+  it("names a child whose month is billed already in an empty run (#7892)", async () => {
+    api.fetchCareNoticeRun.mockResolvedValue(
+      run({
+        billedChildren: [
+          {
+            childFirstName: "Noah",
+            childLastName: "Muster",
+            reason: "already_billed",
+            contracts: [
+              { contractId: "81", schoolId: "3", schoolName: "OGS Nord" },
+            ],
+            invoices: [
+              {
+                source: "care_run",
+                runId: "5",
+                contractId: "82",
+                schoolName: "OGS Süd",
+                number: "MB-0002",
+                documentKind: "invoice",
+              },
+            ],
+          },
+        ],
+      }),
+    );
+    renderPage();
+
+    expect(
+      await screen.findByText(
+        /Für das Jahr \d{4} gibt es keinen neuen Bescheid\. Für ein Kind ist ein Monat schon abgerechnet, siehe unten\. Stimmt das, kannst du den Lauf verwerfen\./,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", {
+        name: "Kind hat schon eine Rechnung – bitte prüfen",
+      }),
+    ).toBeInTheDocument();
   });
 
   it("closes a run whose contracts keep their notice, as before", async () => {

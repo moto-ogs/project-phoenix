@@ -70,9 +70,15 @@ type SplitSeriesInput struct {
 	// closing days (#3820).
 	IncludeSchoolBreaks *bool
 	ActorStaffID        int64
+	// TraegerAccountID is the Träger-Büro account behind a split without a
+	// staff member (#7818): the successor carries the mark.
+	TraegerAccountID int64
 	// WorkingTime confirms the working-time warnings of the occurrences
 	// (#4708).
 	WorkingTime workforce.WorkingTimeConfirmation
+	// ExpectedVersion is the version of the series the planner read (ADR
+	// 0311), checked under the staff's shift lock.
+	ExpectedVersion string
 }
 
 // StaffShiftSeriesService manages recurring shift series (#1889). Series
@@ -237,8 +243,16 @@ func (s *staffShiftSeriesService) updateTodayOccurrence(
 	if input.Notes != nil {
 		updated.Notes = *input.Notes
 	}
+	// The occurrence keeps its author. The Träger-Büro changes it without a
+	// staff member, so no earlier staff editor stays named, and it marks
+	// the row as last changed by the Träger (#7818).
+	updated.UpdatedBy = nil
 	if input.ActorStaffID > 0 {
 		updated.UpdatedBy = &input.ActorStaffID
+	}
+	if account := input.TraegerAccountID; account > 0 {
+		updated.PlannedByTraeger = true
+		updated.TraegerAccountID = &account
 	}
 	if _, err := s.shiftService.UpdateShiftWithOptions(ctx, &updated, StaffShiftUpdateOptions{
 		SuppressTimeTrackingBroadcast: true,
@@ -378,7 +392,7 @@ func (s *staffShiftSeriesService) writeSeriesCandidates(ctx context.Context, ser
 		return 0, shiftWriteError("bulk create staff shifts", err)
 	}
 	if override != nil {
-		if err := s.guard.recordSeries(ctx, override, shiftsToRows(written), series.CreatedBy); err != nil {
+		if err := s.guard.recordSeries(ctx, override, shiftsToRows(written), series.TraegerAccountID, series.CreatedBy); err != nil {
 			return 0, err
 		}
 	}
@@ -447,6 +461,7 @@ func seriesCandidate(series *StaffShiftSeries, d calendar.Date, stamp absenceSta
 		SeriesID:             &seriesID,
 		SeriesOccurrenceDate: &occurrenceDate,
 		CreatedBy:            series.CreatedBy,
+		PlannedByTraeger:     series.PlannedByTraeger,
 	}
 	if stamp.absenceID > 0 {
 		applySickReport(candidate, stamp)

@@ -1,129 +1,77 @@
-import { ApiError, apiErrorFromBody, transportFetch } from "./api-error";
 /**
  * Staff client for the post-enrollment offering change-request review queue
- * (#1665). Calls the Next.js proxy routes under
- * /api/students/offering-change-requests which forward (with the tenant session
- * token) to the backend.
+ * (#1665): the registered routes under /api/students/offering-change-requests,
+ * through the tenant BFF.
  */
 
+import type * as studentsContract from "~/lib/contract/students.generated";
+import { requiredEnum } from "~/lib/contract/known-enum";
+import { ApiError } from "./api-error";
+import { bffJson } from "./bff-fetch";
 import { createLogger } from "~/lib/logger";
-import type { RosterImpactWire } from "~/lib/roster-impact";
 
 const logger = createLogger({ component: "OfferingRequestReviewAPI" });
 
-type OfferingRequestStatus = "pending" | "approved" | "rejected" | "withdrawn";
-
-/** One "current → requested" line, pre-rendered in German by the backend. */
-export interface OfferingRequestDiffLine {
-  readonly offering_id: string;
-  readonly label: string;
-  readonly old: string;
-  readonly new: string;
-  /** True when a Mitbuchungs-Regel (or the required lunch) added days here. */
-  readonly automatic?: boolean;
-  /** German day list of the automatic share ("Do, Fr"). */
-  readonly automatic_days?: string;
-  /** Rule-derived part of automatic_days, excluding required-lunch days. */
-  readonly rule_days?: string;
-  /** Materialized German day list after this co-booking rule is suppressed. */
-  readonly new_when_excluded?: string;
-  /** Offerings whose rule produced the automatic share (for cascade greying). */
-  readonly trigger_ids?: readonly string[];
-  readonly trigger_names?: readonly string[];
-  /** True when staff may exclude this rule-added line per request (#2370). */
-  readonly optoutable?: boolean;
-  /** True for a Kurs — an AG the family reached through a care offering. */
-  readonly is_course?: boolean;
-}
-
-/** One booking the request leaves exactly as it is. */
-interface OfferingRequestUnchangedLine {
-  readonly offering_id: string;
-  readonly label: string;
-  readonly days: string;
-}
+const OFFERING_REQUEST_STATUSES = [
+  "pending",
+  "approved",
+  "rejected",
+  "withdrawn",
+  "done",
+  "care_ended",
+] as const;
+type OfferingRequestStatus = (typeof OFFERING_REQUEST_STATUSES)[number];
 
 /**
- * One offering change request in the staff queue. Mirrors
- * api/students.OfferingRequestResponse.
+ * One offering change request in the staff queue: the generated response
+ * with its closed status and a `diff` that is never `null`.
  */
-export interface StaffOfferingRequest {
-  readonly id: string;
-  readonly student_id: string;
-  readonly student_name: string;
+export type StaffOfferingRequest = Omit<
+  studentsContract.OfferingRequestResponse,
+  "status" | "diff"
+> & {
   readonly status: OfferingRequestStatus;
-  /** Date the switch would take effect (YYYY-MM-DD). */
-  readonly effective_from: string;
-  /**
-   * Range staff may confirm the switch for (YYYY-MM-DD, #2484). Absent when the
-   * backend could not resolve the care period; the date field is then unbounded
-   * and the decision validates alone.
-   */
-  readonly earliest_effective_from?: string;
-  readonly latest_effective_from?: string;
-  /**
-   * Das Datum, das die Eltern eingetragen haben — nur gesetzt, wenn es nicht
-   * mehr geht (es ist vorbei oder liegt vor dem Beginn der Betreuungszeit) und
-   * `effective_from` deshalb der früheste noch mögliche Tag ist (#2484).
-   */
-  readonly requested_effective_from?: string;
-  readonly note?: string;
-  readonly diff: readonly OfferingRequestDiffLine[];
-  /** Bookings this request does not touch, for the complete after picture. */
-  readonly unchanged?: readonly OfferingRequestUnchangedLine[];
-  /** True when approving would leave the child without any offering (#2434). */
-  readonly full_withdrawal?: boolean;
-  readonly reason?: string;
-  readonly created_at: string;
-  readonly reviewed_at?: string;
+  readonly diff: readonly studentsContract.OfferingRequestDiffResponse[];
+};
+
+export function toStaffOfferingRequest(
+  request: studentsContract.OfferingRequestResponse,
+): StaffOfferingRequest {
+  return {
+    ...request,
+    status: requiredEnum(OFFERING_REQUEST_STATUSES, request.status, "status"),
+    diff: request.diff ?? [],
+  };
 }
 
-export interface OfferingRequestPreviewSelection {
-  readonly offering_id: string;
-  readonly new: string;
-  readonly removed?: boolean;
-}
+type WithLists<T, K extends keyof T> = Omit<T, K> & {
+  readonly [P in K]: NonNullable<T[P]>;
+};
 
-export interface OfferingRequestPreview {
-  readonly selections: readonly OfferingRequestPreviewSelection[];
-  readonly manual_planning_conflicts: readonly ManualPlanningConflict[];
-  readonly arrival_expectations_follow_bookings: boolean;
-}
+/** The review card's preview; Go may write its lists as `null`. */
+export type OfferingRequestPreview = Omit<
+  WithLists<
+    studentsContract.OfferingRequestPreviewResponse,
+    "selections" | "manual_planning_conflicts"
+  >,
+  "manual_planning_conflicts"
+> & {
+  readonly manual_planning_conflicts: readonly WithLists<
+    studentsContract.ManualPlanningConflictResponse,
+    "days"
+  >[];
+};
 
-interface ManualPlanningConflict {
-  readonly activity_group_id: string;
-  readonly activity_group_name: string;
-  readonly days: readonly string[];
-  readonly first_date: string;
-  readonly occurrence_count: number;
-}
-
-interface Envelope<T> {
-  readonly data?: T;
-}
-
-function unwrap<T>(json: Envelope<T>): T {
-  if (json && typeof json === "object" && "data" in json) {
-    return json.data as T;
+/** Logs a failed call; the ApiError keeps the backend's code and detail. */
+function logFailure(error: unknown): never {
+  if (error instanceof ApiError) {
+    logger.error("offering_request_review_request_failed", {
+      status: error.status,
+      message: error.message,
+      ...(error.code ? { code: error.code } : {}),
+    });
   }
-  return json as unknown as T;
-}
-
-async function readError(
-  response: Response,
-  fallback: string,
-): Promise<ApiError> {
-  const error = apiErrorFromBody(
-    fallback,
-    response.status,
-    await response.json().catch(() => undefined),
-  );
-  logger.error("offering_request_review_request_failed", {
-    status: response.status,
-    message: error.message,
-    ...(error.code ? { code: error.code } : {}),
-  });
-  return error;
+  throw error;
 }
 
 /**
@@ -134,39 +82,35 @@ async function readError(
 export async function decideOfferingChangeRequest(
   requestId: string,
   approve: boolean,
-  reason?: string,
-  excludedOfferingIds?: readonly string[],
-  effectiveFrom?: string,
-  completeWithdrawalConfirmed?: boolean,
-  expectedVersion?: string,
-): Promise<RosterImpactWire | undefined> {
-  const response = await transportFetch(
-    `/api/students/offering-change-requests/${encodeURIComponent(requestId)}/decide`,
+  reason: string | undefined,
+  excludedOfferingIds: readonly string[] | undefined,
+  effectiveFrom: string | undefined,
+  completeWithdrawalConfirmed: boolean,
+  /** Die Fassung der Anfrage aus der Liste (ADR 0311). */
+  expectedVersion: string,
+): Promise<studentsContract.rosterImpactResponse | undefined> {
+  const answer = await bffJson(
+    "tenant",
+    "POST /api/students/offering-change-requests/{requestId}/decide",
     {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+      params: { requestId },
+      body: {
         approve,
         reason: reason ?? "",
-        excluded_offering_ids: excludedOfferingIds,
+        excluded_offering_ids: excludedOfferingIds
+          ? [...excludedOfferingIds]
+          : undefined,
         effective_from: effectiveFrom,
         ...(completeWithdrawalConfirmed
           ? { complete_withdrawal_confirmed: true }
           : {}),
-        ...(expectedVersion ? { expected_version: expectedVersion } : {}),
-      }),
+        expected_version: expectedVersion,
+      },
+      errorMessage: "Entscheidung konnte nicht gespeichert werden",
     },
-  );
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Entscheidung konnte nicht gespeichert werden",
-    );
-  }
+  ).catch(logFailure);
   // Eine Freigabe meldet, was sie im Betreuungsplan bewirkt hat (#5102).
-  const body = (await response.json().catch(() => undefined)) as
-    Envelope<{ roster_impact?: RosterImpactWire }> | undefined;
-  return body ? unwrap(body)?.roster_impact : undefined;
+  return answer?.roster_impact;
 }
 
 /** Materializes the review card with its current co-booking overrides. */
@@ -175,24 +119,25 @@ export async function previewOfferingChangeRequest(
   excludedOfferingIds: readonly string[],
   effectiveFrom?: string,
 ): Promise<OfferingRequestPreview> {
-  const response = await transportFetch(
-    `/api/students/offering-change-requests/${encodeURIComponent(requestId)}/preview`,
+  const answer = await bffJson(
+    "tenant",
+    "POST /api/students/offering-change-requests/{requestId}/preview",
     {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        excluded_offering_ids: excludedOfferingIds,
+      params: { requestId },
+      body: {
+        excluded_offering_ids: [...excludedOfferingIds],
         effective_from: effectiveFrom,
-      }),
+      },
+      errorMessage: "Vorschau konnte nicht aktualisiert werden",
     },
-  );
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Vorschau konnte nicht aktualisiert werden",
-    );
-  }
-  return unwrap((await response.json()) as Envelope<OfferingRequestPreview>);
+  ).catch(logFailure);
+  return {
+    ...answer,
+    selections: answer.selections ?? [],
+    manual_planning_conflicts: (answer.manual_planning_conflicts ?? []).map(
+      (conflict) => ({ ...conflict, days: conflict.days ?? [] }),
+    ),
+  };
 }
 
 /**
@@ -200,16 +145,20 @@ export async function previewOfferingChangeRequest(
  * api/students.OfferingRequestHistoryResponse; the diff is the frozen
  * decision snapshot, never recomputed against current bookings.
  */
-export interface StaffOfferingRequestHistoryEntry extends StaffOfferingRequest {
-  readonly decided_at: string;
-  /** Absent for withdrawn rows (no reviewer). */
-  readonly decided_by_name?: string;
-  /** Payload-derived recap when no frozen decision snapshot exists. */
-  readonly requested?: readonly OfferingRequestRequestedLine[];
-}
+export type StaffOfferingRequestHistoryEntry = Omit<
+  studentsContract.OfferingRequestHistoryResponse,
+  "status" | "diff"
+> & {
+  readonly status: OfferingRequestStatus;
+  readonly diff: readonly studentsContract.OfferingRequestDiffResponse[];
+};
 
-interface OfferingRequestRequestedLine {
-  readonly offering_id: string;
-  readonly label: string;
-  readonly new: string;
+export function toStaffOfferingRequestHistoryEntry(
+  entry: studentsContract.OfferingRequestHistoryResponse,
+): StaffOfferingRequestHistoryEntry {
+  return {
+    ...entry,
+    status: requiredEnum(OFFERING_REQUEST_STATUSES, entry.status, "status"),
+    diff: entry.diff ?? [],
+  };
 }

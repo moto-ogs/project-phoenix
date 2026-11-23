@@ -5,6 +5,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/facilities"
 	educationRepo "github.com/moto-ogs/project-phoenix/modules/schoolstructure/compose"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // EducationRooms serves the group service's room directory from the
@@ -33,7 +34,7 @@ func (r EducationRooms) FindRoom(ctx context.Context, id int64) (*educationRepo.
 		return nil, facilities.ErrRoomNotFound
 	}
 	return &educationRepo.RoomProjection{
-		ID: room.ID, CreatedAt: room.CreatedAt, UpdatedAt: room.UpdatedAt,
+		ID: ident.ID(room.ID), CreatedAt: room.CreatedAt, UpdatedAt: room.UpdatedAt,
 		Name: room.Name, Building: room.Building, Floor: room.Floor,
 		Capacity: room.Capacity, Category: room.Category, Color: room.Color,
 	}, nil

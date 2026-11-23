@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The finance exports of the Elternabrechnung (#4693): the frame every file
@@ -269,6 +270,9 @@ type SollstellungSettings struct {
 	Mapping   SollstellungMapping `json:"mapping"`
 	Custom    bool                `json:"custom"`
 	UpdatedAt *time.Time          `json:"updated_at"`
+	// Version is the read-state token of the mapping (ADR 0311): a change
+	// sends it back as expected_version.
+	Version string `json:"version"`
 }
 
 // ExportFileNumbers is the state of the file numbers of a Träger: the
@@ -289,16 +293,16 @@ type ExportSettings struct {
 
 // ExportProtocolEntry is one entry of the export protocol.
 type ExportProtocolEntry struct {
-	ID           int64  `json:"id"`
-	FileNumber   int64  `json:"file_number" contract:"number"`
-	Format       string `json:"format"`
-	RunKind      string `json:"run_kind"`
-	RunID        int64  `json:"run_id"`
-	RunLabel     string `json:"run_label"`
-	FileName     string `json:"file_name"`
-	Fingerprint  string `json:"fingerprint"`
-	InvoiceCount int    `json:"invoice_count"`
-	TotalCents   int64  `json:"total_cents"`
+	ID           ident.ID `json:"id"`
+	FileNumber   int64    `json:"file_number" contract:"number"`
+	Format       string   `json:"format"`
+	RunKind      string   `json:"run_kind"`
+	RunID        ident.ID `json:"run_id"`
+	RunLabel     string   `json:"run_label"`
+	FileName     string   `json:"file_name"`
+	Fingerprint  string   `json:"fingerprint"`
+	InvoiceCount int      `json:"invoice_count"`
+	TotalCents   int64    `json:"total_cents" contract:"number"`
 	// Reference is the message ID of a PAIN.008 file.
 	Reference string `json:"reference,omitempty"`
 	// RepeatOf is the number of the earliest file of the run with the same
@@ -318,7 +322,7 @@ type ExportProtocolEntry struct {
 	// ExportedByName names a colleague who downloaded it at this Träger
 	// (#4693): empty for the reader's own downloads, for a person without a
 	// name and after the erasure of the account.
-	ExportedBy     *int64     `json:"exported_by_account_id"`
+	ExportedBy     *ident.ID  `json:"exported_by_account_id"`
 	ExportedByYou  bool       `json:"exported_by_you"`
 	ExportedByName string     `json:"exported_by_name"`
 	ExportedAt     time.Time  `json:"exported_at"`
@@ -336,11 +340,11 @@ type ExportProtocolEntry struct {
 // rows ExportRunContent reads. A file keeps the figures of its own content.
 type ExportRun struct {
 	RunKind      string        `json:"run_kind"`
-	RunID        int64         `json:"run_id"`
+	RunID        ident.ID      `json:"run_id"`
 	Label        string        `json:"label"`
 	IssuedOn     calendar.Date `json:"issued_on"`
 	InvoiceCount int           `json:"invoice_count"`
-	TotalCents   int64         `json:"total_cents"`
+	TotalCents   int64         `json:"total_cents" contract:"number"`
 	// LastSollstellung and LastDatev are the newest Sollstellung and DATEV
 	// batch of the run, nil before the first; Exports counts every file of
 	// the run.
@@ -355,7 +359,7 @@ type ExportRun struct {
 // the bookings of the run fall in, for the choice of "all again".
 type DatevRunOverview struct {
 	RunKind     string          `json:"run_kind"`
-	RunID       int64           `json:"run_id"`
+	RunID       ident.ID        `json:"run_id"`
 	NewBookings int             `json:"new_bookings"`
 	FiscalYears []calendar.Date `json:"fiscal_years"`
 }
@@ -575,7 +579,7 @@ const (
 type InvoiceHistoryEntry struct {
 	Kind      string    `json:"kind"`
 	At        time.Time `json:"at"`
-	AccountID *int64    `json:"account_id"`
+	AccountID *ident.ID `json:"account_id"`
 	ByYou     bool      `json:"by_you"`
 	// AccountName names the colleague of the step like ExportedByName
 	// (#4693).
@@ -593,7 +597,7 @@ type InvoiceHistoryEntry struct {
 // InvoiceHistory is the history of one invoice, oldest first.
 type InvoiceHistory struct {
 	Kind    string                `json:"kind"`
-	ID      int64                 `json:"id"`
+	ID      ident.ID              `json:"id"`
 	Number  string                `json:"number"`
 	Entries []InvoiceHistoryEntry `json:"entries"`
 }
@@ -607,7 +611,10 @@ type InvoiceHistory struct {
 // which the caller opens and rolls back when an operation fails.
 type FinanceExports interface {
 	ExportSettings(ctx context.Context, reviewer HolidayReviewer) (ExportSettings, error)
-	SaveSollstellungMapping(ctx context.Context, reviewer HolidayReviewer, mapping SollstellungMapping) (ExportSettings, error)
+	// SaveSollstellungMapping stores the mapping as the Abrechnung read it:
+	// a mapping changed since expectedVersion is refused with
+	// readstate.ErrChanged (ADR 0311).
+	SaveSollstellungMapping(ctx context.Context, reviewer HolidayReviewer, mapping SollstellungMapping, expectedVersion string) (ExportSettings, error)
 	ResetSollstellungMapping(ctx context.Context, reviewer HolidayReviewer) (ExportSettings, error)
 	SetExportFileNumberStart(ctx context.Context, reviewer HolidayReviewer, start int64) (ExportSettings, error)
 	ExportRuns(ctx context.Context, reviewer HolidayReviewer, page ExportPage) (ExportRunPage, error)

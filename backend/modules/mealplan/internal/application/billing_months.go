@@ -2,11 +2,8 @@ package application
 
 import (
 	"context"
-	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"hash/fnv"
 	"slices"
 	"strings"
 	"unicode/utf8"
@@ -16,6 +13,8 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/mealplan/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/collation"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // billingMonthsBack is how many months back the Mensa-Monatsfreigabe goes:
@@ -188,7 +187,7 @@ func releaseDiffers(stored domain.StoredBillingMonth, computed mealplan.BillingM
 		released[child.StudentID] = child
 	}
 	for _, child := range computed.Children {
-		before, ok := released[child.StudentID]
+		before, ok := released[child.StudentID.Int64()]
 		if !ok || before.MealDays != child.MealDays || before.RegisteredDays != child.RegisteredDays {
 			return true
 		}
@@ -272,7 +271,7 @@ func storedMonth(month calendar.Date, computed mealplan.BillingMonth) domain.Sto
 	stored := domain.StoredBillingMonth{Month: month, ChildCount: computed.ChildCount, MealCount: computed.MealCount,
 		Children: make([]domain.BillingChild, len(computed.Children))}
 	for i, child := range computed.Children {
-		stored.Children[i] = domain.BillingChild{StudentID: child.StudentID, FirstName: child.FirstName, LastName: child.LastName,
+		stored.Children[i] = domain.BillingChild{StudentID: child.StudentID.Int64(), FirstName: child.FirstName, LastName: child.LastName,
 			SchoolClass: child.SchoolClass, RegisteredDays: child.RegisteredDays, MealDays: child.MealDays}
 	}
 	return stored
@@ -288,7 +287,7 @@ func releasedView(stored domain.StoredBillingMonth) mealplan.BillingMonth {
 		view.Releases[i] = mealplan.BillingMonthReleaseEntry(version)
 	}
 	for i, child := range stored.Children {
-		children[i] = mealplan.BillingMonthChild{StudentID: child.StudentID, FirstName: child.FirstName, LastName: child.LastName,
+		children[i] = mealplan.BillingMonthChild{StudentID: ident.ID(child.StudentID), FirstName: child.FirstName, LastName: child.LastName,
 			SchoolClass: child.SchoolClass, RegisteredDays: child.RegisteredDays, MealDays: child.MealDays, AbsentDates: []mealplan.Date{}}
 		view.AbsenceCount += child.RegisteredDays - child.MealDays
 	}
@@ -329,6 +328,19 @@ func (b *BillingMonths) compute(ctx context.Context, month calendar.Date) (mealp
 	return result, nil
 }
 
+// fingerprintChild is a child as the fingerprint has always read it: the
+// student ID as a JSON number, while the wire sends it as a string (#2342).
+// A release compares the fingerprint of its preview, so the bytes stay.
+type fingerprintChild struct {
+	StudentID      int64           `json:"student_id"`
+	FirstName      string          `json:"first_name"`
+	LastName       string          `json:"last_name"`
+	SchoolClass    string          `json:"school_class"`
+	RegisteredDays int             `json:"registered_days"`
+	MealDays       int             `json:"meal_days"`
+	AbsentDates    []mealplan.Date `json:"absent_dates"`
+}
+
 // monthFingerprint names a computed month as the OGS-Leitung sees it: each
 // child with its class, its registered days, its meals and its absences.
 // The release compares it, so the totals alone cannot hide a meal that
@@ -336,20 +348,20 @@ func (b *BillingMonths) compute(ctx context.Context, month calendar.Date) (mealp
 // fingerprint order, not in the shown one, so a preview opened before the
 // German sort keeps its fingerprint (#6464).
 func monthFingerprint(month mealplan.BillingMonth) string {
-	children := slices.Clone(month.Children)
-	slices.SortFunc(children, compareChildrenForFingerprint)
-	state, err := json.Marshal(struct {
-		Month    mealplan.Date                `json:"month"`
-		Children []mealplan.BillingMonthChild `json:"children"`
-	}{month.Month, children})
-	if err != nil {
-		// A month always marshals; no fingerprint matches no release.
-		return ""
+	sorted := slices.Clone(month.Children)
+	slices.SortFunc(sorted, compareChildrenForFingerprint)
+	children := make([]fingerprintChild, len(sorted))
+	for i, child := range sorted {
+		children[i] = fingerprintChild{
+			StudentID: child.StudentID.Int64(), FirstName: child.FirstName, LastName: child.LastName,
+			SchoolClass: child.SchoolClass, RegisteredDays: child.RegisteredDays, MealDays: child.MealDays,
+			AbsentDates: child.AbsentDates,
+		}
 	}
-	// A change detector, not a secret: as the monthly run's review (#5916).
-	hash := fnv.New128a()
-	_, _ = hash.Write(state)
-	return hex.EncodeToString(hash.Sum(nil))
+	return readstate.Fingerprint(struct {
+		Month    mealplan.Date      `json:"month"`
+		Children []fingerprintChild `json:"children"`
+	}{month.Month, children})
 }
 
 // countBillingMonth counts the month (#4686): a school day is a day of the
@@ -396,7 +408,7 @@ func schoolDay(month calendar.Date, day mealplan.DailyList, holidays []mealplan.
 func countDay(children map[int64]*mealplan.BillingMonthChild, participant mealplan.DailyParticipant, date mealplan.Date, present bool) {
 	child, ok := children[participant.StudentID]
 	if !ok {
-		child = &mealplan.BillingMonthChild{StudentID: participant.StudentID, AbsentDates: []mealplan.Date{}}
+		child = &mealplan.BillingMonthChild{StudentID: ident.ID(participant.StudentID), AbsentDates: []mealplan.Date{}}
 		children[participant.StudentID] = child
 	}
 	child.FirstName, child.LastName, child.SchoolClass = participant.FirstName, participant.LastName, participant.SchoolClass
@@ -415,7 +427,7 @@ func compareChildren(a, b mealplan.BillingMonthChild) int {
 	if c := collation.CompareGermanNames(a.LastName, a.FirstName, b.LastName, b.FirstName); c != 0 {
 		return c
 	}
-	return compareIDs(a.StudentID, b.StudentID)
+	return compareIDs(a.StudentID.Int64(), b.StudentID.Int64())
 }
 
 // compareChildrenForFingerprint is the byte order of the lowercased names,
@@ -429,7 +441,7 @@ func compareChildrenForFingerprint(a, b mealplan.BillingMonthChild) int {
 	if c := strings.Compare(strings.ToLower(a.FirstName), strings.ToLower(b.FirstName)); c != 0 {
 		return c
 	}
-	return compareIDs(a.StudentID, b.StudentID)
+	return compareIDs(a.StudentID.Int64(), b.StudentID.Int64())
 }
 
 func compareIDs(a, b int64) int {

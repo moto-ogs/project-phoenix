@@ -159,11 +159,11 @@ func (rs *StaffAdminResource) listAbsenceRequests(w http.ResponseWriter, r *http
 	for i, item := range items {
 		responses[i] = absenceRequestResponse{
 			StaffAbsenceRequestItem: item,
-			ID:                      strconv.FormatInt(item.ID, 10),
-			StaffID:                 strconv.FormatInt(item.StaffID, 10),
+			ID:                      strconv.FormatInt(item.ID.Int64(), 10),
+			StaffID:                 strconv.FormatInt(item.StaffID.Int64(), 10),
 		}
 		if item.ApprovedBy != nil {
-			approvedBy := strconv.FormatInt(*item.ApprovedBy, 10)
+			approvedBy := strconv.FormatInt((*item.ApprovedBy).Int64(), 10)
 			responses[i].ApprovedBy = &approvedBy
 		}
 	}
@@ -350,7 +350,7 @@ func (rs *StaffAdminResource) setStaffVacationQuota(w http.ResponseWriter, r *ht
 	}
 	if err := rs.StaffAbsenceService.SetVacationQuota(r.Context(), workforce.VacationQuotaChange{
 		StaffID: staffID, Year: body.Year, EntitledDays: body.EntitledDays, CarryoverDays: body.CarryoverDays,
-		Reason: body.Reason, ChangedBy: changedBy,
+		Reason: body.Reason, ChangedBy: changedBy, ExpectedVersion: body.ExpectedVersion,
 	}); err != nil {
 		if errors.Is(err, workforce.ErrVacationQuotaInvalid) {
 			common.RenderError(w, r, common.ErrorInvalidRequest(err))
@@ -421,6 +421,11 @@ func (rs *StaffAdminResource) adminUpdateStaffSession(w http.ResponseWriter, r *
 	if err := render.DecodeJSON(r.Body, &updates); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
+	}
+	// A correction without the history row's token is refused like an
+	// outdated one (ADR 0311).
+	if updates.ExpectedVersion == nil {
+		updates.ExpectedVersion = new(string)
 	}
 
 	session, err := rs.WorkSessionService.UpdateSessionAsAdmin(r.Context(), editorStaffID, targetStaffID, sessionID, updates)
@@ -721,8 +726,8 @@ func (rs *StaffAdminResource) adminRebookStaffAbsences(w http.ResponseWriter, r 
 		common.RenderError(w, r, common.ErrorUnauthorized(errors.New("invalid token")))
 		return
 	}
-	var req workforce.RebookAbsencesRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	req, err := decodeRebookAbsences(r)
+	if err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}

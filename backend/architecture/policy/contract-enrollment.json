@@ -1,0 +1,185 @@
+{
+  "packages": [
+    {
+      "path": "workflows/contractenrollment",
+      "owner": "contract-enrollment",
+      "role": "public",
+      "internal_test_role": "workflow-decision-test",
+      "external_test_role": "workflow-integration-test"
+    },
+    {
+      "path": "workflows/contractenrollment/ports",
+      "owner": "contract-enrollment",
+      "role": "port",
+      "internal_test_role": "workflow-decision-test",
+      "external_test_role": "workflow-integration-test"
+    },
+    {
+      "path": "workflows/contractenrollment/internal/application",
+      "owner": "contract-enrollment",
+      "role": "application",
+      "internal_test_role": "workflow-decision-test",
+      "external_test_role": "workflow-integration-test"
+    },
+    {
+      "path": "workflows/contractenrollment/compose",
+      "owner": "contract-enrollment",
+      "role": "compose",
+      "internal_test_role": "adapter-test",
+      "external_test_role": "adapter-test"
+    },
+    {
+      "path": "workflows/contractenrollment/http",
+      "owner": "contract-enrollment",
+      "role": "http",
+      "internal_test_role": "adapter-test",
+      "external_test_role": "adapter-test"
+    }
+  ],
+  "rules": [
+    {
+      "id": "contract-enrollment.public.care-contract",
+      "description": "The workflow contract shows the bookings and planned changes of Care Contract's enrollment plan (ADR 0309 section 4).",
+      "scopes": [
+        "production"
+      ],
+      "source_owner": "contract-enrollment",
+      "source_role": "public",
+      "target_owner": "care-contract",
+      "target_role": "public"
+    },
+    {
+      "id": "contract-enrollment.port.care-contract",
+      "description": "Workflow ports name Care Contract's plan and binding of imported contracts through their public contract (ADR 0309 section 4).",
+      "scopes": [
+        "production"
+      ],
+      "source_owner": "contract-enrollment",
+      "source_role": "port",
+      "target_owner": "care-contract",
+      "target_role": "public"
+    },
+    {
+      "id": "contract-enrollment.application.care-contract",
+      "description": "The workflow coordinates Care Contract's read, plan and binding of imported contracts through their public contract (ADR 0309 section 4).",
+      "scopes": [
+        "production"
+      ],
+      "source_owner": "contract-enrollment",
+      "source_role": "application",
+      "target_owner": "care-contract",
+      "target_role": "public"
+    },
+    {
+      "id": "contract-enrollment.port.enrollment",
+      "description": "Workflow ports name Enrollment's silent enrollment of contract children through its public contract (ADR 0309 section 4).",
+      "scopes": [
+        "production"
+      ],
+      "source_owner": "contract-enrollment",
+      "source_role": "port",
+      "target_owner": "enrollment",
+      "target_role": "public"
+    },
+    {
+      "id": "contract-enrollment.application.enrollment",
+      "description": "The workflow hands every ready row to Enrollment's silent enrollment through its public contract and relays its answers (ADR 0309 section 4).",
+      "scopes": [
+        "production"
+      ],
+      "source_owner": "contract-enrollment",
+      "source_role": "application",
+      "target_owner": "enrollment",
+      "target_role": "public"
+    },
+    {
+      "id": "contract-enrollment.application.ports",
+      "description": "The workflow consumes its own consumer-owned ports.",
+      "scopes": [
+        "production"
+      ],
+      "source_owner": "contract-enrollment",
+      "source_role": "application",
+      "target_owner": "contract-enrollment",
+      "target_role": "port"
+    },
+    {
+      "id": "contract-enrollment.application.public",
+      "description": "The workflow implements its own public contract.",
+      "scopes": [
+        "production"
+      ],
+      "source_owner": "contract-enrollment",
+      "source_role": "application",
+      "target_owner": "contract-enrollment",
+      "target_role": "public"
+    },
+    {
+      "id": "contract-enrollment.compose.tenant-runtime",
+      "description": "The workflow composition opens the Träger transaction and the school's tenant transaction, one after the other (ADR 0105, ADR 0309 section 4).",
+      "scopes": [
+        "production"
+      ],
+      "source_owner": "contract-enrollment",
+      "source_role": "compose",
+      "target_owner": "tenant-runtime",
+      "target_role": "public"
+    },
+    {
+      "id": "contract-enrollment.http.public",
+      "description": "The contract enrollment HTTP transport serves its own workflow contract.",
+      "scopes": [
+        "production"
+      ],
+      "source_owner": "contract-enrollment",
+      "source_role": "http",
+      "target_owner": "contract-enrollment",
+      "target_role": "public"
+    },
+    {
+      "id": "contract-enrollment.http.care-contract",
+      "description": "The contract enrollment HTTP transport maps Care Contract's refusals of a school, a contract and a binding to their registered codes.",
+      "scopes": [
+        "production"
+      ],
+      "source_owner": "contract-enrollment",
+      "source_role": "http",
+      "target_owner": "care-contract",
+      "target_role": "public"
+    },
+    {
+      "id": "contract-enrollment.http.tenant-runtime.http",
+      "description": "The contract enrollment HTTP transport renders through the shared API envelope.",
+      "scopes": [
+        "production"
+      ],
+      "source_owner": "contract-enrollment",
+      "source_role": "http",
+      "target_owner": "tenant-runtime",
+      "target_role": "http",
+      "target_package": "api/common"
+    },
+    {
+      "id": "contract-enrollment.decision-test.care-contract",
+      "description": "Workflow decision tests fake Care Contract's plan and binding through public DTOs.",
+      "scopes": [
+        "internal_test"
+      ],
+      "source_owner": "contract-enrollment",
+      "source_role": "workflow-decision-test",
+      "target_owner": "care-contract",
+      "target_role": "public"
+    },
+    {
+      "id": "contract-enrollment.decision-test.enrollment",
+      "description": "Workflow decision tests fake Enrollment's silent enrollment through public DTOs.",
+      "scopes": [
+        "internal_test"
+      ],
+      "source_owner": "contract-enrollment",
+      "source_role": "workflow-decision-test",
+      "target_owner": "enrollment",
+      "target_role": "public"
+    }
+  ]
+}

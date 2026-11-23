@@ -8,19 +8,15 @@
  * Go backend with the staff JWT. Backend int64 ids arrive already stringified.
  */
 
-import type { MailOutcome } from "./email-delivery-status";
-import {
-  ApiError,
-  apiErrorFromResponse,
-  apiErrorFromText,
-  transportFetch,
-  wireErrorCode,
-} from "~/lib/api-error";
+import { knownMailOutcome, type MailOutcome } from "./email-delivery-status";
+import { ApiError, wireErrorCode } from "~/lib/api-error";
+import { bffJson } from "~/lib/bff-fetch";
+import type * as messagesContract from "~/lib/contract/messages.generated";
 import {
   type ChatMessage,
   type MessageAudience,
   type SchoolReaders,
-  audienceQuery,
+  chatMessageFieldsOf,
   endSentence,
   leadershipNameList,
 } from "~/lib/messaging-status";
@@ -37,12 +33,10 @@ export function isParentMessagingDisabled(error: unknown): boolean {
 /** Leadership accounts without a person name (#5200), as staff read them. */
 const UNNAMED_LEADER_LABEL = "Schulverwaltung";
 
-// The wire message shape is shared with the parent client; see ChatMessage.
-// A guardian's answer to a Gruppennachricht (#4784) names that thread.
-export type Message = ChatMessage & {
-  readonly group_thread_id?: string;
-  readonly group_thread_title?: string;
-};
+// The message view is shared with the parent client; see ChatMessage. A
+// guardian's answer to a Gruppennachricht (#4784) names that thread in
+// group_thread_id and group_thread_title.
+export type Message = ChatMessage;
 
 /**
  * Which conversation of a guardian about a child (#5200). Staff without the
@@ -57,102 +51,84 @@ export type ThreadAudience = MessageAudience;
  * names such as „Swantje M.“) is empty on inbox rows.
  */
 export interface ThreadReaders {
-  guardian: { account_id: string; name: string; relationship_type?: string };
+  guardian: messagesContract.GuardianReaderResponse;
   school: SchoolReaders;
 }
 
-export interface InboxThread {
-  thread_id: string;
-  student_id: string;
-  student_name: string;
-  school_class?: string;
-  group_name?: string;
-  guardian_name: string;
-  relationship_type?: "parent" | "guardian" | "relative" | "other";
-  audience?: ThreadAudience;
-  readers?: ThreadReaders;
-  last_message_at?: string;
-  last_sender_kind?: "guardian" | "staff";
-  last_message_body?: string;
-  unread_count: number;
-}
+/** A row or detail with its readers and audience read for the screen. */
+type WithReaders<T> = Omit<T, "readers" | "audience"> & {
+  readers: ThreadReaders;
+  audience: ThreadAudience;
+};
 
-export interface ThreadDetail {
-  thread_id: string;
-  student_id: string;
-  student_name: string;
-  guardian_name: string;
-  relationship_type?: string;
-  audience?: ThreadAudience;
-  readers?: ThreadReaders;
-  messages: Message[];
-}
+export type InboxThread =
+  WithReaders<messagesContract.ParentChatInboxThreadResponse>;
 
-export interface Guardian {
-  account_id: string;
-  name: string;
-  relationship_type?: string;
-  is_primary: boolean;
+/**
+ * `readers` is missing only while the chat window shows the row the inbox
+ * already had, until the conversation itself has loaded.
+ */
+export type ThreadDetail = Omit<
+  WithReaders<messagesContract.ParentChatThreadDetailResponse>,
+  "messages" | "readers"
+> & { messages: Message[]; readers?: ThreadReaders };
+
+export type Guardian = Omit<
+  messagesContract.MessageableGuardianResponse,
+  "readers"
+> & {
   /** Who would read the conversation with this guardian in the asked audience. */
-  readers?: ThreadReaders;
-  /** True only for a leadership member while a new leadership conversation may begin. */
-  leadership_available?: boolean;
+  readers: ThreadReaders;
+};
+
+function toAudience(audience: string): ThreadAudience {
+  return audience === "leadership" ? "leadership" : "team";
 }
 
-interface ApiResponse<T> {
-  status?: string;
-  success?: boolean;
-  data?: T;
+function toReaders(readers: messagesContract.ReadersResponse): ThreadReaders {
+  return {
+    guardian: readers.guardian,
+    school: {
+      kind: readers.school.kind === "leadership" ? "leadership" : "all_staff",
+      names: readers.school.names ?? [],
+      unnamed_count: readers.school.unnamed_count,
+    },
+  };
+}
+
+function toInboxThread(
+  thread: messagesContract.ParentChatInboxThreadResponse,
+): InboxThread {
+  return {
+    ...thread,
+    audience: toAudience(thread.audience),
+    readers: toReaders(thread.readers),
+  };
 }
 
 /**
- * Throws the failed /api/messages response as an ApiError (#2517): code,
- * field errors and request ID come from the envelope, so the shared display
- * path shows the catalog text instead of the backend sentence. The message
- * keeps the backend's `error` (fallback: the German default) as a developer
- * diagnostic for the log.
+ * The contract types a message's enums as plain strings and its `payload` as
+ * `unknown` (#7808); the conversation reads them in the shape ChatMessage
+ * names, through the same reader as the parent client.
  */
-async function throwApiError(
-  response: Response,
-  fallback: string,
-): Promise<never> {
-  let text = "";
-  try {
-    text = await response.text();
-  } catch {
-    // Body unreadable: the status still classifies the error.
-  }
-  throw apiErrorFromText(fallback, response.status, text);
-}
-
-/** A success response without the expected payload. */
-function missingData(fallback: string): ApiError {
-  return new ApiError(fallback, 500);
-}
-
-/** GET a /api/messages route, surfacing the backend error on failure. */
-async function getEnvelope<T>(
-  url: string,
-  fallback: string,
-): Promise<ApiResponse<T>> {
-  const response = await transportFetch(url);
-  if (!response.ok) await throwApiError(response, fallback);
-  return (await response.json()) as ApiResponse<T>;
-}
-
-/** POST to a /api/messages route, surfacing the backend error on failure. */
-async function postEnvelope<T>(
-  url: string,
-  body: unknown,
-  fallback: string,
-): Promise<ApiResponse<T>> {
-  const response = await transportFetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+function toMessages(
+  messages: readonly messagesContract.ParentChatMessageResponse[] | null,
+): Message[] {
+  return (messages ?? []).flatMap((message) => {
+    const fields = chatMessageFieldsOf(message);
+    return fields ? [{ ...message, ...fields }] : [];
   });
-  if (!response.ok) await throwApiError(response, fallback);
-  return (await response.json()) as ApiResponse<T>;
+}
+
+function toThreadDetail(
+  detail: messagesContract.ParentChatThreadDetailResponse,
+): ThreadDetail {
+  return {
+    ...detail,
+    audience: toAudience(detail.audience),
+    readers: toReaders(detail.readers),
+    messages: toMessages(detail.messages),
+  };
 }
 
 /**
@@ -189,13 +165,11 @@ export function readersLabel(readers: ThreadReaders): string {
 export async function fetchInboxWithFilters(filters: {
   onlyUnread?: boolean;
 }): Promise<InboxThread[]> {
-  const params = new URLSearchParams();
-  if (filters.onlyUnread) params.set("unread", "true");
-  const result = await getEnvelope<InboxThread[]>(
-    `/api/messages${params.size > 0 ? `?${params.toString()}` : ""}`,
-    "Nachrichten konnten nicht geladen werden",
-  );
-  return result.data ?? [];
+  const threads = await bffJson("tenant", "GET /api/messages/", {
+    query: { unread: filters.onlyUnread ? true : undefined },
+    errorMessage: "Nachrichten konnten nicht geladen werden",
+  });
+  return threads.map(toInboxThread);
 }
 
 /**
@@ -208,28 +182,25 @@ export async function fetchStudentThreads(
 ): Promise<InboxThread[]> {
   // The child page shows a failed load through the shared display path
   // (#2513), which reads the code and request ID, not the backend sentence.
-  const response = await transportFetch(
-    `/api/messages/students/${encodeURIComponent(studentId)}/threads`,
+  const threads = await bffJson(
+    "tenant",
+    "GET /api/messages/students/{studentId}/threads",
+    {
+      params: { studentId },
+      errorMessage: "Nachrichten konnten nicht geladen werden",
+    },
   );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      "Nachrichten konnten nicht geladen werden",
-    );
-  }
-  const result = (await response.json()) as ApiResponse<InboxThread[]>;
-  return result.data ?? [];
+  return threads.map(toInboxThread);
 }
 
 /**
  * Fetch the number of unread message threads for the unread badge.
  */
 export async function fetchUnreadCount(): Promise<number> {
-  const result = await getEnvelope<{ unread_count: number }>(
-    "/api/messages/unread-count",
-    "Ungelesene Nachrichten konnten nicht geladen werden",
-  );
-  return result.data?.unread_count ?? 0;
+  const result = await bffJson("tenant", "GET /api/messages/unread-count", {
+    errorMessage: "Ungelesene Nachrichten konnten nicht geladen werden",
+  });
+  return result.unread_count;
 }
 
 /**
@@ -237,15 +208,15 @@ export async function fetchUnreadCount(): Promise<number> {
  * for the chat window.
  */
 export async function fetchThread(threadId: string): Promise<ThreadDetail> {
-  const fallback = "Nachrichtenverlauf konnte nicht geladen werden";
-  const result = await getEnvelope<ThreadDetail>(
-    `/api/messages/threads/${threadId}`,
-    fallback,
+  const detail = await bffJson(
+    "tenant",
+    "GET /api/messages/threads/{threadId}",
+    {
+      params: { threadId },
+      errorMessage: "Nachrichtenverlauf konnte nicht geladen werden",
+    },
   );
-  if (!result.data) {
-    throw missingData(fallback);
-  }
-  return result.data;
+  return toThreadDetail(detail);
 }
 
 /**
@@ -255,13 +226,21 @@ export async function fetchThread(threadId: string): Promise<ThreadDetail> {
 export async function fetchThreadMails(
   threadId: string,
 ): Promise<Readonly<Record<string, MailOutcome>>> {
-  const result = await getEnvelope<{
-    messages?: Record<string, MailOutcome>;
-  }>(
-    `/api/messages/threads/${encodeURIComponent(threadId)}/mails`,
-    "Der Stand der E-Mails konnte nicht geladen werden",
+  const result = await bffJson(
+    "tenant",
+    "GET /api/messages/threads/{threadId}/mails",
+    {
+      params: { threadId },
+      errorMessage: "Der Stand der E-Mails konnte nicht geladen werden",
+    },
   );
-  return result.data?.messages ?? {};
+  // An outcome this build does not know shows no status.
+  const mails: Record<string, MailOutcome> = {};
+  for (const [messageId, outcome] of Object.entries(result.messages ?? {})) {
+    const known = knownMailOutcome(outcome);
+    if (known) mails[messageId] = known;
+  }
+  return mails;
 }
 
 /**
@@ -274,19 +253,25 @@ export async function postMessage(
   clientMessageId?: string,
   attachmentIds?: readonly string[],
 ): Promise<Message[]> {
-  const result = await postEnvelope<Message[]>(
-    `/api/messages/threads/${threadId}`,
+  const messages = await bffJson(
+    "tenant",
+    "POST /api/messages/threads/{threadId}",
     {
-      body,
-      client_message_id: clientMessageId,
-      ...(attachmentIds?.length ? { attachment_ids: attachmentIds } : {}),
-      ...(handledUpToMessageId
-        ? { handled_up_to_message_id: handledUpToMessageId }
-        : {}),
+      params: { threadId },
+      body: {
+        body,
+        client_message_id: clientMessageId,
+        ...(attachmentIds?.length
+          ? { attachment_ids: [...attachmentIds] }
+          : {}),
+        ...(handledUpToMessageId
+          ? { handled_up_to_message_id: handledUpToMessageId }
+          : {}),
+      },
+      errorMessage: "Nachricht konnte nicht gesendet werden",
     },
-    "Nachricht konnte nicht gesendet werden",
   );
-  return result.data ?? [];
+  return toMessages(messages);
 }
 
 /**
@@ -295,11 +280,10 @@ export async function postMessage(
  * Parents see no change.
  */
 export async function markThreadUnread(threadId: string): Promise<void> {
-  await postEnvelope<null>(
-    `/api/messages/threads/${encodeURIComponent(threadId)}/unread`,
-    {},
-    "Die Unterhaltung wurde nicht als ungelesen markiert.",
-  );
+  await bffJson("tenant", "POST /api/messages/threads/{threadId}/unread", {
+    params: { threadId },
+    errorMessage: "Die Unterhaltung wurde nicht als ungelesen markiert.",
+  });
 }
 
 /**
@@ -312,11 +296,11 @@ export async function confirmThreadForTeam(
   threadId: string,
   handledUpToMessageId: string,
 ): Promise<void> {
-  await postEnvelope<null>(
-    `/api/messages/threads/${encodeURIComponent(threadId)}/handled`,
-    { handled_up_to_message_id: handledUpToMessageId },
-    "Die Nachricht wurde nicht als gelesen bestätigt.",
-  );
+  await bffJson("tenant", "POST /api/messages/threads/{threadId}/handled", {
+    params: { threadId },
+    body: { handled_up_to_message_id: handledUpToMessageId },
+    errorMessage: "Die Nachricht wurde nicht als gelesen bestätigt.",
+  });
 }
 
 /**
@@ -326,12 +310,10 @@ export async function confirmThreadForTeam(
  * the team marked unread remain.
  */
 export async function markAllMessagesRead(): Promise<number> {
-  const result = await postEnvelope<{ unread_count: number }>(
-    "/api/messages/mark-all-read",
-    {},
-    "Die Nachrichten wurden nicht als gelesen markiert.",
-  );
-  return result.data?.unread_count ?? 0;
+  const result = await bffJson("tenant", "POST /api/messages/mark-all-read", {
+    errorMessage: "Die Nachrichten wurden nicht als gelesen markiert.",
+  });
+  return result.unread_count;
 }
 
 /**
@@ -361,37 +343,17 @@ function toCountScope(value: unknown): MessageCountScope {
 export async function fetchMessageCountSetting(): Promise<MessageCountSetting> {
   // Own error path (#2517): the settings card shows the catalog text, so the
   // ApiError keeps code and request ID instead of a fixed sentence.
-  const response = await transportFetch("/api/messages/count-scope");
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Count scope fetch failed (${response.status})`,
-    );
-  }
-  const result = (await response.json()) as ApiResponse<{
-    scope?: string;
-    has_own_groups?: boolean;
-  }>;
+  const result = await bffJson("tenant", "GET /api/messages/count-scope");
   return {
-    scope: toCountScope(result.data?.scope),
-    hasOwnGroups: result.data?.has_own_groups === true,
+    scope: toCountScope(result.scope),
+    hasOwnGroups: result.has_own_groups,
   };
 }
 
 export async function saveMessageCountScope(
   scope: MessageCountScope,
 ): Promise<void> {
-  const response = await transportFetch("/api/messages/count-scope", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ scope }),
-  });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Count scope save failed (${response.status})`,
-    );
-  }
+  await bffJson("tenant", "PUT /api/messages/count-scope", { body: { scope } });
 }
 
 /**
@@ -406,20 +368,15 @@ export async function openThread(input: {
   /** Leadership members may open the conversation with the leadership only. */
   audience?: ThreadAudience;
 }): Promise<ThreadDetail> {
-  const fallback = "Unterhaltung konnte nicht geöffnet werden";
-  const result = await postEnvelope<ThreadDetail>(
-    "/api/messages/threads/open",
-    {
+  const detail = await bffJson("tenant", "POST /api/messages/threads/open", {
+    body: {
       student_id: input.studentId,
       guardian_account_id: input.guardianAccountId,
       ...(input.audience === "leadership" ? { audience: input.audience } : {}),
     },
-    fallback,
-  );
-  if (!result.data) {
-    throw missingData(fallback);
-  }
-  return result.data;
+    errorMessage: "Unterhaltung konnte nicht geöffnet werden",
+  });
+  return toThreadDetail(detail);
 }
 
 /**
@@ -427,14 +384,14 @@ export async function openThread(input: {
  * would offer. „Neue Nachricht“ marks every other child (#4362).
  */
 export async function fetchReachableStudentIds(): Promise<ReadonlySet<string>> {
-  const result = await getEnvelope<{ student_ids: string[] }>(
-    "/api/messages/reachable-students",
-    "Erreichbare Kinder konnten nicht geladen werden",
+  const result = await bffJson(
+    "tenant",
+    "GET /api/messages/reachable-students",
+    {
+      errorMessage: "Erreichbare Kinder konnten nicht geladen werden",
+    },
   );
-  if (!result.data) {
-    throw missingData("Erreichbare Kinder konnten nicht geladen werden");
-  }
-  return new Set(result.data.student_ids);
+  return new Set(result.student_ids ?? []);
 }
 
 /**
@@ -445,9 +402,17 @@ export async function fetchGuardians(
   studentId: string,
   audience: ThreadAudience = "team",
 ): Promise<Guardian[]> {
-  const result = await getEnvelope<Guardian[]>(
-    `/api/messages/students/${studentId}/guardians${audienceQuery(audience)}`,
-    "Bezugspersonen konnten nicht geladen werden",
+  const guardians = await bffJson(
+    "tenant",
+    "GET /api/messages/students/{studentId}/guardians",
+    {
+      params: { studentId },
+      query: { audience: audience === "leadership" ? audience : undefined },
+      errorMessage: "Bezugspersonen konnten nicht geladen werden",
+    },
   );
-  return result.data ?? [];
+  return guardians.map((guardian) => ({
+    ...guardian,
+    readers: toReaders(guardian.readers),
+  }));
 }

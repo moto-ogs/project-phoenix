@@ -10,7 +10,6 @@ const authConfig = createPortalAuthConfig(PORTALS.tenant);
 vi.mock("~/env", () => ({
   env: {
     API_URL: "http://server:8080",
-    NEXT_PUBLIC_API_URL: "http://localhost:8080",
     AUTH_JWT_EXPIRY: "15m",
     AUTH_JWT_REFRESH_EXPIRY: "1h",
     NEXTAUTH_SECRET: "test-auth-secret-with-sufficient-entropy",
@@ -201,10 +200,7 @@ describe("JWT callback — refresh scenarios", () => {
 
   // ── Scenario 7: Backend refresh returns 401 (revoked token, #2952) ──
   it("scenario 7: pre-expiry backend 401 — session ends immediately", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      status: 401,
-    });
+    mockFetch.mockResolvedValueOnce(new Response(null, { status: 401 }));
 
     const token = {
       id: "7",
@@ -224,10 +220,7 @@ describe("JWT callback — refresh scenarios", () => {
   });
 
   it("scenario 7b: a rejected refresh token is never retried (#2952)", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      status: 403,
-    });
+    mockFetch.mockResolvedValueOnce(new Response(null, { status: 403 }));
 
     // Server-component requests cannot persist the terminal error into the
     // cookie, so the next callback still arrives with the same dead token.
@@ -269,11 +262,12 @@ describe("JWT callback — refresh scenarios", () => {
   // explanation and tries the renewal again later; booking the module again
   // continues it.
   it("scenario 7c: refresh 403 module.not_booked keeps the session and retries later", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      status: 403,
-      json: async () => ({ status: 403, code: "module.not_booked" }),
-    });
+    mockFetch.mockResolvedValueOnce(
+      Response.json(
+        { status: 403, code: "module.not_booked" },
+        { status: 403 },
+      ),
+    );
     const makeToken = (extra: Record<string, unknown> = {}) => ({
       id: "7c",
       token: "old-access",
@@ -316,11 +310,12 @@ describe("JWT callback — refresh scenarios", () => {
   });
 
   it("scenario 7d: any other 403 ends the session as before", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      status: 403,
-      json: async () => ({ status: 403, code: "general.forbidden" }),
-    });
+    mockFetch.mockResolvedValueOnce(
+      Response.json(
+        { status: 403, code: "general.forbidden" },
+        { status: 403 },
+      ),
+    );
 
     const result = await callJwt({
       id: "7d",
@@ -332,6 +327,46 @@ describe("JWT callback — refresh scenarios", () => {
 
     expect(result?.error).toBe("RefreshTokenError");
     expect(refreshAlreadyRefused(result as never)).toBe(true);
+  });
+
+  it("retries a refresh 403 whose response body times out", async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        new Response(
+          new ReadableStream({
+            start(controller) {
+              controller.error(
+                new DOMException("Response timed out", "TimeoutError"),
+              );
+            },
+          }),
+          { status: 403 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        Response.json(
+          { status: 403, code: "module.not_booked" },
+          { status: 403 },
+        ),
+      );
+    const token = {
+      id: "7e",
+      token: "old-access",
+      refreshToken: "unbooked-refresh",
+      tokenExpiry: Date.now() - 30 * 1000,
+      refreshTokenExpiry: Date.now() + 60 * 60 * 1000,
+    };
+
+    const first = await callJwt({ ...token });
+
+    expect(first?.error).toBeUndefined();
+    expect(first?.refreshToken).toBe(token.refreshToken);
+    expect(first?.notBooked).toBeUndefined();
+    expect(refreshAlreadyRefused(token)).toBe(false);
+
+    const second = await callJwt({ ...token });
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(second?.notBooked).toBe(true);
   });
 
   // ── Scenario 8: Backend refresh network timeout ───────────────────
@@ -484,10 +519,7 @@ describe("JWT callback — refresh scenarios", () => {
 
   // ── Scenario 13: Post-expiry refresh failure (backend 401) ─────────
   it("scenario 13: post-expiry + backend 401 — error = RefreshTokenError", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      status: 401,
-    });
+    mockFetch.mockResolvedValueOnce(new Response(null, { status: 401 }));
 
     const token = {
       id: "13",

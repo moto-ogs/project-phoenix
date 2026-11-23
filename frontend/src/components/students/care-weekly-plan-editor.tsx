@@ -1,4 +1,5 @@
 "use client";
+import type * as studentsContract from "~/lib/contract/students.generated";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 
 import { useEffect, useRef, useState } from "react";
@@ -26,11 +27,7 @@ import {
   type PickupScheduleFormData,
   type WeekdayNoteEntry,
 } from "~/lib/pickup-schedule-helpers";
-import type {
-  PickupAdjustmentPreview,
-  PickupAdjustmentResolution,
-  PickupAdjustmentSelection,
-} from "~/lib/pickup-schedule-api";
+import type { PickupAdjustmentResolution } from "~/lib/pickup-schedule-api";
 import type {
   CareDaysSource,
   CareTimePresets,
@@ -63,8 +60,8 @@ export interface CarePlanWeeklySubmit {
 
 export interface CarePlanWeeklyAdjustment {
   readonly resolution: PickupAdjustmentResolution;
-  readonly preview: PickupAdjustmentPreview;
-  readonly selections?: PickupAdjustmentSelection[];
+  readonly preview: studentsContract.pickupAdjustmentPreviewResponse;
+  readonly selections?: studentsContract.pickupAdjustmentSelectionRequest[];
   readonly effectiveFrom?: string;
   readonly reason?: string;
   /** false refreshes the offering consequences; true performs the write. */
@@ -221,19 +218,20 @@ export function toWeeklySubmit(
 }
 
 function offeringRemovesAllCareDays(
-  preview: PickupAdjustmentPreview,
-  selections: PickupAdjustmentSelection[],
+  preview: studentsContract.pickupAdjustmentPreviewResponse,
+  selections: studentsContract.pickupAdjustmentSelectionRequest[],
 ) {
   if (!preview.offering_catalog) return false;
   const selected = new Map(
     selections.map((selection) => [selection.offering_id, selection]),
   );
-  return !preview.offering_catalog.items.some(
+  return !(preview.offering_catalog.items ?? []).some(
     (item) =>
       item.counts_as_care &&
       (item.days_of_week_mode === "fixed"
-        ? selected.has(item.offering_id) && item.available_days.length > 0
-        : (selected.get(item.offering_id)?.selected_days.length ?? 0) > 0),
+        ? selected.has(item.offering_id) &&
+          (item.available_days ?? []).length > 0
+        : (selected.get(item.offering_id)?.selected_days?.length ?? 0) > 0),
   );
 }
 
@@ -667,7 +665,7 @@ interface CareWeeklyPlanEditFormProps {
   readonly onSubmitWeekly: (
     payload: CarePlanWeeklySubmit,
     adjustment?: CarePlanWeeklyAdjustment,
-  ) => Promise<PickupAdjustmentPreview | void>;
+  ) => Promise<studentsContract.pickupAdjustmentPreviewResponse | void>;
   /** Leaves the edit state without saving. */
   readonly onCancel: () => void;
   /** The plan is written; the section returns to its display. */
@@ -704,11 +702,11 @@ export function CareWeeklyPlanEditForm({
   const latestRetryRef = useRef<() => void>(() => undefined);
   const [showRemovalConfirm, setShowRemovalConfirm] = useState(false);
   const [weeklyAdjustment, setWeeklyAdjustment] =
-    useState<PickupAdjustmentPreview | null>(null);
+    useState<studentsContract.pickupAdjustmentPreviewResponse | null>(null);
   const save = useFormModalPending(weeklyAdjustment !== null);
   const isSubmitting = save.pending;
   const [offeringSelections, setOfferingSelections] = useState<
-    PickupAdjustmentSelection[]
+    studentsContract.pickupAdjustmentSelectionRequest[]
   >([]);
   const [offeringEffectiveFrom, setOfferingEffectiveFrom] = useState("");
   const [offeringReason, setOfferingReason] = useState("");
@@ -717,7 +715,8 @@ export function CareWeeklyPlanEditForm({
     null,
   );
   const offeringPreviewRequestId = useRef(0);
-  const weeklyExceptionPreview = useRef<PickupAdjustmentPreview | null>(null);
+  const weeklyExceptionPreview =
+    useRef<studentsContract.pickupAdjustmentPreviewResponse | null>(null);
   const decisionHeadingRef = useRef<HTMLHeadingElement>(null);
   const decisionWasVisible = useRef(false);
 
@@ -822,14 +821,14 @@ export function CareWeeklyPlanEditForm({
     effectiveFrom = offeringEffectiveFrom,
   ) => {
     if (!weeklyAdjustment?.offering_catalog) return;
-    const match = weeklyAdjustment.matching_offerings.find(
+    const match = (weeklyAdjustment.matching_offerings ?? []).find(
       (item) => item.offering_id === offeringId,
     );
-    const target = weeklyAdjustment.offering_catalog.items.find(
+    const target = (weeklyAdjustment.offering_catalog.items ?? []).find(
       (item) => item.offering_id === offeringId,
     );
     if (!match || !target) return;
-    const selections = match.selections;
+    const selections = match.selections ?? [];
     const requestId = ++offeringPreviewRequestId.current;
     setSelectedOfferingId(null);
     setOfferingSelections([]);
@@ -857,14 +856,14 @@ export function CareWeeklyPlanEditForm({
           return;
         }
         if (
-          !preview.matching_offerings.some(
+          !(preview.matching_offerings ?? []).some(
             (item) => item.offering_id === offeringId,
           )
         ) {
           setWeeklyAdjustment(preview);
           return;
         }
-        const refreshedTarget = preview.offering_catalog?.items.find(
+        const refreshedTarget = preview.offering_catalog?.items?.find(
           (item) => item.offering_id === offeringId,
         );
         if (

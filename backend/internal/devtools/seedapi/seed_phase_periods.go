@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strconv"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedSchoolYearStart is the year the school year holding day starts in. The
@@ -87,7 +89,7 @@ func seedPhaseSchoolYear(rt *Runtime, auth AuthRef, startYear int) (seedCalendar
 	if err != nil {
 		return seedCalendarPeriod{}, fmt.Errorf("parse school year %d/%d: %w", startYear, startYear+1, err)
 	}
-	return seedCalendarPeriod{ID: id, Name: fmt.Sprintf("Schuljahr %d/%d", startYear, startYear+1), PeriodType: "school_year", StartDate: startDate, EndDate: endDate, WeekCycleLength: 1, IsActive: true}, nil
+	return seedCalendarPeriod{ID: ident.ID(id), Name: fmt.Sprintf("Schuljahr %d/%d", startYear, startYear+1), PeriodType: "school_year", StartDate: startDate, EndDate: endDate, WeekCycleLength: 1, IsActive: true}, nil
 }
 
 // activateSeedPhaseSchoolYear enables an exact existing school year so phases
@@ -114,7 +116,7 @@ func activateSeedPhaseSchoolYear(rt *Runtime, auth AuthRef, period seedCalendarP
 // covers exactly the period, so its Betreuungszeitraum and the Zeitraum
 // under Planung show the same dates.
 func linkPhaseToPeriod(body map[string]any, period seedCalendarPeriod) {
-	body["calendar_period_id"] = strconv.FormatInt(period.ID, 10)
+	body["calendar_period_id"] = strconv.FormatInt(int64(period.ID), 10)
 	body["service_start_date"] = period.StartDate
 	body["service_end_date"] = period.EndDate
 }

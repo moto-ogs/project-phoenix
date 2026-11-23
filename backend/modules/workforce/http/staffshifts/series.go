@@ -1,39 +1,14 @@
 package staffshifts
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
-	"strconv"
 
 	"github.com/go-chi/render"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
-
-// occurrenceShiftID accepts legacy JSON numbers as well as the lossless
-// decimal-string representation used by the frontend. JavaScript numbers
-// cannot faithfully represent every valid PostgreSQL bigint ID.
-type occurrenceShiftID int64
-
-func (id *occurrenceShiftID) UnmarshalJSON(data []byte) error {
-	var encoded string
-	if err := json.Unmarshal(data, &encoded); err == nil {
-		parsed, err := strconv.ParseInt(encoded, 10, 64)
-		if err != nil {
-			return errors.New("occurrence_shift_id must be an int64")
-		}
-		*id = occurrenceShiftID(parsed)
-		return nil
-	}
-
-	var parsed int64
-	if err := json.Unmarshal(data, &parsed); err != nil {
-		return errors.New("occurrence_shift_id must be an int64")
-	}
-	*id = occurrenceShiftID(parsed)
-	return nil
-}
 
 // SeriesRequest is the create payload for a recurring shift series (#1889).
 // Weekdays are ISO (1=Monday … 7=Sunday); week_pattern is 0 = every week,
@@ -44,28 +19,36 @@ func (id *occurrenceShiftID) UnmarshalJSON(data []byte) error {
 type SeriesRequest struct {
 	// WorkingTimeRequest confirms the working-time warnings (#4708).
 	WorkingTimeRequest
-	StaffID          int64      `json:"staff_id"`
+	StaffID          ident.ID   `json:"staff_id"`
 	Weekdays         []int      `json:"weekdays"` // omitted on split = keep predecessor weekdays
-	StartTime        string     `json:"start_time"`
-	EndTime          string     `json:"end_time"`
+	StartTime        string     `json:"start_time" contract:"clock"`
+	EndTime          string     `json:"end_time" contract:"clock"`
 	BreakMinutes     int        `json:"break_minutes"`
-	ShiftTypeID      optionalID `json:"shift_type_id"`
+	ShiftTypeID      OptionalID `json:"shift_type_id"`
 	Notes            *string    `json:"notes"`
-	CalendarPeriodID int64      `json:"calendar_period_id"`
+	CalendarPeriodID ident.ID   `json:"calendar_period_id"`
 	WeekPattern      *int       `json:"week_pattern"` // omitted: create = every week, split = keep predecessor
-	ValidFrom        string     `json:"valid_from"`
+	ValidFrom        string     `json:"valid_from" contract:"date"`
 	// ValidUntil is presence-aware on split (#2028): an omitted key keeps the
 	// predecessor's end, an explicit null lets the series run to the period end.
-	ValidUntil    optionalString `json:"valid_until"`
-	EffectiveDate string         `json:"effective_date"`
+	ValidUntil    OptionalString `json:"valid_until"`
+	EffectiveDate string         `json:"effective_date" contract:"date"`
 	// OccurrenceShiftID is the concrete row opened by the planner. For a
 	// permanent edit effective today it is updated in place before the series
 	// is re-planned from tomorrow.
-	OccurrenceShiftID occurrenceShiftID `json:"occurrence_shift_id"`
+	OccurrenceShiftID ident.ID `json:"occurrence_shift_id"`
 	// IncludeSchoolBreaks also plans the series in the Ferien and on closing
 	// days (#3820); statutory holidays stay free. Omitted: create = false,
 	// split = keep the predecessor's choice.
 	IncludeSchoolBreaks *bool `json:"include_school_breaks"`
+}
+
+// SeriesSplitRequest is the split payload: the series fields plus the
+// version of the series the planner edited (ADR 0311). The split refuses a
+// series changed since that read with general.changed_since_read.
+type SeriesSplitRequest struct {
+	SeriesRequest
+	ExpectedVersion string `json:"expected_version"`
 }
 
 // SeriesResponse is the wire format for series create/split/end results.
@@ -74,8 +57,8 @@ type SeriesRequest struct {
 type SeriesResponse struct {
 	// Keep bigint identifiers as strings on the wire. The frontend needs to
 	// carry them through a subsequent split request without JavaScript rounding.
-	SeriesID     int64    `json:"series_id,string"`
-	OldSeriesID  int64    `json:"old_series_id,omitempty,string"`
+	SeriesID     ident.ID `json:"series_id"`
+	OldSeriesID  ident.ID `json:"old_series_id,omitempty"`
 	Created      int      `json:"created"`
 	Deleted      int      `json:"deleted"`
 	SkippedDates []string `json:"skipped_dates"`
@@ -90,8 +73,8 @@ func toSeriesResponse(result workforce.StaffShiftSeriesResult) SeriesResponse {
 		skipped = []string{}
 	}
 	return SeriesResponse{
-		SeriesID:              result.SeriesID,
-		OldSeriesID:           result.OldSeriesID,
+		SeriesID:              ident.ID(result.SeriesID),
+		OldSeriesID:           ident.ID(result.OldSeriesID),
 		Created:               result.Created,
 		Deleted:               int(result.Deleted),
 		SkippedDates:          skipped,
@@ -119,39 +102,43 @@ func toWeekdays(values []int) ([]int, error) {
 // wall-clock, dates "YYYY-MM-DD"; valid_until is exclusive, as everywhere in
 // the series API.
 type SeriesDetailResponse struct {
-	ID               int64   `json:"id,string"`
-	StaffID          int64   `json:"staff_id"`
-	Weekdays         []int   `json:"weekdays"`
-	StartTime        string  `json:"start_time"`
-	EndTime          string  `json:"end_time"`
-	BreakMinutes     int     `json:"break_minutes"`
-	ShiftTypeID      *int64  `json:"shift_type_id"`
-	Notes            string  `json:"notes,omitempty"`
-	CalendarPeriodID int64   `json:"calendar_period_id"`
-	WeekPattern      int     `json:"week_pattern"`
-	ValidFrom        string  `json:"valid_from"`
-	ValidUntil       *string `json:"valid_until"`
+	ID               ident.ID  `json:"id"`
+	StaffID          ident.ID  `json:"staff_id"`
+	Weekdays         []int     `json:"weekdays"`
+	StartTime        string    `json:"start_time"`
+	EndTime          string    `json:"end_time"`
+	BreakMinutes     int       `json:"break_minutes"`
+	ShiftTypeID      *ident.ID `json:"shift_type_id"`
+	Notes            string    `json:"notes,omitempty"`
+	CalendarPeriodID ident.ID  `json:"calendar_period_id"`
+	WeekPattern      int       `json:"week_pattern"`
+	ValidFrom        string    `json:"valid_from"`
+	ValidUntil       *string   `json:"valid_until"`
 	// IncludeSchoolBreaks: the series is also planned in the Ferien and on
 	// closing days (#3820).
 	IncludeSchoolBreaks bool `json:"include_school_breaks"`
+	// Version is the token of the stored series; the split sends it back as
+	// expected_version (ADR 0311).
+	Version string `json:"version"`
 }
 
 func toSeriesDetailResponse(series workforce.StaffShiftSeries) SeriesDetailResponse {
 	weekdays := make([]int, 0, len(series.Weekdays))
 	weekdays = append(weekdays, series.Weekdays...)
 	resp := SeriesDetailResponse{
-		ID:                  series.ID,
-		StaffID:             series.StaffID,
+		ID:                  ident.ID(series.ID),
+		StaffID:             ident.ID(series.StaffID),
 		Weekdays:            weekdays,
 		StartTime:           FormatWallClock(series.StartTime),
 		EndTime:             FormatWallClock(series.EndTime),
 		BreakMinutes:        series.BreakMinutes,
-		ShiftTypeID:         series.ShiftTypeID,
+		ShiftTypeID:         (*ident.ID)(series.ShiftTypeID),
 		Notes:               series.Notes,
-		CalendarPeriodID:    series.CalendarPeriodID,
+		CalendarPeriodID:    ident.ID(series.CalendarPeriodID),
 		WeekPattern:         series.WeekPattern,
 		ValidFrom:           series.ValidFrom,
 		IncludeSchoolBreaks: series.IncludeSchoolBreaks,
+		Version:             series.Version,
 	}
 	if series.ValidUntil != "" {
 		until := series.ValidUntil
@@ -164,7 +151,7 @@ func toSeriesDetailResponse(series workforce.StaffShiftSeries) SeriesDetailRespo
 // An absent key and an explicit null both mean "no end date" here; the split
 // handler additionally reads Present to tell "clear the end" from "keep the
 // predecessor's end".
-func parseOptionalValidUntil(raw optionalString) (string, error) {
+func parseOptionalValidUntil(raw OptionalString) (string, error) {
 	if raw.Value == nil || *raw.Value == "" {
 		return "", nil
 	}
@@ -201,14 +188,14 @@ func buildSeries(req SeriesRequest) (workforce.StaffShiftSeriesInput, error) {
 		return workforce.StaffShiftSeriesInput{}, err
 	}
 	return workforce.StaffShiftSeriesInput{
-		StaffID:             req.StaffID,
+		StaffID:             req.StaffID.Int64(),
 		Weekdays:            weekdays,
 		StartTime:           start,
 		EndTime:             end,
 		BreakMinutes:        req.BreakMinutes,
-		ShiftTypeID:         req.ShiftTypeID.Value,
+		ShiftTypeID:         (*int64)(req.ShiftTypeID.Value),
 		Notes:               notes,
-		CalendarPeriodID:    req.CalendarPeriodID,
+		CalendarPeriodID:    req.CalendarPeriodID.Int64(),
 		WeekPattern:         weekPattern,
 		ValidFrom:           validFrom,
 		ValidUntil:          validUntil,
@@ -236,12 +223,12 @@ func buildSplit(id int64, req SeriesRequest) (workforce.SplitStaffShiftSeries, e
 	return workforce.SplitStaffShiftSeries{
 		SeriesID:            id,
 		EffectiveDate:       effective,
-		OccurrenceShiftID:   int64(req.OccurrenceShiftID),
+		OccurrenceShiftID:   req.OccurrenceShiftID.Int64(),
 		Weekdays:            weekdays,
 		StartTime:           start,
 		EndTime:             end,
 		BreakMinutes:        req.BreakMinutes,
-		ShiftTypeID:         req.ShiftTypeID.Value,
+		ShiftTypeID:         (*int64)(req.ShiftTypeID.Value),
 		ShiftTypeIDSet:      req.ShiftTypeID.Present,
 		Notes:               req.Notes,
 		ValidUntil:          validUntil,
@@ -267,6 +254,7 @@ func (rs *Resource) createSeries(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	input.ActorStaffID = actor.StaffID
+	input.TraegerAccountID = actor.traegerAccountID()
 	input.WorkingTime = req.Confirmation()
 
 	result, err := rs.planning.CreateSeries(r.Context(), workforce.CreateStaffShiftSeries{StaffShiftSeriesInput: input})
@@ -283,21 +271,23 @@ func (rs *Resource) splitSeries(w http.ResponseWriter, r *http.Request) {
 		rs.invalid(w, r, err)
 		return
 	}
-	var req SeriesRequest
+	var req SeriesSplitRequest
 	if err := render.DecodeJSON(r.Body, &req); err != nil {
 		rs.invalid(w, r, err)
 		return
 	}
-	input, err := buildSplit(id, req)
+	input, err := buildSplit(id, req.SeriesRequest)
 	if err != nil {
 		rs.invalid(w, r, err)
 		return
 	}
+	input.ExpectedVersion = req.ExpectedVersion
 	actor, ok := rs.actor(w, r)
 	if !ok {
 		return
 	}
 	input.ActorStaffID = actor.StaffID
+	input.TraegerAccountID = actor.traegerAccountID()
 	input.WorkingTime = req.Confirmation()
 	result, err := rs.planning.SplitSeries(r.Context(), input)
 	if err != nil {

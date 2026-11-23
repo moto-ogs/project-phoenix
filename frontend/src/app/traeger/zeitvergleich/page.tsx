@@ -1,5 +1,7 @@
 "use client";
 
+import { bffFile } from "~/lib/bff-fetch";
+
 // Länger als gebucht (#4683, ADR 0156): je Schule, wie oft Kinder länger da
 // waren, als ihr Vertrag bucht. moto vergleicht die gebuchten Zeiten mit dem
 // Ein- und Auschecken (Soll und Ist, ADR 0139). Die Zahlen je Schule sieht
@@ -18,7 +20,10 @@ import {
 } from "react";
 import { useSession } from "next-auth/react";
 import { FreshPerTraeger } from "~/components/traeger/fresh-per-traeger";
-import { useFreshTraegerResource } from "~/components/traeger/use-traeger-resource";
+import {
+  useFreshTraegerResource,
+  useTraegerResource,
+} from "~/components/traeger/use-traeger-resource";
 import { CalendarOff, CircleCheck, CircleDashed } from "lucide-react";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
@@ -35,7 +40,10 @@ import {
   traegerExportScope,
 } from "~/components/traeger/traeger-list-export-menu";
 import { hasPermission } from "~/lib/auth-utils";
-import { downloadTraegerList } from "~/lib/traeger-list-export";
+import {
+  downloadTraegerList,
+  listExportQuery,
+} from "~/lib/traeger-list-export";
 import { calendarConcept } from "~/lib/concepts/calendar";
 import { careTimesConcept } from "~/lib/concepts/careTimes";
 import { childrenConcept } from "~/lib/concepts/children";
@@ -196,7 +204,7 @@ function schoolColumns(
           >
             {school.schoolName}
           </NavigationLink>
-          {school.dataFrom > to ? (
+          {school.dataFrom === null || school.dataFrom > to ? (
             <span className="block text-sm text-gray-500">
               Keine Check-ins mehr gespeichert
             </span>
@@ -463,27 +471,32 @@ function TraegerZeitvergleichContent() {
   const range = useMemo(() => monthWindow(month, today), [month, today]);
 
   const chosenSchool = schoolId === ALL_SCHOOLS ? undefined : schoolId;
+  const query = { ...range, schoolId: chosenSchool };
+  const key = traegerReportKeys.careTimeOverruns(
+    range.from,
+    range.to,
+    chosenSchool ?? null,
+    canSeeNames,
+  );
   // With names the read stands in the access log of every school it shows:
   // one read per opening and filter, none on reconnect.
+  const named = useFreshTraegerResource(
+    canSeeNames ? key : null,
+    () => fetchOverrunChildren(query),
+    "die Auswertung",
+  );
+  // Without names the figures name no child; the report logs their view at
+  // most every 15 minutes, so the shared cache shows a revisit at once.
+  const summary = useTraegerResource(
+    canSeeNames ? null : key,
+    () => fetchOverrunSummary(query),
+    "die Auswertung",
+  );
   const {
     data: evaluation,
     loading,
     error: loadError,
-  } = useFreshTraegerResource(
-    traegerReportKeys.careTimeOverruns(
-      range.from,
-      range.to,
-      chosenSchool ?? null,
-      canSeeNames,
-    ),
-    () => {
-      const query = { ...range, schoolId: chosenSchool };
-      return canSeeNames
-        ? fetchOverrunChildren(query)
-        : fetchOverrunSummary(query);
-    },
-    "die Auswertung",
-  );
+  } = canSeeNames ? named : summary;
   // The school choice keeps the schools of the last evaluation over all
   // schools of this Träger: reading it again for a chosen school would open
   // the names of every school once more, and that read stands in their
@@ -596,9 +609,9 @@ function TraegerZeitvergleichContent() {
             <TraegerListExportMenu
               download={(format) =>
                 downloadTraegerList(
-                  "/api/traeger/care-time-overruns/export",
-                  format,
-                  exportParams,
+                  bffFile("org", "GET /traeger/care-time-overruns/export", {
+                    query: listExportQuery(format, exportParams),
+                  }),
                 )
               }
               scope={exportScope}
@@ -628,9 +641,11 @@ function TraegerZeitvergleichContent() {
               <TraegerListExportMenu
                 download={(format) =>
                   downloadTraegerList(
-                    "/api/traeger/care-time-overruns/children/export",
-                    format,
-                    exportParams,
+                    bffFile(
+                      "org",
+                      "GET /traeger/care-time-overruns/children/export",
+                      { query: listExportQuery(format, exportParams) },
+                    ),
                   )
                 }
                 scope={exportScope}

@@ -2,6 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useSession } from "next-auth/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { roomKeys } from "~/lib/swr/rooms-keys";
 import RoomDetailPage from "./page";
 
 const {
@@ -17,7 +18,9 @@ const {
   exportPlanMock,
   showErrorMock,
   supervisionState,
+  suspendSearchParamsState,
   weekendOpenState,
+  tenantMutateMock,
 } = vi.hoisted(() => ({
   searchParams: new URLSearchParams(),
   pushMock: vi.fn(),
@@ -31,7 +34,9 @@ const {
   exportPlanMock: vi.fn(() => Promise.resolve()),
   showErrorMock: vi.fn(() => Promise.resolve()),
   supervisionState: { overviewEnabled: false },
+  suspendSearchParamsState: { value: false },
   weekendOpenState: { value: false },
+  tenantMutateMock: vi.fn(() => Promise.resolve()),
 }));
 
 vi.mock("next-auth/react", () => ({ useSession: vi.fn() }));
@@ -40,7 +45,10 @@ vi.mock("next/navigation", () => ({
   useParams: () => ({ id: "7" }),
   usePathname: () => "/rooms/7",
   useRouter: () => ({ replace: replaceMock }),
-  useSearchParams: () => searchParams,
+  useSearchParams: () => {
+    if (suspendSearchParamsState.value) throw new Promise(() => {});
+    return searchParams;
+  },
 }));
 
 vi.mock("~/lib/tenant-router", () => ({
@@ -88,28 +96,21 @@ const { removalImpact } = vi.hoisted(() => ({
       archived_activity_groups: 0,
       has_session_history: false,
     },
+    fingerprint: "vorschau-1",
   },
 }));
 
 vi.mock("~/lib/swr", () => ({
-  useSWRAuth: () => ({
-    data: undefined,
-    error: undefined,
-    isLoading: false,
-    isValidating: false,
-    mutate: () => Promise.resolve(undefined),
-  }),
-  // Der Löschdialog liest die Vorschau je Öffnen neu.
-  useFreshSWR: (key: string | null) => ({
+  // Der Löschdialog liest seine Vorschau aus dem gemeinsamen Cache.
+  useSWRAuth: (key: string | null) => ({
     data: key?.startsWith("room-removal-impact-") ? removalImpact : undefined,
     error: undefined,
     isLoading: false,
     isValidating: false,
-    fresh: true,
     mutate: () => Promise.resolve(undefined),
   }),
   useSWRSeedFrom: () => () => undefined,
-  useTenantMutate: () => vi.fn(() => Promise.resolve()),
+  useTenantMutate: () => tenantMutateMock,
   useTenantMutateMatching: () => vi.fn(() => Promise.resolve()),
 }));
 
@@ -124,11 +125,6 @@ vi.mock("~/lib/database/service-factory", () => ({
 vi.mock("~/lib/room-removal-api", () => ({
   fetchRoomRemovalImpact: () => Promise.resolve(removalImpact),
   removeRoom: serviceDeleteMock,
-}));
-
-vi.mock("~/lib/api", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/lib/api")>()),
-  roomService: { deleteRoom: serviceDeleteMock },
 }));
 
 vi.mock("~/components/rooms/room-detail-content", () => ({
@@ -228,8 +224,18 @@ vi.mock("~/components/ui/confirm-delete-modal", () => ({
 }));
 
 vi.mock("./page-skeleton", () => ({
-  RoomDetailLoadingPage: ({ backLabel }: { backLabel?: string }) => (
-    <div data-testid="room-loading" data-back-label={backLabel} />
+  RoomDetailLoadingPage: ({
+    backLabel,
+    info,
+  }: {
+    backLabel?: string;
+    info?: string;
+  }) => (
+    <div
+      data-testid="room-loading"
+      data-back-label={backLabel}
+      data-info={info}
+    />
   ),
 }));
 
@@ -263,6 +269,7 @@ describe("RoomDetailPage", () => {
     searchParams.delete("view");
     presenceModeState.mode = "detailed";
     supervisionState.overviewEnabled = false;
+    suspendSearchParamsState.value = false;
     weekendOpenState.value = false;
     useRoomDetailMock.mockReturnValue({
       room,
@@ -416,6 +423,35 @@ describe("RoomDetailPage", () => {
     expect(toastSuccessMock).toHaveBeenCalled();
   });
 
+  // The answer of the save carries the new version (ADR 0311): the next save
+  // of the same person sends it even when the reload after this one fails.
+  it("writes the saved room with its new version into the detail cache", async () => {
+    mockSession(["rooms:update"]);
+    serviceUpdateMock.mockResolvedValueOnce({
+      ...room,
+      name: "Neu",
+      isOccupied: false,
+      version: "v2",
+    });
+    render(<RoomDetailPage />);
+
+    fireEvent.click(screen.getByRole("tab", { name: "Stammdaten" }));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() => expect(toastSuccessMock).toHaveBeenCalled());
+    const write = (tenantMutateMock.mock.calls as unknown[][]).find(
+      ([, data]) => typeof data === "function",
+    );
+    expect(write?.[0]).toBe(roomKeys.detailKey("7"));
+    expect(write?.[2]).toEqual({ revalidate: false });
+    const update = write?.[1] as (current: unknown) => {
+      room: { name: string; version?: string; isOccupied: boolean };
+    };
+    const cached = update({ room: { ...room, version: "v1" }, history: [] });
+    expect(cached.room).toMatchObject({ name: "Neu", version: "v2" });
+    expect(cached.room.isOccupied).toBe(true);
+  });
+
   it("keeps the referrer when switching room tabs", () => {
     mockSession(["rooms:update"]);
     searchParams.set("from", "/database/rooms?groupBy=floor");
@@ -452,7 +488,7 @@ describe("RoomDetailPage", () => {
     // Die Vorschau lädt, bevor die Rückfrage den Raum entfernt (#6845).
     await waitFor(() => {
       fireEvent.click(screen.getByRole("button", { name: "Bestätigen" }));
-      expect(serviceDeleteMock).toHaveBeenCalledWith("7");
+      expect(serviceDeleteMock).toHaveBeenCalledWith("7", "vorschau-1");
     });
     await waitFor(() => {
       expect(pushMock).toHaveBeenCalledWith("/database/rooms?groupBy=floor");
@@ -519,6 +555,30 @@ describe("RoomDetailPage", () => {
     expect(screen.queryByTestId("room-stammdaten")).not.toBeInTheDocument();
   });
 
+  it("explains the room's occupancy, or only its record in binary mode", () => {
+    const { unmount } = render(<RoomDetailPage />);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Erklärung zu Gruppenraum Sonne" }),
+    );
+    expect(
+      screen.getByText(
+        "Hier siehst du, ob dieser Raum belegt ist. Unter „Kinder im Raum“ stehen die Kinder, die gerade dort sind. Wähle ein Kind, um seine Angaben zu öffnen.",
+      ),
+    ).toBeInTheDocument();
+    unmount();
+
+    presenceModeState.mode = "binary";
+    render(<RoomDetailPage />);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Erklärung zu Gruppenraum Sonne" }),
+    );
+    expect(
+      screen.getByText(
+        "Hier stehen die Angaben zu diesem Raum. Deine Schule erfasst nicht, welche Kinder in welchem Raum sind.",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("falls back to the room list for an external referrer", () => {
     searchParams.set("from", "//attacker.example");
     render(<RoomDetailPage />);
@@ -542,6 +602,20 @@ describe("RoomDetailPage", () => {
     expect(screen.getByTestId("room-loading")).toHaveAttribute(
       "data-back-label",
       "Zurück zu den Räumen der Datenverwaltung",
+    );
+    expect(screen.getByTestId("room-loading")).toHaveAttribute(
+      "data-info",
+      "Hier siehst du, ob dieser Raum belegt ist. Unter „Kinder im Raum“ stehen die Kinder, die gerade dort sind. Wähle ein Kind, um seine Angaben zu öffnen.",
+    );
+  });
+
+  it("explains room occupancy while the page is suspended", () => {
+    suspendSearchParamsState.value = true;
+    render(<RoomDetailPage />);
+
+    expect(screen.getByTestId("room-loading")).toHaveAttribute(
+      "data-info",
+      "Hier siehst du, ob dieser Raum belegt ist. Unter „Kinder im Raum“ stehen die Kinder, die gerade dort sind. Wähle ein Kind, um seine Angaben zu öffnen.",
     );
   });
 

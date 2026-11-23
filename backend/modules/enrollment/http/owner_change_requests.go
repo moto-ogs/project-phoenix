@@ -26,28 +26,29 @@ type (
 )
 
 // ChangeRequest is a change request with its snapshots decoded, because the
-// review UI compares them field by field.
+// review UI compares them field by field. It is no answer itself:
+// toChangeRequestResponse renders it, so it carries no json tags.
 type ChangeRequest struct {
-	ID        int64     `json:"id"`
-	TenantID  int64     `json:"tenant_id"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID        int64
+	TenantID  int64
+	CreatedAt time.Time
+	UpdatedAt time.Time
 
-	RequestID         int64          `json:"request_id"`
-	RequestChildID    *int64         `json:"request_child_id,omitempty"`
-	Origin            string         `json:"origin"`
-	Status            string         `json:"status"`
-	ParentNote        *string        `json:"parent_note,omitempty"`
-	AdminDecisionNote *string        `json:"admin_decision_note,omitempty"`
-	BaseSnapshot      map[string]any `json:"base_snapshot"`
-	ProposedSnapshot  map[string]any `json:"proposed_snapshot"`
-	Diff              map[string]any `json:"diff"`
+	RequestID         int64
+	RequestChildID    *int64
+	Origin            string
+	Status            string
+	ParentNote        *string
+	AdminDecisionNote *string
+	BaseSnapshot      *ChangeRequestSnapshot
+	ProposedSnapshot  *ChangeRequestSnapshot
+	Diff              *ChangeRequestDiff
 	// CareOfferingsEnabledAtCreation pins the form capability used to validate
 	// and apply this proposal. It is internal workflow state, not API data.
-	CareOfferingsEnabledAtCreation bool       `json:"-"`
-	CreatedByAccountID             *int64     `json:"created_by_account_id,omitempty"`
-	ReviewedByAccountID            *int64     `json:"reviewed_by_account_id,omitempty"`
-	ReviewedAt                     *time.Time `json:"reviewed_at,omitempty"`
+	CareOfferingsEnabledAtCreation bool
+	CreatedByAccountID             *int64
+	ReviewedByAccountID            *int64
+	ReviewedAt                     *time.Time
 }
 
 // DecisionInstant is when a terminal change request was decided. Older rows
@@ -132,7 +133,7 @@ func changeRequestValue(value *capability.ChangeRequest) (*ChangeRequest, error)
 	for _, field := range []struct {
 		name string
 		raw  json.RawMessage
-		into *map[string]any
+		into any
 	}{
 		{"BaseSnapshot", value.BaseSnapshot, &row.BaseSnapshot},
 		{"ProposedSnapshot", value.ProposedSnapshot, &row.ProposedSnapshot},

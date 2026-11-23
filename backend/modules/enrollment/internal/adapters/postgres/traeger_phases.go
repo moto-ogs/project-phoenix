@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/uptrace/bun"
@@ -13,6 +14,8 @@ import (
 	"github.com/uptrace/bun/driver/pgdriver"
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Träger phases (#4704, ADR 0195). Like the holiday periods their tables
@@ -144,14 +147,35 @@ func (s *TraegerPhaseStore) withSchools(ctx context.Context, db bun.IDB, organiz
 		if phase.Schools == nil {
 			phase.Schools = []enrollment.TraegerCatalogSchool{}
 		}
+		phase.Version = traegerPhaseVersion(phase)
 		phases = append(phases, phase)
 	}
 	return phases, nil
 }
 
+// traegerPhaseVersion is the token of what the office edits on a phase
+// (ADR 0311): the draft, all schools or the chosen ones, and whether it is
+// withdrawn. The schools live in their own table, whose rows no trigger of
+// the phase row follows, so the token is a fingerprint, not updated_at.
+func traegerPhaseVersion(phase enrollment.TraegerPhase) string {
+	selected := []int64{}
+	for _, school := range phase.Schools {
+		if school.Selected {
+			selected = append(selected, school.SchoolID.Int64())
+		}
+	}
+	slices.Sort(selected)
+	return readstate.Fingerprint(struct {
+		Draft      enrollment.TraegerPhaseFields
+		AllSchools bool
+		Selected   []int64
+		Withdrawn  bool
+	}{phase.Draft, phase.AllSchools, selected, phase.WithdrawnAt != nil})
+}
+
 func (row traegerPhaseRow) value() (enrollment.TraegerPhase, error) {
 	phase := enrollment.TraegerPhase{
-		ID: row.ID, OrganizationID: row.OrganizationID, AllSchools: row.AllSchools,
+		ID: ident.ID(row.ID), OrganizationID: ident.ID(row.OrganizationID), AllSchools: row.AllSchools,
 		ReleasedVersion: row.ReleasedVersion, WithdrawnAt: row.WithdrawnAt, UpdatedAt: row.UpdatedAt,
 	}
 	if err := json.Unmarshal(row.Draft, &phase.Draft); err != nil {
@@ -171,7 +195,7 @@ func traegerSchoolsByParent(rows []traegerCatalogSchoolRow) map[int64][]enrollme
 	byParent := make(map[int64][]enrollment.TraegerCatalogSchool)
 	for _, row := range rows {
 		school := enrollment.TraegerCatalogSchool{
-			SchoolID: row.SchoolID, Selected: row.Selected, AppliedVersion: row.AppliedVersion, RecordedAt: row.RecordedAt,
+			SchoolID: ident.ID(row.SchoolID), Selected: row.Selected, AppliedVersion: row.AppliedVersion, RecordedAt: row.RecordedAt,
 		}
 		if row.Outcome != nil {
 			school.Outcome = *row.Outcome

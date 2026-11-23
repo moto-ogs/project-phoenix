@@ -1,4 +1,4 @@
-import { apiErrorFromResponse, transportFetch } from "~/lib/api-error";
+import { bffFile } from "~/lib/bff-fetch";
 import {
   downloadBlob,
   filenameFromDisposition,
@@ -19,13 +19,15 @@ export async function exportStaffTimeTracking(
   format: TimeTrackingExportFormat,
   printTarget?: Window,
 ): Promise<void> {
-  const params = new URLSearchParams({ from, to, format });
-  const response = await transportFetch(
-    `/api/staff/${encodeURIComponent(staffId)}/time-tracking/export?${params.toString()}`,
+  const response = await bffFile(
+    "tenant",
+    "GET /api/staff/{id}/time-tracking/export",
+    {
+      params: { id: staffId },
+      query: { from, to, format },
+      errorMessage: "time tracking export failed",
+    },
   );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, "time tracking export failed");
-  }
   const blob = await response.blob();
   if (printTarget) {
     await openBlobForPrint(blob, printTarget);

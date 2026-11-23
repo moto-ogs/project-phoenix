@@ -30,15 +30,15 @@ import {
   availableCareOfferings,
   careOfferingAvailabilityReason,
 } from "~/lib/care-offering-availability";
-import {
-  type CareOfferingBookingStats,
-  fetchCareOfferingBookingStats,
-} from "~/lib/care-offering-booking-stats";
+import { fetchCareOfferingBookingStats } from "~/lib/care-offering-booking-stats";
+import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 import { materializeCareSelection } from "~/lib/care-offering-selection";
 import { announceChangeRequestsChanged } from "~/lib/change-requests-refresh";
 import { changeHistoryConcept } from "~/lib/concepts/changeHistory";
+import { formatDate } from "~/lib/date-helpers";
 import {
   type AdminOfferingAdjustment,
+  type AdminOfferingChoice,
   type AdminRequestChild,
   type AdminRequestChildOffering,
   listAdminChildOfferingAdjustments,
@@ -57,7 +57,10 @@ import { weekdayShortLabel, weekdayShortList } from "~/lib/weekdays";
 const logger = createLogger({ component: "ChildOfferingAdjustment" });
 
 const NO_OFFERINGS: CareOffering[] = [];
-const NO_STATS: Record<string, CareOfferingBookingStats> = {};
+const NO_STATS: Record<
+  string,
+  enrollmentContract.CareOfferingBookingStatsResponse
+> = {};
 const NO_ADJUSTMENTS: AdminOfferingAdjustment[] = [];
 
 /**
@@ -83,14 +86,21 @@ function BlockedOfferingRow({
   automaticDays,
   stats,
   onRemove,
+  extension,
 }: Readonly<{
   offering: CareOffering;
   gradeLevel: number | null | undefined;
   gradeLevelMax: number | null;
   booked: boolean;
   automaticDays: readonly string[];
-  stats: CareOfferingBookingStats | undefined;
+  stats: enrollmentContract.CareOfferingBookingStatsResponse | undefined;
   onRemove: () => void;
+  /** The end the office can extend (#7929); shown while the row stays booked. */
+  extension?: Readonly<{
+    end: { validUntil: string; extendsUntil: string };
+    extended: boolean;
+    onToggle: () => void;
+  }>;
 }>) {
   const reason = careOfferingAvailabilityReason(
     offering,
@@ -143,6 +153,9 @@ function BlockedOfferingRow({
           <OfferingOccupancyLine stats={stats} />
         </div>
       </label>
+      {booked && extension ? (
+        <BookingEnd inputId={`${inputId}-extend`} {...extension} />
+      ) : null}
     </OfferingRowShell>
   );
 }
@@ -200,8 +213,10 @@ export function ChildOfferingAdjustment({
     () => fetchCareOfferingBookingStats(phaseId),
     { keepPreviousData: false },
   );
-  const bookingStats: Record<string, CareOfferingBookingStats> =
-    statsRead.data ?? NO_STATS;
+  const bookingStats: Record<
+    string,
+    enrollmentContract.CareOfferingBookingStatsResponse
+  > = statsRead.data ?? NO_STATS;
   const historyRead = useSWRAuth(
     enrollmentKeys.offeringAdjustments(requestId, child.id),
     () => listAdminChildOfferingAdjustments(requestId, child.id),
@@ -215,6 +230,13 @@ export function ChildOfferingAdjustment({
   );
   const [days, setDays] = useState<Record<string, string[]>>(() =>
     initialManualOfferingDays(child.offerings),
+  );
+  // Befristete Angebote, die das Büro bis zum Ende der Phase verlängert
+  // (#7929).
+  const [extended, setExtended] = useState<Set<string>>(() => new Set());
+  const bookingEnds = useMemo(
+    () => currentBookingEnds(child.offerings),
+    [child.offerings],
   );
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
@@ -243,7 +265,7 @@ export function ChildOfferingAdjustment({
     useState(false);
   const [pendingWithdrawalInput, setPendingWithdrawalInput] = useState<{
     reason: string;
-    offerings: Array<{ offering_id: string; selected_days?: string[] }>;
+    offerings: AdminOfferingChoice[];
   } | null>(null);
   const [withdrawalCreated, setWithdrawalCreated] = useState(false);
   // Was die letzte Korrektur im Betreuungsplan bewirkt hat (#5102).
@@ -279,6 +301,16 @@ export function ChildOfferingAdjustment({
     setRosterImpact(null);
     errors.clear();
     setDays(initialManualOfferingDays(child.offerings));
+    setExtended(new Set());
+  };
+
+  const toggleExtended = (offeringID: string) => {
+    setExtended((current) => {
+      const next = new Set(current);
+      if (next.has(offeringID)) next.delete(offeringID);
+      else next.add(offeringID);
+      return next;
+    });
   };
 
   const preview = useMemo(() => {
@@ -367,7 +399,7 @@ export function ChildOfferingAdjustment({
   const saveAdjustment = async (
     input: {
       reason: string;
-      offerings: Array<{ offering_id: string; selected_days?: string[] }>;
+      offerings: AdminOfferingChoice[];
     },
     completeWithdrawalConfirmed: boolean,
   ) => {
@@ -377,7 +409,11 @@ export function ChildOfferingAdjustment({
     });
     setRosterImpact(mapRosterImpact(updated?.roster_impact));
     setWithdrawalCreated(completeWithdrawalConfirmed);
-    if (completeWithdrawalConfirmed) {
+    // Eine Verlängerung kann eine offene Abmeldung erledigen (#7929).
+    if (
+      completeWithdrawalConfirmed ||
+      input.offerings.some((offering) => offering.extend_to_phase_end)
+    ) {
       announceChangeRequestsChanged();
     }
     await finishSave();
@@ -401,6 +437,7 @@ export function ChildOfferingAdjustment({
         selected,
         days,
         child.offerings,
+        extended,
       ),
     };
     try {
@@ -516,6 +553,7 @@ export function ChildOfferingAdjustment({
                 const checked = selected.has(offering.id);
                 const autoDays = preview.automaticDays[offering.id] ?? [];
                 const inputId = `offering-adjustment-${child.id}-${offering.id}`;
+                const bookingEnd = bookingEnds[offering.id];
                 return (
                   <OfferingRowShell
                     key={offering.id}
@@ -584,6 +622,14 @@ export function ChildOfferingAdjustment({
                         ))}
                       </div>
                     ) : null}
+                    {checked && bookingEnd ? (
+                      <BookingEnd
+                        inputId={`${inputId}-extend`}
+                        end={bookingEnd}
+                        extended={extended.has(offering.id)}
+                        onToggle={() => toggleExtended(offering.id)}
+                      />
+                    ) : null}
                   </OfferingRowShell>
                 );
               })}
@@ -592,24 +638,34 @@ export function ChildOfferingAdjustment({
                   <SectionLabel as="p">
                     Für dieses Kind nicht wählbar
                   </SectionLabel>
-                  {blockedCatalog.map((offering) => (
-                    <BlockedOfferingRow
-                      key={offering.id}
-                      offering={offering}
-                      gradeLevel={child.target_grade_level}
-                      gradeLevelMax={gradeLevelMax}
-                      booked={selected.has(offering.id)}
-                      automaticDays={automaticDaysOnFile[offering.id] ?? []}
-                      stats={bookingStats[offering.id]}
-                      onRemove={() =>
-                        setSelected((prev) => {
-                          const next = new Set(prev);
-                          next.delete(offering.id);
-                          return next;
-                        })
-                      }
-                    />
-                  ))}
+                  {blockedCatalog.map((offering) => {
+                    const end = bookingEnds[offering.id];
+                    return (
+                      <BlockedOfferingRow
+                        key={offering.id}
+                        offering={offering}
+                        gradeLevel={child.target_grade_level}
+                        gradeLevelMax={gradeLevelMax}
+                        booked={selected.has(offering.id)}
+                        automaticDays={automaticDaysOnFile[offering.id] ?? []}
+                        stats={bookingStats[offering.id]}
+                        {...(end && {
+                          extension: {
+                            end,
+                            extended: extended.has(offering.id),
+                            onToggle: () => toggleExtended(offering.id),
+                          },
+                        })}
+                        onRemove={() =>
+                          setSelected((prev) => {
+                            const next = new Set(prev);
+                            next.delete(offering.id);
+                            return next;
+                          })
+                        }
+                      />
+                    );
+                  })}
                 </div>
               ) : null}
               {hasSelectedCareDays ? (
@@ -726,6 +782,63 @@ export function ChildOfferingAdjustment({
   );
 }
 
+/**
+ * A limited booking the office can extend (#7929): its last booked day and
+ * the choice to book the offering to `extends_until`, the end of the phase
+ * or the earlier care end. An end the backend offers no extension for stays
+ * in the booking display above; here it would read as a choice that is not
+ * there.
+ */
+function BookingEnd({
+  inputId,
+  end,
+  extended,
+  onToggle,
+}: Readonly<{
+  inputId: string;
+  end: { validUntil: string; extendsUntil: string };
+  extended: boolean;
+  onToggle: () => void;
+}>) {
+  return (
+    <div className="mt-3 space-y-2 pl-8">
+      <p className="text-xs text-gray-600">
+        Gebucht bis {formatDate(end.validUntil)}
+      </p>
+      <label
+        htmlFor={inputId}
+        className="flex cursor-pointer items-start gap-2 text-sm text-gray-900"
+      >
+        <Checkbox
+          id={inputId}
+          className="mt-0.5"
+          checked={extended}
+          onChange={onToggle}
+        />
+        Bis {formatDate(end.extendsUntil)} verlängern
+      </label>
+    </div>
+  );
+}
+
+/**
+ * The current bookings the office can extend, keyed by offering: the last
+ * booked day and the day an extension books to (`extends_until`).
+ */
+function currentBookingEnds(
+  offerings?: AdminRequestChildOffering[],
+): Record<string, { validUntil: string; extendsUntil: string }> {
+  const out: Record<string, { validUntil: string; extendsUntil: string }> = {};
+  for (const offering of offerings ?? []) {
+    if (!offering.valid_until || !offering.extends_until) continue;
+    out[offering.offering_id] = {
+      validUntil: offering.valid_until,
+      extendsUntil: offering.extends_until,
+    };
+  }
+  return out;
+}
+
 function initialManualOfferingIDs(
   offerings?: AdminRequestChildOffering[],
 ): Set<string> {
@@ -776,7 +889,8 @@ function adjustmentPayloadOfferings(
   selected: Set<string>,
   days: Record<string, string[]>,
   existingOfferings?: AdminRequestChildOffering[],
-): Array<{ offering_id: string; selected_days?: string[] }> {
+  extended: ReadonlySet<string> = new Set(),
+): AdminOfferingChoice[] {
   const payload = catalog
     .filter((offering) => selected.has(offering.id))
     .map((offering) => ({
@@ -785,6 +899,7 @@ function adjustmentPayloadOfferings(
         offering.days_of_week_mode === "parent_choice"
           ? (days[offering.id] ?? [])
           : undefined,
+      ...(extended.has(offering.id) && { extend_to_phase_end: true }),
     }));
   const catalogIDs = new Set(catalog.map((offering) => offering.id));
   for (const offering of existingOfferings ?? []) {
@@ -800,6 +915,7 @@ function adjustmentPayloadOfferings(
         offering.days_of_week_mode === "parent_choice"
           ? (days[offering.offering_id] ?? offering.selected_days ?? [])
           : undefined,
+      ...(extended.has(offering.offering_id) && { extend_to_phase_end: true }),
     });
   }
   return payload;

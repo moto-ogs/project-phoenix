@@ -7,70 +7,24 @@
  * Backend int64 ids arrive already stringified.
  */
 
-import type { MailOutcomeCounts } from "./email-delivery-status";
-import type { MessageAttachment } from "~/lib/message-attachments";
-import { ApiError, apiErrorFromText, transportFetch } from "~/lib/api-error";
+import {
+  knownMailOutcome,
+  type MailOutcome,
+  type MailOutcomeCounts,
+} from "./email-delivery-status";
+import { bffJson } from "~/lib/bff-fetch";
+import type * as messagesContract from "~/lib/contract/messages.generated";
 
 export type GroupTargetType = "group" | "class" | "activity_group";
 
-interface GroupThread {
-  id: string;
-  target_type: GroupTargetType;
-  /** Group or AG id, or the class name for a class. */
-  target_id: string;
-  target_label: string;
-  title: string;
-  closed_at?: string;
-  last_message_at?: string;
-  created_at: string;
-}
-
-/**
- * Who a group thread reached (#5200): the group, class or AG and how many
- * families received it. Parents' answers go to each child's team
- * conversation.
- */
-export interface GroupReaders {
-  target_type: GroupTargetType;
-  target_label: string;
-  recipient_count: number;
-}
-
-export interface GroupThreadSummary extends GroupThread {
-  last_message_body: string;
-  message_count: number;
-  family_count: number;
-  read_count: number;
-  readers?: GroupReaders;
-}
-
-interface GroupMessage {
-  client_message_id?: string;
-  id: string;
-  sender_name: string;
-  body: string;
-  created_at: string;
-  /** Fotos und Dateien der Nachricht (#6685). */
-  attachments?: readonly MessageAttachment[];
-}
-
-export interface GroupChild {
-  student_id: string;
-  first_name: string;
-  last_name: string;
-  school_class?: string;
-  reachable: boolean;
-  read: boolean;
-}
-
-export interface GroupThreadDetail {
-  thread: GroupThread;
-  messages: GroupMessage[];
-  children: GroupChild[];
-  family_count: number;
-  read_count: number;
-  readers?: GroupReaders;
-}
+/** A group thread with its lists; Go writes an empty list as null. */
+export type GroupThreadDetail = Omit<
+  messagesContract.GroupThreadDetailResponse,
+  "messages" | "children"
+> & {
+  messages: messagesContract.StaffGroupMessageResponse[];
+  children: messagesContract.GroupChildResponse[];
+};
 
 export interface GroupTarget {
   type: GroupTargetType;
@@ -78,67 +32,42 @@ export interface GroupTarget {
   label: string;
 }
 
-interface ApiResponse<T> {
-  data?: T;
+function withLists(
+  detail: messagesContract.GroupThreadDetailResponse,
+): GroupThreadDetail {
+  return {
+    ...detail,
+    messages: detail.messages ?? [],
+    children: detail.children ?? [],
+  };
 }
 
-async function request<T>(
-  url: string,
-  fallback: string,
-  init?: RequestInit,
-): Promise<T> {
-  const response = await transportFetch(url, init);
-  if (!response.ok) {
-    let text = "";
-    try {
-      text = await response.text();
-    } catch {
-      // Body unreadable: the status still classifies the error.
-    }
-    throw apiErrorFromText(fallback, response.status, text);
-  }
-  const result = (await response.json()) as ApiResponse<T>;
-  if (result.data === undefined) throw new ApiError(fallback, 500);
-  return result.data;
-}
-
-function post<T>(url: string, body: unknown, fallback: string): Promise<T> {
-  return request<T>(url, fallback, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+export function fetchGroupThreads(): Promise<
+  messagesContract.StaffGroupThreadSummaryResponse[]
+> {
+  return bffJson("tenant", "GET /api/messages/group-threads", {
+    errorMessage: "Gruppennachrichten konnten nicht geladen werden",
   });
-}
-
-const BASE = "/api/messages/group-threads";
-
-export function fetchGroupThreads(): Promise<GroupThreadSummary[]> {
-  return request<GroupThreadSummary[]>(
-    BASE,
-    "Gruppennachrichten konnten nicht geladen werden",
-  );
 }
 
 export function fetchGroupAudience(
   type: GroupTargetType,
   id: string,
-): Promise<GroupChild[]> {
-  const params = new URLSearchParams({ target_type: type, target_id: id });
-  return request<GroupChild[]>(
-    `${BASE}/audience?${params.toString()}`,
-    "Empfänger konnten nicht geladen werden",
-  );
+): Promise<messagesContract.GroupChildResponse[]> {
+  return bffJson("tenant", "GET /api/messages/group-threads/audience", {
+    query: { target_type: type, target_id: id },
+    errorMessage: "Empfänger konnten nicht geladen werden",
+  });
 }
 
-export function createGroupThread(input: {
+export async function createGroupThread(input: {
   client_message_id?: string;
   target: GroupTarget;
   title: string;
   body: string;
 }): Promise<GroupThreadDetail> {
-  return post<GroupThreadDetail>(
-    BASE,
-    {
+  const detail = await bffJson("tenant", "POST /api/messages/group-threads", {
+    body: {
       target_type: input.target.type,
       target_id: input.target.id,
       target_label: input.target.label,
@@ -146,54 +75,85 @@ export function createGroupThread(input: {
       body: input.body,
       client_message_id: input.client_message_id,
     },
-    "Gruppennachricht konnte nicht gesendet werden",
-  );
+    errorMessage: "Gruppennachricht konnte nicht gesendet werden",
+  });
+  return withLists(detail);
 }
 
-export function fetchGroupThread(id: string): Promise<GroupThreadDetail> {
-  return request<GroupThreadDetail>(
-    `${BASE}/${encodeURIComponent(id)}`,
-    "Gruppennachricht konnte nicht geladen werden",
+export async function fetchGroupThread(id: string): Promise<GroupThreadDetail> {
+  const detail = await bffJson(
+    "tenant",
+    "GET /api/messages/group-threads/{groupThreadId}",
+    {
+      params: { groupThreadId: id },
+      errorMessage: "Gruppennachricht konnte nicht geladen werden",
+    },
   );
+  return withLists(detail);
 }
 
 /**
  * The e-mails of each group message, counted by result (#7058), keyed by
- * message id. A message without a mail has no key.
+ * message id. A message without a mail has no key; an outcome this build does
+ * not know is not counted.
  */
 export async function fetchGroupThreadMails(
   id: string,
 ): Promise<Readonly<Record<string, MailOutcomeCounts>>> {
-  const data = await request<{ messages?: Record<string, MailOutcomeCounts> }>(
-    `${BASE}/${encodeURIComponent(id)}/mails`,
-    "Der Stand der E-Mails konnte nicht geladen werden",
+  const data = await bffJson(
+    "tenant",
+    "GET /api/messages/group-threads/{groupThreadId}/mails",
+    {
+      params: { groupThreadId: id },
+      errorMessage: "Der Stand der E-Mails konnte nicht geladen werden",
+    },
   );
-  return data.messages ?? {};
+  const mails: Record<string, MailOutcomeCounts> = {};
+  for (const [messageId, counts] of Object.entries(data.messages ?? {})) {
+    const known: Partial<Record<MailOutcome, number>> = {};
+    for (const [outcome, count] of Object.entries(counts ?? {})) {
+      const name = knownMailOutcome(outcome);
+      if (name) known[name] = count;
+    }
+    mails[messageId] = known;
+  }
+  return mails;
 }
 
-export function postGroupMessage(
+export async function postGroupMessage(
   id: string,
   body: string,
   clientMessageId?: string,
   attachmentIds?: readonly string[],
 ): Promise<GroupThreadDetail> {
-  return post<GroupThreadDetail>(
-    `${BASE}/${encodeURIComponent(id)}/messages`,
+  const detail = await bffJson(
+    "tenant",
+    "POST /api/messages/group-threads/{groupThreadId}/messages",
     {
-      body,
-      client_message_id: clientMessageId,
-      ...(attachmentIds?.length ? { attachment_ids: attachmentIds } : {}),
+      params: { groupThreadId: id },
+      body: {
+        body,
+        client_message_id: clientMessageId,
+        ...(attachmentIds?.length
+          ? { attachment_ids: [...attachmentIds] }
+          : {}),
+      },
+      errorMessage: "Nachricht konnte nicht gesendet werden",
     },
-    "Nachricht konnte nicht gesendet werden",
   );
+  return withLists(detail);
 }
 
-export function closeGroupThread(id: string): Promise<GroupThreadDetail> {
-  return post<GroupThreadDetail>(
-    `${BASE}/${encodeURIComponent(id)}/close`,
-    {},
-    "Gruppennachricht konnte nicht geschlossen werden",
+export async function closeGroupThread(id: string): Promise<GroupThreadDetail> {
+  const detail = await bffJson(
+    "tenant",
+    "POST /api/messages/group-threads/{groupThreadId}/close",
+    {
+      params: { groupThreadId: id },
+      errorMessage: "Gruppennachricht konnte nicht geschlossen werden",
+    },
   );
+  return withLists(detail);
 }
 
 /** "3 von 5 Familien gelesen". */
@@ -205,7 +165,9 @@ export function familyReadLabel(read: number, families: number): string {
  * „Ging an: Gruppe Bären (12 Familien).“ — where a group thread went (#5200). The
  * target label already names its kind („Gruppe“, „Klasse“, „AG“).
  */
-export function groupRecipientsLabel(readers: GroupReaders): string {
+export function groupRecipientsLabel(
+  readers: messagesContract.GroupReadersResponse,
+): string {
   const families = `${readers.recipient_count} ${readers.recipient_count === 1 ? "Familie" : "Familien"}`;
   return `Ging an: ${readers.target_label} (${families}).`;
 }

@@ -14,6 +14,7 @@ import (
 	planning "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 	"github.com/stretchr/testify/assert"
@@ -102,6 +103,15 @@ func (e *seriesTestEnv) inTx(t *testing.T, fn func(ctx context.Context) error) {
 	require.NoError(t, testpkg.WithTenantTx(t, context.Background(), e.db, e.scope.TenantID, func(txCtx context.Context, _ bun.Tx) error {
 		return fn(txCtx)
 	}))
+}
+
+// versionIn is the version of the stored series a planner reads, read in the
+// transaction of the write that sends it back (ADR 0311).
+func (e *seriesTestEnv) versionIn(ctx context.Context, t *testing.T, seriesID int64) string {
+	t.Helper()
+	series, err := e.series.GetSeries(ctx, seriesID)
+	require.NoError(t, err)
+	return readstate.Of(series.UpdatedAt)
 }
 
 func (e *seriesTestEnv) inTxExpectErr(t *testing.T, fn func(ctx context.Context) error) error {
@@ -282,7 +292,7 @@ func TestStaffShiftSeries_SplitOutsideSegmentRejected(t *testing.T) {
 	})
 	err := env.inTxExpectErr(t, func(ctx context.Context) error {
 		_, err := env.series.SplitSeries(ctx, planning.SplitSeriesInput{
-			SeriesID:      series.ID,
+			SeriesID: series.ID, ExpectedVersion: env.versionIn(ctx, t, series.ID),
 			EffectiveDate: today.AddDays(5),
 			StartTime:     seriesClock(t, "12:00"),
 			EndTime:       seriesClock(t, "13:00"),
@@ -423,7 +433,7 @@ func TestStaffShiftSeries_SplitTodayUpdatesOccurrenceAndReplansTomorrow(t *testi
 	env.inTx(t, func(ctx context.Context) error {
 		var err error
 		result, err = env.series.SplitSeries(ctx, planning.SplitSeriesInput{
-			SeriesID:          series.ID,
+			SeriesID: series.ID, ExpectedVersion: env.versionIn(ctx, t, series.ID),
 			EffectiveDate:     today,
 			OccurrenceShiftID: todayShift.ID,
 			StartTime:         seriesClock(t, "09:00"),
@@ -457,7 +467,7 @@ func TestStaffShiftSeries_SplitTodayUpdatesOccurrenceAndReplansTomorrow(t *testi
 	env.inTx(t, func(ctx context.Context) error {
 		var err error
 		secondResult, err = env.series.SplitSeries(ctx, planning.SplitSeriesInput{
-			SeriesID:          result.Series.ID,
+			SeriesID: result.Series.ID, ExpectedVersion: env.versionIn(ctx, t, result.Series.ID),
 			EffectiveDate:     today,
 			OccurrenceShiftID: todayShift.ID,
 			StartTime:         seriesClock(t, "10:00"),
@@ -473,6 +483,54 @@ func TestStaffShiftSeries_SplitTodayUpdatesOccurrenceAndReplansTomorrow(t *testi
 	require.NotNil(t, todayRows[0].SeriesID)
 	assert.Equal(t, secondResult.Series.ID, *todayRows[0].SeriesID)
 	assert.Equal(t, "10:00", calendar.NormalizeWallClock(todayRows[0].StartTime).Format("15:04"))
+}
+
+// A same-day split by the Träger-Büro (#7818) changes today's occurrence of a
+// staff series in place: the occurrence keeps its staff author, is marked as
+// last changed by the Träger, and no longer names the staff member who edited
+// it before.
+func TestStaffShiftSeries_TraegerSplitTodayClearsTheLastStaffEditor(t *testing.T) {
+	t.Parallel()
+
+	env := setupSeriesTest(t)
+	today := calendar.NewDate(2026, 8, 24)
+	periodID := env.createPeriod(t, today.AddDays(-7), today.AddDays(14), 1, nil)
+	series := env.buildSeries(t, periodID, today.AddDays(-7), nil, planning.WeekPatternEvery)
+	env.inTx(t, func(ctx context.Context) error {
+		_, err := env.series.CreateSeries(ctx, series)
+		return err
+	})
+
+	seriesID := series.ID
+	occurrenceDate := calendar.Date(today)
+	editor := env.staff.ID
+	todayShift := &workforce.ShiftRecord{
+		StaffID: env.staff.ID, Date: occurrenceDate, StartTime: series.StartTime, EndTime: series.EndTime,
+		BreakMinutes: series.BreakMinutes, SeriesID: &seriesID, SeriesOccurrenceDate: &occurrenceDate,
+		CreatedBy: env.staff.ID, UpdatedBy: &editor,
+	}
+	todayShift.TenantID = env.scope.TenantID
+	env.inTx(t, func(ctx context.Context) error {
+		return env.shiftRows.Create(ctx, todayShift)
+	})
+
+	traegerAccount := testpkg.CreateTestAccount(t, env.db, "traeger-buero-split").ID
+	env.inTx(t, func(ctx context.Context) error {
+		_, err := env.series.SplitSeries(ctx, planning.SplitSeriesInput{
+			SeriesID: series.ID, ExpectedVersion: env.versionIn(ctx, t, series.ID), EffectiveDate: today, OccurrenceShiftID: todayShift.ID,
+			StartTime: seriesClock(t, "09:00"), EndTime: seriesClock(t, "15:00"), BreakMinutes: 30,
+			TraegerAccountID: traegerAccount,
+		})
+		return err
+	})
+
+	todayRows := env.shiftsInRange(t, today, today)
+	require.Len(t, todayRows, 1)
+	assert.Equal(t, todayShift.ID, todayRows[0].ID)
+	assert.Equal(t, "09:00", calendar.NormalizeWallClock(todayRows[0].StartTime).Format("15:04"))
+	assert.Equal(t, env.staff.ID, todayRows[0].CreatedBy, "the occurrence keeps its staff author")
+	assert.True(t, todayRows[0].PlannedByTraeger, "the occurrence is marked as last changed by the Träger")
+	assert.Nil(t, todayRows[0].UpdatedBy, "no earlier staff editor stays named after the Träger-Büro's change")
 }
 
 func TestStaffShiftSeries_MoveConsumesOriginalDateBeforeRematerialization(t *testing.T) {
@@ -535,7 +593,7 @@ func TestStaffShiftSeries_MoveConsumesOriginalDateBeforeRematerialization(t *tes
 	// vacated Monday must prevent that original occurrence from coming back.
 	env.inTx(t, func(ctx context.Context) error {
 		_, err := env.series.SplitSeries(ctx, planning.SplitSeriesInput{
-			SeriesID:      series.ID,
+			SeriesID: series.ID, ExpectedVersion: env.versionIn(ctx, t, series.ID),
 			EffectiveDate: originalDate,
 			StartTime:     series.StartTime,
 			EndTime:       series.EndTime,
@@ -632,7 +690,7 @@ func TestStaffShiftSeries_RepeatedMoveKeepsOriginalOccurrenceIdentity(t *testing
 	env.inTx(t, func(ctx context.Context) error {
 		var err error
 		splitResult, err = env.series.SplitSeries(ctx, planning.SplitSeriesInput{
-			SeriesID:      series.ID,
+			SeriesID: series.ID, ExpectedVersion: env.versionIn(ctx, t, series.ID),
 			EffectiveDate: originalMonday,
 			StartTime:     series.StartTime,
 			EndTime:       series.EndTime,
@@ -696,7 +754,7 @@ func TestStaffShiftSeries_SplitPreservesDeviationsOnSuccessor(t *testing.T) {
 		// Weekdays and WeekPattern stay nil: the successor must inherit them
 		// from the predecessor (the UI edits only times here).
 		result, err = env.series.SplitSeries(ctx, planning.SplitSeriesInput{
-			SeriesID:      series.ID,
+			SeriesID: series.ID, ExpectedVersion: env.versionIn(ctx, t, series.ID),
 			EffectiveDate: effective,
 			StartTime:     seriesClock(t, "12:00"),
 			EndTime:       seriesClock(t, "13:00"),
@@ -879,7 +937,7 @@ func TestStaffShiftSeries_SplitAtFirstOccurrence(t *testing.T) {
 	env.inTx(t, func(ctx context.Context) error {
 		var err error
 		result, err = env.series.SplitSeries(ctx, planning.SplitSeriesInput{
-			SeriesID:      series.ID,
+			SeriesID: series.ID, ExpectedVersion: env.versionIn(ctx, t, series.ID),
 			EffectiveDate: validFrom,
 			StartTime:     seriesClock(t, "12:00"),
 			EndTime:       seriesClock(t, "13:00"),

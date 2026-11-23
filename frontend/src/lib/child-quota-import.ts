@@ -1,15 +1,4 @@
-/**
- * Kinderkontingent in der Import-Vorschau (#3571). Fehlt bei einer Schule
- * ohne Kinderkontingent. Die Namen der Plätze folgen den Details der
- * 409-Ablehnung `students.child_quota_reached`.
- */
-export interface ImportChildQuota {
-  booked_places: number;
-  occupied_places: number;
-  requested_places: number;
-  free_places: number;
-  fits: boolean;
-}
+import type * as importContract from "~/lib/contract/import.generated";
 
 function childCount(count: number): string {
   return count === 1 ? "1 Kind" : `${count} Kinder`;
@@ -27,7 +16,7 @@ function freeSentence(free: number, fits: boolean): string {
  * nicht. Ein Import, der nur Kinder ändert, braucht keinen Hinweis.
  */
 export function importChildQuotaNotice(
-  quota: ImportChildQuota | null | undefined,
+  quota: importContract.ChildQuotaPreview | null | undefined,
 ): { type: "info" | "error"; message: string } | null {
   if (!quota || quota.requested_places === 0) return null;
   const added = `Der Import würde ${childCount(quota.requested_places)} hinzufügen.`;

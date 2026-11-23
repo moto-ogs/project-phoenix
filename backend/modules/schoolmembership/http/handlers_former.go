@@ -6,29 +6,29 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
-// employmentFormer is the value of ?employment= that lists former
-// employments instead of the current staff (#3403).
-const employmentFormer = "former"
-
-// formerStaffResponse is one former employment in the Ehemalige filter of
+// FormerStaffResponse is one former employment in the Ehemalige filter of
 // the staff list. The period is the membership's time in moto, from the day
 // it was created to the day the person left, the same period the invitation
 // dialog names (#3402).
-type formerStaffResponse struct {
-	ID        int64         `json:"id,string"`
+type FormerStaffResponse struct {
+	ID        ident.ID      `json:"id"`
 	FirstName string        `json:"first_name"`
 	LastName  string        `json:"last_name"`
 	StartedOn calendar.Date `json:"started_on"`
 	EndedOn   calendar.Date `json:"ended_on"`
 }
 
-// listFormerStaff answers ?employment=former: former employments stay
-// findable where staff is searched (ADR 0021, decision 7). The read takes
-// retired memberships along on purpose and stays inside the caller's school
-// transaction; the name filters apply as on the current list.
-func (rs *Resource) listFormerStaff(w http.ResponseWriter, r *http.Request, filters listStaffFilters) {
+// listFormerStaff answers GET /former: former employments stay findable
+// where staff is searched (ADR 0021, decision 7). The read takes retired
+// memberships along on purpose and stays inside the caller's school
+// transaction; the filters apply as on the current list. It was the query
+// ?employment=former on the list until #7563: one route answers one shape,
+// so the contract can name it.
+func (rs *Resource) listFormerStaff(w http.ResponseWriter, r *http.Request) {
+	filters := parseListStaffFilters(r)
 	ctx := r.Context()
 	members, err := rs.membership.ListStaff(ctx, schoolmembership.StaffFilter{
 		IncludeDeleted: true, IncludeInactiveExternalCaregiverRecords: true, MembershipOnly: true,
@@ -57,7 +57,7 @@ func (rs *Resource) listFormerStaff(w http.ResponseWriter, r *http.Request, filt
 		}
 	}
 
-	responses := make([]formerStaffResponse, 0, len(former))
+	responses := make([]FormerStaffResponse, 0, len(former))
 	for _, staff := range former {
 		person := persons[staff.PersonID]
 		if person == nil ||
@@ -71,8 +71,8 @@ func (rs *Resource) listFormerStaff(w http.ResponseWriter, r *http.Request, filt
 				continue
 			}
 		}
-		responses = append(responses, formerStaffResponse{
-			ID: staff.ID, FirstName: person.FirstName, LastName: person.LastName,
+		responses = append(responses, FormerStaffResponse{
+			ID: ident.ID(staff.ID), FirstName: person.FirstName, LastName: person.LastName,
 			StartedOn: calendar.DateFromTime(staff.CreatedAt), EndedOn: calendar.DateFromTime(*staff.DeletedAt),
 		})
 	}

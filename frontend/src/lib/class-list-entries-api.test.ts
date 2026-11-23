@@ -11,6 +11,13 @@ import {
   updateClassListEntry,
 } from "./class-list-entries-api";
 
+import { plainFetch } from "~/test/mocks/plain-session-fetch";
+
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 const mockFetch = vi.fn();
 
 function jsonResponse(body: unknown, ok = true, status = 200) {
@@ -33,7 +40,7 @@ const wireEntry = {
 
 beforeEach(() => {
   mockFetch.mockReset();
-  vi.stubGlobal("fetch", mockFetch);
+  vi.stubGlobal("fetch", vi.fn(plainFetch(mockFetch)));
 });
 
 describe("fetchClassListEntries", () => {
@@ -44,7 +51,7 @@ describe("fetchClassListEntries", () => {
 
     expect(mockFetch).toHaveBeenCalledWith(
       "/api/class-list-entries",
-      expect.objectContaining({ method: "GET", credentials: "include" }),
+      expect.objectContaining({ method: "GET" }),
     );
     expect(entries).toEqual([
       {
@@ -58,13 +65,16 @@ describe("fetchClassListEntries", () => {
     ]);
   });
 
-  it("tolerates a missing data array and missing match hints", async () => {
+  it("rejects an answer without data and reads missing match hints as none", async () => {
     mockFetch.mockResolvedValueOnce(jsonResponse({}));
-    expect(await fetchClassListEntries()).toEqual([]);
+    await expect(fetchClassListEntries()).rejects.toMatchObject({
+      status: 502,
+      code: "general.unavailable",
+    });
 
     mockFetch.mockResolvedValueOnce(
       jsonResponse({
-        data: [{ ...wireEntry, matching_student_ids: undefined }],
+        data: [{ ...wireEntry, matching_student_ids: null }],
       }),
     );
     const entries = await fetchClassListEntries();
@@ -76,23 +86,30 @@ describe("fetchClassListEntries", () => {
       jsonResponse({ detail: "Ein Eintrag existiert bereits" }, false, 400),
     );
     await expect(fetchClassListEntries()).rejects.toMatchObject({
-      message: "API error (400)",
+      message: "Klassenlisteneintrag: Anfrage fehlgeschlagen",
+      status: 400,
       detail: "Ein Eintrag existiert bereits",
     });
   });
 
-  it("falls back to the status code without a detail", async () => {
+  it("keeps the operation message and status without a detail", async () => {
     mockFetch.mockResolvedValueOnce(
       jsonResponse({ message: "Nicht gefunden" }, false, 404),
     );
-    await expect(fetchClassListEntries()).rejects.toThrow("API error (404)");
+    await expect(fetchClassListEntries()).rejects.toMatchObject({
+      message: "Klassenlisteneintrag: Anfrage fehlgeschlagen",
+      status: 404,
+    });
 
     mockFetch.mockResolvedValueOnce({
       ok: false,
       status: 500,
       json: () => Promise.reject(new Error("no body")),
     } as unknown as Response);
-    await expect(fetchClassListEntries()).rejects.toThrow("API error (500)");
+    await expect(fetchClassListEntries()).rejects.toMatchObject({
+      message: "Klassenlisteneintrag: Anfrage fehlgeschlagen",
+      status: 500,
+    });
   });
 
   it("keeps code and request ID for the shared error path", async () => {

@@ -17,10 +17,10 @@ vi.mock("./logger", () => ({
 }));
 
 import { timetableService } from "./timetable-api";
-import type {
-  BackendEnrichedInstance,
-  BackendTimetableTemplate,
-} from "./timetable-types";
+import {
+  buildEnrichedInstance,
+  buildTemplateResponse,
+} from "~/test/fixtures/timetable";
 
 function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
   return new Response(JSON.stringify(body), {
@@ -30,79 +30,74 @@ function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
   });
 }
 
-const backendInstance: BackendEnrichedInstance = {
-  id: 42,
+const backendInstance = buildEnrichedInstance({
+  id: "42",
   date: "2026-05-04",
   start_time: "12:00",
   end_time: "13:00",
   title: "Mensa",
-  status: "planned",
-  is_spontaneous: false,
-  is_live: false,
-  activity_group_id: 7,
-  activity_type: "care",
-  room_id: 3,
+  activity_group_id: "7",
+  room_id: "3",
   room_name: "Mensa",
   staff: [
     {
-      staff_id: 11,
+      staff_id: "11",
       is_primary: true,
       is_absent: false,
       is_substitute: false,
+      is_sick_absence: false,
     },
   ],
   students: [
     {
-      student_id: 21,
+      student_id: "21",
       status: "expected",
       note: "kommt spaeter",
+      care_day_status: "unknown",
     },
   ],
   staff_count: 1,
-  absent_staff_count: 0,
   expected_students_count: 1,
-  present_students_count: 0,
   required_staff_count: 1,
   assigned_staff_count: 1,
   conflict_warnings: [
     {
       kind: "staff",
-      resource_id: 3,
+      resource_id: "3",
       message: "Personal doppelt eingeplant",
       can_override: true,
     },
   ],
-};
+});
 
-const backendTemplate: BackendTimetableTemplate = {
-  id: 7,
+const backendTemplate = buildTemplateResponse({
+  id: "7",
   name: "Yoga",
   type: "activity",
-  category_id: 2,
+  category_id: "2",
   category_name: "AG",
-  room_id: 3,
+  room_id: "3",
   room_name: "Turnhalle",
   is_open: true,
   max_participants: 12,
-  target_group_type: "none",
   enrollment_count: 8,
   supervisor_count: 1,
   required_staff_count: 1,
   assigned_staff_count: 1,
-  student_ids: [21],
-  staff_ids: [11],
-  primary_staff_id: 11,
+  student_ids: ["21"],
+  staff_ids: ["11"],
+  primary_staff_id: "11",
   schedules: [
     {
-      id: 9,
+      id: "9",
       weekday: 1,
       start_time: "14:00",
       end_time: "15:00",
       week_pattern: 0,
-      calendar_period_id: 5,
+      calendar_period_id: "5",
     },
   ],
-};
+});
 
 describe("timetableService", () => {
   let fetchMock: ReturnType<typeof vi.fn>;
@@ -151,7 +146,6 @@ describe("timetableService", () => {
       "/api/timetable/instances?from=2026-05-04&to=2026-05-08",
       expect.objectContaining({
         method: "GET",
-        credentials: "include",
       }),
     );
     expect(result.instances[0]).toMatchObject({
@@ -176,9 +170,9 @@ describe("timetableService", () => {
       title: "Mensa",
       start_time: "12:00",
       end_time: "13:00",
-      room_id: 3,
-      staff_ids: [11],
-      student_ids: [21],
+      room_id: "3",
+      staff_ids: ["11"],
+      student_ids: ["21"],
     };
 
     await expect(
@@ -187,7 +181,9 @@ describe("timetableService", () => {
       id: "42",
       title: "Mensa",
     });
-    await expect(timetableService.update("42", body)).resolves.toMatchObject({
+    await expect(
+      timetableService.update("42", { ...body, expected_version: "v1" }),
+    ).resolves.toMatchObject({
       id: "42",
     });
     await expect(
@@ -210,7 +206,7 @@ describe("timetableService", () => {
       "/api/timetable/instances/42",
       expect.objectContaining({
         method: "PUT",
-        body: JSON.stringify(body),
+        body: JSON.stringify({ ...body, expected_version: "v1" }),
       }),
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
@@ -225,9 +221,9 @@ describe("timetableService", () => {
       .mockResolvedValueOnce(
         jsonResponse({
           data: {
-            template_id: 7,
-            timeframe_id: 4,
-            schedule_ids: [9, 10],
+            template_id: "7",
+            timeframe_id: "4",
+            schedule_ids: ["9", "10"],
             instances_created: 2,
             materialized_from: "2026-05-04",
             materialized_to: "2026-05-08",
@@ -246,9 +242,9 @@ describe("timetableService", () => {
       weekdays: [1],
       start_time: "14:00",
       end_time: "15:00",
-      room_id: 3,
-      category_id: 2,
-      calendar_period_id: 5,
+      room_id: "3",
+      category_id: "2",
+      calendar_period_id: "5",
     };
 
     await expect(timetableService.createTemplate(createBody)).resolves.toEqual({
@@ -263,7 +259,10 @@ describe("timetableService", () => {
       templates: [{ id: "7", schedules: [{ calendarPeriodId: "5" }] }],
     });
     await expect(
-      timetableService.updateTemplate("7", createBody),
+      timetableService.updateTemplate("7", {
+        ...createBody,
+        expected_version: "v7",
+      }),
     ).resolves.toMatchObject({ id: "7", primaryStaffId: "11" });
     await expect(
       timetableService.archiveTemplate("7"),
@@ -280,10 +279,10 @@ describe("timetableService", () => {
     fetchMock.mockResolvedValueOnce(
       jsonResponse({
         data: {
-          template_id: 7,
-          timeframe_id: 4,
-          schedule_ids: [9, 10],
-          linked_instance_id: 42,
+          template_id: "7",
+          timeframe_id: "4",
+          schedule_ids: ["9", "10"],
+          linked_instance_id: "42",
         },
       }),
     );
@@ -293,11 +292,12 @@ describe("timetableService", () => {
       weekdays: [1],
       start_time: "14:00",
       end_time: "15:00",
-      room_id: 3,
-      category_id: 2,
-      calendar_period_id: 5,
+      room_id: "3",
+      category_id: "2",
+      calendar_period_id: "5",
       start_date: "2026-05-04",
       instance_notes: "Heute draußen",
+      expected_version: "v42",
     };
 
     await expect(
@@ -326,10 +326,11 @@ describe("timetableService", () => {
       weekdays: [1],
       start_time: "14:00",
       end_time: "15:00",
-      room_id: 3,
-      category_id: 2,
-      calendar_period_id: 5,
+      room_id: "3",
+      category_id: "2",
+      calendar_period_id: "5",
       series_roster_from: "2026-06-01",
+      expected_version: "v7",
     };
 
     await timetableService.updateTemplate("7", body);
@@ -352,10 +353,11 @@ describe("timetableService", () => {
       weekdays: [1],
       start_time: "14:00",
       end_time: "15:00",
-      room_id: 3,
-      category_id: 2,
-      calendar_period_id: 5,
+      room_id: "3",
+      category_id: "2",
+      calendar_period_id: "5",
       start_date: "2026-08-12",
+      expected_version: "v7",
     };
 
     await timetableService.updateTemplate("7", body);
@@ -375,9 +377,9 @@ describe("timetableService", () => {
       .mockResolvedValueOnce(
         jsonResponse({
           data: {
-            old_template_id: 7,
-            new_template_id: 8,
-            schedule_ids: [11, 12],
+            old_template_id: "7",
+            new_template_id: "8",
+            schedule_ids: ["11", "12"],
             deleted_instances: 4,
             instances_created: 6,
           },
@@ -386,7 +388,7 @@ describe("timetableService", () => {
       .mockResolvedValueOnce(
         jsonResponse({
           data: {
-            template_id: 7,
+            template_id: "7",
             effective_date: "2026-06-01",
             deleted_instances: 4,
           },
@@ -407,11 +409,12 @@ describe("timetableService", () => {
       weekdays: [1],
       start_time: "15:00",
       end_time: "16:00",
-      room_id: 3,
-      category_id: 2,
+      room_id: "3",
+      category_id: "2",
       effective_date: "2026-06-01",
       materialize_from: "2026-06-01",
       materialize_to: "2026-06-07",
+      expected_version: "v7",
     };
 
     await expect(
@@ -436,7 +439,7 @@ describe("timetableService", () => {
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
       "/api/timetable/templates/7?period_id=5",
-      expect.objectContaining({ method: "GET", credentials: "include" }),
+      expect.objectContaining({ method: "GET" }),
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
@@ -463,16 +466,16 @@ describe("timetableService", () => {
           data: {
             offerings: [
               {
-                id: 12,
+                id: "12",
                 name: "Frühbetreuung",
-                phase_id: 3,
+                phase_id: "3",
                 phase_name: "Schuljahr 2026/27",
                 total_count: 18,
                 grade_counts: { "0": 2, "1": 9, "2": 7 },
                 sourced_templates: [
-                  { id: 7, name: "Frühbetreuung Jg. 1", grade_levels: [1] },
+                  { id: "7", name: "Frühbetreuung Jg. 1", grade_levels: [1] },
                 ],
-                legacy_linked_template_id: 7,
+                legacy_linked_template_id: "7",
               },
             ],
           },
@@ -504,13 +507,13 @@ describe("timetableService", () => {
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
       "/api/timetable/offering-sources?calendar_period_id=5",
-      expect.objectContaining({ method: "GET", credentials: "include" }),
+      expect.objectContaining({ method: "GET" }),
     );
     // No period → no query string at all, not a dangling "?".
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
       "/api/timetable/offering-sources",
-      expect.objectContaining({ method: "GET", credentials: "include" }),
+      expect.objectContaining({ method: "GET" }),
     );
   });
 
@@ -525,9 +528,9 @@ describe("timetableService", () => {
             warnings: [
               {
                 kind: "staff",
-                resource_id: 3,
+                resource_id: "3",
                 message: "Personal doppelt eingeplant",
-                conflicting_instance_id: 42,
+                conflicting_instance_id: "42",
                 conflicting_title: "Mensa",
               },
             ],
@@ -572,7 +575,7 @@ describe("timetableService", () => {
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
       "/api/timetable/conflicts?date=2026-05-04&start_time=12%3A00&end_time=13%3A00&room_id=3&staff_ids=11%2C12&student_ids=21&exclude_instance_id=42",
-      expect.objectContaining({ method: "GET", credentials: "include" }),
+      expect.objectContaining({ method: "GET" }),
     );
 
     // Optional params (and empty arrays) are omitted entirely.
@@ -598,7 +601,7 @@ describe("timetableService", () => {
           coverage_warning_count: 17,
           coverage_warnings: [
             {
-              staff_id: 11,
+              staff_id: "11",
               staff_name: "Ada Staff",
               date: "2026-05-06",
               start_time: "12:00",
@@ -645,15 +648,14 @@ describe("timetableService", () => {
       "/api/timetable/shift-coverage",
       expect.objectContaining({
         method: "POST",
-        credentials: "include",
         signal: controller.signal,
         body: JSON.stringify({
           dates: ["2026-05-04", "2026-05-06"],
           start_time: "12:00",
           end_time: "13:00",
-          staff_ids: [11, 12],
-          replan_activity_group_id: 7,
-          calendar_period_id: 5,
+          staff_ids: ["11", "12"],
+          replan_activity_group_id: "7",
+          calendar_period_id: "5",
           week_pattern: 2,
         }),
       }),
@@ -665,9 +667,9 @@ describe("timetableService", () => {
       .mockResolvedValueOnce(
         jsonResponse({
           data: {
-            instance_id: 42,
+            instance_id: "42",
             status: "active",
-            active_group_id: 99,
+            active_group_id: "99",
             started_at: "2026-05-04T12:00:00Z",
             warnings: [],
           },
@@ -676,7 +678,7 @@ describe("timetableService", () => {
       .mockResolvedValueOnce(
         jsonResponse({
           data: {
-            instance_id: 42,
+            instance_id: "42",
             status: "completed",
             completed_at: "2026-05-04T13:00:00Z",
           },
@@ -709,12 +711,12 @@ describe("timetableService", () => {
             to: "2026-05-08",
             gaps: [
               {
-                instance_id: 42,
+                instance_id: "42",
                 date: "2026-05-04",
                 title: "Mensa",
                 start_time: "12:00",
                 end_time: "13:00",
-                room_id: 3,
+                room_id: "3",
                 status: "planned",
                 assigned_staff_count: 1,
                 absent_staff_count: 1,
@@ -728,7 +730,7 @@ describe("timetableService", () => {
       instanceId: "42",
       activeGroupId: "99",
     });
-    await expect(timetableService.complete("42", [])).resolves.toMatchObject({
+    await expect(timetableService.complete("42")).resolves.toMatchObject({
       instanceId: "42",
       status: "completed",
     });
@@ -745,7 +747,7 @@ describe("timetableService", () => {
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
       "/api/timetable/instances/42/start",
-      expect.objectContaining({ method: "POST", body: "{}" }),
+      expect.not.objectContaining({ body: expect.anything() }),
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
       4,
@@ -766,10 +768,10 @@ describe("timetableService", () => {
           data: {
             events: [
               {
-                id: 91,
+                id: "91",
                 occurrence_date: "2026-05-04",
                 start_time: "12:00:00",
-                instance_id: 42,
+                instance_id: "42",
                 event_type: "absence",
                 occurred_at: "2026-05-04T10:00:00Z",
               },
@@ -780,7 +782,7 @@ describe("timetableService", () => {
       .mockResolvedValueOnce(
         jsonResponse({
           data: {
-            instance_id: 42,
+            instance_id: "42",
             cancelled: false,
             understaffed_ack: true,
             affected_instances: [],
@@ -791,9 +793,9 @@ describe("timetableService", () => {
       .mockResolvedValueOnce(
         jsonResponse({
           data: {
-            id: 7,
-            instance_id: 42,
-            student_id: 21,
+            id: "7",
+            instance_id: "42",
+            student_id: "21",
             status: "present",
           },
         }),
@@ -832,9 +834,9 @@ describe("timetableService", () => {
         body: JSON.stringify({
           understaffed_ack: true,
           understaffed_note: "keine Vertretung",
-          absences: [{ staff_id: 11, reason: "krank" }],
-          substitutions: [{ absent_staff_id: 12, substitute_staff_id: 13 }],
-          presences: [{ staff_id: 14 }],
+          absences: [{ staff_id: "11", reason: "krank" }],
+          substitutions: [{ absent_staff_id: "12", substitute_staff_id: "13" }],
+          presences: [{ staff_id: "14" }],
         }),
       }),
     );
@@ -875,7 +877,7 @@ describe("timetableService", () => {
         body: JSON.stringify({
           from_date: "2026-05-04",
           to_date: "2026-05-08",
-          activity_group_id: 7,
+          activity_group_id: "7",
         }),
       }),
     );
@@ -890,7 +892,7 @@ describe("timetableService", () => {
     );
 
     await expect(timetableService.materialize("x", "y")).rejects.toMatchObject({
-      message: "Anfrage fehlgeschlagen (HTTP 400)",
+      message: expect.not.stringContaining("Zeitraum ungueltig"),
       detail: "Zeitraum ungueltig",
       status: 400,
       code: "INVALID_RANGE",
@@ -903,7 +905,6 @@ describe("timetableService", () => {
       }),
     );
     await expect(timetableService.cancel("42")).rejects.toMatchObject({
-      message: "Anfrage fehlgeschlagen (HTTP 502)",
       status: 502,
     });
   });
@@ -911,10 +912,10 @@ describe("timetableService", () => {
   it("passes an optional cancel reason through the lifecycle body (#1840)", async () => {
     fetchMock
       .mockResolvedValueOnce(
-        jsonResponse({ data: { instance_id: 42, status: "cancelled" } }),
+        jsonResponse({ data: { instance_id: "42", status: "cancelled" } }),
       )
       .mockResolvedValueOnce(
-        jsonResponse({ data: { instance_id: 42, status: "cancelled" } }),
+        jsonResponse({ data: { instance_id: "42", status: "cancelled" } }),
       );
 
     await timetableService.cancel("42", "Ausflug");
@@ -942,10 +943,10 @@ describe("timetableService", () => {
     fetchMock.mockResolvedValueOnce(
       jsonResponse({
         data: {
-          instance_id: 42,
+          instance_id: "42",
           status: "cancelled",
           guardian_notice: {
-            announcement_id: 7,
+            announcement_id: "7",
             child_count: 3,
             family_count: 2,
           },
@@ -990,7 +991,7 @@ describe("timetableService", () => {
     const reach = await timetableService.getGuardianNoticeReach("42");
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/timetable/instances/42/guardian-notice",
-      expect.objectContaining({ credentials: "include" }),
+      expect.objectContaining({ method: "GET" }),
     );
     expect(reach).toEqual({
       childCount: 4,
@@ -1002,7 +1003,7 @@ describe("timetableService", () => {
     fetchMock.mockResolvedValueOnce(
       jsonResponse({
         data: {
-          instance_id: 42,
+          instance_id: "42",
           cancelled: true,
           understaffed_ack: false,
           affected_instances: [],
@@ -1033,12 +1034,12 @@ describe("timetableService", () => {
     fetchMock.mockResolvedValueOnce(
       jsonResponse({
         data: {
-          instance_id: 42,
+          instance_id: "42",
           cancelled: false,
           understaffed_ack: true,
           affected_instances: [
             {
-              instance_id: 42,
+              instance_id: "42",
               title: "Mensa",
               start_time: "12:00",
               action: "substituted",
@@ -1082,19 +1083,22 @@ describe("timetableService", () => {
           understaffed_ack: true,
           understaffed_note: "Rest offen",
           absences: [
-            { staff_id: 11, reason: "krank", instance_ids: [42] },
-            { staff_id: 13 },
+            { staff_id: "11", reason: "krank", instance_ids: ["42"] },
+            { staff_id: "13" },
           ],
           substitutions: [
             {
-              absent_staff_id: 11,
-              substitute_staff_id: 12,
+              absent_staff_id: "11",
+              substitute_staff_id: "12",
               reason: "springt ein",
-              instance_ids: [42, 43],
+              instance_ids: ["42", "43"],
             },
           ],
-          substitution_removals: [{ staff_id: 16, instance_ids: [42] }],
-          presences: [{ staff_id: 14, instance_ids: [42] }, { staff_id: 15 }],
+          substitution_removals: [{ staff_id: "16", instance_ids: ["42"] }],
+          presences: [
+            { staff_id: "14", instance_ids: ["42"] },
+            { staff_id: "15" },
+          ],
         }),
       }),
     );
@@ -1104,7 +1108,7 @@ describe("timetableService", () => {
     fetchMock.mockResolvedValueOnce(
       jsonResponse({
         data: {
-          instance_id: 42,
+          instance_id: "42",
           cancelled: false,
           understaffed_ack: false,
           affected_instances: [],
@@ -1134,7 +1138,7 @@ describe("timetableService", () => {
       .mockResolvedValueOnce(
         jsonResponse({
           data: {
-            instance_id: 42,
+            instance_id: "42",
             cancelled: true,
             understaffed_ack: false,
             affected_instances: [],
@@ -1145,7 +1149,7 @@ describe("timetableService", () => {
       .mockResolvedValueOnce(
         jsonResponse({
           data: {
-            instance_id: 42,
+            instance_id: "42",
             cancelled: false,
             understaffed_ack: false,
             affected_instances: [],
@@ -1172,8 +1176,8 @@ describe("timetableService", () => {
       "/api/timetable/instances/42/deviations",
       expect.objectContaining({
         body: JSON.stringify({
-          absences: [{ staff_id: 11 }],
-          substitutions: [{ absent_staff_id: 11, substitute_staff_id: 12 }],
+          absences: [{ staff_id: "11" }],
+          substitutions: [{ absent_staff_id: "11", substitute_staff_id: "12" }],
         }),
       }),
     );
@@ -1186,14 +1190,14 @@ describe("timetableService", () => {
           count: 2,
           occurrences: [
             {
-              instance_id: 101,
+              instance_id: "101",
               date: "2026-05-04",
               start_time: "15:00:00",
               title: "Fußball AG",
               changes: ["room", "title"],
             },
             {
-              instance_id: 102,
+              instance_id: "102",
               date: "2026-05-11",
               start_time: "15:00:00",
               title: "Fußball AG",
@@ -1294,7 +1298,7 @@ describe("staff pool + move (#1884)", () => {
       jsonResponse({
         status: "success",
         data: {
-          instance_id: 42,
+          instance_id: "42",
           title: "Mensa",
           date: "2026-05-04",
           start_time: "12:30",
@@ -1314,13 +1318,13 @@ describe("staff pool + move (#1884)", () => {
     );
   });
 
-  it("posts a move with numeric ids and maps the result", async () => {
+  it("posts a move with string ids and maps the result", async () => {
     fetchMock.mockResolvedValueOnce(
       jsonResponse({
         status: "success",
         data: {
-          target_instance_id: 42,
-          source_instance_id: 41,
+          target_instance_id: "42",
+          source_instance_id: "41",
           action: "moved",
           time_conflicts: [],
           coverage_warnings: [],
@@ -1337,8 +1341,8 @@ describe("staff pool + move (#1884)", () => {
     const [url, init] = fetchMock.mock.calls.at(-1) as [string, RequestInit];
     expect(url).toBe("/api/timetable/instances/42/move-staff");
     expect(JSON.parse(String(init.body))).toEqual({
-      staff_id: 7,
-      source_instance_id: 41,
+      staff_id: "7",
+      source_instance_id: "41",
     });
   });
 
@@ -1347,7 +1351,7 @@ describe("staff pool + move (#1884)", () => {
       jsonResponse({
         status: "success",
         data: {
-          target_instance_id: 42,
+          target_instance_id: "42",
           action: "assigned",
           time_conflicts: null,
           coverage_warnings: null,
@@ -1358,15 +1362,15 @@ describe("staff pool + move (#1884)", () => {
     const result = await timetableService.moveStaff("42", { staffId: "9" });
     expect(result.action).toBe("assigned");
     const [, init] = fetchMock.mock.calls.at(-1) as [string, RequestInit];
-    expect(JSON.parse(String(init.body))).toEqual({ staff_id: 9 });
+    expect(JSON.parse(String(init.body))).toEqual({ staff_id: "9" });
   });
 
-  it("posts confirmed present ids and reopens a completed instance", async () => {
+  it("completes without a roster and reopens a completed instance", async () => {
     fetchMock
       .mockResolvedValueOnce(
         jsonResponse({
           data: {
-            instance_id: 42,
+            instance_id: "42",
             status: "completed",
             completed_at: "2026-05-04T13:00:00Z",
             reopen_until: "2026-05-04T13:05:00Z",
@@ -1376,18 +1380,16 @@ describe("staff pool + move (#1884)", () => {
       .mockResolvedValueOnce(
         jsonResponse({
           data: {
-            instance_id: 42,
+            instance_id: "42",
             status: "active",
-            active_group_id: 99,
+            active_group_id: "99",
             started_at: "2026-05-04T13:01:00Z",
             warnings: [],
           },
         }),
       );
 
-    await expect(
-      timetableService.complete("42", ["21", "22"]),
-    ).resolves.toMatchObject({
+    await expect(timetableService.complete("42")).resolves.toMatchObject({
       instanceId: "42",
       status: "completed",
       reopenUntil: "2026-05-04T13:05:00Z",
@@ -1400,11 +1402,9 @@ describe("staff pool + move (#1884)", () => {
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
       "/api/timetable/instances/42/complete",
-      expect.objectContaining({
-        method: "POST",
-        body: JSON.stringify({ confirmed_present_student_ids: [21, 22] }),
-      }),
+      expect.objectContaining({ method: "POST" }),
     );
+    expect(fetchMock.mock.calls[0]?.[1]).not.toHaveProperty("body");
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
       "/api/timetable/instances/42/reopen",
@@ -1439,7 +1439,7 @@ describe("timetableService.applyBulkSubstitution (#2284)", () => {
               date: "2026-08-18",
               affected_instances: [
                 {
-                  instance_id: 43,
+                  instance_id: "43",
                   title: "Mensa",
                   start_time: "12:00",
                   action: "substituted",
@@ -1484,9 +1484,9 @@ describe("timetableService.applyBulkSubstitution (#2284)", () => {
       expect.objectContaining({
         method: "POST",
         body: JSON.stringify({
-          absent_staff_id: 11,
+          absent_staff_id: "11",
           dates: ["2026-08-18", "2026-08-19"],
-          substitute_staff_id: 12,
+          substitute_staff_id: "12",
           reason: "Krankheit",
         }),
       }),
@@ -1508,7 +1508,7 @@ describe("timetableService.applyBulkSubstitution (#2284)", () => {
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/timetable/substitutions/bulk",
       expect.objectContaining({
-        body: JSON.stringify({ absent_staff_id: 11, dates: ["2026-08-18"] }),
+        body: JSON.stringify({ absent_staff_id: "11", dates: ["2026-08-18"] }),
       }),
     );
   });
@@ -1530,7 +1530,10 @@ describe("timetableService.applyBulkSubstitution (#2284)", () => {
         substituteStaffId: "12",
         dates: ["2026-08-18"],
       }),
-    ).rejects.toThrow("Anfrage fehlgeschlagen (HTTP 400)");
+    ).rejects.toMatchObject({
+      status: 400,
+      detail: "18.08.2026: die Ersatzperson ist am 18.08.2026 selbst abwesend",
+    });
   });
 });
 
@@ -1557,10 +1560,10 @@ describe("instance participants (#2283)", () => {
         status: "success",
         data: {
           participants: [
-            { student_id: 21, display_name: "Mia M." },
-            { student_id: 22, display_name: "Ben B." },
+            { student_id: "21", display_name: "Mia M." },
+            { student_id: "22", display_name: "Ben B." },
           ],
-          staff: [{ staff_id: 11, display_name: "Frau Weber" }],
+          staff: [{ staff_id: "11", display_name: "Frau Weber" }],
         },
       }),
     );
@@ -1569,7 +1572,7 @@ describe("instance participants (#2283)", () => {
 
     expect(fetchMock).toHaveBeenLastCalledWith(
       "/api/timetable/instances/42/participants",
-      expect.objectContaining({ method: "GET", credentials: "include" }),
+      expect.objectContaining({ method: "GET" }),
     );
     expect(names.studentNames.get("21")).toBe("Mia M.");
     expect(names.studentNames.get("22")).toBe("Ben B.");

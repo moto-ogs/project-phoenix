@@ -7,6 +7,11 @@ import {
 } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { plainFetch } from "~/test/mocks/plain-session-fetch";
+
+const fetchMock = vi.hoisted(() => vi.fn());
+import { requireTenantSession } from "~/lib/session-cache";
+import { ApiError } from "~/lib/api-error";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { catalogText } from "~/test/error-catalog-text";
 
@@ -17,6 +22,16 @@ function render(ui: ReactElement) {
 import StudentImportPage from "./page";
 
 // Mock next-auth/react
+// The session gate of bffJson is a spy over the plain gate, so a case
+// can let it refuse an expired session.
+vi.mock("~/lib/session-cache", async () => {
+  const plain = await import("~/test/mocks/plain-session-fetch");
+  return {
+    ...plain,
+    requireTenantSession: vi.fn(plain.requireTenantSession),
+  };
+});
+
 vi.mock("next-auth/react", () => ({
   useSession: vi.fn(() => ({
     data: { user: { id: "1" } },
@@ -141,10 +156,10 @@ vi.mock("~/components/import/student-row-card", () => ({
   StudentRowCard: ({
     student,
   }: {
-    student: { first_name: string; last_name: string };
+    student: { firstName: string; lastName: string };
   }) => (
     <div data-testid="student-row">
-      {student.first_name} {student.last_name}
+      {student.firstName} {student.lastName}
     </div>
   ),
 }));
@@ -152,7 +167,8 @@ vi.mock("~/components/import/student-row-card", () => ({
 describe("StudentImportPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    global.fetch = vi.fn();
+    // Plain answer objects of a case go out as Responses.
+    global.fetch = vi.fn(plainFetch(fetchMock));
   });
 
   afterEach(() => {
@@ -216,7 +232,7 @@ describe("StudentImportPage", () => {
 
   it("calls API when download button is clicked", async () => {
     const mockBlob = new Blob(["test"], { type: "text/csv" });
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       blob: () => Promise.resolve(mockBlob),
     });
@@ -236,7 +252,7 @@ describe("StudentImportPage", () => {
       expect(global.fetch).toHaveBeenCalledWith(
         "/api/import/students/template?format=xlsx",
         // The route reads the session cookie (#5005).
-        { credentials: "include" },
+        expect.objectContaining({ method: "GET" }),
       );
     });
   });
@@ -244,15 +260,15 @@ describe("StudentImportPage", () => {
   it("handles file upload and preview", async () => {
     const mockPreviewResponse = {
       data: {
-        TotalRows: 5,
-        CreatedCount: 3,
-        UpdatedCount: 2,
-        ErrorCount: 0,
-        Errors: [],
+        total_rows: 5,
+        created_count: 3,
+        updated_count: 2,
+        error_count: 0,
+        errors: [],
       },
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve(mockPreviewResponse),
     });
@@ -273,7 +289,7 @@ describe("StudentImportPage", () => {
   });
 
   it("displays error when API call fails", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: false,
       status: 400,
       json: () =>
@@ -293,7 +309,7 @@ describe("StudentImportPage", () => {
   });
 
   it("retries the preview with the same file", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>)
+    fetchMock
       .mockResolvedValueOnce({
         ok: false,
         status: 503,
@@ -304,11 +320,11 @@ describe("StudentImportPage", () => {
         json: () =>
           Promise.resolve({
             data: {
-              TotalRows: 1,
-              CreatedCount: 1,
-              UpdatedCount: 0,
-              ErrorCount: 0,
-              Errors: [],
+              total_rows: 1,
+              created_count: 1,
+              updated_count: 0,
+              error_count: 0,
+              errors: [],
             },
           }),
       });
@@ -341,14 +357,14 @@ describe("StudentImportPage", () => {
   it("shows preview section after successful file upload", async () => {
     const mockPreviewResponse = {
       data: {
-        TotalRows: 3,
-        CreatedCount: 2,
-        UpdatedCount: 1,
-        ErrorCount: 0,
-        Errors: [
+        total_rows: 3,
+        created_count: 2,
+        updated_count: 1,
+        error_count: 0,
+        errors: [
           {
-            RowNumber: 1,
-            Data: {
+            row_number: 1,
+            data: {
               first_name: "Max",
               last_name: "Mustermann",
               school_class: "1a",
@@ -356,7 +372,7 @@ describe("StudentImportPage", () => {
               birthday: "2015-01-01",
               guardians: [],
             },
-            Errors: [
+            errors: [
               {
                 code: "already_exists",
                 severity: "error",
@@ -364,13 +380,13 @@ describe("StudentImportPage", () => {
                 field: "",
               },
             ],
-            Timestamp: new Date().toISOString(),
+            timestamp: new Date().toISOString(),
           },
         ],
       },
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve(mockPreviewResponse),
     });
@@ -389,14 +405,14 @@ describe("StudentImportPage", () => {
   it("resets form when cancel button is clicked", async () => {
     const mockPreviewResponse = {
       data: {
-        TotalRows: 3,
-        CreatedCount: 2,
-        UpdatedCount: 1,
-        ErrorCount: 0,
-        Errors: [
+        total_rows: 3,
+        created_count: 2,
+        updated_count: 1,
+        error_count: 0,
+        errors: [
           {
-            RowNumber: 1,
-            Data: {
+            row_number: 1,
+            data: {
               first_name: "Test",
               last_name: "Student",
               school_class: "2b",
@@ -404,7 +420,7 @@ describe("StudentImportPage", () => {
               birthday: "2014-05-01",
               guardians: [],
             },
-            Errors: [
+            errors: [
               {
                 code: "already_exists",
                 severity: "error",
@@ -412,13 +428,13 @@ describe("StudentImportPage", () => {
                 field: "",
               },
             ],
-            Timestamp: new Date().toISOString(),
+            timestamp: new Date().toISOString(),
           },
         ],
       },
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve(mockPreviewResponse),
     });
@@ -443,15 +459,15 @@ describe("StudentImportPage", () => {
   it("handles import with preview data containing warnings", async () => {
     const mockPreviewResponse = {
       data: {
-        TotalRows: 2,
-        CreatedCount: 1,
-        UpdatedCount: 0,
-        ErrorCount: 0,
-        WarningCount: 1,
-        Errors: [
+        total_rows: 2,
+        created_count: 1,
+        updated_count: 0,
+        error_count: 0,
+        warning_count: 1,
+        errors: [
           {
-            RowNumber: 1,
-            Data: {
+            row_number: 1,
+            data: {
               first_name: "Anna",
               last_name: "Schmidt",
               school_class: "3c",
@@ -468,7 +484,7 @@ describe("StudentImportPage", () => {
                 },
               ],
             },
-            Errors: [
+            errors: [
               {
                 code: "phone_format",
                 severity: "warning",
@@ -476,13 +492,13 @@ describe("StudentImportPage", () => {
                 field: "phone",
               },
             ],
-            Timestamp: new Date().toISOString(),
+            timestamp: new Date().toISOString(),
           },
         ],
       },
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve(mockPreviewResponse),
     });
@@ -501,14 +517,14 @@ describe("StudentImportPage", () => {
   it("handles import with real errors", async () => {
     const mockPreviewResponse = {
       data: {
-        TotalRows: 1,
-        CreatedCount: 0,
-        UpdatedCount: 0,
-        ErrorCount: 1,
-        Errors: [
+        total_rows: 1,
+        created_count: 0,
+        updated_count: 0,
+        error_count: 1,
+        errors: [
           {
-            RowNumber: 1,
-            Data: {
+            row_number: 1,
+            data: {
               first_name: "",
               last_name: "Müller",
               school_class: "1a",
@@ -516,7 +532,7 @@ describe("StudentImportPage", () => {
               birthday: "",
               guardians: [],
             },
-            Errors: [
+            errors: [
               {
                 code: "required",
                 severity: "error",
@@ -524,13 +540,13 @@ describe("StudentImportPage", () => {
                 field: "first_name",
               },
             ],
-            Timestamp: new Date().toISOString(),
+            timestamp: new Date().toISOString(),
           },
         ],
       },
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve(mockPreviewResponse),
     });
@@ -548,15 +564,15 @@ describe("StudentImportPage", () => {
   it("shows summary row when no errors in preview", async () => {
     const mockPreviewResponse = {
       data: {
-        TotalRows: 5,
-        CreatedCount: 5,
-        UpdatedCount: 0,
-        ErrorCount: 0,
-        Errors: [],
+        total_rows: 5,
+        created_count: 5,
+        updated_count: 0,
+        error_count: 0,
+        errors: [],
       },
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve(mockPreviewResponse),
     });
@@ -574,7 +590,7 @@ describe("StudentImportPage", () => {
   });
 
   it("handles download error gracefully", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: false,
     });
 
@@ -593,15 +609,15 @@ describe("StudentImportPage", () => {
   it("displays correct import button text with stats", async () => {
     const mockPreviewResponse = {
       data: {
-        TotalRows: 10,
-        CreatedCount: 7,
-        UpdatedCount: 3,
-        ErrorCount: 0,
-        Errors: [],
+        total_rows: 10,
+        created_count: 7,
+        updated_count: 3,
+        error_count: 0,
+        errors: [],
       },
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve(mockPreviewResponse),
     });
@@ -620,26 +636,26 @@ describe("StudentImportPage", () => {
     // First mock for preview
     const mockPreviewResponse = {
       data: {
-        TotalRows: 3,
-        CreatedCount: 3,
-        UpdatedCount: 0,
-        ErrorCount: 0,
-        Errors: [],
+        total_rows: 3,
+        created_count: 3,
+        updated_count: 0,
+        error_count: 0,
+        errors: [],
       },
     };
 
     // Second mock for actual import
     const mockImportResponse = {
       data: {
-        TotalRows: 3,
-        CreatedCount: 3,
-        UpdatedCount: 0,
-        ErrorCount: 0,
-        Errors: [],
+        total_rows: 3,
+        created_count: 3,
+        updated_count: 0,
+        error_count: 0,
+        errors: [],
       },
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>)
+    fetchMock
       .mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(mockPreviewResponse),
@@ -674,11 +690,11 @@ describe("StudentImportPage", () => {
     // Preview shows all rows as valid (0 errors - button will be enabled)
     const mockPreviewResponse = {
       data: {
-        TotalRows: 3,
-        CreatedCount: 3,
-        UpdatedCount: 0,
-        ErrorCount: 0,
-        Errors: [],
+        total_rows: 3,
+        created_count: 3,
+        updated_count: 0,
+        error_count: 0,
+        errors: [],
       },
     };
 
@@ -686,14 +702,14 @@ describe("StudentImportPage", () => {
     // (e.g., race condition, database constraint violation during insert)
     const mockImportResponse = {
       data: {
-        TotalRows: 3,
-        CreatedCount: 2,
-        UpdatedCount: 0,
-        ErrorCount: 1,
-        Errors: [
+        total_rows: 3,
+        created_count: 2,
+        updated_count: 0,
+        error_count: 1,
+        errors: [
           {
-            RowNumber: 3,
-            Data: {
+            row_number: 3,
+            data: {
               first_name: "Max",
               last_name: "Müller",
               school_class: "1a",
@@ -701,7 +717,7 @@ describe("StudentImportPage", () => {
               birthday: "2015-01-01",
               guardians: [],
             },
-            Errors: [
+            errors: [
               {
                 code: "duplicate",
                 severity: "error",
@@ -709,13 +725,13 @@ describe("StudentImportPage", () => {
                 field: "",
               },
             ],
-            Timestamp: new Date().toISOString(),
+            timestamp: new Date().toISOString(),
           },
         ],
       },
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>)
+    fetchMock
       .mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(mockPreviewResponse),
@@ -758,15 +774,15 @@ describe("StudentImportPage", () => {
     // First mock for preview
     const mockPreviewResponse = {
       data: {
-        TotalRows: 2,
-        CreatedCount: 2,
-        UpdatedCount: 0,
-        ErrorCount: 0,
-        Errors: [],
+        total_rows: 2,
+        created_count: 2,
+        updated_count: 0,
+        error_count: 0,
+        errors: [],
       },
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>)
+    fetchMock
       .mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(mockPreviewResponse),
@@ -802,15 +818,15 @@ describe("StudentImportPage", () => {
   it("shows saved rows and the blocking row on import_batch_failed", async () => {
     const mockPreviewResponse = {
       data: {
-        TotalRows: 205,
-        CreatedCount: 205,
-        UpdatedCount: 0,
-        ErrorCount: 0,
-        Errors: [],
+        total_rows: 205,
+        created_count: 205,
+        updated_count: 0,
+        error_count: 0,
+        errors: [],
       },
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>)
+    fetchMock
       .mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(mockPreviewResponse),
@@ -824,14 +840,14 @@ describe("StudentImportPage", () => {
             code: "import.import_batch_failed",
             details: {
               result: {
-                TotalRows: 205,
-                CreatedCount: 100,
-                UpdatedCount: 0,
-                ErrorCount: 1,
-                Errors: [
+                total_rows: 205,
+                created_count: 100,
+                updated_count: 0,
+                error_count: 1,
+                errors: [
                   {
-                    RowNumber: 152,
-                    Data: {
+                    row_number: 152,
+                    data: {
                       first_name: "Refused",
                       last_name: "Batch",
                       school_class: "1a",
@@ -839,7 +855,7 @@ describe("StudentImportPage", () => {
                       birthday: "",
                       guardians: [],
                     },
-                    Errors: [
+                    errors: [
                       {
                         field: "create",
                         message: "Anlegen fehlgeschlagen",
@@ -880,17 +896,17 @@ describe("StudentImportPage", () => {
   });
 
   it("shows saved rows when import_batch_failed has a nil Errors slice", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>)
+    fetchMock
       .mockResolvedValueOnce({
         ok: true,
         json: () =>
           Promise.resolve({
             data: {
-              TotalRows: 205,
-              CreatedCount: 205,
-              UpdatedCount: 0,
-              ErrorCount: 0,
-              Errors: [],
+              total_rows: 205,
+              created_count: 205,
+              updated_count: 0,
+              error_count: 0,
+              errors: [],
             },
           }),
       })
@@ -903,11 +919,11 @@ describe("StudentImportPage", () => {
             code: "import.import_batch_failed",
             details: {
               result: {
-                TotalRows: 205,
-                CreatedCount: 100,
-                UpdatedCount: 0,
-                ErrorCount: 0,
-                Errors: null,
+                total_rows: 205,
+                created_count: 100,
+                updated_count: 0,
+                error_count: 0,
+                errors: null,
               },
             },
           }),
@@ -934,17 +950,17 @@ describe("StudentImportPage", () => {
   });
 
   it("keeps import enabled after re-uploading a file whose first rows already exist", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>)
+    fetchMock
       .mockResolvedValueOnce({
         ok: true,
         json: () =>
           Promise.resolve({
             data: {
-              TotalRows: 205,
-              CreatedCount: 205,
-              UpdatedCount: 0,
-              ErrorCount: 0,
-              Errors: [],
+              total_rows: 205,
+              created_count: 205,
+              updated_count: 0,
+              error_count: 0,
+              errors: [],
             },
           }),
       })
@@ -957,14 +973,14 @@ describe("StudentImportPage", () => {
             code: "import.import_batch_failed",
             details: {
               result: {
-                TotalRows: 205,
-                CreatedCount: 100,
-                UpdatedCount: 0,
-                ErrorCount: 1,
-                Errors: [
+                total_rows: 205,
+                created_count: 100,
+                updated_count: 0,
+                error_count: 1,
+                errors: [
                   {
-                    RowNumber: 152,
-                    Data: {
+                    row_number: 152,
+                    data: {
                       first_name: "Refused",
                       last_name: "Batch",
                       school_class: "1a",
@@ -972,7 +988,7 @@ describe("StudentImportPage", () => {
                       birthday: "",
                       guardians: [],
                     },
-                    Errors: [
+                    errors: [
                       {
                         field: "create",
                         message: "Anlegen fehlgeschlagen",
@@ -991,13 +1007,13 @@ describe("StudentImportPage", () => {
         json: () =>
           Promise.resolve({
             data: {
-              TotalRows: 205,
-              CreatedCount: 105,
-              UpdatedCount: 0,
-              ErrorCount: 100,
-              Errors: Array.from({ length: 100 }, (_, index) => ({
-                RowNumber: index + 2,
-                Data: {
+              total_rows: 205,
+              created_count: 105,
+              updated_count: 0,
+              error_count: 100,
+              errors: Array.from({ length: 100 }, (_, index) => ({
+                row_number: index + 2,
+                data: {
                   first_name: `Kind${index}`,
                   last_name: "Batch",
                   school_class: "1a",
@@ -1005,7 +1021,7 @@ describe("StudentImportPage", () => {
                   birthday: "",
                   guardians: [],
                 },
-                Errors: [
+                errors: [
                   {
                     code: "already_exists",
                     severity: "error",
@@ -1043,14 +1059,14 @@ describe("StudentImportPage", () => {
   it("disables import button when there are errors", async () => {
     const mockPreviewResponse = {
       data: {
-        TotalRows: 1,
-        CreatedCount: 0,
-        UpdatedCount: 0,
-        ErrorCount: 1,
-        Errors: [
+        total_rows: 1,
+        created_count: 0,
+        updated_count: 0,
+        error_count: 1,
+        errors: [
           {
-            RowNumber: 1,
-            Data: {
+            row_number: 1,
+            data: {
               first_name: "",
               last_name: "",
               school_class: "",
@@ -1058,7 +1074,7 @@ describe("StudentImportPage", () => {
               birthday: "",
               guardians: [],
             },
-            Errors: [
+            errors: [
               {
                 code: "required",
                 severity: "error",
@@ -1066,13 +1082,13 @@ describe("StudentImportPage", () => {
                 field: "first_name",
               },
             ],
-            Timestamp: new Date().toISOString(),
+            timestamp: new Date().toISOString(),
           },
         ],
       },
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve(mockPreviewResponse),
     });
@@ -1111,6 +1127,12 @@ describe("StudentImportPage", () => {
       .spyOn(window.location, "assign")
       .mockImplementation(() => undefined);
     const useSession = await import("next-auth/react");
+    // The gate reads the session cookie and refuses the expired session.
+    vi.mocked(requireTenantSession).mockRejectedValueOnce(
+      new ApiError("Authentication required", 401, {
+        code: "general.permission",
+      }),
+    );
     vi.mocked(useSession.useSession).mockReturnValueOnce({
       data: { user: { id: "1" }, error: "RefreshTokenError" },
       status: "authenticated",
@@ -1134,6 +1156,12 @@ describe("StudentImportPage", () => {
       .spyOn(window.location, "assign")
       .mockImplementation(() => undefined);
     const useSession = await import("next-auth/react");
+    // The gate reads the session cookie and refuses the expired session.
+    vi.mocked(requireTenantSession).mockRejectedValueOnce(
+      new ApiError("Authentication required", 401, {
+        code: "general.permission",
+      }),
+    );
     vi.mocked(useSession.useSession).mockReturnValueOnce({
       data: { user: { id: "1" }, error: "RefreshTokenError" },
       status: "authenticated",
@@ -1153,20 +1181,20 @@ describe("StudentImportPage", () => {
   });
 
   it("handles valid file drop (csv)", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       json: () =>
         Promise.resolve({
           data: {
-            TotalRows: 2,
-            CreatedCount: 2,
-            UpdatedCount: 0,
-            SkippedCount: 0,
-            ErrorCount: 0,
-            WarningCount: 0,
-            Errors: [],
-            BulkActions: [],
-            DryRun: true,
+            total_rows: 2,
+            created_count: 2,
+            updated_count: 0,
+            skipped_count: 0,
+            error_count: 0,
+            warning_count: 0,
+            errors: [],
+            bulk_actions: [],
+            dry_run: true,
           },
         }),
     });
@@ -1194,20 +1222,20 @@ describe("StudentImportPage", () => {
   });
 
   it("handles valid file drop (xlsx)", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       json: () =>
         Promise.resolve({
           data: {
-            TotalRows: 1,
-            CreatedCount: 1,
-            UpdatedCount: 0,
-            SkippedCount: 0,
-            ErrorCount: 0,
-            WarningCount: 0,
-            Errors: [],
-            BulkActions: [],
-            DryRun: true,
+            total_rows: 1,
+            created_count: 1,
+            updated_count: 0,
+            skipped_count: 0,
+            error_count: 0,
+            warning_count: 0,
+            errors: [],
+            bulk_actions: [],
+            dry_run: true,
           },
         }),
     });
@@ -1261,20 +1289,20 @@ describe("StudentImportPage", () => {
 
   it("handles partial import failure with guardian info", async () => {
     // First call: preview
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       json: () =>
         Promise.resolve({
           data: {
-            TotalRows: 2,
-            CreatedCount: 2,
-            UpdatedCount: 0,
-            SkippedCount: 0,
-            ErrorCount: 0,
-            WarningCount: 0,
-            Errors: [],
-            BulkActions: [],
-            DryRun: true,
+            total_rows: 2,
+            created_count: 2,
+            updated_count: 0,
+            skipped_count: 0,
+            error_count: 0,
+            warning_count: 0,
+            errors: [],
+            bulk_actions: [],
+            dry_run: true,
           },
         }),
     });
@@ -1290,21 +1318,21 @@ describe("StudentImportPage", () => {
     });
 
     // Second call: import with partial failure including guardian info
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       json: () =>
         Promise.resolve({
           data: {
-            TotalRows: 2,
-            CreatedCount: 1,
-            UpdatedCount: 0,
-            SkippedCount: 0,
-            ErrorCount: 1,
-            WarningCount: 0,
-            Errors: [
+            total_rows: 2,
+            created_count: 1,
+            updated_count: 0,
+            skipped_count: 0,
+            error_count: 1,
+            warning_count: 0,
+            errors: [
               {
-                RowNumber: 2,
-                Data: {
+                row_number: 2,
+                data: {
                   first_name: "Max",
                   last_name: "Mustermann",
                   school_class: "1a",
@@ -1321,7 +1349,7 @@ describe("StudentImportPage", () => {
                   ],
                   health_info: "",
                 },
-                Errors: [
+                errors: [
                   {
                     field: "last_name",
                     message: "Duplicate entry",
@@ -1329,11 +1357,11 @@ describe("StudentImportPage", () => {
                     severity: "error",
                   },
                 ],
-                Timestamp: new Date().toISOString(),
+                timestamp: new Date().toISOString(),
               },
             ],
-            BulkActions: [],
-            DryRun: false,
+            bulk_actions: [],
+            dry_run: false,
           },
         }),
     });
@@ -1349,16 +1377,16 @@ describe("StudentImportPage", () => {
   });
 
   it("sends the chosen import mode and labels the button accordingly", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+    fetchMock.mockResolvedValue({
       ok: true,
       json: () =>
         Promise.resolve({
           data: {
-            TotalRows: 2,
-            CreatedCount: 2,
-            UpdatedCount: 2,
-            ErrorCount: 0,
-            Errors: [],
+            total_rows: 2,
+            created_count: 2,
+            updated_count: 2,
+            error_count: 0,
+            errors: [],
           },
         }),
     });
@@ -1379,7 +1407,6 @@ describe("StudentImportPage", () => {
       expect(screen.getByText("2 Kinder aktualisieren")).toBeInTheDocument();
     });
 
-    const fetchMock = global.fetch as ReturnType<typeof vi.fn>;
     const previewCalls = fetchMock.mock.calls.filter(
       (call) => call[0] === "/api/import/students/preview",
     );
@@ -1394,18 +1421,18 @@ describe("StudentImportPage", () => {
       json: () =>
         Promise.resolve({
           data: {
-            TotalRows: 80,
-            CreatedCount: 80,
-            UpdatedCount: 0,
-            ErrorCount: 0,
-            Errors: [],
+            total_rows: 80,
+            created_count: 80,
+            updated_count: 0,
+            error_count: 0,
+            errors: [],
             child_quota: quota,
           },
         }),
     });
 
     it("blocks the import when the new children do not fit", async () => {
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      fetchMock.mockResolvedValueOnce(
         previewWithQuota({
           booked_places: 100,
           occupied_places: 88,
@@ -1433,7 +1460,7 @@ describe("StudentImportPage", () => {
     });
 
     it("names the free Kinderkontingent and keeps the import open when it fits", async () => {
-      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      fetchMock.mockResolvedValueOnce(
         previewWithQuota({
           booked_places: 200,
           occupied_places: 100,
@@ -1457,7 +1484,7 @@ describe("StudentImportPage", () => {
     });
 
     it("explains a start the Kinderkontingent refused", async () => {
-      (global.fetch as ReturnType<typeof vi.fn>)
+      fetchMock
         .mockResolvedValueOnce(
           previewWithQuota({
             booked_places: 200,
@@ -1519,7 +1546,7 @@ describe("StudentImportPage", () => {
     });
 
     it("keeps the saved rows when a later batch hits the Kinderkontingent", async () => {
-      (global.fetch as ReturnType<typeof vi.fn>)
+      fetchMock
         .mockResolvedValueOnce(
           previewWithQuota({
             booked_places: 200,
@@ -1539,11 +1566,11 @@ describe("StudentImportPage", () => {
               code: "import.import_batch_failed",
               details: {
                 result: {
-                  TotalRows: 80,
-                  CreatedCount: 50,
-                  UpdatedCount: 0,
-                  ErrorCount: 0,
-                  Errors: null,
+                  total_rows: 80,
+                  created_count: 50,
+                  updated_count: 0,
+                  error_count: 0,
+                  errors: null,
                 },
                 rejection: {
                   code: "students.child_quota_reached",

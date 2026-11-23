@@ -28,8 +28,12 @@ import {
 import { staffQualificationKeys } from "~/lib/swr/staff-keys";
 import { ApiError } from "~/lib/api-error";
 import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
-import { useSWRAuth, useTenantMutate } from "~/lib/swr";
+import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
 import { TenantPageStats } from "~/components/ui/tenant-page";
+
+/** Info-Knopf am Titel: wofür die Seite da ist und was man zuerst tut. */
+const QUALIFICATION_TYPES_INFO =
+  "Hier legst du fest, welche Nachweise dein Team braucht, zum Beispiel Erste Hilfe am Kind. Je Art stellst du ein, wie lange sie gültig ist und wann moto erinnert. Eine Art mit Pflicht braucht jede Person.";
 
 const CACHE_KEY = staffQualificationKeys.types();
 
@@ -189,16 +193,11 @@ const config: CatalogConfig<QualificationType> = {
 
 function QualificationTypesPageContent() {
   const searchParams = useSearchParams();
-  const tenantMutate = useTenantMutate();
   const discardRefused = useDiscardRefusedEntity();
-  const {
-    data: cachedData,
-    isLoading,
-    error: swrError,
-    mutate,
-  } = useSWRAuth<QualificationType[]>(CACHE_KEY, () =>
+  const list = useSWRAuth<QualificationType[]>(CACHE_KEY, () =>
     staffQualificationService.listTypes(),
   );
+  const { data: cachedData, isLoading, error: swrError, mutate } = list;
   const accessRefused =
     swrError instanceof ApiError && isAccessRefusal(swrError);
   const data = accessRefused ? undefined : cachedData;
@@ -216,10 +215,13 @@ function QualificationTypesPageContent() {
     () => mutate(),
     data === undefined ? undefined : STALE_DATA_SUFFIX,
   );
-  const onChanged = useCallback(() => tenantMutate(CACHE_KEY), [tenantMutate]);
+  // Lehnt ab, wenn das Lesen scheitert (ADR 0311), mit der Liste als
+  // Antwort.
+  const onChanged = useCallback(() => revalidateOrThrow(list), [list]);
 
   return (
     <CatalogPage
+      info={QUALIFICATION_TYPES_INFO}
       config={config}
       items={data}
       isLoading={

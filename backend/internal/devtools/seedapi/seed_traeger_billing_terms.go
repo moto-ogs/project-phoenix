@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedBillingTerms gives the demo Träger who gets an invoice, how it is paid
@@ -14,17 +15,36 @@ import (
 // 4th of the month after), and two families that deviate: one invoice goes
 // to another payer, one to both parents with its own due day.
 func seedBillingTerms(client *Client, auth AuthRef, runID int64, month calendar.Date) error {
+	versions, err := serviceTermsVersions(client, auth)
+	if err != nil {
+		return err
+	}
 	for service, terms := range map[string]map[string]any{
 		"care":    {"payment_method": "direct_debit", "due_days": 10},
 		"meal":    {"payment_method": "direct_debit", "due_days": 10, "bundle_with": "care"},
 		"holiday": {"payment_method": "transfer", "due_days": 14},
 	} {
+		terms["expected_version"] = versions[service]
 		if _, err := client.PutWithAuth(auth, "/traeger/billing-terms/"+service, terms); err != nil {
 			return fmt.Errorf("keep the payment terms of %s: %w", service, err)
 		}
 	}
+	// The run names its invoices and the version of its due dates, which
+	// their change sends back (ADR 0311); the dates change no invoice.
+	raw, err := client.GetWithAuth(auth, fmt.Sprintf("/traeger/care-billing-runs/%d", runID))
+	if err != nil {
+		return fmt.Errorf("read the monthly run: %w", err)
+	}
+	run, err := seedReadData[struct {
+		Invoices        []seedRunInvoice `json:"invoices"`
+		DueDatesVersion string           `json:"due_dates_version"`
+	}](raw, "monthly run")
+	if err != nil {
+		return err
+	}
 	next := calendar.NewDate(month.Year(), month.Month(), 1).AddDays(32)
 	if _, err := client.PutWithAuth(auth, fmt.Sprintf("/traeger/billing-run-due-dates/care/%d", runID), map[string]any{
+		"expected_version": run.DueDatesVersion,
 		"due_dates": []map[string]any{
 			{"payment_method": "transfer", "due_on": calendar.NewDate(next.Year(), next.Month(), 2).String()},
 			{"payment_method": "direct_debit", "due_on": calendar.NewDate(next.Year(), next.Month(), 4).String()},
@@ -32,29 +52,40 @@ func seedBillingTerms(client *Client, auth AuthRef, runID int64, month calendar.
 	}); err != nil {
 		return fmt.Errorf("keep the due dates of the monthly run: %w", err)
 	}
-	raw, err := client.GetWithAuth(auth, fmt.Sprintf("/traeger/care-billing-runs/%d", runID))
-	if err != nil {
-		return fmt.Errorf("read the monthly run: %w", err)
-	}
-	var envelope struct {
-		Data struct {
-			Invoices []seedRunInvoice `json:"invoices"`
-		} `json:"data"`
-	}
-	if err := json.Unmarshal(raw, &envelope); err != nil {
-		return fmt.Errorf("read the monthly run: %w", err)
-	}
-	invoices := envelope.Data.Invoices
+	invoices := run.Invoices
 	if err := seedFamilyBilling(client, auth, invoices); err != nil {
 		return err
 	}
 	return seedSEPAMandates(client, auth, invoices)
 }
 
+// serviceTermsVersions reads per service the version of its terms, which a
+// change sends back (ADR 0311).
+func serviceTermsVersions(client *Client, auth AuthRef) (map[string]string, error) {
+	raw, err := client.GetWithAuth(auth, "/traeger/billing-terms/")
+	if err != nil {
+		return nil, fmt.Errorf("read the payment terms: %w", err)
+	}
+	read, err := seedReadData[struct {
+		Terms []struct {
+			Service string `json:"service"`
+			Version string `json:"version"`
+		} `json:"terms"`
+	}](raw, "payment terms")
+	if err != nil {
+		return nil, err
+	}
+	versions := make(map[string]string, len(read.Terms))
+	for _, terms := range read.Terms {
+		versions[terms.Service] = terms.Version
+	}
+	return versions, nil
+}
+
 // seedRunInvoice is an invoice of the monthly run as the seed reads it.
 type seedRunInvoice = struct {
-	ContractID  int64  `json:"contract_id"`
-	FamilyEmail string `json:"family_email"`
+	ContractID  ident.ID `json:"contract_id"`
+	FamilyEmail string   `json:"family_email"`
 	Recipient   struct {
 		LastName string `json:"last_name"`
 	} `json:"recipient"`
@@ -83,9 +114,54 @@ func seedFamilyBilling(client *Client, auth AuthRef, invoices []seedRunInvoice) 
 		if deviation["recipient_kind"] == "both" {
 			deviation["second_last_name"] = invoices[i].Recipient.LastName
 		}
+		version, err := familyBillingVersion(client, auth, invoices[i].ContractID)
+		if err != nil {
+			return err
+		}
+		deviation["expected_version"] = version
 		if _, err := client.PutWithAuth(auth, "/traeger/family-billing/", deviation); err != nil {
 			return fmt.Errorf("keep the deviation of a family: %w", err)
 		}
+	}
+	return nil
+}
+
+// familyBillingVersion reads the version of the deviation of a contract's
+// family, which its save sends back (ADR 0311).
+func familyBillingVersion(client *Client, auth AuthRef, contractID ident.ID) (string, error) {
+	raw, err := client.GetWithAuth(auth, fmt.Sprintf("/traeger/family-billing/contracts/%s", contractID))
+	if err != nil {
+		return "", fmt.Errorf("read the deviation of a family: %w", err)
+	}
+	var envelope struct {
+		Data struct {
+			Version string `json:"version"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(raw, &envelope); err != nil {
+		return "", fmt.Errorf("read the deviation of a family: %w", err)
+	}
+	return envelope.Data.Version, nil
+}
+
+// seedSEPACreditor keeps the Bundesbank's test identifier as the creditor,
+// on the creditor it read (ADR 0311).
+func seedSEPACreditor(client *Client, auth AuthRef) error {
+	raw, err := client.GetWithAuth(auth, "/traeger/sepa-creditor/")
+	if err != nil {
+		return fmt.Errorf("read the SEPA creditor: %w", err)
+	}
+	creditor, err := seedReadData[struct {
+		Version string `json:"version"`
+	}](raw, "SEPA creditor")
+	if err != nil {
+		return err
+	}
+	if _, err := client.PutWithAuth(auth, "/traeger/sepa-creditor/", map[string]any{
+		"creditor_id": "DE98ZZZ09999999999", "prenotification_days": 5, "missing_mandate": "transfer",
+		"expected_version": creditor.Version,
+	}); err != nil {
+		return fmt.Errorf("keep the SEPA creditor: %w", err)
 	}
 	return nil
 }
@@ -96,10 +172,8 @@ func seedFamilyBilling(client *Client, auth AuthRef, invoices []seedRunInvoice) 
 // replaced, one family has none, so the review shows its hint and the
 // invoice goes as a transfer. The first family pays by transfer anyway.
 func seedSEPAMandates(client *Client, auth AuthRef, invoices []seedRunInvoice) error {
-	if _, err := client.PutWithAuth(auth, "/traeger/sepa-creditor/", map[string]any{
-		"creditor_id": "DE98ZZZ09999999999", "prenotification_days": 5, "missing_mandate": "transfer",
-	}); err != nil {
-		return fmt.Errorf("keep the SEPA creditor: %w", err)
+	if err := seedSEPACreditor(client, auth); err != nil {
+		return err
 	}
 	// Every monthly run seeds its families again: a family that has a
 	// mandate already keeps it (the backend answers in force or reference
@@ -123,7 +197,7 @@ func seedSEPAMandates(client *Client, auth AuthRef, invoices []seedRunInvoice) e
 			return fmt.Errorf("keep the SEPA mandate of a family: %w", err)
 		}
 		if i == 1 {
-			if err := seedReplacedMandate(client, auth, raw, mandate, invoice.ContractID); err != nil {
+			if err := seedReplacedMandate(client, auth, raw, mandate, int64(invoice.ContractID)); err != nil {
 				return err
 			}
 		}
@@ -133,8 +207,8 @@ func seedSEPAMandates(client *Client, auth AuthRef, invoices []seedRunInvoice) e
 
 // seedImportedMandates imports the mandate of the first family, if any.
 func seedImportedMandates(client *Client, auth AuthRef, invoices []struct {
-	ContractID  int64  `json:"contract_id"`
-	FamilyEmail string `json:"family_email"`
+	ContractID  ident.ID `json:"contract_id"`
+	FamilyEmail string   `json:"family_email"`
 	Recipient   struct {
 		LastName string `json:"last_name"`
 	} `json:"recipient"`
@@ -188,7 +262,7 @@ const (
 func seedReplacedMandate(client *Client, auth AuthRef, raw []byte, mandate map[string]any, contractID int64) error {
 	var created struct {
 		Data struct {
-			ID int64 `json:"id"`
+			ID ident.ID `json:"id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &created); err != nil {

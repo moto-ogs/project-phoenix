@@ -130,10 +130,16 @@ func (rs *Resource[E, C]) runEventLoop(ctx context.Context, conn *sseConnection[
 
 	heartbeat := time.NewTicker(30 * time.Second)
 	defer heartbeat.Stop()
+	draining := rs.hub.Draining()
 
 	for {
 		select {
 		case <-ctx.Done():
+			return
+
+		case <-draining:
+			// The process stops: end the response, the client reconnects to
+			// another replica (#7226).
 			return
 
 		case event := <-conn.client.SSEEvents():

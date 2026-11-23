@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -154,13 +155,13 @@ func TestAdministrationRejectsSameTypeOverlaps(t *testing.T) {
 
 	t.Run("change rejects a date change into a same-type overlap", func(t *testing.T) {
 		mover := addPeriod(t, ctx, module, semester("SameType-Verschoben", "2037-08-01", "2038-01-31", true))
-		_, err := module.ChangeCalendarPeriod(ctx, schoolcalendar.UpdateCalendarPeriod{ID: mover.ID, CalendarPeriodFields: semester(mover.Name, "2035-12-01", "2036-01-15", true)})
+		_, err := module.ChangeCalendarPeriod(ctx, schoolcalendar.UpdateCalendarPeriod{ID: mover.ID, ExpectedVersion: schoolcalendar.CalendarPeriodVersion(mover), CalendarPeriodFields: semester(mover.Name, "2035-12-01", "2036-01-15", true)})
 		require.ErrorIs(t, err, schoolcalendar.ErrCalendarPeriodOverlapConflict)
 	})
 
 	t.Run("change rejects activating an overlapping same-type period", func(t *testing.T) {
 		sleeper := addPeriod(t, ctx, module, semester("SameType-Schlafend", "2035-09-01", "2035-12-31", false))
-		_, err := module.ChangeCalendarPeriod(ctx, schoolcalendar.UpdateCalendarPeriod{ID: sleeper.ID, CalendarPeriodFields: semester(sleeper.Name, sleeper.StartDate, sleeper.EndDate, true)})
+		_, err := module.ChangeCalendarPeriod(ctx, schoolcalendar.UpdateCalendarPeriod{ID: sleeper.ID, ExpectedVersion: schoolcalendar.CalendarPeriodVersion(sleeper), CalendarPeriodFields: semester(sleeper.Name, sleeper.StartDate, sleeper.EndDate, true)})
 		require.ErrorIs(t, err, schoolcalendar.ErrCalendarPeriodOverlapConflict)
 	})
 
@@ -168,7 +169,7 @@ func TestAdministrationRejectsSameTypeOverlaps(t *testing.T) {
 		// Seed the overlap through the plain command, bypassing the
 		// administrative guard — this is the pre-rule legacy data shape.
 		legacy := createPeriod(t, ctx, module, semester("SameType-Bestand", "2035-09-01", "2035-11-30", true))
-		_, err := module.ChangeCalendarPeriod(ctx, schoolcalendar.UpdateCalendarPeriod{ID: legacy.ID, CalendarPeriodFields: semester("SameType-Bestand-Umbenannt", legacy.StartDate, legacy.EndDate, true)})
+		_, err := module.ChangeCalendarPeriod(ctx, schoolcalendar.UpdateCalendarPeriod{ID: legacy.ID, ExpectedVersion: schoolcalendar.CalendarPeriodVersion(legacy), CalendarPeriodFields: semester("SameType-Bestand-Umbenannt", legacy.StartDate, legacy.EndDate, true)})
 		require.NoError(t, err, "rename-only edits must not trip the overlap guard on pre-existing overlaps")
 	})
 
@@ -178,14 +179,14 @@ func TestAdministrationRejectsSameTypeOverlaps(t *testing.T) {
 		holiday.PeriodType = schoolcalendar.PeriodTypeHoliday
 		retyped := addPeriod(t, ctx, module, holiday)
 		// … but re-typing it to semester collides with the active base semester.
-		_, err := module.ChangeCalendarPeriod(ctx, schoolcalendar.UpdateCalendarPeriod{ID: retyped.ID, CalendarPeriodFields: semester(retyped.Name, retyped.StartDate, retyped.EndDate, true)})
+		_, err := module.ChangeCalendarPeriod(ctx, schoolcalendar.UpdateCalendarPeriod{ID: retyped.ID, ExpectedVersion: schoolcalendar.CalendarPeriodVersion(retyped), CalendarPeriodFields: semester(retyped.Name, retyped.StartDate, retyped.EndDate, true)})
 		require.ErrorIs(t, err, schoolcalendar.ErrCalendarPeriodOverlapConflict)
 	})
 
 	t.Run("re-typing a legacy overlapper out of the conflict stays allowed", func(t *testing.T) {
 		// The guard checks the NEW type, so this repair path must keep working.
 		legacy := createPeriod(t, ctx, module, semester("SameType-Reparatur", "2035-12-01", "2036-01-20", true))
-		_, err := module.ChangeCalendarPeriod(ctx, schoolcalendar.UpdateCalendarPeriod{ID: legacy.ID, CalendarPeriodFields: schoolYear(legacy.Name, legacy.StartDate, legacy.EndDate, true)})
+		_, err := module.ChangeCalendarPeriod(ctx, schoolcalendar.UpdateCalendarPeriod{ID: legacy.ID, ExpectedVersion: schoolcalendar.CalendarPeriodVersion(legacy), CalendarPeriodFields: schoolYear(legacy.Name, legacy.StartDate, legacy.EndDate, true)})
 		require.NoError(t, err, "re-typing out of a same-type conflict must resolve, not trip, the overlap guard")
 	})
 }
@@ -232,7 +233,7 @@ func TestAdministrationChangesPeriods(t *testing.T) {
 	t.Run("changes a period", func(t *testing.T) {
 		ctx := testpkg.OwnCtx(t)
 		period := addPeriod(t, ctx, module, schoolYear("Update", "2025-08-01", "2026-07-31", true))
-		changed, err := module.ChangeCalendarPeriod(ctx, schoolcalendar.UpdateCalendarPeriod{ID: period.ID, CalendarPeriodFields: semester("Updated", "2025-08-01", "2026-07-31", false)})
+		changed, err := module.ChangeCalendarPeriod(ctx, schoolcalendar.UpdateCalendarPeriod{ID: period.ID, ExpectedVersion: schoolcalendar.CalendarPeriodVersion(period), CalendarPeriodFields: semester("Updated", "2025-08-01", "2026-07-31", false)})
 		require.NoError(t, err)
 		assert.Equal(t, "Updated", changed.Name)
 		assert.Equal(t, schoolcalendar.PeriodTypeSemester, changed.PeriodType)
@@ -246,7 +247,7 @@ func TestAdministrationChangesPeriods(t *testing.T) {
 	t.Run("allows keeping the own name", func(t *testing.T) {
 		ctx := testpkg.OwnCtx(t)
 		period := addPeriod(t, ctx, module, schoolYear("SameName", "2025-08-01", "2026-07-31", true))
-		_, err := module.ChangeCalendarPeriod(ctx, schoolcalendar.UpdateCalendarPeriod{ID: period.ID, CalendarPeriodFields: schoolYear("SameName", "2025-08-01", "2026-07-31", false)})
+		_, err := module.ChangeCalendarPeriod(ctx, schoolcalendar.UpdateCalendarPeriod{ID: period.ID, ExpectedVersion: schoolcalendar.CalendarPeriodVersion(period), CalendarPeriodFields: schoolYear("SameName", "2025-08-01", "2026-07-31", false)})
 		require.NoError(t, err)
 	})
 
@@ -254,20 +255,47 @@ func TestAdministrationChangesPeriods(t *testing.T) {
 		ctx := testpkg.OwnCtx(t)
 		addPeriod(t, ctx, module, schoolYear("First", "2025-08-01", "2026-07-31", true))
 		second := addPeriod(t, ctx, module, semester("Second", "2025-08-01", "2026-01-31", true))
-		_, err := module.ChangeCalendarPeriod(ctx, schoolcalendar.UpdateCalendarPeriod{ID: second.ID, CalendarPeriodFields: semester("First", "2025-08-01", "2026-01-31", true)})
+		_, err := module.ChangeCalendarPeriod(ctx, schoolcalendar.UpdateCalendarPeriod{ID: second.ID, ExpectedVersion: schoolcalendar.CalendarPeriodVersion(second), CalendarPeriodFields: semester("First", "2025-08-01", "2026-01-31", true)})
 		require.ErrorIs(t, err, schoolcalendar.ErrCalendarPeriodNameConflict)
 	})
 
 	t.Run("rejects invalid data and an unknown period", func(t *testing.T) {
 		ctx := testpkg.OwnCtx(t)
 		period := addPeriod(t, ctx, module, schoolYear("InvalidUpdate", "2025-08-01", "2026-07-31", true))
-		_, err := module.ChangeCalendarPeriod(ctx, schoolcalendar.UpdateCalendarPeriod{ID: period.ID, CalendarPeriodFields: schoolYear("", "2025-08-01", "2026-07-31", true)})
+		_, err := module.ChangeCalendarPeriod(ctx, schoolcalendar.UpdateCalendarPeriod{ID: period.ID, ExpectedVersion: schoolcalendar.CalendarPeriodVersion(period), CalendarPeriodFields: schoolYear("", "2025-08-01", "2026-07-31", true)})
 		require.ErrorIs(t, err, schoolcalendar.ErrInvalidCalendarPeriod)
 		assert.Contains(t, err.Error(), "name is required")
 
 		_, err = module.ChangeCalendarPeriod(ctx, schoolcalendar.UpdateCalendarPeriod{ID: period.ID + 1_000_000, CalendarPeriodFields: schoolYear("Unbekannt", "2025-08-01", "2026-07-31", true)})
 		require.ErrorIs(t, err, schoolcalendar.ErrCalendarPeriodNotFound)
 	})
+}
+
+// A change carries the version of the period its editor read (ADR 0311): a
+// colleague's change in between, or no version at all, refuses it and
+// writes nothing; the version of the stored period saves.
+func TestAdministrationRefusesAPeriodChangedSinceRead(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	module := buildAdministration(t, db, nil)
+	ctx := testpkg.OwnCtx(t)
+	read := addPeriod(t, ctx, module, schoolYear("Gelesen", "2025-08-01", "2026-07-31", true))
+
+	colleague, err := module.ChangeCalendarPeriod(ctx, schoolcalendar.UpdateCalendarPeriod{ID: read.ID, ExpectedVersion: schoolcalendar.CalendarPeriodVersion(read), CalendarPeriodFields: schoolYear("Kollegin", "2025-08-01", "2026-07-31", true)})
+	require.NoError(t, err)
+
+	for name, version := range map[string]string{"outdated": schoolcalendar.CalendarPeriodVersion(read), "missing": ""} {
+		_, err = module.ChangeCalendarPeriod(ctx, schoolcalendar.UpdateCalendarPeriod{ID: read.ID, ExpectedVersion: version, CalendarPeriodFields: schoolYear("Überschrieben", "2025-08-01", "2026-07-31", false)})
+		require.ErrorIs(t, err, readstate.ErrChanged, name)
+	}
+	stored, err := module.FindCalendarPeriod(ctx, read.ID)
+	require.NoError(t, err)
+	assert.Equal(t, "Kollegin", stored.Name, "a refused change writes nothing")
+	assert.True(t, stored.IsActive)
+
+	changed, err := module.ChangeCalendarPeriod(ctx, schoolcalendar.UpdateCalendarPeriod{ID: read.ID, ExpectedVersion: schoolcalendar.CalendarPeriodVersion(colleague), CalendarPeriodFields: schoolYear("Neu gelesen", "2025-08-01", "2026-07-31", false)})
+	require.NoError(t, err)
+	assert.Equal(t, "Neu gelesen", changed.Name)
 }
 
 func TestAdministrationEnsuresDefaultSchoolYear(t *testing.T) {
@@ -489,7 +517,7 @@ func TestAdministrationCareOfferingGuardLeavesPeriodUnchanged(t *testing.T) {
 	period := createPeriod(t, ctx, module, schoolYear("Care-link-preflight", "2026-08-01", "2027-07-31", true))
 	wantID = period.ID
 
-	_, err := module.ChangeCalendarPeriod(ctx, schoolcalendar.UpdateCalendarPeriod{ID: period.ID, CalendarPeriodFields: schoolYear(period.Name, "2026-09-01", "2027-06-30", true)})
+	_, err := module.ChangeCalendarPeriod(ctx, schoolcalendar.UpdateCalendarPeriod{ID: period.ID, ExpectedVersion: schoolcalendar.CalendarPeriodVersion(period), CalendarPeriodFields: schoolYear(period.Name, "2026-09-01", "2027-06-30", true)})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "care offering still linked")
 

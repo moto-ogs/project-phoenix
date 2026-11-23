@@ -28,10 +28,10 @@ func TestOrdersDateBatchKeepsDailyRosterAndPendingSchedules(t *testing.T) {
 		if studentID == entrant.ID {
 			effective = "2026-09-09"
 		}
-		_, err := register.ReplaceScheduleBySchool(ctx, mealplan.SchoolSchedule{StudentID: studentID, StaffAccountID: account.ID, Weekdays: allDays, EffectiveFrom: effective})
+		_, err := register.ReplaceScheduleBySchool(ctx, mealcompose.SchoolAsRead(t, register, ctx, mealplan.SchoolSchedule{StudentID: studentID, StaffAccountID: account.ID, Weekdays: allDays, EffectiveFrom: effective}))
 		require.NoError(t, err)
 	}
-	_, err = register.ReplaceScheduleBySchool(ctx, mealplan.SchoolSchedule{StudentID: first.ID, StaffAccountID: account.ID, Weekdays: []mealplan.Weekday{mealplan.Friday}, EffectiveFrom: "2026-09-10"})
+	_, err = register.ReplaceScheduleBySchool(ctx, mealcompose.SchoolAsRead(t, register, ctx, mealplan.SchoolSchedule{StudentID: first.ID, StaffAccountID: account.ID, Weekdays: []mealplan.Weekday{mealplan.Friday}, EffectiveFrom: "2026-09-10"}))
 	require.NoError(t, err)
 	reader := mealcompose.BuildOrderDateModuleForTest(t, db, true, nil, time.Date(2026, 9, 7, 10, 0, 0, 0, calendar.Berlin))
 	school, err := reader.Orders(ctx, "2026-09-07", "2026-09-11")

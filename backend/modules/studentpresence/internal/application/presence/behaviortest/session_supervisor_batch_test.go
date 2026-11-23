@@ -50,7 +50,7 @@ type faultingSupervisors struct {
 }
 
 func (r faultingSupervisors) Create(ctx context.Context, row *ports.GroupSupervisor) error {
-	if err := r.fault.fail(ctx, row.StaffID); err != nil {
+	if err := r.fault.fail(ctx, row.StaffID.Int64()); err != nil {
 		return err
 	}
 	return r.GroupSupervisorRepository.Create(ctx, row)

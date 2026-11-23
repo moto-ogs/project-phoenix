@@ -49,11 +49,18 @@ import {
   type CorrectableSlot,
 } from "~/components/students/attendance-correction-modal";
 import { hasPermission } from "~/lib/auth-utils";
+import { usePresenceMode } from "~/lib/tenant-context";
 import { RoomHistorySkeleton } from "./page-skeleton";
 import type { HistoryChartPoint } from "./history-charts";
 import { Button } from "~/components/ui/button";
 import { AttendanceExportDialog } from "~/components/students/attendance-export-dialog";
 import { changeHistoryConcept } from "~/lib/concepts/changeHistory";
+
+const ROOM_HISTORY_INFO =
+  "Hier siehst du, wann dieses Kind kam und ging. Du siehst auch, in welchen Räumen es war. Bei jedem Tag steht, wer es an- und abgemeldet hat.";
+// Bei einfacher Anwesenheit führt die Schule keine Räume.
+const ROOM_HISTORY_BINARY_MODE_INFO =
+  "Hier siehst du, wann dieses Kind kam und ging. Bei jedem Tag steht, wer es an- und abgemeldet hat.";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -263,29 +270,31 @@ function DayCard({
                   {/* Korrigieren nur mit Recht und nach Abschluss. Der fehlende
                       Instanzstatus synthetischer "Ohne Zuordnung"-Zeilen
                       schließt sie ebenfalls aus. */}
-                  {canCorrect && slot.instanceStatus === "completed" && (
-                    <Button
-                      type="button"
-                      variant="link"
-                      size="md"
-                      onClick={() =>
-                        onCorrect({
-                          instanceId: slot.instanceId,
-                          title: slot.title,
-                          date: formatDateShort(day.date),
-                          startTime: slot.startTime,
-                          endTime: slot.endTime,
-                          status: slot.status,
-                          substatus: slot.substatus,
-                          note: slot.note,
-                        })
-                      }
-                      tooltip={CORRECTION_TOOLTIP}
-                      className="mt-0.5 ml-1"
-                    >
-                      Korrigieren
-                    </Button>
-                  )}
+                  {canCorrect &&
+                    slot.instanceStatus === "completed" &&
+                    slot.status && (
+                      <Button
+                        type="button"
+                        variant="link"
+                        size="md"
+                        onClick={() =>
+                          onCorrect({
+                            instanceId: slot.instanceId,
+                            title: slot.title,
+                            date: formatDateShort(day.date),
+                            startTime: slot.startTime,
+                            endTime: slot.endTime,
+                            status: slot.status ?? "",
+                            substatus: slot.substatus,
+                            note: slot.note,
+                          })
+                        }
+                        tooltip={CORRECTION_TOOLTIP}
+                        className="mt-0.5 ml-1"
+                      >
+                        Korrigieren
+                      </Button>
+                    )}
                 </div>
               ))}
             </div>
@@ -484,29 +493,31 @@ function daySlotRows(
                 Bemerkung: {slot.note}
               </p>
             )}
-            {canCorrect && slot.instanceStatus === "completed" && (
-              <Button
-                type="button"
-                variant="link"
-                size="md"
-                onClick={() =>
-                  onCorrect({
-                    instanceId: slot.instanceId,
-                    title: slot.title,
-                    date: formatDateShort(day.date),
-                    startTime: slot.startTime,
-                    endTime: slot.endTime,
-                    status: slot.status,
-                    substatus: slot.substatus,
-                    note: slot.note,
-                  })
-                }
-                tooltip={CORRECTION_TOOLTIP}
-                className="mt-1"
-              >
-                Korrigieren
-              </Button>
-            )}
+            {canCorrect &&
+              slot.instanceStatus === "completed" &&
+              slot.status && (
+                <Button
+                  type="button"
+                  variant="link"
+                  size="md"
+                  onClick={() =>
+                    onCorrect({
+                      instanceId: slot.instanceId,
+                      title: slot.title,
+                      date: formatDateShort(day.date),
+                      startTime: slot.startTime,
+                      endTime: slot.endTime,
+                      status: slot.status ?? "",
+                      substatus: slot.substatus,
+                      note: slot.note,
+                    })
+                  }
+                  tooltip={CORRECTION_TOOLTIP}
+                  className="mt-1"
+                >
+                  Korrigieren
+                </Button>
+              )}
           </>
         ),
       },
@@ -724,6 +735,7 @@ export default function StudentRoomHistoryPage() {
 
 function StudentRoomHistoryPageContent() {
   const today = useBerlinToday();
+  const presenceMode = usePresenceMode();
   const params = useParams();
   const searchParams = useSearchParams();
   const studentId = params.id as string;
@@ -815,6 +827,11 @@ function StudentRoomHistoryPageContent() {
         {...back}
         leading={<ConceptIconTile concept={changeHistoryConcept} size="page" />}
         title={displayName || "Anwesenheitsprotokoll"}
+        info={
+          presenceMode === "binary"
+            ? ROOM_HISTORY_BINARY_MODE_INFO
+            : ROOM_HISTORY_INFO
+        }
         stats={studentMeta ?? dayLine}
         statsLoading={loading}
         loading={loading}

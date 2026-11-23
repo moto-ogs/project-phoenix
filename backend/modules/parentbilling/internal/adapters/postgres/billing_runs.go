@@ -11,6 +11,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The billing runs, number ranges and invoices (#4668, ADR 0119). The
@@ -47,7 +48,7 @@ type runRow struct {
 
 func (r runRow) run() parentbilling.BillingRun {
 	return parentbilling.BillingRun{
-		ID: r.ID, Service: r.Service, HolidayPeriodID: r.HolidayPeriodID, PeriodName: r.PeriodName,
+		ID: ident.ID(r.ID), Service: r.Service, HolidayPeriodID: ident.ID(r.HolidayPeriodID), PeriodName: r.PeriodName,
 		ServiceFrom: r.ServiceFrom, ServiceUntil: r.ServiceUntil, Status: r.Status, CreatedAt: r.CreatedAt,
 		ReleasedAt: r.ReleasedAt, IssuedOn: r.IssuedOn, DocumentCount: r.DocumentCount, TotalCents: r.TotalCents,
 		DiscardedAt: r.DiscardedAt,
@@ -204,7 +205,7 @@ func (s *Store) InsertBillingRun(ctx context.Context, organizationID int64, run 
 		return parentbilling.BillingRun{}, err
 	}
 	row := &runRow{
-		OrganizationID: organizationID, Service: run.Service, HolidayPeriodID: run.HolidayPeriodID, PeriodName: run.PeriodName,
+		OrganizationID: organizationID, Service: run.Service, HolidayPeriodID: run.HolidayPeriodID.Int64(), PeriodName: run.PeriodName,
 		ServiceFrom: run.ServiceFrom, ServiceUntil: run.ServiceUntil, Status: parentbilling.RunCalculated,
 	}
 	if _, err := db.NewInsert().Model(row).Returning("id, created_at").Exec(ctx); err != nil {
@@ -273,7 +274,7 @@ func (s *Store) PeriodContributions(ctx context.Context, organizationID, periodI
 			childLines = []parentbilling.HolidayContributionLine{}
 		}
 		contribution.Children = append(contribution.Children, parentbilling.HolidayChildContribution{
-			ChildID: row.HolidayRegistrationChildID, Position: len(contribution.Children) + 1, Lines: childLines, TotalCents: row.TotalCents,
+			ChildID: ident.ID(row.HolidayRegistrationChildID), Position: len(contribution.Children) + 1, Lines: childLines, TotalCents: row.TotalCents,
 		})
 		contribution.TotalCents += row.TotalCents
 		contribution.Frozen = true
@@ -405,8 +406,8 @@ func (s *Store) RunCorrections(ctx context.Context, organizationID, runID int64)
 	corrections := make([]parentbilling.BillingCorrection, len(rows))
 	for i, row := range rows {
 		corrections[i] = parentbilling.BillingCorrection{
-			ID: row.ID, ChildID: row.HolidayRegistrationChildID, AmountCents: row.AmountCents, TotalBeforeCents: row.TotalBeforeCents,
-			TotalAfterCents: row.TotalAfterCents, Reason: row.Reason, CreatedByAccountID: row.CreatedByAccountID, CreatedAt: row.CreatedAt,
+			ID: ident.ID(row.ID), ChildID: ident.ID(row.HolidayRegistrationChildID), AmountCents: row.AmountCents, TotalBeforeCents: row.TotalBeforeCents,
+			TotalAfterCents: row.TotalAfterCents, Reason: row.Reason, CreatedByAccountID: (*ident.ID)(row.CreatedByAccountID), CreatedAt: row.CreatedAt,
 			CarriedFromNumber: row.CarriedFromNumber,
 		}
 	}
@@ -420,8 +421,8 @@ func (s *Store) InsertRunCorrection(ctx context.Context, organizationID int64, r
 		return err
 	}
 	_, err = db.NewInsert().Model(&correctionRow{
-		OrganizationID: organizationID, RunID: run.ID, HolidayPeriodID: run.HolidayPeriodID, HolidayRegistrationID: registrationID,
-		HolidayRegistrationChildID: correction.ChildID, AmountCents: correction.AmountCents, TotalBeforeCents: correction.TotalBeforeCents,
+		OrganizationID: organizationID, RunID: run.ID.Int64(), HolidayPeriodID: run.HolidayPeriodID.Int64(), HolidayRegistrationID: registrationID,
+		HolidayRegistrationChildID: correction.ChildID.Int64(), AmountCents: correction.AmountCents, TotalBeforeCents: correction.TotalBeforeCents,
 		TotalAfterCents: correction.TotalAfterCents, Reason: correction.Reason, CarriedFromNumber: correction.CarriedFromNumber, CreatedByAccountID: &accountID,
 	}).Exec(ctx)
 	return err
@@ -507,8 +508,13 @@ func (s *Store) IssueDocuments(ctx context.Context, organizationID int64, run pa
 	if err != nil {
 		return err
 	}
-	// The debits of the file hold the account of the mandate now (#4697).
-	return insertSEPADebits(ctx, db, organizationID, true, ids)
+	var debitIDs []int64
+	for i, document := range documents {
+		if document.TotalCents > 0 && document.Payment != nil && document.Payment.Mandate != nil {
+			debitIDs = append(debitIDs, ids[i])
+		}
+	}
+	return insertSEPADebits(ctx, db, organizationID, true, debitIDs)
 }
 
 // insertDocuments stores numbered documents with their positions and
@@ -546,12 +552,12 @@ func (s *Store) insertDocuments(ctx context.Context, organizationID int64, run p
 				number++
 				positions = append(positions, documentPositionRow{
 					OrganizationID: organizationID, DocumentID: rows[i].ID, Position: number,
-					HolidayRegistrationChildID: child.ChildID, ChildFirstName: child.FirstName, ChildLastName: child.LastName,
+					HolidayRegistrationChildID: child.ChildID.Int64(), ChildFirstName: child.FirstName, ChildLastName: child.LastName,
 					Kind: position.Kind, AmountCents: position.AmountCents, NetCents: position.AmountCents,
 					WeekStartsOn: position.WeekStartsOn, WeekEndsOn: position.WeekEndsOn, TimeModelName: position.TimeModelName,
 					ChildRank: position.ChildRank, DiscountBasisPoints: position.DiscountBasisPoints,
 					DiscountCents: position.DiscountCents, Note: position.Note,
-					CostBearerID: position.CostBearerID, CostBearerName: position.CostBearerName, BookedDays: position.BookedDays,
+					CostBearerID: (*int64)(position.CostBearerID), CostBearerName: position.CostBearerName, BookedDays: position.BookedDays,
 					positionAccountsColumns: positionAccountsOf(position.Accounts), CostCenterFallback: textRef(position.CostCenterFallback),
 				})
 			}
@@ -655,17 +661,17 @@ func (s *Store) selectDocuments(ctx context.Context, organizationID int64, where
 	for i, row := range rows {
 		issuedOn := row.IssuedOn
 		documents[i] = parentbilling.BillingDocument{
-			ID: row.ID, RunID: row.RunID, Number: row.Number, IssuedOn: &issuedOn, RegistrationID: row.HolidayRegistrationID,
+			ID: ident.ID(row.ID), RunID: ident.ID(row.RunID), Number: row.Number, IssuedOn: &issuedOn, RegistrationID: ident.ID(row.HolidayRegistrationID),
 			RecipientFirstName: row.RecipientFirstName, RecipientLastName: row.RecipientLastName, RecipientEmail: row.RecipientEmail,
 			ServiceFrom: row.ServiceFrom, ServiceUntil: row.ServiceUntil, Children: issuedChildren(byDocument[row.ID]),
 			TotalCents: row.TotalCents, RecipientAddress: row.recipientAddress(),
-			Kind: row.Kind, DocumentKind: row.DocumentKind, ReferenceDocumentID: row.ReferenceDocumentID, ReferenceNumber: row.ReferenceNumber, Reason: row.Reason,
+			Kind: row.Kind, DocumentKind: row.DocumentKind, ReferenceDocumentID: (*ident.ID)(row.ReferenceDocumentID), ReferenceNumber: row.ReferenceNumber, Reason: row.Reason,
 		}
 		if row.DebtorNumber != nil {
 			documents[i].DebtorNumber = *row.DebtorNumber
 		}
 		if row.HolidayRegistrationChildID != nil {
-			documents[i].RegistrationChildID = *row.HolidayRegistrationChildID
+			documents[i].RegistrationChildID = ident.ID(*row.HolidayRegistrationChildID)
 		}
 		documents[i].FamilyEmail = textOf(row.FamilyEmail)
 		documents[i].RecipientKind, documents[i].RecipientSecondName = textOf(row.RecipientKind), textOf(row.RecipientSecondName)
@@ -678,17 +684,17 @@ func (s *Store) selectDocuments(ctx context.Context, organizationID int64, where
 // recipient, the postal address (#5625) and the debtor number (#5621).
 func issuedDocumentRow(organizationID int64, run parentbilling.BillingRun, year int, sequence int64, document parentbilling.BillingDocument) documentRow {
 	row := documentRow{
-		OrganizationID: organizationID, RunID: run.ID, Service: run.Service, Number: document.Number,
+		OrganizationID: organizationID, RunID: run.ID.Int64(), Service: run.Service, Number: document.Number,
 		NumberYear: year, NumberSequence: sequence, IssuedOn: *document.IssuedOn,
-		HolidayPeriodID: run.HolidayPeriodID, HolidayRegistrationID: document.RegistrationID,
+		HolidayPeriodID: run.HolidayPeriodID.Int64(), HolidayRegistrationID: document.RegistrationID.Int64(),
 		RecipientFirstName: document.RecipientFirstName, RecipientLastName: document.RecipientLastName,
 		RecipientEmail: document.RecipientEmail, ServiceFrom: document.ServiceFrom, ServiceUntil: document.ServiceUntil,
-		TotalCents: document.TotalCents, Kind: document.Kind, ReferenceDocumentID: document.ReferenceDocumentID,
+		TotalCents: document.TotalCents, Kind: document.Kind, ReferenceDocumentID: (*int64)(document.ReferenceDocumentID),
 		Reason: document.Reason,
 	}
 	if document.RegistrationChildID != 0 {
 		child := document.RegistrationChildID
-		row.HolidayRegistrationChildID = &child
+		row.HolidayRegistrationChildID = (*int64)(&child)
 	}
 	if row.Kind == "" {
 		row.Kind = parentbilling.DocumentInvoice
@@ -730,7 +736,7 @@ func issuedChildren(positions []documentPositionRow) []parentbilling.BillingChil
 			at = len(children)
 			index[position.HolidayRegistrationChildID] = at
 			children = append(children, parentbilling.BillingChild{
-				ChildID: position.HolidayRegistrationChildID, FirstName: position.ChildFirstName, LastName: position.ChildLastName,
+				ChildID: ident.ID(position.HolidayRegistrationChildID), FirstName: position.ChildFirstName, LastName: position.ChildLastName,
 				Positions: []parentbilling.BillingPosition{},
 			})
 		}
@@ -738,7 +744,7 @@ func issuedChildren(positions []documentPositionRow) []parentbilling.BillingChil
 			Kind: position.Kind, AmountCents: position.AmountCents, WeekStartsOn: position.WeekStartsOn, WeekEndsOn: position.WeekEndsOn,
 			TimeModelName: position.TimeModelName, ChildRank: position.ChildRank, DiscountBasisPoints: position.DiscountBasisPoints,
 			DiscountCents: position.DiscountCents, Note: position.Note,
-			CostBearerID: position.CostBearerID, CostBearerName: position.CostBearerName, BookedDays: position.BookedDays,
+			CostBearerID: (*ident.ID)(position.CostBearerID), CostBearerName: position.CostBearerName, BookedDays: position.BookedDays,
 			Accounts: position.accounts(), CostCenterFallback: textOf(position.CostCenterFallback),
 		})
 		children[at].TotalCents += position.AmountCents

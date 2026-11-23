@@ -26,6 +26,8 @@ import {
   buildHelpHref,
   type HelpTopicId,
 } from "~/lib/help-topics";
+import { trackOnboardingSurface } from "~/lib/analytics";
+import { useMessageComposerOnScreen } from "~/lib/hooks/use-message-composer-presence";
 import { createLogger } from "~/lib/logger";
 import { useHasOwnStaff } from "~/lib/hooks/use-user-context";
 import { useShellAuthSafe } from "~/lib/shell-auth-context";
@@ -72,14 +74,28 @@ type RunAction = (
 type View = "beacon" | "checklist";
 
 /** Einmal pro Anmeldung öffnet sich die Checkliste von selbst. */
-function claimFirstOpen(tenantSlug: string, accountID: string): boolean {
-  const key = `staff-onboarding-opened:${tenantSlug}:${accountID}`;
+function firstOpenKey(tenantSlug: string, accountID: string): string {
+  return `staff-onboarding-opened:${tenantSlug}:${accountID}`;
+}
+
+/** Ob sich die Checkliste in dieser Sitzung schon von selbst gezeigt hat. */
+function openedThisSession(tenantSlug: string, accountID: string): boolean {
   try {
-    if (sessionStorage.getItem(key)) return false;
-    sessionStorage.setItem(key, "1");
-    return true;
+    return sessionStorage.getItem(firstOpenKey(tenantSlug, accountID)) !== null;
   } catch {
-    return false;
+    return true;
+  }
+}
+
+/**
+ * Merkt sich das erste Öffnen erst, wenn die Checkliste zu sehen war: Hielt
+ * ein Chat sie verdeckt, geht sie nach dem Neuladen noch einmal auf (#7686).
+ */
+function rememberOpened(tenantSlug: string, accountID: string): void {
+  try {
+    sessionStorage.setItem(firstOpenKey(tenantSlug, accountID), "1");
+  } catch {
+    // Ohne Sitzungsspeicher öffnet sie sich ohnehin nicht von selbst.
   }
 }
 
@@ -101,6 +117,16 @@ export function StaffOnboardingWizard() {
 
 function StaffOnboardingForPerson() {
   const [view, setView] = useState<View>("beacon");
+  // Ein offener Chat hat seinen Senden-Knopf genau dort, wo Knopf und
+  // Checkliste unten am Rand stehen (#7686). Solange er offen ist, treten
+  // beide zurück.
+  const chatOpen = useMessageComposerOnScreen();
+  // Von selbst geöffnet, aber noch nie zu sehen gewesen: „angezeigt“ zählt
+  // erst, wenn die Checkliste wirklich auf dem Bildschirm steht.
+  const [shownPending, setShownPending] = useState<{
+    readonly accountID: string;
+    readonly tenantSlug: string;
+  } | null>(null);
   const { state, accountID, replace } = useStaffOnboarding();
   const [expanded, setExpanded] = useState<StaffOnboardingStepKey | null>(null);
   const [expandedByPerson, setExpandedByPerson] = useState(false);
@@ -112,6 +138,20 @@ function StaffOnboardingForPerson() {
   const { clear: clearError, show: showError } = formErrors;
   const latestRunRef = useRef<RunAction>(() => undefined);
   const [notice, setNotice] = useState<string | null>(null);
+  // Die Checkliste hat sich von selbst geöffnet, wurde für die
+  // Nutzungsanalyse gezählt und die Person hat noch nicht reagiert. Ihre erste
+  // Reaktion meldet die Nutzungsanalyse (#7553): eine Tour starten oder
+  // zuklappen. Ausblenden und Abschließen zählt die Schule über den Server,
+  // nicht hier.
+  const selfOpened = useRef(false);
+  const answerSelfOpened = useCallback(
+    (action: "accepted" | "dismissed" | null) => {
+      if (!selfOpened.current) return;
+      selfOpened.current = false;
+      if (action) trackOnboardingSurface(action, "staff_first_steps");
+    },
+    [],
+  );
   const pathname = usePathname();
   const { data: session } = useSession();
   const nfcEnabled = useNFCEnabled();
@@ -229,11 +269,18 @@ function StaffOnboardingForPerson() {
       visible &&
       tenantSlug &&
       accountID &&
-      claimFirstOpen(tenantSlug, accountID)
+      !openedThisSession(tenantSlug, accountID)
     ) {
       setView("checklist");
+      setShownPending({ accountID, tenantSlug });
     }
   }, [visible, tenantSlug, accountID]);
+  useEffect(() => {
+    if (!shownPending || !visible || view !== "checklist" || chatOpen) return;
+    setShownPending(null);
+    rememberOpened(shownPending.tenantSlug, shownPending.accountID);
+    selfOpened.current = trackOnboardingSurface("shown", "staff_first_steps");
+  }, [shownPending, visible, view, chatOpen]);
 
   // Aufgeklappt ist der nächste offene Schritt, solange die Person nicht
   // selbst einen anderen gewählt hat.
@@ -296,6 +343,8 @@ function StaffOnboardingForPerson() {
 
   const open = steps.filter((step) => !step.done && !step.skipped).length;
 
+  if (chatOpen) return null;
+
   if (view === "beacon") {
     return <SetupBeacon open={open} onOpen={() => setView("checklist")} />;
   }
@@ -323,6 +372,7 @@ function StaffOnboardingForPerson() {
           setExpandedByPerson(true);
         }}
         onStartTour={(step) => {
+          answerSelfOpened("accepted");
           setNotice(null);
           tour.start(step);
         }}
@@ -331,11 +381,19 @@ function StaffOnboardingForPerson() {
             setStaffOnboardingStepState(step, skipped ? "skipped" : "open"),
           )
         }
-        onCollapse={() => setView("beacon")}
+        onCollapse={() => {
+          answerSelfOpened("dismissed");
+          setView("beacon");
+        }}
         onDismiss={() => setConfirmDismiss(true)}
         finishLabel="Abschließen"
         finishTooltip="Blendet die Checkliste sofort für dich aus."
-        onFinish={() => void run(() => setStaffOnboardingDismissed(true))}
+        onFinish={() => {
+          answerSelfOpened(null);
+          void run(() =>
+            setStaffOnboardingDismissed(true, { completed: true }),
+          );
+        }}
         finished={
           <>
             <div className="flex flex-col gap-1">
@@ -364,15 +422,16 @@ function StaffOnboardingForPerson() {
       <ConfirmationModal
         isOpen={confirmDismiss}
         onClose={() => setConfirmDismiss(false)}
-        onConfirm={() =>
+        onConfirm={() => {
+          answerSelfOpened(null);
           void run(
             () => setStaffOnboardingDismissed(true),
             () => setConfirmDismiss(false),
             // Der Grund steht in der Checkliste; der Dialog davor würde ihn
             // verdecken.
             () => setConfirmDismiss(false),
-          )
-        }
+          );
+        }}
         title="Erste Schritte ausblenden?"
         confirmText="Ausblenden"
         isConfirmLoading={busy}

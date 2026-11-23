@@ -13,6 +13,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -117,7 +118,7 @@ func TestCareMonthsFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 		tariffs, err := store.CareTariffs(ctx, own.organization)
 		require.NoError(t, err)
 		require.Len(t, tariffs, 1, "CareTariffs")
-		assert.Equal(t, own.school, tariffs[0].SchoolID)
+		assert.Equal(t, ident.ID(own.school), tariffs[0].SchoolID)
 
 		billed, err := store.CareBilledUntil(ctx, own.organization)
 		require.NoError(t, err)
@@ -130,7 +131,7 @@ func TestCareMonthsFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 		runs, err := store.ListCareRuns(ctx, own.organization)
 		require.NoError(t, err)
 		require.Len(t, runs, 2, "ListCareRuns")
-		assert.ElementsMatch(t, []int64{own.released, own.open}, []int64{runs[0].ID, runs[1].ID})
+		assert.ElementsMatch(t, []int64{own.released, own.open}, []int64{runs[0].ID.Int64(), runs[1].ID.Int64()})
 
 		_, err = store.CareRun(ctx, own.organization, other.open, false)
 		assert.ErrorIs(t, err, parentbilling.ErrCareRunNotFound, "CareRun of another Träger")
@@ -140,9 +141,37 @@ func TestCareMonthsFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 		invoiced, err := store.InvoicedContracts(ctx, own.organization, september)
 		require.NoError(t, err)
 		require.Len(t, invoiced, 1, "InvoicedContracts")
-		assert.Equal(t, own.contract, invoiced[own.contract].ContractID)
+		assert.Equal(t, ident.ID(own.contract), invoiced[own.contract].ContractID)
 		assert.Equal(t, int64(3200), invoiced[own.contract].TotalCents)
 		assert.Equal(t, int64(3200), invoiced[own.contract].Positions[0].PayableCents)
+		// The document behind the entry and the days it bills (#7892).
+		assert.Equal(t, calendar.NewDate(2029, 9, 1), invoiced[own.contract].Positions[0].ServiceFrom)
+		assert.Equal(t, calendar.NewDate(2029, 9, 30), invoiced[own.contract].Positions[0].ServiceUntil)
+		assert.Equal(t, []parentbilling.CareBilledInvoice{{Source: parentbilling.BilledByCareRun, RunID: ident.ID(own.released),
+			ContractID: ident.ID(own.contract), SchoolID: ident.ID(own.school), SchoolName: "Träger A", Number: own.number,
+			DocumentKind: parentbilling.DocumentKindInvoice}}, invoiced[own.contract].BilledBy)
+
+		// A release keeps the children held for an issued invoice with that
+		// invoice (#7892); the rows read back as stored.
+		// The held contract lies at another school than the invoice.
+		const heldSchool = 987654321
+		stored := []parentbilling.CareRunHold{{Position: 2, Reason: parentbilling.HoldReasonAlreadyBilled, ChildFirstName: "Noah", ChildLastName: "Beispiel",
+			Contracts: []parentbilling.CareDuplicateContract{{ContractID: ident.ID(own.contract + 2), SchoolID: heldSchool, SchoolName: "Andere Schule"}},
+			Slots:     []parentbilling.CareHeldSlot{}, Invoices: invoiced[own.contract].BilledBy}}
+		require.NoError(t, store.InsertCareRunHolds(ctx, own.organization, own.released, stored))
+		ownHolds, err := store.CareRunHolds(ctx, own.organization, own.released)
+		require.NoError(t, err)
+		require.Len(t, ownHolds, 2)
+		assert.Empty(t, ownHolds[0].Invoices, "a hold for a duplicate contract names no invoice")
+		assert.Equal(t, stored[0], ownHolds[1])
+		// The snapshot keeps the name of the child and the number of the
+		// invoice: it goes with the school of either, so the erasure of a
+		// demo school (school_ids && hidden_schools) finds it by the school
+		// of the stored invoice too.
+		var named []int64
+		require.NoError(t, tx.NewRaw(`SELECT unnest(school_ids) FROM parent_billing.care_run_holds
+			WHERE organization_id = ? AND run_id = ? AND position = 2 ORDER BY 1`, own.organization, own.released).Scan(ctx, &named))
+		assert.ElementsMatch(t, []int64{heldSchool, own.school}, named, "the schools of the held contract and of the stored invoice")
 
 		_, err = store.MarkCareRunReleased(ctx, own.organization, other.open, september, 1, 3200, parentbilling.MonthRuleVersionOnFirst)
 		assert.ErrorIs(t, err, parentbilling.ErrBillingRunReleased, "MarkCareRunReleased of another Träger's run")

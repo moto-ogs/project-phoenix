@@ -1,118 +1,138 @@
-import { createLogger } from "~/lib/logger";
+import { bffJson } from "~/lib/bff-fetch";
+import { knownEnum, requiredEnum } from "~/lib/contract/known-enum";
+import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
+import { translationsFromContract } from "~/lib/enrollment-form-schema-api";
 import type { Translations } from "~/lib/enrollment-translations";
-import {
-  enrollmentErrorReader,
-  readEnrollmentJSON,
-  sendEnrollmentRequest,
-} from "~/lib/enrollment-http";
 
-const logger = createLogger({ component: "EnrollmentPhaseAPI" });
+// Go does not register these sets; the contract types them as string.
+export const PHASE_KINDS = ["school_year", "holiday", "custom"] as const;
+export const PHASE_AUDIENCES = [
+  "open",
+  "new_students",
+  "existing_students",
+  "linked_parents",
+] as const;
+export const SELECTION_MODES = [
+  "optional",
+  "at_least_one",
+  "exactly_one",
+] as const;
+const OVERFLOW_MODES = ["waitlist", "reject", "allow"] as const;
+const ROLLOVER_MODES = ["opt_in", "opt_out"] as const;
+const EXPIRY_STATES = ["missing_successor", "incomplete"] as const;
 
-export type PhaseKind = "school_year" | "holiday" | "custom";
+export type PhaseKind = (typeof PHASE_KINDS)[number];
 // Who may apply to a phase (#1663). "open" = everyone (incl. anonymous);
 // "new_students" = anonymous allowed but children already enrolled at the
 // school are rejected server-side; "linked_parents" = hidden from the public
 // listing, only parent accounts with a guardian link + submit permission may
 // apply via the parents portal.
-export type PhaseAudience =
-  "open" | "new_students" | "existing_students" | "linked_parents";
-export type CareOfferingSelectionMode =
-  "optional" | "at_least_one" | "exactly_one";
-export type PhaseCareOverflowMode = "waitlist" | "reject" | "allow";
-
-export interface Phase {
-  id: string;
-  name: string;
-  kind: PhaseKind;
-  service_start_date: string; // YYYY-MM-DD
-  service_end_date: string; // YYYY-MM-DD
-  enrollment_open_at?: string | null; // RFC3339
-  enrollment_close_at?: string | null; // RFC3339
-  form_schema_id?: string | null;
-  calendar_period_id?: string | null;
-  show_status_reason_to_parent: boolean;
-  care_overflow_mode: PhaseCareOverflowMode;
-  care_offering_selection_mode: CareOfferingSelectionMode;
-  is_active: boolean;
-  /** School-written translations of `name` (#3377). */
-  translations?: Translations;
-  // Rollover columns — populated only on phases created by the
-  // "verlängern" flow. NULL/false on fresh phases.
-  rollover_source_phase_id?: string | null;
-  rollover_mode?: RolloverMode | null;
-  rollover_auto_approve?: boolean;
-  rollover_deadline?: string | null;
-  rollover_bumps_grade?: boolean;
-  // Concrete-class config (#1833). available_school_classes is the pick
-  // list the public form offers from grade 2; require_school_class makes
-  // choosing mandatory. Only meaningful when enrollment.collect_school_class
-  // is on.
-  available_school_classes?: string[];
-  require_school_class?: boolean;
-  // Eligibility config (#1663). audience gates who may apply;
-  // eligible_school_classes restricts submissions to children declaring one
-  // of these classes ([] = no restriction). Omitted on legacy phases.
-  audience?: PhaseAudience;
-  eligible_school_classes?: string[];
-  // eligible_grade_levels restricts submissions to children declaring one of
-  // these grade levels ([] = no restriction). Independent of the class
-  // restriction: a phase for a whole grade needs no concrete classes.
-  eligible_grade_levels?: number[];
-  created_at: string;
-  updated_at: string;
-}
+export type PhaseAudience = (typeof PHASE_AUDIENCES)[number];
+export type CareOfferingSelectionMode = (typeof SELECTION_MODES)[number];
+export type PhaseCareOverflowMode = (typeof OVERFLOW_MODES)[number];
+export type RolloverMode = (typeof ROLLOVER_MODES)[number];
 
 /**
- * Preview of deleting a phase, fetched for the confirmation modal.
- * `requests` block the delete (#6836); `care_offerings` are permanently
- * deleted with the phase; `students_kept` counts the children created
- * from its requests.
+ * A phase: the contract's answer with its enums narrowed and the lists Go
+ * may write as null read as empty lists. `available_school_classes` is the
+ * pick list the public form offers from grade 2 (#1833); `audience`,
+ * `eligible_school_classes` and `eligible_grade_levels` gate who may apply
+ * (#1663, [] = no restriction). The rollover fields are set only on phases
+ * the "verlängern" flow created.
  */
-export interface PhaseDeleteImpact {
-  requests: number;
-  care_offerings: number;
-  students_kept: number;
+export type Phase = Omit<
+  enrollmentContract.PhaseResponse,
+  | "kind"
+  | "care_overflow_mode"
+  | "care_offering_selection_mode"
+  | "rollover_mode"
+  | "available_school_classes"
+  | "audience"
+  | "eligible_school_classes"
+  | "eligible_grade_levels"
+  | "translations"
+> & {
+  kind: PhaseKind;
+  care_overflow_mode: PhaseCareOverflowMode;
+  care_offering_selection_mode: CareOfferingSelectionMode;
+  rollover_mode?: RolloverMode;
+  available_school_classes: string[];
+  audience: PhaseAudience;
+  eligible_school_classes: string[];
+  eligible_grade_levels: number[];
+  /** School-written translations of `name` (#3377). */
+  translations?: Translations;
+};
+
+/**
+ * Reads a phase of the contract. The editor saves the whole phase back, so
+ * a kind, mode or audience this build does not know fails the read instead
+ * of saving a guess.
+ */
+function phaseFromContract(phase: enrollmentContract.PhaseResponse): Phase {
+  const { rollover_mode, translations, ...rest } = phase;
+  const mode = knownEnum(ROLLOVER_MODES, rollover_mode);
+  const named = translationsFromContract(translations);
+  return {
+    ...rest,
+    kind: requiredEnum(PHASE_KINDS, phase.kind, "Phase.kind"),
+    care_overflow_mode: requiredEnum(
+      OVERFLOW_MODES,
+      phase.care_overflow_mode,
+      "Phase.care_overflow_mode",
+    ),
+    care_offering_selection_mode: requiredEnum(
+      SELECTION_MODES,
+      phase.care_offering_selection_mode,
+      "Phase.care_offering_selection_mode",
+    ),
+    ...(mode && { rollover_mode: mode }),
+    available_school_classes: phase.available_school_classes ?? [],
+    audience: requiredEnum(PHASE_AUDIENCES, phase.audience, "Phase.audience"),
+    eligible_school_classes: phase.eligible_school_classes ?? [],
+    eligible_grade_levels: phase.eligible_grade_levels ?? [],
+    ...(named && { translations: named }),
+  };
 }
 
-type PhaseExpiryState = "missing_successor" | "incomplete";
+/** A phase whose end leaves children without a confirmed successor phase. */
+export type PhaseExpiryWarning = Omit<
+  enrollmentContract.PhaseExpiryWarningResponse,
+  "state"
+> & {
+  /** undefined: a state this build does not know. */
+  state: (typeof EXPIRY_STATES)[number] | undefined;
+};
 
-export interface PhaseExpiryWarning {
-  source_phase_id: string;
-  source_phase_name: string;
-  successor_phase_id?: string;
-  successor_phase_name?: string;
-  first_affected_date: string;
-  affected_children: number;
-  unresolved_children: number;
-  state: PhaseExpiryState;
-  overdue: boolean;
-}
-
-export interface PhaseInput {
+/**
+ * The editor's draft of a phase: the request body with the fields the editor
+ * always fills and its enums narrowed. Omitted translations keep the stored
+ * ones; `{}` clears them.
+ */
+export type PhaseInput = Omit<
+  enrollmentContract.EnrollmentPhaseRequest,
+  | "name"
+  | "kind"
+  | "service_start_date"
+  | "service_end_date"
+  | "show_status_reason_to_parent"
+  | "care_overflow_mode"
+  | "care_offering_selection_mode"
+  | "is_active"
+  | "audience"
+  | "translations"
+> & {
   name: string;
   kind: PhaseKind;
   service_start_date: string;
   service_end_date: string;
-  enrollment_open_at?: string | null;
-  enrollment_close_at?: string | null;
-  form_schema_id?: string | null;
-  calendar_period_id?: string | null;
   show_status_reason_to_parent: boolean;
   care_overflow_mode: PhaseCareOverflowMode;
   care_offering_selection_mode: CareOfferingSelectionMode;
   is_active: boolean;
-  available_school_classes?: string[];
-  require_school_class?: boolean;
   audience?: PhaseAudience;
-  eligible_school_classes?: string[];
-  eligible_grade_levels?: number[];
-  /** Omitted keeps the stored translations; `{}` clears them. */
   translations?: Translations;
-}
-
-const BASE = "/api/enrollment/phases";
-
-const readError = enrollmentErrorReader(logger, "phase_request_failed");
+};
 
 /**
  * Maps a Phase back to the full PUT body. The backend rebuilds the whole
@@ -131,20 +151,14 @@ export function phaseToInput(p: Phase): PhaseInput {
     calendar_period_id: p.calendar_period_id ?? null,
     show_status_reason_to_parent: p.show_status_reason_to_parent,
     care_overflow_mode: p.care_overflow_mode,
-    care_offering_selection_mode: p.care_offering_selection_mode ?? "optional",
+    care_offering_selection_mode: p.care_offering_selection_mode,
     is_active: p.is_active,
-    available_school_classes: p.available_school_classes ?? [],
-    require_school_class: p.require_school_class ?? false,
-    // Default legacy phases (no stored audience) to "open" so a round-trip
-    // save never silently changes their eligibility.
-    audience: p.audience ?? "open",
-    eligible_school_classes: p.eligible_school_classes ?? [],
-    // Deliberately NOT coalesced to [] like its neighbours: a phase payload
-    // without the field comes from a backend that predates it, and sending an
-    // explicit [] would read as "clear the restriction". Leaving it undefined
-    // omits the key, which the backend re-hydrates from the stored phase.
+    available_school_classes: p.available_school_classes,
+    require_school_class: p.require_school_class,
+    audience: p.audience,
+    eligible_school_classes: p.eligible_school_classes,
     eligible_grade_levels: p.eligible_grade_levels,
-    // Same rule: undefined keeps the stored translations (#3377).
+    // Undefined keeps the stored translations (#3377).
     translations: p.translations,
   };
 }
@@ -160,58 +174,49 @@ export async function setPhaseCalendarPeriod(
   periodId: string | null,
 ): Promise<Phase> {
   const fresh = await getPhase(phase.id);
-  return updatePhase(phase.id, {
-    ...phaseToInput(fresh),
-    calendar_period_id: periodId,
-  });
+  return updatePhase(
+    phase.id,
+    { ...phaseToInput(fresh), calendar_period_id: periodId },
+    // The link goes onto the phase as just read (ADR 0311).
+    fresh.version,
+  );
 }
 
 export async function getPhase(id: string): Promise<Phase> {
-  const response = await sendEnrollmentRequest(
-    `${BASE}/${encodeURIComponent(id)}`,
-    {
-      cache: "no-store",
-    },
+  return phaseFromContract(
+    await bffJson("tenant", "GET /api/enrollment/phases/{id}/", {
+      params: { id },
+      errorMessage: "Phase konnte nicht geladen werden",
+    }),
   );
-  if (!response.ok) {
-    throw await readError(response, "Phase konnte nicht geladen werden");
-  }
-  return readEnrollmentJSON<Phase>(response);
 }
 
 export async function listPhases(): Promise<Phase[]> {
-  const response = await sendEnrollmentRequest(BASE, { cache: "no-store" });
-  if (!response.ok) {
-    throw await readError(response, "Phasen konnten nicht geladen werden");
-  }
-  const list = await readEnrollmentJSON<Phase[]>(response);
-  return Array.isArray(list) ? list : [];
+  const phases = await bffJson("tenant", "GET /api/enrollment/phases/", {
+    errorMessage: "Phasen konnten nicht geladen werden",
+  });
+  return phases.map(phaseFromContract);
 }
 
 export async function listPhaseExpiryWarnings(): Promise<PhaseExpiryWarning[]> {
-  const response = await sendEnrollmentRequest(`${BASE}/expiry-warnings`, {
-    cache: "no-store",
-  });
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Hinweise zum Phasenende konnten nicht geladen werden",
-    );
-  }
-  const list = await readEnrollmentJSON<PhaseExpiryWarning[]>(response);
-  return Array.isArray(list) ? list : [];
+  const warnings = await bffJson(
+    "tenant",
+    "GET /api/enrollment/phases/expiry-warnings",
+    { errorMessage: "Hinweise zum Phasenende konnten nicht geladen werden" },
+  );
+  return warnings.map((warning) => ({
+    ...warning,
+    state: knownEnum(EXPIRY_STATES, warning.state),
+  }));
 }
 
 export async function createPhase(input: PhaseInput): Promise<Phase> {
-  const response = await sendEnrollmentRequest(BASE, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
-  });
-  if (!response.ok) {
-    throw await readError(response, "Phase konnte nicht erstellt werden");
-  }
-  return readEnrollmentJSON<Phase>(response);
+  return phaseFromContract(
+    await bffJson("tenant", "POST /api/enrollment/phases/", {
+      body: input,
+      errorMessage: "Phase konnte nicht erstellt werden",
+    }),
+  );
 }
 
 /**
@@ -230,38 +235,29 @@ export interface CareBeyondPhaseEnd {
   phaseEnd: string;
 }
 
-interface CareBeyondPhaseEndWire {
-  student_id: string;
-  first_name: string;
-  last_name: string;
-  school_class: string;
-  care_end: string;
-  phase_end: string;
-}
-
 /** The saved phase; `careBeyondEnd` lists the children a shortened end left in care. */
 export type UpdatedPhase = Phase & { careBeyondEnd?: CareBeyondPhaseEnd[] };
 
+/**
+ * Saves the whole phase over the version its draft rests on; the backend
+ * refuses a phase changed since (ADR 0311).
+ */
 export async function updatePhase(
   id: string,
   input: PhaseInput,
+  version: string,
 ): Promise<UpdatedPhase> {
-  const response = await sendEnrollmentRequest(
-    `${BASE}/${encodeURIComponent(id)}`,
+  const { care_beyond_end: careBeyondEnd, ...phase } = await bffJson(
+    "tenant",
+    "PUT /api/enrollment/phases/{id}/",
     {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
+      params: { id },
+      body: { ...input, expected_version: version },
+      errorMessage: "Phase konnte nicht gespeichert werden",
     },
   );
-  if (!response.ok) {
-    throw await readError(response, "Phase konnte nicht gespeichert werden");
-  }
-  const { care_beyond_end: careBeyondEnd, ...phase } = await readEnrollmentJSON<
-    Phase & { care_beyond_end?: CareBeyondPhaseEndWire[] | null }
-  >(response);
   return {
-    ...phase,
+    ...phaseFromContract(phase),
     careBeyondEnd: (careBeyondEnd ?? []).map((child) => ({
       studentId: child.student_id,
       firstName: child.first_name,
@@ -275,21 +271,17 @@ export async function updatePhase(
 
 /**
  * Fetches the blast radius of deleting a phase so the confirmation modal
- * can warn the admin what will be removed vs kept.
+ * can warn the admin what will be removed vs kept: `requests` block the
+ * delete (#6836); `care_offerings` are permanently deleted with the phase;
+ * `students_kept` counts the children created from its requests.
  */
 export async function getPhaseDeleteImpact(
   id: string,
-): Promise<PhaseDeleteImpact> {
-  const response = await sendEnrollmentRequest(
-    `${BASE}/${encodeURIComponent(id)}/delete-impact`,
-  );
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Löschvorschau konnte nicht geladen werden",
-    );
-  }
-  return readEnrollmentJSON<PhaseDeleteImpact>(response);
+): Promise<enrollmentContract.PhaseDeleteImpactResponse> {
+  return bffJson("tenant", "GET /api/enrollment/phases/{id}/delete-impact", {
+    params: { id },
+    errorMessage: "Löschvorschau konnte nicht geladen werden",
+  });
 }
 
 /**
@@ -299,49 +291,38 @@ export async function getPhaseDeleteImpact(
  * no "has enrollments" guard anymore.
  */
 export async function deletePhase(id: string): Promise<void> {
-  const response = await sendEnrollmentRequest(
-    `${BASE}/${encodeURIComponent(id)}`,
-    {
-      method: "DELETE",
-    },
-  );
-  if (response.status === 204) return;
-  if (!response.ok) {
-    throw await readError(response, "Phase konnte nicht gelöscht werden");
-  }
+  await bffJson("tenant", "DELETE /api/enrollment/phases/{id}/", {
+    params: { id },
+    errorMessage: "Phase konnte nicht gelöscht werden",
+  });
 }
 
 // --- Rollover (annual phase renewal) ---
 
-export type RolloverMode = "opt_in" | "opt_out";
-
-export interface RolloverInput {
+/** The rollover form's draft: the request body with its enums narrowed. */
+export type RolloverInput = Omit<
+  enrollmentContract.RolloverCreateRequest,
+  | "name"
+  | "kind"
+  | "service_start_date"
+  | "service_end_date"
+  | "rollover_mode"
+  | "rollover_auto_approve"
+  | "rollover_deadline"
+> & {
   name: string;
   kind: PhaseKind;
   service_start_date: string;
   service_end_date: string;
-  enrollment_open_at?: string | null;
-  enrollment_close_at?: string | null;
-  form_schema_id?: string | null;
   rollover_mode: RolloverMode;
   rollover_auto_approve: boolean;
-  rollover_deadline: string; // RFC3339
-  rollover_bumps_grade?: boolean;
-}
-
-interface RolloverSummary {
-  source_child_count: number;
-  rolled_count: number;
-  review_count: number;
-  review_by_reason: Record<string, number>;
-  request_count: number;
-  enqueued_emails: number;
-  skipped_empty_email: number;
-}
+  /** RFC 3339 */
+  rollover_deadline: string;
+};
 
 export interface RolloverResult {
   phase: Phase;
-  summary: RolloverSummary;
+  summary: enrollmentContract.RolloverSummary;
 }
 
 /**
@@ -352,28 +333,16 @@ export async function createRollover(
   sourcePhaseID: string,
   input: RolloverInput,
 ): Promise<RolloverResult> {
-  const response = await sendEnrollmentRequest(
-    `${BASE}/${encodeURIComponent(sourcePhaseID)}/rollover`,
+  const { phase, summary } = await bffJson(
+    "tenant",
+    "POST /api/enrollment/phases/{id}/rollover",
     {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
+      params: { id: sourcePhaseID },
+      body: input,
+      errorMessage: "Rollover konnte nicht erstellt werden",
     },
   );
-  if (!response.ok) {
-    throw await readError(response, "Rollover konnte nicht erstellt werden");
-  }
-  return readEnrollmentJSON<RolloverResult>(response);
-}
-
-export interface RolloverPreview {
-  carry_candidate_count: number;
-  carried_count: number;
-  review_count: number;
-  review_by_reason: Record<string, number>;
-  excluded_count: number;
-  excluded_by_status: Record<string, number>;
-  request_count: number;
+  return { phase: phaseFromContract(phase), summary };
 }
 
 /**
@@ -384,47 +353,21 @@ export interface RolloverPreview {
 export async function fetchRolloverPreview(
   sourcePhaseID: string,
   bumpsGrade: boolean,
-): Promise<RolloverPreview> {
-  const response = await sendEnrollmentRequest(
-    `${BASE}/${encodeURIComponent(sourcePhaseID)}/rollover-preview?bumps_grade=${bumpsGrade}`,
-    { cache: "no-store" },
-  );
-  if (!response.ok) {
-    throw await readError(response, "Vorschau konnte nicht geladen werden");
-  }
-  return readEnrollmentJSON<RolloverPreview>(response);
-}
-
-export interface ReviewQueueItem {
-  child_id: string;
-  request_id: string;
-  first_name: string;
-  last_name: string;
-  target_grade_level?: number | null;
-  review_reason?: string | null;
-  source_grade_level?: number | null;
-  source_first_name?: string;
-  source_last_name?: string;
-  guardian_first_name: string;
-  guardian_last_name: string;
-  guardian_email: string;
-  status_token: string;
+): Promise<enrollmentContract.RolloverPreviewResponse> {
+  return bffJson("tenant", "GET /api/enrollment/phases/{id}/rollover-preview", {
+    params: { id: sourcePhaseID },
+    query: { bumps_grade: bumpsGrade },
+    errorMessage: "Vorschau konnte nicht geladen werden",
+  });
 }
 
 export async function listRolloverReview(
   phaseID: string,
-): Promise<ReviewQueueItem[]> {
-  const response = await sendEnrollmentRequest(
-    `${BASE}/${encodeURIComponent(phaseID)}/review`,
-    {
-      cache: "no-store",
-    },
-  );
-  if (!response.ok) {
-    throw await readError(response, "Prüfliste konnte nicht geladen werden");
-  }
-  const list = await readEnrollmentJSON<ReviewQueueItem[]>(response);
-  return Array.isArray(list) ? list : [];
+): Promise<enrollmentContract.ReviewItemResponse[]> {
+  return bffJson("tenant", "GET /api/enrollment/phases/{id}/review", {
+    params: { id: phaseID },
+    errorMessage: "Prüfliste konnte nicht geladen werden",
+  });
 }
 
 type ReviewDecision = "keep" | "drop" | "defer";
@@ -438,26 +381,32 @@ export async function decideRolloverReview(
   requestChildID: string,
   input: ReviewDecisionInput,
 ): Promise<void> {
-  const response = await sendEnrollmentRequest(
-    `/api/enrollment/admin/request-children/${encodeURIComponent(requestChildID)}/rollover-review`,
+  await bffJson(
+    "tenant",
+    "POST /api/enrollment/admin/request-children/{id}/rollover-review",
     {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
+      params: { id: requestChildID },
+      body: input,
+      errorMessage: "Entscheidung konnte nicht gespeichert werden",
     },
   );
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Entscheidung konnte nicht gespeichert werden",
-    );
-  }
 }
 
 // Rücklauf der bestehenden Kinder (#3379)
 
+// Go does not register this set; the contract types it as string.
+const EXCLUSION_REASON_VALUES = [
+  "care_ending",
+  "graduating",
+  "not_in_scope",
+] as const;
+
+/**
+ * Why children do not count for the response rate. "other": a reason this
+ * build does not know; the children stay excluded (ADR 0270 point 6).
+ */
 type PhaseResponseExclusionReason =
-  "care_ending" | "graduating" | "not_in_scope";
+  (typeof EXCLUSION_REASON_VALUES)[number] | "other";
 
 export interface PhaseResponseChild {
   studentId: string;
@@ -489,28 +438,8 @@ export interface PhaseResponseOverview {
   excluded: PhaseResponseExclusion[];
 }
 
-interface BackendPhaseResponseChild {
-  student_id: string;
-  first_name: string;
-  last_name: string;
-  school_class: string;
-  has_parent_app: boolean;
-  responded: boolean;
-  request_id?: string | null;
-  pending_request_id?: string | null;
-  child_status?: string | null;
-}
-
-interface BackendPhaseResponseOverview {
-  applicable: boolean;
-  expected: number;
-  responded: number;
-  children?: BackendPhaseResponseChild[] | null;
-  excluded?: PhaseResponseExclusion[] | null;
-}
-
 export function mapPhaseResponseOverview(
-  data: BackendPhaseResponseOverview,
+  data: enrollmentContract.PhaseResponseOverviewResponse,
 ): PhaseResponseOverview {
   return {
     applicable: data.applicable,
@@ -527,21 +456,20 @@ export function mapPhaseResponseOverview(
       pendingRequestId: child.pending_request_id ?? null,
       childStatus: child.child_status ?? null,
     })),
-    excluded: data.excluded ?? [],
+    excluded: (data.excluded ?? []).map((entry) => ({
+      reason: knownEnum(EXCLUSION_REASON_VALUES, entry.reason) ?? "other",
+      count: entry.count,
+    })),
   };
 }
 
 export async function getPhaseResponseOverview(
   phaseID: string,
 ): Promise<PhaseResponseOverview> {
-  const response = await sendEnrollmentRequest(
-    `${BASE}/${encodeURIComponent(phaseID)}/responses`,
-    { cache: "no-store" },
-  );
-  if (!response.ok) {
-    throw await readError(response, "Rücklauf konnte nicht geladen werden");
-  }
   return mapPhaseResponseOverview(
-    await readEnrollmentJSON<BackendPhaseResponseOverview>(response),
+    await bffJson("tenant", "GET /api/enrollment/phases/{id}/responses", {
+      params: { id: phaseID },
+      errorMessage: "Rücklauf konnte nicht geladen werden",
+    }),
   );
 }

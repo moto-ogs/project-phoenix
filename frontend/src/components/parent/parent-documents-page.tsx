@@ -39,12 +39,12 @@ import {
   downloadMySharedDocument,
   listMyDocuments,
   type ParentDocument,
-  type ParentSharedDocument,
 } from "~/lib/parent-api";
 import { careContractsConcept } from "~/lib/concepts/careContracts";
 import { documentsConcept } from "~/lib/concepts/documents";
 import { parentPath } from "~/lib/parent-url";
 import type { MotoConcept } from "~/lib/moto-concepts";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 /** The title of each kind of letter in the inbox (#4690). */
 const DOCUMENT_TITLES = {
@@ -56,7 +56,16 @@ const DOCUMENT_TITLES = {
   care_fee_notice: "careFeeNotice",
   care_change_notice: "careChangeNotice",
   care_contract: "careContract",
-} as const satisfies Record<ParentDocument["kind"], string>;
+} as const;
+
+function isDocumentKind(kind: string): kind is keyof typeof DOCUMENT_TITLES {
+  return Object.hasOwn(DOCUMENT_TITLES, kind);
+}
+
+/** A kind this build has a title for; a newer kind shows the inbox title. */
+function documentTitleKey(kind: string) {
+  return isDocumentKind(kind) ? DOCUMENT_TITLES[kind] : "title";
+}
 
 /** A row of the inbox: a letter or contract, or a released document. */
 type InboxEntry =
@@ -68,7 +77,7 @@ type InboxEntry =
   | {
       readonly type: "shared";
       readonly at: string;
-      readonly document: ParentSharedDocument;
+      readonly document: parentMeContract.SharedDocumentResponse;
     };
 
 /** The failed source of the inbox, as the catalog object names it. */
@@ -81,7 +90,7 @@ const FAILED_OBJECTS = {
 
 function inboxEntries(
   documents: readonly ParentDocument[],
-  shared: readonly ParentSharedDocument[],
+  shared: readonly parentMeContract.SharedDocumentResponse[],
 ): InboxEntry[] {
   return [
     ...documents.map((document): InboxEntry => ({
@@ -256,7 +265,7 @@ function ParentDocumentCard({
   return (
     <InboxDocumentCard
       concept={contract ? careContractsConcept : documentsConcept}
-      title={t(DOCUMENT_TITLES[document.kind], {
+      title={t(documentTitleKey(document.kind), {
         period: document.period_name,
       })}
       description={t("sender", { traeger: document.traeger_name })}
@@ -298,7 +307,7 @@ function ParentDocumentCard({
           </DataField>
         ) : null}
         <DataField label={t("children")}>
-          {document.child_names.join(", ")}
+          {(document.child_names ?? []).join(", ")}
         </DataField>
         {contract ? (
           <>
@@ -440,7 +449,7 @@ function fileKind(contentType: string): string {
 /** A document a Träger released for the parents (#4692). */
 function ParentSharedDocumentCard({
   document,
-}: Readonly<{ document: ParentSharedDocument }>) {
+}: Readonly<{ document: parentMeContract.SharedDocumentResponse }>) {
   const t = useTranslations("parentDocuments");
   const locale = useLocale();
   const kind = fileKind(document.content_type);

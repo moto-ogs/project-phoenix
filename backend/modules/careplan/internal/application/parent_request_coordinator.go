@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/masterdatarequests"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/parentrequests"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // maxBulkParentRequests bounds one bulk approval.
@@ -113,7 +114,7 @@ func (c *ParentRequestCoordinator) BulkApprove(ctx context.Context, input parent
 		// A cascading child deletion now reaches this frontier before the
 		// request re-read. Keep the request-race outcome of the old pre-lock.
 		if isParentRequestRace(err) {
-			return c.failed(ctx, fmt.Errorf("%w: bulk student changed before locking", parentrequests.ErrStale))
+			return c.failed(ctx, fmt.Errorf("%w: bulk student changed before locking", readstate.ErrChanged))
 		}
 		return c.failed(ctx, fmt.Errorf("parent requests: lock bulk students: %w", err))
 	}
@@ -139,7 +140,7 @@ func (c *ParentRequestCoordinator) lockBulkParentRequests(ctx context.Context, r
 		}
 		if err != nil {
 			if isParentRequestRace(err) {
-				return fmt.Errorf("%w: %s %d changed before locking", parentrequests.ErrStale, ref.Kind, ref.ID)
+				return fmt.Errorf("%w: %s %d changed before locking", readstate.ErrChanged, ref.Kind, ref.ID)
 			}
 			return fmt.Errorf("parent requests: lock %s %d: %w", ref.Kind, ref.ID, err)
 		}
@@ -219,7 +220,7 @@ func (c *ParentRequestCoordinator) applyBulkParentRequests(ctx context.Context, 
 	for _, ref := range input.Requests {
 		if err := c.applyBulkParentRequest(ctx, input, ref); err != nil {
 			if errors.Is(err, parentrequests.ErrDecisionRace) {
-				return fmt.Errorf("%w: %s %d changed during approval", parentrequests.ErrStale, ref.Kind, ref.ID)
+				return fmt.Errorf("%w: %s %d changed during approval", readstate.ErrChanged, ref.Kind, ref.ID)
 			}
 			return fmt.Errorf("parent requests: bulk apply %s %d: %w", ref.Kind, ref.ID, err)
 		}
@@ -335,8 +336,8 @@ func validateBulkParentRequestVersions(refs []parentrequests.Ref, masters map[in
 		if err != nil {
 			return err
 		}
-		if version != ref.ExpectedVersion {
-			return parentrequests.ErrStale
+		if err := readstate.Check(ref.ExpectedVersion, version); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -351,7 +352,7 @@ func bulkCandidateVersion(ref parentrequests.Ref, masters map[int64]*careplan.Ma
 		if !row.BulkEligible {
 			return "", parentrequests.ErrBulkIneligible
 		}
-		return careplan.ParentRequestVersion(row.Request.UpdatedAt), nil
+		return readstate.Of(row.Request.UpdatedAt), nil
 	}
 	row, found := excused[ref.ID]
 	if !found {
@@ -360,5 +361,5 @@ func bulkCandidateVersion(ref parentrequests.Ref, masters map[int64]*careplan.Ma
 	if !row.Eligible {
 		return "", parentrequests.ErrBulkIneligible
 	}
-	return careplan.ParentRequestVersion(row.UpdatedAt), nil
+	return readstate.Of(row.UpdatedAt), nil
 }

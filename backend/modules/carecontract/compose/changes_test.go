@@ -13,6 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	"github.com/moto-ogs/project-phoenix/modules/carecontract/compose"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -34,7 +35,7 @@ func (s *changeSchool) TraegerSchools(context.Context, int64) ([]carecontract.Sc
 
 func (s *changeSchool) PendingChanges(_ context.Context, _ int64, childID int64, _ *calendar.Date) ([]carecontract.ChangeRequest, *carecontract.ChangeOutcome, bool, error) {
 	s.readChild = childID
-	return []carecontract.ChangeRequest{{ID: s.request, EffectiveFrom: calendar.NewDate(2100, 3, 1)}}, nil, false, nil
+	return []carecontract.ChangeRequest{{ID: ident.ID(s.request), EffectiveFrom: calendar.NewDate(2100, 3, 1)}}, nil, false, nil
 }
 
 func (s *changeSchool) DecideChange(_ context.Context, decision carecontract.ChangeDecision) (*carecontract.ChangeImpact, error) {

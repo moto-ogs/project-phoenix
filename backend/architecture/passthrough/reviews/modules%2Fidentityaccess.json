@@ -197,11 +197,6 @@
     },
     {
       "decision": "0177",
-      "id": "modules/identityaccess/internal/application/AccountAdministration.UpdateManageableAccount",
-      "reason": "ADR 0177: the flow helper takes over nil guard, runtime binding and translation; ADR 0075 eligibility unchanged."
-    },
-    {
-      "decision": "0177",
       "id": "modules/identityaccess/internal/application/AccountAuthentication.CountExpiredTokens",
       "reason": "ADR 0177: the flow helper takes over nil guard, runtime binding and translation; ADR 0075 eligibility unchanged."
     },
@@ -307,16 +302,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/identityaccess/internal/application/CallerEngine.GroupStudentIDs",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/identityaccess/internal/application/CallerEngine.GroupVisits",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/identityaccess/internal/application/CallerEngine.HasCurrentStaff",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -398,11 +383,6 @@
     {
       "decision": "0090",
       "id": "modules/identityaccess/internal/application/CallerPeople.FindPersonByAccount",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/identityaccess/internal/application/CallerSessions.SessionVisits",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
@@ -713,11 +693,6 @@
     {
       "decision": "0090",
       "id": "modules/identityaccess/internal/application/GuardianInvitationReads.ListOpenGuardianInvitations",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/identityaccess/internal/application/GuardianInvitationReads.ListRedeemableGuardianInvitations",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {

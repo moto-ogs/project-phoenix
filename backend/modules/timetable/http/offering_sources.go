@@ -17,6 +17,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	timetableModule "github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type offeringSourcesResponse struct {
@@ -26,21 +27,21 @@ type offeringSourcesResponse struct {
 // offeringSourceOptionResponse mirrors timetable.OfferingSourceOption with
 // string-keyed grade counts (JSON objects cannot carry int keys).
 type offeringSourceOptionResponse struct {
-	ID                int64  `json:"id"`
-	Name              string `json:"name"`
-	PhaseID           int64  `json:"phase_id"`
-	PhaseName         string `json:"phase_name"`
-	PhaseServiceStart string `json:"phase_service_start,omitempty"`
-	TotalCount        int    `json:"total_count"`
+	ID                ident.ID `json:"id"`
+	Name              string   `json:"name"`
+	PhaseID           ident.ID `json:"phase_id"`
+	PhaseName         string   `json:"phase_name"`
+	PhaseServiceStart string   `json:"phase_service_start,omitempty"`
+	TotalCount        int      `json:"total_count"`
 	// GradeCounts maps Jahrgang (as string) → approved children; key "0"
 	// collects children without a derivable grade.
 	GradeCounts            map[string]int                    `json:"grade_counts"`
 	SourcedTemplates       []offeringSourcedTemplateResponse `json:"sourced_templates"`
-	LegacyLinkedTemplateID *int64                            `json:"legacy_linked_template_id,omitempty"`
+	LegacyLinkedTemplateID *ident.ID                         `json:"legacy_linked_template_id,omitempty"`
 }
 
 type offeringSourcedTemplateResponse struct {
-	ID            int64    `json:"id"`
+	ID            ident.ID `json:"id"`
 	Name          string   `json:"name"`
 	GradeLevels   []int    `json:"grade_levels,omitempty"`
 	SchoolClasses []string `json:"school_classes,omitempty"`
@@ -79,7 +80,7 @@ func (rs *Resource) listOfferingSources(w http.ResponseWriter, r *http.Request) 
 		sourced := make([]offeringSourcedTemplateResponse, 0, len(option.SourcedTemplates))
 		for _, tmpl := range option.SourcedTemplates {
 			sourced = append(sourced, offeringSourcedTemplateResponse{
-				ID:            tmpl.ID,
+				ID:            ident.ID(tmpl.ID),
 				Name:          tmpl.Name,
 				GradeLevels:   tmpl.GradeLevels,
 				SchoolClasses: tmpl.SchoolClasses,
@@ -90,15 +91,15 @@ func (rs *Resource) listOfferingSources(w http.ResponseWriter, r *http.Request) 
 			phaseServiceStart = option.PhaseServiceStart.String()
 		}
 		resp.Offerings = append(resp.Offerings, offeringSourceOptionResponse{
-			ID:                     option.ID,
+			ID:                     ident.ID(option.ID),
 			Name:                   option.Name,
-			PhaseID:                option.PhaseID,
+			PhaseID:                ident.ID(option.PhaseID),
 			PhaseName:              option.PhaseName,
 			PhaseServiceStart:      phaseServiceStart,
 			TotalCount:             option.TotalCount,
 			GradeCounts:            gradeCounts,
 			SourcedTemplates:       sourced,
-			LegacyLinkedTemplateID: option.LegacyLinkedTemplateID,
+			LegacyLinkedTemplateID: (*ident.ID)(option.LegacyLinkedTemplateID),
 		})
 	}
 	common.Respond(w, r, http.StatusOK, resp, "Offering sources retrieved")
@@ -118,8 +119,8 @@ type combinedOfferingCountsResponse struct {
 }
 
 type combinedOfferingStudentResponse struct {
-	StudentID   int64  `json:"student_id"`
-	SchoolClass string `json:"school_class,omitempty"`
+	StudentID   ident.ID `json:"student_id"`
+	SchoolClass string   `json:"school_class,omitempty"`
 }
 
 // getCombinedOfferingSourceCounts handles
@@ -163,7 +164,7 @@ func (rs *Resource) getCombinedOfferingSourceCounts(w http.ResponseWriter, r *ht
 	students := make([]combinedOfferingStudentResponse, 0, len(counts.Students))
 	for _, student := range counts.Students {
 		students = append(students, combinedOfferingStudentResponse{
-			StudentID:   student.StudentID,
+			StudentID:   ident.ID(student.StudentID),
 			SchoolClass: student.SchoolClass,
 		})
 	}

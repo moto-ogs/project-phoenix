@@ -4,36 +4,21 @@
 // Gesprächslänge und Pausen; diese Datei hält Typen, Aufrufe und die Prüfung
 // des Formulars. Die Aufrufe der Eltern-App liegen in `parent-api.ts`.
 
-import { authFetch } from "~/lib/api-helpers";
-
-interface ProxyResponse<T> {
-  readonly data: T;
-}
-
-export interface ParentConferenceWindow {
-  readonly start_time: string;
-  readonly end_time: string;
-}
-
-export interface ParentConferenceSlot extends ParentConferenceWindow {
-  readonly booked: boolean;
-  readonly student_id?: string;
-  readonly student_name?: string;
-}
+import { bffJson } from "~/lib/bff-fetch";
+import { requiredDay } from "~/lib/contract/required-day";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
+import type * as schoolCalendarContract from "~/lib/contract/school-calendar.generated";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 
 /** Ein Sprechtag, wie ihn die Lehrkraft sieht: mit Belegung. */
-export interface ParentConference {
-  readonly id: string;
-  readonly school_class: string;
+export type ParentConference = Omit<
+  schoolCalendarContract.ParentConferenceView,
+  "date" | "breaks" | "slots"
+> & {
   readonly date: string;
-  readonly start_time: string;
-  readonly end_time: string;
-  readonly slot_minutes: number;
-  readonly breaks: readonly ParentConferenceWindow[];
-  readonly location?: string;
-  readonly booked_count: number;
-  readonly slots: readonly ParentConferenceSlot[];
-}
+  readonly breaks: readonly sharedContract.ParentConferenceWindow[];
+  readonly slots: readonly schoolCalendarContract.ParentConferenceSlot[];
+};
 
 export interface SchoolParentConferenceList {
   readonly conferences: readonly ParentConference[];
@@ -41,69 +26,94 @@ export interface SchoolParentConferenceList {
 }
 
 /** Ein Sprechtag, wie ihn die Eltern für ein Kind sehen. */
-export interface ParentConferenceOffer {
-  readonly id: string;
-  readonly school_class: string;
-  readonly teacher_name: string;
+export type ParentConferenceOffer = Omit<
+  parentMeContract.ParentConferenceOffer,
+  "date" | "free_slots"
+> & {
   readonly date: string;
-  readonly location?: string;
-  readonly free_slots: readonly ParentConferenceWindow[];
-  readonly booking?: ParentConferenceWindow;
-  readonly can_change: boolean;
+  readonly free_slots: readonly sharedContract.ParentConferenceWindow[];
+};
+
+/** What the form sends: the generated request with every field it fills. */
+export type ParentConferenceRequest = Required<
+  Pick<
+    schoolCalendarContract.ParentConferenceRequest,
+    "school_class" | "start_time" | "end_time" | "slot_minutes"
+  >
+> & {
+  date: string;
+  breaks: sharedContract.ParentConferenceWindow[];
+  location?: string;
+};
+
+// Go always sets the day of a Sprechtag; the contract types calendar.Date as
+// nullable.
+function mapConference(
+  raw: schoolCalendarContract.ParentConferenceView,
+): ParentConference {
+  return {
+    ...raw,
+    date: requiredDay(raw.date, "parent_conference.date"),
+    breaks: raw.breaks ?? [],
+    slots: raw.slots ?? [],
+  };
 }
 
-export interface ParentConferenceRequest {
-  readonly school_class: string;
-  readonly date: string;
-  readonly start_time: string;
-  readonly end_time: string;
-  readonly slot_minutes: number;
-  readonly breaks: readonly ParentConferenceWindow[];
-  readonly location?: string;
+export function mapParentConferenceOffer(
+  raw: parentMeContract.ParentConferenceOffer,
+): ParentConferenceOffer {
+  return {
+    ...raw,
+    date: requiredDay(raw.date, "parent_conference_offer.date"),
+    free_slots: raw.free_slots ?? [],
+  };
 }
 
 export const SCHOOL_PARENT_CONFERENCES_ROUTE = "/school/elternsprechtag";
-const SCHOOL_BASE = "/api/school/calendar/parent-conferences";
 
 export async function fetchSchoolParentConferences(): Promise<SchoolParentConferenceList> {
-  const response =
-    await authFetch<ProxyResponse<Partial<SchoolParentConferenceList>>>(
-      SCHOOL_BASE,
-    );
+  const data = await bffJson(
+    "school",
+    "GET /school/calendar/parent-conferences",
+  );
   return {
-    conferences: response.data.conferences ?? [],
-    classes: response.data.classes ?? [],
+    conferences: (data.conferences ?? []).map(mapConference),
+    classes: data.classes ?? [],
   };
 }
 
 export async function createSchoolParentConference(
   request: ParentConferenceRequest,
 ): Promise<ParentConference> {
-  const response = await authFetch<ProxyResponse<ParentConference>>(
-    SCHOOL_BASE,
-    {
-      method: "POST",
+  return mapConference(
+    await bffJson("school", "POST /school/calendar/parent-conferences", {
       body: request,
-    },
+    }),
   );
-  return response.data;
 }
 
 export async function updateSchoolParentConference(
   id: string,
   request: ParentConferenceRequest,
 ): Promise<ParentConference> {
-  const response = await authFetch<ProxyResponse<ParentConference>>(
-    `${SCHOOL_BASE}/${encodeURIComponent(id)}`,
-    { method: "PUT", body: request },
+  return mapConference(
+    await bffJson(
+      "school",
+      "PUT /school/calendar/parent-conferences/{conferenceId}",
+      {
+        params: { conferenceId: id },
+        body: request,
+      },
+    ),
   );
-  return response.data;
 }
 
 export async function deleteSchoolParentConference(id: string): Promise<void> {
-  await authFetch<unknown>(`${SCHOOL_BASE}/${encodeURIComponent(id)}`, {
-    method: "DELETE",
-  });
+  await bffJson(
+    "school",
+    "DELETE /school/calendar/parent-conferences/{conferenceId}",
+    { params: { conferenceId: id } },
+  );
 }
 
 export interface ParentConferenceDraft {
@@ -115,7 +125,7 @@ export interface ParentConferenceDraft {
   readonly breakStart: string;
   readonly breakEnd: string;
   // The form edits the first break; retain further API-created breaks on save.
-  readonly additionalBreaks: readonly ParentConferenceWindow[];
+  readonly additionalBreaks: readonly sharedContract.ParentConferenceWindow[];
   readonly location: string;
 }
 
@@ -212,7 +222,7 @@ export function parentConferenceRequest(
 
 /** „14:15–14:30 Uhr“ */
 export function parentConferenceWindowLabel(
-  window: ParentConferenceWindow,
+  window: sharedContract.ParentConferenceWindow,
 ): string {
   return `${window.start_time}–${window.end_time} Uhr`;
 }

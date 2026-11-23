@@ -4,10 +4,11 @@ import (
 	"fmt"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type demoPresenceBooking struct {
-	StudentID int64         `json:"student_id"`
+	StudentID ident.ID      `json:"student_id"`
 	Date      calendar.Date `json:"date"`
 	Expected  bool          `json:"expected"`
 	NoPlan    bool          `json:"no_plan"`
@@ -36,7 +37,7 @@ func loadDemoPresenceBookings(rt *Runtime, input *presenceHistoryInput) error {
 		if input.bookings[booking.Date] == nil {
 			input.bookings[booking.Date] = make(map[int64]demoPresenceBooking)
 		}
-		input.bookings[booking.Date][booking.StudentID] = booking
+		input.bookings[booking.Date][int64(booking.StudentID)] = booking
 	}
 	return nil
 }

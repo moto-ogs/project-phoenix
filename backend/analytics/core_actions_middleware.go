@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
+	"maps"
 	"net/http"
 	"strconv"
 	"strings"
@@ -85,8 +87,8 @@ func CoreActionMiddleware(cfg CoreActionConfig) func(http.Handler) http.Handler 
 			}
 
 			ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
-			body := &cappedBuffer{limit: sessionBodyLimit}
-			ww.Tee(body)
+			body, head := &cappedBuffer{limit: sessionBodyLimit}, &responseHead{}
+			ww.Tee(io.MultiWriter(body, head))
 			next.ServeHTTP(ww, r)
 
 			status := ww.Status()
@@ -100,15 +102,20 @@ func CoreActionMiddleware(cfg CoreActionConfig) func(http.Handler) http.Handler 
 			if !ok || action.Event == "" {
 				return
 			}
-			if !action.countsResponse(body.Bytes()) {
+			extra, ok := action.completed(r, body, head.kept)
+			if !ok {
 				return
 			}
-			captureCoreAction(cfg, r, action, body)
+			captureCoreAction(cfg, r, action, body, extra)
 		})
 	}
 }
 
-func captureCoreAction(cfg CoreActionConfig, r *http.Request, action CoreAction, body *cappedBuffer) {
+func captureCoreAction(cfg CoreActionConfig, r *http.Request, action CoreAction, body *cappedBuffer, extra map[string]any) {
+	action, ok := action.detailed(r, body)
+	if !ok {
+		return
+	}
 	actor, ok := resolveActor(cfg, r, action, body)
 	if !ok {
 		return
@@ -119,7 +126,9 @@ func captureCoreAction(cfg CoreActionConfig, r *http.Request, action CoreAction,
 		return
 	}
 	ctx, distinct := identify(context.WithValue(r.Context(), collectionPermissionKey{}, true), cfg, actor)
-	cfg.Tracker.CaptureContext(ctx, distinct, action.Event, action.properties(actor))
+	props := action.properties(actor)
+	maps.Copy(props, extra)
+	cfg.Tracker.CaptureContext(ctx, distinct, action.Event, props)
 }
 
 func lookupCoreAction(r *http.Request) (CoreAction, bool) {
@@ -149,6 +158,44 @@ func responseFlag(body []byte, field string) bool {
 	}
 	var value bool
 	return ok && json.Unmarshal(raw, &value) == nil && value
+}
+
+// leadingResponseFlag reads data.<field> of the response envelope from the
+// first bytes of a response and stops there: what follows the flag (a long
+// list of rows) is cut and is not read. A flag that stands behind a value
+// the cut reached, or a false one, is no flag.
+func leadingResponseFlag(head []byte, field string) bool {
+	decoder := json.NewDecoder(bytes.NewReader(head))
+	if !leadingMember(decoder, "data") {
+		return false
+	}
+	if !leadingMember(decoder, field) {
+		return false
+	}
+	var value bool
+	return decoder.Decode(&value) == nil && value
+}
+
+// leadingMember enters the object the decoder stands before and skips its
+// members up to key; the decoder then stands before the value of key.
+func leadingMember(decoder *json.Decoder, key string) bool {
+	if open, err := decoder.Token(); err != nil || open != json.Delim('{') {
+		return false
+	}
+	for decoder.More() {
+		name, err := decoder.Token()
+		if err != nil {
+			return false
+		}
+		if name == key {
+			return true
+		}
+		var skipped json.RawMessage
+		if decoder.Decode(&skipped) != nil {
+			return false
+		}
+	}
+	return false
 }
 
 // resolveActor names who acted. A session-minting route takes the minted
@@ -211,6 +258,11 @@ func (action CoreAction) properties(actor Actor) map[string]any {
 	if action.ExportType != "" {
 		props["export_type"] = action.ExportType
 	}
+	for key, value := range action.details {
+		if _, taken := props[key]; !taken {
+			props[key] = value
+		}
+	}
 	return props
 }
 
@@ -265,6 +317,24 @@ func accessTokenFromBody(body []byte) string {
 		return response.AccessToken
 	}
 	return response.Data.AccessToken
+}
+
+// responseHeadLimit is how much of the start of every response is kept
+// beside the body: enough for the envelope's first members up to a leading
+// flag (leadingResponseFlag).
+const responseHeadLimit = 512
+
+// responseHead keeps the first responseHeadLimit bytes of a response,
+// however long it is. Only a leading flag is read from it.
+type responseHead struct {
+	kept []byte
+}
+
+func (h *responseHead) Write(p []byte) (int, error) {
+	if room := responseHeadLimit - len(h.kept); room > 0 {
+		h.kept = append(h.kept, p[:min(room, len(p))]...)
+	}
+	return len(p), nil
 }
 
 // cappedBuffer keeps the first limit bytes of a response and notes when it

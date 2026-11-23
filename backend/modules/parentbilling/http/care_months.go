@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	capability "github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -75,31 +76,33 @@ func (rs *CareBillingResource) RunRouter(protectedTraegerRoutes func(chi.Router,
 // weekday or, with days_per_week, a scale step, with the price for every
 // further child and the meal note of the module (#6196).
 type CarePriceRequest struct {
-	CareOfferingID int64  `json:"care_offering_id"`
-	ModuleName     string `json:"module_name"`
-	Weekday        string `json:"weekday"`
-	DaysPerWeek    *int   `json:"days_per_week"`
-	MonthlyCents   int64  `json:"monthly_cents"`
-	SiblingCents   *int64 `json:"sibling_cents"`
-	MealExtra      bool   `json:"meal_extra"`
+	CareOfferingID ident.ID `json:"care_offering_id"`
+	ModuleName     string   `json:"module_name"`
+	Weekday        string   `json:"weekday"`
+	DaysPerWeek    *int     `json:"days_per_week"`
+	MonthlyCents   int64    `json:"monthly_cents" contract:"number"`
+	SiblingCents   *int64   `json:"sibling_cents" contract:"number"`
+	MealExtra      bool     `json:"meal_extra"`
 }
 
 // CarePriceListRequest is the body of PUT /traeger/care-tariffs: the
 // prices of one school from the first day of a month on and the months of
-// the year it bills nothing for.
+// the year it bills nothing for. ExpectedVersion is the version of the
+// school's price lists the office read (ADR 0311).
 type CarePriceListRequest struct {
-	SchoolID   int64              `json:"school_id"`
-	ValidFrom  calendar.Date      `json:"valid_from"`
-	FreeMonths []int              `json:"free_months"`
-	Prices     []CarePriceRequest `json:"prices"`
+	SchoolID        ident.ID           `json:"school_id"`
+	ValidFrom       calendar.Date      `json:"valid_from"`
+	FreeMonths      []int              `json:"free_months"`
+	Prices          []CarePriceRequest `json:"prices"`
+	ExpectedVersion string             `json:"expected_version"`
 }
 
 // Bind accepts the body; the Owner validates the price list.
 func (req *CarePriceListRequest) Bind(*http.Request) error { return nil }
 
 func (req *CarePriceListRequest) list() capability.CarePriceList {
-	list := capability.CarePriceList{SchoolID: req.SchoolID, ValidFrom: req.ValidFrom, FreeMonths: req.FreeMonths,
-		Prices: make([]capability.CarePrice, len(req.Prices))}
+	list := capability.CarePriceList{SchoolID: req.SchoolID.Int64(), ValidFrom: req.ValidFrom, FreeMonths: req.FreeMonths,
+		Prices: make([]capability.CarePrice, len(req.Prices)), ExpectedVersion: req.ExpectedVersion}
 	for i, price := range req.Prices {
 		list.Prices[i] = capability.CarePrice(price)
 	}
@@ -111,7 +114,7 @@ func (req *CarePriceListRequest) list() capability.CarePriceList {
 // open run of the month) and an optional invoice date (#5916).
 type CareRunRequest struct {
 	BillingMonth calendar.Date  `json:"billing_month"`
-	SchoolIDs    []int64        `json:"school_ids"`
+	SchoolIDs    []ident.ID     `json:"school_ids"`
 	InvoiceDate  *calendar.Date `json:"invoice_date"`
 }
 
@@ -165,7 +168,7 @@ func (rs *CareBillingResource) deletePriceList(w http.ResponseWriter, r *http.Re
 		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeParentBillingCareTariffInvalid))
 		return
 	}
-	tariffs, err := rs.billing.DeleteCarePriceList(r.Context(), reviewer, schoolID, validFrom)
+	tariffs, err := rs.billing.DeleteCarePriceList(r.Context(), reviewer, schoolID, validFrom, r.URL.Query().Get("expected_version"))
 	if err != nil {
 		tenant.MarkRollback(r.Context())
 		renderCareError(w, r, err)
@@ -198,7 +201,7 @@ func (rs *CareBillingResource) start(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	run, err := rs.billing.StartCareRun(r.Context(), reviewer,
-		capability.CareRunStart{BillingMonth: req.BillingMonth, SchoolIDs: req.SchoolIDs, InvoiceDate: req.InvoiceDate})
+		capability.CareRunStart{BillingMonth: req.BillingMonth, SchoolIDs: ident.Int64s(req.SchoolIDs), InvoiceDate: req.InvoiceDate})
 	if err != nil {
 		tenant.MarkRollback(r.Context())
 		renderCareError(w, r, err)

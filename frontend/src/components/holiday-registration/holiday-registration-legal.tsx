@@ -11,10 +11,22 @@ import {
 import { Modal } from "~/components/ui/modal";
 import { SectionCard } from "~/components/ui/section-card";
 import type { FormLegalBlock } from "~/lib/enrollment-form-schema-api";
+import { bffFile } from "~/lib/bff-fetch";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
 
-function holidayPublicDocumentPath(token: string, id: string): string {
-  return `/api/holiday-registrations/${encodeURIComponent(token)}/documents/${encodeURIComponent(id)}`;
+// The Träger proxy's public file route (#2352): no session travels.
+function loadHolidayPublicDocument(
+  token: string,
+  documentId: string,
+): Promise<Response> {
+  return bffFile(
+    "public",
+    "GET /traeger/holiday-registrations/{token}/documents/{documentId}",
+    {
+      params: { token, documentId },
+      errorMessage: "Holiday PDF could not be loaded",
+    },
+  );
 }
 
 /** Required holiday blocks offer an explicit acknowledgement, including
@@ -69,7 +81,7 @@ export function HolidayRegistrationLegal({
             )}
             <DocumentAttachmentList
               attachments={block.attachments}
-              documentURL={(id) => holidayPublicDocumentPath(token, id)}
+              loadDocument={(id) => loadHolidayPublicDocument(token, id)}
             />
           </div>
         ))}

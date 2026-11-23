@@ -74,10 +74,10 @@ type ChangeRequestReviewEntry struct {
 	// detail view compares, so the list can show the real before → after
 	// instead of only naming the changed areas: the enrollment as filed and as
 	// proposed, plus the changed-key list. The client derives the field rows.
-	BaseSnapshot     map[string]any `json:"base_snapshot"`
-	ProposedSnapshot map[string]any `json:"proposed_snapshot"`
-	Diff             map[string]any `json:"diff"`
-	CreatedAt        time.Time      `json:"created_at"`
+	BaseSnapshot     *ChangeRequestSnapshot `json:"base_snapshot"`
+	ProposedSnapshot *ChangeRequestSnapshot `json:"proposed_snapshot"`
+	Diff             *ChangeRequestDiff     `json:"diff"`
+	CreatedAt        time.Time              `json:"created_at"`
 	// DecidedAt and DecidedByName are set once the request is decided.
 	DecidedAt     *time.Time `json:"decided_at,omitempty"`
 	DecidedByName string     `json:"decided_by_name,omitempty"`
@@ -285,11 +285,10 @@ func encodeReviewListCursor(cursor *ChangeRequestReviewCursor) string {
 	return base64.RawURLEncoding.EncodeToString(raw)
 }
 
-// orEmptyMap keeps a nil jsonb out of the wire: the client walks these maps,
-// and "absent" and "empty" mean the same thing to it.
-func orEmptyMap(value map[string]any) map[string]any {
+// The review list has always used an empty object for an absent snapshot.
+func orEmptySnapshot[T any](value *T) *T {
 	if value == nil {
-		return map[string]any{}
+		return new(T)
 	}
 	return value
 }
@@ -307,9 +306,9 @@ func toChangeRequestReviewItem(item *ChangeRequestReviewRow, history bool) Chang
 		GuardianName:     item.GuardianName,
 		ParentNote:       row.ParentNote,
 		DecisionNote:     row.AdminDecisionNote,
-		BaseSnapshot:     orEmptyMap(row.BaseSnapshot),
-		ProposedSnapshot: orEmptyMap(row.ProposedSnapshot),
-		Diff:             orEmptyMap(row.Diff),
+		BaseSnapshot:     orEmptySnapshot(row.BaseSnapshot),
+		ProposedSnapshot: orEmptySnapshot(row.ProposedSnapshot),
+		Diff:             orEmptySnapshot(row.Diff),
 		CreatedAt:        row.CreatedAt,
 	}
 	if entry.ChildNames == nil {

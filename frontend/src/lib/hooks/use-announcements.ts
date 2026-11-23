@@ -4,33 +4,25 @@ import { announcementKeys } from "~/lib/swr/shell-keys";
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { LIVE_RECONCILE_INTERVAL_MS, useSWRAuth } from "~/lib/swr";
-import { authFetch } from "~/lib/api-helpers";
+import { bffJson } from "~/lib/bff-fetch";
+import type * as platformContract from "~/lib/contract/platform.generated";
 
-export interface UnreadAnnouncement {
-  /** The proxy answers a string; the server bootstrap still reads a number. */
-  id: number | string;
-  title: string;
-  content: string;
-  type: string;
-  severity: string;
-  version?: string;
-  published_at: string;
+async function fetchUnread(): Promise<
+  platformContract.PlatformAnnouncementResponse[]
+> {
+  return bffJson("tenant", "GET /api/platform/announcements/unread");
 }
 
-interface UnreadResponse {
-  data: UnreadAnnouncement[];
+/** Records that the person saw the announcement (`seen_at`, #7555). */
+async function markSeen(id: string): Promise<void> {
+  await bffJson("tenant", "POST /api/platform/announcements/{id}/seen", {
+    params: { id },
+  });
 }
 
-async function fetchUnread(): Promise<UnreadAnnouncement[]> {
-  const response = await authFetch<UnreadResponse>(
-    "/api/platform/announcements/unread",
-  );
-  return response.data ?? [];
-}
-
-async function markDismissed(id: number | string): Promise<void> {
-  await authFetch(`/api/platform/announcements/${id}/dismiss`, {
-    method: "POST",
+async function markDismissed(id: string): Promise<void> {
+  await bffJson("tenant", "POST /api/platform/announcements/{id}/dismiss", {
+    params: { id },
   });
 }
 
@@ -60,7 +52,7 @@ export function useAnnouncements() {
     }
   }, [pathname, mutate]);
 
-  const dismiss = async (id: number | string) => {
+  const dismiss = async (id: string) => {
     // Just send to backend - don't mutate local state
     // The modal manages its own queue and will refresh after closing
     await markDismissed(id);
@@ -71,6 +63,7 @@ export function useAnnouncements() {
     unreadCount: data?.length ?? 0,
     isLoading,
     dismiss,
+    markSeen,
     refresh: () => mutate(),
   };
 }

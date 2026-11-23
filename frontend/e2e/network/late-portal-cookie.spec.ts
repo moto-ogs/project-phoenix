@@ -369,6 +369,7 @@ const catalogReads = {
       key_day: 15,
       next_key_date: "2026-12-15",
       updated_at: "2026-11-01T08:00:00Z",
+      overrides: [],
     },
   },
   Caterer: {
@@ -408,8 +409,8 @@ for (const portal of portals.slice(1)) {
 }
 
 // The proxy of moto schule beyond a plain read: only the registered query
-// travels, a legacy numeric id leaves as a string, and a write the backend
-// answers with 204 succeeds without data.
+// travels, the identifier stays a string, and a write the backend answers
+// with 204 succeeds without data.
 test("Schule: the catalog proxy forwards a query and a write without data", async ({
   browser,
 }) => {

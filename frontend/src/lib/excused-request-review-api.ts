@@ -1,110 +1,116 @@
-import { ApiError, apiErrorFromBody, transportFetch } from "./api-error";
 /**
- * Staff client for the parent absence-request review queue. Calls the Next.js proxy routes under
- * /api/students/excused-absence-requests which forward (with the tenant session
- * token) to the backend. Mirrors care-request-review-api.ts.
+ * Staff client for the parent absence-request review queue: the registered
+ * routes under /api/students/excused-absence-requests, through the tenant
+ * BFF. Mirrors care-request-review-api.ts.
  */
 
+import { ApiError } from "./api-error";
+import { bffJson } from "./bff-fetch";
+import type * as studentsContract from "./contract/students.generated";
+import { requiredEnum } from "./contract/known-enum";
 import { createLogger } from "~/lib/logger";
 
 const logger = createLogger({ component: "ExcusedRequestReviewAPI" });
 
-type ExcusedRequestStatus = "pending" | "approved" | "rejected" | "withdrawn";
+const EXCUSED_REQUEST_STATUSES = [
+  "pending",
+  "approved",
+  "rejected",
+  "withdrawn",
+  "done",
+  "care_ended",
+] as const;
+const ABSENCE_STATUSES = ["sick", "excused"] as const;
 
-// One absence request in the staff queue. Mirrors
-// api/students.StaffExcusedRequestResponse. `dates` are YYYY-MM-DD.
-export interface StaffExcusedRequest {
-  readonly id: string;
-  readonly student_id: string;
-  readonly first_name: string;
-  readonly last_name: string;
-  readonly absence_status: "sick" | "excused";
-  readonly status: ExcusedRequestStatus;
+type Narrowed = "status" | "absence_status" | "dates";
+
+interface ExcusedRequestFields {
+  readonly status: (typeof EXCUSED_REQUEST_STATUSES)[number];
+  readonly absence_status: (typeof ABSENCE_STATUSES)[number];
   readonly dates: readonly string[];
-  readonly note: string;
-  readonly reason?: string;
-  readonly created_at: string;
-  readonly reviewed_at?: string;
-  /**
-   * Was für die beantragten Tage aktuell eingetragen ist (#2267), je Tag
-   * `YYYY-MM-DD` → `present | sick | excused | class_trip`. Damit die
-   * Entscheidung „Aktuell → Gewünscht" zeigen kann, statt nur den Wunsch.
-   */
-  readonly current_status_by_date?: Readonly<Record<string, string>>;
 }
 
-interface Envelope<T> {
-  readonly data?: T;
+/** The generated request with its closed values; `dates` never `null`. */
+export type StaffExcusedRequest = Omit<
+  studentsContract.StaffExcusedRequestResponse,
+  Narrowed
+> &
+  ExcusedRequestFields;
+
+function excusedFields(
+  request: Pick<studentsContract.StaffExcusedRequestResponse, Narrowed>,
+): ExcusedRequestFields {
+  return {
+    status: requiredEnum(EXCUSED_REQUEST_STATUSES, request.status, "status"),
+    absence_status: requiredEnum(
+      ABSENCE_STATUSES,
+      request.absence_status,
+      "absence_status",
+    ),
+    dates: request.dates ?? [],
+  };
 }
 
-function unwrap<T>(json: Envelope<T>): T {
-  if (json && typeof json === "object" && "data" in json) {
-    return json.data as T;
-  }
-  return json as unknown as T;
+export function toStaffExcusedRequest(
+  request: studentsContract.StaffExcusedRequestResponse,
+): StaffExcusedRequest {
+  return { ...request, ...excusedFields(request) };
 }
 
 /**
- * Turns a failed response into an ApiError. The backend's stable 409 `code`
- * (e.g. "students.change_request_not_pending") lets the review UI name the
- * concrete recovery action; `detail` stays diagnostics for the log.
+ * Logs a failed call. The backend's stable 409 `code` (e.g.
+ * "students.change_request_not_pending") travels on the ApiError and lets
+ * the review UI name the concrete recovery action.
  */
-async function readError(
-  response: Response,
-  fallback: string,
-): Promise<ApiError> {
-  let payload: unknown;
-  try {
-    payload = await response.json();
-  } catch {
-    // not JSON
+function logFailure(error: unknown): never {
+  if (error instanceof ApiError) {
+    logger.error("excused_request_review_request_failed", {
+      status: error.status,
+      message: error.message,
+      ...(error.code ? { code: error.code } : {}),
+    });
   }
-  const error = apiErrorFromBody(fallback, response.status, payload);
-  logger.error("excused_request_review_request_failed", {
-    status: response.status,
-    message: error.message,
-    ...(error.code ? { code: error.code } : {}),
-  });
-  return error;
+  throw error;
 }
 
 /** Approves (marks the child absent) or rejects one absence request. */
-export async function decideExcusedAbsenceRequest(
+export function decideExcusedAbsenceRequest(
   requestId: string,
   approve: boolean,
-  reason?: string,
-  expectedVersion?: string,
+  reason: string | undefined,
+  /** Die Fassung der Anfrage aus der Liste (ADR 0311). */
+  expectedVersion: string,
   /** Ersetzt die Teilentschuldigungen der Tage (#5698); nur nach Bestätigung. */
   replacePartialAbsences = false,
-): Promise<StaffExcusedRequest> {
-  const response = await transportFetch(
-    `/api/students/excused-absence-requests/${encodeURIComponent(requestId)}/decide`,
+): Promise<studentsContract.StaffExcusedRequestResponse> {
+  return bffJson(
+    "tenant",
+    "POST /api/students/excused-absence-requests/{requestId}/decide",
     {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+      params: { requestId },
+      body: {
         approve,
         reason: reason ?? "",
-        ...(expectedVersion ? { expected_version: expectedVersion } : {}),
+        expected_version: expectedVersion,
         ...(replacePartialAbsences ? { replace_partial_absences: true } : {}),
-      }),
+      },
+      errorMessage: "Entscheidung konnte nicht gespeichert werden",
     },
-  );
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Entscheidung konnte nicht gespeichert werden",
-    );
-  }
-  return unwrap((await response.json()) as Envelope<StaffExcusedRequest>);
+  ).catch(logFailure);
 }
 
 /**
  * One decided absence request in the staff history. Mirrors
  * api/students.StaffExcusedRequestHistoryResponse.
  */
-export interface StaffExcusedRequestHistoryEntry extends StaffExcusedRequest {
-  readonly decided_at: string;
-  /** Absent for withdrawn rows (no reviewer). */
-  readonly decided_by_name?: string;
+export type StaffExcusedRequestHistoryEntry = Omit<
+  studentsContract.StaffExcusedRequestHistoryResponse,
+  Narrowed
+> &
+  ExcusedRequestFields;
+
+export function toStaffExcusedRequestHistoryEntry(
+  entry: studentsContract.StaffExcusedRequestHistoryResponse,
+): StaffExcusedRequestHistoryEntry {
+  return { ...entry, ...excusedFields(entry) };
 }

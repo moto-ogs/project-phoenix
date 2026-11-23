@@ -24,8 +24,7 @@ import { announceSessionBarrier, type SessionEnd } from "./session-end-state";
  *
  * The barrier opens when the logout fails (the session stays, waiting
  * requests continue with it) or, unless the owner keeps it closed for its own
- * navigation, once the signout answer deleted the cookie. Axios needs no
- * barrier: the browser paths use fetch; Axios only runs on the server.
+ * navigation, once the signout answer deleted the cookie.
  */
 
 let closed = false;

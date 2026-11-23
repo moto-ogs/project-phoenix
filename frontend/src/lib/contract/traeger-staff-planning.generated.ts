@@ -4,7 +4,8 @@ import {
   arr,
   bool,
   calendarDate,
-  int64StringOrNumber,
+  fileAnswer,
+  int64String,
   noData,
   nullable,
   object,
@@ -42,9 +43,9 @@ export interface TraegerPlanningSite {
 }
 
 export const TraegerPlanningSiteSchema: z.ZodType<TraegerPlanningSite, unknown> = object<TraegerPlanningSite>({
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   school_name: str,
-  staff_id: int64StringOrNumber,
+  staff_id: int64String,
 });
 
 /** Go: workforce.TraegerPlanningShift */
@@ -66,10 +67,10 @@ export interface TraegerPlanningShift {
 }
 
 export const TraegerPlanningShiftSchema: z.ZodType<TraegerPlanningShift, unknown> = object<TraegerPlanningShift>({
-  id: int64StringOrNumber,
-  school_id: int64StringOrNumber,
+  id: int64String,
+  school_id: int64String,
   school_name: str,
-  staff_id: int64StringOrNumber,
+  staff_id: int64String,
   date: nullable(calendarDate),
   start_time: str,
   end_time: str,
@@ -90,7 +91,7 @@ export interface TraegerPlanningSollDay {
 }
 
 export const TraegerPlanningSollDaySchema: z.ZodType<TraegerPlanningSollDay, unknown> = object<TraegerPlanningSollDay>({
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   date: nullable(calendarDate),
   minutes: safeInt,
 });
@@ -102,7 +103,7 @@ export interface TraegerPlanningAbsentDay {
 }
 
 export const TraegerPlanningAbsentDaySchema: z.ZodType<TraegerPlanningAbsentDay, unknown> = object<TraegerPlanningAbsentDay>({
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   date: nullable(calendarDate),
 });
 
@@ -138,7 +139,7 @@ export interface TraegerPlanningPerson {
 }
 
 export const TraegerPlanningPersonSchema: z.ZodType<TraegerPlanningPerson, unknown> = object<TraegerPlanningPerson>({
-  staff_record_id: int64StringOrNumber,
+  staff_record_id: int64String,
   first_name: str,
   last_name: str,
   sites: nullable(arr(TraegerPlanningSiteSchema)),
@@ -175,7 +176,7 @@ export interface TraegerFutureShifts {
 }
 
 export const TraegerFutureShiftsSchema: z.ZodType<TraegerFutureShifts, unknown> = object<TraegerFutureShifts>({
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   school_name: str,
   shifts: safeInt,
 });
@@ -192,11 +193,6 @@ export interface PlanShiftRequest {
   notes?: string;
 }
 
-/** Query of GET /traeger/staff-planning/ */
-export interface GetTraegerStaffPlanningQuery {
-  week?: string;
-}
-
 export const routes = {
   "DELETE /traeger/staff-planning/records/{id}/schools/{schoolId}/shifts/{shiftId}": {
     method: "DELETE",
@@ -208,8 +204,20 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/staff-planning/",
     portals: ["org"],
-    query: ["week"],
+    query: {
+      "week": { kind: "date" },
+    },
     response: success(TraegerPlanningWeekSchema),
+  },
+  "GET /traeger/staff-planning/export": {
+    method: "GET",
+    pattern: "/traeger/staff-planning/export",
+    portals: ["org"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+      "week": { kind: "date" },
+    },
+    response: fileAnswer,
   },
   "GET /traeger/staff-planning/future-shifts": {
     method: "GET",

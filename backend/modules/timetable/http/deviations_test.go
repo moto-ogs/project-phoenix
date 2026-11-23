@@ -26,6 +26,7 @@ import (
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -667,57 +668,9 @@ func TestApplyDeviations_SameSubstituteForTwoAbsent_WarningsNotDuplicated(t *tes
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 
 	require.Len(t, resp.Data.Warnings, 1, "the conflict must appear once, not once per absent position")
-	assert.Equal(t, inst.ID, resp.Data.Warnings[0].InstanceID)
-	assert.Equal(t, foreign.ID, resp.Data.Warnings[0].OtherID)
+	assert.Equal(t, ident.ID(inst.ID), resp.Data.Warnings[0].InstanceID)
+	assert.Equal(t, ident.ID(foreign.ID), resp.Data.Warnings[0].OtherID)
 
-}
-
-// ackRouter wires the standalone acknowledge-understaffed handler with the same
-// real TimetableData facade + tenant middleware as devRouter, so the date guard
-// (which loads the instance) is exercised end to end.
-func ackRouter(parentCtx context.Context, res *Resource) chi.Router {
-	tenantID := tenant.FromContext(parentCtx)
-	r := chi.NewRouter()
-	r.Use(render.SetContentType(render.ContentTypeJSON))
-	r.Use(func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			ctx := tenant.WithTenantID(testpkg.WithPackageTenantRuntime(req.Context()), tenantID)
-			next.ServeHTTP(w, req.WithContext(ctx))
-		})
-	})
-	r.Post("/instances/{id}/acknowledge-understaffed", res.acknowledgeUnderstaffed)
-	return r
-}
-
-func doAck(t *testing.T, router chi.Router, instanceID int64, body any) *httptest.ResponseRecorder {
-	t.Helper()
-	raw, err := json.Marshal(body)
-	require.NoError(t, err)
-	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/instances/%d/acknowledge-understaffed", instanceID), bytes.NewReader(raw))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
-	return w
-}
-
-// The standalone /acknowledge-understaffed endpoint must reject a past block just
-// like /deviations does. A materialized past occurrence can still be
-// planned/active, so a status-only check would let a historical staffing record
-// be rewritten through this public endpoint (#1840).
-func TestAcknowledgeUnderstaffed_PastBlock_Rejected(t *testing.T) {
-	t.Parallel()
-
-	s := buildDevModule(t)
-	router := ackRouter(s.ctx, s.res)
-	_, past := futureSubDate(-1) // the day before the module's clock
-
-	inst := testpkg.CreateTestActivityInstance(t, s.db, past, s.roomID, testpkg.ActivityInstanceOpts{Title: "PastAck"})
-
-	w := doAck(t, router, inst.ID, map[string]any{"ack": true})
-	require.Equal(t, http.StatusBadRequest, w.Code, "body=%s", w.Body.String())
-	assert.Contains(t, w.Body.String(), "Vergangenheit")
-	assert.False(t, readInstance(t, s.db, s.ctx, inst.ID).UnderstaffedAck,
-		"a past block's acknowledgement must not be written")
 }
 
 // futureSubDate returns a YYYY-MM-DD in the future plus the matching

@@ -1,13 +1,13 @@
+import { bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the changes of a single invoice in the review of a monthly run
  * (#6197): amount, recipient, address and positions, each with a reason,
  * and the revocation of a change. Only the page of one invoice loads it.
  */
 
-import { traegerRequest } from "./traeger-api";
+import type * as traegerCareBillingRunsContract from "./contract/traeger-care-billing-runs.generated";
 import type { PostalAddress } from "./traeger-billing-terms-api";
 import {
-  type BackendRunDetail,
   type CareAmendmentKind,
   type CareRunDetail,
   detailFromBackend,
@@ -44,9 +44,11 @@ export type CareAmendmentInput = {
     }
 );
 
-function amendmentBody(input: CareAmendmentInput): Record<string, unknown> {
-  const body: Record<string, unknown> = {
-    contract_id: Number(input.contractId),
+function amendmentBody(
+  input: CareAmendmentInput,
+): traegerCareBillingRunsContract.CareAmendmentRequest {
+  const body: traegerCareBillingRunsContract.CareAmendmentRequest = {
+    contract_id: input.contractId,
     service: input.service,
     kind: input.kind satisfies CareAmendmentKind | "revoke",
     fingerprint: input.fingerprint,
@@ -81,7 +83,7 @@ function amendmentBody(input: CareAmendmentInput): Record<string, unknown> {
     case "revoke":
       return {
         ...body,
-        revokes_id: Number(input.revokesId),
+        revokes_id: input.revokesId,
         revokes_carried: input.revokesCarried,
       };
   }
@@ -93,9 +95,9 @@ export async function amendCareInvoice(
   input: CareAmendmentInput,
 ): Promise<CareRunDetail> {
   return detailFromBackend(
-    await traegerRequest<BackendRunDetail>(
-      `/api/traeger/care-billing-runs/${encodeURIComponent(runId)}/amendments`,
-      { method: "POST", body: amendmentBody(input) },
-    ),
+    await bffJson("org", "POST /traeger/care-billing-runs/{id}/amendments", {
+      params: { id: runId },
+      body: amendmentBody(input),
+    }),
   );
 }

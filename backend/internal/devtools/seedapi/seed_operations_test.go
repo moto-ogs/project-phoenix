@@ -44,7 +44,7 @@ func TestSeedOperationsDemoStepCreatesOperationalPlanningData(t *testing.T) {
 		"/api/timetable/closing-days",
 	}
 	for _, day := range demoMealDates(todaySeedDate()) {
-		want = append(want, "/api/meal-plan/"+day)
+		want = append(want, "/api/meal-plan/days/"+day)
 	}
 	want = append(want, "/api/shift-types/defaults", "/api/staff-shifts", "/api/staff-shifts")
 	assert.Equal(t, want, paths)
@@ -83,7 +83,7 @@ func TestSeedMealPlanFillsCurrentAndNextWeek(t *testing.T) {
 			var paths []string
 			srv := newSeedHTTPTestServer(func(w seedHTTPResponseWriter, r *seedHTTPRequest) {
 				assert.Equal(t, "PUT", r.Method)
-				paths = append(paths, strings.TrimPrefix(r.URL.Path, "/api/meal-plan/"))
+				paths = append(paths, strings.TrimPrefix(r.URL.Path, "/api/meal-plan/days/"))
 				_, _ = fmt.Fprint(w, `{"status":"success"}`)
 			})
 			defer srv.Close()

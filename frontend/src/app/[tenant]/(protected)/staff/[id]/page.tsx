@@ -37,11 +37,12 @@ import {
   staffService,
   staffStammdatenService,
 } from "~/lib/staff-api";
-import type { BackendStaffResponse, Staff } from "~/lib/staff-api";
+import type { Staff } from "~/lib/staff-api";
+import type { StaffRecordResponse } from "~/lib/contract/staff.generated";
 import { teacherService, type Teacher } from "~/lib/teacher-api";
 import { mapTeacherResponse } from "~/lib/teacher-helpers";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
-import { ApiError } from "~/lib/api-error";
+import { ApiError, isChangedSinceRead } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
 import {
   employmentTypeLabels,
@@ -103,6 +104,12 @@ import { DetailSkeleton } from "~/components/ui/page-skeletons";
 import { StaffDetailSkeleton } from "./page-skeleton";
 
 const logger = createLogger({ component: "StaffDetailPage" });
+
+// Info-Knopf am Titel (#7566). Ohne geladene Person gibt es keine Reiter.
+const STAFF_DETAIL_MISSING_INFO =
+  "Hier stehen sonst die Angaben zu einer Person aus deinem Team.";
+const STAFF_DETAIL_INFO =
+  "Hier stehen alle Angaben zu dieser Person. Wähle unter dem Namen einen Bereich, etwa „Abwesenheiten“ oder „Stammdaten“. Welche Bereiche du siehst, hängt von deinen Rechten und deiner Schule ab.";
 
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
@@ -233,7 +240,7 @@ export default function StaffDetailContent() {
   // wie im Register der Datenverwaltung (Systemrolle, RFID-Karte, Notizen,
   // Konto-ID), damit beide Seiten dieselben Felder kennen. Neben einem
   // schmalen Profil lädt er nur für den Reiter „Konto".
-  const recordRequest = useSWRAuth<BackendStaffResponse>(
+  const recordRequest = useSWRAuth<StaffRecordResponse>(
     limitedProfile === null || (canViewRecord && profile && !profile.endedOn)
       ? staffKeys.recordKey(staffId)
       : null,
@@ -350,7 +357,11 @@ export default function StaffDetailContent() {
   // sagt die Meldung, was schon gespeichert ist.
   const handleSaveKonto = useCallback(
     async (draft: KontoDraft) => {
-      const { role_id: targetRoleId, ...recordData } = draft;
+      const {
+        role_id: targetRoleId,
+        role_version: roleVersion,
+        ...recordData
+      } = draft;
       const hasRecordChanges = Object.keys(recordData).length > 0;
       if (hasRecordChanges) {
         try {
@@ -366,7 +377,9 @@ export default function StaffDetailContent() {
       }
       if (targetRoleId !== undefined) {
         try {
-          await replaceAccountRole(accountId, targetRoleId);
+          // Die Version der Rollen, die die Person beim Wählen sah
+          // (ADR 0311), nicht die des inzwischen nachgeladenen Stands.
+          await replaceAccountRole(accountId, targetRoleId, roleVersion ?? "");
         } catch (err) {
           logger.error("failed to update account role", {
             staff_id: staffId,
@@ -375,6 +388,11 @@ export default function StaffDetailContent() {
             error: err instanceof Error ? err.message : String(err),
           });
           await refreshRecord();
+          // Haben sich die Rollen inzwischen geändert, zeigt das Feld die
+          // gespeicherte Rolle; der Reiter bietet kein „Wiederholen“ an.
+          if (isChangedSinceRead(err)) {
+            await tenantMutate(staffAccessKeys.roleAssignment(accountId));
+          }
           // Der Datensatz ist gespeichert; das sagt eine Erfolgsmeldung,
           // der Fehler im Formular nennt nur die Systemrolle.
           if (hasRecordChanges) {
@@ -538,6 +556,7 @@ export default function StaffDetailContent() {
     return (
       <TenantPage
         title="Mitarbeitende"
+        info={STAFF_DETAIL_MISSING_INFO}
         back
         backHref={referrer}
         backLabel={backLabel}
@@ -550,6 +569,7 @@ export default function StaffDetailContent() {
     return (
       <TenantPage
         title="Mitarbeitende"
+        info={STAFF_DETAIL_MISSING_INFO}
         back
         backHref={referrer}
         backLabel={backLabel}
@@ -740,6 +760,7 @@ export default function StaffDetailContent() {
           ? `${staff.firstName} ${staff.lastName}`
           : (preview?.name ?? "Mitarbeitende")
       }
+      info={STAFF_DETAIL_INFO}
       stats={staff ? statusLine : preview?.context}
       statsLoading={!staff && !preview?.context}
       back
@@ -749,11 +770,14 @@ export default function StaffDetailContent() {
         staff ? (
           // Kit-Avatar: hochgeladenes Profilbild, sonst Initialen (#4432).
           // Der Name steht direkt daneben, das Bild ist also rein schmückend.
+          // Auf dem Telefon entfällt es: neben Info-Knopf, Status und Menü
+          // bliebe dem Namen sonst nur Platz für zwei Buchstaben je Zeile.
           <Avatar
             imageUrl={staff.avatarUrl}
             name={`${staff.firstName} ${staff.lastName}`}
             size="lg"
             decorative
+            className="max-sm:hidden"
           />
         ) : undefined
       }

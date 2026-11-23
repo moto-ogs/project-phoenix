@@ -13,16 +13,17 @@ import (
 type Service struct {
 	store    ports.Store
 	settings ports.Settings
+	stops    ports.StudentStops
 	tx       ports.Transaction
 	observe  ports.Observer
 	today    func() domain.Date
 }
 
-func New(store ports.Store, settings ports.Settings, tx ports.Transaction, observe ports.Observer, today func() domain.Date) *Service {
-	if store == nil || settings == nil || tx == nil || observe == nil || today == nil {
+func New(store ports.Store, settings ports.Settings, stops ports.StudentStops, tx ports.Transaction, observe ports.Observer, today func() domain.Date) *Service {
+	if store == nil || settings == nil || stops == nil || tx == nil || observe == nil || today == nil {
 		panic("feedback application: all dependencies are required")
 	}
-	return &Service{store: store, settings: settings, tx: tx, observe: observe, today: today}
+	return &Service{store: store, settings: settings, stops: stops, tx: tx, observe: observe, today: today}
 }
 
 func (s *Service) Available(ctx context.Context) (available bool, err error) {

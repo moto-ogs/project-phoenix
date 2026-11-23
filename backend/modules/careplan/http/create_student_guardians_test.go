@@ -17,8 +17,8 @@ import (
 // a freshly created student.
 type createStudentResponse struct {
 	Data struct {
-		ID       int64 `json:"id"`
-		PersonID int64 `json:"person_id"`
+		ID       testpkg.ID `json:"id"`
+		PersonID testpkg.ID `json:"person_id"`
 	} `json:"data"`
 }
 
@@ -101,7 +101,7 @@ func TestCreateStudent_WithGuardians(t *testing.T) {
 				Count(ctx)
 			require.NoError(t, err)
 			assert.Equal(t, 1, int(phoneCount), "expected exactly one guardian phone number")
-			contacts, err := tc.resource.PeopleDirectory.ListStudentGuardians(testpkg.Ctx(t), resp.Data.ID)
+			contacts, err := tc.resource.PeopleDirectory.ListStudentGuardians(testpkg.Ctx(t), int64(resp.Data.ID))
 			require.NoError(t, err)
 			require.Len(t, contacts, 1)
 			assert.False(t, contacts[0].Guardian.HasAccount, "contacts do not require a parent account")

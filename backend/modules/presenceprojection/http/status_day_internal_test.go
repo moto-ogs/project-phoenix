@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/absencerecords"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -64,7 +65,7 @@ func TestStudentStatusDayResponsesAndEffectiveStatus(t *testing.T) {
 
 	conflictResponses := studentpresence.NewStudentStatusDayConflictResponses([]*absencerecords.StudentStatusDay{sick})
 	require.Len(t, conflictResponses, 1)
-	assert.Equal(t, sick.ID, conflictResponses[0].ID)
+	assert.Equal(t, ident.ID(sick.ID), conflictResponses[0].ID)
 	assert.Nil(t, conflictResponses[0].Note, "409 conflict payloads must omit free-text notes")
 
 	studentResponses := []StudentResponse{{ID: 90}, {ID: 91}}

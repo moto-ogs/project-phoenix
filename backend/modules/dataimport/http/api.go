@@ -2,6 +2,7 @@ package importapi
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -13,7 +14,7 @@ import (
 )
 
 const (
-	maxFileSize = 10 * 1024 * 1024 // 10MB
+	maxFileSize = MaxUploadBytes
 
 	// Error messages (S1192 - avoid duplicate string literals)
 	errTemplateCreation = "Fehler beim Erstellen der Vorlage"
@@ -125,7 +126,7 @@ func (rs *Resource) previewStudentImport(w http.ResponseWriter, r *http.Request)
 	// returns, when a commit failure can no longer be reported. Staff ID
 	// resolution happens inside the TX because the lookup is RLS-scoped.
 	tenantID := rs.runtime.TenantID(r.Context())
-	var preview studentPreviewResponse
+	var preview StudentPreviewResponse
 	var staffResolutionErr error
 	if err := rs.runtime.WithinTenant(r.Context(), func(ctx context.Context) error {
 		staffID, staffErr := rs.runtime.StaffID(ctx)
@@ -147,13 +148,12 @@ func (rs *Resource) previewStudentImport(w http.ResponseWriter, r *http.Request)
 			return txErr
 		}
 		// GDPR Compliance: Audit log for preview (Article 30).
-		return rs.studentImportService.RecordAuditInTransaction(ctx, "student", uploadResult.Filename, preview.ImportResult, accountID, true, tenantID)
+		return rs.studentImportService.RecordAuditInTransaction(ctx, "student", uploadResult.Filename, preview.result, accountID, true, tenantID)
 	}); err != nil {
 		if staffResolutionErr != nil {
-			rs.runtime.Failure(w, r, Failure{Status: http.StatusUnauthorized, Cause: staffResolutionErr})
-			return
+			err = staffResolutionErr
 		}
-		rs.runtime.Failure(w, r, Failure{Status: http.StatusInternalServerError, Cause: err, Message: "Import-Vorschau fehlgeschlagen"})
+		rs.runtime.Failure(w, r, staffFailure(err, codeImportStaffProfileRequired, "Import-Vorschau fehlgeschlagen"))
 		return
 	}
 
@@ -185,14 +185,17 @@ func (rs *Resource) importStudents(w http.ResponseWriter, r *http.Request) {
 	request := importModels.ImportRequest[importModels.StudentImportRow]{
 		Rows: uploadResult.Rows, Mode: mode, SkipInvalidRows: true,
 	}
+	var staffResolutionErr error
 	if err := rs.runtime.WithinTenant(r.Context(), func(ctx context.Context) error {
-		var err error
-		if request.UserID, err = rs.runtime.StaffID(ctx); err != nil {
-			return err
+		if request.UserID, staffResolutionErr = rs.runtime.StaffID(ctx); staffResolutionErr != nil {
+			return staffResolutionErr
 		}
 		return rs.admitStudentImport(ctx, request)
 	}); err != nil {
-		rs.runtime.Failure(w, r, Failure{Status: http.StatusInternalServerError, Cause: err, Message: "Import fehlgeschlagen"})
+		if staffResolutionErr != nil {
+			err = staffResolutionErr
+		}
+		rs.runtime.Failure(w, r, staffFailure(err, codeImportStaffProfileRequired, "Import fehlgeschlagen"))
 		return
 	}
 	result, err := rs.studentImportService.ImportBatches(r.Context(), request,
@@ -213,7 +216,17 @@ func (rs *Resource) importStudents(w http.ResponseWriter, r *http.Request) {
 	message := fmt.Sprintf("Import abgeschlossen: %d erstellt, %d aktualisiert, %d Fehler",
 		result.CreatedCount, result.UpdatedCount, result.ErrorCount)
 
-	rs.runtime.Success(w, r, http.StatusOK, result, message)
+	rs.runtime.Success(w, r, http.StatusOK, importModels.NewStudentImportResult(result), message)
+}
+
+// staffFailure answers a failed import whose author could not be resolved
+// (#7818): an account without staff record is refused with the route's
+// code; a failed lookup or any other failure stays a server error.
+func staffFailure(err error, code, message string) Failure {
+	if errors.Is(err, ErrStaffProfileRequired) {
+		return Failure{Status: http.StatusForbidden, Cause: err, Code: code}
+	}
+	return Failure{Status: http.StatusInternalServerError, Cause: err, Message: message}
 }
 
 // codeImportBatchFailed is the registered code of a batch that stopped after
@@ -251,3 +264,11 @@ func (rs *Resource) mountStaffImports(r chi.Router, withTx func(http.Handler) ht
 		r.With(rs.runtime.RequireAnyPermission(permUsersCreate)).Post(routeImport, rs.ImportStaff)
 	})
 }
+
+// MaxUploadBytes bounds the whole multipart body of an import upload; the
+// catalog proxy answers a larger one 413 with CodeImportFileTooLarge before
+// the backend reads it (#2352).
+const MaxUploadBytes = 10 * 1024 * 1024 // 10MB
+
+// CodeImportFileTooLarge is the code of an import file over MaxUploadBytes.
+const CodeImportFileTooLarge = codeImportFileTooLarge

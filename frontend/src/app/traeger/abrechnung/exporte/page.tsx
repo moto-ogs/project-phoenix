@@ -1,5 +1,7 @@
 "use client";
 
+import { bffFile } from "~/lib/bff-fetch";
+
 // Exporte für Kämmerei und Steuerbüro (#4693, #4694): je ausgestellten Lauf
 // die Sollstellung als CSV mit der Feldzuordnung des Trägers und den
 // DATEV-Buchungsstapel, sobald die DATEV-Werte vollständig sind, und das
@@ -41,7 +43,10 @@ import { ApiError } from "~/lib/api-error";
 import { downloadBlob } from "~/lib/file-download";
 import { createLogger } from "~/lib/logger";
 import { traegerBillingKeys } from "~/lib/swr/traeger-billing-keys";
-import { downloadTraegerList } from "~/lib/traeger-list-export";
+import {
+  downloadTraegerList,
+  listExportQuery,
+} from "~/lib/traeger-list-export";
 import {
   type DatevBookingProblem,
   type DatevDownloadOptions,
@@ -245,6 +250,10 @@ export default function TraegerFinanceExportsPage() {
   const runs = data?.runs.items;
   const datevNotices = useMemo<DatevHandoverNotices>(
     () => ({
+      onAttempt: () => {
+        setRefusal(null);
+        setNothingNew(null);
+      },
       onNothingNew: (run, taken) =>
         setNothingNew({ runLabel: run.label, taken }),
       onRefused: (run, problems) =>
@@ -405,7 +414,6 @@ export default function TraegerFinanceExportsPage() {
               runKind={refusal.runKind}
               runLabel={refusal.runLabel}
               problems={refusal.problems}
-              onDismiss={() => setRefusal(null)}
             />
           ) : null}
           <SectionCard
@@ -415,8 +423,9 @@ export default function TraegerFinanceExportsPage() {
               <TraegerListExportMenu
                 download={(format) =>
                   downloadTraegerList(
-                    "/api/traeger/finance-exports/runs/export",
-                    format,
+                    bffFile("org", "GET /traeger/finance-exports/runs/export", {
+                      query: listExportQuery(format),
+                    }),
                   )
                 }
                 scope={traegerExportScope()}
@@ -468,8 +477,11 @@ export default function TraegerFinanceExportsPage() {
               <TraegerListExportMenu
                 download={(format) =>
                   downloadTraegerList(
-                    "/api/traeger/finance-exports/files/export",
-                    format,
+                    bffFile(
+                      "org",
+                      "GET /traeger/finance-exports/files/export",
+                      { query: listExportQuery(format) },
+                    ),
                   )
                 }
                 scope={traegerExportScope()}

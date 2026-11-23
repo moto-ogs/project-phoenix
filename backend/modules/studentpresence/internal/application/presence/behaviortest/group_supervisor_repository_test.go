@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -42,8 +43,8 @@ func createSupervisorTestData(t *testing.T, db *testpkg.DB) *supervisorTestData 
 		StartTime:      now,
 		LastActivity:   now,
 		TimeoutMinutes: 30,
-		GroupID:        ptrtest.Ptr(activityGroup.ID),
-		RoomID:         room.ID,
+		GroupID:        (*ident.ID)(ptrtest.Ptr(activityGroup.ID)),
+		RoomID:         ident.ID(room.ID),
 	}
 	err := groupRepo.Create(testpkg.Ctx(t), activeGroup)
 	require.NoError(t, err)
@@ -81,7 +82,7 @@ func TestGroupSupervisorRepository_Create(t *testing.T) {
 		today := supervisorDay
 		supervisor := &ports.GroupSupervisor{
 			GroupID:   data.ActiveGroup.ID,
-			StaffID:   data.Staff1ID,
+			StaffID:   ident.ID(data.Staff1ID),
 			StartDate: today,
 			Role:      "supervisor",
 		}
@@ -98,7 +99,7 @@ func TestGroupSupervisorRepository_Create(t *testing.T) {
 		endDate := today.AddDays(7) // One week
 		supervisor := &ports.GroupSupervisor{
 			GroupID:   data.ActiveGroup.ID,
-			StaffID:   data.Staff2ID,
+			StaffID:   ident.ID(data.Staff2ID),
 			StartDate: today,
 			EndDate:   &endDate,
 			Role:      "assistant",
@@ -131,17 +132,17 @@ func TestGroupSupervisorRepository_FindByID(t *testing.T) {
 		today := calendar.NewDate(2026, 8, 24)
 		supervisor := &ports.GroupSupervisor{
 			GroupID:   data.ActiveGroup.ID,
-			StaffID:   data.Staff1ID,
+			StaffID:   ident.ID(data.Staff1ID),
 			StartDate: today,
 			Role:      "supervisor",
 		}
 		err := repo.Create(ctx, supervisor)
 		require.NoError(t, err)
 
-		found, err := repo.FindByID(ctx, supervisor.ID)
+		found, err := repo.FindByID(ctx, supervisor.ID.Int64())
 		require.NoError(t, err)
 		assert.Equal(t, supervisor.ID, found.ID)
-		assert.Equal(t, data.Staff1ID, found.StaffID)
+		assert.Equal(t, ident.ID(data.Staff1ID), found.StaffID)
 	})
 
 	t.Run("returns error for non-existent supervisor", func(t *testing.T) {
@@ -164,7 +165,7 @@ func TestGroupSupervisorRepository_Update(t *testing.T) {
 		today := calendar.NewDate(2026, 8, 24)
 		supervisor := &ports.GroupSupervisor{
 			GroupID:   data.ActiveGroup.ID,
-			StaffID:   data.Staff1ID,
+			StaffID:   ident.ID(data.Staff1ID),
 			StartDate: today,
 			Role:      "supervisor",
 		}
@@ -175,11 +176,11 @@ func TestGroupSupervisorRepository_Update(t *testing.T) {
 		err = repo.Update(ctx, supervisor)
 		require.NoError(t, err)
 
-		found, err := repo.FindByID(ctx, supervisor.ID)
+		found, err := repo.FindByID(ctx, supervisor.ID.Int64())
 		require.NoError(t, err)
 		assert.Equal(t, "lead", found.Role)
 
-		require.NoError(t, repo.Delete(ctx, supervisor.ID))
+		require.NoError(t, repo.Delete(ctx, supervisor.ID.Int64()))
 		err = repo.Update(ctx, supervisor)
 		requireRepositoryNotFound(t, err)
 	})
@@ -198,17 +199,17 @@ func TestGroupSupervisorRepository_Delete(t *testing.T) {
 		today := calendar.NewDate(2026, 8, 24)
 		supervisor := &ports.GroupSupervisor{
 			GroupID:   data.ActiveGroup.ID,
-			StaffID:   data.Staff1ID,
+			StaffID:   ident.ID(data.Staff1ID),
 			StartDate: today,
 			Role:      "supervisor",
 		}
 		err := repo.Create(ctx, supervisor)
 		require.NoError(t, err)
 
-		err = repo.Delete(ctx, supervisor.ID)
+		err = repo.Delete(ctx, supervisor.ID.Int64())
 		require.NoError(t, err)
 
-		_, err = repo.FindByID(ctx, supervisor.ID)
+		_, err = repo.FindByID(ctx, supervisor.ID.Int64())
 		require.Error(t, err)
 	})
 }
@@ -230,7 +231,7 @@ func TestPresence_QuerySupervisionsAfterLegacyCreate(t *testing.T) {
 		today := calendar.NewDate(2026, 8, 24)
 		supervisor := &ports.GroupSupervisor{
 			GroupID:   data.ActiveGroup.ID,
-			StaffID:   data.Staff1ID,
+			StaffID:   ident.ID(data.Staff1ID),
 			StartDate: today,
 			Role:      "supervisor",
 		}
@@ -250,7 +251,7 @@ func TestPresence_QuerySupervisionsAfterLegacyCreate(t *testing.T) {
 		// Create an active supervisor (no end_date)
 		activeSupervisor := &ports.GroupSupervisor{
 			GroupID:   data.ActiveGroup.ID,
-			StaffID:   data.Staff1ID,
+			StaffID:   ident.ID(data.Staff1ID),
 			StartDate: today,
 			Role:      "supervisor",
 		}
@@ -260,7 +261,7 @@ func TestPresence_QuerySupervisionsAfterLegacyCreate(t *testing.T) {
 		// Create an ended supervisor (end_date in past)
 		endedSupervisor := &ports.GroupSupervisor{
 			GroupID:   data.ActiveGroup.ID,
-			StaffID:   data.Staff2ID,
+			StaffID:   ident.ID(data.Staff2ID),
 			StartDate: yesterday.AddDays(-7),
 			EndDate:   &yesterday,
 			Role:      "supervisor",
@@ -278,10 +279,10 @@ func TestPresence_QuerySupervisionsAfterLegacyCreate(t *testing.T) {
 		// Should contain active supervisor
 		var foundActive, foundEnded bool
 		for _, s := range supervisors {
-			if s.ID == activeSupervisor.ID {
+			if ident.ID(s.ID) == activeSupervisor.ID {
 				foundActive = true
 			}
-			if s.ID == endedSupervisor.ID {
+			if ident.ID(s.ID) == endedSupervisor.ID {
 				foundEnded = true
 			}
 		}
@@ -303,7 +304,7 @@ func TestGroupSupervisorRepository_FindActiveByStaffID(t *testing.T) {
 		today := calendar.NewDate(2026, 8, 24)
 		supervisor := &ports.GroupSupervisor{
 			GroupID:   data.ActiveGroup.ID,
-			StaffID:   data.Staff1ID,
+			StaffID:   ident.ID(data.Staff1ID),
 			StartDate: today,
 			Role:      "supervisor",
 		}
@@ -335,7 +336,7 @@ func TestGroupSupervisorRepository_FindActiveByStaffID(t *testing.T) {
 		data := createSupervisorTestData(t, db)
 		futureSupervisor := &ports.GroupSupervisor{
 			GroupID:   data.ActiveGroup.ID,
-			StaffID:   data.Staff1ID,
+			StaffID:   ident.ID(data.Staff1ID),
 			StartDate: supervisorDay.AddDays(1),
 			Role:      "supervisor",
 		}
@@ -360,13 +361,13 @@ func TestGroupSupervisorRepository_FindByActiveGroupID(t *testing.T) {
 		today := supervisorDay
 		supervisor1 := &ports.GroupSupervisor{
 			GroupID:   data.ActiveGroup.ID,
-			StaffID:   data.Staff1ID,
+			StaffID:   ident.ID(data.Staff1ID),
 			StartDate: today,
 			Role:      "supervisor",
 		}
 		supervisor2 := &ports.GroupSupervisor{
 			GroupID:   data.ActiveGroup.ID,
-			StaffID:   data.Staff2ID,
+			StaffID:   ident.ID(data.Staff2ID),
 			StartDate: today,
 			Role:      "assistant",
 		}
@@ -377,7 +378,7 @@ func TestGroupSupervisorRepository_FindByActiveGroupID(t *testing.T) {
 		require.NoError(t, err)
 
 		// Get all supervisors (active or not)
-		supervisions, err := repo.FindByActiveGroupID(ctx, data.ActiveGroup.ID, false)
+		supervisions, err := repo.FindByActiveGroupID(ctx, data.ActiveGroup.ID.Int64(), false)
 		require.NoError(t, err)
 		assert.GreaterOrEqual(t, len(supervisions), 2)
 	})
@@ -389,13 +390,13 @@ func TestGroupSupervisorRepository_FindByActiveGroupID(t *testing.T) {
 
 		activeSupervisor := &ports.GroupSupervisor{
 			GroupID:   data.ActiveGroup.ID,
-			StaffID:   data.Staff1ID,
+			StaffID:   ident.ID(data.Staff1ID),
 			StartDate: today,
 			Role:      "supervisor",
 		}
 		endedSupervisor := &ports.GroupSupervisor{
 			GroupID:   data.ActiveGroup.ID,
-			StaffID:   data.Staff2ID,
+			StaffID:   ident.ID(data.Staff2ID),
 			StartDate: today.AddDays(-7),
 			EndDate:   &endDate,
 			Role:      "assistant",
@@ -407,7 +408,7 @@ func TestGroupSupervisorRepository_FindByActiveGroupID(t *testing.T) {
 		require.NoError(t, err)
 
 		// Get only active supervisors
-		supervisions, err := repo.FindByActiveGroupID(ctx, data.ActiveGroup.ID, true)
+		supervisions, err := repo.FindByActiveGroupID(ctx, data.ActiveGroup.ID.Int64(), true)
 		require.NoError(t, err)
 
 		// All returned supervisions should not have an end_date
@@ -436,8 +437,8 @@ func TestGroupSupervisorRepository_FindByActiveGroupIDs(t *testing.T) {
 			StartTime:      now,
 			LastActivity:   now,
 			TimeoutMinutes: 30,
-			GroupID:        ptrtest.Ptr(data.ActivityGroup),
-			RoomID:         room2.ID,
+			GroupID:        (*ident.ID)(ptrtest.Ptr(data.ActivityGroup)),
+			RoomID:         ident.ID(room2.ID),
 		}
 		err := groupRepo.Create(ctx, activeGroup2)
 		require.NoError(t, err)
@@ -445,13 +446,13 @@ func TestGroupSupervisorRepository_FindByActiveGroupIDs(t *testing.T) {
 		today := calendar.TodayDate()
 		supervisor1 := &ports.GroupSupervisor{
 			GroupID:   data.ActiveGroup.ID,
-			StaffID:   data.Staff1ID,
+			StaffID:   ident.ID(data.Staff1ID),
 			StartDate: today,
 			Role:      "supervisor",
 		}
 		supervisor2 := &ports.GroupSupervisor{
 			GroupID:   activeGroup2.ID,
-			StaffID:   data.Staff2ID,
+			StaffID:   ident.ID(data.Staff2ID),
 			StartDate: today,
 			Role:      "supervisor",
 		}
@@ -461,7 +462,7 @@ func TestGroupSupervisorRepository_FindByActiveGroupIDs(t *testing.T) {
 		err = repo.Create(ctx, supervisor2)
 		require.NoError(t, err)
 
-		supervisions, err := repo.FindByActiveGroupIDs(ctx, []int64{data.ActiveGroup.ID, activeGroup2.ID}, false)
+		supervisions, err := repo.FindByActiveGroupIDs(ctx, []int64{data.ActiveGroup.ID.Int64(), activeGroup2.ID.Int64()}, false)
 		require.NoError(t, err)
 		assert.GreaterOrEqual(t, len(supervisions), 2)
 	})
@@ -490,17 +491,17 @@ func TestGroupSupervisorRepository_EndSupervision(t *testing.T) {
 		today := calendar.NewDate(2026, 8, 24)
 		supervisor := &ports.GroupSupervisor{
 			GroupID:   data.ActiveGroup.ID,
-			StaffID:   data.Staff1ID,
+			StaffID:   ident.ID(data.Staff1ID),
 			StartDate: today,
 			Role:      "supervisor",
 		}
 		err := repo.Create(ctx, supervisor)
 		require.NoError(t, err)
 
-		err = repo.EndSupervision(ctx, supervisor.ID)
+		err = repo.EndSupervision(ctx, supervisor.ID.Int64())
 		require.NoError(t, err)
 
-		found, err := repo.FindByID(ctx, supervisor.ID)
+		found, err := repo.FindByID(ctx, supervisor.ID.Int64())
 		require.NoError(t, err)
 		assert.NotNil(t, found.EndDate)
 	})
@@ -521,7 +522,7 @@ func TestGroupSupervisorRepository_UsesInjectedClockForActiveSupervisions(t *tes
 		data := createSupervisorTestData(t, db)
 		endDate := today.AddDays(1)
 		supervisor := &ports.GroupSupervisor{
-			GroupID: data.ActiveGroup.ID, StaffID: data.Staff1ID,
+			GroupID: data.ActiveGroup.ID, StaffID: ident.ID(data.Staff1ID),
 			StartDate: today.AddDays(-1), EndDate: &endDate, Role: "supervisor",
 		}
 		require.NoError(t, repo.Create(ctx, supervisor))
@@ -531,12 +532,12 @@ func TestGroupSupervisorRepository_UsesInjectedClockForActiveSupervisions(t *tes
 	t.Run("finds supervision active on the injected date", func(t *testing.T) {
 		data, supervisor := createActiveSupervisor(t)
 
-		found, err := repo.FindByActiveGroupID(ctx, data.ActiveGroup.ID, true)
+		found, err := repo.FindByActiveGroupID(ctx, data.ActiveGroup.ID.Int64(), true)
 		require.NoError(t, err)
 		require.Len(t, found, 1)
 		assert.Equal(t, supervisor.ID, found[0].ID)
 
-		found, err = repo.FindByActiveGroupIDs(ctx, []int64{data.ActiveGroup.ID}, true)
+		found, err = repo.FindByActiveGroupIDs(ctx, []int64{data.ActiveGroup.ID.Int64()}, true)
 		require.NoError(t, err)
 		require.Len(t, found, 1)
 		assert.Equal(t, supervisor.ID, found[0].ID)
@@ -545,36 +546,36 @@ func TestGroupSupervisorRepository_UsesInjectedClockForActiveSupervisions(t *tes
 	t.Run("excludes and does not end a future supervision", func(t *testing.T) {
 		data := createSupervisorTestData(t, db)
 		future := &ports.GroupSupervisor{
-			GroupID: data.ActiveGroup.ID, StaffID: data.Staff1ID,
+			GroupID: data.ActiveGroup.ID, StaffID: ident.ID(data.Staff1ID),
 			StartDate: today.AddDays(1), Role: "future supervisor",
 		}
 		require.NoError(t, repo.Create(ctx, future))
 
-		found, err := repo.FindByActiveGroupID(ctx, data.ActiveGroup.ID, true)
+		found, err := repo.FindByActiveGroupID(ctx, data.ActiveGroup.ID.Int64(), true)
 		require.NoError(t, err)
 		assert.Empty(t, found)
 
 		day := today.String()
-		options := studentpresence.GroupSupervisionFilter{ActiveOn: &day, IDs: []int64{future.ID}}
+		options := studentpresence.GroupSupervisionFilter{ActiveOn: &day, IDs: []int64{future.ID.Int64()}}
 		supervisions, err := newPresence(t, db).QueryGroupSupervisions(ctx, options)
 		require.NoError(t, err)
 		assert.Empty(t, supervisions)
 
-		require.NoError(t, repo.EndSupervision(ctx, future.ID))
+		require.NoError(t, repo.EndSupervision(ctx, future.ID.Int64()))
 		count, err := repo.EndAllActiveByStaffID(ctx, data.Staff1ID)
 		require.NoError(t, err)
 		assert.Zero(t, count)
 
-		reloaded, err := repo.FindByID(ctx, future.ID)
+		reloaded, err := repo.FindByID(ctx, future.ID.Int64())
 		require.NoError(t, err)
 		assert.Nil(t, reloaded.EndDate)
 	})
 
 	t.Run("ends one supervision on the injected date", func(t *testing.T) {
 		_, supervisor := createActiveSupervisor(t)
-		require.NoError(t, repo.EndSupervision(ctx, supervisor.ID))
+		require.NoError(t, repo.EndSupervision(ctx, supervisor.ID.Int64()))
 
-		found, err := repo.FindByID(ctx, supervisor.ID)
+		found, err := repo.FindByID(ctx, supervisor.ID.Int64())
 		require.NoError(t, err)
 		require.Equal(t, today, *found.EndDate)
 	})
@@ -585,7 +586,7 @@ func TestGroupSupervisorRepository_UsesInjectedClockForActiveSupervisions(t *tes
 		require.NoError(t, err)
 		require.Equal(t, 1, count)
 
-		found, err := repo.FindByID(ctx, supervisor.ID)
+		found, err := repo.FindByID(ctx, supervisor.ID.Int64())
 		require.NoError(t, err)
 		require.Equal(t, today, *found.EndDate)
 	})
@@ -608,7 +609,7 @@ func TestGroupSupervisorRepository_GetStaffIDsWithSupervisionToday(t *testing.T)
 		today := supervisorDay
 		supervisor := &ports.GroupSupervisor{
 			GroupID:   data.ActiveGroup.ID,
-			StaffID:   data.Staff1ID,
+			StaffID:   ident.ID(data.Staff1ID),
 			StartDate: today,
 			Role:      "supervisor",
 		}
@@ -626,7 +627,7 @@ func TestGroupSupervisorRepository_GetStaffIDsWithSupervisionToday(t *testing.T)
 		yesterday := today.AddDays(-1)
 		supervisor := &ports.GroupSupervisor{
 			GroupID:   data.ActiveGroup.ID,
-			StaffID:   data.Staff1ID,
+			StaffID:   ident.ID(data.Staff1ID),
 			StartDate: yesterday,
 			EndDate:   &today,
 			Role:      "supervisor",
@@ -646,7 +647,7 @@ func TestGroupSupervisorRepository_GetStaffIDsWithSupervisionToday(t *testing.T)
 		tomorrow := today.AddDays(1)
 		supervisor := &ports.GroupSupervisor{
 			GroupID:   data.ActiveGroup.ID,
-			StaffID:   data.Staff1ID,
+			StaffID:   ident.ID(data.Staff1ID),
 			StartDate: yesterday,
 			EndDate:   &tomorrow,
 			Role:      "supervisor",
@@ -665,7 +666,7 @@ func TestGroupSupervisorRepository_GetStaffIDsWithSupervisionToday(t *testing.T)
 		yesterday := today.AddDays(-1)
 		supervisor := &ports.GroupSupervisor{
 			GroupID:   data.ActiveGroup.ID,
-			StaffID:   data.Staff1ID,
+			StaffID:   ident.ID(data.Staff1ID),
 			StartDate: yesterday,
 			EndDate:   nil, // Still active
 			Role:      "supervisor",
@@ -685,7 +686,7 @@ func TestGroupSupervisorRepository_GetStaffIDsWithSupervisionToday(t *testing.T)
 		yesterday := today.AddDays(-1)
 		supervisor := &ports.GroupSupervisor{
 			GroupID:   data.ActiveGroup.ID,
-			StaffID:   data.Staff2ID,
+			StaffID:   ident.ID(data.Staff2ID),
 			StartDate: twoDaysAgo,
 			EndDate:   &yesterday, // Ended yesterday
 			Role:      "supervisor",
@@ -704,13 +705,13 @@ func TestGroupSupervisorRepository_GetStaffIDsWithSupervisionToday(t *testing.T)
 		// Create multiple supervisions for same staff on same day
 		supervisor1 := &ports.GroupSupervisor{
 			GroupID:   data.ActiveGroup.ID,
-			StaffID:   data.Staff1ID,
+			StaffID:   ident.ID(data.Staff1ID),
 			StartDate: today,
 			Role:      "supervisor",
 		}
 		supervisor2 := &ports.GroupSupervisor{
 			GroupID:   data.ActiveGroup.ID,
-			StaffID:   data.Staff1ID,
+			StaffID:   ident.ID(data.Staff1ID),
 			StartDate: today,
 			Role:      "assistant",
 		}
@@ -766,7 +767,7 @@ func TestGroupSupervisorRepository_Update_ValidationFailure(t *testing.T) {
 		today := calendar.TodayDate()
 		supervisor := &ports.GroupSupervisor{
 			GroupID:   data.ActiveGroup.ID,
-			StaffID:   data.Staff1ID,
+			StaffID:   ident.ID(data.Staff1ID),
 			StartDate: today,
 			Role:      "supervisor",
 		}
@@ -825,7 +826,7 @@ func TestPresence_QuerySupervisionsIncludesCreatedRole(t *testing.T) {
 		today := calendar.TodayDate()
 		supervisor := &ports.GroupSupervisor{
 			GroupID:   data.ActiveGroup.ID,
-			StaffID:   data.Staff1ID,
+			StaffID:   ident.ID(data.Staff1ID),
 			StartDate: today,
 			Role:      "lead",
 		}
@@ -853,7 +854,7 @@ func TestGroupSupervisorRepository_EndSupervision_AlreadyEnded(t *testing.T) {
 		endDate := today.AddDays(-1)
 		supervisor := &ports.GroupSupervisor{
 			GroupID:   data.ActiveGroup.ID,
-			StaffID:   data.Staff1ID,
+			StaffID:   ident.ID(data.Staff1ID),
 			StartDate: today.AddDays(-7),
 			EndDate:   &endDate, // Already ended
 			Role:      "supervisor",
@@ -862,7 +863,7 @@ func TestGroupSupervisorRepository_EndSupervision_AlreadyEnded(t *testing.T) {
 		require.NoError(t, err)
 
 		// Try to end again - should not fail (idempotent)
-		err = repo.EndSupervision(ctx, supervisor.ID)
+		err = repo.EndSupervision(ctx, supervisor.ID.Int64())
 		require.NoError(t, err)
 	})
 }
@@ -903,24 +904,24 @@ func TestGroupSupervisorRepository_EndAllActiveByStaffID(t *testing.T) {
 		// the count assertions below. EndAllActiveByStaffID filters only on
 		// staff_id + the supervision date range, so an ended session changes nothing
 		// about what this test exercises.
-		testpkg.EndTestActiveGroup(t, db, testpkg.EndedActiveGroup{GroupID: data.ActiveGroup.ID})
+		testpkg.EndTestActiveGroup(t, db, testpkg.EndedActiveGroup{GroupID: data.ActiveGroup.ID.Int64()})
 		today := calendar.NewDate(2026, 8, 24)
 		// Create multiple active supervisions for same staff
 		supervisor1 := &ports.GroupSupervisor{
 			GroupID:   data.ActiveGroup.ID,
-			StaffID:   data.Staff1ID,
+			StaffID:   ident.ID(data.Staff1ID),
 			StartDate: today,
 			Role:      "supervisor",
 		}
 		supervisor2 := &ports.GroupSupervisor{
 			GroupID:   data.ActiveGroup.ID,
-			StaffID:   data.Staff1ID,
+			StaffID:   ident.ID(data.Staff1ID),
 			StartDate: today,
 			Role:      "assistant",
 		}
 		futureEnd := calendar.NewDate(2099, 1, 1)
 		supervisor3 := &ports.GroupSupervisor{
-			GroupID: data.ActiveGroup.ID, StaffID: data.Staff1ID,
+			GroupID: data.ActiveGroup.ID, StaffID: ident.ID(data.Staff1ID),
 			StartDate: today, EndDate: &futureEnd, Role: "future-assistant",
 		}
 		err := repo.Create(ctx, supervisor1)
@@ -936,15 +937,15 @@ func TestGroupSupervisorRepository_EndAllActiveByStaffID(t *testing.T) {
 		assert.Equal(t, 3, count)
 
 		// Verify both are ended
-		found1, err := repo.FindByID(ctx, supervisor1.ID)
+		found1, err := repo.FindByID(ctx, supervisor1.ID.Int64())
 		require.NoError(t, err)
 		assert.NotNil(t, found1.EndDate)
 
-		found2, err := repo.FindByID(ctx, supervisor2.ID)
+		found2, err := repo.FindByID(ctx, supervisor2.ID.Int64())
 		require.NoError(t, err)
 		assert.NotNil(t, found2.EndDate)
 
-		found3, err := repo.FindByID(ctx, supervisor3.ID)
+		found3, err := repo.FindByID(ctx, supervisor3.ID.Int64())
 		require.NoError(t, err)
 		assert.NotEqual(t, futureEnd, *found3.EndDate)
 	})
@@ -962,7 +963,7 @@ func TestGroupSupervisorRepository_EndAllActiveByStaffID(t *testing.T) {
 		endDate := today.AddDays(-1)
 		supervisor := &ports.GroupSupervisor{
 			GroupID:   data.ActiveGroup.ID,
-			StaffID:   data.Staff1ID,
+			StaffID:   ident.ID(data.Staff1ID),
 			StartDate: today.AddDays(-7),
 			EndDate:   &endDate,
 			Role:      "supervisor",
@@ -976,7 +977,7 @@ func TestGroupSupervisorRepository_EndAllActiveByStaffID(t *testing.T) {
 		assert.Equal(t, 0, count) // Should not count already-ended supervisions
 
 		// Verify end date hasn't changed
-		found, err := repo.FindByID(ctx, supervisor.ID)
+		found, err := repo.FindByID(ctx, supervisor.ID.Int64())
 		require.NoError(t, err)
 		assert.Equal(t, endDate, *found.EndDate)
 	})
@@ -987,13 +988,13 @@ func TestGroupSupervisorRepository_EndAllActiveByStaffID(t *testing.T) {
 		// Create active supervisions for two different staff members
 		supervisor1 := &ports.GroupSupervisor{
 			GroupID:   data.ActiveGroup.ID,
-			StaffID:   data.Staff1ID,
+			StaffID:   ident.ID(data.Staff1ID),
 			StartDate: today,
 			Role:      "supervisor",
 		}
 		supervisor2 := &ports.GroupSupervisor{
 			GroupID:   data.ActiveGroup.ID,
-			StaffID:   data.Staff2ID,
+			StaffID:   ident.ID(data.Staff2ID),
 			StartDate: today,
 			Role:      "supervisor",
 		}
@@ -1008,12 +1009,12 @@ func TestGroupSupervisorRepository_EndAllActiveByStaffID(t *testing.T) {
 		assert.Equal(t, 1, count)
 
 		// Verify Staff1's supervision is ended
-		found1, err := repo.FindByID(ctx, supervisor1.ID)
+		found1, err := repo.FindByID(ctx, supervisor1.ID.Int64())
 		require.NoError(t, err)
 		assert.NotNil(t, found1.EndDate)
 
 		// Verify Staff2's supervision is still active
-		found2, err := repo.FindByID(ctx, supervisor2.ID)
+		found2, err := repo.FindByID(ctx, supervisor2.ID.Int64())
 		require.NoError(t, err)
 		assert.Nil(t, found2.EndDate)
 	})
@@ -1037,8 +1038,8 @@ func TestGroupSupervisorRepository_EndByActiveGroupAndStaffID(t *testing.T) {
 
 	createSup := func(t *testing.T, groupID, staffID int64) *ports.GroupSupervisor {
 		sup := &ports.GroupSupervisor{
-			GroupID:   groupID,
-			StaffID:   staffID,
+			GroupID:   ident.ID(groupID),
+			StaffID:   ident.ID(staffID),
 			StartDate: calendar.NewDate(2026, 8, 24),
 			Role:      "supervisor",
 		}
@@ -1048,60 +1049,60 @@ func TestGroupSupervisorRepository_EndByActiveGroupAndStaffID(t *testing.T) {
 
 	t.Run("EndsActiveRowForMatchingPair", func(t *testing.T) {
 		data := createSupervisorTestData(t, db)
-		sup := createSup(t, data.ActiveGroup.ID, data.Staff1ID)
+		sup := createSup(t, data.ActiveGroup.ID.Int64(), data.Staff1ID)
 
-		n, err := repo.EndByActiveGroupAndStaffID(ctx, data.ActiveGroup.ID, data.Staff1ID)
+		n, err := repo.EndByActiveGroupAndStaffID(ctx, data.ActiveGroup.ID.Int64(), data.Staff1ID)
 		require.NoError(t, err)
 		assert.Equal(t, 1, n)
 
 		// Verify end_date is now set.
-		reloaded, err := repo.FindByID(ctx, sup.ID)
+		reloaded, err := repo.FindByID(ctx, sup.ID.Int64())
 		require.NoError(t, err)
 		assert.NotNil(t, reloaded.EndDate)
 	})
 
 	t.Run("Idempotent_ZeroRowsOnAlreadyEnded", func(t *testing.T) {
 		data := createSupervisorTestData(t, db)
-		createSup(t, data.ActiveGroup.ID, data.Staff1ID)
+		createSup(t, data.ActiveGroup.ID.Int64(), data.Staff1ID)
 
 		// First call ends it.
-		n1, err := repo.EndByActiveGroupAndStaffID(ctx, data.ActiveGroup.ID, data.Staff1ID)
+		n1, err := repo.EndByActiveGroupAndStaffID(ctx, data.ActiveGroup.ID.Int64(), data.Staff1ID)
 		require.NoError(t, err)
 		assert.Equal(t, 1, n1)
 
 		// Second call is idempotent: zero rows, no error.
-		n2, err := repo.EndByActiveGroupAndStaffID(ctx, data.ActiveGroup.ID, data.Staff1ID)
+		n2, err := repo.EndByActiveGroupAndStaffID(ctx, data.ActiveGroup.ID.Int64(), data.Staff1ID)
 		require.NoError(t, err)
 		assert.Equal(t, 0, n2)
 	})
 
 	t.Run("LeavesOtherStaffUntouched", func(t *testing.T) {
 		data := createSupervisorTestData(t, db)
-		createSup(t, data.ActiveGroup.ID, data.Staff1ID)
-		sup2 := createSup(t, data.ActiveGroup.ID, data.Staff2ID)
+		createSup(t, data.ActiveGroup.ID.Int64(), data.Staff1ID)
+		sup2 := createSup(t, data.ActiveGroup.ID.Int64(), data.Staff2ID)
 
-		n, err := repo.EndByActiveGroupAndStaffID(ctx, data.ActiveGroup.ID, data.Staff1ID)
+		n, err := repo.EndByActiveGroupAndStaffID(ctx, data.ActiveGroup.ID.Int64(), data.Staff1ID)
 		require.NoError(t, err)
 		assert.Equal(t, 1, n)
 
 		// Staff2 must remain active.
-		reloaded, err := repo.FindByID(ctx, sup2.ID)
+		reloaded, err := repo.FindByID(ctx, sup2.ID.Int64())
 		require.NoError(t, err)
 		assert.Nil(t, reloaded.EndDate, "other staff's supervision must remain open")
 	})
 
 	t.Run("TenantIsolation_DoesNotTouchOtherTenantRow", func(t *testing.T) {
 		data := createSupervisorTestData(t, db)
-		sup := createSup(t, data.ActiveGroup.ID, data.Staff1ID)
+		sup := createSup(t, data.ActiveGroup.ID.Int64(), data.Staff1ID)
 
 		// Call from a different tenant context: must match zero rows.
 		otherTenantCtx := testpkg.TenantContext(999)
-		n, err := repo.EndByActiveGroupAndStaffID(otherTenantCtx, data.ActiveGroup.ID, data.Staff1ID)
+		n, err := repo.EndByActiveGroupAndStaffID(otherTenantCtx, data.ActiveGroup.ID.Int64(), data.Staff1ID)
 		require.NoError(t, err)
 		assert.Equal(t, 0, n)
 
 		// Confirm the original row is still open from the correct tenant.
-		reloaded, err := repo.FindByID(ctx, sup.ID)
+		reloaded, err := repo.FindByID(ctx, sup.ID.Int64())
 		require.NoError(t, err)
 		assert.Nil(t, reloaded.EndDate)
 	})
@@ -1161,8 +1162,8 @@ func TestGroupSupervisorRepository_FindStaleOpen(t *testing.T) {
 	stale, err := repo.FindStaleOpen(ctx, today)
 	require.NoError(t, err)
 	require.Len(t, stale, 1)
-	assert.Equal(t, staleID, stale[0].ID)
-	assert.Equal(t, staff.ID, stale[0].StaffID)
+	assert.Equal(t, ident.ID(staleID), stale[0].ID)
+	assert.Equal(t, ident.ID(staff.ID), stale[0].StaffID)
 	assert.Nil(t, stale[0].EndDate)
 }
 

@@ -73,6 +73,10 @@ entschieden, den Import für SJR Pforzheim vorzuziehen (Kommentar in #4723).
    Folge: Für importierte Verträge gibt es keinen Soll-Ist-Vergleich je Kind
    und keine Änderung aus Buchungen (`AmendFromBookings` liest nur Verträge
    aus Anmeldungen), bis ein eigener, belegter Schritt das Kind verknüpft.
+   **Ergänzt am 22.11.2026
+   ([#7760](https://github.com/moto-ogs/project-phoenix/issues/7760)):**
+   Diesen Schritt gibt es jetzt, siehe
+   [ADR 0307](0307-importierte-vertraege-werden-ueber-kennungen-mit-der-kinderakte-verknuepft.md).
 7. **Debitorennummer.** `care-contract` hat den Port
    `ContractDebtorNumbers`; die Root bindet ihn an die neue Fähigkeit
    `parentbilling.ContractImportNumbers`. Sie entscheidet und speichert in der
@@ -115,6 +119,12 @@ entschieden, den Import für SJR Pforzheim vorzuziehen (Kommentar in #4723).
    moto den Vertrag ohne Vertragspartner und sagt das in der Vorschau. Nennt
    sie Vorname oder Mail-Adresse, aber keinen Nachnamen, ist sie
    unvollständig.
+
+## Nachtrag vom 22.11.2026: Kind verknüpfen
+
+Die Verknüpfung importierter Verträge mit Kinderakten, der Schutz vor einem
+zweiten Vertrag und die Entscheidung zu Anmeldung und Buchungen stehen in
+[ADR 0307](0307-importierte-vertraege-werden-ueber-kennungen-mit-der-kinderakte-verknuepft.md).
 
 ## Register
 
@@ -177,4 +187,7 @@ Die Entscheidung ändert diese Register (ADR 0057 Punkt 5, ADR 0070):
 - Die Mail-Adresse eines Vertragspartners lässt sich heute nicht ändern. Wer
   das einführt, zieht Nummer, Abweichung und Mandat vom Schlüssel des
   Vertrags auf die Adresse um.
-- Offen: Verknüpfung importierter Verträge mit Kindern der Schule (Punkt 6).
+- Die Verknüpfung importierter Verträge mit Kindern der Schule gibt es seit
+  #7760 (ADR 0307). Anmeldung und Buchungen der Bestandskinder kommen still
+  aus dem importierten Vertrag
+  ([ADR 0309](0309-bestandskinder-bekommen-ihre-anmeldung-still-aus-dem-importierten-vertrag.md)).

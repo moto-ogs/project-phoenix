@@ -25,6 +25,9 @@ type row struct {
 	Note          *string       `bun:"note"`
 	// nullzero: an unset list inserts the column default, the empty list.
 	Allergens []string `bun:"allergens,array,nullzero"`
+	// MenuChangedAt marks every dish of a day whose menu changed after it
+	// was published (#7666).
+	MenuChangedAt *time.Time `bun:"menu_changed_at"`
 }
 
 type participationScheduleRow struct {
@@ -86,12 +89,14 @@ func (s *Store) FindWeek(ctx context.Context, start, end domain.Date) ([]domain.
 	}
 	entries := make([]domain.Entry, 0, len(rows))
 	for _, value := range rows {
-		entries = append(entries, domain.Entry{Date: value.Date, Position: value.Position, Dish: value.Dish, Note: value.Note, Allergens: value.Allergens})
+		entries = append(entries, domain.Entry{Date: value.Date, Position: value.Position, Dish: value.Dish, Note: value.Note, Allergens: value.Allergens, MenuChangedAt: value.MenuChangedAt})
 	}
 	return entries, stats, nil
 }
 
-func (s *Store) ReplaceDay(ctx context.Context, date domain.Date, dishes []mealplan.Dish) (domain.OperationStats, error) {
+// ReplaceDay sets the dishes of a day; changedAt marks a menu that changed
+// after it was published (#7666), nil a day as first published.
+func (s *Store) ReplaceDay(ctx context.Context, date domain.Date, dishes []mealplan.Dish, changedAt *time.Time) (domain.OperationStats, error) {
 	db, tenantID, err := s.database(ctx)
 	if err != nil {
 		return domain.OperationStats{}, err
@@ -106,7 +111,7 @@ func (s *Store) ReplaceDay(ctx context.Context, date domain.Date, dishes []mealp
 		for _, allergen := range dish.Allergens {
 			allergens = append(allergens, string(allergen))
 		}
-		rows = append(rows, row{TenantID: tenantID, Date: date, Position: position, Dish: dish.Dish, Note: dish.Note, Allergens: allergens})
+		rows = append(rows, row{TenantID: tenantID, Date: date, Position: position, Dish: dish.Dish, Note: dish.Note, Allergens: allergens, MenuChangedAt: changedAt})
 	}
 	query := db.NewInsert().Model(&rows).ModelTableExpr(`schedule.meal_plan_entries`)
 	started := time.Now()
@@ -130,6 +135,24 @@ func (s *Store) ClearDay(ctx context.Context, date domain.Date) (domain.Operatio
 		return domain.OperationStats{}, err
 	}
 	return deleteDay(ctx, db, tenantID, date)
+}
+
+// LockDay takes the transaction lock of the school's day; it needs the
+// caller's transaction, which releases it.
+func (s *Store) LockDay(ctx context.Context, date domain.Date) (domain.OperationStats, error) {
+	db, tenantID, err := s.database(ctx)
+	if err != nil {
+		return domain.OperationStats{}, err
+	}
+	stats := domain.OperationStats{Queries: 1}
+	started := time.Now()
+	_, err = db.NewRaw(`SELECT pg_advisory_xact_lock(hashtextextended(?, 0))`,
+		fmt.Sprintf("meal_plan.day:%d:%s", tenantID, date.String())).Exec(ctx)
+	stats.StatementDuration = time.Since(started)
+	if err != nil {
+		return stats, fmt.Errorf("meal plan postgres: lock day: %w", err)
+	}
+	return stats, nil
 }
 
 func deleteDay(ctx context.Context, db bun.IDB, tenantID int64, date domain.Date) (domain.OperationStats, error) {
@@ -158,17 +181,9 @@ func (s *Store) FindParticipation(ctx context.Context, studentID int64, start, e
 		return domain.ParticipationData{}, domain.OperationStats{}, err
 	}
 	stats := domain.OperationStats{}
-	var schedules []participationScheduleRow
-	if err := timedQuery(&stats, func() error {
-		return db.NewSelect().Model(&schedules).
-			ModelTableExpr(`schedule.meal_participation_schedules AS "meal_participation_schedule"`).
-			Where(`"meal_participation_schedule".tenant_id = ?`, tenantID).
-			Where(`"meal_participation_schedule".student_id = ?`, studentID).
-			Where(`"meal_participation_schedule".effective_from <= ?`, end).
-			OrderExpr(`"meal_participation_schedule".effective_from ASC`).
-			Scan(ctx)
-	}); err != nil {
-		return domain.ParticipationData{}, stats, fmt.Errorf("meal plan postgres: find participation schedules: %w", err)
+	schedules, err := findSchedules(ctx, db, tenantID, studentID, &stats)
+	if err != nil {
+		return domain.ParticipationData{}, stats, err
 	}
 
 	var overrides []participationOverrideRow
@@ -197,6 +212,57 @@ func (s *Store) FindParticipation(ctx context.Context, studentID int64, start, e
 
 	data := participationValues(schedules, overrides, sickDays)
 	return data, stats, nil
+}
+
+// findSchedules reads every period of a child's regular days, the past and
+// the coming ones: a read shows the one in force, and the version of a
+// schedule save covers all of them (ADR 0311).
+func findSchedules(ctx context.Context, db bun.IDB, tenantID, studentID int64, stats *domain.OperationStats) ([]participationScheduleRow, error) {
+	var schedules []participationScheduleRow
+	if err := timedQuery(stats, func() error {
+		return db.NewSelect().Model(&schedules).
+			ModelTableExpr(`schedule.meal_participation_schedules AS "meal_participation_schedule"`).
+			Where(`"meal_participation_schedule".tenant_id = ?`, tenantID).
+			Where(`"meal_participation_schedule".student_id = ?`, studentID).
+			OrderExpr(`"meal_participation_schedule".effective_from ASC`).
+			Scan(ctx)
+	}); err != nil {
+		return nil, fmt.Errorf("meal plan postgres: find participation schedules: %w", err)
+	}
+	return schedules, nil
+}
+
+// FindSchedules reads every period of a child's regular days, as
+// FindParticipation does.
+func (s *Store) FindSchedules(ctx context.Context, studentID int64) ([]domain.ParticipationSchedule, domain.OperationStats, error) {
+	db, tenantID, err := s.database(ctx)
+	if err != nil {
+		return nil, domain.OperationStats{}, err
+	}
+	var stats domain.OperationStats
+	rows, err := findSchedules(ctx, db, tenantID, studentID, &stats)
+	if err != nil {
+		return nil, stats, err
+	}
+	return participationValues(rows, nil, nil).Schedules, stats, nil
+}
+
+// LockSchedule takes the transaction lock of a child's regular days, so a
+// schedule save's check of the stored days and its write stay together.
+func (s *Store) LockSchedule(ctx context.Context, studentID int64) (domain.OperationStats, error) {
+	db, tenantID, err := s.database(ctx)
+	if err != nil {
+		return domain.OperationStats{}, err
+	}
+	stats := domain.OperationStats{Queries: 1}
+	started := time.Now()
+	_, err = db.NewRaw(`SELECT pg_advisory_xact_lock(hashtextextended(?, 0))`,
+		fmt.Sprintf("meal_plan.schedule:%d:%d", tenantID, studentID)).Exec(ctx)
+	stats.StatementDuration = time.Since(started)
+	if err != nil {
+		return stats, fmt.Errorf("meal plan postgres: lock schedule: %w", err)
+	}
+	return stats, nil
 }
 
 func (s *Store) InsertParticipationSchedule(ctx context.Context, studentID, accountID int64, effectiveFrom domain.Date, weekdays []domain.Weekday) (domain.OperationStats, error) {

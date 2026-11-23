@@ -14,6 +14,7 @@ import (
 	scheduleModels "github.com/moto-ogs/project-phoenix/modules/timetable/internal/domain/schedulerecords"
 	"github.com/moto-ogs/project-phoenix/modules/transactionruntime"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Shift-coverage probe (#1873): does the Dienstplan cover every probed staff
@@ -245,7 +246,7 @@ func buildShiftCoverageWarnings(pending []pendingShiftCoverageWarning, staff map
 		start, end := clockLabel(item.start), clockLabel(item.end)
 		gapStart, gapEnd := clockLabel(item.gap.StartTime), clockLabel(item.gap.EndTime)
 		warnings = append(warnings, timetable.ShiftCoverageWarning{
-			StaffID:            item.staffID,
+			StaffID:            ident.ID(item.staffID),
 			StaffName:          name,
 			Date:               item.date.String(),
 			StartTime:          start,

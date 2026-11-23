@@ -24,7 +24,7 @@ func TestHolidayGuestPlansOnlyBookedDaysAndReconcilesDateChanges(t *testing.T) {
 	require.NoError(t, err)
 	f.confirm(t, f.siblings, "confirm")
 	lead := f.staffOf(t, f.nord, permissions.ConfigRead, permissions.UsersCreate, permissions.UsersRead)
-	rec := f.assign(t, lead, week.ID, f.group)
+	rec := f.assign(t, lead, int64(week.ID), f.group)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	var guest struct {
 		StudentID int64
@@ -37,7 +37,7 @@ func TestHolidayGuestPlansOnlyBookedDaysAndReconcilesDateChanges(t *testing.T) {
 	assert.Equal(t, []string{"2099-07-06 08:00-13:00"}, f.careDays(t, guest.StudentID), "unchanged dates keep the plan")
 
 	path := holidayRebookPath(f.periodID(t), f.siblings, guest.ChildID)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, path, map[string]any{"bookings": []map[string]any{
+	rec = putReadRegistration(t, f.traeger, f.office.token, path, map[string]any{"bookings": []map[string]any{
 		{"week_id": week.ID, "time_model_id": week.TimeModels[0].ID, "days": []string{"2099-07-07"}},
 	}})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())

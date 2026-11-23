@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Holiday periods of a Träger (spec #4611 user stories 22 to 25, #4659): the
@@ -99,21 +100,21 @@ func (r *HolidayWeekDayLimitRefusal) Unwrap() error { return ErrHolidayWeekDayLi
 // (#5994). An archived time model is no longer offered and takes no new
 // booking; the bookings that name it keep reading it.
 type HolidayTimeModel struct {
-	ID         int64  `json:"id"`
-	Name       string `json:"name"`
-	StartsAt   string `json:"starts_at"`
-	EndsAt     string `json:"ends_at"`
-	PriceCents int    `json:"price_cents"`
-	Archived   bool   `json:"archived"`
-	Protected  bool   `json:"protected"`
+	ID         ident.ID `json:"id"`
+	Name       string   `json:"name"`
+	StartsAt   string   `json:"starts_at"`
+	EndsAt     string   `json:"ends_at"`
+	PriceCents int      `json:"price_cents"`
+	Archived   bool     `json:"archived"`
+	Protected  bool     `json:"protected"`
 }
 
 // HolidayWeek is a bookable week of a period with its host school.
 type HolidayWeek struct {
-	ID           int64              `json:"id"`
+	ID           ident.ID           `json:"id"`
 	StartsOn     calendar.Date      `json:"starts_on"`
 	EndsOn       calendar.Date      `json:"ends_on"`
-	HostSchoolID int64              `json:"host_school_id"`
+	HostSchoolID ident.ID           `json:"host_school_id"`
 	TimeModels   []HolidayTimeModel `json:"time_models"`
 	// NoCareDays are the days of the week on which the host school gives
 	// no care (#4702). A week with such a day takes no new booking.
@@ -141,7 +142,7 @@ type HolidayWeek struct {
 
 // HolidayPeriod is a holiday period of a Träger with its weeks.
 type HolidayPeriod struct {
-	ID                   int64         `json:"id"`
+	ID                   ident.ID      `json:"id"`
 	Name                 string        `json:"name"`
 	RegistrationOpensOn  calendar.Date `json:"registration_opens_on"`
 	RegistrationClosesOn calendar.Date `json:"registration_closes_on"`
@@ -174,6 +175,9 @@ type HolidayPeriod struct {
 	// figure without personal data.
 	RegistrationCount int           `json:"registration_count"`
 	Weeks             []HolidayWeek `json:"weeks"`
+	// Version is the token of the period as the Büro edits it; an update
+	// sends it back (ADR 0311).
+	Version string `json:"version"`
 }
 
 // HolidayTimeModelInput is a time model as the Träger-Büro writes it. A zero
@@ -181,7 +185,7 @@ type HolidayPeriod struct {
 // archives a time model of the week for good and leaves it as it is; an
 // archived time model stays, named or not, and is never restored.
 type HolidayTimeModelInput struct {
-	ID         int64
+	ID         ident.ID
 	Name       string
 	StartsAt   string
 	EndsAt     string
@@ -223,6 +227,9 @@ type HolidayPeriodInput struct {
 	// period has no registration.
 	AllocationMode string
 	Weeks          []HolidayWeekInput
+	// ExpectedVersion is the Version of the period the Büro read; an
+	// update refuses another one (ADR 0311). Creating sends none.
+	ExpectedVersion string
 }
 
 // HolidayWeekHost is a week of a holiday period with the school that hosts
@@ -263,5 +270,5 @@ type HolidayPeriods interface {
 	// and returns it. accountID is the person of the Träger-Büro who saves;
 	// address is the building block "Anschrift" of the version (#5625),
 	// health the building block "Gesundheit" (#6686).
-	SaveHolidayPeriodForm(ctx context.Context, organizationID, periodID, accountID int64, fields []HolidayFormField, blocks []FormLegalBlock, address HolidayAddressRequirement, health HolidayHealthRequirement) (HolidayFormEditor, error)
+	SaveHolidayPeriodForm(ctx context.Context, organizationID, periodID, accountID int64, expectedVersion int, fields []HolidayFormField, blocks []FormLegalBlock, address HolidayAddressRequirement, health HolidayHealthRequirement) (HolidayFormEditor, error)
 }

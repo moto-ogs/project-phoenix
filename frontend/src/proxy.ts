@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { problemBody } from "~/lib/api-error";
 import { REQUEST_ID_HEADER } from "~/lib/request-id";
 import { RESERVED_SLUGS } from "~/lib/reserved-slugs";
 import { normalizeHostname, tenantSlugFromHost } from "~/lib/tenant-host";
@@ -246,7 +247,7 @@ const SANDBOXED_FILE_ROUTES: readonly RegExp[] = [
   // Managed files and announcement attachments, staff and parents.
   /^\/api\/files\/folders\/[^/]+\/files\/[^/]+\/download$/,
   /^\/api\/announcement-attachments\/[^/]+\/[^/]+\/download$/,
-  /^\/api\/parent\/me\/news\/[^/]+\/attachments\/[^/]+\/download$/,
+  /^\/api\/parent\/parent-news-attachments\/[^/]+\/[^/]+\/download$/,
   // Documents staff attach to a child (#777) or a staff member (#1424).
   /^\/api\/(?:students|staff)\/[^/]+\/documents\/[^/]+\/download$/,
   // The proof of a care schedule request a parent signed (#4780).
@@ -256,11 +257,11 @@ const SANDBOXED_FILE_ROUTES: readonly RegExp[] = [
   // Documents a Träger attaches to a holiday-period form, in the Träger
   // portal and on the public registration link (#6179).
   /^\/api\/traeger\/holiday-periods\/[^/]+\/form\/documents\/[^/]+$/,
-  /^\/api\/holiday-registrations\/[^/]+\/documents\/[^/]+$/,
+  /^\/api\/traeger\/holiday-registrations\/[^/]+\/documents\/[^/]+$/,
   // Träger documents, in the Träger portal and shared with a school (#4692).
   /^\/api\/(?:traeger-documents|traeger\/documents)\/[^/]+\/file$/,
   // Photos and files of chat messages (#6685): a PDF opens inline in a tab.
-  /^\/api\/(?:messages|staff-messages|school\/staff-messages)\/attachments\/[^/]+\/download$/,
+  /^\/api\/(?:messages|staff-messages|school\/school-staff-messages)\/attachments\/[^/]+\/download$/,
   /^\/api\/parent\/me\/messages\/children\/[^/]+\/attachments\/[^/]+\/download$/,
 ];
 
@@ -293,9 +294,11 @@ function secureRewrite(request: NextRequest, url: URL): NextResponse {
  * portal host, so a tenant route must not run there. */
 interface PortalHostRules {
   /** BFF routes the host serves: a string ending in "/" is a prefix, any
-   * other string an exact path. Every other /api/ path answers 404. The
-   * portal's own prefix also carries its client log route (`portalLogPath`). */
-  readonly api: readonly (string | RegExp)[];
+   * other string an exact path, `{ get }` a path served only to a GET (its
+   * other methods are another portal's session routes). Every other /api/
+   * path answers 404. The portal's own prefix also carries its client log
+   * route (`portalLogPath`). */
+  readonly api: readonly (string | RegExp | { readonly get: RegExp })[];
   /** Parent-facing: the request may render in the parent's language. */
   readonly localized: boolean;
   /** Serves the public /help pages. */
@@ -315,6 +318,9 @@ interface PortalHost extends PortalHostRules {
   readonly pages: readonly string[];
 }
 
+/** The staff invitation's link, `GET /auth/invitations/{token}` (#2352). */
+const STAFF_INVITATION_LINK = { get: /^\/api\/auth\/invitations\/[^/]+$/ };
+
 const HOST_RULES: Record<HostedPortalKey, PortalHostRules> = {
   operator: {
     api: ["/api/operator/"],
@@ -328,17 +334,27 @@ const HOST_RULES: Record<HostedPortalKey, PortalHostRules> = {
       // invitations, enrollment status and its uploads, holiday registration,
       // contract signing, the demo entry and the school's login image.
       "/api/public/",
-      "/api/tenant/resolve",
+      "/api/auth/tenant/resolve",
       // The staff invitation's school picker (#7369); attaches no session.
-      "/api/tenant/list",
-      "/api/invitations/validate",
+      "/api/auth/tenants",
+      // The invitation link through the staff proxy's public route (#2352);
+      // the path's other methods are staff session routes.
+      STAFF_INVITATION_LINK,
       "/api/invitations/accept",
-      "/api/guardian-invitations/",
-      "/api/holiday-registrations/",
-      "/api/holiday-parent-setups/",
+      "/api/auth/guardian-invitations/",
+      // The holiday link, its summary, documents and proof upload through
+      // the Träger proxy's public routes (#2352); every other /api/traeger/
+      // path stays off this host.
+      "/api/traeger/holiday-registrations/",
+      "/api/traeger/holiday-quotes/",
+      "/api/auth/holiday-parent-setups/",
       "/api/enrollment/requests/",
       /^\/api\/enrollment\/[^/]+\/uploads$/,
       "/api/demo/access/",
+      // The calendar subscription the backend hands parents names this host
+      // (#2352); the token is its only credential and next.config.js
+      // rewrites it to the staff proxy's public file route.
+      { get: /^\/api\/calendar-feed\/[^/]+$/ },
     ],
     localized: true,
     help: true,
@@ -346,10 +362,10 @@ const HOST_RULES: Record<HostedPortalKey, PortalHostRules> = {
   school: {
     api: [
       "/api/school/",
-      "/api/invitations/validate",
+      STAFF_INVITATION_LINK,
       "/api/invitations/accept",
       // The invitation's school picker (#7369); attaches no session.
-      "/api/tenant/list",
+      "/api/auth/tenants",
     ],
     localized: false,
     help: true,
@@ -390,9 +406,16 @@ function isUnder(pathname: string, prefix: string): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);
 }
 
-function servesApi(host: PortalHost, pathname: string): boolean {
+function servesApi(
+  host: PortalHost,
+  pathname: string,
+  method: string,
+): boolean {
   return host.api.some((rule) => {
-    if (typeof rule !== "string") return rule.test(pathname);
+    if (rule instanceof RegExp) return rule.test(pathname);
+    if (typeof rule !== "string") {
+      return (method === "GET" || method === "HEAD") && rule.get.test(pathname);
+    }
     return rule.endsWith("/") ? pathname.startsWith(rule) : pathname === rule;
   });
 }
@@ -416,8 +439,15 @@ function movedTarget(host: PortalHost, pathname: string): string | null {
   return host.movedPaths.find(([from]) => page === from)?.[1] ?? null;
 }
 
+/** An /api/ path this host does not serve. Its code asks the reader to
+ * reload: a tab from before a release may still call a retired route. */
 function notFound(): NextResponse {
-  return withSecurityHeaders(new NextResponse(null, { status: 404 }));
+  return withSecurityHeaders(
+    NextResponse.json(
+      problemBody(404, "route not found", { code: "general.route_not_found" }),
+      { status: 404, headers: { "Content-Type": "application/problem+json" } },
+    ),
+  );
 }
 
 function handlePortalHost(
@@ -429,7 +459,9 @@ function handlePortalHost(
   if (host.help && isUnder(pathname, "/help")) return secureNext(request);
   if (isUnder(pathname, "/monitoring")) return secureNext(request);
   if (pathname.startsWith("/api/")) {
-    return servesApi(host, pathname) ? secureNext(request) : notFound();
+    return servesApi(host, pathname, request.method)
+      ? secureNext(request)
+      : notFound();
   }
 
   const rewrite = host.localized ? rewriteLocalized : secureRewrite;
@@ -738,17 +770,17 @@ export function proxy(request: NextRequest): NextResponse {
   // next.config.js sets skipTrailingSlashRedirect so the PostHog proxy
   // keeps the trailing slash its endpoints need (/ingest/e/). A path the
   // routing would serve as it is keeps the Next.js default and loses its
-  // trailing slash; routing redirects such as old bookmarks win. Relative
-  // Location: the browser resolves it against the host it asked.
+  // trailing slash; routing redirects such as old bookmarks win. The Location
+  // is absolute: Next.js parses it without a base (a relative one answered
+  // 500) and turns a same-host target back into a relative Location itself.
   const servedAsIs =
     !pathname.startsWith("/_next") &&
     (response.headers.has("x-middleware-next") ||
       response.headers.has("x-middleware-rewrite"));
   if (servedAsIs && pathname.length > 1 && pathname.endsWith("/")) {
-    const target = `${pathname.replace(/\/+$/, "") || "/"}${request.nextUrl.search}`;
-    return withSecurityHeaders(
-      new NextResponse(null, { status: 308, headers: { Location: target } }),
-    );
+    const target = new URL(request.url);
+    target.pathname = pathname.replace(/\/+$/, "") || "/";
+    return withSecurityHeaders(NextResponse.redirect(target, 308));
   }
   const pagePath = new URL(
     response.headers.get("x-middleware-rewrite") ?? request.url,

@@ -28,12 +28,12 @@ import (
 
 type contractRecordBody struct {
 	Contracts []struct {
-		ID       int64   `json:"id"`
+		ID       wireID  `json:"id"`
 		Kind     string  `json:"kind"`
 		StartsOn string  `json:"starts_on"`
 		EndsOn   *string `json:"ends_on"`
 		Sites    []struct {
-			SchoolID       int64  `json:"school_id"`
+			SchoolID       wireID `json:"school_id"`
 			SchoolName     string `json:"school_name"`
 			ChangeableFrom string `json:"changeable_from"`
 			Soll           []struct {
@@ -42,7 +42,7 @@ type contractRecordBody struct {
 			} `json:"soll"`
 		} `json:"sites"`
 		HolidayWeeks []struct {
-			SchoolID  int64  `json:"school_id"`
+			SchoolID  wireID `json:"school_id"`
 			WeekStart string `json:"week_start"`
 		} `json:"holiday_weeks"`
 	} `json:"contracts"`
@@ -98,7 +98,7 @@ func TestTraegerStaffContractsCarryTheSollIntoEachSchool(t *testing.T) {
 		VALUES (?, ?, DATE '2026-12-21', DATE '2026-12-23', '{0,0,0,0,0}')`, south, miraSouth.ID)
 	require.NoError(t, err)
 
-	rec := traegerJSON(t, router, office.token, http.MethodPost, "/traeger/staff-records/", map[string]any{
+	rec := traegerLink(t, router, office.token, map[string]any{
 		"members": []map[string]int64{{"school_id": north, "staff_id": miraNorth.ID}, {"school_id": south, "staff_id": miraSouth.ID}},
 	})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
@@ -117,7 +117,7 @@ func TestTraegerStaffContractsCarryTheSollIntoEachSchool(t *testing.T) {
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		body := decode[contractRecordBody](t, rec)
 		require.Len(t, body.Contracts, 1)
-		contractID = body.Contracts[0].ID
+		contractID = int64(body.Contracts[0].ID)
 		require.Len(t, body.Contracts[0].Sites, 2)
 		for _, site := range body.Contracts[0].Sites {
 			assert.Equal(t, "2026-11-01", site.ChangeableFrom, "October is closed at north, and the current month is November")
@@ -303,7 +303,7 @@ func TestTraegerStaffContractKeepsTheTemplateAndGivesItBack(t *testing.T) {
 	_, err = db.ExecContext(ctx, `UPDATE users.staff_employment_profiles SET work_time_model_id = ? WHERE tenant_id = ? AND membership_id = ?`, modelID, north, lea.ID)
 	require.NoError(t, err)
 
-	rec := traegerJSON(t, router, office.token, http.MethodPost, "/traeger/staff-records/", map[string]any{
+	rec := traegerLink(t, router, office.token, map[string]any{
 		"members": []map[string]int64{{"school_id": north, "staff_id": lea.ID}},
 	})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())

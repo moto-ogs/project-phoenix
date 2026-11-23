@@ -84,6 +84,7 @@
   "lastMealPlanWeekReason": "Daha sonrası için henüz yemek listesi yok.",
   "editRegularDaysTooltip": "Çocuğunuzun her zaman yemek yediği günlerin seçimini açar.",
   "saveRegularDaysTooltip": "Çocuğunuz için yeni sabit günleri kaydeder.",
+  "saveAfterReload": "Önce kaydı yeniden yükle, sonra kaydedebilirsin.",
   "saveDayTooltip": "Bu günün kaydını kaydeder.",
   "registerWeekTooltip": "Çocuğunuzu bu haftanın hâlâ değiştirilebilen tüm günlerine hemen kaydeder.",
   "cancelWeekTooltip": "Çocuğunuzun bu haftaki kaydını iptal eder. moto önce sorar.",

@@ -1,13 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { CaretDownIcon } from "@phosphor-icons/react";
 import { Button, ButtonLink } from "~/components/ui/button";
 import { CoachMark } from "~/components/ui/coach-mark";
 import { ConfirmationModal } from "~/components/ui/modal";
 import { ProgressBar } from "~/components/ui/progress-bar";
+import {
+  trackOnboardingChecklist,
+  trackOnboardingSurface,
+} from "~/lib/analytics";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
+import { useMessageComposerOnScreen } from "~/lib/hooks/use-message-composer-presence";
 import {
   buildHelpHref,
   HELP_TOPICS,
@@ -15,6 +20,7 @@ import {
 } from "~/lib/help-topics";
 import {
   completeParentFirstStep,
+  PARENT_FIRST_STEP_ANALYTICS_KEYS,
   readParentFirstStepsState,
   writeParentFirstStepsState,
   type ParentFirstStepsState,
@@ -42,14 +48,28 @@ const EMPTY_STATE: ParentFirstStepsState = {
   finished: false,
 };
 
-function claimFirstOpen(accountId: string): boolean {
-  const key = `parent-first-steps-opened:${accountId}`;
+function firstOpenKey(accountId: string): string {
+  return `parent-first-steps-opened:${accountId}`;
+}
+
+/** Ob sich die Liste in dieser Sitzung schon von selbst gezeigt hat. */
+function openedThisSession(accountId: string): boolean {
   try {
-    if (sessionStorage.getItem(key)) return false;
-    sessionStorage.setItem(key, "1");
-    return true;
+    return sessionStorage.getItem(firstOpenKey(accountId)) !== null;
   } catch {
-    return true;
+    return false;
+  }
+}
+
+/**
+ * Merkt sich das erste Öffnen erst, wenn die Liste zu sehen war: Hielt ein
+ * Chat sie verdeckt, geht sie nach dem Neuladen noch einmal von selbst auf.
+ */
+function rememberOpened(accountId: string): void {
+  try {
+    sessionStorage.setItem(firstOpenKey(accountId), "1");
+  } catch {
+    // Ohne Sitzungsspeicher öffnet sich die Liste beim nächsten Laden erneut.
   }
 }
 
@@ -69,6 +89,20 @@ export function ParentFirstSteps({
   const [expanded, setExpanded] = useState<ParentFirstStepKey | null>(null);
   const [confirmDismiss, setConfirmDismiss] = useState(false);
   const hasChild = childCount > 0;
+  // Letzter gespeicherter Zustand, damit ein erledigter Schritt genau einmal
+  // gemeldet wird, auch wenn React einen Zustandswechsel doppelt ausführt.
+  const stateRef = useRef<ParentFirstStepsState | null>(null);
+  // Die Liste ging von selbst auf, „angezeigt“ ist gezählt und die Person hat
+  // noch nicht reagiert (Fläche `parent_first_steps`, #7557). War die
+  // Erfassung beim Öffnen noch aus (Schulfreigabe noch nicht geladen), zählt
+  // auch die Antwort nicht, sonst gäbe es mehr Antworten als Anzeigen.
+  const autoOpenRef = useRef(false);
+  // Ein offener Chat hat seinen Senden-Knopf genau dort, wo Knopf und Liste
+  // unten am Rand stehen (#7686). Solange er offen ist, treten beide zurück.
+  const chatOpen = useMessageComposerOnScreen();
+  // Von selbst geöffnet, aber noch nie zu sehen gewesen: „angezeigt“ zählt
+  // erst, wenn die Liste wirklich auf dem Bildschirm steht.
+  const [shownPending, setShownPending] = useState(false);
 
   const steps = useMemo<readonly StepContent[]>(() => {
     const list: StepContent[] = [
@@ -210,31 +244,59 @@ export function ParentFirstSteps({
 
   useEffect(() => {
     const stored = readParentFirstStepsState(accountId);
+    stateRef.current = stored;
+    autoOpenRef.current = false;
     setState(stored);
-    if (!stored.dismissed && !stored.finished && claimFirstOpen(accountId)) {
-      setView("checklist");
-    }
+    const opens =
+      !stored.dismissed && !stored.finished && !openedThisSession(accountId);
+    if (opens) setView("checklist");
+    setShownPending(opens);
   }, [accountId]);
+
+  useEffect(() => {
+    if (!shownPending || view !== "checklist" || chatOpen) return;
+    setShownPending(false);
+    rememberOpened(accountId);
+    autoOpenRef.current = trackOnboardingSurface("shown", "parent_first_steps");
+  }, [accountId, shownPending, view, chatOpen]);
 
   const updateState = useCallback(
     (next: ParentFirstStepsState) => {
+      stateRef.current = next;
       setState(next);
       writeParentFirstStepsState(accountId, next);
     },
     [accountId],
   );
 
+  const completeStep = useCallback(
+    (key: ParentFirstStepKey) => {
+      const current = stateRef.current ?? EMPTY_STATE;
+      const next = completeParentFirstStep(current, key);
+      if (next === current) return;
+      updateState(next);
+      trackOnboardingChecklist("parent_first_steps", {
+        action: "step_done",
+        step: PARENT_FIRST_STEP_ANALYTICS_KEYS[key],
+      });
+    },
+    [updateState],
+  );
+
+  /** Die Person reagiert auf die von selbst geöffnete Liste. */
+  const answerAutoOpen = useCallback((action: "accepted" | "dismissed") => {
+    if (!autoOpenRef.current) return;
+    autoOpenRef.current = false;
+    trackOnboardingSurface(action, "parent_first_steps");
+  }, []);
+
   const onTourFinished = useCallback(
     (key: ParentFirstStepKey) => {
-      setState((current) => {
-        const next = completeParentFirstStep(current ?? EMPTY_STATE, key);
-        writeParentFirstStepsState(accountId, next);
-        return next;
-      });
+      completeStep(key);
       setExpanded(key);
       setView("checklist");
     },
-    [accountId],
+    [completeStep],
   );
   const tour = useParentFirstStepsTour(definitions, onTourFinished);
 
@@ -305,6 +367,8 @@ export function ParentFirstSteps({
     );
   }
 
+  if (chatOpen) return null;
+
   if (view === "beacon") {
     return (
       <div
@@ -353,7 +417,10 @@ export function ParentFirstSteps({
               type="button"
               variant="ghost"
               size="icon"
-              onClick={() => setView("beacon")}
+              onClick={() => {
+                answerAutoOpen("dismissed");
+                setView("beacon");
+              }}
               aria-label={t("collapse")}
               tooltip={t("tooltips.collapse")}
             >
@@ -380,7 +447,12 @@ export function ParentFirstSteps({
               <Button
                 type="button"
                 size="md"
-                onClick={() => updateState({ ...state, finished: true })}
+                onClick={() => {
+                  updateState({ ...state, finished: true });
+                  trackOnboardingChecklist("parent_first_steps", {
+                    action: "completed",
+                  });
+                }}
                 tooltip={t("tooltips.complete")}
               >
                 {t("complete.action")}
@@ -448,6 +520,7 @@ export function ParentFirstSteps({
                             type="button"
                             size="md"
                             onClick={() => {
+                              answerAutoOpen("accepted");
                               setView("beacon");
                               tour.start(step.key);
                             }}
@@ -469,10 +542,9 @@ export function ParentFirstSteps({
                                   : t("tooltips.guide")
                               }
                               onClick={() => {
+                                answerAutoOpen("accepted");
                                 if (step.key !== "installApp") return;
-                                updateState(
-                                  completeParentFirstStep(state, step.key),
-                                );
+                                completeStep(step.key);
                               }}
                             >
                               {help.label}
@@ -507,7 +579,11 @@ export function ParentFirstSteps({
         isOpen={confirmDismiss}
         onClose={() => setConfirmDismiss(false)}
         onConfirm={() => {
+          answerAutoOpen("dismissed");
           updateState({ ...state, dismissed: true });
+          trackOnboardingChecklist("parent_first_steps", {
+            action: "dismissed",
+          });
           setConfirmDismiss(false);
         }}
         title={t("dismiss.title")}

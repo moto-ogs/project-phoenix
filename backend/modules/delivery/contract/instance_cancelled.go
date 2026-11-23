@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // NotificationInstanceCancelled is the notification type of a cancelled
@@ -84,7 +86,7 @@ type NotificationFeedPage struct {
 // NotificationFeedEntry is one entry as the owner of the feed reads it;
 // DeepLink is the link in the portal it was read in.
 type NotificationFeedEntry struct {
-	ID        int64
+	ID        ident.ID
 	Type      string
 	Title     string
 	Body      string

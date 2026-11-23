@@ -3,7 +3,12 @@
 // Role Entity Configuration
 
 import { defineEntityConfig, type SectionConfig } from "@/lib/database/types";
-import type { Role, BackendRole } from "@/lib/auth-helpers";
+import type { Role } from "@/lib/auth-helpers";
+import { bffJson } from "~/lib/bff-fetch";
+import type {
+  CreateRoleRequest,
+  UpdateRoleRequest,
+} from "~/lib/contract/auth-roles.generated";
 import {
   mapRoleResponse,
   getRoleDisplayName,
@@ -58,6 +63,28 @@ export const roleEditSections: SectionConfig[] = [
   },
 ];
 
+type RoleForm = Partial<Role> & { template?: string };
+
+/** A new role starts from its template, which also sets base_role (#4574). */
+export function toCreateRoleRequest(data: RoleForm): CreateRoleRequest {
+  return {
+    name: data.name,
+    description: data.description,
+    ...(data.template
+      ? { template: data.template }
+      : { base_role: data.baseRole }),
+  };
+}
+
+/** A system role keeps its base_role. */
+export function toUpdateRoleRequest(data: Partial<Role>): UpdateRoleRequest {
+  return {
+    name: data.name,
+    description: data.description,
+    ...(!data.isSystem && { base_role: data.baseRole }),
+  };
+}
+
 export const rolesConfig = defineEntityConfig<Role>({
   name: {
     singular: "Rolle",
@@ -69,7 +96,26 @@ export const rolesConfig = defineEntityConfig<Role>({
   backUrl: "/database",
 
   api: {
-    basePath: "/api/auth/roles",
+    list: async () =>
+      (await bffJson("tenant", "GET /auth/roles/")).map(mapRoleResponse),
+    get: async (id) =>
+      mapRoleResponse(
+        await bffJson("tenant", "GET /auth/roles/{id}/", { params: { id } }),
+      ),
+    create: async (data) =>
+      mapRoleResponse(
+        await bffJson("tenant", "POST /auth/roles/", {
+          body: toCreateRoleRequest(data),
+        }),
+      ),
+    // The route answers without the role; the page reloads it.
+    update: (id, data) =>
+      bffJson("tenant", "PUT /auth/roles/{id}/", {
+        params: { id },
+        body: toUpdateRoleRequest(data),
+      }),
+    delete: (id) =>
+      bffJson("tenant", "DELETE /auth/roles/{id}/", { params: { id } }),
   },
 
   form: {
@@ -135,7 +181,7 @@ export const rolesConfig = defineEntityConfig<Role>({
           {
             label: "Berechtigungen",
             value: (role: Role) =>
-              `${role.permissions?.length ?? 0} Berechtigungen zugewiesen`,
+              `${role.permissionNames?.length ?? 0} Berechtigungen zugewiesen`,
           },
           {
             label: "Erstellt am",
@@ -178,33 +224,6 @@ export const rolesConfig = defineEntityConfig<Role>({
       avatar: {
         text: (role: Role) => getRoleDisplayName(role.name)?.[0] ?? "R",
       },
-    },
-  },
-
-  service: {
-    mapRequest: (
-      data: Partial<Role> & { template?: string },
-    ): Record<string, unknown> => ({
-      name: data.name,
-      description: data.description,
-      // Beim Anlegen setzt die Vorlage auch base_role (#4574).
-      ...(data.template
-        ? { template: data.template }
-        : !data.isSystem && { base_role: data.baseRole }),
-    }),
-    mapResponse: (data: unknown): Role => {
-      // Handle wrapped response format
-      let actualData = data;
-      if (
-        data &&
-        typeof data === "object" &&
-        "status" in data &&
-        "data" in data
-      ) {
-        actualData = (data as { status: string; data: unknown }).data;
-      }
-
-      return mapRoleResponse(actualData as BackendRole);
     },
   },
 

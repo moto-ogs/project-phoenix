@@ -322,7 +322,8 @@ func (e bookingEnrollment) Request(ctx context.Context, id int64) (careplanCompo
 	if request == nil {
 		return careplanCompose.BookingRequest{}, careplanCompose.BookingRowNotFound(fmt.Errorf("request %d not found", id))
 	}
-	return careplanCompose.BookingRequest{ID: request.ID, PhaseID: request.PhaseID}, nil
+	return careplanCompose.BookingRequest{ID: request.ID, PhaseID: request.PhaseID,
+		StartsWithFirstBooking: request.SubmissionSource == enrollmentOwner.RequestSourceContractImport}, nil
 }
 
 func (e bookingEnrollment) Child(ctx context.Context, id int64) (careplanCompose.BookingChild, error) {
@@ -475,7 +476,7 @@ func (s bookingStudents) Student(ctx context.Context, id int64, lock bool) (care
 	if err != nil {
 		return careplanCompose.BookingStudent{}, err
 	}
-	student := careplanCompose.BookingStudent{ID: row.ID, GradeLevel: enrollmentOwner.SchoolClassGradeLevel(row.SchoolClass)}
+	student := careplanCompose.BookingStudent{ID: row.ID, SchoolClass: row.SchoolClass, GradeLevel: enrollmentOwner.SchoolClassGradeLevel(row.SchoolClass)}
 	// Both enrollment dates are validated, as the decision's student read
 	// always did; only the care end bounds the rosters.
 	if row.EnrolledFrom != "" {

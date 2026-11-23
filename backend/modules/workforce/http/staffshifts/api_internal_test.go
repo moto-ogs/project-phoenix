@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -30,12 +32,12 @@ func TestOptionalFieldsTrackPresence(t *testing.T) {
 	assert.Nil(t, explicit.ChangeReason.Value)
 	assert.True(t, explicit.Cancelled.Present)
 	require.NotNil(t, explicit.OriginShiftID.Value)
-	assert.Equal(t, int64(9223372036854775807), *explicit.OriginShiftID.Value, "string ids keep every bigint digit")
+	assert.Equal(t, ident.ID(9223372036854775807), *explicit.OriginShiftID.Value, "string ids keep every bigint digit")
 
 	var numeric ShiftRequest
 	require.NoError(t, json.Unmarshal([]byte(`{"shift_type_id":5,"origin_shift_id":42}`), &numeric))
 	require.NotNil(t, numeric.ShiftTypeID.Value)
-	assert.Equal(t, int64(5), *numeric.ShiftTypeID.Value)
+	assert.Equal(t, ident.ID(5), *numeric.ShiftTypeID.Value)
 
 	var rejected CancellationRequest
 	assert.Error(t, json.Unmarshal([]byte(`{"cancelled":null}`), &rejected), "a null cancelled flag is never an implicit false")
@@ -68,12 +70,12 @@ func TestBuildMoveRequiresAnExplicitShiftType(t *testing.T) {
 	_, err := buildMove(9, MoveShiftRequest{SourceStaffID: 7, TargetStaffID: 8, Date: "2026-07-07", StartTime: "09:00", EndTime: "15:00"})
 	assert.EqualError(t, err, "shift_type_id is required")
 
-	typeID := int64(5)
-	input, err := buildMove(9, MoveShiftRequest{SourceStaffID: 7, TargetStaffID: 8, Date: "2026-07-07", StartTime: "09:00", EndTime: "15:00", BreakMinutes: 20, ShiftTypeID: optionalID{Present: true, Value: &typeID}})
+	typeID := ident.ID(5)
+	input, err := buildMove(9, MoveShiftRequest{SourceStaffID: 7, TargetStaffID: 8, Date: "2026-07-07", StartTime: "09:00", EndTime: "15:00", BreakMinutes: 20, ShiftTypeID: OptionalID{Present: true, Value: &typeID}})
 	require.NoError(t, err)
 	assert.Equal(t, int64(9), input.ShiftID)
 	assert.Equal(t, "15:00:00", input.EndTime)
-	assert.Equal(t, &typeID, input.ShiftTypeID)
+	assert.Equal(t, (*int64)(&typeID), input.ShiftTypeID)
 }
 
 func TestBuildCancellationRejectsPartialOriginEdits(t *testing.T) {
@@ -147,7 +149,7 @@ func TestWireFormatKeepsBigintIdentifiersAsStrings(t *testing.T) {
 	seriesID := int64(9223372036854775807)
 	originShiftID := int64(9223372036854775805)
 	shiftTypeID := int64(9007199254740993)
-	encoded, err := json.Marshal(ToShiftResponse(workforce.PlannedShift{StaffShift: workforce.StaffShift{
+	encoded, err := wire.Marshal(ToShiftResponse(workforce.PlannedShift{StaffShift: workforce.StaffShift{
 		ID: 9223372036854775806, SeriesID: &seriesID, OriginShiftID: &originShiftID, SeriesOccurrenceDate: "2026-07-06",
 		StartTime: "08:00:00", EndTime: "16:30:00",
 	}}))
@@ -161,7 +163,7 @@ func TestWireFormatKeepsBigintIdentifiersAsStrings(t *testing.T) {
 	assert.Equal(t, "08:00", body["start_time"])
 	assert.Equal(t, "16:30", body["end_time"])
 
-	encoded, err = json.Marshal(toSeriesResponse(workforce.StaffShiftSeriesResult{SeriesID: 9223372036854775807, OldSeriesID: 9223372036854775806}))
+	encoded, err = wire.Marshal(toSeriesResponse(workforce.StaffShiftSeriesResult{SeriesID: 9223372036854775807, OldSeriesID: 9223372036854775806}))
 	require.NoError(t, err)
 	assert.Contains(t, string(encoded), `"series_id":"9223372036854775807"`)
 	assert.Contains(t, string(encoded), `"old_series_id":"9223372036854775806"`)
@@ -170,11 +172,11 @@ func TestWireFormatKeepsBigintIdentifiersAsStrings(t *testing.T) {
 	detail := toSeriesDetailResponse(workforce.StaffShiftSeries{ID: 11, Weekdays: []int{1, 3}, StartTime: "09:00:00", EndTime: "12:00:00", ValidFrom: "2026-09-01"})
 	assert.Equal(t, "09:00", detail.StartTime)
 	assert.Nil(t, detail.ValidUntil)
-	encoded, err = json.Marshal(detail)
+	encoded, err = wire.Marshal(detail)
 	require.NoError(t, err)
 	assert.Contains(t, string(encoded), `"id":"11"`)
 
-	encoded, err = json.Marshal(ShiftTypeMinutesResponse{ShiftTypeID: &shiftTypeID, PlannedMinutes: 60})
+	encoded, err = wire.Marshal(ShiftTypeMinutesResponse{ShiftTypeID: (*ident.ID)(&shiftTypeID), PlannedMinutes: 60})
 	require.NoError(t, err)
 	assert.JSONEq(t, `{"shift_type_id":"9007199254740993","planned_minutes":60}`, string(encoded))
 }

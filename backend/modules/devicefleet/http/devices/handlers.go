@@ -85,25 +85,6 @@ func (rs *Resource) getDevice(w http.ResponseWriter, r *http.Request) {
 	rs.runtime.Success(w, r, http.StatusOK, newDeviceResponse(r.Context(), rs.IoTService, device), "Device retrieved successfully")
 }
 
-// getDeviceByDeviceID handles getting a device by its device ID
-func (rs *Resource) getDeviceByDeviceID(w http.ResponseWriter, r *http.Request) {
-	// Get device ID from URL
-	deviceID := deviceIDParam(r)
-	if deviceID == "" {
-		rs.runtime.Failure(w, r, http.StatusBadRequest, errors.New(errMsgDeviceIDRequired), "")
-		return
-	}
-
-	// Get device
-	device, err := rs.IoTService.GetDeviceByDeviceID(r.Context(), deviceID)
-	if err != nil {
-		rs.renderError(w, r, err)
-		return
-	}
-
-	rs.runtime.Success(w, r, http.StatusOK, newDeviceResponse(r.Context(), rs.IoTService, device), "Device retrieved successfully")
-}
-
 // createDevice handles creating a new device
 func (rs *Resource) createDevice(w http.ResponseWriter, r *http.Request) {
 	// Parse request
@@ -118,7 +99,7 @@ func (rs *Resource) createDevice(w http.ResponseWriter, r *http.Request) {
 		DeviceID:       req.DeviceID,
 		DeviceType:     req.DeviceType,
 		Name:           req.Name,
-		RegisteredByID: req.RegisteredByID,
+		RegisteredByID: (*int64)(req.RegisteredByID),
 	}
 
 	// Set status if provided, otherwise default to active
@@ -180,7 +161,7 @@ func (rs *Resource) updateDevice(w http.ResponseWriter, r *http.Request) {
 	device.DeviceID = req.DeviceID
 	device.DeviceType = req.DeviceType
 	device.Name = req.Name
-	device.RegisteredByID = req.RegisteredByID
+	device.RegisteredByID = (*int64)(req.RegisteredByID)
 	// An omitted status keeps the stored one; the edit then does not write
 	// the status this request read, which may already be outdated.
 	device.Status = devicefleet.DeviceStatus(req.Status)
@@ -363,226 +344,4 @@ func (rs *Resource) lockLiveDevice(r *http.Request, op string, id int64) (device
 		return devicefleet.Device{}, &devicefleet.AdministrationError{Op: op, Err: devicefleet.ErrAdministrationDeviceNotFound}
 	}
 	return device, err
-}
-
-// pingDevice handles pinging a device to update its last seen time
-func (rs *Resource) pingDevice(w http.ResponseWriter, r *http.Request) {
-	// Get device ID from URL
-	deviceID := deviceIDParam(r)
-	if deviceID == "" {
-		rs.runtime.Failure(w, r, http.StatusBadRequest, errors.New(errMsgDeviceIDRequired), "")
-		return
-	}
-
-	// Ping device
-	if err := rs.IoTService.PingDevice(r.Context(), deviceID); err != nil {
-		rs.renderError(w, r, err)
-		return
-	}
-
-	rs.runtime.Success(w, r, http.StatusOK, nil, "Device pinged successfully")
-}
-
-// getDevicesByType handles getting devices by type
-func (rs *Resource) getDevicesByType(w http.ResponseWriter, r *http.Request) {
-	// Get type from URL
-	deviceType := chi.URLParam(r, "type")
-	if deviceType == "" {
-		rs.runtime.Failure(w, r, http.StatusBadRequest, errors.New(errMsgDeviceTypeRequired), "")
-		return
-	}
-
-	// Get devices by type
-	devices, err := rs.IoTService.GetDevicesByType(r.Context(), deviceType)
-	if err != nil {
-		rs.renderError(w, r, err)
-		return
-	}
-
-	// Build response
-	responses := newDeviceResponses(r.Context(), rs.IoTService, devices)
-
-	rs.runtime.Success(w, r, http.StatusOK, responses, msgDevicesRetrieved)
-}
-
-// getDevicesByStatus handles getting devices by status
-func (rs *Resource) getDevicesByStatus(w http.ResponseWriter, r *http.Request) {
-	// Get status from URL
-	status := chi.URLParam(r, "status")
-	if status == "" {
-		rs.runtime.Failure(w, r, http.StatusBadRequest, errors.New(errMsgStatusRequired), "")
-		return
-	}
-
-	// Validate status
-	deviceStatus := devicefleet.DeviceStatus(status)
-	if !isValidDeviceStatus(deviceStatus) {
-		rs.runtime.Failure(w, r, http.StatusBadRequest, errors.New(errMsgInvalidDeviceStatus), "")
-		return
-	}
-
-	// Get devices by status
-	devices, err := rs.IoTService.GetDevicesByStatus(r.Context(), deviceStatus)
-	if err != nil {
-		rs.renderError(w, r, err)
-		return
-	}
-
-	// Build response
-	responses := newDeviceResponses(r.Context(), rs.IoTService, devices)
-
-	rs.runtime.Success(w, r, http.StatusOK, responses, msgDevicesRetrieved)
-}
-
-// getDevicesByRegisteredBy handles getting devices registered by a specific person
-func (rs *Resource) getDevicesByRegisteredBy(w http.ResponseWriter, r *http.Request) {
-	// Parse person ID from URL
-	personID, err := rs.runtime.ParseID(r, "personId")
-	if err != nil {
-		rs.runtime.Failure(w, r, http.StatusBadRequest, errors.New(errMsgInvalidPersonID), "")
-		return
-	}
-
-	// Get devices
-	devices, err := rs.IoTService.GetDevicesByRegisteredBy(r.Context(), personID)
-	if err != nil {
-		rs.renderError(w, r, err)
-		return
-	}
-
-	// Build response
-	responses := newDeviceResponses(r.Context(), rs.IoTService, devices)
-
-	rs.runtime.Success(w, r, http.StatusOK, responses, msgDevicesRetrieved)
-}
-
-// getActiveDevices handles getting all active devices
-func (rs *Resource) getActiveDevices(w http.ResponseWriter, r *http.Request) {
-	// Get active devices
-	devices, err := rs.IoTService.GetActiveDevices(r.Context())
-	if err != nil {
-		rs.renderError(w, r, err)
-		return
-	}
-
-	// Build response
-	responses := newDeviceResponses(r.Context(), rs.IoTService, devices)
-
-	rs.runtime.Success(w, r, http.StatusOK, responses, "Active devices retrieved successfully")
-}
-
-// getDevicesRequiringMaintenance handles getting devices requiring maintenance
-func (rs *Resource) getDevicesRequiringMaintenance(w http.ResponseWriter, r *http.Request) {
-	// Get devices requiring maintenance
-	devices, err := rs.IoTService.GetDevicesRequiringMaintenance(r.Context())
-	if err != nil {
-		rs.renderError(w, r, err)
-		return
-	}
-
-	// Build response
-	responses := newDeviceResponses(r.Context(), rs.IoTService, devices)
-
-	rs.runtime.Success(w, r, http.StatusOK, responses, "Devices requiring maintenance retrieved successfully")
-}
-
-// getOfflineDevices handles getting offline devices
-func (rs *Resource) getOfflineDevices(w http.ResponseWriter, r *http.Request) {
-	// Get duration parameter (default to 1 hour)
-	durationStr := r.URL.Query().Get("duration")
-	duration := time.Hour // default
-
-	if durationStr != "" {
-		if parsedDuration, err := time.ParseDuration(durationStr); err == nil {
-			duration = parsedDuration
-		}
-	}
-
-	// Get offline devices
-	devices, err := rs.IoTService.GetOfflineDevices(r.Context(), duration)
-	if err != nil {
-		rs.renderError(w, r, err)
-		return
-	}
-
-	// Build response
-	responses := newDeviceResponses(r.Context(), rs.IoTService, devices)
-
-	rs.runtime.Success(w, r, http.StatusOK, responses, "Offline devices retrieved successfully")
-}
-
-// getDeviceStatistics handles getting device statistics
-func (rs *Resource) getDeviceStatistics(w http.ResponseWriter, r *http.Request) {
-	// Get device type statistics
-	typeStats, err := rs.IoTService.GetDeviceTypeStatistics(r.Context())
-	if err != nil {
-		rs.renderError(w, r, err)
-		return
-	}
-
-	// Get active devices count
-	activeDevices, err := rs.IoTService.GetActiveDevices(r.Context())
-	if err != nil {
-		rs.renderError(w, r, err)
-		return
-	}
-
-	// Get offline devices count using the same tenant-configured online window
-	// used by per-device is_online responses.
-	offlineDevices, err := rs.IoTService.GetOfflineDevices(r.Context(), rs.IoTService.DeviceOnlineWindow(r.Context()))
-	if err != nil {
-		rs.renderError(w, r, err)
-		return
-	}
-
-	// Calculate total devices
-	total := 0
-	for _, count := range typeStats {
-		total += count
-	}
-
-	// Build response
-	response := DeviceStatisticsResponse{
-		DeviceTypeCount: typeStats,
-		TotalDevices:    total,
-		ActiveDevices:   len(activeDevices),
-		OfflineDevices:  len(offlineDevices),
-		LastUpdated:     rs.runtime.Now(),
-	}
-
-	rs.runtime.Success(w, r, http.StatusOK, response, "Device statistics retrieved successfully")
-}
-
-// detectNewDevices handles detecting new devices on the network
-func (rs *Resource) detectNewDevices(w http.ResponseWriter, r *http.Request) {
-	// Detect new devices
-	devices, err := rs.IoTService.DetectNewDevices(r.Context())
-	if err != nil {
-		rs.renderError(w, r, err)
-		return
-	}
-
-	// Build response
-	responses := newDeviceResponses(r.Context(), rs.IoTService, devices)
-
-	rs.runtime.Success(w, r, http.StatusOK, responses, "Device detection completed")
-}
-
-// scanNetwork handles scanning the network for IoT devices
-func (rs *Resource) scanNetwork(w http.ResponseWriter, r *http.Request) {
-	// Scan network
-	scanResults, err := rs.IoTService.ScanNetwork(r.Context())
-	if err != nil {
-		rs.renderError(w, r, err)
-		return
-	}
-
-	// Build response
-	response := NetworkScanResponse{
-		Devices:      scanResults,
-		ScanTime:     rs.runtime.Now(),
-		DevicesFound: len(scanResults),
-	}
-
-	rs.runtime.Success(w, r, http.StatusOK, response, "Network scan completed")
 }

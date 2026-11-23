@@ -136,7 +136,9 @@ func (m morningAttendance) storeMarks(ctx context.Context, in classday.MorningAt
 	if err != nil {
 		return err
 	}
-	err = m.store.RecordMorningAttendance(ctx, studentpresence.MorningAttendanceWrite{Date: date, RecordedBy: in.RecordedBy, Marks: marks})
+	// The class names the handover lock the write takes: the handover's
+	// version covers the marks (ADR 0311).
+	err = m.store.RecordMorningAttendance(ctx, studentpresence.MorningAttendanceWrite{Date: date, RecordedBy: in.RecordedBy, Marks: marks, SchoolClass: in.SchoolClass})
 	if errors.Is(err, studentpresence.ErrMorningAttendanceInvalid) {
 		return fmt.Errorf("%w: %w", classday.ErrMorningAttendanceInvalid, err)
 	}
@@ -289,9 +291,9 @@ func (m morningAttendance) fillMorningAttendance(ctx context.Context, rows []cla
 
 func morningChild(row classday.DayRow) studentpresence.MorningAttendanceChild {
 	if row.ListEntry {
-		return studentpresence.MorningAttendanceChild{ClassListEntryID: row.ListEntryID}
+		return studentpresence.MorningAttendanceChild{ClassListEntryID: row.ListEntryID.Int64()}
 	}
-	return studentpresence.MorningAttendanceChild{StudentID: row.StudentID}
+	return studentpresence.MorningAttendanceChild{StudentID: row.StudentID.Int64()}
 }
 
 // unreportedAbsence reports a child the Lehrkraft marked absent that nobody

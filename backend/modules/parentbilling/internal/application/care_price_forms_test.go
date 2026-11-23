@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The two SJR price lists 2026/27 (#6196), fully configured: Ispringen
@@ -40,7 +41,7 @@ func weekdayPrices(t *testing.T, offering int64, name string, weekdays []string,
 	t.Helper()
 	tariffs := make([]parentbilling.CareTariff, 0, len(weekdays))
 	for _, weekday := range weekdays {
-		tariffs = append(tariffs, parentbilling.CareTariff{SchoolID: schoolIspringen, CareOfferingID: offering, ModuleName: name,
+		tariffs = append(tariffs, parentbilling.CareTariff{SchoolID: ident.ID(schoolIspringen), CareOfferingID: ident.ID(offering), ModuleName: name,
 			Weekday: weekday, ValidFrom: day(t, sjrListStart), MonthlyCents: first, SiblingCents: ptr(further)})
 	}
 	return tariffs
@@ -52,7 +53,7 @@ func scalePrices(t *testing.T, offering int64, name string, meal bool, steps, fu
 	t.Helper()
 	tariffs := make([]parentbilling.CareTariff, 0, len(steps))
 	for i, cents := range steps {
-		tariff := parentbilling.CareTariff{SchoolID: schoolBirkenfeld, CareOfferingID: offering, ModuleName: name,
+		tariff := parentbilling.CareTariff{SchoolID: ident.ID(schoolBirkenfeld), CareOfferingID: ident.ID(offering), ModuleName: name,
 			DaysPerWeek: ptr(i + 1), ValidFrom: day(t, sjrListStart), MonthlyCents: cents, MealExtra: meal}
 		if further != nil {
 			tariff.SiblingCents = ptr(further[i])
@@ -102,8 +103,8 @@ func sjrPriceLists(t *testing.T, withBirkSiblingSteps bool) []parentbilling.Care
 func sjrLists(t *testing.T) []parentbilling.CarePriceListHead {
 	t.Helper()
 	return []parentbilling.CarePriceListHead{
-		{SchoolID: schoolIspringen, ValidFrom: day(t, sjrListStart), FreeMonths: []int{8}},
-		{SchoolID: schoolBirkenfeld, ValidFrom: day(t, sjrListStart), FreeMonths: []int{}},
+		{SchoolID: ident.ID(schoolIspringen), ValidFrom: day(t, sjrListStart), FreeMonths: []int{8}},
+		{SchoolID: ident.ID(schoolBirkenfeld), ValidFrom: day(t, sjrListStart), FreeMonths: []int{}},
 	}
 }
 
@@ -227,7 +228,7 @@ func sjrInput(t *testing.T, month, rule string, children []sjrChild, birkByPrice
 func totalsByContract(month careMonth) map[int64]int64 {
 	totals := map[int64]int64{}
 	for _, invoice := range month.invoices {
-		totals[invoice.ContractID] = invoice.TotalCents
+		totals[invoice.ContractID.Int64()] = invoice.TotalCents
 	}
 	return totals
 }
@@ -266,7 +267,7 @@ func TestSJRPriceListsGoldenPositions(t *testing.T) {
 	require.NoError(t, err)
 	invoices := map[int64]parentbilling.CareInvoice{}
 	for _, invoice := range month.invoices {
-		invoices[invoice.ContractID] = invoice
+		invoices[invoice.ContractID.Int64()] = invoice
 	}
 
 	// Ispringen: one position per module with its weekday prices; the
@@ -339,7 +340,7 @@ func TestSJRAugustIsFreeAtIspringen(t *testing.T) {
 	month, err := buildCareMonth(sjrInput(t, "2027-08-01", parentbilling.MonthRuleVersionOnFirst, sjrFamilies()[:12], false))
 	require.NoError(t, err)
 	for _, invoice := range month.invoices {
-		assert.Equal(t, schoolBirkenfeld, invoice.SchoolID, "no Ispringen invoice in August")
+		assert.Equal(t, ident.ID(schoolBirkenfeld), invoice.SchoolID, "no Ispringen invoice in August")
 	}
 	assert.Equal(t, map[int64]int{schoolIspringen: 9}, month.freeBySchool)
 	assert.Equal(t, int64(6000), totalsByContract(month)[811])
@@ -410,11 +411,11 @@ func TestBilledScaleStepsNeverChange(t *testing.T) {
 	added := make([]parentbilling.CareTariff, 0, len(before))
 	for _, tariff := range before {
 		next := tariff
-		if tariff.CareOfferingID == birk4 && *tariff.DaysPerWeek == 3 {
+		if tariff.CareOfferingID == ident.ID(birk4) && *tariff.DaysPerWeek == 3 {
 			next.MonthlyCents = 6500
 		}
 		changed = append(changed, next)
-		if tariff.CareOfferingID == birk4 && *tariff.DaysPerWeek == 5 {
+		if tariff.CareOfferingID == ident.ID(birk4) && *tariff.DaysPerWeek == 5 {
 			continue
 		}
 		added = append(added, tariff)
@@ -431,7 +432,7 @@ func TestBilledScaleStepsNeverChange(t *testing.T) {
 	assert.True(t, changesBilledPrice(schoolBirkenfeld, start, billed, newPriceBook(before), newPriceBook(weekly)),
 		"a billed month keeps its price form")
 
-	free := newFreeMonths([]parentbilling.CarePriceListHead{{SchoolID: schoolBirkenfeld, ValidFrom: start, FreeMonths: []int{1}}})
+	free := newFreeMonths([]parentbilling.CarePriceListHead{{SchoolID: ident.ID(schoolBirkenfeld), ValidFrom: start, FreeMonths: []int{1}}})
 	assert.True(t, freesBilledMonth(schoolBirkenfeld, start, billed, free), "a billed month never turns free")
 	assert.False(t, freesBilledMonth(schoolBirkenfeld, start, billed, newFreeMonths(nil)))
 }
@@ -440,8 +441,8 @@ func TestPriceListValidationKeepsOneFormPerModule(t *testing.T) {
 	t.Parallel()
 	start := day(t, sjrListStart)
 	valid := parentbilling.CarePriceList{SchoolID: schoolBirkenfeld, ValidFrom: start, FreeMonths: []int{8, 8, 7}, Prices: []parentbilling.CarePrice{
-		{CareOfferingID: birk1, ModuleName: " Modul 1 ", DaysPerWeek: ptr(1), MonthlyCents: 500, SiblingCents: ptr(int64(375))},
-		{CareOfferingID: birk1, ModuleName: "Modul 1", DaysPerWeek: ptr(2), MonthlyCents: 900},
+		{CareOfferingID: ident.ID(birk1), ModuleName: " Modul 1 ", DaysPerWeek: ptr(1), MonthlyCents: 500, SiblingCents: ptr(int64(375))},
+		{CareOfferingID: ident.ID(birk1), ModuleName: "Modul 1", DaysPerWeek: ptr(2), MonthlyCents: 900},
 	}}
 	list, err := normalizePriceList(valid)
 	require.NoError(t, err)
@@ -449,14 +450,14 @@ func TestPriceListValidationKeepsOneFormPerModule(t *testing.T) {
 	assert.Equal(t, "Modul 1", list.Prices[0].ModuleName)
 
 	for name, broken := range map[string]parentbilling.CarePrice{
-		"weekday and step":       {CareOfferingID: birk2, ModuleName: "M", Weekday: "mon", DaysPerWeek: ptr(1), MonthlyCents: 1},
-		"neither":                {CareOfferingID: birk2, ModuleName: "M", MonthlyCents: 1},
-		"step above seven":       {CareOfferingID: birk2, ModuleName: "M", DaysPerWeek: ptr(8), MonthlyCents: 1},
-		"sibling above first":    {CareOfferingID: birk2, ModuleName: "M", DaysPerWeek: ptr(1), MonthlyCents: 100, SiblingCents: ptr(int64(101))},
-		"negative sibling price": {CareOfferingID: birk2, ModuleName: "M", DaysPerWeek: ptr(1), MonthlyCents: 100, SiblingCents: ptr(int64(-1))},
-		"other form same module": {CareOfferingID: birk1, ModuleName: "Modul 1", Weekday: "mon", MonthlyCents: 100},
-		"other meal same module": {CareOfferingID: birk1, ModuleName: "Modul 1", DaysPerWeek: ptr(3), MonthlyCents: 1400, MealExtra: true},
-		"step twice":             {CareOfferingID: birk1, ModuleName: "Modul 1", DaysPerWeek: ptr(2), MonthlyCents: 900},
+		"weekday and step":       {CareOfferingID: ident.ID(birk2), ModuleName: "M", Weekday: "mon", DaysPerWeek: ptr(1), MonthlyCents: 1},
+		"neither":                {CareOfferingID: ident.ID(birk2), ModuleName: "M", MonthlyCents: 1},
+		"step above seven":       {CareOfferingID: ident.ID(birk2), ModuleName: "M", DaysPerWeek: ptr(8), MonthlyCents: 1},
+		"sibling above first":    {CareOfferingID: ident.ID(birk2), ModuleName: "M", DaysPerWeek: ptr(1), MonthlyCents: 100, SiblingCents: ptr(int64(101))},
+		"negative sibling price": {CareOfferingID: ident.ID(birk2), ModuleName: "M", DaysPerWeek: ptr(1), MonthlyCents: 100, SiblingCents: ptr(int64(-1))},
+		"other form same module": {CareOfferingID: ident.ID(birk1), ModuleName: "Modul 1", Weekday: "mon", MonthlyCents: 100},
+		"other meal same module": {CareOfferingID: ident.ID(birk1), ModuleName: "Modul 1", DaysPerWeek: ptr(3), MonthlyCents: 1400, MealExtra: true},
+		"step twice":             {CareOfferingID: ident.ID(birk1), ModuleName: "Modul 1", DaysPerWeek: ptr(2), MonthlyCents: 900},
 	} {
 		list := valid
 		list.FreeMonths = []int{8}
@@ -475,9 +476,9 @@ func TestPriceListValidationKeepsOneFormPerModule(t *testing.T) {
 // another way, or a free month, changes the fingerprint (#6177).
 func TestFingerprintCoversThePriceForm(t *testing.T) {
 	t.Parallel()
-	run := parentbilling.CareRun{ID: 1, CareRunScope: parentbilling.CareRunScope{SchoolIDs: []int64{schoolBirkenfeld}}}
-	invoice := parentbilling.CareInvoice{ContractID: 1, SchoolID: schoolBirkenfeld, TotalCents: 6000, Positions: []parentbilling.CarePosition{
-		{CareOfferingID: birk4, AmountCents: 6000, Weekdays: []parentbilling.CareWeekdayPrice{{Weekday: "mon", MonthlyCents: 6000, AmountCents: 6000}}},
+	run := parentbilling.CareRun{ID: 1, CareRunScope: parentbilling.CareRunScope{SchoolIDs: []ident.ID{ident.ID(schoolBirkenfeld)}}}
+	invoice := parentbilling.CareInvoice{ContractID: 1, SchoolID: ident.ID(schoolBirkenfeld), TotalCents: 6000, Positions: []parentbilling.CarePosition{
+		{CareOfferingID: ident.ID(birk4), AmountCents: 6000, Weekdays: []parentbilling.CareWeekdayPrice{{Weekday: "mon", MonthlyCents: 6000, AmountCents: 6000}}},
 	}}
 	weekly := reviewedMonth{careMonth: careMonth{invoices: []parentbilling.CareInvoice{invoice}}}
 	scaled := invoice
@@ -496,9 +497,9 @@ func TestFingerprintCoversThePriceForm(t *testing.T) {
 // share, an amount or a price, never alongside one; no other kind keeps it.
 func TestCareRuleTakesTheSiblingPricesOfThePriceList(t *testing.T) {
 	t.Parallel()
-	schools := []parentbilling.CareSchool{{ID: schoolIspringen}}
+	schools := []parentbilling.CareSchool{{ID: ident.ID(schoolIspringen)}}
 	input := parentbilling.CareRuleInput{Kind: parentbilling.RuleSibling, Name: "Geschwisterpreis", ValidFrom: day(t, sjrListStart),
-		SchoolIDs: []int64{schoolIspringen}, SiblingFromChild: ptr(2), TariffSiblingPrice: true}
+		SchoolIDs: []ident.ID{ident.ID(schoolIspringen)}, SiblingFromChild: ptr(2), TariffSiblingPrice: true}
 	_, err := normalizeCareRule(input, schools)
 	require.NoError(t, err)
 
@@ -516,6 +517,15 @@ func TestCareRuleTakesTheSiblingPricesOfThePriceList(t *testing.T) {
 	normalized, err := normalizeCareRule(income, schools)
 	require.NoError(t, err)
 	assert.False(t, normalized.TariffSiblingPrice)
+
+	// Only a sibling rule chooses by the size of the family (#7765).
+	input.SiblingAllChildren, income.SiblingAllChildren = true, true
+	normalized, err = normalizeCareRule(input, schools)
+	require.NoError(t, err)
+	assert.True(t, normalized.SiblingAllChildren)
+	normalized, err = normalizeCareRule(income, schools)
+	require.NoError(t, err)
+	assert.False(t, normalized.SiblingAllChildren)
 }
 
 // An income reduction before the sibling stage counts towards the sibling
@@ -527,7 +537,7 @@ func TestTariffSiblingPriceIsAnEndPrice(t *testing.T) {
 		rule.Name, rule.DiscountBasisPoints = "Stufe 1", ptr(1000)
 	})
 	input.rules = append(input.rules, level)
-	input.evidences = []parentbilling.CareEvidence{evidence(t, 802, parentbilling.EvidenceIncomeLevel, &level.ID, sjrListStart, nil)}
+	input.evidences = []parentbilling.CareEvidence{evidence(t, 802, parentbilling.EvidenceIncomeLevel, (*int64)(&level.ID), sjrListStart, nil)}
 	month, err := buildCareMonth(input)
 	require.NoError(t, err)
 	// Ben: 78,00 − 10 % = 70,20 €, then down to the sibling price 60,50 €.
@@ -597,7 +607,7 @@ func TestFreeMonthKeepsTheSiblingAtItsContractSchool(t *testing.T) {
 				tariffs: []parentbilling.CareTariff{first}, rules: []parentbilling.ContributionRule{rule},
 				recipients:   map[int64]parentbilling.CareRecipient{contractMia: {Email: familyEva}, contractNoah: {Email: familyEva}},
 				familyCounts: confirmedFamily(familyEva, stated, january2027, nil)(t),
-				lists:        []parentbilling.CarePriceListHead{{SchoolID: schoolBirkenfeld, ValidFrom: day(t, january2027), FreeMonths: []int{1}}},
+				lists:        []parentbilling.CarePriceListHead{{SchoolID: ident.ID(schoolBirkenfeld), ValidFrom: day(t, january2027), FreeMonths: []int{1}}},
 			})
 			require.NoError(t, err)
 			require.Len(t, month.invoices, 1)
@@ -639,14 +649,14 @@ func TestSJRPriceFormsWithFamilyCountCostSharesAndMensa(t *testing.T) {
 	ben := parentbilling.CareMealChild{StudentID: 840 + 9000, FirstName: "Ben", LastName: "Beispiel", MealDays: 5}
 	billMeals(&month, careMealInput{month: in.month, today: day(t, "2027-02-02"),
 		schools:  map[int64]string{schoolIspringen: "Grundschule Ispringen", schoolBirkenfeld: "Grundschule Birkenfeld"},
-		tariffs:  []parentbilling.CareMealTariff{{SchoolID: schoolIspringen, ValidFrom: from, Mode: parentbilling.MealModePerMeal, AmountCents: 400}},
+		tariffs:  []parentbilling.CareMealTariff{{SchoolID: ident.ID(schoolIspringen), ValidFrom: from, Mode: parentbilling.MealModePerMeal, AmountCents: 400}},
 		releases: []parentbilling.CareMealRelease{{SchoolID: schoolIspringen, Month: from, Children: []parentbilling.CareMealChild{ben}}},
 		billed:   map[CareMealKey]bool{}, versions: in.versions, invoiced: in.invoiced, recipients: in.recipients})
 	applyMealCostShares(&month, in.costShares, in.month, in.invoiced)
 
 	invoices := map[int64]parentbilling.CareInvoice{}
 	for _, invoice := range month.invoices {
-		invoices[invoice.ContractID] = invoice
+		invoices[invoice.ContractID.Int64()] = invoice
 	}
 	benInvoice := invoices[840]
 	require.Len(t, benInvoice.Positions, 1)

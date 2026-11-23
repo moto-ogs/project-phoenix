@@ -5,9 +5,10 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { ApiError } from "~/lib/api-error";
 import { TEST_CLOCK_TODAY } from "~/test/clock";
+import { catalogText } from "~/test/error-catalog-text";
 
 import { TimetableRosterContent } from "./timetable-roster";
 import type {
@@ -43,6 +44,7 @@ const row: TimetableRosterRow = {
   careDayStatus: "scheduled",
   parallelPresentIn: null,
   homework: [{ subject: "Mathe", description: "Seite 12" }],
+  homeworkFeedbackVersion: "absent",
 };
 
 const withoutHomework: TimetableRosterRow = {
@@ -79,6 +81,9 @@ function renderRoster(
     row: TimetableRosterRow,
     body: HomeworkFeedbackBody,
   ) => Promise<void>,
+  reloadAfterRefusal: () => Promise<TimetableRoster | null> = vi
+    .fn()
+    .mockResolvedValue(value),
 ) {
   render(
     <TimetableRosterContent
@@ -95,12 +100,19 @@ function renderRoster(
       onConfirmExpected={vi.fn()}
       onRosterAction={vi.fn()}
       onSaveHomeworkFeedback={onSaveHomeworkFeedback}
+      reloadAfterRefusal={reloadAfterRefusal}
       onSearchChange={vi.fn()}
     />,
   );
 }
 
 describe("Hausaufgaben in der Lernzeit (#4796)", () => {
+  beforeAll(async () => {
+    // The retry checks the dialog, not chunk loading. Load the real error
+    // presenter before interactions so its import cannot exhaust the DOM timeout.
+    await import("~/lib/error-presentation");
+  });
+
   it("shows the class homework and saves the feedback with a trimmed note", async () => {
     const save = vi.fn().mockResolvedValue(undefined);
     renderRoster(roster, save);
@@ -131,8 +143,91 @@ describe("Hausaufgaben in der Lernzeit (#4796)", () => {
       expect(save).toHaveBeenCalledWith(row, {
         status: "difficult",
         note: "Aufgabe 3",
+        expected_version: "absent",
       }),
     );
+  });
+
+  it("shows the stored feedback after a refusal and saves with its token", async () => {
+    const stored: TimetableRosterRow = {
+      ...row,
+      homeworkFeedback: { status: "not_done", note: "von Kollegin" },
+      homeworkFeedbackVersion: "v2",
+    };
+    const save = vi
+      .fn()
+      .mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      )
+      .mockResolvedValue(undefined);
+    const reload = vi.fn().mockResolvedValue({ ...roster, rows: [stored] });
+    renderRoster(roster, save, reload);
+    fireEvent.click(screen.getByRole("button", { name: "Hausaufgaben" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "War schwer" }));
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Rückmeldung speichern" }),
+    );
+
+    // ADR 0311: the dialog shows the feedback a colleague gave meanwhile,
+    // says so, and offers no retry of the refused answer.
+    expect(
+      await within(dialog).findByText(
+        catalogText("general.changed_since_read", "die Rückmeldung"),
+      ),
+    ).toBeInTheDocument();
+    expect(reload).toHaveBeenCalledTimes(1);
+    expect(
+      within(dialog).getByLabelText("Kurze Notiz (freiwillig)"),
+    ).toHaveValue("von Kollegin");
+    expect(
+      within(dialog).queryByRole("button", { name: "Wiederholen" }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Fertig" }));
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Rückmeldung speichern" }),
+    );
+    await waitFor(() =>
+      expect(save).toHaveBeenLastCalledWith(stored, {
+        status: "done",
+        note: "von Kollegin",
+        expected_version: "v2",
+      }),
+    );
+  });
+
+  it("keeps the refusal visible when the child left the block meanwhile", async () => {
+    const save = vi
+      .fn()
+      .mockRejectedValue(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      );
+    const reload = vi
+      .fn()
+      .mockResolvedValue({ ...roster, rows: [withoutHomework] });
+    renderRoster(roster, save, reload);
+    fireEvent.click(screen.getByRole("button", { name: "Hausaufgaben" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "War schwer" }));
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Rückmeldung speichern" }),
+    );
+
+    // ADR 0311: the refusal is never silent. The dialog stays open with it,
+    // and there is nothing left to save for the child.
+    expect(
+      await within(dialog).findByText(
+        catalogText("general.changed_since_read", "die Rückmeldung"),
+      ),
+    ).toBeInTheDocument();
+    expect(reload).toHaveBeenCalledTimes(1);
+    const blocked = within(dialog).getByRole("button", {
+      name: "Rückmeldung speichern",
+    });
+    expect(blocked).toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(blocked);
+    expect(save).toHaveBeenCalledTimes(1);
   });
 
   it("retries homework feedback using the edited answer and note", async () => {
@@ -160,6 +255,7 @@ describe("Hausaufgaben in der Lernzeit (#4796)", () => {
       expect(save).toHaveBeenLastCalledWith(row, {
         status: "done",
         note: "edited",
+        expected_version: "absent",
       }),
     );
   });

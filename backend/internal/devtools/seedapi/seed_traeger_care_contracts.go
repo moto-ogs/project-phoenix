@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedTraegerCareContractsStep gives the demo Träger its care contracts
@@ -36,11 +38,11 @@ var seedCareContractTemplate = map[string]any{
 }
 
 type seedCareContractCandidate struct {
-	SchoolID       int64  `json:"school_id"`
-	RequestChildID int64  `json:"request_child_id"`
-	TemplateIssue  string `json:"template_issue"`
-	ChildFirstName string `json:"child_first_name"`
-	ChildLastName  string `json:"child_last_name"`
+	SchoolID       ident.ID `json:"school_id"`
+	RequestChildID ident.ID `json:"request_child_id"`
+	TemplateIssue  string   `json:"template_issue"`
+	ChildFirstName string   `json:"child_first_name"`
+	ChildLastName  string   `json:"child_last_name"`
 }
 
 // seedChangedCare names the child whose parents changed the care with an
@@ -90,8 +92,8 @@ func seedCareContractTemplates(client *Client, auth AuthRef) (int, error) {
 	}
 	var envelope struct {
 		Data []struct {
-			SchoolID   int64           `json:"school_id"`
-			OfferingID int64           `json:"offering_id"`
+			SchoolID   ident.ID        `json:"school_id"`
+			OfferingID ident.ID        `json:"offering_id"`
 			Active     bool            `json:"active"`
 			Template   json.RawMessage `json:"template"`
 		} `json:"data"`
@@ -130,7 +132,7 @@ func seedCareContractDrafts(rt *Runtime, auth AuthRef) (int, error) {
 	onAcceptance, reserved := seedConclusionCandidates(envelope.Data)
 	keys := []map[string]any{}
 	for _, candidate := range envelope.Data {
-		held := candidate.SchoolID == onAcceptance && reserved[candidate.RequestChildID]
+		held := int64(candidate.SchoolID) == onAcceptance && reserved[int64(candidate.RequestChildID)]
 		if candidate.TemplateIssue == "" && !held && len(keys) < 200 {
 			keys = append(keys, map[string]any{"school_id": candidate.SchoolID, "request_child_id": candidate.RequestChildID})
 		}
@@ -161,20 +163,20 @@ func seedConclusionCandidates(candidates []seedCareContractCandidate) (int64, ma
 	var school int64
 	changed := int64(0)
 	for _, candidate := range candidates {
-		school = max(school, candidate.SchoolID)
+		school = max(school, int64(candidate.SchoolID))
 		if candidate.seedChangedCare() {
-			changed = candidate.RequestChildID
+			changed = int64(candidate.RequestChildID)
 		}
 	}
 	for _, candidate := range candidates {
-		if candidate.RequestChildID == changed {
-			school = candidate.SchoolID
+		if int64(candidate.RequestChildID) == changed {
+			school = int64(candidate.SchoolID)
 		}
 	}
 	ids := []int64{}
 	for _, candidate := range candidates {
-		if candidate.SchoolID == school && candidate.TemplateIssue == "" {
-			ids = append(ids, candidate.RequestChildID)
+		if int64(candidate.SchoolID) == school && candidate.TemplateIssue == "" {
+			ids = append(ids, int64(candidate.RequestChildID))
 		}
 	}
 	slices.Sort(ids)
@@ -214,8 +216,8 @@ func seedCareContractSends(client *Client, auth AuthRef) (int, error) {
 	var envelope struct {
 		Data struct {
 			Contracts []struct {
-				ID     int64  `json:"id"`
-				Status string `json:"status"`
+				ID     ident.ID `json:"id"`
+				Status string   `json:"status"`
 			} `json:"contracts"`
 			Counts map[string]int `json:"counts"`
 		} `json:"data"`
@@ -231,7 +233,7 @@ func seedCareContractSends(client *Client, auth AuthRef) (int, error) {
 			break
 		}
 		if contract.Status == "entwurf" && i%2 == 0 {
-			ids = append(ids, contract.ID)
+			ids = append(ids, int64(contract.ID))
 		}
 	}
 	if len(ids) == 0 {

@@ -10,6 +10,7 @@ vi.mock("~/server/auth", async () =>
   (await import("~/test/portal-binding")).mockPortalModule("tenant", {
     auth: vi.fn(),
     uncachedAuth: vi.fn(),
+    withSessionResponse: (handler: unknown) => handler,
   }),
 );
 vi.mock("~/server/auth/operator", async () =>
@@ -19,7 +20,9 @@ vi.mock("~/server/auth/operator", async () =>
   }),
 );
 
-const { createPublicJsonProxy } = await import("./backend-proxy-route.server");
+const { authStepProxy } = await import("./auth-proxy.server");
+const { routes } = await import("./contract/auth-mfa.generated");
+const { POST: login } = await import("~/app/api/auth/login/route");
 const { handleApiError, ApiResponseError } =
   await import("./api-helpers.server");
 
@@ -29,7 +32,7 @@ const request = () =>
     headers: { "X-Request-ID": requestId },
   });
 
-const proxy = createPublicJsonProxy({ method: "GET", path: "/api/example" });
+const proxy = authStepProxy(routes["POST /auth/mfa/resend"]);
 
 describe("BFF Sentry ownership", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -71,18 +74,15 @@ describe("BFF Sentry ownership", () => {
   });
 
   it("rejects malformed JSON before fetch without a BFF event", async () => {
-    const send = createPublicJsonProxy({
-      method: "POST",
-      path: "/api/example",
-    });
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
-    const invalid = new NextRequest("http://localhost:3000/api/example", {
+    const invalid = new NextRequest("http://localhost:3000/api/auth/login", {
       method: "POST",
+      headers: { Origin: "http://localhost:3000" },
       body: '{"password":"cleartext-secret"',
     });
 
-    const response = await send(invalid);
+    const response = await login(invalid);
 
     expect(response.status).toBe(400);
     expect(await response.json()).toMatchObject({

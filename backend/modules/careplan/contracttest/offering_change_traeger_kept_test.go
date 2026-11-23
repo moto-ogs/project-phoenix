@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/parentrequests"
 	offeringContract "github.com/moto-ogs/project-phoenix/modules/enrollment/offeringcontract"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -76,7 +77,7 @@ func assertKeptModule(t *testing.T, lines []api.ContractChangeLineForTest, offer
 	t.Helper()
 	var found []api.ContractChangeLineForTest
 	for _, line := range lines {
-		if line.CareOfferingID == offeringID {
+		if line.CareOfferingID == ident.ID(offeringID) {
 			found = append(found, line)
 		}
 	}
@@ -90,7 +91,7 @@ func assertKeptModule(t *testing.T, lines []api.ContractChangeLineForTest, offer
 func assertChangeState(t *testing.T, lines []api.ContractChangeLineForTest, offeringID int64, state string) {
 	t.Helper()
 	for _, line := range lines {
-		if line.CareOfferingID == offeringID {
+		if line.CareOfferingID == ident.ID(offeringID) {
 			assert.Equal(t, state, line.State)
 			return
 		}

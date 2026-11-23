@@ -38,13 +38,16 @@ import { feedbackConcept } from "~/lib/concepts/feedback";
 import { PlanLegend } from "~/components/ui/planning/plan-legend";
 import { ListGroupHeader } from "~/components/ui/list-group-header";
 
+const FEEDBACK_INFO =
+  "Hier siehst du, wie dieses Kind seine Tage bewertet hat. Das Feedback gibt das Kind freiwillig nach dem Abmelden am Tablet. Wähle oben den Zeitraum.";
+
 const FEATURE_DISABLED_DESCRIPTION =
   "Die Feedbackhistorie ist für deine Schule ausgeschaltet. Sie lässt sich in den Einstellungen unter Datenschutz einschalten.";
 
 const FEEDBACK_HISTORY_DESCRIPTION =
   "Rückmeldungen dieses Kindes im Zeitverlauf.";
 
-const feedbackTypeLabels: Record<FeedbackEntry["feedback_type"], string> = {
+const feedbackTypeLabels: Record<FeedbackEntry["feedbackType"], string> = {
   positive: "Positives Feedback",
   neutral: "Neutrales Feedback",
   negative: "Negatives Feedback",
@@ -61,7 +64,7 @@ const feedbackToneColors = {
   positive: MOTO_COLOR_PALETTE.green.base,
   neutral: MOTO_COLOR_PALETTE.amber.base,
   negative: MOTO_COLOR_PALETTE.red.base,
-} satisfies Record<FeedbackEntry["feedback_type"], string>;
+} satisfies Record<FeedbackEntry["feedbackType"], string>;
 
 const timeRangeOptions = [
   { value: "all", label: "Alle" },
@@ -166,13 +169,13 @@ function StudentFeedbackHistoryPageContent() {
 
   // Counts
   const positiveFeedbackCount = filteredFeedbackHistory.filter(
-    (e) => e.feedback_type === "positive",
+    (e) => e.feedbackType === "positive",
   ).length;
   const neutralFeedbackCount = filteredFeedbackHistory.filter(
-    (e) => e.feedback_type === "neutral",
+    (e) => e.feedbackType === "neutral",
   ).length;
   const negativeFeedbackCount = filteredFeedbackHistory.filter(
-    (e) => e.feedback_type === "negative",
+    (e) => e.feedbackType === "negative",
   ).length;
   const totalFeedback =
     positiveFeedbackCount + neutralFeedbackCount + negativeFeedbackCount;
@@ -193,7 +196,7 @@ function StudentFeedbackHistoryPageContent() {
         neutral: 0,
         negative: 0,
       };
-      existing[entry.feedback_type]++;
+      existing[entry.feedbackType]++;
       dayMap.set(key, existing);
     }
 
@@ -297,6 +300,7 @@ function StudentFeedbackHistoryPageContent() {
         {...back}
         leading={<ConceptIconTile concept={feedbackConcept} size="page" />}
         title={student?.name ?? "Feedbackhistorie"}
+        info={FEEDBACK_INFO}
         stats={studentMeta ?? feedbackLine}
         statsLoading={loading}
         loading={loading}
@@ -384,15 +388,15 @@ function StudentFeedbackHistoryPageContent() {
                               <div
                                 key={feedback.id}
                                 className="flex items-center gap-3 py-2.5"
-                                data-testid={`feedback-indicator-${feedback.feedback_type}`}
+                                data-testid={`feedback-indicator-${feedback.feedbackType}`}
                               >
                                 <span className="text-sm text-gray-900">
-                                  {feedbackTypeLabels[feedback.feedback_type]}
+                                  {feedbackTypeLabels[feedback.feedbackType]}
                                 </span>
                                 <span className="text-xs text-gray-500">
                                   {formatTime(feedback.timestamp)}
                                 </span>
-                                {feedback.is_mensa_feedback && (
+                                {feedback.isMensaFeedback && (
                                   <StatusBadge
                                     label="Mensa"
                                     tone="gray"

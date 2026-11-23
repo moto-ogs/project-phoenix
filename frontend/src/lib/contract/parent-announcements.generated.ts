@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   arr,
   bool,
+  fileAnswer,
   instant,
   nullable,
   object,
@@ -131,13 +132,8 @@ export const pollResultsResponseSchema: z.ZodType<pollResultsResponse, unknown> 
 
 /** Go: announcement.reminderRequest */
 export interface reminderRequest {
-  reminder_at?: unknown | null;
+  reminder_at?: string | null;
   reminder_text?: string | null;
-}
-
-/** Query of GET /api/parent-announcements/ */
-export interface GetParentAnnouncementsQuery {
-  include_inactive?: boolean;
 }
 
 export const routes = {
@@ -151,7 +147,9 @@ export const routes = {
     method: "GET",
     pattern: "/api/parent-announcements/",
     portals: ["tenant"],
-    query: ["include_inactive"],
+    query: {
+      "include_inactive": { kind: "bool" },
+    },
     response: success(z.array(announcementResponseSchema)),
   },
   "GET /api/parent-announcements/letter-placeholders": {
@@ -172,6 +170,16 @@ export const routes = {
     portals: ["tenant"],
     response: success(announcementResponseSchema),
   },
+  "GET /api/parent-announcements/{announcementId}/declaration-export": {
+    method: "GET",
+    pattern: "/api/parent-announcements/{announcementId}/declaration-export",
+    portals: ["tenant"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf"] },
+      "student_id": { kind: "id" },
+    },
+    response: fileAnswer,
+  },
   "GET /api/parent-announcements/{announcementId}/declaration-status": {
     method: "GET",
     pattern: "/api/parent-announcements/{announcementId}/declaration-status",
@@ -183,6 +191,12 @@ export const routes = {
     pattern: "/api/parent-announcements/{announcementId}/letter-status",
     portals: ["tenant"],
     response: success(letterStatusResponseSchema),
+  },
+  "GET /api/parent-announcements/{announcementId}/letters-pdf": {
+    method: "GET",
+    pattern: "/api/parent-announcements/{announcementId}/letters-pdf",
+    portals: ["tenant"],
+    response: fileAnswer,
   },
   "GET /api/parent-announcements/{announcementId}/poll-children": {
     method: "GET",
@@ -219,6 +233,7 @@ export const routes = {
     method: "POST",
     pattern: "/api/parent-announcements/letter-preview",
     portals: ["tenant"],
+    noCommit: "the preview renders the letter and sends nothing",
     request: requestBody<letterPreviewRequest>(),
     response: success(letterPreviewResponseSchema),
   },

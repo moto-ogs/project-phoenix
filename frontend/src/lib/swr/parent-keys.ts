@@ -1,6 +1,8 @@
-import type { Child } from "~/lib/parent-api";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
-function relationships(children: readonly Child[]): string {
+function relationships(
+  children: readonly parentMeContract.ChildResponse[],
+): string {
   return children
     .map(
       (child) =>
@@ -74,10 +76,13 @@ export const parentKeys = {
   isNewsResource: (key: string) => key === "parent-announcements",
   isResource: (key: string) =>
     key.startsWith("parent-") && !key.startsWith("parent-profile"),
-  relationshipSet: (children: readonly Child[]) => relationships(children),
-  features: (children: readonly Child[], day: string) =>
-    `parent-features-${relationships(children)}-${day}`,
-  today: (children: readonly Child[], day: string) =>
+  relationshipSet: (children: readonly parentMeContract.ChildResponse[]) =>
+    relationships(children),
+  features: (
+    children: readonly parentMeContract.ChildResponse[],
+    day: string,
+  ) => `parent-features-${relationships(children)}-${day}`,
+  today: (children: readonly parentMeContract.ChildResponse[], day: string) =>
     `parent-today-${relationships(children)}-${day}`,
   /** Appointments from `day` over `days` days; the start page reads 90. */
   calendar: (day: string, days = 90) => `parent-calendar-${day}-${days}`,
@@ -100,6 +105,8 @@ export const parentKeys = {
     `parent-child-${encodeURIComponent(studentId)}-status-care-exceptions-${day}`,
   pickupChangeRequests: (studentId: string, day: string) =>
     `parent-child-${encodeURIComponent(studentId)}-status-pickup-change-requests-${day}`,
+  pickupChangeRequestsFamily: (studentId: string) =>
+    `parent-child-${encodeURIComponent(studentId)}-status-pickup-change-requests-`,
   careSchedule: (studentId: string, day: string) =>
     `parent-child-${encodeURIComponent(studentId)}-status-care-schedule-${day}`,
   careOfferings: (studentId: string) =>
@@ -120,6 +127,9 @@ export const parentKeys = {
     `parent-child-${encodeURIComponent(studentId)}-pickup-signature-statement-${encodeURIComponent(input)}`,
   consents: (studentId: string) =>
     `parent-child-${encodeURIComponent(studentId)}-consents`,
+  /** The stop of the child's room history and mood (#3844). */
+  roomHistoryStop: (studentId: string) =>
+    `parent-child-${encodeURIComponent(studentId)}-room-history-stop`,
   courses: (studentId: string) =>
     `parent-child-${encodeURIComponent(studentId)}-courses`,
   conferences: (studentId: string) =>
@@ -129,7 +139,7 @@ export const parentKeys = {
     `parent-child-${encodeURIComponent(studentId)}-sharing-options`,
   requestSharing: (studentId: string, requestType: string, requestId: string) =>
     `parent-child-${encodeURIComponent(studentId)}-request-sharing-${encodeURIComponent(requestType)}-${encodeURIComponent(requestId)}`,
-  /** The change history of one request; its last entry is the version. */
+  /** The change history of one request ("Geändert am …"). */
   requestEventsFamily: (studentId: string) =>
     `parent-child-${encodeURIComponent(studentId)}-request-events-`,
   requestEvents: (studentId: string, requestType: string, requestId: string) =>

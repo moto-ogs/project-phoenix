@@ -60,7 +60,7 @@ func (h *HolidayRegistrationReview) listPeriod(ctx context.Context, reviewer enr
 			matching = append(matching, registration)
 		}
 	}
-	if err := h.audit(ctx, reviewer, period.ID, 0, enrollment.HolidayAuditList, map[string]any{
+	if err := h.audit(ctx, reviewer, period.ID.Int64(), 0, enrollment.HolidayAuditList, map[string]any{
 		"filter": holidayFilterDetails(filter), "registrations": len(matching),
 	}); err != nil {
 		return nil, nil, err

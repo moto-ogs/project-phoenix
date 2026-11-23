@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ISODateInput } from "~/components/ui/date-picker";
 import { EditActions } from "~/components/ui/edit-actions";
 import { FormModal } from "~/components/ui/form-modal";
+import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { Input } from "~/components/ui/input";
 import {
@@ -14,7 +15,9 @@ import { Textarea } from "~/components/ui/textarea";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { berlinTodayISO } from "~/lib/date-helpers";
 import type { RefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import {
   type ContributionRule,
   type ContributionRuleInput,
@@ -103,15 +106,24 @@ function percentToBasisPoints(value: string): number | null {
  */
 export function ContributionRuleModal({
   edit,
+  rules,
+  reload,
+  write,
   onClose,
   onSaved,
 }: Readonly<{
   edit: ContributionRuleEdit | null;
+  /** The stored rules as the card shows them. */
+  rules: readonly ContributionRule[];
+  /** Reads the rules again; rejects when the read fails (ADR 0311). */
+  reload: () => Promise<readonly ContributionRule[]>;
+  /** Hands a changed rule to the read (ADR 0311, rule 5). */
+  write: (rule: ContributionRule) => Promise<unknown>;
   onClose: () => void;
   /** Reloads the card; never rejects (#6652). */
   onSaved: RefreshAfterWrite;
 }>) {
-  const [draft, setDraft] = useState<Draft | null>(null);
+  const [created, setCreated] = useState<Draft | null>(null);
   const save = useFormModalPending(edit !== null);
   const saving = save.pending;
   const formRef = useRef<HTMLFormElement>(null);
@@ -121,9 +133,37 @@ export function ContributionRuleModal({
 
   useEffect(() => {
     if (!edit) return;
-    setDraft(draftOf(edit));
+    setCreated(edit.kind === "create" ? draftOf(edit) : null);
     clearErrors();
   }, [edit, clearErrors]);
+
+  // A change rests on the rule as it was read (ADR 0311): a newer read
+  // refills the form only while untouched, the save sends its version, and
+  // after a refusal the stored rule shows.
+  const changedId = edit?.kind === "change" ? edit.rule.id : null;
+  const stored = useDraftOn<ContributionRule, Draft, string, ContributionRule>(
+    {
+      opening: changedId,
+      data: rules.find((rule) => rule.id === changedId),
+      reload: async () => {
+        const found = (await reload()).find((rule) => rule.id === changedId);
+        if (!found) throw new Error("contribution rule is gone");
+        return found;
+      },
+      write,
+    },
+    {
+      token: (rule) => rule.version,
+      toDraft: (rule) => draftOf({ kind: "change", rule }),
+      answer: (saved) => saved,
+    },
+  );
+  const draft = edit?.kind === "change" ? (stored.draft ?? null) : created;
+  const form = useReadDraftForm(
+    edit?.kind === "change" ? stored : null,
+    formErrors,
+    "die Regel",
+  );
 
   const ruleKind: ContributionRuleKind | null =
     edit?.kind === "create" ? edit.ruleKind : (edit?.rule.kind ?? null);
@@ -164,28 +204,40 @@ export function ContributionRuleModal({
     };
   };
 
+  const fail = (err: unknown, reload?: () => Promise<unknown>) => {
+    logger.error("contribution_rule_save_failed", {
+      kind: edit?.kind,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    // A refused change shows the rule as stored now (`reload`), without
+    // a retry (ADR 0311).
+    void formErrors.show(err, { object: "die Regel", reload });
+  };
+
   const submit = async () => {
-    if (!edit || !draft) return;
-    formErrors.clear();
+    // Enter submits too: a change goes out only after the stored rule is
+    // read, and the shown error stays until then.
+    if (!edit || !draft || !form.begin()) return;
     const rule = input(draft);
     if (!rule) return;
     await save.run(async (op) => {
-      try {
-        if (edit.kind === "create") {
+      if (edit.kind === "create") {
+        try {
           await createContributionRule(rule);
-          success("Die Regel ist gespeichert.");
-        } else {
-          await updateContributionRule(edit.rule.id, rule);
-          success("Die Regel ist geändert.");
+        } catch (err) {
+          if (op.isCurrent()) fail(err);
+          return;
         }
-      } catch (err) {
-        logger.error("contribution_rule_save_failed", {
-          kind: edit.kind,
-          error: err instanceof Error ? err.message : String(err),
-        });
-        if (!op.isCurrent()) return;
-        void formErrors.show(err, { object: "die Regel" });
-        return;
+        success("Die Regel ist gespeichert.");
+      } else {
+        const result = await stored.submit((version) =>
+          updateContributionRule(edit.rule.id, rule, version),
+        );
+        if (!result.ok) {
+          if (op.isCurrent()) fail(result.error, result.reload);
+          return;
+        }
+        success("Die Regel ist geändert.");
       }
       if (op.isCurrent()) onClose();
       await onSaved();
@@ -193,7 +245,9 @@ export function ContributionRuleModal({
   };
 
   const set = (patch: Partial<Draft>) =>
-    setDraft((current) => (current ? { ...current, ...patch } : current));
+    edit?.kind === "change"
+      ? stored.setDraft((current) => ({ ...current, ...patch }))
+      : setCreated((current) => (current ? { ...current, ...patch } : current));
   const title = `${sibling ? "Geschwisterregel" : "Befreiungsregel"} ${edit?.kind === "change" ? "ändern" : "anlegen"}`;
 
   return (
@@ -224,6 +278,7 @@ export function ContributionRuleModal({
             void submit();
           }}
         >
+          <LoadErrorAlert error={form.loadError} />
           {sibling ? null : (
             // The rule is the Träger's, not a family's (#5690): it applies
             // to a registration once the office picks the exemption there.

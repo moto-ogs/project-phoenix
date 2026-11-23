@@ -9,5 +9,6 @@
   "import_batch_failed": "Nie udało się przetworzyć: {object}. Spróbuj ponownie później.",
   "mode_forbidden": "Nie masz dostępu do: {object}. Skontaktuj się ze szkołą.",
   "not_test_traeger": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
+  "staff_profile_required": "Dzieci może importować tylko osoba z profilem pracownika. Pana/Pani konto nie ma go jeszcze w tej szkole. Proszę poprosić administrację szkoły o jego utworzenie.",
   "test_traeger_inactive": "Nie udało się zmienić: {object}. Sprawdź aktualny stan."
 }

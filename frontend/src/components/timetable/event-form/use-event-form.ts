@@ -13,6 +13,7 @@ import {
   type FormModalOperation,
 } from "~/components/ui/use-form-modal-pending";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
+import { isReadStateRefusal } from "~/lib/api-error";
 import type { ActivityCategory } from "~/lib/activity-helpers";
 import {
   findPeriodForDate,
@@ -51,7 +52,7 @@ import {
 import type { Staff } from "~/lib/staff-api";
 import { schoolClassesLabel, schoolClassLabel } from "~/lib/school-class-label";
 import { getSchoolYear } from "~/lib/student-helpers";
-import { useFreshSWR, useSWRAuth } from "~/lib/swr";
+import { useSWRAuth } from "~/lib/swr";
 import { timetableKeys } from "~/lib/swr/portal-keys";
 import { staff as staffResource } from "~/lib/swr/staff";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
@@ -134,6 +135,14 @@ export interface GroupOption {
 }
 
 const MAX_SUPPORTED_TARGET_GRADE_LEVEL = 13;
+
+/** The room of a Dienst without a room (#3822): the backend reads "0" as none. */
+const NO_ROOM_ID = "0";
+
+/** A stored row's ID: a positive decimal, not a blank or a draft key. */
+function isPersistedID(id: string | undefined): id is string {
+  return id !== undefined && /^[1-9]\d*$/.test(id);
+}
 /**
  * Advisory probes (Dienstplan coverage, double bookings) never block the
  * save. Their failure is a hint next to the form, not an error: the person
@@ -172,6 +181,26 @@ function saveErrorObject(isSeries: boolean, isCreate: boolean): string {
       : "die Änderung des Regeltermins";
   }
   return isCreate ? "das Anlegen des Termins" : "die Änderung des Termins";
+}
+
+/** What a refusal as changed since read names: the block or the series. */
+function changedObject(isSeries: boolean): string {
+  return isSeries ? "der Regeltermin" : "der Termin";
+}
+
+/**
+ * The block as the planner reads it now; rejects when it is gone, since
+ * nothing stored is left to show.
+ */
+async function readStoredBlock(
+  instance: EnrichedInstance,
+): Promise<EnrichedInstance> {
+  const week = await timetableService.getWeek(instance.date, instance.date);
+  const found = week.instances.find(
+    (candidate) => candidate.id === instance.id,
+  );
+  if (!found) throw new Error(`instance ${instance.id} is no longer planned`);
+  return found;
 }
 
 function sameIDSelection(left: string[], right: string[]): boolean {
@@ -397,9 +426,9 @@ export function useEventForm({
   calendarPeriods,
   planningPeriods,
   defaultCalendarPeriodId,
-  initialInstance,
-  initialSeries,
-  convertInstance,
+  initialInstance: openedInstance,
+  initialSeries: openedSeries,
+  convertInstance: openedConvertInstance,
   onDeleteSeries,
   defaultRepeat,
   variant,
@@ -411,6 +440,25 @@ export function useEventForm({
 }: UseEventFormParams) {
   const { tenant } = useTenant();
   const { success: toastSuccess, warning: toastWarning } = useToast();
+  // After a save refused as changed since read (ADR 0311) the panel shows
+  // the block and the series as stored now: they replace what the panel was
+  // opened with, until it opens with something else.
+  const [stored, setStored] = useState<{
+    readonly opened: readonly unknown[];
+    readonly instance: EnrichedInstance | null;
+    readonly series: TimetableTemplate | null;
+    readonly convert: EnrichedInstance | null;
+  } | null>(null);
+  const opened = [openedInstance, openedSeries, openedConvertInstance, isOpen];
+  const reread =
+    stored?.opened.every((value, index) => value === opened[index]) === true
+      ? stored
+      : null;
+  const initialInstance = reread ? reread.instance : openedInstance;
+  const initialSeries = reread ? reread.series : openedSeries;
+  const convertInstance = reread ? reread.convert : openedConvertInstance;
+  // Set by that reread: its new seeding keeps the refusal on screen.
+  const reseedKeepsError = useRef(false);
   const [form, setForm] = useState<EventFormState>(() =>
     emptyForm(
       defaultDate,
@@ -458,20 +506,21 @@ export function useEventForm({
       onError: logLoadFailure("planning_tracks_fetch_failed"),
     },
   );
-  // The category list seeds the draft (the first category of a new Termin),
-  // so each opening reads it anew and never starts from an earlier answer.
-  const categoryRead = useFreshSWR(
+  // The category, student and staff lists are option catalogs (ADR 0311):
+  // they read through the shared cache and revalidate at every opening, and
+  // the save validates what it receives. The first category of the list
+  // seeds a new Termin.
+  const categoryRead = useSWRAuth(
     isOpen ? tenantDailyKeys.plannerCategories() : null,
     () => fetchPlannerActivityCategories(),
     { onError: logLoadFailure("categories_fetch_failed") },
   );
-  // The rosters decide what a save writes: until this opening's own list
-  // answered, the stored assignment is kept. So each opening reads them anew
-  // and an answer of an earlier opening never unlocks the roster.
-  // The student catalog has a stricter permission boundary than the shared
-  // planner references. Keep it on an independent read so users without
-  // users:read can still use rooms, categories and groups immediately.
-  const studentRead = useFreshSWR(
+  // Until the student list answered, the roster stays read-only and keeps
+  // its stored assignment. The student catalog has a stricter permission
+  // boundary than the shared planner references. Keep it on an independent
+  // read so users without users:read can still use rooms, categories and
+  // groups immediately.
+  const studentRead = useSWRAuth(
     isOpen ? tenantDailyKeys.plannerStudentOptions() : null,
     () => fetchAllStudentOptions(),
     { onError: logLoadFailure("students_fetch_failed") },
@@ -479,7 +528,7 @@ export function useEventForm({
   // Staff carries the same users:read boundary as students. Keep it
   // independent from rooms/categories/groups so a 403 cannot masquerade as
   // an empty editable roster or delay the planner references.
-  const staffRead = useFreshSWR(
+  const staffRead = useSWRAuth(
     isOpen ? staffResource.key() : null,
     () => staffResource.fetcher(),
     { onError: logLoadFailure("staff_fetch_failed") },
@@ -489,8 +538,8 @@ export function useEventForm({
     () =>
       (roomRead.data ?? [])
         .map((room): RoomOption => ({
-          id: Number(room.id),
-          name: room.name ?? room.room_name ?? `Raum ${room.id}`,
+          id: room.id,
+          name: room.name,
           building: room.building ?? undefined,
         }))
         .sort(byName),
@@ -500,7 +549,7 @@ export function useEventForm({
     () =>
       (groupRead.data ?? [])
         .map((group): GroupOption => ({
-          id: String(group.id),
+          id: group.id,
           name: group.name,
         }))
         .sort(byName),
@@ -615,7 +664,7 @@ export function useEventForm({
   const [expanded, setExpanded] = useState(variant === "full");
   // Validated room id stashed while the Dreifach-Frage dialog (US-5) is open.
   const [pendingSeriesEdit, setPendingSeriesEdit] = useState<{
-    roomId: number;
+    roomId: string;
   } | null>(null);
   const [selectedInstanceScope, setSelectedInstanceScope] =
     useState<SeriesEditScope | null>(null);
@@ -634,7 +683,7 @@ export function useEventForm({
     /** How many dates of the edited series fall on closing days. */
     closingDayCount: number;
     scope: "all" | "following";
-    roomId: number;
+    roomId: string;
     template: TimetableTemplate;
     periodEnd: string | undefined;
     // The RESOLVED series template id (#2187): after a split chain
@@ -863,7 +912,11 @@ export function useEventForm({
     createIdempotencyFingerprint.current = null;
     setForm(nextForm);
     initialFormSnapshot.current = nextForm;
-    clearFormError();
+    if (reseedKeepsError.current) {
+      reseedKeepsError.current = false;
+    } else {
+      clearFormError();
+    }
     setFieldErrors({});
     setDeleteConfirmOpen(false);
     setDeleteEffectiveDate(berlinTodayISO());
@@ -1390,12 +1443,12 @@ export function useEventForm({
         const primary =
           roster.primaryStaffId &&
           roster.staffIds.includes(roster.primaryStaffId)
-            ? Number(roster.primaryStaffId)
+            ? roster.primaryStaffId
             : undefined;
         return {
           weekday,
-          staff_ids: roster.staffIds.map(Number),
-          student_ids: sourced ? [] : roster.studentIds.map(Number),
+          staff_ids: [...roster.staffIds],
+          student_ids: sourced ? [] : [...roster.studentIds],
           primary_staff_id: primary,
         };
       });
@@ -1454,7 +1507,7 @@ export function useEventForm({
     });
   };
 
-  const validateForm = (): { roomId: number; categoryId?: number } | null => {
+  const validateForm = (): { roomId: string; categoryId?: string } | null => {
     const errors: Record<string, string> = {};
     if (form.title.trim() === "") {
       errors.title = "Bitte einen Titel eingeben.";
@@ -1481,22 +1534,19 @@ export function useEventForm({
     }
     // Ein Dienst (#3822) darf ohne Raum stattfinden, z. B. die Busaufsicht;
     // 0 heißt dann "kein Raum".
-    const parsedRoomId = Number.parseInt(form.roomId, 10);
-    const hasRoom = Number.isFinite(parsedRoomId) && parsedRoomId > 0;
-    const roomId = hasRoom ? parsedRoomId : 0;
+    const hasRoom = isPersistedID(form.roomId);
+    const roomId = hasRoom ? form.roomId : NO_ROOM_ID;
     if (!hasRoom && form.type !== "duty") {
       errors.roomId = "Bitte einen Raum auswählen.";
     }
-    let categoryId: number | undefined;
+    let categoryId: string | undefined;
     if (isSeriesFlow) {
-      const parsedCategoryId = Number.parseInt(form.categoryId, 10);
-      if (!Number.isFinite(parsedCategoryId) || parsedCategoryId <= 0) {
+      if (!isPersistedID(form.categoryId)) {
         errors.categoryId = "Bitte eine Kategorie auswählen.";
       } else {
-        categoryId = parsedCategoryId;
+        categoryId = form.categoryId;
       }
-      const calendarPeriodId = Number.parseInt(form.calendarPeriodId, 10);
-      if (!Number.isFinite(calendarPeriodId) || calendarPeriodId <= 0) {
+      if (!isPersistedID(form.calendarPeriodId)) {
         errors.calendarPeriodId = "Bitte einen Planungszeitraum auswählen.";
       }
       // #2135: the picked Datum is the series start for new series; it must
@@ -1672,7 +1722,13 @@ export function useEventForm({
     }
   };
 
-  const instanceBody = (roomId: number, activityGroupId?: string) =>
+  // The picker only knows this build's values. Preserve a newer backend's
+  // classification on unrelated edits, but honor an explicit pick or clear.
+  const instanceListKind = listKindTouched.current
+    ? form.listKind
+    : (initialInstance?.rawListKind ?? form.listKind);
+
+  const instanceBody = (roomId: string, activityGroupId?: string) =>
     ({
       date: form.date,
       title: form.title.trim(),
@@ -1681,16 +1737,17 @@ export function useEventForm({
       room_id: roomId,
       notes: form.notes.trim() || undefined,
       // Ein Dienst hat keine Kinder und gehört in keine Tagesliste (#3822).
-      list_kind: form.type === "duty" ? undefined : form.listKind || undefined,
-      activity_group_id: activityGroupId ? Number(activityGroupId) : undefined,
-      staff_ids: staffIDsForSave.map(Number),
-      student_ids: form.type === "duty" ? [] : studentIDsForSave.map(Number),
+      list_kind:
+        form.type === "duty" ? undefined : instanceListKind || undefined,
+      activity_group_id: activityGroupId || undefined,
+      staff_ids: [...staffIDsForSave],
+      student_ids: form.type === "duty" ? [] : [...studentIDsForSave],
       required_staff: parseRequiredStaffOverride(form.requiredStaff),
     }) satisfies CreateInstanceBody;
 
   const seriesBody = (
-    roomId: number,
-    categoryId: number,
+    roomId: string,
+    categoryId: string,
   ): CreateTemplateBody => {
     const body = seriesBodyFields(roomId, categoryId);
     if (form.type !== "duty") return body;
@@ -1717,8 +1774,8 @@ export function useEventForm({
   };
 
   const seriesBodyFields = (
-    roomId: number,
-    categoryId: number,
+    roomId: string,
+    categoryId: string,
   ): CreateTemplateBody => ({
     name: form.title.trim(),
     type: form.type,
@@ -1728,20 +1785,12 @@ export function useEventForm({
     end_time: form.endTime,
     room_id: roomId,
     category_id: categoryId,
-    planning_track_id: form.planningTrackId
-      ? Number(form.planningTrackId)
-      : null,
+    planning_track_id: form.planningTrackId || null,
     notes: form.seriesNotes.trim() || undefined,
     education_group_id:
       form.targetGroupType === "gruppe"
-        ? form.educationGroupIds.length > 0
-          ? Number(form.educationGroupIds[0])
-          : form.educationGroupId
-            ? Number(form.educationGroupId)
-            : undefined
-        : form.educationGroupId
-          ? Number(form.educationGroupId)
-          : undefined,
+        ? form.educationGroupIds[0] || form.educationGroupId || undefined
+        : form.educationGroupId || undefined,
     target_group_type: form.targetGroupType,
     target_grade_level:
       form.targetGroupType === "jahrgang" && form.targetGradeLevels.length > 0
@@ -1758,7 +1807,7 @@ export function useEventForm({
     source_care_offering_ids:
       form.targetGroupType === "angebot" &&
       form.sourceCareOfferingIds.length > 0
-        ? form.sourceCareOfferingIds.map(Number)
+        ? [...form.sourceCareOfferingIds]
         : null,
     // Jahrgang und Klasse schließen sich aus (#2482): der aktive Modus
     // bestimmt, welche Liste gesendet wird; die andere geht als explizites
@@ -1792,10 +1841,10 @@ export function useEventForm({
           : form.targetGroupType === "gruppe"
             ? form.educationGroupIds.map((value) => ({
                 type: "gruppe" as const,
-                education_group_id: Number(value),
+                education_group_id: value,
               }))
             : [],
-    calendar_period_id: Number(form.calendarPeriodId),
+    calendar_period_id: form.calendarPeriodId,
     week_pattern: form.weekPattern,
     required_staff: parseRequiredStaffOverride(form.requiredStaff),
     // #2233: explicit value or explicit null ("unbegrenzt"). The update
@@ -1809,11 +1858,9 @@ export function useEventForm({
       form.targetGroupType === "angebot" &&
       form.sourceCareOfferingIds.length > 0
         ? []
-        : studentIDsForSave.map(Number),
-    staff_ids: staffIDsForSave.map(Number),
-    primary_staff_id: primaryStaffIDForSave
-      ? Number(primaryStaffIDForSave)
-      : undefined,
+        : [...studentIDsForSave],
+    staff_ids: [...staffIDsForSave],
+    primary_staff_id: primaryStaffIDForSave || undefined,
     weekday_assignments: weekdayAssignmentsBody(),
     // #3594: the answer to "Diese Serie trifft N Schließtage" wins; without a
     // prompt the stored series flag stays as it is.
@@ -1859,15 +1906,13 @@ export function useEventForm({
   const changedRosterIDs = (
     next: readonly string[],
     before: readonly string[],
-  ): number[] => {
+  ): string[] => {
     const nextSet = new Set(next);
     const beforeSet = new Set(before);
     const changed = new Set<string>();
     for (const id of next) if (!beforeSet.has(id)) changed.add(id);
     for (const id of before) if (!nextSet.has(id)) changed.add(id);
-    return [...changed]
-      .map(Number)
-      .filter((id) => Number.isFinite(id) && id > 0);
+    return [...changed].filter(isPersistedID);
   };
 
   /**
@@ -1884,18 +1929,12 @@ export function useEventForm({
    * sides of a changed Hauptbetreuung, whose is_primary flag has to be
    * rewritten on the predecessor rows as well.
    */
-  const changedStaffIDs = (): number[] => {
+  const changedStaffIDs = (): string[] => {
     const changed = changedRosterIDs(form.staffIds, initialStaffIDsSnapshot);
     if (primaryStaffTouched()) {
       for (const id of [form.primaryStaffId, initialPrimaryStaffIDSnapshot]) {
-        const numeric = Number(id);
-        if (
-          id &&
-          Number.isFinite(numeric) &&
-          numeric > 0 &&
-          !changed.includes(numeric)
-        ) {
-          changed.push(numeric);
+        if (isPersistedID(id) && !changed.includes(id)) {
+          changed.push(id);
         }
       }
     }
@@ -1948,16 +1987,12 @@ export function useEventForm({
       );
     }
     if (template.roomId) {
-      keep(
-        form.roomId === initialInstance.roomId,
-        "room_id",
-        Number(template.roomId),
-      );
+      keep(form.roomId === initialInstance.roomId, "room_id", template.roomId);
     }
     keep(
       (form.planningTrackId || "") === (initialInstance.planningTrackId ?? ""),
       "planning_track_id",
-      template.planningTrackId ? Number(template.planningTrackId) : null,
+      template.planningTrackId || null,
     );
     return { preserved, edited };
   };
@@ -1997,10 +2032,10 @@ export function useEventForm({
       ) {
         return {
           weekday: assignment.weekday,
-          staff_ids: assignment.staffIds.map(Number),
-          student_ids: sourced ? [] : assignment.studentIds.map(Number),
+          staff_ids: [...assignment.staffIds],
+          student_ids: sourced ? [] : [...assignment.studentIds],
           primary_staff_id: assignment.primaryStaffId
-            ? Number(assignment.primaryStaffId)
+            ? assignment.primaryStaffId
             : undefined,
         };
       }
@@ -2031,18 +2066,28 @@ export function useEventForm({
           : primaryStaffId;
       return {
         weekday: assignment.weekday,
-        staff_ids: weekdayStaffIDs.map(Number),
-        student_ids: sourced ? [] : weekdayStudentIDs.map(Number),
+        staff_ids: [...weekdayStaffIDs],
+        student_ids: sourced ? [] : [...weekdayStudentIDs],
         primary_staff_id: staffWasEdited
           ? weekdayPrimary && weekdayStaffIDs.includes(weekdayPrimary)
-            ? Number(weekdayPrimary)
+            ? weekdayPrimary
             : undefined
-          : assignment.primaryStaffId
-            ? Number(assignment.primaryStaffId)
-            : undefined,
+          : assignment.primaryStaffId || undefined,
       };
     });
   };
+
+  /**
+   * The series form's body for a scope edit whose form was seeded from the
+   * loaded series, with that series' read version (ADR 0311).
+   */
+  const scopedSeriesBody = (
+    roomId: string,
+    template: TimetableTemplate,
+  ): UpdateTemplateBody => ({
+    ...seriesBody(roomId, form.categoryId),
+    expected_version: template.version ?? "",
+  });
 
   /**
    * Maps the fetched template plus the fields the instance-edit form
@@ -2052,7 +2097,7 @@ export function useEventForm({
    */
   const templateBodyFromForm = (
     template: TimetableTemplate,
-    roomId: number,
+    roomId: string,
   ): UpdateTemplateBody => {
     const firstSchedule = template.schedules[0];
     const calendarPeriodId =
@@ -2099,6 +2144,8 @@ export function useEventForm({
           : form.primaryStaffId || template.primaryStaffId
         : template.primaryStaffId;
     return {
+      // The series as this edit read it (ADR 0311).
+      expected_version: template.version ?? "",
       name: form.title.trim(),
       type: template.type,
       // This builder runs only for occurrence-scope edits ("Alle Termine" /
@@ -2119,16 +2166,12 @@ export function useEventForm({
       start_time: form.startTime,
       end_time: form.endTime,
       room_id: roomId,
-      category_id: Number(template.categoryId),
-      planning_track_id: form.planningTrackId
-        ? Number(form.planningTrackId)
-        : null,
+      category_id: template.categoryId,
+      planning_track_id: form.planningTrackId || null,
       // Preserve the series' own Wochennotiz verbatim — an instance-scope edit
       // (all/following) must never wipe it. It is read-only in this flow.
       notes: template.notes ?? undefined,
-      education_group_id: template.educationGroupId
-        ? Number(template.educationGroupId)
-        : undefined,
+      education_group_id: template.educationGroupId || undefined,
       // Zielgruppe is preserved from the existing template, not edited —
       // this body builder only carries the fields a single-instance edit
       // actually changes (title, times, room, people).
@@ -2140,7 +2183,7 @@ export function useEventForm({
       source_care_offering_ids:
         template.sourceCareOfferingIds &&
         template.sourceCareOfferingIds.length > 0
-          ? template.sourceCareOfferingIds.map(Number)
+          ? [...template.sourceCareOfferingIds]
           : null,
       source_grade_levels:
         template.sourceCareOfferingIds &&
@@ -2160,9 +2203,7 @@ export function useEventForm({
         type: target.type,
         grade_level: target.gradeLevel,
         school_class: target.schoolClass,
-        education_group_id: target.educationGroupId
-          ? Number(target.educationGroupId)
-          : undefined,
+        education_group_id: target.educationGroupId || undefined,
       })),
       // The occurrence editor never shows the Teilnehmergrenze (#2233), so a
       // scope save must echo the stored series value — null included, the
@@ -2176,20 +2217,18 @@ export function useEventForm({
         ? parseRequiredStaffOverride(form.requiredStaff)
         : (template.requiredStaffOverride ?? null),
       week_pattern: firstSchedule?.weekPattern ?? 0,
-      calendar_period_id: calendarPeriodId
-        ? Number(calendarPeriodId)
-        : undefined,
+      calendar_period_id: calendarPeriodId || undefined,
       // A sourced template's studentIds ARE the sourced rows; echoing them
       // next to the source would be rejected by the backend.
       student_ids:
         template.sourceCareOfferingIds &&
         template.sourceCareOfferingIds.length > 0
           ? []
-          : templateStudentIDs.map(Number),
-      staff_ids: templateStaffIDs.map(Number),
+          : [...templateStudentIDs],
+      staff_ids: [...templateStaffIDs],
       primary_staff_id:
         primaryStaffId && templateStaffIDs.includes(primaryStaffId)
-          ? Number(primaryStaffId)
+          ? primaryStaffId
           : undefined,
       // #2129: an occurrence-scope edit must not silently flatten a series
       // that staffs each weekday differently. Carry the template's weekday
@@ -2367,10 +2406,10 @@ export function useEventForm({
       if (selectedInstanceScope === "single") {
         try {
           await checkCoverageBeforeSave(coverageProbes);
-          const saved = await timetableService.update(
-            initialInstance.id,
-            instanceBody(parsed.roomId, initialInstance.activityGroupId),
-          );
+          const saved = await timetableService.update(initialInstance.id, {
+            ...instanceBody(parsed.roomId, initialInstance.activityGroupId),
+            expected_version: initialInstance.version ?? "",
+          });
           toastSuccess("Der Termin ist gespeichert.");
           reportSaved(op, { kind: "instance", instance: saved });
           if (op.isCurrent()) onClose();
@@ -2392,7 +2431,11 @@ export function useEventForm({
         );
         let saved: EnrichedInstance;
         if (initialInstance) {
-          saved = await timetableService.update(initialInstance.id, body);
+          // The block as the panel opened it (ADR 0311).
+          saved = await timetableService.update(initialInstance.id, {
+            ...body,
+            expected_version: initialInstance.version ?? "",
+          });
         } else {
           const createFingerprint = JSON.stringify(body);
           if (createIdempotencyFingerprint.current !== createFingerprint) {
@@ -2434,6 +2477,8 @@ export function useEventForm({
         const runSeriesEdit = async (seriesOp: FormModalOperation) => {
           await timetableService.updateTemplate(seriesId, {
             ...seriesBody(parsed.roomId, categoryId),
+            // The series as the panel opened it (ADR 0311).
+            expected_version: initialSeries.version ?? "",
             ...(notesOnly ? { propagate_notes_to_predecessors: true } : {}),
             // #6838: the server rebuilds the future occurrences in the same
             // transaction. A notes-only save and a start-only pull keep them.
@@ -2527,6 +2572,8 @@ export function useEventForm({
           seriesSeedInstance.id,
           {
             ...seriesBody(parsed.roomId, parsed.categoryId),
+            // The one-off block as the panel opened it (ADR 0311).
+            expected_version: seriesSeedInstance.version ?? "",
             // #2135: the repeated instance's date is the series start.
             start_date: form.date,
             // #3594: optional last day of the series.
@@ -2576,11 +2623,14 @@ export function useEventForm({
       // Steht oben im Panel (SlideOverBody `error`), nicht als Toast:
       // Bauart 2 Regel 5.
       void showFormError(err, {
-        object: saveErrorObject(
-          isSeriesFlow,
-          isSeriesFlow ? !initialSeries : !initialInstance,
-        ),
+        object: isReadStateRefusal(err)
+          ? changedObject(isSeriesFlow)
+          : saveErrorObject(
+              isSeriesFlow,
+              isSeriesFlow ? !initialSeries : !initialInstance,
+            ),
         retry: retrySave,
+        reload: reloadAfterRefusal,
       });
     }
   };
@@ -2709,6 +2759,28 @@ export function useEventForm({
     };
   };
 
+  /**
+   * The read after a save refused as changed since read (ADR 0311): the
+   * block and the series the panel edits, as stored now. The panel then
+   * starts from them with their tokens; a scope chosen before is asked
+   * again. Rejects when a read fails, so the refusal says that instead.
+   */
+  const reloadAfterRefusal = async () => {
+    const seriesPeriod = initialSeries
+      ? (resolveTemplateCalendarPeriodId(initialSeries) ??
+        form.calendarPeriodId)
+      : "";
+    const [instance, series, convert] = await Promise.all([
+      initialInstance ? readStoredBlock(initialInstance) : null,
+      initialSeries
+        ? timetableService.getTemplate(initialSeries.id, seriesPeriod)
+        : null,
+      convertInstance ? readStoredBlock(convertInstance) : null,
+    ]);
+    reseedKeepsError.current = true;
+    setStored({ opened, instance, series, convert });
+  };
+
   const handleScopeError = (
     op: FormModalOperation,
     scope: string,
@@ -2726,8 +2798,11 @@ export function useEventForm({
     // Speicherfehler des Serienumfangs: oben im Panel, nicht als Toast. Die
     // Rückfragen davor sind geschlossen, das Panel ist die offene Fläche.
     void showFormError(err, {
-      object: saveErrorObject(scope !== "single", false),
+      object: isReadStateRefusal(err)
+        ? changedObject(scope !== "single")
+        : saveErrorObject(scope !== "single", false),
       retry: retrySave,
+      reload: reloadAfterRefusal,
     });
   };
 
@@ -2759,7 +2834,7 @@ export function useEventForm({
   const performSeriesEdit = async (
     op: FormModalOperation,
     typedScope: "all" | "following",
-    roomId: number,
+    roomId: string,
     template: TimetableTemplate,
     periodEnd: string | undefined,
     seriesTemplateId: string,
@@ -2773,7 +2848,7 @@ export function useEventForm({
       ? chainPreservedScalars(template)
       : { preserved: {}, edited: false };
     const body = scopedSeries
-      ? seriesBody(roomId, Number(form.categoryId))
+      ? scopedSeriesBody(roomId, template)
       : chainResolved
         ? {
             ...templateBodyFromForm(template, roomId),
@@ -2804,8 +2879,8 @@ export function useEventForm({
       // children. The form loads them empty and cannot edit them, so only
       // the staffing can have changed.
       const sourcedSeries = (template.sourceCareOfferingIds?.length ?? 0) > 0;
-      const studentScope = new Set<number>();
-      const staffScope = new Set<number>();
+      const studentScope = new Set<string>();
+      const staffScope = new Set<string>();
       const scopeWeekdays: number[] = [];
       let primaryChanged = false;
 
@@ -2831,10 +2906,7 @@ export function useEventForm({
             changedStudents.forEach((id) => studentScope.add(id));
             changedStaff.forEach((id) => staffScope.add(id));
             for (const id of [next.primaryStaffId, assignment.primaryStaffId]) {
-              const numeric = Number(id);
-              if (id && Number.isFinite(numeric) && numeric > 0) {
-                staffScope.add(numeric);
-              }
+              if (isPersistedID(id)) staffScope.add(id);
             }
             primaryChanged ||= weekdayPrimaryChanged;
           }
@@ -2911,14 +2983,13 @@ export function useEventForm({
       let followUpOk = true;
       for (const chunk of chunks.slice(1)) {
         try {
-          const result = await timetableService.replanWeek(
+          // The re-plan answers no warnings (replan_week.go:40): without
+          // an active period a chunk plans nothing and the next one runs.
+          await timetableService.replanWeek(
             chunk.from,
             chunk.to,
             seriesTemplateId,
           );
-          if (result.warnings.some((w) => w.code === "no_active_period")) {
-            break;
-          }
         } catch (chunkErr) {
           logger.error("series_replan_chunk_failed", {
             template_id: seriesTemplateId,
@@ -2961,7 +3032,7 @@ export function useEventForm({
       seriesTemplateId,
     }: {
       typedScope: "all" | "following";
-      roomId: number;
+      roomId: string;
       template: TimetableTemplate;
       periodEnd: string | undefined;
       seriesTemplateId: string;
@@ -3095,7 +3166,7 @@ export function useEventForm({
   async function selectScope(
     op: FormModalOperation,
     scope: string,
-    pendingOverride?: { roomId: number },
+    pendingOverride?: { roomId: string },
   ) {
     if (!isSeriesEditScope(scope)) return;
     const pending = pendingOverride ?? pendingSeriesEdit;
@@ -3106,10 +3177,10 @@ export function useEventForm({
     if (scope === "single") {
       try {
         await checkCoverageBeforeSave(coverageProbes);
-        const saved = await timetableService.update(
-          initialInstance.id,
-          instanceBody(pending.roomId, groupId),
-        );
+        const saved = await timetableService.update(initialInstance.id, {
+          ...instanceBody(pending.roomId, groupId),
+          expected_version: initialInstance.version ?? "",
+        });
         toastSuccess("Der Termin ist gespeichert.");
         reportSaved(op, { kind: "instance", instance: saved });
         if (!op.isCurrent()) return;
@@ -3143,7 +3214,7 @@ export function useEventForm({
         findPeriod(templateCalendarPeriodId)?.endDate ??
         findPeriod(form.calendarPeriodId)?.endDate;
       const body = scopedSeries
-        ? seriesBody(pending.roomId, Number(form.categoryId))
+        ? scopedSeriesBody(pending.roomId, template)
         : templateBodyFromForm(template, pending.roomId);
       const scopeFrom =
         typedScope === "following" ? initialInstance.date : berlinTodayISO();

@@ -2,43 +2,26 @@
 // Tests for the auth service methods that still have callers
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import type { BackendRole, BackendPermission } from "./auth-helpers";
-
-// Mock dependencies
-vi.mock("next-auth/react", () => ({
-  getSession: vi.fn(),
-}));
-
-vi.mock("./api-transport", () => ({
-  default: {
-    get: vi.fn(),
-    post: vi.fn(),
-    put: vi.fn(),
-    delete: vi.fn(),
-  },
-}));
-
-// Import after mocks
-import { getSession } from "next-auth/react";
-import api from "./api-transport";
+import type * as sharedContract from "./contract/shared.generated";
 import { authService } from "./auth-service";
+import { plainFetch } from "~/test/mocks/plain-session-fetch";
 
-const mockedGetSession = vi.mocked(getSession);
-const mockedApiGet = vi.mocked(api.get);
-const mockedApiPut = vi.mocked(api.put);
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 
 // Sample test data
-const sampleBackendRole: BackendRole = {
-  ID: 1,
-  Name: "admin",
-  Description: "Administrator role",
-  IsSystem: false,
-  CreatedAt: "2024-01-01T00:00:00Z",
-  UpdatedAt: "2024-01-01T00:00:00Z",
+// The shape the catalog proxy decodes (snake_case, string IDs).
+const sampleBackendRole: sharedContract.RoleResponse = {
+  id: "1",
+  name: "admin",
+  description: "Administrator role",
+  is_system: false,
+  school_portal: false,
+  created_at: "2024-01-01T00:00:00Z",
+  updated_at: "2024-01-01T00:00:00Z",
 };
 
-const sampleBackendPermission: BackendPermission = {
-  id: 1,
+const sampleBackendPermission: sharedContract.PermissionResponse = {
+  id: "1",
   name: "users.read",
   description: "Read users",
   resource: "users",
@@ -47,10 +30,28 @@ const sampleBackendPermission: BackendPermission = {
   updated_at: "2024-01-01T00:00:00Z",
 };
 
+const fetchMock = vi.fn();
+
+function respondWith(body: unknown, status = 200): void {
+  fetchMock.mockResolvedValueOnce({
+    ok: status >= 200 && status < 300,
+    status,
+    text: async () => (body === undefined ? "" : JSON.stringify(body)),
+  });
+}
+
+function sentUrl(): string {
+  return String(fetchMock.mock.calls[0]?.[0]);
+}
+
+function sentInit(): RequestInit {
+  return fetchMock.mock.calls[0]?.[1] as RequestInit;
+}
+
 describe("authService", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    vi.stubGlobal("window", undefined);
+    fetchMock.mockReset();
+    vi.stubGlobal("fetch", vi.fn(plainFetch(fetchMock)));
   });
 
   afterEach(() => {
@@ -59,91 +60,77 @@ describe("authService", () => {
 
   describe("Role management", () => {
     describe("getRoles", () => {
-      it("fetches roles in server context", async () => {
-        mockedApiGet.mockResolvedValueOnce({
-          data: { data: [sampleBackendRole] },
-        });
+      it("fetches roles", async () => {
+        respondWith({ data: [sampleBackendRole] });
 
         const result = await authService.getRoles();
 
         expect(result).toHaveLength(1);
         expect(result[0]?.name).toBe("admin");
+        expect(sentUrl()).toBe("/api/auth/roles");
       });
 
       it("fetches roles with name filter", async () => {
-        mockedApiGet.mockResolvedValueOnce({
-          data: { data: [sampleBackendRole] },
-        });
+        respondWith({ data: [sampleBackendRole] });
 
         await authService.getRoles({ name: "admin" });
 
-        expect(mockedApiGet).toHaveBeenCalledWith(
-          expect.stringContaining("name=admin"),
-          undefined,
-        );
+        expect(sentUrl()).toBe("/api/auth/roles?name=admin");
       });
     });
 
     describe("getRolePermissions", () => {
-      it("fetches role permissions in server context", async () => {
-        mockedApiGet.mockResolvedValueOnce({
-          data: { data: [sampleBackendPermission] },
+      it("fetches role permissions", async () => {
+        respondWith({
+          data: { permissions: [sampleBackendPermission], version: "v1" },
         });
 
         const result = await authService.getRolePermissions("1");
 
-        expect(result).toHaveLength(1);
-        expect(result[0]?.name).toBe("users.read");
-      });
-
-      it("handles double-nested response structure", async () => {
-        mockedApiGet.mockResolvedValueOnce({
-          data: { data: { data: [sampleBackendPermission] } },
-        });
-
-        const result = await authService.getRolePermissions("1");
-
-        expect(result).toHaveLength(1);
+        expect(result.permissions).toHaveLength(1);
+        expect(result.permissions[0]?.name).toBe("users.read");
+        expect(result.version).toBe("v1");
+        expect(sentUrl()).toBe("/api/auth/roles/1/permission-selection");
       });
     });
 
     describe("replaceRolePermissions", () => {
       it("replaces the permission set of a role with one PUT", async () => {
-        mockedApiPut.mockResolvedValueOnce({ data: {} });
+        respondWith({ data: { version: "v2" } });
 
-        await authService.replaceRolePermissions("1", ["2", "3"]);
+        await expect(
+          authService.replaceRolePermissions("1", ["2", "3"], "v1"),
+        ).resolves.toBe("v2");
 
-        expect(mockedApiPut).toHaveBeenCalledWith(
-          expect.stringContaining("/auth/roles/1/permissions"),
-          { permission_ids: ["2", "3"] },
-          undefined,
-        );
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(sentUrl()).toBe("/api/auth/roles/1/permission-selection");
+        expect(sentInit().method).toBe("PUT");
+        expect(JSON.parse(String(sentInit().body))).toEqual({
+          permission_ids: ["2", "3"],
+          expected_version: "v1",
+        });
       });
     });
   });
 
   describe("Permission management", () => {
     describe("getPermissions", () => {
-      it("fetches permissions in server context", async () => {
-        mockedApiGet.mockResolvedValueOnce({
-          data: { data: [sampleBackendPermission] },
-        });
+      it("fetches permissions", async () => {
+        respondWith({ data: [sampleBackendPermission] });
 
         const result = await authService.getPermissions();
 
         expect(result).toHaveLength(1);
+        expect(sentUrl()).toBe("/api/auth/permissions");
       });
 
       it("fetches permissions with filters", async () => {
-        mockedApiGet.mockResolvedValueOnce({
-          data: { data: [] },
-        });
+        respondWith({ data: [] });
 
         await authService.getPermissions({ resource: "users", action: "read" });
 
-        expect(mockedApiGet).toHaveBeenCalledWith(
-          expect.stringContaining("resource=users"),
-          undefined,
+        expect(sentUrl()).toBe(
+          "/api/auth/permissions?resource=users&action=read",
         );
       });
     });
@@ -152,51 +139,32 @@ describe("authService", () => {
   describe("Account management", () => {
     describe("Role assignment", () => {
       it("replaces the system role of an account with one PUT", async () => {
-        mockedApiPut.mockResolvedValueOnce({ data: {} });
+        respondWith(undefined, 204);
 
-        await authService.replaceAccountRole("1", "2");
+        await authService.replaceAccountRole("1", "2", "v1");
 
-        expect(mockedApiPut).toHaveBeenCalledWith(
-          expect.stringContaining("/auth/accounts/1/roles"),
-          { role_id: "2" },
-          undefined,
-        );
-      });
-
-      it("gets account roles", async () => {
-        mockedApiGet.mockResolvedValueOnce({
-          data: { data: [sampleBackendRole] },
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(sentUrl()).toBe("/api/auth/accounts/1/roles");
+        expect(sentInit().method).toBe("PUT");
+        expect(JSON.parse(String(sentInit().body))).toEqual({
+          role_id: "2",
+          expected_version: "v1",
         });
-
-        const result = await authService.getAccountRoles("1");
-
-        expect(result).toHaveLength(1);
       });
 
       // The route reads the session cookie; the browser holds no token (#5005).
-      it("gets account roles in browser context without a bearer token", async () => {
-        vi.stubGlobal("window", {});
-        mockedGetSession.mockResolvedValueOnce({
-          user: { id: "1" },
-          expires: "2099-01-01",
-        });
-        const fetchMock = vi.fn().mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          text: async () => JSON.stringify({ data: [sampleBackendRole] }),
-        });
-        vi.stubGlobal("fetch", fetchMock);
+      it("gets account roles without a bearer token", async () => {
+        respondWith({ data: { roles: [sampleBackendRole], version: "v1" } });
 
         const result = await authService.getAccountRoles("1");
 
-        expect(result[0]?.name).toBe("admin");
+        expect(result.roles[0]?.name).toBe("admin");
+        expect(result.version).toBe("v1");
         expect(fetchMock).toHaveBeenCalledWith(
-          "/api/auth/accounts/1/roles",
-          expect.objectContaining({
-            method: "GET",
-            headers: { "Content-Type": "application/json" },
-          }),
+          "/api/auth/accounts/1/role-selection",
+          expect.objectContaining({ method: "GET" }),
         );
+        expect(sentInit().headers).toBeUndefined();
       });
     });
   });

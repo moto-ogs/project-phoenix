@@ -95,7 +95,7 @@ if [[ "$*" == *quality.sh* && "\${MUTATE_SOURCE:-}" == 1 ]]; then echo changed >
   symlinkSync(process.execPath, join(root, '.devbox/nix/profile/default/bin/node'));
   write('.devbox/nix/profile/default/bin/go', '#!/bin/bash\nif [[ "$*" == *-json* ]]; then echo \'{"GOVERSION":"go1.27.0","GOWORK":"off"}\'; else echo go1.27.0; fi\n');
   for (const tool of ['gofmt', 'golangci-lint', 'govulncheck']) write(`.devbox/nix/profile/default/bin/${tool}`, '#!/bin/bash\nexit 0\n');
-  for (const file of ['check-agent-context.mjs', 'check-agent-context.test.mjs', 'pre-push.test.mjs', 'check-secrets.test.mjs']) write(`scripts/${file}`, '// fixture\n');
+  for (const file of ['check-agent-context.mjs', 'check-agent-context.test.mjs', 'check-du-form.mjs', 'check-du-form.test.mjs', 'pre-push.test.mjs', 'check-secrets.test.mjs']) write(`scripts/${file}`, '// fixture\n');
   write('scripts/generate-error-codes.mjs', "console.log(`generator ${process.argv.slice(2).join(' ')}`);\nprocess.exit(Number(process.env.FAIL_ERROR_CODES ?? 0));\n");
   write('scripts/generate-error-codes.test.mjs', '// fixture\n');
   write('.devbox/nix/profile/default/bin/pnpm', '#!/bin/bash\necho "pnpm $*"\n');
@@ -402,6 +402,23 @@ test('shared backend quality fails when an analyzer executable is missing', t =>
   });
   assert.equal(result.status, 127);
   assert.match(result.stderr, /go: command not found/);
+});
+
+test('an uncommitted lint configuration lints every backend package', t => {
+  const f = fixture(t);
+  // Keep both scripts out of the diff: either one, changed, forces the full
+  // lint by itself. The selector stub narrows the committed change.
+  f.write('.git/info/exclude', 'scripts/backend-affected-packages.sh\nscripts/check-backend-quality.sh\n');
+  copyFileSync(join(source, 'check-backend-quality.sh'), join(f.root, 'scripts/check-backend-quality.sh'));
+  f.write('.devbox/nix/profile/default/bin/golangci-lint', '#!/bin/bash\necho "lint $*"\n');
+  f.write('scripts/backend-affected-packages.sh', '#!/bin/bash\necho ./example\n');
+  f.commit('backend/example/example.go', 'package example\n');
+  f.write('backend/.golangci.yml', 'version: "2"\n');
+  const result = f.run('bash', ['scripts/check-backend-quality.sh', 'lint', 'base'], {
+    env: { ...f.env, PATH: `${join(f.root, '.devbox/nix/profile/default/bin')}:${process.env.PATH}` },
+  });
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  assert.match(result.stdout, /^lint run .* \.\/\.\.\.$/m);
 });
 
 test('successful backend checks survive a docs-only follow-up and CI-only analysis stays out of pre-push', t => {

@@ -56,7 +56,7 @@ func TestClosingDaysRouteGrowthQueryBudget(t *testing.T) {
 		require.Len(t, envelope.Data, n)
 		gotIDs := []int64{}
 		for i, day := range envelope.Data {
-			gotIDs = append(gotIDs, day.ID)
+			gotIDs = append(gotIDs, day.ID.Int64())
 			require.Equal(t, calendar.NewDate(2027, 1, 1).AddDays(i*3).String(), day.StartDate)
 			require.Equal(t, day.StartDate, day.EndDate)
 			require.Equal(t, fmt.Sprintf("Growth %d", i), day.Reason)

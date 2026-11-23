@@ -372,11 +372,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/communication/internal/application/Service.CountUnread",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/communication/internal/application/Service.GetAnnouncement",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -388,16 +383,6 @@
     {
       "decision": "0090",
       "id": "modules/communication/internal/application/Service.ListAnnouncements",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/communication/internal/application/Service.MarkDismissed",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/communication/internal/application/Service.MarkSeen",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
@@ -563,11 +548,6 @@
     {
       "decision": "0090",
       "id": "modules/communication/internal/application/parentMessaging[I, T, M, G].SetParentMessageCountScope",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0132",
-      "id": "modules/communication/internal/application/parentMessaging[I, T, M, G].StartParentMessageThread",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {

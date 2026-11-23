@@ -17,6 +17,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
 	schoolCalendarCompose "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/compose"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
@@ -27,16 +28,16 @@ func TestMovedNoticeOnlyApprovesItsOwnRanges(t *testing.T) {
 	t.Parallel()
 	w := newClosureWorld(t, "Träger genauer Umfang")
 	day := w.createClosingDay(t, "2030-07-08", "2030-07-08")
-	_, err := w.records.UpdateClosingDay(w.schoolCtx(), schoolcalendar.UpdateClosingDay{ID: day.ID, ClosingDayFields: schoolcalendar.ClosingDayFields{
+	_, err := w.records.UpdateClosingDay(w.schoolCtx(), schoolcalendar.UpdateClosingDay{ID: day.ID, ExpectedVersion: w.closingDayVersion(t, day.ID), ClosingDayFields: schoolcalendar.ClosingDayFields{
 		StartDate: "2030-07-12", EndDate: "2030-07-12", Reason: "Verschoben",
 	}})
 	require.NoError(t, err)
 	other := w.createClosingDay(t, "2030-07-09", "2030-07-09")
 	for _, notice := range w.schoolNotices(t) {
-		if notice.ClosingDayID != day.ID {
+		if notice.ClosingDayID != ident.ID(day.ID) {
 			continue
 		}
-		_, err := w.notices.NotifyFromSchool(w.ctx, w.school, 0, notice.ID, notice.Revision, notice.Token)
+		_, err := w.notices.NotifyFromSchool(w.ctx, w.school, 0, notice.ID.Int64(), notice.Revision, notice.Token)
 		require.NoError(t, err)
 	}
 	require.Len(t, w.mails(t), 2)
@@ -45,7 +46,7 @@ func TestMovedNoticeOnlyApprovesItsOwnRanges(t *testing.T) {
 	assert.Equal(t, []string{"Freitag, 12.07.2030"}, payload.Children[0].Weeks[0].ClosedDays)
 	var outstanding bool
 	for _, notice := range w.schoolNotices(t) {
-		if notice.ClosingDayID == other.ID && notice.Status == "suggested" {
+		if notice.ClosingDayID == ident.ID(other.ID) && notice.Status == "suggested" {
 			outstanding = true
 		}
 	}
@@ -75,7 +76,7 @@ func TestTransferredSchoolReplacesTheOldProposalOwner(t *testing.T) {
 	_, err := w.db.ExecContext(context.Background(), `UPDATE platform.schools SET organization_id = ? WHERE id = ?`, next.organization, w.school)
 	require.NoError(t, err)
 	bookHolidayWeek(t, w.db, next.organization, w.school, "neue.familie@example.org")
-	_, err = w.records.UpdateClosingDay(w.schoolCtx(), schoolcalendar.UpdateClosingDay{ID: day.ID, ClosingDayFields: schoolcalendar.ClosingDayFields{
+	_, err = w.records.UpdateClosingDay(w.schoolCtx(), schoolcalendar.UpdateClosingDay{ID: day.ID, ExpectedVersion: w.closingDayVersion(t, day.ID), ClosingDayFields: schoolcalendar.ClosingDayFields{
 		StartDate: "2030-07-09", EndDate: "2030-07-09", Reason: "Neuer Träger",
 	}})
 	require.NoError(t, err)
@@ -85,7 +86,7 @@ func TestTransferredSchoolReplacesTheOldProposalOwner(t *testing.T) {
 	pending, err := w.notices.PendingHolidayClosures(w.ctx, next.organization)
 	require.NoError(t, err)
 	require.Len(t, pending.Notices, 1)
-	_, err = w.notices.NotifyFromTraeger(w.ctx, w.organization, 0, before.ID, before.Revision, before.Token)
+	_, err = w.notices.NotifyFromTraeger(w.ctx, w.organization, 0, before.ID.Int64(), before.Revision, before.Token)
 	require.Error(t, err, "the previous organization cannot approve the renewed proposal")
 }
 
@@ -119,11 +120,11 @@ func TestRetryAlsoRecoversLegacyBlockingMail(t *testing.T) {
 	require.NoError(t, err)
 	w.createClosingDay(t, "2030-07-08", "2030-07-08")
 	notice := w.schoolNotices(t)[0]
-	_, err = w.notices.NotifyFromSchool(w.ctx, w.school, 0, notice.ID, notice.Revision, notice.Token)
+	_, err = w.notices.NotifyFromSchool(w.ctx, w.school, 0, notice.ID.Int64(), notice.Revision, notice.Token)
 	require.NoError(t, err)
 	failed := w.schoolNotices(t)[0]
 	require.Equal(t, "failed", failed.Status, "the blocking predecessor must be visible and recoverable")
-	_, err = w.notices.NotifyFromSchool(w.ctx, w.school, 0, failed.ID, failed.Revision, failed.Token)
+	_, err = w.notices.NotifyFromSchool(w.ctx, w.school, 0, failed.ID.Int64(), failed.Revision, failed.Token)
 	require.NoError(t, err)
 	var state string
 	require.NoError(t, w.db.NewRaw(`SELECT status FROM platform.email_outbox WHERE organization_id = ? AND idempotency_key = 'legacy-closure'`, w.organization).Scan(context.Background(), &state))
@@ -142,12 +143,12 @@ func TestSuppressionCancelledNoticeCanBeRetried(t *testing.T) {
 	w := newClosureWorldIn(t, "Träger Sperre aufgehoben", testpkg.SetupIsolatedTestDB(t))
 	w.createClosingDay(t, "2030-07-08", "2030-07-08")
 	notice := w.schoolNotices(t)[0]
-	_, err := w.notices.NotifyFromSchool(w.ctx, w.school, 0, notice.ID, notice.Revision, notice.Token)
+	_, err := w.notices.NotifyFromSchool(w.ctx, w.school, 0, notice.ID.Int64(), notice.Revision, notice.Token)
 	require.NoError(t, err)
 	_, err = w.db.ExecContext(context.Background(), `UPDATE platform.email_outbox SET status = 'cancelled', cancelled_at = NOW(), last_error = ? WHERE organization_id = ?`, deliveryContract.MailHeldByList, w.organization)
 	require.NoError(t, err)
 	require.NoError(t, w.notices.ProcessDue(w.ctx))
-	_, err = w.notices.NotifyFromSchool(w.ctx, w.school, 0, notice.ID, notice.Revision, notice.Token)
+	_, err = w.notices.NotifyFromSchool(w.ctx, w.school, 0, notice.ID.Int64(), notice.Revision, notice.Token)
 	require.NoError(t, err)
 	for _, mail := range w.mails(t) {
 		assert.Equal(t, "pending", mail.Status)
@@ -179,7 +180,7 @@ func TestBulkConfirmationGuardsAndBudget(t *testing.T) {
 	}
 	var confirmations []schoolcalendar.HolidayClosureConfirmation
 	for _, notice := range w.schoolNotices(t) {
-		confirmations = append(confirmations, schoolcalendar.HolidayClosureConfirmation{ProposalID: notice.ID, Revision: int64(notice.Revision), ImpactToken: notice.Token})
+		confirmations = append(confirmations, schoolcalendar.HolidayClosureConfirmation{ProposalID: notice.ID.Int64(), Revision: int64(notice.Revision), ImpactToken: notice.Token})
 	}
 	events := schoolCalendarCompose.NewHolidayClosureEvents(holidayTestToday)
 	actor := schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelTraeger, OrganizationID: w.organization}
@@ -222,17 +223,17 @@ func TestUnprocessedMoveKeepsTheLastToldRange(t *testing.T) {
 	w := newClosureWorld(t, "Träger zweimal verschoben vor Verarbeitung")
 	day := w.createClosingDay(t, "2030-07-08", "2030-07-08")
 	first := w.schoolNotices(t)[0]
-	_, err := w.notices.NotifyFromSchool(w.ctx, w.school, 0, first.ID, first.Revision, first.Token)
+	_, err := w.notices.NotifyFromSchool(w.ctx, w.school, 0, first.ID.Int64(), first.Revision, first.Token)
 	require.NoError(t, err)
 	move := func(date string) {
-		_, err := w.records.UpdateClosingDay(w.schoolCtx(), schoolcalendar.UpdateClosingDay{ID: day.ID, ClosingDayFields: schoolcalendar.ClosingDayFields{StartDate: date, EndDate: date, Reason: "Verschoben"}})
+		_, err := w.records.UpdateClosingDay(w.schoolCtx(), schoolcalendar.UpdateClosingDay{ID: day.ID, ExpectedVersion: w.closingDayVersion(t, day.ID), ClosingDayFields: schoolcalendar.ClosingDayFields{StartDate: date, EndDate: date, Reason: "Verschoben"}})
 		require.NoError(t, err)
 	}
 	move("2030-07-12")
 	var pending schoolcalendar.HolidayClosureConfirmation
 	for _, notice := range w.schoolNotices(t) {
 		if notice.Status == "suggested" {
-			pending = schoolcalendar.HolidayClosureConfirmation{ProposalID: notice.ID, Revision: int64(notice.Revision), ImpactToken: notice.Token}
+			pending = schoolcalendar.HolidayClosureConfirmation{ProposalID: notice.ID.Int64(), Revision: int64(notice.Revision), ImpactToken: notice.Token}
 		}
 	}
 	require.NoError(t, tenant.WithTenantTx(w.ctx, w.db, w.school, func(ctx context.Context, _ bun.Tx) error {
@@ -246,7 +247,7 @@ func TestUnprocessedMoveKeepsTheLastToldRange(t *testing.T) {
 		}
 		require.NotNil(t, notice.Previous)
 		assert.Equal(t, calendar.NewDate(2030, 7, 8), notice.Previous.StartDate, "the unprocessed Friday was never the told source range")
-		_, err = w.notices.NotifyFromSchool(w.ctx, w.school, 0, notice.ID, notice.Revision, notice.Token)
+		_, err = w.notices.NotifyFromSchool(w.ctx, w.school, 0, notice.ID.Int64(), notice.Revision, notice.Token)
 		require.NoError(t, err)
 	}
 	mails := w.mails(t)
@@ -273,7 +274,7 @@ func TestDeletingUnpreparedNewClosureWithdrawsItsCommands(t *testing.T) {
 						continue
 					}
 					require.NoError(t, tenant.WithTenantTx(w.ctx, w.db, w.school, func(ctx context.Context, _ bun.Tx) error {
-						_, err := events.ConfirmHolidayClosureNotice(ctx, notice.ID, int64(notice.Revision), schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, ImpactToken: notice.Token})
+						_, err := events.ConfirmHolidayClosureNotice(ctx, notice.ID.Int64(), int64(notice.Revision), schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, ImpactToken: notice.Token})
 						return err
 					}))
 				}
@@ -289,7 +290,7 @@ func TestDeletingUnpreparedNewClosureWithdrawsItsCommands(t *testing.T) {
 				}))
 			}
 			if state == "edited" || state == "confirmed_twice" {
-				_, err := w.records.UpdateClosingDay(w.schoolCtx(), schoolcalendar.UpdateClosingDay{ID: day.ID, ClosingDayFields: schoolcalendar.ClosingDayFields{StartDate: "2030-07-12", EndDate: "2030-07-12", Reason: "Verschoben"}})
+				_, err := w.records.UpdateClosingDay(w.schoolCtx(), schoolcalendar.UpdateClosingDay{ID: day.ID, ExpectedVersion: w.closingDayVersion(t, day.ID), ClosingDayFields: schoolcalendar.ClosingDayFields{StartDate: "2030-07-12", EndDate: "2030-07-12", Reason: "Verschoben"}})
 				require.NoError(t, err)
 				if state == "confirmed_twice" {
 					confirm()
@@ -321,25 +322,25 @@ func TestIndirectRetryReconcilesTheFailedPredecessor(t *testing.T) {
 	w := newClosureWorldIn(t, "Träger Vorgängerstatus abgleichen", testpkg.SetupIsolatedTestDB(t))
 	w.createClosingDay(t, "2030-07-08", "2030-07-08")
 	first := w.schoolNotices(t)[0]
-	_, err := w.notices.NotifyFromSchool(w.ctx, w.school, 0, first.ID, first.Revision, first.Token)
+	_, err := w.notices.NotifyFromSchool(w.ctx, w.school, 0, first.ID.Int64(), first.Revision, first.Token)
 	require.NoError(t, err)
 	_, err = w.db.ExecContext(w.ctx, `UPDATE platform.email_outbox SET status='dead_letter', dead_letter_at=NOW(), last_error='mailbox unavailable' WHERE organization_id=?`, w.organization)
 	require.NoError(t, err)
 	require.NoError(t, w.notices.ProcessDue(w.ctx))
 	secondDay := w.createClosingDay(t, "2030-07-12", "2030-07-12")
 	for _, notice := range w.schoolNotices(t) {
-		if notice.ClosingDayID != secondDay.ID {
+		if notice.ClosingDayID != ident.ID(secondDay.ID) {
 			continue
 		}
-		_, err = w.notices.NotifyFromSchool(w.ctx, w.school, 0, notice.ID, notice.Revision, notice.Token)
+		_, err = w.notices.NotifyFromSchool(w.ctx, w.school, 0, notice.ID.Int64(), notice.Revision, notice.Token)
 		require.NoError(t, err)
 	}
 	assert.Equal(t, []string{"failed", "failed"}, w.events(t))
 	for _, notice := range w.schoolNotices(t) {
-		if notice.ClosingDayID != secondDay.ID {
+		if notice.ClosingDayID != ident.ID(secondDay.ID) {
 			continue
 		}
-		_, err = w.notices.NotifyFromSchool(w.ctx, w.school, 0, notice.ID, notice.Revision, notice.Token)
+		_, err = w.notices.NotifyFromSchool(w.ctx, w.school, 0, notice.ID.Int64(), notice.Revision, notice.Token)
 		require.NoError(t, err)
 	}
 	assert.Equal(t, []string{"prepared", "prepared"}, w.events(t), "indirectly retried mail must clear its predecessor's error")
@@ -384,7 +385,7 @@ func TestEditedNoticeReplacesAnOutstandingRenewal(t *testing.T) {
 			first := w.schoolNotices(t)[0]
 			events := schoolCalendarCompose.NewHolidayClosureEvents(holidayTestToday)
 			require.NoError(t, tenant.WithTenantTx(w.ctx, w.db, w.school, func(ctx context.Context, _ bun.Tx) error {
-				_, err := events.ConfirmHolidayClosureNotice(ctx, first.ID, int64(first.Revision), schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, ImpactToken: first.Token})
+				_, err := events.ConfirmHolidayClosureNotice(ctx, first.ID.Int64(), int64(first.Revision), schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, ImpactToken: first.Token})
 				return err
 			}))
 			// An unrelated calendar revision makes the confirmed command await approval.
@@ -419,7 +420,7 @@ func TestEditedNoticeReplacesAnOutstandingRenewal(t *testing.T) {
 				assert.Empty(t, w.mails(t))
 				return
 			}
-			_, err := w.records.UpdateClosingDay(w.schoolCtx(), schoolcalendar.UpdateClosingDay{ID: day.ID, ClosingDayFields: schoolcalendar.ClosingDayFields{StartDate: "2030-07-08", EndDate: "2030-07-12", Reason: "Verschoben"}})
+			_, err := w.records.UpdateClosingDay(w.schoolCtx(), schoolcalendar.UpdateClosingDay{ID: day.ID, ExpectedVersion: w.closingDayVersion(t, day.ID), ClosingDayFields: schoolcalendar.ClosingDayFields{StartDate: "2030-07-08", EndDate: "2030-07-12", Reason: "Verschoben"}})
 			require.NoError(t, err)
 			// Also recover proposals saved before explicit predecessor linking.
 			_, err = w.db.ExecContext(w.ctx, `UPDATE calendar.holiday_closure_proposals SET supersedes_event_id=NULL WHERE tenant_id=? AND state='open'`, w.school)
@@ -428,7 +429,7 @@ func TestEditedNoticeReplacesAnOutstandingRenewal(t *testing.T) {
 			require.Len(t, notices, 1, "the new source proposal replaces the old renewal in both portals")
 			require.NotEqual(t, stale.ID, notices[0].ID)
 			err = tenant.WithTenantTx(w.ctx, w.db, w.school, func(ctx context.Context, _ bun.Tx) error {
-				_, err := events.ConfirmHolidayClosureNotice(ctx, stale.ID, int64(stale.Revision), schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, ImpactToken: stale.Token})
+				_, err := events.ConfirmHolidayClosureNotice(ctx, stale.ID.Int64(), int64(stale.Revision), schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, ImpactToken: stale.Token})
 				return err
 			})
 			require.ErrorIs(t, err, schoolcalendar.ErrHolidayClosureNoticeChanged, "a stale renewal must not reach a uniqueness error")
@@ -439,22 +440,22 @@ func TestEditedNoticeReplacesAnOutstandingRenewal(t *testing.T) {
 				_, err = w.notices.NotifyPendingHolidayClosures(w.ctx, w.organization, 0, pending.Token)
 			} else {
 				n := notices[0]
-				_, err = w.notices.NotifyFromSchool(w.ctx, w.school, 0, n.ID, n.Revision, n.Token)
+				_, err = w.notices.NotifyFromSchool(w.ctx, w.school, 0, n.ID.Int64(), n.Revision, n.Token)
 			}
 			require.NoError(t, err)
 			require.Len(t, w.mails(t), 2)
 			assert.Contains(t, string(w.mails(t)[0].Payload), "12.07.2030")
 			err = tenant.WithTenantTx(w.ctx, w.db, w.school, func(ctx context.Context, _ bun.Tx) error {
-				_, err := events.ConfirmHolidayClosureNotice(ctx, stale.ID, int64(stale.Revision), schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, ImpactToken: stale.Token})
+				_, err := events.ConfirmHolidayClosureNotice(ctx, stale.ID.Int64(), int64(stale.Revision), schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, ImpactToken: stale.Token})
 				return err
 			})
 			require.ErrorIs(t, err, schoolcalendar.ErrHolidayClosureNoticeChanged, "the old command also stays superseded after the newer proposal is confirmed")
 			// A later edit must use the latest prepared source, not the old renewal.
-			_, err = w.records.UpdateClosingDay(w.schoolCtx(), schoolcalendar.UpdateClosingDay{ID: day.ID, ClosingDayFields: schoolcalendar.ClosingDayFields{StartDate: "2030-07-10", EndDate: "2030-07-10", Reason: "Verkürzt"}})
+			_, err = w.records.UpdateClosingDay(w.schoolCtx(), schoolcalendar.UpdateClosingDay{ID: day.ID, ExpectedVersion: w.closingDayVersion(t, day.ID), ClosingDayFields: schoolcalendar.ClosingDayFields{StartDate: "2030-07-10", EndDate: "2030-07-10", Reason: "Verkürzt"}})
 			require.NoError(t, err)
 			var corrections []notification.ClosureNotice
 			for _, notice := range w.schoolNotices(t) {
-				if notice.ClosingDayID == day.ID && notice.Status == "suggested" {
+				if notice.ClosingDayID == ident.ID(day.ID) && notice.Status == "suggested" {
 					corrections = append(corrections, notice)
 				}
 			}
@@ -462,7 +463,7 @@ func TestEditedNoticeReplacesAnOutstandingRenewal(t *testing.T) {
 			correction := corrections[0]
 			require.NotNil(t, correction.Previous)
 			assert.Equal(t, calendar.NewDate(2030, 7, 12), correction.Previous.EndDate)
-			_, err = w.notices.NotifyFromSchool(w.ctx, w.school, 0, correction.ID, correction.Revision, correction.Token)
+			_, err = w.notices.NotifyFromSchool(w.ctx, w.school, 0, correction.ID.Int64(), correction.Revision, correction.Token)
 			require.NoError(t, err)
 			require.Len(t, w.mails(t), 4)
 			assert.Contains(t, string(w.mails(t)[1].Payload), "reopened_children")
@@ -475,10 +476,10 @@ func TestPreparationFailureKeepsTheLastToldSourceRange(t *testing.T) {
 	w := newClosureWorldIn(t, "Träger Vorbereitung fehlgeschlagen", testpkg.SetupIsolatedTestDB(t))
 	day := w.createClosingDay(t, "2030-07-08", "2030-07-08")
 	n := w.schoolNotices(t)[0]
-	_, err := w.notices.NotifyFromSchool(w.ctx, w.school, 0, n.ID, n.Revision, n.Token)
+	_, err := w.notices.NotifyFromSchool(w.ctx, w.school, 0, n.ID.Int64(), n.Revision, n.Token)
 	require.NoError(t, err)
 	move := func(date string) {
-		_, err := w.records.UpdateClosingDay(w.schoolCtx(), schoolcalendar.UpdateClosingDay{ID: day.ID, ClosingDayFields: schoolcalendar.ClosingDayFields{StartDate: date, EndDate: date, Reason: "Verschoben"}})
+		_, err := w.records.UpdateClosingDay(w.schoolCtx(), schoolcalendar.UpdateClosingDay{ID: day.ID, ExpectedVersion: w.closingDayVersion(t, day.ID), ClosingDayFields: schoolcalendar.ClosingDayFields{StartDate: date, EndDate: date, Reason: "Verschoben"}})
 		require.NoError(t, err)
 	}
 	move("2030-07-12")
@@ -488,7 +489,7 @@ func TestPreparationFailureKeepsTheLastToldSourceRange(t *testing.T) {
 			continue
 		}
 		require.NoError(t, tenant.WithTenantTx(w.ctx, w.db, w.school, func(ctx context.Context, _ bun.Tx) error {
-			_, err := events.ConfirmHolidayClosureNotice(ctx, notice.ID, int64(notice.Revision), schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, ImpactToken: notice.Token})
+			_, err := events.ConfirmHolidayClosureNotice(ctx, notice.ID.Int64(), int64(notice.Revision), schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, ImpactToken: notice.Token})
 			return err
 		}))
 	}
@@ -521,7 +522,7 @@ func TestPreparationFailureKeepsTheLastToldSourceRange(t *testing.T) {
 	}
 	require.NotNil(t, latest.Previous)
 	assert.Equal(t, calendar.NewDate(2030, 7, 8), latest.Previous.StartDate)
-	_, err = w.notices.NotifyFromSchool(w.ctx, w.school, 0, latest.ID, latest.Revision, latest.Token)
+	_, err = w.notices.NotifyFromSchool(w.ctx, w.school, 0, latest.ID.Int64(), latest.Revision, latest.Token)
 	require.NoError(t, err)
 	require.Len(t, w.mails(t), 4)
 	assert.Contains(t, string(w.mails(t)[1].Payload), "Montag, 08.07.2030")
@@ -535,7 +536,7 @@ func TestErasedRegistrationsResolveWaitingCommands(t *testing.T) {
 			w := newClosureWorldIn(t, "Träger gelöschte Anmeldungen", testpkg.SetupIsolatedTestDB(t))
 			w.createClosingDay(t, "2030-07-08", "2030-07-08")
 			n := w.schoolNotices(t)[0]
-			_, err := w.notices.NotifyFromSchool(w.ctx, w.school, 0, n.ID, n.Revision, n.Token)
+			_, err := w.notices.NotifyFromSchool(w.ctx, w.school, 0, n.ID.Int64(), n.Revision, n.Token)
 			require.NoError(t, err)
 			_, err = w.db.ExecContext(w.ctx, `UPDATE calendar.holiday_closure_events SET state=? WHERE organization_id=?`, state, w.organization)
 			require.NoError(t, err)
@@ -573,7 +574,7 @@ func TestAuthorizationHistoryCommitsWithTheCommandAndAnonymizesActors(t *testing
 	n := w.schoolNotices(t)[0]
 	events := schoolCalendarCompose.NewHolidayClosureEvents(holidayTestToday)
 	err := tenant.WithTenantTx(w.ctx, w.db, w.school, func(ctx context.Context, _ bun.Tx) error {
-		_, err := events.ConfirmHolidayClosureNotice(ctx, n.ID, int64(n.Revision), schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, AccountID: first.ID, ImpactToken: n.Token})
+		_, err := events.ConfirmHolidayClosureNotice(ctx, n.ID.Int64(), int64(n.Revision), schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, AccountID: first.ID, ImpactToken: n.Token})
 		if err != nil {
 			return err
 		}
@@ -584,12 +585,12 @@ func TestAuthorizationHistoryCommitsWithTheCommandAndAnonymizesActors(t *testing
 	require.NoError(t, w.db.NewRaw(`SELECT count(*) FROM calendar.holiday_closure_authorizations WHERE tenant_id=?`, w.school).Scan(w.ctx, &rolledBack))
 	assert.Zero(t, rolledBack)
 	assert.Empty(t, w.events(t))
-	_, err = w.notices.NotifyFromSchool(w.ctx, w.school, first.ID, n.ID, n.Revision, n.Token)
+	_, err = w.notices.NotifyFromSchool(w.ctx, w.school, first.ID, n.ID.Int64(), n.Revision, n.Token)
 	require.NoError(t, err)
 	_, err = w.db.ExecContext(w.ctx, `UPDATE platform.email_outbox SET status='dead_letter', dead_letter_at=NOW(), last_error='mailbox unavailable' WHERE organization_id=?`, w.organization)
 	require.NoError(t, err)
 	require.NoError(t, w.notices.ProcessDue(w.ctx))
-	_, err = w.notices.NotifyFromTraeger(w.ctx, w.organization, retry.ID, n.ID, n.Revision, n.Token)
+	_, err = w.notices.NotifyFromTraeger(w.ctx, w.organization, retry.ID, n.ID.Int64(), n.Revision, n.Token)
 	require.NoError(t, err)
 	var accounts []int64
 	require.NoError(t, w.db.NewRaw(`SELECT account_id FROM calendar.holiday_closure_authorizations WHERE tenant_id=? ORDER BY id`, w.school).Scan(w.ctx, &accounts))
@@ -601,7 +602,7 @@ func TestAuthorizationHistoryCommitsWithTheCommandAndAnonymizesActors(t *testing
 	_, err = w.db.ExecContext(w.ctx, `UPDATE calendar.holiday_closure_events SET state='needs_confirmation' WHERE organization_id=?`, w.organization)
 	require.NoError(t, err)
 	require.NoError(t, tenant.WithTenantTx(w.ctx, w.db, w.school, func(ctx context.Context, _ bun.Tx) error {
-		_, err := events.ConfirmHolidayClosureNotice(ctx, n.ID, int64(n.Revision), schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, AccountID: first.ID, ImpactToken: n.Token})
+		_, err := events.ConfirmHolidayClosureNotice(ctx, n.ID.Int64(), int64(n.Revision), schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, AccountID: first.ID, ImpactToken: n.Token})
 		return err
 	}))
 	require.NoError(t, w.db.NewRaw(`SELECT account_id FROM calendar.holiday_closure_authorizations WHERE tenant_id=? ORDER BY id`, w.school).Scan(w.ctx, &accounts))
@@ -670,7 +671,7 @@ func TestTraegerClosureChangesExcludeTransferredHistoricalSchools(t *testing.T) 
 	_, err := w.db.ExecContext(w.ctx, `UPDATE platform.schools SET organization_id=? WHERE id=?`, next.ID, transferred)
 	require.NoError(t, err)
 	day := calendar.Date("2030-07-08")
-	previous := &enrollment.HolidayClosureSpan{SchoolIDs: []int64{w.school, transferred}, StartsOn: day, EndsOn: day}
+	previous := &enrollment.HolidayClosureSpan{SchoolIDs: []ident.ID{ident.ID(w.school), ident.ID(transferred)}, StartsOn: day, EndsOn: day}
 	for _, deleted := range []bool{false, true} {
 		require.NoError(t, testpkg.WithinTraeger(w.ctx, w.organization, func(ctx context.Context) error {
 			closure := enrollment.HolidayClosure{SchoolIDs: []int64{w.school}, StartsOn: day, EndsOn: day, Previous: previous, Deleted: deleted}

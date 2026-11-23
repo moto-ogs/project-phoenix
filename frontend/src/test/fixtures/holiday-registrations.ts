@@ -7,7 +7,7 @@ import type {
   HolidayRegistrationList,
 } from "~/lib/traeger-holiday-registrations-api";
 import type { HolidayContribution } from "~/lib/traeger-contributions-api";
-import type { BackendHolidayRegistrationEntries } from "~/lib/parent-holiday-registration-entries";
+import type { HolidayRegistrationEntriesResponse } from "~/lib/contract/parent-me.generated";
 import { HOLIDAY_CONSENT_TEXTS } from "./holiday-consent-texts";
 
 export const HOLIDAY_SCHOOLS: TraegerSchool[] = [
@@ -27,6 +27,7 @@ export const HOLIDAY_PERIOD: HolidayPeriod = {
   publishedAt: "2026-08-20T10:00:00Z",
   publicToken: "link",
   registrationCount: 2,
+  version: "period-read",
   weeks: [
     {
       id: "51",
@@ -70,6 +71,7 @@ export const HOLIDAY_PERIOD: HolidayPeriod = {
 
 export const HOLIDAY_REGISTRATION: HolidayRegistrationDetail = {
   id: "7",
+  version: "registration-read",
   status: "received",
   frozen: false,
   submittedAt: "2026-09-03T08:00:00Z",
@@ -248,11 +250,11 @@ export const HOLIDAY_REGISTRATION_HEALTH: HolidayRegistrationHealthDetail = {
  * (#6673), newest first: one still waiting with a full week, one confirmed,
  * one cancelled.
  */
-export const PARENT_HOLIDAY_REGISTRATION_ENTRIES: BackendHolidayRegistrationEntries =
+export const PARENT_HOLIDAY_REGISTRATION_ENTRIES: HolidayRegistrationEntriesResponse =
   {
     registrations: [
       {
-        id: 12,
+        id: "12",
         traeger_name: "Träger Bissendorf",
         period_name: "Weihnachtsferien 2026/27",
         first_day: "2027-01-04",
@@ -268,13 +270,14 @@ export const PARENT_HOLIDAY_REGISTRATION_ENTRIES: BackendHolidayRegistrationEntr
                 last_day: "2027-01-08",
                 time_model_name: "bis 16 Uhr",
                 placement: "waitlisted",
+                lunch: false,
               },
             ],
           },
         ],
       },
       {
-        id: 9,
+        id: "9",
         traeger_name: "Träger Bissendorf",
         period_name: "Herbstferien 2026",
         first_day: "2026-10-12",
@@ -290,6 +293,7 @@ export const PARENT_HOLIDAY_REGISTRATION_ENTRIES: BackendHolidayRegistrationEntr
                 last_day: "2026-10-16",
                 time_model_name: "bis 13 Uhr",
                 placement: "placed",
+                lunch: false,
               },
             ],
           },
@@ -301,13 +305,14 @@ export const PARENT_HOLIDAY_REGISTRATION_ENTRIES: BackendHolidayRegistrationEntr
                 last_day: "2026-10-23",
                 time_model_name: "bis 16 Uhr",
                 placement: "placed",
+                lunch: false,
               },
             ],
           },
         ],
       },
       {
-        id: 4,
+        id: "4",
         traeger_name: "Träger Melle",
         period_name: "Sommerferien 2026",
         first_day: "2026-07-20",
@@ -323,6 +328,7 @@ export const PARENT_HOLIDAY_REGISTRATION_ENTRIES: BackendHolidayRegistrationEntr
                 last_day: "2026-07-24",
                 time_model_name: "bis 16 Uhr",
                 placement: "waitlisted",
+                lunch: false,
               },
             ],
           },

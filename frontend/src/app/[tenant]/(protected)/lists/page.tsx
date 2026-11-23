@@ -1,5 +1,6 @@
 "use client";
 
+import type * as timetableContract from "~/lib/contract/timetable.generated";
 import { ApiError } from "~/lib/api-error";
 import {
   useCallback,
@@ -72,16 +73,19 @@ import {
   type SlotListFormat,
   type SlotListGroupBy,
   type SlotListKind,
-  type SlotListOptionsResult,
   type SlotListPickupCohort,
-  type SlotListResult,
-  type SlotListRow,
   type SlotListSource,
   type SlotListTarget,
+  type SlotListOptionsResult,
+  type SlotListResult,
 } from "~/lib/slot-lists-api";
 import { IconTile } from "~/components/ui/icon-tile";
 import { PlanLegend } from "~/components/ui/planning/plan-legend";
 import { StatusColorBadge } from "~/components/ui/status-color-badge";
+
+// Info-Knopf am Seitentitel (#7578): wofür die Seite da ist.
+const LISTS_INFO =
+  "Hier stellst du eine Liste der Kinder für einen Tag zusammen, zum Beispiel zum Ausdrucken. Wähle oben das Datum und unter „Quelle“ die Art der Liste. Drucken und Herunterladen findest du im Menü mit den drei Punkten.";
 
 const logger = createLogger({ component: "SlotListsPage" });
 
@@ -248,7 +252,10 @@ interface InitialListState {
   filterLinkInvalid: boolean;
 }
 
-function statusColor(row: SlotListRow, source: SlotListSource): string {
+function statusColor(
+  row: timetableContract.SlotListRow,
+  source: SlotListSource,
+): string {
   if (source === "planned") return LOCATION_COLORS.OTHER_ROOM;
   if (source === "actual") return LOCATION_COLORS.GROUP_ROOM;
   if (row.unplanned) return LOCATION_COLORS.SCHOOLYARD;
@@ -334,7 +341,7 @@ function CounterLegend({
 function SlotRowStatusBadge({
   row,
   source,
-}: Readonly<{ row: SlotListRow; source: SlotListSource }>) {
+}: Readonly<{ row: timetableContract.SlotListRow; source: SlotListSource }>) {
   return (
     <StatusColorBadge
       label={row.status_label}
@@ -987,7 +994,7 @@ export default function SlotListsPage() {
 
   const pickupOptionByCohort = useMemo(() => {
     const map = new Map<
-      SlotListPickupCohort,
+      string,
       SlotListOptionsResult["pickup_cohorts"][number]
     >();
     for (const option of listOptions?.pickup_cohorts ?? []) {
@@ -1746,7 +1753,7 @@ export default function SlotListsPage() {
   // arrive pre-sorted by group, so Map insertion order keeps sections intact.
   const sections = useMemo(() => {
     const rows = result?.rows ?? [];
-    const map = new Map<string, SlotListRow[]>();
+    const map = new Map<string, timetableContract.SlotListRow[]>();
     for (const row of rows) {
       const key = row.group_title ?? "";
       const bucket = map.get(key) ?? [];
@@ -1759,8 +1766,10 @@ export default function SlotListsPage() {
     }));
   }, [result]);
 
-  const columns = useMemo<DataTableColumn<SlotListRow>[]>(() => {
-    const cols: DataTableColumn<SlotListRow>[] = [
+  const columns = useMemo<
+    DataTableColumn<timetableContract.SlotListRow>[]
+  >(() => {
+    const cols: DataTableColumn<timetableContract.SlotListRow>[] = [
       {
         key: "name",
         header: "Name",
@@ -1838,6 +1847,7 @@ export default function SlotListsPage() {
     return (
       <PlanningDisabledState
         pageTitle="Tageslisten"
+        info={LISTS_INFO}
         heading="Tageslisten sind deaktiviert"
         description="Tageslisten gehören zum Betreuungsplan, der für diese Schule ausgeschaltet ist. Er kann in den Einstellungen unter „Betrieb“ wieder aktiviert werden."
         testId="slot-lists-disabled-state"
@@ -1880,6 +1890,7 @@ export default function SlotListsPage() {
     "";
   return (
     <TenantPage
+      info={LISTS_INFO}
       title="Tageslisten"
       // Erreichbar über Datenverwaltung → Exporte, kein eigener Eintrag in
       // der Seitenleiste.

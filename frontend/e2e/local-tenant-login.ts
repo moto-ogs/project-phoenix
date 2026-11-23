@@ -277,9 +277,8 @@ async function loginThroughUI(
   ]);
   if (!response.ok())
     throw new Error(`Test-Login fehlgeschlagen (${response.status()}).`);
-  const result = (await response.json()) as {
-    status?: string;
-    trusted_device_enabled?: boolean;
+  const { data: result } = (await response.json()) as {
+    data: { status?: string; trusted_device_enabled?: boolean };
   };
   const enrollment = result.status === "mfa_enrollment_required";
   if (enrollment) {

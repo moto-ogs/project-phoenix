@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/portalauth"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The second factor of the Träger-Portal (ADR 0084, #4651). The e-mailed code
@@ -67,26 +68,26 @@ var (
 	errDevicesNotComposed   = errors.New("the Träger remembered devices are not composed")
 )
 
-// MFAVerifyRequest is the body of POST /traeger/auth/mfa/verify and
+// TraegerMFAVerifyRequest is the body of POST /traeger/auth/mfa/verify and
 // /traeger/auth/mfa/enroll/confirm. OrganizationID is the Träger the login
 // answered with; zero lets the backend take the only Träger of the account.
 // RememberDevice asks to remember the browser at that Träger (#6955); the
 // enrollment confirm ignores it.
-type MFAVerifyRequest struct {
-	ChallengeToken string `json:"challenge_token"`
-	Code           string `json:"code"`
-	OrganizationID int64  `json:"organization_id,omitempty"`
-	RememberDevice bool   `json:"remember_device,omitempty"`
+type TraegerMFAVerifyRequest struct {
+	ChallengeToken string   `json:"challenge_token"`
+	Code           string   `json:"code"`
+	OrganizationID ident.ID `json:"organization_id,omitempty"`
+	RememberDevice bool     `json:"remember_device,omitempty"`
 }
 
 // Bind validates the request like the other portals' verify body.
-func (req *MFAVerifyRequest) Bind(r *http.Request) error {
+func (req *TraegerMFAVerifyRequest) Bind(r *http.Request) error {
 	shared := common.MFAVerifyRequest{ChallengeToken: req.ChallengeToken, Code: req.Code}
 	if err := shared.Bind(r); err != nil {
 		return err
 	}
 	req.ChallengeToken, req.Code = shared.ChallengeToken, shared.Code
-	return validation.ValidateStruct(req, validation.Field(&req.OrganizationID, validation.Min(int64(0))))
+	return validation.ValidateStruct(req, validation.Field(&req.OrganizationID, validation.Min(ident.ID(0))))
 }
 
 // mfaVerify exchanges an org-scope challenge and its code for a Träger
@@ -96,7 +97,7 @@ func (rs *Resource) mfaVerify(w http.ResponseWriter, r *http.Request) {
 	if !rs.requireMFA(w, r) {
 		return
 	}
-	req := &MFAVerifyRequest{}
+	req := &TraegerMFAVerifyRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
@@ -106,7 +107,7 @@ func (rs *Resource) mfaVerify(w http.ResponseWriter, r *http.Request) {
 		portalauth.Render(w, r, err, portalauth.MFARules)
 		return
 	}
-	rs.completeTraegerExchange(w, r, verified, req.OrganizationID, req.RememberDevice)
+	rs.completeTraegerExchange(w, r, verified, req.OrganizationID.Int64(), req.RememberDevice)
 }
 
 // mfaResend mails a new code for the challenge and answers with the renewed
@@ -125,7 +126,7 @@ func (rs *Resource) mfaResend(w http.ResponseWriter, r *http.Request) {
 		portalauth.Render(w, r, err, portalauth.MFARules)
 		return
 	}
-	render.JSON(w, r, common.MFAResendResponse{ChallengeToken: renewed})
+	common.RenderJSON(w, r, common.MFAResendResponse{ChallengeToken: renewed})
 }
 
 // mfaEnrollStart mails the code that sets up the second factor.
@@ -144,7 +145,7 @@ func (rs *Resource) mfaEnrollStart(w http.ResponseWriter, r *http.Request) {
 		portalauth.Render(w, r, err, portalauth.MFARules)
 		return
 	}
-	render.JSON(w, r, portalauth.EnrollStartResponse{ChallengeToken: challengeToken})
+	common.RenderJSON(w, r, portalauth.EnrollStartResponse{ChallengeToken: challengeToken})
 }
 
 // mfaEnrollConfirm redeems the enrollment code, records the factor and mints
@@ -161,7 +162,7 @@ func (rs *Resource) mfaEnrollConfirm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	accountID := claims.AccountID
-	req := &MFAVerifyRequest{}
+	req := &TraegerMFAVerifyRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
@@ -178,7 +179,7 @@ func (rs *Resource) mfaEnrollConfirm(w http.ResponseWriter, r *http.Request) {
 	}
 	// Setting the factor up remembers no device: the frontend offers the
 	// choice only at the code step of a sign-in.
-	rs.completeTraegerExchange(w, r, verified, req.OrganizationID, false)
+	rs.completeTraegerExchange(w, r, verified, req.OrganizationID.Int64(), false)
 }
 
 // completeTraegerExchange mints the Träger session once the second factor is
@@ -216,7 +217,7 @@ func (rs *Resource) completeTraegerExchange(w http.ResponseWriter, r *http.Reque
 		portalauth.Render(w, r, err, portalauth.ExchangeRules, portalauth.LoginRules)
 		return
 	}
-	render.JSON(w, r, tokens)
+	common.RenderJSON(w, r, tokens)
 }
 
 // listTrustedDevices answers the person's remembered devices at the Träger
@@ -226,7 +227,7 @@ func (rs *Resource) listTrustedDevices(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	portalauth.ListTrustedDevices(w, r, func(ctx context.Context) ([]identityaccess.AccountTrustedDevice, error) {
+	portalauth.RespondTrustedDevices(w, r, func(ctx context.Context) ([]identityaccess.AccountTrustedDevice, error) {
 		return rs.mfa.ListTrustedDevices(ctx, actor.AccountID, actor.OrganizationID)
 	}, portalauth.RefuseMFA)
 }

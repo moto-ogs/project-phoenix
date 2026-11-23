@@ -140,7 +140,6 @@ func (rs *Resource) Router() chi.Router {
 		r.Post("/checkin", checkinHandler)
 		r.Post("/pickup-query", checkinHandler)
 		r.Post("/ping", checkinHandler)
-		r.Get("/status", checkinHandler)
 
 		// Destination booking into a released room, chosen at the device
 		// the child leaves (#3067).
@@ -167,7 +166,7 @@ func (rs *Resource) Router() chi.Router {
 		attendanceResource := rs.Runtime.Attendance(rs.DeviceScan, rs.getLogger().With(slog.String("sub", "attendance")))
 		r.Mount("/attendance", attendanceResource.Router())
 
-		// Mount sessions sub-router (handles activity session management and timeout)
+		// Mount sessions sub-router (handles activity session management)
 		sessionsResource := rs.Runtime.Session(rs.SessionLifecycle, rs.SessionEnd)
 		r.Mount("/session", sessionsResource.Router())
 

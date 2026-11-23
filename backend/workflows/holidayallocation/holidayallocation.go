@@ -37,7 +37,7 @@ type Periods interface {
 // Places are Enrollment's rebooking and capacity commands with their guards.
 // Both report the bookings that moved up.
 type Places interface {
-	RebookHolidayChild(ctx context.Context, reviewer enrollment.HolidayReviewer, periodID, registrationID, childID int64, bookings []enrollment.HolidayBookingInput) (enrollment.HolidayRegistrationDetail, error)
+	RebookHolidayChild(ctx context.Context, reviewer enrollment.HolidayReviewer, periodID, registrationID, childID int64, expectedVersion string, bookings []enrollment.HolidayBookingInput) (enrollment.HolidayRegistrationDetail, error)
 	SetHolidayWeekCapacity(ctx context.Context, reviewer enrollment.HolidayReviewer, periodID, weekID int64, capacity *int) (enrollment.HolidayCapacityChange, error)
 }
 
@@ -76,11 +76,11 @@ func New(ports Ports) *Workflow {
 // RebookHolidayChild replaces the bookings of one child. Enrollment locks the
 // registration and the weeks it touches under P; whoever moves up and the
 // rebooked registration get the contribution of the sibling group again.
-func (w *Workflow) RebookHolidayChild(ctx context.Context, reviewer enrollment.HolidayReviewer, periodID, registrationID, childID int64, bookings []enrollment.HolidayBookingInput) (enrollment.HolidayRegistrationDetail, error) {
+func (w *Workflow) RebookHolidayChild(ctx context.Context, reviewer enrollment.HolidayReviewer, periodID, registrationID, childID int64, expectedVersion string, bookings []enrollment.HolidayBookingInput) (enrollment.HolidayRegistrationDetail, error) {
 	var detail enrollment.HolidayRegistrationDetail
 	err := w.run(ctx, reviewer, periodID, func(ctx context.Context) ([]int64, error) {
 		var err error
-		detail, err = w.ports.Places.RebookHolidayChild(ctx, reviewer, periodID, registrationID, childID, bookings)
+		detail, err = w.ports.Places.RebookHolidayChild(ctx, reviewer, periodID, registrationID, childID, expectedVersion, bookings)
 		// The rebooked registration is computed again as well: its lunch
 		// is billed as booked (#5631, ADR 0235).
 		return append(promoted(detail.Promotions), registrationID), err
@@ -152,8 +152,8 @@ func (w *Workflow) run(ctx context.Context, reviewer enrollment.HolidayReviewer,
 func promoted(promotions []enrollment.HolidayPromotion) []int64 {
 	ids := make([]int64, 0, len(promotions))
 	for _, promotion := range promotions {
-		if !slices.Contains(ids, promotion.RegistrationID) {
-			ids = append(ids, promotion.RegistrationID)
+		if !slices.Contains(ids, promotion.RegistrationID.Int64()) {
+			ids = append(ids, promotion.RegistrationID.Int64())
 		}
 	}
 	return ids

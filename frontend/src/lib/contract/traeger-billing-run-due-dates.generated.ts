@@ -21,6 +21,7 @@ export interface RunDueDateRequest {
 /** Go: parentbillinghttp.RunDueDatesRequest */
 export interface RunDueDatesRequest {
   due_dates?: RunDueDateRequest[] | null;
+  expected_version?: string;
 }
 
 /** Go: parentbillinghttp.RunDueDatesResponse */

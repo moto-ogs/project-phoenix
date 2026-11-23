@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"testing"
@@ -37,13 +38,21 @@ func checkFormerLateBoundMounts(t *testing.T, graph *goldenRuntime) {
 		}
 	})
 	t.Run("feedback settings", func(t *testing.T) {
-		code, body := request(http.MethodGet, "/api/feedback/", "")
+		code, body := request(http.MethodGet, "/api/feedback/student/1", "")
 		assert.Equal(t, http.StatusForbidden, code, body)
 		assert.Contains(t, body, `"code":"feedback.disabled"`, "the registry default must refuse feedback")
 	})
 	t.Run("room deletion guard", func(t *testing.T) {
 		room := testpkg.CreateTestRoom(t, db, fmt.Sprintf("late-bound-room-%d", time.Now().UnixNano()))
-		code, body := request(http.MethodDelete, fmt.Sprintf("/api/rooms/%d", room.ID), "")
+		code, body := request(http.MethodGet, fmt.Sprintf("/api/rooms/%d/removal-impact", room.ID), "")
+		require.Equal(t, http.StatusOK, code, body)
+		var impact struct {
+			Data struct {
+				Fingerprint string `json:"fingerprint"`
+			} `json:"data"`
+		}
+		require.NoError(t, json.Unmarshal([]byte(body), &impact))
+		code, body = request(http.MethodDelete, fmt.Sprintf("/api/rooms/%d", room.ID), fmt.Sprintf(`{"expected_fingerprint":%q}`, impact.Data.Fingerprint))
 		assert.Contains(t, []int{http.StatusOK, http.StatusNoContent}, code, body)
 	})
 	t.Run("guardian directory provider", func(t *testing.T) {

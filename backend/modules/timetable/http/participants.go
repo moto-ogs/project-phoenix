@@ -20,18 +20,19 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // InstanceParticipantResponse is one visible child in an instance.
 type InstanceParticipantResponse struct {
-	StudentID   int64  `json:"student_id"`
-	DisplayName string `json:"display_name"`
+	StudentID   ident.ID `json:"student_id"`
+	DisplayName string   `json:"display_name"`
 }
 
 // InstanceStaffNameResponse is one assigned staff member's display name.
 type InstanceStaffNameResponse struct {
-	StaffID     int64  `json:"staff_id"`
-	DisplayName string `json:"display_name"`
+	StaffID     ident.ID `json:"staff_id"`
+	DisplayName string   `json:"display_name"`
 }
 
 // InstanceParticipantsResponse is the wire shape of the participants list.
@@ -39,7 +40,7 @@ type InstanceStaffNameResponse struct {
 // block is exactly the overview the Leseansicht exists for; only child names
 // run through the CanReadStudent scope filter.
 type InstanceParticipantsResponse struct {
-	InstanceID   int64                         `json:"instance_id"`
+	InstanceID   ident.ID                      `json:"instance_id"`
 	Participants []InstanceParticipantResponse `json:"participants"`
 	Staff        []InstanceStaffNameResponse   `json:"staff"`
 }
@@ -86,7 +87,7 @@ func (rs *Resource) getInstanceParticipants(w http.ResponseWriter, r *http.Reque
 	}
 
 	resp := InstanceParticipantsResponse{
-		InstanceID:   instanceID,
+		InstanceID:   ident.ID(instanceID),
 		Participants: participants,
 		Staff:        staffNames,
 	}
@@ -115,7 +116,7 @@ func (rs *Resource) instanceStaffNames(ctx context.Context, instanceID int64) ([
 			continue
 		}
 		names = append(names, InstanceStaffNameResponse{
-			StaffID:     id,
+			StaffID:     ident.ID(id),
 			DisplayName: name,
 		})
 	}
@@ -141,7 +142,7 @@ func (rs *Resource) visibleParticipants(r *http.Request, rows []timetable.Schedu
 	participants := make([]InstanceParticipantResponse, 0, len(names))
 	for studentID, name := range names {
 		participants = append(participants, InstanceParticipantResponse{
-			StudentID:   studentID,
+			StudentID:   ident.ID(studentID),
 			DisplayName: name,
 		})
 	}

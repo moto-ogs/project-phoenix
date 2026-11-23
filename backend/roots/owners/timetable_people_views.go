@@ -121,14 +121,14 @@ func TimetableStaffMember(row *peopleValues.Staff) *timetable.StaffMember {
 	if row == nil {
 		return nil
 	}
-	return &timetable.StaffMember{ID: row.ID, PersonID: row.PersonID, HasExternalCaregiverRecord: row.HasExternalCaregiverRecord, IsExternalCaregiver: row.IsExternalCaregiver, Person: TimetablePerson(row.Person)}
+	return &timetable.StaffMember{ID: row.ID.Int64(), PersonID: row.PersonID.Int64(), HasExternalCaregiverRecord: row.HasExternalCaregiverRecord, IsExternalCaregiver: row.IsExternalCaregiver, Person: TimetablePerson(row.Person)}
 }
 
 func TimetablePerson(row *peopleValues.DirectoryPersonSnapshot) *timetable.Person {
 	if row == nil {
 		return nil
 	}
-	return &timetable.Person{ID: row.ID, FirstName: row.FirstName, LastName: row.LastName, AccountID: row.AccountID}
+	return &timetable.Person{ID: row.ID.Int64(), FirstName: row.FirstName, LastName: row.LastName, AccountID: (*int64)(row.AccountID)}
 }
 
 func timetableLifecycleStudent(row *peopleValues.StudentState) *timetable.LifecycleStudent {

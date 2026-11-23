@@ -55,6 +55,7 @@ import {
   startCareRun,
 } from "~/lib/traeger-care-billing-api";
 import { traegerPath } from "~/lib/traeger-url";
+import { labelOf } from "~/lib/label-of";
 
 const logger = createLogger({ component: "TraegerCareRunLettersPage" });
 
@@ -79,6 +80,10 @@ function seriesMessage(series: CareLetterSeries): string {
   }
   return parts.join(" ");
 }
+
+/** Was die Seite ist und was man dort zuerst tut (#7596). */
+const LETTERS_INFO =
+  "Hier sendest du die Schreiben zu den Rechnungen an die Familien. Das geht erst, wenn der Monatslauf freigegeben ist. Gibt es noch keine, wählst du „Schreiben erstellen“.";
 
 export default function TraegerCareRunLettersPage() {
   const params = useParams<{ id: string }>();
@@ -287,6 +292,7 @@ export default function TraegerCareRunLettersPage() {
 
   return (
     <TenantPage
+      info={LETTERS_INFO}
       title={
         run ? `Schreiben für ${formatMonth(run.billingMonth)}` : "Schreiben"
       }
@@ -310,8 +316,8 @@ export default function TraegerCareRunLettersPage() {
         <>
           {run ? (
             <StatusBadge
-              label={CARE_RUN_STATUS_LABELS[run.status]}
-              tone={CARE_RUN_STATUS_TONES[run.status]}
+              label={labelOf(CARE_RUN_STATUS_LABELS, run.status, "–")}
+              tone={labelOf(CARE_RUN_STATUS_TONES, run.status, "gray")}
             />
           ) : null}
         </>

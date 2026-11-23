@@ -35,6 +35,13 @@ type ArrivalPlans interface {
 }
 
 // ArrivalExceptions manages dated deviations from the weekly plan.
+//
+// resolveStaffID names the staff member who takes over a day a guardian set.
+// It is called only for such a takeover and answers (0, nil) when the caller
+// has no staff record of the school; an error means the lookup failed and is
+// returned as a failure, never as a refusal (#7818). Without a staff member
+// the takeover needs the mark of WithTraegerBueroAuthor, or it is refused
+// with ErrCareExceptionStaffProfileRequired.
 type ArrivalExceptions interface {
 	GetStudentArrivalExceptionByID(ctx context.Context, exceptionID int64) (*ArrivalException, error)
 	GetStudentArrivalExceptionForDate(ctx context.Context, studentID int64, date calendar.Date) (*ArrivalException, error)
@@ -60,7 +67,9 @@ type ArrivalNotes interface {
 	GetStudentArrivalNotes(ctx context.Context, studentID int64) ([]*ArrivalNote, error)
 	GetStudentArrivalNotesForDate(ctx context.Context, studentID int64, date calendar.Date) ([]*ArrivalNote, error)
 	CreateStudentArrivalNote(ctx context.Context, note *ArrivalNote) error
-	UpdateStudentArrivalNote(ctx context.Context, note *ArrivalNote) error
+	// UpdateStudentArrivalNote changes a note read at expectedVersion
+	// (ArrivalNoteVersion); a changed note is refused with readstate.ErrChanged.
+	UpdateStudentArrivalNote(ctx context.Context, note *ArrivalNote, expectedVersion string) error
 	DeleteStudentArrivalNote(ctx context.Context, noteID int64) error
 	DeleteAllStudentArrivalNotes(ctx context.Context, studentID int64) error
 }
@@ -93,15 +102,24 @@ type ArrivalScheduleInput struct {
 
 // ArrivalScheduleBulkFilter selects exactly one class, OGS group, or explicit
 // student list. A whole class updates its timetable, not per-child deviations.
+//
+// ExpectedVersion binds a class update to the class times its author read
+// (ClassArrivalTimes.Version, ADR 0311); a class whose times changed since
+// is refused with readstate.ErrChanged. A group or student list starts from
+// empty fields and reads nothing, so it carries no version.
 type ArrivalScheduleBulkFilter struct {
-	SchoolClass string
-	GroupID     int64
-	StudentIDs  []int64
-	Authorize   func(context.Context, ScheduleStudent) (bool, error)
+	SchoolClass     string
+	ExpectedVersion string
+	GroupID         int64
+	StudentIDs      []int64
+	Authorize       func(context.Context, ScheduleStudent) (bool, error)
 }
 
+// ClassArrivalTimes is what one class carries. Version is the read-state
+// token of that stored state, also when the class has no row yet.
 type ClassArrivalTimes struct {
 	SchoolClass string            `json:"school_class"`
 	Times       map[string]string `json:"times"`
 	UpdatedAt   *time.Time        `json:"updated_at,omitempty"`
+	Version     string            `json:"version"`
 }

@@ -1,66 +1,12 @@
-import { apiErrorFromResponse, transportFetch } from "./api-error";
+import { apiErrorFromResponse, unavailableApiError } from "./api-error";
 // Client API for the info-point display domain (issue #1325).
-// Admin CRUD goes through the session-authenticated Next.js proxy routes
-// under /api/displays; the public dashboard fetch is token-only.
+// Admin CRUD goes through the portal's catalog proxy under /api/display;
+// the public dashboard fetch is token-only.
 
-import type {
-  BackendDisplay,
-  BackendDisplayCreateResponse,
-  InfoDisplay,
-} from "~/lib/display-helpers";
+import { bffJson } from "~/lib/bff-fetch";
+import type * as displayContract from "~/lib/contract/display.generated";
+import type { InfoDisplay } from "~/lib/display-helpers";
 import { mapDisplayResponse } from "~/lib/display-helpers";
-
-// ---------------------------------------------------------------------------
-// Public dashboard payload (mirrors backend services/display DashboardPayload)
-// ---------------------------------------------------------------------------
-
-export interface DashboardRoomOccupancy {
-  name: string;
-  group_name?: string;
-  category_name?: string;
-  student_count: number;
-  capacity?: number | null;
-  is_occupied: boolean;
-}
-
-export interface DashboardRunningActivity {
-  id: string;
-  name: string;
-  category: string;
-  room_name: string;
-  participants: number;
-  max_capacity?: number | null;
-}
-
-export interface DashboardUpcomingActivity {
-  id: string;
-  name: string;
-  category: string;
-  start_time: string; // HH:MM
-  room_name: string;
-}
-
-export interface DashboardPickupBucket {
-  time: string; // HH:MM
-  count: number;
-}
-
-export interface DashboardPayload {
-  status: "active" | "inactive";
-  school_name?: string;
-  display_name?: string;
-  server_time?: string;
-  date?: string; // YYYY-MM-DD
-  room_occupancy?: DashboardRoomOccupancy[];
-  running_activities?: DashboardRunningActivity[];
-  upcoming_activities?: DashboardUpcomingActivity[];
-  pickup_times?: DashboardPickupBucket[];
-  totals?: {
-    students_present: number;
-    rooms_occupied: number;
-    activities_running: number;
-  };
-}
 
 /**
  * Fetches the public dashboard aggregate. No session required — the token
@@ -71,48 +17,39 @@ export interface DashboardPayload {
 export async function fetchDisplayDashboard(
   token: string,
   signal?: AbortSignal,
-): Promise<DashboardPayload> {
-  const response = await transportFetch("/api/display/dashboard", {
-    cache: "no-store",
-    signal,
-    headers: { "X-Display-Token": token },
-  });
+): Promise<displayContract.DashboardResponse> {
+  // The wall display has no session and its answer has no envelope
+  // (`plain`): neither fits a portal of bffJson, so it fetches the route
+  // file itself (bff-boundary/no-raw-browser-transport lists it).
+  let response: Response;
+  try {
+    response = await fetch("/api/display/dashboard", {
+      cache: "no-store",
+      signal,
+      headers: { "X-Display-Token": token },
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw error;
+    }
+    throw unavailableApiError(error);
+  }
   if (!response.ok) {
     throw await apiErrorFromResponse(
       response,
       `display dashboard request failed with status ${response.status}`,
     );
   }
-  return (await response.json()) as DashboardPayload;
+  return (await response.json()) as displayContract.DashboardResponse;
 }
 
 // ---------------------------------------------------------------------------
-// Admin CRUD (session-authenticated)
+// Admin CRUD (session-authenticated, tenant routes under /api/display)
 // ---------------------------------------------------------------------------
-
-interface ApiEnvelope<T> {
-  status?: string;
-  data?: T;
-}
-
-async function parseEnvelope<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    // Code, Feldfehler und Vorgangskennung kommen aus dem Fehlerumschlag.
-    throw await apiErrorFromResponse(
-      response,
-      `display request failed (${response.status})`,
-    );
-  }
-  const envelope = (await response.json()) as ApiEnvelope<T>;
-  return (envelope.data ?? envelope) as T;
-}
 
 export async function listDisplays(): Promise<InfoDisplay[]> {
-  const response = await transportFetch("/api/displays", { cache: "no-store" });
-  const displays = await parseEnvelope<BackendDisplay[]>(response);
-  // parseEnvelope falls back to the envelope object when `data` is absent
-  // (empty list responses) — only a real array may be mapped.
-  return (Array.isArray(displays) ? displays : []).map(mapDisplayResponse);
+  const displays = await bffJson("tenant", "GET /api/display/");
+  return displays.map(mapDisplayResponse);
 }
 
 export interface DisplayWithToken {
@@ -121,12 +58,9 @@ export interface DisplayWithToken {
 }
 
 export async function createDisplay(name: string): Promise<DisplayWithToken> {
-  const response = await transportFetch("/api/displays", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name }),
+  const data = await bffJson("tenant", "POST /api/display/", {
+    body: { name },
   });
-  const data = await parseEnvelope<BackendDisplayCreateResponse>(response);
   return { display: mapDisplayResponse(data.display), token: data.token };
 }
 
@@ -134,43 +68,25 @@ export async function updateDisplay(
   id: string,
   changes: { name?: string; isActive?: boolean },
 ): Promise<InfoDisplay> {
-  const response = await transportFetch(
-    `/api/displays/${encodeURIComponent(id)}`,
-    {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...(changes.name !== undefined ? { name: changes.name } : {}),
-        ...(changes.isActive !== undefined
-          ? { is_active: changes.isActive }
-          : {}),
-      }),
-    },
+  const body: displayContract.InfoDisplayWriteRequest = {
+    ...(changes.name !== undefined ? { name: changes.name } : {}),
+    ...(changes.isActive !== undefined ? { is_active: changes.isActive } : {}),
+  };
+  return mapDisplayResponse(
+    await bffJson("tenant", "PATCH /api/display/{id}", {
+      params: { id },
+      body,
+    }),
   );
-  const data = await parseEnvelope<{ display: BackendDisplay }>(response);
-  return mapDisplayResponse(data.display);
 }
 
 export async function regenerateDisplayToken(id: string): Promise<string> {
-  const response = await transportFetch(
-    `/api/displays/${encodeURIComponent(id)}/regenerate`,
-    { method: "POST" },
-  );
-  const data = await parseEnvelope<{ token: string }>(response);
+  const data = await bffJson("tenant", "POST /api/display/{id}/regenerate", {
+    params: { id },
+  });
   return data.token;
 }
 
 export async function deleteDisplay(id: string): Promise<void> {
-  const response = await transportFetch(
-    `/api/displays/${encodeURIComponent(id)}`,
-    {
-      method: "DELETE",
-    },
-  );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `display delete failed (${response.status})`,
-    );
-  }
+  await bffJson("tenant", "DELETE /api/display/{id}", { params: { id } });
 }

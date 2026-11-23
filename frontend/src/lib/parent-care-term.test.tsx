@@ -2,28 +2,37 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
-import type { Child, ChildFeatures } from "~/lib/parent-api";
 import {
   accountCareTerm,
   ParentCareTermScope,
   ParentChildCareTermScope,
   useParentCareTerms,
 } from "./parent-care-term";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 const resources = vi.hoisted(() => ({
-  children: [] as Child[],
-  features: {} as Record<string, Partial<ChildFeatures>>,
+  children: [] as parentMeContract.ChildResponse[],
+  features: {} as Record<
+    string,
+    Partial<parentMeContract.ChildFeaturesResponse>
+  >,
 }));
 
 vi.mock("~/lib/hooks/use-parent-resources", () => ({
   useParentChildren: () => ({ data: resources.children }),
-  useParentFeatures: (children: readonly Child[] | undefined) => ({
+  useParentFeatures: (
+    children: readonly parentMeContract.ChildResponse[] | undefined,
+  ) => ({
     data: children ? resources.features : undefined,
   }),
 }));
 
-function child(studentId: string, schoolName: string): Child {
+function child(
+  studentId: string,
+  schoolName: string,
+): parentMeContract.ChildResponse {
   return {
+    care_ended: false,
     student_id: studentId,
     tenant_id: `t-${schoolName}`,
     first_name: `Kind ${studentId}`,
@@ -34,7 +43,7 @@ function child(studentId: string, schoolName: string): Child {
   };
 }
 
-function link(...rows: [Child, string | undefined][]) {
+function link(...rows: [parentMeContract.ChildResponse, string | undefined][]) {
   resources.children = rows.map(([row]) => row);
   resources.features = Object.fromEntries(
     rows.map(([row, term]) => [row.student_id, { care_facility_term: term }]),

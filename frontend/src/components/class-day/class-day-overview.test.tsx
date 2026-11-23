@@ -1,3 +1,4 @@
+import type * as schoolClassDayContract from "~/lib/contract/school-class-day.generated";
 import {
   act,
   fireEvent,
@@ -12,7 +13,6 @@ import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import type { ClassDayReport } from "~/lib/class-day-api";
-import type { SchoolDayReport } from "~/lib/school-class-day-api";
 import { setTestClock } from "~/test/clock";
 import { ClassDayOverview } from "./class-day-overview";
 
@@ -63,6 +63,12 @@ function report(date: string): ClassDayReport {
     weekday: "fri",
     school_day: true,
     enrollment_known: true,
+    can_write_day_hints: false,
+    can_record_morning_attendance: false,
+    can_write_homework: false,
+    can_read_shared_notes: false,
+    can_hand_over: false,
+    can_report_absences: false,
     totals: { students: 1, staying: 1, leaving: 0, absent: 0, list_entries: 0 },
     rows: [],
   };
@@ -71,6 +77,8 @@ function report(date: string): ClassDayReport {
 function classList(weekendFollowsFriday: boolean) {
   return {
     classes: ["4a"],
+    can_report_class_trip: false,
+    can_view_school_day: false,
     can_write_arrival_exception: false,
     weekend_follows_friday: weekendFollowsFriday,
   };
@@ -134,6 +142,7 @@ describe("ClassDayOverview on the weekend", () => {
 const schoolTotals = {
   students: 0,
   missing: 0,
+  unreported: 0,
   absent: 0,
   sick: 0,
   excused: 0,
@@ -144,16 +153,18 @@ const schoolTotals = {
   changes: 0,
 };
 
-function schoolDay(date: string): SchoolDayReport {
+function schoolDay(date: string): schoolClassDayContract.SchoolDayReport {
   return {
     date,
     weekday: "wed",
     school_day: true,
     enrollment_known: true,
+    can_report_absences: false,
     totals: {
       ...schoolTotals,
       students: 3,
       missing: 1,
+      unreported: 0,
       absent: 1,
       sick: 1,
       staying: 1,
@@ -166,6 +177,7 @@ function schoolDay(date: string): SchoolDayReport {
           ...schoolTotals,
           students: 2,
           missing: 1,
+          unreported: 0,
           absent: 1,
           sick: 1,
           staying: 1,
@@ -217,6 +229,8 @@ describe("ClassDayOverview for the Schulverwaltung", () => {
   const classes = () =>
     Promise.resolve({
       classes: ["1a", "2b"],
+      can_report_class_trip: false,
+      weekend_follows_friday: false,
       can_write_arrival_exception: false,
       can_view_school_day: true,
     });
@@ -276,7 +290,7 @@ describe("ClassDayOverview for the Schulverwaltung", () => {
   it("labels a child without a care place in the school roster", async () => {
     navigation.search = "tag=2026-09-09&liste=kinder";
     const data = schoolDay("2026-09-09");
-    data.classes[1]!.children = [
+    data.classes![1]!.children = [
       {
         student_id: "3",
         first_name: "Carl",
@@ -284,7 +298,11 @@ describe("ClassDayOverview for the Schulverwaltung", () => {
         without_care_place: true,
       },
     ];
-    data.classes[1]!.totals = { ...schoolTotals, students: 1, list_entries: 1 };
+    data.classes![1]!.totals = {
+      ...schoolTotals,
+      students: 1,
+      list_entries: 1,
+    };
     data.totals = { ...data.totals, leaving: 0, list_entries: 1 };
     render(
       <ClassDayOverview
@@ -329,6 +347,9 @@ describe("ClassDayOverview for the Schulverwaltung", () => {
         fetchClasses={() =>
           Promise.resolve({
             classes: ["4a"],
+            can_report_class_trip: false,
+            weekend_follows_friday: false,
+            can_view_school_day: false,
             can_write_arrival_exception: false,
           })
         }
@@ -358,6 +379,8 @@ describe("ClassDayOverview: Meldung nachtragen", () => {
   const classes = () =>
     Promise.resolve({
       classes: ["1a"],
+      can_report_class_trip: false,
+      weekend_follows_friday: false,
       can_write_arrival_exception: false,
       can_view_school_day: true,
     });
@@ -366,7 +389,7 @@ describe("ClassDayOverview: Meldung nachtragen", () => {
     date: string,
     reported: "sick" | null,
     canReport = true,
-  ): SchoolDayReport {
+  ): schoolClassDayContract.SchoolDayReport {
     const child = reported
       ? {
           student_id: "5",
@@ -490,7 +513,7 @@ describe("ClassDayOverview: Meldung nachtragen", () => {
     const refused = new ApiError("not missing", 409, {
       code: "general.business_rejection",
     });
-    const recovery = deferred<SchoolDayReport>();
+    const recovery = deferred<schoolClassDayContract.SchoolDayReport>();
     const fetchSchoolDay = vi
       .fn()
       .mockResolvedValueOnce(unreportedDay("2026-09-09", null))

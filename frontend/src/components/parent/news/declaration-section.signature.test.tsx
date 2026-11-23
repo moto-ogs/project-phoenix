@@ -17,9 +17,9 @@ const render: typeof baseRender = ((ui: React.ReactElement) =>
 import { NewsDetailModal } from "./news-components";
 import { declarationErrorOutcome } from "./declaration-section";
 import { ApiError } from "~/lib/api-error";
-import type { ParentAnnouncement } from "~/lib/parent-api";
 import * as parentApi from "~/lib/parent-api";
 import { catalogText } from "~/test/error-catalog-text";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 // Einverständnis mit Unterschrift (#4785): agreeing needs a confirmed
 // signature in the confirmation; declining goes without one. A refused
@@ -27,7 +27,7 @@ import { catalogText } from "~/test/error-catalog-text";
 
 const PNG_DATA_URL = "data:image/png;base64,iVBORw0KGgo=";
 
-function item(): ParentAnnouncement {
+function item(): parentMeContract.AnnouncementResponse {
   return {
     id: "42",
     title: "Ausflug in den Zoo",
@@ -51,6 +51,7 @@ function item(): ParentAnnouncement {
       version: { id: "12", version_no: 2, content_hash: "ab".repeat(32) },
       children: [
         {
+          earlier_consent: null,
           student_id: "5",
           first_name: "Mia",
           last_name: "Muster",

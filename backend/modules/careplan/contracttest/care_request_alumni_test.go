@@ -16,6 +16,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
 
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -56,12 +57,12 @@ func TestCareRequest_GraduatedChildLeavesQueueAndRefusesDecisions(t *testing.T) 
 
 	// Neither direction may still act on the alumnus — same 404 the rest of the
 	// child surface returns for graduates.
-	_, err = f.svc.Decide(ctx, carerequests.DecideInput{
+	_, err = f.svc.Decide(ctx, carerequests.DecideInput{ExpectedVersion: testpkg.CareRequestVersion(t, req.ID),
 		RequestID: req.ID, Approve: true, ReviewedBy: f.staffAccount,
 	})
 	assert.ErrorIs(t, err, carerequests.ErrNotFound)
 
-	_, err = f.svc.Decide(ctx, carerequests.DecideInput{
+	_, err = f.svc.Decide(ctx, carerequests.DecideInput{ExpectedVersion: testpkg.CareRequestVersion(t, req.ID),
 		RequestID: req.ID, Approve: false, Reason: "child has left", ReviewedBy: f.staffAccount,
 	})
 	assert.ErrorIs(t, err, carerequests.ErrNotFound)

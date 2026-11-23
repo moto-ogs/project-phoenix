@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedTraegerInvitees are the colleagues the seeded Träger-Büro has invited
@@ -162,8 +163,8 @@ func seedHolidayParticipantList(rt *Runtime) (int64, error) {
 	}
 	var envelope struct {
 		Data []struct {
-			ID           int64 `json:"id"`
-			Participants int   `json:"participants"`
+			ID           ident.ID `json:"id"`
+			Participants int      `json:"participants"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil {
@@ -176,7 +177,7 @@ func seedHolidayParticipantList(rt *Runtime) (int64, error) {
 		return 0, fmt.Errorf("read the holiday participant list: %w", err)
 	}
 	fmt.Printf("  Ausrichtende OGS: participant list with %d confirmed child(ren) read\n", envelope.Data[0].Participants)
-	return envelope.Data[0].ID, nil
+	return int64(envelope.Data[0].ID), nil
 }
 
 // seedHolidayGuests creates the group "Feriengruppe" at the hosting school
@@ -225,6 +226,7 @@ func seedHolidayAddressForm(client *Client, auth AuthRef, periodID int64) error 
 	}
 	var form struct {
 		Data struct {
+			Version     int             `json:"version"`
 			Fields      json.RawMessage `json:"fields"`
 			LegalBlocks json.RawMessage `json:"legal_blocks"`
 		} `json:"data"`
@@ -236,7 +238,8 @@ func seedHolidayAddressForm(client *Client, auth AuthRef, periodID int64) error 
 	if len(fields) == 0 {
 		fields = json.RawMessage(`[]`)
 	}
-	body := map[string]any{"fields": fields, "address_requirement": "optional"}
+	// The save carries the version it replaces (ADR 0311).
+	body := map[string]any{"fields": fields, "address_requirement": "optional", "expected_version": form.Data.Version}
 	if len(form.Data.LegalBlocks) > 0 {
 		body["legal_blocks"] = form.Data.LegalBlocks
 	}
@@ -386,8 +389,14 @@ func seedHolidayRegistrationEdit(rt *Runtime, auth AuthRef, periodID, registrati
 		maps.Copy(guardian, registered)
 	}
 	guardian["phone"] = "0151 0000009"
-	path := fmt.Sprintf("/traeger/holiday-periods/%d/registrations/%d/details", periodID, registrationID)
-	if _, err := rt.Client.PutWithAuth(auth, path, map[string]any{
+	// The edit carries the version of the registration it read (ADR 0311).
+	read := fmt.Sprintf("/traeger/holiday-periods/%d/registrations/%d", periodID, registrationID)
+	version, err := readSeedVersion(rt, auth, read, "the holiday registration")
+	if err != nil {
+		return err
+	}
+	if _, err := rt.Client.PutWithAuth(auth, read+"/details", map[string]any{
+		"expected_version": version,
 		"guardian":         guardian,
 		"guardian_address": registration["guardian_address"],
 		"second_guardian":  registration["second_guardian"],
@@ -606,9 +615,9 @@ func seedHolidayRegistration(published []byte, homeSchool int64) (string, map[st
 		Data struct {
 			PublicToken string `json:"public_token"`
 			Weeks       []struct {
-				ID         int64 `json:"id"`
+				ID         ident.ID `json:"id"`
 				TimeModels []struct {
-					ID int64 `json:"id"`
+					ID ident.ID `json:"id"`
 				} `json:"time_models"`
 			} `json:"weeks"`
 		} `json:"data"`
@@ -621,7 +630,7 @@ func seedHolidayRegistration(published []byte, homeSchool int64) (string, map[st
 		return "", nil, fmt.Errorf("the published holiday period has no link or no bookable weeks")
 	}
 	booking := func(week, model int) map[string]any {
-		return map[string]any{"week_id": period.Weeks[week].ID, "time_model_id": period.Weeks[week].TimeModels[model].ID}
+		return map[string]any{"week_id": int64(period.Weeks[week].ID), "time_model_id": int64(period.Weeks[week].TimeModels[model].ID)}
 	}
 	withLunch := func(booking map[string]any) map[string]any {
 		booking["lunch"] = true
@@ -708,7 +717,7 @@ func seedTraegerSchoolIDs(client *Client, auth AuthRef) ([]int64, error) {
 	}
 	var envelope struct {
 		Data []struct {
-			ID int64 `json:"id"`
+			ID ident.ID `json:"id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil || len(envelope.Data) == 0 {
@@ -716,7 +725,7 @@ func seedTraegerSchoolIDs(client *Client, auth AuthRef) ([]int64, error) {
 	}
 	ids := make([]int64, len(envelope.Data))
 	for i, school := range envelope.Data {
-		ids[i] = school.ID
+		ids[i] = int64(school.ID)
 	}
 	return ids, nil
 }

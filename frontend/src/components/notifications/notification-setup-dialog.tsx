@@ -17,9 +17,10 @@ import { PushInstallSteps } from "~/components/settings/push-install-steps";
 import {
   fetchNotificationPreferences,
   setNotificationPreference,
-  type NotificationPreferenceType,
 } from "~/lib/notification-preferences-api";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 import { useApiFormError } from "~/contexts/ToastContext";
+import { trackOnboardingSurface } from "~/lib/analytics";
 import { createLogger } from "~/lib/logger";
 import { useInvalidateMatching, useSWRAuth } from "~/lib/swr";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
@@ -120,7 +121,7 @@ export function NotificationSetupDialog({
   // Shared with the session sync and the settings card: one read per page.
   const pushKey = usePushPublicKey(portal);
   const [mode, setMode] = useState<SetupMode | null>(null);
-  const [types, setTypes] = useState<NotificationPreferenceType[]>([]);
+  const [types, setTypes] = useState<sharedContract.PreferenceState[]>([]);
   const [check, setCheck] = useState<PreferencesCheck | null>(null);
   // The same cached read as the settings card: on the settings page both
   // share one request instead of one each (#7429 did the same for the key).
@@ -148,6 +149,23 @@ export function NotificationSetupDialog({
     isInstallationCompleted,
     () => false,
   );
+
+  // Einstieg messen (#7556): nur der Dialog, der sich von selbst öffnet, ist
+  // eine Fläche des Einstiegs. Den Neustart aus der Einstellungskarte hat die
+  // Person selbst angefordert; er zählt nicht mit. Ohne Einwilligung und ohne
+  // Freigabe der Schule (Eltern: aller Schulen) sendet die Erfassung nichts.
+  const reportsSurface = restartToken === 0;
+  const shownReportedRef = useRef(false);
+  useEffect(() => {
+    if (!mode || !reportsSurface || shownReportedRef.current) return;
+    // Einmal je Öffnung: der Wechsel zwischen den Schritten (Installieren,
+    // Einschalten, abgelehnt) ist dieselbe Fläche.
+    shownReportedRef.current = true;
+    trackOnboardingSurface("shown", "notification_setup");
+  }, [mode, reportsSurface]);
+  const reportOutcome = (action: "accepted" | "dismissed") => {
+    if (reportsSurface) trackOnboardingSurface(action, "notification_setup");
+  };
 
   const close = useCallback(
     (mode: SetupMode | null) => {
@@ -279,12 +297,16 @@ export function NotificationSetupDialog({
     else writeDecision(storageKey, { done: true });
   }, [check, portal, preferences, preferencesError, storageKey]);
 
+  // „Später“: die Person schiebt die Einrichtung auf (Später erinnern, X,
+  // Hintergrund, Verstanden, Anleitung schließen).
   const remindLater = () => {
+    reportOutcome("dismissed");
     writeDecision(storageKey, { remindAfter: Date.now() + REMIND_LATER_MS });
     close(null);
   };
 
   const finishInstallGuide = () => {
+    reportOutcome("dismissed");
     writeDecision(storageKey, {
       remindAfter: Date.now() + INSTALL_GUIDE_REMIND_MS,
     });
@@ -330,6 +352,8 @@ export function NotificationSetupDialog({
         invalidate((key) => key === preferences),
       );
       await Promise.all([pushRequest, ...preferenceRequests]);
+      // „Fertig“: Benachrichtigungen sind auf diesem Gerät eingeschaltet.
+      reportOutcome("accepted");
       writeDecision(storageKey, { done: true });
       close(null);
     } catch (err) {

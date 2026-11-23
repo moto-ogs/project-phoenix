@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Operational answers of the "Heute geplant" views, the supervision rosters
@@ -51,13 +52,13 @@ type PlannedNowOptions struct {
 
 // OperationPlannedInstance is one block of the caller's day plan.
 type OperationPlannedInstance struct {
-	ID        int64   `json:"id"`
-	Title     string  `json:"title"`
-	Date      string  `json:"date"`
-	StartTime string  `json:"start_time"`
-	EndTime   string  `json:"end_time"`
-	RoomID    int64   `json:"room_id"`
-	RoomName  *string `json:"room_name,omitempty"`
+	ID        ident.ID `json:"id"`
+	Title     string   `json:"title"`
+	Date      string   `json:"date"`
+	StartTime string   `json:"start_time"`
+	EndTime   string   `json:"end_time"`
+	RoomID    ident.ID `json:"room_id"`
+	RoomName  *string  `json:"room_name,omitempty"`
 	// ActivityType is the template's block type ("care", "activity",
 	// "external", "duty"); empty for a block without template (#3822).
 	ActivityType          string `json:"activity_type,omitempty"`
@@ -79,7 +80,7 @@ type OperationPlannedInstance struct {
 	// IsSpontaneous marks a block started on the spot; its end is open until
 	// it is completed (#3921).
 	IsSpontaneous       bool                      `json:"is_spontaneous"`
-	AssignedStaffIDs    []int64                   `json:"assigned_staff_ids"`
+	AssignedStaffIDs    []ident.ID                `json:"assigned_staff_ids"`
 	IsAssigned          bool                      `json:"is_assigned"`
 	IsPrimary           bool                      `json:"is_primary"`
 	IsSubstitute        bool                      `json:"is_substitute"`
@@ -98,7 +99,7 @@ type OperationPlannedInstance struct {
 	// CanReopen.
 	ReopenUntil string `json:"reopen_until,omitempty"`
 	// ActiveGroupID is the live session behind a running block (#2383).
-	ActiveGroupID *int64 `json:"active_group_id,omitempty"`
+	ActiveGroupID *ident.ID `json:"active_group_id,omitempty"`
 	// CancelReason explains a cancelled block ("fällt aus: …", #1840).
 	CancelReason *string `json:"cancel_reason,omitempty"`
 	// PlanningTrackName/Color carry the planned colour coding of the
@@ -115,9 +116,9 @@ type OperationPlannedInstance struct {
 
 // OperationStaffName is one assigned staff member on a day-scope block.
 type OperationStaffName struct {
-	StaffID      int64  `json:"staff_id"`
-	DisplayName  string `json:"display_name"`
-	IsSubstitute bool   `json:"is_substitute"`
+	StaffID      ident.ID `json:"staff_id"`
+	DisplayName  string   `json:"display_name"`
+	IsSubstitute bool     `json:"is_substitute"`
 }
 
 // OperationActiveSession is one running block seen from its live session
@@ -171,16 +172,16 @@ type OperationRoster struct {
 
 // OperationRosterInstance is the block a roster belongs to.
 type OperationRosterInstance struct {
-	ID            int64   `json:"id"`
-	Title         string  `json:"title"`
-	Status        string  `json:"status"`
-	IsSpontaneous bool    `json:"is_spontaneous"`
-	ActiveGroupID *int64  `json:"active_group_id,omitempty"`
-	RoomID        int64   `json:"room_id"`
-	RoomName      *string `json:"room_name,omitempty"`
-	Date          string  `json:"date"`
-	StartTime     string  `json:"start_time"`
-	EndTime       string  `json:"end_time"`
+	ID            ident.ID  `json:"id"`
+	Title         string    `json:"title"`
+	Status        string    `json:"status"`
+	IsSpontaneous bool      `json:"is_spontaneous"`
+	ActiveGroupID *ident.ID `json:"active_group_id,omitempty"`
+	RoomID        ident.ID  `json:"room_id"`
+	RoomName      *string   `json:"room_name,omitempty"`
+	Date          string    `json:"date"`
+	StartTime     string    `json:"start_time"`
+	EndTime       string    `json:"end_time"`
 	// IsDuty marks a duty (#3822): no children, never started.
 	IsDuty bool `json:"is_duty,omitempty"`
 	// ListKind is the block's list classification ("learning_time" for a
@@ -192,14 +193,14 @@ type OperationRosterInstance struct {
 
 // OperationRosterRow is one child on a roster.
 type OperationRosterRow struct {
-	StudentID        int64                    `json:"student_id"`
+	StudentID        ident.ID                 `json:"student_id"`
 	StudentName      string                   `json:"student_name"`
 	SchoolClass      string                   `json:"school_class"`
 	GroupName        string                   `json:"group_name"`
 	Planned          bool                     `json:"planned"`
 	IsUnplanned      bool                     `json:"is_unplanned"`
 	CurrentlyPresent bool                     `json:"currently_present"`
-	VisitID          *int64                   `json:"visit_id,omitempty"`
+	VisitID          *ident.ID                `json:"visit_id,omitempty"`
 	Status           string                   `json:"status"`
 	Substatus        *string                  `json:"substatus,omitempty"`
 	Note             *string                  `json:"note,omitempty"`
@@ -224,6 +225,10 @@ type OperationRosterRow struct {
 	Homework []OperationRosterHomework `json:"homework,omitempty"`
 	// HomeworkFeedback is the child's OGS feedback of that date, if any.
 	HomeworkFeedback *OperationHomeworkFeedback `json:"homework_feedback,omitempty"`
+	// HomeworkFeedbackVersion is the read-state token of that feedback (ADR
+	// 0311), set on a Lernzeit roster also before the first feedback; the
+	// feedback write sends it back as expected_version.
+	HomeworkFeedbackVersion string `json:"homework_feedback_version,omitempty"`
 }
 
 // OperationTeacherHint is a Lehrkraft's hint for the OGS for one day (#4795),
@@ -251,21 +256,21 @@ type OperationHomeworkFeedback struct {
 // OperationParallelPresence identifies the other running block a roster
 // row's parallel-presence hint points at (#2265).
 type OperationParallelPresence struct {
-	InstanceID int64  `json:"instance_id"`
-	Title      string `json:"title"`
-	StartTime  string `json:"start_time"`
-	EndTime    string `json:"end_time"`
+	InstanceID ident.ID `json:"instance_id"`
+	Title      string   `json:"title"`
+	StartTime  string   `json:"start_time"`
+	EndTime    string   `json:"end_time"`
 }
 
 // OperationRosterWarning flags a roster row (late arrival, class mismatch).
 type OperationRosterWarning struct {
-	Kind                  string  `json:"kind"`
-	Message               string  `json:"message"`
-	ExpectedArrival       *string `json:"expected_arrival,omitempty"`
-	SlotStart             *string `json:"slot_start,omitempty"`
-	ExpectedGroupID       *int64  `json:"expected_group_id,omitempty"`
-	ExpectedGroupName     *string `json:"expected_group_name,omitempty"`
-	CurrentEducationGroup *int64  `json:"current_education_group_id,omitempty"`
+	Kind                  string    `json:"kind"`
+	Message               string    `json:"message"`
+	ExpectedArrival       *string   `json:"expected_arrival,omitempty"`
+	SlotStart             *string   `json:"slot_start,omitempty"`
+	ExpectedGroupID       *ident.ID `json:"expected_group_id,omitempty"`
+	ExpectedGroupName     *string   `json:"expected_group_name,omitempty"`
+	CurrentEducationGroup *ident.ID `json:"current_education_group_id,omitempty"`
 }
 
 // StartedOperation is what a start or reopen answers.
@@ -301,33 +306,33 @@ func (e *SpontaneousCreateError) Unwrap() error { return e.Err }
 // ScheduledInstance is one block with the execution state of its Student
 // Presence session, in the JSON shape the timetable routes answer with.
 type ScheduledInstance struct {
-	ID               int64         `json:"id"`
+	ID               ident.ID      `json:"id"`
 	CreatedAt        time.Time     `json:"created_at"`
 	UpdatedAt        time.Time     `json:"updated_at"`
-	TenantID         int64         `json:"tenant_id"`
+	TenantID         ident.ID      `json:"tenant_id"`
 	Date             calendar.Date `json:"date"`
-	ActivityGroupID  *int64        `json:"activity_group_id,omitempty"`
-	CalendarPeriodID *int64        `json:"calendar_period_id,omitempty"`
+	ActivityGroupID  *ident.ID     `json:"activity_group_id,omitempty"`
+	CalendarPeriodID *ident.ID     `json:"calendar_period_id,omitempty"`
 	Title            string        `json:"title"`
 	Description      *string       `json:"description,omitempty"`
 	StartTime        time.Time     `json:"start_time"`
 	EndTime          time.Time     `json:"end_time"`
-	RoomID           int64         `json:"room_id"`
+	RoomID           ident.ID      `json:"room_id"`
 	// RequiredStaff is the per-occurrence Personalbedarf pin (#1839).
 	RequiredStaff    *int       `json:"required_staff,omitempty"`
 	Status           string     `json:"status"`
-	ActiveGroupID    *int64     `json:"active_group_id,omitempty"`
+	ActiveGroupID    *ident.ID  `json:"active_group_id,omitempty"`
 	ListKind         *string    `json:"list_kind,omitempty"`
 	IsSpontaneous    bool       `json:"is_spontaneous"`
 	UnderstaffedAck  bool       `json:"understaffed_ack"`
 	UnderstaffedNote *string    `json:"understaffed_note,omitempty"`
 	CancelReason     *string    `json:"cancel_reason,omitempty"`
 	Notes            *string    `json:"notes,omitempty"`
-	CreatedBy        *int64     `json:"created_by,omitempty"`
-	StartedBy        *int64     `json:"started_by,omitempty"`
+	CreatedBy        *ident.ID  `json:"created_by,omitempty"`
+	StartedBy        *ident.ID  `json:"started_by,omitempty"`
 	StartedAt        *time.Time `json:"started_at,omitempty"`
 	CompletedAt      *time.Time `json:"completed_at,omitempty"`
-	CompletedBy      *int64     `json:"completed_by,omitempty"`
+	CompletedBy      *ident.ID  `json:"completed_by,omitempty"`
 	ReopenUntil      *time.Time `json:"reopen_until,omitempty"`
 	// HasCompletionSnapshot reports a completion a reopen can restore.
 	HasCompletionSnapshot bool `json:"-"`

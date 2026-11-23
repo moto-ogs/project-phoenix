@@ -15,6 +15,7 @@ import (
 	timetableCompose "github.com/moto-ogs/project-phoenix/modules/timetable/compose"
 	timetablePorts "github.com/moto-ogs/project-phoenix/modules/timetable/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -87,8 +88,8 @@ func TestConvertInstanceToSeries_MapsRequestAndResponse(t *testing.T) {
 	w := doTemplateJSON(t, router, http.MethodPost, "/instances/71/convert-to-series", body)
 	require.Equal(t, http.StatusCreated, w.Code, "body=%s", w.Body.String())
 	got := decodeTemplateData[convertInstanceToSeriesResponse](t, w)
-	assert.Equal(t, int64(81), got.TemplateID)
-	assert.Equal(t, int64(71), got.LinkedInstanceID)
+	assert.Equal(t, ident.ID(int64(81)), got.TemplateID)
+	assert.Equal(t, ident.ID(int64(71)), got.LinkedInstanceID)
 	require.NotNil(t, converter.input)
 	assert.Equal(t, int64(71), converter.input.InstanceID)
 	assert.Equal(t, "Tpl-Convert-HTTP", converter.input.Template.Name)
@@ -175,12 +176,25 @@ func TestConvertInstanceToSeries_LinksExistingOccurrenceAndRejectsRetry(t *testi
 	body["calendar_period_id"] = period.ID
 	body["start_date"] = date.String()
 	body["weekdays"] = []int{timetableModule.WeekdayMonday}
+	read := instanceReadVersion(t, router, date, instance.ID)
 
+	// ADR 0311: a conversion that names no read block, or one read before a
+	// change, is refused and creates no series.
+	stale := testpkg.CreateTestStudent(t, s.db, "Tpl", fmt.Sprintf("Convert-Late-%d", instance.ID), "3a")
+	body["expected_version"] = read
+	testpkg.CreateTestInstanceStudent(t, s.db, instance.ID, stale.ID, timetableModule.SlotAttendanceExpected)
+	refusedW := doTemplateJSON(t, router, http.MethodPost,
+		fmt.Sprintf("/instances/%d/convert-to-series", instance.ID), body)
+	assert.Equal(t, http.StatusConflict, refusedW.Code, "body=%s", refusedW.Body.String())
+	assert.Contains(t, refusedW.Body.String(), "general.changed_since_read")
+	assertNoTemplateNamed(t, router, "Tpl-Convert-Atomic")
+
+	body["expected_version"] = instanceReadVersion(t, router, date, instance.ID)
 	createdW := doTemplateJSON(t, router, http.MethodPost,
 		fmt.Sprintf("/instances/%d/convert-to-series", instance.ID), body)
 	require.Equal(t, http.StatusCreated, createdW.Code, "body=%s", createdW.Body.String())
 	created := decodeTemplateData[convertInstanceToSeriesResponse](t, createdW)
-	assert.Equal(t, instance.ID, created.LinkedInstanceID)
+	assert.Equal(t, ident.ID(instance.ID), created.LinkedInstanceID)
 	assert.NotZero(t, created.TemplateID)
 
 	listW := doTemplateJSON(t, router, http.MethodGet,
@@ -188,10 +202,10 @@ func TestConvertInstanceToSeries_LinksExistingOccurrenceAndRejectsRetry(t *testi
 	require.Equal(t, http.StatusOK, listW.Code, "body=%s", listW.Body.String())
 	listed := decodeTemplateData[weeklyInstancesResponse](t, listW)
 	require.Len(t, listed.Instances, 1, "conversion must reuse the occurrence instead of adding a parallel row")
-	assert.Equal(t, instance.ID, listed.Instances[0].ID)
+	assert.Equal(t, ident.ID(instance.ID), listed.Instances[0].ID)
 	require.NotNil(t, listed.Instances[0].ActivityGroupID)
 	assert.Equal(t, created.TemplateID, *listed.Instances[0].ActivityGroupID)
-	assert.ElementsMatch(t, []int64{s.studentA, s.studentB}, listed.Instances[0].StudentIDs)
+	assert.ElementsMatch(t, []int64{s.studentA, s.studentB}, ident.Int64s(listed.Instances[0].StudentIDs))
 
 	// Materializer marker: seed must carry the template period so resync and
 	// FindPlannedTemplateBackedFrom treat it as a series occurrence.
@@ -278,6 +292,7 @@ func TestConvertInstanceToSeries_UsesOfferingRosterForExistingSeed(t *testing.T)
 	body["target_group_type"] = timetableModule.TargetGroupTypeOffering
 	body["source_care_offering_ids"] = []int64{17}
 	body["student_ids"] = []int64{}
+	body["expected_version"] = instanceReadVersion(t, router, date, instance.ID)
 
 	createdW := doTemplateJSON(t, router, http.MethodPost,
 		fmt.Sprintf("/instances/%d/convert-to-series", instance.ID), body)
@@ -288,8 +303,8 @@ func TestConvertInstanceToSeries_UsesOfferingRosterForExistingSeed(t *testing.T)
 	require.Equal(t, http.StatusOK, listW.Code, "body=%s", listW.Body.String())
 	listed := decodeTemplateData[weeklyInstancesResponse](t, listW)
 	require.Len(t, listed.Instances, 1)
-	assert.Equal(t, instance.ID, listed.Instances[0].ID)
-	assert.Equal(t, []int64{s.studentA}, listed.Instances[0].StudentIDs,
+	assert.Equal(t, ident.ID(instance.ID), listed.Instances[0].ID)
+	assert.Equal(t, []ident.ID{ident.ID(s.studentA)}, listed.Instances[0].StudentIDs,
 		"the converted Monday seed must derive its children from the offering roster and booked weekday")
 }
 
@@ -418,4 +433,13 @@ func TestConvertInstanceToSeries_MarksRollbackOnServiceError(t *testing.T) {
 	w := doTemplateJSON(t, router, http.MethodPost, "/instances/71/convert-to-series", body)
 	assert.Equal(t, http.StatusConflict, w.Code, "body=%s", w.Body.String())
 	assert.True(t, sawRollback, "convert service errors must mark the ambient tenant tx for rollback")
+}
+
+func assertNoTemplateNamed(t *testing.T, router http.Handler, name string) {
+	t.Helper()
+	w := doTemplateJSON(t, router, http.MethodGet, "/templates", nil)
+	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
+	for _, candidate := range decodeTemplateData[listTemplatesResponse](t, w).Templates {
+		assert.NotEqual(t, name, candidate.Name, "a refused conversion creates no series")
+	}
 }

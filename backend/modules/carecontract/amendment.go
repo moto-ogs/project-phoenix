@@ -43,6 +43,10 @@ const (
 	// SourceImport is the first version of a contract taken over from an
 	// import file (#4723).
 	SourceImport = "import"
+	// SourceOfferingCorrection is a later version that books other modules
+	// for the same care: the office corrected which modules an imported
+	// contract books (#7764).
+	SourceOfferingCorrection = "angebotskorrektur"
 )
 
 // The reasons an amendment run leaves a contract unchanged although its

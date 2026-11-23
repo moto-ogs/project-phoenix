@@ -69,6 +69,7 @@ func TestAbsenceTypesRouteManagesCustomTypeAllowance(t *testing.T) {
 
 	set := testutil.NewAuthenticatedRequest(t, "PUT", path, map[string]any{
 		"year": 2026, "entitled_days": 2.5, "reason": "Tariflicher Anspruch",
+		"expected_version": readAllowanceVersion(t, router, token, path, 2026),
 	}, testutil.WithJWTBearer(token))
 	saved := testutil.ExecuteRequest(router, set)
 	require.Equal(t, http.StatusOK, saved.Code, saved.Body.String())
@@ -134,6 +135,7 @@ func TestAbsenceTypesRouteCarryoverAndPreview(t *testing.T) {
 	for year, days := range map[int]float64{2030: 1, 2031: 1} {
 		saved := testutil.ExecuteRequest(router, testutil.NewAuthenticatedRequest(t, "PUT", path, map[string]any{
 			"year": year, "entitled_days": days, "reason": "Anspruch",
+			"expected_version": readAllowanceVersion(t, router, token, path, year),
 		}, testutil.WithJWTBearer(token)))
 		require.Equal(t, http.StatusOK, saved.Code, saved.Body.String())
 	}
@@ -220,6 +222,33 @@ func TestAbsenceTypesRouteRejectsWritesWithoutManage(t *testing.T) {
 	}
 }
 
+// An allowance change stays staff-only: it records its staff member. A valid
+// session without a staff record is refused with its code (403), not as a
+// missing login (401, before #7818), also when it came through the
+// Träger-Portal.
+func TestAbsenceTypesAllowanceRefusesSessionsWithoutStaffRecord(t *testing.T) {
+	t.Parallel()
+	db, router := setupAbsenceTypesRoute(t)
+	staff := testpkg.CreateTestStaff(t, db, "Rena", "Kontingent")
+	path := fmt.Sprintf("/1/allowances/%d", staff.ID)
+
+	for name, viaTraeger := range map[string]bool{"staffless account": false, "Träger session": true} {
+		account := testpkg.CreateTestAccount(t, db, "ohne-personalakte")
+		claims := testutil.AdminTestClaimsForTenant(int(account.ID), testpkg.Tenant(t))
+		claims.ViaTraeger = viaTraeger
+		request := testutil.NewAuthenticatedRequest(t, http.MethodPut, path, map[string]any{
+			"year": 2026, "entitled_days": 2, "reason": "Tariflicher Anspruch",
+		}, testutil.WithJWTBearer(testutil.MintTestJWT(t, claims)))
+		rec := testutil.ExecuteRequest(router, request)
+		require.Equal(t, http.StatusForbidden, rec.Code, "%s: %s", name, rec.Body.String())
+		var refusal struct {
+			Code string `json:"code"`
+		}
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &refusal))
+		assert.Equal(t, "workforce.no_staff_profile", refusal.Code, name)
+	}
+}
+
 func setupAbsenceTypesRoute(t *testing.T, clocks ...func() time.Time) (*testpkg.DB, chi.Router) {
 	t.Helper()
 	db := testpkg.SetupTestDB(t)
@@ -227,4 +256,20 @@ func setupAbsenceTypesRoute(t *testing.T, clocks ...func() time.Time) (*testpkg.
 	require.NoError(t, err)
 	resource := newAbsenceTypesResource(svc.Administration, userContext.Caller().StaffID)
 	return db, resource.Router()
+}
+
+// readAllowanceVersion reads the claim's token the way the form does: from
+// the summary it shows (ADR 0311).
+func readAllowanceVersion(t *testing.T, router chi.Router, token, path string, year int) string {
+	t.Helper()
+	read := testutil.ExecuteRequest(router, testutil.NewAuthenticatedRequest(t, "GET", fmt.Sprintf("%s?year=%d", path, year), nil, testutil.WithJWTBearer(token)))
+	require.Equal(t, http.StatusOK, read.Code, read.Body.String())
+	var envelope struct {
+		Data struct {
+			Version string `json:"version"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(read.Body.Bytes(), &envelope))
+	require.NotEmpty(t, envelope.Data.Version)
+	return envelope.Data.Version
 }

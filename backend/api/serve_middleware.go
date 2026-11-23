@@ -223,6 +223,7 @@ func setupRateLimiting(router chi.Router, securityLogger *customMiddleware.Secur
 	generalRateLimiter.ExemptPathPrefix(emailWebhookPath + "/")
 	generalRateLimiter.ExemptPathPrefix(holidayRegistrationPath + "/")
 	generalRateLimiter.ExemptPathPrefix(holidayQuoteMount + "/")
+	generalRateLimiter.ExemptPathPrefix(careContractSigningPath + "/")
 	generalRateLimiter.ExemptRequest(isPublicEnrollmentRequest)
 	generalRateLimiter.SetBucketFunc(func(r *http.Request) string {
 		switch r.Method {
@@ -363,10 +364,11 @@ func buildAuthRateLimiters(securityLogger *customMiddleware.SecurityLogger, conf
 
 // authMailPathSuffixes end the auth-limited routes that mail a password-reset
 // link or a code under every portal: the reset request, the resend of a
-// sign-in code, and the caterer's start of a second factor or a passkey
-// enrollment, and the Träger's code step in a running session (#7068). The
-// confirmation of a reset sends none.
-var authMailPathSuffixes = []string{"/password-reset", "/mfa/resend", "/account/mfa/start", "/passkeys/enrollment/challenge", "/mfa/step-up"}
+// sign-in code, the caterer's and the parents' start of a second factor
+// (/caterer/account/mfa/start, /parent/me/mfa/start), a passkey enrollment,
+// and the Träger's code step in a running session (#7068). The confirmation
+// of a reset sends none.
+var authMailPathSuffixes = []string{"/password-reset", "/mfa/resend", "/account/mfa/start", "/me/mfa/start", "/passkeys/enrollment/challenge", "/mfa/step-up"}
 
 // sendsAuthMail reports whether an auth-limited request asks for a mail.
 func sendsAuthMail(r *http.Request) bool {
@@ -466,6 +468,15 @@ func holidayRegistrationRateLimit(enabled, exemptLoopback bool, newLimiter rateL
 		return nil
 	}
 	return publicLinkRateLimit("holiday-link", exemptLoopback, newLimiter)
+}
+
+// careContractSigningRateLimit is the limit of the signing link of a care
+// contract mail (#4679), nil when rate limiting is disabled.
+func careContractSigningRateLimit(enabled, exemptLoopback bool, newLimiter rateLimiterFactory) func(http.Handler) http.Handler {
+	if !enabled {
+		return nil
+	}
+	return publicLinkRateLimit("care-contract-link", exemptLoopback, newLimiter)
 }
 
 // dataReturnRateLimit is nil when rate limiting is disabled.

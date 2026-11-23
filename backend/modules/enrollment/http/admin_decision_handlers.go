@@ -2,7 +2,6 @@ package enrollmenthttp
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -15,6 +14,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // AdminRequestSummary is the wire shape for admin list-style responses.
@@ -27,19 +27,23 @@ import (
 // answer next to its label. Listing endpoints leave them empty to
 // keep payloads light.
 type AdminRequestSummary struct {
-	ID                        string                    `json:"id"`
-	PhaseID                   string                    `json:"phase_id"`
-	PhaseName                 string                    `json:"phase_name"`
-	CareOfferingSelectionMode string                    `json:"care_offering_selection_mode"`
-	GuardianFirstName         string                    `json:"guardian_first_name"`
-	GuardianLastName          string                    `json:"guardian_last_name"`
-	GuardianEmail             string                    `json:"guardian_email"`
-	GuardianPhone             *string                   `json:"guardian_phone,omitempty"`
-	SubmittedAt               time.Time                 `json:"submitted_at"`
-	WithdrawnAt               *time.Time                `json:"withdrawn_at,omitempty"`
-	CustomData                capability.FormValues     `json:"custom_data,omitzero"`
-	ConsentFlags              capability.FormValues     `json:"consent_flags,omitzero"`
-	SchemaFields              []AdminRequestSchemaField `json:"schema_fields,omitempty"`
+	ID                        string  `json:"id"`
+	PhaseID                   string  `json:"phase_id"`
+	PhaseName                 string  `json:"phase_name"`
+	CareOfferingSelectionMode string  `json:"care_offering_selection_mode"`
+	GuardianFirstName         string  `json:"guardian_first_name"`
+	GuardianLastName          string  `json:"guardian_last_name"`
+	GuardianEmail             string  `json:"guardian_email"`
+	GuardianPhone             *string `json:"guardian_phone,omitempty"`
+	// SubmissionSource tells how the request came in (public, late_invite,
+	// admin_manual, contract_import): the school names a request of an
+	// imported contract as such, without parents (ADR 0309).
+	SubmissionSource string                    `json:"submission_source"`
+	SubmittedAt      time.Time                 `json:"submitted_at"`
+	WithdrawnAt      *time.Time                `json:"withdrawn_at,omitempty"`
+	CustomData       map[string]any            `json:"custom_data,omitempty" contract_json:"Answer values follow the school's versioned form schema"`
+	ConsentFlags     ConsentFlags              `json:"consent_flags,omitempty" contract_json:"Preserve the recorded value of historical non-boolean checkbox answers"`
+	SchemaFields     []AdminRequestSchemaField `json:"schema_fields,omitempty"`
 	// SchemaLegalBlocks carries key→title pairs from the pinned schema's
 	// legal blocks so the detail UI can label custom consent flags (e.g.
 	// "Schwimmbad") instead of rendering raw keys. Detail endpoint only.
@@ -117,13 +121,16 @@ type AdminRequestChild struct {
 	DateOfBirth       string  `json:"date_of_birth"`
 	TargetGradeLevel  *int16  `json:"target_grade_level,omitempty"`
 	TargetSchoolClass *string `json:"target_school_class,omitempty"`
+	// Version is the token of the child's data a staff correction sends
+	// back as expected_version (ADR 0311).
+	Version string `json:"version"`
 	// HolidayCareWish is the parents' answer to the holiday care question
 	// when the form asked it (#4703).
 	HolidayCareWish  *bool      `json:"holiday_care_wish,omitempty"`
 	Status           string     `json:"status"`
 	StatusReason     *string    `json:"status_reason,omitempty"`
 	ReviewedAt       *time.Time `json:"reviewed_at,omitempty"`
-	ReviewedBy       *int64     `json:"reviewed_by,omitempty"`
+	ReviewedBy       *ident.ID  `json:"reviewed_by,omitempty"`
 	ActivationMode   string     `json:"activation_mode"`
 	CreatedStudentID string     `json:"created_student_id,omitempty"`
 	// MatchedStudentID is the enrolled child the approval renews instead of
@@ -145,8 +152,8 @@ type AdminRequestChild struct {
 	// WeeklyPlanOn is the day the approved weekly plan of a renewal applies
 	// when the child's care was still running at approval (#6043). Until
 	// then the running pickup times, care days and Heimweg stay.
-	WeeklyPlanOn string                `json:"weekly_plan_on,omitempty"`
-	CustomData   capability.FormValues `json:"custom_data,omitzero"`
+	WeeklyPlanOn string         `json:"weekly_plan_on,omitempty"`
+	CustomData   map[string]any `json:"custom_data,omitempty" contract_json:"Answer values follow the school's versioned form schema"`
 	// Offerings is the per-child Betreuungsangebote selection that is on
 	// file RIGHT NOW — exactly the set a correction replaces. Populated
 	// only on the detail endpoint (listing endpoints leave it empty to
@@ -189,18 +196,31 @@ type AdminCandidatePhaseRequest struct {
 }
 
 type AdminOfferingAdjustment struct {
-	ID                 string          `json:"id"`
-	RequestID          string          `json:"request_id"`
-	RequestChildID     string          `json:"request_child_id"`
-	StudentID          string          `json:"student_id"`
-	ActorAccountID     string          `json:"actor_account_id"`
-	ActorRole          string          `json:"actor_role"`
-	ActorNameSnapshot  *string         `json:"actor_name_snapshot,omitempty"`
-	ActorEmailSnapshot *string         `json:"actor_email_snapshot,omitempty"`
-	Reason             string          `json:"reason"`
-	Before             json.RawMessage `json:"before"`
-	After              json.RawMessage `json:"after"`
-	ChangedAt          time.Time       `json:"changed_at"`
+	ID                 string                            `json:"id"`
+	RequestID          string                            `json:"request_id"`
+	RequestChildID     string                            `json:"request_child_id"`
+	StudentID          string                            `json:"student_id"`
+	ActorAccountID     string                            `json:"actor_account_id"`
+	ActorRole          string                            `json:"actor_role"`
+	ActorNameSnapshot  *string                           `json:"actor_name_snapshot,omitempty"`
+	ActorEmailSnapshot *string                           `json:"actor_email_snapshot,omitempty"`
+	Reason             string                            `json:"reason"`
+	Before             []AdminOfferingAdjustmentSnapshot `json:"before"`
+	After              []AdminOfferingAdjustmentSnapshot `json:"after"`
+	ChangedAt          time.Time                         `json:"changed_at"`
+}
+
+// AdminOfferingAdjustmentSnapshot is a booked offering as recorded in an
+// adjustment. The name and mode are optional for historical audit rows.
+type AdminOfferingAdjustmentSnapshot struct {
+	OfferingID            string   `json:"offering_id"`
+	OfferingName          *string  `json:"offering_name,omitempty"`
+	DaysOfWeekMode        *string  `json:"days_of_week_mode,omitempty"`
+	SelectedDays          []string `json:"selected_days,omitempty"`
+	ManualSelectedDays    []string `json:"manual_selected_days,omitempty"`
+	AutomaticSelectedDays []string `json:"automatic_selected_days,omitempty"`
+	AvailableDays         []string `json:"available_days,omitempty"`
+	ExtendedUntil         string   `json:"extended_until,omitempty" contract:"date"`
 }
 
 func toAdminRequestSummary(s *RequestSummary) AdminRequestSummary {
@@ -211,6 +231,7 @@ func toAdminRequestSummary(s *RequestSummary) AdminRequestSummary {
 		GuardianLastName:  s.Request.GuardianLastName,
 		GuardianEmail:     s.Request.GuardianEmail,
 		GuardianPhone:     s.Request.GuardianPhone,
+		SubmissionSource:  capability.NormalizedSubmissionSource(s.Request.SubmissionSource),
 		SubmittedAt:       s.Request.SubmittedAt,
 		WithdrawnAt:       s.Request.WithdrawnAt,
 	}
@@ -227,17 +248,18 @@ func toAdminRequestSummary(s *RequestSummary) AdminRequestSummary {
 			DateOfBirth:       string(c.DateOfBirth),
 			TargetGradeLevel:  c.TargetGradeLevel,
 			TargetSchoolClass: c.TargetSchoolClass,
+			Version:           capability.ChildDataVersion(c),
 			HolidayCareWish:   c.HolidayCareWish,
 			Status:            c.Status,
 			StatusReason:      c.StatusReason,
 			ReviewedAt:        c.ReviewedAt,
-			ReviewedBy:        c.ReviewedBy,
+			ReviewedBy:        (*ident.ID)(c.ReviewedBy),
 			ActivationMode:    c.ActivationMode,
 			CreatedStudentID:  optionalInt64String(c.CreatedStudentID),
 			MatchedStudentID:  optionalInt64String(c.MatchedStudentID),
 			ReviewReason:      c.ReviewReason,
 			WeeklyPlanOn:      optionalDateString(c.WeeklyPlanOn),
-			CustomData:        c.CustomData,
+			CustomData:        formAnswerMap(c.CustomData),
 		})
 	}
 	out.AdditionalGuardians = make([]AdminRequestGuardian, 0, len(s.Guardians))
@@ -307,6 +329,12 @@ func (rs *Resource) listAdminRequests(w http.ResponseWriter, r *http.Request) {
 	common.Respond(w, r, http.StatusOK, out, "Admin requests retrieved")
 }
 
+// getAdminSignatureProof downloads the proof of the parent's signature
+// (#4786) on a path of its own (#2352): the detail read with its PDF answer.
+func (rs *Resource) getAdminSignatureProof(w http.ResponseWriter, r *http.Request) {
+	rs.getAdminRequest(w, r.WithContext(context.WithValue(r.Context(), signatureProofRoute{}, true)))
+}
+
 func (rs *Resource) getAdminRequest(w http.ResponseWriter, r *http.Request) {
 	if rs.DecisionService == nil {
 		common.RenderError(w, r, common.ErrorInternalServer(errors.New("decision service not configured")))
@@ -352,7 +380,7 @@ func (rs *Resource) getAdminRequest(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInternalServer(err))
 		return
 	}
-	// ?format=pdf downloads the proof of the parent's signature (#4786).
+	// The proof's own path or ?format=pdf downloads the parent's signature (#4786).
 	if proofRequested {
 		rs.writeAdminSignatureProof(w, r, summary, signature)
 		return
@@ -411,8 +439,8 @@ func (rs *Resource) toAdminRequestDetailSummary(ctx context.Context, summary *Re
 	if summary == nil || summary.Request == nil {
 		return detail
 	}
-	detail.CustomData = summary.Request.CustomData
-	detail.ConsentFlags = summary.Request.ConsentFlags
+	detail.CustomData = formAnswerMap(summary.Request.CustomData)
+	detail.ConsentFlags = consentFlagsFromOwner(summary.Request.ConsentFlags)
 
 	if rs.FormSchemaService != nil && summary.Request.SchemaID != nil {
 		if fs, err := rs.FormSchemaService.SchemaVersion(ctx, *summary.Request.SchemaID); err == nil && fs != nil {
@@ -728,11 +756,12 @@ func newAdminRequestChild(child *capability.RequestChild) AdminRequestChild {
 		DateOfBirth:       string(child.DateOfBirth),
 		TargetGradeLevel:  child.TargetGradeLevel,
 		TargetSchoolClass: child.TargetSchoolClass,
+		Version:           capability.ChildDataVersion(child),
 		HolidayCareWish:   child.HolidayCareWish,
 		Status:            child.Status,
 		StatusReason:      child.StatusReason,
 		ReviewedAt:        child.ReviewedAt,
-		ReviewedBy:        child.ReviewedBy,
+		ReviewedBy:        (*ident.ID)(child.ReviewedBy),
 		ActivationMode:    child.ActivationMode,
 		CreatedStudentID:  optionalInt64String(child.CreatedStudentID),
 		MatchedStudentID:  optionalInt64String(child.MatchedStudentID),

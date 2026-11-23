@@ -8,16 +8,23 @@ import (
 var traegerPortal = []common.PortalScope{common.PortalTraeger}
 
 // ContractRouteContracts registers the typed contract of the care contracts
-// (ADR 0270), with patterns relative to /traeger/contracts. The documents,
-// the paper signature and the export answer files and keep their route files.
+// (ADR 0270), with patterns relative to /traeger/contracts. Documents and
+// exports answer files; the paper signature also takes a multipart upload
+// through the catalog (#2352).
 func ContractRouteContracts() []common.RouteContract {
 	school := common.QueryParam{Name: "school_id", Kind: common.QueryID}
-	list := []common.QueryParam{
-		{Name: "status", Kind: common.QueryString}, school, {Name: "search", Kind: common.QueryString},
-		{Name: "offset", Kind: common.QueryInt}, {Name: "limit", Kind: common.QueryInt},
-	}
+	filter := []common.QueryParam{{Name: "status", Kind: common.QueryString}, school, {Name: "search", Kind: common.QueryString}}
+	list := append([]common.QueryParam{{Name: "offset", Kind: common.QueryInt}, {Name: "limit", Kind: common.QueryInt}}, filter...)
+	export := append([]common.QueryParam{common.ListFormatQuery}, filter...)
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: traegerPortal, Query: list, Response: carecontract.ContractList{}},
+		{Method: "GET", Pattern: "/export", Portals: traegerPortal, Query: export, File: true},
+		{Method: "GET", Pattern: "/{id}/document", Portals: traegerPortal, File: true},
+		{Method: "GET", Pattern: "/{id}/versions/{number}/document", Portals: traegerPortal, File: true},
+		{Method: "GET", Pattern: "/{id}/paper-signature", Portals: traegerPortal, File: true},
+		// The handler answers 204; the catalog proxy answers it as no data.
+		{Method: "POST", Pattern: "/{id}/paper-signature", Portals: traegerPortal, Multipart: true,
+			MaxBodyBytes: carecontract.PaperMaxBytes + paperFormOverhead, TooLargeCode: common.CodeCareContractPaperDocumentInvalid, NoData: true},
 		{Method: "POST", Pattern: "/", Portals: traegerPortal, Request: CreateRequest{}, Response: carecontract.CreateResult{}},
 		{Method: "GET", Pattern: "/candidates", Portals: traegerPortal, Query: []common.QueryParam{school}, Response: []carecontract.Candidate{}},
 		{Method: "GET", Pattern: "/conclusion-modes", Portals: traegerPortal, Response: []carecontract.SchoolConclusion{}},
@@ -60,14 +67,81 @@ func ChangeRouteContracts() []common.RouteContract {
 
 // OverrunRouteContracts registers the evaluation of the care time overruns,
 // with patterns relative to /traeger/care-time-overruns. The exports answer
-// files and keep their route files.
+// files (#2352).
 func OverrunRouteContracts() []common.RouteContract {
 	window := []common.QueryParam{
 		{Name: "from", Kind: common.QueryDate}, {Name: "to", Kind: common.QueryDate}, {Name: "school_id", Kind: common.QueryID},
 	}
+	export := append([]common.QueryParam{common.ListFormatQuery}, window...)
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: traegerPortal, Query: window, Response: carecontract.OverrunEvaluation{}},
+		{Method: "GET", Pattern: "/export", Portals: traegerPortal, Query: export, File: true},
 		{Method: "GET", Pattern: "/children", Portals: traegerPortal, Query: window, Response: carecontract.OverrunEvaluation{}},
+		{Method: "GET", Pattern: "/children/export", Portals: traegerPortal, Query: export, File: true},
+	}
+}
+
+// ImportRouteContracts registers the import of existing contracts (#4723),
+// with patterns relative to /traeger/contract-imports. The preview and the
+// import take the same upload: the file plus the form fields.
+func ImportRouteContracts() []common.RouteContract {
+	upload := func(pattern string, response any) common.RouteContract {
+		return common.RouteContract{Method: "POST", Pattern: pattern, Portals: traegerPortal, Multipart: true,
+			MaxBodyBytes: carecontract.MaxContractImportFileBytes + importFormOverhead,
+			TooLargeCode: common.CodeCareContractImportFileTooLarge, Response: response}
+	}
+	preview := upload("/preview", carecontract.ContractImport{})
+	preview.NoCommit = "an import preview checks the file and saves no row of it"
+	// The correction of the modules imported contracts book (#7764).
+	correctionPreview := upload("/offering-corrections/preview", carecontract.OfferingCorrection{})
+	correctionPreview.NoCommit = "a correction preview checks the file and saves no version"
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: []carecontract.ContractImportEntry{}},
+		upload("/", carecontract.ContractImport{}),
+		preview,
+		upload("/offering-corrections", carecontract.OfferingCorrection{}),
+		correctionPreview,
+	}
+}
+
+// CorrectionRouteContracts registers the correction of contracts from an
+// import (#7767), with patterns relative to /traeger/contract-corrections.
+// The preview and the correction take the same upload; the list to fill in
+// answers a file.
+func CorrectionRouteContracts() []common.RouteContract {
+	upload := func(pattern string) common.RouteContract {
+		return common.RouteContract{Method: "POST", Pattern: pattern, Portals: traegerPortal, Multipart: true,
+			MaxBodyBytes: carecontract.MaxContractImportFileBytes + importFormOverhead,
+			TooLargeCode: common.CodeCareContractImportFileTooLarge, Response: carecontract.ContractCorrectionRun{}}
+	}
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: []carecontract.ContractCorrectionEntry{}},
+		{Method: "GET", Pattern: "/list", Portals: traegerPortal, File: true},
+		upload("/"),
+		upload("/preview"),
+	}
+}
+
+// ChildLinkRouteContracts registers the link of imported contracts to child
+// records (#7760), with patterns relative to /traeger/contract-child-links.
+// The preview and the run of a file take the upload of the import.
+func ChildLinkRouteContracts() []common.RouteContract {
+	upload := func(pattern string) common.RouteContract {
+		return common.RouteContract{Method: "POST", Pattern: pattern, Portals: traegerPortal, Multipart: true,
+			MaxBodyBytes: carecontract.MaxContractImportFileBytes + importFormOverhead,
+			TooLargeCode: common.CodeCareContractImportFileTooLarge, Response: carecontract.ChildLinking{}}
+	}
+	preview := upload("/preview")
+	preview.NoCommit = "a link preview checks the file and links no contract"
+	return []common.RouteContract{
+		upload("/"),
+		preview,
+		{Method: "POST", Pattern: "/{contractId}/preview", Portals: traegerPortal, Request: ChildLinkPreviewRequest{}, Response: carecontract.ChildLinkRow{},
+			NoCommit: "a link preview compares the contract with the child record and links nothing"},
+		{Method: "PUT", Pattern: "/{contractId}", Portals: traegerPortal, Request: ChildLinkRequest{}, Response: carecontract.ChildLinkRow{}},
+		// student_id is the child record the office saw on the contract.
+		{Method: "DELETE", Pattern: "/{contractId}", Portals: traegerPortal, NoData: true,
+			Query: []common.QueryParam{{Name: "student_id", Kind: common.QueryID}}},
 	}
 }
 
@@ -79,14 +153,34 @@ const (
 
 // SigningRouteContracts registers the one-time link of a contract mail,
 // which the parents open without a session (#2352), with patterns relative
-// to /public/care-contract-signing. The frozen PDF answers a file and keeps
-// its route file.
+// to /public/care-contract-signing. The frozen PDF is a public file of the
+// link; reading it leaves the link open.
 func SigningRouteContracts() []common.RouteContract {
 	portals := []common.PortalScope{common.PortalPublic}
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/{link}", Portals: portals, Response: carecontract.SigningView{}},
+		{Method: "GET", Pattern: "/{link}/document", Portals: portals, File: true,
+			PublicFile: "the one-time link of the contract mail is the parents' only credential for the contract it names"},
 		{Method: "POST", Pattern: "/{link}/sign", Portals: portals, Request: SignRequest{}, Response: carecontract.SigningView{}, MaxBodyBytes: signBodyBytes},
 		{Method: "GET", Pattern: "/{link}/family-children", Portals: portals, Response: SigningFamilyChildrenResponse{}},
 		{Method: "PUT", Pattern: "/{link}/family-children", Portals: portals, Request: SigningFamilyChildrenRequest{}, Response: SigningFamilyChildrenResponse{}, MaxBodyBytes: familyChildrenBodyBytes},
 	}
+}
+
+// ApplicationRouteContracts registers the school's read of the contracts of
+// its application children (#4788), relative to /api/care-contracts.
+func ApplicationRouteContracts() []common.RouteContract {
+	return []common.RouteContract{{
+		Method: "GET", Pattern: "/", Portals: []common.PortalScope{common.PortalTenant},
+		Query:    []common.QueryParam{{Name: "request_child_ids", Kind: common.QueryString}},
+		Response: []ApplicationContractResponse{},
+		Enums: []common.EnumContract{{
+			Name: "ApplicationContractStatus", Fields: []string{"ApplicationContractResponse.status"},
+			Values: []string{carecontract.StatusSent, carecontract.StatusActive, carecontract.StatusTerminated,
+				carecontract.StatusWithdrawn, carecontract.StatusEnded},
+		}, {
+			Name: "ApplicationContractConclusionMethod", Fields: []string{"ApplicationContractConclusion.method"},
+			Values: []string{carecontract.MethodWithApplication, carecontract.MethodElectronic, carecontract.MethodPaper},
+		}},
+	}}
 }

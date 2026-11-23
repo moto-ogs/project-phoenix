@@ -53,13 +53,13 @@ func TestFlowJ_TemplateUpdateReplansTheWholePeriod(t *testing.T) {
 	rr := s.do("POST", "/templates", create, s.primaryAdminClaims())
 	require.Equal(t, http.StatusCreated, rr.Code, "create template body=%s", rr.Body.String())
 	var created struct {
-		TemplateID int64 `json:"template_id"`
+		TemplateID testpkg.ID `json:"template_id"`
 	}
 	decodeResponse(t, rr, &created)
 
 	rr = s.do("POST", "/materialize", map[string]any{"from_date": far.String(), "to_date": far.String()}, s.primaryAdminClaims())
 	require.Equal(t, http.StatusOK, rr.Code, "materialize body=%s", rr.Body.String())
-	farBefore := fetchOneInstance(t, s, created.TemplateID, far)
+	farBefore := fetchOneInstance(t, s, int64(created.TemplateID), far)
 	require.Equal(t, "14:00", farBefore.StartTime.Format("15:04"))
 
 	devReq := map[string]any{
@@ -70,14 +70,24 @@ func TestFlowJ_TemplateUpdateReplansTheWholePeriod(t *testing.T) {
 	rr = s.do("POST", fmt.Sprintf("/instances/%d/deviations", farBefore.ID), devReq, s.primaryAdminClaims())
 	require.Equal(t, http.StatusOK, rr.Code, "deviations body=%s", rr.Body.String())
 
+	// The editor saves back the series it read (ADR 0311).
+	rr = s.do("GET", fmt.Sprintf("/templates/%d?period_id=%d", created.TemplateID, period.ID), nil, s.primaryAdminClaims())
+	require.Equal(t, http.StatusOK, rr.Code, "read template body=%s", rr.Body.String())
+	var opened struct {
+		Version string `json:"version"`
+	}
+	decodeResponse(t, rr, &opened)
+	require.NotEmpty(t, opened.Version)
+
 	update := body("15:00", "16:00")
 	update["replan_future"] = true
+	update["expected_version"] = opened.Version
 	rr = s.do("PUT", fmt.Sprintf("/templates/%d", created.TemplateID), update, s.primaryAdminClaims())
 	require.Equal(t, http.StatusOK, rr.Code, "update template body=%s", rr.Body.String())
 
 	// fetchOneInstance fails on a stale 14:00 row beside the new 15:00 one.
 	for _, day := range []calendar.Date{near, far, beyond} {
-		inst := fetchOneInstance(t, s, created.TemplateID, day)
+		inst := fetchOneInstance(t, s, int64(created.TemplateID), day)
 		assert.Equal(t, "15:00", inst.StartTime.Format("15:04"), "occurrence on %s follows the edit", day)
 	}
 	stale := testpkg.ActivityInstancesWhere(t, s.tenantCtx(), s.db,
@@ -85,7 +95,7 @@ func TestFlowJ_TemplateUpdateReplansTheWholePeriod(t *testing.T) {
 		created.TemplateID, s.primaryTenant)
 	assert.Empty(t, stale, "no occurrence keeps the old start time")
 
-	farAfter := fetchOneInstance(t, s, created.TemplateID, far)
+	farAfter := fetchOneInstance(t, s, int64(created.TemplateID), far)
 	assert.True(t, farAfter.UnderstaffedAck, "acknowledgement reapplied beyond the first window")
 	absent := map[int64]bool{}
 	for _, row := range fetchInstanceStaff(t, s, farAfter.ID) {

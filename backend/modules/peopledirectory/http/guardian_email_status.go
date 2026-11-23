@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // ErrGuardianHasNoEmail refuses to lift a block for a guardian without an address.
@@ -33,10 +34,10 @@ const sendBlockStopped = "stopped"
 
 // guardianEmailStatusResponse is one guardian's line of the student's status.
 type guardianEmailStatusResponse struct {
-	GuardianProfileID int64  `json:"guardian_profile_id"`
-	MailOutcome       string `json:"mail_outcome,omitempty"`
-	AddressMark       string `json:"address_mark,omitempty"`
-	EmailsStopped     bool   `json:"emails_stopped,omitempty"`
+	GuardianProfileID ident.ID `json:"guardian_profile_id"`
+	MailOutcome       string   `json:"mail_outcome,omitempty"`
+	AddressMark       string   `json:"address_mark,omitempty"`
+	EmailsStopped     bool     `json:"emails_stopped,omitempty"`
 	// StopShared: another holder of the address carries no stop, so mail to the
 	// address still goes out.
 	StopShared    bool       `json:"stop_shared,omitempty"`
@@ -69,7 +70,7 @@ func (rs *GuardianResource) getStudentGuardianEmailStatus(w http.ResponseWriter,
 	}
 	responses := make([]guardianEmailStatusResponse, 0, len(rows))
 	for _, row := range rows {
-		line := guardianEmailStatusResponse{GuardianProfileID: row.Guardian.ID, EmailsStopped: row.Guardian.EmailsStopped}
+		line := guardianEmailStatusResponse{GuardianProfileID: ident.ID(row.Guardian.ID), EmailsStopped: row.Guardian.EmailsStopped}
 		if row.Guardian.Email != nil {
 			state := states[strings.ToLower(strings.TrimSpace(*row.Guardian.Email))]
 			line.MailOutcome, line.AddressMark, line.SendBlock, line.OutcomeAt = state.MailOutcome, state.AddressMark, state.SendBlock, state.OutcomeAt

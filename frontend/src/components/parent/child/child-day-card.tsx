@@ -8,7 +8,6 @@ import { Button, ButtonLink } from "~/components/ui/button";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { MotoDuotoneIcon } from "~/components/ui/moto-duotone-icon";
 import { Skeleton } from "~/components/ui/skeleton";
-import type { ChildFeatures, ChildToday } from "~/lib/parent-api";
 import type { MotoConcept } from "~/lib/moto-concepts";
 import { childConversationPath } from "~/lib/messaging-status";
 import { parentPath } from "~/lib/parent-url";
@@ -21,6 +20,7 @@ import { homeConcept } from "~/lib/concepts/home";
 import { presentConcept } from "~/lib/concepts/present";
 import { unknownConcept } from "~/lib/concepts/unknown";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 /**
  * Die Tageskarte eines Kindes. Das Herzstueck der Eltern-App: auf der
@@ -49,7 +49,10 @@ type TodayTranslator = ReturnType<typeof useTranslations<"parentToday">>;
  * Ebene 2 im Klartext. Fehlt die Uhrzeit, die der Zustand erwartet, sagen wir
  * den Zustand ohne Zeit statt "Seit undefined Uhr da".
  */
-function explainState(today: ChildToday, t: TodayTranslator): string {
+function explainState(
+  today: parentMeContract.TodayStatusResponse,
+  t: TodayTranslator,
+): string {
   switch (today.state) {
     case "present":
       return today.since
@@ -92,9 +95,9 @@ export function ChildDayCard({
   loading = false,
 }: Readonly<{
   child: ChildDayCardChild;
-  today: ChildToday;
+  today: parentMeContract.TodayStatusResponse;
   /** Undefiniert, solange die Funktionen der Schule noch laden. */
-  features?: ChildFeatures;
+  features?: parentMeContract.ChildFeaturesResponse;
   /** Gesetzt, wenn die Seite den Krank-Dialog selbst fuehrt. */
   onSick?: () => void;
   /** Gesetzt, wenn die Seite den Abhol-Dialog selbst fuehrt. */
@@ -303,7 +306,7 @@ function ChildDayActions({
 }: Readonly<{
   studentId: string;
   firstName: string;
-  features?: ChildFeatures;
+  features?: parentMeContract.ChildFeaturesResponse;
   onSick?: () => void;
   onPickup?: () => void;
   display: "compact" | "detailed";

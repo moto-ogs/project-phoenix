@@ -1,6 +1,7 @@
+import type * as studentsContract from "~/lib/contract/students.generated";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { ToastProvider } from "~/contexts/ToastContext";
 import type { Student } from "~/lib/student-helpers";
-import type { SupervisorContact } from "~/lib/student-helpers";
 import {
   StudentHeaderStats,
   SupervisorsCard,
@@ -24,7 +25,7 @@ const mockStudent: Student = {
   bus: false,
 };
 
-const mockSupervisors: SupervisorContact[] = [
+const mockSupervisors: studentsContract.SupervisorContact[] = [
   {
     id: "1",
     first_name: "Anna",
@@ -111,6 +112,14 @@ export const PersonalInfoReadOnlyEditable: StoryObj<
 export const StudentHistorySectionStory: StoryObj<
   typeof StudentHistorySection
 > = {
+  // Der Stopp-Bereich (#3844) meldet Ergebnisse als Toast.
+  decorators: [
+    (Story) => (
+      <ToastProvider>
+        <Story />
+      </ToastProvider>
+    ),
+  ],
   render: () => (
     <StudentHistorySection
       studentId="1"
@@ -126,6 +135,14 @@ export const StudentHistorySectionStory: StoryObj<
 export const StudentHistorySectionReadOnly: StoryObj<
   typeof StudentHistorySection
 > = {
+  // Der Stopp-Bereich (#3844) meldet Ergebnisse als Toast.
+  decorators: [
+    (Story) => (
+      <ToastProvider>
+        <Story />
+      </ToastProvider>
+    ),
+  ],
   render: () => (
     <StudentHistorySection
       studentId="1"

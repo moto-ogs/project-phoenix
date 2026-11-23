@@ -10,24 +10,23 @@ import (
 
 	validation "github.com/go-ozzo/ozzo-validation"
 	"github.com/go-ozzo/ozzo-validation/is"
-
-	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/settings"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 const errPasswordsNotMatch = "passwords do not match"
 
 // TenantResolveResponse represents the public tenant info returned by resolve
 type TenantResolveResponse struct {
-	TenantID         int64           `json:"tenant_id"`
+	TenantID         ident.ID        `json:"tenant_id"`
 	Slug             string          `json:"slug"`
 	Name             string          `json:"name"`
 	Subdomain        string          `json:"subdomain"`
-	OrganizationID   int64           `json:"organization_id"`
+	OrganizationID   ident.ID        `json:"organization_id"`
 	OrganizationName string          `json:"organization_name"`
 	Hidden           bool            `json:"hidden"`
-	Settings         json.RawMessage `json:"settings"`
+	Settings         json.RawMessage `json:"settings" contract_json:"The tenant directory forwards legacy school-specific settings without interpreting their keys"`
 	// PresenceMode is the tenant's resolved operations.presence_mode setting
 	// ("detailed" | "binary"). Included so the frontend can render the right
 	// badge component (PresenceBadge vs LocationBadge) without a second call.
@@ -231,12 +230,12 @@ func (req *SwitchTenantRequest) Bind(_ *http.Request) error {
 
 // AccountTenantResponse represents a tenant available to the authenticated user
 type AccountTenantResponse struct {
-	TenantID         int64  `json:"tenant_id"`
-	Slug             string `json:"slug"`
-	Name             string `json:"name"`
-	Subdomain        string `json:"subdomain"`
-	OrganizationID   int64  `json:"organization_id"`
-	OrganizationName string `json:"organization_name"`
+	TenantID         ident.ID `json:"tenant_id"`
+	Slug             string   `json:"slug"`
+	Name             string   `json:"name"`
+	Subdomain        string   `json:"subdomain"`
+	OrganizationID   ident.ID `json:"organization_id"`
+	OrganizationName string   `json:"organization_name"`
 }
 
 // PublicTenantResponse is the public-facing tenant info returned by the
@@ -268,11 +267,11 @@ func (req *LoginRequest) Bind(_ *http.Request) error {
 
 // RegisterRequest represents the register request payload
 type RegisterRequest struct {
-	Email           string `json:"email"`
-	Username        string `json:"username"`
-	Password        string `json:"password"`
-	ConfirmPassword string `json:"confirm_password"`
-	RoleID          *int64 `json:"role_id,omitempty"` // Optional role assignment
+	Email           string    `json:"email"`
+	Username        string    `json:"username"`
+	Password        string    `json:"password"`
+	ConfirmPassword string    `json:"confirm_password"`
+	RoleID          *ident.ID `json:"role_id,omitempty"` // Optional role assignment
 
 	// Identity fields. Supplying them makes the account staff at the school in
 	// the same transaction (#2222) instead of leaving that to follow-up
@@ -311,7 +310,7 @@ func validateAccountCredentialFields(structPtr any, email, username, password, c
 
 // AccountResponse represents the account response payload
 type AccountResponse struct {
-	ID          int64    `json:"id"`
+	ID          ident.ID `json:"id"`
 	Email       string   `json:"email"`
 	Username    string   `json:"username,omitempty"`
 	Active      bool     `json:"active"`
@@ -324,6 +323,15 @@ type AccountResponse struct {
 	SchoolIdentity *SchoolIdentityResponse `json:"school_identity,omitempty"`
 }
 
+// LinkedAccountResponse is the answer of linking an existing account to the
+// caller's school: only its id, its address and what was provisioned at this
+// school, never its roles, username or state at other schools.
+type LinkedAccountResponse struct {
+	ID             ident.ID                `json:"id"`
+	Email          string                  `json:"email"`
+	SchoolIdentity *SchoolIdentityResponse `json:"school_identity"`
+}
+
 // SchoolIdentityResponse carries the ids of the person/staff chain provisioned
 // for an account at the caller's school.
 //
@@ -333,15 +341,15 @@ type AccountResponse struct {
 // as strings is the project convention for int64 ids (backend int64 to frontend
 // string) and keeps the value intact end to end.
 type SchoolIdentityResponse struct {
-	PersonID  int64 `json:"person_id,string"`
-	StaffID   int64 `json:"staff_id,string"`
-	TeacherID int64 `json:"teacher_id,string,omitempty"`
+	PersonID  ident.ID `json:"person_id"`
+	StaffID   ident.ID `json:"staff_id"`
+	TeacherID ident.ID `json:"teacher_id,omitempty"`
 }
 
 // LinkToTenantRequest represents a request to link an existing account to the current tenant.
 type LinkToTenantRequest struct {
-	Email  string `json:"email"`
-	RoleID *int64 `json:"role_id,omitempty"`
+	Email  string    `json:"email"`
+	RoleID *ident.ID `json:"role_id,omitempty"`
 
 	// Identity fields, same meaning as on RegisterRequest (#2222).
 	FirstName string  `json:"first_name,omitempty"`
@@ -424,15 +432,33 @@ type UpdateRoleRequest struct {
 
 // ReplaceRolePermissionsRequest contains the complete target set for a role.
 // An explicit empty array removes every permission; an omitted field is invalid.
+// ExpectedVersion is the version of the selection the set was made from
+// (ADR 0311); a selection changed since answers 409
+// general.changed_since_read.
 type ReplaceRolePermissionsRequest struct {
-	PermissionIDs []common.JSONID `json:"permission_ids"`
+	PermissionIDs   []ident.ID `json:"permission_ids"`
+	ExpectedVersion string     `json:"expected_version"`
+}
+
+// ReplaceRolePermissionsResponse answers a replacement with the version of
+// the selection it stored; the next replacement sends it as
+// expected_version.
+type ReplaceRolePermissionsResponse struct {
+	Version string `json:"version"`
+}
+
+// RolePermissionsResponse is a role's selection with the version a
+// replacement sends back as expected_version.
+type RolePermissionsResponse struct {
+	Permissions []PermissionResponse `json:"permissions"`
+	Version     string               `json:"version"`
 }
 
 func (req *ReplaceRolePermissionsRequest) Bind(_ *http.Request) error {
 	if req.PermissionIDs == nil {
 		return errors.New("permission_ids is required")
 	}
-	seen := make(map[common.JSONID]struct{}, len(req.PermissionIDs))
+	seen := make(map[ident.ID]struct{}, len(req.PermissionIDs))
 	for _, permissionID := range req.PermissionIDs {
 		if permissionID.Int64() <= 0 {
 			return errors.New("permission_ids must contain positive IDs")
@@ -449,7 +475,18 @@ func (req *ReplaceRolePermissionsRequest) Bind(_ *http.Request) error {
 // staff role at the current tenant. Every other staff role at this school is
 // removed; guardian access is kept.
 type ReplaceAccountRoleRequest struct {
-	RoleID *common.JSONID `json:"role_id"`
+	RoleID *ident.ID `json:"role_id"`
+	// ExpectedVersion is the version of the roles the change was made from
+	// (GET /accounts/{accountId}/role-selection/, ADR 0311); roles changed
+	// since answer 409 general.changed_since_read.
+	ExpectedVersion string `json:"expected_version"`
+}
+
+// AccountRolesResponse is an account's roles at this school with the
+// version a role change sends back as expected_version.
+type AccountRolesResponse struct {
+	Roles   []*RoleResponse `json:"roles"`
+	Version string          `json:"version"`
 }
 
 func (req *ReplaceAccountRoleRequest) Bind(_ *http.Request) error {
@@ -498,11 +535,11 @@ func validateBaseRole(br *string) error {
 
 // RoleResponse represents a role response
 type RoleResponse struct {
-	ID          int64   `json:"id,string"`
-	Name        string  `json:"name"`
-	Description string  `json:"description"`
-	IsSystem    bool    `json:"is_system"`
-	BaseRole    *string `json:"base_role,omitempty"`
+	ID          ident.ID `json:"id"`
+	Name        string   `json:"name"`
+	Description string   `json:"description"`
+	IsSystem    bool     `json:"is_system"`
+	BaseRole    *string  `json:"base_role,omitempty"`
 	// SchoolPortal marks a school role made from the Lehrkraft template: its
 	// accounts use moto schule like the Lehrkraft role (#4574).
 	SchoolPortal bool     `json:"school_portal"`
@@ -511,66 +548,21 @@ type RoleResponse struct {
 	Permissions  []string `json:"permissions,omitempty"`
 }
 
-// CreatePermissionRequest represents the create permission request payload
-type CreatePermissionRequest struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Resource    string `json:"resource"`
-	Action      string `json:"action"`
-}
-
-// Bind validates the create permission request
-func (req *CreatePermissionRequest) Bind(_ *http.Request) error {
-	req.Name = strings.TrimSpace(req.Name)
-	req.Description = strings.TrimSpace(req.Description)
-	req.Resource = strings.TrimSpace(strings.ToLower(req.Resource))
-	req.Action = strings.TrimSpace(strings.ToLower(req.Action))
-
-	return validation.ValidateStruct(req,
-		validation.Field(&req.Name, validation.Required, validation.Length(1, 100)),
-		validation.Field(&req.Description, validation.Length(0, 500)),
-		validation.Field(&req.Resource, validation.Required, validation.Length(1, 50)),
-		validation.Field(&req.Action, validation.Required, validation.Length(1, 50)),
-	)
-}
-
-// UpdatePermissionRequest represents the update permission request payload.
-// Field set, JSON tags, and Bind validation are identical to the create
-// payload, so it is a type alias.
-type UpdatePermissionRequest = CreatePermissionRequest
-
 // PermissionResponse represents a permission response
 type PermissionResponse struct {
-	ID          int64  `json:"id,string"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Resource    string `json:"resource"`
-	Action      string `json:"action"`
-	CreatedAt   string `json:"created_at"`
-	UpdatedAt   string `json:"updated_at"`
-}
-
-// UpdateAccountRequest represents the update account request payload
-type UpdateAccountRequest struct {
-	Email    string `json:"email"`
-	Username string `json:"username,omitempty"`
+	ID          ident.ID `json:"id"`
+	Name        string   `json:"name"`
+	Description string   `json:"description"`
+	Resource    string   `json:"resource"`
+	Action      string   `json:"action"`
+	CreatedAt   string   `json:"created_at"`
+	UpdatedAt   string   `json:"updated_at"`
 }
 
 type EnableCaregiverCapabilityRequest struct {
 	FirstName string `json:"first_name,omitempty"`
 	LastName  string `json:"last_name,omitempty"`
 	Position  string `json:"position,omitempty"`
-}
-
-// Bind validates the update account request
-func (req *UpdateAccountRequest) Bind(_ *http.Request) error {
-	req.Email = strings.TrimSpace(strings.ToLower(req.Email))
-	req.Username = strings.TrimSpace(req.Username)
-
-	return validation.ValidateStruct(req,
-		validation.Field(&req.Email, validation.Required, is.Email),
-		validation.Field(&req.Username, validation.Length(3, 30)),
-	)
 }
 
 func (req *EnableCaregiverCapabilityRequest) Bind(_ *http.Request) error {

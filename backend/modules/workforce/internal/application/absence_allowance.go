@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"slices"
 	"strconv"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // previewAbsenceID marks the not yet stored booking inside a preview ledger;
@@ -27,6 +29,21 @@ type allowanceAccounts struct {
 	// all its schools (#4710); local marks the bookings at this school.
 	pooled bool
 	local  map[int64]bool
+}
+
+// version is the token of the stored claim in year: the person's own days,
+// if any (ADR 0311). Bookings move the summary, not the claim the form
+// edits. The read and the change under the absence write lock both use it.
+func (a allowanceAccounts) version(year int) string {
+	var days *float64
+	if stored, found := a.entitlements[year]; found {
+		days = &stored
+	}
+	return readstate.Fingerprint(struct {
+		Type int64    `json:"type"`
+		Year int      `json:"year"`
+		Days *float64 `json:"days"`
+	}{a.absenceType.ID, year, days})
 }
 
 func (a allowanceAccounts) ledger(today string, extra ...domain.AllowanceUse) domain.AllowanceLedger {
@@ -112,7 +129,7 @@ func (s *Service) listAllowanceAbsences(ctx context.Context, staffID int64, from
 // [from, to] and still count: reported, approved or awaiting a decision.
 func (s *Service) addAllowanceUses(accounts *allowanceAccounts, absences []workforce.StaffAbsence, from, to string) error {
 	for _, absence := range absences {
-		if absence.AbsenceTypeID == nil || *absence.AbsenceTypeID != accounts.absenceType.ID {
+		if absence.AbsenceTypeID == nil || *absence.AbsenceTypeID != ident.ID(accounts.absenceType.ID) {
 			continue
 		}
 		if absence.DateEnd < from || absence.DateStart > to {
@@ -226,7 +243,7 @@ func (s *Service) rebookingCandidates(ctx context.Context, staffID int64, absenc
 	}
 	byID := make(map[int64]workforce.StaffAbsence, len(absences))
 	for _, absence := range absences {
-		byID[absence.ID] = absence
+		byID[absence.ID.Int64()] = absence
 	}
 	candidates := make([]domain.StaffAbsence, 0, len(absenceIDs))
 	firstYear, lastYear := 0, 0
@@ -235,7 +252,7 @@ func (s *Service) rebookingCandidates(ctx context.Context, staffID int64, absenc
 			return nil, 0, 0, invalidAbsence("staff absence ID is required")
 		}
 		absence, found := byID[id]
-		if !found || absence.StaffID != staffID {
+		if !found || absence.StaffID != ident.ID(staffID) {
 			return nil, 0, 0, domain.ErrStaffAbsenceNotFound
 		}
 		start, end, err := absenceYears(absenceToDomain(absence))
@@ -325,6 +342,7 @@ func (s *Service) AllowanceSummary(ctx context.Context, staffID, absenceTypeID i
 	}
 	summary := allowanceSummaryToPublic(accounts.ledger(s.clock.Today()).Summary(staffID, absenceTypeID, year))
 	summary.KeptByTraeger = accounts.pooled
+	summary.Version = accounts.version(year)
 	return summary, MapError(nil)
 }
 
@@ -393,6 +411,7 @@ func (s *Service) allowanceAccountsFor(
 		}
 		summary := allowanceSummaryToPublic(accounts.ledger(today).Summary(staffID, absenceType.ID, year))
 		summary.KeptByTraeger = accounts.pooled
+		summary.Version = accounts.version(year)
 		result = append(result, workforce.AbsenceTypeAllowanceAccount{AbsenceType: absenceType, Summary: summary})
 	}
 	return result, nil
@@ -410,6 +429,7 @@ func (s *Service) SetAllowance(ctx context.Context, input workforce.SetAbsenceTy
 	storedInput := domain.SetAbsenceTypeAllowance{
 		StaffID: input.StaffID, AbsenceTypeID: input.AbsenceTypeID, Year: input.Year,
 		EntitledDays: input.EntitledDays, Reason: input.Reason, ChangedBy: input.ChangedBy,
+		ExpectedVersion: input.ExpectedVersion,
 	}
 	absenceType, err := s.findAllowanceType(ctx, storedInput.AbsenceTypeID)
 	if err != nil {
@@ -459,6 +479,12 @@ func (s *Service) saveAllowance(ctx context.Context, absenceType domain.StaffAbs
 	accounts, err := s.loadAllowanceAccounts(ctx, input.StaffID, absenceType, input.Year, input.Year+1)
 	if err != nil {
 		return err
+	}
+	// The claim the form showed is the stored one only under this lock.
+	if input.ExpectedVersion != nil {
+		if err := readstate.Check(*input.ExpectedVersion, accounts.version(input.Year)); err != nil {
+			return err
+		}
 	}
 	if err := s.ensureAllowanceClaimCovers(accounts, input); err != nil {
 		return err

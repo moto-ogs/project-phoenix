@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
@@ -94,8 +95,23 @@ func (s *Service) RecordMorningAttendance(ctx context.Context, in studentpresenc
 		position[mark.Child] = len(marks)
 		marks = append(marks, mark)
 	}
+	class := strings.ToLower(strings.TrimSpace(in.SchoolClass))
 	return s.runWrite(ctx, "record_morning_attendance", func(txCtx context.Context) (ports.Stats, error) {
-		return s.store.UpsertMorningAttendance(txCtx, in.Date, in.RecordedBy, marks)
+		var stats ports.Stats
+		if class != "" {
+			// The handover's version covers these marks: wait for a
+			// handover of the class in flight, and hold it off until commit.
+			lockStats, err := s.store.LockClassHandover(txCtx, class, in.Date)
+			stats = lockStats
+			if err != nil {
+				return stats, err
+			}
+		}
+		upsertStats, err := s.store.UpsertMorningAttendance(txCtx, in.Date, in.RecordedBy, marks)
+		stats.Queries += upsertStats.Queries
+		stats.Rows += upsertStats.Rows
+		stats.StatementDuration += upsertStats.StatementDuration
+		return stats, err
 	})
 }
 

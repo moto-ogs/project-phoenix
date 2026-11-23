@@ -1,77 +1,45 @@
-import type { ActivityCategory } from "./activity-helpers";
-import { apiErrorFromResponse, transportFetch } from "./api-error";
+// Lookup lists of the planner: rooms, groups and activity categories, read
+// through the tenant catalog routes.
+import { bffJson } from "./bff-fetch";
+import type * as groupsContract from "./contract/groups.generated";
+import type * as roomsContract from "./contract/rooms.generated";
+import {
+  mapActivityCategoryResponse,
+  type ActivityCategory,
+} from "./activity-helpers";
 
-export interface PlannerRoomReference {
-  readonly id: number | string;
-  readonly name?: string;
-  readonly room_name?: string;
-  readonly building?: string | null;
-}
+const PAGE_SIZE = 1000;
 
-export interface PlannerGroupReference {
-  readonly id: number | string;
-  readonly name: string;
-}
-
-interface ReferenceEnvelope<T> {
-  readonly data?: T[];
-  readonly pagination?: { readonly total_pages?: number };
-}
-
-function unwrapReferences<T>(body: ReferenceEnvelope<T> | T[]): T[] {
-  return Array.isArray(body) ? body : (body.data ?? []);
-}
-
-async function readReferenceResponse<T>(response: Response): Promise<T> {
-  if (response.ok === false) {
-    throw await apiErrorFromResponse(
-      response,
-      `Reference request failed (${response.status})`,
-    );
+export async function fetchPlannerRooms(): Promise<
+  roomsContract.RoomResponse[]
+> {
+  const rooms: roomsContract.RoomResponse[] = [];
+  for (let page = 1, totalPages = 1; page <= totalPages; page += 1) {
+    const answer = await bffJson("tenant", "GET /api/rooms/", {
+      query: { page, page_size: PAGE_SIZE },
+      errorMessage: "Reference request failed",
+    });
+    rooms.push(...answer.data);
+    totalPages = answer.pagination.total_pages;
   }
-  return (await response.json()) as T;
-}
-
-export async function fetchPlannerRooms(): Promise<PlannerRoomReference[]> {
-  const pageSize = 1000;
-  const rooms: PlannerRoomReference[] = [];
-  let totalPages = 1;
-
-  for (let page = 1; page <= totalPages; page += 1) {
-    const response = await transportFetch(
-      `/api/rooms?page=${page}&page_size=${pageSize}`,
-      { credentials: "include" },
-    );
-    const body = await readReferenceResponse<
-      ReferenceEnvelope<PlannerRoomReference> | PlannerRoomReference[]
-    >(response);
-    rooms.push(...unwrapReferences(body));
-    if (Array.isArray(body) === false) {
-      totalPages = body.pagination?.total_pages ?? 1;
-    }
-  }
-
   return rooms;
 }
 
 export async function fetchPlannerActivityCategories(): Promise<
   ActivityCategory[]
 > {
-  const response = await transportFetch("/api/activities/categories", {
-    credentials: "include",
+  const categories = await bffJson("tenant", "GET /api/activities/categories", {
+    errorMessage: "Reference request failed",
   });
-  const body = await readReferenceResponse<
-    ReferenceEnvelope<ActivityCategory> | ActivityCategory[]
-  >(response);
-  return unwrapReferences(body);
+  return categories.map(mapActivityCategoryResponse);
 }
 
-export async function fetchPlannerGroups(): Promise<PlannerGroupReference[]> {
-  const response = await transportFetch("/api/groups?page_size=1000", {
-    credentials: "include",
+export async function fetchPlannerGroups(): Promise<
+  groupsContract.GroupResponse[]
+> {
+  const answer = await bffJson("tenant", "GET /api/groups/", {
+    query: { page_size: PAGE_SIZE },
+    errorMessage: "Reference request failed",
   });
-  const body = await readReferenceResponse<
-    ReferenceEnvelope<PlannerGroupReference> | PlannerGroupReference[]
-  >(response);
-  return unwrapReferences(body);
+  return answer.data;
 }

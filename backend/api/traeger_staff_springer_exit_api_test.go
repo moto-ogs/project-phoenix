@@ -43,7 +43,7 @@ func TestStaffPoolLastBlockEndsTheSpringerEmployment(t *testing.T) {
 
 	mira, miraAccount := testpkg.CreateTestStaffWithAccountForTenant(t, db, north, "Mira", "Springer")
 	southStaff, southLead := testpkg.CreateTestStaffWithAccountForTenant(t, db, south, "Sina", "Süd")
-	rec := traegerJSON(t, router, office.token, http.MethodPost, "/traeger/staff-records/", map[string]any{
+	rec := traegerLink(t, router, office.token, map[string]any{
 		"members": []map[string]int64{{"school_id": north, "staff_id": mira.ID}},
 	})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
@@ -88,15 +88,15 @@ func TestStaffPoolLastBlockEndsTheSpringerEmployment(t *testing.T) {
 		rec := traegerJSON(t, router, office.token, http.MethodGet, fmt.Sprintf("/traeger/staff-records/%d", record), nil)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		type place struct {
-			SchoolID int64 `json:"school_id"`
-			Active   bool  `json:"active"`
-			ViaPool  bool  `json:"via_pool"`
+			SchoolID wireID `json:"school_id"`
+			Active   bool   `json:"active"`
+			ViaPool  bool   `json:"via_pool"`
 		}
 		body := decode[struct {
 			Employments []place `json:"employments"`
 		}](t, rec)
 		for _, employment := range body.Employments {
-			if employment.SchoolID == south {
+			if int64(employment.SchoolID) == south {
 				return employment.Active, employment.ViaPool
 			}
 		}
@@ -122,7 +122,7 @@ func TestStaffPoolLastBlockEndsTheSpringerEmployment(t *testing.T) {
 			SET access_windows = access_windows || '{"999999": ["2000-01-03T07:30:00Z", "2000-01-03T13:30:00Z"]}'::jsonb
 			WHERE tenant_id = ? AND account_id = ?`, south, account)
 		require.NoError(t, err)
-		pastBlocks(t, db, record, south)
+		pastBlocks(t, db, int64(record), south)
 		testpkg.MapAccountToTenant(t, db, account, north)
 
 		result := run(south)
@@ -131,7 +131,7 @@ func TestStaffPoolLastBlockEndsTheSpringerEmployment(t *testing.T) {
 		staffID, live := employment()
 		assert.Equal(t, first, staffID)
 		assert.False(t, live, "the employment at the school ended")
-		assert.Equal(t, springerAt{People: 1, Links: 1, Windows: 1}, springerAtSchool(t, db, south, account, record),
+		assert.Equal(t, springerAt{People: 1, Links: 1, Windows: 1}, springerAtSchool(t, db, south, account, int64(record)),
 			"role and live employment are gone, the person and the link stay for the next block; the ended window is pruned")
 		assert.False(t, mappingActive(south))
 		assert.True(t, mappingActive(north), "the exit locks no account that works at another school")
@@ -158,7 +158,7 @@ func TestStaffPoolLastBlockEndsTheSpringerEmployment(t *testing.T) {
 		staffID, live := employment()
 		assert.Equal(t, first, staffID, "the block resumes the employment (ADR 0021)")
 		assert.True(t, live)
-		state := springerAtSchool(t, db, south, account, record)
+		state := springerAtSchool(t, db, south, account, int64(record))
 		assert.Equal(t, 1, state.Memberships)
 		assert.Equal(t, 1, state.Roles)
 		assert.True(t, mappingActive(south))
@@ -172,7 +172,7 @@ func TestStaffPoolLastBlockEndsTheSpringerEmployment(t *testing.T) {
 		_, err := db.ExecContext(t.Context(), `INSERT INTO auth.account_roles (account_id, role_id, tenant_id)
 			SELECT ?, id, ? FROM auth.roles WHERE name = 'user' AND tenant_id IS NULL`, account, south)
 		require.NoError(t, err)
-		pastBlocks(t, db, record, south)
+		pastBlocks(t, db, int64(record), south)
 		result := run(south)
 		require.Len(t, result, 1)
 		assert.Equal(t, "kept", result[0])
@@ -190,7 +190,7 @@ func TestStaffPoolLastBlockEndsTheSpringerEmployment(t *testing.T) {
 		require.NoError(t, err)
 		_, err = db.ExecContext(t.Context(), `UPDATE users.staff_school_memberships SET deleted_at = now() WHERE tenant_id = ? AND id = ?`, south, southStaff.ID)
 		require.NoError(t, err)
-		pastBlocks(t, db, record, south)
+		pastBlocks(t, db, int64(record), south)
 
 		result := run(south)
 		require.Len(t, result, 1)

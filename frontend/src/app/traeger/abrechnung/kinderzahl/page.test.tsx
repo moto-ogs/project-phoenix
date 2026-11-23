@@ -31,6 +31,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 const stated: FamilyChildren = {
+  version: "v1",
   contractId: "31",
   recipientFirstName: "Eva",
   recipientLastName: "Beispiel",
@@ -56,6 +57,7 @@ const stated: FamilyChildren = {
   status: "stated",
 };
 const confirmed: FamilyChildren = {
+  version: "v1",
   contractId: "32",
   recipientFirstName: "Jonas",
   recipientLastName: "Muster",
@@ -123,18 +125,22 @@ describe("TraegerKinderzahlPage", () => {
       within(dialog).getByRole("button", { name: "Kinderzahl bestätigen" }),
     );
     await vi.waitFor(() =>
-      expect(confirmFamilyChildren).toHaveBeenCalledWith({
-        contractId: "31",
-        children: 3,
-        // Die bestätigte Zahl gilt ab dem Ersten des laufenden Monats.
-        validFrom: `${TEST_CLOCK_TODAY.slice(0, 8)}01`,
-        validUntil: null,
-      }),
+      expect(confirmFamilyChildren).toHaveBeenCalledWith(
+        {
+          contractId: "31",
+          children: 3,
+          // Die bestätigte Zahl gilt ab dem Ersten des laufenden Monats.
+          validFrom: `${TEST_CLOCK_TODAY.slice(0, 8)}01`,
+          validUntil: null,
+        },
+        "v1",
+      ),
     );
   });
 
   it("lists a contract without a mail address as a family of its own", async () => {
     const imported: FamilyChildren = {
+      version: "v1",
       contractId: "77",
       recipientFirstName: "",
       recipientLastName: "",
@@ -183,6 +189,7 @@ describe("TraegerKinderzahlPage", () => {
     await vi.waitFor(() =>
       expect(confirmFamilyChildren).toHaveBeenCalledWith(
         expect.objectContaining({ contractId: "77", children: 1 }),
+        "v1",
       ),
     );
   });

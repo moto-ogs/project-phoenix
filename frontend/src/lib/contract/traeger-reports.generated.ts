@@ -4,8 +4,9 @@ import {
   arr,
   bool,
   calendarDate,
+  fileAnswer,
   instant,
-  int64StringOrNumber,
+  int64String,
   nullable,
   num,
   object,
@@ -21,7 +22,7 @@ export interface KeyDateReportTemplate {
 }
 
 export const KeyDateReportTemplateSchema: z.ZodType<KeyDateReportTemplate, unknown> = object<KeyDateReportTemplate>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
 });
 
@@ -100,7 +101,7 @@ export interface KeyDateSchool {
 }
 
 export const KeyDateSchoolSchema: z.ZodType<KeyDateSchool, unknown> = object<KeyDateSchool>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   city: str,
   district: nullable(str),
@@ -162,18 +163,26 @@ export const KeyDateReportSchema: z.ZodType<KeyDateReport, unknown> = object<Key
   total: KeyDateTotalSchema,
 });
 
-/** Query of GET /traeger/reports/key-date */
-export interface GetTraegerReportsKeyDateQuery {
-  key_date?: string;
-  template?: string;
-}
-
 export const routes = {
   "GET /traeger/reports/key-date": {
     method: "GET",
     pattern: "/traeger/reports/key-date",
     portals: ["org"],
-    query: ["key_date", "template"],
+    query: {
+      "key_date": { kind: "date" },
+      "template": { kind: "id" },
+    },
     response: success(KeyDateReportSchema),
+  },
+  "GET /traeger/reports/key-date/export": {
+    method: "GET",
+    pattern: "/traeger/reports/key-date/export",
+    portals: ["org"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+      "key_date": { kind: "date" },
+      "template": { kind: "id" },
+    },
+    response: fileAnswer,
   },
 } as const;

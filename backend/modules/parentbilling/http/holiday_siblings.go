@@ -7,6 +7,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	capability "github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -19,7 +20,7 @@ import (
 // /traeger/holiday-contributions/{periodId}/sibling-groups: the
 // registrations to merge as siblings.
 type HolidaySiblingMergeRequest struct {
-	RegistrationIDs []int64 `json:"registration_ids"`
+	RegistrationIDs []ident.ID `json:"registration_ids"`
 }
 
 // Bind accepts the body; the Owner checks the registrations.
@@ -64,7 +65,7 @@ func (rs *HolidayResource) mergeSiblings(w http.ResponseWriter, r *http.Request)
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	group, err := rs.contributions.MergeHolidaySiblings(r.Context(), reviewer, periodID, req.RegistrationIDs)
+	group, err := rs.contributions.MergeHolidaySiblings(r.Context(), reviewer, periodID, ident.Int64s(req.RegistrationIDs))
 	if err != nil {
 		tenant.MarkRollback(r.Context())
 		renderHolidayError(w, r, err)

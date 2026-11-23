@@ -369,6 +369,36 @@ func TestScan_CheckoutClosesCurrentVisit(t *testing.T) {
 	assert.Nil(t, result.ActiveStudents, "no room requested, no count")
 }
 
+// TestScan_CheckoutOffersNoMoodToAStoppedChild pins #3844 on the room
+// checkout: a child whose mood capture is stopped gets no feedback prompt,
+// and a stop that cannot be read offers none either.
+func TestScan_CheckoutOffersNoMoodToAStoppedChild(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name     string
+		stopped  bool
+		stopsErr error
+	}{
+		{name: "stopped", stopped: true},
+		{name: "unreadable stop", stopsErr: errors.New("stop read failed")},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			h := newHarness(t)
+			h.settings.feedback = true
+			h.settings.moodStopped = map[int64]bool{testStudentID: tc.stopped}
+			h.settings.moodStopErr = tc.stopsErr
+			h.visits.current = &ports.CurrentVisit{ID: 55, EntryTime: fixedNow.Add(-time.Hour), Session: &ports.SessionRef{ID: 201, RoomID: testRoomID, StartTime: fixedNow.Add(-time.Hour), Room: &ports.Room{ID: testRoomID, Name: "Klassenraum 1a"}}}
+
+			result, err := h.service().Scan(context.Background(), scanCommand(nil))
+
+			require.NoError(t, err)
+			assert.Equal(t, devicescan.ScanActionCheckedOut, result.Action)
+			assert.False(t, result.FeedbackEnabled)
+		})
+	}
+}
+
 func TestScan_TransferMovesBetweenRooms(t *testing.T) {
 	t.Parallel()
 	h := newHarness(t)
@@ -779,18 +809,6 @@ func TestPingAndStatus(t *testing.T) {
 		_, err := h.service().Ping(context.Background())
 
 		requireFailure(t, err, devicescan.FailureInternal, "IoT service error in PingDevice: device not found")
-	})
-	t.Run("status reports the device", func(t *testing.T) {
-		t.Parallel()
-		h := newHarness(t)
-
-		status, err := h.service().Status(context.Background())
-
-		require.NoError(t, err)
-		assert.Equal(t, testDeviceID, status.Device.ID)
-		assert.True(t, status.Device.Active)
-		assert.True(t, status.IsOnline)
-		assert.Equal(t, fixedNow, status.AuthenticatedAt)
 	})
 }
 

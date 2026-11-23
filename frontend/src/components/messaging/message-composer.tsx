@@ -16,15 +16,16 @@ import { Textarea } from "~/components/ui/textarea";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { formatBytes } from "~/lib/file-format";
+import { useAnnounceMessageComposer } from "~/lib/hooks/use-message-composer-presence";
 import { cn } from "~/lib/utils";
 import {
   checkAttachmentFiles,
   MAX_MESSAGE_ATTACHMENT_MB,
   MAX_MESSAGE_ATTACHMENTS,
   MESSAGE_ATTACHMENT_ACCEPT,
-  uploadMessageAttachment,
   type AttachmentRefusal,
   type MessageAttachment,
+  type MessageAttachmentRoutes,
 } from "~/lib/message-attachments";
 
 // Hard client cap mirroring the backend's 2000-rune message/note limit
@@ -156,13 +157,15 @@ export function MessageComposer({
    * der erscheint, sobald etwas angehängt ist (wer die Datei sieht).
    */
   readonly attachments?: {
-    readonly uploadUrl: string;
+    readonly upload: MessageAttachmentRoutes["upload"];
     readonly labels?: ComposerAttachmentLabels;
     readonly notice?: string;
     /** Öffnet eine Vorschau der angetippten Kachel; ohne bleibt sie Anzeige. */
     readonly onOpenAttachment?: (item: ComposerAttachmentItem) => void;
   };
 }) {
+  // Schwebende Hilfen unten am Rand weichen dem Senden-Knopf (#7686).
+  useAnnounceMessageComposer();
   const labels = attachments?.labels ?? GERMAN_ATTACHMENT_LABELS;
   const [pending, setPending] = useState<readonly PendingAttachment[]>([]);
   const pendingRef = useRef(pending);
@@ -220,7 +223,8 @@ export function MessageComposer({
       if (added.length === 0) return;
       setPending((current) => [...current, ...added]);
       for (const item of added) {
-        uploadMessageAttachment(attachments.uploadUrl, item.file)
+        attachments
+          .upload(item.file)
           .then((attachment) => {
             setPending((current) =>
               current.map((entry) =>

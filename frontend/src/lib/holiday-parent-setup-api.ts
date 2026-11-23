@@ -1,11 +1,7 @@
 // Elternkonto aus dem Link der Ferienanmeldung (#6673, ADR 0216). Der Link
 // ist die Berechtigung; er gilt 30 Tage und nur für diese Seite.
 
-import {
-  apiErrorFromBody,
-  transportFetch,
-  type ApiError,
-} from "~/lib/api-error";
+import { bffJson } from "~/lib/bff-fetch";
 
 export interface HolidayParentSetup {
   /** The address the link went to; the account's login. */
@@ -15,42 +11,17 @@ export interface HolidayParentSetup {
   readonly accountExists: boolean;
 }
 
-interface BackendSetup {
-  email: string;
-  traeger_name: string;
-  account_exists: boolean;
-}
-
-function setupPath(token: string): string {
-  return `/api/holiday-parent-setups/${encodeURIComponent(token)}`;
-}
-
-async function readError(
-  response: Response,
-  fallback: string,
-): Promise<ApiError> {
-  const body: unknown = await response.json().catch(() => null);
-  return apiErrorFromBody(fallback, response.status, body);
-}
-
-function unwrap<T>(body: unknown): T {
-  return (
-    body && typeof body === "object" && "data" in body
-      ? (body as { data: T }).data
-      : body
-  ) as T;
-}
-
 export async function fetchHolidayParentSetup(
   token: string,
 ): Promise<HolidayParentSetup> {
-  const response = await transportFetch(setupPath(token), {
-    cache: "no-store",
-  });
-  if (!response.ok) {
-    throw await readError(response, "Elternkonto konnte nicht geladen werden");
-  }
-  const data = unwrap<BackendSetup>(await response.json());
+  const data = await bffJson(
+    "public",
+    "GET /auth/holiday-parent-setups/{token}",
+    {
+      params: { token },
+      errorMessage: "Elternkonto konnte nicht geladen werden",
+    },
+  );
   return {
     email: data.email,
     traegerName: data.traeger_name,
@@ -67,26 +38,19 @@ export async function completeHolidayParentSetup(
   token: string,
   passwords?: { password: string; confirmPassword: string },
 ): Promise<{ accountExists: boolean }> {
-  const response = await transportFetch(setupPath(token), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(
-      passwords
+  const data = await bffJson(
+    "public",
+    "POST /auth/holiday-parent-setups/{token}",
+    {
+      params: { token },
+      body: passwords
         ? {
             password: passwords.password,
             confirm_password: passwords.confirmPassword,
           }
         : {},
-    ),
-  });
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Elternkonto konnte nicht eingerichtet werden",
-    );
-  }
-  const data = unwrap<{ account_exists?: boolean } | null>(
-    await response.json().catch(() => null),
+      errorMessage: "Elternkonto konnte nicht eingerichtet werden",
+    },
   );
-  return { accountExists: data?.account_exists === true };
+  return { accountExists: data.account_exists };
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/compose"
 	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
@@ -45,7 +46,12 @@ func TestNativeRequestEditChecksOwnershipBeforeStatusAndVersion(t *testing.T) {
 	}
 	require.ErrorIs(t, edit(), careplan.ErrCareScheduleRequestNotFound)
 	input.GuardianAccountID = account.ID
-	require.ErrorIs(t, edit(), careplan.ErrParentRequestStale)
+	require.ErrorIs(t, edit(), readstate.ErrChanged)
+	input.ExpectedVersion = ""
+	require.ErrorIs(t, edit(), readstate.ErrChanged, "an edit without a read is refused")
+	stored, err := owner.FindCareScheduleRequest(ctx, row.ID, false)
+	require.NoError(t, err)
+	require.JSONEq(t, string(row.Payload), string(stored.Payload), "a refused edit writes nothing")
 	require.NoError(t, owner.DecideCareScheduleRequest(ctx, careplan.CareScheduleRequestDecision{ID: row.ID, Status: "rejected"}))
 	input.GuardianAccountID = stranger.ID
 	require.ErrorIs(t, edit(), careplan.ErrCareScheduleRequestNotFound)
@@ -87,7 +93,7 @@ func TestNativePickupEditChecksOldCutoffAndRollsBackLedgerFailure(t *testing.T) 
 	cutoff, err := carerequests.NewSameDayCutoff("11:00", time.Date(2026, 9, 20, 12, 0, 0, 0, calendar.Berlin))
 	require.NoError(t, err)
 	input := carerequests.EditInput{RequestID: row.ID, StudentID: student.ID, GuardianAccountID: account.ID,
-		ExpectedVersion: careplan.ParentRequestVersion(row.UpdatedAt), Date: "2026-09-21", PickupTime: time.Date(1, 1, 1, 14, 0, 0, 0, time.UTC), Reason: "Neuer Termin", Cutoff: cutoff}
+		ExpectedVersion: readstate.Of(row.UpdatedAt), Date: "2026-09-21", PickupTime: time.Date(1, 1, 1, 14, 0, 0, 0, time.UTC), Reason: "Neuer Termin", Cutoff: cutoff}
 	edit := func() error {
 		return testpkg.WithTenantTx(t, ctx, db, testpkg.Tenant(t), func(txCtx context.Context, _ bun.Tx) error {
 			_, editErr := query.EditRequest(txCtx, input)

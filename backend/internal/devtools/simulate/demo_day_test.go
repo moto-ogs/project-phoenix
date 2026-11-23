@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -22,12 +23,12 @@ func demoDayAt(t *testing.T, clock string) time.Time {
 	return at
 }
 
-func plannedBlock(id int64, start, end string, room int64, students ...int64) demoBlock {
-	block := demoBlock{ID: id, Date: "2026-09-11", StartTime: start, EndTime: end, Title: fmt.Sprintf("Block %d", id), Status: "planned", RoomID: room, StudentIDs: students}
+func plannedBlock(id int64, start, end string, room int64, students ...ident.ID) demoBlock {
+	block := demoBlock{ID: ident.ID(id), Date: "2026-09-11", StartTime: start, EndTime: end, Title: fmt.Sprintf("Block %d", id), Status: "planned", RoomID: ident.ID(room), StudentIDs: students}
 	for _, studentID := range students {
 		block.Students = append(block.Students, struct {
-			StudentID int64  `json:"student_id"`
-			Status    string `json:"status"`
+			StudentID ident.ID `json:"student_id"`
+			Status    string   `json:"status"`
 		}{StudentID: studentID, Status: "expected"})
 	}
 	return block
@@ -126,6 +127,9 @@ func (c *demoDayClient) Get(path string) ([]byte, error) {
 	if path == "/api/timetable/pickup-extensions" {
 		return json.Marshal(map[string]any{"data": map[string]any{"tasks": c.tasks}})
 	}
+	if strings.HasPrefix(path, "/api/students?") {
+		return c.childList(path)
+	}
 	if strings.Contains(path, "-schedules?") {
 		base, query, _ := strings.Cut(path, "?")
 		values, err := url.ParseQuery(query)
@@ -159,6 +163,46 @@ func (c *demoDayClient) Get(path string) ([]byte, error) {
 	return json.Marshal(map[string]any{"data": map[string]any{"instances": blocks}})
 }
 
+// childList answers the child list with today's planned times, as
+// include_arrival_times and include_pickup_times add them.
+func (c *demoDayClient) childList(path string) ([]byte, error) {
+	query, err := url.ParseQuery(strings.TrimPrefix(path, "/api/students?"))
+	if err != nil {
+		return nil, err
+	}
+	if query.Get("include_arrival_times") != "true" || query.Get("include_pickup_times") != "true" {
+		return nil, fmt.Errorf("unexpected GET %s", path)
+	}
+	ids := map[int64]bool{}
+	for id := range c.arrivals {
+		ids[id] = true
+	}
+	for id := range c.pickups {
+		ids[id] = true
+	}
+	for id := range c.dayChanges {
+		ids[id] = true
+	}
+	rows := []map[string]any{}
+	for id := range ids {
+		row := map[string]any{"id": strconv.FormatInt(id, 10)}
+		for _, kind := range []string{"arrival", "pickup"} {
+			row[kind+"_is_exception"] = c.dayChanges[id]
+			if exception, ok := c.exceptions[fmt.Sprintf("/api/students/%d/%s-exceptions", id, kind)]; ok {
+				row[kind+"_is_exception"], row[kind+"_notes"] = true, exception["reason"]
+			}
+		}
+		if clock, ok := c.arrivals[id]; ok {
+			row["arrival_time"] = clock
+		}
+		if clock, ok := c.pickups[id]; ok {
+			row["pickup_time"] = clock
+		}
+		rows = append(rows, row)
+	}
+	return json.Marshal(map[string]any{"data": rows, "pagination": map[string]any{"total_pages": 1}})
+}
+
 func (c *demoDayClient) Put(path string, body any) ([]byte, error) {
 	c.writes = append(c.writes, "PUT "+path)
 	values := body.(map[string]any)
@@ -187,27 +231,6 @@ func (c *demoDayClient) Put(path string, body any) ([]byte, error) {
 
 func (c *demoDayClient) Post(path string, body any) ([]byte, error) {
 	switch {
-	case path == "/api/students/arrival-times/bulk" || path == "/api/students/pickup-times/bulk":
-		source, field := c.arrivals, "expected_arrival"
-		if strings.Contains(path, "pickup") {
-			source, field = c.pickups, "pickup_time"
-		}
-		var rows []map[string]any
-		for _, studentID := range body.(map[string]any)["student_ids"].([]int64) {
-			row := map[string]any{"student_id": studentID, "is_exception": c.dayChanges[studentID]}
-			kind := "arrival"
-			if field == "pickup_time" {
-				kind = "pickup"
-			}
-			if exception, ok := c.exceptions[fmt.Sprintf("/api/students/%d/%s-exceptions", studentID, kind)]; ok {
-				row["is_exception"], row["notes"] = true, exception["reason"]
-			}
-			if clock, ok := source[studentID]; ok {
-				row[field] = clock
-			}
-			rows = append(rows, row)
-		}
-		return json.Marshal(map[string]any{"data": rows})
 	case strings.HasSuffix(path, "-exceptions"):
 		if c.dayChanges[studentIDFromPath(path)] || c.exceptions[path] != nil {
 			// A staff exception already holds the day; the care plan refuses a second one.
@@ -731,7 +754,7 @@ func TestDemoTickRunsAWeekdayWithoutKioskSessions(t *testing.T) {
 	state.Accounts.Betreuer = []AccountCredentials{{StaffID: 17}}
 	state.Activities = map[string]int64{"Hausaufgaben": 23}
 	studentID := state.Students[0].ID
-	client := &demoPlanClient{demoDayClient: *newDemoDayClient(plannedBlock(1, "14:45", "17:00", 5, studentID))}
+	client := &demoPlanClient{demoDayClient: *newDemoDayClient(plannedBlock(1, "14:45", "17:00", 5, ident.ID(studentID)))}
 	client.arrivals[studentID] = "11:45"
 	now := demoDayAt(t, "15:00")
 	ticker, err := NewDemoTicker(DemoTickOptions{
@@ -760,8 +783,8 @@ func TestDemoTickWaitsForEachChildsRunningPlannedBlock(t *testing.T) {
 	futureID := currentID + 1
 	state.Students = append(state.Students, SeedStudent{ID: futureID, FirstName: "Mia", LastName: "S"})
 	client := &demoPlanClient{demoDayClient: *newDemoDayClient(
-		plannedBlock(1, "14:45", "17:00", 5, currentID),
-		plannedBlock(2, "16:00", "17:00", 5, futureID),
+		plannedBlock(1, "14:45", "17:00", 5, ident.ID(currentID)),
+		plannedBlock(2, "16:00", "17:00", 5, ident.ID(futureID)),
 	)}
 	client.arrivals[currentID], client.arrivals[futureID] = "11:45", "11:45"
 	now := demoDayAt(t, "15:00")
@@ -822,7 +845,7 @@ func TestDemoTickRunsAWeekendThatFollowsFridaysPlan(t *testing.T) {
 	state.Accounts.Betreuer = []AccountCredentials{{StaffID: 17}}
 	state.Activities = map[string]int64{"Hausaufgaben": 23}
 	studentID := state.Students[0].ID
-	saturdayBlock := plannedBlock(1, "14:45", "17:00", 5, studentID)
+	saturdayBlock := plannedBlock(1, "14:45", "17:00", 5, ident.ID(studentID))
 	saturdayBlock.Date = "2026-09-12"
 	client := &demoPlanClient{demoDayClient: *newDemoDayClient(saturdayBlock)}
 	client.arrivals[studentID] = "11:45"

@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/masterdatarequests"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/parentrequests"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // MasterDataDecisionDependencies wires the Stammdaten decision (#3354).
@@ -122,8 +123,8 @@ func (s *MasterDataDecisions) loadPendingDecisionRequest(ctx context.Context, in
 		}
 		return nil, fmt.Errorf("review: find pending request: %w", err)
 	}
-	if input.ExpectedVersion != "" && careplan.ParentRequestVersion(req.UpdatedAt) != input.ExpectedVersion {
-		return nil, parentrequests.ErrStale
+	if err := readstate.Check(input.ExpectedVersion, readstate.Of(req.UpdatedAt)); err != nil {
+		return nil, err
 	}
 	return req, nil
 }

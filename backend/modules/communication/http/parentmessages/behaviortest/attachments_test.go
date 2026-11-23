@@ -60,7 +60,9 @@ func messagingFixture(t *testing.T, reads owners.StaffStudentReads) (chi.Router,
 	persons := owners.ParentMessagePeopleWithLeaders{ParentMessagePeople: owners.BindParentMessagePeople(directory), ParentMessageLeadership: owners.BindParentMessageLeadership(people.Staff, owners.NewPeopleIdentityAccess(database, nil))}
 	svc, groups, attachments, handling, _ := compose.NewParentMessaging(compose.ParentMessagingConfig{ThreadRepo: repos.ParentMessageThread, MessageRepo: parentStore.NewParentMessageRepository(db), ReadRepo: repos.ParentMessageRead, Persons: persons, UserContext: reads, Session: api.CommunicationSession{}, Settings: settingsValues.NewParentMessagingValues(settings.Settings), Broadcaster: realtime.NewHub(slog.Default()), DB: db, Logger: slog.Default(), Observe: func(compose.Observation) {}, GroupAudience: owners.NewParentGroupAudience(database)}, owners.CommunicationRequestRuntime{}, deliveryPolicy.ParentDeliveryPolicy{})
 	routes := api.NewMessageAttachmentRoutesForTests(attachments, common.RequiresPermission(permissions.UsersRead))
-	return messaging.NewResource(svc, groups, handling, nil).Router(api.ProtectedTenantRoutesWith(routes.Register)), testpkg.CreateTestParentGuardianChain(t, db)
+	router := chi.NewRouter()
+	router.Mount("/api/messages", messaging.NewResource(svc, groups, handling, nil).Router(api.ProtectedTenantRoutesWith(routes.Register)))
+	return router, testpkg.CreateTestParentGuardianChain(t, db)
 }
 
 func staffToken(t *testing.T, name string, grants ...string) string {
@@ -75,7 +77,7 @@ func call(t *testing.T, router chi.Router, token, method, path, contentType stri
 	if body == nil {
 		body = &bytes.Buffer{}
 	}
-	req := httptest.NewRequest(method, path, body).WithContext(testpkg.Ctx(t))
+	req := httptest.NewRequest(method, "/api/messages"+path, body).WithContext(testpkg.Ctx(t))
 	req.Header.Set("Authorization", "Bearer "+token)
 	if contentType != "" {
 		req.Header.Set("Content-Type", contentType)
@@ -112,16 +114,27 @@ func TestStaffSendPhotosToGuardiansAndReadThemWithTheMessages(t *testing.T) {
 	photo := uploadPhoto(t, router, sender, "basteln.png")
 	download := "/attachments/" + photo.ID + "/download"
 	require.Equal(t, http.StatusNotFound, call(t, router, colleague, http.MethodGet, download, "", nil).Code, "an unsent upload is its uploader's alone")
-	opened := post("/threads", fmt.Sprintf(`{"student_id":%q,"guardian_account_id":%q,"body":"","attachment_ids":[%q]}`, fmt.Sprint(chain.StudentID), fmt.Sprint(chain.AccountID), photo.ID))
-	require.Equal(t, http.StatusCreated, opened.Code, opened.Body.String())
+	opened := post("/threads/open", fmt.Sprintf(`{"student_id":%q,"guardian_account_id":%q}`, fmt.Sprint(chain.StudentID), fmt.Sprint(chain.AccountID)))
+	require.Equal(t, http.StatusOK, opened.Code, opened.Body.String())
 	var thread struct {
 		Data messaging.ParentChatThreadDetailResponse
 	}
 	require.NoError(t, json.Unmarshal(opened.Body.Bytes(), &thread))
+	sent := post("/threads/"+thread.Data.ThreadID, fmt.Sprintf(`{"body":"","attachment_ids":[%q]}`, photo.ID))
+	require.Equal(t, http.StatusCreated, sent.Code, sent.Body.String())
+	detail := call(t, router, sender, http.MethodGet, "/threads/"+thread.Data.ThreadID, "", nil)
+	require.Equal(t, http.StatusOK, detail.Code, detail.Body.String())
+	require.NoError(t, json.Unmarshal(detail.Body.Bytes(), &thread))
 	require.Len(t, thread.Data.Messages, 1)
-	var carried []attachmentWire
-	require.NoError(t, json.Unmarshal(thread.Data.Messages[0].Attachments, &carried))
-	require.Equal(t, []attachmentWire{photo}, carried)
+	var carried struct {
+		Data struct {
+			Messages []struct {
+				Attachments []attachmentWire `json:"attachments"`
+			} `json:"messages"`
+		}
+	}
+	require.NoError(t, json.Unmarshal(detail.Body.Bytes(), &carried))
+	require.Equal(t, []attachmentWire{photo}, carried.Data.Messages[0].Attachments)
 
 	// Whoever reads the conversation reads its photo; the route's right
 	// keeps everybody else out.

@@ -9,11 +9,12 @@ import (
 
 // RouteContracts registers the Träger's catalog of phases and care
 // offerings (ADR 0270), with patterns relative to /traeger/catalog. The
-// export answers a file and keeps its route file.
+// export answers a file (#2352).
 func RouteContracts() []common.RouteContract {
 	portals := []common.PortalScope{common.PortalTraeger}
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/phases", Portals: portals, Response: []enrollment.TraegerPhase{}},
+		{Method: "GET", Pattern: "/phases/export", Portals: portals, Query: []common.QueryParam{common.ListFormatQuery}, File: true},
 		{Method: "POST", Pattern: "/phases", Portals: portals, Request: PhaseRequest{}, Response: PhaseDetail{}},
 		{Method: "GET", Pattern: "/phases/{id}", Portals: portals, Response: PhaseDetail{}},
 		{Method: "PUT", Pattern: "/phases/{id}", Portals: portals, Request: PhaseRequest{}, Response: PhaseDetail{}},
@@ -21,7 +22,7 @@ func RouteContracts() []common.RouteContract {
 		{Method: "POST", Pattern: "/phases/{id}/offerings", Portals: portals, Request: OfferingRequest{}, Response: careplan.TraegerOffering{}},
 		{Method: "PUT", Pattern: "/offerings/{id}", Portals: portals, Request: OfferingRequest{}, Response: careplan.TraegerOffering{}},
 		{Method: "POST", Pattern: "/offerings/{id}/withdraw", Portals: portals, Response: careplan.TraegerOffering{}},
-		{Method: "POST", Pattern: "/phases/{id}/preview", Portals: portals, Response: traegercatalog.Preview{}},
+		{Method: "POST", Pattern: "/phases/{id}/preview", Portals: portals, NoCommit: "the preview shows what publishing the phase would change and saves nothing", Response: traegercatalog.Preview{}},
 		{Method: "POST", Pattern: "/phases/{id}/rollout", Portals: portals, Request: RolloutRequest{}, Response: traegercatalog.Rollout{}},
 	}
 }

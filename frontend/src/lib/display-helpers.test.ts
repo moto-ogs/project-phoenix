@@ -2,9 +2,10 @@ import { describe, expect, it, vi, afterEach } from "vitest";
 import { mapDisplayResponse, buildDisplayUrl } from "./display-helpers";
 
 describe("mapDisplayResponse", () => {
-  it("maps backend snake_case to camelCase with string id", () => {
+  it("maps the contract's snake_case to camelCase with string id", () => {
     const mapped = mapDisplayResponse({
-      id: 42,
+      id: "42",
+      tenant_id: "1",
       name: "Eingangsbereich",
       is_active: true,
       created_at: "2026-07-07T10:00:00Z",

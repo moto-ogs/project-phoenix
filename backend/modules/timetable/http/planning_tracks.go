@@ -8,12 +8,17 @@ import (
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type planningTrackRequest struct {
 	Name      string `json:"name"`
 	Color     string `json:"color"`
 	SortOrder int    `json:"sort_order"`
+	// ExpectedVersion is the version of the track an edit replaces (ADR
+	// 0311); an edit of a track changed since is refused. A create ignores
+	// it.
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 func (req *planningTrackRequest) Bind(_ *http.Request) error {
@@ -31,7 +36,7 @@ func (req *planningTrackRequest) Bind(_ *http.Request) error {
 }
 
 type planningTrackOrderRequest struct {
-	IDs []int64 `json:"ids"`
+	IDs []ident.ID `json:"ids"`
 }
 
 func (req *planningTrackOrderRequest) Bind(_ *http.Request) error {
@@ -89,7 +94,7 @@ func (rs *Resource) updatePlanningTrack(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	track, err := service.EditPlanningTrack(r.Context(), id, timetable.PlanningTrackDraft{
-		Name: req.Name, Color: req.Color, SortOrder: req.SortOrder,
+		Name: req.Name, Color: req.Color, SortOrder: req.SortOrder, ExpectedVersion: req.ExpectedVersion,
 	})
 	if err != nil {
 		renderPlanningTrackError(w, r, err)
@@ -108,7 +113,7 @@ func (rs *Resource) reorderPlanningTracks(w http.ResponseWriter, r *http.Request
 		common.RenderError(w, r, bindErrorRenderer(err))
 		return
 	}
-	if err := service.OrderPlanningTracks(r.Context(), req.IDs); err != nil {
+	if err := service.OrderPlanningTracks(r.Context(), ident.Int64s(req.IDs)); err != nil {
 		renderPlanningTrackError(w, r, err)
 		return
 	}

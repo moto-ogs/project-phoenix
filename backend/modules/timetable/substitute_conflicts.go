@@ -1,6 +1,10 @@
 package timetable
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+)
 
 // Substitute time conflicts (WP-B12) are soft warnings of the staffing
 // saves. A substitute carries no implicit guarantee that their day is
@@ -18,10 +22,10 @@ const SubstituteConflictKind = "substitute_time_conflict"
 
 // SubstituteTimeConflict is one soft warning in a staffing save response.
 type SubstituteTimeConflict struct {
-	Kind       string `json:"kind"`              // always "substitute_time_conflict"
-	InstanceID int64  `json:"instance_id"`       // the substituted target that collides
-	OtherID    int64  `json:"other_instance_id"` // the conflicting foreign instance
-	Message    string `json:"message"`           // German-facing copy
+	Kind       string   `json:"kind"`              // always "substitute_time_conflict"
+	InstanceID ident.ID `json:"instance_id"`       // the substituted target that collides
+	OtherID    ident.ID `json:"other_instance_id"` // the conflicting foreign instance
+	Message    string   `json:"message"`           // German-facing copy
 }
 
 // SubstituteConflictInstance is the minimal shape of a target or foreign
@@ -61,8 +65,8 @@ func DetectSubstituteTimeConflicts(
 			if tgt.StartMin < other.EndMin && other.StartMin < tgt.EndMin {
 				warnings = append(warnings, SubstituteTimeConflict{
 					Kind:       SubstituteConflictKind,
-					InstanceID: tgt.ID,
-					OtherID:    other.ID,
+					InstanceID: ident.ID(tgt.ID),
+					OtherID:    ident.ID(other.ID),
 					Message: fmt.Sprintf(
 						"Vertretung ist auf Instanz %d um %s eingetragen",
 						other.ID, other.StartHHMM,

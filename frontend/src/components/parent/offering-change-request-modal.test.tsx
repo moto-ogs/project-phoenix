@@ -18,12 +18,19 @@ import {
   updateOfferingChangeRequest,
   type OfferingCatalog,
 } from "~/lib/parent-api";
+import { ToastProvider } from "~/contexts/ToastContext";
 import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
 
 vi.unmock("swr");
 
 function renderParent(ui: Parameters<typeof render>[0]) {
-  return render(ui, { wrapper: ParentResourceTestProvider });
+  return render(ui, {
+    wrapper: ({ children }) => (
+      <ParentResourceTestProvider>
+        <ToastProvider>{children}</ToastProvider>
+      </ParentResourceTestProvider>
+    ),
+  });
 }
 
 vi.mock("~/lib/parent-api", async (importOriginal) => {
@@ -76,6 +83,8 @@ function catalog(overrides: Partial<OfferingCatalog> = {}): OfferingCatalog {
     latest_effective_from: "2027-07-31",
     items: [
       {
+        automatic: false,
+        is_active: true,
         id: "5",
         name: "Regelbetreuung",
         days_of_week_mode: "parent_choice",
@@ -88,6 +97,8 @@ function catalog(overrides: Partial<OfferingCatalog> = {}): OfferingCatalog {
         selected_days: ["mon", "tue"],
       },
       {
+        automatic: false,
+        is_active: true,
         id: "6",
         name: "Ferienbetreuung",
         days_of_week_mode: "fixed",
@@ -117,7 +128,7 @@ describe("OfferingChangeRequestModal", () => {
     mockEvents.mockResolvedValue([
       {
         event_type: "submitted",
-        version: "v7",
+        version: "history-v",
         created_at: "2026-08-10T08:00:00Z",
       },
     ]);
@@ -178,7 +189,7 @@ describe("OfferingChangeRequestModal", () => {
         onClose={vi.fn()}
         onSubmit={vi.fn()}
         reasonRequired={false}
-        editRequestId="req-9"
+        editRequest={{ id: "req-9", version: "v7" }}
         onEdited={onEdited}
       />,
     );
@@ -201,6 +212,39 @@ describe("OfferingChangeRequestModal", () => {
         expectedVersion: "v7",
       }),
     );
+    expect(onEdited).toHaveBeenCalled();
+  });
+
+  // ADR 0311 rule 6: after a refusal the page reads the request again; a
+  // failed read says so instead of claiming the new state shows.
+  it("names a failed read of the request after a refusal", async () => {
+    mockUpdateOffering.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    const onEdited = vi
+      .fn()
+      .mockRejectedValue(
+        new ApiError("down", 503, { code: "general.unavailable" }),
+      );
+    renderParent(
+      <OfferingChangeRequestModal
+        studentId="42"
+        onClose={vi.fn()}
+        onSubmit={vi.fn()}
+        reasonRequired={false}
+        editRequest={{ id: "req-9", version: "v7" }}
+        onEdited={onEdited}
+      />,
+    );
+    const save = await screen.findByRole("button", {
+      name: "Änderung speichern",
+    });
+    await waitFor(() => expect(save).toBeEnabled());
+    fireEvent.click(save);
+
+    expect(
+      await screen.findByText(/Der neue Stand konnte nicht geladen werden/),
+    ).toBeInTheDocument();
     expect(onEdited).toHaveBeenCalled();
   });
 
@@ -443,6 +487,8 @@ describe("OfferingChangeRequestModal", () => {
       catalog({
         items: [
           {
+            automatic: false,
+            is_active: true,
             id: "7",
             name: "Frühbetreuung",
             days_of_week_mode: "parent_choice",
@@ -476,6 +522,8 @@ describe("OfferingChangeRequestModal", () => {
 
   it("names a weekday shared by two variants of a per-day group and keeps both (#4514)", async () => {
     const variant = (id: string, name: string, days: string[]) => ({
+      automatic: false,
+      is_active: true,
       id,
       name,
       days_of_week_mode: "parent_choice",
@@ -536,6 +584,8 @@ describe("OfferingChangeRequestModal", () => {
       catalog({
         items: [
           {
+            automatic: false,
+            is_active: true,
             id: "8",
             name: "Volles Angebot",
             days_of_week_mode: "fixed",

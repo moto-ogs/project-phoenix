@@ -28,7 +28,7 @@ import {
   type RoomRemovalImpact,
   type RoomRemovalOutcome,
 } from "~/lib/room-removal-api";
-import { useFreshSWR } from "~/lib/swr";
+import { useSWRAuth } from "~/lib/swr";
 import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 
 const logger = createLogger({ component: "RoomRemovalModal" });
@@ -184,19 +184,20 @@ export function RoomRemovalModal({
   const [removing, setRemoving] = useState(false);
   const errors = useApiFormError();
   const clearErrors = errors.clear;
-  // Bestätigt wird nur gegen die Vorschau dieser Öffnung; auch nach einem
-  // abgelehnten Entfernen erst wieder gegen die neue.
+  // Die Vorschau kommt aus dem gemeinsamen Cache und wird beim Öffnen neu
+  // gelesen. Bestätigt wird mit ihrem Fingerabdruck: hat sich der Raum seither
+  // geändert, lehnt der Server ab (ADR 0311), und der Dialog zeigt die neue.
   const {
-    data: freshData,
+    data: cachedData,
     error: impactError,
     mutate: reloadImpact,
-  } = useFreshSWR(
+  } = useSWRAuth(
     isOpen ? tenantDailyKeys.roomRemovalImpact(roomId) : null,
     () => fetchRoomRemovalImpact(roomId),
   );
-  // Scheitert das Laden dieser Öffnung, zeigt der Dialog den Fehler, nicht
-  // eine frühere Vorschau.
-  const data = impactError ? undefined : freshData;
+  // Scheitert das Laden, zeigt der Dialog den Fehler, nicht eine frühere
+  // Vorschau.
+  const data = impactError ? undefined : cachedData;
   const impact: RoomRemovalImpact | null = data ?? null;
   const loadingImpact = isOpen && data === undefined && !impactError;
   const impactLoad = useSwrResourceLoadError(
@@ -219,7 +220,7 @@ export function RoomRemovalModal({
     clearErrors();
     let result: Exclude<RoomRemovalOutcome, "blocked">;
     try {
-      result = await removeRoom(roomId);
+      result = await removeRoom(roomId, impact.fingerprint);
     } catch (removeError) {
       logger.warn("room_removal_failed", {
         room_id: roomId,
@@ -228,7 +229,9 @@ export function RoomRemovalModal({
             ? removeError.message
             : String(removeError),
       });
-      // Hält jemand den Raum inzwischen, zeigt die neue Vorschau, was.
+      // Hält jemand den Raum inzwischen oder hat er sich sonst geändert, zeigt
+      // die neue Vorschau, was jetzt geschähe. Ein Wiederholen gibt es nicht:
+      // bestätigt wird die neue Vorschau.
       void reloadImpact();
       await errors.show(removeError, { object: "das Entfernen des Raums" });
       setRemoving(false);

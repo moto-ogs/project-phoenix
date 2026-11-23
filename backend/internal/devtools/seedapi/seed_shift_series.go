@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedShiftSeriesStep shows Dienstplan series around two weeks of
@@ -30,14 +32,14 @@ const (
 func (seedShiftSeriesStep) Name() string { return "Seeding shift series around the Ferien" }
 
 type seedCalendarPeriod struct {
-	ID              int64   `json:"id"`
-	Name            string  `json:"name"`
-	PeriodType      string  `json:"period_type"`
-	StartDate       string  `json:"start_date"`
-	EndDate         string  `json:"end_date"`
-	WeekCycleLength int     `json:"week_cycle_length"`
-	WeekCycleAnchor *string `json:"week_cycle_anchor"`
-	IsActive        bool    `json:"is_active"`
+	ID              ident.ID `json:"id"`
+	Name            string   `json:"name"`
+	PeriodType      string   `json:"period_type"`
+	StartDate       string   `json:"start_date"`
+	EndDate         string   `json:"end_date"`
+	WeekCycleLength int      `json:"week_cycle_length"`
+	WeekCycleAnchor *string  `json:"week_cycle_anchor"`
+	IsActive        bool     `json:"is_active"`
 }
 
 // seedHerbstferien are the two Ferien weeks the seed plans around: Monday to
@@ -193,22 +195,26 @@ func timeTrackingSeedStaffIDs(fs *FixedSeeder) []int64 {
 // currentWeekShifts are the single shifts from Monday of today's week up to
 // today, Friday at the latest: the series' hours for everybody a series
 // covers, and the Spätdienst for the first staff member, whose Freies Spiel
-// runs until 17:00. The person on vacation today is not planned today
-// (seedTodaysAbsencesStep). On a weekend they fill the week that just ended.
+// runs until 17:00. The people on vacation or training today are not planned
+// today (seedTodaysAbsencesStep), so the full-day simulation does not record
+// them as absent. On a weekend they fill the week that just ended.
 func currentWeekShifts(today seedDate, staffIDs []int64, series []map[string]any, types seedDutyTypes) []map[string]any {
 	plan := append([]map[string]any{{
 		"staff_id": staffIDs[0], "start_time": lateDutyStart, "end_time": lateDutyEnd,
 		"break_minutes": regularDutyBreakMinutes, "shift_type_id": types.late,
 	}}, series...)
 	monday := seedDate{Time: mostRecentWeekday(today.UTCMidnight(), time.Monday)}
-	onVacation := int64(0)
-	if len(staffIDs) > vacationTodayStaffIndex {
-		onVacation = staffIDs[vacationTodayStaffIndex]
+	onLeave := map[int64]bool{}
+	for _, index := range []int{vacationTodayStaffIndex, trainingTodayStaffIndex} {
+		if len(staffIDs) > index {
+			onLeave[staffIDs[index]] = true
+		}
 	}
 	var shifts []map[string]any
 	for day := monday; !day.After(today.UTCMidnight()) && day.Weekday() != time.Saturday; day = day.AddDays(1) {
 		for _, shift := range plan {
-			if day.String() != today.String() || shift["staff_id"] != onVacation {
+			staffID, isStaffID := shift["staff_id"].(int64)
+			if day.String() != today.String() || !isStaffID || !onLeave[staffID] {
 				shifts = append(shifts, singleShiftBody(day, shift))
 			}
 		}

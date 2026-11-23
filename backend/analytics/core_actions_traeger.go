@@ -174,14 +174,12 @@ var traegerCoreActions = map[RouteKey]CoreAction{
 	{http.MethodPut, "/traeger/family-billing/"}:                      notCaptured,
 	{http.MethodPut, "/traeger/billing-families/debtor-number"}:       notCaptured,
 	{http.MethodPut, "/traeger/billing-families/child-debtor-number"}: notCaptured,
-	{http.MethodDelete, "/traeger/family-billing/{id}"}:               notCaptured,
 	{http.MethodPut, "/traeger/billing-run-due-dates/care/{id}"}:      notCaptured,
 	{http.MethodPut, "/traeger/billing-run-due-dates/holiday/{id}"}:   notCaptured,
 	// The SEPA creditor and the mandates of the families (#4695) belong to
 	// the Träger, no school to count them for.
 	{http.MethodPut, "/traeger/sepa-creditor/"}:                      notCaptured,
 	{http.MethodPost, "/traeger/sepa-mandates/"}:                     notCaptured,
-	{http.MethodPut, "/traeger/sepa-mandates/{id}"}:                  notCaptured,
 	{http.MethodPost, "/traeger/sepa-mandates/{id}/revoke"}:          notCaptured,
 	{http.MethodPost, "/traeger/sepa-debits/{kind}/{id}/submission"}: notCaptured,
 	// The field mapping of the Sollstellung and the start of the file
@@ -239,6 +237,33 @@ var traegerCoreActions = map[RouteKey]CoreAction{
 	// to a school; the preview stores nothing.
 	{http.MethodPost, "/traeger/contract-imports/"}:        notCaptured,
 	{http.MethodPost, "/traeger/contract-imports/preview"}: notCaptured,
+	// The correction of contracts from an import (#7767) completes a
+	// one-time takeover and belongs to the Träger; the preview stores
+	// nothing.
+	{http.MethodPost, "/traeger/contract-corrections/"}:        notCaptured,
+	{http.MethodPost, "/traeger/contract-corrections/preview"}: notCaptured,
+	// The correction of the modules imported contracts book (#7764) belongs
+	// to the Träger like the import; the preview stores nothing.
+	{http.MethodPost, "/traeger/contract-imports/offering-corrections"}:         notCaptured,
+	{http.MethodPost, "/traeger/contract-imports/offering-corrections/preview"}: notCaptured,
+	// The link of imported contracts to child records (#7760) belongs to the
+	// Träger; the previews store nothing.
+	{http.MethodPost, "/traeger/contract-child-links/"}:                     notCaptured,
+	{http.MethodPost, "/traeger/contract-child-links/preview"}:              notCaptured,
+	{http.MethodPost, "/traeger/contract-child-links/{contractId}/preview"}: notCaptured,
+	{http.MethodPut, "/traeger/contract-child-links/{contractId}"}:          notCaptured,
+	{http.MethodDelete, "/traeger/contract-child-links/{contractId}"}:       notCaptured,
+	// The enrollment of the children of imported contracts (#7760, ADR
+	// 0309): a run that enrolled a child or bound a contract is the core
+	// action. A run that found everything done answers changed=false and
+	// counts nothing. The answer lists every contract of the school after
+	// the flag, so the flag is read from its start. The preview stores
+	// nothing, and taking a binding off again is a correction of the Träger.
+	// Classified, not yet emitted: a Träger session names no school, so
+	// ActorOf yields no actor, as for every route of this table.
+	{http.MethodPost, "/traeger/contract-enrollments/preview"}:        notCaptured,
+	{http.MethodPost, "/traeger/contract-enrollments/"}:               leadingFlagEvent("contract_children_enrolled", "changed"),
+	{http.MethodDelete, "/traeger/contract-enrollments/{contractId}"}: notCaptured,
 	// Withdrawal and termination (#4682): the Träger-Büro records a
 	// declaration it received and sets the end of an extraordinary
 	// termination it checked; the parents' own one in the parents portal.

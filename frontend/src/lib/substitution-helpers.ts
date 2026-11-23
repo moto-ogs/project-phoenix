@@ -1,62 +1,18 @@
 // lib/substitution-helpers.ts
 // Type definitions and helper functions for substitutions
 
+import { ApiError } from "~/lib/api-error";
 import { toISODate } from "~/lib/date-helpers";
+import { knownEnum } from "~/lib/contract/known-enum";
+import type {
+  SubstitutionAssignmentResponse,
+  GroupHandover,
+  StaffRef,
+  SubstitutionOverviewResult,
+} from "~/lib/contract/substitutions.generated";
+import type * as substitutionsContract from "~/lib/contract/substitutions.generated";
 import type { ExternalAccountStatus } from "~/lib/staff-api";
-
-export interface BackendGroupHandover {
-  id: string;
-  type: "group_handover";
-  group: { id: string; name: string };
-  target: {
-    id: string;
-    full_name: string;
-  };
-  period: { start_date: string; end_date: string };
-  can_end: boolean;
-}
-
-export interface BackendSubstitutionOverview {
-  groups?: Array<{ id: string; name: string }>;
-  group_handovers: BackendGroupHandover[];
-  targets: Array<{ id: string; full_name: string }>;
-  schedule_appointments?: BackendScheduleAppointment[];
-  // is_external marks an external caregiver (#4573): markable absent, never
-  // offered as substitute.
-  schedule_targets?: Array<{
-    id: string;
-    full_name: string;
-    is_external?: boolean;
-  }>;
-  running_supervisions: BackendRunningSupervision[];
-}
-
-/** One person of a running supervision; externals carry their account state. */
-interface BackendSupervisionStaffRef {
-  id: string;
-  full_name: string;
-  is_external?: boolean;
-  /** Organisation der externen Kraft; fehlt, wenn leer (#4573). */
-  external_organization?: string;
-  external_account_status?: ExternalAccountStatus;
-}
-
-interface BackendRunningSupervision {
-  id: string;
-  type: "additional_supervision";
-  name: string;
-  room_name?: string;
-  supervisors: BackendSupervisionStaffRef[];
-  available_targets: BackendSupervisionStaffRef[];
-  is_current_user_supervising: boolean;
-  can_assign: boolean;
-}
-export interface BackendAdditionalSupervisionResult {
-  id: string;
-  type: "additional_supervision";
-  active_group_id: string;
-  target: { id: string; full_name: string };
-}
+import { EXTERNAL_ACCOUNT_STATUS_VALUES } from "~/lib/staff-wire-enums";
 
 interface SupervisionStaffRef {
   id: string;
@@ -89,24 +45,6 @@ export interface SubstitutionOverview {
   runningSupervisions: RunningSupervision[];
 }
 
-interface BackendScheduleAppointment {
-  /** A number from the route file kept one release, a string via the proxy. */
-  id: number | string;
-  type: "schedule_substitution";
-  date: string;
-  start_time: string;
-  end_time: string;
-  title: string;
-  status: string;
-  staff: Array<{
-    assignment_id: number | string;
-    staff: { id: string; full_name: string };
-    is_absent: boolean;
-    is_substitute: boolean;
-    can_end: boolean;
-  }>;
-}
-
 export interface ScheduleSubstitutionOverview {
   appointments: Array<{
     id: string;
@@ -127,38 +65,26 @@ export interface ScheduleSubstitutionOverview {
   staff: Array<{ id: string; name: string; isExternal: boolean }>;
 }
 
-export interface SubstitutionProxyEnvelope<T> {
-  data?: T;
-}
-
-export function unwrapSubstitutionProxyEnvelope<T>(
-  envelope: SubstitutionProxyEnvelope<T>,
-): T {
-  if (envelope.data === undefined) {
-    throw new Error("Ungültige Antwort für Gruppenübergaben.");
-  }
-  return envelope.data;
-}
-
 /** The kinds of assignment POST /api/substitutions answers (#2352). */
-export type SubstitutionAssignmentKind =
+type SubstitutionAssignmentKind =
   "group_handover" | "additional_supervision" | "schedule_substitution";
 
 /**
  * The result of an assignment. The backend names its shape in `type` and
- * carries the result under the member of that name (#2352); the route file
- * kept for one release answers the bare result, as it did before. Both
- * shapes land here at the bare result of the kind the caller asked for.
+ * carries the result under the member of that name (#2352). An answer
+ * without that member is not one of the kind the caller asked for.
  */
-export function substitutionAssignmentResult<T>(
-  data: unknown,
-  kind: SubstitutionAssignmentKind,
-): T {
-  if (typeof data === "object" && data !== null && kind in data) {
-    const member = (data as Record<string, unknown>)[kind];
-    if (member !== undefined && member !== null) return member as T;
+export function substitutionAssignmentResult<
+  K extends SubstitutionAssignmentKind,
+>(
+  answer: SubstitutionAssignmentResponse,
+  kind: K,
+): NonNullable<SubstitutionAssignmentResponse[K]> {
+  const member = answer[kind];
+  if (member === undefined || member === null) {
+    throw new ApiError(`substitution answer without ${kind}`, 502);
   }
-  return data as T;
+  return member as NonNullable<SubstitutionAssignmentResponse[K]>;
 }
 
 // Frontend types
@@ -188,14 +114,17 @@ export interface TeacherAvailability {
 
 // Mapping functions
 export function mapSubstitutionResponse(
-  backend: BackendGroupHandover,
+  backend: Pick<
+    GroupHandover,
+    "id" | "group" | "target" | "period" | "can_end"
+  >,
 ): Substitution {
   return {
-    id: String(backend.id),
-    type: backend.type,
-    groupId: String(backend.group.id),
+    id: backend.id,
+    type: "group_handover",
+    groupId: backend.group.id,
     groupName: backend.group.name,
-    substituteStaffId: String(backend.target.id),
+    substituteStaffId: backend.target.id,
     substituteStaffName: backend.target.full_name,
     startDate: backend.period.start_date,
     endDate: backend.period.end_date,
@@ -204,84 +133,80 @@ export function mapSubstitutionResponse(
 }
 
 export function mapSubstitutionsResponse(
-  backendSubstitutions: BackendGroupHandover[],
+  backendSubstitutions: readonly GroupHandover[] | null,
 ): Substitution[] {
-  if (!Array.isArray(backendSubstitutions)) {
-    throw new Error("Ungültige Antwort für Gruppenübergaben.");
-  }
-  return backendSubstitutions.map(mapSubstitutionResponse);
+  return (backendSubstitutions ?? []).map(mapSubstitutionResponse);
 }
 
-function mapSupervisionStaffRef(
-  staff: BackendSupervisionStaffRef,
-): SupervisionStaffRef {
+function mapSupervisionStaffRef(staff: StaffRef): SupervisionStaffRef {
+  const accountStatus = knownEnum(
+    EXTERNAL_ACCOUNT_STATUS_VALUES,
+    staff.external_account_status,
+  );
   return {
-    id: staff.id.toString(),
+    id: staff.id,
     fullName: staff.full_name,
     ...(staff.is_external ? { isExternal: true as const } : {}),
     ...(staff.is_external && staff.external_organization
       ? { externalOrganization: staff.external_organization }
       : {}),
-    ...(staff.is_external && staff.external_account_status
-      ? { externalAccountStatus: staff.external_account_status }
+    ...(staff.is_external && accountStatus
+      ? { externalAccountStatus: accountStatus }
       : {}),
   };
 }
 
 export function mapRunningSupervision(
-  backend: BackendRunningSupervision,
+  backend: substitutionsContract.RunningSupervision,
 ): RunningSupervision {
   return {
-    id: backend.id.toString(),
+    id: backend.id,
     name: backend.name,
     roomName: backend.room_name,
-    supervisors: backend.supervisors.map(mapSupervisionStaffRef),
-    availableTargets: backend.available_targets.map(mapSupervisionStaffRef),
+    supervisors: (backend.supervisors ?? []).map(mapSupervisionStaffRef),
+    availableTargets: (backend.available_targets ?? []).map(
+      mapSupervisionStaffRef,
+    ),
     isCurrentUserSupervising: backend.is_current_user_supervising,
     canAssign: backend.can_assign,
   };
 }
 
+// Go writes an empty list as null; a malformed answer never gets here, the
+// catalog proxy refuses it (502).
 export function mapSubstitutionOverview(
-  backend: BackendSubstitutionOverview,
+  backend: SubstitutionOverviewResult,
 ): SubstitutionOverview {
-  if (
-    !Array.isArray(backend.groups) ||
-    !Array.isArray(backend.targets) ||
-    !Array.isArray(backend.running_supervisions)
-  ) {
-    throw new Error("Ungültige Antwort für Vertretungen.");
-  }
   return {
-    groups: backend.groups.map((group) => ({
-      id: group.id.toString(),
+    groups: (backend.groups ?? []).map((group) => ({
+      id: group.id,
       name: group.name,
     })),
     groupHandovers: mapSubstitutionsResponse(backend.group_handovers),
-    targets: backend.targets.map((staff) => ({
-      id: staff.id.toString(),
+    targets: (backend.targets ?? []).map((staff) => ({
+      id: staff.id,
       fullName: staff.full_name,
     })),
-    runningSupervisions: backend.running_supervisions.map(
+    runningSupervisions: (backend.running_supervisions ?? []).map(
       mapRunningSupervision,
     ),
   };
 }
 
 export function mapScheduleSubstitutionOverview(
-  backend: BackendSubstitutionOverview,
+  backend: SubstitutionOverviewResult,
 ): ScheduleSubstitutionOverview {
   return {
     appointments: (backend.schedule_appointments ?? []).map((appointment) => ({
-      id: String(appointment.id),
+      id: appointment.id,
       date: appointment.date,
       startTime: appointment.start_time,
       endTime: appointment.end_time,
       title: appointment.title,
       status: appointment.status,
-      staff: appointment.staff.map((row) => ({
-        assignmentId: String(row.assignment_id),
-        id: String(row.staff.id),
+      staff: (appointment.staff ?? []).map((row) => ({
+        assignmentId: row.assignment_id,
+        id: row.staff.id,
         name: row.staff.full_name,
         isAbsent: row.is_absent,
         isSubstitute: row.is_substitute,
@@ -289,7 +214,7 @@ export function mapScheduleSubstitutionOverview(
       })),
     })),
     staff: (backend.schedule_targets ?? []).map((member) => ({
-      id: String(member.id),
+      id: member.id,
       name: member.full_name,
       isExternal: member.is_external === true,
     })),
@@ -304,16 +229,6 @@ export interface CreateSubstitutionRequest {
     target_staff_id: string;
     start_date: string;
     end_date: string;
-  };
-}
-
-export interface AddSupervisorRequest {
-  type: "additional_supervision";
-  additional_supervision: {
-    active_group_id: string;
-    target_staff_id: string;
-    /** Ends the caller's own supervision once the target joined (#4763). */
-    hand_over?: boolean;
   };
 }
 

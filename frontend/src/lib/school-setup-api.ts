@@ -1,6 +1,7 @@
-import { ApiError, apiErrorFromResponse } from "./api-error";
+import { ApiError } from "./api-error";
+import { bffJson } from "./bff-fetch";
+import type { Status } from "./contract/school-setup.generated";
 import { createLogger } from "./logger";
-import { sessionFetch } from "./session-cache";
 
 const logger = createLogger({ component: "SchoolSetupApi" });
 
@@ -40,58 +41,45 @@ const STEP_KEYS: readonly SchoolSetupStepKey[] = [
   "worktime",
 ];
 
-interface BackendStep {
-  key?: unknown;
-  applies?: unknown;
-  done?: unknown;
-  skipped?: unknown;
+function isStepKey(key: string): key is SchoolSetupStepKey {
+  return (STEP_KEYS as readonly string[]).includes(key);
 }
 
-interface BackendState {
-  completed?: unknown;
-  dismissed?: unknown;
-  basics?: {
-    presence_mode?: unknown;
-    group_mode?: unknown;
-  };
-  steps?: unknown;
-}
-
-export function mapSchoolSetupState(raw: BackendState): SchoolSetupState {
-  const steps = Array.isArray(raw.steps) ? (raw.steps as BackendStep[]) : [];
+export function mapSchoolSetupState(raw: Status): SchoolSetupState {
   return {
-    completed: raw.completed === true,
-    dismissed: raw.dismissed === true,
+    completed: raw.completed,
+    dismissed: raw.dismissed,
     basics: {
       presenceMode:
-        raw.basics?.presence_mode === "binary" ? "binary" : "detailed",
+        raw.basics.presence_mode === "binary" ? "binary" : "detailed",
       groupMode:
-        raw.basics?.group_mode === "open_care" ? "open_care" : "fixed_groups",
+        raw.basics.group_mode === "open_care" ? "open_care" : "fixed_groups",
     },
-    steps: steps
-      .filter((step): step is BackendStep & { key: SchoolSetupStepKey } =>
-        STEP_KEYS.includes(step.key as SchoolSetupStepKey),
-      )
-      .map((step) => ({
-        key: step.key,
-        applies: step.applies === true,
-        done: step.done === true,
-        skipped: step.skipped === true,
-      })),
+    steps: (raw.steps ?? []).flatMap((step) =>
+      isStepKey(step.key)
+        ? [
+            {
+              key: step.key,
+              applies: step.applies,
+              done: step.done,
+              skipped: step.skipped,
+            },
+          ]
+        : [],
+    ),
   };
 }
 
-async function readState(response: Response, event: string) {
-  if (!response.ok) {
-    logger.error(event, { status: response.status });
-    throw await apiErrorFromResponse(
-      response,
-      `school setup request failed (${response.status})`,
-    );
+async function readState(call: Promise<Status>, event: string) {
+  let data: Status;
+  try {
+    data = await call;
+  } catch (error) {
+    logger.error(event, {
+      status: error instanceof ApiError ? error.status : undefined,
+    });
+    throw error;
   }
-  const body = (await response.json()) as
-    { data?: BackendState } | BackendState;
-  const data = "data" in body && body.data ? body.data : (body as BackendState);
   // Eine offene Einrichtung hat immer Schritte. Fehlen sie, ist die Antwort
   // nicht die erwartete; sie darf den Stand nicht ersetzen, sonst sähe die
   // Checkliste „alles erledigt“ (0 von 0).
@@ -108,44 +96,38 @@ async function readState(response: Response, event: string) {
  * gibt es keinen Assistenten: dann `null`.
  */
 export async function fetchSchoolSetup(): Promise<SchoolSetupState | null> {
-  const response = await sessionFetch("/api/school-setup", { method: "GET" });
-  if (response.status === 401 || response.status === 403) {
-    return null;
+  try {
+    return await readState(
+      bffJson("tenant", "GET /api/school-setup/"),
+      "fetch_school_setup_failed",
+    );
+  } catch (error) {
+    if (
+      error instanceof ApiError &&
+      (error.status === 401 || error.status === 403)
+    ) {
+      return null;
+    }
+    throw error;
   }
-  return readState(response, "fetch_school_setup_failed");
-}
-
-async function send(
-  path: string,
-  method: "PUT" | "POST",
-  body: unknown,
-  event: string,
-): Promise<SchoolSetupState> {
-  const response = await sessionFetch(path, {
-    method,
-    headers: { "Content-Type": "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  return readState(response, event);
 }
 
 export function setSchoolSetupStepSkipped(
   step: SchoolSetupStepKey,
   skipped: boolean,
 ): Promise<SchoolSetupState> {
-  return send(
-    `/api/school-setup/steps/${step}`,
-    "PUT",
-    { skipped },
+  return readState(
+    bffJson("tenant", "PUT /api/school-setup/steps/{step}", {
+      params: { step },
+      body: { skipped },
+    }),
     "skip_school_setup_step_failed",
   );
 }
 
 export function completeSchoolSetup(): Promise<SchoolSetupState> {
-  return send(
-    "/api/school-setup/complete",
-    "POST",
-    undefined,
+  return readState(
+    bffJson("tenant", "POST /api/school-setup/complete"),
     "complete_school_setup_failed",
   );
 }
@@ -153,10 +135,10 @@ export function completeSchoolSetup(): Promise<SchoolSetupState> {
 export function setSchoolSetupDismissed(
   dismissed: boolean,
 ): Promise<SchoolSetupState> {
-  return send(
-    "/api/school-setup/dismissal",
-    "PUT",
-    { dismissed },
+  return readState(
+    bffJson("tenant", "PUT /api/school-setup/dismissal", {
+      body: { dismissed },
+    }),
     "dismiss_school_setup_failed",
   );
 }

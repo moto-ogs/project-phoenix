@@ -2,19 +2,25 @@
 package common
 
 const CodeGeneralBusinessRejection = "general.business_rejection"
+const CodeGeneralChangedSinceRead = "general.changed_since_read"
 const CodeGeneralInput = "general.input"
 const CodeGeneralPermission = "general.permission"
 const CodeGeneralRequestTooLarge = "general.request_too_large"
+const CodeGeneralRouteNotFound = "general.route_not_found"
 const CodeGeneralServer = "general.server"
 const CodeGeneralUnavailable = "general.unavailable"
+const CodeGeneralWriteAnswerUnreadable = "general.write_answer_unreadable"
 
 var errorCodeClassesGeneral = []errorCodeClass{
 	{CodeGeneralBusinessRejection, "business_rejection"},
+	{CodeGeneralChangedSinceRead, "business_rejection"},
 	{CodeGeneralInput, "input"},
 	{CodeGeneralPermission, "permission"},
 	{CodeGeneralRequestTooLarge, "input"},
+	{CodeGeneralRouteNotFound, "business_rejection"},
 	{CodeGeneralServer, "server"},
 	{CodeGeneralUnavailable, "unavailable"},
+	{CodeGeneralWriteAnswerUnreadable, "business_rejection"},
 }
 
 func init() {

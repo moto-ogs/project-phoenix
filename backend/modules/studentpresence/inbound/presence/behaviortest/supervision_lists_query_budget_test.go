@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	presenceAPI "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 	"github.com/stretchr/testify/require"
@@ -28,15 +29,9 @@ func TestSupervisionListsQueryBudget(t *testing.T) {
 	}
 	type listCase struct {
 		name, scenario, message string
-		paths                   []string
 	}
 	cases := []listCase{
-		{"all", "api.active.supervisors.list", "Supervisors retrieved successfully", []string{"/active/supervisors/"}},
-		{"active", "api.active.supervisors.list.active", "Supervisors retrieved successfully", []string{"/active/supervisors/?active=true", "/active/supervisors/?active=1"}},
-		{"ended", "api.active.supervisors.list.ended", "Supervisors retrieved successfully", []string{"/active/supervisors/?active=false", "/active/supervisors/?active=0"}},
-		{"staff", "api.active.supervisors.staff", "Staff supervisions retrieved successfully", nil},
-		{"staff_active", "api.active.supervisors.staff.active", "Staff active supervisions retrieved successfully", nil},
-		{"group", "api.active.supervisors.group", "Group supervisors retrieved successfully", nil},
+		{"staff_active", "api.active.supervisors.staff.active", "Staff active supervisions retrieved successfully"},
 	}
 	var samples []sample
 	behaviorPassed := true
@@ -54,8 +49,6 @@ func TestSupervisionListsQueryBudget(t *testing.T) {
 			claims := testutil.AdminTestClaimsForTenant(int(account.ID), tenantID)
 			room := testpkg.CreateTestRoom(t, db, "SupervisionBudgetRoom")
 			activity := testpkg.CreateTestActivityGroup(t, db, "SupervisionBudgetActivity")
-			group := testpkg.CreateTestActiveGroup(t, db, activity.ID, room.ID)
-			otherGroup := testpkg.CreateTestActiveGroup(t, db, activity.ID, room.ID)
 			staff := testpkg.CreateTestStaff(t, db, "SupervisionBudget", "Target")
 			today := calendar.TodayDate()
 			pastStart, pastEnd := today.AddDays(-20), today.AddDays(-10)
@@ -74,18 +67,10 @@ func TestSupervisionListsQueryBudget(t *testing.T) {
 			makeRow := func(state string, matching bool) expected {
 				created++
 				staffID := staff.ID
-				groupID := group.ID
-				if selection.name == "staff" || selection.name == "staff_active" {
-					// Distinct group per row avoids unique(staff,group,role).
-					groupID = testpkg.CreateTestActiveGroup(t, db, activity.ID, room.ID).ID
-					if !matching {
-						staffID = testpkg.CreateTestStaff(t, db, "SupervisionBudget", fmt.Sprintf("Other%d", created)).ID
-					}
-				} else {
-					staffID = testpkg.CreateTestStaff(t, db, "SupervisionBudget", fmt.Sprintf("Row%d", created)).ID
-					if !matching {
-						groupID = otherGroup.ID
-					}
+				// Distinct group per row avoids unique(staff,group,role).
+				groupID := testpkg.CreateTestActiveGroup(t, db, activity.ID, room.ID).ID
+				if !matching {
+					staffID = testpkg.CreateTestStaff(t, db, "SupervisionBudget", fmt.Sprintf("Other%d", created)).ID
 				}
 				start, end, active := pastStart, (*calendar.Date)(nil), true
 				switch state {
@@ -98,37 +83,16 @@ func TestSupervisionListsQueryBudget(t *testing.T) {
 				}
 				return expected{insert(staffID, groupID, tenantID, start, end), active}
 			}
-			if selection.name == "active" || selection.name == "staff" || selection.name == "staff_active" || selection.name == "group" {
-				makeRow("ended", true)
-				makeRow("future_start", true)
-			}
-			if selection.name == "ended" {
-				makeRow("open", true)
-				makeRow("future_end", true)
-				makeRow("future_start", true) // inactive is not the same as EndedBy.
-			}
-			if selection.name == "staff" || selection.name == "staff_active" || selection.name == "group" {
-				makeRow("open", false)
-			}
+			makeRow("ended", true)
+			makeRow("future_start", true)
+			makeRow("open", false)
 			foreignTenant := testpkg.UniqueTestTenantID(t)
 			testpkg.EnsureTestTenant(t, db, foreignTenant)
 			testpkg.OwnTenantRows(t, db, foreignTenant)
 			foreignStaff := testpkg.CreateTestStaffForTenant(t, db, foreignTenant, "SupervisionBudget", "Foreign")
 			foreignGroup := testpkg.CreateTestActiveGroupForTenant(t, db, foreignTenant)
-			foreignEnd := &futureEnd
-			if selection.name == "ended" {
-				foreignEnd = &pastEnd
-			}
-			insert(foreignStaff.ID, foreignGroup.ID, foreignTenant, pastStart, foreignEnd)
-			paths := selection.paths
-			switch selection.name {
-			case "staff":
-				paths = []string{fmt.Sprintf("/active/supervisors/staff/%d", staff.ID)}
-			case "staff_active":
-				paths = []string{fmt.Sprintf("/active/supervisors/staff/%d/active", staff.ID)}
-			case "group":
-				paths = []string{fmt.Sprintf("/active/supervisors/group/%d", group.ID)}
-			}
+			insert(foreignStaff.ID, foreignGroup.ID, foreignTenant, pastStart, &futureEnd)
+			paths := []string{fmt.Sprintf("/active/supervisors/staff/%d/active", staff.ID)}
 			counter := testpkg.CaptureQueriesForContext(t, db)
 			counter.Stop()
 			run := func(path, label string, want []expected) testpkg.QueryMeasurement {
@@ -163,9 +127,9 @@ func TestSupervisionListsQueryBudget(t *testing.T) {
 				require.NoError(t, json.Unmarshal(envelope.Data, &objects))
 				for index, dto := range rows {
 					expect := want[index]
-					require.Equal(t, expect.row.ID, dto.ID, "ascending persisted ID order")
-					require.Equal(t, expect.row.StaffID, dto.StaffID)
-					require.Equal(t, expect.row.GroupID, dto.ActiveGroupID)
+					require.Equal(t, ident.ID(expect.row.ID), dto.ID, "ascending persisted ID order")
+					require.Equal(t, ident.ID(expect.row.StaffID), dto.StaffID)
+					require.Equal(t, ident.ID(expect.row.GroupID), dto.ActiveGroupID)
 					require.Equal(t, expect.active, dto.IsActive)
 					require.True(t, expect.row.CreatedAt.Equal(dto.CreatedAt))
 					require.True(t, expect.row.UpdatedAt.Equal(dto.UpdatedAt))
@@ -194,12 +158,6 @@ func TestSupervisionListsQueryBudget(t *testing.T) {
 					if len(want)%2 == 1 {
 						state = "future_end"
 					}
-					switch selection.name {
-					case "ended":
-						state = "ended"
-					case "all":
-						state = []string{"open", "future_end", "ended", "future_start"}[len(want)%4]
-					}
 					want = append(want, makeRow(state, true))
 				}
 				for variant, path := range paths {
@@ -215,37 +173,20 @@ func TestSupervisionListsQueryBudget(t *testing.T) {
 			for path, measured := range counts {
 				require.Equal(t, measured[3], measured[8], "%s must not grow per supervision", path)
 			}
-			switch selection.name {
-			case "staff":
-				run(fmt.Sprintf("/active/supervisors/staff/%d", foreignStaff.ID), "foreign_staff", nil)
-			case "staff_active":
-				run(fmt.Sprintf("/active/supervisors/staff/%d/active", foreignStaff.ID), "foreign_staff_active", nil)
-			case "group":
-				run(fmt.Sprintf("/active/supervisors/group/%d", foreignGroup.ID), "foreign_group", nil)
-			}
+			run(fmt.Sprintf("/active/supervisors/staff/%d/active", foreignStaff.ID), "foreign_staff_active", nil)
 			t.Logf("SUPERVISION_LIST_CASE_BEHAVIOR_COMPLETE case=%s counts=%v", selection.name, counts)
 		})
 		behaviorPassed = behaviorPassed && passed
 	}
 	require.True(t, behaviorPassed, "all isolated DTO/date/filter/tenant/DML cases must pass before any registration lookup")
-	require.Len(t, samples, 24)
-	t.Log("SUPERVISION_LIST_ALL_BEHAVIOR_COMPLETE measured_requests=24 foreign_id_requests=3 no_budget_lookup_yet=true")
+	require.Len(t, samples, 3)
+	t.Log("SUPERVISION_LIST_ALL_BEHAVIOR_COMPLETE measured_requests=3 foreign_id_requests=1 no_budget_lookup_yet=true")
 	for _, captured := range samples {
 		t.Run("budget_registration/"+captured.label, func(t *testing.T) {
 			// The repository's register ratchet requires literal scenario names.
 			switch captured.scenario {
-			case "api.active.supervisors.list":
-				querybudgets.AssertQueryBudget(t, "api.active.supervisors.list", captured.queries)
-			case "api.active.supervisors.list.active":
-				querybudgets.AssertQueryBudget(t, "api.active.supervisors.list.active", captured.queries)
-			case "api.active.supervisors.list.ended":
-				querybudgets.AssertQueryBudget(t, "api.active.supervisors.list.ended", captured.queries)
-			case "api.active.supervisors.staff":
-				querybudgets.AssertQueryBudget(t, "api.active.supervisors.staff", captured.queries)
 			case "api.active.supervisors.staff.active":
 				querybudgets.AssertQueryBudget(t, "api.active.supervisors.staff.active", captured.queries)
-			case "api.active.supervisors.group":
-				querybudgets.AssertQueryBudget(t, "api.active.supervisors.group", captured.queries)
 			default:
 				t.Fatalf("unexpected budget scenario %q", captured.scenario)
 			}

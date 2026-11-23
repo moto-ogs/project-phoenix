@@ -8,6 +8,7 @@ import (
 
 	schoolStructureCompose "github.com/moto-ogs/project-phoenix/modules/schoolstructure/compose"
 	api "github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -50,7 +51,7 @@ func TestGroupRepository_Create(t *testing.T) {
 		uniqueName := fmt.Sprintf("GroupWithRoom-%d", time.Now().UnixNano())
 		group := &schoolStructureCompose.Group{
 			Name:   uniqueName,
-			RoomID: &room.ID,
+			RoomID: (*ident.ID)(&room.ID),
 		}
 
 		err := testpkg.TenantCommand1(t, ctx, db, repo.Create, group)
@@ -60,7 +61,7 @@ func TestGroupRepository_Create(t *testing.T) {
 		found, err := testpkg.TenantQuery1(t, ctx, db, repo.FindByID, any(group.ID))
 		require.NoError(t, err)
 		require.NotNil(t, found.RoomID)
-		assert.Equal(t, room.ID, *found.RoomID)
+		assert.Equal(t, ident.ID(room.ID), *found.RoomID)
 
 	})
 }
@@ -78,7 +79,7 @@ func TestGroupRepository_FindByID(t *testing.T) {
 
 		found, err := testpkg.TenantQuery1(t, ctx, db, repo.FindByID, any(group.ID))
 		require.NoError(t, err)
-		assert.Equal(t, group.ID, found.ID)
+		assert.Equal(t, ident.ID(group.ID), found.ID)
 		assert.Contains(t, found.Name, "FindByID")
 	})
 
@@ -209,7 +210,7 @@ func TestGroupRepository_FindByName(t *testing.T) {
 
 		found, err := testpkg.TenantQuery1(t, ctx, db, repo.FindByName, group.Name)
 		require.NoError(t, err)
-		assert.Equal(t, group.ID, found.ID)
+		assert.Equal(t, ident.ID(group.ID), found.ID)
 	})
 
 	t.Run("returns error for non-existent name", func(t *testing.T) {
@@ -241,7 +242,7 @@ func TestGroupRepository_FindByTeacher(t *testing.T) {
 
 		var found bool
 		for _, g := range groups {
-			if g.ID == group.ID {
+			if g.ID == ident.ID(group.ID) {
 				found = true
 				break
 			}
@@ -264,13 +265,13 @@ func TestGroupRepository_FindWithRoom(t *testing.T) {
 		uniqueName := fmt.Sprintf("GroupWithRoom-%d", time.Now().UnixNano())
 		group := &schoolStructureCompose.Group{
 			Name:   uniqueName,
-			RoomID: &room.ID,
+			RoomID: (*ident.ID)(&room.ID),
 		}
 		err := testpkg.TenantCommand1(t, ctx, db, repo.Create, group)
 		require.NoError(t, err)
 
 		// Find with room
-		found, err := testpkg.TenantQuery1(t, ctx, db, repo.FindWithRoom, group.ID)
+		found, err := testpkg.TenantQuery1(t, ctx, db, repo.FindWithRoom, group.ID.Int64())
 		require.NoError(t, err)
 		require.NotNil(t, found.Room)
 		assert.Contains(t, found.Room.Name, "WithRoomTest")
@@ -364,7 +365,7 @@ func TestGroupRepository_List_WithFilters(t *testing.T) {
 		// Should find both FilterTest groups but not OtherGroup
 		var foundIDs []int64
 		for _, g := range groups {
-			foundIDs = append(foundIDs, g.ID)
+			foundIDs = append(foundIDs, g.ID.Int64())
 		}
 		assert.Contains(t, foundIDs, group1.ID)
 		assert.Contains(t, foundIDs, group2.ID)
@@ -378,7 +379,7 @@ func TestGroupRepository_List_WithFilters(t *testing.T) {
 		uniqueName := fmt.Sprintf("WithRoom-%d", time.Now().UnixNano())
 		groupWithRoom := &schoolStructureCompose.Group{
 			Name:   uniqueName,
-			RoomID: &room.ID,
+			RoomID: (*ident.ID)(&room.ID),
 		}
 		err := testpkg.TenantCommand1(t, ctx, db, repo.Create, groupWithRoom)
 		require.NoError(t, err)
@@ -434,10 +435,10 @@ func TestGroupRepository_ListWithRooms_Advanced(t *testing.T) {
 		// Verify first group comes before last (by name)
 		foundFirst, foundLast := -1, -1
 		for i, g := range groups {
-			if g.ID == group1.ID {
+			if g.ID == ident.ID(group1.ID) {
 				foundFirst = i
 			}
-			if g.ID == group2.ID {
+			if g.ID == ident.ID(group2.ID) {
 				foundLast = i
 			}
 		}
@@ -452,7 +453,7 @@ func TestGroupRepository_ListWithRooms_Advanced(t *testing.T) {
 		groups, err := testpkg.TenantQuery1(t, ctx, db, repo.ListWithRooms, &schoolStructureCompose.GroupListQuery{NameContains: "CombinedTest", Limit: 5})
 		require.NoError(t, err)
 		require.Len(t, groups, 1)
-		assert.Equal(t, combined.ID, groups[0].ID)
+		assert.Equal(t, ident.ID(combined.ID), groups[0].ID)
 	})
 
 	t.Run("counts the filtered groups without pagination", func(t *testing.T) {
@@ -506,7 +507,7 @@ func TestGroupWritesStayInsideTheCallerTenant(t *testing.T) {
 
 	forged := *schoolStructureGroupOf(foreign)
 	forged.Name = "Must not replace the foreign group"
-	forged.TenantID = testpkg.Tenant(t)
+	forged.TenantID = ident.ID(testpkg.Tenant(t))
 	err := testpkg.WithTenantTx(t, context.Background(), db, testpkg.Tenant(t), func(ctx context.Context, _ bun.Tx) error {
 		return testpkg.TenantCommand1(t, ctx, db, repo.Update, &forged)
 	})
@@ -517,7 +518,7 @@ func TestGroupWritesStayInsideTheCallerTenant(t *testing.T) {
 	}), "deleting an invisible id remains the legacy no-op")
 
 	forgedInsert := &schoolStructureCompose.Group{Name: "Must not enter the foreign school"}
-	forgedInsert.TenantID = foreignTenant
+	forgedInsert.TenantID = ident.ID(foreignTenant)
 	err = testpkg.WithTenantTx(t, context.Background(), db, testpkg.Tenant(t), func(ctx context.Context, _ bun.Tx) error {
 		return testpkg.TenantCommand1(t, ctx, db, repo.Create, forgedInsert)
 	})
@@ -527,7 +528,7 @@ func TestGroupWritesStayInsideTheCallerTenant(t *testing.T) {
 		kept, err := testpkg.TenantQuery1(t, ctx, db, repo.FindByID, any(foreign.ID))
 		require.NoError(t, err)
 		assert.Equal(t, foreign.Name, kept.Name)
-		assert.Equal(t, foreignTenant, kept.TenantID)
+		assert.Equal(t, ident.ID(foreignTenant), kept.TenantID)
 		return nil
 	}))
 }
@@ -536,7 +537,7 @@ func TestGroupWritesStayInsideTheCallerTenant(t *testing.T) {
 // group reads return it.
 func schoolStructureGroupOf(row *testpkg.EducationGroup) *schoolStructureCompose.Group {
 	return &schoolStructureCompose.Group{
-		ID: row.ID, TenantID: row.TenantID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
-		Name: row.Name, RoomID: row.RoomID,
+		ID: ident.ID(row.ID), TenantID: ident.ID(row.TenantID), CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
+		Name: row.Name, RoomID: (*ident.ID)(row.RoomID),
 	}
 }

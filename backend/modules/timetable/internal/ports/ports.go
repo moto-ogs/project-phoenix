@@ -69,7 +69,6 @@ type Store interface {
 	ReplaceGroupTargets(context.Context, int64, []timetable.GroupTargetInput) (domain.OperationStats, error)
 	FindSchedule(context.Context, int64) (timetable.Schedule, bool, domain.OperationStats, error)
 	ListSchedules(context.Context, timetable.ScheduleFilter) ([]timetable.Schedule, domain.OperationStats, error)
-	FindTemplateStartTimes(context.Context, []int64) ([]timetable.TemplateStartTime, domain.OperationStats, error)
 	CreateSchedule(context.Context, timetable.ScheduleInput) (timetable.Schedule, domain.OperationStats, error)
 	UpdateSchedule(context.Context, int64, timetable.ScheduleInput) (timetable.Schedule, bool, domain.OperationStats, error)
 	DeleteSchedule(context.Context, int64) (domain.OperationStats, error)
@@ -178,6 +177,12 @@ type HomeworkStore interface {
 	DeleteClassHomework(ctx context.Context, ref timetable.HomeworkRef, classKey string) (bool, domain.OperationStats, error)
 	ListHomeworkFeedback(ctx context.Context, date calendar.Date, studentIDs []int64) ([]timetable.HomeworkFeedback, domain.OperationStats, error)
 	UpsertHomeworkFeedback(ctx context.Context, in timetable.HomeworkFeedbackInput) (timetable.HomeworkFeedback, domain.OperationStats, error)
+	// LockClassHomework locks an entry of the class for its change and
+	// returns it; found is false when the class has no such entry.
+	LockClassHomework(ctx context.Context, ref timetable.HomeworkRef, classKey string) (entry timetable.HomeworkEntry, found bool, stats domain.OperationStats, err error)
+	// LockHomeworkFeedback serializes the feedback writes of a child and day,
+	// also before its first feedback, and returns the stored one or nil.
+	LockHomeworkFeedback(ctx context.Context, studentID int64, date calendar.Date) (*timetable.HomeworkFeedback, domain.OperationStats, error)
 	// DeleteHomeworkBefore deletes the tenant's entries and feedback dated
 	// before cutoff and returns how many rows went.
 	DeleteHomeworkBefore(ctx context.Context, cutoff calendar.Date) (int, domain.OperationStats, error)

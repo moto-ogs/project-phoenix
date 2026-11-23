@@ -208,12 +208,22 @@ func (e *sickCascadeEnv) updateInstanceOn(t *testing.T, instanceID, templateID i
 		if date == "" {
 			date = instance.Date
 		}
-		_, err := e.timetable.Instance.UpdatePlanned(ctx, instanceID, timetable.UpdateInstanceInput{
+		// The edit saves back the block as the planner reads it (ADR 0311).
+		scheduled, err := e.timetable.TimetableData.Data.FindScheduledInstance(ctx, instanceID)
+		if err != nil {
+			return err
+		}
+		rows, err := e.timetable.TimetableData.Data.ListScheduledInstanceRows(ctx, []timetable.ScheduledInstance{scheduled})
+		if err != nil {
+			return err
+		}
+		_, err = e.timetable.Instance.UpdatePlanned(ctx, instanceID, timetable.UpdateInstanceInput{
+			ExpectedVersion: timetable.ScheduledInstanceVersion(scheduled, rows.Staff[instanceID], rows.Participants[instanceID]),
 			Date:            date,
 			StartTime:       instance.StartTime,
 			EndTime:         instance.EndTime,
 			Title:           instance.Title + " (bearbeitet)",
-			RoomID:          instance.RoomID,
+			RoomID:          instance.RoomID.Int64(),
 			ActivityGroupID: &templateID,
 			StaffIDs:        staffIDs,
 		}, nil)
@@ -235,7 +245,7 @@ func TestSickReport_EditTakesSickStateOfTheBlocksDate(t *testing.T) {
 			AbsenceType: "sick", DateStart: stampWeekOne.String(), DateEnd: stampWeekOne.String(),
 		})
 		if err == nil {
-			substituteSickID = created.ID
+			substituteSickID = created.ID.Int64()
 		}
 		return err
 	})
@@ -313,7 +323,7 @@ func TestSickReport_SeriesRosterChangeAddsSickPersonAbsent(t *testing.T) {
 			AbsenceType: "sick", DateStart: stampWeekTwo.String(), DateEnd: stampWeekTwo.String(),
 		})
 		if err == nil {
-			absenceID = created.ID
+			absenceID = created.ID.Int64()
 		}
 		return err
 	})

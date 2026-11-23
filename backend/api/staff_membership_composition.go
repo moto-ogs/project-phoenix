@@ -16,6 +16,7 @@ import (
 	workforceCompose "github.com/moto-ogs/project-phoenix/modules/workforce/compose"
 	"github.com/moto-ogs/project-phoenix/realtime"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/workflows/staffoffboarding"
 	offboardingcompose "github.com/moto-ogs/project-phoenix/workflows/staffoffboarding/compose"
 )
@@ -48,12 +49,6 @@ type StaffRoleRow struct {
 	IsActiveCaregiver bool
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
-}
-
-// StaffGroup is one group a Betreuungskraft is assigned to.
-type StaffGroup struct {
-	ID   int64
-	Name string
 }
 
 type StaffCreateInput struct {
@@ -141,7 +136,6 @@ type StaffMembershipRuntime struct {
 	AccountHasRole      func(context.Context, int64, string) bool
 	AccountsHoldingRole func(context.Context, []int64, string) (map[int64]bool, error)
 
-	TeacherGroups    func(context.Context, int64) ([]StaffGroup, error)
 	SchoolClasses    func(context.Context, int64) ([]string, error)
 	SetSchoolClasses func(context.Context, int64, []string, int64) error
 	ActiveCaregivers func(context.Context) ([]StaffRoleRow, error)
@@ -196,7 +190,6 @@ func bindStaffMembershipRuntime(users peoplePorts.PersonDirectory, education sch
 			return matches, nil
 		},
 
-		TeacherGroups:    membershipTeacherGroups(education),
 		SchoolClasses:    education.GetStaffSchoolClasses,
 		SetSchoolClasses: education.SetStaffSchoolClasses,
 		ActiveCaregivers: activeCaregivers,
@@ -261,7 +254,7 @@ func staffDirectoryPersons(users peoplePorts.PersonDirectory) (func(context.Cont
 		if err != nil {
 			return StaffDirectoryPerson{}, err
 		}
-		return toStaffDirectoryPerson(person.ID, person.FirstName, person.LastName, person.TagID, person.AccountID, person.CreatedAt, person.UpdatedAt), nil
+		return toStaffDirectoryPerson(person.ID.Int64(), person.FirstName, person.LastName, person.TagID, (*int64)(person.AccountID), person.CreatedAt, person.UpdatedAt), nil
 	}
 	persons := func(ctx context.Context, ids []int64) ([]StaffDirectoryPerson, error) {
 		persons, err := users.GetByIDs(ctx, ids)
@@ -270,26 +263,11 @@ func staffDirectoryPersons(users peoplePorts.PersonDirectory) (func(context.Cont
 		}
 		result := make([]StaffDirectoryPerson, 0, len(persons))
 		for _, person := range persons {
-			result = append(result, toStaffDirectoryPerson(person.ID, person.FirstName, person.LastName, person.TagID, person.AccountID, person.CreatedAt, person.UpdatedAt))
+			result = append(result, toStaffDirectoryPerson(person.ID.Int64(), person.FirstName, person.LastName, person.TagID, (*int64)(person.AccountID), person.CreatedAt, person.UpdatedAt))
 		}
 		return result, nil
 	}
 	return person, persons
-}
-
-// membershipTeacherGroups lists the groups a Betreuungskraft is assigned to.
-func membershipTeacherGroups(education schoolstructure.GroupManagement) func(context.Context, int64) ([]StaffGroup, error) {
-	return func(ctx context.Context, teacherID int64) ([]StaffGroup, error) {
-		groups, err := education.GetTeacherGroups(ctx, teacherID)
-		if err != nil {
-			return nil, err
-		}
-		result := make([]StaffGroup, 0, len(groups))
-		for _, group := range groups {
-			result = append(result, StaffGroup{ID: group.ID, Name: group.Name})
-		}
-		return result, nil
-	}
 }
 
 // membershipRoleRows lists the active caregivers and the staff selected by role.
@@ -345,7 +323,7 @@ func staffDirectoryWrites(users peoplePorts.PersonDirectory) (func(context.Conte
 			return StaffUpdateResult{}, err
 		}
 		staff.StaffNotes = input.StaffNotes
-		staff.PersonID = input.PersonID
+		staff.PersonID = ident.ID(input.PersonID)
 		teacher, action, err := users.UpdateStaffWithTeacher(ctx, staff, input.IsTeacher, input.Specialization, input.Role, input.Qualifications)
 		if err != nil {
 			return StaffUpdateResult{}, err

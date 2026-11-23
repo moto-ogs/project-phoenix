@@ -117,10 +117,16 @@ function report(overrides: Partial<ClassDayReport> = {}): ClassDayReport {
     weekday: "mon",
     school_day: true,
     enrollment_known: true,
+    can_write_day_hints: false,
+    can_record_morning_attendance: false,
+    can_write_homework: false,
+    can_read_shared_notes: false,
+    can_hand_over: false,
+    can_report_absences: false,
     totals: { students: 1, staying: 1, leaving: 0, absent: 0, list_entries: 0 },
     rows: [
       {
-        student_id: 1,
+        student_id: "1",
         first_name: "Klara",
         last_name: "Klassentag",
         registered: true,
@@ -232,6 +238,8 @@ describe("ClassDayClass", () => {
         fetchClasses={() =>
           Promise.resolve({
             classes: ["4a"],
+            can_report_class_trip: false,
+            can_view_school_day: false,
             can_write_arrival_exception: false,
             weekend_follows_friday: true,
           })
@@ -253,7 +261,7 @@ describe("ClassDayClass", () => {
         report({
           rows: [
             {
-              student_id: 1,
+              student_id: "1",
               first_name: "Klara",
               last_name: "Klassentag",
               registered: true,
@@ -298,6 +306,9 @@ describe("ClassDayClass", () => {
         fetchClasses={() =>
           Promise.resolve({
             classes: ["4a"],
+            can_report_class_trip: false,
+            weekend_follows_friday: false,
+            can_view_school_day: false,
             can_write_arrival_exception: false,
           })
         }
@@ -322,6 +333,9 @@ describe("ClassDayClass", () => {
         fetchClasses={() =>
           Promise.resolve({
             classes: ["4a"],
+            can_report_class_trip: false,
+            weekend_follows_friday: false,
+            can_view_school_day: false,
             can_write_arrival_exception: true,
           })
         }
@@ -350,6 +364,9 @@ describe("ClassDayClass", () => {
         fetchClasses={() =>
           Promise.resolve({
             classes: ["4a"],
+            can_report_class_trip: false,
+            weekend_follows_friday: false,
+            can_view_school_day: false,
             can_write_arrival_exception: true,
           })
         }
@@ -371,6 +388,9 @@ describe("ClassDayClass", () => {
         fetchClasses={() =>
           Promise.resolve({
             classes: ["3b"],
+            can_report_class_trip: false,
+            weekend_follows_friday: false,
+            can_view_school_day: false,
             can_write_arrival_exception: true,
           })
         }
@@ -392,6 +412,9 @@ describe("ClassDayClass", () => {
         fetchClasses={() =>
           Promise.resolve({
             classes: [" 4a"],
+            can_report_class_trip: false,
+            weekend_follows_friday: false,
+            can_view_school_day: false,
             can_write_arrival_exception: true,
           })
         }
@@ -430,7 +453,7 @@ describe("ClassDayClass", () => {
         },
         rows: [
           {
-            student_id: 1,
+            student_id: "1",
             first_name: "Klara",
             last_name: "Klassentag",
             registered: true,
@@ -438,7 +461,7 @@ describe("ClassDayClass", () => {
             offerings: ["Ganztag"],
           },
           {
-            student_id: 2,
+            student_id: "2",
             first_name: "Nico",
             last_name: "Krank",
             registered: true,
@@ -448,7 +471,7 @@ describe("ClassDayClass", () => {
             morning_attendance: { status: "absent", source: "report" },
           },
           {
-            student_id: 0,
+            student_id: "0",
             list_entry: true,
             list_entry_id: "9007199254740993",
             first_name: "Lisa",
@@ -511,7 +534,7 @@ describe("ClassDayClass", () => {
 
       await waitFor(() =>
         expect(record).toHaveBeenCalledWith("4a", todayISO(), [
-          { student_id: 1, status: "absent" },
+          { student_id: "1", status: "absent" },
           { list_entry_id: "9007199254740993", status: "present" },
         ]),
       );
@@ -525,7 +548,7 @@ describe("ClassDayClass", () => {
     it("lists children without a care place neutrally and saves attendance by student ID", async () => {
       const record = vi.fn(() => Promise.resolve());
       const noCareRow = {
-        student_id: 3,
+        student_id: "3",
         first_name: "Mila",
         last_name: "Schule",
         without_care_place: true,
@@ -545,7 +568,7 @@ describe("ClassDayClass", () => {
         rows: [
           ...report().rows,
           noCareRow,
-          { ...noCareRow, student_id: 4, first_name: "Nico", status: "sick" },
+          { ...noCareRow, student_id: "4", first_name: "Nico", status: "sick" },
         ],
       });
       render(
@@ -584,7 +607,7 @@ describe("ClassDayClass", () => {
       );
       await waitFor(() =>
         expect(record).toHaveBeenCalledWith("4a", todayISO(), [
-          { student_id: 3, status: "absent" },
+          { student_id: "3", status: "absent" },
         ]),
       );
     });
@@ -615,7 +638,7 @@ describe("ClassDayClass", () => {
       fireEvent.click(retry);
       await waitFor(() =>
         expect(record).toHaveBeenLastCalledWith("4a", todayISO(), [
-          { student_id: 1, status: "absent" },
+          { student_id: "1", status: "absent" },
         ]),
       );
     });
@@ -747,6 +770,7 @@ describe("ClassDayClass", () => {
     ): ClassDayReport {
       return report({
         can_hand_over: true,
+        handover_version: "v-none",
         totals: {
           students: 3,
           staying: 2,
@@ -756,7 +780,7 @@ describe("ClassDayClass", () => {
         },
         rows: [
           {
-            student_id: 1,
+            student_id: "1",
             first_name: "Klara",
             last_name: "Klassentag",
             registered: true,
@@ -764,7 +788,7 @@ describe("ClassDayClass", () => {
             offerings: ["Ganztag"],
           },
           {
-            student_id: 2,
+            student_id: "2",
             first_name: "Mia",
             last_name: "Morgenfehlt",
             registered: true,
@@ -773,7 +797,7 @@ describe("ClassDayClass", () => {
             morning_attendance: { status: "absent", source: "teacher" },
           },
           {
-            student_id: 3,
+            student_id: "3",
             first_name: "Hugo",
             last_name: "Heimgeher",
             registered: true,
@@ -816,7 +840,8 @@ describe("ClassDayClass", () => {
       await waitFor(() =>
         expect(save).toHaveBeenLastCalledWith("4a", todayISO(), {
           present: [],
-          absent: [1, 2],
+          absent: ["1", "2"],
+          expectedVersion: "v-none",
         }),
       );
     });
@@ -867,14 +892,16 @@ describe("ClassDayClass", () => {
           handed_over_by: "Petra Lehrkraft",
           absent_count: 1,
         },
+        handover_version: "v-stored",
       });
       current.rows[0]!.handover_absent = true;
       fireEvent.click(screen.getByRole("button", { name: "Übergeben" }));
 
       await waitFor(() =>
         expect(handOver).toHaveBeenCalledWith("4a", todayISO(), {
-          present: [2],
-          absent: [1],
+          present: ["2"],
+          absent: ["1"],
+          expectedVersion: "v-none",
         }),
       );
       expect(
@@ -895,6 +922,7 @@ describe("ClassDayClass", () => {
           handed_over_at: "2026-09-09T09:45:00Z",
           absent_count: 1,
         },
+        handover_version: "v-stored",
       });
       report.rows[0]!.handover_absent = true;
       render(
@@ -921,10 +949,70 @@ describe("ClassDayClass", () => {
       fireEvent.click(screen.getByRole("button", { name: "Übergeben" }));
       await waitFor(() =>
         expect(handOver).toHaveBeenCalledWith("4a", todayISO(), {
-          present: [2],
-          absent: [1],
+          present: ["2"],
+          absent: ["1"],
+          expectedVersion: "v-stored",
         }),
       );
+    });
+
+    // ADR 0311: a colleague handed the class over since the view was read.
+    // The save is refused, offers no retry, and the dialog shows the stored
+    // handover: the child marked "nicht da" there is not "da" again.
+    it("shows the stored handover after a refusal instead of retrying", async () => {
+      const handOver = vi
+        .fn()
+        .mockRejectedValueOnce(
+          new ApiError("changed", 409, { code: "general.changed_since_read" }),
+        );
+      let current = handoverReport();
+      render(
+        <ClassDayClass
+          schoolClass="4a"
+          fetchClassDay={() => Promise.resolve(current)}
+          handOverClass={handOver}
+          withdrawClassHandover={() => Promise.resolve()}
+        />,
+      );
+      fireEvent.click(
+        await screen.findByRole("button", { name: "Klasse übergeben" }),
+      );
+      fireEvent.click(
+        within(choice("Mia Morgenfehlt")).getByRole("button", { name: "Da" }),
+      );
+      current = handoverReport({
+        handover: {
+          handed_over_at: "2026-09-09T09:45:00Z",
+          handed_over_by: "Petra Lehrkraft",
+          absent_count: 1,
+        },
+        handover_version: "v-stored",
+      });
+      current.rows[0]!.handover_absent = true;
+      current.rows[1]!.handover_absent = true;
+      fireEvent.click(screen.getByRole("button", { name: "Übergeben" }));
+
+      expect(
+        await screen.findByText(
+          catalogText("general.changed_since_read", "die Übergabe"),
+        ),
+      ).toBeInTheDocument();
+      await waitFor(() =>
+        expect(
+          within(choice("Mia Morgenfehlt")).getByRole("button", {
+            name: "Nicht da",
+          }),
+        ).toHaveAttribute("aria-pressed", "true"),
+      );
+      expect(
+        within(choice("Klara Klassentag")).getByRole("button", {
+          name: "Nicht da",
+        }),
+      ).toHaveAttribute("aria-pressed", "true");
+      expect(
+        screen.queryByRole("button", { name: "Wiederholen" }),
+      ).not.toBeInTheDocument();
+      expect(handOver).toHaveBeenCalledTimes(1);
     });
 
     it("takes the handover back only after the confirmation", async () => {
@@ -1035,12 +1123,12 @@ describe("ClassDayClass homework (#4796)", () => {
     return report({
       can_write_homework: true,
       homework: [
-        { id: "11", subject: "Mathe", description: "Seite 12" },
-        { id: "12", description: "Lesen" },
+        { id: "11", subject: "Mathe", description: "Seite 12", version: "v11" },
+        { id: "12", description: "Lesen", version: "v12" },
       ],
       rows: [
         {
-          student_id: 1,
+          student_id: "1",
           first_name: "Klara",
           last_name: "Klassentag",
           registered: true,
@@ -1105,11 +1193,71 @@ describe("ClassDayClass homework (#4796)", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Speichern" }));
 
     await waitFor(() =>
-      expect(homework.change).toHaveBeenCalledWith("4a", "12", {
-        subject: null,
-        description: "Lesen, Seite 4",
-      }),
+      expect(homework.change).toHaveBeenCalledWith(
+        "4a",
+        "12",
+        {
+          subject: null,
+          description: "Lesen, Seite 4",
+        },
+        "v12",
+      ),
     );
+  });
+
+  it("keeps a change's refusal visible when the entry was deleted meanwhile", async () => {
+    const homework = {
+      ...api(),
+      change: vi.fn(() =>
+        Promise.reject(
+          new ApiError("changed", 409, { code: "general.changed_since_read" }),
+        ),
+      ),
+    };
+    const fetchClassDay = vi
+      .fn()
+      .mockResolvedValueOnce(homeworkReport())
+      .mockResolvedValue(
+        homeworkReport({
+          homework: [
+            {
+              id: "11",
+              subject: "Mathe",
+              description: "Seite 12",
+              version: "v11",
+            },
+          ],
+        }),
+      );
+    render(
+      <ClassDayClass
+        schoolClass="4a"
+        fetchClassDay={fetchClassDay}
+        homework={homework}
+      />,
+    );
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Aktionen zur Hausaufgabe" }),
+    );
+    fireEvent.click(screen.getByRole("menuitem", { name: "Ändern" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText("Was ist zu tun?"), {
+      target: { value: "Lesen, Seite 4" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Speichern" }));
+
+    // ADR 0311: the refusal is never silent. The dialog stays open with it,
+    // and the deleted entry cannot be saved again.
+    expect(
+      await within(dialog).findByText(
+        catalogText("general.changed_since_read", "die Hausaufgabe"),
+      ),
+    ).toBeInTheDocument();
+    const blocked = within(dialog).getByRole("button", { name: "Speichern" });
+    expect(blocked).toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(blocked);
+    expect(homework.change).toHaveBeenCalledTimes(1);
   });
 
   it("deletes an entry that another Lehrkraft of the class entered", async () => {
@@ -1295,7 +1443,7 @@ describe("ClassDayClass class trips (#4799)", () => {
       rows: [
         ...report().rows,
         {
-          student_id: 2,
+          student_id: "2",
           without_care_place: true,
           first_name: "Mila",
           last_name: "Schule",
@@ -1304,7 +1452,7 @@ describe("ClassDayClass class trips (#4799)", () => {
           offerings: [],
         },
         {
-          student_id: 0,
+          student_id: "0",
           list_entry: true,
           list_entry_id: "77",
           first_name: "Lena",
@@ -1329,6 +1477,8 @@ describe("ClassDayClass class trips (#4799)", () => {
         fetchClasses={() =>
           Promise.resolve({
             classes: ["4a"],
+            weekend_follows_friday: false,
+            can_view_school_day: false,
             can_write_arrival_exception: false,
             can_report_class_trip: true,
           })
@@ -1372,6 +1522,8 @@ describe("ClassDayClass class trips (#4799)", () => {
         fetchClasses={() =>
           Promise.resolve({
             classes: ["4a"],
+            weekend_follows_friday: false,
+            can_view_school_day: false,
             can_write_arrival_exception: true,
             can_report_class_trip: false,
           })
@@ -1413,6 +1565,9 @@ describe("ClassDayClass class trips (#4799)", () => {
           fetchClasses={() =>
             Promise.resolve({
               classes: ["4a"],
+              can_report_class_trip: false,
+              weekend_follows_friday: false,
+              can_view_school_day: false,
               can_write_arrival_exception: false,
             })
           }

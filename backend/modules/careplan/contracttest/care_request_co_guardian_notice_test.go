@@ -52,7 +52,7 @@ func TestCareDecisionTellsTheOtherGuardian(t *testing.T) {
 		f.svc = careServiceWithCoGuardianEmitter(t, f, nil)
 
 		req := f.createPending(t, careWeekdays(map[string]any{"weekday": 1, "arrival": "08:00"}))
-		_, err := f.svc.Decide(f.staffCtx(f.staffAccount), carerequests.DecideInput{
+		_, err := f.svc.Decide(f.staffCtx(f.staffAccount), carerequests.DecideInput{ExpectedVersion: testpkg.CareRequestVersion(t, req.ID),
 			RequestID: req.ID, Approve: true, Reason: "Passt so", ReviewedBy: f.staffAccount,
 		})
 		require.NoError(t, err)
@@ -74,7 +74,7 @@ func TestCareDecisionTellsTheOtherGuardian(t *testing.T) {
 		f.svc = careServiceWithCoGuardianEmitter(t, f, []int64{other.AccountID})
 
 		req := f.createPending(t, careWeekdays(map[string]any{"weekday": 1, "arrival": "08:00"}))
-		_, err := f.svc.Decide(f.staffCtx(f.staffAccount), carerequests.DecideInput{
+		_, err := f.svc.Decide(f.staffCtx(f.staffAccount), carerequests.DecideInput{ExpectedVersion: testpkg.CareRequestVersion(t, req.ID),
 			RequestID: req.ID, Approve: true, Reason: "Passt so", ReviewedBy: f.staffAccount,
 		})
 		require.NoError(t, err)

@@ -4,25 +4,25 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"time"
 
 	validation "github.com/go-ozzo/ozzo-validation"
 	devicefleet "github.com/moto-ogs/project-phoenix/modules/devicefleet"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // DeviceResponse represents a device API response
 type DeviceResponse struct {
-	ID             int64     `json:"id"`
+	ID             ident.ID  `json:"id"`
 	DeviceID       string    `json:"device_id"`
 	DeviceType     string    `json:"device_type"`
 	Name           *string   `json:"name,omitempty"`
 	Status         string    `json:"status"`
-	LastSeen       *wireTime `json:"last_seen,omitempty"`
-	RegisteredByID *int64    `json:"registered_by_id,omitempty"`
+	LastSeen       *WireTime `json:"last_seen,omitempty"`
+	RegisteredByID *ident.ID `json:"registered_by_id,omitempty"`
 	RoomName       *string   `json:"room_name,omitempty"`
 	IsOnline       bool      `json:"is_online"`
-	CreatedAt      wireTime  `json:"created_at"`
-	UpdatedAt      wireTime  `json:"updated_at"`
+	CreatedAt      WireTime  `json:"created_at"`
+	UpdatedAt      WireTime  `json:"updated_at"`
 }
 
 // DeviceCreationResponse represents a device creation response with API key
@@ -33,11 +33,11 @@ type DeviceCreationResponse struct {
 
 // DeviceRequest represents a device creation/update request
 type DeviceRequest struct {
-	DeviceID       string  `json:"device_id"`
-	DeviceType     string  `json:"device_type"`
-	Name           *string `json:"name,omitempty"`
-	Status         string  `json:"status,omitempty"`
-	RegisteredByID *int64  `json:"registered_by_id,omitempty"`
+	DeviceID       string    `json:"device_id"`
+	DeviceType     string    `json:"device_type"`
+	Name           *string   `json:"name,omitempty"`
+	Status         string    `json:"status,omitempty"`
+	RegisteredByID *ident.ID `json:"registered_by_id,omitempty"`
 }
 
 // Bind validates the device request
@@ -76,41 +76,25 @@ func (req *DeviceStatusRequest) Bind(_ *http.Request) error {
 	)
 }
 
-// DeviceStatisticsResponse represents device statistics
-type DeviceStatisticsResponse struct {
-	DeviceTypeCount map[string]int `json:"device_type_count"`
-	TotalDevices    int            `json:"total_devices"`
-	ActiveDevices   int            `json:"active_devices"`
-	OfflineDevices  int            `json:"offline_devices"`
-	LastUpdated     time.Time      `json:"last_updated"`
-}
-
-// NetworkScanResponse represents network scan results
-type NetworkScanResponse struct {
-	Devices      map[string]string `json:"devices"`
-	ScanTime     time.Time         `json:"scan_time"`
-	DevicesFound int               `json:"devices_found"`
-}
-
 // newDeviceResponse converts a device model to a response object. The
 // online/offline decision is resolved by the IoT service (issue #586, Rule 12)
 // rather than the model.
 func newDeviceResponse(ctx context.Context, svc devicefleet.DeviceOnlineMonitoring, device *devicefleet.Device) DeviceResponse {
 	response := DeviceResponse{
-		ID:             device.ID,
+		ID:             ident.ID(device.ID),
 		DeviceID:       device.DeviceID,
 		DeviceType:     device.DeviceType,
 		Name:           device.Name,
 		Status:         string(device.Status),
-		RegisteredByID: device.RegisteredByID,
+		RegisteredByID: (*ident.ID)(device.RegisteredByID),
 		RoomName:       device.RoomName,
 		IsOnline:       svc.IsDeviceOnline(ctx, device),
-		CreatedAt:      wireTime(device.CreatedAt),
-		UpdatedAt:      wireTime(device.UpdatedAt),
+		CreatedAt:      WireTime(device.CreatedAt),
+		UpdatedAt:      WireTime(device.UpdatedAt),
 	}
 
 	if device.LastSeen != nil {
-		lastSeen := wireTime(*device.LastSeen)
+		lastSeen := WireTime(*device.LastSeen)
 		response.LastSeen = &lastSeen
 	}
 

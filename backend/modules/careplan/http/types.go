@@ -10,6 +10,9 @@ import (
 
 	peopleModule "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	departure "github.com/moto-ogs/project-phoenix/modules/peopledirectory/departure"
+
+	validation "github.com/go-ozzo/ozzo-validation"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // validateDepartureCompanionNote bounds the free-text "mit wem" companion note
@@ -64,12 +67,12 @@ type StudentRequest struct {
 	// Legacy guardian fields (optional - use guardian_profiles system instead)
 
 	// Optional fields
-	GroupID           *int64  `json:"group_id,omitempty"`
-	AddressStreet     string  `json:"address_street,omitempty"`
-	AddressCity       string  `json:"address_city,omitempty"`
-	AddressPostalCode string  `json:"address_postal_code,omitempty"`
-	ExtraInfo         *string `json:"extra_info,omitempty"`  // Extra information visible to supervisors
-	HealthInfo        *string `json:"health_info,omitempty"` // Static health and medical information
+	GroupID           *ident.ID `json:"group_id,omitempty"`
+	AddressStreet     string    `json:"address_street,omitempty"`
+	AddressCity       string    `json:"address_city,omitempty"`
+	AddressPostalCode string    `json:"address_postal_code,omitempty"`
+	ExtraInfo         *string   `json:"extra_info,omitempty"`  // Extra information visible to supervisors
+	HealthInfo        *string   `json:"health_info,omitempty"` // Static health and medical information
 	// DepartureDays is the authoritative per-weekday departure mode
 	// (alone/bus/pickup). When provided it supersedes the legacy PickupStatus /
 	// PickupDays / Bus / BusDays inputs below, which remain accepted for clients
@@ -104,6 +107,11 @@ type StudentRequest struct {
 
 // UpdateStudentRequest represents a student update request
 type UpdateStudentRequest struct {
+	// ExpectedVersion is the version of the child's master data the form read
+	// (StudentRecordVersion, ADR 0311). Every update but a pure absence
+	// report needs it.
+	ExpectedVersion string `json:"expected_version,omitempty"`
+
 	// Person details (optional for update)
 	FirstName *string `json:"first_name,omitempty"`
 	LastName  *string `json:"last_name,omitempty"`
@@ -111,13 +119,13 @@ type UpdateStudentRequest struct {
 	TagID     *string `json:"tag_id,omitempty"`
 
 	// Student-specific details (optional for update)
-	SchoolClass       *string `json:"school_class,omitempty"`
-	GroupID           *int64  `json:"group_id,omitempty"`
-	AddressStreet     *string `json:"address_street,omitempty"`
-	AddressCity       *string `json:"address_city,omitempty"`
-	AddressPostalCode *string `json:"address_postal_code,omitempty"`
-	HealthInfo        *string `json:"health_info,omitempty"` // Static health and medical information
-	ExtraInfo         *string `json:"extra_info,omitempty"`  // Extra information visible to supervisors
+	SchoolClass       *string   `json:"school_class,omitempty"`
+	GroupID           *ident.ID `json:"group_id,omitempty"`
+	AddressStreet     *string   `json:"address_street,omitempty"`
+	AddressCity       *string   `json:"address_city,omitempty"`
+	AddressPostalCode *string   `json:"address_postal_code,omitempty"`
+	HealthInfo        *string   `json:"health_info,omitempty"` // Static health and medical information
+	ExtraInfo         *string   `json:"extra_info,omitempty"`  // Extra information visible to supervisors
 	// AllowedDepartureModes supersedes the legacy exclusive departure/pickup/bus
 	// inputs below when provided.
 	AllowedDepartureModes *departure.AllowedDepartureModes `json:"allowed_departure_modes,omitempty"`
@@ -147,14 +155,14 @@ type UpdateStudentRequest struct {
 	// nil = leave the links untouched; [] = clear them.
 	Companions *[]CompanionEntry `json:"companions,omitempty"`
 	// CompanionsFingerprint is the fingerprint of the list the client LOADED
-	// before it built Companions (models/departure.CompanionLinksFingerprint,
-	// mirrored by companionsFingerprint() in the frontend).
+	// before it built Companions: the one GET /{id}/companion-links returned
+	// with it (careplan.CompanionLinksFingerprint, ADR 0311).
 	//
 	// Because Companions is a complete replacement, two staff members editing
 	// the same child from the same snapshot would both submit everything they
 	// saw and the second write would delete the first one's committed links.
-	// The handler compares this against the stored links while it holds the
-	// child's row lock and answers a mismatch with a retriable 409 instead.
+	// The owner compares this against the stored links while the child's row
+	// lock is held and answers a mismatch with 409 general.changed_since_read.
 	//
 	// It is equally required WITHOUT Companions: a departure plan alone removes
 	// links too (the backend trims the weekdays the new plan no longer allows),
@@ -261,19 +269,31 @@ func (req *UpdateStudentRequest) normalizeDayFields() error {
 	return nil
 }
 
+// requireStudentNames refuses a child without first name, last name or
+// class, each blank one as a field error, so the form marks every missing
+// field at once. Blank means empty after trimming (the staff portal's BFF
+// route checked this until #7563).
+func requireStudentNames(req *StudentRequest) error {
+	missing := validation.Errors{}
+	for field, value := range map[string]string{
+		"first_name":   req.FirstName,
+		"last_name":    req.LastName,
+		"school_class": req.SchoolClass,
+	} {
+		if strings.TrimSpace(value) == "" {
+			missing[field] = errors.New("required")
+		}
+	}
+	if len(missing) > 0 {
+		return missing
+	}
+	return nil
+}
+
 // Bind validates the student request
 func (req *StudentRequest) Bind(_ *http.Request) error {
-	// Basic validation for person fields
-	if req.FirstName == "" {
-		return errors.New("first name is required")
-	}
-	if req.LastName == "" {
-		return errors.New("last name is required")
-	}
-
-	// Basic validation for student fields
-	if req.SchoolClass == "" {
-		return errors.New("school class is required")
+	if err := requireStudentNames(req); err != nil {
+		return err
 	}
 
 	// Guardian fields are now optional (legacy fields - use guardian_profiles system instead)
@@ -393,6 +413,15 @@ func (req *UpdateStudentRequest) isAbsenceOnly() bool {
 // A nil pointer means "leave the links alone"; an empty slice clears them.
 func (req *UpdateStudentRequest) hasCompanionUpdate() bool {
 	return req.Companions != nil
+}
+
+// companionsFingerprint is the claimed companion state; an absent claim is
+// empty, which the owner refuses wherever the write would remove a link.
+func (req *UpdateStudentRequest) companionsFingerprint() string {
+	if req.CompanionsFingerprint == nil {
+		return ""
+	}
+	return *req.CompanionsFingerprint
 }
 
 func (req *UpdateStudentRequest) hasDeparturePlanUpdate() bool {

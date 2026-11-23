@@ -29,23 +29,26 @@ export const tenantStudentKeys = {
   /** The day evaluation of one Berlin day (`fetchDayLog`). */
   dayLog: (date: string) => `day-log-${date}`,
   /**
-   * One child's arrival plan for a week (`fetchArrivalData` with a range).
-   * Deliberately outside `studentKeys.arrivalData`'s SSE prefix: the care
-   * schedule editor refreshes it on `CARE_SCHEDULE_STALE_EVENT`, deferred
-   * while a draft is open.
+   * One child's care week: its pickup and arrival plan for a range, read
+   * together (`fetchCareWeek` in the care schedule manager) because the
+   * weekly plan token of the pickup half guards both (ADR 0311).
+   * Deliberately outside the SSE prefixes of `studentKeys.arrivalData` and
+   * `pickupData`: the care schedule editor refreshes it on
+   * `CARE_SCHEDULE_STALE_EVENT`, deferred while a draft is open.
    */
-  arrivalWeek: (studentId: string, from: string, to: string) =>
-    `care-week-arrival-${encodeURIComponent(studentId)}-${from}-${to}`,
-  /** The pickup counterpart (`fetchStudentPickupData` with a range). */
-  pickupWeek: (studentId: string, from: string, to: string) =>
-    `care-week-pickup-${encodeURIComponent(studentId)}-${from}-${to}`,
+  careWeek: (studentId: string, from: string, to: string) =>
+    `care-week-${encodeURIComponent(studentId)}-${from}-${to}`,
   /** The school's arrival settings: care days source, periods, defaults (`fetchArrivalSettings`). */
   arrivalSettings: () => "arrival-settings",
   /** Whether the reader has an RSS link for new parent requests (`getRequestFeedStatus`). */
   requestFeedStatus: () => "request-feed-status",
   /** The dry run of a parent-portal invitation for these children (`bulkInviteGuardians`). */
-  bulkInvitePreview: (studentIds: readonly string[], resendOpen: boolean) =>
-    `bulk-invite-preview-${resendOpen ? "resend" : "new"}-${encodeURIComponent([...studentIds].sort().join(","))}`,
+  bulkInvitePreview: (
+    studentIds: readonly string[],
+    resendOpen: boolean,
+    notifyActive: boolean,
+  ) =>
+    `bulk-invite-preview-${resendOpen ? "resend" : "new"}-${notifyActive ? "notify" : "quiet"}-${encodeURIComponent([...studentIds].sort().join(","))}`,
   /** What deleting one child would remove (`fetchStudentDeletionImpact`). */
   deletionImpact: (studentId: string, completionId?: string) =>
     `student-deletion-impact-${encodeURIComponent(studentId)}-${encodeURIComponent(completionId ?? "")}`,
@@ -55,6 +58,9 @@ export const tenantStudentKeys = {
   /** One child's stored privacy consent and retention (`fetchStudentPrivacyConsent`). */
   privacyConsent: (studentId: string) =>
     `student-privacy-consent-${encodeURIComponent(studentId)}`,
+  /** Whether one child's room history and mood are stopped (`fetchRoomHistoryStop`). */
+  roomHistoryStop: (studentId: string) =>
+    `student-room-history-stop-${encodeURIComponent(studentId)}`,
   /** Whether one child's family protection is on (`getFamilyProtection`). */
   familyProtection: (studentId: string) =>
     `student-family-protection-${encodeURIComponent(studentId)}`,

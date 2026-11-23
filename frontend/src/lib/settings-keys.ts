@@ -2,7 +2,7 @@ import { MODULE_SETTING_KEYS } from "./modules";
 
 // Keys whose value rides on /auth/tenant/resolve. The settings PUT/DELETE
 // proxies (tenant-side `/api/settings/values/[key]` and operator-side
-// `/api/operator/provisioning/schools/[id]/settings/values/[key]`) consult
+// `/api/operator/schools/[id]/settings/values/[key]`) consult
 // this set after a successful write and purge the cached layout lookup via
 // `revalidateTag('tenant-${slug}')` + `revalidatePath('/${slug}', 'layout')`.
 // The settings page also calls `router.refresh()` so the RSC tree pulls the
@@ -78,4 +78,8 @@ export const TENANT_RESOLVE_AFFECTING_KEYS: ReadonlySet<string> = new Set([
   // layout cache TTL (300s). The signed-in switches of #4996 ride on
   // /api/me/navigation instead; useSettingsCacheBridge refreshes that.
   "timetable.enabled",
+  // display.enabled rides on /auth/tenant/resolve as display_enabled and
+  // unlocks the Info-Displays page. Without revalidation the page stays on
+  // „nicht eingeschaltet“ after the school switched it on, until the TTL ends.
+  "display.enabled",
 ]);

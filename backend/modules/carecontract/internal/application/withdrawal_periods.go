@@ -71,7 +71,7 @@ func withdrawalReads(subjects []withdrawalSubject) ([]int64, calendar.Date, cale
 		if !hasWithdrawalPeriod(subject.concluded, subject.informedAt) {
 			continue
 		}
-		first, last := withdrawalWindow(subject.concluded.At)
+		first, last := withdrawalWindow(subject.concluded, subject.informedAt)
 		if from.IsZero() || first.Before(from) {
 			from = first
 		}

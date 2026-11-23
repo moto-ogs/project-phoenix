@@ -77,6 +77,12 @@ vi.mock("~/components/ui/icons", () => ({
   ),
 }));
 
+// The staff session gate lets the request through; fetch gets the answer on.
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 // Mock fetch
 global.fetch = vi.fn();
 
@@ -86,9 +92,10 @@ describe("PasswordChangeModal", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // The catalog proxy's answer to a route without data.
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
-      json: async () => ({}),
+      json: async () => ({ status: "success", data: null }),
     });
   });
 
@@ -352,6 +359,16 @@ describe("PasswordChangeModal", () => {
       expect(
         screen.getByText(/Passwort erfolgreich geändert!/i),
       ).toBeInTheDocument();
+    });
+    // The backend's field names: the portals' catalog proxies pass the body
+    // on unchanged (#2352).
+    const [url, init] = (global.fetch as ReturnType<typeof vi.fn>).mock
+      .calls[0] as [string, RequestInit];
+    expect(url).toBe("/api/auth/password");
+    expect(JSON.parse(init.body as string)).toEqual({
+      current_password: "OldPass123!",
+      new_password: "NewPass123!",
+      confirm_password: "NewPass123!",
     });
   });
 

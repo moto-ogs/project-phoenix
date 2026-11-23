@@ -10,9 +10,10 @@
 
 import { signOut } from "next-auth/react";
 
-import { apiErrorFromResponse } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
-import { sessionFetch, clearSessionCache } from "~/lib/session-cache";
+import { bffJson } from "~/lib/bff-fetch";
+import { sessionBff } from "~/lib/session-bff";
+import { clearSessionCache } from "~/lib/session-cache";
 
 const logger = createLogger({ component: "StaffPreviewApi" });
 
@@ -24,26 +25,10 @@ export interface StaffPreviewCandidate {
   roles: string[];
 }
 
-interface BackendStaffPreviewCandidate {
-  // int64 on the backend, serialized as a string so no ID passes through a
-  // JavaScript number.
-  account_id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  roles: string[];
-}
-
 export interface StaffPreviewSession {
   expiresIn: number;
   targetAccountId: string;
   targetName: string;
-}
-
-interface BackendStaffPreviewStartResponse {
-  expires_in: number;
-  target_account_id: string;
-  target_name: string;
 }
 
 type SessionUpdate = (data: Record<string, unknown>) => Promise<unknown>;
@@ -92,41 +77,26 @@ async function signOutAfterFailedRestore(): Promise<void> {
 export async function fetchStaffPreviewCandidates(): Promise<
   StaffPreviewCandidate[]
 > {
-  const response = await sessionFetch("/api/auth/staff-preview/candidates");
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Failed to load preview candidates: ${response.status}`,
-    );
-  }
-  // createGetHandler wraps GET responses in { status, data }.
-  const envelope = (await response.json()) as {
-    data?: BackendStaffPreviewCandidate[] | null;
-  };
-  return (envelope.data ?? []).map((candidate) => ({
+  const candidates = await bffJson(
+    "tenant",
+    "GET /auth/staff-preview/candidates",
+  );
+  return candidates.map((candidate) => ({
     accountId: candidate.account_id,
     firstName: candidate.first_name,
     lastName: candidate.last_name,
     email: candidate.email,
-    roles: candidate.roles,
+    roles: candidate.roles ?? [],
   }));
 }
 
 async function startStaffPreview(
   accountId: string,
 ): Promise<StaffPreviewSession> {
-  const response = await sessionFetch("/api/auth/staff-preview", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ account_id: accountId }),
+  const data = await bffJson("tenant", sessionBff.startPreview, {
+    body: { account_id: accountId },
+    errorMessage: "Failed to start preview",
   });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Failed to start preview: ${response.status}`,
-    );
-  }
-  const data = (await response.json()) as BackendStaffPreviewStartResponse;
   return {
     expiresIn: data.expires_in,
     targetAccountId: data.target_account_id,
@@ -142,18 +112,16 @@ async function startStaffPreview(
  * The signed preview token is the credential the whole way down. A running
  * preview's token lives only in the session cookie (#5005), so the route reads
  * it there. Failed starts are rolled back entirely server-side.
- * Plain fetch, not sessionFetch: sessionFetch would throw when the
- * admin session has already expired, and the call must never fail the end.
+ * Through `public`, not the staff portal: its session gate would throw when
+ * the admin session has already expired, and the call must never fail the end.
  */
 export async function recordStaffPreviewEnd(
   signal?: AbortSignal,
 ): Promise<void> {
   signal?.throwIfAborted();
   try {
-    await fetch("/api/auth/staff-preview/end", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
+    await bffJson("public", sessionBff.endPreview, {
+      body: {},
       // The end of the preview waits for this call; a stalled request must
       // not keep the admin in the preview.
       signal: signal

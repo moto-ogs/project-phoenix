@@ -367,9 +367,9 @@ describe("active-supervisions view model", () => {
     // All sessions of a released room feed its one shared entry, so listing
     // them again would put the same place on screen once per session (#3065).
     const rooms = [
-      { id: "yard-1", name: "Aufsicht 1", room_name: "Schulhof", room_id: "7" },
-      { id: "yard-2", name: "Aufsicht 2", room_name: "Schulhof", room_id: "7" },
-      { id: "other", name: "Kreativ", room_name: "Atelier", room_id: "9" },
+      { id: "yard-1", name: "Aufsicht 1", roomName: "Schulhof", roomId: "7" },
+      { id: "yard-2", name: "Aufsicht 2", roomName: "Schulhof", roomId: "7" },
+      { id: "other", name: "Kreativ", roomName: "Atelier", roomId: "9" },
     ];
 
     expect(
@@ -379,8 +379,8 @@ describe("active-supervisions view model", () => {
 
   it("keeps every own session when nothing is released", () => {
     const rooms = [
-      { id: "yard-1", name: "Aufsicht 1", room_id: "7" },
-      { id: "other", name: "Kreativ", room_id: "9" },
+      { id: "yard-1", name: "Aufsicht 1", roomId: "7" },
+      { id: "other", name: "Kreativ", roomId: "9" },
     ];
 
     expect(
@@ -416,11 +416,11 @@ describe("active-supervisions view model", () => {
       },
     ]);
 
-    expect(result.map((room) => room.room_name)).toEqual([
+    expect(result.map((room) => room.roomName)).toEqual([
       "Atelier",
       "Zeichenraum",
     ]);
-    expect(result[0]?.room_color).toBe("#83CD2D");
+    expect(result[0]?.roomColor).toBe("#83CD2D");
     expect(result[0]?.isCurrentUserSupervising).toBe(true);
   });
 
@@ -464,8 +464,8 @@ describe("active-supervisions view model", () => {
       { id: "b", name: "Lesen", room: { id: "r2", name: "Bücherei" } },
     ]);
 
-    expect(limited?.participant_limit).toBe(45);
-    expect(unlimited?.participant_limit).toBeNull();
+    expect(limited?.participantLimit).toBe(45);
+    expect(unlimited?.participantLimit).toBeNull();
   });
 
   it("maps only active visits to student card rows", () => {
@@ -533,8 +533,8 @@ describe("active-supervisions view model", () => {
 
     expect(rooms[0]).toMatchObject({
       id: "active-without-room",
-      room_name: undefined,
-      room_color: undefined,
+      roomName: undefined,
+      roomColor: undefined,
     });
     expect(students[0]).toMatchObject({
       id: "student-3",
@@ -592,22 +592,22 @@ describe("resolveSupervisionSelection (#2265)", () => {
     {
       id: "group-a",
       name: "GT 1",
-      room_name: "Raum 54",
-      room_id: "54",
+      roomName: "Raum 54",
+      roomId: "54",
       isCurrentUserSupervising: true,
     },
     {
       id: "group-b",
       name: "GT 2",
-      room_name: "Raum 54",
-      room_id: "54",
+      roomName: "Raum 54",
+      roomId: "54",
       isCurrentUserSupervising: true,
     },
     {
       id: "group-c",
       name: "Kreativ",
-      room_name: "Atelier",
-      room_id: "55",
+      roomName: "Atelier",
+      roomId: "55",
       isCurrentUserSupervising: true,
     },
   ];
@@ -772,15 +772,15 @@ describe("resolveSupervisionSelection (#2265)", () => {
           {
             id: "foreign",
             name: "Fremde Aufsicht",
-            room_name: "Gruppenraum",
-            room_id: "1",
+            roomName: "Gruppenraum",
+            roomId: "1",
             isCurrentUserSupervising: false,
           },
           {
             id: "own-open",
             name: "Eigene Aufsicht",
-            room_name: "Sporthalle",
-            room_id: "2",
+            roomName: "Sporthalle",
+            roomId: "2",
             isCurrentUserSupervising: true,
           },
         ],
@@ -800,8 +800,8 @@ describe("resolveSupervisionSelection (#2265)", () => {
           {
             id: "fußball",
             name: "Fußball",
-            room_name: "Sporthalle",
-            room_id: "2",
+            roomName: "Sporthalle",
+            roomId: "2",
             isCurrentUserSupervising: true,
           },
         ],
@@ -865,7 +865,7 @@ describe("supervision tab identity (#2265)", () => {
   it("labels a tab with the instance title plus the plan time when known", () => {
     expect(
       supervisionTabLabel(
-        { id: "active-1", name: "GT 1", room_name: "Mehrzweckraum" },
+        { id: "active-1", name: "GT 1", roomName: "Mehrzweckraum" },
         { title: "GT 1", timeRange: "12:45–13:45" },
       ),
     ).toBe("GT 1 · 12:45–13:45");
@@ -876,7 +876,7 @@ describe("supervision tab identity (#2265)", () => {
       supervisionTabLabel({
         id: "active-3",
         name: undefined as unknown as string,
-        room_name: "OGS-Raum 1",
+        roomName: "OGS-Raum 1",
       }),
     ).toBe("OGS-Raum 1");
   });
@@ -886,7 +886,7 @@ describe("supervision tab identity (#2265)", () => {
       supervisionTabLabel({
         id: "active-1",
         name: "GT 1",
-        room_name: "Mehrzweckraum",
+        roomName: "Mehrzweckraum",
       }),
     ).toBe("GT 1 · Mehrzweckraum");
     expect(supervisionTabLabel({ id: "active-2", name: "Schulhof" })).toBe(
@@ -1102,7 +1102,7 @@ describe("room and supervisors in the page head (#4354)", () => {
       supervisionHeadFacts({
         title: "Lese-AG",
         currentRoom: {
-          room_name: "Raum 101",
+          roomName: "Raum 101",
           supervisorNames: ["Anna Alt", "Ben Bauer"],
         },
         currentOpenRoom: null,
@@ -1117,7 +1117,7 @@ describe("room and supervisors in the page head (#4354)", () => {
     expect(
       supervisionHeadFacts({
         title: "Raum 101",
-        currentRoom: { room_name: "Raum 101", supervisorNames: [] },
+        currentRoom: { roomName: "Raum 101", supervisorNames: [] },
         currentOpenRoom: null,
       }),
     ).toEqual({ roomName: null, supervisorNames: [] });

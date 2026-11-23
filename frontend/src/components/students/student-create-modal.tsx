@@ -23,7 +23,7 @@ import {
 import { Button, ButtonLink } from "~/components/ui/button";
 import { SegmentedControl } from "~/components/ui/segmented-control";
 import { createLogger } from "~/lib/logger";
-import type { Student } from "~/lib/student-helpers";
+import type { Student, PrivacyConsent } from "~/lib/student-helpers";
 import {
   AdditionalInfoSection,
   DepartureSection,
@@ -66,13 +66,13 @@ import {
 import { fetchPrivacyConsentDefaults } from "~/lib/student-api";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useFreshSWR, useSWRAuth } from "~/lib/swr";
+import { useSWRAuth } from "~/lib/swr";
 import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import {
   mapBulkPickupScheduleFormToBackend,
-  type BackendPickupScheduleRequest,
   type PickupScheduleFormData,
 } from "~/lib/pickup-schedule-helpers";
+import type { StudentCreateBody } from "~/lib/student-request";
 import { careTimesConcept } from "~/lib/concepts/careTimes";
 import { groupsConcept } from "~/lib/concepts/groups";
 import { InsetPanel } from "~/components/ui/inset-panel";
@@ -89,7 +89,7 @@ type GuardianSubmitEntry = {
   phoneNumbers: Array<{
     id?: string;
     phoneNumber: string;
-    phoneType: PhoneType;
+    phoneType: PhoneType | undefined;
     label?: string;
     isPrimary: boolean;
   }>;
@@ -143,7 +143,7 @@ function toExistingGuardianPayload(
   relationship: RelationshipFormData,
 ): StudentGuardianPayload {
   return {
-    guardian_profile_id: Number(guardian.id),
+    guardian_profile_id: guardian.id,
     first_name: guardian.firstName,
     last_name: guardian.lastName,
     relationship_type: relationship.relationshipType,
@@ -161,14 +161,14 @@ function relationshipLabel(value: string): string {
   return RELATIONSHIP_TYPES.find((t) => t.value === value)?.label ?? value;
 }
 
-// Weekly schedules travel to the backend in snake_case alongside the student so
-// they are persisted in the same atomic create transaction. Arrival entries are
-// already backend-shaped (ArrivalScheduleFormEntry); pickup entries are mapped
-// from the care-plan form via mapBulkPickupScheduleFormToBackend.
-export type CreateStudentSchedules = {
-  arrival_schedules?: ArrivalScheduleFormEntry[];
-  pickup_schedules?: BackendPickupScheduleRequest[];
-};
+// Weekly schedules travel to the backend alongside the student so they are
+// persisted in the same atomic create transaction. Pickup entries are mapped
+// from the care-plan form via mapBulkPickupScheduleFormToBackend; arrival
+// entries stay form entries until studentCreateRequest maps them.
+export type CreateStudentSchedules = Pick<
+  StudentCreateBody,
+  "arrival_schedules" | "pickup_schedules"
+>;
 
 // The two things "+ Kinder" can create (#2382): a regular OGS child, or a
 // minimal class-list-only entry (Name + Klasse, "Keine Betreuung").
@@ -281,18 +281,22 @@ export function StudentCreateModal({
     isOpen && !settings && settingsLoad.failure === undefined;
   // The consent fields start at the school's defaults and are only sent when
   // the person changed one: the stored consent then follows the school
-  // setting until somebody decides otherwise for this child.
-  const consentDefaults = useFreshSWR(
+  // setting until somebody decides otherwise for this child. A template
+  // needs no read token (ADR 0311): the backend validates what is saved.
+  // Every opening reads them again in the background (no deduplication).
+  const consentDefaults = useSWRAuth(
     isOpen ? tenantStudentKeys.privacyConsentDefaults() : null,
     fetchPrivacyConsentDefaults,
+    { dedupingInterval: 0 },
   );
   const consentDefaultsLoad = useSwrResourceLoadError(
     [consentDefaults],
     "die Datenschutz-Voreinstellung",
     () => consentDefaults.mutate(),
   );
-  // Whether this opening's form already took the school's defaults.
-  const [consentDefaultsApplied, setConsentDefaultsApplied] = useState(false);
+  // The defaults answer this opening's form took last; null = none yet.
+  const [appliedConsentDefaults, setAppliedConsentDefaults] =
+    useState<PrivacyConsent | null>(null);
   const touchedConsentFieldsRef = useRef(new Set<string>());
   const [guardianPickerOpen, setGuardianPickerOpen] = useState(false);
   // The inline picker panel is tall; collapsing it (on add or cancel) shrinks
@@ -336,22 +340,20 @@ export function StudentCreateModal({
       pendingGuardianScrollRef.current = false;
       touchedConsentFieldsRef.current = new Set();
     }
-    setConsentDefaultsApplied(false);
+    setAppliedConsentDefaults(null);
   }, [isOpen, clearErrors]);
 
-  // Take the defaults once per opening, from an answer read in this opening,
-  // and only into fields nobody touched yet.
+  // Take each defaults answer of this opening (the cached one at once, the
+  // one read again after it), only into fields nobody touched yet.
   const consentDefaultsData = consentDefaults.data;
-  const consentDefaultsValidating = consentDefaults.isValidating;
   useEffect(() => {
     if (
       !isOpen ||
-      consentDefaultsApplied ||
       !consentDefaultsData ||
-      consentDefaultsValidating
+      appliedConsentDefaults === consentDefaultsData
     )
       return;
-    setConsentDefaultsApplied(true);
+    setAppliedConsentDefaults(consentDefaultsData);
     const touched = touchedConsentFieldsRef.current;
     setFormData((prev) => ({
       ...prev,
@@ -362,12 +364,7 @@ export function StudentCreateModal({
         data_retention_days: consentDefaultsData.dataRetentionDays,
       }),
     }));
-  }, [
-    isOpen,
-    consentDefaultsApplied,
-    consentDefaultsData,
-    consentDefaultsValidating,
-  ]);
+  }, [isOpen, appliedConsentDefaults, consentDefaultsData]);
 
   // After the inline picker collapses (add or cancel), re-anchor to the guardian
   // section so the shrinking modal doesn't leave the user scrolled past it.
@@ -396,7 +393,7 @@ export function StudentCreateModal({
     guardian: Guardian,
     relationship: RelationshipFormData,
   ) => {
-    const profileId = Number(guardian.id);
+    const profileId = guardian.id;
     setGuardians((prev) =>
       prev.some((g) => g.guardian_profile_id === profileId)
         ? prev
@@ -426,8 +423,7 @@ export function StudentCreateModal({
   // guardians that are already on this child.
   const addedProfileIds = guardians
     .map((g) => g.guardian_profile_id)
-    .filter((id): id is number => id !== undefined)
-    .map((id) => id.toString());
+    .filter((id): id is string => id !== undefined);
 
   // Prüfung vor dem Senden: gleicher Kasten wie ein Fehler vom Server, die
   // Felder heißen wie in der API, damit Markierung und Fokus sie finden.

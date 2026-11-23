@@ -7,6 +7,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -41,6 +42,26 @@ func bulkRequest(studentIDs ...int64) identityaccess.BulkInviteRequest {
 	return identityaccess.BulkInviteRequest{StudentIDs: studentIDs, CreatedBy: relativeActor}
 }
 
+// bulkRun runs req as the dialog does: a run confirms the preview it sends
+// the fingerprint of (ADR 0311), read just before.
+func (f *lifecycleFixture) bulkRun(req identityaccess.BulkInviteRequest) (*identityaccess.BulkInviteResult, error) {
+	if !req.DryRun && req.ExpectedFingerprint == "" {
+		req = f.previewed(req)
+	}
+	return f.lifecycle.BulkInviteToStudents(tenantContext(), req)
+}
+
+// previewed is req with the fingerprint of its preview; an invalid request
+// stays without one.
+func (f *lifecycleFixture) previewed(req identityaccess.BulkInviteRequest) identityaccess.BulkInviteRequest {
+	preview := req
+	preview.DryRun = true
+	if counted, err := f.lifecycle.BulkInviteToStudents(tenantContext(), preview); err == nil {
+		req.ExpectedFingerprint = counted.Fingerprint
+	}
+	return req
+}
+
 func TestBulkInvite_ValidatesTheRequest(t *testing.T) {
 	t.Parallel()
 	f := newLifecycleFixture(t)
@@ -51,7 +72,7 @@ func TestBulkInvite_ValidatesTheRequest(t *testing.T) {
 		"negative id": {CreatedBy: relativeActor, StudentIDs: []int64{1, -2}},
 		"too many":    {CreatedBy: relativeActor, StudentIDs: make([]int64, domain.BulkInviteMaxStudents+1)},
 	} {
-		_, err := f.lifecycle.BulkInviteToStudents(tenantContext(), req)
+		_, err := f.bulkRun(req)
 		require.Error(t, err, name)
 		var validation *identityaccess.GuardianInvitationValidationError
 		require.ErrorAs(t, err, &validation, name)
@@ -63,7 +84,7 @@ func TestBulkInvite_OneMailPerGuardianAcrossSiblings(t *testing.T) {
 	f := newLifecycleFixture(t)
 	parent := f.bulkGuardian("mutter@example.test", roleLegal, 11, 12, 13)
 
-	result, err := f.lifecycle.BulkInviteToStudents(tenantContext(), bulkRequest(13, 11, 12))
+	result, err := f.bulkRun(bulkRequest(13, 11, 12))
 
 	require.NoError(t, err)
 	assert.Equal(t, 1, result.Invited)
@@ -87,7 +108,7 @@ func TestBulkInvite_SkipsActiveRestrictedAndOpen(t *testing.T) {
 	waiting := f.bulkGuardian("offen@example.test", roleLegal, 12)
 	f.openInvitation(waiting.ID, 12, domain.GuardianInvitationApprovalNotRequired, time.Now().Add(time.Hour))
 
-	result, err := f.lifecycle.BulkInviteToStudents(tenantContext(), bulkRequest(11, 12))
+	result, err := f.bulkRun(bulkRequest(11, 12))
 
 	require.NoError(t, err)
 	assert.Equal(t, identityaccess.BulkInviteResult{SkippedActive: 1, SkippedRestricted: 2, SkippedOpen: 1, Problems: []identityaccess.BulkInviteProblem{}}, *result)
@@ -105,7 +126,7 @@ func TestBulkInvite_RecordsAnActiveProfileEmailBeforeSkippingIt(t *testing.T) {
 	f.guardians.profiles[active.ID] = active
 	f.bulkGuardian("geteilt@example.test", roleLegal, 12)
 
-	result, err := f.lifecycle.BulkInviteToStudents(tenantContext(), bulkRequest(11, 12))
+	result, err := f.bulkRun(bulkRequest(11, 12))
 
 	require.NoError(t, err)
 	assert.Equal(t, 1, result.SkippedActive)
@@ -124,7 +145,7 @@ func TestBulkInvite_RegrantsTenantAccessForAnActiveGuardian(t *testing.T) {
 	active.HasAccount = true
 	f.guardians.profiles[active.ID] = active
 
-	result, err := f.lifecycle.BulkInviteToStudents(tenantContext(), bulkRequest(11))
+	result, err := f.bulkRun(bulkRequest(11))
 
 	require.NoError(t, err)
 	assert.Equal(t, 1, result.SkippedActive)
@@ -140,10 +161,12 @@ func TestBulkInvite_LocksProfilesBeforeReadingOpenInvitations(t *testing.T) {
 		f.openInvitation(parent.ID, 11, domain.GuardianInvitationApprovalNotRequired, time.Now().Add(time.Hour))
 	}
 
-	result, err := f.lifecycle.BulkInviteToStudents(tenantContext(), bulkRequest(11))
+	_, err := f.bulkRun(bulkRequest(11))
 
-	require.NoError(t, err)
-	assert.Equal(t, 1, result.SkippedOpen)
+	// The invitation a colleague issued while the run waited for the lock is
+	// read after the lock: the run sees more than its preview counted and
+	// is refused instead of mailing the guardian a second link (ADR 0311).
+	require.ErrorIs(t, err, readstate.ErrChanged)
 	assert.Empty(t, f.delivery.emails)
 	assert.Equal(t, []string{fmt.Sprintf("guardian-bulk-invite:77:%d", parent.ID)}, f.runtime.locks)
 }
@@ -155,11 +178,13 @@ func TestBulkInvite_BatchesExistingAccountLookups(t *testing.T) {
 	f.bulkGuardian("zwei@example.test", roleLegal, 12)
 	f.bulkGuardian("drei@example.test", roleLegal, 13)
 
-	result, err := f.lifecycle.BulkInviteToStudents(tenantContext(), bulkRequest(11, 12, 13))
+	req := f.previewed(bulkRequest(11, 12, 13))
+	before := f.store.findAccountsByEmailsCalls
+	result, err := f.bulkRun(req)
 
 	require.NoError(t, err)
 	assert.Equal(t, 3, result.Invited)
-	assert.Equal(t, 1, f.store.findAccountsByEmailsCalls)
+	assert.Equal(t, 1, f.store.findAccountsByEmailsCalls-before)
 }
 
 func TestBulkInvite_ResendRestartsTheWindow(t *testing.T) {
@@ -171,7 +196,7 @@ func TestBulkInvite_ResendRestartsTheWindow(t *testing.T) {
 
 	req := bulkRequest(12)
 	req.ResendOpen = true
-	result, err := f.lifecycle.BulkInviteToStudents(tenantContext(), req)
+	result, err := f.bulkRun(req)
 
 	require.NoError(t, err)
 	assert.Equal(t, 1, result.Resent)
@@ -189,7 +214,7 @@ func TestBulkInvite_ResendSupersedesAParentRequestAwaitingApproval(t *testing.T)
 
 	req := bulkRequest(12)
 	req.ResendOpen = true
-	result, err := f.lifecycle.BulkInviteToStudents(tenantContext(), req)
+	result, err := f.bulkRun(req)
 
 	require.NoError(t, err)
 	assert.Equal(t, 1, result.Invited)
@@ -208,7 +233,7 @@ func TestBulkInvite_ReportsAddressProblemsWithTheChild(t *testing.T) {
 	f.bulkGuardian("familie@example.test", roleLegal, 11)
 	f.bulkGuardian("Familie@example.test ", roleLegal, 11)
 
-	result, err := f.lifecycle.BulkInviteToStudents(tenantContext(), bulkRequest(11))
+	result, err := f.bulkRun(bulkRequest(11))
 
 	require.NoError(t, err)
 	assert.Equal(t, 1, result.Invited, "a shared address is mailed once")
@@ -227,7 +252,7 @@ func TestBulkInvite_ExistingAccountIsLinkedAndToldWhereToLogIn(t *testing.T) {
 	f.store.addAccount(40, "konto@example.test", "hash:secret", true)
 	parent := f.bulkGuardian("konto@example.test", roleLegal, 11)
 
-	result, err := f.lifecycle.BulkInviteToStudents(tenantContext(), bulkRequest(11))
+	result, err := f.bulkRun(bulkRequest(11))
 
 	require.NoError(t, err)
 	assert.Equal(t, 1, result.LinkedExistingAccount)
@@ -246,7 +271,7 @@ func TestBulkInvite_ExistingAccountWinsOverAnOpenInvitation(t *testing.T) {
 	req := bulkRequest(11)
 	req.ResendOpen = true
 
-	result, err := f.lifecycle.BulkInviteToStudents(tenantContext(), req)
+	result, err := f.bulkRun(req)
 
 	require.NoError(t, err)
 	assert.Equal(t, 1, result.LinkedExistingAccount)
@@ -269,7 +294,7 @@ func TestBulkInvite_DryRunWritesAndMailsNothing(t *testing.T) {
 
 	req := bulkRequest(11, 12)
 	req.DryRun, req.ResendOpen = true, true
-	result, err := f.lifecycle.BulkInviteToStudents(tenantContext(), req)
+	result, err := f.bulkRun(req)
 
 	require.NoError(t, err)
 	assert.True(t, result.DryRun)
@@ -294,7 +319,7 @@ func TestBulkInvite_RepoErrorsSurface(t *testing.T) {
 		t.Parallel()
 		f := newLifecycleFixture(t)
 		f.guardians.listByStudentErr = errLifecycleBoom
-		_, err := f.lifecycle.BulkInviteToStudents(tenantContext(), bulkRequest(11))
+		_, err := f.bulkRun(bulkRequest(11))
 		require.ErrorIs(t, err, errLifecycleBoom)
 	})
 
@@ -303,7 +328,7 @@ func TestBulkInvite_RepoErrorsSurface(t *testing.T) {
 		f := newLifecycleFixture(t)
 		f.bulkGuardian("neu@example.test", roleLegal, 11)
 		f.invitations.insertErr = errLifecycleBoom
-		_, err := f.lifecycle.BulkInviteToStudents(tenantContext(), bulkRequest(11))
+		_, err := f.bulkRun(bulkRequest(11))
 		require.ErrorIs(t, err, errLifecycleBoom)
 	})
 }
@@ -320,7 +345,7 @@ func TestBulkInvite_LinksExistingAccountDespiteMailBlock(t *testing.T) {
 
 			previewReq := bulkRequest(11)
 			previewReq.DryRun = true
-			preview, err := f.lifecycle.BulkInviteToStudents(tenantContext(), previewReq)
+			preview, err := f.bulkRun(previewReq)
 			require.NoError(t, err)
 			assert.Equal(t, 1, preview.LinkedExistingAccount)
 			assert.Empty(t, preview.Problems)
@@ -328,7 +353,7 @@ func TestBulkInvite_LinksExistingAccountDespiteMailBlock(t *testing.T) {
 			assert.Empty(t, f.store.granted)
 			assert.Empty(t, f.delivery.accessEmails)
 
-			result, err := f.lifecycle.BulkInviteToStudents(tenantContext(), bulkRequest(11))
+			result, err := f.bulkRun(bulkRequest(11))
 
 			require.NoError(t, err)
 			assert.Equal(t, 1, result.LinkedExistingAccount)
@@ -340,4 +365,46 @@ func TestBulkInvite_LinksExistingAccountDespiteMailBlock(t *testing.T) {
 			assert.Equal(t, []int64{40}, f.store.granted)
 		})
 	}
+}
+
+// A run confirms the preview it was counted from (ADR 0311): a guardian
+// linked since, or no preview at all, refuses the run and mails nobody; the
+// preview's own fingerprint lets it through.
+func TestBulkInvite_RefusesARunThatDiffersFromItsPreview(t *testing.T) {
+	t.Parallel()
+	f := newLifecycleFixture(t)
+	f.bulkGuardian("eins@example.test", roleLegal, 11)
+	read := f.previewed(bulkRequest(11))
+	f.bulkGuardian("neu@example.test", roleLegal, 11)
+
+	for _, expected := range []string{read.ExpectedFingerprint, ""} {
+		req := bulkRequest(11)
+		req.ExpectedFingerprint = expected
+		_, err := f.lifecycle.BulkInviteToStudents(tenantContext(), req)
+		require.ErrorIs(t, err, readstate.ErrChanged)
+	}
+	assert.Empty(t, f.delivery.emails)
+
+	result, err := f.lifecycle.BulkInviteToStudents(tenantContext(), f.previewed(bulkRequest(11)))
+	require.NoError(t, err)
+	assert.Equal(t, 2, result.Invited)
+}
+
+// The bulk invitation's fingerprint is an unkeyed hash the school reads. It
+// says whether an address has an account, never which one: two different
+// accounts give one token, no account another.
+func TestBulkInviteFingerprint_HidesWhichAccountAnAddressHas(t *testing.T) {
+	t.Parallel()
+	candidates := []bulkInviteCandidate{{profileID: 7, studentIDs: []int64{1}}}
+	profiles := map[int64]domain.GuardianProfile{7: {ID: 7, Email: "parent@example.com"}}
+	runWith := func(accounts map[string]domain.Account) *bulkInviteRun {
+		return &bulkInviteRun{existingAccounts: accounts, mailBlocks: map[string]string{}}
+	}
+	fingerprint := func(run *bulkInviteRun) string {
+		return bulkInviteFingerprint(identityaccess.BulkInviteRequest{}, 0, candidates, profiles, nil, run)
+	}
+
+	first := fingerprint(runWith(map[string]domain.Account{"parent@example.com": {ID: 41}}))
+	assert.Equal(t, first, fingerprint(runWith(map[string]domain.Account{"parent@example.com": {ID: 9001}})))
+	assert.NotEqual(t, first, fingerprint(runWith(map[string]domain.Account{})))
 }

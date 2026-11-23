@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type staffAbsenceCapability struct {
@@ -24,11 +25,11 @@ func publicStaffAbsence(entity *StaffAbsence) *workforce.StaffAbsence {
 		return nil
 	}
 	return &workforce.StaffAbsence{
-		ID: entity.ID, TenantID: entity.TenantID, StaffID: entity.StaffID, AbsenceType: entity.AbsenceType, AbsenceTypeID: entity.AbsenceTypeID,
+		ID: ident.ID(entity.ID), TenantID: ident.ID(entity.TenantID), StaffID: ident.ID(entity.StaffID), AbsenceType: entity.AbsenceType, AbsenceTypeID: (*ident.ID)(entity.AbsenceTypeID),
 		AbsenceTypeLabel: entity.AbsenceTypeLabel, DateStart: entity.DateStart.String(), DateEnd: entity.DateEnd.String(), HalfDay: entity.HalfDay,
-		StartHalfDay: entity.StartHalfDay, EndHalfDay: entity.EndHalfDay, Note: entity.Note, Status: entity.Status, ApprovedBy: entity.ApprovedBy,
-		ApprovedAt: entity.ApprovedAt, CreatedBy: entity.CreatedBy, WorkingDays: entity.WorkingDays, DecisionNote: entity.DecisionNote,
-		RequestedAt: entity.RequestedAt, SubstituteStaffID: entity.SubstituteStaffID, CreatedAt: entity.CreatedAt, UpdatedAt: entity.UpdatedAt,
+		StartHalfDay: entity.StartHalfDay, EndHalfDay: entity.EndHalfDay, Note: entity.Note, Status: entity.Status, ApprovedBy: (*ident.ID)(entity.ApprovedBy),
+		ApprovedAt: entity.ApprovedAt, CreatedBy: ident.ID(entity.CreatedBy), WorkingDays: entity.WorkingDays, DecisionNote: entity.DecisionNote,
+		RequestedAt: entity.RequestedAt, SubstituteStaffID: (*ident.ID)(entity.SubstituteStaffID), CreatedAt: entity.CreatedAt, UpdatedAt: entity.UpdatedAt,
 	}
 }
 
@@ -57,9 +58,9 @@ func publicVacationOpening(entity *StaffVacationOpening) *workforce.StaffVacatio
 		return nil
 	}
 	return &workforce.StaffVacationOpening{
-		ID: entity.ID, TenantID: entity.TenantID, StaffID: entity.StaffID, Year: entity.Year, EffectiveDate: entity.EffectiveDate.String(),
+		ID: ident.ID(entity.ID), TenantID: ident.ID(entity.TenantID), StaffID: ident.ID(entity.StaffID), Year: entity.Year, EffectiveDate: entity.EffectiveDate.String(),
 		TakenBeforeDays: entity.TakenBeforeDays, EnteredRemainingDays: entity.EnteredRemainingDays, Note: entity.Note,
-		DecidedBy: entity.DecidedBy, DecidedAt: entity.DecidedAt, CreatedAt: entity.CreatedAt, UpdatedAt: entity.UpdatedAt,
+		DecidedBy: ident.ID(entity.DecidedBy), DecidedAt: entity.DecidedAt, CreatedAt: entity.CreatedAt, UpdatedAt: entity.UpdatedAt,
 	}
 }
 
@@ -107,7 +108,7 @@ func (c staffAbsenceCapability) CreateOwnAbsence(ctx context.Context, staffID in
 	if err != nil {
 		return nil, nil, err
 	}
-	return plannedAbsence(plan)(c.absence(absences.CreateOwnAbsence(ctx, staffID, actorAccountID, CreateAbsenceRequest(request))))
+	return plannedAbsence(plan)(c.absence(absences.CreateOwnAbsence(ctx, staffID, actorAccountID, legacyCreateAbsence(request))))
 }
 
 func (c staffAbsenceCapability) CreateAbsenceFor(ctx context.Context, subjectStaffID, createdByStaffID int64, actorAccountID *int64, request workforce.CreateAbsenceRequest) (*workforce.StaffAbsenceResponse, workforce.SickCascadePlan, error) {
@@ -115,7 +116,9 @@ func (c staffAbsenceCapability) CreateAbsenceFor(ctx context.Context, subjectSta
 	if err != nil {
 		return nil, nil, err
 	}
-	return plannedAbsence(plan)(c.absence(absences.CreateAbsenceFor(ctx, subjectStaffID, createdByStaffID, actorAccountID, CreateAbsenceRequest(request))))
+	booking := legacyCreateAbsence(request)
+	booking.OverdraftFingerprint = &request.ExpectedFingerprint
+	return plannedAbsence(plan)(c.absence(absences.CreateAbsenceFor(ctx, subjectStaffID, createdByStaffID, actorAccountID, booking)))
 }
 
 func (c staffAbsenceCapability) UpdateAbsence(ctx context.Context, staffID int64, actorAccountID *int64, absenceID int64, request workforce.UpdateAbsenceRequest) (*workforce.StaffAbsenceResponse, workforce.SickCascadePlan, error) {
@@ -123,7 +126,21 @@ func (c staffAbsenceCapability) UpdateAbsence(ctx context.Context, staffID int64
 	if err != nil {
 		return nil, nil, err
 	}
-	return plannedAbsence(plan)(c.absence(absences.UpdateAbsence(ctx, staffID, actorAccountID, absenceID, UpdateAbsenceRequest(request))))
+	return plannedAbsence(plan)(c.absence(absences.UpdateAbsence(ctx, staffID, actorAccountID, absenceID, legacyUpdateAbsence(request))))
+}
+
+func legacyCreateAbsence(value workforce.CreateAbsenceRequest) CreateAbsenceRequest {
+	return CreateAbsenceRequest{
+		AbsenceType: value.AbsenceType, AbsenceTypeID: (*int64)(value.AbsenceTypeID), DateStart: value.DateStart,
+		DateEnd: value.DateEnd, HalfDay: value.HalfDay, Note: value.Note,
+	}
+}
+
+func legacyUpdateAbsence(value workforce.UpdateAbsenceRequest) UpdateAbsenceRequest {
+	return UpdateAbsenceRequest{
+		AbsenceType: value.AbsenceType, AbsenceTypeID: (*int64)(value.AbsenceTypeID), AbsenceTypeIDSet: value.AbsenceTypeIDSet,
+		DateStart: value.DateStart, DateEnd: value.DateEnd, HalfDay: value.HalfDay, Note: value.Note,
+	}
 }
 
 func (c staffAbsenceCapability) DeleteOwnAbsence(ctx context.Context, staffID int64, actorAccountID *int64, absenceID int64) (workforce.SickCascadePlan, error) {
@@ -183,7 +200,7 @@ func (c staffAbsenceCapability) RebookAbsences(ctx context.Context, staffID, act
 	value, err := c.absences.RebookAbsences(ctx, RebookAbsencesRequest{
 		StaffID: staffID, ActorAccountID: actorAccountID, AbsenceIDs: request.AbsenceIDs,
 		AbsenceType: request.AbsenceType, AbsenceTypeID: request.AbsenceTypeID,
-		Reason: request.Reason, DryRun: request.DryRun,
+		Reason: request.Reason, DryRun: request.DryRun, ExpectedFingerprint: request.ExpectedFingerprint,
 	})
 	if err != nil {
 		return nil, mapTimeTrackingFailure(err)
@@ -191,7 +208,7 @@ func (c staffAbsenceCapability) RebookAbsences(ctx context.Context, staffID, act
 	result := &workforce.AbsenceRebookingResult{
 		Absences: publicAbsenceResponses(value.Absences), Days: value.Days,
 		BalanceDeltaMinutes: value.BalanceDeltaMinutes, AllowanceExceeded: value.AllowanceExceeded,
-		VacationExceeded: value.VacationExceeded, Applied: value.Applied,
+		VacationExceeded: value.VacationExceeded, Applied: value.Applied, Fingerprint: value.Fingerprint,
 	}
 	for _, allowance := range value.Allowances {
 		result.Allowances = append(result.Allowances, workforce.RebookingAllowanceYear{
@@ -279,9 +296,9 @@ func (c staffAbsenceCapability) VacationQuotaSummary(ctx context.Context, staffI
 		return nil, nil
 	}
 	return &workforce.VacationQuotaSummary{
-		StaffID: summary.StaffID, Year: summary.Year, EntitledDays: summary.EntitledDays, CarryoverDays: summary.CarryoverDays,
+		StaffID: ident.ID(summary.StaffID), Year: summary.Year, EntitledDays: summary.EntitledDays, CarryoverDays: summary.CarryoverDays,
 		TakenBeforeDays: summary.TakenBeforeDays, TakenDays: summary.TakenDays, ReservedDays: summary.ReservedDays,
-		RemainingDays: summary.RemainingDays, Opening: publicVacationOpening(summary.Opening),
+		RemainingDays: summary.RemainingDays, Opening: publicVacationOpening(summary.Opening), Version: summary.Version,
 	}, nil
 }
 

@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -35,7 +36,7 @@ func TestStaffRepository_Create(t *testing.T) {
 		person := testpkg.CreateTestPerson(t, db, "Staff", "Create")
 
 		staff := &peopleValues.Staff{
-			PersonID: person.ID,
+			PersonID: ident.ID(person.ID),
 		}
 
 		err := testpkg.TenantCommand1(t, ctx, db, repo.Create, staff)
@@ -46,7 +47,7 @@ func TestStaffRepository_Create(t *testing.T) {
 		// Verify in DB
 		found, err := testpkg.TenantQuery1(t, ctx, db, repo.FindByID, any(staff.ID))
 		require.NoError(t, err)
-		assert.Equal(t, person.ID, found.PersonID)
+		assert.Equal(t, ident.ID(person.ID), found.PersonID)
 
 		// Cleanup
 	})
@@ -55,7 +56,7 @@ func TestStaffRepository_Create(t *testing.T) {
 		person := testpkg.CreateTestPerson(t, db, "Staff", "Notes")
 
 		staff := &peopleValues.Staff{
-			PersonID:   person.ID,
+			PersonID:   ident.ID(person.ID),
 			StaffNotes: "Initial staff notes",
 		}
 
@@ -98,8 +99,8 @@ func TestStaffRepository_FindByID(t *testing.T) {
 
 		found, err := testpkg.TenantQuery1(t, ctx, db, repo.FindByID, any(staff.ID))
 		require.NoError(t, err)
-		assert.Equal(t, staff.ID, found.ID)
-		assert.Equal(t, staff.PersonID, found.PersonID)
+		assert.Equal(t, ident.ID(staff.ID), found.ID)
+		assert.Equal(t, ident.ID(staff.PersonID), found.PersonID)
 	})
 
 	t.Run("returns error for non-existent staff", func(t *testing.T) {
@@ -122,8 +123,8 @@ func TestStaffRepository_FindByPersonID(t *testing.T) {
 
 		found, err := testpkg.TenantQuery1(t, ctx, db, repo.FindByPersonID, staff.PersonID)
 		require.NoError(t, err)
-		assert.Equal(t, staff.ID, found.ID)
-		assert.Equal(t, staff.PersonID, found.PersonID)
+		assert.Equal(t, ident.ID(staff.ID), found.ID)
+		assert.Equal(t, ident.ID(staff.PersonID), found.PersonID)
 	})
 
 	t.Run("returns error for non-existent person ID", func(t *testing.T) {
@@ -206,11 +207,11 @@ func TestStaffRepository_List(t *testing.T) {
 		staff := testpkg.CreateTestStaff(t, db, "FilterStaff", "Test")
 
 		staffMembers, err := testpkg.TenantQuery1(t, ctx, db, repo.List, map[string]any{
-			"person_id": staff.PersonID,
+			"person_id": ident.ID(staff.PersonID),
 		})
 		require.NoError(t, err)
 		assert.NotEmpty(t, staffMembers)
-		assert.Equal(t, staff.ID, staffMembers[0].ID)
+		assert.Equal(t, ident.ID(staff.ID), staffMembers[0].ID)
 	})
 }
 
@@ -299,8 +300,8 @@ func TestStaffRepository_FindByIDs(t *testing.T) {
 		require.Len(t, found, 2)
 		require.Contains(t, found, staff1.ID)
 		require.Contains(t, found, staff2.ID)
-		assert.Equal(t, staff1.PersonID, found[staff1.ID].PersonID)
-		assert.Equal(t, staff2.PersonID, found[staff2.ID].PersonID)
+		assert.Equal(t, ident.ID(staff1.PersonID), found[staff1.ID].PersonID)
+		assert.Equal(t, ident.ID(staff2.PersonID), found[staff2.ID].PersonID)
 		assert.NotContains(t, found, unrequested.ID)
 	})
 
@@ -339,13 +340,13 @@ func TestStaffRepository_ListAllWithPerson(t *testing.T) {
 		// Find our created staff members in results
 		var foundStaff1, foundStaff2 bool
 		for _, s := range results {
-			if s.ID == staff1.ID {
+			if s.ID == ident.ID(staff1.ID) {
 				foundStaff1 = true
 				require.NotNil(t, s.Person, "staff1.Person should be loaded")
 				assert.Equal(t, "AllWithPerson1", s.Person.FirstName)
 				assert.Equal(t, "Test1", s.Person.LastName)
 			}
-			if s.ID == staff2.ID {
+			if s.ID == ident.ID(staff2.ID) {
 				foundStaff2 = true
 				require.NotNil(t, s.Person, "staff2.Person should be loaded")
 				assert.Equal(t, "AllWithPerson2", s.Person.FirstName)
@@ -383,14 +384,14 @@ func TestStaffRepository_ListAllWithPerson(t *testing.T) {
 		require.NoError(t, err)
 		var found *peopleValues.Staff
 		for _, s := range results {
-			if s.ID == staff.ID {
+			if s.ID == ident.ID(staff.ID) {
 				found = s
 				break
 			}
 		}
 		require.NotNil(t, found, "should find the created staff member")
 		require.NotNil(t, found.WorkTimeModelID, "work_time_model_id must be scanned")
-		assert.Equal(t, modelID, *found.WorkTimeModelID)
+		assert.Equal(t, ident.ID(modelID), *found.WorkTimeModelID)
 		require.NotNil(t, found.RotationAnchorDate, "rotation_anchor_date must be scanned")
 		assert.Equal(t, staffAnchor, *found.RotationAnchorDate)
 	})
@@ -414,7 +415,7 @@ func TestStaffRepository_ListAllWithPerson(t *testing.T) {
 		// Find our staff member
 		var found *peopleValues.Staff
 		for _, s := range results {
-			if s.ID == staff.ID {
+			if s.ID == ident.ID(staff.ID) {
 				found = s
 				break
 			}

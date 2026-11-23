@@ -4,7 +4,8 @@ import {
   arr,
   bool,
   calendarDate,
-  int64StringOrNumber,
+  fileAnswer,
+  int64String,
   nullable,
   object,
   requestBody,
@@ -44,6 +45,8 @@ export interface BillingFamily {
   family_email: string;
   family_debtor_number: string;
   holiday_only: boolean;
+  family_payment_method: string;
+  contract_id: string;
   issued_cents: number;
   cancelled_cents: number;
   credited_cents: number;
@@ -51,7 +54,7 @@ export interface BillingFamily {
 }
 
 export const BillingFamilySchema: z.ZodType<BillingFamily, unknown> = object<BillingFamily>({
-  id: int64StringOrNumber,
+  id: int64String,
   recipient_first_name: str,
   recipient_last_name: str,
   recipient_email: str,
@@ -65,6 +68,8 @@ export const BillingFamilySchema: z.ZodType<BillingFamily, unknown> = object<Bil
   family_email: str,
   family_debtor_number: str,
   holiday_only: bool,
+  family_payment_method: str,
+  contract_id: int64String,
   issued_cents: safeInt,
   cancelled_cents: safeInt,
   credited_cents: safeInt,
@@ -88,6 +93,7 @@ export const FamilyChildSchema: z.ZodType<FamilyChild, unknown> = object<FamilyC
 
 /** Go: parentbilling.FamilyChildNumbers */
 export interface FamilyChildNumbers {
+  contract_id: string;
   family_email: string;
   recipient_first_name: string;
   recipient_last_name: string;
@@ -95,6 +101,7 @@ export interface FamilyChildNumbers {
 }
 
 export const FamilyChildNumbersSchema: z.ZodType<FamilyChildNumbers, unknown> = object<FamilyChildNumbers>({
+  contract_id: int64String,
   family_email: str,
   recipient_first_name: str,
   recipient_last_name: str,
@@ -146,15 +153,15 @@ export const BillingFamilyDocumentSchema: z.ZodType<BillingFamilyDocument, unkno
   service: str,
   recipient_kind: str,
   recipient_second_name: str,
-  id: int64StringOrNumber,
-  run_id: int64StringOrNumber,
+  id: int64String,
+  run_id: int64String,
   kind: str,
   number: str,
   issued_on: nullable(calendarDate),
   period_name: str,
   service_from: nullable(calendarDate),
   service_until: nullable(calendarDate),
-  reference_document_id: nullable(int64StringOrNumber),
+  reference_document_id: nullable(int64String),
   reference_number: str,
   reason: str,
   child_names: nullable(arr(str)),
@@ -183,6 +190,8 @@ export interface BillingFamilyDetail {
   family_email: string;
   family_debtor_number: string;
   holiday_only: boolean;
+  family_payment_method: string;
+  contract_id: string;
   issued_cents: number;
   cancelled_cents: number;
   credited_cents: number;
@@ -191,7 +200,7 @@ export interface BillingFamilyDetail {
 }
 
 export const BillingFamilyDetailSchema: z.ZodType<BillingFamilyDetail, unknown> = object<BillingFamilyDetail>({
-  id: int64StringOrNumber,
+  id: int64String,
   recipient_first_name: str,
   recipient_last_name: str,
   recipient_email: str,
@@ -205,6 +214,8 @@ export const BillingFamilyDetailSchema: z.ZodType<BillingFamilyDetail, unknown> 
   family_email: str,
   family_debtor_number: str,
   holiday_only: bool,
+  family_payment_method: str,
+  contract_id: int64String,
   issued_cents: safeInt,
   cancelled_cents: safeInt,
   credited_cents: safeInt,
@@ -249,6 +260,9 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/billing-families/children",
     portals: ["org"],
+    query: {
+      "numbers": { kind: "bool" },
+    },
     response: success(z.array(FamilyChildNumbersSchema)),
   },
   "GET /traeger/billing-families/debtor-number-format": {
@@ -257,11 +271,29 @@ export const routes = {
     portals: ["org"],
     response: success(debtorNumberSettingsSchema),
   },
+  "GET /traeger/billing-families/export": {
+    method: "GET",
+    pattern: "/traeger/billing-families/export",
+    portals: ["org"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
+    response: fileAnswer,
+  },
   "GET /traeger/billing-families/{id}": {
     method: "GET",
     pattern: "/traeger/billing-families/{id}",
     portals: ["org"],
     response: success(BillingFamilyDetailSchema),
+  },
+  "GET /traeger/billing-families/{id}/export": {
+    method: "GET",
+    pattern: "/traeger/billing-families/{id}/export",
+    portals: ["org"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
+    response: fileAnswer,
   },
   "PUT /traeger/billing-families/child-debtor-number": {
     method: "PUT",

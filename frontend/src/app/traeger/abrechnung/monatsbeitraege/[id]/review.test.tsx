@@ -93,6 +93,7 @@ const RUN: CareRunDetail = {
   unpriced: [],
   duplicates: [],
   duplicateChildren: 0,
+  joinedChildren: [],
   billed: 0,
   previewCount: 1,
   previewCents: 7750,

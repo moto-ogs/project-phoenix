@@ -4,8 +4,6 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/go-chi/render"
-
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 )
@@ -19,20 +17,24 @@ import (
 // TrustedDeviceIDParam is the path parameter of the revoke route.
 const TrustedDeviceIDParam = "deviceId"
 
-// ListTrustedDevices answers the signed-in account's remembered devices as
-// TrustedDeviceDTOs.
-func ListTrustedDevices(w http.ResponseWriter, r *http.Request, list func(context.Context) ([]identityaccess.AccountTrustedDevice, error), refuse Refusal) {
+// RespondTrustedDevices answers the signed-in account's remembered devices in
+// the response envelope, the shape a portal's catalog proxy reads (#2352).
+func RespondTrustedDevices(w http.ResponseWriter, r *http.Request, list func(context.Context) ([]identityaccess.AccountTrustedDevice, error), refuse Refusal) {
 	devices, err := list(r.Context())
 	if err != nil {
 		refuse(w, r, err)
 		return
 	}
-	render.JSON(w, r, common.MapTrustedDevices(devices, func(d identityaccess.AccountTrustedDevice) common.TrustedDeviceRow {
+	common.Respond(w, r, http.StatusOK, trustedDeviceDTOs(devices), "Trusted devices retrieved")
+}
+
+func trustedDeviceDTOs(devices []identityaccess.AccountTrustedDevice) []common.TrustedDeviceDTO {
+	return common.MapTrustedDevices(devices, func(d identityaccess.AccountTrustedDevice) common.TrustedDeviceRow {
 		return common.TrustedDeviceRow{
 			ID: d.ID, UserAgent: d.UserAgent, IPAddress: d.IPAddress,
 			CreatedAt: d.CreatedAt, ExpiresAt: d.ExpiresAt, LastUsedAt: d.LastUsedAt,
 		}
-	}))
+	})
 }
 
 // RevokeTrustedDevice forgets the remembered device the path names and
@@ -46,5 +48,14 @@ func RevokeTrustedDevice(w http.ResponseWriter, r *http.Request, revoke func(con
 		refuse(w, r, err)
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	common.RespondNoContent(w, r)
+}
+
+// TrustedDeviceRouteContracts registers the list and the revoke for the
+// given portals (#2352), relative to the mount the portal names them under.
+func TrustedDeviceRouteContracts(portals ...common.PortalScope) []common.RouteContract {
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/mfa/trusted-devices", Portals: portals, Response: []common.TrustedDeviceDTO{}},
+		{Method: "DELETE", Pattern: "/mfa/trusted-devices/{" + TrustedDeviceIDParam + "}", Portals: portals, NoData: true},
+	}
 }

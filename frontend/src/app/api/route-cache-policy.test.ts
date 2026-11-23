@@ -1,7 +1,9 @@
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { globSync, readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
+import { portalRoutes } from "~/lib/contract/portals.generated";
+import { fileAnswer } from "~/lib/contract/runtime";
 import { PRIVATE_DOWNLOAD_ROUTES } from "~/test/private-download-routes";
 
 /**
@@ -56,7 +58,6 @@ const POLICY_FACTORIES: Record<string, readonly string[]> = {
     "createDeleteHandler",
     "createDeleteWithBodyHandler",
     "createTenantJsonProxy",
-    "createOptionalTenantJsonProxy",
     "catalogProxy",
     "catalogProxyUnder",
     "proxyFile",
@@ -77,12 +78,14 @@ const POLICY_FACTORIES: Record<string, readonly string[]> = {
     "createOperatorDeleteHandler",
     "createOperatorJsonProxy",
     "catalogProxy",
+    "catalogProxyUnder",
     "operator.proxyFile",
   ],
   "~/lib/parent/route-wrapper.server": [
     ...PORTAL_PROXIES,
     "proxyDelete",
     "catalogProxy",
+    "catalogProxyUnder",
     "createParentJsonProxy",
     "parent.route",
     "parent.proxyFile",
@@ -94,6 +97,7 @@ const POLICY_FACTORIES: Record<string, readonly string[]> = {
     "proxyDelete",
     "createSchoolDeleteHandler",
     "catalogProxy",
+    "catalogProxyUnder",
     "school.route",
     // The portal's JSON pass-through, which the tenant, operator and caterer
     // wrappers export under their own names (#6955).
@@ -106,6 +110,7 @@ const POLICY_FACTORIES: Record<string, readonly string[]> = {
     "proxyPost",
     "createCatererJsonProxy",
     "catalogProxy",
+    "catalogProxyUnder",
     "caterer.proxyFile",
   ],
   "~/lib/traeger/route-wrapper.server": [
@@ -116,14 +121,11 @@ const POLICY_FACTORIES: Record<string, readonly string[]> = {
     // The builder under proxyDelete, for a removal that answers its result.
     "traeger.del",
     "catalogProxy",
+    "catalogProxyUnder",
     "traeger.jsonProxy",
   ],
-  "~/lib/backend-proxy-route.server": ["createPublicJsonProxy"],
   "~/lib/auth-proxy.server": ["authStepProxy"],
-  "~/lib/file-upload-wrapper.server": [
-    "createFileUploadHandler",
-    "proxyFileUpload",
-  ],
+  "~/lib/file-upload-wrapper.server": ["createFileUploadHandler"],
 };
 
 /**
@@ -140,20 +142,6 @@ const DOWNLOAD_POLICY_FACTORIES: Record<string, string[]> = {
 // Non-JSON resources deliberately outside the private-download rule. Image,
 // legal-document and subscription caching is not changed by #5119.
 const NON_DOWNLOAD_RESOURCES: Record<string, string> = {
-  "traeger/master-data/logo":
-    "Authenticated brand image, existing no-store policy",
-  "public/enrollment-form-legal-documents/[filename]":
-    "Public form PDF, public cache policy",
-  "public/enrollment-legal-documents/[filename]":
-    "Public legal PDF, public cache policy",
-  "public/login-image/[filename]": "Public login image, public cache policy",
-  "me/profile/avatar/[filename]":
-    "Session avatar, existing private image cache",
-  "staff/[id]/avatar": "Staff avatar, existing private image cache",
-  "students/[id]/photo/[filename]":
-    "Photo with existing backend revalidation policy",
-  "calendar-feed/[token]": "Subscription feed, private max-age=3600",
-  "request-feed/[token]": "Subscription feed, already private no-store",
   "sse/events": "Live stream, existing SSE cache/abort contract",
   "parent/sse/events": "Live stream, existing SSE cache/abort contract",
   "school/sse/events": "Live stream, existing SSE cache/abort contract",
@@ -336,8 +324,40 @@ function exportedHandlers(file: string): Map<string, boolean> {
 describe("BFF route cache policy (#4999)", () => {
   const files = routeFiles(API_ROOT);
 
-  it("finds the route handlers", () => {
-    expect(files.length).toBeGreaterThan(200);
+  // The walk must reach every route file, however few remain once the
+  // catalog proxy serves a route (#2352): it equals an independent glob.
+  it("finds every route handler", () => {
+    const walked = files.map((file) => path.relative(API_ROOT, file)).sort();
+    expect(walked).toEqual(
+      globSync("**/route.{ts,tsx}", { cwd: API_ROOT }).sort(),
+    );
+    // A catch-all and a nested Auth.js folder: dynamic segments are walked.
+    expect(walked).toEqual(
+      expect.arrayContaining([
+        "[...path]/route.ts",
+        "auth/[...nextauth]/route.ts",
+        "sse/events/route.ts",
+      ]),
+    );
+    expect(files).toContain(path.join(API_ROOT, "auth/logout/route.ts"));
+    expect(files).toContain(
+      path.join(API_ROOT, "traeger/auth/logout/route.ts"),
+    );
+    for (const portal of [
+      "",
+      "operator",
+      "parent",
+      "school",
+      "caterer",
+      "traeger",
+    ]) {
+      expect(files).toContain(
+        path.join(API_ROOT, portal, "[...path]", "route.ts"),
+      );
+      expect(files).toContain(
+        path.join(API_ROOT, portal, "auth", "login", "route.ts"),
+      );
+    }
   });
 
   it("builds every exported handler with a factory that sends private, no-store", () => {
@@ -394,16 +414,14 @@ describe("private download cache policy (#5119)", () => {
       const route = path.relative(API_ROOT, path.dirname(file));
       const text = readFileSync(file, "utf8");
       const fileFactory =
-        /\b(?:createFileExportRoute|createFileDownloadRoute|fileResponse|downloadFile|proxyFile)\s*[(<]/.test(
-          text,
-        );
+        /\b(?:fileResponse|downloadFile|proxyFile)\s*[(<]/.test(text);
       const binaryResponse =
         /new (?:Next)?Response\(/.test(text) &&
         /content-disposition|application\/octet-stream|text\/calendar|text\/event-stream|image\//i.test(
           text,
         );
       const downloadPath =
-        /(?:^|\/)(?:export(?:\/\[format\])?|download|template|ics|signature-proof|proof(?:\/pdf)?|pdf)$|-export$/.test(
+        /(?:^|\/)(?:export|download|template|ics|signature-proof|proof(?:\/pdf)?|pdf)$|-export$/.test(
           route,
         );
       return (
@@ -423,6 +441,30 @@ describe("private download cache policy (#5119)", () => {
     );
     expect(
       Object.keys(NON_DOWNLOAD_RESOURCES).filter((route) => !routes.has(route)),
+    ).toEqual([]);
+  });
+
+  it("leaves a download the contract registers to the catalog proxy (#2352)", () => {
+    // `/traeger/x/{id}/file` and `/api/x/{id}` stand for the BFF folders
+    // `traeger/x/[id]/file` and `x/[id]`; parameter names do not matter.
+    const folder = (route: string) =>
+      route
+        .replace(/^\/(?:api\/)?/, "")
+        .replace(/\{[^}]+\}|\[[^\]]+\]/g, "[]")
+        .replace(/\/$/, "");
+    const contractFiles = Object.values(portalRoutes)
+      .flat()
+      .filter((route) => route.response === fileAnswer)
+      .map((route) => `${folder(route.pattern)}:${route.method}`);
+    expect(contractFiles.length).toBeGreaterThan(0);
+    const listed = new Set(
+      PRIVATE_DOWNLOAD_ROUTES.map(
+        ([route, method]) => `${folder(route)}:${method}`,
+      ),
+    );
+    expect(
+      contractFiles.filter((route) => listed.has(route)),
+      "the catalog proxy answers this file private and uncached; delete its route file and its entry here",
     ).toEqual([]);
   });
 

@@ -70,6 +70,7 @@ const sourceTestExceptions = [
   ...fixtureExceptions('durable_side_effects_ratchet_test.go', [
     'TestSideEffectScannerFindsNestedAndPackageLevelOperations',
     'TestSideEffectNoticeRegisterRejectsEqualSizedReplacements',
+    'TestSharedTenantSignalSiteAllowsOnlyItself',
   ]),
   ...fixtureExceptions('gdpr_log_pii_ratchet_test.go', [
     'TestGDPRLogPIIRatchetCoversExplicitLevelsAndFullNames',
@@ -279,14 +280,14 @@ test('the architecture step runs the existing checker on the working tree, only 
 
 test('a changed contract model is compared with the base', () => {
   const steps = stepsFor('/repo', 'origin/development', ['backend/api/contract/contract.json']);
-  assert.deepEqual(steps.map(step => step.name), ['static', 'contract', 'tests']);
+  assert.deepEqual(steps.map(step => step.name), ['static', 'contract', 'contract-registers', 'tests']);
   assert.deepEqual(steps[1].command, ['node', 'scripts/check-contract-compat.mjs', 'origin/development']);
 });
 
-test('a changed proxy route register is compared with the base', () => {
-  const steps = stepsFor('/repo', 'origin/development', ['frontend/src/test/proxy-routes/api/groups.json']);
-  assert.deepEqual(steps.map(step => step.name), ['static', 'proxy-routes', 'tests']);
-  assert.deepEqual(steps[1].command, ['node', 'scripts/check-proxy-routes.mjs', 'origin/development']);
+test('a changed route catalog is compared with the base', () => {
+  const steps = stepsFor('/repo', 'origin/development', ['backend/api/testdata/routes/api/students.golden']);
+  assert.deepEqual(steps.map(step => step.name), ['static', 'contract-registers', 'tests']);
+  assert.deepEqual(steps[1].command, ['node', 'scripts/check-contract-shrink.mjs', 'origin/development']);
 });
 
 test('steps run side by side only on a machine with room', () => {

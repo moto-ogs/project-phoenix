@@ -3,7 +3,16 @@
 // es. Der Text des Mandats kommt vom Backend; bestätigt wird genau dieser
 // Text über seine Prüfsumme. Die volle IBAN geht nur hin, nie zurück.
 
-import { apiErrorFromResponse, transportFetch } from "./api-error";
+import { bffJson } from "./bff-fetch";
+import { knownEnum } from "./contract/known-enum";
+import type * as parentMeContract from "./contract/parent-me.generated";
+import { requiredDay } from "./contract/required-day";
+
+// Go does not register this set; the contract types it as string. A value
+// this build does not know stays undefined instead of passing as a known one.
+const MANDATE_SOURCE_VALUES = ["office", "import", "parent"] as const;
+
+type MandateSource = (typeof MANDATE_SOURCE_VALUES)[number];
 
 interface SepaMandateCreditor {
   readonly name: string;
@@ -30,14 +39,16 @@ interface SepaMandateProof {
 export interface SepaMandate {
   readonly collectionEligible: boolean;
   readonly id: string;
+  /** Read-state token: the revocation sends it back (ADR 0311). */
+  readonly version: string;
   readonly reference: string;
   /** Calendar date of the signature, YYYY-MM-DD. */
   readonly signedOn: string;
   readonly accountHolder: string;
   readonly ibanMasked: string;
   readonly bic: string;
-  /** office, import or parent. */
-  readonly source: string;
+  /** undefined: a source this build does not know. */
+  readonly source: MandateSource | undefined;
   readonly creditorId: string;
   readonly revokedOn: string | null;
   readonly proof: SepaMandateProof | null;
@@ -73,77 +84,17 @@ export interface SepaMandateText {
   readonly accountToken: string;
 }
 
-interface BackendMandate {
-  collection_eligible: boolean;
-  id: string;
-  reference: string;
-  signed_on: string;
-  account_holder: string;
-  iban_masked: string;
-  bic: string;
-  source: string;
-  creditor_id: string;
-  revoked_on: string | null;
-  proof: {
-    channel: string;
-    version: string;
-    text_sha256: string;
-    text: string;
-    confirmed_at: string;
-  } | null;
-}
-
-interface BackendView {
-  enabled: boolean;
-  can_manage?: boolean;
-  creditor_missing?: boolean;
-  creditor?: { name: string; address: string; creditor_id: string } | null;
-  mandate?: BackendMandate | null;
-  prefill?: {
-    account_holder: string;
-    street: string;
-    postal_code: string;
-    city: string;
-  } | null;
-}
-
-interface BackendText {
-  version: string;
-  reference: string;
-  text: string;
-  text_sha256: string;
-  account_token: string;
-}
-
-const path = (organizationId: string, contractId: string) =>
-  `/api/parent/me/documents/${encodeURIComponent(organizationId)}/contracts/${encodeURIComponent(contractId)}/sepa-mandate`;
-
-async function request<T>(url: string, init: RequestInit): Promise<T> {
-  const response = await transportFetch(url, {
-    ...init,
-    cache: "no-store",
-    headers: { "Content-Type": "application/json" },
-  });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `SEPA mandate failed: ${response.status}`,
-    );
-  }
-  const { data } = (await response.json()) as { data: T };
-  return data;
-}
-
-function mapMandate(mandate: BackendMandate): SepaMandate {
+function mapMandate(mandate: parentMeContract.SEPAMandateSummary): SepaMandate {
   return {
-    id: String(mandate.id),
+    id: mandate.id,
+    version: mandate.version,
     collectionEligible: mandate.collection_eligible,
     reference: mandate.reference,
-    signedOn: mandate.signed_on,
+    signedOn: requiredDay(mandate.signed_on, "SEPAMandateSummary.signed_on"),
     accountHolder: mandate.account_holder,
     ibanMasked: mandate.iban_masked,
     bic: mandate.bic,
-    source: mandate.source,
+    source: knownEnum(MANDATE_SOURCE_VALUES, mandate.source),
     creditorId: mandate.creditor_id,
     revokedOn: mandate.revoked_on,
     proof: mandate.proof
@@ -158,11 +109,11 @@ function mapMandate(mandate: BackendMandate): SepaMandate {
   };
 }
 
-function mapView(view: BackendView): SepaMandateView {
+function mapView(view: parentMeContract.SEPAMandateView): SepaMandateView {
   return {
     enabled: view.enabled,
-    canManage: view.can_manage ?? false,
-    creditorMissing: view.creditor_missing ?? false,
+    canManage: view.can_manage,
+    creditorMissing: view.creditor_missing,
     creditor: view.creditor
       ? {
           name: view.creditor.name,
@@ -182,7 +133,7 @@ function mapView(view: BackendView): SepaMandateView {
   };
 }
 
-function inputBody(input: SepaMandateInput) {
+function inputBody(input: SepaMandateInput): parentMeContract.SEPAMandateInput {
   return {
     account_holder: input.accountHolder,
     iban: input.iban,
@@ -199,9 +150,11 @@ export async function fetchSepaMandate(
   contractId: string,
 ): Promise<SepaMandateView> {
   return mapView(
-    await request<BackendView>(path(organizationId, contractId), {
-      method: "GET",
-    }),
+    await bffJson(
+      "parent",
+      "GET /parent/me/documents/{organizationId}/contracts/{contractId}/sepa-mandate",
+      { params: { organizationId, contractId } },
+    ),
   );
 }
 
@@ -212,11 +165,12 @@ export async function previewSepaMandate(
   input: SepaMandateInput,
   reference?: string,
 ): Promise<SepaMandateText> {
-  const text = await request<BackendText>(
-    `${path(organizationId, contractId)}/preview`,
+  const text = await bffJson(
+    "parent",
+    "POST /parent/me/documents/{organizationId}/contracts/{contractId}/sepa-mandate/preview",
     {
-      method: "POST",
-      body: JSON.stringify({ ...inputBody(input), reference: reference ?? "" }),
+      params: { organizationId, contractId },
+      body: { ...inputBody(input), reference: reference ?? "" },
     },
   );
   return {
@@ -236,28 +190,41 @@ export async function grantSepaMandate(
   confirmed: Pick<SepaMandateText, "reference" | "textSha256" | "accountToken">,
 ): Promise<SepaMandateView> {
   return mapView(
-    await request<BackendView>(path(organizationId, contractId), {
-      method: "POST",
-      body: JSON.stringify({
-        ...inputBody(input),
-        reference: confirmed.reference,
-        text_sha256: confirmed.textSha256,
-        account_token: confirmed.accountToken,
-        holder_confirmed: true,
-      }),
-    }),
+    await bffJson(
+      "parent",
+      "POST /parent/me/documents/{organizationId}/contracts/{contractId}/sepa-mandate",
+      {
+        params: { organizationId, contractId },
+        body: {
+          ...inputBody(input),
+          reference: confirmed.reference,
+          text_sha256: confirmed.textSha256,
+          account_token: confirmed.accountToken,
+          holder_confirmed: true,
+        },
+      },
+    ),
   );
 }
 
-/** The parents revoke the mandate of their family. */
+/**
+ * The parents revoke the mandate of their family they read: `version` is
+ * its read-state token. A mandate another member of the family gave since
+ * is refused with `general.changed_since_read` (ADR 0311).
+ */
 export async function revokeSepaMandate(
   organizationId: string,
   contractId: string,
+  version: string,
 ): Promise<SepaMandateView> {
   return mapView(
-    await request<BackendView>(`${path(organizationId, contractId)}/revoke`, {
-      method: "POST",
-      body: "{}",
-    }),
+    await bffJson(
+      "parent",
+      "POST /parent/me/documents/{organizationId}/contracts/{contractId}/sepa-mandate/revoke",
+      {
+        params: { organizationId, contractId },
+        body: { expected_version: version },
+      },
+    ),
   );
 }

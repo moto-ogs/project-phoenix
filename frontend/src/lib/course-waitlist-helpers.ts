@@ -1,27 +1,11 @@
+import type { CourseWaitlistResponse } from "~/lib/contract/students.generated";
+
 /**
  * Warteliste je AG für das Team (#4767). Die Reihenfolge rechnet das Backend
  * nach derselben Regel wie den Wartelistenplatz im Elternportal: die älteste
  * offene Anfrage zuerst. Gespeichert wird nichts; das Nachrücken ist die
  * normale Freigabe der ersten Anfrage in /anfragen.
  */
-
-interface CourseWaitlistEntryWire {
-  readonly request_id: string;
-  readonly student_id: string;
-  readonly student_name: string;
-  readonly rank: number;
-  readonly submitted_at: string;
-}
-
-export interface CourseWaitlistWire {
-  readonly activity_group_id: string;
-  readonly name: string;
-  readonly participant_limit: number | null;
-  readonly participants: number;
-  readonly free_slots: number | null;
-  readonly slot_free_for_next: boolean;
-  readonly entries: readonly CourseWaitlistEntryWire[];
-}
 
 interface CourseWaitlistEntry {
   readonly requestId: string;
@@ -44,18 +28,18 @@ export interface CourseWaitlist {
 }
 
 export function mapCourseWaitlists(
-  wire: readonly CourseWaitlistWire[],
+  wire: readonly CourseWaitlistResponse[],
 ): CourseWaitlist[] {
   return wire.map((waitlist) => ({
-    activityGroupId: String(waitlist.activity_group_id),
+    activityGroupId: waitlist.activity_group_id,
     name: waitlist.name,
     participantLimit: waitlist.participant_limit ?? null,
     participants: waitlist.participants,
     freeSlots: waitlist.free_slots ?? null,
     slotFreeForNext: waitlist.slot_free_for_next,
     entries: (waitlist.entries ?? []).map((entry) => ({
-      requestId: String(entry.request_id),
-      studentId: String(entry.student_id),
+      requestId: entry.request_id,
+      studentId: entry.student_id,
       studentName: entry.student_name,
       rank: entry.rank,
       submittedAt: entry.submitted_at,

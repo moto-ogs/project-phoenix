@@ -6,24 +6,21 @@ import (
 	"net/http"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type moveStudentsToActiveGroupRequest struct {
-	StudentIDs          []int64 `json:"student_ids"`
-	TargetActiveGroupID int64   `json:"target_active_group_id"`
+	StudentIDs          []ident.ID `json:"student_ids"`
+	TargetActiveGroupID ident.ID   `json:"target_active_group_id"`
 }
 
 // checkInStudentsToSessionRequest is the move request plus keep_present: the
 // check-in mode of „Alle Kinder“ leaves present children where they are,
 // the room page pulls them in (#6953).
 type checkInStudentsToSessionRequest struct {
-	StudentIDs          []int64 `json:"student_ids"`
-	TargetActiveGroupID int64   `json:"target_active_group_id"`
-	KeepPresent         bool    `json:"keep_present"`
-}
-
-type moveStudentsToTransitRequest struct {
-	StudentIDs []int64 `json:"student_ids"`
+	StudentIDs          []ident.ID `json:"student_ids"`
+	TargetActiveGroupID ident.ID   `json:"target_active_group_id"`
+	KeepPresent         bool       `json:"keep_present"`
 }
 
 func (rs *Resource) moveStudentsToActiveGroup(w http.ResponseWriter, r *http.Request) {
@@ -42,7 +39,7 @@ func (rs *Resource) moveStudentsToActiveGroup(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	result, err := rs.Operations.MoveStudentsToSession(r.Context(), req.StudentIDs, req.TargetActiveGroupID, *auth)
+	result, err := rs.Operations.MoveStudentsToSession(r.Context(), ident.Int64s(req.StudentIDs), req.TargetActiveGroupID.Int64(), *auth)
 	if err != nil {
 		rs.runtime.MarkRollback(r.Context())
 		common.RenderError(w, r, ErrorRenderer(err))
@@ -50,32 +47,6 @@ func (rs *Resource) moveStudentsToActiveGroup(w http.ResponseWriter, r *http.Req
 	}
 
 	common.Respond(w, r, http.StatusOK, result, "Students moved successfully")
-}
-
-func (rs *Resource) moveStudentsToTransit(w http.ResponseWriter, r *http.Request) {
-	var req moveStudentsToTransitRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
-		return
-	}
-	if len(req.StudentIDs) == 0 {
-		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("student_ids are required")))
-		return
-	}
-
-	auth, ok := rs.BulkStudentMoveAuthorization(w, r)
-	if !ok {
-		return
-	}
-
-	result, err := rs.Operations.MoveStudentsToTransit(r.Context(), req.StudentIDs, *auth)
-	if err != nil {
-		rs.runtime.MarkRollback(r.Context())
-		common.RenderError(w, r, ErrorRenderer(err))
-		return
-	}
-
-	common.Respond(w, r, http.StatusOK, result, "Students moved to transit successfully")
 }
 
 // checkInStudentsToSession checks children in to the school and places them
@@ -97,7 +68,7 @@ func (rs *Resource) checkInStudentsToSession(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	result, err := rs.Operations.CheckInStudentsToSessionAuthorized(r.Context(), req.StudentIDs, req.TargetActiveGroupID, staffID, *auth, req.KeepPresent)
+	result, err := rs.Operations.CheckInStudentsToSessionAuthorized(r.Context(), ident.Int64s(req.StudentIDs), req.TargetActiveGroupID.Int64(), staffID, *auth, req.KeepPresent)
 	if err != nil {
 		rs.runtime.MarkRollback(r.Context())
 		common.RenderError(w, r, ErrorRenderer(err))

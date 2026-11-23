@@ -1,19 +1,19 @@
 import "server-only";
 import type { NextRequest } from "next/server";
 import { sessionMutationOriginError } from "~/server/auth/same-origin";
-import { sendBackend } from "~/lib/backend-client.server";
-import { forwardBackendResponse } from "~/lib/backend-proxy-response.server";
-import {
-  BackendUnavailableError,
-  handleApiError,
-  problemResponse,
-} from "~/lib/api-response-error.server";
+import type { z } from "zod";
+import { contractWrite } from "~/lib/contract/client.server";
+import { contractError } from "~/lib/contract/route-response.server";
+import type { RequestBody } from "~/lib/contract/runtime";
+import type { TokenResponse } from "~/lib/contract/shared.generated";
+import type { TraegerLoginResponse } from "~/lib/contract/traeger-auth.generated";
+import type { SignInReply } from "~/lib/session-bff";
+import { problemResponse } from "~/lib/api-response-error.server";
 import { captureBffException } from "~/lib/sentry-bff.server";
 import { withoutSessionCookies } from "~/server/auth/session-cookie-writes";
 import { createLogger } from "~/lib/logger";
 import type { PortalAuth } from "~/server/auth/portal-auth";
-import type { BackendAuthStep } from "~/server/auth/portals";
-import { portalAuthAnswer, portalAuthEnvelope } from "~/lib/portal-paths";
+import { successResponse } from "~/lib/route-wrapper-utils.server";
 import {
   installMintedSession,
   logoutRollback,
@@ -29,7 +29,16 @@ export type LoginPortal = Pick<
 >;
 
 /** A pre-session step of a portal's login the BFF forwards. */
-export type LoginStep = Exclude<BackendAuthStep, "refresh">;
+type LoginStep =
+  "login" | "mfa/verify" | "mfa/enroll/confirm" | "passkeys/login/verify";
+
+type LoginData = TraegerLoginResponse | TokenResponse;
+type LoginRoute = Parameters<typeof contractWrite>[0] & {
+  method: "POST";
+  routeFile: string;
+  request: RequestBody<unknown>;
+  response: z.ZodType<LoginData | { data: LoginData }>;
+};
 
 /** The backend's remember-device cookie, read by its login and MFA steps. */
 const TRUSTED_DEVICE_COOKIE = "mfa_trust_device";
@@ -56,14 +65,14 @@ function withoutIgnoreFlag(body: unknown): Record<string, unknown> {
  */
 export function installLoginSession(
   request: NextRequest,
-  data: Record<string, unknown>,
+  data: Partial<TokenResponse>,
   { portal, setSession }: Pick<LoginPortal, "portal" | "setSession">,
 ): Promise<Response | null> {
   const pair = mintedPair(data);
   return installMintedSession(
     request,
     () => setSession(pair.access_token, pair.refresh_token),
-    logoutRollback(portal.backend.logout, pair),
+    logoutRollback(request, portal.backend.logout, pair),
   );
 }
 
@@ -72,9 +81,22 @@ export function installLoginSession(
  * answer with a next step (organization choice, MFA challenge, enrollment);
  * only the enrollment confirmation carries the limited enrollment proof.
  */
-export function createPortalLoginRoute(login: LoginPortal, step: LoginStep) {
-  const { backend, key } = login.portal;
-  const path = `${backend.authPrefix}/${step}`;
+export function createPortalLoginRoute(
+  login: LoginPortal,
+  step: "login",
+): ReturnType<LoginPortal["withSessionResponse"]>;
+export function createPortalLoginRoute<R extends LoginRoute>(
+  login: LoginPortal,
+  step: Exclude<LoginStep, "login">,
+  route: R,
+): ReturnType<LoginPortal["withSessionResponse"]>;
+export function createPortalLoginRoute(
+  login: LoginPortal,
+  step: LoginStep,
+  route: LoginRoute = login.portal.backend.login,
+) {
+  const { backend } = login.portal;
+  const path = route.pattern;
   const challenges = step === "login";
   const organizations = challenges && backend.organizationSelection === true;
   return login.withSessionResponse(async (request: NextRequest) => {
@@ -99,9 +121,8 @@ export function createPortalLoginRoute(login: LoginPortal, step: LoginStep) {
         step === "mfa/enroll/confirm"
           ? request.headers.get("authorization")
           : null;
-      const backend = await sendBackend(path, null, {
-        method: "POST",
-        json: body,
+      // Go validates the incoming body; the generated entry decodes its answer.
+      const reply = await contractWrite(route, body, {
         request,
         timeout: "login",
         headers: {
@@ -112,51 +133,45 @@ export function createPortalLoginRoute(login: LoginPortal, step: LoginStep) {
         },
       });
       let response: Response;
-      if (!backend.ok) {
-        response = forwardBackendResponse(backend, request);
+      if (!reply.ok) {
+        response = contractError(reply, request);
+        // A locally refused success must not remember this device.
+        if (reply.backend?.ok) return response;
       } else {
-        // Parse errors must not put bearer material in an exception message.
-        const data = portalAuthAnswer<Record<string, unknown>>(
-          key,
-          step,
-          await backend.json().catch(() => {
-            throw new Error("Invalid login response");
-          }),
-        );
-        const json = (body: Record<string, unknown>) =>
-          Response.json(portalAuthEnvelope(key, step, body));
+        const value: LoginData | { data: LoginData } = reply.value;
+        const data = "data" in value ? value.data : value;
+        const json = (body: SignInReply) =>
+          Response.json(successResponse(body));
+        const signIn = "status" in data ? data : undefined;
         if (
           organizations &&
-          data.status === "organization_selection_required"
+          signIn?.status === "organization_selection_required"
         ) {
-          if (!Array.isArray(data.organizations))
+          if (!signIn.organizations)
             throw new Error("Invalid organization selection");
           response = json({
-            status: data.status,
-            organizations: data.organizations.map(
-              (value: { id: unknown; name: unknown }) => ({
-                id: value.id,
-                name: value.name,
-              }),
-            ),
+            status: signIn.status,
+            organizations: signIn.organizations,
           });
-        } else if (challenges && data.status === "mfa_required") {
+        } else if (challenges && signIn?.status === "mfa_required") {
           if (
-            typeof data.challenge_token !== "string" ||
-            !data.challenge_token ||
+            typeof signIn.challenge_token !== "string" ||
+            !signIn.challenge_token ||
             data.access_token ||
             data.refresh_token
           )
             throw new Error("Invalid MFA challenge response");
           response = json({
-            status: data.status,
-            challenge_token: data.challenge_token,
-            masked_email: data.masked_email,
-            ...(organizations ? { organization_id: data.organization_id } : {}),
-            trusted_device_enabled: data.trusted_device_enabled,
-            trusted_device_days: data.trusted_device_days,
+            status: signIn.status,
+            challenge_token: signIn.challenge_token,
+            masked_email: signIn.masked_email,
+            ...(organizations
+              ? { organization_id: signIn.organization_id }
+              : {}),
+            trusted_device_enabled: signIn.trusted_device_enabled,
+            trusted_device_days: signIn.trusted_device_days,
           });
-        } else if (challenges && data.status === "mfa_enrollment_required") {
+        } else if (challenges && signIn?.status === "mfa_enrollment_required") {
           if (
             typeof data.access_token !== "string" ||
             !data.access_token ||
@@ -165,10 +180,12 @@ export function createPortalLoginRoute(login: LoginPortal, step: LoginStep) {
             throw new Error("Invalid enrollment response");
           // A limited enrollment proof is not a completed session token.
           response = json({
-            status: data.status,
+            status: signIn.status,
             access_token: data.access_token,
-            masked_email: data.masked_email,
-            ...(organizations ? { organization_id: data.organization_id } : {}),
+            masked_email: signIn.masked_email,
+            ...(organizations
+              ? { organization_id: signIn.organization_id }
+              : {}),
             mfa_enrollment_required: true,
           });
         } else {
@@ -180,7 +197,7 @@ export function createPortalLoginRoute(login: LoginPortal, step: LoginStep) {
       // Includes trusted-device creation/expiry, independent of the Auth.js
       // cookie; a session cookie leaves only via its gate (#5399).
       for (const cookie of withoutSessionCookies(
-        backend.headers.getSetCookie(),
+        reply.backend?.headers?.getSetCookie?.() ?? [],
       ))
         response.headers.append("Set-Cookie", cookie);
       return response;
@@ -189,9 +206,6 @@ export function createPortalLoginRoute(login: LoginPortal, step: LoginStep) {
         path,
         error: error instanceof Error ? error.message : String(error),
       });
-      if (error instanceof BackendUnavailableError) {
-        return handleApiError(error, request);
-      }
       captureBffException(error, request);
       return problemResponse(500, "Login unavailable", request);
     }

@@ -22,6 +22,7 @@ type Observation struct {
 }
 
 type Store interface {
+	RoomHistoryStopStore
 	PrepareVisitWrites(context.Context, studentpresence.VisitWriteScope) (Stats, error)
 	SetSupervisionEnd(context.Context, int64, Date, time.Time) (int64, Stats, error)
 	EndOpenGroupSupervisions(context.Context, int64, int64, Date) (int, Stats, error)
@@ -43,17 +44,6 @@ type Store interface {
 	ListRoomSessionHistory(context.Context, int64, time.Time, time.Time, *int64) ([]studentpresence.RoomSessionHistory, Stats, error)
 	ListRoomOccupancy(context.Context, []int64) ([]studentpresence.RoomOccupancy, Stats, error)
 	QueryLiveGroups(context.Context, studentpresence.LiveGroupFilter) ([]studentpresence.LiveGroup, Stats, error)
-	GetCombinedGroup(context.Context, int64) (studentpresence.CombinedGroup, Stats, error)
-	RecordCombination(context.Context, time.Time, *time.Time) (studentpresence.CombinedGroup, Stats, error)
-	ReviseCombination(context.Context, int64, time.Time, *time.Time) (studentpresence.CombinedGroup, Stats, error)
-	DeleteCombination(context.Context, int64) (Stats, error)
-	ListCombinedGroups(context.Context, studentpresence.CombinedGroupFilter) ([]studentpresence.CombinedGroup, Stats, error)
-	EndCombination(context.Context, int64, time.Time) (Stats, error)
-	RecordGroupMapping(context.Context, int64, int64) (studentpresence.GroupMapping, Stats, error)
-	DeleteGroupMapping(context.Context, int64) (Stats, error)
-	ListGroupMappings(context.Context, studentpresence.GroupMappingFilter) ([]studentpresence.GroupMapping, Stats, error)
-	AddGroupToCombination(context.Context, int64, int64) (Stats, error)
-	RemoveGroupFromCombination(context.Context, int64, int64) (Stats, error)
 	RoomUtilization(context.Context, []studentpresence.StudentVisitWindow) ([]studentpresence.RoomUtilization, Stats, error)
 	LockStaffSupervision(context.Context, int64, Date) ([]int64, Stats, error)
 	UnclaimedStore

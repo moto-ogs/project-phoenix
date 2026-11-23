@@ -2,14 +2,22 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { storyNow } from "~storybook/clock";
 import { installStorybookFetch, jsonResponse } from "~storybook/mocks/fetch";
 import { ParentMealPlanPage } from "./parent-meal-plan-page";
-import type {
-  Child,
-  ChildFeatures,
-  MealParticipation,
-  MealPlanEntry,
-} from "~/lib/parent-api";
+import type { MealParticipation, MealPlanEntry } from "~/lib/parent-api";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 const baseFeatures = {
+  conference_book_allowed: false,
+  care_ended: false,
+  excused_note_enabled: false,
+  pickup_change_mode_enabled: false,
+  pickup_change_cutoff_time: "",
+  pickup_change_today_closed: false,
+  pickup_change_care_day_ended: false,
+  pickup_manage_allowed: false,
+  emergency_contact_manage_allowed: false,
+  absence_request_edit_enabled: false,
+  reason_required: false,
+  care_facility_term: "",
   sick_note_enabled: true,
   sick_requires_approval: false,
   notes_enabled: true,
@@ -26,10 +34,11 @@ const baseFeatures = {
   meal_registration_enabled: false,
   has_open_change_request: false,
   parent_news_enabled: true,
-} satisfies ChildFeatures;
+} satisfies parentMeContract.ChildFeaturesResponse;
 
-const childrenWithMealPlans: Child[] = [
+const childrenWithMealPlans: parentMeContract.ChildResponse[] = [
   {
+    care_ended: false,
     student_id: "child-1",
     tenant_id: "school-1",
     first_name: "Mia",
@@ -41,6 +50,7 @@ const childrenWithMealPlans: Child[] = [
     school_slug: "am-berg",
   },
   {
+    care_ended: false,
     student_id: "child-2",
     tenant_id: "school-2",
     first_name: "Ben",
@@ -147,6 +157,7 @@ function participationForFourWeeks(): MealParticipation {
     model: "ongoing_single",
     schedule_changeable: true,
     sick_cancels_after_deadline: false,
+    version: "v1",
     days,
   };
 }
@@ -158,7 +169,7 @@ function mockParentMealPlan({
   entriesByStudent = {},
   shouldFail = false,
 }: {
-  childrenData: Child[];
+  childrenData: parentMeContract.ChildResponse[];
   enabledStudentIds?: ReadonlySet<string>;
   registrationEnabledStudentIds?: ReadonlySet<string>;
   entriesByStudent?: Record<string, MealPlanEntry[]>;
@@ -240,7 +251,7 @@ export const Populated: Story = {
 
 export const WithRegistration: Story = {
   beforeEach: () => {
-    const felix: Child = {
+    const felix: parentMeContract.ChildResponse = {
       ...childrenWithMealPlans[0]!,
       first_name: "Felix",
       last_name: "Schneider",

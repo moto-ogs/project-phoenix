@@ -9,6 +9,7 @@ import {
   type SetupTourBranch,
   type SetupTourStop,
 } from "./setup-tours";
+import { useResponsivePanelSheet } from "../ui/responsive-panel";
 
 /** Die Touren einer Checkliste, je Schritt höchstens eine. */
 export type SetupTourSet<K extends string> = Readonly<
@@ -79,6 +80,10 @@ export function findVisibleTarget(selector: string): Element | null {
   return null;
 }
 
+function targetFor(stop: SetupTourStop, asSheet: boolean): string {
+  return asSheet ? (stop.mobileTarget ?? stop.target) : stop.target;
+}
+
 /**
  * Die Adresse, mit der die Tour ihre Seite öffnet: die beim Start genannte,
  * sonst die der Tour.
@@ -100,12 +105,24 @@ function firstPageStop(stops: readonly SetupTourStop[]): number {
  */
 function closeOverlayLeftBehind(
   shown: Element | null,
-  previous: SetupTourStop,
+  previousTarget: string,
 ): void {
   const overlay = shown?.closest('[role="dialog"]');
-  if (!overlay || overlay.querySelector(previous.target)) return;
+  if (!overlay || overlay.querySelector(previousTarget)) return;
   const close = overlay.querySelector<HTMLElement>("[data-overlay-close]");
   close?.click();
+}
+
+/** Schließt das geöffnete ResponsivePanel am Tour-Ziel, sonst nichts. */
+function closeResponsivePanelAt(target: Element): void {
+  const trigger =
+    target instanceof HTMLButtonElement &&
+    target.matches('[aria-expanded="true"][aria-haspopup="dialog"]')
+      ? target
+      : target.querySelector<HTMLButtonElement>(
+          '[aria-expanded="true"][aria-haspopup="dialog"]',
+        );
+  trigger?.click();
 }
 
 interface TourState<K extends string> {
@@ -136,6 +153,8 @@ export interface ActiveTourStop {
   missing: boolean;
   /** Gibt es eine Station, zu der „Zurück“ führt? */
   canGoBack: boolean;
+  /** Die Station zeigt am Telefon auf einen Auslöser statt auf ein Blatt. */
+  usesMobileTarget: boolean;
   /** Was die Sprechblase sagt: der Text der Station oder seine Variante. */
   text: string;
 }
@@ -167,6 +186,9 @@ export function useSetupTour<K extends string>(
   // Über eine Ref, damit ein neues Router-Objekt die laufende Suche nicht
   // neu startet und das gefundene Ziel verwirft.
   const router = useTenantRouter();
+  // Dieselbe Breitenentscheidung wie das Menü: Unter `sm` zeigt ein
+  // `mobileTarget` auf dessen Auslöser statt auf den Inhalt des Blatts.
+  const asSheet = useResponsivePanelSheet();
   const routerRef = useRef(router);
   useEffect(() => {
     routerRef.current = router;
@@ -176,6 +198,9 @@ export function useSetupTour<K extends string>(
   // Der Stand, an dem ein verzögerter Klick-Wechsel prüft, ob die Tour
   // inzwischen schon weiter ist.
   const tourRef = useRef(tour);
+  // Der Klick, der ein Blatt wieder schließt, darf nicht ein zweites
+  // Voranschreiten derselben Station auslösen.
+  const ignoredPanelCloseRef = useRef<Element | null>(null);
   useEffect(() => {
     tourRef.current = tour;
   }, [tour]);
@@ -274,7 +299,7 @@ export function useSetupTour<K extends string>(
 
   const back = useCallback(() => {
     if (!tour || !canGoBack || !previousStop || !definition) return;
-    closeOverlayLeftBehind(target, previousStop);
+    closeOverlayLeftBehind(target, targetFor(previousStop, asSheet));
     if (previousNeedsPage) routerRef.current.push(pageHref(definition, tour));
     setTour({ ...tour, index: previousIndex, reviewing: true });
   }, [
@@ -285,6 +310,7 @@ export function useSetupTour<K extends string>(
     previousNeedsPage,
     definition,
     target,
+    asSheet,
   ]);
 
   const start = useCallback(
@@ -343,6 +369,7 @@ export function useSetupTour<K extends string>(
   // Seitenwechsel oder wenn ein Fenster aufgeht.
   useEffect(() => {
     if (!stop || !tour || !definition) return undefined;
+    const targetSelector = targetFor(stop, asSheet);
     // Stationen der Seitenleiste gelten überall. Alle anderen erst, wenn ihre
     // Seite geladen ist: Nach dem Klick in der Seitenleiste steht kurz noch
     // die alte Seite da, und deren gleichnamiger Knopf wäre das falsche Ziel.
@@ -394,7 +421,7 @@ export function useSetupTour<K extends string>(
         jump(tour, tour.index + (stop.skipCount ?? 1), definition.stops.length);
         return true;
       }
-      const found = findVisibleTarget(stop.target);
+      const found = findVisibleTarget(targetSelector);
       if (found) {
         shown = found;
         setSearch({
@@ -437,7 +464,7 @@ export function useSetupTour<K extends string>(
       }, POLL_MS);
     }
     return () => window.clearInterval(timer);
-  }, [stop, tour, definition, pathname, onStopPage, jump]);
+  }, [stop, tour, definition, pathname, onStopPage, jump, asSheet]);
 
   // Die Person hat die Seite der Station verlassen, etwa über einen Link in
   // der Seitenleiste. Die Tour sucht dort nichts mehr und
@@ -472,7 +499,17 @@ export function useSetupTour<K extends string>(
     const { branch } = stop;
     if (stop.advance !== "click" && !branch) return undefined;
     const onClick = (event: MouseEvent) => {
-      if (!(event.target instanceof Node && target.contains(event.target))) {
+      // `mobileTarget` verlegt nur die Sprechblase auf den sichtbaren
+      // Auslöser. Die Handlung bleibt am eigentlichen Ziel, das bei einem
+      // ResponsivePanel im Blatt gerendert wird.
+      const clickTarget = findVisibleTarget(stop.target);
+      if (!(
+        event.target instanceof Node && clickTarget?.contains(event.target)
+      )) {
+        return;
+      }
+      if (ignoredPanelCloseRef.current === clickTarget) {
+        ignoredPanelCloseRef.current = null;
         return;
       }
       if (branch) {
@@ -485,13 +522,26 @@ export function useSetupTour<K extends string>(
       // Ist die Tour bis dahin schon weiter (etwa weil das Fenster schneller
       // da war), bleibt der Wechsel aus; sonst setzte er sie zurück.
       const clicked = tourRef.current;
+      const nextStop = tour ? definition?.stops[tour.index + 1] : undefined;
+      if (
+        asSheet &&
+        nextStop?.mobileTarget !== undefined &&
+        clickTarget.matches(nextStop.mobileTarget)
+      ) {
+        // Der Auslöser öffnet das Blatt im Click-Handler. Erst danach
+        // schließen, damit seine Ausblendung vor der nächsten Station läuft.
+        window.setTimeout(() => {
+          ignoredPanelCloseRef.current = clickTarget;
+          closeResponsivePanelAt(clickTarget);
+        }, 0);
+      }
       window.setTimeout(() => {
         if (tourRef.current === clicked) next();
       }, ADVANCE_DELAY_MS);
     };
     document.addEventListener("click", onClick, true);
     return () => document.removeEventListener("click", onClick, true);
-  }, [stop, target, next]);
+  }, [stop, target, next, definition, tour, asSheet]);
 
   return {
     active:
@@ -503,10 +553,13 @@ export function useSetupTour<K extends string>(
             target,
             missing,
             canGoBack,
+            usesMobileTarget: asSheet && stop.mobileTarget !== undefined,
             text:
               current?.variant && stop.textWhenVisible
                 ? stop.textWhenVisible.text
-                : stop.text,
+                : asSheet && stop.mobileText !== undefined
+                  ? stop.mobileText
+                  : stop.text,
           }
         : null,
     start,

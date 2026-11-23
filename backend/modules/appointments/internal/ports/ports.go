@@ -15,6 +15,9 @@ type Store interface {
 	FindReminderCandidateForUpdate(context.Context, int64) (*appointments.Appointment, domain.OperationStats, error)
 	FindReminderCandidatesForUpdate(context.Context, []int64) ([]*appointments.Appointment, domain.OperationStats, error)
 	ListAppointmentsVisibleToStaff(context.Context, int64, appointments.Date, appointments.Date) ([]*appointments.Appointment, domain.OperationStats, error)
+	// ListStaffDayAppointments reads the staff day in one statement (#7903),
+	// one value per joined row: an appointment repeats for each override.
+	ListStaffDayAppointments(context.Context, int64, appointments.Date) ([]appointments.StaffDayAppointment, domain.OperationStats, error)
 	ListStaffCancellationTombstones(context.Context, int64, time.Time) ([]*appointments.Appointment, domain.OperationStats, error)
 	ListAppointmentsVisibleToGuardians(context.Context, []int64, []int64, appointments.Date, appointments.Date) ([]*appointments.Appointment, domain.OperationStats, error)
 	ListGuardianCancellationTombstones(context.Context, []int64, []int64, time.Time) ([]*appointments.Appointment, domain.OperationStats, error)

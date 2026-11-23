@@ -1,8 +1,5 @@
 import type { Session } from "next-auth";
-import {
-  mapAccountTenant,
-  type AccountTenantBackend,
-} from "~/lib/account-tenants";
+import { mapAccountTenant } from "~/lib/account-tenants";
 import { apiGet } from "~/lib/api-helpers.server";
 import {
   hasEffectiveAdminScope,
@@ -16,8 +13,16 @@ import {
   resolveChangeRequestAccess,
 } from "~/lib/change-request-access";
 import { createLogger } from "~/lib/logger";
-import { mapProfileResponse, type BackendProfile } from "~/lib/profile-helpers";
-import type { UnreadAnnouncement } from "~/lib/hooks/use-announcements";
+import { mapProfileResponse } from "~/lib/profile-helpers";
+import { contractGet } from "~/lib/contract/client.server";
+import type { ApiResponse } from "~/lib/api-envelope";
+import type * as authAccountContract from "~/lib/contract/auth-account.generated";
+import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
+import * as meContract from "~/lib/contract/me.generated";
+import type * as messagesContract from "~/lib/contract/messages.generated";
+import type * as sharedContract from "~/lib/contract/shared.generated";
+import type * as studentsContract from "~/lib/contract/students.generated";
+import type * as platformContract from "~/lib/contract/platform.generated";
 import type { RemindersResult } from "~/lib/reminders-api";
 import type { ShellBootstrap, ShellCounts } from "~/lib/shell-seed";
 import type { StaffNotice } from "~/lib/staff-notices-api";
@@ -28,7 +33,6 @@ import type {
 } from "~/lib/supervision-derive";
 import type { TenantInfo } from "~/lib/tenant-api";
 import { loadUserContext } from "~/lib/user-context.server";
-import type { NavigationEducationalGroup } from "~/lib/usercontext-helpers";
 
 const logger = createLogger({ component: "ShellBootstrap" });
 
@@ -38,10 +42,6 @@ const logger = createLogger({ component: "ShellBootstrap" });
  * it as it always did.
  */
 const REQUEST_BUDGET_MS = 1500;
-
-interface Envelope<T> {
-  data: T;
-}
 
 /**
  * Resolves to the loaded value, or undefined when the request failed or ran
@@ -97,14 +97,14 @@ async function loadSupervision(
     overviewOk: boolean;
   }> => {
     const loadOwn = () =>
-      apiGet<Envelope<SupervisedGroupPayload[] | null>>(
+      apiGet<ApiResponse<SupervisedGroupPayload[] | null>>(
         "/api/me/groups/supervised",
         token,
         { signal },
       );
     if (canReadGroups && mayHaveOverview) {
       const [overview, own] = await Promise.allSettled([
-        apiGet<Envelope<SupervisedGroupPayload[] | null>>(
+        apiGet<ApiResponse<SupervisedGroupPayload[] | null>>(
           "/api/active/supervisors/all",
           token,
           { signal },
@@ -139,11 +139,9 @@ async function loadSupervision(
 
   const [groups, supervision, openRooms] = await Promise.all([
     optional("groups", async (signal) => {
-      const response = await apiGet<Envelope<NavigationEducationalGroup[]>>(
-        "/api/students/ogs-group-navigation",
-        token,
-        { signal },
-      );
+      const response = await apiGet<
+        ApiResponse<studentsContract.NavigationGroup[]>
+      >("/api/students/ogs-group-navigation", token, { signal });
       return response.data;
     }),
     optional("supervised", loadSupervised),
@@ -151,7 +149,7 @@ async function loadSupervision(
     // rooms:read is the same permission every caregiver already holds for the
     // rest of the navigation, so no extra gate is needed here.
     optional("openRooms", async (signal) => {
-      const response = await apiGet<Envelope<OpenRoomPayload[] | null>>(
+      const response = await apiGet<ApiResponse<OpenRoomPayload[] | null>>(
         "/api/rooms?is_open_room=true",
         token,
         { signal },
@@ -215,22 +213,18 @@ async function loadCounts(
     careWithdrawalsPending,
   ] = await Promise.all([
     loadCount("staffAbsencesPending", canReviewAbsences, async (signal) => {
-      const response = await apiGet<Envelope<unknown[] | null>>(
-        "/api/staff/absences/pending",
-        token,
-        { signal },
-      );
+      const response = await apiGet<
+        ApiResponse<sharedContract.StaffAbsenceResponse[] | null>
+      >("/api/staff/absences/pending", token, { signal });
       return (response.data ?? []).length;
     }),
     loadCount(
       "messagesUnread",
       tenant.messagingEnabled && hasPermission(session, "users:read"),
       async (signal) => {
-        const response = await apiGet<Envelope<{ unread_count?: number }>>(
-          "/api/messages/unread-count",
-          token,
-          { signal },
-        );
+        const response = await apiGet<
+          ApiResponse<messagesContract.ParentChatUnreadCountResponse>
+        >("/api/messages/unread-count", token, { signal });
         return response.data?.unread_count ?? 0;
       },
     ),
@@ -238,11 +232,9 @@ async function loadCounts(
       "teamChatUnread",
       tenant.staffMessagingEnabled,
       async (signal) => {
-        const response = await apiGet<Envelope<{ unread_count?: number }>>(
-          "/api/staff-messages/unread-count",
-          token,
-          { signal },
-        );
+        const response = await apiGet<
+          ApiResponse<sharedContract.unreadCountResponse>
+        >("/api/staff-messages/unread-count", token, { signal });
         return response.data?.unread_count ?? 0;
       },
     ),
@@ -250,11 +242,9 @@ async function loadCounts(
       "changeRequestsPending",
       canReviewParentRequests,
       async (signal) => {
-        const response = await apiGet<Envelope<{ pending_count?: number }>>(
-          "/api/students/change-requests/pending-count",
-          token,
-          { signal },
-        );
+        const response = await apiGet<
+          ApiResponse<studentsContract.ChangeRequestPendingCountResponse>
+        >("/api/students/change-requests/pending-count", token, { signal });
         return response.data?.pending_count ?? 0;
       },
     ),
@@ -262,11 +252,11 @@ async function loadCounts(
       "enrollmentRequestsPending",
       canReviewEnrollmentChangeRequests(session),
       async (signal) => {
-        const response = await apiGet<Envelope<{ pending_count?: number }>>(
-          "/api/enrollment/admin/change-requests/pending-count",
-          token,
-          { signal },
-        );
+        const response = await apiGet<
+          ApiResponse<enrollmentContract.EnrollmentChangeRequestPendingCountResponse>
+        >("/api/enrollment/admin/change-requests/pending-count", token, {
+          signal,
+        });
         return response.data?.pending_count ?? 0;
       },
     ),
@@ -274,11 +264,9 @@ async function loadCounts(
       "careWithdrawalsPending",
       canReviewCareWithdrawals(session),
       async (signal) => {
-        const response = await apiGet<Envelope<{ total?: number }>>(
-          "/api/students/care-withdrawals?page_size=1",
-          token,
-          { signal },
-        );
+        const response = await apiGet<
+          ApiResponse<studentsContract.careWithdrawalPageResponse>
+        >("/api/students/care-withdrawals?page_size=1", token, { signal });
         return response.data?.total ?? 0;
       },
     ),
@@ -324,26 +312,24 @@ export async function loadShellBootstrap(
       // retries); leave that path to the browser instead of caching it.
       return context.incomplete ? undefined : context;
     }),
+    // Through the decoder like the browser's profile read: the generated
+    // type holds at runtime, IDs arrive as strings (#2353).
     optional("profile", async (signal) => {
-      const response = await apiGet<Envelope<BackendProfile>>(
-        "/api/me/profile",
-        token,
-        { signal },
-      );
-      return mapProfileResponse(response.data);
+      const route = meContract.routes["GET /api/me/profile"];
+      const result = await contractGet(route, { token, signal });
+      if (!result.ok) throw result.error.cause;
+      return mapProfileResponse(result.value.data);
     }),
     optional("accountTenants", async (signal) => {
-      const response = await apiGet<Envelope<AccountTenantBackend[] | null>>(
-        "/auth/account/tenants",
-        token,
-        { signal },
-      );
+      const response = await apiGet<
+        ApiResponse<authAccountContract.AccountTenantResponse[] | null>
+      >("/auth/account/tenants", token, { signal });
       return (response.data ?? []).map(mapAccountTenant);
     }),
     // Same gate as useReminders: the route needs users:read (#4573).
     hasPermission(session, "users:read")
       ? optional("reminders", async (signal) => {
-          const response = await apiGet<Envelope<RemindersResult>>(
+          const response = await apiGet<ApiResponse<RemindersResult>>(
             "/api/reminders",
             token,
             { signal },
@@ -356,7 +342,7 @@ export async function loadShellBootstrap(
     // as useStaffNoticesPending: the route needs users:read.
     hasPermission(session, "users:read")
       ? optional("staffNoticesToday", async (signal) => {
-          const response = await apiGet<Envelope<StaffNotice[] | null>>(
+          const response = await apiGet<ApiResponse<StaffNotice[] | null>>(
             "/api/staff-notices/today",
             token,
             { signal },
@@ -365,11 +351,9 @@ export async function loadShellBootstrap(
         })
       : Promise.resolve(undefined),
     optional("announcements", async (signal) => {
-      const response = await apiGet<Envelope<UnreadAnnouncement[] | null>>(
-        "/api/platform/announcements/unread",
-        token,
-        { signal },
-      );
+      const response = await apiGet<
+        ApiResponse<platformContract.PlatformAnnouncementResponse[] | null>
+      >("/api/platform/announcements/unread", token, { signal });
       return response.data ?? [];
     }),
     loadSupervision(session, tenant, token),

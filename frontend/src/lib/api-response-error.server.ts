@@ -27,6 +27,8 @@ export class ApiResponseError extends Error {
   readonly bodyText: string;
   readonly retryAfter: string | null;
   readonly contentType: string | null;
+  /** Headers arrived, but the response stream did not finish. */
+  readonly bodyInterrupted: boolean;
   // Memoized parse result — `null` means "not JSON". Lazy so callers that
   // only check status never pay the JSON.parse cost.
   private parsedBody: JsonBody | null = null;
@@ -38,6 +40,7 @@ export class ApiResponseError extends Error {
     options?: ErrorOptions & {
       retryAfter?: string | null;
       contentType?: string | null;
+      bodyInterrupted?: boolean;
     },
   ) {
     super(`API error (${status}): ${bodyText}`, options);
@@ -46,6 +49,7 @@ export class ApiResponseError extends Error {
     this.bodyText = bodyText;
     this.retryAfter = options?.retryAfter ?? null;
     this.contentType = options?.contentType ?? null;
+    this.bodyInterrupted = options?.bodyInterrupted ?? false;
   }
 
   /** Returns the parsed JSON body, or `null` if the body isn't valid JSON. */
@@ -176,11 +180,14 @@ function publicProblemExtensions(
   if (status < 500) return { ...extra, instance };
 
   // A 5xx can contain backend diagnostics in every extension, not only in
-  // `detail`. Its code is the only backend value the browser may use; the
-  // instance remains safe for correlating the response with server logs.
+  // `detail`. Keep its code and only explicitly allowed, sanitized details;
+  // the instance correlates the response with server logs.
+  const code =
+    extra?.code && registeredErrorCodes.has(extra.code) ? extra.code : null;
   return {
-    ...(extra?.code && registeredErrorCodes.has(extra.code)
-      ? { code: extra.code }
+    ...(code ? { code } : {}),
+    ...(code && CLIENT_DETAILS_SERVER_ERROR_CODES.has(code) && extra?.details
+      ? { details: safeImportDetails(extra.details) }
       : {}),
     ...(instance ? { instance } : {}),
   };
@@ -322,13 +329,92 @@ function isProblemEnvelope(
 /**
  * Keeps only a validated error identity when replacing a backend 5xx body.
  * Other extensions can contain diagnostics just like `detail`, so a generic
- * proxy cannot decide that they are safe to send to the browser.
+ * proxy cannot decide that they are safe to send to the browser; the codes
+ * of CLIENT_DETAILS_SERVER_ERROR_CODES keep their sanitized `details`.
  */
 export function safeProblemExtensions(
   value: unknown,
   status: number,
 ): Omit<Partial<ProblemBody>, "status" | "detail"> {
-  return isProblemEnvelope(value, status) ? { code: value.code } : {};
+  if (!isProblemEnvelope(value, status)) return {};
+  const details = value.details;
+  if (
+    CLIENT_DETAILS_SERVER_ERROR_CODES.has(value.code) &&
+    details !== null &&
+    typeof details === "object" &&
+    !Array.isArray(details)
+  ) {
+    return { code: value.code, details: safeImportDetails(details) };
+  }
+  return { code: value.code };
+}
+
+/**
+ * Server-error codes whose `details` the backend writes for the person who
+ * acted, not as diagnostics: an import whose later batch failed names the
+ * rows it already saved (#3184), and the page shows them. Row diagnostics
+ * are replaced, including those restored from older checkpoints. Every other 5xx
+ * keeps only its code.
+ */
+const CLIENT_DETAILS_SERVER_ERROR_CODES: ReadonlySet<string> = new Set([
+  "import.import_batch_failed",
+]);
+
+const importDiagnosticMessages: Readonly<Record<string, string>> = {
+  opening_preflight_failed:
+    "Die Übernahme konnte nicht geprüft werden. Bitte versuche es erneut.",
+  vacation_opening_preflight_failed:
+    "Die Übernahme konnte nicht geprüft werden. Bitte versuche es erneut.",
+  existing_lookup_failed:
+    "Die Zeile konnte nicht geprüft werden. Bitte versuche es erneut.",
+  rfid_lookup_failed:
+    "Die Karte konnte nicht geprüft werden. Bitte versuche es erneut.",
+  role_lookup_failed:
+    "Die Rolle konnte nicht geprüft werden. Bitte versuche es erneut.",
+  creation_failed:
+    "Die Zeile konnte nicht gespeichert werden. Bitte versuche es erneut.",
+  update_failed:
+    "Die Zeile konnte nicht gespeichert werden. Bitte versuche es erneut.",
+  duplicate_check_failed:
+    "Die Zeile konnte nicht geprüft werden. Bitte versuche es erneut.",
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+/** Keep the saved outcome, but never expose database diagnostics from row failures. */
+function safeImportDetails(
+  details: Record<string, unknown>,
+): Record<string, unknown> {
+  const result = details.result;
+  if (!isRecord(result) || !Array.isArray(result.errors)) return details;
+  return {
+    ...details,
+    result: {
+      ...result,
+      errors: result.errors.map((row: unknown) => {
+        if (!isRecord(row) || !Array.isArray(row.errors)) return row;
+        return {
+          ...row,
+          errors: row.errors.map((error: unknown) => {
+            if (!isRecord(error) || typeof error.code !== "string")
+              return error;
+            const message = Object.hasOwn(importDiagnosticMessages, error.code)
+              ? importDiagnosticMessages[error.code]
+              : undefined;
+            if (!message) return error;
+            return {
+              field: error.field,
+              code: error.code,
+              severity: error.severity,
+              message,
+            };
+          }),
+        };
+      }),
+    },
+  };
 }
 
 function hasNonEmptyString(

@@ -11,9 +11,8 @@ import (
 )
 
 // PreviewPhaseFromSource classifies the source phase's children without
-// writing anything. Shares classifyRolloverGrade with the create path,
-// so the numbers the admin confirms are the numbers the rollover
-// produces.
+// writing anything. Shares classifyRollover with the create path, so the
+// numbers the admin confirms are the numbers the rollover produces.
 func (s *Rollovers) PreviewPhaseFromSource(ctx context.Context, sourcePhaseID int64, bumpsGrade bool) (*enrollmentNative.RolloverPreview, error) {
 	tenantID := s.deps.Runtime.TenantID(ctx)
 	if tenantID == 0 {
@@ -38,6 +37,10 @@ func (s *Rollovers) PreviewPhaseFromSource(ctx context.Context, sourcePhaseID in
 		ReviewByReason:   make(map[string]int),
 		ExcludedByStatus: make(map[string]int),
 	}
+	unanswerable, err := s.renewalsWithoutParent(ctx, children)
+	if err != nil {
+		return nil, err
+	}
 	candidateRequests := make(map[int64]struct{})
 	for _, child := range children {
 		if child.Status != enrollmentNative.ChildStatusApproved {
@@ -47,7 +50,7 @@ func (s *Rollovers) PreviewPhaseFromSource(ctx context.Context, sourcePhaseID in
 		}
 		preview.CarryCandidateCount++
 		candidateRequests[child.RequestID] = struct{}{}
-		_, reviewReason := classifyRolloverGrade(child.TargetGradeLevel, bumpsGrade, collectGradeLevel, maxGrade)
+		_, reviewReason := classifyRollover(child.TargetGradeLevel, bumpsGrade, collectGradeLevel, maxGrade, unanswerable[child.RequestID])
 		if reviewReason == "" {
 			preview.CarriedCount++
 		} else {
@@ -151,12 +154,44 @@ func (s *Rollovers) DecideReview(ctx context.Context, req enrollmentNative.Decid
 	}
 }
 
-// classifyRolloverGrade is the ONE classification rule shared by the
-// rollover create path (rolloverAttributesForSource) and its preview
+// renewalsWithoutParent names, in one read, the requests of the approved
+// children whose renewal no parent can answer (renewalWithoutParent).
+func (s *Rollovers) renewalsWithoutParent(ctx context.Context, children []*enrollmentNative.RequestChild) (map[int64]bool, error) {
+	ids := []int64{}
+	seen := map[int64]bool{}
+	for _, child := range children {
+		if child.Status == enrollmentNative.ChildStatusApproved && !seen[child.RequestID] {
+			seen[child.RequestID] = true
+			ids = append(ids, child.RequestID)
+		}
+	}
+	requests, err := s.deps.Requests.RequestsByID(ctx, ids)
+	if err != nil {
+		return nil, fmt.Errorf("rollover preview: load source requests: %w", err)
+	}
+	unanswerable := make(map[int64]bool, len(requests))
+	for _, request := range requests {
+		unanswerable[request.ID] = renewalWithoutParent(request)
+	}
+	return unanswerable, nil
+}
+
+// classifyRollover is the ONE classification rule shared by the rollover
+// create path (rolloverAttributesForSource) and its preview
 // (PreviewPhaseFromSource, #2251). Keeping both on this helper is what
-// guarantees the numbers the admin confirms are the numbers the
-// rollover produces. With grade collection disabled every approved
-// child carries without review.
+// guarantees the numbers the admin confirms are the numbers the rollover
+// produces. A renewal no parent can answer goes to review whatever its
+// grade (ReviewReasonNoGuardian), with the grade it would carry.
+func classifyRollover(sourceGrade *int16, bumpsGrade, collectGradeLevel bool, maxGrade int, unanswerable bool) (*int16, string) {
+	grade, reason := classifyRolloverGrade(sourceGrade, bumpsGrade, collectGradeLevel, maxGrade)
+	if unanswerable {
+		return grade, enrollmentNative.ReviewReasonNoGuardian
+	}
+	return grade, reason
+}
+
+// classifyRolloverGrade is the grade rule of classifyRollover. With grade
+// collection disabled every approved child carries without review.
 func classifyRolloverGrade(sourceGrade *int16, bumpsGrade, collectGradeLevel bool, maxGrade int) (*int16, string) {
 	if !collectGradeLevel {
 		return nil, ""

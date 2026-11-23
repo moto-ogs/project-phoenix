@@ -1,7 +1,9 @@
 import { invalidateTenantResolve } from "~/lib/tenant-resolve.server";
 import { revalidatePath } from "next/cache";
 import type { NextRequest } from "next/server";
-import { apiPut, apiDelete } from "~/lib/api-helpers.server";
+import { contractWrite } from "~/lib/contract/client.server";
+import { routes } from "~/lib/contract/settings.generated";
+import type { setValueRequest } from "~/lib/contract/shared.generated";
 import { createLogger } from "~/lib/logger";
 import {
   createPutHandler,
@@ -39,7 +41,7 @@ function revalidateTenantIfNeeded(request: NextRequest, key: string): void {
 export const PUT = createPutHandler(
   async (
     request: NextRequest,
-    body: unknown,
+    body: setValueRequest,
     token: string,
     params: Record<string, unknown>,
   ) => {
@@ -47,13 +49,19 @@ export const PUT = createPutHandler(
     if (!VALID_KEY_PATTERN.test(key)) {
       throw bffError(400, "Invalid settings key format");
     }
-    const result = await apiPut(
-      `/api/settings/values/${encodeURIComponent(key)}`,
-      token,
+    const result = await contractWrite(
+      routes["PUT /api/settings/values/{key}"],
       body,
+      {
+        endpoint: `/api/settings/values/${encodeURIComponent(key)}`,
+        token,
+        request,
+      },
     );
-    revalidateTenantIfNeeded(request, key);
-    return result;
+    // Go may have applied the change even if the reply cannot be read.
+    if (result.backend?.ok) revalidateTenantIfNeeded(request, key);
+    if (!result.ok) throw result.error.cause;
+    return result.value.data;
   },
 );
 
@@ -67,11 +75,17 @@ export const DELETE = createDeleteHandler(
     if (!VALID_KEY_PATTERN.test(key)) {
       throw bffError(400, "Invalid settings key format");
     }
-    const result = await apiDelete(
-      `/api/settings/values/${encodeURIComponent(key)}`,
-      token,
+    const result = await contractWrite(
+      routes["DELETE /api/settings/values/{key}"],
+      undefined,
+      {
+        endpoint: `/api/settings/values/${encodeURIComponent(key)}`,
+        token,
+        request,
+      },
     );
-    revalidateTenantIfNeeded(request, key);
-    return result;
+    if (result.backend?.ok) revalidateTenantIfNeeded(request, key);
+    if (!result.ok) throw result.error.cause;
+    return result.value.data;
   },
 );

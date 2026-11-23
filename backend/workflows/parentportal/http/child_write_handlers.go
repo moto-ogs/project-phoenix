@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/absencerecords"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
 
@@ -39,10 +40,10 @@ type SubmitSickNoteRequest struct {
 	RecipientGuardianProfileIDs []string `json:"recipient_guardian_profile_ids"`
 }
 
-// SickNoteEnvelopeResponse is the ?envelope=1 shape of the sick-note create.
-// The bare status-day array stays the default so a tab loaded before this
-// change keeps working; a client that wants to know whether the school gated
-// the absence into a pending request asks for the envelope (#2267).
+// SickNoteEnvelopeResponse is the answer of the sick-note create: the status
+// days it wrote and the request the school gated the absence into, if any
+// (#2267). It is the only shape since #2352; the former bare status-day
+// array without ?envelope=1 is gone, the query is ignored.
 type SickNoteEnvelopeResponse struct {
 	StatusDays     []StatusDayResponse           `json:"status_days"`
 	PendingRequest *ParentExcusedRequestResponse `json:"pending_request"`
@@ -99,6 +100,9 @@ type ParentExcusedRequestResponse struct {
 	// a non-submitter as not-found), so the UI shows the edit action only for
 	// own requests.
 	IsSelf bool `json:"is_self"`
+	// Version is what an edit of this request sends back as
+	// expected_version (ADR 0311).
+	Version string `json:"version"`
 }
 
 func toParentExcusedRequestResponse(req *parentService.ExcusedAbsenceRequestSnapshot, accountID int64) ParentExcusedRequestResponse {
@@ -117,6 +121,7 @@ func toParentExcusedRequestResponse(req *parentService.ExcusedAbsenceRequestSnap
 		CreatedAt:      req.CreatedAt,
 		ReviewedAt:     req.ReviewedAt,
 		IsSelf:         req.SubmittedBy == accountID,
+		Version:        readstate.Of(req.UpdatedAt),
 	}
 }
 
@@ -385,15 +390,26 @@ type MealParticipationResponse struct {
 	ScheduleChangeable bool                           `json:"schedule_changeable"`
 	SickCancels        bool                           `json:"sick_cancels_after_deadline"`
 	Days               []MealParticipationDayResponse `json:"days"`
+	// Version is the read-state token of the child's regular days (ADR
+	// 0311); a change of them sends it back as expected_version.
+	Version string `json:"version"`
 }
 
+// ReplaceMealParticipationRequest replaces the child's regular days.
+// ExpectedVersion is the version of the regular days as read: days changed
+// since, and a change without one, are refused with
+// general.changed_since_read.
 type ReplaceMealParticipationRequest struct {
-	Weekdays []parentService.MealWeekday `json:"weekdays"`
+	Weekdays        []parentService.MealWeekday `json:"weekdays"`
+	ExpectedVersion string                      `json:"expected_version"`
 }
 
-// MealPlanSavedResponse names the day the regular meal plan applies from.
+// MealPlanSavedResponse names the day the regular meal plan applies from
+// and the version of the regular days stored: the next save sends it back
+// as expected_version (ADR 0311).
 type MealPlanSavedResponse struct {
 	EffectiveFrom string `json:"effective_from"`
+	Version       string `json:"version"`
 }
 
 type SetMealParticipationDayRequest struct {
@@ -476,12 +492,12 @@ func (rs *Resource) replaceMealParticipation(w http.ResponseWriter, r *http.Requ
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid JSON body")))
 		return
 	}
-	effectiveFrom, err := rs.ParentService.ReplaceMealParticipationSchedule(r.Context(), accountID, studentID, request.Weekdays)
+	saved, err := rs.ParentService.ReplaceMealParticipationSchedule(r.Context(), accountID, studentID, request.Weekdays, request.ExpectedVersion)
 	if err != nil {
 		renderParentWriteError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, MealPlanSavedResponse{EffectiveFrom: string(effectiveFrom)}, "Regular meal participation saved")
+	common.Respond(w, r, http.StatusOK, MealPlanSavedResponse{EffectiveFrom: saved.EffectiveFrom, Version: saved.Version}, "Regular meal participation saved")
 }
 
 func (rs *Resource) setMealParticipationDay(w http.ResponseWriter, r *http.Request) {
@@ -573,7 +589,7 @@ func mealParticipationResponse(plan parentService.MealParticipationPlan) MealPar
 			CanRegister: day.CanRegister, CanCancel: day.CanCancel, RegisterUntil: day.RegisterUntil, CancelUntil: day.CancelUntil,
 		})
 	}
-	return MealParticipationResponse{Weekdays: plan.Weekdays, EffectiveFrom: string(plan.EffectiveFrom), CutoffTime: plan.CutoffTime, Model: plan.Model, ScheduleChangeable: plan.ScheduleChangeable, SickCancels: plan.SickCancels, Days: days}
+	return MealParticipationResponse{Weekdays: plan.Weekdays, EffectiveFrom: string(plan.EffectiveFrom), CutoffTime: plan.CutoffTime, Model: plan.Model, ScheduleChangeable: plan.ScheduleChangeable, SickCancels: plan.SickCancels, Days: days, Version: plan.Version}
 }
 
 // --- shared helpers ---
@@ -660,26 +676,8 @@ func respondSickNote(w http.ResponseWriter, r *http.Request, result *parentServi
 	for _, d := range result.StatusDays {
 		statusDays = append(statusDays, toStatusDayResponse(d))
 	}
-
-	// ?envelope=1 is the new client's opt-in to the full result. Old tabs keep
-	// the bare array below, which is what they call .map() on (#2267).
-	if r.URL.Query().Get("envelope") == "1" {
-		common.Respond(w, r, http.StatusCreated, SickNoteEnvelopeResponse{
-			StatusDays:     statusDays,
-			PendingRequest: pendingSickNoteRequest(result, accountID),
-		}, "Absence submitted")
-		return
-	}
-
-	// Backward-compatibility (#1845 review): ALWAYS respond with the bare
-	// status-day array — the shape every client (including tabs loaded before the
-	// approval gate was enabled) already calls .map() on. When the school gates an
-	// absence the request is created server-side but NOT returned here;
-	// StatusDays is empty and the child stays "expected". New clients discover the
-	// freshly-created pending request via GET .../excused-requests (they refetch
-	// after a submit). Returning a {status_days, pending_request} object on this
-	// path would crash an already-open #1735-era tab — which has the "excused"
-	// option but expects an array — and make it report a false failure, so the
-	// parent could resubmit and create a duplicate pending request.
-	common.Respond(w, r, http.StatusCreated, statusDays, "Absence submitted")
+	common.Respond(w, r, http.StatusCreated, SickNoteEnvelopeResponse{
+		StatusDays:     statusDays,
+		PendingRequest: pendingSickNoteRequest(result, accountID),
+	}, "Absence submitted")
 }

@@ -42,6 +42,14 @@ type BelegRetentionStore interface {
 	// and lists those to which none hangs and no suspension applies.
 	DueContracts(ctx context.Context, today calendar.Date) ([]parentbilling.DueContract, error)
 	LogContractDeletions(ctx context.Context, organizationID int64, today calendar.Date, contractIDs []int64) error
+	// FamiliesOnContracts lists the deviations of families that hang on
+	// one of the contracts.
+	FamiliesOnContracts(ctx context.Context, organizationID int64, contractIDs []int64) ([]parentbilling.FamilyOnContract, error)
+	// MoveFamilies hangs each deviation onto its new contract, where it
+	// still hangs on the old one, and then every trail entry of a
+	// deviation on a surviving contract that still names a going
+	// contract onto the deviation's contract.
+	MoveFamilies(ctx context.Context, organizationID int64, going []int64, moves []parentbilling.FamilyMove) error
 	DeleteExpiredBelegDeletions(ctx context.Context, years int) (int, error)
 	// DeleteExpiredFamilies deletes the families without a care contract
 	// whose own period ended and no document of which is kept (#6692).
@@ -250,12 +258,12 @@ func decideBelegRecords(facts []parentbilling.BelegFact, instructions []parentbi
 ) []parentbilling.BelegRecord {
 	byType := make(map[belegKey]*parentbilling.RetentionInstruction, len(instructions))
 	for i := range instructions {
-		byType[belegKey{instructions[i].OrganizationID, instructions[i].BelegType}] = &instructions[i]
+		byType[belegKey{instructions[i].OrganizationID.Int64(), instructions[i].BelegType}] = &instructions[i]
 	}
 	typeHolds := map[belegKey]*parentbilling.RetentionSuspension{}
 	belegHolds := map[belegKey]map[int64]*parentbilling.RetentionSuspension{}
 	for i := range suspensions {
-		key := belegKey{suspensions[i].OrganizationID, suspensions[i].BelegType}
+		key := belegKey{suspensions[i].OrganizationID.Int64(), suspensions[i].BelegType}
 		if suspensions[i].BelegID == 0 {
 			if typeHolds[key] == nil {
 				typeHolds[key] = &suspensions[i]
@@ -265,7 +273,7 @@ func decideBelegRecords(facts []parentbilling.BelegFact, instructions []parentbi
 		if belegHolds[key] == nil {
 			belegHolds[key] = map[int64]*parentbilling.RetentionSuspension{}
 		}
-		belegHolds[key][suspensions[i].BelegID] = &suspensions[i]
+		belegHolds[key][suspensions[i].BelegID.Int64()] = &suspensions[i]
 	}
 	records := make([]parentbilling.BelegRecord, 0, len(facts))
 	for _, fact := range facts {
@@ -306,6 +314,9 @@ func (r *BelegRetention) deleteDueContracts(ctx context.Context, today calendar.
 	total := 0
 	for _, organizationID := range order {
 		ids, rule := byTraeger[organizationID], cutoff[organizationID]
+		if err := r.keepFamilies(ctx, organizationID, ids, rule, today); err != nil {
+			return 0, err
+		}
 		deleted, err := r.contracts.DeleteEndedContracts(ctx, organizationID, ids, today, rule.TriggerEvent, rule.LastEventOn)
 		if err != nil {
 			return 0, fmt.Errorf("parent billing: delete retained contracts: %w", err)

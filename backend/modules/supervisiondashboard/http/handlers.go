@@ -55,6 +55,16 @@ type Resource struct {
 	SupervisionDashboardService supervisionDashboardService.Query
 }
 
+// DashboardRouteContracts registers the typed contract of the supervision
+// projection (ADR 0270, #7563), with patterns relative to /api/active.
+func DashboardRouteContracts() []common.RouteContract {
+	return []common.RouteContract{{
+		Method: "GET", Pattern: "/supervision-dashboard", Portals: []common.PortalScope{common.PortalTenant},
+		Query:    []common.QueryParam{{Name: "group_id", Kind: common.QueryID}},
+		Response: supervisionDashboardService.DashboardProjection{},
+	}}
+}
+
 func NewResource(query supervisionDashboardService.Query) *Resource {
 	return &Resource{SupervisionDashboardService: query}
 }

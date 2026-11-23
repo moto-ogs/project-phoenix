@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import PlanningTracksPage from "./page";
@@ -9,11 +9,12 @@ import { catalogText } from "~/test/error-catalog-text";
 
 vi.mock("~/lib/swr/hooks", () => ({ useDiscardRefusedEntity: () => vi.fn() }));
 
+const searchParams = vi.hoisted(() => ({ value: new URLSearchParams() }));
 vi.mock("next/navigation", () => ({
   redirect: vi.fn(),
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() }),
   usePathname: () => "/test-tenant/database/planning-tracks",
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => searchParams.value,
 }));
 
 vi.mock("~/hooks/useUpdateUrlParams", () => ({
@@ -59,6 +60,7 @@ vi.mock("~/lib/swr", () => ({
 }));
 
 beforeEach(() => {
+  searchParams.value = new URLSearchParams();
   vi.mocked(useTimetableEnabled).mockReturnValue(true);
   swrState.data = undefined;
   swrState.error = undefined;
@@ -138,5 +140,37 @@ describe("Planungsspuren", () => {
     expect(
       screen.queryByText("Noch keine Planungsspuren"),
     ).not.toBeInTheDocument();
+  });
+
+  // ADR 0311: das Speichern schickt den Stand der Spur, aus dem das Formular
+  // stammt.
+  it("saves an edit with the version of the track it edits", async () => {
+    searchParams.value = new URLSearchParams("eintrag=1");
+    planningTrackService.update.mockResolvedValue({});
+    swrState.data = [
+      {
+        id: "1",
+        name: "Jahrgang 1",
+        color: "#5080D8",
+        sortOrder: 3,
+        version: "v7",
+      },
+    ];
+    swrState.isLoading = false;
+    render(<PlanningTracksPage />);
+
+    fireEvent.change(screen.getByDisplayValue("Jahrgang 1"), {
+      target: { value: "Jahrgang 2" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() =>
+      expect(planningTrackService.update).toHaveBeenCalledWith("1", {
+        name: "Jahrgang 2",
+        color: "#5080D8",
+        sort_order: 3,
+        expected_version: "v7",
+      }),
+    );
   });
 });

@@ -57,7 +57,7 @@ export interface RelationshipFormData {
 interface PhoneEntry {
   id: string;
   phoneNumber: string;
-  phoneType: PhoneType;
+  phoneType: PhoneType | undefined;
   label: string;
   isPrimary: boolean;
 }
@@ -95,6 +95,14 @@ function createEmptyPhone(isPrimary = false): PhoneEntry {
     label: "",
     isPrimary,
   };
+}
+
+// Eine reine Abholperson darf ohne E-Mail und Telefon gespeichert werden;
+// als Notfallkontakt muss sie erreichbar sein.
+function contactRequired(
+  entry: Pick<GuardianEntry, "guardianRole" | "isEmergencyContact">,
+): boolean {
+  return entry.guardianRole !== "pickup_only" || entry.isEmergencyContact;
 }
 
 // Create empty guardian entry
@@ -227,7 +235,7 @@ interface GuardianFormModalProps {
       phoneNumbers: Array<{
         id?: string; // Phone ID (for edit mode)
         phoneNumber: string;
-        phoneType: PhoneType;
+        phoneType: PhoneType | undefined;
         label?: string;
         isPrimary: boolean;
       }>;
@@ -236,6 +244,11 @@ interface GuardianFormModalProps {
   ) => Promise<void>;
   readonly onDelete?: () => void;
   readonly initialData?: GuardianWithRelationship;
+  /**
+   * Edit: reads the stored guardian after a refused save and hands it in as
+   * `initialData`; rejects when the read fails (ADR 0311).
+   */
+  readonly onReload?: () => Promise<unknown>;
   readonly mode: "create" | "edit";
 }
 
@@ -245,6 +258,7 @@ export default function GuardianFormModal({
   onSubmit,
   onDelete,
   initialData,
+  onReload,
   mode,
 }: GuardianFormModalProps) {
   // Another guardian in the open panel starts a new session (#6593).
@@ -258,7 +272,10 @@ export default function GuardianFormModal({
   const [newEntryId, setNewEntryId] = useState<string | null>(null);
   const entryRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
-  // Reset entries when modal opens/closes or initialData changes
+  // Reset entries when modal opens/closes or initialData changes. The stored
+  // row read after a refused save refills the form but keeps the refusal's
+  // message: errors clear only for a new opening or another guardian.
+  const initialId = initialData?.id;
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
@@ -266,12 +283,14 @@ export default function GuardianFormModal({
       } else {
         setEntries([createEmptyEntry()]);
       }
-      clearErrors();
       setFieldErrors(new Set());
       setNewEntryId(null);
       entryRefs.current.clear();
     }
-  }, [isOpen, initialData, clearErrors]);
+  }, [isOpen, initialData]);
+  useEffect(() => {
+    if (isOpen) clearErrors();
+  }, [isOpen, initialId, clearErrors]);
 
   // Scroll to newly added entry
   useEffect(() => {
@@ -447,13 +466,28 @@ export default function GuardianFormModal({
         (p) => p.phoneNumber.trim() !== "",
       );
 
-      if (!hasEmail && !hasPhone) {
+      // Die Kontaktdaten gehören zur Person, nicht zu diesem Kind: Bei einem
+      // Geschwisterkind kann sie Notfallkontakt sein. Die letzte gespeicherte
+      // Kontaktmöglichkeit bleibt deshalb auch bei „Nur Abholung“ stehen.
+      const keepsStoredContact =
+        mode === "edit" &&
+        Boolean(initialData?.email || initialData?.phoneNumbers.length);
+      if (
+        !hasEmail &&
+        !hasPhone &&
+        (contactRequired(entry) || keepsStoredContact)
+      ) {
         const contactErrors = new Set<string>([`${entry.id}:email`]);
         for (const phone of entry.phoneNumbers) {
           contactErrors.add(`${entry.id}:phone:${phone.id}`);
         }
         setFieldErrors(contactErrors);
-        return `Mindestens eine Kontaktmöglichkeit ist erforderlich${label}`;
+        if (entry.isEmergencyContact) {
+          return `Ein Notfallkontakt braucht eine Telefonnummer oder E-Mail-Adresse${label}`;
+        }
+        return contactRequired(entry)
+          ? `Mindestens eine Kontaktmöglichkeit ist erforderlich${label}`
+          : `Lass eine Telefonnummer oder E-Mail-Adresse stehen: Die Person kann auch bei einem Geschwisterkind eingetragen sein${label}`;
       }
     }
 
@@ -469,21 +503,36 @@ export default function GuardianFormModal({
     phoneNumbers: Array<{
       id?: string;
       phoneNumber: string;
-      phoneType: PhoneType;
+      phoneType: PhoneType | undefined;
       label?: string;
       isPrimary: boolean;
     }>;
   }> => {
+    // Beim Bearbeiten heißt ein geleertes Feld „löschen“: "" kommt im Backend
+    // an, undefined ließe den alten Wert stehen. Nur ein Feld, das beim
+    // Öffnen einen Wert hatte, wird geleert; ein unberührt leeres Feld
+    // schreibt nichts.
+    const valueOrCleared = (value: string, stored?: string | null) =>
+      value.trim() || (mode === "edit" && stored ? "" : undefined);
     return entries.map((entry) => ({
       id: entry.id,
       guardianData: {
         firstName: entry.firstName.trim(),
         lastName: entry.lastName.trim(),
-        email: entry.email.trim() || undefined,
-        addressStreet: entry.addressStreet.trim() || undefined,
-        addressCity: entry.addressCity.trim() || undefined,
-        addressPostalCode: entry.addressPostalCode.trim() || undefined,
-        notes: entry.notes.trim() || undefined,
+        email: valueOrCleared(entry.email, initialData?.email),
+        addressStreet: valueOrCleared(
+          entry.addressStreet,
+          initialData?.addressStreet,
+        ),
+        addressCity: valueOrCleared(
+          entry.addressCity,
+          initialData?.addressCity,
+        ),
+        addressPostalCode: valueOrCleared(
+          entry.addressPostalCode,
+          initialData?.addressPostalCode,
+        ),
+        notes: valueOrCleared(entry.notes, initialData?.notes),
         languagePreference: entry.languagePreference || "de",
       },
       relationshipData: {
@@ -543,6 +592,8 @@ export default function GuardianFormModal({
               : "das Speichern der Erziehungsberechtigten",
           // Erneut absenden mit den Eingaben von jetzt.
           retry: () => formRef.current?.requestSubmit(),
+          // Geändert seit dem Öffnen: der gespeicherte Stand steht im Formular.
+          reload: onReload,
         });
       }
     });
@@ -732,6 +783,11 @@ export default function GuardianFormModal({
                       hint={PARENT_VISIBLE_HINTS.guardianContact}
                     />
                   </h3>
+                  <p className="mb-3 text-sm text-gray-600 md:mb-4">
+                    {contactRequired(entry)
+                      ? "Trage mindestens eine E-Mail-Adresse oder eine Telefonnummer ein."
+                      : "Bei „Nur Abholung“ sind E-Mail und Telefon freiwillig."}
+                  </p>
 
                   {/* Email */}
                   <div className="mb-4">
@@ -767,7 +823,7 @@ export default function GuardianFormModal({
                         <div className="w-full sm:w-32">
                           <CustomSelect
                             id={`phone-type-${entry.id}-${phone.id}`}
-                            value={phone.phoneType}
+                            value={phone.phoneType ?? ""}
                             options={(
                               Object.keys(PHONE_TYPE_LABELS) as PhoneType[]
                             ).map((type) => ({

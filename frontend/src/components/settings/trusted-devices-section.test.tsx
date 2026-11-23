@@ -25,6 +25,11 @@ function render(ui: ReactNode) {
 
 const toastSuccess = vi.fn();
 const toastError = vi.fn();
+// The staff session gate lets the request through; fetch gets the answer on.
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
 vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/contexts/ToastContext")>()),
   useToast: () => ({
@@ -96,7 +101,7 @@ describe("TrustedDevicesSection", () => {
   });
 
   it("renders empty state when no devices exist", async () => {
-    global.fetch = jsonResponse([]);
+    global.fetch = jsonResponse({ status: "success", data: [] });
     render(<TrustedDevicesSection />);
 
     await waitFor(() => {
@@ -111,7 +116,7 @@ describe("TrustedDevicesSection", () => {
   });
 
   it("renders a device row with shortened User-Agent + revoke button", async () => {
-    global.fetch = jsonResponse([sampleDevice]);
+    global.fetch = jsonResponse({ status: "success", data: [sampleDevice] });
     render(<TrustedDevicesSection />);
 
     await waitFor(() => {
@@ -149,12 +154,11 @@ describe("TrustedDevicesSection", () => {
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
         "/api/operator/auth/mfa/trusted-devices",
-        expect.objectContaining({
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-        }),
+        expect.objectContaining({ method: "GET" }),
       );
     });
+    // No bearer token leaves the browser: the request carries no headers.
+    expect(vi.mocked(global.fetch).mock.calls[0]?.[1]?.headers).toBeUndefined();
     expect(mockGetSession).not.toHaveBeenCalled();
     expect(
       await screen.findByText(/Du hast aktuell keine vertrauten Geräte/),
@@ -167,7 +171,7 @@ describe("TrustedDevicesSection", () => {
       error: "RefreshTokenError",
       expires: "2099-01-01",
     };
-    global.fetch = jsonResponse([]);
+    global.fetch = jsonResponse({ status: "success", data: [] });
     render(<TrustedDevicesSection />);
 
     expect(
@@ -178,9 +182,9 @@ describe("TrustedDevicesSection", () => {
   });
 
   it("calls DELETE on revoke + reloads the list", async () => {
-    const listMock = jsonResponse([sampleDevice]);
+    const listMock = jsonResponse({ status: "success", data: [sampleDevice] });
     const deleteMock = noContentResponse();
-    const reloadMock = jsonResponse([]);
+    const reloadMock = jsonResponse({ status: "success", data: [] });
     let call = 0;
     global.fetch = vi.fn(async (input, init) => {
       call++;
@@ -249,11 +253,11 @@ describe("TrustedDevicesSection", () => {
 
     it("keeps a revoked device revoked when the reload fails", async () => {
       const responses = [
-        () => jsonResponse([sampleDevice]),
+        () => jsonResponse({ status: "success", data: [sampleDevice] }),
         () => noContentResponse(),
         () =>
           jsonResponse({ code: "general.unavailable", detail: "down" }, 503),
-        () => jsonResponse([]),
+        () => jsonResponse({ status: "success", data: [] }),
       ];
       let call = 0;
       const fetchMock = vi.fn(async (input: RequestInfo, init?: RequestInit) =>

@@ -2,15 +2,15 @@
 // One command for CI's fast checks on this branch's changes, uncommitted and
 // untracked files included:
 //   static  scripts/pre-push.sh --worktree: secrets, agent context, generated
-//           error codes, backend lint, frontend lint/types/knip/guard
+//           error codes, backend lint, frontend lint/types/knip/depcruise/guard
 //           inventory, as selected by the changed paths
 //   arch    scripts/backend-architecture.sh check without the base
 //           comparison, when a path of CI's architecture ratchet changed:
 //           import policy for production and test packages (imports.forbidden),
 //           legacy baseline and pass-through evidence of the working tree.
 //           About 30 s warm; CI adds the comparison with the base (about 60 s).
-//   tests   scripts/test-changed.sh --fast: affected Go packages and their
-//           direct importers, affected source ratchets and selected frontend tests
+//   tests   scripts/test-changed.sh --fast: the changed Go packages without
+//           their importers, affected source ratchets and selected frontend tests
 // CI still runs the full affected closure and the full architecture ratchet.
 //
 //   scripts/run-go-toolchain.sh scripts/check-changed.mjs [--fast] [base]   (default origin/development)
@@ -18,7 +18,7 @@
 // Two steps run side by side when the machine has room (8 CPUs, 16 GB and a
 // load average below half the CPUs), otherwise one after the other, static
 // checks first because they fail faster. Each prints its output when it finishes; a
-// step running past PHX_CHECK_TIMEOUT_MINUTES (default 30) is stopped with its
+// step running past PHX_CHECK_TIMEOUT_MINUTES (default 10) is stopped with its
 // process group and reported as TIMEOUT. A rerun with byte-identical inputs
 // (every non-ignored file, the base, env files, installed dependencies, Node
 // and Go) prints the last passing summary instead; PHX_CACHE_VERIFY_RATE
@@ -32,7 +32,7 @@ import { pathToFileURL } from 'node:url';
 import { checkLocalMigrationVersions } from './check-migration-versions.mjs';
 import { changedPaths } from './backend-source-ratchets.mjs';
 import { MODEL_PATH as CONTRACT_MODEL_PATH } from './check-contract-compat.mjs';
-import { REGISTER_PATH as PROXY_REGISTER_PATH } from './check-proxy-routes.mjs';
+import { CATALOG_DIR } from './check-contract-shrink.mjs';
 
 // The paths that start CI's "Backend architecture ratchet" (main.yml, filter
 // backend-architecture). Keep both lists in step.
@@ -56,9 +56,9 @@ export function stepsFor(root, base, paths) {
     ...(paths.includes(CONTRACT_MODEL_PATH)
       ? [{ name: 'contract', command: ['node', 'scripts/check-contract-compat.mjs', base] }]
       : []),
-    // A new pass-through route file belongs in the contract instead (#2352).
-    ...(paths.some(path => path.startsWith(`${PROXY_REGISTER_PATH}/`))
-      ? [{ name: 'proxy-routes', command: ['node', 'scripts/check-proxy-routes.mjs', base] }]
+    // Catalog lines outside the contract only shrink (#2353, #7808).
+    ...(paths.some(path => path === CONTRACT_MODEL_PATH || path.startsWith(`${CATALOG_DIR}/`))
+      ? [{ name: 'contract-registers', command: ['node', 'scripts/check-contract-shrink.mjs', base] }]
       : []),
     { name: 'tests', command: ['bash', 'scripts/test-changed.sh', '--fast', base] },
   ];
@@ -243,7 +243,7 @@ async function main(argv) {
     console.error('check-changed: pnpm install --frozen-lockfile failed');
     return 1;
   }
-  const minutes = Number(process.env.PHX_CHECK_TIMEOUT_MINUTES || 30);
+  const minutes = Number(process.env.PHX_CHECK_TIMEOUT_MINUTES || 10);
   const concurrency = concurrencyFor();
   console.log(`check-changed: ${mergeBase.slice(0, 10)}..working tree, ${concurrency === 2 ? 'steps side by side' : 'one step at a time'}, timeout ${minutes} min per step`);
   const results = await runSteps(stepsFor(root, base, changedPaths(root, base)), { concurrency, timeoutMs: minutes * 60_000, cwd: root });
@@ -253,6 +253,9 @@ async function main(argv) {
     return 130;
   }
   console.log(`\n===== summary =====\n${summary}`);
+  if (results.some(result => result.status === 'TIMEOUT')) {
+    console.log(`TIMEOUT: stopped after ${minutes} min, not a check failure. A go.mod change or a loaded machine needs more: raise PHX_CHECK_TIMEOUT_MINUTES.`);
+  }
   const passed = results.every(result => result.status === 'ok');
   // PHX_PREPUSH=skip passes the static step without checking anything.
   if (passed && process.env.PHX_PREPUSH !== 'skip' && inputsKey(root, mergeBase) === key) {

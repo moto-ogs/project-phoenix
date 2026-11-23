@@ -42,6 +42,12 @@ func schoolDB(ctx context.Context) (bun.IDB, int64, error) {
 	return tx, school.Int64(), nil
 }
 
+// TransactionSchool is the school whose tenant transaction ctx carries.
+func (Store) TransactionSchool(ctx context.Context) (int64, error) {
+	_, school, err := schoolDB(ctx)
+	return school, err
+}
+
 type bookedVersionRow struct {
 	ContractID    int64          `bun:"contract_id"`
 	StudentID     int64          `bun:"student_id"`

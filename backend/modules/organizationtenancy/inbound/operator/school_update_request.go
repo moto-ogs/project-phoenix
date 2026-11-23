@@ -8,20 +8,21 @@ import (
 	"strings"
 
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type updateSchoolRequest struct {
-	OrganizationID int64  `json:"organization_id"`
-	Name           string `json:"name"`
-	Slug           string `json:"slug"`
-	Subdomain      string `json:"subdomain"`
-	Address        string `json:"address"`
-	City           string `json:"city"`
-	Zip            string `json:"zip"`
-	Phone          string `json:"phone"`
-	Email          string `json:"email"`
-	Active         bool   `json:"active"`
-	Hidden         bool   `json:"hidden"`
+	OrganizationID ident.ID `json:"organization_id"`
+	Name           string   `json:"name"`
+	Slug           string   `json:"slug"`
+	Subdomain      string   `json:"subdomain"`
+	Address        string   `json:"address"`
+	City           string   `json:"city"`
+	Zip            string   `json:"zip"`
+	Phone          string   `json:"phone"`
+	Email          string   `json:"email"`
+	Active         bool     `json:"active"`
+	Hidden         bool     `json:"hidden"`
 	// ChildQuota is the Kinderkontingent (#3567): absent keeps it, null
 	// removes it, an object sets it.
 	ChildQuota ChildQuotaField `json:"child_quota"`

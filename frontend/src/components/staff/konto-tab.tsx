@@ -19,6 +19,7 @@ import {
 } from "~/lib/account-role-assignment";
 import { getRoleDisplayName } from "~/lib/auth-helpers";
 import { useApiFormError } from "~/contexts/ToastContext";
+import { isChangedSinceRead } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
 import { displayEmail } from "~/lib/demo-build";
 import { useClipboardCopy } from "~/lib/use-clipboard-copy";
@@ -36,14 +37,18 @@ const logger = createLogger({ component: "StaffKontoTab" });
  * ändern darf, sind gesetzt: ohne users:update fehlen Vorname und Nachname,
  * ohne Betreuungsprofil die Position, ohne Rollenwechsel `role_id`.
  */
-export interface KontoDraft {
-  readonly first_name?: string;
-  readonly last_name?: string;
-  readonly role?: string | null;
-  readonly staff_notes?: string;
+export type KontoDraft = Readonly<
+  Partial<Pick<Teacher, "first_name" | "last_name" | "role" | "staff_notes">>
+> & {
   /** Neue Systemrolle, nur wenn sie sich von der aktuellen unterscheidet. */
   readonly role_id?: string;
-}
+  /**
+   * Die Version der Rollen, die das Feld zeigte, als die Person die Rolle
+   * wählte (ADR 0311); gesetzt mit `role_id`. Ein späteres Nachladen ändert
+   * sie nicht, sonst ersetzte das Speichern eine inzwischen vergebene Rolle.
+   */
+  readonly role_version?: string;
+};
 
 /** Der Bearbeiten-Zustand des Reiters. */
 export interface KontoEditing {
@@ -100,6 +105,8 @@ interface Draft {
   position: string;
   notes: string;
   roleId: string;
+  /** Die Version der Rollen bei der ersten Wahl einer Rolle (ADR 0311). */
+  roleVersion?: string;
 }
 
 function formatTimestamp(iso: string): string {
@@ -206,7 +213,7 @@ export function KontoTab({ teacher, editing }: KontoTabProps) {
       !assignment.currentIsLehrkraft &&
       selectedRoleId !== "" &&
       currentSelectableRoleId(assignment) !== selectedRoleId
-        ? { role_id: selectedRoleId }
+        ? { role_id: selectedRoleId, role_version: draft.roleVersion ?? "" }
         : {}),
     };
 
@@ -221,7 +228,16 @@ export function KontoTab({ teacher, editing }: KontoTabProps) {
         error: err instanceof Error ? err.message : String(err),
       });
       const roleOnly = err instanceof KontoRoleSaveError;
-      await errors.show(roleOnly ? err.cause : err, {
+      const cause = roleOnly ? err.cause : err;
+      if (roleOnly && isChangedSinceRead(cause)) {
+        // Die Rollen haben sich seit dem Lesen geändert (ADR 0311): Das Feld
+        // zeigt wieder die gespeicherte Rolle, die die Seite neu liest. Ein
+        // „Wiederholen“ schickte nur denselben veralteten Stand.
+        patchDraft({ roleId: "", roleVersion: undefined });
+        await errors.show(cause, { object: "die Rolle" });
+        return;
+      }
+      await errors.show(cause, {
         object: roleOnly ? "die Rolle" : "das Konto",
         // Der Datensatz ist bei KontoRoleSaveError bereits gespeichert. Der
         // aktuelle Rollenentwurf geht noch einmal raus, ohne Name, Position
@@ -493,7 +509,14 @@ function KontoEditForm({
               value={roleValue}
               disabled={saving}
               error={fieldError("role_id")}
-              onChange={(next) => onPatch({ roleId: next })}
+              onChange={(next) =>
+                onPatch({
+                  roleId: next,
+                  // Gilt der Stand, den die Person beim Wählen sah; ein
+                  // Nachladen im Hintergrund ersetzt ihn nicht.
+                  roleVersion: draft.roleVersion ?? assignment?.version,
+                })
+              }
             />
           ) : (
             <DataGrid>

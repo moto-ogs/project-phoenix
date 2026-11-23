@@ -71,6 +71,26 @@ export function mandateExpired(mandate: SepaMandate, today: string): boolean {
   return mandate.expiresOn !== null && mandate.expiresOn <= today;
 }
 
+/** A one-off mandate that was collected once: it authorizes no further
+ * collection (#4697). */
+export function mandateUsedUp(mandate: SepaMandate): boolean {
+  return mandate.kind === "one_off" && mandate.lastCollectedOn !== null;
+}
+
+/** Whether the billing may collect with the mandate on the school day
+ * today, as the backend checks it (MandateCollectionGap). */
+export function mandateCollectable(
+  mandate: SepaMandate,
+  today: string,
+): boolean {
+  return (
+    !mandate.revokedOn &&
+    mandate.creditorCurrent &&
+    !mandateExpired(mandate, today) &&
+    !mandateUsedUp(mandate)
+  );
+}
+
 /** The state of a mandate as a badge on the school day today. */
 export function mandateState(
   mandate: SepaMandate,
@@ -86,24 +106,31 @@ export function mandateState(
   if (mandateExpired(mandate, today)) {
     return { label: "Verfallen", tone: "red" };
   }
+  if (mandateUsedUp(mandate)) return { label: "Verbraucht", tone: "red" };
   return { label: "Gültig", tone: "green" };
+}
+
+/** The name of a mandate kind; "–" for a kind this build does not know. */
+export function mandateKindLabel(kind: MandateKind | undefined): string {
+  return kind ? MANDATE_KIND_LABELS[kind] : "–";
 }
 
 /** What the next collection of a mandate is. */
 export function nextDebitLabel(mandate: SepaMandate): string {
-  if (mandate.revokedOn) return "–";
+  if (mandate.revokedOn || mandateUsedUp(mandate)) return "–";
   if (mandate.kind === "one_off") return "Einmalige Lastschrift";
+  if (mandate.kind === undefined || mandate.sequence === undefined) return "–";
   return MANDATE_SEQUENCE_LABELS[mandate.sequence];
 }
 
 /** One line of the trail: what happened and where. */
 export function mandateEventLabel(event: SepaMandateEvent): string {
-  const action = ACTION_LABELS[event.action];
+  const action = event.action ? ACTION_LABELS[event.action] : "Eintrag";
   const fields = event.fields
     .map((field) => FIELD_LABELS[field] ?? field)
     .join(", ");
   const what = fields ? `${action}: ${fields}` : action;
-  return `${what} ${SOURCE_LABELS[event.source]}`;
+  return event.source ? `${what} ${SOURCE_LABELS[event.source]}` : what;
 }
 
 /** Who acted in a trail entry: the e-mail of a known account, else its

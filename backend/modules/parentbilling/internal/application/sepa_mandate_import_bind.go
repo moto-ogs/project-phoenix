@@ -2,12 +2,10 @@ package application
 
 import (
 	"context"
-	"encoding/hex"
-	"encoding/json"
 	"fmt"
-	"hash/fnv"
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // What binds an import to the stored mandates and to the preview the office
@@ -33,7 +31,7 @@ func (m *SEPAMandates) importAccounts(ctx context.Context, reviewer parentbillin
 	ids := []int64{}
 	for _, mandate := range existing {
 		if named[mandate.Reference] {
-			ids = append(ids, mandate.ID)
+			ids = append(ids, mandate.ID.Int64())
 		}
 	}
 	accounts := map[int64]importAccount{}
@@ -50,7 +48,7 @@ func (m *SEPAMandates) importAccounts(ctx context.Context, reviewer parentbillin
 		if err != nil {
 			return nil, err
 		}
-		accounts[entry.Mandate.ID], opened[i] = account, entry.Mandate
+		accounts[entry.Mandate.ID.Int64()], opened[i] = account, entry.Mandate
 	}
 	if err := m.store.InsertSEPAMandateEvents(ctx, reviewer.OrganizationID, reviewer.AccountID, mandateRead,
 		parentbilling.MandateFromImport, nil, opened); err != nil {
@@ -92,18 +90,10 @@ func importFingerprint(mapping parentbilling.SEPAMandateImportMapping, creditorI
 			destinations[i] = "child\x1e" + importChildKey(candidate)
 		}
 	}
-	state, err := json.Marshal(struct {
+	return readstate.Fingerprint(struct {
 		Mapping      parentbilling.SEPAMandateImportMapping `json:"mapping"`
 		Creditor     string                                 `json:"creditor"`
 		Rows         []parentbilling.SEPAMandateImportRow   `json:"rows"`
 		Destinations []string                               `json:"destinations"`
 	}{mapping, creditorID, rows, destinations})
-	if err != nil {
-		// Every value above marshals; a failure leaves no fingerprint an
-		// import could match.
-		return ""
-	}
-	hash := fnv.New128a()
-	_, _ = hash.Write(state)
-	return hex.EncodeToString(hash.Sum(nil))
 }

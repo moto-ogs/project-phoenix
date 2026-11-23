@@ -28,6 +28,9 @@ type AdminUpdateOfferingsRequest struct {
 type AdminUpdateOfferingSelection struct {
 	OfferingID   string   `json:"offering_id"`
 	SelectedDays []string `json:"selected_days,omitempty"`
+	// ExtendToPhaseEnd books a limited offering to the end of the phase, or
+	// to the earlier care end of the child record (#7929).
+	ExtendToPhaseEnd bool `json:"extend_to_phase_end,omitempty"`
 }
 
 func (req *AdminUpdateOfferingsRequest) Bind(_ *http.Request) error { return nil }
@@ -91,15 +94,15 @@ func (rs *Resource) updateAdminChildOfferings(w http.ResponseWriter, r *http.Req
 		common.RenderError(w, r, updateAdminOfferingsErrorRenderer(err))
 		return
 	}
-	out := adminChildOfferingsResponse{AdminRequestChild: newAdminRequestChild(updated.Child), RosterImpact: newRosterImpactResponse(updated.RosterImpact)}
-	out.CustomData = updated.Child.CustomData
+	out := AdminChildOfferingsResponse{AdminRequestChild: newAdminRequestChild(updated.Child), RosterImpact: newRosterImpactResponse(updated.RosterImpact)}
+	out.CustomData = formAnswerMap(updated.Child.CustomData)
 	rs.enrichUpdatedAdminOfferings(r, requestID, childID, &out.AdminRequestChild)
 	common.Respond(w, r, http.StatusOK, out, "Child offerings updated")
 }
 
-// adminChildOfferingsResponse is the corrected child with the effect of the
+// AdminChildOfferingsResponse is the corrected child with the effect of the
 // correction on the child's Regeltermine (#5102).
-type adminChildOfferingsResponse struct {
+type AdminChildOfferingsResponse struct {
 	AdminRequestChild
 	RosterImpact enrollmentRosterImpactResponse `json:"roster_impact"`
 }
@@ -135,8 +138,9 @@ func parseAdminOfferingUpdate(
 			return nil, nil, fmt.Errorf("%w: invalid offering_id", capability.ErrOfferingAdjustmentInvalid)
 		}
 		selections = append(selections, OfferingAdjustmentSelection{
-			OfferingID:   offeringID,
-			SelectedDays: row.SelectedDays,
+			OfferingID:       offeringID,
+			SelectedDays:     row.SelectedDays,
+			ExtendToPhaseEnd: row.ExtendToPhaseEnd,
 		})
 	}
 	var effectiveFrom *calendar.Date
@@ -232,7 +236,12 @@ func (rs *Resource) listAdminChildOfferingAdjustments(w http.ResponseWriter, r *
 	}
 	out := make([]AdminOfferingAdjustment, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, toAdminOfferingAdjustment(row))
+		adjustment, err := toAdminOfferingAdjustment(row)
+		if err != nil {
+			common.RenderError(w, r, common.ErrorInternalServerWrap("decode offering adjustment", err))
+			return
+		}
+		out = append(out, adjustment)
 	}
 	common.Respond(w, r, http.StatusOK, out, "Offering adjustments retrieved")
 }
@@ -268,6 +277,10 @@ type AdminRequestChildOffering struct {
 	ValidFrom             string   `json:"valid_from,omitempty"`
 	ValidUntil            string   `json:"valid_until,omitempty"`
 	StartsLater           bool     `json:"starts_later,omitempty"`
+	// ExtendsUntil is the last day (inclusive) the office can extend this
+	// current booking to in an undated correction (#7929), absent when it
+	// cannot be extended.
+	ExtendsUntil string `json:"extends_until,omitempty"`
 	// SubmittedTerms are the catalog terms the parents submitted and signed
 	// (#6837), absent for a booking without a snapshot. ChangedTerms names
 	// what the catalog changed since: price, days, activity. While it is
@@ -300,6 +313,7 @@ func toAdminChildOffering(row ChildOfferingRow) AdminRequestChildOffering {
 		ValidFrom:             optionalDateString(row.ValidFrom),
 		ValidUntil:            optionalInclusiveEndDateString(row.ValidUntil),
 		StartsLater:           row.StartsLater,
+		ExtendsUntil:          optionalDateString(row.ExtendsUntil),
 		SubmittedTerms:        toAdminSubmittedOfferingTerms(row.SubmittedTerms),
 		ChangedTerms:          row.ChangedTerms,
 	}
@@ -315,8 +329,8 @@ func toAdminSubmittedOfferingTerms(terms *capability.OfferingTerms) *AdminSubmit
 	}
 }
 
-func toAdminOfferingAdjustment(row *OfferingAdjustment) AdminOfferingAdjustment {
-	return AdminOfferingAdjustment{
+func toAdminOfferingAdjustment(row *OfferingAdjustment) (AdminOfferingAdjustment, error) {
+	response := AdminOfferingAdjustment{
 		ID:                 strconv.FormatInt(row.ID, 10),
 		RequestID:          strconv.FormatInt(row.RequestID, 10),
 		RequestChildID:     strconv.FormatInt(row.RequestChildID, 10),
@@ -326,8 +340,13 @@ func toAdminOfferingAdjustment(row *OfferingAdjustment) AdminOfferingAdjustment 
 		ActorNameSnapshot:  row.ActorNameSnapshot,
 		ActorEmailSnapshot: row.ActorEmailSnapshot,
 		Reason:             row.Reason,
-		Before:             row.Before,
-		After:              row.After,
 		ChangedAt:          row.ChangedAt,
 	}
+	if err := decodeJSONObject(row.Before, &response.Before); err != nil {
+		return AdminOfferingAdjustment{}, fmt.Errorf("before snapshot: %w", err)
+	}
+	if err := decodeJSONObject(row.After, &response.After); err != nil {
+		return AdminOfferingAdjustment{}, fmt.Errorf("after snapshot: %w", err)
+	}
+	return response, nil
 }

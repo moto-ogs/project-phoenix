@@ -11,7 +11,9 @@ import {
   type CompanionWeekday,
 } from "./student-companion-api";
 
-function parsedBody(body: string): unknown {
+/** The error body: parsed already (ApiError.problem) or its JSON text. */
+function parsedBody(body: unknown): unknown {
+  if (typeof body !== "string") return body;
   try {
     return JSON.parse(body) as unknown;
   } catch {
@@ -58,7 +60,7 @@ export class CompanionPlanConflictError extends ApiError {
    */
   readonly conflicts: CompanionExtensionConfirmation[];
 
-  constructor(body: string) {
+  constructor(body: unknown) {
     const parsed = parsedBody(body);
     super(problemDetail(parsed)?.trim() ?? "companion plan conflict", 409);
     // Keeps code and details, including the half-saved consent marker.
@@ -75,14 +77,17 @@ export class CompanionPlanConflictError extends ApiError {
  * one of those as the question would replace its real contract with an empty
  * confirmation the user cannot answer.
  */
-export function isCompanionPlanConflictResponse(body: string): boolean {
+export function isCompanionPlanConflictResponse(body: unknown): boolean {
   return conflictExtensions(parsedBody(body)).length > 0;
 }
 
 /**
  * The submitted "läuft mit" list was built on a snapshot someone else has
  * since replaced. Re-sending the SAME list is exactly what the refusal
- * prevents, so the form reloads first and lets the user redo the edit.
+ * prevents, so the form reloads first and lets the user redo the edit. This
+ * is the code an older backend still in service answers; the current one
+ * answers general.changed_since_read (ADR 0311), which the form handles
+ * before it, with isChangedSinceRead.
  */
 export function isCompanionsChanged(err: unknown): boolean {
   return err instanceof ApiError && err.code === "students.companions_changed";

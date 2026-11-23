@@ -4,17 +4,22 @@ import {
   arr,
   bool,
   calendarDate,
+  fileAnswer,
   instant,
-  int64StringOrNumber,
+  int64String,
+  multipart,
   nullable,
   object,
+  optional,
   requestBody,
   safeInt,
   str,
   success,
 } from "./runtime";
 import {
+  CareSchoolSchema,
   ContributionRuleSchema,
+  type CareSchool,
   type ContributionRule,
 } from "./shared.generated";
 
@@ -27,7 +32,7 @@ export interface FamilyContractChild {
 }
 
 export const FamilyContractChildSchema: z.ZodType<FamilyContractChild, unknown> = object<FamilyContractChild>({
-  contract_id: int64StringOrNumber,
+  contract_id: int64String,
   school_name: str,
   child_first_name: str,
   child_last_name: str,
@@ -47,8 +52,8 @@ export interface FamilyChildCount {
 }
 
 export const FamilyChildCountSchema: z.ZodType<FamilyChildCount, unknown> = object<FamilyChildCount>({
-  id: int64StringOrNumber,
-  contract_id: int64StringOrNumber,
+  id: int64String,
+  contract_id: int64String,
   stated_children: nullable(safeInt),
   stated_at: nullable(instant),
   confirmed_children: nullable(safeInt),
@@ -68,10 +73,11 @@ export interface FamilyChildren {
   count: FamilyChildCount | null;
   status: string;
   differing: boolean;
+  version: string;
 }
 
 export const FamilyChildrenSchema: z.ZodType<FamilyChildren, unknown> = object<FamilyChildren>({
-  contract_id: int64StringOrNumber,
+  contract_id: int64String,
   recipient_first_name: str,
   recipient_last_name: str,
   recipient_email: str,
@@ -79,6 +85,7 @@ export const FamilyChildrenSchema: z.ZodType<FamilyChildren, unknown> = object<F
   count: nullable(FamilyChildCountSchema),
   status: str,
   differing: bool,
+  version: str,
 });
 
 /** Go: parentbilling.FamilyChildrenSet */
@@ -92,12 +99,135 @@ export const FamilyChildrenSetSchema: z.ZodType<FamilyChildrenSet, unknown> = ob
   rules: nullable(arr(ContributionRuleSchema)),
 });
 
+/** Go: parentbilling.FamilyChildrenImportColumns */
+export interface FamilyChildrenImportColumns {
+  child_first_name: string;
+  child_last_name: string;
+  child_birth_date: string;
+  school: string;
+  children: string;
+  valid_from: string;
+}
+
+export const FamilyChildrenImportColumnsSchema: z.ZodType<FamilyChildrenImportColumns, unknown> = object<FamilyChildrenImportColumns>({
+  child_first_name: str,
+  child_last_name: str,
+  child_birth_date: str,
+  school: str,
+  children: str,
+  valid_from: str,
+});
+
+/** Go: parentbilling.FamilyChildrenImportMapping */
+export interface FamilyChildrenImportMapping {
+  columns: FamilyChildrenImportColumns;
+  school_id: string;
+  valid_from: string | null;
+}
+
+export const FamilyChildrenImportMappingSchema: z.ZodType<FamilyChildrenImportMapping, unknown> = object<FamilyChildrenImportMapping>({
+  columns: FamilyChildrenImportColumnsSchema,
+  school_id: int64String,
+  valid_from: nullable(calendarDate),
+});
+
+/** Go: parentbilling.FamilyChildrenImportCounts */
+export interface FamilyChildrenImportCounts {
+  ready: number;
+  same: number;
+  differs: number;
+  conflict: number;
+  invalid: number;
+  imported: number;
+}
+
+export const FamilyChildrenImportCountsSchema: z.ZodType<FamilyChildrenImportCounts, unknown> = object<FamilyChildrenImportCounts>({
+  ready: safeInt,
+  same: safeInt,
+  differs: safeInt,
+  conflict: safeInt,
+  invalid: safeInt,
+  imported: safeInt,
+});
+
+/** Go: parentbilling.FamilyChildrenImportProblem */
+export interface FamilyChildrenImportProblem {
+  field: string;
+  code: string;
+}
+
+export const FamilyChildrenImportProblemSchema: z.ZodType<FamilyChildrenImportProblem, unknown> = object<FamilyChildrenImportProblem>({
+  field: str,
+  code: str,
+});
+
+/** Go: parentbilling.FamilyChildrenImportRow */
+export interface FamilyChildrenImportRow {
+  line: number;
+  status: string;
+  child_first_name: string;
+  child_last_name: string;
+  child_birth_date: string | null;
+  school_name: string;
+  children: number | null;
+  contract_id?: string;
+  valid_from: string | null;
+  later_valid_from: (string | null)[] | null;
+  confirmed_children: number | null;
+  problems: FamilyChildrenImportProblem[] | null;
+  repeats_line?: number;
+}
+
+export const FamilyChildrenImportRowSchema: z.ZodType<FamilyChildrenImportRow, unknown> = object<FamilyChildrenImportRow>({
+  line: safeInt,
+  status: str,
+  child_first_name: str,
+  child_last_name: str,
+  child_birth_date: nullable(calendarDate),
+  school_name: str,
+  children: nullable(safeInt),
+  contract_id: optional(int64String),
+  valid_from: nullable(calendarDate),
+  later_valid_from: nullable(arr(nullable(calendarDate))),
+  confirmed_children: nullable(safeInt),
+  problems: nullable(arr(FamilyChildrenImportProblemSchema)),
+  repeats_line: optional(safeInt),
+});
+
+/** Go: parentbilling.FamilyChildrenImport */
+export interface FamilyChildrenImport {
+  encoding: string;
+  delimiter: string;
+  headers: string[] | null;
+  mapping: FamilyChildrenImportMapping;
+  unmapped: string[] | null;
+  schools: CareSchool[] | null;
+  fingerprint?: string;
+  applied: boolean;
+  counts: FamilyChildrenImportCounts;
+  rows: FamilyChildrenImportRow[] | null;
+}
+
+export const FamilyChildrenImportSchema: z.ZodType<FamilyChildrenImport, unknown> = object<FamilyChildrenImport>({
+  encoding: str,
+  delimiter: str,
+  headers: nullable(arr(str)),
+  mapping: FamilyChildrenImportMappingSchema,
+  unmapped: nullable(arr(str)),
+  schools: nullable(arr(CareSchoolSchema)),
+  fingerprint: optional(str),
+  applied: bool,
+  counts: FamilyChildrenImportCountsSchema,
+  rows: nullable(arr(FamilyChildrenImportRowSchema)),
+});
+
 /** Go: parentbillinghttp.FamilyChildrenRequest */
 export interface FamilyChildrenRequest {
-  contract_id?: number;
+  contract_id?: string;
   children?: number;
   valid_from?: string | null;
   valid_until?: string | null;
+  expected_version?: string;
 }
 
 export const routes = {
@@ -112,6 +242,34 @@ export const routes = {
     pattern: "/traeger/family-children/",
     portals: ["org"],
     response: success(FamilyChildrenSetSchema),
+  },
+  "GET /traeger/family-children/export": {
+    method: "GET",
+    pattern: "/traeger/family-children/export",
+    portals: ["org"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
+    response: fileAnswer,
+  },
+  "POST /traeger/family-children/imports": {
+    method: "POST",
+    pattern: "/traeger/family-children/imports",
+    portals: ["org"],
+    maxBodyBytes: 2359296,
+    tooLargeCode: "parent_billing.family_children_import_file_too_large",
+    request: multipart,
+    response: success(FamilyChildrenImportSchema),
+  },
+  "POST /traeger/family-children/imports/preview": {
+    method: "POST",
+    pattern: "/traeger/family-children/imports/preview",
+    portals: ["org"],
+    noCommit: "an import preview checks the file and saves no row of it",
+    maxBodyBytes: 2359296,
+    tooLargeCode: "parent_billing.family_children_import_file_too_large",
+    request: multipart,
+    response: success(FamilyChildrenImportSchema),
   },
   "PUT /traeger/family-children/": {
     method: "PUT",

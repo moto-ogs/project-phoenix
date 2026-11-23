@@ -28,7 +28,7 @@ import (
 const costBearersPath = "/traeger/cost-bearers"
 
 type costBearerBody struct {
-	ID            int64  `json:"id"`
+	ID            wireID `json:"id"`
 	Name          string `json:"name"`
 	Address       string `json:"address"`
 	FileReference string `json:"file_reference"`
@@ -37,10 +37,10 @@ type costBearerBody struct {
 }
 
 type takeoverLineBody struct {
-	Kind           string `json:"kind"`
-	AmountCents    int64  `json:"amount_cents"`
-	CostBearerID   *int64 `json:"cost_bearer_id"`
-	CostBearerName string `json:"cost_bearer_name"`
+	Kind           string  `json:"kind"`
+	AmountCents    int64   `json:"amount_cents"`
+	CostBearerID   *wireID `json:"cost_bearer_id"`
+	CostBearerName string  `json:"cost_bearer_name"`
 }
 
 type takeoverContributionBody struct {
@@ -48,11 +48,11 @@ type takeoverContributionBody struct {
 		Lines      []takeoverLineBody `json:"lines"`
 		TotalCents int64              `json:"total_cents"`
 	} `json:"children"`
-	TotalCents        int64  `json:"total_cents"`
-	BenefitsExemption bool   `json:"benefits_exemption"`
-	CostBearerID      *int64 `json:"cost_bearer_id"`
-	CostBearerName    string `json:"cost_bearer_name"`
-	Frozen            bool   `json:"frozen"`
+	TotalCents        int64   `json:"total_cents"`
+	BenefitsExemption bool    `json:"benefits_exemption"`
+	CostBearerID      *wireID `json:"cost_bearer_id"`
+	CostBearerName    string  `json:"cost_bearer_name"`
+	Frozen            bool    `json:"frozen"`
 }
 
 func youthOffice() map[string]any {
@@ -73,7 +73,7 @@ func costBearerPath(id int64) string { return fmt.Sprintf("%s/%d", costBearersPa
 
 func (f reviewFixture) takeoverPreview(t *testing.T, registrationID int64, query string) *httptest.ResponseRecorder {
 	t.Helper()
-	return traegerJSON(t, f.traeger, f.office.token, http.MethodGet, holidayContributionPath(f.period.ID, registrationID)+query, nil)
+	return traegerJSON(t, f.traeger, f.office.token, http.MethodGet, holidayContributionPath(int64(f.period.ID), registrationID)+query, nil)
 }
 
 func refusalCode(t *testing.T, rec *httptest.ResponseRecorder) string {
@@ -125,17 +125,18 @@ func TestCostBearersAreKeptPerTraegerAndNamedOnesOnlySwitchOff(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Empty(t, decodeSchoolPortalData[[]costBearerBody](t, rec.Body.Bytes()))
 	for _, method := range []string{http.MethodPut, http.MethodDelete} {
-		rec = traegerJSON(t, f.traeger, foreign.token, method, costBearerPath(office.ID), youthOffice())
+		rec = traegerJSON(t, f.traeger, foreign.token, method, costBearerPath(int64(office.ID)), youthOffice())
 		assert.Equal(t, http.StatusNotFound, rec.Code, "%s of a foreign cost bearer: %s", method, rec.Body.String())
 	}
 
 	confirmSiblingsWithTakeover(t, f, office)
-	rec = traegerJSON(t, f.traeger, billing, http.MethodDelete, costBearerPath(office.ID), nil)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodDelete, costBearerPath(int64(office.ID)), nil)
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	assert.Equal(t, "parent_billing.cost_bearer_in_use", refusalCode(t, rec), "a frozen contribution names it")
 	switchedOff := youthOffice()
 	switchedOff["active"] = false
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPut, costBearerPath(office.ID), switchedOff)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPut, costBearerPath(int64(office.ID)),
+		withVersion(switchedOff, costBearerVersion(t, f.traeger, billing, int64(office.ID))))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.False(t, decodeSchoolPortalData[costBearerBody](t, rec.Body.Bytes()).Active)
 
@@ -151,9 +152,9 @@ func TestCostBearersAreKeptPerTraegerAndNamedOnesOnlySwitchOff(t *testing.T) {
 		Scan(context.Background(), &bearers))
 	assert.Equal(t, 2, bearers, "PUT /0 created no cost bearer")
 
-	rec = traegerJSON(t, f.traeger, billing, http.MethodDelete, costBearerPath(unused.ID), nil)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodDelete, costBearerPath(int64(unused.ID)), nil)
 	require.Equal(t, http.StatusNoContent, rec.Code, rec.Body.String())
-	rec = traegerJSON(t, f.traeger, billing, http.MethodDelete, costBearerPath(unused.ID), nil)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodDelete, costBearerPath(int64(unused.ID)), nil)
 	require.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
 	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, costBearersPath, nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
@@ -178,7 +179,7 @@ func TestCostTakeoverFreezesTheRestAfterTheSiblingDiscount(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	settings := decodeSchoolPortalData[struct {
 		CostBearers []struct {
-			ID   int64  `json:"id"`
+			ID   wireID `json:"id"`
 			Name string `json:"name"`
 		} `json:"cost_bearers"`
 	}](t, rec.Body.Bytes())
@@ -235,7 +236,8 @@ func TestCostTakeoverFreezesTheRestAfterTheSiblingDiscount(t *testing.T) {
 
 	renamed := youthOffice()
 	renamed["name"] = "Jugendamt Musterstadt"
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPut, costBearerPath(office.ID), renamed)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPut, costBearerPath(int64(office.ID)),
+		withVersion(renamed, costBearerVersion(t, f.traeger, billing, int64(office.ID))))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	rec = f.takeoverPreview(t, f.siblings, "")
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
@@ -255,20 +257,21 @@ func TestCostTakeoverShowsInTheRunTheOverviewAndTheReimbursementList(t *testing.
 	require.Equal(t, http.StatusCreated, proof.Code, proof.Body.String())
 
 	setNumberRange(t, f, billing, "FE-{NNNN}")
-	run := billingRun(t, f, billing, startBillingRun(t, f, billing, f.period.ID).ID)
+	run := billingRun(t, f, billing, int64(startBillingRun(t, f, billing, int64(f.period.ID)).ID))
 	assert.Equal(t, int64(4500), run.PreviewCents, "the run bills only what the families pay")
-	listPath := billingRunPath(run.ID, fmt.Sprintf("/cost-takeovers/%d/export", office.ID))
+	listPath := billingRunPath(int64(run.ID), fmt.Sprintf("/cost-takeovers/%d/export", office.ID))
 	rec := traegerJSON(t, f.traeger, billing, http.MethodGet, listPath+"?format=csv", nil)
 	require.Equal(t, http.StatusConflict, rec.Code, "the list comes with the release: %s", rec.Body.String())
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/release"), releaseBody(run))
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/release"), releaseBody(run))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	renamed := youthOffice()
 	renamed["name"] = "Jugendamt Musterstadt"
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPut, costBearerPath(office.ID), renamed)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPut, costBearerPath(int64(office.ID)),
+		withVersion(renamed, costBearerVersion(t, f.traeger, billing, int64(office.ID))))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
-	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, billingRunPath(run.ID, "/export?format=csv"), nil)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, billingRunPath(int64(run.ID), "/export?format=csv"), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	overview := rec.Body.String()
 	assert.Contains(t, overview, "Kostenübernahme: Fachdienst Jugend des Landkreises Musterstadt;-90,00",
@@ -307,7 +310,7 @@ func TestCostTakeoverShowsInTheRunTheOverviewAndTheReimbursementList(t *testing.
 	// The list needs the right "Abrechnung" and a cost bearer of the Träger.
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, listPath+"?format=csv", nil)
 	assert.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
-	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, billingRunPath(run.ID, "/cost-takeovers/999999999/export?format=csv"), nil)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, billingRunPath(int64(run.ID), "/cost-takeovers/999999999/export?format=csv"), nil)
 	require.Equal(t, http.StatusNotFound, rec.Code, rec.Body.String())
 	assert.Equal(t, "parent_billing.cost_bearer_not_found", refusalCode(t, rec))
 }
@@ -371,7 +374,7 @@ func TestTraegerBueroUploadsAProofTheFamilyBroughtOnPaper(t *testing.T) {
 func TestTraegerBueroCannotUploadAProofToACancelledRegistration(t *testing.T) {
 	t.Parallel()
 	f := newReviewFixture(t, "Träger Nachweis storniert")
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayCancelPath(f.period.ID, f.again), map[string]any{})
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayCancelPath(int64(f.period.ID), f.again), map[string]any{})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	rec = uploadOfficeProof(t, f, f.office.token, f.again, "bescheid.pdf", proofPDF)
@@ -407,10 +410,10 @@ func TestCostBearerListAndReimbursementListQueryBudgetsAreFlat(t *testing.T) {
 	rec := f.confirmWith(t, f.again, map[string]any{"cost_bearer_id": office.ID})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	setNumberRange(t, f, billing, "FE-{NNNN}")
-	run := billingRun(t, f, billing, startBillingRun(t, f, billing, f.period.ID).ID)
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/release"), releaseBody(run))
+	run := billingRun(t, f, billing, int64(startBillingRun(t, f, billing, int64(f.period.ID)).ID))
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/release"), releaseBody(run))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	list := get(billingRunPath(run.ID, fmt.Sprintf("/cost-takeovers/%d/export?format=csv", office.ID)), true)
+	list := get(billingRunPath(int64(run.ID), fmt.Sprintf("/cost-takeovers/%d/export?format=csv", office.ID)), true)
 	querybudgets.AssertQueryBudget(t, "api.traeger.billing_run_cost_takeovers", list)
 }
 
@@ -451,7 +454,7 @@ func TestConfirmationAndDeletionOfACostBearerWaitForEachOther(t *testing.T) {
 	require.NoError(t, err)
 	_, err = deletion.ExecContext(ctx, `SELECT id FROM parent_billing.cost_bearers WHERE id = ? FOR UPDATE`, deleted.ID)
 	require.NoError(t, err)
-	confirmation := requestInBackground(t, f, f.office.token, http.MethodPost, holidayConfirmPath(f.period.ID, f.siblings),
+	confirmation := requestInBackground(t, f, f.office.token, http.MethodPost, holidayConfirmPath(int64(f.period.ID), f.siblings),
 		map[string]any{"cost_bearer_id": deleted.ID})
 	assertWaits(t, confirmation, "the confirmation")
 	_, err = deletion.ExecContext(ctx, `DELETE FROM parent_billing.cost_bearers WHERE id = ?`, deleted.ID)
@@ -473,7 +476,7 @@ func TestConfirmationAndDeletionOfACostBearerWaitForEachOther(t *testing.T) {
 	require.NoError(t, err)
 	_, err = confirming.ExecContext(ctx, `SELECT id FROM parent_billing.cost_bearers WHERE id = ? FOR SHARE`, office.ID)
 	require.NoError(t, err)
-	deletionRequest := requestInBackground(t, f, billing, http.MethodDelete, costBearerPath(office.ID), nil)
+	deletionRequest := requestInBackground(t, f, billing, http.MethodDelete, costBearerPath(int64(office.ID)), nil)
 	assertWaits(t, deletionRequest, "the deletion")
 	_, err = confirming.ExecContext(ctx, `INSERT INTO parent_billing.holiday_contribution_lines
 		(organization_id, holiday_contribution_id, position, kind, amount_cents, cost_bearer_id, cost_bearer_name)
@@ -499,15 +502,15 @@ func TestStornoOfAnInvoiceWithACostTakeoverReversesTheTakeover(t *testing.T) {
 	confirmSiblingsWithTakeover(t, f, office)
 	require.Equal(t, http.StatusOK, f.confirmWith(t, f.again, nil).Code)
 	setNumberRange(t, f, billing, "FE-{NNNN}")
-	run := billingRun(t, f, billing, startBillingRun(t, f, billing, f.period.ID).ID)
-	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/release"), releaseBody(run))
+	run := billingRun(t, f, billing, int64(startBillingRun(t, f, billing, int64(f.period.ID)).ID))
+	rec := traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/release"), releaseBody(run))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
-	invoice := documentByNumber(t, correctedRun(t, f, billing, run.ID), "FE-0001")
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, cancellationPath(run.ID, invoice.ID),
+	invoice := documentByNumber(t, correctedRun(t, f, billing, int64(run.ID)), "FE-0001")
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, cancellationPath(int64(run.ID), int64(invoice.ID)),
 		map[string]any{"reason": "Falsch bestätigt"})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-	corrected := correctedRun(t, f, billing, run.ID)
+	corrected := correctedRun(t, f, billing, int64(run.ID))
 	var storno correctedDocumentBody
 	for _, document := range corrected.Documents {
 		if document.Kind == "cancellation" {
@@ -525,7 +528,7 @@ func TestStornoOfAnInvoiceWithACostTakeoverReversesTheTakeover(t *testing.T) {
 	}
 	assert.Equal(t, map[int64]bool{9000: true, 3375: true}, reversed, "the Storno reverses both takeover lines")
 
-	overview := exportCSV(t, f, billing, run.ID)
+	overview := exportCSV(t, f, billing, int64(run.ID))
 	assert.Contains(t, overview, "Kostenübernahme: Fachdienst Jugend des Landkreises Musterstadt;-90,00", "the invoice keeps its line")
 	assert.Contains(t, overview, "Kostenübernahme: Fachdienst Jugend des Landkreises Musterstadt;90,00", "the Storno reverses it")
 	assert.Contains(t, overview, "Storno", "the overview names the kind of the document")
@@ -533,7 +536,7 @@ func TestStornoOfAnInvoiceWithACostTakeoverReversesTheTakeover(t *testing.T) {
 	assert.NotContains(t, overview, "Davon übernimmt", "the cost bearer pays nothing once its only invoice is cancelled")
 
 	rec = traegerJSON(t, f.traeger, billing, http.MethodGet,
-		billingRunPath(run.ID, fmt.Sprintf("/cost-takeovers/%d/export?format=csv", office.ID)), nil)
+		billingRunPath(int64(run.ID), fmt.Sprintf("/cost-takeovers/%d/export?format=csv", office.ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	list := rec.Body.String()
 	assert.Contains(t, list, "(Storno zu FE-0001);Lia Muster;")
@@ -554,15 +557,15 @@ func TestReimbursementListKeepsTheProofOfACancelledRegistration(t *testing.T) {
 	rec := uploadOfficeProof(t, f, f.office.token, f.siblings, "bescheid.pdf", proofPDF)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	setNumberRange(t, f, billing, "FE-{NNNN}")
-	run := billingRun(t, f, billing, startBillingRun(t, f, billing, f.period.ID).ID)
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/release"), releaseBody(run))
+	run := billingRun(t, f, billing, int64(startBillingRun(t, f, billing, int64(f.period.ID)).ID))
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/release"), releaseBody(run))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayCancelPath(f.period.ID, f.siblings), map[string]any{})
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, holidayCancelPath(int64(f.period.ID), f.siblings), map[string]any{})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	rec = traegerJSON(t, f.traeger, billing, http.MethodGet,
-		billingRunPath(run.ID, fmt.Sprintf("/cost-takeovers/%d/export?format=csv", office.ID)), nil)
+		billingRunPath(int64(run.ID), fmt.Sprintf("/cost-takeovers/%d/export?format=csv", office.ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	list := rec.Body.String()
 	assert.Contains(t, list, "FE-0001;Lia Muster;")

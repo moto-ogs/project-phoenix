@@ -15,10 +15,12 @@ import { useBookedModules, useTenantSafe } from "~/lib/tenant-context";
 export function ModuleRouteGuard({
   module,
   title,
+  info,
   children,
 }: {
   readonly module: ModuleKey;
   readonly title: string;
+  readonly info?: ReactNode;
   readonly children: ReactNode;
 }) {
   const tenant = useTenantSafe()?.tenant;
@@ -34,7 +36,7 @@ export function ModuleRouteGuard({
   // of an unbooked module (#6577).
   return (
     <NotBookedPageSlot module={module}>
-      <TenantPage title={title} />
+      <TenantPage title={title} info={info} />
     </NotBookedPageSlot>
   );
 }

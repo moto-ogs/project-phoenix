@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The Vertretungspool (#4709, ADR 0089 section 9, ADR 0252). A school reads
@@ -291,7 +292,7 @@ func poolSpringers(springers []domain.PoolSpringer, blocks []domain.PoolBlock, p
 		return int(a.RecordID - b.RecordID)
 	})
 	for _, springer := range springers {
-		public := workforce.PoolSpringer{RecordID: springer.RecordID, FirstName: springer.FirstName, LastName: springer.LastName,
+		public := workforce.PoolSpringer{RecordID: ident.ID(springer.RecordID), FirstName: springer.FirstName, LastName: springer.LastName,
 			PoolFrom: springer.PoolFrom, Proofs: []workforce.PoolProofStatus{}, Blocks: []workforce.PoolBlock{}}
 		if !springer.PoolUntil.IsZero() {
 			public.PoolUntil = new(springer.PoolUntil)
@@ -321,10 +322,10 @@ func publicPoolProof(proof domain.PoolProof, today calendar.Date) workforce.Pool
 }
 
 func publicPoolBlock(block domain.PoolBlock) workforce.PoolBlock {
-	public := workforce.PoolBlock{SchoolID: block.SchoolID, SchoolName: block.SchoolName, Own: block.Own, Date: block.Date,
+	public := workforce.PoolBlock{SchoolID: ident.ID(block.SchoolID), SchoolName: block.SchoolName, Own: block.Own, Date: block.Date,
 		StartTime: block.Start, EndTime: block.End, Lifted: block.Lifted}
 	if block.ID > 0 {
-		public.ID = new(block.ID)
+		public.ID = (*ident.ID)(new(block.ID))
 	}
 	return public
 }

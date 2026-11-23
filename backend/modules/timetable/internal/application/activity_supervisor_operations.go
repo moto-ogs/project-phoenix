@@ -2,7 +2,6 @@ package application
 
 import (
 	"context"
-	"errors"
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	activityContract "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract"
@@ -153,83 +152,6 @@ func (s *ActivityService) GetSupervisorsForGroups(ctx context.Context, groupIDs 
 	}
 
 	return supervisorMap, nil
-}
-
-// UpdateSupervisor updates a supervisor's details
-func (s *ActivityService) UpdateSupervisor(ctx context.Context, supervisor *activityContract.SupervisorPlanned) (*activityContract.SupervisorPlanned, error) {
-	existingSupervisor, err := s.findExistingSupervisor(ctx, s, supervisor.ID)
-	if err != nil {
-		return nil, &activityContract.ActivityError{Op: opUpdateSupervisor, Err: err}
-	}
-	if err := s.lockActivitySupervisorStaff(ctx, existingSupervisor.GroupID, supervisor.StaffID); err != nil {
-		return nil, &activityContract.ActivityError{Op: opUpdateSupervisor, Err: err}
-	}
-	if _, err := s.findMutableActivityGroup(ctx, existingSupervisor.GroupID); err != nil {
-		return nil, &activityContract.ActivityError{Op: opUpdateSupervisor, Err: err}
-	}
-	if supervisor.GroupID != existingSupervisor.GroupID {
-		return nil, &activityContract.ActivityError{Op: opUpdateSupervisor, Err: errors.New("cannot change activity group for a supervisor")}
-	}
-
-	if err := supervisor.Validate(); err != nil {
-		return nil, &activityContract.ActivityError{Op: opUpdateSupervisor, Err: err}
-	}
-
-	if err := s.handlePrimaryStatusChangeInTx(ctx, s, supervisor, existingSupervisor); err != nil {
-		return nil, &activityContract.ActivityError{Op: opUpdateSupervisor, Err: err}
-	}
-
-	if err := updateLegacyPlannedSupervisor(ctx, s.timetable, supervisor); err != nil {
-		return nil, &activityContract.ActivityError{Op: opUpdateSupervisor, Err: err}
-	}
-
-	updatedSupervisor, err := findLegacyPlannedSupervisor(ctx, s.timetable, supervisor.ID)
-	if err != nil {
-		return nil, &activityContract.ActivityError{Op: opUpdateSupervisor, Err: err}
-	}
-
-	return updatedSupervisor, nil
-}
-
-// findExistingSupervisor finds and validates that a supervisor exists
-func (s *ActivityService) findExistingSupervisor(ctx context.Context, txService activityContract.ActivityService, supervisorID int64) (*activityContract.SupervisorPlanned, error) {
-	txActivities := txService.(*ActivityService)
-	existingSupervisor, err := findLegacyPlannedSupervisor(ctx, txActivities.timetable, supervisorID)
-	if err != nil {
-		if isRepositoryNotFound(err) {
-			return nil, activityContract.ErrSupervisorNotFound
-		}
-		return nil, &activityContract.ActivityError{Op: opFindSupervisor, Err: err}
-	}
-	return existingSupervisor, nil
-}
-
-// handlePrimaryStatusChangeInTx handles primary status changes for supervisors
-func (s *ActivityService) handlePrimaryStatusChangeInTx(ctx context.Context, txService activityContract.ActivityService, supervisor, existingSupervisor *activityContract.SupervisorPlanned) error {
-	txActivities := txService.(*ActivityService)
-	if existingSupervisor.IsPrimary == supervisor.IsPrimary {
-		return nil
-	}
-
-	if !supervisor.IsPrimary {
-		return &activityContract.ActivityError{Op: opUpdateSupervisor, Err: activityContract.ErrPrimarySupervisorRequired}
-	}
-
-	otherSupervisors, err := groupPlannedSupervisors(ctx, txActivities.timetable, txActivities.directories, supervisor.GroupID)
-	if err != nil {
-		return &activityContract.ActivityError{Op: opFindGroupSupervisors, Err: err}
-	}
-
-	for _, other := range otherSupervisors {
-		if other.ID != supervisor.ID && other.IsPrimary {
-			other.IsPrimary = false
-			if err := updateLegacyPlannedSupervisor(ctx, txActivities.timetable, other); err != nil {
-				return &activityContract.ActivityError{Op: "update other supervisor", Err: err}
-			}
-		}
-	}
-
-	return nil
 }
 
 // DeleteSupervisor deletes a supervisor
@@ -396,51 +318,6 @@ func (s *ActivityService) findNewPrimarySupervisor(supervisors []*activityContra
 	for _, supervisor := range supervisors {
 		if supervisor.ID != excludeID {
 			return supervisor
-		}
-	}
-	return nil
-}
-
-// SetPrimarySupervisor sets a supervisor as primary and unsets others
-func (s *ActivityService) SetPrimarySupervisor(ctx context.Context, id int64) error {
-	supervisor, err := findLegacyPlannedSupervisor(ctx, s.timetable, id)
-	if err != nil {
-		if isRepositoryNotFound(err) {
-			return &activityContract.ActivityError{Op: "set primary supervisor", Err: activityContract.ErrSupervisorNotFound}
-		}
-		return &activityContract.ActivityError{Op: "set primary supervisor", Err: err}
-	}
-	if err := s.lockActivitySupervisorStaff(ctx, supervisor.GroupID); err != nil {
-		return &activityContract.ActivityError{Op: "set primary supervisor", Err: err}
-	}
-	if _, err := s.findMutableActivityGroup(ctx, supervisor.GroupID); err != nil {
-		return &activityContract.ActivityError{Op: "set primary supervisor", Err: err}
-	}
-
-	supervisors, err := groupPlannedSupervisors(ctx, s.timetable, s.directories, supervisor.GroupID)
-	if err != nil {
-		return &activityContract.ActivityError{Op: "set primary supervisor", Err: err}
-	}
-
-	if err := s.updateSupervisorPrimaryStatusInTx(ctx, s, id, supervisors); err != nil {
-		return &activityContract.ActivityError{Op: "set primary supervisor", Err: err}
-	}
-
-	return nil
-}
-
-// updateSupervisorPrimaryStatusInTx updates primary status for all supervisors in a group
-func (s *ActivityService) updateSupervisorPrimaryStatusInTx(ctx context.Context, txService activityContract.ActivityService, primaryID int64, supervisors []*activityContract.SupervisorPlanned) error {
-	txActivities := txService.(*ActivityService)
-	for _, sup := range supervisors {
-		newPrimaryStatus := sup.ID == primaryID
-		if sup.IsPrimary == newPrimaryStatus {
-			continue
-		}
-
-		sup.IsPrimary = newPrimaryStatus
-		if err := updateLegacyPlannedSupervisor(ctx, txActivities.timetable, sup); err != nil {
-			return &activityContract.ActivityError{Op: "update supervisor primary status", Err: err}
 		}
 	}
 	return nil

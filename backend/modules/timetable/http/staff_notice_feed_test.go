@@ -42,6 +42,9 @@ type noticeFeedFixture struct {
 	notices  chi.Router
 	feed     chi.Router
 	consent  func(accountID int64, enabled bool)
+	// versions holds each notice's version from its last save answer, the
+	// token the Leitung's next save sends (ADR 0311).
+	versions map[int64]string
 }
 
 type noticeFeedPerson struct {
@@ -108,6 +111,7 @@ func (f *noticeFeedFixture) save(t *testing.T, author noticeFeedPerson, id int64
 	method, path, want := http.MethodPost, "/", http.StatusCreated
 	if id != 0 {
 		method, path, want = http.MethodPut, fmt.Sprintf("/%d", id), http.StatusOK
+		body = strings.TrimSuffix(strings.TrimSpace(body), "}") + fmt.Sprintf(`,"expected_version":%q}`, f.versions[id])
 	}
 	req := httptest.NewRequest(method, path, strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -115,12 +119,18 @@ func (f *noticeFeedFixture) save(t *testing.T, author noticeFeedPerson, id int64
 	require.Equal(t, want, rec.Code, rec.Body.String())
 	var envelope struct {
 		Data struct {
-			ID string `json:"id"`
+			ID      string `json:"id"`
+			Version string `json:"version"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &envelope), rec.Body.String())
 	saved, err := strconv.ParseInt(envelope.Data.ID, 10, 64)
 	require.NoError(t, err)
+	require.NotEmpty(t, envelope.Data.Version, "a save answers the notice's version")
+	if f.versions == nil {
+		f.versions = map[int64]string{}
+	}
+	f.versions[saved] = envelope.Data.Version
 	return saved
 }
 
@@ -306,6 +316,34 @@ func TestStaffNoticeFeedPublishesWhenAnExpiredNoticeIsExtended(t *testing.T) {
 	require.Len(t, entries, 1)
 	assert.Equal(t, "„Vorbei“ gilt vom 01.06.2030 bis 12.06.2030.", entries[0].Body)
 	assert.Equal(t, 1, f.pushes(t, pushed))
+}
+
+// ADR 0311: a change sends the version its editor read. A change from a
+// notice read before the last save, or without a version, writes nothing;
+// the version of a save's answer saves again.
+func TestStaffNoticeUpdateRefusesAStaleRead(t *testing.T) {
+	t.Parallel()
+	f := newNoticeFeedFixture(t)
+	author := f.reader(t, "Leitung")
+	id := f.save(t, author, 0, noticeBody("Turnhalle", "all", "2030-06-12", "", true))
+	read := f.versions[id]
+	f.save(t, author, id, noticeBody("Turnhalle belegt", "all", "2030-06-12", "", true))
+
+	for name, version := range map[string]string{"stale": read, "none": ""} {
+		body := strings.TrimSuffix(noticeBody("Überschrieben", "all", "2030-06-12", "", true), "}") + fmt.Sprintf(`,"expected_version":%q}`, version)
+		req := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/%d", id), strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		rec := f.noticeRequest(t, req, author, []string{"admin:*"})
+		assert.Equal(t, http.StatusConflict, rec.Code, "%s: %s", name, rec.Body.String())
+		assert.Contains(t, rec.Body.String(), "general.changed_since_read", name)
+	}
+	var title string
+	require.NoError(t, f.db.NewRaw(`SELECT title FROM users.staff_notices WHERE tenant_id = ? AND id = ?`, f.tenantID, id).Scan(context.Background(), &title))
+	assert.Equal(t, "Turnhalle belegt", title, "a refused change writes nothing")
+
+	f.save(t, author, id, noticeBody("Turnhalle frei", "all", "2030-06-12", "", true))
+	require.NoError(t, f.db.NewRaw(`SELECT title FROM users.staff_notices WHERE tenant_id = ? AND id = ?`, f.tenantID, id).Scan(context.Background(), &title))
+	assert.Equal(t, "Turnhalle frei", title, "the answer's version saves again")
 }
 
 // The Leitung deletes a Hinweis through its route; it answers in the shared

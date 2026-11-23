@@ -85,7 +85,7 @@ func TestSeedTraegerBueroStepAssignsTheSchoolAdminThroughTheOperatorRoute(t *tes
 	}, operatorInvitations, "the operator invites a person without a moto account, with several roles at once")
 	login := requests["/traeger/auth/login"]
 	assert.Empty(t, login.authorization, "the Träger sign-in carries no session")
-	assert.Equal(t, map[string]any{"email": "admin@example.test", "password": "Geheim1234%", "organization_id": float64(12)}, login.body)
+	assert.Equal(t, map[string]any{"email": "admin@example.test", "password": "Geheim1234%", "organization_id": "12"}, login.body)
 	name := requests["/traeger/profile/name"]
 	assert.Equal(t, "Bearer traeger-token", name.authorization, "the admin names themselves with the Träger session")
 	assert.Equal(t, map[string]any{"name": "Sabine Hartmann"}, name.body)
@@ -231,7 +231,9 @@ func TestSeedTraegerHolidayPeriodStepPublishesAPeriodAtTheTraegerSchools(t *test
 		"PUT /traeger/settings/values/parent_billing.debtor_number_digits_only Bearer traeger-token",
 		"PUT /traeger/settings/values/parent_billing.debtor_number_min_digits Bearer traeger-token",
 		"PUT /traeger/settings/values/parent_billing.debtor_number_max_digits Bearer traeger-token",
-		// The Träger-Büro corrects the confirmed registration (#5629).
+		// The Träger-Büro corrects the confirmed registration (#5629) over
+		// the version it read (ADR 0311).
+		"GET /traeger/holiday-periods/5/registrations/9 Bearer traeger-token",
 		"PUT /traeger/holiday-periods/5/registrations/9/details Bearer traeger-token",
 		"POST /traeger/cost-bearers/ Bearer traeger-token",
 		"POST /traeger/holiday-contributions/5/registrations/10/confirm Bearer traeger-token",
@@ -272,7 +274,9 @@ func TestSeedTraegerHolidayPeriodStepPublishesAPeriodAtTheTraegerSchools(t *test
 		"POST /traeger/billing-runs/9/release Bearer traeger-token",
 		"GET /traeger/billing-runs/9/export Bearer traeger-token",
 		"GET /traeger/billing-runs/9/cost-takeovers/7/export Bearer traeger-token",
-		// The Abrechnung maps and downloads the Sollstellung (#4693).
+		// The Abrechnung maps and downloads the Sollstellung (#4693), on
+		// the mapping it read (ADR 0311).
+		"GET /traeger/finance-exports/settings Bearer traeger-token",
 		"PUT /traeger/finance-exports/settings/sollstellung Bearer traeger-token",
 		"GET /traeger/finance-exports/runs/holiday-runs/9/sollstellung Bearer traeger-token",
 		// It enters two recipients, sends each format to one of them and

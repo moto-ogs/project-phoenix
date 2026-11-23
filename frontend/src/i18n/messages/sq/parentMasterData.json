@@ -143,7 +143,6 @@
     "editedAt": "Ndryshuar më {date}",
     "saveEdit": "Ruaj ndryshimin",
     "noteRequired": "Shkruani shkurt pse duhet të ndryshojë përkujdesja.",
-    "staleError": "Kërkesa ka ndryshuar ndërkohë. Ju lutemi rifreskoni faqen.",
     "intro": "Zgjidhni cilat oferta duhet të ndjekë fëmija dhe nga cila datë. Ekipi do ta shqyrtojë kërkesën.",
     "noOfferings": "Nuk ka oferta përkujdesjeje për këtë periudhë.",
     "effectiveFromLabel": "Ndryshimi vlen nga",

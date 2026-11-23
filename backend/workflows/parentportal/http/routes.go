@@ -46,13 +46,6 @@ func (rs *Resource) mountAccountRoutes(r chi.Router, authRateLimiter func(http.H
 	// "Neue Anmeldung" school picker in the parents app.
 	r.Get("/me/enrollable-schools", rs.listEnrollableSchools)
 
-	// Cross-tenant enrollment-request list — every
-	// enrollment.requests row owned by this parent (matched by
-	// guardian_account_id), joined to phase/school/children.
-	// Powers the "Anmeldungen in Bearbeitung" section on the
-	// dashboard.
-	r.Get("/me/enrollments", rs.listMyEnrollments)
-
 	rs.mountDocumentRoutes(r, authRateLimiter)
 }
 
@@ -143,6 +136,9 @@ func (rs *Resource) mountChildStatusRoutes(r chi.Router) {
 	r.Get("/me/children/{studentId}/consents", rs.getChildConsents)
 	r.Put("/me/children/{studentId}/consents/photo", rs.grantPhotoConsent)
 	r.Delete("/me/children/{studentId}/consents/photo", rs.withdrawPhotoConsent)
+	r.Get("/me/children/{studentId}/room-history-stop", rs.getRoomHistoryStop)
+	r.Put("/me/children/{studentId}/room-history-stop", rs.stopRoomHistory)
+	r.Delete("/me/children/{studentId}/room-history-stop", rs.resumeRoomHistory)
 	r.Get("/me/children/{studentId}/meal-plan", rs.getChildMealPlan)
 	r.Get("/me/children/{studentId}/meal-participation", rs.getMealParticipation)
 	r.Put("/me/children/{studentId}/meal-participation", rs.replaceMealParticipation)
@@ -159,7 +155,7 @@ func (rs *Resource) mountChildStatusRoutes(r chi.Router) {
 	// own pending request instead of withdrawing and refiling it, so the
 	// request keeps its id and the co-guardians it was shared with. Every
 	// body carries expected_version; a mismatch is 409
-	// change_request_stale.
+	// general.changed_since_read.
 	r.Put("/me/children/{studentId}/excused-requests/{requestId}", rs.editExcusedRequest)
 	r.Get("/me/children/{studentId}/requests/{requestType}/{requestId}/events", rs.listRequestEvents)
 	r.Get("/me/children/{studentId}/request-sharing/{requestType}/{requestId}", rs.getRequestSharing)

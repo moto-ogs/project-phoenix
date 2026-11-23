@@ -283,7 +283,7 @@ describe("Anfragen: Liste und Detail", () => {
     });
     mockBulkApprove.mockRejectedValue(
       new ApiError("change request stale", 409, {
-        code: "students.change_request_stale",
+        code: "general.changed_since_read",
       }),
     );
 

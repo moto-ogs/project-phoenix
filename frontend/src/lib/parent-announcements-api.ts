@@ -1,8 +1,9 @@
 /**
  * Staff-side client for parent announcements (Elternmitteilungen, #1669):
- * tenant-authored broadcast news to guardians. Talks to the Next.js proxy
- * routes under /api/parent-announcements, which forward to the Go backend with
- * the staff JWT. Backend int64 ids arrive already stringified.
+ * tenant-authored broadcast news to guardians. Calls the registered routes
+ * under /api/parent-announcements through bffJson (#7806); moto schule reaches
+ * the same handlers under /school/parent-letters. Backend int64 ids arrive
+ * already stringified.
  */
 
 import type {
@@ -10,7 +11,9 @@ import type {
   MailProviderBlock,
   MailOutcome,
 } from "~/lib/email-delivery-status";
-import { ApiError, apiErrorFromText, transportFetch } from "~/lib/api-error";
+import { bffFile, bffJson } from "~/lib/bff-fetch";
+import type * as parentAnnouncementsContract from "~/lib/contract/parent-announcements.generated";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 import { downloadBlob, filenameFromDisposition } from "~/lib/file-download";
 
 export type AnnouncementPriority = "info" | "important";
@@ -24,11 +27,12 @@ export type AnnouncementTargetType =
   | "student"
   | "pending_enrollment";
 
-export interface AnnouncementTarget {
+export type AnnouncementTarget = Omit<
+  sharedContract.targetResponse,
+  "target_type"
+> & {
   target_type: AnnouncementTargetType;
-  ref_id?: string;
-  ref_text?: string;
-}
+};
 
 /**
  * "none" is a plain Mitteilung; the two choice types make it an Umfrage that
@@ -36,11 +40,6 @@ export interface AnnouncementTarget {
  */
 export type AnnouncementResponseType =
   "none" | "single_choice" | "multi_choice";
-
-interface AnnouncementOption {
-  id: string;
-  label: string;
-}
 
 /**
  * How the announcement is delivered. "letter" is the Elternbrief (#2384):
@@ -67,54 +66,41 @@ export type DeclarationSigners = "any" | "all";
  */
 export type AnnouncementEmailAudience = "portal_only" | "all_contacts";
 
-export interface Announcement {
-  id: string;
-  title: string;
-  body: string;
+/**
+ * An announcement with the values the backend writes for its open enums
+ * and its lists never null. `system_kind` is set on rows the system wrote,
+ * e.g. the cancellation notice (#2601). `sender_name` and
+ * `sender_school_class` name the Lehrkraft of a class letter from moto schule
+ * (#4800): the OGS reads such a letter but does not change it. A scheduled
+ * reminder (#3162) carries `reminder_at`, `reminder_text` and, once sent,
+ * `reminder_sent_at`. The `declaration_*` settings (#3430, signature #4785)
+ * are present only for an Einverständnis; `declaration_locked_attachments` is
+ * true once a version exists.
+ */
+export type Announcement = Omit<
+  sharedContract.announcementResponse,
+  | "priority"
+  | "status"
+  | "targets"
+  | "response_type"
+  | "options"
+  | "delivery_mode"
+  | "email_audience"
+  | "system_kind"
+  | "declaration_kind"
+  | "declaration_signers"
+> & {
   priority: AnnouncementPriority;
-  link_url?: string;
-  requires_acknowledgement: boolean;
-  send_email: boolean;
   status: AnnouncementStatus;
-  published_at?: string;
-  expires_at?: string;
-  active: boolean;
-  created_at: string;
-  updated_at: string;
   targets: AnnouncementTarget[];
   response_type: AnnouncementResponseType;
-  response_deadline?: string;
-  /** Set on rows the system wrote, e.g. the cancellation notice (#2601). */
-  system_kind?: "care_cancellation";
-  /**
-   * A class letter of a Lehrkraft from moto schule (#4800): her name and the
-   * class it went to. The OGS reads such a letter but does not change it.
-   */
-  sender_name?: string;
-  sender_school_class?: string;
-  options: AnnouncementOption[];
+  options: sharedContract.optionResponse[];
   delivery_mode: AnnouncementDeliveryMode;
   email_audience: AnnouncementEmailAudience;
-  /**
-   * Scheduled reminder (#3162): the moment the announcement goes out a second
-   * time to its whole audience, the optional short wording of that second
-   * delivery, and the moment it actually went out. All absent = no reminder.
-   */
-  reminder_at?: string;
-  reminder_text?: string;
-  reminder_sent_at?: string;
-  /**
-   * Einverständnis settings (#3430). Present only when delivery_mode is
-   * "declaration"; the deadline is the shared response_deadline.
-   */
+  system_kind?: "care_cancellation";
   declaration_kind?: DeclarationKind;
   declaration_signers?: DeclarationSigners;
-  declaration_requires_password?: boolean;
-  /** Agreeing needs a signature with finger, pen or mouse (#4785). */
-  declaration_requires_signature?: boolean;
-  /** True once a version exists: the attachments are fixed from then on. */
-  declaration_locked_attachments?: boolean;
-}
+};
 
 /** True when the announcement is an Einverständnis (#3430). */
 export function isDeclaration(announcement: Announcement): boolean {
@@ -136,93 +122,82 @@ export function isPoll(announcement: Announcement): boolean {
   return announcement.response_type !== "none";
 }
 
-/** One option's tally: how many reached children picked it. */
-interface PollOptionResult {
-  option_id: string;
-  label: string;
-  count: number;
-}
-
-export interface PollResults {
-  child_count: number;
-  target_child_count: number;
-  answered_count: number;
-  options: PollOptionResult[];
-}
+/** The tally of a poll: per option, how many reached children picked it. */
+export type PollResults = Omit<
+  parentAnnouncementsContract.pollResultsResponse,
+  "options"
+> & {
+  options: parentAnnouncementsContract.pollOptionResultResponse[];
+};
 
 /** One reached child with the answer given for them (empty = still open). */
-export interface PollChild {
-  student_id: string;
-  first_name: string;
-  last_name: string;
-  school_class: string;
+export type PollChild = Omit<
+  parentAnnouncementsContract.pollChildResponse,
+  "answer_labels"
+> & {
   answer_labels: string[];
-  responded_at?: string;
-  can_answer: boolean;
-}
-
-export interface AnnouncementStats {
-  target_count: number;
-  read_count: number;
-  acknowledged_count: number;
-  /**
-   * The counts refer to the parents the publication reached (#6988). False
-   * for a draft and for announcements published before recording, which
-   * count whoever the targets reach today.
-   */
-  recorded?: boolean;
-}
+};
 
 type AnnouncementRecipientStatus = "pending" | "read" | "acknowledged";
 
 /** One guardian account in the live audience with their read/ack state. */
-export interface AnnouncementRecipient {
-  account_id: string;
-  first_name: string;
-  last_name: string;
+export type AnnouncementRecipient = Omit<
+  sharedContract.recipientResponse,
+  "status"
+> & {
   status: AnnouncementRecipientStatus;
-  read_at?: string;
-  acknowledged_at?: string;
-}
+};
 
-export interface AnnouncementInput {
-  title: string;
-  body: string;
-  priority: AnnouncementPriority;
-  link_url?: string | null;
-  requires_acknowledgement: boolean;
-  send_email: boolean;
-  expires_at?: string | null;
-  targets: AnnouncementTarget[];
-  /** Omit or "none" for a plain Mitteilung; a choice type requires options. */
-  response_type?: AnnouncementResponseType;
-  response_deadline?: string | null;
-  /** Answer labels in display order — the backend assigns the option ids. */
-  options?: string[];
-  /**
-   * "letter" makes this an Elternbrief. The backend then forces send_email and
-   * requires_acknowledgement on, so the client need not repeat them.
-   */
-  delivery_mode?: AnnouncementDeliveryMode;
-  email_audience?: AnnouncementEmailAudience;
-  /** Scheduled reminder (#3162): an instant (ISO) or null for none. */
-  reminder_at?: string | null;
-  reminder_text?: string | null;
-  /** Einverständnis settings (#3430), only with delivery_mode "declaration". */
-  declaration_kind?: DeclarationKind;
-  declaration_signers?: DeclarationSigners;
-  declaration_requires_password?: boolean;
-  declaration_requires_signature?: boolean;
-}
+/**
+ * What the form sends. Omit `response_type` or send "none" for a plain
+ * Mitteilung; a choice type requires `options`, the answer labels in display
+ * order (the backend assigns the option ids). "letter" as `delivery_mode`
+ * makes it an Elternbrief: the backend then forces `send_email` and
+ * `requires_acknowledgement` on. `reminder_at` is an instant (ISO) or null for
+ * no reminder (#3162); the `declaration_*` settings apply only with
+ * delivery_mode "declaration" (#3430).
+ */
+export type AnnouncementInput = Omit<
+  sharedContract.announcementRequest,
+  | "title"
+  | "body"
+  | "priority"
+  | "requires_acknowledgement"
+  | "send_email"
+  | "targets"
+  | "response_type"
+  | "options"
+  | "delivery_mode"
+  | "email_audience"
+  | "declaration_kind"
+  | "declaration_signers"
+> &
+  Required<
+    Pick<
+      sharedContract.announcementRequest,
+      "title" | "body" | "requires_acknowledgement" | "send_email"
+    >
+  > & {
+    priority: AnnouncementPriority;
+    targets: AnnouncementTarget[];
+    response_type?: AnnouncementResponseType;
+    options?: string[];
+    delivery_mode?: AnnouncementDeliveryMode;
+    email_audience?: AnnouncementEmailAudience;
+    declaration_kind?: DeclarationKind;
+    declaration_signers?: DeclarationSigners;
+  };
 
 /**
  * The one edit a published announcement still accepts (#3162): move, reword
  * or remove (reminder_at null) its scheduled reminder, until it has been sent.
  */
-export interface AnnouncementReminderInput {
+export type AnnouncementReminderInput = Omit<
+  parentAnnouncementsContract.reminderRequest,
+  "reminder_at"
+> & {
   reminder_at: string | null;
-  reminder_text?: string | null;
-}
+};
 
 /**
  * One addressed person in the recipient matrix. The two channels are reported
@@ -231,77 +206,42 @@ export interface AnnouncementReminderInput {
  *
  * email_status "sent" means handed to the mail server — label it "Versendet",
  * never "Zugestellt", until provider delivery events exist (#1937).
+ * "not_sent" means nothing was queued — `reachability` says why. The two are
+ * separate vocabularies on purpose; collapsing them is what would let a
+ * school read "kein Portalzugang" as a delivery failure. `mail_outcome` is
+ * what became of the mail (only a provider's report says delivered),
+ * `stopped` that the school stopped mail to this person, `stop_shared` that
+ * another holder of the address carries no stop, `departed` that no holder of
+ * the address has a child in care at the school now, and `mailed_to` where
+ * the mail went (`email` is the current address).
  */
-export interface LetterRecipient {
-  first_name: string;
-  last_name: string;
-  email?: string;
-  /**
-   * "not_sent" means nothing was queued — `reachability` says why. The two are
-   * separate vocabularies on purpose; collapsing them is what would let a
-   * school read "kein Portalzugang" as a delivery failure.
-   */
+export type LetterRecipient = Omit<
+  sharedContract.letterRecipientResponse,
+  | "email_status"
+  | "mail_outcome"
+  | "address_mark"
+  | "provider_block"
+  | "reachability"
+> & {
   email_status: "not_sent" | "pending" | "sent" | "failed" | "cancelled";
-  /** What became of the mail; only a provider's report says delivered. */
   mail_outcome?: MailOutcome;
   address_mark?: EmailAddressMark;
-  /** The school stopped mail to this person. */
-  stopped?: boolean;
-  /** Another holder of the address carries no stop: mail to it still goes out. */
-  stop_shared?: boolean;
-  /** No holder of this address has a child in care at the school now. */
-  departed?: boolean;
-  /** Where this mail went: its outcome belongs there. `email` is the current address. */
-  mailed_to?: string;
   provider_block?: MailProviderBlock;
   reachability: "ok" | "no_email" | "no_portal" | "excluded";
-  last_error?: string;
-  sent_at?: string;
-}
+};
 
-/** One reached child with the derived fulfilment of the letter. */
-export interface LetterChild {
-  student_id: string;
-  first_name: string;
-  last_name: string;
-  school_class: string;
-  fulfilled: boolean;
-  /**
-   * False when NO guardian of this child can acknowledge in moto. Such a child
-   * is reached by the letter but can never be confirmed — a data gap a reminder
-   * cannot close, so it must never be counted as "offen".
-   */
-  can_confirm: boolean;
-  acknowledged_at?: string;
-  acknowledged_by?: string;
-}
-
-interface LetterSummary {
-  children_total: number;
-  children_confirmable: number;
-  children_fulfilled: number;
-  children_open: number;
-  children_without_portal: number;
-  recipients_total: number;
-  emails_sent: number;
-  /** Optional: an older backend does not send the provider's counts. */
-  emails_delivered?: number;
-  emails_delayed?: number;
-  emails_address_check?: number;
-  emails_stopped?: number;
-  emails_provider_blocked?: number;
-  emails_resendable?: number;
-  emails_pending: number;
-  emails_failed: number;
-  without_email: number;
-  without_portal: number;
-}
-
-export interface LetterStatus {
+/**
+ * The Elternbrief recipient matrix. A child with `can_confirm` false has NO
+ * guardian who can acknowledge in moto: reached by the letter but never
+ * confirmable, a data gap a reminder cannot close, so never counted "offen".
+ */
+export type LetterStatus = Omit<
+  sharedContract.letterStatusResponse,
+  "recipients" | "children"
+> & {
   recipients: LetterRecipient[];
-  children: LetterChild[];
-  summary: LetterSummary;
-}
+  children: sharedContract.letterChildResponse[];
+};
 
 /* --- Einverständnisse (#3430) --------------------------------------------- */
 
@@ -318,138 +258,85 @@ export type DeclarationChildState =
 /** What one guardian did. */
 export type DeclarationAction = "agreed" | "declined" | "revoked";
 
-interface DeclarationVersionAttachment {
-  filename: string;
-  content_type: string;
-  size_bytes: number;
-  sha256: string;
-}
+/**
+ * A frozen version (Fassung) of the Einverständnis, created on publish, with
+ * title and full text as frozen; `integrity_ok` is false when the stored text
+ * no longer matches its checksum.
+ */
+export type DeclarationVersion = Omit<
+  sharedContract.declarationVersionResponse,
+  "attachments"
+> & {
+  attachments: sharedContract.declarationAttachmentResponse[];
+};
 
-/** A frozen version (Fassung) of the Einverständnis, created on publish. */
-export interface DeclarationVersion {
-  id: string;
-  version_no: number;
-  /** Title and full text as frozen with this version. */
-  title: string;
-  body: string;
-  content_hash: string;
-  published_at: string;
-  attachments: DeclarationVersionAttachment[];
-  /** False when the stored text no longer matches its checksum. */
-  integrity_ok: boolean;
-}
-
-interface DeclarationSigner {
-  account_id: string;
-  first_name: string;
-  last_name: string;
+type DeclarationSigner = Omit<
+  sharedContract.declarationSignerResponse,
+  "action"
+> & {
   action: DeclarationAction | null;
-  submitted_at: string | null;
-}
+};
 
-export interface DeclarationChild {
-  student_id: string;
-  first_name: string;
-  last_name: string;
-  school_class: string;
+export type DeclarationChild = Omit<
+  sharedContract.declarationChildResponse,
+  "state" | "signers"
+> & {
   state: DeclarationChildState;
   signers: DeclarationSigner[];
-}
+};
 
-/** One entry of the full history, across all versions, newest first. */
-export interface DeclarationSubmission {
-  id: string;
-  student_id: string;
-  student_first_name: string;
-  student_last_name: string;
-  signer_name: string;
-  guardian_role: string;
+/**
+ * One entry of the full history, across all versions, newest first, with the
+ * stored signature without the image (#4785); the signature's `integrity_ok`
+ * is false when the image or its record changed after signing.
+ */
+export type DeclarationSubmission = Omit<
+  sharedContract.declarationSubmissionResponse,
+  "action" | "signature"
+> & {
   action: DeclarationAction;
-  method: string;
-  password_confirmed: boolean;
-  version_no: number;
-  content_hash: string;
-  record_hash: string;
-  submitted_at: string;
-  integrity_ok: boolean;
-  /** The stored signature, without the image (#4785). */
-  signature: DeclarationSubmissionSignature | null;
-}
+  signature:
+    | (Omit<sharedContract.declarationSignatureResponse, "method"> & {
+        method: "drawn" | "typed";
+      })
+    | null;
+};
 
-interface DeclarationSubmissionSignature {
-  method: "drawn" | "typed";
-  typed_name: string | null;
-  signed_at: string;
-  /** False when the image or its record changed after signing. */
-  integrity_ok: boolean;
-}
+const DECLARATION_SUMMARY_KEYS = [
+  "children_total",
+  "agreed",
+  "declined",
+  "revoked",
+  "partial",
+  "open",
+  "no_signer",
+  "expired",
+] as const;
 
-interface DeclarationSummary {
-  children_total: number;
-  agreed: number;
-  declined: number;
-  revoked: number;
-  partial: number;
-  open: number;
-  no_signer: number;
-  expired: number;
-}
+/** The children of an Einverständnis counted per state. */
+type DeclarationSummary = Readonly<
+  Record<(typeof DECLARATION_SUMMARY_KEYS)[number], number>
+>;
 
-export interface DeclarationStatus {
+/** `integrity_ok` is false when any version or history entry fails its checksum. */
+export type DeclarationStatus = Omit<
+  sharedContract.declarationStatusResponse,
+  | "kind"
+  | "signers"
+  | "current_version"
+  | "versions"
+  | "summary"
+  | "children"
+  | "submissions"
+> & {
   kind: DeclarationKind;
   signers: DeclarationSigners;
-  requires_password: boolean;
-  requires_signature: boolean;
-  deadline: string | null;
   current_version: DeclarationVersion | null;
   versions: DeclarationVersion[];
   summary: DeclarationSummary;
   children: DeclarationChild[];
   submissions: DeclarationSubmission[];
-  /** False when any version or history entry fails its checksum. */
-  integrity_ok: boolean;
-}
-
-interface ApiResponse<T> {
-  status?: string;
-  data?: T;
-}
-
-/**
- * Throws an ApiError carrying the backend's stable `code`, field errors,
- * details and request ID (#2517). Screens show the catalog text for the code,
- * never the message.
- */
-async function throwApiError(
-  response: Response,
-  fallback: string,
-): Promise<never> {
-  let text = "";
-  try {
-    text = await response.text();
-  } catch {
-    // Body already consumed or the stream broke: the status still classifies.
-  }
-  throw apiErrorFromText(fallback, response.status, text);
-}
-
-/** A success answer without the expected body: the API broke its contract. */
-function missingBody(message: string): ApiError {
-  return new ApiError(message, 500);
-}
-
-async function request<T>(
-  url: string,
-  init: RequestInit | undefined,
-  fallback: string,
-): Promise<T | undefined> {
-  const response = await transportFetch(url, init);
-  if (!response.ok) await throwApiError(response, fallback);
-  // A DELETE without a result answers 204.
-  if (response.status === 204) return undefined;
-  const body = (await response.json()) as ApiResponse<T>;
-  return body.data;
-}
+};
 
 const BASE = "/api/parent-announcements";
 
@@ -460,181 +347,273 @@ const BASE = "/api/parent-announcements";
  */
 export const SCHOOL_PARENT_LETTERS_BASE = "/api/school/parent-letters";
 
+/** Where an announcement call goes: the OGS portal or moto schule. */
+export type AnnouncementApiBase =
+  typeof BASE | typeof SCHOOL_PARENT_LETTERS_BASE;
+
+/** Runs the call of the portal the base names. */
+function onPortal<T>(
+  base: AnnouncementApiBase,
+  tenant: () => Promise<T>,
+  school: () => Promise<T>,
+): Promise<T> {
+  return base === SCHOOL_PARENT_LETTERS_BASE ? school() : tenant();
+}
+
 /**
  * Calls an announcement route of the given portal. Without a base the call
  * stays exactly the OGS call, so its default applies.
  */
 export function withApiBase<T>(
-  call: (id: string, base?: string) => Promise<T>,
+  call: (id: string, base?: AnnouncementApiBase) => Promise<T>,
   id: string,
-  base: string | undefined,
+  base: AnnouncementApiBase | undefined,
 ): Promise<T> {
   return base === undefined ? call(id) : call(id, base);
 }
 
+function toAnnouncement(
+  announcement: sharedContract.announcementResponse,
+): Announcement {
+  // The backend writes the enum values listed above.
+  return {
+    ...announcement,
+    targets: announcement.targets ?? [],
+    options: announcement.options ?? [],
+  } as Announcement;
+}
+
+function toSigner(
+  signer: sharedContract.declarationSignerResponse,
+): DeclarationSigner {
+  return signer as DeclarationSigner;
+}
+
+function toVersion(
+  version: sharedContract.declarationVersionResponse,
+): DeclarationVersion {
+  return { ...version, attachments: version.attachments ?? [] };
+}
+
 export async function fetchAnnouncements(
   includeInactive = true,
-  base = BASE,
+  base: AnnouncementApiBase = BASE,
 ): Promise<Announcement[]> {
-  const url = includeInactive ? `${base}?include_inactive=true` : base;
-  const data = await request<Announcement[]>(
-    url,
-    undefined,
-    "Elternmitteilungen konnten nicht geladen werden",
+  const errorMessage = "Elternmitteilungen konnten nicht geladen werden";
+  const rows = await onPortal(
+    base,
+    () =>
+      bffJson("tenant", "GET /api/parent-announcements/", {
+        ...(includeInactive && { query: { include_inactive: true } }),
+        errorMessage,
+      }),
+    () => bffJson("school", "GET /school/parent-letters/", { errorMessage }),
   );
-  return data ?? [];
+  return rows.map(toAnnouncement);
 }
 
 /**
  * One announcement with its targets, for the object page
- * /parent-announcements/[id] (#3115). Resolves to undefined when the backend
- * answers without a body; the page treats that as "nicht gefunden".
+ * /parent-announcements/[id] (#3115).
  */
 export async function fetchAnnouncement(
   id: string,
-  base = BASE,
-): Promise<Announcement | undefined> {
-  return request<Announcement>(
-    `${base}/${encodeURIComponent(id)}`,
-    undefined,
-    "Elternmitteilung konnte nicht geladen werden",
+  base: AnnouncementApiBase = BASE,
+): Promise<Announcement> {
+  const errorMessage = "Elternmitteilung konnte nicht geladen werden";
+  const params = { announcementId: id };
+  return toAnnouncement(
+    await onPortal(
+      base,
+      () =>
+        bffJson("tenant", "GET /api/parent-announcements/{announcementId}", {
+          params,
+          errorMessage,
+        }),
+      () =>
+        bffJson("school", "GET /school/parent-letters/{announcementId}", {
+          params,
+          errorMessage,
+        }),
+    ),
   );
-}
-
-function jsonBody(body: AnnouncementInput): RequestInit {
-  return {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  };
 }
 
 export async function createAnnouncement(
   input: AnnouncementInput,
-  base = BASE,
+  base: AnnouncementApiBase = BASE,
 ): Promise<Announcement> {
-  const data = await request<Announcement>(
-    base,
-    jsonBody(input),
-    "Elternmitteilung konnte nicht erstellt werden",
+  const errorMessage = "Elternmitteilung konnte nicht erstellt werden";
+  return toAnnouncement(
+    await onPortal(
+      base,
+      () =>
+        bffJson("tenant", "POST /api/parent-announcements/", {
+          body: input,
+          errorMessage,
+        }),
+      () =>
+        bffJson("school", "POST /school/parent-letters/", {
+          body: input,
+          errorMessage,
+        }),
+    ),
   );
-  if (!data) throw missingBody("Elternmitteilung konnte nicht erstellt werden");
-  return data;
 }
 
 export async function updateAnnouncement(
   id: string,
   input: AnnouncementInput,
 ): Promise<Announcement> {
-  const data = await request<Announcement>(
-    `${BASE}/${encodeURIComponent(id)}`,
-    { ...jsonBody(input), method: "PUT" },
-    "Elternmitteilung konnte nicht gespeichert werden",
+  return toAnnouncement(
+    await bffJson("tenant", "PUT /api/parent-announcements/{announcementId}", {
+      params: { announcementId: id },
+      body: input,
+      errorMessage: "Elternmitteilung konnte nicht gespeichert werden",
+    }),
   );
-  if (!data)
-    throw missingBody("Elternmitteilung konnte nicht gespeichert werden");
-  return data;
 }
 
 export async function updateAnnouncementReminder(
   id: string,
   input: AnnouncementReminderInput,
 ): Promise<Announcement> {
-  const data = await request<Announcement>(
-    `${BASE}/${encodeURIComponent(id)}/reminder`,
-    {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
-    },
-    "Erinnerung konnte nicht gespeichert werden",
+  return toAnnouncement(
+    await bffJson(
+      "tenant",
+      "PUT /api/parent-announcements/{announcementId}/reminder",
+      {
+        params: { announcementId: id },
+        body: input,
+        errorMessage: "Erinnerung konnte nicht gespeichert werden",
+      },
+    ),
   );
-  if (!data) throw missingBody("Erinnerung konnte nicht gespeichert werden");
-  return data;
 }
 
 export async function deleteAnnouncement(
   id: string,
-  base = BASE,
+  base: AnnouncementApiBase = BASE,
 ): Promise<void> {
-  await request<unknown>(
-    `${base}/${encodeURIComponent(id)}`,
-    { method: "DELETE" },
-    "Elternmitteilung konnte nicht gelöscht werden",
+  const errorMessage = "Elternmitteilung konnte nicht gelöscht werden";
+  const params = { announcementId: id };
+  await onPortal(
+    base,
+    () =>
+      bffJson("tenant", "DELETE /api/parent-announcements/{announcementId}", {
+        params,
+        errorMessage,
+      }),
+    () =>
+      bffJson("school", "DELETE /school/parent-letters/{announcementId}", {
+        params,
+        errorMessage,
+      }),
   );
 }
 
 export async function publishAnnouncement(
   id: string,
-  base = BASE,
+  base: AnnouncementApiBase = BASE,
 ): Promise<Announcement> {
-  const data = await request<Announcement>(
-    `${base}/${encodeURIComponent(id)}/publish`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: "{}",
-    },
-    "Elternmitteilung konnte nicht veröffentlicht werden",
+  const errorMessage = "Elternmitteilung konnte nicht veröffentlicht werden";
+  const params = { announcementId: id };
+  return toAnnouncement(
+    await onPortal(
+      base,
+      () =>
+        bffJson(
+          "tenant",
+          "POST /api/parent-announcements/{announcementId}/publish",
+          { params, errorMessage },
+        ),
+      () =>
+        bffJson(
+          "school",
+          "POST /school/parent-letters/{announcementId}/publish",
+          { params, errorMessage },
+        ),
+    ),
   );
-  if (!data)
-    throw missingBody("Elternmitteilung konnte nicht veröffentlicht werden");
-  return data;
 }
 
 export async function unpublishAnnouncement(
   id: string,
-  base = BASE,
+  base: AnnouncementApiBase = BASE,
 ): Promise<Announcement> {
-  const data = await request<Announcement>(
-    `${base}/${encodeURIComponent(id)}/unpublish`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: "{}",
-    },
-    "Elternmitteilung konnte nicht zurückgezogen werden",
+  const errorMessage = "Elternmitteilung konnte nicht zurückgezogen werden";
+  const params = { announcementId: id };
+  return toAnnouncement(
+    await onPortal(
+      base,
+      () =>
+        bffJson(
+          "tenant",
+          "POST /api/parent-announcements/{announcementId}/unpublish",
+          { params, errorMessage },
+        ),
+      () =>
+        bffJson(
+          "school",
+          "POST /school/parent-letters/{announcementId}/unpublish",
+          { params, errorMessage },
+        ),
+    ),
   );
-  if (!data)
-    throw missingBody("Elternmitteilung konnte nicht zurückgezogen werden");
-  return data;
 }
 
+/**
+ * The read and confirmation counts. `recorded`: they refer to the parents
+ * the publication reached (#6988); false for a draft and for announcements
+ * published before recording, which count whoever the targets reach today.
+ */
 export async function fetchAnnouncementStats(
   id: string,
-  base = BASE,
-): Promise<AnnouncementStats> {
-  const data = await request<AnnouncementStats>(
-    `${base}/${encodeURIComponent(id)}/stats`,
-    undefined,
-    "Statistik konnte nicht geladen werden",
+  base: AnnouncementApiBase = BASE,
+): Promise<sharedContract.statsResponse> {
+  const errorMessage = "Statistik konnte nicht geladen werden";
+  const params = { announcementId: id };
+  return onPortal(
+    base,
+    () =>
+      bffJson(
+        "tenant",
+        "GET /api/parent-announcements/{announcementId}/stats",
+        { params, errorMessage },
+      ),
+    () =>
+      bffJson("school", "GET /school/parent-letters/{announcementId}/stats", {
+        params,
+        errorMessage,
+      }),
   );
-  return data ?? { target_count: 0, read_count: 0, acknowledged_count: 0 };
 }
 
 export async function fetchPollResults(id: string): Promise<PollResults> {
-  const data = await request<PollResults>(
-    `${BASE}/${encodeURIComponent(id)}/poll-results`,
-    undefined,
-    "Umfrageergebnis konnte nicht geladen werden",
+  const results = await bffJson(
+    "tenant",
+    "GET /api/parent-announcements/{announcementId}/poll-results",
+    {
+      params: { announcementId: id },
+      errorMessage: "Umfrageergebnis konnte nicht geladen werden",
+    },
   );
-  return (
-    data ?? {
-      child_count: 0,
-      target_child_count: 0,
-      answered_count: 0,
-      options: [],
-    }
-  );
+  return { ...results, options: results.options ?? [] };
 }
 
 export async function fetchPollChildren(id: string): Promise<PollChild[]> {
-  const data = await request<PollChild[]>(
-    `${BASE}/${encodeURIComponent(id)}/poll-children`,
-    undefined,
-    "Antwortliste konnte nicht geladen werden",
+  const children = await bffJson(
+    "tenant",
+    "GET /api/parent-announcements/{announcementId}/poll-children",
+    {
+      params: { announcementId: id },
+      errorMessage: "Antwortliste konnte nicht geladen werden",
+    },
   );
-  return data ?? [];
+  return children.map((child) => ({
+    ...child,
+    answer_labels: child.answer_labels ?? [],
+  }));
 }
 
 /**
@@ -643,49 +622,55 @@ export async function fetchPollChildren(id: string): Promise<PollChild[]> {
  */
 export async function remindUnanswered(
   id: string,
-  base = BASE,
+  base: AnnouncementApiBase = BASE,
 ): Promise<number> {
-  const data = await request<{ reminded_count: number }>(
-    `${base}/${encodeURIComponent(id)}/remind`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: "{}",
-    },
-    "Erinnerung konnte nicht gesendet werden",
+  const errorMessage = "Erinnerung konnte nicht gesendet werden";
+  const params = { announcementId: id };
+  const result = await onPortal(
+    base,
+    () =>
+      bffJson(
+        "tenant",
+        "POST /api/parent-announcements/{announcementId}/remind",
+        { params, errorMessage },
+      ),
+    () =>
+      bffJson("school", "POST /school/parent-letters/{announcementId}/remind", {
+        params,
+        errorMessage,
+      }),
   );
-  return data?.reminded_count ?? 0;
+  return result.reminded_count;
 }
 
 /** The Elternbrief recipient matrix: per person, per child, plus the counts. */
 export async function fetchLetterStatus(
   id: string,
-  base = BASE,
+  base: AnnouncementApiBase = BASE,
 ): Promise<LetterStatus> {
-  const data = await request<LetterStatus>(
-    `${base}/${encodeURIComponent(id)}/letter-status`,
-    undefined,
-    "Status konnte nicht geladen werden",
+  const errorMessage = "Status konnte nicht geladen werden";
+  const params = { announcementId: id };
+  const status = await onPortal(
+    base,
+    () =>
+      bffJson(
+        "tenant",
+        "GET /api/parent-announcements/{announcementId}/letter-status",
+        { params, errorMessage },
+      ),
+    () =>
+      bffJson(
+        "school",
+        "GET /school/parent-letters/{announcementId}/letter-status",
+        { params, errorMessage },
+      ),
   );
-  return (
-    data ?? {
-      recipients: [],
-      children: [],
-      summary: {
-        children_total: 0,
-        children_confirmable: 0,
-        children_fulfilled: 0,
-        children_open: 0,
-        children_without_portal: 0,
-        recipients_total: 0,
-        emails_sent: 0,
-        emails_pending: 0,
-        emails_failed: 0,
-        without_email: 0,
-        without_portal: 0,
-      },
-    }
-  );
+  return {
+    ...status,
+    // The backend writes the enum values listed above.
+    recipients: (status.recipients ?? []) as LetterRecipient[],
+    children: status.children ?? [],
+  };
 }
 
 /**
@@ -694,48 +679,77 @@ export async function fetchLetterStatus(
  */
 export async function fetchDeclarationStatus(
   id: string,
-  base = BASE,
+  base: AnnouncementApiBase = BASE,
 ): Promise<DeclarationStatus> {
-  const data = await request<DeclarationStatus>(
-    `${base}/${encodeURIComponent(id)}/declaration-status`,
-    undefined,
-    "Status konnte nicht geladen werden",
+  const errorMessage = "Status konnte nicht geladen werden";
+  const params = { announcementId: id };
+  const status = await onPortal(
+    base,
+    () =>
+      bffJson(
+        "tenant",
+        "GET /api/parent-announcements/{announcementId}/declaration-status",
+        { params, errorMessage },
+      ),
+    () =>
+      bffJson(
+        "school",
+        "GET /school/parent-letters/{announcementId}/declaration-status",
+        { params, errorMessage },
+      ),
   );
-  if (!data) throw missingBody("Status konnte nicht geladen werden");
-  return data;
-}
-
-/**
- * Download address of the Einverständnis report (PDF) or history (CSV). With
- * a child the proof holds only that child (Kinderakte, #4814).
- */
-function declarationExportUrl(
-  id: string,
-  format: "csv" | "pdf",
-  base: string,
-  studentId?: string,
-): string {
-  const child = studentId ? `&student_id=${encodeURIComponent(studentId)}` : "";
-  return `${base}/${encodeURIComponent(id)}/declaration-export?format=${format}${child}`;
+  const summary = Object.fromEntries(
+    DECLARATION_SUMMARY_KEYS.map((key) => [key, status.summary?.[key] ?? 0]),
+  ) as Record<(typeof DECLARATION_SUMMARY_KEYS)[number], number>;
+  // The backend writes the enum values listed above.
+  return {
+    ...status,
+    kind: status.kind as DeclarationKind,
+    signers: status.signers as DeclarationSigners,
+    current_version: status.current_version
+      ? toVersion(status.current_version)
+      : null,
+    versions: (status.versions ?? []).map(toVersion),
+    summary,
+    children: (status.children ?? []).map((child) => ({
+      ...child,
+      state: child.state as DeclarationChildState,
+      signers: (child.signers ?? []).map(toSigner),
+    })),
+    submissions: (status.submissions ?? []) as DeclarationSubmission[],
+  };
 }
 
 /**
  * Downloads the Einverständnis report (PDF) or history (CSV) under the file name
  * the backend chose. Fetched first rather than opened as a link, so a failure
  * stays on the page as a message instead of replacing it with an error body.
+ * With a child the proof holds only that child (Kinderakte, #4814).
  */
 export async function downloadDeclarationExport(
   id: string,
   format: "csv" | "pdf",
-  base = BASE,
+  base: AnnouncementApiBase = BASE,
   studentId?: string,
 ): Promise<void> {
-  const response = await transportFetch(
-    declarationExportUrl(id, format, base, studentId),
+  const errorMessage = "Die Datei konnte nicht erstellt werden";
+  const params = { announcementId: id };
+  const query = { format, ...(studentId && { student_id: studentId }) };
+  const response = await onPortal(
+    base,
+    () =>
+      bffFile(
+        "tenant",
+        "GET /api/parent-announcements/{announcementId}/declaration-export",
+        { params, query, errorMessage },
+      ),
+    () =>
+      bffFile(
+        "school",
+        "GET /school/parent-letters/{announcementId}/declaration-export",
+        { params, query, errorMessage },
+      ),
   );
-  if (!response.ok) {
-    await throwApiError(response, "Die Datei konnte nicht erstellt werden");
-  }
   const blob = await response.blob();
   downloadBlob(
     blob,
@@ -745,31 +759,21 @@ export async function downloadDeclarationExport(
 
 /* --- Kinderakte (#4814) ---------------------------------------------------- */
 
-/** One Elternbrief that reached the child, with the child's confirmation. */
-export interface StudentParentLetter {
-  announcement_id: string;
-  title: string;
-  published_at: string;
-  /** False when no guardian of the child has a parent account. */
-  can_confirm: boolean;
-  acknowledged_at: string | null;
-  acknowledged_by: string;
-}
-
 /** One Einverständnis of the child with its state on the current version. */
-export interface StudentParentDeclaration {
-  announcement_id: string;
-  title: string;
-  published_at: string;
-  deadline: string | null;
-  version_no: number;
+export type StudentParentDeclaration = Omit<
+  parentAnnouncementsContract.studentDeclarationResponse,
+  "state" | "signers"
+> & {
   state: DeclarationChildState;
   signers: DeclarationSigner[];
-}
+};
 
-/** The letters and declarations of one child, newest first. */
+/**
+ * The letters and declarations of one child, newest first. A letter's
+ * `can_confirm` is false when no guardian of the child has a parent account.
+ */
 export interface StudentParentRecords {
-  letters: StudentParentLetter[];
+  letters: parentAnnouncementsContract.studentLetterResponse[];
   declarations: StudentParentDeclaration[];
 }
 
@@ -781,44 +785,73 @@ export interface StudentParentRecords {
 export async function fetchStudentParentRecords(
   studentId: string,
 ): Promise<StudentParentRecords> {
-  const data = await request<StudentParentRecords>(
-    `${BASE}/students/${encodeURIComponent(studentId)}`,
-    undefined,
-    "Elternbriefe und Einverständnisse konnten nicht geladen werden",
+  const records = await bffJson(
+    "tenant",
+    "GET /api/parent-announcements/students/{studentId}",
+    {
+      params: { studentId },
+      errorMessage:
+        "Elternbriefe und Einverständnisse konnten nicht geladen werden",
+    },
   );
   return {
-    letters: data?.letters ?? [],
-    declarations: data?.declarations ?? [],
+    letters: records.letters ?? [],
+    declarations: (records.declarations ?? []).map((declaration) => ({
+      ...declaration,
+      state: declaration.state as DeclarationChildState,
+      signers: (declaration.signers ?? []).map(toSigner),
+    })),
   };
 }
 
 /** Re-queue only the mails that failed. Separate from remindUnanswered. */
 export async function resendFailedEmails(
   id: string,
-  base = BASE,
+  base: AnnouncementApiBase = BASE,
 ): Promise<number> {
-  const data = await request<{ resent_count: number }>(
-    `${base}/${encodeURIComponent(id)}/resend-failed`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: "{}",
-    },
-    "Erneuter Versand fehlgeschlagen",
+  const errorMessage = "Erneuter Versand fehlgeschlagen";
+  const params = { announcementId: id };
+  const result = await onPortal(
+    base,
+    () =>
+      bffJson(
+        "tenant",
+        "POST /api/parent-announcements/{announcementId}/resend-failed",
+        { params, errorMessage },
+      ),
+    () =>
+      bffJson(
+        "school",
+        "POST /school/parent-letters/{announcementId}/resend-failed",
+        { params, errorMessage },
+      ),
   );
-  return data?.resent_count ?? 0;
+  return result.resent_count;
 }
 
 export async function fetchAnnouncementRecipients(
   id: string,
-  base = BASE,
+  base: AnnouncementApiBase = BASE,
 ): Promise<AnnouncementRecipient[]> {
-  const data = await request<AnnouncementRecipient[]>(
-    `${base}/${encodeURIComponent(id)}/recipients`,
-    undefined,
-    "Empfängerliste konnte nicht geladen werden",
+  const errorMessage = "Empfängerliste konnte nicht geladen werden";
+  const params = { announcementId: id };
+  const recipients = await onPortal(
+    base,
+    () =>
+      bffJson(
+        "tenant",
+        "GET /api/parent-announcements/{announcementId}/recipients",
+        { params, errorMessage },
+      ),
+    () =>
+      bffJson(
+        "school",
+        "GET /school/parent-letters/{announcementId}/recipients",
+        { params, errorMessage },
+      ),
   );
-  return data ?? [];
+  // The backend writes the statuses listed above.
+  return recipients as AnnouncementRecipient[];
 }
 
 /* --- Anhänge (#2890) -------------------------------------------------------
@@ -830,52 +863,46 @@ export async function fetchAnnouncementRecipients(
 
 const ATTACHMENTS_BASE = "/api/announcement-attachments";
 
-export interface AnnouncementAttachment {
-  id: string;
-  filename: string;
-  size_bytes: number;
-  content_type: string;
-  uploaded_at: string;
-}
-
-export interface AnnouncementAttachmentList {
-  attachments: AnnouncementAttachment[];
-  /** Höchstzahl der Anhänge je Mitteilung. */
-  max_count: number;
-  /** Größengrenze je Datei in Bytes. */
-  max_bytes: number;
-  /** false, sobald die Mitteilung veröffentlicht ist. */
-  editable: boolean;
-}
-
-const EMPTY_ATTACHMENTS: AnnouncementAttachmentList = {
-  attachments: [],
-  max_count: 0,
-  max_bytes: 0,
-  editable: false,
+/**
+ * Die Anhänge einer Mitteilung mit `max_count` (Höchstzahl je Mitteilung),
+ * `max_bytes` (Größengrenze je Datei) und `editable` (false, sobald die
+ * Mitteilung veröffentlicht ist).
+ */
+export type AnnouncementAttachmentList = Omit<
+  sharedContract.AnnouncementAttachmentListResponse,
+  "attachments"
+> & {
+  attachments: sharedContract.AnnouncementAttachmentResponse[];
 };
 
 export async function fetchAnnouncementAttachments(
   announcementId: string,
 ): Promise<AnnouncementAttachmentList> {
-  const data = await request<AnnouncementAttachmentList>(
-    `${ATTACHMENTS_BASE}/${encodeURIComponent(announcementId)}`,
-    undefined,
-    "Anhänge konnten nicht geladen werden",
+  const list = await bffJson(
+    "tenant",
+    "GET /api/announcement-attachments/{announcementId}",
+    {
+      params: { announcementId },
+      errorMessage: "Anhänge konnten nicht geladen werden",
+    },
   );
-  return data ?? EMPTY_ATTACHMENTS;
+  return { ...list, attachments: list.attachments ?? [] };
 }
 
-export async function uploadAnnouncementAttachment(
+export function uploadAnnouncementAttachment(
   announcementId: string,
   file: File,
-): Promise<AnnouncementAttachment | undefined> {
+): Promise<sharedContract.AnnouncementAttachmentResponse> {
   const form = new FormData();
   form.append("file", file);
-  return request<AnnouncementAttachment>(
-    `${ATTACHMENTS_BASE}/${encodeURIComponent(announcementId)}`,
-    { method: "POST", body: form },
-    "Die Datei konnte nicht hochgeladen werden",
+  return bffJson(
+    "tenant",
+    "POST /api/announcement-attachments/{announcementId}",
+    {
+      params: { announcementId },
+      body: form,
+      errorMessage: "Die Datei konnte nicht hochgeladen werden",
+    },
   );
 }
 
@@ -883,10 +910,13 @@ export async function deleteAnnouncementAttachment(
   announcementId: string,
   attachmentId: string,
 ): Promise<void> {
-  await request<unknown>(
-    `${ATTACHMENTS_BASE}/${encodeURIComponent(announcementId)}/${encodeURIComponent(attachmentId)}`,
-    { method: "DELETE" },
-    "Der Anhang konnte nicht entfernt werden",
+  await bffJson(
+    "tenant",
+    "DELETE /api/announcement-attachments/{announcementId}/{attachmentId}",
+    {
+      params: { announcementId, attachmentId },
+      errorMessage: "Der Anhang konnte nicht entfernt werden",
+    },
   );
 }
 
@@ -900,56 +930,48 @@ export function announcementAttachmentDownloadUrl(
 
 // --- Serienbriefe (#4813) ----------------------------------------------------
 
-/** A value an Elternbrief can name for each child, written {{name}}. */
-export interface LetterPlaceholder {
-  name: string;
-  label: string;
-  example: string;
-}
-
-/** The letter text filled with one child's values, before it is sent. */
-export interface LetterPreview {
-  body: string;
-  child: {
-    student_id: string;
-    first_name: string;
-    last_name: string;
-    school_class: string;
-  };
-}
-
-/** The fixed list of placeholders a letter may name. */
-export async function fetchLetterPlaceholders(
-  base = BASE,
-): Promise<LetterPlaceholder[]> {
-  const data = await request<LetterPlaceholder[]>(
-    `${base}/letter-placeholders`,
-    undefined,
-    "Die Platzhalter konnten nicht geladen werden",
+/** The fixed list of placeholders a letter may name, written {{name}}. */
+export function fetchLetterPlaceholders(
+  base: AnnouncementApiBase = BASE,
+): Promise<sharedContract.letterPlaceholderResponse[]> {
+  const errorMessage = "Die Platzhalter konnten nicht geladen werden";
+  return onPortal(
+    base,
+    () =>
+      bffJson("tenant", "GET /api/parent-announcements/letter-placeholders", {
+        errorMessage,
+      }),
+    () =>
+      bffJson("school", "GET /school/parent-letters/letter-placeholders", {
+        errorMessage,
+      }),
   );
-  return data ?? [];
 }
 
 /**
- * Fills a letter text for one child of the school. Reads the child's data,
- * so the backend writes the access to the data access log.
+ * Fills a letter text for one child of the school, before it is sent. Reads
+ * the child's data, so the backend writes the access to the data access log.
  */
-export async function previewLetter(
+export function previewLetter(
   body: string,
   studentId: string,
-  base = BASE,
-): Promise<LetterPreview> {
-  const data = await request<LetterPreview>(
-    `${base}/letter-preview`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ body, student_id: studentId }),
-    },
-    "Die Vorschau konnte nicht erstellt werden",
+  base: AnnouncementApiBase = BASE,
+): Promise<sharedContract.letterPreviewResponse> {
+  const errorMessage = "Die Vorschau konnte nicht erstellt werden";
+  const request = { body, student_id: studentId };
+  return onPortal(
+    base,
+    () =>
+      bffJson("tenant", "POST /api/parent-announcements/letter-preview", {
+        body: request,
+        errorMessage,
+      }),
+    () =>
+      bffJson("school", "POST /school/parent-letters/letter-preview", {
+        body: request,
+        errorMessage,
+      }),
   );
-  if (!data) throw missingBody("Die Vorschau konnte nicht erstellt werden");
-  return data;
 }
 
 /**
@@ -958,14 +980,25 @@ export async function previewLetter(
  */
 export async function downloadLetterPrint(
   id: string,
-  base = BASE,
+  base: AnnouncementApiBase = BASE,
 ): Promise<void> {
-  const response = await transportFetch(
-    `${base}/${encodeURIComponent(id)}/letters-pdf`,
+  const errorMessage = "Die Briefe konnten nicht erstellt werden";
+  const params = { announcementId: id };
+  const response = await onPortal(
+    base,
+    () =>
+      bffFile(
+        "tenant",
+        "GET /api/parent-announcements/{announcementId}/letters-pdf",
+        { params, errorMessage },
+      ),
+    () =>
+      bffFile(
+        "school",
+        "GET /school/parent-letters/{announcementId}/letters-pdf",
+        { params, errorMessage },
+      ),
   );
-  if (!response.ok) {
-    await throwApiError(response, "Die Briefe konnten nicht erstellt werden");
-  }
   const blob = await response.blob();
   downloadBlob(
     blob,

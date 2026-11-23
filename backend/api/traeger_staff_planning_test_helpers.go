@@ -59,7 +59,7 @@ func StaffPlanningTestComposition(database transactionruntime.Database, rules *S
 	composition, err := workforceCompose.NewShiftPlanning(workforceCompose.ShiftPlanningDependencies{
 		Workforce: NewAbsenceTypeTestCapability(database), Staff: owners.NewPlanStaffDirectory(owners.MustNewMembershipTestRepositories(database).Staff), CalendarPeriods: calendar.SchoolCalendar(),
 		Instances: timetableCompose.NewTimetableInstanceReads(timetable.ActivityInstance.Reads), InstanceStaff: timetableCompose.NewTimetableInstanceStaffReads(timetable.InstanceStaff),
-		Rooms: facilitiesCompose.NewRoomNameDirectory(rooms.Room), ActivityGroups: timetableCompose.NewTimetableGroupReads(timetable.Timetable), DB: database.Pool(),
+		Rooms: facilitiesCompose.NewRoomNameDirectory(rooms.Room), ActivityGroups: timetableCompose.NewTimetableGroupReads(timetable.Timetable), DB: database.Pool(), LockStaffAssignments: ShiftPlanningTestStaffRowLock(database),
 		PlanRules: rules, WorkingTimeAudit: owners.NewWorkingTimeOverrideAudit(NewTimetableDeviationAudit(database).DeviationEvent), Today: timezone.TodayDate,
 	})
 	if err != nil {

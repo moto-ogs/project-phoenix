@@ -25,7 +25,7 @@ type holidayHealthFormBody struct {
 
 func saveHolidayHealthForm(t *testing.T, f holidayRegistrationFixture, office traegerOffice, periodID int64, requirement string) holidayHealthFormBody {
 	t.Helper()
-	rec := traegerJSON(t, f.traeger, office.token, http.MethodPut, holidayFormPath(periodID),
+	rec := putHolidayForm(t, f.traeger, office.token, holidayFormPath(periodID),
 		map[string]any{"fields": []map[string]any{}, "health_requirement": requirement})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	return decodeSchoolPortalData[holidayHealthFormBody](t, rec.Body.Bytes())
@@ -45,31 +45,31 @@ func TestTraegerSwitchesTheHealthRequirementPerFormVersion(t *testing.T) {
 	office := newTraegerOffice(t, f.db, f.traeger, "Gesundheit Schalter", identityaccess.TraegerRoleAdministration)
 	period := openHolidays(t, f, office)
 
-	rec := traegerJSON(t, f.traeger, office.token, http.MethodGet, holidayFormPath(period.ID), nil)
+	rec := traegerJSON(t, f.traeger, office.token, http.MethodGet, holidayFormPath(int64(period.ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, "optional", decodeSchoolPortalData[holidayHealthFormBody](t, rec.Body.Bytes()).HealthRequirement,
 		"a new period keeps the health fields optional")
 
-	saved := saveHolidayHealthForm(t, f, office, period.ID, "required")
+	saved := saveHolidayHealthForm(t, f, office, int64(period.ID), "required")
 	assert.Equal(t, holidayHealthFormBody{Version: 2, HealthRequirement: "required"}, saved)
-	assert.Equal(t, []string{"optional", "required"}, holidayFormHealthRequirements(t, f, period.ID),
+	assert.Equal(t, []string{"optional", "required"}, holidayFormHealthRequirements(t, f, int64(period.ID)),
 		"the new version carries the setting, the older one does not")
 	rec = publicJSON(t, f.public, http.MethodGet, registrationPath(period.PublicToken), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), `"health_requirement":"required"`, "parents see the setting of the current version")
 
-	rec = traegerJSON(t, f.traeger, office.token, http.MethodPut, holidayFormPath(period.ID), map[string]any{"fields": []map[string]any{}})
+	rec = putHolidayForm(t, f.traeger, office.token, holidayFormPath(int64(period.ID)), map[string]any{"fields": []map[string]any{}})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, "optional", decodeSchoolPortalData[holidayHealthFormBody](t, rec.Body.Bytes()).HealthRequirement,
 		"a save without the setting keeps the health fields optional")
 
-	rec = traegerJSON(t, f.traeger, office.token, http.MethodPut, holidayFormPath(period.ID),
+	rec = putHolidayForm(t, f.traeger, office.token, holidayFormPath(int64(period.ID)),
 		map[string]any{"fields": []map[string]any{}, "health_requirement": "sometimes"})
 	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	code, fields := registrationRefusalOf(t, rec)
 	assert.Equal(t, enrollment.CodeHolidayFormFieldNotAllowed, code)
 	assert.Equal(t, []string{"health_requirement"}, fields)
-	assert.Equal(t, []string{"optional", "required", "optional"}, holidayFormHealthRequirements(t, f, period.ID),
+	assert.Equal(t, []string{"optional", "required", "optional"}, holidayFormHealthRequirements(t, f, int64(period.ID)),
 		"a refused save writes no version")
 }
 
@@ -81,7 +81,7 @@ func TestHolidayRegistrationChecksTheHealthFieldsAgainstItsFormVersion(t *testin
 			t.Parallel()
 			office := newTraegerOffice(t, f.db, f.traeger, "Gesundheit Prüfung "+requirement, identityaccess.TraegerRoleAdministration)
 			period := openHolidays(t, f, office)
-			saveHolidayHealthForm(t, f, office, period.ID, requirement)
+			saveHolidayHealthForm(t, f, office, int64(period.ID), requirement)
 			offer := holidayOffer(t, f, period.PublicToken)
 			email := func(name string) string { return fmt.Sprintf("%s.gesundheit.%s@example.org", name, requirement) }
 			submit := func(name string, change func(children []map[string]any), consent bool) (int, []string) {

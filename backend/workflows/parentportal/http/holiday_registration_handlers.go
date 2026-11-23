@@ -13,6 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
@@ -271,7 +272,7 @@ type HolidayRegistrationEntryChildResponse struct {
 // account. first_day and last_day span the care weeks and are null while
 // the period has none.
 type HolidayRegistrationEntryResponse struct {
-	ID          int64                                   `json:"id"`
+	ID          ident.ID                                `json:"id"`
 	TraegerName string                                  `json:"traeger_name"`
 	PeriodName  string                                  `json:"period_name"`
 	FirstDay    *timezone.Date                          `json:"first_day"`
@@ -313,7 +314,7 @@ func holidayRegistrationEntriesResponse(entries []parentService.HolidayRegistrat
 	registrations := make([]HolidayRegistrationEntryResponse, 0, len(entries))
 	for _, entry := range entries {
 		response := HolidayRegistrationEntryResponse{
-			ID: entry.ID, TraegerName: entry.TraegerName, PeriodName: entry.PeriodName, SubmittedAt: entry.SubmittedAt,
+			ID: ident.ID(entry.ID), TraegerName: entry.TraegerName, PeriodName: entry.PeriodName, SubmittedAt: entry.SubmittedAt,
 			Status: entry.Status, Children: make([]HolidayRegistrationEntryChildResponse, 0, len(entry.Children)),
 		}
 		if !entry.FirstDay.IsZero() && !entry.LastDay.IsZero() {

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"testing"
 	"time"
 
@@ -75,7 +76,7 @@ func TestParentTrustedDevicesQueryBudget(t *testing.T) {
 		for len(devices) < n {
 			name := fmt.Sprintf("Parent browser %d", len(devices))
 			id := addDevice(chain.AccountID, nil, true, name)
-			devices = append(devices, map[string]any{"id": float64(id), "user_agent": name, "ip_address": "127.0.0.1", "created_at": created.Format(time.RFC3339), "expires_at": expires.Format(time.RFC3339)})
+			devices = append(devices, map[string]any{"id": strconv.FormatInt(id, 10), "user_agent": name, "ip_address": "127.0.0.1", "created_at": created.Format(time.RFC3339), "expires_at": expires.Format(time.RFC3339)})
 		}
 		counter.Reset()
 		counter.Start()
@@ -83,8 +84,12 @@ func TestParentTrustedDevicesQueryBudget(t *testing.T) {
 		counter.Stop()
 		require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 		require.Zero(t, counter.WriteRows())
-		var got []map[string]any
-		require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &got))
+		// The list answers in the envelope the catalog proxy reads (#2352).
+		var envelope struct {
+			Data []map[string]any `json:"data"`
+		}
+		require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &envelope))
+		got := envelope.Data
 		require.ElementsMatch(t, devices, got)
 		querybudgets.AssertQueryBudget(t, "api.parent.me.mfa.trusted_devices.positive_growth", counter.Measurement(counter.Queries()))
 	}

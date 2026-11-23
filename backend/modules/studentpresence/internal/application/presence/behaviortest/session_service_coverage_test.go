@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/api"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	activeSvc "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -52,7 +53,7 @@ func TestGetDeviceCurrentSession_HasSession(t *testing.T) {
 	assert.NotNil(t, currentSession)
 	assert.Equal(t, session.ID, currentSession.ID)
 	require.NotNil(t, currentSession.GroupID)
-	assert.Equal(t, activityGroup.ID, *currentSession.GroupID)
+	assert.Equal(t, ident.ID(activityGroup.ID), *currentSession.GroupID)
 }
 
 // TestGetDeviceCurrentSession_NoSession verifies error when device has no active session
@@ -69,126 +70,6 @@ func TestGetDeviceCurrentSession_NoSession(t *testing.T) {
 
 	// ACT
 	_, err := service.GetDeviceCurrentSession(ctx, device.ID)
-
-	// ASSERT
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "no active session")
-}
-
-// TestProcessSessionTimeout_WithActiveSession verifies timeout processing for active session
-func TestProcessSessionTimeout_WithActiveSession(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-
-	ctx := testpkg.Ctx(t)
-	service := setupSessionService(t, db)
-
-	// Create fixtures
-	staff := testpkg.CreateTestStaff(t, db, "Supervisor", "Test")
-	device := testpkg.CreateTestDevice(t, db, "device-timeout-active")
-	activityGroup := testpkg.CreateTestActivityGroup(t, db, "Activity Timeout")
-	room := testpkg.CreateTestRoom(t, db, "Room Timeout")
-
-	// Start session
-	session, err := service.StartActivitySessionWithSupervisors(ctx, activityGroup.ID, device.ID, []int64{staff.ID}, &room.ID)
-	require.NoError(t, err)
-
-	// ACT: Process timeout
-	result, err := service.ProcessSessionTimeout(ctx, device.ID)
-
-	// ASSERT
-	require.NoError(t, err)
-	assert.NotNil(t, result)
-	assert.Equal(t, session.ID, result.SessionID)
-	if assert.NotNil(t, result.ActivityID) {
-		assert.Equal(t, activityGroup.ID, *result.ActivityID)
-	}
-	assert.Equal(t, 0, result.StudentsCheckedOut, "the session has no visits to check out")
-}
-
-// TestProcessSessionTimeout_NoSession verifies error when processing timeout for non-existent session
-func TestProcessSessionTimeout_NoSession(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-
-	ctx := testpkg.Ctx(t)
-	service := setupSessionService(t, db)
-
-	// Create device with no session
-	device := testpkg.CreateTestDevice(t, db, "device-timeout-none")
-
-	// ACT
-	result, err := service.ProcessSessionTimeout(ctx, device.ID)
-
-	// ASSERT
-	require.Error(t, err)
-	assert.Nil(t, result)
-	assert.Contains(t, err.Error(), "no active session")
-}
-
-// TestProcessSessionTimeout_WithVisits verifies session timeout with active visits
-func TestProcessSessionTimeout_WithVisits(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-
-	ctx := testpkg.Ctx(t)
-	service := setupSessionService(t, db)
-
-	// Create fixtures
-	staff := testpkg.CreateTestStaff(t, db, "Supervisor", "Test")
-	device := testpkg.CreateTestDevice(t, db, "device-timeout-visits")
-	activityGroup := testpkg.CreateTestActivityGroup(t, db, "Activity WithVisits")
-	room := testpkg.CreateTestRoom(t, db, "Room WithVisits")
-	student := testpkg.CreateTestStudent(t, db, "Student", "WithVisits", "1a")
-
-	// Start session
-	session, err := service.StartActivitySessionWithSupervisors(ctx, activityGroup.ID, device.ID, []int64{staff.ID}, &room.ID)
-	require.NoError(t, err)
-
-	// Create a visit
-	visit := testpkg.CreateTestVisit(t, db, student.ID, session.ID, time.Now(), nil)
-	require.NotNil(t, visit)
-
-	// ACT: Process timeout (which internally ends visits)
-	result, err := service.ProcessSessionTimeout(ctx, device.ID)
-
-	// ASSERT
-	require.NoError(t, err)
-	assert.NotNil(t, result)
-	assert.Equal(t, session.ID, result.SessionID)
-	if assert.NotNil(t, result.ActivityID) {
-		assert.Equal(t, activityGroup.ID, *result.ActivityID)
-	}
-	assert.Equal(t, 1, result.StudentsCheckedOut, "Should have checked out 1 student")
-}
-
-// TestProcessSessionTimeout_AlreadyEnded verifies error when session already ended
-func TestProcessSessionTimeout_AlreadyEnded(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-
-	ctx := testpkg.Ctx(t)
-	service := setupSessionService(t, db)
-
-	// Create fixtures
-	staff := testpkg.CreateTestStaff(t, db, "Supervisor", "Ended")
-	device := testpkg.CreateTestDevice(t, db, "device-ended")
-	activityGroup := testpkg.CreateTestActivityGroup(t, db, "Activity Ended")
-	room := testpkg.CreateTestRoom(t, db, "Room Ended")
-
-	// Start and end session
-	session, err := service.StartActivitySessionWithSupervisors(ctx, activityGroup.ID, device.ID, []int64{staff.ID}, &room.ID)
-	require.NoError(t, err)
-
-	_, err = service.EndActivitySession(ctx, session.ID)
-	require.NoError(t, err)
-
-	// ACT: Try to timeout already-ended session
-	_, err = service.ProcessSessionTimeout(ctx, device.ID)
 
 	// ASSERT
 	require.Error(t, err)
@@ -216,7 +97,7 @@ func TestEndDailySessions_WithActiveSessions(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create visit and supervisor
-	visit := testpkg.CreateTestVisit(t, db, student.ID, session.ID, time.Now(), nil)
+	visit := testpkg.CreateTestVisit(t, db, student.ID, session.ID.Int64(), time.Now(), nil)
 	require.NotNil(t, visit)
 
 	// ACT: End all daily sessions
@@ -416,7 +297,7 @@ func TestCleanupAbandonedSessions_KeepsSessionWithChildrenInRoom(t *testing.T) {
 
 	session, err := service.StartActivitySessionWithSupervisors(ctx, activityGroup.ID, device.ID, []int64{staff.ID}, &room.ID)
 	require.NoError(t, err)
-	testpkg.CreateTestVisit(t, db, student.ID, session.ID, time.Now().Add(-3*time.Hour), nil)
+	testpkg.CreateTestVisit(t, db, student.ID, session.ID.Int64(), time.Now().Add(-3*time.Hour), nil)
 
 	// The terminal is offline and nobody used the session for two hours.
 	oldTime := time.Now().Add(-2 * time.Hour)
@@ -429,7 +310,7 @@ func TestCleanupAbandonedSessions_KeepsSessionWithChildrenInRoom(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Zero(t, cleanedCount, "a session with children in the room is not abandoned")
-	group, err := service.GetActiveGroup(ctx, session.ID)
+	group, err := service.GetActiveGroup(ctx, session.ID.Int64())
 	require.NoError(t, err)
 	assert.Nil(t, group.EndTime, "the supervision keeps running")
 }
@@ -526,7 +407,7 @@ func TestUpdateActiveGroupSupervisors_ReactivateEndedSupervisor(t *testing.T) {
 	// 1. End staff1 (because all current supervisors are ended)
 	// 2. Reactivate staff1 (because they're in the new list) ← covers reactivateSupervisor
 	// 3. Create staff2 (new supervisor)
-	_, err = service.UpdateActiveGroupSupervisors(ctx, session.ID, []int64{staff1.ID, staff2.ID})
+	_, err = service.UpdateActiveGroupSupervisors(ctx, session.ID.Int64(), []int64{staff1.ID, staff2.ID})
 
 	// ASSERT
 	require.NoError(t, err)
@@ -564,9 +445,9 @@ func TestEndDailySessions_WithMultipleVisitsAndSupervisors(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create 2 active visits (no end time)
-	visit1 := testpkg.CreateTestVisit(t, db, student1.ID, session.ID, time.Now(), nil)
+	visit1 := testpkg.CreateTestVisit(t, db, student1.ID, session.ID.Int64(), time.Now(), nil)
 	require.NotNil(t, visit1)
-	visit2 := testpkg.CreateTestVisit(t, db, student2.ID, session.ID, time.Now(), nil)
+	visit2 := testpkg.CreateTestVisit(t, db, student2.ID, session.ID.Int64(), time.Now(), nil)
 	require.NotNil(t, visit2)
 
 	// ACT: End all daily sessions (should end both visits, supervisor, and session)
@@ -579,43 +460,6 @@ func TestEndDailySessions_WithMultipleVisitsAndSupervisors(t *testing.T) {
 	assert.GreaterOrEqual(t, result.VisitsEnded, 2, "Should have ended at least 2 visits")
 	assert.GreaterOrEqual(t, result.SupervisorsEnded, 1, "Should have ended at least 1 supervisor")
 	assert.GreaterOrEqual(t, result.SessionsEnded, 1, "Should have ended at least 1 session")
-}
-
-// TestProcessSessionTimeout_WithMultipleActiveVisits exercises checkoutActiveVisits coverage
-// Scenario: Session timeout should checkout all active visits
-func TestProcessSessionTimeout_WithMultipleActiveVisits(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-
-	ctx := testpkg.Ctx(t)
-	service := setupSessionService(t, db)
-
-	// Create fixtures
-	staff := testpkg.CreateTestStaff(t, db, "Supervisor", "Timeout")
-	device := testpkg.CreateTestDevice(t, db, "device-timeout-multi")
-	activityGroup := testpkg.CreateTestActivityGroup(t, db, "Activity TimeoutMulti")
-	room := testpkg.CreateTestRoom(t, db, "Room TimeoutMulti")
-	student1 := testpkg.CreateTestStudent(t, db, "Student", "Three", "2a")
-	student2 := testpkg.CreateTestStudent(t, db, "Student", "Four", "2b")
-
-	// ARRANGE: Start session
-	session, err := service.StartActivitySessionWithSupervisors(ctx, activityGroup.ID, device.ID, []int64{staff.ID}, &room.ID)
-	require.NoError(t, err)
-
-	// Create 2 active visits
-	visit1 := testpkg.CreateTestVisit(t, db, student1.ID, session.ID, time.Now(), nil)
-	require.NotNil(t, visit1)
-	visit2 := testpkg.CreateTestVisit(t, db, student2.ID, session.ID, time.Now(), nil)
-	require.NotNil(t, visit2)
-
-	// ACT: Process timeout (should checkout both students)
-	result, err := service.ProcessSessionTimeout(ctx, device.ID)
-
-	// ASSERT
-	require.NoError(t, err)
-	assert.NotNil(t, result)
-	assert.Equal(t, 2, result.StudentsCheckedOut, "Should have checked out 2 students")
 }
 
 // TestEndActivitySession_BySessionID exercises EndActivitySession coverage
@@ -640,7 +484,7 @@ func TestEndActivitySession_BySessionID(t *testing.T) {
 	require.NotNil(t, session)
 
 	// ACT: End the session by ID
-	_, err = service.EndActivitySession(ctx, session.ID)
+	_, err = service.EndActivitySession(ctx, session.ID.Int64())
 
 	// ASSERT
 	require.NoError(t, err)

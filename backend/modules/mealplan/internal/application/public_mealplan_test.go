@@ -7,14 +7,20 @@ import (
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/modules/mealplan"
+	"github.com/moto-ogs/project-phoenix/modules/mealplan/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 type recordingEngine struct {
 	available bool
 	replaced  mealplan.ReplaceDay
+	// stored is the day the store reads; calls lists lock, read and write.
+	stored []domain.Entry
+	calls  []string
 }
 
 func (e *recordingEngine) Replace(_ context.Context, date string, dishes []mealplan.Dish) error {
+	e.calls = append(e.calls, "write "+date)
 	e.replaced = mealplan.ReplaceDay{Date: mealplan.Date(date), Dishes: dishes}
 	return nil
 }
@@ -27,7 +33,7 @@ func TestModuleRejectsWeekendWritesAtPublicSeam(t *testing.T) {
 		t.Fatal(dateErr)
 	}
 	module := newTestModule(&recordingEngine{available: true})
-	err := module.ReplaceDay(context.Background(), mealplan.ReplaceDay{
+	_, err := module.ReplaceDay(context.Background(), mealplan.ReplaceDay{
 		Date:   date,
 		Dishes: []mealplan.Dish{{Dish: "Suppe"}},
 	})
@@ -76,8 +82,8 @@ func TestModuleNormalizesDishesAtPublicSeam(t *testing.T) {
 		t.Fatal(dateErr)
 	}
 	note := "  vegetarisch  "
-	err := module.ReplaceDay(context.Background(), mealplan.ReplaceDay{
-		Date: date,
+	_, err := module.ReplaceDay(context.Background(), mealplan.ReplaceDay{
+		Date: date, ExpectedVersion: dayVersion(nil),
 		Dishes: []mealplan.Dish{
 			{Dish: "  Nudeln  ", Note: &note},
 			{Dish: "   "},
@@ -141,8 +147,8 @@ func TestModuleNormalizesAllergensAtPublicSeam(t *testing.T) {
 
 	engine := &recordingEngine{available: true}
 	module := newTestModule(engine)
-	err := module.ReplaceDay(context.Background(), mealplan.ReplaceDay{
-		Date: "2026-09-07",
+	_, err := module.ReplaceDay(context.Background(), mealplan.ReplaceDay{
+		Date: "2026-09-07", ExpectedVersion: dayVersion(nil),
 		Dishes: []mealplan.Dish{
 			{Dish: "Fischstäbchen", Allergens: []mealplan.Allergen{mealplan.AllergenMilk, mealplan.AllergenFish, mealplan.AllergenGluten, mealplan.AllergenFish}},
 			{Dish: "Obst"},
@@ -165,7 +171,7 @@ func TestModuleRejectsUnknownAllergensBeforeWriting(t *testing.T) {
 
 	engine := &recordingEngine{available: true}
 	module := newTestModule(engine)
-	err := module.ReplaceDay(context.Background(), mealplan.ReplaceDay{
+	_, err := module.ReplaceDay(context.Background(), mealplan.ReplaceDay{
 		Date: "2026-09-07",
 		// A blank dish does not hide an unknown code either.
 		Dishes: []mealplan.Dish{{Dish: " ", Allergens: []mealplan.Allergen{"strawberry"}}},
@@ -175,5 +181,81 @@ func TestModuleRejectsUnknownAllergensBeforeWriting(t *testing.T) {
 	}
 	if engine.replaced.Date != "" {
 		t.Fatalf("an invalid day reached the store: %#v", engine.replaced)
+	}
+}
+
+// A save locks the day, reads it and checks the version its saver read
+// before it writes: an outdated or missing version is refused without a
+// write. The deprecated route's day as read stands for its version, in
+// stored form.
+func TestModuleChecksTheReadVersionBeforeTheWrite(t *testing.T) {
+	t.Parallel()
+
+	date, dateErr := mealplan.ParseDate("2026-09-07")
+	if dateErr != nil {
+		t.Fatal(dateErr)
+	}
+	note := "mit Brot"
+	stored := []domain.Entry{{Date: domain.Date(date), Dish: "Suppe", Note: &note, Allergens: []string{"gluten", "milk"}}}
+	spaced := " mit Brot "
+	asRead := []mealplan.Dish{{Dish: " Suppe ", Note: &spaced, Allergens: []mealplan.Allergen{"milk", "gluten"}}, {Dish: " "}}
+	empty := []mealplan.Dish{}
+	current := dayVersion(storedDishes(stored))
+	written := []string{"lock 2026-09-07", "read 2026-09-07", "write 2026-09-07"}
+	refused := []string{"lock 2026-09-07", "read 2026-09-07"}
+	tests := []struct {
+		name      string
+		version   string
+		asRead    *[]mealplan.Dish
+		wantErr   error
+		wantCalls []string
+	}{
+		{"current version", current, nil, nil, written},
+		{"outdated version", dayVersion(nil), nil, readstate.ErrChanged, refused},
+		{"no version", "", nil, readstate.ErrChanged, refused},
+		{"deprecated day as read", "", &asRead, nil, written},
+		{"deprecated day changed since read", "", &empty, readstate.ErrChanged, refused},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			engine := &recordingEngine{available: true, stored: stored}
+			day, err := newTestModule(engine).ReplaceDay(context.Background(), mealplan.ReplaceDay{
+				Date: date, Dishes: []mealplan.Dish{{Dish: " Nudeln "}}, ExpectedVersion: tc.version, ExpectedDishes: tc.asRead,
+			})
+			if !errors.Is(err, tc.wantErr) {
+				t.Fatalf("ReplaceDay() error = %v, want %v", err, tc.wantErr)
+			}
+			if !slices.Equal(engine.calls, tc.wantCalls) {
+				t.Fatalf("store calls = %v, want %v", engine.calls, tc.wantCalls)
+			}
+			if err == nil && day.Version != dayVersion([]mealplan.Dish{{Dish: "Nudeln", Allergens: []mealplan.Allergen{}}}) {
+				t.Fatalf("answered version %q is not the version of the written day", day.Version)
+			}
+		})
+	}
+}
+
+// Every weekday of the week read carries the version a save of it checks,
+// an empty day too.
+func TestModuleDaysCarryTheVersionTheSaveChecks(t *testing.T) {
+	t.Parallel()
+
+	stored := []domain.Entry{{Date: "2026-09-08", Dish: "Suppe", Allergens: []string{"milk"}}}
+	engine := &recordingEngine{available: true, stored: stored}
+	module := newTestModule(engine)
+	days, err := module.Days(context.Background(), "2026-09-09")
+	if err != nil {
+		t.Fatalf("Days() error = %v", err)
+	}
+	if len(days) != 5 || days[0].Date != "2026-09-07" || days[1].Date != "2026-09-08" {
+		t.Fatalf("days = %+v, want Monday to Friday of the week", days)
+	}
+	if days[0].Version != dayVersion(nil) || days[1].Version != dayVersion(storedDishes(stored)) {
+		t.Fatalf("versions = %q, %q", days[0].Version, days[1].Version)
+	}
+	engine.stored = nil
+	if _, err := module.ReplaceDay(context.Background(), mealplan.ReplaceDay{Date: "2026-09-07", Dishes: []mealplan.Dish{{Dish: "Obst"}}, ExpectedVersion: days[0].Version}); err != nil {
+		t.Fatalf("a save with the read version of an empty day: %v", err)
 	}
 }

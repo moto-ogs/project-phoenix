@@ -14,7 +14,7 @@ import {
   useWeekendFollowsFriday,
 } from "~/lib/tenant-context";
 import { fetchStudents } from "~/lib/student-api";
-import { ApiError, transportFetch } from "~/lib/api-error";
+import { ApiError, unavailableApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import { deferred } from "~/test/helpers/form-modal-pending";
@@ -49,7 +49,10 @@ const {
   mockShowActionError,
   mockShowMessage,
   mockAcknowledgeConflict,
+  mockGetTemplate,
 } = vi.hoisted(() => ({
+  // The series editor opens from the series' editing read (ADR 0311).
+  mockGetTemplate: vi.fn(),
   mockUseSession: vi.fn(),
   mockToastSuccess: vi.fn(),
   mockToastError: vi.fn(),
@@ -201,6 +204,7 @@ vi.mock("~/lib/timetable-api", () => ({
   timetableService: {
     getWeek: vi.fn(),
     getTemplates: vi.fn(),
+    getTemplate: mockGetTemplate,
     getGaps: vi.fn(),
     materialize: mockMaterialize,
     replanWeek: vi.fn(),
@@ -943,7 +947,7 @@ function setupSWR({
       }
       return { data: phases, isLoading: false };
     }
-    if (key === 'staff-directory-list-{"strict":false}') {
+    if (key === "staff-directory-list-{}") {
       return {
         data: [
           {
@@ -2414,15 +2418,8 @@ describe("BetreuungsplanView", () => {
 
   it("shows a network failure of the week in place, never the browser text (#1577)", async () => {
     // Was der Client bei einem Netzfehler wirft: fetch scheitert mit
-    // TypeError, transportFetch macht daraus general.unavailable.
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockRejectedValue(new TypeError("Failed to fetch")),
-    );
-    const networkError = await transportFetch("/api/timetable/instances").catch(
-      (err: unknown) => err,
-    );
-    vi.unstubAllGlobals();
+    // TypeError, der Transport von bffJson macht daraus general.unavailable.
+    const networkError = unavailableApiError(new TypeError("Failed to fetch"));
     const base = mockUseSWRAuth.getMockImplementation()!;
     mockUseSWRAuth.mockImplementation((key: string | null) =>
       key?.startsWith("timetable-week-")
@@ -2553,7 +2550,7 @@ describe("BetreuungsplanView", () => {
     );
     fireEvent.click(screen.getByText("detail-complete"));
     await stateChange.waitFor(() =>
-      expect(mockComplete).toHaveBeenCalledWith("42", []),
+      expect(mockComplete).toHaveBeenCalledWith("42"),
     );
     fireEvent.click(screen.getByText("detail-cancel"));
     await stateChange.waitFor(() =>
@@ -2874,6 +2871,7 @@ describe("BetreuungsplanView", () => {
 
   it("handles series create, edit, apply, delete and archive", async () => {
     setUrl("view=serien");
+    mockGetTemplate.mockResolvedValue({ ...template, version: "v7" });
     render(<BetreuungsplanView />);
 
     expect(screen.getByText("create-template")).toBeVisible();
@@ -2882,7 +2880,8 @@ describe("BetreuungsplanView", () => {
     fireEvent.click(screen.getByText("event-close"));
 
     fireEvent.click(screen.getByText("edit-template"));
-    expect(screen.getByText("event-close")).toBeInTheDocument();
+    expect(await screen.findByText("event-close")).toBeInTheDocument();
+    expect(mockGetTemplate).toHaveBeenCalledWith("7", "5");
     fireEvent.click(screen.getByText("event-delete-series"));
     await stateChange.waitFor(() =>
       expect(mockEndTemplate).toHaveBeenCalledWith("7", {
@@ -2895,7 +2894,7 @@ describe("BetreuungsplanView", () => {
     expect(mockTenantMutate).toHaveBeenCalledWith("timetable-templates-5");
 
     fireEvent.click(screen.getByText("edit-template"));
-    fireEvent.click(screen.getByText("event-close"));
+    fireEvent.click(await screen.findByText("event-close"));
 
     fireEvent.click(screen.getByText("apply-template"));
     await stateChange.waitFor(() => expect(mockMaterialize).toHaveBeenCalled());

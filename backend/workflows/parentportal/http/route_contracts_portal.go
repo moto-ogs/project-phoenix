@@ -44,6 +44,11 @@ type PushPublicKeyResponse struct {
 // to sign. The root names them, as it binds the renderers (ADR 0270).
 type ForeignContractTypes struct {
 	EnrollmentBootstrap, EnrollmentSubmitRequest, EnrollmentSubmit, ContractSigning any
+	// EnrollmentUpload is Enrollment's receipt of a proof the form uploads,
+	// with the body bound and the code of a too large file.
+	EnrollmentUpload             any
+	EnrollmentUploadMaxBodyBytes int
+	EnrollmentUploadTooLargeCode string
 }
 
 // PortalRouteContracts registers the typed contract of the guardian's routes
@@ -89,8 +94,13 @@ func documentRouteContracts(signing any) []common.RouteContract {
 		{Method: "GET", Pattern: "/me/documents/shared", Portals: portals, Response: []SharedDocumentResponse{}},
 		{Method: "GET", Pattern: contract + "/signing", Portals: portals, Response: signing},
 		{Method: "POST", Pattern: contract + "/sign", Portals: portals, Request: ContractSignRequest{}, Response: signing},
-		{Method: "POST", Pattern: contract + "/sepa-mandate/preview", Portals: portals, Request: parentService.SEPAMandateInput{}, Response: parentService.SEPAMandateText{}},
-		{Method: "POST", Pattern: contract + "/sepa-mandate/revoke", Portals: portals, Response: parentService.SEPAMandateView{}},
+		{Method: "POST", Pattern: contract + "/sepa-mandate/preview", Portals: portals, NoCommit: "renders the mandate text and grants no mandate", Request: parentService.SEPAMandateInput{}, Response: parentService.SEPAMandateText{}},
+		{Method: "POST", Pattern: contract + "/sepa-mandate/revoke", Portals: portals, Request: ParentSEPAMandateRevokeRequest{}, Response: parentService.SEPAMandateView{}},
+		// The stored PDFs and the shared files of the inbox (#4671, #4678,
+		// #4692); the handlers refuse a non-numeric ID with 400.
+		{Method: "GET", Pattern: "/me/documents/{organizationId}/{documentId}/pdf", Portals: portals, File: true},
+		{Method: "GET", Pattern: contract + "/pdf", Portals: portals, File: true},
+		{Method: "GET", Pattern: "/me/documents/{organizationId}/shared/{documentId}/file", Portals: portals, File: true},
 	}
 }
 
@@ -108,6 +118,16 @@ func communicationRouteContracts() []common.RouteContract {
 			Response: ThreadViewResponse{},
 		},
 		{Method: "POST", Pattern: child, Portals: portals, Request: PostMessageRequest{}, Response: ThreadViewResponse{}},
+		// The attachments stream through the portal's proxy (#2352).
+		{
+			Method: "POST", Pattern: child + "/attachments", Portals: portals, Multipart: true,
+			MaxBodyBytes: int(common.MessageAttachmentBodyBytes(maxMessageAttachmentBytes)),
+			TooLargeCode: common.CodeFilesFileTooLarge, Response: messageAttachmentResponse{},
+		},
+		{
+			Method: "GET", Pattern: child + "/attachments/{attachmentId}/download", Portals: portals,
+			Query: []common.QueryParam{{Name: "inline", Kind: common.QueryString}}, File: true,
+		},
 		{Method: "GET", Pattern: "/me/messages/group-threads", Portals: portals, Response: []GroupThreadSummaryResponse{}},
 		{Method: "GET", Pattern: "/me/messages/group-threads/{groupThreadId}", Portals: portals, Response: GroupThreadViewResponse{}},
 		{Method: "GET", Pattern: "/me/news", Portals: portals, Response: []AnnouncementResponse{}},
@@ -121,10 +141,13 @@ func communicationRouteContracts() []common.RouteContract {
 			Request:             declarationRequest{}, Response: DeclarationRecordedResponse{},
 		},
 		{
-			// format=pdf answers a file; the proxy forwards only the JSON form.
 			Method: "GET", Pattern: news + "/declaration/proof", Portals: portals,
 			Query:    []common.QueryParam{{Name: "student_id", Kind: common.QueryID}},
 			Response: declarationProofResponse{},
+		},
+		{
+			Method: "GET", Pattern: news + "/declaration/proof/pdf", Portals: portals,
+			Query: []common.QueryParam{{Name: "student_id", Kind: common.QueryID}}, File: true,
 		},
 	}
 }
@@ -145,8 +168,8 @@ func childStatusRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: child + "/excused-requests", Portals: portals, Response: []ParentExcusedRequestResponse{}},
 		{Method: "PUT", Pattern: child + "/excused-requests/{requestId}", Portals: portals, Request: EditExcusedRequestBody{}, Response: ParentExcusedRequestResponse{}},
 		{Method: "GET", Pattern: child + "/requests/{requestType}/{requestId}/events", Portals: portals, Response: []ParentRequestEventResponse{}},
-		{Method: "GET", Pattern: sharing, Portals: portals, Response: requestSharingResponse{}},
-		{Method: "PUT", Pattern: sharing, Portals: portals, Request: requestSharingBody{}, Response: requestSharingResponse{}},
+		{Method: "GET", Pattern: sharing, Portals: portals, Response: requestSharingStateResponse{}},
+		{Method: "PUT", Pattern: sharing, Portals: portals, Request: requestSharingBody{}, Response: requestSharingStateResponse{}},
 		{Method: "GET", Pattern: child + "/request-sharing-options", Portals: portals, Response: requestSharingResponse{}},
 		{Method: "GET", Pattern: child + "/parent-conferences", Portals: portals, Response: []calendarService.ParentConferenceOffer{}},
 	}
@@ -193,6 +216,7 @@ func childMasterDataRouteContracts() []common.RouteContract {
 		{Method: "PUT", Pattern: guardian + "/pickup", Portals: portals, Request: updateGuardianRelationshipRequest{}, Response: childGuardianResponse{}},
 		{Method: "POST", Pattern: guardian + "/pickup-permission-requests", Portals: portals, Request: pickupPermissionRequestBody{}, Response: pickupPermissionRequestResponse{}},
 		{Method: "GET", Pattern: child + "/pickup-permission-requests", Portals: portals, Response: []pickupPermissionRequestResponse{}},
+		{Method: "GET", Pattern: child + "/pickup-requests/{requestId}/proof/pdf", Portals: portals, File: true},
 		{Method: "POST", Pattern: child + "/pickup-signature-statement", Portals: portals, Request: pickupSignatureStatementRequest{}, Response: pickupSignatureStatementResponse{}},
 	}
 }
@@ -204,6 +228,8 @@ func formRouteContracts(foreign ForeignContractTypes) []common.RouteContract {
 		{Method: "GET", Pattern: "/enrollments/{tenantSlug}/profile", Portals: portals, Response: common.GuardianProfileResponse{}},
 		{Method: "GET", Pattern: "/enrollments/{tenantSlug}/bootstrap/{phaseId}", Portals: portals, Query: lateInvite, Response: foreign.EnrollmentBootstrap},
 		{Method: "POST", Pattern: "/enrollments/{tenantSlug}/submit", Portals: portals, Query: lateInvite, Request: foreign.EnrollmentSubmitRequest, Response: foreign.EnrollmentSubmit},
+		{Method: "POST", Pattern: "/enrollments/{tenantSlug}/uploads", Portals: portals, Multipart: true, Response: foreign.EnrollmentUpload,
+			MaxBodyBytes: foreign.EnrollmentUploadMaxBodyBytes, TooLargeCode: foreign.EnrollmentUploadTooLargeCode},
 		{Method: "GET", Pattern: "/holiday-registrations/{token}/family", Portals: portals, Response: HolidayRegistrationFamilyResponse{}},
 	}
 }

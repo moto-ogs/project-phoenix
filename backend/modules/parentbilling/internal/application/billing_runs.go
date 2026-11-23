@@ -212,7 +212,7 @@ func (b *BillingRuns) StartHolidayBillingRun(ctx context.Context, reviewer paren
 	if err != nil {
 		return parentbilling.BillingRun{}, err
 	}
-	if err := b.store.InsertRunEvent(ctx, reviewer.OrganizationID, run.ID, reviewer.AccountID, runEventCreate, nil); err != nil {
+	if err := b.store.InsertRunEvent(ctx, reviewer.OrganizationID, run.ID.Int64(), reviewer.AccountID, runEventCreate, nil); err != nil {
 		return parentbilling.BillingRun{}, fmt.Errorf("parent billing: record billing run: %w", err)
 	}
 	return run, nil
@@ -232,7 +232,7 @@ func (b *BillingRuns) BillingRun(ctx context.Context, reviewer parentbilling.Hol
 	if err != nil {
 		return parentbilling.BillingRunDetail{}, err
 	}
-	if err := b.store.InsertRunEvent(ctx, reviewer.OrganizationID, run.ID, reviewer.AccountID, runEventRead, nil); err != nil {
+	if err := b.store.InsertRunEvent(ctx, reviewer.OrganizationID, run.ID.Int64(), reviewer.AccountID, runEventRead, nil); err != nil {
 		return parentbilling.BillingRunDetail{}, fmt.Errorf("parent billing: record billing run read: %w", err)
 	}
 	return detail, nil
@@ -257,7 +257,7 @@ func (b *BillingRuns) CorrectBillingRun(ctx context.Context, reviewer parentbill
 	if err != nil {
 		return parentbilling.BillingRunDetail{}, err
 	}
-	child, ok := current.child(input.RegistrationID, input.ChildID)
+	child, ok := current.child(input.RegistrationID.Int64(), input.ChildID.Int64())
 	if !ok {
 		return parentbilling.BillingRunDetail{}, parentbilling.ErrBillingFamilyNotFound
 	}
@@ -268,11 +268,11 @@ func (b *BillingRuns) CorrectBillingRun(ctx context.Context, reviewer parentbill
 		ChildID: child.ChildID, AmountCents: input.TotalCents - child.TotalCents, TotalBeforeCents: child.TotalCents,
 		TotalAfterCents: input.TotalCents, Reason: input.Reason,
 	}
-	if err := b.store.InsertRunCorrection(ctx, reviewer.OrganizationID, run, input.RegistrationID, reviewer.AccountID, correction); err != nil {
+	if err := b.store.InsertRunCorrection(ctx, reviewer.OrganizationID, run, input.RegistrationID.Int64(), reviewer.AccountID, correction); err != nil {
 		return parentbilling.BillingRunDetail{}, fmt.Errorf("parent billing: store correction: %w", err)
 	}
-	if err := b.store.InsertRunEvent(ctx, reviewer.OrganizationID, run.ID, reviewer.AccountID, runEventCorrect,
-		map[string]any{"registration_id": input.RegistrationID, "child_id": input.ChildID}); err != nil {
+	if err := b.store.InsertRunEvent(ctx, reviewer.OrganizationID, run.ID.Int64(), reviewer.AccountID, runEventCorrect,
+		map[string]any{"registration_id": input.RegistrationID.Int64(), "child_id": input.ChildID.Int64()}); err != nil {
 		return parentbilling.BillingRunDetail{}, fmt.Errorf("parent billing: record correction: %w", err)
 	}
 	return b.detail(ctx, reviewer, run)
@@ -292,7 +292,7 @@ func (b *BillingRuns) ReleaseBillingRun(ctx context.Context, reviewer parentbill
 	}
 	// A change of a debtor number of the period waits until the invoices
 	// are issued, or the release until the change is committed (#5621).
-	if err := b.store.LockPeriodBilling(ctx, reviewer.OrganizationID, run.Service, run.HolidayPeriodID); err != nil {
+	if err := b.store.LockPeriodBilling(ctx, reviewer.OrganizationID, run.Service, run.HolidayPeriodID.Int64()); err != nil {
 		return parentbilling.BillingRunDetail{}, fmt.Errorf("parent billing: hold the invoices of the period: %w", err)
 	}
 	pattern, err := numberPatternOf(ctx, b.store, reviewer.OrganizationID, run.Service)
@@ -325,7 +325,7 @@ func (b *BillingRuns) ReleaseBillingRun(ctx context.Context, reviewer parentbill
 	if err := b.store.IssueDocuments(ctx, reviewer.OrganizationID, run, year, first, documents); err != nil {
 		return parentbilling.BillingRunDetail{}, err
 	}
-	released, err := b.store.MarkRunReleased(ctx, reviewer.OrganizationID, run.ID, issuedOn, len(documents), current.total())
+	released, err := b.store.MarkRunReleased(ctx, reviewer.OrganizationID, run.ID.Int64(), issuedOn, len(documents), current.total())
 	if err != nil {
 		return parentbilling.BillingRunDetail{}, fmt.Errorf("parent billing: release billing run: %w", err)
 	}
@@ -333,7 +333,7 @@ func (b *BillingRuns) ReleaseBillingRun(ctx context.Context, reviewer parentbill
 	if err != nil {
 		return parentbilling.BillingRunDetail{}, err
 	}
-	if err := b.store.InsertRunEvent(ctx, reviewer.OrganizationID, run.ID, reviewer.AccountID, runEventRelease,
+	if err := b.store.InsertRunEvent(ctx, reviewer.OrganizationID, run.ID.Int64(), reviewer.AccountID, runEventRelease,
 		map[string]any{"document_count": len(documents), "total_cents": current.total(), "carried_corrections": carried, "document_kind": documentKind}); err != nil {
 		return parentbilling.BillingRunDetail{}, fmt.Errorf("parent billing: record release: %w", err)
 	}
@@ -375,7 +375,7 @@ func (b *BillingRuns) fingerprintedPreview(ctx context.Context, reviewer parentb
 func (b *BillingRuns) freezeAccounts(ctx context.Context, reviewer parentbilling.HolidayReviewer, run parentbilling.BillingRun,
 	documents []parentbilling.BillingDocument,
 ) error {
-	weeks, err := b.registrations.HolidayWeekHosts(ctx, reviewer, run.HolidayPeriodID)
+	weeks, err := b.registrations.HolidayWeekHosts(ctx, reviewer, run.HolidayPeriodID.Int64())
 	if err != nil {
 		return fmt.Errorf("parent billing: read the host schools of the weeks: %w", err)
 	}
@@ -443,27 +443,27 @@ func patternOf(ranges []parentbilling.NumberRange, service string) (string, bool
 // preview reads the confirmed registrations through Enrollment, which
 // records the read, and builds the draft invoices of the run.
 func (b *BillingRuns) preview(ctx context.Context, reviewer parentbilling.HolidayReviewer, run parentbilling.BillingRun) (preview, error) {
-	registrations, err := b.registrations.ConfirmedHolidayRegistrations(ctx, reviewer, run.HolidayPeriodID)
+	registrations, err := b.registrations.ConfirmedHolidayRegistrations(ctx, reviewer, run.HolidayPeriodID.Int64())
 	if err != nil {
 		return preview{}, err
 	}
-	contributions, err := b.store.PeriodContributions(ctx, reviewer.OrganizationID, run.HolidayPeriodID)
+	contributions, err := b.store.PeriodContributions(ctx, reviewer.OrganizationID, run.HolidayPeriodID.Int64())
 	if err != nil {
 		return preview{}, fmt.Errorf("parent billing: read holiday contributions: %w", err)
 	}
-	issued, err := b.store.IssuedInvoices(ctx, reviewer.OrganizationID, run.Service, run.HolidayPeriodID)
+	issued, err := b.store.IssuedInvoices(ctx, reviewer.OrganizationID, run.Service, run.HolidayPeriodID.Int64())
 	if err != nil {
 		return preview{}, fmt.Errorf("parent billing: read issued invoices: %w", err)
 	}
-	corrections, err := b.store.RunCorrections(ctx, reviewer.OrganizationID, run.ID)
+	corrections, err := b.store.RunCorrections(ctx, reviewer.OrganizationID, run.ID.Int64())
 	if err != nil {
 		return preview{}, fmt.Errorf("parent billing: read corrections: %w", err)
 	}
-	replaces, err := b.store.CancelledInvoices(ctx, reviewer.OrganizationID, run.Service, run.HolidayPeriodID)
+	replaces, err := b.store.CancelledInvoices(ctx, reviewer.OrganizationID, run.Service, run.HolidayPeriodID.Int64())
 	if err != nil {
 		return preview{}, fmt.Errorf("parent billing: read cancelled invoices: %w", err)
 	}
-	replaced, err := b.replacedInvoices(ctx, reviewer.OrganizationID, run.ID, replaces)
+	replaced, err := b.replacedInvoices(ctx, reviewer.OrganizationID, run.ID.Int64(), replaces)
 	if err != nil {
 		return preview{}, err
 	}
@@ -475,7 +475,7 @@ func (b *BillingRuns) preview(ctx context.Context, reviewer parentbilling.Holida
 		run: run, registrations: registrations, contributions: contributions, issued: issued, corrections: corrections,
 		replaces: replaces, replaced: replaced, perChild: scope == parentbilling.DebtorNumberScopeChild,
 	})
-	payments, err := readInvoicePayments(ctx, b.store, reviewer.OrganizationID, 0, run.ID, scope, hasChildInvoices(result.documents))
+	payments, err := readInvoicePayments(ctx, b.store, reviewer.OrganizationID, 0, run.ID.Int64(), scope, hasChildInvoices(result.documents))
 	if err != nil {
 		return preview{}, err
 	}
@@ -559,12 +559,12 @@ func (b *BillingRuns) issued(ctx context.Context, organizationID, runID int64) (
 func withHistory(documents []parentbilling.BillingDocument, corrections []parentbilling.BillingCorrection) []parentbilling.BillingDocument {
 	byChild := map[int64][]parentbilling.BillingCorrection{}
 	for _, correction := range corrections {
-		byChild[correction.ChildID] = append(byChild[correction.ChildID], correction)
+		byChild[correction.ChildID.Int64()] = append(byChild[correction.ChildID.Int64()], correction)
 	}
 	for i := range documents {
 		for j := range documents[i].Children {
 			child := &documents[i].Children[j]
-			child.Corrections = byChild[child.ChildID]
+			child.Corrections = byChild[child.ChildID.Int64()]
 			if child.Corrections == nil {
 				child.Corrections = []parentbilling.BillingCorrection{}
 			}
@@ -635,15 +635,15 @@ func (b *BillingRuns) missingDebtorNumbers(ctx context.Context, organizationID i
 // of the run (#4689).
 func (b *BillingRuns) releasedDetail(ctx context.Context, organizationID int64, detail *parentbilling.BillingRunDetail) error {
 	var err error
-	if detail.Documents, detail.Letters, err = b.issued(ctx, organizationID, detail.ID); err != nil {
+	if detail.Documents, detail.Letters, err = b.issued(ctx, organizationID, detail.ID.Int64()); err != nil {
 		return err
 	}
 	detail.DocumentKind = issuedDocumentKind(detail.Documents)
-	payments, err := readInvoicePayments(ctx, b.store, organizationID, 0, detail.ID, parentbilling.DebtorNumberScopePayer, false)
+	payments, err := readInvoicePayments(ctx, b.store, organizationID, 0, detail.ID.Int64(), parentbilling.DebtorNumberScopePayer, false)
 	if err != nil {
 		return err
 	}
-	detail.DueDates = payments.run.InPaymentOrder()
+	detail.DueDates, detail.DueDatesVersion = payments.run.InPaymentOrder(), runDueDatesVersion(payments.run)
 	return nil
 }
 
@@ -658,6 +658,7 @@ func (b *BillingRuns) previewDetail(ctx context.Context, reviewer parentbilling.
 	}
 	detail.Fingerprint = fingerprint
 	detail.Documents, detail.Unbilled, detail.DueDates = current.documents, current.unbilled, current.dueDates.InPaymentOrder()
+	detail.DueDatesVersion = runDueDatesVersion(current.dueDates)
 	detail.DocumentKindState = kind
 	for i := range detail.Documents {
 		detail.Documents[i].DocumentKind = kind.DocumentKind

@@ -100,6 +100,7 @@
   "sepa_mandate_invalid": "Das Mandat konnte nicht gespeichert werden. Bitte prüfe die markierten Felder.",
   "sepa_mandate_not_found": "Dieses Mandat gibt es nicht mehr. Bitte lade die Seite neu.",
   "sepa_mandate_in_force": "Die Familie hat schon ein gültiges Mandat. Bitte widerrufe es zuerst.",
+  "sepa_mandate_contract_draft": "Der Vertrag ist noch ein Entwurf. Trage das Mandat ein, sobald der Vertrag versendet ist.",
   "sepa_mandate_reference_taken": "Diese Mandatsreferenz gibt es schon. Bitte wähle eine andere.",
   "sepa_mandate_revoked": "Dieses Mandat ist widerrufen. Es lässt sich nicht mehr ändern.",
   "direct_debit_without_mandate": "Einige Familien zahlen per Lastschrift, haben aber kein gültiges Mandat. Bitte erfasse das Mandat oder ändere den Zahlungsweg.",

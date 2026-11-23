@@ -355,7 +355,7 @@ func TestOperationsCreateAndStartSpontaneous(t *testing.T) {
 	assert.Equal(t, "14:00", service.lastSpontaneousInput.StartTime.Format("15:04"))
 	assert.Equal(t, "15:00", service.lastSpontaneousInput.EndTime.Format("15:04"))
 	assert.Equal(t, int64(241), service.lastInstanceID)
-	assert.Contains(t, rr.Body.String(), `"active_group_id":341`)
+	assert.Contains(t, rr.Body.String(), `"active_group_id":"341"`)
 }
 
 func TestOperationsCreateAndStartSpontaneousRollsBackNon5xxFailures(t *testing.T) {
@@ -686,82 +686,6 @@ func TestOperationsCreateAndStartSpontaneousRequiresSetting(t *testing.T) {
 
 	assert.Equal(t, http.StatusForbidden, rr.Code)
 	assert.Nil(t, service.lastSpontaneousInput, "disabled web spontaneous activities must not create instances")
-}
-
-func TestOperationsCapabilities(t *testing.T) {
-	t.Parallel()
-
-	res := newResourceForTest(Dependencies{
-		TimetableData: operationTimetableData(operationDataDeps{ActiveGroupRepo: &fakeOperationActiveGroupRepo{}}),
-		SettingsService: &fakeOperationSettingsService{
-			hasOverride: true,
-			boolValue:   true,
-		},
-	})
-	router := operationRouter(http.MethodGet, "/capabilities", res.operationsCapabilities)
-
-	rr := executeOperationRequest(t, router, http.MethodGet, "/capabilities", nil)
-
-	require.Equal(t, http.StatusOK, rr.Code)
-	assert.Contains(t, rr.Body.String(), `"web_spontaneous_activities_enabled":true`)
-}
-
-func TestOperationsCapabilitiesDefaultsToEnabled(t *testing.T) {
-	t.Parallel()
-
-	res := newResourceForTest(Dependencies{
-		TimetableData: operationTimetableData(operationDataDeps{ActiveGroupRepo: &fakeOperationActiveGroupRepo{}}),
-		SettingsService: &fakeOperationSettingsService{
-			hasOverride: false,
-			boolValue:   true,
-		},
-	})
-	router := operationRouter(http.MethodGet, "/capabilities", res.operationsCapabilities)
-
-	rr := executeOperationRequest(t, router, http.MethodGet, "/capabilities", nil)
-
-	require.Equal(t, http.StatusOK, rr.Code)
-	assert.Contains(t, rr.Body.String(), `"web_spontaneous_activities_enabled":true`)
-}
-
-// The switch alone decides since #3730; the care concept it used to depend
-// on is gone, so a string setting of any value changes nothing.
-func TestOperationsCapabilitiesDisabledWhenSwitchOff(t *testing.T) {
-	t.Parallel()
-
-	res := newResourceForTest(Dependencies{
-		TimetableData: operationTimetableData(operationDataDeps{ActiveGroupRepo: &fakeOperationActiveGroupRepo{}}),
-		SettingsService: &fakeOperationSettingsService{
-			hasOverride: true,
-			boolValue:   false,
-			stringValue: "open_rooms",
-		},
-	})
-	router := operationRouter(http.MethodGet, "/capabilities", res.operationsCapabilities)
-
-	rr := executeOperationRequest(t, router, http.MethodGet, "/capabilities", nil)
-
-	require.Equal(t, http.StatusOK, rr.Code)
-	assert.Contains(t, rr.Body.String(), `"web_spontaneous_activities_enabled":false`)
-}
-
-func TestOperationsCapabilitiesIgnoreRemovedCareConcept(t *testing.T) {
-	t.Parallel()
-
-	res := newResourceForTest(Dependencies{
-		TimetableData: operationTimetableData(operationDataDeps{ActiveGroupRepo: &fakeOperationActiveGroupRepo{}}),
-		SettingsService: &fakeOperationSettingsService{
-			hasOverride: true,
-			boolValue:   true,
-			stringValue: "fixed_schedule",
-		},
-	})
-	router := operationRouter(http.MethodGet, "/capabilities", res.operationsCapabilities)
-
-	rr := executeOperationRequest(t, router, http.MethodGet, "/capabilities", nil)
-
-	require.Equal(t, http.StatusOK, rr.Code)
-	assert.Contains(t, rr.Body.String(), `"web_spontaneous_activities_enabled":true`)
 }
 
 func TestOperationsRosterByActiveGroup(t *testing.T) {

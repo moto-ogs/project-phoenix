@@ -2,6 +2,8 @@ package facilities
 
 import (
 	"strings"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 const (
@@ -84,6 +86,16 @@ type UpdateRoom struct {
 	// stored release untouched. Releasing a room is an explicit
 	// administrative decision; an unrelated edit must not silently revoke it.
 	IsOpenRoom *bool
+	// ExpectedVersion is the RoomVersion of the room the editor read (ADR
+	// 0311); a room changed since is refused with readstate.ErrChanged, an
+	// empty version too.
+	ExpectedVersion string
+}
+
+// RoomVersion is the token of a stored room (ADR 0311): every write of a
+// room updates its row, and the row's trigger moves updated_at.
+func RoomVersion(room Room) string {
+	return readstate.Of(room.UpdatedAt)
 }
 
 // RoomFilter is the closed set of filters supported by the owner. Pointers

@@ -1,5 +1,7 @@
 "use client";
 
+import { bffFile } from "~/lib/bff-fetch";
+
 // Monatsbeiträge des Trägers (#4684): Ein Monatslauf rechnet jeden Monat
 // nach dem gültigen Betreuungsvertrag und der Preisliste ab. Die Abrechnung
 // wählt Monat, Schulen und Rechnungsdatum (#5916), prüft die Vorschau und
@@ -48,8 +50,12 @@ import {
   fetchCareTariffs,
   startCareRun,
 } from "~/lib/traeger-care-billing-api";
-import { downloadTraegerList } from "~/lib/traeger-list-export";
+import {
+  downloadTraegerList,
+  listExportQuery,
+} from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
+import { labelOf } from "~/lib/label-of";
 
 // The start dialog loads when it opens (#5916).
 const CareRunStartModal = dynamic(
@@ -79,8 +85,8 @@ function runColumns(
       header: "Status",
       render: (run) => (
         <StatusBadge
-          label={CARE_RUN_STATUS_LABELS[run.status]}
-          tone={CARE_RUN_STATUS_TONES[run.status]}
+          label={labelOf(CARE_RUN_STATUS_LABELS, run.status, "–")}
+          tone={labelOf(CARE_RUN_STATUS_TONES, run.status, "gray")}
         />
       ),
       stacked: "meta",
@@ -188,7 +194,11 @@ export default function TraegerMonatsbeitraegePage() {
 
   const exportItems = useTraegerListExportItems({
     download: (format) =>
-      downloadTraegerList("/api/traeger/care-billing-runs/export", format),
+      downloadTraegerList(
+        bffFile("org", "GET /traeger/care-billing-runs/export", {
+          query: listExportQuery(format),
+        }),
+      ),
     scope: traegerExportScope(),
     fallbackName: "monatsbeitraege",
     errorObject: "die Monatsläufe",

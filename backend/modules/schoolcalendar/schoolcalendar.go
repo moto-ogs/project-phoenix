@@ -12,6 +12,8 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Period types a calendar period may carry; mirrors the legacy model constants.
@@ -133,6 +135,21 @@ type CreateCalendarPeriod struct{ CalendarPeriodFields }
 type UpdateCalendarPeriod struct {
 	ID int64
 	CalendarPeriodFields
+	// ExpectedVersion is the CalendarPeriodVersion of the period its editor
+	// read (ADR 0311): ChangeCalendarPeriod refuses a period changed since,
+	// and an empty version, with readstate.ErrChanged.
+	ExpectedVersion string
+}
+
+// CalendarPeriodVersion is the token of a stored period (ADR 0311): a
+// fingerprint of its fields. Its updated_at comes from the application
+// clock, not from a trigger, so two saves on one clock reading would share
+// a stamp; the fields themselves cannot.
+func CalendarPeriodVersion(p CalendarPeriod) string {
+	return readstate.Fingerprint(CalendarPeriodFields{
+		Name: p.Name, PeriodType: p.PeriodType, StartDate: p.StartDate, EndDate: p.EndDate,
+		WeekCycleLength: p.WeekCycleLength, WeekCycleAnchor: p.WeekCycleAnchor, IsActive: p.IsActive,
+	})
 }
 
 // CalendarPeriodFilter narrows a period listing. Every field is optional; an
@@ -184,6 +201,16 @@ type CreateClosingDay struct{ ClosingDayFields }
 type UpdateClosingDay struct {
 	ID int64
 	ClosingDayFields
+	// ExpectedVersion is the ClosingDayVersion of the closing day its editor
+	// read (ADR 0311); a closing day changed since, and an empty version,
+	// is refused with readstate.ErrChanged.
+	ExpectedVersion string
+}
+
+// ClosingDayVersion is the token of a stored closing day (ADR 0311): every
+// write of the row moves updated_at through its trigger.
+func ClosingDayVersion(d ClosingDay) string {
+	return readstate.Of(d.UpdatedAt)
 }
 
 // ClosingDayFilter narrows a closing-day listing. OverlappingFrom and
@@ -296,7 +323,6 @@ type Command interface {
 	// race-free (ON CONFLICT DO NOTHING) so concurrent bootstraps yield
 	// exactly one row and no error.
 	CreateCalendarPeriodIfAbsent(context.Context, CreateCalendarPeriod) (CalendarPeriod, bool, error)
-	UpdateCalendarPeriod(context.Context, UpdateCalendarPeriod) (CalendarPeriod, error)
 	// DeleteCalendarPeriod removes the period; a period still referenced by a
 	// non-nullable foreign key keeps the driver error in the chain.
 	DeleteCalendarPeriod(context.Context, int64) error

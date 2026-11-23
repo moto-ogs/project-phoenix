@@ -13,6 +13,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -82,17 +83,13 @@ func TestSEPAMandateFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 		mandates, err := store.SEPAMandates(ctx, own.organization, "")
 		require.NoError(t, err)
 		require.Len(t, mandates, 1, "SEPAMandates")
-		assert.Equal(t, own.mandate, mandates[0].ID)
+		assert.Equal(t, ident.ID(own.mandate), mandates[0].ID)
 		mandates, err = store.SEPAMandates(ctx, own.organization, other.family)
 		require.NoError(t, err)
 		assert.Empty(t, mandates, "SEPAMandates of another Träger's family")
 
 		_, err = store.SEPAMandate(ctx, own.organization, other.mandate, true)
 		require.ErrorIs(t, err, parentbilling.ErrSEPAMandateNotFound, "SEPAMandate of another Träger")
-		_, err = store.UpdateSEPAMandate(ctx, own.organization, 0, parentbilling.SealedSEPAMandate{
-			Mandate: parentbilling.SEPAMandate{ID: other.mandate, AccountHolder: "Fremd", Sequence: parentbilling.SequenceFirst},
-			IBAN:    []byte{2}, Holder: []byte{3}})
-		require.ErrorIs(t, err, parentbilling.ErrSEPAMandateNotFound, "UpdateSEPAMandate of another Träger")
 		_, err = store.RevokeSEPAMandate(ctx, own.organization, 0, other.mandate, calendar.NewDate(2026, 10, 1))
 		require.ErrorIs(t, err, parentbilling.ErrSEPAMandateNotFound, "RevokeSEPAMandate of another Träger")
 
@@ -102,7 +99,7 @@ func TestSEPAMandateFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 		sealed, err := store.SealedSEPAMandates(ctx, own.organization, []int64{own.mandate, other.mandate})
 		require.NoError(t, err)
 		require.Len(t, sealed, 1, "SealedSEPAMandates opens only the Träger's own")
-		assert.Equal(t, own.mandate, sealed[0].Mandate.ID)
+		assert.Equal(t, ident.ID(own.mandate), sealed[0].Mandate.ID)
 
 		debitCreditor, inForce, err := store.InvoiceDebitTerms(ctx, own.organization)
 		require.NoError(t, err)
@@ -166,8 +163,7 @@ func TestSEPAMandateHistoryNeverChanges(t *testing.T) {
 		require.NotNil(t, revoked.RevokedOn)
 		_, err = tx.ExecContext(ctx, `SAVEPOINT revoked`)
 		require.NoError(t, err)
-		_, err = store.UpdateSEPAMandate(ctx, own.organization, 0, parentbilling.SealedSEPAMandate{
-			Mandate: parentbilling.SEPAMandate{ID: own.mandate, Sequence: parentbilling.SequenceFirst}, Holder: []byte{4}})
+		_, err = tx.ExecContext(ctx, `UPDATE parent_billing.sepa_mandates SET account_holder_sealed = '\x04' WHERE id = ?`, own.mandate)
 		require.ErrorContains(t, err, "revoked SEPA mandate never changes")
 		_, err = tx.ExecContext(ctx, `ROLLBACK TO SAVEPOINT revoked`)
 		require.NoError(t, err)

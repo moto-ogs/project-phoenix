@@ -1,3 +1,4 @@
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the care contracts in the Träger portal (#4678, ADR 0153): the
  * contract template of every offering, the drafts from the accepted
@@ -6,31 +7,119 @@
  * whole cent; calendar dates stay "YYYY-MM-DD".
  */
 
-import type { MailOutcome } from "~/lib/email-delivery-status";
-import { apiErrorFromResponse, transportFetch } from "./api-error";
+import {
+  type MailOutcome,
+  knownMailOutcome,
+} from "~/lib/email-delivery-status";
+import {
+  type CareContractStatus,
+  knownContractStatus,
+} from "./care-contract-status";
+import { knownEnum } from "./contract/known-enum";
+import { requiredDay } from "./contract/required-day";
+import type * as traegerContractTemplatesContract from "./contract/traeger-contract-templates.generated";
+import type * as traegerContractsContract from "./contract/traeger-contracts.generated";
 import { filenameFromDisposition } from "./file-download";
-import { traegerRequest } from "./traeger-api";
+import {
+  type ContractCorrectionChange,
+  type ContractCorrectionValues,
+  correctionChangesFromBackend,
+  correctionValuesFromBackend,
+} from "./traeger-contract-correction-api";
 
-const CONTRACTS_PATH = "/api/traeger/contracts";
-const TEMPLATES_PATH = "/api/traeger/contract-templates";
+export type { CareContractStatus } from "./care-contract-status";
+
+// Go does not register these sets; the contract types them as string. A value
+// this build does not know stays undefined instead of passing as a known one.
+const TERM_KIND_VALUES = ["open_ended", "school_year", "fixed_months"] as const;
+const NOTICE_TO_VALUES = ["month_end", "half_year", "school_year_end"] as const;
+const WEEKDAY_VALUES = [
+  "mon",
+  "tue",
+  "wed",
+  "thu",
+  "fri",
+  "sat",
+  "sun",
+] as const;
+const TEMPLATE_ISSUE_VALUES = [
+  "template_missing",
+  "templates_differ",
+  "conclusion_automatic",
+  "acceptance_missing",
+  "acceptance_missing_renewal",
+  "acceptance_changed",
+  "recipient_missing",
+  "mail_blocked",
+  "mail_stopped",
+  "imported_contract",
+] as const;
+const ACCEPTANCE_ISSUE_VALUES = [
+  "acceptance_missing",
+  "acceptance_changed",
+] as const;
+const MAIL_BLOCK_VALUES = ["stopped", "address"] as const;
+const CONCLUSION_METHOD_VALUES = [
+  "mit_anmeldung",
+  "einfach_elektronisch",
+  "papier",
+] as const;
+const CONCLUSION_MODE_VALUES = ["nachtraeglich", "bei_annahme"] as const;
+const MAIL_STATE_VALUES = ["queued", "sent", "failed", "unknown"] as const;
+const VERSION_STATUS_VALUES = [
+  "beantragt",
+  "wirksam",
+  "abgeloest",
+  "abgelehnt",
+  "ersetzt",
+] as const;
+const VERSION_SOURCE_VALUES = [
+  "abschluss",
+  "buchungsaenderung",
+  "import",
+  "angebotskorrektur",
+] as const;
+const SIGNATURE_METHOD_VALUES = ["drawn", "typed", "paper"] as const;
+const SIGNATURE_CHANNEL_VALUES = [
+  "parent_account",
+  "mail_link",
+  "office",
+] as const;
+const CREATE_SKIP_VALUES = [
+  ...TEMPLATE_ISSUE_VALUES,
+  "contract_exists",
+  "application_not_found",
+] as const;
+const SEND_SKIP_VALUES = [
+  "recipient_missing",
+  "partner_missing",
+  "mail_pending",
+  "mail_delayed",
+  "mail_blocked",
+  "mail_block_unreadable",
+  "not_sendable",
+] as const;
+const SEND_BLOCK_VALUES = [
+  "delayed",
+  "stopped",
+  "address",
+  "provider",
+  "provider_unknown",
+] as const;
+
+export type ContractTermKind = (typeof TERM_KIND_VALUES)[number];
+export type ContractNoticeTo = (typeof NOTICE_TO_VALUES)[number];
+export type Weekday = (typeof WEEKDAY_VALUES)[number];
 
 /**
- * Every state of ADR 0088. The office reaches draft and sent; the conclusion
- * at the acceptance (#4680) or the signature (#4679) reaches active; a
- * termination or a withdrawal (#4682) ends an active contract.
+ * The terms of a contract template. undefined: a term kind or notice date
+ * this build does not know; saving it again lets the backend refuse it.
  */
-export type CareContractStatus =
-  "entwurf" | "versendet" | "aktiv" | "gekuendigt" | "widerrufen" | "beendet";
-
-export type ContractTermKind = "open_ended" | "school_year" | "fixed_months";
-export type ContractNoticeTo = "month_end" | "half_year" | "school_year_end";
-export type Weekday = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
-
 export interface ContractTerms {
-  readonly termKind: ContractTermKind;
+  readonly termKind: ContractTermKind | undefined;
   readonly termMonths: number | null;
   readonly noticeMonths: number;
-  readonly noticeTo: ContractNoticeTo;
+  readonly noticeTo: ContractNoticeTo | undefined;
   readonly specialTermination: boolean;
   readonly specialTerminationNote: string;
   readonly statuteRequired: boolean;
@@ -90,23 +179,17 @@ export interface ContractService {
   readonly lastDay: string | null;
 }
 
-/** Why no draft can be made for a candidate yet. */
-export type TemplateIssue =
-  | "template_missing"
-  | "templates_differ"
-  | "conclusion_automatic"
-  | "acceptance_missing"
-  | "acceptance_missing_renewal"
-  | "acceptance_changed"
-  | "recipient_missing"
-  | "mail_blocked"
-  | "mail_stopped";
+/**
+ * Why no draft can be made for a candidate yet. "other": a reason this
+ * build does not know; still no draft.
+ */
+export type TemplateIssue = (typeof TEMPLATE_ISSUE_VALUES)[number] | "other";
 
 /**
  * Why the application gives no proof of the parents' agreement for a
  * conclusion at the acceptance (#4680); null when it does.
  */
-type AcceptanceIssue = "acceptance_missing" | "acceptance_changed";
+type AcceptanceIssue = (typeof ACCEPTANCE_ISSUE_VALUES)[number] | "other";
 
 /** An accepted application child with booked care and no contract. */
 export interface ContractCandidate extends CandidateKey {
@@ -131,36 +214,52 @@ export interface ContractCandidate extends CandidateKey {
    * Why a mail to the parents' address would stay back now, for a child the
    * conclusion at the acceptance could conclude (#4680); null otherwise.
    */
-  readonly mailBlock: "stopped" | "address" | null;
+  readonly mailBlock: (typeof MAIL_BLOCK_VALUES)[number] | "other" | null;
+  /** The imported contract that names the child (issue imported_contract). */
+  readonly importedContractId: string | null;
 }
 
 /**
  * How a contract was concluded (ADR 0088 section 3): at the acceptance of
  * the application, or with the parents' signature.
  */
-export type ConclusionMethod =
-  "mit_anmeldung" | "einfach_elektronisch" | "papier";
+export type ConclusionMethod = (typeof CONCLUSION_METHOD_VALUES)[number];
 
 export interface ContractConclusion {
-  readonly method: ConclusionMethod;
+  /** undefined: a method this build does not know. */
+  readonly method: ConclusionMethod | undefined;
+  /**
+   * When it was concluded. For a contract with `dateUnknown` only a stand-in
+   * the backend needs: never show it as the day of the conclusion.
+   */
   readonly at: string;
+  /**
+   * The contract came from an import (#4723): it was concluded before moto,
+   * online in the previous program or on paper. Absent: a view that does not
+   * carry it, read as false.
+   */
+  readonly takenOver?: boolean;
+  /** The office does not know the day of the conclusion (#7767). */
+  readonly dateUnknown?: boolean;
 }
 
 /**
  * How the contracts of a school come about (#4680): sent later by the
  * office (Weg a) or concluded at the acceptance (Weg b).
  */
-export type ConclusionMode = "nachtraeglich" | "bei_annahme";
+export type ConclusionMode = (typeof CONCLUSION_MODE_VALUES)[number];
 
 export interface SchoolConclusionMode {
   readonly schoolId: string;
   readonly schoolName: string;
-  readonly mode: ConclusionMode;
+  /** undefined: a mode this build does not know. */
+  readonly mode: ConclusionMode | undefined;
 }
 
 export interface CareContractSummary {
   readonly id: string;
-  readonly status: CareContractStatus;
+  /** undefined: a status this build does not know. */
+  readonly status: CareContractStatus | undefined;
   readonly schoolId: string;
   readonly schoolName: string;
   readonly childFirstName: string;
@@ -177,6 +276,17 @@ export interface CareContractSummary {
   readonly concluded: ContractConclusion | null;
   /** Last day of a terminated contract (#4682); null otherwise. */
   readonly endsOn: string | null;
+  /** The child record the contract is linked to; null without one (#7760). */
+  readonly studentId: string | null;
+  /** Taken over from a file, not made from an application (ADR 0232). */
+  readonly imported: boolean;
+  /**
+   * The contract follows the approved bookings of an enrollment: every one
+   * from an application, and an imported one once it is bound (ADR 0309).
+   */
+  readonly followsBookings: boolean;
+  /** The enrollment (application child) it follows; null without one. */
+  readonly requestChildId: string | null;
 }
 
 export interface CareContractList {
@@ -185,19 +295,19 @@ export interface CareContractList {
   readonly hasMore: boolean;
 }
 
-export type ContractMailState = "queued" | "sent" | "failed" | "unknown";
+/** "unknown" also stands for a state this build does not know. */
+export type ContractMailState = (typeof MAIL_STATE_VALUES)[number];
 
 /** The state of a contract version (ADR 0088 section 2, #4681). */
-type ContractVersionStatus =
-  "beantragt" | "wirksam" | "abgeloest" | "abgelehnt" | "ersetzt";
+type ContractVersionStatus = (typeof VERSION_STATUS_VALUES)[number];
 
 /** Where a version came from: the conclusion or an approved change. */
-type ContractVersionSource = "abschluss" | "buchungsaenderung" | "import";
+type ContractVersionSource = (typeof VERSION_SOURCE_VALUES)[number];
 
 export interface ContractVersion {
   readonly number: number;
-  readonly status: ContractVersionStatus;
-  readonly source: ContractVersionSource;
+  readonly status: ContractVersionStatus | undefined;
+  readonly source: ContractVersionSource | undefined;
   readonly effectiveFrom: string;
   readonly endsOn: string | null;
   /** The last day it holds; null while it holds open ended. */
@@ -250,11 +360,26 @@ export interface CareContractDetail extends CareContractSummary {
   readonly termText: string;
   readonly noticeText: string;
   readonly feeText: string;
+  /**
+   * Values the office completed from the original documents after the
+   * import (#7767), in the order the backend lists them.
+   */
+  readonly corrections: readonly ContractCorrectionRecord[];
+}
+
+/** One completion of an imported contract: what changed, and the proof. */
+export interface ContractCorrectionRecord {
+  readonly correctedAt: string;
+  readonly file: string;
+  readonly evidence: string;
+  readonly changes: readonly ContractCorrectionChange[];
+  readonly before: ContractCorrectionValues;
+  readonly after: ContractCorrectionValues;
 }
 
 export interface ContractSignature {
-  readonly method: "drawn" | "typed" | "paper";
-  readonly channel: "parent_account" | "mail_link" | "office";
+  readonly method: (typeof SIGNATURE_METHOD_VALUES)[number] | undefined;
+  readonly channel: (typeof SIGNATURE_CHANNEL_VALUES)[number] | undefined;
   readonly signerName: string;
   readonly signedAt: string;
   readonly signedOn: string;
@@ -267,8 +392,8 @@ export interface ContractSignature {
   readonly intact: boolean;
 }
 
-type CreateSkipReason =
-  TemplateIssue | "contract_exists" | "application_not_found";
+/** "other": a reason this build does not know; the draft was not made. */
+type CreateSkipReason = (typeof CREATE_SKIP_VALUES)[number] | "other";
 
 export interface CreateResult {
   readonly created: readonly CareContractSummary[];
@@ -277,17 +402,11 @@ export interface CreateResult {
   })[];
 }
 
-export type SendSkipReason =
-  | "recipient_missing"
-  | "partner_missing"
-  | "mail_pending"
-  | "mail_delayed"
-  | "mail_blocked"
-  | "mail_block_unreadable"
-  | "not_sendable";
+/** "other": a reason this build does not know; the contract was not sent. */
+export type SendSkipReason = (typeof SEND_SKIP_VALUES)[number] | "other";
 
-type ContractSendBlock =
-  "delayed" | "stopped" | "address" | "provider" | "provider_unknown";
+/** "other": a block this build does not know; the mail still stays back. */
+type ContractSendBlock = (typeof SEND_BLOCK_VALUES)[number] | "other";
 
 export interface SendResult {
   readonly sent: readonly string[];
@@ -302,152 +421,32 @@ export interface ContractFile {
   readonly filename: string;
 }
 
-export interface BackendTerms {
-  term_kind: ContractTermKind;
-  term_months: number | null;
-  notice_months: number;
-  notice_to: ContractNoticeTo;
-  special_termination: boolean;
-  special_termination_note: string;
-  statute_required: boolean;
-  statute_title: string;
-  statute_url: string;
-  contract_partner: string;
+/** A reason of a closed set; one this build does not know is "other". */
+function reasonOf<T extends string>(
+  values: readonly T[],
+  value: string,
+): T | "other" {
+  return knownEnum(values, value) ?? "other";
 }
 
-interface BackendTemplate extends BackendTerms {
-  id: number | string;
-  updated_at: string;
+/** An optional reason: "" or absent is none. */
+function optionalReason<T extends string>(
+  values: readonly T[],
+  value: string | undefined,
+): T | "other" | null {
+  return value ? reasonOf(values, value) : null;
 }
 
-interface BackendOfferingTemplate {
-  acceptance_text?: string;
-  withdrawal_text?: string;
-  early_start_text?: string;
-  term_text?: string;
-  notice_text?: string;
-  school_id: number | string;
-  school_name: string;
-  offering_id: number | string;
-  offering_name: string;
-  phase_name: string;
-  price_cents: number | null;
-  active: boolean;
-  template: BackendTemplate | null;
-}
-
-interface BackendService {
-  weekday: Weekday;
-  care_offering_id: number | string;
-  module_name: string;
-  ends_at: string;
-  last_day?: string | null;
-}
-
-interface BackendCandidate {
-  acceptance_issue?: AcceptanceIssue | "";
-  renewal?: boolean;
-  mail_block?: "stopped" | "address" | "";
-  school_id: number | string;
-  request_child_id: number | string;
-  school_name: string;
-  child_first_name: string;
-  child_last_name: string;
-  guardian_name: string;
-  guardian_email: string;
-  phase_name: string;
-  services: BackendService[] | null;
-  effective_from: string;
-  template_issue: TemplateIssue | "";
-  modules_text?: string;
-}
-
-interface BackendSummary {
-  id: number | string;
-  status: CareContractStatus;
-  school_id: number | string;
-  school_name: string;
-  child_first_name: string;
-  child_last_name: string;
-  module_names: string[] | null;
-  modules_text?: string;
-  party_name: string;
-  party_email: string;
-  effective_from: string;
-  created_at: string;
-  sent_at: string | null;
-  concluded?: { method: ConclusionMethod; at: string } | null;
-  ends_on?: string | null;
-}
-
-interface BackendDetail extends BackendSummary {
-  version: {
-    number: number;
-    effective_from: string;
-    ends_on: string | null;
-    child_birth_date: string | null;
-    school_name: string;
-    phase_name: string;
-    services: BackendService[] | null;
-    price_cents: number | null;
-    terms: BackendTerms;
-    created_at: string;
-  };
-  parties:
-    | {
-        first_name: string;
-        last_name: string;
-        email: string;
-        has_account: boolean;
-      }[]
-    | null;
-  mailings:
-    | {
-        recipient: string;
-        sent_at: string;
-        state: ContractMailState;
-        outcome?: MailOutcome;
-        send_block?: ContractSendBlock;
-      }[]
-    | null;
-  document_frozen: boolean;
-  signature?: {
-    method: ContractSignature["method"];
-    channel: ContractSignature["channel"];
-    signer_name: string;
-    signed_at: string;
-    signed_on: string;
-    document_sha256: string;
-    early_start_requested: boolean;
-    withdrawal_ends_on: string | null;
-    image_png: string | null;
-    paper_filename: string;
-    intact: boolean;
-  } | null;
-  reminders?: { number: number; sent_at: string }[] | null;
-  versions?: BackendVersion[] | null;
-  term_text?: string;
-  notice_text?: string;
-  fee_text?: string;
-}
-
-interface BackendVersion {
-  number: number;
-  status: ContractVersionStatus;
-  source: ContractVersionSource;
-  effective_from: string;
-  ends_on: string | null;
-  valid_until: string | null;
-  services: BackendService[] | null;
-  created_at: string;
-}
-
-export function termsFromBackend(terms: BackendTerms): ContractTerms {
+export function termsFromBackend(
+  terms: Omit<traegerContractsContract.TemplateInput, "term_months"> & {
+    readonly term_months?: number | null;
+  },
+): ContractTerms {
   return {
-    termKind: terms.term_kind,
-    termMonths: terms.term_months,
+    termKind: knownEnum(TERM_KIND_VALUES, terms.term_kind),
+    termMonths: terms.term_months ?? null,
     noticeMonths: terms.notice_months,
-    noticeTo: terms.notice_to,
+    noticeTo: knownEnum(NOTICE_TO_VALUES, terms.notice_to),
     specialTermination: terms.special_termination,
     specialTerminationNote: terms.special_termination_note,
     statuteRequired: terms.statute_required,
@@ -457,12 +456,16 @@ export function termsFromBackend(terms: BackendTerms): ContractTerms {
   };
 }
 
-export function termsToBackend(terms: ContractTerms): BackendTerms {
+// An unknown term kind or notice date goes back as "": the backend refuses it
+// at its field instead of the client guessing one.
+export function termsToBackend(
+  terms: ContractTerms,
+): traegerContractsContract.TemplateInput {
   return {
-    term_kind: terms.termKind,
+    term_kind: terms.termKind ?? "",
     term_months: terms.termKind === "fixed_months" ? terms.termMonths : null,
     notice_months: terms.noticeMonths,
-    notice_to: terms.noticeTo,
+    notice_to: terms.noticeTo ?? "",
     special_termination: terms.specialTermination,
     special_termination_note: terms.specialTerminationNote,
     statute_required: terms.statuteRequired,
@@ -472,16 +475,18 @@ export function termsToBackend(terms: ContractTerms): BackendTerms {
   };
 }
 
-function offeringFromBackend(row: BackendOfferingTemplate): OfferingTemplate {
+function offeringFromBackend(
+  row: traegerContractTemplatesContract.OfferingTemplate,
+): OfferingTemplate {
   return {
-    acceptanceText: row.acceptance_text ?? "",
-    withdrawalText: row.withdrawal_text ?? "",
-    earlyStartText: row.early_start_text ?? "",
-    termText: row.term_text ?? "",
-    noticeText: row.notice_text ?? "",
-    schoolId: String(row.school_id),
+    acceptanceText: row.acceptance_text,
+    withdrawalText: row.withdrawal_text,
+    earlyStartText: row.early_start_text,
+    termText: row.term_text,
+    noticeText: row.notice_text,
+    schoolId: row.school_id,
     schoolName: row.school_name,
-    offeringId: String(row.offering_id),
+    offeringId: row.offering_id,
     offeringName: row.offering_name,
     phaseName: row.phase_name,
     priceCents: row.price_cents,
@@ -489,27 +494,38 @@ function offeringFromBackend(row: BackendOfferingTemplate): OfferingTemplate {
     template: row.template
       ? {
           ...termsFromBackend(row.template),
-          id: String(row.template.id),
+          id: row.template.id,
           updatedAt: row.template.updated_at,
         }
       : null,
   };
 }
 
-function servicesFromBackend(rows: BackendService[] | null): ContractService[] {
-  return (rows ?? []).map((row) => ({
-    weekday: row.weekday,
-    careOfferingId: String(row.care_offering_id),
-    moduleName: row.module_name,
-    endsAt: row.ends_at,
-    lastDay: row.last_day ?? null,
-  }));
+// A service on a weekday this build does not know is left out.
+function servicesFromBackend(
+  rows: readonly traegerContractsContract.Service[] | null,
+): ContractService[] {
+  return (rows ?? []).flatMap((row) => {
+    const weekday = knownEnum(WEEKDAY_VALUES, row.weekday);
+    if (!weekday) return [];
+    return [
+      {
+        weekday,
+        careOfferingId: row.care_offering_id,
+        moduleName: row.module_name,
+        endsAt: row.ends_at,
+        lastDay: row.last_day,
+      },
+    ];
+  });
 }
 
-function candidateFromBackend(row: BackendCandidate): ContractCandidate {
+function candidateFromBackend(
+  row: traegerContractsContract.Candidate,
+): ContractCandidate {
   return {
-    schoolId: String(row.school_id),
-    requestChildId: String(row.request_child_id),
+    schoolId: row.school_id,
+    requestChildId: row.request_child_id,
     schoolName: row.school_name,
     childFirstName: row.child_first_name,
     childLastName: row.child_last_name,
@@ -517,43 +533,63 @@ function candidateFromBackend(row: BackendCandidate): ContractCandidate {
     guardianEmail: row.guardian_email,
     phaseName: row.phase_name,
     services: servicesFromBackend(row.services),
-    effectiveFrom: row.effective_from,
-    templateIssue: row.template_issue === "" ? null : row.template_issue,
-    modulesText: row.modules_text ?? "",
-    acceptanceIssue: row.acceptance_issue ? row.acceptance_issue : null,
-    renewal: row.renewal === true,
-    mailBlock: row.mail_block ? row.mail_block : null,
+    effectiveFrom: requiredDay(row.effective_from, "candidate.effective_from"),
+    templateIssue: optionalReason(TEMPLATE_ISSUE_VALUES, row.template_issue),
+    modulesText: row.modules_text,
+    acceptanceIssue: optionalReason(
+      ACCEPTANCE_ISSUE_VALUES,
+      row.acceptance_issue,
+    ),
+    renewal: row.renewal,
+    mailBlock: optionalReason(MAIL_BLOCK_VALUES, row.mail_block),
+    importedContractId: row.imported_contract_id ?? null,
   };
 }
 
-function summaryFromBackend(row: BackendSummary): CareContractSummary {
+function summaryFromBackend(
+  row: traegerContractsContract.ContractSummary,
+): CareContractSummary {
   return {
-    id: String(row.id),
-    status: row.status,
-    schoolId: String(row.school_id),
+    id: row.id,
+    status: knownContractStatus(row.status),
+    schoolId: row.school_id,
     schoolName: row.school_name,
     childFirstName: row.child_first_name,
     childLastName: row.child_last_name,
     moduleNames: row.module_names ?? [],
-    modulesText: row.modules_text ?? "",
+    modulesText: row.modules_text,
     partyName: row.party_name,
     partyEmail: row.party_email,
-    effectiveFrom: row.effective_from,
+    effectiveFrom: requiredDay(row.effective_from, "contract.effective_from"),
     createdAt: row.created_at,
     sentAt: row.sent_at,
     concluded: row.concluded
-      ? { method: row.concluded.method, at: row.concluded.at }
+      ? {
+          method: knownEnum(CONCLUSION_METHOD_VALUES, row.concluded.method),
+          at: row.concluded.at,
+          takenOver: row.concluded.taken_over,
+          dateUnknown: row.concluded.date_unknown,
+        }
       : null,
-    endsOn: row.ends_on ?? null,
+    endsOn: row.ends_on,
+    studentId: row.student_id,
+    imported: row.imported,
+    followsBookings: row.follows_bookings,
+    requestChildId: row.request_child_id,
   };
 }
 
-function detailFromBackend(row: BackendDetail): CareContractDetail {
+function detailFromBackend(
+  row: traegerContractsContract.ContractDetail,
+): CareContractDetail {
   return {
     ...summaryFromBackend(row),
     version: {
       number: row.version.number,
-      effectiveFrom: row.version.effective_from,
+      effectiveFrom: requiredDay(
+        row.version.effective_from,
+        "contract_version.effective_from",
+      ),
       endsOn: row.version.ends_on,
       childBirthDate: row.version.child_birth_date,
       schoolName: row.version.school_name,
@@ -572,18 +608,21 @@ function detailFromBackend(row: BackendDetail): CareContractDetail {
     mailings: (row.mailings ?? []).map((mailing) => ({
       recipient: mailing.recipient,
       sentAt: mailing.sent_at,
-      outcome: mailing.outcome,
-      sendBlock: mailing.send_block,
-      state: mailing.state,
+      outcome: knownMailOutcome(mailing.outcome),
+      sendBlock: mailing.send_block
+        ? reasonOf(SEND_BLOCK_VALUES, mailing.send_block)
+        : undefined,
+      // The backend names a state it cannot read "unknown" itself.
+      state: knownEnum(MAIL_STATE_VALUES, mailing.state) ?? "unknown",
     })),
     documentFrozen: row.document_frozen,
     signature: row.signature
       ? {
-          method: row.signature.method,
-          channel: row.signature.channel,
+          method: knownEnum(SIGNATURE_METHOD_VALUES, row.signature.method),
+          channel: knownEnum(SIGNATURE_CHANNEL_VALUES, row.signature.channel),
           signerName: row.signature.signer_name,
           signedAt: row.signature.signed_at,
-          signedOn: row.signature.signed_on,
+          signedOn: requiredDay(row.signature.signed_on, "signature.signed_on"),
           documentSha256: row.signature.document_sha256,
           earlyStartRequested: row.signature.early_start_requested,
           withdrawalEndsOn: row.signature.withdrawal_ends_on,
@@ -598,29 +637,36 @@ function detailFromBackend(row: BackendDetail): CareContractDetail {
     })),
     versions: (row.versions ?? []).map((version) => ({
       number: version.number,
-      status: version.status,
-      source: version.source,
-      effectiveFrom: version.effective_from,
+      status: knownEnum(VERSION_STATUS_VALUES, version.status),
+      source: knownEnum(VERSION_SOURCE_VALUES, version.source),
+      effectiveFrom: requiredDay(
+        version.effective_from,
+        "contract_version.effective_from",
+      ),
       endsOn: version.ends_on,
       validUntil: version.valid_until,
       services: servicesFromBackend(version.services),
       createdAt: version.created_at,
     })),
-    termText: row.term_text ?? "",
-    noticeText: row.notice_text ?? "",
-    feeText: row.fee_text ?? "",
+    termText: row.term_text,
+    noticeText: row.notice_text,
+    feeText: row.fee_text,
+    corrections: (row.corrections ?? []).map((correction) => ({
+      correctedAt: correction.corrected_at,
+      file: correction.file,
+      evidence: correction.evidence,
+      changes: correctionChangesFromBackend(correction.changes),
+      before: correctionValuesFromBackend(correction.before),
+      after: correctionValuesFromBackend(correction.after),
+    })),
   };
 }
 
 function keyToBackend(key: CandidateKey) {
   return {
-    school_id: Number(key.schoolId),
-    request_child_id: Number(key.requestChildId),
+    school_id: key.schoolId,
+    request_child_id: key.requestChildId,
   };
-}
-
-function contractPath(id: string): string {
-  return `${CONTRACTS_PATH}/${encodeURIComponent(id)}`;
 }
 
 export async function fetchCareContracts(
@@ -631,45 +677,38 @@ export async function fetchCareContracts(
     offset?: number;
   } = {},
 ): Promise<CareContractList> {
-  const query = new URLSearchParams();
-  if (filter.status) query.set("status", filter.status);
-  if (filter.schoolId) query.set("school_id", filter.schoolId);
-  if (filter.search) query.set("search", filter.search);
-  if (filter.offset) query.set("offset", String(filter.offset));
-  const path = query.size ? `${CONTRACTS_PATH}?${query}` : CONTRACTS_PATH;
-  const body = await traegerRequest<{
-    contracts: BackendSummary[] | null;
-    counts: Partial<Record<CareContractStatus, number>> | null;
-    has_more: boolean;
-  }>(path);
+  const body = await bffJson("org", "GET /traeger/contracts/", {
+    query: {
+      status: filter.status || undefined,
+      school_id: filter.schoolId || undefined,
+      search: filter.search || undefined,
+      offset: filter.offset || undefined,
+    },
+  });
+  const counts: Partial<Record<CareContractStatus, number>> = {};
+  for (const [status, count] of Object.entries(body.counts ?? {})) {
+    const known = knownContractStatus(status);
+    if (known) counts[known] = count;
+  }
   return {
-    contracts: (body?.contracts ?? []).map(summaryFromBackend),
-    counts: body?.counts ?? {},
-    hasMore: body?.has_more ?? false,
+    contracts: (body.contracts ?? []).map(summaryFromBackend),
+    counts,
+    hasMore: body.has_more,
   };
 }
 
 export async function fetchConclusionModes(): Promise<SchoolConclusionMode[]> {
-  const rows = await traegerRequest<
-    | {
-        school_id: number | string;
-        school_name: string;
-        mode: ConclusionMode;
-      }[]
-    | null
-  >(`${CONTRACTS_PATH}/conclusion-modes`);
-  return (rows ?? []).map((row) => ({
-    schoolId: String(row.school_id),
+  const rows = await bffJson("org", "GET /traeger/contracts/conclusion-modes");
+  return rows.map((row) => ({
+    schoolId: row.school_id,
     schoolName: row.school_name,
-    mode: row.mode,
+    mode: knownEnum(CONCLUSION_MODE_VALUES, row.mode),
   }));
 }
 
 export async function fetchContractCandidates(): Promise<ContractCandidate[]> {
-  const rows = await traegerRequest<BackendCandidate[] | null>(
-    `${CONTRACTS_PATH}/candidates`,
-  );
-  return (rows ?? []).map(candidateFromBackend);
+  const rows = await bffJson("org", "GET /traeger/contracts/candidates");
+  return rows.map(candidateFromBackend);
 }
 
 // The backend accepts at most 200 items per request. Sequential batches
@@ -713,19 +752,17 @@ export async function sendCareContracts(
 async function createCareContractBatch(
   keys: readonly CandidateKey[],
 ): Promise<CreateResult> {
-  const body = await traegerRequest<{
-    created: BackendSummary[] | null;
-    skipped: (BackendCandidate & { reason: CreateSkipReason })[] | null;
-  }>(CONTRACTS_PATH, {
-    method: "POST",
-    body: { contracts: keys.map(keyToBackend) },
+  const body = await bffJson("org", "POST /traeger/contracts/", {
+    body: {
+      contracts: keys.map(keyToBackend),
+    } satisfies traegerContractsContract.CreateRequest,
   });
   return {
-    created: (body?.created ?? []).map(summaryFromBackend),
-    skipped: (body?.skipped ?? []).map((skip) => ({
-      schoolId: String(skip.school_id),
-      requestChildId: String(skip.request_child_id),
-      reason: skip.reason,
+    created: (body.created ?? []).map(summaryFromBackend),
+    skipped: (body.skipped ?? []).map((skip) => ({
+      schoolId: skip.school_id,
+      requestChildId: skip.request_child_id,
+      reason: reasonOf(CREATE_SKIP_VALUES, skip.reason),
     })),
   };
 }
@@ -742,23 +779,19 @@ async function sendCareContractBatch(
   ids: readonly string[],
   recipientEmail?: string,
 ): Promise<SendResult> {
-  const body = await traegerRequest<{
-    sent: (number | string)[] | null;
-    skipped: { id: number | string; reason: SendSkipReason }[] | null;
-  }>(`${CONTRACTS_PATH}/send`, {
-    method: "POST",
+  const body = await bffJson("org", "POST /traeger/contracts/send", {
     body: {
-      contract_ids: ids.map(Number),
+      contract_ids: [...ids],
       ...(recipientEmail === undefined
         ? {}
         : { recipient_email: recipientEmail }),
-    },
+    } satisfies traegerContractsContract.SendRequest,
   });
   return {
-    sent: (body?.sent ?? []).map(String),
-    skipped: (body?.skipped ?? []).map((skip) => ({
-      id: String(skip.id),
-      reason: skip.reason,
+    sent: body.sent ?? [],
+    skipped: (body.skipped ?? []).map((skip) => ({
+      id: skip.id,
+      reason: reasonOf(SEND_SKIP_VALUES, skip.reason),
     })),
   };
 }
@@ -767,17 +800,19 @@ export async function fetchCareContract(
   id: string,
 ): Promise<CareContractDetail> {
   return detailFromBackend(
-    await traegerRequest<BackendDetail>(contractPath(id)),
+    await bffJson("org", "GET /traeger/contracts/{id}", { params: { id } }),
   );
 }
 
 export async function discardCareContract(id: string): Promise<void> {
-  await traegerRequest<unknown>(contractPath(id), { method: "DELETE" });
+  await bffJson("org", "DELETE /traeger/contracts/{id}", { params: { id } });
 }
 
 /** The PDF: a preview of a draft, the stored document once sent. */
 export async function downloadCareContract(id: string): Promise<ContractFile> {
-  return downloadContractFile(`${contractPath(id)}/document`);
+  return downloadContractFile(
+    bffFile("org", "GET /traeger/contracts/{id}/document", { params: { id } }),
+  );
 }
 
 /**
@@ -789,24 +824,17 @@ export async function downloadCareContractVersion(
   number: number,
 ): Promise<ContractFile> {
   return downloadContractFile(
-    `${contractPath(id)}/versions/${encodeURIComponent(String(number))}/document`,
+    bffFile("org", "GET /traeger/contracts/{id}/versions/{number}/document", {
+      params: { id, number: String(number) },
+    }),
   );
 }
 
 async function downloadContractFile(
-  path: string,
+  file: Promise<Response>,
   fallbackFilename = "betreuungsvertrag.pdf",
 ): Promise<ContractFile> {
-  const response = await transportFetch(path, {
-    credentials: "include",
-    cache: "no-store",
-  });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Request failed (${response.status})`,
-    );
-  }
+  const response = await file;
   return {
     blob: await response.blob(),
     filename: filenameFromDisposition(response) ?? fallbackFilename,
@@ -814,10 +842,8 @@ async function downloadContractFile(
 }
 
 export async function fetchContractTemplates(): Promise<OfferingTemplate[]> {
-  const rows = await traegerRequest<BackendOfferingTemplate[] | null>(
-    TEMPLATES_PATH,
-  );
-  return (rows ?? []).map(offeringFromBackend);
+  const rows = await bffJson("org", "GET /traeger/contract-templates/");
+  return rows.map(offeringFromBackend);
 }
 
 export async function saveContractTemplate(
@@ -826,9 +852,10 @@ export async function saveContractTemplate(
   terms: ContractTerms,
 ): Promise<OfferingTemplate> {
   return offeringFromBackend(
-    await traegerRequest<BackendOfferingTemplate>(
-      `${TEMPLATES_PATH}/${encodeURIComponent(schoolId)}/${encodeURIComponent(offeringId)}`,
-      { method: "PUT", body: termsToBackend(terms) },
+    await bffJson(
+      "org",
+      "PUT /traeger/contract-templates/{schoolId}/{offeringId}",
+      { params: { schoolId, offeringId }, body: termsToBackend(terms) },
     ),
   );
 }
@@ -849,25 +876,19 @@ export async function recordPaperSignature(
   form.append("file", input.file);
   form.append("signer_name", input.signerName);
   form.append("signed_on", input.signedOn);
-  const response = await transportFetch(`${contractPath(id)}/paper-signature`, {
-    method: "POST",
-    credentials: "include",
-    cache: "no-store",
+  await bffJson("org", "POST /traeger/contracts/{id}/paper-signature", {
+    params: { id },
     body: form,
   });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Request failed (${response.status})`,
-    );
-  }
 }
 
 export async function downloadPaperSignature(
   id: string,
 ): Promise<ContractFile> {
   return downloadContractFile(
-    `${contractPath(id)}/paper-signature`,
+    bffFile("org", "GET /traeger/contracts/{id}/paper-signature", {
+      params: { id },
+    }),
     "vertrag-papier.pdf",
   );
 }

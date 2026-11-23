@@ -180,7 +180,7 @@ func newBookingsForTest(
 	}
 	options := []api.BookingMaterializationOption{
 		api.WithBookingCatalog(env.offeringCatalog),
-		api.WithBookingToday(func() calendar.Date { return decisionTestToday }),
+		api.WithBookingToday(env.decisionDay),
 		api.WithBookingSettings(bookingSettings),
 		api.WithBookingWithdrawals(careWithdrawal),
 	}
@@ -257,20 +257,28 @@ func newDecisionsForTestWithBookings(
 	if t != nil {
 		pickupBaselines := newPickupBaselineService(repoFactoryCare.CarePlan, approvedOfferingTestProjection(repoFactory))
 		pickupAutoExcusal = newPickupExcusal(t, env.db, repoFactoryCare.CarePlan, pickupBaselines, env.timetable, true)
+		if env.excusalToday != nil {
+			var err error
+			pickupAutoExcusal, err = api.NewEnrollmentFlowPickupExcusalOn(testpkg.NewDatabase(t, env.db), repoFactoryCare.CarePlan,
+				pickupBaselines, env.timetable, true, env.excusalToday)
+			require.NoError(t, err)
+		}
 	}
 	studentEnrollment := testStudentEnrollment(env.db)
 	decisionRows := repoFactory.EnrollmentOn(decisionTestClock)
 	return newTestDecisions(enrollmentCompose.DecisionDependencies{
-		Now:            decisionTestClock,
-		Requests:       decisionRows,
-		Children:       decisionRows,
-		Guardians:      decisionRows,
-		LateInvites:    decisionRows,
-		Phases:         decisionRows,
-		Schemas:        decisionRows,
-		Offerings:      enrollmentCompose.NewCareOfferingRecords(repoFactoryCare.CarePlan),
-		Bookings:       bookings,
-		GuardianAccess: testGuardianAccess(env.db), GuardianAuthorizer: repoFactory.StudentGuardian, GuardianHold: testGuardianHold(env.db, repoFactory),
+		Now:              decisionTestClock,
+		Requests:         decisionRows,
+		Children:         decisionRows,
+		Guardians:        decisionRows,
+		LateInvites:      decisionRows,
+		Phases:           decisionRows,
+		Schemas:          decisionRows,
+		Offerings:        enrollmentCompose.NewCareOfferingRecords(repoFactoryCare.CarePlan),
+		Bookings:         bookings,
+		ContractStudents: owners.EnrollmentContractStudents{People: owners.MustNewPeopleDirectory(testpkg.MustDatabase(env.db))},
+		CareBookings:     requestTestBookingCommands(),
+		GuardianAccess:   testGuardianAccess(env.db), GuardianAuthorizer: repoFactory.StudentGuardian, GuardianHold: testGuardianHold(env.db, repoFactory),
 		People: owners.EnrollmentDecisionPeopleDirectory(
 			repoFactory.Person, repoFactory.Staff, repoFactory.Student, repoFactory.StudentGuardian, repoFactory.GuardianProfile, repoFactory.GuardianPhoneNumber, studentEnrollment,
 		),
@@ -283,16 +291,28 @@ func newDecisionsForTestWithBookings(
 		StudentAudit:           owners.EnrollmentDecisionStudentAudit(api.NewEnrollmentFlowStudentAudit(testpkg.MustDatabase(env.db), testpkg.RequestAuditActor)),
 		StudentConsents:        owners.EnrollmentDecisionStudentConsents(studentConsents),
 		CareWithdrawal:         careWithdrawal,
+		CareStudents:           owners.NewEnrollmentPhaseCareStudents(owners.MustNewPeopleDirectory(testpkg.MustDatabase(env.db))),
 		ParentsURL:             owners.EnrollmentDecisionParentsURL("http://parents.localhost:3000", "http://localhost:3000"),
 		LockTemplateRecurrence: lockTemplateRecurrence,
 		FollowClassChanges:     api.MustEnrollmentTestClassFollowUp(testpkg.MustDatabase(env.db)),
 		Pickups: TestWeeklyPickupHooks{
+			ResyncExcusal: resyncPickupExcusals(pickupAutoExcusal),
 			Snapshot:      snapshotPickupWeekdayChanges(pickupAutoExcusal),
 			RecordChanges: recordPickupWeekdayChanges(pickupAutoExcusal),
 		},
 		Logger: slog.Default(),
-		Today:  func() calendar.Date { return decisionTestToday },
+		Today:  env.decisionDay,
 	}, settings, outbox)
+}
+
+// resyncPickupExcusals binds the resync of the pickup auto excusals the way
+// the root binds it (weeklyPickupHooks), so the flows of the suites run it
+// as production does.
+func resyncPickupExcusals(syncer careplan.PickupAutoExcusal) func(context.Context, []int64) error {
+	if syncer == nil {
+		return nil
+	}
+	return syncer.ResyncFutureExceptions
 }
 
 func snapshotPickupWeekdayChanges(syncer careplan.PickupAutoExcusal) func(context.Context, int64, calendar.Date) (map[int]string, error) {
@@ -2943,6 +2963,56 @@ func TestDecisionService_Decide_ScheduleTargetWithoutReviewerStaffRollsBackAppro
 	assert.Nil(t, child.CreatedStudentID)
 }
 
+// A person of the Träger-Büro approves in a school session opened through the
+// Absprung: no staff record there, and the request carries the mark of the
+// Träger-Büro (#7818). The weekly rows name no staff member and carry the
+// mark instead. A reviewer with a staff record in the same kind of session
+// still writes as that staff member.
+func TestDecisionService_Decide_TraegerSessionWithoutStaffWritesWeeklyRowsAsTraeger(t *testing.T) {
+	t.Parallel()
+
+	env := setupDecisionTest(t)
+	ctx := testpkg.Ctx(t)
+	schema, err := NewTestFormSchemas(env.repos.Enrollment()).CreateSchema(ctx, "Testformular Träger", []enrollmentNative.FormField{
+		{Key: "pickup_times", Label: "Abholzeiten", Type: enrollmentNative.FormFieldWeekdaySchedule, AppliesToCh: true,
+			Target: enrollmentNative.TargetSchedulePickup, AllowedTimes: []string{"14:45"}, SortOrder: 0},
+		{Key: "arrival_times", Label: "Betreuungstage", Type: enrollmentNative.FormFieldWeekdaySchedule, AppliesToCh: true,
+			Target: enrollmentNative.TargetScheduleArrival, SortOrder: 1},
+	}, env.creatorID)
+	require.NoError(t, err)
+	env.sourcePhase.FormSchemaID = &schema.ID
+	require.NoError(t, testpkg.TenantCommand1(t, ctx, env.db, env.repos.Enrollment().UpdatePhase, OwnerPhaseForTest(env.sourcePhase)))
+	traegerCtx := enrollmentNative.WithTraegerBueroReviewer(ctx)
+	weekly := map[string]any{"pickup_times": map[string]any{"mon": "14:45"}, "arrival_times": map[string]any{"mon": "07:45"}}
+
+	approve := func(email, lastName string, reviewer int64) int64 {
+		reqID, childID := submitOneChildWithCustomData(t, env, email, "Anna", lastName, weekly)
+		outcome, decideErr := testpkg.TenantQuery1(t, traegerCtx, env.db, env.decision.Decide, enrollmentAPI.DecideInput{
+			RequestID: reqID, ChildID: childID, Status: enrollmentNative.DecisionApproved, ReviewedBy: reviewer,
+		})
+		require.NoError(t, decideErr)
+		require.NotNil(t, outcome.Child.CreatedStudentID)
+		return *outcome.Child.CreatedStudentID
+	}
+	countRows := func(studentID int64, where string) (count int) {
+		require.NoError(t, env.db.NewRaw(`
+			SELECT (SELECT COUNT(*) FROM schedule.student_pickup_schedules WHERE tenant_id = ? AND student_id = ? AND `+where+`)
+				+ (SELECT COUNT(*) FROM schedule.student_arrival_schedules WHERE tenant_id = ? AND student_id = ? AND `+where+`)`,
+			testpkg.Tenant(t), studentID, testpkg.Tenant(t), studentID).Scan(ctx, &count))
+		return count
+	}
+
+	traegerAccount := testpkg.CreateTestAccount(t, env.db, "traeger-buero-reviewer")
+	byTraeger := approve("pickup-traeger@example.com", "Traeger", traegerAccount.ID)
+	assert.Equal(t, 2, countRows(byTraeger, "created_by IS NULL AND entered_by_traeger"),
+		"the pickup and the arrival row carry the mark of the Träger-Büro instead of a staff author")
+
+	staff, staffAccountID := createReviewerStaffWithDistinctAccount(t, env)
+	byStaff := approve("pickup-traeger-staff@example.com", "TraegerStaff", staffAccountID)
+	assert.Equal(t, 2, countRows(byStaff, fmt.Sprintf("created_by = %d AND NOT entered_by_traeger", staff.ID)),
+		"a reviewer with a staff record writes as that staff member, also in a Träger session")
+}
+
 // TestDecisionService_Decide_ExistingStudentScheduleReplacementFailureRollsBack
 // locks in the #1663 fix. The existing-student re-enrollment path runs
 // applyTargetedFields with ReplaceSchedules, which DELETES the matched
@@ -4593,6 +4663,15 @@ func TestDecisionService_UpdateChildOfferings_RemovesSourcedEnrollmentAfterPhase
 	env.sourcePhase.ServiceStartDate = enrollmentNative.Date(calendar.NewDate(2026, 10, 1))
 	env.sourcePhase.ServiceEndDate = enrollmentNative.Date(calendar.NewDate(2027, 8, 15))
 	require.NoError(t, testpkg.TenantCommand1(t, ctx, env.db, env.repos.Enrollment().UpdatePhase, OwnerPhaseForTest(env.sourcePhase)))
+	// The phase edit carries the bounds the phase set on the child's booking
+	// (FollowPhaseBookingBounds, #6597); the raw update above does not, so the
+	// booking follows here. A booking that kept the old end would be a
+	// booking ending before the phase, and its row ends with it (#7908).
+	_, err = env.db.NewRaw(`UPDATE enrollment.care_offering_bookings SET valid_from = ?, valid_until = ?
+		WHERE tenant_id = ? AND request_child_id = ?`,
+		calendar.Date(env.sourcePhase.ServiceStartDate), calendar.Date(env.sourcePhase.ServiceEndDate).AddDays(1),
+		testpkg.Tenant(t), submitted.Children[0].ID).Exec(ctx)
+	require.NoError(t, err)
 	// This test isolates a phase-window correction, not a planned individual
 	// care end. Keep the student's master interval aligned with the corrected
 	// phase; otherwise enrolled_until must win and cap every rematerialization.

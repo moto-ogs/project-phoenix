@@ -1,5 +1,7 @@
 "use client";
 
+import { bffFile } from "~/lib/bff-fetch";
+
 // Kinderzahl der Familien (#5918): wie viele Kinder eine Familie hat, auch
 // Geschwister ohne Betreuungsvertrag. Eltern geben die Zahl im Vertrag an,
 // die Abrechnung bestätigt oder ändert sie mit Gültigkeit. Eine
@@ -54,13 +56,17 @@ import { parentsConcept } from "~/lib/concepts/parents";
 import { berlinTodayISO } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
 import { traegerBillingKeys } from "~/lib/swr/traeger-billing-keys";
-import { downloadTraegerList } from "~/lib/traeger-list-export";
+import {
+  downloadTraegerList,
+  listExportQuery,
+} from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
 import {
   type FamilyChildren,
   fetchFamilyChildren,
   removeFamilyChildren,
 } from "~/lib/traeger-family-children-api";
+import { labelOf } from "~/lib/label-of";
 
 const logger = createLogger({ component: "TraegerKinderzahlPage" });
 
@@ -171,6 +177,7 @@ export default function TraegerKinderzahlPage() {
     loading,
     error: loadError,
     mutate,
+    reloadOrThrow,
   } = useTraegerResource(
     traegerBillingKeys.childCounts(),
     fetchFamilyChildren,
@@ -204,8 +211,9 @@ export default function TraegerKinderzahlPage() {
   };
 
   const families = data?.families ?? [];
-  const toCheck = families.filter((family) =>
-    NEEDS_CHECK.includes(family.status),
+  const toCheck = families.filter(
+    (family) =>
+      family.status !== undefined && NEEDS_CHECK.includes(family.status),
   );
   const rows = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -268,8 +276,8 @@ export default function TraegerKinderzahlPage() {
       className: "w-44 align-top",
       render: (family) => (
         <StatusBadge
-          tone={STATUS_TONES[family.status]}
-          label={STATUS_LABELS[family.status]}
+          tone={labelOf(STATUS_TONES, family.status, "gray")}
+          label={labelOf(STATUS_LABELS, family.status, "–")}
         />
       ),
     },
@@ -316,7 +324,11 @@ export default function TraegerKinderzahlPage() {
 
   const exportItems = useTraegerListExportItems({
     download: (format) =>
-      downloadTraegerList("/api/traeger/family-children/export", format),
+      downloadTraegerList(
+        bffFile("org", "GET /traeger/family-children/export", {
+          query: listExportQuery(format),
+        }),
+      ),
     scope: "Alle Familien, ohne Suche. Jeder Download wird protokolliert.",
     fallbackName: "kinderzahl",
     errorObject: "die Kinderzahl der Familien",
@@ -380,6 +392,8 @@ export default function TraegerKinderzahlPage() {
         <>
           <FamilyChildrenModal
             family={checking}
+            data={data}
+            reload={reloadOrThrow}
             onClose={() => setChecking(null)}
             onSaved={(next) => {
               void mutate(next, { revalidate: false });
@@ -453,8 +467,8 @@ export default function TraegerKinderzahlPage() {
                     <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-gray-900">
                       {familyName(family)}
                       <StatusBadge
-                        tone={STATUS_TONES[family.status]}
-                        label={STATUS_LABELS[family.status]}
+                        tone={labelOf(STATUS_TONES, family.status, "gray")}
+                        label={labelOf(STATUS_LABELS, family.status, "–")}
                       />
                     </p>
                     <p className="mt-0.5 text-sm text-gray-600">

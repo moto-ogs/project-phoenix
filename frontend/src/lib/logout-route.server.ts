@@ -1,6 +1,7 @@
 import "server-only";
 import type { NextRequest } from "next/server";
-import { forwardBackendResponse } from "~/lib/backend-proxy-response.server";
+import { contractWrite } from "~/lib/contract/client.server";
+import { contractResponse } from "~/lib/contract/route-response.server";
 import {
   handleApiError,
   problemResponse,
@@ -8,7 +9,6 @@ import {
 import {
   renewalFailureResponse,
   renewSession,
-  sendBackend,
 } from "~/lib/backend-client.server";
 import { createLogger } from "~/lib/logger";
 import type { PortalAuth } from "~/server/auth/portal-auth";
@@ -43,8 +43,8 @@ export function createLogoutRoute(
 ) {
   const { portal, auth, uncachedAuth } = session;
   const revoke = (request: NextRequest, token: string) =>
-    sendBackend(portal.backend.logout.path, token, {
-      method: "POST",
+    contractWrite(portal.backend.logout.route, undefined, {
+      token,
       request,
       timeout: "logout",
     });
@@ -55,8 +55,8 @@ export function createLogoutRoute(
       if (!token) return problemResponse(401, "No active session", request);
 
       const response = await revoke(request, token);
-      if (response.status !== 401) {
-        return forwardBackendResponse(response, request);
+      if (response.ok || response.error.status !== 401) {
+        return contractResponse(response, request);
       }
       const renewal = await renewSession({ uncachedAuth }, token, (renewed) =>
         logoutToken(portal, renewed),
@@ -64,10 +64,7 @@ export function createLogoutRoute(
       if (renewal.outcome !== "renewed") {
         return renewalFailureResponse(renewal.outcome, request);
       }
-      return forwardBackendResponse(
-        await revoke(request, renewal.token),
-        request,
-      );
+      return contractResponse(await revoke(request, renewal.token), request);
     } catch (error) {
       logger.error("logout failed", {
         portal: portal.key,

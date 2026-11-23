@@ -6,7 +6,6 @@ package sessions_test
 
 import (
 	"bytes"
-	"fmt"
 	"net/http/httptest"
 	"testing"
 	"time"
@@ -280,68 +279,6 @@ func TestGetCurrentSession_WithActiveSession(t *testing.T) {
 }
 
 // =============================================================================
-// CHECK CONFLICT TESTS
-// =============================================================================
-
-func TestCheckConflict_NoDevice(t *testing.T) {
-	t.Parallel()
-	ctx := setupSessionsRoute(t)
-
-	router := testutil.NewTenantRouter(ctx.db)
-	router.Mount("/", ctx.resource.Router())
-
-	body := map[string]interface{}{
-		"activity_id": 1,
-	}
-
-	// Request without device context should return 401
-	req := testutil.NewAuthenticatedRequest(t, "POST", "/check-conflict", body)
-
-	rr := testutil.ExecuteRequest(router, req)
-
-	assert.Equal(t, 401, rr.Code, "Expected 401 for missing device authentication")
-}
-
-func TestCheckConflict_InvalidJSON(t *testing.T) {
-	t.Parallel()
-	ctx := setupSessionsRoute(t)
-
-	testDevice := testpkg.CreateTestDevice(t, ctx.db, "sessions-test-device-6")
-
-	router := testutil.NewTenantRouter(ctx.db)
-	router.Mount("/", ctx.resource.Router())
-
-	// Send invalid JSON body
-	req := httptest.NewRequest("POST", "/check-conflict", bytes.NewBufferString("invalid json"))
-	req.Header.Set("Content-Type", "application/json")
-	testutil.WithDeviceContext(testDevice)(req)
-
-	rr := testutil.ExecuteRequest(router, req)
-
-	testutil.AssertBadRequest(t, rr)
-}
-
-func TestCheckConflict_MissingActivityID(t *testing.T) {
-	t.Parallel()
-	ctx := setupSessionsRoute(t)
-
-	testDevice := testpkg.CreateTestDevice(t, ctx.db, "sessions-test-device-7")
-
-	router := testutil.NewTenantRouter(ctx.db)
-	router.Mount("/", ctx.resource.Router())
-
-	body := map[string]interface{}{} // Missing activity_id
-
-	req := testutil.NewAuthenticatedRequest(t, "POST", "/check-conflict", body,
-		testutil.WithDeviceContext(testDevice),
-	)
-
-	rr := testutil.ExecuteRequest(router, req)
-
-	testutil.AssertBadRequest(t, rr)
-}
-
-// =============================================================================
 // UPDATE SUPERVISORS TESTS
 // =============================================================================
 
@@ -440,101 +377,6 @@ func TestUpdateActivity_InvalidActivityType(t *testing.T) {
 }
 
 // =============================================================================
-// VALIDATE TIMEOUT TESTS
-// Note: Relies on middleware for device auth, so we only test with device context
-// =============================================================================
-
-func TestValidateTimeout_StatusCodes(t *testing.T) {
-	t.Parallel()
-	ctx := setupSessionsRoute(t)
-
-	testDevice := testpkg.CreateTestDevice(t, ctx.db, "sessions-validate-timeout")
-
-	router := testutil.NewTenantRouter(ctx.db)
-	router.Mount("/", ctx.resource.Router())
-
-	now := time.Now().Format(time.RFC3339)
-	// A rejected binding goes through renderError, which classifies every
-	// error outside the device-scan failures as 500. The 500 rows pin
-	// today's status; answering 400 needs a production change.
-	tests := []struct {
-		name   string
-		body   map[string]interface{}
-		status int
-		detail string
-	}{
-		{"missing timeout_minutes", map[string]interface{}{"last_activity": now}, 500, "timeout_minutes: cannot be blank."},
-		{"zero timeout", map[string]interface{}{"timeout_minutes": 0, "last_activity": now}, 500, "timeout_minutes: cannot be blank."},
-		{"negative timeout", map[string]interface{}{"timeout_minutes": -5, "last_activity": now}, 500, "timeout_minutes: must be no less than 1."},
-		{"one above maximum", map[string]interface{}{"timeout_minutes": 481, "last_activity": now}, 500, "timeout_minutes: must be no greater than 480."},
-		{"far above maximum", map[string]interface{}{"timeout_minutes": 1000, "last_activity": now}, 500, "timeout_minutes: must be no greater than 480."},
-		{"missing last_activity", map[string]interface{}{"timeout_minutes": 30}, 500, "last_activity: cannot be blank."},
-		{"valid request without session", map[string]interface{}{"timeout_minutes": 30, "last_activity": time.Now().Add(-10 * time.Minute).Format(time.RFC3339)}, 404, "no active session found"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			req := testutil.NewAuthenticatedRequest(t, "POST", "/validate-timeout", tt.body,
-				testutil.WithDeviceContext(testDevice),
-			)
-
-			rr := testutil.ExecuteRequest(router, req)
-
-			testutil.AssertErrorResponse(t, rr, tt.status)
-			assert.Contains(t, rr.Body.String(), tt.detail)
-		})
-	}
-}
-
-// =============================================================================
-// GET TIMEOUT INFO TESTS
-// Note: Relies on middleware for device auth, so we only test with device context
-// =============================================================================
-
-func TestGetTimeoutInfo_NoActiveSession(t *testing.T) {
-	t.Parallel()
-	ctx := setupSessionsRoute(t)
-
-	testDevice := testpkg.CreateTestDevice(t, ctx.db, "sessions-test-device-14")
-
-	router := testutil.NewTenantRouter(ctx.db)
-	router.Mount("/", ctx.resource.Router())
-
-	req := testutil.NewAuthenticatedRequest(t, "GET", "/timeout-info", nil,
-		testutil.WithDeviceContext(testDevice),
-	)
-
-	rr := testutil.ExecuteRequest(router, req)
-
-	testutil.AssertNotFound(t, rr)
-	assert.Contains(t, rr.Body.String(), "no active session found")
-}
-
-// =============================================================================
-// PROCESS TIMEOUT TESTS
-// Note: Relies on middleware for device auth, so we only test with device context
-// =============================================================================
-
-func TestProcessTimeout_NoActiveSession(t *testing.T) {
-	t.Parallel()
-	ctx := setupSessionsRoute(t)
-
-	testDevice := testpkg.CreateTestDevice(t, ctx.db, "sessions-test-device-15")
-
-	router := testutil.NewTenantRouter(ctx.db)
-	router.Mount("/", ctx.resource.Router())
-
-	req := testutil.NewAuthenticatedRequest(t, "POST", "/timeout", nil,
-		testutil.WithDeviceContext(testDevice),
-	)
-
-	rr := testutil.ExecuteRequest(router, req)
-
-	testutil.AssertNotFound(t, rr)
-	assert.Contains(t, rr.Body.String(), "no active session - please start an activity first")
-}
-
-// =============================================================================
 // ROUTER AND RESOURCE TESTS
 // =============================================================================
 
@@ -571,64 +413,6 @@ func TestStartSession_NonExistentActivity(t *testing.T) {
 
 	// Should return error for non-existent activity
 	assert.Contains(t, []int{400, 404, 500}, rr.Code)
-}
-
-// =============================================================================
-// CHECK CONFLICT WITH REAL ACTIVITY TESTS
-// =============================================================================
-
-func TestCheckConflict_NoConflict(t *testing.T) {
-	t.Parallel()
-	ctx := setupSessionsRoute(t)
-
-	testDevice := testpkg.CreateTestDevice(t, ctx.db, "sessions-test-device-19")
-	activity := testpkg.CreateTestActivityGroup(t, ctx.db, "NoConflict Activity")
-
-	router := testutil.NewTenantRouter(ctx.db)
-	router.Mount("/", ctx.resource.Router())
-
-	body := map[string]interface{}{
-		"activity_id": activity.ID,
-	}
-
-	req := testutil.NewAuthenticatedRequest(t, "POST", "/check-conflict", body,
-		testutil.WithDeviceContext(testDevice),
-	)
-
-	rr := testutil.ExecuteRequest(router, req)
-
-	testutil.AssertSuccessResponse(t, rr, 200)
-	data := testutil.ParseJSONResponse(t, rr.Body.Bytes())["data"].(map[string]interface{})
-	assert.Equal(t, false, data["has_conflict"])
-	assert.Equal(t, true, data["can_override"])
-	assert.Equal(t, "", data["conflict_message"])
-	assert.NotContains(t, data, "conflicting_device")
-}
-
-func TestCheckConflict_ActivityRunningOnAnotherDevice(t *testing.T) {
-	t.Parallel()
-	ctx := setupSessionsRoute(t)
-
-	runningDevice := testpkg.CreateTestDevice(t, ctx.db, "sessions-conflict-running")
-	askingDevice := testpkg.CreateTestDevice(t, ctx.db, "sessions-conflict-asking")
-	activity := testpkg.CreateTestActivityGroup(t, ctx.db, "Conflict Activity")
-
-	router := testutil.NewTenantRouter(ctx.db)
-	router.Mount("/", ctx.resource.Router())
-	startSession(t, ctx, router, runningDevice, activity.ID)
-
-	req := testutil.NewAuthenticatedRequest(t, "POST", "/check-conflict", map[string]interface{}{"activity_id": activity.ID},
-		testutil.WithDeviceContext(askingDevice),
-	)
-
-	rr := testutil.ExecuteRequest(router, req)
-
-	require.Equal(t, 409, rr.Code, rr.Body.String())
-	details := testutil.ParseJSONResponse(t, rr.Body.Bytes())["details"].(map[string]interface{})
-	assert.Equal(t, true, details["has_conflict"])
-	assert.Equal(t, true, details["can_override"])
-	assert.Equal(t, float64(runningDevice.ID), details["conflicting_device"])
-	assert.Equal(t, fmt.Sprintf("Activity is already active on device %d", runningDevice.ID), details["conflict_message"])
 }
 
 // =============================================================================

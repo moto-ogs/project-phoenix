@@ -87,7 +87,7 @@ func (t traegerSites) absentDays(ctx context.Context, staffIDs []int64, from, to
 	}
 	byStaff := map[int64][]workforce.StaffAbsence{}
 	for _, absence := range absences {
-		byStaff[absence.StaffID] = append(byStaff[absence.StaffID], absence)
+		byStaff[absence.StaffID.Int64()] = append(byStaff[absence.StaffID.Int64()], absence)
 	}
 	var result []workforce.TraegerSiteAbsentDay
 	for _, staffID := range staffIDs {

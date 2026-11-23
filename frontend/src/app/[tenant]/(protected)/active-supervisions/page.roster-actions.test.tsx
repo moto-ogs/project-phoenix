@@ -12,6 +12,7 @@ import {
   cleanup,
   fireEvent,
   act,
+  within,
 } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
@@ -169,11 +170,6 @@ vi.mock("~/components/sse/SSEErrorBoundary", () => ({
   SSEErrorBoundary: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="sse-boundary">{children}</div>
   ),
-}));
-
-// Mock UnclaimedRooms
-vi.mock("~/components/active/unclaimed-rooms", () => ({
-  UnclaimedRooms: () => <div data-testid="unclaimed-rooms" />,
 }));
 
 vi.mock("~/components/rooms/transit-students-section", () => ({
@@ -368,6 +364,8 @@ vi.mock("~/lib/timetable-operations-api", () => ({
     patchAttendance: vi.fn(),
     plannedNow: vi.fn(() => Promise.resolve([])),
     reopen: vi.fn(),
+    roster: vi.fn(),
+    saveHomeworkFeedback: vi.fn(),
   },
   isReopenUnavailableError: vi.fn(() => false),
 }));
@@ -528,6 +526,83 @@ describe("MeinRaumPage roster actions", () => {
       );
     });
     expect(timetableOperationsApi.checkIn).toHaveBeenCalledWith("99", "100");
+  });
+
+  // ADR 0311: on the Aktive-Aufsicht page a feedback refused as changed
+  // since read shows the stored feedback with the refusal, and the next
+  // save carries the stored token, not the dialog's old one.
+  it("shows the stored homework feedback after a refusal and saves with its token", async () => {
+    const homeworkRow = {
+      ...expectedRow,
+      currentlyPresent: true,
+      visitId: "visit-100",
+      status: "present",
+      homework: [{ subject: "Mathe", description: "Seite 12" }],
+      homeworkFeedbackVersion: "v1",
+    };
+    const stored = {
+      ...homeworkRow,
+      homeworkFeedback: { status: "not_done", note: "von Kollegin" },
+      homeworkFeedbackVersion: "v2",
+    };
+    primaryRosterRows = [homeworkRow];
+    const rosterRead = vi.mocked(useSWRAuth).getMockImplementation()!;
+    vi.mocked(useSWRAuth).mockImplementation(((key: string | null) => {
+      const answer = rosterRead(key as never, undefined as never);
+      return key?.startsWith("timetable-roster-active-group")
+        ? {
+            ...answer,
+            data: {
+              ...(answer.data as object),
+              canRecordHomeworkFeedback: true,
+            },
+          }
+        : answer;
+    }) as never);
+    vi.mocked(timetableOperationsApi.saveHomeworkFeedback)
+      .mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      )
+      .mockResolvedValue({} as never);
+    vi.mocked(timetableOperationsApi.roster).mockResolvedValue({
+      instance: rosterInstance,
+      rows: [stored],
+      canRecordHomeworkFeedback: true,
+    } as never);
+
+    render(<MeinRaumPage />);
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Hausaufgaben" }),
+    );
+    const dialog = await screen.findByTestId("modal");
+    fireEvent.click(within(dialog).getByRole("button", { name: "War schwer" }));
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Rückmeldung speichern" }),
+    );
+
+    expect(
+      await within(dialog).findByText(
+        catalogText("general.changed_since_read", "die Rückmeldung"),
+      ),
+    ).toBeInTheDocument();
+    expect(timetableOperationsApi.roster).toHaveBeenCalledWith("99");
+    expect(
+      within(dialog).getByLabelText("Kurze Notiz (freiwillig)"),
+    ).toHaveValue("von Kollegin");
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Fertig" }));
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Rückmeldung speichern" }),
+    );
+    await waitFor(() =>
+      expect(
+        timetableOperationsApi.saveHomeworkFeedback,
+      ).toHaveBeenLastCalledWith("99", "100", {
+        status: "done",
+        note: "von Kollegin",
+        expected_version: "v2",
+      }),
+    );
   });
 
   it("links each block row to the child's profile with users:read (#4356)", async () => {

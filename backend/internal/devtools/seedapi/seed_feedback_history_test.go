@@ -48,7 +48,7 @@ func TestFeedbackHistoryPlanRatesPresentDays(t *testing.T) {
 		require.True(t, ok, "feedback only on a present day: %+v", entry)
 		require.False(t, day.Date.Before(from), "inside the window")
 		values[entry.Value]++
-		students[entry.StudentID] = true
+		students[int64(entry.StudentID)] = true
 		if entry.IsMensaFeedback {
 			mensa++
 			assert.Less(t, entry.Time, day.CheckOut.In(seedBerlinLocation()).Format("15:04:05"))
@@ -84,15 +84,13 @@ func TestFeedbackHistoryRangeCoversTheCurrentMonth(t *testing.T) {
 	}
 }
 
-// The step writes the history as the school admin in one batch, inside the
-// window it read, and leaves a school alone that already has one (#5029).
+// The step hands the history to the bound writer in one batch for the
+// school, inside its window, and leaves a school alone whose first rated
+// child already has a rating in it (#5029).
 func TestSeedFeedbackHistoryStepWritesOneBatchOnce(t *testing.T) {
 	t.Parallel()
 	for _, existing := range []bool{false, true} {
-		var start, end, batchAuth string
-		var batch struct {
-			Entries []feedbackHistoryEntry `json:"entries"`
-		}
+		var askedStudent string
 		srv := newSeedHTTPTestServer(func(w seedHTTPResponseWriter, r *seedHTTPRequest) {
 			w.Header().Set("Content-Type", "application/json")
 			switch {
@@ -101,47 +99,99 @@ func TestSeedFeedbackHistoryStepWritesOneBatchOnce(t *testing.T) {
 				_, _ = w.Write([]byte(`{"status":"success","data":[]}`))
 			case r.Method == http.MethodGet && r.URL.Path == "/api/students":
 				_, _ = w.Write([]byte(`{"status":"success","data":[` + feedbackHistoryStudentRows(20) + `],"pagination":{"total_pages":1}}`))
-			case r.Method == http.MethodGet && r.URL.Path == "/api/feedback/date-range":
-				start, end = r.URL.Query().Get("start_date"), r.URL.Query().Get("end_date")
+			case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/api/feedback/student/"):
+				askedStudent = strings.TrimPrefix(r.URL.Path, "/api/feedback/student/")
+				yesterday := todaySeedDate().AddDays(-1).Format(seedDateLayout)
 				if existing {
-					_, _ = w.Write([]byte(`{"status":"success","data":[{"id":1}]}`))
+					_, _ = fmt.Fprintf(w, `{"status":"success","data":[{"id":1,"day":%q}]}`, yesterday)
 					return
 				}
-				_, _ = w.Write([]byte(`{"status":"success","data":[]}`))
-			case r.Method == http.MethodPost && r.URL.Path == "/api/feedback/batch":
-				batchAuth = r.Header.Get("Authorization")
-				require.NoError(t, json.NewDecoder(r.Body).Decode(&batch))
-				w.WriteHeader(http.StatusCreated)
-				_, _ = fmt.Fprintf(w, `{"status":"success","data":{"count":%d}}`, len(batch.Entries))
+				// Today's rating of the kiosk is no history.
+				_, _ = fmt.Fprintf(w, `{"status":"success","data":[{"id":1,"day":%q}]}`, todaySeedDate().Format(seedDateLayout))
 			default:
 				t.Errorf("unexpected request %s %s", r.Method, r.URL.Path)
 			}
 		})
+		var school int64
+		var batches [][]PastFeedback
 		runtime := &Runtime{
 			Client:      newTestClient(srv.URL, false),
 			TenantAuth:  AuthRef{Kind: AuthBearer, Token: "tenant-token"},
 			FixedSeeder: &FixedSeeder{seedDay: todaySeedDate()},
+			Bootstrap:   &bootstrapSeedState{SchoolID: 9},
 		}
-		step := seedFeedbackHistoryStep{seeder: &Seeder{definition: fullOperationProfileDefinition()}}
+		step := seedFeedbackHistoryStep{seeder: &Seeder{definition: fullOperationProfileDefinition(), options: SeedOptions{
+			FeedbackHistory: func(_ context.Context, schoolID int64, entries []PastFeedback) (int, error) {
+				school = schoolID
+				batches = append(batches, entries)
+				return len(entries), nil
+			},
+		}}}
 
 		require.NoError(t, step.Run(context.Background(), runtime))
 		srv.Close()
+		require.NotEmpty(t, askedStudent)
 		if existing {
-			assert.Empty(t, batch.Entries, "a present history is not written twice")
+			assert.Empty(t, batches, "a present history is not written twice")
 			continue
 		}
-		assert.Equal(t, "Bearer tenant-token", batchAuth)
-		require.NotEmpty(t, batch.Entries)
+		require.Len(t, batches, 1)
+		assert.Equal(t, runtime.Bootstrap.SchoolID, school)
+		assert.Equal(t, fmt.Sprint(batches[0][0].StudentID), askedStudent, "the first rated child tells whether the history is there")
+		today, err := runtime.historyToday()
+		require.NoError(t, err)
+		from, until := feedbackHistoryRange(today)
 		mensa := 0
-		for _, entry := range batch.Entries {
-			assert.GreaterOrEqual(t, entry.Day, start)
-			assert.LessOrEqual(t, entry.Day, end)
+		for _, entry := range batches[0] {
+			assert.GreaterOrEqual(t, entry.Day, from.String())
+			assert.LessOrEqual(t, entry.Day, until.String())
 			if entry.IsMensaFeedback {
 				mensa++
 			}
 		}
 		assert.Positive(t, mensa, "the history holds Mensa feedback")
 	}
+}
+
+// Without a database writer and outside the public demo the step leaves the
+// past without ratings and sends no request.
+func TestSeedFeedbackHistoryStepSkipsWithoutWriter(t *testing.T) {
+	t.Parallel()
+	srv := newSeedHTTPTestServer(func(_ seedHTTPResponseWriter, r *seedHTTPRequest) {
+		t.Errorf("unexpected request %s %s", r.Method, r.URL.Path)
+	})
+	defer srv.Close()
+	step := seedFeedbackHistoryStep{seeder: &Seeder{definition: fullOperationProfileDefinition()}}
+	require.NoError(t, step.Run(context.Background(), &Runtime{Client: newTestClient(srv.URL, false)}))
+}
+
+// In the public demo the step writes through the demo-only operator route
+// as the operator (ADR 0298).
+func TestOperatorFeedbackHistoryWriterUsesTheDemoRoute(t *testing.T) {
+	t.Parallel()
+	var path, authorization string
+	var raw json.RawMessage
+	var body struct {
+		Entries []PastFeedback `json:"entries"`
+	}
+	srv := newSeedHTTPTestServer(func(w seedHTTPResponseWriter, r *seedHTTPRequest) {
+		path, authorization = r.Method+" "+r.URL.Path, r.Header.Get("Authorization")
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&raw))
+		require.NoError(t, json.Unmarshal(raw, &body))
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprintf(w, `{"status":"success","data":{"written":%d}}`, len(body.Entries))
+	})
+	defer srv.Close()
+	runtime := &Runtime{Client: newTestClient(srv.URL, false), OperatorAuth: AuthRef{Kind: AuthBearer, Token: "operator-token"}}
+	write := feedbackHistoryWriterFor(SeedOptions{PresenceHistoryRoute: true}, runtime)
+	entries := []PastFeedback{{Value: "positive", Day: "2026-11-19", Time: "15:00:00", StudentID: 4}}
+	written, err := write(context.Background(), 9, entries)
+	require.NoError(t, err)
+	assert.Equal(t, 1, written)
+	assert.Equal(t, "POST /operator/schools/9/demo-feedback-history", path)
+	assert.Equal(t, "Bearer operator-token", authorization)
+	assert.Equal(t, entries, body.Entries)
+	assert.Contains(t, string(raw), `"student_id":"4"`, "the identifier travels as text")
 }
 
 // A profile that leaves feedback off sends no request: the API would refuse

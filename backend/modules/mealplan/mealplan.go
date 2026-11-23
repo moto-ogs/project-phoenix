@@ -100,12 +100,19 @@ type ParticipationPlan struct {
 	// deadline still cancels the meal.
 	SickCancels bool
 	Days        []ParticipationDay
+	// Version is the read-state token of the child's stored regular days,
+	// every period of them (ADR 0311): a schedule save sends it back.
+	Version string
 }
 
+// ReplaceParticipationSchedule replaces a child's regular days for a parent.
+// ExpectedVersion is the ParticipationPlan.Version the parent read: regular
+// days stored differently since are refused with readstate.ErrChanged.
 type ReplaceParticipationSchedule struct {
 	StudentID         int64
 	GuardianAccountID int64
 	Weekdays          []Weekday
+	ExpectedVersion   string
 }
 
 // SetParticipationWeek registers or cancels the remaining weekdays of the
@@ -143,11 +150,13 @@ type SchoolChange struct {
 
 // SchoolSchedule replaces a child's regular days from EffectiveFrom on, at
 // the earliest today. The school uses it after the annual registration.
+// ExpectedVersion is the ParticipationPlan.Version the staff member read.
 type SchoolSchedule struct {
-	StudentID      int64
-	StaffAccountID int64
-	Weekdays       []Weekday
-	EffectiveFrom  Date
+	StudentID       int64
+	StaffAccountID  int64
+	Weekdays        []Weekday
+	EffectiveFrom   Date
+	ExpectedVersion string
 }
 
 type DailyParticipant struct {
@@ -170,19 +179,27 @@ type DailyList struct {
 	Others []DailyParticipant
 }
 
-// ReplaceDay sets the dishes of a day. AccountID is the account that saves
-// them; it never hears about its own change (#7145).
-type ReplaceDay struct {
-	Date      Date
-	Dishes    []Dish
-	AccountID int64
+// Day is one weekday of the plan as stored, with the read-state token of
+// its dishes (ADR 0311). An empty day has a version too.
+type Day struct {
+	Date    Date
+	Version string
+	Dishes  []Dish
 }
 
-// ClearDay removes the dishes of a day. AccountID is the account that
-// removes them.
-type ClearDay struct {
-	Date      Date
-	AccountID int64
+// ReplaceDay sets the dishes of a day; no dishes clear it. AccountID is the
+// account that saves them; it never hears about its own change (#7145).
+// ExpectedVersion is the Day.Version its saver read: a day stored
+// differently since is refused with readstate.ErrChanged, and so is a save
+// without one. ExpectedDishes is the day as read by the deprecated
+// PUT /api/meal-plan/{date}, which sends the dishes instead of their
+// version; it stands for their version until that route is removed.
+type ReplaceDay struct {
+	Date            Date
+	Dishes          []Dish
+	ExpectedVersion string
+	ExpectedDishes  *[]Dish
+	AccountID       int64
 }
 
 // Fault is a refused Meal Plan request. Code names it; Detail, when set, is
@@ -224,8 +241,11 @@ type Capability interface {
 type Menu interface {
 	Available(context.Context) (bool, error)
 	Week(context.Context, Date) ([]Entry, error)
-	ReplaceDay(context.Context, ReplaceDay) error
-	ClearDay(context.Context, ClearDay) error
+	// Days returns Monday to Friday of the week of a date, each with its
+	// version.
+	Days(context.Context, Date) ([]Day, error)
+	// ReplaceDay saves a day and returns it as stored, with its new version.
+	ReplaceDay(context.Context, ReplaceDay) (Day, error)
 }
 
 // Registration is the children's meal registration, by their parents and by

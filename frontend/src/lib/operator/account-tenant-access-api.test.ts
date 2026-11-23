@@ -22,20 +22,20 @@ describe("accountTenantAccessService", () => {
       jsonResponse({
         data: [
           {
-            tenant_id: 7,
+            tenant_id: "7",
             school_name: "OGS Nord",
             school_slug: "ogs-nord",
             school_active: true,
-            organization_id: 3,
+            organization_id: "3",
             organization_name: "Träger Köln",
             status: "active",
             activated_at: "2026-07-01T10:00:00Z",
-            deactivated_at: null,
             has_person: true,
             has_staff: false,
             roles: [
-              { id: "1", name: "admin", is_system: true, base_role: null },
+              { id: "1", name: "admin", is_system: true, school_portal: false },
             ],
+            version: "roles-v1",
           },
         ],
       }),
@@ -69,24 +69,27 @@ describe("accountTenantAccessService", () => {
             schoolPortal: false,
           },
         ],
+        version: "roles-v1",
       },
     ]);
   });
 
-  it("treats an unknown status as no access and missing roles as empty", async () => {
+  it("leaves an unknown status unknown and treats missing roles as empty", async () => {
     mockFetch.mockResolvedValue(
       jsonResponse({
         data: [
           {
-            tenant_id: 7,
+            tenant_id: "7",
             school_name: "OGS Nord",
             school_slug: "ogs-nord",
             school_active: true,
-            organization_id: 3,
+            organization_id: "3",
             organization_name: "Träger",
             status: "something-new",
             has_person: false,
             has_staff: false,
+            roles: null,
+            version: "roles-v0",
           },
         ],
       }),
@@ -94,7 +97,10 @@ describe("accountTenantAccessService", () => {
 
     const [entry] = await accountTenantAccessService.list("42");
 
-    expect(entry?.status).toBe("inactive");
+    // ADR 0270 point 6: a status this build does not know is not passed off
+    // as a known one; the modal shows „–“.
+    expect(entry).toBeDefined();
+    expect(entry?.status).toBeUndefined();
     expect(entry?.roles).toEqual([]);
   });
 
@@ -116,7 +122,7 @@ describe("accountTenantAccessService", () => {
       expect.objectContaining({
         method: "POST",
         body: JSON.stringify({
-          school_id: 7,
+          school_id: "7",
           role_id: roleId,
           first_name: "Ada",
           last_name: "Lovelace",
@@ -124,12 +130,12 @@ describe("accountTenantAccessService", () => {
       }),
     );
 
-    await accountTenantAccessService.updateRole("42", "7", roleId);
+    await accountTenantAccessService.updateRole("42", "7", roleId, "roles-v1");
     expect(mockFetch).toHaveBeenLastCalledWith(
       "/api/operator/accounts/42/tenants/7",
       expect.objectContaining({
         method: "PUT",
-        body: JSON.stringify({ role_id: roleId }),
+        body: JSON.stringify({ role_id: roleId, expected_version: "roles-v1" }),
       }),
     );
   });
@@ -138,7 +144,12 @@ describe("accountTenantAccessService", () => {
     mockFetch.mockResolvedValue(
       jsonResponse({
         data: [
-          { id: "4", name: "teamleitung", is_system: false },
+          {
+            id: "4",
+            name: "teamleitung",
+            is_system: false,
+            school_portal: false,
+          },
           // A copy of the Lehrkraft role keeps its mark (#4574).
           {
             id: "5",
@@ -175,9 +186,9 @@ describe("accountTenantAccessService", () => {
     );
 
     await expect(
-      accountTenantAccessService.updateRole("42", "7", "1"),
+      accountTenantAccessService.updateRole("42", "7", "1", "roles-v1"),
     ).rejects.toThrowError(
-      new ApiError("school access request failed (400)", 400, {
+      new ApiError("school access request failed", 400, {
         detail: "Diese Rolle existiert an der Zielschule nicht",
       }),
     );
@@ -187,7 +198,7 @@ describe("accountTenantAccessService", () => {
     mockFetch.mockResolvedValue(jsonResponse({ detail: "Unauthorized" }, 401));
 
     await expect(accountTenantAccessService.list("42")).rejects.toThrowError(
-      new ApiError("school access request failed (401)", 401, {
+      new ApiError("school access request failed", 401, {
         detail: "Unauthorized",
       }),
     );
@@ -199,12 +210,12 @@ describe("accountTenantAccessService", () => {
     );
 
     await expect(accountTenantAccessService.list("42")).rejects.toThrowError(
-      new ApiError("school access request failed (504)", 504),
+      new ApiError("school access request failed", 504),
     );
   });
 
-  it("treats a missing data envelope as an empty list", async () => {
-    mockFetch.mockResolvedValue(jsonResponse({ data: null }));
+  it("maps an empty list", async () => {
+    mockFetch.mockResolvedValue(jsonResponse({ data: [] }));
 
     await expect(accountTenantAccessService.list("42")).resolves.toEqual([]);
   });
@@ -214,11 +225,11 @@ describe("accountTenantAccessService", () => {
       jsonResponse({
         data: [
           {
-            tenant_id: 7,
+            tenant_id: "7",
             school_name: "OGS Nord",
             school_slug: "ogs-nord",
             school_active: false,
-            organization_id: 3,
+            organization_id: "3",
             organization_name: "Träger",
             status: "inactive",
             activated_at: "2026-07-01T10:00:00Z",
@@ -226,6 +237,7 @@ describe("accountTenantAccessService", () => {
             has_person: true,
             has_staff: true,
             roles: [],
+            version: "roles-v0",
           },
         ],
       }),

@@ -134,6 +134,10 @@ type UpdateInstanceInput struct {
 	// period, not spontaneous). Only the series conversion sets it; an
 	// ordinary edit leaves hand-linked one-offs outside the roster resync.
 	CalendarPeriodID *int64
+	// ExpectedVersion is the InstanceVersion its editor read (ADR 0311);
+	// the edit is refused with readstate.ErrChanged unless the block is
+	// still stored that way.
+	ExpectedVersion string
 }
 
 // StartInstanceResult is a started (or reopened) block, its live session
@@ -210,6 +214,9 @@ type ConvertInstanceToSeriesInput struct {
 	Template       CreateTemplateCommand
 	InstanceNotes  *string
 	ActorAccountID *int64
+	// ExpectedVersion is the InstanceVersion of the one-off block its editor
+	// read (ADR 0311).
+	ExpectedVersion string
 }
 
 // ConvertInstanceToSeriesResult identifies both sides of a conversion;
@@ -297,10 +304,6 @@ type InstanceStaffing interface {
 	// ClearUnderstaffedAckIfStaffed clears a lingering acknowledgement only
 	// when the block is fully staffed now.
 	ClearUnderstaffedAckIfStaffed(ctx context.Context, instanceID int64, actorAccountID *int64) error
-	// AcknowledgeUnderstaffed is the standalone acknowledgement: it gates
-	// past blocks and serializes with same-day staffing saves. The note
-	// arrives trimmed and validated.
-	AcknowledgeUnderstaffed(ctx context.Context, instanceID int64, ack bool, note *string, actorAccountID *int64) (*LifecycleInstance, error)
 	// MoveStaffBetweenBlocks moves (or pool-assigns) one staff member onto
 	// the target block atomically, with one staff_moved protocol entry.
 	MoveStaffBetweenBlocks(ctx context.Context, targetID int64, in MoveStaffInput) (*MoveStaffResult, error)

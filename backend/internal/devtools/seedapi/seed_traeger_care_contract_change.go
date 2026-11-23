@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedCareContractChange lets the parents of the first active contract
@@ -20,9 +22,9 @@ func seedCareContractChange(rt *Runtime, auth AuthRef) (bool, error) {
 	var list struct {
 		Data struct {
 			Contracts []struct {
-				ID         int64  `json:"id"`
-				PartyEmail string `json:"party_email"`
-				StudentID  *int64 `json:"student_id"`
+				ID         ident.ID  `json:"id"`
+				PartyEmail string    `json:"party_email"`
+				StudentID  *ident.ID `json:"student_id"`
 			} `json:"contracts"`
 		} `json:"data"`
 	}
@@ -31,14 +33,14 @@ func seedCareContractChange(rt *Runtime, auth AuthRef) (bool, error) {
 	}
 	for _, contract := range list.Data.Contracts {
 		parent, ok := seedParentByEmail(rt, contract.PartyEmail)
-		if !ok || contract.StudentID == nil || !slices.Contains(parent.StudentIDs, *contract.StudentID) {
+		if !ok || contract.StudentID == nil || !slices.Contains(parent.StudentIDs, int64(*contract.StudentID)) {
 			continue
 		}
 		parentAuth, err := rt.Client.adapter.LoginParent(context.Background(), parent.Email, parent.Password)
 		if err != nil {
 			return false, fmt.Errorf("sign in the parents of contract %d: %w", contract.ID, err)
 		}
-		return seedOneDayLess(rt, parentAuth, *contract.StudentID)
+		return seedOneDayLess(rt, parentAuth, int64(*contract.StudentID))
 	}
 	return false, nil
 }

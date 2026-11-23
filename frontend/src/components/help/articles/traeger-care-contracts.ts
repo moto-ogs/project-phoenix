@@ -8,7 +8,9 @@ import { HELP_TOPICS } from "~/lib/help-topics";
  * der Eltern und den Papiervertrag erfassen; Versionen nach einer Änderung;
  * Kündigung und Widerruf (#4682); Änderungswünsche der Eltern freigeben (#5979);
  * Kinder und bestehende Verträge aus einer Datei importieren (#4723), auch
- * ohne Mail-Adresse der Eltern (#7360).
+ * ohne Mail-Adresse der Eltern (#7360), ihre Vertragsangaben aus den
+ * Originalunterlagen nachpflegen (#7767), importierte Verträge mit der
+ * Kinderakte verknüpfen und ihre Anmeldungen nachtragen (#7760).
  */
 export function traegerCareContractsTopic(): HelpTopic {
   return {
@@ -130,6 +132,111 @@ export function traegerCareContractsTopic(): HelpTopic {
           "Prüfe die Zeilen unter `Prüfen und übernehmen`. `Bereit` übernimmt moto. `Schon vorhanden` heißt: Das Kind hat an der Schule schon einen Vertrag. Bei `Fehlerhaft` steht der Grund in der Spalte `Hinweis`.",
           "Wähle unten `übernehmen`. Die Verträge stehen danach in der Liste mit dem Status `Aktiv`.",
           "Fehler in der Datei? Korrigiere die Datei und lade sie noch einmal. moto legt kein Kind doppelt an.",
+          "Danach verknüpfst du die Verträge mit der Kinderakte. Wie das geht, steht im nächsten Abschnitt.",
+        ],
+      },
+      {
+        title: "Importierte Verträge mit der Kinderakte verknüpfen",
+        description:
+          "Ein importierter Vertrag kennt sein Kind zuerst nur über den Namen. Erst mit der Kinderakte weiß moto, welches Kind der Schule er meint. Das braucht der Soll-Ist-Vergleich, die genaue Zuordnung des Essens und das Elternpostfach für Rechnungen. Es verknüpfen nur die Nummern von Vertrag und Kinderakte. Name und Geburtsdatum vergleicht moto nur. Eltern bekommen keine Nachricht, und es startet kein Rechnungslauf.",
+        steps: [
+          "Stimmt bei einem Vertrag das Angebot nicht? Korrigiere das zuerst. Verknüpfe danach.",
+          "Die Vertragsnummer steht auf der Seite des Vertrags unter `Vertragsangaben`, im Feld `Vertrag Nr.` Alle Nummern auf einmal bekommst du in der Vertragsliste im Menü unter `Herunterladen`: Die Datei hat die Spalten `Vertrag Nr.` und `Kinderakte`.",
+          "Die Nummer der Kinderakte steht im OGS-Portal der Schule. Öffne dort `Datenverwaltung` › `Kinderdaten` und das Kind. Die Zahl am Ende der Adresse ist die Nummer, zum Beispiel …/students/123. Hast du keinen Zugang, frag die Schule.",
+          "Lege eine CSV-Datei an: eine Zeile je Vertrag, eine Spalte `Vertrag Nr.` und eine Spalte `Kinderakte`, wie im Export. Mit `Beispieldatei` bekommst du den Aufbau.",
+          "Wähle in der Navigation `Verträge`. Wähle oben rechts das Menü mit den drei Punkten und dann `Mit Kinderakten verknüpfen`. Nach einem Import führt dich auch `Mit Kinderakten verknüpfen` dorthin.",
+          "Ziehe die Datei in das Feld oder wähle `Datei wählen`. Erkennt moto die Spalten nicht, wählst du sie unter `Spalten zuordnen`.",
+          "Prüfe die Zeilen unter `Prüfen und verknüpfen`. `Bereit` verknüpft moto. `Schon verknüpft` ist schon erledigt. `Unklar` und `Nicht möglich` bleiben, wie sie sind. Den Grund nennt die Spalte `Hinweis`.",
+          "`Unklar` heißt zum Beispiel: Name oder Geburtsdatum in der Kinderakte sind anders als im Vertrag. Oder die Datei nennt einen Vertrag oder ein Kind zweimal. Oder das Kind hat in derselben Zeit schon einen anderen Vertrag an der Schule.",
+          "`Nicht möglich` heißt: Eine Nummer fehlt, ist keine Zahl, oder moto kennt sie nicht. Auch ein Vertrag aus einer Anmeldung steht hier. Er gehört schon zu seinem Kind und braucht keine Verknüpfung.",
+          "Wähle unten zum Beispiel `12 Verträge verknüpfen`.",
+          "Danach zeigt moto, wie viele Verträge verknüpft sind und welche Zeilen offen bleiben. Mit `Offene Zeilen herunterladen` bekommst du sie als Arbeitsliste.",
+          "Lädst du dieselbe Datei noch einmal, steht jede verknüpfte Zeile auf `Schon verknüpft`. Es passiert nichts doppelt.",
+        ],
+      },
+      {
+        title: "Einen Vertrag einzeln verknüpfen oder die Verknüpfung lösen",
+        steps: [
+          "Öffne den Vertrag. Unter `Vertragsangaben` steht bei `Kinderakte`, ob er verknüpft ist.",
+          "Wähle `Mit Kinderakte verknüpfen`, unter `Kinderakte` oder im Menü mit den drei Punkten oben rechts.",
+          "Gib die `Nummer der Kinderakte` ein und wähle `Prüfen`. moto zeigt nebeneinander, was im Vertrag und was in der Kinderakte steht.",
+          "Passt alles, wähle `Verknüpfen`.",
+          "Weichen Name oder Geburtsdatum ab, markiert moto das mit `Weicht ab`. Ist es sicher dasselbe Kind, wähle `Trotzdem verknüpfen`. Nur das geht hier, und nur einzeln.",
+          "Falsch verknüpft? Wähle im Menü mit den drei Punkten `Verknüpfung lösen` und bestätige. Sonst ändert sich nichts. Schon ausgestellte Rechnungen bleiben, wie sie sind.",
+          "Steht unter `Anmeldung` schon `Anmeldung nachgetragen`, fehlt `Verknüpfung lösen`. Löse dann zuerst die Bindung an die Anmeldung, siehe unten.",
+        ],
+      },
+      {
+        title: "Anmeldungen für importierte Verträge nachtragen",
+        description:
+          "Ein importierter Vertrag hat an der Schule noch keine Anmeldung. moto legt sie aus dem Vertrag an, schon genehmigt, und bindet den Vertrag daran. Die Kinder stehen dann in den Gruppenlisten. Eltern bekommen keine Mail und keine Einladung, die Kinderakte bleibt, wie sie ist. Die Reihenfolge: falls nötig `Module neu zuordnen`, dann `Mit Kinderakten verknüpfen`, dann `Anmeldungen nachtragen`.",
+        steps: [
+          "Wähle in der Navigation `Verträge`. Wähle oben rechts das Menü mit den drei Punkten und dann `Anmeldungen nachtragen`.",
+          "Hat dein Träger mehrere Schulen, wähle unter `Schule wählen` die Schule. moto trägt je Schule nach.",
+          "Prüfe unter `Vorschau prüfen` jede Zeile. Bei `Vertrag` steht das Kind, wie der Vertrag es nennt, bei `Kinderakte` das Kind der Schule. Steht dort `Name weicht ab`, prüfe zuerst die Verknüpfung.",
+          "Bei `Betreuung` stehen Modul, Wochentage mit Endzeit und Zeitraum. So bucht die Anmeldung das Kind.",
+          "`Bereit` trägt moto nach. Hat das Kind schon eine passende Anmeldung, bindet moto den Vertrag nur daran. `Erledigt` ist schon gebunden. Bei `Zurückgestellt` und `Hängt` steht in der Spalte `Hinweis`, was fehlt und wer es klärt. `Ohne Kinderakte` verknüpfst du zuerst.",
+          "Wähle unten zum Beispiel `Für 12 Verträge nachtragen`. moto fragt vorher nach. Bestätige mit `Jetzt nachtragen`.",
+          "Danach zeigt moto, wie viele Anmeldungen nachgetragen und wie viele Verträge nur gebunden sind. Die offenen Zeilen bleiben als Arbeitsliste stehen.",
+          "Mit `Neue Vorschau` holst du den neuen Stand. Erledigtes steht dann auf `Erledigt`. Es entsteht nichts doppelt.",
+          "Danach sind die Eltern dran. Das macht die Schule in ihrer Kinderliste mit `Eltern einladen`. Eltern ohne Konto bekommen die Einladung ins Elternportal. Mit `Eltern mit Konto benachrichtigen` bekommen Eltern mit Konto eine kurze Nachricht, für Kinder, die heute Betreuung gebucht haben. Jedes Elternteil bekommt sie pro Kind nur einmal.",
+        ],
+      },
+      {
+        title: "Warum ein Vertrag offen bleibt",
+        description:
+          "Für eine offene Zeile schreibt moto nichts. Ist der Grund geklärt, nimmt die nächste Vorschau sie mit.",
+        ordered: false,
+        steps: [
+          "Am Vertrag zu berichtigen: Ein Modul gibt es nicht mehr, die Module liegen in zwei Anmeldephasen, Wochentage oder Endzeit passen nicht zum Modul, oder der Vertrag ist nicht aktiv.",
+          "Mit der Schule zu klären: Das Kind hat schon eine andere Anmeldung, das Modul ist ausgeschaltet, die Kinderakte ist nicht mehr aktiv, ihr fehlt der Betreuungsplatz oder das Geburtsdatum, oder die Betreuung endet dort früher.",
+          "Kommt von selbst: Der Vertrag oder die Anmeldephase hat noch nicht begonnen, oder eine geplante Änderung gilt noch nicht.",
+          "`Hängt` heißt: Ein früherer Lauf hat die Anmeldung schon angelegt, aber der Vertrag passt nicht mehr dazu. Berichtige den Vertrag, oder die Schule berichtigt die Buchungen der Anmeldung. Dann bindet der nächste Lauf. Hast du die Module des Vertrags auf eine andere Anmeldephase umgestellt, ordne sie zurück auf ein Modul der Phase dieser Anmeldung. Die Anmeldung an der Schule zu beenden hilft nicht.",
+        ],
+      },
+      {
+        title: "Bindung an die Anmeldung lösen",
+        description:
+          "Ein gebundener Vertrag folgt den Buchungen seiner Anmeldung. Ändert die Schule eine Buchung, bekommt er eine neue Version. Auf der Vertragsseite steht unter `Anmeldung` dann `Anmeldung nachgetragen`.",
+        steps: [
+          "Öffne den Vertrag. Wähle im Menü mit den drei Punkten `Bindung an die Anmeldung lösen`.",
+          "Lies im Fenster, was passiert, und wähle `Bindung lösen`.",
+          "Der Vertrag folgt den Buchungen dann nicht mehr. Versionen, die schon entstanden sind, bleiben.",
+          "Die Anmeldung und ihre Buchungen bleiben an der Schule. Braucht das Kind sie nicht, nimmt die Schule die Buchungen heraus.",
+          "War die Verknüpfung falsch, wähle danach `Verknüpfung lösen` und verknüpfe die richtige Kinderakte. Sonst bindet `Anmeldungen nachtragen` den Vertrag wieder an dieselbe Anmeldung.",
+        ],
+      },
+      {
+        title: "Module importierter Verträge neu zuordnen",
+        description:
+          "Hast du deine Module nach dem Import neu geordnet? Dann buchen die importierten Verträge noch die alten Module. Mit einer CSV-Datei ordnest du die Buchungen den neuen Modulen zu. Jeder geänderte Vertrag bekommt eine neue Version. Wochentage und Endzeiten bleiben. Die Eltern bekommen keine Nachricht.",
+        steps: [
+          "Wähle in der Navigation `Verträge`. Wähle oben rechts das Menü mit den drei Punkten und dann `Module neu zuordnen`.",
+          "Du kennst den Aufbau noch nicht? Wähle `Beispieldatei`. Die Datei hat die Spalten `Vertrag`, `Wochentag`, `Bisheriges_Modul` und `Neues_Modul`.",
+          "Schreibe je Vertrag, Wochentag und bisherigem Modul eine Zeile. Bei `Vertrag` steht die Vertragsnummer aus moto. Bei `Wochentag` geht zum Beispiel `Mo`, `Mo-Fr` oder `Montag`.",
+          "Weißt du das neue Modul noch nicht? Lass `Neues_Modul` leer. moto stellt den ganzen Vertrag dann zurück und ändert ihn nicht.",
+          "Wähle bei `Gilt ab` den Tag, ab dem die neuen Module gelten. Vorgeschlagen ist der Erste des nächsten Monats. Frühestens geht heute.",
+          "Ziehe die Datei in das Feld oder wähle `Datei wählen`.",
+          "Prüfe die Verträge unter `Prüfen und ändern`. Bei `Änderung` steht links das bisherige und rechts das neue Modul. `Wird geändert` ändert moto. `Schon zugeordnet` bucht schon die neuen Module. `Zurückgestellt` wartet auf deine Entscheidung. Bei `Nicht möglich` steht der Grund mit der Zeile der Datei in der Spalte `Hinweis`.",
+          "Änderst du `Gilt ab`, prüft moto die Datei sofort neu.",
+          "Wähle unten den grünen Knopf, zum Beispiel `12 Verträge ändern`. moto fragt vorher nach. Bestätige im Fenster noch einmal.",
+          "Beim Vertrag steht die neue Version im Reiter `Versionen` mit `Module neu zugeordnet`. Frühere Versionen bleiben lesbar.",
+        ],
+      },
+      {
+        title: "Vertragsangaben importierter Verträge nachpflegen",
+        description:
+          "Der Import kennt nur einen Vertragspartner, den Abschluss auf Papier und ein Abschlussdatum. Aus den Originalunterlagen ergänzt du weitere Vertragsparteien, die Abschlussart und das Abschlussdatum. Es entsteht kein neuer Vertrag. Die Eltern bekommen keine Mail.",
+        steps: [
+          "Wähle in der Navigation `Verträge`. Wähle oben rechts das Menü mit den drei Punkten und dann `Vertragsangaben nachpflegen`.",
+          "Wähle bei `1. Liste herunterladen` den Knopf `Liste herunterladen`. Die Liste enthält jeden importierten Vertrag mit seinen Angaben in moto.",
+          "Ergänze die Liste. `Vertragsparteien`: Namen als „Nachname, Vorname“, getrennt mit „ | “. Ein weiterer Name kommt dazu. Schreibst du einen Namen anders, ändert moto die Schreibweise. Vor- oder Nachname muss dabei gleich bleiben. Ändere je Liste nur einen Namen pro Vertrag. Keine Partei fällt weg. Mail-Adresse und Elternkonto bleiben.",
+          "`Abschlussart`: „online“ oder „papier“. `Abschlussdatum`: ein Datum wie 12.03.2026, oder „unbekannt“, wenn du den Tag nicht belegen kannst.",
+          "Trage bei `Beleg` in jeder geänderten Zeile ein, woher die Angabe stammt, zum Beispiel den Namen der PDF mit dem Vertrag. Eine leere Zelle ändert nichts. `Vertrag-ID` und `Kind` änderst du nicht.",
+          "Speichere die Liste als CSV-Datei. Ziehe sie bei `2. Ausgefüllte Liste hochladen` in das Feld oder wähle `Datei wählen`.",
+          "Prüfe die Vorschau. Je Zeile steht der alte Wert durchgestrichen und daneben der neue. `Wird geändert` ändert moto. `Bereits aktuell` bleibt, wie es ist. Bei `Fehler` steht der Grund in der Spalte, zu der er gehört.",
+          "Wähle unten zum Beispiel `3 Verträge ändern`. moto fragt noch einmal. Bestätige.",
+          "Auf der Vertragsseite steht danach die Karte `Nachgepflegte Angaben` mit dem Tag, dem Beleg und der Änderung. Lädst du dieselbe Liste noch einmal hoch, ändert sich nichts.",
         ],
       },
       {
@@ -171,7 +278,8 @@ export function traegerCareContractsTopic(): HelpTopic {
     result:
       "Die Eltern bekommen den Vertrag als PDF per Mail. Haben sie ein Konto in der Eltern-App, liegt er dort auch unter `Dokumente`. Wer dort `Neues Dokument vom Träger` eingeschaltet hat, bekommt dazu eine Nachricht aufs Handy. Gilt der Vertrag bei der Annahme, ist sein Status `Aktiv`. Sonst wird er `Versendet`: Der Versand ist beauftragt. Ob die Mail gesendet wurde, siehst du unter `Versand`.",
     notes: [
-      "Ein importierter Vertrag beginnt frühestens mit dem Schuljahr seines Moduls. Er endet auch mit diesem Schuljahr, wenn das Modul ein Ende hat und die Datei kein früheres nennt. Lief der Vertrag schon vorher, steht der frühere Tag unter `Abgeschlossen`. Der Vertrag ist mit keinem Kind aus den `Kinderdaten` der Schule verknüpft: moto gleicht Kinder nicht über den Namen ab. Im Reiter `Versionen` steht bei ihm `Aus einer Datei importiert`.",
+      "Ein importierter Vertrag beginnt frühestens mit dem Schuljahr seines Moduls. Er endet auch mit diesem Schuljahr, wenn das Modul ein Ende hat und die Datei kein früheres nennt. Lief der Vertrag schon vorher, steht der frühere Tag unter `Abgeschlossen`. Der Vertrag ist mit keiner Kinderakte der Schule verknüpft, bis du ihn verknüpfst: moto gleicht Kinder nicht über den Namen ab. Im Reiter `Versionen` steht bei ihm `Aus einer Datei importiert`.",
+      "Hat ein Kind einen laufenden importierten Vertrag, bekommt es aus einer Anmeldung keinen zweiten Vertrag für dieselbe Zeit. Das gilt auch, solange der Vertrag noch nicht verknüpft ist: Dann zählen Name und Geburtsdatum. Das Kind steht in `Verträge erstellen` mit `Hat schon einen importierten Vertrag` und der Nummer des Vertrags. Stimmt das nicht, prüfe dort die Kinderakte und das Vertragsende. Endet der importierte Vertrag vor der gebuchten Betreuung, bekommt das Kind seinen neuen Vertrag wie sonst.",
       "Die Suche und die Filter gelten für alle Verträge. Mit `Weitere Verträge laden` zeigst du ältere Treffer an.",
       "Beim ersten Senden hält moto das PDF fest. Änderst du danach Bedingungen oder Brieftext, bleibt der versendete Vertrag gleich.",
       "Im Reiter `Unterschrift und Versand` siehst du in der Karte `Versand`, ob die Mail gesendet wurde. Mit `Versand aktualisieren` prüfst du den neuen Stand. Mit `Erneut senden` geht dasselbe PDF noch einmal an die Eltern; moto fragt vorher. Bei einem aktiven Vertrag steht `Erneut senden` im Menü mit den drei Punkten oben rechts. Eine zweite Nachricht aufs Handy gibt es dabei nicht. Nur eine korrigierte Mail-Adresse bekommt eine eigene Nachricht.",
@@ -195,14 +303,23 @@ export function traegerCareContractsTopic(): HelpTopic {
       "Ist schon eine spätere Version geplant, gilt eine frühere Änderung nur bis dahin. Die geplante Version übernimmt sie nicht von selbst.",
     ],
     differences: [
+      "`Schule wählen` fehlt bei `Anmeldungen nachtragen`? Dein Träger hat nur eine Schule. moto zeigt gleich ihre Vorschau.",
       "Du siehst `Verträge` nicht in der Navigation? Dir fehlt das Recht `Verträge verwalten`. Wende dich an eine Person mit der Rolle `Leitung`.",
     ],
     troubleshootingDetails: [
+      "Beim Nachtragen steht `Seit deiner Vorschau hat sich etwas geändert`? Ein Vertrag, die Schule oder der Tag ist neu. moto hat nichts eingetragen. Prüfe die neue Vorschau und trag noch einmal nach.",
+      "Beim Nachtragen steht `Das Nachtragen ist nicht ganz durchgelaufen`? Manche Kinder können schon angemeldet sein. Trag noch einmal nach. moto bindet dann die Verträge, es entsteht nichts doppelt.",
+      "Die Schule fragt, warum ein Kind ohne Eltern angemeldet ist? Die Anmeldung kommt aus dem importierten Vertrag. Die Schule lädt die Eltern in ihrer Kinderliste mit `Eltern einladen` ins Elternportal ein. Setzt sie dort den Haken bei `Eltern mit Konto benachrichtigen`, bekommen Eltern mit Konto eine kurze Nachricht: Die Betreuung ist jetzt im Elternportal sichtbar.",
       "Beim Import steht `Für das Modul fehlen die Vertragsbedingungen`? Trage unter `Vertragsbedingungen` Laufzeit und Frist für das Modul ein. Wähle danach im Import `Erneut prüfen` oder lade die Datei noch einmal.",
       "Beim Import steht `Dieses Modul gibt es an der Schule nicht`? Der Name in der Datei muss so heißen wie das Angebot der Schule. Ändere den Namen in der Datei, oder wähle `Modul für alle Zeilen`.",
       "Beim Import steht `„Kinder in der Familie“ ist keine ganze Zahl von 1 bis 20`? moto übernimmt die Zeile nicht. Korrigiere die Zahl in der Datei und lade die Datei noch einmal.",
-      "Ein importierter Vertrag ist falsch? Einen übernommenen Vertrag kannst du nicht löschen und nicht noch einmal importieren. Trage für ihn eine Kündigung ein. Prüfe die Vorschau deshalb, bevor du übernimmst.",
-      "In `Vertrag beenden` steht `Die Mitteilung zum Vertragsende ging nicht raus`? Der Hinweis nennt den Grund: Der Vertrag ist mit keinem Kind aus den `Kinderdaten` der Schule verknüpft. Oder keine Adresse des Vertrags gehört noch einer Bezugsperson, die für das Kind handeln darf. Bei älteren Entscheidungen kennt moto den Grund nicht. Die Entscheidung gilt trotzdem. Schicke den Eltern die Mitteilung per Brief. Sie steht darunter als `Mitteilung zum Vertragsende (nicht verschickt)`.",
+      "Beim Neuzuordnen der Module steht `Der Vertrag kommt aus einer Anmeldung`? Ändern lassen sich nur importierte Verträge. Die Module eines Vertrags aus einer Anmeldung folgen den Buchungen der Schule. Die Schule ändert dort die Buchung.",
+      "Beim Neuzuordnen der Module steht `Der Vertrag ändert sich schon später`? Für den Vertrag ist schon eine neue Version geplant. Wähle bei `Gilt ab` einen Tag ab dieser Version.",
+      "Ein importierter Vertrag ist falsch? Einen übernommenen Vertrag kannst du nicht löschen und nicht noch einmal importieren. Fehlen nur Vertragsparteien, die Abschlussart oder das Abschlussdatum, ergänze sie unter `Vertragsangaben nachpflegen`. Sonst trage für ihn eine Kündigung ein. Prüfe die Vorschau deshalb, bevor du übernimmst.",
+      "Beim Nachpflegen steht `Dieser Vertrag kommt nicht aus einem Import`? Nachpflegen geht nur für importierte Verträge. Die Angaben der anderen Verträge stammen aus moto.",
+      "Beim Nachpflegen steht `moto erkennt nicht sicher, welcher Name zu welcher vorhandenen Vertragspartei gehört`? Du hast in einer Zeile einen Namen geändert und zugleich einen ergänzt, oder zwei Namen geändert. Ändere erst einen Namen und lade die Liste hoch. Lade danach die Liste neu herunter und ergänze den nächsten. Ist es eine andere Person? Dann lass den alten Namen stehen und ergänze den neuen.",
+      "Beim Nachpflegen steht `Eine Vertragspartei fehlt`? Die Zeile nennt weniger Namen als der Vertrag hat. Nimm alle Namen aus der heruntergeladenen Liste und ergänze nur neue.",
+      "In `Vertrag beenden` steht `Die Mitteilung zum Vertragsende ging nicht raus`? Der Hinweis nennt den Grund: Der Vertrag ist mit keiner Kinderakte der Schule verknüpft. Einen importierten Vertrag verknüpfst du auf seiner Seite mit `Mit Kinderakte verknüpfen`. Oder keine Adresse des Vertrags gehört noch einer Bezugsperson, die für das Kind handeln darf. Bei älteren Entscheidungen kennt moto den Grund nicht. Die Entscheidung gilt trotzdem. Schicke den Eltern die Mitteilung per Brief. Sie steht darunter als `Mitteilung zum Vertragsende (nicht verschickt)`.",
       "`Vertragsende festlegen` oder `Grund nicht anerkennen` meldet, dass kein Ende mehr offen ist? Eine andere Person hat schon entschieden. Lade die Seite neu. Die Entscheidung steht in `Vertrag beenden`.",
       "Bei einem Änderungswunsch fehlt `Freigeben`? Die Eltern melden damit die ganze Betreuung ab. Das ist eine Kündigung. Trage sie unter `Vertrag beenden` ein, oder lehne den Wunsch ab.",
       "Nach der Freigabe bleiben Regeltermine oder Abholzeiten unverändert? Gib die angezeigten Hinweise an die Schule weiter. Die Schule muss sie prüfen.",

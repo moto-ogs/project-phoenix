@@ -2,7 +2,7 @@
   "registerVersion": 1,
   "formatVersion": 1,
   "catalogVersion": 1,
-  "catalogSHA256": "79a015bb6a36fbefd0109c915785ead31673a7174be63d4e3721f01d4ed59d3f",
+  "catalogSHA256": "29fd8753ffa1bbf4353a7f148a0d11596c84e60216a27c2327cc2a7d89c5a974",
   "about": "Dieses Register beschreibt das Rückgabepaket von moto: welche Tabellen und Felder es enthält, welche Typen sie haben, ob sie leer sein dürfen und wie die Tabellen verbunden sind. Es enthält keine Kundendaten. Jedes Paket enthält dieselbe Beschreibung für seine Tabellen als model.json. formatVersion und catalogSHA256 stehen auch in der manifest.json des Pakets.",
   "standards": [
     {
@@ -1574,6 +1574,49 @@
           "column": "tenant_id",
           "targetTable": "platform.schools",
           "targetColumn": "id"
+        }
+      ],
+      "packages": [
+        "school"
+      ]
+    },
+    {
+      "name": "active.room_history_stops",
+      "columns": [
+        {
+          "name": "tenant_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "student_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "stopped_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        }
+      ],
+      "relationships": [
+        {
+          "column": "student_id",
+          "targetTable": "users.student_profiles",
+          "targetColumn": "id"
+        },
+        {
+          "column": "tenant_id",
+          "targetTable": "platform.schools",
+          "targetColumn": "id"
+        },
+        {
+          "column": "tenant_id",
+          "targetTable": "users.student_profiles",
+          "targetColumn": "tenant_id"
         }
       ],
       "packages": [
@@ -7225,6 +7268,12 @@
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": false
+        },
+        {
+          "name": "care_notice_sent_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -16138,6 +16187,12 @@
           "type": "text",
           "udt": "text",
           "nullable": true
+        },
+        {
+          "name": "conclusion_date_unknown",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
         }
       ],
       "relationships": [
@@ -17361,6 +17416,12 @@
         },
         {
           "name": "tariff_sibling_price",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
+        },
+        {
+          "name": "sibling_all_children",
           "type": "boolean",
           "udt": "bool",
           "nullable": false
@@ -21678,6 +21739,12 @@
           "type": "jsonb",
           "udt": "jsonb",
           "nullable": false
+        },
+        {
+          "name": "invoices",
+          "type": "jsonb",
+          "udt": "jsonb",
+          "nullable": false
         }
       ],
       "relationships": [
@@ -22452,6 +22519,12 @@
         },
         {
           "name": "tariff_sibling_price",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
+        },
+        {
+          "name": "sibling_all_children",
           "type": "boolean",
           "udt": "bool",
           "nullable": false
@@ -24736,6 +24809,12 @@
           "type": "boolean",
           "udt": "bool",
           "nullable": true
+        },
+        {
+          "name": "weekly_plan_by_traeger",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
         }
       ],
       "relationships": [
@@ -26657,13 +26736,25 @@
           "name": "seen_at",
           "type": "timestamp with time zone",
           "udt": "timestamptz",
-          "nullable": false
+          "nullable": true
         },
         {
           "name": "dismissed",
           "type": "boolean",
           "udt": "bool",
           "nullable": false
+        },
+        {
+          "name": "shown_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
+        },
+        {
+          "name": "dismissed_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -30282,6 +30373,12 @@
           "type": "ARRAY",
           "udt": "_text",
           "nullable": false
+        },
+        {
+          "name": "menu_changed_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -30880,7 +30977,7 @@
           "name": "created_by",
           "type": "bigint",
           "udt": "int8",
-          "nullable": false
+          "nullable": true
         },
         {
           "name": "updated_by",
@@ -30908,6 +31005,12 @@
         },
         {
           "name": "include_school_breaks",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
+        },
+        {
+          "name": "planned_by_traeger",
           "type": "boolean",
           "udt": "bool",
           "nullable": false
@@ -31025,7 +31128,7 @@
           "name": "created_by",
           "type": "bigint",
           "udt": "int8",
-          "nullable": false
+          "nullable": true
         },
         {
           "name": "created_at",
@@ -31037,6 +31140,12 @@
           "name": "updated_at",
           "type": "timestamp with time zone",
           "udt": "timestamptz",
+          "nullable": false
+        },
+        {
+          "name": "planned_by_traeger",
+          "type": "boolean",
+          "udt": "bool",
           "nullable": false
         }
       ],
@@ -31346,6 +31455,12 @@
           "type": "bigint",
           "udt": "int8",
           "nullable": true
+        },
+        {
+          "name": "entered_by_traeger",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
         }
       ],
       "relationships": [
@@ -31411,7 +31526,7 @@
           "name": "created_by",
           "type": "bigint",
           "udt": "int8",
-          "nullable": false
+          "nullable": true
         },
         {
           "name": "created_at",
@@ -31424,6 +31539,12 @@
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": true
+        },
+        {
+          "name": "entered_by_traeger",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
         }
       ],
       "relationships": [
@@ -31490,7 +31611,7 @@
           "name": "created_by",
           "type": "bigint",
           "udt": "int8",
-          "nullable": false
+          "nullable": true
         },
         {
           "name": "created_at",
@@ -31503,6 +31624,12 @@
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": true
+        },
+        {
+          "name": "entered_by_traeger",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
         }
       ],
       "relationships": [
@@ -31581,6 +31708,12 @@
           "name": "updated_at",
           "type": "timestamp with time zone",
           "udt": "timestamptz",
+          "nullable": false
+        },
+        {
+          "name": "entered_by_traeger",
+          "type": "boolean",
+          "udt": "bool",
           "nullable": false
         }
       ],
@@ -31713,6 +31846,18 @@
           "type": "boolean",
           "udt": "bool",
           "nullable": false
+        },
+        {
+          "name": "entered_by_traeger",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
+        },
+        {
+          "name": "excused_by_traeger",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
         }
       ],
       "relationships": [
@@ -31792,7 +31937,7 @@
           "name": "created_by",
           "type": "bigint",
           "udt": "int8",
-          "nullable": false
+          "nullable": true
         },
         {
           "name": "created_at",
@@ -31817,6 +31962,12 @@
           "type": "smallint",
           "udt": "int2",
           "nullable": true
+        },
+        {
+          "name": "entered_by_traeger",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
         }
       ],
       "relationships": [
@@ -31918,6 +32069,12 @@
           "type": "bigint",
           "udt": "int8",
           "nullable": true
+        },
+        {
+          "name": "entered_by_traeger",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": false
         }
       ],
       "relationships": [
@@ -39323,6 +39480,11 @@
       "name": "auth.demo_accesses",
       "classification": "excludeInternal",
       "reason": "Separate public-demo access lifecycle, not a customer school; access requests require authorized demo-process handling."
+    },
+    {
+      "name": "auth.demo_crm_jobs",
+      "classification": "excludeInternal",
+      "reason": "Separate public-demo CRM queue, not customer school content; no tenant export."
     },
     {
       "name": "auth.passkey_sessions",

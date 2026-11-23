@@ -1,24 +1,30 @@
+import { knownEnum } from "./contract/known-enum";
+
+const MAIL_OUTCOME_VALUES = [
+  "queued",
+  "accepted",
+  "delivered",
+  "delayed",
+  "undeliverable",
+  "blocked",
+  "provider_blocked",
+  "held_by_stop",
+  "held_by_departure",
+  "unsubscribed",
+  "overdue",
+  "complained",
+  "send_failed",
+  "unknown",
+  "cancelled",
+] as const;
+const MAIL_PROVIDER_BLOCK_VALUES = ["none", "active", "unreadable"] as const;
+
 /**
  * What became of a mail, as Delivery names it (#5934). "accepted" only means a
  * mail server took it; "delivered" needs a report of the mail provider. The two
  * must never read alike.
  */
-export type MailOutcome =
-  | "queued"
-  | "accepted"
-  | "delivered"
-  | "delayed"
-  | "undeliverable"
-  | "blocked"
-  | "provider_blocked"
-  | "held_by_stop"
-  | "held_by_departure"
-  | "unsubscribed"
-  | "overdue"
-  | "complained"
-  | "send_failed"
-  | "unknown"
-  | "cancelled";
+export type MailOutcome = (typeof MAIL_OUTCOME_VALUES)[number];
 
 /** Why the school's list holds an address. It stays until someone checked it. */
 export type EmailAddressMark = "failed" | "complained";
@@ -27,7 +33,24 @@ export type EmailAddressMark = "failed" | "complained";
  * The mail provider's block of an address right now, read exactly for it. Unset
  * means nobody asked: an old mail alone says nothing about it.
  */
-export type MailProviderBlock = "none" | "active" | "unreadable";
+export type MailProviderBlock = (typeof MAIL_PROVIDER_BLOCK_VALUES)[number];
+
+/**
+ * The outcome a contract string names. Go does not register the set; a value
+ * this build does not know stays undefined, so no status shows for it.
+ */
+export function knownMailOutcome(
+  value: string | undefined,
+): MailOutcome | undefined {
+  return knownEnum(MAIL_OUTCOME_VALUES, value);
+}
+
+/** The provider block a contract string names, undefined when unknown. */
+export function knownMailProviderBlock(
+  value: string | undefined,
+): MailProviderBlock | undefined {
+  return knownEnum(MAIL_PROVIDER_BLOCK_VALUES, value);
+}
 
 export interface MailStatusCopy {
   readonly label: string;

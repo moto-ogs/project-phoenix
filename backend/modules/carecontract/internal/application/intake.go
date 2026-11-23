@@ -10,6 +10,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 const maxCreateBatch = 200
@@ -89,7 +90,7 @@ func (in *Intake) Candidates(ctx context.Context, reviewer carecontract.Reviewer
 	}
 	var candidates []carecontract.Candidate
 	err = in.runtime.WithinTraeger(ctx, reviewer.OrganizationID, func(txCtx context.Context) error {
-		existing, err := in.store.ContractKeys(txCtx, reviewer.OrganizationID, schoolIDs(schools))
+		existing, named, err := in.contractedKeys(txCtx, reviewer.OrganizationID, reads)
 		if err != nil {
 			return err
 		}
@@ -98,7 +99,8 @@ func (in *Intake) Candidates(ctx context.Context, reviewer carecontract.Reviewer
 			return err
 		}
 		templates, changed := indexTemplates(rows)
-		candidates = collectCandidates(reads, existing, templates, changed, in.today())
+		candidates = collectCandidates(reads, withoutNamed(existing, named), templates, changed, in.today())
+		markNamedByImport(candidates, named)
 		return in.markHeldMail(txCtx, reviewer.OrganizationID, candidates)
 	})
 	if err != nil {
@@ -156,7 +158,7 @@ func collectCandidates(reads []schoolRead, existing map[ContractKey]bool, templa
 			}
 			terms, issue := templates.terms(read.school.ID, booked.offerings)
 			candidates = append(candidates, carecontract.Candidate{
-				CandidateKey:   carecontract.CandidateKey{SchoolID: read.school.ID, RequestChildID: application.RequestChildID},
+				CandidateKey:   carecontract.CandidateKey{SchoolID: ident.ID(read.school.ID), RequestChildID: ident.ID(application.RequestChildID)},
 				SchoolName:     read.school.Name,
 				ChildFirstName: application.ChildFirstName, ChildLastName: application.ChildLastName,
 				GuardianName:  fullName(application.GuardianFirstName, application.GuardianLastName),
@@ -179,7 +181,7 @@ func collectCandidates(reads []schoolRead, existing map[ContractKey]bool, templa
 func sortCandidates(candidates []carecontract.Candidate) {
 	slices.SortStableFunc(candidates, func(a, b carecontract.Candidate) int {
 		return firstNonZero(strings.Compare(a.SchoolName, b.SchoolName), strings.Compare(a.ChildLastName, b.ChildLastName),
-			strings.Compare(a.ChildFirstName, b.ChildFirstName), compareIDs(a.RequestChildID, b.RequestChildID))
+			strings.Compare(a.ChildFirstName, b.ChildFirstName), compareIDs(a.RequestChildID.Int64(), b.RequestChildID.Int64()))
 	})
 }
 
@@ -200,10 +202,10 @@ func (in *Intake) CreateContracts(ctx context.Context, reviewer carecontract.Rev
 	}
 	children := map[int64][]int64{}
 	for _, key := range keys {
-		if !slices.ContainsFunc(all, func(s carecontract.School) bool { return s.ID == key.SchoolID }) {
+		if !slices.ContainsFunc(all, func(s carecontract.School) bool { return ident.ID(s.ID) == key.SchoolID }) {
 			return carecontract.CreateResult{}, carecontract.ErrSchoolOutsideTraeger
 		}
-		children[key.SchoolID] = append(children[key.SchoolID], key.RequestChildID)
+		children[key.SchoolID.Int64()] = append(children[key.SchoolID.Int64()], key.RequestChildID.Int64())
 	}
 	schools := slices.DeleteFunc(slices.Clone(all), func(s carecontract.School) bool { return children[s.ID] == nil })
 	reads, err := in.readSchools(ctx, reviewer, schools, children, accessViewCreate)
@@ -224,11 +226,7 @@ func (in *Intake) CreateContracts(ctx context.Context, reviewer carecontract.Rev
 
 func (in *Intake) create(ctx context.Context, reviewer carecontract.Reviewer, keys []carecontract.CandidateKey, reads []schoolRead) (carecontract.CreateResult, error) {
 	result := carecontract.CreateResult{Created: []carecontract.ContractSummary{}, Skipped: []carecontract.CreateSkip{}}
-	templates, err := in.templateIndex(ctx, reviewer.OrganizationID)
-	if err != nil {
-		return result, err
-	}
-	existing, err := in.store.ContractKeys(ctx, reviewer.OrganizationID, readSchoolIDs(reads))
+	templates, existing, err := in.lockedBasis(ctx, reviewer.OrganizationID, reads)
 	if err != nil {
 		return result, err
 	}
@@ -247,8 +245,8 @@ func (in *Intake) create(ctx context.Context, reviewer carecontract.Reviewer, ke
 		if err != nil {
 			return result, err
 		}
-		if err := trail(ctx, in.store, reviewer.OrganizationID, reviewer.AccountID, id, key.SchoolID, ActionCreate,
-			map[string]any{"request_child_id": key.RequestChildID, "care_offering_ids": draftOfferings(draft)}); err != nil {
+		if err := trail(ctx, in.store, reviewer.OrganizationID, reviewer.AccountID, id, key.SchoolID.Int64(), ActionCreate,
+			map[string]any{"request_child_id": key.RequestChildID.Int64(), "care_offering_ids": draftOfferings(draft)}); err != nil {
 			return result, err
 		}
 		if err := adoptFamilyChildren(ctx, in.store, in.families, reviewer.OrganizationID, id, draft); err != nil {
@@ -263,15 +261,34 @@ func (in *Intake) create(ctx context.Context, reviewer carecontract.Reviewer, ke
 	return result, nil
 }
 
+// lockedBasis takes the lock of the Träger's links and reads under it the
+// templates and the keys with a contract: a link run of the Träger waits
+// until the drafts are written, or they wait for it, so what an imported
+// contract covers is decided under the lock (#7760).
+func (in *Intake) lockedBasis(ctx context.Context, organizationID int64, reads []schoolRead) (templateIndex, map[ContractKey]bool, error) {
+	if err := in.store.LockChildLinks(ctx, organizationID); err != nil {
+		return nil, nil, err
+	}
+	templates, err := in.templateIndex(ctx, organizationID)
+	if err != nil {
+		return nil, nil, err
+	}
+	existing, _, err := in.contractedKeys(ctx, organizationID, reads)
+	if err != nil {
+		return nil, nil, err
+	}
+	return templates, existing, nil
+}
+
 // draft builds the draft of one key over every module the child books, or
 // names why there is none.
 func (in *Intake) draft(key carecontract.CandidateKey, reads []schoolRead, templates templateIndex,
 	existing map[ContractKey]bool, today calendar.Date) (NewContract, string) {
-	contractKey := ContractKey{SchoolID: key.SchoolID, RequestChildID: key.RequestChildID}
+	contractKey := ContractKey{SchoolID: key.SchoolID.Int64(), RequestChildID: key.RequestChildID.Int64()}
 	if existing[contractKey] {
 		return NewContract{}, carecontract.SkipContractExists
 	}
-	read, ok := findRead(reads, key.SchoolID)
+	read, ok := findRead(reads, key.SchoolID.Int64())
 	if !ok {
 		return NewContract{}, carecontract.SkipNotFound
 	}
@@ -280,7 +297,7 @@ func (in *Intake) draft(key carecontract.CandidateKey, reads []schoolRead, templ
 		// the key the conclusion needs (#4680).
 		return NewContract{}, carecontract.SkipConclusionAutomatic
 	}
-	index := slices.IndexFunc(read.applications, func(a carecontract.Application) bool { return a.RequestChildID == key.RequestChildID })
+	index := slices.IndexFunc(read.applications, func(a carecontract.Application) bool { return ident.ID(a.RequestChildID) == key.RequestChildID })
 	if index < 0 {
 		return NewContract{}, carecontract.SkipNotFound
 	}
@@ -289,7 +306,7 @@ func (in *Intake) draft(key carecontract.CandidateKey, reads []schoolRead, templ
 	if len(booked.services) == 0 {
 		return NewContract{}, carecontract.SkipNotFound
 	}
-	terms, issue := templates.terms(key.SchoolID, booked.offerings)
+	terms, issue := templates.terms(key.SchoolID.Int64(), booked.offerings)
 	if issue != "" {
 		return NewContract{}, issue
 	}
@@ -317,8 +334,8 @@ func (in *Intake) draft(key carecontract.CandidateKey, reads []schoolRead, templ
 func draftOfferings(draft NewContract) []int64 {
 	ids := []int64{}
 	for _, service := range draft.Version.Services {
-		if !slices.Contains(ids, service.CareOfferingID) {
-			ids = append(ids, service.CareOfferingID)
+		if !slices.Contains(ids, service.CareOfferingID.Int64()) {
+			ids = append(ids, service.CareOfferingID.Int64())
 		}
 	}
 	return ids
@@ -346,7 +363,7 @@ func (in *Intake) ConclusionModes(ctx context.Context, reviewer carecontract.Rev
 		if err != nil {
 			return nil, fmt.Errorf("care contract: conclusion mode of school %d: %w", school.ID, err)
 		}
-		result = append(result, carecontract.SchoolConclusion{SchoolID: school.ID, SchoolName: school.Name, Mode: mode})
+		result = append(result, carecontract.SchoolConclusion{SchoolID: ident.ID(school.ID), SchoolName: school.Name, Mode: mode})
 	}
 	return result, nil
 }
@@ -467,7 +484,7 @@ func (in *Intake) SaveTemplate(ctx context.Context, reviewer carecontract.Review
 			return err
 		}
 		return trail(txCtx, in.store, reviewer.OrganizationID, reviewer.AccountID, 0, schoolID, ActionTemplate,
-			versionDetails(offeringID, saved.ID, saved.TemplateInput))
+			versionDetails(offeringID, saved.ID.Int64(), saved.TemplateInput))
 	})
 	if err != nil {
 		return carecontract.OfferingTemplate{}, err
@@ -610,7 +627,7 @@ func offeringTemplate(school carecontract.School, offering carecontract.Offering
 	}
 	return carecontract.OfferingTemplate{
 		AcceptanceText: text, WithdrawalText: withdrawal, EarlyStartText: earlyStart, TermText: term, NoticeText: notice,
-		SchoolID: school.ID, SchoolName: school.Name, OfferingID: offering.ID, OfferingName: offering.Name,
+		SchoolID: ident.ID(school.ID), SchoolName: school.Name, OfferingID: ident.ID(offering.ID), OfferingName: offering.Name,
 		PhaseName: offering.PhaseName, PriceCents: offering.PriceCents, Active: offering.Active, Template: template,
 	}
 }
@@ -673,7 +690,7 @@ func uniqueKeys(keys []carecontract.CandidateKey) []carecontract.CandidateKey {
 	// A fixed order: two overlapping batches insert the same keys one after
 	// the other instead of waiting on each other's uncommitted rows.
 	slices.SortFunc(result, func(a, b carecontract.CandidateKey) int {
-		return firstNonZero(compareIDs(a.SchoolID, b.SchoolID), compareIDs(a.RequestChildID, b.RequestChildID))
+		return firstNonZero(compareIDs(a.SchoolID.Int64(), b.SchoolID.Int64()), compareIDs(a.RequestChildID.Int64(), b.RequestChildID.Int64()))
 	})
 	return result
 }

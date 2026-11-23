@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 const enrollmentBookingsProfileKey = "anmeldung-buchungen"
@@ -175,12 +177,16 @@ func seedBookingProfileAttendance(rt *Runtime, state *SeedState) error {
 		return err
 	}
 	var response struct {
-		Data SeedDevice `json:"data"`
+		Data struct {
+			SeedDevice
+			ID ident.ID `json:"id"`
+		} `json:"data"`
 	}
 	if err := parseJSON(raw, &response); err != nil {
 		return err
 	}
-	device := response.Data
+	device := response.Data.SeedDevice
+	device.ID = int64(response.Data.ID)
 	if device.ID <= 0 || device.APIKey == "" {
 		return fmt.Errorf("physical terminal returned no ID or API key")
 	}
@@ -212,9 +218,6 @@ func seedBookingProfileAttendance(rt *Runtime, state *SeedState) error {
 		return err
 	}
 	if err := verifyManualVisits(rt); err != nil {
-		return err
-	}
-	if err := verifyManualVisitHistories(rt, students); err != nil {
 		return err
 	}
 	virtual, err := verifyProfileDevices(rt, 1)

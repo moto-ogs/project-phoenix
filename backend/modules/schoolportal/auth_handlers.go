@@ -16,17 +16,17 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 )
 
-// LoginRequest is the body shape for POST /school/auth/login. TenantSlug is
+// SchoolLoginRequest is the body shape for POST /school/auth/login. TenantSlug is
 // optional for direct school-portal logins, and pins an OGS-portal handoff to
 // the school the user selected.
-type LoginRequest struct {
+type SchoolLoginRequest struct {
 	Email      string `json:"email"`
 	Password   string `json:"password"`
 	TenantSlug string `json:"tenant_slug,omitempty"`
 }
 
 // Bind normalizes + validates the request.
-func (req *LoginRequest) Bind(_ *http.Request) error {
+func (req *SchoolLoginRequest) Bind(_ *http.Request) error {
 	req.Email = strings.TrimSpace(strings.ToLower(req.Email))
 	req.TenantSlug = strings.TrimSpace(req.TenantSlug)
 
@@ -36,23 +36,10 @@ func (req *LoginRequest) Bind(_ *http.Request) error {
 	)
 }
 
-// SwitchSchoolRequest is the body shape for POST /school/auth/switch-school.
-type SwitchSchoolRequest struct {
-	TenantSlug string `json:"tenant_slug"`
-}
-
-// Bind validates the switch-school request.
-func (req *SwitchSchoolRequest) Bind(_ *http.Request) error {
-	req.TenantSlug = strings.TrimSpace(req.TenantSlug)
-	return validation.ValidateStruct(req,
-		validation.Field(&req.TenantSlug, validation.Required),
-	)
-}
-
 // login signs a Lehrkraft in to a school-scope session, or answers the
 // second factor still to pass.
 func (rs *Resource) login(w http.ResponseWriter, r *http.Request) {
-	req := &LoginRequest{}
+	req := &SchoolLoginRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
@@ -113,7 +100,7 @@ func (rs *Resource) completeSchoolExchange(w http.ResponseWriter, r *http.Reques
 		portalauth.Render(w, r, err, portalauth.ExchangeRules)
 		return
 	}
-	render.JSON(w, r, tokens)
+	common.RenderJSON(w, r, tokens)
 }
 
 // mfaResend mails a new code for a school challenge and answers with the
@@ -133,7 +120,7 @@ func (rs *Resource) mfaResend(w http.ResponseWriter, r *http.Request) {
 		portalauth.Render(w, r, err, portalauth.MFARules)
 		return
 	}
-	render.JSON(w, r, common.MFAResendResponse{ChallengeToken: renewed})
+	common.RenderJSON(w, r, common.MFAResendResponse{ChallengeToken: renewed})
 }
 
 // mfaEnrollStart mails the enrollment code and answers with its challenge;
@@ -153,7 +140,7 @@ func (rs *Resource) mfaEnrollStart(w http.ResponseWriter, r *http.Request) {
 		portalauth.Render(w, r, err, portalauth.MFARules)
 		return
 	}
-	render.JSON(w, r, portalauth.EnrollStartResponse{ChallengeToken: challengeToken})
+	common.RenderJSON(w, r, portalauth.EnrollStartResponse{ChallengeToken: challengeToken})
 }
 
 // mfaEnrollConfirm redeems the enrollment challenge, records the factor and
@@ -202,27 +189,6 @@ func (rs *Resource) mfaEnrollConfirm(w http.ResponseWriter, r *http.Request) {
 	rs.completeSchoolExchange(w, r, verified, req.RememberDevice)
 }
 
-// switchSchool moves a school session to another school where the account
-// holds a school-portal role.
-func (rs *Resource) switchSchool(w http.ResponseWriter, r *http.Request) {
-	req := &SwitchSchoolRequest{}
-	if err := render.Bind(r, req); err != nil {
-		common.RenderError(w, r, common.ErrorInvalidRequest(err))
-		return
-	}
-	if !common.RequireDependency(w, r, rs.AuthService.complete(), errLoginUnavailable) {
-		return
-	}
-	claims := sessiontoken.ClaimsFromCtx(r.Context())
-	client := portalauth.ClientOf(r)
-	accessToken, refreshToken, err := rs.AuthService.SwitchSchool(r.Context(), int64(claims.ID), req.TenantSlug, client.IP, client.UserAgent, claims.FamilyID)
-	if err != nil {
-		portalauth.Render(w, r, err, portalauth.SwitchRules)
-		return
-	}
-	render.JSON(w, r, portalauth.TokenResponse{AccessToken: accessToken, RefreshToken: refreshToken})
-}
-
 // listTrustedDevices answers the Lehrkraft's remembered devices at the school
 // of the session. A device the tenant portal remembered for the same account
 // at the same school is the same row: each portal has its own host and
@@ -232,7 +198,7 @@ func (rs *Resource) listTrustedDevices(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	portalauth.ListTrustedDevices(w, r, func(ctx context.Context) ([]identityaccess.AccountTrustedDevice, error) {
+	portalauth.RespondTrustedDevices(w, r, func(ctx context.Context) ([]identityaccess.AccountTrustedDevice, error) {
 		return rs.MFAService.ListTrustedDevices(ctx, int64(claims.ID), claims.TenantID)
 	}, portalauth.RefuseMFA)
 }

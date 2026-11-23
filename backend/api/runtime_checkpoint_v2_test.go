@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/api/testutil"
+	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken/tokentest"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
@@ -82,6 +83,9 @@ type targetRiskWorkload struct {
 	// bookedActivities every care-end child is enrolled in, so ending care
 	// removes real bookings and the removal sets carry rows.
 	bookedActivities []int64
+	// bookedRosters holds each booked activity's children: the roster
+	// route replaces the whole list.
+	bookedRosters map[int64][]int64
 
 	owned        map[string]bool
 	slotCounters []*testpkg.QueryCounter
@@ -166,8 +170,14 @@ func newTargetRiskWorkload(t *testing.T, production *Runtime) *targetRiskWorkloa
 func (w *targetRiskWorkload) bookedStudent(t *testing.T, name string) int64 {
 	t.Helper()
 	id := testpkg.CreateTestStudent(w.fixtures, w.db, "Checkpoint", name, "2a").ID
+	if w.bookedRosters == nil {
+		w.bookedRosters = map[int64][]int64{}
+	}
 	for _, activityID := range w.bookedActivities {
-		enrolled := checkpointRequest(w.handler, checkpointScenario{Method: http.MethodPost, Path: fmt.Sprintf("/api/activities/%d/students/%d", activityID, id), Authenticated: true}, w.token)
+		w.bookedRosters[activityID] = append(w.bookedRosters[activityID], id)
+		body, err := json.Marshal(map[string][]int64{"student_ids": w.bookedRosters[activityID]})
+		require.NoError(t, err)
+		enrolled := checkpointRequest(w.handler, checkpointScenario{Method: http.MethodPut, Path: fmt.Sprintf("/api/activities/%d/students", activityID), Body: string(body), Authenticated: true}, w.token)
 		require.Equal(t, http.StatusOK, enrolled.Code, "prepare activity booking: %s", enrolled.Body.String())
 	}
 	return id
@@ -246,11 +256,22 @@ func (w *targetRiskWorkload) link(t *testing.T, subjectID int64, companionIDs ..
 	for _, companionID := range companionIDs {
 		links = append(links, fmt.Sprintf(`{"companion_student_id":%d,"weekdays":["mon"]}`, companionID))
 	}
-	w.putStudent(t, subjectID, "{"+accompaniedPlan+`,"companions":[`+strings.Join(links, ",")+`],"companions_fingerprint":""}`)
+	w.putStudent(t, subjectID, "{"+accompaniedPlan+`,"companions":[`+strings.Join(links, ",")+`],"companions_fingerprint":"`+careplan.CompanionLinksFingerprint(nil)+`"}`)
 }
 
 func (w *targetRiskWorkload) putStudent(t *testing.T, studentID int64, body string) {
 	t.Helper()
+	// The form saves against the master data the child's page read (ADR 0311).
+	read := checkpointRequest(w.handler, checkpointScenario{Method: http.MethodGet, Path: fmt.Sprintf("/api/students/%d", studentID), Authenticated: true}, w.token)
+	require.Equal(t, http.StatusOK, read.Code, "read student: %s", read.Body.String())
+	var detail struct {
+		Data struct {
+			Version string `json:"version"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(read.Body.Bytes(), &detail))
+	require.NotEmpty(t, detail.Data.Version)
+	body = fmt.Sprintf(`{"expected_version":%q,`, detail.Data.Version) + strings.TrimPrefix(body, "{")
 	response := checkpointRequest(w.handler, checkpointScenario{Method: http.MethodPut, Path: fmt.Sprintf("/api/students/%d", studentID), Authenticated: true, Body: body}, w.token)
 	require.Equal(t, http.StatusOK, response.Code, "prepare student plan: %s", response.Body.String())
 }
@@ -324,8 +345,8 @@ func (w *targetRiskWorkload) scenarios() []checkpointScenario {
 		{"device-scan.checkin-invalid-key", "POST", "/api/iot/checkin", 401, true, checkin},
 		{"device-scan.pickup-query", "POST", "/api/iot/pickup-query", 200, true, pickup},
 		{"device-scan.pickup-query-missing-pin", "POST", "/api/iot/pickup-query", 401, true, pickup},
-		{"device-scan.status", "GET", "/api/iot/status", 200, true, ""},
-		{"device-scan.status-wrong-pin", "GET", "/api/iot/status", 401, true, ""},
+		{"device-scan.config", "GET", "/api/iot/config", 200, true, ""},
+		{"device-scan.rfid-lookup-wrong-pin", "GET", "/api/iot/rfid/" + w.studentTag, 401, true, ""},
 		{"device-scan.rfid-lookup", "GET", "/api/iot/rfid/" + w.studentTag, 200, true, ""},
 		{"device-scan.rfid-lookup-malformed-key", "GET", "/api/iot/rfid/" + w.studentTag, 401, false, ""},
 		{"device-scan.staff-clock", "POST", "/api/iot/staff-clock", 200, true, checkpointBodyPlaceholder},
@@ -351,6 +372,28 @@ func (w *targetRiskWorkload) scenarios() []checkpointScenario {
 	}
 }
 
+// Check the checkpoint's PIN refusals without running the opt-in measurements.
+func checkRuntimeCheckpointPINRejections(t *testing.T, api *goldenRuntime) {
+	t.Helper()
+	testpkg.OwnTenant(t)
+	db := testpkg.SetupTestDB(t)
+	w := &targetRiskWorkload{
+		deviceKey:  *testpkg.CreateTestDevice(t, db, "checkpoint-pin").APIKey,
+		studentTag: "checkpoint-pin-tag",
+	}
+	checked := 0
+	for _, scenario := range w.scenarios() {
+		if !strings.HasPrefix(scenario.Name, "device-scan.") || !strings.HasSuffix(scenario.Name, "-wrong-pin") {
+			continue
+		}
+		response := checkpointHeaderRequest(api.handler, scenario, w.deviceKey, checked, w.headers(scenario))
+		require.Equal(t, scenario.ExpectedStatus, response.Code, "%s: %s", scenario.Name, response.Body.String())
+		require.Contains(t, response.Body.String(), `"code":"iot.device_pin_invalid"`, scenario.Name)
+		checked++
+	}
+	require.Equal(t, 2, checked, "both checkpoint PIN refusals must run")
+}
+
 // headers are the non-bearer headers of a scenario. The kiosk contract is
 // the PyrePortal one: Authorization carries the device key, X-Staff-PIN the
 // school's device PIN (the fresh-tenant default of security.ogs_device_pin).
@@ -362,7 +405,7 @@ func (w *targetRiskWorkload) headers(scenario checkpointScenario) map[string]str
 		return map[string]string{"Origin": "http://checkpoint-elsewhere.invalid"}
 	case "device-scan.pickup-query-missing-pin":
 		return nil
-	case "device-scan.status-wrong-pin", "device-scan.staff-clock-wrong-pin":
+	case "device-scan.rfid-lookup-wrong-pin", "device-scan.staff-clock-wrong-pin":
 		return map[string]string{"X-Staff-PIN": "0000"}
 	case "device-scan.rfid-lookup-malformed-key":
 		return map[string]string{"Authorization": "Token " + w.deviceKey, "X-Staff-PIN": "1234"}
@@ -435,11 +478,11 @@ func (w *targetRiskWorkload) prepare(t *testing.T, scenario checkpointScenario) 
 			scenario.Body = fmt.Sprintf(`{"rfid_tag":%q,"action":"checkin","status":"present"}`, w.staffTag)
 		}
 	case "request-review.care-schedule-decide":
-		requestID := w.pendingCareRequest(t)
+		requestID, version := w.pendingCareRequest(t)
 		scenario.Path = strings.Replace(scenario.Path, checkpointRequestPlaceholder, strconv.FormatInt(requestID, 10), 1)
 		// #6843: the approval names the diff the open queue shows.
 		impact := careScheduleImpactToken(t, w.handler, w.token, w.parentStudentID, requestID)
-		scenario.Body = fmt.Sprintf(`{"approve":true,"reason":"Checkpoint","impact_token":%q}`, impact)
+		scenario.Body = fmt.Sprintf(`{"approve":true,"reason":"Checkpoint","impact_token":%q,"expected_version":%q}`, impact, version)
 	case "care-plan.care-end":
 		scenario.Body = w.prepareCareEnd(t, false)
 	case "care-plan.care-end-replan":
@@ -492,7 +535,7 @@ func (w *targetRiskWorkload) mfaChallenge(t *testing.T, code, submitted string) 
 // pendingCareRequest files one parent care-schedule request for the chain's
 // child. The pickup time alternates so an approved plan never equals the
 // next proposal.
-func (w *targetRiskWorkload) pendingCareRequest(t *testing.T) int64 {
+func (w *targetRiskWorkload) pendingCareRequest(t *testing.T) (int64, string) {
 	t.Helper()
 	pickup := "15:30"
 	if w.decided%2 == 1 {
@@ -504,7 +547,7 @@ func (w *targetRiskWorkload) pendingCareRequest(t *testing.T) int64 {
 	path := "/parent/me/children/" + strconv.FormatInt(w.parentStudentID, 10) + "/care-schedule/requests"
 	created := doCareScheduleJSON(t, w.handler, http.MethodPost, path, w.parentToken, body)
 	require.Equal(t, http.StatusCreated, created.Code, "prepare care-schedule request: %s", created.Body.String())
-	return careSchedulePendingRequestID(t, created)
+	return careSchedulePendingRequestID(t, created), careSchedulePendingRequestVersion(t, created)
 }
 
 // observe carries state from a response into the next preparation.

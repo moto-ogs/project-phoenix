@@ -7,6 +7,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
 	schoolCalendarCompose "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/compose"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -25,7 +26,7 @@ func TestReplacementConfirmationResolvesBlockedPredecessor(t *testing.T) {
 			first := w.schoolNotices(t)[0]
 			events := schoolCalendarCompose.NewHolidayClosureEvents(holidayTestToday)
 			require.NoError(t, tenant.WithTenantTx(w.ctx, w.db, w.school, func(ctx context.Context, _ bun.Tx) error {
-				_, err := events.ConfirmHolidayClosureNotice(ctx, first.ID, int64(first.Revision),
+				_, err := events.ConfirmHolidayClosureNotice(ctx, first.ID.Int64(), int64(first.Revision),
 					schoolcalendar.HolidayClosureActor{Channel: "school", AccountID: account.ID, ImpactToken: first.Token})
 				return err
 			}))
@@ -50,7 +51,7 @@ func TestReplacementConfirmationResolvesBlockedPredecessor(t *testing.T) {
 				})
 			}
 			require.ErrorContains(t, resolve(), "only takes up a failed", "a school cannot resolve work without a confirmed replacement")
-			_, err := w.records.UpdateClosingDay(w.schoolCtx(), schoolcalendar.UpdateClosingDay{ID: day.ID,
+			_, err := w.records.UpdateClosingDay(w.schoolCtx(), schoolcalendar.UpdateClosingDay{ID: day.ID, ExpectedVersion: w.closingDayVersion(t, day.ID),
 				ClosingDayFields: schoolcalendar.ClosingDayFields{StartDate: "2030-07-12", EndDate: "2030-07-12", Reason: "Verschoben"}})
 			require.NoError(t, err)
 			require.ErrorContains(t, resolve(), "only takes up a failed", "an unconfirmed edit cannot resolve work either")
@@ -78,8 +79,8 @@ func TestReplacementConfirmationResolvesBlockedPredecessor(t *testing.T) {
 			if channel == "school" {
 				notice := w.schoolNotices(t)
 				for _, item := range notice {
-					if item.ID == next.ProposalID {
-						_, err = w.notices.NotifyFromSchool(w.ctx, w.school, account.ID, item.ID, item.Revision, item.Token)
+					if item.ID == ident.ID(next.ProposalID) {
+						_, err = w.notices.NotifyFromSchool(w.ctx, w.school, account.ID, item.ID.Int64(), item.Revision, item.Token)
 					}
 				}
 			} else {

@@ -2,15 +2,14 @@ package httpadapter
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
 
 	activityContract "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/tenant"
@@ -38,7 +37,7 @@ func (rs *Resource) checkSupervisorOwnership(w http.ResponseWriter, r *http.Requ
 }
 
 // fetchSupervisorsBySpecialization retrieves supervisors filtered by specialization.
-func (rs *Resource) fetchSupervisorsBySpecialization(ctx context.Context, specialization string) ([]SupervisorResponse, error) {
+func (rs *Resource) fetchSupervisorsBySpecialization(ctx context.Context, specialization string) ([]ActivitySupervisorResponse, error) {
 	teachers, err := rs.UserService.GetTeachersBySpecialization(ctx, specialization)
 	if err != nil {
 		return nil, err
@@ -52,15 +51,15 @@ func (rs *Resource) fetchSupervisorsBySpecialization(ctx context.Context, specia
 	if err != nil {
 		return nil, err
 	}
-	supervisors := make([]SupervisorResponse, 0, len(teachers))
+	supervisors := make([]ActivitySupervisorResponse, 0, len(teachers))
 	for _, teacher := range teachers {
 		staff := staffByID[teacher.StaffID]
 		if staff != nil && staff.Person != nil {
-			supervisors = append(supervisors, SupervisorResponse{
+			supervisors = append(supervisors, ActivitySupervisorResponse{
 				// Available supervisor selections are persisted back as supervisor_ids,
 				// so this identifier must remain the staff ID for safe round-tripping.
-				ID:        staff.ID,
-				StaffID:   teacher.StaffID,
+				ID:        ident.ID(staff.ID),
+				StaffID:   ident.ID(teacher.StaffID),
 				FirstName: staff.Person.FirstName,
 				LastName:  staff.Person.LastName,
 				IsPrimary: false,
@@ -72,24 +71,24 @@ func (rs *Resource) fetchSupervisorsBySpecialization(ctx context.Context, specia
 }
 
 // fetchAllSupervisors retrieves all staff members as potential supervisors.
-func (rs *Resource) fetchAllSupervisors(ctx context.Context) ([]SupervisorResponse, error) {
+func (rs *Resource) fetchAllSupervisors(ctx context.Context) ([]ActivitySupervisorResponse, error) {
 	// Use batch query to avoid N+1 (fetches staff with person in single query).
 	staffMembers, err := rs.UserService.ListStaffWithPerson(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	supervisors := make([]SupervisorResponse, 0, len(staffMembers))
+	supervisors := make([]ActivitySupervisorResponse, 0, len(staffMembers))
 	for _, staffMember := range staffMembers {
 		if staffMember.Person == nil {
 			slog.Default().Warn("Staff has no associated person", slog.Int64("staff_id", staffMember.ID))
 			continue
 		}
 
-		supervisors = append(supervisors, SupervisorResponse{
+		supervisors = append(supervisors, ActivitySupervisorResponse{
 			// Keep the public ID aligned with the staff ID expected by activity writes.
-			ID:        staffMember.ID,
-			StaffID:   staffMember.ID,
+			ID:        ident.ID(staffMember.ID),
+			StaffID:   ident.ID(staffMember.ID),
 			FirstName: staffMember.Person.FirstName,
 			LastName:  staffMember.Person.LastName,
 			IsPrimary: false,
@@ -101,38 +100,12 @@ func (rs *Resource) fetchAllSupervisors(ctx context.Context) ([]SupervisorRespon
 
 // SUPERVISOR ASSIGNMENT HANDLERS
 
-// getActivitySupervisors retrieves all supervisors for a specific activity
-func (rs *Resource) getActivitySupervisors(w http.ResponseWriter, r *http.Request) {
-	activity, ok := rs.parseAndGetActivity(w, r)
-	if !ok {
-		return
-	}
-
-	// Get supervisors for the activity
-	supervisors, err := rs.ActivityService.GetGroupSupervisors(r.Context(), activity.ID)
-	if err != nil {
-		common.RenderError(w, r, ErrorRenderer(err))
-		return
-	}
-
-	// Convert to response objects
-	responses := make([]SupervisorResponse, 0, len(supervisors))
-	for _, supervisor := range supervisors {
-		if supervisor == nil {
-			continue // Skip nil supervisors to prevent panic
-		}
-		responses = append(responses, newSupervisorResponse(supervisor))
-	}
-
-	common.Respond(w, r, http.StatusOK, responses, fmt.Sprintf("Supervisors for activity '%s' retrieved successfully", activity.Name))
-}
-
 // getAvailableSupervisors retrieves available supervisors for assignment
 func (rs *Resource) getAvailableSupervisors(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	specialization := r.URL.Query().Get("specialization")
 
-	var supervisors []SupervisorResponse
+	var supervisors []ActivitySupervisorResponse
 	var err error
 
 	if specialization != "" {
@@ -170,100 +143,6 @@ func parseSupervisorReplacement(r *http.Request) (*activitySupervisorReplacement
 	}
 
 	return &activitySupervisorReplacement{ReplacementStaffID: &replacementStaffID}, nil
-}
-
-// assignSupervisor assigns a supervisor to an activity
-func (rs *Resource) assignSupervisor(w http.ResponseWriter, r *http.Request) {
-	activity, ok := rs.parseAndGetActivity(w, r)
-	if !ok {
-		return
-	}
-
-	// Parse request
-	var req SupervisorRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		common.RenderError(w, r, common.ErrorInvalidRequest(err))
-		return
-	}
-
-	// Validate request
-	if err := req.Bind(r); err != nil {
-		common.RenderError(w, r, common.ErrorInvalidRequest(err))
-		return
-	}
-
-	// Assign supervisor
-	tenantID := tenant.FromContext(r.Context())
-	var supervisor *activityContract.SupervisorPlanned
-	if err := rs.transactions.WithinTenant(r.Context(), tenantID, func(ctx context.Context) error {
-		var txErr error
-		supervisor, txErr = rs.ActivityService.AddSupervisor(ctx, activity.ID, req.StaffID, req.IsPrimary)
-		return txErr
-	}); err != nil {
-		common.RenderError(w, r, ErrorRenderer(err))
-		return
-	}
-
-	common.Respond(w, r, http.StatusCreated, newSupervisorResponse(supervisor), "Supervisor assigned successfully")
-}
-
-// updateSupervisorRole updates a supervisor's role (primary/non-primary)
-func (rs *Resource) updateSupervisorRole(w http.ResponseWriter, r *http.Request) {
-	activity, ok := rs.parseAndGetActivity(w, r)
-	if !ok {
-		return
-	}
-
-	supervisorID, ok := rs.parseSupervisorID(w, r)
-	if !ok {
-		return
-	}
-
-	// Parse request
-	var req SupervisorRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		common.RenderError(w, r, common.ErrorInvalidRequest(err))
-		return
-	}
-
-	// Get existing supervisor
-	supervisor, err := rs.ActivityService.GetSupervisor(r.Context(), supervisorID)
-	if err != nil {
-		common.RenderError(w, r, ErrorRenderer(err))
-		return
-	}
-
-	// Check if supervisor belongs to the specified activity
-	if !rs.checkSupervisorOwnership(w, r, supervisor, activity.ID) {
-		return
-	}
-
-	// Update supervisor role within tenant transaction
-	tenantID := tenant.FromContext(r.Context())
-	if err := rs.transactions.WithinTenant(r.Context(), tenantID, func(ctx context.Context) error {
-		// If making this supervisor primary, use the service method to handle it properly
-		if req.IsPrimary && !supervisor.IsPrimary {
-			return rs.ActivityService.SetPrimarySupervisor(ctx, supervisorID)
-		} else if supervisor.IsPrimary != req.IsPrimary {
-			// Only update if the primary status is changing
-			supervisor.IsPrimary = req.IsPrimary
-			_, txErr := rs.ActivityService.UpdateSupervisor(ctx, supervisor)
-			return txErr
-		}
-		return nil
-	}); err != nil {
-		common.RenderError(w, r, ErrorRenderer(err))
-		return
-	}
-
-	// Get the updated supervisor
-	updatedSupervisor, err := rs.ActivityService.GetSupervisor(r.Context(), supervisorID)
-	if err != nil {
-		common.RenderError(w, r, ErrorRenderer(err))
-		return
-	}
-
-	common.Respond(w, r, http.StatusOK, newSupervisorResponse(updatedSupervisor), "Supervisor role updated successfully")
 }
 
 // removeSupervisor removes a supervisor from an activity

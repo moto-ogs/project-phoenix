@@ -10,8 +10,8 @@ import (
 // 0270), with patterns relative to /api/active.
 func RouteContracts() []common.RouteContract {
 	portals := []common.PortalScope{common.PortalTenant}
-	active := []common.QueryParam{{Name: "active", Kind: common.QueryString}, {Name: "is_active", Kind: common.QueryString}}
-	visits := []common.QueryParam{{Name: "active", Kind: common.QueryString}, {Name: "active_group_ids", Kind: common.QueryString}}
+	active := []common.QueryParam{{Name: "active", Kind: common.QueryBool}, {Name: "is_active", Kind: common.QueryBool}}
+	visits := []common.QueryParam{{Name: "active", Kind: common.QueryBool}, {Name: "active_group_ids", Kind: common.QueryString}}
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/groups/", Portals: portals, Query: active, Response: []ActiveGroupResponse{}},
 		{Method: "GET", Pattern: "/groups/{id}/supervisors", Portals: portals, Response: []SupervisorResponse{}},
@@ -25,5 +25,7 @@ func RouteContracts() []common.RouteContract {
 		// The ended supervision is read back; a failed read answers null.
 		{Method: "POST", Pattern: "/supervisors/{id}/end", Portals: portals, Response: &SupervisorResponse{}},
 		{Method: "POST", Pattern: "/tracking-indicators", Portals: portals, Request: TrackingIndicatorsRequest{}, Response: TrackingIndicatorsResponse{}},
+		// The dashboard's figures left their reshaping route file in #7563.
+		{Method: "GET", Pattern: "/analytics/dashboard", Portals: portals, Response: DashboardAnalyticsResponse{}},
 	}
 }

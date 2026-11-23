@@ -41,7 +41,7 @@ type handoverResultBody struct {
 }
 
 type recipientBody struct {
-	ID      int64    `json:"id"`
+	ID      wireID   `json:"id"`
 	Name    string   `json:"name"`
 	Ready   bool     `json:"ready"`
 	Formats []string `json:"formats"`
@@ -50,8 +50,8 @@ type recipientBody struct {
 type recipientsPageBody struct {
 	Recipients  []recipientBody `json:"recipients"`
 	Assignments []struct {
-		Format      string `json:"format"`
-		RecipientID *int64 `json:"recipient_id"`
+		Format      string  `json:"format"`
+		RecipientID *wireID `json:"recipient_id"`
 	} `json:"assignments"`
 }
 
@@ -62,7 +62,7 @@ func addRecipient(t *testing.T, f careBillingFixture, body map[string]any) (*htt
 	if rec.Code != http.StatusCreated {
 		return rec, 0
 	}
-	return rec, decodeSchoolPortalData[recipientBody](t, rec.Body.Bytes()).ID
+	return rec, int64(decodeSchoolPortalData[recipientBody](t, rec.Body.Bytes()).ID)
 }
 
 // assignFormats sends each format to its recipient, 0 for the download.
@@ -178,7 +178,7 @@ func TestFinanceExportHandoverOfARun(t *testing.T) {
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, recipientPath(recipient), renamed)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	saved := decodeSchoolPortalData[recipientBody](t, rec.Body.Bytes())
-	assert.Equal(t, recipient, saved.ID)
+	assert.Equal(t, recipient, int64(saved.ID))
 	assert.Equal(t, "Kämmerei Nord", saved.Name)
 	assert.True(t, saved.Ready, "a saved recipient with its password stays ready")
 
@@ -316,7 +316,7 @@ func TestNumberedSollstellungRepeatsTheSameContent(t *testing.T) {
 	contract := careContract(t, f.db, f.office.organization, f.office.schools[0], "Ben", sepaDebitMonth, sjrServices()...)
 	createMandate(t, f, mandateBody(contract, "SJR-H-BEN"))
 	run := releaseDebitRun(t, f, sepaDebitMonth)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, financeExportsPath+"/settings/sollstellung", map[string]any{
+	rec := putSollstellung(t, f.traeger, f.office.token, map[string]any{
 		"columns":   []map[string]any{{"field": "invoice_number", "header": "Nr"}, {"field": "file_number", "header": "Datei"}},
 		"delimiter": ";", "decimal_separator": ",", "date_format": "dd.mm.yyyy", "encoding": "utf-8", "header_row": true,
 		"file_name_pattern": "soll-{NR}.csv",

@@ -28,7 +28,7 @@ export function traegerInvitationTopic(): HelpTopic {
       "Wähle `Weiter zum Dashboard`.",
     ],
     result:
-      "moto öffnet die Seite `Schulen`. Was du siehst, hängt von deiner Rolle ab.",
+      "moto öffnet das `Dashboard`. Darfst du es nicht sehen, öffnet moto die Seite `Schulen`. Was du siehst, hängt von deiner Rolle ab.",
     notes: [
       "Mit derselben E-Mail-Adresse und demselben Passwort meldest du dich später an.",
       "Ein Konto in einer Schule brauchst du dafür nicht.",

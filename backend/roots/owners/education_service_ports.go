@@ -123,7 +123,7 @@ func externalCaregiverCandidates(members []*peopleValues.Staff) []schoolmembersh
 		if member == nil {
 			continue
 		}
-		candidate := schoolmembership.ExternalCaregiverCandidate{StaffID: member.ID, HasExternalCaregiverRecord: member.HasExternalCaregiverRecord, HasPerson: member.Person != nil}
+		candidate := schoolmembership.ExternalCaregiverCandidate{StaffID: member.ID.Int64(), HasExternalCaregiverRecord: member.HasExternalCaregiverRecord, HasPerson: member.Person != nil}
 		if member.Person != nil {
 			candidate.HasAccount = member.Person.AccountID != nil
 			candidate.FirstName, candidate.LastName = member.Person.FirstName, member.Person.LastName
@@ -140,7 +140,7 @@ func (s EducationExternalCaregivers) markOpenInvitations(ctx context.Context, ca
 	personIDs := make(map[int64]int64, len(candidates))
 	for _, member := range members {
 		if member != nil && member.IsExternalCaregiver && member.Person != nil && member.Person.AccountID == nil {
-			personIDs[member.ID] = member.Person.ID
+			personIDs[member.ID.Int64()] = member.Person.ID.Int64()
 		}
 	}
 	if len(personIDs) == 0 {

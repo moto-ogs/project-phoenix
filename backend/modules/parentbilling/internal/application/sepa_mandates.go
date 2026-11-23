@@ -13,6 +13,8 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/sepa"
 )
 
@@ -24,7 +26,6 @@ import (
 // Actions of the trail of a mandate.
 const (
 	mandateCreate = "create"
-	mandateUpdate = "update"
 	mandateRevoke = "revoke"
 	mandateRead   = "read"
 	mandateReveal = "reveal"
@@ -33,20 +34,15 @@ const (
 // mandateFromRun is the source of a read a run preview made.
 const mandateFromRun = "run"
 
-// Fields a change of a mandate names in its trail.
-const (
-	mandateFieldHolder   = "account_holder"
-	mandateFieldIBAN     = "iban"
-	mandateFieldBIC      = "bic"
-	mandateFieldSequence = "sequence"
-)
-
 // MandateStore persists the creditor, the mandates and their trail. Every
 // method runs in the Träger transaction of organizationID.
 type MandateStore interface {
 	// SEPACreditor reads the creditor of the Träger, nil without one.
 	SEPACreditor(ctx context.Context, organizationID int64) (*parentbilling.SEPACreditor, error)
 	SaveSEPACreditor(ctx context.Context, organizationID, accountID int64, creditor parentbilling.SEPACreditor) error
+	// LockBillingSetting holds one setting of the Abrechnung of the Träger
+	// until the transaction ends.
+	LockBillingSetting(ctx context.Context, organizationID int64, setting string) error
 	// SEPAMandates reads the mandates of a family (familyEmail) or of every
 	// family (empty), newest first.
 	SEPAMandates(ctx context.Context, organizationID int64, familyEmail string) ([]parentbilling.SEPAMandate, error)
@@ -55,9 +51,6 @@ type MandateStore interface {
 	// InsertSEPAMandate stores a new mandate; the reference and the mandate
 	// in force of the family are unique.
 	InsertSEPAMandate(ctx context.Context, organizationID, accountID int64, mandate parentbilling.SealedSEPAMandate) (parentbilling.SEPAMandate, error)
-	// UpdateSEPAMandate stores the account of a mandate; a nil IBAN or holder keeps
-	// the sealed one.
-	UpdateSEPAMandate(ctx context.Context, organizationID, accountID int64, mandate parentbilling.SealedSEPAMandate) (parentbilling.SEPAMandate, error)
 	RevokeSEPAMandate(ctx context.Context, organizationID, accountID, id int64, revokedOn calendar.Date) (parentbilling.SEPAMandate, error)
 	// InsertSEPAMandateEvents records one action for each mandate in one
 	// statement.
@@ -136,14 +129,35 @@ func creditorOf(ctx context.Context, store MandateStore, organizationID int64) (
 	if err != nil {
 		return parentbilling.SEPACreditor{}, err
 	}
-	if stored == nil {
-		return parentbilling.DefaultSEPACreditor(), nil
+	creditor := parentbilling.DefaultSEPACreditor()
+	if stored != nil {
+		creditor = *stored
 	}
-	return *stored, nil
+	creditor.Version = creditorVersion(creditor)
+	return creditor, nil
 }
 
-// SaveSEPACreditor validates and stores the creditor.
-func (m *SEPAMandates) SaveSEPACreditor(ctx context.Context, reviewer parentbilling.HolidayReviewer, creditor parentbilling.SEPACreditor) (parentbilling.SEPACreditor, error) {
+// settingSEPACreditor names the lock of the creditor.
+const settingSEPACreditor = "sepa_creditor"
+
+// creditorVersion is the read-state token of the creditor (ADR 0311): the
+// fields the form shows, the defaults while the Träger set none. The
+// creditor carries no bank account.
+func creditorVersion(creditor parentbilling.SEPACreditor) string {
+	return readstate.Fingerprint(struct {
+		CreditorID          string `json:"creditor_id"`
+		PrenotificationDays int    `json:"prenotification_days"`
+		MissingMandate      string `json:"missing_mandate"`
+		Set                 bool   `json:"set"`
+	}{creditor.CreditorID, creditor.PrenotificationDays, creditor.MissingMandate, creditor.UpdatedAt != nil})
+}
+
+// SaveSEPACreditor validates and stores the creditor as the Abrechnung read
+// it: under the lock of the creditor, one changed since expectedVersion is
+// refused with readstate.ErrChanged (ADR 0311).
+func (m *SEPAMandates) SaveSEPACreditor(ctx context.Context, reviewer parentbilling.HolidayReviewer, creditor parentbilling.SEPACreditor,
+	expectedVersion string,
+) (parentbilling.SEPACreditor, error) {
 	if err := validReviewer(reviewer); err != nil {
 		return parentbilling.SEPACreditor{}, err
 	}
@@ -162,6 +176,16 @@ func (m *SEPAMandates) SaveSEPACreditor(ctx context.Context, reviewer parentbill
 	if len(errs) > 0 {
 		return parentbilling.SEPACreditor{}, errs
 	}
+	if err := m.store.LockBillingSetting(ctx, reviewer.OrganizationID, settingSEPACreditor); err != nil {
+		return parentbilling.SEPACreditor{}, fmt.Errorf("parent billing: hold the SEPA creditor: %w", err)
+	}
+	before, err := creditorOf(ctx, m.store, reviewer.OrganizationID)
+	if err != nil {
+		return parentbilling.SEPACreditor{}, err
+	}
+	if err := readstate.Check(expectedVersion, before.Version); err != nil {
+		return parentbilling.SEPACreditor{}, err
+	}
 	if err := m.store.SaveSEPACreditor(ctx, reviewer.OrganizationID, reviewer.AccountID, normalized); err != nil {
 		return parentbilling.SEPACreditor{}, err
 	}
@@ -176,7 +200,7 @@ func (m *SEPAMandates) ListSEPAMandates(ctx context.Context, reviewer parentbill
 	}
 	family := ""
 	if contractID > 0 {
-		key, err := m.familyOf(ctx, reviewer.OrganizationID, contractID)
+		key, _, err := m.familyOf(ctx, reviewer.OrganizationID, contractID)
 		if err != nil {
 			return nil, err
 		}
@@ -206,8 +230,8 @@ func (m *SEPAMandates) nameParties(ctx context.Context, organizationID int64, ma
 	}
 	ids := make([]int64, 0, len(mandates))
 	for _, mandate := range mandates {
-		if !slices.Contains(ids, mandate.ContractID) {
-			ids = append(ids, mandate.ContractID)
+		if !slices.Contains(ids, mandate.ContractID.Int64()) {
+			ids = append(ids, mandate.ContractID.Int64())
 		}
 	}
 	parties, err := m.contracts.Recipients(ctx, organizationID, ids)
@@ -215,29 +239,29 @@ func (m *SEPAMandates) nameParties(ctx context.Context, organizationID int64, ma
 		return fmt.Errorf("parent billing: read the contract parties: %w", err)
 	}
 	for i := range mandates {
-		party := parties[mandates[i].ContractID]
+		party := parties[mandates[i].ContractID.Int64()]
 		mandates[i].PartyFirstName, mandates[i].PartyLastName = party.FirstName, party.LastName
 	}
 	return nil
 }
 
 // familyOf is the family of a contract of the Träger.
-func (m *SEPAMandates) familyOf(ctx context.Context, organizationID, contractID int64) (string, error) {
+func (m *SEPAMandates) familyOf(ctx context.Context, organizationID, contractID int64) (string, bool, error) {
 	if contractID <= 0 {
-		return "", parentbilling.ErrFamilyUnknown
+		return "", false, parentbilling.ErrFamilyUnknown
 	}
 	recipients, err := m.contracts.Recipients(ctx, organizationID, []int64{contractID})
 	if err != nil {
-		return "", fmt.Errorf("parent billing: read the contract party: %w", err)
+		return "", false, fmt.Errorf("parent billing: read the contract party: %w", err)
 	}
 	// A contract of another Träger is not among the recipients and names
 	// no family.
 	recipient, known := recipients[contractID]
 	key := parentbilling.ContractFamilyKey(recipient.Email, contractID)
 	if !known || key == "" {
-		return "", parentbilling.ErrFamilyUnknown
+		return "", false, parentbilling.ErrFamilyUnknown
 	}
-	return key, nil
+	return key, recipient.ContractDraft, nil
 }
 
 // CreateSEPAMandate validates the mandate, seals its IBAN and stores it for
@@ -250,11 +274,16 @@ func (m *SEPAMandates) CreateSEPAMandate(ctx context.Context, reviewer parentbil
 	if err != nil {
 		return parentbilling.SEPAMandate{}, err
 	}
-	family, err := m.familyOf(ctx, reviewer.OrganizationID, input.ContractID)
+	family, draft, err := m.familyOf(ctx, reviewer.OrganizationID, input.ContractID)
 	if err != nil {
 		return parentbilling.SEPAMandate{}, err
 	}
-	mandate.FamilyEmail, mandate.ContractID = family, input.ContractID
+	// A mandate hangs on its contract; a draft can be discarded and would
+	// take the signed mandate with it (#7862).
+	if draft {
+		return parentbilling.SEPAMandate{}, parentbilling.ErrSEPAMandateContractDraft
+	}
+	mandate.FamilyEmail, mandate.ContractID = family, ident.ID(input.ContractID)
 	// A mandate is given to the Träger's creditor identifier and stays bound
 	// to it; a later change of the identifier needs a new mandate (ADR 0171).
 	creditor, err := creditorOf(ctx, m.store, reviewer.OrganizationID)
@@ -383,77 +412,6 @@ func normalizeAccount(errs validation.Errors, kind, holder, iban, bic, sequence 
 	return account, compact
 }
 
-// ChangeSEPAMandate changes the account of a mandate in force.
-func (m *SEPAMandates) ChangeSEPAMandate(ctx context.Context, reviewer parentbilling.HolidayReviewer, id int64, change parentbilling.SEPAMandateChange) (parentbilling.SEPAMandate, error) {
-	if err := validReviewer(reviewer); err != nil {
-		return parentbilling.SEPAMandate{}, err
-	}
-	current, err := m.lockInForce(ctx, reviewer.OrganizationID, id)
-	if err != nil {
-		return parentbilling.SEPAMandate{}, err
-	}
-	errs := validation.Errors{}
-	account, iban := normalizeAccount(errs, current.Kind, change.AccountHolder, change.IBAN, change.BIC, change.Sequence, false)
-	if iban == "" && account.BIC == "" && sepa.NeedsBIC(current.IBANMasked) {
-		errs["bic"] = errors.New("is required for an account outside the EEA")
-	}
-	if len(errs) > 0 {
-		return parentbilling.SEPAMandate{}, errs
-	}
-	next, fields, err := m.changedAccount(reviewer.OrganizationID, current, account, iban)
-	if err != nil {
-		return parentbilling.SEPAMandate{}, err
-	}
-	if len(fields) == 0 {
-		// Nothing changed, but the answer shows the account: a read.
-		if err := m.record(ctx, reviewer, mandateRead, parentbilling.MandateFromOffice, nil, current); err != nil {
-			return parentbilling.SEPAMandate{}, err
-		}
-		return m.named(ctx, reviewer.OrganizationID, current)
-	}
-	slices.Sort(fields)
-	stored, err := m.store.UpdateSEPAMandate(ctx, reviewer.OrganizationID, reviewer.AccountID, next)
-	if err != nil {
-		return parentbilling.SEPAMandate{}, err
-	}
-	if err := m.record(ctx, reviewer, mandateUpdate, parentbilling.MandateFromOffice, fields, stored); err != nil {
-		return parentbilling.SEPAMandate{}, err
-	}
-	return m.named(ctx, reviewer.OrganizationID, stored)
-}
-
-// changedAccount applies a checked change of the account to a mandate in
-// force: it seals a new IBAN or account holder and names the fields that
-// changed, none when nothing does.
-func (m *SEPAMandates) changedAccount(organizationID int64, current parentbilling.SEPAMandate, account parentbilling.SEPAMandateChange,
-	iban string,
-) (parentbilling.SealedSEPAMandate, []string, error) {
-	next := parentbilling.SealedSEPAMandate{Mandate: current}
-	next.Mandate.AccountHolder, next.Mandate.BIC, next.Mandate.Sequence = account.AccountHolder, account.BIC, account.Sequence
-	var fields []string
-	var err error
-	if iban != "" {
-		next.Mandate.IBANMasked = sepa.MaskIBAN(iban)
-		if next.IBAN, err = m.cipher.Seal([]byte(iban), ibanContext(organizationID, current.Reference)); err != nil {
-			return next, nil, fmt.Errorf("parent billing: seal the IBAN: %w", err)
-		}
-		fields = append(fields, mandateFieldIBAN)
-	}
-	if account.AccountHolder != current.AccountHolder {
-		if next.Holder, err = m.cipher.Seal([]byte(account.AccountHolder), holderContext(organizationID, current.Reference)); err != nil {
-			return next, nil, fmt.Errorf("parent billing: seal the account holder: %w", err)
-		}
-		fields = append(fields, mandateFieldHolder)
-	}
-	if account.BIC != current.BIC {
-		fields = append(fields, mandateFieldBIC)
-	}
-	if account.Sequence != current.Sequence {
-		fields = append(fields, mandateFieldSequence)
-	}
-	return next, fields, nil
-}
-
 // lockInForce reads a mandate in force for a change.
 func (m *SEPAMandates) lockInForce(ctx context.Context, organizationID, id int64) (parentbilling.SEPAMandate, error) {
 	if id <= 0 {
@@ -547,7 +505,7 @@ func (m *SEPAMandates) SEPAMandateDebits(ctx context.Context, reviewer parentbil
 		}
 		mandate.AccountHolder, mandate.HolderSealed = string(holder), nil
 		mandates[i] = mandate
-		debits[i] = parentbilling.SEPAMandateDebit{MandateID: mandate.ID, Reference: mandate.Reference, SignedOn: mandate.SignedOn,
+		debits[i] = parentbilling.SEPAMandateDebit{MandateID: mandate.ID.Int64(), Reference: mandate.Reference, SignedOn: mandate.SignedOn,
 			SequenceType: mandate.SequenceType(), AccountHolder: mandate.AccountHolder, IBAN: string(iban), BIC: mandate.BIC}
 	}
 	if err := m.store.InsertSEPAMandateEvents(ctx, reviewer.OrganizationID, reviewer.AccountID, mandateReveal,

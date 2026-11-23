@@ -16,6 +16,8 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -73,17 +75,21 @@ type ruleRow struct {
 	CapCents             *int64         `bun:"cap_cents"`
 	CountsFamilyChildren bool           `bun:"counts_family_children"`
 	TariffSiblingPrice   bool           `bun:"tariff_sibling_price"`
+	SiblingAllChildren   bool           `bun:"sibling_all_children"`
 	UpdatedAt            time.Time      `bun:"updated_at,nullzero"`
 }
 
 func (r ruleRow) rule() parentbilling.ContributionRule {
 	return parentbilling.ContributionRule{
-		ID: r.ID, Service: r.Service, Kind: r.Kind, ValidFrom: r.ValidFrom, ValidUntil: r.ValidUntil,
+		ID: ident.ID(r.ID), Service: r.Service, Kind: r.Kind, ValidFrom: r.ValidFrom, ValidUntil: r.ValidUntil,
 		SiblingFromChild: r.SiblingFromChild, DiscountBasisPoints: r.DiscountBasisPoints, DiscountCents: r.DiscountCents,
-		Note: r.Note, Name: r.Name, SchoolIDs: idsOrEmpty(r.SchoolIDs), CareOfferingIDs: idsOrEmpty(r.CareOfferingIDs),
-		CountSchoolIDs: idsOrEmpty(r.CountSchoolIDs), PriceCents: r.PriceCents, CapCents: r.CapCents, UpdatedAt: r.UpdatedAt,
+		Note: r.Note, Name: r.Name, SchoolIDs: ident.IDs(idsOrEmpty(r.SchoolIDs)), CareOfferingIDs: ident.IDs(idsOrEmpty(r.CareOfferingIDs)),
+		CountSchoolIDs: ident.IDs(idsOrEmpty(r.CountSchoolIDs)), PriceCents: r.PriceCents, CapCents: r.CapCents, UpdatedAt: r.UpdatedAt,
 		CountsFamilyChildren: r.CountsFamilyChildren,
 		TariffSiblingPrice:   r.TariffSiblingPrice,
+		SiblingAllChildren:   r.SiblingAllChildren,
+		// A trigger stamps updated_at on every change of the row.
+		Version: readstate.Of(r.UpdatedAt),
 	}
 }
 
@@ -133,6 +139,25 @@ func (s *Store) InsertContributionRule(ctx context.Context, organizationID int64
 	row := newRuleRow(organizationID, input)
 	if _, err := db.NewInsert().Model(row).Returning("id, updated_at").Exec(ctx); err != nil {
 		return parentbilling.ContributionRule{}, ruleWriteError(err)
+	}
+	return row.rule(), nil
+}
+
+// LockContributionRule reads a rule of one service under a row lock until
+// the transaction ends; a missing one is ErrContributionRuleNotFound.
+func (s *Store) LockContributionRule(ctx context.Context, organizationID, ruleID int64, service string) (parentbilling.ContributionRule, error) {
+	db, err := traegerDB(ctx, organizationID)
+	if err != nil {
+		return parentbilling.ContributionRule{}, err
+	}
+	var row ruleRow
+	if err := db.NewSelect().Model(&row).
+		Where("id = ?", ruleID).Where("organization_id = ?", organizationID).Where("service = ?", service).
+		For("UPDATE").Scan(ctx); err != nil {
+		if isNoRows(err) {
+			return parentbilling.ContributionRule{}, parentbilling.ErrContributionRuleNotFound
+		}
+		return parentbilling.ContributionRule{}, fmt.Errorf("lock contribution rule: %w", err)
 	}
 	return row.rule(), nil
 }

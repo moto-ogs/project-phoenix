@@ -40,20 +40,6 @@ const (
 	RoomConflictWarn
 )
 
-// CrossTenantRepo defines the interface for cross-tenant student queries.
-type CrossTenantRepo interface {
-	FindCrossTenantStudents(ctx context.Context, hostingTenantID int64) ([]ports.CrossTenantStudent, error)
-}
-
-type SchoolQuery interface {
-	ListSchoolsByID(context.Context, []int64) ([]School, error)
-}
-
-type School struct {
-	ID   int64
-	Slug string
-}
-
 // SettingsResolver resolves tenant-scoped settings. Implemented by config.SettingsService.
 // Optional dependency — when nil, auto-clear behavior falls back to the registry default.
 type SettingsResolver interface {
@@ -64,8 +50,6 @@ type SettingsResolver interface {
 	// flag is cleared; ClearModeNextCheckin is the value the check-in acts on.
 	SickClearMode(ctx context.Context) (string, error)
 	ExcusedClearMode(ctx context.Context) (string, error)
-	// SessionInactivityTimeoutMinutes is how long a kiosk session may idle.
-	SessionInactivityTimeoutMinutes(ctx context.Context) (int, error)
 	// AttendanceEditScope and OperationalOverviewScope gate who may edit
 	// attendance and who sees the tenant-wide overview.
 	AttendanceEditScope(ctx context.Context) (string, error)
@@ -104,10 +88,6 @@ type ServiceDependencies struct {
 	SchoolPresence    StudentPresence
 	StudentDisplay    StudentDisplayReader
 	StudentStatusRepo StudentStatusDayRepository
-
-	// Cross-tenant query repository (optional - nil-safe)
-	CrossTenantRepo CrossTenantRepo
-	Schools         SchoolQuery
 
 	// User domain repositories
 	StudentRepo PresenceStudents

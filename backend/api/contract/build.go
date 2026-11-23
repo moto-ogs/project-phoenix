@@ -24,33 +24,34 @@ var (
 type builder struct {
 	types        map[string]Object
 	names        map[reflect.Type]string
+	requestNames map[reflect.Type]string
 	enums        map[string]Enum
 	enumByType   map[reflect.Type]string
 	enumByField  map[string]string
 	deprecated   map[string]bool
-	numericIDs   map[string]bool
 	identifiers  map[reflect.Type]string
 	readers      map[reflect.Type]string
+	values       map[reflect.Type]string
 	dates        map[reflect.Type]bool
+	instants     map[reflect.Type]bool
 	used         map[string]bool
-	requestTypes map[string]bool
 }
 
 // Build walks the registrations with reflection, following encoding/json.
 // Routes carry their full pattern.
 func Build(routes []Registration, options Options) (Document, error) {
 	b := &builder{
-		types: map[string]Object{}, names: map[reflect.Type]string{}, enums: map[string]Enum{},
+		types: map[string]Object{}, names: map[reflect.Type]string{}, requestNames: map[reflect.Type]string{}, enums: map[string]Enum{},
 		enumByType: map[reflect.Type]string{}, enumByField: map[string]string{},
-		deprecated: map[string]bool{}, numericIDs: map[string]bool{}, used: map[string]bool{},
-		requestTypes: map[string]bool{}, identifiers: options.Identifiers, readers: options.Readers,
-		dates: map[reflect.Type]bool{dateType: true},
+		deprecated: map[string]bool{}, used: map[string]bool{},
+		identifiers: options.Identifiers, readers: options.Readers, values: options.Values,
+		dates: map[reflect.Type]bool{dateType: true}, instants: map[reflect.Type]bool{timeType: true},
 	}
 	for _, t := range options.Dates {
 		b.dates[t] = true
 	}
-	for _, key := range options.NumericIDs {
-		b.numericIDs[key] = true
+	for _, t := range options.Instants {
+		b.instants[t] = true
 	}
 	for _, rc := range routes {
 		if err := b.registerEnums(rc); err != nil {
@@ -60,11 +61,11 @@ func Build(routes []Registration, options Options) (Document, error) {
 			b.deprecated[field] = true
 		}
 	}
-	built, err := b.routes(routes, options)
+	built, lines, err := b.routes(routes, options)
 	if err != nil {
 		return Document{}, err
 	}
-	doc := Document{Routes: built}
+	doc := Document{Routes: built, Outside: lines}
 	if err := b.unused(options); err != nil {
 		return Document{}, err
 	}
@@ -77,26 +78,62 @@ func Build(routes []Registration, options Options) (Document, error) {
 	sort.Slice(doc.Types, func(i, j int) bool { return doc.Types[i].Name < doc.Types[j].Name })
 	sort.Slice(doc.Enums, func(i, j int) bool { return doc.Enums[i].Name < doc.Enums[j].Name })
 	sort.Slice(doc.Routes, func(i, j int) bool { return doc.Routes[i].Key() < doc.Routes[j].Key() })
+	sort.Slice(doc.Outside, func(i, j int) bool { return doc.Outside[i].Key() < doc.Outside[j].Key() })
 	return doc, nil
 }
 
-// routes builds every registration once and refuses what the public proxy
-// path cannot serve.
-func (b *builder) routes(registrations []Registration, options Options) ([]Route, error) {
+// routes builds every registration once, the lines outside the contract
+// apart, and refuses what the public proxy path cannot serve.
+func (b *builder) routes(registrations []Registration, options Options) ([]Route, []Outside, error) {
 	var routes []Route
+	var lines []Outside
+	// at is the index of each registration's route; -1 for an outside line.
+	at := make([]int, len(registrations))
 	seen := map[string]bool{}
-	for _, rc := range registrations {
-		route, err := b.route(rc, options)
-		if err != nil {
-			return nil, err
+	for i, rc := range registrations {
+		var key string
+		at[i] = len(routes)
+		if rc.Outside != nil {
+			at[i] = -1
+			line, err := outside(rc)
+			if err != nil {
+				return nil, nil, err
+			}
+			key, lines = line.Key(), append(lines, line)
+		} else {
+			route, err := b.route(rc, options)
+			if err != nil {
+				return nil, nil, err
+			}
+			key, routes = route.Key(), append(routes, route)
 		}
-		if seen[route.Key()] {
-			return nil, fmt.Errorf("%s is registered twice", route.Key())
+		if seen[key] {
+			return nil, nil, fmt.Errorf("%s is registered twice", key)
 		}
-		seen[route.Key()] = true
-		routes = append(routes, route)
+		seen[key] = true
 	}
-	return routes, publicRoutesStandApart(routes)
+	if err := b.requests(registrations, routes, at); err != nil {
+		return nil, nil, err
+	}
+	return routes, lines, publicRoutesStandApart(routes)
+}
+
+// requests builds the bound bodies after every answer, so a type that is
+// both keeps its own name in the answers and its request role is named
+// apart from it. at is the index of each registration's route, -1 for a
+// line outside the contract.
+func (b *builder) requests(registrations []Registration, routes []Route, at []int) error {
+	for i, rc := range registrations {
+		if rc.Request == nil || at[i] < 0 {
+			continue
+		}
+		s, err := b.top(rc.Request, routes[at[i]].Key(), true)
+		if err != nil {
+			return err
+		}
+		routes[at[i]].Request = &s
+	}
+	return nil
 }
 
 func (b *builder) registerEnums(rc Registration) error {
@@ -140,14 +177,29 @@ func (b *builder) enumName(enum EnumSpec) (string, error) {
 func (b *builder) route(rc Registration, options Options) (Route, error) {
 	route := Route{
 		Method: rc.Method, Pattern: rc.Pattern, Paginated: rc.Paginated, Deprecated: rc.Deprecated,
-		NoRetryAfterRenewal: rc.NoRetryAfterRenewal, MaxBodyBytes: rc.MaxBodyBytes,
+		NoRetryAfterRenewal: rc.NoRetryAfterRenewal, MaxBodyBytes: rc.MaxBodyBytes, NoCommit: rc.NoCommit,
+		File: rc.File, Multipart: rc.Multipart, TooLargeCode: rc.TooLargeCode, PublicFile: rc.PublicFile, PublicUpload: rc.PublicUpload,
+		FileCache: rc.FileCache, ConditionalGet: rc.ConditionalGet,
+		PrivateCache: rc.PrivateCache, RouteFile: rc.RouteFile, Plain: rc.Plain,
 	}
 	where := route.Key()
 	if rc.Method == "" || !strings.HasPrefix(rc.Pattern, "/") {
 		return route, fmt.Errorf("invalid route registration %q", where)
 	}
-	if rc.MaxBodyBytes < 0 || (rc.MaxBodyBytes > 0 && rc.Request == nil) {
+	if rc.MaxBodyBytes < 0 || (rc.MaxBodyBytes > 0 && rc.Request == nil && !rc.Multipart) {
 		return route, fmt.Errorf("%s: a body limit needs a positive size and a request body", where)
+	}
+	if err := multipartTraits(rc, where); err != nil {
+		return route, err
+	}
+	if err := fileCacheTraits(rc, where); err != nil {
+		return route, err
+	}
+	if err := retryTraits(rc, where); err != nil {
+		return route, err
+	}
+	if err := routeFileTraits(rc, where); err != nil {
+		return route, err
 	}
 	if len(rc.Portals) == 0 {
 		return route, fmt.Errorf("%s names no portal", where)
@@ -159,13 +211,6 @@ func (b *builder) route(rc Registration, options Options) (Route, error) {
 		return route, err
 	}
 	route.Query = query
-	if rc.Request != nil {
-		s, err := b.top(rc.Request, where, true)
-		if err != nil {
-			return route, err
-		}
-		route.Request = &s
-	}
 	return route, b.responses(&route, rc, options)
 }
 
@@ -183,14 +228,64 @@ func queryParams(params []QueryParam, where string) ([]QueryParam, error) {
 	return query, nil
 }
 
+// multipartTraits refuses an upload the proxy cannot stream: one without a
+// bound, without the code of its refusal, beside a JSON body or file answer,
+// or with a retry trait although an upload is sent only once.
+// retryTraits checks the traits that decide what the proxy may repeat or
+// keep: NoCommit on a POST only, PrivateCache on a file of a session portal.
+func retryTraits(rc Registration, where string) error {
+	if rc.Refuses != "" && !rc.Deprecated {
+		return fmt.Errorf("%s: only a Deprecated route names Refuses; a route that stays must answer", where)
+	}
+	if rc.NoCommit != "" && rc.Method != "POST" {
+		return fmt.Errorf("%s: only a POST names NoCommit; a GET commits nothing anyway and a PUT, PATCH or DELETE changes", where)
+	}
+	if rc.PrivateCache && (!rc.File || slices.Contains(rc.Portals, PublicPortal)) {
+		return fmt.Errorf("%s: PrivateCache belongs to a file route of a session portal", where)
+	}
+	return nil
+}
+
+func multipartTraits(rc Registration, where string) error {
+	if !rc.Multipart {
+		if rc.TooLargeCode != "" {
+			return fmt.Errorf("%s: TooLargeCode belongs to a multipart upload", where)
+		}
+		return nil
+	}
+	switch {
+	case !slices.Contains([]string{"POST", "PUT", "PATCH"}, rc.Method):
+		return fmt.Errorf("%s: a multipart upload is a POST, PUT or PATCH", where)
+	case rc.Request != nil:
+		return fmt.Errorf("%s registers a multipart upload and a JSON request body", where)
+	case rc.File:
+		return fmt.Errorf("%s: a multipart upload cannot answer a file", where)
+	case rc.MaxBodyBytes == 0 || rc.TooLargeCode == "":
+		return fmt.Errorf("%s: a multipart upload needs MaxBodyBytes and TooLargeCode", where)
+	case rc.NoRetryAfterRenewal != "":
+		return fmt.Errorf("%s: a multipart upload is sent once; drop NoRetryAfterRenewal", where)
+	}
+	return nil
+}
+
+// withoutData handles the two answers that carry no data member: a file and
+// no data. It reports whether the registration was one of them.
+func withoutData(route *Route, rc Registration) (bool, error) {
+	data := rc.Response != nil || rc.Variants != nil || rc.Paginated
+	switch {
+	case rc.File && (data || rc.NoData):
+		return true, fmt.Errorf("%s registers a file and a JSON response", route.Key())
+	case rc.NoData && data:
+		return true, fmt.Errorf("%s registers a response and no data", route.Key())
+	}
+	route.NoData = rc.NoData
+	return rc.File || rc.NoData, nil
+}
+
 func (b *builder) responses(route *Route, rc Registration, options Options) error {
 	where := route.Key()
-	if rc.NoData {
-		if rc.Response != nil || rc.Variants != nil || rc.Paginated {
-			return fmt.Errorf("%s registers a response and no data", where)
-		}
-		route.NoData = true
-		return nil
+	if handled, err := withoutData(route, rc); handled {
+		return err
 	}
 	if rc.Variants == nil {
 		if rc.Response == nil {
@@ -223,8 +318,11 @@ func (b *builder) responses(route *Route, rc Registration, options Options) erro
 
 func (b *builder) unused(options Options) error {
 	registers := map[string][]string{
-		"id:": options.NumericIDs, "variants:": options.QueryVariants,
-		"enum:": sortedKeys(b.enumByField), "deprecated:": sortedKeys(b.deprecated),
+		"variants:": options.QueryVariants,
+		"enum:":     sortedKeys(b.enumByField), "deprecated:": sortedKeys(b.deprecated),
+	}
+	for t := range options.Values {
+		registers["value:"] = append(registers["value:"], t.String())
 	}
 	for t := range options.Readers {
 		registers["reader:"] = append(registers["reader:"], t.String())
@@ -232,7 +330,10 @@ func (b *builder) unused(options Options) error {
 	for _, t := range options.Dates {
 		registers["date:"] = append(registers["date:"], t.String())
 	}
-	labels := map[string]string{"date:": "day type ", "id:": "numeric id ", "variants:": "query variant ", "enum:": "enum field ", "deprecated:": "deprecated field ", "reader:": "reader "}
+	for _, t := range options.Instants {
+		registers["instant:"] = append(registers["instant:"], t.String())
+	}
+	labels := map[string]string{"date:": "day type ", "instant:": "instant type ", "variants:": "query variant ", "enum:": "enum field ", "deprecated:": "deprecated field ", "reader:": "reader ", "value:": "value wrapper "}
 	var stale []string
 	for prefix, keys := range registers {
 		for _, key := range keys {
@@ -254,6 +355,9 @@ func (b *builder) unused(options Options) error {
 func (b *builder) top(zero any, where string, request bool) (Schema, error) {
 	t := reflect.TypeOf(zero)
 	s, err := b.schema(t, where, request)
+	if err == nil {
+		err = checkFreeJSON(s, "", where)
+	}
 	// A registered pointer says the route may answer null: there is no such
 	// object now.
 	s.Nullable = !request && t != nil && t.Kind() == reflect.Pointer
@@ -275,7 +379,7 @@ func (b *builder) schema(t reflect.Type, where string, request bool) (Schema, er
 	case reflect.Bool:
 		return Schema{Kind: KindBool}, nil
 	case reflect.Int64, reflect.Uint64:
-		// The field decides: see numericID.
+		// The field decides: see bareInt64.
 		return Schema{Kind: KindInt}, errBareInt64
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32:
 		return Schema{Kind: KindInt}, nil
@@ -314,6 +418,25 @@ func (b *builder) schema(t reflect.Type, where string, request bool) (Schema, er
 	return Schema{}, fmt.Errorf("%s: unsupported type %s", where, t)
 }
 
+// timeSchema is the schema of an instant or day type: time.Time,
+// calendar.Date and the types the root names beside them.
+func (b *builder) timeSchema(t reflect.Type) (Schema, bool) {
+	if b.instants[t] {
+		if t != timeType {
+			b.used["instant:"+t.String()] = true
+		}
+		return Schema{Kind: KindInstant}, true
+	}
+	if b.dates[t] {
+		// A day type renders its zero value as null.
+		if t != dateType {
+			b.used["date:"+t.String()] = true
+		}
+		return Schema{Kind: KindDate, Nullable: true}, true
+	}
+	return Schema{}, false
+}
+
 // named decides the types whose Go type, not their kind, says what travels:
 // instants, days, identifiers and enums. It also stops at a type that writes
 // or reads itself without an entry.
@@ -323,15 +446,8 @@ func (b *builder) named(t reflect.Type, where string, request bool) (Schema, boo
 		// or, with omitempty, no key.
 		return Schema{Kind: KindJSON, Nullable: true}, true, nil
 	}
-	if t == timeType {
-		return Schema{Kind: KindInstant}, true, nil
-	}
-	if b.dates[t] {
-		// A day type renders its zero value as null.
-		if t != dateType {
-			b.used["date:"+t.String()] = true
-		}
-		return Schema{Kind: KindDate, Nullable: true}, true, nil
+	if schema, ok := b.timeSchema(t); ok {
+		return schema, true, nil
 	}
 	if kind, ok := b.identifiers[t]; ok {
 		return Schema{Kind: kind}, true, nil
@@ -339,9 +455,15 @@ func (b *builder) named(t reflect.Type, where string, request bool) (Schema, boo
 	if name, ok := b.enumByType[t]; ok {
 		return Schema{Kind: KindEnum, Ref: name}, true, nil
 	}
+	if mode, ok := b.values[t]; ok {
+		b.used["value:"+t.String()] = true
+		s, err := b.wrapped(t, where, request)
+		s.LegacyJSON = mode == LegacyValue
+		return s, true, err
+	}
 	if request && b.readers[t] == ReadsValue {
 		b.used["reader:"+t.String()] = true
-		s, err := b.wrapped(t, where)
+		s, err := b.wrapped(t, where, request)
 		return s, true, err
 	}
 	if t.Implements(marshalerType) || reflect.PointerTo(t).Implements(marshalerType) {
@@ -358,37 +480,44 @@ func (b *builder) named(t reflect.Type, where string, request bool) (Schema, boo
 	return Schema{}, false, nil
 }
 
-// wrapped is the request value a ReadsValue wrapper reads into its field
-// Value. The wrapper itself tells an absent key from null.
-func (b *builder) wrapped(t reflect.Type, where string) (Schema, error) {
+// wrapped describes the Value of a transparent wrapper.
+func (b *builder) wrapped(t reflect.Type, where string, request bool) (Schema, error) {
 	sf, ok := t.FieldByName("Value")
 	if !ok || t.Kind() != reflect.Struct {
 		return Schema{}, fmt.Errorf("%s: %s reads a value but has no field Value", where, t)
 	}
 	at := where + "." + t.Name() + ".Value"
-	s, err := b.schema(sf.Type, at, true)
+	s, err := b.schema(sf.Type, at, request)
 	if errors.Is(err, errBareInt64) {
-		err = b.numericID(&s, t, sf.Name, false, at)
+		err = bareInt64(at)
 	}
 	return s, err
 }
 
 func (b *builder) object(t reflect.Type, where string, request bool) (string, error) {
-	name := t.Name()
+	// An instance of a generic type is named for the type: the owner of a
+	// route declares it, the root names the rows it carries (#7563). Two
+	// instances of one type collide below like any two types of one name.
+	name, _, _ := strings.Cut(t.Name(), "[")
 	if name == "" {
 		return "", fmt.Errorf("%s: anonymous struct is not supported", where)
 	}
-	if known, ok := b.names[t]; ok {
-		if b.requestTypes[known] != request {
-			return "", fmt.Errorf("%s: %s is used as a request and as a response", where, t)
+	names := b.names
+	if request {
+		names = b.requestNames
+		// A type an answer carries too is a request under a name of its own:
+		// a body has only optional fields, an answer its required ones.
+		if _, answered := b.names[t]; answered {
+			name += "Input"
 		}
+	}
+	if known, ok := names[t]; ok {
 		return known, nil
 	}
-	if existing, taken := b.types[name]; taken && existing.GoType != t.String() {
+	if existing, taken := b.types[name]; taken {
 		return "", fmt.Errorf("%s: type name %s is used by %s and %s", where, name, existing.GoType, t)
 	}
-	b.names[t] = name
-	b.requestTypes[name] = request
+	names[t] = name
 	// Reserved before the walk so that a recursive type terminates.
 	b.types[name] = Object{Name: name, GoType: t.String(), Request: request}
 	fields, err := b.fields(t, where+" "+name, request)

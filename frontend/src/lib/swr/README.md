@@ -119,10 +119,51 @@ the rule does not need. Träger pages and cards use `useTraegerResource`
 (`components/traeger/use-traeger-resource.ts`): Träger session gate, refusal
 rules and load error in one return shape. A read the access log records on a
 person's explicit click (`utilization-children.tsx`) stays a click handler.
-A read that must be new each time its surface opens (the preview of a
-deletion, the version an edit saves against, a form's template) uses
-`useFreshSWR`: it shows nothing of an earlier opening. There is no
-runtime registry. Direct package imports outside this boundary and new free
+There is no runtime registry.
+
+## Reading and saving (ADR 0311)
+
+A surface reads stored state in one of three ways:
+
+1. **A read for display** goes through the shared cache: `useSWRAuth` or a
+   hook built on it (`useImmutableSWR`, `useConfirmedSWR`; Träger:
+   `useTraegerResource`).
+2. **An edit of stored state, or a preview a write confirms with its
+   token,** goes through `useReadDraft` (`~/lib/swr/read-draft`); a draft
+   on a read the surface already holds (a list row) through `useDraftOn`.
+   They read per opening, keep the token from the moment editing starts,
+   refill only an untouched draft (a preview confirm with `follow: false`
+   holds the preview it opened with), read the stored state after a
+   refusal, send nothing until a read of it succeeded, take the token of a
+   save's answer (or read again), and report a failed read as a load error
+   (`status` `loadFailed`, `error`) that the surface shows also over a
+   draft on screen (`useReadDraftLoadError`). A form with its own
+   `FormErrorAlert` takes `useReadDraftForm`: its `begin()` refuses to send
+   while `canSubmit` is false without clearing the shown error, and its
+   `loadError` shows the failed read.
+3. **A read the server logs or authorizes on every opening** (an access
+   log entry per read) goes through
+   `useOpeningRead(key, fetcher, { showCached: false })` (Träger:
+   `useFreshTraegerResource`): nothing shows until this opening's own read
+   answered. Focus, reconnect and key changes start no read; an
+   invalidation of the key does, and its answer replaces the shown one.
+   Such a read is one more log entry: a write hands its answer to
+   `mutate(answer, { revalidate: false })` instead of invalidating the key.
+
+Not covered: a preview of an uploaded file (`useCsvFilePreview`, the
+Träger imports) answers a POST, and its token comes with that answer.
+Surfaces that still hold a hand-rolled draft move onto `useReadDraft`
+under #7904; a new one starts there.
+
+A write that depends on what was read sends its token (`expected_version`,
+`expected_fingerprint`); the server refuses a changed state with 409
+`general.changed_since_read` or an older module code of the same meaning
+(`isReadStateRefusal` in `~/lib/api-error`). Show it with
+`show(error, { reload })` of the error path: it offers no retry or action,
+waits for the reload and, when that read fails, shows the load error with
+„Der neue Stand konnte nicht geladen werden.“ and a retry of the read
+alone. `revalidateOrThrow(read)` turns a `useSWRAuth` read into such a
+reload; SWR's own `mutate()` resolves with the old data when it fails. Direct package imports outside this boundary and new free
 hook keys fail oxlint; both baselines are empty and take no new entry. A free key is
 anything at a `useSWRAuth` or `useImmutableSWR` call that is
 not built by an export of `~/lib/swr` (directly, through a local constant or
@@ -135,7 +176,7 @@ After the server refuses a read (401 or 403 as an access decision,
 no data and the data leaves the cache. It shows again only after a read of
 the key succeeded: a later 5xx, a network failure or a cache write does not
 bring it back. Logout and an account switch lift every refusal. This holds
-for `useSWRAuth`, `useImmutableSWR` and `useFreshSWR` without anything at the
+for `useSWRAuth`, `useImmutableSWR` and `useOpeningRead` without anything at the
 call site; a page shows the error because its data is gone. A 404, or a
 refusal that has to remove other keys too (a child a guardian lost), stays
 with `useConfirmedSWR`, `useTraegerResource` or `useDiscardRefusedEntity`.

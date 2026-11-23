@@ -8,9 +8,7 @@ package presence_test
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -50,15 +48,6 @@ func caregiverClaims(t *testing.T, tc *testContext, name string) testutil.Claims
 	}
 }
 
-// foreignActiveGroup creates a running module nobody in the test supervises.
-func foreignActiveGroup(t *testing.T, tc *testContext, label string) int64 {
-	t.Helper()
-
-	room := testpkg.CreateTestRoom(t, tc.db, fmt.Sprintf("Overview Room %s", label))
-	activityGroup := testpkg.CreateTestActivityGroup(t, tc.db, fmt.Sprintf("Overview Activity %s", label))
-	return testpkg.CreateTestActiveGroup(t, tc.db, activityGroup.ID, room.ID).ID
-}
-
 func getWithClaims(t *testing.T, router testutil.Router, path string, claims testutil.Claims) int {
 	t.Helper()
 
@@ -68,8 +57,7 @@ func getWithClaims(t *testing.T, router testutil.Router, path string, claims tes
 
 // TestOperationalOverviewScope_OwnKeepsCaregiverOnOwnSupervisions is the
 // default and the deactivation case in one: without the freigabe, a caregiver
-// neither gets the school-wide list nor the detail of a module they do not
-// supervise.
+// does not get the school-wide list.
 func TestOperationalOverviewScope_OwnKeepsCaregiverOnOwnSupervisions(t *testing.T) {
 	t.Parallel()
 
@@ -77,19 +65,15 @@ func TestOperationalOverviewScope_OwnKeepsCaregiverOnOwnSupervisions(t *testing.
 	setOverviewScopeForTest(t, tc, tenantsettings.OverviewScopeOwn)
 
 	claims := caregiverClaims(t, tc, "Own")
-	groupID := foreignActiveGroup(t, tc, "own")
 
 	assert.Equal(t, testutil.StatusForbidden,
 		getWithClaims(t, router, "/active/supervisors/all", claims),
 		"the school-wide list must stay closed on the own scope")
-	assert.Equal(t, testutil.StatusForbidden,
-		getWithClaims(t, router, fmt.Sprintf("/active/groups/%d/visits/display", groupID), claims),
-		"a foreign module's detail must stay closed on the own scope")
 }
 
 // TestOperationalOverviewScope_AllStaffOpensListAndDetail is the acceptance
-// criterion: with the freigabe a caregiver opens every running module, and the
-// list and the detail route agree — no block without a working detail call.
+// criterion: with the freigabe a caregiver opens the list of every running
+// module.
 func TestOperationalOverviewScope_AllStaffOpensListAndDetail(t *testing.T) {
 	t.Parallel()
 
@@ -97,14 +81,10 @@ func TestOperationalOverviewScope_AllStaffOpensListAndDetail(t *testing.T) {
 	setOverviewScopeForTest(t, tc, tenantsettings.OverviewScopeAllStaff)
 
 	claims := caregiverClaims(t, tc, "AllStaff")
-	groupID := foreignActiveGroup(t, tc, "allstaff")
 
 	assert.Equal(t, testutil.StatusOK,
 		getWithClaims(t, router, "/active/supervisors/all", claims),
 		"the school-wide list must open for verified staff")
-	assert.Equal(t, testutil.StatusOK,
-		getWithClaims(t, router, fmt.Sprintf("/active/groups/%d/visits/display", groupID), claims),
-		"every module the list shows must also answer its detail route")
 }
 
 // TestOperationalOverviewScope_SchoolPortalCannotReachTenantRoutes verifies
@@ -120,14 +100,10 @@ func TestOperationalOverviewScope_SchoolPortalCannotReachTenantRoutes(t *testing
 	claims.Scope = tenant.ScopeSchool
 	claims.IsAdmin = true
 	claims.Roles = []string{"admin"}
-	groupID := foreignActiveGroup(t, tc, "school-portal")
 
 	assert.Equal(t, testutil.StatusUnauthorized,
 		getWithClaims(t, router, "/active/supervisors/all", claims),
 		"the tenant middleware must reject a school-portal token")
-	assert.Equal(t, testutil.StatusUnauthorized,
-		getWithClaims(t, router, fmt.Sprintf("/active/groups/%d/visits/display", groupID), claims),
-		"the school portal must not expose a tenant operational detail")
 }
 
 // TestOperationalOverviewScope_GroupModeIsNotAnAccessRule pins the decoupling
@@ -144,29 +120,8 @@ func TestOperationalOverviewScope_GroupModeIsNotAnAccessRule(t *testing.T) {
 	setOverviewScopeForTest(t, tc, tenantsettings.OverviewScopeOwn)
 
 	claims := caregiverClaims(t, tc, "GroupMode")
-	groupID := foreignActiveGroup(t, tc, "groupmode")
 
 	assert.Equal(t, testutil.StatusForbidden,
 		getWithClaims(t, router, "/active/supervisors/all", claims),
 		"open care is an organisational decision, not a freigabe")
-	assert.Equal(t, testutil.StatusForbidden,
-		getWithClaims(t, router, fmt.Sprintf("/active/groups/%d/visits/display", groupID), claims))
-}
-
-func TestGroupVisitsDisplayRejectsUnreadablePhotoSetting(t *testing.T) {
-	t.Parallel()
-	tc := setupActiveRoute(t, &settingsDouble{ResolveBoolFn: func(_ context.Context, key string) (bool, error) {
-		if key == tenantsettings.KeyStudentPhotosEnabled {
-			return false, errors.New("private photo setting failure")
-		}
-		return false, nil
-	}})
-	groupID := foreignActiveGroup(t, tc, "photo-failure")
-	account := testpkg.CreateTestAccount(t, tc.db, "photo-setting-reader")
-	request := testutil.NewJSONRequest(t, http.MethodGet, fmt.Sprintf("/active/groups/%d/visits/display", groupID), nil)
-	response := testutil.ExecuteWithAuthPermissions(t, mountActiveRouter(tc), request, testutil.AdminTestClaims(int(account.ID)), []string{"admin:*"})
-	require.Equal(t, http.StatusInternalServerError, response.Code, response.Body.String())
-	assert.Contains(t, response.Body.String(), `"code":"general.server"`)
-	assert.NotContains(t, response.Body.String(), "private photo setting failure")
-	assert.NotContains(t, response.Body.String(), `"data"`)
 }

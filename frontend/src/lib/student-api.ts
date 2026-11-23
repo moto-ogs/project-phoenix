@@ -1,17 +1,29 @@
-// The browser's client for the student: list, detail, update, check-in, photo,
-// deletion and privacy consent. Every call goes through the tenant BFF routes
-// under /api/students, which own the backend wire shape.
+// The browser's client for the student: list, detail, create, update,
+// check-in, photo, deletion and privacy consent. The calls go through the
+// staff portal's catalog proxy under /api/students; this module maps the
+// contract's shape (student-wire) onto the browser's Student once.
 
-import { apiErrorFromText } from "./api-error";
+import { ApiError } from "./api-error";
 import {
   mapAttendanceHistoryResponse,
   type AttendanceHistory,
-  type BackendAttendanceHistoryResponse,
 } from "./attendance-history-helpers";
 import { bffJson } from "./bff-fetch";
+import type {
+  EnrollmentAnswerFilterResponse,
+  PrivacyConsentDefaultsResponse,
+  PrivacyConsentResponse,
+  RoomHistoryStopResponse,
+  StudentEnrollmentExtraFieldGroup,
+  changeHistoryEntry,
+  schoolCheckinBatchRequest,
+  schoolCheckinRequest,
+  studentDeleteImpactResponse,
+  studentDeleteRequest,
+} from "./contract/students.generated";
+import { knownEnum } from "./contract/known-enum";
 import { createLogger } from "~/lib/logger";
 import { encodeMultiValueParam } from "./multi-value-param";
-import { sessionFetch } from "./session-cache";
 import type {
   CareOfferingOption,
   EnrollmentAnswerFilter,
@@ -22,16 +34,34 @@ import type {
 } from "./student-helpers";
 import { notifyStudentCompanionsChanged } from "./student-companion-api";
 import {
+  readConsentAfterWrite,
+  readStudentConsentVersion,
+  sentConsentPair,
+  writeStudentConsent,
+} from "./student-privacy-consent";
+import {
+  studentCreateRequest,
+  type StudentCreateBody,
+} from "./student-request";
+import {
   CompanionPlanConflictError,
   isCompanionPlanConflictResponse,
+  PRIVACY_CONSENT_SAVED_DETAIL,
 } from "./student-update-errors";
+import {
+  mapStudentDetailResponse,
+  mapStudentListRow,
+  mapStudentResponse,
+  prepareStudentForBackend,
+  writeMayChangeCompanions,
+  type StudentView,
+} from "./student-wire";
 
 const logger = createLogger({ component: "StudentAPI" });
 
 /** The filters of `GET /api/students`. */
 export interface StudentFilters {
   search?: string;
-  inHouse?: boolean;
   /**
    * Educational group(s). Several may be selected at once (#2218) and travel
    * comma-separated; the backend reads both that form and a repeated parameter.
@@ -66,6 +96,8 @@ export interface StudentFilters {
   includeArrivalTimes?: boolean;
   /** Companion links for the shown day; costs an extra query per page. */
   includeCompanions?: boolean;
+  /** Keeps children whose care ends with a pending withdrawal (#2487). */
+  includePendingWithdrawals?: boolean;
   /**
    * Wire projection. "slim" (#2097) drops address, health, guardian and
    * schedule fields; "names" (#4996) keeps only ID and name.
@@ -78,7 +110,6 @@ const QUERY_KEYS: Record<
   string
 > = {
   search: "search",
-  inHouse: "in_house",
   roomId: "room_id",
   locationState: "location_state",
   dayStatus: "day_status",
@@ -93,6 +124,7 @@ const QUERY_KEYS: Record<
   includePickupTimes: "include_pickup_times",
   includeArrivalTimes: "include_arrival_times",
   includeCompanions: "include_companions",
+  includePendingWithdrawals: "include_pending_withdrawals",
   view: "view",
 };
 
@@ -102,14 +134,14 @@ const MULTI_VALUE_KEYS = {
   gradeLevel: "grade_level",
 } as const;
 
-function studentQuery(filters: StudentFilters = {}): string {
-  const params = new URLSearchParams();
+function studentQuery(filters: StudentFilters = {}): Record<string, string> {
+  const query: Record<string, string> = {};
   for (const [key, param] of Object.entries(QUERY_KEYS)) {
     const value = filters[key as keyof typeof QUERY_KEYS];
-    // false and 0 restrict nothing, except in_house where false is a filter.
-    if (value === undefined || value === "" || value === 0) continue;
-    if (value === false && key !== "inHouse") continue;
-    params.append(param, String(value));
+    // false and 0 restrict nothing.
+    if (value === undefined || value === "" || value === 0 || value === false)
+      continue;
+    query[param] = String(value);
   }
   // A selection of several values travels comma-separated and escaped (see
   // lib/multi-value-param); a single string is taken as already encoded.
@@ -118,23 +150,30 @@ function studentQuery(filters: StudentFilters = {}): string {
     const encoded = Array.isArray(value)
       ? encodeMultiValueParam(value)
       : (value ?? "").trim();
-    if (encoded) params.append(param, encoded);
+    if (encoded) query[param] = encoded;
   }
-  const query = params.toString();
-  return query ? `?${query}` : "";
+  return query;
 }
 
+/**
+ * One page of children. Without a page size the backend answers every child
+ * up to its cap of 1000 in one page.
+ */
 export async function fetchStudents(
   filters?: StudentFilters,
 ): Promise<{ students: Student[]; pagination: StudentPage["pagination"] }> {
-  const page = await bffJson<StudentPage>(
-    `/api/students${studentQuery(filters)}`,
-  );
-  return { students: page.data, pagination: page.pagination };
+  const page = await bffJson("tenant", "GET /api/students/", {
+    query: studentQuery(filters),
+  });
+  const view: StudentView = filters?.view ?? "full";
+  return {
+    students: page.data.map((row) => mapStudentListRow(row, view)),
+    pagination: page.pagination,
+  };
 }
 
 export async function fetchSchoolClasses(): Promise<string[]> {
-  return bffJson<string[]>("/api/students/school-classes");
+  return bffJson("tenant", "GET /api/students/school-classes");
 }
 
 /** Names for a complete local child selector, including subsequent pages. */
@@ -150,51 +189,124 @@ export async function fetchAllStudentNames(): Promise<Student[]> {
 
 /** One child with access flags, feature flags and privacy consent. */
 export async function fetchStudent(id: string): Promise<Student> {
-  return bffJson<Student>(`/api/students/${encodeURIComponent(id)}`);
+  // The detail read carries the consent: one read and no consent waterfall.
+  return mapStudentDetailResponse(
+    await bffJson("tenant", "GET /api/students/{id}", {
+      params: { id },
+      query: { include_privacy_consent: true },
+    }),
+  );
 }
 
-/** The registration questions the child list can filter by (#6954). */
-export async function fetchEnrollmentAnswerFilters(): Promise<
-  EnrollmentAnswerFilter[]
-> {
-  return bffJson<EnrollmentAnswerFilter[]>(
-    "/api/students/enrollment-answer-filters",
+/**
+ * Creates a child with its guardians and weekly schedules (one backend
+ * transaction), then the privacy consent the form changed. The consent lives
+ * at another backend endpoint, so it cannot join that transaction: when it
+ * fails, the child exists anyway and the answer carries the consent that is
+ * actually stored and `privacy_consent_saved: false`, so the form can say
+ * that the input was lost and the person can correct it on the child's page
+ * (#5970). The marker is absent whenever nothing was lost.
+ */
+export async function createStudent(body: StudentCreateBody): Promise<Student> {
+  const consent = sentConsentPair(body);
+  const created = await bffJson("tenant", "POST /api/students/", {
+    body: studentCreateRequest(body),
+  });
+
+  let written = consent;
+  if (consent) {
+    try {
+      // The child is new: its consent is written against the state read
+      // right after creating it, with nothing recorded yet.
+      await writeStudentConsent(
+        created.id,
+        consent,
+        await readStudentConsentVersion(created.id),
+      );
+    } catch (consentError) {
+      written = null;
+      logger.error("privacy_consent_write_failed_after_create", {
+        student_id: created.id,
+        error:
+          consentError instanceof Error
+            ? consentError.message
+            : String(consentError),
+      });
+    }
+  }
+
+  return {
+    ...mapStudentResponse(created),
+    ...(await readConsentAfterWrite(created.id, written)),
+    ...(consent && !written && { privacy_consent_saved: false }),
+  };
+}
+
+/**
+ * Marks a refused student write whose consent write had landed already, so
+ * the form says which half was saved (isPrivacyConsentSaved). Status, code,
+ * field errors and the companion conflict list stay as the backend sent them.
+ */
+function markPrivacyConsentSaved(error: unknown): unknown {
+  if (!(error instanceof ApiError)) return error;
+  error.details = { ...error.details, [PRIVACY_CONSENT_SAVED_DETAIL]: true };
+  return error;
+}
+
+/**
+ * The registration questions the child list can filter by (#6954), read
+ * through the portal's catalog proxy since #7563. `date` is the list's
+ * planning day (YYYY-MM-DD); omit it for today. The answers name the children
+ * in care that day (#7645).
+ */
+export async function fetchEnrollmentAnswerFilters(
+  date?: string,
+): Promise<EnrollmentAnswerFilter[]> {
+  const filters = await bffJson(
+    "tenant",
+    "GET /api/students/enrollment-answer-filters",
+    date ? { query: { date } } : undefined,
   );
+  return filters.map(mapEnrollmentAnswerFilter);
 }
 
 /** The school's active care offerings that count as care (#4571). */
 export async function fetchCareOfferingOptions(): Promise<
   CareOfferingOption[]
 > {
-  return bffJson<CareOfferingOption[]>("/api/students/care-offerings");
+  const offerings = await bffJson("tenant", "GET /api/students/care-offerings");
+  return offerings.map((offering) => ({
+    id: offering.id,
+    name: offering.name,
+  }));
 }
 
-interface StudentEnrollmentExtraField {
-  key: string;
-  label: string;
-  type: string;
-  target?: string;
-  options?: { label: string; value: string }[];
-  value: unknown;
-}
-
-export interface StudentEnrollmentExtraFieldGroup {
-  request_id: string;
-  phase_name: string;
-  submitted_at: string;
-  fields: StudentEnrollmentExtraField[];
+/** A filter question of the contract, without the type the list needs not. */
+function mapEnrollmentAnswerFilter(
+  filter: EnrollmentAnswerFilterResponse,
+): EnrollmentAnswerFilter {
+  return {
+    key: filter.key,
+    label: filter.label,
+    options: (filter.options ?? []).map((option) => ({
+      value: option.value,
+      label: option.label,
+      count: option.count,
+      studentIds: option.student_ids ?? [],
+    })),
+  };
 }
 
 export async function fetchStudentEnrollmentExtraFields(
   id: string,
 ): Promise<StudentEnrollmentExtraFieldGroup[]> {
-  return bffJson<StudentEnrollmentExtraFieldGroup[]>(
-    `/api/students/${encodeURIComponent(id)}/enrollment-extra-fields`,
-  );
+  return bffJson("tenant", "GET /api/students/{id}/enrollment-extra-fields", {
+    params: { id },
+  });
 }
 
 /**
- * Updates a child.
+ * Updates a child and, when the form changed it, the privacy consent.
  *
  * A 409 carrying a conflict list means a linked child's own departure plan
  * does not allow the requested "läuft mit" days. It is a question, not a
@@ -203,56 +315,66 @@ export async function fetchStudentEnrollmentExtraFields(
  * Every other refusal keeps code, field errors and request ID (#2513); the
  * predicates in student-update-errors recognise the companion ones by code.
  *
- * Mounted "läuft mit" views refetch when the write changed the links, as the
- * route reports. An open Laufgemeinschaft form answers that by discarding its
- * draft, so a write that changed none announces nothing.
+ * Consent BEFORE the student PUT, deliberately. Both writes can fail, so one
+ * of them has to run while the other is still undone, and the two are not
+ * interchangeable. The consent PUT writes the two values of this update
+ * against the consent version the form read: failing it leaves the student
+ * untouched. The student PUT carries the companion fingerprint (#1694) and
+ * the master-data version (ADR 0311), so once it commits, a retry of the
+ * same payload is refused. Running it last means a reported failure never
+ * hides a committed companion write; a student PUT failing on top of a
+ * committed consent write says so (markPrivacyConsentSaved), and the caller
+ * then leaves the saved consent out of a retry.
+ *
+ * The consequence for callers: a consent pair in the update is WRITTEN,
+ * refused student PUT or not, so only a save that actually changes it may
+ * send it.
+ *
+ * Mounted "läuft mit" views refetch when the write changed the links: the
+ * backend's verdict, or what the update can change when it sent none. An
+ * open Laufgemeinschaft form answers that by discarding its draft, so a
+ * write that changed none announces nothing.
  */
 export async function updateStudent(
   id: string,
   update: StudentUpdate,
 ): Promise<Student> {
-  const response = await sessionFetch(
-    `/api/students/${encodeURIComponent(id)}`,
-    { method: "PUT", body: JSON.stringify(update) },
-  );
-  if (!response.ok) {
-    const body = await response.text();
-    if (response.status === 409 && isCompanionPlanConflictResponse(body)) {
-      throw new CompanionPlanConflictError(body);
-    }
-    throw apiErrorFromText(
-      `Student update failed (${response.status})`,
-      response.status,
-      body,
-    );
+  const consent = sentConsentPair(update);
+  if (consent)
+    await writeStudentConsent(id, consent, update.privacy_consent_version);
+
+  let data;
+  try {
+    data = await bffJson("tenant", "PUT /api/students/{id}", {
+      params: { id },
+      body: prepareStudentForBackend(update),
+      errorMessage: "Student update failed",
+    });
+  } catch (failure) {
+    const error =
+      failure instanceof ApiError &&
+      failure.status === 409 &&
+      isCompanionPlanConflictResponse(failure.problem)
+        ? new CompanionPlanConflictError(failure.problem)
+        : failure;
+    throw consent ? markPrivacyConsentSaved(error) : error;
   }
-  const { data } = (await response.json()) as {
-    data: Student & { companions_changed: boolean };
-  };
-  if (data.companions_changed) {
+  if (data.companions_changed ?? writeMayChangeCompanions(update)) {
     notifyStudentCompanionsChanged();
   }
-  return data;
-}
-
-/** The latest recorded change of a tracked field (#1455). */
-export interface StudentFieldChange {
-  id: string;
-  field: string;
-  /** Already formatted German values. */
-  old_value: string;
-  new_value: string;
-  edited_by: string;
-  changed_at: string;
+  return {
+    ...mapStudentResponse(data),
+    ...(await readConsentAfterWrite(id, consent)),
+  };
 }
 
 /** Recorded field changes, newest first; the backend requires full access. */
 export async function fetchStudentChangeHistory(
   id: string,
-): Promise<StudentFieldChange[]> {
-  return bffJson<StudentFieldChange[]>(
-    `/api/students/${encodeURIComponent(id)}/change-history`,
-  );
+): Promise<changeHistoryEntry[]> {
+  return bffJson("tenant", "GET /api/students/{id}/change-history", {
+    params: { id },
+  });
 }
 
 /** The child's Anwesenheitsprotokoll (#1425); 403 when the school turned it off. */
@@ -260,9 +382,9 @@ export async function fetchStudentAttendanceHistory(
   id: string,
 ): Promise<AttendanceHistory> {
   return mapAttendanceHistoryResponse(
-    await bffJson<BackendAttendanceHistoryResponse>(
-      `/api/students/${encodeURIComponent(id)}/attendance-history`,
-    ),
+    await bffJson("tenant", "GET /api/students/{id}/attendance-history", {
+      params: { id },
+    }),
   );
 }
 
@@ -273,27 +395,27 @@ export type SchoolCheckinAction = "in" | "out";
 /** Why a checkout is no departure for the day: the child goes to class (#5656). */
 export type SchoolCheckoutReason = "class";
 
-type SchoolLocation = "Anwesend" | "Schulhof" | "Abwesend" | "Im Unterricht";
+type SchoolCheckinStatus =
+  "checked_in" | "on_yard" | "checked_out" | "not_checked_in";
+
+const SCHOOL_CHECKIN_STATUSES: readonly SchoolCheckinStatus[] = [
+  "checked_in",
+  "on_yard",
+  "checked_out",
+  "not_checked_in",
+];
 
 /** The attendance state after the call, so the UI can update optimistically. */
 interface SchoolCheckinResponse {
   studentId: string;
-  status: "checked_in" | "on_yard" | "checked_out" | "not_checked_in";
+  /** undefined: a status this build does not know. */
+  status: SchoolCheckinStatus | undefined;
   checkInTime?: string;
   checkOutTime?: string;
   yardSince?: string;
-  location: SchoolLocation;
+  /** The presence label Go derives („Anwesend“, „Im Unterricht“, …). */
+  location: string;
   /** false when the student was already in the target state. */
-  changed: boolean;
-}
-
-interface BackendSchoolCheckinResponse {
-  student_id: number | string;
-  status: SchoolCheckinResponse["status"];
-  check_in_time?: string;
-  check_out_time?: string;
-  yard_since?: string;
-  location: SchoolLocation;
   changed: boolean;
 }
 
@@ -313,20 +435,22 @@ export async function schoolCheckinStudent(
   const note = action === "out" ? checkoutNote?.trim() : undefined;
   const reason = action === "out" ? checkoutReason : undefined;
   try {
-    const data = await bffJson<BackendSchoolCheckinResponse>(
-      `/api/students/${encodeURIComponent(studentId)}/school-checkin`,
+    const body: schoolCheckinRequest = reason
+      ? { action, reason }
+      : note
+        ? { action, note }
+        : { action };
+    const data = await bffJson(
+      "tenant",
+      "POST /api/students/{id}/school-checkin",
       {
-        method: "POST",
-        body: reason
-          ? { action, reason }
-          : note
-            ? { action, note }
-            : { action },
+        params: { id: studentId },
+        body,
       },
     );
     return {
-      studentId: String(data.student_id),
-      status: data.status,
+      studentId: data.student_id,
+      status: knownEnum(SCHOOL_CHECKIN_STATUSES, data.status),
       checkInTime: data.check_in_time,
       checkOutTime: data.check_out_time,
       yardSince: data.yard_since,
@@ -350,7 +474,8 @@ interface SchoolCheckinBatchResult {
   ok: boolean;
   /** false when the student was already in the target state (no-op). */
   changed: boolean;
-  location?: "Anwesend" | "Schulhof" | "Abwesend";
+  /** The presence label Go derives; „Im Unterricht“ after a class checkout. */
+  location?: string;
   /** Machine-readable failure code, e.g. "not_found". */
   error?: string;
 }
@@ -358,21 +483,6 @@ interface SchoolCheckinBatchResult {
 export interface SchoolCheckinBatchOutcome {
   action: SchoolCheckinAction;
   results: SchoolCheckinBatchResult[];
-  succeeded: number;
-  failed: number;
-}
-
-interface BackendSchoolCheckinBatchResponse {
-  action: SchoolCheckinAction;
-  results: Array<{
-    // String IDs on this endpoint: they are matched back against the
-    // selection, and a JSON number would corrupt int64 IDs above 2^53-1.
-    student_id: string;
-    ok: boolean;
-    changed: boolean;
-    location?: "Anwesend" | "Schulhof" | "Abwesend";
-    error?: string;
-  }>;
   succeeded: number;
   failed: number;
 }
@@ -413,19 +523,20 @@ export async function schoolCheckinStudentsBatch(
       offset + SCHOOL_CHECKIN_BATCH_CHUNK_SIZE,
     );
     try {
-      const data = await bffJson<BackendSchoolCheckinBatchResponse>(
-        "/api/students/school-checkin/batch",
-        {
-          method: "POST",
-          body: checkoutReason
-            ? { action, reason: checkoutReason, student_ids: chunk }
-            : { action, student_ids: chunk },
-        },
+      // String IDs on this endpoint: they are matched back against the
+      // selection, and a JSON number would corrupt int64 IDs above 2^53-1.
+      const body: schoolCheckinBatchRequest = checkoutReason
+        ? { action, reason: checkoutReason, student_ids: chunk }
+        : { action, student_ids: chunk };
+      const data = await bffJson(
+        "tenant",
+        "POST /api/students/school-checkin/batch",
+        { body },
       );
       outcome.succeeded += data.succeeded;
       outcome.failed += data.failed;
       outcome.results.push(
-        ...data.results.map((result) => ({
+        ...(data.results ?? []).map((result) => ({
           studentId: result.student_id,
           ok: result.ok,
           changed: result.changed,
@@ -459,32 +570,6 @@ export async function schoolCheckinStudentsBatch(
 
 // ─── Deletion ───────────────────────────────────────────────────────────────
 
-export interface StudentDeletionCounts {
-  timetable_assignments: number;
-  activity_enrollments: number;
-  attendance_records: number;
-  care_schedules: number;
-  guardian_links: number;
-  companion_links: number;
-  communications: number;
-  consents: number;
-  enrollment_references: number;
-  other_records: number;
-}
-
-export interface StudentDeletionImpact {
-  confirmation_name: string;
-  fingerprint: string;
-  total: number;
-  counts: StudentDeletionCounts;
-  preserved: {
-    guardian_profiles: boolean;
-    parent_accounts: boolean;
-    other_students: boolean;
-    shared_instances: boolean;
-  };
-}
-
 export type StudentDeletionReason =
   | "test_data"
   | "incorrect_entry"
@@ -494,22 +579,23 @@ export type StudentDeletionReason =
   // Austritt liegt lange genug zurück, die Aufbewahrungsfrist ist um.
   | "retention_expired";
 
-interface DeleteStudentWithDataInput {
-  expected_fingerprint: string;
-  confirmation_name: string;
+type DeleteStudentWithDataInput = studentDeleteRequest & {
   reason: StudentDeletionReason;
-  acknowledged: true;
-}
+};
 
 export async function fetchStudentDeletionImpact(
   id: string,
   completionId?: string,
-): Promise<StudentDeletionImpact> {
-  return bffJson<StudentDeletionImpact>(
-    completionId
-      ? `/api/students/care-withdrawals/${encodeURIComponent(completionId)}/deletion-impact`
-      : `/api/students/${encodeURIComponent(id)}/delete-impact`,
-  );
+): Promise<studentDeleteImpactResponse> {
+  return completionId
+    ? bffJson(
+        "tenant",
+        "GET /api/students/care-withdrawals/{completionId}/deletion-impact",
+        { params: { completionId } },
+      )
+    : bffJson("tenant", "GET /api/students/{id}/delete-impact", {
+        params: { id },
+      });
 }
 
 export async function deleteStudentWithData(
@@ -517,12 +603,19 @@ export async function deleteStudentWithData(
   input: DeleteStudentWithDataInput,
   completionId?: string,
 ): Promise<void> {
-  await bffJson<unknown>(
-    completionId
-      ? `/api/students/care-withdrawals/${encodeURIComponent(completionId)}`
-      : `/api/students/${encodeURIComponent(id)}`,
-    { method: "DELETE", body: input },
-  );
+  await (completionId
+    ? bffJson(
+        "tenant",
+        "DELETE /api/students/care-withdrawals/{completionId}",
+        {
+          params: { completionId },
+          body: input,
+        },
+      )
+    : bffJson("tenant", "DELETE /api/students/{id}", {
+        params: { id },
+        body: input,
+      }));
 }
 
 // ─── Student photo (Datenverwaltung) ────────────────────────────────────────
@@ -553,32 +646,86 @@ export async function uploadStudentPhoto(
   if (options.consentAcknowledged) {
     formData.append("consent_acknowledged", "true");
   }
-  const data = await bffJson<{ photo_url: string }>(
-    `/api/students/${encodeURIComponent(studentId)}/photo`,
-    { method: "POST", body: formData },
-  );
+  const data = await bffJson("tenant", "POST /api/students/{id}/photo", {
+    params: { id: studentId },
+    body: formData,
+  });
   return { photoUrl: data.photo_url };
 }
 
 /** Removes a child's photo (idempotent). */
 export async function deleteStudentPhoto(studentId: string): Promise<void> {
-  await bffJson<unknown>(
-    `/api/students/${encodeURIComponent(studentId)}/photo`,
-    { method: "DELETE" },
+  await bffJson("tenant", "DELETE /api/students/{id}/photo", {
+    params: { id: studentId },
+  });
+}
+
+// ─── Room history stop (#3844) ──────────────────────────────────────────────
+
+/** Whether a child's room history and mood are stopped, and since when. */
+export interface RoomHistoryStop {
+  stopped: boolean;
+  /** Instant the stop began; null while recording. */
+  stoppedAt: string | null;
+  /** Completed visits a new stop deleted; zero otherwise. */
+  deletedVisits: number;
+}
+
+function mapRoomHistoryStop(
+  response: RoomHistoryStopResponse,
+): RoomHistoryStop {
+  return {
+    stopped: response.stopped,
+    stoppedAt: response.stopped_at ?? null,
+    deletedVisits: response.deleted_visits,
+  };
+}
+
+/** Reads the stop of a child's room history and mood. */
+export async function fetchRoomHistoryStop(
+  studentId: string,
+): Promise<RoomHistoryStop> {
+  return mapRoomHistoryStop(
+    await bffJson("tenant", "GET /api/students/{id}/room-history-stop", {
+      params: { id: studentId },
+    }),
+  );
+}
+
+/**
+ * Stops the child's room history and mood and deletes its completed visits.
+ * Only the OGS administration (config:manage) may.
+ */
+export async function stopRoomHistory(
+  studentId: string,
+): Promise<RoomHistoryStop> {
+  return mapRoomHistoryStop(
+    await bffJson("tenant", "PUT /api/students/{id}/room-history-stop", {
+      params: { id: studentId },
+    }),
+  );
+}
+
+/** Lifts the stop; moto records again from now on. */
+export async function resumeRoomHistory(
+  studentId: string,
+): Promise<RoomHistoryStop> {
+  return mapRoomHistoryStop(
+    await bffJson("tenant", "DELETE /api/students/{id}/room-history-stop", {
+      params: { id: studentId },
+    }),
   );
 }
 
 // ─── Privacy consent ────────────────────────────────────────────────────────
 
-interface BackendConsentPair {
-  accepted: boolean;
-  data_retention_days: number;
-}
-
-function mapConsentPair(consent: BackendConsentPair): PrivacyConsent {
+function mapConsentPair(
+  consent: PrivacyConsentResponse | PrivacyConsentDefaultsResponse,
+): PrivacyConsent {
   return {
     accepted: consent.accepted,
     dataRetentionDays: consent.data_retention_days,
+    ...("version" in consent && { version: consent.version }),
   };
 }
 
@@ -591,15 +738,15 @@ export async function fetchStudentPrivacyConsent(
   studentId: string,
 ): Promise<PrivacyConsent> {
   return mapConsentPair(
-    await bffJson<BackendConsentPair>(
-      `/api/students/${encodeURIComponent(studentId)}/privacy-consent`,
-    ),
+    await bffJson("tenant", "GET /api/students/{id}/privacy-consent", {
+      params: { id: studentId },
+    }),
   );
 }
 
 /** The consent a new child starts with: the school's defaults. */
 export async function fetchPrivacyConsentDefaults(): Promise<PrivacyConsent> {
   return mapConsentPair(
-    await bffJson<BackendConsentPair>("/api/students/privacy-consent/defaults"),
+    await bffJson("tenant", "GET /api/students/privacy-consent/defaults"),
   );
 }

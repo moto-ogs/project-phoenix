@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -78,13 +79,29 @@ func TestCreatePartialAbsenceAppliesOnlyToBlocksStartingAfterTheChosenTime(t *te
 	assert.True(t, checkedInAt.Equal(*rows[actualRow.ID].CheckedInAt), "actual check-in instant must be preserved")
 
 	partialAbsenceID := partialAbsenceResponseID(t, rr.Body.Bytes())
-	updateReq := testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/%d/partial-absences/%d", student.ID, partialAbsenceID), map[string]any{
-		"date":      date.String(),
-		"from_time": "14:30",
-		"reason":    "Späterer Arzttermin",
-	})
-	updateRR := authExec(t, tc, updateReq, testutil.AdminTestClaims(int(account.ID)), []string{"admin:*"})
+	created := partialAbsenceResponseVersion(t, rr.Body.Bytes())
+	update := func(fromTime, version string) *httptest.ResponseRecorder {
+		req := testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/%d/partial-absences/%d", student.ID, partialAbsenceID), map[string]any{
+			"date":             date.String(),
+			"from_time":        fromTime,
+			"reason":           "Späterer Arzttermin",
+			"expected_version": version,
+		})
+		return authExec(t, tc, req, testutil.AdminTestClaims(int(account.ID)), []string{"admin:*"})
+	}
+	updateRR := update("14:30", created)
 	require.Equal(t, http.StatusOK, updateRR.Code, updateRR.Body.String())
+
+	// ADR 0311: an edit made against the state before that update, or against
+	// no read at all, is refused and changes nothing.
+	for name, version := range map[string]string{"older read": created, "no read": ""} {
+		stale := update("15:00", version)
+		require.Equal(t, http.StatusConflict, stale.Code, "%s: %s", name, stale.Body.String())
+		require.Contains(t, stale.Body.String(), `"code":"general.changed_since_read"`, name)
+	}
+	listRR := authExec(t, tc, testutil.NewRequest(http.MethodGet, fmt.Sprintf("/%d/partial-absences?from=%s&to=%s", student.ID, date, date), nil), testutil.AdminTestClaims(int(account.ID)), []string{"admin:*"})
+	require.Contains(t, listRR.Body.String(), `"from_time":"14:30"`)
+	require.Contains(t, listRR.Body.String(), `"version":"`+partialAbsenceResponseVersion(t, updateRR.Body.Bytes())+`"`)
 
 	rows = loadAttendanceRows(t, tc, morningRow.ID, overlapRow.ID, afternoonRow.ID, actualRow.ID)
 	assert.Equal(t, studentpresence.SessionAttendanceExpected, rows[afternoonRow.ID].Status, "update must restore the slot no longer covered")
@@ -162,7 +179,7 @@ func TestPartialAbsenceFromRunningBlockStartExcusesTheRestOfTheDay(t *testing.T)
 		fmt.Sprintf("/%d/partial-absences?from=%s&to=%s", student.ID, date.String(), date.String()), nil)
 	listRR := authExec(t, tc, listReq, testutil.AdminTestClaims(int(account.ID)), []string{"admin:*"})
 	require.Equal(t, http.StatusOK, listRR.Code, listRR.Body.String())
-	assert.Contains(t, listRR.Body.String(), fmt.Sprintf(`"id":%d`, partialAbsenceID))
+	assert.Contains(t, listRR.Body.String(), fmt.Sprintf(`"id":"%d"`, partialAbsenceID))
 	assert.Contains(t, listRR.Body.String(), `"from_time":"13:00"`)
 
 	deleteReq := testutil.NewAuthenticatedRequest(t, http.MethodDelete, fmt.Sprintf("/%d/partial-absences/%d", student.ID, partialAbsenceID), nil)
@@ -257,18 +274,18 @@ func TestPartialAbsenceIsAPlannedPickupTimeWithoutAFullDayStatus(t *testing.T) {
 	require.Equal(t, http.StatusOK, listRR.Code, listRR.Body.String())
 	var response struct {
 		Data []struct {
-			ID                int64   `json:"id"`
-			PickupTime        *string `json:"pickup_time"`
-			PickupIsException bool    `json:"pickup_is_exception"`
-			Excused           bool    `json:"excused"`
-			DayPlanningStatus string  `json:"day_planning_status"`
-			DayPlanningReason string  `json:"day_planning_reason"`
+			ID                testpkg.ID `json:"id"`
+			PickupTime        *string    `json:"pickup_time"`
+			PickupIsException bool       `json:"pickup_is_exception"`
+			Excused           bool       `json:"excused"`
+			DayPlanningStatus string     `json:"day_planning_status"`
+			DayPlanningReason string     `json:"day_planning_reason"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(listRR.Body.Bytes(), &response))
 	var found bool
 	for _, row := range response.Data {
-		if row.ID != student.ID {
+		if int64(row.ID) != student.ID {
 			continue
 		}
 		found = true
@@ -282,16 +299,30 @@ func TestPartialAbsenceIsAPlannedPickupTimeWithoutAFullDayStatus(t *testing.T) {
 	assert.True(t, found)
 }
 
+// partialAbsenceResponseVersion is the version an update of the answered
+// partial absence sends back (ADR 0311).
+func partialAbsenceResponseVersion(t *testing.T, body []byte) string {
+	t.Helper()
+	var response struct {
+		Data struct {
+			Version string `json:"version"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(body, &response))
+	require.NotEmpty(t, response.Data.Version)
+	return response.Data.Version
+}
+
 func partialAbsenceResponseID(t *testing.T, body []byte) int64 {
 	t.Helper()
 	var response struct {
 		Data struct {
-			ID int64 `json:"id"`
+			ID testpkg.ID `json:"id"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(body, &response))
 	require.Positive(t, response.Data.ID)
-	return response.Data.ID
+	return int64(response.Data.ID)
 }
 
 // attendanceSlotRow is the slice of a participant's attendance the partial

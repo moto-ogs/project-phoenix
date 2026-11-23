@@ -64,9 +64,9 @@ func registerWithHealth(t *testing.T, f holidayGuestFixture) int64 {
 	}
 	rec := publicJSON(t, f.public, http.MethodPost, registrationPath(f.link), body)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-	return decodeSchoolPortalData[struct {
-		ID int64 `json:"id"`
-	}](t, rec.Body.Bytes()).ID
+	return int64(decodeSchoolPortalData[struct {
+		ID wireID `json:"id"`
+	}](t, rec.Body.Bytes()).ID)
 }
 
 // traegerMemberToken signs another member of the office's Träger in with role.
@@ -143,7 +143,7 @@ func TestHostingSchoolSeesHealthInformationOfItsWeekUntilItsLastDay(t *testing.T
 	week := f.offer.Weeks[0].ID
 	lead := f.staffOf(t, nord, permissions.ConfigRead, permissions.UsersCreate, permissions.UsersRead)
 
-	byName := participantsByName(t, f, lead, week)
+	byName := participantsByName(t, f, lead, int64(week))
 	require.NotNil(t, byName["Mila"].Health, "the hosting school sees the health information of its child")
 	assert.Equal(t, "Erdnüsse-MILA", byName["Mila"].Health.Allergies)
 	require.Len(t, byName["Mila"].Health.Answers, 1, "the shared health question of the form")
@@ -159,7 +159,7 @@ func TestHostingSchoolSeesHealthInformationOfItsWeekUntilItsLastDay(t *testing.T
 	assert.Equal(t, "2", healthEntries, "the access log names how many children's health information the list showed")
 
 	noHealthRight := f.staffOf(t, nord, permissions.ConfigRead)
-	assert.Nil(t, participantsByName(t, f, noHealthRight, week)["Mila"].Health,
+	assert.Nil(t, participantsByName(t, f, noHealthRight, int64(week))["Mila"].Health,
 		"without users:read the list leaves the health information out")
 
 	rec := f.get(t, lead, fmt.Sprintf("/%d/participants/export?format=csv", week))
@@ -187,7 +187,7 @@ func TestHolidayGuestCarriesItsHealthInformationUntilItsContactsGo(t *testing.T)
 	week := f.offer.Weeks[0].ID
 	lead := f.staffOf(t, f.nord, permissions.ConfigRead, permissions.UsersCreate, permissions.UsersRead)
 
-	require.Equal(t, http.StatusOK, f.assign(t, lead, week, f.group).Code)
+	require.Equal(t, http.StatusOK, f.assign(t, lead, int64(week), f.group).Code)
 	f.today.Store(calendar.NewDate(2099, 7, 6))
 	f.reconcile(t)
 	roster := f.roster(t, calendar.NewDate(2099, 7, 8))
@@ -259,7 +259,7 @@ func TestOwnChildKeepsItsHealthFieldAndSeesTheRegistrationBesideIt(t *testing.T)
 	rec := f.get(t, lead, path)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	entries := decodeSchoolPortalData[[]struct {
-		WeekID int64          `json:"week_id"`
+		WeekID wireID         `json:"week_id"`
 		Health hostHealthBody `json:"health"`
 	}](t, rec.Body.Bytes())
 	require.Len(t, entries, 1)

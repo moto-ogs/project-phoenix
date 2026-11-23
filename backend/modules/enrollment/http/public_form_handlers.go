@@ -88,6 +88,9 @@ type PublicEnrollmentFormBootstrapResponse struct {
 	CaptchaConfig             PublicCaptchaConfigResponse `json:"captcha_config"`
 	LegalTexts                PublicLegalTextsResponse    `json:"legal_texts"`
 	LateInvite                *PublicLateInvitePrefill    `json:"late_invite,omitempty"`
+	// TermsFingerprint is the read-state token of the form and its legal
+	// texts (ADR 0311); the submit sends it as expected_terms_fingerprint.
+	TermsFingerprint string `json:"terms_fingerprint"`
 }
 
 // PublicLateInvitePrefill exposes only the recipient fields the parent form
@@ -300,6 +303,7 @@ func buildPublicEnrollmentFormBootstrapResponse(data *PublicFormBootstrapData, c
 		CareOfferingsEnabled:      capabilities.CareOfferingsEnabled,
 		CaptchaConfig:             captcha,
 		LateInvite:                lateInvite,
+		TermsFingerprint:          capability.FormTermsFingerprint(data.Schema, texts.Blocks),
 		LegalTexts: PublicLegalTextsResponse{
 			AGB:                 texts.AGB,
 			DSGVO:               texts.DSGVO,

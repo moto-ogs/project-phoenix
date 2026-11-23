@@ -26,10 +26,6 @@ func NewDemoAccessExpiry(db bun.IDB, now func() time.Time) (*identityaccess.Demo
 	return identityaccess.NewDemoAccessExpiry(demoAccessExpiryEngine{db: db, now: now}), nil
 }
 
-// composeDemoAccess composes the demo access of the public demo (#3462); the
-// token functions are the token adapter's opaque capability token, so only a
-// SHA-256 fingerprint is stored. Callers supply the unit of work on the
-// request context, as every public route does.
 func composeDemoAccess(store *postgres.Store, sessions ports.DemoSessions, deps *identityPorts.DemoDependencies, hasDatabase bool, now func() time.Time) (*identityaccess.DemoAccess, error) {
 	return application.NewDemoAccessBinding(hasDatabase, sessions, deps, store, tenant.WithinAdmin, now)
 }

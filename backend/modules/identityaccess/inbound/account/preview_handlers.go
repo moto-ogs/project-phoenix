@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // StaffPreviewStartRequest selects the staff account to preview (#2893).
@@ -17,7 +18,7 @@ import (
 // client silently rounds numbers beyond 2^53 — which would preview the wrong
 // person. Strings keep the ID exact end to end.
 type StaffPreviewStartRequest struct {
-	AccountID int64 `json:"account_id,string"`
+	AccountID ident.ID `json:"account_id"`
 	// PreviousToken is the preview token the client currently holds, sent
 	// when it renews an expiring preview. It turns the call into a re-mint of
 	// the SAME preview instance, so the audit trail keeps one start per
@@ -53,10 +54,10 @@ func (req *StaffPreviewEndRequest) Bind(_ *http.Request) error {
 // deliberately NO refresh token: the preview is re-minted with the admin's
 // own session and dies with it.
 type StaffPreviewStartResponse struct {
-	AccessToken     string `json:"access_token"`
-	ExpiresIn       int64  `json:"expires_in"`
-	TargetAccountID int64  `json:"target_account_id,string"`
-	TargetName      string `json:"target_name"`
+	AccessToken     string   `json:"access_token"`
+	ExpiresIn       int64    `json:"expires_in" contract:"number"`
+	TargetAccountID ident.ID `json:"target_account_id"`
+	TargetName      string   `json:"target_name"`
 }
 
 // startStaffPreview handles POST /auth/staff-preview (admin only).
@@ -69,7 +70,7 @@ func (rs *Resource) startStaffPreview(w http.ResponseWriter, r *http.Request) {
 
 	claims := sessiontoken.ClaimsFromCtx(r.Context())
 	session, err := rs.AuthService.StartStaffPreview(
-		r.Context(), int64(claims.ID), claims.TenantID, req.AccountID,
+		r.Context(), int64(claims.ID), claims.TenantID, req.AccountID.Int64(),
 		claims.FamilyID, req.PreviousToken, common.GetClientIPString(r), r.UserAgent(),
 	)
 	if err != nil {
@@ -77,10 +78,10 @@ func (rs *Resource) startStaffPreview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	render.JSON(w, r, StaffPreviewStartResponse{
+	common.RenderJSON(w, r, StaffPreviewStartResponse{
 		AccessToken:     session.AccessToken,
 		ExpiresIn:       session.ExpiresIn,
-		TargetAccountID: session.TargetAccountID,
+		TargetAccountID: ident.ID(session.TargetAccountID),
 		TargetName:      session.TargetName,
 	})
 }

@@ -33,7 +33,7 @@ type holidayAddressFormBody struct {
 
 func saveHolidayAddressForm(t *testing.T, f holidayRegistrationFixture, office traegerOffice, periodID int64, requirement string) holidayAddressFormBody {
 	t.Helper()
-	rec := traegerJSON(t, f.traeger, office.token, http.MethodPut, holidayFormPath(periodID),
+	rec := putHolidayForm(t, f.traeger, office.token, holidayFormPath(periodID),
 		map[string]any{"fields": []map[string]any{}, "address_requirement": requirement})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	return decodeSchoolPortalData[holidayAddressFormBody](t, rec.Body.Bytes())
@@ -57,37 +57,37 @@ func TestTraegerSwitchesTheAddressPerFormVersion(t *testing.T) {
 	office := newTraegerOffice(t, f.db, f.traeger, "Anschrift Schalter", identityaccess.TraegerRoleAdministration)
 	period := openHolidays(t, f, office)
 
-	rec := traegerJSON(t, f.traeger, office.token, http.MethodGet, holidayFormPath(period.ID), nil)
+	rec := traegerJSON(t, f.traeger, office.token, http.MethodGet, holidayFormPath(int64(period.ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, "off", decodeSchoolPortalData[holidayAddressFormBody](t, rec.Body.Bytes()).AddressRequirement,
 		"a new period asks for no address")
 
-	saved := saveHolidayAddressForm(t, f, office, period.ID, "required")
+	saved := saveHolidayAddressForm(t, f, office, int64(period.ID), "required")
 	assert.Equal(t, holidayAddressFormBody{Version: 2, AddressRequirement: "required"}, saved)
-	assert.Equal(t, []string{"off", "required"}, holidayFormAddressRequirements(t, f, period.ID),
+	assert.Equal(t, []string{"off", "required"}, holidayFormAddressRequirements(t, f, int64(period.ID)),
 		"the new version carries the setting, the older one does not")
 	rec = publicJSON(t, f.public, http.MethodGet, registrationPath(period.PublicToken), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), `"address_requirement":"required"`, "parents see the setting of the current version")
 
-	rec = traegerJSON(t, f.traeger, office.token, http.MethodPut, holidayFormPath(period.ID), map[string]any{"fields": []map[string]any{}})
+	rec = putHolidayForm(t, f.traeger, office.token, holidayFormPath(int64(period.ID)), map[string]any{"fields": []map[string]any{}})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, "off", decodeSchoolPortalData[holidayAddressFormBody](t, rec.Body.Bytes()).AddressRequirement,
 		"a save without the setting asks for no address")
 
-	rec = traegerJSON(t, f.traeger, office.token, http.MethodPut, holidayFormPath(period.ID),
+	rec = putHolidayForm(t, f.traeger, office.token, holidayFormPath(int64(period.ID)),
 		map[string]any{"fields": []map[string]any{}, "address_requirement": "sometimes"})
 	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 	code, fields := registrationRefusalOf(t, rec)
 	assert.Equal(t, enrollment.CodeHolidayFormFieldNotAllowed, code)
 	assert.Equal(t, []string{"address_requirement"}, fields)
-	assert.Equal(t, []string{"off", "required", "off"}, holidayFormAddressRequirements(t, f, period.ID), "a refused save writes no version")
+	assert.Equal(t, []string{"off", "required", "off"}, holidayFormAddressRequirements(t, f, int64(period.ID)), "a refused save writes no version")
 
 	readOnly := newTraegerOffice(t, f.db, f.traeger, "Anschrift Schalter Lesend", identityaccess.TraegerRoleReadOnly)
 	foreign := newTraegerOffice(t, f.db, f.traeger, "Anschrift Schalter Fremd", identityaccess.TraegerRoleAdministration)
 	body := map[string]any{"fields": []map[string]any{}, "address_requirement": "optional"}
-	assert.Equal(t, http.StatusForbidden, traegerJSON(t, f.traeger, readOnly.token, http.MethodPut, holidayFormPath(period.ID), body).Code)
-	assert.Equal(t, http.StatusNotFound, traegerJSON(t, f.traeger, foreign.token, http.MethodPut, holidayFormPath(period.ID), body).Code)
+	assert.Equal(t, http.StatusForbidden, putHolidayForm(t, f.traeger, readOnly.token, holidayFormPath(int64(period.ID)), body).Code)
+	assert.Equal(t, http.StatusNotFound, putHolidayForm(t, f.traeger, foreign.token, holidayFormPath(int64(period.ID)), body).Code)
 }
 
 // submitWithAddress posts a registration with the address and returns the
@@ -125,7 +125,7 @@ func TestHolidayRegistrationChecksTheAddressAgainstItsFormVersion(t *testing.T) 
 			office := newTraegerOffice(t, f.db, f.traeger, "Anschrift Prüfung "+tc.requirement, identityaccess.TraegerRoleAdministration)
 			period := openHolidays(t, f, office)
 			if tc.requirement != "off" {
-				saveHolidayAddressForm(t, f, office, period.ID, tc.requirement)
+				saveHolidayAddressForm(t, f, office, int64(period.ID), tc.requirement)
 			}
 			offer := holidayOffer(t, f, period.PublicToken)
 			email := func(name string) string { return fmt.Sprintf("%s.%s@example.org", name, tc.requirement) }
@@ -158,15 +158,15 @@ func TestHolidayRegistrationChecksTheAddressAgainstItsFormVersion(t *testing.T) 
 func TestHolidayAddressIsAuditedAndOnlyInDetailAndExport(t *testing.T) {
 	t.Parallel()
 	f := newReviewFixture(t, "Anschrift Zugriff")
-	saveHolidayAddressForm(t, f.holidayRegistrationFixture, f.office, f.period.ID, "optional")
+	saveHolidayAddressForm(t, f.holidayRegistrationFixture, f.office, int64(f.period.ID), "optional")
 	rec := submitWithAddress(t, f.holidayRegistrationFixture, f.period.PublicToken, f.offer, "anschrift@example.org", musterAddress())
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	assert.NotContains(t, rec.Body.String(), "Musterweg")
 	id := decodeSchoolPortalData[struct {
-		ID int64 `json:"id"`
+		ID wireID `json:"id"`
 	}](t, rec.Body.Bytes()).ID
 
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(id, ""), nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, f.registrationPath(int64(id), ""), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	detail := decodeSchoolPortalData[enrollment.HolidayRegistrationDetail](t, rec.Body.Bytes())
 	require.NotNil(t, detail.GuardianAddress)
@@ -190,7 +190,7 @@ func TestHolidayAddressIsAuditedAndOnlyInDetailAndExport(t *testing.T) {
 
 	for _, role := range []string{identityaccess.TraegerRoleReadOnly, identityaccess.TraegerRoleAdministration} {
 		other := newTraegerOffice(t, f.db, f.traeger, "Anschrift Fremdzugriff "+role, role)
-		rec = traegerJSON(t, f.traeger, other.token, http.MethodGet, f.registrationPath(id, ""), nil)
+		rec = traegerJSON(t, f.traeger, other.token, http.MethodGet, f.registrationPath(int64(id), ""), nil)
 		if role == identityaccess.TraegerRoleReadOnly {
 			assert.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
 		} else {
@@ -250,7 +250,7 @@ func TestHolidayAddressStaysOutOfSchoolParticipantsAndGuestCopy(t *testing.T) {
 	for _, private := range []string{"Musterweg", "01234", "guardian_address"} {
 		assert.NotContains(t, rec.Body.String(), private)
 	}
-	rec = f.assign(t, lead, f.offer.Weeks[0].ID, f.group)
+	rec = f.assign(t, lead, int64(f.offer.Weeks[0].ID), f.group)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	f.today.Store(calendar.NewDate(2099, 7, 6))
 	f.reconcile(t)
@@ -266,7 +266,7 @@ func TestHolidayAddressStaysOutOfSchoolParticipantsAndGuestCopy(t *testing.T) {
 
 type billingAddressBody struct {
 	Documents []struct {
-		RegistrationID   int64 `json:"registration_id"`
+		RegistrationID   wireID `json:"registration_id"`
 		RecipientAddress *struct {
 			Street     string `json:"street"`
 			PostalCode string `json:"postal_code"`
@@ -286,15 +286,15 @@ func TestReleasedBillingRunCopiesTheAddressIntoTheInvoice(t *testing.T) {
 		require.Equal(t, http.StatusOK, f.act(t, id, "confirm").Code)
 	}
 	setNumberRange(t, f, billing, "FE-{NNNN}")
-	run := billingRun(t, f, billing, startBillingRun(t, f, billing, f.period.ID).ID)
-	rec := traegerJSON(t, f.traeger, billing, http.MethodGet, billingRunPath(run.ID, ""), nil)
+	run := billingRun(t, f, billing, int64(startBillingRun(t, f, billing, int64(f.period.ID)).ID))
+	rec := traegerJSON(t, f.traeger, billing, http.MethodGet, billingRunPath(int64(run.ID), ""), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	addresses := func(body []byte) map[int64]string {
 		out := map[int64]string{}
 		for _, document := range decodeSchoolPortalData[billingAddressBody](t, body).Documents {
-			out[document.RegistrationID] = ""
+			out[int64(document.RegistrationID)] = ""
 			if address := document.RecipientAddress; address != nil {
-				out[document.RegistrationID] = address.Street + ", " + address.PostalCode + " " + address.City
+				out[int64(document.RegistrationID)] = address.Street + ", " + address.PostalCode + " " + address.City
 			}
 		}
 		return out
@@ -302,7 +302,7 @@ func TestReleasedBillingRunCopiesTheAddressIntoTheInvoice(t *testing.T) {
 	want := map[int64]string{f.siblings: "Musterweg 12, 01234 Bissendorf", f.again: ""}
 	assert.Equal(t, want, addresses(rec.Body.Bytes()), "the preview names the address of the registration")
 
-	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(run.ID, "/release"), releaseBody(run))
+	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, billingRunPath(int64(run.ID), "/release"), releaseBody(run))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, want, addresses(rec.Body.Bytes()), "the release copies the address into the invoice")
 
@@ -311,21 +311,21 @@ func TestReleasedBillingRunCopiesTheAddressIntoTheInvoice(t *testing.T) {
 	_, err = f.db.ExecContext(t.Context(), `UPDATE enrollment.holiday_registrations SET guardian_address_street = NULL,
   guardian_address_postal_code = NULL, guardian_address_city = NULL WHERE id = ?`, f.siblings)
 	require.NoError(t, err)
-	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, billingRunPath(run.ID, ""), nil)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, billingRunPath(int64(run.ID), ""), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, want, addresses(rec.Body.Bytes()))
 
-	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, billingRunPath(run.ID, "/export?format=csv"), nil)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, billingRunPath(int64(run.ID), "/export?format=csv"), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	lines := strings.Split(strings.TrimSpace(strings.TrimPrefix(rec.Body.String(), "\xEF\xBB\xBF")), "\n")
 	assert.Equal(t, "Rechnungsnummer;Empfänger;Straße und Hausnummer;PLZ;Ort;Kind;Position;Betrag in Euro;Zahlungsweg;Fällig am", strings.TrimSpace(lines[0]))
 	assert.Contains(t, rec.Body.String(), ";Muster, Eva;Musterweg 12;01234;Bissendorf;")
-	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, billingRunPath(run.ID, "/export?format=xlsx"), nil)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, billingRunPath(int64(run.ID), "/export?format=xlsx"), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	for _, text := range []string{"Straße und Hausnummer", "PLZ", "Ort", "Musterweg 12", "01234", "Bissendorf"} {
 		assert.Contains(t, xlsxText(t, rec.Body.Bytes()), text)
 	}
-	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, billingRunPath(run.ID, "/export?format=pdf"), nil)
+	rec = traegerJSON(t, f.traeger, billing, http.MethodGet, billingRunPath(int64(run.ID), "/export?format=pdf"), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.True(t, strings.HasPrefix(rec.Body.String(), "%PDF"), "the PDF renders the same table")
 }

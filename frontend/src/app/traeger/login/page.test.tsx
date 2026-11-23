@@ -18,6 +18,7 @@ const {
   mockSession,
   mockSearchParamsGet,
   mockEndTraegerSession,
+  mockGetSession,
 } = vi.hoisted(() => ({
   mockLogin: vi.fn(),
   mockSignIn: vi.fn(),
@@ -30,12 +31,14 @@ const {
   },
   mockSearchParamsGet: vi.fn((_key: string): string | null => null),
   mockEndTraegerSession: vi.fn(),
+  mockGetSession: vi.fn(),
 }));
 
 vi.mock("next-auth/react", () => ({
   signIn: (...args: unknown[]) => mockSignIn(...args),
   signOut: (...args: unknown[]) => mockSignOut(...args),
   useSession: () => mockSession.current,
+  getSession: (...args: unknown[]) => mockGetSession(...args),
 }));
 
 const stableSearchParams = { get: mockSearchParamsGet };
@@ -82,6 +85,15 @@ async function enterCode(code: string) {
   });
 }
 
+const DASHBOARD_SESSION = {
+  user: {
+    scope: "org",
+    token: "access-token",
+    permissions: ["traeger_overview:read"],
+  },
+  expires: "2099-01-01T00:00:00Z",
+};
+
 describe("TraegerLoginPage", () => {
   const fetchMock = vi.fn<typeof fetch>();
   let navigate: ReturnType<typeof vi.spyOn>;
@@ -95,6 +107,8 @@ describe("TraegerLoginPage", () => {
     mockSignOut.mockReset().mockResolvedValue(undefined);
     mockEndTraegerSession.mockReset().mockResolvedValue(undefined);
     mockSession.current = { data: null, status: "unauthenticated" };
+    // The new session may open the dashboard: the start (#7646).
+    mockGetSession.mockReset().mockResolvedValue(DASHBOARD_SESSION);
     mockSearchParamsGet.mockReturnValue(null);
     fetchMock.mockReset();
     vi.stubGlobal("fetch", fetchMock);
@@ -110,11 +124,13 @@ describe("TraegerLoginPage", () => {
       status: "mfa_required",
       challengeToken: "challenge",
       maskedEmail: "b***@traeger.example",
-      organizationId: "7",
+      organizationId: "9007199254740993",
       trustedDeviceEnabled: true,
       trustedDeviceDays: 90,
     });
-    fetchMock.mockResolvedValue(jsonResponse({ status: "authenticated" }));
+    fetchMock.mockResolvedValue(
+      jsonResponse({ status: "success", data: { status: "authenticated" } }),
+    );
     mockSignIn.mockResolvedValue({ error: undefined });
     render(<TraegerLoginPage />);
 
@@ -144,9 +160,11 @@ describe("TraegerLoginPage", () => {
       challenge_token: "challenge",
       code: "123456",
       remember_device: false,
-      organization_id: 7,
+      organization_id: "9007199254740993",
     });
-    await waitFor(() => expect(navigate).toHaveBeenCalledWith("/traeger"));
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith("/traeger/uebersicht"),
+    );
   });
 
   it("asks for the code until the sign-in completes, also after going back from the code step (#6955)", async () => {
@@ -159,7 +177,9 @@ describe("TraegerLoginPage", () => {
       trustedDeviceEnabled: true,
       trustedDeviceDays: 90,
     });
-    fetchMock.mockResolvedValue(jsonResponse({ status: "authenticated" }));
+    fetchMock.mockResolvedValue(
+      jsonResponse({ status: "success", data: { status: "authenticated" } }),
+    );
     mockSignIn.mockResolvedValue({ error: undefined });
     render(<TraegerLoginPage />);
 
@@ -188,7 +208,9 @@ describe("TraegerLoginPage", () => {
     fireEvent.click(
       screen.getByRole("button", { name: /^Nein, nur anmelden/ }),
     );
-    await waitFor(() => expect(navigate).toHaveBeenCalledWith("/traeger"));
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith("/traeger/uebersicht"),
+    );
     expect(sessionStorage.getItem("moto.traeger.sign-in-with-code")).toBeNull();
   });
 
@@ -336,11 +358,18 @@ describe("TraegerLoginPage", () => {
       status: "mfa_enrollment_required",
       enrollmentToken: "enrollment",
       maskedEmail: "b***@traeger.example",
-      organizationId: "7",
+      organizationId: "9007199254740993",
     });
     fetchMock
-      .mockResolvedValueOnce(jsonResponse({ challenge_token: "challenge" }))
-      .mockResolvedValueOnce(jsonResponse({ status: "authenticated" }));
+      .mockResolvedValueOnce(
+        jsonResponse({
+          status: "success",
+          data: { challenge_token: "challenge" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({ status: "success", data: { status: "authenticated" } }),
+      );
     mockSignIn.mockResolvedValue({ error: undefined });
     render(<TraegerLoginPage />);
 
@@ -367,7 +396,7 @@ describe("TraegerLoginPage", () => {
       code: "654321",
       remember_device: false,
       challenge_token: "challenge",
-      organization_id: 7,
+      organization_id: "9007199254740993",
     });
   });
 
@@ -383,13 +412,52 @@ describe("TraegerLoginPage", () => {
     ).toBeInTheDocument();
     submitCredentials();
 
-    await waitFor(() => expect(navigate).toHaveBeenCalledWith("/traeger"));
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith("/traeger/uebersicht"),
+    );
     expect(mockSignIn).not.toHaveBeenCalled();
     expect(mockLogin).toHaveBeenCalledWith({
       email: "buero@traeger.example",
       password: "secret",
       organizationId: undefined,
     });
+  });
+
+  it("starts on the school list without the dashboard right (#7646)", async () => {
+    mockLogin.mockResolvedValue({ status: "authenticated" });
+    mockGetSession.mockResolvedValue({
+      ...DASHBOARD_SESSION,
+      user: {
+        ...DASHBOARD_SESSION.user,
+        permissions: ["traeger_staff:manage"],
+      },
+    });
+    render(<TraegerLoginPage />);
+
+    submitCredentials();
+
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith("/traeger"));
+    expect(mockGetSession).toHaveBeenCalledWith({ broadcast: false });
+  });
+
+  it("starts on the school list when the new session cannot be read (#7646)", async () => {
+    mockLogin.mockResolvedValue({ status: "authenticated" });
+    // next-auth answers a failed read with null.
+    mockGetSession.mockResolvedValue(null);
+    render(<TraegerLoginPage />);
+
+    submitCredentials();
+
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith("/traeger"));
+  });
+
+  it("sends an existing session to its start (#7646)", async () => {
+    mockSession.current = { data: DASHBOARD_SESSION, status: "authenticated" };
+    render(<TraegerLoginPage />);
+
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith("/traeger/uebersicht"),
+    );
   });
 
   it("opens a later choice without the error of an earlier one", async () => {
@@ -452,7 +520,9 @@ describe("TraegerLoginPage", () => {
         organizationId: "9",
       }),
     );
-    await waitFor(() => expect(navigate).toHaveBeenCalledWith("/traeger"));
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith("/traeger/uebersicht"),
+    );
   });
 
   it("explains a missing Träger-Portal access with the catalog text", async () => {
@@ -477,9 +547,7 @@ describe("TraegerLoginPage", () => {
   // logins, which asks the Träger route for the link.
   it("requests a reset link through the Träger route", async () => {
     fetchMock.mockResolvedValue(
-      jsonResponse({
-        message: "If the email exists, a password reset link has been sent",
-      }),
+      jsonResponse({ status: "success", data: null }),
     );
     render(<TraegerLoginPage />);
 

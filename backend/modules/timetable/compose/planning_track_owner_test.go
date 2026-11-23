@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
@@ -28,31 +29,65 @@ func TestModuleOwnsPlanningTrackLifecycle(t *testing.T) {
 	require.ErrorIs(t, err, timetable.ErrPlanningTrackNameExists)
 	assert.EqualValues(t, 1, observedOperation(log.seen, "create_planning_track").Stats.DuplicatePreventionConflicts)
 
-	found, err := module.FindPlanningTrackForShare(ctx, second.ID)
+	found, err := module.FindPlanningTrackForShare(ctx, second.ID.Int64())
 	require.NoError(t, err)
 	assert.Equal(t, second.ID, found.ID)
-	updated, ok, err := module.UpdateActivePlanningTrack(ctx, second.ID, planningTrackInput("Spät", "#83CD2D", 1))
+	updated, ok, err := module.UpdateActivePlanningTrack(ctx, second.ID.Int64(), versioned(planningTrackInput("Spät", "#83CD2D", 1), second))
 	require.NoError(t, err)
 	assert.True(t, ok)
 	assert.Equal(t, "Spät", updated.Name)
 	assert.True(t, updated.UpdatedAt.After(second.UpdatedAt))
 
 	archivedAt := time.Now()
-	_, ok, err = module.SetPlanningTrackArchivedAt(ctx, first.ID, &archivedAt)
+	_, ok, err = module.SetPlanningTrackArchivedAt(ctx, first.ID.Int64(), &archivedAt)
 	require.NoError(t, err)
 	assert.True(t, ok)
-	_, ok, err = module.UpdateActivePlanningTrack(ctx, first.ID, planningTrackInput("Nein", "#5080D8", 0))
+	_, ok, err = module.UpdateActivePlanningTrack(ctx, first.ID.Int64(), planningTrackInput("Nein", "#5080D8", 0))
 	require.NoError(t, err)
 	assert.False(t, ok)
-	require.NoError(t, module.ReorderPlanningTracks(ctx, []int64{second.ID}))
+	require.NoError(t, module.ReorderPlanningTracks(ctx, []int64{second.ID.Int64()}))
 
-	restored, ok, err := module.RestorePlanningTrackAtEnd(ctx, first.ID)
+	restored, ok, err := module.RestorePlanningTrackAtEnd(ctx, first.ID.Int64())
 	require.NoError(t, err)
 	assert.True(t, ok)
 	assert.Equal(t, 1, restored.SortOrder)
 	listed, err := module.ListPlanningTracks(ctx, timetable.PlanningTrackFilter{Ordered: true})
 	require.NoError(t, err)
-	assert.Equal(t, []int64{second.ID, first.ID}, planningTrackIDs(listed))
+	assert.Equal(t, []int64{second.ID.Int64(), first.ID.Int64()}, planningTrackIDs(listed))
+}
+
+// An update carries the version of the track its editor read (ADR 0311): a
+// colleague's rename or new order in between, or no version at all, refuses
+// it and writes nothing; the version of the stored track saves.
+func TestModuleRefusesAPlanningTrackChangedSinceRead(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	module := buildModule(t, db)
+	ctx := testpkg.Ctx(t)
+	read := createOwnedPlanningTrack(t, module, ctx, "Früh", "#5080D8", 0)
+	other := createOwnedPlanningTrack(t, module, ctx, "Spät", "#F78C10", 1)
+
+	renamed, ok, err := module.UpdateActivePlanningTrack(ctx, read.ID.Int64(), versioned(planningTrackInput("Kollegin", "#5080D8", 0), read))
+	require.NoError(t, err)
+	require.True(t, ok)
+	for name, version := range map[string]string{"outdated": read.Version, "missing": ""} {
+		input := planningTrackInput("Überschrieben", "#83CD2D", 0)
+		input.ExpectedVersion = version
+		_, _, err = module.UpdateActivePlanningTrack(ctx, read.ID.Int64(), input)
+		require.ErrorIs(t, err, readstate.ErrChanged, name)
+	}
+	require.NoError(t, module.ReorderPlanningTracks(ctx, []int64{other.ID.Int64(), read.ID.Int64()}))
+	_, _, err = module.UpdateActivePlanningTrack(ctx, read.ID.Int64(), versioned(planningTrackInput("Kollegin", "#5080D8", 0), renamed))
+	require.ErrorIs(t, err, readstate.ErrChanged, "a new order since the read would be undone")
+
+	stored, err := module.FindPlanningTrack(ctx, read.ID.Int64())
+	require.NoError(t, err)
+	assert.Equal(t, "Kollegin", stored.Name, "a refused update writes nothing")
+	assert.Equal(t, 1, stored.SortOrder)
+	updated, ok, err := module.UpdateActivePlanningTrack(ctx, read.ID.Int64(), versioned(planningTrackInput("Neu gelesen", "#5080D8", stored.SortOrder), stored))
+	require.NoError(t, err)
+	require.True(t, ok)
+	assert.Equal(t, "Neu gelesen", updated.Name)
 }
 
 func TestModulePlanningTracksAreTenantIsolated(t *testing.T) {
@@ -67,15 +102,15 @@ func TestModulePlanningTracksAreTenantIsolated(t *testing.T) {
 	foreignCtx := tenant.WithTenantID(testpkg.WithPackageTenantRuntime(context.Background()), foreignTenantID)
 	foreign := createOwnedPlanningTrack(t, module, foreignCtx, "Foreign", "#F78C10", 0)
 
-	_, err := module.FindPlanningTrack(foreignCtx, owned.ID)
+	_, err := module.FindPlanningTrack(foreignCtx, owned.ID.Int64())
 	require.ErrorIs(t, err, timetable.ErrPlanningTrackNotFound)
-	listed, err := module.ListPlanningTracks(ctx, timetable.PlanningTrackFilter{IDs: []int64{owned.ID, foreign.ID}})
+	listed, err := module.ListPlanningTracks(ctx, timetable.PlanningTrackFilter{IDs: []int64{owned.ID.Int64(), foreign.ID.Int64()}})
 	require.NoError(t, err)
-	assert.Equal(t, []int64{owned.ID}, planningTrackIDs(listed))
-	_, err = module.UpdatePlanningTrack(foreignCtx, owned.ID, planningTrackInput("No", "#83CD2D", 0))
+	assert.Equal(t, []int64{owned.ID.Int64()}, planningTrackIDs(listed))
+	_, err = module.UpdatePlanningTrack(foreignCtx, owned.ID.Int64(), planningTrackInput("No", "#83CD2D", 0))
 	require.ErrorIs(t, err, timetable.ErrPlanningTrackNotFound)
-	require.NoError(t, module.DeletePlanningTrack(foreignCtx, owned.ID))
-	_, err = module.FindPlanningTrack(ctx, owned.ID)
+	require.NoError(t, module.DeletePlanningTrack(foreignCtx, owned.ID.Int64()))
+	_, err = module.FindPlanningTrack(ctx, owned.ID.Int64())
 	require.NoError(t, err)
 }
 
@@ -102,7 +137,7 @@ func TestModulePlanningTrackWritesParticipateInCallerTransaction(t *testing.T) {
 
 	err := tenant.WithinCurrentTenant(ctx, func(txCtx context.Context) error {
 		created, createErr := module.CreatePlanningTrack(txCtx, planningTrackInput("Rollback", "#5080D8", 0))
-		rolledBackID = created.ID
+		rolledBackID = created.ID.Int64()
 		if createErr != nil {
 			return createErr
 		}
@@ -114,14 +149,14 @@ func TestModulePlanningTrackWritesParticipateInCallerTransaction(t *testing.T) {
 
 	track := createOwnedPlanningTrack(t, module, ctx, "Stable", "#5080D8", 0)
 	err = tenant.WithinCurrentTenant(ctx, func(txCtx context.Context) error {
-		_, updateErr := module.UpdatePlanningTrack(txCtx, track.ID, planningTrackInput("Changed", "#83CD2D", 0))
+		_, updateErr := module.UpdatePlanningTrack(txCtx, track.ID.Int64(), versioned(planningTrackInput("Changed", "#83CD2D", 0), track))
 		if updateErr != nil {
 			return updateErr
 		}
 		return wantErr
 	})
 	require.ErrorIs(t, err, wantErr)
-	unchanged, err := module.FindPlanningTrack(ctx, track.ID)
+	unchanged, err := module.FindPlanningTrack(ctx, track.ID.Int64())
 	require.NoError(t, err)
 	assert.Equal(t, "Stable", unchanged.Name)
 }
@@ -133,20 +168,20 @@ func TestModulePlanningTrackArchiveAndRestoreRollBack(t *testing.T) {
 	track := createOwnedPlanningTrack(t, module, ctx, "Archive", "#5080D8", 0)
 
 	requirePlanningTrackRollback(t, ctx, func(txCtx context.Context) error {
-		_, _, err := module.SetPlanningTrackArchivedAt(txCtx, track.ID, planningTrackTime(time.Now()))
+		_, _, err := module.SetPlanningTrackArchivedAt(txCtx, track.ID.Int64(), planningTrackTime(time.Now()))
 		return err
 	})
-	stored, err := module.FindPlanningTrack(ctx, track.ID)
+	stored, err := module.FindPlanningTrack(ctx, track.ID.Int64())
 	require.NoError(t, err)
 	assert.Nil(t, stored.ArchivedAt)
 
-	_, _, err = module.SetPlanningTrackArchivedAt(ctx, track.ID, planningTrackTime(time.Now()))
+	_, _, err = module.SetPlanningTrackArchivedAt(ctx, track.ID.Int64(), planningTrackTime(time.Now()))
 	require.NoError(t, err)
 	requirePlanningTrackRollback(t, ctx, func(txCtx context.Context) error {
-		_, _, restoreErr := module.RestorePlanningTrackAtEnd(txCtx, track.ID)
+		_, _, restoreErr := module.RestorePlanningTrackAtEnd(txCtx, track.ID.Int64())
 		return restoreErr
 	})
-	stored, err = module.FindPlanningTrack(ctx, track.ID)
+	stored, err = module.FindPlanningTrack(ctx, track.ID.Int64())
 	require.NoError(t, err)
 	assert.NotNil(t, stored.ArchivedAt)
 }
@@ -159,11 +194,11 @@ func TestModulePlanningTrackReorderRollsBack(t *testing.T) {
 	second := createOwnedPlanningTrack(t, module, ctx, "Second", "#F78C10", 1)
 
 	requirePlanningTrackRollback(t, ctx, func(txCtx context.Context) error {
-		return module.ReorderPlanningTracks(txCtx, []int64{second.ID, first.ID})
+		return module.ReorderPlanningTracks(txCtx, []int64{second.ID.Int64(), first.ID.Int64()})
 	})
 	listed, err := module.ListPlanningTracks(ctx, timetable.PlanningTrackFilter{Ordered: true})
 	require.NoError(t, err)
-	assert.Equal(t, []int64{first.ID, second.ID}, planningTrackIDs(listed))
+	assert.Equal(t, []int64{first.ID.Int64(), second.ID.Int64()}, planningTrackIDs(listed))
 }
 
 func TestModulePlanningTrackDeleteRollsBack(t *testing.T) {
@@ -173,9 +208,9 @@ func TestModulePlanningTrackDeleteRollsBack(t *testing.T) {
 	track := createOwnedPlanningTrack(t, module, ctx, "Delete", "#5080D8", 0)
 
 	requirePlanningTrackRollback(t, ctx, func(txCtx context.Context) error {
-		return module.DeletePlanningTrack(txCtx, track.ID)
+		return module.DeletePlanningTrack(txCtx, track.ID.Int64())
 	})
-	_, err := module.FindPlanningTrack(ctx, track.ID)
+	_, err := module.FindPlanningTrack(ctx, track.ID.Int64())
 	require.NoError(t, err)
 }
 
@@ -206,6 +241,12 @@ func createOwnedPlanningTrack(t *testing.T, module timetable.Owner, ctx context.
 	return value
 }
 
+// versioned carries the version of the track an update replaces (ADR 0311).
+func versioned(input timetable.PlanningTrackInput, read timetable.PlanningTrack) timetable.PlanningTrackInput {
+	input.ExpectedVersion = read.Version
+	return input
+}
+
 func planningTrackInput(name, color string, order int) timetable.PlanningTrackInput {
 	return timetable.PlanningTrackInput{Name: name, Color: color, SortOrder: order}
 }
@@ -213,7 +254,7 @@ func planningTrackInput(name, color string, order int) timetable.PlanningTrackIn
 func planningTrackIDs(values []timetable.PlanningTrack) []int64 {
 	result := make([]int64, 0, len(values))
 	for _, value := range values {
-		result = append(result, value.ID)
+		result = append(result, value.ID.Int64())
 	}
 	return result
 }
@@ -242,20 +283,20 @@ func TestModulePlanningTracksResolveArchivedAndUnknownIDs(t *testing.T) {
 
 	active := createOwnedPlanningTrack(t, module, ctx, "Früh", "#5080D8", 0)
 	archived := createOwnedPlanningTrack(t, module, ctx, "Mittag", "#F78C10", 1)
-	_, ok, err := module.SetPlanningTrackArchivedAt(ctx, archived.ID, planningTrackTime(time.Now()))
+	_, ok, err := module.SetPlanningTrackArchivedAt(ctx, archived.ID.Int64(), planningTrackTime(time.Now()))
 	require.NoError(t, err)
 	require.True(t, ok)
 
-	tracks, err := module.ListPlanningTracks(ctx, timetable.PlanningTrackFilter{IDs: []int64{active.ID, archived.ID, archived.ID + 1000}})
+	tracks, err := module.ListPlanningTracks(ctx, timetable.PlanningTrackFilter{IDs: []int64{active.ID.Int64(), archived.ID.Int64(), (archived.ID + 1000).Int64()}})
 	require.NoError(t, err)
 	require.Len(t, tracks, 2)
 	byID := map[int64]timetable.PlanningTrack{}
 	for _, track := range tracks {
-		byID[track.ID] = track
+		byID[track.ID.Int64()] = track
 	}
-	require.Contains(t, byID, active.ID)
-	require.Contains(t, byID, archived.ID)
-	assert.NotNil(t, byID[archived.ID].ArchivedAt)
+	require.Contains(t, byID, active.ID.Int64())
+	require.Contains(t, byID, archived.ID.Int64())
+	assert.NotNil(t, byID[archived.ID.Int64()].ArchivedAt)
 }
 
 func TestModulePlanningTrackRejectsPartialOrder(t *testing.T) {
@@ -267,14 +308,14 @@ func TestModulePlanningTrackRejectsPartialOrder(t *testing.T) {
 	second := createOwnedPlanningTrack(t, module, ctx, "Mittag", "#F78C10", 1)
 
 	err := tenant.WithinCurrentTenant(ctx, func(txCtx context.Context) error {
-		return module.ReorderPlanningTracks(txCtx, []int64{first.ID})
+		return module.ReorderPlanningTracks(txCtx, []int64{first.ID.Int64()})
 	})
 	require.ErrorIs(t, err, timetable.ErrPlanningTrackNotFound, "partial order must report not found")
 
 	err = tenant.WithinCurrentTenant(ctx, func(txCtx context.Context) error {
 		require.NoError(t, module.ReorderPlanningTracks(txCtx, nil))
-		return module.ReorderPlanningTracks(txCtx, []int64{first.ID, first.ID + second.ID + 1000})
+		return module.ReorderPlanningTracks(txCtx, []int64{first.ID.Int64(), (first.ID + second.ID + 1000).Int64()})
 	})
 	require.Error(t, err)
-	require.Error(t, module.ReorderPlanningTracks(context.Background(), []int64{first.ID, second.ID}))
+	require.Error(t, module.ReorderPlanningTracks(context.Background(), []int64{first.ID.Int64(), second.ID.Int64()}))
 }

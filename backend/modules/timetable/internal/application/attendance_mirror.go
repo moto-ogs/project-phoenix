@@ -106,7 +106,7 @@ func (s *attendanceMirror) MirrorCheckInForVisit(
 		return nil, err
 	}
 	if row == nil {
-		return s.createUnplannedAttendance(ctx, instance.ID, visit)
+		return s.createUnplannedAttendance(ctx, instance.ID.Int64(), visit)
 	}
 
 	// B6: respect manual states and already-open presence. A checked-out
@@ -118,13 +118,13 @@ func (s *attendanceMirror) MirrorCheckInForVisit(
 	// Return the snapshot we already read so SSE reflects the true state.
 	if shouldPreserveAttendanceOnCheckin(row) {
 		s.getLogger().Debug("attendance mirror: row already past expected, not clobbering",
-			slog.Int64("instance_id", instance.ID),
+			slog.Int64("instance_id", instance.ID.Int64()),
 			slog.Int64("student_id", visit.StudentID),
 			slog.String("current_status", row.Status),
 		)
-		return s.finishVisitInterval(ctx, instance.ID, visit, row)
+		return s.finishVisitInterval(ctx, instance.ID.Int64(), visit, row)
 	}
-	return s.openVisitPresence(ctx, instance.ID, visit, row)
+	return s.openVisitPresence(ctx, instance.ID.Int64(), visit, row)
 }
 
 // loadVisitSlot resolves the block bridged to the visit's session and the
@@ -144,10 +144,10 @@ func (s *attendanceMirror) loadVisitSlot(
 	if instance == nil {
 		return nil, nil, nil
 	}
-	row, err := s.instanceStudentRepo.FindByInstanceAndStudent(ctx, instance.ID, visit.StudentID)
+	row, err := s.instanceStudentRepo.FindByInstanceAndStudent(ctx, instance.ID.Int64(), visit.StudentID)
 	if err != nil {
 		s.getLogger().Warn(logPrefix+": find instance_student failed",
-			slog.Int64("instance_id", instance.ID),
+			slog.Int64("instance_id", instance.ID.Int64()),
 			slog.Int64("student_id", visit.StudentID),
 			slog.String("error", err.Error()),
 		)
@@ -348,10 +348,10 @@ func (s *attendanceMirror) MirrorCheckOutForVisit(
 	}
 	if closesPresentInterval(visit.ExitTime, row) {
 		if err := s.instanceStudentRepo.UpdateAttendanceCheckout(
-			ctx, instance.ID, visit.StudentID, *visit.ExitTime,
+			ctx, instance.ID.Int64(), visit.StudentID, *visit.ExitTime,
 		); err != nil {
 			s.getLogger().Error("attendance mirror: persist slot checkout failed",
-				slog.Int64("instance_id", instance.ID),
+				slog.Int64("instance_id", instance.ID.Int64()),
 				slog.Int64("student_id", visit.StudentID),
 				slog.String("error", err.Error()),
 			)
@@ -361,57 +361,6 @@ func (s *attendanceMirror) MirrorCheckOutForVisit(
 	}
 
 	return snapshotFromRow(row), nil
-}
-
-// MirrorVisitRevision updates the interval represented by a slot after staff
-// edit or reopen a visit. The repository compares the previous check-in first,
-// so an older visit cannot overwrite a later re-entry in the same slot. It may
-// also repair a missing checkout left by an older completed-visit write.
-func (s *attendanceMirror) MirrorVisitRevision(
-	ctx context.Context, previous, updated timetable.AttendanceVisit,
-) (err error) {
-	defer s.recoverMirrorPanic(ctx, "attendance visit revision mirror panic", "attendance visit revision panic", &err)
-
-	if previous.StudentID != updated.StudentID ||
-		previous.ActiveGroupID <= 0 ||
-		previous.ActiveGroupID != updated.ActiveGroupID {
-		return nil
-	}
-	instance, err := s.instanceRepo.FindByActiveGroupID(ctx, previous.ActiveGroupID)
-	if err != nil {
-		s.getLogger().Warn("attendance visit revision: find instance failed",
-			slog.Int64("active_group_id", previous.ActiveGroupID),
-			slog.String("error", err.Error()),
-		)
-		return fmt.Errorf("attendance visit revision: find instance: %w", err)
-	}
-	if instance == nil {
-		return nil
-	}
-	changed, err := s.instanceStudentRepo.ReconcileAttendanceInterval(
-		ctx,
-		instance.ID,
-		previous.StudentID,
-		previous.EntryTime,
-		previous.ExitTime,
-		updated.EntryTime,
-		updated.ExitTime,
-	)
-	if err != nil {
-		s.getLogger().Error("attendance visit revision: reconcile slot interval failed",
-			slog.Int64("instance_id", instance.ID),
-			slog.Int64("student_id", previous.StudentID),
-			slog.String("error", err.Error()),
-		)
-		return fmt.Errorf("attendance visit revision: reconcile interval: %w", err)
-	}
-	if changed {
-		s.getLogger().Info("attendance visit revision synced",
-			slog.Int64("instance_id", instance.ID),
-			slog.Int64("student_id", previous.StudentID),
-		)
-	}
-	return nil
 }
 
 // snapshotFromRow is the common projection. Substatus and Note already

@@ -8,6 +8,8 @@ import (
 	"slices"
 	"strconv"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 const enrollmentWeeklyProfileKey = "anmeldung-wochenplan"
@@ -199,15 +201,15 @@ func submitWeeklyProfileRequest(rt *Runtime, step parentEnrollmentSeedStep, enro
 	offeringID := enrollment.Offerings["wochenangebot"]
 	body := step.enrollmentSubmissionWithDays(enrollment.PhaseID, enrollment.Offerings, weeklyProfileNames()[index], "Wochenplan", "2019-04-18", 1,
 		"Alex", fmt.Sprintf("Wochenplan%02d", index+1), email, key, []int64{offeringID}, map[int64][]string{offeringID: {"mon"}})
-	source := "public"
-	var raw []byte
-	var err error
-	if index == 12 {
-		source = "parent"
-		raw, err = rt.Client.PostWithAuth(parentAuth, "/parent/enrollments/"+rt.Bootstrap.TenantSlug+"/submit", body)
-	} else {
-		raw, err = rt.Client.PostPublicWithHeaders("/api/enrollment/"+rt.Bootstrap.TenantSlug+"/submit", body, publicEnrollmentSeedHeaders(100+index))
+	source, post := "public", func(b map[string]any) ([]byte, error) {
+		return rt.Client.PostPublicWithHeaders("/api/enrollment/"+rt.Bootstrap.TenantSlug+"/submit", b, publicEnrollmentSeedHeaders(100+index))
 	}
+	if index == 12 {
+		source, post = "parent", func(b map[string]any) ([]byte, error) {
+			return rt.Client.PostWithAuth(parentAuth, "/parent/enrollments/"+rt.Bootstrap.TenantSlug+"/submit", b)
+		}
+	}
+	raw, err := postShownForm(staffGet(rt, rt.TenantAuth), body, post)
 	if err != nil {
 		return SeedEnrollmentRequest{}, err
 	}
@@ -255,10 +257,17 @@ func submitWeeklyProfileRequest(rt *Runtime, step parentEnrollmentSeedStep, enro
 
 func writeWeeklyProfileSchedule(rt *Runtime, studentID int64) error {
 	for _, schedule := range []struct{ path, timeField, clock string }{{"arrival-schedules", "expected_arrival", "12:00"}, {"pickup-schedules", "pickup_time", "15:00"}} {
-		_, err := rt.Client.Put(fmt.Sprintf("/api/students/%d/%s", studentID, schedule.path), map[string]any{"schedules": []map[string]any{
+		body := map[string]any{"schedules": []map[string]any{
 			{"weekday": 1, schedule.timeField: schedule.clock}, {"weekday": 2, schedule.timeField: schedule.clock}, {"weekday": 4, schedule.timeField: schedule.clock},
-		}})
+		}}
+		// Both are saves of the weekly plan (ADR 0311); each reads the token
+		// the previous one left.
+		version, err := seedWeeklyPlanVersion(rt, studentID)
 		if err != nil {
+			return err
+		}
+		body["expected_version"] = version
+		if _, err := rt.Client.Put(fmt.Sprintf("/api/students/%d/%s", studentID, schedule.path), body); err != nil {
 			return err
 		}
 	}
@@ -274,8 +283,8 @@ func inviteWeeklyProfileParent(ctx context.Context, rt *Runtime, step parentEnro
 	var response struct {
 		Data []struct {
 			Guardian struct {
-				ID    int64  `json:"id"`
-				Email string `json:"email"`
+				ID    ident.ID `json:"id"`
+				Email string   `json:"email"`
 			} `json:"guardian"`
 		} `json:"data"`
 	}
@@ -285,7 +294,7 @@ func inviteWeeklyProfileParent(ctx context.Context, rt *Runtime, step parentEnro
 	var guardianID int64
 	for _, row := range response.Data {
 		if row.Guardian.Email == email {
-			guardianID = row.Guardian.ID
+			guardianID = int64(row.Guardian.ID)
 		}
 	}
 	if guardianID == 0 {
@@ -418,8 +427,8 @@ func linkDeveloperAdminIdentity(ctx context.Context, primary, target *Runtime, s
 	var identity struct {
 		Data struct {
 			SchoolIdentity struct {
-				StaffID   int64 `json:"staff_id,string"`
-				TeacherID int64 `json:"teacher_id,string"`
+				StaffID   ident.ID `json:"staff_id"`
+				TeacherID ident.ID `json:"teacher_id"`
 			} `json:"school_identity"`
 		} `json:"data"`
 	}
@@ -429,7 +438,7 @@ func linkDeveloperAdminIdentity(ctx context.Context, primary, target *Runtime, s
 	if identity.Data.SchoolIdentity.StaffID == 0 {
 		return fmt.Errorf("developer admin staff identity missing")
 	}
-	state.Accounts.Admin = []AccountCredentials{{Key: "developer-admin", Email: admin.Email, Password: admin.Password, Name: admin.Name, StaffID: identity.Data.SchoolIdentity.StaffID, TeacherID: identity.Data.SchoolIdentity.TeacherID}}
+	state.Accounts.Admin = []AccountCredentials{{Key: "developer-admin", Email: admin.Email, Password: admin.Password, Name: admin.Name, StaffID: int64(identity.Data.SchoolIdentity.StaffID), TeacherID: int64(identity.Data.SchoolIdentity.TeacherID)}}
 	return nil
 }
 
@@ -470,13 +479,13 @@ func linkDeveloperAdmin(ctx context.Context, primary, target *Runtime, state *Se
 	}
 	var tenants struct {
 		Data []struct {
-			TenantID int64 `json:"tenant_id"`
+			TenantID ident.ID `json:"tenant_id"`
 		} `json:"data"`
 	}
 	if err := parseJSON(raw, &tenants); err != nil {
 		return err
 	}
-	if len(tenants.Data) != 1 || tenants.Data[0].TenantID != target.Bootstrap.SchoolID {
+	if len(tenants.Data) != 1 || int64(tenants.Data[0].TenantID) != target.Bootstrap.SchoolID {
 		return fmt.Errorf("school admin is not isolated to own school")
 	}
 	_, err = target.Client.PostWithAuth(target.TenantAuth, "/auth/switch-tenant", map[string]any{"tenant_slug": primary.Bootstrap.TenantSlug})

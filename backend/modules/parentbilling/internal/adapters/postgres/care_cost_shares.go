@@ -12,6 +12,8 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // The cost bearer shares of the monthly contribution (#4687, 1.15.816):
@@ -54,7 +56,7 @@ type careCostShareRow struct {
 
 func newCareCostShareRow(organizationID, accountID int64, input parentbilling.CareCostShareInput) *careCostShareRow {
 	return &careCostShareRow{
-		OrganizationID: organizationID, CareContractID: input.ContractID, Kind: input.Kind, CostBearerID: input.CostBearerID,
+		OrganizationID: organizationID, CareContractID: input.ContractID.Int64(), Kind: input.Kind, CostBearerID: input.CostBearerID.Int64(),
 		ShareBasisPoints: input.ShareBasisPoints, ShareCents: input.ShareCents, Scope: storedCostShareScope(input.Scope), ValidFrom: input.ValidFrom,
 		ValidUntil: input.ValidUntil, Reference: input.Reference, CheckedOn: input.CheckedOn, RecordedByAccountID: &accountID,
 	}
@@ -84,10 +86,15 @@ func (s *Store) CareCostShares(ctx context.Context, organizationID int64, contra
 	shares := make([]parentbilling.CareCostShare, len(rows))
 	for i, row := range rows {
 		shares[i] = parentbilling.CareCostShare{
-			ID: row.ID, ContractID: row.CareContractID, Kind: row.Kind, CostBearerID: row.CostBearerID,
+			ID: ident.ID(row.ID), ContractID: ident.ID(row.CareContractID), Kind: row.Kind, CostBearerID: ident.ID(row.CostBearerID),
 			CostBearerName: row.CostBearerName, ShareBasisPoints: row.ShareBasisPoints, ShareCents: row.ShareCents, Scope: row.Scope,
 			ValidFrom: row.ValidFrom, ValidUntil: row.ValidUntil, Reference: row.Reference, CheckedOn: row.CheckedOn,
 			UpdatedAt: row.UpdatedAt,
+			// The stored share as the form shows it: updated_at has no
+			// trigger and takes the clock of the writer (ADR 0311).
+			Version: readstate.Fingerprint(parentbilling.CareCostShareInput{ContractID: ident.ID(row.CareContractID), Kind: row.Kind,
+				CostBearerID: ident.ID(row.CostBearerID), ShareBasisPoints: row.ShareBasisPoints, ShareCents: row.ShareCents,
+				Scope: row.Scope, ValidFrom: row.ValidFrom, ValidUntil: row.ValidUntil, Reference: row.Reference, CheckedOn: row.CheckedOn}),
 		}
 	}
 	return shares, nil
@@ -215,7 +222,7 @@ func insertCareCostShares(ctx context.Context, db bun.IDB, organizationID int64,
 		for j, share := range invoice.CostShares {
 			shares = append(shares, careInvoiceCostShareRow{
 				OrganizationID: organizationID, InvoiceID: rows[i].ID, Position: j + 1, Kind: share.Kind,
-				CostBearerID: share.CostBearerID, CostBearerName: share.CostBearerName,
+				CostBearerID: share.CostBearerID.Int64(), CostBearerName: share.CostBearerName,
 				ShareBasisPoints: share.ShareBasisPoints, ShareCents: share.ShareCents, Scope: storedCostShareScope(share.Scope), AmountCents: share.AmountCents,
 			})
 		}

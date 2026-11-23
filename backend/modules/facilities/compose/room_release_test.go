@@ -56,7 +56,7 @@ func TestModulePersistsRoomReleaseChangesBothWays(t *testing.T) {
 	require.False(t, created.IsOpenRoom)
 
 	released, err := module.UpdateRoom(ctx, facilities.UpdateRoom{
-		ID: created.ID, Name: "Turnhalle", IsOpenRoom: releasePtr(true),
+		ID: created.ID, Name: "Turnhalle", IsOpenRoom: releasePtr(true), ExpectedVersion: facilities.RoomVersion(created),
 	})
 	require.NoError(t, err)
 	assert.True(t, released.IsOpenRoom)
@@ -68,7 +68,7 @@ func TestModulePersistsRoomReleaseChangesBothWays(t *testing.T) {
 	// Removing a release must be just as possible as granting one — an
 	// administrator who released a room by mistake needs a way back.
 	revoked, err := module.UpdateRoom(ctx, facilities.UpdateRoom{
-		ID: created.ID, Name: "Turnhalle", IsOpenRoom: releasePtr(false),
+		ID: created.ID, Name: "Turnhalle", IsOpenRoom: releasePtr(false), ExpectedVersion: facilities.RoomVersion(released),
 	})
 	require.NoError(t, err)
 	assert.False(t, revoked.IsOpenRoom)
@@ -99,6 +99,7 @@ func TestUnrelatedRoomEditPreservesAStandingRelease(t *testing.T) {
 	building := "Neubau"
 	updated, err := module.UpdateRoom(ctx, facilities.UpdateRoom{
 		ID: created.ID, Name: "Sporthalle", Building: building, Capacity: &capacity,
+		ExpectedVersion: facilities.RoomVersion(created),
 	})
 	require.NoError(t, err)
 	assert.True(t, updated.IsOpenRoom,
@@ -124,7 +125,7 @@ func TestUnrelatedRoomEditPreservesAnUnreleasedRoom(t *testing.T) {
 	require.NoError(t, err)
 
 	updated, err := module.UpdateRoom(ctx, facilities.UpdateRoom{
-		ID: created.ID, Name: "Bastelraum",
+		ID: created.ID, Name: "Bastelraum", ExpectedVersion: facilities.RoomVersion(created),
 	})
 	require.NoError(t, err)
 	assert.False(t, updated.IsOpenRoom)
@@ -151,7 +152,7 @@ func TestRoomReleaseIsIsolatedPerTenant(t *testing.T) {
 	assert.ErrorIs(t, err, facilities.ErrRoomNotFound)
 
 	_, err = module.UpdateRoom(otherCtx, facilities.UpdateRoom{
-		ID: released.ID, Name: "Turnhalle", IsOpenRoom: releasePtr(false),
+		ID: released.ID, Name: "Turnhalle", IsOpenRoom: releasePtr(false), ExpectedVersion: facilities.RoomVersion(released),
 	})
 	assert.Error(t, err, "a foreign tenant must not be able to change a release")
 
@@ -181,7 +182,7 @@ func TestToiletRoomReleaseIsRefusedAtThePersistenceSeam(t *testing.T) {
 	require.False(t, created.IsOpenRoom)
 
 	_, err = module.UpdateRoom(ctx, facilities.UpdateRoom{
-		ID: created.ID, Name: facilities.WCRoomName, IsOpenRoom: releasePtr(true),
+		ID: created.ID, Name: facilities.WCRoomName, IsOpenRoom: releasePtr(true), ExpectedVersion: facilities.RoomVersion(created),
 	})
 	require.ErrorIs(t, err, facilities.ErrToiletRoomNotReleasable)
 

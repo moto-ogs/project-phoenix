@@ -1,5 +1,12 @@
 import type { StammdatenGender } from "~/lib/staff-api";
 import type {
+  CreateSchoolInvitationRequest,
+  FormerEmploymentView,
+  InvitationValidationResponse,
+  SchoolInvitationResponse,
+} from "~/lib/contract/auth-invitations.generated";
+import { knownEnum } from "~/lib/contract/known-enum";
+import type {
   EmailAddressMark,
   MailProviderBlock,
   MailOutcome,
@@ -24,7 +31,8 @@ export interface InvitationAcceptRequest {
   confirmPassword: string;
 }
 
-export type EmploymentAction = "resume" | "new";
+const EMPLOYMENT_ACTIONS = ["resume", "new"] as const;
+export type EmploymentAction = (typeof EMPLOYMENT_ACTIONS)[number];
 
 export interface CreateInvitationRequest {
   resetMasterData?: boolean;
@@ -38,15 +46,22 @@ export interface CreateInvitationRequest {
   position?: string;
   /** Geschlecht für die Stammdaten; fehlt bei „Keine Angabe“. */
   gender?: StammdatenGender;
+  /**
+   * Version der Antwort zur früheren Beschäftigung, auf der die Wahl beruht
+   * (ADR 0311). Fehlt, wenn die Abfrage nicht gelang: dann gilt die Vorgabe
+   * aus ADR 0021.
+   */
+  expectedFormerEmployment?: string;
 }
 
 export interface PendingInvitation {
   employmentAction?: EmploymentAction;
-  id: number;
+  /** Decimal string, as the contract delivers bigint ids (#7563). */
+  id: string;
   email: string;
   roleId: string;
   roleName: string;
-  createdBy: number;
+  createdBy: string;
   creatorEmail?: string;
   expiresAt: string;
   token?: string;
@@ -59,39 +74,13 @@ export interface PendingInvitation {
   addressMark?: EmailAddressMark;
 }
 
-export interface BackendInvitationValidation {
-  target_portal?: "tenant" | "school";
-  requires_account_login?: boolean;
-  email: string;
-  role_name: string;
-  first_name?: string | null;
-  last_name?: string | null;
-  position?: string | null;
-  expires_at: string;
-}
-
-export interface BackendInvitation {
-  employment_action?: EmploymentAction;
-  id: number;
-  email: string;
-  role_id: string;
-  role_name?: string; // Role name from backend
-  token?: string;
-  expires_at: string;
-  created_by: number;
-  first_name?: string | null;
-  last_name?: string | null;
-  position?: string | null;
-  creator?: string; // Creator email from backend
-  mail_outcome?: MailOutcome;
-  provider_block?: MailProviderBlock;
-  address_mark?: EmailAddressMark;
-}
+const INVITATION_PORTALS = ["tenant", "school"] as const;
 
 export const mapInvitationValidationResponse = (
-  data: BackendInvitationValidation,
+  data: InvitationValidationResponse,
 ): InvitationValidation => ({
-  targetPortal: data.target_portal,
+  // A portal this build does not know stays undefined, like a missing one.
+  targetPortal: knownEnum(INVITATION_PORTALS, data.target_portal),
   requiresAccountLogin: data.requires_account_login,
   email: data.email,
   roleName: data.role_name,
@@ -102,10 +91,10 @@ export const mapInvitationValidationResponse = (
 });
 
 export const mapPendingInvitationResponse = (
-  data: BackendInvitation,
+  data: SchoolInvitationResponse,
 ): PendingInvitation => {
   return {
-    employmentAction: data.employment_action,
+    employmentAction: knownEnum(EMPLOYMENT_ACTIONS, data.employment_action),
     id: data.id,
     email: data.email,
     roleId: data.role_id,
@@ -117,9 +106,39 @@ export const mapPendingInvitationResponse = (
     firstName: data.first_name,
     lastName: data.last_name,
     position: data.position,
-    mailOutcome: data.mail_outcome,
-    providerBlock: data.provider_block,
-    addressMark: data.address_mark,
+    // The contract names these as open strings; the values are Delivery's.
+    mailOutcome: data.mail_outcome as MailOutcome | undefined,
+    providerBlock: data.provider_block as MailProviderBlock | undefined,
+    addressMark: data.address_mark as EmailAddressMark | undefined,
+  };
+};
+
+/**
+ * A role id goes out only as a plain positive decimal string. Anything else
+ * (empty, a rounded JSON number) leaves the field out, so the backend answers
+ * 400 with `role_id` in `errors` and the form marks the field (#2511).
+ */
+function wireRoleId(roleId: string | undefined): string | undefined {
+  return roleId !== undefined && /^[1-9]\d*$/.test(roleId) ? roleId : undefined;
+}
+
+/** The body of POST /auth/invitations, in the contract's field names. */
+export const toCreateInvitationBody = (
+  data: CreateInvitationRequest,
+): CreateSchoolInvitationRequest => {
+  const roleId = wireRoleId(data.roleId);
+  return {
+    email: data.email,
+    ...(roleId === undefined ? {} : { role_id: roleId }),
+    first_name: data.firstName,
+    last_name: data.lastName,
+    position: data.position,
+    gender: data.gender,
+    employment_action: data.employmentAction,
+    reset_master_data: data.resetMasterData,
+    reset_qualifications: data.resetQualifications,
+    reset_work_time: data.resetWorkTime,
+    expected_former_employment: data.expectedFormerEmployment,
   };
 };
 
@@ -151,11 +170,14 @@ export interface FormerEmployment {
   notReturning: FormerEmploymentPart[];
 }
 
-export interface BackendFormerEmployment {
-  started_on: string;
-  ended_on: string;
-  resumes: string[];
-  not_returning: string[];
+/**
+ * Die Antwort zur früheren Beschäftigung einer Adresse samt ihrer Version,
+ * die die Einladung als `expected_former_employment` zurückschickt. Die
+ * Version gibt es auch für „keine frühere Beschäftigung“.
+ */
+export interface FormerEmploymentAnswer {
+  formerEmployment: FormerEmployment | null;
+  version: string;
 }
 
 const isFormerEmploymentPart = (part: string): part is FormerEmploymentPart =>
@@ -163,13 +185,13 @@ const isFormerEmploymentPart = (part: string): part is FormerEmploymentPart =>
 
 /** A part key this frontend does not know yet is left out, not shown raw. */
 export const mapFormerEmploymentResponse = (
-  data: BackendFormerEmployment | null | undefined,
+  data: FormerEmploymentView | null | undefined,
 ): FormerEmployment | null =>
   data
     ? {
         startedOn: data.started_on,
         endedOn: data.ended_on,
-        resumes: data.resumes.filter(isFormerEmploymentPart),
-        notReturning: data.not_returning.filter(isFormerEmploymentPart),
+        resumes: (data.resumes ?? []).filter(isFormerEmploymentPart),
+        notReturning: (data.not_returning ?? []).filter(isFormerEmploymentPart),
       }
     : null;

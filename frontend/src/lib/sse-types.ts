@@ -42,6 +42,19 @@ type SSEEventType =
   // the parent-messaging pill. Fires only on request transitions. See
   // backend/realtime/events.go EventChangeRequestsChanged.
   | "change_requests_changed"
+  // Hinweise der Leitung (#7667): ein Hinweis kam dazu, wurde geändert oder
+  // gelöscht. Ohne Inhalt; „Heute anders“ und die Tagesinformationen laden neu.
+  // See backend/realtime/events.go EventStaffNoticesChanged.
+  | "staff_notices_changed"
+  // Kalendertermine (#7693): ein Termin kam dazu, wurde geändert, abgesagt
+  // oder gelöscht, oder ein einzelner Termin einer Serie wurde abgesagt. Ohne
+  // Inhalt; „Heute anders“ und der eigene Kalender laden neu.
+  // See backend/realtime/events.go EventCalendarAppointmentsChanged.
+  | "calendar_appointments_changed"
+  // Speiseplan (#7666): das Menü eines Tages wurde gespeichert oder gelöscht.
+  // Ohne Inhalt; „Heute anders“ lädt neu.
+  // See backend/realtime/events.go EventMealPlanChanged.
+  | "meal_plan_changed"
   // Timetable instance lifecycle events emitted by the backend (WP-B9).
   // The weekly planner subscribes to these so admin and office staff see
   // live status changes (start/complete/cancel) without manual refresh.

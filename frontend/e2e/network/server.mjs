@@ -5,6 +5,7 @@ import { randomBytes } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import { createAppWorkspace } from "./app-workspace.mjs";
+import { catalogReads, profile } from "./catalog-fixtures.mjs";
 import { networkPorts } from "./ports.mjs";
 import { realClock } from "../real-clock.mjs";
 
@@ -15,16 +16,16 @@ const apiPort = ports.api;
 let switchRequests = 0;
 let logoutRequests = 0;
 const schools = ["school-a", "school-b"].map((subdomain, index) => ({
-  tenant_id: index + 1,
+  tenant_id: String(index + 1),
   slug: subdomain,
   subdomain,
   name: index === 0 ? "School A" : "School B",
-  organization_id: 1,
+  organization_id: "1",
   organization_name: "Fixture",
 }));
 
 // Only synthetic fixtures. This is not a backend/authentication test.
-const envelope = (data) => ({ status: "success", success: true, data });
+const envelope = (data) => ({ status: "success", data });
 const claims = (scope = "") => ({
   id: 1,
   sub: "1",
@@ -77,38 +78,9 @@ const familyRoutes = (path) =>
 // One protected read per other portal, through its BFF (the operator's
 // through the catalog proxy, #2352).
 const portalReads = new Set(["/operator/organizations"]);
-// Reads that reach the API through a portal's catalog proxy (#2352), not a
-// route file: the proxy checks each answer against the route's contract.
-const catalogReads = new Map([
-  ["/caterer/schools", { caterer_name: "Fixture-Küche", schools: [] }],
-  ["/parent/me/calendar", { from: "2026-11-02", to: "2026-11-08", events: [] }],
-  ["/school/staff-messages/unread-count", { unread_count: 2, internal: 1 }],
-  // The proxy builds the path from segments: no trailing slash.
-  ["/school/supervisions", { instances: [] }],
-  [
-    "/operator/billing/key-day",
-    {
-      key_day: 15,
-      next_key_date: "2026-12-15",
-      updated_at: "2026-11-01T08:00:00Z",
-    },
-  ],
-]);
 const refuse = (res, body) => {
   res.writeHead(401, { "Content-Type": "application/problem+json" });
   res.end(JSON.stringify(body));
-};
-// The shape of GET /api/me/profile in the contract: the catalog proxy checks
-// the answer (#2352).
-const profile = {
-  id: 1,
-  first_name: "Test",
-  last_name: "Fixture",
-  email: "fixture@example.invalid",
-  username: null,
-  last_login: null,
-  created_at: "2026-01-01T00:00:00Z",
-  updated_at: "2026-01-01T00:00:00Z",
 };
 const api = createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${apiPort}`);
@@ -126,7 +98,7 @@ const api = createServer(async (req, res) => {
   else if (path === "/auth/tenant/resolve") {
     const slug = url.searchParams.get("slug") ?? "proof-off";
     data = envelope({
-      tenant_id: sharedTenantCookie && slug === "school-b" ? 2 : 1,
+      tenant_id: sharedTenantCookie && slug === "school-b" ? "2" : "1",
       slug,
       subdomain: slug,
       name: sharedTenantCookie
@@ -134,14 +106,41 @@ const api = createServer(async (req, res) => {
           ? "School B"
           : "School A"
         : "Netzwerktest",
-      organization_id: 1,
+      organization_id: "1",
       organization_name: "Fixture",
+      hidden: false,
       settings: {},
+      presence_mode: "detailed",
+      booked_modules: null,
+      parent_messaging_enabled: false,
+      parent_message_card_badge_enabled: false,
+      staff_messaging_enabled: false,
+      display_enabled: false,
+      caldav_enabled: false,
       grade_level_max: 4,
+      care_offerings_enabled: true,
+      attendance_web_enabled: false,
+      attendance_log_enabled: false,
+      group_mode: "fixed_groups",
+      operational_overview_scope: "own",
+      attendance_edit_scope: "own",
+      parent_request_reason_policy: "both",
+      show_timetable_counts: true,
       analytics_enabled: slug === "proof-on",
       analytics_freigabe: false,
+      analytics_recording_sample_percent: 0,
       student_photos_enabled: true,
       timetable_enabled: false,
+      meal_plan_enabled: false,
+      meal_registration_enabled: false,
+      waitlist_enabled: true,
+      early_checkout_note_enabled: false,
+      early_checkout_note_tolerance_minutes: 0,
+      weekend_follows_friday: false,
+      children_without_care_place: false,
+      child_search_only_navigation: false,
+      simple_staff_navigation: false,
+      care_facility_term: "OGS",
     });
   } else if (sharedTenantCookie && portalReads.has(path)) {
     data = envelope([]);
@@ -150,7 +149,7 @@ const api = createServer(async (req, res) => {
     data = envelope({
       entries: [
         {
-          id: 7,
+          id: "7",
           type: "test",
           title: "Hinweis",
           body: "Text",
@@ -301,7 +300,23 @@ const api = createServer(async (req, res) => {
       current_staff: null,
       incomplete: false,
       unavailable_sections: [],
+      school_switches: {
+        parent_news_enabled: false,
+        parent_invite_mode: "direct",
+        timetable_day_start_time: "08:00",
+        timetable_day_end_time: "16:00",
+      },
     });
+  // The school picker of the main domain (#7563).
+  else if (path === "/auth/tenants")
+    data = envelope(
+      schools.map(({ slug, name, subdomain, organization_name }) => ({
+        slug,
+        name,
+        subdomain,
+        organization_name,
+      })),
+    );
   else if (path === "/auth/account/tenants")
     data = envelope(sharedTenantCookie ? schools : []);
   else {
@@ -364,7 +379,6 @@ const env = {
   NODE_ENV: "development",
   NEXT_TELEMETRY_DISABLED: "1",
   API_URL: `http://127.0.0.1:${apiPort}`,
-  NEXT_PUBLIC_API_URL: `http://127.0.0.1:${apiPort}`,
   NEXTAUTH_URL: `http://localhost:${frontendPort}`,
   NEXTAUTH_SECRET: randomBytes(32).toString("hex"),
   AUTH_JWT_EXPIRY: "15m",

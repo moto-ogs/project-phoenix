@@ -12,6 +12,7 @@ DELETE /api/students/{id}/pickup-exceptions/{exceptionId}
 DELETE /api/students/{id}/pickup-notes/{noteId}
 DELETE /api/students/{id}/purge
 DELETE /api/students/{id}/rfid
+DELETE /api/students/{id}/room-history-stop
 DELETE /api/students/{id}/status-days/{statusDayId}
 GET /api/students/
 GET /api/students/arrival-settings
@@ -22,6 +23,7 @@ GET /api/students/care-withdrawals
 GET /api/students/care-withdrawals/{completionId}/deletion-impact
 GET /api/students/change-requests
 GET /api/students/change-requests/access
+GET /api/students/change-requests/history
 GET /api/students/change-requests/pending-count
 GET /api/students/change-requests/rss-feed/
 GET /api/students/child-quota
@@ -46,8 +48,8 @@ GET /api/students/{id}/attendance-history
 GET /api/students/{id}/attendance-history/export
 GET /api/students/{id}/care-withdrawals
 GET /api/students/{id}/change-history
+GET /api/students/{id}/companion-links
 GET /api/students/{id}/companions
-GET /api/students/{id}/current-visit
 GET /api/students/{id}/delete-impact
 GET /api/students/{id}/documents
 GET /api/students/{id}/documents/{documentId}/download
@@ -59,12 +61,11 @@ GET /api/students/{id}/partial-absences
 GET /api/students/{id}/photo/{filename}
 GET /api/students/{id}/pickup-schedules
 GET /api/students/{id}/privacy-consent
+GET /api/students/{id}/room-history-stop
 GET /api/students/{id}/status-days
-GET /api/students/{id}/visit-history
 POST /api/students/
 POST /api/students/arrival-schedules/bulk
 POST /api/students/arrival-schedules/status
-POST /api/students/arrival-times/bulk
 POST /api/students/care-end
 POST /api/students/care-end/cancel
 POST /api/students/care-end/preview
@@ -83,7 +84,6 @@ POST /api/students/master-data-change-requests/{requestId}/decide
 POST /api/students/offering-change-requests/{requestId}/decide
 POST /api/students/offering-change-requests/{requestId}/preview
 POST /api/students/pickup-schedules/bulk
-POST /api/students/pickup-times/bulk
 POST /api/students/school-checkin/batch
 POST /api/students/status-days/bulk
 POST /api/students/{id}/accident-reports
@@ -123,3 +123,4 @@ PUT /api/students/{id}/pickup-notes
 PUT /api/students/{id}/pickup-notes/{noteId}
 PUT /api/students/{id}/pickup-schedules
 PUT /api/students/{id}/privacy-consent
+PUT /api/students/{id}/room-history-stop

@@ -103,7 +103,6 @@ var changeConflictRules = []struct {
 }{
 	{carecontract.ErrContractNotActive, common.CodeCareContractChangeContractNotActive},
 	{carecontract.ErrChangeDecided, common.CodeStudentsChangeRequestNotPending},
-	{carecontract.ErrChangeStale, common.CodeStudentsChangeRequestStale},
 	{carecontract.ErrChangePast, common.CodeStudentsRequestPast},
 	{carecontract.ErrChangeEndsCare, common.CodeCareContractChangeEndsCare},
 	{carecontract.ErrChangeCapacityFull, common.CodeStudentsOfferingChangeCapacityFull},

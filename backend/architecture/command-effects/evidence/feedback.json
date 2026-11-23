@@ -17,25 +17,9 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/feedback/internal/application.Service.EraseEntry",
-      "binding_digest": "c1300bdfb0bb5fd8a50aa51f9cbedbcc",
-      "port": "github.com/moto-ogs/project-phoenix/modules/feedback.Capability.EraseEntry",
-      "source_owner": "feedback",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/feedback/internal/application.Service.FindEntries",
       "binding_digest": "c1300bdfb0bb5fd8a50aa51f9cbedbcc",
       "port": "github.com/moto-ogs/project-phoenix/modules/feedback.Capability.FindEntries",
-      "source_owner": "feedback",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/feedback/internal/application.Service.LookupEntry",
-      "binding_digest": "c1300bdfb0bb5fd8a50aa51f9cbedbcc",
-      "port": "github.com/moto-ogs/project-phoenix/modules/feedback.Capability.LookupEntry",
       "source_owner": "feedback",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"
@@ -49,9 +33,9 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/feedback/internal/application.Service.SubmitBatch",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/feedback/internal/application.FeedbackHistory.RecordFeedbackHistory",
       "binding_digest": "c1300bdfb0bb5fd8a50aa51f9cbedbcc",
-      "port": "github.com/moto-ogs/project-phoenix/modules/feedback.Capability.SubmitBatch",
+      "port": "github.com/moto-ogs/project-phoenix/modules/feedback.FeedbackHistory.RecordFeedbackHistory",
       "source_owner": "feedback",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"
@@ -113,25 +97,9 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/feedback/internal/adapters/postgres.Store.Delete",
-      "binding_digest": "c1300bdfb0bb5fd8a50aa51f9cbedbcc",
-      "port": "github.com/moto-ogs/project-phoenix/modules/feedback/internal/ports.Store.Delete",
-      "source_owner": "feedback",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/feedback/internal/adapters/postgres.Store.DeleteOlderThan",
       "binding_digest": "c1300bdfb0bb5fd8a50aa51f9cbedbcc",
       "port": "github.com/moto-ogs/project-phoenix/modules/feedback/internal/ports.Store.DeleteOlderThan",
-      "source_owner": "feedback",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/feedback/internal/adapters/postgres.Store.Get",
-      "binding_digest": "c1300bdfb0bb5fd8a50aa51f9cbedbcc",
-      "port": "github.com/moto-ogs/project-phoenix/modules/feedback/internal/ports.Store.Get",
       "source_owner": "feedback",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"
@@ -143,6 +111,22 @@
       "source_owner": "feedback",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.RoomHistoryStopReads.MoodCaptureStopped",
+      "binding_digest": "d4e86118da885055002ae194886ca9a8",
+      "port": "github.com/moto-ogs/project-phoenix/modules/feedback/internal/ports.StudentStops.MoodCaptureStopped",
+      "source_owner": "feedback",
+      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.RoomHistoryStopOwner.MoodCaptureStopped",
+      "target_owner": "student-presence"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.RoomHistoryStopReads.MoodCaptureStopped",
+      "binding_digest": "d2677872ffbeefc62cc3a9d6df0efa1e",
+      "port": "github.com/moto-ogs/project-phoenix/modules/feedback/internal/ports.StudentStops.MoodCaptureStopped",
+      "source_owner": "feedback",
+      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.RoomHistoryStopReads.MoodCaptureStopped",
+      "target_owner": "student-presence"
     }
   ]
 }

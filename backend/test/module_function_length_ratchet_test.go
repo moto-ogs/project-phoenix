@@ -74,13 +74,13 @@ const moduleFuncLenThreshold = 60
 // additions or raises require a new-numbered ADR cited by the entry (ADR 0070).
 // ADR 0082: newly covered sources, measured at 722c5aa147; no headroom.
 var moduleFuncLenAllowlist = map[string]int{
-	"api/active_test_helpers.go:buildActiveTestModule":            185,
+	// Lowered by #7808: the cross-tenant visitor read left the presence wiring.
+	"api/active_test_helpers.go:buildActiveTestModule":            181,
 	"api/auth_test_helpers.go:NewAuthTestModule":                  164,
-	"api/calendar_test_helpers.go:NewCalendarTestModule":          63,
 	"api/guardian_invitation_test_helpers.go:lifecycleTestModule": 61,
-	"api/guardians_composition.go:NewGuardiansResource":           106,
+	"api/guardians_composition.go:NewGuardiansResource":           91,
 	"api/import_test_helpers.go:NewImportTestModuleWithOwners":    80,
-	"api/iot/compose/compose.go:(*Resource).Router":               105,
+	"api/iot/compose/compose.go:(*Resource).Router":               104,
 	"api/reminders_test_helpers.go:NewRemindersTestModule":        64,
 	// ADR 0234: the school search mount takes the note search and the
 	// activity read; gofmt splits its root step (+2).
@@ -556,13 +556,13 @@ var moduleFuncLenAllowlist = map[string]int{
 	// ADR 0087.
 	"internal/devtools/seedapi/seeder.go:(*Seeder).printSuccessSummary": 70,
 	// ADR 0087.
-	"internal/devtools/seedapi/stammdaten.go:(*FixedSeeder).Seed": 119,
+	"internal/devtools/seedapi/stammdaten.go:(*FixedSeeder).Seed": 114,
 	// ADR 0087.
-	"internal/devtools/seedapi/stammdaten.go:(*FixedSeeder).seedActivities": 64,
+	"internal/devtools/seedapi/stammdaten.go:(*FixedSeeder).seedActivities": 62,
 	// ADR 0087.
 	"internal/devtools/seedapi/stammdaten.go:(*FixedSeeder).seedGroups": 65,
 	// ADR 0087.
-	"internal/devtools/seedapi/stammdaten.go:(*FixedSeeder).seedPickupSchedules": 123,
+	"internal/devtools/seedapi/stammdaten.go:(*FixedSeeder).seedPickupSchedules": 118,
 	// ADR 0087.
 	"internal/devtools/seedapi/stammdaten.go:(*FixedSeeder).seedStaffAccounts": 129,
 	// ADR 0087.

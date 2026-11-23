@@ -1,8 +1,40 @@
-import type { TeacherHint } from "./student-helpers";
-import type { HomeworkFeedbackStatus } from "./homework-feedback";
-import type { CareDayStatus } from "./timetable-types";
+import {
+  HOMEWORK_FEEDBACK_STATUSES,
+  type HomeworkFeedbackStatus,
+} from "./homework-feedback";
+import type { AttendancePatchBody, CareDayStatus } from "./timetable-types";
+import { knownEnum } from "./contract/known-enum";
+import type * as sharedContract from "./contract/shared.generated";
 
-import type { ClassHandover } from "~/lib/class-handover";
+import type * as studentsContract from "~/lib/contract/students.generated";
+
+// Go does not register these sets; the contract types them as string. A value
+// this build does not know stays undefined instead of passing as a known one.
+const BLOCK_STATUS_VALUES = [
+  "planned",
+  "active",
+  "completed",
+  "cancelled",
+] as const;
+const ROW_STATUS_VALUES = ["expected", "present", "absent"] as const;
+const SUBSTATUS_VALUES = [
+  "late",
+  "excused",
+  "sick",
+  "field_trip",
+  "other",
+] as const;
+const CARE_DAY_STATUS_VALUES = [
+  "scheduled",
+  "not_scheduled",
+  "cancelled",
+  "unknown",
+] as const satisfies readonly CareDayStatus[];
+
+/** undefined: a status this build does not know. */
+type BlockStatus = (typeof BLOCK_STATUS_VALUES)[number] | undefined;
+type RosterRowStatus = (typeof ROW_STATUS_VALUES)[number];
+type RosterRowSubstatus = (typeof SUBSTATUS_VALUES)[number];
 export interface PlannedTimetableInstance {
   id: string;
   title: string;
@@ -11,7 +43,7 @@ export interface PlannedTimetableInstance {
   endTime: string;
   roomId: string;
   roomName: string | null;
-  status: "planned" | "active" | "completed" | "cancelled";
+  status: BlockStatus;
   isOverdue: boolean;
   minutesUntilStart: number;
   expectedStudentsCount: number;
@@ -85,7 +117,7 @@ interface PlannedInstanceStaffName {
 interface TimetableRosterInstance {
   id: string;
   title: string;
-  status: "planned" | "active" | "completed" | "cancelled";
+  status: BlockStatus;
   isSpontaneous: boolean;
   activeGroupId: string | null;
   roomId: string;
@@ -106,8 +138,10 @@ export interface TimetableRosterRow {
   isUnplanned: boolean;
   currentlyPresent: boolean;
   visitId: string | null;
-  status: "expected" | "present" | "absent";
-  substatus: "late" | "excused" | "sick" | "field_trip" | "other" | null;
+  /** undefined: a status this build does not know. */
+  status: RosterRowStatus | undefined;
+  /** null: none; undefined: a substatus this build does not know. */
+  substatus: RosterRowSubstatus | null | undefined;
   note: string | null;
   checkedInAt: string | null;
   checkedOutAt?: string | null;
@@ -118,7 +152,7 @@ export interface TimetableRosterRow {
    * Übergabe nach dem Unterricht (#4794): heute mit der Klasse an die OGS
    * übergeben, „da“ oder „nicht da“. Nur in der Aufsicht geliefert.
    */
-  classHandover?: ClassHandover;
+  classHandover?: studentsContract.ClassHandover;
   warnings: TimetableRosterWarning[];
   /**
    * Care-plan verdict for this child on the instance's date (#1747).
@@ -130,7 +164,7 @@ export interface TimetableRosterRow {
    */
   careDayStatus: CareDayStatus;
   /** Hinweise der Lehrkraft für den Tag des Blocks (#4795); nur mit users:read. */
-  teacherHints?: TeacherHint[];
+  teacherHints?: studentsContract.TeacherHint[];
   /**
    * Names the other running instance where this child is currently recorded
    * present (#2265). Null when no parallel block holds the child as present;
@@ -144,6 +178,11 @@ export interface TimetableRosterRow {
   homework?: TimetableRosterHomework[];
   /** Rückmeldung der OGS zu diesen Hausaufgaben, falls schon gegeben. */
   homeworkFeedback?: TimetableHomeworkFeedback;
+  /**
+   * Lese-Token dieser Rückmeldung (ADR 0311), auch vor der ersten; die
+   * Rückmeldung schickt ihn als expected_version mit.
+   */
+  homeworkFeedbackVersion?: string;
 }
 
 export type TimetableHomeworkFeedbackStatus = HomeworkFeedbackStatus;
@@ -154,7 +193,8 @@ interface TimetableRosterHomework {
 }
 
 interface TimetableHomeworkFeedback {
-  status: TimetableHomeworkFeedbackStatus;
+  /** undefined: a status this build does not know. */
+  status: TimetableHomeworkFeedbackStatus | undefined;
   note: string | null;
 }
 
@@ -222,217 +262,100 @@ export interface StartOperationResult {
 export interface HomeworkFeedbackBody {
   status: TimetableHomeworkFeedbackStatus;
   note: string | null;
+  /** The feedback as the dialog opened it (ADR 0311). */
+  expected_version: string;
 }
 
-export interface AttendancePatchBody {
-  status?: "expected" | "present" | "absent";
-  substatus?: "late" | "excused" | "sick" | "field_trip" | "other" | null;
-  note?: string | null;
-}
+export type { AttendancePatchBody };
 
-interface BackendPlannedTimetableInstance {
-  id: string | number;
-  title: string;
-  date: string;
-  start_time: string;
-  end_time: string;
-  room_id: string | number;
-  room_name?: string | null;
-  activity_type?: string;
-  status: PlannedTimetableInstance["status"];
-  is_overdue: boolean;
-  minutes_until_start: number;
-  expected_students_count: number;
-  not_scheduled_students_count?: number;
-  present_students_count: number;
-  current_students_count?: number;
-  planned_students_count?: number;
-  is_spontaneous?: boolean;
-  assigned_staff_ids: (string | number)[];
-  is_assigned?: boolean;
-  is_primary?: boolean;
-  is_substitute?: boolean;
-  is_absent?: boolean;
-  roster_preview?: BackendRosterRow[];
-  pickup_times_loaded?: boolean;
-  pickup_times_redacted?: boolean;
-  can_start?: boolean;
-  start_available_at?: string;
-  start_expires_at?: string;
-  can_reopen?: boolean;
-  reopen_until?: string;
-  active_group_id?: string | number | null;
-  cancel_reason?: string | null;
-  planning_track_name?: string | null;
-  planning_track_color?: string | null;
-  group_name?: string | null;
-  staff_names?: {
-    staff_id: string | number;
-    display_name: string;
-    is_substitute?: boolean;
-  }[];
-}
-
-interface BackendRosterInstance {
-  id: string | number;
-  title: string;
-  status: TimetableRosterInstance["status"];
-  is_spontaneous?: boolean;
-  active_group_id?: string | number | null;
-  room_id: string | number;
-  room_name?: string | null;
-  date?: string;
-  start_time?: string;
-  end_time?: string;
-  can_complete?: boolean;
-  complete_available_at?: string;
-}
-
-interface BackendRosterRow {
-  student_id: string | number;
-  student_name: string;
-  school_class: string;
-  group_name: string;
-  planned: boolean;
-  is_unplanned: boolean;
-  currently_present: boolean;
-  visit_id?: string | number | null;
-  status: TimetableRosterRow["status"];
-  substatus?: TimetableRosterRow["substatus"];
-  note?: string | null;
-  checked_in_at?: string | null;
-  checked_out_at?: string | null;
-  visit_entry_time?: string | null;
-  pickup_time?: string | null;
-  warnings?: BackendRosterWarning[];
-  care_day_status?: TimetableRosterRow["careDayStatus"];
-  teacher_hints?: TeacherHint[];
-  parallel_present_in?: {
-    instance_id: string | number;
-    title: string;
-    start_time: string;
-    end_time: string;
-  } | null;
-  homework?: { subject?: string | null; description: string }[];
-  homework_feedback?: {
-    status: TimetableHomeworkFeedbackStatus;
-    note?: string | null;
-  } | null;
-}
-
-interface BackendRosterWarning {
-  kind: TimetableRosterWarning["kind"];
-  message: string;
-  expected_arrival?: string | null;
-  slot_start?: string | null;
-  expected_group_id?: string | number | null;
-  expected_group_name?: string | null;
-  current_education_group_id?: string | number | null;
-}
-
-export interface BackendTimetableRoster {
-  instance: BackendRosterInstance;
-  rows: BackendRosterRow[];
-  pickup_times_loaded?: boolean;
-  pickup_times_redacted?: boolean;
-  moved_from?: string | null;
-  can_operate?: boolean;
-  can_start?: boolean;
-  can_end?: boolean;
-  can_edit_attendance?: boolean;
-  can_report_absence?: boolean;
-  can_record_homework_feedback?: boolean;
-}
-
-export interface BackendStartOperationResult {
-  instance_id: string | number;
-  status: string;
-  active_group_id: string | number;
+/** An ID of the contract that may be absent; null when it is. */
+function optionalId(value: string | undefined): string | null {
+  return value ?? null;
 }
 
 export function mapPlannedInstance(
-  raw: BackendPlannedTimetableInstance,
+  raw: sharedContract.OperationPlannedInstance,
 ): PlannedTimetableInstance {
   return {
-    id: raw.id.toString(),
+    id: raw.id,
     title: raw.title,
     date: raw.date,
     startTime: raw.start_time,
     endTime: raw.end_time,
-    roomId: raw.room_id.toString(),
+    roomId: raw.room_id,
     roomName: raw.room_name ?? null,
-    status: raw.status,
+    status: knownEnum(BLOCK_STATUS_VALUES, raw.status),
     ...(raw.activity_type === "duty" ? { isDuty: true } : {}),
     isOverdue: raw.is_overdue,
     minutesUntilStart: raw.minutes_until_start,
     expectedStudentsCount: raw.expected_students_count,
     presentStudentsCount: raw.present_students_count,
-    notScheduledStudentsCount: raw.not_scheduled_students_count ?? 0,
-    ...(raw.current_students_count === undefined
-      ? {}
-      : { currentStudentsCount: raw.current_students_count }),
-    ...(raw.planned_students_count === undefined
-      ? {}
-      : { plannedStudentsCount: raw.planned_students_count }),
-    ...(raw.is_spontaneous === true ? { isSpontaneous: true } : {}),
-    assignedStaffIds: raw.assigned_staff_ids.map(String),
-    isAssigned: raw.is_assigned ?? false,
-    isPrimary: raw.is_primary ?? false,
-    isSubstitute: raw.is_substitute ?? false,
-    isAbsent: raw.is_absent ?? false,
+    notScheduledStudentsCount: raw.not_scheduled_students_count,
+    currentStudentsCount: raw.current_students_count,
+    plannedStudentsCount: raw.planned_students_count,
+    ...(raw.is_spontaneous ? { isSpontaneous: true } : {}),
+    assignedStaffIds: raw.assigned_staff_ids ?? [],
+    isAssigned: raw.is_assigned,
+    isPrimary: raw.is_primary,
+    isSubstitute: raw.is_substitute,
+    isAbsent: raw.is_absent,
     rosterPreview: (raw.roster_preview ?? []).map(mapRosterRow),
-    ...(raw.pickup_times_loaded === undefined
-      ? {}
-      : { pickupTimesLoaded: raw.pickup_times_loaded }),
+    pickupTimesLoaded: raw.pickup_times_loaded,
     ...(raw.pickup_times_redacted === undefined
       ? {}
       : { pickupTimesRedacted: raw.pickup_times_redacted }),
-    canStart: raw.can_start ?? false,
-    startAvailableAt: raw.start_available_at ?? "",
-    startExpiresAt: raw.start_expires_at ?? "",
+    canStart: raw.can_start,
+    startAvailableAt: raw.start_available_at,
+    startExpiresAt: raw.start_expires_at,
     ...(raw.can_reopen === true
       ? {
           canReopen: true,
           ...(raw.reopen_until ? { reopenUntil: raw.reopen_until } : {}),
         }
       : {}),
-    activeGroupId: raw.active_group_id?.toString() ?? null,
+    activeGroupId: optionalId(raw.active_group_id),
     cancelReason: raw.cancel_reason ?? null,
     planningTrackName: raw.planning_track_name ?? null,
     planningTrackColor: raw.planning_track_color ?? null,
     groupName: raw.group_name ?? null,
     staffNames: (raw.staff_names ?? []).map((entry) => ({
-      staffId: entry.staff_id.toString(),
+      staffId: entry.staff_id,
       displayName: entry.display_name,
-      isSubstitute: entry.is_substitute ?? false,
+      isSubstitute: entry.is_substitute,
     })),
   };
 }
 
-function mapRosterRow(row: BackendRosterRow): TimetableRosterRow {
+function mapRosterRow(
+  row: sharedContract.OperationRosterRow,
+): TimetableRosterRow {
   return {
-    studentId: row.student_id.toString(),
+    studentId: row.student_id,
     studentName: row.student_name,
     schoolClass: row.school_class,
     groupName: row.group_name,
     planned: row.planned,
     isUnplanned: row.is_unplanned,
     currentlyPresent: row.currently_present,
-    visitId: row.visit_id?.toString() ?? null,
-    status: row.status,
-    substatus: row.substatus ?? null,
+    visitId: optionalId(row.visit_id),
+    status: knownEnum(ROW_STATUS_VALUES, row.status),
+    substatus:
+      row.substatus === undefined
+        ? null
+        : knownEnum(SUBSTATUS_VALUES, row.substatus),
     note: row.note ?? null,
     checkedInAt: row.checked_in_at ?? null,
     checkedOutAt: row.checked_out_at ?? null,
     visitEntryTime: row.visit_entry_time ?? null,
-    ...(row.pickup_time === undefined
-      ? {}
-      : { pickupTime: row.pickup_time ?? null }),
-    careDayStatus: row.care_day_status ?? "unknown",
+    pickupTime: row.pickup_time,
+    // Go's own fallback for a day the plan says nothing about
+    // (backend/modules/timetable/care_days.go:19); it keeps the child expected.
+    careDayStatus:
+      knownEnum(CARE_DAY_STATUS_VALUES, row.care_day_status) ?? "unknown",
     ...(row.teacher_hints?.length ? { teacherHints: row.teacher_hints } : {}),
     parallelPresentIn: row.parallel_present_in
       ? {
-          instanceId: row.parallel_present_in.instance_id.toString(),
+          instanceId: row.parallel_present_in.instance_id,
           title: row.parallel_present_in.title,
           startTime: row.parallel_present_in.start_time,
           endTime: row.parallel_present_in.end_time,
@@ -443,10 +366,9 @@ function mapRosterRow(row: BackendRosterRow): TimetableRosterRow {
       message: warning.message,
       expectedArrival: warning.expected_arrival ?? null,
       slotStart: warning.slot_start ?? null,
-      expectedGroupId: warning.expected_group_id?.toString() ?? null,
+      expectedGroupId: optionalId(warning.expected_group_id),
       expectedGroupName: warning.expected_group_name ?? null,
-      currentEducationGroupId:
-        warning.current_education_group_id?.toString() ?? null,
+      currentEducationGroupId: optionalId(warning.current_education_group_id),
     })),
     ...(row.homework && row.homework.length > 0
       ? {
@@ -459,59 +381,59 @@ function mapRosterRow(row: BackendRosterRow): TimetableRosterRow {
     ...(row.homework_feedback
       ? {
           homeworkFeedback: {
-            status: row.homework_feedback.status,
+            status: knownEnum(
+              HOMEWORK_FEEDBACK_STATUSES,
+              row.homework_feedback.status,
+            ),
             note: row.homework_feedback.note ?? null,
           },
         }
       : {}),
+    ...(row.homework_feedback_version
+      ? { homeworkFeedbackVersion: row.homework_feedback_version }
+      : {}),
   };
 }
 
-export function mapRoster(raw: BackendTimetableRoster): TimetableRoster {
+export function mapRoster(
+  raw: sharedContract.OperationRoster,
+): TimetableRoster {
   return {
     instance: {
-      id: raw.instance.id.toString(),
+      id: raw.instance.id,
       title: raw.instance.title,
-      status: raw.instance.status,
-      isSpontaneous: raw.instance.is_spontaneous ?? false,
-      activeGroupId: raw.instance.active_group_id?.toString() ?? null,
-      roomId: raw.instance.room_id.toString(),
+      status: knownEnum(BLOCK_STATUS_VALUES, raw.instance.status),
+      isSpontaneous: raw.instance.is_spontaneous,
+      activeGroupId: optionalId(raw.instance.active_group_id),
+      roomId: raw.instance.room_id,
       roomName: raw.instance.room_name ?? null,
-      date: raw.instance.date ?? "",
-      startTime: raw.instance.start_time ?? "",
-      endTime: raw.instance.end_time ?? "",
-      canComplete: raw.instance.can_complete ?? false,
-      completeAvailableAt: raw.instance.complete_available_at ?? "",
+      date: raw.instance.date,
+      startTime: raw.instance.start_time,
+      endTime: raw.instance.end_time,
+      canComplete: raw.instance.can_complete,
+      completeAvailableAt: raw.instance.complete_available_at,
     },
-    rows: raw.rows.map(mapRosterRow),
-    ...(raw.pickup_times_loaded === undefined
-      ? {}
-      : { pickupTimesLoaded: raw.pickup_times_loaded }),
+    rows: (raw.rows ?? []).map(mapRosterRow),
+    pickupTimesLoaded: raw.pickup_times_loaded,
     ...(raw.pickup_times_redacted === undefined
       ? {}
       : { pickupTimesRedacted: raw.pickup_times_redacted }),
     movedFrom: raw.moved_from ?? null,
-    ...(raw.can_operate === undefined ? {} : { canOperate: raw.can_operate }),
-    ...(raw.can_start === undefined ? {} : { canStart: raw.can_start }),
-    ...(raw.can_end === undefined ? {} : { canEnd: raw.can_end }),
-    ...(raw.can_edit_attendance === undefined
-      ? {}
-      : { canEditAttendance: raw.can_edit_attendance }),
-    ...(raw.can_report_absence === undefined
-      ? {}
-      : { canReportAbsence: raw.can_report_absence }),
-    ...(raw.can_record_homework_feedback === undefined
-      ? {}
-      : { canRecordHomeworkFeedback: raw.can_record_homework_feedback }),
+    canOperate: raw.can_operate,
+    canStart: raw.can_start,
+    canEnd: raw.can_end,
+    canEditAttendance: raw.can_edit_attendance,
+    canReportAbsence: raw.can_report_absence,
+    canRecordHomeworkFeedback: raw.can_record_homework_feedback,
   };
 }
 
 export function mapStartOperation(
-  raw: BackendStartOperationResult,
+  raw: sharedContract.startOperationResponse,
 ): StartOperationResult {
   return {
-    instanceId: raw.instance_id.toString(),
-    activeGroupId: raw.active_group_id.toString(),
+    instanceId: raw.instance_id,
+    activeGroupId: raw.active_group_id,
     status: raw.status,
   };
 }

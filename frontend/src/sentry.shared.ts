@@ -6,9 +6,9 @@ import { isSentryUserPseudonym } from "~/lib/sentry-user-pseudonym";
 const routerStateParseMessage =
   "The router state header was sent but could not be parsed.";
 
-// Calendar- and request-feed capability tokens ride in URL paths. Redact them
-// from every recorded URL/path so a Sentry event cannot leak a replayable
-// secret. This mirrors the backend request-log redactor.
+// Calendar, request-feed and public credential tokens ride in URL paths.
+// Redact them from every recorded URL/path so a Sentry event cannot leak a
+// replayable secret. This mirrors the backend request-log redactor.
 const feedTokenPatterns = [
   SIGNING_TOKEN_PATH_PATTERN,
   /(\/api\/calendar-feed\/)[^/?#\s"]+/g,
@@ -131,13 +131,23 @@ function scrubDeep(value: unknown, seen: WeakSet<object>): unknown {
 export function scrubClientEvent(event: ErrorEvent): ErrorEvent | null {
   const isNetworkFailure = event.exception?.values?.some(
     (exception) =>
-      (exception.type === "TypeError" &&
-        /^(?:Failed to fetch|Load failed|NetworkError when attempting to fetch resource\.?)$/.test(
-          exception.value ?? "",
-        )) ||
-      (exception.type === "AxiosError" && exception.value === "Network Error"),
+      exception.type === "TypeError" &&
+      /^(?:Failed to fetch|Load failed|NetworkError when attempting to fetch resource\.?)$/.test(
+        exception.value ?? "",
+      ),
   );
-  return isNetworkFailure ? null : scrubEvent(event);
+  if (isNetworkFailure) return null;
+  // Every build names its chunks anew, so Sentry would open a new issue (and
+  // send a new alert) per chunk file. A chunk that stays unloadable after the
+  // automatic reload (~/lib/chunk-load-recovery) is one fault: one issue.
+  if (
+    event.exception?.values?.some(
+      (exception) => exception.type === "ChunkLoadError",
+    )
+  ) {
+    event.fingerprint = ["ChunkLoadError"];
+  }
+  return scrubEvent(event);
 }
 
 function scrubRequestAndUser(event: Event): void {

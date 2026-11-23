@@ -33,15 +33,12 @@ import {
   fetchAnnouncementsUnreadCount,
   markAnnouncementRead,
   acknowledgeAnnouncement,
-  type Child,
-  type StatusDay,
-  type ChildMasterData,
   type ThreadSummary,
   type ThreadView,
-  type ParentAnnouncement,
 } from "./parent-api";
 
-import type { SubmitEnrollmentPayload } from "./enrollment-submission-api";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 
 const originalFetch = globalThis.fetch;
 
@@ -67,8 +64,12 @@ afterEach(() => {
   globalThis.fetch = originalFetch;
 });
 
-function mkChild(id: string, schoolName: string): Child {
+function mkChild(
+  id: string,
+  schoolName: string,
+): parentMeContract.ChildResponse {
   return {
+    care_ended: false,
     student_id: id,
     tenant_id: "1",
     first_name: "Lara",
@@ -250,23 +251,23 @@ describe("listMyChildren", () => {
     expect(out[0]!.school_name).toBe("OGS A");
   });
 
-  it("handles flat (non-enveloped) response by returning it directly", async () => {
-    // Some routes return the data directly without { status, data }.
+  it("rejects an answer without data as unreadable (502)", async () => {
+    // The catalog proxy always answers { status, data }; a bare list is a
+    // broken route, not a second answer shape.
     mockFetch(async () => jsonResponse([mkChild("1", "OGS")]));
-    const out = await listMyChildren();
-    expect(out).toHaveLength(1);
+    await expect(listMyChildren()).rejects.toMatchObject({ status: 502 });
   });
 
   it("throws with backend error message on non-OK", async () => {
     mockFetch(async () =>
       jsonResponse({ detail: "forbidden" }, { status: 403 }),
     );
-    await expect(listMyChildren()).rejects.toThrow(/Request failed \(403\)/);
+    await expect(listMyChildren()).rejects.toThrow(/failed \(403\)/);
   });
 
   it("throws with generic message on non-OK non-JSON body", async () => {
     mockFetch(async () => new Response("not json", { status: 500 }));
-    await expect(listMyChildren()).rejects.toThrow(/Request failed \(500\)/);
+    await expect(listMyChildren()).rejects.toThrow(/failed \(500\)/);
   });
 
   it("redirects to /parents/login on 401", async () => {
@@ -352,6 +353,7 @@ describe("listMyDocuments", () => {
 
   it("merges the letters and the care contracts, newest first", async () => {
     const doc = (id: string, kind: string, sentAt: string) => ({
+      replaced: false,
       id,
       organization_id: "3",
       traeger_name: "Ganztag Nord",
@@ -394,6 +396,40 @@ describe("listMyDocuments", () => {
       "4",
     ]);
   });
+
+  it("puts the newer of two documents sent at once first, also above 2^53", async () => {
+    const sentAt = "2026-09-03T08:00:00Z";
+    const doc = (id: string) => ({
+      replaced: false,
+      id,
+      organization_id: "3",
+      traeger_name: "Ganztag Nord",
+      kind: "invoice",
+      number: "",
+      period_name: "",
+      service_from: "",
+      service_until: "",
+      issued_on: "",
+      total_cents: 0,
+      child_names: ["Lina"],
+      sent_at: sentAt,
+    });
+    mockFetch(async (input) =>
+      jsonResponse({
+        data: String(input).endsWith("/documents")
+          ? [doc("9007199254740992"), doc("99"), doc("9007199254740993")]
+          : [],
+      }),
+    );
+
+    const out = await listMyDocuments();
+
+    expect(out.documents.map((document) => document.id)).toEqual([
+      "9007199254740993",
+      "9007199254740992",
+      "99",
+    ]);
+  });
 });
 
 describe("listEnrollableSchools", () => {
@@ -431,9 +467,7 @@ describe("listEnrollableSchools", () => {
 
   it("throws on non-OK", async () => {
     mockFetch(async () => jsonResponse({ detail: "boom" }, { status: 500 }));
-    await expect(listEnrollableSchools()).rejects.toThrow(
-      /Request failed \(500\)/,
-    );
+    await expect(listEnrollableSchools()).rejects.toThrow(/failed \(500\)/);
   });
 });
 
@@ -489,23 +523,26 @@ describe("fetchParentEnrollmentProfile", () => {
     });
   });
 
-  it("handles flat (non-enveloped) response", async () => {
+  it("rejects an answer without data as unreadable (502)", async () => {
+    // The catalog proxy always answers { status, data }; a flat profile is a
+    // broken route, not a second answer shape.
     mockFetch(async () =>
       jsonResponse({
         guardian: { first_name: "Anna", last_name: "", email: "" },
         children: [],
       }),
     );
-    const out = await fetchParentEnrollmentProfile("school");
-    expect(out).not.toBeNull();
-    expect(out!.guardian.first_name).toBe("Anna");
+    await expect(fetchParentEnrollmentProfile("school")).rejects.toMatchObject({
+      status: 502,
+      code: "general.unavailable",
+    });
   });
 });
 
 // --- submitParentEnrollment ----------------------------------------
 
-const validPayload: SubmitEnrollmentPayload = {
-  phase_id: 42,
+const validPayload: sharedContract.SubmitEnrollmentRequest = {
+  phase_id: "42",
   guardian_first_name: "Anna",
   guardian_last_name: "Beispiel",
   guardian_email: "a@b.c",
@@ -532,7 +569,7 @@ describe("submitParentEnrollment", () => {
     expect(out.request_id).toBe("1234");
     expect(out.status_url).toBe("/status/tok");
     expect(seenURL).toContain("/api/parent/enrollments/school/submit");
-    expect(seenBody).toContain(`"phase_id":42`);
+    expect(seenBody).toContain(`"phase_id":"42"`);
   });
 
   it("URL-encodes the tenant slug", async () => {
@@ -548,23 +585,21 @@ describe("submitParentEnrollment", () => {
     expect(seenURL).toContain("a%2Fb");
   });
 
-  it("handles flat (non-enveloped) response", async () => {
-    mockFetch(async () =>
-      jsonResponse(
-        { request_id: "9999", status_url: "/status/abc" },
-        { status: 201 },
-      ),
-    );
-    const out = await submitParentEnrollment("school", validPayload);
-    expect(out.request_id).toBe("9999");
-    expect(out.status_url).toBe("/status/abc");
-  });
-
-  it("falls back to empty strings when neither envelope nor flat fields present", async () => {
-    mockFetch(async () => jsonResponse({}, { status: 201 }));
-    const out = await submitParentEnrollment("school", validPayload);
-    expect(out.request_id).toBe("");
-    expect(out.status_url).toBe("");
+  it("rejects an answer without data as unreadable (502)", async () => {
+    // A flat or empty answer is a broken route; the enrollment may have been
+    // saved, so the person reloads before sending it again.
+    for (const body of [
+      { request_id: "9999", status_url: "/status/abc" },
+      {},
+    ]) {
+      mockFetch(async () => jsonResponse(body, { status: 201 }));
+      await expect(
+        submitParentEnrollment("school", validPayload),
+      ).rejects.toMatchObject({
+        status: 502,
+        code: "general.write_answer_unreadable",
+      });
+    }
   });
 
   it("keeps the backend sentence out of the error", async () => {
@@ -618,7 +653,7 @@ describe("submitParentEnrollment", () => {
 
 // --- Stammdaten master-data helpers ---------------------------------
 
-function mkMasterData(): ChildMasterData {
+function mkMasterData(): parentMeContract.MasterDataResponse {
   return {
     student_id: "42",
     first_name: "Lara",
@@ -718,7 +753,7 @@ describe("parent master-data API helpers", () => {
 
     await expect(
       updateMasterDataField("42", "student", "health_info", "x"),
-    ).rejects.toThrow(/Request failed \(409\)/);
+    ).rejects.toThrow(/failed \(409\)/);
   });
 });
 
@@ -786,7 +821,10 @@ describe("updateParentPortalLocale", () => {
 
 // --- sick notes ------------------------------------------------------
 
-function mkStatusDay(date: string, note?: string): StatusDay {
+function mkStatusDay(
+  date: string,
+  note?: string,
+): parentMeContract.StatusDayResponse {
   return {
     id: "1",
     student_id: "84",
@@ -808,41 +846,35 @@ describe("submitSickNote", () => {
       seenBody = (init?.body as string) ?? "";
       seenMethod = init?.method ?? "";
       return jsonResponse(
-        { data: { status_days: [mkStatusDay("2026-06-02", "Fieber")] } },
+        {
+          data: {
+            pending_request: null,
+            status_days: [mkStatusDay("2026-06-02", "Fieber")],
+          },
+        },
         { status: 201 },
       );
     });
     const out = await submitSickNote("84", ["2026-06-02"], "Fieber");
     expect(out.status_days).toHaveLength(1);
-    expect(out.status_days[0]!.note).toBe("Fieber");
-    expect(out.pending_request).toBeUndefined();
+    expect((out.status_days ?? [])[0]!.note).toBe("Fieber");
+    expect(out.pending_request).toBeNull();
     expect(seenMethod).toBe("POST");
     expect(seenURL).toContain("/api/parent/me/children/84/sick-note");
+    // The backend answers the envelope without the former opt-in (#2352).
+    expect(seenURL).not.toContain("envelope");
     expect(seenBody).toContain('"dates":["2026-06-02"]');
     expect(seenBody).toContain('"reason":"Fieber"');
-  });
-
-  it("normalizes the legacy bare-array response into the envelope shape (issue #1845 backward-compat)", async () => {
-    // A backend on the pre-#1845 contract (and the current direct-write path)
-    // responds with the bare status-day array, not the { status_days } object.
-    // submitSickNote must wrap it so callers see one shape.
-    mockFetch(async () =>
-      jsonResponse(
-        { data: [mkStatusDay("2026-06-02", "Fieber")] },
-        { status: 201 },
-      ),
-    );
-    const out = await submitSickNote("84", ["2026-06-02"], "Fieber");
-    expect(out.status_days).toHaveLength(1);
-    expect(out.status_days[0]!.note).toBe("Fieber");
-    expect(out.pending_request).toBeUndefined();
   });
 
   it("defaults the status to a Krankmeldung (sick)", async () => {
     let seenBody = "";
     mockFetch(async (_input, init) => {
       seenBody = (init?.body as string) ?? "";
-      return jsonResponse({ data: { status_days: [] } }, { status: 201 });
+      return jsonResponse(
+        { data: { pending_request: null, status_days: [] } },
+        { status: 201 },
+      );
     });
     await submitSickNote("84", ["2026-06-02"], "Fieber");
     expect(seenBody).toContain('"status":"sick"');
@@ -852,7 +884,10 @@ describe("submitSickNote", () => {
     let seenBody = "";
     mockFetch(async (_input, init) => {
       seenBody = (init?.body as string) ?? "";
-      return jsonResponse({ data: { status_days: [] } }, { status: 201 });
+      return jsonResponse(
+        { data: { pending_request: null, status_days: [] } },
+        { status: 201 },
+      );
     });
     await submitSickNote("84", ["2026-06-02"], "Termin", "excused");
     expect(seenBody).toContain('"status":"excused"');
@@ -893,7 +928,10 @@ describe("submitSickNote", () => {
     let seenURL = "";
     mockFetch(async (input) => {
       seenURL = typeof input === "string" ? input : input.toString();
-      return jsonResponse({ data: { status_days: [] } }, { status: 201 });
+      return jsonResponse(
+        { data: { pending_request: null, status_days: [] } },
+        { status: 201 },
+      );
     });
     await submitSickNote("a/b", ["2026-06-02"], "Fieber");
     expect(seenURL).toContain("a%2Fb");
@@ -905,7 +943,7 @@ describe("submitSickNote", () => {
     );
     await expect(
       submitSickNote("84", ["2026-06-02"], "Fieber"),
-    ).rejects.toThrow(/Request failed \(403\)/);
+    ).rejects.toThrow(/failed \(403\)/);
   });
 
   it("redirects to /parents/login on 401", async () => {
@@ -1054,9 +1092,7 @@ describe("getChildFeatures", () => {
 
   it("throws on non-OK so the caller can fall back to defaults", async () => {
     mockFetch(async () => new Response("nope", { status: 500 }));
-    await expect(getChildFeatures("84")).rejects.toThrow(
-      /Request failed \(500\)/,
-    );
+    await expect(getChildFeatures("84")).rejects.toThrow(/failed \(500\)/);
   });
 });
 
@@ -1098,7 +1134,7 @@ describe("getChildMealPlan", () => {
   it("propagates a 403 (meal_plan_disabled) so the caller can hide the section", async () => {
     mockFetch(async () => new Response("nope", { status: 403 }));
     await expect(getChildMealPlan("84", "2026-07-06")).rejects.toThrow(
-      /Request failed \(403\)/,
+      /failed \(403\)/,
     );
   });
 });
@@ -1118,6 +1154,8 @@ function mkThreadSummary(
     counterpart_name: "OGS OGS A",
     last_message_read_by_staff: false,
     unread: 0,
+    audience: "team",
+    readers: { school: { kind: "all_staff", names: [], unnamed_count: 0 } },
     ...overrides,
   };
 }
@@ -1129,6 +1167,9 @@ function mkThreadView(overrides: Partial<ThreadView> = {}): ThreadView {
     student_name: "Max Mustermann",
     school_name: "OGS A",
     counterpart_name: "OGS OGS A",
+    audience: "team",
+    readers: { school: { kind: "all_staff", names: [], unnamed_count: 0 } },
+    leadership_option: { available: false, names: [], unnamed_count: 0 },
     messages: [],
     ...overrides,
   };
@@ -1166,13 +1207,11 @@ describe("listMessageThreads", () => {
 
   it("throws on non-OK with a clear message", async () => {
     mockFetch(async () => new Response("nope", { status: 500 }));
-    await expect(listMessageThreads()).rejects.toThrow(
-      /Request failed \(500\)/,
-    );
+    await expect(listMessageThreads()).rejects.toThrow(/failed \(500\)/);
   });
 
-  it("returns an empty array when data is missing from the envelope", async () => {
-    mockFetch(async () => jsonResponse({}));
+  it("returns an empty array when the list is null", async () => {
+    mockFetch(async () => jsonResponse({ status: "success", data: null }));
     const out = await listMessageThreads();
     expect(out).toEqual([]);
   });
@@ -1187,7 +1226,21 @@ describe("fetchMessagesUnreadCount", () => {
       const url = typeof input === "string" ? input : input.toString();
       seenURLs.push(url);
       if (url.endsWith("/group-threads")) {
-        return jsonResponse({ data: [{ unread: 4 }, { unread: 0 }] });
+        const group = (id: string, unread: number) => ({
+          id,
+          title: "Sommerfest",
+          target_label: "Klasse 2a",
+          school_name: "OGS A",
+          counterpart_name: "OGS OGS A",
+          closed: false,
+          last_message_body: "",
+          unread,
+          children: [],
+          readers: {
+            school: { kind: "all_staff", names: [], unnamed_count: 0 },
+          },
+        });
+        return jsonResponse({ data: [group("g1", 4), group("g2", 0)] });
       }
       return jsonResponse({
         data: [
@@ -1214,9 +1267,7 @@ describe("fetchMessagesUnreadCount", () => {
 
   it("throws on non-OK", async () => {
     mockFetch(async () => new Response("", { status: 500 }));
-    await expect(fetchMessagesUnreadCount()).rejects.toThrow(
-      /Request failed \(500\)/,
-    );
+    await expect(fetchMessagesUnreadCount()).rejects.toThrow(/failed \(500\)/);
   });
 });
 
@@ -1227,7 +1278,7 @@ describe("getChildConversation", () => {
     let seenURL = "";
     mockFetch(async (input) => {
       seenURL = typeof input === "string" ? input : input.toString();
-      return jsonResponse(mkThreadView({ messages: [] }));
+      return jsonResponse({ data: mkThreadView({ messages: [] }) });
     });
     const view = await getChildConversation("42");
     expect(view.student_id).toBe("42");
@@ -1239,7 +1290,7 @@ describe("getChildConversation", () => {
     let seenURL = "";
     mockFetch(async (input) => {
       seenURL = typeof input === "string" ? input : input.toString();
-      return jsonResponse(mkThreadView());
+      return jsonResponse({ data: mkThreadView() });
     });
     await getChildConversation("a/b");
     expect(seenURL).toContain("a%2Fb");
@@ -1249,9 +1300,7 @@ describe("getChildConversation", () => {
     mockFetch(async () =>
       jsonResponse({ detail: "not found" }, { status: 404 }),
     );
-    await expect(getChildConversation("42")).rejects.toThrow(
-      /Request failed \(404\)/,
-    );
+    await expect(getChildConversation("42")).rejects.toThrow(/failed \(404\)/);
   });
 });
 
@@ -1266,7 +1315,10 @@ describe("postChildMessage", () => {
       seenURL = typeof input === "string" ? input : input.toString();
       seenBody = (init?.body as string) ?? "";
       seenMethod = init?.method ?? "";
-      return jsonResponse(mkThreadView({ thread_id: "t99" }), { status: 201 });
+      return jsonResponse(
+        { data: mkThreadView({ thread_id: "t99" }) },
+        { status: 201 },
+      );
     });
     const view = await postChildMessage("42", "Hallo OGS!");
     expect(view.thread_id).toBe("t99");
@@ -1279,7 +1331,7 @@ describe("postChildMessage", () => {
     let seenURL = "";
     mockFetch(async (input) => {
       seenURL = typeof input === "string" ? input : input.toString();
-      return jsonResponse(mkThreadView(), { status: 201 });
+      return jsonResponse({ data: mkThreadView() }, { status: 201 });
     });
     await postChildMessage("x/y", "text");
     expect(seenURL).toContain("x%2Fy");
@@ -1290,15 +1342,16 @@ describe("postChildMessage", () => {
       jsonResponse({ detail: "Messaging deaktiviert" }, { status: 403 }),
     );
     await expect(postChildMessage("42", "test")).rejects.toThrow(
-      /Request failed \(403\)/,
+      /failed \(403\)/,
     );
   });
 });
 
 function mkAnnouncement(
-  overrides: Partial<ParentAnnouncement> = {},
-): ParentAnnouncement {
+  overrides: Partial<parentMeContract.AnnouncementResponse> = {},
+): parentMeContract.AnnouncementResponse {
   return {
+    delivery_mode: "informational",
     id: "5",
     title: "Sommerfest",
     body: "Wir feiern am Freitag.",
@@ -1332,7 +1385,7 @@ describe("listAnnouncements", () => {
 
   it("throws an ApiError on a failed feed load", async () => {
     mockFetch(async () => jsonResponse({ detail: "kaputt" }, { status: 500 }));
-    await expect(listAnnouncements()).rejects.toThrow(/Request failed \(500\)/);
+    await expect(listAnnouncements()).rejects.toThrow(/failed \(500\)/);
   });
 });
 
@@ -1387,7 +1440,7 @@ describe("markAnnouncementRead", () => {
     );
     await expect(
       markAnnouncementRead("5", "2026-07-01T08:00:00Z"),
-    ).rejects.toThrow(/Request failed \(409\)/);
+    ).rejects.toThrow(/failed \(409\)/);
   });
 });
 
@@ -1412,7 +1465,7 @@ describe("acknowledgeAnnouncement", () => {
     );
     await expect(
       acknowledgeAnnouncement("5", "2026-07-01T08:00:00Z"),
-    ).rejects.toThrow(/Request failed \(409\)/);
+    ).rejects.toThrow(/failed \(409\)/);
   });
 });
 

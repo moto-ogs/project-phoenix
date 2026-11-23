@@ -120,7 +120,7 @@ func TestApplyAdministrativeFilters(t *testing.T) {
 			got := applyAdministrativeFilters(students, tt.bus, tt.photoConsent, tt.pickupSt, planningDate)
 			gotIDs := make([]int64, 0, len(got))
 			for _, student := range got {
-				gotIDs = append(gotIDs, student.ID)
+				gotIDs = append(gotIDs, student.ID.Int64())
 			}
 			assert.Equal(t, tt.wantIDs, gotIDs)
 		})

@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   arr,
   calendarDate,
+  fileAnswer,
   instant,
   int64String,
   nullable,
@@ -101,6 +102,15 @@ export const routes = {
     pattern: "/operator/billing/key-date-counts",
     portals: ["platform"],
     response: success(z.array(billingKeyDateCountResponseSchema)),
+  },
+  "GET /operator/billing/key-date-counts/export": {
+    method: "GET",
+    pattern: "/operator/billing/key-date-counts/export",
+    portals: ["platform"],
+    query: {
+      "month": { kind: "string" },
+    },
+    response: fileAnswer,
   },
   "GET /operator/billing/key-day": {
     method: "GET",

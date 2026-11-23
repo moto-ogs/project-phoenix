@@ -1,19 +1,21 @@
 import { invalidateTenantResolve } from "~/lib/tenant-resolve.server";
-import { apiDelete } from "~/lib/api-helpers.server";
+import { contractGet, contractWrite } from "~/lib/contract/client.server";
+import {
+  routes,
+  type loginImageUploadResponse,
+} from "~/lib/contract/settings.generated";
 import type { NextRequest } from "next/server";
 import {
   createFileUploadHandler,
   FileValidationError,
-  postForm,
 } from "~/lib/file-upload-wrapper.server";
-import { createDeleteHandler, proxyGet } from "~/lib/route-wrapper.server";
+import {
+  createDeleteHandler,
+  createGetHandler,
+} from "~/lib/route-wrapper.server";
 import { createLogger } from "~/lib/logger";
 
 const logger = createLogger({ component: "LoginImageRoute" });
-
-interface LoginImageResponse {
-  login_image_url: string;
-}
 
 /** Extract tenant slug from the request to revalidate ISR cache.
  *  Tries subdomain first (host header), then falls back to path prefix (referer).
@@ -61,7 +63,7 @@ function revalidateTenantCache(request: NextRequest) {
   });
 }
 
-export const POST = createFileUploadHandler<LoginImageResponse>(
+export const POST = createFileUploadHandler<loginImageUploadResponse>(
   async (request: NextRequest, formData: FormData, token: string) => {
     const file = formData.get("login_image");
     if (!file || !(file instanceof File)) {
@@ -73,14 +75,15 @@ export const POST = createFileUploadHandler<LoginImageResponse>(
     }
     const forwarded = new FormData();
     forwarded.append("login_image", file);
-    const data = await postForm<LoginImageResponse>(
-      request,
-      "/api/settings/login-image",
-      token,
+    const result = await contractWrite(
+      routes["POST /api/settings/login-image"],
       forwarded,
+      { token, request },
     );
-    revalidateTenantCache(request);
-    return data;
+    // Go may have applied the change even if the reply cannot be read.
+    if (result.backend?.ok) revalidateTenantCache(request);
+    if (!result.ok) throw result.error.cause;
+    return result.value.data;
   },
   {
     maxSizeInMB: 2,
@@ -91,10 +94,22 @@ export const POST = createFileUploadHandler<LoginImageResponse>(
 
 export const DELETE = createDeleteHandler(
   async (request: NextRequest, token: string) => {
-    await apiDelete("/api/settings/login-image", token);
-    revalidateTenantCache(request);
+    const result = await contractWrite(
+      routes["DELETE /api/settings/login-image"],
+      undefined,
+      { token, request },
+    );
+    if (result.backend?.ok) revalidateTenantCache(request);
+    if (!result.ok) throw result.error.cause;
     return null;
   },
 );
 
-export const GET = proxyGet("/api/settings/login-image");
+export const GET = createGetHandler(async (request, token) => {
+  const result = await contractGet(routes["GET /api/settings/login-image"], {
+    token,
+    request,
+  });
+  if (!result.ok) throw result.error.cause;
+  return result.value.data;
+});

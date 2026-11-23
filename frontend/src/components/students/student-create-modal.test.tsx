@@ -1369,7 +1369,7 @@ describe("StudentCreateModal", () => {
     expect(submitted).toMatchObject({
       guardians: [
         {
-          guardian_profile_id: 777,
+          guardian_profile_id: "777",
           relationship_type: "parent",
           guardian_role: "legal_guardian",
           can_pickup: true,

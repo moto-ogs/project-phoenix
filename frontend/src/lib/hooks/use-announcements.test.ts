@@ -3,13 +3,13 @@ import { renderHook, waitFor } from "@testing-library/react";
 import type { SWRResponse } from "~/lib/swr";
 
 // Use vi.hoisted for mock values referenced in vi.mock
-const { mockAuthFetch, mockPathname } = vi.hoisted(() => ({
-  mockAuthFetch: vi.fn(),
+const { mockBffJson, mockPathname } = vi.hoisted(() => ({
+  mockBffJson: vi.fn(),
   mockPathname: vi.fn(),
 }));
 
-vi.mock("~/lib/api-helpers", () => ({
-  authFetch: mockAuthFetch,
+vi.mock("~/lib/bff-fetch", () => ({
+  bffJson: mockBffJson,
 }));
 
 vi.mock("next/navigation", () => ({
@@ -23,7 +23,7 @@ import { useAnnouncements } from "./use-announcements";
 import { useSWRAuth as useSWR } from "~/lib/swr";
 
 interface UnreadAnnouncement {
-  id: number;
+  id: string;
   title: string;
   content: string;
   type: string;
@@ -57,7 +57,7 @@ describe("useAnnouncements", () => {
   it("returns announcements when data is loaded", () => {
     const mockData = [
       {
-        id: 1,
+        id: "1",
         title: "Test Announcement",
         content: "Test content",
         type: "announcement",
@@ -102,7 +102,7 @@ describe("useAnnouncements", () => {
   });
 
   it("dismiss sends request to backend", async () => {
-    mockAuthFetch.mockResolvedValueOnce({});
+    mockBffJson.mockResolvedValueOnce(null);
 
     vi.mocked(useSWR<UnreadAnnouncement[]>).mockReturnValue({
       data: [],
@@ -114,11 +114,12 @@ describe("useAnnouncements", () => {
 
     const { result } = renderHook(() => useAnnouncements());
 
-    await result.current.dismiss(123);
+    await result.current.dismiss("123");
 
-    expect(mockAuthFetch).toHaveBeenCalledWith(
-      "/api/platform/announcements/123/dismiss",
-      { method: "POST" },
+    expect(mockBffJson).toHaveBeenCalledWith(
+      "tenant",
+      "POST /api/platform/announcements/{id}/dismiss",
+      { params: { id: "123" } },
     );
   });
 
@@ -167,7 +168,7 @@ describe("useAnnouncements", () => {
   it("handles multiple announcements", () => {
     const mockData = [
       {
-        id: 1,
+        id: "1",
         title: "Announcement 1",
         content: "Content 1",
         type: "announcement",
@@ -175,7 +176,7 @@ describe("useAnnouncements", () => {
         published_at: "2024-01-15T10:00:00Z",
       },
       {
-        id: 2,
+        id: "2",
         title: "Announcement 2",
         content: "Content 2",
         type: "release",

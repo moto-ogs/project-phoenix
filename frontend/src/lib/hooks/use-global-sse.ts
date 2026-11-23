@@ -62,10 +62,12 @@ import {
 import type { SSEEvent, SSEHookState } from "~/lib/sse-types";
 import { createLogger } from "~/lib/logger";
 import { isOwnAttendanceEvent } from "~/lib/sse-optimistic-mutations";
-import { STUDENT_KEY_FAMILIES } from "~/lib/swr/portal-keys";
+import { homeKeys, STUDENT_KEY_FAMILIES } from "~/lib/swr/portal-keys";
 import { announceChangeRequestsChanged } from "~/lib/change-requests-refresh";
 import { announceCareScheduleStale } from "~/lib/care-schedule-stale";
 import { groupKeys } from "~/lib/swr/groups-keys";
+import { staffNoticeKeys } from "~/lib/swr/staff-keys";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 
 const logger = createLogger({ component: "GlobalSSE" });
 
@@ -338,7 +340,7 @@ export function useGlobalSSE(): SSEHookState {
     hasSessionAccess(session) &&
     // A refused stream would re-read the same wrong-school session forever,
     // and a late lookup could restore its cookie after explicit signout.
-    (!tenant || tenantID === tenant.tenantId) &&
+    (!tenant || String(tenantID) === tenant.tenantId) &&
     (hasStaffRole || hasAdminWildcard);
 
   // Every event acts only for the school and account its stream is bound to
@@ -405,6 +407,12 @@ export function useGlobalSSE(): SSEHookState {
   // date-bound access change can refresh subscriptions without another broad
   // OGS refetch; both paths still share the same burst debounce.
   const hasPendingGroupSubscriptionRefresh = useRef(false);
+  // A Hinweis der Leitung was created, changed or deleted (#7667).
+  const hasPendingStaffNoticesEvent = useRef(false);
+  // An appointment of the school was written (#7693).
+  const hasPendingCalendarAppointmentsEvent = useRef(false);
+  // The menu of a day was saved or cleared (#7666).
+  const hasPendingMealPlanEvent = useRef(false);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Per-burst flush state (#2057): jitter drawn once when a burst starts, and
   // the burst's start time for the MAX_FLUSH_WAIT_MS cap.
@@ -433,6 +441,9 @@ export function useGlobalSSE(): SSEHookState {
     hasPendingTimetableEvent.current = false;
     hasPendingGroupAccessEvent.current = false;
     hasPendingGroupSubscriptionRefresh.current = false;
+    hasPendingStaffNoticesEvent.current = false;
+    hasPendingCalendarAppointmentsEvent.current = false;
+    hasPendingMealPlanEvent.current = false;
     burstScopeRef.current = null;
   }, []);
 
@@ -958,6 +969,78 @@ export function useGlobalSSE(): SSEHookState {
       });
     }
 
+    // „Heute anders“ (#7659) lists the day's absences and substitutions. A
+    // staffing deviation (staffing_deviation_changed rides the timetable
+    // flag), a Gruppenübergabe (group_access_changed) or an absence or shift
+    // (staff_time_tracking_changed) rewrites it. The activity blocks (#7662)
+    // ride the timetable flag too: instance_cancelled for a cancellation,
+    // staffing_deviation_changed for a reinstatement, a room or a substitute.
+    // The children (#7665): a status day, a parent's pickup change and a day
+    // departure announce student_updated; a staff Gehzeit or pickup note
+    // pickup_schedule_changed. The classes (#7681): a class trip status
+    // announces student_updated, a day outing and a changed
+    // Unterrichtsschluss arrival_schedule_changed. The appointments (#7663)
+    // announce calendar_appointments_changed (#7693). The burst debounce makes
+    // several events one reload; the reconnect reconcile sets every flag.
+    if (
+      hasPendingTimetableEvent.current ||
+      hasPendingArrivalScheduleEvent.current ||
+      hasPendingGroupAccessEvent.current ||
+      hasPendingStaffTimeTrackingEvent.current ||
+      hasPendingStudentUpdateEvent.current ||
+      hasPendingPickupScheduleEvent.current ||
+      hasPendingStaffNoticesEvent.current ||
+      hasPendingCalendarAppointmentsEvent.current ||
+      hasPendingMealPlanEvent.current
+    ) {
+      mutate(
+        (key) =>
+          typeof key === "string" && key.includes(homeKeys.dayChanges("")),
+      ).catch((err) => {
+        // Fire-and-forget: the block keeps its data until the next event or load.
+        logger.debug("swr_revalidation_failed", {
+          error: err instanceof Error ? err.message : String(err),
+          scope: "day_changes",
+        });
+      });
+    }
+
+    // Hinweise der Leitung (#7667): „Heute anders“ reloads above; the
+    // Tagesinformationen page, the start page block and the count in the
+    // navigation read the day's notices of the account under this key. The
+    // administration list includes acknowledgement counts, so it must reload
+    // as well when another account confirms a notice.
+    if (hasPendingStaffNoticesEvent.current) {
+      mutate(
+        (key) =>
+          typeof key === "string" &&
+          (key.includes(staffNoticeKeys.today("")) ||
+            key.includes(staffNoticeKeys.all(""))),
+      ).catch((err) => {
+        // Fire-and-forget: the views keep their data until the next event or load.
+        logger.debug("swr_revalidation_failed", {
+          error: err instanceof Error ? err.message : String(err),
+          scope: "staff_notices",
+        });
+      });
+    }
+
+    // Kalendertermine (#7693): „Heute anders“ reloads above; the own calendar
+    // reads its views and ranges under the staff calendar family.
+    if (hasPendingCalendarAppointmentsEvent.current) {
+      mutate(
+        (key) =>
+          typeof key === "string" &&
+          key.includes(tenantDailyKeys.staffCalendarFamily),
+      ).catch((err) => {
+        // Fire-and-forget: the calendar keeps its data until the next event or load.
+        logger.debug("swr_revalidation_failed", {
+          error: err instanceof Error ? err.message : String(err),
+          scope: "staff_calendar",
+        });
+      });
+    }
+
     // Reminders (issue #1457): the header bell + /reminders page are computed
     // live from attendance, pickups, activity instances and student data.
     // Check-ins/outs, activity/instance lifecycle and student edits change
@@ -1229,6 +1312,26 @@ export function useGlobalSSE(): SSEHookState {
           // cascade tears down the EventSource only once.
           hasPendingGroupSubscriptionRefresh.current = true;
           hasPendingGroupAccessEvent.current = true;
+          scheduleFlush();
+          break;
+        }
+
+        case "staff_notices_changed": {
+          hasPendingStaffNoticesEvent.current = true;
+          scheduleFlush();
+          break;
+        }
+
+        case "calendar_appointments_changed": {
+          hasPendingCalendarAppointmentsEvent.current = true;
+          scheduleFlush();
+          break;
+        }
+
+        // Speiseplan (#7666): „Heute anders“ shows whether today's menu
+        // changed. The event carries no dish.
+        case "meal_plan_changed": {
+          hasPendingMealPlanEvent.current = true;
           scheduleFlush();
           break;
         }
@@ -1521,6 +1624,9 @@ export function useGlobalSSE(): SSEHookState {
     hasPendingStudentUpdateEvent.current = true;
     hasPendingTimetableEvent.current = true;
     hasPendingGroupAccessEvent.current = true;
+    hasPendingStaffNoticesEvent.current = true;
+    hasPendingCalendarAppointmentsEvent.current = true;
+    hasPendingMealPlanEvent.current = true;
     const openStudentId = currentStudentDetailId();
     if (openStudentId) pendingOpenStudentIds.current.add(openStudentId);
     // One flush for the gap and any burst that was still waiting.

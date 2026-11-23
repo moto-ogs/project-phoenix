@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"maps"
 	"strconv"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedConclusionEnrollment submits a new parent's agreement through Enrollment,
@@ -82,16 +84,16 @@ func seedContractAcceptanceText(rt *Runtime, offeringID int64) (string, error) {
 	}
 	var envelope struct {
 		Data []struct {
-			SchoolID       int64  `json:"school_id"`
-			OfferingID     int64  `json:"offering_id"`
-			AcceptanceText string `json:"acceptance_text"`
+			SchoolID       ident.ID `json:"school_id"`
+			OfferingID     ident.ID `json:"offering_id"`
+			AcceptanceText string   `json:"acceptance_text"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil {
 		return "", err
 	}
 	for _, offering := range envelope.Data {
-		if offering.SchoolID == rt.Bootstrap.SchoolID && offering.OfferingID == offeringID && offering.AcceptanceText != "" {
+		if int64(offering.SchoolID) == rt.Bootstrap.SchoolID && int64(offering.OfferingID) == offeringID && offering.AcceptanceText != "" {
 			return offering.AcceptanceText, nil
 		}
 	}
@@ -107,11 +109,11 @@ func withContractEnrollmentForm(rt *Runtime, schemaID int64, submit func() error
 	path := fmt.Sprintf("/api/enrollment/phases/%d", rt.Enrollment.PhaseID)
 	body := maps.Clone(original)
 	body["form_schema_id"] = strconv.FormatInt(schemaID, 10)
-	if _, err := rt.Client.PutWithAuth(rt.TenantAuth, path, body); err != nil {
+	if err := putReadPhase(rt, rt.TenantAuth, path, body); err != nil {
 		return err
 	}
 	defer func() {
-		if _, restoreErr := rt.Client.PutWithAuth(rt.TenantAuth, path, original); restoreErr != nil {
+		if restoreErr := putReadPhase(rt, rt.TenantAuth, path, original); restoreErr != nil {
 			err = errors.Join(err, fmt.Errorf("restore the enrollment form: %w", restoreErr))
 		}
 	}()

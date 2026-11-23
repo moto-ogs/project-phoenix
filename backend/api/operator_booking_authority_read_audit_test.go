@@ -34,7 +34,7 @@ func TestOperatorAuditBookingAuthorityImpact(t *testing.T) {
 			Settings: module.OperatorSchoolSettings(module.SettingsSideEffects.Dispatch), OperatorID: operatorIDFromSession,
 		}),
 		bookingAuthorityImpact: newBookingAuthorityImpact(lifecycle, calendar.TodayDate),
-	}, nil)
+	}, demoOperatorRoutes{})
 	request := func() *httptest.ResponseRecorder {
 		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/schools/%d/settings/booking-authority-impact?search=private-filter", testpkg.Tenant(t)), nil)
 		req.RemoteAddr = "198.51.100.46:12345"

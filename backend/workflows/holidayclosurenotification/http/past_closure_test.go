@@ -29,7 +29,7 @@ func TestPastClosingDayChangeResolvesItsWaitingCommand(t *testing.T) {
 			first := w.schoolNotices(t)[0]
 			events := schoolCalendarCompose.NewHolidayClosureEvents(holidayTestToday)
 			require.NoError(t, tenant.WithTenantTx(w.ctx, w.db, w.school, func(ctx context.Context, _ bun.Tx) error {
-				_, err := events.ConfirmHolidayClosureNotice(ctx, first.ID, int64(first.Revision), schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, ImpactToken: first.Token})
+				_, err := events.ConfirmHolidayClosureNotice(ctx, first.ID.Int64(), int64(first.Revision), schoolcalendar.HolidayClosureActor{Channel: schoolcalendar.HolidayClosureChannelSchool, ImpactToken: first.Token})
 				return err
 			}))
 			// An unrelated calendar revision makes the confirmed command await approval.
@@ -59,7 +59,7 @@ func TestPastClosingDayChangeResolvesItsWaitingCommand(t *testing.T) {
 			}
 
 			if mode == "edited" {
-				_, err = w.records.UpdateClosingDay(w.schoolCtx(), schoolcalendar.UpdateClosingDay{ID: day.ID, ClosingDayFields: schoolcalendar.ClosingDayFields{
+				_, err = w.records.UpdateClosingDay(w.schoolCtx(), schoolcalendar.UpdateClosingDay{ID: day.ID, ExpectedVersion: w.closingDayVersion(t, day.ID), ClosingDayFields: schoolcalendar.ClosingDayFields{
 					StartDate: "2020-07-09", EndDate: "2020-07-09", Reason: "Nachgetragen"}})
 				require.NoError(t, err)
 				assert.Zero(t, w.openProposals(t, day.ID), "a change of past days proposes nothing")

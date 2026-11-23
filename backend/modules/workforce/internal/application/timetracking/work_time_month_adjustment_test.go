@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -340,7 +341,7 @@ func TestWTMAdjustments_ReductionCapacityStartsFromFrozenPriorMonth(t *testing.T
 	f := newWTMFixture()
 	f.svc.snapshotRepo = &wtmMockSnapshotReader{
 		snapshot: &MonthSnapshot{
-			StaffID:               wtmStaffID,
+			StaffID:               ident.ID(wtmStaffID),
 			Year:                  2026,
 			Month:                 6,
 			ClosingBalanceMinutes: 1_000,
@@ -367,7 +368,7 @@ func TestWTMAdjustments_AdvancedAccountStartIgnoresOlderSnapshotBoundary(t *test
 	f.settings.accountStart = "2026-07-01"
 	f.svc.snapshotRepo = &wtmMockSnapshotReader{
 		snapshot: &MonthSnapshot{
-			StaffID:               wtmStaffID,
+			StaffID:               ident.ID(wtmStaffID),
 			Year:                  2026,
 			Month:                 6,
 			ClosingBalanceMinutes: 1_000,

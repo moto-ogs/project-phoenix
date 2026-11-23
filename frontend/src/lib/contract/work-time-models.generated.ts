@@ -3,7 +3,7 @@ import { z } from "zod";
 import {
   arr,
   bool,
-  int64StringOrNumber,
+  int64String,
   nullable,
   object,
   optional,
@@ -19,7 +19,7 @@ export interface DeletedResponse {
 }
 
 export const DeletedResponseSchema: z.ZodType<DeletedResponse, unknown> = object<DeletedResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
 });
 
 /** Go: worktimemodels.EntryResponse */
@@ -50,7 +50,7 @@ export interface ModelResponse {
 }
 
 export const ModelResponseSchema: z.ZodType<ModelResponse, unknown> = object<ModelResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   rotation_length: safeInt,
   rotation_anchor_date: str,
@@ -70,8 +70,8 @@ export interface StaffFactResponse {
 }
 
 export const StaffFactResponseSchema: z.ZodType<StaffFactResponse, unknown> = object<StaffFactResponse>({
-  staff_id: int64StringOrNumber,
-  work_time_model_id: nullable(int64StringOrNumber),
+  staff_id: int64String,
+  work_time_model_id: nullable(int64String),
   has_schedule: bool,
   soll_kept_by_traeger: bool,
   closed_through: nullable(str),
@@ -95,7 +95,7 @@ export interface ModelRequest {
 
 /** Go: worktimemodels.AssignRequest */
 export interface AssignRequest {
-  staff_ids?: number[] | null;
+  staff_ids?: string[] | null;
   valid_from?: string;
 }
 
@@ -107,15 +107,10 @@ export interface AssignResponse {
 }
 
 export const AssignResponseSchema: z.ZodType<AssignResponse, unknown> = object<AssignResponse>({
-  assigned_staff_ids: nullable(arr(int64StringOrNumber)),
-  unchanged_staff_ids: nullable(arr(int64StringOrNumber)),
+  assigned_staff_ids: nullable(arr(int64String)),
+  unchanged_staff_ids: nullable(arr(int64String)),
   valid_from: str,
 });
-
-/** Query of GET /api/work-time-models/ */
-export interface GetWorkTimeModelsQuery {
-  with_usage?: boolean;
-}
 
 export const routes = {
   "DELETE /api/work-time-models/{id}": {
@@ -128,7 +123,9 @@ export const routes = {
     method: "GET",
     pattern: "/api/work-time-models/",
     portals: ["tenant"],
-    query: ["with_usage"],
+    query: {
+      "with_usage": { kind: "bool" },
+    },
     response: success(z.array(ModelResponseSchema)),
   },
   "GET /api/work-time-models/staff-facts": {

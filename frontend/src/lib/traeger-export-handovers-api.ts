@@ -1,3 +1,4 @@
+import { bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the handover of finance exports to the recipients of the Träger
  * (#6824, ADR 0218; #6911, ADR 0222): the recipients without their
@@ -11,20 +12,46 @@ import type {
   ExportRunPathKind,
   HandoverState,
 } from "./traeger-finance-exports-api";
-import { traegerRequest } from "./traeger-api";
+import { knownEnum } from "./contract/known-enum";
+import type * as traegerExportRecipientContract from "./contract/traeger-export-recipient.generated";
+import type * as traegerFinanceHandoversContract from "./contract/traeger-finance-handovers.generated";
 
-const RECIPIENTS = "/api/traeger/export-recipient";
-const HANDOVERS = "/api/traeger/finance-handovers";
+// Go does not register these sets; the contract types them as string. A value
+// this build does not know stays undefined instead of passing as a known one.
+const RECIPIENT_FIELD_VALUES = [
+  "name",
+  "host",
+  "port",
+  "username",
+  "password",
+  "remote_directory",
+  "host_key_fingerprint",
+] as const;
+const HANDOVER_FORMAT_VALUES = ["sollstellung", "datev", "pain008"] as const;
+const HANDOVER_STATE_VALUES = [
+  "transferred",
+  "failed",
+  "in_progress",
+  "unknown",
+] as const satisfies readonly HandoverState[];
+
+/** The backend names a state it cannot read "unknown" itself. */
+function knownHandoverState(value: string): HandoverState {
+  return knownEnum(HANDOVER_STATE_VALUES, value) ?? "unknown";
+}
+
+function knownList<T extends string>(
+  values: readonly T[],
+  list: readonly string[] | null,
+): T[] {
+  return (list ?? []).flatMap((value) => {
+    const known = knownEnum(values, value);
+    return known ? [known] : [];
+  });
+}
 
 /** The fields of a recipient, in form order; the backend names these. */
-export type RecipientField =
-  | "name"
-  | "host"
-  | "port"
-  | "username"
-  | "password"
-  | "remote_directory"
-  | "host_key_fingerprint";
+export type RecipientField = (typeof RECIPIENT_FIELD_VALUES)[number];
 
 export type { HandoverState } from "./traeger-finance-exports-api";
 
@@ -34,16 +61,14 @@ export type HandoverFormat = Extract<
 >;
 
 /** The formats a recipient can receive, in the order the Träger sees them. */
-export const HANDOVER_FORMATS: readonly HandoverFormat[] = [
-  "sollstellung",
-  "datev",
-  "pain008",
-];
+export const HANDOVER_FORMATS: readonly HandoverFormat[] =
+  HANDOVER_FORMAT_VALUES;
 
 export interface ExportHandover {
   readonly id: string;
   readonly createdAt: string;
-  readonly format: ExportFormat;
+  /** undefined: a format this build does not know. */
+  readonly format: HandoverFormat | undefined;
   readonly fileName: string;
   readonly byteSize: number;
   readonly targetHost: string;
@@ -126,73 +151,29 @@ export interface HandoverResult {
   readonly targetDirectory: string;
 }
 
-interface BackendHandover {
-  id: number | string;
-  created_at: string;
-  format: ExportFormat;
-  filename: string;
-  byte_size: number;
-  target_host: string;
-  target_directory: string;
-  recipient_id?: number | string | null;
-  recipient_name?: string;
-  state: HandoverState;
-  reason?: string;
-}
-
-interface BackendRecipient {
-  id: number | string;
-  name: string;
-  enabled: boolean;
-  ready: boolean;
-  host: string;
-  port: number;
-  username: string;
-  remote_directory: string;
-  host_key_fingerprint: string;
-  password_set: boolean;
-  missing_fields: RecipientField[] | null;
-  formats: HandoverFormat[] | null;
-  last_handover?: BackendHandover | null;
-  updated_at: string;
-}
-
-interface BackendRecipientsPage {
-  recipients: BackendRecipient[] | null;
-  assignments:
-    { format: HandoverFormat; recipient_id: number | string | null }[] | null;
-  handovers: BackendHandover[] | null;
-}
-
-interface BackendResult {
-  file_name: string;
-  state: HandoverState;
-  reason?: string;
-  recipient_name?: string;
-  target_host: string;
-  target_directory: string;
-}
-
-function handoverFromBackend(handover: BackendHandover): ExportHandover {
+function handoverFromBackend(
+  handover: traegerExportRecipientContract.TraegerTransferEntry,
+): ExportHandover {
   return {
-    id: String(handover.id),
+    id: handover.id,
     createdAt: handover.created_at,
-    format: handover.format,
+    format: knownEnum(HANDOVER_FORMAT_VALUES, handover.format),
     fileName: handover.filename,
     byteSize: handover.byte_size,
     targetHost: handover.target_host,
     targetDirectory: handover.target_directory,
-    recipientId:
-      handover.recipient_id == null ? null : String(handover.recipient_id),
-    recipientName: handover.recipient_name ?? "",
-    state: handover.state,
+    recipientId: handover.recipient_id,
+    recipientName: handover.recipient_name,
+    state: knownHandoverState(handover.state),
     reason: handover.reason ?? "",
   };
 }
 
-function recipientFromBackend(recipient: BackendRecipient): ExportRecipient {
+function recipientFromBackend(
+  recipient: traegerExportRecipientContract.TraegerRecipient,
+): ExportRecipient {
   return {
-    id: String(recipient.id),
+    id: recipient.id,
     name: recipient.name,
     enabled: recipient.enabled,
     ready: recipient.ready,
@@ -202,8 +183,8 @@ function recipientFromBackend(recipient: BackendRecipient): ExportRecipient {
     remoteDirectory: recipient.remote_directory,
     hostKeyFingerprint: recipient.host_key_fingerprint,
     passwordSet: recipient.password_set,
-    missingFields: recipient.missing_fields ?? [],
-    formats: recipient.formats ?? [],
+    missingFields: knownList(RECIPIENT_FIELD_VALUES, recipient.missing_fields),
+    formats: knownList(HANDOVER_FORMAT_VALUES, recipient.formats),
     lastHandover: recipient.last_handover
       ? handoverFromBackend(recipient.last_handover)
       : null,
@@ -212,22 +193,22 @@ function recipientFromBackend(recipient: BackendRecipient): ExportRecipient {
 }
 
 function recipientsPageFromBackend(
-  page: BackendRecipientsPage,
+  page: traegerExportRecipientContract.TraegerRecipientsPage,
 ): ExportRecipientsPage {
   return {
     recipients: (page.recipients ?? []).map(recipientFromBackend),
-    assignments: (page.assignments ?? []).map((assignment) => ({
-      format: assignment.format,
-      recipientId:
-        assignment.recipient_id == null
-          ? null
-          : String(assignment.recipient_id),
-    })),
+    // An assignment of a format this build does not know is left out.
+    assignments: (page.assignments ?? []).flatMap((assignment) => {
+      const format = knownEnum(HANDOVER_FORMAT_VALUES, assignment.format);
+      return format ? [{ format, recipientId: assignment.recipient_id }] : [];
+    }),
     handovers: (page.handovers ?? []).map(handoverFromBackend),
   };
 }
 
-function recipientBody(draft: ExportRecipientDraft) {
+function recipientBody(
+  draft: ExportRecipientDraft,
+): traegerExportRecipientContract.RecipientRequest {
   return {
     name: draft.name,
     enabled: draft.enabled,
@@ -240,12 +221,10 @@ function recipientBody(draft: ExportRecipientDraft) {
   };
 }
 
-const recipientPath = (id: string) => `${RECIPIENTS}/${encodeURIComponent(id)}`;
-
 /** Every recipient of the Träger, its formats and the newest handovers. */
 export async function fetchExportRecipients(): Promise<ExportRecipientsPage> {
   return recipientsPageFromBackend(
-    await traegerRequest<BackendRecipientsPage>(RECIPIENTS),
+    await bffJson("org", "GET /traeger/export-recipient/"),
   );
 }
 
@@ -253,10 +232,9 @@ export async function fetchExportRecipients(): Promise<ExportRecipientsPage> {
 export async function fetchExportRecipient(
   id: string,
 ): Promise<ExportRecipientPage> {
-  const page = await traegerRequest<{
-    recipient: BackendRecipient;
-    handovers: BackendHandover[] | null;
-  }>(recipientPath(id));
+  const page = await bffJson("org", "GET /traeger/export-recipient/{id}", {
+    params: { id },
+  });
   return {
     recipient: recipientFromBackend(page.recipient),
     handovers: (page.handovers ?? []).map(handoverFromBackend),
@@ -268,8 +246,7 @@ export async function createExportRecipient(
   draft: ExportRecipientDraft,
 ): Promise<ExportRecipient> {
   return recipientFromBackend(
-    await traegerRequest<BackendRecipient>(RECIPIENTS, {
-      method: "POST",
+    await bffJson("org", "POST /traeger/export-recipient/", {
       body: recipientBody(draft),
     }),
   );
@@ -281,8 +258,8 @@ export async function saveExportRecipient(
   draft: ExportRecipientDraft,
 ): Promise<ExportRecipient> {
   return recipientFromBackend(
-    await traegerRequest<BackendRecipient>(recipientPath(id), {
-      method: "PUT",
+    await bffJson("org", "PUT /traeger/export-recipient/{id}", {
+      params: { id },
       body: recipientBody(draft),
     }),
   );
@@ -293,8 +270,8 @@ export async function deleteExportRecipient(
   id: string,
 ): Promise<ExportRecipientsPage> {
   return recipientsPageFromBackend(
-    await traegerRequest<BackendRecipientsPage>(recipientPath(id), {
-      method: "DELETE",
+    await bffJson("org", "DELETE /traeger/export-recipient/{id}", {
+      params: { id },
     }),
   );
 }
@@ -304,20 +281,22 @@ export async function assignExportFormats(
   assignments: readonly ExportFormatAssignment[],
 ): Promise<ExportRecipientsPage> {
   return recipientsPageFromBackend(
-    await traegerRequest<BackendRecipientsPage>(`${RECIPIENTS}/formats`, {
-      method: "PUT",
+    await bffJson("org", "PUT /traeger/export-recipient/formats", {
       body: {
         assignments: assignments.map((assignment) => ({
           format: assignment.format,
-          recipient_id:
-            assignment.recipientId === null
-              ? null
-              : Number(assignment.recipientId),
+          recipient_id: assignment.recipientId,
         })),
-      },
+      } satisfies traegerExportRecipientContract.FormatsRequest,
     }),
   );
 }
+
+const HANDOVER_ROUTES = {
+  sollstellung: "POST /traeger/finance-handovers/runs/{kind}/{id}/sollstellung",
+  datev: "POST /traeger/finance-handovers/runs/{kind}/{id}/datev",
+  pain008: "POST /traeger/finance-handovers/runs/{kind}/{id}/pain008",
+} as const satisfies Record<HandoverFormat, string>;
 
 /** Makes the file of a run and hands it to the recipient. */
 export async function handOverRunFile(
@@ -326,22 +305,19 @@ export async function handOverRunFile(
   runId: string,
   options: HandoverOptions = {},
 ): Promise<HandoverResult> {
-  const result = await traegerRequest<BackendResult>(
-    `${HANDOVERS}/runs/${pathKind}/${encodeURIComponent(runId)}/${format}`,
-    {
-      method: "POST",
-      body: {
-        repeat: options.repeat ?? false,
-        ...(options.all ? { mode: "all" } : {}),
-        ...(options.fiscalYear ? { fiscal_year: options.fiscalYear } : {}),
-      },
-    },
-  );
+  const result = await bffJson("org", HANDOVER_ROUTES[format], {
+    params: { kind: pathKind, id: runId },
+    body: {
+      repeat: options.repeat ?? false,
+      ...(options.all ? { mode: "all" } : {}),
+      ...(options.fiscalYear ? { fiscal_year: options.fiscalYear } : {}),
+    } satisfies traegerFinanceHandoversContract.HandoverRequestBody,
+  });
   return {
     fileName: result.file_name,
-    state: result.state,
+    state: knownHandoverState(result.state),
     reason: result.reason ?? "",
-    recipientName: result.recipient_name ?? "",
+    recipientName: result.recipient_name,
     targetHost: result.target_host,
     targetDirectory: result.target_directory,
   };

@@ -24,9 +24,8 @@ import {
   setRequestSharing,
   submitMasterDataRequest,
   updateMasterDataField,
-  type ChildFeatures,
-  type ChildMasterData,
 } from "~/lib/parent-api";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 vi.unmock("swr");
 
@@ -108,8 +107,22 @@ const mockSharing = vi.mocked(getRequestSharing);
 const mockSharingOptions = vi.mocked(getRequestSharingOptions);
 const mockSetRequestSharing = vi.mocked(setRequestSharing);
 
-function features(overrides: Partial<ChildFeatures> = {}): ChildFeatures {
+function features(
+  overrides: Partial<parentMeContract.ChildFeaturesResponse> = {},
+): parentMeContract.ChildFeaturesResponse {
   return {
+    conference_book_allowed: false,
+    care_ended: false,
+    excused_note_enabled: false,
+    pickup_change_mode_enabled: false,
+    pickup_change_cutoff_time: "",
+    pickup_change_today_closed: false,
+    pickup_change_care_day_ended: false,
+    pickup_manage_allowed: false,
+    emergency_contact_manage_allowed: false,
+    absence_request_edit_enabled: false,
+    reason_required: false,
+    care_facility_term: "",
     sick_note_enabled: true,
     sick_requires_approval: false,
     notes_enabled: true,
@@ -130,7 +143,9 @@ function features(overrides: Partial<ChildFeatures> = {}): ChildFeatures {
   };
 }
 
-function masterData(overrides: Partial<ChildMasterData> = {}): ChildMasterData {
+function masterData(
+  overrides: Partial<parentMeContract.MasterDataResponse> = {},
+): parentMeContract.MasterDataResponse {
   return {
     student_id: "42",
     first_name: "Lara",
@@ -178,12 +193,17 @@ describe("ChildMasterDataView", () => {
     mockGetMasterData.mockResolvedValue(masterData());
     mockUpdateField.mockResolvedValue(masterData({ health_info: "Neue Info" }));
     mockSubmit.mockResolvedValue([]);
-    mockSharing.mockResolvedValue({ family_protected: false, recipients: [] });
+    mockSharing.mockResolvedValue({
+      version: "v1",
+      family_protected: false,
+      recipients: [],
+    });
     mockSharingOptions.mockResolvedValue({
       family_protected: false,
       recipients: [],
     });
     mockSetRequestSharing.mockResolvedValue({
+      version: "v1",
       family_protected: false,
       recipients: [],
     });
@@ -312,7 +332,7 @@ describe("ChildMasterDataView", () => {
     let rejectSave: ((reason?: unknown) => void) | undefined;
     mockUpdateField.mockImplementationOnce(
       () =>
-        new Promise<ChildMasterData>((_resolve, reject) => {
+        new Promise<parentMeContract.MasterDataResponse>((_resolve, reject) => {
           rejectSave = reject;
         }),
     );
@@ -335,10 +355,11 @@ describe("ChildMasterDataView", () => {
   });
 
   it("warns before a hard unload while an auto-save is still pending", async () => {
-    let resolveSave: ((value: ChildMasterData) => void) | undefined;
+    let resolveSave:
+      ((value: parentMeContract.MasterDataResponse) => void) | undefined;
     mockUpdateField.mockImplementationOnce(
       () =>
-        new Promise<ChildMasterData>((resolve) => {
+        new Promise<parentMeContract.MasterDataResponse>((resolve) => {
           resolveSave = resolve;
         }),
     );
@@ -411,10 +432,11 @@ describe("ChildMasterDataView", () => {
   });
 
   it("asks before an in-app navigation while an auto-save is pending", async () => {
-    let resolveSave: ((value: ChildMasterData) => void) | undefined;
+    let resolveSave:
+      ((value: parentMeContract.MasterDataResponse) => void) | undefined;
     mockUpdateField.mockImplementationOnce(
       () =>
-        new Promise<ChildMasterData>((resolve) => {
+        new Promise<parentMeContract.MasterDataResponse>((resolve) => {
           resolveSave = resolve;
         }),
     );
@@ -618,7 +640,7 @@ describe("ChildMasterDataView", () => {
     let rejectSave: ((reason?: unknown) => void) | undefined;
     mockUpdateField.mockImplementationOnce(
       () =>
-        new Promise<ChildMasterData>((_resolve, reject) => {
+        new Promise<parentMeContract.MasterDataResponse>((_resolve, reject) => {
           rejectSave = reject;
         }),
     );
@@ -652,11 +674,11 @@ describe("ChildMasterDataView", () => {
   it("merges direct-save snapshots without rolling back other saved fields", async () => {
     const resolvers: Array<{
       field: string;
-      resolve: (value: ChildMasterData) => void;
+      resolve: (value: parentMeContract.MasterDataResponse) => void;
     }> = [];
     mockUpdateField.mockImplementation(
       (_studentId, _target, field) =>
-        new Promise<ChildMasterData>((resolve) => {
+        new Promise<parentMeContract.MasterDataResponse>((resolve) => {
           resolvers.push({ field, resolve });
         }),
     );
@@ -705,10 +727,11 @@ describe("ChildMasterDataView", () => {
   });
 
   it("does not duplicate a blur save while the debounced save is in flight", async () => {
-    let resolveSave: ((value: ChildMasterData) => void) | undefined;
+    let resolveSave:
+      ((value: parentMeContract.MasterDataResponse) => void) | undefined;
     mockUpdateField.mockImplementation(
       () =>
-        new Promise<ChildMasterData>((resolve) => {
+        new Promise<parentMeContract.MasterDataResponse>((resolve) => {
           resolveSave = resolve;
         }),
     );
@@ -741,10 +764,12 @@ describe("ChildMasterDataView", () => {
   });
 
   it("keeps newer autosave input when an older response resolves first", async () => {
-    const resolvers: Array<(value: ChildMasterData) => void> = [];
+    const resolvers: Array<
+      (value: parentMeContract.MasterDataResponse) => void
+    > = [];
     mockUpdateField.mockImplementation(
       (_studentId, _target, _field, value) =>
-        new Promise<ChildMasterData>((resolve) => {
+        new Promise<parentMeContract.MasterDataResponse>((resolve) => {
           resolvers.push(() =>
             resolve(masterData({ health_info: String(value) })),
           );
@@ -790,7 +815,7 @@ describe("ChildMasterDataView", () => {
     let rejectFirst: ((error: Error) => void) | undefined;
     mockUpdateField.mockImplementationOnce(
       () =>
-        new Promise<ChildMasterData>((_resolve, reject) => {
+        new Promise<parentMeContract.MasterDataResponse>((_resolve, reject) => {
           rejectFirst = reject;
         }),
     );
@@ -834,6 +859,8 @@ describe("ChildMasterDataView", () => {
       masterData({
         pending_changes: [
           {
+            version: "v1",
+            is_self: false,
             id: "900",
             target: "person",
             field_key: "first_name",
@@ -874,6 +901,8 @@ describe("ChildMasterDataView", () => {
   it("keeps identity request success when the pending refresh fails", async () => {
     mockSubmit.mockResolvedValueOnce([
       {
+        version: "v1",
+        is_self: false,
         id: "900",
         target: "person",
         field_key: "first_name",
@@ -906,6 +935,7 @@ describe("ChildMasterDataView", () => {
       masterData({
         pending_changes: [
           {
+            version: "v1",
             id: "900",
             target: "person",
             field_key: "first_name",
@@ -946,6 +976,8 @@ describe("ChildMasterDataView", () => {
       masterData({
         pending_changes: [
           {
+            version: "v1",
+            is_self: false,
             id: "901",
             target: "person",
             field_key: "birthday",
@@ -972,6 +1004,8 @@ describe("ChildMasterDataView", () => {
       masterData({
         pending_changes: [
           {
+            version: "v1",
+            is_self: false,
             id: "901",
             target: "departure",
             field_key: "allowed_departure_modes",
@@ -1109,6 +1143,8 @@ describe("ChildMasterDataView", () => {
   it("keeps departure request success when the pending refresh fails", async () => {
     mockSubmit.mockResolvedValueOnce([
       {
+        version: "v1",
+        is_self: false,
         id: "901",
         target: "departure",
         field_key: "allowed_departure_modes",
@@ -1322,6 +1358,7 @@ describe("ChildMasterDataView", () => {
       masterData({
         pending_changes: [
           {
+            version: "v1",
             id: "901",
             target: "departure",
             field_key: "allowed_departure_modes",

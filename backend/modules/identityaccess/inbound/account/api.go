@@ -123,13 +123,6 @@ func NewResource(lifecycle AccountLifecycle, invitations Invitations, schoolServ
 	}
 }
 
-func (rs *Resource) withinAdmin(ctx context.Context, fn func(context.Context) error) error {
-	if rs.transactions == nil {
-		return fn(ctx)
-	}
-	return rs.transactions.WithinAdmin(ctx, fn)
-}
-
 func (rs *Resource) markRollback(ctx context.Context) {
 	if rs.transactions != nil {
 		rs.transactions.MarkRollback(ctx)
@@ -158,18 +151,6 @@ type Invitations interface {
 	identityaccess.SchoolInvitations
 	identityaccess.SchoolInvitationMailStates
 	identityaccess.GuardianInvitations
-}
-
-func requirePlatformScope(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		claims := sessiontoken.ClaimsFromCtx(r.Context())
-		if !claims.IsPlatformScope() {
-			common.RenderError(w, r, common.AuthorizationForbidden())
-			return
-		}
-
-		next.ServeHTTP(w, r)
-	})
 }
 
 // RouterWithAuthRateLimiter returns the auth router with the given rate
@@ -269,7 +250,7 @@ func (rs *Resource) mountAuthenticatedRoutes(r chi.Router, configureSession func
 	r.Post("/switch-tenant", rs.switchTenant)
 
 	// Admin staff-view preview (#2893). "admin:*" matches the admin
-	// wildcard (precedent: DELETE /auth/tokens/expired below). start
+	// wildcard. start
 	// deliberately runs WITHOUT the tenant transaction — like
 	// /switch-tenant it opens its own admin transaction inside the
 	// service; the candidate list is a plain RLS read and gets one.
@@ -282,7 +263,6 @@ func (rs *Resource) mountAuthenticatedRoutes(r chi.Router, configureSession func
 	r.With(common.RequiresPermission("admin:*"), common.TenantTxMiddleware).Get("/staff-preview/candidates", rs.listStaffPreviewCandidates)
 
 	// Current user routes
-	r.Get("/account", rs.getAccount)
 	r.Get("/account/tenants", rs.listAccountTenants)
 
 	// Password change - users can change their own password without special permissions
@@ -306,8 +286,6 @@ func (rs *Resource) mountAuthenticatedRoutes(r chi.Router, configureSession func
 
 	// Account management routes
 	r.Route("/accounts", func(r chi.Router) {
-		r.With(common.RequiresPermission(permUsersList)).Get("/", rs.listAccounts)
-		r.With(common.RequiresPermission("users:read")).Get("/by-role/{roleName}", rs.getAccountsByRole)
 		r.Route("/{accountId}", rs.mountAccountRoutes)
 	})
 
@@ -343,10 +321,11 @@ func (rs *Resource) mountAdminRoutes(r chi.Router) {
 		r.With(common.RequiresPermission(permRolesManage)).Get("/", rs.getRolePermissions)
 		r.With(common.RequiresPermission(permRolesManage)).Put("/", rs.replaceRolePermissions)
 	})
-
-	// Token cleanup
-	r.Route("/tokens", func(r chi.Router) {
-		r.With(common.RequiresPermission("admin:*")).Delete("/expired", rs.cleanupExpiredTokens)
+	// The selection with its version (ADR 0311); the list above goes after
+	// one release.
+	r.Route("/roles/{roleId}/permission-selection", func(r chi.Router) {
+		r.With(common.RequiresPermission(permRolesManage)).Get("/", rs.getRolePermissionSelection)
+		r.With(common.RequiresPermission(permRolesManage)).Put("/", rs.replaceRolePermissionSelection)
 	})
 
 	rs.mountInvitationRoutes(r)
@@ -373,28 +352,13 @@ func (rs *Resource) mountRoleAndPermissionRoutes(r chi.Router) {
 
 	// Permission management routes
 	r.Route(pathPermissions, func(r chi.Router) {
-		r.With(requirePlatformScope, common.RequiresPermission("permissions:create")).Post("/", rs.createPermission)
 		r.With(common.RequiresPermission("permissions:read")).Get("/", rs.listPermissions)
-		r.Route("/{id}", func(r chi.Router) {
-			r.With(common.RequiresPermission("permissions:read")).Get("/", rs.getPermissionByID)
-			r.With(requirePlatformScope, common.RequiresPermission("permissions:update")).Put("/", rs.updatePermission)
-			r.With(requirePlatformScope, common.RequiresPermission("permissions:delete")).Delete("/", rs.deletePermission)
-		})
 	})
 }
 
 // mountAccountRoutes registers the routes on one account under
 // /accounts/{accountId}.
 func (rs *Resource) mountAccountRoutes(r chi.Router) {
-	// Account update operations
-	// This single-command handler lets the capability select its unit before
-	// any transaction starts, including cross-school organization updates.
-	//
-	// It rewrites the login address and name, so it needs users:manage like
-	// register and link-to-tenant: under users:update, which the "user" role
-	// holds, a Betreuer could move an admin's address to their own mailbox
-	// and take the account over through a password reset.
-	r.With(common.RequiresPermission(permUsersManage)).Put("/", rs.updateAccount)
 	r.Group(rs.mountTransactionalAccountRoutes)
 }
 
@@ -409,11 +373,8 @@ func (rs *Resource) mountTransactionalAccountRoutes(r chi.Router) {
 		r.With(common.RequiresPermission(permUsersManage)).Get("/", rs.getAccountRoles)
 		r.With(common.RequiresPermission(permUsersManage)).Put("/", rs.replaceAccountRole)
 	})
-
-	// Token management
-	r.Route("/tokens", func(r chi.Router) {
-		r.With(common.RequiresPermission(permUsersManage)).Get("/", rs.getActiveTokens)
-		r.With(common.RequiresPermission(permUsersManage)).Delete("/", common.IDAction("accountId", common.MsgInvalidAccountID, rs.revokeAllTokens, common.ErrorInternalServer))
+	r.Route("/role-selection", func(r chi.Router) {
+		r.With(common.RequiresPermission(permUsersManage)).Get("/", rs.getAccountRoleSelection)
 	})
 
 	// MFA admin override ("Godmode") — issue #1308 Phase 6.
@@ -442,17 +403,6 @@ func (rs *Resource) mountInvitationRoutes(r chi.Router) {
 		r.Route("/{id}", func(r chi.Router) {
 			r.With(common.RequiresPermission(permUsersManage)).Post("/resend", rs.resendInvitation)
 			r.With(common.RequiresPermission(permUsersManage)).Delete("/", rs.revokeInvitation)
-		})
-	})
-
-	// Guardian invitations — public accept handled above; admins
-	// can resend a still-valid invitation. Create endpoint is
-	// deliberately omitted in PR 3 (per parent-enrollment plan):
-	// the decision service in PR 8 calls Service.Create directly
-	// when approving the first child.
-	r.Route("/guardian-invitations", func(r chi.Router) {
-		r.Route("/{id}", func(r chi.Router) {
-			r.With(common.RequiresPermission(permUsersManage)).Post("/resend", rs.resendGuardianInvitation)
 		})
 	})
 

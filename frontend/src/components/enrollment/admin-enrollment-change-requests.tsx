@@ -45,8 +45,11 @@ const logger = createLogger({ component: "AdminEnrollmentChangeRequests" });
 
 export function AdminEnrollmentChangeRequestDetail({
   changeRequestId,
+  info,
 }: {
   readonly changeRequestId: string;
+  /** Erklärung hinter dem Info-Knopf am Seitentitel; die Seite liefert sie. */
+  readonly info?: string;
 }) {
   const tenantPath = useTenantAwarePath();
   const [question, setQuestion] = useState("");
@@ -167,6 +170,7 @@ export function AdminEnrollmentChangeRequestDetail({
     return (
       <TenantPage
         title="Änderungsanfrage"
+        info={info}
         back
         backHref="/anfragen"
         backLabel="Zurück zu Anfragen"
@@ -180,6 +184,7 @@ export function AdminEnrollmentChangeRequestDetail({
     return (
       <TenantPage
         title="Änderungsanfrage"
+        info={info}
         back
         backHref="/anfragen"
         backLabel="Zurück zu Anfragen"
@@ -232,6 +237,7 @@ export function AdminEnrollmentChangeRequestDetail({
 
   return (
     <TenantPage
+      info={info}
       title={
         data.origin === "admin" ? "OGS-Korrektur" : "Änderungsanfrage prüfen"
       }
@@ -516,7 +522,7 @@ function ChangeRequestStatusBadge({
   return <StatusBadge label={meta.label} tone={meta.tone} />;
 }
 
-function messageAuthorLabel(authorType: string): string {
+function messageAuthorLabel(authorType: string | undefined): string {
   if (authorType === "parent") return "Eltern";
   if (authorType === "system") return "System";
   return "OGS";

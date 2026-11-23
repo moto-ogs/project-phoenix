@@ -64,7 +64,7 @@ export function CareContractImportMappingCard({
   mapping: ContractImportMapping;
   unmapped: readonly ContractImportField[];
   schools: readonly ContractImportSchool[];
-  debtorNumberScope: "payer" | "child";
+  debtorNumberScope: "payer" | "child" | undefined;
   /** Whether the account bills: only then a file may name the number. */
   familyChildrenAllowed: boolean;
   disabled: boolean;

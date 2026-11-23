@@ -24,6 +24,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/parentrequests"
 	"github.com/moto-ogs/project-phoenix/modules/communication/communicationtest"
 	"github.com/moto-ogs/project-phoenix/realtime"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -155,7 +156,7 @@ func TestMasterDataReview_ScopedToWritableChildren(t *testing.T) {
 		items, _, listErr := f.queue(t, noReviewScope).ListPending(ctx, careplan.RequestQueueFilter{})
 		require.NoError(t, listErr)
 		assert.Empty(t, items, "a caller who cannot review the child must not see its request in the queue")
-		_, decideErr := denied.Decide(ctx, masterdatarequests.DecideInput{RequestID: row.ID, Approve: true})
+		_, decideErr := denied.Decide(ctx, masterdatarequests.DecideInput{ExpectedVersion: testpkg.MasterDataRequestVersion(t, row.ID), RequestID: row.ID, Approve: true})
 		return decideErr
 	})
 	assert.ErrorIs(t, err, masterdatarequests.ErrReviewForbidden)
@@ -164,7 +165,7 @@ func TestMasterDataReview_ScopedToWritableChildren(t *testing.T) {
 		items, _, listErr := f.queue(t, careplantest.SchoolWideReviewScope).ListPending(ctx, careplan.RequestQueueFilter{})
 		require.NoError(t, listErr)
 		require.Len(t, items, 1)
-		_, decideErr := f.decisions(t).Decide(ctx, masterdatarequests.DecideInput{RequestID: row.ID, Approve: false, Reason: "closing", ReviewedBy: f.chain.AccountID})
+		_, decideErr := f.decisions(t).Decide(ctx, masterdatarequests.DecideInput{ExpectedVersion: testpkg.MasterDataRequestVersion(t, row.ID), RequestID: row.ID, Approve: false, Reason: "closing", ReviewedBy: f.chain.AccountID})
 		return decideErr
 	})
 	require.NoError(t, err)
@@ -175,7 +176,7 @@ func TestMasterDataReview_ApproveAppliesNameChange(t *testing.T) {
 	f := newMasterDataFixture(t, testpkg.SetupTestDB(t))
 	row := f.insert(t, peopledirectory.DataChangeTargetPerson, "first_name", `"Felix"`, `"Maximilian"`)
 
-	decided, err := f.decide(t, f.decisions(t), masterdatarequests.DecideInput{RequestID: row.ID, Approve: true})
+	decided, err := f.decide(t, f.decisions(t), masterdatarequests.DecideInput{ExpectedVersion: testpkg.MasterDataRequestVersion(t, row.ID), RequestID: row.ID, Approve: true})
 	require.NoError(t, err)
 	assert.Equal(t, masterdatarequests.StatusApproved, decided.Request.Status)
 	require.NotNil(t, decided.Request.AppliedAt)
@@ -189,8 +190,10 @@ func TestMasterDataReview_DecideRejectsStaleExpectedVersionAfterLock(t *testing.
 	f := newMasterDataFixture(t, testpkg.SetupTestDB(t))
 	row := f.insert(t, peopledirectory.DataChangeTargetPerson, "first_name", `"Felix"`, `"Max"`)
 
-	_, err := f.decide(t, f.decisions(t), masterdatarequests.DecideInput{RequestID: row.ID, Approve: true, ExpectedVersion: "stale"})
-	require.ErrorIs(t, err, parentrequests.ErrStale)
+	for _, expected := range []string{"stale", ""} {
+		_, err := f.decide(t, f.decisions(t), masterdatarequests.DecideInput{RequestID: row.ID, Approve: true, ExpectedVersion: expected})
+		require.ErrorIs(t, err, readstate.ErrChanged, "version %q", expected)
+	}
 
 	assert.Equal(t, peopledirectory.DataChangeStatusPending, f.status(t, row.ID))
 	assert.Equal(t, "Felix", f.person(t).FirstName)
@@ -248,8 +251,8 @@ func TestParentRequestCoordinator_RollsBackEarlierDatabaseWrite(t *testing.T) {
 	err = f.inTx(t, func(ctx context.Context) error {
 		bulkErr := coordinator.BulkApprove(ctx, parentrequests.BulkApproveInput{
 			Requests: []parentrequests.Ref{
-				{Kind: parentrequests.KindMasterData, ID: first.ID, ExpectedVersion: careplan.ParentRequestVersion(first.UpdatedAt)},
-				{Kind: parentrequests.KindMasterData, ID: second.ID, ExpectedVersion: careplan.ParentRequestVersion(second.UpdatedAt)},
+				{Kind: parentrequests.KindMasterData, ID: first.ID, ExpectedVersion: readstate.Of(first.UpdatedAt)},
+				{Kind: parentrequests.KindMasterData, ID: second.ID, ExpectedVersion: readstate.Of(second.UpdatedAt)},
 			},
 			Reason: "Gemeinsam geprüft", ReviewerID: f.chain.AccountID,
 		})
@@ -272,10 +275,10 @@ func TestMasterDataReview_ApproveAppliesOtherPersonFields(t *testing.T) {
 	birthday := f.insert(t, peopledirectory.DataChangeTargetPerson, "birthday", `null`, `"2017-12-24"`)
 
 	require.NoError(t, f.inTx(t, func(ctx context.Context) error {
-		if _, err := testpkg.TenantQuery1(t, ctx, testpkg.SetupTestDB(t), svc.Decide, masterdatarequests.DecideInput{RequestID: lastName.ID, Approve: true}); err != nil {
+		if _, err := testpkg.TenantQuery1(t, ctx, testpkg.SetupTestDB(t), svc.Decide, masterdatarequests.DecideInput{ExpectedVersion: testpkg.MasterDataRequestVersion(t, lastName.ID), RequestID: lastName.ID, Approve: true}); err != nil {
 			return err
 		}
-		_, err := testpkg.TenantQuery1(t, ctx, testpkg.SetupTestDB(t), svc.Decide, masterdatarequests.DecideInput{RequestID: birthday.ID, Approve: true})
+		_, err := testpkg.TenantQuery1(t, ctx, testpkg.SetupTestDB(t), svc.Decide, masterdatarequests.DecideInput{ExpectedVersion: testpkg.MasterDataRequestVersion(t, birthday.ID), RequestID: birthday.ID, Approve: true})
 		return err
 	}))
 
@@ -291,7 +294,7 @@ func TestMasterDataReview_RejectRequiresReason(t *testing.T) {
 	svc := f.decisions(t)
 	row := f.insert(t, peopledirectory.DataChangeTargetPerson, "first_name", `"Felix"`, `"Max"`)
 
-	_, err := f.decide(t, svc, masterdatarequests.DecideInput{
+	_, err := f.decide(t, svc, masterdatarequests.DecideInput{ExpectedVersion: testpkg.MasterDataRequestVersion(t, row.ID),
 		RequestID:  row.ID,
 		Reason:     " \n\t ",
 		ReviewedBy: f.chain.AccountID,
@@ -308,7 +311,7 @@ func TestMasterDataReview_ApproveAppliesSchoolClass(t *testing.T) {
 	svc := f.decisions(t, func(_ *api.MasterDataDecisionTestOptions, p *api.MasterDataDecisionTestPeople) { p.Audit = audit })
 	row := f.insert(t, peopledirectory.DataChangeTargetStudent, "school_class", `"1a"`, `"2b"`)
 
-	_, err := f.decide(t, svc, masterdatarequests.DecideInput{RequestID: row.ID, Approve: true, ReviewedBy: f.chain.AccountID})
+	_, err := f.decide(t, svc, masterdatarequests.DecideInput{ExpectedVersion: testpkg.MasterDataRequestVersion(t, row.ID), RequestID: row.ID, Approve: true, ReviewedBy: f.chain.AccountID})
 	require.NoError(t, err)
 
 	student, err := testpkg.TenantQuery1(t, testpkg.ContextForTenant(testpkg.WithPackageTenantRuntime(context.Background()), f.chain.TenantID), testpkg.SetupTestDB(t), f.repos.Student.FindByID, any(f.chain.StudentID))
@@ -329,7 +332,7 @@ func TestMasterDataReview_ConcurrentPersonFieldApprovalsDoNotOverwrite(t *testin
 		wg.Add(1)
 		go func(idx int, requestID int64) {
 			defer wg.Done()
-			_, errs[idx] = f.decide(t, svc, masterdatarequests.DecideInput{RequestID: requestID, Approve: true})
+			_, errs[idx] = f.decide(t, svc, masterdatarequests.DecideInput{ExpectedVersion: testpkg.MasterDataRequestVersion(t, requestID), RequestID: requestID, Approve: true})
 		}(i, row.ID)
 	}
 	wg.Wait()
@@ -355,7 +358,7 @@ func TestMasterDataReview_ConcurrentDecisionsKeepStatusAndRecordConsistent(t *te
 			defer wg.Done()
 			// A reason makes both decisions reach the locked-row race; a rejection
 			// without one is rejected before the concurrency contract is exercised.
-			_, errs[idx] = f.decide(t, svc, masterdatarequests.DecideInput{RequestID: row.ID, Approve: approve, Reason: "Gleichzeitig geprüft"})
+			_, errs[idx] = f.decide(t, svc, masterdatarequests.DecideInput{ExpectedVersion: testpkg.MasterDataRequestVersion(t, row.ID), RequestID: row.ID, Approve: approve, Reason: "Gleichzeitig geprüft"})
 		}(i, approve)
 	}
 	wg.Wait()
@@ -420,7 +423,7 @@ func TestMasterDataReview_ListPendingEmptyAndInvalidRequestID(t *testing.T) {
 	})
 	assert.ErrorIs(t, err, masterdatarequests.ErrReviewNotFound)
 
-	_, err = f.decide(t, svc, masterdatarequests.DecideInput{RequestID: 999_999_999, Approve: true})
+	_, err = f.decide(t, svc, masterdatarequests.DecideInput{ExpectedVersion: testpkg.MissingRequestVersion, RequestID: 999_999_999, Approve: true})
 	assert.ErrorIs(t, err, masterdatarequests.ErrReviewNotFound)
 }
 
@@ -432,7 +435,7 @@ func TestMasterDataReview_ApproveAppliesDepartureModes(t *testing.T) {
 	svc := f.decisions(t, func(_ *api.MasterDataDecisionTestOptions, p *api.MasterDataDecisionTestPeople) { p.Audit = audit })
 	row := f.insert(t, peopledirectory.DataChangeTargetDeparture, "allowed_departure_modes", `{}`, `{"mon":["bus"],"wed":["pickup"]}`)
 
-	_, err := f.decide(t, svc, masterdatarequests.DecideInput{RequestID: row.ID, Approve: true, ReviewedBy: f.chain.AccountID})
+	_, err := f.decide(t, svc, masterdatarequests.DecideInput{ExpectedVersion: testpkg.MasterDataRequestVersion(t, row.ID), RequestID: row.ID, Approve: true, ReviewedBy: f.chain.AccountID})
 	require.NoError(t, err)
 
 	student, err := testpkg.TenantQuery1(t, testpkg.ContextForTenant(testpkg.WithPackageTenantRuntime(context.Background()), f.chain.TenantID), testpkg.SetupTestDB(t), f.repos.Student.FindByID, any(f.chain.StudentID))
@@ -462,7 +465,7 @@ func TestMasterDataReview_StalePersonApprovalConflicts(t *testing.T) {
 	person.FirstName = "StaffEdit"
 	require.NoError(t, testpkg.TenantCommand1(t, testpkg.ContextForTenant(testpkg.WithPackageTenantRuntime(context.Background()), f.chain.TenantID), testpkg.SetupTestDB(t), f.repos.Person.Update, person))
 
-	_, err := f.decide(t, f.decisions(t), masterdatarequests.DecideInput{RequestID: row.ID, Approve: true})
+	_, err := f.decide(t, f.decisions(t), masterdatarequests.DecideInput{ExpectedVersion: testpkg.MasterDataRequestVersion(t, row.ID), RequestID: row.ID, Approve: true})
 	assert.ErrorIs(t, err, masterdatarequests.ErrReviewStaleValue)
 	assert.Equal(t, "StaffEdit", f.person(t).FirstName)
 }
@@ -480,7 +483,7 @@ func TestMasterDataReview_StaleDepartureApprovalConflicts(t *testing.T) {
 	}
 	require.NoError(t, testpkg.TenantCommand1(t, tenantCtx, testpkg.SetupTestDB(t), f.repos.Student.Update, student))
 
-	_, err = f.decide(t, f.decisions(t), masterdatarequests.DecideInput{RequestID: row.ID, Approve: true})
+	_, err = f.decide(t, f.decisions(t), masterdatarequests.DecideInput{ExpectedVersion: testpkg.MasterDataRequestVersion(t, row.ID), RequestID: row.ID, Approve: true})
 	assert.ErrorIs(t, err, masterdatarequests.ErrReviewStaleValue)
 
 	student, err = testpkg.TenantQuery1(t, tenantCtx, testpkg.SetupTestDB(t), f.repos.Student.FindByID, any(f.chain.StudentID))
@@ -499,7 +502,7 @@ func TestMasterDataReview_ApprovalBroadcastsStudentUpdatedAfterCommit(t *testing
 	row := f.insert(t, peopledirectory.DataChangeTargetPerson, "first_name", `"Felix"`, `"Max"`)
 
 	require.NoError(t, f.inTx(t, func(ctx context.Context) error {
-		_, err := testpkg.TenantQuery1(t, ctx, testpkg.SetupTestDB(t), svc.Decide, masterdatarequests.DecideInput{RequestID: row.ID, Approve: true, ReviewedBy: f.chain.AccountID})
+		_, err := testpkg.TenantQuery1(t, ctx, testpkg.SetupTestDB(t), svc.Decide, masterdatarequests.DecideInput{ExpectedVersion: testpkg.MasterDataRequestVersion(t, row.ID), RequestID: row.ID, Approve: true, ReviewedBy: f.chain.AccountID})
 		assert.Empty(t, broadcaster.CallsByMethod("tenant"), "broadcast must wait until the transaction commits")
 		return err
 	}))
@@ -513,7 +516,7 @@ func TestMasterDataReview_RejectLeavesRecordUnchanged(t *testing.T) {
 	f := newMasterDataFixture(t, testpkg.SetupTestDB(t))
 	row := f.insert(t, peopledirectory.DataChangeTargetPerson, "first_name", `"Felix"`, `"Maximilian"`)
 
-	_, err := f.decide(t, f.decisions(t), masterdatarequests.DecideInput{RequestID: row.ID, Approve: false, Reason: "Bitte Nachweis"})
+	_, err := f.decide(t, f.decisions(t), masterdatarequests.DecideInput{ExpectedVersion: testpkg.MasterDataRequestVersion(t, row.ID), RequestID: row.ID, Approve: false, Reason: "Bitte Nachweis"})
 	require.NoError(t, err)
 	assert.Equal(t, "Felix", f.person(t).FirstName, "rejected change must not touch the record")
 }
@@ -525,9 +528,9 @@ func TestMasterDataReview_DecideNonPendingRejected(t *testing.T) {
 	row := f.insert(t, peopledirectory.DataChangeTargetPerson, "first_name", `"Felix"`, `"Maximilian"`)
 
 	// First decision approves; the second must fail as not-pending.
-	_, err := f.decide(t, svc, masterdatarequests.DecideInput{RequestID: row.ID, Approve: true})
+	_, err := f.decide(t, svc, masterdatarequests.DecideInput{ExpectedVersion: testpkg.MasterDataRequestVersion(t, row.ID), RequestID: row.ID, Approve: true})
 	require.NoError(t, err)
-	_, err = f.decide(t, svc, masterdatarequests.DecideInput{RequestID: row.ID, Approve: true})
+	_, err = f.decide(t, svc, masterdatarequests.DecideInput{ExpectedVersion: testpkg.MasterDataRequestVersion(t, row.ID), RequestID: row.ID, Approve: true})
 	assert.ErrorIs(t, err, masterdatarequests.ErrReviewNotPending)
 	assert.Equal(t, masterdatarequests.ErrReviewNotPending.Error(), err.Error(), "the lost race keeps the sentinel's own text")
 }
@@ -553,7 +556,7 @@ func TestMasterDataReview_ApproveInvalidRowsRejected(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			f := newMasterDataFixture(t, testpkg.SetupTestDB(t))
 			row := f.insert(t, tt.target, tt.field, `null`, tt.value)
-			_, err := f.decide(t, f.decisions(t), masterdatarequests.DecideInput{RequestID: row.ID, Approve: true})
+			_, err := f.decide(t, f.decisions(t), masterdatarequests.DecideInput{ExpectedVersion: testpkg.MasterDataRequestVersion(t, row.ID), RequestID: row.ID, Approve: true})
 			assert.ErrorIs(t, err, tt.want)
 		})
 	}
@@ -580,7 +583,7 @@ func TestMasterDataReview_ApproveEmitsDecisionPill(t *testing.T) {
 	f := newMasterDataFixture(t, testpkg.SetupTestDB(t))
 	row := f.insert(t, peopledirectory.DataChangeTargetPerson, "first_name", `"Felix"`, `"Maximilian"`)
 
-	_, err := f.decide(t, f.decisionsWithEmitter(t, nil), masterdatarequests.DecideInput{RequestID: row.ID, Approve: true, ReviewedBy: f.chain.AccountID})
+	_, err := f.decide(t, f.decisionsWithEmitter(t, nil), masterdatarequests.DecideInput{ExpectedVersion: testpkg.MasterDataRequestVersion(t, row.ID), RequestID: row.ID, Approve: true, ReviewedBy: f.chain.AccountID})
 	require.NoError(t, err)
 
 	pill, err := api.ParentStoreLastGuardianEventFixture(func(read func(context.Context) error) error { return f.inTx(t, read) }, f.reposMessages.ParentMessageThread, communicationtest.NewParentMessageRepository(f.db), f.chain.StudentID, f.chain.AccountID, peopledirectory.ParentMessageEventRequestStatus)
@@ -596,7 +599,7 @@ func TestMasterDataReview_RejectEmitsPillWithReason(t *testing.T) {
 	f := newMasterDataFixture(t, testpkg.SetupTestDB(t))
 	row := f.insert(t, peopledirectory.DataChangeTargetPerson, "last_name", `"Schneider"`, `"Müller"`)
 
-	_, err := f.decide(t, f.decisionsWithEmitter(t, nil), masterdatarequests.DecideInput{RequestID: row.ID, Approve: false, Reason: "Nachweis fehlt", ReviewedBy: f.chain.AccountID})
+	_, err := f.decide(t, f.decisionsWithEmitter(t, nil), masterdatarequests.DecideInput{ExpectedVersion: testpkg.MasterDataRequestVersion(t, row.ID), RequestID: row.ID, Approve: false, Reason: "Nachweis fehlt", ReviewedBy: f.chain.AccountID})
 	require.NoError(t, err)
 
 	pill, err := api.ParentStoreLastGuardianEventFixture(func(read func(context.Context) error) error { return f.inTx(t, read) }, f.reposMessages.ParentMessageThread, communicationtest.NewParentMessageRepository(f.db), f.chain.StudentID, f.chain.AccountID, peopledirectory.ParentMessageEventRequestStatus)
@@ -636,7 +639,7 @@ func TestMasterDataDecisionTellsTheOtherGuardian(t *testing.T) {
 				sharedWith = []int64{other.AccountID}
 			}
 			row := f.insert(t, peopledirectory.DataChangeTargetPerson, "first_name", `"Felix"`, `"Maximilian"`)
-			_, err := f.decide(t, f.decisionsWithEmitter(t, staticShareVisibility{recipients: sharedWith}), masterdatarequests.DecideInput{
+			_, err := f.decide(t, f.decisionsWithEmitter(t, staticShareVisibility{recipients: sharedWith}), masterdatarequests.DecideInput{ExpectedVersion: testpkg.MasterDataRequestVersion(t, row.ID),
 				RequestID: row.ID, Approve: true, Reason: "Passt so", ReviewedBy: f.chain.AccountID,
 			})
 			require.NoError(t, err)

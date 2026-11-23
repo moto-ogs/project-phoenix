@@ -4,9 +4,12 @@ import {
   arr,
   bool,
   calendarDate,
+  fileAnswer,
   instant,
-  int64StringOrNumber,
+  int64String,
   json,
+  multipart,
+  noData,
   nullable,
   object,
   optional,
@@ -19,13 +22,25 @@ import {
 import {
   FormLegalBlockSchema,
   HolidayFormFieldSchema,
+  HolidayNoCareDaySchema,
   HolidayRegistrationChildSchema,
   HolidayRegistrationDetailSchema,
   HolidayRegistrationMailProblemSchema,
+  type FormAttachmentInput,
+  type FormFieldOptionInput,
+  type FormFieldValidationInput,
+  type FormFileOptionsInput,
   type FormLegalBlock,
+  type FormLegalBlockInput,
   type HolidayFormField,
+  type HolidayNoCareDay,
   type HolidayRegistrationChild,
   type HolidayRegistrationMailProblem,
+  type TranslatedTextInput,
+  type VisibilityConditionInput,
+  type holidayAddressRequest,
+  type holidayContactRequest,
+  type holidayGuardianRequest,
 } from "./shared.generated";
 
 /** Go: enrollment.HolidayTimeModel */
@@ -40,26 +55,13 @@ export interface HolidayTimeModel {
 }
 
 export const HolidayTimeModelSchema: z.ZodType<HolidayTimeModel, unknown> = object<HolidayTimeModel>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   starts_at: str,
   ends_at: str,
   price_cents: safeInt,
   archived: bool,
   protected: bool,
-});
-
-/** Go: enrollment.HolidayNoCareDay */
-export interface HolidayNoCareDay {
-  date: string | null;
-  kind: string;
-  name: string;
-}
-
-export const HolidayNoCareDaySchema: z.ZodType<HolidayNoCareDay, unknown> = object<HolidayNoCareDay>({
-  date: nullable(calendarDate),
-  kind: str,
-  name: str,
 });
 
 /** Go: enrollment.HolidayWeek */
@@ -77,10 +79,10 @@ export interface HolidayWeek {
 }
 
 export const HolidayWeekSchema: z.ZodType<HolidayWeek, unknown> = object<HolidayWeek>({
-  id: int64StringOrNumber,
+  id: int64String,
   starts_on: nullable(calendarDate),
   ends_on: nullable(calendarDate),
-  host_school_id: int64StringOrNumber,
+  host_school_id: int64String,
   time_models: nullable(arr(HolidayTimeModelSchema)),
   no_care_days: nullable(arr(HolidayNoCareDaySchema)),
   capacity: nullable(safeInt),
@@ -108,10 +110,11 @@ export interface HolidayPeriod {
   public_token: string;
   registration_count: number;
   weeks: HolidayWeek[] | null;
+  version: string;
 }
 
 export const HolidayPeriodSchema: z.ZodType<HolidayPeriod, unknown> = object<HolidayPeriod>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   registration_opens_on: nullable(calendarDate),
   registration_closes_on: nullable(calendarDate),
@@ -128,6 +131,7 @@ export const HolidayPeriodSchema: z.ZodType<HolidayPeriod, unknown> = object<Hol
   public_token: str,
   registration_count: safeInt,
   weeks: nullable(arr(HolidayWeekSchema)),
+  version: str,
 });
 
 /** Go: enrollment.HolidayCriterion */
@@ -142,7 +146,7 @@ export interface HolidayCriterion {
 }
 
 export const HolidayCriterionSchema: z.ZodType<HolidayCriterion, unknown> = object<HolidayCriterion>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   question: str,
   scope: str,
@@ -158,7 +162,7 @@ export interface HolidayCriterionPeriod {
 }
 
 export const HolidayCriterionPeriodSchema: z.ZodType<HolidayCriterionPeriod, unknown> = object<HolidayCriterionPeriod>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
 });
 
@@ -166,11 +170,13 @@ export const HolidayCriterionPeriodSchema: z.ZodType<HolidayCriterionPeriod, unk
 export interface HolidayCriteriaCatalog {
   criteria: HolidayCriterion[] | null;
   periods: HolidayCriterionPeriod[] | null;
+  version: string;
 }
 
 export const HolidayCriteriaCatalogSchema: z.ZodType<HolidayCriteriaCatalog, unknown> = object<HolidayCriteriaCatalog>({
   criteria: nullable(arr(HolidayCriterionSchema)),
   periods: nullable(arr(HolidayCriterionPeriodSchema)),
+  version: str,
 });
 
 /** Go: enrollment.HolidayCriterionRef */
@@ -182,7 +188,7 @@ export interface HolidayCriterionRef {
 }
 
 export const HolidayCriterionRefSchema: z.ZodType<HolidayCriterionRef, unknown> = object<HolidayCriterionRef>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   scope: str,
   position: safeInt,
@@ -196,7 +202,7 @@ export interface HolidayCriterionValue {
 }
 
 export const HolidayCriterionValueSchema: z.ZodType<HolidayCriterionValue, unknown> = object<HolidayCriterionValue>({
-  criterion_id: int64StringOrNumber,
+  criterion_id: int64String,
   value: str,
   source: str,
 });
@@ -217,11 +223,11 @@ export interface HolidayAllocationCandidate {
 }
 
 export const HolidayAllocationCandidateSchema: z.ZodType<HolidayAllocationCandidate, unknown> = object<HolidayAllocationCandidate>({
-  booking_id: int64StringOrNumber,
+  booking_id: int64String,
   rank: safeInt,
-  registration_id: int64StringOrNumber,
+  registration_id: int64String,
   submitted_at: instant,
-  child_id: int64StringOrNumber,
+  child_id: int64String,
   child_first_name: str,
   child_last_name: str,
   time_model_name: str,
@@ -244,10 +250,10 @@ export interface HolidayAllocationWeek {
 }
 
 export const HolidayAllocationWeekSchema: z.ZodType<HolidayAllocationWeek, unknown> = object<HolidayAllocationWeek>({
-  week_id: int64StringOrNumber,
+  week_id: int64String,
   starts_on: nullable(calendarDate),
   ends_on: nullable(calendarDate),
-  host_school_id: int64StringOrNumber,
+  host_school_id: int64String,
   booking_unit: str,
   capacity: nullable(safeInt),
   placed: safeInt,
@@ -275,12 +281,12 @@ export interface HolidayAllocationDecision {
 }
 
 export const HolidayAllocationDecisionSchema: z.ZodType<HolidayAllocationDecision, unknown> = object<HolidayAllocationDecision>({
-  id: int64StringOrNumber,
-  week_id: int64StringOrNumber,
+  id: int64String,
+  week_id: int64String,
   week_starts_on: nullable(calendarDate),
   week_ends_on: nullable(calendarDate),
-  registration_id: int64StringOrNumber,
-  child_id: int64StringOrNumber,
+  registration_id: int64String,
+  child_id: int64String,
   child_first_name: str,
   child_last_name: str,
   placement: str,
@@ -289,7 +295,7 @@ export const HolidayAllocationDecisionSchema: z.ZodType<HolidayAllocationDecisio
   criteria_met: nullable(arr(str)),
   reason: str,
   decided_at: instant,
-  decided_by_account_id: nullable(int64StringOrNumber),
+  decided_by_account_id: nullable(int64String),
 });
 
 /** Go: enrollment.HolidayAllocationBoard */
@@ -344,10 +350,10 @@ export interface HolidayWaitlistEntry {
 
 export const HolidayWaitlistEntrySchema: z.ZodType<HolidayWaitlistEntry, unknown> = object<HolidayWaitlistEntry>({
   position: safeInt,
-  registration_id: int64StringOrNumber,
+  registration_id: int64String,
   registration_status: str,
   submitted_at: instant,
-  child_id: int64StringOrNumber,
+  child_id: int64String,
   child_first_name: str,
   child_last_name: str,
   time_model_name: str,
@@ -381,10 +387,10 @@ export interface HolidayWeekPlaces {
 }
 
 export const HolidayWeekPlacesSchema: z.ZodType<HolidayWeekPlaces, unknown> = object<HolidayWeekPlaces>({
-  week_id: int64StringOrNumber,
+  week_id: int64String,
   starts_on: nullable(calendarDate),
   ends_on: nullable(calendarDate),
-  host_school_id: int64StringOrNumber,
+  host_school_id: int64String,
   capacity: nullable(safeInt),
   placed: safeInt,
   waitlist: nullable(arr(HolidayWaitlistEntrySchema)),
@@ -413,7 +419,7 @@ export interface HolidayRegistrationSummary {
 }
 
 export const HolidayRegistrationSummarySchema: z.ZodType<HolidayRegistrationSummary, unknown> = object<HolidayRegistrationSummary>({
-  id: int64StringOrNumber,
+  id: int64String,
   status: str,
   frozen: bool,
   submitted_at: instant,
@@ -451,9 +457,9 @@ export interface HolidayKnownChild {
 }
 
 export const HolidayKnownChildSchema: z.ZodType<HolidayKnownChild, unknown> = object<HolidayKnownChild>({
-  registration_id: int64StringOrNumber,
-  child_id: int64StringOrNumber,
-  school_id: int64StringOrNumber,
+  registration_id: int64String,
+  child_id: int64String,
+  school_id: int64String,
 });
 
 /** Go: enrollmenthttp.HolidayKnownChildrenResponse */
@@ -472,7 +478,7 @@ export interface HolidayRegistrationMails {
 }
 
 export const HolidayRegistrationMailsSchema: z.ZodType<HolidayRegistrationMails, unknown> = object<HolidayRegistrationMails>({
-  registration_id: int64StringOrNumber,
+  registration_id: int64String,
   mail_problems: nullable(arr(HolidayRegistrationMailProblemSchema)),
 });
 
@@ -495,7 +501,7 @@ export interface HolidayRegistrationHealth {
 }
 
 export const HolidayRegistrationHealthSchema: z.ZodType<HolidayRegistrationHealth, unknown> = object<HolidayRegistrationHealth>({
-  child_id: int64StringOrNumber,
+  child_id: int64String,
   allergies: str,
   medication: str,
   health_notes: str,
@@ -515,7 +521,7 @@ export const HolidayRegistrationHealthDetailSchema: z.ZodType<HolidayRegistratio
 
 /** Go: enrollmenthttp.HolidayTimeModelRequest */
 export interface HolidayTimeModelRequest {
-  id?: number;
+  id?: string;
   name?: string;
   starts_at?: string;
   ends_at?: string;
@@ -525,10 +531,10 @@ export interface HolidayTimeModelRequest {
 
 /** Go: enrollmenthttp.HolidayWeekRequest */
 export interface HolidayWeekRequest {
-  id?: number;
+  id?: string;
   starts_on?: string | null;
   ends_on?: string | null;
-  host_school_id?: number;
+  host_school_id?: string;
   time_models?: HolidayTimeModelRequest[] | null;
   booking_unit?: string;
   lunch_price_cents?: number | null;
@@ -546,11 +552,12 @@ export interface HolidayPeriodRequest {
   max_days_per_child?: number | null;
   allocation_mode?: string;
   weeks?: HolidayWeekRequest[] | null;
+  expected_version?: string;
 }
 
 /** Go: enrollmenthttp.holidayAllocationChoiceRequest */
 export interface holidayAllocationChoiceRequest {
-  booking_id?: number;
+  booking_id?: string;
   placement?: string;
   proposal?: string;
   reason?: string;
@@ -561,9 +568,22 @@ export interface HolidayAllocationRequest {
   decisions?: holidayAllocationChoiceRequest[] | null;
 }
 
+/** Go: enrollment.HolidayFormDocument */
+export interface HolidayFormDocument {
+  id: string;
+  filename: string;
+  size: number;
+}
+
+export const HolidayFormDocumentSchema: z.ZodType<HolidayFormDocument, unknown> = object<HolidayFormDocument>({
+  id: str,
+  filename: str,
+  size: safeInt,
+});
+
 /** Go: enrollmenthttp.holidayCriterionRequest */
 export interface holidayCriterionRequest {
-  id?: number;
+  id?: string;
   name?: string;
   question?: string;
   scope?: string;
@@ -573,6 +593,39 @@ export interface holidayCriterionRequest {
 /** Go: enrollmenthttp.HolidayCriteriaRequest */
 export interface HolidayCriteriaRequest {
   criteria?: holidayCriterionRequest[] | null;
+  expected_version?: string;
+}
+
+/** Go: enrollment.HolidayFormField */
+export interface HolidayFormFieldInput {
+  attachments?: FormAttachmentInput[] | null;
+  key?: string;
+  label?: string;
+  type?: string;
+  required?: boolean;
+  help_text?: string;
+  content?: string;
+  options?: FormFieldOptionInput[] | null;
+  allowed_times?: string[] | null;
+  single_mode_grades?: number[] | null;
+  validation?: FormFieldValidationInput | null;
+  file_options?: FormFileOptionsInput | null;
+  sort_order?: number;
+  applies_to_child?: boolean;
+  target?: string;
+  visible_when?: VisibilityConditionInput | null;
+  translations?: Record<string, Record<string, TranslatedTextInput> | null> | null;
+  health?: boolean;
+  share_with_host?: boolean;
+}
+
+/** Go: enrollmenthttp.HolidayPeriodFormRequest */
+export interface HolidayPeriodFormRequest {
+  fields?: HolidayFormFieldInput[] | null;
+  legal_blocks?: FormLegalBlockInput[] | null;
+  address_requirement?: string;
+  health_requirement?: string;
+  expected_version?: number;
 }
 
 /** Go: enrollmenthttp.HolidayWishRequest */
@@ -582,8 +635,8 @@ export interface HolidayWishRequest {
 
 /** Go: enrollmenthttp.HolidayCriterionCheckRequest */
 export interface HolidayCriterionCheckRequest {
-  criterion_id?: number;
-  child_id?: number | null;
+  criterion_id?: string;
+  child_id?: string | null;
   checked?: string | null;
 }
 
@@ -592,37 +645,15 @@ export interface HolidayCriteriaCheckRequest {
   checks?: HolidayCriterionCheckRequest[] | null;
 }
 
-/** Go: enrollmenthttp.holidayGuardianRequest */
-export interface holidayGuardianRequest {
-  first_name?: string;
-  last_name?: string;
-  email?: string;
-  phone?: string;
-}
-
-/** Go: enrollmenthttp.holidayAddressRequest */
-export interface holidayAddressRequest {
-  street?: string;
-  postal_code?: string;
-  city?: string;
-}
-
 /** Go: enrollmenthttp.holidayChildEditRequest */
 export interface holidayChildEditRequest {
-  id?: number;
+  id?: string;
   first_name?: string;
   last_name?: string;
   birth_date?: string | null;
-  home_school_id?: number;
+  home_school_id?: string;
   guest_school_name?: string;
   custom_data?: Record<string, unknown | null> | null;
-}
-
-/** Go: enrollmenthttp.holidayContactRequest */
-export interface holidayContactRequest {
-  name?: string;
-  phone?: string;
-  relationship?: string;
 }
 
 /** Go: enrollmenthttp.HolidayRegistrationEditRequest */
@@ -634,23 +665,16 @@ export interface HolidayRegistrationEditRequest {
   emergency_contacts?: holidayContactRequest[] | null;
   pickup_persons?: holidayContactRequest[] | null;
   custom_data?: Record<string, unknown | null> | null;
-}
-
-/** Query of GET /traeger/holiday-periods/{id}/registrations */
-export interface GetTraegerHolidayPeriodsIdRegistrationsQuery {
-  school?: string;
-  status?: string;
-  time_model?: string;
-  week_id?: string;
-  wish?: string;
-}
-
-/** Query of GET /traeger/holiday-periods/{id}/registrations/known-children */
-export interface GetTraegerHolidayPeriodsIdRegistrationsKnownChildrenQuery {
-  registration_id?: string;
+  expected_version?: string;
 }
 
 export const routes = {
+  "DELETE /traeger/holiday-periods/{id}/form/documents/{documentId}": {
+    method: "DELETE",
+    pattern: "/traeger/holiday-periods/{id}/form/documents/{documentId}",
+    portals: ["org"],
+    response: noData,
+  },
   "GET /traeger/holiday-periods/": {
     method: "GET",
     pattern: "/traeger/holiday-periods/",
@@ -662,6 +686,15 @@ export const routes = {
     pattern: "/traeger/holiday-periods/criteria",
     portals: ["org"],
     response: success(HolidayCriteriaCatalogSchema),
+  },
+  "GET /traeger/holiday-periods/export": {
+    method: "GET",
+    pattern: "/traeger/holiday-periods/export",
+    portals: ["org"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
+    response: fileAnswer,
   },
   "GET /traeger/holiday-periods/{id}": {
     method: "GET",
@@ -675,11 +708,26 @@ export const routes = {
     portals: ["org"],
     response: success(HolidayAllocationBoardSchema),
   },
+  "GET /traeger/holiday-periods/{id}/allocation/export": {
+    method: "GET",
+    pattern: "/traeger/holiday-periods/{id}/allocation/export",
+    portals: ["org"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
+    response: fileAnswer,
+  },
   "GET /traeger/holiday-periods/{id}/form": {
     method: "GET",
     pattern: "/traeger/holiday-periods/{id}/form",
     portals: ["org"],
     response: success(HolidayFormEditorSchema),
+  },
+  "GET /traeger/holiday-periods/{id}/form/documents/{documentId}": {
+    method: "GET",
+    pattern: "/traeger/holiday-periods/{id}/form/documents/{documentId}",
+    portals: ["org"],
+    response: fileAnswer,
   },
   "GET /traeger/holiday-periods/{id}/places": {
     method: "GET",
@@ -687,18 +735,49 @@ export const routes = {
     portals: ["org"],
     response: success(z.array(HolidayWeekPlacesSchema)),
   },
+  "GET /traeger/holiday-periods/{id}/places/export": {
+    method: "GET",
+    pattern: "/traeger/holiday-periods/{id}/places/export",
+    portals: ["org"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
+    response: fileAnswer,
+  },
   "GET /traeger/holiday-periods/{id}/registrations": {
     method: "GET",
     pattern: "/traeger/holiday-periods/{id}/registrations",
     portals: ["org"],
-    query: ["school", "status", "time_model", "week_id", "wish"],
+    query: {
+      "school": { kind: "string" },
+      "status": { kind: "string" },
+      "time_model": { kind: "string" },
+      "week_id": { kind: "id" },
+      "wish": { kind: "string" },
+    },
     response: success(HolidayRegistrationListSchema),
+  },
+  "GET /traeger/holiday-periods/{id}/registrations/export": {
+    method: "GET",
+    pattern: "/traeger/holiday-periods/{id}/registrations/export",
+    portals: ["org"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+      "school": { kind: "string" },
+      "status": { kind: "string" },
+      "time_model": { kind: "string" },
+      "week_id": { kind: "id" },
+      "wish": { kind: "string" },
+    },
+    response: fileAnswer,
   },
   "GET /traeger/holiday-periods/{id}/registrations/known-children": {
     method: "GET",
     pattern: "/traeger/holiday-periods/{id}/registrations/known-children",
     portals: ["org"],
-    query: ["registration_id"],
+    query: {
+      "registration_id": { kind: "id" },
+    },
     response: success(HolidayKnownChildrenResponseSchema),
   },
   "GET /traeger/holiday-periods/{id}/registrations/mail-problems": {
@@ -706,6 +785,20 @@ export const routes = {
     pattern: "/traeger/holiday-periods/{id}/registrations/mail-problems",
     portals: ["org"],
     response: success(HolidayMailProblemsResponseSchema),
+  },
+  "GET /traeger/holiday-periods/{id}/registrations/pdf": {
+    method: "GET",
+    pattern: "/traeger/holiday-periods/{id}/registrations/pdf",
+    portals: ["org"],
+    query: {
+      "health": { kind: "bool" },
+      "school": { kind: "string" },
+      "status": { kind: "string" },
+      "time_model": { kind: "string" },
+      "week_id": { kind: "id" },
+      "wish": { kind: "string" },
+    },
+    response: fileAnswer,
   },
   "GET /traeger/holiday-periods/{id}/registrations/{registrationId}": {
     method: "GET",
@@ -718,6 +811,21 @@ export const routes = {
     pattern: "/traeger/holiday-periods/{id}/registrations/{registrationId}/health",
     portals: ["org"],
     response: success(HolidayRegistrationHealthDetailSchema),
+  },
+  "GET /traeger/holiday-periods/{id}/registrations/{registrationId}/pdf": {
+    method: "GET",
+    pattern: "/traeger/holiday-periods/{id}/registrations/{registrationId}/pdf",
+    portals: ["org"],
+    query: {
+      "health": { kind: "bool" },
+    },
+    response: fileAnswer,
+  },
+  "GET /traeger/holiday-periods/{id}/registrations/{registrationId}/proofs/{proofId}": {
+    method: "GET",
+    pattern: "/traeger/holiday-periods/{id}/registrations/{registrationId}/proofs/{proofId}",
+    portals: ["org"],
+    response: fileAnswer,
   },
   "POST /traeger/holiday-periods/": {
     method: "POST",
@@ -733,6 +841,15 @@ export const routes = {
     request: requestBody<HolidayAllocationRequest>(),
     response: success(HolidayAllocationBoardSchema),
   },
+  "POST /traeger/holiday-periods/{id}/form/documents": {
+    method: "POST",
+    pattern: "/traeger/holiday-periods/{id}/form/documents",
+    portals: ["org"],
+    maxBodyBytes: 10489856,
+    tooLargeCode: "enrollment.legal_document_invalid",
+    request: multipart,
+    response: success(HolidayFormDocumentSchema),
+  },
   "POST /traeger/holiday-periods/{id}/publish": {
     method: "POST",
     pattern: "/traeger/holiday-periods/{id}/publish",
@@ -743,6 +860,15 @@ export const routes = {
     method: "POST",
     pattern: "/traeger/holiday-periods/{id}/registrations/{registrationId}/freeze",
     portals: ["org"],
+    response: success(HolidayRegistrationDetailSchema),
+  },
+  "POST /traeger/holiday-periods/{id}/registrations/{registrationId}/proofs": {
+    method: "POST",
+    pattern: "/traeger/holiday-periods/{id}/registrations/{registrationId}/proofs",
+    portals: ["org"],
+    maxBodyBytes: 10551296,
+    tooLargeCode: "enrollment.upload_invalid",
+    request: multipart,
     response: success(HolidayRegistrationDetailSchema),
   },
   "POST /traeger/holiday-periods/{id}/registrations/{registrationId}/reopen": {
@@ -769,6 +895,7 @@ export const routes = {
     method: "PUT",
     pattern: "/traeger/holiday-periods/{id}/form",
     portals: ["org"],
+    request: requestBody<HolidayPeriodFormRequest>(),
     response: success(HolidayFormEditorSchema),
   },
   "PUT /traeger/holiday-periods/{id}/registrations/{registrationId}/children/{childId}/holiday-wish": {

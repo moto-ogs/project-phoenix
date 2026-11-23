@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // A link joins employments of the Träger's schools into one record (ADR
@@ -21,6 +22,8 @@ type linkSource struct {
 	ref       workforce.TraegerStaffMemberRef
 	member    workforce.TraegerSchoolStaffMember
 	financial map[string]string
+	// bankRow is the token of the school's bank row as the link read it.
+	bankRow string
 }
 
 // linkPlan is everything a link read before it writes.
@@ -29,6 +32,40 @@ type linkPlan struct {
 	members []linkSource
 	sources []domain.StaffSource
 	names   map[int64]string
+	// state is what the preview compares, per source, for its fingerprint.
+	state []linkSourceState
+}
+
+// linkSourceState is one source's values in the fingerprint of a link
+// (ADR 0311). The bank and tax values enter sealed: the token carries no
+// digest of an opened IBAN, and a new value is sealed anew.
+type linkSourceState struct {
+	Key    string            `json:"key"`
+	Values map[string]string `json:"values"`
+	Sealed [][]byte          `json:"sealed"`
+}
+
+// fingerprint is the token of the values a link takes its choices from.
+func (plan linkPlan) fingerprint() string {
+	var recordID int64
+	if plan.record != nil {
+		recordID = plan.record.ID
+	}
+	return readstate.Fingerprint(struct {
+		Record  int64             `json:"record"`
+		Sources []linkSourceState `json:"sources"`
+	}{recordID, plan.state})
+}
+
+// sourceState keeps the plain fields of values and the sealed bank values.
+func sourceState(key string, values map[string]string, sealed ...[]byte) linkSourceState {
+	plain := make(map[string]string, len(values))
+	for field, value := range values {
+		if !domain.IsFinancialStaffField(field) {
+			plain[field] = value
+		}
+	}
+	return linkSourceState{Key: key, Values: plain, Sealed: sealed}
 }
 
 // PreviewLink shows the values the employments bring, field by field.
@@ -43,8 +80,9 @@ func (t *TraegerStaff) PreviewLink(ctx context.Context, actor workforce.TraegerS
 		preview.Record = &summary
 	}
 	for _, member := range plan.members {
-		preview.Members = append(preview.Members, publicCandidate(member.member, member.ref.SchoolID, plan.names))
+		preview.Members = append(preview.Members, publicCandidate(member.member, member.ref.SchoolID.Int64(), plan.names))
 	}
+	preview.Fingerprint = plan.fingerprint()
 	for _, field := range domain.PreviewStaffFields(plan.sources) {
 		public := workforce.TraegerStaffFieldPreview{Field: field.Field, Conflict: field.Conflict(), Options: []workforce.TraegerStaffFieldOption{}}
 		for _, option := range field.Options {
@@ -64,6 +102,14 @@ func (t *TraegerStaff) PreviewLink(ctx context.Context, actor workforce.TraegerS
 func (t *TraegerStaff) Link(ctx context.Context, actor workforce.TraegerStaffActor, request workforce.TraegerStaffLinkRequest) (workforce.TraegerStaffRecordDetail, error) {
 	plan, err := t.planLink(ctx, actor, request)
 	if err != nil {
+		return workforce.TraegerStaffRecordDetail{}, err
+	}
+	// The choices were made on the preview's values. The schools are read in
+	// their own transactions (ADR 0105): this read refuses what changed while
+	// the dialog was open. What changes after it is caught under the lock each
+	// write takes: the record's values in writeLink, a school's bank row in
+	// handOverSchool, which keeps a row it did not read and refuses.
+	if err := readstate.Check(request.ExpectedFingerprint, plan.fingerprint()); err != nil {
 		return workforce.TraegerStaffRecordDetail{}, err
 	}
 	resolved, err := domain.ResolveStaffFields(plan.sources, request.Choices)
@@ -86,10 +132,38 @@ func (t *TraegerStaff) Link(ctx context.Context, actor workforce.TraegerStaffAct
 	if err != nil {
 		return workforce.TraegerStaffRecordDetail{}, publicTraegerStaffError(err)
 	}
-	if err := t.handOver(ctx, actor, saved); err != nil {
+	if err := t.handOver(ctx, actor, saved, plannedBankRows(plan)); err != nil {
 		return workforce.TraegerStaffRecordDetail{}, err
 	}
 	return t.Record(ctx, actor, saved.ID)
+}
+
+// employmentKey names one employment: school and staff.
+type employmentKey struct{ schoolID, staffID int64 }
+
+// plannedBankRows lists the bank row of every new employment as the link
+// read it: only that row moves to the record.
+func plannedBankRows(plan linkPlan) map[employmentKey]string {
+	rows := make(map[employmentKey]string, len(plan.members))
+	for _, member := range plan.members {
+		rows[employmentKey{member.ref.SchoolID.Int64(), member.ref.StaffID.Int64()}] = member.bankRow
+	}
+	return rows
+}
+
+// bankRowState is the token of a school's bank row: its sealed values, none
+// for a school without a row. Nothing is opened.
+func bankRowState(rows []domain.StaffFinancialData) string {
+	if len(rows) == 0 {
+		return readstate.Fingerprint(nil)
+	}
+	row := rows[0]
+	return readstate.Fingerprint([][]byte{row.IBANSealed, row.TaxIDSealed, row.SocialSecurityNumberSealed})
+}
+
+// recordState is the record's entry in the fingerprint of a link.
+func recordState(record domain.TraegerStaffRecord, values map[string]string) linkSourceState {
+	return sourceState(domain.StaffSourceRecord, values, record.IBANSealed, record.TaxIDSealed, record.SocialSecurityNumberSealed)
 }
 
 // planLink checks the request against the Träger's schools and records and
@@ -114,7 +188,7 @@ func (t *TraegerStaff) planLink(ctx context.Context, actor workforce.TraegerStaf
 	}
 	wanted := make(map[int64][]int64, len(request.Members))
 	for _, ref := range request.Members {
-		wanted[ref.SchoolID] = []int64{ref.StaffID}
+		wanted[ref.SchoolID.Int64()] = []int64{ref.StaffID.Int64()}
 	}
 	reads, err := t.readSchools(ctx, actor, staffView{name: workforce.TraegerStaffViewLinkPreview}, slices.Sorted(maps.Keys(wanted)), wanted, true)
 	if err != nil {
@@ -128,7 +202,7 @@ func (t *TraegerStaff) planLink(ctx context.Context, actor workforce.TraegerStaf
 func (t *TraegerStaff) checkLinkTarget(ctx context.Context, actor workforce.TraegerStaffActor, request workforce.TraegerStaffLinkRequest) (*domain.TraegerStaffRecord, error) {
 	schools, staff := make([]int64, 0, len(request.Members)), make([]int64, 0, len(request.Members))
 	for _, ref := range request.Members {
-		schools, staff = append(schools, ref.SchoolID), append(staff, ref.StaffID)
+		schools, staff = append(schools, ref.SchoolID.Int64()), append(staff, ref.StaffID.Int64())
 	}
 	linked, err := t.store.LinkedEmployments(ctx, actor.OrganizationID, schools, staff)
 	if err != nil {
@@ -159,7 +233,7 @@ func linkTargets(plan linkPlan) []domain.TraegerStaffLink {
 		targets = append(targets, plan.record.Links...)
 	}
 	for _, member := range plan.members {
-		targets = append(targets, domain.TraegerStaffLink{SchoolID: member.ref.SchoolID, StaffID: member.ref.StaffID})
+		targets = append(targets, domain.TraegerStaffLink{SchoolID: member.ref.SchoolID.Int64(), StaffID: member.ref.StaffID.Int64()})
 	}
 	return targets
 }
@@ -170,13 +244,13 @@ func validateLinkMembers(members []workforce.TraegerStaffMemberRef, schools map[
 	}
 	seen := make(map[int64]bool, len(members))
 	for _, ref := range members {
-		if _, ok := schools[ref.SchoolID]; !ok || ref.StaffID <= 0 {
+		if _, ok := schools[ref.SchoolID.Int64()]; !ok || ref.StaffID <= 0 {
 			return &workforce.TraegerStaffLinkError{Field: "members", Reason: "an employment is not one of the Träger's schools"}
 		}
-		if seen[ref.SchoolID] {
+		if seen[ref.SchoolID.Int64()] {
 			return &workforce.TraegerStaffLinkError{Field: "members", Reason: "a record holds one employment per school"}
 		}
-		seen[ref.SchoolID] = true
+		seen[ref.SchoolID.Int64()] = true
 	}
 	return nil
 }
@@ -188,16 +262,21 @@ func (t *TraegerStaff) collectSources(plan linkPlan, refs []workforce.TraegerSta
 		if err != nil {
 			return linkPlan{}, err
 		}
-		plan.sources = append(plan.sources, staffSource(domain.StaffSourceRecord, 0, "", recordValues(*plan.record, financial)))
+		values := recordValues(*plan.record, financial)
+		plan.sources = append(plan.sources, staffSource(domain.StaffSourceRecord, 0, "", values))
+		plan.state = append(plan.state, recordState(*plan.record, values))
 	}
 	for _, ref := range refs {
-		read := reads[ref.SchoolID]
-		member, ok := read.members[ref.StaffID]
+		read := reads[ref.SchoolID.Int64()]
+		member, ok := read.members[ref.StaffID.Int64()]
 		if !ok {
 			return linkPlan{}, &workforce.TraegerStaffLinkError{Field: "members", Reason: "an employment is no longer live at its school"}
 		}
-		source := linkSource{ref: ref, member: member, financial: map[string]string{}}
-		if row, ok := read.financial[ref.StaffID]; ok {
+		source := linkSource{ref: ref, member: member, financial: map[string]string{}, bankRow: bankRowState(nil)}
+		var sealed [][]byte
+		if row, ok := read.financial[ref.StaffID.Int64()]; ok {
+			source.bankRow = bankRowState([]domain.StaffFinancialData{row})
+			sealed = [][]byte{row.IBANSealed, row.TaxIDSealed, row.SocialSecurityNumberSealed}
 			opened, err := t.openSchoolFinancial(row)
 			if err != nil {
 				return linkPlan{}, err
@@ -206,7 +285,9 @@ func (t *TraegerStaff) collectSources(plan linkPlan, refs []workforce.TraegerSta
 		}
 		plan.members = append(plan.members, source)
 		values := personValues(member.FirstName, member.LastName, member.Birthday, member.PersonnelNumber, source.financial)
-		plan.sources = append(plan.sources, staffSource(domain.SchoolSourceKey(ref.SchoolID), ref.SchoolID, plan.names[ref.SchoolID], values))
+		key := domain.SchoolSourceKey(ref.SchoolID.Int64())
+		plan.sources = append(plan.sources, staffSource(key, ref.SchoolID.Int64(), plan.names[ref.SchoolID.Int64()], values))
+		plan.state = append(plan.state, sourceState(key, values, sealed...))
 	}
 	return plan, nil
 }

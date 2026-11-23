@@ -1,20 +1,32 @@
-import { apiErrorFromResponse, transportFetch } from "~/lib/api-error";
+import { ApiError, isReadStateRefusal } from "~/lib/api-error";
+import { bffJson } from "~/lib/bff-fetch";
+import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
+import { knownEnum, requiredEnum } from "~/lib/contract/known-enum";
+import type * as studentsContract from "~/lib/contract/students.generated";
 import { createLogger } from "~/lib/logger";
-import type {
-  StaffCareRequest,
-  StaffCareRequestHistoryEntry,
+import {
+  toStaffCareRequest,
+  toStaffCareRequestHistoryEntry,
+  type StaffCareRequest,
+  type StaffCareRequestHistoryEntry,
 } from "~/lib/care-request-review-api";
-import type {
-  StaffExcusedRequest,
-  StaffExcusedRequestHistoryEntry,
+import {
+  toStaffExcusedRequest,
+  toStaffExcusedRequestHistoryEntry,
+  type StaffExcusedRequest,
+  type StaffExcusedRequestHistoryEntry,
 } from "~/lib/excused-request-review-api";
-import type {
-  StaffMasterDataChange,
-  StaffMasterDataHistoryEntry,
+import {
+  toStaffMasterDataChange,
+  toStaffMasterDataHistoryEntry,
+  type StaffMasterDataChange,
+  type StaffMasterDataHistoryEntry,
 } from "~/lib/master-data-review-api";
-import type {
-  StaffOfferingRequest,
-  StaffOfferingRequestHistoryEntry,
+import {
+  toStaffOfferingRequest,
+  toStaffOfferingRequestHistoryEntry,
+  type StaffOfferingRequest,
+  type StaffOfferingRequestHistoryEntry,
 } from "~/lib/offering-request-review-api";
 
 const logger = createLogger({ component: "ChangeRequestListApi" });
@@ -23,9 +35,9 @@ const logger = createLogger({ component: "ChangeRequestListApi" });
  * Aggregierte Eltern-Anfragenliste (#2432): ein Endpunkt über die vier
  * Anfragearten (Stammdaten, Betreuungszeiten, Angebote, Abwesenheiten),
  * offen oder Historie, mit serverseitiger Namenssuche, Filtern und
- * Keyset-Pagination. Jedes Item trägt unter `data` die unveränderte
- * Art-Projektion, diskriminiert über `request_type` — die bestehenden
- * Entscheiden-Aufrufe der Art-APIs bleiben unverändert.
+ * Keyset-Pagination. Jedes Item trägt seine Art-Projektion im Feld seiner
+ * Art (`master_data`, `care_schedule`, …); der Client legt sie unter `data`
+ * ab, diskriminiert über `request_type` (#7882).
  */
 
 export type AggregatedRequestType =
@@ -42,54 +54,19 @@ export type AggregatedRequestType =
  * (#2436). Keine Anfrage: kein Status, keine Entscheidung, nur in der
  * Historie.
  */
-interface DirectCorrection {
-  readonly id: string;
-  readonly student_id: string;
-  readonly student_name: string;
-  readonly changed_at: string;
-  readonly changed_by_name: string;
-  readonly reason: string;
-  readonly diff: readonly {
-    readonly offering_id: string;
-    readonly label: string;
-    readonly old: string;
-    readonly new: string;
-  }[];
-}
+type DirectCorrection = Omit<
+  studentsContract.DirectCorrectionResponse,
+  "diff"
+> & {
+  readonly diff: readonly studentsContract.OfferingRequestDiffResponse[];
+};
 
 /**
- * Eine Anmeldungsänderung (#2435): der Wunsch einer Familie, ihre Anmeldung
- * nach dem Absenden noch zu ändern. Eigener Endpunkt, weil die Freigabe an
- * config:manage hängt statt an users:update.
+ * Eine Anmeldungsänderung (#2435) ist `enrollmentContract.ChangeRequestReviewEntry`:
+ * der Wunsch einer Familie, ihre Anmeldung nach dem Absenden noch zu ändern.
+ * Eigener Endpunkt, weil die Freigabe an config:manage hängt statt an
+ * users:update.
  */
-export interface EnrollmentChangeRequest {
-  readonly id: string;
-  readonly request_id: string;
-  /** "parent" = von der Familie eingereicht, "admin" = Korrektur der OGS. */
-  readonly origin: string;
-  readonly status: string;
-  readonly child_names: readonly string[];
-  readonly child_ids?: readonly string[];
-  readonly children?: readonly {
-    readonly case_id: string;
-    readonly student_id?: string;
-    readonly name: string;
-  }[];
-  readonly guardian_name?: string;
-  readonly parent_note?: string;
-  readonly decision_note?: string;
-  /**
-   * Die Anmeldung wie eingereicht und wie beantragt, plus die Liste der
-   * geänderten Schlüssel — dieselben drei Felder, aus denen die Detailansicht
-   * ihren Vergleich baut. Die Zeile zeigt daraus das echte vorher → nachher.
-   */
-  readonly base_snapshot: Record<string, unknown>;
-  readonly proposed_snapshot: Record<string, unknown>;
-  readonly diff: Record<string, unknown>;
-  readonly created_at: string;
-  readonly decided_at?: string;
-  readonly decided_by_name?: string;
-}
 
 export type AggregatedRequestStatus = "approved" | "rejected" | "withdrawn";
 
@@ -98,9 +75,7 @@ export type AggregatedRequestStatus = "approved" | "rejected" | "withdrawn";
  * werden: die Einreichung in der Arbeitsliste, die Entscheidung in der
  * Historie.
  */
-interface Occurred {
-  readonly occurred_at: string;
-}
+type Occurred = Pick<studentsContract.Item, "occurred_at">;
 
 /**
  * Stabiler Code, warum eine Anfrage nicht gemeinsam freigegeben werden kann
@@ -116,70 +91,25 @@ export type BulkIneligibleReason =
   | "access_revoked";
 
 /**
- * Wer die Anfrage eingereicht hat (#4359). Beide Felder fehlen, wenn die
- * Schule die Person nicht (mehr) kennt; die Beziehung fehlt, wenn zu diesem
- * Kind keine hinterlegt ist. Die Oberfläche leitet sie nie aus dem Namen ab.
+ * Die Felder einer offenen Zeile neben ihrer Art-Projektion (#2267, #4359):
+ * wer eingereicht hat, Sammelfreigabe, Widerspruchsgruppe, Familienschutz.
+ * `bulk_ineligible_reason` ist ein stabiler Code; der Text steht in
+ * `bulk_ineligible_text`. Die Widerspruchsfelder FEHLEN ohne Widerspruch und
+ * zählen über alle offenen Anfragen des Kindes, auch nicht geladene.
  */
-interface SubmittedBy {
-  readonly submitted_by_name?: string;
-  /** Hinterlegte Beziehung zum Kind: `parent`, `guardian`, `relative`, `other`. */
-  readonly submitted_by_relationship?: string;
-}
-
-export interface RequestReviewMetadata extends SubmittedBy {
-  readonly student_id: string;
-  readonly student_name: string;
-  readonly group_name?: string;
-  readonly expected_version: string;
-  readonly urgent_today: boolean;
-  readonly bulk_eligible: boolean;
-  /** Stabiler Code; der Text steht in `bulk_ineligible_text`. */
-  readonly bulk_ineligible_reason?: BulkIneligibleReason;
-  /** Formulierung des Backends, Rückfallebene für unbekannte Codes. */
-  readonly bulk_ineligible_text?: string;
-  readonly family_protected: boolean;
-  /**
-   * Nur bei Abwesenheiten: was für die beantragten Tage aktuell eingetragen
-   * ist, je Tag `YYYY-MM-DD` → `present | sick | excused | class_trip`. Das
-   * Backend liefert das Feld auf Eintragsebene, nicht in `data`.
-   */
-  readonly current_status_by_date?: Readonly<Record<string, string>>;
-  /**
-   * Nur bei Abwesenheiten: Tage, an denen die OGS das Kind schon ab einer
-   * Uhrzeit entschuldigt hat, je Tag `YYYY-MM-DD` → `HH:MM` (#5698). Freigeben
-   * ersetzt diese Einträge erst nach ausdrücklicher Bestätigung.
-   */
-  readonly partial_absence_from_by_date?: Readonly<Record<string, string>>;
-  /**
-   * Die Anfrage betrifft nur vergangene Tage. Sie ändert nichts mehr und kann
-   * nur noch abgelehnt oder als erledigt markiert werden (#2267).
-   */
-  readonly past?: boolean;
-  /**
-   * Schlüssel der Wünsche, die sich mit anderen Anfragen desselben Kindes
-   * widersprechen können (ein Tag, ein Wochentag, ein Feld). Vom Backend
-   * berechnet — die Oberfläche gruppiert nur noch danach.
-   */
-  readonly conflict_key?: string;
-  /**
-   * Wie viele offene Anfragen des Kindes denselben Schlüssel berühren. Beide
-   * Felder FEHLEN, wenn es keinen Widerspruch gibt — sie stehen nie auf 1.
-   * Gezählt wird über ALLE offenen Anfragen des Kindes, eine davon kann also
-   * noch auf einer nicht geladenen Seite liegen. Die Oberfläche darf deshalb
-   * nie annehmen, alle Beteiligten schon zu kennen.
-   */
-  readonly conflict_group_size?: number;
-  /**
-   * Die OGS hat den Wert nach der Anfrage selbst geändert. Fehlt bei Arten
-   * ohne Ausgangswert (Betreuungszeiten, Abholzeit, Angebote).
-   */
-  readonly current_value_changed?: boolean;
-}
+export type RequestReviewMetadata = Omit<
+  studentsContract.Item,
+  | "request_type"
+  | "data"
+  | "occurred_at"
+  | "bulk_ineligible_reason"
+  | ParentRequestKind
+> & { readonly bulk_ineligible_reason?: BulkIneligibleReason };
 
 /** Eine Anmeldungsänderung als Zeile der gemeinsamen Liste. */
 export type EnrollmentRequestItem = Occurred & {
   request_type: "enrollment";
-  data: EnrollmentChangeRequest;
+  data: enrollmentContract.ChangeRequestReviewEntry;
 };
 
 export type AggregatedOpenRequest =
@@ -200,10 +130,11 @@ export type AggregatedOpenRequest =
  * beim Korrigieren mitgeschickt, damit zwei gleichzeitige Korrekturen sich
  * nicht überschreiben.
  */
-interface HistoryDecisionMeta extends SubmittedBy {
-  readonly can_correct?: boolean;
-  readonly expected_version?: string;
-}
+type HistoryDecisionMeta = Pick<
+  studentsContract.Item,
+  "can_correct" | "submitted_by_name" | "submitted_by_relationship"
+> &
+  Partial<Pick<studentsContract.Item, "expected_version">>;
 
 export type AggregatedHistoryRequest =
   | (Occurred &
@@ -224,13 +155,18 @@ export type AggregatedHistoryRequest =
  */
 export type RequestReviewAccess = "admin" | "team" | "group_leader" | "none";
 
-export interface AggregatedRequestPage<T> {
+/**
+ * Eine Seite der Liste: die Zeilen als Sichttypen, `next_cursor` fehlt auf
+ * der letzten Seite und gilt nur für denselben Filtersatz, `review_access`
+ * kommt nur mit der offenen Liste.
+ */
+export type AggregatedRequestPage<T> = Pick<
+  studentsContract.Page,
+  "next_cursor"
+> & {
   readonly items: readonly T[];
-  /** Fehlt auf der letzten Seite. Nur für denselben Filtersatz gültig. */
-  readonly next_cursor?: string;
-  /** Nur in der offenen Liste. */
   readonly review_access?: RequestReviewAccess;
-}
+};
 
 export interface AggregatedRequestParams {
   readonly search?: string;
@@ -250,73 +186,201 @@ export interface AggregatedRequestParams {
   readonly cursor?: string;
 }
 
-interface Envelope<T> {
-  data: T;
+function listQuery(params: AggregatedRequestParams) {
+  const join = (values?: readonly string[]) =>
+    values && values.length > 0 ? values.join(",") : undefined;
+  return {
+    search: params.search?.trim() || undefined,
+    student_id: params.studentId || undefined,
+    types: join(params.types),
+    status: join(params.statuses),
+    from: params.from || undefined,
+    to: params.to || undefined,
+    cursor: params.cursor || undefined,
+  };
 }
 
-function buildQuery(
-  view: "open" | "history",
-  params: AggregatedRequestParams,
-): string {
-  const query = new URLSearchParams();
-  query.set("view", view);
-  if (params.search?.trim()) query.set("search", params.search.trim());
-  if (params.studentId) query.set("student_id", params.studentId);
-  if (params.types && params.types.length > 0)
-    query.set("types", params.types.join(","));
-  if (params.statuses && params.statuses.length > 0)
-    query.set("status", params.statuses.join(","));
-  if (params.from) query.set("from", params.from);
-  if (params.to) query.set("to", params.to);
-  if (params.cursor) query.set("cursor", params.cursor);
-  return `?${query.toString()}`;
-}
+const REVIEW_ACCESS = ["admin", "team", "group_leader", "none"] as const;
+const BULK_INELIGIBLE_REASONS = [
+  "past",
+  "stale",
+  "conflict",
+  "single_only",
+  "child_unavailable",
+  "access_revoked",
+] as const satisfies readonly BulkIneligibleReason[];
 
-async function fetchPage<T>(
-  view: "open" | "history",
-  params: AggregatedRequestParams,
-): Promise<AggregatedRequestPage<T>> {
-  const response = await transportFetch(
-    `/api/students/change-requests${buildQuery(view, params)}`,
-    {
-      cache: "no-store",
-    },
-  );
-  if (!response.ok) {
-    // Fehlt das Recht „Kinder sehen“, trägt die Antwort den Code
-    // students.absence_read_required; den Text liefert der Katalog (#2513).
-    const error = await apiErrorFromResponse(
-      response,
-      "change request list load failed",
-    );
-    logger.warn("change_request_list_load_failed", {
-      status: response.status,
-      view,
-      ...(error.code ? { code: error.code } : {}),
-    });
-    throw error;
+/** The projection of a row's kind; a row without it breaks the contract. */
+function projection<T>(value: T | undefined, kind: string): T {
+  if (value === undefined) {
+    throw new Error(`contract: change request row without its ${kind}`);
   }
-  const envelope = (await response.json()) as Envelope<
-    AggregatedRequestPage<T>
-  >;
-  return envelope.data;
+  return value;
 }
 
-export function listAggregatedOpenRequests(
+function openRequest(item: studentsContract.Item): AggregatedOpenRequest {
+  const {
+    request_type,
+    data: _data,
+    master_data,
+    care_schedule,
+    offering,
+    excused,
+    bulk_ineligible_reason,
+    ...meta
+  } = item;
+  const row = {
+    ...meta,
+    bulk_ineligible_reason: knownEnum(
+      BULK_INELIGIBLE_REASONS,
+      bulk_ineligible_reason,
+    ),
+  };
+  const kind = requiredEnum(PARENT_REQUEST_KINDS, request_type, "request_type");
+  switch (kind) {
+    case "master_data":
+      return {
+        ...row,
+        request_type: kind,
+        data: toStaffMasterDataChange(projection(master_data, kind)),
+      };
+    case "care_schedule":
+      return {
+        ...row,
+        request_type: kind,
+        data: toStaffCareRequest(projection(care_schedule, kind)),
+      };
+    case "offering":
+      return {
+        ...row,
+        request_type: kind,
+        data: toStaffOfferingRequest(projection(offering, kind)),
+      };
+    case "excused":
+      return {
+        ...row,
+        request_type: kind,
+        data: toStaffExcusedRequest(projection(excused, kind)),
+      };
+  }
+}
+
+const HISTORY_KINDS = [
+  "master_data",
+  "care_schedule",
+  "offering",
+  "excused",
+  "direct_correction",
+] as const;
+
+function historyRequest(
+  item: studentsContract.HistoryItem,
+): AggregatedHistoryRequest {
+  const {
+    request_type,
+    master_data,
+    care_schedule,
+    offering,
+    excused,
+    direct_correction,
+    ...meta
+  } = item;
+  const kind = requiredEnum(HISTORY_KINDS, request_type, "request_type");
+  switch (kind) {
+    case "master_data":
+      return {
+        ...meta,
+        request_type: kind,
+        data: toStaffMasterDataHistoryEntry(projection(master_data, kind)),
+      };
+    case "care_schedule":
+      return {
+        ...meta,
+        request_type: kind,
+        data: toStaffCareRequestHistoryEntry(projection(care_schedule, kind)),
+      };
+    case "offering":
+      return {
+        ...meta,
+        request_type: kind,
+        data: toStaffOfferingRequestHistoryEntry(projection(offering, kind)),
+      };
+    case "excused":
+      return {
+        ...meta,
+        request_type: kind,
+        data: toStaffExcusedRequestHistoryEntry(projection(excused, kind)),
+      };
+    case "direct_correction": {
+      const correction = projection(direct_correction, kind);
+      return {
+        ...meta,
+        request_type: kind,
+        data: { ...correction, diff: correction.diff ?? [] },
+      };
+    }
+  }
+}
+
+function logLoadFailure(view: "open" | "history", error: unknown): void {
+  // Fehlt das Recht „Kinder sehen“, trägt die Antwort den Code
+  // students.absence_read_required; den Text liefert der Katalog (#2513).
+  logger.warn("change_request_list_load_failed", {
+    view,
+    ...(error instanceof ApiError
+      ? { status: error.status, ...(error.code ? { code: error.code } : {}) }
+      : {}),
+  });
+}
+
+export async function listAggregatedOpenRequests(
   params: AggregatedRequestParams = {},
 ): Promise<AggregatedRequestPage<AggregatedOpenRequest>> {
-  return fetchPage<AggregatedOpenRequest>("open", params);
+  try {
+    const page = await bffJson("tenant", "GET /api/students/change-requests", {
+      query: { view: "open", ...listQuery(params) },
+      errorMessage: "change request list load failed",
+    });
+    return {
+      items: (page.items ?? []).map(openRequest),
+      next_cursor: page.next_cursor,
+      review_access: knownEnum(REVIEW_ACCESS, page.review_access),
+    };
+  } catch (error) {
+    logLoadFailure("open", error);
+    throw error;
+  }
 }
 
-export function listAggregatedRequestHistory(
+export async function listAggregatedRequestHistory(
   params: AggregatedRequestParams = {},
 ): Promise<AggregatedRequestPage<AggregatedHistoryRequest>> {
-  return fetchPage<AggregatedHistoryRequest>("history", params);
+  try {
+    const page = await bffJson(
+      "tenant",
+      "GET /api/students/change-requests/history",
+      {
+        query: listQuery(params),
+        errorMessage: "change request list load failed",
+      },
+    );
+    return {
+      items: (page.items ?? []).map(historyRequest),
+      next_cursor: page.next_cursor,
+    };
+  } catch (error) {
+    logLoadFailure("history", error);
+    throw error;
+  }
 }
 
-/** Die vier Arten, die über den gemeinsamen Lebenszyklus entschieden werden. */
-export type ParentRequestKind =
-  "master_data" | "care_schedule" | "offering" | "excused";
+const PARENT_REQUEST_KINDS = [
+  "master_data",
+  "care_schedule",
+  "offering",
+  "excused",
+] as const;
+export type ParentRequestKind = (typeof PARENT_REQUEST_KINDS)[number];
 
 export interface BulkApproveRequestRef {
   readonly kind: ParentRequestKind;
@@ -325,46 +389,37 @@ export interface BulkApproveRequestRef {
 }
 
 /**
- * Liest die Fehlerantwort einer schreibenden Anfrage als ApiError mit Code,
- * den der gemeinsame Fehlerweg übersetzt (#2513). Eine veraltete Version
- * (409 `students.change_request_stale`, #2267) erkennt die Oberfläche am
- * Code und lädt neu, statt die Person eine verlorene Entscheidung
- * wiederholen zu lassen.
+ * Eine Entscheidung, die auf einem veralteten Stand beruht: ein anderer
+ * Name für `isReadStateRefusal`, also `general.changed_since_read` (ADR
+ * 0311) und jeder ältere Modulcode derselben Bedeutung (ADR 0311 §6). Bei
+ * den Anfragen sind das die seit dem Lesen geänderte Anfrage und ein nicht
+ * mehr stimmender bisheriger Wert einer Stammdaten-Anfrage
+ * (`students.change_request_stale`).
  */
-async function throwWriteError(
-  response: Response,
-  message: string,
-): Promise<never> {
-  const error = await apiErrorFromResponse(response, message);
-  if (error.code === "students.change_request_stale") throw error;
+export const isOutdatedDecision = isReadStateRefusal;
+
+/**
+ * Meldet eine abgelehnte schreibende Anfrage (#2513). Eine veraltete
+ * Entscheidung (`isOutdatedDecision`) erkennt die Oberfläche am Code und lädt
+ * neu, statt die Person eine verlorene Entscheidung wiederholen zu lassen;
+ * sie ist kein Fehler zum Protokollieren.
+ */
+function logWriteError(error: unknown): void {
+  if (!(error instanceof ApiError)) return;
+  if (isOutdatedDecision(error)) return;
   logger.warn("change_request_write_failed", {
-    status: response.status,
+    status: error.status,
     ...(error.code ? { code: error.code } : {}),
   });
-  throw error;
 }
 
-async function postLifecycle<T>(
-  url: string,
-  body: unknown,
-  fallback: string,
-): Promise<T> {
-  const response = await transportFetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!response.ok) await throwWriteError(response, fallback);
-  const envelope = (await response.json()) as Envelope<T>;
-  return envelope.data;
-}
-
-function lifecycleURL(
-  kind: ParentRequestKind,
-  requestID: string,
-  action: string,
-): string {
-  return `/api/students/change-requests/${encodeURIComponent(kind)}/${encodeURIComponent(requestID)}/${action}`;
+async function write<T>(send: () => Promise<T>): Promise<T> {
+  try {
+    return await send();
+  } catch (error) {
+    logWriteError(error);
+    throw error;
+  }
 }
 
 /**
@@ -377,15 +432,21 @@ export function markRequestDone(
   expectedVersion: string,
   reason?: string,
 ): Promise<unknown> {
-  return postLifecycle(
-    lifecycleURL(kind, requestID, "mark-done"),
-    {
-      expected_version: expectedVersion,
-      // Der Grund ist freiwillig; ein leerer würde nur eine leere Zeile in
-      // der Historie erzeugen.
-      ...(reason?.trim() ? { reason: reason.trim() } : {}),
-    },
-    "change request mark done failed",
+  return write(() =>
+    bffJson(
+      "tenant",
+      "POST /api/students/change-requests/{kind}/{requestId}/mark-done",
+      {
+        params: { kind, requestId: requestID },
+        body: {
+          expected_version: expectedVersion,
+          // Der Grund ist freiwillig; ein leerer würde nur eine leere Zeile
+          // in der Historie erzeugen.
+          ...(reason?.trim() ? { reason: reason.trim() } : {}),
+        },
+        errorMessage: "change request mark done failed",
+      },
+    ),
   );
 }
 
@@ -407,15 +468,21 @@ export function correctRequestDecision(
     reason: string;
     expectedVersion: string;
   }>,
-): Promise<{ approved: boolean }> {
-  return postLifecycle(
-    lifecycleURL(kind, requestID, "correct"),
-    {
-      approve: input.approve,
-      reason: input.reason,
-      expected_version: input.expectedVersion,
-    },
-    "change request correction failed",
+): Promise<studentsContract.parentRequestCorrectedResponse> {
+  return write(() =>
+    bffJson(
+      "tenant",
+      "POST /api/students/change-requests/{kind}/{requestId}/correct",
+      {
+        params: { kind, requestId: requestID },
+        body: {
+          approve: input.approve,
+          reason: input.reason,
+          expected_version: input.expectedVersion,
+        },
+        errorMessage: "change request correction failed",
+      },
+    ),
   );
 }
 
@@ -461,21 +528,22 @@ export interface ConflictResolution {
 export async function resolveRequestConflict(
   input: ConflictResolution,
 ): Promise<number> {
-  const result = await postLifecycle<{ resolved_count: number }>(
-    "/api/students/change-requests/conflicts/resolve",
-    {
-      kind: input.kind,
-      conflict_key: input.conflictKey,
-      request_ids: input.requestIDs,
-      expected_versions: input.expectedVersions,
-      ...(input.chosenRequestID
-        ? { chosen_request_id: input.chosenRequestID }
-        : input.staffValue !== undefined
-          ? { staff_value: { value: input.staffValue } }
-          : { none: true }),
-      reason: input.reason,
-    },
-    "change request conflict resolution failed",
+  const result = await write(() =>
+    bffJson("tenant", "POST /api/students/change-requests/conflicts/resolve", {
+      body: {
+        kind: input.kind,
+        conflict_key: input.conflictKey,
+        request_ids: [...input.requestIDs],
+        expected_versions: [...input.expectedVersions],
+        ...(input.chosenRequestID
+          ? { chosen_request_id: input.chosenRequestID }
+          : input.staffValue !== undefined
+            ? { staff_value: { value: input.staffValue } }
+            : { none: true }),
+        reason: input.reason,
+      },
+      errorMessage: "change request conflict resolution failed",
+    }),
   );
   return result.resolved_count;
 }
@@ -484,21 +552,13 @@ export async function bulkApproveParentRequests(
   requests: readonly BulkApproveRequestRef[],
   reason: string,
 ): Promise<number> {
-  const response = await transportFetch(
-    "/api/students/change-requests/bulk-approve",
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ requests, reason }),
-    },
+  const result = await write(() =>
+    bffJson("tenant", "POST /api/students/change-requests/bulk-approve", {
+      body: { requests: [...requests], reason },
+      errorMessage: "change request bulk approval failed",
+    }),
   );
-  if (!response.ok) {
-    await throwWriteError(response, "change request bulk approval failed");
-  }
-  const envelope = (await response.json()) as Envelope<{
-    approved_count: number;
-  }>;
-  return envelope.data.approved_count;
+  return result.approved_count;
 }
 
 export async function setFamilyProtection(
@@ -506,36 +566,20 @@ export async function setFamilyProtection(
   enabled: boolean,
   reason: string,
 ): Promise<void> {
-  const response = await transportFetch(
-    `/api/students/${encodeURIComponent(studentId)}/family-protection`,
-    {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ enabled, reason }),
-    },
-  );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, "family protection save failed");
-  }
-}
-
-export interface FamilyProtectionState {
-  readonly student_id: string;
-  readonly enabled: boolean;
+  await bffJson("tenant", "PUT /api/students/{id}/family-protection", {
+    params: { id: studentId },
+    body: { enabled, reason },
+    errorMessage: "family protection save failed",
+  });
 }
 
 export async function getFamilyProtection(
   studentId: string,
-): Promise<FamilyProtectionState> {
-  const response = await transportFetch(
-    `/api/students/${encodeURIComponent(studentId)}/family-protection`,
-    { cache: "no-store" },
-  );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, "family protection load failed");
-  }
-  const envelope = (await response.json()) as Envelope<FamilyProtectionState>;
-  return envelope.data;
+): Promise<studentsContract.familyProtectionResponse> {
+  return bffJson("tenant", "GET /api/students/{id}/family-protection", {
+    params: { id: studentId },
+    errorMessage: "family protection load failed",
+  });
 }
 
 /**
@@ -545,15 +589,11 @@ export async function getFamilyProtection(
  */
 export async function fetchPendingEnrollmentChangeRequestCount(): Promise<number> {
   try {
-    const response = await fetch(
-      "/api/enrollment/admin/change-requests/pending-count",
-      { cache: "no-store" },
+    const data = await bffJson(
+      "tenant",
+      "GET /api/enrollment/admin/change-requests/pending-count",
     );
-    if (!response.ok) return 0;
-    const envelope = (await response.json()) as Envelope<{
-      pending_count?: number;
-    }>;
-    return envelope.data?.pending_count ?? 0;
+    return data.pending_count;
   } catch {
     return 0;
   }
@@ -572,22 +612,32 @@ export async function listEnrollmentChangeRequests(
   // Ohne Art-Filter: diese Quelle kennt nur eine Art. Und ohne Kind-Filter:
   // dieser Endpunkt kennt ihn nicht, würde also ungefiltert antworten.
   const { types: _types, studentId: _studentId, ...rest } = params;
-  const response = await transportFetch(
-    `/api/enrollment/admin/change-requests/list${buildQuery(view, rest)}`,
-    { cache: "no-store" },
-  );
-  if (!response.ok) {
-    logger.warn("enrollment_change_request_list_load_failed", {
-      status: response.status,
-      view,
-    });
-    throw await apiErrorFromResponse(
-      response,
-      "enrollment change request list load failed",
+  try {
+    const page = await bffJson(
+      "tenant",
+      "GET /api/enrollment/admin/change-requests/list",
+      {
+        query: { view, ...listQuery(rest) },
+        errorMessage: "enrollment change request list load failed",
+      },
     );
+    return {
+      items: (page.items ?? []).map((item) => ({
+        occurred_at: item.occurred_at,
+        request_type: requiredEnum(
+          ["enrollment"] as const,
+          item.request_type,
+          "request_type",
+        ),
+        data: item.data,
+      })),
+      next_cursor: page.next_cursor,
+    };
+  } catch (error) {
+    logger.warn("enrollment_change_request_list_load_failed", {
+      view,
+      ...(error instanceof ApiError ? { status: error.status } : {}),
+    });
+    throw error;
   }
-  const envelope = (await response.json()) as Envelope<
-    AggregatedRequestPage<EnrollmentRequestItem>
-  >;
-  return envelope.data;
 }

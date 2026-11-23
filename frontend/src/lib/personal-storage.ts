@@ -98,6 +98,7 @@ export const KEPT_STORAGE_KEYS: readonly string[] = [
   // Gerätelayout.
   "sidebar-collapsed",
   "sidebar-open-groups",
+  "traeger-sidebar-open-groups",
   "sidebar-accordion-expanded",
   // Steuerwerte ohne Konto. deliberateLogout muss den Logout überleben: die
   // Login-Seite liest daraus, dass er gewollt war.
@@ -105,6 +106,9 @@ export const KEPT_STORAGE_KEYS: readonly string[] = [
   // Ebenso der Merker, dass der letzte Logout die Sitzung nur auf diesem
   // Gerät beendet hat (#7209); die Login-Seite liest ihn einmal.
   "logoutNotRevoked",
+  // Und der Merker, dass der Logout auf den eigenen Passwortwechsel folgt;
+  // die Login-Seite liest ihn einmal.
+  "passwordChanged",
   // „Mit Code neu anmelden“ (#6955) muss den Logout ebenso überleben: Die
   // nächste Träger-Anmeldung in diesem Tab fragt einmal nach dem Code. Nur
   // ein Merker ohne Konto; trifft er die nächste Person, fragt moto auch sie
@@ -112,6 +116,9 @@ export const KEPT_STORAGE_KEYS: readonly string[] = [
   "moto.traeger.sign-in-with-code",
   "lastSuccessfulRefresh",
   "tagesplan-scroll",
+  // Zeitpunkt des letzten automatischen Neuladens nach einem nicht geladenen
+  // Programmteil; verhindert eine Neulade-Schleife. Ohne Konto und Daten.
+  "moto:chunk-load-reload-at",
   // Sperrzeiten für „Passwort vergessen“ je Adresse (#7213); entstehen vor
   // der Anmeldung. Je Eintrag ein Zeitpunkt unter einem 32-Bit-Hash der
   // Adresse, kein Konto und keine Adresse im Klartext. Wer eine Adresse
@@ -122,7 +129,6 @@ export const KEPT_STORAGE_KEYS: readonly string[] = [
   // Die frühere Sperrzeit ohne Adresse; das Fenster räumt sie beim Lesen weg.
   "passwordResetRateLimitUntil",
   // Hinweise auf diesem Gerät und die öffentliche Demo.
-  "schulhof-banner-dismissed",
   "moto-pwa-install-hint-*",
   "moto-demo-*",
   // Im Dienstplan ausgeblendete Abwesenheiten (#7021): nur Abwesenheits-IDs

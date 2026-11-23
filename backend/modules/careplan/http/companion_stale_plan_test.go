@@ -7,8 +7,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
+	"github.com/moto-ogs/project-phoenix/modules/careplan"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -18,7 +19,7 @@ import (
 // cases that assert on a refusal rather than on a success.
 func putStudentExpect(t *testing.T, tc *testContext, studentID int64, body map[string]any) *httptest.ResponseRecorder {
 	t.Helper()
-	req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", studentID), body)
+	req := studentUpdateRequest(t, tc, studentID, body)
 	return authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
 }
 
@@ -33,15 +34,15 @@ func companionLinkDays(t *testing.T, tc *testContext, studentID int64) map[int64
 
 	var body struct {
 		Data []struct {
-			CompanionStudentID int64    `json:"companion_student_id"`
-			Weekdays           []string `json:"weekdays"`
+			CompanionStudentID testpkg.ID `json:"companion_student_id"`
+			Weekdays           []string   `json:"weekdays"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &body))
 
 	links := make(map[int64][]string, len(body.Data))
 	for _, entry := range body.Data {
-		links[entry.CompanionStudentID] = entry.Weekdays
+		links[int64(entry.CompanionStudentID)] = entry.Weekdays
 	}
 	return links
 }
@@ -83,10 +84,10 @@ func TestUpdateStudent_PlanOnlyTrimNeedsBaseline(t *testing.T) {
 		"companions": []map[string]any{
 			{"companion_student_id": companion.ID, "weekdays": []string{"mon", "tue"}},
 		},
-		"companions_fingerprint": "",
+		"companions_fingerprint": mondayLinkFingerprint(),
 	}))
 
-	current := fmt.Sprintf("%d:mon,tue", companion.ID)
+	current := careplan.CompanionLinksFingerprint([]careplan.CompanionLink{{CompanionStudentID: companion.ID, Weekdays: []string{"mon", "tue"}}})
 	// The narrowing an out-of-date form would submit: Tuesday gone from the plan,
 	// no list, so the Tuesday edge is on the block.
 	narrowed := func(extra map[string]any) map[string]any {
@@ -104,19 +105,19 @@ func TestUpdateStudent_PlanOnlyTrimNeedsBaseline(t *testing.T) {
 	t.Run("without a baseline the removal is refused", func(t *testing.T) {
 		rr := putStudentExpect(t, tc, student.ID, narrowed(nil))
 		require.Equal(t, http.StatusConflict, rr.Code, "Body: %s", rr.Body.String())
-		assert.Contains(t, rr.Body.String(), common.CodeStudentsCompanionsChanged,
+		assert.Contains(t, rr.Body.String(), `"code":"`+readstate.ChangedCode+`"`,
 			"the client has to be told to reload, not to confirm anything")
 		assert.Equal(t, map[int64][]string{companion.ID: {"mon", "tue"}}, companionLinkDays(t, tc, student.ID),
 			"a refused update must leave the links untouched")
 	})
 
 	t.Run("a stale baseline is refused too", func(t *testing.T) {
-		stale := fmt.Sprintf("%d:mon", companion.ID)
+		stale := mondayLinkFingerprint(companion.ID)
 		rr := putStudentExpect(t, tc, student.ID, narrowed(map[string]any{
 			"companions_fingerprint": stale,
 		}))
 		require.Equal(t, http.StatusConflict, rr.Code, "Body: %s", rr.Body.String())
-		assert.Contains(t, rr.Body.String(), common.CodeStudentsCompanionsChanged)
+		assert.Contains(t, rr.Body.String(), `"code":"`+readstate.ChangedCode+`"`)
 	})
 
 	t.Run("the current baseline lets the intended narrowing through", func(t *testing.T) {
@@ -246,4 +247,46 @@ func TestUpdateStudent_CompanionsWithoutAccompaniedDayRefused(t *testing.T) {
 		}))
 		assert.Empty(t, companionLinkDays(t, tc, student.ID))
 	})
+}
+
+// TestCompanionListReadCarriesTheFingerprintASaveSends pins ADR 0311 for the
+// Laufgemeinschaft: the read hands out the token of the links it shows, the
+// form sends it back unchanged, and a save against an older read is refused.
+func TestCompanionListReadCarriesTheFingerprintASaveSends(t *testing.T) {
+	t.Parallel()
+	tc := setupStudentsRoute(t)
+	student := testpkg.CreateTestStudent(t, tc.db, "Token", "Subject", "TK1")
+	partner := testpkg.CreateTestStudent(t, tc.db, "Token", "Partner", "TK1")
+	other := testpkg.CreateTestStudent(t, tc.db, "Token", "Other", "TK1")
+	for _, id := range []int64{student.ID, partner.ID, other.ID} {
+		putStudent(t, tc, id, accompaniedPlanBody(nil))
+	}
+	read := func() string {
+		rr := authExec(t, tc, testutil.NewRequest("GET", fmt.Sprintf("/%d/companion-links", student.ID), nil), testutil.AdminTestClaims(1), []string{"admin:*"})
+		require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+		var body struct {
+			Data struct {
+				Fingerprint string `json:"fingerprint"`
+			} `json:"data"`
+		}
+		require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &body))
+		return body.Data.Fingerprint
+	}
+	link := func(fingerprint string, partnerID int64) *httptest.ResponseRecorder {
+		return putStudentExpect(t, tc, student.ID, accompaniedPlanBody(map[string]any{
+			"companions":             []map[string]any{{"companion_student_id": partnerID, "weekdays": []string{"mon"}}},
+			"companions_fingerprint": fingerprint,
+		}))
+	}
+	opened := read()
+	rr := link(opened, partner.ID)
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+
+	rr = link(opened, other.ID)
+	require.Equal(t, http.StatusConflict, rr.Code, rr.Body.String())
+	require.Contains(t, rr.Body.String(), `"code":"`+readstate.ChangedCode+`"`)
+	require.Equal(t, map[int64][]string{partner.ID: {"mon"}}, companionLinkDays(t, tc, student.ID))
+
+	rr = link(read(), other.ID)
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 }

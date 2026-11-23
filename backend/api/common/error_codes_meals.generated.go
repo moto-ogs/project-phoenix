@@ -9,6 +9,7 @@ const CodeMealsBillingMonthReasonRequired = "meals.billing_month_reason_required
 const CodeMealsBillingMonthReleased = "meals.billing_month_released"
 const CodeMealsBillingMonthRunning = "meals.billing_month_running"
 const CodeMealsChildNotEnrolled = "meals.child_not_enrolled"
+const CodeMealsDayChanged = "meals.day_changed"
 const CodeMealsDayClosed = "meals.day_closed"
 const CodeMealsDayPast = "meals.day_past"
 const CodeMealsDeliveryRangeTooLong = "meals.delivery_range_too_long"
@@ -35,6 +36,7 @@ var errorCodeClassesMeals = []errorCodeClass{
 	{CodeMealsBillingMonthReleased, "business_rejection"},
 	{CodeMealsBillingMonthRunning, "business_rejection"},
 	{CodeMealsChildNotEnrolled, "business_rejection"},
+	{CodeMealsDayChanged, "business_rejection"},
 	{CodeMealsDayClosed, "business_rejection"},
 	{CodeMealsDayPast, "business_rejection"},
 	{CodeMealsDeliveryRangeTooLong, "input"},

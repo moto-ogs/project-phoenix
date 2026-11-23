@@ -52,7 +52,7 @@ func TestCareRequestHistory_ServesFrozenDecisionDiff(t *testing.T) {
 	impact, _ := openWeeklyImpact(t, tc, testutil.AdminTestClaims(int(staffAccount.ID)), chain.StudentID, pending.ID)
 	decideReq, err := http.NewRequest(http.MethodPost,
 		fmt.Sprintf("/care-schedule-change-requests/%d/decide", pending.ID),
-		strings.NewReader(fmt.Sprintf(`{"approve":true,"reason":"Passt so","impact_token":%q}`, impact)))
+		strings.NewReader(fmt.Sprintf(`{"approve":true,"reason":"Passt so","impact_token":%q,"expected_version":%q}`, impact, testpkg.CareRequestVersion(t, pending.ID))))
 	require.NoError(t, err)
 	decideReq.Header.Set("Content-Type", "application/json")
 	rr := authExec(t, tc, decideReq, testutil.AdminTestClaims(int(staffAccount.ID)), []string{"admin:*"})

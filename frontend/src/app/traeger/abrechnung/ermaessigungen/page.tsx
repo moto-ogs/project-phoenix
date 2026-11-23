@@ -39,6 +39,7 @@ export default function TraegerErmaessigungenPage() {
     loading,
     error: loadError,
     mutate,
+    reloadOrThrow,
   } = useTraegerResource(
     traegerBillingKeys.careRules(),
     fetchCareRules,
@@ -110,6 +111,7 @@ export default function TraegerErmaessigungenPage() {
               data={data}
               open={editing}
               currentMonth={currentMonth}
+              reload={reloadOrThrow}
               onClose={() => setEditing(null)}
               onSaved={(next) => {
                 void mutate(next, { revalidate: false });

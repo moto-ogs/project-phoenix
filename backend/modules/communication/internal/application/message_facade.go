@@ -142,15 +142,6 @@ func (m *parentMessaging[I, T, M, G]) ListParentMessageThreadsForStudent(ctx con
 		return mapParentMessageInbox(projectMessageRows(rows, m.rows.Inbox)), m.mapError(err)
 	})
 }
-func (m *parentMessaging[I, T, M, G]) StartParentMessageThread(ctx context.Context, studentID, guardianAccountID int64, body, audience string) (*communication.ParentMessageThread, error) {
-	return observeMessageResult(ctx, m.observe, "parent_messages.start_thread", func(runCtx context.Context) (*communication.ParentMessageThread, error) {
-		thread, err := m.service.StartThread(runCtx, studentID, guardianAccountID, body, audience)
-		if err != nil {
-			return nil, m.mapError(err)
-		}
-		return mapNativeParentThread(thread, m.rows.Thread, m.rows.Message)
-	})
-}
 func (m *parentMessaging[I, T, M, G]) OpenParentMessageThread(ctx context.Context, studentID, guardianAccountID int64, audience string) (*communication.ParentMessageThread, error) {
 	return observeMessageResult(ctx, m.observe, "parent_messages.open_thread", func(runCtx context.Context) (*communication.ParentMessageThread, error) {
 		thread, err := m.service.OpenThread(runCtx, studentID, guardianAccountID, audience)

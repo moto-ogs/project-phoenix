@@ -53,6 +53,14 @@ type Application struct {
 	// Renewal tells that the application renews care into a new phase, whose
 	// conditions the parents accept on their own (#6456).
 	Renewal bool
+	// ContractImport tells that the school made the application for the
+	// child of an imported contract (the source contract_import, ADR 0309):
+	// no parent submitted it.
+	ContractImport bool
+	// ImportContractID is the imported contract such an application was
+	// made for, as the school stored it with the application; 0 for any
+	// other application.
+	ImportContractID int64
 }
 
 // Offering is a care offering of one school. A contract books it as a
@@ -86,7 +94,8 @@ type SchoolAccess struct {
 	// ContractIDs are the contracts at this school a contract read showed.
 	ContractIDs []int64
 	// StudentIDs are the children an overrun read showed by name (#4683),
-	// over the window from RangeStart to RangeEnd.
+	// over the window from RangeStart to RangeEnd, and the child records a
+	// link of imported contracts showed (#7760).
 	StudentIDs []int64
 	RangeStart calendar.Date
 	RangeEnd   calendar.Date
@@ -107,6 +116,20 @@ type SchoolApplications interface {
 	// AcceptedApplications lists the accepted application children without
 	// their bookings; a non-empty requestChildIDs keeps only those.
 	AcceptedApplications(ctx context.Context, requestChildIDs []int64) ([]Application, error)
+	// NamePhases fills in the name and service window of each offering's enrollment phase.
+	NamePhases(ctx context.Context, offerings []Offering) ([]Offering, error)
+}
+
+// StudentApplications reads, of the school whose tenant transaction the
+// caller holds, the accepted applications of named child records
+// (Enrollment): what the plan of imported contracts needs (ADR 0309).
+type StudentApplications interface {
+	// AcceptedStudentApplications lists the accepted application children
+	// of the child records and of no other, without their bookings and
+	// without the guardians of the application: the application child, its
+	// child record and where the application comes from (ContractImport,
+	// ImportContractID). None for no child record.
+	AcceptedStudentApplications(ctx context.Context, studentIDs []int64) ([]Application, error)
 	// NamePhases fills in the name and service window of each offering's enrollment phase.
 	NamePhases(ctx context.Context, offerings []Offering) ([]Offering, error)
 }

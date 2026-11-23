@@ -12,6 +12,7 @@ import (
 	supervisiondashboardCompose "github.com/moto-ogs/project-phoenix/modules/supervisiondashboard/compose"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	calendarpkg "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -385,7 +386,7 @@ func TestSupervisionPlanningMapsEffectiveTimes(t *testing.T) {
 	clock := "15:30"
 	assert.Equal(t, map[int64]supervisiondashboard.Pickup{42: {
 		Date: "2026-08-19", WeekdayName: "Mittwoch", PickupTime: &clock, IsException: true, Notes: "Oma",
-		DayNotes:         []supervisiondashboard.DayNote{{ID: 3, Content: "Klingeln"}},
+		DayNotes:         []supervisiondashboard.DashboardDayNote{{ID: 3, Content: "Klingeln"}},
 		DayDepartureMode: "pickup",
 	}}, pickups, "nil plans are dropped, not projected as empty; a day Abholart marks the row (#3946)")
 
@@ -394,7 +395,7 @@ func TestSupervisionPlanningMapsEffectiveTimes(t *testing.T) {
 	arrivalClock := "11:45"
 	assert.Equal(t, map[int64]supervisiondashboard.Arrival{42: {
 		Date: "2026-08-19", WeekdayName: "Mittwoch", ArrivalTime: &arrivalClock, Notes: "Bus",
-		DayNotes: []supervisiondashboard.DayNote{{ID: 4, Content: "Verspätung"}},
+		DayNotes: []supervisiondashboard.DashboardDayNote{{ID: 4, Content: "Verspätung"}},
 	}}, arrivals)
 
 	_, err = p.Pickups(ctx, nil, "yesterday")
@@ -413,17 +414,17 @@ func TestSupervisionScheduleForwardsQueryAndPreservesWireShape(t *testing.T) {
 	retained := timetable.OperationPlannedInstance{
 		ID: 5, Title: "Malen", Date: "2026-08-19", StartTime: "14:00", EndTime: "15:00", RoomID: 21, RoomName: &roomName, Status: "planned",
 		IsOverdue: true, MinutesUntilStart: 3, ExpectedStudentsCount: 4, PresentStudentsCount: 2, NotScheduledCount: 1,
-		AssignedStaffIDs: []int64{7, 9}, IsAssigned: true, IsPrimary: true, IsSubstitute: false, IsAbsent: false,
+		AssignedStaffIDs: []ident.ID{7, 9}, IsAssigned: true, IsPrimary: true, IsSubstitute: false, IsAbsent: false,
 		RosterPreview: []timetable.OperationRosterRow{{
 			StudentID: 1, StudentName: "Erika Muster", SchoolClass: "4a", GroupName: "Bären", Planned: true, CurrentlyPresent: true,
-			VisitID: supervisionInt64Ptr(77), Status: "present", Substatus: &note, Note: &note, CheckedInAt: &pickup, VisitEntryTime: &pickup, PickupTime: &pickup,
-			Warnings:          []timetable.OperationRosterWarning{{Kind: "arrival", Message: "zu früh", ExpectedArrival: &pickup, ExpectedGroupID: supervisionInt64Ptr(3)}},
+			VisitID: (*ident.ID)(supervisionInt64Ptr(77)), Status: "present", Substatus: &note, Note: &note, CheckedInAt: &pickup, VisitEntryTime: &pickup, PickupTime: &pickup,
+			Warnings:          []timetable.OperationRosterWarning{{Kind: "arrival", Message: "zu früh", ExpectedArrival: &pickup, ExpectedGroupID: (*ident.ID)(supervisionInt64Ptr(3))}},
 			ParallelPresentIn: &timetable.OperationParallelPresence{InstanceID: 6, Title: "Basteln", StartTime: "14:00", EndTime: "15:00"},
 			CareDayStatus:     "scheduled",
 		}},
 		PickupTimesLoaded: true, PickupTimesRedacted: false,
 		Warnings: []timetable.InstanceConflictWarning{{Kind: "staff", ResourceID: 7, Message: "doppelt", CanOverride: true, Fingerprint: "abc", ConflictingInstanceID: 6, ConflictingTitle: "Basteln", OverlapStart: "14:00", OverlapEnd: "14:30"}},
-		CanStart: true, StartAvailableAt: "13:45", StartExpiresAt: "15:00", ActiveGroupID: &activeGroupID, CancelReason: &note,
+		CanStart: true, StartAvailableAt: "13:45", StartExpiresAt: "15:00", ActiveGroupID: (*ident.ID)(&activeGroupID), CancelReason: &note,
 		PlanningTrackName: &note, PlanningTrackColor: &note, GroupName: &note,
 		StaffNames: []timetable.OperationStaffName{{StaffID: 7, DisplayName: "Erika", IsSubstitute: true}},
 	}

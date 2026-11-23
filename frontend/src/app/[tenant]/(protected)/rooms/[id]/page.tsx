@@ -44,6 +44,7 @@ import {
   useApiFormError,
   useToast,
 } from "~/contexts/ToastContext";
+import { isReadStateRefusal } from "~/lib/api-error";
 import { canReadSupervisionData, hasPermission } from "~/lib/auth-utils";
 import { useSetBreadcrumb } from "~/lib/breadcrumb-context";
 import { useOptionalSupervision } from "~/lib/supervision-context";
@@ -56,7 +57,12 @@ import { createLogger } from "~/lib/logger";
 import { exportPlan } from "~/lib/plan-export-api";
 import { NO_PLAN_FILTER } from "~/lib/plan-filter";
 import { roomPlanCareDay } from "~/lib/room-plan";
-import { formatFloor, isSystemRoom, type Room } from "~/lib/room-helpers";
+import {
+  formatFloor,
+  isSystemRoom,
+  type Room,
+  withStoredRoomFields,
+} from "~/lib/room-helpers";
 import {
   useTenantMutate,
   useTenantMutateMatching,
@@ -68,6 +74,12 @@ import { resolveDetailReferrer, useTenantAwarePath } from "~/lib/tenant-path";
 import { useTenantRouter } from "~/lib/tenant-router";
 import { RoomDetailLoadingPage } from "./page-skeleton";
 import { roomsConcept } from "~/lib/concepts/rooms";
+
+const ROOM_INFO =
+  "Hier siehst du, ob dieser Raum belegt ist. Unter „Kinder im Raum“ stehen die Kinder, die gerade dort sind. Wähle ein Kind, um seine Angaben zu öffnen.";
+// Erfasst die Schule nur, ob ein Kind da ist, gibt es keine Belegung.
+const ROOM_RECORD_INFO =
+  "Hier stehen die Angaben zu diesem Raum. Deine Schule erfasst nicht, welche Kinder in welchem Raum sind.";
 
 const logger = createLogger({ component: "RoomDetailPage" });
 
@@ -84,8 +96,11 @@ function backLabelFor(referrer: string): string {
 }
 
 export default function RoomDetailPage() {
+  const roomInfo =
+    usePresenceMode() === "binary" ? ROOM_RECORD_INFO : ROOM_INFO;
+
   return (
-    <Suspense fallback={<RoomDetailLoadingPage />}>
+    <Suspense fallback={<RoomDetailLoadingPage info={roomInfo} />}>
       <RoomDetailPageContent />
     </Suspense>
   );
@@ -133,8 +148,15 @@ function RoomDetailPageContent() {
   );
   const service = useMemo(() => createCrudService(roomsConfig), []);
 
-  const { room, history, loading, error, historyDisabled, historyError } =
-    useRoomDetail(roomId);
+  const {
+    room,
+    history,
+    loading,
+    error,
+    historyDisabled,
+    historyError,
+    reload: reloadRoom,
+  } = useRoomDetail(roomId);
 
   const seedFrom = useSWRSeedFrom();
   const preview = useMemo(
@@ -163,6 +185,7 @@ function RoomDetailPageContent() {
   // Im binären Modus führt die Schule keine Belegung; die Raumseite ist dann
   // der reine Datensatz.
   const hasOccupancy = presenceMode !== "binary";
+  const roomInfo = hasOccupancy ? ROOM_INFO : ROOM_RECORD_INFO;
   // Ein offener Raum (#3065) hat seine gemeinsame Aufsichtsansicht. Sie ist
   // seit #4372 nur noch über „Räume“ erreichbar, also über diese Seite.
   // Dieselbe Regel wie der Zugang zur Aufsichtsseite.
@@ -293,18 +316,35 @@ function RoomDetailPageContent() {
   );
 
   const handleSaveRoom = useCallback(
-    async (data: Partial<Room>) => {
-      if (!room) return;
+    async (data: Partial<Room>, version: string | undefined) => {
+      if (!room) throw new Error("room is not loaded");
       try {
         const payload = roomsConfig.form.transformBeforeSubmit
           ? roomsConfig.form.transformBeforeSubmit(data)
           : data;
-        await service.update(room.id, payload);
+        // The save carries the version the form was filled from.
+        const saved = await service.update(room.id, {
+          ...payload,
+          version,
+        });
+        const stored = saved ? withStoredRoomFields(room, saved) : room;
+        // The answer carries the new version: the next save sends it even
+        // when the reload below fails (ADR 0311). Occupancy is not part of
+        // the answer and stays as read.
+        await tenantMutate(
+          roomKeys.detailKey(roomId),
+          (current?: { room: Room }) =>
+            current && saved
+              ? { ...current, room: withStoredRoomFields(current.room, saved) }
+              : current,
+          { revalidate: false },
+        );
         const savedName = data.name?.trim() || room.name;
         toastSuccess(`Der Raum „${savedName}“ ist gespeichert.`);
         // A failed reload is a load error above the room, never an error
         // of the form (#6652).
         await roomAfterWrite.refresh();
+        return stored;
       } catch (updateError) {
         logger.error("failed to update room", {
           room_id: room.id,
@@ -313,10 +353,21 @@ function RoomDetailPageContent() {
               ? updateError.message
               : String(updateError),
         });
+        // Someone saved the room since it was read: the form reads it again
+        // (ADR 0311), the lists too.
+        if (isReadStateRefusal(updateError)) void refreshRoomLists();
         throw updateError;
       }
     },
-    [roomAfterWrite, room, service, toastSuccess],
+    [
+      refreshRoomLists,
+      roomAfterWrite,
+      room,
+      roomId,
+      service,
+      tenantMutate,
+      toastSuccess,
+    ],
   );
 
   const handleRoomRemoved = useCallback(
@@ -340,6 +391,7 @@ function RoomDetailPageContent() {
         referrer={referrer}
         backLabel={backLabel}
         preview={preview}
+        info={roomInfo}
       />
     );
   }
@@ -348,6 +400,7 @@ function RoomDetailPageContent() {
     return (
       <TenantPage
         title="Raum"
+        info={roomInfo}
         back
         backHref={referrer}
         backLabel={backLabel}
@@ -415,6 +468,7 @@ function RoomDetailPageContent() {
   return (
     <TenantPage
       title={room.name}
+      info={roomInfo}
       stats={statusLine ?? undefined}
       back
       backHref={referrer}
@@ -527,6 +581,7 @@ function RoomDetailPageContent() {
           room={room}
           showOccupancy={hasOccupancy}
           onSave={handleSaveRoom}
+          reload={reloadRoom}
           errorPath={saveErrors}
         />
       ) : null}

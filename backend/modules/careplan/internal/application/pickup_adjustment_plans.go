@@ -2,6 +2,7 @@ package application
 
 import (
 	"bytes"
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -119,7 +120,7 @@ func validatePickupArrivalRow(row careplan.PickupAdjustmentArrivalSchedule, seen
 	return nil
 }
 
-func pickupScheduleRows(studentID, createdBy int64, input []careplan.PickupAdjustmentSchedule) ([]*careplan.PickupSchedule, error) {
+func pickupScheduleRows(ctx context.Context, studentID, createdBy int64, input []careplan.PickupAdjustmentSchedule) ([]*careplan.PickupSchedule, error) {
 	rows := make([]*careplan.PickupSchedule, 0, len(input))
 	for _, item := range input {
 		parsed, err := time.Parse("15:04", item.PickupTime)
@@ -128,13 +129,13 @@ func pickupScheduleRows(studentID, createdBy int64, input []careplan.PickupAdjus
 		}
 		rows = append(rows, &careplan.PickupSchedule{
 			StudentID: studentID, Weekday: item.Weekday, PickupTime: parsed, Notes: item.Notes,
-			CreatedBy: createdBy, Source: careplan.ScheduleSourceStaff,
+			CreatedBy: createdBy, EnteredByTraeger: careplan.EnteredByTraeger(ctx, createdBy), Source: careplan.ScheduleSourceStaff,
 		})
 	}
 	return rows, nil
 }
 
-func pickupArrivalScheduleRows(studentID, createdBy int64, input []careplan.PickupAdjustmentArrivalSchedule) ([]*careplan.ArrivalSchedule, error) {
+func pickupArrivalScheduleRows(ctx context.Context, studentID, createdBy int64, input []careplan.PickupAdjustmentArrivalSchedule) ([]*careplan.ArrivalSchedule, error) {
 	rows := make([]*careplan.ArrivalSchedule, 0, len(input))
 	for _, item := range input {
 		var expectedArrival time.Time
@@ -147,7 +148,7 @@ func pickupArrivalScheduleRows(studentID, createdBy int64, input []careplan.Pick
 		}
 		rows = append(rows, &careplan.ArrivalSchedule{
 			StudentID: studentID, Weekday: item.Weekday, ExpectedArrival: expectedArrival,
-			Notes: item.Notes, CreatedBy: createdBy,
+			Notes: item.Notes, CreatedBy: createdBy, EnteredByTraeger: careplan.EnteredByTraeger(ctx, createdBy),
 		})
 	}
 	return rows, nil

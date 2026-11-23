@@ -5,7 +5,7 @@ import {
   bool,
   calendarDate,
   instant,
-  int64StringOrNumber,
+  int64String,
   json,
   noData,
   nullable,
@@ -17,6 +17,7 @@ import {
   success,
 } from "./runtime";
 import {
+  CaregiverCapabilityStateSchema,
   OperatorDeviceSchema,
   OperatorPersonSchema,
   SchoolSchema,
@@ -24,7 +25,17 @@ import {
   SettingsSchemaSchema,
   type MFAAdminOverrideSetRequest,
   type MFAAdminResetRequest,
+  type setSchoolSettingRequest,
 } from "./shared.generated";
+
+/** Go: operator.schoolSettingMutationResponse */
+export interface schoolSettingMutationResponse {
+  school_slug?: string;
+}
+
+export const schoolSettingMutationResponseSchema: z.ZodType<schoolSettingMutationResponse, unknown> = object<schoolSettingMutationResponse>({
+  school_slug: optional(str),
+});
 
 /** Go: organizationtenancy.SchoolRequiredDetails */
 export interface SchoolRequiredDetails {
@@ -33,7 +44,7 @@ export interface SchoolRequiredDetails {
 }
 
 export const SchoolRequiredDetailsSchema: z.ZodType<SchoolRequiredDetails, unknown> = object<SchoolRequiredDetails>({
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   reply_address_missing: bool,
 });
 
@@ -54,7 +65,7 @@ export interface SchoolAccount {
 }
 
 export const SchoolAccountSchema: z.ZodType<SchoolAccount, unknown> = object<SchoolAccount>({
-  account_id: int64StringOrNumber,
+  account_id: int64String,
   email: str,
   active: bool,
   first_name: str,
@@ -144,7 +155,7 @@ export const revealedSettingValueSchema: z.ZodType<revealedSettingValue, unknown
 
 /** Go: operator.createSchoolRequest */
 export interface createSchoolRequest {
-  organization_id?: number;
+  organization_id?: string;
   name?: string;
   slug?: string;
   subdomain?: string;
@@ -190,7 +201,7 @@ export interface CreatedAccount {
 }
 
 export const CreatedAccountSchema: z.ZodType<CreatedAccount, unknown> = object<CreatedAccount>({
-  id: int64StringOrNumber,
+  id: int64String,
   created_at: instant,
   updated_at: instant,
   email: str,
@@ -231,9 +242,9 @@ export interface operatorInvitationResponse {
 }
 
 export const operatorInvitationResponseSchema: z.ZodType<operatorInvitationResponse, unknown> = object<operatorInvitationResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   email: str,
-  role_id: int64StringOrNumber,
+  role_id: int64String,
   role_name: optional(str),
   token: optional(str),
   expires_at: instant,
@@ -241,7 +252,7 @@ export const operatorInvitationResponseSchema: z.ZodType<operatorInvitationRespo
   last_name: optional(str),
   position: optional(str),
   caregiver_enabled: bool,
-  created_by: int64StringOrNumber,
+  created_by: int64String,
   creator: optional(str),
   delivery_status: str,
   email_sent_at: optional(instant),
@@ -257,7 +268,7 @@ export interface childQuotaRequest {
 
 /** Go: operator.updateSchoolRequest */
 export interface updateSchoolRequest {
-  organization_id?: number;
+  organization_id?: string;
   name?: string;
   slug?: string;
   subdomain?: string;
@@ -287,7 +298,7 @@ export const routes = {
     method: "DELETE",
     pattern: "/operator/schools/{id}/accounts/{accountId}/caregiver-capability/",
     portals: ["platform"],
-    response: success(z.unknown()),
+    response: success(CaregiverCapabilityStateSchema),
   },
   "DELETE /operator/schools/{id}/accounts/{accountId}/mfa/": {
     method: "DELETE",
@@ -295,6 +306,13 @@ export const routes = {
     portals: ["platform"],
     request: requestBody<MFAAdminResetRequest>(),
     response: noData,
+  },
+  "DELETE /operator/schools/{id}/settings/values/{key}": {
+    method: "DELETE",
+    pattern: "/operator/schools/{id}/settings/values/{key}",
+    portals: ["platform"],
+    routeFile: "the operator's route file purges the school's cached tenant lookup",
+    response: success(schoolSettingMutationResponseSchema),
   },
   "GET /operator/schools/": {
     method: "GET",
@@ -324,7 +342,7 @@ export const routes = {
     method: "GET",
     pattern: "/operator/schools/{id}/accounts/{accountId}/caregiver-capability/",
     portals: ["platform"],
-    response: success(z.unknown()),
+    response: success(CaregiverCapabilityStateSchema),
   },
   "GET /operator/schools/{id}/accounts/{accountId}/mfa/": {
     method: "GET",
@@ -380,7 +398,7 @@ export const routes = {
     pattern: "/operator/schools/{id}/accounts/{accountId}/caregiver-capability/",
     portals: ["platform"],
     request: requestBody<updateCaregiverCapabilityRequest>(),
-    response: success(z.unknown()),
+    response: success(CaregiverCapabilityStateSchema),
   },
   "POST /operator/schools/{id}/create-account": {
     method: "POST",
@@ -422,5 +440,16 @@ export const routes = {
     portals: ["platform"],
     request: requestBody<deviceSlotsRequest>(),
     response: noData,
+  },
+  "PUT /operator/schools/{id}/settings/values/{key}": {
+    method: "PUT",
+    pattern: "/operator/schools/{id}/settings/values/{key}",
+    portals: ["platform"],
+    routeFile: "the operator's route file purges the school's cached tenant lookup",
+    query: {
+      "force": { kind: "string", values: ["true"] },
+    },
+    request: requestBody<setSchoolSettingRequest>(),
+    response: success(schoolSettingMutationResponseSchema),
   },
 } as const;

@@ -21,10 +21,10 @@ type Reader interface {
 	// (Elternnotizen); contact persons of a child at the school by name or
 	// e-mail address, or by the phone key and its alternative reading when
 	// phoneKey is not empty; staff, rooms and groups by name.
-	Search(ctx context.Context, text, phoneKey, alternativeKey string, scope schoolsearchview.Scope) (schoolsearchview.Result, error)
+	Search(ctx context.Context, text, phoneKey, alternativeKey string, scope schoolsearchview.SearchScope) (schoolsearchview.SearchResult, error)
 	// ChildrenByID reads the first limit of the given children that are
 	// still at the school, in the order of ids, with their OGS group.
-	ChildrenByID(ctx context.Context, ids []int64, limit int) ([]schoolsearchview.Child, error)
+	ChildrenByID(ctx context.Context, ids []int64, limit int) ([]schoolsearchview.SearchChild, error)
 }
 
 // Search is the projection's search capability.
@@ -47,10 +47,10 @@ func New(reader Reader, answers schoolsearchview.StudentAnswerSearch, notes scho
 // SearchSchool answers one query within its Scope. Contact persons match a
 // phone query by its key; every other field compares the text as typed, so
 // digits still find a room "1012" or a parent note that names a number.
-func (s *Search) SearchSchool(ctx context.Context, query schoolsearchview.Query) (schoolsearchview.Result, error) {
-	empty := schoolsearchview.Result{
-		Children: []schoolsearchview.Child{}, Contacts: []schoolsearchview.Contact{},
-		Staff: []schoolsearchview.Staff{}, Rooms: []schoolsearchview.Room{}, Groups: []schoolsearchview.Group{},
+func (s *Search) SearchSchool(ctx context.Context, query schoolsearchview.Query) (schoolsearchview.SearchResult, error) {
+	empty := schoolsearchview.SearchResult{
+		Children: []schoolsearchview.SearchChild{}, Contacts: []schoolsearchview.SearchContact{},
+		Staff: []schoolsearchview.SearchStaff{}, Rooms: []schoolsearchview.SearchRoom{}, Groups: []schoolsearchview.SearchGroup{},
 		Scope: query.Scope,
 	}
 	text, err := schoolsearchview.ValidateQueryText(query.Text)
@@ -78,9 +78,9 @@ func (s *Search) SearchSchool(ctx context.Context, query schoolsearchview.Query)
 // registration answer. A note that reaches the caller
 // only through the child's care team keeps the answer as a fallback.
 type detailHit struct {
-	match        schoolsearchview.Match
+	match        schoolsearchview.SearchMatch
 	careTeamOnly bool
-	fallback     *schoolsearchview.Match
+	fallback     *schoolsearchview.SearchMatch
 }
 
 // detailHits are the children found through a note or an answer, in the
@@ -91,10 +91,10 @@ type detailHits struct {
 	order []int64
 }
 
-func newDetailHits(children []schoolsearchview.Child) *detailHits {
+func newDetailHits(children []schoolsearchview.SearchChild) *detailHits {
 	found := make(map[int64]bool, len(children))
 	for _, child := range children {
-		found[child.ID] = true
+		found[child.ID.Int64()] = true
 	}
 	return &detailHits{found: found, hits: map[int64]*detailHit{}}
 }
@@ -105,7 +105,7 @@ func (d *detailHits) addNote(hit schoolsearchview.NoteHit, text string) {
 		return
 	}
 	d.hits[hit.StudentID] = &detailHit{
-		match:        schoolsearchview.Match{Field: schoolsearchview.MatchStudentNote, Text: matchSnippet(hit.Body, text)},
+		match:        schoolsearchview.SearchMatch{Field: schoolsearchview.MatchStudentNote, Text: matchSnippet(hit.Body, text)},
 		careTeamOnly: hit.CareTeamOnly,
 	}
 	d.order = append(d.order, hit.StudentID)
@@ -113,7 +113,7 @@ func (d *detailHits) addNote(hit schoolsearchview.NoteHit, text string) {
 
 // addAnswer takes a child's answer: as its reason, or as the fallback of a
 // note that waits for the care team.
-func (d *detailHits) addAnswer(studentID int64, match schoolsearchview.Match) {
+func (d *detailHits) addAnswer(studentID int64, match schoolsearchview.SearchMatch) {
 	if d.found[studentID] {
 		return
 	}
@@ -134,7 +134,7 @@ func (d *detailHits) addAnswer(studentID int64, match schoolsearchview.Match) {
 // children who have left the school, so the search asks for every hit and
 // keeps the first ones still at the school: former pupils never leave a free
 // place empty.
-func (s *Search) withDetailHits(ctx context.Context, text string, children []schoolsearchview.Child, notes *schoolsearchview.NoteReader) ([]schoolsearchview.Child, error) {
+func (s *Search) withDetailHits(ctx context.Context, text string, children []schoolsearchview.SearchChild, notes *schoolsearchview.NoteReader) ([]schoolsearchview.SearchChild, error) {
 	if len(children) >= schoolsearchview.ChildLimit {
 		return children, nil
 	}
@@ -147,7 +147,7 @@ func (s *Search) withDetailHits(ctx context.Context, text string, children []sch
 		return nil, fmt.Errorf("school search: registration answers: %w", err)
 	}
 	for _, answer := range answers {
-		found.addAnswer(answer.StudentID, schoolsearchview.Match{Field: schoolsearchview.MatchEnrollmentAnswer, Label: answer.Label, Text: matchSnippet(answer.Answer, text)})
+		found.addAnswer(answer.StudentID, schoolsearchview.SearchMatch{Field: schoolsearchview.MatchEnrollmentAnswer, Label: answer.Label, Text: matchSnippet(answer.Answer, text)})
 	}
 	if len(found.order) == 0 {
 		return children, nil
@@ -165,13 +165,13 @@ func (s *Search) withDetailHits(ctx context.Context, text string, children []sch
 // appendTo fills the free places with the rows that kept a reason: note hits
 // first, then answer hits, each in the order they were found. A child whose
 // care team note fell back to its answer moves to the answers.
-func (d *detailHits) appendTo(children, rows []schoolsearchview.Child) []schoolsearchview.Child {
+func (d *detailHits) appendTo(children, rows []schoolsearchview.SearchChild) []schoolsearchview.SearchChild {
 	for _, notes := range []bool{true, false} {
 		for _, row := range rows {
 			if len(children) == schoolsearchview.ChildLimit {
 				return children
 			}
-			hit := d.hits[row.ID]
+			hit := d.hits[row.ID.Int64()]
 			if hit == nil || (hit.match.Field == schoolsearchview.MatchStudentNote) != notes {
 				continue
 			}
@@ -206,11 +206,11 @@ func (s *Search) findNotes(ctx context.Context, text string, notes *schoolsearch
 // and today's activities against the caller's. A child outside the caller's
 // care team keeps its answer hit, or is no hit at all. The activities of all
 // those children come in one read.
-func (s *Search) resolveCareTeam(ctx context.Context, rows []schoolsearchview.Child, hits map[int64]*detailHit, notes *schoolsearchview.NoteReader) error {
+func (s *Search) resolveCareTeam(ctx context.Context, rows []schoolsearchview.SearchChild, hits map[int64]*detailHit, notes *schoolsearchview.NoteReader) error {
 	pending := make([]int64, 0)
 	for _, row := range rows {
-		if hit := hits[row.ID]; hit != nil && hit.careTeamOnly {
-			pending = append(pending, row.ID)
+		if hit := hits[row.ID.Int64()]; hit != nil && hit.careTeamOnly {
+			pending = append(pending, row.ID.Int64())
 		}
 	}
 	if len(pending) == 0 {
@@ -221,17 +221,17 @@ func (s *Search) resolveCareTeam(ctx context.Context, rows []schoolsearchview.Ch
 		return fmt.Errorf("school search: activities of note children: %w", err)
 	}
 	for _, row := range rows {
-		hit := hits[row.ID]
+		hit := hits[row.ID.Int64()]
 		if hit == nil || !hit.careTeamOnly {
 			continue
 		}
-		child := schoolsearchview.NoteChild{GroupID: row.GroupID, SchoolClass: row.SchoolClass, ActivityGroupIDs: activities[row.ID]}
+		child := schoolsearchview.NoteChild{GroupID: row.GroupID, SchoolClass: row.SchoolClass, ActivityGroupIDs: activities[row.ID.Int64()]}
 		switch {
 		case notes.HasChildOf(child):
 		case hit.fallback != nil:
-			hits[row.ID] = &detailHit{match: *hit.fallback}
+			hits[row.ID.Int64()] = &detailHit{match: *hit.fallback}
 		default:
-			delete(hits, row.ID)
+			delete(hits, row.ID.Int64())
 		}
 	}
 	return nil
@@ -239,7 +239,7 @@ func (s *Search) resolveCareTeam(ctx context.Context, rows []schoolsearchview.Ch
 
 // withNoteSnippets cuts the parent note of a note hit to the part around the
 // match.
-func withNoteSnippets(children []schoolsearchview.Child, text string) {
+func withNoteSnippets(children []schoolsearchview.SearchChild, text string) {
 	for i := range children {
 		if children[i].Match.Field == schoolsearchview.MatchParentNote {
 			children[i].Match.Text = matchSnippet(children[i].Match.Text, text)

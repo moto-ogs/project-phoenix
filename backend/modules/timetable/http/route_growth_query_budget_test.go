@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	timetablehttp "github.com/moto-ogs/project-phoenix/modules/timetable/http"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 	"github.com/stretchr/testify/require"
@@ -44,11 +45,11 @@ func TestParticipantsRouteGrowthQueryBudget(t *testing.T) {
 		decodeGrowthEnvelope(t, response, &body)
 		require.Len(t, body.Participants, n)
 		require.Len(t, body.Staff, 1)
-		require.Equal(t, s.InstanceID, body.InstanceID)
-		require.Equal(t, s.StaffID, body.Staff[0].StaffID)
+		require.Equal(t, ident.ID(s.InstanceID), body.InstanceID)
+		require.Equal(t, ident.ID(s.StaffID), body.Staff[0].StaffID)
 		ids := make([]int64, 0, n)
 		for _, child := range body.Participants {
-			ids = append(ids, child.StudentID)
+			ids = append(ids, child.StudentID.Int64())
 			require.NotEmpty(t, child.DisplayName)
 		}
 		require.ElementsMatch(t, s.StudentIDs, ids)
@@ -261,14 +262,14 @@ func TestStudentDayPopulatedGrowthQueryBudget(t *testing.T) {
 		response := doGrowthGet(t, router, fmt.Sprintf("/student/%d/day?date=%s", s.StudentID, date))
 		require.Equal(t, http.StatusOK, response.Code, response.Body.String())
 		var body struct {
-			StudentID int64  `json:"student_id"`
-			Date      string `json:"date"`
+			StudentID testpkg.ID `json:"student_id"`
+			Date      string     `json:"date"`
 			Instances []struct {
-				ID int64 `json:"id"`
+				ID testpkg.ID `json:"id"`
 			} `json:"instances"`
 		}
 		decodeGrowthEnvelope(t, response, &body)
-		require.Equal(t, s.StudentID, body.StudentID)
+		require.Equal(t, s.StudentID, int64(body.StudentID))
 		require.Equal(t, date.String(), body.Date)
 		require.Len(t, body.Instances, n)
 		require.Zero(t, counter.WriteRows())

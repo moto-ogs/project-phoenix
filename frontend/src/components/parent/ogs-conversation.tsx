@@ -56,7 +56,6 @@ import {
   parentRequestTypeI18nKey,
 } from "~/lib/messaging-status";
 import {
-  type ChildFeatures,
   type ParentMessage,
   type ThreadSummary,
   UNKNOWN_CHILD_TODAY,
@@ -82,6 +81,7 @@ import {
   useCareFacilityTerm,
   useCareTermTranslations,
 } from "~/lib/care-facility-term";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 const logger = createLogger({ component: "OgsConversation" });
 
@@ -366,7 +366,7 @@ export function OgsConversation({
         optimistic: (current, { id }) => ({
           ...current,
           messages: [
-            ...current.messages,
+            ...(current.messages ?? []),
             {
               id,
               kind: "message",
@@ -643,7 +643,7 @@ export function OgsConversation({
                     }
                     tone="parent"
                     attachments={message.attachments}
-                    attachmentUrl={attachmentRoutes.downloadUrl}
+                    attachmentFiles={attachmentRoutes}
                     attachmentLabels={attachmentLabels.bubble}
                     pending={send.stateOf(message.id)}
                     pendingLabel={
@@ -771,7 +771,7 @@ export function OgsConversation({
                 }}
                 sending={sending}
                 attachments={{
-                  uploadUrl: attachmentRoutes.uploadUrl,
+                  upload: attachmentRoutes.upload,
                   labels: attachmentLabels.composer,
                 }}
                 placeholder={tm(
@@ -819,6 +819,7 @@ export function OgsConversation({
           pickupChangeRequests={care.pickupChangeRequests}
           careExceptionsLoaded={care.careExceptionsLoaded}
           pickupChangeRequestsLoaded={care.pickupChangeRequestsLoaded}
+          reloadRequests={care.reloadPickupRequests}
           pickupChangeEnabled={care.features.pickup_change_enabled}
           departureModeEnabled={
             care.features.pickup_change_mode_enabled === true
@@ -894,7 +895,7 @@ function QuickActions({
   childName,
   onPick,
 }: Readonly<{
-  features: ChildFeatures;
+  features: parentMeContract.ChildFeaturesResponse;
   loading: boolean;
   childName?: string;
   onPick: (key: OgsActionKey) => void;

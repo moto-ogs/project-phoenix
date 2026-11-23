@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -41,10 +42,14 @@ func TestUploadLegalDocument_SavesTenantPrefixedPDF(t *testing.T) {
 	req = req.WithContext(tenant.WithTenantID(req.Context(), 42))
 	w := httptest.NewRecorder()
 
-	(&Resource{
+	resource := &Resource{
 		Now:      resourceTestClock,
 		Failures: DatabaseFailures{Transient: transactionFailures.IsTransientDatabaseError, Constraint: transactionFailures.IsConstraintViolation},
-		uploads:  nativeUploads.UploadFiles{}}).uploadLegalDocument(w, req)
+		uploads:  nativeUploads.UploadFiles{}}
+	router := chi.NewRouter()
+	router.Post("/api/enrollment/legal-documents", resource.uploadLegalDocument)
+	req.URL.Path = "/api/enrollment/legal-documents"
+	router.ServeHTTP(w, req)
 
 	require.Equal(t, http.StatusOK, w.Code)
 	var body struct {
@@ -194,7 +199,11 @@ func multipartPDFRequest(t *testing.T, fieldName, fileName string, content []byt
 	t.Helper()
 	var body bytes.Buffer
 	writer := multipart.NewWriter(&body)
-	part, err := writer.CreateFormFile(fieldName, fileName)
+	// A browser declares a PDF as application/pdf; the upload checks that.
+	part, err := writer.CreatePart(map[string][]string{
+		"Content-Disposition": {fmt.Sprintf(`form-data; name=%q; filename=%q`, fieldName, fileName)},
+		"Content-Type":        {"application/pdf"},
+	})
 	require.NoError(t, err)
 	_, err = part.Write(content)
 	require.NoError(t, err)

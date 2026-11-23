@@ -13,6 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 )
@@ -61,7 +62,7 @@ func TestHostingSchoolPlansTheBookedDaysOfItsOwnChildAndShowsItsRegistration(t *
 	entries := f.registration(t, lead, lia)
 	require.Len(t, entries, 1)
 
-	rec := f.assign(t, lead, week, f.group)
+	rec := f.assign(t, lead, int64(week), f.group)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	transfer := decodeSchoolPortalData[enrollment.HolidayGuestTransfer](t, rec.Body.Bytes())
 	assert.Equal(t, 1, transfer.Guests, "Ben is the holiday guest")
@@ -85,7 +86,7 @@ func TestHostingSchoolPlansTheBookedDaysOfItsOwnChildAndShowsItsRegistration(t *
 	entries = f.registration(t, lead, lia)
 	require.Len(t, entries, 1)
 	entry := entries[0]
-	assert.Equal(t, week, entry.WeekID)
+	assert.Equal(t, ident.ID(int64(week)), entry.WeekID)
 	assert.Equal(t, "Sommerferien 2099", entry.PeriodName)
 	assert.Equal(t, calendar.NewDate(2099, 7, 6), entry.StartsOn)
 	assert.Equal(t, "bis 16 Uhr", entry.TimeModelName)
@@ -143,7 +144,7 @@ func TestOwnChildBookedInTwoHostedWeeksShowsItsContactsInBoth(t *testing.T) {
 	for _, week := range f.offer.Weeks[:2] {
 		bookings = append(bookings, map[string]any{"week_id": week.ID, "time_model_id": week.TimeModels[0].ID})
 	}
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayRebookPath(f.periodID(t), f.siblings, liaChild), map[string]any{"bookings": bookings})
+	rec := putReadRegistration(t, f.traeger, f.office.token, holidayRebookPath(f.periodID(t), f.siblings, liaChild), map[string]any{"bookings": bookings})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	entries := f.registration(t, lead, lia)
@@ -163,7 +164,7 @@ func TestOwnChildPlanLeavesThePlansOfTeamAndParentsAlone(t *testing.T) {
 	lead := f.staffOf(t, f.nord, permissions.ConfigRead, permissions.UsersCreate, permissions.UsersRead)
 	lia := f.liaOfNord(t, "Lia")
 	f.confirm(t, f.siblings, "confirm")
-	require.Equal(t, http.StatusOK, f.assign(t, lead, week, f.group).Code)
+	require.Equal(t, http.StatusOK, f.assign(t, lead, int64(week), f.group).Code)
 	require.Len(t, f.ownChildDays(t, lia), 5)
 
 	// The team replaces Wednesday's pickup by an entry of its own.
@@ -195,7 +196,7 @@ func TestParticipantListNamesOwnChildrenThatFitNoStudentOrSeveral(t *testing.T) 
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		list := decodeSchoolPortalData[struct {
 			Participants []struct {
-				ChildID   int64  `json:"child_id"`
+				ChildID   wireID `json:"child_id"`
 				FirstName string `json:"first_name"`
 			} `json:"participants"`
 		}](t, rec.Body.Bytes())
@@ -203,11 +204,11 @@ func TestParticipantListNamesOwnChildrenThatFitNoStudentOrSeveral(t *testing.T) 
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		byChild := map[int64]enrollment.HolidayOwnChildAssignment{}
 		for _, assignment := range decodeSchoolPortalData[[]enrollment.HolidayOwnChildAssignment](t, rec.Body.Bytes()) {
-			byChild[assignment.ChildID] = assignment
+			byChild[assignment.ChildID.Int64()] = assignment
 		}
 		byName := map[string]enrollment.HolidayOwnChildAssignment{}
 		for _, participant := range list.Participants {
-			byName[participant.FirstName] = byChild[participant.ChildID]
+			byName[participant.FirstName] = byChild[int64(participant.ChildID)]
 		}
 		return byName
 	}
@@ -221,11 +222,11 @@ func TestParticipantListNamesOwnChildrenThatFitNoStudentOrSeveral(t *testing.T) 
 	matched := assignments()
 	assert.Equal(t, enrollment.HolidayOwnChildMatched, matched["Lia"].Assignment)
 	require.NotNil(t, matched["Lia"].StudentID)
-	assert.Equal(t, lia, *matched["Lia"].StudentID)
+	assert.Equal(t, ident.ID(lia), *matched["Lia"].StudentID)
 
 	twin := f.liaOfNord(t, "LIA")
 	assert.Equal(t, enrollment.HolidayOwnChildAmbiguous, assignments()["Lia"].Assignment, "two students fit: the registration is assigned to neither")
-	require.Equal(t, http.StatusOK, f.assign(t, lead, week, f.group).Code)
+	require.Equal(t, http.StatusOK, f.assign(t, lead, int64(week), f.group).Code)
 	assert.Empty(t, f.ownChildDays(t, lia), "an ambiguous registration plans no day")
 	assert.Empty(t, f.ownChildDays(t, twin))
 	assert.Empty(t, f.registration(t, lead, lia), "and shows its contacts at neither child")
@@ -244,7 +245,7 @@ func TestHolidayOwnChildReadsStayWithinTheirQueryBudget(t *testing.T) {
 	lead := f.staffOf(t, f.nord, permissions.ConfigRead, permissions.UsersCreate, permissions.UsersRead, permissions.StudentsRead, permissions.GroupsRead)
 	lia := f.liaOfNord(t, "Lia")
 	f.confirm(t, f.siblings, "confirm")
-	require.Equal(t, http.StatusOK, f.assign(t, lead, week, f.group).Code)
+	require.Equal(t, http.StatusOK, f.assign(t, lead, int64(week), f.group).Code)
 	read := func(path string) testpkg.QueryMeasurement {
 		counter := testpkg.CaptureQueriesForContext(t, f.db)
 		req := httptest.NewRequest(http.MethodGet, path, nil)

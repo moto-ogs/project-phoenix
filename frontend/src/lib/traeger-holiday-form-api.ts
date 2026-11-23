@@ -1,3 +1,4 @@
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the registration form of a holiday period (#5198): the
  * Träger-Büro builds the questions with the form builder of the online
@@ -6,18 +7,15 @@
  * /api/traeger/holiday-periods/{id}/form.
  */
 
-import { apiErrorFromResponse, transportFetch } from "./api-error";
+import type * as traegerHolidayPeriodsContract from "./contract/traeger-holiday-periods.generated";
 import type { FormLegalBlock } from "./enrollment-form-schema-api";
 import {
-  holidayAddressRequirement,
-  holidayHealthRequirement,
-  holidayLegalBlocks,
+  holidayFormFieldsFromContract,
+  holidayFormVersionFromContract,
   type HolidayAddressRequirement,
   type HolidayHealthRequirement,
-  type HolidayLegalBlockWire,
   type HolidayFormField,
 } from "./holiday-form-field";
-import { traegerRequest } from "./traeger-api";
 
 export {
   HOLIDAY_FORM_FIELD_TYPES,
@@ -40,52 +38,52 @@ export interface HolidayForm {
   readonly template: readonly HolidayFormField[];
 }
 
-interface BackendHolidayForm {
-  legal_blocks?: HolidayLegalBlockWire[];
-  version: number;
-  fields?: HolidayFormField[] | null;
-  address_requirement?: string | null;
-  health_requirement?: string | null;
-  created_at: string;
-  template?: HolidayFormField[] | null;
-}
-
-function formFromBackend(form: BackendHolidayForm): HolidayForm {
+/**
+ * The editor saves the whole form back as a new version, so every open
+ * enum of a question or legal block fails the read when this build does
+ * not know it; the page shows its load error instead of saving a guess.
+ */
+function formFromBackend(
+  form: traegerHolidayPeriodsContract.HolidayFormEditor,
+): HolidayForm {
   return {
-    legalBlocks: holidayLegalBlocks(form.legal_blocks),
-    version: form.version,
-    fields: form.fields ?? [],
-    addressRequirement: holidayAddressRequirement(form.address_requirement),
-    healthRequirement: holidayHealthRequirement(form.health_requirement),
+    ...holidayFormVersionFromContract(form, "HolidayFormEditor"),
     createdAt: form.created_at,
-    template: form.template ?? [],
+    template: holidayFormFieldsFromContract(
+      form.template,
+      "HolidayFormEditor.template",
+    ),
   };
-}
-
-function formPath(periodId: string): string {
-  return `/api/traeger/holiday-periods/${encodeURIComponent(periodId)}/form`;
 }
 
 /** The current version of the form of a holiday period. */
 export async function fetchHolidayForm(periodId: string): Promise<HolidayForm> {
   return formFromBackend(
-    await traegerRequest<BackendHolidayForm>(formPath(periodId)),
+    await bffJson("org", "GET /traeger/holiday-periods/{id}/form", {
+      params: { id: periodId },
+    }),
   );
 }
 
-/** Saves the questions as a new version of the form. */
+/**
+ * Saves the questions as a new version of the form, over the version the
+ * editor read; the backend refuses once another version is current
+ * (ADR 0311).
+ */
 export async function saveHolidayForm(
   periodId: string,
+  expectedVersion: number,
   fields: readonly HolidayFormField[],
   legalBlocks: readonly FormLegalBlock[] = [],
   addressRequirement: HolidayAddressRequirement = "off",
   healthRequirement: HolidayHealthRequirement = "optional",
 ): Promise<HolidayForm> {
   return formFromBackend(
-    await traegerRequest<BackendHolidayForm>(formPath(periodId), {
-      method: "PUT",
+    await bffJson("org", "PUT /traeger/holiday-periods/{id}/form", {
+      params: { id: periodId },
       body: {
-        fields,
+        expected_version: expectedVersion,
+        fields: [...fields],
         address_requirement: addressRequirement,
         health_requirement: healthRequirement,
         legal_blocks: legalBlocks.map((block) => ({
@@ -100,11 +98,19 @@ export async function saveHolidayForm(
   );
 }
 
-export function holidayDocumentPath(
+/** A PDF of the form's legal blocks, as the office reads it. */
+export function fetchHolidayDocument(
   periodId: string,
-  documentId?: string,
-): string {
-  return `${formPath(periodId)}/documents${documentId ? `/${encodeURIComponent(documentId)}` : ""}`;
+  documentId: string,
+): Promise<Response> {
+  return bffFile(
+    "org",
+    "GET /traeger/holiday-periods/{id}/form/documents/{documentId}",
+    {
+      params: { id: periodId, documentId },
+      errorMessage: "Holiday PDF request failed",
+    },
+  );
 }
 export async function uploadHolidayDocument(
   periodId: string,
@@ -112,24 +118,31 @@ export async function uploadHolidayDocument(
 ): Promise<string> {
   const body = new FormData();
   body.append("document", file);
-  const response = await transportFetch(holidayDocumentPath(periodId), {
-    method: "POST",
-    body,
-  });
-  if (!response.ok)
-    throw await apiErrorFromResponse(response, "Holiday PDF request failed");
-  const result = (await response.json()) as { data: { id: string } };
-  return String(result.data.id);
+  const result = await bffJson(
+    "org",
+    "POST /traeger/holiday-periods/{id}/form/documents",
+    {
+      params: { id: periodId },
+      body,
+      errorMessage: "Holiday PDF request failed",
+    },
+  );
+  return result.id;
 }
 export async function deleteHolidayDocument(
   periodId: string,
   id: string,
   options?: { keepalive?: boolean },
 ): Promise<void> {
-  const response = await transportFetch(holidayDocumentPath(periodId, id), {
-    method: "DELETE",
-    keepalive: options?.keepalive,
-  });
-  if (!response.ok)
-    throw await apiErrorFromResponse(response, "Holiday PDF request failed");
+  await bffJson(
+    "org",
+    "DELETE /traeger/holiday-periods/{id}/form/documents/{documentId}",
+    {
+      params: { id: periodId, documentId: id },
+      errorMessage: "Holiday PDF request failed",
+      // The draft's PDF goes when the page goes (pagehide): only a keepalive
+      // request outlives it.
+      ...(options?.keepalive && { keepalive: true }),
+    },
+  );
 }

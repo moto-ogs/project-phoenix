@@ -1,5 +1,5 @@
-import { apiErrorFromResponse } from "~/lib/api-error";
-import { sessionFetch } from "~/lib/session-cache";
+import type * as studentsContract from "~/lib/contract/students.generated";
+import { bffFile } from "~/lib/bff-fetch";
 import { berlinTodayISO, formatDate } from "~/lib/date-helpers";
 import {
   downloadBlob,
@@ -42,43 +42,19 @@ export type StudentExportColumn =
   | "checklist"
   | "health_info";
 
-export interface StudentExportFilters {
-  search?: string;
-  group_id?: string;
-  room_id?: string;
-  year?: string;
-  school_class?: string;
-  status?: string;
-  bus?: string;
-  photo_consent?: string;
-  pickup_status?: string;
-  day_status?: string;
-  /**
-   * Planning day (YYYY-MM-DD) the day-planning status and planned times are
-   * evaluated for (#1939). Omit for today.
-   */
-  date?: string;
-  pickup_time?: string;
-  arrival_time?: string;
-  sort?: string;
-  group_by_class?: boolean;
-  /**
-   * Birth months ("01".."12") a birthday list is limited to. Empty means every
-   * month. A birthday recurs every year, so this matches on the month alone and
-   * never on the birth year.
-   */
-  months?: string[];
-  /**
-   * Keeps children without a stored health note on the Gesundheitsliste
-   * (#3323); they print "Nicht hinterlegt". Other lists ignore it.
-   */
-  include_without_health_info?: boolean;
-  /**
-   * Only these children (#3834): the selection of a table view. Narrows the
-   * other filters and never widens them.
-   */
-  student_ids?: string[];
-}
+/**
+ * The filters of a list export, as `POST /api/students/export` takes them.
+ * `date` is the planning day (YYYY-MM-DD) the day-planning status and planned
+ * times are evaluated for (#1939), omitted for today. `months` limits a
+ * birthday list to birth months ("01".."12") and matches the month alone,
+ * empty for every month. `include_without_health_info` keeps children without
+ * a stored health note on the Gesundheitsliste (#3323). `student_ids` is the
+ * selection of a table view (#3834): it narrows the other filters and never
+ * widens them.
+ */
+export type StudentExportFilters = NonNullable<
+  studentsContract.studentExportRequest["filters"]
+>;
 
 interface BirthdayMonthOption {
   value: string;
@@ -441,14 +417,10 @@ export async function exportStudents(
   request: StudentExportRequest,
   printTarget?: Window,
 ): Promise<void> {
-  const response = await sessionFetch("/api/students/export", {
-    method: "POST",
-    body: JSON.stringify(request),
+  const response = await bffFile("tenant", "POST /api/students/export", {
+    body: request,
+    errorMessage: "Export fehlgeschlagen",
   });
-
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, "Export fehlgeschlagen");
-  }
 
   const blob = await response.blob();
   if (printTarget) {

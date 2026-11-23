@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	facilitiesModule "github.com/moto-ogs/project-phoenix/modules/facilities"
 	yardHTTP "github.com/moto-ogs/project-phoenix/modules/supervisiondashboard/http"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
@@ -65,7 +66,7 @@ func TestPresenceGroups20YardQueryBudget(t *testing.T) {
 			// FacilitiesGroupSupervisions currently projects IDs, not names.
 			// Preserve that wire contract; name hydration is a separate defect.
 			name := " "
-			expected = append(expected, yardHTTP.SupervisorInfoResponse{ID: row.ID, StaffID: supervisor.ID, Name: name, IsCurrentUser: i == 0})
+			expected = append(expected, yardHTTP.SupervisorInfoResponse{ID: ident.ID(row.ID), StaffID: ident.ID(supervisor.ID), Name: name, IsCurrentUser: i == 0})
 			child := testpkg.CreateTestStudent(t, db, "Yard20", fmt.Sprintf("Child%02d", i), "Y20")
 			testpkg.CreateTestVisit(t, db, child.ID, group.ID, time.Date(2026, 11, 6, 9, i, 0, 0, time.UTC), nil)
 		}
@@ -82,7 +83,7 @@ func TestPresenceGroups20YardQueryBudget(t *testing.T) {
 			Data yardHTTP.SchulhofStatusResponse `json:"data"`
 		}
 		require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &body))
-		require.Equal(t, yardHTTP.SchulhofStatusResponse{Exists: true, RoomID: activity.PlannedRoomID, RoomName: "Schulhof", ActivityGroupID: &activity.ID, ActiveGroupID: &group.ID, IsUserSupervising: true, SupervisionID: &expected[0].ID, SupervisorCount: n, StudentCount: n, Supervisors: expected}, body.Data)
+		require.Equal(t, yardHTTP.SchulhofStatusResponse{Exists: true, RoomID: (*ident.ID)(activity.PlannedRoomID), RoomName: "Schulhof", ActivityGroupID: (*ident.ID)(&activity.ID), ActiveGroupID: (*ident.ID)(&group.ID), IsUserSupervising: true, SupervisionID: &expected[0].ID, SupervisorCount: n, StudentCount: n, Supervisors: expected}, body.Data)
 		t.Logf("PRESENCE20_YARD n=%d statements=%d sql=%q body=%s", n, counter.Total(), counter.Queries(), rr.Body.String())
 		samples = append(samples, sample{n, counter.Measurement(counter.Queries())})
 	}

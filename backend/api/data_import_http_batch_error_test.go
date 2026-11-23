@@ -42,11 +42,12 @@ func TestBatchFailureResponseRetainsCommittedProgressAndRowErrors(t *testing.T) 
 		Code    string
 		Details struct {
 			Result struct {
-				CreatedCount, TotalRows int
-				Errors                  []struct {
-					RowNumber int
-					Errors    []struct{ Code string }
-				}
+				CreatedCount int `json:"created_count"`
+				TotalRows    int `json:"total_rows"`
+				Errors       []struct {
+					RowNumber int                     `json:"row_number"`
+					Errors    []struct{ Code string } `json:"errors"`
+				} `json:"errors"`
 			}
 		}
 	}

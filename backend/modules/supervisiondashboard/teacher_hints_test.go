@@ -5,18 +5,19 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 type teacherHintReader struct {
-	hints []TeacherHint
+	hints []SupervisionTeacherHint
 	err   error
 	asked [][]int64
 	dates []Date
 }
 
-func (r *teacherHintReader) TeacherHints(_ context.Context, ids []int64, date Date) ([]TeacherHint, error) {
+func (r *teacherHintReader) TeacherHints(_ context.Context, ids []int64, date Date) ([]SupervisionTeacherHint, error) {
 	r.asked = append(r.asked, ids)
 	r.dates = append(r.dates, date)
 	return r.hints, r.err
@@ -28,14 +29,14 @@ func (r *teacherHintReader) TeacherHints(_ context.Context, ids []int64, date Da
 func TestLoadTeacherHintsSharesPlanningGate(t *testing.T) {
 	t.Parallel()
 	const date Date = "2026-08-19"
-	hint := TeacherHint{StudentID: 42, Body: "Hat Bauchweh", AuthorName: "Frau Kurz"}
+	hint := SupervisionTeacherHint{StudentID: 42, Body: "Hat Bauchweh", AuthorName: "Frau Kurz"}
 
-	reader := &teacherHintReader{hints: []TeacherHint{hint}}
+	reader := &teacherHintReader{hints: []SupervisionTeacherHint{hint}}
 	svc := newService(&fakes{})
 	svc.deps.TeacherHints = reader
 	projection := emptyProjection()
 	require.NoError(t, svc.loadTeacherHints(context.Background(), projection, Caller{CanReadStudents: true}, []int64{42, 43}, true, date))
-	assert.Equal(t, []TeacherHint{hint}, projection.TeacherHints)
+	assert.Equal(t, []SupervisionTeacherHint{hint}, projection.TeacherHints)
 	assert.Equal(t, [][]int64{{42, 43}}, reader.asked)
 	assert.Equal(t, []Date{date}, reader.dates)
 
@@ -46,7 +47,7 @@ func TestLoadTeacherHintsSharesPlanningGate(t *testing.T) {
 		"without users:read":  {Caller{}, true},
 		"without full access": {Caller{CanReadStudents: true}, false},
 	} {
-		reader := &teacherHintReader{hints: []TeacherHint{hint}}
+		reader := &teacherHintReader{hints: []SupervisionTeacherHint{hint}}
 		svc := newService(&fakes{})
 		svc.deps.TeacherHints = reader
 		projection := emptyProjection()
@@ -67,15 +68,15 @@ func TestLoadTeacherHintsSharesPlanningGate(t *testing.T) {
 func TestDashboardAttachesTeacherHints(t *testing.T) {
 	t.Parallel()
 	yardGroupID := int64(30)
-	hint := TeacherHint{StudentID: 1, Body: "Hat Bauchweh", AuthorName: "Frau Kurz"}
-	reader := &teacherHintReader{hints: []TeacherHint{hint}}
+	hint := SupervisionTeacherHint{StudentID: 1, Body: "Hat Bauchweh", AuthorName: "Frau Kurz"}
+	reader := &teacherHintReader{hints: []SupervisionTeacherHint{hint}}
 	svc := newService(&fakes{
 		currentStaffID:    func(context.Context) (*int64, error) { return int64Ptr(77), nil },
 		caller:            func(context.Context) (Caller, error) { return Caller{CanReadStudents: true}, nil },
 		fullStudentAccess: func(context.Context) (bool, error) { return true, nil },
 		supervised:        func(context.Context) ([]Session, error) { return []Session{{ID: 10, RoomName: "Adler"}}, nil },
 		yard: func(context.Context, int64) (*SchulhofStatus, error) {
-			return &SchulhofStatus{Exists: true, IsUserSupervising: true, ActiveGroupID: &yardGroupID}, nil
+			return &SchulhofStatus{Exists: true, IsUserSupervising: true, ActiveGroupID: (*ident.ID)(&yardGroupID)}, nil
 		},
 		groupVisits: func(_ context.Context, activeGroupID int64) ([]VisitRecord, error) {
 			return []VisitRecord{{StudentID: 1, ActiveGroupID: activeGroupID, FirstName: "Erika", LastName: "Muster"}}, nil
@@ -86,6 +87,6 @@ func TestDashboardAttachesTeacherHints(t *testing.T) {
 	projection, err := svc.Dashboard(context.Background(), yardGroupID)
 
 	require.NoError(t, err)
-	assert.Equal(t, []TeacherHint{hint}, projection.TeacherHints)
+	assert.Equal(t, []SupervisionTeacherHint{hint}, projection.TeacherHints)
 	assert.Equal(t, [][]int64{{1}}, reader.asked)
 }

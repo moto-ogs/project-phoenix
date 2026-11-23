@@ -12,6 +12,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 const (
@@ -111,11 +112,11 @@ func (p *Provisioning) listDevices(ctx context.Context, filter deviceFilter) ([]
 // window before now, the composition's clock that also stamps last_seen.
 func operatorDevice(device domain.Device, school organizationtenancy.DashboardSchool, now time.Time) organizationtenancy.OperatorDevice {
 	view := organizationtenancy.OperatorDevice{
-		ID: device.ID, DeviceID: device.DeviceID, DeviceType: device.DeviceType,
+		ID: ident.ID(device.ID), DeviceID: device.DeviceID, DeviceType: device.DeviceType,
 		Name: device.Name, Status: device.Status,
 		MaskedAPIKey: device.MaskedAPIKey, LastSeen: device.LastSeen,
-		SchoolID: school.ID, SchoolName: school.Name,
-		OrganizationID: school.OrganizationID, OrganizationName: school.OrganizationName,
+		SchoolID: ident.ID(school.ID), SchoolName: school.Name,
+		OrganizationID: ident.ID(school.OrganizationID), OrganizationName: school.OrganizationName,
 		CreatedAt: device.CreatedAt, UpdatedAt: device.UpdatedAt,
 	}
 	if device.LastSeen != nil {
@@ -539,7 +540,7 @@ func (p *Provisioning) transferStatus(ctx, adminCtx context.Context, device doma
 	}
 	if session != nil {
 		status.ActiveSession = &organizationtenancy.DeviceTransferSession{
-			ID: session.ID, StartedAt: session.StartedAt, ActivityName: session.ActivityName, RoomName: session.RoomName,
+			ID: ident.ID(session.ID), StartedAt: session.StartedAt, ActivityName: session.ActivityName, RoomName: session.RoomName,
 		}
 	}
 	status.CanTransfer = !status.IsOnline && status.ActiveSession == nil
@@ -635,24 +636,24 @@ func visibleDeviceSchools(schools []organizationtenancy.School, organizations []
 	liveOrganizations := make(map[int64]string, len(organizations))
 	for _, organization := range organizations {
 		if organization.DeletedAt == nil {
-			liveOrganizations[organization.ID] = organization.Name
+			liveOrganizations[organization.ID.Int64()] = organization.Name
 		}
 	}
 	visible := make(map[int64]organizationtenancy.DashboardSchool, len(schools))
 	tenantIDs := make([]int64, 0, len(schools))
 	for _, school := range schools {
-		organizationName, live := liveOrganizations[school.OrganizationID]
+		organizationName, live := liveOrganizations[school.OrganizationID.Int64()]
 		if school.DeletedAt != nil || !live {
 			continue
 		}
-		if filter.schoolID != nil && school.ID != *filter.schoolID {
+		if filter.schoolID != nil && school.ID != ident.ID(*filter.schoolID) {
 			continue
 		}
-		if filter.organizationID != nil && school.OrganizationID != *filter.organizationID {
+		if filter.organizationID != nil && school.OrganizationID != ident.ID(*filter.organizationID) {
 			continue
 		}
-		visible[school.ID] = organizationtenancy.DashboardSchool{ID: school.ID, Name: school.Name, OrganizationID: school.OrganizationID, OrganizationName: organizationName}
-		tenantIDs = append(tenantIDs, school.ID)
+		visible[school.ID.Int64()] = organizationtenancy.DashboardSchool{ID: school.ID.Int64(), Name: school.Name, OrganizationID: school.OrganizationID.Int64(), OrganizationName: organizationName}
+		tenantIDs = append(tenantIDs, school.ID.Int64())
 	}
 	return visible, tenantIDs
 }

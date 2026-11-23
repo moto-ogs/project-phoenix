@@ -51,14 +51,15 @@ func TestCareScheduleAuthorityHTTPFlow(t *testing.T) {
 	created := doCareScheduleJSON(t, router, http.MethodPost, path, parentToken, careScheduleRequestBody())
 	require.Equal(t, http.StatusCreated, created.Code, created.Body.String())
 	requestID := careSchedulePendingRequestID(t, created)
+	version := careSchedulePendingRequestVersion(t, created)
 
 	decisionPath := "/api/students/care-schedule-change-requests/" + strconv.FormatInt(requestID, 10) + "/decide"
 	// #2267: reason policy defaults to "both", so a staff approval carries a reason.
 	// #6843: an approval names the diff the reviewer saw; the decision path
 	// with that token is covered by careplan/http TestWeeklyApprovalRefusesPlanChangedSinceReview.
-	decided := doCareScheduleJSON(t, router, http.MethodPost, decisionPath, staffToken, map[string]any{"approve": true, "reason": "Passt so"})
+	decided := doCareScheduleJSON(t, router, http.MethodPost, decisionPath, staffToken, map[string]any{"approve": true, "reason": "Passt so", "expected_version": version})
 	require.Equal(t, http.StatusBadRequest, decided.Code, decided.Body.String())
-	rejected = doCareScheduleJSON(t, router, http.MethodPost, decisionPath, staffToken, map[string]any{"approve": false, "reason": "Passt nicht"})
+	rejected = doCareScheduleJSON(t, router, http.MethodPost, decisionPath, staffToken, map[string]any{"approve": false, "reason": "Passt nicht", "expected_version": version})
 	require.Equal(t, http.StatusOK, rejected.Code, rejected.Body.String())
 	assert.Contains(t, rejected.Body.String(), `"status":"rejected"`)
 }
@@ -106,7 +107,7 @@ func careScheduleImpactToken(t *testing.T, handler http.Handler, token string, s
 				Data struct {
 					ID          string `json:"id"`
 					ImpactToken string `json:"impact_token"`
-				} `json:"data"`
+				} `json:"care_schedule"`
 			} `json:"items"`
 		} `json:"data"`
 	}
@@ -134,4 +135,20 @@ func careSchedulePendingRequestID(t *testing.T, recorder *httptest.ResponseRecor
 	id, err := strconv.ParseInt(response.Data.PendingRequest.ID, 10, 64)
 	require.NoError(t, err)
 	return id
+}
+
+// careSchedulePendingRequestVersion is the version the answer carries for the
+// open request, what a decision of it sends back (ADR 0311).
+func careSchedulePendingRequestVersion(t *testing.T, recorder *httptest.ResponseRecorder) string {
+	t.Helper()
+	var response struct {
+		Data struct {
+			PendingRequest struct {
+				Version string `json:"version"`
+			} `json:"pending_request"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(recorder.Body.Bytes(), &response))
+	require.NotEmpty(t, response.Data.PendingRequest.Version)
+	return response.Data.PendingRequest.Version
 }

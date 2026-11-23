@@ -17,6 +17,7 @@ import {
 } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import type { SchoolSetupState } from "~/lib/school-setup-api";
+import { useAnnounceMessageComposer } from "~/lib/hooks/use-message-composer-presence";
 
 const push = vi.fn();
 const replace = vi.fn(() => Promise.resolve());
@@ -25,6 +26,14 @@ let shellUser: { id: string } | null = { id: "73" };
 let shellViaTraeger = false;
 let setupState: SchoolSetupState | null = null;
 let pathname = "/dashboard";
+let setupAccountID = "73";
+let tenantSlug = "school-a";
+
+const analytics = vi.hoisted(() => ({
+  trackOnboardingSurface: vi.fn(() => true),
+}));
+
+const responsivePanel = vi.hoisted(() => ({ asSheet: false }));
 
 vi.mock("next/navigation", () => ({
   usePathname: () => pathname,
@@ -39,6 +48,7 @@ vi.mock("~/lib/shell-auth-context", () => ({
 
 vi.mock("~/lib/tenant-context", () => ({
   useNFCEnabled: () => false,
+  useTenantSlugSafe: () => tenantSlug,
 }));
 
 vi.mock("~/lib/tenant-router", () => ({
@@ -48,10 +58,15 @@ vi.mock("~/lib/tenant-router", () => ({
 vi.mock("./use-school-setup", () => ({
   useSchoolSetup: () => ({
     state: setupState,
-    accountID: "73",
+    accountID: setupAccountID,
     refresh,
     replace,
   }),
+}));
+vi.mock("~/lib/analytics", () => analytics);
+vi.mock("../ui/responsive-panel", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../ui/responsive-panel")>()),
+  useResponsivePanelSheet: () => responsivePanel.asSheet,
 }));
 
 // Die Soll-Prüfung des Schritts „Arbeitszeitmodelle“ (#6919); `enabled`
@@ -259,6 +274,12 @@ function studentsNext(): SchoolSetupState {
   return state;
 }
 
+/** Stands in for a chat's writing field, which announces itself (#7686). */
+function OpenChat() {
+  useAnnounceMessageComposer();
+  return <p>Chat offen</p>;
+}
+
 describe("SchoolSetupWizard", () => {
   // Die Tour sucht im 200-ms-Takt und wartet bewusst (Klick 250 ms, Verlassen
   // 800 ms, fehlende Seitenleiste 1,5 s). Fake-Timer für die ganze Datei
@@ -284,6 +305,10 @@ describe("SchoolSetupWizard", () => {
     shellViaTraeger = false;
     setupState = newSchool();
     pathname = "/dashboard";
+    setupAccountID = "73";
+    tenantSlug = "school-a";
+    responsivePanel.asSheet = false;
+    analytics.trackOnboardingSurface.mockReturnValue(true);
   });
 
   it("opens the checklist once per sign-in, afterwards only the beacon", () => {
@@ -305,6 +330,116 @@ describe("SchoolSetupWizard", () => {
     expect(
       screen.getByRole("button", { name: "Erste Schritte öffnen, 5 offen" }),
     ).toBeInTheDocument();
+  });
+
+  it("steps aside with beacon and checklist while a chat is open (#7686)", () => {
+    sessionStorage.setItem("school-setup-opened:school-a:73", "1");
+    const wizard = (chat: boolean) => (
+      <>
+        <SchoolSetupWizard />
+        {chat ? <OpenChat /> : null}
+      </>
+    );
+    const { rerender } = render(wizard(true));
+    // Anker: der Chat steht.
+    expect(screen.getByText("Chat offen")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /^Erste Schritte öffnen/ }),
+    ).not.toBeInTheDocument();
+
+    rerender(wizard(false));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Erste Schritte öffnen, 5 offen" }),
+    );
+    rerender(wizard(true));
+    expect(screen.getByText("Chat offen")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("region", { name: "Erste Schritte mit moto" }),
+    ).not.toBeInTheDocument();
+
+    rerender(wizard(false));
+    expect(
+      screen.getByRole("region", { name: "Erste Schritte mit moto" }),
+    ).toBeInTheDocument();
+  });
+
+  it("counts the checklist that opened by itself as shown once it is on screen (#7686)", () => {
+    // Neu geladen, während der Chat offen ist: Die Liste bleibt fällig.
+    render(
+      <>
+        <SchoolSetupWizard />
+        <OpenChat />
+      </>,
+    ).unmount();
+    const { rerender } = render(
+      <>
+        <SchoolSetupWizard />
+        <OpenChat />
+      </>,
+    );
+    expect(screen.getByText("Chat offen")).toBeInTheDocument();
+    expect(analytics.trackOnboardingSurface).not.toHaveBeenCalled();
+
+    rerender(<SchoolSetupWizard />);
+    expect(
+      screen.getByRole("region", { name: "Erste Schritte mit moto" }),
+    ).toBeInTheDocument();
+    expect(analytics.trackOnboardingSurface).toHaveBeenCalledExactlyOnceWith(
+      "shown",
+      "setup_checklist",
+    );
+  });
+
+  it("does not answer an auto-open that analytics could not record", () => {
+    analytics.trackOnboardingSurface.mockReturnValueOnce(false);
+    render(<SchoolSetupWizard />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Checkliste einklappen" }),
+    );
+
+    expect(analytics.trackOnboardingSurface.mock.calls).toEqual([
+      ["shown", "setup_checklist"],
+    ]);
+  });
+
+  it("opens once per school and never answers another school's auto-open", () => {
+    const view = render(<SchoolSetupWizard />);
+    expect(analytics.trackOnboardingSurface).toHaveBeenCalledWith(
+      "shown",
+      "setup_checklist",
+    );
+
+    tenantSlug = "school-b";
+    view.rerender(<SchoolSetupWizard />);
+    expect(analytics.trackOnboardingSurface).toHaveBeenCalledTimes(2);
+
+    sessionStorage.setItem("school-setup-opened:school-c:73", "1");
+    tenantSlug = "school-c";
+    view.rerender(<SchoolSetupWizard />);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Checkliste einklappen" }),
+    );
+
+    expect(analytics.trackOnboardingSurface.mock.calls).toEqual([
+      ["shown", "setup_checklist"],
+      ["shown", "setup_checklist"],
+    ]);
+  });
+
+  it("never answers another account's auto-open", () => {
+    const view = render(<SchoolSetupWizard />);
+    sessionStorage.setItem("school-setup-opened:school-a:74", "1");
+    setupAccountID = "74";
+    view.rerender(<SchoolSetupWizard />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Checkliste einklappen" }),
+    );
+
+    expect(analytics.trackOnboardingSurface.mock.calls).toEqual([
+      ["shown", "setup_checklist"],
+    ]);
   });
 
   it("stays hidden for a finished school, a hidden wizard and without an account", () => {
@@ -463,74 +598,104 @@ describe("SchoolSetupWizard", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows how to enter a parent, and skips that when one is already there", async () => {
-    setupState = newSchool();
-    setupState.steps[3] = {
-      key: "students",
-      applies: true,
-      done: true,
-      skipped: false,
-    };
-    pathname = "/database/students";
-    const { rerender } = render(<SchoolSetupWizard />);
-    fireEvent.click(
-      screen.getByRole("button", { name: /^Erste Eltern einladen/ }),
-    );
+  it.each([false, true])(
+    "shows how to enter a parent, and skips that when one is already there (%s as sheet)",
+    async (asSheet) => {
+      responsivePanel.asSheet = asSheet;
+      setupState = newSchool();
+      setupState.steps[3] = {
+        key: "students",
+        applies: true,
+        done: true,
+        skipped: false,
+      };
+      pathname = "/database/students";
+      const { rerender } = render(<SchoolSetupWizard />);
+      fireEvent.click(
+        screen.getByRole("button", { name: /^Erste Eltern einladen/ }),
+      );
 
-    const row = visibleTarget("row");
-    row.setAttribute("href", "/students/5?from=%2Fdatabase%2Fstudents");
-    const tab = visibleTarget("tab");
-    tab.setAttribute("role", "tab");
-    tab.dataset.tabValue = "erziehungsberechtigte";
+      const row = visibleTarget("row");
+      row.setAttribute("href", "/students/5?from=%2Fdatabase%2Fstudents");
+      const tab = visibleTarget("tab");
+      tab.setAttribute("role", "tab");
+      tab.dataset.tabValue = "erziehungsberechtigte";
 
-    fireEvent.click(screen.getByRole("button", { name: "Zeig es mir" }));
-    // Die Zeile ist ein <button> mit href-Attribut; der Selektor fragt nach <a>.
-    const link = document.createElement("a");
-    link.href = "/students/5?from=%2Fdatabase%2Fstudents";
-    link.getClientRects = row.getClientRects;
-    link.getBoundingClientRect = row.getBoundingClientRect;
-    document.body.appendChild(link);
+      fireEvent.click(screen.getByRole("button", { name: "Zeig es mir" }));
+      // Die Zeile ist ein <button> mit href-Attribut; der Selektor fragt nach <a>.
+      const link = document.createElement("a");
+      link.href = "/students/5?from=%2Fdatabase%2Fstudents";
+      link.getClientRects = row.getClientRects;
+      link.getBoundingClientRect = row.getBoundingClientRect;
+      document.body.appendChild(link);
 
-    expect(
-      await screen.findByRole("dialog", { name: "Kind öffnen" }),
-    ).toBeInTheDocument();
-    await waitForHighlight();
-    fireEvent.click(link);
-    // Erst auf der Kindakte geht es weiter, nicht auf der noch sichtbaren Liste.
-    await act(() => vi.advanceTimersByTimeAsync(600));
-    expect(
-      screen.queryByRole("dialog", { name: "Erziehungsberechtigte" }),
-    ).not.toBeInTheDocument();
-    pathname = "/students/5";
-    rerender(<SchoolSetupWizard />);
-    expect(
-      await screen.findByRole("dialog", { name: "Erziehungsberechtigte" }),
-    ).toBeInTheDocument();
+      expect(
+        await screen.findByRole("dialog", { name: "Kind öffnen" }),
+      ).toBeInTheDocument();
+      await waitForHighlight();
+      fireEvent.click(link);
+      // Erst auf der Kindakte geht es weiter, nicht auf der noch sichtbaren Liste.
+      await act(() => vi.advanceTimersByTimeAsync(600));
+      expect(
+        screen.queryByRole("dialog", { name: "Erziehungsberechtigte" }),
+      ).not.toBeInTheDocument();
+      pathname = "/students/5";
+      rerender(<SchoolSetupWizard />);
+      expect(
+        await screen.findByRole("dialog", { name: "Erziehungsberechtigte" }),
+      ).toBeInTheDocument();
 
-    // Eine Person mit E-Mail-Adresse steht schon da: Eintragen entfällt.
-    const menuButton = visibleTarget("guardian-menu");
-    await waitForHighlight();
-    fireEvent.click(tab);
-    expect(
-      await screen.findByRole("dialog", { name: "Menü öffnen" }),
-    ).toBeInTheDocument();
+      // Eine Person mit E-Mail-Adresse steht schon da: Eintragen entfällt.
+      const menuButton = visibleTarget("guardian-menu");
+      if (asSheet) {
+        menuButton.setAttribute("aria-haspopup", "dialog");
+        menuButton.setAttribute("aria-expanded", "false");
+        menuButton.addEventListener("click", () => {
+          menuButton.setAttribute(
+            "aria-expanded",
+            menuButton.getAttribute("aria-expanded") === "true"
+              ? "false"
+              : "true",
+          );
+        });
+      }
+      await waitForHighlight();
+      fireEvent.click(tab);
+      expect(
+        await screen.findByRole("dialog", { name: "Menü öffnen" }),
+      ).toBeInTheDocument();
 
-    // Menü auf, „Einladen“ gewählt: Die Tour endet, und der Stand wird
-    // mehrmals nachgeladen, weil die Einladung dann noch unterwegs ist.
-    const menu = visibleTarget("menu");
-    menu.setAttribute("role", "menu");
-    await waitForHighlight();
-    fireEvent.click(menuButton);
-    expect(
-      await screen.findByRole("dialog", { name: "Einladen" }),
-    ).toBeInTheDocument();
-    await waitForHighlight();
-    refresh.mockClear();
-    fireEvent.click(menu);
-    await waitFor(() => expect(refresh).toHaveBeenCalledTimes(2), {
-      timeout: 2000,
-    });
-  });
+      // Menü auf, „Einladen“ gewählt: Die Tour endet, und der Stand wird
+      // mehrmals nachgeladen, weil die Einladung dann noch unterwegs ist.
+      const menu = visibleTarget("menu");
+      menu.setAttribute("role", "menu");
+      await waitForHighlight();
+      fireEvent.click(menuButton);
+      expect(
+        await screen.findByRole("dialog", { name: "Einladen" }),
+      ).toBeInTheDocument();
+      await waitForHighlight();
+      if (asSheet) {
+        expect(menuButton).toHaveAttribute("aria-expanded", "false");
+        // Die Sprechblase sagt, dass das Menü noch einmal aufgeht (#7799).
+        expect(
+          screen.getByRole("dialog", { name: "Einladen" }),
+        ).toHaveTextContent("Öffne das Menü noch einmal und wähle „Einladen“.");
+      }
+      // Am Handy liegt die Markierung weiter auf dem Auslöser. Er darf diese
+      // Station aber nicht beenden; das übernimmt der Menüeintrag im Blatt.
+      fireEvent.click(menuButton);
+      await act(() => vi.advanceTimersByTimeAsync(300));
+      expect(
+        screen.getByRole("dialog", { name: "Einladen" }),
+      ).toBeInTheDocument();
+      refresh.mockClear();
+      fireEvent.click(menu);
+      await waitFor(() => expect(refresh).toHaveBeenCalledTimes(2), {
+        timeout: 2000,
+      });
+    },
+  );
 
   it("lets the person open any step of the checklist", () => {
     setupState = newSchool();

@@ -6,7 +6,10 @@
  * IDs kommen als Strings heraus.
  */
 
-import { apiErrorFromText, transportFetch } from "~/lib/api-error";
+import { bffFile, bffJson } from "~/lib/bff-fetch";
+import type * as weeks from "~/lib/contract/holiday-weeks.generated";
+import { knownEnum } from "~/lib/contract/known-enum";
+import type * as shared from "~/lib/contract/shared.generated";
 import { berlinTodayISO, formatDate } from "~/lib/date-helpers";
 import { downloadBlob, filenameFromDisposition } from "~/lib/file-download";
 
@@ -86,23 +89,40 @@ export interface HolidayHostHealth {
   readonly answers: HolidayHostAnswer[];
 }
 
-interface BackendHostHealth {
-  allergies: string;
-  medication: string;
-  health_notes: string;
-  answers?: HolidayHostAnswer[] | null;
+/** A free answer arrives as JSON; this build reads a yes/no, a text or nothing. */
+function mapAnswers(
+  answers: readonly shared.HolidayHostAnswer[] | null | undefined,
+): HolidayHostAnswer[] {
+  return (answers ?? []).map((answer) => ({
+    key: answer.key,
+    label: answer.label,
+    type: answer.type,
+    value:
+      typeof answer.value === "boolean" || typeof answer.value === "string"
+        ? answer.value
+        : null,
+  }));
 }
 
 function mapHealth(
-  health: BackendHostHealth | null | undefined,
+  health: shared.HolidayHostHealth | null,
 ): HolidayHostHealth | null {
   if (!health) return null;
   return {
     allergies: health.allergies,
     medication: health.medication,
     healthNotes: health.health_notes,
-    answers: health.answers ?? [],
+    answers: mapAnswers(health.answers),
   };
+}
+
+/** A day the contract names as nullable; the screens read "" as unknown. */
+function day(value: string | null): string {
+  return value ?? "";
+}
+
+function days(values: readonly (string | null)[] | null | undefined): string[] {
+  return (values ?? []).filter((value): value is string => value !== null);
 }
 
 /** Eine freigegebene Frage der Liste: eine Spalte. */
@@ -157,82 +177,32 @@ export function formatHolidayHostAnswer(
   return answer.value;
 }
 
-interface BackendWeek {
-  id: number | string;
-  period_name: string;
-  starts_on: string;
-  ends_on: string;
-  participants: number;
-  booking_unit?: string;
-  care_starts_at?: string;
-  care_ends_at?: string;
-  day_participants?: { date: string; participants: number }[] | null;
-  guest_group_id?: number | string | null;
-  guests?: number;
-  lunch_offered?: boolean;
-  lunches?: { date: string; participants: number }[] | null;
-}
-
-interface BackendParticipantList {
-  week: BackendWeek;
-  time_models: {
-    id: number | string;
-    name: string;
-    starts_at: string;
-    ends_at: string;
-    count: number;
-  }[];
-  home_schools: {
-    school_id: number | string | null;
-    name: string;
-    count: number;
-  }[];
-  questions?: HolidayHostQuestion[] | null;
-  participants: {
-    child_id: number | string;
-    first_name: string;
-    last_name: string;
-    birth_date: string;
-    home_school_id: number | string | null;
-    home_school_name: string;
-    time_model_id: number | string;
-    days?: string[] | null;
-    lunch?: boolean;
-    second_guardian?: HolidayHostGuardian | null;
-    answers?: HolidayHostAnswer[] | null;
-    health?: BackendHostHealth | null;
-  }[];
-}
-
-const BASE = "/api/holiday-weeks";
-
-function optionalId(id: number | string | null): string | null {
-  return id === null ? null : String(id);
-}
-
-function mapWeek(week: BackendWeek): HostedHolidayWeek {
+function mapWeek(week: weeks.HostedHolidayWeek): HostedHolidayWeek {
   return {
-    id: String(week.id),
+    id: week.id,
     periodName: week.period_name,
-    startsOn: week.starts_on,
-    endsOn: week.ends_on,
+    startsOn: day(week.starts_on),
+    endsOn: day(week.ends_on),
     participants: week.participants,
     bookingUnit: week.booking_unit === "day" ? "day" : "week",
-    careStartsAt: week.care_starts_at ?? "",
-    careEndsAt: week.care_ends_at ?? "",
+    careStartsAt: week.care_starts_at,
+    careEndsAt: week.care_ends_at,
     dayParticipants: new Map(
-      (week.day_participants ?? []).map((day) => [day.date, day.participants]),
+      (week.day_participants ?? []).flatMap((entry) =>
+        entry.date === null ? [] : [[entry.date, entry.participants]],
+      ),
     ),
-    guestGroupId: optionalId(week.guest_group_id ?? null),
-    guests: week.guests ?? 0,
+    guestGroupId: week.guest_group_id,
+    guests: week.guests,
     // Only a week with lunch carries the fields (#5631).
     ...(week.lunch_offered
       ? {
           lunchOffered: true,
-          lunches: (week.lunches ?? []).map((day) => ({
-            date: day.date,
-            count: day.participants,
-          })),
+          lunches: (week.lunches ?? []).flatMap((entry) =>
+            entry.date === null
+              ? []
+              : [{ date: entry.date, count: entry.participants }],
+          ),
         }
       : {}),
   };
@@ -240,57 +210,48 @@ function mapWeek(week: BackendWeek): HostedHolidayWeek {
 
 /** Die Antwort des Backends in der Form der Oberfläche. */
 function mapHolidayParticipantList(
-  list: BackendParticipantList,
+  list: weeks.HolidayParticipantListResponse,
 ): HolidayParticipantList {
   return {
     week: mapWeek(list.week),
-    timeModels: list.time_models.map((model) => ({
-      id: String(model.id),
+    timeModels: (list.time_models ?? []).map((model) => ({
+      id: model.id,
       name: model.name,
       startsAt: model.starts_at,
       endsAt: model.ends_at,
       count: model.count,
     })),
-    homeSchools: list.home_schools.map((school) => ({
-      schoolId: optionalId(school.school_id),
+    homeSchools: (list.home_schools ?? []).map((school) => ({
+      schoolId: school.school_id,
       name: school.name,
       count: school.count,
     })),
     questions: list.questions ?? [],
-    participants: list.participants.map((participant) => ({
-      childId: String(participant.child_id),
+    participants: (list.participants ?? []).map((participant) => ({
+      childId: participant.child_id,
       firstName: participant.first_name,
       lastName: participant.last_name,
-      birthDate: participant.birth_date,
-      homeSchoolId: optionalId(participant.home_school_id),
+      birthDate: day(participant.birth_date),
+      homeSchoolId: participant.home_school_id,
       homeSchoolName: participant.home_school_name,
-      timeModelId: String(participant.time_model_id),
-      ...(participant.days?.length ? { days: participant.days } : {}),
+      timeModelId: participant.time_model_id,
+      ...(days(participant.days).length
+        ? { days: days(participant.days) }
+        : {}),
       ...(participant.lunch ? { lunch: true } : {}),
-      secondGuardian: participant.second_guardian ?? null,
-      answers: participant.answers ?? [],
+      secondGuardian: participant.second_guardian,
+      answers: mapAnswers(participant.answers),
       health: mapHealth(participant.health),
     })),
   };
 }
 
-async function readData<T>(url: string, fallback: string): Promise<T> {
-  const response = await transportFetch(url, { cache: "no-store" });
-  if (!response.ok) {
-    throw apiErrorFromText(fallback, response.status, await response.text());
-  }
-  const body = (await response.json()) as { data?: T };
-  if (body.data === undefined) throw apiErrorFromText(fallback, 500, "");
-  return body.data;
-}
-
 /** Die Wochen, die die Schule ausrichtet und die noch nicht vorbei sind. */
 export async function fetchHostedHolidayWeeks(): Promise<HostedHolidayWeek[]> {
-  const weeks = await readData<BackendWeek[] | null>(
-    BASE,
-    "Ferienwochen konnten nicht geladen werden",
-  );
-  return (weeks ?? []).map(mapWeek);
+  const hosted = await bffJson("tenant", "GET /api/holiday-weeks/", {
+    errorMessage: "Ferienwochen konnten nicht geladen werden",
+  });
+  return hosted.map(mapWeek);
 }
 
 /** Die Teilnehmerliste einer Woche. Jeder Abruf steht im Zugriffsprotokoll. */
@@ -298,10 +259,10 @@ export async function fetchHolidayParticipants(
   weekId: string,
 ): Promise<HolidayParticipantList> {
   return mapHolidayParticipantList(
-    await readData<BackendParticipantList>(
-      `${BASE}/${encodeURIComponent(weekId)}/participants`,
-      "Teilnehmerliste konnte nicht geladen werden",
-    ),
+    await bffJson("tenant", "GET /api/holiday-weeks/{weekId}/participants", {
+      params: { weekId },
+      errorMessage: "Teilnehmerliste konnte nicht geladen werden",
+    }),
   );
 }
 
@@ -314,17 +275,15 @@ export async function downloadHolidayParticipants(
   weekId: string,
   format: "csv" | "xlsx",
 ): Promise<void> {
-  const response = await transportFetch(
-    `${BASE}/${encodeURIComponent(weekId)}/participants/export/${format}`,
-    { cache: "no-store" },
+  const response = await bffFile(
+    "tenant",
+    "GET /api/holiday-weeks/{weekId}/participants/export",
+    {
+      params: { weekId },
+      query: { format },
+      errorMessage: "Die Datei konnte nicht erstellt werden",
+    },
   );
-  if (!response.ok) {
-    throw apiErrorFromText(
-      "Die Datei konnte nicht erstellt werden",
-      response.status,
-      await response.text(),
-    );
-  }
   const blob = await response.blob();
   downloadBlob(
     blob,
@@ -369,24 +328,6 @@ export interface HolidayGuestSheet {
   readonly readOnly: boolean;
 }
 
-interface BackendGuestSheet {
-  student_id: number | string;
-  starts_on: string;
-  ends_on: string;
-  time_model_name: string;
-  time_model_starts_at: string;
-  time_model_ends_at: string;
-  lunch?: boolean;
-  home_school_id: number | string | null;
-  guest_school_name: string;
-  school_name?: string;
-  emergency_contacts: HolidayGuestContact[] | null;
-  pickup_contacts: HolidayGuestContact[] | null;
-  answers?: HolidayHostAnswer[] | null;
-  health?: BackendHostHealth | null;
-  read_only: boolean;
-}
-
 /** Die Klasse, unter der ein Feriengast in der ausrichtenden OGS steht. */
 export const HOLIDAY_GUEST_SCHOOL_CLASS = "Feriengast";
 
@@ -411,14 +352,12 @@ export interface HolidayGuestBadge {
  * Vor und nach ihrer Woche stehen Gäste in keiner Liste und haben keinen.
  */
 export async function fetchHolidayGuestBadges(): Promise<HolidayGuestBadge[]> {
-  const badges = await readData<
-    { student_id: number | string; school_name: string }[] | null
-  >(
-    "/api/holiday-guests",
-    "Die Hinweise zu den Feriengästen konnten nicht geladen werden",
-  );
-  return (badges ?? []).map((badge) => ({
-    studentId: String(badge.student_id),
+  const badges = await bffJson("tenant", "GET /api/holiday-guests/", {
+    errorMessage:
+      "Die Hinweise zu den Feriengästen konnten nicht geladen werden",
+  });
+  return badges.map((badge) => ({
+    studentId: badge.student_id,
     schoolName: badge.school_name,
   }));
 }
@@ -451,24 +390,14 @@ export interface HolidayGuestGroup {
  * ersten Tag geordnet.
  */
 export async function fetchHolidayGuestGroups(): Promise<HolidayGuestGroup[]> {
-  const groups = await readData<
-    | {
-        group_id: number | string;
-        week_id: number | string;
-        starts_on: string;
-        ends_on: string;
-        guests: number;
-      }[]
-    | null
-  >(
-    "/api/holiday-guests/groups",
-    "Die Feriengruppen konnten nicht geladen werden",
-  );
-  return (groups ?? []).map((group) => ({
-    groupId: String(group.group_id),
-    weekId: String(group.week_id),
-    startsOn: group.starts_on,
-    endsOn: group.ends_on,
+  const groups = await bffJson("tenant", "GET /api/holiday-guests/groups", {
+    errorMessage: "Die Feriengruppen konnten nicht geladen werden",
+  });
+  return groups.map((group) => ({
+    groupId: group.group_id,
+    weekId: group.week_id,
+    startsOn: day(group.starts_on),
+    endsOn: day(group.ends_on),
     guests: group.guests,
   }));
 }
@@ -539,52 +468,40 @@ export async function assignHolidayGuestGroup(
   weekId: string,
   groupId: string,
 ): Promise<HolidayGuestTransfer> {
-  const response = await transportFetch(
-    `${BASE}/${encodeURIComponent(weekId)}/guest-group`,
+  const data = await bffJson(
+    "tenant",
+    "PUT /api/holiday-weeks/{weekId}/guest-group",
     {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ group_id: groupId }),
+      params: { weekId },
+      body: { group_id: groupId },
+      errorMessage: "Die Feriengäste konnten nicht übernommen werden",
     },
   );
-  if (!response.ok) {
-    throw apiErrorFromText(
-      "Die Feriengäste konnten nicht übernommen werden",
-      response.status,
-      await response.text(),
-    );
-  }
-  const body = (await response.json()) as {
-    data?: { guests?: number; own_children?: number };
-  };
-  return {
-    guests: body.data?.guests ?? 0,
-    ownChildren: body.data?.own_children ?? 0,
-  };
+  return { guests: data.guests, ownChildren: data.own_children };
 }
 
 /** Betreuung, Notfall und Abholung eines Feriengasts. Jeder Abruf steht im Zugriffsprotokoll. */
 export async function fetchHolidayGuestSheet(
   studentId: string,
 ): Promise<HolidayGuestSheet> {
-  const sheet = await readData<BackendGuestSheet>(
-    `/api/holiday-guests/${encodeURIComponent(studentId)}`,
-    "Die Angaben zum Feriengast konnten nicht geladen werden",
-  );
+  const sheet = await bffJson("tenant", "GET /api/holiday-guests/{studentId}", {
+    params: { studentId },
+    errorMessage: "Die Angaben zum Feriengast konnten nicht geladen werden",
+  });
   return {
-    studentId: String(sheet.student_id),
-    startsOn: sheet.starts_on,
-    endsOn: sheet.ends_on,
+    studentId: sheet.student_id,
+    startsOn: day(sheet.starts_on),
+    endsOn: day(sheet.ends_on),
     timeModelName: sheet.time_model_name,
     timeModelStartsAt: sheet.time_model_starts_at,
     timeModelEndsAt: sheet.time_model_ends_at,
     ...(sheet.lunch ? { lunch: true } : {}),
-    homeSchoolId: optionalId(sheet.home_school_id),
+    homeSchoolId: sheet.home_school_id,
     guestSchoolName: sheet.guest_school_name,
-    schoolName: sheet.school_name ?? "",
+    schoolName: sheet.school_name,
     emergencyContacts: sheet.emergency_contacts ?? [],
     pickupContacts: sheet.pickup_contacts ?? [],
-    answers: sheet.answers ?? [],
+    answers: mapAnswers(sheet.answers),
     health: mapHealth(sheet.health),
     readOnly: sheet.read_only,
   };
@@ -606,14 +523,6 @@ export interface HolidayStudentHealth {
   readonly health: HolidayHostHealth;
 }
 
-interface BackendStudentHealth {
-  week_id: number | string;
-  period_name: string;
-  starts_on: string;
-  ends_on: string;
-  health: BackendHostHealth;
-}
-
 /**
  * Die Gesundheitsangaben der Ferienanmeldungen eines eigenen Kindes bis zum
  * letzten Tag der Woche. Jeder Abruf mit Angaben steht im Zugriffsprotokoll.
@@ -621,15 +530,20 @@ interface BackendStudentHealth {
 export async function fetchHolidayStudentHealth(
   studentId: string,
 ): Promise<HolidayStudentHealth[]> {
-  const entries = await readData<BackendStudentHealth[] | null>(
-    `${BASE}/students/${encodeURIComponent(studentId)}/health`,
-    "Die Angaben aus der Ferienanmeldung konnten nicht geladen werden",
+  const entries = await bffJson(
+    "tenant",
+    "GET /api/holiday-weeks/students/{studentId}/health",
+    {
+      params: { studentId },
+      errorMessage:
+        "Die Angaben aus der Ferienanmeldung konnten nicht geladen werden",
+    },
   );
-  return (entries ?? []).map((entry) => ({
-    weekId: String(entry.week_id),
+  return entries.map((entry) => ({
+    weekId: entry.week_id,
     periodName: entry.period_name,
-    startsOn: entry.starts_on,
-    endsOn: entry.ends_on,
+    startsOn: day(entry.starts_on),
+    endsOn: day(entry.ends_on),
     health: mapHealth(entry.health) ?? {
       allergies: "",
       medication: "",
@@ -647,6 +561,17 @@ export async function fetchHolidayStudentHealth(
  */
 type HolidayOwnChildAssignmentState = "matched" | "not_found" | "ambiguous";
 
+const ASSIGNMENT_STATES: readonly HolidayOwnChildAssignmentState[] = [
+  "matched",
+  "not_found",
+  "ambiguous",
+];
+
+/** An unknown state reads as "not_found": the screen offers no match. */
+function assignmentState(value: string): HolidayOwnChildAssignmentState {
+  return knownEnum(ASSIGNMENT_STATES, value) ?? "not_found";
+}
+
 export interface HolidayOwnChildAssignment {
   /** Das Kind der Teilnehmerliste. */
   readonly childId: string;
@@ -662,21 +587,19 @@ export interface HolidayOwnChildAssignment {
 export async function fetchHolidayOwnChildAssignments(
   weekId: string,
 ): Promise<HolidayOwnChildAssignment[]> {
-  const entries = await readData<
-    | {
-        child_id: number | string;
-        assignment: HolidayOwnChildAssignmentState;
-        student_id?: number | string | null;
-      }[]
-    | null
-  >(
-    `${BASE}/${encodeURIComponent(weekId)}/own-children`,
-    "Die eigenen Kinder der Ferienwoche konnten nicht geladen werden",
+  const entries = await bffJson(
+    "tenant",
+    "GET /api/holiday-weeks/{weekId}/own-children",
+    {
+      params: { weekId },
+      errorMessage:
+        "Die eigenen Kinder der Ferienwoche konnten nicht geladen werden",
+    },
   );
-  return (entries ?? []).map((entry) => ({
-    childId: String(entry.child_id),
-    assignment: entry.assignment,
-    studentId: optionalId(entry.student_id ?? null),
+  return entries.map((entry) => ({
+    childId: entry.child_id,
+    assignment: assignmentState(entry.assignment),
+    studentId: entry.student_id,
   }));
 }
 
@@ -720,49 +643,32 @@ export interface HolidayHomeSchoolBooking {
 export async function fetchHolidayHomeSchoolBookings(): Promise<
   HolidayHomeSchoolBooking[]
 > {
-  const entries = await readData<
-    | {
-        child_id: number | string;
-        first_name: string;
-        last_name: string;
-        birth_date: string;
-        week_id: number | string;
-        period_name: string;
-        starts_on: string;
-        ends_on: string;
-        host_school_id: number | string;
-        host_school_name: string;
-        time_model_name: string;
-        time_model_starts_at: string;
-        time_model_ends_at: string;
-        days?: string[] | null;
-        lunch?: boolean;
-        assignment: HolidayOwnChildAssignmentState;
-        student_id?: number | string | null;
-      }[]
-    | null
-  >(
-    `${BASE}/home-school-children`,
-    "Die Kinder in Ferienwochen anderer OGS konnten nicht geladen werden",
+  const entries = await bffJson(
+    "tenant",
+    "GET /api/holiday-weeks/home-school-children",
+    {
+      errorMessage:
+        "Die Kinder in Ferienwochen anderer OGS konnten nicht geladen werden",
+    },
   );
-  return (entries ?? []).map((entry) => ({
-    childId: String(entry.child_id),
+  return entries.map((entry) => ({
+    childId: entry.child_id,
     firstName: entry.first_name,
     lastName: entry.last_name,
-    birthDate: entry.birth_date,
-    weekId: String(entry.week_id),
+    birthDate: day(entry.birth_date),
+    weekId: entry.week_id,
     periodName: entry.period_name,
-    startsOn: entry.starts_on,
-    endsOn: entry.ends_on,
-    hostSchoolId: String(entry.host_school_id),
+    startsOn: day(entry.starts_on),
+    endsOn: day(entry.ends_on),
+    hostSchoolId: entry.host_school_id,
     hostSchoolName: entry.host_school_name,
     timeModelName: entry.time_model_name,
     timeModelStartsAt: entry.time_model_starts_at,
     timeModelEndsAt: entry.time_model_ends_at,
-    days: entry.days ?? [],
+    days: days(entry.days),
     ...(entry.lunch ? { lunch: true } : {}),
-    assignment: entry.assignment,
-    studentId: optionalId(entry.student_id ?? null),
+    assignment: assignmentState(entry.assignment),
+    studentId: entry.student_id,
   }));
 }
 
@@ -795,31 +701,21 @@ export interface HolidayStudentRegistration {
 export async function fetchHolidayStudentRegistrations(
   studentId: string,
 ): Promise<HolidayStudentRegistration[]> {
-  const entries = await readData<
-    | {
-        week_id: number | string;
-        period_name: string;
-        starts_on: string;
-        ends_on: string;
-        days?: string[] | null;
-        time_model_name: string;
-        time_model_starts_at: string;
-        time_model_ends_at: string;
-        lunch?: boolean;
-        emergency_contacts?: HolidayGuestContact[] | null;
-        pickup_contacts?: HolidayGuestContact[] | null;
-      }[]
-    | null
-  >(
-    `${BASE}/students/${encodeURIComponent(studentId)}/registration`,
-    "Die Angaben aus der Ferienanmeldung konnten nicht geladen werden",
+  const entries = await bffJson(
+    "tenant",
+    "GET /api/holiday-weeks/students/{studentId}/registration",
+    {
+      params: { studentId },
+      errorMessage:
+        "Die Angaben aus der Ferienanmeldung konnten nicht geladen werden",
+    },
   );
-  return (entries ?? []).map((entry) => ({
-    weekId: String(entry.week_id),
+  return entries.map((entry) => ({
+    weekId: entry.week_id,
     periodName: entry.period_name,
-    startsOn: entry.starts_on,
-    endsOn: entry.ends_on,
-    days: entry.days ?? [],
+    startsOn: day(entry.starts_on),
+    endsOn: day(entry.ends_on),
+    days: days(entry.days),
     timeModelName: entry.time_model_name,
     timeModelStartsAt: entry.time_model_starts_at,
     timeModelEndsAt: entry.time_model_ends_at,

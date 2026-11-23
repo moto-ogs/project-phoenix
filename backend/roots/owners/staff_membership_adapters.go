@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 
 	peopleValues "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
@@ -105,6 +106,9 @@ func membershipError(op string, err error) error {
 }
 
 func MembershipID(id any) (int64, error) {
+	if typed, ok := id.(ident.ID); ok {
+		id = typed.Int64()
+	}
 	switch value := id.(type) {
 	case int64:
 		return value, nil
@@ -119,10 +123,10 @@ func MembershipID(id any) (int64, error) {
 
 func staffFieldsFromLegacy(staff *peopleValues.Staff) schoolmembership.StaffFields {
 	return schoolmembership.StaffFields{
-		PersonID:              staff.PersonID,
+		PersonID:              staff.PersonID.Int64(),
 		StaffNotes:            staff.StaffNotes,
 		EmploymentType:        staff.EmploymentType,
-		WorkTimeModelID:       staff.WorkTimeModelID,
+		WorkTimeModelID:       (*int64)(staff.WorkTimeModelID),
 		PersonnelNumber:       staff.PersonnelNumber,
 		RotationAnchorDate:    calendarDateString(staff.RotationAnchorDate),
 		BirthdayDisplayOptOut: staff.BirthdayDisplayOptOut,
@@ -130,14 +134,14 @@ func staffFieldsFromLegacy(staff *peopleValues.Staff) schoolmembership.StaffFiel
 }
 
 func applyStaffToLegacy(target *peopleValues.Staff, value schoolmembership.Staff) {
-	target.ID = value.ID
+	target.ID = ident.ID(value.ID)
 	target.CreatedAt = value.CreatedAt
 	target.UpdatedAt = value.UpdatedAt
 	target.SetTenantID(value.TenantID)
-	target.PersonID = value.PersonID
+	target.PersonID = ident.ID(value.PersonID)
 	target.StaffNotes = value.StaffNotes
 	target.EmploymentType = value.EmploymentType
-	target.WorkTimeModelID = value.WorkTimeModelID
+	target.WorkTimeModelID = (*ident.ID)(value.WorkTimeModelID)
 	target.PersonnelNumber = value.PersonnelNumber
 	target.RotationAnchorDate = parseCalendarDate(value.RotationAnchorDate)
 	target.BirthdayDisplayOptOut = value.BirthdayDisplayOptOut
@@ -177,7 +181,7 @@ func (r StaffMembershipRepository) Update(ctx context.Context, entity *peopleVal
 	if entity == nil {
 		return repositoryError("update staff", errors.New("staff cannot be nil"))
 	}
-	updated, err := r.Membership.UpdateStaff(ctx, schoolmembership.UpdateStaff{ID: entity.ID, StaffFields: staffFieldsFromLegacy(entity)})
+	updated, err := r.Membership.UpdateStaff(ctx, schoolmembership.UpdateStaff{ID: entity.ID.Int64(), StaffFields: staffFieldsFromLegacy(entity)})
 	if err != nil {
 		return membershipError("update staff", err)
 	}
@@ -297,7 +301,7 @@ func (r StaffMembershipRepository) hydrateStaffPersons(ctx context.Context, memb
 	ids := make([]int64, 0, len(members))
 	for _, member := range members {
 		if member.PersonID > 0 {
-			ids = append(ids, member.PersonID)
+			ids = append(ids, member.PersonID.Int64())
 		}
 	}
 	persons, err := r.Deps.persons.FindByIDs(ctx, ids)
@@ -305,7 +309,7 @@ func (r StaffMembershipRepository) hydrateStaffPersons(ctx context.Context, memb
 		return err
 	}
 	for _, member := range members {
-		if person, found := persons[member.PersonID]; found {
+		if person, found := persons[member.PersonID.Int64()]; found {
 			member.Person = person
 		}
 		// The People Directory owns the person, so School Membership's
@@ -366,7 +370,7 @@ func (r StaffMembershipRepository) FindByIDs(ctx context.Context, ids []int64) (
 	}
 	result := make(map[int64]*peopleValues.Staff, len(values))
 	for _, member := range toLegacyStaffList(values) {
-		result[member.ID] = member
+		result[member.ID.Int64()] = member
 	}
 	return result, nil
 }
@@ -388,7 +392,7 @@ func (r StaffMembershipRepository) FindWithPersonByIDs(ctx context.Context, ids 
 	}
 	result := make(map[int64]*peopleValues.Staff, len(members))
 	for _, member := range members {
-		result[member.ID] = member
+		result[member.ID.Int64()] = member
 	}
 	return result, nil
 }
@@ -452,8 +456,8 @@ func (p staffViewPersons) PersonsByID(ctx context.Context, ids []int64) (map[int
 
 func staffViewPerson(person *peopleValues.DirectoryPersonSnapshot) staffdirectoryview.Person {
 	return staffdirectoryview.Person{
-		ID: person.ID, FirstName: person.FirstName, LastName: person.LastName,
-		AccountID: person.AccountID, Birthday: person.Birthday,
+		ID: person.ID.Int64(), FirstName: person.FirstName, LastName: person.LastName,
+		AccountID: (*int64)(person.AccountID), Birthday: person.Birthday,
 	}
 }
 

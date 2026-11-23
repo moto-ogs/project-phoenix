@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
+
 vi.mock("~/lib/logger", () => ({
   createLogger: () => ({
     info: vi.fn(),
@@ -20,7 +22,7 @@ function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
 }
 
 const backendDay = {
-  id: 7,
+  id: "7",
   start_date: "2026-12-24",
   end_date: "2026-12-31",
   reason: "Weihnachtsschließung",
@@ -54,14 +56,8 @@ describe("closingDayService", () => {
     ]);
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/timetable/closing-days",
-      expect.objectContaining({ method: "GET", credentials: "include" }),
+      expect.objectContaining({ method: "GET" }),
     );
-  });
-
-  it("lists to an empty array when the backend returns null data", async () => {
-    fetchMock.mockResolvedValueOnce(jsonResponse({ data: null }));
-
-    await expect(closingDayService.list()).resolves.toEqual([]);
   });
 
   it("creates and updates a closing day with the expected body", async () => {
@@ -109,7 +105,7 @@ describe("closingDayService", () => {
       jsonResponse({ detail: "Zeitraum überlappt" }, { status: 409 }),
     );
     await expect(closingDayService.list()).rejects.toMatchObject({
-      message: "Anfrage fehlgeschlagen (HTTP 409)",
+      message: expect.not.stringContaining("Zeitraum überlappt"),
       detail: "Zeitraum überlappt",
       status: 409,
     });
@@ -121,7 +117,6 @@ describe("closingDayService", () => {
       }),
     );
     await expect(closingDayService.delete("7")).rejects.toMatchObject({
-      message: "Anfrage fehlgeschlagen (HTTP 502)",
       status: 502,
     });
 
@@ -129,7 +124,7 @@ describe("closingDayService", () => {
       jsonResponse({ detail: "Grund fehlt" }, { status: 400 }),
     );
     await expect(closingDayService.delete("7")).rejects.toMatchObject({
-      message: "Anfrage fehlgeschlagen (HTTP 400)",
+      message: expect.not.stringContaining("Grund fehlt"),
       detail: "Grund fehlt",
       status: 400,
     });

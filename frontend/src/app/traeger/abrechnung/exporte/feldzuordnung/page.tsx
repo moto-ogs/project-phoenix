@@ -10,6 +10,7 @@ import { useState } from "react";
 import { ExportFileNumberCard } from "~/components/traeger/export-file-number-card";
 import { SollMappingEditor } from "~/components/traeger/soll-mapping-editor";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
+import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { ConfirmationModal } from "~/components/ui/modal";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
@@ -37,6 +38,7 @@ export default function TraegerSollMappingPage() {
     loading,
     error: loadError,
     mutate,
+    reloadOrThrow,
   } = useTraegerResource(
     traegerBillingKeys.exportSettings(),
     fetchExportSettings,
@@ -76,7 +78,10 @@ export default function TraegerSollMappingPage() {
         settings ? (
           <TenantPageStats
             items={[
-              { value: settings.mapping.columns.length, label: "Spalten" },
+              {
+                value: settings.mapping?.columns.length ?? 0,
+                label: "Spalten",
+              },
               {
                 value: settings.custom
                   ? "Eigene Zuordnung"
@@ -111,15 +116,24 @@ export default function TraegerSollMappingPage() {
       {settings ? (
         <>
           <ExportFileNumberCard settings={settings} onChanged={setSettings} />
-          <SollMappingEditor
-            key={version}
-            settings={settings}
-            onCancel={() => router.push(traegerPath(EXPORTS_PATH))}
-            onSaved={(saved) => {
-              setSettings(saved);
-              setVersion((current) => current + 1);
-            }}
-          />
+          {settings.mapping ? (
+            <SollMappingEditor
+              key={version}
+              settings={settings}
+              mapping={settings.mapping}
+              reload={reloadOrThrow}
+              onCancel={() => router.push(traegerPath(EXPORTS_PATH))}
+              onSaved={(saved) => {
+                setSettings(saved);
+                setVersion((current) => current + 1);
+              }}
+            />
+          ) : (
+            <Alert
+              type="warning"
+              message="Die gespeicherte Feldzuordnung enthält eine Angabe, die diese Seite noch nicht kennt. Lade die Seite neu, dann kannst du sie bearbeiten."
+            />
+          )}
           <ConfirmationModal
             isOpen={confirmReset}
             onClose={() => setConfirmReset(false)}

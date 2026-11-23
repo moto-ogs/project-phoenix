@@ -246,8 +246,8 @@ type ResolvedSetting struct {
 	Description  string       `json:"description"`
 	Placeholder  string       `json:"placeholder,omitempty"`
 	Type         FieldType    `json:"type"`
-	Default      any          `json:"default"`
-	Value        any          `json:"value"`
+	Default      any          `json:"default" contract_json:"The setting key selects its default value type in the settings registry"`
+	Value        any          `json:"value" contract_json:"The setting key selects its value type in the settings registry"`
 	IsDefault    bool         `json:"is_default"`
 	Writable     bool         `json:"writable"`
 	Visible      bool         `json:"visible"`

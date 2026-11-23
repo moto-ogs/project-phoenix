@@ -1,7 +1,7 @@
-import { ApiError, enrichApiError, problemDetail } from "./api-error";
-import { createLogger } from "~/lib/logger";
-
-const logger = createLogger({ component: "CaregiverCapabilityAPI" });
+import { ApiError } from "./api-error";
+import { bffJson } from "./bff-fetch";
+import type * as sharedContract from "./contract/shared.generated";
+import type * as authAccountsContract from "./contract/auth-accounts.generated";
 
 export interface BlockerSupervision {
   id: string;
@@ -60,7 +60,7 @@ function formatCount(count: number, singular: string, plural: string): string {
 
 function translateCapabilityBlocker(
   blocker: string,
-  state?: BackendCaregiverCapabilityState,
+  state?: sharedContract.CaregiverCapabilityState,
 ): string {
   switch (blocker) {
     case "missing_usable_role":
@@ -106,74 +106,6 @@ function translateCapabilityBlocker(
   }
 }
 
-interface BackendBlockerSupervision {
-  id: number;
-  group_name: string;
-  start_date: string;
-}
-
-interface BackendBlockerSubstitution {
-  id: number;
-  group_name: string;
-  start_date: string;
-  end_date: string;
-}
-
-interface BackendBlockerActivity {
-  id: number;
-  activity_id: number;
-  activity_name: string;
-  is_primary: boolean;
-}
-
-interface BackendBlockerGroup {
-  id: number;
-  group_id: number;
-  group_name: string;
-  teacher_id: number;
-  teacher_ids?: number[];
-}
-
-interface BackendCaregiverCapabilityState {
-  account_id: number;
-  email: string;
-  first_name: string;
-  last_name: string;
-  person_id?: number;
-  staff_id?: number;
-  teacher_id?: number;
-  has_admin_role: boolean;
-  has_user_role: boolean;
-  has_person: boolean;
-  has_staff: boolean;
-  has_teacher: boolean;
-  has_caregiver_profile: boolean;
-  is_active_caregiver: boolean;
-  disable_blocked: boolean;
-  disable_blockers?: string[];
-  active_supervisions?: BackendBlockerSupervision[];
-  active_substitutions?: BackendBlockerSubstitution[];
-  activity_supervisions?: BackendBlockerActivity[];
-  group_assignments?: BackendBlockerGroup[];
-}
-
-interface EnableCaregiverCapabilityRequest {
-  first_name?: string;
-  last_name?: string;
-  position?: string;
-}
-
-interface ApiEnvelope<T> {
-  data?: T;
-  success?: boolean;
-  status?: string;
-  message?: string;
-}
-
-interface CapabilityErrorPayload {
-  blockers?: string[];
-}
-
 export class CaregiverCapabilityApiError extends ApiError {
   status: number;
   blockers: string[];
@@ -187,16 +119,16 @@ export class CaregiverCapabilityApiError extends ApiError {
 }
 
 function mapCapabilityState(
-  state: BackendCaregiverCapabilityState,
+  state: sharedContract.CaregiverCapabilityState,
 ): CaregiverCapabilityState {
   return {
-    accountId: state.account_id.toString(),
+    accountId: state.account_id,
     email: state.email,
     firstName: state.first_name,
     lastName: state.last_name,
-    personId: state.person_id?.toString() ?? null,
-    staffId: state.staff_id?.toString() ?? null,
-    teacherId: state.teacher_id?.toString() ?? null,
+    personId: state.person_id ?? null,
+    staffId: state.staff_id ?? null,
+    teacherId: state.teacher_id ?? null,
     hasAdminRole: state.has_admin_role,
     hasUserRole: state.has_user_role,
     hasPerson: state.has_person,
@@ -209,152 +141,129 @@ function mapCapabilityState(
       translateCapabilityBlocker(blocker, state),
     ),
     activeSupervisions: (state.active_supervisions ?? []).map((s) => ({
-      id: s.id.toString(),
+      id: s.id,
       groupName: s.group_name,
       startDate: s.start_date,
     })),
     activeSubstitutions: (state.active_substitutions ?? []).map((s) => ({
-      id: s.id.toString(),
+      id: s.id,
       groupName: s.group_name,
       startDate: s.start_date,
       endDate: s.end_date,
     })),
     activitySupervisions: (state.activity_supervisions ?? []).map((a) => ({
-      id: a.id.toString(),
-      activityId: a.activity_id.toString(),
+      id: a.id,
+      activityId: a.activity_id,
       activityName: a.activity_name,
       isPrimary: a.is_primary,
     })),
     groupAssignments: (state.group_assignments ?? []).map((g) => ({
-      id: g.id.toString(),
-      groupId: g.group_id.toString(),
+      id: g.id,
+      groupId: g.group_id,
       groupName: g.group_name,
-      teacherId: g.teacher_id.toString(),
-      teacherIds: (g.teacher_ids ?? []).map((teacherId) =>
-        teacherId.toString(),
-      ),
+      teacherId: g.teacher_id,
+      teacherIds: g.teacher_ids ?? [],
     })),
   };
 }
 
-async function parseCapabilityResponse(
-  response: Response,
-): Promise<CaregiverCapabilityState> {
-  const raw = (await response.json()) as
-    | BackendCaregiverCapabilityState
-    | ApiEnvelope<BackendCaregiverCapabilityState>;
-
-  const payload =
-    typeof raw === "object" &&
-    raw !== null &&
-    "data" in raw &&
-    raw.data !== undefined
-      ? raw.data
-      : (raw as BackendCaregiverCapabilityState);
-
-  return mapCapabilityState(payload);
-}
-
-async function handleCapabilityError(response: Response): Promise<never> {
-  let message = response.statusText || "Unbekannter Fehler";
-  let blockers: string[] = [];
-  let body: unknown;
-
-  try {
-    const payload = (await response.json()) as CapabilityErrorPayload;
-    body = payload;
-    message = problemDetail(payload) ?? message;
-    blockers = (payload.blockers ?? []).map((blocker) =>
-      translateCapabilityBlocker(blocker),
-    );
-  } catch (error) {
-    logger.warn("failed to parse caregiver capability error response", {
-      error: error instanceof Error ? error.message : String(error),
-      status: response.status,
-    });
-  }
-
-  throw enrichApiError(
-    new CaregiverCapabilityApiError(message, response.status, blockers),
-    body,
+/**
+ * A refusal as CaregiverCapabilityApiError: a 409 names the People Directory
+ * blockers in its `blockers` extension member, translated for the dialog.
+ */
+function capabilityError(error: unknown): never {
+  if (!(error instanceof ApiError)) throw error;
+  const raw = error.problem?.blockers;
+  const blockers = Array.isArray(raw)
+    ? raw
+        .filter((blocker): blocker is string => typeof blocker === "string")
+        .map((blocker) => translateCapabilityBlocker(blocker))
+    : [];
+  const wrapped = new CaregiverCapabilityApiError(
+    error.detail ?? error.message,
+    error.status ?? 500,
+    blockers,
   );
+  Object.assign(wrapped, error, { name: wrapped.name });
+  // The original problem body is deliberately non-enumerable on ApiError.
+  if (error.problem) {
+    Object.defineProperty(wrapped, "problem", { value: error.problem });
+  }
+  throw wrapped;
 }
 
-async function requestCapability(
-  endpoint: string,
-  options: RequestInit = {},
+const FAILED = "Betreuung konnte nicht geändert werden";
+
+function mapCapabilityAnswer(
+  answer: Promise<sharedContract.CaregiverCapabilityState>,
 ): Promise<CaregiverCapabilityState> {
-  const response = await fetch(endpoint, {
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers ?? {}),
-    },
-    ...options,
-  });
-
-  if (!response.ok) {
-    await handleCapabilityError(response);
-  }
-
-  return parseCapabilityResponse(response);
+  return answer.then(mapCapabilityState, capabilityError);
 }
 
 class CaregiverCapabilityService {
   getTenantAccountCapability(accountId: string) {
-    return requestCapability(
-      `/api/auth/accounts/${encodeURIComponent(accountId)}/caregiver-capability`,
+    return mapCapabilityAnswer(
+      bffJson("tenant", "GET /auth/accounts/{accountId}/caregiver-capability", {
+        params: { accountId },
+        errorMessage: FAILED,
+      }),
     );
   }
 
   enableTenantAccountCapability(
     accountId: string,
-    body: EnableCaregiverCapabilityRequest,
+    body: authAccountsContract.EnableCaregiverCapabilityRequest,
   ) {
-    return requestCapability(
-      `/api/auth/accounts/${encodeURIComponent(accountId)}/caregiver-capability`,
-      {
-        method: "POST",
-        body: JSON.stringify(body),
-      },
+    return mapCapabilityAnswer(
+      bffJson(
+        "tenant",
+        "POST /auth/accounts/{accountId}/caregiver-capability",
+        { params: { accountId }, body, errorMessage: FAILED },
+      ),
     );
   }
 
   disableTenantAccountCapability(accountId: string) {
-    return requestCapability(
-      `/api/auth/accounts/${encodeURIComponent(accountId)}/caregiver-capability`,
-      {
-        method: "DELETE",
-      },
+    return mapCapabilityAnswer(
+      bffJson(
+        "tenant",
+        "DELETE /auth/accounts/{accountId}/caregiver-capability",
+        { params: { accountId }, errorMessage: FAILED },
+      ),
     );
   }
 
   getOperatorAccountCapability(schoolId: string, accountId: string) {
-    return requestCapability(
-      `/api/operator/schools/${encodeURIComponent(schoolId)}/accounts/${encodeURIComponent(accountId)}/caregiver-capability`,
+    return mapCapabilityAnswer(
+      bffJson(
+        "platform",
+        "GET /operator/schools/{id}/accounts/{accountId}/caregiver-capability/",
+        { params: { id: schoolId, accountId }, errorMessage: FAILED },
+      ),
     );
   }
 
   enableOperatorAccountCapability(
     schoolId: string,
     accountId: string,
-    body: EnableCaregiverCapabilityRequest,
+    body: authAccountsContract.EnableCaregiverCapabilityRequest,
   ) {
-    return requestCapability(
-      `/api/operator/schools/${encodeURIComponent(schoolId)}/accounts/${encodeURIComponent(accountId)}/caregiver-capability`,
-      {
-        method: "POST",
-        body: JSON.stringify(body),
-      },
+    return mapCapabilityAnswer(
+      bffJson(
+        "platform",
+        "POST /operator/schools/{id}/accounts/{accountId}/caregiver-capability/",
+        { params: { id: schoolId, accountId }, body, errorMessage: FAILED },
+      ),
     );
   }
 
   disableOperatorAccountCapability(schoolId: string, accountId: string) {
-    return requestCapability(
-      `/api/operator/schools/${encodeURIComponent(schoolId)}/accounts/${encodeURIComponent(accountId)}/caregiver-capability`,
-      {
-        method: "DELETE",
-      },
+    return mapCapabilityAnswer(
+      bffJson(
+        "platform",
+        "DELETE /operator/schools/{id}/accounts/{accountId}/caregiver-capability/",
+        { params: { id: schoolId, accountId }, errorMessage: FAILED },
+      ),
     );
   }
 }

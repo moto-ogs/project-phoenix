@@ -23,7 +23,7 @@ type HomeLayoutResponse struct {
 func settingsRouteContracts() []common.RouteContract {
 	types := settingsHTTP.RouteContractTypes()
 	portals := []common.PortalScope{common.PortalTenant}
-	return []common.RouteContract{
+	routes := []common.RouteContract{
 		{Method: "GET", Pattern: "/payroll-status", Portals: portals, Response: configModel.PayrollStatus{}},
 		{Method: "GET", Pattern: "/device-pin-status", Portals: portals, Response: configModel.DevicePINStatus{}},
 		{Method: "GET", Pattern: "/school-contact-email", Portals: portals, Response: types.SchoolContactEmail},
@@ -32,11 +32,12 @@ func settingsRouteContracts() []common.RouteContract {
 		{Method: "DELETE", Pattern: "/home-layout", Portals: portals, NoData: true},
 		{Method: "PUT", Pattern: "/home-layout/policies", Portals: portals, Request: types.HomeBlockPolicies, NoData: true},
 	}
+	routes = append(routes, settingsHTTP.RouteFileContracts()...)
+	return append(routes, settingsHTTP.LegalAGBDocumentRouteContracts()...)
 }
 
 // settingsAdminRouteContracts registers the schema and the reveal of a
-// secret value of the settings page (#2352), relative to /api/settings. The
-// value writes keep their route files: they renew the cached tenant view.
+// secret value of the settings page (#2352), relative to /api/settings.
 func settingsAdminRouteContracts() []common.RouteContract {
 	portals := []common.PortalScope{common.PortalTenant}
 	return []common.RouteContract{

@@ -99,7 +99,7 @@ func BuildParentPortal(
 		Emitter: BindParentChildEvents(emitter), MessagingEnabled: BindParentMessagingGate(settings, env.Logger.With("service", "parent")), AnnouncementRepo: BindParentAnnouncementAccess(messaging.ParentAnnouncement),
 		Memberships: NewParentSchoolMembershipLock(db), InvitationAccounts: NewParentInvitationAccountLock(db), GuardianInvites: NewParentGuardianAccess(identity), GuardianInvitations: NewGuardianInvitationReads(identity), InvalidateInvites: NewGuardianInvitationInvalidation(db, env.Now),
 		StudentGuardianRepo: NewParentStudentGuardianReads(people.StudentGuardians), GuardianPhoneRepo: NewParentGuardianPhoneReads(peopleCompose.NewGuardianPhoneNumberRepository(db.Pool())),
-		StudentConsents: NewParentStudentConsents(services.StudentConsents), StudentPhotos: photos, ChildDataAccess: NewParentChildDataAccess(audit.Persistence.DataAccessLog),
+		StudentConsents: NewParentStudentConsents(services.StudentConsents, MustNewRoomHistoryStops(db)), StudentPhotos: photos, ChildDataAccess: NewParentChildDataAccess(audit.Persistence.DataAccessLog),
 		HolidayWishes: NewParentHolidayWishes(wishProofs), HolidayAnnouncements: NewParentHolidayAnnouncements(), HolidayRegistrations: NewParentHolidayRegistrations(organizations), HolidayAccountProofs: NewParentHolidayAccountProofs(env.HealthData, env.Now),
 		AbsenceNotifier: bindParentAbsenceNotifier(notifications.AbsenceNotifier), CarePeriods: parentportal.NewCarePeriodReads(enrollment.ParentCarePeriods.CarePeriods),
 		OfferingHistory: parentportal.NewOfferingHistoryReads(enrollment.ParentOfferingHistory.OfferingHistory), CareOfferingRepo: NewParentCareOfferingReads(notices.CareOfferings),

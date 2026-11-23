@@ -12,11 +12,8 @@ import {
 import { Button } from "~/components/ui/button";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { formatDate } from "~/lib/date-helpers";
-import type { RequestDiffEntry } from "~/lib/messaging-status";
-import {
-  submitCareScheduleRequest,
-  type ChildCareSchedule,
-} from "~/lib/parent-api";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
+import { submitCareScheduleRequest } from "~/lib/parent-api";
 import { calendarConcept } from "~/lib/concepts/calendar";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
 
@@ -28,14 +25,16 @@ const DAY_KEYS: Record<number, "mon" | "tue" | "wed" | "thu" | "fri"> = {
   4: "thu",
   5: "fri",
 };
-type PendingRequest = NonNullable<ChildCareSchedule["pending_request"]>;
+type PendingRequest = NonNullable<
+  parentMeContract.CareScheduleResponse["pending_request"]
+>;
 
 interface ScheduleProps {
   studentId: string;
-  schedule: ChildCareSchedule;
+  schedule: parentMeContract.CareScheduleResponse;
   childFirstName: string;
   careEnded: boolean;
-  onScheduleChange: (schedule: ChildCareSchedule) => void;
+  onScheduleChange: (schedule: parentMeContract.CareScheduleResponse) => void;
 }
 
 export function WeeklyScheduleSection(props: Readonly<ScheduleProps>) {
@@ -89,7 +88,7 @@ export function WeeklyScheduleSection(props: Readonly<ScheduleProps>) {
       {requestOpen && (
         <CareScheduleRequestModal
           studentId={studentId}
-          weekdays={schedule.weekdays}
+          weekdays={schedule.weekdays ?? []}
           capabilities={schedule.request_capabilities}
           onClose={() => setRequestOpen(false)}
           onSubmit={async (payload, signature, signatureStatement) =>
@@ -112,10 +111,12 @@ function ScheduleDays({
   schedule,
   childFirstName,
 }: Readonly<{
-  schedule: ChildCareSchedule;
+  schedule: parentMeContract.CareScheduleResponse;
   childFirstName: string;
 }>) {
-  const days = new Map(schedule.weekdays.map((day) => [day.weekday, day]));
+  const days = new Map(
+    (schedule.weekdays ?? []).map((day) => [day.weekday, day]),
+  );
   return (
     <ul
       data-parent-tour="child-care-times"
@@ -139,7 +140,7 @@ function ScheduleDay({
   childFirstName,
 }: Readonly<{
   weekday: number;
-  day?: ChildCareSchedule["weekdays"][number];
+  day?: NonNullable<parentMeContract.CareScheduleResponse["weekdays"]>[number];
   childFirstName: string;
 }>) {
   const t = useCareTermTranslations("parentMasterData");
@@ -150,8 +151,8 @@ function ScheduleDay({
       ? t("careSchedule.notInCare")
       : t("careSchedule.unknownCareDay");
   const modes =
-    scheduled && day.modes.length > 0
-      ? day.modes.map((mode) => t(`departureModes.${mode}`)).join(", ")
+    scheduled && (day.modes ?? []).length > 0
+      ? (day.modes ?? []).map((mode) => t(`departureModes.${mode}`)).join(", ")
       : t("careSchedule.notSet");
   return (
     <li className="moto-content-surface rounded-xl border p-4">
@@ -202,9 +203,9 @@ function PendingRequestPanel({
           date: formatDate(pending.created_at, false, locale),
         })}
       </p>
-      {pending.diff.length > 0 && (
+      {(pending.diff ?? []).length > 0 && (
         <DataGrid columns={1}>
-          {pending.diff.map((entry, index) => (
+          {(pending.diff ?? []).map((entry, index) => (
             <CareScheduleDiff key={`${entry.label}-${index}`} entry={entry} />
           ))}
         </DataGrid>
@@ -220,7 +221,9 @@ function PendingRequestPanel({
   );
 }
 
-function CareScheduleDiff({ entry }: Readonly<{ entry: RequestDiffEntry }>) {
+function CareScheduleDiff({
+  entry,
+}: Readonly<{ entry: parentMeContract.ParentCareRequestDiffResponse }>) {
   const t = useCareTermTranslations("parentMasterData");
   const day = entry.weekday ? DAY_KEYS[entry.weekday] : undefined;
   const kind =

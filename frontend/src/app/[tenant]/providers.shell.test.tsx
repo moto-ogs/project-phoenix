@@ -97,7 +97,7 @@ function ChildWithLayoutEffect() {
   return null;
 }
 
-const tenant = { tenantId: 1, subdomain: "school-a" } as TenantInfo;
+const tenant = { tenantId: "1", subdomain: "school-a" } as TenantInfo;
 const session = mockSessionData();
 
 const shell: ShellBootstrap = {

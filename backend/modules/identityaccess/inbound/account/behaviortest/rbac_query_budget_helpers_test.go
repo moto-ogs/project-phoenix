@@ -108,8 +108,9 @@ func (f *rbacBudgetFixture) state(t *testing.T) rbacBudgetState {
 	require.NoError(t, err)
 	state.Mappings = make(map[int64][]identityaccess.Permission)
 	for id, ctx := range f.roleContexts {
-		state.Mappings[id], err = f.module.AccountAuthentication.GetRolePermissions(ctx, id)
+		selection, err := f.module.AccountAuthentication.GetRolePermissions(ctx, id)
 		require.NoError(t, err)
+		state.Mappings[id] = selection.Permissions
 	}
 	return state
 }
@@ -184,14 +185,12 @@ func rbacBudgetPermissionDTO(id int64, name, description, resource, action strin
 
 func (f *rbacBudgetFixture) permission(t *testing.T, name, description, resource, action string) identityaccess.Permission {
 	t.Helper()
-	var created identityaccess.Permission
-	require.NoError(t, testpkg.WithinAdminContext(t, testpkg.Ctx(t), f.db, func(ctx context.Context) error {
-		var err error
-		created, err = f.module.AccountAuthentication.CreatePermission(ctx, name, description, resource, action)
-		return err
-	}))
-	testpkg.OwnTestPermission(t, f.db, created.ID)
-	stored, err := f.module.AccountAuthentication.GetPermission(testpkg.Ctx(t), created.ID)
+	// No route creates permissions; the catalog row is inserted directly.
+	var id int64
+	require.NoError(t, f.db.NewRaw(`INSERT INTO auth.permissions (name, description, resource, action)
+		VALUES (?, ?, ?, ?) RETURNING id`, name, description, resource, action).Scan(testpkg.Ctx(t), &id))
+	testpkg.OwnTestPermission(t, f.db, id)
+	stored, err := f.module.AccountAuthentication.GetPermissionByName(testpkg.Ctx(t), name)
 	require.NoError(t, err)
 	require.Equal(t, name, stored.Name)
 	require.Equal(t, description, stored.Description)

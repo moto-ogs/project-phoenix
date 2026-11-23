@@ -49,9 +49,6 @@ type SessionDependencies struct {
 	// Traeger reads the Träger memberships of Organisation & Tenancy the
 	// Träger-Portal sign-in and refresh re-check (ADR 0084).
 	Traeger TraegerMemberships
-	// SecurityNotice mails the previous address of an account whose login an
-	// administrator changed (#6862); nil sends none.
-	SecurityNotice AccountSecurityNotice
 	// PortalModules locks the parents and school portals of a school that
 	// has not booked their module (#4895).
 	PortalModules PortalModules
@@ -82,6 +79,9 @@ type CallerMemo interface {
 // DemoDependencies are the Organisation & Tenancy facts the demo flow needs
 // when the Identity & Access module is composed for the demo environment.
 type DemoDependencies struct {
+	CRMEnabled  bool
+	CRMToken    string
+	CRMJobs     identityaccess.DemoCRMJobs
 	Schools     DemoSchools
 	Mail        identityaccess.DemoAccessMail
 	NewToken    func() (raw, fingerprint string, err error)
@@ -146,8 +146,7 @@ type MFADependencies struct {
 	// factor (#4497); nil leaves the reset unavailable.
 	ResetNotice CatererMFAResetNotice
 	// SecurityNotice mails an account holder an administrator's reset of
-	// their second factor and change of their login address (#6862); nil
-	// leaves both changes without a notice.
+	// their second factor (#6862); nil leaves the reset without a notice.
 	SecurityNotice AccountSecurityNotice
 	OperatorAudit  OperatorActionLog
 	// JWTSecret derives the trusted-device HMAC key, so the cookie signature

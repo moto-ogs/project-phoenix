@@ -44,36 +44,36 @@ func TestModulePersistsOrganizationLifecycleAtPublicSeam(t *testing.T) {
 	require.NoError(t, err)
 	assert.Positive(t, created.ID)
 
-	found, err := module.FindOrganization(ctx, created.ID)
+	found, err := module.FindOrganization(ctx, created.ID.Int64())
 	require.NoError(t, err)
 	assert.Equal(t, created.Slug, found.Slug)
 
-	listed, err := module.ListOrganizationsByID(ctx, []int64{created.ID})
+	listed, err := module.ListOrganizationsByID(ctx, []int64{created.ID.Int64()})
 	require.NoError(t, err)
 	require.Len(t, listed, 1)
 	assert.Equal(t, created.ID, listed[0].ID)
-	count, err := module.CountOrganizationsByID(ctx, []int64{created.ID, created.ID + 999999})
+	count, err := module.CountOrganizationsByID(ctx, []int64{created.ID.Int64(), (created.ID + 999999).Int64()})
 	require.NoError(t, err)
 	assert.Equal(t, 1, count)
 
 	updated, err := module.UpdateOrganization(ctx, organizationtenancy.UpdateOrganization{
-		ID: created.ID, Name: "Renamed Organization", Slug: created.Slug, Active: false,
+		ID: created.ID.Int64(), Name: "Renamed Organization", Slug: created.Slug, Active: false,
 	})
 	require.NoError(t, err)
 	assert.Equal(t, "Renamed Organization", updated.Name)
 	assert.False(t, updated.Active)
 
-	deleted, err := module.SoftDeleteOrganization(ctx, created.ID)
+	deleted, err := module.SoftDeleteOrganization(ctx, created.ID.Int64())
 	require.NoError(t, err)
 	assert.True(t, deleted.IsDeleted())
-	persistedDeleted, err := module.FindOrganization(ctx, created.ID)
+	persistedDeleted, err := module.FindOrganization(ctx, created.ID.Int64())
 	require.NoError(t, err)
 	assert.True(t, persistedDeleted.IsDeleted())
 
-	restored, err := module.RestoreOrganization(ctx, created.ID)
+	restored, err := module.RestoreOrganization(ctx, created.ID.Int64())
 	require.NoError(t, err)
 	assert.False(t, restored.IsDeleted())
-	persistedRestored, err := module.FindOrganization(ctx, created.ID)
+	persistedRestored, err := module.FindOrganization(ctx, created.ID.Int64())
 	require.NoError(t, err)
 	assert.False(t, persistedRestored.IsDeleted())
 }
@@ -91,7 +91,7 @@ func TestModulePersistsSchoolLifecycleAtPublicSeam(t *testing.T) {
 	require.NoError(t, err)
 
 	created, err := module.CreateSchool(ctx, organizationtenancy.CreateSchool{
-		OrganizationID: organization.ID,
+		OrganizationID: organization.ID.Int64(),
 		Name:           fmt.Sprintf("School %d", suffix),
 		Slug:           fmt.Sprintf("school-%d", suffix),
 		Subdomain:      fmt.Sprintf("school-%d", suffix),
@@ -104,19 +104,19 @@ func TestModulePersistsSchoolLifecycleAtPublicSeam(t *testing.T) {
 	require.NoError(t, err)
 	assert.Positive(t, created.ID)
 
-	found, err := module.FindSchool(ctx, created.ID)
+	found, err := module.FindSchool(ctx, created.ID.Int64())
 	require.NoError(t, err)
 	assert.Equal(t, created.Subdomain, found.Subdomain)
 	assert.Equal(t, organization.ID, found.OrganizationID)
 
-	listed, err := module.ListSchoolsByID(ctx, []int64{created.ID})
+	listed, err := module.ListSchoolsByID(ctx, []int64{created.ID.Int64()})
 	require.NoError(t, err)
 	require.Len(t, listed, 1)
 	assert.Equal(t, created.ID, listed[0].ID)
 
 	updated, err := module.UpdateSchool(ctx, organizationtenancy.UpdateSchool{
-		ID:             created.ID,
-		OrganizationID: organization.ID,
+		ID:             created.ID.Int64(),
+		OrganizationID: organization.ID.Int64(),
 		Name:           "Renamed School",
 		Slug:           created.Slug,
 		Subdomain:      created.Subdomain,
@@ -132,11 +132,11 @@ func TestModulePersistsSchoolLifecycleAtPublicSeam(t *testing.T) {
 	assert.False(t, updated.Active)
 	assert.True(t, updated.Hidden)
 
-	deleted, err := module.SoftDeleteSchool(ctx, created.ID)
+	deleted, err := module.SoftDeleteSchool(ctx, created.ID.Int64())
 	require.NoError(t, err)
 	assert.True(t, deleted.IsDeleted())
 
-	restored, err := module.RestoreSchool(ctx, created.ID)
+	restored, err := module.RestoreSchool(ctx, created.ID.Int64())
 	require.NoError(t, err)
 	assert.False(t, restored.IsDeleted())
 }
@@ -158,11 +158,11 @@ func TestSchoolLifecycleRejectsMissingOrDeletedOrganization(t *testing.T) {
 		Name: fmt.Sprintf("Deleted Parent %d", suffix), Slug: fmt.Sprintf("deleted-parent-%d", suffix), Active: true,
 	})
 	require.NoError(t, err)
-	_, err = module.SoftDeleteOrganization(ctx, organization.ID)
+	_, err = module.SoftDeleteOrganization(ctx, organization.ID.Int64())
 	require.NoError(t, err)
 
 	_, err = module.CreateSchool(ctx, organizationtenancy.CreateSchool{
-		OrganizationID: organization.ID,
+		OrganizationID: organization.ID.Int64(),
 		Name:           "Deleted Parent School", Slug: fmt.Sprintf("deleted-school-%d", suffix), Subdomain: fmt.Sprintf("deleted-school-%d", suffix), Active: true,
 	})
 	assert.ErrorIs(t, err, organizationtenancy.ErrOrganizationDeleted)
@@ -278,7 +278,7 @@ func TestSchoolTablePreservesTwoTenantRolePermissions(t *testing.T) {
 	})
 	require.NoError(t, err)
 	school, err := module.CreateSchool(ctx, organizationtenancy.CreateSchool{
-		OrganizationID: organization.ID, Name: "School RLS", Slug: fmt.Sprintf("school-rls-%d", suffix),
+		OrganizationID: organization.ID.Int64(), Name: "School RLS", Slug: fmt.Sprintf("school-rls-%d", suffix),
 		Subdomain: fmt.Sprintf("school-rls-%d", suffix), Active: true,
 	})
 	require.NoError(t, err)

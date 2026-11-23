@@ -51,7 +51,8 @@ func TestStudentDirectoryReadsClassesAndCohorts(t *testing.T) {
 	names, err := module.ListStudentNamesByID(ctx, []int64{first.ID, graduate.ID})
 	require.NoError(t, err)
 	require.Len(t, names, 2)
-	assert.Equal(t, peopledirectory.StudentName{StudentID: first.ID, FirstName: "Anna", LastName: "Directory"}, names[0])
+	// The read by id places the child in its class and group too (#7681).
+	assert.Equal(t, peopledirectory.StudentName{StudentID: first.ID, FirstName: "Anna", LastName: "Directory", SchoolClass: "1a"}, names[0])
 
 	classes, err := module.ListSchoolClasses(ctx)
 	require.NoError(t, err)
@@ -162,17 +163,12 @@ func TestStudentDirectoryTenantIsolation(t *testing.T) {
 
 	err = tenant.WithinCurrentTenant(otherCtx, func(txCtx context.Context) error {
 		require.ErrorIs(t, module.LockStudent(txCtx, student.ID), peopledirectory.ErrStudentNotFound)
-		// Visiting students are the one deliberate way past the boundary.
-		across, err := module.ListStudentsAcrossTenantsByID(txCtx, []int64{student.ID})
-		require.NoError(t, err)
-		require.Len(t, across, 1)
-		assert.Equal(t, testpkg.Tenant(t), across[0].TenantID)
 		return nil
 	})
 	require.NoError(t, err)
 }
 
-func TestStudentNamesExcludeSoftDeletedPeople(t *testing.T) {
+func TestStudentNamesKeepDeletedPlacementOnlyWhenRequested(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
 	module := buildStudentOwnersModule(t, db)
@@ -187,6 +183,12 @@ func TestStudentNamesExcludeSoftDeletedPeople(t *testing.T) {
 	names, err := module.ListStudentNamesByID(testpkg.Ctx(t), []int64{student.ID})
 	require.NoError(t, err)
 	assert.Empty(t, names)
+
+	placements, err := module.ListStudentNamesByID(peopledirectory.WithDeletedStudentPlacements(testpkg.Ctx(t)), []int64{student.ID})
+	require.NoError(t, err)
+	assert.Equal(t, []peopledirectory.StudentName{{
+		StudentID: student.ID, SchoolClass: "2c", PersonDeleted: true,
+	}}, placements, "the deleted person's names stay empty while its placement is available")
 }
 
 // The absence list reads a class and its names in one statement (#6165):

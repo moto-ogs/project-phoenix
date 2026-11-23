@@ -156,3 +156,27 @@ liegt eine Ebene tiefer.
 Ob der Urlaubsanspruch bei einer Wiederaufnahme arbeitsrechtlich anteilig sein
 müsste, ist hier bewusst nicht entschieden. Der volle Jahresanspruch ohne
 Übertrag ist der Startwert, den die Schule korrigieren kann.
+
+## Nachtrag 2026-11-23: Die Einladung trägt die gelesene Antwort (#7904, ADR 0311)
+
+Der Einladen-Dialog fragt nach Wiederaufnahme oder Neuaufnahme nur, wenn
+seine Abfrage eine frühere Beschäftigung fand. Ändert sich das bis zum
+Absenden, entscheidet die Schule über einen Stand, den es nicht mehr gibt:
+Taucht eine frühere Beschäftigung erst danach auf, würde sie mit der
+Vorgabe still fortgeführt. Deshalb gilt für die beiden Routen:
+
+1. `POST /auth/invitations/former-employment` antwortet neben
+   `former_employment` (oder `null`) mit `version`, dem Fingerabdruck der
+   gefundenen früheren Beschäftigung (Staff-Satz, Beginn, Ende). Auch die
+   Antwort „keine frühere Beschäftigung“ hat eine Version.
+2. `POST /auth/invitations/` nimmt das optionale Feld
+   `expected_former_employment`. Der Dialog schickt die Version nur nach einer
+   gelungenen Abfrage zur selben Adresse. Der Server bildet sie nach der Sperre
+   der Konto-Zeile neu und lehnt eine abweichende Version mit
+   `general.changed_since_read` (409) ab. Der Dialog fragt dann neu und bietet
+   kein „Wiederholen“ an.
+3. Ohne Version gilt die bisherige Vorgabe dieser Entscheidung: Ohne
+   `employment_action` wird eine gefundene frühere Beschäftigung fortgeführt.
+   So bleibt es für eine fehlgeschlagene oder abgelaufene Abfrage, den
+   Personalimport, die Externe Betreuung und den Operator-Weg. Eine gescheiterte
+   Abfrage sperrt die Einladung damit nicht.

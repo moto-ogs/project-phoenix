@@ -12,7 +12,11 @@ import {
   useState,
 } from "react";
 // eslint-disable-next-line no-restricted-imports -- operator pages are not tenant-scoped
-import { useSWRAuth, useInvalidateMatching } from "~/lib/swr";
+import {
+  revalidateOrThrow,
+  useSWRAuth,
+  useInvalidateMatching,
+} from "~/lib/swr";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
@@ -190,12 +194,7 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
     [organizations],
   );
 
-  const {
-    data: cachedSchools,
-    error: schoolsError,
-    isLoading: schoolsLoading,
-    mutate: mutateSchools,
-  } = useSWRAuth(
+  const schoolsRead = useSWRAuth(
     isAuthenticated ? operatorProvisioningKeys.schoolSummaries() : null,
     () => operatorProvisioningService.listSchoolSummaries(),
     {
@@ -203,6 +202,24 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
       revalidateOnFocus: false,
       dedupingInterval: 5000,
     },
+  );
+  const {
+    data: cachedSchools,
+    error: schoolsError,
+    isLoading: schoolsLoading,
+    mutate: mutateSchools,
+  } = schoolsRead;
+  // A write starts from the school as stored now. revalidateOrThrow, not
+  // mutate: `mutate()` resolves with the old list when the read fails, and
+  // `mutate(undefined, …)` empties the cache and resolves to undefined (#7780).
+  const readCurrentSchool = useCallback(
+    async (id: string): Promise<SchoolSummary> => {
+      const fresh = await revalidateOrThrow(schoolsRead);
+      const current = fresh.find((item) => item.id === id);
+      if (!current) throw new Error("school not found after refresh");
+      return current;
+    },
+    [schoolsRead],
   );
   const { data: schools, accessRefused: schoolsAccessRefused } =
     useAccessControlledData(
@@ -482,11 +499,10 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
     if (!school) return;
     let subdomain: string;
     try {
-      const fresh = await mutateSchools();
-      const current = fresh?.find((item) => item.id === school.id) ?? school;
+      const current = await readCurrentSchool(school.id);
 
       await operatorProvisioningService.updateSchool(current.id, {
-        organization_id: parseInt(current.organizationId, 10),
+        organization_id: current.organizationId,
         name: current.name,
         slug: current.slug,
         subdomain: current.subdomain,
@@ -509,7 +525,7 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
       return;
     }
     await statusAfterWrite.refresh(subdomain);
-  }, [mutateSchools, school, showToggleError, statusAfterWrite]);
+  }, [readCurrentSchool, school, showToggleError, statusAfterWrite]);
 
   const schoolDelete = useSoftDeletable<SchoolSummary>({
     softDeleteFn: operatorProvisioningService.softDeleteSchool,
@@ -894,16 +910,7 @@ function OperatorSchoolDetailPageContent({ params }: PageProps) {
             isOpen={childQuotaOpen}
             onClose={() => setChildQuotaOpen(false)}
             school={school}
-            loadCurrentSchool={async () => {
-              const fresh = await mutateSchools(undefined, {
-                throwOnError: true,
-              });
-              const current = fresh?.find((item) => item.id === school.id);
-              if (!current) {
-                throw new Error("school not found after refresh");
-              }
-              return current;
-            }}
+            loadCurrentSchool={() => readCurrentSchool(school.id)}
             onUpdated={refreshSchoolDetail}
           />
 

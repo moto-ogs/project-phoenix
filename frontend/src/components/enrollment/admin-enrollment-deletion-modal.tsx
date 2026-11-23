@@ -11,6 +11,7 @@ import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { Input } from "~/components/ui/input";
 import NavigationLink from "~/components/ui/navigation-link";
 import { useApiFormError } from "~/contexts/ToastContext";
+import { ApiError } from "~/lib/api-error";
 import {
   type AdminEnrollmentDeletionImpact,
   deleteAdminChild,
@@ -18,9 +19,9 @@ import {
   getAdminChildDeleteImpact,
   getAdminRequestDeleteImpact,
 } from "~/lib/enrollment-admin-api";
-import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useReadDraftLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
-import { useFreshSWR } from "~/lib/swr";
+import { useReadDraft } from "~/lib/swr/read-draft";
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 
 const logger = createLogger({ component: "AdminEnrollmentDeletionModal" });
@@ -67,26 +68,37 @@ export function AdminEnrollmentDeletionModal({
   // „Wiederholen“ löscht mit dem aktuellen Grund, nicht dem vom Fehler.
   const latestDeleteRef = useRef<() => Promise<void>>(async () => undefined);
 
-  // Confirmed against this opening's own preview, never an earlier one.
-  const impactRead = useFreshSWR(
-    isOpen
+  // The deletion confirms the preview on screen (ADR 0311): the dialog holds
+  // the preview it opened with, also over a later read, and sends its
+  // fingerprint; the server refuses it when the impact changed meanwhile.
+  const preview = useReadDraft<
+    AdminEnrollmentDeletionImpact,
+    AdminEnrollmentDeletionImpact,
+    string,
+    AdminEnrollmentDeletionImpact
+  >({
+    key: isOpen
       ? childId
         ? enrollmentKeys.childDeleteImpact(requestId, childId)
         : enrollmentKeys.requestDeleteImpact(requestId)
       : null,
-    () =>
+    fetcher: () =>
       childId
         ? getAdminChildDeleteImpact(requestId, childId)
         : getAdminRequestDeleteImpact(requestId),
-  );
-  // A failed load of this opening shows the error, not an earlier preview.
-  const impact = impactRead.error ? undefined : impactRead.data;
-  const previewError = useSwrResourceLoadError(
-    [{ data: impact, error: impactRead.error }],
+    token: (read) => read.fingerprint,
+    follow: false,
+    // A deletion leaves no preview to read again.
+    answer: (_deleted, shown) => shown,
+  });
+  // A failed read shows its error, also over a preview from before.
+  const previewError = useReadDraftLoadError(
+    preview,
     "die Vorschau der Löschung",
-    () => impactRead.mutate(),
   );
-  const loadingPreview = isOpen && !impact && !previewError.failure;
+  const impact = preview.status === "loadFailed" ? undefined : preview.base;
+  const loadingPreview =
+    isOpen && !preview.canSubmit && preview.status !== "loadFailed";
 
   useEffect(() => {
     if (isOpen) return;
@@ -115,24 +127,35 @@ export function AdminEnrollmentDeletionModal({
     if (!impact || confirmDisabled) return;
     setDeleting(true);
     errors.clear();
-    try {
-      const result = childId
-        ? await deleteAdminChild(requestId, childId, trimmedReason)
-        : await deleteAdminRequest(requestId, trimmedReason);
-      onDeleted(result);
-    } catch (deleteError) {
-      logger.error("enrollment_delete_failed", {
-        error: deleteError instanceof Error ? deleteError.message : "unknown",
-        request_id: requestId,
-        child_id: childId,
-      });
-      await errors.show(deleteError, {
-        object: "die Löschung",
-        retry: () => void latestDeleteRef.current(),
-      });
-    } finally {
-      setDeleting(false);
+    const result = await preview.submit((fingerprint) =>
+      childId
+        ? deleteAdminChild(requestId, childId, trimmedReason, fingerprint)
+        : deleteAdminRequest(requestId, trimmedReason, fingerprint),
+    );
+    setDeleting(false);
+    if (result.ok) {
+      onDeleted(result.saved);
+      return;
     }
+    const deleteError = result.error;
+    const failure = {
+      error: deleteError instanceof Error ? deleteError.message : "unknown",
+      request_id: requestId,
+      child_id: childId,
+    };
+    // A refusal is expected; only server failures are errors.
+    const expected =
+      deleteError instanceof ApiError && (deleteError.status ?? 500) < 500;
+    if (expected) logger.warn("enrollment_delete_failed", failure);
+    else logger.error("enrollment_delete_failed", failure);
+    // The impact changed since the preview: the dialog shows the new one
+    // and the error says so; deleting again confirms the new preview. A
+    // failed read of it is named, with a retry of the read alone.
+    await errors.show(deleteError, {
+      object: result.refused ? "die Vorschau der Löschung" : "die Löschung",
+      retry: () => void latestDeleteRef.current(),
+      reload: result.reload,
+    });
   };
   useLayoutEffect(() => {
     latestDeleteRef.current = handleDelete;
@@ -155,8 +178,9 @@ export function AdminEnrollmentDeletionModal({
             {targetLabel}
           </span>
           <span className="mt-1 block">
-            Diese Löschung lässt sich nicht rückgängig machen. Die Vorschau wird
-            beim Löschen in derselben Transaktion erneut geprüft.
+            Diese Löschung lässt sich nicht rückgängig machen. Hat sich seit der
+            Vorschau etwas geändert, löscht moto nichts und zeigt dir die neue
+            Vorschau.
           </span>
         </>
       }
@@ -168,7 +192,9 @@ export function AdminEnrollmentDeletionModal({
             </p>
           ) : null}
 
-          <LoadErrorAlert error={previewError.error} />
+          {/* After a refused deletion the dialog's error already names the
+              failed read, with its retry. */}
+          {errors.error ? null : <LoadErrorAlert error={previewError} />}
 
           {impact ? (
             <>

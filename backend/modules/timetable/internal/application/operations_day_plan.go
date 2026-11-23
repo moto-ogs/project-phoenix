@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	activityContract "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 )
@@ -77,7 +78,7 @@ func (s *operations) loadDayPlanMetadata(ctx context.Context, candidates []plann
 			return dayPlanMetadata{}, err
 		}
 		for _, track := range tracks {
-			meta.tracks[track.ID] = track
+			meta.tracks[track.ID.Int64()] = track
 		}
 	}
 	if len(educationGroupIDs) > 0 {
@@ -153,7 +154,7 @@ func dayPlanStaffNames(candidate plannedNowCandidate, staffByID map[int64]*timet
 			continue
 		}
 		names = append(names, timetable.OperationStaffName{
-			StaffID:      row.StaffID,
+			StaffID:      ident.ID(row.StaffID),
 			DisplayName:  staff.Person.FullName(),
 			IsSubstitute: row.IsSubstitute,
 		})

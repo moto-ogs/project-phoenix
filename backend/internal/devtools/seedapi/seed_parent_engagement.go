@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type seedParentEngagementStep struct{}
@@ -54,9 +56,7 @@ func (seedParentEngagementStep) Run(ctx context.Context, rt *Runtime) error {
 // the first day still open for changes; the portal opens that day's week.
 func seedParentMealParticipation(rt *Runtime, auth AuthRef, studentID int64) error {
 	basePath := fmt.Sprintf("/parent/me/children/%d/meal-participation", studentID)
-	raw, err := rt.Client.PutWithAuth(auth, basePath, map[string]any{
-		"weekdays": []int{1, 2, 3, 4},
-	})
+	raw, err := parentMealSchedule(rt, auth, studentID, []int{1, 2, 3, 4})
 	if err != nil {
 		return fmt.Errorf("seed regular meal participation: %w", err)
 	}
@@ -313,14 +313,14 @@ func seedStudentGroupID(rt *Runtime, studentID int64) (int64, error) {
 	}
 	var resp struct {
 		Data struct {
-			GroupID any `json:"group_id"`
+			GroupID ident.ID `json:"group_id"`
 		} `json:"data"`
 	}
 	if err := parseJSON(raw, &resp); err != nil {
 		return 0, fmt.Errorf("parse student %d: %w", studentID, err)
 	}
-	groupID, err := parseSeedID(resp.Data.GroupID)
-	if err != nil || groupID == 0 {
+	groupID := int64(resp.Data.GroupID)
+	if groupID == 0 {
 		return 0, fmt.Errorf("student %d has no group", studentID)
 	}
 	return groupID, nil
@@ -336,8 +336,14 @@ func seedParentPhotoConsentHistory(rt *Runtime, auth AuthRef, studentID int64) e
 	if _, err := rt.Client.PutWithAuth(rt.TenantAuth, photosSetting, map[string]any{"value": true}); err != nil {
 		return fmt.Errorf("switch child photos on for the photo consent: %w", err)
 	}
+	version, err := readDataVersion(func(path string) ([]byte, error) {
+		return rt.Client.GetWithAuth(rt.TenantAuth, path)
+	}, fmt.Sprintf("/api/students/%d", studentID))
+	if err != nil {
+		return err
+	}
 	if _, err := rt.Client.PutWithAuth(rt.TenantAuth, fmt.Sprintf("/api/students/%d", studentID), map[string]any{
-		"photo_consent_given": true,
+		"photo_consent_given": true, "expected_version": version,
 	}); err != nil {
 		return fmt.Errorf("seed granted photo consent: %w", err)
 	}

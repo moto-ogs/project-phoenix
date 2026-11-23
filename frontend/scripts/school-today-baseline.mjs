@@ -30,7 +30,6 @@ export default {
   "src/lib/client-log-ingest.server.ts": [
     "api_timestamp: new Date().toISOString(),",
   ],
-  "src/lib/activity-helpers.ts": [": new Date(),", ": new Date(),"],
   "src/lib/hooks/use-reminders.ts": ["const now = new Date();"],
   "src/components/ui/calendar-shell.tsx": [
     "const thisYear = new Date().getFullYear();",
@@ -105,13 +104,6 @@ export default {
     "const closed = new Date(survey.closes_at) <= new Date();",
   ],
   "src/app/api/health/route.ts": ["timestamp: new Date().toISOString(),"],
-  "src/app/api/activities/route.ts": [
-    "created_at: new Date(),",
-    "updated_at: new Date(),",
-  ],
-  "src/app/api/activities/quick-create/route.ts": [
-    "created_at: new Date().toISOString(),",
-  ],
   "src/app/[tenant]/(protected)/time-tracking/page.tsx": [
     "const now = new Date();",
     "const now = new Date();",

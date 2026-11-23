@@ -1,10 +1,12 @@
+import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 import type { Translations } from "~/lib/enrollment-translations";
+import { translationsFromContract } from "~/lib/enrollment-form-schema-api";
 import { WEEKDAY_CODES, weekdayShortLabel } from "~/lib/weekdays";
 
 export interface EnrollmentChangeRequestDiffInput {
-  readonly baseSnapshot: Record<string, unknown>;
-  readonly proposedSnapshot: Record<string, unknown>;
-  readonly diff: Record<string, unknown>;
+  readonly baseSnapshot: object | null;
+  readonly proposedSnapshot: object | null;
+  readonly diff: object | null;
   readonly copy?: EnrollmentChangeRequestDiffCopy;
   /** Questions of the request's form version; without them rows show keys. */
   readonly formLabels?: EnrollmentFormLabels | null;
@@ -38,6 +40,32 @@ interface EnrollmentFormLabelLegalBlock {
 export interface EnrollmentFormLabels {
   readonly fields: EnrollmentFormLabelField[];
   readonly legal_blocks: EnrollmentFormLabelLegalBlock[];
+}
+
+/** The form labels of the contract, translations without null languages. */
+export function formLabelsFromContract(
+  labels: enrollmentContract.FormLabelsResponse,
+): EnrollmentFormLabels {
+  return {
+    fields: (labels.fields ?? []).map(
+      ({ options, translations, ...field }) => ({
+        ...field,
+        ...(options && {
+          options: options.map(({ translations: texts, ...option }) => ({
+            ...option,
+            translations: translationsFromContract(texts),
+          })),
+        }),
+        translations: translationsFromContract(translations),
+      }),
+    ),
+    legal_blocks: (labels.legal_blocks ?? []).map(
+      ({ translations, ...block }) => ({
+        ...block,
+        translations: translationsFromContract(translations),
+      }),
+    ),
+  };
 }
 
 interface EnrollmentChangeRequestDiffRow {
@@ -175,13 +203,16 @@ function formKeyLabels(
 const GUARDIAN_METADATA_KEYS = new Set(["id"]);
 
 export function buildEnrollmentChangeRequestDiffGroups({
-  baseSnapshot,
+  baseSnapshot: base,
   copy = DEFAULT_ENROLLMENT_CHANGE_REQUEST_DIFF_COPY,
-  proposedSnapshot,
-  diff,
+  proposedSnapshot: proposed,
+  diff: storedDiff,
   formLabels,
 }: EnrollmentChangeRequestDiffInput): EnrollmentChangeRequestDiffGroup[] {
   const labels = formKeyLabels(formLabels, copy);
+  const baseSnapshot: Record<string, unknown> = { ...base };
+  const proposedSnapshot: Record<string, unknown> = { ...proposed };
+  const diff: Record<string, unknown> = { ...storedDiff };
   return changedSnapshotKeys(baseSnapshot, proposedSnapshot, diff).flatMap(
     (key) => {
       const before = baseSnapshot[key];

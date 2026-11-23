@@ -37,9 +37,17 @@ func (d Document) Violations(route Route, answer Answer) []string {
 	for _, object := range d.Types {
 		c.types[object.Name] = object
 	}
+	if route.File {
+		return []string{"the route registers a file, not the envelope"}
+	}
 	body := bytes.TrimSpace(answer.Body)
 	if route.NoData && len(body) == 0 {
 		return nil
+	}
+	if route.Plain {
+		// The data is the whole body; a route file reads it.
+		c.value("body", *route.Response, body)
+		return c.found
 	}
 	var envelope map[string]json.RawMessage
 	if err := json.Unmarshal(body, &envelope); err != nil {
@@ -96,6 +104,9 @@ func (c *checker) pagination(raw json.RawMessage) {
 }
 
 func (c *checker) value(at string, s Schema, raw json.RawMessage) {
+	if s.LegacyJSON && json.Valid(raw) {
+		return
+	}
 	if string(raw) == "null" {
 		if !s.Nullable {
 			c.failf(at, "null where the contract names no null")
@@ -104,14 +115,7 @@ func (c *checker) value(at string, s Schema, raw json.RawMessage) {
 	}
 	switch s.Kind {
 	case KindArray:
-		var items []json.RawMessage
-		if err := json.Unmarshal(raw, &items); err != nil {
-			c.failf(at, "want an array, found %s", shown(raw))
-			return
-		}
-		for i, item := range items {
-			c.value(fmt.Sprintf("%s[%d]", at, i), *s.Elem, item)
-		}
+		c.array(at, *s.Elem, raw)
 	case KindMap:
 		var members map[string]json.RawMessage
 		if err := json.Unmarshal(raw, &members); err != nil {
@@ -129,6 +133,17 @@ func (c *checker) value(at string, s Schema, raw json.RawMessage) {
 		if reason := scalar(s.Kind, raw); reason != "" {
 			c.failf(at, "want %s, found %s", reason, shown(raw))
 		}
+	}
+}
+
+func (c *checker) array(at string, elem Schema, raw json.RawMessage) {
+	var items []json.RawMessage
+	if err := json.Unmarshal(raw, &items); err != nil {
+		c.failf(at, "want an array, found %s", shown(raw))
+		return
+	}
+	for i, item := range items {
+		c.value(fmt.Sprintf("%s[%d]", at, i), elem, item)
 	}
 }
 
@@ -160,10 +175,8 @@ func scalar(kind string, raw json.RawMessage) string {
 	want := map[string]string{
 		KindString: "a string", KindEnum: "a string", KindBool: "a boolean",
 		KindInt: "a safe integer", KindNumber: "a number",
-		KindID:       "an identifier as a decimal string",
-		KindLegacyID: "an identifier as a safe integer or a decimal string",
-		KindLaxID:    "an identifier as a safe integer or a decimal string",
-		KindDate:     "a day as YYYY-MM-DD", KindInstant: "an RFC 3339 instant", KindClock: "a time as HH:MM",
+		KindID:   "an identifier as a decimal string",
+		KindDate: "a day as YYYY-MM-DD", KindInstant: "an RFC 3339 instant", KindClock: "a time as HH:MM",
 	}[kind]
 	switch kind {
 	case KindString, KindEnum:
@@ -177,8 +190,6 @@ func scalar(kind string, raw json.RawMessage) string {
 		ok = !isString && json.Unmarshal(raw, &number) == nil
 	case KindID:
 		ok = isString && int64Text.MatchString(text)
-	case KindLegacyID, KindLaxID:
-		ok = isString && int64Text.MatchString(text) || safeInteger(raw)
 	case KindDate:
 		_, err := time.Parse(time.DateOnly, text)
 		ok = isString && err == nil

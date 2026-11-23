@@ -47,6 +47,8 @@ case "${1:-quality}" in
     quality_step migration-validation go run main.go migrate validate
     quality_step deadcode-regressions bash "$root/scripts/check-deadcode_test.sh"
     quality_step deadcode bash "$root/scripts/check-deadcode.sh"
+    # Sie-Anrede in German texts (ADR 0294); about a second over the whole tree.
+    quality_step du-form node "$root/scripts/check-du-form.mjs"
     ;;
   # Dependency scans run nightly, not per pull request (nightly.yml).
   dependencies)
@@ -55,8 +57,11 @@ case "${1:-quality}" in
     ;;
   lint)
     base=${2:?base revision is required}
-    changed=$(git diff --name-only "$(git merge-base HEAD "$base")" HEAD)
-    if printf '%s\n' "$changed" | grep -qE '^(backend/go\.(mod|sum)|backend/\.golangci.yml|scripts/(backend-affected-packages.*|backend-lint-packages.sh|check-backend-quality.sh))$'; then
+    # The working tree, as backend-affected-packages.sh reads it: check-changed
+    # lints uncommitted and untracked files too; the hook has a clean tree.
+    merge_base=$(git merge-base HEAD "$base")
+    changed=$(git -C "$root" diff --no-renames --name-only "$merge_base" && git -C "$root" ls-files --others --exclude-standard)
+    if grep -qE '^(backend/go\.(mod|sum)|backend/\.golangci.yml|scripts/(backend-affected-packages.*|backend-lint-packages.sh|check-backend-quality.sh))$' <<< "$changed"; then
       output=./...
     else
       output=$("$root/scripts/backend-affected-packages.sh" "$base")

@@ -12,6 +12,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -221,7 +222,7 @@ func TestBelegRetentionSuspensionHoldsTheDeletion(t *testing.T) {
 	assert.Equal(t, 1, invoices, "and keeps the invoice it would take along")
 
 	admin(func(adminCtx context.Context) error {
-		return retention.LiftSuspension(adminCtx, f.organization, hold.ID, 0)
+		return retention.LiftSuspension(adminCtx, f.organization, hold.ID.Int64(), 0)
 	})
 	today = calendar.NewDate(2035, time.January, 3)
 	admin(func(adminCtx context.Context) error { _, err := retention.ApplyBelegRetention(adminCtx); return err })
@@ -292,7 +293,7 @@ func TestPendingDebitGoesWithItsInvoice(t *testing.T) {
 	admin(func(adminCtx context.Context) error {
 		instruct(t, retention, adminCtx, f.organization)
 		_, err := retention.RecordSuspension(adminCtx, f.organization, 0, parentbilling.NewRetentionSuspension{
-			BelegType: parentbilling.BelegSEPADebit, BelegID: f.debit, Reason: "Rückfrage der Bank", Scope: "Lastschrift MB-1",
+			BelegType: parentbilling.BelegSEPADebit, BelegID: ident.ID(f.debit), Reason: "Rückfrage der Bank", Scope: "Lastschrift MB-1",
 			Responsible: "Kämmerei", ReviewOn: calendar.NewDate(2036, time.March, 1),
 		})
 		return err
@@ -305,4 +306,170 @@ func TestPendingDebitGoesWithItsInvoice(t *testing.T) {
 	assert.True(t, belegExists(t, db, "parent_billing.sepa_debits", f.debit), "the suspended submitted debit follows its own rule")
 	assert.True(t, belegExists(t, db, "parent_billing.care_invoices", f.careInvoice), "and keeps its invoice")
 	assert.True(t, belegExists(t, db, "parent_billing.sepa_mandates", f.mandate), "and its mandate")
+}
+
+// TestFamilyBillingOutlivesADeletedContractOfItsFamily (#7862): the
+// deviation of a family hangs on one contract. When the retention deletes
+// that contract while a sibling's contract of the family remains, the
+// deviation moves to the sibling's contract with its trail instead of going
+// with the cascade. A family whose last contract goes loses its row, as
+// before: the row lives no longer than the family's contracts.
+func TestFamilyBillingOutlivesADeletedContractOfItsFamily(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupIsolatedTestDB(t)
+	ctx := context.Background()
+	organization := testpkg.CreateTestOrganization(t, db, &testpkg.Organization{
+		Name: "Träger mit Geschwistern", Slug: fmt.Sprintf("geschwister-%d", testpkg.UniqueTestTenantID(t)),
+	}).ID
+	school := testpkg.CreateTestSchoolInOrganization(t, db, organization, "Geschwister OGS")
+	contract := func(status, email string, endsOn any) int64 {
+		t.Helper()
+		id := testpkg.CreateTestCareContract(t, db, organization, school, testpkg.UniqueTestTenantID(t), "versendet", calendar.NewDate(2026, time.August, 1))
+		_, err := db.ExecContext(ctx, `UPDATE care_contract.contracts SET concluded_at = '2026-08-01 10:00+02', conclusion_method = 'papier',
+			status = ?, ends_on = ?::date WHERE id = ?`, status, endsOn, id)
+		require.NoError(t, err)
+		_, err = db.ExecContext(ctx, `INSERT INTO care_contract.contract_parties (organization_id, contract_id, first_name, last_name, email)
+			VALUES (?, ?, 'Eva', 'Muster', ?)`, organization, id, email)
+		require.NoError(t, err)
+		return id
+	}
+	older := contract("gekuendigt", "familie.a@example.org", "2027-07-31")
+	ended := contract("gekuendigt", "Familie.A@example.org", "2027-07-31")
+	sibling := contract("aktiv", " familie.a@example.org ", nil)
+	alone := contract("gekuendigt", "familie.b@example.org", "2027-07-31")
+	holidayEnded := contract("gekuendigt", "familie.c@example.org", "2027-07-31")
+	holidaySibling := contract("aktiv", "familie.c@example.org", nil)
+	deviation := func(family string, contractID int64) int64 {
+		t.Helper()
+		var id int64
+		require.NoError(t, db.NewRaw(`INSERT INTO parent_billing.family_billing (organization_id, family_email, care_contract_id,
+				recipient_kind, payment_method, due_day) VALUES (?, ?, ?, 'applicant', 'direct_debit', 15) RETURNING id`,
+			organization, family, contractID).Scan(ctx, &id))
+		_, err := db.ExecContext(ctx, `INSERT INTO parent_billing.family_billing_events (organization_id, family_billing_id, care_contract_id, action)
+			VALUES (?, ?, ?, 'save')`, organization, id, contractID)
+		require.NoError(t, err)
+		return id
+	}
+	kept := deviation("familie.a@example.org", ended)
+	// An office save moved the deviation from the older contract before and
+	// left its earlier trail there.
+	_, err := db.ExecContext(ctx, `INSERT INTO parent_billing.family_billing_events (organization_id, family_billing_id, care_contract_id, action)
+		VALUES (?, ?, ?, 'read')`, organization, kept, older)
+	require.NoError(t, err)
+	lost := deviation("familie.b@example.org", alone)
+	// A row the holiday care used kept only its number when its contract
+	// went (#6692); with a sibling's contract it keeps its whole deviation.
+	holiday := deviation("familie.c@example.org", holidayEnded)
+	_, err = db.ExecContext(ctx, `UPDATE parent_billing.family_billing SET last_used_on = '2026-08-01' WHERE id = ?`, holiday)
+	require.NoError(t, err)
+
+	today := calendar.NewDate(2026, time.November, 9)
+	retention := NewBelegRetention(func() time.Time { return today.BerlinMidnight() })
+	admin := func(fn func(context.Context) error) {
+		t.Helper()
+		require.NoError(t, tenant.WithinAdmin(tenant.WithUnitOfWork(ctx, testpkg.TenantRuntime(t, db)), fn))
+	}
+	admin(func(adminCtx context.Context) error {
+		instruct(t, retention, adminCtx, organization)
+		return nil
+	})
+	today = calendar.NewDate(2034, time.January, 1)
+	admin(func(adminCtx context.Context) error {
+		_, err := retention.ApplyBelegRetention(adminCtx)
+		return err
+	})
+
+	var contracts []int64
+	require.NoError(t, db.NewRaw(`SELECT id FROM care_contract.contracts WHERE organization_id = ? ORDER BY id`, organization).Scan(ctx, &contracts))
+	require.Equal(t, []int64{sibling, holidaySibling}, contracts, "the contracts ended in 2027 go after six years")
+
+	var row struct {
+		Contract      *int64 `bun:"care_contract_id"`
+		PaymentMethod string `bun:"payment_method"`
+		DueDay        *int   `bun:"due_day"`
+		Events        int    `bun:"events"`
+	}
+	require.NoError(t, db.NewRaw(`SELECT care_contract_id, COALESCE(payment_method, '') AS payment_method, due_day,
+			(SELECT count(*) FROM parent_billing.family_billing_events e WHERE e.family_billing_id = f.id AND e.care_contract_id = f.care_contract_id) AS events
+		FROM parent_billing.family_billing f WHERE f.id = ?`, kept).Scan(ctx, &row), "the deviation of a family with a remaining contract stays")
+	require.NotNil(t, row.Contract)
+	assert.Equal(t, sibling, *row.Contract, "it hangs on the sibling's contract now")
+	assert.Equal(t, "direct_debit", row.PaymentMethod, "the payment method survives")
+	require.NotNil(t, row.DueDay)
+	assert.Equal(t, 15, *row.DueDay)
+	assert.Equal(t, 2, row.Events, "its whole trail moves with it, also the entry an earlier save left on the older contract")
+
+	var used struct {
+		Contract      *int64 `bun:"care_contract_id"`
+		PaymentMethod string `bun:"payment_method"`
+	}
+	require.NoError(t, db.NewRaw(`SELECT care_contract_id, COALESCE(payment_method, '') AS payment_method
+		FROM parent_billing.family_billing WHERE id = ?`, holiday).Scan(ctx, &used))
+	require.NotNil(t, used.Contract)
+	assert.Equal(t, holidaySibling, *used.Contract, "the used row moves to the sibling's contract too")
+	assert.Equal(t, "direct_debit", used.PaymentMethod, "and keeps its payment method instead of being detached")
+
+	var gone bool
+	require.NoError(t, db.NewRaw(`SELECT NOT EXISTS (SELECT 1 FROM parent_billing.family_billing WHERE id = ?)`, lost).Scan(ctx, &gone))
+	assert.True(t, gone, "a family whose last contract goes loses its deviation with it")
+}
+
+// TestFamilyBillingMovesToAContractTheDeletionSkips (#7862): under a
+// Weisung counting from the conclusion, a terminated contract without its
+// last day is due but not deleted. It is the family's remaining contract,
+// so the deviation moves onto it instead of going with its own contract.
+func TestFamilyBillingMovesToAContractTheDeletionSkips(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupIsolatedTestDB(t)
+	ctx := context.Background()
+	organization := testpkg.CreateTestOrganization(t, db, &testpkg.Organization{
+		Name: "Träger mit offener Kündigung", Slug: fmt.Sprintf("offen-%d", testpkg.UniqueTestTenantID(t)),
+	}).ID
+	school := testpkg.CreateTestSchoolInOrganization(t, db, organization, "Offen OGS")
+	contract := func(status string, endsOn any) int64 {
+		t.Helper()
+		id := testpkg.CreateTestCareContract(t, db, organization, school, testpkg.UniqueTestTenantID(t), "versendet", calendar.NewDate(2026, time.August, 1))
+		_, err := db.ExecContext(ctx, `UPDATE care_contract.contracts SET concluded_at = '2026-08-01 10:00+02', conclusion_method = 'papier',
+			status = ?, ends_on = ?::date WHERE id = ?`, status, endsOn, id)
+		require.NoError(t, err)
+		_, err = db.ExecContext(ctx, `INSERT INTO care_contract.contract_parties (organization_id, contract_id, first_name, last_name, email)
+			VALUES (?, ?, 'Eva', 'Muster', 'familie.d@example.org')`, organization, id)
+		require.NoError(t, err)
+		return id
+	}
+	held := contract("gekuendigt", "2027-07-31")
+	open := contract("gekuendigt", nil)
+	var deviation int64
+	require.NoError(t, db.NewRaw(`INSERT INTO parent_billing.family_billing (organization_id, family_email, care_contract_id,
+			recipient_kind, payment_method) VALUES (?, 'familie.d@example.org', ?, 'applicant', 'direct_debit') RETURNING id`,
+		organization, held).Scan(ctx, &deviation))
+
+	today := calendar.NewDate(2026, time.November, 9)
+	retention := NewBelegRetention(func() time.Time { return today.BerlinMidnight() })
+	admin := func(fn func(context.Context) error) {
+		t.Helper()
+		require.NoError(t, tenant.WithinAdmin(tenant.WithUnitOfWork(ctx, testpkg.TenantRuntime(t, db)), fn))
+	}
+	admin(func(adminCtx context.Context) error {
+		_, err := retention.RecordInstruction(adminCtx, organization, 0, parentbilling.NewRetentionInstruction{
+			BelegType: parentbilling.BelegCareContract, TriggerEvent: parentbilling.TriggerContractConcluded, Period: 6,
+			Basis: parentbilling.BasisBusinessLetter, LegalBasis: "§ 257 HGB", InstructedBy: "Kämmerei des Trägers",
+			InstructedOn: calendar.NewDate(2026, time.November, 9), InstructionReference: "AVV-Nachtrag 2026-11",
+		})
+		return err
+	})
+	today = calendar.NewDate(2033, time.January, 1)
+	admin(func(adminCtx context.Context) error {
+		_, err := retention.ApplyBelegRetention(adminCtx)
+		return err
+	})
+
+	var contracts []int64
+	require.NoError(t, db.NewRaw(`SELECT id FROM care_contract.contracts WHERE organization_id = ? ORDER BY id`, organization).Scan(ctx, &contracts))
+	require.Equal(t, []int64{open}, contracts, "the contract with its last day goes, the open termination stays")
+	var on *int64
+	require.NoError(t, db.NewRaw(`SELECT care_contract_id FROM parent_billing.family_billing WHERE id = ?`, deviation).Scan(ctx, &on),
+		"the deviation stays with the family's remaining contract")
+	require.NotNil(t, on)
+	assert.Equal(t, open, *on)
 }

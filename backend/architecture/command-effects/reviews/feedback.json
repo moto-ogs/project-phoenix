@@ -21,31 +21,11 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/feedback/internal/application.Service.EraseEntry",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/feedback.Capability.EraseEntry",
-      "reason": "Read-only target already reviewed as query: feedback reaches tenant.TenantFromContext (tenant-runtime) through *modules/feedback/internal/application.Service.EraseEntry. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "feedback",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/feedback/internal/application.Service.FindEntries",
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/feedback.Capability.FindEntries",
       "reason": "Read-only target already reviewed as query: feedback reaches tenant.TenantFromContext (tenant-runtime) through *modules/feedback/internal/application.Service.FindEntries. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "feedback",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/feedback/internal/application.Service.LookupEntry",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/feedback.Capability.LookupEntry",
-      "reason": "Read-only target already reviewed as query: feedback reaches tenant.TenantFromContext (tenant-runtime) through *modules/feedback/internal/application.Service.LookupEntry. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
       "source_owner": "feedback",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"
@@ -61,11 +41,11 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/feedback/internal/application.Service.SubmitBatch",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/feedback/internal/application.FeedbackHistory.RecordFeedbackHistory",
       "classification": "query",
       "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/feedback.Capability.SubmitBatch",
-      "reason": "Read-only target already reviewed as query: feedback reaches tenant.TenantFromContext (tenant-runtime) through *modules/feedback/internal/application.Service.SubmitBatch. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "port": "github.com/moto-ogs/project-phoenix/modules/feedback.FeedbackHistory.RecordFeedbackHistory",
+      "reason": "Read-only target already reviewed as query: feedback reaches tenant.TenantFromContext (tenant-runtime) through *modules/feedback/internal/application.FeedbackHistory.RecordFeedbackHistory, the demo seed's batch writer that took over SubmitBatch's batch insert (ADR 0298). No persistent, lock or scope effect.",
       "source_owner": "feedback",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"
@@ -141,31 +121,11 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/feedback/internal/adapters/postgres.Store.Delete",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/feedback/internal/ports.Store.Delete",
-      "reason": "Read-only newly exposed target: feedback reaches tenant.TenantFromContext (tenant-runtime) through modules/feedback/internal/adapters/postgres.Store.Delete. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "feedback",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/feedback/internal/adapters/postgres.Store.DeleteOlderThan",
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/feedback/internal/ports.Store.DeleteOlderThan",
       "reason": "Read-only newly exposed target: feedback reaches tenant.TenantFromContext (tenant-runtime) through modules/feedback/internal/adapters/postgres.Store.DeleteOlderThan. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
-      "source_owner": "feedback",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/feedback/internal/adapters/postgres.Store.Get",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/feedback/internal/ports.Store.Get",
-      "reason": "Read-only newly exposed target: feedback reaches tenant.TenantFromContext (tenant-runtime) through modules/feedback/internal/adapters/postgres.Store.Get. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098).",
       "source_owner": "feedback",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"
@@ -179,6 +139,26 @@
       "source_owner": "feedback",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.RoomHistoryStopReads.MoodCaptureStopped",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/feedback/internal/ports.StudentStops.MoodCaptureStopped",
+      "reason": "Reviewed read: feedback asks Student Presence whether a child's mood capture is stopped (#3844) through modules/studentpresence.RoomHistoryStopReads.MoodCaptureStopped; no owned-row mutation or locking read at this terminal.",
+      "source_owner": "feedback",
+      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.RoomHistoryStopOwner.MoodCaptureStopped",
+      "target_owner": "student-presence"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.RoomHistoryStopReads.MoodCaptureStopped",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/feedback/internal/ports.StudentStops.MoodCaptureStopped",
+      "reason": "Reviewed read: feedback asks Student Presence whether a child's mood capture is stopped (#3844) through modules/studentpresence.RoomHistoryStopReads.MoodCaptureStopped; no owned-row mutation or locking read at this terminal.",
+      "source_owner": "feedback",
+      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.RoomHistoryStopReads.MoodCaptureStopped",
+      "target_owner": "student-presence"
     }
   ]
 }

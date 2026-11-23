@@ -59,6 +59,10 @@ import { devicesConcept } from "~/lib/concepts/devices";
 import { foldForSearch } from "~/lib/search-fold";
 import { TenantPageStats } from "~/components/ui/tenant-page";
 
+/** Info-Knopf am Titel: wofür die Seite da ist und was man zuerst tut. */
+const DEVICES_INFO =
+  "Hier siehst du alle Geräte deiner OGS und ob sie online sind. Ein geliefertes Tablet steht schon in der Liste, du musst es nicht anlegen. Wähle ein Gerät, um es zu sperren oder zu entfernen.";
+
 const logger = createLogger({ component: "DatabaseDevicesPage" });
 
 type DevicesGroupingMode = "none" | "type" | "room";
@@ -84,7 +88,11 @@ function parseDevicesGrouping(value: string | null): DevicesGroupingMode {
 
 export default function DevicesPage() {
   return (
-    <ModuleRouteGuard module="nfc_anwesenheit" title="Geräte">
+    <ModuleRouteGuard
+      module="nfc_anwesenheit"
+      title="Geräte"
+      info={DEVICES_INFO}
+    >
       <Suspense fallback={null}>
         <DevicesPageContent />
       </Suspense>
@@ -155,7 +163,7 @@ function DevicesPageContent() {
     error: devicesError,
     mutate: mutateDevices,
   } = useSWRAuth(tenantAdminKeys.devices(), async () => {
-    const data = await service.getList({ page: 1, pageSize: 500 });
+    const data = await service.getList();
     return Array.isArray(data.data) ? data.data : [];
   });
 
@@ -338,7 +346,8 @@ function DevicesPageContent() {
       const payload = devicesConfig.form.transformBeforeSubmit
         ? devicesConfig.form.transformBeforeSubmit(data)
         : data;
-      const updatedDevice = await service.update(selectedDevice.id, payload);
+      const updatedDevice =
+        (await service.update(selectedDevice.id, payload)) ?? selectedDevice;
       // Editing closes the api_key flash — the snapshot would otherwise
       // overlay the freshly-edited list values on the next render.
       setCreatedDevice(null);
@@ -516,6 +525,7 @@ function DevicesPageContent() {
       className="flex w-full flex-col"
       intro={{
         title: "Geräte",
+        info: DEVICES_INFO,
         description: (
           <>
             {statusLine}

@@ -8,6 +8,8 @@ interface FeatureOffPageProps {
   readonly title: string;
   /** Was hier stünde, wenn die Funktion an wäre. Ein Satz. */
   readonly description: string;
+  /** Erklärung der Seite, auch wenn die Funktion nicht eingeschaltet ist. */
+  readonly info?: TenantPageProps["info"];
   /**
    * Wer sie einschalten kann. Für Funktionen, die nur moto schaltet
    * (NFC, Anwesenheitsmodus), ist das ausdrücklich NICHT die Leitung.
@@ -35,6 +37,7 @@ interface FeatureOffPageProps {
 export function FeatureOffPage({
   title,
   description,
+  info,
   whoCanEnable = "Wende dich an moto, wenn du diese Funktion nutzen möchtest.",
   back,
   backHref,
@@ -46,6 +49,7 @@ export function FeatureOffPage({
   return (
     <TenantPage
       title={title}
+      info={info}
       back={back}
       backHref={backHref}
       backLabel={backLabel}

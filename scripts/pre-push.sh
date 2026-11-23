@@ -61,6 +61,7 @@ context=false
 env_sync=false
 hooks=false
 error_codes=false
+du_form_tests=false
 # Keep the diff and child-tool scratch files off a quota-limited system /tmp.
 # Git metadata also works in linked worktrees without dirtying the checkout.
 workspace_parent=$(git rev-parse --path-format=absolute --git-path pre-push-cache)
@@ -80,12 +81,16 @@ while IFS= read -r -d '' file; do
   esac
   case "$file" in
     *.md) context=true ;;
+    backend/api/contract/contract.json) backend=true; frontend=true ;;
     backend/*|scripts/backend-*|scripts/check-backend-quality.sh|scripts/check-deadcode*) backend=true ;;
     frontend/*|scripts/check-frontend-quality.sh) frontend=true ;;
     environments/*|.env.example) env_sync=true ;;
     scripts/check-quality.sh|scripts/quality-timing.sh|devbox.*|package.json) backend=true; frontend=true; hooks=true ;;
     scripts/pre-push*|scripts/check-secrets*|.gitleaks*|scripts/run-go-toolchain.sh|scripts/dev-native*|scripts/go-package-workers.sh|scripts/total-memory-gb.sh|lefthook.yml|.github/*|scripts/test-*) hooks=true ;;
     .agents/*|.claude/*|.codex/*|scripts/check-agent-context*) context=true ;;
+  esac
+  case "$file" in
+    scripts/check-du-form*) du_form_tests=true ;;
   esac
   # Same paths as the error-codes filter in main.yml; the check takes < 1 s.
   case "$file" in
@@ -135,6 +140,11 @@ fi
 if [[ "$error_codes" == true ]]; then
   quality_step error-code-tests node --test scripts/generate-error-codes.test.mjs
   quality_step error-codes node scripts/generate-error-codes.mjs --check
+fi
+# Sie-Anrede in German texts (ADR 0294); scans the whole tree in about a second.
+quality_step du-form node scripts/check-du-form.mjs
+if [[ "$du_form_tests" == true ]]; then
+  quality_step du-form-tests node --test scripts/check-du-form.test.mjs
 fi
 if [[ "$env_sync" == true ]]; then
   quality_step env-sync bash scripts/env-check.sh

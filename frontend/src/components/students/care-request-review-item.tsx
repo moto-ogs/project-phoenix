@@ -19,7 +19,7 @@ import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { SectionLabel } from "~/components/ui/section-label";
 import { StatusBadge } from "~/components/ui/status-badge";
-import type { RequestDiffEntry } from "~/lib/messaging-status";
+import type * as studentsContract from "~/lib/contract/students.generated";
 import {
   fetchPickupExtensions,
   type PickupExtension,
@@ -40,7 +40,7 @@ const logger = createLogger({ component: "CareRequestReviewItem" });
  * hat eine Tages-Anfrage für eine dauerhafte Änderung gehalten (#2480).
  */
 export function careSummary(
-  diff: readonly RequestDiffEntry[],
+  diff: readonly studentsContract.CareRequestDiffResponse[],
   requestKind: StaffCareRequest["request_kind"],
 ): string {
   const days = new Set<string>();
@@ -83,7 +83,9 @@ export function careTypeLabel(
  * oder beides. Ohne lesbare Einträge bleibt es bei der Abholzeit, die jede
  * Anfrage vor #3945 trug.
  */
-function pickupChangeLegs(diff: readonly RequestDiffEntry[]): {
+function pickupChangeLegs(
+  diff: readonly studentsContract.CareRequestDiffResponse[],
+): {
   time: boolean;
   mode: boolean;
   person: boolean;
@@ -135,6 +137,7 @@ export function CareRequestReviewItem({
   onDecided,
   grouped = false,
   expectedVersion,
+  onStale,
   decisionDisabledReason,
   approveReasonRequired = false,
 }: Readonly<{
@@ -142,12 +145,19 @@ export function CareRequestReviewItem({
   onDecided: (notice: string) => void;
   grouped?: boolean;
   /** Fassung, die entschieden werden soll — verhindert Überschreiben (#2267). */
-  expectedVersion?: string;
+  expectedVersion: string;
+  /** Die Anfrage ist seit dem Lesen anders gespeichert: die Liste neu laden. */
+  onStale: () => Promise<unknown>;
   /** Warum hier gerade nicht einzeln entschieden werden kann (#2267). */
   decisionDisabledReason?: string;
   approveReasonRequired?: boolean;
 }>) {
-  const decision = useCareRequestDecision(row, onDecided, expectedVersion);
+  const decision = useCareRequestDecision(
+    row,
+    onDecided,
+    expectedVersion,
+    onStale,
+  );
   return (
     <RequestReviewCard
       type="care_schedule"
@@ -197,7 +207,8 @@ async function openExtensionsAfterApproval(
 function useCareRequestDecision(
   row: StaffCareRequest,
   onDecided: (notice: string) => void,
-  expectedVersion?: string,
+  expectedVersion: string,
+  onStale: () => Promise<unknown>,
 ) {
   const { show: showApiError, showMessage: showLocalError } =
     useApiErrorDisplay();
@@ -224,14 +235,14 @@ function useCareRequestDecision(
         approve,
         trimmed || undefined,
         row.impact_token,
-        // Nur mitschicken, wenn die Liste eine Fassung kennt.
-        ...(expectedVersion ? ([expectedVersion] as const) : ([] as const)),
+        expectedVersion,
       );
     } catch (err) {
       logDecisionError(err, row.id);
       await showApiError(err, {
         object: "die Anfrage",
         retry: () => void decideRef.current(approve),
+        reload: onStale,
       });
       setBusy(false);
       return;
@@ -393,7 +404,7 @@ function RequestDiffRows({
  */
 export function ParentsSawBadge({
   entry,
-}: Readonly<{ entry: RequestDiffEntry }>) {
+}: Readonly<{ entry: studentsContract.CareRequestDiffResponse }>) {
   if (!entry.submitted_old) return null;
   return (
     <StatusBadge

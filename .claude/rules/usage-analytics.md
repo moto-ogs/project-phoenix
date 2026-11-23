@@ -137,12 +137,13 @@ Every POST, PUT, PATCH, or DELETE route of the portal routers (`/api`,
    write counts for the school in its route (`catererEvent("…")`, route with
    `{schoolId}`). An idempotent write whose response reports whether it
    changed something counts only a real change (`createdEvent`,
-   `endedEvent`); one that does not report it (an order confirmation)
+   `endedEvent`, `leadingFlagEvent`); one that does not report it (an order confirmation)
    counts every 2xx, so its dashboards count days, not events.
 2. Name a new event in snake_case after what succeeded (`group_created`).
    Properties are fixed: `school_id`, `surface`, `role`, `deployment`,
-   `$session_id`, and `export_type` for exports. Never a path ID or a body
-   value.
+   `$session_id`, `export_type` for exports, and `step` for a skipped
+   checklist step (`skippedStepEvent`: only a key the response lists as
+   skipped). Never a path ID or a body value.
 3. Run `go test ./api/ -run TestFullProductionRouterGolden` from `backend/`.
    The route guard (`core action classification`) goes red for an
    unclassified writing route and for a table entry whose route is gone.

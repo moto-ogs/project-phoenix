@@ -6,6 +6,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/modules/timetable/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -17,7 +18,10 @@ const bulkCancelReason = "Termine im Zeitraum abgesagt"
 // from today on (#3594); series that include closing days only on request.
 // Each occurrence runs through Cancel (change log entry, SSE) and then the
 // DeleteCancelled path (slot exception, so no later materialization or
-// re-plan recreates it). Guardians are not notified. opts.DryRun only counts.
+// re-plan recreates it). Guardians are not notified. opts.DryRun only counts;
+// a real run removes only the selection its confirmed dry run named
+// (opts.ExpectedFingerprint, ADR 0311) and refuses a different one with
+// readstate.ErrChanged.
 // Everything runs in one tenant transaction behind the recurrence gate and
 // the ascending day locks ReplanWeek takes, so a concurrent move into the
 // range or a materialization run waits.
@@ -52,6 +56,9 @@ func (s *InstanceLifecycleService) BulkCancelPlanned(ctx context.Context, from, 
 	ids, result := timetable.SelectBulkCancel(candidates, from.String(), to.String(), today, opts)
 	if opts.DryRun {
 		return &result, nil
+	}
+	if err := readstate.Check(opts.ExpectedFingerprint, result.Fingerprint); err != nil {
+		return nil, err
 	}
 	if err := s.cancelAndDeleteSelected(ctx, bulkCancelledBlocks(candidates, ids), actorAccountID); err != nil {
 		return nil, err

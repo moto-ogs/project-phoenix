@@ -80,6 +80,10 @@ const DRAFT: CareContractSummary = {
   sentAt: null,
   concluded: null,
   endsOn: null,
+  studentId: null,
+  imported: false,
+  followsBookings: false,
+  requestChildId: null,
 };
 
 const SENT: CareContractSummary = {
@@ -121,6 +125,7 @@ const CANDIDATE: ContractCandidate = {
   acceptanceIssue: null,
   renewal: false,
   mailBlock: null,
+  importedContractId: null,
 };
 
 function renderPage() {
@@ -171,6 +176,30 @@ describe("TraegerVertraegePage", () => {
     expect(screen.getAllByText("Versendet")[0]).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /Verträge erstellen \(3\)/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows a child an imported contract covers, held back, and does not count it as waiting", async () => {
+    api.fetchContractCandidates.mockResolvedValue([
+      CANDIDATE,
+      {
+        ...CANDIDATE,
+        requestChildId: "45",
+        childFirstName: "Noah",
+        templateIssue: "imported_contract",
+        importedContractId: "79",
+      },
+    ]);
+    renderPage();
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: /Verträge erstellen \(1\)/ }),
+    );
+    expect(
+      await screen.findByText("Hat schon einen importierten Vertrag"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Der importierte Vertrag Nr\. 79 gilt für dieses Kind/),
     ).toBeInTheDocument();
   });
 
@@ -240,6 +269,28 @@ describe("TraegerVertraegePage", () => {
     );
   });
 
+  it("marks only imported contracts without a child record", async () => {
+    api.fetchCareContracts.mockResolvedValue({
+      contracts: [
+        { ...SENT, id: "8", childFirstName: "Ohne", imported: true },
+        {
+          ...SENT,
+          id: "9",
+          childFirstName: "Verknüpft",
+          imported: true,
+          studentId: "12",
+        },
+        DRAFT,
+      ],
+      counts: { versendet: 2, entwurf: 1 },
+      hasMore: false,
+    });
+    renderPage();
+    await screen.findAllByText("Verknüpft Muster");
+    // One marker: the linked import and the application's draft have none.
+    expect(screen.getAllByText("Ohne Kinderakte")).toHaveLength(1);
+  });
+
   it("keeps one visible head action; import and download sit in the page menu", async () => {
     renderPage();
     await screen.findAllByText("Lina Muster");
@@ -257,6 +308,12 @@ describe("TraegerVertraegePage", () => {
     expect(
       screen.getByRole("menuitem", { name: /Verträge importieren/ }),
     ).toHaveAttribute("href", "/vertraege/import");
+    expect(
+      screen.getByRole("menuitem", { name: /Module neu zuordnen/ }),
+    ).toHaveAttribute("href", "/vertraege/module-zuordnen");
+    expect(
+      screen.getByRole("menuitem", { name: /Mit Kinderakten verknüpfen/ }),
+    ).toHaveAttribute("href", "/vertraege/verknuepfen");
     expect(screen.getByRole("menuitem", { name: /CSV/ })).toBeInTheDocument();
   });
 

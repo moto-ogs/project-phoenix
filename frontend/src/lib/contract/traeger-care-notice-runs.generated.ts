@@ -4,8 +4,9 @@ import {
   arr,
   bool,
   calendarDate,
+  fileAnswer,
   instant,
-  int64StringOrNumber,
+  int64String,
   nullable,
   object,
   optional,
@@ -16,10 +17,14 @@ import {
 } from "./runtime";
 import {
   BillingLetterSeriesSchema,
+  CareBilledChildSchema,
   CareDuplicateSchema,
+  CareJoinedChildSchema,
   CareRecipientSchema,
   CareUnpricedSchema,
+  type CareBilledChild,
   type CareDuplicate,
+  type CareJoinedChild,
   type CareRecipient,
   type CareReleaseRequest,
   type CareUnpriced,
@@ -43,12 +48,12 @@ export interface CareNoticeRun {
 }
 
 export const CareNoticeRunSchema: z.ZodType<CareNoticeRun, unknown> = object<CareNoticeRun>({
-  id: int64StringOrNumber,
+  id: int64String,
   year: safeInt,
   period_from: nullable(calendarDate),
   period_until: nullable(calendarDate),
   status: str,
-  school_ids: nullable(arr(int64StringOrNumber)),
+  school_ids: nullable(arr(int64String)),
   notice_date: nullable(calendarDate),
   created_at: instant,
   released_at: nullable(instant),
@@ -92,7 +97,7 @@ export const CareNoticeLineSchema: z.ZodType<CareNoticeLine, unknown> = object<C
   kind: str,
   label: str,
   detail: str,
-  care_offering_id: optional(int64StringOrNumber),
+  care_offering_id: optional(int64String),
   period_from: nullable(calendarDate),
   period_until: nullable(calendarDate),
   months: safeInt,
@@ -131,7 +136,7 @@ export interface CareNoticeReference {
 }
 
 export const CareNoticeReferenceSchema: z.ZodType<CareNoticeReference, unknown> = object<CareNoticeReference>({
-  id: int64StringOrNumber,
+  id: int64String,
   number: str,
   issued_on: nullable(calendarDate),
 });
@@ -163,12 +168,12 @@ export interface CareNotice {
 }
 
 export const CareNoticeSchema: z.ZodType<CareNotice, unknown> = object<CareNotice>({
-  id: int64StringOrNumber,
+  id: int64String,
   number: str,
   issued_on: nullable(calendarDate),
   kind: str,
-  contract_id: int64StringOrNumber,
-  school_id: int64StringOrNumber,
+  contract_id: int64String,
+  school_id: int64String,
   school_name: str,
   child_first_name: str,
   child_last_name: str,
@@ -207,6 +212,8 @@ export interface CareNoticeRunDetail {
   billed: number;
   unpriced: CareUnpriced[] | null;
   duplicates: CareDuplicate[] | null;
+  joined_children: CareJoinedChild[] | null;
+  billed_children: CareBilledChild[] | null;
   preview_count: number;
   preview_cents: number;
   preview_delta_cents: number;
@@ -217,12 +224,12 @@ export interface CareNoticeRunDetail {
 }
 
 export const CareNoticeRunDetailSchema: z.ZodType<CareNoticeRunDetail, unknown> = object<CareNoticeRunDetail>({
-  id: int64StringOrNumber,
+  id: int64String,
   year: safeInt,
   period_from: nullable(calendarDate),
   period_until: nullable(calendarDate),
   status: str,
-  school_ids: nullable(arr(int64StringOrNumber)),
+  school_ids: nullable(arr(int64String)),
   notice_date: nullable(calendarDate),
   created_at: instant,
   released_at: nullable(instant),
@@ -235,6 +242,8 @@ export const CareNoticeRunDetailSchema: z.ZodType<CareNoticeRunDetail, unknown> 
   billed: safeInt,
   unpriced: nullable(arr(CareUnpricedSchema)),
   duplicates: nullable(arr(CareDuplicateSchema)),
+  joined_children: nullable(arr(CareJoinedChildSchema)),
+  billed_children: nullable(arr(CareBilledChildSchema)),
   preview_count: safeInt,
   preview_cents: safeInt,
   preview_delta_cents: safeInt,
@@ -273,8 +282,8 @@ export interface CareNoticeMailing {
 }
 
 export const CareNoticeMailingSchema: z.ZodType<CareNoticeMailing, unknown> = object<CareNoticeMailing>({
-  notice_id: int64StringOrNumber,
-  contract_id: int64StringOrNumber,
+  notice_id: int64String,
+  contract_id: int64String,
   kind: str,
   number: str,
   amends_number: optional(str),
@@ -377,7 +386,7 @@ export const CareNoticeLetterSchema: z.ZodType<CareNoticeLetter, unknown> = obje
 export interface CareNoticeRunRequest {
   year?: number;
   from_month?: string | null;
-  school_ids?: number[] | null;
+  school_ids?: string[] | null;
   notice_date?: string | null;
 }
 
@@ -388,11 +397,29 @@ export const routes = {
     portals: ["org"],
     response: success(CareNoticeRunListSchema),
   },
+  "GET /traeger/care-notice-runs/export": {
+    method: "GET",
+    pattern: "/traeger/care-notice-runs/export",
+    portals: ["org"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
+    response: fileAnswer,
+  },
   "GET /traeger/care-notice-runs/{id}": {
     method: "GET",
     pattern: "/traeger/care-notice-runs/{id}",
     portals: ["org"],
     response: success(CareNoticeRunDetailSchema),
+  },
+  "GET /traeger/care-notice-runs/{id}/export": {
+    method: "GET",
+    pattern: "/traeger/care-notice-runs/{id}/export",
+    portals: ["org"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
+    response: fileAnswer,
   },
   "GET /traeger/care-notice-runs/{id}/letters": {
     method: "GET",
@@ -400,11 +427,35 @@ export const routes = {
     portals: ["org"],
     response: success(CareNoticeLettersSchema),
   },
+  "GET /traeger/care-notice-runs/{id}/letters/export": {
+    method: "GET",
+    pattern: "/traeger/care-notice-runs/{id}/letters/export",
+    portals: ["org"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
+    response: fileAnswer,
+  },
+  "GET /traeger/care-notice-runs/{id}/letters/print": {
+    method: "GET",
+    pattern: "/traeger/care-notice-runs/{id}/letters/print",
+    portals: ["org"],
+    query: {
+      "only": { kind: "string", values: ["without_email"] },
+    },
+    response: fileAnswer,
+  },
   "GET /traeger/care-notice-runs/{id}/notices/{contractID}/letter": {
     method: "GET",
     pattern: "/traeger/care-notice-runs/{id}/notices/{contractID}/letter",
     portals: ["org"],
     response: success(CareNoticeLetterSchema),
+  },
+  "GET /traeger/care-notice-runs/{id}/notices/{contractID}/pdf": {
+    method: "GET",
+    pattern: "/traeger/care-notice-runs/{id}/notices/{contractID}/pdf",
+    portals: ["org"],
+    response: fileAnswer,
   },
   "POST /traeger/care-notice-runs/": {
     method: "POST",

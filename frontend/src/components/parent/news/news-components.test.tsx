@@ -9,12 +9,12 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { NewsCard, NewsDetailModal, isOpenPoll } from "./news-components";
-import type { ParentAnnouncement } from "~/lib/parent-api";
 import * as parentApi from "~/lib/parent-api";
 import { catalogText } from "~/test/error-catalog-text";
 import * as dateHelpers from "~/lib/date-helpers";
 import { BELOW_SM } from "~/lib/hooks/use-media-query";
 import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 vi.unmock("swr");
 
@@ -26,8 +26,11 @@ const render: typeof baseRender = ((ui: React.ReactElement) =>
 // flags that an answer is due. The detail view is where it is given, one row
 // per child, saved explicitly, and refused once the poll is closed.
 
-function poll(overrides: Partial<ParentAnnouncement> = {}): ParentAnnouncement {
+function poll(
+  overrides: Partial<parentMeContract.AnnouncementResponse> = {},
+): parentMeContract.AnnouncementResponse {
   return {
+    delivery_mode: "informational",
     id: "42",
     title: "Kommt Ihr Kind zur Murmelparty?",
     body: "Am Freitag ab 15 Uhr.",
@@ -55,8 +58,8 @@ function poll(overrides: Partial<ParentAnnouncement> = {}): ParentAnnouncement {
 }
 
 function announcement(
-  overrides: Partial<ParentAnnouncement> = {},
-): ParentAnnouncement {
+  overrides: Partial<parentMeContract.AnnouncementResponse> = {},
+): parentMeContract.AnnouncementResponse {
   return {
     ...poll({
       title: "Infos zum Sommerfest",
@@ -70,8 +73,8 @@ function announcement(
 }
 
 function declaration(
-  overrides: Partial<ParentAnnouncement> = {},
-): ParentAnnouncement {
+  overrides: Partial<parentMeContract.AnnouncementResponse> = {},
+): parentMeContract.AnnouncementResponse {
   return announcement({
     title: "Einverständnis für den Ausflug",
     delivery_mode: "declaration",
@@ -90,6 +93,7 @@ function declaration(
       },
       children: [
         {
+          earlier_consent: null,
           student_id: "10",
           first_name: "Felix",
           last_name: "Schneider",
@@ -353,6 +357,38 @@ describe("Umfrage answering in the detail view", () => {
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     expect(respond).toHaveBeenCalledTimes(2);
+  });
+
+  it("reads a changed announcement again and offers no retry", async () => {
+    vi.spyOn(parentApi, "respondToAnnouncement").mockRejectedValue(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    const onStale = vi.fn();
+
+    render(
+      <NewsDetailModal
+        item={poll()}
+        onClose={vi.fn()}
+        onUpdated={vi.fn()}
+        onStale={onStale}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("radio", { name: "Ja" }));
+    fireEvent.click(screen.getByRole("button", { name: "Antwort speichern" }));
+
+    // The backend refuses a stale answer with the read-state code (ADR 0311):
+    // the stored announcement is read again, and the same answer would be
+    // refused again, so the error offers no retry.
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", "die Antwort"),
+      ),
+    ).toBeInTheDocument();
+    expect(onStale).toHaveBeenCalled();
+    expect(
+      screen.queryByRole("button", { name: "Wiederholen" }),
+    ).not.toBeInTheDocument();
   });
 
   it("reconciles earlier child responses when a later save fails", async () => {

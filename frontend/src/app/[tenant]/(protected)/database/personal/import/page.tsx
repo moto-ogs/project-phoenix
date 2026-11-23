@@ -40,53 +40,23 @@ import {
 } from "~/contexts/ToastContext";
 import {
   downloadImportTemplate,
-  importResponseError,
-  postImportFile,
+  importFailureBody,
 } from "~/lib/import-request";
+import { bffJson } from "~/lib/bff-fetch";
 import { hasPermission } from "~/lib/auth-utils";
 import { createCrudService } from "~/lib/database/service-factory";
 import { rolesConfig } from "~/components/database/configs/roles.config";
 import { getRoleDisplayName } from "~/lib/auth-helpers";
 import { useSWRAuth } from "~/lib/swr";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
+import type * as importContract from "~/lib/contract/import.generated";
 import { createLogger } from "~/lib/logger";
 
+/** Info-Knopf am Seitentitel: wofür die Seite da ist und was man zuerst tut. */
+const PERSONAL_IMPORT_INFO =
+  "Hier übernimmst du viele Personen auf einmal aus einer Datei. Lade zuerst die Vorlage herunter und fülle sie aus.";
+
 const logger = createLogger({ component: "StaffImportPage" });
-
-// Types matching the backend API response
-interface ImportError {
-  field: string;
-  message: string;
-  code: string;
-  severity: "error" | "warning" | "info";
-}
-
-interface ImportRowResult {
-  RowNumber: number;
-  Data: {
-    first_name: string;
-    last_name: string;
-    email?: string;
-    role_name: string;
-    position?: string;
-  };
-  Errors: ImportError[];
-  Timestamp: string;
-}
-
-interface ImportResult {
-  StartedAt: string;
-  CompletedAt: string;
-  TotalRows: number;
-  CreatedCount: number;
-  UpdatedCount: number;
-  SkippedCount: number;
-  ErrorCount: number;
-  WarningCount: number;
-  Errors: ImportRowResult[];
-  BulkActions: string[];
-  DryRun: boolean;
-}
 
 type RowStatus = "new" | "existing" | "error" | "warning";
 
@@ -95,14 +65,17 @@ interface DisplayStaff {
   status: RowStatus;
   errors: string[];
   notes: string[];
-  first_name: string;
-  last_name: string;
+  firstName: string;
+  lastName: string;
   email: string;
-  role_name: string;
+  roleName: string;
   position: string;
 }
 
-function rowStatusFor(errors: ImportError[]): RowStatus {
+function rowStatusFor(
+  findings: readonly importContract.ValidationError[] | null,
+): RowStatus {
+  const errors = findings ?? [];
   const isExisting = errors.some(
     (e) => e.code === "already_exists" || e.code === "will_update",
   );
@@ -112,21 +85,21 @@ function rowStatusFor(errors: ImportError[]): RowStatus {
   return "new";
 }
 
-function toDisplayStaff(row: ImportRowResult): DisplayStaff {
+function toDisplayStaff(row: importContract.StaffImportError): DisplayStaff {
   return {
-    row: row.RowNumber,
-    status: rowStatusFor(row.Errors),
-    errors: row.Errors.filter((e) => e.severity !== "info").map(
-      (e) => e.message,
-    ),
-    notes: row.Errors.filter((e) => e.severity === "info").map(
-      (e) => e.message,
-    ),
-    first_name: row.Data.first_name,
-    last_name: row.Data.last_name,
-    email: row.Data.email ?? "",
-    role_name: row.Data.role_name,
-    position: row.Data.position ?? "",
+    row: row.row_number,
+    status: rowStatusFor(row.errors),
+    errors: (row.errors ?? [])
+      .filter((e) => e.severity !== "info")
+      .map((e) => e.message),
+    notes: (row.errors ?? [])
+      .filter((e) => e.severity === "info")
+      .map((e) => e.message),
+    firstName: row.data.first_name,
+    lastName: row.data.last_name,
+    email: row.data.email ?? "",
+    roleName: row.data.role_name,
+    position: row.data.position ?? "",
   };
 }
 
@@ -138,7 +111,8 @@ export default function StaffImportPage() {
   const [isImporting, setIsImporting] = useState(false);
   const [importComplete, setImportComplete] = useState(false);
   const [importInterrupted, setImportInterrupted] = useState(false);
-  const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [importResult, setImportResult] =
+    useState<importContract.StaffImportResult | null>(null);
   // Fehler der Datei und des Imports stehen im Kasten über der Vorlage,
   // mit Wiederholen (#2517). Ein angehaltener Stapel steht dort auch, mit
   // oder ohne gespeicherte Zeilen: der Import als Ganzes ist gescheitert.
@@ -172,7 +146,7 @@ export default function StaffImportPage() {
   const rolesService = useMemo(() => createCrudService(rolesConfig), []);
   // Without the list the hint is missing; the import still works.
   const { data: roles } = useSWRAuth(tenantAdminKeys.roles(), async () => {
-    const response = await rolesService.getList({ page: 1, pageSize: 500 });
+    const response = await rolesService.getList();
     return Array.isArray(response.data) ? response.data : [];
   });
   const availableRoles = useMemo(
@@ -198,8 +172,8 @@ export default function StaffImportPage() {
   const handleDownloadTemplate = async () => {
     try {
       await downloadImportTemplate(
-        `/api/import/teachers/template?format=${templateFormat}`,
-        session,
+        "GET /api/import/teachers/template",
+        templateFormat,
         templateFormat === "xlsx"
           ? "mitarbeiter-import-vorlage.xlsx"
           : "mitarbeiter-import-vorlage.csv",
@@ -233,34 +207,27 @@ export default function StaffImportPage() {
         formData.append("file", file);
         formData.append("mode", importMode);
 
-        const response = await postImportFile(
-          "/api/import/teachers/preview",
-          session,
-          formData,
+        const importData: importContract.StaffImportResult = await bffJson(
+          "tenant",
+          "POST /api/import/teachers/preview",
+          { body: formData, errorMessage: "Staff import preview failed" },
         );
-        const result = response.body;
-
-        if (!response.ok) {
-          throw importResponseError(response, "Staff import preview failed");
-        }
-
-        const importData = result.data as ImportResult;
-        const displayData: DisplayStaff[] = (importData.Errors ?? []).map(
+        const displayData: DisplayStaff[] = (importData.errors ?? []).map(
           toDisplayStaff,
         );
 
         // Rows without issues are not in the Errors array — summarise them.
-        const newCount = importData.TotalRows - displayData.length;
+        const newCount = importData.total_rows - displayData.length;
         if (newCount > 0 && displayData.length === 0) {
           displayData.push({
             row: 0,
             status: "new",
             errors: [],
             notes: [],
-            first_name: `${importData.TotalRows} Mitarbeitende`,
-            last_name: "bereit zum Import",
+            firstName: `${importData.total_rows} Mitarbeitende`,
+            lastName: "bereit zum Import",
             email: "",
-            role_name: "",
+            roleName: "",
             position: "",
           });
         }
@@ -282,7 +249,7 @@ export default function StaffImportPage() {
         if (generation === previewGeneration.current) setIsLoading(false);
       }
     },
-    [session, mode, importErrors],
+    [mode, importErrors],
   );
 
   // A new mode changes what the preview means, so the uploaded file is
@@ -307,44 +274,45 @@ export default function StaffImportPage() {
       formData.append("file", uploadedFile);
       formData.append("mode", mode);
 
-      const response = await postImportFile(
-        "/api/import/teachers/import",
-        session,
-        formData,
-      );
-      const result = response.body;
-
-      if (!response.ok) {
-        const interrupted = readImportBatchFailure<ImportRowResult>(result);
+      let importData: importContract.StaffImportResult;
+      try {
+        importData = await bffJson(
+          "tenant",
+          "POST /api/import/teachers/import",
+          { body: formData, errorMessage: "Staff import failed" },
+        );
+      } catch (error) {
+        // A stopped batch carries the rows already saved in its error body.
+        const result = importFailureBody(error);
+        const interrupted =
+          readImportBatchFailure<importContract.StaffImportError>(result);
         if (interrupted) {
-          setImportResult(interrupted as ImportResult);
+          setImportResult(interrupted as importContract.StaffImportResult);
           setImportInterrupted(true);
-          setPreviewData((interrupted.Errors ?? []).map(toDisplayStaff));
+          setPreviewData((interrupted.errors ?? []).map(toDisplayStaff));
           setBatchNotice(importBatchFailureMessage(interrupted));
           logger.error("staff_import_batch_failed", {
-            created: interrupted.CreatedCount,
-            updated: interrupted.UpdatedCount,
-            errors: interrupted.ErrorCount,
+            created: interrupted.created_count,
+            updated: interrupted.updated_count,
+            errors: interrupted.error_count,
           });
           return;
         }
-        throw importResponseError(response, "Staff import failed");
+        throw error;
       }
-
-      const importData = result.data as ImportResult;
       setImportResult(importData);
       setImportInterrupted(false);
 
-      if (importData.ErrorCount > 0) {
+      if (importData.error_count > 0) {
         // Partial success: keep preview visible so the user sees which rows failed.
-        setPreviewData(importData.Errors.map(toDisplayStaff));
+        setPreviewData((importData.errors ?? []).map(toDisplayStaff));
         toast.warning(
-          `Der Import ist fertig: ${importData.CreatedCount} angelegt, ${importData.UpdatedCount} aktualisiert, ${importData.ErrorCount} übersprungen.`,
+          `Der Import ist fertig: ${importData.created_count} angelegt, ${importData.updated_count} aktualisiert, ${importData.error_count} übersprungen.`,
         );
       } else {
         setImportComplete(true);
         toast.success(
-          `Der Import ist fertig: ${importData.CreatedCount} angelegt, ${importData.UpdatedCount} aktualisiert.`,
+          `Der Import ist fertig: ${importData.created_count} angelegt, ${importData.updated_count} aktualisiert.`,
         );
         resetForm();
       }
@@ -384,17 +352,18 @@ export default function StaffImportPage() {
     }
   };
 
-  const alreadyExists = countAlreadyExistsRows(importResult?.Errors);
+  const alreadyExists = countAlreadyExistsRows(importResult?.errors);
   const stats = {
-    total: importResult?.TotalRows ?? 0,
-    new: importResult?.CreatedCount ?? 0,
-    existing: (importResult?.UpdatedCount ?? 0) + alreadyExists,
-    errors: (importResult?.ErrorCount ?? 0) - alreadyExists,
+    total: importResult?.total_rows ?? 0,
+    new: importResult?.created_count ?? 0,
+    existing: (importResult?.updated_count ?? 0) + alreadyExists,
+    errors: (importResult?.error_count ?? 0) - alreadyExists,
   };
   const importable =
     mode === "update"
-      ? (importResult?.UpdatedCount ?? 0)
-      : stats.new + (mode === "upsert" ? (importResult?.UpdatedCount ?? 0) : 0);
+      ? (importResult?.updated_count ?? 0)
+      : stats.new +
+        (mode === "upsert" ? (importResult?.updated_count ?? 0) : 0);
   const importLabel = importInterrupted
     ? "Erneut versuchen"
     : mode === "create"
@@ -430,6 +399,7 @@ export default function StaffImportPage() {
     return (
       <TenantPage
         title="Personal importieren"
+        info={PERSONAL_IMPORT_INFO}
         stats={statusLine}
         back
         backHref="/database/personal"
@@ -445,6 +415,7 @@ export default function StaffImportPage() {
   return (
     <TenantPage
       title="Personal importieren"
+      info={PERSONAL_IMPORT_INFO}
       stats={statusLine}
       back
       backHref="/database/personal"
@@ -578,9 +549,9 @@ export default function StaffImportPage() {
                       status: staff.status,
                       errors: staff.errors,
                       notes: staff.notes,
-                      first_name: staff.first_name,
-                      last_name: staff.last_name,
-                      meta: [staff.email, staff.role_name, staff.position],
+                      firstName: staff.firstName,
+                      lastName: staff.lastName,
+                      meta: [staff.email, staff.roleName, staff.position],
                     }}
                     index={idx}
                   />

@@ -123,8 +123,8 @@ func buildArrivalPickupTimes(schools []traegerview.TraegerSchool, counts []traeg
 		Schools: make([]traegerview.SchoolArrivalPickupTimes, 0, len(schools)),
 	}
 	for _, school := range schools {
-		entry := traegerview.SchoolArrivalPickupTimes{TraegerSchool: school, ArrivalPickupHeatmap: index.heatmap(school.ID, true)}
-		if first, ok := index.firstDay[school.ID]; ok {
+		entry := traegerview.SchoolArrivalPickupTimes{TraegerSchool: school, ArrivalPickupHeatmap: index.heatmap(school.ID.Int64(), true)}
+		if first, ok := index.firstDay[school.ID.Int64()]; ok {
 			entry.FirstDay = &first
 		}
 		addHeatmap(result.All, entry.ArrivalPickupHeatmap)

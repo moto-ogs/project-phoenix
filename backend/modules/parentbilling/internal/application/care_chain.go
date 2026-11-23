@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The rule chain of the monthly care contribution (#4685, ADR 0164): income
@@ -44,8 +45,9 @@ type careChainInput struct {
 	// reduces; nil collects nothing.
 	uncounted map[string][]int64
 	// unbilled are the contracts in force in the month without a draft in
-	// the chain (a missing price, a child billed twice): they bill nothing
-	// yet but still place their child at its school.
+	// the chain (a missing price, a child billed twice, a month another
+	// contract of the child bills): they bill nothing here but still place
+	// their child at its school.
 	unbilled []careContractPlace
 }
 
@@ -59,6 +61,7 @@ type careContractPlace struct {
 // every reduction and the total of each draft.
 func applyCareChain(entries []*careChainEntry, in careChainInput) {
 	rules := careRulesInForce(in.rules, in.month)
+	shareBirthDates(entries)
 	for _, entry := range entries {
 		entry.initialize()
 	}
@@ -77,6 +80,24 @@ func applyCareChain(entries []*careChainEntry, in careChainInput) {
 	for _, entry := range entries {
 		entry.finish()
 		entry.applyCostShares(in)
+	}
+}
+
+// shareBirthDates gives every entry of a child the birth date one of its
+// entries knows, before a rule picks the entries at its schools: a draft
+// without one ranks by the date of an issued invoice, also at a school the
+// rule does not count (#7863).
+func shareBirthDates(entries []*careChainEntry) {
+	known := map[string]*calendar.Date{}
+	for _, entry := range entries {
+		if _, seen := known[entry.child]; !seen && entry.birthDate != nil {
+			known[entry.child] = entry.birthDate
+		}
+	}
+	for _, entry := range entries {
+		if entry.birthDate == nil {
+			entry.birthDate = known[entry.child]
+		}
 	}
 }
 
@@ -107,7 +128,7 @@ func rulesOfKind(rules []*parentbilling.ContributionRule, kind string) []*parent
 
 func ruleByID(rules []*parentbilling.ContributionRule, id *int64) *parentbilling.ContributionRule {
 	for _, rule := range rules {
-		if id != nil && rule.ID == *id {
+		if id != nil && rule.ID == ident.ID(*id) {
 			return rule
 		}
 	}
@@ -123,7 +144,7 @@ func careEvidenceInMonth(evidences []parentbilling.CareEvidence, contractID int6
 	var found *parentbilling.CareEvidence
 	for i := range evidences {
 		evidence := &evidences[i]
-		if evidence.ContractID != contractID || evidence.Kind != kind || evidence.ValidFrom.After(end) ||
+		if evidence.ContractID != ident.ID(contractID) || evidence.Kind != kind || evidence.ValidFrom.After(end) ||
 			(evidence.ValidUntil != nil && evidence.ValidUntil.Before(month)) {
 			continue
 		}
@@ -135,20 +156,20 @@ func careEvidenceInMonth(evidences []parentbilling.CareEvidence, contractID int6
 }
 
 func appliesAt(schoolIDs []int64, entry *careChainEntry) bool {
-	return slices.Contains(schoolIDs, entry.invoice.SchoolID)
+	return slices.Contains(schoolIDs, entry.invoice.SchoolID.Int64())
 }
 
 // inScope reports whether a rule applies to a module: a rule without
 // modules applies to all.
 func inScope(rule *parentbilling.ContributionRule, offeringID int64) bool {
-	return len(rule.CareOfferingIDs) == 0 || slices.Contains(rule.CareOfferingIDs, offeringID)
+	return len(rule.CareOfferingIDs) == 0 || slices.Contains(rule.CareOfferingIDs, ident.ID(offeringID))
 }
 
 // scoped is what is left of the positions the rule applies to.
 func (e *careChainEntry) scoped(rule *parentbilling.ContributionRule) int64 {
 	var sum int64
 	for i, position := range e.invoice.Positions {
-		if inScope(rule, position.CareOfferingID) {
+		if inScope(rule, position.CareOfferingID.Int64()) {
 			sum += e.remaining[i]
 		}
 	}
@@ -160,7 +181,7 @@ func (e *careChainEntry) scoped(rule *parentbilling.ContributionRule) int64 {
 func (e *careChainEntry) base(rule *parentbilling.ContributionRule) int64 {
 	var sum int64
 	for _, position := range e.invoice.Positions {
-		if inScope(rule, position.CareOfferingID) {
+		if inScope(rule, position.CareOfferingID.Int64()) {
 			sum += position.AmountCents
 		}
 	}
@@ -193,7 +214,7 @@ func (e *careChainEntry) reduce(rule *parentbilling.ContributionRule, discount i
 	indices := []int{}
 	numerators := []int64{}
 	for i, position := range e.invoice.Positions {
-		if inScope(rule, position.CareOfferingID) && e.remaining[i] > 0 {
+		if inScope(rule, position.CareOfferingID.Int64()) && e.remaining[i] > 0 {
 			indices = append(indices, i)
 			numerators = append(numerators, e.remaining[i]*discount)
 		}
@@ -223,7 +244,7 @@ func (e *careChainEntry) reduceBy(rule *parentbilling.ContributionRule, parts []
 	e.invoice.Reductions = append(e.invoice.Reductions, parentbilling.CareReduction{
 		Kind: rule.Kind, RuleID: rule.ID, Name: rule.Name, ChildRank: rank, FamilyChildren: children,
 		DiscountBasisPoints: rule.DiscountBasisPoints, DiscountCents: rule.DiscountCents, PriceCents: rule.PriceCents,
-		CapCents: rule.CapCents, TariffSiblingPrice: rule.TariffSiblingPrice,
+		CapCents: rule.CapCents, TariffSiblingPrice: rule.TariffSiblingPrice, SiblingAllChildren: rule.SiblingAllChildren,
 		CareOfferingIDs: slices.Clone(rule.CareOfferingIDs), AmountCents: -discount,
 	})
 }
@@ -235,7 +256,7 @@ func (e *careChainEntry) reduceBy(rule *parentbilling.ContributionRule, parts []
 func (e *careChainEntry) reduceToSiblingPrices(rule *parentbilling.ContributionRule, rank, children *int) {
 	parts := make([]int64, len(e.invoice.Positions))
 	for i, position := range e.invoice.Positions {
-		if inScope(rule, position.CareOfferingID) {
+		if inScope(rule, position.CareOfferingID.Int64()) {
 			parts[i] = max(e.remaining[i]-position.SiblingCents, 0)
 		}
 	}
@@ -249,13 +270,19 @@ func (e *careChainEntry) reduceToSiblingPrices(rule *parentbilling.ContributionR
 // recipient's address. An invoice without an address is a family of its
 // own. #5918 adds the children the family states.
 func familyOf(entry *careChainEntry) string {
-	if email := parentbilling.FamilyKey(entry.invoice.FamilyEmail); email != "" {
+	return invoiceFamily(*entry.invoice)
+}
+
+// invoiceFamily is the family an invoice counts under: its family, else
+// the mail address of its recipient, else its contract.
+func invoiceFamily(invoice parentbilling.CareInvoice) string {
+	if email := parentbilling.FamilyKey(invoice.FamilyEmail); email != "" {
 		return email
 	}
-	if email := strings.ToLower(strings.TrimSpace(entry.invoice.Recipient.Email)); email != "" {
+	if email := strings.ToLower(strings.TrimSpace(invoice.Recipient.Email)); email != "" {
 		return email
 	}
-	return parentbilling.ContractFamilyKey("", entry.invoice.ContractID)
+	return parentbilling.ContractFamilyKey("", invoice.ContractID.Int64())
 }
 
 // rankedCareChild is a child of a family as a rule counts it.
@@ -316,17 +343,24 @@ func compareCareChildren(a, b *rankedCareChild) int {
 }
 
 // countingSchools are the schools whose children a sibling rule counts:
-// the chosen ones, else the rule's own schools.
+// its own schools and the ones chosen with them (#7863, ADR 0305 Nachtrag).
+// A rule reduces at its own schools, so a child there is never left out of
+// its own family, by rank or by the family's size.
 func countingSchools(rule *parentbilling.ContributionRule) []int64 {
-	if len(rule.CountSchoolIDs) > 0 {
-		return rule.CountSchoolIDs
+	counting := ident.Int64s(rule.SchoolIDs)
+	for _, school := range ident.Int64s(rule.CountSchoolIDs) {
+		if !slices.Contains(counting, school) {
+			counting = append(counting, school)
+		}
 	}
-	return rule.SchoolIDs
+	return counting
 }
 
 // applyCareSiblingRule ranks the children of every family that have a
 // position of the rule at a counting school and reduces the invoices at the
-// rule's schools of every child from the rule's rank on.
+// rule's schools of every child the rule chooses: the children from the
+// rule's rank on, or every child of a family of at least that size
+// (SiblingAllChildren, #7765).
 func applyCareSiblingRule(entries []*careChainEntry, rule *parentbilling.ContributionRule, in careChainInput) {
 	counting := countingSchools(rule)
 	counted := []*careChainEntry{}
@@ -341,7 +375,7 @@ func applyCareSiblingRule(entries []*careChainEntry, rule *parentbilling.Contrib
 		for index, child := range children {
 			rank := ahead + index + 1
 			switch {
-			case rank < *rule.SiblingFromChild:
+			case !siblingRuleReduces(rule, rank, total):
 			case rule.TariffSiblingPrice:
 				reduceToSiblingPricesChild(child, rule, rank, total)
 			default:
@@ -349,6 +383,18 @@ func applyCareSiblingRule(entries []*careChainEntry, rule *parentbilling.Contrib
 			}
 		}
 	}
+}
+
+// siblingRuleReduces tells whether a sibling rule reduces a child: by its
+// rank among the family's counted children or, for a rule of the family's
+// size, by that size alone, so the first child too (#7765). The size is the
+// one the rank reads: the confirmed number of a rule that counts the family,
+// else the children with a contract.
+func siblingRuleReduces(rule *parentbilling.ContributionRule, rank, familyChildren int) bool {
+	if rule.SiblingAllChildren {
+		return familyChildren >= *rule.SiblingFromChild
+	}
+	return rank >= *rule.SiblingFromChild
 }
 
 // familySize is how many children a sibling rule counts in a family and how
@@ -364,7 +410,9 @@ func applyCareSiblingRule(entries []*careChainEntry, rule *parentbilling.Contrib
 // 08.11.2026, each location apart). Such children come off the stated
 // number. Siblings without a contract belong to no school and count at every
 // one. A rule that counts both schools counts them all; the choice is the
-// rule's setting „Geschwister zählen an“.
+// rule's setting „Geschwister zählen auch an“. A child with a contract at a
+// counting school on any day of the month counts there, also in a month
+// another contract of the child bills (#7863).
 //
 // A child with a contract at a counting school is a child with a contract
 // even when the rule's part of it costs nothing (a price of 0 €, a full
@@ -374,8 +422,16 @@ func applyCareSiblingRule(entries []*careChainEntry, rule *parentbilling.Contrib
 // with a contract are siblings without one.
 func familySize(children []*rankedCareChild, rule *parentbilling.ContributionRule, in careChainInput, others contractChildren) (total, ahead int) {
 	withContract := len(children)
+	// Without a confirmed number the rank reads the ranked children alone:
+	// a child with a contract but no base price ranks behind them anyway.
+	// The size of the family is no rank: such a child is one of the
+	// family's children with a contract and counts (#7765).
+	contracts := withContract
+	if rule.SiblingAllChildren {
+		contracts += others.unranked
+	}
 	if !rule.CountsFamilyChildren {
-		return withContract, 0
+		return contracts, 0
 	}
 	family := familyOf(children[0].entries[0])
 	stated, ok := in.familyChildren[family]
@@ -383,7 +439,7 @@ func familySize(children []*rankedCareChild, rule *parentbilling.ContributionRul
 		if in.uncounted != nil {
 			noteUncounted(in.uncounted, family, children, rule)
 		}
-		return withContract, 0
+		return contracts, 0
 	}
 	total = max(stated-others.elsewhere, withContract+others.unranked)
 	return total, total - withContract - others.unranked
@@ -407,7 +463,7 @@ func otherContractChildren(entries []*careChainEntry, unbilled []careContractPla
 	}
 	places := slices.Clone(unbilled)
 	for _, entry := range entries {
-		places = append(places, careContractPlace{family: familyOf(entry), child: entry.child, school: entry.invoice.SchoolID})
+		places = append(places, careContractPlace{family: familyOf(entry), child: entry.child, school: entry.invoice.SchoolID.Int64()})
 	}
 	inside := map[familyChild]bool{}
 	outside := map[familyChild]bool{}
@@ -437,16 +493,14 @@ func otherContractChildren(entries []*careChainEntry, unbilled []careContractPla
 	return others
 }
 
-// noteUncounted records the schools of the family's invoices the rule
-// reduces: only there the missing number changes an amount.
+// noteUncounted records schools with drafts that could use a confirmed
+// number. A previously issued invoice still ranks, but cannot change.
 func noteUncounted(uncounted map[string][]int64, family string, children []*rankedCareChild, rule *parentbilling.ContributionRule) {
-	if _, ok := uncounted[family]; !ok {
-		uncounted[family] = []int64{}
-	}
+	schools := ident.Int64s(rule.SchoolIDs)
 	for _, child := range children {
 		for _, entry := range child.entries {
-			if appliesAt(rule.SchoolIDs, entry) && !slices.Contains(uncounted[family], entry.invoice.SchoolID) {
-				uncounted[family] = append(uncounted[family], entry.invoice.SchoolID)
+			if !entry.issued && appliesAt(schools, entry) && !slices.Contains(uncounted[family], entry.invoice.SchoolID.Int64()) {
+				uncounted[family] = append(uncounted[family], entry.invoice.SchoolID.Int64())
 			}
 		}
 	}
@@ -457,7 +511,7 @@ func noteUncounted(uncounted map[string][]int64, family string, children []*rank
 func applyCareCap(entries []*careChainEntry, rule *parentbilling.ContributionRule) {
 	scope := []*careChainEntry{}
 	for _, entry := range entries {
-		if appliesAt(rule.SchoolIDs, entry) {
+		if appliesAt(ident.Int64s(rule.SchoolIDs), entry) {
 			scope = append(scope, entry)
 		}
 	}
@@ -482,7 +536,7 @@ func applyCareCap(entries []*careChainEntry, rule *parentbilling.ContributionRul
 // rule's schools to the sibling prices of the price list (#6196).
 func reduceToSiblingPricesChild(child *rankedCareChild, rule *parentbilling.ContributionRule, rank, children int) {
 	for _, entry := range child.entries {
-		if appliesAt(rule.SchoolIDs, entry) {
+		if appliesAt(ident.Int64s(rule.SchoolIDs), entry) {
 			entry.reduceToSiblingPrices(rule, &rank, &children)
 		}
 	}
@@ -493,12 +547,12 @@ func reduceCareSiblingChild(child *rankedCareChild, rule *parentbilling.Contribu
 	var amounts []int64
 	var draftTotal, issuedTotal, issuedDiscount int64
 	for _, entry := range child.entries {
-		if !appliesAt(rule.SchoolIDs, entry) {
+		if !appliesAt(ident.Int64s(rule.SchoolIDs), entry) {
 			continue
 		}
 		if entry.issued {
 			issuedTotal += entry.issuedAtSiblingStage(rule)
-			issuedDiscount += entry.issuedSiblingDiscount(rule.ID)
+			issuedDiscount += entry.issuedSiblingDiscount(rule.ID.Int64())
 		} else {
 			drafts = append(drafts, entry)
 			amounts = append(amounts, entry.scoped(rule))
@@ -564,7 +618,7 @@ func (e *careChainEntry) issuedAtSiblingStage(rule *parentbilling.ContributionRu
 		}
 		stage -= e.incomeOnScope(reduction, rule)
 	}
-	return max(stage-e.issuedSiblingDiscount(rule.ID), 0)
+	return max(stage-e.issuedSiblingDiscount(rule.ID.Int64()), 0)
 }
 
 // incomeOnScope is the part of an issued income reduction that fell on the
@@ -576,7 +630,7 @@ func (e *careChainEntry) incomeOnScope(reduction parentbilling.CareReduction, ru
 	var base int64
 	discount := -reduction.AmountCents
 	for i, position := range e.invoice.Positions {
-		if inScope(reduced, position.CareOfferingID) && position.AmountCents > 0 {
+		if inScope(reduced, position.CareOfferingID.Int64()) && position.AmountCents > 0 {
 			indices = append(indices, i)
 			numerators = append(numerators, position.AmountCents*discount)
 			base += position.AmountCents
@@ -587,7 +641,7 @@ func (e *careChainEntry) incomeOnScope(reduction parentbilling.CareReduction, ru
 	}
 	var onScope int64
 	for k, part := range largestRemainder(numerators, base, min(discount, base)) {
-		if inScope(rule, e.invoice.Positions[indices[k]].CareOfferingID) {
+		if inScope(rule, e.invoice.Positions[indices[k]].CareOfferingID.Int64()) {
 			onScope += part
 		}
 	}
@@ -597,7 +651,7 @@ func (e *careChainEntry) incomeOnScope(reduction parentbilling.CareReduction, ru
 func (e *careChainEntry) issuedSiblingDiscount(ruleID int64) int64 {
 	var discount int64
 	for _, reduction := range e.invoice.Reductions {
-		if reduction.Kind == parentbilling.RuleSibling && reduction.RuleID == ruleID {
+		if reduction.Kind == parentbilling.RuleSibling && reduction.RuleID == ident.ID(ruleID) {
 			discount -= reduction.AmountCents
 		}
 	}
@@ -608,21 +662,21 @@ func (e *careChainEntry) applyIncome(in careChainInput, rules []*parentbilling.C
 	if e.issued {
 		return
 	}
-	evidence := careEvidenceInMonth(in.evidences, e.invoice.ContractID, parentbilling.EvidenceIncomeLevel, in.month)
+	evidence := careEvidenceInMonth(in.evidences, e.invoice.ContractID.Int64(), parentbilling.EvidenceIncomeLevel, in.month)
 	if evidence == nil {
 		return
 	}
-	if rule := ruleByID(rules, evidence.RuleID); rule != nil && rule.Kind == parentbilling.RuleIncomeLevel && appliesAt(rule.SchoolIDs, e) {
+	if rule := ruleByID(rules, (*int64)(evidence.RuleID)); rule != nil && rule.Kind == parentbilling.RuleIncomeLevel && appliesAt(ident.Int64s(rule.SchoolIDs), e) {
 		e.reduce(rule, discountOf(e.scoped(rule), rule), nil, nil)
 	}
 }
 
 func (e *careChainEntry) applySingleParent(in careChainInput, rules []*parentbilling.ContributionRule) {
-	if e.issued || careEvidenceInMonth(in.evidences, e.invoice.ContractID, parentbilling.EvidenceSingleParent, in.month) == nil {
+	if e.issued || careEvidenceInMonth(in.evidences, e.invoice.ContractID.Int64(), parentbilling.EvidenceSingleParent, in.month) == nil {
 		return
 	}
 	for _, rule := range rulesOfKind(rules, parentbilling.RuleSingleParent) {
-		if appliesAt(rule.SchoolIDs, e) {
+		if appliesAt(ident.Int64s(rule.SchoolIDs), e) {
 			e.reduce(rule, discountOf(e.scoped(rule), rule), nil, nil)
 		}
 	}

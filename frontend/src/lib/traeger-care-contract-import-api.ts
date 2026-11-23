@@ -1,3 +1,4 @@
+import { bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the import of children and their existing care contracts
  * (#4723): the preview of a CSV file with its column mapping, the import of
@@ -6,43 +7,66 @@
  * Backend int64 IDs leave here as strings; calendar dates stay "YYYY-MM-DD".
  */
 
-import { apiErrorFromResponse, transportFetch } from "./api-error";
-import { readJson, traegerRequest } from "./traeger-api";
-
-const IMPORTS_PATH = "/api/traeger/contract-imports";
+import { knownEnum } from "./contract/known-enum";
+import type * as traegerContractImportsContract from "./contract/traeger-contract-imports.generated";
 
 /** Largest file the backend reads, in bytes. */
 export const MAX_CONTRACT_IMPORT_FILE_BYTES = 2 * 1024 * 1024;
 
-export type ContractImportField =
-  | "child_first_name"
-  | "child_last_name"
-  | "child_birth_date"
-  | "school"
-  | "module"
-  | "weekdays"
-  | "effective_from"
-  | "ends_on"
-  | "concluded_on"
-  | "party_first_name"
-  | "party_last_name"
-  | "party_email"
-  | "debtor_number"
-  | "family_children";
+// Go does not register these sets; the contract types them as string. A value
+// this build does not know stays undefined instead of passing as a known one.
+const FIELD_VALUES = [
+  "child_first_name",
+  "child_last_name",
+  "child_birth_date",
+  "school",
+  "module",
+  "weekdays",
+  "effective_from",
+  "ends_on",
+  "concluded_on",
+  "party_first_name",
+  "party_last_name",
+  "party_email",
+  "debtor_number",
+  "family_children",
+] as const;
+const ROW_STATUS_VALUES = [
+  "ready",
+  "duplicate",
+  "conflict",
+  "invalid",
+  "imported",
+] as const;
+const DEBTOR_NUMBER_STATUS_VALUES = [
+  "new",
+  "same",
+  "differs",
+  "rows_differ",
+  "invalid",
+] as const;
+const FAMILY_CHILDREN_STATUS_VALUES = [
+  "new",
+  "same",
+  "differs",
+  "rows_differ",
+] as const;
+const DEBTOR_SCOPE_VALUES = ["payer", "child"] as const;
 
-export type ContractImportRowStatus =
-  "ready" | "duplicate" | "conflict" | "invalid" | "imported";
+export type ContractImportField = (typeof FIELD_VALUES)[number];
+
+export type ContractImportRowStatus = (typeof ROW_STATUS_VALUES)[number];
 
 /** What the import does with the debtor number of a row; "" without one. */
 type ContractDebtorNumberStatus =
-  "" | "new" | "same" | "differs" | "rows_differ" | "invalid";
+  "" | (typeof DEBTOR_NUMBER_STATUS_VALUES)[number];
 
 /**
  * What the import does with the number of the family's children of a row
  * (#7356); "" without one.
  */
 type ContractFamilyChildrenStatus =
-  "" | "new" | "same" | "differs" | "rows_differ";
+  "" | (typeof FAMILY_CHILDREN_STATUS_VALUES)[number];
 
 /** Header of the column each field comes from; "" leaves it unmapped. */
 type ContractImportColumns = Readonly<Record<ContractImportField, string>>;
@@ -61,13 +85,15 @@ export interface ContractImportMapping {
 }
 
 interface ContractImportProblem {
-  readonly field: ContractImportField;
+  /** undefined: a field this build does not know. */
+  readonly field: ContractImportField | undefined;
   readonly code: string;
 }
 
 export interface ContractImportRow {
   readonly line: number;
-  readonly status: ContractImportRowStatus;
+  /** undefined: a status this build does not know. */
+  readonly status: ContractImportRowStatus | undefined;
   readonly childFirstName: string;
   readonly childLastName: string;
   readonly childBirthDate: string | null;
@@ -125,7 +151,7 @@ export interface ContractImportResult {
   readonly unmapped: readonly ContractImportField[];
   readonly schools: readonly ContractImportSchool[];
   /** Whom a debtor number of the Träger names. */
-  readonly debtorNumberScope: "payer" | "child";
+  readonly debtorNumberScope: (typeof DEBTOR_SCOPE_VALUES)[number] | undefined;
   /**
    * Whether the account may map the column of the family's children: the
    * number counts as confirmed by the Abrechnung, so it needs that right.
@@ -152,88 +178,31 @@ export interface ContractImportRequest {
   readonly fingerprint?: string;
 }
 
-interface BackendMapping {
-  columns: Record<ContractImportField, string>;
-  school_id: number;
-  module_name: string;
-  effective_from: string | null;
+function knownFields(fields: readonly string[] | null): ContractImportField[] {
+  return (fields ?? []).flatMap((field) => {
+    const known = knownEnum(FIELD_VALUES, field);
+    return known ? [known] : [];
+  });
 }
 
-interface BackendRow {
-  line: number;
-  status: ContractImportRowStatus;
-  child_first_name: string;
-  child_last_name: string;
-  child_birth_date: string | null;
-  school_name: string;
-  module_names: string[] | null;
-  weekdays: string[] | null;
-  effective_from: string | null;
-  ends_on: string | null;
-  party_name: string;
-  party_email: string;
-  problems: ContractImportProblem[] | null;
-  hints?: string[] | null;
-  contract_id?: number;
-  repeats_line?: number;
-  debtor_number?: string;
-  debtor_number_status?: ContractDebtorNumberStatus;
-  family_children?: number;
-  family_children_status?: ContractFamilyChildrenStatus;
-}
-
-interface BackendResult {
-  encoding: string;
-  delimiter: string;
-  headers: string[] | null;
-  mapping: BackendMapping;
-  unmapped: ContractImportField[] | null;
-  schools:
-    | {
-        id: number;
-        name: string;
-        modules:
-          | { name: string; phase_name: string; has_conditions: boolean }[]
-          | null;
-      }[]
-    | null;
-  debtor_number_scope: "payer" | "child";
-  family_children_allowed?: boolean;
-  fingerprint?: string;
-  applied: boolean;
-  counts: {
-    ready: number;
-    duplicate: number;
-    conflict: number;
-    invalid: number;
-    imported: number;
-    debtor_numbers?: number;
-    debtor_conflicts?: number;
-    family_children?: number;
-  };
-  rows: BackendRow[] | null;
-}
-
-interface BackendLogEntry {
-  file: string;
-  account_id: number | null;
-  imported_at: string;
-  contracts: number;
-}
-
-function toBackendMapping(mapping: ContractImportMapping): BackendMapping {
+/** The multipart field "mapping"; "0" leaves the school to the file. */
+function toBackendMapping(
+  mapping: ContractImportMapping,
+): traegerContractImportsContract.ContractImportMapping {
   return {
     columns: { ...mapping.columns },
-    school_id: mapping.schoolId === "" ? 0 : Number(mapping.schoolId),
+    school_id: mapping.schoolId || "0",
     module_name: mapping.moduleName,
     effective_from: mapping.effectiveFrom === "" ? null : mapping.effectiveFrom,
   };
 }
 
-function mapRow(row: BackendRow): ContractImportRow {
+function mapRow(
+  row: traegerContractImportsContract.ContractImportRow,
+): ContractImportRow {
   return {
     line: row.line,
-    status: row.status,
+    status: knownEnum(ROW_STATUS_VALUES, row.status),
     childFirstName: row.child_first_name,
     childLastName: row.child_last_name,
     childBirthDate: row.child_birth_date,
@@ -244,33 +213,42 @@ function mapRow(row: BackendRow): ContractImportRow {
     endsOn: row.ends_on,
     partyName: row.party_name,
     partyEmail: row.party_email,
-    problems: row.problems ?? [],
+    problems: (row.problems ?? []).map((problem) => ({
+      field: knownEnum(FIELD_VALUES, problem.field),
+      code: problem.code,
+    })),
     hints: row.hints ?? [],
-    contractId: row.contract_id ? String(row.contract_id) : null,
+    contractId: row.contract_id || null,
     repeatsLine: row.repeats_line ?? null,
     debtorNumber: row.debtor_number ?? "",
-    debtorNumberStatus: row.debtor_number_status ?? "",
+    debtorNumberStatus:
+      knownEnum(DEBTOR_NUMBER_STATUS_VALUES, row.debtor_number_status) ?? "",
     familyChildren: row.family_children ?? null,
-    familyChildrenStatus: row.family_children_status ?? "",
+    familyChildrenStatus:
+      knownEnum(FAMILY_CHILDREN_STATUS_VALUES, row.family_children_status) ??
+      "",
   };
 }
 
-function mapImportResult(result: BackendResult): ContractImportResult {
+/** The school of a mapping as the catalog proxy sends it; "0" names none. */
+const mappedSchoolId = (id: string): string => (id === "0" ? "" : id);
+
+function mapImportResult(
+  result: traegerContractImportsContract.ContractImport,
+): ContractImportResult {
   return {
     encoding: result.encoding,
     delimiter: result.delimiter,
     headers: result.headers ?? [],
     mapping: {
       columns: result.mapping.columns,
-      schoolId: result.mapping.school_id
-        ? String(result.mapping.school_id)
-        : "",
-      moduleName: result.mapping.module_name ?? "",
+      schoolId: mappedSchoolId(result.mapping.school_id),
+      moduleName: result.mapping.module_name,
       effectiveFrom: result.mapping.effective_from ?? "",
     },
-    unmapped: result.unmapped ?? [],
+    unmapped: knownFields(result.unmapped),
     schools: (result.schools ?? []).map((school) => ({
-      id: String(school.id),
+      id: school.id,
       name: school.name,
       modules: (school.modules ?? []).map((entry) => ({
         name: entry.name,
@@ -278,8 +256,11 @@ function mapImportResult(result: BackendResult): ContractImportResult {
         hasConditions: entry.has_conditions,
       })),
     })),
-    debtorNumberScope: result.debtor_number_scope,
-    familyChildrenAllowed: result.family_children_allowed ?? false,
+    debtorNumberScope: knownEnum(
+      DEBTOR_SCOPE_VALUES,
+      result.debtor_number_scope,
+    ),
+    familyChildrenAllowed: result.family_children_allowed,
     fingerprint: result.fingerprint ?? "",
     applied: result.applied,
     counts: {
@@ -288,16 +269,16 @@ function mapImportResult(result: BackendResult): ContractImportResult {
       conflict: result.counts.conflict,
       invalid: result.counts.invalid,
       imported: result.counts.imported,
-      debtorNumbers: result.counts.debtor_numbers ?? 0,
-      debtorConflicts: result.counts.debtor_conflicts ?? 0,
-      familyChildren: result.counts.family_children ?? 0,
+      debtorNumbers: result.counts.debtor_numbers,
+      debtorConflicts: result.counts.debtor_conflicts,
+      familyChildren: result.counts.family_children,
     },
     rows: (result.rows ?? []).map(mapRow),
   };
 }
 
 async function postImport(
-  path: string,
+  preview: boolean,
   request: ContractImportRequest,
 ): Promise<ContractImportResult> {
   const form = new FormData();
@@ -308,44 +289,34 @@ async function postImport(
   if (request.fingerprint) {
     form.append("fingerprint", request.fingerprint);
   }
-  const response = await transportFetch(path, {
-    method: "POST",
-    credentials: "include",
-    cache: "no-store",
-    body: form,
-  });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Request failed (${response.status})`,
-    );
-  }
-  const data = await readJson(response);
-  return mapImportResult((data as { data: BackendResult }).data);
+  const data = await (preview
+    ? bffJson("org", "POST /traeger/contract-imports/preview", { body: form })
+    : bffJson("org", "POST /traeger/contract-imports/", { body: form }));
+  return mapImportResult(data);
 }
 
 /** Reads the file and answers every row; stores nothing. */
 export function previewContractImport(
   request: ContractImportRequest,
 ): Promise<ContractImportResult> {
-  return postImport(`${IMPORTS_PATH}/preview`, request);
+  return postImport(true, request);
 }
 
 /** Takes over the ready rows. */
 export function applyContractImport(
   request: ContractImportRequest,
 ): Promise<ContractImportResult> {
-  return postImport(IMPORTS_PATH, request);
+  return postImport(false, request);
 }
 
 /** The imports of the Träger, newest first. */
 export async function fetchContractImportLog(): Promise<
   ContractImportLogEntry[]
 > {
-  const entries = await traegerRequest<BackendLogEntry[] | null>(IMPORTS_PATH);
-  return (entries ?? []).map((entry) => ({
+  const entries = await bffJson("org", "GET /traeger/contract-imports/");
+  return entries.map((entry) => ({
     file: entry.file,
-    accountId: entry.account_id === null ? null : String(entry.account_id),
+    accountId: entry.account_id,
     importedAt: entry.imported_at,
     contracts: entry.contracts,
   }));

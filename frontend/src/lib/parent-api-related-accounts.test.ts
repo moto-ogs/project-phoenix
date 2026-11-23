@@ -4,8 +4,8 @@ import {
   listRelatedAccounts,
   inviteRelatedAccount,
   removeRelatedAccount,
-  type RelatedAccount,
 } from "./parent-api";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 const originalFetch = globalThis.fetch;
 
@@ -31,7 +31,7 @@ afterEach(() => {
   globalThis.fetch = originalFetch;
 });
 
-const sampleAccount: RelatedAccount = {
+const sampleAccount: parentMeContract.relatedAccountResponse = {
   guardian_profile_id: "10",
   first_name: "Sabine",
   last_name: "Schneider",
@@ -42,7 +42,7 @@ const sampleAccount: RelatedAccount = {
   is_self: false,
 };
 
-const noAccountSample: RelatedAccount = {
+const noAccountSample: parentMeContract.relatedAccountResponse = {
   ...sampleAccount,
   guardian_profile_id: "11",
   status: "no_account",
@@ -69,9 +69,7 @@ describe("parent-api related accounts", () => {
 
     it("throws on a non-ok response", async () => {
       mockFetch(async () => jsonResponse({ detail: "boom" }, { status: 500 }));
-      await expect(listRelatedAccounts("3")).rejects.toThrow(
-        "Request failed (500)",
-      );
+      await expect(listRelatedAccounts("3")).rejects.toThrow("failed (500)");
     });
   });
 
@@ -115,7 +113,7 @@ describe("parent-api related accounts", () => {
         jsonResponse({ detail: "Einladen deaktiviert" }, { status: 403 }),
       );
       await expect(inviteRelatedAccount("3", "x@x.de")).rejects.toThrow(
-        "Request failed (403)",
+        "failed (403)",
       );
     });
 
@@ -153,13 +151,14 @@ describe("parent-api related accounts", () => {
   });
 
   describe("removeRelatedAccount", () => {
-    it("resolves on a 200 DELETE", async () => {
+    it("resolves on a DELETE without content", async () => {
       let method = "";
       let url = "";
       mockFetch(async (input, init) => {
         url = String(input);
         method = String(init?.method);
-        return new Response("", { status: 200 });
+        // The catalog proxy answers a route without data with 204.
+        return new Response(null, { status: 204 });
       });
       await expect(removeRelatedAccount("3", "10")).resolves.toBeUndefined();
       expect(method).toBe("DELETE");
@@ -171,14 +170,14 @@ describe("parent-api related accounts", () => {
         jsonResponse({ detail: "Primär geschützt" }, { status: 403 }),
       );
       await expect(removeRelatedAccount("3", "10")).rejects.toThrow(
-        "Request failed (403)",
+        "failed (403)",
       );
     });
 
     it("falls back to a generic message when the error body is unshaped", async () => {
       mockFetch(async () => new Response("not json", { status: 500 }));
       await expect(removeRelatedAccount("3", "10")).rejects.toThrow(
-        /Request failed \(500\)/,
+        /failed \(500\)/,
       );
     });
 

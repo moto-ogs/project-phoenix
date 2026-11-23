@@ -61,7 +61,6 @@ const (
 	opGetGroup             = "get group"
 	opFindByCategory       = "find by category"
 	opFindGroup            = "find group"
-	opGetSchedule          = "get schedule"
 	opGetSupervisor        = "get supervisor"
 	opFindSupervisor       = "find supervisor"
 	opFindGroupSupervisors = "find group supervisors"
@@ -492,7 +491,8 @@ func (s *ActivityService) GetGroupWithDetails(ctx context.Context, id int64) (*a
 }
 
 // GetGroupsWithEnrollmentCounts returns the groups by name with the number
-// of enrollments of each.
+// of children enrolled in each; a child with several rows on a group counts
+// once (#7908).
 func (s *ActivityService) GetGroupsWithEnrollmentCounts(ctx context.Context) ([]*activityContract.Group, map[int64]int, error) {
 	groups, err := s.timetable.ListGroups(ctx, timetable.GroupFilter{OrderByName: true})
 	if err != nil {
@@ -510,8 +510,12 @@ func (s *ActivityService) GetGroupsWithEnrollmentCounts(ctx context.Context) ([]
 	if err != nil {
 		return nil, nil, legacyDatabaseError("count enrollments", err)
 	}
+	counted := make(map[[2]int64]bool, len(enrollments))
 	for _, enrollment := range enrollments {
-		counts[enrollment.ActivityGroupID]++
+		if key := [2]int64{enrollment.ActivityGroupID, enrollment.StudentID}; !counted[key] {
+			counted[key] = true
+			counts[enrollment.ActivityGroupID]++
+		}
 	}
 	return legacyGroups(groups), counts, nil
 }

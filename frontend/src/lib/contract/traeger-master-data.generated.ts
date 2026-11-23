@@ -3,8 +3,10 @@ import { z } from "zod";
 import {
   arr,
   bool,
+  fileAnswer,
   instant,
-  int64StringOrNumber,
+  int64String,
+  multipart,
   noData,
   nullable,
   object,
@@ -69,7 +71,7 @@ export interface TraegerBankAccount {
 }
 
 export const TraegerBankAccountSchema: z.ZodType<TraegerBankAccount, unknown> = object<TraegerBankAccount>({
-  id: int64StringOrNumber,
+  id: int64String,
   label: str,
   account_holder: str,
   iban: str,
@@ -181,6 +183,7 @@ export const PlaceholderSchema: z.ZodType<Placeholder, unknown> = object<Placeho
 
 /** Go: organizationtenancy.TraegerDocumentTemplateDetail */
 export interface TraegerDocumentTemplateDetail {
+  version: string;
   current: TraegerDocumentTemplate;
   standard_template: Template;
   placeholders: Placeholder[] | null;
@@ -188,6 +191,7 @@ export interface TraegerDocumentTemplateDetail {
 }
 
 export const TraegerDocumentTemplateDetailSchema: z.ZodType<TraegerDocumentTemplateDetail, unknown> = object<TraegerDocumentTemplateDetail>({
+  version: str,
   current: TraegerDocumentTemplateSchema,
   standard_template: TemplateSchema,
   placeholders: nullable(arr(PlaceholderSchema)),
@@ -218,6 +222,7 @@ export interface TemplateRequest {
   closing?: string;
   invoice?: InvoiceLayoutRequest;
   legal_remedy?: string;
+  expected_version?: string;
 }
 
 /** Go: templates.Row */
@@ -289,6 +294,12 @@ export const routes = {
     portals: ["org"],
     response: noData,
   },
+  "DELETE /traeger/master-data/logo": {
+    method: "DELETE",
+    pattern: "/traeger/master-data/logo",
+    portals: ["org"],
+    response: noData,
+  },
   "GET /traeger/master-data/": {
     method: "GET",
     pattern: "/traeger/master-data/",
@@ -301,11 +312,30 @@ export const routes = {
     portals: ["org"],
     response: success(z.array(TraegerDocumentTemplateSummarySchema)),
   },
+  "GET /traeger/master-data/document-templates/export": {
+    method: "GET",
+    pattern: "/traeger/master-data/document-templates/export",
+    portals: ["org"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
+    response: fileAnswer,
+  },
   "GET /traeger/master-data/document-templates/{kind}": {
     method: "GET",
     pattern: "/traeger/master-data/document-templates/{kind}",
     portals: ["org"],
     response: success(TraegerDocumentTemplateDetailSchema),
+  },
+  "GET /traeger/master-data/logo": {
+    method: "GET",
+    pattern: "/traeger/master-data/logo",
+    portals: ["org"],
+    privateCache: true,
+    query: {
+      "v": { kind: "string" },
+    },
+    response: fileAnswer,
   },
   "POST /traeger/master-data/bank-accounts": {
     method: "POST",
@@ -318,6 +348,7 @@ export const routes = {
     method: "POST",
     pattern: "/traeger/master-data/document-templates/{kind}/preview",
     portals: ["org"],
+    noCommit: "renders a sample letter and saves no template",
     request: requestBody<TemplateRequest>(),
     response: success(SampleLetterSchema),
   },
@@ -341,6 +372,15 @@ export const routes = {
     portals: ["org"],
     request: requestBody<ContactRequest>(),
     response: success(TraegerContactSchema),
+  },
+  "PUT /traeger/master-data/logo": {
+    method: "PUT",
+    pattern: "/traeger/master-data/logo",
+    portals: ["org"],
+    maxBodyBytes: 1114112,
+    tooLargeCode: "traeger.logo_too_large",
+    request: multipart,
+    response: success(TraegerLogoSchema),
   },
   "PUT /traeger/master-data/withdrawal-contact": {
     method: "PUT",

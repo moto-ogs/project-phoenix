@@ -49,11 +49,18 @@ func NewEnrollmentFlowStudentAudit(db transactionruntime.Database, actor peopleP
 // way the root binds it; extensions also records the pickup extensions the
 // Timetable owner keeps.
 func NewEnrollmentFlowPickupExcusal(db transactionruntime.Database, records careplan.Capability, baselines careplan.PickupBaselineReader, tt timetable.Capability, extensions bool) (careplan.PickupAutoExcusal, error) {
+	// The enrollment flow suites resync from the real day, as the root does.
+	return NewEnrollmentFlowPickupExcusalOn(db, records, baselines, tt, extensions, calendar.TodayDate)
+}
+
+// NewEnrollmentFlowPickupExcusalOn is NewEnrollmentFlowPickupExcusal on the
+// day of the given clock, for a suite that asserts which coming pickup
+// exceptions a resync reaches.
+func NewEnrollmentFlowPickupExcusalOn(db transactionruntime.Database, records careplan.Capability, baselines careplan.PickupBaselineReader, tt timetable.Capability, extensions bool, today func() calendar.Date) (careplan.PickupAutoExcusal, error) {
 	adapter := owners.NewPickupExcusalTimetable(tt, owners.NewPartialAbsencePreview(db))
 	deps := careplanCompose.PickupExcusalDependencies{
 		DB: db.Pool(), Records: records, Baselines: baselines, Blocks: owners.NewLoggedStudentPresence(db, slog.Default()), Preview: adapter,
-		// The enrollment flow suites resync from the real day, as the root does.
-		Today: calendar.TodayDate,
+		Today: today,
 	}
 	if extensions {
 		deps.Extensions = adapter

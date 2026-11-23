@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -72,7 +73,7 @@ func NewHolidayPeriodResource(periods capability.HolidayPeriods, review capabili
 // a period and records the Büro's check of answers (#4700).
 type HolidayAllocationReads interface {
 	HolidayCriteria(ctx context.Context, reviewer capability.HolidayReviewer) (capability.HolidayCriteriaCatalog, error)
-	SaveHolidayCriteria(ctx context.Context, reviewer capability.HolidayReviewer, criteria []capability.HolidayCriterionInput) (capability.HolidayCriteriaCatalog, error)
+	SaveHolidayCriteria(ctx context.Context, reviewer capability.HolidayReviewer, expectedVersion string, criteria []capability.HolidayCriterionInput) (capability.HolidayCriteriaCatalog, error)
 	HolidayAllocationBoard(ctx context.Context, reviewer capability.HolidayReviewer, periodID int64) (capability.HolidayAllocationBoard, error)
 	CheckHolidayCriteria(ctx context.Context, reviewer capability.HolidayReviewer, periodID, registrationID int64, checks []capability.HolidayCriterionCheck) (capability.HolidayRegistrationDetail, error)
 }
@@ -118,19 +119,19 @@ func (rs *HolidayPeriodResource) TraegerRouter(protectedTraegerRoutes func(chi.R
 }
 
 type HolidayTimeModelRequest struct {
-	ID         int64  `json:"id"`
-	Name       string `json:"name"`
-	StartsAt   string `json:"starts_at"`
-	EndsAt     string `json:"ends_at"`
-	PriceCents int    `json:"price_cents"`
-	Archived   bool   `json:"archived"`
+	ID         ident.ID `json:"id"`
+	Name       string   `json:"name"`
+	StartsAt   string   `json:"starts_at"`
+	EndsAt     string   `json:"ends_at"`
+	PriceCents int      `json:"price_cents"`
+	Archived   bool     `json:"archived"`
 }
 
 type HolidayWeekRequest struct {
-	ID           int64                     `json:"id"`
+	ID           ident.ID                  `json:"id"`
 	StartsOn     calendar.Date             `json:"starts_on"`
 	EndsOn       calendar.Date             `json:"ends_on"`
-	HostSchoolID int64                     `json:"host_school_id"`
+	HostSchoolID ident.ID                  `json:"host_school_id"`
 	TimeModels   []HolidayTimeModelRequest `json:"time_models"`
 	// BookingUnit is "week" or "day"; empty is a week (#4701).
 	BookingUnit string `json:"booking_unit"`
@@ -157,6 +158,9 @@ type HolidayPeriodRequest struct {
 	// AllocationMode is "arrival" or "criteria"; empty is "arrival" (#4700).
 	AllocationMode string               `json:"allocation_mode"`
 	Weeks          []HolidayWeekRequest `json:"weeks"`
+	// ExpectedVersion is the version of the period the Büro edits; a
+	// change saved since is refused (ADR 0311). A new period sends none.
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 // Bind accepts the body; the Owner validates the period as a whole.
@@ -170,14 +174,14 @@ func (req *HolidayPeriodRequest) input() capability.HolidayPeriodInput {
 			models[j] = capability.HolidayTimeModelInput(model)
 		}
 		weeks[i] = capability.HolidayWeekInput{
-			ID: week.ID, StartsOn: week.StartsOn, EndsOn: week.EndsOn, HostSchoolID: week.HostSchoolID, TimeModels: models,
+			ID: week.ID.Int64(), StartsOn: week.StartsOn, EndsOn: week.EndsOn, HostSchoolID: week.HostSchoolID.Int64(), TimeModels: models,
 			BookingUnit: week.BookingUnit, LunchPriceCents: week.LunchPriceCents,
 		}
 	}
 	return capability.HolidayPeriodInput{
 		Name: req.Name, RegistrationOpensOn: req.RegistrationOpensOn, RegistrationClosesOn: req.RegistrationClosesOn,
 		Binding: req.Binding, Notes: req.Notes, AcceptanceMailText: req.AcceptanceMailText, HolidayWishRule: req.HolidayWishRule, Weeks: weeks, MaxDaysPerChild: req.MaxDaysPerChild,
-		AllocationMode: req.AllocationMode,
+		AllocationMode: req.AllocationMode, ExpectedVersion: req.ExpectedVersion,
 	}
 }
 

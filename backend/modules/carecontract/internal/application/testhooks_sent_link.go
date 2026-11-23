@@ -20,7 +20,7 @@ func SendLinkForTests(ctx context.Context, store ContractStore, links carecontra
 	if err != nil {
 		return err
 	}
-	document, err := store.CurrentDocument(ctx, organizationID, contractID, record.Version.ID)
+	document, err := store.CurrentDocument(ctx, organizationID, contractID, record.Version.ID.Int64())
 	if err != nil {
 		return err
 	}

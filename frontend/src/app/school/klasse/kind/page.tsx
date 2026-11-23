@@ -7,6 +7,7 @@
 // Kind und Tag stehen als Query-Parameter in der Adresse, wie auf der
 // Klassenseite (`CLASS_DAY_CLASS_PARAM`).
 
+import type * as schoolClassDayContract from "~/lib/contract/school-class-day.generated";
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -24,18 +25,19 @@ import { SectionCard } from "~/components/ui/section-card";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { formatDate } from "~/lib/date-helpers";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
-import {
-  fetchSharedNotesSchool,
-  type SharedNote,
-  type StudentSharedNotes,
-} from "~/lib/school-class-day-api";
+import { fetchSharedNotesSchool } from "~/lib/school-class-day-api";
 import { schoolClassLabel } from "~/lib/school-class-label";
 import { schoolPath } from "~/lib/school-url";
 import { IsolatedSWRCache, useSWRAuth } from "~/lib/swr";
 import { schoolPortalKeys } from "~/lib/swr/portal-keys";
 
+// Erklärung der Seite für neue Lehrkräfte (#7567), im Laden wie in der
+// fertigen Seite.
+const SHARED_NOTES_INFO =
+  "Hier liest du, was die OGS über dieses Kind notiert hat. Die neueste Notiz steht oben. Fragen dazu klärst du direkt mit der OGS.";
+
 /** Wann und von wem: der beschriebene Tag oder „Dauerhafter Hinweis“. */
-function noteMeta(note: SharedNote): string {
+function noteMeta(note: schoolClassDayContract.SharedNote): string {
   const parts = [
     note.subject_date ? formatDate(note.subject_date) : "Dauerhafter Hinweis",
   ];
@@ -79,7 +81,7 @@ function SharedNotes({
     error,
     isLoading,
     mutate,
-  } = useSWRAuth<StudentSharedNotes>(
+  } = useSWRAuth<schoolClassDayContract.StudentSharedNotes>(
     session && schoolClass && studentId
       ? schoolPortalKeys.sharedNotes(schoolClass, studentId)
       : null,
@@ -108,6 +110,7 @@ function SharedNotes({
   return (
     <TenantPage
       title={name || "Beobachtungen der OGS"}
+      info={SHARED_NOTES_INFO}
       back
       backHref={schoolPath(classDayPath(schoolClass, dateISO))}
       backLabel={`Zurück zur ${schoolClassLabel(schoolClass) || "Klasse"}`}
@@ -128,7 +131,7 @@ function SharedNotes({
           title="Beobachtungen der OGS"
           description="Die OGS hat diese Notizen für dich freigegeben. Du kannst sie nur lesen."
         >
-          {data.notes.length === 0 ? (
+          {(data.notes ?? []).length === 0 ? (
             <EmptyState
               variant="compact"
               title="Keine Beobachtungen"
@@ -136,7 +139,7 @@ function SharedNotes({
             />
           ) : (
             <ul className="space-y-4">
-              {data.notes.map((note) => (
+              {(data.notes ?? []).map((note) => (
                 <li key={note.id} className="space-y-1">
                   <p className="text-sm whitespace-pre-line text-gray-900">
                     {note.body}
@@ -156,7 +159,15 @@ export default function SchoolSharedNotesPage() {
   return (
     // useSearchParams (Klasse, Kind und Tag stehen in der Adresse) braucht
     // eine Suspense-Grenze.
-    <Suspense fallback={<TenantPage title="Beobachtungen der OGS" loading />}>
+    <Suspense
+      fallback={
+        <TenantPage
+          title="Beobachtungen der OGS"
+          info={SHARED_NOTES_INFO}
+          loading
+        />
+      }
+    >
       <SharedNotesFromAddress />
     </Suspense>
   );

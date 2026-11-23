@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -74,14 +75,14 @@ func (rs *StaffAdminResource) listTraegerMonthStaff(w http.ResponseWriter, r *ht
 		renderMonthCloseError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, TraegerMonthStaff{Year: year, Month: month, StaffIDs: staffIDs}, "Traeger month staff retrieved")
+	common.Respond(w, r, http.StatusOK, TraegerMonthStaff{Year: year, Month: month, StaffIDs: ident.IDs(staffIDs)}, "Traeger month staff retrieved")
 }
 
 // TraegerMonthStaff lists the staff members the Träger closes in a month.
 type TraegerMonthStaff struct {
-	Year     int     `json:"year"`
-	Month    int     `json:"month"`
-	StaffIDs []int64 `json:"staff_ids"`
+	Year     int        `json:"year"`
+	Month    int        `json:"month"`
+	StaffIDs []ident.ID `json:"staff_ids"`
 }
 
 // closeMonth handles POST /api/staff/time-tracking/month-close — freezes the

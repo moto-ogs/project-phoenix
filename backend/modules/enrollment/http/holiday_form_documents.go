@@ -78,7 +78,7 @@ func (rs *HolidayPeriodResource) deleteFormDocument(w http.ResponseWriter, r *ht
 		renderHolidayDocumentError(w, r, err)
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	common.RespondNoContent(w, r)
 }
 
 func (rs *HolidayRegistrationResource) document(w http.ResponseWriter, r *http.Request) {

@@ -1,3 +1,4 @@
+import type * as schoolClassDayContract from "~/lib/contract/school-class-day.generated";
 import {
   act,
   fireEvent,
@@ -15,7 +16,6 @@ import { SWRScopeBoundary } from "~/lib/swr/scope-boundary";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import type { ClassDayReport } from "~/lib/class-day-api";
-import type { SchoolDayReport } from "~/lib/school-class-day-api";
 import { ClassDayOverview } from "./class-day-overview";
 import { ClassDayClass } from "./class-day-class";
 
@@ -47,10 +47,16 @@ const report: ClassDayReport = {
   weekday: "wed",
   school_day: true,
   enrollment_known: true,
+  can_write_day_hints: false,
+  can_record_morning_attendance: false,
+  can_write_homework: false,
+  can_read_shared_notes: false,
+  can_hand_over: false,
+  can_report_absences: false,
   totals: { students: 1, staying: 1, leaving: 0, absent: 0, list_entries: 0 },
   rows: [
     {
-      student_id: 1,
+      student_id: "1",
       first_name: "Klara",
       last_name: "Klassentag",
       registered: true,
@@ -126,7 +132,7 @@ describe("school report cache", () => {
         class_trip: 0,
         changes: 0,
       };
-      const schoolDay: SchoolDayReport = {
+      const schoolDay: schoolClassDayContract.SchoolDayReport = {
         date: report.date,
         weekday: "wed",
         school_day: true,
@@ -507,7 +513,7 @@ describe("school report cache", () => {
         class_trip: 0,
         changes: 0,
       };
-      const schoolDay: SchoolDayReport = {
+      const schoolDay: schoolClassDayContract.SchoolDayReport = {
         date: "2026-09-09",
         weekday: "wed",
         school_day: true,

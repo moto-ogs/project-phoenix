@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Sending and printing the confirmation letters (spec #4611 user stories
@@ -62,7 +64,7 @@ var (
 // RequestedAt and SentAt are nil before the first mail; Sends counts every
 // mail of the letter.
 type BillingLetterMailing struct {
-	DocumentID int64 `json:"document_id"`
+	DocumentID ident.ID `json:"document_id"`
 	// Kind names an invoice, a Storno or a Gutschrift (#4690).
 	Kind               string     `json:"kind"`
 	Number             string     `json:"number"`

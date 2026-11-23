@@ -6,17 +6,19 @@ import (
 	"fmt"
 	"slices"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type seedPlanningDemoStep struct{}
 
 type seedPlanningInstance struct {
-	ID              int64  `json:"id"`
-	Title           string `json:"title"`
-	Status          string `json:"status"`
-	ActivityGroupID *int64 `json:"activity_group_id"`
+	ID              ident.ID  `json:"id"`
+	Title           string    `json:"title"`
+	Status          string    `json:"status"`
+	ActivityGroupID *ident.ID `json:"activity_group_id"`
 	Staff           []struct {
-		StaffID int64 `json:"staff_id"`
+		StaffID ident.ID `json:"staff_id"`
 	} `json:"staff"`
 }
 
@@ -141,11 +143,11 @@ func selectRecurringPlanningInstances(instances []seedPlanningInstance, deviatio
 	var deviationID int64
 	for _, instance := range instances {
 		if instance.ID > 0 && instance.ActivityGroupID != nil && instance.Title == "Frühbetreuung" {
-			recurringIDs = append(recurringIDs, instance.ID)
+			recurringIDs = append(recurringIDs, int64(instance.ID))
 			if deviationID == 0 {
 				for _, staff := range instance.Staff {
-					if staff.StaffID == deviationStaffID {
-						deviationID = instance.ID
+					if int64(staff.StaffID) == deviationStaffID {
+						deviationID = int64(instance.ID)
 						break
 					}
 				}
@@ -221,7 +223,8 @@ func seedCarePlanDeviations(rt *Runtime, studentIDs []int64) error {
 // seedTodayHomeChanges gives two children a one-day change of their way home,
 // so the strip on the Kinderkarte shows on every dev machine (#3946): index 5
 // is picked up at 13:30 instead of its Gehzeit, index 4, who goes home alone
-// every weekday, is picked up today. Index 0 above shows its day Abholart
+// every weekday, is picked up today, index 3 goes home alone today and index
+// 5 carries a pickup note for today. Index 0 above shows its day Abholart
 // too. On a weekend the changes land on Monday, which has a plan to deviate
 // from.
 func seedTodayHomeChanges(rt *Runtime, studentIDs []int64) error {
@@ -240,6 +243,18 @@ func seedTodayHomeChanges(rt *Runtime, studentIDs []int64) error {
 		"departure_mode": "pickup", "reason": "Die Oma holt heute ab.",
 	}); err != nil {
 		return fmt.Errorf("seed today departure change: %w", err)
+	}
+	// „Heute anders“ (#7665) shows every child kind of the day: index 3 goes
+	// home alone today, index 5 carries a pickup note for today.
+	if _, err := rt.Client.Put(fmt.Sprintf("/api/students/%d/departure-exceptions/%s", studentIDs[3], day.String()), map[string]any{
+		"departure_mode": "alone", "reason": "Die Eltern haben es heute erlaubt.",
+	}); err != nil {
+		return fmt.Errorf("seed today departure alone: %w", err)
+	}
+	if _, err := rt.Client.Post(fmt.Sprintf("/api/students/%d/pickup-notes", studentIDs[5]), map[string]any{
+		"note_date": day.String(), "content": "Heute holt die Oma ab.",
+	}); err != nil {
+		return fmt.Errorf("seed today pickup note: %w", err)
 	}
 	return nil
 }
@@ -279,13 +294,45 @@ func seedArrivalSchedules(rt *Runtime, studentIDs []int64) (int, error) {
 				"weekday": weekday, "expected_arrival": arrival,
 			})
 		}
+		version, err := seedWeeklyPlanVersion(rt, studentID)
+		if err != nil {
+			return index, err
+		}
 		if _, err := rt.Client.Put(fmt.Sprintf("/api/students/%d/arrival-schedules", studentID), map[string]any{
-			"schedules": schedules,
+			"schedules": schedules, "expected_version": version,
 		}); err != nil {
 			return index, fmt.Errorf("seed arrival plan for student %d: %w", studentID, err)
 		}
 	}
 	return len(studentIDs), nil
+}
+
+// seedWeeklyPlanVersion reads the token of a child's weekly plan the way the
+// Betreuungsplan editor does (weekly_plan_version of the pickup read, ADR 0311);
+// every save of the weekly plan sends it back.
+func seedWeeklyPlanVersion(rt *Runtime, studentID int64) (string, error) {
+	return weeklyPlanVersionVia(rt.Client, studentID)
+}
+
+// weeklyPlanVersionVia is seedWeeklyPlanVersion for a step that holds the
+// client itself.
+func weeklyPlanVersionVia(client *Client, studentID int64) (string, error) {
+	raw, err := client.Get(fmt.Sprintf("/api/students/%d/pickup-schedules", studentID))
+	if err != nil {
+		return "", fmt.Errorf("read weekly plan of student %d: %w", studentID, err)
+	}
+	var response struct {
+		Data *struct {
+			WeeklyPlanVersion string `json:"weekly_plan_version"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(raw, &response); err != nil {
+		return "", fmt.Errorf("parse weekly plan of student %d: %w", studentID, err)
+	}
+	if response.Data == nil {
+		return "", nil
+	}
+	return response.Data.WeeklyPlanVersion, nil
 }
 
 func createSeedPlanningTrack(rt *Runtime) (int64, error) {
@@ -297,13 +344,13 @@ func createSeedPlanningTrack(rt *Runtime) (int64, error) {
 	}
 	var response struct {
 		Data struct {
-			ID int64 `json:"id"`
+			ID ident.ID `json:"id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &response); err != nil || response.Data.ID == 0 {
 		return 0, fmt.Errorf("parse planning track response")
 	}
-	return response.Data.ID, nil
+	return int64(response.Data.ID), nil
 }
 
 func createSeedPlanningTemplate(
@@ -488,7 +535,7 @@ func seedClassStudentIDs(fs *FixedSeeder, class string) []int64 {
 func confirmSeedManualRoster(rt *Runtime, created []byte) error {
 	var response struct {
 		Data struct {
-			TemplateID int64 `json:"template_id"`
+			TemplateID ident.ID `json:"template_id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(created, &response); err != nil || response.Data.TemplateID == 0 {

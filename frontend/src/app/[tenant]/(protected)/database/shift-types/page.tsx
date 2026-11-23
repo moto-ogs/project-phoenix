@@ -44,10 +44,14 @@ import {
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { ApiError } from "~/lib/api-error";
 import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
-import { useSWRAuth, useTenantMutate } from "~/lib/swr";
+import { revalidateOrThrow, useSWRAuth, useTenantMutate } from "~/lib/swr";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { useModuleBooked } from "~/lib/tenant-context";
 import { staffPlanConcept } from "~/lib/concepts/staffPlan";
+
+/** Info-Knopf am Titel: wofür die Seite da ist und was man zuerst tut. */
+const SHIFT_TYPES_INFO =
+  "Hier legst du fest, welche Dienstarten es im Dienstplan gibt. Mit „Beispiele hinzufügen“ bekommst du typische Dienstarten auf einmal. Fehlt dir eine, lege sie selbst an.";
 
 const logger = createLogger({ component: "DatabaseShiftTypesPage" });
 
@@ -160,15 +164,11 @@ function ShiftTypesPageContent() {
   const [seeding, setSeeding] = useState(false);
 
   const discardRefused = useDiscardRefusedEntity();
-  const {
-    data: cachedData,
-    isLoading,
-    error: swrError,
-    mutate,
-  } = useSWRAuth<ShiftType[]>(CACHE_KEY, () =>
+  const list = useSWRAuth<ShiftType[]>(CACHE_KEY, () =>
     // Die Zahlen sagen der Rückfrage, ob gelöscht oder archiviert wird.
     shiftTypeService.getShiftTypes({ withUsage: true }),
   );
+  const { data: cachedData, isLoading, error: swrError, mutate } = list;
   const accessRefused =
     swrError instanceof ApiError && isAccessRefusal(swrError);
   const data = accessRefused ? undefined : cachedData;
@@ -198,11 +198,15 @@ function ShiftTypesPageContent() {
   >(CATEGORY_CACHE_KEY, () => categoryService.getManagedCategories());
   const categoriesReady = categories !== undefined && !categoriesError;
 
-  const onChanged = useCallback(
-    () =>
-      Promise.all([tenantMutate(CACHE_KEY), tenantMutate(CATEGORY_CACHE_KEY)]),
-    [tenantMutate],
-  );
+  // Lehnt ab, wenn das Lesen scheitert (ADR 0311), mit der Liste als
+  // Antwort.
+  const onChanged = useCallback(async () => {
+    const [stored] = await Promise.all([
+      revalidateOrThrow(list),
+      tenantMutate(CATEGORY_CACHE_KEY),
+    ]);
+    return stored;
+  }, [list, tenantMutate]);
 
   const items = useMemo(
     () =>
@@ -421,6 +425,7 @@ function ShiftTypesPageContent() {
 
   return (
     <CatalogPage
+      info={SHIFT_TYPES_INFO}
       config={config}
       items={items}
       // Bis der Katalogtext des Ladefehlers da ist, bleibt das Skelett
@@ -459,7 +464,7 @@ function BookedShiftTypesPage() {
   // antworten und erst recht keine Katalogdaten laden. Ist das Modul sicher
   // nicht gebucht, ersetzt TenantPage diesen Ladezustand durch die Erklärung.
   if (!dienstplanBooked) {
-    return <TenantPage title="Dienstarten" loading />;
+    return <TenantPage title="Dienstarten" info={SHIFT_TYPES_INFO} loading />;
   }
 
   return <ShiftTypesPageContent />;
@@ -468,7 +473,11 @@ function BookedShiftTypesPage() {
 export default function ShiftTypesPage() {
   return (
     <Suspense fallback={null}>
-      <ModuleRouteGuard module="dienstplan" title="Dienstarten">
+      <ModuleRouteGuard
+        module="dienstplan"
+        title="Dienstarten"
+        info={SHIFT_TYPES_INFO}
+      >
         <BookedShiftTypesPage />
       </ModuleRouteGuard>
     </Suspense>

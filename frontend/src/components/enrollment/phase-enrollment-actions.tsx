@@ -16,10 +16,6 @@ import {
   type AdminExistingChildCandidate,
   type ExistingChildChoice,
 } from "~/lib/enrollment-admin-api";
-import type {
-  SubmitEnrollmentPayload,
-  SubmitEnrollmentResult,
-} from "~/lib/enrollment-submission-api";
 import type { Phase } from "~/lib/enrollment-phase-api";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
@@ -54,20 +50,22 @@ import {
   sendWithExistingChildChoice,
   type ExistingChildChoiceSubject,
 } from "~/components/enrollment/existing-child-choice";
-import {
-  type CareOfferingBookingStats,
-  fetchCareOfferingBookingStats,
-} from "~/lib/care-offering-booking-stats";
+import { fetchCareOfferingBookingStats } from "~/lib/care-offering-booking-stats";
+import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
-import { useFreshSWR, useInvalidateFamily, useSWRAuth } from "~/lib/swr";
+import { useInvalidateFamily, useOpeningRead, useSWRAuth } from "~/lib/swr";
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import { withLateInviteQuery } from "~/lib/enrollment-http";
 import { Loading } from "~/components/ui/loading";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 
 const logger = createLogger({ component: "PhaseEnrollmentActions" });
 
-const NO_STATS: Record<string, CareOfferingBookingStats> = {};
+const NO_STATS: Record<
+  string,
+  enrollmentContract.CareOfferingBookingStatsResponse
+> = {};
 
 export function LateInviteModal({
   isOpen,
@@ -228,14 +226,32 @@ export function ManualApprovedEnrollmentModal({
   phase: Phase;
   gradeLevelMax: number | null;
 }>) {
-  // The form reads its template once when it mounts: every opening waits for
-  // its own answer, so no deleted offering or outdated template is offered.
-  const bootstrapRead = useFreshSWR(
+  // A reopened panel shows the cached template while it reads again. The
+  // server checks the entry against the current offerings, and refuses a
+  // form the school changed meanwhile (ADR 0311); the form then shows the
+  // current one.
+  // The office fills the template this opening read: every opening reads it
+  // again, then a background read neither swaps it under the typed entry
+  // nor, when it fails, takes the form away. A failed first read shows its
+  // error, also over a cached template, until a retry answers.
+  const opened = useOpeningRead(
     isOpen ? enrollmentKeys.manualEnrollmentBootstrap(phase.id) : null,
     () => fetchManualEnrollmentBootstrap(phase.id),
+    { showCached: true },
   );
-  // A failed load of this opening shows the error, not an earlier template.
-  const bootstrap = bootstrapRead.error ? undefined : bootstrapRead.data;
+  const loadCurrentForm = async () => {
+    try {
+      await opened.reload();
+    } catch (err) {
+      // The form keeps the entry and shows this failure in place of the
+      // refusal.
+      logger.warn("manual_enrollment_form_reload_failed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      throw err;
+    }
+  };
+  const bootstrap = isOpen ? opened.data : undefined;
   const prefetchedData = useMemo<EnrollmentFormPrefetchedData | null>(
     () => (bootstrap ? toManualPrefetchedData(bootstrap) : null),
     [bootstrap],
@@ -266,9 +282,9 @@ export function ManualApprovedEnrollmentModal({
   // a click on it nor the focus it hands back may close the waiting form.
   const send = useFormModalPending(isOpen, phase.id);
   const loadError = useSwrResourceLoadError(
-    [{ data: bootstrap, error: bootstrapRead.error }],
+    [{ data: bootstrap, error: opened.error }],
     "das Formular",
-    () => bootstrapRead.mutate(),
+    opened.retry,
   );
   const loading = isOpen && !bootstrap && !loadError.failure;
   const checks = useApiFormError();
@@ -291,8 +307,8 @@ export function ManualApprovedEnrollmentModal({
   }, [isOpen, phase.id, clearChecks]);
 
   const submitter = async (
-    payload: SubmitEnrollmentPayload,
-  ): Promise<SubmitEnrollmentResult | null> => {
+    payload: sharedContract.SubmitEnrollmentRequest,
+  ): Promise<sharedContract.SubmitEnrollmentResponse | null> => {
     const trimmedReason = reason.trim();
     // Grund und Einwilligung stehen über dem Formular. Der Kasten hier sagt,
     // was fehlt; `null` hält das Formular davon ab, Erfolg oder einen
@@ -311,7 +327,7 @@ export function ManualApprovedEnrollmentModal({
     }
     checks.clear();
     setRenewedChildName(null);
-    const child = payload.children[0];
+    const child = payload.children?.[0];
     let renewalCandidates: AdminExistingChildCandidate[] = [];
     const created = await send.run(async (op) => {
       try {
@@ -471,6 +487,7 @@ export function ManualApprovedEnrollmentModal({
               onSubmitted={(url) => setStatusUrl(url)}
               prefetchedData={prefetchedData}
               submitter={submitter}
+              onFormChanged={loadCurrentForm}
               skipCaptcha
               lockChildStructure
               withoutSignature
@@ -506,8 +523,12 @@ export function ManualApprovedEnrollmentModal({
   );
 }
 
+type ManualEnrollmentBootstrap = Awaited<
+  ReturnType<typeof fetchManualEnrollmentBootstrap>
+>;
+
 function toManualPrefetchedData(
-  bootstrap: Awaited<ReturnType<typeof fetchManualEnrollmentBootstrap>>,
+  bootstrap: ManualEnrollmentBootstrap,
 ): EnrollmentFormPrefetchedData {
   // The school confirms consent outside the form, so no block is required.
   // Staff entry bypasses the phase's audience and grade gates.

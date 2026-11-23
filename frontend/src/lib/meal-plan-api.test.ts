@@ -7,13 +7,12 @@ import {
   mondayOf,
   workWeekDates,
 } from "./meal-plan-api";
-import { sessionFetch } from "./session-cache";
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 
-vi.mock("./session-cache", () => ({
-  sessionFetch: vi.fn(),
-}));
-
-const mockedFetch = sessionFetch as unknown as Mock;
+const fetchMock: Mock = vi.fn();
+beforeEach(() => {
+  vi.stubGlobal("fetch", fetchMock);
+});
 
 function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
   return new Response(JSON.stringify(body), {
@@ -24,13 +23,13 @@ function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
 }
 
 beforeEach(() => {
-  mockedFetch.mockReset();
+  fetchMock.mockReset();
 });
 
 describe("getWeeklyMealParticipants", () => {
   it("requests the week and maps each day's children", async () => {
     let seenURL = "";
-    mockedFetch.mockImplementation(async (url: string) => {
+    fetchMock.mockImplementation(async (url: string) => {
       seenURL = url;
       return jsonResponse({
         data: {
@@ -40,6 +39,7 @@ describe("getWeeklyMealParticipants", () => {
           days: [
             {
               date: "2026-09-07",
+              closed: false,
               participants: [
                 {
                   student_id: "42",
@@ -81,54 +81,45 @@ describe("getWeeklyMealParticipants", () => {
 });
 
 describe("getMealPlanWeek", () => {
-  it("requests the week and maps backend entries, trimming empty notes to null", async () => {
+  it("requests the days and maps their versions and dishes, trimming empty notes to null", async () => {
     let seenURL = "";
-    mockedFetch.mockImplementation(async (url: string) => {
+    fetchMock.mockImplementation(async (url: string) => {
       seenURL = url;
       return jsonResponse({
         data: [
           {
             date: "2026-07-06",
-            position: 0,
-            dish: "Nudeln",
-            note: "  vegetarisch  ",
+            version: "v-mon",
+            dishes: [
+              { dish: "Nudeln", note: "  vegetarisch  " },
+              { dish: "Salat", note: "   " },
+            ],
           },
-          { date: "2026-07-06", position: 1, dish: "Salat", note: "   " },
-          { date: "2026-07-07", position: 0, dish: "Suppe", note: null },
+          {
+            date: "2026-07-07",
+            version: "v-tue",
+            dishes: [{ dish: "Suppe" }],
+          },
+          { date: "2026-07-08", version: "v-wed", dishes: null },
         ],
       });
     });
 
     const out = await getMealPlanWeek("2026-07-06");
-    expect(seenURL).toContain("/api/meal-plan?week_start=2026-07-06");
-    expect(out).toHaveLength(3);
+    expect(seenURL).toContain("/api/meal-plan/days?week_start=2026-07-06");
+    expect(out.map((day) => day.version)).toEqual(["v-mon", "v-tue", "v-wed"]);
     // A note with content is preserved verbatim (untrimmed value kept).
-    expect(out[0]?.note).toBe("  vegetarisch  ");
+    expect(out[0]?.dishes[0]?.note).toBe("  vegetarisch  ");
     // A whitespace-only note collapses to null.
-    expect(out[1]?.note).toBeNull();
-    // A null note stays null.
-    expect(out[2]?.note).toBeNull();
-  });
-
-  it("accepts a bare array response shape", async () => {
-    mockedFetch.mockResolvedValue(
-      jsonResponse([
-        { date: "2026-07-06", position: 0, dish: "Reis", note: null },
-      ]),
-    );
-    const out = await getMealPlanWeek("2026-07-06");
-    expect(out).toHaveLength(1);
-    expect(out[0]?.dish).toBe("Reis");
-  });
-
-  it("returns an empty list for an unexpected object shape", async () => {
-    mockedFetch.mockResolvedValue(jsonResponse({ unexpected: true }));
-    const out = await getMealPlanWeek("2026-07-06");
-    expect(out).toEqual([]);
+    expect(out[0]?.dishes[1]?.note).toBeNull();
+    // A missing note stays null.
+    expect(out[1]?.dishes[0]?.note).toBeNull();
+    // An empty day has no dishes, but its version.
+    expect(out[2]?.dishes).toEqual([]);
   });
 
   it("throws an ApiError with the status class on a non-OK response", async () => {
-    mockedFetch.mockResolvedValue(
+    fetchMock.mockResolvedValue(
       new Response("boom", { status: 500, statusText: "Server Error" }),
     );
     await expect(getMealPlanWeek("2026-07-06")).rejects.toMatchObject({
@@ -140,35 +131,48 @@ describe("getMealPlanWeek", () => {
 
   it("URL-encodes the week start", async () => {
     let seenURL = "";
-    mockedFetch.mockImplementation(async (url: string) => {
+    fetchMock.mockImplementation(async (url: string) => {
       seenURL = url;
       return jsonResponse({ data: [] });
     });
     await getMealPlanWeek("2026 07 06");
-    expect(seenURL).toContain("week_start=2026%2007%2006");
+    expect(seenURL).toContain("week_start=2026+07+06");
   });
 });
 
 describe("setDay", () => {
-  it("PUTs the day with the dishes payload", async () => {
+  it("PUTs the day with the dishes and the version as read, and answers the stored day", async () => {
     let seenURL = "";
     let seenInit: RequestInit | undefined;
-    mockedFetch.mockImplementation(async (url: string, init?: RequestInit) => {
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
       seenURL = url;
       seenInit = init;
-      return jsonResponse({});
+      return jsonResponse({
+        status: "success",
+        data: {
+          date: "2026-07-06",
+          version: "v-saved",
+          dishes: [{ dish: "Nudeln", note: "vegetarisch", allergens: [] }],
+        },
+      });
     });
 
-    await setDay("2026-07-06", [{ dish: "Nudeln", note: "vegetarisch" }]);
-    expect(seenURL).toContain("/api/meal-plan/2026-07-06");
+    const saved = await setDay(
+      "2026-07-06",
+      [{ dish: "Nudeln", note: "vegetarisch" }],
+      "v-read",
+    );
+    expect(seenURL).toContain("/api/meal-plan/days/2026-07-06");
     expect(seenInit?.method).toBe("PUT");
     expect(JSON.parse(seenInit?.body as string)).toEqual({
       dishes: [{ dish: "Nudeln", note: "vegetarisch" }],
+      expected_version: "v-read",
     });
+    expect(saved.version).toBe("v-saved");
   });
 
   it("keeps code, field errors and request id of a refused save", async () => {
-    mockedFetch.mockResolvedValue(
+    fetchMock.mockResolvedValue(
       new Response(
         JSON.stringify({
           code: "meals.invalid_dishes",
@@ -178,7 +182,7 @@ describe("setDay", () => {
         { status: 400, statusText: "Bad Request" },
       ),
     );
-    await expect(setDay("2026-07-06", [])).rejects.toMatchObject({
+    await expect(setDay("2026-07-06", [], "v-read")).rejects.toMatchObject({
       name: "ApiError",
       status: 400,
       code: "meals.invalid_dishes",

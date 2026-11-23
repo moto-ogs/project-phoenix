@@ -351,7 +351,7 @@ describe("OperatorSchoolsPage", () => {
     await waitFor(() => {
       expect(mockCreateSchool).toHaveBeenCalledWith(
         expect.objectContaining({
-          organization_id: 1,
+          organization_id: "1",
           name: "New School",
           slug: "new-school",
           subdomain: "new-school",

@@ -13,6 +13,11 @@ import {
   type PushPortal,
 } from "./push-api";
 
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 // The key reaches the actions from the shared reader (usePushPublicKey).
 // Here each action reads it itself, as that reader does on a page.
 async function serverKey(portal: PushPortal) {
@@ -165,7 +170,7 @@ describe("push-api", () => {
   it("reuses an existing parent subscription", async () => {
     getSubscription.mockResolvedValue(subscription);
     fetchMock
-      .mockResolvedValueOnce(response({ public_key: vapidPublicKey }))
+      .mockResolvedValueOnce(response({ data: { public_key: vapidPublicKey } }))
       .mockResolvedValueOnce(response(null, 204));
 
     await subscribePush("parent");
@@ -185,7 +190,9 @@ describe("push-api", () => {
 
   it("requests permission synchronously before awaiting server configuration", async () => {
     requestPermission.mockResolvedValue("denied");
-    fetchMock.mockResolvedValueOnce(response({ public_key: vapidPublicKey }));
+    fetchMock.mockResolvedValueOnce(
+      response({ data: { public_key: vapidPublicKey } }),
+    );
 
     await expect(subscribePush("tenant")).rejects.toMatchObject({
       name: "ApiError",
@@ -215,7 +222,7 @@ describe("push-api", () => {
     fetchMock.mockResolvedValueOnce(new Response("not-json", { status: 503 }));
     await expect(subscribePush("tenant")).rejects.toMatchObject({
       status: 503,
-      message: "Push-Anfrage fehlgeschlagen (503).",
+      message: "Push-Anfrage fehlgeschlagen.",
     });
     expect(isPushConfigurationMissing(new Error("unrelated"))).toBe(false);
   });
@@ -253,13 +260,13 @@ describe("push-api", () => {
 
     await expect(subscribePush("tenant")).rejects.toMatchObject({
       status: 409,
-      message: "Push-Anfrage fehlgeschlagen (409).",
+      message: "Push-Anfrage fehlgeschlagen.",
       detail: "push is disabled",
     });
   });
 
   it("rejects a malformed VAPID key", async () => {
-    fetchMock.mockResolvedValueOnce(response({ public_key: "YWJj" }));
+    fetchMock.mockResolvedValueOnce(response({ data: { public_key: "YWJj" } }));
 
     await expect(subscribePush("tenant")).rejects.toMatchObject({
       status: 502,
@@ -288,7 +295,7 @@ describe("push-api", () => {
     getSubscription.mockResolvedValue(subscription);
     subscribeBrowser.mockResolvedValue(rotated);
     fetchMock
-      .mockResolvedValueOnce(response({ public_key: vapidPublicKey }))
+      .mockResolvedValueOnce(response({ data: { public_key: vapidPublicKey } }))
       .mockResolvedValueOnce(response(null, 204));
 
     await subscribePush("tenant");
@@ -310,7 +317,7 @@ describe("push-api", () => {
   it("rebinds an existing subscription without requesting permission", async () => {
     getSubscription.mockResolvedValue(subscription);
     fetchMock
-      .mockResolvedValueOnce(response({ public_key: vapidPublicKey }))
+      .mockResolvedValueOnce(response({ data: { public_key: vapidPublicKey } }))
       .mockResolvedValueOnce(response(null, 204));
 
     await expect(syncExistingPushSubscription("parent")).resolves.toBe(
@@ -364,6 +371,30 @@ describe("push-api", () => {
 
     await expect(unsubscribePushSilently("parent")).resolves.toBeUndefined();
     expect(unsubscribeBrowser).toHaveBeenCalledOnce();
+  });
+
+  // The family is revoked before the cleanup runs; a 401 then must not send
+  // the parent to the login before the sign-out clears the cookie.
+  it("sends the logout DELETE without the portal's login redirect", async () => {
+    getSubscription.mockResolvedValue(subscription);
+    fetchMock.mockResolvedValue(response({ code: "auth.unauthorized" }, 401));
+    const assign = vi.fn();
+    vi.stubGlobal("location", { ...window.location, assign, pathname: "/" });
+
+    await expect(unsubscribePushSilently("parent")).resolves.toBeUndefined();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/api/parent/me/push/subscriptions?endpoint=${encodeURIComponent(endpoint)}`,
+      expect.objectContaining({ method: "DELETE" }),
+    );
+    expect(assign).not.toHaveBeenCalled();
+    expect(unsubscribeBrowser).toHaveBeenCalledOnce();
+
+    // Turning push off in the settings keeps the portal's handling.
+    await expect(unsubscribePush("parent")).rejects.toMatchObject({
+      status: 401,
+    });
+    expect(assign).toHaveBeenCalledWith("/parents/login");
   });
 
   it("bounds a tenant logout's hanging DELETE and aborts its request", async () => {

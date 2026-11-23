@@ -15,7 +15,7 @@ if [[ "${1:-quality}" == react-doctor ]]; then
   exit 0
 fi
 # Static-analysis placeholders, shared by local checks and CI. No servers run.
-export NEXT_PUBLIC_API_URL=http://localhost:8080 SKIP_ENV_VALIDATION=true
+export SKIP_ENV_VALIDATION=true
 export API_URL=http://localhost:8080 TENANT_DOMAIN=localhost
 export NEXT_PUBLIC_OPERATOR_HOSTNAME=operator.localhost:3000
 export NEXT_PUBLIC_PARENTS_HOSTNAME=parents.localhost:3000
@@ -23,11 +23,16 @@ export NEXT_PUBLIC_APP_ENV=test
 export NEXT_PUBLIC_SCHOOL_HOSTNAME=schule.localhost:3000
 export NEXT_PUBLIC_CATERER_HOSTNAME=caterer.localhost:3000
 export NEXT_PUBLIC_TRAEGER_HOSTNAME=traeger.localhost:3000
+# Sie-Anrede in German texts (ADR 0294); about a second over the whole tree.
+[[ "${1:-quality}" == fast ]] || quality_step du-form node ../scripts/check-du-form.mjs
 [[ "${1:-quality}" == fast ]] || quality_step locales pnpm exec node scripts/verify-locales.mjs
 [[ "${1:-quality}" == fast ]] || quality_step help-index pnpm exec node scripts/generate-help-index.mjs --check
 [[ "${1:-quality}" == fast ]] || quality_step portal-pages pnpm exec node scripts/generate-portal-pages.mjs --check
 [[ "${1:-quality}" == fast ]] || quality_step error-catalog pnpm exec node scripts/verify-error-catalog.mjs
 [[ "${1:-quality}" == fast ]] || quality_step frontend-source-contracts pnpm run test:source-contracts
+if [[ "${1:-quality}" == fast ]]; then
+  quality_step bff-exceptions node --test scripts/bff-boundary.node-test.mjs
+fi
 quality_step frontend-lint pnpm run lint --max-warnings 0
 quality_step frontend-types pnpm run typecheck
 # Unused exports and files were the most frequent frontend-quality CI failure
@@ -38,6 +43,6 @@ quality_step production-unused-code pnpm knip:production
 # CI checks the guard inventory in test-frontend; a stale inventory failed 3 of
 # 9 red PR runs on 2026-10-31 and takes about 3 s here.
 [[ "${1:-quality}" == fast ]] && quality_step frontend-guards node ../scripts/test-frontend-changed.mjs --check-guards
-# Pre-push stops here; CI runs the whole-project analysis below.
-[[ "${1:-quality}" == fast ]] && exit 0
+# Layer and cycle rules (.dependency-cruiser.cjs) take about 4 s, so pre-push
+# and check-changed.mjs run them too instead of leaving them to CI.
 quality_step dependency-graph pnpm depcruise

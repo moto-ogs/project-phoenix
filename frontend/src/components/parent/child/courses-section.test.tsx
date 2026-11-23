@@ -9,10 +9,10 @@ import {
   getChildCourses,
   requestChildCourse,
   withdrawChildCourseRequest,
-  type ChildCourses,
 } from "~/lib/parent-api";
 import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
 import { CoursesSection } from "./courses-section";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 vi.unmock("swr");
 
@@ -26,8 +26,12 @@ const mockedCourses = vi.mocked(getChildCourses);
 const mockedRequest = vi.mocked(requestChildCourse);
 const mockedWithdraw = vi.mocked(withdrawChildCourseRequest);
 
-function catalog(overrides: Partial<ChildCourses> = {}): ChildCourses {
+function catalog(
+  overrides: Partial<parentMeContract.CoursesResponse> = {},
+): parentMeContract.CoursesResponse {
   return {
+    can_request: true,
+    reason_required: false,
     enabled: true,
     effective_from: "2026-09-21",
     pending_submitted_by_self: false,

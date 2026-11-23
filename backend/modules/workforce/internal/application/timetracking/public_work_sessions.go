@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // workSessionCapability embeds the service so GetTodayPresenceMap, whose
@@ -43,7 +44,7 @@ func publicWorkSessionBreak(entity *WorkSessionBreak) *workforce.WorkSessionBrea
 		return nil
 	}
 	return &workforce.WorkSessionBreak{
-		ID: entity.ID, TenantID: entity.TenantID, SessionID: entity.SessionID, StartedAt: entity.StartedAt, EndedAt: entity.EndedAt,
+		ID: ident.ID(entity.ID), TenantID: ident.ID(entity.TenantID), SessionID: ident.ID(entity.SessionID), StartedAt: entity.StartedAt, EndedAt: entity.EndedAt,
 		DurationMinutes: entity.DurationMinutes, PlannedEndTime: entity.PlannedEndTime, CreatedAt: entity.CreatedAt, UpdatedAt: entity.UpdatedAt,
 	}
 }
@@ -68,6 +69,7 @@ func publicSessionResponse(value *SessionResponse) *workforce.SessionResponse {
 		IsOvertime: value.IsOvertime, IsBreakCompliant: value.IsBreakCompliant, Breaks: publicWorkSessionBreaks(value.Breaks),
 		EditCount: value.EditCount, AuditCount: value.AuditCount,
 		PackUpMinutes: value.PackUpMinutes, RoundingMinutes: value.RoundingMinutes,
+		Version: value.Version,
 	}
 }
 
@@ -112,7 +114,7 @@ func publicWorkSessionEdit(entity *WorkSessionEdit) *workforce.WorkSessionEdit {
 		return nil
 	}
 	return &workforce.WorkSessionEdit{
-		ID: entity.ID, TenantID: entity.TenantID, SessionID: entity.SessionID, StaffID: entity.StaffID, EditedBy: entity.EditedBy,
+		ID: ident.ID(entity.ID), TenantID: ident.ID(entity.TenantID), SessionID: ident.ID(entity.SessionID), StaffID: ident.ID(entity.StaffID), EditedBy: ident.ID(entity.EditedBy),
 		FieldName: entity.FieldName, OldValue: entity.OldValue, NewValue: entity.NewValue, Notes: entity.Notes, CreatedAt: entity.CreatedAt,
 	}
 }
@@ -137,12 +139,12 @@ func publicWorkSessionEdits(values []*WorkSessionEditView) []*workforce.WorkSess
 func legacySessionUpdate(value workforce.SessionUpdateRequest) SessionUpdateRequest {
 	result := SessionUpdateRequest{
 		Date: value.Date, CheckInTime: value.CheckInTime, CheckOutTime: value.CheckOutTime, BreakMinutes: value.BreakMinutes,
-		Status: value.Status, Notes: value.Notes,
+		Status: value.Status, Notes: value.Notes, ExpectedVersion: value.ExpectedVersion,
 	}
 	if value.Breaks != nil {
 		result.Breaks = make([]BreakDurationUpdate, 0, len(value.Breaks))
 		for _, update := range value.Breaks {
-			result.Breaks = append(result.Breaks, BreakDurationUpdate(update))
+			result.Breaks = append(result.Breaks, BreakDurationUpdate{ID: update.ID.Int64(), DurationMinutes: update.DurationMinutes})
 		}
 	}
 	return result

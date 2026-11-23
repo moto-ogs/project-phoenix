@@ -125,8 +125,8 @@ func writeExportFile(w http.ResponseWriter, file lists.File) {
 }
 
 // parsePhaseExportRequest reads the format and optional child-status
-// filter from the JSON body (falling back to the ?format= / ?child_status=
-// query params), reading the body exactly once. Format defaults to PDF
+// filter from the JSON body, reading it exactly once; the query carries
+// neither (#7644). Format defaults to PDF
 // (pdf/docx/xlsx only); child_status defaults to "" (no filter), with
 // "all" also meaning no filter. A present-but-unknown status is rejected
 // so a typo can't silently widen the export to everyone.
@@ -135,12 +135,7 @@ func parsePhaseExportRequest(r *http.Request) (lists.Format, string, error) {
 	if err := decodeOptionalJSONBody(r, &body); err != nil {
 		return "", "", err
 	}
-	// Normalise both sources to lower case so "PDF"/"XLSX" from either
-	// the JSON body or the ?format= query param resolve identically.
 	format := lists.Format(strings.ToLower(string(body.Format)))
-	if format == "" {
-		format = lists.Format(strings.ToLower(r.URL.Query().Get("format")))
-	}
 	if format == "" {
 		format = lists.FormatPDF
 	}
@@ -152,9 +147,6 @@ func parsePhaseExportRequest(r *http.Request) (lists.Format, string, error) {
 	}
 
 	childStatus := strings.ToLower(strings.TrimSpace(body.ChildStatus))
-	if childStatus == "" {
-		childStatus = strings.ToLower(strings.TrimSpace(r.URL.Query().Get("child_status")))
-	}
 	if childStatus == "all" {
 		childStatus = "" // explicit "all" == no filter
 	}

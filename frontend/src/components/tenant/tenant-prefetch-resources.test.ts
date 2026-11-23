@@ -1,4 +1,3 @@
-import * as apiError from "~/lib/api-error";
 import type { Session } from "next-auth";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { tenantPrefetchResources } from "./tenant-prefetch-resources";
@@ -6,6 +5,7 @@ import { studentKeys } from "~/lib/swr/portal-keys";
 import { groups } from "~/lib/swr/groups";
 import { dashboardKeys } from "~/lib/swr/shell-keys";
 import { berlinTodayISO } from "~/lib/date-helpers";
+import { buildSupervisionDashboardWire } from "~/test/fixtures/supervision-dashboard";
 
 function context(permissions: string[], scope = "") {
   const session: Session = {
@@ -23,7 +23,19 @@ function context(permissions: string[], scope = "") {
   };
 }
 
-afterEach(() => vi.restoreAllMocks());
+vi.mock("~/lib/session-cache", async (importOriginal) => {
+  const plain = await import("~/test/mocks/plain-session-fetch");
+  return {
+    ...(await importOriginal<typeof import("~/lib/session-cache")>()),
+    requireTenantSession: plain.requireTenantSession,
+    renewTenantSession: plain.renewTenantSession,
+  };
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 
 describe("tenant destination resources", () => {
   it.each(["", "tenant"])(
@@ -169,23 +181,24 @@ describe("tenant destination resources", () => {
 });
 
 it("uses the cold destination's exact entry fetcher for a parameterized supervision link", async () => {
-  const transport = vi
-    .spyOn(apiError, "transportFetch")
-    .mockResolvedValueOnce(
-      new Response(JSON.stringify({ data: { selectedGroupId: "first" } })),
-    );
+  const fetchMock = vi.fn<typeof fetch>().mockResolvedValueOnce(
+    new Response(
+      JSON.stringify({
+        data: buildSupervisionDashboardWire({ selected_group_id: "first" }),
+      }),
+    ),
+  );
+  vi.stubGlobal("fetch", fetchMock);
   const resources = await tenantPrefetchResources(
     "/active-supervisions?session=9",
     context(["groups:read"]),
   );
   expect(resources).toHaveLength(1);
-  await expect(resources[0]!.fetcher()).resolves.toEqual({
+  await expect(resources[0]!.fetcher()).resolves.toMatchObject({
     selectedGroupId: "first",
   });
-  expect(transport).toHaveBeenCalledExactlyOnceWith(
-    "/api/active-supervision-dashboard",
-    {
-      headers: { "Content-Type": "application/json" },
-    },
+  expect(fetchMock).toHaveBeenCalledExactlyOnceWith(
+    "/api/active/supervision-dashboard",
+    expect.objectContaining({ method: "GET" }),
   );
 });

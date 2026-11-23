@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"sort"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // StaffCredentials stores login credentials for a staff member
@@ -194,12 +196,7 @@ func (s *FixedSeeder) Seed(ctx context.Context) (*FixedResult, error) {
 		return nil, fmt.Errorf("failed to seed activities: %w", err)
 	}
 
-	// 12. Assign supervisors to activities
-	if err := s.assignSupervisors(ctx); err != nil {
-		return nil, fmt.Errorf("failed to assign supervisors: %w", err)
-	}
-
-	// 13. Enroll students in activities
+	// 12. Enroll students in activities
 	if err := s.enrollStudents(ctx); err != nil {
 		return nil, fmt.Errorf("failed to enroll students: %w", err)
 	}
@@ -271,12 +268,8 @@ func (s *FixedSeeder) seedClassArrivalTimes(_ context.Context, result *FixedResu
 		{"weekday": 5, "expected_arrival": "11:45"},
 	}
 	for _, class := range classNames {
-		_, err := s.client.Post("/api/students/arrival-schedules/bulk", map[string]any{
-			"school_class": class,
-			"schedules":    schedules,
-		})
-		if err != nil {
-			return fmt.Errorf("seed class arrival times for %s: %w", class, err)
+		if err := s.saveClassArrivalTimes(class, schedules); err != nil {
+			return err
 		}
 		result.ClassArrivalTimeCount++
 	}
@@ -429,14 +422,14 @@ func (s *FixedSeeder) seedRooms(_ context.Context, result *FixedResult) error {
 		var resp struct {
 			Status string `json:"status"`
 			Data   struct {
-				ID int64 `json:"id"`
+				ID ident.ID `json:"id"`
 			} `json:"data"`
 		}
 		if err := json.Unmarshal(respBody, &resp); err != nil {
 			return fmt.Errorf("failed to parse room response: %w", err)
 		}
 
-		s.roomIDs[room.Name] = resp.Data.ID
+		s.roomIDs[room.Name] = int64(resp.Data.ID)
 		result.RoomCount++
 	}
 
@@ -485,7 +478,7 @@ func (s *FixedSeeder) seedStaff(_ context.Context, result *FixedResult) error {
 			Status string `json:"status"`
 			Data   struct {
 				ID        json.Number `json:"id"`
-				TeacherID int64       `json:"teacher_id,omitempty"`
+				TeacherID ident.ID    `json:"teacher_id,omitempty"`
 			} `json:"data"`
 		}
 		if err := json.Unmarshal(respBody, &resp); err != nil {
@@ -499,7 +492,7 @@ func (s *FixedSeeder) seedStaff(_ context.Context, result *FixedResult) error {
 		s.staffIDs[personKey] = staffID
 		// Store teacher ID if this is a teacher (for group assignment)
 		if resp.Data.TeacherID > 0 {
-			s.teacherIDs[personKey] = resp.Data.TeacherID
+			s.teacherIDs[personKey] = int64(resp.Data.TeacherID)
 		}
 		result.StaffCount++
 	}
@@ -524,7 +517,7 @@ func (s *FixedSeeder) retireFormerStaff() error {
 		"kontakt":         {"address_city": "Köln", "phone": "+49 221 4605318", "note": "Frühere Kontaktdaten für die Wiederaufnahme"},
 		"qualifikationen": {"qualifikationen": []map[string]any{{"name": "Erste Hilfe"}}, "note": "Frühere Qualifikation für die Wiederaufnahme"},
 	} {
-		if _, err := s.client.Put(fmt.Sprintf("/api/staff/%d/stammdaten/%s", formerStaffID, section), data); err != nil {
+		if err := putStammdatenSection(s.client, formerStaffID, section, data); err != nil {
 			return fmt.Errorf("seed former staff %s: %w", section, err)
 		}
 	}
@@ -585,14 +578,14 @@ func (s *FixedSeeder) seedGroups(_ context.Context, result *FixedResult) error {
 		var resp struct {
 			Status string `json:"status"`
 			Data   struct {
-				ID int64 `json:"id"`
+				ID ident.ID `json:"id"`
 			} `json:"data"`
 		}
 		if err := json.Unmarshal(respBody, &resp); err != nil {
 			return fmt.Errorf("failed to parse group response: %w", err)
 		}
 
-		s.groupIDs[class.key] = resp.Data.ID
+		s.groupIDs[class.key] = int64(resp.Data.ID)
 		result.GroupCount++
 	}
 
@@ -704,15 +697,15 @@ func (s *FixedSeeder) seedStudents(_ context.Context, result *FixedResult) error
 		var resp struct {
 			Status string `json:"status"`
 			Data   struct {
-				ID int64 `json:"id"`
+				ID ident.ID `json:"id"`
 			} `json:"data"`
 		}
 		if err := json.Unmarshal(respBody, &resp); err != nil {
 			return fmt.Errorf("failed to parse student response: %w", err)
 		}
 
-		s.studentIDs[studentKey] = resp.Data.ID
-		s.studentIDByIndex[i] = resp.Data.ID
+		s.studentIDs[studentKey] = int64(resp.Data.ID)
+		s.studentIDByIndex[i] = int64(resp.Data.ID)
 		result.StudentCount++
 	}
 
@@ -790,7 +783,7 @@ func (s *FixedSeeder) getCheckedInStudentIDs() (map[int64]bool, error) {
 	var resp struct {
 		Status string `json:"status"`
 		Data   []struct {
-			StudentID int64 `json:"student_id"`
+			StudentID ident.ID `json:"student_id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(respBody, &resp); err != nil {
@@ -798,7 +791,7 @@ func (s *FixedSeeder) getCheckedInStudentIDs() (map[int64]bool, error) {
 	}
 
 	for _, visit := range resp.Data {
-		checkedIn[visit.StudentID] = true
+		checkedIn[int64(visit.StudentID)] = true
 	}
 
 	return checkedIn, nil
@@ -863,13 +856,13 @@ func (s *FixedSeeder) createDemoGuardian(index int, guardian DemoGuardian) (int6
 	}
 	var resp struct {
 		Data struct {
-			ID int64 `json:"id"`
+			ID ident.ID `json:"id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(respBody, &resp); err != nil {
 		return 0, fmt.Errorf("failed to parse guardian response: %w", err)
 	}
-	return resp.Data.ID, nil
+	return int64(resp.Data.ID), nil
 }
 
 // demoIBANBLZ is the Bundesbank test Bankleitzahl block used for the demo
@@ -946,26 +939,6 @@ func (s *FixedSeeder) seedGuardianPayments(_ context.Context, result *FixedResul
 		fmt.Printf("  ✓ %d payers marked, %d bank details stored\n", result.PayerCount, result.GuardianIBANCount)
 	}
 	return nil
-}
-
-// storeDemoBankDetails stores the IBAN of the payer DemoGuardians[index]. A
-// guardian of several children stores it with the first child only.
-func (s *FixedSeeder) storeDemoBankDetails(index int, guardian DemoGuardian, guardianID int64, ibanIndex int) (bool, error) {
-	if guardian.StudentIndex%4 == 3 || demoGuardianFirstIndex(guardian) != index {
-		// Payer known, bank details still missing.
-		return false, nil
-	}
-	body := map[string]any{"iban": demoIBAN(ibanIndex)}
-	if guardian.StudentIndex%5 == 2 {
-		// A Kontoinhaber that differs from the guardian: the account runs
-		// on the partner's name.
-		body["account_holder"] = fmt.Sprintf("%s %s", guardian.FirstName, guardian.LastName+"-Berger")
-	}
-	paymentPath := fmt.Sprintf("/api/guardians/%d/payment", guardianID)
-	if _, err := s.client.Put(paymentPath, body); err != nil {
-		return false, fmt.Errorf("store bank details for guardian %s: %w", demoGuardianKey(guardian), err)
-	}
-	return true, nil
 }
 
 // seedPickupSchedules creates the weekly Gehzeiten. Children with "Wird abgeholt"
@@ -1079,12 +1052,7 @@ func (s *FixedSeeder) seedPickupSchedules(_ context.Context, result *FixedResult
 			schedules = append(schedules, entry)
 		}
 
-		path := fmt.Sprintf("/api/students/%d/pickup-schedules", studentID)
-		body := map[string]any{
-			"schedules": schedules,
-		}
-
-		_, err := s.client.Put(path, body)
+		err := putWeeklyPickupSchedules(s.client, studentID, schedules)
 		if err != nil {
 			return fmt.Errorf("seed pickup schedule for student %s %s: %w", student.FirstName, student.LastName, err)
 		}
@@ -1108,8 +1076,8 @@ func (s *FixedSeeder) fetchCategories(_ context.Context) error {
 	var resp struct {
 		Status string `json:"status"`
 		Data   []struct {
-			ID   int64  `json:"id"`
-			Name string `json:"name"`
+			ID   ident.ID `json:"id"`
+			Name string   `json:"name"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(respBody, &resp); err != nil {
@@ -1118,7 +1086,7 @@ func (s *FixedSeeder) fetchCategories(_ context.Context) error {
 
 	// Build category map
 	for _, cat := range resp.Data {
-		s.categoryIDs[cat.Name] = cat.ID
+		s.categoryIDs[cat.Name] = int64(cat.ID)
 	}
 
 	// For demo, we'll use the first available category for all activities
@@ -1164,31 +1132,29 @@ func (s *FixedSeeder) seedActivities(_ context.Context, result *FixedResult) err
 			}
 		}
 
+		supervisorID, err := s.activitySupervisorID()
+		if err != nil {
+			return err
+		}
+
+		// The first staff member supervises every activity; the first
+		// supervisor of the list becomes the primary one.
 		body := map[string]any{
 			"name":             activity.Name,
 			"max_participants": 20,
 			"is_open":          true,
 			"category_id":      categoryID,
 			"planned_room_id":  roomID,
+			"supervisor_ids":   []int64{supervisorID},
 		}
 
-		respBody, err := s.client.Post("/api/activities", body)
+		activityID, err := s.postDemoActivity(activity.Name, body)
 		if err != nil {
-			return fmt.Errorf("failed to create activity %s: %w", activity.Name, err)
+			return err
 		}
 
-		var resp struct {
-			Status string `json:"status"`
-			Data   struct {
-				ID int64 `json:"id"`
-			} `json:"data"`
-		}
-		if err := json.Unmarshal(respBody, &resp); err != nil {
-			return fmt.Errorf("failed to parse activity response: %w", err)
-		}
-
-		s.activityIDs[activity.Name] = resp.Data.ID
-		s.activityRoomIDs[resp.Data.ID] = roomID // Store activity → room mapping for runtime seeder
+		s.activityIDs[activity.Name] = activityID
+		s.activityRoomIDs[activityID] = roomID // Store activity → room mapping for runtime seeder
 		result.ActivityCount++
 	}
 
@@ -1198,46 +1164,46 @@ func (s *FixedSeeder) seedActivities(_ context.Context, result *FixedResult) err
 	return nil
 }
 
-func (s *FixedSeeder) assignSupervisors(_ context.Context) error {
-	// Assign first staff member as supervisor to each activity
+// postDemoActivity creates one demo activity and returns its ID.
+func (s *FixedSeeder) postDemoActivity(name string, body map[string]any) (int64, error) {
+	respBody, err := s.client.Post("/api/activities", body)
+	if err != nil {
+		return 0, fmt.Errorf("failed to create activity %s: %w", name, err)
+	}
+	var resp struct {
+		Data struct {
+			ID ident.ID `json:"id"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(respBody, &resp); err != nil {
+		return 0, fmt.Errorf("failed to parse activity response: %w", err)
+	}
+	return int64(resp.Data.ID), nil
+}
+
+// activitySupervisorID is the staff member who supervises every demo
+// activity: the first demo staff member.
+func (s *FixedSeeder) activitySupervisorID() (int64, error) {
 	if len(DemoStaff) == 0 || len(s.staffIDs) == 0 {
-		return fmt.Errorf("no staff available for supervisor assignment")
+		return 0, fmt.Errorf("no staff available for supervisor assignment")
 	}
-
-	// Get first staff ID
-	var firstStaffID int64
 	firstStaffKey := fmt.Sprintf("%s %s", DemoStaff[0].FirstName, DemoStaff[0].LastName)
-	firstStaffID = s.staffIDs[firstStaffKey]
-
-	// Assign to each activity
-	for activityName, activityID := range s.activityIDs {
-		path := fmt.Sprintf("/api/activities/%d/supervisors", activityID)
-		body := map[string]any{
-			"staff_id":   firstStaffID,
-			"is_primary": true,
-		}
-
-		_, err := s.client.Post(path, body)
-		if err != nil {
-			return fmt.Errorf("failed to assign supervisor to activity %s: %w", activityName, err)
-		}
+	staffID, ok := s.staffIDs[firstStaffKey]
+	if !ok {
+		return 0, fmt.Errorf("staff ID not found for %s", firstStaffKey)
 	}
-
-	if s.verbose {
-		fmt.Printf("  ✓ Supervisors assigned to activities\n")
-	}
-	return nil
+	return staffID, nil
 }
 
 func (s *FixedSeeder) enrollStudents(_ context.Context) error {
-	// Enroll first 5 students in each activity
+	// Enroll the first 5 students in each activity, one roster per activity.
 	maxEnrollmentsPerActivity := 5
 	studentCount := 0
 
 	for activityName, activityID := range s.activityIDs {
-		enrolled := 0
+		studentIDs := make([]int64, 0, maxEnrollmentsPerActivity)
 		for _, student := range DemoStudents {
-			if enrolled >= maxEnrollmentsPerActivity {
+			if len(studentIDs) >= maxEnrollmentsPerActivity {
 				break
 			}
 
@@ -1246,16 +1212,14 @@ func (s *FixedSeeder) enrollStudents(_ context.Context) error {
 			if !ok {
 				return fmt.Errorf("student ID not found for %s", studentKey)
 			}
-
-			path := fmt.Sprintf("/api/activities/%d/students/%d", activityID, studentID)
-			_, err := s.client.Post(path, nil)
-			if err != nil {
-				return fmt.Errorf("enroll student %d in %s: %w", studentID, activityName, err)
-			}
-
-			enrolled++
-			studentCount++
+			studentIDs = append(studentIDs, studentID)
 		}
+
+		path := fmt.Sprintf("/api/activities/%d/students", activityID)
+		if _, err := s.client.Put(path, map[string]any{"student_ids": studentIDs}); err != nil {
+			return fmt.Errorf("enroll students in %s: %w", activityName, err)
+		}
+		studentCount += len(studentIDs)
 	}
 
 	if s.verbose {
@@ -1284,8 +1248,8 @@ func (s *FixedSeeder) seedDevices(_ context.Context, result *FixedResult) error 
 		var resp struct {
 			Status string `json:"status"`
 			Data   struct {
-				ID     int64  `json:"id"`
-				APIKey string `json:"api_key"`
+				ID     ident.ID `json:"id"`
+				APIKey string   `json:"api_key"`
 			} `json:"data"`
 		}
 		if err := json.Unmarshal(respBody, &resp); err != nil {
@@ -1302,34 +1266,6 @@ func (s *FixedSeeder) seedDevices(_ context.Context, result *FixedResult) error 
 		fmt.Printf("  ✓ %d IoT devices created\n", result.DeviceCount)
 	}
 	return s.seedBlockedDevice()
-}
-
-// fetchRoles retrieves available roles from the API
-func (s *FixedSeeder) fetchRoles(_ context.Context) error {
-	respBody, err := s.client.Get("/auth/roles")
-	if err != nil {
-		return fmt.Errorf("failed to fetch roles: %w", err)
-	}
-
-	var resp struct {
-		Status string `json:"status"`
-		Data   []struct {
-			ID   int64  `json:"id,string"`
-			Name string `json:"name"`
-		} `json:"data"`
-	}
-	if err := json.Unmarshal(respBody, &resp); err != nil {
-		return fmt.Errorf("failed to parse roles response: %w", err)
-	}
-
-	for _, role := range resp.Data {
-		s.roleIDs[role.Name] = role.ID
-	}
-
-	if s.verbose {
-		fmt.Printf("  ✓ %d roles found\n", len(s.roleIDs))
-	}
-	return nil
 }
 
 // seedStaffAccounts creates auth accounts for staff and the matching person
@@ -1421,10 +1357,10 @@ func (s *FixedSeeder) seedStaffAccounts(ctx context.Context, result *FixedResult
 		var account struct {
 			Status string `json:"status"`
 			Data   struct {
-				ID int64 `json:"id"`
+				ID ident.ID `json:"id"`
 				// int64 ids travel as JSON strings on this field.
 				SchoolIdentity *struct {
-					PersonID int64 `json:"person_id,string"`
+					PersonID ident.ID `json:"person_id"`
 				} `json:"school_identity"`
 			} `json:"data"`
 		}
@@ -1437,20 +1373,20 @@ func (s *FixedSeeder) seedStaffAccounts(ctx context.Context, result *FixedResult
 
 		// seedStaff later posts this id to /api/staff, which adopts the staff
 		// record created here instead of adding a second one.
-		s.personIDs[personKey] = account.Data.SchoolIdentity.PersonID
+		s.personIDs[personKey] = int64(account.Data.SchoolIdentity.PersonID)
 		result.PersonCount++
 
 		// Store credentials for summary
 		s.staffCredentials = append(s.staffCredentials, StaffCredentials{
-			AccountID: account.Data.ID,
+			AccountID: int64(account.Data.ID),
 			Email:     email,
 			Password:  password,
 			Name:      personKey,
 			Position:  staff.Position,
 		})
-		s.accountIDs[personKey] = account.Data.ID
+		s.accountIDs[personKey] = int64(account.Data.ID)
 		if i == visitorStaffIndex && s.saveVisitor != nil {
-			if err := s.saveVisitor(ctx, account.Data.ID, 0); err != nil {
+			if err := s.saveVisitor(ctx, int64(account.Data.ID), 0); err != nil {
 				return fmt.Errorf("save visitor caregiver account: %w", err)
 			}
 		}

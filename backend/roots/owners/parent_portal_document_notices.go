@@ -75,7 +75,7 @@ func (r parentReleaseSchools) TraegerSchoolIDs(ctx context.Context, organization
 	ids := make([]int64, 0, len(schools))
 	for _, school := range schools {
 		if !school.IsDeleted() {
-			ids = append(ids, school.ID)
+			ids = append(ids, school.ID.Int64())
 		}
 	}
 	return ids, nil

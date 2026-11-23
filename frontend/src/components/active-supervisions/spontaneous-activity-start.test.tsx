@@ -10,6 +10,12 @@ import { SWRConfig } from "~/lib/swr/testing";
 import type React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { pagedJson, plainResponse } from "~/test/mocks/plain-session-fetch";
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 import { SpontaneousActivityStart as ProductionSpontaneousActivityStart } from "./spontaneous-activity-start";
 
 vi.unmock("swr");
@@ -136,14 +142,15 @@ describe("SpontaneousActivityStart", () => {
     ]);
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue({
-        json: async () => ({
-          data: [
-            { id: 3, name: "Mensa" },
-            { id: 4, name: "Atelier", building: "Haus A" },
-          ],
+      vi.fn().mockImplementation(() =>
+        plainResponse({
+          json: async () =>
+            pagedJson([
+              { id: "3", name: "Mensa" },
+              { id: "4", name: "Atelier", building: "Haus A" },
+            ]),
         }),
-      }),
+      ),
     );
   });
 
@@ -197,15 +204,18 @@ describe("SpontaneousActivityStart", () => {
     });
   });
 
-  it("accepts the raw /api/rooms array response used by the route wrapper", async () => {
+  it("offers the rooms of the catalog proxy's /api/rooms list", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue({
-        json: async () => [
-          { id: 3, name: "Mensa" },
-          { id: 4, name: "Atelier", building: "Haus A" },
-        ],
-      }),
+      vi.fn().mockImplementation(() =>
+        plainResponse({
+          json: async () =>
+            pagedJson([
+              { id: "3", name: "Mensa" },
+              { id: "4", name: "Atelier", building: "Haus A" },
+            ]),
+        }),
+      ),
     );
     const onStart = vi.fn();
     render(
@@ -245,14 +255,15 @@ describe("SpontaneousActivityStart", () => {
   it("treats Schulhof as a normal startable room (#2161)", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue({
-        json: async () => ({
-          data: [
-            { id: 3, name: "Mensa" },
-            { id: 5, name: "Schulhof" },
-          ],
+      vi.fn().mockImplementation(() =>
+        plainResponse({
+          json: async () =>
+            pagedJson([
+              { id: "3", name: "Mensa" },
+              { id: "5", name: "Schulhof" },
+            ]),
         }),
-      }),
+      ),
     );
     const onStart = vi.fn();
     render(<SpontaneousActivityStart currentStaffId="11" onStart={onStart} />);

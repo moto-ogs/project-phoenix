@@ -167,7 +167,7 @@ export const HOME_BLOCK_MODULES: Readonly<Record<string, ModuleScope>> = {
   "section.my_day": BASIS,
   "section.my_group": BASIS,
   "section.students": BASIS,
-  "section.staff_notices": BASIS,
+  "section.day_changes": BASIS,
   "section.day_flow": BASIS,
   "section.open_requests": BASIS,
   "section.reminders": BASIS,

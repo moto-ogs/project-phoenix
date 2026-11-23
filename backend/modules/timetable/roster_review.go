@@ -129,6 +129,11 @@ type ConnectOfferingSourceCommand struct {
 	GradeLevels   []int
 	SchoolClasses []string
 	EffectiveDate calendar.Date
+	// ConfirmPreview compares the preview the school confirmed with the one
+	// the stored state gives now and refuses a different one with
+	// readstate.ErrChanged (ADR 0311). The connection calls it under its
+	// recurrence gate, before any write; it is required.
+	ConfirmPreview func(context.Context) error
 }
 
 // ConnectOfferingSourceResult names the segments that were switched.

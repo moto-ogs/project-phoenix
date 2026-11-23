@@ -10,6 +10,11 @@ function thread(studentId: string, unread: number): InboxThread {
     student_id: studentId,
     student_name: "Kind",
     guardian_name: "Mutter",
+    audience: "team",
+    readers: {
+      guardian: { account_id: "g1", name: "Eltern" },
+      school: { kind: "all_staff", names: [], unnamed_count: 0 },
+    },
     unread_count: unread,
   };
 }

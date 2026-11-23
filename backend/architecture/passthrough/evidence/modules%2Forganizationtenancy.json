@@ -121,13 +121,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (rs *BillingResource) SeedKeyDateCounts(w http.ResponseWriter, r *http.Request) {\n\tif rs.isLocalSeedRequest == nil || !rs.isLocalSeedRequest(r) {\n\t\tcommon.RenderError(w, r, common.OperatorForbidden(\"Die Demo-Erfassung ist nur lokal verfügbar.\"))\n\t\treturn\n\t}\n\twritten, err := rs.service.SeedBillingKeyDateCounts(r.Context(), rs.now())\n\tif err != nil {\n\t\tcommon.RenderError(w, r, rs.billingError(r, err))\n\t\treturn\n\t}\n\tcommon.Respond(w, r, http.StatusCreated, map[string]int{\"written\": written}, \"Demo-Stichtagszahlen erfasst\")\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/organizationtenancy/inbound/operator/BillingResource.SeedKeyDateCounts",
-      "owner": "modules/organizationtenancy"
-    },
-    {
-      "build": "production",
       "evidence": "func (rs *ProvisioningResource) DeleteDevice(w http.ResponseWriter, r *http.Request) {\n\tdeviceID, ok := common.ParseInt64IDWithError(w, r, \"id\", invalidDeviceIDMessage)\n\tif !ok {\n\t\treturn\n\t}\n\toperatorID := int64(sessiontoken.ClaimsFromCtx(r.Context()).ID)\n\terr := rs.service.DeleteDevice(r.Context(), deviceID, operatorID, common.ParseClientIP(r))\n\tif err != nil {\n\t\tcommon.RenderError(w, r, ProvisioningErrorRenderer(err))\n\t\treturn\n\t}\n\tcommon.Respond(w, r, http.StatusOK, nil, \"Device deleted successfully\")\n}",
       "form": "unclassified-evidence",
       "id": "modules/organizationtenancy/inbound/operator/ProvisioningResource.DeleteDevice",
@@ -527,7 +520,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (p *Provisioning) ListSystemRoles(ctx context.Context) ([]organizationtenancy.SystemRole, error) {\n\treturn adminValue(ctx, p, func(adminCtx context.Context) ([]organizationtenancy.SystemRole, error) {\n\t\troles, err := p.identity.ListSystemRoles(adminCtx)\n\t\tif err != nil {\n\t\t\treturn nil, err\n\t\t}\n\t\tresult := make([]organizationtenancy.SystemRole, 0, len(roles))\n\t\tfor _, role := range roles {\n\t\t\tresult = append(result, organizationtenancy.SystemRole{ID: role.ID, Name: role.Name, IsSystem: role.IsSystem})\n\t\t}\n\t\treturn result, nil\n\t})\n}",
+      "evidence": "func (p *Provisioning) ListSystemRoles(ctx context.Context) ([]organizationtenancy.SystemRole, error) {\n\treturn adminValue(ctx, p, func(adminCtx context.Context) ([]organizationtenancy.SystemRole, error) {\n\t\troles, err := p.identity.ListSystemRoles(adminCtx)\n\t\tif err != nil {\n\t\t\treturn nil, err\n\t\t}\n\t\tresult := make([]organizationtenancy.SystemRole, 0, len(roles))\n\t\tfor _, role := range roles {\n\t\t\tresult = append(result, organizationtenancy.SystemRole{ID: ident.ID(role.ID), Name: role.Name, IsSystem: role.IsSystem})\n\t\t}\n\t\treturn result, nil\n\t})\n}",
       "form": "unclassified-evidence",
       "id": "modules/organizationtenancy/internal/application/Provisioning.ListSystemRoles",
       "owner": "modules/organizationtenancy"

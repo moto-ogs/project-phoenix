@@ -109,6 +109,7 @@ function rebooking(extra: Partial<AbsenceRebooking> = {}): AbsenceRebooking {
     vacation: [],
     vacationExceeded: false,
     applied: false,
+    fingerprint: "effect-1",
     ...extra,
   };
 }
@@ -251,10 +252,89 @@ describe("AbsenceRebookModal", () => {
       absenceTypeId: "12",
       reason: "Kontingent angelegt",
       dryRun: false,
+      expectedFingerprint: "effect-1",
     });
     expect(stable.toast.success).toHaveBeenCalledWith(
       "2 Einträge sind jetzt Krank-Urlaubstag.",
     );
+  });
+
+  it("shows the new effect without a retry when it changed since the preview", async () => {
+    mocks.rebookAbsences.mockResolvedValue(rebooking());
+    const onSaved = renderModal();
+    fireEvent.click(screen.getByRole("radio", { name: /Krank-Urlaubstag/ }));
+    expect(await screen.findByText("+16h")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Grund (Pflicht)"), {
+      target: { value: "Kontingent angelegt" },
+    });
+    mocks.rebookAbsences
+      .mockRejectedValueOnce(
+        new ApiError("changed since it was read", 409, {
+          code: "general.changed_since_read",
+        }),
+      )
+      .mockResolvedValue(
+        rebooking({ balanceDeltaMinutes: 480, fingerprint: "effect-2" }),
+      );
+    fireEvent.click(submitButton());
+
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", "die Änderung der Art"),
+      ),
+    ).toBeInTheDocument();
+    // The dialog reads the effect again and shows it; it saves only that one.
+    expect(await screen.findByText("+8h")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Wiederholen" }),
+    ).not.toBeInTheDocument();
+    expect(onSaved).not.toHaveBeenCalled();
+    fireEvent.click(submitButton());
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+    expect(mocks.rebookAbsences).toHaveBeenLastCalledWith(
+      "4",
+      expect.objectContaining({
+        dryRun: false,
+        expectedFingerprint: "effect-2",
+      }),
+    );
+  });
+
+  // ADR 0311 rule 6: a failed read of the new effect after a refusal says
+  // so, and the refused fingerprint is not sent again.
+  it("names a failed read of the effect after a refusal", async () => {
+    mocks.rebookAbsences.mockResolvedValue(rebooking());
+    const onSaved = renderModal();
+    fireEvent.click(screen.getByRole("radio", { name: /Krank-Urlaubstag/ }));
+    expect(await screen.findByText("+16h")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Grund (Pflicht)"), {
+      target: { value: "Kontingent angelegt" },
+    });
+    mocks.rebookAbsences
+      .mockRejectedValueOnce(
+        new ApiError("changed since it was read", 409, {
+          code: "general.changed_since_read",
+        }),
+      )
+      .mockRejectedValue(
+        new ApiError("down", 503, { code: "general.unavailable" }),
+      );
+    fireEvent.click(submitButton());
+
+    expect(
+      await screen.findByText(/Der neue Stand konnte nicht geladen werden/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Du siehst jetzt den neuen Stand/),
+    ).not.toBeInTheDocument();
+    expect(submitButton()).toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(submitButton());
+    expect(
+      mocks.rebookAbsences.mock.calls.filter(
+        ([, body]) => (body as { dryRun: boolean }).dryRun === false,
+      ),
+    ).toHaveLength(1);
+    expect(onSaved).not.toHaveBeenCalled();
   });
 
   it("blocks saving when the allowance is too small", async () => {
@@ -372,9 +452,10 @@ it("withdraws a cached rebooking preview when a later dry run is rejected", asyn
   act(() => {
     refresh = reload();
   });
-  // Anker: der offene Dialog darf während der Neuberechnung nicht speichern.
-  expect(submitButton()).toHaveAttribute("aria-disabled", "true");
-  expect(screen.queryByText("+16h")).not.toBeInTheDocument();
+  // Anker: während der Neuberechnung bleibt die gelesene Wirkung stehen; ein
+  // Speichern trägt ihren Fingerabdruck, und der Server lehnt eine inzwischen
+  // andere Wirkung ab (ADR 0311).
+  expect(screen.getByText("+16h")).toBeVisible();
   await act(async () => {
     pending.reject(
       new ApiError("blocked", 409, {

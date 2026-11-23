@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Träger care offering (ADR 0195): a Träger keeps a care offering once for
@@ -90,7 +92,7 @@ type TraegerOfferingSchool struct {
 	Applied *TraegerOfferingDraft `json:"-"`
 	// AppliedCopyID ties the financial baseline to the school copy it priced.
 	AppliedCopyID  *int64     `json:"-"`
-	SchoolID       int64      `json:"school_id"`
+	SchoolID       ident.ID   `json:"school_id"`
 	AppliedVersion *int       `json:"applied_version,omitempty"`
 	Outcome        string     `json:"outcome,omitempty"`
 	ErrorCode      string     `json:"error_code,omitempty"`
@@ -100,15 +102,18 @@ type TraegerOfferingSchool struct {
 // TraegerOffering is a Träger care offering with its draft, its released
 // version and the outcome per school.
 type TraegerOffering struct {
-	ID              int64                   `json:"id"`
-	OrganizationID  int64                   `json:"organization_id"`
-	TraegerPhaseID  int64                   `json:"traeger_phase_id"`
+	ID              ident.ID                `json:"id"`
+	OrganizationID  ident.ID                `json:"organization_id"`
+	TraegerPhaseID  ident.ID                `json:"traeger_phase_id"`
 	Draft           TraegerOfferingDraft    `json:"draft"`
 	ReleasedVersion *int                    `json:"released_version,omitempty"`
 	Released        *TraegerOfferingDraft   `json:"released,omitempty"`
 	WithdrawnAt     *time.Time              `json:"withdrawn_at,omitempty"`
 	Schools         []TraegerOfferingSchool `json:"schools"`
 	UpdatedAt       time.Time               `json:"updated_at"`
+	// Version is readstate.Of(UpdatedAt): a trigger stamps every change of
+	// the row, and the draft is all the office edits on it (ADR 0311).
+	Version string `json:"version"`
 }
 
 // TraegerOfferingOutcome records the outcome of one school's copy.
@@ -127,7 +132,9 @@ type TraegerOfferings interface {
 	ListTraegerOfferings(ctx context.Context, organizationID, traegerPhaseID int64) ([]TraegerOffering, error)
 	TraegerOffering(ctx context.Context, organizationID, id int64) (TraegerOffering, error)
 	CreateTraegerOffering(ctx context.Context, organizationID, traegerPhaseID int64, draft TraegerOfferingDraft) (TraegerOffering, error)
-	UpdateTraegerOffering(ctx context.Context, organizationID, id int64, draft TraegerOfferingDraft) (TraegerOffering, error)
+	// UpdateTraegerOffering replaces the draft under the row lock when
+	// expectedVersion is the stored Version, else readstate.ErrChanged.
+	UpdateTraegerOffering(ctx context.Context, organizationID, id int64, expectedVersion string, draft TraegerOfferingDraft) (TraegerOffering, error)
 	// WithdrawTraegerOffering marks the offering withdrawn; the next rollout
 	// of its phase withdraws its copies.
 	WithdrawTraegerOffering(ctx context.Context, organizationID, id int64) (TraegerOffering, error)
@@ -153,8 +160,8 @@ type TraegerOfferingCopy struct {
 type TraegerOfferingFieldChange struct {
 	Field   string `json:"field"`
 	State   string `json:"state"`
-	Traeger any    `json:"traeger"`
-	School  any    `json:"school"`
+	Traeger any    `json:"traeger" contract_json:"The changed field selects the inherited offering value type"`
+	School  any    `json:"school" contract_json:"The changed field selects the overridden offering value type"`
 }
 
 // TraegerOfferingApplied is the result of applying a Träger offering.

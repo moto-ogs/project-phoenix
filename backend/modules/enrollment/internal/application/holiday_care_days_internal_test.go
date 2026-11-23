@@ -9,6 +9,8 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Invariant (#4702): a day that is a statutory holiday or a closing day of the
@@ -51,7 +53,7 @@ func (s *careDayPeriodStore) FindHolidayPeriod(context.Context, int64, int64, bo
 
 func (s *careDayPeriodStore) InsertHolidayPeriod(context.Context, int64, enrollment.HolidayPeriodInput, calendar.Date) (int64, error) {
 	s.written++
-	return s.stored.ID, nil
+	return s.stored.ID.Int64(), nil
 }
 
 func (s *careDayPeriodStore) UpdateHolidayPeriod(context.Context, int64, int64, enrollment.HolidayPeriodInput, calendar.Date) error {
@@ -122,25 +124,52 @@ func TestHolidayWeekChecksTheDaysOfItsOwnHostSchool(t *testing.T) {
 func TestHolidayPeriodUpdateChecksOnlyAddedOrMovedWeeks(t *testing.T) {
 	t.Parallel()
 	monday := calendar.NewDate(2027, 5, 17)
-	stored := enrollment.HolidayPeriod{ID: 9, Status: enrollment.HolidayPeriodDraft, Weeks: []enrollment.HolidayWeek{{
-		ID: 3, StartsOn: monday, EndsOn: monday.AddDays(4), HostSchoolID: careDayHostSchool,
+	stored := enrollment.HolidayPeriod{ID: 9, Status: enrollment.HolidayPeriodDraft, Version: "read", Weeks: []enrollment.HolidayWeek{{
+		ID: 3, StartsOn: monday, EndsOn: monday.AddDays(4), HostSchoolID: ident.ID(careDayHostSchool),
 		TimeModels: []enrollment.HolidayTimeModel{{ID: 5, Name: "bis 13 Uhr", StartsAt: "08:00", EndsAt: "13:00", PriceCents: 4500}},
 	}}}
 	store := &careDayPeriodStore{stored: stored}
 	periods := newCareDayPeriods(store, careDaySchoolCalendar{careDayHostSchool: {whitMonday}})
 	kept := careDayWeek(3, monday, careDayHostSchool)
 	kept.TimeModels[0].ID = 5
+	// The Büro saves over the version it read (ADR 0311).
+	read := func(week enrollment.HolidayWeekInput) enrollment.HolidayPeriodInput {
+		input := careDayPeriod(week)
+		input.ExpectedVersion = "read"
+		return input
+	}
 
-	_, err := periods.UpdateHolidayPeriod(context.Background(), 7, 9, careDayPeriod(kept))
+	_, err := periods.UpdateHolidayPeriod(context.Background(), 7, 9, read(kept))
 	require.NoError(t, err, "the unchanged week stays writable")
 	moved := kept
 	moved.HostSchoolID = careDayOtherSchool
-	_, err = periods.UpdateHolidayPeriod(context.Background(), 7, 9, careDayPeriod(moved))
+	_, err = periods.UpdateHolidayPeriod(context.Background(), 7, 9, read(moved))
 	require.NoError(t, err, "another host school without the holiday is fine")
 
 	periods = newCareDayPeriods(store, careDaySchoolCalendar{careDayHostSchool: {whitMonday}, careDayOtherSchool: {whitMonday}})
-	_, err = periods.UpdateHolidayPeriod(context.Background(), 7, 9, careDayPeriod(moved))
+	_, err = periods.UpdateHolidayPeriod(context.Background(), 7, 9, read(moved))
 	require.ErrorIs(t, err, enrollment.ErrHolidayWeekNoCareDay, "a new host school with the holiday is refused")
+}
+
+// TestHolidayPeriodUpdateRefusesAnotherReadVersion pins ADR 0311: a period
+// saved over another version than the stored one, or over none, is refused
+// before anything is checked or written.
+func TestHolidayPeriodUpdateRefusesAnotherReadVersion(t *testing.T) {
+	t.Parallel()
+	monday := calendar.NewDate(2027, 5, 17)
+	store := &careDayPeriodStore{stored: enrollment.HolidayPeriod{ID: 9, Status: enrollment.HolidayPeriodDraft, Version: "stored"}}
+	periods := newCareDayPeriods(store, careDaySchoolCalendar{})
+	input := careDayPeriod(careDayWeek(0, monday, careDayHostSchool))
+	for _, expected := range []string{"older", ""} {
+		input.ExpectedVersion = expected
+		_, err := periods.UpdateHolidayPeriod(context.Background(), 7, 9, input)
+		require.ErrorIs(t, err, readstate.ErrChanged, "expected version %q", expected)
+	}
+	assert.Zero(t, store.written, "a refused save writes nothing")
+	input.ExpectedVersion = "stored"
+	_, err := periods.UpdateHolidayPeriod(context.Background(), 7, 9, input)
+	require.NoError(t, err)
+	assert.Equal(t, 1, store.written)
 }
 
 func TestHolidayWeekIsNotWrittenWithoutTheHostSchoolsCalendar(t *testing.T) {
@@ -152,15 +181,15 @@ func TestHolidayWeekIsNotWrittenWithoutTheHostSchoolsCalendar(t *testing.T) {
 	assert.Zero(t, store.written)
 
 	registrations := &HolidayRegistrations{}
-	err = registrations.refuseWeeksWithoutCare(context.Background(), enrollment.HolidayPeriod{Weeks: []enrollment.HolidayWeek{{ID: 3, StartsOn: whitMonday.Date, EndsOn: whitMonday.Date, HostSchoolID: careDayHostSchool}}}, nil)
+	err = registrations.refuseWeeksWithoutCare(context.Background(), enrollment.HolidayPeriod{Weeks: []enrollment.HolidayWeek{{ID: 3, StartsOn: whitMonday.Date, EndsOn: whitMonday.Date, HostSchoolID: ident.ID(careDayHostSchool)}}}, nil)
 	require.ErrorIs(t, err, enrollment.ErrHolidaySchoolCalendarUnavailable, "no registration without the calendar")
 }
 
 func TestHolidayBookingOfAWeekWithoutCareIsRefusedUnlessKept(t *testing.T) {
 	t.Parallel()
 	period := enrollment.HolidayPeriod{Weeks: []enrollment.HolidayWeek{
-		{ID: 3, StartsOn: whitMonday.Date, EndsOn: whitMonday.Date.AddDays(4), HostSchoolID: careDayHostSchool, NoCareDays: []enrollment.HolidayNoCareDay{whitMonday}},
-		{ID: 4, StartsOn: whitMonday.Date.AddDays(7), EndsOn: whitMonday.Date.AddDays(11), HostSchoolID: careDayHostSchool, NoCareDays: []enrollment.HolidayNoCareDay{}},
+		{ID: 3, StartsOn: whitMonday.Date, EndsOn: whitMonday.Date.AddDays(4), HostSchoolID: ident.ID(careDayHostSchool), NoCareDays: []enrollment.HolidayNoCareDay{whitMonday}},
+		{ID: 4, StartsOn: whitMonday.Date.AddDays(7), EndsOn: whitMonday.Date.AddDays(11), HostSchoolID: ident.ID(careDayHostSchool), NoCareDays: []enrollment.HolidayNoCareDay{}},
 	}}
 	booking := []enrollment.HolidayBookingInput{{WeekID: 4, TimeModelID: 1}, {WeekID: 3, TimeModelID: 1}}
 
@@ -175,8 +204,8 @@ func TestHolidayBookingOfAWeekWithoutCareIsRefusedUnlessKept(t *testing.T) {
 func TestHolidayOfferMarksTheDaysWithoutCare(t *testing.T) {
 	t.Parallel()
 	period := enrollment.HolidayPeriod{Weeks: []enrollment.HolidayWeek{
-		{ID: 3, StartsOn: whitMonday.Date, EndsOn: whitMonday.Date.AddDays(4), HostSchoolID: careDayHostSchool},
-		{ID: 4, StartsOn: whitMonday.Date, EndsOn: whitMonday.Date.AddDays(4), HostSchoolID: careDayOtherSchool},
+		{ID: 3, StartsOn: whitMonday.Date, EndsOn: whitMonday.Date.AddDays(4), HostSchoolID: ident.ID(careDayHostSchool)},
+		{ID: 4, StartsOn: whitMonday.Date, EndsOn: whitMonday.Date.AddDays(4), HostSchoolID: ident.ID(careDayOtherSchool)},
 	}}
 	marked, err := withHolidayNoCareDays(context.Background(), careDaySchoolCalendar{careDayHostSchool: {whitMonday}}, period)
 	require.NoError(t, err)

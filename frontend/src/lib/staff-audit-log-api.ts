@@ -4,8 +4,12 @@
 // the permission (like the time-accounts overview) so no request fires
 // without it.
 
-import { apiErrorFromResponse } from "./api-error";
-import { sessionFetch } from "./session-cache";
+import { bffJson } from "./bff-fetch";
+import { knownEnum } from "./contract/known-enum";
+import type * as staffContract from "./contract/staff.generated";
+import { createLogger } from "./logger";
+
+const logger = createLogger({ component: "StaffAuditLogApi" });
 
 // ─── Wire shapes (backend snake_case) ────────────────────────────────────────
 
@@ -21,28 +25,10 @@ export type AuditLogSource =
   | "deletion"
   | "personnel_number";
 
-export interface BackendAuditLogEvent {
-  occurred_at: string;
+/** An event of a source this build can describe. */
+export type KnownAuditLogEvent = staffContract.AuditLogEvent & {
   source: AuditLogSource;
-  entry_id: number | string;
-  staff?: { id: number | string; name: string };
-  actor: {
-    staff_id?: number | string;
-    name: string;
-    is_system: boolean;
-    is_self: boolean;
-  };
-  reason: string;
-  /** Source-typed payload; see the render switch in staff-audit-log.tsx. */
-  detail: Record<string, unknown>;
-}
-
-interface BackendAuditLogPage {
-  events: BackendAuditLogEvent[];
-  next_cursor?: string;
-  /** Oldest day session edits can still exist for (retention setting). */
-  retention_cutoff: string;
-}
+};
 
 // ─── Frontend shapes ─────────────────────────────────────────────────────────
 
@@ -57,7 +43,7 @@ export interface AuditLogEvent {
   actorIsSystem: boolean;
   actorIsSelf: boolean;
   reason: string;
-  detail: Record<string, unknown>;
+  detail: NonNullable<staffContract.AuditLogEvent["detail"]>;
 }
 
 export interface AuditLogPage {
@@ -79,20 +65,31 @@ export const auditLogSourceLabels: Record<AuditLogSource, string> = {
   personnel_number: "Personalnummer",
 };
 
-export function mapAuditLogEvent(data: BackendAuditLogEvent): AuditLogEvent {
+const SOURCES = Object.keys(auditLogSourceLabels) as AuditLogSource[];
+
+function isKnown(
+  event: staffContract.AuditLogEvent | null,
+): event is KnownAuditLogEvent {
+  if (event === null) return false;
+  if (knownEnum(SOURCES, event.source)) return true;
+  // A source a newer backend added: this build has no sentence for it.
+  logger.warn("audit_log_unknown_source", { source: event.source });
+  return false;
+}
+
+export function mapAuditLogEvent(data: KnownAuditLogEvent): AuditLogEvent {
   return {
     occurredAt: data.occurred_at,
     source: data.source,
-    entryId: data.entry_id.toString(),
-    staffId: data.staff ? data.staff.id.toString() : null,
+    entryId: data.entry_id,
+    staffId: data.staff?.id ?? null,
     staffName: data.staff?.name ?? "",
-    actorStaffId:
-      data.actor.staff_id !== undefined ? data.actor.staff_id.toString() : null,
+    actorStaffId: data.actor.staff_id ?? null,
     actorName: data.actor.name,
     actorIsSystem: data.actor.is_system,
     actorIsSelf: data.actor.is_self,
     reason: data.reason,
-    detail: data.detail,
+    detail: data.detail ?? {},
   };
 }
 
@@ -123,18 +120,20 @@ export function buildAuditLogQuery(query: AuditLogQuery): string {
 export const staffAuditLogService = {
   /** Requires time_tracking:manage. */
   async getAuditLog(query: AuditLogQuery = {}): Promise<AuditLogPage> {
-    const suffix = buildAuditLogQuery(query);
-    const response = await sessionFetch(
-      `/api/staff/time-tracking/audit-log${suffix ? `?${suffix}` : ""}`,
+    const page = await bffJson(
+      "tenant",
+      "GET /api/staff/time-tracking/audit-log",
+      {
+        query: Object.fromEntries(
+          new URLSearchParams(buildAuditLogQuery(query)),
+        ),
+        errorMessage: "Failed to fetch audit log",
+      },
     );
-    if (!response.ok) {
-      throw await apiErrorFromResponse(response, "Failed to fetch audit log");
-    }
-    const json = (await response.json()) as { data: BackendAuditLogPage };
     return {
-      events: json.data.events.map(mapAuditLogEvent),
-      nextCursor: json.data.next_cursor ?? null,
-      retentionCutoff: json.data.retention_cutoff,
+      events: (page.events ?? []).filter(isKnown).map(mapAuditLogEvent),
+      nextCursor: page.next_cursor ?? null,
+      retentionCutoff: page.retention_cutoff,
     };
   },
 };

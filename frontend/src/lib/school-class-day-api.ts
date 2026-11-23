@@ -4,190 +4,77 @@
 // Backend mit dem school-Token unter /school/class-day auf.
 
 import { ApiError } from "./api-error";
-import { authFetch } from "./api-helpers";
+import { bffFile, bffJson } from "./bff-fetch";
 import type { StudentStatusKind } from "./student-status-days-api";
 import type { ClassDayReport, MorningAttendanceStatus } from "./class-day-api";
 import type {
-  ClassArrivalException,
-  ClassArrivalExceptionInput,
-  ClassArrivalExceptionList,
-} from "./student-arrival-api";
+  ClassArrivalExceptionListResponse,
+  ClassArrivalExceptionResponse,
+} from "./contract/students.generated";
+import { requiredDay } from "./contract/required-day";
+import type * as schoolClassDayContract from "./contract/school-class-day.generated";
 
-interface ProxyResponse<T> {
-  success: boolean;
-  data: T;
-}
-
-/** Antwort von GET /school/class-day/classes. */
-export interface ClassDayClasses {
-  classes: string[];
-  /**
-   * Ob die Lehrkraft eine andere Ankunftszeit für eine Klasse eintragen darf
-   * (#2970): Berechtigung UND Freigabe der OGS in den Einstellungen.
-   */
-  can_write_arrival_exception: boolean;
-  /**
-   * Ob die Lehrkraft einen Ausflug oder eine Klassenfahrt melden darf
-   * (#4799): Berechtigung UND Freigabe der OGS in den Einstellungen.
-   */
-  can_report_class_trip?: boolean;
-  /**
-   * Die Schule betreut Sa/So nach dem Freitagsplan
-   * (operations.weekend_follows_friday, #3921): dann ist das Wochenende ein
-   * Tag wie jeder andere und wird geladen.
-   */
-  weekend_follows_friday?: boolean;
-  /**
-   * Die Schulverwaltung (class_day:all_classes, #4802) lädt die Startseite
-   * über die Tagesübersicht der ganzen Schule: ein Abruf statt einer
-   * Klassenansicht je Klasse.
-   */
-  can_view_school_day?: boolean;
-}
+/** Antwort von GET /school/class-day/classes; ohne Klassen eine leere Liste. */
+export type ClassDayClasses = Omit<
+  schoolClassDayContract.ClassesResponse,
+  "classes"
+> & { classes: string[] };
 
 export async function fetchClassDayClassesSchool(): Promise<ClassDayClasses> {
-  const response = await authFetch<ProxyResponse<Partial<ClassDayClasses>>>(
-    "/api/school/class-day/classes",
-  );
-  return {
-    classes: response.data.classes ?? [],
-    can_write_arrival_exception:
-      response.data.can_write_arrival_exception === true,
-    can_report_class_trip: response.data.can_report_class_trip === true,
-    weekend_follows_friday: response.data.weekend_follows_friday === true,
-    can_view_school_day: response.data.can_view_school_day === true,
-  };
-}
-
-/** Zahlen der Tagesübersicht, für die ganze Schule oder eine Klasse. */
-export interface SchoolDayTotals {
-  students: number;
-  /** Am Vormittag als fehlend markiert oder krank, entschuldigt, Klassenfahrt. */
-  missing: number;
-  /**
-   * Von der Lehrkraft als fehlend markiert, ohne Krankmeldung, Entschuldigung
-   * oder Klassenfahrt (#4791). Fehlt bei älteren Antworten.
-   */
-  unreported?: number;
-  /** Kinder mit Tagesstatus, „Heute abgemeldet“ eingeschlossen. */
-  absent: number;
-  sick: number;
-  excused: number;
-  class_trip: number;
-  staying: number;
-  leaving: number;
-  list_entries: number;
-  /** Kinder, deren Tag anders ist als sonst (#2294). */
-  changes: number;
-}
-
-/** Ein Kind der Tagesübersicht, nur mit dem, was die Zahlen zählen. */
-export interface SchoolDayChild {
-  student_id?: string;
-  list_entry?: boolean;
-  list_entry_id?: string;
-  without_care_place?: boolean;
-  first_name: string;
-  last_name: string;
-  status?: string;
-  missing?: boolean;
-  /** Fehlt ohne Meldung (#4791). */
-  unreported?: boolean;
-  /** Den Status hat die Schulverwaltung nachgetragen (#4791). */
-  status_by_school?: boolean;
-  after_school?: "stays" | "goes_home";
-  changed?: boolean;
-}
-
-interface SchoolDayClass {
-  school_class: string;
-  totals: SchoolDayTotals;
-  children: SchoolDayChild[];
-}
-
-/** Antwort von GET /school/class-day/school-day (#4802). */
-export interface SchoolDayReport {
-  date: string;
-  weekday: string;
-  school_day: boolean;
-  enrollment_known: boolean;
-  totals: SchoolDayTotals;
-  classes: SchoolDayClass[];
-  /**
-   * Die Person darf für ein Kind, das ohne Meldung fehlt, eine Meldung
-   * nachtragen oder sie zurücknehmen (#4791): der Tag ist heute und das Recht
-   * liegt vor.
-   */
-  can_report_absences?: boolean;
+  const data = await bffJson("school", "GET /school/class-day/classes");
+  return { ...data, classes: data.classes ?? [] };
 }
 
 export async function fetchSchoolDaySchool(
   date: string,
-): Promise<SchoolDayReport> {
-  const params = new URLSearchParams({ date });
-  const response = await authFetch<ProxyResponse<SchoolDayReport>>(
-    `/api/school/class-day/school-day?${params.toString()}`,
-  );
-  return response.data;
+): Promise<schoolClassDayContract.SchoolDayReport> {
+  return bffJson("school", "GET /school/class-day/school-day", {
+    query: { date },
+  });
 }
 
 export async function fetchClassDaySchool(
   schoolClass: string,
   date: string,
 ): Promise<ClassDayReport> {
-  const params = new URLSearchParams({ class: schoolClass, date });
-  const response = await authFetch<ProxyResponse<ClassDayReport>>(
-    `/api/school/class-day?${params.toString()}`,
-  );
-  // The catalog proxy hands student_id out as a string (ADR 0270); the view
-  // and the writes of this page keep the number Go still reads.
-  const report = response.data;
-  return {
-    ...report,
-    rows: (report.rows ?? []).map((row) => ({
-      ...row,
-      student_id: Number(row.student_id),
-    })),
-  };
+  const report = await bffJson("school", "GET /school/class-day/", {
+    query: { class: schoolClass, date },
+  });
+  return { ...report, rows: report.rows ?? [] };
 }
 
 // Tagesausnahme einer Klasse aus moto schule (#2970). Der Klassenname reist
-// in der Adresse als Segment; Next dekodiert Route-Handler-Parameter, das
-// Backend prüft die Zuweisung.
-
-function arrivalExceptionPath(schoolClass: string, date: string): string {
-  return `/api/school/class-day/arrival-exceptions/${encodeURIComponent(schoolClass)}/${encodeURIComponent(date)}`;
-}
+// in der Adresse als Segment; das Backend prüft die Zuweisung.
 
 export async function fetchClassArrivalExceptionsSchool(
   schoolClass: string,
-): Promise<ClassArrivalExceptionList> {
-  const params = new URLSearchParams({ class: schoolClass });
-  const response = await authFetch<ProxyResponse<ClassArrivalExceptionList>>(
-    `/api/school/class-day/arrival-exceptions?${params.toString()}`,
-  );
-  return response.data;
+): Promise<ClassArrivalExceptionListResponse> {
+  return bffJson("school", "GET /school/class-day/arrival-exceptions", {
+    query: { class: schoolClass },
+  });
 }
 
 export async function upsertClassArrivalExceptionSchool(
   schoolClass: string,
   date: string,
-  input: ClassArrivalExceptionInput,
-): Promise<ClassArrivalException> {
-  const response = await authFetch<ProxyResponse<ClassArrivalException>>(
-    arrivalExceptionPath(schoolClass, date),
-    { method: "PUT", body: input },
+  input: schoolClassDayContract.ArrivalExceptionRequest,
+): Promise<ClassArrivalExceptionResponse> {
+  return bffJson(
+    "school",
+    "PUT /school/class-day/arrival-exceptions/{schoolClass}/{date}",
+    { params: { schoolClass, date }, body: input },
   );
-  return response.data;
 }
 
 export async function deleteClassArrivalExceptionSchool(
   schoolClass: string,
   date: string,
 ): Promise<void> {
-  await authFetch<unknown>(arrivalExceptionPath(schoolClass, date), {
-    method: "DELETE",
-  });
+  await bffJson(
+    "school",
+    "DELETE /school/class-day/arrival-exceptions/{schoolClass}/{date}",
+    { params: { schoolClass, date } },
+  );
 }
 
 /**
@@ -198,11 +85,12 @@ export async function fetchClassBlockStartSchool(
   schoolClass: string,
   isoDate: string,
 ): Promise<string | null> {
-  const params = new URLSearchParams({ class: schoolClass, date: isoDate });
-  const response = await authFetch<ProxyResponse<{ start?: string }>>(
-    `/api/school/class-day/arrival-exceptions/block-start?${params.toString()}`,
+  const data = await bffJson(
+    "school",
+    "GET /school/class-day/arrival-exceptions/block-start",
+    { query: { class: schoolClass, date: isoDate } },
   );
-  const start = response.data.start ?? "";
+  const start = data.start ?? "";
   return start === "" ? null : start;
 }
 
@@ -260,14 +148,6 @@ export function classTripConflictsFromError(
   return conflicts.length > 0 ? { conflicts, total } : null;
 }
 
-/** Was eine Meldung geschrieben hat (#4799). */
-export interface ClassTripReportResult {
-  /** "class_trip": Status Klassenfahrt; "return_time": Ankunft in der OGS. */
-  kind: "class_trip" | "return_time";
-  student_count: number;
-  date_count: number;
-}
-
 /**
  * Ausflug oder Klassenfahrt einer zugewiesenen Klasse melden (#4799). Ohne
  * Rückkehrzeit gilt jeder Tag als Klassenfahrt; mit Rückkehrzeit (nur ein
@@ -276,58 +156,61 @@ export interface ClassTripReportResult {
 export async function reportClassTripSchool(
   schoolClass: string,
   input: ClassTripReportInput,
-): Promise<ClassTripReportResult> {
-  const response = await authFetch<ProxyResponse<ClassTripReportResult>>(
-    `/api/school/class-day/class-trips/${encodeURIComponent(schoolClass)}`,
-    {
-      method: "POST",
-      body: {
-        from: input.from,
-        to: input.to,
-        student_ids: input.studentIds.map(Number),
-        ...(input.reason ? { reason: input.reason } : {}),
-        ...(input.returnTime ? { return_time: input.returnTime } : {}),
-      },
+): Promise<schoolClassDayContract.ClassTripResult> {
+  return bffJson("school", "POST /school/class-day/class-trips/{schoolClass}", {
+    params: { schoolClass },
+    body: {
+      from: input.from,
+      to: input.to,
+      student_ids: [...input.studentIds],
+      ...(input.reason ? { reason: input.reason } : {}),
+      ...(input.returnTime ? { return_time: input.returnTime } : {}),
     },
-  );
-  return response.data;
+  });
 }
 
 /**
- * Ziel eines Hinweises an die OGS (#4795): die ganze Klasse ohne studentId,
- * sonst ein Kind der Klasse. Ein Hinweis gilt nur für heute.
+ * Ein Hinweis an die OGS (#4795): die ganze Klasse ohne studentId, sonst ein
+ * Kind der Klasse. Ein Hinweis gilt nur für heute.
  */
-function dayHintPath(
-  schoolClass: string,
-  date: string,
-  studentId?: number,
-): string {
-  const base = `/api/school/class-day/day-hints/${encodeURIComponent(schoolClass)}/${encodeURIComponent(date)}`;
-  return studentId
-    ? `${base}/students/${encodeURIComponent(String(studentId))}`
-    : base;
-}
-
 export async function saveDayHintSchool(
   schoolClass: string,
   date: string,
   body: string,
-  studentId?: number,
+  studentId?: string,
 ): Promise<void> {
-  await authFetch<unknown>(dayHintPath(schoolClass, date, studentId), {
-    method: "PUT",
-    body: { body },
-  });
+  await (studentId
+    ? bffJson(
+        "school",
+        "PUT /school/class-day/day-hints/{schoolClass}/{date}/students/{studentId}",
+        { params: { schoolClass, date, studentId }, body: { body } },
+      )
+    : bffJson(
+        "school",
+        "PUT /school/class-day/day-hints/{schoolClass}/{date}",
+        {
+          params: { schoolClass, date },
+          body: { body },
+        },
+      ));
 }
 
 export async function deleteDayHintSchool(
   schoolClass: string,
   date: string,
-  studentId?: number,
+  studentId?: string,
 ): Promise<void> {
-  await authFetch<unknown>(dayHintPath(schoolClass, date, studentId), {
-    method: "DELETE",
-  });
+  await (studentId
+    ? bffJson(
+        "school",
+        "DELETE /school/class-day/day-hints/{schoolClass}/{date}/students/{studentId}",
+        { params: { schoolClass, date, studentId } },
+      )
+    : bffJson(
+        "school",
+        "DELETE /school/class-day/day-hints/{schoolClass}/{date}",
+        { params: { schoolClass, date } },
+      ));
 }
 
 /**
@@ -336,7 +219,7 @@ export async function deleteDayHintSchool(
  * (String, wie in der Tageszeile).
  */
 export type MorningAttendanceMark =
-  | { student_id: number; status: MorningAttendanceStatus }
+  | { student_id: string; status: MorningAttendanceStatus }
   | { list_entry_id: string; status: MorningAttendanceStatus };
 
 /** Speichert die Markierungen einer zugewiesenen Klasse für heute. */
@@ -345,9 +228,10 @@ export async function recordMorningAttendanceSchool(
   date: string,
   marks: readonly MorningAttendanceMark[],
 ): Promise<void> {
-  await authFetch<unknown>(
-    `/api/school/class-day/morning-attendance/${encodeURIComponent(schoolClass)}/${encodeURIComponent(date)}`,
-    { method: "PUT", body: { marks } },
+  await bffJson(
+    "school",
+    "PUT /school/class-day/morning-attendance/{schoolClass}/{date}",
+    { params: { schoolClass, date }, body: { marks: [...marks] } },
   );
 }
 
@@ -363,21 +247,29 @@ export async function addHomeworkSchool(
   date: string,
   input: HomeworkInput,
 ): Promise<void> {
-  await authFetch<unknown>(
-    `/api/school/class-day/homework/${encodeURIComponent(schoolClass)}`,
-    { method: "POST", body: { date, ...input } },
-  );
+  await bffJson("school", "POST /school/class-day/homework/{schoolClass}", {
+    params: { schoolClass },
+    body: { date, ...input },
+  });
 }
 
-/** Ändert einen eigenen Hausaufgaben-Eintrag. */
+/**
+ * Ändert einen Hausaufgaben-Eintrag der Klasse, wie er mit
+ * `expectedVersion` gelesen wurde (ADR 0311).
+ */
 export async function changeHomeworkSchool(
   schoolClass: string,
   homeworkId: string,
   input: HomeworkInput,
+  expectedVersion: string,
 ): Promise<void> {
-  await authFetch<unknown>(
-    `/api/school/class-day/homework/${encodeURIComponent(schoolClass)}/${encodeURIComponent(homeworkId)}`,
-    { method: "PUT", body: input },
+  await bffJson(
+    "school",
+    "PUT /school/class-day/homework/{schoolClass}/{homeworkId}",
+    {
+      params: { schoolClass, homeworkId },
+      body: { ...input, expected_version: expectedVersion },
+    },
   );
 }
 
@@ -386,20 +278,22 @@ export async function deleteHomeworkSchool(
   schoolClass: string,
   homeworkId: string,
 ): Promise<void> {
-  await authFetch<unknown>(
-    `/api/school/class-day/homework/${encodeURIComponent(schoolClass)}/${encodeURIComponent(homeworkId)}`,
-    { method: "DELETE" },
+  await bffJson(
+    "school",
+    "DELETE /school/class-day/homework/{schoolClass}/{homeworkId}",
+    { params: { schoolClass, homeworkId } },
   );
 }
 
-function classHandoverPath(schoolClass: string, date: string): string {
-  return `/api/school/class-day/handover/${encodeURIComponent(schoolClass)}/${encodeURIComponent(date)}`;
-}
-
-/** Die übergebenen Kinder, die in die OGS gehen: „da“ und „nicht da“. */
+/**
+ * Die übergebenen Kinder, die in die OGS gehen: „da“ und „nicht da“, und der
+ * `handover_version` der Klassenansicht, aus der sie gewählt wurden (ADR
+ * 0311): eine inzwischen gespeicherte andere Übergabe weist die Übergabe ab.
+ */
 export interface ClassHandoverChildren {
-  readonly present: readonly number[];
-  readonly absent: readonly number[];
+  readonly present: readonly string[];
+  readonly absent: readonly string[];
+  readonly expectedVersion: string;
 }
 
 /** Übergibt eine zugewiesene Klasse heute an die OGS (#4794). */
@@ -408,13 +302,18 @@ export async function handOverClassSchool(
   date: string,
   children: ClassHandoverChildren,
 ): Promise<void> {
-  await authFetch<unknown>(classHandoverPath(schoolClass, date), {
-    method: "PUT",
-    body: {
-      present_student_ids: children.present,
-      absent_student_ids: children.absent,
+  await bffJson(
+    "school",
+    "PUT /school/class-day/handover/{schoolClass}/{date}",
+    {
+      params: { schoolClass, date },
+      body: {
+        present_student_ids: [...children.present],
+        absent_student_ids: [...children.absent],
+        expected_version: children.expectedVersion,
+      },
     },
-  });
+  );
 }
 
 /** Nimmt die heutige Übergabe einer zugewiesenen Klasse zurück (#4794). */
@@ -422,35 +321,11 @@ export async function withdrawClassHandoverSchool(
   schoolClass: string,
   date: string,
 ): Promise<void> {
-  await authFetch<unknown>(classHandoverPath(schoolClass, date), {
-    method: "DELETE",
-  });
-}
-
-/**
- * Eine Notiz, die die OGS für die Schule freigegeben hat (#4797). Die
- * Lehrkraft liest sie nur; Sichtbarkeit und Bezug bleiben Sache der OGS.
- */
-export interface SharedNote {
-  id: string;
-  kind: string;
-  category?: string;
-  body: string;
-  /** Tag, den ein Eintrag beschreibt; fehlt bei einem dauerhaften Hinweis. */
-  subject_date?: string;
-  author_name?: string;
-  edited: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-/** Die freigegebenen Notizen zu einem Kind der Klasse, neueste zuerst. */
-export interface StudentSharedNotes {
-  student_id: string;
-  first_name: string;
-  last_name: string;
-  school_class: string;
-  notes: SharedNote[];
+  await bffJson(
+    "school",
+    "DELETE /school/class-day/handover/{schoolClass}/{date}",
+    { params: { schoolClass, date } },
+  );
 }
 
 /**
@@ -460,23 +335,16 @@ export interface StudentSharedNotes {
 export async function fetchSharedNotesSchool(
   schoolClass: string,
   studentId: string,
-): Promise<StudentSharedNotes> {
-  const response = await authFetch<ProxyResponse<StudentSharedNotes>>(
-    `/api/school/class-day/shared-notes/${encodeURIComponent(schoolClass)}/students/${encodeURIComponent(studentId)}`,
+): Promise<schoolClassDayContract.StudentSharedNotes> {
+  return bffJson(
+    "school",
+    "GET /school/class-day/shared-notes/{schoolClass}/students/{studentId}",
+    { params: { schoolClass, studentId } },
   );
-  return response.data;
 }
 
 /** Was die Schulverwaltung nachträgt (#4791). */
 export type AbsenceReportStatus = "sick" | "excused";
-
-function absenceReportPath(
-  schoolClass: string,
-  date: string,
-  studentId: string,
-): string {
-  return `/api/school/class-day/absence-reports/${encodeURIComponent(schoolClass)}/${encodeURIComponent(date)}/students/${encodeURIComponent(studentId)}`;
-}
 
 /**
  * Trägt für ein Kind, das ohne Meldung fehlt, „krank“ oder „entschuldigt“
@@ -488,10 +356,11 @@ export async function reportAbsenceSchool(
   studentId: string,
   status: AbsenceReportStatus,
 ): Promise<void> {
-  await authFetch<unknown>(absenceReportPath(schoolClass, date, studentId), {
-    method: "PUT",
-    body: { status },
-  });
+  await bffJson(
+    "school",
+    "PUT /school/class-day/absence-reports/{schoolClass}/{date}/students/{studentId}",
+    { params: { schoolClass, date, studentId }, body: { status } },
+  );
 }
 
 /** Nimmt die Meldung zurück, die die Schulverwaltung heute nachgetragen hat. */
@@ -500,9 +369,11 @@ export async function withdrawAbsenceReportSchool(
   date: string,
   studentId: string,
 ): Promise<void> {
-  await authFetch<unknown>(absenceReportPath(schoolClass, date, studentId), {
-    method: "DELETE",
-  });
+  await bffJson(
+    "school",
+    "DELETE /school/class-day/absence-reports/{schoolClass}/{date}/students/{studentId}",
+    { params: { schoolClass, date, studentId } },
+  );
 }
 
 // Fehlzeitenliste einer Klasse (#4793): je Kind die Fehltage eines Zeitraums,
@@ -543,33 +414,9 @@ export interface AbsenceList {
   readonly totals: AbsenceListCounts;
 }
 
-interface BackendAbsenceListCounts {
-  absent_days: number;
-  excused_days: number;
-  unexcused_days: number;
-  not_recorded_days: number;
-}
-
-interface BackendAbsenceList {
-  available_from: string;
-  incomplete: boolean;
-  school_class: string;
-  from: string;
-  to: string;
-  period_name?: string;
-  counted_until?: string | null;
-  school_days: number;
-  children?: Array<
-    BackendAbsenceListCounts & {
-      student_id: string | number;
-      first_name: string;
-      last_name: string;
-    }
-  > | null;
-  totals: BackendAbsenceListCounts;
-}
-
-function absenceListCounts(raw: BackendAbsenceListCounts): AbsenceListCounts {
+function absenceListCounts(
+  raw: schoolClassDayContract.AbsenceListCounts,
+): AbsenceListCounts {
   return {
     absentDays: raw.absent_days,
     excusedDays: raw.excused_days,
@@ -578,18 +425,25 @@ function absenceListCounts(raw: BackendAbsenceListCounts): AbsenceListCounts {
   };
 }
 
-function mapAbsenceList(raw: BackendAbsenceList): AbsenceList {
+function mapAbsenceList(
+  raw: schoolClassDayContract.AbsenceListReport,
+): AbsenceList {
   return {
-    availableFrom: raw.available_from,
+    // Go always sets these days: the retention start and the counted period
+    // (backend/modules/classday/internal/application/absence_list.go:133).
+    availableFrom: requiredDay(
+      raw.available_from,
+      "absence_list.available_from",
+    ),
     incomplete: raw.incomplete,
     schoolClass: raw.school_class,
-    from: raw.from,
-    to: raw.to,
-    periodName: raw.period_name ?? "",
+    from: requiredDay(raw.from, "absence_list.from"),
+    to: requiredDay(raw.to, "absence_list.to"),
+    periodName: raw.period_name,
     countedUntil: raw.counted_until ?? "",
     schoolDays: raw.school_days,
     children: (raw.children ?? []).map((child) => ({
-      studentId: String(child.student_id),
+      studentId: child.student_id,
       firstName: child.first_name,
       lastName: child.last_name,
       ...absenceListCounts(child),
@@ -605,32 +459,32 @@ export interface AbsenceListQuery {
   readonly period?: { readonly from: string; readonly to: string };
 }
 
-function absenceListParams(query: AbsenceListQuery): URLSearchParams {
-  const params = new URLSearchParams({ class: query.schoolClass });
-  if (query.period) {
-    params.set("from", query.period.from);
-    params.set("to", query.period.to);
-  }
-  return params;
+function absenceListQuery(query: AbsenceListQuery) {
+  return {
+    class: query.schoolClass,
+    from: query.period?.from,
+    to: query.period?.to,
+  };
 }
 
 export async function fetchAbsenceListSchool(
   query: AbsenceListQuery,
 ): Promise<AbsenceList> {
-  const response = await authFetch<ProxyResponse<BackendAbsenceList>>(
-    `/api/school/class-day/absence-list?${absenceListParams(query).toString()}`,
-  );
-  return mapAbsenceList(response.data);
+  const report = await bffJson("school", "GET /school/class-day/absence-list", {
+    query: absenceListQuery(query),
+  });
+  return mapAbsenceList(report);
 }
 
 export type AbsenceListExportFormat = "pdf" | "xlsx";
 
-/** Adresse des Exports als PDF oder Excel (#4793). */
-export function absenceListExportPath(
+/** Der Export als PDF oder Excel (#4793); die Antwort trägt die Datei. */
+export function fetchAbsenceListExport(
   query: AbsenceListQuery,
   format: AbsenceListExportFormat,
-): string {
-  const params = absenceListParams(query);
-  params.set("format", format);
-  return `/api/school/class-day/absence-list/export?${params.toString()}`;
+): Promise<Response> {
+  return bffFile("school", "GET /school/class-day/absence-list/export", {
+    query: { ...absenceListQuery(query), format },
+    errorMessage: "absence list export failed",
+  });
 }

@@ -5,7 +5,7 @@ import { catalogProxy } from "~/lib/operator/route-wrapper.server";
  * The operator portal's proxy (#2352). It answers every `/api/operator/…` path without a
  * route file of its own, and forwards only what the generated contract
  * registers for the portal `platform`; everything else is a 404. A route
- * with behavior of its own (session, files, uploads, SSE) keeps its file, and
+ * with behavior of its own (session, SSE, a file or upload it reshapes) keeps its file, and
  * Next prefers that file over this one.
  */
 const routes = portalRoutes.platform;

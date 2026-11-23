@@ -100,7 +100,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (a *StaffAdmin) ReplaceStaffQualificationList(ctx context.Context, staffID int64, inputs []StammdatenQualificationInput, changedByStaffID int64, note string) error {\n\treturn a.engine.ReplaceStaffQualificationList(ctx, staffID, inputs, changedByStaffID, note)\n}",
+      "evidence": "func (a *StaffAdmin) ReplaceStaffQualificationList(ctx context.Context, staffID int64, inputs []StammdatenQualificationInput, expectedVersion *string, changedByStaffID int64, note string) (string, error) {\n\treturn a.engine.ReplaceStaffQualificationList(ctx, staffID, inputs, expectedVersion, changedByStaffID, note)\n}",
       "form": "unchanged-forward-evidence",
       "id": "modules/workforce/StaffAdmin.ReplaceStaffQualificationList",
       "owner": "modules/workforce"
@@ -184,35 +184,35 @@
     },
     {
       "build": "production",
-      "evidence": "func (a *StaffAdmin) UpdatePersonnelNumber(ctx context.Context, staffID int64, value *string, changedByStaffID int64, note string) (*StaffProfile, error) {\n\treturn a.engine.UpdatePersonnelNumber(ctx, staffID, value, changedByStaffID, note)\n}",
+      "evidence": "func (a *StaffAdmin) UpdatePersonnelNumber(ctx context.Context, staffID int64, value, expectedVersion *string, changedByStaffID int64, note string) (*StaffProfile, error) {\n\treturn a.engine.UpdatePersonnelNumber(ctx, staffID, value, expectedVersion, changedByStaffID, note)\n}",
       "form": "unchanged-forward-evidence",
       "id": "modules/workforce/StaffAdmin.UpdatePersonnelNumber",
       "owner": "modules/workforce"
     },
     {
       "build": "production",
-      "evidence": "func (a *StaffAdmin) UpdateStaffFinancial(ctx context.Context, staffID int64, input StammdatenFinancialInput, changedByAccountID int64, note string) error {\n\treturn a.engine.UpdateStaffFinancial(ctx, staffID, input, changedByAccountID, note)\n}",
+      "evidence": "func (a *StaffAdmin) UpdateStaffFinancial(ctx context.Context, staffID int64, input StammdatenFinancialInput, changedByAccountID int64, note string) (string, error) {\n\treturn a.engine.UpdateStaffFinancial(ctx, staffID, input, changedByAccountID, note)\n}",
       "form": "unchanged-forward-evidence",
       "id": "modules/workforce/StaffAdmin.UpdateStaffFinancial",
       "owner": "modules/workforce"
     },
     {
       "build": "production",
-      "evidence": "func (a *StaffAdmin) UpdateStaffStammdatenArbeitsvertrag(ctx context.Context, staffID int64, input StammdatenArbeitsvertragInput, changedByStaffID int64, note string) error {\n\treturn a.engine.UpdateStaffStammdatenArbeitsvertrag(ctx, staffID, input, changedByStaffID, note)\n}",
+      "evidence": "func (a *StaffAdmin) UpdateStaffStammdatenArbeitsvertrag(ctx context.Context, staffID int64, input StammdatenArbeitsvertragInput, changedByStaffID int64, note string) (string, error) {\n\treturn a.engine.UpdateStaffStammdatenArbeitsvertrag(ctx, staffID, input, changedByStaffID, note)\n}",
       "form": "unchanged-forward-evidence",
       "id": "modules/workforce/StaffAdmin.UpdateStaffStammdatenArbeitsvertrag",
       "owner": "modules/workforce"
     },
     {
       "build": "production",
-      "evidence": "func (a *StaffAdmin) UpdateStaffStammdatenKontakt(ctx context.Context, staffID int64, input StammdatenKontaktInput, changedByStaffID int64, note string) error {\n\treturn a.engine.UpdateStaffStammdatenKontakt(ctx, staffID, input, changedByStaffID, note)\n}",
+      "evidence": "func (a *StaffAdmin) UpdateStaffStammdatenKontakt(ctx context.Context, staffID int64, input StammdatenKontaktInput, changedByStaffID int64, note string) (string, error) {\n\treturn a.engine.UpdateStaffStammdatenKontakt(ctx, staffID, input, changedByStaffID, note)\n}",
       "form": "unchanged-forward-evidence",
       "id": "modules/workforce/StaffAdmin.UpdateStaffStammdatenKontakt",
       "owner": "modules/workforce"
     },
     {
       "build": "production",
-      "evidence": "func (a *StaffAdmin) UpdateStaffStammdatenPerson(ctx context.Context, staffID int64, input StammdatenPersonInput, changedByStaffID int64, note string) error {\n\treturn a.engine.UpdateStaffStammdatenPerson(ctx, staffID, input, changedByStaffID, note)\n}",
+      "evidence": "func (a *StaffAdmin) UpdateStaffStammdatenPerson(ctx context.Context, staffID int64, input StammdatenPersonInput, changedByStaffID int64, note string) (string, error) {\n\treturn a.engine.UpdateStaffStammdatenPerson(ctx, staffID, input, changedByStaffID, note)\n}",
       "form": "unchanged-forward-evidence",
       "id": "modules/workforce/StaffAdmin.UpdateStaffStammdatenPerson",
       "owner": "modules/workforce"
@@ -247,7 +247,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (rs *ReleaseResource) Withdraw(w http.ResponseWriter, r *http.Request) {\n\torganizationID, ok := common.ParseInt64IDWithError(w, r, \"id\", \"invalid organization ID\")\n\tif !ok {\n\t\treturn\n\t}\n\trs.write(w, r, ReleaseWithdrawn, \"\", func(ctx context.Context, _ int64) error {\n\t\treturn rs.releases.WithdrawRelease(ctx, organizationID)\n\t}, func() {\n\t\tcommon.Respond(w, r, http.StatusOK, withdrawnReleaseResponse{OrganizationID: organizationID}, \"Staff release withdrawn successfully\")\n\t})\n}",
+      "evidence": "func (rs *ReleaseResource) Withdraw(w http.ResponseWriter, r *http.Request) {\n\torganizationID, ok := common.ParseInt64IDWithError(w, r, \"id\", \"invalid organization ID\")\n\tif !ok {\n\t\treturn\n\t}\n\trs.write(w, r, ReleaseWithdrawn, \"\", func(ctx context.Context, _ int64) error {\n\t\treturn rs.releases.WithdrawRelease(ctx, organizationID)\n\t}, func() {\n\t\tcommon.Respond(w, r, http.StatusOK, withdrawnReleaseResponse{OrganizationID: ident.ID(organizationID)}, \"Staff release withdrawn successfully\")\n\t})\n}",
       "form": "unclassified-evidence",
       "id": "modules/workforce/http/traegerstaff/ReleaseResource.Withdraw",
       "owner": "modules/workforce"
@@ -506,7 +506,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (e StaffAdminEngine) ReplaceStaffQualificationList(ctx context.Context, staffID int64, inputs []workforce.StammdatenQualificationInput, changedByStaffID int64, note string) error {\n\trows := make([]domain.QualificationInput, 0, len(inputs))\n\tfor _, input := range inputs {\n\t\trows = append(rows, domain.QualificationInput(input))\n\t}\n\treturn MapStaffAdminError(e.admin.ReplaceStaffQualifications(ctx, staffID, rows, changedByStaffID, note))\n}",
+      "evidence": "func (e StaffAdminEngine) ReplaceStaffQualificationList(ctx context.Context, staffID int64, inputs []workforce.StammdatenQualificationInput, expectedVersion *string, changedByStaffID int64, note string) (string, error) {\n\trows := make([]domain.QualificationInput, 0, len(inputs))\n\tfor _, input := range inputs {\n\t\trows = append(rows, domain.QualificationInput(input))\n\t}\n\tversion, err := e.admin.ReplaceStaffQualifications(ctx, staffID, rows, expectedVersion, changedByStaffID, note)\n\treturn version, MapStaffAdminError(err)\n}",
       "form": "unclassified-evidence",
       "id": "modules/workforce/internal/application/StaffAdminEngine.ReplaceStaffQualificationList",
       "owner": "modules/workforce"
@@ -527,7 +527,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (e StaffAdminEngine) RevealStaffFinancial(ctx context.Context, staffID, actorAccountID int64, actorRole string) (*workforce.StaffFinancialPlain, error) {\n\tdata, err := e.admin.RevealStaffFinancial(ctx, staffID, actorAccountID, actorRole)\n\tif err != nil {\n\t\treturn nil, MapStaffAdminError(err)\n\t}\n\treturn \u0026workforce.StaffFinancialPlain{StaffID: staffID, IBAN: data.IBAN, TaxID: data.TaxID, SocialSecurityNumber: data.SocialSecurityNumber}, nil\n}",
+      "evidence": "func (e StaffAdminEngine) RevealStaffFinancial(ctx context.Context, staffID, actorAccountID int64, actorRole string) (*workforce.StaffFinancialPlain, error) {\n\tdata, err := e.admin.RevealStaffFinancial(ctx, staffID, actorAccountID, actorRole)\n\tif err != nil {\n\t\treturn nil, MapStaffAdminError(err)\n\t}\n\treturn \u0026workforce.StaffFinancialPlain{StaffID: staffID, IBAN: data.IBAN, TaxID: data.TaxID, SocialSecurityNumber: data.SocialSecurityNumber, Version: financialSectionVersion(\u0026data)}, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/workforce/internal/application/StaffAdminEngine.RevealStaffFinancial",
       "owner": "modules/workforce"
@@ -541,42 +541,42 @@
     },
     {
       "build": "production",
-      "evidence": "func (e StaffAdminEngine) StaffStammdaten(ctx context.Context, staffID int64) (*workforce.StaffStammdaten, error) {\n\tdata, err := e.admin.StaffStammdaten(ctx, staffID)\n\tif err != nil {\n\t\treturn nil, MapStaffAdminError(err)\n\t}\n\tresult := \u0026workforce.StaffStammdaten{Staff: workforce.StaffProfile(data.Staff), Qualifications: []workforce.StaffQualification{}}\n\tif data.MasterData != nil {\n\t\tresult.MasterData = new(masterDataToPublic(*data.MasterData))\n\t}\n\tresult.Qualifications = append(result.Qualifications, qualificationsToPublic(data.Qualifications)...)\n\treturn result, nil\n}",
+      "evidence": "func (e StaffAdminEngine) StaffStammdaten(ctx context.Context, staffID int64) (*workforce.StaffStammdaten, error) {\n\tdata, err := e.admin.StaffStammdaten(ctx, staffID)\n\tif err != nil {\n\t\treturn nil, MapStaffAdminError(err)\n\t}\n\tresult := \u0026workforce.StaffStammdaten{Staff: workforce.StaffProfile(data.Staff), Qualifications: []workforce.StaffQualification{}, Versions: workforce.StammdatenVersions(data.Versions)}\n\tif data.MasterData != nil {\n\t\tresult.MasterData = new(masterDataToPublic(*data.MasterData))\n\t}\n\tresult.Qualifications = append(result.Qualifications, qualificationsToPublic(data.Qualifications)...)\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/workforce/internal/application/StaffAdminEngine.StaffStammdaten",
       "owner": "modules/workforce"
     },
     {
       "build": "production",
-      "evidence": "func (e StaffAdminEngine) UpdatePersonnelNumber(ctx context.Context, staffID int64, value *string, changedByStaffID int64, note string) (*workforce.StaffProfile, error) {\n\tsubject, err := e.admin.UpdatePersonnelNumber(ctx, staffID, value, changedByStaffID, note)\n\tif err != nil {\n\t\treturn nil, MapStaffAdminError(err)\n\t}\n\treturn new(workforce.StaffProfile(subject)), nil\n}",
+      "evidence": "func (e StaffAdminEngine) UpdatePersonnelNumber(ctx context.Context, staffID int64, value, expectedVersion *string, changedByStaffID int64, note string) (*workforce.StaffProfile, error) {\n\tsubject, err := e.admin.UpdatePersonnelNumber(ctx, staffID, value, expectedVersion, changedByStaffID, note)\n\tif err != nil {\n\t\treturn nil, MapStaffAdminError(err)\n\t}\n\treturn new(workforce.StaffProfile(subject)), nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/workforce/internal/application/StaffAdminEngine.UpdatePersonnelNumber",
       "owner": "modules/workforce"
     },
     {
       "build": "production",
-      "evidence": "func (e StaffAdminEngine) UpdateStaffFinancial(ctx context.Context, staffID int64, input workforce.StammdatenFinancialInput, changedByAccountID int64, note string) error {\n\treturn MapStaffAdminError(e.admin.UpdateStaffFinancial(ctx, staffID, domain.FinancialSection(input), changedByAccountID, note))\n}",
+      "evidence": "func (e StaffAdminEngine) UpdateStaffFinancial(ctx context.Context, staffID int64, input workforce.StammdatenFinancialInput, changedByAccountID int64, note string) (string, error) {\n\tversion, err := e.admin.UpdateStaffFinancial(ctx, staffID, domain.FinancialSection(input), changedByAccountID, note)\n\treturn version, MapStaffAdminError(err)\n}",
       "form": "unclassified-evidence",
       "id": "modules/workforce/internal/application/StaffAdminEngine.UpdateStaffFinancial",
       "owner": "modules/workforce"
     },
     {
       "build": "production",
-      "evidence": "func (e StaffAdminEngine) UpdateStaffStammdatenArbeitsvertrag(ctx context.Context, staffID int64, input workforce.StammdatenArbeitsvertragInput, changedByStaffID int64, note string) error {\n\treturn MapStaffAdminError(e.admin.UpdateStaffStammdatenArbeitsvertrag(ctx, staffID, domain.ContractSection(input), changedByStaffID, note))\n}",
+      "evidence": "func (e StaffAdminEngine) UpdateStaffStammdatenArbeitsvertrag(ctx context.Context, staffID int64, input workforce.StammdatenArbeitsvertragInput, changedByStaffID int64, note string) (string, error) {\n\tversion, err := e.admin.UpdateStaffStammdatenArbeitsvertrag(ctx, staffID, domain.ContractSection(input), changedByStaffID, note)\n\treturn version, MapStaffAdminError(err)\n}",
       "form": "unclassified-evidence",
       "id": "modules/workforce/internal/application/StaffAdminEngine.UpdateStaffStammdatenArbeitsvertrag",
       "owner": "modules/workforce"
     },
     {
       "build": "production",
-      "evidence": "func (e StaffAdminEngine) UpdateStaffStammdatenKontakt(ctx context.Context, staffID int64, input workforce.StammdatenKontaktInput, changedByStaffID int64, note string) error {\n\treturn MapStaffAdminError(e.admin.UpdateStaffStammdatenKontakt(ctx, staffID, domain.ContactSection(input), changedByStaffID, note))\n}",
+      "evidence": "func (e StaffAdminEngine) UpdateStaffStammdatenKontakt(ctx context.Context, staffID int64, input workforce.StammdatenKontaktInput, changedByStaffID int64, note string) (string, error) {\n\tversion, err := e.admin.UpdateStaffStammdatenKontakt(ctx, staffID, domain.ContactSection(input), changedByStaffID, note)\n\treturn version, MapStaffAdminError(err)\n}",
       "form": "unclassified-evidence",
       "id": "modules/workforce/internal/application/StaffAdminEngine.UpdateStaffStammdatenKontakt",
       "owner": "modules/workforce"
     },
     {
       "build": "production",
-      "evidence": "func (e StaffAdminEngine) UpdateStaffStammdatenPerson(ctx context.Context, staffID int64, input workforce.StammdatenPersonInput, changedByStaffID int64, note string) error {\n\treturn MapStaffAdminError(e.admin.UpdateStaffStammdatenPerson(ctx, staffID, domain.PersonSection(input), changedByStaffID, note))\n}",
+      "evidence": "func (e StaffAdminEngine) UpdateStaffStammdatenPerson(ctx context.Context, staffID int64, input workforce.StammdatenPersonInput, changedByStaffID int64, note string) (string, error) {\n\tversion, err := e.admin.UpdateStaffStammdatenPerson(ctx, staffID, domain.PersonSection(input), changedByStaffID, note)\n\treturn version, MapStaffAdminError(err)\n}",
       "form": "unclassified-evidence",
       "id": "modules/workforce/internal/application/StaffAdminEngine.UpdateStaffStammdatenPerson",
       "owner": "modules/workforce"
@@ -905,7 +905,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (c staffAbsenceCapability) VacationQuotaSummary(ctx context.Context, staffID int64, year int) (*workforce.VacationQuotaSummary, error) {\n\tsummary, err := c.absences.GetVacationQuotaSummary(ctx, staffID, year)\n\tif err != nil {\n\t\treturn nil, mapTimeTrackingFailure(err)\n\t}\n\tif summary == nil {\n\t\treturn nil, nil\n\t}\n\treturn \u0026workforce.VacationQuotaSummary{StaffID: summary.StaffID, Year: summary.Year, EntitledDays: summary.EntitledDays, CarryoverDays: summary.CarryoverDays, TakenBeforeDays: summary.TakenBeforeDays, TakenDays: summary.TakenDays, ReservedDays: summary.ReservedDays, RemainingDays: summary.RemainingDays, Opening: publicVacationOpening(summary.Opening)}, nil\n}",
+      "evidence": "func (c staffAbsenceCapability) VacationQuotaSummary(ctx context.Context, staffID int64, year int) (*workforce.VacationQuotaSummary, error) {\n\tsummary, err := c.absences.GetVacationQuotaSummary(ctx, staffID, year)\n\tif err != nil {\n\t\treturn nil, mapTimeTrackingFailure(err)\n\t}\n\tif summary == nil {\n\t\treturn nil, nil\n\t}\n\treturn \u0026workforce.VacationQuotaSummary{StaffID: ident.ID(summary.StaffID), Year: summary.Year, EntitledDays: summary.EntitledDays, CarryoverDays: summary.CarryoverDays, TakenBeforeDays: summary.TakenBeforeDays, TakenDays: summary.TakenDays, ReservedDays: summary.ReservedDays, RemainingDays: summary.RemainingDays, Opening: publicVacationOpening(summary.Opening), Version: summary.Version}, nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/workforce/internal/application/timetracking/staffAbsenceCapability.VacationQuotaSummary",
       "owner": "modules/workforce"
@@ -1010,7 +1010,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (c traegerMonthCapability) CloseMonthForTraeger(ctx context.Context, staffID, accountID int64, year, month int, reason string) (bool, error) {\n\tclosed, err := c.closing.CloseMonthForTraeger(ctx, staffID, accountID, year, month, reason)\n\treturn closed, mapTimeTrackingFailure(err)\n}",
+      "evidence": "func (c traegerMonthCapability) CloseMonthForTraeger(ctx context.Context, staffID, accountID int64, year, month int, reason, expectedVersion string) (bool, error) {\n\tclosed, err := c.closing.CloseMonthForTraeger(ctx, staffID, accountID, year, month, reason, func(ctx context.Context) error {\n\t\tcurrent, err := c.TraegerMonthAccount(ctx, staffID, year, month)\n\t\tif err != nil {\n\t\t\treturn err\n\t\t}\n\t\treturn readstate.Check(expectedVersion, current.Version)\n\t})\n\treturn closed, mapTimeTrackingFailure(err)\n}",
       "form": "unclassified-evidence",
       "id": "modules/workforce/internal/application/timetracking/traegerMonthCapability.CloseMonthForTraeger",
       "owner": "modules/workforce"

@@ -29,7 +29,7 @@ type ParentMessageResponse struct {
 	EventType       string                     `json:"event_type,omitempty"`
 	RequestType     string                     `json:"request_type,omitempty"`
 	RequestStatus   string                     `json:"request_status,omitempty"`
-	Payload         map[string]json.RawMessage `json:"payload,omitempty"`
+	Payload         map[string]json.RawMessage `json:"payload,omitempty" contract_json:"The message kind selects an extensible event payload, including historical kinds"`
 	RefTable        string                     `json:"ref_table,omitempty"`
 	RefID           string                     `json:"ref_id,omitempty"`
 	AppliedAt       *time.Time                 `json:"applied_at,omitempty"`
@@ -40,7 +40,7 @@ type ParentMessageResponse struct {
 	GroupThreadID    string `json:"group_thread_id,omitempty"`
 	GroupThreadTitle string `json:"group_thread_title,omitempty"`
 	// Attachments are the photos and files of the message (#6685).
-	Attachments json.RawMessage `json:"attachments,omitempty"`
+	Attachments []messageAttachmentResponse `json:"attachments,omitempty"`
 }
 
 // ThreadSummaryResponse is one row on the parent thread list. counterpart_name
@@ -63,7 +63,7 @@ type ThreadSummaryResponse struct {
 	LastEventType          string                     `json:"last_event_type,omitempty"`
 	LastRequestType        string                     `json:"last_request_type,omitempty"`
 	LastRequestStatus      string                     `json:"last_request_status,omitempty"`
-	LastMessagePayload     map[string]json.RawMessage `json:"last_message_payload,omitempty"`
+	LastMessagePayload     map[string]json.RawMessage `json:"last_message_payload,omitempty" contract_json:"The last message kind selects its extensible event payload"`
 	LastMessageReadByStaff bool                       `json:"last_message_read_by_staff"`
 	Unread                 int                        `json:"unread"`
 	// Audience is "team" or "leadership" (#5200); a child can have one
@@ -264,7 +264,7 @@ func toMessageResponses(messages []*parentService.ParentMessage, counterpart str
 			ReadByStaff:      m.ReadByStaff,
 			GroupThreadID:    groupThreadIDString(m.GroupThreadID),
 			GroupThreadTitle: m.GroupThreadTitle,
-			Attachments:      m.Attachments,
+			Attachments:      toMessageAttachmentResponses(m.Attachments),
 		})
 	}
 	return out

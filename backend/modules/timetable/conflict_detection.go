@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Conflict kinds — stable string values exported to clients so the frontend
@@ -16,31 +17,27 @@ import (
 const (
 	ConflictKindStaff   = "staff"
 	ConflictKindStudent = "student"
-	// The two exception-conflict kinds (WP-B13) between an activity exception
-	// and a student's arrival expectation.
-	ConflictKindCancelledArrivals = "cancelled_instance_with_scheduled_arrivals"
-	ConflictKindModifiedMismatch  = "modified_instance_time_mismatch"
 )
 
 // InstanceConflictWarning is a single soft warning surfaced on the start
 // response and on the calendar's instance list. One entry per (kind,
 // resource) pair; several warnings per kind are possible.
 type InstanceConflictWarning struct {
-	Kind        string `json:"kind"`         // "staff" | "student"
-	ResourceID  int64  `json:"resource_id"`  // staff_id / student_id
-	Message     string `json:"message"`      // German user-facing copy
-	CanOverride bool   `json:"can_override"` // always true in v1
+	Kind        string   `json:"kind"`         // "staff" | "student"
+	ResourceID  ident.ID `json:"resource_id"`  // staff_id / student_id
+	Message     string   `json:"message"`      // German user-facing copy
+	CanOverride bool     `json:"can_override"` // always true in v1
 
 	// The fields below are set by the planning-window detection (#2139) so
 	// the calendar can link the two involved blocks and persist a per-user
 	// acknowledgement. Start-time warnings (planned vs. live layer) leave
 	// them empty — they are transient toast content, not acknowledgeable
 	// calendar state.
-	Fingerprint           string `json:"fingerprint,omitempty"`
-	ConflictingInstanceID int64  `json:"conflicting_instance_id,omitempty"`
-	ConflictingTitle      string `json:"conflicting_title,omitempty"`
-	OverlapStart          string `json:"overlap_start,omitempty"` // "HH:MM"
-	OverlapEnd            string `json:"overlap_end,omitempty"`   // "HH:MM"
+	Fingerprint           string   `json:"fingerprint,omitempty"`
+	ConflictingInstanceID ident.ID `json:"conflicting_instance_id,omitempty"`
+	ConflictingTitle      string   `json:"conflicting_title,omitempty"`
+	OverlapStart          string   `json:"overlap_start,omitempty"` // "HH:MM"
+	OverlapEnd            string   `json:"overlap_end,omitempty"`   // "HH:MM"
 }
 
 // StartConflictSubject names the planned block whose start is checked and
@@ -77,11 +74,11 @@ type PlannedConflictProbe struct {
 // planner can link to it; there is no can_override flag because the probe
 // never blocks anything.
 type PlannedConflictWarning struct {
-	Kind                  string `json:"kind"` // "staff" | "student"
-	ResourceID            int64  `json:"resource_id"`
-	Message               string `json:"message"` // German user-facing copy
-	ConflictingInstanceID int64  `json:"conflicting_instance_id"`
-	ConflictingTitle      string `json:"conflicting_title"`
+	Kind                  string   `json:"kind"` // "staff" | "student"
+	ResourceID            ident.ID `json:"resource_id"`
+	Message               string   `json:"message"` // German user-facing copy
+	ConflictingInstanceID ident.ID `json:"conflicting_instance_id"`
+	ConflictingTitle      string   `json:"conflicting_title"`
 }
 
 // WindowConflictBlock is one block of the calendar window together with its
@@ -115,23 +112,6 @@ type WindowConflictStudent struct {
 	Status    string
 }
 
-// ExceptionConflict is one planning conflict between an activity exception
-// and a student's arrival expectation. Optional string fields are populated
-// per kind and are empty otherwise.
-type ExceptionConflict struct {
-	Kind               string
-	Date               string
-	ActivityGroupID    int64
-	InstanceID         int64
-	ActivityTitle      string
-	StudentID          int64
-	ExpectedArrival    string
-	ArrivalSource      string
-	CancellationReason string
-	OriginalStartTime  string
-	ModifiedStartTime  string
-}
-
 // StartConflictQuery checks a planned block against the live layer before it
 // starts (WP-B9, #2139). Warnings are advisory; a failure to load the
 // expected students or their current presence is returned, because
@@ -151,9 +131,6 @@ type PlanningConflictQuery interface {
 	// DetectWindowConflicts returns the warnings keyed by instance ID. Every
 	// warning appears on both involved blocks with the same fingerprint.
 	DetectWindowConflicts([]WindowConflictBlock) map[int64][]InstanceConflictWarning
-	// DetectExceptionConflicts covers the inclusive [from, to] window and
-	// returns an unsorted slice.
-	DetectExceptionConflicts(ctx context.Context, from, to calendar.Date) ([]ExceptionConflict, error)
 }
 
 // StaffingQuery answers who could cover a block and whether the Dienstplan

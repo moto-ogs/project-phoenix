@@ -1,18 +1,9 @@
 // Type mapping for the info-point display domain (issue #1325).
-// Backend int64 IDs become strings; snake_case becomes camelCase.
+// The contract's display (InfoDisplayResponse) becomes the view's display;
+// snake_case becomes camelCase. Identifiers arrive as decimal strings through
+// the catalog proxy and are kept as strings.
 
-export interface BackendDisplay {
-  id: number;
-  name: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface BackendDisplayCreateResponse {
-  display: BackendDisplay;
-  token: string;
-}
+import type { InfoDisplayResponse } from "~/lib/contract/display.generated";
 
 export interface InfoDisplay {
   id: string;
@@ -21,9 +12,9 @@ export interface InfoDisplay {
   createdAt: string;
 }
 
-export function mapDisplayResponse(data: BackendDisplay): InfoDisplay {
+export function mapDisplayResponse(data: InfoDisplayResponse): InfoDisplay {
   return {
-    id: data.id.toString(),
+    id: String(data.id),
     name: data.name,
     isActive: data.is_active,
     createdAt: data.created_at,

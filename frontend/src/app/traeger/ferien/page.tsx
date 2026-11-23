@@ -1,5 +1,7 @@
 "use client";
 
+import { bffFile } from "~/lib/bff-fetch";
+
 // Ferienzeiträume des Trägers (#4659): Übersicht aller Zeiträume, von hier
 // aus anlegen und öffnen.
 
@@ -21,7 +23,10 @@ import {
   useTraegerListExportItems,
 } from "~/components/traeger/traeger-list-export-menu";
 import type { HolidayPeriod } from "~/lib/traeger-api";
-import { downloadTraegerList } from "~/lib/traeger-list-export";
+import {
+  downloadTraegerList,
+  listExportQuery,
+} from "~/lib/traeger-list-export";
 import { useTraegerHolidayPeriods } from "~/components/traeger/use-traeger-resources";
 import { traegerPath } from "~/lib/traeger-url";
 
@@ -64,7 +69,7 @@ const COLUMNS: DataTableColumn<HolidayPeriod>[] = [
         tone={period.status === "published" ? "green" : "gray"}
       />
     ),
-    sortValue: (period) => period.status,
+    sortValue: (period) => period.status ?? "",
     stacked: "meta",
   },
 ];
@@ -80,7 +85,11 @@ export default function TraegerHolidayPeriodsPage() {
   // sichtbar bleibt nur „Ferienzeitraum anlegen“ (#7411).
   const exportItems = useTraegerListExportItems({
     download: (format) =>
-      downloadTraegerList("/api/traeger/holiday-periods/export", format),
+      downloadTraegerList(
+        bffFile("org", "GET /traeger/holiday-periods/export", {
+          query: listExportQuery(format),
+        }),
+      ),
     scope: traegerExportScope(),
     fallbackName: "ferienzeitraeume",
     errorObject: "die Ferienzeiträume",

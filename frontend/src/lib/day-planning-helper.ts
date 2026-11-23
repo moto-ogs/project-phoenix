@@ -1,21 +1,29 @@
+import type * as studentsContract from "~/lib/contract/students.generated";
 import {
   LOCATION_STATUSES,
   isInClassLocation,
   parseLocation,
 } from "./location-helper";
 
-type DayPlanningStatus = "comes_today" | "not_coming_today";
-
-export interface DayPlanningStudent {
-  day_planning_status?: DayPlanningStatus;
-  day_planning_reason?: string;
-  day_planning_label?: string;
-  arrival_is_exception?: boolean;
-  arrival_time?: string;
-  arrival_notes?: string;
-  actual_arrival_time?: string;
+/**
+ * The day-planning fields of a student row, from any read that carries
+ * them. current_location may be null in rows that have no location yet.
+ */
+export type DayPlanningStudent = Partial<
+  Pick<
+    studentsContract.SlimStudentResponse,
+    | "day_planning_reason"
+    | "day_planning_label"
+    | "arrival_is_exception"
+    | "arrival_time"
+    | "arrival_notes"
+    | "actual_arrival_time"
+  >
+> & {
+  // Narrowed to the statuses this build knows.
+  day_planning_status?: studentsContract.DayPlanningStatus;
   current_location?: string | null;
-}
+};
 
 export function getDayPlanningNotComingLabel(
   student: Pick<

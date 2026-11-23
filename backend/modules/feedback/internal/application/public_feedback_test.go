@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/feedback"
+	"github.com/moto-ogs/project-phoenix/modules/feedback/internal/domain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -26,13 +27,6 @@ func (e *recordingEngine) Submit(_ context.Context, entry feedback.CreateEntry) 
 	e.created = append(e.created, entry)
 	return feedback.Entry{ID: 1, Value: entry.Value, Day: entry.Day, Time: entry.Time, StudentID: entry.StudentID}, nil
 }
-func (*recordingEngine) SubmitBatch(context.Context, []feedback.CreateEntry) ([]feedback.Entry, error) {
-	return nil, nil
-}
-func (*recordingEngine) LookupEntry(context.Context, int64) (feedback.Entry, error) {
-	return feedback.Entry{}, nil
-}
-func (*recordingEngine) EraseEntry(context.Context, int64) error { return nil }
 func (*recordingEngine) FindEntries(context.Context, feedback.Filter) ([]feedback.Entry, error) {
 	return nil, nil
 }
@@ -78,19 +72,23 @@ func TestModuleRejectsInvalidDateRangesAtPublicSeam(t *testing.T) {
 	assert.Equal(t, feedback.Date("2026-09-02"), rangeErr.StartDate)
 }
 
-func TestModuleRejectsWholeBatchBeforePersistence(t *testing.T) {
+func TestFeedbackHistoryRejectsWholeBatchBeforePersistence(t *testing.T) {
 	t.Parallel()
-	module := newTestModule(&recordingEngine{})
+	engine := &recordingEngine{}
+	history := NewFeedbackHistory(seamStore{e: engine}, seamTransaction{}, func() domain.Date { return domain.Date("2026-09-01") })
 
-	_, err := module.SubmitBatch(context.Background(), []feedback.CreateEntry{
+	written, err := history.RecordFeedbackHistory(context.Background(), []feedback.CreateEntry{
 		{Value: feedback.ValuePositive, Day: "2026-08-31", Time: "09:07:05", StudentID: 42},
 		{Value: "invalid", Day: "2026-08-31", Time: "09:07:05", StudentID: 42},
+		{Value: feedback.ValuePositive, Day: "2026-09-01", Time: "09:07:05", StudentID: 42},
 	})
 
 	require.ErrorIs(t, err, feedback.ErrInvalidEntryData)
 	var batchErr *feedback.BatchOperationError
 	require.ErrorAs(t, err, &batchErr)
-	assert.Len(t, batchErr.Errors, 1)
+	assert.Len(t, batchErr.Errors, 2, "the invalid value and the day that is not past")
+	assert.Zero(t, written)
+	assert.Empty(t, engine.created, "a refused batch writes nothing")
 }
 
 func TestErrorCodeIsStable(t *testing.T) {
@@ -101,3 +99,20 @@ func TestErrorCodeIsStable(t *testing.T) {
 }
 
 func datePtr(value feedback.Date) *feedback.Date { return &value }
+
+// TestModuleRefusesARatingForAStoppedChild pins the per-child stop of #3844:
+// the stopped child's rating never reaches persistence, another child's does.
+func TestModuleRefusesARatingForAStoppedChild(t *testing.T) {
+	t.Parallel()
+	engine := &recordingEngine{}
+	module := newTestModuleWithStops(engine, seamStops{7: true})
+
+	_, err := module.Submit(context.Background(), feedback.CreateEntry{Value: "positive", Day: "2026-08-31", Time: "09:07:05", StudentID: 7})
+	require.ErrorIs(t, err, feedback.ErrMoodCaptureStopped)
+	assert.Equal(t, "mood_capture_stopped", feedback.ErrorCode(err))
+	assert.Empty(t, engine.created, "a stopped child's rating is not stored")
+
+	_, err = module.Submit(context.Background(), feedback.CreateEntry{Value: "positive", Day: "2026-08-31", Time: "09:07:05", StudentID: 8})
+	require.NoError(t, err)
+	assert.Len(t, engine.created, 1)
+}

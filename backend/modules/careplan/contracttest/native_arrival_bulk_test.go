@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/careplantest"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/compose"
 	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 )
@@ -55,6 +56,47 @@ func (p *arrivalClassPlansFixture) Upsert(_ context.Context, row *compose.Arriva
 	return nil
 }
 
+// unstoredClassVersion is the version a class without stored times reads.
+var unstoredClassVersion = readstate.Absent
+
+// TestClassArrivalSaveRefusesTimesChangedSinceRead pins ADR 0311 for the
+// class editor: it sends every filled weekday back, so a save made against
+// an older read would put back a colleague's changed day. Under the class
+// lock the stored version must still be the one read.
+func TestClassArrivalSaveRefusesTimesChangedSinceRead(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	ctx := testpkg.Ctx(t)
+	owner := careplantest.NewCarePlan(t, db, testpkg.StudentDirectory{}, decisionTestClock)
+	var events []string
+	directory := &arrivalClassStudents{events: &events}
+	read := time.Date(2026, 11, 23, 8, 0, 0, 123456000, time.UTC)
+	classes := &arrivalClassPlansFixture{events: &events, row: compose.ArrivalClassPlan{SchoolClass: "2b", UpdatedAt: read, ArrivalTimes: map[string]string{"mon": "12:00", "tue": "12:00"}}}
+	service, err := compose.NewArrivalSchedules(db, owner, nil, nil, compose.ArrivalScheduleDependencies{Students: directory, Classes: classes, Today: decisionTestDay})
+	require.NoError(t, err)
+	opened, err := service.GetClassArrivalTimes(ctx, "2b")
+	require.NoError(t, err)
+	require.Equal(t, readstate.Of(read), opened.Version)
+
+	// A colleague moves Tuesday after the editor opened.
+	classes.row.ArrivalTimes["tue"] = "13:30"
+	classes.row.UpdatedAt = read.Add(time.Second)
+	allow := func(context.Context, careplan.ScheduleStudent) (bool, error) { return true, nil }
+	stale := []careplan.ArrivalScheduleInput{{Weekday: 1, ArrivalTime: "11:30"}, {Weekday: 2, ArrivalTime: "12:00"}}
+	for name, expected := range map[string]string{"older read": opened.Version, "no read": ""} {
+		_, err = service.BulkUpsertArrivalSchedules(ctx, careplan.ArrivalScheduleBulkFilter{SchoolClass: "2b", ExpectedVersion: expected, Authorize: allow}, stale, 1)
+		require.ErrorIs(t, err, readstate.ErrChanged, name)
+		require.Equal(t, map[string]string{"mon": "12:00", "tue": "13:30"}, classes.row.ArrivalTimes, name)
+		require.NotContains(t, events, "write", name)
+	}
+
+	reread, err := service.GetClassArrivalTimes(ctx, "2b")
+	require.NoError(t, err)
+	_, err = service.BulkUpsertArrivalSchedules(ctx, careplan.ArrivalScheduleBulkFilter{SchoolClass: "2b", ExpectedVersion: reread.Version, Authorize: allow}, stale[:1], 1)
+	require.NoError(t, err)
+	require.Equal(t, map[string]string{"mon": "11:30", "tue": "13:30"}, classes.row.ArrivalTimes)
+}
+
 func TestNativeArrivalClassUpdateAuthorizesBeforeClassLockAndPreservesDeviations(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
@@ -71,10 +113,11 @@ func TestNativeArrivalClassUpdateAuthorizesBeforeClassLockAndPreservesDeviations
 		{ScheduleStudent: careplan.ScheduleStudent{ID: second.ID, TenantID: testpkg.Tenant(t)}, SchoolClass: "1a"},
 		{ScheduleStudent: careplan.ScheduleStudent{ID: first.ID, TenantID: testpkg.Tenant(t)}, SchoolClass: " 1A "},
 	}}
-	classes := &arrivalClassPlansFixture{events: &events, row: compose.ArrivalClassPlan{SchoolClass: "1a", ArrivalTimes: map[string]string{"mon": "13:00", "tue": "12:45", "wed": "12:15"}}}
+	stored := time.Date(2026, 11, 23, 7, 0, 0, 0, time.UTC)
+	classes := &arrivalClassPlansFixture{events: &events, row: compose.ArrivalClassPlan{SchoolClass: "1a", UpdatedAt: stored, ArrivalTimes: map[string]string{"mon": "13:00", "tue": "12:45", "wed": "12:15"}}}
 	service, err := compose.NewArrivalSchedules(db, owner, nil, nil, compose.ArrivalScheduleDependencies{Students: directory, Classes: classes, Today: decisionTestDay})
 	require.NoError(t, err)
-	filter := careplan.ArrivalScheduleBulkFilter{SchoolClass: " 1a ", Authorize: func(_ context.Context, row careplan.ScheduleStudent) (bool, error) {
+	filter := careplan.ArrivalScheduleBulkFilter{SchoolClass: " 1a ", ExpectedVersion: readstate.Of(stored), Authorize: func(_ context.Context, row careplan.ScheduleStudent) (bool, error) {
 		events = append(events, "authorize")
 		return row.ID == first.ID, nil
 	}}

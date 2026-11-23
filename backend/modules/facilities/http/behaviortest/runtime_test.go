@@ -243,7 +243,7 @@ func TestCreateRoom(t *testing.T) {
 		// uniqueness is enforced the cleanup is mandatory.
 		var resp struct {
 			Data struct {
-				ID int64 `json:"id"`
+				ID testpkg.ID `json:"id"`
 			} `json:"data"`
 		}
 		require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &resp))
@@ -290,9 +290,11 @@ func TestUpdateRoom(t *testing.T) {
 
 	t.Run("success_updates_room", func(t *testing.T) {
 		uniqueName := fmt.Sprintf("Updated Room %d", time.Now().UnixNano())
+		read := storedRoomVersion(t, tc.db, room.ID)
 		body := map[string]interface{}{
-			"name":     uniqueName,
-			"capacity": 40,
+			"name":             uniqueName,
+			"capacity":         40,
+			"expected_version": read,
 		}
 		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", room.ID), body)
 
@@ -300,6 +302,20 @@ func TestUpdateRoom(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, rr.Code, "Expected 200 OK. Body: %s", rr.Body.String())
 		assert.Contains(t, rr.Body.String(), "Updated Room", "Response should contain updated name")
+		assert.Contains(t, rr.Body.String(), fmt.Sprintf(`"version":%q`, storedRoomVersion(t, tc.db, room.ID)))
+
+		// A second editor still holding the first read is refused and
+		// writes nothing (ADR 0311).
+		for _, stale := range []string{read, ""} {
+			body["name"], body["expected_version"] = "Überschrieben", stale
+			req = testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", room.ID), body)
+			rr = testutil.ExecuteWithAuth(t, tc.router, req, testutil.AdminTestClaims(1))
+			require.Equal(t, http.StatusConflict, rr.Code, rr.Body.String())
+			assert.Contains(t, rr.Body.String(), `"code":"general.changed_since_read"`)
+		}
+		var stored string
+		require.NoError(t, tc.db.NewRaw(`SELECT name FROM facilities.rooms WHERE id = ?`, room.ID).Scan(context.Background(), &stored))
+		assert.Equal(t, uniqueName, stored)
 	})
 
 	t.Run("not_found_for_nonexistent_room", func(t *testing.T) {
@@ -338,9 +354,7 @@ func TestDeleteRoom(t *testing.T) {
 		// Create room specifically for deletion
 		room := testpkg.CreateTestRoom(t, tc.db, "Delete Room Test")
 
-		req := testutil.NewRequest("DELETE", fmt.Sprintf("/%d", room.ID), nil)
-
-		rr := testutil.ExecuteWithAuth(t, tc.router, req, testutil.AdminTestClaims(1))
+		rr := removeRoom(t, tc, room.ID, readImpact(t, tc, room.ID).Data.Fingerprint)
 
 		// The answer names the outcome: an unused room is deleted (#6845).
 		assert.Equal(t, http.StatusOK, rr.Code, "Body: %s", rr.Body.String())
@@ -400,66 +414,6 @@ func TestGetRoomsByCategory(t *testing.T) {
 		rr := testutil.ExecuteWithAuth(t, tc.router, req, testutil.AdminTestClaims(1))
 
 		testutil.AssertBadRequest(t, rr)
-	})
-}
-
-// =============================================================================
-// Building and Category List Tests
-// =============================================================================
-
-func TestGetBuildingList(t *testing.T) {
-	t.Parallel()
-
-	tc := setupRoomsRoute(t)
-
-	t.Run("success_gets_building_list", func(t *testing.T) {
-		req := testutil.NewRequest("GET", "/buildings", nil)
-
-		rr := testutil.ExecuteWithAuth(t, tc.router, req, testutil.AdminTestClaims(1))
-
-		assert.Equal(t, http.StatusOK, rr.Code, "Expected 200 OK. Body: %s", rr.Body.String())
-		assert.Contains(t, rr.Body.String(), "buildings", "Response should contain buildings")
-	})
-}
-
-func TestGetCategoryList(t *testing.T) {
-	t.Parallel()
-
-	tc := setupRoomsRoute(t)
-
-	t.Run("success_gets_category_list", func(t *testing.T) {
-		req := testutil.NewRequest("GET", "/categories", nil)
-
-		rr := testutil.ExecuteWithAuth(t, tc.router, req, testutil.AdminTestClaims(1))
-
-		assert.Equal(t, http.StatusOK, rr.Code, "Expected 200 OK. Body: %s", rr.Body.String())
-		assert.Contains(t, rr.Body.String(), "categories", "Response should contain categories")
-	})
-}
-
-// =============================================================================
-// Available Rooms Tests
-// =============================================================================
-
-func TestGetAvailableRooms(t *testing.T) {
-	t.Parallel()
-
-	tc := setupRoomsRoute(t)
-
-	t.Run("success_gets_available_rooms", func(t *testing.T) {
-		req := testutil.NewRequest("GET", "/available", nil)
-
-		rr := testutil.ExecuteWithAuth(t, tc.router, req, testutil.AdminTestClaims(1))
-
-		assert.Equal(t, http.StatusOK, rr.Code, "Expected 200 OK. Body: %s", rr.Body.String())
-	})
-
-	t.Run("success_with_capacity_filter", func(t *testing.T) {
-		req := testutil.NewRequest("GET", "/available?capacity=20", nil)
-
-		rr := testutil.ExecuteWithAuth(t, tc.router, req, testutil.AdminTestClaims(1))
-
-		assert.Equal(t, http.StatusOK, rr.Code, "Expected 200 OK. Body: %s", rr.Body.String())
 	})
 }
 
@@ -631,7 +585,7 @@ func TestGetRoomHistory_StaffScope(t *testing.T) {
 		require.Equal(t, http.StatusOK, rr.Code, "Body: %s", rr.Body.String())
 		data := decodeData(t, rr)
 		require.Len(t, data, 1, "supervisor should see exactly the one session they supervise")
-		assert.Equal(t, float64(activeGroup.ID), data[0]["session_id"], "session id should match the active group")
+		assert.Equal(t, int64(activeGroup.ID), testpkg.JSONID(t, data[0]["session_id"]), "session id should match the active group")
 	})
 
 	t.Run("bystander_staff_sees_session_too", func(t *testing.T) {
@@ -642,7 +596,7 @@ func TestGetRoomHistory_StaffScope(t *testing.T) {
 		require.Equal(t, http.StatusOK, rr.Code, "Body: %s", rr.Body.String())
 		data := decodeData(t, rr)
 		require.Len(t, data, 1, "verified staff read the room history whether or not they supervise the session")
-		assert.Equal(t, float64(activeGroup.ID), data[0]["session_id"])
+		assert.Equal(t, int64(activeGroup.ID), testpkg.JSONID(t, data[0]["session_id"]))
 	})
 
 	t.Run("admin_needs_no_staff_record", func(t *testing.T) {
@@ -653,7 +607,7 @@ func TestGetRoomHistory_StaffScope(t *testing.T) {
 		require.Equal(t, http.StatusOK, rr.Code, "Body: %s", rr.Body.String())
 		data := decodeData(t, rr)
 		require.Len(t, data, 1, "admin should see the session even without a supervisor row")
-		assert.Equal(t, float64(activeGroup.ID), data[0]["session_id"])
+		assert.Equal(t, int64(activeGroup.ID), testpkg.JSONID(t, data[0]["session_id"]))
 	})
 
 	t.Run("caller_without_staff_record_returns_forbidden", func(t *testing.T) {
@@ -747,7 +701,7 @@ func TestGetRoomHistory_RangeCapClamped(t *testing.T) {
 	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &body))
 
 	require.Len(t, body.Data, 1, "30d request must be clamped to 1d window (cap=1); only the recent session survives")
-	assert.Equal(t, float64(recent.ID), body.Data[0]["session_id"], "the returned session should be the one inside the cap")
+	assert.Equal(t, int64(recent.ID), testpkg.JSONID(t, body.Data[0]["session_id"]), "the returned session should be the one inside the cap")
 }
 
 // TestGetRoomHistory_DurationMinutesPopulated — covers the duration_minutes

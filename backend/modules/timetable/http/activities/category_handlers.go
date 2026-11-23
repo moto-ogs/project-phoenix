@@ -30,17 +30,17 @@ const maxCategoryDescriptionLength = 255
 
 var categoryColorPattern = regexp.MustCompile(`^#?([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$`)
 
-// CategoryRequest is the create/update payload for an activity category.
+// ActivityCategoryRequest is the create/update payload for an activity category.
 // is_system is deliberately absent: schools must not be able to mint system
 // categories, and the existing ones stay read-only (#2131).
-type CategoryRequest struct {
+type ActivityCategoryRequest struct {
 	Name        string `json:"name"`
 	Description string `json:"description,omitempty"`
 	Color       string `json:"color,omitempty"`
 }
 
 // Bind validates and normalizes the category payload.
-func (req *CategoryRequest) Bind(_ *http.Request) error {
+func (req *ActivityCategoryRequest) Bind(_ *http.Request) error {
 	req.Name = strings.TrimSpace(req.Name)
 	req.Description = strings.TrimSpace(req.Description)
 	req.Color = strings.TrimSpace(req.Color)
@@ -59,7 +59,7 @@ func (req *CategoryRequest) Bind(_ *http.Request) error {
 	)
 }
 
-func (req *CategoryRequest) toInput() activityContract.CategoryInput {
+func (req *ActivityCategoryRequest) toInput() activityContract.CategoryInput {
 	return activityContract.CategoryInput{
 		Name:        req.Name,
 		Description: req.Description,
@@ -90,7 +90,7 @@ func (rs *Resource) listCategories(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	responses := make([]CategoryResponse, 0, len(categories))
+	responses := make([]ActivityCategoryResponse, 0, len(categories))
 	for _, category := range categories {
 		if category.IsSystem && !includeSystem {
 			continue
@@ -110,7 +110,7 @@ func (rs *Resource) listCategories(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		for i := range responses {
-			count := usage[responses[i].ID]
+			count := usage[responses[i].ID.Int64()]
 			responses[i].UsageCount = &count
 		}
 	}
@@ -119,7 +119,7 @@ func (rs *Resource) listCategories(w http.ResponseWriter, r *http.Request) {
 }
 
 // createCategory creates a new school-owned activity category.
-func (rs *Resource) createCategory(ctx context.Context, req *CategoryRequest) (CategoryResponse, error) {
+func (rs *Resource) createCategory(ctx context.Context, req *ActivityCategoryRequest) (ActivityCategoryResponse, error) {
 	category := &activityContract.Category{
 		Name:        req.Name,
 		Description: req.Description,
@@ -128,7 +128,7 @@ func (rs *Resource) createCategory(ctx context.Context, req *CategoryRequest) (C
 
 	created, err := rs.ActivityService.CreateCategory(ctx, category)
 	if err != nil {
-		return CategoryResponse{}, err
+		return ActivityCategoryResponse{}, err
 	}
 
 	return newCategoryResponse(created), nil
@@ -142,7 +142,7 @@ func (rs *Resource) updateCategory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	req := &CategoryRequest{}
+	req := &ActivityCategoryRequest{}
 	if bindErr := render.Bind(r, req); bindErr != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(bindErr))
 		return
@@ -159,19 +159,19 @@ func (rs *Resource) updateCategory(w http.ResponseWriter, r *http.Request) {
 
 // archiveCategory retires a category. Nothing is deleted — existing Termine
 // and Aktivitäten keep their category and stay valid.
-func (rs *Resource) archiveCategory(ctx context.Context, id int64) (CategoryResponse, error) {
+func (rs *Resource) archiveCategory(ctx context.Context, id int64) (ActivityCategoryResponse, error) {
 	archived, err := rs.ActivityService.ArchiveCategory(ctx, id)
 	if err != nil {
-		return CategoryResponse{}, err
+		return ActivityCategoryResponse{}, err
 	}
 	return newCategoryResponse(archived), nil
 }
 
 // restoreCategory brings an archived category back into the pickers.
-func (rs *Resource) restoreCategory(ctx context.Context, id int64) (CategoryResponse, error) {
+func (rs *Resource) restoreCategory(ctx context.Context, id int64) (ActivityCategoryResponse, error) {
 	restored, err := rs.ActivityService.RestoreCategory(ctx, id)
 	if err != nil {
-		return CategoryResponse{}, err
+		return ActivityCategoryResponse{}, err
 	}
 	return newCategoryResponse(restored), nil
 }

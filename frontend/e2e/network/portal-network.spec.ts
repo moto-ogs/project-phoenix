@@ -8,6 +8,7 @@ import {
 } from "@playwright/test";
 import { randomBytes } from "node:crypto";
 import { writeFile } from "node:fs/promises";
+import type { PublicEnrollmentFormBootstrapResponse } from "../../src/lib/contract/shared.generated";
 import { networkPorts } from "./ports.mjs";
 
 type Entry = { origin: string; path: string; contentType: string };
@@ -152,12 +153,19 @@ async function browserApi(
           email: "fixture@example.invalid",
           settings: {},
         };
-      else if (path === "/api/user-context")
+      else if (path === "/api/me/navigation")
         data = {
-          educationalGroups: [],
-          supervisedGroups: [],
-          currentStaff: null,
-          isReady: true,
+          educational_groups: [],
+          supervised_groups: [],
+          current_staff: null,
+          incomplete: false,
+          unavailable_sections: [],
+          school_switches: {
+            parent_news_enabled: false,
+            parent_invite_mode: "direct",
+            timetable_day_start_time: "08:00",
+            timetable_day_end_time: "16:00",
+          },
         };
       else if (path === "/api/parent/me/profile")
         data = {
@@ -181,7 +189,7 @@ async function browserApi(
         });
         return;
       }
-      await route.fulfill({ json: { status: "success", success: true, data } });
+      await route.fulfill({ json: { status: "success", data } });
     },
   );
 }
@@ -250,6 +258,25 @@ test("network guard aborts dedicated-worker CDN imports before sending", async (
   await expect(proof.check()).rejects.toThrow(
     "Requests outside this scenario's explicit allowlist",
   );
+});
+
+// GET /api/auth/tenants is a route file without a dynamic segment: Next
+// hands it `params: undefined`, which the unit tests did not (#7563).
+test("main domain lists the schools to choose from", async ({
+  page,
+  context,
+}) => {
+  const origin = `http://localhost:${port}`;
+  const proof = await observe(context, origin, { analytics: false });
+  const answer = page.waitForResponse(
+    (response) => new URL(response.url()).pathname === "/api/auth/tenants",
+  );
+  await page.goto(`${origin}/`, { waitUntil: "domcontentloaded" });
+  expect((await answer).status()).toBe(200);
+  await page.getByRole("combobox", { name: "Einrichtung" }).click();
+  await visible(page.getByRole("option", { name: "School A" }));
+  await visible(page.getByRole("option", { name: "School B" }));
+  await proof.check("network-school-picker");
 });
 
 for (const analytics of [false, true]) {
@@ -504,44 +531,60 @@ for (const analytics of [false, true]) {
         analytics: false,
         captcha,
       });
-      await page.route("**/api/enrollment/form-bootstrap/public/**", (route) =>
-        route.fulfill({
-          json: {
-            status: "success",
-            data: {
-              phase: {
-                id: "1",
-                name: "Netzwerktest",
-                kind: "school_year",
-                service_start_date: "2026-08-01",
-                service_end_date: "2027-07-31",
-                show_status_reason_to_parent: false,
-              },
-              schema: { id: "1", version: 1, fields: [] },
-              offerings: [],
-              care_offering_selection_mode: "optional",
-              care_required: false,
-              collect_grade_level: false,
-              care_offerings_enabled: false,
-              // Deliberately contradictory when disabled: catches the original bug.
-              captcha_config: {
-                enabled: captcha,
-                site_key: "1x00000000000000000000AA",
-              },
-              legal_texts: {
-                agb: "",
-                dsgvo: "",
-                email_contact: "",
-                photo: "",
-                terms_enabled: false,
-                dsgvo_enabled: false,
-                email_contact_enabled: false,
-                photo_enabled: false,
-                blocks: [],
-              },
-            },
+      // Typed by the generated contract: a field the client starts to need
+      // fails tsc here instead of leaving the form unrendered.
+      const bootstrap = {
+        status: "success",
+        data: {
+          phase: {
+            id: "1",
+            name: "Netzwerktest",
+            kind: "school_year",
+            service_start_date: "2026-08-01",
+            service_end_date: "2027-07-31",
+            show_status_reason_to_parent: false,
+            care_offering_selection_mode: "optional",
+            audience: "open",
+            eligible_grade_levels: null,
           },
-        }),
+          schema: { id: "1", version: 1, fields: [], core_requirements: null },
+          offerings: [],
+          care_offering_selection_mode: "optional",
+          care_required: false,
+          terms_fingerprint: "network-form",
+          collect_grade_level: false,
+          care_offerings_enabled: false,
+          school_class: {
+            collect: false,
+            available_classes: [],
+            require: false,
+            collect_grade_1: false,
+          },
+          // Deliberately contradictory when disabled: catches the original bug.
+          captcha_config: {
+            enabled: captcha,
+            site_key: "1x00000000000000000000AA",
+          },
+          legal_texts: {
+            agb: "",
+            agb_document_url: "",
+            agb_display_mode: "text",
+            dsgvo: "",
+            email_contact: "",
+            photo: "",
+            terms_enabled: false,
+            dsgvo_enabled: false,
+            email_contact_enabled: false,
+            photo_enabled: false,
+            blocks: [],
+          },
+        },
+      } satisfies {
+        status: "success";
+        data: PublicEnrollmentFormBootstrapResponse;
+      };
+      await page.route("**/api/enrollment/form-bootstrap/public/**", (route) =>
+        route.fulfill({ json: bootstrap }),
       );
       try {
         await page.goto(`${origin}/anmeldung/1`, {

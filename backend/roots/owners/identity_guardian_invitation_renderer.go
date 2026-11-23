@@ -7,6 +7,7 @@ import (
 	deliveryCompose "github.com/moto-ogs/project-phoenix/modules/delivery/compose"
 	email "github.com/moto-ogs/project-phoenix/modules/delivery/mail"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Payload keys used by the guardian-invitation outbox row. The service
@@ -28,6 +29,11 @@ const (
 	guardianPayloadHelpURL           = "help_url"
 	guardianPayloadParentInfoURL     = "parent_info_url"
 	guardianPayloadPrecedingOutboxID = "preceding_outbox_id"
+	// The care notice (#7760) names the child and links the parents portal
+	// login in the guardian's portal language.
+	guardianPayloadChildFirstNames = "child_first_names"
+	guardianPayloadPortalURL       = "portal_url"
+	guardianPayloadLocale          = "locale"
 )
 
 // GuardianInvitationRendererConfig is the closure-state for the
@@ -65,6 +71,47 @@ func NewGuardianWelcomeRenderer(cfg GuardianInvitationRendererConfig) func(conte
 			return nil, err
 		}
 		return identityMessage(cfg.DefaultFrom, email.NewEmail("", queued.Recipient), mail), nil
+	}
+}
+
+// NewGuardianCareVisibleRenderer returns the renderer of the queued care
+// notice (#7760).
+func NewGuardianCareVisibleRenderer(defaultFrom email.Email) func(context.Context, map[string]any) (*email.Message, error) {
+	return func(_ context.Context, payload map[string]any) (*email.Message, error) {
+		text := func(key string) string {
+			value, _ := payload[key].(string)
+			return value
+		}
+		queued := identityaccess.GuardianCareVisibleMail{
+			Recipient: text(guardianPayloadRecipientEmail), FirstName: text(guardianPayloadFirstName),
+			LastName: text(guardianPayloadLastName), ChildFirstNames: payloadStrings(payload, guardianPayloadChildFirstNames),
+			SchoolName: text(guardianPayloadSchoolName), PortalURL: text(guardianPayloadPortalURL),
+			LogoURL: text(guardianPayloadLogoURL), Locale: text(guardianPayloadLocale),
+		}
+		mail, err := identityaccess.GuardianCareVisibleMailContent(queued)
+		if err != nil {
+			return nil, err
+		}
+		return identityMessage(defaultFrom, email.NewEmail("", queued.Recipient), mail), nil
+	}
+}
+
+// payloadStrings reads a list of strings back from a payload: as stored
+// before the round trip, or as the JSON array the outbox returns.
+func payloadStrings(payload map[string]any, key string) []string {
+	switch values := payload[key].(type) {
+	case []string:
+		return values
+	case []any:
+		result := make([]string, 0, len(values))
+		for _, value := range values {
+			if text, ok := value.(string); ok {
+				result = append(result, text)
+			}
+		}
+		return result
+	default:
+		return nil
 	}
 }
 
@@ -122,6 +169,9 @@ func payloadInt64Field(payload map[string]any, key string) (int64, bool) {
 	if !ok {
 		return 0, false
 	}
+	if typed, ok := v.(ident.ID); ok {
+		v = typed.Int64()
+	}
 	switch x := v.(type) {
 	case int:
 		return int64(x), true
@@ -141,6 +191,9 @@ func payloadIntField(payload map[string]any, key string) (int, bool) {
 	v, ok := payload[key]
 	if !ok {
 		return 0, false
+	}
+	if typed, ok := v.(ident.ID); ok {
+		v = typed.Int64()
 	}
 	switch x := v.(type) {
 	case int:

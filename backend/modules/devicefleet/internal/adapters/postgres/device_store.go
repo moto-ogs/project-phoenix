@@ -43,8 +43,8 @@ type deviceRow struct {
 // DeviceStore reads and writes iot.devices for the Device Fleet owner.
 type DeviceStore struct {
 	database Database
-	// now is the owner's clock Create stamps created_at with: ListOffline
-	// compares it with a cutoff on the same clock (ADR 0281 point 2).
+	// now is the owner's clock Create stamps created_at with (ADR 0281
+	// point 2).
 	now func() time.Time
 }
 
@@ -418,19 +418,6 @@ func (s *DeviceStore) ListByIDs(ctx context.Context, ids []int64) ([]devicefleet
 	return s.scanList(ctx, query, &rows, "list devices by id")
 }
 
-// ListOffline reads devices last seen before cutoff, including devices that
-// were never seen and created before it.
-func (s *DeviceStore) ListOffline(ctx context.Context, cutoff time.Time) ([]devicefleet.Device, domain.OperationStats, error) {
-	db, scope, err := s.database(ctx)
-	if err != nil {
-		return nil, domain.OperationStats{}, err
-	}
-	var rows []deviceRow
-	query := s.selectDevices(db, scope, &rows).
-		Where(`"device".last_seen < ? OR ("device".last_seen IS NULL AND "device".created_at < ?)`, cutoff, cutoff)
-	return s.scanList(ctx, query, &rows, "list offline devices")
-}
-
 func (s *DeviceStore) scanList(
 	ctx context.Context,
 	query *bun.SelectQuery,
@@ -450,40 +437,6 @@ func (s *DeviceStore) scanList(
 		devices = append(devices, toDeviceDomain(row))
 	}
 	return devices, stats, nil
-}
-
-// CountByType counts live devices grouped by device_type, most frequent first.
-func (s *DeviceStore) CountByType(ctx context.Context) (map[string]int, domain.OperationStats, error) {
-	db, scope, err := s.database(ctx)
-	if err != nil {
-		return nil, domain.OperationStats{}, err
-	}
-	var counts []struct {
-		DeviceType string `bun:"device_type"`
-		Count      int    `bun:"count"`
-	}
-	query := db.NewSelect().
-		Model((*deviceRow)(nil)).
-		ModelTableExpr(deviceTableExpr).
-		Column("device_type").
-		ColumnExpr("COUNT(*) AS count").
-		Where(deviceNotArchive)
-	if !scope.AcrossSchools {
-		query = query.Where(`"device".tenant_id = ?`, scope.TenantID)
-	}
-	stats := domain.OperationStats{Queries: 1}
-	started := time.Now()
-	err = query.Group("device_type").Order("count DESC").Scan(ctx, &counts)
-	stats.StatementDuration = time.Since(started)
-	if err != nil {
-		return nil, stats, fmt.Errorf("devicefleet postgres: count devices by type: %w", err)
-	}
-	stats.Rows = int64(len(counts))
-	result := make(map[string]int, len(counts))
-	for _, count := range counts {
-		result[count.DeviceType] = count.Count
-	}
-	return result, stats, nil
 }
 
 // CountByTenant counts live devices grouped by tenant: the devices that

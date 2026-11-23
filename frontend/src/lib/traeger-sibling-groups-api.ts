@@ -1,3 +1,4 @@
+import { bffJson } from "~/lib/bff-fetch";
 /**
  * Siblings from separate holiday registrations (#5628): the Träger-Büro
  * merges registrations of one period as siblings, and splits them again.
@@ -5,36 +6,29 @@
  * from the contribution client, so the registration page does not load it.
  */
 
-import { traegerRequest } from "./traeger-api";
+import type * as traegerHolidayContributionsContract from "./contract/traeger-holiday-contributions.generated";
 
 export interface HolidaySiblingGroup {
   readonly id: string;
   readonly registrationIds: readonly string[];
 }
 
-interface BackendGroup {
-  id: number;
-  registration_ids?: number[] | null;
-}
-
-const groupsPath = (periodId: string) =>
-  `/api/traeger/holiday-contributions/${encodeURIComponent(periodId)}/sibling-groups`;
-
-function groupFromBackend(group: BackendGroup): HolidaySiblingGroup {
-  return {
-    id: String(group.id),
-    registrationIds: (group.registration_ids ?? []).map(String),
-  };
+function groupFromBackend(
+  group: traegerHolidayContributionsContract.HolidaySiblingGroup,
+): HolidaySiblingGroup {
+  return { id: group.id, registrationIds: group.registration_ids ?? [] };
 }
 
 /** The sibling groups of the period, by registration number. */
 export async function fetchHolidaySiblingGroups(
   periodId: string,
 ): Promise<HolidaySiblingGroup[]> {
-  const groups = await traegerRequest<BackendGroup[] | null>(
-    groupsPath(periodId),
+  const groups = await bffJson(
+    "org",
+    "GET /traeger/holiday-contributions/{periodId}/sibling-groups",
+    { params: { periodId } },
   );
-  return (groups ?? []).map(groupFromBackend);
+  return groups.map(groupFromBackend);
 }
 
 /**
@@ -46,10 +40,16 @@ export async function mergeHolidaySiblings(
   registrationIds: readonly string[],
 ): Promise<HolidaySiblingGroup> {
   return groupFromBackend(
-    await traegerRequest<BackendGroup>(groupsPath(periodId), {
-      method: "POST",
-      body: { registration_ids: registrationIds.map(Number) },
-    }),
+    await bffJson(
+      "org",
+      "POST /traeger/holiday-contributions/{periodId}/sibling-groups",
+      {
+        params: { periodId },
+        body: {
+          registration_ids: [...registrationIds],
+        } satisfies traegerHolidayContributionsContract.HolidaySiblingMergeRequest,
+      },
+    ),
   );
 }
 
@@ -58,8 +58,9 @@ export async function splitHolidaySibling(
   periodId: string,
   registrationId: string,
 ): Promise<void> {
-  await traegerRequest<unknown>(
-    `/api/traeger/holiday-contributions/${encodeURIComponent(periodId)}/sibling-groups/registrations/${encodeURIComponent(registrationId)}`,
-    { method: "DELETE" },
+  await bffJson(
+    "org",
+    "DELETE /traeger/holiday-contributions/{periodId}/sibling-groups/registrations/{registrationId}",
+    { params: { periodId, registrationId } },
   );
 }

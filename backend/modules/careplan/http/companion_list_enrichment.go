@@ -3,6 +3,7 @@ package careplanhttp
 import (
 	careplan "github.com/moto-ogs/project-phoenix/modules/careplan"
 	departure "github.com/moto-ogs/project-phoenix/modules/peopledirectory/departure"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // toCompanionLinks converts the wire entries into the service's link shape.
@@ -10,7 +11,7 @@ func toCompanionLinks(entries []CompanionEntry) []departure.CompanionLink {
 	links := make([]departure.CompanionLink, 0, len(entries))
 	for _, entry := range entries {
 		links = append(links, departure.CompanionLink{
-			CompanionStudentID: entry.CompanionStudentID,
+			CompanionStudentID: entry.CompanionStudentID.Int64(),
 			Weekdays:           entry.Weekdays,
 		})
 	}
@@ -25,7 +26,7 @@ func toCompanionResponses(links []departure.CompanionLink) []CompanionResponse {
 			weekdays = []string{}
 		}
 		out = append(out, CompanionResponse{
-			CompanionStudentID: link.CompanionStudentID,
+			CompanionStudentID: ident.ID(link.CompanionStudentID),
 			FirstName:          link.FirstName,
 			LastName:           link.LastName,
 			Weekdays:           weekdays,

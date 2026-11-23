@@ -25,15 +25,15 @@ import (
 )
 
 type careAmendmentBody struct {
-	ID                int64  `json:"id"`
-	Kind              string `json:"kind"`
-	Label             string `json:"label"`
-	AmountCents       int64  `json:"amount_cents"`
-	Reason            string `json:"reason"`
-	AccountID         *int64 `json:"account_id"`
-	Carried           bool   `json:"carried"`
-	CarriedFromNumber string `json:"carried_from_number"`
-	Conflict          string `json:"conflict"`
+	ID                wireID  `json:"id"`
+	Kind              string  `json:"kind"`
+	Label             string  `json:"label"`
+	AmountCents       int64   `json:"amount_cents"`
+	Reason            string  `json:"reason"`
+	AccountID         *wireID `json:"account_id"`
+	Carried           bool    `json:"carried"`
+	CarriedFromNumber string  `json:"carried_from_number"`
+	Conflict          string  `json:"conflict"`
 	Before            struct {
 		TotalCents *int64 `json:"total_cents"`
 	} `json:"before"`
@@ -43,9 +43,9 @@ type careAmendmentBody struct {
 }
 
 type careAmendedInvoiceBody struct {
-	ID         int64 `json:"id"`
-	ContractID int64 `json:"contract_id"`
-	TotalCents int64 `json:"total_cents"`
+	ID         wireID `json:"id"`
+	ContractID wireID `json:"contract_id"`
+	TotalCents int64  `json:"total_cents"`
 	Recipient  struct {
 		FirstName string `json:"first_name"`
 		LastName  string `json:"last_name"`
@@ -98,7 +98,7 @@ func (f careBillingFixture) amend(t *testing.T, runID, contractID int64, change 
 func amendedInvoice(t *testing.T, run careAmendedRunBody, contractID int64) careAmendedInvoiceBody {
 	t.Helper()
 	for _, invoice := range run.Invoices {
-		if invoice.ContractID == contractID {
+		if int64(invoice.ContractID) == contractID {
 			return invoice
 		}
 	}
@@ -115,7 +115,7 @@ func amendableRun(t *testing.T, f careBillingFixture, children ...string) (careR
 	for _, child := range children {
 		contracts[child] = careContract(t, f.db, f.office.organization, school, child, careMonth, sjrServices()...)
 	}
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	return f.startRun(t, careMonth), contracts
 }
@@ -135,7 +135,7 @@ func TestCareAmendmentsChangeOneInvoiceUpToItsLetter(t *testing.T) {
 	brandCareTraeger(t, f)
 	run, contracts := amendableRun(t, f, "Mia", "Lea")
 	mia, lea := contracts["Mia"], contracts["Lea"]
-	review := f.amended(t, run.ID)
+	review := f.amended(t, int64(run.ID))
 	assert.True(t, review.Amendable.Amount && review.Amendable.Recipient && review.Amendable.Address && review.Amendable.Positions,
 		"every change is on by default")
 	require.Equal(t, int64(7750), amendedInvoice(t, review, mia).TotalCents)
@@ -143,7 +143,7 @@ func TestCareAmendmentsChangeOneInvoiceUpToItsLetter(t *testing.T) {
 	require.Equal(t, "Betreuung bis 16:30 Uhr", tuesday.ModuleName)
 	assert.Equal(t, int64(4550), tuesday.PayableCents, "the removal dialog receives the effective deduction")
 
-	code, review := f.amend(t, run.ID, mia, map[string]any{"kind": "amount", "total_cents": 7000, "reason": "Kulanz wegen Schließtag"})
+	code, review := f.amend(t, int64(run.ID), mia, map[string]any{"kind": "amount", "total_cents": 7000, "reason": "Kulanz wegen Schließtag"})
 	require.Equal(t, http.StatusOK, code)
 	invoice := amendedInvoice(t, review, mia)
 	assert.Equal(t, int64(7000), invoice.TotalCents, "the amount change adds a correction line")
@@ -153,19 +153,19 @@ func TestCareAmendmentsChangeOneInvoiceUpToItsLetter(t *testing.T) {
 	assert.NotNil(t, invoice.Amendments[0].AccountID, "the entry names who changed it")
 	assert.Len(t, invoice.Positions, 2, "the computed positions stay")
 
-	code, review = f.amend(t, run.ID, mia, map[string]any{"kind": "add_position", "label": "Ausflug Wildpark", "amount_cents": 1200, "reason": "Elternbrief vom 3.1."})
+	code, review = f.amend(t, int64(run.ID), mia, map[string]any{"kind": "add_position", "label": "Ausflug Wildpark", "amount_cents": 1200, "reason": "Elternbrief vom 3.1."})
 	require.Equal(t, http.StatusOK, code)
 	assert.Equal(t, int64(8200), amendedInvoice(t, review, mia).TotalCents)
-	code, review = f.amend(t, run.ID, mia, map[string]any{"kind": "remove_position", "position_key": tuesday.Key, "reason": "Dienstag nicht gebucht"})
+	code, review = f.amend(t, int64(run.ID), mia, map[string]any{"kind": "remove_position", "position_key": tuesday.Key, "reason": "Dienstag nicht gebucht"})
 	require.Equal(t, http.StatusOK, code)
 	assert.Equal(t, int64(3650), amendedInvoice(t, review, mia).TotalCents, "the removal takes the Tuesday off")
-	code, _ = f.amend(t, run.ID, mia, map[string]any{"kind": "remove_position", "position_key": tuesday.Key, "reason": "Noch einmal"})
+	code, _ = f.amend(t, int64(run.ID), mia, map[string]any{"kind": "remove_position", "position_key": tuesday.Key, "reason": "Noch einmal"})
 	assert.Equal(t, http.StatusConflict, code, "a position goes off once")
 
-	code, review = f.amend(t, run.ID, mia, map[string]any{"kind": "recipient", "reason": "Rechnung an den Vater",
+	code, review = f.amend(t, int64(run.ID), mia, map[string]any{"kind": "recipient", "reason": "Rechnung an den Vater",
 		"recipient": map[string]any{"first_name": "Jan", "last_name": "Beispiel", "email": "jan@example.org"}})
 	require.Equal(t, http.StatusOK, code)
-	code, review = f.amend(t, run.ID, mia, map[string]any{"kind": "address", "reason": "Umzug",
+	code, review = f.amend(t, int64(run.ID), mia, map[string]any{"kind": "address", "reason": "Umzug",
 		"address": map[string]any{"street": "Neue Straße 4", "postal_code": "75172", "city": "Pforzheim"}})
 	require.Equal(t, http.StatusOK, code)
 	invoice = amendedInvoice(t, review, mia)
@@ -178,12 +178,12 @@ func TestCareAmendmentsChangeOneInvoiceUpToItsLetter(t *testing.T) {
 	assert.Equal(t, int64(7750), other.TotalCents)
 	assert.Empty(t, other.Amendments)
 
-	list := reviewListCSV(t, f, run.ID)
+	list := reviewListCSV(t, f, int64(run.ID))
 	for _, want := range []string{"Korrektur: Kulanz wegen Schließtag", "Ausflug Wildpark", "Entfällt: Betreuung bis 16:30 Uhr", "Jan Beispiel"} {
 		assert.Contains(t, list, want, "the review list shows the change")
 	}
 
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/release"), careRelease(review.careRunBody))
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"), careRelease(review.careRunBody))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	released := decodeSchoolPortalData[careAmendedRunBody](t, rec.Body.Bytes())
 	issued := amendedInvoice(t, released, mia)
@@ -204,9 +204,9 @@ func TestCareAmendmentsChangeOneInvoiceUpToItsLetter(t *testing.T) {
 		issued.ID).Scan(context.Background(), &lines))
 	assert.Equal(t, int64(3650-7750), lines, "the correction lines add up to the difference")
 
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/letters"), careLettersInput())
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/letters"), careLettersInput())
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, careRunPath(run.ID, fmt.Sprintf("/invoices/%d/letter", issued.ID)), nil)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodGet, careRunPath(int64(run.ID), fmt.Sprintf("/invoices/%d/letter", issued.ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.True(t, strings.HasPrefix(rec.Body.String(), "%PDF"), "the letter of the changed invoice renders")
 
@@ -215,7 +215,7 @@ func TestCareAmendmentsChangeOneInvoiceUpToItsLetter(t *testing.T) {
 		Scan(context.Background(), &families))
 	assert.Zero(t, families, "a recipient change of the run is no family deviation (#4689)")
 	nextMonth := f.startRun(t, "2030-02-01")
-	assert.Equal(t, "Eva", amendedInvoice(t, f.amended(t, nextMonth.ID), mia).Recipient.FirstName,
+	assert.Equal(t, "Eva", amendedInvoice(t, f.amended(t, int64(nextMonth.ID)), mia).Recipient.FirstName,
 		"the next month goes to the contract party again")
 }
 
@@ -226,26 +226,26 @@ func TestCareAmendmentInvalidatesTheReviewedState(t *testing.T) {
 	t.Parallel()
 	f := newCareBillingFixture(t, "Träger Änderung Fingerabdruck")
 	run, contracts := amendableRun(t, f, "Mia")
-	reviewed := f.amended(t, run.ID)
-	code, _ := f.amend(t, run.ID, contracts["Mia"], map[string]any{"kind": "amount", "total_cents": 5000, "reason": "Kulanz"})
+	reviewed := f.amended(t, int64(run.ID))
+	code, _ := f.amend(t, int64(run.ID), contracts["Mia"], map[string]any{"kind": "amount", "total_cents": 5000, "reason": "Kulanz"})
 	require.Equal(t, http.StatusOK, code)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/release"), careRelease(reviewed.careRunBody))
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"), careRelease(reviewed.careRunBody))
 	assert.Equal(t, http.StatusConflict, rec.Code, "the release of the state before the change: %s", rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "parent_billing.billing_run_changed")
 
 	stale := map[string]any{"contract_id": contracts["Mia"], "fingerprint": reviewed.Fingerprint, "kind": "amount",
 		"total_cents": 6000, "reason": "Alter Stand"}
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/amendments"), stale)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/amendments"), stale)
 	assert.Equal(t, http.StatusConflict, rec.Code, "a change on an old review: %s", rec.Body.String())
 
-	current := f.amended(t, run.ID)
+	current := f.amended(t, int64(run.ID))
 	codes := make([]int, 2)
 	var wg sync.WaitGroup
 	for i, total := range []int64{4000, 4500} {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/amendments"),
+			rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/amendments"),
 				map[string]any{"contract_id": contracts["Mia"], "fingerprint": current.Fingerprint, "kind": "amount",
 					"total_cents": total, "reason": "Gleichzeitig"})
 			codes[i] = rec.Code
@@ -253,10 +253,10 @@ func TestCareAmendmentInvalidatesTheReviewedState(t *testing.T) {
 	}
 	wg.Wait()
 	assert.ElementsMatch(t, []int{http.StatusOK, http.StatusConflict}, codes, "two changes on one review: one wins, one is refused")
-	assert.Len(t, amendedInvoice(t, f.amended(t, run.ID), contracts["Mia"]).Amendments, 2)
+	assert.Len(t, amendedInvoice(t, f.amended(t, int64(run.ID)), contracts["Mia"]).Amendments, 2)
 
-	final := f.amended(t, run.ID)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/release"), careRelease(final.careRunBody))
+	final := f.amended(t, int64(run.ID))
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"), careRelease(final.careRunBody))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 }
 
@@ -267,33 +267,33 @@ func TestCareAmendmentInConflictBlocksTheReleaseUntilRevoked(t *testing.T) {
 	f := newCareBillingFixture(t, "Träger Änderung Konflikt")
 	run, contracts := amendableRun(t, f, "Mia")
 	mia := contracts["Mia"]
-	code, review := f.amend(t, run.ID, mia, map[string]any{"kind": "amount", "total_cents": 7000, "reason": "Kulanz"})
+	code, review := f.amend(t, int64(run.ID), mia, map[string]any{"kind": "amount", "total_cents": 7000, "reason": "Kulanz"})
 	require.Equal(t, http.StatusOK, code)
 	entry := amendedInvoice(t, review, mia).Amendments[0]
 
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(f.office.schools[0], "2029-09-01", 3500))
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(f.office.schools[0], "2029-09-01", 3500))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	review = f.amended(t, run.ID)
+	review = f.amended(t, int64(run.ID))
 	invoice := amendedInvoice(t, review, mia)
 	assert.Equal(t, "basis_changed", invoice.Amendments[0].Conflict, "the total the change corrected is gone")
 	assert.Equal(t, int64(8050), invoice.TotalCents, "a change in conflict is not applied")
 	assert.Equal(t, 1, review.AmendmentConflicts)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/release"), careRelease(review.careRunBody))
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"), careRelease(review.careRunBody))
 	assert.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "parent_billing.care_amendments_unresolved")
 
-	code, review = f.amend(t, run.ID, mia, map[string]any{"kind": "revoke", "revokes_id": entry.ID, "reason": "Preis geändert"})
+	code, review = f.amend(t, int64(run.ID), mia, map[string]any{"kind": "revoke", "revokes_id": entry.ID, "reason": "Preis geändert"})
 	require.Equal(t, http.StatusOK, code)
 	invoice = amendedInvoice(t, review, mia)
 	require.NotNil(t, invoice.Amendments[0].Revocation)
 	assert.Equal(t, "Preis geändert", invoice.Amendments[0].Revocation.Reason)
-	code, _ = f.amend(t, run.ID, mia, map[string]any{"kind": "revoke", "revokes_id": entry.ID, "reason": "Noch einmal"})
+	code, _ = f.amend(t, int64(run.ID), mia, map[string]any{"kind": "revoke", "revokes_id": entry.ID, "reason": "Noch einmal"})
 	assert.Equal(t, http.StatusConflict, code, "a change is revoked once")
 	var rows int
 	require.NoError(t, f.db.NewRaw(`SELECT count(*) FROM parent_billing.care_run_amendments WHERE run_id = ?`, run.ID).
 		Scan(context.Background(), &rows))
 	assert.Equal(t, 2, rows, "the revocation is appended, the change stays")
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/release"), careRelease(review.careRunBody))
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"), careRelease(review.careRunBody))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 }
 
@@ -313,14 +313,14 @@ func TestCareAmendmentIsCheckedAgainstTheInvoice(t *testing.T) {
 		{"kind": "address", "reason": "Ohne PLZ", "address": map[string]any{"street": "Weg 1", "postal_code": "1", "city": "Pforzheim"}},
 		{"kind": "unknown", "reason": "Unbekannt"},
 	} {
-		code, _ := f.amend(t, run.ID, mia, change)
+		code, _ := f.amend(t, int64(run.ID), mia, change)
 		assert.Equal(t, http.StatusBadRequest, code, "%v", change)
 	}
-	code, _ := f.amend(t, run.ID, mia, map[string]any{"kind": "remove_position", "position_key": "care:1:1:2030-01-01", "reason": "Gibt es nicht"})
+	code, _ := f.amend(t, int64(run.ID), mia, map[string]any{"kind": "remove_position", "position_key": "care:1:1:2030-01-01", "reason": "Gibt es nicht"})
 	assert.Equal(t, http.StatusConflict, code, "an unknown position")
-	code, _ = f.amend(t, run.ID, mia+1000000, map[string]any{"kind": "amount", "total_cents": 100, "reason": "Fremd"})
+	code, _ = f.amend(t, int64(run.ID), mia+1000000, map[string]any{"kind": "amount", "total_cents": 100, "reason": "Fremd"})
 	assert.Equal(t, http.StatusConflict, code, "an invoice the preview does not have")
-	assert.Empty(t, amendedInvoice(t, f.amended(t, run.ID), mia).Amendments, "no refused change is stored")
+	assert.Empty(t, amendedInvoice(t, f.amended(t, int64(run.ID)), mia).Amendments, "no refused change is stored")
 }
 
 // After the release no invoice changes: the API answers 409 and the
@@ -329,12 +329,12 @@ func TestCareAmendmentIsRefusedAfterTheRelease(t *testing.T) {
 	t.Parallel()
 	f := newCareBillingFixture(t, "Träger Änderung nach Ausstellung")
 	run, contracts := amendableRun(t, f, "Mia")
-	code, review := f.amend(t, run.ID, contracts["Mia"], map[string]any{"kind": "amount", "total_cents": 7000, "reason": "Kulanz"})
+	code, review := f.amend(t, int64(run.ID), contracts["Mia"], map[string]any{"kind": "amount", "total_cents": 7000, "reason": "Kulanz"})
 	require.Equal(t, http.StatusOK, code)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/release"), careRelease(review.careRunBody))
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"), careRelease(review.careRunBody))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/amendments"),
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/amendments"),
 		map[string]any{"contract_id": contracts["Mia"], "fingerprint": review.Fingerprint, "kind": "amount", "total_cents": 100, "reason": "Zu spät"})
 	assert.Equal(t, http.StatusConflict, rec.Code, "a released run takes no change: %s", rec.Body.String())
 	_, err := f.db.ExecContext(context.Background(), `INSERT INTO parent_billing.care_run_amendments (organization_id, run_id,
@@ -356,22 +356,22 @@ func TestCareReissueCarriesTheChangesOfTheCancelledInvoice(t *testing.T) {
 	brandCareTraeger(t, f)
 	run, contracts := amendableRun(t, f, "Mia")
 	mia := contracts["Mia"]
-	code, _ := f.amend(t, run.ID, mia, map[string]any{"kind": "amount", "total_cents": 7000, "reason": "Kulanz"})
+	code, _ := f.amend(t, int64(run.ID), mia, map[string]any{"kind": "amount", "total_cents": 7000, "reason": "Kulanz"})
 	require.Equal(t, http.StatusOK, code)
-	code, review := f.amend(t, run.ID, mia, map[string]any{"kind": "recipient", "reason": "An den Vater",
+	code, review := f.amend(t, int64(run.ID), mia, map[string]any{"kind": "recipient", "reason": "An den Vater",
 		"recipient": map[string]any{"first_name": "Jan", "last_name": "Beispiel", "email": "jan@example.org"}})
 	require.Equal(t, http.StatusOK, code)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/release"), careRelease(review.careRunBody))
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"), careRelease(review.careRunBody))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	issued := amendedInvoice(t, decodeSchoolPortalData[careAmendedRunBody](t, rec.Body.Bytes()), mia)
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/letters"), careLettersInput())
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/letters"), careLettersInput())
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, fmt.Sprintf("/invoices/%d/cancellation", issued.ID)),
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), fmt.Sprintf("/invoices/%d/cancellation", issued.ID)),
 		map[string]any{"reason": "Falsches Modul"})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 
 	next := f.startRun(t, careMonth)
-	preview := amendedInvoice(t, f.amended(t, next.ID), mia)
+	preview := amendedInvoice(t, f.amended(t, int64(next.ID)), mia)
 	assert.Equal(t, int64(7000), preview.TotalCents, "the new invoice takes the amount change over")
 	assert.Equal(t, "Jan", preview.Recipient.FirstName, "and the recipient change")
 	require.Len(t, preview.Amendments, 2)
@@ -380,11 +380,11 @@ func TestCareReissueCarriesTheChangesOfTheCancelledInvoice(t *testing.T) {
 		assert.Equal(t, issued.Number(t, f), carried.CarriedFromNumber)
 	}
 
-	code, review = f.amend(t, next.ID, mia, map[string]any{"kind": "revoke", "revokes_id": preview.Amendments[1].ID,
+	code, review = f.amend(t, int64(next.ID), mia, map[string]any{"kind": "revoke", "revokes_id": preview.Amendments[1].ID,
 		"revokes_carried": true, "reason": "Wieder an die Mutter"})
 	require.Equal(t, http.StatusOK, code)
 	assert.Equal(t, "Eva", amendedInvoice(t, review, mia).Recipient.FirstName, "a carried change can be revoked")
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(next.ID, "/release"), careRelease(review.careRunBody))
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(next.ID), "/release"), careRelease(review.careRunBody))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	reissued := amendedInvoice(t, decodeSchoolPortalData[careAmendedRunBody](t, rec.Body.Bytes()), mia)
 	assert.Equal(t, int64(7000), reissued.TotalCents)
@@ -406,7 +406,7 @@ func TestCareAmendmentNeedsTheRightTheTraegerAndItsSwitch(t *testing.T) {
 	t.Parallel()
 	f := newCareBillingFixture(t, "Träger Änderung Recht")
 	run, contracts := amendableRun(t, f, "Mia")
-	review := f.amended(t, run.ID)
+	review := f.amended(t, int64(run.ID))
 	body := map[string]any{"contract_id": contracts["Mia"], "fingerprint": review.Fingerprint, "kind": "amount", "total_cents": 7000, "reason": "Kulanz"}
 
 	password := testpkg.NewTestPassword()
@@ -414,21 +414,21 @@ func TestCareAmendmentNeedsTheRightTheTraegerAndItsSwitch(t *testing.T) {
 	testpkg.CreateTestTraegerMember(t, f.db, f.office.organization, account.ID, identityaccess.TraegerRoleAdministration)
 	code, answer := traegerSignIn(t, f.traeger, account.Email, password, 0)
 	require.Equal(t, http.StatusOK, code)
-	rec := traegerJSON(t, f.traeger, answer.AccessToken, http.MethodPost, careRunPath(run.ID, "/amendments"), body)
+	rec := traegerJSON(t, f.traeger, answer.AccessToken, http.MethodPost, careRunPath(int64(run.ID), "/amendments"), body)
 	assert.Equal(t, http.StatusForbidden, rec.Code, "without the right: %s", rec.Body.String())
 	foreign := newTraegerOffice(t, f.db, f.traeger, "Träger Änderung Fremd", identityaccess.TraegerRoleBilling)
-	rec = traegerJSON(t, f.traeger, foreign.token, http.MethodPost, careRunPath(run.ID, "/amendments"), body)
+	rec = traegerJSON(t, f.traeger, foreign.token, http.MethodPost, careRunPath(int64(run.ID), "/amendments"), body)
 	assert.Equal(t, http.StatusNotFound, rec.Code, "a run of another Träger: %s", rec.Body.String())
 
 	_, err := f.db.ExecContext(context.Background(), `INSERT INTO config.traeger_setting_values (organization_id, setting_key, value)
 		VALUES (?, 'parent_billing.care_review_amount', 'false'::jsonb)`, f.office.organization)
 	require.NoError(t, err)
-	review = f.amended(t, run.ID)
+	review = f.amended(t, int64(run.ID))
 	assert.False(t, review.Amendable.Amount)
 	assert.True(t, review.Amendable.Positions, "the other switches stay on")
 	body["fingerprint"] = review.Fingerprint
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(run.ID, "/amendments"), body)
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/amendments"), body)
 	assert.Equal(t, http.StatusForbidden, rec.Code, "a change the Träger switched off: %s", rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "parent_billing.care_amendment_disabled")
-	assert.Empty(t, amendedInvoice(t, f.amended(t, run.ID), contracts["Mia"]).Amendments, "no refused change is stored")
+	assert.Empty(t, amendedInvoice(t, f.amended(t, int64(run.ID)), contracts["Mia"]).Amendments, "no refused change is stored")
 }

@@ -1,11 +1,17 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import {
   DEPLOYMENTS,
   FEATURES,
+  ONBOARDING_SURFACE_LABELS,
+  PARENT_FIRST_STEP_LABELS,
   ON_WORKDAY,
   POSTHOG_HOST,
   SCHOOL_BREAKDOWN,
+  SETUP_CHECKLIST_STEP_LABELS,
+  STAFF_FIRST_STEPS_EVENTS,
+  STAFF_FIRST_STEP_LABELS,
   check,
   dashboards,
   featureExpression,
@@ -15,6 +21,8 @@ import {
   posthogClient,
   publicHolidays,
   readBrowserEvents,
+  readOnboardingChecklistSteps,
+  readOnboardingSurfaces,
   readPageNames,
   readRouteTemplates,
   sync,
@@ -23,7 +31,7 @@ import {
 const definitions = dashboards({ projectId: '1' });
 const insights = definitions.flatMap((dashboard) => dashboard.insights);
 
-test('defines one dashboard per product surface plus the two across schools', () => {
+test('defines one dashboard per product surface plus the two across schools and the entry', () => {
   assert.deepEqual(definitions.map((dashboard) => dashboard.name), [
     'Nutzungsanalyse: Nutzung je Standort',
     'Nutzungsanalyse: OGS-App',
@@ -31,6 +39,7 @@ test('defines one dashboard per product surface plus the two across schools', ()
     'Nutzungsanalyse: Schul-App',
     'Nutzungsanalyse: Caterer-Portal',
     'Nutzungsanalyse: Schule im Verlauf',
+    'Nutzungsanalyse: Einstieg',
     'Nutzungsanalyse: Demo',
   ]);
   const names = insights.map((insight) => insight.name);
@@ -171,6 +180,183 @@ test('the Alle Kinder tile counts tab changes per tab kind, and browser clicks a
   const noFeature = expression.slice(expression.lastIndexOf("startsWith(event, 'demo_')"));
   for (const event of ['child_scope_tab_selected', 'notification_bell_opened', 'notification_feed_entry_clicked', 'notification_feed_all_read']) {
     assert.match(noFeature, new RegExp(`'${event}'`), `${event} is no feature use`);
+  }
+});
+
+test('the entry dashboard shows the notification setup per portal, marked as consent-only', () => {
+  const dashboard = definitions.find((d) => d.name === 'Nutzungsanalyse: Einstieg');
+  const tile = dashboard.insights.find((insight) => insight.name === 'Einstieg: Benachrichtigungs-Einrichtung je Portal (nur mit Einwilligung)');
+  assert.ok(tile, 'the notification setup tile exists');
+  assert.equal(tile.deployment, 'production');
+  assert.match(tile.description, /nur mit Einwilligung/i);
+  const query = tile.query.source.query;
+  assert.match(query, /properties\.onboarding_surface = 'notification_setup'/);
+  assert.match(query, /group by Portal\b/);
+  for (const action of ['shown', 'accepted', 'dismissed']) {
+    assert.match(query, new RegExp(`'onboarding_surface_${action}'`), action);
+  }
+  for (const [surface, label] of [['ogs', 'OGS-App'], ['school', 'Schul-App'], ['parents', 'Eltern-App']]) {
+    assert.ok(query.includes(`'${surface}', '${label}'`), surface);
+  }
+  assert.ok(readOnboardingSurfaces().includes('notification_setup'), 'the browser filter allows the surface');
+});
+
+test('the entry dashboard counts self-opening surfaces from consenting browsers only, never as feature use', () => {
+  const dashboard = definitions.find((d) => d.name === 'Nutzungsanalyse: Einstieg');
+  assert.match(dashboard.description, /nur mit Einwilligung/);
+  const perSurface = dashboard.insights.find((insight) => insight.name === 'Einstieg: je Fläche angezeigt, angenommen, geschlossen (nur mit Einwilligung)');
+  const perSession = dashboard.insights.find((insight) => insight.name === 'Einstieg: Flächen pro erfasster Sitzung (nur mit Einwilligung)');
+  assert.ok(perSurface && perSession, 'both tiles exist');
+  for (const tile of [perSurface, perSession]) {
+    assert.equal(tile.deployment, 'production');
+    assert.match(tile.description, /nur mit Einwilligung/i, tile.name);
+  }
+  for (const action of ['shown', 'accepted', 'dismissed']) {
+    assert.match(perSurface.query.source.query, new RegExp(`'onboarding_surface_${action}'`), action);
+  }
+  assert.match(perSession.query.source.query, /group by Sitzung/);
+  assert.match(perSession.query.source.query, /uniq\(toString\(properties\.onboarding_surface\)\)/);
+
+  // Every allowed surface of the browser filter has a German name on the tile.
+  assert.deepEqual(Object.keys(ONBOARDING_SURFACE_LABELS).sort(), readOnboardingSurfaces().sort());
+  assert.throws(() => readOnboardingSurfaces('const OTHER = 1;'), /ONBOARDING_SURFACES/);
+  const query = perSurface.query.source.query;
+  assert.match(query, /transform\(toString\(properties\.onboarding_surface\), \['/, 'transform takes arrays, not tuples');
+  for (const [value, label] of Object.entries(ONBOARDING_SURFACE_LABELS)) {
+    assert.ok(query.includes(`'${value}'`) && query.includes(`'${label}'`), value);
+  }
+
+  // Surface events and the install dialog's answers fall outside „Sonstiges“.
+  const browserEvents = readBrowserEvents();
+  const expression = featureExpression();
+  const noFeature = expression.slice(expression.lastIndexOf("startsWith(event, 'demo_')"));
+  for (const event of ['onboarding_surface_shown', 'onboarding_surface_accepted', 'onboarding_surface_dismissed', 'pwa_install_prompt_shown', 'pwa_install_prompt_accepted', 'pwa_install_prompt_dismissed']) {
+    assert.ok(browserEvents.includes(event), `${event} passes the browser filter`);
+    const byPrefix = event.startsWith('onboarding_') && noFeature.includes("startsWith(event, 'onboarding_')");
+    assert.ok(byPrefix || noFeature.includes(`'${event}'`), `${event} is no feature use`);
+  }
+});
+
+// Ankündigung (#7555): the server counts it for the school, also without
+// consent, so its tile is the one entry tile without the consent mark.
+test('the entry dashboard shows the announcement seen and closed from the server, never as feature use', () => {
+  const dashboard = definitions.find((d) => d.name === 'Nutzungsanalyse: Einstieg');
+  const tile = dashboard.insights.find((insight) => insight.name === 'Einstieg: Ankündigung gesehen und geschlossen');
+  assert.ok(tile, 'the announcement tile exists');
+  assert.equal(tile.deployment, 'production');
+  assert.match(tile.description, /auch ohne Einwilligung/);
+  const query = tile.query.source.query;
+  for (const event of ['announcement_seen', 'announcement_dismissed']) {
+    assert.match(query, new RegExp(`'${event}'`), event);
+  }
+  assert.doesNotMatch(query, /Geschlossen in Prozent/, 'bulk closing can include announcements not shown');
+  assert.match(tile.description, /keinen Prozentwert/);
+  assert.doesNotMatch(query, /distinct_id|person|\$session_id/, 'no person and no session');
+
+  const expression = featureExpression();
+  const noFeature = expression.slice(expression.lastIndexOf("startsWith(event, 'demo_')"));
+  for (const event of ['announcement_seen', 'announcement_dismissed']) {
+    assert.ok(noFeature.includes(`'${event}'`), `${event} is no feature use`);
+  }
+});
+
+test('the entry dashboard counts the care worker\'s first steps from the server, never as feature use', () => {
+  const dashboard = definitions.find((d) => d.name === 'Nutzungsanalyse: Einstieg');
+  const hiding = dashboard.insights.find((insight) => insight.name === 'Einstieg: Erste Schritte der Betreuung abgeschlossen oder ausgeblendet (vom Server)');
+  const perStep = dashboard.insights.find((insight) => insight.name === 'Einstieg: Erste Schritte der Betreuung je Schritt (vom Server)');
+  assert.ok(hiding && perStep, 'both tiles exist');
+  for (const tile of [hiding, perStep]) {
+    assert.equal(tile.deployment, 'production');
+    assert.match(tile.description, /auch ohne Einwilligung/, tile.name);
+    assert.doesNotMatch(tile.query.source.query, /distinct_id|\$session_id|person/, `${tile.name} counts no people`);
+  }
+  assert.match(hiding.query.source.query, /'staff_first_steps_completed'/);
+  assert.match(hiding.query.source.query, /'staff_first_steps_dismissed'/);
+  for (const action of ['done', 'skipped', 'reopened']) {
+    assert.match(perStep.query.source.query, new RegExp(`properties\\.action = '${action}'`), action);
+  }
+
+  // Every step of the checklist has a German name on the tile.
+  const api = readFileSync(new URL('../frontend/src/lib/staff-onboarding-api.ts', import.meta.url), 'utf8');
+  const keys = api.match(/STAFF_ONBOARDING_STEP_KEYS[^=]*=\s*\[([^\]]*)\]/)?.[1].match(/"[a-z_]+"/g).map((key) => key.slice(1, -1));
+  assert.deepEqual(Object.keys(STAFF_FIRST_STEP_LABELS), keys);
+  for (const [value, label] of Object.entries(STAFF_FIRST_STEP_LABELS)) {
+    assert.ok(perStep.query.source.query.includes(`'${value}'`) && perStep.query.source.query.includes(`'${label}'`), value);
+  }
+
+  // The server events fall outside „Sonstiges“.
+  const expression = featureExpression();
+  const noFeature = expression.slice(expression.lastIndexOf("startsWith(event, 'demo_')"));
+  for (const event of STAFF_FIRST_STEPS_EVENTS) {
+    assert.ok(FEATURES.every((f) => !f.events?.includes(event)), event);
+    assert.ok(noFeature.includes(`'${event}'`), `${event} is no feature use`);
+  }
+});
+
+test('the entry dashboard shows the parents\' first steps from consenting browsers only, never as feature use', () => {
+  const dashboard = definitions.find((d) => d.name === 'Nutzungsanalyse: Einstieg');
+  const tile = dashboard.insights.find((insight) => insight.name === 'Einstieg: Erste Schritte der Eltern (nur mit Einwilligung)');
+  assert.ok(tile, 'the tile exists');
+  assert.equal(tile.deployment, 'production');
+  assert.match(tile.description, /nur mit Einwilligung/i);
+  const query = tile.query.source.query;
+  for (const event of ['onboarding_checklist_step_done', 'onboarding_checklist_dismissed', 'onboarding_checklist_completed']) {
+    assert.match(query, new RegExp(`'${event}'`), event);
+  }
+  assert.match(query, /properties\.onboarding_surface = 'parent_first_steps'/);
+  assert.match(query, /properties\.checklist = 'parent_first_steps'/);
+  assert.match(query, /properties\.surface = 'parents'/);
+
+  // Every allowed step of the browser filter has a German name on the tile.
+  assert.deepEqual(Object.keys(PARENT_FIRST_STEP_LABELS).sort(), readOnboardingChecklistSteps().sort());
+  assert.throws(() => readOnboardingChecklistSteps('const OTHER = 1;'), /ONBOARDING_CHECKLIST_STEPS/);
+  for (const [value, label] of Object.entries(PARENT_FIRST_STEP_LABELS)) {
+    assert.ok(query.includes(`'${value}'`) && query.includes(`'${label}'`), value);
+  }
+
+  // The checklist events pass the browser filter and fall outside „Sonstiges“.
+  const browserEvents = readBrowserEvents();
+  const expression = featureExpression();
+  const noFeature = expression.slice(expression.lastIndexOf("startsWith(event, 'demo_')"));
+  for (const event of ['onboarding_checklist_step_done', 'onboarding_checklist_dismissed', 'onboarding_checklist_completed']) {
+    assert.ok(browserEvents.includes(event), `${event} passes the browser filter`);
+    assert.ok(noFeature.includes("startsWith(event, 'onboarding_')") || noFeature.includes(`'${event}'`), `${event} is no feature use`);
+  }
+});
+
+test('the entry dashboard shows the setup checklist from the server: completed, dismissed and skipped steps', () => {
+  const dashboard = definitions.find((d) => d.name === 'Nutzungsanalyse: Einstieg');
+  const outcome = dashboard.insights.find((insight) => insight.name === 'Einrichtungs-Checkliste: abgeschlossen und ausgeblendet');
+  const skipped = dashboard.insights.find((insight) => insight.name === 'Einrichtungs-Checkliste: übersprungene Schritte');
+  assert.ok(outcome && skipped, 'both tiles exist');
+  for (const tile of [outcome, skipped]) {
+    assert.equal(tile.deployment, 'production');
+    assert.match(tile.description, /auch ohne Einwilligung/, tile.name);
+  }
+  assert.match(outcome.query.source.query, /'onboarding_setup_checklist_completed'/);
+  assert.match(outcome.query.source.query, /'onboarding_setup_checklist_dismissed'/);
+  assert.match(outcome.query.source.query, /group by Schule_ID/, 'a rate per school, never per person');
+  assert.match(outcome.query.source.query, /countIf\(HatAbgeschlossen = 1\)/, 'PostHog requires the UInt8 condition explicitly');
+  assert.match(outcome.query.source.query, /countIf\(HatAusgeblendet = 1 and HatAbgeschlossen = 0\)/, 'PostHog requires the UInt8 condition explicitly');
+  assert.match(outcome.query.source.query, /as HatAbgeschlossen/, 'the inner flag differs from the visible aggregate');
+  assert.match(skipped.query.source.query, /'onboarding_setup_checklist_step_skipped'/);
+
+  // Every step of the wizard (schoolsetup.StepKeys) has its German name on the tile.
+  const wizard = readFileSync(new URL('../backend/modules/schoolsetup/schoolsetup.go', import.meta.url), 'utf8');
+  const steps = [...wizard.matchAll(/^\s*Step\w+ StepKey = "(\w+)"/gm)].map((match) => match[1]);
+  assert.ok(steps.length > 0, 'reads the step keys');
+  assert.deepEqual(Object.keys(SETUP_CHECKLIST_STEP_LABELS).sort(), steps.sort());
+  for (const [value, label] of Object.entries(SETUP_CHECKLIST_STEP_LABELS)) {
+    assert.ok(skipped.query.source.query.includes(`'${value}'`) && skipped.query.source.query.includes(`'${label}'`), value);
+  }
+
+  // The server's checklist events are no feature use and stay out of „Sonstiges“.
+  const expression = featureExpression();
+  const noFeature = expression.slice(expression.lastIndexOf("startsWith(event, 'demo_')"));
+  assert.ok(noFeature.includes("startsWith(event, 'onboarding_')"));
+  for (const event of ['onboarding_setup_checklist_completed', 'onboarding_setup_checklist_dismissed', 'onboarding_setup_checklist_step_skipped']) {
+    assert.ok(event.startsWith('onboarding_'), `${event} is no feature use`);
+    assert.ok(FEATURES.every((feature) => !feature.events?.includes(event)), event);
   }
 });
 

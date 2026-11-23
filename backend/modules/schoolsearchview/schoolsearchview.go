@@ -19,6 +19,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Limits of one search. A result list stops at its limit; the dialog shows a
@@ -57,9 +58,9 @@ const (
 // ErrInvalidQuery reports a query outside MinQueryRunes..MaxQueryRunes.
 var ErrInvalidQuery = fmt.Errorf("school search: the query must have between %d and %d characters", MinQueryRunes, MaxQueryRunes)
 
-// Scope is what the account may read without the search. Every field maps to
+// SearchScope is what the account may read without the search. Every field maps to
 // the permission check of the page the hit leads to.
-type Scope struct {
+type SearchScope struct {
 	// Children opens names, class and group (users:read or students:read,
 	// tenant staff or admin).
 	Children bool `json:"children"`
@@ -82,7 +83,7 @@ type Scope struct {
 // Query is one search request.
 type Query struct {
 	Text  string
-	Scope Scope
+	Scope SearchScope
 	// Notes is the reader of the note cards (#7012); nil searches no note.
 	Notes *NoteReader
 }
@@ -133,83 +134,83 @@ const (
 	MatchContact          MatchField = "contact"
 )
 
-// Match is the reason of a hit. Label names the field (a registration
+// SearchMatch is the reason of a hit. Label names the field (a registration
 // question), Text the matched value as stored; a parent note and a
 // registration answer come as the part around the match, at most
 // MaxMatchTextRunes characters.
-type Match struct {
+type SearchMatch struct {
 	Field MatchField `json:"field"`
 	Label string     `json:"label,omitempty"`
 	Text  string     `json:"text,omitempty"`
 }
 
-// Child is a child hit.
-type Child struct {
-	ID          int64  `json:"id,string"`
-	FirstName   string `json:"first_name"`
-	LastName    string `json:"last_name"`
-	SchoolClass string `json:"school_class"`
-	GroupName   string `json:"group_name,omitempty"`
-	Match       Match  `json:"match"`
+// SearchChild is a child hit.
+type SearchChild struct {
+	ID          ident.ID    `json:"id"`
+	FirstName   string      `json:"first_name"`
+	LastName    string      `json:"last_name"`
+	SchoolClass string      `json:"school_class"`
+	GroupName   string      `json:"group_name,omitempty"`
+	Match       SearchMatch `json:"match"`
 	// GroupID is the child's OGS group for the care team question of a note
 	// hit; it stays on the server.
 	GroupID *int64 `json:"-"`
 }
 
-// ContactChild is a child a contact person belongs to.
-type ContactChild struct {
-	ID               int64  `json:"id,string"`
-	FirstName        string `json:"first_name"`
-	LastName         string `json:"last_name"`
-	SchoolClass      string `json:"school_class"`
-	RelationshipType string `json:"relationship_type"`
+// SearchContactChild is a child a contact person belongs to.
+type SearchContactChild struct {
+	ID               ident.ID `json:"id"`
+	FirstName        string   `json:"first_name"`
+	LastName         string   `json:"last_name"`
+	SchoolClass      string   `json:"school_class"`
+	RelationshipType string   `json:"relationship_type"`
 }
 
-// Contact is a contact person hit with the children it belongs to.
-type Contact struct {
-	ID        int64          `json:"id,string"`
-	FirstName string         `json:"first_name"`
-	LastName  string         `json:"last_name"`
-	Match     Match          `json:"match"`
-	Children  []ContactChild `json:"children"`
+// SearchContact is a contact person hit with the children it belongs to.
+type SearchContact struct {
+	ID        ident.ID             `json:"id"`
+	FirstName string               `json:"first_name"`
+	LastName  string               `json:"last_name"`
+	Match     SearchMatch          `json:"match"`
+	Children  []SearchContactChild `json:"children"`
 }
 
-// Staff is a staff hit.
-type Staff struct {
-	ID        int64  `json:"id,string"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
+// SearchStaff is a staff hit.
+type SearchStaff struct {
+	ID        ident.ID `json:"id"`
+	FirstName string   `json:"first_name"`
+	LastName  string   `json:"last_name"`
 }
 
-// Room is a room hit.
-type Room struct {
-	ID       int64  `json:"id,string"`
-	Name     string `json:"name"`
-	Building string `json:"building,omitempty"`
+// SearchRoom is a room hit.
+type SearchRoom struct {
+	ID       ident.ID `json:"id"`
+	Name     string   `json:"name"`
+	Building string   `json:"building,omitempty"`
 }
 
-// Group is an OGS group hit.
-type Group struct {
-	ID   int64  `json:"id,string"`
-	Name string `json:"name"`
+// SearchGroup is an OGS group hit.
+type SearchGroup struct {
+	ID   ident.ID `json:"id"`
+	Name string   `json:"name"`
 }
 
-// Result is the answer of one search. Every list is present, empty when the
+// SearchResult is the answer of one search. Every list is present, empty when the
 // kind found nothing or lies outside the Scope. Scope is the account's own
 // scope, the same for every query: the dialog explains from it what this
 // account can find, and it says nothing about the hits.
-type Result struct {
-	Children []Child   `json:"children"`
-	Contacts []Contact `json:"contacts"`
-	Staff    []Staff   `json:"staff"`
-	Rooms    []Room    `json:"rooms"`
-	Groups   []Group   `json:"groups"`
-	Scope    Scope     `json:"scope"`
+type SearchResult struct {
+	Children []SearchChild   `json:"children"`
+	Contacts []SearchContact `json:"contacts"`
+	Staff    []SearchStaff   `json:"staff"`
+	Rooms    []SearchRoom    `json:"rooms"`
+	Groups   []SearchGroup   `json:"groups"`
+	Scope    SearchScope     `json:"scope"`
 }
 
 // Search is the projection's capability.
 type Search interface {
-	SearchSchool(ctx context.Context, query Query) (Result, error)
+	SearchSchool(ctx context.Context, query Query) (SearchResult, error)
 }
 
 // StudentAnswerSearch is the consumer-owned port to Enrollment's answers of

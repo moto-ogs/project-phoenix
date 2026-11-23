@@ -15,15 +15,15 @@ import (
 
 var errLoginFieldsRequired = errors.New("email and password are required")
 
-type loginRequest struct {
+type catererLoginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
-// LoginResponse is a caterer's password sign-in: the session, or, where the
+// CatererLoginResponse is a caterer's password sign-in: the session, or, where the
 // caterer switched its second factor on, the challenge of the mailed code
 // (#4497).
-type LoginResponse struct {
+type CatererLoginResponse struct {
 	Status               string `json:"status"`
 	AccessToken          string `json:"access_token,omitempty"`
 	RefreshToken         string `json:"refresh_token,omitempty"`
@@ -37,7 +37,7 @@ type LoginResponse struct {
 // its second factor on gets the challenge of a mailed code, unless the
 // browser presents a device it remembered.
 func (rs *Resource) login(w http.ResponseWriter, r *http.Request) {
-	var request loginRequest
+	var request catererLoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
@@ -55,7 +55,7 @@ func (rs *Resource) login(w http.ResponseWriter, r *http.Request) {
 		renderFailure(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, LoginResponse{
+	common.Respond(w, r, http.StatusOK, CatererLoginResponse{
 		Status: string(result.Status), AccessToken: result.AccessToken, RefreshToken: result.RefreshToken,
 		ChallengeToken: result.ChallengeToken, MaskedEmail: result.MaskedEmail,
 		TrustedDeviceEnabled: result.TrustedDeviceDays > 0, TrustedDeviceDays: result.TrustedDeviceDays,
@@ -78,7 +78,7 @@ func (rs *Resource) verifyMFA(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	common.SetTrustedDevice(w, session.TrustedDeviceCookie, session.TrustedDeviceExpiresAt)
-	render.JSON(w, r, portalauth.TokenResponse{AccessToken: session.AccessToken, RefreshToken: session.RefreshToken})
+	common.RenderJSON(w, r, portalauth.TokenResponse{AccessToken: session.AccessToken, RefreshToken: session.RefreshToken})
 }
 
 // resendMFA mails a new code for a caterer challenge.
@@ -93,7 +93,7 @@ func (rs *Resource) resendMFA(w http.ResponseWriter, r *http.Request) {
 		renderFailure(w, r, err)
 		return
 	}
-	render.JSON(w, r, common.MFAResendResponse{ChallengeToken: renewed})
+	common.RenderJSON(w, r, common.MFAResendResponse{ChallengeToken: renewed})
 }
 
 // passkeyLoginOptions starts a passkey sign-in on the caterer portal.
@@ -103,7 +103,7 @@ func (rs *Resource) passkeyLoginOptions(w http.ResponseWriter, r *http.Request) 
 		renderPasskeyLoginFailure(w, r, err)
 		return
 	}
-	render.JSON(w, r, options)
+	common.RenderJSON(w, r, options)
 }
 
 // passkeyLoginVerify completes the passkey sign-in.
@@ -121,7 +121,7 @@ func (rs *Resource) passkeyLoginVerify(w http.ResponseWriter, r *http.Request) {
 		renderPasskeyLoginFailure(w, r, err)
 		return
 	}
-	render.JSON(w, r, LoginResponse{
+	common.RenderJSON(w, r, CatererLoginResponse{
 		Status: string(identityaccess.CatererLoginAuthenticated), AccessToken: result.AccessToken, RefreshToken: result.RefreshToken,
 	})
 }

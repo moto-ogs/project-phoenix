@@ -14,12 +14,17 @@ export const MODEL_PATH = "backend/api/contract/contract.json";
 const describe = (schema) => schema.elem ? `${schema.kind}<${describe(schema.elem)}>`
   : schema.kind === "ref" ? "object" : schema.kind;
 
-// A reader of the base decodes legacy_id as string or number, so the move to
-// a string identifier is the one kind change that does not break it.
-const sameKind = (before, after) => before.kind === after.kind
+// The legacy_id decoder on a released base already accepted a decimal
+// string in answers, and ident.ID still reads legacy numeric request IDs.
+// lax_id was a request reader in the later migration, not an answer kind.
+// Naming the form of a string narrows the type, not the wire. Typing a JSON
+// answer or an open object does not break a reader of the older schema.
+const openObject = (schema) => schema.kind === "map" && schema.elem.kind === "json";
+const sameKind = (before, after, request) => before.kind === after.kind
+  || (before.kind === "string" && ["enum", "date", "clock"].includes(after.kind))
+  || (!request && (before.kind === "json" || (openObject(before) && after.kind === "ref")))
   || (before.kind === "legacy_id" && after.kind === "id")
-  // Naming the form of a string narrows the type, not the wire.
-  || (before.kind === "string" && ["enum", "date", "clock"].includes(after.kind));
+  || (request && after.kind === "id" && ["string", "lax_id"].includes(before.kind));
 
 export function breakingChanges(base, head) {
   const breaking = [];
@@ -30,13 +35,20 @@ export function breakingChanges(base, head) {
   // A response may gain fields and may turn optional into required. A reader
   // breaks when a field disappears, changes its kind, or starts to be null
   // or absent. Types are compared by shape, so renaming a Go type is free.
-  function compare(where, before, after) {
-    if (!sameKind(before, after)) {
+  function compare(where, before, after, request = false, refinesJSON = false) {
+    // A documented refinement of existing validation does not narrow what
+    // a previously successful caller could send.
+    const alreadyValidated = request && refinesJSON
+      && (before.kind === "json" || (openObject(before) && after.kind === "ref"));
+    if (!sameKind(before, after, request) && !alreadyValidated) {
       breaking.push(`${where}: ${describe(before)} became ${describe(after)}`);
       return;
     }
+    if (!request && !before.legacy_json && before.kind !== "json" && after.legacy_json) {
+      breaking.push(`${where}: may now return other JSON shapes`);
+    }
     if (!before.nullable && after.nullable) breaking.push(`${where}: may now be null`);
-    if (before.elem) compare(`${where}[]`, before.elem, after.elem);
+    if (before.elem && after.elem) compare(`${where}[]`, before.elem, after.elem, request, refinesJSON);
     if (before.kind !== "ref") return;
     const pair = `${before.ref}>${after.ref}`;
     if (seen.has(pair)) return;
@@ -53,7 +65,7 @@ export function breakingChanges(base, head) {
         continue;
       }
       if (!beforeType.request && !field.optional && next.optional) breaking.push(`${at}: may now be absent`);
-      compare(at, field.schema, next.schema);
+      compare(at, field.schema, next.schema, Boolean(beforeType.request), Boolean(next.refines_json?.trim()));
     }
   }
 
@@ -68,13 +80,19 @@ export function breakingChanges(base, head) {
     for (const portal of route.portals) {
       if (!next.portals.includes(portal)) breaking.push(`${key}: portal ${portal} removed`);
     }
-    if (route.request && next.request) compare(`${key} request`, route.request, next.request);
+    if (route.request && next.request) compare(`${key} request`, route.request, next.request, true);
+    // A multipart upload and a JSON body are different requests: a client
+    // of the base would send the other kind.
+    if (Boolean(route.multipart) !== Boolean(next.multipart)) {
+      breaking.push(`${key} request: ${route.multipart ? "multipart" : "json"} became ${next.multipart ? "multipart" : "json"}`);
+    }
     // Both envelopes require status and data; only the paginated one also
     // requires pagination. Adding it is safe because readers ignore extras.
     if (route.paginated && !next.paginated) breaking.push(`${key}.pagination: may now be absent`);
-    // No data is an explicit response kind, not a removed response. Its
-    // decoder rejects data, so changing either way also breaks old readers.
-    const defaultResponse = (entry) => entry.no_data ? { kind: "no_data" } : entry.variants
+    // No data and a file are explicit response kinds, not a removed
+    // response. A reader of one cannot read another, so a change either way
+    // breaks old readers.
+    const defaultResponse = (entry) => entry.file ? { kind: "file" } : entry.no_data ? { kind: "no_data" } : entry.variants
       ? entry.variants.cases[entry.variants.default] : entry.response;
     // Compare what an existing request selects, not just equal case names.
     // No selector uses the default; a renamed selector ignores the old key.

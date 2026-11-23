@@ -2,14 +2,15 @@ package application
 
 import (
 	"context"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"hash/fnv"
+	"maps"
 	"slices"
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // noticePreview is the preview of a calculated notice run: the drafts, the
@@ -17,11 +18,17 @@ import (
 // in a month of the period, the bookings the months leave out and the legal
 // remedy the notices would print.
 type noticePreview struct {
-	notices            []parentbilling.CareNotice
-	unchanged          int
-	billed             int
-	unpriced           []parentbilling.CareUnpriced
-	duplicates         []parentbilling.CareDuplicate
+	notices    []parentbilling.CareNotice
+	unchanged  int
+	billed     int
+	unpriced   []parentbilling.CareUnpriced
+	duplicates []parentbilling.CareDuplicate
+	// joined are the children the months join by their name across
+	// schools (ADR 0158, Nachtrag Schulwechsel).
+	joined []parentbilling.CareJoinedChild
+	// billedChildren are the children a month holds back because an issued
+	// invoice of another of their contracts already bills it (#7892).
+	billedChildren     []parentbilling.CareBilledChild
 	legalRemedyMissing bool
 	issuedOn           calendar.Date
 	fingerprint        string
@@ -58,7 +65,8 @@ func (n *CareFeeNotices) preview(ctx context.Context, organizationID int64, run 
 	if run.NoticeDate != nil {
 		issuedOn = *run.NoticeDate
 	}
-	preview := noticePreview{issuedOn: issuedOn, unpriced: []parentbilling.CareUnpriced{}, duplicates: []parentbilling.CareDuplicate{}}
+	preview := noticePreview{issuedOn: issuedOn, unpriced: []parentbilling.CareUnpriced{}, duplicates: []parentbilling.CareDuplicate{},
+		joined: []parentbilling.CareJoinedChild{}, billedChildren: []parentbilling.CareBilledChild{}}
 	drafts, err := n.noticeDrafts(ctx, organizationID, run, in, &preview)
 	if err != nil {
 		return noticePreview{}, err
@@ -88,8 +96,37 @@ func (n *CareFeeNotices) preview(ctx context.Context, organizationID int64, run 
 func (n *CareFeeNotices) noticeDrafts(ctx context.Context, organizationID int64, run parentbilling.CareNoticeRun, in noticeInput,
 	preview *noticePreview,
 ) (map[calendar.Date][]parentbilling.CareInvoice, error) {
+	months, err := n.noticeMonths(ctx, organizationID, in)
+	if err != nil {
+		return nil, err
+	}
 	drafts := map[calendar.Date][]parentbilling.CareInvoice{}
 	billed := map[int64]bool{}
+	schools := ident.Int64s(run.SchoolIDs)
+	for _, monthIn := range months {
+		month := monthIn.month
+		review, final, err := computeNoticeMonth(monthIn, monthIn.invoiced, in.noticed[month], schools)
+		if err != nil {
+			return nil, err
+		}
+		drafts[month] = retainFailedAssessments(final, review.careMonth, in.previous, in.month.recipients, month)
+		if !month.Before(run.PeriodFrom) {
+			addBilledByInvoice(billed, monthIn.invoiced, schools)
+		}
+		preview.unpriced = appendNew(preview.unpriced, review.unpriced)
+		preview.duplicates = appendNew(preview.duplicates, review.duplicates)
+		preview.joined = appendNew(preview.joined, review.joined)
+		preview.billedChildren = mergeBilledChildren(preview.billedChildren, review.billedChildren)
+	}
+	preview.billed = len(billed)
+	return drafts, nil
+}
+
+// noticeMonths reads all issued child identities missing from the monthly
+// versions in one batch for the whole notice run.
+func (n *CareFeeNotices) noticeMonths(ctx context.Context, organizationID int64, in noticeInput) ([]careMonthInput, error) {
+	months := make([]careMonthInput, 0, len(in.months))
+	missing := map[int64]bool{}
 	for _, month := range in.months {
 		monthIn := in.month
 		monthIn.month = month
@@ -98,24 +135,26 @@ func (n *CareFeeNotices) noticeDrafts(ctx context.Context, organizationID int64,
 		if err != nil {
 			return nil, err
 		}
-		review, final, err := computeNoticeMonth(monthIn, invoiced, in.noticed[month], run.SchoolIDs)
-		if err != nil {
-			return nil, err
+		monthIn.invoiced = invoiced
+		for _, id := range missingCareChildren(monthIn.versions, invoiced) {
+			missing[id] = true
 		}
-		drafts[month] = retainFailedAssessments(final, review.careMonth, in.previous, in.month.recipients, month)
-		if !month.Before(run.PeriodFrom) {
-			addBilledByInvoice(billed, invoiced, run.SchoolIDs)
-		}
-		preview.unpriced = appendNew(preview.unpriced, review.unpriced)
-		preview.duplicates = appendNew(preview.duplicates, review.duplicates)
+		months = append(months, monthIn)
 	}
-	preview.billed = len(billed)
-	return drafts, nil
+	children, err := n.billing.issuedCareChildren(ctx, organizationID, slices.Collect(maps.Keys(missing)))
+	if err != nil {
+		return nil, err
+	}
+	for i := range months {
+		months[i].issuedChildren = children
+	}
+	return months, nil
 }
 
 // computeNoticeMonth computes a month for the notices: every contract of an
 // effective notice of the run's schools is computed again. A noticed
-// contract the month cannot price or holds for a duplicate keeps its
+// contract the month cannot price or holds, for a duplicate or for an issued
+// invoice that already bills its child (#7892), keeps its
 // assessment; the month is then computed once more with that assessment as
 // issued, so the rule chain (siblings, caps) counts it like any issued month.
 // review is the first computation, which names the bookings without a price
@@ -124,12 +163,20 @@ func computeNoticeMonth(in careMonthInput, invoiced map[int64]parentbilling.Care
 	schoolIDs []int64,
 ) (reviewedMonth, careMonth, error) {
 	issued := make(map[int64]parentbilling.CareInvoice, len(invoiced))
+	in.assessed = map[int64]parentbilling.CareInvoice{}
 	for contractID, invoice := range invoiced {
-		if !noticed[contractID] {
+		if noticed[contractID] {
+			in.assessed[contractID] = invoice
+		} else {
 			issued[contractID] = invoice
 		}
 	}
 	in.invoiced = issued
+	in.frozenFamilies = invoiceFamilies(invoiced)
+	// Both computations decide a school change alike: a notice computed
+	// again keeps its frozen family and counts as not issued in both, also
+	// when the second one takes its assessment back (#7874, #7892).
+	in.recomputed = recomputedNotices(invoiced, noticed)
 	computed, err := buildCareMonth(in)
 	if err != nil {
 		return reviewedMonth{}, careMonth{}, err
@@ -144,11 +191,37 @@ func computeNoticeMonth(in careMonthInput, invoiced map[int64]parentbilling.Care
 	if !kept {
 		return review, review.careMonth, nil
 	}
+	// A child held for an issued invoice stays held as a whole (S4): taking
+	// one contract's assessment back must not free the others.
+	in.keepHeld = heldForInvoice(computed.billedChildren)
 	again, err := buildCareMonth(in)
 	if err != nil {
 		return reviewedMonth{}, careMonth{}, err
 	}
 	return review, narrowMonth(again, schoolIDs, nil).careMonth, nil
+}
+
+// recomputedNotices are the issued notice months a preview computes again.
+func recomputedNotices(invoiced map[int64]parentbilling.CareInvoice, noticed map[int64]bool) map[int64]bool {
+	recomputed := map[int64]bool{}
+	for contractID := range invoiced {
+		if noticed[contractID] {
+			recomputed[contractID] = true
+		}
+	}
+	return recomputed
+}
+
+// heldForInvoice names the contracts of the children held for an issued
+// invoice.
+func heldForInvoice(children []parentbilling.CareBilledChild) map[int64]bool {
+	held := map[int64]bool{}
+	for _, child := range children {
+		for _, contract := range child.Contracts {
+			held[contract.ContractID.Int64()] = true
+		}
+	}
+	return held
 }
 
 // retainFailedAssessments keeps the effective assessment of months the
@@ -179,7 +252,7 @@ func retainFailedAssessments(final, review careMonth, previous map[int64]parentb
 // bills; a month of a notice carries the notice number.
 func addBilledByInvoice(billed map[int64]bool, invoiced map[int64]parentbilling.CareInvoice, schoolIDs []int64) {
 	for contractID, invoice := range invoiced {
-		if invoice.Number == "" && slices.Contains(schoolIDs, invoice.SchoolID) {
+		if invoice.Number == "" && slices.Contains(schoolIDs, invoice.SchoolID.Int64()) {
 			billed[contractID] = true
 		}
 	}
@@ -219,12 +292,12 @@ func (in *noticeInput) collectPrevious(effective []parentbilling.CareNotice, run
 		if !slices.Contains(run.SchoolIDs, notice.SchoolID) {
 			continue
 		}
-		in.previous[notice.ContractID] = notice
+		in.previous[notice.ContractID.Int64()] = notice
 		for _, installment := range notice.Installments {
 			if in.noticed[installment.Month] == nil {
 				in.noticed[installment.Month] = map[int64]bool{}
 			}
-			in.noticed[installment.Month][notice.ContractID] = true
+			in.noticed[installment.Month][notice.ContractID.Int64()] = true
 			if installment.Month.Before(start) {
 				start = installment.Month
 			}
@@ -308,7 +381,7 @@ func (n *CareFeeNotices) withPayments(ctx context.Context, organizationID int64,
 	for i := range notices {
 		family := notices[i].FamilyEmail
 		if family == "" {
-			family = parentbilling.ContractFamilyKey(notices[i].Recipient.Email, notices[i].ContractID)
+			family = parentbilling.ContractFamilyKey(notices[i].Recipient.Email, notices[i].ContractID.Int64())
 		}
 		invoice := parentbilling.CareInvoice{Recipient: notices[i].Recipient, Service: parentbilling.ServiceCare,
 			FamilyEmail: family}
@@ -326,7 +399,8 @@ func (n *CareFeeNotices) withPayments(ctx context.Context, organizationID int64,
 // method, lines, installments, the months it bills with the cents the rule
 // chain allocated and the notice it amends; the contracts whose notice
 // still holds and those a monthly invoice bills; the bookings without a
-// price and the duplicates; and the legal remedy. A change of any of them
+// price, the duplicates, the children joined by their name and those an
+// issued invoice already bills; and the legal remedy. A change of any of them
 // since the review makes the release refuse.
 func noticeFingerprint(run parentbilling.CareNoticeRun, rule string, preview noticePreview, legalRemedy string) string {
 	notices := make([]any, len(preview.notices))
@@ -337,7 +411,7 @@ func noticeFingerprint(run parentbilling.CareNoticeRun, rule string, preview not
 			Months    []fingerprintInvoice     `json:"months"`
 		}{notice, notice.StudentID, fingerprintInvoices(notice.Months)}
 	}
-	state, err := json.Marshal(struct {
+	return readstate.Fingerprint(struct {
 		Run         int64                         `json:"run"`
 		Schools     []int64                       `json:"schools"`
 		From        calendar.Date                 `json:"from"`
@@ -349,12 +423,51 @@ func noticeFingerprint(run parentbilling.CareNoticeRun, rule string, preview not
 		Unpriced    []parentbilling.CareUnpriced  `json:"unpriced"`
 		Duplicates  []parentbilling.CareDuplicate `json:"duplicates"`
 		LegalRemedy string                        `json:"legal_remedy"`
-	}{run.ID, run.SchoolIDs, run.PeriodFrom, preview.issuedOn, rule, notices, preview.unchanged, preview.billed,
-		preview.unpriced, preview.duplicates, legalRemedy})
-	if err != nil {
-		return ""
+		// Joined stays out while empty, so a run without a joined child
+		// keeps the fingerprint it had before #7874.
+		Joined []parentbilling.CareJoinedChild `json:"joined,omitempty"`
+		// BilledChildren likewise, for the fingerprint before #7892.
+		BilledChildren []parentbilling.CareBilledChild `json:"billed_children,omitempty"`
+	}{run.ID.Int64(), ident.Int64s(run.SchoolIDs), run.PeriodFrom, preview.issuedOn, rule, notices, preview.unchanged, preview.billed,
+		preview.unpriced, preview.duplicates, legalRemedy, preview.joined, preview.billedChildren})
+}
+
+// mergeBilledChildren adds the held children of a month to those of the
+// months before. A child held in several months stands once per reason, with
+// the contracts and documents of every month: the preview counts children,
+// not months. Entries that share a contract are one child; an entry that
+// joins two rows merges them into the first, so the order stays stable.
+func mergeBilledChildren(list, entries []parentbilling.CareBilledChild) []parentbilling.CareBilledChild {
+	for _, entry := range entries {
+		merged := make([]parentbilling.CareBilledChild, 0, len(list)+1)
+		at := -1
+		for _, have := range list {
+			switch {
+			case have.Reason != entry.Reason || !shareContract(have.Contracts, entry.Contracts):
+				merged = append(merged, have)
+			case at < 0:
+				at = len(merged)
+				merged = append(merged, have)
+			default:
+				merged[at].Contracts = appendNew(merged[at].Contracts, have.Contracts)
+				merged[at].Invoices = appendNew(merged[at].Invoices, have.Invoices)
+			}
+		}
+		if at < 0 {
+			entry.Contracts, entry.Invoices = slices.Clone(entry.Contracts), slices.Clone(entry.Invoices)
+			merged = append(merged, entry)
+		} else {
+			merged[at].Contracts = appendNew(merged[at].Contracts, entry.Contracts)
+			merged[at].Invoices = appendNew(merged[at].Invoices, entry.Invoices)
+		}
+		list = merged
 	}
-	hash := fnv.New128a()
-	_, _ = hash.Write(state)
-	return hex.EncodeToString(hash.Sum(nil))
+	return list
+}
+
+// shareContract tells whether two entries name a contract in common.
+func shareContract(a, b []parentbilling.CareDuplicateContract) bool {
+	return slices.ContainsFunc(a, func(contract parentbilling.CareDuplicateContract) bool {
+		return slices.ContainsFunc(b, func(other parentbilling.CareDuplicateContract) bool { return other.ContractID == contract.ContractID })
+	})
 }

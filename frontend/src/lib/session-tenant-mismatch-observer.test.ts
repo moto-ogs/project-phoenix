@@ -8,7 +8,6 @@ const { installSessionTenantMismatchObserver } =
 const { onSessionTenantMismatch } = await import("./api-error");
 const { bindSessionAccount, SESSION_ACCOUNT_HEADER } =
   await import("./session-account");
-const { authFetch, fetchWithRetry } = await import("./api-helpers");
 const { getCachedSession, primeSessionCache } = await import("./session-cache");
 const { listAvailableTenants } = await import("./tenant-api");
 const { timeTrackingService } = await import("./time-tracking-api");
@@ -55,9 +54,7 @@ afterEach(() => {
 describe("the session tenant refusal reaches TenantGuard from every client", () => {
   it.each([
     ["a plain fetch that reads only ok", () => fetch("/api/students")],
-    ["a sessionFetch client that answers []", () => listAvailableTenants()],
-    ["authFetch", () => authFetch("/api/students")],
-    ["fetchWithRetry", () => fetchWithRetry("/api/students")],
+    ["a bffJson client", () => listAvailableTenants()],
     ["the time tracking client", () => timeTrackingService.checkIn("present")],
   ])("%s", async (_client, send) => {
     fetchMock.mockResolvedValue(refusal());
@@ -76,13 +73,14 @@ describe("the session tenant refusal reaches TenantGuard from every client", () 
     });
   });
 
-  it("drops the cached session of a client that never reads the body", async () => {
+  it("drops the cached session of a bffJson client", async () => {
     fetchMock.mockResolvedValue(Response.json({ data: [] }));
     await listAvailableTenants();
     expect(getSessionMock).toHaveBeenCalledTimes(1);
 
     fetchMock.mockResolvedValue(refusal());
-    await listAvailableTenants();
+    // The refused list rejects (#2353); the barrier is what this asserts.
+    await listAvailableTenants().catch(() => undefined);
     await getCachedSession();
 
     expect(getSessionMock).toHaveBeenCalledTimes(2);
@@ -142,8 +140,7 @@ describe("the tab's account on every request to its own BFF", () => {
       () => fetch("/api/students", { headers: { "X-Other": "1" } }),
     ],
     ["a Request object", () => fetch(new Request(`${location.origin}/api/x`))],
-    ["a sessionFetch client", () => listAvailableTenants()],
-    ["authFetch", () => authFetch("/api/students")],
+    ["a bffJson client", () => listAvailableTenants()],
   ])("names the bound account on %s", async (_client, send) => {
     bindSessionAccount("7");
     fetchMock.mockResolvedValue(Response.json({ data: [] }));
@@ -185,7 +182,7 @@ describe("the tab's account on every request to its own BFF", () => {
 
   it.each([
     ["a plain fetch that reads only ok", () => fetch("/api/students")],
-    ["a sessionFetch client", () => listAvailableTenants()],
+    ["a bffJson client", () => listAvailableTenants()],
     ["the time tracking client", () => timeTrackingService.checkIn("present")],
   ])(
     "reports the refusal of another account from %s",
@@ -208,7 +205,8 @@ describe("the tab's account on every request to its own BFF", () => {
     expect(getSessionMock).toHaveBeenCalledTimes(1);
 
     fetchMock.mockResolvedValue(accountRefusal());
-    await listAvailableTenants();
+    // The refused list rejects (#2353); the barrier is what this asserts.
+    await listAvailableTenants().catch(() => undefined);
     await getCachedSession();
 
     expect(getSessionMock).toHaveBeenCalledTimes(2);

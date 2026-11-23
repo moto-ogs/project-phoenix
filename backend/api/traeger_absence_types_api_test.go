@@ -29,12 +29,12 @@ import (
 )
 
 type traegerAbsenceTypeBody struct {
-	ID           int64   `json:"id"`
+	ID           wireID  `json:"id"`
 	Name         string  `json:"name"`
 	StandardDays float64 `json:"standard_days"`
 	Requestable  bool    `json:"requestable"`
 	Schools      []struct {
-		SchoolID        int64    `json:"school_id"`
+		SchoolID        wireID   `json:"school_id"`
 		Carried         bool     `json:"carried"`
 		Offered         bool     `json:"offered"`
 		SchoolLimitDays *float64 `json:"school_limit_days"`
@@ -44,14 +44,14 @@ type traegerAbsenceTypeBody struct {
 type traegerAbsenceAccountsBody struct {
 	Year     int `json:"year"`
 	Accounts []struct {
-		AbsenceTypeID int64   `json:"absence_type_id"`
+		AbsenceTypeID wireID  `json:"absence_type_id"`
 		EntitledDays  float64 `json:"entitled_days"`
 		Individual    bool    `json:"individual"`
 		TakenDays     float64 `json:"taken_days"`
 		ReservedDays  float64 `json:"reserved_days"`
 		RemainingDays float64 `json:"remaining_days"`
 		Schools       []struct {
-			SchoolID     int64    `json:"school_id"`
+			SchoolID     wireID   `json:"school_id"`
 			TakenDays    float64  `json:"taken_days"`
 			ReservedDays float64  `json:"reserved_days"`
 			LimitDays    *float64 `json:"limit_days"`
@@ -110,7 +110,7 @@ func TestTraegerAbsenceTypesShareOneKontingentOverAllSchools(t *testing.T) {
 	})
 
 	staffRelease(t, db, office.organization)
-	rec := traegerJSON(t, router, office.token, http.MethodPost, "/traeger/staff-records/", map[string]any{
+	rec := traegerLink(t, router, office.token, map[string]any{
 		"members": []map[string]int64{{"school_id": north, "staff_id": miraNorth.ID}, {"school_id": south, "staff_id": miraSouth.ID}},
 	})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
@@ -129,12 +129,12 @@ func TestTraegerAbsenceTypesShareOneKontingentOverAllSchools(t *testing.T) {
 		for _, carried := range regeneration.Schools {
 			assert.True(t, carried.Carried && carried.Offered, "school %d carries the type", carried.SchoolID)
 		}
-		assert.Equal(t, ownNorth, schoolTypeOf(t, db, north, regeneration.ID), "the school's own type of the same name is taken over")
-		assert.NotZero(t, schoolTypeOf(t, db, south, regeneration.ID))
+		assert.Equal(t, ownNorth, schoolTypeOf(t, db, north, int64(regeneration.ID)), "the school's own type of the same name is taken over")
+		assert.NotZero(t, schoolTypeOf(t, db, south, int64(regeneration.ID)))
 		rec = traegerJSON(t, router, office.token, http.MethodPost, "/traeger/absence-types/", map[string]any{"name": "regenerationstag"})
 		assertStaffRefusal(t, rec, http.StatusConflict, "workforce.traeger_absence_type_name_taken")
 	})
-	northType, southType := schoolTypeOf(t, db, north, regeneration.ID), schoolTypeOf(t, db, south, regeneration.ID)
+	northType, southType := schoolTypeOf(t, db, north, int64(regeneration.ID)), schoolTypeOf(t, db, south, int64(regeneration.ID))
 
 	t.Run("a booking at one school draws on the one Kontingent of the person", func(t *testing.T) {
 		bookAbsence(t, db, north, miraNorth.ID, northType, "2027-03-03", "2027-03-03", "approved")
@@ -197,9 +197,19 @@ func TestTraegerAbsenceTypesShareOneKontingentOverAllSchools(t *testing.T) {
 			assert.ErrorIs(t, err, workforce.ErrAbsenceTypeKeptByTraeger, "the Träger keeps the Kontingent of a person with a Personalakte")
 			return nil
 		}))
-		rec := traegerJSON(t, router, office.token, http.MethodPut, fmt.Sprintf("/traeger/staff-records/%d/absence-accounts/%d", record.ID, regeneration.ID),
-			map[string]any{"year": 2027, "entitled_days": 5, "reason": "Vereinbarung"})
+		// The days are written onto the claim the form read (ADR 0311): a
+		// second form of the same read, or one without a read, is refused and
+		// the first change stays (5 days, read below).
+		read := traegerJSON(t, router, office.token, http.MethodGet, fmt.Sprintf("/traeger/staff-records/%d/absence-accounts?year=2027", record.ID), nil)
+		require.Equal(t, http.StatusOK, read.Code, read.Body.String())
+		version := allowanceVersion(t, read, int64(regeneration.ID))
+		path := fmt.Sprintf("/traeger/staff-records/%d/absence-accounts/%d", record.ID, regeneration.ID)
+		rec := traegerJSON(t, router, office.token, http.MethodPut, path, map[string]any{"year": 2027, "entitled_days": 5, "reason": "Vereinbarung", "expected_version": version})
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		for _, stale := range []string{version, ""} {
+			rec = traegerJSON(t, router, office.token, http.MethodPut, path, map[string]any{"year": 2027, "entitled_days": 6, "reason": "Vereinbarung", "expected_version": stale})
+			assertStaffRefusal(t, rec, http.StatusConflict, "general.changed_since_read")
+		}
 		require.NoError(t, inSchool(t, unit, south, func(ctx context.Context) error {
 			_, err := school.PreviewAllowanceBooking(ctx, miraSouth.ID, southType, "2027-06-07", "2027-06-07", false)
 			assert.ErrorIs(t, err, workforce.ErrAbsenceTypeSchoolLimitExceeded, "the south school allows half a day, its request already holds one")
@@ -213,6 +223,19 @@ func TestTraegerAbsenceTypesShareOneKontingentOverAllSchools(t *testing.T) {
 	})
 
 	t.Run("the Personalverwaltung reads the Kontingent over all schools with each school's share", func(t *testing.T) {
+		accountReads := func() map[int64]int {
+			entries := map[int64]int{}
+			var rows []struct {
+				TenantID int64 `bun:"tenant_id"`
+			}
+			require.NoError(t, db.NewRaw(`SELECT tenant_id FROM audit.data_access_log WHERE actor_role = 'traeger' AND metadata->>'view' = ?
+				AND metadata->>'organization_id' = ?`, workforce.TraegerStaffViewAbsenceAccounts, fmt.Sprint(office.organization)).Scan(context.Background(), &rows))
+			for _, row := range rows {
+				entries[row.TenantID]++
+			}
+			return entries
+		}
+		before := accountReads()
 		rec := traegerJSON(t, router, office.token, http.MethodGet, fmt.Sprintf("/traeger/staff-records/%d/absence-accounts?year=2027", record.ID), nil)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		accounts := decode[traegerAbsenceAccountsBody](t, rec)
@@ -225,21 +248,13 @@ func TestTraegerAbsenceTypesShareOneKontingentOverAllSchools(t *testing.T) {
 		assert.Equal(t, 3.0, account.RemainingDays)
 		shares := map[int64][2]float64{}
 		for _, share := range account.Schools {
-			shares[share.SchoolID] = [2]float64{share.TakenDays, share.ReservedDays}
+			shares[int64(share.SchoolID)] = [2]float64{share.TakenDays, share.ReservedDays}
 		}
 		assert.Equal(t, map[int64][2]float64{north: {1, 0}, south: {0, 1}}, shares)
-		entries := map[int64]int{}
-		var rows []struct {
-			TenantID int64 `bun:"tenant_id"`
-		}
-		require.NoError(t, db.NewRaw(`SELECT tenant_id FROM audit.data_access_log WHERE actor_role = 'traeger' AND metadata->>'view' = ?
-			AND metadata->>'organization_id' = ?`, workforce.TraegerStaffViewAbsenceAccounts, fmt.Sprint(office.organization)).Scan(context.Background(), &rows))
-		for _, row := range rows {
-			entries[row.TenantID]++
-		}
-		assert.Equal(t, map[int64]int{north: 1, south: 1}, entries, "each Einsatzort logs the read")
-		rec = traegerJSON(t, router, office.token, http.MethodPut, fmt.Sprintf("/traeger/staff-records/%d/absence-accounts/%d", record.ID, regeneration.ID),
-			map[string]any{"year": 2027, "entitled_days": 1.5, "reason": "weniger"})
+		after := accountReads()
+		assert.Equal(t, map[int64]int{north: 1, south: 1}, map[int64]int{north: after[north] - before[north], south: after[south] - before[south]},
+			"each Einsatzort logs the read")
+		rec = traegerSetAllowance(t, router, office.token, record.ID, regeneration.ID, map[string]any{"year": 2027, "entitled_days": 1.5, "reason": "weniger"})
 		assertStaffRefusal(t, rec, http.StatusConflict, "workforce.traeger_absence_allowance_below_booked")
 	})
 
@@ -283,7 +298,7 @@ func TestTraegerAbsenceTypesQueryBudget(t *testing.T) {
 	north, south := office.schools[0], office.schools[1]
 	miraNorth, account := testpkg.CreateTestStaffWithAccountForTenant(t, db, north, "Mira", "Budget")
 	miraSouth := testpkg.CreateTestStaffForExistingAccountInTenant(t, db, south, account.ID, "Mira", "Budget")
-	rec := traegerJSON(t, router, office.token, http.MethodPost, "/traeger/staff-records/", map[string]any{
+	rec := traegerLink(t, router, office.token, map[string]any{
 		"members": []map[string]int64{{"school_id": north, "staff_id": miraNorth.ID}, {"school_id": south, "staff_id": miraSouth.ID}},
 	})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
@@ -305,8 +320,8 @@ func TestTraegerAbsenceTypesQueryBudget(t *testing.T) {
 			})
 			require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 			typeID := decode[traegerAbsenceTypeBody](t, rec).ID
-			bookAbsence(t, db, north, miraNorth.ID, schoolTypeOf(t, db, north, typeID), "2027-03-03", "2027-03-03", "approved")
-			bookAbsence(t, db, south, miraSouth.ID, schoolTypeOf(t, db, south, typeID), "2027-03-04", "2027-03-04", "requested")
+			bookAbsence(t, db, north, miraNorth.ID, schoolTypeOf(t, db, north, int64(typeID)), "2027-03-03", "2027-03-03", "approved")
+			bookAbsence(t, db, south, miraSouth.ID, schoolTypeOf(t, db, south, int64(typeID)), "2027-03-04", "2027-03-04", "requested")
 		}
 	}
 	accountsPath := fmt.Sprintf("/traeger/staff-records/%d/absence-accounts?year=2027", record.ID)

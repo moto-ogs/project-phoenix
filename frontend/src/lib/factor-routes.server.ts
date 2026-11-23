@@ -1,6 +1,11 @@
 import "server-only";
-import { forwardBackendResponse } from "~/lib/backend-proxy-response.server";
+import type { z } from "zod";
+import { contractWrite, type ContractBody } from "~/lib/contract/client.server";
+import { contractError } from "~/lib/contract/route-response.server";
+import type { TokenResponse } from "~/lib/contract/shared.generated";
+import type { SessionRenewed } from "~/lib/session-bff";
 import { problemResponse } from "~/lib/api-response-error.server";
+import { successResponse } from "~/lib/route-wrapper-utils.server";
 import { installLoginSession } from "~/lib/login-route.server";
 import { createLogger } from "~/lib/logger";
 import type { makePortalHandlers } from "~/lib/portal-handlers.server";
@@ -8,11 +13,17 @@ import { captureBffException } from "~/lib/sentry-bff.server";
 import type { PortalAuth } from "~/server/auth/portal-auth";
 import { sessionMutationOriginError } from "~/server/auth/same-origin";
 
-interface FactorConfirmRoute {
+type FactorRoute = Parameters<typeof contractWrite>[0] & {
+  method: "POST";
+  routeFile: string;
+  response: z.ZodType<TokenResponse>;
+};
+
+interface FactorConfirmRoute<R extends FactorRoute> {
   portal: Pick<PortalAuth, "portal" | "setSession" | "withAuth">;
   handlers: Pick<ReturnType<typeof makePortalHandlers>, "backendFetch">;
   /** The backend route that redeems the code and answers the new session. */
-  path: string;
+  route: R;
   /** Why a backend 401 is not repeated with a renewed session. */
   retry: { off: string };
   log: { component: string; event: string };
@@ -26,13 +37,13 @@ interface FactorConfirmRoute {
  * the answer says so: the second factor is on and the person must sign in
  * again.
  */
-export function createFactorConfirmRoute({
+export function createFactorConfirmRoute<R extends FactorRoute>({
   portal,
   handlers,
-  path,
+  route,
   retry,
   log,
-}: FactorConfirmRoute) {
+}: FactorConfirmRoute<R>) {
   const logger = createLogger({ component: log.component });
   return portal.withAuth(async (request) => {
     const originError = sessionMutationOriginError(request);
@@ -44,18 +55,15 @@ export function createFactorConfirmRoute({
       return problemResponse(400, "Invalid JSON", request);
     }
     try {
-      const backend = await handlers.backendFetch(request, path, {
-        method: "POST",
-        json: body,
-        retry,
+      const reply = await contractWrite(route, body as ContractBody<R>, {
+        send: (path, call) =>
+          handlers.backendFetch(request, path, { ...call, retry }),
       });
-      if (!backend.ok) return forwardBackendResponse(backend, request);
-      // Parse errors must not put bearer material in an exception message.
-      const data = (await backend.json().catch(() => {
-        throw new Error("Invalid MFA confirm response");
-      })) as Record<string, unknown>;
-      const failure = await installLoginSession(request, data, portal);
-      return Response.json({ session_renewed: failure === null });
+      if (!reply.ok) return contractError(reply, request);
+      const failure = await installLoginSession(request, reply.value, portal);
+      return Response.json(
+        successResponse<SessionRenewed>({ session_renewed: failure === null }),
+      );
     } catch (error) {
       captureBffException(error, request);
       logger.error(log.event, {
@@ -64,16 +72,4 @@ export function createFactorConfirmRoute({
       return problemResponse(500, "MFA confirm unavailable", request);
     }
   });
-}
-
-/**
- * The body of the route that switches the factor off. The current password
- * is a credential check: a wrong one comes back as 401 with its own code and
- * stays on the form, like the password change.
- */
-export function currentPasswordBody(body: unknown) {
-  return {
-    current_password:
-      (body as { currentPassword?: string }).currentPassword ?? "",
-  };
 }

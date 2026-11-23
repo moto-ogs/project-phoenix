@@ -3,6 +3,8 @@ package common
 import (
 	"net"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // TrustedDeviceDTO is the wire shape for an MFA trusted-device row.
@@ -15,12 +17,12 @@ import (
 // the operator /operator/auth/mfa/trusted-devices endpoints —
 // extracted to remove the duplicated DTO definition and mapping loop.
 type TrustedDeviceDTO struct {
-	ID         int64   `json:"id"`
-	UserAgent  *string `json:"user_agent,omitempty"`
-	IPAddress  string  `json:"ip_address,omitempty"`
-	CreatedAt  string  `json:"created_at"`
-	ExpiresAt  string  `json:"expires_at"`
-	LastUsedAt *string `json:"last_used_at,omitempty"`
+	ID         ident.ID `json:"id"`
+	UserAgent  *string  `json:"user_agent,omitempty"`
+	IPAddress  string   `json:"ip_address,omitempty"`
+	CreatedAt  string   `json:"created_at"`
+	ExpiresAt  string   `json:"expires_at"`
+	LastUsedAt *string  `json:"last_used_at,omitempty"`
 }
 
 // TrustedDeviceRow is the projection needed to build a TrustedDeviceDTO
@@ -39,7 +41,7 @@ type TrustedDeviceRow struct {
 // fields when the source values are nil.
 func NewTrustedDeviceDTO(row TrustedDeviceRow) TrustedDeviceDTO {
 	dto := TrustedDeviceDTO{
-		ID:        row.ID,
+		ID:        ident.ID(row.ID),
 		UserAgent: row.UserAgent,
 		CreatedAt: row.CreatedAt.UTC().Format(time.RFC3339),
 		ExpiresAt: row.ExpiresAt.UTC().Format(time.RFC3339),

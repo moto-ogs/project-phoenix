@@ -21,6 +21,7 @@ import (
 	"github.com/go-chi/render"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Middleware is the HTTP middleware shape the composition root supplies.
@@ -31,12 +32,11 @@ type Middleware = func(http.Handler) http.Handler
 type FailureKind string
 
 const (
-	FailureInvalid      FailureKind = "invalid"
-	FailureNotFound     FailureKind = "not_found"
-	FailureConflict     FailureKind = "conflict"
-	FailureUnauthorized FailureKind = "unauthorized"
-	FailureForbidden    FailureKind = "forbidden"
-	FailureInternal     FailureKind = "internal"
+	FailureInvalid   FailureKind = "invalid"
+	FailureNotFound  FailureKind = "not_found"
+	FailureConflict  FailureKind = "conflict"
+	FailureForbidden FailureKind = "forbidden"
+	FailureInternal  FailureKind = "internal"
 )
 
 // ClientMessageError is an internal failure whose cause must not reach the
@@ -49,26 +49,6 @@ type ClientMessageError struct {
 func (e *ClientMessageError) Error() string { return e.Message }
 func (e *ClientMessageError) Unwrap() error { return e.Cause }
 
-// Actor is the acting admin behind a write: the staff record every plan
-// change is attributed to and the account an audit entry names.
-type Actor struct {
-	StaffID   int64
-	AccountID *int64
-}
-
-// ErrNoStaffActor refuses a caller without a staff record: every plan change
-// is attributed to a staff member, so such a request is unauthorized.
-var ErrNoStaffActor = errors.New("staff record not found")
-
-// NewActor is the acting admin behind staffID; a caller without a staff
-// record (staffID <= 0) is ErrNoStaffActor.
-func NewActor(staffID int64, accountID *int64) (Actor, error) {
-	if staffID <= 0 {
-		return Actor{}, ErrNoStaffActor
-	}
-	return Actor{StaffID: staffID, AccountID: accountID}, nil
-}
-
 // Runtime carries the HTTP-platform behavior this adapter must not own. Every
 // field is required, so missing production wiring fails at startup.
 type Runtime struct {
@@ -77,8 +57,10 @@ type Runtime struct {
 	ParseID    func(*http.Request) (int64, error)
 	Success    func(http.ResponseWriter, *http.Request, int, any, string)
 	Failure    func(http.ResponseWriter, *http.Request, FailureKind, error)
-	// ResolveActor identifies the acting admin; a request without a staff
-	// record behind it is unauthorized.
+	// ResolveActor identifies the acting admin: a staff member, or the
+	// Träger-Büro in a session opened through the Träger-Portal. An error
+	// wrapping ErrNoStaffActor is the caller's (403), any other the
+	// server's.
 	ResolveActor func(context.Context) (Actor, error)
 	// MarkRollback discards the request's tenant transaction so a
 	// client-facing 4xx never commits a half-applied plan change.
@@ -146,71 +128,57 @@ func (rs *Resource) Router() chi.Router {
 type ShiftRequest struct {
 	// WorkingTimeRequest confirms the working-time warnings (#4708).
 	WorkingTimeRequest
-	StaffID      int64      `json:"staff_id"`
-	Date         string     `json:"date"`
-	StartTime    string     `json:"start_time"`
-	EndTime      string     `json:"end_time"`
+	StaffID      ident.ID   `json:"staff_id"`
+	Date         string     `json:"date" contract:"date"`
+	StartTime    string     `json:"start_time" contract:"clock"`
+	EndTime      string     `json:"end_time" contract:"clock"`
 	BreakMinutes int        `json:"break_minutes"`
-	ShiftTypeID  optionalID `json:"shift_type_id"`
+	ShiftTypeID  OptionalID `json:"shift_type_id"`
 	Notes        *string    `json:"notes"`
 	// Cancelled marks a shift that does not take place (staff absent / gap left
 	// open, #1841). Honoured only on create (defaults to false). A plain update
 	// always preserves the stored flag and ignores this field — flipping the
 	// cancellation state must go through PUT /{id}/cancellation so the
 	// replacement set is maintained atomically.
-	Cancelled optionalBool `json:"cancelled"`
+	Cancelled OptionalBool `json:"cancelled"`
 	// ChangeReason is the optional "why" for a flexible daily change.
 	// Presence-aware: an omitted key preserves the stored reason on update, an
 	// explicit null clears it, a string replaces it.
-	ChangeReason optionalString `json:"change_reason"`
+	ChangeReason OptionalString `json:"change_reason"`
 	// OriginShiftID marks this shift as a replacement covering another shift
 	// (#1841). Only honoured on create; a plain edit never re-points it.
-	OriginShiftID optionalID `json:"origin_shift_id"`
+	OriginShiftID OptionalID `json:"origin_shift_id"`
 }
 
-// optionalID captures whether a nullable ID field was present in the JSON
+// OptionalID captures whether a nullable ID field was present in the JSON
 // payload, so an omitted shift_type_id (preserve the existing value on update)
 // is distinguishable from an explicit null (clear the type). encoding/json only
 // invokes UnmarshalJSON when the key is present, so Present stays false when the
 // field is absent — the case a stale client or third-party consumer produces.
-type optionalID struct {
+type OptionalID struct {
 	Present bool
-	Value   *int64
+	Value   *ident.ID
 }
 
-func (o *optionalID) UnmarshalJSON(data []byte) error {
+func (o *OptionalID) UnmarshalJSON(data []byte) error {
 	o.Present = true
 	if string(data) == "null" {
 		o.Value = nil
 		return nil
 	}
-	var decimal string
-	if err := json.Unmarshal(data, &decimal); err == nil {
-		v, err := strconv.ParseInt(decimal, 10, 64)
-		if err != nil {
-			return fmt.Errorf("ID must be a signed 64-bit integer: %w", err)
-		}
-		o.Value = &v
-		return nil
-	}
-	var v int64
-	if err := json.Unmarshal(data, &v); err != nil {
-		return err
-	}
-	o.Value = &v
-	return nil
+	return json.Unmarshal(data, &o.Value)
 }
 
-// optionalBool captures whether a bool field was present in the JSON payload so
+// OptionalBool captures whether a bool field was present in the JSON payload so
 // an omitted cancelled key (preserve the stored flag on update) is
 // distinguishable from an explicit false (reactivate). Same presence trick as
-// optionalID: UnmarshalJSON only runs when the key is present.
-type optionalBool struct {
+// OptionalID: UnmarshalJSON only runs when the key is present.
+type OptionalBool struct {
 	Present bool
 	Value   bool
 }
 
-func (o *optionalBool) UnmarshalJSON(data []byte) error {
+func (o *OptionalBool) UnmarshalJSON(data []byte) error {
 	o.Present = true
 	// A JSON null must not be read as an explicit false: encoding/json leaves the
 	// bool at its zero value (false) for "null" and produces no error, which on
@@ -223,17 +191,17 @@ func (o *optionalBool) UnmarshalJSON(data []byte) error {
 	return json.Unmarshal(data, &o.Value)
 }
 
-// optionalInt captures whether an int field was present in the JSON payload so an
+// OptionalInt captures whether an int field was present in the JSON payload so an
 // omitted break_minutes is distinguishable from an explicit 0. The cancellation
 // endpoint refuses a partial origin edit rather than silently zeroing the stored
 // break, so it must know whether the client actually sent the field. Same presence
-// trick as optionalID: UnmarshalJSON only runs when the key is present.
-type optionalInt struct {
+// trick as OptionalID: UnmarshalJSON only runs when the key is present.
+type OptionalInt struct {
 	Present bool
 	Value   int
 }
 
-func (o *optionalInt) UnmarshalJSON(data []byte) error {
+func (o *OptionalInt) UnmarshalJSON(data []byte) error {
 	o.Present = true
 	// A JSON null is not a valid break length; reject it rather than reading it as
 	// an ambiguous 0 that a partial-payload guard could not distinguish from omitted.
@@ -243,16 +211,16 @@ func (o *optionalInt) UnmarshalJSON(data []byte) error {
 	return json.Unmarshal(data, &o.Value)
 }
 
-// optionalString captures whether a nullable string field was present in the
+// OptionalString captures whether a nullable string field was present in the
 // JSON payload, distinguishing an omitted change_reason (preserve the stored
 // value) from an explicit null (clear it) from a string (replace it). A plain
 // *string cannot: encoding/json leaves it nil for both omitted and null.
-type optionalString struct {
+type OptionalString struct {
 	Present bool
 	Value   *string
 }
 
-func (o *optionalString) UnmarshalJSON(data []byte) error {
+func (o *OptionalString) UnmarshalJSON(data []byte) error {
 	o.Present = true
 	if string(data) == "null" {
 		o.Value = nil
@@ -270,25 +238,25 @@ func (o *optionalString) UnmarshalJSON(data []byte) error {
 type ShiftResponse struct {
 	// IDs cross the JSON boundary as decimal strings. A JavaScript number cannot
 	// represent every PostgreSQL bigint value without rounding it.
-	ID           int64  `json:"id,string"`
-	StaffID      int64  `json:"staff_id"`
-	Date         string `json:"date"`
-	StartTime    string `json:"start_time"`
-	EndTime      string `json:"end_time"`
-	BreakMinutes int    `json:"break_minutes"`
-	ShiftTypeID  *int64 `json:"shift_type_id,omitempty"`
+	ID           ident.ID  `json:"id"`
+	StaffID      ident.ID  `json:"staff_id"`
+	Date         string    `json:"date"`
+	StartTime    string    `json:"start_time"`
+	EndTime      string    `json:"end_time"`
+	BreakMinutes int       `json:"break_minutes"`
+	ShiftTypeID  *ident.ID `json:"shift_type_id,omitempty"`
 	// ShiftTypeName/ShiftTypeColor carry the resolved Schichtart so a staff
 	// member who cannot read the admin-only /api/shift-types endpoint still sees
 	// the label and color on their own shifts (#1844). Present only when the
 	// shift has a type and the service resolved it.
-	ShiftTypeName  *string `json:"shift_type_name,omitempty"`
-	ShiftTypeColor *string `json:"shift_type_color,omitempty"`
-	Notes          string  `json:"notes,omitempty"`
-	SeriesID       *int64  `json:"series_id,omitempty,string"`
-	Detached       bool    `json:"detached"`
-	Cancelled      bool    `json:"cancelled"`
-	ChangeReason   *string `json:"change_reason,omitempty"`
-	OriginShiftID  *int64  `json:"origin_shift_id,omitempty,string"`
+	ShiftTypeName  *string   `json:"shift_type_name,omitempty"`
+	ShiftTypeColor *string   `json:"shift_type_color,omitempty"`
+	Notes          string    `json:"notes,omitempty"`
+	SeriesID       *ident.ID `json:"series_id,omitempty"`
+	Detached       bool      `json:"detached"`
+	Cancelled      bool      `json:"cancelled"`
+	ChangeReason   *string   `json:"change_reason,omitempty"`
+	OriginShiftID  *ident.ID `json:"origin_shift_id,omitempty"`
 	// SeriesOccurrenceDate is the immutable recurrence slot. It lets clients
 	// apply a rule edit from a moved occurrence's source date, not its current
 	// display date.
@@ -302,19 +270,19 @@ type ShiftResponse struct {
 // time-tracking self endpoint, which serves the same shape.
 func ToShiftResponse(s workforce.PlannedShift) ShiftResponse {
 	resp := ShiftResponse{
-		ID:               s.ID,
-		StaffID:          s.StaffID,
+		ID:               ident.ID(s.ID),
+		StaffID:          ident.ID(s.StaffID),
 		Date:             s.Date,
 		StartTime:        FormatWallClock(s.StartTime),
 		EndTime:          FormatWallClock(s.EndTime),
 		BreakMinutes:     s.BreakMinutes,
-		ShiftTypeID:      s.ShiftTypeID,
+		ShiftTypeID:      (*ident.ID)(s.ShiftTypeID),
 		Notes:            s.Notes,
-		SeriesID:         s.SeriesID,
+		SeriesID:         (*ident.ID)(s.SeriesID),
 		Detached:         s.Detached,
 		Cancelled:        s.Cancelled,
 		ChangeReason:     s.ChangeReason,
-		OriginShiftID:    s.OriginShiftID,
+		OriginShiftID:    (*ident.ID)(s.OriginShiftID),
 		PlannedByTraeger: s.PlannedByTraeger,
 	}
 	if s.SeriesOccurrenceDate != "" {
@@ -386,16 +354,16 @@ func buildShift(req ShiftRequest) (workforce.StaffShiftInput, error) {
 		notes = *req.Notes
 	}
 	return workforce.StaffShiftInput{
-		StaffID:       req.StaffID,
+		StaffID:       req.StaffID.Int64(),
 		Date:          date,
 		StartTime:     start,
 		EndTime:       end,
 		BreakMinutes:  req.BreakMinutes,
-		ShiftTypeID:   req.ShiftTypeID.Value,
+		ShiftTypeID:   (*int64)(req.ShiftTypeID.Value),
 		Notes:         notes,
 		Cancelled:     req.Cancelled.Value,
 		ChangeReason:  req.ChangeReason.Value,
-		OriginShiftID: req.OriginShiftID.Value,
+		OriginShiftID: (*int64)(req.OriginShiftID.Value),
 	}, nil
 }
 
@@ -465,16 +433,6 @@ func (rs *Resource) parseDateRange(w http.ResponseWriter, r *http.Request) (from
 	return from, to, true
 }
 
-// actor resolves the acting admin or renders the unauthorized failure.
-func (rs *Resource) actor(w http.ResponseWriter, r *http.Request) (Actor, bool) {
-	actor, err := rs.runtime.ResolveActor(r.Context())
-	if err != nil {
-		rs.runtime.Failure(w, r, FailureUnauthorized, err)
-		return Actor{}, false
-	}
-	return actor, true
-}
-
 func (rs *Resource) list(w http.ResponseWriter, r *http.Request) {
 	from, to, ok := rs.parseDateRange(w, r)
 	if !ok {
@@ -516,6 +474,7 @@ func (rs *Resource) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	input.ActorStaffID = actor.StaffID
+	input.TraegerAccountID = actor.traegerAccountID()
 	input.WorkingTime = req.Confirmation()
 
 	saved, err := rs.planning.CreateShift(r.Context(), workforce.CreateStaffShift{StaffShiftInput: input})
@@ -547,6 +506,7 @@ func (rs *Resource) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	input.ActorStaffID = actor.StaffID
+	input.TraegerAccountID = actor.traegerAccountID()
 	input.WorkingTime = req.Confirmation()
 
 	saved, err := rs.planning.UpdateShift(r.Context(), workforce.UpdateStaffShift{
@@ -568,13 +528,13 @@ func (rs *Resource) update(w http.ResponseWriter, r *http.Request) {
 type MoveShiftRequest struct {
 	// WorkingTimeRequest confirms the working-time warnings (#4708).
 	WorkingTimeRequest
-	SourceStaffID int64      `json:"source_staff_id"`
-	TargetStaffID int64      `json:"target_staff_id"`
-	Date          string     `json:"date"`
-	StartTime     string     `json:"start_time"`
-	EndTime       string     `json:"end_time"`
+	SourceStaffID ident.ID   `json:"source_staff_id"`
+	TargetStaffID ident.ID   `json:"target_staff_id"`
+	Date          string     `json:"date" contract:"date"`
+	StartTime     string     `json:"start_time" contract:"clock"`
+	EndTime       string     `json:"end_time" contract:"clock"`
 	BreakMinutes  int        `json:"break_minutes"`
-	ShiftTypeID   optionalID `json:"shift_type_id"`
+	ShiftTypeID   OptionalID `json:"shift_type_id"`
 }
 
 func (rs *Resource) move(w http.ResponseWriter, r *http.Request) {
@@ -627,13 +587,13 @@ func buildMove(id int64, req MoveShiftRequest) (workforce.MoveStaffShift, error)
 	}
 	return workforce.MoveStaffShift{
 		ShiftID:       id,
-		SourceStaffID: req.SourceStaffID,
-		TargetStaffID: req.TargetStaffID,
+		SourceStaffID: req.SourceStaffID.Int64(),
+		TargetStaffID: req.TargetStaffID.Int64(),
 		Date:          date,
 		StartTime:     start,
 		EndTime:       end,
 		BreakMinutes:  req.BreakMinutes,
-		ShiftTypeID:   req.ShiftTypeID.Value,
+		ShiftTypeID:   (*int64)(req.ShiftTypeID.Value),
 	}, nil
 }
 
@@ -648,7 +608,7 @@ type CancellationRequest struct {
 	// reactivation deletes every replacement), so an omitted key is rejected
 	// rather than defaulting to false and silently reactivating a shift a stale
 	// or malformed client only meant to tweak.
-	Cancelled    optionalBool `json:"cancelled"`
+	Cancelled    OptionalBool `json:"cancelled"`
 	ChangeReason *string      `json:"change_reason"`
 	// StartTime/EndTime/BreakMinutes/ShiftTypeID are the origin shift's own values
 	// as the admin sees them. An origin edit is all-or-nothing: applying it
@@ -657,25 +617,25 @@ type CancellationRequest struct {
 	// fields to 0/null. break_minutes and shift_type_id are therefore presence-tracked
 	// and the handler requires the complete set whenever any origin field is present;
 	// omitting all four preserves the stored window/type/break (#1841).
-	StartTime    string               `json:"start_time"`
-	EndTime      string               `json:"end_time"`
-	BreakMinutes optionalInt          `json:"break_minutes"`
-	ShiftTypeID  optionalID           `json:"shift_type_id"`
+	StartTime    string               `json:"start_time" contract:"clock"`
+	EndTime      string               `json:"end_time" contract:"clock"`
+	BreakMinutes OptionalInt          `json:"break_minutes"`
+	ShiftTypeID  OptionalID           `json:"shift_type_id"`
 	Replacements []ReplacementRequest `json:"replacements"`
 }
 
 // ReplacementRequest is one person covering part of a cancelled shift's gap.
 type ReplacementRequest struct {
-	StaffID      int64  `json:"staff_id"`
-	StartTime    string `json:"start_time"`
-	EndTime      string `json:"end_time"`
-	BreakMinutes int    `json:"break_minutes"`
-	ShiftTypeID  *int64 `json:"shift_type_id"`
+	StaffID      ident.ID  `json:"staff_id"`
+	StartTime    string    `json:"start_time" contract:"clock"`
+	EndTime      string    `json:"end_time" contract:"clock"`
+	BreakMinutes int       `json:"break_minutes"`
+	ShiftTypeID  *ident.ID `json:"shift_type_id"`
 }
 
 // ShiftDeletedResponse names the shift a delete removed.
 type ShiftDeletedResponse struct {
-	ID int64 `json:"id"`
+	ID ident.ID `json:"id"`
 }
 
 // CancellationResponse returns the updated origin plus the created covers.
@@ -717,6 +677,7 @@ func (rs *Resource) cancellation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	input.ActorStaffID = actor.StaffID
+	input.TraegerAccountID = actor.traegerAccountID()
 	input.WorkingTime = req.Confirmation()
 
 	result, err := rs.planning.ApplyCancellation(r.Context(), input)
@@ -764,7 +725,7 @@ func buildCancellation(id int64, req CancellationRequest) (workforce.CancelStaff
 		input.StartTime = start
 		input.EndTime = end
 		input.BreakMinutes = req.BreakMinutes.Value
-		input.ShiftTypeID = req.ShiftTypeID.Value
+		input.ShiftTypeID = (*int64)(req.ShiftTypeID.Value)
 	}
 	for _, rep := range req.Replacements {
 		start, end, err := parseShiftTimes(rep.StartTime, rep.EndTime)
@@ -772,11 +733,11 @@ func buildCancellation(id int64, req CancellationRequest) (workforce.CancelStaff
 			return workforce.CancelStaffShift{}, err
 		}
 		input.Replacements = append(input.Replacements, workforce.ShiftReplacement{
-			StaffID:      rep.StaffID,
+			StaffID:      rep.StaffID.Int64(),
 			StartTime:    start,
 			EndTime:      end,
 			BreakMinutes: rep.BreakMinutes,
-			ShiftTypeID:  rep.ShiftTypeID,
+			ShiftTypeID:  (*int64)(rep.ShiftTypeID),
 		})
 	}
 	return input, nil
@@ -792,5 +753,5 @@ func (rs *Resource) delete(w http.ResponseWriter, r *http.Request) {
 		rs.renderError(w, r, err)
 		return
 	}
-	rs.runtime.Success(w, r, http.StatusOK, ShiftDeletedResponse{ID: id}, "Staff shift deleted")
+	rs.runtime.Success(w, r, http.StatusOK, ShiftDeletedResponse{ID: ident.ID(id)}, "Staff shift deleted")
 }

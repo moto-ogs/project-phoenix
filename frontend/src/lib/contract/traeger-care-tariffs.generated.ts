@@ -5,7 +5,7 @@ import {
   bool,
   calendarDate,
   instant,
-  int64StringOrNumber,
+  int64String,
   nullable,
   object,
   rec,
@@ -38,9 +38,9 @@ export interface CareTariff {
 }
 
 export const CareTariffSchema: z.ZodType<CareTariff, unknown> = object<CareTariff>({
-  id: int64StringOrNumber,
-  school_id: int64StringOrNumber,
-  care_offering_id: int64StringOrNumber,
+  id: int64String,
+  school_id: int64String,
+  care_offering_id: int64String,
   module_name: str,
   weekday: str,
   days_per_week: nullable(safeInt),
@@ -60,7 +60,7 @@ export interface CarePriceListHead {
 }
 
 export const CarePriceListHeadSchema: z.ZodType<CarePriceListHead, unknown> = object<CarePriceListHead>({
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   valid_from: nullable(calendarDate),
   free_months: nullable(arr(safeInt)),
 });
@@ -72,6 +72,7 @@ export interface CareTariffs {
   tariffs: CareTariff[] | null;
   lists: CarePriceListHead[] | null;
   billed_until: Record<string, string | null> | null;
+  versions: Record<string, string> | null;
 }
 
 export const CareTariffsSchema: z.ZodType<CareTariffs, unknown> = object<CareTariffs>({
@@ -80,11 +81,12 @@ export const CareTariffsSchema: z.ZodType<CareTariffs, unknown> = object<CareTar
   tariffs: nullable(arr(CareTariffSchema)),
   lists: nullable(arr(CarePriceListHeadSchema)),
   billed_until: nullable(rec(nullable(calendarDate))),
+  versions: nullable(rec(str)),
 });
 
 /** Go: parentbillinghttp.CarePriceRequest */
 export interface CarePriceRequest {
-  care_offering_id?: number;
+  care_offering_id?: string;
   module_name?: string;
   weekday?: string;
   days_per_week?: number | null;
@@ -95,10 +97,11 @@ export interface CarePriceRequest {
 
 /** Go: parentbillinghttp.CarePriceListRequest */
 export interface CarePriceListRequest {
-  school_id?: number;
+  school_id?: string;
   valid_from?: string | null;
   free_months?: number[] | null;
   prices?: CarePriceRequest[] | null;
+  expected_version?: string;
 }
 
 export const routes = {
@@ -106,6 +109,9 @@ export const routes = {
     method: "DELETE",
     pattern: "/traeger/care-tariffs/{schoolID}/{validFrom}",
     portals: ["org"],
+    query: {
+      "expected_version": { kind: "string" },
+    },
     response: success(CareTariffsSchema),
   },
   "GET /traeger/care-tariffs/": {

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/workflows/parentportal/internal/care"
 )
 
@@ -15,12 +16,12 @@ import (
 
 // MessageAttachment is one file of a message as the guardian sees it.
 type MessageAttachment struct {
-	ID          int64  `json:"id,string"`
-	Filename    string `json:"filename"`
-	SizeBytes   int64  `json:"size_bytes"`
-	ContentType string `json:"content_type"`
-	Width       int    `json:"width,omitempty"`
-	Height      int    `json:"height,omitempty"`
+	ID          ident.ID `json:"id"`
+	Filename    string   `json:"filename"`
+	SizeBytes   int64    `json:"size_bytes"`
+	ContentType string   `json:"content_type"`
+	Width       int      `json:"width,omitempty"`
+	Height      int      `json:"height,omitempty"`
 }
 
 // MessageAttachmentUpload is one validated file on its way into the store.

@@ -82,7 +82,10 @@ func TestSeedCreatesOnlyTheFormsTheAnswerScopeTestCovers(t *testing.T) {
 		}
 	}
 	sort.Strings(creators)
-	assert.Equal(t, []string{"parent_enrollment.go", "seed_care_contract_enrollment.go", "seed_enrollment_signature.go"}, creators)
+	// The school change form (#7874) has no questions either, and its manual
+	// enrollment sends no answers.
+	assert.Equal(t, []string{"parent_enrollment.go", "seed_care_contract_enrollment.go", "seed_enrollment_signature.go",
+		"seed_traeger_school_change.go"}, creators)
 }
 
 // seedQuestionKeysByScope splits the answer-collecting questions of a form

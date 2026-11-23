@@ -65,7 +65,6 @@ func (rs *Resource) Router(protectedTenantRoutes func(chi.Router, func(chi.Route
 		r.With(withTx).Get("/categories", rs.listCategories)
 
 		rs.mountCategories(r, withTx)
-		r.With(withTx).Get("/timespans", rs.getTimespans)
 
 		// Basic Activity Group operations (Write) - All authenticated users can create/update/delete
 		r.With(withTx).Post("/", rs.createActivity)
@@ -73,31 +72,16 @@ func (rs *Resource) Router(protectedTenantRoutes func(chi.Router, func(chi.Route
 		r.With(withTx).Put("/{id}", rs.updateActivity)
 		r.With(withTx).Delete("/{id}", rs.deleteActivity)
 
-		// Legacy schedule reads; schedule writes go through the guarded activity update.
-		r.With(withTx).Get("/{id}/schedules", rs.getActivitySchedules)
-		r.With(withTx).Get(routeScheduleByID, rs.getActivitySchedule)
-
-		// Supervisor Assignment
-		r.With(common.RequiresPermission(permissions.ActivitiesRead), withTx).
-			Get("/{id}/supervisors", rs.getActivitySupervisors)
+		// Supervisor Assignment: the activity's own body sets its
+		// supervisors (supervisor_ids); this route only replaces one.
 		r.With(common.RequiresPermission(permissions.ActivitiesAssign), withTx).
 			Get("/supervisors/available", rs.getAvailableSupervisors)
-		r.With(common.RequiresPermission(permissions.ActivitiesAssign), withTx, rs.requireActivityModification).
-			Post("/{id}/supervisors", rs.assignSupervisor)
-		r.With(common.RequiresPermission(permissions.ActivitiesAssign), withTx, rs.requireActivityModification).
-			Put("/{id}/supervisors/{supervisorId}", rs.updateSupervisorRole)
 		r.With(common.RequiresPermission(permissions.ActivitiesAssign), withTx, rs.requireActivityModification).
 			Delete("/{id}/supervisors/{supervisorId}", rs.removeSupervisor)
 
 		// Student Enrollment
 		r.With(common.RequiresPermission(permissions.ActivitiesRead), withTx).
 			Get("/{id}/students", rs.getActivityStudents)
-		r.With(common.RequiresPermission(permissions.ActivitiesRead), withTx).
-			Get("/students/{studentId}", rs.getStudentEnrollments)
-		r.With(common.RequiresPermission(permissions.ActivitiesRead), withTx).
-			Get("/students/{studentId}/available", rs.getAvailableActivities)
-		r.With(common.RequiresPermission(permissions.ActivitiesEnroll), withTx, rs.requireActivityModification).
-			Post("/{id}/students/{studentId}", rs.enrollStudent)
 		r.With(common.RequiresPermission(permissions.ActivitiesEnroll), withTx, rs.requireActivityModification).
 			Delete("/{id}/students/{studentId}", rs.unenrollStudent)
 		r.With(common.RequiresPermission(permissions.ActivitiesEnroll), withTx, rs.requireActivityModification).
@@ -113,7 +97,7 @@ func (rs *Resource) mountCategories(r chi.Router, withTx common.Middleware) {
 	// dedicated activities:manage_categories permission instead.
 	r.With(common.RequiresPermission(permissions.ActivitiesManageCategories), withTx).
 		Post("/categories", common.BindAction(
-			func() *CategoryRequest { return &CategoryRequest{} },
+			func() *ActivityCategoryRequest { return &ActivityCategoryRequest{} },
 			http.StatusCreated, rs.createCategory, categoryErrorRenderer, "Category created successfully"))
 	r.With(common.RequiresPermission(permissions.ActivitiesManageCategories), withTx).
 		Put("/categories/{categoryId}", rs.updateCategory)

@@ -11,6 +11,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // excusedRequestMaxReasonLen bounds notes and staff reasons (in runes).
@@ -247,8 +248,8 @@ func (w *ExcusedRequests) EditRequest(ctx context.Context, input careplan.Excuse
 	if req.Status != careplan.ExcusedRequestStatusPending {
 		return nil, careplan.ErrExcusedRequestNotPending
 	}
-	if input.ExpectedVersion != "" && careplan.ParentRequestVersion(req.UpdatedAt) != input.ExpectedVersion {
-		return nil, careplan.ErrParentRequestStale
+	if err := readstate.Check(input.ExpectedVersion, readstate.Of(req.UpdatedAt)); err != nil {
+		return nil, err
 	}
 	absenceStatus := normalizedAbsenceRequestStatus(req.AbsenceStatus)
 	// Same validators the create path runs: an edit may not produce a request

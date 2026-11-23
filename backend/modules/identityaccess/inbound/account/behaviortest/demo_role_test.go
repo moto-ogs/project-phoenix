@@ -323,15 +323,16 @@ func TestDemoRoleTraegerSignsTheVisitorInToTheSchoolsOwnTraeger(t *testing.T) {
 	payload, err := base64.RawURLEncoding.DecodeString(segments[1])
 	require.NoError(t, err)
 	var claims struct {
+		// Token claims are no route answer; they keep numbers.
 		ID       int64  `json:"id"`
 		Scope    string `json:"scope"`
 		OrgID    int64  `json:"org_id"`
 		TenantID int64  `json:"tenant_id"`
 	}
 	require.NoError(t, json.Unmarshal(payload, &claims))
-	assert.Equal(t, visitor.ID, claims.ID, "the Träger-Büro is the visitor's own account")
+	assert.Equal(t, visitor.ID, int64(claims.ID), "the Träger-Büro is the visitor's own account")
 	assert.Equal(t, "org", claims.Scope)
-	assert.Equal(t, traegerID, claims.OrgID)
+	assert.Equal(t, traegerID, int64(claims.OrgID))
 	assert.Zero(t, claims.TenantID)
 	assert.Equal(t, []string{"ogs-leitung"}, env.schoolRoles(t, visitor.ID), "the school role of the last switch stays")
 }

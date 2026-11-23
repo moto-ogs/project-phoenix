@@ -4,8 +4,9 @@ import {
   arr,
   bool,
   calendarDate,
+  fileAnswer,
   instant,
-  int64StringOrNumber,
+  int64String,
   nullable,
   object,
   requestBody,
@@ -54,7 +55,7 @@ export interface SEPADebitRun {
 
 export const SEPADebitRunSchema: z.ZodType<SEPADebitRun, unknown> = object<SEPADebitRun>({
   run_kind: str,
-  run_id: int64StringOrNumber,
+  run_id: int64String,
   creditor_id: str,
   creditor_name: str,
   creditor_iban_masked: str,
@@ -81,6 +82,12 @@ export const routes = {
     pattern: "/traeger/sepa-debits/{kind}/{id}",
     portals: ["org"],
     response: success(SEPADebitRunSchema),
+  },
+  "GET /traeger/sepa-debits/{kind}/{id}/file": {
+    method: "GET",
+    pattern: "/traeger/sepa-debits/{kind}/{id}/file",
+    portals: ["org"],
+    response: fileAnswer,
   },
   "POST /traeger/sepa-debits/{kind}/{id}/submission": {
     method: "POST",

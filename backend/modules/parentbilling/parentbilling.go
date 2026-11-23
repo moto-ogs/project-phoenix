@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Services a contribution rule applies to: the holiday care and, since
@@ -58,32 +59,40 @@ var (
 // A sibling rule carries SiblingFromChild and either DiscountBasisPoints or
 // DiscountCents; an exemption carries its Note. A nil ValidUntil is open.
 type ContributionRule struct {
-	ID                  int64          `json:"id"`
+	ID                  ident.ID       `json:"id"`
 	Service             string         `json:"service"`
 	Kind                string         `json:"kind"`
 	ValidFrom           calendar.Date  `json:"valid_from"`
 	ValidUntil          *calendar.Date `json:"valid_until"`
 	SiblingFromChild    *int           `json:"sibling_from_child"`
 	DiscountBasisPoints *int           `json:"discount_basis_points"`
-	DiscountCents       *int64         `json:"discount_cents"`
+	DiscountCents       *int64         `json:"discount_cents" contract:"number"`
 	Note                string         `json:"note"`
 	// A care rule (#4685) has a name, the schools and modules it applies
 	// to, the schools whose children a sibling rule counts, a fixed end
 	// price or the cap of a family; a holiday rule has none of them.
-	Name            string  `json:"name"`
-	SchoolIDs       []int64 `json:"school_ids"`
-	CareOfferingIDs []int64 `json:"care_offering_ids"`
-	CountSchoolIDs  []int64 `json:"count_school_ids"`
-	PriceCents      *int64  `json:"price_cents"`
-	CapCents        *int64  `json:"cap_cents"`
+	Name            string     `json:"name"`
+	SchoolIDs       []ident.ID `json:"school_ids"`
+	CareOfferingIDs []ident.ID `json:"care_offering_ids"`
+	CountSchoolIDs  []ident.ID `json:"count_school_ids"`
+	PriceCents      *int64     `json:"price_cents" contract:"number"`
+	CapCents        *int64     `json:"cap_cents" contract:"number"`
 	// TariffSiblingPrice makes a care sibling rule charge every counted
 	// child from its rank on the sibling price of the price list, per
 	// module and weekday or scale step (#6196).
 	TariffSiblingPrice bool `json:"tariff_sibling_price"`
 	// CountsFamilyChildren tells that a sibling rule of the care counts
 	// the children the family stated and the Abrechnung confirmed (#5918).
-	CountsFamilyChildren bool      `json:"counts_family_children"`
-	UpdatedAt            time.Time `json:"updated_at"`
+	CountsFamilyChildren bool `json:"counts_family_children"`
+	// SiblingAllChildren makes a care sibling rule choose by the size of
+	// the family instead of the child's rank (#7765): a family of at least
+	// SiblingFromChild counted children gets the reduction for every child,
+	// the first too.
+	SiblingAllChildren bool      `json:"sibling_all_children"`
+	UpdatedAt          time.Time `json:"updated_at"`
+	// Version is the read-state token of the rule (ADR 0311): a change
+	// sends it back as expected_version.
+	Version string `json:"version"`
 }
 
 // ContributionRuleInput is a rule as the Abrechnung writes it.
@@ -105,14 +114,18 @@ type ContributionRuleInput struct {
 type ContributionRules interface {
 	ListContributionRules(ctx context.Context, organizationID int64) ([]ContributionRule, error)
 	CreateContributionRule(ctx context.Context, organizationID int64, input ContributionRuleInput) (ContributionRule, error)
-	UpdateContributionRule(ctx context.Context, organizationID, ruleID int64, input ContributionRuleInput) (ContributionRule, error)
+	// UpdateContributionRule changes the rule as the Abrechnung read it:
+	// a rule changed since expectedVersion is refused with
+	// readstate.ErrChanged (ADR 0311).
+	UpdateContributionRule(ctx context.Context, organizationID, ruleID int64, input ContributionRuleInput, expectedVersion string) (ContributionRule, error)
 	DeleteContributionRule(ctx context.Context, organizationID, ruleID int64) error
 	// ListCostBearers lists the cost bearers by name, each with whether a
 	// frozen contribution or an invoice names it.
 	ListCostBearers(ctx context.Context, organizationID int64) ([]CostBearer, error)
 	// SaveCostBearer creates a cost bearer when costBearerID is zero and
-	// changes that one otherwise; a missing one is ErrCostBearerNotFound.
-	SaveCostBearer(ctx context.Context, organizationID, costBearerID int64, input CostBearerInput) (CostBearer, error)
+	// changes that one otherwise; a missing one is ErrCostBearerNotFound, one
+	// changed since expectedVersion readstate.ErrChanged (ADR 0311).
+	SaveCostBearer(ctx context.Context, organizationID, costBearerID int64, input CostBearerInput, expectedVersion string) (CostBearer, error)
 	// DeleteCostBearer deletes a cost bearer nothing names; otherwise it is
 	// ErrCostBearerInUse.
 	DeleteCostBearer(ctx context.Context, organizationID, costBearerID int64) error

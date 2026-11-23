@@ -100,7 +100,7 @@ var classRosterWeekdays = [5]int{weekdayMonday, weekdayTuesday, weekdayWednesday
 // (responseRowSources keeps the order).
 func applyClassRosterRows(sources []exportRowSource, students []StudentResponse, weekly map[int64]weeklySchedule) {
 	for i, student := range students {
-		sources[i].row = classRosterExportRow(student, weekly[student.ID], sources[i].row)
+		sources[i].row = classRosterExportRow(student, weekly[student.ID.Int64()], sources[i].row)
 	}
 }
 

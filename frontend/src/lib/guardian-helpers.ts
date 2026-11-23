@@ -1,23 +1,29 @@
 // Guardian Type Definitions and Mapping Helpers
 
+import { knownEnum } from "~/lib/contract/known-enum";
+import type {
+  GuardianPickerResponse,
+  GuardianResponse,
+  PhoneNumberResponse,
+} from "~/lib/contract/guardians.generated";
+import type * as guardiansContract from "~/lib/contract/guardians.generated";
+import type * as sharedContract from "~/lib/contract/shared.generated";
+
 // Phone Number Types
 export type PhoneType = "mobile" | "home" | "work" | "other";
+
+const PHONE_TYPES: readonly PhoneType[] = ["mobile", "home", "work", "other"];
 
 export interface PhoneNumber {
   id: string;
   phoneNumber: string;
-  phoneType: PhoneType;
+  /**
+   * undefined: a type this build does not know. The list shows „–“; an edit
+   * leaves the stored type unchanged.
+   */
+  phoneType: PhoneType | undefined;
   label?: string;
   isPrimary: boolean;
-  priority: number;
-}
-
-export interface BackendPhoneNumber {
-  id: number | string;
-  phone_number: string;
-  phone_type: PhoneType;
-  label?: string;
-  is_primary: boolean;
   priority: number;
 }
 
@@ -51,6 +57,33 @@ export const GUARDIAN_ROLE_OPTIONS: Array<{
   { value: "custom", label: "Individuell" },
 ];
 
+// Was die gewählte Rolle für die Eltern-App bedeutet. Abgeleitet aus
+// StudentGuardianPermissionSet (backend securityruntime): nur die drei vollen
+// Rollen bekommen Rechte; Sozialdienst lässt sich nie einladen.
+const FULL_ROLE_HINT =
+  "Bekommt nach einer Einladung vollen Zugang zur Eltern-App für dieses Kind.";
+
+export const GUARDIAN_ROLE_HINTS: Record<GuardianRole, string> = {
+  primary_guardian: FULL_ROLE_HINT,
+  legal_guardian: FULL_ROLE_HINT,
+  co_guardian: FULL_ROLE_HINT,
+  emergency_contact: "Kein Zugang zur Eltern-App. Nur für den Notfall da.",
+  pickup_only: "Kein Zugang zur Eltern-App. Nur zum Abholen da.",
+  social_worker:
+    "Fachkraft vom Sozialdienst. Kein Zugang zur Eltern-App, keine Einladung.",
+  custom:
+    "Kein Zugang zur Eltern-App. Abholung und Notfall legst du unten fest.",
+};
+
+// Rollen mit Zugang zur Eltern-App (backend IsFullGuardianRole).
+export function isFullGuardianRole(role: GuardianRole | undefined): boolean {
+  return (
+    role === "primary_guardian" ||
+    role === "legal_guardian" ||
+    role === "co_guardian"
+  );
+}
+
 function normalizeGuardianRole(value: unknown): GuardianRole {
   return GUARDIAN_ROLE_OPTIONS.some((option) => option.value === value)
     ? (value as GuardianRole)
@@ -77,38 +110,6 @@ export interface Guardian {
   // names — only how many other children the guardian is linked to, for
   // disambiguation (#1513 GDPR minimization).
   linkedChildrenCount?: number;
-}
-
-// Backend Guardian Profile Response
-export interface BackendGuardianProfile {
-  id: number | string;
-  first_name: string;
-  last_name: string;
-  email?: string;
-  phone_numbers?: BackendPhoneNumber[]; // Flexible phone numbers
-  address_street?: string;
-  address_city?: string;
-  address_postal_code?: string;
-  preferred_contact_method: string;
-  language_preference: string;
-  notes?: string;
-  has_account: boolean;
-  account_id?: number | string;
-}
-
-// Backend Guardian Picker Response (GET /guardians/search). This is the
-// deliberately minimal, enumeration-resistant projection the picker endpoint
-// emits — NOT a full profile. Address, notes, language, contact method,
-// account, and phone numbers are all withheld server-side; and only a COUNT of
-// other linked children is exposed, never their names (#1513 GDPR
-// minimization). Kept separate from BackendGuardianProfile so callers can't
-// accidentally read fields the picker never sends.
-export interface BackendGuardianPickerResponse {
-  id: number | string;
-  first_name: string;
-  last_name: string;
-  email?: string;
-  linked_children_count: number;
 }
 
 // Student-Guardian Relationship
@@ -147,22 +148,9 @@ export interface GuardianWithRelationship extends Guardian {
   // mapGuardianWithRelationshipResponse), but omittable in test fixtures and
   // older payloads. Consumers default a missing value to "none".
   accountStatus?: GuardianAccountStatus;
-}
-
-// Backend Guardian with Relationship
-export interface BackendGuardianWithRelationship {
-  guardian: BackendGuardianProfile;
-  relationship_id: number | string;
-  relationship_type: string;
-  guardian_role?: string;
-  is_primary: boolean;
-  is_emergency_contact: boolean;
-  can_pickup: boolean;
-  pickup_weekdays?: number[];
-  pickup_notes?: string;
-  emergency_priority: number;
-  is_payer?: boolean;
-  account_status?: GuardianAccountStatus;
+  // The token a save of the staff form sends back (ADR 0311); missing in
+  // test fixtures, where the server refuses the save as it would an empty one.
+  version?: string;
 }
 
 // Guardian Create/Update Request
@@ -178,39 +166,43 @@ export interface GuardianFormData {
   notes?: string;
 }
 
-// Snake-case guardian payload sent together with a new student to
-// POST /api/students (backend `GuardianInput`). Used when creating a child and
-// its guardians in one atomic request, mirroring the guardian fields managed on
-// the student detail page.
-export interface StudentGuardianPayload {
-  // When set, links an EXISTING guardian profile to the new student instead of
-  // creating one (sibling case, #1513). The profile fields below are then
-  // carried only for local display in the create modal's summary list — the
-  // backend ignores them and never mutates the existing profile.
-  guardian_profile_id?: number;
-  first_name: string;
-  last_name: string;
-  email?: string;
-  address_street?: string;
-  address_city?: string;
-  address_postal_code?: string;
-  preferred_contact_method?: string;
-  language_preference?: string;
-  notes?: string;
-  relationship_type: string;
-  guardian_role?: GuardianRole;
-  is_primary: boolean;
-  is_emergency_contact: boolean;
-  can_pickup: boolean;
-  pickup_notes?: string;
-  emergency_priority: number;
-  phone_numbers: Array<{
-    phone_number: string;
-    phone_type: PhoneType;
-    label?: string;
-    is_primary: boolean;
-  }>;
-}
+// A guardian sent together with a new student to POST /api/students (backend
+// `NewStudentGuardian`), when a child and its guardians are created in one
+// atomic request: the generated type with the fields the create modal always
+// fills. With `guardian_profile_id` it links an EXISTING guardian profile to
+// the new student instead of creating one (sibling case, #1513); the profile
+// fields are then carried only for the modal's summary list, the backend
+// ignores them and never mutates the existing profile.
+export type StudentGuardianPayload = Omit<
+  sharedContract.NewStudentGuardian,
+  | "guardian_profile_id"
+  | "relationship_type"
+  | "guardian_role"
+  | "phone_numbers"
+> &
+  Required<
+    Pick<
+      sharedContract.NewStudentGuardian,
+      | "first_name"
+      | "last_name"
+      | "is_primary"
+      | "is_emergency_contact"
+      | "can_pickup"
+      | "emergency_priority"
+    >
+  > & {
+    guardian_profile_id?: string;
+    relationship_type: string;
+    guardian_role?: GuardianRole;
+    phone_numbers: Array<
+      Required<
+        Pick<sharedContract.NewGuardianPhone, "phone_number" | "is_primary">
+      > &
+        Pick<sharedContract.NewGuardianPhone, "label"> & {
+          phone_type?: PhoneType;
+        }
+    >;
+  };
 
 // Student-Guardian Link Request
 export interface StudentGuardianLinkRequest {
@@ -224,39 +216,29 @@ export interface StudentGuardianLinkRequest {
   emergencyPriority: number;
 }
 
-// Backend Student-Guardian Link Request
-interface BackendStudentGuardianLinkRequest {
-  guardian_profile_id: number;
-  relationship_type: string;
-  guardian_role?: GuardianRole;
-  is_primary: boolean;
-  is_emergency_contact: boolean;
-  can_pickup: boolean;
-  pickup_notes?: string;
-  emergency_priority: number;
-}
-
 // Mapping Functions
 
 // Map backend phone number to frontend format
-export function mapPhoneNumberResponse(data: BackendPhoneNumber): PhoneNumber {
+export function mapPhoneNumberResponse(data: PhoneNumberResponse): PhoneNumber {
   return {
-    id: data.id.toString(),
+    id: data.id,
     phoneNumber: data.phone_number,
-    phoneType: data.phone_type,
+    phoneType: knownEnum(PHONE_TYPES, data.phone_type),
     label: data.label,
     isPrimary: data.is_primary,
     priority: data.priority,
   };
 }
 
-export function mapGuardianResponse(data: BackendGuardianProfile): Guardian {
+export function mapGuardianResponse(data: GuardianResponse): Guardian {
   return {
-    id: data.id.toString(),
+    id: data.id,
     firstName: data.first_name,
     lastName: data.last_name,
     email: data.email,
-    phoneNumbers: (data.phone_numbers ?? []).map(mapPhoneNumberResponse),
+    phoneNumbers: (data.phone_numbers ?? []).flatMap((phone) =>
+      phone ? [mapPhoneNumberResponse(phone)] : [],
+    ),
     addressStreet: data.address_street,
     addressCity: data.address_city,
     addressPostalCode: data.address_postal_code,
@@ -264,7 +246,7 @@ export function mapGuardianResponse(data: BackendGuardianProfile): Guardian {
     languagePreference: data.language_preference,
     notes: data.notes,
     hasAccount: data.has_account,
-    accountId: data.account_id?.toString(),
+    accountId: data.account_id,
   };
 }
 
@@ -276,10 +258,10 @@ export function mapGuardianResponse(data: BackendGuardianProfile): Guardian {
 // real data. Use this — never mapGuardianResponse — for picker results, so
 // nothing downstream trusts a field the picker never sent.
 export function mapGuardianPickerResponse(
-  data: BackendGuardianPickerResponse,
+  data: GuardianPickerResponse,
 ): Guardian {
   return {
-    id: data.id.toString(),
+    id: data.id,
     firstName: data.first_name,
     lastName: data.last_name,
     email: data.email,
@@ -291,12 +273,26 @@ export function mapGuardianPickerResponse(
   };
 }
 
+const ACCOUNT_STATUSES: readonly GuardianAccountStatus[] = [
+  "active",
+  "active_no_access",
+  "pending",
+  "link_invalid",
+  "none",
+];
+
+/**
+ * null: a link without its guardian profile. Go always sends the profile;
+ * lists leave such a link out.
+ */
 export function mapGuardianWithRelationshipResponse(
-  data: BackendGuardianWithRelationship,
-): GuardianWithRelationship {
+  data: guardiansContract.GuardianWithRelationship,
+): GuardianWithRelationship | null {
+  const guardian = data.guardian;
+  if (!guardian) return null;
   return {
-    ...mapGuardianResponse(data.guardian),
-    relationshipId: data.relationship_id.toString(),
+    ...mapGuardianResponse(guardian),
+    relationshipId: data.relationship_id,
     relationshipType: data.relationship_type,
     guardianRole: normalizeGuardianRole(data.guardian_role),
     isPrimary: data.is_primary,
@@ -305,21 +301,23 @@ export function mapGuardianWithRelationshipResponse(
     ...(data.pickup_weekdays?.length
       ? { pickupWeekdays: data.pickup_weekdays }
       : {}),
-    isPayer: data.is_payer ?? false,
+    isPayer: data.is_payer,
     pickupNotes: data.pickup_notes,
     emergencyPriority: data.emergency_priority,
-    // Fall back to deriving from has_account if the backend omits the field
-    // (older builds): account → active, otherwise none.
+    // A status this build does not know falls back to Go's own derivation
+    // from has_account: account → active, otherwise none.
     accountStatus:
-      data.account_status ?? (data.guardian.has_account ? "active" : "none"),
+      knownEnum(ACCOUNT_STATUSES, data.account_status) ??
+      (guardian.has_account ? "active" : "none"),
+    version: data.version,
   };
 }
 
 export function mapStudentGuardianLinkToBackend(
   data: StudentGuardianLinkRequest,
-): BackendStudentGuardianLinkRequest {
+): guardiansContract.StudentGuardianLinkRequest {
   return {
-    guardian_profile_id: Number.parseInt(data.guardianProfileId),
+    guardian_profile_id: data.guardianProfileId,
     relationship_type: data.relationshipType,
     guardian_role: data.guardianRole,
     is_primary: data.isPrimary,
@@ -379,7 +377,7 @@ export function getRelationshipTypeLabel(type: string): string {
 // Phone number request types
 export interface PhoneNumberCreateRequest {
   phoneNumber: string;
-  phoneType: PhoneType;
+  phoneType: PhoneType | undefined;
   label?: string;
   isPrimary?: boolean;
 }
@@ -390,23 +388,10 @@ export interface PhoneNumberUpdateRequest {
   label?: string;
 }
 
-interface BackendPhoneNumberCreateRequest {
-  phone_number: string;
-  phone_type: PhoneType;
-  label?: string;
-  is_primary?: boolean;
-}
-
-interface BackendPhoneNumberUpdateRequest {
-  phone_number?: string;
-  phone_type?: PhoneType;
-  label?: string;
-}
-
 // Map phone number create request to backend format
 export function mapPhoneNumberCreateToBackend(
   data: PhoneNumberCreateRequest,
-): BackendPhoneNumberCreateRequest {
+): guardiansContract.PhoneNumberCreateRequest {
   return {
     phone_number: data.phoneNumber,
     phone_type: data.phoneType,
@@ -418,8 +403,8 @@ export function mapPhoneNumberCreateToBackend(
 // Map phone number update request to backend format
 export function mapPhoneNumberUpdateToBackend(
   data: PhoneNumberUpdateRequest,
-): BackendPhoneNumberUpdateRequest {
-  const result: BackendPhoneNumberUpdateRequest = {};
+): guardiansContract.PhoneNumberUpdateRequest {
+  const result: guardiansContract.PhoneNumberUpdateRequest = {};
   if (data.phoneNumber !== undefined) result.phone_number = data.phoneNumber;
   if (data.phoneType !== undefined) result.phone_type = data.phoneType;
   if (data.label !== undefined) result.label = data.label;

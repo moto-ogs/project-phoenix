@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Presence modes resolved from the tenant's presence_mode setting.
@@ -32,22 +34,19 @@ func NormalizeCheckoutNote(note string) (string, error) {
 // messages are wire contracts: the web routes render them verbatim and the
 // kiosk maps several of them to German text.
 var (
-	ErrGroupSupervisorNotFound   = errors.New("group supervisor not found")
-	ErrGroupMappingNotFound      = errors.New("group mapping not found")
-	ErrStaffNotFound             = errors.New("staff member not found")
-	ErrStudentNotFound           = errors.New("student not found")
-	ErrStudentGraduated          = errors.New("student has graduated and cannot check in")
-	ErrStudentCareEnded          = errors.New("student care has ended and cannot check in")
-	ErrGroupAlreadyEnded         = errors.New("active group session already ended")
-	ErrVisitAlreadyEnded         = errors.New("visit already ended")
-	ErrSupervisionAlreadyEnded   = errors.New("supervision already ended")
-	ErrCombinedGroupAlreadyEnded = errors.New("combined group already ended")
-	ErrStudentAlreadyInGroup     = errors.New("student already present in this group")
-	ErrGroupAlreadyInCombination = errors.New("group already part of this combination")
-	ErrInvalidTimeRange          = errors.New("invalid time range")
-	ErrCannotDeleteActiveGroup   = errors.New("cannot delete active group with active visits")
-	ErrStudentAlreadyActive      = errors.New("student already has an active visit")
-	ErrStaffAlreadySupervising   = errors.New("staff member already supervising this group")
+	ErrGroupSupervisorNotFound = errors.New("group supervisor not found")
+	ErrStaffNotFound           = errors.New("staff member not found")
+	ErrStudentNotFound         = errors.New("student not found")
+	ErrStudentGraduated        = errors.New("student has graduated and cannot check in")
+	ErrStudentCareEnded        = errors.New("student care has ended and cannot check in")
+	ErrGroupAlreadyEnded       = errors.New("active group session already ended")
+	ErrVisitAlreadyEnded       = errors.New("visit already ended")
+	ErrSupervisionAlreadyEnded = errors.New("supervision already ended")
+	ErrStudentAlreadyInGroup   = errors.New("student already present in this group")
+	ErrInvalidTimeRange        = errors.New("invalid time range")
+	ErrCannotDeleteActiveGroup = errors.New("cannot delete active group with active visits")
+	ErrStudentAlreadyActive    = errors.New("student already has an active visit")
+	ErrStaffAlreadySupervising = errors.New("staff member already supervising this group")
 	// ErrLastSupervisor refuses to release a supervision when nobody else
 	// supervises the session: the session would run unsupervised (#4763).
 	ErrLastSupervisor       = errors.New("no other supervisor stays with the session")
@@ -233,12 +232,6 @@ func (s *AttendanceStatus) PickupTime() *time.Time {
 	return s.CheckOutTime
 }
 
-// CheckoutOutcome is the outcome of an explicit school checkout.
-type CheckoutOutcome struct {
-	Action       string
-	AttendanceID int64
-}
-
 // StudentMoveAuthorization carries the caller facts a bulk move revalidates
 // against the locked move state inside the command.
 type StudentMoveAuthorization struct {
@@ -251,20 +244,20 @@ type StudentMoveAuthorization struct {
 
 // StudentMoveSkipped names a student a move could not relocate.
 type StudentMoveSkipped struct {
-	StudentID int64  `json:"student_id"`
-	Reason    string `json:"reason"`
+	StudentID ident.ID `json:"student_id"`
+	Reason    string   `json:"reason"`
 }
 
 // StudentMoveResult is the wire result of a bulk room or transit move.
 type StudentMoveResult struct {
-	Moved         []int64              `json:"moved"`
-	Unchanged     []int64              `json:"unchanged"`
+	Moved         []ident.ID           `json:"moved"`
+	Unchanged     []ident.ID           `json:"unchanged"`
 	Skipped       []StudentMoveSkipped `json:"skipped"`
-	ActiveGroupID *int64               `json:"active_group_id,omitempty"`
-	RoomID        *int64               `json:"room_id,omitempty"`
+	ActiveGroupID *ident.ID            `json:"active_group_id,omitempty"`
+	RoomID        *ident.ID            `json:"room_id,omitempty"`
 	// CheckedIn names the children a check-in into a session (#6953) checked
 	// in to the school; a plain move leaves it empty.
-	CheckedIn []int64 `json:"checked_in,omitempty"`
+	CheckedIn []ident.ID `json:"checked_in,omitempty"`
 	// PreviousActiveGroupIDs records the source observed after move serialization.
 	// It is service metadata and intentionally not part of the bulk-move API.
 	PreviousActiveGroupIDs map[int64]int64 `json:"-"`
@@ -284,17 +277,17 @@ const (
 
 // TransitAssignSkipped names a student a transit assignment left out.
 type TransitAssignSkipped struct {
-	StudentID int64  `json:"student_id"`
-	Reason    string `json:"reason"`
+	StudentID ident.ID `json:"student_id"`
+	Reason    string   `json:"reason"`
 }
 
 // TransitAssignResult is the wire result of assigning transit students to a
 // room session.
 type TransitAssignResult struct {
-	Assigned      []int64                `json:"assigned"`
+	Assigned      []ident.ID             `json:"assigned"`
 	Skipped       []TransitAssignSkipped `json:"skipped"`
-	ActiveGroupID int64                  `json:"active_group_id"`
-	RoomID        int64                  `json:"room_id"`
+	ActiveGroupID ident.ID               `json:"active_group_id"`
+	RoomID        ident.ID               `json:"room_id"`
 }
 
 // VisitDisplay joins an open visit with the tenant-scoped student display
@@ -338,29 +331,6 @@ type SessionActivitySummary struct {
 	PlannedRoomID   *int64
 	IsSystem        bool
 	IsOpen          bool
-}
-
-// UnclaimedSession is an open session without supervisors together with the
-// room and template projections the claiming view renders.
-type UnclaimedSession struct {
-	UnclaimedGroup
-	Room     *SessionRoomSummary
-	Activity *SessionActivitySummary
-}
-
-// VisitsFromAnotherSchool reports whether a child of the home school is a
-// visitor at the hosting school: only a child of another school is.
-func VisitsFromAnotherSchool(homeTenantID, hostingTenantID int64) bool {
-	return homeTenantID != hostingTenantID
-}
-
-// CrossTenantStudent is a child hosted from another school.
-type CrossTenantStudent struct {
-	StudentID  int64
-	FirstName  string
-	LastName   string
-	GroupName  string
-	HomeTenant string
 }
 
 // DashboardAnalytics aggregates the tenant's presence for the dashboard.

@@ -48,30 +48,18 @@ vi.mock("next-auth", () => ({
 
 vi.mock("~/lib/tenant-resolve.server", async (original) => ({
   ...(await original<typeof import("~/lib/tenant-resolve.server")>()),
-  resolveTenantCached: async () => ({ tenant_id: 7 }),
+  resolveTenantCached: async () => ({ tenant_id: "7" }),
 }));
 
 const backend = vi.fn<typeof fetch>();
 type RoutePost = (request: NextRequest, context: unknown) => Promise<Response>;
 
 const ROUTES: Record<string, () => Promise<{ POST: unknown }>> = {
-  "auth/password": () => import("./auth/password/route"),
-  "operator/profile/password": () =>
-    import("./operator/profile/password/route"),
-  "operator/profile/email-change": () =>
-    import("./operator/profile/email-change/route"),
-  "caterer/account/password": () => import("./caterer/account/password/route"),
-  // Hands the request to the Träger catalog proxy, whose contract switches
-  // the retry off.
-  "traeger/auth/mfa/step-up": () => import("./traeger/auth/mfa/step-up/route"),
-  "caterer/account/mfa/disable": () =>
-    import("./caterer/account/mfa/disable/route"),
+  "traeger/auth/mfa/step-up/verify": () =>
+    import("./traeger/auth/mfa/step-up/verify/route"),
   "caterer/account/mfa/confirm": () =>
     import("./caterer/account/mfa/confirm/route"),
-  "parent/me/mfa/disable": () => import("./parent/me/mfa/disable/route"),
   "parent/me/mfa/confirm": () => import("./parent/me/mfa/confirm/route"),
-  "parent/me/children/[studentId]/sick-note": () =>
-    import("./parent/me/children/[studentId]/sick-note/route"),
 };
 
 /**
@@ -85,6 +73,47 @@ const CATALOG: Record<
   "parent/me/news/[announcementId]/declaration": {
     load: () => import("./parent/[...path]/route"),
     path: ["me", "news", "1", "declaration"],
+  },
+  "operator/profile/email-change": {
+    load: () => import("./operator/[...path]/route"),
+    path: ["profile", "email-change"],
+  },
+  "operator/profile/password": {
+    load: () => import("./operator/[...path]/route"),
+    path: ["profile", "password"],
+  },
+  "caterer/account/password": {
+    load: () => import("./caterer/[...path]/route"),
+    path: ["account", "password"],
+  },
+  "caterer/account/mfa/disable": {
+    load: () => import("./caterer/[...path]/route"),
+    path: ["account", "mfa", "disable"],
+  },
+  "caterer/account/mfa/start": {
+    load: () => import("./caterer/[...path]/route"),
+    path: ["account", "mfa", "start"],
+  },
+  "parent/me/mfa/disable": {
+    load: () => import("./parent/[...path]/route"),
+    path: ["me", "mfa", "disable"],
+  },
+  "parent/me/mfa/start": {
+    load: () => import("./parent/[...path]/route"),
+    path: ["me", "mfa", "start"],
+  },
+  "parent/me/children/[studentId]/sick-note": {
+    load: () => import("./parent/[...path]/route"),
+    path: ["me", "children", "1", "sick-note"],
+  },
+  // The hand-offs below `auth`, which Next would give Auth.js otherwise.
+  "auth/password": {
+    load: () => import("./auth/password/[[...path]]/route"),
+    path: [],
+  },
+  "traeger/auth/mfa/step-up": {
+    load: () => import("./traeger/auth/mfa/[...path]/route"),
+    path: ["step-up"],
   },
 };
 
@@ -136,9 +165,9 @@ beforeEach(() => {
 });
 
 const password = {
-  currentPassword: SECRET,
-  newPassword: "New-Secret-2!",
-  confirmPassword: "New-Secret-2!",
+  current_password: SECRET,
+  new_password: "New-Secret-2!",
+  confirm_password: "New-Secret-2!",
 };
 
 describe("routes that carry the current password or a code", () => {
@@ -159,15 +188,20 @@ describe("routes that carry the current password or a code", () => {
     [
       "caterer/account/mfa/disable",
       "caterer.localhost:3000",
-      { currentPassword: SECRET },
+      { current_password: SECRET },
     ],
     ["caterer/account/mfa/confirm", "caterer.localhost:3000", { code: SECRET }],
     [
       "parent/me/mfa/disable",
       "parents.localhost:3000",
-      { currentPassword: SECRET },
+      { current_password: SECRET },
     ],
     ["parent/me/mfa/confirm", "parents.localhost:3000", { code: SECRET }],
+    [
+      "traeger/auth/mfa/step-up/verify",
+      "traeger.localhost:3000",
+      { code: SECRET },
+    ],
   ])("%s sends it once after a 401", async (route, host, body) => {
     const response = await post(route, host, body);
 
@@ -181,6 +215,16 @@ describe("routes that carry the current password or a code", () => {
       "traeger.localhost:3000",
       {},
     );
+
+    expect(response.status).toBe(401);
+    expect(backend).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    ["caterer/account/mfa/start", "caterer.localhost:3000"],
+    ["parent/me/mfa/start", "parents.localhost:3000"],
+  ])("%s mails once after a 401", async (route, host) => {
+    const response = await post(route, host, {});
 
     expect(response.status).toBe(401);
     expect(backend).toHaveBeenCalledOnce();

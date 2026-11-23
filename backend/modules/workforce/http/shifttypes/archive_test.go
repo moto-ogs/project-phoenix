@@ -17,9 +17,9 @@ import (
 )
 
 type shiftTypeWire struct {
-	ID         int64   `json:"id"`
-	Name       string  `json:"name"`
-	ArchivedAt *string `json:"archived_at"`
+	ID         testpkg.ID `json:"id"`
+	Name       string     `json:"name"`
+	ArchivedAt *string    `json:"archived_at"`
 	Usage      *struct {
 		Shifts int `json:"shifts"`
 		Series int `json:"series"`
@@ -82,7 +82,7 @@ func TestShiftTypeRemovalArchivesUsedTypes(t *testing.T) {
 
 	withUsage := list("?with_usage=true")
 	require.Len(t, withUsage, 2)
-	require.Equal(t, used.ID, withUsage[0].ID)
+	require.Equal(t, used.ID, int64(withUsage[0].ID))
 	require.NotNil(t, withUsage[0].Usage)
 	assert.Equal(t, 1, withUsage[0].Usage.Shifts)
 	require.NotNil(t, withUsage[1].Usage)
@@ -99,6 +99,37 @@ func TestShiftTypeRemovalArchivesUsedTypes(t *testing.T) {
 	assert.Empty(t, list(""), "the choice hides the archived type and the deleted one is gone")
 	all := list("?include_archived=true")
 	require.Len(t, all, 1)
-	assert.Equal(t, used.ID, all[0].ID)
+	assert.Equal(t, used.ID, int64(all[0].ID))
 	assert.NotNil(t, all[0].ArchivedAt)
+}
+
+// The Dienstplan renames a shift type through the update route, which the
+// staff portal reaches through its catalog proxy since #7563; the answer is
+// the stored type.
+func TestShiftTypeUpdateAnswersTheStoredType(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	types, references, _, err := api.NewShiftTypeTestModule(testpkg.NewDatabase(t, db))
+	require.NoError(t, err)
+	router := testpkg.MountedQueryBudgetRouter("/api/shift-types", api.NewShiftTypesRouterForBudgetTest(types, references))
+	created, err := types.CreateShiftType(testpkg.Ctx(t), workforce.ShiftTypeInput{Name: "Frühdienst", Color: "#83CD2D"})
+	require.NoError(t, err)
+
+	body := map[string]any{"name": "Spätdienst", "color": "#5080D8", "description": "ab 14 Uhr"}
+	request := testutil.NewAuthenticatedRequest(t, http.MethodPut, "/"+strconv.FormatInt(created.ID, 10), body, testutil.WithJWTBearer(managerToken(t, 0)))
+	response := testutil.ExecuteRequestForTest(t, router, request)
+	require.Equal(t, http.StatusOK, response.Code, response.Body.String())
+	var envelope struct {
+		Data struct {
+			ID       testpkg.ID `json:"id"`
+			Name     string     `json:"name"`
+			Color    string     `json:"color"`
+			IsActive bool       `json:"is_active"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(response.Body.Bytes(), &envelope))
+	assert.Equal(t, created.ID, int64(envelope.Data.ID))
+	assert.Equal(t, "Spätdienst", envelope.Data.Name)
+	assert.Equal(t, "#5080D8", envelope.Data.Color)
+	assert.True(t, envelope.Data.IsActive, "an update without is_active keeps the type active")
 }

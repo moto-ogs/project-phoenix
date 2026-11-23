@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/api/common"
@@ -162,7 +163,7 @@ func (rs *StaffAdminResource) buildTemplateScheduleResponse(ctx context.Context,
 	return &ScheduleResponse{
 		Mode: "template",
 		Model: &ScheduleModelInfo{
-			ID:                 model.ID,
+			ID:                 ident.ID(model.ID),
 			Name:               model.Name,
 			RotationLength:     model.RotationLength,
 			RotationAnchorDate: model.RotationAnchorDate,

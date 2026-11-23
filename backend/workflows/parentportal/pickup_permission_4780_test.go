@@ -21,6 +21,7 @@ import (
 	presenceCompose "github.com/moto-ogs/project-phoenix/modules/studentpresence/compose"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
@@ -194,7 +195,7 @@ func approveCareRequest(t *testing.T, f pickupPermissionFixture, tenantID, reque
 	staffCtx, staffID := staffDecisionContext(t, f.db, tenantID)
 	token := ""
 	err := testpkg.WithTenantTx(t, staffCtx, f.db, tenantID, func(txCtx context.Context, _ bun.Tx) error {
-		_, decideErr := f.requests.Decide(txCtx, carerequests.DecideInput{
+		_, decideErr := f.requests.Decide(txCtx, carerequests.DecideInput{ExpectedVersion: testpkg.CareRequestVersion(t, requestID),
 			RequestID: requestID, Approve: true, ReviewedBy: staffID, ExpectedImpactToken: &token,
 		})
 		return decideErr
@@ -325,7 +326,7 @@ func TestPickupPermissionCorrectionRestoresThePreviousPermission(t *testing.T) {
 	})
 	require.True(t, ok)
 	require.NoError(t, testpkg.WithTenantTx(t, staffCtx, f.db, chain.TenantID, func(txCtx context.Context, _ bun.Tx) error {
-		return corrector.Correct(txCtx, created.ID, false, careplan.ParentRequestVersion(current.UpdatedAt), "Doch nicht", staffID)
+		return corrector.Correct(txCtx, created.ID, false, readstate.Of(current.UpdatedAt), "Doch nicht", staffID)
 	}))
 
 	canPickup, weekdays := pickupWeekdays(t, f.db, chain.StudentID, contactID)
@@ -348,7 +349,8 @@ func TestPickupChangeEditPreservesAnOmittedSignedCollector(t *testing.T) {
 	require.NotNil(t, originalSignature)
 
 	edited, err := f.svc.EditPickupChange(ctx, chain.AccountID, chain.StudentID, created.ID, parentService.PickupChangeEdit{
-		Date: pickupPermissionDay, Reason: "Abholung bleibt vereinbart", PreservePickupDeclaration: true,
+		ExpectedVersion: testpkg.CareRequestVersion(t, created.ID),
+		Date:            pickupPermissionDay, Reason: "Abholung bleibt vereinbart", PreservePickupDeclaration: true,
 	})
 	require.NoError(t, err)
 	terms := carerequests.StoredPickupTerms(edited.Payload)
@@ -372,7 +374,8 @@ func TestPickupChangeEditPreservesAnOmittedSignedWalkingHomeAlone(t *testing.T) 
 	require.NotNil(t, originalSignature)
 
 	edited, err := f.svc.EditPickupChange(ctx, chain.AccountID, chain.StudentID, created.ID, parentService.PickupChangeEdit{
-		Date: pickupPermissionDay, DepartureMode: "alone", Reason: "Geht weiter allein", PreservePickupDeclaration: true,
+		ExpectedVersion: testpkg.CareRequestVersion(t, created.ID),
+		Date:            pickupPermissionDay, DepartureMode: "alone", Reason: "Geht weiter allein", PreservePickupDeclaration: true,
 	})
 	require.NoError(t, err)
 	terms := carerequests.StoredPickupTerms(edited.Payload)
@@ -403,7 +406,7 @@ func TestPickupPermissionCorrectionKeepsAnApprovedPermission(t *testing.T) {
 	})
 	require.True(t, ok)
 	require.NoError(t, testpkg.WithTenantTx(t, staffCtx, f.db, chain.TenantID, func(txCtx context.Context, _ bun.Tx) error {
-		return corrector.Correct(txCtx, created.ID, true, careplan.ParentRequestVersion(rows[0].UpdatedAt), "Bleibt bestätigt", staffID)
+		return corrector.Correct(txCtx, created.ID, true, readstate.Of(rows[0].UpdatedAt), "Bleibt bestätigt", staffID)
 	}))
 
 	canPickup, weekdays := pickupWeekdays(t, f.db, chain.StudentID, contactID)
@@ -444,7 +447,7 @@ func TestPickupPermissionCorrectionKeepsALaterStaffChange(t *testing.T) {
 	})
 	require.True(t, ok)
 	err = testpkg.WithTenantTx(t, staffCtx, f.db, chain.TenantID, func(txCtx context.Context, _ bun.Tx) error {
-		return corrector.Correct(txCtx, created.ID, false, careplan.ParentRequestVersion(rows[0].UpdatedAt), "Doch nicht", staffID)
+		return corrector.Correct(txCtx, created.ID, false, readstate.Of(rows[0].UpdatedAt), "Doch nicht", staffID)
 	})
 	require.ErrorIs(t, err, parentrequests.ErrCorrectionUnsupported)
 	canPickup, weekdays := pickupWeekdays(t, f.db, chain.StudentID, contactID)
@@ -468,7 +471,7 @@ func TestPickupPermissionApprovalRefusesAContactNowManagedByTheSchool(t *testing
 
 	staffCtx, staffID := staffDecisionContext(t, f.db, chain.TenantID)
 	err = testpkg.WithTenantTx(t, staffCtx, f.db, chain.TenantID, func(txCtx context.Context, _ bun.Tx) error {
-		_, decideErr := f.requests.Decide(txCtx, carerequests.DecideInput{RequestID: created.ID, Approve: true, ReviewedBy: staffID})
+		_, decideErr := f.requests.Decide(txCtx, carerequests.DecideInput{ExpectedVersion: testpkg.CareRequestVersion(t, created.ID), RequestID: created.ID, Approve: true, ReviewedBy: staffID})
 		return decideErr
 	})
 	require.ErrorIs(t, err, carerequests.ErrPickupPermissionContactGone)
@@ -500,7 +503,7 @@ func TestPickupPermissionApprovalKeepsALaterStaffChange(t *testing.T) {
 
 	staffCtx, staffID := staffDecisionContext(t, f.db, chain.TenantID)
 	err = testpkg.WithTenantTx(t, staffCtx, f.db, chain.TenantID, func(txCtx context.Context, _ bun.Tx) error {
-		_, decideErr := f.requests.Decide(txCtx, carerequests.DecideInput{RequestID: created.ID, Approve: true, ReviewedBy: staffID})
+		_, decideErr := f.requests.Decide(txCtx, carerequests.DecideInput{ExpectedVersion: testpkg.CareRequestVersion(t, created.ID), RequestID: created.ID, Approve: true, ReviewedBy: staffID})
 		return decideErr
 	})
 	require.ErrorIs(t, err, carerequests.ErrPickupChangeConflict)
@@ -747,7 +750,7 @@ func TestDayPickupApprovalRefusesAContactNowManagedByTheSchool(t *testing.T) {
 
 	staffCtx, staffID := staffDecisionContext(t, f.db, chain.TenantID)
 	err = testpkg.WithTenantTx(t, staffCtx, f.db, chain.TenantID, func(txCtx context.Context, _ bun.Tx) error {
-		_, decideErr := f.requests.Decide(txCtx, carerequests.DecideInput{RequestID: created.ID, Approve: true, ReviewedBy: staffID})
+		_, decideErr := f.requests.Decide(txCtx, carerequests.DecideInput{ExpectedVersion: testpkg.CareRequestVersion(t, created.ID), RequestID: created.ID, Approve: true, ReviewedBy: staffID})
 		return decideErr
 	})
 	require.ErrorIs(t, err, carerequests.ErrPickupPermissionContactGone)

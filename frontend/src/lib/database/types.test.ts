@@ -12,6 +12,7 @@ import { childrenConcept } from "~/lib/concepts/children";
 
 describe("defineEntityConfig", () => {
   it("returns the config as-is with proper typing", () => {
+    const list = () => Promise.resolve([]);
     const config = defineEntityConfig({
       name: {
         singular: "Test",
@@ -22,9 +23,7 @@ describe("defineEntityConfig", () => {
         createModalTitle: "Test erstellen",
         editModalTitle: "Test bearbeiten",
       },
-      api: {
-        basePath: "/api/test",
-      },
+      api: { list },
       form: {
         sections: [],
       },
@@ -43,7 +42,7 @@ describe("defineEntityConfig", () => {
 
     expect(config.name.singular).toBe("Test");
     expect(config.name.plural).toBe("Tests");
-    expect(config.api.basePath).toBe("/api/test");
+    expect(config.api.list).toBe(list);
   });
 });
 

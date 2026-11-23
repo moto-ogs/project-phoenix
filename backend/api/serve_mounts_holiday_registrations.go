@@ -22,6 +22,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	schoolCalendarHTTP "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/http"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/traegercalendar"
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	configModels "github.com/moto-ogs/project-phoenix/modules/settings/records"
@@ -52,7 +53,7 @@ func mountTraegerRoutes(root, tenant chi.Router, limiters authRateLimiters, iden
 	delivery deliveryRuntime.Capability, closureMail owners.HolidayClosureMail, outcomes deliveryRuntime.EmailOutcomes, keys TurnstileKeys,
 	healthData enrollmentOwner.HolidayHealthCipher, bankData parentbilling.BankDataCipher, statistics studentpresence.StatisticsReports, changes careplan.OfferingChangeCapability, contractHolidays carecontract.SchoolHolidays,
 	holidayCalendar enrollmentOwner.HolidaySchoolCalendar, closureHolidays owners.HolidayClosureHolidays, calendarSchools traegercalendar.Schools, schoolPhases *enrollmentCompose.Phases, schoolCatalog careplan.CareOfferingCatalogCapability, lockRecurrence func(context.Context) error,
-	today func() calendar.Date, now func() time.Time, parentsURL string, logger *slog.Logger) error {
+	staffing schoolCalendarHTTP.StaffingChangeQueue, contractEnrollments enrollmentOwner.ContractEnrollments, today func() calendar.Date, now func() time.Time, parentsURL string, logger *slog.Logger) error {
 	if _, ok := identity.(identityaccess.TraegerMemberProfiles); !ok {
 		return errors.New("traeger portal: identity does not serve the names of the Träger-Büro")
 	}
@@ -69,11 +70,19 @@ func mountTraegerRoutes(root, tenant chi.Router, limiters authRateLimiters, iden
 		publicLink = root.With(limit)
 	}
 	publicLink.Mount(holidayRegistrationPath, NewHolidayRegistrationHTTP(organizations, delivery, keys, "", healthData, holidayCalendar, settings, accountLinks, viper.GetString("app_env"), logger, now).Router())
-	mountTraegerClosingDayRoutes(root, calendarSchools, organizations, closureMail, holidayCalendar, closureHolidays, now)
+	mountTraegerClosingDayRoutes(root, calendarSchools, organizations, closureMail, holidayCalendar, closureHolidays, staffing, now)
 	mountHolidayClosureNotificationRoutes(root, tenant, organizations, closureMail, holidayCalendar, closureHolidays, logger, now)
 	mountParentBillingRoutes(root, publicLink, organizations, settings, schoolSettings, attendanceMarks, delivery, outcomes, healthData, bankData, holidayCalendar, today, now, logger)
-	mountCareContractRoutes(root, organizations, settings, schoolSettings, delivery, outcomes, audit.Log,
+	signingLink := root
+	if limit := careContractSigningRateLimit(limiters.enabled(), demoLoopbackExempt(), limiters.newLimiter); limit != nil {
+		signingLink = root.With(limit)
+	}
+	mountCareContractRoutes(root, signingLink, organizations, settings, schoolSettings, delivery, outcomes, audit.Log,
 		owners.NewCareContractNoticeAddressees(persons, identity), contractHolidays, parentsURL, today, now)
+	// The children of imported contracts get their enrollment (#7760).
+	if err := mountContractEnrollmentRoutes(root, organizations, contractEnrollments, audit.Log, today, now); err != nil {
+		return err
+	}
 	mountCareTimeOverrunRoutes(root, organizations, statistics, audit.Log, today)
 	// The office decides the parents' changes through Care Plan's review of
 	// the school (#5979).
@@ -291,7 +300,7 @@ func (l parentHolidayRegistrationLinks) ResolveHolidayRegistrationSchools(ctx co
 	}
 	schoolIDs := make([]int64, 0, len(link.Traeger.Schools))
 	for _, school := range link.Traeger.Schools {
-		schoolIDs = append(schoolIDs, school.ID)
+		schoolIDs = append(schoolIDs, school.ID.Int64())
 	}
 	return parentportal.HolidayRegistrationScope{
 		OrganizationID: link.OrganizationID, PeriodID: link.PeriodID, SchoolIDs: schoolIDs,

@@ -95,6 +95,10 @@ type StaffShift struct {
 	// materialized for; it does not follow Date when the row is moved.
 	// Empty for standalone rows.
 	SeriesOccurrenceDate string
+	// SeriesStartTime and SeriesEndTime are the times planned by the linked
+	// series. They are empty for standalone shifts and reads without a series.
+	SeriesStartTime string
+	SeriesEndTime   string
 	// Cancelled marks a shift that does not take place; ChangeReason is the
 	// optional why and OriginShiftID marks a replacement covering another
 	// cancelled shift's gap.
@@ -128,23 +132,26 @@ type StaffShiftOrder struct {
 }
 
 // StaffShiftFilter narrows a shift listing. Every set field is combined with
-// AND; From/To select From <= date <= To. A non-nil empty StaffIDs, Dates or
+// AND; From/To select From <= date <= To. IncludeSeriesOccurrenceDate also
+// selects a row materialized for that recurrence slot, even if it was moved
+// outside the date selection. A non-nil empty StaffIDs, Dates or
 // OriginShiftIDs matches nothing.
 type StaffShiftFilter struct {
-	StaffID        int64
-	StaffIDs       []int64
-	From           string
-	To             string
-	Dates          []string
-	SeriesID       int64
-	OriginShiftID  int64
-	OriginShiftIDs []int64
-	SickAbsenceID  *int64
-	Cancelled      *bool
-	Detached       *bool
-	Order          []StaffShiftOrder
-	Limit          int
-	Offset         int
+	StaffID                     int64
+	StaffIDs                    []int64
+	From                        string
+	To                          string
+	Dates                       []string
+	IncludeSeriesOccurrenceDate string
+	SeriesID                    int64
+	OriginShiftID               int64
+	OriginShiftIDs              []int64
+	SickAbsenceID               *int64
+	Cancelled                   *bool
+	Detached                    *bool
+	Order                       []StaffShiftOrder
+	Limit                       int
+	Offset                      int
 }
 
 // StaffShiftSeries is one recurring shift rule (#1889) bound to a calendar
@@ -172,19 +179,28 @@ type StaffShiftSeries struct {
 	IncludeSchoolBreaks bool
 	CreatedBy           int64
 	UpdatedBy           *int64
-	CreatedAt           time.Time
-	UpdatedAt           time.Time
+	// PlannedByTraeger marks a series the Träger-Büro planned in a school
+	// session opened through the Träger-Portal (#7818); CreatedBy is then 0.
+	PlannedByTraeger bool
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	// Version is the token of the stored series a read returns; a split
+	// sends it back as ExpectedVersion (ADR 0311). Empty on a written row.
+	Version string
 }
 
 // StaffShiftSeriesException is one deliberately removed occurrence of a
-// series; re-plans and splits never regenerate the date.
+// series; re-plans and splits never regenerate the date. It carries the
+// author of the occurrence: CreatedBy, or PlannedByTraeger for an
+// occurrence of a series the Träger-Büro planned (#7818).
 type StaffShiftSeriesException struct {
-	ID        int64
-	TenantID  int64
-	SeriesID  int64
-	Date      string
-	CreatedBy int64
-	CreatedAt time.Time
+	ID               int64
+	TenantID         int64
+	SeriesID         int64
+	Date             string
+	CreatedBy        int64
+	PlannedByTraeger bool
+	CreatedAt        time.Time
 }
 
 // ShiftType is a tenant-defined label and color for planned shifts

@@ -1,0 +1,43 @@
+{
+  "packages": [
+    {
+      "path": "modules/daychangesview",
+      "owner": "day-changes-view",
+      "role": "public",
+      "internal_test_role": "module-internal-test",
+      "external_test_role": "module-behavior-test"
+    },
+    {
+      "path": "modules/daychangesview/http",
+      "owner": "day-changes-view",
+      "role": "http",
+      "internal_test_role": "adapter-test",
+      "external_test_role": "adapter-test"
+    }
+  ],
+  "rules": [
+    {
+      "id": "day-changes-view.http.public",
+      "description": "ADR 0299: the route calls the projection's one public capability.",
+      "scopes": [
+        "production"
+      ],
+      "source_owner": "day-changes-view",
+      "source_role": "http",
+      "target_owner": "day-changes-view",
+      "target_role": "public"
+    },
+    {
+      "id": "day-changes-view.http.tenant-runtime.common",
+      "description": "ADR 0299: the route uses the shared HTTP request, route contract and response helpers.",
+      "scopes": [
+        "production"
+      ],
+      "source_owner": "day-changes-view",
+      "source_role": "http",
+      "target_owner": "tenant-runtime",
+      "target_role": "http",
+      "target_package": "api/common"
+    }
+  ]
+}

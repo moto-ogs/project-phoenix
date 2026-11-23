@@ -286,11 +286,11 @@ func TestGradeTransitionWorkflow_RejectsStalePreviewBeforeAnyMutation(t *testing
 	})
 
 	t.Run("a mapping edited after the preview", func(t *testing.T) {
-		_, err := workflow.UpdateDraft(ctx, scene.transitionID, gradetransition.DraftPatch{Mappings: []gradetransition.Mapping{promote("1a", "2b"), graduate("4a")}})
+		_, err := workflow.UpdateDraft(ctx, scene.transitionID, gradetransition.DraftPatch{ExpectedVersion: draftVersion(t, ctx, workflow, scene.transitionID), Mappings: []gradetransition.Mapping{promote("1a", "2b"), graduate("4a")}})
 		require.NoError(t, err)
 		_, err = workflow.Apply(ctx, scene.transitionID, preview.Fingerprint)
 		require.ErrorIs(t, err, gradetransition.ErrPreviewStale)
-		_, err = workflow.UpdateDraft(ctx, scene.transitionID, gradetransition.DraftPatch{Mappings: []gradetransition.Mapping{promote("1a", "2a"), graduate("4a")}})
+		_, err = workflow.UpdateDraft(ctx, scene.transitionID, gradetransition.DraftPatch{ExpectedVersion: draftVersion(t, ctx, workflow, scene.transitionID), Mappings: []gradetransition.Mapping{promote("1a", "2a"), graduate("4a")}})
 		require.NoError(t, err)
 		assertUntouched(t, ctx, db, scene)
 	})
@@ -340,7 +340,7 @@ func TestGradeTransitionWorkflow_AuthorizationAndTenantIsolation(t *testing.T) {
 		workflow := f.workflow(t)
 		_, err := workflow.Preview(ctx, transitionID)
 		require.ErrorIs(t, err, gradetransition.ErrUnauthorized)
-		_, err = workflow.Apply(ctx, transitionID, "")
+		_, err = workflow.Apply(ctx, transitionID, previewed(ctx, workflow, transitionID))
 		require.ErrorIs(t, err, gradetransition.ErrUnauthorized)
 		_, err = workflow.Revert(ctx, transitionID)
 		require.ErrorIs(t, err, gradetransition.ErrUnauthorized)
@@ -366,7 +366,7 @@ func TestGradeTransitionWorkflow_AuthorizationAndTenantIsolation(t *testing.T) {
 		require.ErrorIs(t, err, gradetransition.ErrTransitionNotFound)
 		_, err = workflow.Preview(ctx, foreignID)
 		require.ErrorIs(t, err, gradetransition.ErrTransitionNotFound)
-		_, err = workflow.Apply(ctx, foreignID, "")
+		_, err = workflow.Apply(ctx, foreignID, previewed(ctx, workflow, foreignID))
 		require.ErrorIs(t, err, gradetransition.ErrTransitionNotFound)
 		_, err = workflow.History(ctx, foreignID)
 		require.ErrorIs(t, err, gradetransition.ErrTransitionNotFound)
@@ -439,7 +439,7 @@ func TestGradeTransitionWorkflow_LockOrderSerializesConcurrentWriters(t *testing
 		<-held
 		result := make(chan error, 1)
 		go func() {
-			_, err := workflow.Apply(ctx, scene.transitionID, "")
+			_, err := workflow.Apply(ctx, scene.transitionID, previewed(ctx, workflow, scene.transitionID))
 			result <- err
 		}()
 		awaitBlockedThenDone(t, result, release)
@@ -453,8 +453,9 @@ func TestGradeTransitionWorkflow_LockOrderSerializesConcurrentWriters(t *testing
 		})
 		<-held
 		result := make(chan error, 1)
+		version := draftVersion(t, ctx, workflow, draftID)
 		go func() {
-			_, err := workflow.UpdateDraft(ctx, draftID, gradetransition.DraftPatch{Mappings: []gradetransition.Mapping{promote("2a", "3b")}})
+			_, err := workflow.UpdateDraft(ctx, draftID, gradetransition.DraftPatch{ExpectedVersion: version, Mappings: []gradetransition.Mapping{promote("2a", "3b")}})
 			result <- err
 		}()
 		awaitBlockedThenDone(t, result, release)
@@ -501,7 +502,7 @@ func TestGradeTransitionWorkflow_IdempotentRetryAndHistoryRetention(t *testing.T
 	assertApplied(t, ctx, db, scene)
 
 	// A draft edit or deletion of the applied transition is refused the same way.
-	_, err = workflow.UpdateDraft(ctx, scene.transitionID, gradetransition.DraftPatch{Notes: testpkg.StrPtr("late edit")})
+	_, err = workflow.UpdateDraft(ctx, scene.transitionID, gradetransition.DraftPatch{ExpectedVersion: draftVersion(t, ctx, workflow, scene.transitionID), Notes: testpkg.StrPtr("late edit")})
 	require.ErrorIs(t, err, gradetransition.ErrTransitionNotDraft)
 	require.ErrorIs(t, workflow.DeleteDraft(ctx, scene.transitionID), gradetransition.ErrTransitionNotDraft)
 
@@ -546,7 +547,7 @@ func TestGradeTransitionWorkflow_IdempotentRetryAndHistoryRetention(t *testing.T
 	_, err = workflow.Revert(ctx, scene.transitionID)
 	require.ErrorIs(t, err, gradetransition.ErrTransitionNotApplied)
 	assert.ErrorContains(t, err, "transition has already been reverted")
-	_, err = workflow.Apply(ctx, scene.transitionID, "")
+	_, err = workflow.Apply(ctx, scene.transitionID, previewed(ctx, workflow, scene.transitionID))
 	require.ErrorIs(t, err, gradetransition.ErrTransitionNotDraft)
 	assert.ErrorContains(t, err, "transition has been reverted")
 	history, err = workflow.History(ctx, scene.transitionID)

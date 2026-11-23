@@ -3,23 +3,8 @@
 // `timetableService.getWeek`, weil dessen Abbildung die Planner-Typen und
 // -Helfer mitzieht.
 
-import { apiErrorFromBody, transportFetch } from "~/lib/api-error";
+import { bffJson } from "~/lib/bff-fetch";
 import type { RoomPlanBlock } from "~/lib/room-plan";
-
-interface BackendRoomPlanInstance {
-  readonly id: number | string;
-  readonly date: string;
-  readonly start_time: string;
-  readonly end_time: string;
-  readonly title: string;
-  readonly status: string;
-  readonly group_name?: string;
-  readonly cancel_reason?: string | null;
-}
-
-interface RoomPlanEnvelope {
-  readonly data?: { readonly instances?: BackendRoomPlanInstance[] };
-}
 
 /** Die Blöcke des Raums von `from` bis `to` (beide inklusive). */
 export async function fetchRoomPlanBlocks(
@@ -27,22 +12,12 @@ export async function fetchRoomPlanBlocks(
   from: string,
   to: string,
 ): Promise<RoomPlanBlock[]> {
-  const params = new URLSearchParams({ from, to, room_id: roomId });
-  const response = await transportFetch(`/api/timetable/instances?${params}`, {
-    method: "GET",
-    headers: { Accept: "application/json" },
-    credentials: "include",
+  const week = await bffJson("tenant", "GET /api/timetable/instances/", {
+    query: { from, to, room_id: roomId },
+    errorMessage: "Der Raumplan konnte nicht geladen werden.",
   });
-  if (!response.ok) {
-    throw apiErrorFromBody(
-      `Anfrage fehlgeschlagen (HTTP ${response.status})`,
-      response.status,
-      await response.json().catch(() => undefined),
-    );
-  }
-  const body = (await response.json()) as RoomPlanEnvelope;
-  return (body.data?.instances ?? []).map((raw) => ({
-    id: String(raw.id),
+  return (week.instances ?? []).map((raw) => ({
+    id: raw.id,
     date: raw.date,
     startTime: raw.start_time,
     endTime: raw.end_time,

@@ -17,10 +17,7 @@ import { DocumentTemplatePreviewBody } from "~/components/traeger/document-templ
 import { DocumentTemplateVersionsCard } from "~/components/traeger/document-template-versions-card";
 import { TraegerLetterheadPreview } from "~/components/traeger/traeger-letterhead-preview";
 import { useTraegerSettingsSchema } from "~/components/traeger/use-traeger-resources";
-import {
-  useFreshTraegerResource,
-  useTraegerResource,
-} from "~/components/traeger/use-traeger-resource";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { EditActions } from "~/components/ui/edit-actions";
@@ -36,19 +33,23 @@ import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { hasPermission } from "~/lib/auth-utils";
 import { formatDate } from "~/lib/date-helpers";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import type { ResolvedSetting } from "~/lib/settings-api";
 import { useInvalidateFamily } from "~/lib/swr";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import { traegerKeys } from "~/lib/swr/traeger-keys";
 import { fetchTraegerMasterData, traegerLogoSrc } from "~/lib/traeger-api";
 import { TRAEGER_BRANDING_TAB } from "~/lib/traeger-branding";
 import {
   DOCUMENT_TEMPLATE_KIND_LABELS,
   DOCUMENT_TEMPLATE_KIND_USE,
+  type DocumentTemplateDetail,
   type DocumentTemplateKind,
   type DocumentTemplatePlaceholder,
   type DocumentTemplatePreview,
   type DocumentTemplateText,
+  type DocumentTemplateVersion,
   fetchDocumentTemplate,
   hasInvoiceTable,
   hasLegalRemedy,
@@ -92,8 +93,6 @@ function TemplateEditorPage({
 }: Readonly<{ kind: DocumentTemplateKind }>) {
   const { data: session } = useSession();
   const canEdit = hasPermission(session ?? null, SETTINGS_RIGHT);
-  // Edits of the saved text; `null` follows the saved text.
-  const [edited, setEdited] = useState<DocumentTemplateText | null>(null);
   // The preview of a draft; `null` shows the preview of the saved text.
   const [draftPreview, setDraftPreview] = useState<{
     readonly text: DocumentTemplateText;
@@ -108,8 +107,10 @@ function TemplateEditorPage({
     isLoading: schemaLoading,
     loadError: schemaError,
   } = useTraegerSettingsSchema();
-  // The version a save builds on: read anew each time the editor opens.
-  const template = useFreshTraegerResource(
+  // Templates hold no personal data and no read is logged: the shared
+  // cache shows a revisit at once. A save sends the version its draft
+  // started from; the backend refuses one saved since (ADR 0311).
+  const template = useTraegerResource(
     traegerKeys.documentTemplate(kind),
     () => fetchDocumentTemplate(kind),
     "die Vorlage",
@@ -142,23 +143,70 @@ function TemplateEditorPage({
   const formErrors = useApiFormError(formRef);
   const { success } = useToast();
 
-  // Liest die Vorlage und weist bei einem Fehler ab. Das Nachladen nach dem
-  // Speichern nutzt sie direkt, damit ein Fehler dabei den gespeicherten
-  // Stand stehen lässt (#6652).
-  const { mutate: mutateTemplate } = template;
-  const readTemplate = useCallback(async () => {
-    await mutateTemplate(fetchDocumentTemplate(kind), { revalidate: false });
-  }, [kind, mutateTemplate]);
+  // Reads the template again and rejects when that fails.
+  const { mutate: mutateTemplate, reloadOrThrow } = template;
   // Nachladen nach dem Speichern: ein Fehler dabei ist ein Ladefehler über
-  // der Vorlage, kein gescheitertes Speichern (#6652).
+  // der Vorlage, der sagt, dass die Änderung gespeichert ist, kein
+  // gescheitertes Speichern (#6652).
   const afterSave = useRefreshAfterWrite(
     "die Anzeige der Vorlage",
-    readTemplate,
+    reloadOrThrow,
   );
-
+  // The read after a save goes through `afterSave`; every other read of
+  // the editor (after a refusal) rejects for the error path.
+  const saveRead = useRef(false);
+  const saveReadFailed = useRef(false);
+  const readTemplate = useCallback(async () => {
+    if (!saveRead.current) return reloadOrThrow();
+    saveRead.current = false;
+    saveReadFailed.current = !(await afterSave.refresh());
+    if (saveReadFailed.current) {
+      throw new Error("the template could not be read after the save");
+    }
+    // The stored template arrives through `template.data`.
+    return undefined;
+  }, [afterSave, reloadOrThrow]);
+  // The editor's text rests on the version it started from (ADR 0311): a
+  // newer read refills it only while untouched; after a refused save the
+  // draft stays only while the stored text is the one it started from,
+  // otherwise the colleague's text shows, so a second „Speichern“ cannot
+  // replace it unseen. Nothing is sent until a read of the stored template
+  // succeeded, also after a save whose read failed.
+  const editor = useDraftOn<
+    DocumentTemplateDetail,
+    DocumentTemplateText,
+    string,
+    DocumentTemplateVersion
+  >(
+    {
+      opening: kind,
+      data: template.data ?? undefined,
+      reload: readTemplate,
+      write: (stored) => mutateTemplate(stored, { revalidate: false }),
+    },
+    {
+      token: (stored) => stored.version,
+      toDraft: (stored) => templateTextOf(stored.current),
+      same: sameTemplateText,
+      rebase: (draft, from, to) =>
+        sameTemplateText(
+          templateTextOf(from.current),
+          templateTextOf(to.current),
+        )
+          ? draft
+          : templateTextOf(to.current),
+    },
+  );
+  // A failed read of the stored template stays visible with its retry,
+  // also after the preview, a loaded text or Abbrechen cleared the form's
+  // error (ADR 0311, rule 6).
+  const form = useReadDraftForm(editor, formErrors, "die Vorlage");
   const error =
     template.error ?? master.error ?? savedPreview.error ?? schemaError;
-  const draft = edited ?? current;
+  const draft = editor.draft ?? current;
+  // Changes the draft.
+  const edit = (next: (base: DocumentTemplateText) => DocumentTemplateText) =>
+    editor.setDraft(next);
   const previewed = draftPreview?.text ?? current;
   const preview = draftPreview?.preview ?? savedPreview.data;
   const data =
@@ -188,41 +236,47 @@ function TemplateEditorPage({
   };
 
   const save = async () => {
-    if (!draft || saving) return;
+    if (!draft || saving || !editor.canSubmit) return;
     previewRequest.current++;
     setPreviewing(false);
     formErrors.clear();
     setSaving(true);
-    const submitted = draft;
-    let saved: Awaited<ReturnType<typeof saveDocumentTemplate>>;
-    try {
-      saved = await saveDocumentTemplate(kind, submitted);
-    } catch (err) {
+    saveReadFailed.current = false;
+    const result = await editor.submit(async (version, submitted) => {
+      const saved = await saveDocumentTemplate(kind, submitted, version);
+      saveRead.current = true;
+      return saved;
+    });
+    if (!result.ok) {
       logger.error("traeger_document_template_save_failed", {
-        error: err instanceof Error ? err.message : String(err),
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
       });
-      void formErrors.show(err, { object: "die Vorlage" });
+      // Someone saved a version since: `reload` shows it (number, date,
+      // text, versions) instead of the draft over it.
+      void formErrors.show(result.error, {
+        object: "die Vorlage",
+        reload: result.reload,
+      });
+      if (result.refused) setDraftPreview(null);
       setSaving(false);
       return;
     }
-    setEdited((before) =>
-      before && sameTemplateText(before, submitted)
-        ? templateTextOf(saved)
-        : before,
-    );
     void invalidateFamily(traegerKeys.documentTemplatesFamily);
     success(
-      `Die Vorlage ist gespeichert. Neue Schreiben nutzen Version ${saved.version}.`,
+      `Die Vorlage ist gespeichert. Neue Schreiben nutzen Version ${result.saved.version}.`,
     );
-    // Das Formular bleibt gesperrt, bis der neue Stand geladen ist.
-    const reloaded = await afterSave.refresh();
-    // Scheitert das Nachladen, gilt trotzdem die gespeicherte Version;
-    // sonst böte die Seite ein zweites Speichern an (#6652).
-    if (!reloaded) {
+    // The read after the save failed: the page shows the saved version and
+    // its text, and saving waits for a successful read of its token.
+    if (saveReadFailed.current) {
+      const saved = result.saved;
       await mutateTemplate(
         (before) => (before ? { ...before, current: saved } : before),
         { revalidate: false },
       );
+      editor.setDraft(templateTextOf(saved));
     }
     setDraftPreview(null);
     setSaving(false);
@@ -244,11 +298,7 @@ function TemplateEditorPage({
   const set = (
     part: "subject" | "salutation" | "body" | "closing" | "legalRemedy",
     value: string,
-  ) =>
-    setEdited((before) => {
-      const base = before ?? current;
-      return base ? { ...base, [part]: value } : base;
-    });
+  ) => edit((base) => ({ ...base, [part]: value }));
   const rememberCaret = (field: HTMLTextAreaElement) => {
     caret.current = { start: field.selectionStart, end: field.selectionEnd };
   };
@@ -337,7 +387,7 @@ function TemplateEditorPage({
                       tooltip="Setzt den Standardtext ins Formular, gespeichert wird erst mit „Speichern“."
                       disabled={saving}
                       onClick={() => {
-                        setEdited(templateTextOf(standard));
+                        edit(() => templateTextOf(standard));
                         formErrors.clear();
                       }}
                     >
@@ -356,6 +406,11 @@ function TemplateEditorPage({
                   }}
                 >
                   <FormErrorAlert message={formErrors.error} />
+                  {/* A failed read after the save stands above as
+                      `afterSave`, saying the text is saved. */}
+                  {afterSave.error ? null : (
+                    <LoadErrorAlert error={form.loadError} />
+                  )}
                   <Input
                     controlSize="compact"
                     id="template-subject"
@@ -436,12 +491,9 @@ function TemplateEditorPage({
                     <DocumentTemplateInvoiceFields
                       layout={invoiceLayoutOf(draft)}
                       onChange={(layout) =>
-                        setEdited((before) => {
-                          const base = before ?? current;
-                          return base
-                            ? templateTextOf({ ...base, invoice: layout })
-                            : base;
-                        })
+                        edit((base) =>
+                          templateTextOf({ ...base, invoice: layout }),
+                        )
                       }
                       disabled={!canEdit || saving}
                       error={formErrors.fieldError("invoice")}
@@ -471,11 +523,17 @@ function TemplateEditorPage({
                     {canEdit && changed ? (
                       <EditActions
                         onCancel={() => {
-                          setEdited(null);
+                          editor.discard();
                           formErrors.clear();
                         }}
                         saving={saving}
                         saveType="submit"
+                        disabled={!editor.canSubmit}
+                        disabledReason={
+                          editor.status === "loadFailed"
+                            ? "Lade zuerst die gespeicherte Vorlage neu."
+                            : undefined
+                        }
                       />
                     ) : null}
                   </div>
@@ -533,7 +591,7 @@ function TemplateEditorPage({
                 canEdit={canEdit}
                 disabled={saving}
                 onLoad={(version) => {
-                  setEdited(templateTextOf(version));
+                  edit(() => templateTextOf(version));
                   formErrors.clear();
                   formRef.current?.scrollIntoView?.({
                     behavior: "smooth",

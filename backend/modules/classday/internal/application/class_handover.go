@@ -55,6 +55,9 @@ type classHandover struct {
 	announcer ClassHandoverAnnouncer
 	rosters   DayRosters
 	today     func() calendar.Date
+	// dayRows projects the roster onto the day like the class view does:
+	// who stays in the OGS. NewClassDay binds it to the day report.
+	dayRows func(ctx context.Context, roster *DayRoster, date calendar.Date, weekday string) ([]classday.DayRow, error)
 }
 
 func newClassHandover(deps ClassDayDependencies) classHandover {
@@ -80,7 +83,8 @@ func (h classHandover) mayHandOver(ctx context.Context) (bool, error) {
 
 // ChangeClassHandover hands the class over or takes today's handover back
 // after the write scope, date and school-day checks; a handover also checks
-// every child against the roster of the day.
+// every child against the roster of the day and its version against the
+// dialog's children (dialogChildren).
 func (h classHandover) ChangeClassHandover(ctx context.Context, in classday.ClassHandoverChange) error {
 	if h.store == nil || h.scope == nil || h.rosters == nil {
 		return classday.ErrClassHandoverNotConfigured
@@ -88,23 +92,20 @@ func (h classHandover) ChangeClassHandover(ctx context.Context, in classday.Clas
 	if in.SchoolClass == "" || (!in.Withdraw && in.HandedOverBy <= 0) {
 		return classday.ErrClassHandoverInvalid
 	}
-	date, err := h.checkDay(ctx, in.Date)
+	date, weekday, err := h.checkDay(ctx, in.Date)
 	if err != nil {
 		return err
 	}
 	if in.Withdraw {
 		return h.withdraw(ctx, in.SchoolClass, date)
 	}
-	roster, err := h.rosters.ClassRosterDay(ctx, in.SchoolClass, date)
-	if err != nil {
-		return err
-	}
-	if err := checkHandoverChildren(roster, in.PresentStudentIDs, in.AbsentStudentIDs); err != nil {
-		return err
+	if h.dayRows == nil {
+		return classday.ErrClassHandoverNotConfigured
 	}
 	_, err = h.store.ChangeClassHandover(ctx, studentpresence.ClassHandoverChange{
 		SchoolClass: in.SchoolClass, Date: date, HandedOverBy: in.HandedOverBy,
 		PresentStudentIDs: in.PresentStudentIDs, AbsentStudentIDs: in.AbsentStudentIDs,
+		ExpectedVersion: in.ExpectedVersion, HandoverChildren: h.dialogChildren(in, date, weekday),
 	})
 	if errors.Is(err, studentpresence.ErrClassHandoverInvalid) {
 		return fmt.Errorf("%w: %w", classday.ErrClassHandoverInvalid, err)
@@ -116,30 +117,52 @@ func (h classHandover) ChangeClassHandover(ctx context.Context, in classday.Clas
 	return nil
 }
 
-// checkDay applies the write scope, today and the school day.
-func (h classHandover) checkDay(ctx context.Context, value classday.Date) (calendar.Date, error) {
+// dialogChildren names the children the handover dialog lists, from the
+// same projection as the report's rows (stays_today), after the roster check
+// of the handed-over children. Student Presence runs it in the write's
+// transaction under the class and day's lock (ADR 0311).
+func (h classHandover) dialogChildren(in classday.ClassHandoverChange, date calendar.Date, weekday string) func(context.Context) ([]int64, error) {
+	return func(ctx context.Context) ([]int64, error) {
+		roster, err := h.rosters.ClassRosterDay(ctx, in.SchoolClass, date)
+		if err != nil {
+			return nil, err
+		}
+		if err := checkHandoverChildren(roster, in.PresentStudentIDs, in.AbsentStudentIDs); err != nil {
+			return nil, err
+		}
+		rows, err := h.dayRows(ctx, roster, date, weekday)
+		if err != nil {
+			return nil, err
+		}
+		return handoverChildIDs(rows), nil
+	}
+}
+
+// checkDay applies the write scope, today and the school day; it returns
+// the date and its plan weekday key.
+func (h classHandover) checkDay(ctx context.Context, value classday.Date) (calendar.Date, string, error) {
 	may, err := h.mayHandOver(ctx)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	if !may {
-		return "", classday.ErrClassHandoverDisabled
+		return "", "", classday.ErrClassHandoverDisabled
 	}
 	date, err := parseDate(value)
 	if err != nil {
-		return "", fmt.Errorf("%w: %w", classday.ErrClassHandoverInvalid, err)
+		return "", "", fmt.Errorf("%w: %w", classday.ErrClassHandoverInvalid, err)
 	}
 	if date != h.today() {
-		return "", classday.ErrClassHandoverNotToday
+		return "", "", classday.ErrClassHandoverNotToday
 	}
 	weekday, err := classDayPlanKey(ctx, date)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	if weekday == "" {
-		return "", classday.ErrClassHandoverNoSchoolDay
+		return "", "", classday.ErrClassHandoverNoSchoolDay
 	}
-	return date, nil
+	return date, weekday, nil
 }
 
 // withdraw takes today's handover back.
@@ -160,6 +183,38 @@ func (h classHandover) announce(ctx context.Context) {
 	if h.announcer != nil {
 		h.announcer(ctx)
 	}
+}
+
+// handoverChildIDs are the children the handover dialog lists: the rows
+// with an OGS record who stay in the OGS today (stays_today). A sick,
+// excused or class-trip day, a cancelled or unbooked care day takes a child
+// out.
+func handoverChildIDs(rows []classday.DayRow) []int64 {
+	var ids []int64
+	for _, row := range rows {
+		if row.StaysToday && !row.NoCare() && row.StudentID.Int64() > 0 {
+			ids = append(ids, row.StudentID.Int64())
+		}
+	}
+	return ids
+}
+
+// handoverMorningAbsent are the dialog's children whose stored morning mark
+// is "absent": the prefill of the handover dialog and, with the stored
+// handover and the children, its version. It reads the rows after the
+// morning attendance filled them in.
+func handoverMorningAbsent(rows []classday.DayRow) []int64 {
+	var ids []int64
+	for _, row := range rows {
+		mark := row.MorningAttendance
+		if !row.StaysToday || row.NoCare() || row.StudentID.Int64() <= 0 || mark == nil {
+			continue
+		}
+		if mark.Source == classday.MorningAttendanceSourceTeacher && mark.Status == classday.MorningAttendanceAbsent {
+			ids = append(ids, row.StudentID.Int64())
+		}
+	}
+	return ids
 }
 
 // checkHandoverChildren refuses a child without an OGS record on the roster
@@ -195,6 +250,7 @@ func (h classHandover) applyClassHandover(ctx context.Context, report *classday.
 		if err != nil {
 			return err
 		}
+		report.HandoverVersion = studentpresence.ClassHandoverVersion(stored, handoverChildIDs(report.Rows), handoverMorningAbsent(report.Rows))
 		if stored != nil {
 			handover, err := h.dayHandover(ctx, stored)
 			if err != nil {
@@ -252,7 +308,7 @@ func markHandoverAbsent(report *classday.DayReport, absent []int64) {
 	}
 	for i := range report.Rows {
 		row := &report.Rows[i]
-		if !row.NoCare() && marked[row.StudentID] {
+		if !row.NoCare() && marked[row.StudentID.Int64()] {
 			row.HandoverAbsent = true
 		}
 	}

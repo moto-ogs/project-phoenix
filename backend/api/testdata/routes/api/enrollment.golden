@@ -18,6 +18,7 @@ GET /api/enrollment/admin/requests/{id}/children/{childId}/offering-adjustments
 GET /api/enrollment/admin/requests/{id}/delete-impact
 GET /api/enrollment/admin/requests/{id}/form-labels
 GET /api/enrollment/admin/requests/{id}/mails
+GET /api/enrollment/admin/requests/{id}/signature-proof
 GET /api/enrollment/admin/requests/{id}/uploads/{uploadId}
 GET /api/enrollment/admin/students/{studentId}/requests/
 GET /api/enrollment/care-offerings/
@@ -41,10 +42,10 @@ GET /api/enrollment/requests/{statusToken}/change-requests
 GET /api/enrollment/requests/{statusToken}/edit-bootstrap
 GET /api/enrollment/requests/{statusToken}/family-children
 GET /api/enrollment/requests/{statusToken}/form-labels
+GET /api/enrollment/requests/{statusToken}/signature-proof
 GET /api/enrollment/schema/
 GET /api/enrollment/schema/preview
 GET /api/enrollment/schema/versions
-GET /api/enrollment/schema/{id}
 PATCH /api/enrollment/requests/{statusToken}
 PATCH /api/enrollment/schema/{id}
 POST /api/enrollment/admin/change-requests/{id}/approve

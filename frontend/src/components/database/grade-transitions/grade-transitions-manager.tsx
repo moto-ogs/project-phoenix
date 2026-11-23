@@ -33,7 +33,11 @@ import {
   useToast,
 } from "~/contexts/ToastContext";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useInvalidateMatching, useSWRAuth } from "~/lib/swr";
+import {
+  revalidateOrThrow,
+  useInvalidateMatching,
+  useSWRAuth,
+} from "~/lib/swr";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
 import { formatDate } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
@@ -220,11 +224,11 @@ export function GradeTransitionsManager({
   ) => void;
 }) {
   const toast = useToast();
-  const {
-    data,
-    error: transitionsError,
-    mutate,
-  } = useSWRAuth(tenantAdminKeys.gradeTransitions(), listGradeTransitions);
+  const list = useSWRAuth(
+    tenantAdminKeys.gradeTransitions(),
+    listGradeTransitions,
+  );
+  const { data, error: transitionsError, mutate } = list;
   const transitions = data ?? null;
   // Ladefehler vor Ort, Fehler in offenen Dialogen im Dialog, sonst als
   // Toast (#2517). Codes steuern nur, was danach passiert; den Text liefert
@@ -591,6 +595,26 @@ export function GradeTransitionsManager({
             setEditorOpen(false);
             setEditorDraft(null);
             setPreviewFor(transition);
+          }}
+          reload={async () => {
+            // Der gespeicherte Entwurf (ADR 0311); scheitert das Lesen oder
+            // ist er kein Entwurf mehr, lehnt es ab.
+            const stored = (await revalidateOrThrow(list)).find(
+              (item) => item.id === editorDraft?.id,
+            );
+            if (!stored?.canModify) throw new Error("draft is gone");
+            setEditorDraft(stored);
+            return stored;
+          }}
+          onNoLongerDraft={(error) => {
+            // Angewendet: kein Entwurf mehr zum Bearbeiten. Die Liste zeigt
+            // den gespeicherten Stand, die Meldung sagt warum.
+            setEditorOpen(false);
+            setEditorDraft(null);
+            void refresh();
+            void showActionError(error, {
+              object: "das Speichern des Entwurfs",
+            });
           }}
         />
       )}

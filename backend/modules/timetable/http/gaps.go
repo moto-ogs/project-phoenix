@@ -17,19 +17,20 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // GapInstance is one row in the gaps response.
 type GapInstance struct {
-	InstanceID         int64  `json:"instance_id"`
-	Date               string `json:"date"`
-	Title              string `json:"title"`
-	StartTime          string `json:"start_time"`
-	EndTime            string `json:"end_time"`
-	RoomID             int64  `json:"room_id"`
-	Status             string `json:"status"`
-	AssignedStaffCount int    `json:"assigned_staff_count"`
-	AbsentStaffCount   int    `json:"absent_staff_count"`
+	InstanceID         ident.ID `json:"instance_id"`
+	Date               string   `json:"date"`
+	Title              string   `json:"title"`
+	StartTime          string   `json:"start_time"`
+	EndTime            string   `json:"end_time"`
+	RoomID             ident.ID `json:"room_id"`
+	Status             string   `json:"status"`
+	AssignedStaffCount int      `json:"assigned_staff_count"`
+	AbsentStaffCount   int      `json:"absent_staff_count"`
 	// PresentStaffCount is the non-absent count (planned people still there plus
 	// any covering substitute); PlannedStaffCount is the base-plan positions
 	// (non-substitute rows). A partial shortfall has 0 < present < planned.
@@ -110,12 +111,12 @@ func (rs *Resource) getGaps(w http.ResponseWriter, r *http.Request) {
 func mapGapInstance(u timetable.UnderstaffedInstance) GapInstance {
 	inst := u.Instance
 	return GapInstance{
-		InstanceID:         inst.ID,
+		InstanceID:         ident.ID(inst.ID),
 		Date:               inst.Date.String(),
 		Title:              inst.Title,
 		StartTime:          inst.StartTime.Format("15:04"),
 		EndTime:            inst.EndTime.Format("15:04"),
-		RoomID:             inst.RoomID,
+		RoomID:             ident.ID(inst.RoomID),
 		Status:             inst.Status,
 		AssignedStaffCount: u.AssignedStaffCount,
 		AbsentStaffCount:   u.AbsentStaffCount,

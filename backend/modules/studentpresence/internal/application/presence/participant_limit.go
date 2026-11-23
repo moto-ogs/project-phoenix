@@ -23,7 +23,7 @@ func (s *service) ensureActivityParticipantLimit(ctx context.Context, targetGrou
 	if incoming <= 0 || targetGroup == nil || targetGroup.GroupID == nil {
 		return nil
 	}
-	activity, err := s.limitedActivity(ctx, *targetGroup.GroupID)
+	activity, err := s.limitedActivity(ctx, (*targetGroup.GroupID).Int64())
 	if err != nil || activity == nil {
 		return err
 	}
@@ -31,32 +31,13 @@ func (s *service) ensureActivityParticipantLimit(ctx context.Context, targetGrou
 	if lockedOccupancy != nil {
 		currentOccupancy = *lockedOccupancy
 	} else {
-		currentOccupancy, err = s.SchoolPresence.CountOpenVisitsInGroup(ctx, targetGroup.ID)
+		currentOccupancy, err = s.SchoolPresence.CountOpenVisitsInGroup(ctx, targetGroup.ID.Int64())
 		if err != nil {
 			return &ActiveError{Op: opEnsureActivityParticipantLimit, Err: errors.Join(ErrDatabaseOperation, err)}
 		}
 	}
 
 	return participantLimitRefusal(activity, currentOccupancy, incoming)
-}
-
-// ensureSessionFitsNewActivity refuses switching a running session to another
-// activity when its open visits exceed the new activity's limit: every child
-// in the session enters that activity at once. The caller holds the session's
-// row lock.
-func (s *service) ensureSessionFitsNewActivity(ctx context.Context, existing, revised *ports.ActiveGroup) error {
-	if revised.GroupID == nil || (existing.GroupID != nil && *existing.GroupID == *revised.GroupID) {
-		return nil
-	}
-	activity, err := s.limitedActivity(ctx, *revised.GroupID)
-	if err != nil || activity == nil {
-		return err
-	}
-	incoming, err := s.SchoolPresence.CountOpenVisitsInGroup(ctx, existing.ID)
-	if err != nil {
-		return &ActiveError{Op: opEnsureActivityParticipantLimit, Err: errors.Join(ErrDatabaseOperation, err)}
-	}
-	return participantLimitRefusal(activity, 0, incoming)
 }
 
 // limitedActivity loads the activity whose limit this admission must respect.
@@ -93,7 +74,7 @@ func participantLimitRefusal(activity *ports.SessionActivity, currentOccupancy, 
 		return nil
 	}
 	return &ActivityParticipantLimitError{
-		ActivityID:       activity.ID,
+		ActivityID:       activity.ID.Int64(),
 		ActivityName:     activity.Name,
 		CurrentOccupancy: currentOccupancy,
 		MaxParticipants:  activity.MaxParticipants,

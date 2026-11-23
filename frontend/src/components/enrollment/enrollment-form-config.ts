@@ -12,8 +12,7 @@ import {
   EMPTY_SCHOOL_CLASS_CONFIG,
   type EnrollmentEditDraft,
   type MeProfileResponse,
-  type PublicCareOffering,
-  type PublicLateInvitePrefill,
+  type PublicEnrollmentBootstrap,
   type PublicPhase,
   type PublicSchoolClassConfig,
 } from "~/lib/enrollment-submission-api";
@@ -23,15 +22,17 @@ import {
   withRequiredOfferings,
   type ChildDraft,
 } from "./enrollment-child-derivation";
+import type * as sharedContract from "~/lib/contract/shared.generated";
+import type { CareOffering } from "~/lib/care-offering-api";
 
 export interface EnrollmentFormPrefetchedData {
   schema: PublicFormSchema | null;
-  offerings: PublicCareOffering[];
+  offerings: CareOffering[];
   careOfferingSelectionMode: CareOfferingSelectionMode;
   captchaConfig: PublicCaptchaConfig | null;
   legalTexts: PublicLegalTexts;
   profile?: MeProfileResponse | null;
-  lateInvite?: PublicLateInvitePrefill;
+  lateInvite?: sharedContract.PublicLateInvitePrefill;
   /** Concrete-class config (#1833); absent means disabled. */
   schoolClass?: PublicSchoolClassConfig;
   collectGradeLevel?: boolean;
@@ -44,20 +45,29 @@ export interface EnrollmentFormPrefetchedData {
   audience?: PublicPhase["audience"];
   /** Phase grade restriction (#1663): the grade select offers only these. */
   eligibleGradeLevels?: number[];
+  /**
+   * The read-state token of the form and its legal texts (ADR 0311); the
+   * submit sends it back, so a refused one means the form changed.
+   */
+  termsFingerprint?: string;
 }
 
 /** The fields every enrollment bootstrap response shares. */
-interface EnrollmentFormBootstrap {
+/** What every form bootstrap carries (public, parent, edit, manual entry). */
+type EnrollmentFormBootstrap = Pick<
+  PublicEnrollmentBootstrap,
+  | "schema"
+  | "offerings"
+  | "care_offering_selection_mode"
+  | "collect_grade_level"
+  | "care_offerings_enabled"
+  | "legal_texts"
+  | "late_invite"
+  | "terms_fingerprint"
+> & {
   phase: Pick<PublicPhase, "audience" | "eligible_grade_levels">;
-  schema: PublicFormSchema | null;
-  offerings: PublicCareOffering[];
-  care_offering_selection_mode: CareOfferingSelectionMode;
-  collect_grade_level: boolean;
-  care_offerings_enabled: boolean;
-  legal_texts: PublicLegalTexts;
   school_class?: PublicSchoolClassConfig;
-  late_invite?: PublicLateInvitePrefill;
-}
+};
 
 interface BootstrapContext {
   /** Autofill for the guardian fields; each caller decides its source. */
@@ -90,6 +100,7 @@ export function prefetchedDataFromBootstrap(
     profile,
     lateInvite: bootstrap.late_invite,
     schoolClass: bootstrap.school_class,
+    termsFingerprint: bootstrap.terms_fingerprint,
     ...(phaseRestrictions
       ? {
           audience: bootstrap.phase.audience,
@@ -102,7 +113,7 @@ export function prefetchedDataFromBootstrap(
 export interface EnrollmentFormConfig {
   /** German texts as loaded; the form localizes them per render. */
   schema: PublicFormSchema | null;
-  offerings: PublicCareOffering[];
+  offerings: CareOffering[];
   careOfferingSelectionMode: CareOfferingSelectionMode;
   collectGradeLevel: boolean;
   careOfferingsEnabled: boolean;
@@ -113,8 +124,10 @@ export interface EnrollmentFormConfig {
   /** null until loaded. */
   legalTexts: PublicLegalTexts | null;
   profile: MeProfileResponse | null;
-  lateInvite?: PublicLateInvitePrefill;
+  lateInvite?: sharedContract.PublicLateInvitePrefill;
   audience?: PublicPhase["audience"];
+  /** The token the submit sends; absent in a preview, which sends nothing. */
+  termsFingerprint?: string;
 }
 
 export function formConfig(
@@ -133,6 +146,7 @@ export function formConfig(
     profile: data?.profile ?? null,
     lateInvite: data?.lateInvite,
     audience: data?.audience,
+    termsFingerprint: data?.termsFingerprint,
   };
 }
 
@@ -141,7 +155,7 @@ export interface PreviewCareOfferings {
   schoolClass?: PublicSchoolClassConfig;
   collectGradeLevel?: boolean;
   careOfferingsEnabled?: boolean;
-  offerings: PublicCareOffering[];
+  offerings: CareOffering[];
   careOfferingSelectionMode: CareOfferingSelectionMode;
   eligibleGradeLevels: number[];
 }
@@ -171,12 +185,11 @@ export function previewFormConfig(
   };
 }
 
-export interface GuardianDraft {
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone: string;
-}
+/** The form's draft of a guardian: every field of the request, as typed. */
+export type GuardianDraft = Record<
+  keyof sharedContract.SubmitGuardianRequest,
+  string
+>;
 
 export function blankGuardian(): GuardianDraft {
   return { first_name: "", last_name: "", email: "", phone: "" };
@@ -326,8 +339,8 @@ function draftChildren(draft: EnrollmentEditDraft): ChildDraft[] {
       holiday_care_wish: child.holiday_care_wish,
       offering_ids: offeringIDs,
       offering_days: offeringDays,
-      custom: child.custom_data ?? {},
-      locked: child.locked ?? false,
+      custom: child.custom_data,
+      locked: child.locked,
       lockedPayload: child.locked
         ? {
             id: child.id,
@@ -338,9 +351,9 @@ function draftChildren(draft: EnrollmentEditDraft): ChildDraft[] {
             target_school_class: child.target_school_class,
             holiday_care_wish: child.holiday_care_wish,
             custom_data: child.custom_data,
-            offering_ids: child.offering_ids.map(Number),
+            offering_ids: child.offering_ids,
             offering_days: child.offering_days?.map((row) => ({
-              offering_id: Number(row.offering_id),
+              offering_id: row.offering_id,
               selected_days: row.selected_days,
             })),
           }

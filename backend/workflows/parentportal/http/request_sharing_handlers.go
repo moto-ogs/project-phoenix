@@ -16,6 +16,10 @@ import (
 
 type requestSharingBody struct {
 	RecipientGuardianProfileIDs []string `json:"recipient_guardian_profile_ids"`
+	// ExpectedVersion is the version of the sharing the guardian read. The
+	// choice replaces the whole recipient set, so a missing or outdated one is
+	// refused with 409 general.changed_since_read (ADR 0311).
+	ExpectedVersion string `json:"expected_version"`
 }
 
 type requestSharingRecipientResponse struct {
@@ -28,6 +32,14 @@ type requestSharingRecipientResponse struct {
 type requestSharingResponse struct {
 	FamilyProtected bool                              `json:"family_protected"`
 	Recipients      []requestSharingRecipientResponse `json:"recipients"`
+}
+
+// requestSharingStateResponse is the sharing of one request. Version is what
+// a change of it sends back as expected_version.
+type requestSharingStateResponse struct {
+	FamilyProtected bool                              `json:"family_protected"`
+	Recipients      []requestSharingRecipientResponse `json:"recipients"`
+	Version         string                            `json:"version"`
 }
 
 func (rs *Resource) getRequestSharingOptions(w http.ResponseWriter, r *http.Request) {
@@ -61,7 +73,7 @@ func (rs *Resource) getRequestSharing(w http.ResponseWriter, r *http.Request) {
 		renderRequestSharingError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, toRequestSharingResponse(state), "Request sharing retrieved")
+	common.Respond(w, r, http.StatusOK, toRequestSharingStateResponse(state), "Request sharing retrieved")
 }
 
 func (rs *Resource) setRequestSharing(w http.ResponseWriter, r *http.Request) {
@@ -79,12 +91,12 @@ func (rs *Resource) setRequestSharing(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeCareRequestSharingInvalid))
 		return
 	}
-	state, err := rs.RequestSharing.SetRequestSharing(r.Context(), accountID, studentID, requestType, requestID, recipients)
+	state, err := rs.RequestSharing.SetRequestSharing(r.Context(), accountID, studentID, requestType, requestID, recipients, body.ExpectedVersion)
 	if err != nil {
 		renderRequestSharingError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, toRequestSharingResponse(state), "Request sharing updated")
+	common.Respond(w, r, http.StatusOK, toRequestSharingStateResponse(state), "Request sharing updated")
 }
 
 func (rs *Resource) requestSharingParams(
@@ -133,6 +145,11 @@ func toRequestSharingResponse(state *parentService.RequestSharingState) requestS
 		})
 	}
 	return response
+}
+
+func toRequestSharingStateResponse(state *parentService.RequestSharingState) requestSharingStateResponse {
+	shared := toRequestSharingResponse(state)
+	return requestSharingStateResponse{FamilyProtected: shared.FamilyProtected, Recipients: shared.Recipients, Version: state.Version}
 }
 
 var requestSharingErrorRenderer = common.RulesRenderer([]common.ErrorRule{

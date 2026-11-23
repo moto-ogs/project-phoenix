@@ -22,8 +22,8 @@ vi.mock("~/components/home/day-flow-block", () => ({
 vi.mock("~/components/home/open-requests-block", () => ({
   OpenRequestsBlock: () => <div data-testid="open-requests-block" />,
 }));
-vi.mock("~/components/home/staff-notices-block", () => ({
-  StaffNoticesBlock: () => <div data-testid="staff-notices-block" />,
+vi.mock("~/components/home/day-changes-block", () => ({
+  DayChangesBlock: () => <div data-testid="day-changes-block" />,
 }));
 vi.mock("~/components/home/my-group-block", () => ({
   MyGroupBlock: () => <div data-testid="my-group-block" />,
@@ -491,9 +491,9 @@ describe("HomeBlockContent — eigene Quellen", () => {
 
   it("rendert die Bausteine mit eigener Abfrage", () => {
     const { rerender } = render(
-      <HomeBlockContent blockKey="section.staff_notices" data={data()} />,
+      <HomeBlockContent blockKey="section.day_changes" data={data()} />,
     );
-    expect(screen.getByTestId("staff-notices-block")).toBeInTheDocument();
+    expect(screen.getByTestId("day-changes-block")).toBeInTheDocument();
 
     rerender(<HomeBlockContent blockKey="section.day_flow" data={data()} />);
     expect(screen.getByTestId("day-flow-block")).toBeInTheDocument();

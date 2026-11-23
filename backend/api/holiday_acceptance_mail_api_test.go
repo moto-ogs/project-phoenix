@@ -47,11 +47,11 @@ func acceptanceMails(t *testing.T, f reviewFixture, registrationID int64) []acce
 
 func (f reviewFixture) writeAcceptanceText(t *testing.T, text string) (int, holidayPeriodBody) {
 	t.Helper()
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, holidayPeriodPath(f.period.ID), nil)
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodGet, holidayPeriodPath(int64(f.period.ID)), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	body := decodeSchoolPortalData[holidayPeriodBody](t, rec.Body.Bytes())
 	body.AcceptanceMailText = text
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayPeriodPath(f.period.ID), body)
+	rec = putHolidayPeriod(t, f.traeger, f.office.token, holidayPeriodPath(int64(f.period.ID)), body)
 	if rec.Code != http.StatusOK {
 		return rec.Code, holidayPeriodBody{}
 	}
@@ -75,9 +75,9 @@ func TestConfirmationSendsOneAcceptanceMailWithTheTextOfTheTraeger(t *testing.T)
 	submit := func(email string) int64 {
 		rec := publicJSON(t, f.public, http.MethodPost, registrationPath(f.period.PublicToken), siblingsRegistration(f.offer, email))
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-		return decodeSchoolPortalData[struct {
-			ID int64 `json:"id"`
-		}](t, rec.Body.Bytes()).ID
+		return int64(decodeSchoolPortalData[struct {
+			ID wireID `json:"id"`
+		}](t, rec.Body.Bytes()).ID)
 	}
 	plain, other := submit(parent), submit(fmt.Sprintf("zweite.%d@example.org", unique))
 

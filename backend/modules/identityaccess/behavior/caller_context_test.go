@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -59,7 +60,7 @@ func TestCallerContext_Account(t *testing.T) {
 		result, err := caller.Account(callerCtx(t, account.ID))
 
 		require.NoError(t, err)
-		assert.Equal(t, account.ID, result.ID)
+		assert.Equal(t, ident.ID(account.ID), result.ID)
 	})
 
 	t.Run("returns error for unauthenticated context", func(t *testing.T) {
@@ -467,112 +468,6 @@ func TestMergeActiveSessions(t *testing.T) {
 }
 
 // ============================================================================
-// GroupStudentIDs Tests
-// ============================================================================
-
-func TestCallerContext_GroupStudentIDs(t *testing.T) {
-	t.Parallel()
-	db := testpkg.SetupTestDB(t)
-	caller := setupCallerRows(t, db).Caller()
-
-	t.Run("returns error for unauthenticated context", func(t *testing.T) {
-		_, err := caller.GroupStudentIDs(context.Background(), nonexistentCallerRowID)
-		require.Error(t, err)
-	})
-
-	t.Run("returns error for unauthorized access to group", func(t *testing.T) {
-		_, account := testpkg.CreateTestStaffWithAccount(t, db, "NoAccess", "Staff")
-
-		// Try to access a non-existent group.
-		_, err := caller.GroupStudentIDs(callerCtx(t, account.ID), nonexistentCallerRowID)
-
-		require.Error(t, err)
-	})
-
-	t.Run("returns students for supervised group", func(t *testing.T) {
-		staff, account := testpkg.CreateTestStaffWithAccount(t, db, "Supervisor", "GroupStudents")
-		activity := testpkg.CreateTestActivityGroup(t, db, "Test Activity for Students")
-		room := testpkg.CreateTestRoom(t, db, "Test Room for Students")
-		student := testpkg.CreateTestStudent(t, db, "Test", "StudentInGroup", "1a")
-
-		activeGroup := testpkg.CreateTestActiveGroup(t, db, activity.ID, room.ID)
-		testpkg.CreateTestGroupSupervisor(t, db, staff.ID, activeGroup.ID, "supervisor")
-		// A visit so there's a student in the group.
-		testpkg.CreateTestVisit(t, db, student.ID, activeGroup.ID, time.Now(), nil)
-
-		students, err := testpkg.TenantQuery1(t, callerCtx(t, account.ID), db, caller.GroupStudentIDs, activeGroup.ID)
-
-		require.NoError(t, err)
-		require.NotNil(t, students)
-		assert.GreaterOrEqual(t, len(students), 1, "Should have at least 1 student")
-	})
-}
-
-// ============================================================================
-// GroupVisits Tests
-// ============================================================================
-
-func TestCallerContext_GroupVisits(t *testing.T) {
-	t.Parallel()
-	db := testpkg.SetupTestDB(t)
-	caller := setupCallerRows(t, db).Caller()
-
-	t.Run("returns error for unauthenticated context", func(t *testing.T) {
-		_, err := caller.GroupVisits(context.Background(), nonexistentCallerRowID)
-		require.Error(t, err)
-	})
-
-	t.Run("returns error for unauthorized access to group", func(t *testing.T) {
-		_, account := testpkg.CreateTestStaffWithAccount(t, db, "NoAccess", "Visits")
-
-		// Try to access a non-existent group.
-		_, err := caller.GroupVisits(callerCtx(t, account.ID), nonexistentCallerRowID)
-
-		require.Error(t, err)
-	})
-
-	t.Run("returns visits for supervised group", func(t *testing.T) {
-		staff, account := testpkg.CreateTestStaffWithAccount(t, db, "Supervisor", "GroupVisits")
-		activity := testpkg.CreateTestActivityGroup(t, db, "Test Activity for Visits")
-		room := testpkg.CreateTestRoom(t, db, "Test Room for Visits")
-		student := testpkg.CreateTestStudent(t, db, "Test", "StudentVisit", "1b")
-
-		activeGroup := testpkg.CreateTestActiveGroup(t, db, activity.ID, room.ID)
-		_ = testpkg.CreateTestGroupSupervisor(t, db, staff.ID, activeGroup.ID, "supervisor")
-
-		// An active visit (no exit time) and a closed one.
-		_ = testpkg.CreateTestVisit(t, db, student.ID, activeGroup.ID, time.Now(), nil)
-		closedAt := time.Now().Add(-time.Hour)
-		_ = testpkg.CreateTestVisit(t, db, student.ID, activeGroup.ID, closedAt.Add(-time.Hour), &closedAt)
-
-		ctx := callerCtx(t, account.ID)
-
-		// Verify prerequisite: staff is findable via account→person→staff chain.
-		var personID int64
-		err := db.NewRaw(`SELECT id FROM users.persons WHERE account_id = ? AND tenant_id = ?`,
-			account.ID, testpkg.Tenant(t)).Scan(context.Background(), &personID)
-		require.NoError(t, err, "prerequisite: person should be findable by account_id")
-		require.Equal(t, staff.Person.ID, personID, "prerequisite: person ID should match")
-
-		var staffID int64
-		err = db.NewRaw(`SELECT id FROM users.staff_school_memberships WHERE person_id = ? AND tenant_id = ?`,
-			personID, testpkg.Tenant(t)).Scan(context.Background(), &staffID)
-		require.NoError(t, err, "prerequisite: staff should be findable by person_id")
-		require.Equal(t, staff.ID, staffID, "prerequisite: staff ID should match")
-
-		visits, err := testpkg.TenantQuery1(t, ctx, db, caller.GroupVisits, activeGroup.ID)
-
-		require.NoError(t, err)
-		require.NotNil(t, visits)
-		assert.GreaterOrEqual(t, len(visits), 1, "Should have at least 1 active visit")
-		for _, visit := range visits {
-			assert.Nil(t, visit.ExitTime, "closed visits must not be exposed as active")
-			assert.Equal(t, activeGroup.ID, visit.ActiveGroupID)
-		}
-	})
-}
-
-// ============================================================================
 // Teacher Groups with Substitutions Tests
 // ============================================================================
 
@@ -711,22 +606,6 @@ func canceledCtx() context.Context {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	return ctx
-}
-
-func TestCallerContext_GroupStudentIDs_DatabaseError(t *testing.T) {
-	t.Parallel()
-	caller := setupCallerRows(t, testpkg.SetupTestDB(t)).Caller()
-
-	_, err := caller.GroupStudentIDs(canceledCtx(), nonexistentCallerRowID)
-	require.Error(t, err)
-}
-
-func TestCallerContext_GroupVisits_DatabaseError(t *testing.T) {
-	t.Parallel()
-	caller := setupCallerRows(t, testpkg.SetupTestDB(t)).Caller()
-
-	_, err := caller.GroupVisits(canceledCtx(), nonexistentCallerRowID)
-	require.Error(t, err)
 }
 
 func TestCallerContext_MyActivityGroupIDs_DatabaseError(t *testing.T) {

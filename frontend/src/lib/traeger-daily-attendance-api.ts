@@ -1,3 +1,4 @@
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the daily attendance report of the Träger portal (#4717): the
  * Träger's schools in Mecklenburg-Vorpommern with the children present and
@@ -5,12 +6,14 @@
  * Figures only, never a child. Backend int64 IDs leave as strings.
  */
 
-import { apiErrorFromBody, transportFetch } from "./api-error";
 import {
   downloadTraegerList,
   type TraegerListFile,
   type TraegerListFormat,
+  listExportQuery,
 } from "./traeger-list-export";
+import type * as traegerSchoolsContract from "./contract/traeger-schools.generated";
+import { requiredDay } from "./contract/required-day";
 import type { TraegerSchool } from "./traeger-api";
 
 /** The longest period of one report, as in the backend: a month. */
@@ -66,70 +69,27 @@ export interface DailyAttendancePeriod {
   readonly to: string;
 }
 
-interface BackendFigures {
-  present: number;
-  sick: number;
-  excused: number;
-  class_trip: number;
-  without_pickup: number;
-  first_arrival: string | null;
-  last_pickup: string | null;
-  average_minutes: number | null;
-  longest_minutes: number | null;
-}
-
-type BackendDay = BackendFigures & { date: string };
-type BackendSummary = BackendFigures & {
-  days_with_children: number;
-  present_per_day: number;
-};
-
-interface BackendReport {
-  from: string;
-  to: string;
-  other_schools: number;
-  summary: BackendSummary;
-  days?: BackendDay[];
-  schools?: {
-    id: number;
-    name: string;
-    slug: string;
-    subdomain: string;
-    city?: string;
-    summary: BackendSummary;
-    days?: BackendDay[];
-  }[];
-}
-
-async function readJson(response: Response): Promise<unknown> {
-  const text = await response.text();
-  if (!text) return null;
-  try {
-    return JSON.parse(text) as unknown;
-  } catch {
-    return null;
-  }
-}
-
-function query(period: DailyAttendancePeriod): string {
-  return new URLSearchParams({ from: period.from, to: period.to }).toString();
-}
-
-function figuresOf(figures: BackendFigures): DailyAttendanceFigures {
+function figuresOf(
+  figures:
+    | traegerSchoolsContract.DailyAttendanceDay
+    | traegerSchoolsContract.DailyAttendanceSummary,
+): DailyAttendanceFigures {
   return {
     present: figures.present,
     sick: figures.sick,
     excused: figures.excused,
     classTrip: figures.class_trip,
     withoutPickup: figures.without_pickup,
-    firstArrival: figures.first_arrival ?? null,
-    lastPickup: figures.last_pickup ?? null,
-    averageMinutes: figures.average_minutes ?? null,
-    longestMinutes: figures.longest_minutes ?? null,
+    firstArrival: figures.first_arrival,
+    lastPickup: figures.last_pickup,
+    averageMinutes: figures.average_minutes,
+    longestMinutes: figures.longest_minutes,
   };
 }
 
-function summaryOf(summary: BackendSummary): DailyAttendanceSummary {
+function summaryOf(
+  summary: traegerSchoolsContract.DailyAttendanceSummary,
+): DailyAttendanceSummary {
   return {
     ...figuresOf(summary),
     daysWithChildren: summary.days_with_children,
@@ -137,39 +97,34 @@ function summaryOf(summary: BackendSummary): DailyAttendanceSummary {
   };
 }
 
-function daysOf(days: BackendDay[] | undefined): DailyAttendanceDay[] {
-  return (days ?? []).map((day) => ({ date: day.date, ...figuresOf(day) }));
+function daysOf(
+  days: traegerSchoolsContract.DailyAttendanceDay[] | null,
+): DailyAttendanceDay[] {
+  return (days ?? []).map((day) => ({
+    date: requiredDay(day.date, "daily_attendance_day.date"),
+    ...figuresOf(day),
+  }));
 }
 
 /** The report of the Träger's schools in Mecklenburg-Vorpommern. */
 export async function fetchTraegerDailyAttendance(
   period: DailyAttendancePeriod,
 ): Promise<TraegerDailyAttendance> {
-  const response = await transportFetch(
-    `/api/traeger/schools/daily-attendance?${query(period)}`,
-    { credentials: "include", cache: "no-store" },
-  );
-  const data = await readJson(response);
-  if (!response.ok) {
-    throw apiErrorFromBody(
-      `Request failed (${response.status})`,
-      response.status,
-      data,
-    );
-  }
-  const report = (data as { data: BackendReport }).data;
+  const report = await bffJson("org", "GET /traeger/schools/daily-attendance", {
+    query: { from: period.from, to: period.to },
+  });
   return {
-    from: report.from,
-    to: report.to,
+    from: requiredDay(report.from, "daily_attendance.from"),
+    to: requiredDay(report.to, "daily_attendance.to"),
     otherSchools: report.other_schools,
     summary: summaryOf(report.summary),
     days: daysOf(report.days),
     schools: (report.schools ?? []).map((school) => ({
-      id: String(school.id),
+      id: school.id,
       name: school.name,
       slug: school.slug,
       subdomain: school.subdomain,
-      city: school.city ?? "",
+      city: school.city,
       summary: summaryOf(school.summary),
       days: daysOf(school.days),
     })),
@@ -182,8 +137,8 @@ export function downloadTraegerDailyAttendance(
   format: TraegerListFormat,
 ): Promise<TraegerListFile> {
   return downloadTraegerList(
-    "/api/traeger/schools/daily-attendance/export",
-    format,
-    { from: period.from, to: period.to },
+    bffFile("org", "GET /traeger/schools/daily-attendance/export", {
+      query: listExportQuery(format, { from: period.from, to: period.to }),
+    }),
   );
 }

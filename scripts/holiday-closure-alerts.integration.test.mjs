@@ -35,7 +35,7 @@ test('holiday closure alerts cover overdue work, recovery and a missing watchdog
   const push = (ms, record, env = 'prod') => {
     const line = JSON.stringify({ time: new Date(ms).toISOString(), ...record });
     const result = request('/loki/api/v1/push', { streams: [
-      { stream: { env, service: 'server' }, values: [[stamp(ms), line]] },
+      { stream: { env, service: 'worker' }, values: [[stamp(ms), line]] },
     ] });
     assert.equal(result.status, 0, 'synthetic log ingestion failed');
   };

@@ -1,37 +1,38 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  act,
+} from "@testing-library/react";
 import { catalogText } from "~/test/error-catalog-text";
-import { ERROR_CATALOG } from "~/lib/error-catalog.generated";
 import { SWRConfig } from "~/lib/swr/testing";
 
 vi.unmock("swr");
 
-/** What the shared path shows for a failure that is no API error. */
-function crashText(object: string) {
-  const text = ERROR_CATALOG.de.actions.crash.replace("{object}", object);
-  return text.charAt(0).toUpperCase() + text.slice(1);
-}
-
 const {
   mockUseSession,
   mockUpdateSession,
-  mockSessionFetch,
+  fetchMock,
   mockToastSuccess,
   mockToastError,
+  mockLogout,
 } = vi.hoisted(() => ({
   mockUseSession: vi.fn(),
   mockUpdateSession: vi.fn(),
-  mockSessionFetch: vi.fn(),
+  fetchMock: vi.fn(),
   mockToastSuccess: vi.fn(),
   mockToastError: vi.fn(),
+  mockLogout: vi.fn(),
 }));
 
 vi.mock("next-auth/react", () => ({
   useSession: mockUseSession,
 }));
 
-vi.mock("~/lib/session-cache", () => ({
-  sessionFetch: (...args: unknown[]) => mockSessionFetch(...args),
+vi.mock("~/lib/shell-auth-context", () => ({
+  useShellAuth: () => ({ logout: mockLogout }),
 }));
 
 const mockApiErrorDisplay = { show: vi.fn() };
@@ -61,6 +62,7 @@ vi.mock("~/components/settings/trusted-devices-section", () => ({
   TrustedDevicesSection: () => null,
 }));
 
+import { PASSWORD_CHANGED_KEY } from "~/lib/session-cache";
 import OperatorSettingsPage from "./page";
 
 function renderPage() {
@@ -80,6 +82,10 @@ const defaultProfile = {
 describe("OperatorSettingsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // bffJson("platform", …) sends through the global fetch.
+    vi.stubGlobal("fetch", fetchMock);
+    sessionStorage.clear();
+    mockLogout.mockResolvedValue(undefined);
     mockUpdateSession.mockResolvedValue(undefined);
     mockUseSession.mockReturnValue({
       data: {
@@ -93,40 +99,39 @@ describe("OperatorSettingsPage", () => {
       status: "authenticated",
       update: mockUpdateSession,
     });
-    mockSessionFetch.mockImplementation(
-      async (url: string, init?: RequestInit) => {
-        if (url === "/api/operator/profile" && init?.method === "GET") {
-          return {
-            ok: true,
-            json: async () => ({ data: defaultProfile }),
-          } as Response;
-        }
-        if (url === "/api/operator/profile" && init?.method === "PUT") {
-          const body = JSON.parse(String(init.body ?? "{}")) as {
-            display_name?: string;
-          };
-          return {
-            ok: true,
-            json: async () => ({
-              data: {
-                ...defaultProfile,
-                display_name: body.display_name ?? defaultProfile.display_name,
-              },
-            }),
-          } as Response;
-        }
-        if (url === "/api/operator/profile/email-change") {
-          return {
-            ok: true,
-            json: async () => ({ message: "Verification email sent" }),
-          } as Response;
-        }
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url === "/api/operator/profile" && init?.method === "GET") {
         return {
           ok: true,
           json: async () => ({ data: defaultProfile }),
         } as Response;
-      },
-    );
+      }
+      if (url === "/api/operator/profile" && init?.method === "PUT") {
+        const body = JSON.parse(String(init.body ?? "{}")) as {
+          display_name?: string;
+        };
+        return {
+          ok: true,
+          json: async () => ({
+            data: {
+              ...defaultProfile,
+              display_name: body.display_name ?? defaultProfile.display_name,
+            },
+          }),
+        } as Response;
+      }
+      if (url === "/api/operator/profile/email-change") {
+        // The catalog proxy answers a route without data as { data: null }.
+        return {
+          ok: true,
+          json: async () => ({ status: "success", data: null }),
+        } as Response;
+      }
+      return {
+        ok: true,
+        json: async () => ({ data: defaultProfile }),
+      } as Response;
+    });
   });
 
   it("shows loading state when auth is loading", async () => {
@@ -189,29 +194,30 @@ describe("OperatorSettingsPage", () => {
       status: "authenticated",
       update: mockUpdateSession,
     });
-    mockSessionFetch.mockRejectedValueOnce(new Error("Network error"));
+    fetchMock.mockRejectedValueOnce(new Error("Network error"));
 
     renderPage();
 
     await waitFor(() => {
-      expect(mockSessionFetch).toHaveBeenCalledWith("/api/operator/profile", {
-        method: "GET",
-      });
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/operator/profile",
+        expect.objectContaining({ method: "GET" }),
+      );
     });
     // Anker: der Fehlerzweig des Profilladens ist gerendert.
     expect(
-      await screen.findByText(crashText("das Profil")),
+      await screen.findByText(catalogText("general.unavailable", "das Profil")),
     ).toBeInTheDocument();
     expect(screen.queryByText("operator:2")).not.toBeInTheDocument();
   });
 
   it("keeps an email session fallback when profile loading fails", async () => {
-    mockSessionFetch.mockRejectedValueOnce(new Error("Network error"));
+    fetchMock.mockRejectedValueOnce(new Error("Network error"));
 
     renderPage();
 
     expect(
-      await screen.findByText(crashText("das Profil")),
+      await screen.findByText(catalogText("general.unavailable", "das Profil")),
     ).toBeInTheDocument();
     expect(screen.getByText("john@example.com")).toBeInTheDocument();
   });
@@ -229,12 +235,12 @@ describe("OperatorSettingsPage", () => {
       status: "authenticated",
       update: mockUpdateSession,
     });
-    mockSessionFetch.mockRejectedValueOnce(new Error("Network error"));
+    fetchMock.mockRejectedValueOnce(new Error("Network error"));
 
     renderPage();
 
     expect(
-      await screen.findByText(crashText("das Profil")),
+      await screen.findByText(catalogText("general.unavailable", "das Profil")),
     ).toBeInTheDocument();
     expect(screen.getByText("john@example.com")).toBeInTheDocument();
     expect(screen.queryByText("name@example.com")).not.toBeInTheDocument();
@@ -242,7 +248,7 @@ describe("OperatorSettingsPage", () => {
 
   // #2519: a failed profile load is visible with retry instead of silent.
   it("shows a failed profile load with retry", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       new Response(JSON.stringify({ code: "general.unavailable" }), {
         status: 503,
       }),
@@ -274,7 +280,7 @@ describe("OperatorSettingsPage", () => {
     fireEvent.click(saveButton);
 
     await waitFor(() => {
-      expect(mockSessionFetch).toHaveBeenCalledWith(
+      expect(fetchMock).toHaveBeenCalledWith(
         "/api/operator/profile",
         expect.objectContaining({
           method: "PUT",
@@ -293,24 +299,22 @@ describe("OperatorSettingsPage", () => {
   });
 
   it("handles save error gracefully", async () => {
-    mockSessionFetch.mockImplementation(
-      async (url: string, init?: RequestInit) => {
-        if (url === "/api/operator/profile" && init?.method === "GET") {
-          return {
-            ok: true,
-            json: async () => ({ data: defaultProfile }),
-          } as Response;
-        }
-        return new Response(
-          JSON.stringify({
-            error: "Something went wrong",
-            code: "general.input",
-            errors: [{ field: "display_name", reason: "too_long" }],
-          }),
-          { status: 400 },
-        );
-      },
-    );
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url === "/api/operator/profile" && init?.method === "GET") {
+        return {
+          ok: true,
+          json: async () => ({ data: defaultProfile }),
+        } as Response;
+      }
+      return new Response(
+        JSON.stringify({
+          error: "Something went wrong",
+          code: "general.input",
+          errors: [{ field: "display_name", reason: "too_long" }],
+        }),
+        { status: 400 },
+      );
+    });
 
     renderPage();
 
@@ -368,7 +372,7 @@ describe("OperatorSettingsPage", () => {
       status: "authenticated",
       update: mockUpdateSession,
     });
-    mockSessionFetch.mockImplementation(async () => ({
+    fetchMock.mockImplementation(async () => ({
       ok: true,
       json: async () => ({
         data: { id: 1, email: "admin@example.com", display_name: "Admin" },
@@ -431,7 +435,7 @@ describe("OperatorSettingsPage", () => {
       fireEvent.click(screen.getByText("E-Mail-Änderung anfordern"));
 
       await waitFor(() => {
-        expect(mockSessionFetch).toHaveBeenCalledWith(
+        expect(fetchMock).toHaveBeenCalledWith(
           "/api/operator/profile/email-change",
           expect.objectContaining({
             method: "POST",
@@ -462,7 +466,7 @@ describe("OperatorSettingsPage", () => {
       fireEvent.click(screen.getByText("E-Mail-Änderung anfordern"));
 
       expect(emailInput).toBeInvalid();
-      expect(mockSessionFetch).not.toHaveBeenCalledWith(
+      expect(fetchMock).not.toHaveBeenCalledWith(
         "/api/operator/profile/email-change",
         expect.anything(),
       );
@@ -482,7 +486,7 @@ describe("OperatorSettingsPage", () => {
       fireEvent.click(screen.getByText("E-Mail-Änderung anfordern"));
 
       expect(emailInput).toBeInvalid();
-      expect(mockSessionFetch).not.toHaveBeenCalledWith(
+      expect(fetchMock).not.toHaveBeenCalledWith(
         "/api/operator/profile/email-change",
         expect.anything(),
       );
@@ -516,24 +520,22 @@ describe("OperatorSettingsPage", () => {
     });
 
     it("sends error response without closing dialog on wrong password", async () => {
-      mockSessionFetch.mockImplementation(
-        async (url: string, init?: RequestInit) => {
-          if (url === "/api/operator/profile" && init?.method === "GET") {
-            return {
-              ok: true,
-              json: async () => ({ data: defaultProfile }),
-            } as Response;
-          }
-          return new Response(
-            JSON.stringify({
-              error: "Das aktuelle Passwort ist falsch",
-              code: "identity.current_password_wrong",
-              errors: [{ field: "current_password", reason: "wrong" }],
-            }),
-            { status: 400 },
-          );
-        },
-      );
+      fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+        if (url === "/api/operator/profile" && init?.method === "GET") {
+          return {
+            ok: true,
+            json: async () => ({ data: defaultProfile }),
+          } as Response;
+        }
+        return new Response(
+          JSON.stringify({
+            error: "Das aktuelle Passwort ist falsch",
+            code: "identity.current_password_wrong",
+            errors: [{ field: "current_password", reason: "wrong" }],
+          }),
+          { status: 400 },
+        );
+      });
 
       renderPage();
 
@@ -555,7 +557,7 @@ describe("OperatorSettingsPage", () => {
       fireEvent.click(screen.getByText("E-Mail-Änderung anfordern"));
 
       await waitFor(() => {
-        expect(mockSessionFetch).toHaveBeenCalledWith(
+        expect(fetchMock).toHaveBeenCalledWith(
           "/api/operator/profile/email-change",
           expect.objectContaining({
             method: "POST",
@@ -586,20 +588,18 @@ describe("OperatorSettingsPage", () => {
     });
 
     it("keeps dialog open on other API errors", async () => {
-      mockSessionFetch.mockImplementation(
-        async (url: string, init?: RequestInit) => {
-          if (url === "/api/operator/profile" && init?.method === "GET") {
-            return {
-              ok: true,
-              json: async () => ({ data: defaultProfile }),
-            } as Response;
-          }
+      fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+        if (url === "/api/operator/profile" && init?.method === "GET") {
           return {
-            ok: false,
-            json: async () => ({ error: "E-Mail bereits verwendet" }),
+            ok: true,
+            json: async () => ({ data: defaultProfile }),
           } as Response;
-        },
-      );
+        }
+        return {
+          ok: false,
+          json: async () => ({ error: "E-Mail bereits verwendet" }),
+        } as Response;
+      });
 
       renderPage();
 
@@ -621,7 +621,7 @@ describe("OperatorSettingsPage", () => {
       fireEvent.click(screen.getByText("E-Mail-Änderung anfordern"));
 
       await waitFor(() => {
-        expect(mockSessionFetch).toHaveBeenCalledWith(
+        expect(fetchMock).toHaveBeenCalledWith(
           "/api/operator/profile/email-change",
           expect.objectContaining({ method: "POST" }),
         );
@@ -632,17 +632,15 @@ describe("OperatorSettingsPage", () => {
     });
 
     it("keeps dialog open on network error", async () => {
-      mockSessionFetch.mockImplementation(
-        async (url: string, init?: RequestInit) => {
-          if (url === "/api/operator/profile" && init?.method === "GET") {
-            return {
-              ok: true,
-              json: async () => ({ data: defaultProfile }),
-            } as Response;
-          }
-          throw new Error("Network error");
-        },
-      );
+      fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+        if (url === "/api/operator/profile" && init?.method === "GET") {
+          return {
+            ok: true,
+            json: async () => ({ data: defaultProfile }),
+          } as Response;
+        }
+        throw new Error("Network error");
+      });
 
       renderPage();
 
@@ -664,7 +662,7 @@ describe("OperatorSettingsPage", () => {
       fireEvent.click(screen.getByText("E-Mail-Änderung anfordern"));
 
       await waitFor(() => {
-        expect(mockSessionFetch).toHaveBeenCalledWith(
+        expect(fetchMock).toHaveBeenCalledWith(
           "/api/operator/profile/email-change",
           expect.objectContaining({ method: "POST" }),
         );
@@ -674,7 +672,7 @@ describe("OperatorSettingsPage", () => {
       expect(screen.getByText("E-Mail-Adresse ändern")).toBeInTheDocument();
       expect(
         await screen.findByText(
-          catalogText("general.server", "die Änderung der E-Mail-Adresse"),
+          catalogText("general.unavailable", "die Änderung der E-Mail-Adresse"),
         ),
       ).toBeInTheDocument();
     });
@@ -717,12 +715,25 @@ describe("OperatorSettingsPage", () => {
     fireEvent.click(await screen.findByText("Passwort ändern"));
 
     const props = passwordModalProps.current;
-    expect(props?.apiEndpoint).toBe("/api/operator/profile/password");
+    expect(props?.portal).toBe("platform");
     expect(props?.formRef).toBeDefined();
     expect(props?.errorPath).toMatchObject({
       show: expect.any(Function),
       invalid: expect.any(Function),
       fieldError: expect.any(Function),
     });
+  });
+  // The backend ends every operator session with the password change, this
+  // one too: the page signs out and the login asks for the new password.
+  it("signs out after a password change", async () => {
+    renderPage();
+    fireEvent.click(await screen.findByText("Passwort ändern"));
+
+    const onSuccess = passwordModalProps.current?.onSuccess as () => void;
+    await act(async () => onSuccess());
+
+    await waitFor(() => expect(mockLogout).toHaveBeenCalledTimes(1));
+    expect(sessionStorage.getItem(PASSWORD_CHANGED_KEY)).toBe("1");
+    expect(mockToastSuccess).not.toHaveBeenCalled();
   });
 });

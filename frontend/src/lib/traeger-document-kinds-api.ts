@@ -1,3 +1,4 @@
+import { bffJson } from "~/lib/bff-fetch";
 /**
  * Dokumentart je Leistung (#4688): Rechnung, Gebührenbescheid oder (nur
  * Ferien) Bestätigungsschreiben als Rechnung. Die Freigabe eines Laufs hält
@@ -5,14 +6,20 @@
  * Rechtsbehelfsbelehrung der Vorlage „Bescheid“.
  */
 
-import { traegerRequest } from "./traeger-api";
+import { knownEnum } from "./contract/known-enum";
+import type * as traegerBillingDocumentKindsContract from "./contract/traeger-billing-document-kinds.generated";
 
-export type BillingService = "holiday" | "care";
-export type DocumentKind = "confirmation" | "invoice" | "fee_notice";
+// Go does not register these sets; the contract types them as string.
+const SERVICE_VALUES = ["holiday", "care"] as const;
+const DOCUMENT_KIND_VALUES = ["confirmation", "invoice", "fee_notice"] as const;
+
+export type BillingService = (typeof SERVICE_VALUES)[number];
+export type DocumentKind = (typeof DOCUMENT_KIND_VALUES)[number];
 
 export interface ServiceDocumentKind {
   readonly service: BillingService;
-  readonly documentKind: DocumentKind;
+  /** undefined: a kind this build does not know; the card asks for a choice. */
+  readonly documentKind: DocumentKind | undefined;
   /** Die Arten, die die Leistung ausstellen kann; die erste ist der Standard. */
   readonly choices: readonly DocumentKind[];
   /** Zeitpunkt der Wahl; `null`, solange der Standard gilt. */
@@ -27,21 +34,6 @@ export interface DocumentKindOverview {
   readonly feeNoticeTemplateVersion: number;
 }
 
-interface BackendOverview {
-  services?:
-    | {
-        service: BillingService;
-        document_kind: DocumentKind;
-        choices?: DocumentKind[] | null;
-        updated_at?: string | null;
-      }[]
-    | null;
-  legal_remedy_set: boolean;
-  fee_notice_template_version: number;
-}
-
-const PATH = "/api/traeger/billing-document-kinds";
-
 /** Name einer Dokumentart, wie Schreiben und Übersicht sie nennen. */
 export const DOCUMENT_KIND_LABEL: Readonly<Record<DocumentKind, string>> = {
   confirmation: "Bestätigung und Rechnung",
@@ -55,21 +47,36 @@ export const BILLING_SERVICE_LABEL: Readonly<Record<BillingService, string>> = {
   care: "Monatsbeitrag",
 };
 
-function overviewFromBackend(body: BackendOverview): DocumentKindOverview {
+// A service this build does not know has no card and is left out; a choice
+// it does not know is left out of the choices.
+function overviewFromBackend(
+  body: traegerBillingDocumentKindsContract.DocumentKindOverview,
+): DocumentKindOverview {
   return {
-    services: (body.services ?? []).map((service) => ({
-      service: service.service,
-      documentKind: service.document_kind,
-      choices: service.choices ?? [],
-      updatedAt: service.updated_at ?? null,
-    })),
+    services: (body.services ?? []).flatMap((entry) => {
+      const service = knownEnum(SERVICE_VALUES, entry.service);
+      if (!service) return [];
+      return [
+        {
+          service,
+          documentKind: knownEnum(DOCUMENT_KIND_VALUES, entry.document_kind),
+          choices: (entry.choices ?? []).flatMap((choice) => {
+            const kind = knownEnum(DOCUMENT_KIND_VALUES, choice);
+            return kind ? [kind] : [];
+          }),
+          updatedAt: entry.updated_at,
+        },
+      ];
+    }),
     legalRemedySet: body.legal_remedy_set,
     feeNoticeTemplateVersion: body.fee_notice_template_version,
   };
 }
 
 export async function fetchDocumentKinds(): Promise<DocumentKindOverview> {
-  return overviewFromBackend(await traegerRequest<BackendOverview>(PATH));
+  return overviewFromBackend(
+    await bffJson("org", "GET /traeger/billing-document-kinds/"),
+  );
 }
 
 export async function saveDocumentKind(
@@ -77,10 +84,12 @@ export async function saveDocumentKind(
   documentKind: DocumentKind,
 ): Promise<DocumentKindOverview> {
   return overviewFromBackend(
-    await traegerRequest<BackendOverview>(
-      `${PATH}/${encodeURIComponent(service)}`,
-      { method: "PUT", body: { document_kind: documentKind } },
-    ),
+    await bffJson("org", "PUT /traeger/billing-document-kinds/{service}", {
+      params: { service },
+      body: {
+        document_kind: documentKind,
+      } satisfies traegerBillingDocumentKindsContract.DocumentKindRequest,
+    }),
   );
 }
 

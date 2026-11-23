@@ -1,19 +1,29 @@
-import { createLogger } from "~/lib/logger";
+import { bffJson } from "~/lib/bff-fetch";
+import { requiredEnum, knownEnum } from "~/lib/contract/known-enum";
+import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 import type { Translations } from "~/lib/enrollment-translations";
-import {
-  enrollmentErrorReader,
-  readEnrollmentJSON,
-  sendEnrollmentRequest,
-} from "~/lib/enrollment-http";
+import { translationsFromContract } from "~/lib/enrollment-form-schema-api";
 
-const logger = createLogger({ component: "CareOfferingAPI" });
+// Go does not register these sets; the contract types them as string.
+const DAYS_OF_WEEK_MODES = ["fixed", "parent_choice"] as const;
+const AVAILABILITY_MATCHES = ["all", "any"] as const;
+const AVAILABILITY_OPERATORS = ["in", "not_in"] as const;
+const AVAILABILITY_SOURCES = ["grade_level"] as const;
+const SELECTION_RULES = [
+  "optional",
+  "exactly_one",
+  "at_least_one",
+  "at_most_one",
+  "at_most_one_per_day",
+] as const;
 
-export type DaysOfWeekMode = "fixed" | "parent_choice";
+export type DaysOfWeekMode = (typeof DAYS_OF_WEEK_MODES)[number];
 
-type CareOfferingAvailabilityMatch = "all" | "any";
-type CareOfferingAvailabilityOperator = "in" | "not_in";
+type CareOfferingAvailabilityMatch = (typeof AVAILABILITY_MATCHES)[number];
+type CareOfferingAvailabilityOperator = (typeof AVAILABILITY_OPERATORS)[number];
 export interface CareOfferingAvailabilityCondition {
-  source: "grade_level";
+  source: (typeof AVAILABILITY_SOURCES)[number];
   operator: CareOfferingAvailabilityOperator;
   value: number[];
 }
@@ -26,12 +36,7 @@ export interface CareOfferingAvailabilityRule {
  * How many offerings within the same selection_group a parent must pick.
  * Mirrors the backend SelectionRule* constants.
  */
-export type CareSelectionRule =
-  | "optional"
-  | "exactly_one"
-  | "at_least_one"
-  | "at_most_one"
-  | "at_most_one_per_day";
+export type CareSelectionRule = (typeof SELECTION_RULES)[number];
 
 /** German labels for the selection-rule dropdown in the admin editor. */
 export const SELECTION_RULE_LABELS: Record<CareSelectionRule, string> = {
@@ -42,48 +47,59 @@ export const SELECTION_RULE_LABELS: Record<CareSelectionRule, string> = {
   at_most_one_per_day: "Höchstens eines pro Tag",
 };
 
-export interface CareOffering {
-  id: string;
-  phase_id: string;
-  activity_group_id?: string | null;
-  name: string;
-  description?: string | null;
+/**
+ * An offering of the staff catalog: the contract's answer with its enums
+ * narrowed and the lists Go may write as null read as empty lists.
+ */
+export type CareOffering = Omit<
+  sharedContract.CareOfferingResponse,
+  | "days_of_week_mode"
+  | "available_days"
+  | "auto_add_grade_levels"
+  | "auto_add_trigger_offering_ids"
+  | "availability_rule"
+  | "selection_rule"
+  | "translations"
+> & {
   days_of_week_mode: DaysOfWeekMode;
   available_days: string[];
-  includes_holiday_care: boolean;
-  includes_lunch: boolean;
-  capacity?: number | null;
-  price_cents?: number | null;
-  is_active: boolean;
-  is_required: boolean;
-  counts_as_care?: boolean;
-  auto_add_grade_levels?: number[];
-  availability_rule?: CareOfferingAvailabilityRule | null;
-  auto_add_trigger_offering_ids?: string[];
-  sort_order: number;
-  selection_group?: string | null;
-  // Optional in the type (older rows + existing fixtures may omit it);
-  // the backend always sends it, defaulting to "optional".
+  auto_add_grade_levels: number[];
+  auto_add_trigger_offering_ids: string[];
+  availability_rule?: CareOfferingAvailabilityRule;
+  /** undefined: a rule this build does not know; it reads as "optional". */
   selection_rule?: CareSelectionRule;
-  /** Buchungsgebundene Gehzeit pro Wochentag ({"mon":"14:30"}). */
-  pickup_times?: Record<string, string> | null;
   /** Von der Schule gepflegte Übersetzungen von Name und Beschreibung (#3377). */
   translations?: Translations;
-  created_at: string;
-  updated_at: string;
-}
+};
 
-export interface CareOfferingInput {
-  phase_id: number;
-  activity_group_id?: number | null;
+/**
+ * The editor's draft of an offering: the request body with the fields the
+ * editor always fills and its enums narrowed.
+ */
+export type CareOfferingInput = Omit<
+  enrollmentContract.CareOfferingRequest,
+  | "phase_id"
+  | "name"
+  | "days_of_week_mode"
+  | "available_days"
+  | "includes_holiday_care"
+  | "includes_lunch"
+  | "is_active"
+  | "is_required"
+  | "counts_as_care"
+  | "auto_add_grade_levels"
+  | "availability_rule"
+  | "auto_add_trigger_offering_ids"
+  | "sort_order"
+  | "selection_rule"
+  | "translations"
+> & {
+  phase_id: string;
   name: string;
-  description?: string | null;
   days_of_week_mode: DaysOfWeekMode;
   available_days: string[];
   includes_holiday_care: boolean;
   includes_lunch: boolean;
-  capacity?: number | null;
-  price_cents?: number | null;
   is_active: boolean;
   is_required: boolean;
   counts_as_care: boolean;
@@ -91,114 +107,125 @@ export interface CareOfferingInput {
   availability_rule?: CareOfferingAvailabilityRule | null;
   auto_add_trigger_offering_ids: string[];
   sort_order: number;
-  selection_group?: string | null;
-  // Optional in the type (older rows + existing fixtures may omit it);
-  // the backend always sends it, defaulting to "optional".
   selection_rule?: CareSelectionRule;
-  /** Für aktive Angebote, die als Betreuung zählen, je Betreuungstag erforderlich. */
-  pickup_times?: Record<string, string> | null;
   /** Vollständiges Übersetzungsdokument; `{}` löscht alle Übersetzungen. */
   translations?: Translations;
+};
+
+/**
+ * Reads a rule of the contract. The editor saves the rule back, so an
+ * operator or source this build does not know fails the read instead of
+ * saving a guess.
+ */
+function availabilityRuleFromContract(
+  rule: sharedContract.CareOfferingAvailabilityRule,
+  at: string,
+): CareOfferingAvailabilityRule {
+  return {
+    match: requiredEnum(AVAILABILITY_MATCHES, rule.match, `${at}.match`),
+    conditions: (rule.conditions ?? []).map((condition) => ({
+      source: requiredEnum(
+        AVAILABILITY_SOURCES,
+        condition.source,
+        `${at}.conditions.source`,
+      ),
+      operator: requiredEnum(
+        AVAILABILITY_OPERATORS,
+        condition.operator,
+        `${at}.conditions.operator`,
+      ),
+      value: condition.value ?? [],
+    })),
+  };
 }
 
-const BASE = "/api/enrollment/care-offerings";
-
-const readError = enrollmentErrorReader(logger, "care_offering_request_failed");
+/** Reads an offering of the contract; see `CareOffering`. */
+export function careOfferingFromContract(
+  offering: sharedContract.CareOfferingResponse,
+): CareOffering {
+  const {
+    availability_rule: rule,
+    selection_rule,
+    translations,
+    ...rest
+  } = offering;
+  return {
+    ...rest,
+    days_of_week_mode: requiredEnum(
+      DAYS_OF_WEEK_MODES,
+      offering.days_of_week_mode,
+      "CareOffering.days_of_week_mode",
+    ),
+    available_days: offering.available_days ?? [],
+    auto_add_grade_levels: offering.auto_add_grade_levels ?? [],
+    auto_add_trigger_offering_ids: offering.auto_add_trigger_offering_ids ?? [],
+    ...(rule && {
+      availability_rule: availabilityRuleFromContract(
+        rule,
+        "CareOffering.availability_rule",
+      ),
+    }),
+    selection_rule: knownEnum(SELECTION_RULES, selection_rule),
+    ...(translations && {
+      translations: translationsFromContract(translations),
+    }),
+  };
+}
 
 export async function listCareOfferings(
   phaseId?: string | null,
 ): Promise<CareOffering[]> {
-  const url = new URL(
-    BASE,
-    globalThis.window?.location.origin ?? "http://localhost",
+  const offerings = await bffJson(
+    "tenant",
+    "GET /api/enrollment/care-offerings/",
+    {
+      query: { phase_id: phaseId || undefined },
+      errorMessage: "Betreuungsangebote konnten nicht geladen werden",
+    },
   );
-  if (phaseId) {
-    url.searchParams.set("phase_id", phaseId);
-  }
-  const path = `${url.pathname}${url.search}`;
-  const response = await sendEnrollmentRequest(path, { cache: "no-store" });
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Betreuungsangebote konnten nicht geladen werden",
-    );
-  }
-  const list = await readEnrollmentJSON<CareOffering[]>(response);
-  return Array.isArray(list) ? list : [];
+  return offerings.map(careOfferingFromContract);
 }
 
 export async function createCareOffering(
   input: CareOfferingInput,
 ): Promise<CareOffering> {
-  const response = await sendEnrollmentRequest(BASE, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
-  });
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Betreuungsangebot konnte nicht angelegt werden",
-    );
-  }
-  return readEnrollmentJSON<CareOffering>(response);
+  return careOfferingFromContract(
+    await bffJson("tenant", "POST /api/enrollment/care-offerings/", {
+      body: input,
+      errorMessage: "Betreuungsangebot konnte nicht angelegt werden",
+    }),
+  );
 }
 
 export async function updateCareOffering(
   id: string,
   input: CareOfferingInput,
 ): Promise<CareOffering> {
-  const response = await sendEnrollmentRequest(
-    `${BASE}/${encodeURIComponent(id)}`,
-    {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
-    },
+  return careOfferingFromContract(
+    await bffJson("tenant", "PUT /api/enrollment/care-offerings/{id}/", {
+      params: { id },
+      body: input,
+      errorMessage: "Betreuungsangebot konnte nicht gespeichert werden",
+    }),
   );
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Betreuungsangebot konnte nicht gespeichert werden",
-    );
-  }
-  return readEnrollmentJSON<CareOffering>(response);
 }
 
 export async function deleteCareOffering(id: string): Promise<void> {
-  const response = await sendEnrollmentRequest(
-    `${BASE}/${encodeURIComponent(id)}`,
-    {
-      method: "DELETE",
-    },
-  );
-  if (response.status === 204) return;
-  if (!response.ok) {
-    throw await readError(
-      response,
-      "Betreuungsangebot konnte nicht gelöscht werden",
-    );
-  }
-}
-
-export interface CloneCareOfferingInput {
-  target_phase_id: number;
+  await bffJson("tenant", "DELETE /api/enrollment/care-offerings/{id}/", {
+    params: { id },
+    errorMessage: "Betreuungsangebot konnte nicht gelöscht werden",
+  });
 }
 
 export async function cloneCareOffering(
   id: string,
-  input: CloneCareOfferingInput,
+  input: enrollmentContract.CloneCareOfferingRequest,
 ): Promise<CareOffering> {
-  const response = await sendEnrollmentRequest(
-    `${BASE}/${encodeURIComponent(id)}/clone`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
-    },
+  return careOfferingFromContract(
+    await bffJson("tenant", "POST /api/enrollment/care-offerings/{id}/clone", {
+      params: { id },
+      body: input,
+      errorMessage: "Klonen fehlgeschlagen",
+    }),
   );
-  if (!response.ok) {
-    throw await readError(response, "Klonen fehlgeschlagen");
-  }
-  return readEnrollmentJSON<CareOffering>(response);
 }

@@ -1,11 +1,13 @@
 "use client";
 
-// Startseite des Träger-Portals ("moto träger", #4649): alle Schulen des
+import { bffFile } from "~/lib/bff-fetch";
+
+// Schulliste des Träger-Portals ("moto träger", #4649): alle Schulen des
 // Trägers der Sitzung. Schulen ordnet das moto-Team zu. Eine Zeile führt in die
 // Ansicht der Schule im Träger-Portal (#5686). Wer das Recht „In OGS wechseln"
 // hat, öffnet die Schul-App ohne neue Anmeldung in einem neuen Tab (#4654).
-// Fehlen dem Träger Pflichtangaben für Verträge, Rechnungen oder Bescheide,
-// nennt ein Hinweis sie (#7177).
+// Start ist sie nur ohne das Recht für das Dashboard (#7646); der Hinweis auf
+// fehlende Pflichtangaben (#7177) steht dort.
 
 import { type MouseEvent, useMemo } from "react";
 import { useRouter } from "next/navigation";
@@ -21,14 +23,16 @@ import {
   useOpenTraegerSchool,
 } from "~/components/traeger/use-open-traeger-school";
 import { TraegerCodeStepModal } from "~/components/traeger/traeger-code-step-modal";
-import { TraegerRequiredDetailsNotice } from "~/components/traeger/traeger-required-details-notice";
 import {
   traegerExportScope,
   useTraegerListExportItems,
 } from "~/components/traeger/traeger-list-export-menu";
 import { TraegerOpenSchoolButton } from "~/components/traeger/traeger-open-school-button";
 import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
-import { downloadTraegerList } from "~/lib/traeger-list-export";
+import {
+  downloadTraegerList,
+  listExportQuery,
+} from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
 
 const COLUMNS: DataTableColumn<TraegerSchool>[] = [
@@ -68,7 +72,11 @@ export default function TraegerSchoolsPage() {
   const { canOpen, opening, open, codeStepModal } = useOpenTraegerSchool();
   const exportItems = useTraegerListExportItems({
     download: (format) =>
-      downloadTraegerList("/api/traeger/schools/export", format),
+      downloadTraegerList(
+        bffFile("org", "GET /traeger/schools/export", {
+          query: listExportQuery(format),
+        }),
+      ),
     scope: traegerExportScope(),
     fallbackName: "schulen",
     errorObject: "die Liste der Schulen",
@@ -134,7 +142,6 @@ export default function TraegerSchoolsPage() {
       error={schoolsError}
       overflowMenu={exportItems}
     >
-      <TraegerRequiredDetailsNotice />
       {!canOpen && (
         <Alert
           type="info"

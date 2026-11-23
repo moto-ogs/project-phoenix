@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 )
@@ -58,11 +59,11 @@ func TestHomeSchoolSeesTheConfirmedHolidayBookingsOfItsChildrenAtOtherSchools(t 
 	assert.Equal(t, "Tom", entry.FirstName)
 	assert.Equal(t, "Beispiel", entry.LastName)
 	assert.Equal(t, calendar.NewDate(2017, 5, 20), entry.BirthDate)
-	assert.Equal(t, f.offer.Weeks[0].ID, entry.WeekID)
+	assert.Equal(t, ident.ID(int64(f.offer.Weeks[0].ID)), entry.WeekID)
 	assert.Equal(t, "Sommerferien 2099", entry.PeriodName)
 	assert.Equal(t, calendar.NewDate(2099, 7, 6), entry.StartsOn)
 	assert.Equal(t, calendar.NewDate(2099, 7, 10), entry.EndsOn)
-	assert.Equal(t, f.nord, entry.HostSchoolID)
+	assert.Equal(t, ident.ID(f.nord), entry.HostSchoolID)
 	assert.Equal(t, nordName, entry.HostSchoolName, "the hosting school is named")
 	assert.Equal(t, "bis 13 Uhr", entry.TimeModelName)
 	assert.NotEmpty(t, entry.TimeModelStarts)
@@ -78,7 +79,7 @@ func TestHomeSchoolSeesTheConfirmedHolidayBookingsOfItsChildrenAtOtherSchools(t 
 	require.Len(t, entries, 1)
 	assert.Equal(t, enrollment.HolidayOwnChildMatched, entries[0].Assignment)
 	require.NotNil(t, entries[0].StudentID)
-	assert.Equal(t, student.ID, *entries[0].StudentID, "the entry links the child's file")
+	assert.Equal(t, ident.ID(student.ID), *entries[0].StudentID, "the entry links the child's file")
 
 	// The hosting school reads this child in its participant list, not
 	// here; its own child Lia is at the week it hosts itself.

@@ -84,7 +84,7 @@ const baseChangeRequest: AdminEnrollmentChangeRequest = {
   origin: "parent",
   status: "pending_review",
   parent_note: "Bitte korrigieren.",
-  admin_decision_note: null,
+  admin_decision_note: undefined,
   base_snapshot: {
     guardian_phone: "+49 221 555 990",
     additional_guardians: [
@@ -143,8 +143,8 @@ const baseChangeRequest: AdminEnrollmentChangeRequest = {
   },
   created_at: "2026-06-27T10:00:00.000Z",
   updated_at: "2026-06-27T10:00:00.000Z",
-  reviewed_at: null,
-  reviewed_by_account_id: null,
+  reviewed_at: undefined,
+  reviewed_by_account_id: undefined,
   request: {
     id: "7",
     phase_id: "5",
@@ -154,15 +154,18 @@ const baseChangeRequest: AdminEnrollmentChangeRequest = {
     guardian_last_name: "Muster",
     guardian_email: "mara@example.test",
     guardian_phone: "+49 221 555 990",
+    submission_source: "public",
     consent_flags: {},
     custom_data: {},
     submitted_at: "2026-06-01T10:00:00.000Z",
+    is_unread: false,
     children: [
       {
         id: "99",
         first_name: "Lea",
         last_name: "Muster",
         date_of_birth: "2018-04-15",
+        version: "v1",
         status: "approved",
         activation_mode: "scheduled",
       },

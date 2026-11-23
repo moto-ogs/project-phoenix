@@ -17,10 +17,18 @@ describe("ForbiddenPage", () => {
   });
 
   it("renders with custom title", () => {
-    render(<ForbiddenPage title="Keine Berechtigung" />);
+    render(
+      <ForbiddenPage
+        title="Keine Berechtigung"
+        info="Hier stehen die geschützten Angaben."
+      />,
+    );
 
     expect(
       screen.getByRole("heading", { name: "Keine Berechtigung" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Erklärung zu Keine Berechtigung" }),
     ).toBeInTheDocument();
   });
 

@@ -91,7 +91,7 @@ func (p callerPeople) FindPersonByAccount(ctx context.Context, accountID int64) 
 		return identityaccess.CallerPerson{}, false, err
 	}
 	return identityaccess.CallerPerson{
-		ID: person.ID, FirstName: person.FirstName, LastName: person.LastName, TagID: person.TagID,
+		ID: person.ID.Int64(), FirstName: person.FirstName, LastName: person.LastName, TagID: person.TagID,
 		CreatedAt: person.CreatedAt, UpdatedAt: person.UpdatedAt,
 	}, true, nil
 }
@@ -180,26 +180,6 @@ func (s callerSessions) OpenSessionIDsForActivities(ctx context.Context, activit
 func (s callerSessions) SupervisedSessionIDs(ctx context.Context, staffID int64) ([]int64, error) {
 	sessions, err := s.presence.ListSupervisedLiveGroups(ctx, staffID)
 	return liveGroupIDs(sessions), err
-}
-
-func (s callerSessions) SessionExists(ctx context.Context, sessionID int64) (bool, error) {
-	sessions, err := s.presence.ListLiveGroups(ctx, []int64{sessionID})
-	return len(sessions) > 0, err
-}
-
-func (s callerSessions) SessionVisits(ctx context.Context, sessionID int64) ([]identityaccess.CallerVisit, error) {
-	visits, err := s.presence.ListVisits(ctx, studentpresence.VisitFilter{ActiveGroupIDs: []int64{sessionID}})
-	if err != nil {
-		return nil, err
-	}
-	result := make([]identityaccess.CallerVisit, 0, len(visits))
-	for _, visit := range visits {
-		result = append(result, identityaccess.CallerVisit{
-			ID: visit.ID, CreatedAt: visit.CreatedAt, UpdatedAt: visit.UpdatedAt, TenantID: visit.TenantID,
-			StudentID: visit.StudentID, ActiveGroupID: visit.ActiveGroupID, EntryTime: visit.EntryTime, ExitTime: visit.ExitTime,
-		})
-	}
-	return result, nil
 }
 
 func liveGroupIDs(sessions []studentpresence.LiveGroup) []int64 {

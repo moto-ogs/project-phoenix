@@ -74,9 +74,7 @@ func roomResponseIDs(t *testing.T, body []byte) map[int64]bool {
 	for _, entry := range data {
 		item, ok := entry.(map[string]interface{})
 		require.True(t, ok, "Expected list entry to be an object")
-		id, ok := item["id"].(float64)
-		require.True(t, ok, "Expected entry id to be a number")
-		ids[int64(id)] = true
+		ids[testpkg.JSONID(t, item["id"])] = true
 	}
 	return ids
 }
@@ -143,63 +141,11 @@ func TestListRooms_IncludesOnlySchulhofFromSystemRoomsByDefault(t *testing.T) {
 	})
 }
 
-func TestGetAvailableRooms_IncludesOnlySchulhofFromSystemRoomsByDefault(t *testing.T) {
-	t.Parallel()
-	tc := setupRoomsRoute(t)
-	tenantID := newRoomFilterTestTenant(t, tc.db)
-	claims := testutil.AdminTestClaimsForTenant(1, tenantID)
-
-	normal := testpkg.CreateTestRoomForTenant(t, tc.db, tenantID, "AvailNormalRoom")
-	system := testpkg.CreateTestRoomForTenant(t, tc.db, tenantID, "AvailSystemRoom")
-	wc := testpkg.CreateTestRoomForTenant(t, tc.db, tenantID, "AvailWCRoom")
-	schulhof := testpkg.CreateTestRoomForTenant(t, tc.db, tenantID, "AvailSchulhofRoom")
-
-	markRoomAsSystem(t, tc.db, tenantID, system.ID)
-	markRoomAsSystem(t, tc.db, tenantID, schulhof.ID)
-	setRoomNameAndBuilding(t, tc.db, tenantID, wc.ID, facilitiesModule.WCRoomName, "Sanitär")
-	setRoomNameAndBuilding(t, tc.db, tenantID, schulhof.ID, facilitiesModule.SchulhofRoomName, "Außengelände")
-	releaseRoom(t, tc.db, tenantID, schulhof.ID, true)
-
-	t.Run("default_excludes_system", func(t *testing.T) {
-		req := testutil.NewRequest("GET", "/available", nil)
-		rr := testutil.ExecuteWithAuth(t, tc.router, req, claims)
-		assert.Equal(t, http.StatusOK, rr.Code, "Expected 200 OK. Body: %s", rr.Body.String())
-
-		ids := roomResponseIDs(t, rr.Body.Bytes())
-		assert.True(t, ids[normal.ID], "normal room should be available")
-		assert.False(t, ids[system.ID], "system room must be hidden by default")
-		assert.False(t, ids[wc.ID], "WC must be hidden even without an is_system flag")
-		assert.True(t, ids[schulhof.ID], "Schulhof must be available for staff planning")
-	})
-
-	t.Run("include_system_returns_system", func(t *testing.T) {
-		req := testutil.NewRequest("GET", "/available?include_system=true", nil)
-		rr := testutil.ExecuteWithAuth(t, tc.router, req, claims)
-		assert.Equal(t, http.StatusOK, rr.Code, "Expected 200 OK. Body: %s", rr.Body.String())
-
-		ids := roomResponseIDs(t, rr.Body.Bytes())
-		assert.True(t, ids[normal.ID], "normal room should be available")
-		assert.True(t, ids[system.ID], "system room must appear with include_system=true")
-		assert.True(t, ids[wc.ID], "WC must appear with include_system=true")
-		assert.True(t, ids[schulhof.ID], "Schulhof must appear with include_system=true")
-	})
-
-	t.Run("toilette_alias_is_hidden", func(t *testing.T) {
-		setRoomNameAndBuilding(t, tc.db, tenantID, wc.ID, facilitiesModule.WCRoomAliasName, "Sanitär")
-		req := testutil.NewRequest("GET", "/available", nil)
-		rr := testutil.ExecuteWithAuth(t, tc.router, req, claims)
-		assert.Equal(t, http.StatusOK, rr.Code, "Expected 200 OK. Body: %s", rr.Body.String())
-
-		ids := roomResponseIDs(t, rr.Body.Bytes())
-		assert.False(t, ids[wc.ID], "Toilette must be hidden even without an is_system flag")
-	})
-}
-
 // TestRoomLists_KeepTheSchulhofSelectableWithoutRelease pins ADR 0019: the
 // open-room release decides whether the yard is an open room, not whether
 // staff can pick it. Schools that plan blocks in the Schulhof revoke the
-// release (#3276) and must still find the yard in the planner, in spontaneous
-// activities and in the available-rooms list. A revoked release previously
+// release (#3276) and must still find the yard in the planner and in
+// spontaneous activities. A revoked release previously
 // hid the yard from every one of those lists.
 func TestRoomLists_KeepTheSchulhofSelectableWithoutRelease(t *testing.T) {
 	t.Parallel()
@@ -234,16 +180,6 @@ func TestRoomLists_KeepTheSchulhofSelectableWithoutRelease(t *testing.T) {
 		assert.True(t, ids[normal.ID], "unrelated rooms stay listed")
 		assert.True(t, ids[schulhof.ID],
 			"a Schulhof without release must stay selectable for planning")
-	})
-
-	t.Run("revoked_schulhof_stays_in_available_rooms", func(t *testing.T) {
-		req := testutil.NewRequest("GET", "/available", nil)
-		rr := testutil.ExecuteWithAuth(t, tc.router, req, claims)
-		assert.Equal(t, http.StatusOK, rr.Code, "Expected 200 OK. Body: %s", rr.Body.String())
-
-		ids := roomResponseIDs(t, rr.Body.Bytes())
-		assert.True(t, ids[schulhof.ID],
-			"the available-rooms endpoint must apply the same rule")
 	})
 
 	t.Run("revoked_schulhof_is_not_an_open_room", func(t *testing.T) {
@@ -283,7 +219,7 @@ func TestRoomLists_HideOtherSystemRoomsRegardlessOfRelease(t *testing.T) {
 	releaseRoom(t, tc.db, tenantID, system.ID, true)
 	releaseRoom(t, tc.db, tenantID, wc.ID, true)
 
-	for _, path := range []string{"/", "/available"} {
+	for _, path := range []string{"/"} {
 		t.Run(path, func(t *testing.T) {
 			req := testutil.NewRequest("GET", path, nil)
 			rr := testutil.ExecuteWithAuth(t, tc.router, req, claims)

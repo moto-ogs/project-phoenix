@@ -1,7 +1,15 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CareTariffs } from "~/lib/traeger-care-billing-api";
 import { ToastProvider } from "~/contexts/ToastContext";
+import { ApiError } from "~/lib/api-error";
+import { catalogText } from "~/test/error-catalog-text";
 import {
   freeMonthsAt,
   freeMonthsLabel,
@@ -146,6 +154,7 @@ describe("CarePriceListModal", () => {
           currentMonth="2027-01-01"
           onClose={() => undefined}
           onSaved={() => undefined}
+          reload={() => Promise.reject(new Error("not read"))}
         />
       </ToastProvider>,
     );
@@ -218,6 +227,145 @@ describe("CarePriceListModal", () => {
       siblingCents: 4500,
       mealExtra: true,
     });
+  });
+
+  // ADR 0311: a colleague changed the school's prices since the list was
+  // read. The save sent the version the form started from, is refused, and
+  // the page reads the prices again: the form shows the colleague's prices
+  // instead of the draft.
+  it("shows the prices a colleague saved since instead of keeping the draft", async () => {
+    saveCarePriceList.mockRejectedValue(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    const stored: CareTariffs = {
+      ...data,
+      versions: { "12": "v-2" },
+      tariffs: data.tariffs.map((tariff) =>
+        tariff.daysPerWeek === 3 ? { ...tariff, siblingCents: 4800 } : tariff,
+      ),
+    };
+    // The page reads the prices again; they arrive as `data` as well.
+    const changed = vi.fn(() => Promise.resolve(stored));
+    const modal = (tariffs: CareTariffs) => (
+      <ToastProvider>
+        <CarePriceListModal
+          data={tariffs}
+          school={{ id: "12", name: "Grundschule Birkenfeld" }}
+          currentMonth="2027-01-01"
+          onClose={() => undefined}
+          onSaved={() => undefined}
+          reload={changed}
+        />
+      </ToastProvider>
+    );
+    const { rerender } = render(modal({ ...data, versions: { "12": "v-1" } }));
+    const label =
+      "Modul 4 mit Mittagessen, 3 Tage je Woche, Jedes weitere Kind, Monatspreis in Euro";
+    fireEvent.change(await screen.findByRole("textbox", { name: label }), {
+      target: { value: "40,00" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Preise speichern" }));
+
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", "die Preisliste"),
+      ),
+    ).toBeInTheDocument();
+    expect(saveCarePriceList.mock.calls[0]?.[4]).toBe("v-1");
+    expect(changed).toHaveBeenCalledTimes(1);
+
+    rerender(modal(stored));
+    await waitFor(() =>
+      expect(screen.getByRole("textbox", { name: label })).toHaveValue("48,00"),
+    );
+  });
+
+  // ADR 0311, rule 4: the lock after a refusal holds over another start
+  // month, which would otherwise start a new draft on the refused version.
+  it("sends nothing in another month until the stored prices are read", async () => {
+    saveCarePriceList.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    // The read after the refusal is still on its way.
+    const reload = vi.fn(() => new Promise<CareTariffs>(() => undefined));
+    render(
+      <ToastProvider>
+        <CarePriceListModal
+          data={{ ...data, versions: { "12": "v-1" } }}
+          school={{ id: "12", name: "Grundschule Birkenfeld" }}
+          currentMonth="2027-01-01"
+          onClose={() => undefined}
+          onSaved={() => undefined}
+          reload={reload}
+        />
+      </ToastProvider>,
+    );
+    const save = await screen.findByRole("button", {
+      name: "Preise speichern",
+    });
+    fireEvent.click(save);
+    await waitFor(() => expect(reload).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByRole("combobox", { name: "Gültig ab" }));
+    fireEvent.click(
+      await screen.findByRole("option", { name: "Februar 2027" }),
+    );
+    expect(
+      screen.getByRole("combobox", { name: "Gültig ab" }),
+    ).toHaveTextContent("Februar 2027");
+    // The refusal's message waits for that read; the click runs at once.
+    await act(async () => {
+      fireEvent.click(save);
+    });
+    expect(saveCarePriceList).toHaveBeenCalledTimes(1);
+  });
+
+  // A background read of the list while the form is open: an untouched
+  // form shows it with its version; typed input stays, and the save sends
+  // the version the input started from (ADR 0311).
+  it("follows a new read only until the person types", async () => {
+    const modal = (tariffs: CareTariffs) => (
+      <ToastProvider>
+        <CarePriceListModal
+          data={tariffs}
+          school={{ id: "12", name: "Grundschule Birkenfeld" }}
+          currentMonth="2027-01-01"
+          onClose={() => undefined}
+          onSaved={() => undefined}
+          reload={() => Promise.reject(new Error("not read"))}
+        />
+      </ToastProvider>
+    );
+    const read = (version: string, siblingCents: number) => ({
+      ...data,
+      versions: { "12": version },
+      tariffs: data.tariffs.map((tariff) =>
+        tariff.daysPerWeek === 3 ? { ...tariff, siblingCents } : tariff,
+      ),
+    });
+    const label =
+      "Modul 4 mit Mittagessen, 3 Tage je Woche, Jedes weitere Kind, Monatspreis in Euro";
+    const { rerender } = render(modal(read("v-1", 4500)));
+    expect(await screen.findByRole("textbox", { name: label })).toHaveValue(
+      "45,00",
+    );
+
+    rerender(modal(read("v-2", 4800)));
+    await waitFor(() =>
+      expect(screen.getByRole("textbox", { name: label })).toHaveValue("48,00"),
+    );
+    fireEvent.change(screen.getByRole("textbox", { name: label }), {
+      target: { value: "40,00" },
+    });
+    rerender(modal(read("v-3", 4900)));
+    expect(screen.getByRole("textbox", { name: label })).toHaveValue("40,00");
+
+    fireEvent.click(screen.getByRole("button", { name: "Preise speichern" }));
+    await waitFor(() => expect(saveCarePriceList).toHaveBeenCalledTimes(1));
+    expect(saveCarePriceList.mock.calls[0]?.[4]).toBe("v-2");
+    expect(saveCarePriceList.mock.calls[0]?.[2]).toContainEqual(
+      expect.objectContaining({ daysPerWeek: 3, siblingCents: 4000 }),
+    );
   });
 
   it("refuses a sibling price above the first child's", async () => {

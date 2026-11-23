@@ -1,8 +1,6 @@
 package careplan
 
 import (
-	"time"
-
 	"github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests"
 )
 
@@ -108,7 +106,6 @@ var (
 	ErrAbsenceRequestInvalidStatus         = excusedrequests.ErrAbsenceRequestInvalidStatus
 	ErrExcusedRequestRejectReasonRequired  = excusedrequests.ErrExcusedRequestRejectReasonRequired
 	ErrExcusedRequestRejectReasonTooLong   = excusedrequests.ErrExcusedRequestRejectReasonTooLong
-	ErrParentRequestStale                  = excusedrequests.ErrParentRequestStale
 	ErrParentRequestReasonRequired         = excusedrequests.ErrParentRequestReasonRequired
 	ErrParentRequestPast                   = excusedrequests.ErrParentRequestPast
 	ErrParentRequestNotPast                = excusedrequests.ErrParentRequestNotPast
@@ -122,9 +119,4 @@ var (
 // given one.
 func StudentStatusDayStatusesExcept(status string) []string {
 	return excusedrequests.StudentStatusDayStatusesExcept(status)
-}
-
-// ParentRequestVersion is the optimistic-concurrency token of one request row.
-func ParentRequestVersion(updatedAt time.Time) string {
-	return excusedrequests.ParentRequestVersion(updatedAt)
 }

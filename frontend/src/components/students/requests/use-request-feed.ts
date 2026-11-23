@@ -61,7 +61,11 @@ import {
   startListFetch,
   useListOverlays,
 } from "~/lib/list-overlays";
-import { useSWRAuth, useTenantMutateMatching } from "~/lib/swr";
+import {
+  revalidateOrThrow,
+  useSWRAuth,
+  useTenantMutateMatching,
+} from "~/lib/swr";
 import { requestFeedKeys, type RequestFeedName } from "~/lib/swr/portal-keys";
 import { useTenantSlugSafe } from "~/lib/tenant-context";
 import { itemKey, type AnyItem } from "./case-model";
@@ -285,12 +289,8 @@ function usePagedFeed<T, S extends PagedSnapshot<T>>({
     show: showLoadError,
     clear: clearError,
   } = useApiLoadError();
-  const {
-    data,
-    error: swrError,
-    isValidating,
-    mutate,
-  } = useSWRAuth<S>(key, loadFirst, feedSwrOptions(view));
+  const read = useSWRAuth<S>(key, loadFirst, feedSwrOptions(view));
+  const { data, error: swrError, isValidating, mutate } = read;
   const slug = useTenantSlugSafe();
   const list = `${slug ?? ""}|${family}`;
   const overlays = useListOverlays<T>(list);
@@ -328,6 +328,17 @@ function usePagedFeed<T, S extends PagedSnapshot<T>>({
     await mutate();
     clearError();
   }, [clearError, mutate]);
+  // Nach einer abgelehnten Entscheidung (ADR 0311): scheitert das Neuladen,
+  // lehnt das Versprechen ab, statt mit dem alten Stand aufzulösen.
+  const readRef = useRef(read);
+  useLayoutEffect(() => {
+    readRef.current = read;
+  });
+  const reloadOrThrow = useCallback(async () => {
+    setAutoLoadFailed(false);
+    await revalidateOrThrow<S>(readRef.current);
+    clearError();
+  }, [clearError]);
   const error = useSwrLoadError(swrError, object, reload);
   // Auch Fokus/Reconnect ersetzt die erste Seite: deren Nachladefehler gilt
   // nicht für den neuen Stand. Eine bloß gestartete Revalidierung reicht nicht.
@@ -411,6 +422,7 @@ function usePagedFeed<T, S extends PagedSnapshot<T>>({
     loadingMore: loadingPage || (isValidating && data !== undefined),
     error: error ?? pageError,
     reload,
+    reloadOrThrow,
     setItems,
     loadMore,
   };
@@ -504,6 +516,7 @@ export function useMergedRequestFeed(
     reviewAccess: feed.data?.reviewAccess,
     error: feed.error,
     reload: feed.reload,
+    reloadOrThrow: feed.reloadOrThrow,
     loadMore: feed.loadMore,
   };
 }

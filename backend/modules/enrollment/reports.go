@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Sentinels of the enrollment reports. The HTTP adapters classify them; the
@@ -148,7 +149,10 @@ type CareUsageRow struct {
 	GuardianLastName  string            `json:"guardian_last_name"`
 	GuardianEmail     string            `json:"guardian_email"`
 	GuardianPhone     *string           `json:"guardian_phone,omitempty"`
-	SubmittedAt       time.Time         `json:"submitted_at"`
+	// SubmissionSource is the normalized source of the request; a request
+	// of an imported contract has no parents (ADR 0309).
+	SubmissionSource string    `json:"submission_source"`
+	SubmittedAt      time.Time `json:"submitted_at"`
 	// SchedulePickupByDay is the maintained Kind-Gehzeit (manual rows and
 	// rolled-out Angebots-Gehzeiten, #2290) of the student linked to this
 	// request child, when one exists. Display-only enrichment for the
@@ -225,8 +229,8 @@ type ClassRosterRow struct {
 	// string because JavaScript clients round numbers beyond 2^53. The row
 	// exists only so the Klassenverband is complete — it can never carry
 	// offerings, times or guardians.
-	ListEntry   bool  `json:"list_entry,omitempty"`
-	ListEntryID int64 `json:"list_entry_id,string,omitempty"`
+	ListEntry   bool     `json:"list_entry,omitempty"`
+	ListEntryID ident.ID `json:"list_entry_id,omitempty"`
 	// WithoutCarePlace marks a child of the class without an OGS place
 	// (#4803): a student record (StudentID is set) that, like a list
 	// entry, carries no offerings, times or guardians on the roster.

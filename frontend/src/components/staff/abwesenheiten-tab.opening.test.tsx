@@ -5,7 +5,6 @@ import { SWRConfig } from "~/lib/swr/testing";
 
 vi.unmock("swr");
 
-import type { StaffVacationQuotaSummary } from "~/lib/staff-api";
 import { ApiError } from "~/lib/api-error";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import { catalogText } from "~/test/error-catalog-text";
@@ -97,17 +96,19 @@ vi.mock("~/lib/staff-api", () => ({
 }));
 
 import { AbwesenheitenTab } from "./abwesenheiten-tab";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 
 const year = new Date().getFullYear();
 
 function quota(
-  overrides: Partial<StaffVacationQuotaSummary> = {},
-): StaffVacationQuotaSummary {
+  overrides: Partial<sharedContract.VacationQuotaSummary> = {},
+): sharedContract.VacationQuotaSummary {
   return {
     staff_id: "4",
     year,
     entitled_days: 30,
     carryover_days: 2,
+    version: "quota-1",
     taken_before_days: 0,
     taken_days: 0,
     reserved_days: 0,
@@ -126,6 +127,9 @@ const existingOpening = {
   note: "Übernahme aus Urlaubsliste",
   decided_by: "9",
   decided_at: `${year}-03-01T08:00:00Z`,
+  tenant_id: "1",
+  created_at: `${year}-03-01T08:00:00Z`,
+  updated_at: `${year}-03-01T08:00:00Z`,
 };
 
 function renderTab() {

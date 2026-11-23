@@ -34,13 +34,15 @@ import {
 } from "@/components/students/students-list";
 import { CareExitModal } from "~/components/students/care-exit-modal";
 import { getDbOperationMessage } from "@/lib/use-notification";
-import { createCrudService } from "@/lib/database/service-factory";
 import { studentsConfig } from "@/components/database/configs/students.config";
 import type { Student } from "~/lib/student-helpers";
+import { createStudent, fetchStudents } from "~/lib/student-api";
 import type { StudentGuardianPayload } from "@/lib/guardian-helpers";
 import { useSWRAuth, useTenantMutate } from "~/lib/swr";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
-import { createLogger } from "~/lib/logger";
+import { groups } from "~/lib/swr/groups";
+import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
+import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { hasPermission } from "~/lib/auth-utils";
 import { createClassListEntry } from "~/lib/class-list-entries-api";
 import { MasterDetailSkeleton } from "~/components/database/master-detail-skeleton";
@@ -51,7 +53,11 @@ import { childrenConcept } from "~/lib/concepts/children";
 import { foldForSearch } from "~/lib/search-fold";
 import { TenantPageStats } from "~/components/ui/tenant-page";
 
-const logger = createLogger({ component: "DatabaseStudentsPage" });
+/** Info-Knopf am Seitentitel: wofür die Seite da ist und was man zuerst tut. */
+const STUDENTS_INFO =
+  "Hier pflegst du die Daten der Kinder. Wähle ein Kind, um seine Angaben zu sehen und zu ändern. Über das Plus legst du ein neues Kind an.";
+
+const NO_GROUP_OPTIONS: Array<{ value: string; label: string }> = [];
 
 const STUDENTS_GROUPING_DEFAULT: GroupingMode = "class";
 
@@ -149,21 +155,21 @@ function StudentsPageContent() {
     },
   });
 
-  const service = useMemo(() => createCrudService(studentsConfig), []);
   const tenantMutate = useTenantMutate();
 
   const {
     data: studentsData,
     isLoading: loading,
     error: studentsError,
+    mutate: reloadStudents,
   } = useSWRAuth(tenantAdminKeys.students(), async () => {
-    const data = await service.getList({
+    const { students } = await fetchStudents({
       page: 1,
       pageSize: 1000,
-      include_arrival_times: true,
-      include_pending_withdrawals: true,
+      includeArrivalTimes: true,
+      includePendingWithdrawals: true,
     });
-    return Array.isArray(data.data) ? data.data : [];
+    return students;
   });
 
   // Kinderkontingent der Schule (#3569). Ein Fehler blendet die Zeile nur
@@ -173,9 +179,11 @@ function StudentsPageContent() {
     fetchChildQuota,
   );
 
-  const errorMessage = studentsError
-    ? "Fehler beim Laden der Kinder. Bitte versuche es später erneut."
-    : null;
+  const studentsLoadError = useSwrLoadError(
+    studentsError,
+    "die Liste der Kinder",
+    () => reloadStudents(),
+  );
 
   useEffect(() => {
     if (!studentsData) return;
@@ -225,38 +233,18 @@ function StudentsPageContent() {
     [showMessage],
   );
 
-  const { data: allGroups = [] } = useSWRAuth<
-    Array<{ value: string; label: string }>
-  >(tenantAdminKeys.groupOptions(), async () => {
-    const response = await fetch("/api/groups");
-    if (!response.ok) {
-      logger.error("failed to fetch groups", { status: response.status });
-      return [];
-    }
-    const data: unknown = await response.json();
-
-    let groups: Array<{ id: number; name: string }> = [];
-    if (Array.isArray(data)) {
-      groups = data as Array<{ id: number; name: string }>;
-    } else if (data && typeof data === "object" && "data" in data) {
-      const wrappedData = data as { data: unknown };
-      if (Array.isArray(wrappedData.data)) {
-        groups = wrappedData.data as Array<{ id: number; name: string }>;
-      }
-    } else {
-      logger.error("unexpected groups response format", {
-        data_type: typeof data,
-      });
-      return [];
-    }
-
-    return groups
-      .map((group) => ({
-        value: String(group.id),
-        label: group.name,
-      }))
-      .sort((a, b) => a.label.localeCompare(b.label));
-  });
+  // Gruppen für Filter und Anlegen. Ein Ladefehler steht über der Liste;
+  // ohne ihn sähe die Schule aus, als hätte sie keine Gruppen (#2353).
+  const {
+    data: allGroups = NO_GROUP_OPTIONS,
+    error: groupsError,
+    mutate: reloadGroups,
+  } = useSWRAuth(tenantAdminKeys.groupOptions(), groups.optionsFetcher);
+  const groupsLoadError = useSwrLoadError(
+    groupsError,
+    "die Gruppenauswahl",
+    () => reloadGroups(),
+  );
 
   // Statuszeile des Seitenkopfs aus der bereits geladenen Kinderliste.
   const statusLine = useMemo(() => {
@@ -374,7 +362,7 @@ function StudentsPageContent() {
         guardians?: StudentGuardianPayload[];
       } & CreateStudentSchedules,
     ) => {
-      const newStudent = await service.create(studentData);
+      const newStudent = await createStudent(studentData);
       const displayName = studentsConfig.list.item.title(newStudent);
       if (newStudent.privacy_consent_saved === false) {
         // The child exists, but the consent input is lost (#5970): the notice
@@ -404,7 +392,7 @@ function StudentsPageContent() {
         tenantMutate(tenantAdminKeys.studentChildQuota()),
       ]);
     },
-    [service, tenantMutate, toastSuccess, toastWarning, router, objectHref],
+    [tenantMutate, toastSuccess, toastWarning, router, objectHref],
   );
 
   // A child of the class without an OGS place (#4803): the same three fields
@@ -433,8 +421,8 @@ function StudentsPageContent() {
   const studentsWithArrival = useMemo(
     () => new Set(filteredStudents.map((s) => String(s.id))),
     // NOTE: v1 defaults every student to "has arrival" so no false-positive
-    // warnings are shown in the list. A bulk arrival-status endpoint (arrival-times/bulk)
-    // can later drive real warnings — reference arrivalRevision below to refetch on save.
+    // warnings are shown in the list. The bulk arrival-status endpoint
+    // (arrival-schedules/status) can later drive real warnings — reference arrivalRevision below to refetch on save.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [filteredStudents, arrivalRevision],
   );
@@ -460,7 +448,7 @@ function StudentsPageContent() {
     <DatabasePageLayout
       loading={loading}
       sessionLoading={status === "loading"}
-      error={errorMessage}
+      error={studentsLoadError}
       empty={
         filteredStudents.length === 0
           ? {
@@ -484,6 +472,9 @@ function StudentsPageContent() {
                   size={48}
                 />
               ),
+              action: groupsLoadError ? (
+                <LoadErrorAlert error={groupsLoadError} />
+              ) : undefined,
             }
           : null
       }
@@ -526,6 +517,7 @@ function StudentsPageContent() {
       className="flex w-full flex-col"
       intro={{
         title: "Kinder",
+        info: STUDENTS_INFO,
         description: (
           <>
             {statusLine}
@@ -645,6 +637,7 @@ function StudentsPageContent() {
         },
       }}
     >
+      <LoadErrorAlert error={groupsLoadError} className="mb-4" />
       {canShowList ? (
         <div className="min-h-0 flex-1 pb-4">
           <StudentsList

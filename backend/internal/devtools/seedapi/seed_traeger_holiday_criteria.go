@@ -8,6 +8,7 @@ import (
 	"slices"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedTraegerHolidayCriteriaStep plans a holiday period of the demo Träger
@@ -70,7 +71,12 @@ func (seedTraegerHolidayCriteriaStep) Run(_ context.Context, rt *Runtime) error 
 // parents first, single parents second, a sibling in the OGS third, and a
 // hardship case switched off. It returns their IDs in this order.
 func seedHolidayCriteria(rt *Runtime, auth AuthRef) ([]int64, error) {
-	raw, err := rt.Client.PutWithAuth(auth, "/traeger/holiday-periods/criteria", map[string]any{"criteria": []map[string]any{
+	// The save carries the version of the criteria it replaces (ADR 0311).
+	version, err := readSeedVersion(rt, auth, "/traeger/holiday-periods/criteria", "the holiday criteria")
+	if err != nil {
+		return nil, err
+	}
+	raw, err := rt.Client.PutWithAuth(auth, "/traeger/holiday-periods/criteria", map[string]any{"expected_version": version, "criteria": []map[string]any{
 		{"name": "Beide Eltern berufstätig", "question": "Sind beide Eltern berufstätig?", "scope": "family", "active": true},
 		{"name": "Alleinerziehend und berufstätig", "question": "Sind Sie alleinerziehend und berufstätig?", "scope": "family", "active": true},
 		{"name": "Geschwisterkind in der OGS", "question": "Geht ein Geschwisterkind schon in die OGS?", "scope": "child", "active": true},
@@ -82,7 +88,7 @@ func seedHolidayCriteria(rt *Runtime, auth AuthRef) ([]int64, error) {
 	var envelope struct {
 		Data struct {
 			Criteria []struct {
-				ID int64 `json:"id"`
+				ID ident.ID `json:"id"`
 			} `json:"criteria"`
 		} `json:"data"`
 	}
@@ -91,7 +97,7 @@ func seedHolidayCriteria(rt *Runtime, auth AuthRef) ([]int64, error) {
 	}
 	ids := make([]int64, len(envelope.Data.Criteria))
 	for i, criterion := range envelope.Data.Criteria {
-		ids[i] = criterion.ID
+		ids[i] = int64(criterion.ID)
 	}
 	return ids, nil
 }
@@ -112,9 +118,9 @@ func seedPublishedHolidayLink(rt *Runtime, auth AuthRef, periodID int64) (seedHo
 		Data struct {
 			PublicToken string `json:"public_token"`
 			Weeks       []struct {
-				ID         int64 `json:"id"`
+				ID         ident.ID `json:"id"`
 				TimeModels []struct {
-					ID int64 `json:"id"`
+					ID ident.ID `json:"id"`
 				} `json:"time_models"`
 			} `json:"weeks"`
 		} `json:"data"`
@@ -124,7 +130,7 @@ func seedPublishedHolidayLink(rt *Runtime, auth AuthRef, periodID int64) (seedHo
 		return seedHolidayLink{}, fmt.Errorf("the holiday period by criteria has no link or no bookable week")
 	}
 	week := envelope.Data.Weeks[0]
-	return seedHolidayLink{token: envelope.Data.PublicToken, weekID: week.ID, modelID: week.TimeModels[0].ID}, nil
+	return seedHolidayLink{token: envelope.Data.PublicToken, weekID: int64(week.ID), modelID: int64(week.TimeModels[0].ID)}, nil
 }
 
 // seedHolidayCriteriaRegistrations registers four families with their
@@ -180,8 +186,8 @@ func seedHolidayFirstAllocation(rt *Runtime, auth AuthRef, periodID int64) error
 		Data struct {
 			Weeks []struct {
 				Pending []struct {
-					BookingID int64  `json:"booking_id"`
-					Proposal  string `json:"proposal"`
+					BookingID ident.ID `json:"booking_id"`
+					Proposal  string   `json:"proposal"`
 				} `json:"pending"`
 			} `json:"weeks"`
 		} `json:"data"`

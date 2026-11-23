@@ -3,8 +3,10 @@
 package common
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
@@ -54,6 +56,39 @@ func TestAnswersOfRegisteredRoutesAreHeldAgainstTheContract(t *testing.T) {
 	assert.Equal(t, http.StatusNoContent, serve(router, http.MethodDelete, "/school/class-day/homework/1a/7").Code)
 	assert.Equal(t, http.StatusOK, serve(router, http.MethodGet, "/not-registered/7/roster").Code)
 	assert.Equal(t, http.StatusOK, serve(relative, http.MethodGet, "/7/roster").Code)
+}
+
+// A handler that reads a body its contract does not type is refused: no
+// typed client could send it (#7808). A body the handler leaves unread is a
+// test sending more than the route takes.
+func TestAHandlerReadingAnUntypedBodyIsRefused(t *testing.T) {
+	t.Parallel()
+	serve := func(read bool) int {
+		router := chi.NewRouter()
+		router.Delete("/school/class-day/homework/{schoolClass}/{homeworkId}", func(w http.ResponseWriter, r *http.Request) {
+			if read {
+				_, _ = io.ReadAll(r.Body)
+			}
+			RespondNoContent(w, r)
+		})
+		recorder := httptest.NewRecorder()
+		router.ServeHTTP(recorder, httptest.NewRequest(http.MethodDelete, "/school/class-day/homework/1a/7", strings.NewReader(`{"reason":"x"}`)))
+		return recorder.Code
+	}
+	assert.Equal(t, http.StatusInternalServerError, serve(true))
+	assert.Equal(t, http.StatusNoContent, serve(false))
+
+	// A route-sized router, as module tests build it: the relative pattern
+	// fits one registered route, so its untyped body is refused too.
+	relative := chi.NewRouter()
+	relative.Delete("/{schoolClass}/{homeworkId}", func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.ReadAll(r.Body)
+		RespondNoContent(w, r)
+	})
+	recorder := httptest.NewRecorder()
+	relative.ServeHTTP(recorder, httptest.NewRequest(http.MethodDelete, "/1a/7", strings.NewReader(`{"reason":"x"}`)))
+	assert.Equal(t, http.StatusInternalServerError, recorder.Code)
+	assert.Contains(t, recorder.Body.String(), "DELETE /school/class-day/homework/{schoolClass}/{homeworkId} read a request body")
 }
 
 func TestAnswerCoverageRequiresAnUnambiguousRoute(t *testing.T) {
@@ -111,6 +146,39 @@ func TestAnswerCoverageRequiresAnUnambiguousRoute(t *testing.T) {
 			recorder := httptest.NewRecorder()
 			handler.ServeHTTP(recorder, httptest.NewRequest(http.MethodDelete, tt.target, nil))
 			assert.Equal(t, http.StatusNoContent, recorder.Code)
+			assert.Equal(t, tt.want, recorded)
+		})
+	}
+}
+
+// A refusal answers a route that only refuses, when the test identified the
+// route by its full pattern; a route-sized router names no route.
+func TestARefusalIsRecordedForItsFullPatternOnly(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		name  string
+		mount string
+		want  []string
+	}{
+		{name: "route-sized router"},
+		{name: "full pattern", mount: "/api/guardians", want: []string{"refused PUT /api/guardians/{id}"}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			var recorded []string
+			relative := chi.NewRouter()
+			relative.Put("/{id}", func(w http.ResponseWriter, r *http.Request) {
+				loadAnswerContract().observeRefusal(r, func(key string) { recorded = append(recorded, key) })
+				w.WriteHeader(http.StatusConflict)
+			})
+			var handler http.Handler = relative
+			target := "/7"
+			if tt.mount != "" {
+				router := chi.NewRouter()
+				router.Mount(tt.mount, relative)
+				handler, target = router, tt.mount+target
+			}
+			handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodPut, target, nil))
 			assert.Equal(t, tt.want, recorded)
 		})
 	}

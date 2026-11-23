@@ -88,7 +88,9 @@ func (emptySchoolMessagingRouter) SchoolRouter(_ func(chi.Router, func(chi.Route
 // newSchoolRouter builds the school portal router with a stubbed second
 // factor; the composed one stays on the resource.
 func newSchoolRouter(resource *schoolportal.Resource, mfa schoolportal.MFARuntime) http.Handler {
-	return testpkg.SessionVerifier(schoolportal.NewResource(resource.AuthService, mfa, resource.Resets, resource.ClassDay, resource.Timetable, resource.StaffMessaging, resource.StaffNotices, resource.Notifications, resource.TenantContext).Router(SchoolSessionChain, ProtectedSchoolRoutes))
+	// Mounted at /school like in production, so the answer check knows each
+	// route (#7808); the tests call the paths below the mount.
+	return testpkg.SessionVerifier(testpkg.MountedQueryBudgetRouter("/school", schoolportal.NewResource(resource.AuthService, mfa, resource.Resets, resource.ClassDay, resource.Timetable, resource.StaffMessaging, resource.StaffNotices, resource.Notifications, resource.TenantContext).Router(SchoolSessionChain, ProtectedSchoolRoutes)))
 }
 
 // newSchoolChiRouter is newSchoolRouter without the http.Handler erasure, for
@@ -182,9 +184,8 @@ func TestSchoolPortalTokenMatrix(t *testing.T) {
 	}
 
 	// The protected school auth surface follows the same matrix: a tenant
-	// token cannot switch schools.
-	req = httptest.NewRequest(http.MethodPost, "/auth/switch-school", strings.NewReader(`{"tenant_slug":"t1"}`))
-	req.Header.Set("Content-Type", "application/json")
+	// token cannot read the school session's remembered devices.
+	req = httptest.NewRequest(http.MethodGet, "/auth/mfa/trusted-devices", nil)
 	tenantClaims := sessiontoken.AppClaims{ID: int(account.ID), Sub: account.Email, Roles: []string{"lehrkraft"}, TenantID: tenantID, Scope: tenant.ScopeTenant}
 	rec = testutil.ExecuteWithAuthPermissions(t, schoolRouter, req, tenantClaims, []string{"class_day:read"})
 	require.Equal(t, http.StatusUnauthorized, rec.Code, rec.Body.String())

@@ -16,8 +16,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
-
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Middleware is the HTTP middleware shape the composition root supplies.
@@ -113,7 +113,7 @@ type ModelRequest struct {
 
 // ModelResponse mirrors the model with its entries.
 type ModelResponse struct {
-	ID                 int64           `json:"id"`
+	ID                 ident.ID        `json:"id"`
 	Name               string          `json:"name"`
 	RotationLength     int             `json:"rotation_length"`
 	RotationAnchorDate string          `json:"rotation_anchor_date"`
@@ -154,7 +154,7 @@ func (rs *Resource) list(w http.ResponseWriter, r *http.Request) {
 
 func attachUsage(models []ModelResponse, usage map[int64]int) {
 	for index := range models {
-		count := usage[models[index].ID]
+		count := usage[models[index].ID.Int64()]
 		models[index].AssignedStaffCount = &count
 	}
 }
@@ -280,7 +280,7 @@ func (rs *Resource) delete(w http.ResponseWriter, r *http.Request) {
 		rs.renderCapabilityError(w, r, err)
 		return
 	}
-	rs.runtime.Success(w, r, http.StatusOK, DeletedResponse{ID: id}, "Work time model deleted")
+	rs.runtime.Success(w, r, http.StatusOK, DeletedResponse{ID: ident.ID(id)}, "Work time model deleted")
 }
 
 // renderCapabilityError maps a capability error to its HTTP response:
@@ -404,7 +404,7 @@ func toResponse(m workforce.WorkTimeModel) (ModelResponse, error) {
 		archivedAt = &formatted
 	}
 	return ModelResponse{
-		ID:                 m.ID,
+		ID:                 ident.ID(m.ID),
 		Name:               m.Name,
 		RotationLength:     m.RotationLength,
 		RotationAnchorDate: rotationAnchor(m.RotationAnchorDate),

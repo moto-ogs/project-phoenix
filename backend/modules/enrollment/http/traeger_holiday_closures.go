@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // HolidayClosureResource serves the preview of a closing day the Träger-Büro
@@ -49,8 +50,8 @@ type HolidayClosurePreviewRequest struct {
 	StartDate    calendar.Date                  `json:"start_date"`
 	EndDate      calendar.Date                  `json:"end_date"`
 	Reason       string                         `json:"reason"`
-	SchoolIDs    []int64                        `json:"school_ids"`
-	ClosingDayID int64                          `json:"closing_day_id"`
+	SchoolIDs    []ident.ID                     `json:"school_ids"`
+	ClosingDayID ident.ID                       `json:"closing_day_id"`
 	Previous     *capability.HolidayClosureSpan `json:"previous"`
 	Delete       bool                           `json:"delete"`
 }
@@ -73,8 +74,8 @@ func (rs *HolidayClosureResource) preview(w http.ResponseWriter, r *http.Request
 		return
 	}
 	impact, err := rs.closures.HolidayClosureImpact(r.Context(), organizationID, capability.HolidayClosure{
-		SchoolIDs: req.SchoolIDs, StartsOn: req.StartDate, EndsOn: req.EndDate, Reason: req.Reason,
-		TraegerClosingDayID: req.ClosingDayID, Previous: req.Previous, Deleted: req.Delete,
+		SchoolIDs: ident.Int64s(req.SchoolIDs), StartsOn: req.StartDate, EndsOn: req.EndDate, Reason: req.Reason,
+		TraegerClosingDayID: req.ClosingDayID.Int64(), Previous: req.Previous, Deleted: req.Delete,
 	})
 	if err != nil {
 		renderHolidayClosureError(w, r, err)

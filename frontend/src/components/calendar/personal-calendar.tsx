@@ -28,6 +28,7 @@ import {
   type CalendarAppointmentOverview,
   type CalendarEvent,
   type CalendarResponseStatus,
+  knownResponseStatus,
 } from "~/lib/personal-calendar-api";
 import { parseISODate, toISODate, berlinTodayISO } from "~/lib/date-helpers";
 import {
@@ -94,7 +95,7 @@ interface PersonalCalendarProps {
   readonly onCancel?: (event: CalendarEvent) => void;
   readonly onDelete?: (event: CalendarEvent) => void;
   readonly busyAppointmentId?: string | null;
-  // Base path for the .ics download route, e.g. "/api/parent/calendar/appointments".
+  // Base path for the .ics download route, e.g. "/api/parent/me/calendar/appointments".
   // When set, appointment cards show a "Zum Kalender hinzufügen" download link.
   readonly icsHrefBase?: string;
   /** Zeigt dem Ersteller, was aus den E-Mails an die Eltern wurde (#7058). */
@@ -273,6 +274,12 @@ const responseTone: Record<CalendarResponseStatus, StatusBadgeTone> = {
   declined: "red",
   info: "blue",
 };
+
+/** An answer this build does not know shows its raw value in gray. */
+function attendeeTone(status: string): StatusBadgeTone {
+  const known = knownResponseStatus(status);
+  return known ? responseTone[known] : "gray";
+}
 
 /** Was eine Antwort nur für diesen Termin mit den anderen Terminen macht. */
 function occurrenceScopeHint(event: CalendarEvent): string {
@@ -1651,7 +1658,7 @@ export function CalendarOverviewList({
             </div>
             <StatusBadge
               label={responseLabel[attendee.status] ?? attendee.status}
-              tone={responseTone[attendee.status]}
+              tone={attendeeTone(attendee.status)}
             />
           </li>
         ))}

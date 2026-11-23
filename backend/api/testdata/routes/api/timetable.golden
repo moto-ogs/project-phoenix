@@ -8,7 +8,6 @@ GET /api/timetable/closing-days/
 GET /api/timetable/conflict-acks/
 GET /api/timetable/conflicts
 GET /api/timetable/deviations/history
-GET /api/timetable/exception-conflicts
 GET /api/timetable/gaps
 GET /api/timetable/holidays
 GET /api/timetable/instances/
@@ -23,8 +22,6 @@ GET /api/timetable/offering-sources/combined-counts
 GET /api/timetable/offering-sources/preview
 GET /api/timetable/offering-sources/suggestion
 GET /api/timetable/operations/active-groups/{id}/roster
-GET /api/timetable/operations/active-sessions
-GET /api/timetable/operations/capabilities
 GET /api/timetable/operations/instances/{id}/roster
 GET /api/timetable/operations/planned-now
 GET /api/timetable/periods/
@@ -47,7 +44,6 @@ POST /api/timetable/closing-days/
 POST /api/timetable/instances/
 POST /api/timetable/instances/bulk-cancel
 POST /api/timetable/instances/re-plan-week
-POST /api/timetable/instances/{id}/acknowledge-understaffed
 POST /api/timetable/instances/{id}/cancel
 POST /api/timetable/instances/{id}/complete
 POST /api/timetable/instances/{id}/convert-to-series
@@ -74,7 +70,6 @@ POST /api/timetable/pickup-extensions/{id}/resolve
 POST /api/timetable/planning-tracks/
 POST /api/timetable/planning-tracks/{id}/restore
 POST /api/timetable/school-vacation-hints/acknowledgements
-POST /api/timetable/school-vacations/seed
 POST /api/timetable/shift-coverage
 POST /api/timetable/substitutions/bulk
 POST /api/timetable/templates

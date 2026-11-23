@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,63 +11,69 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-)
 
-// routesNoRouterTestAnswers are the registered routes without unambiguous
-// router answers, so the answer check (api/common/answer_contract_test_helpers.go)
-// cannot attribute a real answer to them. Their tests call the handler without
-// a router, use an ambiguous router, or none exists. Their types still render
-// within the contract (TestRegisteredResponseTypesRenderWithinTheContract).
-//
-// Shrink only: give the route a test through its router and delete the line.
-var routesNoRouterTestAnswers = map[string]string{}
+	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/api/contract"
+)
 
 // The answer check writes the key of every registered route a test identified
 // unambiguously and answered to the file CONTRACT_ANSWERS_FILE names. After a
 // run of the whole suite, CONTRACT_ANSWERS_CHECK=1 makes this test hold that
-// file against the register above:
+// file against every registered JSON route; there is no exception list
+// (#7808):
 //
 //	cd backend && rm -f /tmp/answers.txt
 //	CONTRACT_ANSWERS_FILE=/tmp/answers.txt ../scripts/run-go-toolchain.sh ../scripts/test-backend.sh -count=1 ./...
 //	CONTRACT_ANSWERS_CHECK=1 CONTRACT_ANSWERS_FILE=/tmp/answers.txt ../scripts/run-go-toolchain.sh go test -tags=testhooks ./api -run TestEveryRegisteredRouteIsAnsweredInATest -count=1
 //
+// A selection of packages answers fewer routes. CI's backend job runs the
+// check after every run that tested ./api: the whole suite holds every route,
+// a selection with CONTRACT_ANSWERS_BASE (the base branch's contract.json)
+// only the routes the branch adds.
+//
+// A file route answers bytes, not the envelope: no decoder reads it, so no
+// answer of it can leave the contract, and it needs none here.
 // Collection never reads the file while other packages may still write it.
-// A selection of packages answers fewer routes, so the comparison runs only
-// on request. Ambiguous relative patterns validate schemas but do not count as
+// Ambiguous relative patterns validate schemas but do not count as
 // coverage; mount those test routers explicitly to identify their routes.
-// The register itself is checked on every run.
+//
+// A deprecated route that only refuses (RouteContract.Refuses) has no
+// success answer: a refusal a test sees through its full pattern answers it.
 func TestEveryRegisteredRouteIsAnsweredInATest(t *testing.T) {
 	t.Parallel()
 	doc, err := ContractDocument()
 	require.NoError(t, err)
 	registered := map[string]bool{}
 	for _, route := range doc.Routes {
-		registered[route.Key()] = true
+		if !route.File {
+			registered[route.Key()] = true
+		}
 	}
-	for key := range routesNoRouterTestAnswers {
-		assert.Truef(t, registered[key], "%s is not a registered route; delete its line", key)
-	}
-
 	answered, err := readRouteAnswers(os.Getenv)
 	require.NoError(t, err)
 	if answered == nil {
-		// Only the register is checked: one package answers few routes.
+		// Without the collected answers there is nothing to hold: one
+		// package answers few routes.
 		return
 	}
-	var unanswered, stale []string
+	registrations, err := contractRegistrations()
+	require.NoError(t, err)
+	for _, registration := range registrations {
+		key := registration.Method + " " + registration.Pattern
+		if registration.Refuses != "" && answered[common.RefusedAnswerKey(key)] {
+			answered[key] = true
+		}
+	}
+	existing, err := readBaseRoutes(os.Getenv)
+	require.NoError(t, err)
+	var unanswered []string
 	for key := range registered {
-		_, excused := routesNoRouterTestAnswers[key]
-		switch {
-		case !answered[key] && !excused:
+		if !answered[key] && !existing[key] {
 			unanswered = append(unanswered, key)
-		case answered[key] && excused:
-			stale = append(stale, key)
 		}
 	}
 	sort.Strings(unanswered)
-	sort.Strings(stale)
-	assert.Emptyf(t, unanswered, "no test unambiguously answers these registered routes through a router. Mount the route's router explicitly in a test:\n%s", strings.Join(unanswered, "\n"))
-	assert.Emptyf(t, stale, "a test answers these routes now; delete their lines from routesNoRouterTestAnswers:\n%s", strings.Join(stale, "\n"))
+	assert.Emptyf(t, unanswered, "no test unambiguously answers these registered routes through a router. Mount the route's router explicitly in a test, under the route's full path:\n%s", strings.Join(unanswered, "\n"))
 }
 
 func readRouteAnswers(getenv func(string) string) (map[string]bool, error) {
@@ -86,6 +93,28 @@ func readRouteAnswers(getenv func(string) string) (map[string]bool, error) {
 		answered[key] = true
 	}
 	return answered, nil
+}
+
+// readBaseRoutes are the routes of the base branch's contract, which a run of
+// a package selection does not hold to an answer; nil holds every route.
+func readBaseRoutes(getenv func(string) string) (map[string]bool, error) {
+	name := getenv("CONTRACT_ANSWERS_BASE")
+	if name == "" {
+		return nil, nil
+	}
+	raw, err := os.ReadFile(name) //nolint:gosec // G304: the file CI named.
+	if err != nil {
+		return nil, err
+	}
+	var base contract.Document
+	if err := json.Unmarshal(raw, &base); err != nil {
+		return nil, fmt.Errorf("base contract %s: %w", name, err)
+	}
+	routes := map[string]bool{}
+	for _, route := range base.Routes {
+		routes[route.Key()] = true
+	}
+	return routes, nil
 }
 
 func TestRouteAnswerCoverageCollectionAndCheckAreSeparate(t *testing.T) {
@@ -122,4 +151,19 @@ func TestRouteAnswerCoverageCollectionAndCheckAreSeparate(t *testing.T) {
 			assert.Equal(t, tt.want, answered)
 		})
 	}
+}
+
+func TestRouteAnswerCoverageOfASelectionSparesTheBaseRoutes(t *testing.T) {
+	t.Parallel()
+	none, err := readBaseRoutes(func(string) string { return "" })
+	require.NoError(t, err)
+	assert.Nil(t, none, "without a base every route needs an answer")
+
+	name := filepath.Join(t.TempDir(), "contract.json")
+	require.NoError(t, os.WriteFile(name, []byte(`{"routes":[{"method":"GET","pattern":"/traeger/documents/","portals":["org"]}]}`), 0o600))
+	base, err := readBaseRoutes(func(key string) string {
+		return map[string]string{"CONTRACT_ANSWERS_BASE": name}[key]
+	})
+	require.NoError(t, err)
+	assert.Equal(t, map[string]bool{"GET /traeger/documents/": true}, base)
 }

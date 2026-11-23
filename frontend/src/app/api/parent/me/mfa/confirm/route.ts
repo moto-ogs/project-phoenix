@@ -1,3 +1,4 @@
+import { routes } from "~/lib/contract/parent-me.generated";
 import { createFactorConfirmRoute } from "~/lib/factor-routes.server";
 import { parent } from "~/lib/parent/route-wrapper.server";
 import { parentPortal } from "~/server/auth/parent";
@@ -5,7 +6,7 @@ import { parentPortal } from "~/server/auth/parent";
 export const POST = createFactorConfirmRoute({
   portal: parentPortal,
   handlers: parent,
-  path: "/parent/me/mfa/confirm",
+  route: routes["POST /parent/me/mfa/confirm"],
   retry: { off: "a renewed session would send the code twice" },
   log: {
     component: "ParentMFAConfirmRoute",

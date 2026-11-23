@@ -24,6 +24,13 @@ func (s *Service) Submit(ctx context.Context, input feedback.CreateEntry) (feedb
 	var entry domain.Entry
 
 	err = s.runWhenEnabled(ctx, "submit", func(txCtx context.Context) (domain.OperationStats, error) {
+		stopped, err := s.stops.MoodCaptureStopped(txCtx, value.StudentID)
+		if err != nil {
+			return domain.OperationStats{}, fmt.Errorf("feedback: resolve the child's stop: %w", err)
+		}
+		if stopped {
+			return domain.OperationStats{}, feedback.ErrMoodCaptureStopped
+		}
 		var stats domain.OperationStats
 		entry, stats, err = s.store.Create(txCtx, value)
 		return stats, err
@@ -32,73 +39,6 @@ func (s *Service) Submit(ctx context.Context, input feedback.CreateEntry) (feedb
 		return feedback.Entry{}, err
 	}
 	return toPublicEntry(entry), nil
-}
-
-func (s *Service) SubmitBatch(ctx context.Context, inputs []feedback.CreateEntry) ([]feedback.Entry, error) {
-	if len(inputs) == 0 {
-		return nil, nil
-	}
-	normalized := make([]feedback.CreateEntry, 0, len(inputs))
-	var failures []error
-	for _, input := range inputs {
-		entry, err := validateEntry(input)
-		if err != nil {
-			failures = append(failures, err)
-			continue
-		}
-		normalized = append(normalized, entry)
-	}
-	if len(failures) > 0 {
-		err := &feedback.BatchOperationError{Errors: failures}
-		s.ObserveRejection("submit_batch", 0, err)
-		return nil, err
-	}
-	values := make([]domain.Entry, 0, len(normalized))
-	for _, input := range normalized {
-		values = append(values, toDomainInput(input))
-	}
-	var entries []domain.Entry
-
-	err := s.runWhenEnabled(ctx, "submit_batch", func(txCtx context.Context) (stats domain.OperationStats, batchErr error) {
-		entries, stats, batchErr = s.store.CreateBatch(txCtx, values)
-		return stats, batchErr
-	})
-	if err != nil {
-		return nil, err
-	}
-	return toPublicEntries(entries), nil
-}
-
-func (s *Service) LookupEntry(ctx context.Context, id int64) (feedback.Entry, error) {
-	if id <= 0 {
-		err := &feedback.InvalidEntryDataError{Err: feedback.ErrInvalidParameters}
-		s.ObserveRejection("read", 0, err)
-		return feedback.Entry{}, err
-	}
-	var entry domain.Entry
-
-	var err error
-	err = s.runWhenEnabled(ctx, "read", func(txCtx context.Context) (domain.OperationStats, error) {
-		var stats domain.OperationStats
-		entry, stats, err = s.store.Get(txCtx, id)
-		return stats, err
-	})
-	if err != nil {
-		return feedback.Entry{}, err
-	}
-	return toPublicEntry(entry), nil
-}
-
-func (s *Service) EraseEntry(ctx context.Context, id int64) error {
-	if id <= 0 {
-		err := &feedback.InvalidEntryDataError{Err: feedback.ErrInvalidParameters}
-		s.ObserveRejection("delete", 0, err)
-		return err
-	}
-
-	return s.run(ctx, "delete", func(txCtx context.Context) (domain.OperationStats, error) {
-		return s.store.Delete(txCtx, id)
-	})
 }
 
 func (s *Service) FindEntries(ctx context.Context, filter feedback.Filter) ([]feedback.Entry, error) {

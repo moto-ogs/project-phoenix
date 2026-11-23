@@ -17,6 +17,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/documentrendering/lists"
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -102,9 +103,9 @@ func (rs *HolidayHostResource) listWeeks(w http.ResponseWriter, r *http.Request)
 // holidayHomeSchoolResponse is a home school count with the school's name; a
 // nil SchoolID counts the holiday guests.
 type holidayHomeSchoolResponse struct {
-	SchoolID *int64 `json:"school_id"`
-	Name     string `json:"name"`
-	Count    int    `json:"count"`
+	SchoolID *ident.ID `json:"school_id"`
+	Name     string    `json:"name"`
+	Count    int       `json:"count"`
 }
 
 // holidayParticipantResponse is a participant with the name of its home
@@ -139,7 +140,7 @@ func (rs *HolidayHostResource) getParticipants(w http.ResponseWriter, r *http.Re
 		Participants: make([]holidayParticipantResponse, len(list.Participants)),
 	}
 	for i, school := range list.HomeSchools {
-		response.HomeSchools[i] = holidayHomeSchoolResponse{SchoolID: school.SchoolID, Name: names.homeSchool(school.SchoolID), Count: school.Count}
+		response.HomeSchools[i] = holidayHomeSchoolResponse{SchoolID: (*ident.ID)(school.SchoolID), Name: names.homeSchool(school.SchoolID), Count: school.Count}
 	}
 	for i, participant := range list.Participants {
 		response.Participants[i] = holidayParticipantResponse{HolidayParticipant: participant, HomeSchoolName: names.participantSchool(participant)}
@@ -273,7 +274,7 @@ func (n holidaySchoolNameMap) school(id int64) string {
 // the school its parents named.
 func (n holidaySchoolNameMap) participantSchool(participant capability.HolidayParticipant) string {
 	if participant.HomeSchoolID != nil {
-		return n.homeSchool(participant.HomeSchoolID)
+		return n.homeSchool((*int64)(participant.HomeSchoolID))
 	}
 	if participant.GuestSchoolName != "" {
 		return "Feriengast (" + participant.GuestSchoolName + ")"
@@ -333,7 +334,7 @@ func holidayParticipantDocument(list capability.HolidayParticipantList, names ho
 	header := []string{"Woche: " + list.Week.StartsOn.Format("02.01.") + " bis " + list.Week.EndsOn.Format("02.01.2006"),
 		"Kinder: " + strconv.Itoa(len(list.Participants))}
 	for _, model := range list.TimeModels {
-		models[model.ID] = model.Name
+		models[model.ID.Int64()] = model.Name
 		header = append(header, "Zeitmodell "+lists.SanitizeUserText(model.Name)+": "+strconv.Itoa(model.Count))
 	}
 	for _, school := range list.HomeSchools {
@@ -347,7 +348,7 @@ func holidayParticipantDocument(list capability.HolidayParticipantList, names ho
 		values := map[lists.ColumnID]string{
 			"last_name": participant.LastName, "first_name": participant.FirstName,
 			"birth_date": participant.BirthDate.Format("02.01.2006"), "home_school": names.participantSchool(participant),
-			"time_model": models[participant.TimeModelID],
+			"time_model": models[participant.TimeModelID.Int64()],
 		}
 		days := make([]string, len(participant.Days))
 		for j, day := range participant.Days {

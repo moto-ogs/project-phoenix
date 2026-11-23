@@ -3,7 +3,8 @@ import { z } from "zod";
 import {
   arr,
   bool,
-  int64StringOrNumber,
+  fileAnswer,
+  int64String,
   nullable,
   object,
   optional,
@@ -29,7 +30,7 @@ export interface TraegerStaffProofType {
 }
 
 export const TraegerStaffProofTypeSchema: z.ZodType<TraegerStaffProofType, unknown> = object<TraegerStaffProofType>({
-  id: int64StringOrNumber,
+  id: int64String,
   standard_key: optional(str),
   name: str,
   validity_months: nullable(safeInt),
@@ -54,12 +55,12 @@ export interface TraegerStaffProofEntry {
 }
 
 export const TraegerStaffProofEntrySchema: z.ZodType<TraegerStaffProofEntry, unknown> = object<TraegerStaffProofEntry>({
-  staff_record_id: int64StringOrNumber,
+  staff_record_id: int64String,
   first_name: str,
   last_name: str,
   personnel_number: nullable(str),
   schools: nullable(arr(str)),
-  type_id: int64StringOrNumber,
+  type_id: int64String,
   type_name: str,
   status: str,
   presented_on: optional(str),
@@ -104,9 +105,9 @@ export interface TraegerSchoolProofKind {
 }
 
 export const TraegerSchoolProofKindSchema: z.ZodType<TraegerSchoolProofKind, unknown> = object<TraegerSchoolProofKind>({
-  school_type_id: int64StringOrNumber,
+  school_type_id: int64String,
   name: str,
-  proof_type_id: nullable(int64StringOrNumber),
+  proof_type_id: nullable(int64String),
 });
 
 /** Go: workforce.TraegerSchoolProofKinds */
@@ -117,7 +118,7 @@ export interface TraegerSchoolProofKinds {
 }
 
 export const TraegerSchoolProofKindsSchema: z.ZodType<TraegerSchoolProofKinds, unknown> = object<TraegerSchoolProofKinds>({
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   school_name: str,
   kinds: nullable(arr(TraegerSchoolProofKindSchema)),
 });
@@ -141,9 +142,9 @@ export interface ProofRequest {
 
 /** Go: traegerstaff.ProofMappingRequest */
 export interface ProofMappingRequest {
-  school_id?: number;
-  school_type_id?: number;
-  proof_type_id?: number | null;
+  school_id?: string;
+  school_type_id?: string;
+  proof_type_id?: string | null;
 }
 
 export const routes = {
@@ -158,6 +159,15 @@ export const routes = {
     pattern: "/traeger/staff-proofs/",
     portals: ["org"],
     response: success(TraegerStaffProofListSchema),
+  },
+  "GET /traeger/staff-proofs/export": {
+    method: "GET",
+    pattern: "/traeger/staff-proofs/export",
+    portals: ["org"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
+    response: fileAnswer,
   },
   "GET /traeger/staff-proofs/school-kinds": {
     method: "GET",

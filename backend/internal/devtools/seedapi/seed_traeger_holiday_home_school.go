@@ -8,6 +8,7 @@ import (
 	"slices"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedTraegerHolidayHomeSchoolStep plans a holiday week the second school of
@@ -106,9 +107,9 @@ func seedHomeSchoolPeriod(client *Client, auth AuthRef, today calendar.Date, hos
 		Data struct {
 			PublicToken string `json:"public_token"`
 			Weeks       []struct {
-				ID         int64 `json:"id"`
+				ID         ident.ID `json:"id"`
 				TimeModels []struct {
-					ID int64 `json:"id"`
+					ID ident.ID `json:"id"`
 				} `json:"time_models"`
 			} `json:"weeks"`
 		} `json:"data"`
@@ -119,7 +120,7 @@ func seedHomeSchoolPeriod(client *Client, auth AuthRef, today calendar.Date, hos
 	}
 	week := envelope.Data.Weeks[0]
 	fmt.Println("  Träger-Büro: Osterferien week planned at the second school")
-	return periodID, week.ID, week.TimeModels[0].ID, envelope.Data.PublicToken, nil
+	return periodID, int64(week.ID), int64(week.TimeModels[0].ID), envelope.Data.PublicToken, nil
 }
 
 // seedHomeSchoolRegistration registers the child of the demo school for the
@@ -172,7 +173,7 @@ func seedHomeSchoolStudent(rt *Runtime) error {
 		return fmt.Errorf("read the demo school's children at other schools: %w", err)
 	}
 	type booking struct {
-		StudentID *int64 `json:"student_id"`
+		StudentID *ident.ID `json:"student_id"`
 	}
 	var envelope struct {
 		Data []booking `json:"data"`

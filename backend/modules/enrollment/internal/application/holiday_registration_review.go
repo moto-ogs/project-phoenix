@@ -11,6 +11,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Review of the holiday registrations by the Träger-Büro (#4663, ADR 0114).
@@ -141,11 +142,11 @@ func (h *HolidayRegistrationReview) ExportHolidayRegistrations(ctx context.Conte
 		return enrollment.HolidayRegistrationExport{}, err
 	}
 	rows := holidayExportRows(all, filter)
-	columns, err := h.exportAnswers(ctx, reviewer.OrganizationID, period.ID, rows)
+	columns, err := h.exportAnswers(ctx, reviewer.OrganizationID, period.ID.Int64(), rows)
 	if err != nil {
 		return enrollment.HolidayRegistrationExport{}, err
 	}
-	if err := h.audit(ctx, reviewer, period.ID, 0, enrollment.HolidayAuditExport, map[string]any{
+	if err := h.audit(ctx, reviewer, period.ID.Int64(), 0, enrollment.HolidayAuditExport, map[string]any{
 		"filter": holidayFilterDetails(filter), "format": format, "rows": len(rows),
 	}); err != nil {
 		return enrollment.HolidayRegistrationExport{}, err
@@ -167,7 +168,7 @@ func (h *HolidayRegistrationReview) exportAnswers(ctx context.Context, organizat
 	}
 	versions := []int{}
 	for _, row := range rows {
-		if version := answers[row.Registration.ID].FormVersion; version > 0 && !slices.Contains(versions, version) {
+		if version := answers[row.Registration.ID.Int64()].FormVersion; version > 0 && !slices.Contains(versions, version) {
 			versions = append(versions, version)
 		}
 	}
@@ -177,8 +178,8 @@ func (h *HolidayRegistrationReview) exportAnswers(ctx context.Context, organizat
 	}
 	columns := holidayExportColumns(forms, versions)
 	for i := range rows {
-		registration := answers[rows[i].Registration.ID]
-		rows[i].Answers = holidayRowAnswers(columns, registration, rows[i].Child.ID)
+		registration := answers[rows[i].Registration.ID.Int64()]
+		rows[i].Answers = holidayRowAnswers(columns, registration, rows[i].Child.ID.Int64())
 		rows[i].AnswerFields = holidayExportAnswerFields(forms[registration.FormVersion], rows[i].Answers)
 	}
 	return columns, nil
@@ -218,7 +219,7 @@ func holidayRowAnswers(columns []enrollment.HolidayFormField, registration enrol
 
 func holidayChildCustomData(answers enrollment.HolidayRegistrationAnswers, childID int64) enrollment.HolidayAnswers {
 	for _, child := range answers.Children {
-		if child.ChildID == childID {
+		if child.ChildID == ident.ID(childID) {
 			return child.CustomData
 		}
 	}
@@ -305,7 +306,7 @@ func (h *HolidayRegistrationReview) cancel(ctx context.Context, reviewer enrollm
 	if err := h.store.SetHolidayRegistrationStatus(ctx, reviewer.OrganizationID, current.ID, enrollment.HolidayRegistrationCancelled); err != nil {
 		return nil, nil, err
 	}
-	read, _, err := h.store.ReadHolidayReview(ctx, reviewer.OrganizationID, period.ID, current.ID)
+	read, _, err := h.store.ReadHolidayReview(ctx, reviewer.OrganizationID, period.ID.Int64(), current.ID)
 	if err != nil {
 		return nil, nil, fmt.Errorf("enrollment: read holiday registration: %w", err)
 	}
@@ -333,10 +334,14 @@ func (h *HolidayRegistrationReview) reopen(ctx context.Context, organizationID i
 }
 
 // RebookHolidayChild replaces the bookings of one child of a registration
-// that is not frozen. The history keeps the bookings before and after.
-func (h *HolidayRegistrationReview) RebookHolidayChild(ctx context.Context, reviewer enrollment.HolidayReviewer, periodID, registrationID, childID int64, bookings []enrollment.HolidayBookingInput) (enrollment.HolidayRegistrationDetail, error) {
+// that is not frozen, over the version its author read (ADR 0311). The
+// history keeps the bookings before and after.
+func (h *HolidayRegistrationReview) RebookHolidayChild(ctx context.Context, reviewer enrollment.HolidayReviewer, periodID, registrationID, childID int64, expectedVersion string, bookings []enrollment.HolidayBookingInput) (enrollment.HolidayRegistrationDetail, error) {
 	var promoted []enrollment.HolidayPromotion
 	detail, err := h.change(ctx, reviewer, periodID, registrationID, func(period enrollment.HolidayPeriod, current holidayRegistrationState) (string, any, error) {
+		if err := h.checkReadRegistration(ctx, reviewer.OrganizationID, period, current.ID, expectedVersion); err != nil {
+			return "", nil, err
+		}
 		details, changed, err := h.rebook(ctx, reviewer.OrganizationID, period, current, childID, bookings)
 		if err != nil {
 			return "", nil, err
@@ -358,7 +363,7 @@ func (h *HolidayRegistrationReview) rebook(ctx context.Context, organizationID i
 	if err := h.requireChangeable(period, current); err != nil {
 		return nil, nil, err
 	}
-	read, _, err := h.store.ReadHolidayReview(ctx, organizationID, period.ID, current.ID)
+	read, _, err := h.store.ReadHolidayReview(ctx, organizationID, period.ID.Int64(), current.ID)
 	if err != nil {
 		return nil, nil, fmt.Errorf("enrollment: read holiday registration: %w", err)
 	}
@@ -397,13 +402,13 @@ func (h *HolidayRegistrationReview) rebook(ctx context.Context, organizationID i
 	}
 	after := make([]enrollment.HolidayBookingChange, len(bookings))
 	for i, booking := range bookings {
-		after[i] = enrollment.HolidayBookingChange{WeekID: booking.WeekID, TimeModelID: booking.TimeModelID, Days: booking.Days, Lunch: booking.Lunch}
+		after[i] = enrollment.HolidayBookingChange{WeekID: ident.ID(booking.WeekID), TimeModelID: ident.ID(booking.TimeModelID), Days: booking.Days, Lunch: booking.Lunch}
 	}
-	changed, err := h.store.ReplaceHolidayChildBookings(ctx, organizationID, period.ID, childID, bookings, holidayWaitingPlacement(period, current.Status))
+	changed, err := h.store.ReplaceHolidayChildBookings(ctx, organizationID, period.ID.Int64(), childID, bookings, holidayWaitingPlacement(period, current.Status))
 	if err != nil {
 		return nil, nil, err
 	}
-	return enrollment.HolidayRegistrationEventDetails{ChildID: childID, Before: before, After: after}, changed, nil
+	return enrollment.HolidayRegistrationEventDetails{ChildID: ident.ID(childID), Before: before, After: after}, changed, nil
 }
 
 // holidayChild finds a child among the read registrations.
@@ -536,22 +541,12 @@ func holidayReviewHasLunch(read []enrollment.HolidayRegistrationDetail) bool {
 }
 
 func (h *HolidayRegistrationReview) detail(ctx context.Context, reviewer enrollment.HolidayReviewer, period enrollment.HolidayPeriod, registrationID int64) (enrollment.HolidayRegistrationDetail, error) {
-	read, overrides, err := h.store.ReadHolidayReview(ctx, reviewer.OrganizationID, period.ID, registrationID)
+	detail, err := h.editedDetail(ctx, reviewer.OrganizationID, period, registrationID)
 	if err != nil {
-		return enrollment.HolidayRegistrationDetail{}, fmt.Errorf("enrollment: read holiday registration: %w", err)
-	}
-	if len(read) == 0 {
-		return enrollment.HolidayRegistrationDetail{}, enrollment.ErrHolidayRegistrationEntryNotFound
-	}
-	if err := h.completeWithLunch(ctx, period, read, overrides); err != nil {
 		return enrollment.HolidayRegistrationDetail{}, err
 	}
-	detail := read[0]
 	if texts, ok := enrollment.HolidayConsentTextsOf(detail.ConsentVersion, detail.RetentionDays); ok {
 		detail.ConsentTexts = &texts
-	}
-	if detail.Contacts, err = h.store.ReadHolidayContacts(ctx, reviewer.OrganizationID, registrationID); err != nil {
-		return enrollment.HolidayRegistrationDetail{}, fmt.Errorf("enrollment: read holiday registration contacts: %w", err)
 	}
 	if detail.History, err = h.store.ReadHolidayHistory(ctx, reviewer.OrganizationID, registrationID); err != nil {
 		return enrollment.HolidayRegistrationDetail{}, fmt.Errorf("enrollment: read holiday registration history: %w", err)
@@ -560,13 +555,10 @@ func (h *HolidayRegistrationReview) detail(ctx context.Context, reviewer enrollm
 	if detail.BenefitsProofs, err = h.store.ReadHolidayProofs(ctx, reviewer.OrganizationID, registrationID); err != nil {
 		return enrollment.HolidayRegistrationDetail{}, fmt.Errorf("enrollment: read holiday registration proofs: %w", err)
 	}
-	if err := h.detailAnswers(ctx, reviewer.OrganizationID, period.ID, &detail); err != nil {
-		return enrollment.HolidayRegistrationDetail{}, err
-	}
 	if detail.Criteria, err = h.detailCriteria(ctx, reviewer.OrganizationID, period, detail); err != nil {
 		return enrollment.HolidayRegistrationDetail{}, err
 	}
-	if err := h.addMails(ctx, reviewer.OrganizationID, period.ID, &detail); err != nil {
+	if err := h.addMails(ctx, reviewer.OrganizationID, period.ID.Int64(), &detail); err != nil {
 		return enrollment.HolidayRegistrationDetail{}, err
 	}
 	return detail, nil
@@ -576,11 +568,11 @@ func (h *HolidayRegistrationReview) detail(ctx context.Context, reviewer enrollm
 // with and every answer without health information; the health read adds
 // those (#4722).
 func (h *HolidayRegistrationReview) detailAnswers(ctx context.Context, organizationID, periodID int64, detail *enrollment.HolidayRegistrationDetail) error {
-	answers, err := h.store.ReadHolidayAnswers(ctx, organizationID, periodID, detail.ID)
+	answers, err := h.store.ReadHolidayAnswers(ctx, organizationID, periodID, detail.ID.Int64())
 	if err != nil {
 		return fmt.Errorf("enrollment: read holiday registration answers: %w", err)
 	}
-	registration, ok := answers[detail.ID]
+	registration, ok := answers[detail.ID.Int64()]
 	if !ok {
 		return enrollment.ErrHolidayRegistrationEntryNotFound
 	}
@@ -615,13 +607,13 @@ func (h *HolidayRegistrationReview) complete(period enrollment.HolidayPeriod, re
 	models := map[int64]holidayWeekModel{}
 	for _, week := range period.Weeks {
 		for _, model := range week.TimeModels {
-			models[model.ID] = holidayWeekModel{week: week, model: model, order: len(models)}
+			models[model.ID.Int64()] = holidayWeekModel{week: week, model: model, order: len(models)}
 		}
 	}
 	for r := range read {
 		registration := &read[r]
 		cancelled := registration.Status == enrollment.HolidayRegistrationCancelled
-		registration.Frozen = !cancelled && h.frozen(period, overrides[registration.ID])
+		registration.Frozen = !cancelled && h.frozen(period, overrides[registration.ID.Int64()])
 		registration.DeletesOn, registration.HealthDeletesOn = holidayDeletionDays(period, registration.RetentionDays)
 		if registration.Children == nil {
 			registration.Children = []enrollment.HolidayRegistrationChild{}
@@ -635,14 +627,14 @@ func (h *HolidayRegistrationReview) complete(period enrollment.HolidayPeriod, re
 
 func completeHolidayChild(child *enrollment.HolidayRegistrationChild, models map[int64]holidayWeekModel, cancelled bool) {
 	if cancelled {
-		child.DuplicateRegistrationIDs = []int64{}
+		child.DuplicateRegistrationIDs = []ident.ID{}
 	}
 	if child.Bookings == nil {
 		child.Bookings = []enrollment.HolidayRegistrationBooking{}
 	}
 	for b := range child.Bookings {
 		booking := &child.Bookings[b]
-		known := models[booking.TimeModelID]
+		known := models[booking.TimeModelID.Int64()]
 		booking.WeekStartsOn, booking.WeekEndsOn = known.week.StartsOn, known.week.EndsOn
 		booking.HostSchoolID, booking.TimeModelName, booking.PriceCents = known.week.HostSchoolID, known.model.Name, known.model.PriceCents
 		if len(booking.Days) > 0 {
@@ -653,7 +645,7 @@ func completeHolidayChild(child *enrollment.HolidayRegistrationChild, models map
 		booking.LunchDays, booking.LunchPriceCents = enrollment.HolidayLunch(known.week, booking.Days, booking.Lunch)
 	}
 	slices.SortFunc(child.Bookings, func(a, b enrollment.HolidayRegistrationBooking) int {
-		return models[a.TimeModelID].order - models[b.TimeModelID].order
+		return models[a.TimeModelID.Int64()].order - models[b.TimeModelID.Int64()].order
 	})
 }
 
@@ -747,12 +739,12 @@ func holidayChildMatches(child enrollment.HolidayRegistrationChild, filter enrol
 	case enrollment.HolidayRegistrationGuestSchool:
 		return child.HomeSchoolID == nil
 	default:
-		return child.HomeSchoolID != nil && strconv.FormatInt(*child.HomeSchoolID, 10) == filter.School
+		return child.HomeSchoolID != nil && strconv.FormatInt((*child.HomeSchoolID).Int64(), 10) == filter.School
 	}
 }
 
 func holidayBookingMatches(booking enrollment.HolidayRegistrationBooking, filter enrollment.HolidayRegistrationFilter) bool {
-	if filter.WeekID != 0 && booking.WeekID != filter.WeekID {
+	if filter.WeekID != 0 && booking.WeekID != ident.ID(filter.WeekID) {
 		return false
 	}
 	return filter.TimeModel == "" || strings.EqualFold(strings.TrimSpace(booking.TimeModelName), strings.TrimSpace(filter.TimeModel))

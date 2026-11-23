@@ -3,8 +3,8 @@
 // (#4497) and the parents portal (#7051). The browser learns only whether a
 // second step follows. A refusal comes back as an ApiError with its code.
 
-import { apiErrorFromResponse, transportFetch } from "./api-error";
-import { portalAuthAnswer, portalAuthPath } from "./portal-paths";
+import { bffJson } from "./bff-fetch";
+import { sessionBff } from "./session-bff";
 import { signInAnswer, type SignInAnswer } from "./sign-in-answer";
 
 /** The caterer's and the parents' sign-in never asks for a setup step. */
@@ -18,20 +18,17 @@ export async function portalPasswordLogin(
   email: string,
   password: string,
 ): Promise<PortalPasswordLoginResult> {
-  // The trusted-device cookie of this browser travels along (same origin),
-  // so a remembered device skips the code.
-  const response = await transportFetch(portalAuthPath(portal, "login"), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({ email, password }),
-  });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, `${portal} login failed`);
-  }
+  // A sign-in step of the BFF without a session (`public`). The
+  // trusted-device cookie of this browser travels along (same origin), so a
+  // remembered device skips the code.
   const answer = signInAnswer(
     portal,
-    portalAuthAnswer<unknown>(portal, "login", await response.json()),
+    await bffJson("public", sessionBff.login(portal), {
+      body: { email, password },
+      errorMessage: `${portal} login failed`,
+    }),
   );
-  return answer.status === "mfa_required" ? answer : { status: "authenticated" };
+  return answer.status === "mfa_required"
+    ? answer
+    : { status: "authenticated" };
 }

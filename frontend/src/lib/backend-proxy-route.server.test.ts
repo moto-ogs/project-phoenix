@@ -1,12 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { suppressConsole } from "~/test/helpers/console";
-import { createPublicJsonProxy } from "./backend-proxy-route.server";
 import { createOperatorJsonProxy } from "./operator/route-wrapper.server";
-import {
-  createOptionalTenantJsonProxy,
-  createTenantJsonProxy,
-} from "./route-wrapper.server";
+import { createTenantJsonProxy } from "./route-wrapper.server";
 
 /**
  * Owner test for the shared JSON proxy request pipeline: URL and query
@@ -538,86 +534,5 @@ describe("createOperatorJsonProxy", () => {
     expect(fetchHeaders(1).Authorization).toBe("Bearer operator-new");
     expect(mockUncachedAuth).not.toHaveBeenCalled();
     expect(response.status).toBe(200);
-  });
-});
-
-describe("createOptionalTenantJsonProxy", () => {
-  it("calls the backend without Authorization when no session exists", async () => {
-    mockAuth.mockResolvedValueOnce(null);
-    const POST = createOptionalTenantJsonProxy({
-      method: "POST",
-      path: "/auth/register",
-    });
-
-    const response = await POST(
-      request("/api/auth/register", { method: "POST", body: "{}" }),
-      context(),
-    );
-
-    expect(response.status).toBe(200);
-    expect(fetchHeaders()).toEqual({
-      ...ORIGIN,
-      "Content-Type": "application/json",
-    });
-  });
-
-  it("attaches the session token when a session exists", async () => {
-    const POST = createOptionalTenantJsonProxy({
-      method: "POST",
-      path: "/auth/register",
-    });
-
-    await POST(
-      request("/api/auth/register", { method: "POST", body: "{}" }),
-      context(),
-    );
-
-    expect(fetchHeaders().Authorization).toBe("Bearer tenant-token");
-  });
-});
-
-describe("createPublicJsonProxy", () => {
-  it("never reads a session or sends Authorization", async () => {
-    const POST = createPublicJsonProxy({
-      method: "POST",
-      path: "/auth/password-reset",
-    });
-
-    await POST(
-      request("/api/auth/password-reset", { method: "POST", body: "{}" }),
-    );
-
-    expect(mockAuth).not.toHaveBeenCalled();
-    expect(fetchHeaders()).toEqual({
-      ...ORIGIN,
-      "Content-Type": "application/json",
-    });
-  });
-});
-
-describe("client header forwarding", () => {
-  const clientRequest = () =>
-    request("/api/tenant/resolve?slug=a", {
-      headers: {
-        "user-agent": "Browser/1",
-        "x-forwarded-for": "198.51.100.1, 203.0.113.9",
-      },
-    });
-
-  // The backend rate-limits per client IP; a route that sends none puts all
-  // visitors into the frontend container's single bucket.
-  it("forwards the canonical client IP and User-Agent by default", async () => {
-    const GET = createPublicJsonProxy({
-      method: "GET",
-      path: "/auth/tenant/resolve",
-    });
-
-    await GET(clientRequest());
-
-    expect(fetchHeaders()).toEqual({
-      ...ORIGIN,
-      "X-Forwarded-For": "203.0.113.9",
-      "User-Agent": "Browser/1",
-    });
   });
 });

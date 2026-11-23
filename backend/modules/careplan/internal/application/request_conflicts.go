@@ -30,7 +30,7 @@ func (s *RequestConflicts) ConflictCandidate(ctx context.Context, id int64) (*ca
 }
 
 func (s *RequestConflicts) LockConflictRequest(ctx context.Context, id int64) error {
-	row, _, err := lockCareRequestStudent(ctx, s.Records, s.People, id, func(row carerequests.Request) error { return validatePendingCareRequest(row, "") })
+	row, _, err := lockCareRequestStudent(ctx, s.Records, s.People, id, requirePendingCareRequest)
 	if err == nil && row.Status != "pending" {
 		return careplan.ErrCareScheduleRequestNotPending
 	}
@@ -80,7 +80,7 @@ func (s *RequestConflicts) WriteStaffValue(ctx context.Context, write carereques
 	}
 	return s.Plans.UpsertStudentPickupSchedule(ctx, &careplan.PickupSchedule{
 		StudentID: write.StudentID, Weekday: weekday, PickupTime: calendar.NormalizeWallClock(pickup),
-		Notes: &write.Reason, CreatedBy: staffID,
+		Notes: &write.Reason, CreatedBy: staffID, EnteredByTraeger: careplan.EnteredByTraeger(ctx, staffID),
 	})
 }
 

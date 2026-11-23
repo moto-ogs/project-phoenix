@@ -37,16 +37,6 @@ func (s *Service) ListStudentNamesByClass(ctx context.Context, schoolClass strin
 	return result, MapError(err)
 }
 
-func (s *Service) ListStudentsAcrossTenantsByID(ctx context.Context, ids []int64) ([]peopledirectory.Student, error) {
-	ids = peopledirectory.PositiveIDs(ids)
-	if len(ids) == 0 {
-		return []peopledirectory.Student{}, nil
-	}
-
-	values, err := s.students.ListAcrossTenantsByIDs(ctx, ids)
-	return nonNilStudents(values), MapError(err)
-}
-
 func (s *Service) ListStudentsByClasses(ctx context.Context, classes []string) ([]peopledirectory.Student, error) {
 	classes = peopledirectory.SchoolClasses(classes)
 	if len(classes) == 0 {
@@ -85,6 +75,14 @@ func (s *Service) LockStudent(ctx context.Context, id int64) error {
 	return MapError(s.students.Lock(ctx, id))
 }
 
+func (s *Service) LockStudentNoKeyUpdate(ctx context.Context, id int64) error {
+	if id <= 0 {
+		return invalidStudent("student ID is required")
+	}
+
+	return MapError(s.students.LockNoKeyUpdate(ctx, id))
+}
+
 func (s *Service) ListStudentsWithStatusFlag(ctx context.Context, status string) ([]peopledirectory.Student, error) {
 	if status != "sick" && status != "excused" {
 		return nil, invalidStudent("student status flag is invalid")
@@ -95,7 +93,10 @@ func (s *Service) ListStudentsWithStatusFlag(ctx context.Context, status string)
 
 func invalidStudent(reason string) error { return &peopledirectory.InvalidStudentError{Reason: reason} }
 
-var _ peopledirectory.StudentRowLocks = (*Service)(nil)
+var (
+	_ peopledirectory.StudentRowLocks     = (*Service)(nil)
+	_ peopledirectory.StudentKeyShareLock = (*Service)(nil)
+)
 
 func (s *Service) LockStudentRows(ctx context.Context, ids []int64) (int, error) {
 	if len(ids) == 0 {

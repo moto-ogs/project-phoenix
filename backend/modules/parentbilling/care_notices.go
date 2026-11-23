@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The Jahresbescheid of the monthly care contribution (#6219, ADR 0182,
@@ -67,18 +68,18 @@ type CareNoticeRunStart struct {
 // CareNoticeRun is a notice run as the list shows it. NoticeCount and
 // TotalCents are set once it is released.
 type CareNoticeRun struct {
-	ID          int64          `json:"id"`
+	ID          ident.ID       `json:"id"`
 	Year        int            `json:"year"`
 	PeriodFrom  calendar.Date  `json:"period_from"`
 	PeriodUntil calendar.Date  `json:"period_until"`
 	Status      string         `json:"status"`
-	SchoolIDs   []int64        `json:"school_ids"`
+	SchoolIDs   []ident.ID     `json:"school_ids"`
 	NoticeDate  *calendar.Date `json:"notice_date"`
 	CreatedAt   time.Time      `json:"created_at"`
 	ReleasedAt  *time.Time     `json:"released_at"`
 	IssuedOn    *calendar.Date `json:"issued_on"`
 	NoticeCount *int           `json:"notice_count"`
-	TotalCents  *int64         `json:"total_cents"`
+	TotalCents  *int64         `json:"total_cents" contract:"number"`
 	// DiscardedAt is set once the Abrechnung discarded the empty run (#6626).
 	DiscardedAt *time.Time `json:"discarded_at"`
 }
@@ -100,16 +101,16 @@ type CareNoticeLine struct {
 	Kind                 string        `json:"kind"`
 	Label                string        `json:"label"`
 	Detail               string        `json:"detail"`
-	CareOfferingID       *int64        `json:"care_offering_id,omitempty"`
+	CareOfferingID       *ident.ID     `json:"care_offering_id,omitempty"`
 	PeriodFrom           calendar.Date `json:"period_from"`
 	PeriodUntil          calendar.Date `json:"period_until"`
 	Months               int           `json:"months"`
 	Quantity             int           `json:"quantity"`
-	MonthlyPreviousCents int64         `json:"monthly_previous_cents"`
-	MonthlyCents         int64         `json:"monthly_cents"`
-	AnnualPreviousCents  int64         `json:"annual_previous_cents"`
-	AnnualCents          int64         `json:"annual_cents"`
-	DeltaCents           int64         `json:"delta_cents"`
+	MonthlyPreviousCents int64         `json:"monthly_previous_cents" contract:"number"`
+	MonthlyCents         int64         `json:"monthly_cents" contract:"number"`
+	AnnualPreviousCents  int64         `json:"annual_previous_cents" contract:"number"`
+	AnnualCents          int64         `json:"annual_cents" contract:"number"`
+	DeltaCents           int64         `json:"delta_cents" contract:"number"`
 }
 
 // CareNoticeInstallment is the rate of one month: due on the first of the
@@ -118,14 +119,14 @@ type CareNoticeInstallment struct {
 	Month          calendar.Date `json:"month"`
 	DueOn          calendar.Date `json:"due_on"`
 	ImmediatelyDue bool          `json:"immediately_due"`
-	PreviousCents  int64         `json:"previous_cents"`
-	AmountCents    int64         `json:"amount_cents"`
-	DeltaCents     int64         `json:"delta_cents"`
+	PreviousCents  int64         `json:"previous_cents" contract:"number"`
+	AmountCents    int64         `json:"amount_cents" contract:"number"`
+	DeltaCents     int64         `json:"delta_cents" contract:"number"`
 }
 
 // CareNoticeReference names another notice of the same contract.
 type CareNoticeReference struct {
-	ID       int64          `json:"id"`
+	ID       ident.ID       `json:"id"`
 	Number   string         `json:"number"`
 	IssuedOn *calendar.Date `json:"issued_on"`
 }
@@ -135,12 +136,12 @@ type CareNoticeReference struct {
 // annual amount the family pays, PreviousCents what the amended notice
 // assessed, DeltaCents the difference.
 type CareNotice struct {
-	ID             int64          `json:"id"`
+	ID             ident.ID       `json:"id"`
 	Number         string         `json:"number"`
 	IssuedOn       *calendar.Date `json:"issued_on"`
 	Kind           string         `json:"kind"`
-	ContractID     int64          `json:"contract_id"`
-	SchoolID       int64          `json:"school_id"`
+	ContractID     ident.ID       `json:"contract_id"`
+	SchoolID       ident.ID       `json:"school_id"`
 	SchoolName     string         `json:"school_name"`
 	ChildFirstName string         `json:"child_first_name"`
 	ChildLastName  string         `json:"child_last_name"`
@@ -156,9 +157,9 @@ type CareNotice struct {
 	PeriodUntil   calendar.Date           `json:"period_until"`
 	Lines         []CareNoticeLine        `json:"lines"`
 	Installments  []CareNoticeInstallment `json:"installments"`
-	PreviousCents int64                   `json:"previous_cents"`
-	TotalCents    int64                   `json:"total_cents"`
-	DeltaCents    int64                   `json:"delta_cents"`
+	PreviousCents int64                   `json:"previous_cents" contract:"number"`
+	TotalCents    int64                   `json:"total_cents" contract:"number"`
+	DeltaCents    int64                   `json:"delta_cents" contract:"number"`
 	Amends        *CareNoticeReference    `json:"amends"`
 	AmendedBy     *CareNoticeReference    `json:"amended_by"`
 	// LegalRemedy is the Rechtsbehelfsbelehrung the release copied from the
@@ -176,18 +177,27 @@ type CareNotice struct {
 // months leave out as in the monthly run.
 type CareNoticeRunDetail struct {
 	CareNoticeRun
-	Notices            []CareNotice    `json:"notices"`
-	Unchanged          int             `json:"unchanged"`
-	Billed             int             `json:"billed"`
-	Unpriced           []CareUnpriced  `json:"unpriced"`
-	Duplicates         []CareDuplicate `json:"duplicates"`
-	PreviewCount       int             `json:"preview_count"`
-	PreviewCents       int64           `json:"preview_cents"`
-	PreviewDeltaCents  int64           `json:"preview_delta_cents"`
-	Fingerprint        string          `json:"fingerprint"`
-	NumberPattern      string          `json:"number_pattern"`
-	NumberRangeSet     bool            `json:"number_range_set"`
-	LegalRemedyMissing bool            `json:"legal_remedy_missing"`
+	Notices    []CareNotice    `json:"notices"`
+	Unchanged  int             `json:"unchanged"`
+	Billed     int             `json:"billed"`
+	Unpriced   []CareUnpriced  `json:"unpriced"`
+	Duplicates []CareDuplicate `json:"duplicates"`
+	// JoinedChildren are the children of a calculated run with a record at
+	// each of several schools its months bill as one (ADR 0158, Nachtrag
+	// Schulwechsel).
+	JoinedChildren []CareJoinedChild `json:"joined_children"`
+	// BilledChildren are the children a month of the run holds back because
+	// an issued invoice or Jahresbescheid of another of their contracts
+	// already bills it (ADR 0158, Nachtrag #7892): the run assesses that
+	// month for none of their contracts.
+	BilledChildren     []CareBilledChild `json:"billed_children"`
+	PreviewCount       int               `json:"preview_count"`
+	PreviewCents       int64             `json:"preview_cents" contract:"number"`
+	PreviewDeltaCents  int64             `json:"preview_delta_cents" contract:"number"`
+	Fingerprint        string            `json:"fingerprint"`
+	NumberPattern      string            `json:"number_pattern"`
+	NumberRangeSet     bool              `json:"number_range_set"`
+	LegalRemedyMissing bool              `json:"legal_remedy_missing"`
 }
 
 // CareNoticeLetter is a fee notice with the letterhead of the Träger, as
@@ -242,11 +252,11 @@ type CareFeeNotices interface {
 // assessed, so no monthly invoice bills it. A new notice of the year bills
 // it again.
 type CareFeeNoticeHold struct {
-	ContractID     int64  `json:"contract_id"`
-	SchoolID       int64  `json:"school_id"`
-	ChildFirstName string `json:"child_first_name"`
-	ChildLastName  string `json:"child_last_name"`
-	NoticeNumber   string `json:"notice_number"`
+	ContractID     ident.ID `json:"contract_id"`
+	SchoolID       ident.ID `json:"school_id"`
+	ChildFirstName string   `json:"child_first_name"`
+	ChildLastName  string   `json:"child_last_name"`
+	NoticeNumber   string   `json:"notice_number"`
 }
 
 // CareNoticeDue is the installment of a month that the effective notice of
@@ -263,5 +273,5 @@ type CareNoticeDue struct {
 	Month          calendar.Date `json:"month"`
 	DueOn          calendar.Date `json:"due_on"`
 	ImmediatelyDue bool          `json:"immediately_due"`
-	AmountCents    int64         `json:"amount_cents"`
+	AmountCents    int64         `json:"amount_cents" contract:"number"`
 }

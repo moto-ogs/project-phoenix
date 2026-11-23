@@ -19,16 +19,11 @@
 
 "use client";
 
-import { apiErrorFromResponse } from "~/lib/api-error";
+import { bffJson } from "~/lib/bff-fetch";
 import { useImmutableSWR } from "~/lib/swr";
 import { shellResourceKeys } from "~/lib/swr/shell-keys";
+import { mapUserContext } from "~/lib/user-context-map";
 import type { UserContextResponse } from "~/lib/user-context-types";
-
-interface ApiResponse<T> {
-  data: T;
-  success: boolean;
-  message: string;
-}
 
 export class IncompleteUserContextError extends Error {
   constructor(readonly userContext: UserContextResponse) {
@@ -52,7 +47,8 @@ interface UseUserContextReturn {
 }
 
 /**
- * Fetches and caches user context from the BFF endpoint.
+ * Fetches the navigation context through the portal's catalog proxy
+ * (GET /api/me/navigation, #7563), maps it once and caches it.
  *
  * Features:
  * - Automatic request deduplication (SWR)
@@ -66,22 +62,13 @@ export function useUserContext(enabled = true): UseUserContextReturn {
   const { data, isLoading, error } = useImmutableSWR<UserContextResponse>(
     enabled ? shellResourceKeys.userContext() : null,
     async () => {
-      const response = await fetch("/api/user-context", {
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        throw await apiErrorFromResponse(
-          response,
-          `User context fetch failed: ${response.status}`,
-        );
+      const userContext = mapUserContext(
+        await bffJson("tenant", "GET /api/me/navigation"),
+      );
+      if (userContext.incomplete) {
+        throw new IncompleteUserContextError(userContext);
       }
-
-      const json = (await response.json()) as ApiResponse<UserContextResponse>;
-      if (json.data.incomplete) {
-        throw new IncompleteUserContextError(json.data);
-      }
-      return json.data;
+      return userContext;
     },
   );
 
@@ -104,10 +91,11 @@ export function useUserContext(enabled = true): UseUserContextReturn {
  * Kontext vollständig geladen ist und kein Profil nennt, etwa für eine Person
  * des Trägers oder eine Schul-Admin ohne Profil (#7306). Solange er lädt,
  * fehlt oder unvollständig ist, gilt `true`: dann entscheidet wie bisher die
- * Seite.
+ * Seite. Ohne Schulsitzung (`enabled` false, etwa im Operator- oder
+ * Trägerportal) fragt der Hook nichts ab und gilt ebenfalls `true`.
  */
-export function useHasOwnStaff(): boolean {
-  const { userContext, isIncomplete } = useUserContext();
+export function useHasOwnStaff(enabled = true): boolean {
+  const { userContext, isIncomplete } = useUserContext(enabled);
   return !(
     userContext !== undefined &&
     !isIncomplete &&

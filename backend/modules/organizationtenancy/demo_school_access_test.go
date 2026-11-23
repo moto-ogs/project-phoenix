@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -40,7 +41,7 @@ type demoSchools map[string]organizationtenancy.School
 
 func (s demoSchools) FindSchool(_ context.Context, id int64) (organizationtenancy.School, error) {
 	for _, school := range s {
-		if school.ID == id {
+		if school.ID == ident.ID(id) {
 			return school, nil
 		}
 	}

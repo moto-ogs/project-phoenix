@@ -3,6 +3,7 @@
 // Zusammenfassung vor dem Absenden der Ferienanmeldung (#4661), mit dem
 // Beitrag aus den Regeln des Trägers (#4664).
 
+import type * as sharedContract from "~/lib/contract/shared.generated";
 import { holidayDayList } from "~/lib/holiday-days";
 import { useLocale, useTranslations } from "next-intl";
 import { type ReactNode, useCallback } from "react";
@@ -15,7 +16,6 @@ import { DataField, DataGrid } from "~/components/ui/data-field";
 import { SectionCard } from "~/components/ui/section-card";
 import { formatDate } from "~/lib/date-helpers";
 import type { HolidayFormField } from "~/lib/holiday-form-field";
-import type { NewUploadValue } from "~/lib/enrollment-uploads";
 import {
   type HolidayRegistrationOffer,
   uploadHolidayProof,
@@ -109,7 +109,7 @@ export function HolidayRegistrationSummary({
   onBack: () => void;
   onSubmit: () => void;
   onBenefitsDeclaredChange: (declared: boolean) => void;
-  onBenefitsProofsChange: (proofs: NewUploadValue[]) => void;
+  onBenefitsProofsChange: (proofs: sharedContract.UploadReceipt[]) => void;
 }>) {
   const t = useTranslations("holidayRegistration");
   const uploadText = useCareTermTranslations("enrollmentForm");

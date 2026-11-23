@@ -181,6 +181,7 @@ func (s *OfferingChanges) directOfferingDiff(
 	diff.phase = scope.phase
 	diff.requested = input.Selections
 	diff.effectiveFrom = scope.effectiveFrom
+	diff.selectionFacts = scope.selectionFacts
 	return diff, ids, nil
 }
 

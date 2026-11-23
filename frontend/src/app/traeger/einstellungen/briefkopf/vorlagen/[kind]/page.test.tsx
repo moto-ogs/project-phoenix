@@ -79,6 +79,7 @@ function detail(
   versions: DocumentTemplateDetail["versions"] = [],
 ): DocumentTemplateDetail {
   return {
+    version: `v-${versions[0]?.version ?? 0}`,
     current: versions[0] ?? {
       kind: "rechnung",
       version: 0,
@@ -288,13 +289,143 @@ describe("TraegerVorlagePage", () => {
         "Die Vorlage ist gespeichert. Neue Schreiben nutzen Version 1.",
       ),
     ).toBeInTheDocument();
-    expect(templatesApi.saveDocumentTemplate).toHaveBeenCalledWith("rechnung", {
-      ...STANDARD,
-      subject: "Ihre Rechnung",
-    });
+    expect(templatesApi.saveDocumentTemplate).toHaveBeenCalledWith(
+      "rechnung",
+      { ...STANDARD, subject: "Ihre Rechnung" },
+      "v-0",
+    );
     expect(
       await screen.findByText("Gilt für neue Schreiben"),
     ).toBeInTheDocument();
+  });
+
+  // ADR 0311 rule 5: the read-state token comes with the read, not with the
+  // save's answer. When the read after a save fails, a second save waits
+  // for a successful read instead of sending the old token (a false
+  // refusal).
+  it("sends no second save with the old token when the read after a save failed", async () => {
+    renderPage();
+    fireEvent.change(await screen.findByLabelText(/Betreff/), {
+      target: { value: "Ihre Rechnung" },
+    });
+    templatesApi.saveDocumentTemplate.mockResolvedValue({
+      kind: "rechnung",
+      version: 1,
+      standard: false,
+      createdAt: "2026-09-09T10:00:00Z",
+      ...STANDARD,
+      subject: "Ihre Rechnung",
+    });
+    templatesApi.fetchDocumentTemplate.mockRejectedValue(
+      new ApiError("down", 503, { code: "general.unavailable" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(templatesApi.saveDocumentTemplate).toHaveBeenCalledTimes(1),
+    );
+    expect(
+      await screen.findByText(/Deine Änderung ist gespeichert/),
+    ).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/Betreff/), {
+      target: { value: "Ihre Rechnung 2" },
+    });
+    const save = screen.queryByRole("button", { name: "Speichern" });
+    if (save) fireEvent.click(save);
+    await waitFor(() =>
+      expect(
+        templatesApi.fetchDocumentTemplate.mock.calls.length,
+      ).toBeGreaterThan(1),
+    );
+    expect(templatesApi.saveDocumentTemplate).toHaveBeenCalledTimes(1);
+  });
+
+  // ADR 0311: a colleague saved a version since the editor opened. The save
+  // is refused and the page shows the stored version with its text; the
+  // draft over it is gone, so no second „Speichern“ replaces it unseen.
+  it("shows the text a colleague saved since instead of keeping the draft over it", async () => {
+    const colleague = {
+      kind: "rechnung" as const,
+      version: 1,
+      standard: false,
+      createdAt: "2026-09-09T10:00:00Z",
+      ...STANDARD,
+      subject: "Rechnung der Kollegin",
+    };
+    renderPage();
+    fireEvent.change(await screen.findByLabelText(/Betreff/), {
+      target: { value: "Ihre Rechnung" },
+    });
+    templatesApi.fetchDocumentTemplate.mockResolvedValue(detail([colleague]));
+    templatesApi.saveDocumentTemplate.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", "die Vorlage"),
+      ),
+    ).toBeInTheDocument();
+    expect(templatesApi.saveDocumentTemplate).toHaveBeenLastCalledWith(
+      "rechnung",
+      { ...STANDARD, subject: "Ihre Rechnung" },
+      "v-0",
+    );
+    expect((await screen.findAllByText("Version 1"))[0]).toBeVisible();
+    await waitFor(() =>
+      expect(screen.getByLabelText(/Betreff/)).toHaveValue(
+        "Rechnung der Kollegin",
+      ),
+    );
+    // Nothing is left to save over the colleague's version.
+    expect(
+      screen.queryByRole("button", { name: "Speichern" }),
+    ).not.toBeInTheDocument();
+    expect(templatesApi.saveDocumentTemplate).toHaveBeenCalledTimes(1);
+  });
+
+  // The stored version is newer but carries the text the draft started
+  // from: nothing of the colleague's is lost, so the draft stays and the
+  // next save builds on the version now shown.
+  it("keeps the draft when the version saved since has the text it started from", async () => {
+    const colleague = {
+      kind: "rechnung" as const,
+      version: 1,
+      standard: false,
+      createdAt: "2026-09-09T10:00:00Z",
+      ...STANDARD,
+    };
+    renderPage();
+    fireEvent.change(await screen.findByLabelText(/Betreff/), {
+      target: { value: "Ihre Rechnung" },
+    });
+    templatesApi.fetchDocumentTemplate.mockResolvedValue(detail([colleague]));
+    templatesApi.saveDocumentTemplate.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", "die Vorlage"),
+      ),
+    ).toBeInTheDocument();
+    expect((await screen.findAllByText("Version 1"))[0]).toBeVisible();
+    expect(screen.getByLabelText(/Betreff/)).toHaveValue("Ihre Rechnung");
+
+    templatesApi.saveDocumentTemplate.mockResolvedValueOnce({
+      ...colleague,
+      version: 2,
+      subject: "Ihre Rechnung",
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(templatesApi.saveDocumentTemplate).toHaveBeenLastCalledWith(
+        "rechnung",
+        { ...STANDARD, subject: "Ihre Rechnung" },
+        "v-1",
+      ),
+    );
   });
 
   it("locks all draft changes until saving and reloading finish", async () => {
@@ -509,6 +640,7 @@ describe("TraegerVorlagePage", () => {
       expect(templatesApi.saveDocumentTemplate).toHaveBeenCalledWith(
         "rechnung",
         { ...STANDARD, invoice },
+        "v-0",
       ),
     );
   });

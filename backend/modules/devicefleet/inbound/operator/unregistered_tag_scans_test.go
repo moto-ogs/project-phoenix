@@ -8,8 +8,12 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 
 	"github.com/go-chi/render"
 	"github.com/stretchr/testify/require"
@@ -110,8 +114,14 @@ func (s *testSurface) surface() operator.Surface {
 			render.JSON(w, r, map[string]string{"kind": rendered.kind, "message": rendered.message})
 		},
 		Respond: func(w http.ResponseWriter, r *http.Request, status int, data any, message string) {
-			render.Status(r, status)
-			render.JSON(w, r, map[string]any{"data": data, "message": message})
+			// As common.Respond does in production: identifiers as strings.
+			body, err := wire.Marshal(map[string]any{"data": data, "message": message})
+			if err != nil {
+				panic(err)
+			}
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(status)
+			_, _ = w.Write(body)
 		},
 		OperatorID: func(context.Context) int64 { return s.operatorID },
 	}
@@ -190,15 +200,15 @@ func TestListUnregisteredTagScansNarrowsAndLabels(t *testing.T) {
 	require.Equal(t, "Unregistered RFID scans retrieved successfully", body.Message)
 	require.Len(t, body.Data, 1)
 	require.Equal(t, map[string]any{
-		"id":                float64(300),
+		"id":                "300",
 		"created_at":        "0001-01-01T00:00:00Z",
 		"updated_at":        "0001-01-01T00:00:00Z",
-		"tenant_id":         float64(schoolID),
+		"tenant_id":         strconv.FormatInt(schoolID, 10),
 		"tag_uid":           "ABC123",
 		"scanned_at":        "0001-01-01T00:00:00Z",
-		"school_id":         float64(schoolID),
+		"school_id":         strconv.FormatInt(schoolID, 10),
 		"school_name":       "School",
-		"organization_id":   float64(orgID),
+		"organization_id":   strconv.FormatInt(orgID, 10),
 		"organization_name": "Organization",
 		"device_name":       "Eingang",
 	}, body.Data[0])
@@ -352,9 +362,9 @@ func TestResolveUnregisteredTagScanPassesOperatorAndTrimmedNote(t *testing.T) {
 	require.Equal(t, "Unregistered RFID scan resolved successfully", body.Message)
 	require.Equal(t, "ABC123", body.Data["tag_uid"])
 	require.Equal(t, "2026-09-17T10:00:00Z", body.Data["resolved_at"])
-	require.Equal(t, float64(42), body.Data["resolved_by_operator_id"])
-	require.Equal(t, float64(84), body.Data["school_id"])
-	require.Equal(t, float64(42), body.Data["organization_id"])
+	require.Equal(t, int64(42), testpkg.JSONID(t, body.Data["resolved_by_operator_id"]))
+	require.Equal(t, int64(84), testpkg.JSONID(t, body.Data["school_id"]))
+	require.Equal(t, int64(42), testpkg.JSONID(t, body.Data["organization_id"]))
 }
 
 func TestResolveUnregisteredTagScanBlankNoteIsNoNote(t *testing.T) {

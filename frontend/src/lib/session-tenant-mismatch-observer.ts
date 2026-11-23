@@ -50,9 +50,9 @@ let restoreFetch: (() => void) | null = null;
  * Names this tab's account on every fetch to its own BFF (#5183) and reports
  * every refusal of it, whichever client sent the request: the session of
  * another school than this subdomain (#5130) or of another account than this
- * tab. Many clients read only `response.ok` and never build an ApiError, so
- * the report in apiErrorFromBody misses them. Axios runs on XHR; its
- * interceptor adds the header and its errors reach apiErrorFromBody.
+ * tab. It sees every request, also those outside bffJson (the session
+ * renewal, Auth.js endpoints, the SSE stream), which never reach the report
+ * in apiErrorFromBody.
  * SSE also uses fetch, so this observes the actual stream refusal (#5374).
  * Where the session-end barrier is installed (#5399), every request to the
  * own BFF passes it: a logout here or in another tab of this origin aborts

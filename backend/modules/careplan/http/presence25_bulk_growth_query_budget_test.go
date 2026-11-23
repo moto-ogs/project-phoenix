@@ -14,10 +14,8 @@ import (
 
 func TestPresence25BulkGrowthQueryBudget(t *testing.T) {
 	t.Parallel()
-	for _, route := range []struct{ name, path, timeKey, time string }{
-		{"arrival_status", "/arrival-schedules/status", "", ""},
-		{"arrival_times", "/arrival-times/bulk", "expected_arrival", "08:15"},
-		{"pickup_times", "/pickup-times/bulk", "pickup_time", "16:15"},
+	for _, route := range []struct{ name, path string }{
+		{"arrival_status", "/arrival-schedules/status"},
 	} {
 		t.Run(route.name, func(t *testing.T) {
 			testpkg.OwnTenant(t)
@@ -33,7 +31,6 @@ func TestPresence25BulkGrowthQueryBudget(t *testing.T) {
 					student := testpkg.CreateTestStudent(t, tc.db, "Presence25", fmt.Sprintf("Child%d", len(ids)), "P25")
 					ids = append(ids, student.ID)
 					testpkg.CreateTestArrivalSchedule(t, tc.db, student.ID, 1, staff.ID, "08:15")
-					testpkg.CreateTestPickupSchedule(t, tc.db, student.ID, 1, staff.ID, "16:15")
 				}
 				counter.Reset()
 				req := testutil.NewAuthenticatedRequest(t, http.MethodPost, "/api/students"+route.path, map[string]any{"student_ids": ids, "date": studentsTestToday.String()})
@@ -44,22 +41,11 @@ func TestPresence25BulkGrowthQueryBudget(t *testing.T) {
 					Data json.RawMessage `json:"data"`
 				}
 				require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &envelope))
-				if route.name == "arrival_status" {
-					var result struct {
-						StudentIDs []int64 `json:"student_ids"`
-					}
-					require.NoError(t, json.Unmarshal(envelope.Data, &result))
-					require.Equal(t, ids, result.StudentIDs)
-				} else {
-					var rows []map[string]any
-					require.NoError(t, json.Unmarshal(envelope.Data, &rows))
-					expected := make([]map[string]any, 0, n)
-					for _, id := range ids {
-						expected = append(expected, map[string]any{"student_id": float64(id), "date": studentsTestToday.String(), "weekday_name": "Montag", route.timeKey: route.time, "is_exception": false})
-					}
-					require.Len(t, rows, n)
-					require.ElementsMatch(t, expected, rows)
+				var result struct {
+					StudentIDs []testpkg.ID `json:"student_ids"`
 				}
+				require.NoError(t, json.Unmarshal(envelope.Data, &result))
+				require.Equal(t, ids, testpkg.IDs(result.StudentIDs))
 				t.Logf("presence25 POST %s N%d: %d full-route statements", route.path, n, counter.Total())
 				assertPresence25BulkBudget(t, route.name, n, counter.Measurement(counter.Queries()))
 			}
@@ -74,14 +60,6 @@ func assertPresence25BulkBudget(t *testing.T, route string, n int, queries query
 		querybudgets.AssertQueryBudget(t, "api.students.presence25.arrival_status.n3", queries)
 	case "arrival_status.n8":
 		querybudgets.AssertQueryBudget(t, "api.students.presence25.arrival_status.n8", queries)
-	case "arrival_times.n3":
-		querybudgets.AssertQueryBudget(t, "api.students.presence25.arrival_times.n3", queries)
-	case "arrival_times.n8":
-		querybudgets.AssertQueryBudget(t, "api.students.presence25.arrival_times.n8", queries)
-	case "pickup_times.n3":
-		querybudgets.AssertQueryBudget(t, "api.students.presence25.pickup_times.n3", queries)
-	case "pickup_times.n8":
-		querybudgets.AssertQueryBudget(t, "api.students.presence25.pickup_times.n8", queries)
 	default:
 		t.Fatalf("unregistered presence25 fixture %s N%d", route, n)
 	}

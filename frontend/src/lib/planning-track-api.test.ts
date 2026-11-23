@@ -1,9 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { sessionFetch } = vi.hoisted(() => ({ sessionFetch: vi.fn() }));
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 
-vi.mock("./session-cache", () => ({ sessionFetch }));
+const fetchMock = vi.fn();
+beforeEach(() => {
+  vi.stubGlobal("fetch", fetchMock);
+});
 
+import { routes } from "./contract/timetable.generated";
 import { planningTrackService } from "./planning-track-api";
 
 function response(data: unknown, status = 200): Response {
@@ -17,12 +21,12 @@ describe("planningTrackService", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("maps list results and keeps archived tracks available", async () => {
-    sessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       response({
         data: [
-          { id: 4, name: "Früh", color: "#5080D8", sort_order: 0 },
+          { id: "4", name: "Früh", color: "#5080D8", sort_order: 0 },
           {
-            id: 5,
+            id: "5",
             name: "Alt",
             color: "#83CD2D",
             sort_order: 1,
@@ -50,14 +54,19 @@ describe("planningTrackService", () => {
     ]);
   });
 
-  it("returns an empty list for a null payload", async () => {
-    sessionFetch.mockResolvedValueOnce(response({ data: null }));
-
-    await expect(planningTrackService.list()).resolves.toEqual([]);
+  it("never sees a null list: the catalog proxy refuses it as a 502", () => {
+    for (const route of [
+      routes["GET /api/timetable/planning-tracks/"],
+      routes["PUT /api/timetable/planning-tracks/order"],
+    ]) {
+      expect(
+        route.response.safeParse({ status: "success", data: null }).success,
+      ).toBe(false);
+    }
   });
 
   it("keeps the backend diagnostic separate when loading fails", async () => {
-    sessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       response({ detail: "Lesen nicht erlaubt" }, 403),
     );
 
@@ -70,9 +79,9 @@ describe("planningTrackService", () => {
   });
 
   it("creates and maps a planning track", async () => {
-    sessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       response({
-        data: { id: 8, name: "Nord", color: "#5080D8", sort_order: 3 },
+        data: { id: "8", name: "Nord", color: "#5080D8", sort_order: 3 },
       }),
     );
 
@@ -89,7 +98,7 @@ describe("planningTrackService", () => {
       sortOrder: 3,
       archivedAt: undefined,
     });
-    expect(sessionFetch).toHaveBeenCalledWith(
+    expect(fetchMock).toHaveBeenCalledWith(
       "/api/timetable/planning-tracks",
       expect.objectContaining({
         method: "POST",
@@ -103,10 +112,10 @@ describe("planningTrackService", () => {
   });
 
   it("updates a planning track and reports a response fallback", async () => {
-    sessionFetch
+    fetchMock
       .mockResolvedValueOnce(
         response({
-          data: { id: 8, name: "Süd", color: "#83CD2D", sort_order: 4 },
+          data: { id: "8", name: "Süd", color: "#83CD2D", sort_order: 4 },
         }),
       )
       .mockResolvedValueOnce(new Response("invalid", { status: 500 }));
@@ -130,10 +139,10 @@ describe("planningTrackService", () => {
     });
   });
 
-  it("serializes the complete order as numeric ids", async () => {
-    sessionFetch.mockResolvedValueOnce(
+  it("serializes the complete order as string ids", async () => {
+    fetchMock.mockResolvedValueOnce(
       response({
-        data: [{ id: 12, name: "Spät", color: "#5080D8", sort_order: 0 }],
+        data: [{ id: "12", name: "Spät", color: "#5080D8", sort_order: 0 }],
       }),
     );
 
@@ -147,17 +156,17 @@ describe("planningTrackService", () => {
       },
     ]);
 
-    expect(sessionFetch).toHaveBeenCalledWith(
+    expect(fetchMock).toHaveBeenCalledWith(
       "/api/timetable/planning-tracks/order",
       expect.objectContaining({
         method: "PUT",
-        body: JSON.stringify({ ids: [12, 7] }),
+        body: JSON.stringify({ ids: ["12", "7"] }),
       }),
     );
   });
 
   it("reports reorder failures", async () => {
-    sessionFetch.mockResolvedValueOnce(response({}, 409));
+    fetchMock.mockResolvedValueOnce(response({}, 409));
 
     await expect(planningTrackService.reorder(["12"])).rejects.toMatchObject({
       message: "Reihenfolge konnte nicht gespeichert werden",
@@ -165,26 +174,17 @@ describe("planningTrackService", () => {
     });
   });
 
-  it("returns an empty order when the backend returns null", async () => {
-    sessionFetch.mockResolvedValueOnce(response({ data: null }));
-
-    await expect(planningTrackService.reorder([])).resolves.toEqual([]);
-  });
-
   it("accepts an empty successful archive response from the delete proxy", async () => {
-    sessionFetch.mockResolvedValueOnce(new Response(null, { status: 204 }));
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
 
     await expect(planningTrackService.archive("5")).resolves.toBeUndefined();
-    expect(sessionFetch).toHaveBeenCalledWith(
-      "/api/timetable/planning-tracks/5",
-      { method: "DELETE" },
-    );
+    expect(fetchMock).toHaveBeenCalledWith("/api/timetable/planning-tracks/5", {
+      method: "DELETE",
+    });
   });
 
   it("reports archive failures", async () => {
-    sessionFetch.mockResolvedValueOnce(
-      new Response("invalid", { status: 502 }),
-    );
+    fetchMock.mockResolvedValueOnce(new Response("invalid", { status: 502 }));
 
     await expect(planningTrackService.archive("5")).rejects.toMatchObject({
       message: "Planungsspur konnte nicht archiviert werden",
@@ -193,9 +193,9 @@ describe("planningTrackService", () => {
   });
 
   it("restores and maps an archived planning track", async () => {
-    sessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       response({
-        data: { id: 5, name: "Alt", color: "#83CD2D", sort_order: 1 },
+        data: { id: "5", name: "Alt", color: "#83CD2D", sort_order: 1 },
       }),
     );
 
@@ -204,14 +204,14 @@ describe("planningTrackService", () => {
       name: "Alt",
       archivedAt: undefined,
     });
-    expect(sessionFetch).toHaveBeenCalledWith(
+    expect(fetchMock).toHaveBeenCalledWith(
       "/api/timetable/planning-tracks/5/restore",
       { method: "POST" },
     );
   });
 
   it("keeps restore diagnostics separate from the operation message", async () => {
-    sessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       response({ detail: "Name bereits vergeben" }, 409),
     );
 

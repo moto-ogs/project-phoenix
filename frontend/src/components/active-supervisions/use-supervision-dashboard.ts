@@ -1,5 +1,6 @@
 "use client";
 
+import type * as studentsContract from "~/lib/contract/students.generated";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import {
@@ -26,11 +27,9 @@ import {
   mapVisitsToSupervisionStudents,
   resolveSupervisionSelection,
 } from "~/components/active-supervisions/view-model";
-import type { TeacherHint } from "~/lib/student-helpers";
 import type {
   ActiveSupervisionRoom,
   ActiveSupervisionStudent,
-  MinimalActiveGroup,
   OpenRoomView,
   SchulhofStatusResponse,
   SupervisionSessionInfo,
@@ -68,12 +67,12 @@ export interface SupervisionDashboardOptions {
 export function releasedRoomTargetedByUrl(options: {
   readonly sessionParam: string | null;
   readonly roomParam: string | null;
-  readonly rooms: readonly Pick<ActiveSupervisionRoom, "id" | "room_id">[];
+  readonly rooms: readonly Pick<ActiveSupervisionRoom, "id" | "roomId">[];
   readonly openRoomIds: ReadonlySet<string>;
 }): string | null {
   const { sessionParam, roomParam, rooms, openRoomIds } = options;
   if (sessionParam) {
-    const roomId = rooms.find((room) => room.id === sessionParam)?.room_id;
+    const roomId = rooms.find((room) => room.id === sessionParam)?.roomId;
     return roomId && openRoomIds.has(roomId) ? roomId : null;
   }
   return roomParam && openRoomIds.has(roomParam) ? roomParam : null;
@@ -93,7 +92,6 @@ export interface SupervisionDashboard {
   readonly myGroupRooms: string[];
   readonly myGroupIds: string[];
   readonly groupNameToIdMap: Map<string, string>;
-  readonly cachedActiveGroups: MinimalActiveGroup[];
   readonly schulhofStatus: SchulhofStatusResponse | null;
   /**
    * Every permanently released room, in the order the backend reports them.
@@ -324,20 +322,6 @@ export function useSupervisionDashboard(
     [snapshot],
   );
 
-  const cachedActiveGroups = useMemo<MinimalActiveGroup[]>(() => {
-    if (!snapshot || snapshot.supervisedGroups.length === 0) return [];
-    return [
-      ...snapshot.supervisedGroups.map((g) => ({
-        id: g.id,
-        room: g.room ? { name: g.room.name } : undefined,
-      })),
-      ...snapshot.unclaimedGroups.map((g) => ({
-        id: g.id,
-        room: g.room,
-      })),
-    ];
-  }, [snapshot]);
-
   const plannedNow = useMemo(() => snapshot?.plannedNow ?? [], [snapshot]);
 
   // The backend limits this list to five blocks. Reload at their window
@@ -465,8 +449,8 @@ export function useSupervisionDashboard(
     }
     if (!roomParam) return false;
     return (
-      allRoomsBase.some((room) => room.room_id === roomParam) &&
-      resolvedRoom?.room_id !== roomParam
+      allRoomsBase.some((room) => room.roomId === roomParam) &&
+      resolvedRoom?.roomId !== roomParam
     );
   }, [
     allRoomsBase,
@@ -491,7 +475,7 @@ export function useSupervisionDashboard(
 
   // Hinweise der Lehrkraft (#4795) je Kind, für die Karten der Aufsicht.
   const teacherHintsByStudent = useMemo(() => {
-    const byStudent = new Map<string, TeacherHint[]>();
+    const byStudent = new Map<string, studentsContract.TeacherHint[]>();
     for (const { studentId, ...hint } of snapshot?.teacherHints ?? []) {
       byStudent.set(studentId, [...(byStudent.get(studentId) ?? []), hint]);
     }
@@ -514,8 +498,8 @@ export function useSupervisionDashboard(
     if (!resolvedRoom) return [];
     if (selectedRoomId && selectedRoomId !== resolvedRoom.id) return [];
     return mapVisitsToSupervisionStudents(snapshot.firstRoomVisits, {
-      roomName: resolvedRoom.room_name,
-      roomColor: resolvedRoom.room_color,
+      roomName: resolvedRoom.roomName,
+      roomColor: resolvedRoom.roomColor,
       groupNameToId: groupNameToIdMap,
       teacherHints: teacherHintsByStudent,
     });
@@ -538,7 +522,7 @@ export function useSupervisionDashboard(
       return allRoomsBase;
     return allRoomsBase.map((room) =>
       room.id === resolvedRoom.id
-        ? { ...room, student_count: students.length }
+        ? { ...room, studentCount: students.length }
         : room,
     );
   }, [
@@ -590,10 +574,10 @@ export function useSupervisionDashboard(
     }
     if (!roomParam) return false;
     return (
-      allRooms.some((room) => room.room_id === roomParam) &&
+      allRooms.some((room) => room.roomId === roomParam) &&
       // A selected session inside the named room settles a room-keyed URL —
       // parallel sessions share the room, so never wait for a "better" match.
-      currentRoom?.room_id !== roomParam
+      currentRoom?.roomId !== roomParam
     );
   })();
 
@@ -830,8 +814,8 @@ export function useSupervisionDashboard(
       const firstRoom = allRoomsBase[0];
       if (firstRoom && ownRooms) {
         memory.write("supervision-last-session", firstRoom.id);
-        if (firstRoom.room_id) {
-          memory.write("sidebar-last-room", firstRoom.room_id);
+        if (firstRoom.roomId) {
+          memory.write("sidebar-last-room", firstRoom.roomId);
         }
       }
     }
@@ -849,7 +833,6 @@ export function useSupervisionDashboard(
     myGroupRooms,
     myGroupIds,
     groupNameToIdMap,
-    cachedActiveGroups,
     schulhofStatus,
     openRooms,
     webSpontaneousActivitiesEnabled,

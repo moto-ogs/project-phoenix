@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests"
 	"github.com/moto-ogs/project-phoenix/modules/requestreview"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 type excusedQueue struct {
@@ -61,7 +62,7 @@ func excusedPendingRow(item *excusedrequests.ReviewItem, today excusedrequests.D
 		StudentName:              item.FirstName + " " + item.LastName,
 		SubmittedBy:              item.Request.SubmittedBy,
 		Status:                   item.Request.Status,
-		Version:                  excusedrequests.ParentRequestVersion(item.Request.UpdatedAt),
+		Version:                  readstate.Of(item.Request.UpdatedAt),
 		UrgentToday:              urgent,
 		Past:                     item.Request.PastOn(today),
 		BulkEligible:             item.BulkEligible,
@@ -71,7 +72,7 @@ func excusedPendingRow(item *excusedrequests.ReviewItem, today excusedrequests.D
 		CurrentValueChanged:      item.CurrentValueChanged,
 		CurrentStatusByDate:      item.CurrentStatusByDate,
 		PartialAbsenceFromByDate: item.PartialAbsenceFromByDate,
-		Data:                     requestreview.ToStaffExcusedRequestResponse(item),
+		Payload:                  requestreview.Payload{Excused: new(requestreview.ToStaffExcusedRequestResponse(item))},
 	}
 }
 
@@ -79,7 +80,7 @@ func excusedHistoryRow(item *excusedrequests.HistoryItem) requestreview.Row {
 	return requestreview.Row{
 		Type:        requestreview.TypeExcused,
 		SortTime:    item.Request.UpdatedAt,
-		Version:     excusedrequests.ParentRequestVersion(item.Request.UpdatedAt),
+		Version:     readstate.Of(item.Request.UpdatedAt),
 		ID:          item.Request.ID,
 		StudentID:   item.Request.StudentID,
 		StudentName: item.FirstName + " " + item.LastName,
@@ -87,6 +88,6 @@ func excusedHistoryRow(item *excusedrequests.HistoryItem) requestreview.Row {
 		Status:      item.Request.Status,
 		DecidedAt:   requestreview.HistoryDecidedAt(item.Request.ReviewedAt, item.Request.UpdatedAt),
 		CanCorrect:  item.Request.CanCorrect(),
-		Data:        requestreview.ToStaffExcusedHistoryResponse(item),
+		Payload:     requestreview.Payload{ExcusedHistory: new(requestreview.ToStaffExcusedHistoryResponse(item))},
 	}
 }

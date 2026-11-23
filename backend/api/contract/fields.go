@@ -115,12 +115,21 @@ func (b *builder) field(declaring, root reflect.Type, sf reflect.StructField, na
 	schema, err := b.schema(sf.Type, at, request)
 	format := sf.Tag.Get("contract")
 	switch {
+	case slices.Contains(options, "string"):
+		// ,string makes encoding/json read only a string, and it does not
+		// reach a list; ident.ID is the one identifier type (ADR 0300).
+		err = fmt.Errorf("%s: the json option ,string does not make an identifier. Use ident.ID (ADR 0300)", at)
 	case errors.Is(err, errBareInt64) && format == "number":
 		// A running number or a count kept as int64: a number, never an
 		// identifier.
 		err, format = nil, ""
 	case errors.Is(err, errBareInt64):
-		err = b.numericID(&schema, declaring, sf.Name, slices.Contains(options, "string"), at)
+		err = bareInt64(at)
+	}
+	if err == nil && namesIdentifier(name) && readsNumber(schema) {
+		// The name does not make an identifier, but a number under an
+		// identifier's name is one the type forgot (ADR 0300).
+		err = fmt.Errorf("%s: %q names an identifier but is a number. Use ident.ID", at, name)
 	}
 	if err == nil {
 		err = setFormat(&schema, format, at)
@@ -129,6 +138,14 @@ func (b *builder) field(declaring, root reflect.Type, sf reflect.StructField, na
 		return Field{}, err
 	}
 	field := Field{Name: name, Schema: schema}
+	field.JSONReason = strings.TrimSpace(sf.Tag.Get("contract_json"))
+	if err := checkFreeJSON(schema, field.JSONReason, at); err != nil {
+		return Field{}, err
+	}
+	field.RefinesJSON = strings.TrimSpace(sf.Tag.Get("contract_refines"))
+	if field.RefinesJSON != "" && (!request || field.JSONReason != "") {
+		return Field{}, fmt.Errorf("%s: contract_refines is for typed requests only", at)
+	}
 	owners := []reflect.Type{declaring}
 	if root != declaring {
 		owners = append(owners, root)
@@ -146,6 +163,22 @@ func (b *builder) field(declaring, root reflect.Type, sf reflect.StructField, na
 	}
 	b.omission(&field, sf.Type, options)
 	return field, nil
+}
+
+// A container inherits the explanation of its untyped elements. A struct
+// reference does not: each field of the referenced struct explains itself.
+func checkFreeJSON(schema Schema, reason, at string) error {
+	for schema.Elem != nil && !schema.LegacyJSON {
+		schema = *schema.Elem
+	}
+	open := schema.Kind == KindJSON || schema.LegacyJSON
+	if open && reason == "" {
+		return fmt.Errorf("%s: free JSON needs a type or a contract_json tag that explains why its shape is open", at)
+	}
+	if !open && reason != "" {
+		return fmt.Errorf("%s: remove contract_json from this typed field", at)
+	}
+	return nil
 }
 
 // mark applies what the owner registered for "GoType.json_name".
@@ -192,34 +225,24 @@ func (b *builder) omission(field *Field, t reflect.Type, options []string) {
 	}
 }
 
-// numericID decides a bare int64. With ,string it is an identifier that
-// already travels as a string, and on a type whose own UnmarshalJSON is
-// registered it reads a number or a string. Otherwise it must be on the
-// shrink-only list of numeric identifiers; a count is an int, a new
-// identifier a common.ID.
-func (b *builder) numericID(schema *Schema, declaring reflect.Type, goField string, asString bool, at string) error {
-	key := declaring.String() + "." + goField
-	leaf := schema
-	for leaf.Kind == KindArray {
-		leaf = leaf.Elem
+// bareInt64 refuses an int64 that does not say what it is: an identifier is
+// an ident.ID, a count or an amount an int or an int64 tagged
+// contract:"number" (ADR 0270, ADR 0300).
+func bareInt64(at string) error {
+	return fmt.Errorf("%s: int64 does not say what it is. Use ident.ID for an identifier, and int or contract:\"number\" for a count or an amount (ADR 0270)", at)
+}
+
+// namesIdentifier tells whether a JSON key is the name of an identifier.
+func namesIdentifier(name string) bool {
+	return name == "id" || strings.HasSuffix(name, "_id") || strings.HasSuffix(name, "_ids")
+}
+
+// readsNumber tells whether a value, or an element of it, is a plain number.
+func readsNumber(schema Schema) bool {
+	for (schema.Kind == KindArray || schema.Kind == KindMap) && schema.Elem != nil {
+		schema = *schema.Elem
 	}
-	if leaf.Kind != KindInt {
-		return fmt.Errorf("%s: int64 inside a map is not supported", at)
-	}
-	switch {
-	case asString && leaf == schema:
-		leaf.Kind = KindID
-	case b.readers[declaring] == ReadsLaxIDs:
-		leaf.Kind = KindLaxID
-	case b.numericIDs[key]:
-		leaf.Kind = KindLegacyID
-		b.used["id:"+key] = true
-	case strings.HasSuffix(goField, "Cents"):
-		// An amount in whole cent is a number, never an identifier.
-	default:
-		return fmt.Errorf("%s: int64 does not say what it is. Use common.ID for an identifier and int for a count (ADR 0270)", at)
-	}
-	return nil
+	return schema.Kind == KindInt || schema.Kind == KindNumber
 }
 
 // formats are the string forms a field names in its `contract` tag. A value

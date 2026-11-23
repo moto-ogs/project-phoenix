@@ -4,8 +4,9 @@ import {
   arr,
   bool,
   calendarDate,
+  fileAnswer,
   instant,
-  int64StringOrNumber,
+  int64String,
   nullable,
   object,
   optional,
@@ -16,14 +17,18 @@ import {
 } from "./runtime";
 import {
   BillingLetterSeriesSchema,
+  CareBilledChildSchema,
   CareDuplicateSchema,
+  CareJoinedChildSchema,
   CareRecipientSchema,
   CareSchoolSchema,
   CareUnpricedSchema,
   InvoicePaymentSchema,
   PostalAddressSchema,
   RunDueDateSchema,
+  type CareBilledChild,
   type CareDuplicate,
+  type CareJoinedChild,
   type CareRecipient,
   type CareReleaseRequest,
   type CareSchool,
@@ -52,7 +57,7 @@ export interface CareRun {
 }
 
 export const CareRunSchema: z.ZodType<CareRun, unknown> = object<CareRun>({
-  id: int64StringOrNumber,
+  id: int64String,
   billing_month: nullable(calendarDate),
   status: str,
   created_at: instant,
@@ -63,7 +68,7 @@ export const CareRunSchema: z.ZodType<CareRun, unknown> = object<CareRun>({
   month_rule: str,
   free_of_charge: safeInt,
   discarded_at: nullable(instant),
-  school_ids: nullable(arr(int64StringOrNumber)),
+  school_ids: nullable(arr(int64String)),
   invoice_date: nullable(calendarDate),
 });
 
@@ -86,9 +91,9 @@ export interface CareRunSchool {
 }
 
 export const CareRunSchoolSchema: z.ZodType<CareRunSchool, unknown> = object<CareRunSchool>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
-  open_run_id: nullable(int64StringOrNumber),
+  open_run_id: nullable(int64String),
 });
 
 /** Go: parentbilling.CareExclusion */
@@ -100,7 +105,7 @@ export interface CareExclusion {
 
 export const CareExclusionSchema: z.ZodType<CareExclusion, unknown> = object<CareExclusion>({
   reason: str,
-  account_id: nullable(int64StringOrNumber),
+  account_id: nullable(int64String),
   excluded_at: instant,
 });
 
@@ -134,7 +139,7 @@ export interface CarePosition {
 }
 
 export const CarePositionSchema: z.ZodType<CarePosition, unknown> = object<CarePosition>({
-  care_offering_id: int64StringOrNumber,
+  care_offering_id: int64String,
   module_name: str,
   version_number: safeInt,
   service_from: nullable(calendarDate),
@@ -160,13 +165,14 @@ export interface CareReduction {
   price_cents: number | null;
   cap_cents: number | null;
   tariff_sibling_price: boolean;
+  sibling_all_children: boolean;
   care_offering_ids: string[] | null;
   amount_cents: number;
 }
 
 export const CareReductionSchema: z.ZodType<CareReduction, unknown> = object<CareReduction>({
   kind: str,
-  rule_id: int64StringOrNumber,
+  rule_id: int64String,
   name: str,
   child_rank: nullable(safeInt),
   family_children: nullable(safeInt),
@@ -175,7 +181,8 @@ export const CareReductionSchema: z.ZodType<CareReduction, unknown> = object<Car
   price_cents: nullable(safeInt),
   cap_cents: nullable(safeInt),
   tariff_sibling_price: bool,
-  care_offering_ids: nullable(arr(int64StringOrNumber)),
+  sibling_all_children: bool,
+  care_offering_ids: nullable(arr(int64String)),
   amount_cents: safeInt,
 });
 
@@ -193,8 +200,8 @@ export interface CareMealPosition {
 }
 
 export const CareMealPositionSchema: z.ZodType<CareMealPosition, unknown> = object<CareMealPosition>({
-  school_id: int64StringOrNumber,
-  student_id: int64StringOrNumber,
+  school_id: int64String,
+  student_id: int64String,
   meal_month: nullable(calendarDate),
   mode: str,
   quantity: safeInt,
@@ -217,7 +224,7 @@ export interface CareInvoiceCostShare {
 
 export const CareInvoiceCostShareSchema: z.ZodType<CareInvoiceCostShare, unknown> = object<CareInvoiceCostShare>({
   kind: str,
-  cost_bearer_id: int64StringOrNumber,
+  cost_bearer_id: int64String,
   cost_bearer_name: str,
   share_basis_points: nullable(safeInt),
   share_cents: nullable(safeInt),
@@ -266,7 +273,7 @@ export interface CareRevocation {
 
 export const CareRevocationSchema: z.ZodType<CareRevocation, unknown> = object<CareRevocation>({
   reason: str,
-  account_id: nullable(int64StringOrNumber),
+  account_id: nullable(int64String),
   revoked_at: instant,
 });
 
@@ -289,7 +296,7 @@ export interface CareAmendment {
 }
 
 export const CareAmendmentSchema: z.ZodType<CareAmendment, unknown> = object<CareAmendment>({
-  id: int64StringOrNumber,
+  id: int64String,
   kind: str,
   label: str,
   amount_cents: safeInt,
@@ -297,7 +304,7 @@ export const CareAmendmentSchema: z.ZodType<CareAmendment, unknown> = object<Car
   before: CareAmendmentValueSchema,
   after: CareAmendmentValueSchema,
   reason: str,
-  account_id: nullable(int64StringOrNumber),
+  account_id: nullable(int64String),
   amended_at: instant,
   carried: bool,
   carried_from_number: optional(str),
@@ -331,12 +338,12 @@ export interface CareInvoice {
 }
 
 export const CareInvoiceSchema: z.ZodType<CareInvoice, unknown> = object<CareInvoice>({
-  id: int64StringOrNumber,
+  id: int64String,
   number: str,
   issued_on: nullable(calendarDate),
-  contract_id: int64StringOrNumber,
+  contract_id: int64String,
   service: str,
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   school_name: str,
   child_first_name: str,
   child_last_name: str,
@@ -364,7 +371,7 @@ export interface CareUncountedContract {
 }
 
 export const CareUncountedContractSchema: z.ZodType<CareUncountedContract, unknown> = object<CareUncountedContract>({
-  contract_id: int64StringOrNumber,
+  contract_id: int64String,
   school_name: str,
   child_first_name: str,
   child_last_name: str,
@@ -381,8 +388,8 @@ export interface CareFeeNoticeHold {
 }
 
 export const CareFeeNoticeHoldSchema: z.ZodType<CareFeeNoticeHold, unknown> = object<CareFeeNoticeHold>({
-  contract_id: int64StringOrNumber,
-  school_id: int64StringOrNumber,
+  contract_id: int64String,
+  school_id: int64String,
   child_first_name: str,
   child_last_name: str,
   notice_number: str,
@@ -397,7 +404,7 @@ export interface CareMealGap {
 }
 
 export const CareMealGapSchema: z.ZodType<CareMealGap, unknown> = object<CareMealGap>({
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   school_name: str,
   month: nullable(calendarDate),
   expired: bool,
@@ -416,9 +423,9 @@ export interface CareMealUnbilled {
 }
 
 export const CareMealUnbilledSchema: z.ZodType<CareMealUnbilled, unknown> = object<CareMealUnbilled>({
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   school_name: str,
-  student_id: int64StringOrNumber,
+  student_id: int64String,
   child_first_name: str,
   child_last_name: str,
   month: nullable(calendarDate),
@@ -442,9 +449,9 @@ export interface CareMealChanged {
 }
 
 export const CareMealChangedSchema: z.ZodType<CareMealChanged, unknown> = object<CareMealChanged>({
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   school_name: str,
-  student_id: int64StringOrNumber,
+  student_id: int64String,
   child_first_name: str,
   child_last_name: str,
   month: nullable(calendarDate),
@@ -464,7 +471,7 @@ export interface CareCostBearerTotal {
 }
 
 export const CareCostBearerTotalSchema: z.ZodType<CareCostBearerTotal, unknown> = object<CareCostBearerTotal>({
-  cost_bearer_id: int64StringOrNumber,
+  cost_bearer_id: int64String,
   cost_bearer_name: str,
   invoice_count: safeInt,
   amount_cents: safeInt,
@@ -503,6 +510,8 @@ export interface CareRunDetail {
   invoices: CareInvoice[] | null;
   unpriced: CareUnpriced[] | null;
   duplicates: CareDuplicate[] | null;
+  joined_children: CareJoinedChild[] | null;
+  billed_children: CareBilledChild[] | null;
   duplicate_children: number;
   uncounted_families: number;
   uncounted_contracts: CareUncountedContract[] | null;
@@ -517,6 +526,7 @@ export interface CareRunDetail {
   meal_unbilled: CareMealUnbilled[] | null;
   meal_changed: CareMealChanged[] | null;
   due_dates: RunDueDate[] | null;
+  due_dates_version: string;
   cost_bearers: CareCostBearerTotal[] | null;
   schools: CareSchool[] | null;
   excluded_count: number;
@@ -529,7 +539,7 @@ export interface CareRunDetail {
 }
 
 export const CareRunDetailSchema: z.ZodType<CareRunDetail, unknown> = object<CareRunDetail>({
-  id: int64StringOrNumber,
+  id: int64String,
   billing_month: nullable(calendarDate),
   status: str,
   created_at: instant,
@@ -540,11 +550,13 @@ export const CareRunDetailSchema: z.ZodType<CareRunDetail, unknown> = object<Car
   month_rule: str,
   free_of_charge: safeInt,
   discarded_at: nullable(instant),
-  school_ids: nullable(arr(int64StringOrNumber)),
+  school_ids: nullable(arr(int64String)),
   invoice_date: nullable(calendarDate),
   invoices: nullable(arr(CareInvoiceSchema)),
   unpriced: nullable(arr(CareUnpricedSchema)),
   duplicates: nullable(arr(CareDuplicateSchema)),
+  joined_children: nullable(arr(CareJoinedChildSchema)),
+  billed_children: nullable(arr(CareBilledChildSchema)),
   duplicate_children: safeInt,
   uncounted_families: safeInt,
   uncounted_contracts: nullable(arr(CareUncountedContractSchema)),
@@ -559,6 +571,7 @@ export const CareRunDetailSchema: z.ZodType<CareRunDetail, unknown> = object<Car
   meal_unbilled: nullable(arr(CareMealUnbilledSchema)),
   meal_changed: nullable(arr(CareMealChangedSchema)),
   due_dates: nullable(arr(RunDueDateSchema)),
+  due_dates_version: str,
   cost_bearers: nullable(arr(CareCostBearerTotalSchema)),
   schools: nullable(arr(CareSchoolSchema)),
   excluded_count: safeInt,
@@ -614,7 +627,7 @@ export interface CareLetterMailing {
 }
 
 export const CareLetterMailingSchema: z.ZodType<CareLetterMailing, unknown> = object<CareLetterMailing>({
-  invoice_id: int64StringOrNumber,
+  invoice_id: int64String,
   kind: str,
   number: str,
   invoice_number: str,
@@ -679,7 +692,7 @@ export const CareLettersSchema: z.ZodType<CareLetters, unknown> = object<CareLet
 /** Go: parentbillinghttp.CareRunRequest */
 export interface CareRunRequest {
   billing_month?: string | null;
-  school_ids?: number[] | null;
+  school_ids?: string[] | null;
   invoice_date?: string | null;
 }
 
@@ -693,7 +706,7 @@ export interface RecipientNameRequest {
 
 /** Go: parentbillinghttp.CareAmendmentRequest */
 export interface CareAmendmentRequest {
-  contract_id?: number;
+  contract_id?: string;
   service?: string;
   kind?: string;
   fingerprint?: string;
@@ -704,20 +717,20 @@ export interface CareAmendmentRequest {
   position_key?: string;
   recipient?: RecipientNameRequest | null;
   address?: PostalAddressRequest | null;
-  revokes_id?: number;
+  revokes_id?: string;
   revokes_carried?: boolean;
 }
 
 /** Go: parentbillinghttp.CareExclusionRequest */
 export interface CareExclusionRequest {
-  contract_id?: number;
+  contract_id?: string;
   service?: string;
   reason?: string;
 }
 
 /** Go: parentbillinghttp.CareInclusionRequest */
 export interface CareInclusionRequest {
-  contract_id?: number;
+  contract_id?: string;
   service?: string;
 }
 
@@ -737,16 +750,6 @@ export interface CareInvoiceDateRequest {
   invoice_date?: string | null;
 }
 
-/** Query of GET /traeger/care-billing-runs/schools */
-export interface GetTraegerCareBillingRunsSchoolsQuery {
-  month?: string;
-}
-
-/** Query of POST /traeger/care-billing-runs/{id}/invoices/{invoiceID}/mail */
-export interface PostTraegerCareBillingRunsIdInvoicesInvoiceIDMailQuery {
-  kind?: string;
-}
-
 export const routes = {
   "GET /traeger/care-billing-runs/": {
     method: "GET",
@@ -754,11 +757,22 @@ export const routes = {
     portals: ["org"],
     response: success(CareRunListSchema),
   },
+  "GET /traeger/care-billing-runs/export": {
+    method: "GET",
+    pattern: "/traeger/care-billing-runs/export",
+    portals: ["org"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
+    response: fileAnswer,
+  },
   "GET /traeger/care-billing-runs/schools": {
     method: "GET",
     pattern: "/traeger/care-billing-runs/schools",
     portals: ["org"],
-    query: ["month"],
+    query: {
+      "month": { kind: "date" },
+    },
     response: success(z.array(CareRunSchoolSchema)),
   },
   "GET /traeger/care-billing-runs/{id}": {
@@ -767,11 +781,56 @@ export const routes = {
     portals: ["org"],
     response: success(CareRunDetailSchema),
   },
+  "GET /traeger/care-billing-runs/{id}/cost-shares/{costBearerID}/export": {
+    method: "GET",
+    pattern: "/traeger/care-billing-runs/{id}/cost-shares/{costBearerID}/export",
+    portals: ["org"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
+    response: fileAnswer,
+  },
+  "GET /traeger/care-billing-runs/{id}/invoices/export": {
+    method: "GET",
+    pattern: "/traeger/care-billing-runs/{id}/invoices/export",
+    portals: ["org"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
+    response: fileAnswer,
+  },
+  "GET /traeger/care-billing-runs/{id}/invoices/{invoiceID}/letter": {
+    method: "GET",
+    pattern: "/traeger/care-billing-runs/{id}/invoices/{invoiceID}/letter",
+    portals: ["org"],
+    query: {
+      "kind": { kind: "string" },
+    },
+    response: fileAnswer,
+  },
   "GET /traeger/care-billing-runs/{id}/letters": {
     method: "GET",
     pattern: "/traeger/care-billing-runs/{id}/letters",
     portals: ["org"],
     response: success(CareLettersSchema),
+  },
+  "GET /traeger/care-billing-runs/{id}/letters/print": {
+    method: "GET",
+    pattern: "/traeger/care-billing-runs/{id}/letters/print",
+    portals: ["org"],
+    query: {
+      "only": { kind: "string", values: ["without_email"] },
+    },
+    response: fileAnswer,
+  },
+  "GET /traeger/care-billing-runs/{id}/review-export": {
+    method: "GET",
+    pattern: "/traeger/care-billing-runs/{id}/review-export",
+    portals: ["org"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
+    response: fileAnswer,
   },
   "POST /traeger/care-billing-runs/": {
     method: "POST",
@@ -818,7 +877,9 @@ export const routes = {
     method: "POST",
     pattern: "/traeger/care-billing-runs/{id}/invoices/{invoiceID}/mail",
     portals: ["org"],
-    query: ["kind"],
+    query: {
+      "kind": { kind: "string" },
+    },
     response: success(CareLetterMailingSchema),
   },
   "POST /traeger/care-billing-runs/{id}/letters": {
@@ -833,6 +894,14 @@ export const routes = {
     pattern: "/traeger/care-billing-runs/{id}/letters/mail",
     portals: ["org"],
     response: success(BillingLetterSeriesSchema),
+  },
+  "POST /traeger/care-billing-runs/{id}/letters/preview": {
+    method: "POST",
+    pattern: "/traeger/care-billing-runs/{id}/letters/preview",
+    portals: ["org"],
+    maxBodyBytes: 65536,
+    request: requestBody<CareLetterRequest>(),
+    response: fileAnswer,
   },
   "POST /traeger/care-billing-runs/{id}/release": {
     method: "POST",

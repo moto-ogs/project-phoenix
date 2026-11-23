@@ -1,10 +1,8 @@
-import { ApiError, apiErrorFromResponse } from "./api-error";
-import { sessionFetch } from "./session-cache";
+import { ApiError } from "./api-error";
+import { bffJson } from "./bff-fetch";
+import type { assignmentRequest } from "./contract/substitutions.generated";
 import {
-  type BackendGroupHandover,
-  type BackendAdditionalSupervisionResult,
   type RunningSupervision,
-  type BackendSubstitutionOverview,
   type Substitution,
   type TeacherAvailability,
   formatDateForBackend,
@@ -17,8 +15,6 @@ import {
   type SubstitutionOverview,
   prepareSubstitutionForBackend,
   substitutionAssignmentResult,
-  type SubstitutionProxyEnvelope,
-  unwrapSubstitutionProxyEnvelope,
 } from "./substitution-helpers";
 import {
   mapApplyDeviations,
@@ -29,48 +25,40 @@ import {
 import type {
   ApplyDeviationsInput,
   ApplyDeviationsResponse,
-  BackendApplyDeviationsResponse,
-  BackendBulkSubstitutionResponse,
   BulkSubstitutionInput,
   BulkSubstitutionResponse,
 } from "./timetable-types";
 
+const overview = (
+  query: {
+    from?: string;
+    to?: string;
+    date?: string;
+    active_group_id?: string;
+  },
+  errorMessage: string,
+) => bffJson("tenant", "GET /api/substitutions/", { query, errorMessage });
+
+const assign = (body: assignmentRequest, errorMessage: string) =>
+  bffJson("tenant", "POST /api/substitutions/", { body, errorMessage });
+
+const end = (body: { type: string; id: string }, errorMessage: string) =>
+  bffJson("tenant", "POST /api/substitutions/end", { body, errorMessage });
+
 class SubstitutionService {
   async fetchOverview(): Promise<SubstitutionOverview> {
-    const response = await sessionFetch("/api/substitutions", {
-      credentials: "include",
-    });
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        "substitution overview failed",
-      );
-    }
-    const envelope =
-      (await response.json()) as SubstitutionProxyEnvelope<BackendSubstitutionOverview>;
-    return mapSubstitutionOverview(unwrapSubstitutionProxyEnvelope(envelope));
+    return mapSubstitutionOverview(
+      await overview({}, "substitution overview failed"),
+    );
   }
 
   async fetchScheduleOverview(
     from: string,
     to: string,
   ): Promise<ScheduleSubstitutionOverview> {
-    const params = new URLSearchParams({ from, to });
-    const response = await sessionFetch(`/api/substitutions?${params}`, {
-      credentials: "include",
-    });
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        "schedule substitution overview failed",
-      );
-    }
-    const envelope =
-      (await response.json()) as SubstitutionProxyEnvelope<BackendSubstitutionOverview>;
-    if (envelope.data === undefined) {
-      throw invalidResponseError("schedule substitution overview");
-    }
-    return mapScheduleSubstitutionOverview(envelope.data);
+    return mapScheduleSubstitutionOverview(
+      await overview({ from, to }, "schedule substitution overview failed"),
+    );
   }
 
   async applyScheduleSubstitution(
@@ -82,82 +70,50 @@ class SubstitutionService {
       // Weg. Der Absturztext des Anzeigewegs ist dafür die richtige Folge.
       throw new Error("cancellations do not go through a substitution");
     }
-    const response = await sessionFetch("/api/substitutions", {
-      method: "POST",
-      credentials: "include",
-      body: JSON.stringify({
+    const body = prepareApplyDeviationsBody(input);
+    const answer = await assign(
+      {
         type: "schedule_substitution",
-        schedule_substitution: {
-          instance_id: Number(instanceId),
-          ...prepareApplyDeviationsBody(input),
-        },
-      }),
-    });
-    if (!response.ok) throw await substitutionError(response);
-    const envelope =
-      (await response.json()) as SubstitutionProxyEnvelope<unknown>;
+        schedule_substitution: { ...body, instance_id: instanceId },
+      },
+      "schedule substitution failed",
+    );
     return mapApplyDeviations(
-      substitutionAssignmentResult<BackendApplyDeviationsResponse>(
-        unwrapSubstitutionProxyEnvelope(envelope),
-        "schedule_substitution",
-      ),
+      substitutionAssignmentResult(answer, "schedule_substitution"),
     );
   }
 
   async applyBulkSubstitution(
     input: BulkSubstitutionInput,
   ): Promise<BulkSubstitutionResponse> {
-    const response = await sessionFetch("/api/substitutions", {
-      method: "POST",
-      credentials: "include",
-      body: JSON.stringify({
+    const answer = await assign(
+      {
         type: "schedule_substitution",
         schedule_substitution: {
           whole_days: prepareBulkSubstitutionBody(input),
         },
-      }),
-    });
-    if (!response.ok) throw await substitutionError(response);
-    const envelope =
-      (await response.json()) as SubstitutionProxyEnvelope<unknown>;
+      },
+      "schedule substitution failed",
+    );
     return mapBulkSubstitution(
-      substitutionAssignmentResult<BackendBulkSubstitutionResponse>(
-        unwrapSubstitutionProxyEnvelope(envelope),
-        "schedule_substitution",
-      ),
+      substitutionAssignmentResult(answer, "schedule_substitution"),
     );
   }
 
   async fetchSubstitutions(date?: Date): Promise<Substitution[]> {
-    const params = new URLSearchParams();
-    if (date) params.set("date", formatDateForBackend(date));
-    const response = await sessionFetch(
-      `/api/substitutions${params.size > 0 ? `?${params.toString()}` : ""}`,
-      { credentials: "include" },
+    const body = await overview(
+      { date: date ? formatDateForBackend(date) : undefined },
+      "group handovers failed",
     );
-    if (!response.ok) {
-      throw await apiErrorFromResponse(response, "group handovers failed");
-    }
-    const envelope =
-      (await response.json()) as SubstitutionProxyEnvelope<BackendSubstitutionOverview>;
-    const body = unwrapSubstitutionProxyEnvelope(envelope);
     return mapSubstitutionsResponse(body.group_handovers);
   }
 
   async fetchAvailableTeachers(): Promise<TeacherAvailability[]> {
-    const response = await sessionFetch("/api/substitutions", {
-      credentials: "include",
-    });
-    if (!response.ok) {
-      throw await apiErrorFromResponse(response, "available staff failed");
-    }
-    const envelope =
-      (await response.json()) as SubstitutionProxyEnvelope<BackendSubstitutionOverview>;
-    const body = unwrapSubstitutionProxyEnvelope(envelope);
-    return body.targets.map((staff) => {
+    const body = await overview({}, "available staff failed");
+    return (body.targets ?? []).map((staff) => {
       const [firstName = "", ...lastNameParts] = staff.full_name.split(" ");
       return {
-        id: staff.id.toString(),
+        id: staff.id,
         firstName,
         lastName: lastNameParts.join(" "),
         inSubstitution: false,
@@ -169,18 +125,13 @@ class SubstitutionService {
   async fetchRunningSupervision(
     activeGroupId: string,
   ): Promise<RunningSupervision> {
-    const params = new URLSearchParams({ active_group_id: activeGroupId });
-    const response = await sessionFetch(`/api/substitutions?${params}`, {
-      credentials: "include",
-    });
-    if (!response.ok) {
-      throw await apiErrorFromResponse(response, "running supervision failed");
-    }
-    const envelope =
-      (await response.json()) as SubstitutionProxyEnvelope<BackendSubstitutionOverview>;
-    const rows = unwrapSubstitutionProxyEnvelope(envelope).running_supervisions;
+    const body = await overview(
+      { active_group_id: activeGroupId },
+      "running supervision failed",
+    );
+    const rows = body.running_supervisions;
     if (!Array.isArray(rows) || rows.length !== 1 || !rows[0]) {
-      throw invalidResponseError("running supervision");
+      throw new ApiError("invalid running supervision response", 500);
     }
     return mapRunningSupervision(rows[0]);
   }
@@ -209,34 +160,21 @@ class SubstitutionService {
     targetStaffId: string,
     handOver: boolean,
   ): Promise<{ id: string; targetName: string }> {
-    const response = await sessionFetch("/api/substitutions", {
-      method: "POST",
-      credentials: "include",
-      body: JSON.stringify({
+    const answer = await assign(
+      {
         type: "additional_supervision",
         additional_supervision: {
           active_group_id: activeGroupId,
           target_staff_id: targetStaffId,
           ...(handOver ? { hand_over: true } : {}),
         },
-      }),
-    });
-    if (!response.ok) {
-      throw await apiErrorFromResponse(
-        response,
-        handOver
-          ? "supervision handover failed"
-          : "additional supervision failed",
-      );
-    }
-    const envelope =
-      (await response.json()) as SubstitutionProxyEnvelope<unknown>;
-    const body =
-      substitutionAssignmentResult<BackendAdditionalSupervisionResult>(
-        unwrapSubstitutionProxyEnvelope(envelope),
-        "additional_supervision",
-      );
-    return { id: body.id.toString(), targetName: body.target.full_name };
+      },
+      handOver
+        ? "supervision handover failed"
+        : "additional supervision failed",
+    );
+    const body = substitutionAssignmentResult(answer, "additional_supervision");
+    return { id: body.id, targetName: body.target.full_name };
   }
 
   /**
@@ -245,17 +183,10 @@ class SubstitutionService {
    * otherwise.
    */
   async releaseSupervision(activeGroupId: string): Promise<void> {
-    const response = await sessionFetch("/api/substitutions/end", {
-      method: "POST",
-      credentials: "include",
-      body: JSON.stringify({
-        type: "additional_supervision",
-        id: activeGroupId,
-      }),
-    });
-    if (!response.ok) {
-      throw await apiErrorFromResponse(response, "supervision release failed");
-    }
+    await end(
+      { type: "additional_supervision", id: activeGroupId },
+      "supervision release failed",
+    );
   }
 
   async createSubstitution(
@@ -264,53 +195,33 @@ class SubstitutionService {
     startDate: string,
     endDate: string,
   ): Promise<Substitution> {
-    const response = await sessionFetch("/api/substitutions", {
-      method: "POST",
-      credentials: "include",
-      body: JSON.stringify(
-        prepareSubstitutionForBackend(
-          groupId,
-          substituteStaffId,
-          startDate,
-          endDate,
-        ),
+    const answer = await assign(
+      prepareSubstitutionForBackend(
+        groupId,
+        substituteStaffId,
+        startDate,
+        endDate,
       ),
-    });
-    if (!response.ok) {
-      throw await apiErrorFromResponse(response, "group handover failed");
-    }
-    const envelope =
-      (await response.json()) as SubstitutionProxyEnvelope<unknown>;
-    return mapSubstitutionResponse(
-      substitutionAssignmentResult<BackendGroupHandover>(
-        unwrapSubstitutionProxyEnvelope(envelope),
-        "group_handover",
-      ),
+      "group handover failed",
     );
+    const result = substitutionAssignmentResult(answer, "group_handover");
+    // A group handover always names its group and period; the contract
+    // shares the type with the other kinds, where both are absent.
+    if (!result.group || !result.period) {
+      throw new ApiError("group handover answer without group or period", 502);
+    }
+    return mapSubstitutionResponse({
+      id: result.id,
+      group: result.group,
+      target: result.target,
+      period: result.period,
+      can_end: result.can_end ?? false,
+    });
   }
 
   async deleteSubstitution(id: string): Promise<void> {
-    const response = await sessionFetch("/api/substitutions/end", {
-      method: "POST",
-      credentials: "include",
-      body: JSON.stringify({
-        type: "group_handover",
-        id,
-      }),
-    });
-    if (!response.ok) {
-      throw await apiErrorFromResponse(response, "end group handover failed");
-    }
+    await end({ type: "group_handover", id }, "end group handover failed");
   }
-}
-
-async function substitutionError(response: Response): Promise<ApiError> {
-  return apiErrorFromResponse(response, "schedule substitution failed");
-}
-
-/** A 2xx answer without the expected shape counts as a server failure. */
-function invalidResponseError(what: string): ApiError {
-  return new ApiError(`invalid ${what} response`, 500);
 }
 
 export const substitutionService = new SubstitutionService();

@@ -89,10 +89,10 @@ const (
 // child's selected care offerings, plus an "includes" operator for the
 // multi-value offering check. nil means "always visible".
 type VisibilityCondition struct {
-	Source   string `json:"source"`          // ConditionSource* constant
-	Field    string `json:"field,omitempty"` // controlling custom field key (Source == "field")
-	Operator string `json:"operator"`        // ConditionOp* constant
-	Value    any    `json:"value,omitempty"` // compared value (required except for not_empty)
+	Source   string `json:"source"`                                                                                                   // ConditionSource* constant
+	Field    string `json:"field,omitempty"`                                                                                          // controlling custom field key (Source == "field")
+	Operator string `json:"operator"`                                                                                                 // ConditionOp* constant
+	Value    any    `json:"value,omitempty" contract_json:"The form field referenced by source determines the comparison value type"` // compared value (required except for not_empty)
 }
 
 // FormField is one custom-field definition. Stored as a JSON object inside

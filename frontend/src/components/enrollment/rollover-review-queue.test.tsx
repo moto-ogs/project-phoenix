@@ -75,7 +75,7 @@ function Providers({ children }: Readonly<{ children: ReactNode }>) {
 }
 const render = (ui: ReactElement) =>
   renderComponent(ui, { wrapper: Providers });
-import type { ReviewQueueItem } from "~/lib/enrollment-phase-api";
+import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 import {
   expectPageReloadedAfterRefusal,
   resetPageReloads,
@@ -85,7 +85,9 @@ import {
 // Test data
 // ============================================================================
 
-function makeItem(overrides: Partial<ReviewQueueItem> = {}): ReviewQueueItem {
+function makeItem(
+  overrides: Partial<enrollmentContract.ReviewItemResponse> = {},
+): enrollmentContract.ReviewItemResponse {
   return {
     child_id: "999",
     request_id: "555",
@@ -126,6 +128,25 @@ describe("RolloverReviewQueue", () => {
       screen.getByText(/Klassenstufe über der Höchstgrenze/),
     ).toBeInTheDocument();
     expect(screen.getByText(/anna@example\.com/)).toBeInTheDocument();
+  });
+
+  it("names a child of an imported contract without an empty guardian line", async () => {
+    mockListReview.mockResolvedValueOnce([
+      makeItem({
+        review_reason: "no_guardian",
+        guardian_first_name: "",
+        guardian_last_name: "",
+        guardian_email: "",
+      }),
+    ]);
+    render(<RolloverReviewQueue phaseID="77" />);
+
+    expect(
+      await screen.findByText("Keine Erziehungsberechtigten hinterlegt"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Aus importiertem Vertrag, ohne Eltern"),
+    ).toBeInTheDocument();
   });
 
   it("falls back to the raw review reason when no label exists", async () => {

@@ -1,7 +1,7 @@
+import type * as studentsContract from "~/lib/contract/students.generated";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { installStorybookFetch, jsonResponse } from "~storybook/mocks/fetch";
 import { CareScheduleManager } from "~/components/students/care-schedule-manager";
-import type { BackendPickupData } from "~/lib/pickup-schedule-helpers";
 
 interface MockResponses {
   arrival: { status: number; body: unknown };
@@ -54,38 +54,42 @@ const filledArrival = {
   notes: [],
 };
 
-const filledPickup: BackendPickupData = {
+const filledPickup: studentsContract.PickupDataResponse = {
   schedules: [
     {
-      id: 1,
-      student_id: 1,
+      id: "1",
+      student_id: "1",
       weekday: 1,
       weekday_name: "Montag",
       pickup_time: "15:00",
       notes: "Oma holt ab",
-      created_by: 1,
+      source: "staff",
+      created_by: "1",
       created_at: "2026-01-01T00:00:00Z",
       updated_at: "2026-01-01T00:00:00Z",
     },
     {
-      id: 2,
-      student_id: 1,
+      id: "2",
+      student_id: "1",
       weekday: 2,
       weekday_name: "Dienstag",
       pickup_time: "16:00",
-      created_by: 1,
+      source: "staff",
+      created_by: "1",
       created_at: "2026-01-01T00:00:00Z",
       updated_at: "2026-01-01T00:00:00Z",
     },
   ],
   exceptions: [],
   notes: [],
+  departure_exceptions: [],
 };
 
-const emptyPickup: BackendPickupData = {
+const emptyPickup: studentsContract.PickupDataResponse = {
   schedules: [],
   exceptions: [],
   notes: [],
+  departure_exceptions: [],
 };
 
 const meta = {

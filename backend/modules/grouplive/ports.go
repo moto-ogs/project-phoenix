@@ -15,9 +15,9 @@ type PendingExcusedReader interface {
 	PendingByStudentForDate(ctx context.Context, date excusedrequests.Date) (map[int64]*excusedrequests.Request, error)
 }
 
-// TeacherHint is a Lehrkraft's hint for the OGS for today (#4795), written in
+// GroupLiveTeacherHint is a Lehrkraft's hint for the OGS for today (#4795), written in
 // moto schule for the child or for its whole class.
-type TeacherHint struct {
+type GroupLiveTeacherHint struct {
 	Body string `json:"body"`
 	// AuthorName is the Lehrkraft's name, empty when the person is gone.
 	AuthorName string `json:"author_name,omitempty"`
@@ -28,7 +28,7 @@ type TeacherHint struct {
 // TeacherHintReader reads the Lehrkraft's day hints of many children, keyed
 // by child, oldest first.
 type TeacherHintReader interface {
-	TeacherHints(ctx context.Context, studentIDs []int64, date Date) (map[int64][]TeacherHint, error)
+	TeacherHints(ctx context.Context, studentIDs []int64, date Date) (map[int64][]GroupLiveTeacherHint, error)
 }
 
 // Date is a calendar day (YYYY-MM-DD) without clock or zone, the same shape
@@ -293,10 +293,10 @@ type Calendar interface {
 	Now() time.Time
 }
 
-// ClassHandover is today's handover of a child to the OGS with its class
+// GroupLiveClassHandover is today's handover of a child to the OGS with its class
 // (#4794): the class, the moment, the Lehrkraft's name (empty when she was
 // removed since) and whether she marked the child "nicht da".
-type ClassHandover struct {
+type GroupLiveClassHandover struct {
 	SchoolClass  string    `json:"school_class"`
 	HandedOverAt time.Time `json:"handed_over_at"`
 	HandedOverBy string    `json:"handed_over_by,omitempty"`
@@ -306,7 +306,7 @@ type ClassHandover struct {
 // HandoverReader returns, in one read, the handover on day of each child
 // among studentIDs the Lehrkraft handed over to the OGS.
 type HandoverReader interface {
-	ClassHandovers(ctx context.Context, studentIDs []int64, day Date) (map[int64]ClassHandover, error)
+	ClassHandovers(ctx context.Context, studentIDs []int64, day Date) (map[int64]GroupLiveClassHandover, error)
 }
 
 // HolidayGroupWeek is a hosted holiday week whose Feriengruppe a group is

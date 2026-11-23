@@ -3,8 +3,9 @@ import { z } from "zod";
 import {
   arr,
   bool,
+  fileAnswer,
   instant,
-  int64StringOrNumber,
+  int64String,
   noData,
   nullable,
   object,
@@ -26,7 +27,7 @@ export interface TraegerMemberResponse {
 }
 
 export const TraegerMemberResponseSchema: z.ZodType<TraegerMemberResponse, unknown> = object<TraegerMemberResponse>({
-  account_id: int64StringOrNumber,
+  account_id: int64String,
   email: str,
   name: str,
   roles: nullable(arr(str)),
@@ -43,7 +44,7 @@ export interface TraegerInvitationResponse {
 }
 
 export const TraegerInvitationResponseSchema: z.ZodType<TraegerInvitationResponse, unknown> = object<TraegerInvitationResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   email: str,
   roles: nullable(arr(str)),
   expires_at: instant,
@@ -74,7 +75,7 @@ export interface TraegerHistoryEntryResponse {
 }
 
 export const TraegerHistoryEntryResponseSchema: z.ZodType<TraegerHistoryEntryResponse, unknown> = object<TraegerHistoryEntryResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   occurred_at: instant,
   action: str,
   actor_email: str,
@@ -106,11 +107,6 @@ export interface TraegerRolesRequest {
   roles?: string[] | null;
 }
 
-/** Query of GET /traeger/accounts/history */
-export interface GetTraegerAccountsHistoryQuery {
-  before?: string;
-}
-
 export const routes = {
   "DELETE /traeger/accounts/invitations/{invitationId}": {
     method: "DELETE",
@@ -130,12 +126,32 @@ export const routes = {
     portals: ["org"],
     response: success(TraegerAccountsResponseSchema),
   },
+  "GET /traeger/accounts/export": {
+    method: "GET",
+    pattern: "/traeger/accounts/export",
+    portals: ["org"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
+    response: fileAnswer,
+  },
   "GET /traeger/accounts/history": {
     method: "GET",
     pattern: "/traeger/accounts/history",
     portals: ["org"],
-    query: ["before"],
+    query: {
+      "before": { kind: "id" },
+    },
     response: success(TraegerHistoryResponseSchema),
+  },
+  "GET /traeger/accounts/history/export": {
+    method: "GET",
+    pattern: "/traeger/accounts/history/export",
+    portals: ["org"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
+    response: fileAnswer,
   },
   "POST /traeger/accounts/invitations": {
     method: "POST",

@@ -1,10 +1,15 @@
 package parent
 
 import (
+	"context"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/go-chi/chi/v5"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
@@ -67,17 +72,6 @@ func TestPickupProofReportWarnsAboutAChangedEntry(t *testing.T) {
 	assert.True(t, found)
 }
 
-func TestPickupProofResponseCarriesTheImageAsDataURL(t *testing.T) {
-	t.Parallel()
-
-	response := toPickupProofResponse(pickupProofFixture(true), time.Now())
-	assert.Equal(t, "12", response.RequestID)
-	assert.True(t, response.IntegrityOK)
-	require.NotNil(t, response.Signature)
-	assert.True(t, strings.HasPrefix(response.Signature.ImageDataURL, "data:image/png;base64,"))
-	require.Len(t, response.Summary, 1)
-}
-
 func TestParsePickupPersonID(t *testing.T) {
 	t.Parallel()
 
@@ -109,4 +103,25 @@ func TestPickupChangeResponseExposesCollectorIDOnlyForOwnPendingRequest(t *testi
 	response, err = toPickupChangeRequestResponse(request, 7)
 	require.NoError(t, err)
 	assert.Nil(t, response.PickupPersonGuardianProfileID)
+}
+
+func pickupProofRequest(path string) *http.Request {
+	req := withClaims(httptest.NewRequest(http.MethodGet, path, nil), 1234)
+	route := chi.NewRouteContext()
+	route.URLParams.Add("studentId", "7")
+	route.URLParams.Add("requestId", "12")
+	return req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, route))
+}
+
+// The PDF has a path of its own (#2352).
+func TestPickupRequestProofPDFHasItsOwnPath(t *testing.T) {
+	t.Parallel()
+	rs := &Resource{ParentService: &fakeParentService{pickupProof: pickupProofFixture(true)}, Reports: &capturingProofRenderer{}, Now: enrollmentTestNow}
+
+	w := httptest.NewRecorder()
+	rs.pickupRequestProofPDF(w, pickupProofRequest("/me/children/7/pickup-requests/12/proof/pdf"))
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	assert.Equal(t, "application/pdf", w.Header().Get("Content-Type"))
+	assert.Equal(t, `attachment; filename="nachweis-abholerlaubnis.pdf"`, w.Header().Get("Content-Disposition"))
+	assert.Equal(t, "no-store", w.Header().Get("Cache-Control"))
 }

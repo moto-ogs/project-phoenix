@@ -13,7 +13,7 @@ import { LOCATION_COLORS } from "~/lib/location-helper";
 import { StatusColorBadge } from "~/components/ui/status-color-badge";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { ApiError } from "~/lib/api-error";
+import { ApiError, isReadStateRefusal } from "~/lib/api-error";
 import { useLocale, useTranslations } from "next-intl";
 import { Trash2 } from "lucide-react";
 import type { MotoConcept } from "~/lib/moto-concepts";
@@ -27,18 +27,11 @@ import {
 } from "~/components/parent/request-sharing-control";
 import { TimeField } from "~/components/ui/time-field";
 import { ISODatePicker } from "~/components/ui/date-picker";
+import { knownEnum } from "~/lib/contract/known-enum";
 import { useLocalizedDatePicker } from "~/lib/hooks/use-localized-date-picker";
 import {
-  type CareException,
-  type ChildCareSchedule,
-  type ChildGuardian,
-  type ChildFeatures,
-  type ChildToday,
   type DayDepartureMode,
-  type ExcusedRequest,
-  type PickupChangeRequest,
   REQUESTABLE_DAY_DEPARTURE_MODES,
-  type StatusDay,
   type StudentStatusKind,
   deleteCareException,
   downloadPickupRequestProofPdf,
@@ -54,7 +47,7 @@ import {
 } from "~/lib/parent-api";
 import {
   RequestEditModal,
-  useRequestVersion,
+  useRequestEditedAt,
 } from "~/components/parent/request-edit-modal";
 import { useChildFeatures } from "~/components/parent/child-requests-context";
 import { CustomSelect } from "~/components/ui/custom-select";
@@ -70,7 +63,12 @@ import { berlinTodayISO, parseISODate, toISODate } from "~/lib/date-helpers";
 import { useMessagesActivity } from "~/lib/hooks/use-messages-activity";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { PARENT_RESOURCE_OPTIONS } from "~/lib/hooks/use-parent-resources";
-import { useInvalidateFamily, useSWRAuth, useTenantMutate } from "~/lib/swr";
+import {
+  revalidateOrThrow,
+  useInvalidateFamily,
+  useSWRAuth,
+  useTenantMutate,
+} from "~/lib/swr";
 import { parentKeys } from "~/lib/swr/parent-keys";
 import type { SignatureValue } from "~/lib/signature";
 import {
@@ -83,6 +81,7 @@ import { sickConcept } from "~/lib/concepts/sick";
 import { InsetPanel } from "~/components/ui/inset-panel";
 import { SectionLabel } from "~/components/ui/section-label";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 const logger = createLogger({ component: "ChildCare" });
 
@@ -109,11 +108,14 @@ export type AbsenceSubmissionOutcome = "applied" | "pending" | "partly_pending";
 // Stable empty default for SickStatusSummary's optional excusedRequests prop —
 // a fresh [] literal per render would break referential equality (oxlint
 // react/no-object-type-as-default-prop).
-const EMPTY_EXCUSED_REQUESTS: readonly ExcusedRequest[] = [];
-const EMPTY_PICKUP_CHANGE_REQUESTS: PickupChangeRequest[] = [];
-const NO_STATUS_DAY_LIST: StatusDay[] = [];
-const NO_EXCUSED_REQUEST_LIST: ExcusedRequest[] = [];
-const NO_CARE_EXCEPTION_LIST: CareException[] = [];
+const EMPTY_EXCUSED_REQUESTS: readonly parentMeContract.ParentExcusedRequestResponse[] =
+  [];
+const EMPTY_PICKUP_CHANGE_REQUESTS: parentMeContract.PickupChangeRequestResponse[] =
+  [];
+const NO_STATUS_DAY_LIST: parentMeContract.StatusDayResponse[] = [];
+const NO_EXCUSED_REQUEST_LIST: parentMeContract.ParentExcusedRequestResponse[] =
+  [];
+const NO_CARE_EXCEPTION_LIST: parentMeContract.CareExceptionResponse[] = [];
 
 // --- date helpers (native <input type=date> already yields YYYY-MM-DD) ---
 
@@ -150,7 +152,7 @@ function formatLocaleDate(iso: string, locale: string): string {
 // --- data hook ---
 
 // An unavailable capability response must not offer parent mutations.
-const DEFAULT_FEATURES: ChildFeatures = {
+const DEFAULT_FEATURES: parentMeContract.ChildFeaturesResponse = {
   sick_note_enabled: false,
   excused_note_enabled: false,
   // Default false on fetch failure (least privilege), consistent with the other
@@ -184,6 +186,17 @@ const DEFAULT_FEATURES: ChildFeatures = {
   // panel rather than showing an empty one for a school that has news off; the
   // backend feed enforces the gate regardless.
   parent_news_enabled: false,
+  conference_book_allowed: false,
+  care_ended: false,
+  sick_requires_approval: false,
+  excused_requires_approval: false,
+  pickup_change_mode_enabled: false,
+  pickup_change_cutoff_time: "",
+  pickup_change_today_closed: false,
+  pickup_change_care_day_ended: false,
+  emergency_contact_manage_allowed: false,
+  reason_required: false,
+  care_facility_term: "",
 };
 
 // The child's effective pickup situation for TODAY, resolved from the weekly
@@ -228,12 +241,12 @@ function isoWeekday(dateISO: string): number {
 // LOADED same-day override with a pickup time is authoritative even if the base
 // plan never loaded — we just can't call it "changed" without a base to compare.
 export function resolveTodayPickup(params: {
-  readonly weekdays: ChildCareSchedule["weekdays"];
+  readonly weekdays: parentMeContract.CareScheduleResponse["weekdays"];
   readonly weekPlanLoaded: boolean;
   // Authoritative all-source absence for today (sick / excused / class trip),
   // computed server-side. Only meaningful when weekPlanLoaded (same response).
   readonly todayAbsent: boolean;
-  readonly careExceptions: readonly CareException[];
+  readonly careExceptions: readonly parentMeContract.CareExceptionResponse[];
   readonly careExceptionsLoaded: boolean;
   readonly today: string;
 }): TodayPickup {
@@ -276,7 +289,8 @@ export function resolveTodayPickup(params: {
     // stale plan could wrongly flag "changed". When the plan isn't loaded we
     // treat the base as unknown and never mark a difference (#1725 review).
     const base = weekPlanLoaded
-      ? weekdays.find((entry) => entry.weekday === isoWeekday(today))?.pickup
+      ? (weekdays ?? []).find((entry) => entry.weekday === isoWeekday(today))
+          ?.pickup
       : undefined;
     const changed = base !== undefined && base !== override.pickup_time;
     return { kind: "time", time: override.pickup_time, changed };
@@ -284,18 +298,20 @@ export function resolveTodayPickup(params: {
 
   if (!weekPlanLoaded) return { kind: "unknown" };
 
-  const base = weekdays.find((entry) => entry.weekday === isoWeekday(today));
+  const base = (weekdays ?? []).find(
+    (entry) => entry.weekday === isoWeekday(today),
+  );
   if (base?.pickup) return { kind: "time", time: base.pickup, changed: false };
   return { kind: "none" };
 }
 
 export interface ChildCare {
-  readonly sickDays: StatusDay[];
+  readonly sickDays: parentMeContract.StatusDayResponse[];
   // Absence requests that went through the OGS approval gate (pending +
   // recently decided). Empty for schools that gate neither absence type.
-  readonly excusedRequests: ExcusedRequest[];
-  readonly careExceptions: CareException[];
-  readonly pickupChangeRequests: PickupChangeRequest[];
+  readonly excusedRequests: parentMeContract.ParentExcusedRequestResponse[];
+  readonly careExceptions: parentMeContract.CareExceptionResponse[];
+  readonly pickupChangeRequests: parentMeContract.PickupChangeRequestResponse[];
   // Whether the care-exception list actually loaded. A failed fetch leaves
   // careExceptions empty, which is indistinguishable from "no overrides exist"
   // — and submitCareException treats an omitted leg as an authoritative clear.
@@ -303,9 +319,13 @@ export interface ChildCare {
   // silently wipe an existing override the UI never managed to prefill.
   readonly careExceptionsLoaded: boolean;
   readonly pickupChangeRequestsLoaded: boolean;
+  /** Reads the pickup requests again; rejects when the read fails. */
+  readonly reloadPickupRequests: () => Promise<unknown>;
+  /** Reads the absence requests again; rejects when the read fails. */
+  readonly reloadExcusedRequests: () => Promise<unknown>;
   // Today's resolved pickup state for the "Heute" tile (see TodayPickup).
   readonly todayPickup: TodayPickup;
-  readonly features: ChildFeatures;
+  readonly features: parentMeContract.ChildFeaturesResponse;
   readonly loading: boolean;
   /**
    * The first failure of the latest load, null when every list arrived. The
@@ -469,13 +489,13 @@ export function useChildCare(
       // A direct write (sick note, or an excused absence without the approval
       // gate) returns the just-recorded days. Merge them into the loaded list
       // (replacing same-date entries) so previously reported absences stay.
-      if (status_days.length > 0) {
-        const submittedDates = new Set(status_days.map((d) => d.date));
+      if ((status_days ?? []).length > 0) {
+        const submittedDates = new Set((status_days ?? []).map((d) => d.date));
         void reloadSick(
           (prev) =>
             [
               ...(prev ?? []).filter((d) => !submittedDates.has(d.date)),
-              ...status_days,
+              ...(status_days ?? []),
             ].sort((a, b) => a.date.localeCompare(b.date)),
           { revalidate: false },
         );
@@ -483,7 +503,7 @@ export function useChildCare(
         // reads today_absent exclusively, so the "Heute → Abholung" tile
         // follows at once; the server signal agrees on the next load (#1725
         // review). The day is stamped so the midnight guard trusts it.
-        if (status_days.some((d) => d.date === day)) {
+        if ((status_days ?? []).some((d) => d.date === day)) {
           void reloadSchedule(
             (plan) => plan && { ...plan, today_absent: true, today_date: day },
             { revalidate: false },
@@ -513,7 +533,7 @@ export function useChildCare(
         // idempotently (#1845 review).
         throw new ChildCareRefreshError();
       }
-      return status_days.length > 0
+      return (status_days ?? []).length > 0
         ? ("partly_pending" as const)
         : ("pending" as const);
     },
@@ -549,7 +569,9 @@ export function useChildCare(
       if (currentStudentIdRef.current !== studentId) return;
       void reloadExceptions(
         (prev) => (prev ?? []).filter((e) => e.date !== date),
-        { revalidate: false },
+        {
+          revalidate: false,
+        },
       );
     },
     [reloadExceptions, studentId],
@@ -582,6 +604,8 @@ export function useChildCare(
     pickupChangeRequests: pickupRequests.data ?? EMPTY_PICKUP_CHANGE_REQUESTS,
     careExceptionsLoaded,
     pickupChangeRequestsLoaded,
+    reloadPickupRequests: () => revalidateOrThrow(pickupRequests),
+    reloadExcusedRequests: () => revalidateOrThrow(excused),
     todayPickup,
     features: featureState.features ?? DEFAULT_FEATURES,
     loading:
@@ -617,8 +641,9 @@ function knownSickErrorKey(err: unknown): string | null {
   return null;
 }
 
-const NO_CARE_EXCEPTIONS: readonly CareException[] = [];
-const NO_STATUS_DAYS: readonly StatusDay[] = [];
+const NO_CARE_EXCEPTIONS: readonly parentMeContract.CareExceptionResponse[] =
+  [];
+const NO_STATUS_DAYS: readonly parentMeContract.StatusDayResponse[] = [];
 /** A day the school already holds: from a time, or (`time` null) sick. */
 type SchoolDay = { readonly date: string; readonly time: string | null };
 // "Mittwoch, 11.11.2026": parents plan absences by weekday.
@@ -662,12 +687,12 @@ export function SickNoteModal({
    * Die Tagesänderungen des Kindes. Für Tage mit einer Teil-Abwesenheit der
    * OGS (`excused_from`) geht die Meldung als Anfrage an die OGS (#5698).
    */
-  careExceptions?: readonly CareException[];
+  careExceptions?: readonly parentMeContract.CareExceptionResponse[];
   /**
    * Die Abwesenheiten, die Eltern sehen. Eine Krankmeldung der OGS
    * (`source` nicht `parent`) ist ein Schuleintrag wie eine Teil-Abwesenheit.
    */
-  sickDays?: readonly StatusDay[];
+  sickDays?: readonly parentMeContract.StatusDayResponse[];
   /**
    * Das Kind hat keinen Platz in der OGS (#4803): die Meldung geht an die
    * Schule, die Texte nennen darum keine OGS.
@@ -704,7 +729,9 @@ export function SickNoteModal({
   // the school may have entered it after the page loaded, or beyond the
   // window the page reads.
   const [reloadedExceptions, setReloadedExceptions] =
-    useState<readonly CareException[]>(NO_CARE_EXCEPTIONS);
+    useState<readonly parentMeContract.CareExceptionResponse[]>(
+      NO_CARE_EXCEPTIONS,
+    );
   // Only a manual partial absence is a school entry; the backend ignores
   // automatic excusals from a pulled-forward pickup time, and so does the
   // read that fills excused_from. Such days go to the school as a request.
@@ -1050,7 +1077,9 @@ const DAY_SIGNATURE_FIELD = "pickup-day-signature";
  * Die Kontaktpersonen des Kindes, die an einem Tag abholen können (#4780):
  * alle eingetragenen Personen außer dem eigenen Konto.
  */
-function useDayPickupContacts(studentId: string | undefined): ChildGuardian[] {
+function useDayPickupContacts(
+  studentId: string | undefined,
+): parentMeContract.childGuardianResponse[] {
   // Without the list only the choice „Wer holt ab?“ is missing; pickup time
   // and mode stay requestable, so a failure stays silent.
   const { data } = useSWRAuth(
@@ -1082,17 +1111,18 @@ export function PickupTimeModal({
   todayClosed = false,
   careDayEnded = false,
   onCutoffPassed,
+  reloadRequests,
 }: Readonly<{
   studentId?: string;
-  careExceptions: CareException[];
-  pickupChangeRequests?: PickupChangeRequest[];
+  careExceptions: parentMeContract.CareExceptionResponse[];
+  pickupChangeRequests?: parentMeContract.PickupChangeRequestResponse[];
   careExceptionsLoaded: boolean;
   pickupChangeRequestsLoaded?: boolean;
   pickupChangeEnabled: boolean;
   /** Die Anfrage darf auch die Abholart des Tages ändern (#3945). */
   departureModeEnabled?: boolean;
   childFirstName?: string;
-  today?: ChildToday;
+  today?: parentMeContract.TodayStatusResponse;
   onClose: () => void;
   onSubmit: (params: PickupChangeSubmitParams) => Promise<void | string>;
   onRemove: (date: string) => Promise<void>;
@@ -1109,6 +1139,11 @@ export function PickupTimeModal({
   careDayEnded?: boolean;
   /** Der Server hat die Frist oder das Betreuungsende gemeldet: Daten neu laden. */
   onCutoffPassed?: () => void;
+  /**
+   * Liest die Anfragen nach einer Ablehnung neu und lehnt ab, wenn das
+   * scheitert (ADR 0311). Ohne sie lädt der Dialog die Liste still neu.
+   */
+  reloadRequests?: () => Promise<unknown>;
 }>) {
   const t = useCareTermTranslations("parentChildCare");
   const tModes = useCareTermTranslations("parentMasterData");
@@ -1249,12 +1284,26 @@ export function PickupTimeModal({
   const canEditRequest =
     pending && studentId !== undefined && request?.is_self !== false;
   const invalidateFamily = useInvalidateFamily();
-  const { version, editedAt } = useRequestVersion(
+  const editedAt = useRequestEditedAt(
     studentId ?? "",
     "pickup_change",
     request?.id ?? "",
     canEditRequest === true,
   );
+  // The version of the request the draft was filled from: an edit sends it
+  // back (ADR 0311). After a refusal, `reloadingVersion` holds the refused
+  // one until the reloaded list brings the stored request. A newer read
+  // refills an edit only while the parent has not typed (`draftTouchedRef`;
+  // a ref, so typing itself never triggers a refill).
+  const [draftVersion, setDraftVersion] = useState("");
+  const [reloadingVersion, setReloadingVersion] = useState<string | null>(null);
+  // The read after a refusal failed: nothing is sent until a read succeeds.
+  const [storedReadFailed, setStoredReadFailed] = useState(false);
+  const draftTouchedRef = useRef(false);
+  const draftVersionRef = useRef("");
+  const touchDraft = () => {
+    draftTouchedRef.current = true;
+  };
 
   // The pickup rules this dialog explains with its own context (the child's
   // name, the school's cutoff time). Every other failure goes through the
@@ -1318,33 +1367,56 @@ export function PickupTimeModal({
   };
 
   // Refetches replace record objects even when their values have not changed.
-  // Keep an active edit attached to its request and never refill its draft.
+  // Keep an active edit attached to its request and never refill what the
+  // parent typed; an untouched edit follows a newer read with its version.
   // Saved values belong to their date; empty days keep the current draft.
   const prefillDate = request || existing ? date : "";
   const prefillTime = request?.pickup_time ?? existing?.pickup_time ?? "";
   const prefillMode =
-    request?.departure_mode && request.departure_mode !== "accompanied"
-      ? request.departure_mode
-      : "";
+    knownEnum(
+      REQUESTABLE_DAY_DEPARTURE_MODES,
+      request?.departure_mode ?? undefined,
+    ) ?? "";
   const prefillReason = request?.reason ?? existing?.reason ?? "";
   const prefillPerson = request?.pickup_person_guardian_profile_id ?? "";
+  const prefillVersion = request?.version ?? "";
   useEffect(() => {
-    if (editing) return;
+    if (
+      editing &&
+      reloadingVersion === null &&
+      (draftTouchedRef.current || prefillVersion === draftVersionRef.current)
+    ) {
+      return;
+    }
+    // A refused edit waits for the reloaded request and then shows its
+    // stored values, keeping the refusal on screen.
+    if (reloadingVersion !== null && prefillVersion === reloadingVersion) {
+      return;
+    }
     setPickupTime(prefillTime);
     setDepartureMode(prefillMode);
     setReason(prefillReason);
     setPickupPersonId(prefillPerson);
+    setDraftVersion(prefillVersion);
+    draftVersionRef.current = prefillVersion;
+    draftTouchedRef.current = false;
     setSignature(null);
+    if (reloadingVersion !== null) {
+      setReloadingVersion(null);
+      return;
+    }
     clearForm();
     setInvalidField(null);
   }, [
     clearForm,
     editing,
+    reloadingVersion,
     prefillDate,
     prefillTime,
     prefillMode,
     prefillReason,
     prefillPerson,
+    prefillVersion,
   ]);
 
   // The date remains part of the signed declaration while editing an existing
@@ -1419,7 +1491,7 @@ export function PickupTimeModal({
   // Ändern einer noch offenen eigenen Anfrage. Die Empfänger bleiben, wie sie
   // beim Senden festgelegt wurden; sie werden über "Anfrage teilen" geändert.
   const handleSaveEdit = async () => {
-    if (!studentId || !request) return;
+    if (!studentId || !request || storedReadFailed) return;
     // An existing collector may only be retained after the current contact
     // list confirmed it. Omitting its ID would silently clear the collector.
     if (
@@ -1453,18 +1525,42 @@ export function PickupTimeModal({
         pickupTime,
         ...(modeField ? { departureMode } : {}),
         reason: reason.trim(),
-        expectedVersion: version,
+        expectedVersion: draftVersion,
         ...dayPickup,
       });
-      // A reopened dialog must send the new version, not the cached one.
+      // The list carries the version of the next edit: without its reload
+      // a second edit would send the version this save just replaced.
+      void invalidateFamily(parentKeys.pickupChangeRequestsFamily(studentId));
       void invalidateFamily(parentKeys.requestEventsFamily(studentId));
       onClose();
     } catch (err) {
-      if (
-        err instanceof ApiError &&
-        err.code === "students.change_request_stale"
-      ) {
-        form.invalid(t("pickup.staleError"));
+      if (isReadStateRefusal(err)) {
+        // Sending the same version again would be refused again: reload
+        // the request and show what is stored now. A failed read says so
+        // and keeps saving locked until a read succeeds (ADR 0311).
+        const refused = draftVersion;
+        setReloadingVersion(refused);
+        void form.show(err, {
+          object: t("pickup.errorObject"),
+          reload: reloadRequests
+            ? async () => {
+                setReloadingVersion(refused);
+                setStoredReadFailed(false);
+                try {
+                  await reloadRequests();
+                } catch (readError) {
+                  setReloadingVersion(null);
+                  setStoredReadFailed(true);
+                  throw readError;
+                }
+              }
+            : undefined,
+        });
+        if (!reloadRequests) {
+          void invalidateFamily(
+            parentKeys.pickupChangeRequestsFamily(studentId),
+          );
+        }
       } else {
         reportError(form, err, () => latestActionsRef.current.saveEdit());
       }
@@ -1565,11 +1661,23 @@ export function PickupTimeModal({
               size="md"
               className="w-full whitespace-nowrap sm:w-auto"
               onClick={() => void handleSaveEdit()}
-              disabled={submitting || todayLocked}
+              disabled={submitting || todayLocked || storedReadFailed}
               tooltip={t("pickup.saveEditTooltip")}
-              disabledReason={todayLocked ? cutoffClosedText : undefined}
-              isLoading={submitting}
-              loadingText={t("pickup.savingEdit")}
+              disabledReason={
+                todayLocked
+                  ? cutoffClosedText
+                  : storedReadFailed
+                    ? t("pickup.reloadFirst")
+                    : undefined
+              }
+              // After a refusal the refused version would go out again
+              // until the stored request has arrived.
+              isLoading={submitting || reloadingVersion !== null}
+              loadingText={
+                reloadingVersion === null
+                  ? t("pickup.savingEdit")
+                  : t("pickup.reloadingEdit")
+              }
             >
               {t("pickup.saveEdit")}
             </Button>
@@ -1752,6 +1860,7 @@ export function PickupTimeModal({
                   })),
                 ]}
                 onChange={(next) => {
+                  touchDraft();
                   setDepartureMode(next as DayDepartureMode | "");
                   setSignature(null);
                   if (next !== "" && next !== "pickup") setPickupPersonId("");
@@ -1780,6 +1889,7 @@ export function PickupTimeModal({
                   })),
                 ]}
                 onChange={(next) => {
+                  touchDraft();
                   setPickupPersonId(next);
                   setSignature(null);
                   if (invalidField === "pickupTime") {
@@ -1793,6 +1903,7 @@ export function PickupTimeModal({
               inputRef={pickupTimeRef}
               value={pickupTime}
               onChange={(next) => {
+                touchDraft();
                 setPickupTime(next);
                 if (invalidField === "pickupTime") {
                   setInvalidField(null);
@@ -1822,6 +1933,7 @@ export function PickupTimeModal({
               ref={reasonRef}
               value={reason}
               onChange={(e) => {
+                touchDraft();
                 setReason(e.target.value);
                 if (invalidField === "reason") {
                   setInvalidField(null);
@@ -1842,6 +1954,7 @@ export function PickupTimeModal({
                 statement={dayStatement}
                 value={signature}
                 onChange={(next) => {
+                  touchDraft();
                   setSignature(next);
                   if (next) form.clear();
                 }}
@@ -1931,23 +2044,30 @@ export function SickStatusSummary({
   onEdited,
 }: Readonly<{
   studentId?: string;
-  sickDays: StatusDay[];
+  sickDays: parentMeContract.StatusDayResponse[];
   // Absence requests behind an OGS approval gate. Pending ones show as
   // "Freigabe ausstehend" and can still be changed by their author; rejected
   // ones show the decision reason. Confirmed (approved) requests arrive as
   // StatusDays instead.
-  excusedRequests?: readonly ExcusedRequest[];
+  excusedRequests?: readonly parentMeContract.ParentExcusedRequestResponse[];
   /** Ob die Person Abwesenheiten melden darf und eigene offene Anfragen damit
    * ändern kann (features.absence_request_edit_enabled, #4603). */
   canEdit?: boolean;
   /** Ob die OGS einen Grund verlangt (requiresGuardianReason). */
   reasonRequired?: boolean;
-  /** Nach einer geänderten Anfrage: die Liste neu laden. */
-  onEdited?: () => void;
+  /**
+   * Nach einer geänderten oder abgelehnten Anfrage: die Liste neu laden.
+   * Lehnt ab, wenn das Lesen scheitert (ADR 0311).
+   */
+  onEdited?: () => Promise<unknown>;
 }>) {
   const t = useCareTermTranslations("parentChildCare");
   const locale = useLocale();
-  const [editing, setEditing] = useState<ExcusedRequest | null>(null);
+  // The edit follows the row of the current list, so a reload after a
+  // refused save hands the dialog the stored version (ADR 0311).
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const editing =
+    excusedRequests.find((request) => request.id === editingId) ?? null;
 
   // Collapse to a "first – last" range ONLY when the days are actually
   // contiguous; otherwise list them comma-separated. The request endpoint accepts
@@ -1975,7 +2095,9 @@ export function SickStatusSummary({
     .map((d) => d.date);
   const pending = excusedRequests.filter((r) => r.status === "pending");
   const rejected = excusedRequests.filter((r) => r.status === "rejected");
-  const requestLabel = (request: ExcusedRequest) =>
+  const requestLabel = (
+    request: parentMeContract.ParentExcusedRequestResponse,
+  ) =>
     request.absence_status === "sick"
       ? t("summary.sickLabel")
       : t("summary.excusedLabel");
@@ -2006,7 +2128,7 @@ export function SickStatusSummary({
     .map((r) => ({
       id: r.id,
       label: requestLabel(r),
-      dates: r.dates.filter(
+      dates: (r.dates ?? []).filter(
         (d) =>
           isOutOfWindow(d) &&
           !(
@@ -2049,7 +2171,7 @@ export function SickStatusSummary({
         <div key={r.id} className="space-y-0.5">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <p className="text-sm font-semibold text-gray-900">
-              {requestLabel(r)}: {rangeLabel(r.dates)}
+              {requestLabel(r)}: {rangeLabel(r.dates ?? [])}
             </p>
             <StatusColorBadge
               color={LOCATION_COLORS.WARNING}
@@ -2062,7 +2184,7 @@ export function SickStatusSummary({
                 variant="outline"
                 size="md"
                 tooltip={t("requestEditTooltip")}
-                onClick={() => setEditing(r)}
+                onClick={() => setEditingId(r.id)}
               >
                 {t("summary.edit")}
               </Button>
@@ -2082,7 +2204,7 @@ export function SickStatusSummary({
         <div key={r.id} className="space-y-0.5">
           <div className="flex flex-wrap items-center gap-x-2">
             <p className="text-sm font-semibold text-gray-900">
-              {requestLabel(r)}: {rangeLabel(r.dates)}
+              {requestLabel(r)}: {rangeLabel(r.dates ?? [])}
             </p>
             <StatusBadge
               tone="red"
@@ -2112,11 +2234,12 @@ export function SickStatusSummary({
           request={{
             type: "excused",
             id: editing.id,
-            dates: [...editing.dates],
+            version: editing.version,
+            dates: [...(editing.dates ?? [])],
             note: editing.note,
           }}
-          onClose={() => setEditing(null)}
-          onSaved={() => onEdited?.()}
+          onClose={() => setEditingId(null)}
+          onReload={() => onEdited?.() ?? Promise.resolve()}
         />
       )}
     </div>
@@ -2149,7 +2272,9 @@ export interface OgsAction {
 // not a hook, so consumers localize each key via
 // t(`actions.${key}.{label,shortLabel,hint}`) in the "parentChildCare"
 // namespace (mirrors the child-detail action pattern).
-export function getOgsActions(features: ChildFeatures): OgsAction[] {
+export function getOgsActions(
+  features: parentMeContract.ChildFeaturesResponse,
+): OgsAction[] {
   return [
     {
       key: "sick",

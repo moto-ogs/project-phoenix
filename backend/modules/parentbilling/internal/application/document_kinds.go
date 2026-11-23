@@ -67,7 +67,7 @@ func (d *DocumentKinds) ListDocumentKinds(ctx context.Context, organizationID in
 	if err != nil {
 		return parentbilling.DocumentKindOverview{}, fmt.Errorf("parent billing: read the template of the fee notice: %w", err)
 	}
-	overview.LegalRemedySet = !templates.LacksLegalRemedy(templates.KindFeeNotice, letterTemplate(template, templates.KindFeeNotice))
+	overview.LegalRemedySet = !templates.LacksLegalRemedy(templates.KindFeeNotice, letterTemplate(template, templates.KindFeeNotice, letterAddressee{}))
 	overview.FeeNoticeTemplateVersion = template.Version
 	return overview, nil
 }
@@ -135,7 +135,7 @@ func (g documentKindGate) reviewed(ctx context.Context, organizationID int64, se
 	if err != nil {
 		return parentbilling.DocumentKindState{}, "", fmt.Errorf("parent billing: read the template of the fee notice: %w", err)
 	}
-	state.LegalRemedyMissing = templates.LacksLegalRemedy(templates.KindFeeNotice, letterTemplate(template, templates.KindFeeNotice))
+	state.LegalRemedyMissing = templates.LacksLegalRemedy(templates.KindFeeNotice, letterTemplate(template, templates.KindFeeNotice, letterAddressee{}))
 	return state, fmt.Sprintf("%d:%s", template.Version, template.LegalRemedy), nil
 }
 

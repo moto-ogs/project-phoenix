@@ -1,14 +1,17 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 import { fetchPickupExtensions } from "./pickup-extension-api";
 
-// Shape the BFF route actually sends: proxyGet unwraps the backend envelope
-// and the GET wrapper puts its own around the result (#3776). An earlier
-// fixture without this envelope hid that the browser always read no tasks.
+// Shape the catalog proxy sends: the backend's envelope around { tasks }
+// (#3776). An earlier fixture without this envelope hid that the browser
+// always read no tasks.
 function bffResponse(tasks: unknown[]): Response {
-  return new Response(
-    JSON.stringify({ success: true, message: "Success", data: { tasks } }),
-  );
+  return new Response(JSON.stringify({ status: "success", data: { tasks } }));
 }
 
 describe("fetchPickupExtensions", () => {
@@ -22,8 +25,8 @@ describe("fetchPickupExtensions", () => {
       vi.fn().mockResolvedValue(
         bffResponse([
           {
-            id: 7,
-            student_id: 42,
+            id: "7",
+            student_id: "42",
             student_name: "Mia Beispiel",
             kind: "weekday",
             weekday: 2,
@@ -45,8 +48,8 @@ describe("fetchPickupExtensions", () => {
     const fetchMock = vi.fn().mockResolvedValue(
       bffResponse([
         {
-          id: 3,
-          student_id: 19,
+          id: "3",
+          student_id: "19",
           student_name: "David Krause",
           kind: "day",
           date: "2026-10-07",
@@ -54,7 +57,7 @@ describe("fetchPickupExtensions", () => {
           pickup_time: "17:00",
           blocks: [
             {
-              id: 29,
+              id: "29",
               title: "Freies Spiel",
               start_time: "14:45",
               end_time: "17:00",

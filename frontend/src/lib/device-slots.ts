@@ -5,14 +5,8 @@
  * hat, ist `booked` null.
  */
 
-import { apiErrorFromResponse, transportFetch } from "./api-error";
-
-/** Antwort von GET /api/iot/device-slots im Backend. */
-export interface BackendDeviceSlots {
-  readonly device_slots: number | null;
-  readonly occupied: number;
-  readonly free: number | null;
-}
+import { bffJson } from "./bff-fetch";
+import type * as iotContract from "./contract/iot.generated";
 
 export interface DeviceSlots {
   /** Gekaufte Geräteplätze; null ohne Grenze. */
@@ -23,7 +17,9 @@ export interface DeviceSlots {
   readonly free: number | null;
 }
 
-export function mapDeviceSlots(data: BackendDeviceSlots): DeviceSlots {
+export function mapDeviceSlots(
+  data: iotContract.DeviceSlotsResponse,
+): DeviceSlots {
   return {
     booked: data.device_slots ?? null,
     occupied: data.occupied,
@@ -48,17 +44,9 @@ export function freeDeviceSlots(
 }
 
 export async function fetchDeviceSlots(): Promise<DeviceSlots> {
-  const response = await transportFetch("/api/iot/device-slots", {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
-    cache: "no-store",
-  });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `device slots failed (${response.status})`,
-    );
-  }
-  const json = (await response.json()) as { data: DeviceSlots };
-  return json.data;
+  return mapDeviceSlots(
+    await bffJson("tenant", "GET /api/iot/device-slots", {
+      errorMessage: "device slots failed",
+    }),
+  );
 }

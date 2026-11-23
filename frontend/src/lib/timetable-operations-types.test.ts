@@ -1,27 +1,28 @@
 import { describe, expect, it } from "vitest";
+import type {
+  OperationRoster,
+  startOperationResponse,
+} from "./contract/shared.generated";
 import {
   mapPlannedInstance,
   mapRoster,
   mapStartOperation,
-  type BackendStartOperationResult,
-  type BackendTimetableRoster,
 } from "./timetable-operations-types";
+import {
+  buildOperationPlannedInstance as plannedInstance,
+  buildOperationRoster as roster,
+  buildOperationRosterInstance as rosterInstance,
+  buildOperationRosterRow as rosterRow,
+} from "~/test/fixtures/timetable-operations";
 
 describe("timetable operation mappers", () => {
-  it("maps the caller's action right and omits it for older backends", () => {
-    const base: BackendTimetableRoster = {
-      instance: {
-        id: 117,
-        title: "Randstunde",
-        status: "active",
-        room_id: 217,
-      },
-      rows: [],
-    };
+  it("maps the caller's action rights as Go sends them", () => {
+    const base = roster({
+      instance: rosterInstance({ id: "117", status: "active" }),
+    });
 
     expect(mapRoster({ ...base, can_operate: false }).canOperate).toBe(false);
     expect(mapRoster({ ...base, can_operate: true }).canOperate).toBe(true);
-    expect(mapRoster(base)).not.toHaveProperty("canOperate");
     expect(
       mapRoster({
         ...base,
@@ -36,59 +37,41 @@ describe("timetable operation mappers", () => {
     });
     expect(mapRoster({ ...base, can_start: true }).canStart).toBe(true);
     expect(mapRoster({ ...base, can_start: false }).canStart).toBe(false);
-    expect(mapRoster(base)).not.toHaveProperty("canStart");
     expect(mapRoster({ ...base, can_end: false }).canEnd).toBe(false);
-    expect(mapRoster(base)).not.toHaveProperty("canEnd");
-    expect(mapRoster(base)).not.toHaveProperty("canEditAttendance");
-    expect(mapRoster(base)).not.toHaveProperty("canReportAbsence");
+    expect(
+      mapRoster({ ...base, can_record_homework_feedback: false })
+        .canRecordHomeworkFeedback,
+    ).toBe(false);
   });
 
   it("keeps loaded pickup times distinct from a failed pickup lookup", () => {
-    const loaded = mapRoster({
-      instance: {
-        id: 119,
-        title: "Randstunde",
-        status: "planned",
-        room_id: 219,
-      },
-      pickup_times_loaded: true,
-      rows: [
-        {
-          student_id: 419,
-          student_name: "Mara Montag",
-          school_class: "1a",
-          group_name: "OGS Grün",
-          planned: true,
-          is_unplanned: false,
-          currently_present: false,
-          status: "expected",
-          pickup_time: "13:30",
-        },
-      ],
-    });
-    const failed = mapRoster({
-      instance: {
-        id: 118,
-        title: "Ganztag",
-        status: "active",
-        room_id: 218,
-      },
-      pickup_times_loaded: false,
-      pickup_times_redacted: true,
-      rows: [
-        {
-          student_id: 418,
-          student_name: "Nora Nichtgeladen",
-          school_class: "2b",
-          group_name: "OGS Blau",
-          planned: true,
-          is_unplanned: false,
-          currently_present: false,
-          status: "expected",
-          pickup_time: null,
-        },
-      ],
-    });
+    const loaded = mapRoster(
+      roster({
+        instance: rosterInstance({ id: "119", title: "Randstunde" }),
+        pickup_times_loaded: true,
+        rows: [
+          rosterRow({
+            student_id: "419",
+            student_name: "Mara Montag",
+            pickup_time: "13:30",
+          }),
+        ],
+      }),
+    );
+    const failed = mapRoster(
+      roster({
+        instance: rosterInstance({ id: "118", status: "active" }),
+        pickup_times_loaded: false,
+        pickup_times_redacted: true,
+        rows: [
+          rosterRow({
+            student_id: "418",
+            student_name: "Nora Nichtgeladen",
+            pickup_time: null,
+          }),
+        ],
+      }),
+    );
 
     expect(loaded.pickupTimesLoaded).toBe(true);
     expect(loaded.rows[0]!.pickupTime).toBe("13:30");
@@ -98,46 +81,52 @@ describe("timetable operation mappers", () => {
   });
 
   it("maps planned instances from backend snake_case into frontend camelCase", () => {
-    const result = mapPlannedInstance({
-      id: 120,
-      title: "Lernzeit",
-      date: "2026-05-10",
-      start_time: "14:00",
-      end_time: "15:00",
-      room_id: 220,
-      room_name: "Lernraum",
-      status: "planned",
-      is_overdue: true,
-      minutes_until_start: -5,
-      expected_students_count: 18,
-      present_students_count: 3,
-      assigned_staff_ids: [320, 321],
-      is_assigned: true,
-      is_primary: true,
-      is_substitute: false,
-      is_absent: false,
-      active_group_id: 910,
-      cancel_reason: null,
-      planning_track_name: "Angebote",
-      planning_track_color: "#5080D8",
-      group_name: "Gruppe Sonne",
-      staff_names: [
-        { staff_id: 320, display_name: "Maria Muster" },
-        { staff_id: 321, display_name: "Vera Vertretung", is_substitute: true },
-      ],
-      roster_preview: [
-        {
-          student_id: 420,
-          student_name: "Mila Muster",
-          school_class: "3a",
-          group_name: "OGS Blau",
-          planned: true,
-          is_unplanned: false,
-          currently_present: false,
-          status: "expected",
-        },
-      ],
-    });
+    const result = mapPlannedInstance(
+      plannedInstance({
+        id: "120",
+        title: "Lernzeit",
+        date: "2026-05-10",
+        start_time: "14:00",
+        end_time: "15:00",
+        room_id: "220",
+        room_name: "Lernraum",
+        status: "planned",
+        is_overdue: true,
+        minutes_until_start: -5,
+        expected_students_count: 18,
+        present_students_count: 3,
+        current_students_count: 2,
+        planned_students_count: 17,
+        assigned_staff_ids: ["320", "321"],
+        is_assigned: true,
+        is_primary: true,
+        active_group_id: "910",
+        planning_track_name: "Angebote",
+        planning_track_color: "#5080D8",
+        group_name: "Gruppe Sonne",
+        staff_names: [
+          {
+            staff_id: "320",
+            display_name: "Maria Muster",
+            is_substitute: false,
+          },
+          {
+            staff_id: "321",
+            display_name: "Vera Vertretung",
+            is_substitute: true,
+          },
+        ],
+        roster_preview: [
+          rosterRow({
+            student_id: "420",
+            student_name: "Mila Muster",
+            school_class: "3a",
+            group_name: "OGS Blau",
+            care_day_status: "unknown",
+          }),
+        ],
+      }),
+    );
 
     expect(result).toEqual({
       id: "120",
@@ -153,11 +142,14 @@ describe("timetable operation mappers", () => {
       expectedStudentsCount: 18,
       notScheduledStudentsCount: 0,
       presentStudentsCount: 3,
+      currentStudentsCount: 2,
+      plannedStudentsCount: 17,
       assignedStaffIds: ["320", "321"],
       isAssigned: true,
       isPrimary: true,
       isSubstitute: false,
       isAbsent: false,
+      pickupTimesLoaded: true,
       canStart: false,
       startAvailableAt: "",
       startExpiresAt: "",
@@ -187,6 +179,7 @@ describe("timetable operation mappers", () => {
           checkedOutAt: null,
           parallelPresentIn: null,
           visitEntryTime: null,
+          pickupTime: null,
           warnings: [],
           careDayStatus: "unknown",
         },
@@ -195,44 +188,44 @@ describe("timetable operation mappers", () => {
   });
 
   it("maps roster ids and optional fields without leaking undefined", () => {
-    const raw: BackendTimetableRoster = {
-      instance: {
-        id: 121,
+    const raw: OperationRoster = roster({
+      instance: rosterInstance({
+        id: "121",
         title: "AG Kunst",
         status: "active",
         is_spontaneous: true,
-        active_group_id: 221,
-        room_id: 222,
-      },
+        active_group_id: "221",
+        room_id: "222",
+        date: "2026-05-10",
+        start_time: "14:00",
+        end_time: "15:00",
+      }),
       rows: [
-        {
-          student_id: 420,
+        rosterRow({
+          student_id: "420",
           student_name: "Mila Muster",
           school_class: "3a",
           group_name: "OGS Blau",
-          planned: true,
-          is_unplanned: false,
           currently_present: true,
-          visit_id: 520,
+          visit_id: "520",
           status: "present",
           substatus: "late",
           note: "kam nach",
           checked_in_at: "2026-05-10T12:00:00Z",
           checked_out_at: "2026-05-10T13:00:00Z",
           visit_entry_time: "2026-05-10T12:01:00Z",
-        },
-        {
-          student_id: 421,
+          care_day_status: "unknown",
+        }),
+        rosterRow({
+          student_id: "421",
           student_name: "Ben Beispiel",
           school_class: "4b",
-          group_name: "",
           planned: false,
           is_unplanned: true,
-          currently_present: false,
-          status: "expected",
-        },
+          care_day_status: "unknown",
+        }),
       ],
-    };
+    });
 
     expect(mapRoster(raw)).toEqual({
       instance: {
@@ -243,9 +236,9 @@ describe("timetable operation mappers", () => {
         activeGroupId: "221",
         roomId: "222",
         roomName: null,
-        date: "",
-        startTime: "",
-        endTime: "",
+        date: "2026-05-10",
+        startTime: "14:00",
+        endTime: "15:00",
         canComplete: false,
         completeAvailableAt: "",
       },
@@ -265,6 +258,7 @@ describe("timetable operation mappers", () => {
           checkedInAt: "2026-05-10T12:00:00Z",
           checkedOutAt: "2026-05-10T13:00:00Z",
           visitEntryTime: "2026-05-10T12:01:00Z",
+          pickupTime: null,
           warnings: [],
           careDayStatus: "unknown",
           parallelPresentIn: null,
@@ -285,29 +279,29 @@ describe("timetable operation mappers", () => {
           checkedOutAt: null,
           parallelPresentIn: null,
           visitEntryTime: null,
+          pickupTime: null,
           warnings: [],
           careDayStatus: "unknown",
         },
       ],
+      pickupTimesLoaded: true,
       movedFrom: null,
+      canOperate: true,
+      canStart: true,
+      canEnd: true,
+      canEditAttendance: true,
+      canReportAbsence: true,
+      canRecordHomeworkFeedback: false,
     });
   });
 
   it("marks a duty from activity_type (#3822)", () => {
-    const base = {
-      id: 125,
+    const base = plannedInstance({
+      id: "125",
       title: "Busaufsicht",
-      date: "2026-05-11",
-      start_time: "16:00",
-      end_time: "16:30",
-      room_id: 0,
-      status: "planned" as const,
-      is_overdue: false,
+      room_id: "0",
       minutes_until_start: 30,
-      expected_students_count: 0,
-      present_students_count: 0,
-      assigned_staff_ids: [],
-    };
+    });
     expect(mapPlannedInstance({ ...base, activity_type: "duty" }).isDuty).toBe(
       true,
     );
@@ -317,20 +311,13 @@ describe("timetable operation mappers", () => {
   });
 
   it("maps the reopen offer of a finished block (#5676)", () => {
-    const base = {
-      id: 125,
+    const base = plannedInstance({
+      id: "125",
       title: "GT 4",
-      date: "2026-05-11",
-      start_time: "14:30",
-      end_time: "16:00",
-      room_id: 226,
-      status: "completed" as const,
+      status: "completed",
       is_overdue: true,
       minutes_until_start: -45,
-      expected_students_count: 0,
-      present_students_count: 0,
-      assigned_staff_ids: [],
-    };
+    });
 
     const offered = mapPlannedInstance({
       ...base,
@@ -345,21 +332,19 @@ describe("timetable operation mappers", () => {
     expect(closed.reopenUntil).toBeUndefined();
   });
 
-  it("maps planned instance defaults when backend omits nullable flags and preview", () => {
-    const result = mapPlannedInstance({
-      id: 124,
-      title: "Freispiel",
-      date: "2026-05-11",
-      start_time: "15:00",
-      end_time: "16:00",
-      room_id: 225,
-      status: "planned",
-      is_overdue: false,
-      minutes_until_start: 30,
-      expected_students_count: 0,
-      present_students_count: 0,
-      assigned_staff_ids: [],
-    });
+  it("maps planned instance defaults when backend omits optional fields and preview", () => {
+    const result = mapPlannedInstance(
+      plannedInstance({
+        id: "124",
+        title: "Freispiel",
+        date: "2026-05-11",
+        start_time: "15:00",
+        end_time: "16:00",
+        room_id: "225",
+        minutes_until_start: 30,
+        assigned_staff_ids: null,
+      }),
+    );
 
     expect(result).toEqual({
       id: "124",
@@ -375,11 +360,14 @@ describe("timetable operation mappers", () => {
       expectedStudentsCount: 0,
       notScheduledStudentsCount: 0,
       presentStudentsCount: 0,
+      currentStudentsCount: 0,
+      plannedStudentsCount: 0,
       assignedStaffIds: [],
       isAssigned: false,
       isPrimary: false,
       isSubstitute: false,
       isAbsent: false,
+      pickupTimesLoaded: true,
       canStart: false,
       startAvailableAt: "",
       startExpiresAt: "",
@@ -393,49 +381,28 @@ describe("timetable operation mappers", () => {
     });
   });
 
-  it("maps roster warnings and normalizes nullable warning ids", () => {
-    const raw: BackendTimetableRoster = {
-      instance: {
-        id: 125,
-        title: "Lernzeit",
-        status: "active",
-        active_group_id: 226,
-        room_id: 227,
-        room_name: null,
-      },
+  it("maps roster warnings and normalizes omitted warning ids", () => {
+    const raw = roster({
+      instance: rosterInstance({ id: "125", status: "active" }),
       rows: [
-        {
-          student_id: 423,
+        rosterRow({
+          student_id: "423",
           student_name: "Warn Kind",
-          school_class: "3d",
-          group_name: "OGS Rot",
-          planned: true,
-          is_unplanned: false,
-          currently_present: false,
-          status: "expected",
           warnings: [
             {
               kind: "arrival_after_slot_start",
               message: "zu spät",
               expected_arrival: "14:30",
               slot_start: "14:00",
-              expected_group_id: 700,
+              expected_group_id: "700",
               expected_group_name: "Klasse 3d",
-              current_education_group_id: 701,
+              current_education_group_id: "701",
             },
-            {
-              kind: "missing_arrival_schedule",
-              message: "kein Plan",
-              expected_arrival: null,
-              slot_start: null,
-              expected_group_id: null,
-              expected_group_name: null,
-              current_education_group_id: null,
-            },
+            { kind: "missing_arrival_schedule", message: "kein Plan" },
           ],
-        },
+        }),
       ],
-    };
+    });
 
     expect(mapRoster(raw).rows[0]!.warnings).toEqual([
       {
@@ -459,80 +426,36 @@ describe("timetable operation mappers", () => {
     ]);
   });
 
-  it("maps nullable roster instance fields", () => {
-    const raw: BackendTimetableRoster = {
-      instance: {
-        id: 123,
-        title: "Spätbetreuung",
-        status: "planned",
-        active_group_id: null,
-        room_id: 224,
-        room_name: "Raum B",
-      },
-      rows: [
-        {
-          student_id: 422,
-          student_name: "Nora Null",
-          school_class: "2c",
-          group_name: "OGS Grün",
-          planned: true,
-          is_unplanned: false,
-          currently_present: false,
-          visit_id: null,
-          status: "absent",
-          substatus: null,
-          note: null,
-          checked_in_at: null,
-          visit_entry_time: null,
-        },
-      ],
-    };
+  it("maps omitted roster instance fields to null", () => {
+    const mapped = mapRoster(
+      roster({
+        instance: rosterInstance({
+          id: "123",
+          title: "Spätbetreuung",
+          room_id: "224",
+          room_name: "Raum B",
+        }),
+        rows: null,
+      }),
+    );
 
-    expect(mapRoster(raw)).toEqual({
-      instance: {
-        id: "123",
-        title: "Spätbetreuung",
-        status: "planned",
-        activeGroupId: null,
-        isSpontaneous: false,
-        roomId: "224",
-        roomName: "Raum B",
-        date: "",
-        startTime: "",
-        endTime: "",
-        canComplete: false,
-        completeAvailableAt: "",
-      },
-      rows: [
-        {
-          studentId: "422",
-          studentName: "Nora Null",
-          schoolClass: "2c",
-          groupName: "OGS Grün",
-          planned: true,
-          isUnplanned: false,
-          currentlyPresent: false,
-          visitId: null,
-          status: "absent",
-          substatus: null,
-          note: null,
-          checkedInAt: null,
-          checkedOutAt: null,
-          parallelPresentIn: null,
-          visitEntryTime: null,
-          warnings: [],
-          careDayStatus: "unknown",
-        },
-      ],
-      movedFrom: null,
+    expect(mapped.instance).toMatchObject({
+      id: "123",
+      activeGroupId: null,
+      isSpontaneous: false,
+      roomId: "224",
+      roomName: "Raum B",
     });
+    expect(mapped.rows).toEqual([]);
+    expect(mapped.movedFrom).toBeNull();
   });
 
-  it("maps start operation ids to strings", () => {
-    const raw: BackendStartOperationResult = {
-      instance_id: 122,
-      active_group_id: 223,
+  it("maps start operation ids", () => {
+    const raw: startOperationResponse = {
+      instance_id: "122",
+      active_group_id: "223",
       status: "active",
+      warnings: null,
     };
 
     expect(mapStartOperation(raw)).toEqual({
@@ -541,38 +464,62 @@ describe("timetable operation mappers", () => {
       status: "active",
     });
   });
+
+  it("leaves a status this build does not know undefined", () => {
+    const mapped = mapRoster(
+      roster({
+        instance: rosterInstance({ status: "paused" }),
+        rows: [
+          rosterRow({
+            status: "away",
+            substatus: "hospital",
+            care_day_status: "half_day",
+            homework_feedback: { status: "partly" },
+          }),
+        ],
+      }),
+    );
+
+    expect(mapped.instance.status).toBeUndefined();
+    expect(mapped.rows[0]).toMatchObject({
+      status: undefined,
+      substatus: undefined,
+      careDayStatus: "unknown",
+      homeworkFeedback: { status: undefined, note: null },
+    });
+    expect(
+      mapPlannedInstance(plannedInstance({ status: "paused" })).status,
+    ).toBeUndefined();
+  });
 });
 
 describe("Lernzeit homework on the roster (#4796)", () => {
-  const instance = {
-    id: 1,
+  const instance = rosterInstance({
+    id: "1",
     title: "Lernzeit",
-    status: "active" as const,
-    room_id: 2,
-  };
-  const studentRow = {
-    student_id: 7,
+    status: "active",
+  });
+  const studentRow = rosterRow({
+    student_id: "7",
     student_name: "Mia Beispiel",
-    school_class: "2a",
-    group_name: "Sonnen",
-    planned: true,
-    is_unplanned: false,
     currently_present: true,
-    status: "present" as const,
-  };
+    status: "present",
+  });
 
   it("maps homework, feedback and the verdict, and leaves them out when absent", () => {
-    const mapped = mapRoster({
-      instance,
-      can_record_homework_feedback: true,
-      rows: [
-        {
-          ...studentRow,
-          homework: [{ subject: null, description: "Lesen" }],
-          homework_feedback: { status: "not_done" },
-        },
-      ],
-    });
+    const mapped = mapRoster(
+      roster({
+        instance,
+        can_record_homework_feedback: true,
+        rows: [
+          {
+            ...studentRow,
+            homework: [{ description: "Lesen" }],
+            homework_feedback: { status: "not_done" },
+          },
+        ],
+      }),
+    );
     expect(mapped.canRecordHomeworkFeedback).toBe(true);
     expect(mapped.rows[0]?.homework).toEqual([
       { subject: null, description: "Lesen" },
@@ -582,9 +529,9 @@ describe("Lernzeit homework on the roster (#4796)", () => {
       note: null,
     });
 
-    const plain = mapRoster({ instance, rows: [studentRow] });
+    const plain = mapRoster(roster({ instance, rows: [studentRow] }));
     expect(plain).toHaveProperty("rows.0.studentId", "7");
-    expect(plain).not.toHaveProperty("canRecordHomeworkFeedback");
+    expect(plain.canRecordHomeworkFeedback).toBe(false);
     expect(plain.rows[0]).not.toHaveProperty("homework");
     expect(plain.rows[0]).not.toHaveProperty("homeworkFeedback");
   });

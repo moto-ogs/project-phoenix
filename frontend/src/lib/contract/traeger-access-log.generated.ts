@@ -3,8 +3,9 @@ import { z } from "zod";
 import {
   arr,
   bool,
+  fileAnswer,
   instant,
-  int64StringOrNumber,
+  int64String,
   nullable,
   object,
   str,
@@ -27,9 +28,9 @@ export interface AccessLogEntry {
 export const AccessLogEntrySchema: z.ZodType<AccessLogEntry, unknown> = object<AccessLogEntry>({
   id: str,
   occurred_at: instant,
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   school_name: str,
-  account_id: nullable(int64StringOrNumber),
+  account_id: nullable(int64String),
   person: str,
   kind: str,
   data: str,
@@ -56,40 +57,49 @@ export interface AccessLogPerson {
 }
 
 export const AccessLogPersonSchema: z.ZodType<AccessLogPerson, unknown> = object<AccessLogPerson>({
-  account_id: int64StringOrNumber,
+  account_id: int64String,
   name: str,
 });
-
-/** Query of GET /traeger/access-log/ */
-export interface GetTraegerAccessLogQuery {
-  account_id?: string;
-  as_of?: string;
-  from?: string;
-  kind?: string;
-  page?: number;
-  school_id?: string;
-  to?: string;
-}
-
-/** Query of GET /traeger/access-log/people */
-export interface GetTraegerAccessLogPeopleQuery {
-  from?: string;
-  to?: string;
-}
 
 export const routes = {
   "GET /traeger/access-log/": {
     method: "GET",
     pattern: "/traeger/access-log/",
     portals: ["org"],
-    query: ["account_id", "as_of", "from", "kind", "page", "school_id", "to"],
+    query: {
+      "account_id": { kind: "id" },
+      "as_of": { kind: "string" },
+      "from": { kind: "date" },
+      "kind": { kind: "string" },
+      "page": { kind: "int" },
+      "school_id": { kind: "id" },
+      "to": { kind: "date" },
+    },
     response: success(AccessLogPageSchema),
+  },
+  "GET /traeger/access-log/export": {
+    method: "GET",
+    pattern: "/traeger/access-log/export",
+    portals: ["org"],
+    query: {
+      "account_id": { kind: "id" },
+      "as_of": { kind: "string" },
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+      "from": { kind: "date" },
+      "kind": { kind: "string" },
+      "school_id": { kind: "id" },
+      "to": { kind: "date" },
+    },
+    response: fileAnswer,
   },
   "GET /traeger/access-log/people": {
     method: "GET",
     pattern: "/traeger/access-log/people",
     portals: ["org"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(z.array(AccessLogPersonSchema)),
   },
 } as const;

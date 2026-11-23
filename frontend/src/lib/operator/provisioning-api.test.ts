@@ -1,41 +1,36 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type * as operatorSchoolsContract from "~/lib/contract/operator-schools.generated";
+import type * as operatorUnregisteredTagScansContract from "~/lib/contract/operator-unregistered-tag-scans.generated";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 
-const { mockOperatorFetch } = vi.hoisted(() => ({
-  mockOperatorFetch: vi.fn(),
+const { mockBffJson } = vi.hoisted(() => ({
+  mockBffJson: vi.fn(),
 }));
 
-vi.mock("./api-helpers", () => ({
-  operatorFetch: mockOperatorFetch,
-}));
+vi.mock("~/lib/bff-fetch", () => ({ bffJson: mockBffJson }));
 
 import { operatorProvisioningService } from "./provisioning-api";
-import type {
-  BackendOrganization,
-  BackendSchool,
-  BackendSchoolAccount,
-  BackendOrgAccount,
-  BackendOperatorDevice,
-  BackendInvitation,
-  BackendOperatorPerson,
-  BackendUnregisteredTagScan,
-} from "./provisioning-helpers";
 
 const NOW = "2026-03-15T10:00:00Z";
 
-const mockBackendOrg: BackendOrganization = {
-  id: 5,
+const mockBackendOrg: sharedContract.Organization = {
+  test_system: false,
+  id: "5",
   name: "Stadt Köln",
   slug: "stadt-koeln",
   active: true,
-  deleted_at: null,
-  settings: null,
+  deleted_at: undefined,
+  settings: undefined,
   created_at: NOW,
   updated_at: NOW,
 };
 
-const mockBackendSchool: BackendSchool = {
-  id: 10,
-  organization_id: 5,
+const mockBackendSchool: sharedContract.School = {
+  child_quota_bundles: null,
+  child_quota_bundle_size: 0,
+  device_slots: null,
+  id: "10",
+  organization_id: "5",
   name: "GGS Europaschule",
   slug: "ggs-europa",
   subdomain: "ggs-europa",
@@ -46,14 +41,18 @@ const mockBackendSchool: BackendSchool = {
   email: "info@ggs-europa.de",
   active: true,
   hidden: false,
-  deleted_at: null,
-  settings: null,
+  deleted_at: undefined,
+  settings: undefined,
   created_at: NOW,
   updated_at: NOW,
 };
 
-const mockBackendSchoolAccount: BackendSchoolAccount = {
-  account_id: 1,
+const mockBackendSchoolAccount: operatorSchoolsContract.SchoolAccount = {
+  has_admin_role: false,
+  has_user_role: false,
+  has_caregiver_profile: false,
+  is_active_caregiver: false,
+  account_id: "1",
   email: "teacher@school.de",
   active: true,
   first_name: "Maria",
@@ -63,14 +62,14 @@ const mockBackendSchoolAccount: BackendSchoolAccount = {
   status: "active",
 };
 
-const mockBackendOrgAccount: BackendOrgAccount = {
+const mockBackendOrgAccount: sharedContract.OrganizationAccount = {
   ...mockBackendSchoolAccount,
-  school_id: 10,
+  school_id: "10",
   school_name: "GGS Europaschule",
 };
 
-const mockBackendDevice: BackendOperatorDevice = {
-  id: 1,
+const mockBackendDevice: sharedContract.OperatorDevice = {
+  id: "1",
   device_id: "dev-001",
   device_type: "terminal",
   name: "Eingang Hauptgebäude",
@@ -79,45 +78,48 @@ const mockBackendDevice: BackendOperatorDevice = {
   masked_api_key: "dk_...abc",
   last_seen: NOW,
   is_online: true,
-  school_id: 10,
+  school_id: "10",
   school_name: "GGS Europaschule",
-  organization_id: 5,
+  organization_id: "5",
   organization_name: "Stadt Köln",
   created_at: NOW,
   updated_at: NOW,
 };
 
-const mockBackendInvitation: BackendInvitation = {
-  id: 1,
-  email: "admin@example.com",
-  role_id: 4,
-  role_name: "admin",
-  expires_at: NOW,
-  first_name: "Ada",
-  last_name: "Lovelace",
-  created_by: 0,
-  delivery_status: "pending",
-  email_retry_count: 0,
-};
+const mockBackendInvitation: operatorSchoolsContract.operatorInvitationResponse =
+  {
+    caregiver_enabled: false,
+    id: "1",
+    email: "admin@example.com",
+    role_id: "4",
+    role_name: "admin",
+    expires_at: NOW,
+    first_name: "Ada",
+    last_name: "Lovelace",
+    created_by: "0",
+    delivery_status: "pending",
+    email_retry_count: 0,
+  };
 
-const mockBackendUnregisteredTagScan: BackendUnregisteredTagScan = {
-  id: 300,
-  tenant_id: 10,
-  tag_uid: "04AABBCCDD",
-  device_id: 1,
-  scanned_at: NOW,
-  resolved_at: null,
-  resolved_by_operator_id: null,
-  resolution_note: null,
-  created_at: NOW,
-  updated_at: NOW,
-  school_id: 10,
-  school_name: "GGS Europaschule",
-  organization_id: 5,
-  organization_name: "Stadt Köln",
-  device_identifier: "dev-001",
-  device_name: "Eingang Hauptgebäude",
-};
+const mockBackendUnregisteredTagScan: operatorUnregisteredTagScansContract.scanResponse =
+  {
+    id: "300",
+    tenant_id: "10",
+    tag_uid: "04AABBCCDD",
+    device_id: "1",
+    scanned_at: NOW,
+    resolved_at: undefined,
+    resolved_by_operator_id: undefined,
+    resolution_note: undefined,
+    created_at: NOW,
+    updated_at: NOW,
+    school_id: "10",
+    school_name: "GGS Europaschule",
+    organization_id: "5",
+    organization_name: "Stadt Köln",
+    device_identifier: "dev-001",
+    device_name: "Eingang Hauptgebäude",
+  };
 
 describe("OperatorProvisioningService", () => {
   beforeEach(() => {
@@ -126,19 +128,20 @@ describe("OperatorProvisioningService", () => {
 
   describe("updateOrganization", () => {
     it("calls correct endpoint with PUT method", async () => {
-      mockOperatorFetch.mockResolvedValue(mockBackendOrg);
+      mockBffJson.mockResolvedValue(mockBackendOrg);
 
       const updateData = { name: "Updated", slug: "updated", active: true };
       await operatorProvisioningService.updateOrganization("5", updateData);
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/organizations/5",
-        { method: "PUT", body: updateData },
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "PUT /operator/organizations/{id}",
+        { params: { id: "5" }, body: updateData },
       );
     });
 
     it("maps response data correctly", async () => {
-      mockOperatorFetch.mockResolvedValue(mockBackendOrg);
+      mockBffJson.mockResolvedValue(mockBackendOrg);
 
       const result = await operatorProvisioningService.updateOrganization("5", {
         name: "Stadt Köln",
@@ -161,7 +164,7 @@ describe("OperatorProvisioningService", () => {
 
   describe("createTestTraeger", () => {
     it("posts the order and maps the test Träger with its schools", async () => {
-      mockOperatorFetch.mockResolvedValue({
+      mockBffJson.mockResolvedValue({
         organization: { ...mockBackendOrg, test_system: true },
         schools: [mockBackendSchool],
       });
@@ -175,9 +178,10 @@ describe("OperatorProvisioningService", () => {
 
       const result = await operatorProvisioningService.createTestTraeger(order);
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/organizations/test-traeger",
-        { method: "POST", body: order },
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "POST /operator/organizations/test-traeger",
+        { body: order },
       );
       expect(result.organization.testSystem).toBe(true);
       expect(result.schools.map((school) => school.id)).toEqual(["10"]);
@@ -186,20 +190,21 @@ describe("OperatorProvisioningService", () => {
 
   describe("createSampleChildren", () => {
     it("posts to the Träger and sums the skipped children of every school", async () => {
-      mockOperatorFetch.mockResolvedValue({
+      mockBffJson.mockResolvedValue({
         created_count: 30,
         schools: [
-          { school_id: 1, created_count: 24, skipped_count: 0 },
-          { school_id: 2, created_count: 6, skipped_count: 18 },
+          { school_id: "1", created_count: 24, skipped_count: 0 },
+          { school_id: "2", created_count: 6, skipped_count: 18 },
         ],
       });
 
       const result =
         await operatorProvisioningService.createSampleChildren("5");
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/organizations/5/sample-children",
-        { method: "POST", body: {} },
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "POST /operator/organizations/{id}/sample-children",
+        { params: { id: "5" } },
       );
       expect(result).toEqual({ createdCount: 30, skippedCount: 18 });
     });
@@ -207,10 +212,10 @@ describe("OperatorProvisioningService", () => {
 
   describe("updateSchool", () => {
     it("calls correct endpoint with PUT method", async () => {
-      mockOperatorFetch.mockResolvedValue(mockBackendSchool);
+      mockBffJson.mockResolvedValue(mockBackendSchool);
 
       const updateData = {
-        organization_id: 5,
+        organization_id: "5",
         name: "Updated School",
         slug: "updated-school",
         subdomain: "updated-school",
@@ -224,17 +229,18 @@ describe("OperatorProvisioningService", () => {
       };
       await operatorProvisioningService.updateSchool("10", updateData);
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/schools/10",
-        { method: "PUT", body: updateData },
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "PUT /operator/schools/{id}",
+        { params: { id: "10" }, body: updateData },
       );
     });
 
     it("maps response data correctly", async () => {
-      mockOperatorFetch.mockResolvedValue(mockBackendSchool);
+      mockBffJson.mockResolvedValue(mockBackendSchool);
 
       const result = await operatorProvisioningService.updateSchool("10", {
-        organization_id: 5,
+        organization_id: "5",
         name: "GGS Europaschule",
         slug: "ggs-europa",
         subdomain: "ggs-europa",
@@ -270,12 +276,13 @@ describe("OperatorProvisioningService", () => {
 
   describe("listOrganizations", () => {
     it("calls correct endpoint", async () => {
-      mockOperatorFetch.mockResolvedValue([mockBackendOrg]);
+      mockBffJson.mockResolvedValue([mockBackendOrg]);
 
       const result = await operatorProvisioningService.listOrganizations();
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/organizations",
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "GET /operator/organizations/",
       );
       expect(result).toHaveLength(1);
       expect(result[0]!.id).toBe("5");
@@ -284,11 +291,14 @@ describe("OperatorProvisioningService", () => {
 
   describe("listSchools", () => {
     it("calls correct endpoint", async () => {
-      mockOperatorFetch.mockResolvedValue([mockBackendSchool]);
+      mockBffJson.mockResolvedValue([mockBackendSchool]);
 
       const result = await operatorProvisioningService.listSchools();
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith("/api/operator/schools");
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "GET /operator/schools/",
+      );
       expect(result).toHaveLength(1);
       expect(result[0]!.id).toBe("10");
     });
@@ -296,29 +306,27 @@ describe("OperatorProvisioningService", () => {
 
   describe("createOrganization", () => {
     it("calls correct endpoint with POST method", async () => {
-      mockOperatorFetch.mockResolvedValue(mockBackendOrg);
+      mockBffJson.mockResolvedValue(mockBackendOrg);
 
       await operatorProvisioningService.createOrganization({
         name: "Stadt Köln",
         slug: "stadt-koeln",
       });
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/organizations",
-        {
-          method: "POST",
-          body: { name: "Stadt Köln", slug: "stadt-koeln" },
-        },
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "POST /operator/organizations/",
+        { body: { name: "Stadt Köln", slug: "stadt-koeln" } },
       );
     });
   });
 
   describe("createSchool", () => {
     it("calls correct endpoint with POST method", async () => {
-      mockOperatorFetch.mockResolvedValue(mockBackendSchool);
+      mockBffJson.mockResolvedValue(mockBackendSchool);
 
       await operatorProvisioningService.createSchool({
-        organization_id: 5,
+        organization_id: "5",
         name: "GGS Europaschule",
         slug: "ggs-europa",
         subdomain: "ggs-europa",
@@ -326,43 +334,50 @@ describe("OperatorProvisioningService", () => {
         federal_state: "DE-NW",
       });
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith("/api/operator/schools", {
-        method: "POST",
-        body: {
-          organization_id: 5,
-          name: "GGS Europaschule",
-          slug: "ggs-europa",
-          subdomain: "ggs-europa",
-          email: "info@ggs-europa.example",
-          federal_state: "DE-NW",
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "POST /operator/schools/",
+        {
+          body: {
+            organization_id: "5",
+            name: "GGS Europaschule",
+            slug: "ggs-europa",
+            subdomain: "ggs-europa",
+            email: "info@ggs-europa.example",
+            federal_state: "DE-NW",
+          },
         },
-      });
+      );
     });
   });
 
   describe("listSchoolAccounts", () => {
     it("calls correct endpoint with school id", async () => {
-      mockOperatorFetch.mockResolvedValue([mockBackendSchoolAccount]);
+      mockBffJson.mockResolvedValue([mockBackendSchoolAccount]);
 
       await operatorProvisioningService.listSchoolAccounts("10");
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/schools/10/accounts",
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "GET /operator/schools/{id}/accounts",
+        { params: { id: "10" } },
       );
     });
 
-    it("encodes school id in URL", async () => {
-      mockOperatorFetch.mockResolvedValue([]);
+    it("hands the raw school id to bffJson, which encodes it", async () => {
+      mockBffJson.mockResolvedValue([]);
 
       await operatorProvisioningService.listSchoolAccounts("10/evil");
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/schools/10%2Fevil/accounts",
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "GET /operator/schools/{id}/accounts",
+        { params: { id: "10/evil" } },
       );
     });
 
     it("maps response data correctly", async () => {
-      mockOperatorFetch.mockResolvedValue([mockBackendSchoolAccount]);
+      mockBffJson.mockResolvedValue([mockBackendSchoolAccount]);
 
       const result = await operatorProvisioningService.listSchoolAccounts("10");
 
@@ -386,17 +401,19 @@ describe("OperatorProvisioningService", () => {
 
   describe("listOrganizationAccounts", () => {
     it("calls correct endpoint with org id", async () => {
-      mockOperatorFetch.mockResolvedValue([mockBackendOrgAccount]);
+      mockBffJson.mockResolvedValue([mockBackendOrgAccount]);
 
       await operatorProvisioningService.listOrganizationAccounts("5");
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/organizations/5/accounts",
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "GET /operator/organizations/{id}/accounts",
+        { params: { id: "5" } },
       );
     });
 
     it("maps response data correctly", async () => {
-      mockOperatorFetch.mockResolvedValue([mockBackendOrgAccount]);
+      mockBffJson.mockResolvedValue([mockBackendOrgAccount]);
 
       const result =
         await operatorProvisioningService.listOrganizationAccounts("5");
@@ -423,15 +440,18 @@ describe("OperatorProvisioningService", () => {
 
   describe("listAllAccounts", () => {
     it("calls correct endpoint", async () => {
-      mockOperatorFetch.mockResolvedValue([mockBackendOrgAccount]);
+      mockBffJson.mockResolvedValue([mockBackendOrgAccount]);
 
       await operatorProvisioningService.listAllAccounts();
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith("/api/operator/accounts");
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "GET /operator/accounts",
+      );
     });
 
     it("maps response data correctly", async () => {
-      mockOperatorFetch.mockResolvedValue([mockBackendOrgAccount]);
+      mockBffJson.mockResolvedValue([mockBackendOrgAccount]);
 
       const result = await operatorProvisioningService.listAllAccounts();
 
@@ -443,15 +463,18 @@ describe("OperatorProvisioningService", () => {
 
   describe("listAllDevices", () => {
     it("calls correct endpoint", async () => {
-      mockOperatorFetch.mockResolvedValue([mockBackendDevice]);
+      mockBffJson.mockResolvedValue([mockBackendDevice]);
 
       await operatorProvisioningService.listAllDevices();
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith("/api/operator/devices");
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "GET /operator/devices/",
+      );
     });
 
     it("maps response data correctly", async () => {
-      mockOperatorFetch.mockResolvedValue([mockBackendDevice]);
+      mockBffJson.mockResolvedValue([mockBackendDevice]);
 
       const result = await operatorProvisioningService.listAllDevices();
 
@@ -478,27 +501,31 @@ describe("OperatorProvisioningService", () => {
 
   describe("listSchoolDevices", () => {
     it("calls correct endpoint with school id", async () => {
-      mockOperatorFetch.mockResolvedValue([mockBackendDevice]);
+      mockBffJson.mockResolvedValue([mockBackendDevice]);
 
       await operatorProvisioningService.listSchoolDevices("10");
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/schools/10/devices",
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "GET /operator/schools/{id}/devices",
+        { params: { id: "10" } },
       );
     });
 
-    it("encodes school id in URL", async () => {
-      mockOperatorFetch.mockResolvedValue([]);
+    it("hands the raw school id to bffJson, which encodes it", async () => {
+      mockBffJson.mockResolvedValue([]);
 
       await operatorProvisioningService.listSchoolDevices("10/evil");
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/schools/10%2Fevil/devices",
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "GET /operator/schools/{id}/devices",
+        { params: { id: "10/evil" } },
       );
     });
 
     it("maps response data correctly", async () => {
-      mockOperatorFetch.mockResolvedValue([mockBackendDevice]);
+      mockBffJson.mockResolvedValue([mockBackendDevice]);
 
       const result = await operatorProvisioningService.listSchoolDevices("10");
 
@@ -509,17 +536,19 @@ describe("OperatorProvisioningService", () => {
 
   describe("listOrganizationDevices", () => {
     it("calls correct endpoint with org id", async () => {
-      mockOperatorFetch.mockResolvedValue([mockBackendDevice]);
+      mockBffJson.mockResolvedValue([mockBackendDevice]);
 
       await operatorProvisioningService.listOrganizationDevices("5");
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/organizations/5/devices",
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "GET /operator/organizations/{id}/devices",
+        { params: { id: "5" } },
       );
     });
 
     it("maps response data correctly", async () => {
-      mockOperatorFetch.mockResolvedValue([mockBackendDevice]);
+      mockBffJson.mockResolvedValue([mockBackendDevice]);
 
       const result =
         await operatorProvisioningService.listOrganizationDevices("5");
@@ -531,7 +560,7 @@ describe("OperatorProvisioningService", () => {
 
   describe("inviteSchoolAdmin", () => {
     it("calls correct endpoint with POST method", async () => {
-      mockOperatorFetch.mockResolvedValue(mockBackendInvitation);
+      mockBffJson.mockResolvedValue(mockBackendInvitation);
 
       await operatorProvisioningService.inviteSchoolAdmin("10", {
         email: "admin@example.com",
@@ -540,10 +569,11 @@ describe("OperatorProvisioningService", () => {
         caregiver_enabled: true,
       });
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/schools/10/invite-admin",
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "POST /operator/schools/{id}/invite-admin",
         {
-          method: "POST",
+          params: { id: "10" },
           body: {
             email: "admin@example.com",
             first_name: "Ada",
@@ -555,7 +585,7 @@ describe("OperatorProvisioningService", () => {
     });
 
     it("maps invitation response correctly", async () => {
-      mockOperatorFetch.mockResolvedValue(mockBackendInvitation);
+      mockBffJson.mockResolvedValue(mockBackendInvitation);
 
       const result = await operatorProvisioningService.inviteSchoolAdmin("10", {
         email: "admin@example.com",
@@ -585,10 +615,10 @@ describe("OperatorProvisioningService", () => {
 
   describe("createDevice", () => {
     it("calls correct endpoint with POST method", async () => {
-      mockOperatorFetch.mockResolvedValue(mockBackendDevice);
+      mockBffJson.mockResolvedValue(mockBackendDevice);
 
       const createData = {
-        school_id: 10,
+        school_id: "10",
         device_id: "DEV-001",
         device_type: "terminal",
         name: "Eingang Hauptgebäude",
@@ -596,20 +626,21 @@ describe("OperatorProvisioningService", () => {
       };
       await operatorProvisioningService.createDevice(createData);
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith("/api/operator/devices", {
-        method: "POST",
-        body: createData,
-      });
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "POST /operator/devices/",
+        { body: createData },
+      );
     });
 
     it("maps response data correctly", async () => {
-      mockOperatorFetch.mockResolvedValue({
+      mockBffJson.mockResolvedValue({
         ...mockBackendDevice,
         api_key: "manual-key",
       });
 
       const result = await operatorProvisioningService.createDevice({
-        school_id: 10,
+        school_id: "10",
         device_id: "DEV-001",
         device_type: "terminal",
       });
@@ -636,30 +667,32 @@ describe("OperatorProvisioningService", () => {
 
   describe("setDeviceAPIKey", () => {
     it("encodes the device id and sends manual api key", async () => {
-      mockOperatorFetch.mockResolvedValue(mockBackendDevice);
+      mockBffJson.mockResolvedValue(mockBackendDevice);
 
       await operatorProvisioningService.setDeviceAPIKey(
         "1/unsafe",
         "manual-key",
       );
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/devices/1%2Funsafe/set-api-key",
-        { method: "POST", body: { api_key: "manual-key" } },
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "POST /operator/devices/{id}/set-api-key",
+        { params: { id: "1/unsafe" }, body: { api_key: "manual-key" } },
       );
     });
 
     it("sends an empty body when auto-generating a key", async () => {
-      mockOperatorFetch.mockResolvedValue({
+      mockBffJson.mockResolvedValue({
         ...mockBackendDevice,
         api_key: "generated-key",
       });
 
       const result = await operatorProvisioningService.setDeviceAPIKey("1");
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/devices/1/set-api-key",
-        { method: "POST", body: {} },
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "POST /operator/devices/{id}/set-api-key",
+        { params: { id: "1" }, body: {} },
       );
       expect(result.apiKey).toBe("generated-key");
     });
@@ -667,32 +700,35 @@ describe("OperatorProvisioningService", () => {
 
   describe("setDeviceBlocked", () => {
     it("blocks and unblocks through the encoded device routes", async () => {
-      mockOperatorFetch.mockResolvedValue(null);
+      mockBffJson.mockResolvedValue(null);
 
       await operatorProvisioningService.setDeviceBlocked("1/unsafe", true);
       await operatorProvisioningService.setDeviceBlocked("1", false);
 
-      expect(mockOperatorFetch).toHaveBeenNthCalledWith(
+      expect(mockBffJson).toHaveBeenNthCalledWith(
         1,
-        "/api/operator/devices/1%2Funsafe/block",
-        { method: "POST" },
+        "platform",
+        "POST /operator/devices/{id}/block",
+        { params: { id: "1/unsafe" } },
       );
-      expect(mockOperatorFetch).toHaveBeenNthCalledWith(
+      expect(mockBffJson).toHaveBeenNthCalledWith(
         2,
-        "/api/operator/devices/1/unblock",
-        { method: "POST" },
+        "platform",
+        "POST /operator/devices/{id}/unblock",
+        { params: { id: "1" } },
       );
     });
   });
 
   describe("device transfer", () => {
     it("loads and maps transfer blockers", async () => {
-      mockOperatorFetch.mockResolvedValue({
+      mockBffJson.mockResolvedValue({
         can_transfer: false,
         is_online: true,
+        is_protected: false,
         last_seen: NOW,
         active_session: {
-          id: 77,
+          id: "77",
           started_at: NOW,
           activity_name: "Mensa",
           room_name: "Speisesaal",
@@ -702,12 +738,15 @@ describe("OperatorProvisioningService", () => {
       const result =
         await operatorProvisioningService.getDeviceTransferStatus("1/unsafe");
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/devices/1%2Funsafe/transfer-status",
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "GET /operator/devices/{id}/transfer-status",
+        { params: { id: "1/unsafe" } },
       );
       expect(result).toEqual({
         canTransfer: false,
         isOnline: true,
+        isProtected: false,
         lastSeen: NOW,
         activeSession: {
           id: "77",
@@ -718,10 +757,10 @@ describe("OperatorProvisioningService", () => {
       });
     });
 
-    it("posts the numeric target school and maps the transferred device", async () => {
-      mockOperatorFetch.mockResolvedValue({
+    it("posts the target school as a string and maps the transferred device", async () => {
+      mockBffJson.mockResolvedValue({
         ...mockBackendDevice,
-        school_id: 20,
+        school_id: "20",
         school_name: "Walbach",
       });
 
@@ -730,9 +769,10 @@ describe("OperatorProvisioningService", () => {
         "20",
       );
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/devices/1%2Funsafe/transfer",
-        { method: "POST", body: { target_school_id: 20 } },
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "POST /operator/devices/{id}/transfer",
+        { params: { id: "1/unsafe" }, body: { target_school_id: "20" } },
       );
       expect(result.schoolId).toBe("20");
       expect(result.schoolName).toBe("Walbach");
@@ -749,35 +789,37 @@ describe("OperatorProvisioningService", () => {
     };
 
     it("calls correct endpoint with POST method", async () => {
-      mockOperatorFetch.mockResolvedValue({ id: 99, email: "new@school.de" });
+      mockBffJson.mockResolvedValue({ id: "99", email: "new@school.de" });
 
       await operatorProvisioningService.createSchoolAccount(
         "10",
         mockAccountData,
       );
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/schools/10/create-account",
-        { method: "POST", body: mockAccountData },
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "POST /operator/schools/{id}/create-account",
+        { params: { id: "10" }, body: mockAccountData },
       );
     });
 
-    it("encodes school id in URL", async () => {
-      mockOperatorFetch.mockResolvedValue({ id: 99, email: "new@school.de" });
+    it("hands the raw school id to bffJson, which encodes it", async () => {
+      mockBffJson.mockResolvedValue({ id: "99", email: "new@school.de" });
 
       await operatorProvisioningService.createSchoolAccount(
         "10/evil",
         mockAccountData,
       );
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/schools/10%2Fevil/create-account",
-        expect.any(Object),
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "POST /operator/schools/{id}/create-account",
+        expect.objectContaining({ params: { id: "10/evil" } }),
       );
     });
 
     it("maps response data correctly", async () => {
-      mockOperatorFetch.mockResolvedValue({ id: 99, email: "new@school.de" });
+      mockBffJson.mockResolvedValue({ id: "99", email: "new@school.de" });
 
       const result = await operatorProvisioningService.createSchoolAccount(
         "10",
@@ -792,8 +834,8 @@ describe("OperatorProvisioningService", () => {
   });
 
   describe("listSchoolPersons", () => {
-    const mockBackendPerson: BackendOperatorPerson = {
-      id: 42,
+    const mockBackendPerson: sharedContract.OperatorPerson = {
+      id: "42",
       first_name: "Max",
       last_name: "Mustermann",
       has_account: true,
@@ -801,35 +843,39 @@ describe("OperatorProvisioningService", () => {
       has_rfid_card: true,
       is_staff: true,
       is_student: false,
-      school_id: 10,
+      school_id: "10",
       school_name: "GGS Europaschule",
-      organization_id: 5,
+      organization_id: "5",
       organization_name: "Stadt Köln",
       created_at: NOW,
     };
 
     it("calls correct endpoint with school id", async () => {
-      mockOperatorFetch.mockResolvedValue([mockBackendPerson]);
+      mockBffJson.mockResolvedValue([mockBackendPerson]);
 
       await operatorProvisioningService.listSchoolPersons("10");
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/schools/10/persons",
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "GET /operator/schools/{id}/persons",
+        { params: { id: "10" } },
       );
     });
 
-    it("encodes school id in URL", async () => {
-      mockOperatorFetch.mockResolvedValue([]);
+    it("hands the raw school id to bffJson, which encodes it", async () => {
+      mockBffJson.mockResolvedValue([]);
 
       await operatorProvisioningService.listSchoolPersons("10/evil");
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/schools/10%2Fevil/persons",
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "GET /operator/schools/{id}/persons",
+        { params: { id: "10/evil" } },
       );
     });
 
     it("maps response data correctly", async () => {
-      mockOperatorFetch.mockResolvedValue([mockBackendPerson]);
+      mockBffJson.mockResolvedValue([mockBackendPerson]);
 
       const result = await operatorProvisioningService.listSchoolPersons("10");
 
@@ -853,7 +899,7 @@ describe("OperatorProvisioningService", () => {
     });
 
     it("returns empty array when no persons", async () => {
-      mockOperatorFetch.mockResolvedValue([]);
+      mockBffJson.mockResolvedValue([]);
 
       const result = await operatorProvisioningService.listSchoolPersons("10");
 
@@ -863,29 +909,31 @@ describe("OperatorProvisioningService", () => {
 
   describe("softDeletePerson", () => {
     it("calls correct endpoint with DELETE method", async () => {
-      mockOperatorFetch.mockResolvedValue(null);
+      mockBffJson.mockResolvedValue(null);
 
       await operatorProvisioningService.softDeletePerson("42");
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/persons/42",
-        { method: "DELETE" },
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "DELETE /operator/persons/{id}",
+        { params: { id: "42" } },
       );
     });
 
     it("encodes person id in URL", async () => {
-      mockOperatorFetch.mockResolvedValue(null);
+      mockBffJson.mockResolvedValue(null);
 
       await operatorProvisioningService.softDeletePerson("42/evil");
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/persons/42%2Fevil",
-        { method: "DELETE" },
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "DELETE /operator/persons/{id}",
+        { params: { id: "42/evil" } },
       );
     });
 
     it("returns void on success", async () => {
-      mockOperatorFetch.mockResolvedValue(null);
+      mockBffJson.mockResolvedValue(null);
 
       const result = await operatorProvisioningService.softDeletePerson("42");
 
@@ -895,17 +943,20 @@ describe("OperatorProvisioningService", () => {
 
   describe("listSystemRoles", () => {
     it("calls correct endpoint", async () => {
-      mockOperatorFetch.mockResolvedValue([
+      mockBffJson.mockResolvedValue([
         { id: "1", name: "admin", is_system: true },
       ]);
 
       await operatorProvisioningService.listSystemRoles();
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith("/api/operator/roles");
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "GET /operator/roles",
+      );
     });
 
     it("maps response data correctly", async () => {
-      mockOperatorFetch.mockResolvedValue([
+      mockBffJson.mockResolvedValue([
         { id: "1", name: "admin", is_system: true },
         { id: "2", name: "teacher", is_system: true },
         { id: "3", name: "custom_role", is_system: false },
@@ -934,29 +985,31 @@ describe("OperatorProvisioningService", () => {
 
   describe("softDeleteSchool", () => {
     it("calls correct endpoint with DELETE method", async () => {
-      mockOperatorFetch.mockResolvedValue(undefined);
+      mockBffJson.mockResolvedValue(undefined);
 
       await operatorProvisioningService.softDeleteSchool("10");
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/schools/10",
-        { method: "DELETE" },
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "DELETE /operator/schools/{id}",
+        { params: { id: "10" } },
       );
     });
 
-    it("encodes school id in URL", async () => {
-      mockOperatorFetch.mockResolvedValue(undefined);
+    it("hands the raw school id to bffJson, which encodes it", async () => {
+      mockBffJson.mockResolvedValue(undefined);
 
       await operatorProvisioningService.softDeleteSchool("10/evil");
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/schools/10%2Fevil",
-        { method: "DELETE" },
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "DELETE /operator/schools/{id}",
+        { params: { id: "10/evil" } },
       );
     });
 
     it("resolves without returning data", async () => {
-      mockOperatorFetch.mockResolvedValue(undefined);
+      mockBffJson.mockResolvedValue(undefined);
 
       const result = await operatorProvisioningService.softDeleteSchool("10");
 
@@ -966,29 +1019,31 @@ describe("OperatorProvisioningService", () => {
 
   describe("restoreSchool", () => {
     it("calls correct endpoint with POST method", async () => {
-      mockOperatorFetch.mockResolvedValue(undefined);
+      mockBffJson.mockResolvedValue(undefined);
 
       await operatorProvisioningService.restoreSchool("10");
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/schools/10/restore",
-        { method: "POST" },
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "POST /operator/schools/{id}/restore",
+        { params: { id: "10" } },
       );
     });
 
-    it("encodes school id in URL", async () => {
-      mockOperatorFetch.mockResolvedValue(undefined);
+    it("hands the raw school id to bffJson, which encodes it", async () => {
+      mockBffJson.mockResolvedValue(undefined);
 
       await operatorProvisioningService.restoreSchool("10/evil");
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/schools/10%2Fevil/restore",
-        { method: "POST" },
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "POST /operator/schools/{id}/restore",
+        { params: { id: "10/evil" } },
       );
     });
 
     it("resolves without returning data", async () => {
-      mockOperatorFetch.mockResolvedValue(undefined);
+      mockBffJson.mockResolvedValue(undefined);
 
       const result = await operatorProvisioningService.restoreSchool("10");
 
@@ -998,55 +1053,59 @@ describe("OperatorProvisioningService", () => {
 
   describe("softDeleteOrganization", () => {
     it("calls correct endpoint with DELETE method", async () => {
-      mockOperatorFetch.mockResolvedValue(undefined);
+      mockBffJson.mockResolvedValue(undefined);
 
       await operatorProvisioningService.softDeleteOrganization("77");
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/organizations/77",
-        { method: "DELETE" },
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "DELETE /operator/organizations/{id}",
+        { params: { id: "77" } },
       );
     });
 
     it("encodes organization id in URL", async () => {
-      mockOperatorFetch.mockResolvedValue(undefined);
+      mockBffJson.mockResolvedValue(undefined);
 
       await operatorProvisioningService.softDeleteOrganization("77/evil");
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/organizations/77%2Fevil",
-        { method: "DELETE" },
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "DELETE /operator/organizations/{id}",
+        { params: { id: "77/evil" } },
       );
     });
   });
 
   describe("restoreOrganization", () => {
     it("calls correct endpoint with POST method", async () => {
-      mockOperatorFetch.mockResolvedValue(undefined);
+      mockBffJson.mockResolvedValue(undefined);
 
       await operatorProvisioningService.restoreOrganization("77");
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/organizations/77/restore",
-        { method: "POST" },
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "POST /operator/organizations/{id}/restore",
+        { params: { id: "77" } },
       );
     });
 
     it("encodes organization id in URL", async () => {
-      mockOperatorFetch.mockResolvedValue(undefined);
+      mockBffJson.mockResolvedValue(undefined);
 
       await operatorProvisioningService.restoreOrganization("77/evil");
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/organizations/77%2Fevil/restore",
-        { method: "POST" },
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "POST /operator/organizations/{id}/restore",
+        { params: { id: "77/evil" } },
       );
     });
   });
 
   describe("getStats", () => {
     it("hits the stats endpoint and maps snake_case to camelCase", async () => {
-      mockOperatorFetch.mockResolvedValue({
+      mockBffJson.mockResolvedValue({
         traeger_count: 3,
         schulen_count: 12,
         konten_count: 250,
@@ -1055,7 +1114,10 @@ describe("OperatorProvisioningService", () => {
 
       const stats = await operatorProvisioningService.getStats();
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith("/api/operator/stats");
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "GET /operator/stats",
+      );
       expect(stats).toEqual({
         traegerCount: 3,
         schulenCount: 12,
@@ -1064,8 +1126,8 @@ describe("OperatorProvisioningService", () => {
       });
     });
 
-    it("propagates errors from operatorFetch", async () => {
-      mockOperatorFetch.mockRejectedValue(new Error("network down"));
+    it("propagates errors from bffJson", async () => {
+      mockBffJson.mockRejectedValue(new Error("network down"));
 
       await expect(operatorProvisioningService.getStats()).rejects.toThrow(
         "network down",
@@ -1075,7 +1137,7 @@ describe("OperatorProvisioningService", () => {
 
   describe("listOrganizationSummaries", () => {
     it("calls correct endpoint and maps each row", async () => {
-      mockOperatorFetch.mockResolvedValue([
+      mockBffJson.mockResolvedValue([
         {
           ...mockBackendOrg,
           schulen_count: 3,
@@ -1088,8 +1150,9 @@ describe("OperatorProvisioningService", () => {
       const summaries =
         await operatorProvisioningService.listOrganizationSummaries();
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/organizations/summaries",
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "GET /operator/organizations/summaries",
       );
       expect(summaries).toHaveLength(1);
       expect(summaries[0]).toMatchObject({
@@ -1106,7 +1169,7 @@ describe("OperatorProvisioningService", () => {
 
   describe("listSchoolSummaries", () => {
     it("calls correct endpoint and maps each row", async () => {
-      mockOperatorFetch.mockResolvedValue([
+      mockBffJson.mockResolvedValue([
         {
           ...mockBackendSchool,
           konten_count: 12,
@@ -1117,8 +1180,9 @@ describe("OperatorProvisioningService", () => {
 
       const summaries = await operatorProvisioningService.listSchoolSummaries();
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/schools/summaries",
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "GET /operator/schools/summaries",
       );
       expect(summaries).toHaveLength(1);
       expect(summaries[0]).toMatchObject({
@@ -1134,16 +1198,17 @@ describe("OperatorProvisioningService", () => {
 
   describe("listSchoolRequiredDetails", () => {
     it("maps the missing details of every school (#7174)", async () => {
-      mockOperatorFetch.mockResolvedValue([
-        { school_id: 7, reply_address_missing: true },
-        { school_id: 8, reply_address_missing: false },
+      mockBffJson.mockResolvedValue([
+        { school_id: "7", reply_address_missing: true },
+        { school_id: "8", reply_address_missing: false },
       ]);
 
       const details =
         await operatorProvisioningService.listSchoolRequiredDetails();
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/schools/required-details",
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "GET /operator/schools/required-details",
       );
       expect(details).toEqual([
         { schoolId: "7", replyAddressMissing: true },
@@ -1154,27 +1219,31 @@ describe("OperatorProvisioningService", () => {
 
   describe("listOrganizationSchools", () => {
     it("calls the org-scoped schools endpoint with the encoded id", async () => {
-      mockOperatorFetch.mockResolvedValue([]);
+      mockBffJson.mockResolvedValue([]);
 
       await operatorProvisioningService.listOrganizationSchools("42");
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/organizations/42/schools",
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "GET /operator/organizations/{id}/schools",
+        { params: { id: "42" } },
       );
     });
 
     it("URL-encodes the org id", async () => {
-      mockOperatorFetch.mockResolvedValue([]);
+      mockBffJson.mockResolvedValue([]);
 
       await operatorProvisioningService.listOrganizationSchools("a/b c");
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/organizations/a%2Fb%20c/schools",
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "GET /operator/organizations/{id}/schools",
+        { params: { id: "a/b c" } },
       );
     });
 
     it("maps each returned school summary", async () => {
-      mockOperatorFetch.mockResolvedValue([
+      mockBffJson.mockResolvedValue([
         {
           ...mockBackendSchool,
           konten_count: 5,
@@ -1198,28 +1267,32 @@ describe("OperatorProvisioningService", () => {
 
   describe("listOrganizationPersons", () => {
     it("calls the org-scoped persons endpoint with the encoded id", async () => {
-      mockOperatorFetch.mockResolvedValue([]);
+      mockBffJson.mockResolvedValue([]);
 
       await operatorProvisioningService.listOrganizationPersons("42");
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/organizations/42/persons",
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "GET /operator/organizations/{id}/persons",
+        { params: { id: "42" } },
       );
     });
 
     it("URL-encodes the org id", async () => {
-      mockOperatorFetch.mockResolvedValue([]);
+      mockBffJson.mockResolvedValue([]);
 
       await operatorProvisioningService.listOrganizationPersons("a/b c");
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/organizations/a%2Fb%20c/persons",
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "GET /operator/organizations/{id}/persons",
+        { params: { id: "a/b c" } },
       );
     });
 
     it("maps each returned person", async () => {
-      const backendPerson: BackendOperatorPerson = {
-        id: 5,
+      const backendPerson: sharedContract.OperatorPerson = {
+        id: "5",
         first_name: "Anna",
         last_name: "Beispiel",
         has_account: true,
@@ -1227,13 +1300,13 @@ describe("OperatorProvisioningService", () => {
         has_rfid_card: false,
         is_staff: true,
         is_student: false,
-        school_id: 10,
+        school_id: "10",
         school_name: "Schule A",
-        organization_id: 42,
+        organization_id: "42",
         organization_name: "Träger A",
         created_at: NOW,
       };
-      mockOperatorFetch.mockResolvedValue([backendPerson]);
+      mockBffJson.mockResolvedValue([backendPerson]);
 
       const result =
         await operatorProvisioningService.listOrganizationPersons("42");
@@ -1256,14 +1329,22 @@ describe("OperatorProvisioningService", () => {
 
   describe("listUnregisteredTagScans", () => {
     it("calls the base endpoint without filters and maps rows", async () => {
-      mockOperatorFetch.mockResolvedValue([mockBackendUnregisteredTagScan]);
+      mockBffJson.mockResolvedValue([mockBackendUnregisteredTagScan]);
 
       const result = await operatorProvisioningService.listUnregisteredTagScans(
         {},
       );
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/unregistered-tag-scans",
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "GET /operator/unregistered-tag-scans/",
+        {
+          query: {
+            organization_id: undefined,
+            school_id: undefined,
+            resolved: undefined,
+          },
+        },
       );
       expect(result).toEqual([
         {
@@ -1288,7 +1369,7 @@ describe("OperatorProvisioningService", () => {
     });
 
     it("adds organization, school, and all-resolved filters", async () => {
-      mockOperatorFetch.mockResolvedValue([]);
+      mockBffJson.mockResolvedValue([]);
 
       await operatorProvisioningService.listUnregisteredTagScans({
         organizationId: "5",
@@ -1296,39 +1377,50 @@ describe("OperatorProvisioningService", () => {
         resolved: "all",
       });
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/unregistered-tag-scans?organization_id=5&school_id=10&resolved=all",
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "GET /operator/unregistered-tag-scans/",
+        { query: { organization_id: "5", school_id: "10", resolved: "all" } },
       );
     });
 
     it("omits resolved query param for unresolved-only mode", async () => {
-      mockOperatorFetch.mockResolvedValue([]);
+      mockBffJson.mockResolvedValue([]);
 
       await operatorProvisioningService.listUnregisteredTagScans({
         organizationId: "5",
         resolved: "unresolved",
       });
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/unregistered-tag-scans?organization_id=5",
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "GET /operator/unregistered-tag-scans/",
+        {
+          query: {
+            organization_id: "5",
+            school_id: undefined,
+            resolved: undefined,
+          },
+        },
       );
     });
   });
 
   describe("resolveUnregisteredTagScan", () => {
     it("posts an empty body when no note is supplied", async () => {
-      mockOperatorFetch.mockResolvedValue(mockBackendUnregisteredTagScan);
+      mockBffJson.mockResolvedValue(mockBackendUnregisteredTagScan);
 
       await operatorProvisioningService.resolveUnregisteredTagScan("300");
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/unregistered-tag-scans/300/resolve",
-        { method: "POST", body: {} },
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "POST /operator/unregistered-tag-scans/{id}/resolve",
+        { params: { id: "300" }, body: {} },
       );
     });
 
     it("posts the note and URL-encodes the scan id", async () => {
-      mockOperatorFetch.mockResolvedValue({
+      mockBffJson.mockResolvedValue({
         ...mockBackendUnregisteredTagScan,
         resolved_at: NOW,
       });
@@ -1338,9 +1430,13 @@ describe("OperatorProvisioningService", () => {
         "Assigned to new card",
       );
 
-      expect(mockOperatorFetch).toHaveBeenCalledWith(
-        "/api/operator/unregistered-tag-scans/300%2Funsafe/resolve",
-        { method: "POST", body: { note: "Assigned to new card" } },
+      expect(mockBffJson).toHaveBeenCalledWith(
+        "platform",
+        "POST /operator/unregistered-tag-scans/{id}/resolve",
+        {
+          params: { id: "300/unsafe" },
+          body: { note: "Assigned to new card" },
+        },
       );
     });
   });

@@ -20,7 +20,7 @@ func parentPersonSnapshot(row *peopledirectory.DirectoryPersonSnapshot) *parentp
 	if row == nil {
 		return nil
 	}
-	value := &parentportal.PersonSnapshot{ID: row.ID, TenantID: row.TenantID, CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, FirstName: row.FirstName, LastName: row.LastName, Birthday: row.Birthday, TagID: row.TagID, AccountID: row.AccountID, DeletedAt: row.DeletedAt}
+	value := &parentportal.PersonSnapshot{ID: row.ID.Int64(), TenantID: row.TenantID.Int64(), CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, FirstName: row.FirstName, LastName: row.LastName, Birthday: row.Birthday, TagID: row.TagID, AccountID: (*int64)(row.AccountID), DeletedAt: row.DeletedAt}
 	var account *parentportal.PersonAccountSnapshot
 	var card *parentportal.PersonRFIDSnapshot
 	if row.Account != nil {

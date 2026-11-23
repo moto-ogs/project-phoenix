@@ -19,7 +19,6 @@ api.requestIDs.# > api/common.ProblemResponseMiddleware > api/common.TenantRunti
 	DELETE /operator/auth/passkeys/{passkeyId}
 	GET /operator/auth/mfa/trusted-devices
 	GET /operator/auth/passkeys
-	GET /operator/auth/passkeys/
 	POST /operator/auth/passkeys/enrollment/challenge
 	POST /operator/auth/passkeys/register/options
 	POST /operator/auth/passkeys/register/verify

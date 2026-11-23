@@ -1,5 +1,6 @@
 "use client";
 
+import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 import { useRefreshPhaseExpiryWarnings } from "~/components/enrollment/phase-expiry-warnings";
 import { MAX_SUPPORTED_GRADE_LEVEL } from "~/lib/grade-level";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -7,7 +8,6 @@ import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import {
   decideRolloverReview,
   listRolloverReview,
-  type ReviewQueueItem,
 } from "~/lib/enrollment-phase-api";
 import { useConfirmedSWR } from "~/lib/hooks/use-confirmed-resource";
 import { LOCATION_COLORS } from "~/lib/location-helper";
@@ -27,10 +27,13 @@ const logger = createLogger({ component: "RolloverReviewQueue" });
 const REVIEW_REASON_LABELS: Record<string, string> = {
   grade_above_max: "Klassenstufe über der Höchstgrenze",
   no_grade_level: "Keine Klassenstufe hinterlegt",
+  no_guardian: "Keine Erziehungsberechtigten hinterlegt",
 };
 
 interface Props {
   readonly phaseID: string;
+  /** Erklärung hinter dem Info-Knopf am Seitentitel; die Seite liefert sie. */
+  readonly info?: string;
 }
 
 const REVIEW_QUEUE_DESCRIPTION =
@@ -40,7 +43,7 @@ function gradeFieldName(childId: string): string {
   return `grade-${childId}`;
 }
 
-export function RolloverReviewQueue({ phaseID }: Props) {
+export function RolloverReviewQueue({ phaseID, info }: Props) {
   const refreshPhaseExpiryWarnings = useRefreshPhaseExpiryWarnings();
   const toast = useToast();
   const activePhase = useRef(phaseID);
@@ -108,7 +111,7 @@ export function RolloverReviewQueue({ phaseID }: Props) {
   }, [phaseID, clearAfterDecideError]);
 
   const decide = async (
-    item: ReviewQueueItem,
+    item: enrollmentContract.ReviewItemResponse,
     choice: "keep" | "drop" | "defer",
   ) => {
     if (accessRefused || completed.current.has(item.child_id)) return;
@@ -175,6 +178,7 @@ export function RolloverReviewQueue({ phaseID }: Props) {
     return (
       <TenantPage
         title="Prüfliste"
+        info={info}
         back
         backHref="/enrollment-phases"
         backLabel="Zurück zu den Anmeldephasen"
@@ -187,6 +191,7 @@ export function RolloverReviewQueue({ phaseID }: Props) {
   return (
     <TenantPage
       title="Prüfliste"
+      info={info}
       back
       backHref="/enrollment-phases"
       backLabel="Zurück zu den Anmeldephasen"
@@ -235,8 +240,11 @@ export function RolloverReviewQueue({ phaseID }: Props) {
                         {item.first_name} {item.last_name}
                       </h3>
                       <p className="text-xs text-gray-600">
-                        {item.guardian_first_name} {item.guardian_last_name} ·{" "}
-                        {item.guardian_email}
+                        {item.review_reason === "no_guardian"
+                          ? // The enrollment of an imported contract (ADR
+                            // 0309) has no guardian to name.
+                            "Aus importiertem Vertrag, ohne Eltern"
+                          : `${item.guardian_first_name} ${item.guardian_last_name} · ${item.guardian_email}`}
                       </p>
                       <p className="mt-1 text-xs text-gray-500">
                         Vorgemerkt: Klasse {item.target_grade_level ?? "–"}

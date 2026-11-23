@@ -70,6 +70,30 @@ type StudentName struct {
 	SchoolMemberOnly  bool           `json:"-"`
 	SchoolMemberFrom  *calendar.Date `json:"-"`
 	SchoolMemberUntil *calendar.Date `json:"-"`
+	// SchoolClass and GroupID are set by the read by id, so an owner names a
+	// child and places it in its class and group in one statement ("Heute
+	// anders", #7681). Not on the wire.
+	SchoolClass string `json:"-"`
+	GroupID     *int64 `json:"-"`
+	// PersonDeleted is true only when a read explicitly keeps the student
+	// placement of a soft-deleted person. Its names are empty. Not on the wire.
+	PersonDeleted bool `json:"-"`
+}
+
+type deletedStudentPlacementKey struct{}
+
+// WithDeletedStudentPlacements retains class and group metadata for a
+// soft-deleted person in a name read, without its name. It is for projections
+// of facts owned by the student record, not for displaying a child.
+func WithDeletedStudentPlacements(ctx context.Context) context.Context {
+	return context.WithValue(ctx, deletedStudentPlacementKey{}, true)
+}
+
+// IncludeDeletedStudentPlacements reports whether this read may retain the
+// placement of soft-deleted people.
+func IncludeDeletedStudentPlacements(ctx context.Context) bool {
+	include, _ := ctx.Value(deletedStudentPlacementKey{}).(bool)
+	return include
 }
 
 func (s Student) IsAlumnus() bool { return s.Status == StudentStatusAlumnus }
@@ -110,10 +134,6 @@ type StudentQuery interface {
 	// trimmed and case-insensitive; an empty class has no children. It reads
 	// in the caller's school transaction and fails without one.
 	ListStudentNamesByClass(context.Context, string) ([]StudentName, error)
-	// ListStudentsAcrossTenantsByID resolves visiting students (holiday care
-	// at a partner school) in a separate admin transaction. Callers must
-	// already hold a reference to the student (an open visit).
-	ListStudentsAcrossTenantsByID(context.Context, []int64) ([]Student, error)
 	// ListStudentsByClasses returns the non-alumni students of the given
 	// classes ordered by class, then id.
 	ListStudentsByClasses(context.Context, []string) ([]Student, error)

@@ -80,8 +80,8 @@ func (r *EnrollmentRequestRepository) ListByAccount(ctx context.Context, account
 // BackfillGuardianAccountID claims every guardian-less enrollment
 // request that matches the given email (case-insensitive) for the
 // given account. Used by the guardian-invite-accept flow so requests
-// submitted before the parent had an account show up in /me/enrollments
-// after acceptance. Cross-tenant — caller wraps in WithAdminTx.
+// submitted before the parent had an account count among the account's
+// requests after acceptance, for the news of their schools. Cross-tenant — caller wraps in WithAdminTx.
 func (r *EnrollmentRequestRepository) BackfillGuardianAccountID(ctx context.Context, accountID int64, email string) (int, error) {
 	return r.commands.BackfillGuardianAccountID(ctx, accountID, email)
 }

@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Places of the holiday weeks (#4699). Every statement runs in the Träger
@@ -220,7 +221,7 @@ func (s *HolidayRegistrationStore) PlaceHolidayBookings(ctx context.Context, org
 	placed := make([]enrollment.HolidayPromotion, len(rows))
 	for i, row := range rows {
 		placed[i] = enrollment.HolidayPromotion{
-			BookingID: row.BookingID, RegistrationID: row.RegistrationID, ChildID: row.ChildID, ChildPosition: row.Position, WeekID: row.WeekID,
+			BookingID: row.BookingID, RegistrationID: ident.ID(row.RegistrationID), ChildID: ident.ID(row.ChildID), ChildPosition: row.Position, WeekID: ident.ID(row.WeekID),
 		}
 	}
 	return placed, nil
@@ -289,8 +290,8 @@ func (s *HolidayRegistrationStore) ReadHolidayWeekPlaces(ctx context.Context, or
 			return nil, err
 		}
 		byWeek[row.WeekID] = append(byWeek[row.WeekID], enrollment.HolidayWaitlistEntry{
-			Position: row.Position, RegistrationID: row.RegistrationID, RegistrationStatus: row.Status,
-			SubmittedAt: row.SubmittedAt, ChildID: row.ChildID, ChildFirstName: row.FirstName, ChildLastName: row.LastName,
+			Position: row.Position, RegistrationID: ident.ID(row.RegistrationID), RegistrationStatus: row.Status,
+			SubmittedAt: row.SubmittedAt, ChildID: ident.ID(row.ChildID), ChildFirstName: row.FirstName, ChildLastName: row.LastName,
 			TimeModelName: row.TimeModelName, Deferred: row.Deferred, Days: days,
 		})
 	}
@@ -307,7 +308,7 @@ func (s *HolidayRegistrationStore) ReadHolidayWeekPlaces(ctx context.Context, or
 			}
 		}
 		places[i] = enrollment.HolidayWeekPlaces{
-			WeekID: week.ID, StartsOn: week.StartsOn, EndsOn: week.EndsOn, HostSchoolID: week.HostSchoolID,
+			WeekID: ident.ID(week.ID), StartsOn: week.StartsOn, EndsOn: week.EndsOn, HostSchoolID: ident.ID(week.HostSchoolID),
 			Capacity: week.Capacity, Placed: week.Placed, Waitlist: waitlist, Pending: week.Pending,
 			BookingUnit: week.BookingUnit, Days: days,
 		}

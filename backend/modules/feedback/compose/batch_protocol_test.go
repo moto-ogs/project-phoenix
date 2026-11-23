@@ -1,23 +1,34 @@
 package compose_test
 
 import (
+	"cmp"
 	"context"
 	"fmt"
+	"slices"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/feedback"
 	"github.com/moto-ogs/project-phoenix/modules/feedback/compose"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
 )
+
+// feedbackHistory is the batch writer of the demo seed (ADR 0298); every
+// batch below writes days before its today.
+func feedbackHistory() feedback.FeedbackHistory {
+	return compose.NewFeedbackHistory(func() time.Time { return time.Date(2026, time.September, 1, 12, 0, 0, 0, calendar.Berlin) })
+}
 
 func feedbackBatchModule(t *testing.T, db *bun.DB) feedback.Capability {
 	t.Helper()
 	settings, err := compose.NewBoundSettings(func(context.Context) (bool, error) { return true, nil }, func(context.Context) (int, error) { return 90, nil })
 	require.NoError(t, err)
-	module, err := compose.New(compose.Dependencies{DB: db, Settings: settings, Today: func() feedback.Date { return "2026-08-31" }, Observe: func(compose.Observation) {}})
+	module, err := compose.New(compose.Dependencies{DB: db, Settings: settings, Stops: noStops{}, Today: func() feedback.Date { return "2026-08-31" }, Observe: func(compose.Observation) {}})
 	require.NoError(t, err)
 	return module
 }
@@ -26,36 +37,57 @@ func feedbackBatchInput(studentID int64, index int) feedback.CreateEntry {
 	return feedback.CreateEntry{Value: feedback.ValuePositive, Day: "2026-08-31", Time: fmt.Sprintf("12:34:%02d", index), StudentID: studentID, IsMensaFeedback: index%2 == 0}
 }
 
+// writtenEntries reads the student's ratings back in the order they were
+// written.
+func writtenEntries(t *testing.T, module feedback.Capability, studentID int64) []feedback.Entry {
+	t.Helper()
+	entries, err := module.FindEntries(testpkg.Ctx(t), feedback.Filter{StudentID: &studentID})
+	require.NoError(t, err)
+	slices.SortFunc(entries, func(left, right feedback.Entry) int { return cmp.Compare(left.ID, right.ID) })
+	return entries
+}
+
 func TestFeedbackBatchPositiveGrowthQueryBudget(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupIsolatedTestDB(t)
-	student := testpkg.CreateTestStudent(t, db, "Feedback", "BatchGrowth", "1a")
 	module := feedbackBatchModule(t, db)
 	for _, n := range []int{3, 8} {
+		student := testpkg.CreateTestStudent(t, db, "Feedback", fmt.Sprintf("BatchGrowth%d", n), "1a")
 		inputs := make([]feedback.CreateEntry, n)
 		for i := range inputs {
 			inputs[i] = feedbackBatchInput(student.ID, i)
 		}
 		counter := testpkg.CaptureQueries(t, db)
-		entries, err := module.SubmitBatch(testpkg.Ctx(t), inputs)
+		written, err := feedbackHistory().RecordFeedbackHistory(testpkg.Ctx(t), inputs)
 		counter.Stop()
 		require.NoError(t, err)
+		require.Equal(t, n, written)
+		entries := writtenEntries(t, module, student.ID)
 		require.Len(t, entries, n)
 		for i, entry := range entries {
 			require.Equal(t, inputs[i].Time, entry.Time)
 			require.Equal(t, inputs[i].StudentID, entry.StudentID)
 			require.Equal(t, inputs[i].IsMensaFeedback, entry.IsMensaFeedback)
-			found, err := module.LookupEntry(testpkg.Ctx(t), entry.ID)
-			require.NoError(t, err)
-			require.Equal(t, entry, found)
 		}
-		t.Logf("N=%d statements=%d scope=public-service-own-tenant-transaction", n, counter.Total())
+		t.Logf("N=%d statements=%d scope=feedback-history-own-tenant-transaction", n, counter.Total())
 		if n == 3 {
 			querybudgets.AssertQueryBudget(t, "services.feedback.submit_batch.entries_3", counter.Measurement(counter.Queries()))
 		} else {
 			querybudgets.AssertQueryBudget(t, "services.feedback.submit_batch.entries_8", counter.Measurement(counter.Queries()))
 		}
 	}
+}
+
+func TestFeedbackHistoryRefusesTodayBeforePersistence(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	student := testpkg.CreateTestStudent(t, db, "Feedback", "HistoryToday", "1a")
+	today := feedbackBatchInput(student.ID, 1)
+	today.Day = "2026-09-01"
+	written, err := feedbackHistory().RecordFeedbackHistory(testpkg.Ctx(t), []feedback.CreateEntry{feedbackBatchInput(student.ID, 0), today})
+	require.ErrorIs(t, err, feedback.ErrInvalidEntryData)
+	require.Zero(t, written)
+	assert.Empty(t, writtenEntries(t, feedbackBatchModule(t, db), student.ID), "a refused day keeps the whole batch out")
 }
 
 func TestFeedbackBatchFailureRollsBackWithoutReusingIDs(t *testing.T) {
@@ -69,14 +101,14 @@ func TestFeedbackBatchFailureRollsBackWithoutReusingIDs(t *testing.T) {
 	require.NoError(t, err)
 	var missingStudent int64
 	require.NoError(t, db.NewRaw(`SELECT nextval(pg_get_serial_sequence('users.student_profiles', 'id'))`).Scan(ctx, &missingStudent))
-	entries, err := module.SubmitBatch(ctx, []feedback.CreateEntry{
+	written, err := feedbackHistory().RecordFeedbackHistory(ctx, []feedback.CreateEntry{
 		feedbackBatchInput(student.ID, 1),
 		feedbackBatchInput(missingStudent, 2),
 		feedbackBatchInput(student.ID, 3),
 	})
 	require.Error(t, err)
 	require.Equal(t, "23503", testpkg.PostgresSQLState(err))
-	require.Nil(t, entries)
+	require.Zero(t, written)
 	retained, err := module.FindEntries(ctx, feedback.Filter{StudentID: &student.ID})
 	require.NoError(t, err)
 	require.Equal(t, []feedback.Entry{before}, retained)
@@ -98,9 +130,9 @@ func TestFeedbackBatchLaterChunkFailureRollsBackEarlierChunk(t *testing.T) {
 		inputs[i] = feedbackBatchInput(student.ID, i%60)
 	}
 	inputs[128].StudentID = missingStudent
-	entries, err := module.SubmitBatch(testpkg.Ctx(t), inputs)
+	written, err := feedbackHistory().RecordFeedbackHistory(testpkg.Ctx(t), inputs)
 	require.Equal(t, "23503", testpkg.PostgresSQLState(err))
-	require.Nil(t, entries)
+	require.Zero(t, written)
 	retained, err := module.FindEntries(testpkg.Ctx(t), feedback.Filter{StudentID: &student.ID})
 	require.NoError(t, err)
 	require.Empty(t, retained, "failure in the second chunk must roll back the first chunk too")

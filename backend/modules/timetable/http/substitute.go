@@ -14,6 +14,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -24,13 +25,24 @@ type StaffingAnnouncer interface {
 	AnnounceStaffingChanged(tenantID int64, source string) error
 }
 
+// QueueStaffingChangeAfterCommit adapts the shared staffing announcer to the
+// existing after-commit queue for a school named outside the request context.
+func QueueStaffingChangeAfterCommit(ctx context.Context, tenantID int64, source string, staffing StaffingAnnouncer, logger *slog.Logger) {
+	(&Resource{Dependencies: Dependencies{Staffing: staffing, Logger: logger}}).broadcastStaffingDeviationChanged(ctx, source, tenantID)
+}
+
 // AffectedInstance is one row in the affected_instances list of the response.
 type AffectedInstance struct {
-	InstanceID int64  `json:"instance_id"`
-	Title      string `json:"title"`
-	StartTime  string `json:"start_time"`
-	Action     string `json:"action"`
+	InstanceID ident.ID `json:"instance_id"`
+	Title      string   `json:"title"`
+	StartTime  string   `json:"start_time"`
+	Action     string   `json:"action"`
 }
+
+// understaffedAckNoteMaxLength caps a deviation reason. Mirrors
+// scheduleModel.ActivityExceptionReasonMaxLength (500) so cancel and
+// substitution reasons share one limit.
+const understaffedAckNoteMaxLength = 500
 
 // trimReason normalizes an optional deviation reason: nil/blank becomes nil,
 // and an over-long value is truncated to the shared note ceiling so a single
@@ -83,11 +95,14 @@ func (rs *Resource) broadcastStaffingIfChanged(ctx context.Context, changed bool
 // subscribed to the active group — so without this signal an open staff page
 // (Betreuungsplan card, planner) stays stale until reload (#1844). source names
 // the emitting flow for log review.
-func (rs *Resource) broadcastStaffingDeviationChanged(ctx context.Context, source string) {
+func (rs *Resource) broadcastStaffingDeviationChanged(ctx context.Context, source string, targetTenantID ...int64) {
 	if rs.Staffing == nil {
 		return
 	}
 	tenantID := tenant.FromContext(ctx)
+	if len(targetTenantID) > 0 {
+		tenantID = targetTenantID[0]
+	}
 	tenant.RegisterAfterCommit(ctx, func() {
 		if err := rs.Staffing.AnnounceStaffingChanged(tenantID, source); err != nil {
 			rs.getLogger().Warn("SSE staffing deviation broadcast failed",

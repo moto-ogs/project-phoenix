@@ -1,20 +1,23 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-// The route answers through sessionFetch; `mockRoute` stands for the BFF
+// The route answers through the stubbed fetch; `mockRoute` stands for the BFF
 // route: it receives the request as sent and returns the route's JSON
 // answer, which the real bffJson then reads.
 
 const { mockRoute } = vi.hoisted(() => ({ mockRoute: vi.fn() }));
 
-vi.mock("./session-cache", () => ({
-  sessionFetch: async (url: string, init: RequestInit) => {
-    const answer: unknown = await mockRoute(url, {
-      method: init.method,
-      body: JSON.parse(String(init.body)),
-    });
-    return new Response(JSON.stringify(answer), { status: 200 });
-  },
-}));
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
+
+const fetchMock = vi.fn(async (url: string, init: RequestInit) => {
+  const answer: unknown = await mockRoute(url, {
+    method: init.method,
+    body: JSON.parse(String(init.body)),
+  });
+  return new Response(JSON.stringify(answer), { status: 200 });
+});
+beforeEach(() => {
+  vi.stubGlobal("fetch", fetchMock);
+});
 
 import {
   schoolCheckinStudent,
@@ -33,7 +36,7 @@ describe("schoolCheckinStudent", () => {
   it("maps a successful check-in response from snake_case to camelCase", async () => {
     const backendPayload = {
       data: {
-        student_id: 42,
+        student_id: "42",
         status: "checked_in" as const,
         check_in_time: "2026-04-22T08:00:00Z",
         check_out_time: undefined,
@@ -47,7 +50,7 @@ describe("schoolCheckinStudent", () => {
     const result = await schoolCheckinStudent("42", "in");
 
     expect(result).toEqual({
-      // Backend int64 -> frontend string at the boundary (CLAUDE.md §4).
+      // The catalog proxy delivers the int64 ID as a string (#2353).
       studentId: "42",
       status: "checked_in",
       checkInTime: "2026-04-22T08:00:00Z",

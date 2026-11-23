@@ -156,7 +156,6 @@ function splitSessionByBerlinDate(
     roundingMinutes: session.rounding_minutes,
     isOvertime: false,
     isBreakCompliant: true,
-    restPeriodWarning: null,
     breaks: (session.breaks ?? []).map((workBreak, index) => ({
       id: index.toString(),
       sessionId: session.id ?? "",
@@ -167,6 +166,7 @@ function splitSessionByBerlinDate(
     })),
     editCount: session.edit_count ?? 0,
     auditCount: session.audit_count ?? 0,
+    version: session.version ?? "",
   };
   const valuesByDate = indexWorkSessionMinutesByBerlinDate(
     [historySession],
@@ -269,6 +269,7 @@ export function StaffSessionTable({
   fetchEdits,
   laborDays,
   weeklySummaries,
+  reloadSessions,
 }: {
   readonly staffId: string;
   readonly from: Date;
@@ -335,6 +336,10 @@ export function StaffSessionTable({
   // read together. Omitted on the staff self-view. Does NOT feed the Soll/Saldo
   // math (that stays the Arbeitszeitmodell, #1842).
   readonly plannedShifts?: readonly StaffShift[];
+  // Reads `sessions` again and rejects when that read fails: after a refused
+  // correction in the bundled dialog the table shows the stored block, or
+  // the load error (ADR 0311, rule 6).
+  readonly reloadSessions: () => Promise<unknown>;
   // Optional external edit handler. When provided, the SquarePen click
   // delegates to the caller instead of opening the bundled
   // AdminSessionEditModal. Used by /time-tracking where the MA-side modal
@@ -597,9 +602,8 @@ export function StaffSessionTable({
   // derived from the very rows this modal just changed. Which keys those are:
   // isStaleAfterSessionSave above.
   const invalidate = useInvalidateMatching();
-  const handleSaved = () => {
-    void invalidate((key) => isStaleAfterSessionSave(key, staffId));
-  };
+  const handleSaved = () =>
+    invalidate((key) => isStaleAfterSessionSave(key, staffId));
 
   // One entry per visible day, with everything the cells below read.
   const rows = days.map((day, dayIndex) => {
@@ -1260,6 +1264,7 @@ export function StaffSessionTable({
           session={editModal.session}
           onClose={() => setEditModal(null)}
           onSaved={handleSaved}
+          onReload={reloadSessions}
         />
       )}
     </div>

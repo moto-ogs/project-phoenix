@@ -88,7 +88,7 @@ func (s *service) notifyGuardians(ctx context.Context, appointment *appointmentc
 	if s.cfg.Outbox == nil {
 		return nil
 	}
-	recipients, err := s.reachableGuardianRecipients(ctx, appointment.ID)
+	recipients, err := s.reachableGuardianRecipients(ctx, appointment.ID.Int64())
 	if err != nil {
 		return err
 	}
@@ -160,8 +160,8 @@ func (c appointmentEmailContent) payload(profile *ports.GuardianProfile) map[str
 // first-occurrence wording of an appointment e-mail.
 func (s *service) guardianEmailContent(ctx context.Context, appointment *appointmentcap.Appointment) (appointmentEmailContent, error) {
 	content := appointmentEmailContent{
-		schoolName:  s.resolveSchoolName(ctx, appointment.TenantID),
-		logoURL:     s.resolveSchoolLogo(ctx, appointment.TenantID),
+		schoolName:  s.resolveSchoolName(ctx, appointment.TenantID.Int64()),
+		logoURL:     s.resolveSchoolLogo(ctx, appointment.TenantID.Int64()),
 		motoLogoURL: s.cfg.MotoLogoURL(s.cfg.ParentsURL),
 		portalURL:   s.cfg.ParentsURL,
 		title:       appointment.Title,
@@ -182,7 +182,7 @@ func (s *service) guardianEmailContent(ctx context.Context, appointment *appoint
 // later date than StartDate — use the same first-occurrence anchor as the
 // calendar/ICS export so the mail and the calendar never disagree.
 func (s *service) firstOccurrenceAppointment(ctx context.Context, appointment *appointmentcap.Appointment) (*appointmentcap.Appointment, error) {
-	recurrence, err := s.cfg.Appointments.FindRecurrenceRule(ctx, appointment.ID)
+	recurrence, err := s.cfg.Appointments.FindRecurrenceRule(ctx, appointment.ID.Int64())
 	if err != nil {
 		return nil, err
 	}
@@ -218,7 +218,7 @@ func (s *service) enqueueGuardianEmail(ctx context.Context, appointment *appoint
 		Kind:              kind,
 		Payload:           payload,
 		RelatedEntityType: portal.EmailRelatedTypeAppointment,
-		RelatedEntityID:   appointment.ID,
+		RelatedEntityID:   appointment.ID.Int64(),
 	}); err != nil {
 		return fmt.Errorf("calendar: enqueue appointment e-mail: %w", err)
 	}
@@ -386,21 +386,21 @@ func (s *service) notifyGuardianDevices(ctx context.Context, appointment *appoin
 	}
 
 	var accountCount int
-	err := s.cfg.Runtime.WithinTenant(ctx, appointment.TenantID, func(txCtx context.Context) error {
+	err := s.cfg.Runtime.WithinTenant(ctx, appointment.TenantID.Int64(), func(txCtx context.Context) error {
 		var err error
-		accountCount, err = s.queueGuardianDevices(txCtx, appointment.ID, kind)
+		accountCount, err = s.queueGuardianDevices(txCtx, appointment.ID.Int64(), kind)
 		return err
 	})
 	if s.cfg.PushSuppressed(err) {
 		s.logger().Info("calendar: appointment push suppressed by tenant notification gate",
-			slog.Int64("appointment_id", appointment.ID),
+			slog.Int64("appointment_id", appointment.ID.Int64()),
 			slog.Int("recipient_count", accountCount),
 			slog.String("reason", err.Error()),
 		)
 		return nil
 	} else if err != nil {
 		s.logger().Warn("calendar: queue guardian appointment push failed",
-			slog.Int64("appointment_id", appointment.ID),
+			slog.Int64("appointment_id", appointment.ID.Int64()),
 			slog.String("error", err.Error()),
 		)
 		return fmt.Errorf("calendar: enqueue guardian appointment push: %w", err)
@@ -441,13 +441,13 @@ func (s *service) dispatchGuardianAccountDevicesLocalized(ctx context.Context, a
 	err = s.cfg.Notifier.Notify(ctx, ports.Event{
 		Type:           notificationType,
 		IdempotencyKey: fmt.Sprintf("appointment:%d:%d:%s", appointment.ID, appointment.Revision, kind),
-		RelatedType:    "appointment", RelatedID: appointment.ID,
+		RelatedType:    "appointment", RelatedID: appointment.ID.Int64(),
 		Title:    title,
 		Body:     body,
 		DeepLink: parentCalendarDeepLink,
 		Priority: priority,
 		Audience: ports.Audience{
-			TenantID:           appointment.TenantID,
+			TenantID:           appointment.TenantID.Int64(),
 			Scope:              "guardian",
 			GuardianAccountIDs: accountIDs,
 			StudentIDs:         studentIDs,
@@ -559,7 +559,7 @@ func (s *service) queueGuardianDevices(ctx context.Context, appointmentID int64,
 	if kind != portal.EmailKindAppointmentCancelled && (current.CancelledAt != nil || !current.NotifyGuardians) {
 		return 0, nil
 	}
-	recipients, err := s.reachableGuardianRecipients(ctx, current.ID)
+	recipients, err := s.reachableGuardianRecipients(ctx, current.ID.Int64())
 	if err != nil {
 		return 0, err
 	}

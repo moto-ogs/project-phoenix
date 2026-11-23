@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Registered error codes (error-registry/) the simulation expects from
@@ -160,14 +161,15 @@ const isoDate = "2006-01-02"
 // window itself are what PUT /periods requires to echo a period back
 // unchanged except for is_active.
 type calendarPeriodWindow struct {
-	ID              int64   `json:"id"`
-	Name            string  `json:"name"`
-	PeriodType      string  `json:"period_type"`
-	StartDate       string  `json:"start_date"`
-	EndDate         string  `json:"end_date"`
-	WeekCycleLength int     `json:"week_cycle_length"`
-	WeekCycleAnchor *string `json:"week_cycle_anchor,omitempty"`
-	IsActive        bool    `json:"is_active"`
+	ID              ident.ID `json:"id"`
+	Name            string   `json:"name"`
+	PeriodType      string   `json:"period_type"`
+	StartDate       string   `json:"start_date"`
+	EndDate         string   `json:"end_date"`
+	WeekCycleLength int      `json:"week_cycle_length"`
+	WeekCycleAnchor *string  `json:"week_cycle_anchor,omitempty"`
+	IsActive        bool     `json:"is_active"`
+	Version         string   `json:"version"`
 }
 
 // firstFutureWeekday returns the earliest weekday after today that falls into
@@ -297,7 +299,7 @@ func (rt *Runtime) createSchoolYearPeriod(name string, start, end time.Time) err
 }
 
 // activatePeriod flips an existing period active, echoing every other field
-// back unchanged as PUT /periods requires.
+// and the version it read back unchanged as PUT /periods requires.
 func (rt *Runtime) activatePeriod(period calendarPeriodWindow) error {
 	body := map[string]any{
 		"name":              period.Name,
@@ -306,6 +308,7 @@ func (rt *Runtime) activatePeriod(period calendarPeriodWindow) error {
 		"end_date":          period.EndDate,
 		"week_cycle_length": period.WeekCycleLength,
 		"is_active":         true,
+		"expected_version":  period.Version,
 	}
 	if period.WeekCycleAnchor != nil {
 		body["week_cycle_anchor"] = *period.WeekCycleAnchor
@@ -383,7 +386,7 @@ func (seedStaffFeedTombstoneAction) Run(_ context.Context, rt *Runtime) error {
 	}
 	var envelope struct {
 		Data struct {
-			ID int64 `json:"id"`
+			ID ident.ID `json:"id"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(created, &envelope); err != nil {

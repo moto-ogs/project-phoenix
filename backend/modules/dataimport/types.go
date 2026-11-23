@@ -50,19 +50,25 @@ type ImportRequest[T any] struct {
 	SkipInvalidRows bool       // Skip invalid rows and continue
 }
 
+// ImportSummary is what every import reports besides its row errors. It
+// is part of the wire result (#2352), so its fields carry their JSON names.
+type ImportSummary struct {
+	StartedAt    time.Time    `json:"started_at"`
+	CompletedAt  time.Time    `json:"completed_at"`
+	TotalRows    int          `json:"total_rows"`
+	CreatedCount int          `json:"created_count"`
+	UpdatedCount int          `json:"updated_count"`
+	SkippedCount int          `json:"skipped_count"`
+	ErrorCount   int          `json:"error_count"`
+	WarningCount int          `json:"warning_count"`
+	BulkActions  []BulkAction `json:"bulk_actions"` // Suggested bulk corrections
+	DryRun       bool         `json:"dry_run"`
+}
+
 // ImportResult tracks import outcomes
 type ImportResult[T any] struct {
-	StartedAt    time.Time
-	CompletedAt  time.Time
-	TotalRows    int
-	CreatedCount int
-	UpdatedCount int
-	SkippedCount int
-	ErrorCount   int
-	WarningCount int
-	Errors       []ImportError[T]
-	BulkActions  []BulkAction // Suggested bulk corrections
-	DryRun       bool
+	ImportSummary
+	Errors []ImportError[T] `json:"errors"`
 	// ChildQuotaRequested is the number of previewed rows that would raise
 	// the Kontingentzahl (#3571). Only a dry run of an import that counts
 	// children sets it; it is not part of the wire result.
@@ -71,10 +77,10 @@ type ImportResult[T any] struct {
 
 // ImportError captures per-row failures
 type ImportError[T any] struct {
-	RowNumber int // CSV row number (1-indexed, excludes header)
-	Data      T   // The row data that failed
-	Errors    []ValidationError
-	Timestamp time.Time
+	RowNumber int               `json:"row_number"` // CSV row number (1-indexed, excludes header)
+	Data      T                 `json:"data"`       // The row data that failed
+	Errors    []ValidationError `json:"errors"`
+	Timestamp time.Time         `json:"timestamp"`
 }
 
 // ValidationError describes a specific field validation failure

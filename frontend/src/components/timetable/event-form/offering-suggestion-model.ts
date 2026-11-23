@@ -14,9 +14,11 @@ export function buildDraftRoster(
   form: EventFormState,
   cohortMemberIds: readonly string[],
 ): DraftRoster {
-  const cohort = COHORT_TARGETS.has(form.targetGroupType)
-    ? cohortMemberIds
-    : [];
+  const cohort =
+    form.targetGroupType !== undefined &&
+    COHORT_TARGETS.has(form.targetGroupType)
+      ? cohortMemberIds
+      : [];
   const roster: DraftRoster = {};
   for (const weekday of [...form.weekdays].sort((a, b) => a - b)) {
     const picked = rosterForWeekday(form, weekday).studentIds;

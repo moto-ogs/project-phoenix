@@ -54,62 +54,6 @@ func (s *service) GetDeviceByDeviceID(ctx context.Context, deviceID string) (*de
 	return toModel(*row), nil
 }
 
-func (s *service) GetDevicesByType(ctx context.Context, deviceType string) ([]*devicefleet.Device, error) {
-	rows, err := s.Administration.GetDevicesByType(ctx, deviceType)
-	if err != nil {
-		return nil, err
-	}
-	return administrationToModels(rows), nil
-}
-
-func (s *service) GetDevicesByStatus(ctx context.Context, status devicefleet.DeviceStatus) ([]*devicefleet.Device, error) {
-	rows, err := s.Administration.GetDevicesByStatus(ctx, devicefleet.DeviceStatus(status))
-	if err != nil {
-		return nil, err
-	}
-	return administrationToModels(rows), nil
-}
-
-func (s *service) GetDevicesByRegisteredBy(ctx context.Context, personID int64) ([]*devicefleet.Device, error) {
-	rows, err := s.Administration.GetDevicesByRegisteredBy(ctx, personID)
-	if err != nil {
-		return nil, err
-	}
-	return administrationToModels(rows), nil
-}
-
-func (s *service) GetOfflineDevices(ctx context.Context, duration time.Duration) ([]*devicefleet.Device, error) {
-	rows, err := s.Administration.GetOfflineDevices(ctx, duration)
-	if err != nil {
-		return nil, err
-	}
-	return administrationToModels(rows), nil
-}
-
-func (s *service) GetActiveDevices(ctx context.Context) ([]*devicefleet.Device, error) {
-	rows, err := s.Administration.GetActiveDevices(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return administrationToModels(rows), nil
-}
-
-func (s *service) GetDevicesRequiringMaintenance(ctx context.Context) ([]*devicefleet.Device, error) {
-	rows, err := s.Administration.GetDevicesRequiringMaintenance(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return administrationToModels(rows), nil
-}
-
-func (s *service) DetectNewDevices(ctx context.Context) ([]*devicefleet.Device, error) {
-	rows, err := s.Administration.DetectNewDevices(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return administrationToModels(rows), nil
-}
-
 func (s *service) ListDevices(ctx context.Context, filters map[string]interface{}) ([]*devicefleet.Device, error) {
 	filter, err := toFilter(filters)
 	if err != nil {

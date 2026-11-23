@@ -64,9 +64,9 @@ func (s qualificationStaff) ListStaffMembers(ctx context.Context) ([]workforce.Q
 		if row == nil || row.Person == nil {
 			continue
 		}
-		member := workforce.QualificationStaffMember{StaffID: row.ID, FirstName: row.Person.FirstName, LastName: row.Person.LastName}
+		member := workforce.QualificationStaffMember{StaffID: row.ID.Int64(), FirstName: row.Person.FirstName, LastName: row.Person.LastName}
 		if row.Person.AccountID != nil {
-			member.AccountID = *row.Person.AccountID
+			member.AccountID = (*row.Person.AccountID).Int64()
 		}
 		members = append(members, member)
 	}

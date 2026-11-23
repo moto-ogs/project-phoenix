@@ -80,7 +80,7 @@ func mountPresenceRoutes(
 	if err != nil {
 		return err
 	}
-	activeResource := presenceAPI.NewResource(operations, activePeople{source: NewAttendanceRoutePeople(users)}, teacherGroupIDs(education), activeStaffAccess{source: peopleCompose.NewAttendanceRouteStaff(caller)}, settings, ProtectedTenantRoutesWith(supervisionDashboardHTTP.NewResource(dashboard).Register), logger.With("handler", "active"), presence, activeRequestRuntime(now), activeAuthorization(), settingsFacts.NewDisplaySettings(settings))
+	activeResource := presenceAPI.NewResource(operations, activePeople{source: NewAttendanceRoutePeople(users)}, activeStaffAccess{source: peopleCompose.NewAttendanceRouteStaff(caller)}, settings, ProtectedTenantRoutesWith(supervisionDashboardHTTP.NewResource(dashboard).Register), logger.With("handler", "active"), presence, activeRequestRuntime(now), activeAuthorization(), settingsFacts.NewDisplaySettings(settings))
 	sessionEnd, err := newSessionEnd(presence, timetableOwner, days.Bridge, persons, facilities, hub, emitter, logger)
 	if err != nil {
 		return err
@@ -102,25 +102,9 @@ func mountPresenceRoutes(
 		}
 		return staff.ID, true, err
 	})
-	tenant.Mount("/active", activeResource.RouterWithOwnerRoutes(move.Register, yardResource.Register))
+	tenant.Mount("/active", activeResource.Router(move.Register, yardResource.Register))
 	tenant.Mount("/iot", iotResource.Router())
 	return nil
-}
-
-func teacherGroupIDs(education schoolstructure.GroupManagement) func(context.Context, int64) ([]int64, error) {
-	return func(ctx context.Context, teacherID int64) ([]int64, error) {
-		groups, err := education.GetTeacherGroups(ctx, teacherID)
-		if err != nil {
-			return nil, err
-		}
-		ids := make([]int64, 0, len(groups))
-		for _, group := range groups {
-			if group != nil {
-				ids = append(ids, group.ID)
-			}
-		}
-		return ids, nil
-	}
 }
 
 // newIoTResource composes the kiosk API. The device-scan workflow runs every
@@ -145,6 +129,10 @@ func newIoTResource(
 	if !ok {
 		return nil, errors.New("iot routes: the device fleet carries no device history")
 	}
+	moodStops, err := owners.NewRoomHistoryStopReads(db)
+	if err != nil {
+		return nil, err
+	}
 	deviceScan := scanBindings.New(devicescanCompose.Dependencies{Principal: DeviceScanPrincipal,
 		Fleet:      iot.Fleet(),
 		Presence:   presence,
@@ -158,7 +146,7 @@ func newIoTResource(
 		// A destination chosen at the kiosk runs the phone's open-room
 		// move (#3067).
 		OpenRooms: newDeviceOpenRoomMover(openRoomMove),
-		Settings:  newDeviceScanSettings(settings),
+		Settings:  newDeviceScanSettings(settings, moodStops),
 		Logger:    logger.With("service", "device-scan"), Now: now,
 	})
 	return iotAPI.NewResource(iotAPI.ServiceDependencies{

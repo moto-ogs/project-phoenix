@@ -11,6 +11,7 @@ import (
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // The guardian adapter serves /api/guardians (#2663): contact persons, their
@@ -22,14 +23,10 @@ import (
 // show the catalog text selected by the error code.
 const (
 	msgInvalidGuardianID      = "invalid guardian ID"
-	msgInvalidPhoneID         = "invalid phone ID"
 	msgInvalidStudentID       = "invalid student ID"
-	msgInvalidRelationshipID  = "invalid relationship ID"
 	msgGuardianNotFound       = "guardian not found"
 	msgStudentNotFound        = "student not found"
 	msgRelationshipNotFound   = "relationship not found"
-	msgPhoneNotFound          = "phone number not found"
-	msgPhoneNotBelongsGuard   = "phone number does not belong to this guardian"
 	msgNotAuthenticated       = "user not authenticated"
 	msgGuardianStillLinked    = "Erziehungsberechtigte/r kann nicht gelöscht werden: Noch mit Kindern verknüpft"
 	msgInvalidPaymentGuardian = "Die erziehungsberechtigte Person konnte nicht zugeordnet werden."
@@ -43,18 +40,6 @@ type GuardianInvitation struct {
 	ExpiresAt         time.Time
 	EmailSent         bool
 	Token             string
-}
-
-// PendingGuardianInvitation is one open invitation of the tenant. Token is
-// exposed only to the locally authorized seeder.
-type PendingGuardianInvitation struct {
-	ID                int64
-	GuardianProfileID int64
-	CreatedAt         time.Time
-	ExpiresAt         time.Time
-	EmailSentAt       *time.Time
-	EmailError        *string
-	EmailRetryCount   int
 }
 
 // GuardianInvite invites a further guardian to a child by e-mail.
@@ -78,12 +63,17 @@ type GuardianInviteResult struct {
 }
 
 // GuardianBulkInvite invites the guardians of many children in one run
-// (#3378). DryRun only counts; ResendOpen mails open invitations again.
+// (#3378). DryRun only counts; ResendOpen mails open invitations again;
+// NotifyActive tells guardians who already use the parents portal that the
+// child's care is visible there (#7760). A run sends the preview's
+// fingerprint as ExpectedFingerprint (ADR 0311).
 type GuardianBulkInvite struct {
-	StudentIDs     []int64
-	ActorAccountID int64
-	ResendOpen     bool
-	DryRun         bool
+	StudentIDs          []int64
+	ActorAccountID      int64
+	ResendOpen          bool
+	DryRun              bool
+	NotifyActive        bool
+	ExpectedFingerprint string
 }
 
 // GuardianBulkInviteProblem is one guardian the run could not reach.
@@ -102,7 +92,12 @@ type GuardianBulkInviteResult struct {
 	SkippedActive         int
 	SkippedOpen           int
 	SkippedRestricted     int
+	Notified              int
+	AlreadyNotified       int
+	WithoutVisibleCare    int
 	Problems              []GuardianBulkInviteProblem
+	// Fingerprint is set on a preview: the token its run sends back.
+	Fingerprint string
 }
 
 // GuardianPendingApproval is one parent-initiated request awaiting staff.
@@ -153,8 +148,7 @@ type GuardianRuntime struct {
 	ExposeInvitationToken func(*http.Request) bool
 	MarkRollback          func(context.Context)
 
-	SendInvitation         func(ctx context.Context, guardianID, actorAccountID int64) (GuardianInvitation, error)
-	ListPendingInvitations func(context.Context) ([]PendingGuardianInvitation, error)
+	SendInvitation func(ctx context.Context, guardianID, actorAccountID int64) (GuardianInvitation, error)
 
 	InviteGuardianToStudent func(context.Context, GuardianInvite) (GuardianInviteResult, error)
 	BulkInviteGuardians     func(context.Context, GuardianBulkInvite) (GuardianBulkInviteResult, error)
@@ -197,7 +191,7 @@ func NewGuardianResource(directory peopledirectory.Capability, runtime GuardianR
 		runtime.Success == nil || runtime.SuccessPaginated == nil || runtime.Failure == nil || runtime.ObserveResponse == nil ||
 		runtime.ActorID == nil || runtime.ActorRole == nil || runtime.HasPermission == nil || runtime.IsAdmin == nil ||
 		runtime.IsVerifiedStaff == nil || runtime.ExposeInvitationToken == nil || runtime.MarkRollback == nil ||
-		runtime.SendInvitation == nil || runtime.ListPendingInvitations == nil ||
+		runtime.SendInvitation == nil ||
 		runtime.InviteGuardianToStudent == nil || runtime.BulkInviteGuardians == nil || runtime.InviteFailureKind == nil || runtime.ListPendingApprovals == nil ||
 		runtime.PendingInvitationStudentID == nil || runtime.ApproveInvitation == nil || runtime.RejectInvitation == nil ||
 		runtime.RenderPaymentExport == nil || runtime.Log == nil || runtime.ParseIDParam == nil {
@@ -219,30 +213,28 @@ func (rs *GuardianResource) Router() chi.Router {
 
 		// Guardian profile reads share the users:read gate; the picker search
 		// (#1513) returns a minimal, enumeration-resistant projection.
-		r.With(usersRead, withTx).Get("/", rs.listGuardians)
 		r.With(usersRead, withTx).Get("/search", rs.searchGuardiansForPicker)
 		r.With(usersRead, withTx).Get("/{id}", rs.getGuardian)
-		r.With(usersRead, withTx).Get("/without-account", rs.listGuardiansWithoutAccount)
-		r.With(usersRead, withTx).Get("/invitable", rs.listInvitableGuardians)
 
 		r.With(usersCreate, withTx).Post("/", rs.createGuardian)
-		r.With(usersUpdate, withTx).Put("/{id}", rs.updateGuardian)
+		// The single-field edits are deprecated (ADR 0311): the staff form saves
+		// a child's guardian as one entry with its version.
+		r.With(usersUpdate, withTx).Put("/{id}", rs.refuseUnversionedEdit)
 		// Read-only preview of a full delete's blast radius (admin-only check in
 		// the handler, #819).
 		r.With(usersDelete, withTx).Get("/{id}/delete-preview", rs.guardianDeletePreview)
 		r.With(usersDelete, withTx).Delete("/{id}", rs.deleteGuardian)
 
 		r.With(usersCreate, withTx).Post("/{id}/invite", rs.sendInvitation)
-		r.With(usersRead, withTx).Get("/invitations/pending", rs.listPendingInvitations)
 
 		// Student-guardian relationships: anyone with users:read may view them
 		// (emergency cases); writes add the per-student check in the handler.
 		r.With(usersRead, withTx).Get("/students/{studentId}/guardians", rs.getStudentGuardians)
-		r.With(usersRead, withTx).Get("/{id}/students", rs.getGuardianStudents)
 		r.With(usersUpdate, withTx).Post("/students/{studentId}/guardians", rs.linkGuardianToStudent)
 		// Atomic create-or-link of one or more guardians (#819).
 		r.With(usersUpdate, withTx).Post("/students/{studentId}/guardians/batch", rs.createStudentGuardians)
-		r.With(usersUpdate, withTx).Put("/relationships/{relationshipId}", rs.updateStudentGuardianRelationship)
+		r.With(usersUpdate, withTx).Put("/students/{studentId}/guardians/{guardianId}", rs.updateStudentGuardian)
+		r.With(usersUpdate, withTx).Put("/relationships/{relationshipId}", rs.refuseUnversionedEdit)
 		r.With(usersUpdate, withTx).Delete("/students/{studentId}/guardians/{guardianId}", rs.removeGuardianFromStudent)
 
 		rs.mountRelatedAccounts(r, withTx)
@@ -260,9 +252,9 @@ func (rs *GuardianResource) Router() chi.Router {
 		r.Route("/{id}/phone-numbers", func(r chi.Router) {
 			r.With(usersRead, withTx).Get("/", rs.listGuardianPhoneNumbers)
 			r.With(usersUpdate, withTx).Post("/", rs.addPhoneNumber)
-			r.With(usersUpdate, withTx).Put("/{phoneId}", rs.updatePhoneNumber)
-			r.With(usersUpdate, withTx).Delete("/{phoneId}", rs.deletePhoneNumber)
-			r.With(usersUpdate, withTx).Post("/{phoneId}/set-primary", rs.setPrimaryPhone)
+			r.With(usersUpdate, withTx).Put("/{phoneId}", rs.refuseUnversionedEdit)
+			r.With(usersUpdate, withTx).Delete("/{phoneId}", rs.refuseUnversionedEdit)
+			r.With(usersUpdate, withTx).Post("/{phoneId}/set-primary", rs.refuseUnversionedEdit)
 		})
 	})
 	return router
@@ -324,8 +316,8 @@ func classifyGuardianError(err error) FailureKind {
 		return FailureInvalidRequest
 	case errors.Is(err, peopledirectory.ErrGuardianForceDeleteRequiresAdmin), errors.Is(err, peopledirectory.ErrPayerRemovalRequiresFinancial):
 		return FailureForbidden
-	case errors.Is(err, peopledirectory.ErrGuardianStillLinked), errors.Is(err, peopledirectory.ErrGuardianDeletePreviewChanged),
-		errors.Is(err, peopledirectory.ErrGuardianLinkConflict):
+	case errors.Is(err, peopledirectory.ErrGuardianStillLinked), errors.Is(err, peopledirectory.ErrGuardianLinkConflict),
+		errors.Is(err, readstate.ErrChanged):
 		return FailureConflict
 	default:
 		return FailureInternal

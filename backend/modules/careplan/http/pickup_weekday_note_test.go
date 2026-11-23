@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/api/testutil"
+	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/settings"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -19,7 +20,7 @@ import (
 
 // A recurring weekday note must not need a pickup time (#3369): the child has
 // no pickup row that weekday, stays not expected, and the note still reaches
-// the day's tile through the bulk pickup-times payload.
+// the day's tile through the bulk read of the effective pickup times.
 func TestWeekdayPickupNoteWithoutPickupTime(t *testing.T) {
 	t.Parallel()
 
@@ -35,9 +36,10 @@ func TestWeekdayPickupNoteWithoutPickupTime(t *testing.T) {
 
 	var created struct {
 		Data struct {
-			ID       int64  `json:"id"`
-			Weekday  int    `json:"weekday"`
-			NoteDate string `json:"note_date"`
+			ID       testpkg.ID `json:"id"`
+			Weekday  int        `json:"weekday"`
+			NoteDate string     `json:"note_date"`
+			Version  string     `json:"version"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &created))
@@ -45,29 +47,26 @@ func TestWeekdayPickupNoteWithoutPickupTime(t *testing.T) {
 	assert.Empty(t, created.Data.NoteDate, "a recurring note carries no date")
 
 	t.Run("reaches_the_tile_on_every_such_weekday", func(t *testing.T) {
-		for _, monday := range []string{"2026-01-26", "2026-02-02"} {
-			req := testutil.NewAuthenticatedRequest(t, "POST", "/pickup-times/bulk", map[string]any{
-				"student_ids": []int64{student.ID}, "date": monday,
-			})
-			rr := authExec(t, tc, req, claims, []string{"admin:*"})
-			require.Equal(t, http.StatusOK, rr.Code, "Body: %s", rr.Body.String())
-			assert.Contains(t, rr.Body.String(), "Montags bei den Großeltern", "date %s", monday)
-			assert.NotContains(t, rr.Body.String(), `"pickup_time":"`, "the note must not invent a pickup time")
+		for _, monday := range []calendar.Date{calendar.NewDate(2026, time.January, 26), calendar.NewDate(2026, time.February, 2)} {
+			times := effectivePickups(t, tc, monday, student.ID)
+			effective := times[student.ID]
+			require.NotNil(t, effective, "date %s", monday)
+			require.Len(t, effective.DayNotes, 1, "date %s", monday)
+			assert.Equal(t, "Montags bei den Großeltern", effective.DayNotes[0].Content, "date %s", monday)
+			assert.Nil(t, effective.PickupTime, "the note must not invent a pickup time")
 		}
 	})
 
 	t.Run("stays_off_other_weekdays", func(t *testing.T) {
-		req := testutil.NewAuthenticatedRequest(t, "POST", "/pickup-times/bulk", map[string]any{
-			"student_ids": []int64{student.ID}, "date": "2026-01-27", // Tuesday
-		})
-		rr := authExec(t, tc, req, claims, []string{"admin:*"})
-		require.Equal(t, http.StatusOK, rr.Code)
-		assert.NotContains(t, rr.Body.String(), "Montags bei den Großeltern")
+		times := effectivePickups(t, tc, calendar.NewDate(2026, time.January, 27), student.ID) // Tuesday
+		if effective := times[student.ID]; effective != nil {
+			assert.Empty(t, effective.DayNotes)
+		}
 	})
 
 	t.Run("update_keeps_it_recurring", func(t *testing.T) {
 		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d/pickup-notes/%d", student.ID, created.Data.ID),
-			map[string]any{"weekday": 1, "content": "Montags bei Oma"})
+			map[string]any{"weekday": 1, "content": "Montags bei Oma", "expected_version": created.Data.Version})
 		rr := authExec(t, tc, req, claims, []string{"admin:*"})
 		require.Equal(t, http.StatusOK, rr.Code, "Body: %s", rr.Body.String())
 		assert.Contains(t, rr.Body.String(), `"weekday":1`)
@@ -85,6 +84,7 @@ func TestWeekdayPickupNoteWithoutPickupTime(t *testing.T) {
 				{"weekday": 1, "content": "Montags bei Tante"},
 				{"weekday": 2, "content": "Dienstags zu Hause"},
 			},
+			"expected_version": weeklyPlanVersion(t, tc, student.ID),
 		})
 		rr = authExec(t, tc, req, claims, []string{"admin:*"})
 		require.Equal(t, http.StatusOK, rr.Code, "Body: %s", rr.Body.String())
@@ -140,6 +140,7 @@ func TestReplaceWeekdayPickupNotesWaitsForStudentLock(t *testing.T) {
 	_, account := testpkg.CreateTestTeacherWithAccount(t, tc.db, "Weekday", "LockTeacher")
 	claims := testutil.AdminTestClaims(int(account.ID))
 
+	version := weeklyPlanVersion(t, tc, student.ID)
 	locked := make(chan struct{})
 	release := make(chan struct{})
 	lockDone := make(chan error, 1)
@@ -175,7 +176,8 @@ func TestReplaceWeekdayPickupNotesWaitsForStudentLock(t *testing.T) {
 	writeDone := make(chan int, 1)
 	go func() {
 		req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d/pickup-notes", student.ID), map[string]any{
-			"notes": []map[string]any{{"weekday": 1, "content": "Montags zu Hause"}},
+			"notes":            []map[string]any{{"weekday": 1, "content": "Montags zu Hause"}},
+			"expected_version": version,
 		})
 		writeDone <- authExec(t, tc, req, claims, []string{"admin:*"}).Code
 	}()
@@ -216,7 +218,7 @@ func TestWeekdayPickupNoteSurvivesBookingBoundary(t *testing.T) {
 	require.Equal(t, http.StatusCreated, rr.Code, "Body: %s", rr.Body.String())
 
 	// The device-scan path resolves one child at a time rather than through
-	// the tile's bulk endpoint. A note-only day must survive that path too.
+	// the tile's bulk read. A note-only day must survive that path too.
 	single, err := testpkg.TenantQuery2(t, testpkg.Ctx(t), tc.db, tc.resource.PickupScheduleService.GetEffectivePickupTimeForDate, noted.ID, calendar.NewDate(2026, time.January, 26))
 	require.NoError(t, err)
 	require.NotNil(t, single)
@@ -224,25 +226,20 @@ func TestWeekdayPickupNoteSurvivesBookingBoundary(t *testing.T) {
 	require.Len(t, single.DayNotes, 1)
 	assert.Equal(t, "Montags beim Vater", single.DayNotes[0].Content)
 
-	req = testutil.NewAuthenticatedRequest(t, "POST", "/pickup-times/bulk", map[string]any{
-		"student_ids": []int64{noted.ID, silent.ID}, "date": "2026-01-26", // Monday
-	})
-	rr = authExec(t, tc, req, claims, []string{"admin:*"})
-	require.Equal(t, http.StatusOK, rr.Code, "Body: %s", rr.Body.String())
+	// The tile reads the effective times of many children at once.
+	times := effectivePickups(t, tc, calendar.NewDate(2026, time.January, 26), noted.ID, silent.ID) // Monday
+	assert.NotContains(t, times, silent.ID, "a child without booking and without note stays out of the payload")
+	require.Contains(t, times, noted.ID)
+	assert.Nil(t, times[noted.ID].PickupTime)
+	require.Len(t, times[noted.ID].DayNotes, 1)
+	assert.Equal(t, "Montags beim Vater", times[noted.ID].DayNotes[0].Content)
+}
 
-	var response struct {
-		Data []struct {
-			StudentID  int64   `json:"student_id"`
-			PickupTime *string `json:"pickup_time"`
-			DayNotes   []struct {
-				Content string `json:"content"`
-			} `json:"day_notes"`
-		} `json:"data"`
-	}
-	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
-	require.Len(t, response.Data, 1, "a child without booking and without note stays out of the payload")
-	assert.Equal(t, noted.ID, response.Data[0].StudentID)
-	assert.Nil(t, response.Data[0].PickupTime)
-	require.Len(t, response.Data[0].DayNotes, 1)
-	assert.Equal(t, "Montags beim Vater", response.Data[0].DayNotes[0].Content)
+// effectivePickups reads the effective pickup times of the children on one
+// day the way the day views do, through Care Plan's bulk read.
+func effectivePickups(t *testing.T, tc *testContext, date calendar.Date, studentIDs ...int64) map[int64]*careplan.EffectivePickupTime {
+	t.Helper()
+	times, err := testpkg.TenantQuery2(t, testpkg.Ctx(t), tc.db, tc.resource.PickupScheduleService.GetBulkEffectivePickupTimesForDate, studentIDs, date)
+	require.NoError(t, err)
+	return times
 }

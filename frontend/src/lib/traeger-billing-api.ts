@@ -1,3 +1,4 @@
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the billing runs in the Träger portal (#4668): the runs of a
  * holiday period with their preview, corrections with a reason, the release
@@ -6,34 +7,58 @@
  * Money stays whole cent. Backend int64 IDs leave here as strings.
  */
 
-import type {
-  MailOutcome,
-  MailProviderBlock,
-} from "~/lib/email-delivery-status";
-import { apiErrorFromBody, transportFetch } from "./api-error";
-import { filenameFromDisposition } from "./file-download";
-import { traegerRequest } from "./traeger-api";
 import {
-  type BackendInvoicePayment,
-  type BackendRunDueDate,
+  type MailOutcome,
+  type MailProviderBlock,
+  knownMailOutcome,
+  knownMailProviderBlock,
+} from "~/lib/email-delivery-status";
+import { knownEnum } from "./contract/known-enum";
+import type * as traegerBillingRunsContract from "./contract/traeger-billing-runs.generated";
+import type * as traegerNumberRangesContract from "./contract/traeger-number-ranges.generated";
+import { filenameFromDisposition } from "./file-download";
+import {
   type InvoicePayment,
   type RecipientKind,
   type RunDueDate,
   invoicePaymentFromBackend,
+  knownRecipientKind,
   runDueDatesFromBackend,
 } from "./traeger-billing-terms-api";
 
+// Go does not register these sets; the contract types them as string. A value
+// this build does not know stays undefined instead of passing as a known one.
+const RUN_STATUS_VALUES = ["calculated", "released", "discarded"] as const;
+const POSITION_KIND_VALUES = [
+  "base",
+  "sibling",
+  "benefits_exemption",
+  "cost_takeover",
+  "meal",
+  "correction",
+  "credit",
+] as const;
+const DOCUMENT_KIND_VALUES = ["invoice", "cancellation", "credit"] as const;
+const LETTER_MAIL_STATUS_VALUES = [
+  "not_sent",
+  "queued",
+  "sent",
+  "failed",
+  "unknown",
+] as const;
+
 /** A run the Abrechnung discarded while it was open and empty (#6628). */
-export type BillingRunStatus = "calculated" | "released" | "discarded";
+export type BillingRunStatus = (typeof RUN_STATUS_VALUES)[number];
 
 export interface BillingRun {
   readonly id: string;
   readonly holidayPeriodId: string;
   readonly periodName: string;
-  /** Calendar dates "YYYY-MM-DD". */
-  readonly serviceFrom: string;
-  readonly serviceUntil: string;
-  readonly status: BillingRunStatus;
+  /** Calendar dates "YYYY-MM-DD"; null when the backend has none. */
+  readonly serviceFrom: string | null;
+  readonly serviceUntil: string | null;
+  /** undefined: a status this build does not know. */
+  readonly status: BillingRunStatus | undefined;
   readonly createdAt: string;
   readonly releasedAt: string | null;
   readonly issuedOn: string | null;
@@ -43,17 +68,17 @@ export interface BillingRun {
   readonly discardedAt?: string | null;
 }
 
-type BillingPositionKind =
-  | "base"
-  | "sibling"
-  | "benefits_exemption"
-  | "cost_takeover"
-  | "meal"
-  | "correction"
-  | "credit";
+type BillingPositionKind = (typeof POSITION_KIND_VALUES)[number];
 
 /** An invoice, its Storno or its Gutschrift (#4690). */
-export type BillingDocumentKind = "invoice" | "cancellation" | "credit";
+export type BillingDocumentKind = (typeof DOCUMENT_KIND_VALUES)[number];
+
+/** The document kind a value names, undefined when unknown. */
+export function knownDocumentKind(
+  value: string,
+): BillingDocumentKind | undefined {
+  return knownEnum(DOCUMENT_KIND_VALUES, value);
+}
 
 /**
  * A document of the history of an invoice: its Storno, its Gutschriften and
@@ -62,15 +87,15 @@ export type BillingDocumentKind = "invoice" | "cancellation" | "credit";
 interface BillingDocumentLink {
   readonly id: string;
   readonly runId: string;
-  readonly kind: BillingDocumentKind;
+  readonly kind: BillingDocumentKind | undefined;
   readonly number: string;
-  readonly issuedOn: string;
+  readonly issuedOn: string | null;
   readonly totalCents: number;
   readonly reason: string;
 }
 
 export interface BillingPosition {
-  readonly kind: BillingPositionKind;
+  readonly kind: BillingPositionKind | undefined;
   /** Negative for a discount. */
   readonly amountCents: number;
   readonly weekStartsOn: string | null;
@@ -126,7 +151,8 @@ export interface BillingChild {
 export interface BillingDocument {
   /** Empty for a draft; the invoice once issued. */
   readonly id: string;
-  readonly kind: BillingDocumentKind;
+  /** undefined: a kind this build does not know. */
+  readonly kind: BillingDocumentKind | undefined;
   /**
    * The number of the invoice a Storno or Gutschrift belongs to, or of the
    * cancelled invoice an invoice replaces; empty otherwise (#4690).
@@ -158,8 +184,8 @@ export interface BillingDocument {
   readonly recipientSecondName?: string;
   /** How and by when it is paid (#4689); null on an invoice issued before. */
   readonly payment?: InvoicePayment | null;
-  readonly serviceFrom: string;
-  readonly serviceUntil: string;
+  readonly serviceFrom: string | null;
+  readonly serviceUntil: string | null;
   readonly children: readonly BillingChild[];
   readonly totalCents: number;
 }
@@ -187,6 +213,8 @@ export interface BillingRunDetail extends BillingRun {
   readonly letters: BillingLetters | null;
   /** The due dates of the run per payment method (#4689). */
   readonly dueDates?: readonly RunDueDate[];
+  /** The read-state token of `dueDates` a change sends back (ADR 0311). */
+  readonly dueDatesVersion?: string;
   /**
    * The kind of document the run issues (#4688): before the release the
    * kind the release would freeze, after it the frozen one.
@@ -215,7 +243,12 @@ export interface BillingLettersInput {
   readonly emergencyContacts: readonly BillingEmergencyContact[];
 }
 
-export interface BillingLetters extends BillingLettersInput {
+export interface BillingLetters extends Omit<
+  BillingLettersInput,
+  "paymentDueOn"
+> {
+  /** Calendar date "YYYY-MM-DD"; null when the backend has none. */
+  readonly paymentDueOn: string | null;
   readonly createdAt: string;
   /** Version der Vorlage, mit der die Schreiben entstanden; 0 = Standardvorlage (#4677). */
   readonly templateVersion: number;
@@ -224,8 +257,8 @@ export interface BillingLetters extends BillingLettersInput {
 export interface BillingPeriod {
   readonly id: string;
   readonly name: string;
-  readonly startsOn: string;
-  readonly endsOn: string;
+  readonly startsOn: string | null;
+  readonly endsOn: string | null;
 }
 
 /** One start value the Abrechnung set for a number range (#7358). */
@@ -257,123 +290,9 @@ export interface NumberRange {
   readonly starts: readonly NumberRangeStart[];
 }
 
-interface BackendRun {
-  id: number | string;
-  holiday_period_id?: number | string;
-  period_name: string;
-  service_from: string;
-  service_until: string;
-  status: BillingRunStatus;
-  created_at: string;
-  released_at: string | null;
-  issued_on: string | null;
-  document_count: number | null;
-  total_cents: number | null;
-  discarded_at?: string | null;
-}
-
-interface BackendPosition {
-  kind: BillingPositionKind;
-  amount_cents: number;
-  week_starts_on: string | null;
-  week_ends_on: string | null;
-  time_model_name: string;
-  child_rank: number | null;
-  discount_basis_points: number | null;
-  discount_cents: number | null;
-  note: string;
-  cost_bearer_id?: number | string | null;
-  cost_bearer_name?: string;
-  booked_days?: number | null;
-}
-
-interface BackendDocumentLink {
-  id: number | string;
-  run_id: number | string;
-  kind: BillingDocumentKind;
-  number: string;
-  issued_on: string;
-  total_cents: number;
-  reason: string;
-}
-
-interface BackendDocument {
-  id: number | string;
-  kind?: BillingDocumentKind;
-  reference_number?: string;
-  reason?: string;
-  history?: BackendDocumentLink[] | null;
-  replaced_credits?: BackendDocumentLink[] | null;
-  number: string;
-  issued_on: string | null;
-  registration_id: number | string;
-  registration_child_id?: number | string;
-  recipient_first_name: string;
-  recipient_last_name: string;
-  recipient_email: string;
-  debtor_number?: string;
-  recipient_kind?: RecipientKind | "";
-  recipient_second_name?: string;
-  payment?: BackendInvoicePayment | null;
-  service_from: string;
-  service_until: string;
-  children?:
-    | {
-        child_id: number | string;
-        first_name: string;
-        last_name: string;
-        positions?: BackendPosition[] | null;
-        corrections?:
-          | {
-              id: number | string;
-              amount_cents: number;
-              total_before_cents: number;
-              total_after_cents: number;
-              reason: string;
-              created_at: string;
-              carried_from_number?: string;
-            }[]
-          | null;
-        carried_corrections?:
-          | {
-              position_id: number | string;
-              source_number: string;
-              amount_cents: number;
-              source_amount_cents: number;
-              reason: string;
-            }[]
-          | null;
-        total_cents: number;
-      }[]
-    | null;
-  total_cents: number;
-}
-
-interface BackendRunDetail extends BackendRun {
-  documents?: BackendDocument[] | null;
-  preview_count: number;
-  preview_cents: number;
-  unbilled: number;
-  missing_debtor_numbers?: number;
-  payment_text_missing_debtor_numbers?: number;
-  number_pattern: string;
-  number_range_set: boolean;
-  letters?: BackendLetters | null;
-  due_dates?: BackendRunDueDate[] | null;
-  document_kind?: string;
-  legal_remedy_missing?: boolean;
-  fingerprint?: string;
-}
-
-interface BackendLetters {
-  payment_due_on: string;
-  notes: string;
-  emergency_contacts?: { name: string; phone: string }[] | null;
-  created_at: string;
-  template_version?: number | null;
-}
-
-function lettersFromBackend(letters: BackendLetters): BillingLetters {
+function lettersFromBackend(
+  letters: traegerBillingRunsContract.BillingLetters,
+): BillingLetters {
   return {
     paymentDueOn: letters.payment_due_on,
     notes: letters.notes,
@@ -382,30 +301,34 @@ function lettersFromBackend(letters: BackendLetters): BillingLetters {
       phone: contact.phone,
     })),
     createdAt: letters.created_at,
-    templateVersion: letters.template_version ?? 0,
+    templateVersion: letters.template_version,
   };
 }
 
-function runFromBackend(run: BackendRun): BillingRun {
+function runFromBackend(
+  run: traegerBillingRunsContract.BillingRun,
+): BillingRun {
   return {
-    id: String(run.id),
-    holidayPeriodId: String(run.holiday_period_id ?? ""),
+    id: run.id,
+    holidayPeriodId: run.holiday_period_id,
     periodName: run.period_name,
     serviceFrom: run.service_from,
     serviceUntil: run.service_until,
-    status: run.status,
+    status: knownEnum(RUN_STATUS_VALUES, run.status),
     createdAt: run.created_at,
     releasedAt: run.released_at,
     issuedOn: run.issued_on,
     documentCount: run.document_count,
     totalCents: run.total_cents,
-    discardedAt: run.discarded_at ?? null,
+    discardedAt: run.discarded_at,
   };
 }
 
-function positionFromBackend(position: BackendPosition): BillingPosition {
+function positionFromBackend(
+  position: traegerBillingRunsContract.BillingPosition,
+): BillingPosition {
   return {
-    kind: position.kind,
+    kind: knownEnum(POSITION_KIND_VALUES, position.kind),
     amountCents: position.amount_cents,
     weekStartsOn: position.week_starts_on,
     weekEndsOn: position.week_ends_on,
@@ -414,21 +337,19 @@ function positionFromBackend(position: BackendPosition): BillingPosition {
     discountBasisPoints: position.discount_basis_points,
     discountCents: position.discount_cents,
     note: position.note,
-    costBearerId: position.cost_bearer_id
-      ? String(position.cost_bearer_id)
-      : null,
-    costBearerName: position.cost_bearer_name ?? "",
-    bookedDays: position.booked_days ?? null,
+    costBearerId: position.cost_bearer_id || null,
+    costBearerName: position.cost_bearer_name,
+    bookedDays: position.booked_days,
   };
 }
 
 function documentLinkFromBackend(
-  link: BackendDocumentLink,
+  link: traegerBillingRunsContract.BillingDocumentLink,
 ): BillingDocumentLink {
   return {
-    id: String(link.id),
-    runId: String(link.run_id),
-    kind: link.kind,
+    id: link.id,
+    runId: link.run_id,
+    kind: knownDocumentKind(link.kind),
     number: link.number,
     issuedOn: link.issued_on,
     totalCents: link.total_cents,
@@ -436,50 +357,57 @@ function documentLinkFromBackend(
   };
 }
 
-function documentFromBackend(document: BackendDocument): BillingDocument {
+function documentFromBackend(
+  document: traegerBillingRunsContract.BillingDocument,
+): BillingDocument {
   return {
     // A draft has no ID yet: 0, which the contract decoder hands on as "0".
-    id: String(document.id) === "0" ? "" : String(document.id),
-    kind: document.kind ?? "invoice",
-    referenceNumber: document.reference_number ?? "",
-    reason: document.reason ?? "",
+    id: document.id === "0" ? "" : document.id,
+    kind: knownDocumentKind(document.kind),
+    referenceNumber: document.reference_number,
+    reason: document.reason,
     history: (document.history ?? []).map(documentLinkFromBackend),
     replacedCredits: (document.replaced_credits ?? []).map(
       documentLinkFromBackend,
     ),
     number: document.number,
     issuedOn: document.issued_on,
-    registrationId: String(document.registration_id),
-    registrationChildId: document.registration_child_id
-      ? String(document.registration_child_id)
-      : "",
+    registrationId: document.registration_id,
+    // A holiday invoice of the whole registration names no child: 0.
+    registrationChildId:
+      document.registration_child_id === "0"
+        ? ""
+        : document.registration_child_id,
     recipientFirstName: document.recipient_first_name,
     recipientLastName: document.recipient_last_name,
     recipientEmail: document.recipient_email,
-    debtorNumber: document.debtor_number ?? "",
-    recipientKind: document.recipient_kind ?? "",
-    recipientSecondName: document.recipient_second_name ?? "",
+    debtorNumber: document.debtor_number,
+    recipientKind:
+      document.recipient_kind === ""
+        ? ""
+        : knownRecipientKind(document.recipient_kind),
+    recipientSecondName: document.recipient_second_name,
     payment: invoicePaymentFromBackend(document.payment),
     serviceFrom: document.service_from,
     serviceUntil: document.service_until,
     totalCents: document.total_cents,
     children: (document.children ?? []).map((child) => ({
-      childId: String(child.child_id),
+      childId: child.child_id,
       firstName: child.first_name,
       lastName: child.last_name,
       totalCents: child.total_cents,
       positions: (child.positions ?? []).map(positionFromBackend),
       corrections: (child.corrections ?? []).map((correction) => ({
-        id: String(correction.id),
+        id: correction.id,
         amountCents: correction.amount_cents,
         totalBeforeCents: correction.total_before_cents,
         totalAfterCents: correction.total_after_cents,
         reason: correction.reason,
         createdAt: correction.created_at,
-        carriedFromNumber: correction.carried_from_number ?? "",
+        carriedFromNumber: correction.carried_from_number,
       })),
       carriedCorrections: (child.carried_corrections ?? []).map((carried) => ({
-        positionId: String(carried.position_id),
+        positionId: carried.position_id,
         sourceNumber: carried.source_number,
         amountCents: carried.amount_cents,
         sourceAmountCents: carried.source_amount_cents,
@@ -489,48 +417,39 @@ function documentFromBackend(document: BackendDocument): BillingDocument {
   };
 }
 
-function detailFromBackend(run: BackendRunDetail): BillingRunDetail {
+function detailFromBackend(
+  run: traegerBillingRunsContract.BillingRunDetail,
+): BillingRunDetail {
   return {
     ...runFromBackend(run),
     documents: (run.documents ?? []).map(documentFromBackend),
     previewCount: run.preview_count,
     previewCents: run.preview_cents,
     unbilled: run.unbilled,
-    missingDebtorNumbers: run.missing_debtor_numbers ?? 0,
-    paymentTextMissingDebtorNumbers:
-      run.payment_text_missing_debtor_numbers ?? 0,
+    missingDebtorNumbers: run.missing_debtor_numbers,
+    paymentTextMissingDebtorNumbers: run.payment_text_missing_debtor_numbers,
     numberPattern: run.number_pattern,
     numberRangeSet: run.number_range_set,
     letters: run.letters ? lettersFromBackend(run.letters) : null,
     dueDates: runDueDatesFromBackend(run.due_dates),
+    dueDatesVersion: run.due_dates_version,
     documentKind: run.document_kind,
-    legalRemedyMissing: run.legal_remedy_missing ?? false,
-    fingerprint: run.fingerprint ?? "",
+    legalRemedyMissing: run.legal_remedy_missing,
+    fingerprint: run.fingerprint,
   };
 }
 
-const RUNS_PATH = "/api/traeger/billing-runs";
-const runPath = (id: string) => `${RUNS_PATH}/${encodeURIComponent(id)}`;
-
 /** The runs of the Träger, newest first. */
 export async function fetchBillingRuns(): Promise<BillingRun[]> {
-  const runs = await traegerRequest<BackendRun[] | null>(RUNS_PATH);
-  return (runs ?? []).map(runFromBackend);
+  const runs = await bffJson("org", "GET /traeger/billing-runs/");
+  return runs.map(runFromBackend);
 }
 
 /** The published holiday periods a run can bill, latest first. */
 export async function fetchBillingPeriods(): Promise<BillingPeriod[]> {
-  const periods = await traegerRequest<
-    | {
-        id: number | string;
-        name: string;
-        starts_on: string;
-        ends_on: string;
-      }[]
-    | null
-  >(`${RUNS_PATH}/periods`);
-  return (periods ?? []).map((period) => ({
-    id: String(period.id),
+  const periods = await bffJson("org", "GET /traeger/billing-runs/periods");
+  return periods.map((period) => ({
+    id: period.id,
     name: period.name,
     startsOn: period.starts_on,
     endsOn: period.ends_on,
@@ -539,16 +458,19 @@ export async function fetchBillingPeriods(): Promise<BillingPeriod[]> {
 
 export async function startBillingRun(periodId: string): Promise<BillingRun> {
   return runFromBackend(
-    await traegerRequest<BackendRun>(RUNS_PATH, {
-      method: "POST",
-      body: { holiday_period_id: Number(periodId) },
+    await bffJson("org", "POST /traeger/billing-runs/", {
+      body: {
+        holiday_period_id: periodId,
+      } satisfies traegerBillingRunsContract.BillingRunRequest,
     }),
   );
 }
 
 /** A run with its preview, or with its issued invoices once released. */
 export async function fetchBillingRun(id: string): Promise<BillingRunDetail> {
-  return detailFromBackend(await traegerRequest<BackendRunDetail>(runPath(id)));
+  return detailFromBackend(
+    await bffJson("org", "GET /traeger/billing-runs/{id}", { params: { id } }),
+  );
 }
 
 /** Sets the amount of one child to totalCents, with a reason. */
@@ -562,20 +484,17 @@ export async function correctBillingRun(
   },
 ): Promise<BillingRunDetail> {
   return detailFromBackend(
-    await traegerRequest<BackendRunDetail>(`${runPath(id)}/corrections`, {
-      method: "POST",
+    await bffJson("org", "POST /traeger/billing-runs/{id}/corrections", {
+      params: { id },
       body: {
-        registration_id: Number(correction.registrationId),
-        child_id: Number(correction.childId),
+        registration_id: correction.registrationId,
+        child_id: correction.childId,
         total_cents: correction.totalCents,
         reason: correction.reason,
-      },
+      } satisfies traegerBillingRunsContract.BillingCorrectionRequest,
     }),
   );
 }
-
-const carriedPath = (runId: string, positionId: string) =>
-  `${runPath(runId)}/carried-corrections/${encodeURIComponent(positionId)}`;
 
 /**
  * Replaces a correction a draft proposes with a correction of the run: the
@@ -587,10 +506,17 @@ export async function changeCarriedCorrection(
   change: { readonly totalCents: number; readonly reason: string },
 ): Promise<BillingRunDetail> {
   return detailFromBackend(
-    await traegerRequest<BackendRunDetail>(carriedPath(runId, positionId), {
-      method: "PUT",
-      body: { total_cents: change.totalCents, reason: change.reason },
-    }),
+    await bffJson(
+      "org",
+      "PUT /traeger/billing-runs/{id}/carried-corrections/{positionID}",
+      {
+        params: { id: runId, positionID: positionId },
+        body: {
+          total_cents: change.totalCents,
+          reason: change.reason,
+        } satisfies traegerBillingRunsContract.BillingCarriedCorrectionRequest,
+      },
+    ),
   );
 }
 
@@ -600,9 +526,11 @@ export async function removeCarriedCorrection(
   positionId: string,
 ): Promise<BillingRunDetail> {
   return detailFromBackend(
-    await traegerRequest<BackendRunDetail>(carriedPath(runId, positionId), {
-      method: "DELETE",
-    }),
+    await bffJson(
+      "org",
+      "DELETE /traeger/billing-runs/{id}/carried-corrections/{positionID}",
+      { params: { id: runId, positionID: positionId } },
+    ),
   );
 }
 
@@ -617,9 +545,15 @@ export async function cancelBillingDocument(
   reason: string,
 ): Promise<BillingDocument> {
   return documentFromBackend(
-    await traegerRequest<BackendDocument>(
-      `${runPath(runId)}/documents/${encodeURIComponent(documentId)}/cancellation`,
-      { method: "POST", body: { reason } },
+    await bffJson(
+      "org",
+      "POST /traeger/billing-runs/{id}/documents/{documentID}/cancellation",
+      {
+        params: { id: runId, documentID: documentId },
+        body: {
+          reason,
+        } satisfies traegerBillingRunsContract.BillingCancellationRequest,
+      },
     ),
   );
 }
@@ -635,15 +569,16 @@ export async function creditBillingDocument(
   },
 ): Promise<BillingDocument> {
   return documentFromBackend(
-    await traegerRequest<BackendDocument>(
-      `${runPath(runId)}/documents/${encodeURIComponent(documentId)}/credits`,
+    await bffJson(
+      "org",
+      "POST /traeger/billing-runs/{id}/documents/{documentID}/credits",
       {
-        method: "POST",
+        params: { id: runId, documentID: documentId },
         body: {
-          child_id: Number(credit.childId),
+          child_id: credit.childId,
           amount_cents: credit.amountCents,
           reason: credit.reason,
-        },
+        } satisfies traegerBillingRunsContract.BillingCreditRequest,
       },
     ),
   );
@@ -661,15 +596,15 @@ export async function releaseBillingRun(
   >,
 ): Promise<BillingRunDetail> {
   return detailFromBackend(
-    await traegerRequest<BackendRunDetail>(`${runPath(run.id)}/release`, {
-      method: "POST",
+    await bffJson("org", "POST /traeger/billing-runs/{id}/release", {
+      params: { id: run.id },
       body: {
         document_count: run.previewCount,
         total_cents: run.previewCents,
         fingerprint: run.fingerprint,
         // The release refuses another kind than the one shown (#4688).
         ...(run.documentKind ? { document_kind: run.documentKind } : {}),
-      },
+      } satisfies traegerBillingRunsContract.BillingReleaseRequest,
     }),
   );
 }
@@ -683,13 +618,15 @@ export async function discardBillingRun(
   runId: string,
 ): Promise<BillingRunDetail> {
   return detailFromBackend(
-    await traegerRequest<BackendRunDetail>(`${runPath(runId)}/discard`, {
-      method: "POST",
+    await bffJson("org", "POST /traeger/billing-runs/{id}/discard", {
+      params: { id: runId },
     }),
   );
 }
 
-function lettersBody(input: BillingLettersInput) {
+function lettersBody(
+  input: BillingLettersInput,
+): traegerBillingRunsContract.BillingLettersRequest {
   return {
     payment_due_on: input.paymentDueOn,
     notes: input.notes,
@@ -709,8 +646,8 @@ export async function createBillingLetters(
   input: BillingLettersInput,
 ): Promise<BillingLetters> {
   return lettersFromBackend(
-    await traegerRequest<BackendLetters>(`${runPath(runId)}/letters`, {
-      method: "POST",
+    await bffJson("org", "POST /traeger/billing-runs/{id}/letters", {
+      params: { id: runId },
       body: lettersBody(input),
     }),
   );
@@ -722,31 +659,12 @@ export interface BillingFile {
   readonly filename: string;
 }
 
-/** Reads a file of the Träger API; a refusal keeps its error code. */
+/** Reads a file asked through `bffFile`; a refusal is its ApiError. */
 export async function billingFile(
-  path: string,
-  init: RequestInit,
+  file: Promise<Response>,
   fallbackName: string,
 ): Promise<BillingFile> {
-  const response = await transportFetch(path, {
-    credentials: "include",
-    cache: "no-store",
-    ...init,
-  });
-  if (!response.ok) {
-    const text = await response.text();
-    let body: unknown = null;
-    try {
-      body = text ? (JSON.parse(text) as unknown) : null;
-    } catch {
-      body = null;
-    }
-    throw apiErrorFromBody(
-      `Request failed (${response.status})`,
-      response.status,
-      body,
-    );
-  }
+  const response = await file;
   return {
     blob: await response.blob(),
     filename: filenameFromDisposition(response) ?? fallbackName,
@@ -759,12 +677,10 @@ export async function previewBillingLetter(
   input: BillingLettersInput,
 ): Promise<BillingFile> {
   return billingFile(
-    `${runPath(runId)}/letters/preview`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(lettersBody(input)),
-    },
+    bffFile("org", "POST /traeger/billing-runs/{id}/letters/preview", {
+      params: { id: runId },
+      body: lettersBody(input),
+    }),
     "vorschau.pdf",
   );
 }
@@ -775,8 +691,11 @@ export async function downloadBillingLetter(
   documentId: string,
 ): Promise<BillingFile> {
   return billingFile(
-    `${runPath(runId)}/documents/${encodeURIComponent(documentId)}/letter`,
-    {},
+    bffFile(
+      "org",
+      "GET /traeger/billing-runs/{id}/documents/{documentID}/letter",
+      { params: { id: runId, documentID: documentId } },
+    ),
     "bestaetigung.pdf",
   );
 }
@@ -784,25 +703,34 @@ export async function downloadBillingLetter(
 /** All stored letters of the run in one PDF to print (#4670). */
 export async function printBillingLetters(runId: string): Promise<BillingFile> {
   return billingFile(
-    `${runPath(runId)}/letters/print`,
-    {},
+    bffFile("org", "GET /traeger/billing-runs/{id}/letters/print", {
+      params: { id: runId },
+    }),
     "bestaetigungsschreiben.pdf",
   );
 }
 
 /** The state of the last mail of a family's letter (#4670). */
-export type LetterMailStatus =
-  "not_sent" | "queued" | "sent" | "failed" | "unknown";
+export type LetterMailStatus = (typeof LETTER_MAIL_STATUS_VALUES)[number];
+
+/**
+ * The state of a letter's mail; the backend names a state it cannot read
+ * "unknown" itself, so a state this build does not know reads the same.
+ */
+export function knownLetterMailStatus(value: string): LetterMailStatus {
+  return knownEnum(LETTER_MAIL_STATUS_VALUES, value) ?? "unknown";
+}
 
 /** The mail of the letter of one family. */
 export interface LetterMailing {
   readonly documentId: string;
   /** An invoice, a Storno or a Gutschrift (#4690). */
-  readonly kind: BillingDocumentKind;
+  readonly kind: BillingDocumentKind | undefined;
   readonly number: string;
   readonly recipientFirstName: string;
   readonly recipientLastName: string;
   readonly recipientEmail: string;
+  /** "unknown" also stands for a state this build does not know. */
   readonly status: LetterMailStatus;
   /** What became of the last mail; only a provider's report says delivered. */
   readonly mailOutcome?: MailOutcome;
@@ -819,32 +747,19 @@ export interface LetterSeries {
   readonly withoutEmail: number;
 }
 
-interface BackendLetterMailing {
-  document_id: number | string;
-  kind?: BillingDocumentKind;
-  number: string;
-  recipient_first_name: string;
-  recipient_last_name: string;
-  recipient_email: string;
-  status: LetterMailStatus;
-  mail_outcome?: MailOutcome;
-  provider_block?: MailProviderBlock;
-  sends: number;
-  requested_at: string | null;
-  sent_at: string | null;
-}
-
-function mailingFromBackend(mailing: BackendLetterMailing): LetterMailing {
+function mailingFromBackend(
+  mailing: traegerBillingRunsContract.BillingLetterMailing,
+): LetterMailing {
   return {
-    documentId: String(mailing.document_id),
-    kind: mailing.kind ?? "invoice",
+    documentId: mailing.document_id,
+    kind: knownDocumentKind(mailing.kind),
     number: mailing.number,
     recipientFirstName: mailing.recipient_first_name,
     recipientLastName: mailing.recipient_last_name,
     recipientEmail: mailing.recipient_email,
-    status: mailing.status,
-    mailOutcome: mailing.mail_outcome,
-    providerBlock: mailing.provider_block,
+    status: knownLetterMailStatus(mailing.status),
+    mailOutcome: knownMailOutcome(mailing.mail_outcome),
+    providerBlock: knownMailProviderBlock(mailing.provider_block),
     sends: mailing.sends,
     requestedAt: mailing.requested_at,
     sentAt: mailing.sent_at,
@@ -855,9 +770,9 @@ function mailingFromBackend(mailing: BackendLetterMailing): LetterMailing {
 export async function fetchLetterMailings(
   runId: string,
 ): Promise<LetterMailing[]> {
-  const body = await traegerRequest<{
-    documents: BackendLetterMailing[] | null;
-  }>(`${runPath(runId)}/mailings`);
+  const body = await bffJson("org", "GET /traeger/billing-runs/{id}/mailings", {
+    params: { id: runId },
+  });
   return (body.documents ?? []).map(mailingFromBackend);
 }
 
@@ -866,11 +781,11 @@ export async function fetchLetterMailings(
  * second call sends nothing twice.
  */
 export async function mailBillingLetters(runId: string): Promise<LetterSeries> {
-  const series = await traegerRequest<{
-    queued: number;
-    already: number;
-    without_email: number;
-  }>(`${runPath(runId)}/mailings`, { method: "POST" });
+  const series = await bffJson(
+    "org",
+    "POST /traeger/billing-runs/{id}/mailings",
+    { params: { id: runId } },
+  );
   return {
     queued: series.queued,
     already: series.already,
@@ -884,9 +799,10 @@ export async function mailBillingLetter(
   documentId: string,
 ): Promise<LetterMailing> {
   return mailingFromBackend(
-    await traegerRequest<BackendLetterMailing>(
-      `${runPath(runId)}/documents/${encodeURIComponent(documentId)}/mailings`,
-      { method: "POST" },
+    await bffJson(
+      "org",
+      "POST /traeger/billing-runs/{id}/documents/{documentID}/mailings",
+      { params: { id: runId, documentID: documentId } },
     ),
   );
 }
@@ -902,8 +818,10 @@ export async function downloadBillingRunOverview(
   format: BillingRunExportFormat,
 ): Promise<BillingFile> {
   return billingFile(
-    `${runPath(id)}/export?format=${format}`,
-    {},
+    bffFile("org", "GET /traeger/billing-runs/{id}/export", {
+      params: { id },
+      query: { format },
+    }),
     `abrechnungsanordnung.${format}`,
   );
 }
@@ -918,38 +836,20 @@ export async function downloadCostTakeoverList(
   format: BillingRunExportFormat,
 ): Promise<BillingFile> {
   return billingFile(
-    `${runPath(id)}/cost-takeovers/${encodeURIComponent(costBearerId)}/export?format=${format}`,
-    {},
+    bffFile(
+      "org",
+      "GET /traeger/billing-runs/{id}/cost-takeovers/{costBearerId}/export",
+      { params: { id, costBearerId }, query: { format } },
+    ),
     `kostenuebernahme.${format}`,
   );
 }
 
-const NUMBER_RANGES_PATH = "/api/traeger/number-ranges";
-
 type NumberRangeService = "holiday" | "care";
-
-interface BackendNumberRange {
-  service: string;
-  pattern: string;
-  example: string;
-  next_number?: number;
-  last_number?: number;
-  year?: number;
-  starts?:
-    | {
-        next_number: number;
-        example: string;
-        set_at: string;
-        set_by_you: boolean;
-        set_by_account: boolean;
-        set_by_name: string;
-      }[]
-    | null;
-}
 
 function mapNumberRange(
   service: string,
-  range: BackendNumberRange | undefined,
+  range: traegerNumberRangesContract.NumberRange | undefined,
 ): NumberRange {
   return {
     service,
@@ -972,12 +872,10 @@ function mapNumberRange(
 async function fetchNumberRange(
   service: NumberRangeService,
 ): Promise<NumberRange> {
-  const ranges = await traegerRequest<BackendNumberRange[] | null>(
-    NUMBER_RANGES_PATH,
-  );
+  const ranges = await bffJson("org", "GET /traeger/number-ranges/");
   return mapNumberRange(
     service,
-    (ranges ?? []).find((range) => range.service === service),
+    ranges.find((range) => range.service === service),
   );
 }
 
@@ -985,10 +883,12 @@ async function saveNumberRange(
   service: NumberRangeService,
   pattern: string,
 ): Promise<NumberRange> {
-  const range = await traegerRequest<BackendNumberRange>(
-    `${NUMBER_RANGES_PATH}/${service}`,
-    { method: "PUT", body: { pattern } },
-  );
+  const range = await bffJson("org", "PUT /traeger/number-ranges/{service}", {
+    params: { service },
+    body: {
+      pattern,
+    } satisfies traegerNumberRangesContract.NumberRangeRequest,
+  });
   return mapNumberRange(range.service, range);
 }
 
@@ -1000,9 +900,15 @@ async function saveNumberRangeStart(
   service: NumberRangeService,
   nextNumber: number,
 ): Promise<NumberRange> {
-  const range = await traegerRequest<BackendNumberRange>(
-    `${NUMBER_RANGES_PATH}/${service}/start`,
-    { method: "PUT", body: { next_number: nextNumber } },
+  const range = await bffJson(
+    "org",
+    "PUT /traeger/number-ranges/{service}/start",
+    {
+      params: { service },
+      body: {
+        next_number: nextNumber,
+      } satisfies traegerNumberRangesContract.NumberRangeStartRequest,
+    },
   );
   return mapNumberRange(range.service, range);
 }

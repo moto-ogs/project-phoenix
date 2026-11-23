@@ -129,6 +129,7 @@ function tourTargetValues(): Map<string, string> {
     for (const stop of tour.stops) {
       const selectors = [
         stop.target,
+        stop.mobileTarget,
         stop.skipWhenVisible,
         stop.endBefore,
         stop.advanceWhenVisible,

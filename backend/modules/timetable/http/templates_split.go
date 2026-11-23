@@ -17,6 +17,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	timetableModule "github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -33,7 +34,7 @@ type NullableInt struct {
 // NullableInt64 is the int64 member of the tri-state family.
 type NullableInt64 struct {
 	Set   bool
-	Value *int64
+	Value *ident.ID
 }
 
 func (n *NullableInt64) UnmarshalJSON(b []byte) error {
@@ -78,7 +79,7 @@ func (n *NullableIntSlice) UnmarshalJSON(b []byte) error {
 // and the split body (multi-source follow-up to #2147 round 12).
 type NullableInt64Slice struct {
 	Set   bool
-	Value []int64
+	Value []ident.ID
 }
 
 func (n *NullableInt64Slice) UnmarshalJSON(b []byte) error {
@@ -110,9 +111,7 @@ func (n *NullableStringSlice) UnmarshalJSON(b []byte) error {
 
 // NullableStr is the string analogue of NullableInt: it tells an omitted note
 // ("inherit the source Wochennotiz") apart from an explicit null ("clear the
-// series note") for the split flow (#1837 follow-up). (Named NullableStr to
-// avoid colliding with the RawMessage-based nullableString in
-// instance_students.go, which is a different tri-state mechanism.)
+// series note") for the split flow (#1837 follow-up).
 type NullableStr struct {
 	Set   bool
 	Value *string
@@ -198,11 +197,11 @@ func (req *splitTemplateRequest) Bind(r *http.Request) error {
 // splitTemplateResponse is the wire contract the planner UI consumes.
 // instances_created comes from the optional materialization run (0 if none).
 type splitTemplateResponse struct {
-	OldTemplateID    int64   `json:"old_template_id"`
-	NewTemplateID    int64   `json:"new_template_id"`
-	ScheduleIDs      []int64 `json:"schedule_ids"`
-	DeletedInstances int     `json:"deleted_instances"`
-	InstancesCreated int     `json:"instances_created"`
+	OldTemplateID    ident.ID   `json:"old_template_id"`
+	NewTemplateID    ident.ID   `json:"new_template_id"`
+	ScheduleIDs      []ident.ID `json:"schedule_ids"`
+	DeletedInstances int        `json:"deleted_instances"`
+	InstancesCreated int        `json:"instances_created"`
 }
 
 func renderTemplateCareOfferingConflict(w http.ResponseWriter, r *http.Request, err error) bool {
@@ -259,6 +258,9 @@ func (rs *Resource) splitTemplate(w http.ResponseWriter, r *http.Request) {
 	if !rs.validateSplitTemplateReferences(w, r, req) {
 		return
 	}
+	if !rs.lockTemplateForWrite(w, r) || !rs.checkTemplateReadVersion(w, r, id, req.ExpectedVersion) {
+		return
+	}
 
 	result, err := rs.Templates.SplitTemplate(r.Context(), in)
 	if err != nil {
@@ -267,9 +269,9 @@ func (rs *Resource) splitTemplate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := splitTemplateResponse{
-		OldTemplateID:    result.OldTemplateID,
-		NewTemplateID:    result.NewTemplateID,
-		ScheduleIDs:      result.NewScheduleIDs,
+		OldTemplateID:    ident.ID(result.OldTemplateID),
+		NewTemplateID:    ident.ID(result.NewTemplateID),
+		ScheduleIDs:      ident.IDs(result.NewScheduleIDs),
 		DeletedInstances: result.DeletedInstances,
 	}
 	if result.Materialization != nil {
@@ -284,16 +286,16 @@ func (rs *Resource) splitTemplate(w http.ResponseWriter, r *http.Request) {
 // the split anchors rosters on the effective date instead. It returns false
 // after rendering the refusal.
 func (rs *Resource) validateSplitTemplateReferences(w http.ResponseWriter, r *http.Request, req *splitTemplateRequest) bool {
-	if _, err := rs.templateRosterValidFrom(r.Context(), req.CalendarPeriodID, nil); err != nil {
+	if _, err := rs.templateRosterValidFrom(r.Context(), (*int64)(req.CalendarPeriodID), nil); err != nil {
 		renderTemplatePeriodLookupError(w, r, err)
 		return false
 	}
-	if err := rs.Templates.ValidateTemplateEducationGroup(r.Context(), req.EducationGroupID); err != nil {
+	if err := rs.Templates.ValidateTemplateEducationGroup(r.Context(), (*int64)(req.EducationGroupID)); err != nil {
 		common.RenderError(w, r, templateEducationGroupRenderer(err))
 		return false
 	}
 	for _, target := range req.Targets {
-		if err := rs.Templates.ValidateTemplateEducationGroup(r.Context(), target.EducationGroupID); err != nil {
+		if err := rs.Templates.ValidateTemplateEducationGroup(r.Context(), (*int64)(target.EducationGroupID)); err != nil {
 			common.RenderError(w, r, templateEducationGroupRenderer(err))
 			return false
 		}
@@ -342,9 +344,9 @@ func splitTemplateCommand(id int64, req *splitTemplateRequest) timetableModule.S
 		Name:                    req.Name,
 		Type:                    req.Type,
 		Weekdays:                req.Weekdays,
-		RoomID:                  req.RoomID,
-		CategoryID:              req.CategoryID,
-		PlanningTrackID:         req.PlanningTrackID.Value,
+		RoomID:                  req.RoomID.Int64(),
+		CategoryID:              req.CategoryID.Int64(),
+		PlanningTrackID:         (*int64)(req.PlanningTrackID.Value),
 		PlanningTrackIDProvided: req.PlanningTrackID.Set,
 		MaxParticipants:         req.MaxParticipants.Value,
 		MaxParticipantsProvided: req.MaxParticipants.Set,
@@ -362,8 +364,8 @@ func splitTemplateCommand(id int64, req *splitTemplateRequest) timetableModule.S
 		// Omitted inherits the source series' closing-day opt-in (#3594).
 		IncludeClosingDays: req.IncludeClosingDays,
 		WeekPattern:        req.WeekPattern,
-		CalendarPeriodID:   req.CalendarPeriodID,
-		EducationGroupID:   req.EducationGroupID,
+		CalendarPeriodID:   (*int64)(req.CalendarPeriodID),
+		EducationGroupID:   (*int64)(req.EducationGroupID),
 		TargetGroupType:    req.TargetGroupType,
 		TargetGradeLevel:   req.TargetGradeLevel,
 		TargetSchoolClass:  req.TargetSchoolClass,
@@ -373,16 +375,16 @@ func splitTemplateCommand(id int64, req *splitTemplateRequest) timetableModule.S
 		// the pass-through an editor save that changes the Quelle or the
 		// Jahrgangsfilter and then picks the "following" scope would silently
 		// keep the old rule on the successor.
-		SourceCareOfferingIDs:         req.SourceCareOfferingIDs.Value,
+		SourceCareOfferingIDs:         ident.Int64s(req.SourceCareOfferingIDs.Value),
 		SourceCareOfferingIDsProvided: req.SourceCareOfferingIDs.Set,
 		SourceGradeLevels:             req.SourceGradeLevels.Value,
 		SourceGradeLevelsProvided:     req.SourceGradeLevels.Set,
 		SourceSchoolClasses:           req.SourceSchoolClasses.Value,
 		SourceSchoolClassesProvided:   req.SourceSchoolClasses.Set,
 		Targets:                       targetInputs(req.Targets),
-		StudentIDs:                    req.StudentIDs,
-		StaffIDs:                      req.StaffIDs,
-		PrimaryStaffID:                req.PrimaryStaffID,
+		StudentIDs:                    ident.Int64s(req.StudentIDs),
+		StaffIDs:                      ident.Int64s(req.StaffIDs),
+		PrimaryStaffID:                (*int64)(req.PrimaryStaffID),
 		// Per-weekday roster deviations follow the successor (#2129); the
 		// embedded updateTemplateRequest.Bind already validated them against
 		// the submitted weekdays.

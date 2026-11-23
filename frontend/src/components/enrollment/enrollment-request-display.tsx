@@ -17,7 +17,7 @@ import {
 import type {
   AdminRequestChild,
   AdminRequestChildOffering,
-  AdminRequestSchemaField,
+  AdminRequestDetail,
   AdminRequestSummary,
 } from "~/lib/enrollment-admin-api";
 import { formatOfferingPrice } from "~/lib/care-offering-format";
@@ -26,6 +26,7 @@ import { formatCalendarDate } from "~/lib/localized-date-format";
 import { childrenConcept } from "~/lib/concepts/children";
 import { parentsConcept } from "~/lib/concepts/parents";
 import { weekdayShortList } from "~/lib/weekdays";
+import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 
 export function formatDateTime(
   value: string,
@@ -51,7 +52,10 @@ const CONSENT_LABELS: Record<string, string> = {
 
 export function RequestExtraSection({
   request,
-}: Readonly<{ request: AdminRequestSummary }>) {
+}: Readonly<{
+  request: AdminRequestSummary &
+    Partial<Pick<AdminRequestDetail, "uploads" | "can_view_uploads">>;
+}>) {
   const guardianFields = (request.schema_fields ?? []).filter(
     (f) => !f.applies_to_child,
   );
@@ -139,6 +143,7 @@ export function ChildOfferings({
   upcomingOfferings,
   unavailable,
   phaseName,
+  fromContract = false,
 }: Readonly<{
   offerings?: AdminRequestChildOffering[];
   /** Rendered alongside the current selection, flagged "gilt ab …". */
@@ -150,6 +155,11 @@ export function ChildOfferings({
    */
   unavailable?: boolean;
   phaseName?: string;
+  /**
+   * The days came from an imported contract (ADR 0309), not from a parent's
+   * choice: the days read „Gebucht“, since the school may have changed them since.
+   */
+  fromContract?: boolean;
 }>) {
   const rows = [...(offerings ?? []), ...(upcomingOfferings ?? [])];
   if (unavailable) {
@@ -171,7 +181,7 @@ export function ChildOfferings({
         {rows.map((o) => {
           const parentChoice = o.days_of_week_mode === "parent_choice";
           const dayDetails = parentChoice
-            ? formatAdminOfferingDaySource(o)
+            ? formatAdminOfferingDaySource(o, fromContract)
             : weekdayShortList(o.available_days ?? []);
           return (
             <li key={`${o.offering_id}-${o.valid_from ?? "current"}`}>
@@ -252,7 +262,10 @@ function OfferingAttributePills({
   );
 }
 
-function formatAdminOfferingDaySource(o: AdminRequestChildOffering): string {
+function formatAdminOfferingDaySource(
+  o: AdminRequestChildOffering,
+  fromContract: boolean,
+): string {
   const automatic = weekdayShortList(o.automatic_selected_days ?? []);
   const manualDays =
     (o.manual_selected_days?.length ?? 0) > 0 ||
@@ -261,10 +274,14 @@ function formatAdminOfferingDaySource(o: AdminRequestChildOffering): string {
       : (o.selected_days ?? []);
   const manual = weekdayShortList(manualDays);
   if (automatic && manual) {
-    return `${automatic} automatisch mitgebucht; ${manual} von Eltern gewählt`;
+    return `${automatic} automatisch mitgebucht; ${manual} ${fromContract ? "gebucht" : "von Eltern gewählt"}`;
   }
   if (automatic) return `${automatic} automatisch mitgebucht`;
-  if (manual) return `Von Eltern gewählt: ${manual}`;
+  if (manual) {
+    return fromContract
+      ? `Gebucht: ${manual}`
+      : `Von Eltern gewählt: ${manual}`;
+  }
   return "";
 }
 
@@ -282,7 +299,7 @@ export function ChildExtraFields({
   schemaFields,
 }: Readonly<{
   child: AdminRequestChild;
-  schemaFields?: AdminRequestSchemaField[];
+  schemaFields?: enrollmentContract.AdminRequestSchemaField[];
 }>) {
   const childFields = (schemaFields ?? []).filter((f) => f.applies_to_child);
   const filled = childFields

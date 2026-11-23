@@ -11,8 +11,20 @@ import { staffWithoutTargetHref } from "~/lib/time-account-links";
  */
 export interface SetupTourStop {
   target: string;
+  /**
+   * Unter `sm` ersetzt dieser Selektor `target`. Ein Menü im
+   * `ResponsivePanel` liegt dort im Blatt über der Sprechblase; die Tour
+   * zeigt deshalb auf seinen weiter sichtbaren Auslöser.
+   */
+  mobileTarget?: string;
   title: string;
   text: string;
+  /**
+   * Was die Sprechblase unter `sm` sagt, wenn `text` dort nicht passt: Ein
+   * Stopp mit `mobileTarget` zeigt auf den Auslöser, nicht auf den Eintrag
+   * im Blatt (#7799). `textWhenVisible` geht vor.
+   */
+  mobileText?: string;
   advance: "click" | "next";
   /**
    * Station in der Seitenleiste auf dem Weg zur Seite. Steht die Person
@@ -95,6 +107,12 @@ const formSubmit = '[data-setup-tour="form-submit"]';
 const DATA_FORM = `form:has(${formSubmit})`;
 /** Das Menü neben einer eingetragenen Person, die man einladen kann. */
 const GUARDIAN_MENU = '[data-setup-tour="guardian-menu"]';
+/**
+ * Hat das Menü am Telefon nur „Einladen“, steht dort statt der drei Punkte
+ * gleich der Knopf „Einladen“ (#7799). Ein Eintrag im Menü liegt dagegen
+ * im Popover oder Blatt am Ende der Seite, nie neben dem Namen.
+ */
+const GUARDIAN_INVITE_BUTTON = `${GUARDIAN_MENU} [data-setup-tour="guardian-invite"]`;
 
 /**
  * Der Weg über die Seitenleiste: die Gruppe „Verwaltung“ aufklappen, dann
@@ -199,6 +217,10 @@ export const SETUP_TOURS: Readonly<
         target: '[data-setup-tour="invite-create"]',
         title: "Einladung wählen",
         text: "Wähle „Personal einladen“.",
+        // Am Handy liegt der Eintrag im Blatt: Die Station zeigt auf das Plus.
+        mobileTarget: create,
+        mobileText:
+          "Tippe noch einmal auf das Plus und wähle „Personal einladen“.",
         advance: "click",
         advanceWhenVisible: INVITE_FORM,
         skipOnBack: true,
@@ -373,12 +395,22 @@ export const SETUP_TOURS: Readonly<
         title: "Menü öffnen",
         text: "Öffne das Menü neben dem Namen.",
         advance: "click",
+        // Steht am Handy gleich der Knopf „Einladen“ da, gibt es kein Menü.
+        skipWhenVisible: GUARDIAN_INVITE_BUTTON,
       },
       {
-        target: '[role="menu"]',
+        // Das offene Menü, oder am Handy der Knopf „Einladen“ ohne Menü.
+        target: '[role="menu"], [data-setup-tour="guardian-invite"]',
+        mobileTarget: GUARDIAN_MENU,
         pathPattern: CHILD_RECORD,
         title: "Einladen",
         text: "Wähle „Einladen“. Die Person bekommt eine E-Mail mit einem Link zur Eltern-App.",
+        mobileText:
+          "Öffne das Menü noch einmal und wähle „Einladen“. Die Person bekommt eine E-Mail mit einem Link zur Eltern-App.",
+        textWhenVisible: {
+          selector: GUARDIAN_INVITE_BUTTON,
+          text: "Wähle „Einladen“. Die Person bekommt eine E-Mail mit einem Link zur Eltern-App.",
+        },
         advance: "click",
       },
     ],

@@ -1,25 +1,15 @@
-import { apiErrorFromResponse, unavailableApiError } from "./api-error";
-import { fetchWithAuth } from "./fetch-with-auth";
+import { bffJson } from "./bff-fetch";
 import type { DashboardAnalytics } from "./dashboard-helpers";
+import { mapDashboardAnalyticsResponse } from "./dashboard-helpers";
 
 /**
- * Client-side fetcher for SWR — calls the Next.js BFF route
+ * Client-side fetcher for SWR. Reads the dashboard figures through the
+ * portal's catalog proxy (#7563) and maps the contract's shape once.
  */
 export async function fetchDashboardAnalyticsClient(): Promise<DashboardAnalytics> {
-  let response: Response;
-  try {
-    response = await fetchWithAuth("/api/dashboard/analytics");
-  } catch (error) {
-    throw unavailableApiError(error);
-  }
-
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Dashboard fetch failed: ${response.status}`,
-    );
-  }
-
-  const json = (await response.json()) as { data: DashboardAnalytics };
-  return json.data;
+  return mapDashboardAnalyticsResponse(
+    await bffJson("tenant", "GET /api/active/analytics/dashboard", {
+      errorMessage: "Dashboard fetch failed",
+    }),
+  );
 }

@@ -11,6 +11,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/enrollment/internal/adapters/postgres"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -45,7 +46,7 @@ func TestHolidayCriterionScopeWaitsForTheFirstOfficeAnswer(t *testing.T) {
 				}
 				pidReady <- pid
 				return store.WriteHolidayCriteria(ctx, w.organization, []enrollment.HolidayCriterionInput{
-					{ID: criterion, Name: "Berufstätig", Question: "Sind Sie berufstätig?", Scope: enrollment.HolidayCriterionChild, Active: true},
+					{ID: ident.ID(criterion), Name: "Berufstätig", Question: "Sind Sie berufstätig?", Scope: enrollment.HolidayCriterionChild, Active: true},
 				}, 0)
 			})
 		}()

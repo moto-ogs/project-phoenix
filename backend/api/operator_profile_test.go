@@ -10,12 +10,14 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/api/testutil/routetest"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	identityoperator "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/operator"
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 func TestGetProfile_Success(t *testing.T) {
@@ -50,7 +52,7 @@ func TestGetProfile_Success(t *testing.T) {
 	require.NoError(t, err)
 
 	data := response["data"].(map[string]interface{})
-	assert.Equal(t, float64(123), data["id"])
+	assert.Equal(t, int64(123), testpkg.JSONID(t, data["id"]))
 	assert.Equal(t, "operator@example.com", data["email"])
 	assert.Equal(t, "Test Operator", data["display_name"])
 }
@@ -233,14 +235,17 @@ func TestChangePassword_Success(t *testing.T) {
 		"new_password":     "newpass123",
 	}
 	jsonBody, _ := json.Marshal(body)
-	req := httptest.NewRequest(http.MethodPost, "/profile/password", bytes.NewReader(jsonBody))
+	// Under its production path, so the answer is held to its route (#7808).
+	req := httptest.NewRequest(http.MethodPost, "/operator/profile/password", bytes.NewReader(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	claims := routetest.Claims{ID: 123}
 	ctx := routetest.WithAuthenticatedContext(req.Context(), claims, nil)
 	req = req.WithContext(ctx)
 	rr := httptest.NewRecorder()
 
-	resource.ChangePassword(rr, req)
+	router := chi.NewRouter()
+	router.Post("/operator/profile/password", resource.ChangePassword)
+	router.ServeHTTP(rr, req)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 	assert.Contains(t, rr.Body.String(), "Password changed successfully")
@@ -351,11 +356,11 @@ func TestUpdateProfileRequest_Bind(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestChangePasswordRequest_Bind(t *testing.T) {
+func TestOperatorPasswordChangeRequest_Bind(t *testing.T) {
 	t.Parallel()
 
 	req := httptest.NewRequest(http.MethodPost, "/profile/password", nil)
-	changeReq := &identityoperator.ChangePasswordRequest{}
+	changeReq := &identityoperator.OperatorPasswordChangeRequest{}
 
 	err := changeReq.Bind(req)
 	assert.NoError(t, err)
@@ -384,14 +389,18 @@ func TestInitiateEmailChange_Success(t *testing.T) {
 		"current_password": "currentpass",
 	}
 	jsonBody, _ := json.Marshal(body)
-	req := httptest.NewRequest(http.MethodPost, "/profile/email-change", bytes.NewReader(jsonBody))
+	// Under its production path, as the operator's catalog proxy reaches it
+	// (#2352).
+	req := httptest.NewRequest(http.MethodPost, "/operator/profile/email-change", bytes.NewReader(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	claims := routetest.Claims{ID: 123}
 	ctx := routetest.WithAuthenticatedContext(req.Context(), claims, nil)
 	req = req.WithContext(ctx)
 	rr := httptest.NewRecorder()
+	router := chi.NewRouter()
+	router.Post("/operator/profile/email-change", resource.InitiateEmailChange)
 
-	resource.InitiateEmailChange(rr, req)
+	router.ServeHTTP(rr, req)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 	assert.Contains(t, rr.Body.String(), "Verification email will be sent shortly")
@@ -658,11 +667,14 @@ func TestConfirmEmailChange_Success(t *testing.T) {
 		"token": testUUID,
 	}
 	jsonBody, _ := json.Marshal(body)
-	req := httptest.NewRequest(http.MethodPost, "/auth/email-confirm", bytes.NewReader(jsonBody))
+	// Under its production path, so the answer is held to its route (#7808).
+	req := httptest.NewRequest(http.MethodPost, "/operator/auth/email-confirm", bytes.NewReader(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
-	resource.ConfirmEmailChange(rr, req)
+	router := chi.NewRouter()
+	router.Post("/operator/auth/email-confirm", resource.ConfirmEmailChange)
+	router.ServeHTTP(rr, req)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 	assert.Contains(t, rr.Body.String(), "Email changed successfully")

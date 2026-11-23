@@ -1,16 +1,17 @@
 "use client";
 
+import type * as studentsContract from "~/lib/contract/students.generated";
 import {
   fetchStudentDetail,
   type StudentDetailResponse,
 } from "~/lib/student-detail-resource";
 import { studentKeys } from "~/lib/swr/portal-keys";
 
-import { useCallback } from "react";
+import { useCallback, useLayoutEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { hasSessionAccess } from "~/lib/session-access";
-import { useSWRAuth } from "~/lib/swr";
-import type { Student, SupervisorContact } from "~/lib/student-helpers";
+import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
+import type { Student } from "~/lib/student-helpers";
 import { createLogger } from "~/lib/logger";
 
 const logger = createLogger({ component: "StudentData" });
@@ -40,7 +41,7 @@ interface StudentDataState {
   hasSickExcusedWriteAccess: boolean;
   attendanceLogEnabled: boolean;
   feedbackEnabled: boolean;
-  supervisors: SupervisorContact[];
+  supervisors: studentsContract.SupervisorContact[];
   myGroups: string[];
   myGroupRooms: string[];
   mySupervisedRooms: string[];
@@ -49,6 +50,8 @@ interface StudentDataState {
 interface UseStudentDataResult extends StudentDataState {
   /** Settles once the revalidation is through; it never rejects. */
   refreshData: () => Promise<void>;
+  /** Reads the child again and rejects when that read fails (ADR 0311). */
+  reloadOrThrow: () => Promise<unknown>;
 }
 
 /**
@@ -60,12 +63,7 @@ export function useStudentData(studentId: string): UseStudentDataResult {
 
   // SWR-based student data fetching with caching
   // Cache key "student-detail-{id}" will be invalidated by global SSE on student_checkin/checkout events
-  const {
-    data: studentData,
-    isLoading,
-    error: fetchError,
-    mutate,
-  } = useSWRAuth<StudentDetailResponse>(
+  const detail = useSWRAuth<StudentDetailResponse>(
     studentId && hasSessionAccess(session)
       ? studentKeys.detail(studentId)
       : null,
@@ -74,6 +72,15 @@ export function useStudentData(studentId: string): UseStudentDataResult {
       keepPreviousData: false, // Never carry another child's detail or grants.
       revalidateOnFocus: false, // Handled by global SSE
     },
+  );
+  const { data: studentData, isLoading, error: fetchError, mutate } = detail;
+  const detailRef = useRef(detail);
+  useLayoutEffect(() => {
+    detailRef.current = detail;
+  });
+  const reloadOrThrow = useCallback(
+    () => revalidateOrThrow(detailRef.current),
+    [],
   );
 
   // refreshData now uses SWR's mutate
@@ -113,5 +120,6 @@ export function useStudentData(studentId: string): UseStudentDataResult {
     myGroupRooms: studentData?.myGroupRooms ?? [],
     mySupervisedRooms: studentData?.mySupervisedRooms ?? [],
     refreshData,
+    reloadOrThrow,
   };
 }

@@ -40,10 +40,6 @@ describe("permissionsConfig", () => {
     });
   });
 
-  it("has correct API configuration", () => {
-    expect(permissionsConfig.api.basePath).toBe("/api/auth/permissions");
-  });
-
   it("has form sections configured", () => {
     expect(permissionsConfig.form.sections).toHaveLength(1);
     expect(permissionsConfig.form.sections[0]?.title).toBe(

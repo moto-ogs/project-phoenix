@@ -4,10 +4,11 @@ import {
   arr,
   bool,
   calendarDate,
+  fileAnswer,
   instant,
   int64String,
-  int64StringOrNumber,
   json,
+  multipart,
   noData,
   nullable,
   object,
@@ -24,9 +25,13 @@ import {
   EventSchema,
   ParentConferenceWindowSchema,
   SigningViewSchema,
+  TokenResponseSchema,
+  TrustedDeviceDTOSchema,
   type Event,
   type InvitationAnswer,
+  type MFAVerifyRequest,
   type ParentConferenceWindow,
+  type SwitchOffRequest,
 } from "./shared.generated";
 
 export const ENROLLMENT_PHASE_AUDIENCE_VALUES = ["existing_students", "linked_parents", "new_students", "open"] as const;
@@ -59,6 +64,21 @@ export interface ParentConferenceCancelledResponse {
 
 export const ParentConferenceCancelledResponseSchema: z.ZodType<ParentConferenceCancelledResponse, unknown> = object<ParentConferenceCancelledResponse>({
   status: str,
+});
+
+/** Go: parent.ChildRoomHistoryStopResponse */
+export interface ChildRoomHistoryStopResponse {
+  offered: boolean;
+  stopped: boolean;
+  stopped_at?: string;
+  can_change: boolean;
+}
+
+export const ChildRoomHistoryStopResponseSchema: z.ZodType<ChildRoomHistoryStopResponse, unknown> = object<ChildRoomHistoryStopResponse>({
+  offered: bool,
+  stopped: bool,
+  stopped_at: optional(instant),
+  can_change: bool,
 });
 
 /** Go: parent.ParentCalendarResponse */
@@ -205,6 +225,7 @@ export interface PendingOfferingChangeResponse {
   note?: string;
   diff: OfferingDiffResponse[] | null;
   submitted_by_self: boolean;
+  version: string;
 }
 
 export const PendingOfferingChangeResponseSchema: z.ZodType<PendingOfferingChangeResponse, unknown> = object<PendingOfferingChangeResponse>({
@@ -214,6 +235,7 @@ export const PendingOfferingChangeResponseSchema: z.ZodType<PendingOfferingChang
   note: optional(str),
   diff: nullable(arr(OfferingDiffResponseSchema)),
   submitted_by_self: bool,
+  version: str,
 });
 
 /** Go: parent.OfferingRequestedItemResponse */
@@ -383,6 +405,7 @@ export interface PendingCareRequestResponse {
   created_at: string;
   diff: ParentCareRequestDiffResponse[] | null;
   submitted_by_self: boolean;
+  version: string;
 }
 
 export const PendingCareRequestResponseSchema: z.ZodType<PendingCareRequestResponse, unknown> = object<PendingCareRequestResponse>({
@@ -390,6 +413,7 @@ export const PendingCareRequestResponseSchema: z.ZodType<PendingCareRequestRespo
   created_at: str,
   diff: nullable(arr(ParentCareRequestDiffResponseSchema)),
   submitted_by_self: bool,
+  version: str,
 });
 
 /** Go: parent.CareScheduleRequestCapabilitiesResponse */
@@ -492,6 +516,7 @@ export interface ParentExcusedRequestResponse {
   created_at: string;
   reviewed_at?: string;
   is_self: boolean;
+  version: string;
 }
 
 export const ParentExcusedRequestResponseSchema: z.ZodType<ParentExcusedRequestResponse, unknown> = object<ParentExcusedRequestResponse>({
@@ -505,6 +530,7 @@ export const ParentExcusedRequestResponseSchema: z.ZodType<ParentExcusedRequestR
   created_at: instant,
   reviewed_at: optional(instant),
   is_self: bool,
+  version: str,
 });
 
 /** Go: parent.ChildFeaturesResponse */
@@ -613,6 +639,7 @@ export interface childGuardianResponse {
   contact_locked_shared: boolean;
   contact_locked_social_worker: boolean;
   contact_locked_full_guardian: boolean;
+  version?: string;
 }
 
 export const childGuardianResponseSchema: z.ZodType<childGuardianResponse, unknown> = object<childGuardianResponse>({
@@ -640,6 +667,7 @@ export const childGuardianResponseSchema: z.ZodType<childGuardianResponse, unkno
   contact_locked_shared: bool,
   contact_locked_social_worker: bool,
   contact_locked_full_guardian: bool,
+  version: optional(str),
 });
 
 /** Go: parent.MasterDataChangeResponse */
@@ -652,6 +680,7 @@ export interface MasterDataChangeResponse {
   status: string;
   created_at: string;
   is_self: boolean;
+  version: string;
 }
 
 export const MasterDataChangeResponseSchema: z.ZodType<MasterDataChangeResponse, unknown> = object<MasterDataChangeResponse>({
@@ -663,6 +692,7 @@ export const MasterDataChangeResponseSchema: z.ZodType<MasterDataChangeResponse,
   status: str,
   created_at: str,
   is_self: bool,
+  version: str,
 });
 
 /** Go: parent.MasterDataResponse */
@@ -746,6 +776,7 @@ export interface MealParticipationResponse {
   schedule_changeable: boolean;
   sick_cancels_after_deadline: boolean;
   days: MealParticipationDayResponse[] | null;
+  version: string;
 }
 
 export const MealParticipationResponseSchema: z.ZodType<MealParticipationResponse, unknown> = object<MealParticipationResponse>({
@@ -756,6 +787,7 @@ export const MealParticipationResponseSchema: z.ZodType<MealParticipationRespons
   schedule_changeable: bool,
   sick_cancels_after_deadline: bool,
   days: nullable(arr(MealParticipationDayResponseSchema)),
+  version: str,
 });
 
 /** Go: parent.MealPlanEntryResponse */
@@ -815,6 +847,7 @@ export interface PickupChangeRequestResponse {
   pickup_person?: string;
   pickup_person_guardian_profile_id?: string;
   signed: boolean;
+  version: string;
 }
 
 export const PickupChangeRequestResponseSchema: z.ZodType<PickupChangeRequestResponse, unknown> = object<PickupChangeRequestResponse>({
@@ -833,6 +866,7 @@ export const PickupChangeRequestResponseSchema: z.ZodType<PickupChangeRequestRes
   pickup_person: optional(str),
   pickup_person_guardian_profile_id: optional(str),
   signed: bool,
+  version: str,
 });
 
 /** Go: parent.pickupPermissionRequestResponse */
@@ -913,6 +947,19 @@ export const requestSharingResponseSchema: z.ZodType<requestSharingResponse, unk
   recipients: nullable(arr(requestSharingRecipientResponseSchema)),
 });
 
+/** Go: parent.requestSharingStateResponse */
+export interface requestSharingStateResponse {
+  family_protected: boolean;
+  recipients: requestSharingRecipientResponse[] | null;
+  version: string;
+}
+
+export const requestSharingStateResponseSchema: z.ZodType<requestSharingStateResponse, unknown> = object<requestSharingStateResponse>({
+  family_protected: bool,
+  recipients: nullable(arr(requestSharingRecipientResponseSchema)),
+  version: str,
+});
+
 /** Go: parent.ParentRequestEventResponse */
 export interface ParentRequestEventResponse {
   event_type: string;
@@ -924,6 +971,27 @@ export const ParentRequestEventResponseSchema: z.ZodType<ParentRequestEventRespo
   event_type: str,
   created_at: str,
   version: str,
+});
+
+/** Go: parent.StatusDayResponse */
+export interface StatusDayResponse {
+  id: string;
+  student_id: string;
+  date: string;
+  status: string;
+  reported_at: string;
+  source: string;
+  note?: string;
+}
+
+export const StatusDayResponseSchema: z.ZodType<StatusDayResponse, unknown> = object<StatusDayResponse>({
+  id: str,
+  student_id: str,
+  date: str,
+  status: str,
+  reported_at: instant,
+  source: str,
+  note: optional(str),
 });
 
 /** Go: parent.TodayStatusResponse */
@@ -1098,8 +1166,8 @@ export interface ContractNoticeOptions {
 }
 
 export const ContractNoticeOptionsSchema: z.ZodType<ContractNoticeOptions, unknown> = object<ContractNoticeOptions>({
-  contract_id: int64StringOrNumber,
-  organization_id: int64StringOrNumber,
+  contract_id: int64String,
+  organization_id: int64String,
   traeger_name: str,
   status: str,
   child_name: str,
@@ -1147,6 +1215,7 @@ export const SEPAMandateProofSchema: z.ZodType<SEPAMandateProof, unknown> = obje
 export interface SEPAMandateSummary {
   collection_eligible: boolean;
   id: string;
+  version: string;
   reference: string;
   signed_on: string | null;
   kind: string;
@@ -1162,6 +1231,7 @@ export interface SEPAMandateSummary {
 export const SEPAMandateSummarySchema: z.ZodType<SEPAMandateSummary, unknown> = object<SEPAMandateSummary>({
   collection_eligible: bool,
   id: int64String,
+  version: str,
   reference: str,
   signed_on: nullable(calendarDate),
   kind: str,
@@ -1284,7 +1354,7 @@ export interface HolidayRegistrationEntryResponse {
 }
 
 export const HolidayRegistrationEntryResponseSchema: z.ZodType<HolidayRegistrationEntryResponse, unknown> = object<HolidayRegistrationEntryResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   traeger_name: str,
   period_name: str,
   first_day: nullable(calendarDate),
@@ -1426,6 +1496,25 @@ export const LeadershipOptionResponseSchema: z.ZodType<LeadershipOptionResponse,
   unnamed_count: safeInt,
 });
 
+/** Go: parent.messageAttachmentResponse */
+export interface messageAttachmentResponse {
+  id: string;
+  filename: string;
+  size_bytes: number;
+  content_type: string;
+  width?: number;
+  height?: number;
+}
+
+export const messageAttachmentResponseSchema: z.ZodType<messageAttachmentResponse, unknown> = object<messageAttachmentResponse>({
+  id: int64String,
+  filename: str,
+  size_bytes: safeInt,
+  content_type: str,
+  width: optional(safeInt),
+  height: optional(safeInt),
+});
+
 /** Go: parent.ParentMessageResponse */
 export interface ParentMessageResponse {
   client_message_id?: string;
@@ -1446,7 +1535,7 @@ export interface ParentMessageResponse {
   read_by_staff?: boolean;
   group_thread_id?: string;
   group_thread_title?: string;
-  attachments?: unknown | null;
+  attachments?: messageAttachmentResponse[];
 }
 
 export const ParentMessageResponseSchema: z.ZodType<ParentMessageResponse, unknown> = object<ParentMessageResponse>({
@@ -1468,7 +1557,7 @@ export const ParentMessageResponseSchema: z.ZodType<ParentMessageResponse, unkno
   read_by_staff: optional(bool),
   group_thread_id: optional(str),
   group_thread_title: optional(str),
-  attachments: optional(nullable(json)),
+  attachments: optional(arr(messageAttachmentResponseSchema)),
 });
 
 /** Go: parent.ThreadViewResponse */
@@ -1543,14 +1632,14 @@ export interface GroupMessageResponse {
   id: string;
   body: string;
   created_at: string;
-  attachments?: unknown | null;
+  attachments?: messageAttachmentResponse[];
 }
 
 export const GroupMessageResponseSchema: z.ZodType<GroupMessageResponse, unknown> = object<GroupMessageResponse>({
   id: str,
   body: str,
   created_at: instant,
-  attachments: optional(nullable(json)),
+  attachments: optional(arr(messageAttachmentResponseSchema)),
 });
 
 /** Go: parent.GroupThreadViewResponse */
@@ -1591,6 +1680,19 @@ export interface UnreadCountResponse {
 
 export const UnreadCountResponseSchema: z.ZodType<UnreadCountResponse, unknown> = object<UnreadCountResponse>({
   unread_count: safeInt,
+});
+
+/** Go: parentauth.ParentMFAStatusResponse */
+export interface ParentMFAStatusResponse {
+  enabled: boolean;
+  available: boolean;
+  masked_email: string;
+}
+
+export const ParentMFAStatusResponseSchema: z.ZodType<ParentMFAStatusResponse, unknown> = object<ParentMFAStatusResponse>({
+  enabled: bool,
+  available: bool,
+  masked_email: str,
 });
 
 /** Go: parent.AnnouncementOption */
@@ -2028,7 +2130,7 @@ export interface notificationFeedEntryResponse {
 }
 
 export const notificationFeedEntryResponseSchema: z.ZodType<notificationFeedEntryResponse, unknown> = object<notificationFeedEntryResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   type: str,
   title: str,
   body: str,
@@ -2131,9 +2233,23 @@ export interface OfferingChangeRequestBody {
   recipient_guardian_profile_ids?: string[] | null;
 }
 
+/** Go: carerequests.WeekdayChange */
+export interface WeekdayChange {
+  weekday?: number;
+  scheduled?: boolean | null;
+  mode?: string;
+  arrival?: string;
+  pickup?: string;
+}
+
+/** Go: carerequests.WeeklyChange */
+export interface WeeklyChange {
+  weekdays?: WeekdayChange[] | null;
+}
+
 /** Go: parent.CareScheduleRequestBody */
 export interface CareScheduleRequestBody {
-  payload?: Record<string, unknown | null> | null;
+  payload?: WeeklyChange | null;
   signature?: declarationSignatureRequest | null;
 }
 
@@ -2236,6 +2352,25 @@ export const inviteRelatedAccountResponseSchema: z.ZodType<inviteRelatedAccountR
   existing_role: optional(str),
 });
 
+/** Go: parent.SubmitSickNoteRequest */
+export interface SubmitSickNoteRequest {
+  dates?: string[] | null;
+  reason?: string;
+  status?: string;
+  recipient_guardian_profile_ids?: string[] | null;
+}
+
+/** Go: parent.SickNoteEnvelopeResponse */
+export interface SickNoteEnvelopeResponse {
+  status_days: StatusDayResponse[] | null;
+  pending_request: ParentExcusedRequestResponse | null;
+}
+
+export const SickNoteEnvelopeResponseSchema: z.ZodType<SickNoteEnvelopeResponse, unknown> = object<SickNoteEnvelopeResponse>({
+  status_days: nullable(arr(StatusDayResponseSchema)),
+  pending_request: nullable(ParentExcusedRequestResponseSchema),
+});
+
 /** Go: care.ContractNoticeInput */
 export interface ContractNoticeInput {
   expected_ends_on?: string | null;
@@ -2275,6 +2410,11 @@ export const SEPAMandateTextSchema: z.ZodType<SEPAMandateText, unknown> = object
   account_token: str,
 });
 
+/** Go: parent.ParentSEPAMandateRevokeRequest */
+export interface ParentSEPAMandateRevokeRequest {
+  expected_version?: string;
+}
+
 /** Go: parent.ContractSignRequest */
 export interface ContractSignRequest {
   method?: string;
@@ -2292,6 +2432,17 @@ export interface PostMessageRequest {
   group_thread_id?: string;
   audience?: string;
 }
+
+/** Go: parentauth.ParentMFAChallengeResponse */
+export interface ParentMFAChallengeResponse {
+  challenge_token: string;
+  masked_email: string;
+}
+
+export const ParentMFAChallengeResponseSchema: z.ZodType<ParentMFAChallengeResponse, unknown> = object<ParentMFAChallengeResponse>({
+  challenge_token: str,
+  masked_email: str,
+});
 
 /** Go: parent.stampRequest */
 export interface stampRequest {
@@ -2419,7 +2570,7 @@ export interface EditOfferingChangeRequestBody {
 
 /** Go: parent.EditCareScheduleRequestBody */
 export interface EditCareScheduleRequestBody {
-  payload?: Record<string, unknown | null> | null;
+  payload?: WeeklyChange | null;
   expected_version?: string;
   signature?: declarationSignatureRequest | null;
 }
@@ -2441,6 +2592,7 @@ export interface updateGuardianContactRequest {
   address_city?: string | null;
   address_postal_code?: string | null;
   phones?: guardianPhoneRequest[] | null;
+  expected_version?: string;
 }
 
 /** Go: parent.EditMasterDataRequestBody */
@@ -2452,15 +2604,18 @@ export interface EditMasterDataRequestBody {
 /** Go: parent.ReplaceMealParticipationRequest */
 export interface ReplaceMealParticipationRequest {
   weekdays?: number[] | null;
+  expected_version?: string;
 }
 
 /** Go: parent.MealPlanSavedResponse */
 export interface MealPlanSavedResponse {
   effective_from: string;
+  version: string;
 }
 
 export const MealPlanSavedResponseSchema: z.ZodType<MealPlanSavedResponse, unknown> = object<MealPlanSavedResponse>({
   effective_from: str,
+  version: str,
 });
 
 /** Go: parent.SetMealParticipationDayRequest */
@@ -2498,6 +2653,7 @@ export interface EditPickupChangeRequestBody {
 /** Go: parent.requestSharingBody */
 export interface requestSharingBody {
   recipient_guardian_profile_ids?: string[] | null;
+  expected_version?: string;
 }
 
 /** Go: parent.familyChildrenRequest */
@@ -2515,71 +2671,14 @@ export interface UpdateParentProfileRequest {
   portal_locale?: string;
 }
 
-/** Query of DELETE /parent/me/children/{studentId}/care-exception */
-export interface DeleteParentMeChildrenStudentIdCareExceptionQuery {
-  date?: string;
-}
-
-/** Query of DELETE /parent/me/push/subscriptions */
-export interface DeleteParentMePushSubscriptionsQuery {
-  endpoint?: string;
-}
-
-/** Query of GET /parent/me/calendar */
-export interface GetParentMeCalendarQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /parent/me/calendar/appointments/{appointmentId}/overview */
-export interface GetParentMeCalendarAppointmentsAppointmentIdOverviewQuery {
-  occurrence_date?: string;
-}
-
-/** Query of GET /parent/me/children/{studentId}/care-exception */
-export interface GetParentMeChildrenStudentIdCareExceptionQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /parent/me/children/{studentId}/care-offerings/catalog */
-export interface GetParentMeChildrenStudentIdCareOfferingsCatalogQuery {
-  effective_from?: string;
-}
-
-/** Query of GET /parent/me/children/{studentId}/meal-participation */
-export interface GetParentMeChildrenStudentIdMealParticipationQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /parent/me/children/{studentId}/meal-plan */
-export interface GetParentMeChildrenStudentIdMealPlanQuery {
-  week_start?: string;
-}
-
-/** Query of GET /parent/me/messages/children/{studentId} */
-export interface GetParentMeMessagesChildrenStudentIdQuery {
-  audience?: string;
-}
-
-/** Query of GET /parent/me/news/{announcementId}/declaration/proof */
-export interface GetParentMeNewsAnnouncementIdDeclarationProofQuery {
-  student_id?: string;
-}
-
-/** Query of GET /parent/me/notifications/feed/ */
-export interface GetParentMeNotificationsFeedQuery {
-  cursor?: string;
-  limit?: number;
-}
-
 export const routes = {
   "DELETE /parent/me/children/{studentId}/care-exception": {
     method: "DELETE",
     pattern: "/parent/me/children/{studentId}/care-exception",
     portals: ["parent"],
-    query: ["date"],
+    query: {
+      "date": { kind: "date" },
+    },
     response: noData,
   },
   "DELETE /parent/me/children/{studentId}/consents/photo": {
@@ -2606,6 +2705,18 @@ export const routes = {
     portals: ["parent"],
     response: noData,
   },
+  "DELETE /parent/me/children/{studentId}/room-history-stop": {
+    method: "DELETE",
+    pattern: "/parent/me/children/{studentId}/room-history-stop",
+    portals: ["parent"],
+    response: success(ChildRoomHistoryStopResponseSchema),
+  },
+  "DELETE /parent/me/mfa/trusted-devices/{deviceId}": {
+    method: "DELETE",
+    pattern: "/parent/me/mfa/trusted-devices/{deviceId}",
+    portals: ["parent"],
+    response: noData,
+  },
   "DELETE /parent/me/notification-preferences/": {
     method: "DELETE",
     pattern: "/parent/me/notification-preferences/",
@@ -2616,21 +2727,34 @@ export const routes = {
     method: "DELETE",
     pattern: "/parent/me/push/subscriptions",
     portals: ["parent"],
-    query: ["endpoint"],
+    query: {
+      "endpoint": { kind: "string" },
+    },
     response: noData,
   },
   "GET /parent/me/calendar": {
     method: "GET",
     pattern: "/parent/me/calendar",
     portals: ["parent"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(ParentCalendarResponseSchema),
+  },
+  "GET /parent/me/calendar/appointments/{appointmentId}/ics": {
+    method: "GET",
+    pattern: "/parent/me/calendar/appointments/{appointmentId}/ics",
+    portals: ["parent"],
+    response: fileAnswer,
   },
   "GET /parent/me/calendar/appointments/{appointmentId}/overview": {
     method: "GET",
     pattern: "/parent/me/calendar/appointments/{appointmentId}/overview",
     portals: ["parent"],
-    query: ["occurrence_date"],
+    query: {
+      "occurrence_date": { kind: "date" },
+    },
     response: success(AppointmentOverviewSchema),
   },
   "GET /parent/me/calendar/feed": {
@@ -2649,7 +2773,10 @@ export const routes = {
     method: "GET",
     pattern: "/parent/me/children/{studentId}/care-exception",
     portals: ["parent"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(z.array(CareExceptionResponseSchema)),
   },
   "GET /parent/me/children/{studentId}/care-offerings": {
@@ -2662,7 +2789,9 @@ export const routes = {
     method: "GET",
     pattern: "/parent/me/children/{studentId}/care-offerings/catalog",
     portals: ["parent"],
-    query: ["effective_from"],
+    query: {
+      "effective_from": { kind: "date" },
+    },
     response: success(OfferingCatalogResponseSchema),
   },
   "GET /parent/me/children/{studentId}/care-schedule": {
@@ -2717,14 +2846,19 @@ export const routes = {
     method: "GET",
     pattern: "/parent/me/children/{studentId}/meal-participation",
     portals: ["parent"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(MealParticipationResponseSchema),
   },
   "GET /parent/me/children/{studentId}/meal-plan": {
     method: "GET",
     pattern: "/parent/me/children/{studentId}/meal-plan",
     portals: ["parent"],
-    query: ["week_start"],
+    query: {
+      "week_start": { kind: "date" },
+    },
     response: success(z.array(MealPlanEntryResponseSchema)),
   },
   "GET /parent/me/children/{studentId}/parent-conferences": {
@@ -2745,6 +2879,12 @@ export const routes = {
     portals: ["parent"],
     response: success(z.array(pickupPermissionRequestResponseSchema)),
   },
+  "GET /parent/me/children/{studentId}/pickup-requests/{requestId}/proof/pdf": {
+    method: "GET",
+    pattern: "/parent/me/children/{studentId}/pickup-requests/{requestId}/proof/pdf",
+    portals: ["parent"],
+    response: fileAnswer,
+  },
   "GET /parent/me/children/{studentId}/related-accounts": {
     method: "GET",
     pattern: "/parent/me/children/{studentId}/related-accounts",
@@ -2761,13 +2901,29 @@ export const routes = {
     method: "GET",
     pattern: "/parent/me/children/{studentId}/request-sharing/{requestType}/{requestId}",
     portals: ["parent"],
-    response: success(requestSharingResponseSchema),
+    response: success(requestSharingStateResponseSchema),
   },
   "GET /parent/me/children/{studentId}/requests/{requestType}/{requestId}/events": {
     method: "GET",
     pattern: "/parent/me/children/{studentId}/requests/{requestType}/{requestId}/events",
     portals: ["parent"],
     response: success(z.array(ParentRequestEventResponseSchema)),
+  },
+  "GET /parent/me/children/{studentId}/room-history-stop": {
+    method: "GET",
+    pattern: "/parent/me/children/{studentId}/room-history-stop",
+    portals: ["parent"],
+    response: success(ChildRoomHistoryStopResponseSchema),
+  },
+  "GET /parent/me/children/{studentId}/sick-note": {
+    method: "GET",
+    pattern: "/parent/me/children/{studentId}/sick-note",
+    portals: ["parent"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
+    response: success(z.array(StatusDayResponseSchema)),
   },
   "GET /parent/me/children/{studentId}/today": {
     method: "GET",
@@ -2805,6 +2961,12 @@ export const routes = {
     portals: ["parent"],
     response: success(ContractNoticeOptionsSchema),
   },
+  "GET /parent/me/documents/{organizationId}/contracts/{contractId}/pdf": {
+    method: "GET",
+    pattern: "/parent/me/documents/{organizationId}/contracts/{contractId}/pdf",
+    portals: ["parent"],
+    response: fileAnswer,
+  },
   "GET /parent/me/documents/{organizationId}/contracts/{contractId}/sepa-mandate": {
     method: "GET",
     pattern: "/parent/me/documents/{organizationId}/contracts/{contractId}/sepa-mandate",
@@ -2816,6 +2978,18 @@ export const routes = {
     pattern: "/parent/me/documents/{organizationId}/contracts/{contractId}/signing",
     portals: ["parent"],
     response: success(SigningViewSchema),
+  },
+  "GET /parent/me/documents/{organizationId}/shared/{documentId}/file": {
+    method: "GET",
+    pattern: "/parent/me/documents/{organizationId}/shared/{documentId}/file",
+    portals: ["parent"],
+    response: fileAnswer,
+  },
+  "GET /parent/me/documents/{organizationId}/{documentId}/pdf": {
+    method: "GET",
+    pattern: "/parent/me/documents/{organizationId}/{documentId}/pdf",
+    portals: ["parent"],
+    response: fileAnswer,
   },
   "GET /parent/me/enrollable-schools": {
     method: "GET",
@@ -2845,8 +3019,19 @@ export const routes = {
     method: "GET",
     pattern: "/parent/me/messages/children/{studentId}",
     portals: ["parent"],
-    query: ["audience"],
+    query: {
+      "audience": { kind: "string" },
+    },
     response: success(ThreadViewResponseSchema),
+  },
+  "GET /parent/me/messages/children/{studentId}/attachments/{attachmentId}/download": {
+    method: "GET",
+    pattern: "/parent/me/messages/children/{studentId}/attachments/{attachmentId}/download",
+    portals: ["parent"],
+    query: {
+      "inline": { kind: "string" },
+    },
+    response: fileAnswer,
   },
   "GET /parent/me/messages/children/{studentId}/threads": {
     method: "GET",
@@ -2872,6 +3057,18 @@ export const routes = {
     portals: ["parent"],
     response: success(UnreadCountResponseSchema),
   },
+  "GET /parent/me/mfa": {
+    method: "GET",
+    pattern: "/parent/me/mfa",
+    portals: ["parent"],
+    response: success(ParentMFAStatusResponseSchema),
+  },
+  "GET /parent/me/mfa/trusted-devices": {
+    method: "GET",
+    pattern: "/parent/me/mfa/trusted-devices",
+    portals: ["parent"],
+    response: success(z.array(TrustedDeviceDTOSchema)),
+  },
   "GET /parent/me/news": {
     method: "GET",
     pattern: "/parent/me/news",
@@ -2888,8 +3085,19 @@ export const routes = {
     method: "GET",
     pattern: "/parent/me/news/{announcementId}/declaration/proof",
     portals: ["parent"],
-    query: ["student_id"],
+    query: {
+      "student_id": { kind: "id" },
+    },
     response: success(declarationProofResponseSchema),
+  },
+  "GET /parent/me/news/{announcementId}/declaration/proof/pdf": {
+    method: "GET",
+    pattern: "/parent/me/news/{announcementId}/declaration/proof/pdf",
+    portals: ["parent"],
+    query: {
+      "student_id": { kind: "id" },
+    },
+    response: fileAnswer,
   },
   "GET /parent/me/news/{announcementId}/survey": {
     method: "GET",
@@ -2907,7 +3115,10 @@ export const routes = {
     method: "GET",
     pattern: "/parent/me/notifications/feed/",
     portals: ["parent"],
-    query: ["cursor", "limit"],
+    query: {
+      "cursor": { kind: "string" },
+      "limit": { kind: "int" },
+    },
     response: success(notificationFeedPageResponseSchema),
   },
   "GET /parent/me/notifications/feed/unread-count": {
@@ -3017,6 +3228,13 @@ export const routes = {
     request: requestBody<inviteRelatedAccountRequest>(),
     response: success(inviteRelatedAccountResponseSchema),
   },
+  "POST /parent/me/children/{studentId}/sick-note": {
+    method: "POST",
+    pattern: "/parent/me/children/{studentId}/sick-note",
+    portals: ["parent"],
+    request: requestBody<SubmitSickNoteRequest>(),
+    response: success(SickNoteEnvelopeResponseSchema),
+  },
   "POST /parent/me/documents/{organizationId}/contracts/{contractId}/notice": {
     method: "POST",
     pattern: "/parent/me/documents/{organizationId}/contracts/{contractId}/notice",
@@ -3035,6 +3253,7 @@ export const routes = {
     method: "POST",
     pattern: "/parent/me/documents/{organizationId}/contracts/{contractId}/sepa-mandate/preview",
     portals: ["parent"],
+    noCommit: "renders the mandate text and grants no mandate",
     request: requestBody<SEPAMandateInput>(),
     response: success(SEPAMandateTextSchema),
   },
@@ -3042,6 +3261,7 @@ export const routes = {
     method: "POST",
     pattern: "/parent/me/documents/{organizationId}/contracts/{contractId}/sepa-mandate/revoke",
     portals: ["parent"],
+    request: requestBody<ParentSEPAMandateRevokeRequest>(),
     response: success(SEPAMandateViewSchema),
   },
   "POST /parent/me/documents/{organizationId}/contracts/{contractId}/sign": {
@@ -3057,6 +3277,39 @@ export const routes = {
     portals: ["parent"],
     request: requestBody<PostMessageRequest>(),
     response: success(ThreadViewResponseSchema),
+  },
+  "POST /parent/me/messages/children/{studentId}/attachments": {
+    method: "POST",
+    pattern: "/parent/me/messages/children/{studentId}/attachments",
+    portals: ["parent"],
+    maxBodyBytes: 10489856,
+    tooLargeCode: "files.file_too_large",
+    request: multipart,
+    response: success(messageAttachmentResponseSchema),
+  },
+  "POST /parent/me/mfa/confirm": {
+    method: "POST",
+    pattern: "/parent/me/mfa/confirm",
+    portals: ["parent"],
+    routeFile: "the answer carries or ends the tokens the portal's route file turns into its session cookie",
+    plain: true,
+    request: requestBody<MFAVerifyRequest>(),
+    response: TokenResponseSchema,
+  },
+  "POST /parent/me/mfa/disable": {
+    method: "POST",
+    pattern: "/parent/me/mfa/disable",
+    portals: ["parent"],
+    noRetryAfterRenewal: "a renewed session would send the current password twice",
+    request: requestBody<SwitchOffRequest>(),
+    response: noData,
+  },
+  "POST /parent/me/mfa/start": {
+    method: "POST",
+    pattern: "/parent/me/mfa/start",
+    portals: ["parent"],
+    noRetryAfterRenewal: "a renewed session would mail the code twice",
+    response: success(ParentMFAChallengeResponseSchema),
   },
   "POST /parent/me/news/{announcementId}/acknowledge": {
     method: "POST",
@@ -3207,7 +3460,13 @@ export const routes = {
     pattern: "/parent/me/children/{studentId}/request-sharing/{requestType}/{requestId}",
     portals: ["parent"],
     request: requestBody<requestSharingBody>(),
-    response: success(requestSharingResponseSchema),
+    response: success(requestSharingStateResponseSchema),
+  },
+  "PUT /parent/me/children/{studentId}/room-history-stop": {
+    method: "PUT",
+    pattern: "/parent/me/children/{studentId}/room-history-stop",
+    portals: ["parent"],
+    response: success(ChildRoomHistoryStopResponseSchema),
   },
   "PUT /parent/me/documents/{organizationId}/contracts/{contractId}/family-children": {
     method: "PUT",

@@ -9,15 +9,10 @@ var (
 	AddCategoryToResponseForTest     = addCategoryToResponse
 	AddSupervisorsToResponseForTest  = addSupervisorsToResponse
 	AddSchedulesToResponseForTest    = addSchedulesToResponse
-	UpdateGroupFieldsForTest         = updateGroupFields
+	GroupEditForTest                 = (*ActivityUpdateRequest).groupEdit
 	NewCategoryResponseForTest       = newCategoryResponse
 	NewScheduleResponseForTest       = newScheduleResponse
 	NewSupervisorResponseForTest     = newSupervisorResponse
-	FormatEndTimeForTest             = formatEndTime
 	SystemActivityForbiddenForTest   = systemActivityForbidden
 	TimetableTemplateConflictForTest = timetableTemplateConflict
-	TimeframeToSlotForTest           = timeframeToSlot
 )
-
-// RouteScheduleByIDForTest is the read-only schedule route of an activity.
-const RouteScheduleByIDForTest = routeScheduleByID

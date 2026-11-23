@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -113,9 +114,9 @@ func TestProvisioningListOrganizationPersons(t *testing.T) {
 
 		require.NoError(t, err)
 		require.Len(t, persons, 2)
-		assert.Equal(t, int64(1), persons[0].ID)
+		assert.Equal(t, ident.ID(int64(1)), persons[0].ID)
 		assert.Equal(t, "Burbach", persons[0].SchoolName)
-		assert.Equal(t, int64(2), persons[1].ID)
+		assert.Equal(t, ident.ID(int64(2)), persons[1].ID)
 		assert.Equal(t, "Walbach", persons[1].SchoolName)
 		assert.True(t, persons[1].HasRFIDCard)
 		assert.True(t, persons[1].IsStudent)

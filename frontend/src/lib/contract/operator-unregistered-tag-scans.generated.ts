@@ -2,7 +2,7 @@
 import { z } from "zod";
 import {
   instant,
-  int64StringOrNumber,
+  int64String,
   object,
   optional,
   requestBody,
@@ -31,19 +31,19 @@ export interface scanResponse {
 }
 
 export const scanResponseSchema: z.ZodType<scanResponse, unknown> = object<scanResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   created_at: instant,
   updated_at: instant,
-  tenant_id: int64StringOrNumber,
+  tenant_id: int64String,
   tag_uid: str,
-  device_id: optional(int64StringOrNumber),
+  device_id: optional(int64String),
   scanned_at: instant,
   resolved_at: optional(instant),
-  resolved_by_operator_id: optional(int64StringOrNumber),
+  resolved_by_operator_id: optional(int64String),
   resolution_note: optional(str),
-  school_id: optional(int64StringOrNumber),
+  school_id: optional(int64String),
   school_name: optional(str),
-  organization_id: optional(int64StringOrNumber),
+  organization_id: optional(int64String),
   organization_name: optional(str),
   device_identifier: optional(str),
   device_name: optional(str),
@@ -54,19 +54,16 @@ export interface resolveUnregisteredTagScanRequest {
   note?: string;
 }
 
-/** Query of GET /operator/unregistered-tag-scans/ */
-export interface GetOperatorUnregisteredTagScansQuery {
-  organization_id?: string;
-  resolved?: string;
-  school_id?: string;
-}
-
 export const routes = {
   "GET /operator/unregistered-tag-scans/": {
     method: "GET",
     pattern: "/operator/unregistered-tag-scans/",
     portals: ["platform"],
-    query: ["organization_id", "resolved", "school_id"],
+    query: {
+      "organization_id": { kind: "id" },
+      "resolved": { kind: "string" },
+      "school_id": { kind: "id" },
+    },
     response: success(z.array(scanResponseSchema)),
   },
   "POST /operator/unregistered-tag-scans/{id}/resolve": {

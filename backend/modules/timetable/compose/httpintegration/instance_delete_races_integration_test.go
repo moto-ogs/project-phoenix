@@ -120,6 +120,7 @@ func TestDeleteCancelled_RefusesBlockMovedAfterItsRead(t *testing.T) {
 	from, to := calendar.Date(ai.Date), calendar.Date(ai.Date).AddDays(1)
 
 	_, err := s.svc.UpdatePlanned(s.ctx, ai.ID, timetable.UpdateInstanceInput{
+		ExpectedVersion: plannerVersion(t, s.ctx, s.timetableData.Data, ai.ID),
 		Date:            to,
 		StartTime:       time.Date(2000, 1, 1, 14, 0, 0, 0, time.UTC),
 		EndTime:         time.Date(2000, 1, 1, 15, 0, 0, 0, time.UTC),
@@ -155,7 +156,11 @@ func TestDeleteWaitsForRunningMaterialization(t *testing.T) {
 			return s.instance.DeleteCancelled(ctx, id)
 		}},
 		{"bulk cancellation", func(ctx context.Context, s *scenarioSetup, _ int64, date calendar.Date) error {
-			_, err := s.instance.BulkCancelPlanned(ctx, date, date, timetable.BulkCancelOptions{}, nil)
+			preview, err := s.instance.BulkCancelPlanned(ctx, date, date, timetable.BulkCancelOptions{DryRun: true}, nil)
+			if err != nil {
+				return err
+			}
+			_, err = s.instance.BulkCancelPlanned(ctx, date, date, timetable.BulkCancelOptions{ExpectedFingerprint: preview.Fingerprint}, nil)
 			return err
 		}},
 	}

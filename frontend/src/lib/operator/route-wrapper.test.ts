@@ -68,12 +68,11 @@ global.fetch = (async (...args: Parameters<typeof fetch>) => {
   });
 }) as typeof fetch;
 
-import { createPublicJsonProxy } from "~/lib/backend-proxy-route.server";
+import { POST as validateInvite } from "~/app/api/operator/auth/invitations/validate/route";
 import {
   operatorApiGet,
   operatorApiPost,
   createOperatorJsonProxy,
-  operatorJsonErrors,
   proxyDelete,
   proxyGet,
   proxyPost,
@@ -281,8 +280,7 @@ describe("operator proxy factories", () => {
     );
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({
-      success: true,
-      message: "Success",
+      status: "success",
       data: { id: 42, name: "Operator Item" },
     });
   });
@@ -340,6 +338,28 @@ describe("operator proxy factories", () => {
     expect(response.status).toBe(204);
     await expect(response.text()).resolves.toBe("");
   });
+
+  it("sends the passkey list on the bare path to the contract form without a slash (#2352)", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ status: "success", data: [] }),
+    });
+    const { GET } =
+      await import("~/app/api/operator/auth/passkeys/[[...path]]/route");
+
+    const response = await GET(
+      createProxyRequest("/api/operator/auth/passkeys"),
+      { params: Promise.resolve({}) },
+    );
+
+    expect(response.status).toBe(200);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockFetch).toHaveBeenCalledWith(
+      "http://localhost:8080/operator/auth/passkeys",
+      expect.objectContaining({ method: "GET" }),
+    );
+  });
 });
 
 describe("operator JSON proxies", () => {
@@ -389,11 +409,7 @@ describe("operator JSON proxies", () => {
   });
 
   it("answers an unreadable body with 400 general.input before any call", async () => {
-    const response = await createPublicJsonProxy({
-      method: "POST",
-      path: "/operator/auth/email-confirm",
-      ...operatorJsonErrors,
-    })(post("not json{"));
+    const response = await validateInvite(post("not json{"));
 
     expect(response.status).toBe(400);
     expect(await response.json()).toMatchObject({ code: "general.input" });
@@ -403,11 +419,12 @@ describe("operator JSON proxies", () => {
   it("answers an unreachable backend with 503 general.unavailable", async () => {
     mockFetch.mockRejectedValue(new TypeError("fetch failed"));
 
-    const response = await createPublicJsonProxy({
-      method: "POST",
-      path: "/operator/auth/email-confirm",
-      ...operatorJsonErrors,
-    })(post("{}"));
+    const request = post("{}");
+    request.headers.set(
+      "x-operator-invitation-flow",
+      "11111111-1111-4111-8111-111111111111",
+    );
+    const response = await validateInvite(request);
 
     expect(response.status).toBe(503);
     expect(await response.json()).toMatchObject({

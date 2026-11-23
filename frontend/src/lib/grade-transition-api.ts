@@ -1,118 +1,23 @@
+import type * as adminContract from "~/lib/contract/admin.generated";
+import { knownEnum } from "~/lib/contract/known-enum";
 import type { ErrorCode } from "~/lib/error-codes.generated";
-import { ApiError, apiErrorFromBody } from "./api-error";
+import { ApiError } from "./api-error";
+import { bffJson } from "./bff-fetch";
+import { compareIds } from "./compare-ids";
 // grade-transition-api.ts
 // Client for the Jahrgangsstufenwechsel (grade transition) admin flow (#405).
-// Talks to the Next.js proxy routes under /api/admin/grade-transitions which
-// forward to the Go backend. Backend snake_case is mapped to camelCase here.
+// Calls the registered routes under /api/admin/grade-transitions through the
+// tenant BFF. Backend snake_case is mapped to camelCase here. A failure is
+// an ApiError with the backend's stable `code` (a NOT_DRAFT_CODE or
+// NOT_APPLIED_CODE conflict), so the caller can tell a recoverable conflict
+// from a real failure.
 
-const BASE = "/api/admin/grade-transitions";
-
-// ---------------------------------------------------------------------------
-// Backend (snake_case) types — mirror backend/api/admin/grade_transitions.go
-// ---------------------------------------------------------------------------
-
-/** A backend int64 identifier on the wire.
- *
- * The grade-transition endpoints serialize ids as JSON STRINGS (`json:"id,string"`)
- * precisely so they survive the trip: a JSON number is an IEEE-754 double here,
- * so an id beyond 2^53 would be rounded during parsing — before any mapper could
- * run — and two distinct rows could collapse onto one key or an apply/revert
- * could address a transition the admin never selected. `number` is still
- * accepted so a response from an older server (or a hand-written test fixture)
- * still maps; only the string form is exact, which is why nothing here ever
- * converts an id back to a number (#405 review). */
-type BackendID = string | number;
-
-/** Normalizes a wire id to the string form the app uses everywhere. A string
- * passes through verbatim — never via Number() — so no precision is lost. */
-function toIdString(id: BackendID): string {
-  return typeof id === "string" ? id : id.toString();
-}
+// Wire shapes: lib/contract/admin.generated.ts. The decoder hands every id
+// over as its exact decimal string, so ids beyond 2^53 survive (#405 review).
 
 export type TransitionStatus = "draft" | "applied" | "reverted";
 type MappingAction = "promote" | "graduate";
 type HistoryAction = "promoted" | "graduated" | "unchanged";
-
-interface BackendTransitionMapping {
-  id: BackendID;
-  from_class: string;
-  to_class?: string | null;
-  action: MappingAction;
-}
-
-export interface BackendGradeTransition {
-  id: BackendID;
-  academic_year: string;
-  status: TransitionStatus;
-  applied_at?: string | null;
-  applied_by?: BackendID | null;
-  reverted_at?: string | null;
-  reverted_by?: BackendID | null;
-  created_at: string;
-  created_by: BackendID;
-  notes?: string | null;
-  mappings?: BackendTransitionMapping[];
-  can_modify: boolean;
-  can_apply: boolean;
-  can_revert: boolean;
-}
-
-interface BackendMappingPreview {
-  from_class: string;
-  to_class?: string | null;
-  student_count: number;
-  action: MappingAction;
-}
-
-interface BackendUnmappedClass {
-  class_name: string;
-  student_count: number;
-}
-
-export interface BackendTransitionPreview {
-  transition_id: BackendID;
-  academic_year: string;
-  total_students: number;
-  to_promote: number;
-  to_graduate: number;
-  by_mapping: BackendMappingPreview[];
-  unmapped_classes?: BackendUnmappedClass[] | null;
-  warnings?: string[] | null;
-  /** Digest of the exact cohort this preview describes (mappings + affected
-   * children + their classes). Sent back on apply so the backend can refuse a
-   * confirmation that no longer matches what was shown (#405). */
-  fingerprint?: string | null;
-}
-
-export interface BackendTransitionResult {
-  transition_id: BackendID;
-  status: string;
-  students_promoted: number;
-  students_graduated: number;
-  can_revert: boolean;
-  warnings?: string[] | null;
-}
-
-export interface BackendSuggestedMapping {
-  from_class: string;
-  to_class?: string | null;
-  student_count: number;
-  is_graduating: boolean;
-  /** true = class name has no grade pattern; graduation guess is not confident */
-  ambiguous?: boolean;
-}
-
-export interface BackendTransitionHistoryEntry {
-  id: BackendID;
-  transition_id: BackendID;
-  student_id: BackendID;
-  person_name: string;
-  from_class: string;
-  to_class?: string | null;
-  action: HistoryAction;
-  created_at: string;
-  student_state?: GraduateState;
-}
 
 // ---------------------------------------------------------------------------
 // Frontend (camelCase) types
@@ -137,6 +42,8 @@ export interface GradeTransition {
   canModify: boolean;
   canApply: boolean;
   canRevert: boolean;
+  /** Stand des Entwurfs; eine Änderung schickt ihn mit (ADR 0311). */
+  version: string;
 }
 
 interface MappingPreview {
@@ -160,7 +67,7 @@ export interface TransitionPreview {
   byMapping: MappingPreview[];
   unmappedClasses: UnmappedClass[];
   warnings: string[];
-  /** @see BackendTransitionPreview.fingerprint */
+  /** @see adminContract.TransitionPreviewResponse.fingerprint */
   fingerprint: string;
 }
 
@@ -219,6 +126,8 @@ export interface CreateTransitionInput {
 }
 
 export interface UpdateTransitionInput {
+  /** Der gelesene Stand; ein seither geänderter Entwurf wird abgelehnt. */
+  expectedVersion: string;
   academicYear?: string;
   notes?: string;
   /** undefined = Mappings unverändert lassen; [] = alle entfernen */
@@ -229,52 +138,77 @@ export interface UpdateTransitionInput {
 // Mappers
 // ---------------------------------------------------------------------------
 
-export function mapTransition(data: BackendGradeTransition): GradeTransition {
+const STATUSES: readonly TransitionStatus[] = ["draft", "applied", "reverted"];
+const MAPPING_ACTIONS: readonly MappingAction[] = ["promote", "graduate"];
+const HISTORY_ACTIONS: readonly HistoryAction[] = [
+  "promoted",
+  "graduated",
+  "unchanged",
+];
+const GRADUATE_STATES: readonly GraduateState[] = [
+  "alumnus",
+  "restored",
+  "purged",
+];
+
+const mappingAction = (value: string): MappingAction =>
+  knownEnum(MAPPING_ACTIONS, value) ?? "promote";
+
+export function mapTransition(
+  data: adminContract.TransitionResponse,
+): GradeTransition {
   return {
-    id: toIdString(data.id),
+    id: data.id,
     academicYear: data.academic_year,
-    status: data.status,
+    // A status this build does not know offers no edit: the backend's
+    // can_* flags still decide what the admin may do.
+    status: knownEnum(STATUSES, data.status) ?? "applied",
     appliedAt: data.applied_at ?? null,
     revertedAt: data.reverted_at ?? null,
     createdAt: data.created_at,
     notes: data.notes ?? null,
     mappings: (data.mappings ?? []).map((m) => ({
-      id: toIdString(m.id),
+      id: m.id,
       fromClass: m.from_class,
       toClass: m.to_class ?? null,
-      action: m.action,
+      action: mappingAction(m.action),
     })),
     canModify: data.can_modify,
     canApply: data.can_apply,
     canRevert: data.can_revert,
+    version: data.version,
   };
 }
 
-export function mapPreview(data: BackendTransitionPreview): TransitionPreview {
+export function mapPreview(
+  data: adminContract.TransitionPreviewResponse,
+): TransitionPreview {
   return {
-    transitionId: toIdString(data.transition_id),
+    transitionId: data.transition_id,
     academicYear: data.academic_year,
     totalStudents: data.total_students,
     toPromote: data.to_promote,
     toGraduate: data.to_graduate,
-    byMapping: data.by_mapping.map((m) => ({
+    byMapping: (data.by_mapping ?? []).map((m) => ({
       fromClass: m.from_class,
       toClass: m.to_class ?? null,
       studentCount: m.student_count,
-      action: m.action,
+      action: mappingAction(m.action),
     })),
     unmappedClasses: (data.unmapped_classes ?? []).map((u) => ({
       className: u.class_name,
       studentCount: u.student_count,
     })),
     warnings: data.warnings ?? [],
-    fingerprint: data.fingerprint ?? "",
+    fingerprint: data.fingerprint,
   };
 }
 
-export function mapResult(data: BackendTransitionResult): TransitionResult {
+export function mapResult(
+  data: adminContract.TransitionResultResponse,
+): TransitionResult {
   return {
-    transitionId: toIdString(data.transition_id),
+    transitionId: data.transition_id,
     status: data.status,
     studentsPromoted: data.students_promoted,
     studentsGraduated: data.students_graduated,
@@ -283,7 +217,9 @@ export function mapResult(data: BackendTransitionResult): TransitionResult {
   };
 }
 
-export function mapSuggestion(data: BackendSuggestedMapping): SuggestedMapping {
+export function mapSuggestion(
+  data: adminContract.SuggestedMappingResponse,
+): SuggestedMapping {
   return {
     fromClass: data.from_class,
     toClass: data.to_class ?? null,
@@ -296,18 +232,18 @@ export function mapSuggestion(data: BackendSuggestedMapping): SuggestedMapping {
 }
 
 export function mapHistoryEntry(
-  data: BackendTransitionHistoryEntry,
+  data: adminContract.TransitionHistoryResponse,
 ): TransitionHistoryEntry {
   return {
-    id: toIdString(data.id),
-    transitionId: toIdString(data.transition_id),
-    studentId: toIdString(data.student_id),
+    id: data.id,
+    transitionId: data.transition_id,
+    studentId: data.student_id,
     personName: data.person_name,
     fromClass: data.from_class,
     toClass: data.to_class ?? null,
-    action: data.action,
+    action: knownEnum(HISTORY_ACTIONS, data.action) ?? "unchanged",
     createdAt: data.created_at,
-    studentState: data.student_state ?? "alumnus",
+    studentState: knownEnum(GRADUATE_STATES, data.student_state) ?? "alumnus",
   };
 }
 
@@ -353,30 +289,12 @@ export const NOT_DRAFT_CODE: ErrorCode = "grade_transition.not_draft";
  */
 export const NOT_APPLIED_CODE: ErrorCode = "grade_transition.not_applied";
 
-/**
- * A failed response as ApiError: the backend's stable `code` (for example a
- * NOT_DRAFT_CODE or NOT_APPLIED_CODE conflict) lets the caller tell a
- * recoverable conflict from a real failure.
- */
-async function responseError(response: Response): Promise<ApiError> {
-  let body: unknown;
-  try {
-    body = await response.json();
-  } catch {
-    // Not JSON: the status still classifies.
+/** A failure keeps the backend's code; its message names the HTTP status. */
+function statusMessage(error: unknown): never {
+  if (error instanceof ApiError && error.status !== undefined) {
+    error.message = `HTTP ${error.status}`;
   }
-  return apiErrorFromBody(`HTTP ${response.status}`, response.status, body);
-}
-
-async function readJSON<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    throw await responseError(response);
-  }
-  const body = (await response.json()) as { data?: T } | T;
-  if (body && typeof body === "object" && "data" in body) {
-    return (body as { data: T }).data;
-  }
-  return body as T;
+  throw error;
 }
 
 // ---------------------------------------------------------------------------
@@ -390,18 +308,12 @@ const LIST_PAGE_SIZE = 100;
 // produce, so it never truncates in practice.
 const LIST_PAGE_LIMIT = 100;
 
-// Newest-first, the order the offset endpoint used to return. Compared as
-// BigInt of the exact string id — creation order for an autoincrement key —
-// never as a number, so ids above 2^53 cannot collapse through float rounding
-// (#405 review).
+// Newest-first by autoincrement key, without rounding ids above 2^53.
 function compareByIdDesc(
-  a: BackendGradeTransition,
-  b: BackendGradeTransition,
+  a: adminContract.TransitionResponse,
+  b: adminContract.TransitionResponse,
 ): number {
-  const aID = BigInt(toIdString(a.id));
-  const bID = BigInt(toIdString(b.id));
-  if (aID === bID) return 0;
-  return aID > bID ? -1 : 1;
+  return compareIds(b.id, a.id);
 }
 
 // Fetches every transition, not just the first page. The list feeds both the
@@ -423,21 +335,20 @@ export async function listGradeTransitions(): Promise<GradeTransition[]> {
   // row, but one that ignores `after_id` would send the same window forever —
   // the map keeps that failure mode at "truncated list", not "duplicated
   // rows".
-  const byID = new Map<string, BackendGradeTransition>();
+  const byID = new Map<string, adminContract.TransitionResponse>();
   let afterID = "0";
 
   for (let window = 0; window < LIST_PAGE_LIMIT; window++) {
-    const response = await fetch(
-      `${BASE}?after_id=${encodeURIComponent(afterID)}&page_size=${LIST_PAGE_SIZE}`,
-      { cache: "no-store" },
-    );
-    const data = (await readJSON<BackendGradeTransition[]>(response)) ?? [];
+    const page = await bffJson("tenant", "GET /api/admin/grade-transitions/", {
+      query: { after_id: afterID, page_size: LIST_PAGE_SIZE },
+    }).catch(statusMessage);
+    const data = page.data ?? [];
     for (const transition of data) {
-      byID.set(toIdString(transition.id), transition);
+      byID.set(transition.id, transition);
     }
     const last = data.at(-1);
     if (data.length < LIST_PAGE_SIZE || !last) break;
-    afterID = toIdString(last.id);
+    afterID = last.id;
   }
 
   return Array.from(byID.values()).sort(compareByIdDesc).map(mapTransition);
@@ -446,128 +357,111 @@ export async function listGradeTransitions(): Promise<GradeTransition[]> {
 export async function createGradeTransition(
   input: CreateTransitionInput,
 ): Promise<GradeTransition> {
-  const response = await fetch(BASE, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      academic_year: input.academicYear,
-      notes: input.notes,
-      mappings: toBackendMappings(input.mappings),
-    }),
-  });
-  return mapTransition(await readJSON<BackendGradeTransition>(response));
+  return mapTransition(
+    await bffJson("tenant", "POST /api/admin/grade-transitions/", {
+      body: {
+        academic_year: input.academicYear,
+        notes: input.notes,
+        mappings: toBackendMappings(input.mappings),
+      },
+    }).catch(statusMessage),
+  );
 }
 
 export async function updateGradeTransition(
   id: string,
   input: UpdateTransitionInput,
 ): Promise<GradeTransition> {
-  const response = await fetch(`${BASE}/${encodeURIComponent(id)}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      academic_year: input.academicYear,
-      notes: input.notes,
-      mappings: input.mappings ? toBackendMappings(input.mappings) : undefined,
-    }),
-  });
-  if (!response.ok) {
-    // Keep the stable code: a NOT_DRAFT_CODE conflict means the loaded draft
-    // was applied by another admin, and the editor must say so instead of
-    // suggesting a retry that can never succeed (#405 review).
-    throw await responseError(response);
-  }
-  return mapTransition(await readJSON<BackendGradeTransition>(response));
+  // Keeps the stable code: a NOT_DRAFT_CODE conflict means the loaded draft
+  // was applied by another admin, and the editor must say so instead of
+  // suggesting a retry that can never succeed (#405 review).
+  return mapTransition(
+    await bffJson("tenant", "PUT /api/admin/grade-transitions/{id}/", {
+      params: { id },
+      body: {
+        academic_year: input.academicYear,
+        notes: input.notes,
+        mappings: input.mappings
+          ? toBackendMappings(input.mappings)
+          : undefined,
+        expected_version: input.expectedVersion,
+      },
+    }).catch(statusMessage),
+  );
 }
 
 export async function deleteGradeTransition(id: string): Promise<void> {
-  const response = await fetch(`${BASE}/${encodeURIComponent(id)}`, {
-    method: "DELETE",
-  });
-  if (!response.ok) {
-    throw await responseError(response);
-  }
+  await bffJson("tenant", "DELETE /api/admin/grade-transitions/{id}/", {
+    params: { id },
+  }).catch(statusMessage);
 }
 
 export async function previewGradeTransition(
   id: string,
 ): Promise<TransitionPreview> {
-  const response = await fetch(`${BASE}/${encodeURIComponent(id)}/preview`, {
-    cache: "no-store",
-  });
-  return mapPreview(await readJSON<BackendTransitionPreview>(response));
+  return mapPreview(
+    await bffJson("tenant", "GET /api/admin/grade-transitions/{id}/preview", {
+      params: { id },
+    }).catch(statusMessage),
+  );
 }
 
 /**
- * Reads an apply/revert response, throwing an ApiError that keeps the
- * backend's stable `code` on failure. The generic {@link readJSON}
- * path drops that code, which would leave the caller unable to tell a
- * recoverable 409 conflict from a real failure.
- */
-async function readResultOrThrow(
-  response: Response,
-): Promise<TransitionResult> {
-  if (!response.ok) {
-    throw await responseError(response);
-  }
-  const body = (await response.json()) as
-    { data?: BackendTransitionResult } | BackendTransitionResult;
-  const data =
-    body && typeof body === "object" && "data" in body
-      ? (body as { data: BackendTransitionResult }).data
-      : (body as BackendTransitionResult);
-  return mapResult(data);
-}
-
-/**
- * Applies a transition. `expectedFingerprint` binds the call to the preview the
+ * Applies a transition. `expectedFingerprint` is the token of the preview the
  * admin confirmed: the backend refuses with {@link PREVIEW_STALE_CODE} when the
- * affected children or mappings have changed since (#405).
+ * affected children or mappings have changed since (#405), and an apply
+ * without it as well (ADR 0311).
  */
 export async function applyGradeTransition(
   id: string,
-  expectedFingerprint?: string,
+  expectedFingerprint: string,
 ): Promise<TransitionResult> {
-  const response = await fetch(`${BASE}/${encodeURIComponent(id)}/apply`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(
-      expectedFingerprint ? { expected_fingerprint: expectedFingerprint } : {},
-    ),
-  });
-  return readResultOrThrow(response);
+  return mapResult(
+    await bffJson("tenant", "POST /api/admin/grade-transitions/{id}/apply", {
+      params: { id },
+      body: { expected_fingerprint: expectedFingerprint },
+    }).catch(statusMessage),
+  );
 }
 
 export async function revertGradeTransition(
   id: string,
 ): Promise<TransitionResult> {
-  const response = await fetch(`${BASE}/${encodeURIComponent(id)}/revert`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({}),
-  });
-  return readResultOrThrow(response);
+  return mapResult(
+    await bffJson("tenant", "POST /api/admin/grade-transitions/{id}/revert", {
+      params: { id },
+    }).catch(statusMessage),
+  );
 }
 
 export async function fetchTransitionClasses(): Promise<string[]> {
-  const response = await fetch(`${BASE}/classes`, { cache: "no-store" });
-  const data = await readJSON<string[]>(response);
-  return data ?? [];
+  return (
+    (await bffJson(
+      "tenant",
+      "GET /api/admin/grade-transitions/classes",
+      {},
+    ).catch(statusMessage)) ?? []
+  );
 }
 
 export async function fetchSuggestedMappings(): Promise<SuggestedMapping[]> {
-  const response = await fetch(`${BASE}/suggest`, { cache: "no-store" });
-  const data = await readJSON<BackendSuggestedMapping[]>(response);
+  const data = await bffJson(
+    "tenant",
+    "GET /api/admin/grade-transitions/suggest",
+  ).catch(statusMessage);
   return (data ?? []).map(mapSuggestion);
 }
 
 export async function fetchTransitionHistory(
   id: string,
 ): Promise<TransitionHistoryEntry[]> {
-  const response = await fetch(`${BASE}/${encodeURIComponent(id)}/history`, {
-    cache: "no-store",
-  });
-  const data = await readJSON<BackendTransitionHistoryEntry[]>(response);
+  const data = await bffJson(
+    "tenant",
+    "GET /api/admin/grade-transitions/{id}/history",
+    {
+      params: { id },
+    },
+  ).catch(statusMessage);
   return (data ?? []).map(mapHistoryEntry);
 }
 
@@ -583,11 +477,7 @@ export async function fetchTransitionHistory(
  * nothing left to restore.
  */
 export async function purgeGraduatedStudent(studentId: string): Promise<void> {
-  const response = await fetch(
-    `/api/students/${encodeURIComponent(studentId)}/purge`,
-    { method: "DELETE" },
-  );
-  if (!response.ok) {
-    throw await responseError(response);
-  }
+  await bffJson("tenant", "DELETE /api/students/{id}/purge", {
+    params: { id: studentId },
+  }).catch(statusMessage);
 }

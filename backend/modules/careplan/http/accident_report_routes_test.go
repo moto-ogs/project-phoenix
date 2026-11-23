@@ -1,6 +1,7 @@
 package careplanhttp_test
 
 import (
+	"archive/zip"
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
@@ -8,6 +9,7 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"mime/multipart"
 	"net/http"
 	"testing"
 
@@ -21,9 +23,10 @@ import (
 )
 
 type accidentReportAnswer struct {
-	ID             int64  `json:"id"`
-	StudentID      int64  `json:"student_id"`
-	Category       string `json:"category"`
+	ID             testpkg.ID `json:"id"`
+	StudentID      testpkg.ID `json:"student_id"`
+	Category       string     `json:"category"`
+	Version        string     `json:"version"`
 	AccidentReport struct {
 		Status       string  `json:"status"`
 		SupersedesID *string `json:"supersedes_id"`
@@ -48,7 +51,9 @@ func TestAccidentReportIsRecordedSignedCorrectedAndDeletedThroughTheRoutes(t *te
 	require.NoError(t, err)
 	tc.resource.StudentDocumentService = documents
 	tc.resource.StudentAccidentReports = reports
-	tc.resource.DocumentStorage = api.NewStudentDocumentStorage(api.TestUploadFileKeys(), nativeUploads.UploadFiles{})
+	uploadFiles, err := nativeUploads.NewUploadFiles(nativeUploads.NewLocal(t.TempDir()))
+	require.NoError(t, err)
+	tc.resource.DocumentStorage = api.NewStudentDocumentStorage(api.TestUploadFileKeys(), uploadFiles)
 	child := testpkg.CreateTestStudent(t, tc.db, "Unfall", "Kind", "U1")
 	actor := testpkg.CreateTestAccount(t, tc.db, fmt.Sprintf("accident-routes-%d@example.com", child.ID))
 	claims := testutil.AdminTestClaims(int(actor.ID))
@@ -75,16 +80,30 @@ func TestAccidentReportIsRecordedSignedCorrectedAndDeletedThroughTheRoutes(t *te
 	base := fmt.Sprintf("/%d/accident-reports", child.ID)
 
 	created := send(http.MethodPost, base, report("Prellung"), http.StatusCreated)
-	assert.Equal(t, child.ID, created.StudentID)
+	assert.Equal(t, child.ID, int64(created.StudentID))
 	assert.Equal(t, "unfallanzeige", created.Category)
 	assert.Equal(t, "open", created.AccidentReport.Status)
 
-	updated := send(http.MethodPut, fmt.Sprintf("%s/%d", base, created.ID), report("Verstauchung"), http.StatusOK)
+	// The paper copy is a scan: a Word document is refused before anything is
+	// stored, as the upload form promises (PDF, PNG, JPEG).
+	paper := authExec(t, tc, accidentPaperCopyRequest(t, fmt.Sprintf("%s/%d/paper-copy", base, created.ID)), claims, perms)
+	require.Equal(t, http.StatusBadRequest, paper.Code, paper.Body.String())
+	assert.Contains(t, paper.Body.String(), `"code":"files.file_type_not_allowed"`)
+
+	stale := report("Verstauchung")
+	stale["expected_version"] = "2026-01-01T00:00:00Z"
+	rr := authExec(t, tc, testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("%s/%d", base, created.ID), stale), claims, perms)
+	require.Equal(t, http.StatusConflict, rr.Code, "a change on an outdated read is refused. Body: %s", rr.Body.String())
+	assert.Contains(t, rr.Body.String(), `"code":"general.changed_since_read"`)
+	changed := report("Verstauchung")
+	changed["expected_version"] = created.Version
+	updated := send(http.MethodPut, fmt.Sprintf("%s/%d", base, created.ID), changed, http.StatusOK)
+	assert.NotEqual(t, created.Version, updated.Version, "the change answers the new version")
 	assert.Equal(t, created.ID, updated.ID)
 	assert.Equal(t, "Verstauchung", updated.AccidentReport.InjuryKind)
 
 	signed := send(http.MethodPost, fmt.Sprintf("%s/%d/signature", base, created.ID),
-		map[string]any{"method": "drawn", "image_png": accidentSignaturePNG(t)}, http.StatusOK)
+		map[string]any{"method": "drawn", "image_png": accidentSignaturePNG(t), "expected_version": updated.Version}, http.StatusOK)
 	assert.Equal(t, "signed", signed.AccidentReport.Status)
 
 	correction := send(http.MethodPost, fmt.Sprintf("%s/%d/corrections", base, created.ID), report("Prellung"), http.StatusCreated)
@@ -92,19 +111,77 @@ func TestAccidentReportIsRecordedSignedCorrectedAndDeletedThroughTheRoutes(t *te
 	assert.Equal(t, fmt.Sprint(created.ID), *correction.AccidentReport.SupersedesID)
 	assert.Equal(t, "open", correction.AccidentReport.Status)
 
-	rr := authExec(t, tc, testutil.NewRequest(http.MethodDelete, fmt.Sprintf("/%d/documents/%d", child.ID, correction.ID), nil), claims, perms)
+	rr = authExec(t, tc, testutil.NewRequest(http.MethodDelete, fmt.Sprintf("/%d/documents/%d", child.ID, correction.ID), nil), claims, perms)
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 	var deleted struct {
 		Data struct {
-			StudentID int64 `json:"student_id"`
+			StudentID testpkg.ID `json:"student_id"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &deleted))
-	assert.Equal(t, child.ID, deleted.Data.StudentID)
+	assert.Equal(t, child.ID, int64(deleted.Data.StudentID))
 	var open int
 	require.NoError(t, tc.db.NewSelect().TableExpr("users.student_documents").ColumnExpr("COUNT(*)").
 		Where("student_id = ? AND deleted_at IS NULL", child.ID).Scan(testpkg.Ctx(t), &open))
 	assert.Equal(t, 1, open, "the signed report stays, the open correction is gone")
+
+	paperReport := send(http.MethodPost, base, report("Prellung"), http.StatusCreated)
+	// A valid scan is stored and answers with the same report's document ID.
+	var scan bytes.Buffer
+	scanForm := multipart.NewWriter(&scan)
+	scanPart, err := scanForm.CreatePart(map[string][]string{
+		"Content-Disposition": {`form-data; name="file"; filename="Unfallanzeige.png"`},
+		"Content-Type":        {"image/png"},
+	})
+	require.NoError(t, err)
+	imageBytes, err := base64.StdEncoding.DecodeString(accidentSignaturePNG(t))
+	require.NoError(t, err)
+	_, err = scanPart.Write(imageBytes)
+	require.NoError(t, err)
+	require.NoError(t, scanForm.WriteField("expected_version", paperReport.Version))
+	require.NoError(t, scanForm.Close())
+	scanRequest := testutil.NewRequest(http.MethodPost, fmt.Sprintf("%s/%d/paper-copy", base, paperReport.ID), &scan)
+	scanRequest.Header.Set("Content-Type", scanForm.FormDataContentType())
+	storedScan := authExec(t, tc, scanRequest, claims, perms)
+	require.Equal(t, http.StatusCreated, storedScan.Code, storedScan.Body.String())
+	var scanAnswer struct {
+		Data struct {
+			ID          testpkg.ID `json:"id"`
+			Filename    string     `json:"filename"`
+			ContentType string     `json:"content_type"`
+			HasFile     bool       `json:"has_file"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(storedScan.Body.Bytes(), &scanAnswer))
+	require.Equal(t, paperReport.ID, scanAnswer.Data.ID)
+
+	require.Equal(t, "Unfallanzeige.png", scanAnswer.Data.Filename)
+	require.Equal(t, "image/png", scanAnswer.Data.ContentType)
+	require.True(t, scanAnswer.Data.HasFile)
+}
+
+// accidentPaperCopyRequest uploads a valid Word document as the paper copy.
+func accidentPaperCopyRequest(t *testing.T, path string) *http.Request {
+	t.Helper()
+	var docx bytes.Buffer
+	archive := zip.NewWriter(&docx)
+	for _, name := range []string{"[Content_Types].xml", "word/document.xml"} {
+		entry, err := archive.Create(name)
+		require.NoError(t, err)
+		_, err = entry.Write([]byte("<x/>"))
+		require.NoError(t, err)
+	}
+	require.NoError(t, archive.Close())
+	var body bytes.Buffer
+	form := multipart.NewWriter(&body)
+	part, err := form.CreateFormFile("file", "Unfallanzeige.docx")
+	require.NoError(t, err)
+	_, err = part.Write(docx.Bytes())
+	require.NoError(t, err)
+	require.NoError(t, form.Close())
+	req := testutil.NewRequest(http.MethodPost, path, &body)
+	req.Header.Set("Content-Type", form.FormDataContentType())
+	return req
 }
 
 // accidentSignaturePNG is a small drawn signature: a dark diagonal.

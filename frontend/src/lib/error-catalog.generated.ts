@@ -26,8 +26,11 @@ export const ERROR_CATALOG = {
       crash:
         "{object} konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
       fieldCheck: "Bitte prüfe dieses Feld.",
+      reloadFailed: "Der neue Stand konnte nicht geladen werden.",
     },
     codes: {
+      "attendance.checkin_staff_profile_required":
+        "Kinder ein- und auschecken kann nur das Personal der Schule. Dein Konto hat an dieser Schule kein Personalprofil.",
       "attendance.log_disabled":
         "Der Anwesenheitsverlauf ist an dieser Schule ausgeschaltet.",
       "attendance.web_disabled":
@@ -50,6 +53,14 @@ export const ERROR_CATALOG = {
         "Die Schule lässt diese Änderung gerade nicht zu. Bitte sprich mit der Schule.",
       "care_contract.change_not_found":
         "Diesen Änderungswunsch gibt es nicht mehr. Bitte lade die Seite neu.",
+      "care_contract.child_link_bound":
+        "Der Vertrag ist schon an die Anmeldung des Kindes gebunden. Die Verknüpfung mit der Kinderakte lässt sich nicht mehr lösen.",
+      "care_contract.child_link_changed":
+        "Die Angaben haben sich seit der Prüfung geändert. Prüfe sie noch einmal.",
+      "care_contract.child_link_not_imported":
+        "Nur importierte Verträge lassen sich hier verknüpfen. Dieser Vertrag gehört zum Kind seiner Anmeldung.",
+      "care_contract.child_link_refused":
+        "Der Vertrag kann so nicht mit dieser Kinderakte verknüpft werden. Prüfe die Angaben noch einmal.",
       "care_contract.contract_input_invalid":
         "Bitte wähle mindestens einen und höchstens 200 Einträge aus.",
       "care_contract.contract_not_draft":
@@ -60,10 +71,14 @@ export const ERROR_CATALOG = {
         "Diesen Vertrag gibt es nicht. Bitte öffne ihn über „Verträge“.",
       "care_contract.contract_not_signable":
         "Dieser Vertrag ist schon unterschrieben oder wartet nicht auf eine Unterschrift. Bitte lade die Seite neu.",
+      "care_contract.enrollment_binding_changed":
+        "Der Vertrag ist nicht mehr an diese Anmeldung gebunden. Lade die Seite neu und prüfe den Stand.",
+      "care_contract.enrollment_preview_changed":
+        "Die Verträge oder die Schule haben sich seit der Vorschau geändert. Lade die Vorschau neu und prüfe sie noch einmal.",
       "care_contract.field_invalid":
         "Einige Angaben stimmen nicht. Bitte prüfe deine Eingaben.",
       "care_contract.import_changed":
-        "Seit der Vorschau hat sich etwas geändert. Bitte prüfe die Vorschau noch einmal und übernimm dann.",
+        "Seit der Vorschau hat sich etwas geändert. moto prüft die Datei neu. Sieh dir die neue Vorschau an und bestätige dann noch einmal.",
       "care_contract.import_file_invalid":
         "Die Datei lässt sich nicht lesen. Bitte wähle eine CSV-Datei mit Überschriften in der ersten Zeile.",
       "care_contract.import_file_too_large":
@@ -216,6 +231,8 @@ export const ERROR_CATALOG = {
         "{object} ist nicht mehr geöffnet. Bitte frage deine Ansprechperson.",
       "care.request_sharing_invalid":
         "{object} enthält ungültige Angaben. Bitte prüfe deine Eingaben.",
+      "care.room_history_stop_disabled":
+        "{object} kannst du hier zurzeit nicht ändern. Bitte frage deine Ansprechperson.",
       "care.sick_note_disabled":
         "{object} ist hier zurzeit nicht verfügbar. Bitte frage deine Ansprechperson.",
       "classday.absence_list_invalid_period":
@@ -711,8 +728,14 @@ export const ERROR_CATALOG = {
         "Es gibt schon einen Ordner mit diesem Namen. Bitte wähle einen anderen Namen.",
       "files.quota_exceeded":
         "Der Speicherplatz der Dateiablage ist voll. Bitte lösche Dateien, die du nicht mehr brauchst.",
+      "general.changed_since_read":
+        "{object} wurde inzwischen geändert. Du siehst jetzt den neuen Stand. Prüfe ihn und versuche es dann noch einmal.",
       "general.request_too_large":
         "{object} konnte nicht bearbeitet werden. Bitte lösche im Browser die Cookies dieser Seite. Melde dich danach neu an.",
+      "general.route_not_found":
+        "{object} konnte nicht bearbeitet werden. Es gibt eine neue Version von moto. Bitte lade die Seite neu.",
+      "general.write_answer_unreadable":
+        "{object} wurde übernommen, konnte aber nicht angezeigt werden. Bitte lade die Seite neu, bevor du es noch einmal versuchst.",
       "grade_transition.graduates_checked_in":
         "Es sind noch Kinder mit Abgang eingecheckt. Bitte buche diese Kinder zuerst nach Hause. Wende den Schuljahreswechsel danach erneut an.",
       "grade_transition.not_applied":
@@ -856,6 +879,8 @@ export const ERROR_CATALOG = {
         "Bestehende Einträge darfst du nicht ändern. Bitte wähle „Nur neue anlegen“ oder frage die Leitung.",
       "import.not_test_traeger":
         "Das geht nur bei einem Test-Träger. Echte Träger bekommen keine Beispieldaten.",
+      "import.staff_profile_required":
+        "Kinder importieren kann nur jemand mit Personalprofil. Dein Konto hat an dieser Schule noch keins. Bitte lass dir von der Verwaltung der Schule eins anlegen.",
       "import.test_traeger_inactive":
         "Der Test-Träger ist deaktiviert. Bitte aktiviere ihn zuerst.",
       "iot.activity_capacity_exceeded":
@@ -894,6 +919,8 @@ export const ERROR_CATALOG = {
         "Der Monat ist noch nicht vorbei. Du kannst ihn ab dem 1. des nächsten Monats freigeben.",
       "meals.child_not_enrolled":
         "{object} geht nicht. Das Kind ist an diesem Tag nicht in der Betreuung.",
+      "meals.day_changed":
+        "Jemand anderes hat den Speiseplan inzwischen geändert. Mit „Verwerfen“ siehst du den neuen Stand. Mit „Speichern“ ersetzt du ihn durch deine Änderungen.",
       "meals.day_closed":
         "{object} geht nicht. An diesem Tag ist die Schule geschlossen.",
       "meals.day_past": "{object} geht nicht mehr. Der Tag ist schon vorbei.",
@@ -1174,6 +1201,8 @@ export const ERROR_CATALOG = {
         "Die Datei ist zu groß. Erlaubt sind 2 MB und 5.000 Zeilen.",
       "parent_billing.sepa_import_mapping_invalid":
         "Bitte ordne zuerst alle Pflichtspalten zu.",
+      "parent_billing.sepa_mandate_contract_draft":
+        "Der Vertrag ist noch ein Entwurf. Trage das Mandat ein, sobald der Vertrag versendet ist.",
       "parent_billing.sepa_mandate_in_force":
         "Die Familie hat schon ein gültiges Mandat. Bitte widerrufe es zuerst.",
       "parent_billing.sepa_mandate_invalid":
@@ -1443,7 +1472,7 @@ export const ERROR_CATALOG = {
       "students.companion_would_lose_departure":
         "Ein verknüpftes Kind hätte dann keinen Heimweg mehr. Bitte passe zuerst dessen Heimweg an.",
       "students.companions_changed":
-        "Die Laufgemeinschaft wurde inzwischen geändert. Bitte lade die Seite neu.",
+        "Die Laufgemeinschaft wurde inzwischen geändert. Du siehst jetzt die gespeicherte Liste. Prüfe sie und versuche es dann noch einmal.",
       "students.conflict_kind_unsupported":
         "Diese Anfragen lassen sich nicht gemeinsam entscheiden. Bitte entscheide sie einzeln.",
       "students.correction_unsupported":
@@ -1499,7 +1528,7 @@ export const ERROR_CATALOG = {
       "students.pickup_change_completed":
         "Das Kind ist schon abgemeldet. Die Abholzeit lässt sich nicht mehr ändern.",
       "students.pickup_change_conflict":
-        "Für diesen Tag hat die OGS schon etwas eingetragen. Bitte prüfe den Tag.",
+        "Für diesen Tag gibt es bereits einen Eintrag der OGS. Prüfe, ob die gewünschte Änderung schon eingetragen ist. Falls ja, kannst du die Anfrage mit einer Begründung ablehnen. Der vorhandene Eintrag bleibt bestehen.",
       "students.pickup_change_expired":
         "Der Tag liegt in der Vergangenheit. Bitte lehne {object} ab.",
       "students.pickup_change_impact_changed":
@@ -1518,6 +1547,8 @@ export const ERROR_CATALOG = {
         "Die Anfrage betrifft noch kommende Tage. Bitte entscheide sie.",
       "students.request_past":
         "Die Anfrage betrifft nur vergangene Tage. Du kannst sie nur ablehnen oder als erledigt markieren.",
+      "students.schedule_staff_profile_required":
+        "Betreuungszeiten kann nur jemand mit Personalprofil ändern. Dein Konto hat an dieser Schule noch keins. Bitte lass dir von der Verwaltung der Schule eins anlegen.",
       "students.sick_excused_conflict":
         "{object} wurde inzwischen geändert. Bitte prüfe deine Angaben erneut.",
       "students.staff_profile_required":
@@ -2176,8 +2207,11 @@ export const ERROR_CATALOG = {
       requestId: "Request ID: {requestId}",
       crash: "{object} could not be processed. Please try again later.",
       fieldCheck: "Please check this field.",
+      reloadFailed: "The current version could not be loaded.",
     },
     codes: {
+      "attendance.checkin_staff_profile_required":
+        "Only the school's staff can check children in and out. Your account has no staff profile at this school.",
       "calendar.federal_state_missing":
         "No federal state is set for the school yet, so the public holidays are missing. The school management can set it in the settings.",
       "calendar.occurrence_unavailable":
@@ -2192,6 +2226,14 @@ export const ERROR_CATALOG = {
         "The school does not allow this change right now. Please talk to the school.",
       "care_contract.change_not_found":
         "This change request no longer exists. Please reload the page.",
+      "care_contract.child_link_bound":
+        "The contract is already bound to the child’s enrollment. The link to the child record can no longer be removed.",
+      "care_contract.child_link_changed":
+        "The details have changed since the check. Please check them again.",
+      "care_contract.child_link_not_imported":
+        "Only imported contracts can be linked here. This contract belongs to the child of its application.",
+      "care_contract.child_link_refused":
+        "The contract cannot be linked to this child record like this. Please check the details again.",
       "care_contract.contract_input_invalid":
         "Please select at least one and at most 200 entries.",
       "care_contract.contract_not_draft":
@@ -2202,6 +2244,10 @@ export const ERROR_CATALOG = {
         "This contract does not exist. Please open it from “Contracts”.",
       "care_contract.contract_not_signable":
         "This contract is already signed or is not waiting for a signature. Please reload the page.",
+      "care_contract.enrollment_binding_changed":
+        "The contract is no longer bound to this enrollment. Reload the page and check the current state.",
+      "care_contract.enrollment_preview_changed":
+        "The contracts or the school have changed since the preview. Reload the preview and check it again.",
       "care_contract.field_invalid":
         "Some details are not valid. Please check your entries.",
       "care_contract.letterhead_missing":
@@ -2351,6 +2397,8 @@ export const ERROR_CATALOG = {
         "{object} is no longer open. Please ask your contact person.",
       "care.request_sharing_invalid":
         "{object} contains invalid details. Please check your entries.",
+      "care.room_history_stop_disabled":
+        "You cannot change {object} here at the moment. Please ask your contact person.",
       "care.sick_note_disabled":
         "{object} is not available here at the moment. Please ask your contact person.",
       "classday.absence_list_invalid_period":
@@ -2616,8 +2664,14 @@ export const ERROR_CATALOG = {
         "A child without an OGS place gets its place through an enrollment for the school year.",
       "files.file_name_invalid":
         "This file name is not allowed. Please choose the file again.",
+      "general.changed_since_read":
+        "{object} has been changed in the meantime. You now see the current state. Check it, then try again.",
       "general.request_too_large":
         "{object} could not be processed. Please delete the cookies of this site in your browser. Then sign in again.",
+      "general.route_not_found":
+        "{object} could not be processed. There is a new version of moto. Please reload the page.",
+      "general.write_answer_unreadable":
+        "{object} went through but could not be shown. Please reload the page before you try again.",
       "identity.account_already_has_tenant_access":
         "This person already has access to this school. You can find them in the staff list.",
       "identity.account_inactive":
@@ -2686,10 +2740,14 @@ export const ERROR_CATALOG = {
         "Another account signed in in another window. moto will reload this page shortly.",
       "identity.session_tenant_mismatch":
         "The school was changed in another window. moto will switch this page back shortly. Please try again afterwards.",
+      "import.staff_profile_required":
+        "Only someone with a staff profile can import children. Your account does not have one at this school yet. Please ask the school's administration to create one for you.",
       "meals.billing_month_attendance_expired":
         "Attendance records for this month may already have been deleted. The month can no longer be released reliably. Please contact your provider.",
       "meals.child_not_enrolled":
         "{object} is not possible. The child is not in care on this day.",
+      "meals.day_changed":
+        "Someone else has changed the meal plan in the meantime. Choose “Verwerfen” to see the new version. Choose “Speichern” to replace it with your changes.",
       "meals.day_closed":
         "{object} is not possible. The school is closed on this day.",
       "meals.day_past":
@@ -2836,6 +2894,8 @@ export const ERROR_CATALOG = {
         "{object} could not be changed. Please check the current state.",
       "students.reason_required":
         "A reason is missing for {object}. Please enter one.",
+      "students.schedule_staff_profile_required":
+        "Only someone with a staff profile can change care times. Your account does not have one at this school yet. Please ask the school's administration to create one for you.",
       "students.staff_profile_required":
         "The parents set this time. Only someone with a staff profile can change it.",
       "students.status_day_conflict":
@@ -2946,8 +3006,11 @@ export const ERROR_CATALOG = {
       requestId: "Номер запроса: {requestId}",
       crash: "Не удалось обработать: {object}. Повторите попытку позже.",
       fieldCheck: "Проверьте это поле.",
+      reloadFailed: "Не удалось загрузить актуальное состояние.",
     },
     codes: {
+      "attendance.checkin_staff_profile_required":
+        "Отмечать приход и уход детей может только персонал школы. У вашей учётной записи в этой школе нет профиля персонала.",
       "calendar.federal_state_missing":
         "Для школы ещё не указана федеральная земля. Поэтому нет праздничных дней. Руководство может указать её в настройках.",
       "calendar.occurrence_unavailable":
@@ -3120,6 +3183,8 @@ export const ERROR_CATALOG = {
         "Больше не открыто: {object}. Обратитесь к контактному лицу.",
       "care.request_sharing_invalid":
         "Указаны неверные данные: {object}. Проверьте введённые данные.",
+      "care.room_history_stop_disabled":
+        "Сейчас здесь нельзя изменить: {object}. Обратитесь к контактному лицу.",
       "care.sick_note_disabled":
         "Сейчас здесь недоступно: {object}. Обратитесь к контактному лицу.",
       "classday.absence_list_invalid_period":
@@ -3329,8 +3394,14 @@ export const ERROR_CATALOG = {
         "Ребёнок без места в OGS получает место через запись на учебный год.",
       "files.file_name_invalid":
         "Имя файла недопустимо. Выберите файл ещё раз.",
+      "general.changed_since_read":
+        "Данные изменились: {object}. Сейчас показано текущее состояние. Проверьте его и попробуйте снова.",
       "general.request_too_large":
         "Не удалось обработать: {object}. Удалите в браузере файлы cookie этого сайта. Затем войдите снова.",
+      "general.route_not_found":
+        "Не удалось обработать: {object}. Вышла новая версия moto. Обновите страницу.",
+      "general.write_answer_unreadable":
+        "Изменение принято: {object}. Его не удалось показать. Обновите страницу, прежде чем пробовать снова.",
       "identity.account_already_has_tenant_access":
         "У этого человека уже есть доступ к этой школе. Он есть в списке сотрудников.",
       "identity.account_inactive":
@@ -3399,10 +3470,14 @@ export const ERROR_CATALOG = {
         "В другом окне выполнен вход в другой аккаунт. moto сейчас перезагрузит эту страницу.",
       "identity.session_tenant_mismatch":
         "Школа была изменена в другом окне. moto сейчас переключит эту страницу обратно. Попробуйте ещё раз чуть позже.",
+      "import.staff_profile_required":
+        "Импортировать детей может только сотрудник с профилем персонала. У вашей учётной записи в этой школе его пока нет. Попросите администрацию школы создать его.",
       "meals.billing_month_attendance_expired":
         "Данные о посещаемости за этот месяц могли быть удалены. Надёжно подтвердить месяц больше нельзя. Обратитесь к организации, управляющей продлёнкой.",
       "meals.child_not_enrolled":
         "Невозможно: {object}. В этот день ребёнок не находится под присмотром.",
+      "meals.day_changed":
+        "Кто-то другой уже изменил меню. Нажмите «Verwerfen», чтобы увидеть новую версию. Нажмите «Speichern», чтобы заменить её своими изменениями.",
       "meals.day_closed": "Невозможно: {object}. В этот день школа закрыта.",
       "meals.day_past": "Уже невозможно: {object}. Этот день уже прошёл.",
       "meals.delivery_range_too_long":
@@ -3524,6 +3599,8 @@ export const ERROR_CATALOG = {
       "students.pickup_proof_not_found":
         "{object}: изменить не удалось. Пожалуйста, проверьте текущее состояние.",
       "students.reason_required": "Не указана причина: {object}. Укажите её.",
+      "students.schedule_staff_profile_required":
+        "Изменять время присмотра может только сотрудник с профилем персонала. У вашей учётной записи в этой школе его пока нет. Попросите администрацию школы создать его.",
       "students.staff_profile_required":
         "Это время установили родители. Изменить его может только сотрудник с профилем персонала.",
       "students.status_day_conflict":
@@ -3578,8 +3655,11 @@ export const ERROR_CATALOG = {
       requestId: "Numri i kërkesës: {requestId}",
       crash: "Nuk u përpunua: {object}. Provoni përsëri më vonë.",
       fieldCheck: "Kontrolloni këtë fushë.",
+      reloadFailed: "Gjendja e re nuk u ngarkua dot.",
     },
     codes: {
+      "attendance.checkin_staff_profile_required":
+        "Vetëm stafi i shkollës mund t'i regjistrojë fëmijët në hyrje dhe në dalje. Llogaria juaj nuk ka profil stafi në këtë shkollë.",
       "calendar.federal_state_missing":
         "Për shkollën nuk është vendosur ende landi federal. Prandaj mungojnë ditët e festave. Drejtuesit mund ta vendosin te cilësimet.",
       "calendar.occurrence_unavailable":
@@ -3754,6 +3834,8 @@ export const ERROR_CATALOG = {
         "Nuk është më i hapur: {object}. Pyetni personin tuaj të kontaktit.",
       "care.request_sharing_invalid":
         "Ka të dhëna të pavlefshme: {object}. Kontrolloni çfarë keni shkruar.",
+      "care.room_history_stop_disabled":
+        "Për momentin nuk mund ta ndryshoni këtu: {object}. Pyetni personin tuaj të kontaktit.",
       "care.sick_note_disabled":
         "Për momentin nuk është i disponueshëm këtu: {object}. Pyetni personin tuaj të kontaktit.",
       "classday.absence_list_invalid_period":
@@ -3974,8 +4056,14 @@ export const ERROR_CATALOG = {
         "Një fëmijë pa vend në OGS e merr vendin me një regjistrim për vitin shkollor.",
       "files.file_name_invalid":
         "Emri i skedarit nuk lejohet. Ju lutemi zgjidhni skedarin përsëri.",
+      "general.changed_since_read":
+        "Ndërkohë është ndryshuar: {object}. Tani shihni gjendjen aktuale. Kontrollojeni dhe provoni përsëri.",
       "general.request_too_large":
         "Nuk u përpunua: {object}. Fshini në shfletues cookies e kësaj faqeje. Pastaj hyni përsëri.",
+      "general.route_not_found":
+        "Nuk u përpunua: {object}. Ka një version të ri të moto. Rifreskoni faqen.",
+      "general.write_answer_unreadable":
+        "Ndryshimi u pranua: {object}. Nuk u shfaq dot. Rifreskoni faqen para se të provoni përsëri.",
       "identity.account_already_has_tenant_access":
         "Ky person ka tashmë qasje në këtë shkollë. E gjeni në listën e personelit.",
       "identity.account_inactive":
@@ -4044,10 +4132,14 @@ export const ERROR_CATALOG = {
         "Një llogari tjetër u identifikua në një dritare tjetër. moto do ta ringarkojë këtë faqe së shpejti.",
       "identity.session_tenant_mismatch":
         "Shkolla u ndryshua në një dritare tjetër. moto do ta kthejë këtë faqe së shpejti. Ju lutemi provoni përsëri pak më vonë.",
+      "import.staff_profile_required":
+        "Fëmijët mund t'i importojë vetëm dikush me profil stafi. Llogaria juaj nuk ka ende një të tillë në këtë shkollë. Ju lutemi kërkoni nga administrata e shkollës ta krijojë.",
       "meals.billing_month_attendance_expired":
         "Të dhënat e pranisë për këtë muaj mund të jenë fshirë. Muaji nuk mund të miratohet më me siguri. Ju lutemi kontaktoni ofruesin tuaj.",
       "meals.child_not_enrolled":
         "Nuk është e mundur: {object}. Fëmija nuk është në kujdes në këtë ditë.",
+      "meals.day_changed":
+        "Dikush tjetër e ka ndryshuar ndërkohë planin e ushqimit. Zgjidhni „Verwerfen” për të parë versionin e ri. Zgjidhni „Speichern” për ta zëvendësuar me ndryshimet tuaja.",
       "meals.day_closed":
         "Nuk është e mundur: {object}. Shkolla është e mbyllur në këtë ditë.",
       "meals.day_past": "Nuk është më e mundur: {object}. Dita ka kaluar.",
@@ -4171,6 +4263,8 @@ export const ERROR_CATALOG = {
         "{object} nuk mund të ndryshohej. Ju lutemi kontrolloni gjendjen aktuale.",
       "students.reason_required":
         "Mungon arsyeja: {object}. Ju lutemi shkruani një.",
+      "students.schedule_staff_profile_required":
+        "Oraret e kujdesit mund t'i ndryshojë vetëm dikush me profil stafi. Llogaria juaj nuk ka ende një të tillë në këtë shkollë. Ju lutemi kërkoni nga administrata e shkollës ta krijojë.",
       "students.staff_profile_required":
         "Këtë orë e kanë vendosur prindërit. Vetëm dikush me profil stafi mund ta ndryshojë.",
       "students.status_day_conflict":
@@ -4226,8 +4320,11 @@ export const ERROR_CATALOG = {
       requestId: "Numer zgłoszenia: {requestId}",
       crash: "Nie udało się przetworzyć: {object}. Spróbuj ponownie później.",
       fieldCheck: "Sprawdź to pole.",
+      reloadFailed: "Nie udało się wczytać aktualnego stanu.",
     },
     codes: {
+      "attendance.checkin_staff_profile_required":
+        "Dzieci może meldować i wymeldowywać tylko personel szkoły. Pana/Pani konto nie ma w tej szkole profilu pracownika.",
       "calendar.federal_state_missing":
         "Dla szkoły nie ustawiono jeszcze kraju związkowego. Dlatego brakuje dni świątecznych. Kierownictwo może go ustawić w ustawieniach.",
       "calendar.occurrence_unavailable":
@@ -4401,6 +4498,8 @@ export const ERROR_CATALOG = {
         "Już nie jest otwarte: {object}. Zapytaj swoją osobę kontaktową.",
       "care.request_sharing_invalid":
         "Nieprawidłowe dane: {object}. Sprawdź wpisane dane.",
+      "care.room_history_stop_disabled":
+        "Obecnie nie możesz tutaj zmienić: {object}. Zapytaj swoją osobę kontaktową.",
       "care.sick_note_disabled":
         "Obecnie niedostępne tutaj: {object}. Zapytaj swoją osobę kontaktową.",
       "classday.absence_list_invalid_period":
@@ -4609,8 +4708,14 @@ export const ERROR_CATALOG = {
         "Dziecko bez miejsca w OGS otrzymuje miejsce poprzez zapis na rok szkolny.",
       "files.file_name_invalid":
         "Nazwa pliku jest niedozwolona. Wybierz plik ponownie.",
+      "general.changed_since_read":
+        "W międzyczasie zmieniono: {object}. Teraz widzisz aktualny stan. Sprawdź go i spróbuj ponownie.",
       "general.request_too_large":
         "Nie udało się przetworzyć: {object}. Usuń w przeglądarce pliki cookie tej strony. Następnie zaloguj się ponownie.",
+      "general.route_not_found":
+        "Nie udało się przetworzyć: {object}. Jest nowa wersja moto. Odśwież stronę.",
+      "general.write_answer_unreadable":
+        "Zmiana została przyjęta: {object}. Nie udało się jej wyświetlić. Odśwież stronę, zanim spróbujesz ponownie.",
       "identity.account_already_has_tenant_access":
         "Ta osoba ma już dostęp do tej szkoły. Znajdziesz ją na liście personelu.",
       "identity.account_inactive":
@@ -4679,10 +4784,14 @@ export const ERROR_CATALOG = {
         "W innym oknie zalogowało się inne konto. moto zaraz odświeży tę stronę.",
       "identity.session_tenant_mismatch":
         "Szkoła została zmieniona w innym oknie. moto zaraz przełączy tę stronę z powrotem. Spróbuj ponownie za chwilę.",
+      "import.staff_profile_required":
+        "Dzieci może importować tylko osoba z profilem pracownika. Pana/Pani konto nie ma go jeszcze w tej szkole. Proszę poprosić administrację szkoły o jego utworzenie.",
       "meals.billing_month_attendance_expired":
         "Dane o obecności z tego miesiąca mogły już zostać usunięte. Nie można bezpiecznie zatwierdzić miesiąca. Prosimy skontaktować się z organem prowadzącym.",
       "meals.child_not_enrolled":
         "Nie można: {object}. Dziecko nie jest tego dnia pod opieką.",
+      "meals.day_changed":
+        "Ktoś inny zmienił w międzyczasie jadłospis. Wybierz „Verwerfen”, aby zobaczyć nową wersję. Wybierz „Speichern”, aby zastąpić ją swoimi zmianami.",
       "meals.day_closed":
         "Nie można: {object}. Tego dnia szkoła jest zamknięta.",
       "meals.day_past": "Już nie można: {object}. Ten dzień już minął.",
@@ -4805,6 +4914,8 @@ export const ERROR_CATALOG = {
       "students.pickup_proof_not_found":
         "{object} nie udało się zmienić. Proszę sprawdzić aktualny stan.",
       "students.reason_required": "Brakuje uzasadnienia: {object}. Wpisz je.",
+      "students.schedule_staff_profile_required":
+        "Godziny opieki może zmieniać tylko osoba z profilem pracownika. Pana/Pani konto nie ma go jeszcze w tej szkole. Proszę poprosić administrację szkoły o jego utworzenie.",
       "students.staff_profile_required":
         "Ten czas ustawili rodzice. Zmienić go może tylko osoba z profilem pracownika.",
       "students.status_day_conflict":
@@ -4859,8 +4970,11 @@ export const ERROR_CATALOG = {
       requestId: "İstek numarası: {requestId}",
       crash: "{object} işlenemedi. Daha sonra yeniden deneyin.",
       fieldCheck: "Bu alanı kontrol edin.",
+      reloadFailed: "Güncel durum yüklenemedi.",
     },
     codes: {
+      "attendance.checkin_staff_profile_required":
+        "Çocukların giriş ve çıkışını yalnızca okul personeli kaydedebilir. Hesabınızın bu okulda personel profili yok.",
       "calendar.federal_state_missing":
         "Okul için henüz eyalet belirlenmedi. Bu yüzden resmi tatiller eksik. Yönetim bunu ayarlardan girebilir.",
       "calendar.occurrence_unavailable":
@@ -5035,6 +5149,8 @@ export const ERROR_CATALOG = {
         "{object} artık açık değil. Lütfen ilgili kişinize danışın.",
       "care.request_sharing_invalid":
         "{object} geçersiz bilgiler içeriyor. Lütfen girdiğiniz bilgileri kontrol edin.",
+      "care.room_history_stop_disabled":
+        "{object} şu anda burada değiştirilemez. Lütfen ilgili kişinize danışın.",
       "care.sick_note_disabled":
         "{object} şu anda burada kullanılamıyor. Lütfen ilgili kişinize danışın.",
       "classday.absence_list_invalid_period":
@@ -5249,8 +5365,14 @@ export const ERROR_CATALOG = {
         "OGS yeri olmayan bir çocuk, yerini okul yılı kaydıyla alır.",
       "files.file_name_invalid":
         "Dosya adı kabul edilmiyor. Lütfen dosyayı yeniden seçin.",
+      "general.changed_since_read":
+        "{object} bu arada değiştirildi. Şimdi güncel durumu görüyorsunuz. Kontrol edin ve tekrar deneyin.",
       "general.request_too_large":
         "{object} işlenemedi. Lütfen tarayıcınızda bu sitenin çerezlerini silin. Ardından yeniden giriş yapın.",
+      "general.route_not_found":
+        "{object} işlenemedi. moto'nun yeni bir sürümü var. Sayfayı yeniden yükleyin.",
+      "general.write_answer_unreadable":
+        "{object} kabul edildi ancak gösterilemedi. Tekrar denemeden önce sayfayı yeniden yükleyin.",
       "identity.account_already_has_tenant_access":
         "Bu kişinin bu okula zaten erişimi var. Kişiyi personel listesinde bulabilirsiniz.",
       "identity.account_inactive":
@@ -5319,10 +5441,14 @@ export const ERROR_CATALOG = {
         "Başka bir pencerede başka bir hesapla giriş yapıldı. moto bu sayfayı birazdan yeniden yükleyecek.",
       "identity.session_tenant_mismatch":
         "Okul başka bir pencerede değiştirildi. moto bu sayfayı birazdan geri geçirecek. Lütfen biraz sonra tekrar deneyin.",
+      "import.staff_profile_required":
+        "Çocukları yalnızca personel profili olan biri içe aktarabilir. Hesabınızın bu okulda henüz bir profili yok. Lütfen okul yönetiminden bir profil oluşturmasını isteyin.",
       "meals.billing_month_attendance_expired":
         "Bu aya ait devam kayıtları silinmiş olabilir. Ay artık güvenilir biçimde onaylanamaz. Lütfen hizmet sağlayıcınızla iletişime geçin.",
       "meals.child_not_enrolled":
         "{object} mümkün değil. Çocuk bu gün bakımda değil.",
+      "meals.day_changed":
+        "Başka biri yemek planını bu arada değiştirdi. Yeni hâlini görmek için “Verwerfen”i seçin. Kendi değişikliklerinizle değiştirmek için “Speichern”i seçin.",
       "meals.day_closed": "{object} mümkün değil. Okul bu gün kapalı.",
       "meals.day_past": "{object} artık mümkün değil. Bu gün geçti.",
       "meals.delivery_range_too_long":
@@ -5445,6 +5571,8 @@ export const ERROR_CATALOG = {
         "{object} değiştirilemedi. Lütfen güncel durumu kontrol edin.",
       "students.reason_required":
         "{object} için gerekçe eksik. Lütfen bir gerekçe girin.",
+      "students.schedule_staff_profile_required":
+        "Bakım saatlerini yalnızca personel profili olan biri değiştirebilir. Hesabınızın bu okulda henüz bir profili yok. Lütfen okul yönetiminden bir profil oluşturmasını isteyin.",
       "students.staff_profile_required":
         "Bu saati veliler belirledi. Yalnızca personel profili olan biri değiştirebilir.",
       "students.status_day_conflict":
@@ -5500,8 +5628,11 @@ export const ERROR_CATALOG = {
       requestId: "Номер запиту: {requestId}",
       crash: "Не вдалося обробити: {object}. Спробуйте пізніше.",
       fieldCheck: "Перевірте це поле.",
+      reloadFailed: "Не вдалося завантажити актуальний стан.",
     },
     codes: {
+      "attendance.checkin_staff_profile_required":
+        "Відмічати прихід і вихід дітей може лише персонал школи. Ваш обліковий запис не має профілю персоналу в цій школі.",
       "calendar.federal_state_missing":
         "Для школи ще не вказано федеральну землю. Тому бракує святкових днів. Керівництво може вказати її в налаштуваннях.",
       "calendar.occurrence_unavailable":
@@ -5673,6 +5804,8 @@ export const ERROR_CATALOG = {
         "Уже не відкрито: {object}. Зверніться до контактної особи.",
       "care.request_sharing_invalid":
         "Указано неправильні дані: {object}. Перевірте введені дані.",
+      "care.room_history_stop_disabled":
+        "Зараз тут не можна змінити: {object}. Зверніться до контактної особи.",
       "care.sick_note_disabled":
         "Зараз тут недоступно: {object}. Зверніться до контактної особи.",
       "classday.absence_list_invalid_period":
@@ -5882,8 +6015,14 @@ export const ERROR_CATALOG = {
         "Дитина без місця в OGS отримує місце через запис на навчальний рік.",
       "files.file_name_invalid":
         "Назва файлу не дозволена. Виберіть файл ще раз.",
+      "general.changed_since_read":
+        "Дані змінилися: {object}. Зараз показано поточний стан. Перевірте його і спробуйте знову.",
       "general.request_too_large":
         "Не вдалося обробити: {object}. Видаліть у браузері файли cookie цього сайту. Потім увійдіть знову.",
+      "general.route_not_found":
+        "Не вдалося обробити: {object}. Вийшла нова версія moto. Оновіть сторінку.",
+      "general.write_answer_unreadable":
+        "Зміну прийнято: {object}. Її не вдалося показати. Оновіть сторінку, перш ніж пробувати знову.",
       "identity.account_already_has_tenant_access":
         "Ця особа вже має доступ до цієї школи. Її можна знайти в списку персоналу.",
       "identity.account_inactive":
@@ -5952,10 +6091,14 @@ export const ERROR_CATALOG = {
         "В іншому вікні увійшов інший обліковий запис. moto зараз перезавантажить цю сторінку.",
       "identity.session_tenant_mismatch":
         "Школу змінено в іншому вікні. moto зараз перемкне цю сторінку назад. Спробуйте ще раз трохи пізніше.",
+      "import.staff_profile_required":
+        "Імпортувати дітей може лише працівник із профілем персоналу. Ваш обліковий запис у цій школі його ще не має. Попросіть адміністрацію школи створити його.",
       "meals.billing_month_attendance_expired":
         "Дані про відвідування за цей місяць могли бути видалені. Надійно підтвердити місяць уже неможливо. Зверніться до організації, що керує групою продовженого дня.",
       "meals.child_not_enrolled":
         "Неможливо: {object}. Цього дня дитина не перебуває під доглядом.",
+      "meals.day_changed":
+        "Хтось інший уже змінив меню. Натисніть «Verwerfen», щоб побачити нову версію. Натисніть «Speichern», щоб замінити її своїми змінами.",
       "meals.day_closed": "Неможливо: {object}. Цього дня школа зачинена.",
       "meals.day_past": "Уже неможливо: {object}. Цей день уже минув.",
       "meals.delivery_range_too_long":
@@ -6077,6 +6220,8 @@ export const ERROR_CATALOG = {
       "students.pickup_proof_not_found":
         "{object}: змінити не вдалося. Будь ласка, перевірте поточний стан.",
       "students.reason_required": "Не вказано причину: {object}. Вкажіть її.",
+      "students.schedule_staff_profile_required":
+        "Змінювати час догляду може лише працівник із профілем персоналу. Ваш обліковий запис у цій школі його ще не має. Попросіть адміністрацію школи створити його.",
       "students.staff_profile_required":
         "Цей час встановили батьки. Змінити його може лише працівник із профілем персоналу.",
       "students.status_day_conflict":

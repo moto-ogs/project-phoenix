@@ -9,7 +9,8 @@
 // „Wieder wie im Vertrag“ lässt sie stehen (#6692), und sie hat das Format
 // des Trägers (#6675).
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { ChoiceTile } from "~/components/ui/choice-tile";
 import { CustomSelect } from "~/components/ui/custom-select";
@@ -27,6 +28,7 @@ import {
   debtorNumberFormatHint,
 } from "~/lib/debtor-number-format";
 import { createLogger } from "~/lib/logger";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import {
   type FamilyBilling,
   type FamilyBillingInput,
@@ -49,10 +51,16 @@ export interface FamilyBillingTarget {
   readonly childName: string;
   /** The invoice is issued: the change reaches only the next run. */
   readonly issued: boolean;
+  /**
+   * The form was opened for the family itself, not from an invoice of a
+   * run (#7770): no invoice exists yet or none is in view.
+   */
+  readonly withoutRun?: boolean;
 }
 
 export interface FamilyBillingDraft {
-  recipientKind: RecipientKind;
+  /** undefined: a stored kind this build does not know; the office picks one. */
+  recipientKind: RecipientKind | undefined;
   secondFirstName: string;
   secondLastName: string;
   payerFirstName: string;
@@ -61,7 +69,8 @@ export interface FamilyBillingDraft {
   street: string;
   postalCode: string;
   city: string;
-  paymentMethod: PaymentMethod | "";
+  /** undefined: a stored method this build does not know. */
+  paymentMethod: PaymentMethod | "" | undefined;
   dueDay: string;
   debtorNumber: string;
 }
@@ -119,6 +128,12 @@ export function familyBillingErrors(
   const need = (field: string, value: string, hint: string) => {
     if (!value.trim()) errors[field] = hint;
   };
+  if (draft.recipientKind === undefined) {
+    errors.recipient_kind = "Bitte wähle aus, wer die Rechnung bekommt.";
+  }
+  if (draft.paymentMethod === undefined) {
+    errors.payment_method = "Bitte wähle aus, wie die Familie zahlt.";
+  }
   if (draft.recipientKind === "both") {
     need(
       "second_first_name",
@@ -160,14 +175,17 @@ export function familyBillingErrors(
   return errors;
 }
 
-/** The request of a draft for the contract. */
+/**
+ * The request of a draft for the contract. familyBillingErrors refuses a
+ * draft without a recipient kind or payment method before it is sent.
+ */
 export function familyBillingInput(
   contractId: string,
   draft: FamilyBillingDraft,
 ): FamilyBillingInput {
   return {
     contractId,
-    recipientKind: draft.recipientKind,
+    recipientKind: draft.recipientKind ?? "applicant",
     secondFirstName: draft.secondFirstName,
     secondLastName: draft.secondLastName,
     payerFirstName: draft.payerFirstName,
@@ -181,10 +199,20 @@ export function familyBillingInput(
             city: draft.city,
           }
         : null,
-    paymentMethod: draft.paymentMethod,
+    paymentMethod: draft.paymentMethod ?? "",
     dueDay: draft.dueDay === "" ? null : Number(draft.dueDay),
     debtorNumber: draft.debtorNumber,
   };
+}
+
+/** Which invoices the saved choice reaches, said above the fields. */
+function scopeText(target: FamilyBillingTarget): string {
+  if (target.withoutRun) {
+    return "Gilt für alle neuen Rechnungen dieser Familie, auch für Geschwister. Speichern erstellt keine Rechnung und bucht nichts ab.";
+  }
+  return target.issued
+    ? "Gilt für alle Rechnungen dieser Familie ab dem nächsten Lauf. Diese Rechnung ist schon ausgestellt und bleibt, wie sie ist."
+    : "Gilt für alle Rechnungen dieser Familie, auch für Geschwister. Die Vorschau zeigt die Änderung gleich.";
 }
 
 const RECIPIENT_ITEMS: readonly { value: RecipientKind; label: string }[] = [
@@ -201,11 +229,21 @@ const DUE_DAY_OPTIONS = [
   })),
 ];
 
+/** The stored deviation the form rests on, with its read-state token. */
+interface StoredFamily {
+  readonly existing: FamilyBilling | null;
+  readonly version: string;
+}
+
 /** The form of a family's recipient and payment, on its own page. */
 export function FamilyBillingForm({
   target,
   existing,
+  version,
+  reload,
   runDueText,
+  termsText,
+  mandateInForce,
   format = NO_DEBTOR_NUMBER_FORMAT,
   onCancel,
   onSaved,
@@ -216,17 +254,56 @@ export function FamilyBillingForm({
   format?: DebtorNumberFormat;
   /** The family's deviation as stored, null without one. */
   existing: FamilyBilling | null;
+  /** Read-state token of `existing`; the save sends it back (ADR 0311). */
+  version: string;
+  /**
+   * Reads the family again after a save was refused because its deviation
+   * changed since; rejects when the read fails (ADR 0311). The stored state
+   * arrives as `existing` and `version`, and the form shows it.
+   */
+  reload: () => Promise<undefined>;
   /**
    * The run's due dates as the run page names them („Überweisung am …“),
    * so „Wie im Lauf“ says which dates it takes. Missing outside a run.
    */
   runDueText?: string | null;
+  /**
+   * What „Wie in den Abrechnungsvorgaben“ takes today, e.g. „Überweisung“
+   * (#7770); missing where the page does not read the Vorgaben.
+   */
+  termsText?: string | null;
+  /**
+   * Whether the family has a SEPA mandate in force for the creditor of
+   * today; null or missing while unknown. The choice „Lastschrift“ names a
+   * missing mandate where the person makes it.
+   */
+  mandateInForce?: boolean | null;
   onCancel: () => void;
   onSaved: (family: FamilyBilling | null) => void;
 }>) {
-  const [draft, setDraft] = useState<FamilyBillingDraft>(() =>
-    draftOf(existing),
+  // The draft starts from the state the form read and saves over its
+  // version (ADR 0311): a newer read refills it only while untouched; after
+  // a refused save the stored state shows, and nothing is sent until it is
+  // read.
+  // One object per read: a fresh one each render would count as a new read
+  // and end a failed read after a refusal with the state read before it.
+  const opened = useMemo(() => ({ existing, version }), [existing, version]);
+  const edit = useDraftOn<StoredFamily, FamilyBillingDraft, string, unknown>(
+    {
+      opening: target.contractId,
+      data: opened,
+      reload,
+    },
+    {
+      token: (stored) => stored.version,
+      toDraft: (stored) => draftOf(stored.existing),
+      // The page leaves after a save.
+      answer: (_saved, shown) => shown,
+    },
   );
+  const base = edit.base ?? opened;
+  const draft = edit.draft ?? draftOf(existing);
+  const setDraft = edit.setDraft;
   const [saving, setSaving] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(formRef);
@@ -237,33 +314,44 @@ export function FamilyBillingForm({
   const fieldError = (name: string) => formErrors.fieldError(name) ?? undefined;
 
   const submit = async () => {
+    if (!edit.canSubmit) return;
     formErrors.clear();
-    const errors = familyBillingErrors(draft, format, existing?.debtorNumber);
+    const errors = familyBillingErrors(
+      draft,
+      format,
+      base.existing?.debtorNumber,
+    );
     if (Object.keys(errors).length > 0) {
       formErrors.invalid("Bitte prüfe die markierten Felder.", errors);
       return;
     }
     setSaving(true);
-    try {
-      const saved = await saveFamilyBilling(
-        familyBillingInput(target.contractId, draft),
-      );
-      success(
-        saved
-          ? "Empfänger und Zahlung sind gespeichert."
-          : "Die Familie hat wieder die Angaben aus dem Vertrag.",
-      );
-      onSaved(saved);
-    } catch (err) {
+    const result = await edit.submit((token, sent) =>
+      saveFamilyBilling(familyBillingInput(target.contractId, sent), token),
+    );
+    setSaving(false);
+    if (!result.ok) {
       logger.error("family_billing_save_failed", {
-        error: err instanceof Error ? err.message : String(err),
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
       });
-      void formErrors.show(err, {
+      // Changed since the read: `reload` shows the stored state, without a
+      // retry of the refused version.
+      void formErrors.show(result.error, {
         object: "die Angabe zu Empfänger und Zahlung",
+        reload: result.reload,
       });
-    } finally {
-      setSaving(false);
+      return;
     }
+    const saved = result.saved as FamilyBilling | null;
+    success(
+      saved
+        ? "Empfänger und Zahlung sind gespeichert."
+        : "Die Familie hat wieder die Angaben aus dem Vertrag.",
+    );
+    onSaved(saved);
   };
 
   const id = (field: string) => `family-billing-${field}`;
@@ -283,11 +371,7 @@ export function FamilyBillingForm({
         void submit();
       }}
     >
-      <p className="text-sm text-gray-600">
-        {target.issued
-          ? "Gilt für alle Rechnungen dieser Familie ab dem nächsten Lauf. Diese Rechnung ist schon ausgestellt und bleibt, wie sie ist."
-          : "Gilt für alle Rechnungen dieser Familie, auch für Geschwister. Die Vorschau zeigt die Änderung gleich."}
-      </p>
+      <p className="text-sm text-gray-600">{scopeText(target)}</p>
       <div className="space-y-2">
         <FieldLabel id={id("recipient-label")}>Rechnung an</FieldLabel>
         <div
@@ -448,11 +532,25 @@ export function FamilyBillingForm({
             </ChoiceTile>
           ))}
         </div>
+        {/* What the first choice takes today, right under the choices. */}
+        {termsText ? (
+          <p className="text-sm text-gray-600">
+            In den Abrechnungsvorgaben steht: {termsText}.
+          </p>
+        ) : null}
         {/* The precondition where the person chooses the debit. */}
         <p className="text-sm text-gray-600">
-          Lastschrift geht nur mit gültigem Mandat. Den Stand siehst du unten
-          unter „SEPA-Lastschriftmandat“.
+          Lastschrift geht nur mit gültigem Mandat. Ein Mandat allein ändert den
+          Zahlungsweg nicht. Den Stand siehst du unten unter
+          „SEPA-Lastschriftmandat“.
         </p>
+        {draft.paymentMethod === "direct_debit" && mandateInForce === false ? (
+          <Alert
+            type="warning"
+            size="compact"
+            message="Diese Familie hat kein gültiges Mandat. Abgebucht wird erst, wenn du unten eins erfasst."
+          />
+        ) : null}
       </div>
       <CustomSelect
         id={id("due-day")}
@@ -499,7 +597,16 @@ export function FamilyBillingForm({
         </Button>
       ) : null}
       <FormErrorAlert message={formErrors.error} />
-      <EditActions onCancel={onCancel} saving={saving} />
+      <EditActions
+        onCancel={onCancel}
+        saving={saving}
+        disabled={!edit.canSubmit}
+        disabledReason={
+          edit.status === "loadFailed"
+            ? "Lade zuerst den gespeicherten Stand neu."
+            : "Der gespeicherte Stand wird geladen."
+        }
+      />
     </form>
   );
 }

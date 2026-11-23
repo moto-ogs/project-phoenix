@@ -73,7 +73,7 @@ import {
   DocumentAttachmentList,
   type AttachmentLabels,
 } from "~/components/enrollment/attachment-list";
-import { holidayDocumentPath } from "~/lib/traeger-holiday-form-api";
+import { fetchHolidayDocument } from "~/lib/traeger-holiday-form-api";
 import { LegalMarkdown } from "~/components/enrollment/legal-markdown";
 import { Button } from "~/components/ui/button";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
@@ -142,6 +142,11 @@ const NO_FAMILY_DEBTOR_NUMBERS: HolidayFamilyDebtorNumbers = {
 };
 
 const logger = createLogger({ component: "TraegerHolidayRegistrationPage" });
+
+/** Was die Seite ist und was man dort zuerst tut (#7595). */
+const REGISTRATION_INFO =
+  "Hier prüfst du eine Anmeldung für die Ferien. Schau dir zuerst die Reiter „Kind“, „Eltern“ und „Nachweise und Beitrag“ an. Ist sie eingegangen, bestätigst du sie oben mit „Bestätigen“.";
+
 const TRAEGER_BILLING_RIGHT = "traeger_billing:manage";
 // The mail notice leads here: phone and address of the parents (#6999).
 const PARENTS_SECTION_ID = "eltern";
@@ -211,6 +216,7 @@ export default function TraegerHolidayRegistrationPage() {
     <Suspense
       fallback={
         <TenantPage
+          info={REGISTRATION_INFO}
           title="Anmeldung"
           leading={
             <ConceptIconTile concept={holidayWeeksConcept} size="page" />
@@ -340,8 +346,10 @@ function HolidayRegistrationContent() {
   // must freeze the amount the card shows.
   const [previewPending, setPreviewPending] = useState(false);
   const latestContribution = useRef(0);
-  // The card in its edit state: "guardians", "contacts", "answers" or
-  // "child:<id>"; one at a time.
+  // The open draft of the registration: an edit state "guardians",
+  // "contacts", "answers" or "child:<id>", or the rebooking "rebook:<id>".
+  // One at a time: each draft opens on the answer of the save before it,
+  // so a second save is never refused for the first one (ADR 0311).
   const [editing, setEditing] = useState<string | null>(null);
   const {
     schools,
@@ -397,6 +405,7 @@ function HolidayRegistrationContent() {
         mutateConfirmation(loadedConfirmation, fresh),
         mutateFamily(loadedFamilyDebtorNumber, fresh),
       ]);
+      return loadedRegistration;
     } catch (error) {
       if (error instanceof ApiError && error.status === 404) {
         complete(() => {
@@ -570,6 +579,7 @@ function HolidayRegistrationContent() {
         registration,
         onSaved: saved,
         onCancel: () => setEditing(null),
+        reload: fetchRegistration,
       }
     : null;
 
@@ -597,6 +607,7 @@ function HolidayRegistrationContent() {
   if (!(registration && view)) {
     return (
       <TenantPage
+        info={REGISTRATION_INFO}
         {...head}
         statsLoading={!loadError}
         error={loadError}
@@ -630,6 +641,11 @@ function HolidayRegistrationContent() {
             names={names}
             knownSchoolId={known.get(child.id)}
             onChanged={changed}
+            reload={fetchRegistration}
+            rebookBlocked={editing !== null && editing !== `rebook:${child.id}`}
+            onRebookingChange={(open) =>
+              setEditing(open ? `rebook:${child.id}` : null)
+            }
             onEdit={
               cancelled || editing
                 ? undefined
@@ -705,8 +721,8 @@ function HolidayRegistrationContent() {
                       <DocumentAttachmentList
                         labels={PDF_LABELS}
                         attachments={block.attachments}
-                        documentURL={(documentId) =>
-                          holidayDocumentPath(periodId, documentId)
+                        loadDocument={(documentId) =>
+                          fetchHolidayDocument(periodId, documentId)
                         }
                       />
                     </div>
@@ -876,6 +892,7 @@ function HolidayRegistrationContent() {
     >
       {(status) => (
         <TenantPage
+          info={REGISTRATION_INFO}
           {...head}
           error={loadError}
           stats={

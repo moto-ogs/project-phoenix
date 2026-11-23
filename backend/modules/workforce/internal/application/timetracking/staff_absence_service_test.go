@@ -10,27 +10,12 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/moto-ogs/project-phoenix/tenant/tenanttest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func TestAbsenceRequestsDecodeLosslessCustomIDAndExplicitNull(t *testing.T) {
-	t.Parallel()
-
-	const id = "9007199254740993"
-
-	var create CreateAbsenceRequest
-	require.NoError(t, json.Unmarshal([]byte(`{"absence_type":"other","absence_type_id":"`+id+`"}`), &create))
-	require.NotNil(t, create.AbsenceTypeID)
-	assert.Equal(t, int64(9007199254740993), *create.AbsenceTypeID)
-
-	var update UpdateAbsenceRequest
-	require.NoError(t, json.Unmarshal([]byte(`{"absence_type":"sick","absence_type_id":null}`), &update))
-	assert.True(t, update.AbsenceTypeIDSet)
-	assert.Nil(t, update.AbsenceTypeID)
-}
 
 func TestLoadRebookedAbsencesOnlyMapsMissingRowsToNotFound(t *testing.T) {
 	t.Parallel()
@@ -3445,6 +3430,9 @@ func (m *absMonthServiceMock) GetBalanceAdjustmentMinutes(context.Context, int64
 	return m.futureAdjustment, nil
 }
 
+// AtEndOfToday is the mock itself: its numbers do not move with the clock.
+func (m *absMonthServiceMock) AtEndOfToday() WorkTimeMonthService { return m }
+
 // #2873: a comp_time absence deducting more daily-target minutes than the
 // Stundenkonto holds is created anyway — the balance goes negative, the
 // Leitung confirmed the projection in the frontend.
@@ -3835,7 +3823,7 @@ func TestStaffAbsenceCapability_ReturnsTheSickCascadePlan(t *testing.T) {
 		AbsenceType: AbsenceTypeSick, DateStart: "2026-02-10", DateEnd: "2026-02-12",
 	})
 	require.NoError(t, err)
-	assert.Equal(t, int64(555), created.ID)
+	assert.Equal(t, ident.ID(int64(555)), created.ID)
 	assert.Equal(t, workforce.SickCascadePlan{{Kind: workforce.SickCascadeMark, Report: workforce.SickCascadeInput{
 		SubjectStaffID: 100, AbsenceType: AbsenceTypeSick, DateStart: "2026-02-10", DateEnd: "2026-02-12", AbsenceID: 555, ActorStaffID: 200, ActorAccountID: &accountID,
 	}}}, plan)

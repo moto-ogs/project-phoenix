@@ -15,6 +15,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	"github.com/moto-ogs/project-phoenix/modules/carecontract/compose"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -203,9 +204,9 @@ func TestPublicCareContractBooksModulesPerWeekdayInOneDraftAndFreezesItsPDFAtThe
 	require.NoError(t, err)
 	require.Len(t, candidates, 1, "one candidate per child, over all its modules")
 	assert.Equal(t, []carecontract.Service{
-		{Weekday: "mon", CareOfferingID: school.offering + 2, ModuleName: "Frühbetreuung", EndsAt: "08:00"},
-		{Weekday: "mon", CareOfferingID: school.offering, ModuleName: "Kurzbetreuung", EndsAt: "14:00", LastDay: &shortLast},
-		{Weekday: "tue", CareOfferingID: school.offering + 1, ModuleName: "Ganztag", EndsAt: "16:30"},
+		{Weekday: "mon", CareOfferingID: ident.ID(school.offering + 2), ModuleName: "Frühbetreuung", EndsAt: "08:00"},
+		{Weekday: "mon", CareOfferingID: ident.ID(school.offering), ModuleName: "Kurzbetreuung", EndsAt: "14:00", LastDay: &shortLast},
+		{Weekday: "tue", CareOfferingID: ident.ID(school.offering + 1), ModuleName: "Ganztag", EndsAt: "16:30"},
 	}, candidates[0].Services, "per weekday the modules with their end times; no ended booking, no AG")
 	assert.Equal(t, calendar.NewDate(2027, 8, 1), candidates[0].EffectiveFrom)
 	assert.Equal(t, carecontract.SkipTemplateMissing, candidates[0].TemplateIssue)
@@ -255,13 +256,13 @@ func TestPublicCareContractBooksModulesPerWeekdayInOneDraftAndFreezesItsPDFAtThe
 	// Missing identity cannot freeze an anonymous PDF or enqueue a mail.
 	ports.Letterheads = letterheadDouble{missing: true}
 	unnamed := compose.NewContracts(ports, time.Now)
-	_, previewErr := unnamed.ContractDocument(ctx, reviewer, id)
+	_, previewErr := unnamed.ContractDocument(ctx, reviewer, id.Int64())
 	var invalid *carecontract.ValidationError
 	assert.ErrorAs(t, previewErr, &invalid)
 	// Without a letterhead the withdrawal notice names no address: the send
 	// is refused as a whole (#7177).
 	require.NoError(t, tenant.WithinTraeger(ctx, organization, func(txCtx context.Context) error {
-		refused, sendErr := unnamed.SendContracts(txCtx, reviewer, []int64{id})
+		refused, sendErr := unnamed.SendContracts(txCtx, reviewer, []int64{id.Int64()})
 		assert.ErrorIs(t, sendErr, carecontract.ErrLetterheadMissing)
 		assert.Empty(t, refused.Sent)
 		return nil
@@ -272,24 +273,24 @@ func TestPublicCareContractBooksModulesPerWeekdayInOneDraftAndFreezesItsPDFAtThe
 	list, err := contracts.ListContracts(ctx, reviewer, carecontract.ContractFilter{})
 	require.NoError(t, err)
 	require.Len(t, list.Contracts, 1)
-	detail, err := contracts.Contract(ctx, reviewer, id)
+	detail, err := contracts.Contract(ctx, reviewer, id.Int64())
 	require.NoError(t, err)
-	preview, err := contracts.ContractDocument(ctx, reviewer, id)
+	preview, err := contracts.ContractDocument(ctx, reviewer, id.Int64())
 	require.NoError(t, err)
 	require.NoError(t, tenant.WithinTraeger(ctx, organization, func(txCtx context.Context) error {
-		result, err := contracts.SendContracts(txCtx, reviewer, []int64{id})
+		result, err := contracts.SendContracts(txCtx, reviewer, []int64{id.Int64()})
 		if err != nil {
 			return err
 		}
-		assert.Equal(t, []int64{id}, result.Sent)
+		assert.Equal(t, []ident.ID{id}, result.Sent)
 		return nil
 	}))
-	frozen, err := contracts.ContractDocument(ctx, reviewer, id)
+	frozen, err := contracts.ContractDocument(ctx, reviewer, id.Int64())
 	require.NoError(t, err)
 	views := []string{}
 	for _, read := range reads {
 		assert.Equal(t, carecontract.SchoolAccessContracts, read.Data)
-		assert.Equal(t, []int64{id}, read.ContractIDs)
+		assert.Equal(t, []int64{id.Int64()}, read.ContractIDs)
 		views = append(views, read.View)
 	}
 	assert.Equal(t, []string{"care_contract_list", "care_contract_detail", "care_contract_document", "care_contract_document"},
@@ -308,7 +309,7 @@ func TestPublicCareContractBooksModulesPerWeekdayInOneDraftAndFreezesItsPDFAtThe
 
 	// A sent contract is no draft any more.
 	err = tenant.WithinTraeger(ctx, organization, func(txCtx context.Context) error {
-		return contracts.DiscardContract(txCtx, reviewer, id)
+		return contracts.DiscardContract(txCtx, reviewer, id.Int64())
 	})
 	require.ErrorIs(t, err, carecontract.ErrContractNotDraft)
 }

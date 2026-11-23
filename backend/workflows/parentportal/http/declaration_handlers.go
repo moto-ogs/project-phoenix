@@ -355,8 +355,18 @@ const (
 )
 
 // declarationProof returns the guardian's own proof for one child: JSON for
-// the portal page, or with format=pdf the proof in the moto PDF design.
+// the portal page.
 func (rs *Resource) declarationProof(w http.ResponseWriter, r *http.Request) {
+	rs.serveDeclarationProof(w, r, false)
+}
+
+// declarationProofPDF returns the same proof in the moto PDF design, on a
+// path of its own (#2352).
+func (rs *Resource) declarationProofPDF(w http.ResponseWriter, r *http.Request) {
+	rs.serveDeclarationProof(w, r, true)
+}
+
+func (rs *Resource) serveDeclarationProof(w http.ResponseWriter, r *http.Request, pdf bool) {
 	accountID, ok := rs.parentAccountID(w, r)
 	if !ok {
 		return
@@ -376,7 +386,7 @@ func (rs *Resource) declarationProof(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store")
-	if r.URL.Query().Get("format") == "pdf" {
+	if pdf {
 		rs.writeDeclarationProofPDF(w, r, proof)
 		return
 	}
@@ -450,4 +460,5 @@ func (rs *Resource) mountDeclarationRoutes(r chi.Router, authRateLimiter func(ht
 	}
 	submit.Post("/me/news/{announcementId}/declaration", rs.submitDeclaration)
 	r.Get("/me/news/{announcementId}/declaration/proof", rs.declarationProof)
+	r.Get("/me/news/{announcementId}/declaration/proof/pdf", rs.declarationProofPDF)
 }

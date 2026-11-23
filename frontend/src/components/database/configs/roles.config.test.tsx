@@ -3,7 +3,12 @@
  * Tests role config structure and response mapping
  */
 import { describe, it, expect, vi } from "vitest";
-import { roleEditSections, rolesConfig } from "./roles.config";
+import {
+  roleEditSections,
+  rolesConfig,
+  toCreateRoleRequest,
+  toUpdateRoleRequest,
+} from "./roles.config";
 import type { Role } from "@/lib/auth-helpers";
 
 // Mock auth-helpers
@@ -26,10 +31,6 @@ describe("rolesConfig", () => {
       singular: "Rolle",
       plural: "Rollen",
     });
-  });
-
-  it("has correct API configuration", () => {
-    expect(rolesConfig.api.basePath).toBe("/api/auth/roles");
   });
 
   it("has form sections configured", () => {
@@ -77,16 +78,19 @@ describe("rolesConfig", () => {
   });
 
   it("sends the template instead of base_role when creating", () => {
-    const mapRequest = rolesConfig.service?.mapRequest;
     expect(
-      mapRequest?.({
+      toCreateRoleRequest({
         name: "Springkraft",
         description: "",
         template: "user",
-      } as Partial<Role>),
+      }),
     ).toEqual({ name: "Springkraft", description: "", template: "user" });
     expect(
-      mapRequest?.({ name: "Springkraft", description: "", baseRole: "admin" }),
+      toUpdateRoleRequest({
+        name: "Springkraft",
+        description: "",
+        baseRole: "admin",
+      }),
     ).toEqual({ name: "Springkraft", description: "", base_role: "admin" });
   });
 
@@ -96,7 +100,7 @@ describe("rolesConfig", () => {
       name: "admin",
       description: "Administrator role",
       isSystem: false,
-      permissions: [],
+      permissionNames: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -115,7 +119,7 @@ describe("rolesConfig", () => {
       name: "admin",
       description: "Administrator role",
       isSystem: false,
-      permissions: [],
+      permissionNames: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };

@@ -41,9 +41,6 @@ import { useSWRAuth } from "~/lib/swr";
 import { parentKeys } from "~/lib/swr/parent-keys";
 import { createLogger } from "~/lib/logger";
 import {
-  type ChildFeatures,
-  type ChildMasterData,
-  type MasterDataChange,
   type MasterDataChangeInput,
   getChildMasterData,
   submitMasterDataRequest,
@@ -70,6 +67,7 @@ import { sickConcept } from "~/lib/concepts/sick";
 import { SpinnerIcon } from "~/components/ui/icons";
 import { FormFieldset } from "~/components/ui/form-fieldset";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 const logger = createLogger({ component: "ChildMasterData" });
 
@@ -125,12 +123,14 @@ interface Props {
 }
 
 export interface ChildMasterDataState {
-  readonly data: ChildMasterData | null;
-  readonly features: ChildFeatures | null;
+  readonly data: parentMeContract.MasterDataResponse | null;
+  readonly features: parentMeContract.ChildFeaturesResponse | null;
   readonly loading: boolean;
   /** A failed load from the shared error path (#2518), with retry. */
   readonly error: FormError | null;
-  readonly setData: Dispatch<SetStateAction<ChildMasterData | null>>;
+  readonly setData: Dispatch<
+    SetStateAction<parentMeContract.MasterDataResponse | null>
+  >;
 }
 
 /**
@@ -212,7 +212,9 @@ export function useChildMasterData(
     t("errorObject"),
     () => reloadFeatures(),
   );
-  const setData = useCallback<Dispatch<SetStateAction<ChildMasterData | null>>>(
+  const setData = useCallback<
+    Dispatch<SetStateAction<parentMeContract.MasterDataResponse | null>>
+  >(
     (next) =>
       void mutate(
         (current) =>
@@ -243,20 +245,20 @@ function ChildMasterDataContent({
   studentId: string;
   childName: string;
   area: "details" | "departure" | "contact";
-  data: ChildMasterData;
-  features: ChildFeatures;
-  onApplied: (next: ChildMasterData) => void;
+  data: parentMeContract.MasterDataResponse;
+  features: parentMeContract.ChildFeaturesResponse;
+  onApplied: (next: parentMeContract.MasterDataResponse) => void;
   onDirectApplied: (
     target: string,
     field: string,
-    next: ChildMasterData,
+    next: parentMeContract.MasterDataResponse,
   ) => void;
 }>) {
   const t = useCareTermTranslations("parentMasterData");
   const visibilityT = useCareTermTranslations("parentVisibility");
   const pendingByField = useMemo(() => {
-    const map = new Map<string, MasterDataChange>();
-    for (const c of data.pending_changes) {
+    const map = new Map<string, parentMeContract.MasterDataChangeResponse>();
+    for (const c of data.pending_changes ?? []) {
       if (c.status === "pending") map.set(`${c.target}/${c.field_key}`, c);
     }
     return map;
@@ -439,29 +441,28 @@ function IdentitySection({
   onApplied,
 }: Readonly<{
   studentId: string;
-  data: ChildMasterData;
-  features: ChildFeatures;
-  pendingByField: Map<string, MasterDataChange>;
-  onApplied: (next: ChildMasterData) => void;
+  data: parentMeContract.MasterDataResponse;
+  features: parentMeContract.ChildFeaturesResponse;
+  pendingByField: Map<string, parentMeContract.MasterDataChangeResponse>;
+  onApplied: (next: parentMeContract.MasterDataResponse) => void;
 }>) {
   const t = useCareTermTranslations("parentMasterData");
   const locale = useLocale();
   const [modalOpen, setModalOpen] = useState(false);
 
-  const refresh = useCallback(() => {
-    void (async () => {
-      try {
-        onApplied(await getChildMasterData(studentId));
-      } catch (err) {
-        // Deliberately silent: the edit itself was saved and the dialog has
-        // confirmed it. This refresh only pulls the newest version in the
-        // background; the next page load shows it anyway.
-        logger.warn("master_data_refresh_failed", {
-          error: err instanceof Error ? err.message : String(err),
-          student_id: studentId,
-        });
-      }
-    })();
+  // Rejects on failure: after a refused edit the dialog shows it as the
+  // load error (ADR 0311); after a saved one the dialog has confirmed the
+  // save and ignores it, the next page load shows the newest version.
+  const refresh = useCallback(async () => {
+    try {
+      onApplied(await getChildMasterData(studentId));
+    } catch (err) {
+      logger.warn("master_data_refresh_failed", {
+        error: err instanceof Error ? err.message : String(err),
+        student_id: studentId,
+      });
+      throw err;
+    }
   }, [onApplied, studentId]);
 
   const requestable = features.master_data_request_enabled;
@@ -481,7 +482,10 @@ function IdentitySection({
     );
     onApplied({
       ...data,
-      pending_changes: mergePendingChanges(data.pending_changes, submitted),
+      pending_changes: mergePendingChanges(
+        data.pending_changes ?? [],
+        submitted,
+      ),
     });
     try {
       onApplied(await getChildMasterData(studentId));
@@ -589,10 +593,10 @@ function IdentityFact({
   studentId: string;
   label: string;
   value: string;
-  pending?: MasterDataChange;
+  pending?: parentMeContract.MasterDataChangeResponse;
   /** Zeigt den beantragten Rohwert so an wie den gültigen Wert. */
   formatRequested?: (raw: string) => string;
-  onEdited?: () => void;
+  onEdited?: () => Promise<unknown>;
 }>) {
   const t = useCareTermTranslations("parentMasterData");
   const requestTitleId = useId();
@@ -656,11 +660,12 @@ function IdentityFact({
           request={{
             type: "master_data",
             id: pending.id,
+            version: pending.version,
             label,
             value: editableValue,
           }}
           onClose={() => setEditing(false)}
-          onSaved={() => onEdited?.()}
+          onReload={() => onEdited?.()}
         />
       )}
     </DataField>
@@ -677,10 +682,10 @@ function DepartureSection({
 }: Readonly<{
   studentId: string;
   childName: string;
-  data: ChildMasterData;
-  features: ChildFeatures;
-  pending?: MasterDataChange;
-  onApplied: (next: ChildMasterData) => void;
+  data: parentMeContract.MasterDataResponse;
+  features: parentMeContract.ChildFeaturesResponse;
+  pending?: parentMeContract.MasterDataChangeResponse;
+  onApplied: (next: parentMeContract.MasterDataResponse) => void;
 }>) {
   const t = useCareTermTranslations("parentMasterData");
   const [modes, setModes] = useState(() =>
@@ -802,7 +807,10 @@ function DepartureSection({
       );
       onApplied({
         ...data,
-        pending_changes: mergePendingChanges(data.pending_changes, submitted),
+        pending_changes: mergePendingChanges(
+          data.pending_changes ?? [],
+          submitted,
+        ),
       });
       setModes(current);
       setRecipientIds([]);
@@ -971,7 +979,7 @@ function DepartureDays({
   tourTarget = false,
   nested = false,
 }: Readonly<{
-  modes?: Record<string, readonly string[]>;
+  modes?: Record<string, readonly string[] | null>;
   tourTarget?: boolean;
   /** Auf grauem Grund (offene Anfrage) heben sich die Tage weiß ab. */
   nested?: boolean;
@@ -1323,11 +1331,11 @@ function AutoSaveSelect({
 }
 
 function mergeDirectMasterDataField(
-  current: ChildMasterData,
-  next: ChildMasterData,
+  current: parentMeContract.MasterDataResponse,
+  next: parentMeContract.MasterDataResponse,
   target: string,
   field: string,
-): ChildMasterData {
+): parentMeContract.MasterDataResponse {
   if (target === "student" && field === "health_info") {
     return { ...current, health_info: next.health_info };
   }
@@ -1359,11 +1367,11 @@ function mergeDirectMasterDataField(
 }
 
 function mergePendingChanges(
-  current: readonly MasterDataChange[],
-  submitted: readonly MasterDataChange[],
-): MasterDataChange[] {
+  current: readonly parentMeContract.MasterDataChangeResponse[],
+  submitted: readonly parentMeContract.MasterDataChangeResponse[],
+): parentMeContract.MasterDataChangeResponse[] {
   if (submitted.length === 0) return [...current];
-  const byKey = new Map<string, MasterDataChange>();
+  const byKey = new Map<string, parentMeContract.MasterDataChangeResponse>();
   for (const change of current) {
     byKey.set(`${change.target}/${change.field_key}`, change);
   }
@@ -1374,7 +1382,7 @@ function mergePendingChanges(
 }
 
 function normalizeDepartureModes(
-  modes?: Record<string, readonly string[]>,
+  modes?: Record<string, readonly string[] | null>,
 ): Record<string, string[]> {
   const out: Record<string, string[]> = {};
   for (const day of DEPARTURE_DAYS) {
@@ -1403,7 +1411,9 @@ function departureModesFromValue(
   return out;
 }
 
-function hasDepartureAccompanied(modes?: Record<string, readonly string[]>) {
+function hasDepartureAccompanied(
+  modes?: Record<string, readonly string[] | null>,
+) {
   return DEPARTURE_DAYS.some((day) =>
     (modes?.[day] ?? []).includes("accompanied"),
   );

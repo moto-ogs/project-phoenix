@@ -61,7 +61,7 @@ func (r handoverRace) datevFile(ctx context.Context, all bool) int64 {
 	entry, err := r.store.InsertExportFile(ctx, r.own, 0, datevFileRecord(r.run, number, all,
 		parentbilling.DatevBookingRef{DocumentID: r.doc}))
 	require.NoError(r.t, err)
-	return entry.ID
+	return entry.ID.Int64()
 }
 
 func (r handoverRace) bookedOn() []int64 {

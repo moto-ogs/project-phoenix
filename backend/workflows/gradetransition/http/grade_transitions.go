@@ -14,6 +14,7 @@ import (
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/moto-ogs/project-phoenix/workflows/gradetransition"
 )
@@ -104,6 +105,9 @@ type TransitionRequest struct {
 	AcademicYear string                     `json:"academic_year"`
 	Notes        *string                    `json:"notes,omitempty"`
 	Mappings     []TransitionMappingRequest `json:"mappings,omitempty"`
+	// ExpectedVersion is the version of the draft an update edits; an update
+	// of a draft changed since is refused (ADR 0311). A create ignores it.
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 // Bind performs basic binding validation for the transition request.
@@ -112,12 +116,13 @@ func (req *TransitionRequest) Bind(_ *http.Request) error {
 	return nil
 }
 
-// TransitionApplyRequest carries the fingerprint of the preview the admin confirmed. It is
-// optional (a caller without a preview omits it), but when present the apply is
-// refused with 409 preview_stale unless the current cohort still matches — the
-// confirmation must bind to the children that were actually shown (#405 review).
+// TransitionApplyRequest carries the fingerprint of the preview the admin
+// confirmed. The apply is refused with 409 grade_transition.preview_stale
+// unless the current cohort still matches it, and without it too: the
+// confirmation must bind to the children that were actually shown (#405
+// review, ADR 0311).
 type TransitionApplyRequest struct {
-	ExpectedFingerprint string `json:"expected_fingerprint,omitempty"`
+	ExpectedFingerprint string `json:"expected_fingerprint"`
 }
 
 // TransitionMappingRequest represents a class mapping in a request
@@ -135,34 +140,37 @@ type TransitionMappingRequest struct {
 // Sending the digits as text keeps the value exact end to end, and the frontend
 // already models every backend id as a string (#405 review).
 type TransitionResponse struct {
-	ID           int64                       `json:"id,string"`
+	ID           ident.ID                    `json:"id"`
 	AcademicYear string                      `json:"academic_year"`
 	Status       string                      `json:"status"`
 	AppliedAt    *string                     `json:"applied_at,omitempty"`
-	AppliedBy    *int64                      `json:"applied_by,string,omitempty"`
+	AppliedBy    *ident.ID                   `json:"applied_by,omitempty"`
 	RevertedAt   *string                     `json:"reverted_at,omitempty"`
-	RevertedBy   *int64                      `json:"reverted_by,string,omitempty"`
+	RevertedBy   *ident.ID                   `json:"reverted_by,omitempty"`
 	CreatedAt    string                      `json:"created_at"`
-	CreatedBy    int64                       `json:"created_by,string"`
+	CreatedBy    ident.ID                    `json:"created_by"`
 	Notes        *string                     `json:"notes,omitempty"`
 	Mappings     []TransitionMappingResponse `json:"mappings,omitempty"`
 	CanModify    bool                        `json:"can_modify"`
 	CanApply     bool                        `json:"can_apply"`
 	CanRevert    bool                        `json:"can_revert"`
+	// Version is the token an update of this draft sends back as
+	// expected_version (ADR 0311).
+	Version string `json:"version"`
 }
 
 // TransitionMappingResponse represents a mapping in API responses. Ids are strings for the
 // reason given on TransitionResponse.
 type TransitionMappingResponse struct {
-	ID        int64   `json:"id,string"`
-	FromClass string  `json:"from_class"`
-	ToClass   *string `json:"to_class,omitempty"`
-	Action    string  `json:"action"` // "promote" or "graduate"
+	ID        ident.ID `json:"id"`
+	FromClass string   `json:"from_class"`
+	ToClass   *string  `json:"to_class,omitempty"`
+	Action    string   `json:"action"` // "promote" or "graduate"
 }
 
 // TransitionPreviewResponse is the wire shape of a transition preview.
 type TransitionPreviewResponse struct {
-	TransitionID    int64                              `json:"transition_id,string"`
+	TransitionID    ident.ID                           `json:"transition_id"`
 	AcademicYear    string                             `json:"academic_year"`
 	TotalStudents   int                                `json:"total_students"`
 	ToPromote       int                                `json:"to_promote"`
@@ -189,7 +197,7 @@ type TransitionUnmappedClassResponse struct {
 
 // TransitionResultResponse is the wire shape of an apply or revert outcome.
 type TransitionResultResponse struct {
-	TransitionID      int64    `json:"transition_id,string"`
+	TransitionID      ident.ID `json:"transition_id"`
 	Status            string   `json:"status"`
 	StudentsPromoted  int      `json:"students_promoted"`
 	StudentsGraduated int      `json:"students_graduated"`
@@ -216,15 +224,15 @@ type SuggestedMappingResponse struct {
 // read children's RFID identifiers, and the UI has no use for the value — it
 // exists solely so a revert can re-link the released tags server-side.
 type TransitionHistoryResponse struct {
-	ID           int64   `json:"id,string"`
-	TransitionID int64   `json:"transition_id,string"`
-	StudentID    int64   `json:"student_id,string"`
-	PersonName   string  `json:"person_name"`
-	FromClass    string  `json:"from_class"`
-	ToClass      *string `json:"to_class,omitempty"`
-	Action       string  `json:"action"`
-	FromStatus   *string `json:"from_status,omitempty"`
-	CreatedAt    string  `json:"created_at"`
+	ID           ident.ID `json:"id"`
+	TransitionID ident.ID `json:"transition_id"`
+	StudentID    ident.ID `json:"student_id"`
+	PersonName   string   `json:"person_name"`
+	FromClass    string   `json:"from_class"`
+	ToClass      *string  `json:"to_class,omitempty"`
+	Action       string   `json:"action"`
+	FromStatus   *string  `json:"from_status,omitempty"`
+	CreatedAt    string   `json:"created_at"`
 	// StudentState is the child's state TODAY ("alumnus" | "restored" |
 	// "purged"), not what the ledger recorded. The ledger is append-only, so a
 	// graduated child who has since been reverted or hard-deleted still reads as
@@ -238,9 +246,9 @@ func toHistoryResponses(rows []gradetransition.HistoryEntry) []TransitionHistory
 	for _, h := range rows {
 		out = append(out, TransitionHistoryResponse{
 			StudentState: h.StudentState,
-			ID:           h.ID,
-			TransitionID: h.TransitionID,
-			StudentID:    h.StudentID,
+			ID:           ident.ID(h.ID),
+			TransitionID: ident.ID(h.TransitionID),
+			StudentID:    ident.ID(h.StudentID),
 			PersonName:   h.PersonName,
 			FromClass:    h.FromClass,
 			ToClass:      h.ToClass,
@@ -262,17 +270,18 @@ func mappingAction(mapping gradetransition.TransitionMapping) string {
 // toTransitionResponse converts an owner transition to its wire shape.
 func toTransitionResponse(t gradetransition.Transition) TransitionResponse {
 	resp := TransitionResponse{
-		ID:           t.ID,
+		ID:           ident.ID(t.ID),
 		AcademicYear: t.AcademicYear,
 		Status:       t.Status,
 		CreatedAt:    t.CreatedAt.UTC().Format(timeFormatISO8601),
-		CreatedBy:    t.CreatedBy,
+		CreatedBy:    ident.ID(t.CreatedBy),
 		Notes:        t.Notes,
 		CanModify:    t.IsDraft(),
 		CanApply:     t.CanApply(),
 		CanRevert:    t.IsApplied(),
-		AppliedBy:    t.AppliedBy,
-		RevertedBy:   t.RevertedBy,
+		AppliedBy:    (*ident.ID)(t.AppliedBy),
+		RevertedBy:   (*ident.ID)(t.RevertedBy),
+		Version:      gradetransition.Version(t),
 	}
 	if t.AppliedAt != nil {
 		formatted := t.AppliedAt.UTC().Format(timeFormatISO8601)
@@ -286,7 +295,7 @@ func toTransitionResponse(t gradetransition.Transition) TransitionResponse {
 		resp.Mappings = make([]TransitionMappingResponse, 0, len(t.Mappings))
 		for _, m := range t.Mappings {
 			resp.Mappings = append(resp.Mappings, TransitionMappingResponse{
-				ID:        m.ID,
+				ID:        ident.ID(m.ID),
 				FromClass: m.FromClass,
 				ToClass:   m.ToClass,
 				Action:    mappingAction(m),
@@ -298,7 +307,7 @@ func toTransitionResponse(t gradetransition.Transition) TransitionResponse {
 
 func toPreviewResponse(preview gradetransition.Preview) TransitionPreviewResponse {
 	resp := TransitionPreviewResponse{
-		TransitionID: preview.TransitionID, AcademicYear: preview.AcademicYear,
+		TransitionID: ident.ID(preview.TransitionID), AcademicYear: preview.AcademicYear,
 		TotalStudents: preview.TotalStudents, ToPromote: preview.ToPromote, ToGraduate: preview.ToGraduate,
 		ByMapping:       make([]TransitionMappingPreviewResponse, 0, len(preview.ByMapping)),
 		UnmappedClasses: make([]TransitionUnmappedClassResponse, 0, len(preview.UnmappedClasses)),
@@ -333,7 +342,7 @@ func toResultResponse(result gradetransition.Result) TransitionResultResponse {
 		warnings = []string{}
 	}
 	return TransitionResultResponse{
-		TransitionID: result.TransitionID, Status: result.Status,
+		TransitionID: ident.ID(result.TransitionID), Status: result.Status,
 		StudentsPromoted: result.StudentsPromoted, StudentsGraduated: result.StudentsGraduated,
 		CanRevert: result.CanRevert, Warnings: warnings,
 	}
@@ -456,7 +465,7 @@ func (rs *GradeTransitionResource) update(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	patch := gradetransition.DraftPatch{Notes: req.Notes}
+	patch := gradetransition.DraftPatch{Notes: req.Notes, ExpectedVersion: req.ExpectedVersion}
 	if req.AcademicYear != "" {
 		patch.AcademicYear = &req.AcademicYear
 	}
@@ -554,12 +563,9 @@ func (rs *GradeTransitionResource) apply(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// The body is optional: an absent or EMPTY one (io.EOF) means "no preview to
-	// check". Anything else must be rejected. A truncated or malformed payload
-	// used to be swallowed, leaving ExpectedFingerprint empty — which the
-	// workflow reads as "caller opted out of the stale-preview check", so a
-	// destructive transition ran unguarded on a cohort that may have changed
-	// since the admin confirmed it (#405 review).
+	// An absent or EMPTY body (io.EOF) carries no fingerprint, which the
+	// workflow refuses as a stale preview. A truncated or malformed payload is
+	// rejected as such instead of being read as an empty one (#405 review).
 	var req TransitionApplyRequest
 	if r.Body != nil {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil && !errors.Is(err, io.EOF) {

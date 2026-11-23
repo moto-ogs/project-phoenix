@@ -3,8 +3,9 @@ import { z } from "zod";
 import {
   arr,
   calendarDate,
+  fileAnswer,
   instant,
-  int64StringOrNumber,
+  int64String,
   nullable,
   object,
   requestBody,
@@ -34,16 +35,18 @@ export interface ClosingDay {
   reason: string;
   school_ids: string[] | null;
   updated_at: string;
+  version: string;
   notified_families: number;
 }
 
 export const ClosingDaySchema: z.ZodType<ClosingDay, unknown> = object<ClosingDay>({
-  id: int64StringOrNumber,
+  id: int64String,
   start_date: nullable(calendarDate),
   end_date: nullable(calendarDate),
   reason: str,
-  school_ids: nullable(arr(int64StringOrNumber)),
+  school_ids: nullable(arr(int64String)),
   updated_at: instant,
+  version: str,
   notified_families: safeInt,
 });
 
@@ -66,7 +69,7 @@ export interface CalendarSchool {
 }
 
 export const CalendarSchoolSchema: z.ZodType<CalendarSchool, unknown> = object<CalendarSchool>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   federal_state: HolidayRegionSchema,
 });
@@ -100,19 +103,9 @@ export interface TraegerClosingDayRequest {
   start_date?: string | null;
   end_date?: string | null;
   reason?: string;
-  school_ids?: number[] | null;
+  school_ids?: string[] | null;
   holiday_bookings_token?: string;
-}
-
-/** Query of DELETE /traeger/closing-days/{id} */
-export interface DeleteTraegerClosingDaysIdQuery {
-  holiday_bookings_token?: string;
-}
-
-/** Query of GET /traeger/closing-days/ */
-export interface GetTraegerClosingDaysQuery {
-  from?: string;
-  to?: string;
+  expected_version?: string;
 }
 
 export const routes = {
@@ -120,15 +113,31 @@ export const routes = {
     method: "DELETE",
     pattern: "/traeger/closing-days/{id}",
     portals: ["org"],
-    query: ["holiday_bookings_token"],
+    query: {
+      "holiday_bookings_token": { kind: "string" },
+    },
     response: success(TraegerClosingDayDeletedSchema),
   },
   "GET /traeger/closing-days/": {
     method: "GET",
     pattern: "/traeger/closing-days/",
     portals: ["org"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(CalendarSchema),
+  },
+  "GET /traeger/closing-days/export": {
+    method: "GET",
+    pattern: "/traeger/closing-days/export",
+    portals: ["org"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
+    response: fileAnswer,
   },
   "POST /traeger/closing-days/": {
     method: "POST",

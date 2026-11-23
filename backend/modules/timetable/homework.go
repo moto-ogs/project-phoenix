@@ -8,6 +8,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Homework and the OGS feedback on it (#4796). The Lehrkraft of a class
@@ -73,12 +74,20 @@ type HomeworkInput struct {
 }
 
 // HomeworkChange replaces subject and text of one entry of the class,
-// whoever entered it.
+// whoever entered it. ExpectedVersion is the HomeworkVersion its editor
+// read (ADR 0311).
 type HomeworkChange struct {
-	ID          int64
-	SchoolClass string
-	Subject     *string
-	Description string
+	ID              int64
+	SchoolClass     string
+	Subject         *string
+	Description     string
+	ExpectedVersion string
+}
+
+// HomeworkVersion is the read-state token of a stored entry: the time of
+// its last change, which a trigger moves on every update.
+func HomeworkVersion(entry HomeworkEntry) string {
+	return readstate.Of(entry.UpdatedAt)
 }
 
 // HomeworkRef names one entry of the class, whoever entered it.
@@ -98,12 +107,25 @@ type HomeworkFeedback struct {
 
 // HomeworkFeedbackInput records the feedback of one child. SchoolClass is
 // the child's class: the feedback needs homework of that class on Date.
+// ExpectedVersion is the HomeworkFeedbackVersion the roster showed (ADR
+// 0311).
 type HomeworkFeedbackInput struct {
-	StudentID   int64
-	SchoolClass string
-	Date        calendar.Date
-	Status      string
-	Note        *string
+	StudentID       int64
+	SchoolClass     string
+	Date            calendar.Date
+	Status          string
+	Note            *string
+	ExpectedVersion string
+}
+
+// HomeworkFeedbackVersion is the read-state token of a child's feedback of
+// one day: readstate.Absent before the first one, then the time of its last
+// change, which a trigger moves on every update.
+func HomeworkFeedbackVersion(feedback *HomeworkFeedback) string {
+	if feedback == nil {
+		return readstate.Absent
+	}
+	return readstate.Of(feedback.UpdatedAt)
 }
 
 // HomeworkQuery reads the homework of classes and the feedback of children

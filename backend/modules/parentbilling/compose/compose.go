@@ -68,9 +68,9 @@ func NewCareLetters(letterheads parentbilling.BillingLetterheads, contracts pare
 	return application.NewCareLetters(postgres.NewStore(now), ports, rendering.NewLetterRenderer(), rendering.NewLetterRenderer(), today)
 }
 
-// NewBillingTerms builds the payment terms, the bundling, the family deviations with the debtor number in the format of the Träger (#6675) and the due dates of the runs (#4689) over the contracts the root binds, the DATEV booking batch of both payment methods (#4694) over the DATEV settings of the Träger, and the check of the details the Träger still has to enter (#7177) over the sources the root binds; today and now are the root's clocks.
-func NewBillingTerms(contracts parentbilling.CareContracts, datev parentbilling.DatevBillingSettings, formats parentbilling.DebtorNumberFormats, details parentbilling.RequiredDetailSources, today func() calendar.Date, now func() time.Time) (parentbilling.BillingTerms, parentbilling.DatevExport, parentbilling.RequiredDetailsCheck) {
-	return application.NewBillingTerms(postgres.NewStore(now), contracts, formats), application.NewDatevExport(datev, today, now), application.NewRequiredDetails(postgres.NewStore(now), details)
+// NewBillingTerms builds the payment terms, the bundling, the family deviations with the debtor number in the format of the Träger (#6675) and the due dates of the runs (#4689) over the contracts the root binds, and the check of the details the Träger still has to enter (#7177) over the sources the root binds; now is the root's clock.
+func NewBillingTerms(contracts parentbilling.CareContracts, formats parentbilling.DebtorNumberFormats, details parentbilling.RequiredDetailSources, now func() time.Time) (parentbilling.BillingTerms, parentbilling.RequiredDetailsCheck) {
+	return application.NewBillingTerms(postgres.NewStore(now), contracts, formats, func() calendar.Date { return calendar.DateFromTime(now()) }), application.NewRequiredDetails(postgres.NewStore(now), details)
 }
 
 // NewCareFeeNotices builds the Jahresbescheide of the monthly care (#6219, ADR 0182) over the monthly computation and the letterhead of the Träger, which carries the template of the fee notice; the root binds the ports and the clocks.

@@ -68,6 +68,7 @@ function renderRoster(
 ) {
   render(
     <TimetableRosterContent
+      reloadAfterRefusal={vi.fn().mockResolvedValue(null)}
       addStudentSearch=""
       attendanceWebEnabled={attendanceWebEnabled}
       isAddingStudent={false}

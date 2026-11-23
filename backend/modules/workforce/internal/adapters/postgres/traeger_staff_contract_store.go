@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
 )
@@ -321,7 +322,7 @@ func (s *TraegerStaffStore) SchoolClosedMonths(ctx context.Context, staffIDs []i
 	}
 	closed := make(map[int64][]*domain.StaffMonthBalanceSnapshot)
 	for _, row := range rows {
-		closed[row.StaffID] = append(closed[row.StaffID], &domain.StaffMonthBalanceSnapshot{StaffID: row.StaffID, Year: row.Year, Month: row.Month})
+		closed[row.StaffID] = append(closed[row.StaffID], &domain.StaffMonthBalanceSnapshot{StaffID: ident.ID(row.StaffID), Year: row.Year, Month: row.Month})
 	}
 	return closed, nil
 }

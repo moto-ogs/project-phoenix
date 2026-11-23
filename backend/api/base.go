@@ -105,7 +105,7 @@ func renderMealPlanFailure(w http.ResponseWriter, r *http.Request, err error, in
 	apiCommon.RenderError(w, r, renderer(err))
 }
 
-func newMealPlanResource(module mealplanModule.Capability, renderer SimpleListRenderer) *mealplanAPI.Resource {
+func newMealPlanResource(module mealplanModule.Capability, renderer SimpleListRenderer, menuChanged mealplanAPI.Middleware) *mealplanAPI.Resource {
 	return mealplanAPI.NewResource(module, mealplanAPI.Runtime{
 		Protected: func(router chi.Router, register func(chi.Router, mealplanAPI.Middleware)) {
 			ProtectedTenantRoutes(router, register)
@@ -126,6 +126,7 @@ func newMealPlanResource(module mealplanModule.Capability, renderer SimpleListRe
 		},
 		CurrentAccountID: func(ctx context.Context) int64 { return int64(sessiontoken.ClaimsFromCtx(ctx).ID) },
 		Allowed:          mealPlanAllowed,
+		MenuChanged:      menuChanged,
 	})
 }
 
@@ -188,16 +189,20 @@ func newFeedbackResource(module feedbackModule.Capability) *feedbackAPI.Resource
 			return apiCommon.RequiresPermission(permission)
 		},
 		Success: apiCommon.Respond,
-		Failure: func(w http.ResponseWriter, r *http.Request, failure feedbackAPI.Failure) {
-			response := &apiCommon.ErrResponse{Err: failure.Err, HTTPStatusCode: failure.Status, Detail: failure.Err.Error()}
-			if errors.Is(failure.Err, feedbackAPI.ErrFeatureDisabled) {
-				response.Code = apiCommon.CodeFeedbackDisabled
-			}
-			apiCommon.RenderError(w, r, response)
-		},
+		Failure: renderFeedbackFailure,
 		ObserveResponse: func(status int, code string) {
 			observability.ObserveFeedbackHTTPResponse("staff", status, code)
 		},
 		ParseIDParam: apiCommon.ParseIDParam,
 	})
+}
+
+// renderFeedbackFailure answers a refused feedback request with the shared
+// envelope; a school with feedback off gets its own code.
+func renderFeedbackFailure(w http.ResponseWriter, r *http.Request, failure feedbackAPI.Failure) {
+	response := &apiCommon.ErrResponse{Err: failure.Err, HTTPStatusCode: failure.Status, Detail: failure.Err.Error()}
+	if errors.Is(failure.Err, feedbackAPI.ErrFeatureDisabled) {
+		response.Code = apiCommon.CodeFeedbackDisabled
+	}
+	apiCommon.RenderError(w, r, response)
 }

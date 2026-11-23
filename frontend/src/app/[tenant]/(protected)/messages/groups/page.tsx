@@ -17,14 +17,18 @@ import { formatChatDateTime } from "~/lib/date-helpers";
 import { useMessagesActivity } from "~/lib/hooks/use-messages-activity";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import type * as messagesContract from "~/lib/contract/messages.generated";
 import {
-  type GroupThreadSummary,
   familyReadLabel,
   fetchGroupThreads,
 } from "~/lib/parent-group-threads-api";
 import { useTenant } from "~/lib/tenant-context";
 import { useTenantRouter } from "~/lib/tenant-router";
 import { groupsConcept } from "~/lib/concepts/groups";
+
+// Info-Knopf am Seitentitel (#7578): wofür die Seite da ist.
+const GROUP_MESSAGES_INFO =
+  "Hier schreibst du allen Eltern einer Gruppe, Klasse oder AG auf einmal. Die Eltern antworten nur der OGS, nicht den anderen Familien. Ihre Antworten findest du unter „Unterhaltungen“.";
 
 const logger = createLogger({ component: "GroupMessagesPage" });
 
@@ -38,18 +42,16 @@ function GroupMessagesContent() {
   const messagingEnabled = tenant?.messagingEnabled === true;
   const [composeOpen, setComposeOpen] = useState(false);
 
-  const { data, error, isLoading, mutate } = useSWRAuth<GroupThreadSummary[]>(
-    messageKeys.groupMessages(),
-    fetchGroupThreads,
-    {
-      revalidateOnFocus: false,
-      keepPreviousData: true,
-      onError: (err: unknown) =>
-        logger.error("group_messages_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        }),
-    },
-  );
+  const { data, error, isLoading, mutate } = useSWRAuth<
+    messagesContract.StaffGroupThreadSummaryResponse[]
+  >(messageKeys.groupMessages(), fetchGroupThreads, {
+    revalidateOnFocus: false,
+    keepPreviousData: true,
+    onError: (err: unknown) =>
+      logger.error("group_messages_load_failed", {
+        error: err instanceof Error ? err.message : String(err),
+      }),
+  });
   // Group-thread changes use the shared staff messaging event. Revalidation
   // only reloads the list; it does not advance a read cursor, even in a
   // background tab.
@@ -97,6 +99,7 @@ function GroupMessagesContent() {
 
   return (
     <TenantPage
+      info={GROUP_MESSAGES_INFO}
       title="Nachrichten"
       tabs={messagesTabs("groups")}
       stats={summary}

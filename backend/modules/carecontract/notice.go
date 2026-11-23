@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Withdrawal and termination of a concluded contract (#4682, ADR 0088
@@ -164,11 +165,11 @@ type Notice struct {
 // NoticeOptions is what the parents (or the office for them) can still
 // declare on a contract today, or the declaration made.
 type NoticeOptions struct {
-	ContractID int64  `json:"contract_id"`
-	Status     string `json:"status"`
-	ChildName  string `json:"child_name"`
-	Modules    string `json:"modules"`
-	SchoolName string `json:"school_name"`
+	ContractID ident.ID `json:"contract_id"`
+	Status     string   `json:"status"`
+	ChildName  string   `json:"child_name"`
+	Modules    string   `json:"modules"`
+	SchoolName string   `json:"school_name"`
 	// Terms is how the contract may be terminated, as its PDF says.
 	Terms string `json:"terms"`
 	// OrdinaryEndsOn is the last day of the contract after a termination

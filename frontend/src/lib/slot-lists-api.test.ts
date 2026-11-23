@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
+
 import { ApiError } from "~/lib/api-error";
 import { releaseFakeTimers } from "~/test/clock";
 

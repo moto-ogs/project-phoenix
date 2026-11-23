@@ -43,7 +43,7 @@ type poolWeekBody struct {
 }
 
 type poolSpringerBody struct {
-	RecordID  int64   `json:"staff_record_id"`
+	RecordID  wireID  `json:"staff_record_id"`
 	LastName  string  `json:"last_name"`
 	PoolFrom  string  `json:"pool_from"`
 	PoolUntil *string `json:"pool_until"`
@@ -52,14 +52,14 @@ type poolSpringerBody struct {
 		Status   string `json:"status"`
 	} `json:"proofs"`
 	Blocks []struct {
-		ID         *int64 `json:"id"`
-		SchoolID   int64  `json:"school_id"`
-		SchoolName string `json:"school_name"`
-		Own        bool   `json:"own"`
-		Date       string `json:"date"`
-		StartTime  string `json:"start_time"`
-		EndTime    string `json:"end_time"`
-		Lifted     bool   `json:"lifted"`
+		ID         *wireID `json:"id"`
+		SchoolID   wireID  `json:"school_id"`
+		SchoolName string  `json:"school_name"`
+		Own        bool    `json:"own"`
+		Date       string  `json:"date"`
+		StartTime  string  `json:"start_time"`
+		EndTime    string  `json:"end_time"`
+		Lifted     bool    `json:"lifted"`
 	} `json:"blocks"`
 }
 
@@ -110,7 +110,7 @@ func TestStaffPoolLetsEverySchoolBlockASpringerOnce(t *testing.T) {
 	_, southLead := testpkg.CreateTestStaffWithAccountForTenant(t, db, south, "Sina", "Süd")
 	_, westLead := testpkg.CreateTestStaffWithAccountForTenant(t, db, west, "Wim", "West")
 	record := func(staffID int64, pool bool) int64 {
-		rec := traegerJSON(t, router, office.token, http.MethodPost, "/traeger/staff-records/", map[string]any{
+		rec := traegerLink(t, router, office.token, map[string]any{
 			"members": []map[string]int64{{"school_id": north, "staff_id": staffID}},
 		})
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
@@ -121,7 +121,7 @@ func TestStaffPoolLetsEverySchoolBlockASpringerOnce(t *testing.T) {
 		})
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		assert.Contains(t, rec.Body.String(), fmt.Sprintf(`"pool":%t`, pool))
-		return id
+		return int64(id)
 	}
 	springer, fixed := record(mira.ID, true), record(jonas.ID, false)
 
@@ -137,7 +137,7 @@ func TestStaffPoolLetsEverySchoolBlockASpringerOnce(t *testing.T) {
 		assert.True(t, body.Available)
 		assert.Equal(t, "2026-11-16", body.WeekStart)
 		require.Len(t, springers, 1, "a contract without the Merkmal is no Springer")
-		assert.Equal(t, springer, springers[0].RecordID)
+		assert.Equal(t, springer, int64(springers[0].RecordID))
 		assert.Equal(t, "2026-08-01", springers[0].PoolFrom)
 		require.NotEmpty(t, springers[0].Proofs, "the standard Nachweise of the Träger are mandatory")
 		for _, proof := range springers[0].Proofs {
@@ -159,12 +159,12 @@ func TestStaffPoolLetsEverySchoolBlockASpringerOnce(t *testing.T) {
 		rec := block(south, southLead.ID, springer, "2026-11-19", "08:00", "12:00")
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		created := decode[struct {
-			ID  *int64 `json:"id"`
-			Own bool   `json:"own"`
+			ID  *wireID `json:"id"`
+			Own bool    `json:"own"`
 		}](t, rec)
 		require.NotNil(t, created.ID)
 		assert.True(t, created.Own)
-		southBlock = *created.ID
+		southBlock = int64(*created.ID)
 
 		assertStaffRefusal(t, block(west, westLead.ID, springer, "2026-11-19", "11:00", "14:00"), http.StatusConflict, "workforce.pool_block_taken")
 		require.Equal(t, http.StatusCreated, block(west, westLead.ID, springer, "2026-11-19", "12:00", "14:00").Code, "a block may start when another ends")
@@ -327,7 +327,7 @@ func TestStaffPoolWeekQueryBudget(t *testing.T) {
 	_, southLead := testpkg.CreateTestStaffWithAccountForTenant(t, db, south, "Sina", "Süd")
 	springer := func(last, date string) {
 		member := testpkg.CreateTestStaffForTenant(t, db, north, "Mira", last)
-		rec := traegerJSON(t, router, office.token, http.MethodPost, "/traeger/staff-records/", map[string]any{
+		rec := traegerLink(t, router, office.token, map[string]any{
 			"members": []map[string]int64{{"school_id": north, "staff_id": member.ID}},
 		})
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())

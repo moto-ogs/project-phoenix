@@ -6,7 +6,6 @@ import {
   calendarDate,
   instant,
   int64String,
-  int64StringOrNumber,
   json,
   nullable,
   num,
@@ -27,6 +26,9 @@ export type GuardianPhoneType = (typeof GUARDIAN_PHONE_TYPE_VALUES)[number];
 export const GUARDIAN_RELATIONSHIP_TYPE_VALUES = ["guardian", "other", "parent", "relative"] as const;
 export type GuardianRelationshipType = (typeof GUARDIAN_RELATIONSHIP_TYPE_VALUES)[number];
 
+export const LIST_FORMAT_VALUES = ["csv", "docx", "pdf", "xlsx"] as const;
+export type ListFormat = (typeof LIST_FORMAT_VALUES)[number];
+
 /** Go: absencetypes.AllowanceCarryResponse */
 export interface AllowanceCarryResponse {
   year: number;
@@ -40,6 +42,355 @@ export const AllowanceCarryResponseSchema: z.ZodType<AllowanceCarryResponse, unk
   remaining_days: num,
   expired_days: num,
   expires_on: str,
+});
+
+/** Go: files.AnnouncementAttachmentResponse */
+export interface AnnouncementAttachmentResponse {
+  id: string;
+  filename: string;
+  size_bytes: number;
+  content_type: string;
+  uploaded_at: string;
+}
+
+export const AnnouncementAttachmentResponseSchema: z.ZodType<AnnouncementAttachmentResponse, unknown> = object<AnnouncementAttachmentResponse>({
+  id: str,
+  filename: str,
+  size_bytes: safeInt,
+  content_type: str,
+  uploaded_at: instant,
+});
+
+/** Go: files.AnnouncementAttachmentListResponse */
+export interface AnnouncementAttachmentListResponse {
+  attachments: AnnouncementAttachmentResponse[] | null;
+  max_count: number;
+  max_bytes: number;
+  editable: boolean;
+}
+
+export const AnnouncementAttachmentListResponseSchema: z.ZodType<AnnouncementAttachmentListResponse, unknown> = object<AnnouncementAttachmentListResponse>({
+  attachments: nullable(arr(AnnouncementAttachmentResponseSchema)),
+  max_count: safeInt,
+  max_bytes: safeInt,
+  editable: bool,
+});
+
+/** Go: peopledirectory.BlockerSupervision */
+export interface BlockerSupervision {
+  id: string;
+  group_name: string;
+  start_date: string;
+}
+
+export const BlockerSupervisionSchema: z.ZodType<BlockerSupervision, unknown> = object<BlockerSupervision>({
+  id: int64String,
+  group_name: str,
+  start_date: str,
+});
+
+/** Go: peopledirectory.BlockerSubstitution */
+export interface BlockerSubstitution {
+  id: string;
+  group_name: string;
+  start_date: string;
+  end_date: string;
+}
+
+export const BlockerSubstitutionSchema: z.ZodType<BlockerSubstitution, unknown> = object<BlockerSubstitution>({
+  id: int64String,
+  group_name: str,
+  start_date: str,
+  end_date: str,
+});
+
+/** Go: peopledirectory.BlockerActivity */
+export interface BlockerActivity {
+  id: string;
+  activity_id: string;
+  activity_name: string;
+  is_primary: boolean;
+}
+
+export const BlockerActivitySchema: z.ZodType<BlockerActivity, unknown> = object<BlockerActivity>({
+  id: int64String,
+  activity_id: int64String,
+  activity_name: str,
+  is_primary: bool,
+});
+
+/** Go: peopledirectory.BlockerGroup */
+export interface BlockerGroup {
+  id: string;
+  group_id: string;
+  group_name: string;
+  teacher_id: string;
+  teacher_ids?: string[];
+}
+
+export const BlockerGroupSchema: z.ZodType<BlockerGroup, unknown> = object<BlockerGroup>({
+  id: int64String,
+  group_id: int64String,
+  group_name: str,
+  teacher_id: int64String,
+  teacher_ids: optional(arr(int64String)),
+});
+
+/** Go: peopledirectory.CaregiverCapabilityState */
+export interface CaregiverCapabilityState {
+  account_id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  person_id?: string;
+  staff_id?: string;
+  teacher_id?: string;
+  has_admin_role: boolean;
+  has_user_role: boolean;
+  has_person: boolean;
+  has_staff: boolean;
+  has_teacher: boolean;
+  has_caregiver_profile: boolean;
+  is_active_caregiver: boolean;
+  disable_blocked: boolean;
+  disable_blockers?: string[];
+  active_supervisions?: BlockerSupervision[];
+  active_substitutions?: BlockerSubstitution[];
+  activity_supervisions?: BlockerActivity[];
+  group_assignments?: BlockerGroup[];
+}
+
+export const CaregiverCapabilityStateSchema: z.ZodType<CaregiverCapabilityState, unknown> = object<CaregiverCapabilityState>({
+  account_id: int64String,
+  email: str,
+  first_name: str,
+  last_name: str,
+  person_id: optional(int64String),
+  staff_id: optional(int64String),
+  teacher_id: optional(int64String),
+  has_admin_role: bool,
+  has_user_role: bool,
+  has_person: bool,
+  has_staff: bool,
+  has_teacher: bool,
+  has_caregiver_profile: bool,
+  is_active_caregiver: bool,
+  disable_blocked: bool,
+  disable_blockers: optional(arr(str)),
+  active_supervisions: optional(arr(BlockerSupervisionSchema)),
+  active_substitutions: optional(arr(BlockerSubstitutionSchema)),
+  activity_supervisions: optional(arr(BlockerActivitySchema)),
+  group_assignments: optional(arr(BlockerGroupSchema)),
+});
+
+/** Go: account.RoleResponse */
+export interface RoleResponse {
+  id: string;
+  name: string;
+  description: string;
+  is_system: boolean;
+  base_role?: string;
+  school_portal: boolean;
+  created_at: string;
+  updated_at: string;
+  permissions?: string[];
+}
+
+export const RoleResponseSchema: z.ZodType<RoleResponse, unknown> = object<RoleResponse>({
+  id: int64String,
+  name: str,
+  description: str,
+  is_system: bool,
+  base_role: optional(str),
+  school_portal: bool,
+  created_at: str,
+  updated_at: str,
+  permissions: optional(arr(str)),
+});
+
+/** Go: account.SchoolIdentityResponse */
+export interface SchoolIdentityResponse {
+  person_id: string;
+  staff_id: string;
+  teacher_id?: string;
+}
+
+export const SchoolIdentityResponseSchema: z.ZodType<SchoolIdentityResponse, unknown> = object<SchoolIdentityResponse>({
+  person_id: int64String,
+  staff_id: int64String,
+  teacher_id: optional(int64String),
+});
+
+/** Go: portalauth.LoginResponse */
+export interface LoginResponse {
+  status: string;
+  access_token?: string;
+  refresh_token?: string;
+  challenge_token?: string;
+  masked_email?: string;
+  mfa_enrollment_required?: boolean;
+  trusted_device_enabled?: boolean;
+  trusted_device_days?: number;
+}
+
+export const LoginResponseSchema: z.ZodType<LoginResponse, unknown> = object<LoginResponse>({
+  status: str,
+  access_token: optional(str),
+  refresh_token: optional(str),
+  challenge_token: optional(str),
+  masked_email: optional(str),
+  mfa_enrollment_required: optional(bool),
+  trusted_device_enabled: optional(bool),
+  trusted_device_days: optional(safeInt),
+});
+
+/** Go: common.TrustedDeviceDTO */
+export interface TrustedDeviceDTO {
+  id: string;
+  user_agent?: string;
+  ip_address?: string;
+  created_at: string;
+  expires_at: string;
+  last_used_at?: string;
+}
+
+export const TrustedDeviceDTOSchema: z.ZodType<TrustedDeviceDTO, unknown> = object<TrustedDeviceDTO>({
+  id: int64String,
+  user_agent: optional(str),
+  ip_address: optional(str),
+  created_at: str,
+  expires_at: str,
+  last_used_at: optional(str),
+});
+
+/** Go: common.MFAVerifyRequest */
+export interface MFAVerifyRequest {
+  challenge_token?: string;
+  code?: string;
+  remember_device?: boolean;
+}
+
+/** Go: portalauth.TokenResponse */
+export interface TokenResponse {
+  access_token: string;
+  refresh_token: string;
+}
+
+export const TokenResponseSchema: z.ZodType<TokenResponse, unknown> = object<TokenResponse>({
+  access_token: str,
+  refresh_token: str,
+});
+
+/** Go: portalauth.EnrollStartResponse */
+export interface EnrollStartResponse {
+  challenge_token: string;
+}
+
+export const EnrollStartResponseSchema: z.ZodType<EnrollStartResponse, unknown> = object<EnrollStartResponse>({
+  challenge_token: str,
+});
+
+/** Go: common.MFAResendRequest */
+export interface MFAResendRequest {
+  challenge_token?: string;
+}
+
+/** Go: common.MFAResendResponse */
+export interface MFAResendResponse {
+  challenge_token: string;
+}
+
+export const MFAResendResponseSchema: z.ZodType<MFAResendResponse, unknown> = object<MFAResendResponse>({
+  challenge_token: str,
+});
+
+/** Go: identityaccess.PasskeyCredentialSummary */
+export interface PasskeyCredentialSummary {
+  id: string;
+  name: string;
+  created_at: string;
+  last_used_at?: string;
+}
+
+export const PasskeyCredentialSummarySchema: z.ZodType<PasskeyCredentialSummary, unknown> = object<PasskeyCredentialSummary>({
+  id: str,
+  name: str,
+  created_at: instant,
+  last_used_at: optional(instant),
+});
+
+/** Go: identityaccess.PasskeyEnrollmentChallenge */
+export interface PasskeyEnrollmentChallenge {
+  challenge_token: string;
+  masked_email: string;
+}
+
+export const PasskeyEnrollmentChallengeSchema: z.ZodType<PasskeyEnrollmentChallenge, unknown> = object<PasskeyEnrollmentChallenge>({
+  challenge_token: str,
+  masked_email: str,
+});
+
+/** Go: identityaccess.PasskeyCeremonyOptions */
+export interface PasskeyCeremonyOptions {
+  session_id: string;
+  options: unknown | null;
+}
+
+export const PasskeyCeremonyOptionsSchema: z.ZodType<PasskeyCeremonyOptions, unknown> = object<PasskeyCeremonyOptions>({
+  session_id: str,
+  options: nullable(json),
+});
+
+/** Go: common.PasskeyVerifyRequest */
+export interface PasskeyVerifyRequest {
+  session_id?: string;
+  response?: unknown | null;
+}
+
+/** Go: common.PasskeyRegisterOptionsRequest */
+export interface PasskeyRegisterOptionsRequest {
+  code?: string;
+  name?: string;
+}
+
+/** Go: common.PasskeyRegisterVerifyRequest */
+export interface PasskeyRegisterVerifyRequest {
+  session_id?: string;
+  name?: string;
+  response?: unknown | null;
+}
+
+/** Go: common.PasswordResetRequest */
+export interface PasswordResetRequest {
+  email?: string;
+}
+
+/** Go: common.PasswordResetConfirmRequest */
+export interface PasswordResetConfirmRequest {
+  token?: string;
+  new_password?: string;
+  confirm_password?: string;
+}
+
+/** Go: account.PermissionResponse */
+export interface PermissionResponse {
+  id: string;
+  name: string;
+  description: string;
+  resource: string;
+  action: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export const PermissionResponseSchema: z.ZodType<PermissionResponse, unknown> = object<PermissionResponse>({
+  id: int64String,
+  name: str,
+  description: str,
+  resource: str,
+  action: str,
+  created_at: str,
+  updated_at: str,
 });
 
 /** Go: staffcalendarhttp.CalendarStatusResponse */
@@ -76,11 +427,11 @@ export interface Appointment {
 }
 
 export const AppointmentSchema: z.ZodType<Appointment, unknown> = object<Appointment>({
-  id: int64StringOrNumber,
-  tenant_id: int64StringOrNumber,
+  id: int64String,
+  tenant_id: int64String,
   created_at: instant,
   updated_at: instant,
-  organizer_staff_id: int64StringOrNumber,
+  organizer_staff_id: int64String,
   title: str,
   description: optional(str),
   location: optional(str),
@@ -114,11 +465,11 @@ export interface RecurrenceRule {
 }
 
 export const RecurrenceRuleSchema: z.ZodType<RecurrenceRule, unknown> = object<RecurrenceRule>({
-  id: int64StringOrNumber,
-  tenant_id: int64StringOrNumber,
+  id: int64String,
+  tenant_id: int64String,
   created_at: instant,
   updated_at: instant,
-  appointment_id: int64StringOrNumber,
+  appointment_id: int64String,
   frequency: str,
   interval_count: safeInt,
   weekdays: optional(arr(str)),
@@ -143,14 +494,14 @@ export interface AppointmentRecipient {
 }
 
 export const AppointmentRecipientSchema: z.ZodType<AppointmentRecipient, unknown> = object<AppointmentRecipient>({
-  id: int64StringOrNumber,
-  tenant_id: int64StringOrNumber,
+  id: int64String,
+  tenant_id: int64String,
   created_at: instant,
   updated_at: instant,
-  appointment_id: int64StringOrNumber,
+  appointment_id: int64String,
   recipient_type: str,
-  staff_id: optional(int64StringOrNumber),
-  guardian_profile_id: optional(int64StringOrNumber),
+  staff_id: optional(int64String),
+  guardian_profile_id: optional(int64String),
   status: str,
   responded_at: optional(instant),
   occurrence_responses: optional(rec(str)),
@@ -169,13 +520,13 @@ export interface AppointmentTarget {
 }
 
 export const AppointmentTargetSchema: z.ZodType<AppointmentTarget, unknown> = object<AppointmentTarget>({
-  id: int64StringOrNumber,
-  tenant_id: int64StringOrNumber,
+  id: int64String,
+  tenant_id: int64String,
   created_at: instant,
   updated_at: instant,
-  appointment_id: int64StringOrNumber,
+  appointment_id: int64String,
   target_type: str,
-  target_id: optional(int64StringOrNumber),
+  target_id: optional(int64String),
   target_value: optional(str),
 });
 
@@ -316,6 +667,11 @@ export interface InvitationAnswer {
   occurrence_date?: string | null;
 }
 
+/** Go: portalauth.SwitchOffRequest */
+export interface SwitchOffRequest {
+  current_password?: string;
+}
+
 /** Go: notifications.schoolFeedEntryResponse */
 export interface schoolFeedEntryResponse {
   id: string;
@@ -331,7 +687,7 @@ export interface schoolFeedEntryResponse {
 }
 
 export const schoolFeedEntryResponseSchema: z.ZodType<schoolFeedEntryResponse, unknown> = object<schoolFeedEntryResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   type: str,
   title: str,
   body: str,
@@ -485,66 +841,6 @@ export const CareOfferingResponseSchema: z.ZodType<CareOfferingResponse, unknown
   translations: optional(rec(nullable(rec(TranslatedTextSchema)))),
   created_at: instant,
   updated_at: instant,
-});
-
-/** Go: enrollment.LegalBlock */
-export interface LegalBlock {
-  attachments?: FormAttachment[];
-  key: string;
-  kind: string;
-  title: string;
-  label: string;
-  text: string;
-  required: boolean;
-  sort_order?: number;
-  source?: string;
-  translations?: Record<string, Record<string, TranslatedText> | null>;
-  guardian_agreement?: boolean;
-}
-
-export const LegalBlockSchema: z.ZodType<LegalBlock, unknown> = object<LegalBlock>({
-  attachments: optional(arr(FormAttachmentSchema)),
-  key: str,
-  kind: str,
-  title: str,
-  label: str,
-  text: str,
-  required: bool,
-  sort_order: optional(safeInt),
-  source: optional(str),
-  translations: optional(rec(nullable(rec(TranslatedTextSchema)))),
-  guardian_agreement: optional(bool),
-});
-
-/** Go: enrollmenthttp.PublicLegalTextsResponse */
-export interface PublicLegalTextsResponse {
-  agb: string;
-  agb_document_url: string;
-  agb_display_mode: string;
-  dsgvo: string;
-  email_contact: string;
-  photo: string;
-  terms_enabled: boolean;
-  dsgvo_enabled: boolean;
-  email_contact_enabled: boolean;
-  photo_enabled: boolean;
-  blocks: LegalBlock[] | null;
-  health_consent?: LegalBlock;
-}
-
-export const PublicLegalTextsResponseSchema: z.ZodType<PublicLegalTextsResponse, unknown> = object<PublicLegalTextsResponse>({
-  agb: str,
-  agb_document_url: str,
-  agb_display_mode: str,
-  dsgvo: str,
-  email_contact: str,
-  photo: str,
-  terms_enabled: bool,
-  dsgvo_enabled: bool,
-  email_contact_enabled: bool,
-  photo_enabled: bool,
-  blocks: nullable(arr(LegalBlockSchema)),
-  health_consent: optional(LegalBlockSchema),
 });
 
 /** Go: enrollmenthttp.PublicPhase */
@@ -714,6 +1010,66 @@ export const PublicCaptchaConfigResponseSchema: z.ZodType<PublicCaptchaConfigRes
   site_key: str,
 });
 
+/** Go: enrollment.LegalBlock */
+export interface LegalBlock {
+  attachments?: FormAttachment[];
+  key: string;
+  kind: string;
+  title: string;
+  label: string;
+  text: string;
+  required: boolean;
+  sort_order?: number;
+  source?: string;
+  translations?: Record<string, Record<string, TranslatedText> | null>;
+  guardian_agreement?: boolean;
+}
+
+export const LegalBlockSchema: z.ZodType<LegalBlock, unknown> = object<LegalBlock>({
+  attachments: optional(arr(FormAttachmentSchema)),
+  key: str,
+  kind: str,
+  title: str,
+  label: str,
+  text: str,
+  required: bool,
+  sort_order: optional(safeInt),
+  source: optional(str),
+  translations: optional(rec(nullable(rec(TranslatedTextSchema)))),
+  guardian_agreement: optional(bool),
+});
+
+/** Go: enrollmenthttp.PublicLegalTextsResponse */
+export interface PublicLegalTextsResponse {
+  agb: string;
+  agb_document_url: string;
+  agb_display_mode: string;
+  dsgvo: string;
+  email_contact: string;
+  photo: string;
+  terms_enabled: boolean;
+  dsgvo_enabled: boolean;
+  email_contact_enabled: boolean;
+  photo_enabled: boolean;
+  blocks: LegalBlock[] | null;
+  health_consent?: LegalBlock;
+}
+
+export const PublicLegalTextsResponseSchema: z.ZodType<PublicLegalTextsResponse, unknown> = object<PublicLegalTextsResponse>({
+  agb: str,
+  agb_document_url: str,
+  agb_display_mode: str,
+  dsgvo: str,
+  email_contact: str,
+  photo: str,
+  terms_enabled: bool,
+  dsgvo_enabled: bool,
+  email_contact_enabled: bool,
+  photo_enabled: bool,
+  blocks: nullable(arr(LegalBlockSchema)),
+  health_consent: optional(LegalBlockSchema),
+});
+
 /** Go: enrollmenthttp.PublicLateInvitePrefill */
 export interface PublicLateInvitePrefill {
   guardian_email: string;
@@ -740,6 +1096,7 @@ export interface PublicEnrollmentFormBootstrapResponse {
   captcha_config: PublicCaptchaConfigResponse;
   legal_texts: PublicLegalTextsResponse;
   late_invite?: PublicLateInvitePrefill;
+  terms_fingerprint: string;
 }
 
 export const PublicEnrollmentFormBootstrapResponseSchema: z.ZodType<PublicEnrollmentFormBootstrapResponse, unknown> = object<PublicEnrollmentFormBootstrapResponse>({
@@ -754,6 +1111,54 @@ export const PublicEnrollmentFormBootstrapResponseSchema: z.ZodType<PublicEnroll
   captcha_config: PublicCaptchaConfigResponseSchema,
   legal_texts: PublicLegalTextsResponseSchema,
   late_invite: optional(PublicLateInvitePrefillSchema),
+  terms_fingerprint: str,
+});
+
+/** Go: common.GuardianProfileGuardian */
+export interface GuardianProfileGuardian {
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string;
+}
+
+export const GuardianProfileGuardianSchema: z.ZodType<GuardianProfileGuardian, unknown> = object<GuardianProfileGuardian>({
+  first_name: str,
+  last_name: str,
+  email: str,
+  phone: optional(str),
+});
+
+/** Go: common.GuardianProfileChild */
+export interface GuardianProfileChild {
+  id: string;
+  first_name: string;
+  last_name: string;
+  school_class: string;
+  grade_level?: number;
+  enrollment_submit: boolean;
+  status: string;
+}
+
+export const GuardianProfileChildSchema: z.ZodType<GuardianProfileChild, unknown> = object<GuardianProfileChild>({
+  id: str,
+  first_name: str,
+  last_name: str,
+  school_class: str,
+  grade_level: optional(safeInt),
+  enrollment_submit: bool,
+  status: str,
+});
+
+/** Go: common.GuardianProfileResponse */
+export interface GuardianProfileResponse {
+  guardian: GuardianProfileGuardian;
+  children: GuardianProfileChild[] | null;
+}
+
+export const GuardianProfileResponseSchema: z.ZodType<GuardianProfileResponse, unknown> = object<GuardianProfileResponse>({
+  guardian: GuardianProfileGuardianSchema,
+  children: nullable(arr(GuardianProfileChildSchema)),
 });
 
 /** Go: enrollment.FormLegalBlock */
@@ -791,6 +1196,12 @@ export const FormLegalBlockSchema: z.ZodType<FormLegalBlock, unknown> = object<F
   guardian_agreement: optional(bool),
 });
 
+/** Go: enrollment.TranslatedText */
+export interface TranslatedTextInput {
+  text?: string;
+  source?: string;
+}
+
 /** Go: enrollmenthttp.SubmitGuardianRequest */
 export interface SubmitGuardianRequest {
   first_name?: string;
@@ -801,7 +1212,7 @@ export interface SubmitGuardianRequest {
 
 /** Go: enrollmenthttp.SubmitOfferingDaysRow */
 export interface SubmitOfferingDaysRow {
-  offering_id?: number;
+  offering_id?: string;
   selected_days?: string[] | null;
 }
 
@@ -815,7 +1226,7 @@ export interface SubmitChildRequest {
   target_school_class?: string | null;
   holiday_care_wish?: boolean | null;
   custom_data?: Record<string, unknown | null> | null;
-  offering_ids?: number[] | null;
+  offering_ids?: string[] | null;
   offering_days?: SubmitOfferingDaysRow[] | null;
 }
 
@@ -826,16 +1237,71 @@ export interface SubmitSignatureRequest {
   typed_name?: string;
 }
 
+/** Go: enrollment.FormAttachment */
+export interface FormAttachmentInput {
+  document_id?: string;
+  label?: string;
+  document_url?: string;
+}
+
+/** Go: enrollment.FormFieldOption */
+export interface FormFieldOptionInput {
+  label?: string;
+  value?: string;
+  translations?: Record<string, Record<string, TranslatedTextInput> | null> | null;
+}
+
+/** Go: enrollment.FormFieldValidation */
+export interface FormFieldValidationInput {
+  min?: number | null;
+  max?: number | null;
+  pattern?: string | null;
+}
+
+/** Go: enrollment.FormFileOptions */
+export interface FormFileOptionsInput {
+  allowed_types?: string[] | null;
+  max_size_mb?: number;
+  multiple?: boolean;
+}
+
+/** Go: enrollment.VisibilityCondition */
+export interface VisibilityConditionInput {
+  source?: string;
+  field?: string;
+  operator?: string;
+  value?: unknown | null;
+}
+
+/** Go: enrollment.FormLegalBlock */
+export interface FormLegalBlockInput {
+  attachments?: FormAttachmentInput[] | null;
+  key?: string;
+  kind?: string;
+  title?: string;
+  label?: string;
+  text?: string;
+  required?: boolean;
+  enabled?: boolean;
+  sort_order?: number;
+  source?: string;
+  display_mode?: string;
+  document_url?: string;
+  translations?: Record<string, Record<string, TranslatedTextInput> | null> | null;
+  guardian_agreement?: boolean;
+}
+
 /** Go: enrollmenthttp.SubmitEnrollmentRequest */
 export interface SubmitEnrollmentRequest {
-  phase_id?: number;
+  phase_id?: string;
   guardian_first_name?: string;
   guardian_last_name?: string;
   guardian_email?: string;
   guardian_phone?: string | null;
   additional_guardians?: SubmitGuardianRequest[] | null;
-  consent_flags?: Record<string, unknown | null> | null;
-  form_schema_id?: number;
+  consent_flags?: Record<string, boolean | null> | null;
+  form_schema_id?: string;
+  expected_terms_fingerprint?: string;
   custom_data?: Record<string, unknown | null> | null;
   children?: SubmitChildRequest[] | null;
   captcha_token?: string;
@@ -865,6 +1331,21 @@ export const SubmitEnrollmentResponseSchema: z.ZodType<SubmitEnrollmentResponse,
   warnings: optional(arr(SubmissionWarningSchema)),
 });
 
+/** Go: enrollmenthttp.UploadReceipt */
+export interface UploadReceipt {
+  token: string;
+  filename: string;
+  size_bytes: number;
+  content_type: string;
+}
+
+export const UploadReceiptSchema: z.ZodType<UploadReceipt, unknown> = object<UploadReceipt>({
+  token: str,
+  filename: str,
+  size_bytes: safeInt,
+  content_type: str,
+});
+
 /** Go: peopledirectory.NewGuardianPhone */
 export interface NewGuardianPhone {
   phone_number?: string;
@@ -875,7 +1356,7 @@ export interface NewGuardianPhone {
 
 /** Go: peopledirectory.NewStudentGuardian */
 export interface NewStudentGuardian {
-  guardian_profile_id?: number | null;
+  guardian_profile_id?: string | null;
   first_name?: string;
   last_name?: string;
   email?: string;
@@ -955,6 +1436,25 @@ export const HolidayHostHealthSchema: z.ZodType<HolidayHostHealth, unknown> = ob
   answers: nullable(arr(HolidayHostAnswerSchema)),
 });
 
+/** Go: messageattachments.UploadResponse */
+export interface UploadResponse {
+  id: string;
+  filename: string;
+  size_bytes: number;
+  content_type: string;
+  width?: number;
+  height?: number;
+}
+
+export const UploadResponseSchema: z.ZodType<UploadResponse, unknown> = object<UploadResponse>({
+  id: int64String,
+  filename: str,
+  size_bytes: safeInt,
+  content_type: str,
+  width: optional(safeInt),
+  height: optional(safeInt),
+});
+
 /** Go: notifications.feedEntryResponse */
 export interface feedEntryResponse {
   id: string;
@@ -968,7 +1468,7 @@ export interface feedEntryResponse {
 }
 
 export const feedEntryResponseSchema: z.ZodType<feedEntryResponse, unknown> = object<feedEntryResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   type: str,
   title: str,
   body: str,
@@ -1066,7 +1566,7 @@ export interface OrganizationAccount {
 }
 
 export const OrganizationAccountSchema: z.ZodType<OrganizationAccount, unknown> = object<OrganizationAccount>({
-  account_id: int64StringOrNumber,
+  account_id: int64String,
   email: str,
   active: bool,
   first_name: str,
@@ -1078,7 +1578,7 @@ export const OrganizationAccountSchema: z.ZodType<OrganizationAccount, unknown> 
   has_user_role: bool,
   has_caregiver_profile: bool,
   is_active_caregiver: bool,
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   school_name: str,
 });
 
@@ -1087,6 +1587,19 @@ export interface MFAAdminOverrideSetRequest {
   override?: string;
   reason?: string;
 }
+
+/** Go: operator.OperatorResponse */
+export interface OperatorResponse {
+  id: string;
+  email: string;
+  display_name: string;
+}
+
+export const OperatorResponseSchema: z.ZodType<OperatorResponse, unknown> = object<OperatorResponse>({
+  id: int64String,
+  email: str,
+  display_name: str,
+});
 
 /** Go: operator.MFAAdminResetRequest */
 export interface MFAAdminResetRequest {
@@ -1113,7 +1626,7 @@ export interface OperatorDevice {
 }
 
 export const OperatorDeviceSchema: z.ZodType<OperatorDevice, unknown> = object<OperatorDevice>({
-  id: int64StringOrNumber,
+  id: int64String,
   device_id: str,
   device_type: str,
   name: optional(str),
@@ -1122,9 +1635,9 @@ export const OperatorDeviceSchema: z.ZodType<OperatorDevice, unknown> = object<O
   masked_api_key: str,
   last_seen: optional(instant),
   is_online: bool,
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   school_name: str,
-  organization_id: int64StringOrNumber,
+  organization_id: int64String,
   organization_name: str,
   created_at: instant,
   updated_at: instant,
@@ -1144,7 +1657,7 @@ export interface OperatorListItem {
 }
 
 export const OperatorListItemSchema: z.ZodType<OperatorListItem, unknown> = object<OperatorListItem>({
-  id: int64StringOrNumber,
+  id: int64String,
   email: str,
   display_name: str,
   active: bool,
@@ -1169,7 +1682,7 @@ export interface Organization {
 }
 
 export const OrganizationSchema: z.ZodType<Organization, unknown> = object<Organization>({
-  id: int64StringOrNumber,
+  id: int64String,
   created_at: instant,
   updated_at: instant,
   name: str,
@@ -1198,7 +1711,7 @@ export interface OperatorPerson {
 }
 
 export const OperatorPersonSchema: z.ZodType<OperatorPerson, unknown> = object<OperatorPerson>({
-  id: int64StringOrNumber,
+  id: int64String,
   first_name: str,
   last_name: str,
   has_account: bool,
@@ -1206,9 +1719,9 @@ export const OperatorPersonSchema: z.ZodType<OperatorPerson, unknown> = object<O
   has_rfid_card: bool,
   is_staff: bool,
   is_student: bool,
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   school_name: str,
-  organization_id: int64StringOrNumber,
+  organization_id: int64String,
   organization_name: str,
   created_at: instant,
 });
@@ -1242,8 +1755,8 @@ export interface SchoolSummary {
 }
 
 export const SchoolSummarySchema: z.ZodType<SchoolSummary, unknown> = object<SchoolSummary>({
-  id: int64StringOrNumber,
-  organization_id: int64StringOrNumber,
+  id: int64String,
+  organization_id: int64String,
   organization_name: str,
   name: str,
   slug: str,
@@ -1434,10 +1947,10 @@ export interface School {
 }
 
 export const SchoolSchema: z.ZodType<School, unknown> = object<School>({
-  id: int64StringOrNumber,
+  id: int64String,
   created_at: instant,
   updated_at: instant,
-  organization_id: int64StringOrNumber,
+  organization_id: int64String,
   name: str,
   slug: str,
   subdomain: str,
@@ -1455,6 +1968,11 @@ export const SchoolSchema: z.ZodType<School, unknown> = object<School>({
   device_slots: nullable(safeInt),
   organization: optional(OrganizationSchema),
 });
+
+/** Go: operator.setSchoolSettingRequest */
+export interface setSchoolSettingRequest {
+  value?: unknown | null;
+}
 
 /** Go: announcement.deletedResponse */
 export interface deletedResponse {
@@ -2030,8 +2548,8 @@ export interface SigningView {
 }
 
 export const SigningViewSchema: z.ZodType<SigningView, unknown> = object<SigningView>({
-  contract_id: int64StringOrNumber,
-  organization_id: int64StringOrNumber,
+  contract_id: int64String,
+  organization_id: int64String,
   status: str,
   traeger_name: str,
   party_name: str,
@@ -2210,6 +2728,7 @@ export interface noticeResponse {
   active: boolean;
   acknowledged_at?: string;
   acknowledged_count?: number;
+  version: string;
 }
 
 export const noticeResponseSchema: z.ZodType<noticeResponse, unknown> = object<noticeResponse>({
@@ -2226,6 +2745,7 @@ export const noticeResponseSchema: z.ZodType<noticeResponse, unknown> = object<n
   active: bool,
   acknowledged_at: optional(str),
   acknowledged_count: optional(safeInt),
+  version: str,
 });
 
 /** Go: timetable.OperationRosterWarning */
@@ -2244,9 +2764,9 @@ export const OperationRosterWarningSchema: z.ZodType<OperationRosterWarning, unk
   message: str,
   expected_arrival: optional(str),
   slot_start: optional(str),
-  expected_group_id: optional(int64StringOrNumber),
+  expected_group_id: optional(int64String),
   expected_group_name: optional(str),
-  current_education_group_id: optional(int64StringOrNumber),
+  current_education_group_id: optional(int64String),
 });
 
 /** Go: timetable.OperationParallelPresence */
@@ -2258,7 +2778,7 @@ export interface OperationParallelPresence {
 }
 
 export const OperationParallelPresenceSchema: z.ZodType<OperationParallelPresence, unknown> = object<OperationParallelPresence>({
-  instance_id: int64StringOrNumber,
+  instance_id: int64String,
   title: str,
   start_time: str,
   end_time: str,
@@ -2322,17 +2842,18 @@ export interface OperationRosterRow {
   teacher_hints?: OperationTeacherHint[];
   homework?: OperationRosterHomework[];
   homework_feedback?: OperationHomeworkFeedback;
+  homework_feedback_version?: string;
 }
 
 export const OperationRosterRowSchema: z.ZodType<OperationRosterRow, unknown> = object<OperationRosterRow>({
-  student_id: int64StringOrNumber,
+  student_id: int64String,
   student_name: str,
   school_class: str,
   group_name: str,
   planned: bool,
   is_unplanned: bool,
   currently_present: bool,
-  visit_id: optional(int64StringOrNumber),
+  visit_id: optional(int64String),
   status: str,
   substatus: optional(str),
   note: optional(str),
@@ -2346,6 +2867,7 @@ export const OperationRosterRowSchema: z.ZodType<OperationRosterRow, unknown> = 
   teacher_hints: optional(arr(OperationTeacherHintSchema)),
   homework: optional(arr(OperationRosterHomeworkSchema)),
   homework_feedback: optional(OperationHomeworkFeedbackSchema),
+  homework_feedback_version: optional(str),
 });
 
 /** Go: timetable.InstanceConflictWarning */
@@ -2363,11 +2885,11 @@ export interface InstanceConflictWarning {
 
 export const InstanceConflictWarningSchema: z.ZodType<InstanceConflictWarning, unknown> = object<InstanceConflictWarning>({
   kind: str,
-  resource_id: int64StringOrNumber,
+  resource_id: int64String,
   message: str,
   can_override: bool,
   fingerprint: optional(str),
-  conflicting_instance_id: optional(int64StringOrNumber),
+  conflicting_instance_id: optional(int64String),
   conflicting_title: optional(str),
   overlap_start: optional(str),
   overlap_end: optional(str),
@@ -2381,7 +2903,7 @@ export interface OperationStaffName {
 }
 
 export const OperationStaffNameSchema: z.ZodType<OperationStaffName, unknown> = object<OperationStaffName>({
-  staff_id: int64StringOrNumber,
+  staff_id: int64String,
   display_name: str,
   is_substitute: bool,
 });
@@ -2428,12 +2950,12 @@ export interface OperationPlannedInstance {
 }
 
 export const OperationPlannedInstanceSchema: z.ZodType<OperationPlannedInstance, unknown> = object<OperationPlannedInstance>({
-  id: int64StringOrNumber,
+  id: int64String,
   title: str,
   date: str,
   start_time: str,
   end_time: str,
-  room_id: int64StringOrNumber,
+  room_id: int64String,
   room_name: optional(str),
   activity_type: optional(str),
   status: str,
@@ -2445,7 +2967,7 @@ export const OperationPlannedInstanceSchema: z.ZodType<OperationPlannedInstance,
   current_students_count: safeInt,
   planned_students_count: safeInt,
   is_spontaneous: bool,
-  assigned_staff_ids: nullable(arr(int64StringOrNumber)),
+  assigned_staff_ids: nullable(arr(int64String)),
   is_assigned: bool,
   is_primary: bool,
   is_substitute: bool,
@@ -2459,7 +2981,7 @@ export const OperationPlannedInstanceSchema: z.ZodType<OperationPlannedInstance,
   start_expires_at: str,
   can_reopen: optional(bool),
   reopen_until: optional(str),
-  active_group_id: optional(int64StringOrNumber),
+  active_group_id: optional(int64String),
   cancel_reason: optional(str),
   planning_track_name: optional(str),
   planning_track_color: optional(str),
@@ -2486,12 +3008,12 @@ export interface OperationRosterInstance {
 }
 
 export const OperationRosterInstanceSchema: z.ZodType<OperationRosterInstance, unknown> = object<OperationRosterInstance>({
-  id: int64StringOrNumber,
+  id: int64String,
   title: str,
   status: str,
   is_spontaneous: bool,
-  active_group_id: optional(int64StringOrNumber),
-  room_id: int64StringOrNumber,
+  active_group_id: optional(int64String),
+  room_id: int64String,
   room_name: optional(str),
   date: str,
   start_time: str,
@@ -2534,13 +3056,13 @@ export const OperationRosterSchema: z.ZodType<OperationRoster, unknown> = object
 /** Go: timetablehttp.PatchAttendanceRequest */
 export interface PatchAttendanceRequest {
   status?: string | null;
-  substatus?: unknown | null;
-  note?: unknown | null;
+  substatus?: string | null;
+  note?: string | null;
 }
 
 /** Go: timetablehttp.CompleteOperationRequest */
 export interface CompleteOperationRequest {
-  confirmed_present_student_ids?: number[] | null;
+  confirmed_present_student_ids?: string[] | null;
 }
 
 /** Go: timetable.ScheduledInstance */
@@ -2575,32 +3097,32 @@ export interface ScheduledInstance {
 }
 
 export const ScheduledInstanceSchema: z.ZodType<ScheduledInstance, unknown> = object<ScheduledInstance>({
-  id: int64StringOrNumber,
+  id: int64String,
   created_at: instant,
   updated_at: instant,
-  tenant_id: int64StringOrNumber,
+  tenant_id: int64String,
   date: nullable(calendarDate),
-  activity_group_id: optional(int64StringOrNumber),
-  calendar_period_id: optional(int64StringOrNumber),
+  activity_group_id: optional(int64String),
+  calendar_period_id: optional(int64String),
   title: str,
   description: optional(str),
   start_time: instant,
   end_time: instant,
-  room_id: int64StringOrNumber,
+  room_id: int64String,
   required_staff: optional(safeInt),
   status: str,
-  active_group_id: optional(int64StringOrNumber),
+  active_group_id: optional(int64String),
   list_kind: optional(str),
   is_spontaneous: bool,
   understaffed_ack: bool,
   understaffed_note: optional(str),
   cancel_reason: optional(str),
   notes: optional(str),
-  created_by: optional(int64StringOrNumber),
-  started_by: optional(int64StringOrNumber),
+  created_by: optional(int64String),
+  started_by: optional(int64String),
   started_at: optional(instant),
   completed_at: optional(instant),
-  completed_by: optional(int64StringOrNumber),
+  completed_by: optional(int64String),
   reopen_until: optional(instant),
 });
 
@@ -2613,9 +3135,9 @@ export interface startOperationResponse {
 }
 
 export const startOperationResponseSchema: z.ZodType<startOperationResponse, unknown> = object<startOperationResponse>({
-  instance_id: int64StringOrNumber,
+  instance_id: int64String,
   status: str,
-  active_group_id: int64StringOrNumber,
+  active_group_id: int64String,
   warnings: nullable(arr(InstanceConflictWarningSchema)),
 });
 
@@ -2623,6 +3145,7 @@ export const startOperationResponseSchema: z.ZodType<startOperationResponse, unk
 export interface HomeworkFeedbackRequest {
   status?: string;
   note?: string | null;
+  expected_version?: string;
 }
 
 /** Go: timetablehttp.HomeworkFeedbackResponse */
@@ -2631,14 +3154,21 @@ export interface HomeworkFeedbackResponse {
   date: string;
   status: string;
   note?: string;
+  version: string;
 }
 
 export const HomeworkFeedbackResponseSchema: z.ZodType<HomeworkFeedbackResponse, unknown> = object<HomeworkFeedbackResponse>({
-  student_id: int64StringOrNumber,
+  student_id: int64String,
   date: str,
   status: str,
   note: optional(str),
+  version: str,
 });
+
+/** Go: settingshttp.setValueRequest */
+export interface setValueRequest {
+  value?: unknown | null;
+}
 
 /** Go: workforce.StaffAbsenceResponse */
 export interface StaffAbsenceResponse {
@@ -2668,9 +3198,9 @@ export interface StaffAbsenceResponse {
 }
 
 export const StaffAbsenceResponseSchema: z.ZodType<StaffAbsenceResponse, unknown> = object<StaffAbsenceResponse>({
-  id: int64StringOrNumber,
-  tenant_id: int64StringOrNumber,
-  staff_id: int64StringOrNumber,
+  id: int64String,
+  tenant_id: int64String,
+  staff_id: int64String,
   absence_type: str,
   absence_type_label: optional(str),
   date_start: str,
@@ -2680,13 +3210,13 @@ export const StaffAbsenceResponseSchema: z.ZodType<StaffAbsenceResponse, unknown
   end_half_day: bool,
   note: optional(str),
   status: str,
-  approved_by: optional(int64StringOrNumber),
+  approved_by: optional(int64String),
   approved_at: optional(instant),
-  created_by: int64StringOrNumber,
+  created_by: int64String,
   working_days: optional(num),
   decision_note: optional(str),
   requested_at: instant,
-  substitute_staff_id: optional(int64StringOrNumber),
+  substitute_staff_id: optional(int64String),
   created_at: instant,
   updated_at: instant,
   duration_days: safeInt,
@@ -2743,6 +3273,7 @@ export interface HistorySessionResponse {
   audit_count: number;
   pack_up_minutes: number;
   rounding_minutes: number;
+  version: string;
 }
 
 export const HistorySessionResponseSchema: z.ZodType<HistorySessionResponse, unknown> = object<HistorySessionResponse>({
@@ -2769,6 +3300,7 @@ export const HistorySessionResponseSchema: z.ZodType<HistorySessionResponse, unk
   audit_count: safeInt,
   pack_up_minutes: safeInt,
   rounding_minutes: safeInt,
+  version: str,
 });
 
 /** Go: workforce.WorkWeekSummary */
@@ -2846,12 +3378,12 @@ export interface AdjustmentView {
 }
 
 export const AdjustmentViewSchema: z.ZodType<AdjustmentView, unknown> = object<AdjustmentView>({
-  id: int64StringOrNumber,
+  id: int64String,
   type: str,
   minutes_delta: safeInt,
   effective_date: str,
   note: str,
-  decided_by: int64StringOrNumber,
+  decided_by: int64String,
   decided_at: instant,
 });
 
@@ -2893,7 +3425,7 @@ export interface MonthSummary {
 }
 
 export const MonthSummarySchema: z.ZodType<MonthSummary, unknown> = object<MonthSummary>({
-  staff_id: int64StringOrNumber,
+  staff_id: int64String,
   year: safeInt,
   month: safeInt,
   carry_in_minutes: safeInt,
@@ -2919,7 +3451,7 @@ export const MonthSummarySchema: z.ZodType<MonthSummary, unknown> = object<Month
   closing_balance_minutes: safeInt,
   is_closed: bool,
   closed_at: optional(instant),
-  closed_by: optional(int64StringOrNumber),
+  closed_by: optional(int64String),
   closed_by_traeger: bool,
   close_reason: optional(str),
   frozen_closing_balance_minutes: optional(safeInt),
@@ -2964,11 +3496,11 @@ export interface WorkSessionEditView {
 }
 
 export const WorkSessionEditViewSchema: z.ZodType<WorkSessionEditView, unknown> = object<WorkSessionEditView>({
-  id: int64StringOrNumber,
-  tenant_id: int64StringOrNumber,
-  session_id: int64StringOrNumber,
-  staff_id: int64StringOrNumber,
-  edited_by: int64StringOrNumber,
+  id: int64String,
+  tenant_id: int64String,
+  session_id: int64String,
+  staff_id: int64String,
+  edited_by: int64String,
   field_name: str,
   old_value: nullable(str),
   new_value: nullable(str),
@@ -2995,15 +3527,15 @@ export interface StaffVacationOpening {
 }
 
 export const StaffVacationOpeningSchema: z.ZodType<StaffVacationOpening, unknown> = object<StaffVacationOpening>({
-  id: int64StringOrNumber,
-  tenant_id: int64StringOrNumber,
-  staff_id: int64StringOrNumber,
+  id: int64String,
+  tenant_id: int64String,
+  staff_id: int64String,
   year: safeInt,
   effective_date: str,
   taken_before_days: num,
   entered_remaining_days: num,
   note: str,
-  decided_by: int64StringOrNumber,
+  decided_by: int64String,
   decided_at: instant,
   created_at: instant,
   updated_at: instant,
@@ -3020,10 +3552,11 @@ export interface VacationQuotaSummary {
   reserved_days: number;
   remaining_days: number;
   opening?: StaffVacationOpening;
+  version: string;
 }
 
 export const VacationQuotaSummarySchema: z.ZodType<VacationQuotaSummary, unknown> = object<VacationQuotaSummary>({
-  staff_id: int64StringOrNumber,
+  staff_id: int64String,
   year: safeInt,
   entitled_days: num,
   carryover_days: num,
@@ -3032,6 +3565,7 @@ export const VacationQuotaSummarySchema: z.ZodType<VacationQuotaSummary, unknown
   reserved_days: num,
   remaining_days: num,
   opening: optional(StaffVacationOpeningSchema),
+  version: str,
 });
 
 /** Go: workforce.CreateAbsenceRequest */
@@ -3042,6 +3576,7 @@ export interface CreateAbsenceRequest {
   date_end?: string;
   half_day?: boolean;
   note?: string;
+  expected_fingerprint?: string;
 }
 
 /** Go: workforce.BreakDurationUpdate */
@@ -3059,6 +3594,7 @@ export interface SessionUpdateRequest {
   status?: string | null;
   notes?: string | null;
   breaks?: BreakDurationUpdate[] | null;
+  expected_version?: string | null;
 }
 
 /** Go: workforce.PoolProofStatus */
@@ -3087,8 +3623,8 @@ export interface PoolBlock {
 }
 
 export const PoolBlockSchema: z.ZodType<PoolBlock, unknown> = object<PoolBlock>({
-  id: optional(int64StringOrNumber),
-  school_id: int64StringOrNumber,
+  id: optional(int64String),
+  school_id: int64String,
   school_name: str,
   own: bool,
   date: nullable(calendarDate),
@@ -3109,7 +3645,7 @@ export interface PoolSpringer {
 }
 
 export const PoolSpringerSchema: z.ZodType<PoolSpringer, unknown> = object<PoolSpringer>({
-  staff_record_id: int64StringOrNumber,
+  staff_record_id: int64String,
   first_name: str,
   last_name: str,
   pool_from: nullable(calendarDate),
@@ -3156,12 +3692,12 @@ export interface ShiftResponse {
 
 export const ShiftResponseSchema: z.ZodType<ShiftResponse, unknown> = object<ShiftResponse>({
   id: int64String,
-  staff_id: int64StringOrNumber,
+  staff_id: int64String,
   date: str,
   start_time: str,
   end_time: str,
   break_minutes: safeInt,
-  shift_type_id: optional(int64StringOrNumber),
+  shift_type_id: optional(int64String),
   shift_type_name: optional(str),
   shift_type_color: optional(str),
   notes: optional(str),
@@ -3192,7 +3728,7 @@ export interface TraegerStaffSchool {
 }
 
 export const TraegerStaffSchoolSchema: z.ZodType<TraegerStaffSchool, unknown> = object<TraegerStaffSchool>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
 });
 
@@ -3237,7 +3773,7 @@ export interface InvoiceMandate {
 }
 
 export const InvoiceMandateSchema: z.ZodType<InvoiceMandate, unknown> = object<InvoiceMandate>({
-  mandate_id: int64StringOrNumber,
+  mandate_id: int64String,
   reference: str,
   signed_on: nullable(calendarDate),
   creditor_id: str,
@@ -3311,12 +3847,12 @@ export interface CareUnpriced {
 }
 
 export const CareUnpricedSchema: z.ZodType<CareUnpriced, unknown> = object<CareUnpriced>({
-  contract_id: int64StringOrNumber,
-  school_id: int64StringOrNumber,
+  contract_id: int64String,
+  school_id: int64String,
   school_name: str,
   child_first_name: str,
   child_last_name: str,
-  care_offering_id: int64StringOrNumber,
+  care_offering_id: int64String,
   module_name: str,
   weekday: str,
   days_per_week: optional(safeInt),
@@ -3330,8 +3866,8 @@ export interface CareDuplicateContract {
 }
 
 export const CareDuplicateContractSchema: z.ZodType<CareDuplicateContract, unknown> = object<CareDuplicateContract>({
-  contract_id: int64StringOrNumber,
-  school_id: int64StringOrNumber,
+  contract_id: int64String,
+  school_id: int64String,
   school_name: str,
 });
 
@@ -3352,6 +3888,57 @@ export const CareDuplicateSchema: z.ZodType<CareDuplicate, unknown> = object<Car
   contracts: nullable(arr(CareDuplicateContractSchema)),
 });
 
+/** Go: parentbilling.CareJoinedChild */
+export interface CareJoinedChild {
+  child_first_name: string;
+  child_last_name: string;
+  contracts: CareDuplicateContract[] | null;
+}
+
+export const CareJoinedChildSchema: z.ZodType<CareJoinedChild, unknown> = object<CareJoinedChild>({
+  child_first_name: str,
+  child_last_name: str,
+  contracts: nullable(arr(CareDuplicateContractSchema)),
+});
+
+/** Go: parentbilling.CareBilledInvoice */
+export interface CareBilledInvoice {
+  source: string;
+  run_id: string;
+  contract_id: string;
+  school_id: string;
+  school_name: string;
+  number: string;
+  document_kind: string;
+}
+
+export const CareBilledInvoiceSchema: z.ZodType<CareBilledInvoice, unknown> = object<CareBilledInvoice>({
+  source: str,
+  run_id: int64String,
+  contract_id: int64String,
+  school_id: int64String,
+  school_name: str,
+  number: str,
+  document_kind: str,
+});
+
+/** Go: parentbilling.CareBilledChild */
+export interface CareBilledChild {
+  child_first_name: string;
+  child_last_name: string;
+  reason: string;
+  contracts: CareDuplicateContract[] | null;
+  invoices: CareBilledInvoice[] | null;
+}
+
+export const CareBilledChildSchema: z.ZodType<CareBilledChild, unknown> = object<CareBilledChild>({
+  child_first_name: str,
+  child_last_name: str,
+  reason: str,
+  contracts: nullable(arr(CareDuplicateContractSchema)),
+  invoices: nullable(arr(CareBilledInvoiceSchema)),
+});
+
 /** Go: parentbilling.CareSchool */
 export interface CareSchool {
   id: string;
@@ -3359,7 +3946,7 @@ export interface CareSchool {
 }
 
 export const CareSchoolSchema: z.ZodType<CareSchool, unknown> = object<CareSchool>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
 });
 
@@ -3386,16 +3973,18 @@ export interface CostBearer {
   active: boolean;
   in_use: boolean;
   updated_at: string;
+  version: string;
 }
 
 export const CostBearerSchema: z.ZodType<CostBearer, unknown> = object<CostBearer>({
-  id: int64StringOrNumber,
+  id: int64String,
   name: str,
   address: str,
   file_reference: str,
   active: bool,
   in_use: bool,
   updated_at: instant,
+  version: str,
 });
 
 /** Go: parentbilling.ContributionRule */
@@ -3417,11 +4006,13 @@ export interface ContributionRule {
   cap_cents: number | null;
   tariff_sibling_price: boolean;
   counts_family_children: boolean;
+  sibling_all_children: boolean;
   updated_at: string;
+  version: string;
 }
 
 export const ContributionRuleSchema: z.ZodType<ContributionRule, unknown> = object<ContributionRule>({
-  id: int64StringOrNumber,
+  id: int64String,
   service: str,
   kind: str,
   valid_from: nullable(calendarDate),
@@ -3431,14 +4022,16 @@ export const ContributionRuleSchema: z.ZodType<ContributionRule, unknown> = obje
   discount_cents: nullable(safeInt),
   note: str,
   name: str,
-  school_ids: nullable(arr(int64StringOrNumber)),
-  care_offering_ids: nullable(arr(int64StringOrNumber)),
-  count_school_ids: nullable(arr(int64StringOrNumber)),
+  school_ids: nullable(arr(int64String)),
+  care_offering_ids: nullable(arr(int64String)),
+  count_school_ids: nullable(arr(int64String)),
   price_cents: nullable(safeInt),
   cap_cents: nullable(safeInt),
   tariff_sibling_price: bool,
   counts_family_children: bool,
+  sibling_all_children: bool,
   updated_at: instant,
+  version: str,
 });
 
 /** Go: parentbilling.CareModule */
@@ -3454,14 +4047,55 @@ export interface CareModule {
 }
 
 export const CareModuleSchema: z.ZodType<CareModule, unknown> = object<CareModule>({
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   school_name: str,
-  care_offering_id: int64StringOrNumber,
+  care_offering_id: int64String,
   module_name: str,
   ends_at: str,
   booked_weekdays: nullable(arr(str)),
   booked_days_per_week: nullable(arr(safeInt)),
   contract_count: safeInt,
+});
+
+/** Go: carecontract.ContractCorrectionValues */
+export interface ContractCorrectionValues {
+  parties: string[] | null;
+  method: string;
+  concluded_on: string | null;
+  date_unknown: boolean;
+}
+
+export const ContractCorrectionValuesSchema: z.ZodType<ContractCorrectionValues, unknown> = object<ContractCorrectionValues>({
+  parties: nullable(arr(str)),
+  method: str,
+  concluded_on: nullable(calendarDate),
+  date_unknown: bool,
+});
+
+/** Go: parentbilling.HolidaySiblingChild */
+export interface HolidaySiblingChild {
+  id: string;
+  first_name: string;
+  last_name: string;
+}
+
+export const HolidaySiblingChildSchema: z.ZodType<HolidaySiblingChild, unknown> = object<HolidaySiblingChild>({
+  id: int64String,
+  first_name: str,
+  last_name: str,
+});
+
+/** Go: parentbilling.HolidaySibling */
+export interface HolidaySibling {
+  registration_id: string;
+  status: string;
+  children: HolidaySiblingChild[] | null;
+}
+
+export const HolidaySiblingSchema: z.ZodType<HolidaySibling, unknown> = object<HolidaySibling>({
+  registration_id: int64String,
+  status: str,
+  children: nullable(arr(HolidaySiblingChildSchema)),
 });
 
 /** Go: enrollment.HolidayRegistrationBooking */
@@ -3483,11 +4117,11 @@ export interface HolidayRegistrationBooking {
 }
 
 export const HolidayRegistrationBookingSchema: z.ZodType<HolidayRegistrationBooking, unknown> = object<HolidayRegistrationBooking>({
-  week_id: int64StringOrNumber,
+  week_id: int64String,
   week_starts_on: nullable(calendarDate),
   week_ends_on: nullable(calendarDate),
-  host_school_id: int64StringOrNumber,
-  time_model_id: int64StringOrNumber,
+  host_school_id: int64String,
+  time_model_id: int64String,
   time_model_name: str,
   price_cents: safeInt,
   days: optional(arr(nullable(calendarDate))),
@@ -3515,14 +4149,14 @@ export interface HolidayRegistrationChild {
 }
 
 export const HolidayRegistrationChildSchema: z.ZodType<HolidayRegistrationChild, unknown> = object<HolidayRegistrationChild>({
-  id: int64StringOrNumber,
+  id: int64String,
   first_name: str,
   last_name: str,
   birth_date: nullable(calendarDate),
-  home_school_id: nullable(int64StringOrNumber),
+  home_school_id: nullable(int64String),
   guest_school_name: str,
   bookings: nullable(arr(HolidayRegistrationBookingSchema)),
-  duplicate_registration_ids: nullable(arr(int64StringOrNumber)),
+  duplicate_registration_ids: nullable(arr(int64String)),
   holiday_wish: str,
   holiday_wish_source: str,
   holiday_wish_check: bool,
@@ -3638,7 +4272,7 @@ export interface HolidayChildAnswers {
 }
 
 export const HolidayChildAnswersSchema: z.ZodType<HolidayChildAnswers, unknown> = object<HolidayChildAnswers>({
-  child_id: int64StringOrNumber,
+  child_id: int64String,
   custom_data: nullable(rec(nullable(json))),
 });
 
@@ -3688,7 +4322,7 @@ export interface HolidayRegistrationProof {
 }
 
 export const HolidayRegistrationProofSchema: z.ZodType<HolidayRegistrationProof, unknown> = object<HolidayRegistrationProof>({
-  id: int64StringOrNumber,
+  id: int64String,
   filename: str,
   size_bytes: safeInt,
   content_type: str,
@@ -3706,8 +4340,8 @@ export interface HolidayBookingChange {
 }
 
 export const HolidayBookingChangeSchema: z.ZodType<HolidayBookingChange, unknown> = object<HolidayBookingChange>({
-  week_id: int64StringOrNumber,
-  time_model_id: int64StringOrNumber,
+  week_id: int64String,
+  time_model_id: int64String,
   waitlisted: optional(bool),
   promoted_at: optional(instant),
   days: optional(arr(nullable(calendarDate))),
@@ -3733,8 +4367,8 @@ export interface HolidayCriterionCheck {
 }
 
 export const HolidayCriterionCheckSchema: z.ZodType<HolidayCriterionCheck, unknown> = object<HolidayCriterionCheck>({
-  criterion_id: int64StringOrNumber,
-  child_id: nullable(int64StringOrNumber),
+  criterion_id: int64String,
+  child_id: nullable(int64String),
   checked: nullable(str),
 });
 
@@ -3757,13 +4391,13 @@ export interface HolidayRegistrationEventDetails {
 
 export const HolidayRegistrationEventDetailsSchema: z.ZodType<HolidayRegistrationEventDetails, unknown> = object<HolidayRegistrationEventDetails>({
   from: optional(str),
-  child_id: optional(int64StringOrNumber),
+  child_id: optional(int64String),
   before: optional(arr(HolidayBookingChangeSchema)),
   after: optional(arr(HolidayBookingChangeSchema)),
   debtor_number: optional(HolidayDebtorNumberChangeSchema),
   fields: optional(arr(str)),
-  siblings: optional(arr(int64StringOrNumber)),
-  week_ids: optional(arr(int64StringOrNumber)),
+  siblings: optional(arr(int64String)),
+  week_ids: optional(arr(int64String)),
   placement: optional(str),
   proposal: optional(str),
   reason: optional(str),
@@ -3782,7 +4416,7 @@ export interface HolidayRegistrationEvent {
 export const HolidayRegistrationEventSchema: z.ZodType<HolidayRegistrationEvent, unknown> = object<HolidayRegistrationEvent>({
   action: str,
   occurred_at: instant,
-  actor_account_id: nullable(int64StringOrNumber),
+  actor_account_id: nullable(int64String),
   details: HolidayRegistrationEventDetailsSchema,
 });
 
@@ -3799,11 +4433,11 @@ export interface HolidayRegistrationCriterion {
 }
 
 export const HolidayRegistrationCriterionSchema: z.ZodType<HolidayRegistrationCriterion, unknown> = object<HolidayRegistrationCriterion>({
-  criterion_id: int64StringOrNumber,
+  criterion_id: int64String,
   name: str,
   question: str,
   scope: str,
-  child_id: nullable(int64StringOrNumber),
+  child_id: nullable(int64String),
   stated: str,
   checked: nullable(str),
   checked_at: nullable(instant),
@@ -3817,9 +4451,9 @@ export interface HolidayPromotion {
 }
 
 export const HolidayPromotionSchema: z.ZodType<HolidayPromotion, unknown> = object<HolidayPromotion>({
-  registration_id: int64StringOrNumber,
-  child_id: int64StringOrNumber,
-  week_id: int64StringOrNumber,
+  registration_id: int64String,
+  child_id: int64String,
+  week_id: int64String,
 });
 
 /** Go: enrollment.HolidayRegistrationDetail */
@@ -3858,10 +4492,11 @@ export interface HolidayRegistrationDetail {
   criteria: HolidayRegistrationCriterion[] | null;
   mails?: RequestMailOutcome[];
   promotions?: HolidayPromotion[];
+  version: string;
 }
 
 export const HolidayRegistrationDetailSchema: z.ZodType<HolidayRegistrationDetail, unknown> = object<HolidayRegistrationDetail>({
-  id: int64StringOrNumber,
+  id: int64String,
   status: str,
   frozen: bool,
   submitted_at: instant,
@@ -3895,7 +4530,43 @@ export const HolidayRegistrationDetailSchema: z.ZodType<HolidayRegistrationDetai
   criteria: nullable(arr(HolidayRegistrationCriterionSchema)),
   mails: optional(arr(RequestMailOutcomeSchema)),
   promotions: optional(arr(HolidayPromotionSchema)),
+  version: str,
 });
+
+/** Go: enrollment.HolidayNoCareDay */
+export interface HolidayNoCareDay {
+  date: string | null;
+  kind: string;
+  name: string;
+}
+
+export const HolidayNoCareDaySchema: z.ZodType<HolidayNoCareDay, unknown> = object<HolidayNoCareDay>({
+  date: nullable(calendarDate),
+  kind: str,
+  name: str,
+});
+
+/** Go: enrollmenthttp.holidayGuardianRequest */
+export interface holidayGuardianRequest {
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  phone?: string;
+}
+
+/** Go: enrollmenthttp.holidayAddressRequest */
+export interface holidayAddressRequest {
+  street?: string;
+  postal_code?: string;
+  city?: string;
+}
+
+/** Go: enrollmenthttp.holidayContactRequest */
+export interface holidayContactRequest {
+  name?: string;
+  phone?: string;
+  relationship?: string;
+}
 
 /** Go: parentbilling.SEPADebit */
 export interface SEPADebit {
@@ -3921,11 +4592,11 @@ export interface SEPADebit {
 }
 
 export const SEPADebitSchema: z.ZodType<SEPADebit, unknown> = object<SEPADebit>({
-  id: int64StringOrNumber,
-  mandate_id: int64StringOrNumber,
-  contract_id: int64StringOrNumber,
+  id: int64String,
+  mandate_id: int64String,
+  contract_id: int64String,
   run_kind: str,
-  run_id: int64StringOrNumber,
+  run_id: int64String,
   invoice_number: str,
   recipient_name: str,
   amount_cents: safeInt,
@@ -3937,7 +4608,7 @@ export const SEPADebitSchema: z.ZodType<SEPADebit, unknown> = object<SEPADebit>(
   status: str,
   left: optional(str),
   submitted_at: nullable(instant),
-  notice_id: optional(int64StringOrNumber),
+  notice_id: optional(int64String),
   notice_month: optional(calendarDate),
   message_id: optional(str),
 });
@@ -3957,7 +4628,7 @@ export interface TraegerStaffProof {
 }
 
 export const TraegerStaffProofSchema: z.ZodType<TraegerStaffProof, unknown> = object<TraegerStaffProof>({
-  type_id: int64StringOrNumber,
+  type_id: int64String,
   type_name: str,
   mandatory: bool,
   police_certificate: bool,

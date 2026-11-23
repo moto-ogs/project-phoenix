@@ -9,6 +9,9 @@ import type {
 
 import { StaffSessionTable } from "./staff-session-table";
 
+// The read of the shown sessions; it answers (ADR 0311, rule 6).
+const reloadSessions = () => Promise.resolve();
+
 // The table invalidates the cache of the signed-in session after a save;
 // these tests render it without a SessionProvider.
 vi.mock("~/lib/swr", () => ({ useInvalidateMatching: () => vi.fn() }));
@@ -74,6 +77,7 @@ function renderTable(props: {
 }) {
   return render(
     <StaffSessionTable
+      reloadSessions={reloadSessions}
       staffId="1"
       from={props.from ?? from}
       to={props.to ?? to}

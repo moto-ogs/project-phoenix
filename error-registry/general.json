@@ -7,6 +7,12 @@
       "legacy": "general.business_rejection"
     },
     {
+      "code": "general.changed_since_read",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "general.changed_since_read"
+    },
+    {
       "code": "general.input",
       "class": "input",
       "parameters": [],
@@ -25,6 +31,12 @@
       "legacy": "general.request_too_large"
     },
     {
+      "code": "general.route_not_found",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "general.route_not_found"
+    },
+    {
       "code": "general.server",
       "class": "server",
       "parameters": [],
@@ -35,6 +47,12 @@
       "class": "unavailable",
       "parameters": [],
       "legacy": "general.unavailable"
+    },
+    {
+      "code": "general.write_answer_unreadable",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "general.write_answer_unreadable"
     }
   ]
 }

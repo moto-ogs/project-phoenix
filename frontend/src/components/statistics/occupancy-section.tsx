@@ -12,10 +12,8 @@ import { EmptyState } from "~/components/ui/empty-state";
 import { SegmentedControl } from "~/components/ui/segmented-control";
 import { formatDate } from "~/lib/date-helpers";
 import { LOCATION_COLORS } from "~/lib/location-helper";
-import type {
-  StatisticsOccupancy,
-  StatisticsOccupancySlot,
-} from "~/lib/statistics-api";
+import type * as statisticsContract from "~/lib/contract/statistics.generated";
+import type { StatisticsOccupancy } from "~/lib/statistics-api";
 import { ProgressBar } from "~/components/ui/progress-bar";
 
 const WEEKDAY_LABELS: Readonly<Record<number, string>> = {
@@ -109,70 +107,72 @@ export function OccupancySection({
   );
   const planned = LOCATION_COLORS.OTHER_ROOM;
   const actual = LOCATION_COLORS.GROUP_ROOM;
-  const slotColumn: DataTableColumn<StatisticsOccupancySlot> = {
-    key: "slot",
-    header: "Uhrzeit",
-    render: (row) => (
-      <span className="font-medium whitespace-nowrap text-gray-900 tabular-nums">
-        {row.start}–{row.end}
-      </span>
-    ),
-  };
+  const slotColumn: DataTableColumn<statisticsContract.occupancySlotResponse> =
+    {
+      key: "slot",
+      header: "Uhrzeit",
+      render: (row) => (
+        <span className="font-medium whitespace-nowrap text-gray-900 tabular-nums">
+          {row.start}–{row.end}
+        </span>
+      ),
+    };
   const count = (value: number | null) =>
     value === null ? "–" : String(value);
   const average = (value: number | null) =>
     value === null ? "–" : formatAverage(value);
 
-  const columns: DataTableColumn<StatisticsOccupancySlot>[] = singleDay
-    ? [
-        slotColumn,
-        {
-          key: "planned",
-          header: "Geplant",
-          align: "right",
-          render: (row) =>
-            bar(row.planned_max, count(row.planned_max), planned),
-        },
-        {
-          key: "actual",
-          header: "Da",
-          align: "right",
-          render: (row) => bar(row.actual_max, count(row.actual_max), actual),
-        },
-      ]
-    : [
-        slotColumn,
-        {
-          key: "planned-average",
-          header: "Geplant Ø",
-          align: "right",
-          render: (row) =>
-            bar(row.planned_average, average(row.planned_average), planned),
-        },
-        {
-          key: "planned-max",
-          header: "Geplant höchstens",
-          align: "right",
-          render: (row) => (
-            <span className="tabular-nums">{count(row.planned_max)}</span>
-          ),
-        },
-        {
-          key: "actual-average",
-          header: "Da Ø",
-          align: "right",
-          render: (row) =>
-            bar(row.actual_average, average(row.actual_average), actual),
-        },
-        {
-          key: "actual-max",
-          header: "Da höchstens",
-          align: "right",
-          render: (row) => (
-            <span className="tabular-nums">{count(row.actual_max)}</span>
-          ),
-        },
-      ];
+  const columns: DataTableColumn<statisticsContract.occupancySlotResponse>[] =
+    singleDay
+      ? [
+          slotColumn,
+          {
+            key: "planned",
+            header: "Geplant",
+            align: "right",
+            render: (row) =>
+              bar(row.planned_max, count(row.planned_max), planned),
+          },
+          {
+            key: "actual",
+            header: "Da",
+            align: "right",
+            render: (row) => bar(row.actual_max, count(row.actual_max), actual),
+          },
+        ]
+      : [
+          slotColumn,
+          {
+            key: "planned-average",
+            header: "Geplant Ø",
+            align: "right",
+            render: (row) =>
+              bar(row.planned_average, average(row.planned_average), planned),
+          },
+          {
+            key: "planned-max",
+            header: "Geplant höchstens",
+            align: "right",
+            render: (row) => (
+              <span className="tabular-nums">{count(row.planned_max)}</span>
+            ),
+          },
+          {
+            key: "actual-average",
+            header: "Da Ø",
+            align: "right",
+            render: (row) =>
+              bar(row.actual_average, average(row.actual_average), actual),
+          },
+          {
+            key: "actual-max",
+            header: "Da höchstens",
+            align: "right",
+            render: (row) => (
+              <span className="tabular-nums">{count(row.actual_max)}</span>
+            ),
+          },
+        ];
 
   // Beide Werte reichen nur so weit zurück, wie ihre Daten aufbewahrt werden.
   const retentionNotes = [

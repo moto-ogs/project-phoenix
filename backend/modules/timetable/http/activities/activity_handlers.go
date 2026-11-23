@@ -9,27 +9,27 @@ import (
 	"strconv"
 
 	activityContract "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/api/common"
-	timetableModule "github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
 // buildBaseActivityResponse creates the base activity response structure.
 func buildBaseActivityResponse(group *activityContract.Group, enrollmentCount int) ActivityResponse {
 	response := ActivityResponse{
-		ID:              group.ID,
+		ID:              ident.ID(group.ID),
 		Name:            group.Name,
 		MaxParticipants: group.ParticipantLimit(),
 		IsOpen:          group.IsOpen,
-		CategoryID:      group.CategoryID,
-		PlannedRoomID:   group.PlannedRoomID,
-		CreatedBy:       group.CreatedBy,
+		CategoryID:      ident.ID(group.CategoryID),
+		PlannedRoomID:   (*ident.ID)(group.PlannedRoomID),
+		CreatedBy:       (*ident.ID)(group.CreatedBy),
 		EnrollmentCount: enrollmentCount,
 		CreatedAt:       group.CreatedAt,
 		UpdatedAt:       group.UpdatedAt,
-		Schedules:       []ScheduleResponse{},
+		Schedules:       []ActivityScheduleResponse{},
 	}
 
 	return response
@@ -50,20 +50,20 @@ func addSupervisorsToResponse(response *ActivityResponse, supervisors []*activit
 	}
 
 	supervisorIDs := make([]int64, 0, len(supervisors))
-	supervisorDetails := make([]SupervisorResponse, 0, len(supervisors))
+	supervisorDetails := make([]ActivitySupervisorResponse, 0, len(supervisors))
 
 	for _, supervisor := range supervisors {
 		if supervisor != nil {
 			supervisorIDs = append(supervisorIDs, supervisor.StaffID)
 			if supervisor.IsPrimary {
-				response.SupervisorID = &supervisor.StaffID
+				response.SupervisorID = (*ident.ID)(&supervisor.StaffID)
 			}
 			supervisorDetails = append(supervisorDetails, newSupervisorResponse(supervisor))
 		}
 	}
 
 	if len(supervisorIDs) > 0 {
-		response.SupervisorIDs = supervisorIDs
+		response.SupervisorIDs = ident.IDs(supervisorIDs)
 		response.Supervisors = supervisorDetails
 	}
 }
@@ -74,7 +74,7 @@ func addSchedulesToResponse(response *ActivityResponse, schedules []*activityCon
 		return
 	}
 
-	responseSchedules := make([]ScheduleResponse, 0, len(schedules))
+	responseSchedules := make([]ActivityScheduleResponse, 0, len(schedules))
 	for _, schedule := range schedules {
 		if schedule != nil {
 			responseSchedules = append(responseSchedules, newScheduleResponse(schedule))
@@ -84,15 +84,6 @@ func addSchedulesToResponse(response *ActivityResponse, schedules []*activityCon
 	if len(responseSchedules) > 0 {
 		response.Schedules = responseSchedules
 	}
-}
-
-// updateGroupFields updates the basic fields of an activity group from a request.
-func updateGroupFields(group *activityContract.Group, req *ActivityRequest) {
-	group.Name = req.Name
-	group.MaxParticipants = req.MaxParticipants
-	group.IsOpen = req.IsOpen
-	group.CategoryID = req.CategoryID
-	group.PlannedRoomID = req.PlannedRoomID
 }
 
 // fetchUpdatedGroupData retrieves the updated group with response details.
@@ -124,13 +115,15 @@ func (rs *Resource) buildUpdateResponse(ctx context.Context, group *activityCont
 
 	response := newActivityResponse(group, len(enrolledStudents))
 	addSupervisorsToResponse(&response, group.Supervisors)
+	addSchedulesToResponse(&response, group.Schedules)
+	response.Version = activityContract.GroupVersion(group, group.Supervisors, group.Schedules)
 	return response, nil
 }
 
-func (rs *Resource) updateActivityInTx(ctx context.Context, group *activityContract.Group, staffID int64, canManage bool, supervisorIDs []int64, schedules []*activityContract.Schedule) (ActivityResponse, error) {
+func (rs *Resource) updateActivityInTx(ctx context.Context, edit activityContract.GroupEdit, staffID int64, canManage bool) (ActivityResponse, error) {
 	var response ActivityResponse
 	err := rs.transactions.WithinTenant(ctx, tenant.FromContext(ctx), func(txCtx context.Context) error {
-		updated, err := rs.ActivityService.UpdateGroupWithDetails(txCtx, group, staffID, canManage, supervisorIDs, schedules)
+		updated, err := rs.ActivityService.UpdateGroupWithDetails(txCtx, edit, staffID, canManage)
 		if err != nil {
 			return err
 		}
@@ -236,6 +229,7 @@ func (rs *Resource) getActivity(w http.ResponseWriter, r *http.Request) {
 	addCategoryToResponse(&response, group)
 	addSupervisorsToResponse(&response, supervisors)
 	addSchedulesToResponse(&response, schedules)
+	response.Version = activityContract.GroupVersion(group, supervisors, schedules)
 
 	common.Respond(w, r, http.StatusOK, response, "Activity retrieved successfully")
 }
@@ -248,22 +242,25 @@ func (rs *Resource) createActivity(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
+	if err := validateNewActivity(req.Name, req.MaxParticipants); err != nil {
+		common.RenderError(w, r, common.ErrorInvalidRequest(err))
+		return
+	}
 
-	// Get current staff ID - required for created_by
-	staffID, _, err := rs.getStaffIDAndManagePermission(r)
-	if err != nil {
-		common.RenderError(w, r, common.ErrorForbidden(errors.New("only staff members can create activities")))
+	creator, refusal := rs.activityCreator(r)
+	if refusal != nil {
+		common.RenderError(w, r, refusal)
 		return
 	}
 
 	// Create activity group with creator
 	group := &activityContract.Group{
 		Name:            req.Name,
-		MaxParticipants: req.MaxParticipants,
+		MaxParticipants: participantLimit(req.MaxParticipants),
 		IsOpen:          req.IsOpen,
-		CategoryID:      req.CategoryID,
-		PlannedRoomID:   req.PlannedRoomID,
-		CreatedBy:       &staffID,
+		CategoryID:      req.CategoryID.Int64(),
+		PlannedRoomID:   (*int64)(req.PlannedRoomID),
+		CreatedBy:       creator,
 	}
 
 	schedules := activityRequestSchedules(req)
@@ -273,7 +270,7 @@ func (rs *Resource) createActivity(w http.ResponseWriter, r *http.Request) {
 	tenantID := tenant.FromContext(r.Context())
 	if err := rs.transactions.WithinTenant(r.Context(), tenantID, func(ctx context.Context) error {
 		var txErr error
-		createdGroup, txErr = rs.ActivityService.CreateGroup(ctx, group, req.SupervisorIDs, schedules)
+		createdGroup, txErr = rs.ActivityService.CreateGroup(ctx, group, ident.Int64s(req.SupervisorIDs), schedules)
 		return txErr
 	}); err != nil {
 		common.RenderError(w, r, ErrorRenderer(err))
@@ -301,25 +298,28 @@ func (rs *Resource) quickCreateActivity(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Get current staff - required for created_by
-	staffID, found, err := rs.UserContextService.CurrentStaffID(r.Context())
-	if err != nil || !found {
-		common.RenderError(w, r, common.ErrorForbidden(errors.New("only staff members can create activities")))
+	creator, refusal := rs.activityCreator(r)
+	if refusal != nil {
+		common.RenderError(w, r, refusal)
 		return
 	}
 
 	// Create activity group with smart defaults and creator
 	group := &activityContract.Group{
 		Name:            req.Name,
-		MaxParticipants: req.MaxParticipants,
+		MaxParticipants: participantLimit(req.MaxParticipants),
 		IsOpen:          true, // Default to true for quick-create
-		CategoryID:      req.CategoryID,
-		PlannedRoomID:   req.RoomID,
-		CreatedBy:       &staffID,
+		CategoryID:      req.CategoryID.Int64(),
+		PlannedRoomID:   (*int64)(req.RoomID),
+		CreatedBy:       creator,
 	}
 
-	// Auto-assign creator as primary supervisor
-	supervisorIDs := []int64{staffID}
+	// Auto-assign a staff creator as primary supervisor; the Träger-Büro
+	// creates the activity without one and enters it afterwards (#7818).
+	var supervisorIDs []int64
+	if creator != nil {
+		supervisorIDs = []int64{*creator}
+	}
 
 	// Create the activity group with auto-assigned teacher supervision
 	var createdGroup *activityContract.Group
@@ -335,13 +335,15 @@ func (rs *Resource) quickCreateActivity(w http.ResponseWriter, r *http.Request) 
 
 	response := quickActivityResponse(createdGroup, req)
 
-	// The creator supervises the activity; their person names it.
-	firstName, lastName, err := rs.UserContextService.CurrentPersonName(r.Context())
-	if err != nil {
-		common.RenderError(w, r, common.ErrorInternalServer(err))
-		return
+	// A staff creator supervises the activity; their person names it.
+	if creator != nil {
+		firstName, lastName, err := rs.UserContextService.CurrentPersonName(r.Context())
+		if err != nil {
+			common.RenderError(w, r, common.ErrorInternalServer(err))
+			return
+		}
+		response.SupervisorName = fmt.Sprintf("%s %s", firstName, lastName)
 	}
-	response.SupervisorName = fmt.Sprintf("%s %s", firstName, lastName)
 
 	common.Respond(w, r, http.StatusCreated, response, msgActivityCreatedSuccess)
 }
@@ -363,33 +365,13 @@ func (rs *Resource) updateActivity(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse request
-	req := &ActivityRequest{}
+	req := &ActivityUpdateRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
 
-	// Get and update existing group
-	existingGroup, err := rs.ActivityService.GetGroup(r.Context(), id)
-	if err != nil {
-		common.RenderError(w, r, ErrorRenderer(err))
-		return
-	}
-
-	updateGroupFields(existingGroup, req)
-
-	// Convert schedule requests to model schedules for the service call.
-	newSchedules := make([]*activityContract.Schedule, 0, len(req.Schedules))
-	for _, scheduleReq := range req.Schedules {
-		newSchedules = append(newSchedules, &activityContract.Schedule{
-			Weekday:     scheduleReq.Weekday,
-			TimeframeID: scheduleReq.TimeframeID,
-		})
-	}
-
-	response, err := rs.updateActivityInTx(
-		r.Context(), existingGroup, staffID, hasManagePermission, req.SupervisorIDs, newSchedules,
-	)
+	response, err := rs.updateActivityInTx(r.Context(), req.groupEdit(id), staffID, hasManagePermission)
 	if err != nil {
 		// Check for ownership error
 		if errors.Is(err, activityContract.ErrNotOwner) {
@@ -436,48 +418,8 @@ func (rs *Resource) deleteActivity(w http.ResponseWriter, r *http.Request) {
 	common.Respond(w, r, http.StatusOK, nil, "Activity deleted successfully")
 }
 
-// getTimespans handles retrieving all available time spans for activities
-func (rs *Resource) getTimespans(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	// Fetch active timeframes from the Timetable owner
-	values, err := rs.Timeframes.ListTimeframes(ctx, timetableModule.TimeframeFilter{ActiveOnly: true})
-	var timeframes []timeframeSlot
-	if err == nil {
-		timeframes, err = timeframesToSlots(values)
-	}
-	if err != nil {
-		slog.Default().ErrorContext(ctx, "Error fetching timeframes", slog.String("error", err.Error()))
-		common.RespondWithError(w, r, http.StatusInternalServerError, "Failed to retrieve timeframes")
-		return
-	}
-
-	// Convert timeframes to TimespanResponse format
-	timespans := make([]TimespanResponse, len(timeframes))
-	for i, tf := range timeframes {
-		timespans[i] = TimespanResponse{
-			ID:          tf.ID,
-			Name:        tf.Description, // Use description as name for now
-			StartTime:   tf.StartTime.Format("15:04"),
-			EndTime:     formatEndTime(tf.EndTime),
-			Description: tf.Description,
-		}
-	}
-
-	common.Respond(w, r, http.StatusOK, timespans, "Time spans retrieved successfully")
-}
-
 func activityRequestSchedules(req *ActivityRequest) []*activityContract.Schedule {
-	// Prepare schedules
-	schedules := make([]*activityContract.Schedule, 0, len(req.Schedules))
-	for _, s := range req.Schedules {
-		schedules = append(schedules, &activityContract.Schedule{
-			Weekday:     s.Weekday,
-			TimeframeID: s.TimeframeID,
-		})
-	}
-
-	return schedules
+	return scheduleRequests(req.Schedules)
 }
 
 func activityListResponses(groups []*activityContract.Group, enrollmentCounts map[int64]int, supervisorMap map[int64][]*activityContract.SupervisorPlanned) []ActivityResponse {
@@ -489,7 +431,7 @@ func activityListResponses(groups []*activityContract.Group, enrollmentCounts ma
 
 		// Get supervisors from map (O(1) lookup)
 		if supervisors := supervisorMap[group.ID]; len(supervisors) > 0 {
-			supervisorResponses := make([]SupervisorResponse, 0, len(supervisors))
+			supervisorResponses := make([]ActivitySupervisorResponse, 0, len(supervisors))
 			for _, supervisor := range supervisors {
 				supervisorResponses = append(supervisorResponses, newSupervisorResponse(supervisor))
 			}
@@ -505,7 +447,7 @@ func activityListResponses(groups []*activityContract.Group, enrollmentCounts ma
 func quickActivityResponse(createdGroup *activityContract.Group, req *QuickActivityRequest) QuickActivityResponse {
 	// Build enhanced response with additional context
 	response := QuickActivityResponse{
-		ActivityID: createdGroup.ID,
+		ActivityID: ident.ID(createdGroup.ID),
 		Name:       createdGroup.Name,
 		Status:     "created",
 		Message:    "Activity created successfully and ready for RFID device selection",
@@ -529,17 +471,17 @@ func quickActivityResponse(createdGroup *activityContract.Group, req *QuickActiv
 func createdActivityResponse(createdGroup *activityContract.Group) ActivityResponse {
 	// Create a direct response with minimal fields
 	response := ActivityResponse{
-		ID:              createdGroup.ID,
+		ID:              ident.ID(createdGroup.ID),
 		Name:            createdGroup.Name,
 		MaxParticipants: createdGroup.ParticipantLimit(),
 		IsOpen:          createdGroup.IsOpen,
-		CategoryID:      createdGroup.CategoryID,
-		PlannedRoomID:   createdGroup.PlannedRoomID,
-		CreatedBy:       createdGroup.CreatedBy,
+		CategoryID:      ident.ID(createdGroup.CategoryID),
+		PlannedRoomID:   (*ident.ID)(createdGroup.PlannedRoomID),
+		CreatedBy:       (*ident.ID)(createdGroup.CreatedBy),
 		CreatedAt:       createdGroup.CreatedAt,
 		UpdatedAt:       createdGroup.UpdatedAt,
 		EnrollmentCount: 0,
-		Schedules:       []ScheduleResponse{}, // Always use empty slice, not nil
+		Schedules:       []ActivityScheduleResponse{}, // Always use empty slice, not nil
 	}
 
 	return response

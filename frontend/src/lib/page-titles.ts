@@ -173,6 +173,8 @@ export const GERMAN_PAGE_TITLES: Readonly<
     "/abrechnung/exporte/konten": "Konten und Kostenstellen",
     "/abrechnung/familien": "Familien",
     "/abrechnung/familien/:id": "Familie",
+    "/abrechnung/familien/zahlung/:contractId":
+      "Empfänger und Zahlung der Familie",
     "/abrechnung/jahresbescheide": "Jahresbescheide",
     "/abrechnung/jahresbescheide/:id": "Jahreslauf",
     "/abrechnung/jahresbescheide/:id/bescheid/:contractId": "Jahresbescheid",
@@ -250,6 +252,10 @@ export const GERMAN_PAGE_TITLES: Readonly<
     "/vertraege/:id": "Vertrag",
     "/vertraege/bedingungen": "Vertragsbedingungen",
     "/vertraege/import": "Verträge importieren",
+    "/vertraege/nachpflege": "Vertragsangaben nachpflegen",
+    "/vertraege/module-zuordnen": "Module neu zuordnen",
+    "/vertraege/verknuepfen": "Verträge mit Kinderakten verknüpfen",
+    "/vertraege/anmeldungen": "Anmeldungen nachtragen",
     "/zeitvergleich": "Länger als gebucht",
   },
   operator: {

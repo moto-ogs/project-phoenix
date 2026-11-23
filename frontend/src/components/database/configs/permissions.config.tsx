@@ -3,7 +3,8 @@
 // Permission Entity Configuration
 
 import { defineEntityConfig } from "@/lib/database/types";
-import type { Permission, BackendPermission } from "@/lib/auth-helpers";
+import type { Permission } from "@/lib/auth-helpers";
+import { bffJson } from "~/lib/bff-fetch";
 import { mapPermissionResponse } from "@/lib/auth-helpers";
 import {
   formatPermissionDisplay,
@@ -60,7 +61,10 @@ export const permissionsConfig = defineEntityConfig<Permission>({
   backUrl: "/database",
 
   api: {
-    basePath: "/api/auth/permissions",
+    list: async () =>
+      (await bffJson("tenant", "GET /auth/permissions/")).map(
+        mapPermissionResponse,
+      ),
   },
 
   form: {
@@ -204,21 +208,6 @@ export const permissionsConfig = defineEntityConfig<Permission>({
       avatar: {
         text: (p: Permission) => (p.resource?.[0] ?? "P").toUpperCase(),
       },
-    },
-  },
-
-  service: {
-    mapResponse: (data: unknown): Permission => {
-      let actual = data;
-      if (
-        data &&
-        typeof data === "object" &&
-        "status" in data &&
-        "data" in data
-      ) {
-        actual = (data as { status: string; data: unknown }).data;
-      }
-      return mapPermissionResponse(actual as BackendPermission);
     },
   },
 

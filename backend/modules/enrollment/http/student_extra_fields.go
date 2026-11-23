@@ -30,7 +30,7 @@ type StudentEnrollmentExtraField struct {
 	Type    string                              `json:"type"`
 	Target  string                              `json:"target,omitempty"`
 	Options []StudentEnrollmentExtraFieldOption `json:"options,omitempty"`
-	Value   any                                 `json:"value"`
+	Value   any                                 `json:"value" contract_json:"The school's enrollment field schema determines the answer type"`
 }
 
 type StudentEnrollmentExtraFieldOption struct {

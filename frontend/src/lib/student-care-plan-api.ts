@@ -9,6 +9,8 @@
  * care-plan-helpers.ts and the view, not by this client.
  */
 
+import { knownEnum } from "~/lib/contract/known-enum";
+import type * as wire from "~/lib/contract/timetable.generated";
 import { bffJson } from "./bff-fetch";
 
 /** Arrival/pickup slot source — mirrors SlotSource* in the backend. */
@@ -72,62 +74,24 @@ interface CarePlanWeek {
   days: CarePlanDay[];
 }
 
-// --- Backend wire shapes (snake_case) --------------------------------------
-
-interface BackendSlot {
-  expected_time: string | null;
-  source: string;
-  reason?: string | null;
-}
-
-interface BackendAttendance {
-  status: string;
-  substatus: string | null;
-  note: string | null;
-  checked_in_at: string | null;
-  checked_out_at: string | null;
-  is_unplanned: boolean;
-}
-
-interface BackendInstance {
-  id: number | string;
-  title: string;
-  start_time: string;
-  end_time: string;
-  room_id: number | string;
-  status: string;
-  active_group_id: number | string | null;
-  attendance: BackendAttendance;
-}
-
-interface BackendDay {
-  student_id: number | string;
-  date: string;
-  weekday: number;
-  arrival: BackendSlot;
-  instances: BackendInstance[] | null;
-  pickup: BackendSlot;
-}
-
-interface BackendWeek {
-  student_id: number | string;
-  from: string;
-  to: string;
-  days: BackendDay[] | null;
-}
-
 // --- Mappers ----------------------------------------------------------------
 
-function mapSlot(s: BackendSlot): CarePlanSlot {
+const SLOT_SOURCES: readonly CarePlanSlotSource[] = [
+  "schedule",
+  "exception",
+  "none",
+];
+
+function mapSlot(s: wire.SlotResponse): CarePlanSlot {
   const slot: CarePlanSlot = {
     expectedTime: s.expected_time,
-    source: (s.source as CarePlanSlotSource | undefined) ?? "none",
+    source: knownEnum(SLOT_SOURCES, s.source) ?? "none",
   };
   if (s.reason) slot.reason = s.reason;
   return slot;
 }
 
-function mapAttendance(a: BackendAttendance): CarePlanAttendance {
+function mapAttendance(a: wire.AttendanceDayResponse): CarePlanAttendance {
   return {
     status: a.status,
     substatus: a.substatus,
@@ -138,23 +102,22 @@ function mapAttendance(a: BackendAttendance): CarePlanAttendance {
   };
 }
 
-function mapInstance(i: BackendInstance): CarePlanInstance {
+function mapInstance(i: wire.InstanceDayResponse): CarePlanInstance {
   return {
-    id: i.id.toString(),
+    id: i.id,
     title: i.title,
     startTime: i.start_time,
     endTime: i.end_time,
-    roomId: i.room_id.toString(),
+    roomId: i.room_id,
     status: i.status,
-    activeGroupId:
-      i.active_group_id != null ? i.active_group_id.toString() : null,
+    activeGroupId: i.active_group_id,
     attendance: mapAttendance(i.attendance),
   };
 }
 
-function mapDay(d: BackendDay): CarePlanDay {
+function mapDay(d: wire.StudentDayResponse): CarePlanDay {
   return {
-    studentId: d.student_id.toString(),
+    studentId: d.student_id,
     date: d.date,
     weekday: d.weekday,
     arrival: mapSlot(d.arrival),
@@ -163,9 +126,9 @@ function mapDay(d: BackendDay): CarePlanDay {
   };
 }
 
-function mapWeek(w: BackendWeek): CarePlanWeek {
+function mapWeek(w: wire.StudentWeekResponse): CarePlanWeek {
   return {
-    studentId: w.student_id.toString(),
+    studentId: w.student_id,
     from: w.from,
     to: w.to,
     days: (w.days ?? []).map(mapDay),
@@ -180,9 +143,10 @@ export async function fetchStudentCarePlanDay(
   date: string,
 ): Promise<CarePlanDay> {
   return mapDay(
-    await bffJson<BackendDay>(
-      `/api/timetable/student/${encodeURIComponent(studentId)}/day?date=${date}`,
-    ),
+    await bffJson("tenant", "GET /api/timetable/student/{id}/day", {
+      params: { id: studentId },
+      query: { date },
+    }),
   );
 }
 
@@ -193,54 +157,37 @@ export async function fetchStudentCarePlanWeek(
   to: string,
 ): Promise<CarePlanWeek> {
   return mapWeek(
-    await bffJson<BackendWeek>(
-      `/api/timetable/student/${encodeURIComponent(studentId)}/week?from=${from}&to=${to}`,
-    ),
+    await bffJson("tenant", "GET /api/timetable/student/{id}/week", {
+      params: { id: studentId },
+      query: { from, to },
+    }),
   );
 }
 
-/** One recorded correction of a child's attendance in a block. */
-export interface AttendanceCorrection {
-  readonly field_name: string;
-  readonly old_value?: string | null;
-  readonly new_value?: string | null;
-  readonly reason: string;
-  readonly actor_name?: string | null;
-  readonly corrected_at: string;
-}
-
-/** The fields a correction changes, with the reason it is made. */
-interface AttendanceCorrectionInput {
-  reason: string;
-  status?: string;
-  substatus?: string | null;
-  note?: string | null;
-}
-
-function correctionPath(instanceId: string, studentId: string): string {
-  return `/api/timetable/instances/${encodeURIComponent(instanceId)}/students/${encodeURIComponent(studentId)}`;
-}
-
-/** The correction trail of a child's attendance in one block. */
+/** The recorded corrections of a child's attendance in a block, oldest first. */
 export async function fetchAttendanceCorrections(
   instanceId: string,
   studentId: string,
-): Promise<AttendanceCorrection[]> {
-  const trail = await bffJson<{ corrections?: AttendanceCorrection[] }>(
-    `${correctionPath(instanceId, studentId)}/corrections`,
+): Promise<wire.attendanceCorrectionResponse[]> {
+  const trail = await bffJson(
+    "tenant",
+    "GET /api/timetable/instances/{instance_id}/students/{student_id}/corrections",
+    { params: { instance_id: instanceId, student_id: studentId } },
   );
   return trail.corrections ?? [];
 }
 
+/** Changes a recorded attendance; `reason` says why. */
 export async function correctAttendance(
   instanceId: string,
   studentId: string,
-  correction: AttendanceCorrectionInput,
+  correction: wire.CorrectAttendanceRequest,
 ): Promise<void> {
-  await bffJson<unknown>(
-    `${correctionPath(instanceId, studentId)}/correction`,
+  await bffJson(
+    "tenant",
+    "POST /api/timetable/instances/{instance_id}/students/{student_id}/correction",
     {
-      method: "POST",
+      params: { instance_id: instanceId, student_id: studentId },
       body: correction,
     },
   );

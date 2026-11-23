@@ -31,7 +31,7 @@ type resolveConflictBody struct {
 	RequestIDs       []string       `json:"request_ids"`
 	ExpectedVersions []string       `json:"expected_versions"`
 	ChosenRequestID  string         `json:"chosen_request_id"`
-	StaffValue       map[string]any `json:"staff_value"`
+	StaffValue       map[string]any `json:"staff_value" contract_json:"The conflict kind selects the staff value shape"`
 	None             bool           `json:"none"`
 	// ConflictKey is the group's key from the list. It pins WHICH part of a
 	// multi-key request (a weekly plan touching several weekdays) a staff
@@ -142,6 +142,7 @@ var resolveConflictErrorRenderer = common.RulesRenderer(parentRequestRules(
 	common.ErrorRule{Target: parentrequests.ErrNotFound, Render: common.ErrorNotFound},
 	common.ErrorRule{Match: isParentRequestMissing, Render: common.ErrorNotFound},
 	common.ErrorRule{Match: isParentRequestNotPending, Render: conflictWithCode(common.CodeStudentsChangeRequestNotPending)},
+	common.ErrorRule{Target: carerequests.ErrCareRequestStaffProfileRequired, Render: staffProfileRequired},
 	common.ErrorRule{Match: isParentRequestForbidden, Render: common.ErrorForbidden},
 	common.ErrorRule{Target: parentrequests.ErrForbidden, Render: common.ErrorForbidden},
 ), common.ErrorInternalServer)

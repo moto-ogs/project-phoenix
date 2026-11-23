@@ -10,6 +10,7 @@ import type {
   FamilyImportRowStatus,
 } from "~/lib/traeger-family-children-import-api";
 import { childrenLabel } from "./family-children-format";
+import { labelOf } from "~/lib/label-of";
 
 /** Die Felder in der Reihenfolge der Zuordnung. */
 export const FAMILY_IMPORT_FIELDS: readonly FamilyImportField[] = [
@@ -18,6 +19,7 @@ export const FAMILY_IMPORT_FIELDS: readonly FamilyImportField[] = [
   "child_birth_date",
   "children",
   "school",
+  "valid_from",
 ];
 
 /** Felder, die jede Datei als Spalte braucht; die Schule auch als Wahl. */
@@ -30,6 +32,7 @@ export const FAMILY_IMPORT_FIELD_LABELS: Record<FamilyImportField, string> = {
   child_birth_date: "Geburtsdatum",
   school: "Schule",
   children: "Kinder in der Familie",
+  valid_from: "Gültig ab",
 };
 
 export const FAMILY_IMPORT_FIELD_HINTS: Partial<
@@ -38,6 +41,8 @@ export const FAMILY_IMPORT_FIELD_HINTS: Partial<
   child_birth_date: "Unterscheidet Kinder mit gleichem Namen.",
   children:
     "Alle Kinder der Familie, auch Geschwister ohne Vertrag. Eine ganze Zahl von 1 bis 20.",
+  valid_from:
+    "Nur wenn deine Datei den Tag je Kind nennt. Eine leere Zelle bekommt den Tag, den du darunter für die ganze Datei wählst.",
 };
 
 const FAMILY_IMPORT_STATUS: Record<
@@ -59,7 +64,7 @@ export function familyImportStatus(row: FamilyImportRow): {
 } {
   return row.problems.some((problem) => problem.code === "confirmations_differ")
     ? { label: "Verschiedene Angaben", tone: "red" }
-    : FAMILY_IMPORT_STATUS[row.status];
+    : labelOf(FAMILY_IMPORT_STATUS, row.status, { label: "–", tone: "gray" });
 }
 
 /** Der Name des Kindes, „–“ ohne Namen. */
@@ -74,6 +79,13 @@ const MISSING_TEXT: Record<FamilyImportField, string> = {
   child_birth_date: "Das Geburtsdatum fehlt.",
   school: "Die Schule fehlt.",
   children: "Die Kinderzahl fehlt.",
+  valid_from: "Der Tag in „Gültig ab“ fehlt.",
+};
+
+const INVALID_TEXT: Partial<Record<FamilyImportField, string>> = {
+  child_birth_date: "Das Geburtsdatum ist kein Datum. Beispiel: 03.05.2018.",
+  children: "Die Kinderzahl ist keine ganze Zahl von 1 bis 20.",
+  valid_from: "„Gültig ab“ ist kein Datum. Beispiel: 01.09.2026.",
 };
 
 /** Was eine Zeile aufhält, als ein Satz ohne den Wert aus der Datei. */
@@ -81,14 +93,14 @@ export function familyImportProblemText(
   problem: FamilyImportRow["problems"][number],
   row: FamilyImportRow,
 ): string {
-  const label = FAMILY_IMPORT_FIELD_LABELS[problem.field] ?? problem.field;
+  const { field } = problem;
+  if (field === undefined) return "Ein Feld dieser Zeile prüfen.";
+  const label = FAMILY_IMPORT_FIELD_LABELS[field] ?? field;
   switch (problem.code) {
     case "missing":
-      return MISSING_TEXT[problem.field] ?? `${label} fehlt.`;
+      return MISSING_TEXT[field] ?? `${label} fehlt.`;
     case "invalid":
-      return problem.field === "children"
-        ? "Die Kinderzahl ist keine ganze Zahl von 1 bis 20."
-        : "Das Geburtsdatum ist kein Datum. Beispiel: 03.05.2018.";
+      return INVALID_TEXT[field] ?? `${label} prüfen.`;
     case "too_long":
       return `${label} ist zu lang.`;
     case "unknown":
@@ -105,6 +117,10 @@ export function familyImportProblemText(
         : `Das Kind steht schon in Zeile ${row.repeatsLine}.`;
     case "rows_differ":
       return "Geschwister derselben Familie nennen verschiedene Zahlen. moto übernimmt keine.";
+    case "too_far_ahead":
+      return "Der Tag liegt mehr als neun Monate voraus. Trage die Zahl später nach.";
+    case "contract_ended":
+      return "Der Vertrag des Kindes endet, bevor die neue Kinderzahl gelten kann. moto übernimmt die Zahl nicht.";
     case "confirmations_differ":
       return "Für diese Familie sind verschiedene Kinderzahlen bestätigt. Bestätige die Kinderzahl in der Familienliste.";
     default:
@@ -164,7 +180,7 @@ export function numberCountLabel(count: number): string {
 
 /** Eine Beispieldatei mit den Spalten, die moto von selbst erkennt. */
 export const FAMILY_IMPORT_SAMPLE = [
-  "Vorname;Nachname;Geburtsdatum;Schule;Kinder in der Familie",
-  "Mia;Beispiel;03.05.2018;Grundschule Nord;2",
-  "Ben;Muster;11.11.2019;Grundschule Nord;1",
+  "Vorname;Nachname;Geburtsdatum;Schule;Kinder in der Familie;Kinderzahl gilt ab",
+  "Mia;Beispiel;03.05.2018;Grundschule Nord;2;01.09.2026",
+  "Ben;Muster;11.11.2019;Grundschule Nord;1;",
 ].join("\r\n");

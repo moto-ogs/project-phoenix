@@ -5,7 +5,6 @@ import {
   bool,
   instant,
   int64String,
-  int64StringOrNumber,
   noData,
   nullable,
   object,
@@ -50,14 +49,15 @@ export interface AccountTenantAccessEntry {
   has_person: boolean;
   has_staff: boolean;
   roles: AccountTenantRole[] | null;
+  version: string;
 }
 
 export const AccountTenantAccessEntrySchema: z.ZodType<AccountTenantAccessEntry, unknown> = object<AccountTenantAccessEntry>({
-  tenant_id: int64StringOrNumber,
+  tenant_id: int64String,
   school_name: str,
   school_slug: str,
   school_active: bool,
-  organization_id: int64StringOrNumber,
+  organization_id: int64String,
   organization_name: str,
   status: str,
   activated_at: optional(instant),
@@ -65,6 +65,7 @@ export const AccountTenantAccessEntrySchema: z.ZodType<AccountTenantAccessEntry,
   has_person: bool,
   has_staff: bool,
   roles: nullable(arr(AccountTenantRoleSchema)),
+  version: str,
 });
 
 /** Go: operator.MFAGlobalOverrideStateResponse */
@@ -95,7 +96,7 @@ export const RoleOptionSchema: z.ZodType<RoleOption, unknown> = object<RoleOptio
 
 /** Go: operator.grantAccountTenantAccessRequest */
 export interface grantAccountTenantAccessRequest {
-  school_id?: number;
+  school_id?: string;
   role_id?: string;
   first_name?: string;
   last_name?: string;
@@ -105,6 +106,7 @@ export interface grantAccountTenantAccessRequest {
 /** Go: operator.updateAccountTenantRoleRequest */
 export interface updateAccountTenantRoleRequest {
   role_id?: string;
+  expected_version?: string;
 }
 
 export const routes = {

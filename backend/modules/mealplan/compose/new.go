@@ -20,9 +20,7 @@ func (transaction) Run(ctx context.Context, callback func(context.Context) error
 }
 
 type Observation = ports.Observation
-
-// OrderingSettings are the school's meal ordering settings as stored.
-type OrderingSettings = ports.OrderingSettings
+type OrderingSettings = ports.OrderingSettings // the school's meal ordering settings as stored
 
 type Dependencies struct {
 	DB       *bun.DB
@@ -36,21 +34,25 @@ type Dependencies struct {
 	Participants    mealplan.ParticipantFinder
 	ParticipantDays mealplan.ParticipantDaysFinder
 	StudentNames    mealplan.StudentNameFinder
+	LockStudent     mealplan.StudentLock
 	Calendar        mealplan.CalendarFinder
 	Notices         mealplan.MenuChangeNotices // changed menu to the families (#7145); nil in the worker, which never changes it
 }
 
 func New(dependencies Dependencies) (mealplan.Capability, error) {
-	if dependencies.DB == nil || dependencies.Settings == nil || dependencies.Observe == nil || dependencies.Now == nil || dependencies.Participants == nil || dependencies.ParticipantDays == nil || dependencies.StudentNames == nil || dependencies.Calendar == nil {
+	if dependencies.DB == nil || dependencies.Settings == nil || dependencies.Observe == nil || dependencies.Now == nil || dependencies.Participants == nil || dependencies.ParticipantDays == nil || dependencies.StudentNames == nil || dependencies.LockStudent == nil || dependencies.Calendar == nil {
 		return nil, errors.New("meal plan compose: all dependencies are required")
 	}
-	store := postgres.New(postgres.NewDatabase(tenant.TransactionFromContext, tenant.TenantFromContext))
-	return application.New(store, application.NewParticipantDirectory(dependencies.Participants, dependencies.StudentNames, dependencies.ParticipantDays), application.NewSchoolCalendar(dependencies.Calendar), dependencies.Settings, transaction{}, dependencies.Observe, dependencies.Now, dependencies.Notices), nil
+	return application.New(postgres.New(postgres.NewDatabase(tenant.TransactionFromContext, tenant.TenantFromContext)), application.NewParticipantDirectory(dependencies.Participants, dependencies.StudentNames, dependencies.ParticipantDays, dependencies.LockStudent), application.NewSchoolCalendar(dependencies.Calendar), dependencies.Settings, transaction{}, dependencies.Observe, dependencies.Now, dependencies.Notices), nil
 }
 
-// Settings are the application-owned bound resolvers.
-type Settings = application.Settings
+type Settings = application.Settings // the application-owned bound resolvers
 
 func NewBoundSettings(mealPlanEnabled, mealRegistrationEnabled func(context.Context) (bool, error), orderingSettings func(context.Context) (OrderingSettings, error)) (*Settings, error) {
 	return application.NewBoundSettings(mealPlanEnabled, mealRegistrationEnabled, orderingSettings)
+}
+
+// NewMenuChanges reads the change mark of a day (#7666) in the caller's tenant transaction.
+func NewMenuChanges() mealplan.MenuChanges {
+	return postgres.NewMenuChanges(postgres.NewDatabase(tenant.TransactionFromContext, tenant.TenantFromContext))
 }

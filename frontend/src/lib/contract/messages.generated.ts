@@ -3,8 +3,10 @@ import { z } from "zod";
 import {
   arr,
   bool,
+  fileAnswer,
   instant,
   json,
+  multipart,
   noData,
   nullable,
   object,
@@ -15,6 +17,9 @@ import {
   str,
   success,
 } from "./runtime";
+import {
+  UploadResponseSchema,
+} from "./shared.generated";
 
 /** Go: messaging.GuardianReaderResponse */
 export interface GuardianReaderResponse {
@@ -302,7 +307,7 @@ export interface ParentChatMessageResponse {
   read_by_guardian?: boolean;
   group_thread_id?: string;
   group_thread_title?: string;
-  attachments?: unknown | null;
+  attachments?: ParentMessageAttachmentResponse[];
 }
 
 export const ParentChatMessageResponseSchema: z.ZodType<ParentChatMessageResponse, unknown> = object<ParentChatMessageResponse>({
@@ -327,7 +332,7 @@ export const ParentChatMessageResponseSchema: z.ZodType<ParentChatMessageRespons
   read_by_guardian: optional(bool),
   group_thread_id: optional(str),
   group_thread_title: optional(str),
-  attachments: optional(nullable(json)),
+  attachments: optional(arr(ParentMessageAttachmentResponseSchema)),
 });
 
 /** Go: messaging.ParentChatThreadDetailResponse */
@@ -423,29 +428,24 @@ export const CountScopeSavedResponseSchema: z.ZodType<CountScopeSavedResponse, u
   scope: str,
 });
 
-/** Query of GET /api/messages/ */
-export interface GetMessagesQuery {
-  unread?: boolean;
-}
-
-/** Query of GET /api/messages/group-threads/audience */
-export interface GetMessagesGroupThreadsAudienceQuery {
-  target_id?: string;
-  target_type?: string;
-}
-
-/** Query of GET /api/messages/students/{studentId}/guardians */
-export interface GetMessagesStudentsStudentIdGuardiansQuery {
-  audience?: string;
-}
-
 export const routes = {
   "GET /api/messages/": {
     method: "GET",
     pattern: "/api/messages/",
     portals: ["tenant"],
-    query: ["unread"],
+    query: {
+      "unread": { kind: "bool" },
+    },
     response: success(z.array(ParentChatInboxThreadResponseSchema)),
+  },
+  "GET /api/messages/attachments/{attachmentId}/download": {
+    method: "GET",
+    pattern: "/api/messages/attachments/{attachmentId}/download",
+    portals: ["tenant"],
+    query: {
+      "inline": { kind: "string" },
+    },
+    response: fileAnswer,
   },
   "GET /api/messages/count-scope": {
     method: "GET",
@@ -463,7 +463,10 @@ export const routes = {
     method: "GET",
     pattern: "/api/messages/group-threads/audience",
     portals: ["tenant"],
-    query: ["target_id", "target_type"],
+    query: {
+      "target_id": { kind: "string" },
+      "target_type": { kind: "string" },
+    },
     response: success(z.array(GroupChildResponseSchema)),
   },
   "GET /api/messages/group-threads/{groupThreadId}": {
@@ -488,7 +491,9 @@ export const routes = {
     method: "GET",
     pattern: "/api/messages/students/{studentId}/guardians",
     portals: ["tenant"],
-    query: ["audience"],
+    query: {
+      "audience": { kind: "string" },
+    },
     response: success(z.array(MessageableGuardianResponseSchema)),
   },
   "GET /api/messages/students/{studentId}/threads": {
@@ -514,6 +519,15 @@ export const routes = {
     pattern: "/api/messages/unread-count",
     portals: ["tenant"],
     response: success(ParentChatUnreadCountResponseSchema),
+  },
+  "POST /api/messages/attachments": {
+    method: "POST",
+    pattern: "/api/messages/attachments",
+    portals: ["tenant"],
+    maxBodyBytes: 10489856,
+    tooLargeCode: "files.file_too_large",
+    request: multipart,
+    response: success(UploadResponseSchema),
   },
   "POST /api/messages/group-threads": {
     method: "POST",

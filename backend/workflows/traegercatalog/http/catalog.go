@@ -15,6 +15,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/moto-ogs/project-phoenix/workflows/traegercatalog"
 )
@@ -80,7 +81,10 @@ type PhaseRequest struct {
 	CareOverflowMode          string     `json:"care_overflow_mode"`
 	CareOfferingSelectionMode string     `json:"care_offering_selection_mode"`
 	AllSchools                bool       `json:"all_schools"`
-	SchoolIDs                 []int64    `json:"school_ids"`
+	SchoolIDs                 []ident.ID `json:"school_ids"`
+	// ExpectedVersion is the version of the phase the office edits; a
+	// change saved since is refused (ADR 0311). A new phase sends none.
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 // Bind accepts the request; the owner validates it.
@@ -94,7 +98,7 @@ func (req *PhaseRequest) input() enrollment.TraegerPhaseInput {
 			EnrollmentCloseAt: req.EnrollmentCloseAt, Audience: req.Audience, CareOverflowMode: req.CareOverflowMode,
 			CareOfferingSelectionMode: req.CareOfferingSelectionMode,
 		},
-		AllSchools: req.AllSchools, SchoolIDs: req.SchoolIDs,
+		AllSchools: req.AllSchools, SchoolIDs: ident.Int64s(req.SchoolIDs), ExpectedVersion: req.ExpectedVersion,
 	}
 }
 
@@ -103,6 +107,9 @@ type OfferingRequest struct {
 	Fields           OfferingFieldsRequest            `json:"fields"`
 	Prices           []OfferingPriceRequest           `json:"prices"`
 	ContractTemplate *OfferingContractTemplateRequest `json:"contract_template,omitempty"`
+	// ExpectedVersion is the version of the offering the office edits; a
+	// change saved since is refused (ADR 0311). A new offering sends none.
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 // Bind accepts the request; the owner validates it.
@@ -171,7 +178,7 @@ func (rs *Resource) createPhase(w http.ResponseWriter, r *http.Request) {
 		renderCatalogError(w, r, err)
 		return
 	}
-	rs.respondPhase(w, r, actor, phase.ID, http.StatusCreated)
+	rs.respondPhase(w, r, actor, phase.ID.Int64(), http.StatusCreated)
 }
 
 func (rs *Resource) updatePhase(w http.ResponseWriter, r *http.Request) {
@@ -231,7 +238,7 @@ func (rs *Resource) updateOffering(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	offering, err := rs.offerings.UpdateTraegerOffering(r.Context(), actor.OrganizationID, id, req.draft())
+	offering, err := rs.offerings.UpdateTraegerOffering(r.Context(), actor.OrganizationID, id, req.ExpectedVersion, req.draft())
 	if err != nil {
 		renderCatalogError(w, r, err)
 		return
@@ -316,7 +323,12 @@ var catalogErrorRules = []common.ErrorRule{
 	{Target: careplan.ErrTraegerOfferingWithdrawn, Render: conflict(common.CodeEnrollmentTraegerWithdrawn)},
 	{Target: traegercatalog.ErrPreviewStale, Render: conflict(common.CodeEnrollmentTraegerPreviewStale)},
 	{Target: enrollment.ErrTraegerSchoolOutsideTraeger, Render: invalid(common.CodeEnrollmentTraegerSchoolOutside)},
-	{Match: func(err error) bool { var coded codedError; return errors.As(err, &coded) }, Render: func(err error) render.Renderer {
+	// A coded input error answers 400; a business rejection such as
+	// readstate.ErrChanged keeps its 409 through common.RenderError.
+	{Match: func(err error) bool {
+		var coded codedError
+		return errors.As(err, &coded) && !common.IsBusinessRejection(err)
+	}, Render: func(err error) render.Renderer {
 		var coded codedError
 		errors.As(err, &coded)
 		return common.ErrorInvalidRequestWithCode(err, coded.ErrorCode())

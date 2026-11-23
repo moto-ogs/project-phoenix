@@ -54,6 +54,13 @@ vi.mock("next-auth/react", () => ({
     data: { user: { token: "test-token", id: "7", tenantId: 1 } },
     status: "authenticated",
   })),
+  // The staff session gate of bffJson reads the same session.
+  getSession: vi.fn(() =>
+    Promise.resolve({
+      user: { token: "test-token", id: "7", tenantId: 1 },
+      expires: "2099-01-01",
+    }),
+  ),
 }));
 
 vi.mock("~/lib/supervision-context", () => ({
@@ -168,11 +175,6 @@ vi.mock("~/components/sse/SSEErrorBoundary", () => ({
   SSEErrorBoundary: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="sse-boundary">{children}</div>
   ),
-}));
-
-// Mock UnclaimedRooms
-vi.mock("~/components/active/unclaimed-rooms", () => ({
-  UnclaimedRooms: () => <div data-testid="unclaimed-rooms" />,
 }));
 
 vi.mock("~/components/rooms/transit-students-section", () => ({
@@ -2163,7 +2165,7 @@ describe("Aggregate fetcher error contract", () => {
 
   it("throws on aggregate failure for admins too — no silent fallback fan-out (#2096)", async () => {
     const fetchMock = vi.fn().mockImplementation((url: string) => {
-      if (url.includes("/api/active-supervision-dashboard")) {
+      if (url.includes("/api/active/supervision-dashboard")) {
         return Promise.resolve({ ok: false, status: 500 });
       }
       return Promise.reject(new Error(`unexpected: ${url}`));
@@ -2174,7 +2176,10 @@ describe("Aggregate fetcher error contract", () => {
     render(<MeinRaumPage />);
     await waitFor(() => expect(getFetcher()).toBeDefined());
 
-    await expect(getFetcher()!()).rejects.toThrow("BFF request failed: 500");
+    await expect(getFetcher()!()).rejects.toMatchObject({
+      message: "BFF request failed",
+      status: 500,
+    });
 
     // The former admin fallback fan-out endpoints must never be contacted:
     // silently-empty partial payloads are the failure mode #2096 removed.
@@ -2195,7 +2200,7 @@ describe("Aggregate fetcher error contract", () => {
     } as never);
 
     global.fetch = vi.fn().mockImplementation((url: string) => {
-      if (url.includes("/api/active-supervision-dashboard")) {
+      if (url.includes("/api/active/supervision-dashboard")) {
         return Promise.resolve({ ok: false, status: 500 });
       }
       return Promise.reject(new Error("should not be called"));
@@ -2205,7 +2210,10 @@ describe("Aggregate fetcher error contract", () => {
     render(<MeinRaumPage />);
     await waitFor(() => expect(getFetcher()).toBeDefined());
 
-    await expect(getFetcher()!()).rejects.toThrow("BFF request failed: 500");
+    await expect(getFetcher()!()).rejects.toMatchObject({
+      message: "BFF request failed",
+      status: 500,
+    });
   });
 });
 
@@ -2262,7 +2270,7 @@ describe("Page-load request budget", () => {
     expect(
       vi.mocked(global.fetch).mock.calls.map(([url]) => String(url)),
     ).toEqual([
-      "/api/active-supervision-dashboard?group_id=1",
+      "/api/active/supervision-dashboard?group_id=1",
       "/api/timetable/operations/active-groups/1/roster",
     ]);
   });

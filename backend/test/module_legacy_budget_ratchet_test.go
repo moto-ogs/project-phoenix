@@ -220,14 +220,16 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0241: the rooms of the utilization (+13).
 	"modules/facilities/compose":                   197,
 	"modules/facilities/compose/repositoryadapter": 11,
-	"modules/feedback/compose":                     61,
-	"modules/filestorage/compose":                  211,
-	"modules/grouplive/compose":                    14,
-	"modules/guardianlinkview/compose":             8,
+	// Raised by ADR 0298: the demo seed's feedback history writer and the
+	// aliases of its input (+15).
+	"modules/feedback/compose":         76,
+	"modules/filestorage/compose":      211,
+	"modules/grouplive/compose":        14,
+	"modules/guardianlinkview/compose": 8,
 	// Raised by ADR 0106: the Träger-Büro account management (+24).
 	// Raised by ADR 0187: the operator directory of the Träger export CLI (+11).
 	// Raised by ADR 0261: the owner's clock, its nil default and imports (+16).
-	"modules/identityaccess/compose": 1382, // raised by ADR 0077
+	"modules/identityaccess/compose": 1379, // raised by ADR 0077
 	// ADR 0269: the clock of the participation history (+2).
 	"modules/mealplan/compose": 104, // raised by ADR 0078 and ADR 0168
 	// ADR 0097: the isolated tenant return constructor, no retained logic moved.
@@ -257,7 +259,11 @@ var moduleComposeBudgets = map[string]int{
 	// termination (+35); ADR 0163: the office's decision of the parents' changes (+5);
 	// ADR 0184: the contract retention of the Belege (+4).
 	// ADR 0232: the import of existing contracts and its ports (+6).
-	"modules/carecontract/compose": 181,
+	// ADR 0307 (#7760): the link of imported contracts
+	// to child records and its ports (+7).
+	// ADR 0309 (#7760): the plan and the binding of the enrollment of the
+	// children of imported contracts and its ports (+7).
+	"modules/carecontract/compose": 195,
 	// Raised by ADR 0158: the monthly contribution constructor (+5);
 	// ADR 0165: the constructor of the monthly letters (+7);
 	// ADR 0167: the constructor of the payment terms (+5);
@@ -285,7 +291,9 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0234: the note search beside the facade (+2).
 	// ADR 0268: the clock of the rosters, the guardians and the retention (+6).
 	// ADR 0278: the time import of the guardian profile clock (+1).
-	"modules/peopledirectory/compose":    1002,
+	// ADR 0307 (#7760): the read of child records by
+	// identifier the link of imported contracts binds (+13).
+	"modules/peopledirectory/compose":    1015,
 	"modules/presenceprojection/compose": 7,
 	"modules/requestreview/compose":      12,
 	"modules/schedulerruntime/compose":   45,
@@ -293,8 +301,9 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0144: the school vacation constructor (+11).
 	// ADR 0269: the default day of the real clock (+4).
 	// ADR 0278: the calendar import of the notices' day clock (+1) and the
-	// root's clock of the Records (+6).
-	"modules/schoolcalendar/compose":        166,
+	// root's clock of the Records (+6). Raised by ADR 0298: the alias of the
+	// demo seed's vacation window (+3).
+	"modules/schoolcalendar/compose":        169,
 	"modules/schoolcalendar/portal/compose": 112,
 	// Raised by ADR 0076: the restricted administrative repair constructor.
 	// ADR 0151: the school figure constructor (+6).
@@ -312,7 +321,9 @@ var moduleComposeBudgets = map[string]int{
 	"modules/securityruntime/compose": 13,
 	// ADR 0154: the group names constructor (+13).
 	// ADR 0268: the clock fields of the group service and the retention (+8).
-	"modules/schoolstructure/compose": 614,
+	// Lowered by #7956: the retained group update moved its read-state
+	// edit into the groups package (-4).
+	"modules/schoolstructure/compose": 577,
 	// Raised by ADR 0107 and ADR 0175: the Träger settings and school-read context guard.
 	// ADR 0193: the export projection of setting values (+3).
 	// ADR 0268: the clock of the operator presence-mode guard (+3).
@@ -324,8 +335,10 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0241: the presence series of the utilization (+7).
 	// #2352: the session row alias the root names in the contract fits in
 	// shortened comments (-1).
-	"modules/studentpresence/compose":                 269,
-	"modules/studentpresence/compose/presenceservice": 110,
+	// Lowered by #7808: the cross-tenant student and school aliases left
+	// with the visitor read (-1, -5).
+	"modules/studentpresence/compose":                 268,
+	"modules/studentpresence/compose/presenceservice": 105,
 	"modules/supervisiondashboard/compose":            11,
 	// Raised by ADR 0128: the student template days constructor (+5), by
 	// ADR 0144: the vacation hint constructor (+6) and by ADR 0224: the cohort
@@ -347,7 +360,7 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0264: the clock field of the time-tracking cleanup (+2).
 	// ADR 0253: the Springer exits after the last block (+6).
 	// ADR 0289: the seal constructor of the sick note and payslip files (+6).
-	"modules/workforce/compose":       943,
+	"modules/workforce/compose":       942,
 	"workflows/catererportal/compose": 37, // added by ADR 0077
 	// Raised by ADR 0224: the class follow-up port (+2).
 	"workflows/gradetransition/compose": 51,
@@ -380,6 +393,10 @@ var moduleComposeBudgets = map[string]int{
 	// Added by ADR 0215: the Träger catalog rollout and its runtime (ADR 0195).
 	"workflows/traegercatalog/compose":  38,
 	"workflows/studentdeletion/compose": 74,
+	// Added by ADR 0309 (#7760): the enrollment of the children of imported
+	// contracts and its runtime (Träger and school transaction), no retained
+	// logic.
+	"workflows/contractenrollment/compose": 34,
 }
 
 // moduleLegacyBudgets maps a legacy tree to its production LOC on 2026-09-18.

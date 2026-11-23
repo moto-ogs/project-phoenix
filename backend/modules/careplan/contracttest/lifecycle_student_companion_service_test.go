@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -23,6 +24,22 @@ func newCompanionTestService(db *bun.DB) careplan.StudentCompanions {
 	factory := api.NewRepositoryTestFactory(testpkg.MustDatabase(db))
 	factoryPeople := api.NewPeopleRepositorySuiteFactory(testpkg.MustDatabase(db))
 	return api.MustNewStudentCompanions(factory.CarePlan(), factoryPeople.Student, owners.MustNewPeopleDirectory(testpkg.MustDatabase(db)), nil)
+}
+
+// asRead sends an update with the fingerprint of the stored links, read in
+// the same transaction, as a client that just loaded them would (ADR 0311).
+// An update that names its own fingerprint keeps it.
+func asRead(service careplan.StudentCompanions, write func(context.Context, int64, careplan.CompanionUpdate) ([]careplan.CompanionConflict, error)) func(context.Context, int64, careplan.CompanionUpdate) ([]careplan.CompanionConflict, error) {
+	return func(ctx context.Context, studentID int64, update careplan.CompanionUpdate) ([]careplan.CompanionConflict, error) {
+		if update.ExpectedFingerprint == "" {
+			links, err := service.ListCompanions(ctx, studentID)
+			if err != nil {
+				return nil, err
+			}
+			update.ExpectedFingerprint = careplan.CompanionLinksFingerprint(links)
+		}
+		return write(ctx, studentID, update)
+	}
 }
 
 // studentPlans is the child repository the departure-plan helper writes
@@ -90,7 +107,7 @@ func TestStudentService_TrimCompanionsToDays_DropsRemovedWeekdays(t *testing.T) 
 	setAccompaniedDepartureDays(t, ctx, studentPlans(db), subject.ID, "mon", "tue")
 	setAccompaniedDepartureDays(t, ctx, studentPlans(db), companion.ID, "mon", "tue")
 
-	conflicts, err := testpkg.TenantQuery2(t, ctx, db, service.ReplaceCompanions, subject.ID, careplan.CompanionUpdate{
+	conflicts, err := testpkg.TenantQuery2(t, ctx, db, asRead(service, service.ReplaceCompanions), subject.ID, careplan.CompanionUpdate{
 		Links: []careplan.CompanionLink{
 			{CompanionStudentID: companion.ID, Weekdays: []string{"mon", "tue"}},
 		},
@@ -130,7 +147,7 @@ func TestStudentService_CheckCompanionConflicts_ValidatesConfirmedRetry(t *testi
 	setAccompaniedDepartureDays(t, ctx, studentPlans(db), subject.ID, "mon")
 
 	// A companion that does not exist (deleted between picking and saving).
-	_, err := testpkg.TenantQuery2(t, ctx, db, service.CheckCompanionConflicts, subject.ID, careplan.CompanionUpdate{
+	_, err := testpkg.TenantQuery2(t, ctx, db, asRead(service, service.CheckCompanionConflicts), subject.ID, careplan.CompanionUpdate{
 		Links:                []careplan.CompanionLink{{CompanionStudentID: subject.ID + 9_000_000, Weekdays: []string{"mon"}}},
 		AccompaniedDays:      map[string]bool{"mon": true},
 		ExtendCompanionPlans: true,
@@ -145,7 +162,7 @@ func TestStudentService_CheckCompanionConflicts_ValidatesConfirmedRetry(t *testi
 			Weekdays:           []string{"mon"},
 		})
 	}
-	_, err = testpkg.TenantQuery2(t, ctx, db, service.CheckCompanionConflicts, subject.ID, careplan.CompanionUpdate{
+	_, err = testpkg.TenantQuery2(t, ctx, db, asRead(service, service.CheckCompanionConflicts), subject.ID, careplan.CompanionUpdate{
 		Links:                tooMany,
 		AccompaniedDays:      map[string]bool{"mon": true},
 		ExtendCompanionPlans: true,
@@ -153,7 +170,7 @@ func TestStudentService_CheckCompanionConflicts_ValidatesConfirmedRetry(t *testi
 	assert.ErrorIs(t, err, careplan.ErrTooManyCompanions)
 
 	// A weekday the subject's own plan does not allow.
-	_, err = testpkg.TenantQuery2(t, ctx, db, service.CheckCompanionConflicts, subject.ID, careplan.CompanionUpdate{
+	_, err = testpkg.TenantQuery2(t, ctx, db, asRead(service, service.CheckCompanionConflicts), subject.ID, careplan.CompanionUpdate{
 		Links:                []careplan.CompanionLink{{CompanionStudentID: subject.ID + 9_000_000, Weekdays: []string{"fri"}}},
 		AccompaniedDays:      map[string]bool{"mon": true},
 		ExtendCompanionPlans: true,
@@ -182,7 +199,7 @@ func TestStudentService_ReplaceCompanions_ExtendPreservesCompanionFields(t *test
 	// conflict the caller has to confirm.
 	setAccompaniedDepartureDays(t, ctx, studentPlans(db), companion.ID, "fri")
 
-	conflicts, err := testpkg.TenantQuery2(t, ctx, db, service.ReplaceCompanions, subject.ID, careplan.CompanionUpdate{
+	conflicts, err := testpkg.TenantQuery2(t, ctx, db, asRead(service, service.ReplaceCompanions), subject.ID, careplan.CompanionUpdate{
 		Links:           []careplan.CompanionLink{{CompanionStudentID: companion.ID, Weekdays: []string{"mon"}}},
 		AccompaniedDays: map[string]bool{"mon": true},
 	})
@@ -198,7 +215,7 @@ func TestStudentService_ReplaceCompanions_ExtendPreservesCompanionFields(t *test
 	updated.SchoolClass = "4b"
 	require.NoError(t, studentRepo.Update(ctx, updated))
 
-	conflicts, err = testpkg.TenantQuery2(t, ctx, db, service.ReplaceCompanions, subject.ID, careplan.CompanionUpdate{
+	conflicts, err = testpkg.TenantQuery2(t, ctx, db, asRead(service, service.ReplaceCompanions), subject.ID, careplan.CompanionUpdate{
 		Links:                []careplan.CompanionLink{{CompanionStudentID: companion.ID, Weekdays: []string{"mon"}}},
 		AccompaniedDays:      map[string]bool{"mon": true},
 		ExtendCompanionPlans: true,
@@ -239,14 +256,14 @@ func TestStudentService_ReplaceCompanions_ExtensionRecordsCompanionAudit(t *test
 	setAccompaniedDepartureDays(t, ctx, studentPlans(db), subject.ID, "mon")
 	setAccompaniedDepartureDays(t, ctx, studentPlans(db), companion.ID, "fri")
 
-	conflicts, err := testpkg.TenantQuery2(t, ctx, db, service.ReplaceCompanions, subject.ID, careplan.CompanionUpdate{
+	conflicts, err := testpkg.TenantQuery2(t, ctx, db, asRead(service, service.ReplaceCompanions), subject.ID, careplan.CompanionUpdate{
 		Links:           []careplan.CompanionLink{{CompanionStudentID: companion.ID, Weekdays: []string{"mon"}}},
 		AccompaniedDays: map[string]bool{"mon": true},
 	})
 	require.NoError(t, err)
 	require.Len(t, conflicts, 1)
 
-	conflicts, err = testpkg.TenantQuery2(t, ctx, db, service.ReplaceCompanions, subject.ID, careplan.CompanionUpdate{
+	conflicts, err = testpkg.TenantQuery2(t, ctx, db, asRead(service, service.ReplaceCompanions), subject.ID, careplan.CompanionUpdate{
 		Links:                []careplan.CompanionLink{{CompanionStudentID: companion.ID, Weekdays: []string{"mon"}}},
 		AccompaniedDays:      map[string]bool{"mon": true},
 		ExtendCompanionPlans: true,
@@ -283,7 +300,7 @@ func TestStudentUpdate_CompanionLinkSatisfiesNoteRequirement(t *testing.T) {
 	setAccompaniedDepartureDays(t, ctx, studentPlans(db), subject.ID, "mon")
 	setAccompaniedDepartureDays(t, ctx, studentPlans(db), companion.ID, "mon")
 
-	conflicts, err := testpkg.TenantQuery2(t, ctx, db, service.ReplaceCompanions, subject.ID, careplan.CompanionUpdate{
+	conflicts, err := testpkg.TenantQuery2(t, ctx, db, asRead(service, service.ReplaceCompanions), subject.ID, careplan.CompanionUpdate{
 		Links: []careplan.CompanionLink{{CompanionStudentID: companion.ID, Weekdays: []string{"mon"}}},
 	})
 	require.NoError(t, err)
@@ -325,7 +342,7 @@ func TestStudentService_ReplaceCompanions_RefusesOrphaningCompanion(t *testing.T
 	setAccompaniedDepartureDays(t, ctx, studentPlans(db), subject.ID, "mon")
 	setAccompaniedDepartureDays(t, ctx, studentPlans(db), companion.ID, "mon")
 
-	conflicts, err := testpkg.TenantQuery2(t, ctx, db, service.ReplaceCompanions, subject.ID, careplan.CompanionUpdate{
+	conflicts, err := testpkg.TenantQuery2(t, ctx, db, asRead(service, service.ReplaceCompanions), subject.ID, careplan.CompanionUpdate{
 		Links: []careplan.CompanionLink{{CompanionStudentID: companion.ID, Weekdays: []string{"mon"}}},
 	})
 	require.NoError(t, err)
@@ -335,7 +352,7 @@ func TestStudentService_ReplaceCompanions_RefusesOrphaningCompanion(t *testing.T
 	clearCompanionNote(t, db, companion.ID)
 
 	// ACT — the subject drops the companion from their list.
-	_, err = testpkg.TenantQuery2(t, ctx, db, service.ReplaceCompanions, subject.ID, careplan.CompanionUpdate{})
+	_, err = testpkg.TenantQuery2(t, ctx, db, asRead(service, service.ReplaceCompanions), subject.ID, careplan.CompanionUpdate{})
 	assert.ErrorIs(t, err, careplan.ErrCompanionWouldLoseDeparture)
 
 	// The refusal happens before any write: the link is still there.
@@ -345,7 +362,7 @@ func TestStudentService_ReplaceCompanions_RefusesOrphaningCompanion(t *testing.T
 
 	// The same removal is fine once the companion carries their own note.
 	setAccompaniedDepartureDays(t, ctx, studentPlans(db), companion.ID, "mon")
-	_, err = testpkg.TenantQuery2(t, ctx, db, service.ReplaceCompanions, subject.ID, careplan.CompanionUpdate{})
+	_, err = testpkg.TenantQuery2(t, ctx, db, asRead(service, service.ReplaceCompanions), subject.ID, careplan.CompanionUpdate{})
 	require.NoError(t, err)
 }
 
@@ -370,7 +387,7 @@ func TestStudentService_ReplaceCompanions_RefusesStrandingRemovedWeekday(t *test
 	setAccompaniedDepartureDays(t, ctx, studentPlans(db), companion.ID, "mon", "tue")
 	setAccompaniedDepartureDays(t, ctx, studentPlans(db), third.ID, "tue")
 
-	_, err := testpkg.TenantQuery2(t, ctx, db, service.ReplaceCompanions, subject.ID, careplan.CompanionUpdate{
+	_, err := testpkg.TenantQuery2(t, ctx, db, asRead(service, service.ReplaceCompanions), subject.ID, careplan.CompanionUpdate{
 		Links: []careplan.CompanionLink{{CompanionStudentID: companion.ID, Weekdays: []string{"mon", "tue"}}},
 	})
 	require.NoError(t, err)
@@ -380,7 +397,7 @@ func TestStudentService_ReplaceCompanions_RefusesStrandingRemovedWeekday(t *test
 	clearCompanionNote(t, db, companion.ID)
 
 	// ACT — the subject keeps the link but drops its Tuesday.
-	_, err = testpkg.TenantQuery2(t, ctx, db, service.ReplaceCompanions, subject.ID, careplan.CompanionUpdate{
+	_, err = testpkg.TenantQuery2(t, ctx, db, asRead(service, service.ReplaceCompanions), subject.ID, careplan.CompanionUpdate{
 		Links: []careplan.CompanionLink{{CompanionStudentID: companion.ID, Weekdays: []string{"mon"}}},
 	})
 	assert.ErrorIs(t, err, careplan.ErrCompanionWouldLoseDeparture)
@@ -393,12 +410,12 @@ func TestStudentService_ReplaceCompanions_RefusesStrandingRemovedWeekday(t *test
 
 	// A THIRD child covering the removed Tuesday makes the same narrowing legal
 	// — coverage counts per day, not per surviving companion.
-	_, err = testpkg.TenantQuery2(t, ctx, db, service.ReplaceCompanions, third.ID, careplan.CompanionUpdate{
+	_, err = testpkg.TenantQuery2(t, ctx, db, asRead(service, service.ReplaceCompanions), third.ID, careplan.CompanionUpdate{
 		Links: []careplan.CompanionLink{{CompanionStudentID: companion.ID, Weekdays: []string{"tue"}}},
 	})
 	require.NoError(t, err)
 
-	_, err = testpkg.TenantQuery2(t, ctx, db, service.ReplaceCompanions, subject.ID, careplan.CompanionUpdate{
+	_, err = testpkg.TenantQuery2(t, ctx, db, asRead(service, service.ReplaceCompanions), subject.ID, careplan.CompanionUpdate{
 		Links: []careplan.CompanionLink{{CompanionStudentID: companion.ID, Weekdays: []string{"mon"}}},
 	})
 	require.NoError(t, err)
@@ -422,7 +439,7 @@ func TestStudentService_CheckCompanionTrim_RefusesStrandingRemovedWeekday(t *tes
 	setAccompaniedDepartureDays(t, ctx, studentPlans(db), subject.ID, "mon", "tue")
 	setAccompaniedDepartureDays(t, ctx, studentPlans(db), companion.ID, "mon", "tue")
 
-	_, err := testpkg.TenantQuery2(t, ctx, db, service.ReplaceCompanions, subject.ID, careplan.CompanionUpdate{
+	_, err := testpkg.TenantQuery2(t, ctx, db, asRead(service, service.ReplaceCompanions), subject.ID, careplan.CompanionUpdate{
 		Links: []careplan.CompanionLink{{CompanionStudentID: companion.ID, Weekdays: []string{"mon", "tue"}}},
 	})
 	require.NoError(t, err)
@@ -462,7 +479,7 @@ func TestStudentService_CheckCompanionTrim_RefusesOrphaningCompanion(t *testing.
 	setAccompaniedDepartureDays(t, ctx, studentPlans(db), subject.ID, "mon")
 	setAccompaniedDepartureDays(t, ctx, studentPlans(db), companion.ID, "mon")
 
-	_, err := testpkg.TenantQuery2(t, ctx, db, service.ReplaceCompanions, subject.ID, careplan.CompanionUpdate{
+	_, err := testpkg.TenantQuery2(t, ctx, db, asRead(service, service.ReplaceCompanions), subject.ID, careplan.CompanionUpdate{
 		Links: []careplan.CompanionLink{{CompanionStudentID: companion.ID, Weekdays: []string{"mon"}}},
 	})
 	require.NoError(t, err)
@@ -507,7 +524,7 @@ func TestStudentService_ReplaceCompanions_EnforcesLimitOnBothEnds(t *testing.T) 
 	}
 
 	for _, peer := range peers[:careplan.MaxStudentCompanions] {
-		_, err := testpkg.TenantQuery2(t, ctx, db, service.ReplaceCompanions, peer, careplan.CompanionUpdate{
+		_, err := testpkg.TenantQuery2(t, ctx, db, asRead(service, service.ReplaceCompanions), peer, careplan.CompanionUpdate{
 			Links: []careplan.CompanionLink{{CompanionStudentID: popular.ID, Weekdays: []string{"mon"}}},
 		})
 		require.NoError(t, err)
@@ -515,14 +532,14 @@ func TestStudentService_ReplaceCompanions_EnforcesLimitOnBothEnds(t *testing.T) 
 
 	// ACT — one more child submits a single-entry list, which is well under the
 	// cap for them but pushes the popular child over it.
-	_, err := testpkg.TenantQuery2(t, ctx, db, service.ReplaceCompanions, peers[careplan.MaxStudentCompanions], careplan.CompanionUpdate{
+	_, err := testpkg.TenantQuery2(t, ctx, db, asRead(service, service.ReplaceCompanions), peers[careplan.MaxStudentCompanions], careplan.CompanionUpdate{
 		Links: []careplan.CompanionLink{{CompanionStudentID: popular.ID, Weekdays: []string{"mon"}}},
 	})
 	assert.ErrorIs(t, err, careplan.ErrCompanionAtLimit)
 
 	// Re-submitting an unchanged list is NOT rejected: the subject's own edges
 	// are excluded from the companion's degree.
-	_, err = testpkg.TenantQuery2(t, ctx, db, service.ReplaceCompanions, peers[0], careplan.CompanionUpdate{
+	_, err = testpkg.TenantQuery2(t, ctx, db, asRead(service, service.ReplaceCompanions), peers[0], careplan.CompanionUpdate{
 		Links: []careplan.CompanionLink{{CompanionStudentID: popular.ID, Weekdays: []string{"mon"}}},
 	})
 	require.NoError(t, err)
@@ -553,7 +570,7 @@ func TestStudentService_ReplaceCompanions_ExtensionIsPerWeekday(t *testing.T) {
 	links := []careplan.CompanionLink{
 		{CompanionStudentID: companion.ID, Weekdays: []string{"mon", "tue"}},
 	}
-	_, err := testpkg.TenantQuery2(t, ctx, db, service.ReplaceCompanions, subject.ID, careplan.CompanionUpdate{
+	_, err := testpkg.TenantQuery2(t, ctx, db, asRead(service, service.ReplaceCompanions), subject.ID, careplan.CompanionUpdate{
 		Links:                links,
 		AccompaniedDays:      map[string]bool{"mon": true, "tue": true},
 		ExtendCompanionPlans: true,
@@ -568,7 +585,7 @@ func TestStudentService_ReplaceCompanions_ExtensionIsPerWeekday(t *testing.T) {
 	assert.False(t, allowed["tue"], "the unconfirmed day especially")
 
 	// Confirming both days makes the identical request go through.
-	conflicts, err := testpkg.TenantQuery2(t, ctx, db, service.ReplaceCompanions, subject.ID, careplan.CompanionUpdate{
+	conflicts, err := testpkg.TenantQuery2(t, ctx, db, asRead(service, service.ReplaceCompanions), subject.ID, careplan.CompanionUpdate{
 		Links:                links,
 		AccompaniedDays:      map[string]bool{"mon": true, "tue": true},
 		ExtendCompanionPlans: true,
@@ -604,7 +621,7 @@ func TestStudentUpdate_CompanionLinkCoversOnlyItsWeekdays(t *testing.T) {
 	setAccompaniedDepartureDays(t, ctx, studentPlans(db), subject.ID, "mon", "tue")
 	setAccompaniedDepartureDays(t, ctx, studentPlans(db), companion.ID, "mon")
 
-	conflicts, err := testpkg.TenantQuery2(t, ctx, db, service.ReplaceCompanions, subject.ID, careplan.CompanionUpdate{
+	conflicts, err := testpkg.TenantQuery2(t, ctx, db, asRead(service, service.ReplaceCompanions), subject.ID, careplan.CompanionUpdate{
 		Links: []careplan.CompanionLink{{CompanionStudentID: companion.ID, Weekdays: []string{"mon"}}},
 	})
 	require.NoError(t, err)
@@ -659,18 +676,18 @@ func TestStudentService_ReplaceCompanions_RefusesStaleList(t *testing.T) {
 	snapshot := careplan.CompanionLinksFingerprint(loaded)
 
 	// Editor A saves first: the child now walks with `first`.
-	_, err = testpkg.TenantQuery2(t, ctx, db, service.ReplaceCompanions, subject.ID, careplan.CompanionUpdate{
+	_, err = testpkg.TenantQuery2(t, ctx, db, asRead(service, service.ReplaceCompanions), subject.ID, careplan.CompanionUpdate{
 		Links:               []careplan.CompanionLink{{CompanionStudentID: first.ID, Weekdays: []string{"mon"}}},
-		ExpectedFingerprint: &snapshot,
+		ExpectedFingerprint: snapshot,
 	})
 	require.NoError(t, err)
 
 	// ACT — editor B saves the list they built on the pre-A snapshot.
-	_, err = testpkg.TenantQuery2(t, ctx, db, service.ReplaceCompanions, subject.ID, careplan.CompanionUpdate{
+	_, err = testpkg.TenantQuery2(t, ctx, db, asRead(service, service.ReplaceCompanions), subject.ID, careplan.CompanionUpdate{
 		Links:               []careplan.CompanionLink{{CompanionStudentID: second.ID, Weekdays: []string{"mon"}}},
-		ExpectedFingerprint: &snapshot,
+		ExpectedFingerprint: snapshot,
 	})
-	assert.ErrorIs(t, err, careplan.ErrCompanionsChanged)
+	assert.ErrorIs(t, err, readstate.ErrChanged)
 
 	// Nothing was written: editor A's link survives untouched.
 	links, err := testpkg.TenantQuery1(t, ctx, db, service.ListCompanions, subject.ID)
@@ -680,22 +697,29 @@ func TestStudentService_ReplaceCompanions_RefusesStaleList(t *testing.T) {
 
 	// The read-only pre-check refuses it too, so the HTTP path can answer 409
 	// before its transaction writes anything.
-	_, err = testpkg.TenantQuery2(t, ctx, db, service.CheckCompanionConflicts, subject.ID, careplan.CompanionUpdate{
+	_, err = testpkg.TenantQuery2(t, ctx, db, asRead(service, service.CheckCompanionConflicts), subject.ID, careplan.CompanionUpdate{
 		Links:               []careplan.CompanionLink{{CompanionStudentID: second.ID, Weekdays: []string{"mon"}}},
-		ExpectedFingerprint: &snapshot,
+		ExpectedFingerprint: snapshot,
 	})
-	assert.ErrorIs(t, err, careplan.ErrCompanionsChanged)
+	assert.ErrorIs(t, err, readstate.ErrChanged)
+
+	// A replacement that names no read is refused too: no caller skips the
+	// check (ADR 0311).
+	_, err = testpkg.TenantQuery2(t, ctx, db, service.ReplaceCompanions, subject.ID, careplan.CompanionUpdate{
+		Links: []careplan.CompanionLink{{CompanionStudentID: second.ID, Weekdays: []string{"mon"}}},
+	})
+	assert.ErrorIs(t, err, readstate.ErrChanged)
 
 	// Reloading makes the same edit succeed.
 	reloaded, err := testpkg.TenantQuery1(t, ctx, db, service.ListCompanions, subject.ID)
 	require.NoError(t, err)
 	fresh := careplan.CompanionLinksFingerprint(reloaded)
-	_, err = testpkg.TenantQuery2(t, ctx, db, service.ReplaceCompanions, subject.ID, careplan.CompanionUpdate{
+	_, err = testpkg.TenantQuery2(t, ctx, db, asRead(service, service.ReplaceCompanions), subject.ID, careplan.CompanionUpdate{
 		Links: []careplan.CompanionLink{
 			{CompanionStudentID: first.ID, Weekdays: []string{"mon"}},
 			{CompanionStudentID: second.ID, Weekdays: []string{"mon"}},
 		},
-		ExpectedFingerprint: &fresh,
+		ExpectedFingerprint: fresh,
 	})
 	require.NoError(t, err)
 }
@@ -718,7 +742,7 @@ func TestStudentService_ListCompanionsForStudents(t *testing.T) {
 	setAccompaniedDepartureDays(t, ctx, studentPlans(db), subject.ID, "mon")
 	setAccompaniedDepartureDays(t, ctx, studentPlans(db), companion.ID, "mon")
 
-	_, err := testpkg.TenantQuery2(t, ctx, db, service.ReplaceCompanions, subject.ID, careplan.CompanionUpdate{
+	_, err := testpkg.TenantQuery2(t, ctx, db, asRead(service, service.ReplaceCompanions), subject.ID, careplan.CompanionUpdate{
 		Links: []careplan.CompanionLink{{CompanionStudentID: companion.ID, Weekdays: []string{"mon"}}},
 	})
 	require.NoError(t, err)

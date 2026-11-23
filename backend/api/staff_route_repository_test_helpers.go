@@ -3,6 +3,7 @@
 package api
 
 import (
+	"context"
 	"time"
 
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
@@ -13,6 +14,16 @@ import (
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
 	workforceCompose "github.com/moto-ogs/project-phoenix/modules/workforce/compose"
 )
+
+// ShiftPlanningTestStaffRowLock is the Dienstplan's staff row batch lock
+// (#7683) over the School Membership owner, as the roots bind it.
+func ShiftPlanningTestStaffRowLock(db transactionruntime.Database) func(context.Context, []int64) error {
+	membership, err := owners.NewSchoolMembership(db)
+	if err != nil {
+		panic(err)
+	}
+	return owners.ShiftPlanningStaffRowLock(membership)
+}
 
 // NewAbsenceTypeTestCapability builds the Workforce capability for the
 // absence-type routes; an optional clock pins its calendar day.

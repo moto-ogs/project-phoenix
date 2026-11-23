@@ -7,6 +7,9 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Guardian and contact-person capability (#2663). The People Directory owns
@@ -26,9 +29,6 @@ var (
 	// ErrGuardianForceDeleteRequiresAdmin refuses a forced full delete by a
 	// non-admin: it reaches siblings the caller may not supervise.
 	ErrGuardianForceDeleteRequiresAdmin = errors.New("only administrators can fully delete a guardian linked to students")
-	// ErrGuardianDeletePreviewChanged reports that the links changed since
-	// the admin confirmed the preview. The text is diagnostic detail.
-	ErrGuardianDeletePreviewChanged = errors.New("die Verknüpfungen haben sich seit der Vorschau geändert. Bitte erneut prüfen")
 	// ErrGuardianLinkConflict marks a delete that tripped the RESTRICT link
 	// constraint because a link was added after the check.
 	ErrGuardianLinkConflict = errors.New("guardian is linked to students")
@@ -218,14 +218,6 @@ type GuardianPhoneInput struct {
 	IsPrimary       bool
 }
 
-type GuardianPhoneUpdate struct {
-	PhoneNumber *string
-	PhoneType   *string
-	Label       *string
-	IsPrimary   *bool
-	Priority    *int
-}
-
 // LinkGuardian attaches an existing guardian to a child.
 type LinkGuardian struct {
 	// CreatedStudent is the successful CreateEnrollmentStudent result from this
@@ -281,7 +273,7 @@ type NewGuardianPhone struct {
 // for that child. It is the wire shape shared by the student create flow
 // and the guardian batch endpoint, so it carries the JSON tags.
 type NewStudentGuardian struct {
-	GuardianProfileID *int64 `json:"guardian_profile_id,omitempty"`
+	GuardianProfileID *ident.ID `json:"guardian_profile_id,omitempty"`
 
 	FirstName              string `json:"first_name"`
 	LastName               string `json:"last_name"`
@@ -329,6 +321,20 @@ type GuardianPayment struct {
 	IBANSealed          []byte
 	IBANMasked          *string
 	AccountHolderSealed []byte
+	// Version is the read-state token of the bank section on a read
+	// (GuardianPaymentVersion, ADR 0311).
+	Version string
+}
+
+// GuardianPaymentVersion is the read-state token of a guardian's bank
+// section (ADR 0311). It is the change time of the stored row, which a
+// trigger moves on every update, and never a value derived from the bank
+// data; without a row it is readstate.Absent.
+func GuardianPaymentVersion(stored *GuardianPayment) string {
+	if stored == nil {
+		return readstate.Absent
+	}
+	return readstate.Of(stored.UpdatedAt)
 }
 
 type GuardianPaymentInput struct {
@@ -336,6 +342,8 @@ type GuardianPaymentInput struct {
 	AccountHolder  *string
 	Note           string
 	ActorAccountID int64
+	// ExpectedVersion is the GuardianPaymentVersion the form read.
+	ExpectedVersion string
 }
 
 // StudentPayer names the guardian charged for a child; a nil GuardianProfileID
@@ -375,8 +383,6 @@ type GuardianQuery interface {
 type GuardianProfileQuery interface {
 	FindGuardian(context.Context, int64) (Guardian, error)
 	ListGuardians(ctx context.Context, page, pageSize int) ([]Guardian, error)
-	ListGuardiansWithoutAccount(context.Context) ([]Guardian, error)
-	ListInvitableGuardians(context.Context) ([]Guardian, error)
 	// SearchGuardians matches name and email; limit caps the slice.
 	SearchGuardians(ctx context.Context, text string, limit int) ([]GuardianMatch, error)
 	// FindGuardianByEmail returns the tenant's guardian whose e-mail equals
@@ -388,7 +394,6 @@ type GuardianProfileQuery interface {
 // GuardianPhoneQuery reads guardian phone numbers.
 type GuardianPhoneQuery interface {
 	ListGuardianPhones(context.Context, int64) ([]GuardianPhone, error)
-	FindGuardianPhone(context.Context, int64) (GuardianPhone, error)
 }
 
 // GuardianRelationshipQuery reads guardian links and their account projections.
@@ -440,12 +445,10 @@ type GuardianProfileCommand interface {
 	DeleteGuardian(context.Context, GuardianDelete) error
 }
 
-// GuardianPhoneCommand changes guardian phone numbers and their primary marker.
+// GuardianPhoneCommand adds guardian phone numbers. A saved staff form
+// replaces the phone list through UpdateGuardianEntry.
 type GuardianPhoneCommand interface {
 	AddGuardianPhone(context.Context, int64, GuardianPhoneInput) (GuardianPhone, error)
-	UpdateGuardianPhone(context.Context, int64, GuardianPhoneUpdate) error
-	DeleteGuardianPhone(context.Context, int64) error
-	SetPrimaryGuardianPhone(context.Context, int64) error
 }
 
 // GuardianRelationshipCommand changes student-guardian relationships.
@@ -454,6 +457,10 @@ type GuardianRelationshipCommand interface {
 	ValidateNewGuardians(context.Context, []NewStudentGuardian) error
 	AddGuardiansToStudent(context.Context, int64, []NewStudentGuardian) error
 	UpdateGuardianLink(context.Context, int64, GuardianLinkUpdate) error
+	// UpdateGuardianEntry saves the staff form of a child's guardian in one
+	// unit of work and refuses an edit read before the stored state with
+	// readstate.ErrChanged.
+	UpdateGuardianEntry(context.Context, GuardianEntryEdit) error
 	RemoveGuardianFromStudent(context.Context, RemoveGuardian) error
 }
 

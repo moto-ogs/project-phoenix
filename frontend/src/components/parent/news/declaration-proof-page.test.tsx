@@ -10,10 +10,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DeclarationProofPage } from "./declaration-proof-page";
 import * as parentApi from "~/lib/parent-api";
-import { type ParentDeclarationProof } from "~/lib/parent-api";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { catalogText } from "~/test/error-catalog-text";
 import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 vi.unmock("swr");
 
@@ -34,7 +34,7 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() }),
 }));
 
-const proof: ParentDeclarationProof = {
+const proof: parentMeContract.declarationProofResponse = {
   title: "Ausflug in den Zoo",
   school_name: "OGS Am Berg",
   child_name: "Mia Muster",
@@ -118,7 +118,7 @@ describe("Nachweis eines Einverständnisses im Eltern-Portal (#3430)", () => {
     expect(screen.getByText(/Ausflug\.pdf/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Ausflug.pdf" })).toHaveAttribute(
       "href",
-      "/api/parent/me/news/42/attachments/19/download?student_id=5&inline=1",
+      "/api/parent/parent-news-attachments/42/19/download?student_id=5&inline=1",
     );
     expect(
       screen.getByText(
@@ -243,13 +243,13 @@ describe("Nachweis eines Einverständnisses im Eltern-Portal (#3430)", () => {
 });
 
 describe("Nachweis mit Unterschrift (#4785)", () => {
-  const signed: ParentDeclarationProof = {
+  const signed: parentMeContract.declarationProofResponse = {
     ...proof,
     method_label:
       "Einfache elektronische Signatur mit gezeichneter Unterschrift im angemeldeten Eltern-Konto",
     submissions: [
       {
-        ...proof.submissions[0]!,
+        ...(proof.submissions ?? [])[0]!,
         method: "simple_electronic_signature",
         signature: {
           method: "drawn",
@@ -260,7 +260,7 @@ describe("Nachweis mit Unterschrift (#4785)", () => {
         },
       },
       {
-        ...proof.submissions[0]!,
+        ...(proof.submissions ?? [])[0]!,
         id: "76",
         signature: {
           method: "typed",

@@ -1,5 +1,7 @@
 "use client";
 
+import { bffFile } from "~/lib/bff-fetch";
+
 // Eine Familie in der Abrechnung (#4691): ihre Summen ausgestellt,
 // storniert, gutgeschrieben und die offene Forderung vor Zahlungseingang
 // (#6348), wer ihre Rechnungen zahlt, und jedes
@@ -18,8 +20,10 @@ import {
 } from "~/components/traeger/billing-family-format";
 import {
   PAYMENT_METHOD_LABELS,
+  familyPaymentPath,
   paymentMethodsText,
 } from "~/components/traeger/billing-payment-format";
+import { ButtonLink } from "~/components/ui/button";
 import { BILLING_DOCUMENT_KIND_LABELS } from "~/components/traeger/billing-format";
 import { formatEuro } from "~/components/traeger/contribution-format";
 import { formatDateRange } from "~/components/traeger/holiday-period-format";
@@ -40,9 +44,14 @@ import {
   type BillingFamilyDocument,
   fetchBillingFamily,
 } from "~/lib/traeger-billing-families-api";
-import { downloadTraegerList } from "~/lib/traeger-list-export";
+import {
+  downloadTraegerList,
+  listExportQuery,
+} from "~/lib/traeger-list-export";
 import { traegerPath } from "~/lib/traeger-url";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
+import { labelOf } from "~/lib/label-of";
+import { formatDay } from "~/components/traeger/holiday-period-format";
 
 /** The line under a Storno or Gutschrift: its invoice and its reason. */
 function referenceText(document: BillingFamilyDocument): string {
@@ -60,7 +69,7 @@ const COLUMNS: DataTableColumn<BillingFamilyDocument>[] = [
     header: "Datum",
     sortValue: (document) => document.issuedOn,
     render: (document) => (
-      <span className="whitespace-nowrap">{formatDate(document.issuedOn)}</span>
+      <span className="whitespace-nowrap">{formatDay(document.issuedOn)}</span>
     ),
     stacked: "meta",
   },
@@ -75,7 +84,7 @@ const COLUMNS: DataTableColumn<BillingFamilyDocument>[] = [
               longer fit beside the amounts on a tablet. */}
           <span className="flex flex-wrap items-center gap-x-2 gap-y-1 font-medium text-gray-900">
             <span>
-              {BILLING_DOCUMENT_KIND_LABELS[document.kind]}{" "}
+              {labelOf(BILLING_DOCUMENT_KIND_LABELS, document.kind, "Beleg")}{" "}
               <span className="font-mono whitespace-nowrap">
                 {document.number}
               </span>
@@ -106,7 +115,7 @@ const COLUMNS: DataTableColumn<BillingFamilyDocument>[] = [
                   stay out of reach by finger. */}
               <StatusBadge
                 label={paymentLabel(document.payment)}
-                tone={PAYMENT_TONES[document.payment.kind]}
+                tone={labelOf(PAYMENT_TONES, document.payment.kind, "gray")}
                 wrap
               />
             </span>
@@ -180,6 +189,10 @@ const COLUMNS: DataTableColumn<BillingFamilyDocument>[] = [
   },
 ];
 
+/** Was die Seite ist und was man dort zuerst tut (#7596). */
+const FAMILY_INFO =
+  "Hier siehst du alle Rechnungen einer Familie, auch Storno und Gutschrift. Prüfe zuerst bei „Empfänger und Zahlung“, wohin die Schreiben gehen.";
+
 export default function TraegerBillingFamilyPage() {
   const params = useParams<{ id: string }>();
   const familyId = params?.id ?? "";
@@ -202,6 +215,7 @@ export default function TraegerBillingFamilyPage() {
 
   return (
     <TenantPage
+      info={FAMILY_INFO}
       title={family ? familyName(family) : "Familie"}
       leading={<ConceptIconTile concept={parentsConcept} size="page" />}
       back
@@ -243,6 +257,18 @@ export default function TraegerBillingFamilyPage() {
             leading={<ConceptIconTile concept={billingConcept} />}
             title="Empfänger und Zahlung"
             description="An diese Adresse gehen die Schreiben. Wer zahlt und der Zahlungsweg stehen auf jeder Rechnung."
+            actions={
+              family.contractId ? (
+                <ButtonLink
+                  href={familyPaymentPath(family.contractId)}
+                  variant="outline"
+                  size="md"
+                  tooltip="Öffnet die Seite, auf der du Empfänger, Zahlungsweg und Zahltag der Familie festlegst."
+                >
+                  Ändern
+                </ButtonLink>
+              ) : undefined
+            }
           >
             <DataGrid columns={2}>
               <DataField label="E-Mail-Adresse">
@@ -263,11 +289,18 @@ export default function TraegerBillingFamilyPage() {
                   "Keine eingetragen"
                 )}
               </DataField>
-              <DataField label="Zahlungsweg">
+              <DataField label="Zahlungsweg auf den Rechnungen">
                 {paymentMethodsText(family.paymentMethods) ??
                   (validInvoices > 0
                     ? "Auf den Rechnungen nicht genannt"
                     : "Steht auf neuen Rechnungen")}
+              </DataField>
+              {/* What the next invoice takes (#7770), apart from what the
+                  issued ones took. */}
+              <DataField label="Zahlungsweg für neue Rechnungen">
+                {family.familyPaymentMethod
+                  ? `${PAYMENT_METHOD_LABELS[family.familyPaymentMethod]} (für die Familie festgelegt)`
+                  : "Wie in den Abrechnungsvorgaben"}
               </DataField>
               <DataField label="Wer zahlt" fullWidth>
                 {family.payments.length > 0 ? (
@@ -276,7 +309,7 @@ export default function TraegerBillingFamilyPage() {
                       <StatusBadge
                         key={`${payment.kind}-${payment.costBearerName}`}
                         label={paymentLabel(payment)}
-                        tone={PAYMENT_TONES[payment.kind]}
+                        tone={labelOf(PAYMENT_TONES, payment.kind, "gray")}
                         wrap
                       />
                     ))}
@@ -295,8 +328,14 @@ export default function TraegerBillingFamilyPage() {
               <TraegerListExportMenu
                 download={(format) =>
                   downloadTraegerList(
-                    `/api/traeger/billing-families/${encodeURIComponent(familyId)}/export`,
-                    format,
+                    bffFile(
+                      "org",
+                      "GET /traeger/billing-families/{id}/export",
+                      {
+                        params: { id: familyId },
+                        query: listExportQuery(format),
+                      },
+                    ),
                   )
                 }
                 scope="Alle Dokumente der Familie"

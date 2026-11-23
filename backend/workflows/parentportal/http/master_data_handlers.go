@@ -10,6 +10,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
 
@@ -55,17 +56,20 @@ type MasterDataChangeResponse struct {
 	ID        string          `json:"id"`
 	Target    string          `json:"target"`
 	FieldKey  string          `json:"field_key"`
-	OldValue  json.RawMessage `json:"old_value,omitempty"`
-	NewValue  json.RawMessage `json:"new_value"`
+	OldValue  json.RawMessage `json:"old_value,omitempty" contract_json:"The requested student field selects the master-data value type"`
+	NewValue  json.RawMessage `json:"new_value" contract_json:"The requested student field selects the master-data value type"`
 	Status    string          `json:"status"`
 	CreatedAt string          `json:"created_at"`
 	IsSelf    bool            `json:"is_self"`
+	// Version is what an edit of this request sends back as
+	// expected_version (ADR 0311).
+	Version string `json:"version"`
 }
 
 // UpdateMasterDataRequest is the wire shape for the Track A PATCH. The value is
 // arbitrary JSON (a string for every Track A field today).
 type UpdateMasterDataRequest struct {
-	Value json.RawMessage `json:"value"`
+	Value json.RawMessage `json:"value" contract_json:"The requested student field selects the master-data value type"`
 }
 
 func dateStrPtr(d *timezone.Date) *string {
@@ -109,6 +113,7 @@ func toMasterDataResponse(d *parentService.ChildMasterData, accountID int64) Mas
 			Status:    c.Status,
 			CreatedAt: c.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 			IsSelf:    c.SubmittedBy == accountID,
+			Version:   readstate.Of(c.UpdatedAt),
 		})
 	}
 	return resp
@@ -176,7 +181,7 @@ type MasterDataChangeRequestBody struct {
 type MasterDataChangeInput struct {
 	Target   string          `json:"target"`
 	FieldKey string          `json:"field_key"`
-	Value    json.RawMessage `json:"value"`
+	Value    json.RawMessage `json:"value" contract_json:"The requested student field selects the master-data value type"`
 }
 
 func toMasterDataChangeResponses(rows []*parentService.StudentDataChangeRequest, accountID int64) []MasterDataChangeResponse {
@@ -191,6 +196,7 @@ func toMasterDataChangeResponses(rows []*parentService.StudentDataChangeRequest,
 			Status:    c.Status,
 			CreatedAt: c.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 			IsSelf:    c.SubmittedBy == accountID,
+			Version:   readstate.Of(c.UpdatedAt),
 		})
 	}
 	return out

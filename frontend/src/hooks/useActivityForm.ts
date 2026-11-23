@@ -1,5 +1,6 @@
 "use client";
 
+import type * as activitiesContract from "~/lib/contract/activities.generated";
 import { useState, useEffect, useCallback } from "react";
 import type { FormError } from "~/components/ui/form-error";
 import { getCategories, type ActivityCategory } from "~/lib/activity-api";
@@ -15,11 +16,12 @@ const NO_CATEGORIES: ActivityCategory[] = [];
  * Activity form state shape.
  * Used by both create and edit modals.
  */
-export interface ActivityFormState {
-  name: string;
-  category_id: string;
+export type ActivityFormState = Required<
+  Pick<activitiesContract.ActivityRequest, "name" | "category_id">
+> & {
+  /** The text of the limit field; parseParticipantLimit reads it. */
   max_participants: string;
-}
+};
 
 /** A check that failed before sending: the hint and the field it marks. */
 interface ActivityFormProblem {

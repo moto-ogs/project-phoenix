@@ -88,6 +88,10 @@ import { formatChatDateTime } from "~/lib/date-helpers";
 import { ThreadSkeleton, ThreadMessagesSkeleton } from "./page-skeleton";
 import { childrenConcept } from "~/lib/concepts/children";
 
+// Info-Knopf am Seitentitel (#7578): wofür die Seite da ist.
+const THREAD_INFO =
+  "Hier liest du die Unterhaltung mit den Eltern eines Kindes. Die neueste Nachricht steht unten. Wenn Eltern-Nachrichten eingeschaltet sind, kannst du darunter antworten.";
+
 const logger = createLogger({ component: "MessageThreadPage" });
 
 const MARK_UNREAD_LABEL = "Als ungelesen markieren";
@@ -581,6 +585,7 @@ function MessageThreadContent() {
   if (!showSkeleton && !thread) {
     return (
       <TenantPage
+        info={THREAD_INFO}
         title="Unterhaltung"
         {...MESSAGES_BACK}
         error={
@@ -597,6 +602,7 @@ function MessageThreadContent() {
 
   return (
     <TenantPage
+      info={THREAD_INFO}
       title={thread?.guardian_name ?? "Unterhaltung"}
       {...MESSAGES_BACK}
       stats={statusLine}
@@ -684,7 +690,7 @@ function MessageThreadContent() {
                         createdAt={message.created_at}
                         pending={send.stateOf(message.id)}
                         attachments={message.attachments}
-                        attachmentUrl={PARENT_MESSAGE_ATTACHMENTS.downloadUrl}
+                        attachmentFiles={PARENT_MESSAGE_ATTACHMENTS}
                         readReceiptLabel={
                           message.sender_kind === "staff" &&
                           message.read_by_guardian
@@ -746,7 +752,7 @@ function MessageThreadContent() {
                 sending={isSending}
                 disabled={snapshotUnavailable}
                 attachments={{
-                  uploadUrl: PARENT_MESSAGE_ATTACHMENTS.uploadUrl,
+                  upload: PARENT_MESSAGE_ATTACHMENTS.upload,
                 }}
                 sendHint={`Schickt die Nachricht sofort an ${thread?.guardian_name ?? "die Eltern"}.`}
                 placeholder="Nachricht an die Eltern schreiben…"

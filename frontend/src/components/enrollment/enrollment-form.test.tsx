@@ -8,6 +8,7 @@ import {
 } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 
 const {
   phaseSchemaFixture,
@@ -155,11 +156,11 @@ import type {
 import type {
   EnrollmentEditDraft,
   MeProfileResponse,
-  PublicCareOffering,
   PublicSchoolClassConfig,
-  SubmitEnrollmentPayload,
 } from "~/lib/enrollment-submission-api";
 import type { CareOfferingSelectionMode } from "~/lib/enrollment-phase-api";
+import type * as sharedContract from "~/lib/contract/shared.generated";
+import type { CareOffering } from "~/lib/care-offering-api";
 
 function schema(): PublicFormSchema {
   return {
@@ -267,6 +268,7 @@ function legalTexts(
 ): PublicLegalTexts {
   return {
     agb: blocks.find((block) => block.key === "agb")?.text ?? "",
+    agb_document_url: "",
     dsgvo: blocks.find((block) => block.key === "data_processing")?.text ?? "",
     email_contact:
       blocks.find((block) => block.key === "email_contact")?.text ?? "",
@@ -281,7 +283,7 @@ function legalTexts(
   };
 }
 
-function offerings(): PublicCareOffering[] {
+function offerings(): CareOffering[] {
   return [
     {
       id: "11",
@@ -294,13 +296,19 @@ function offerings(): PublicCareOffering[] {
       includes_lunch: true,
       is_active: true,
       is_required: false,
-      capacity: null,
+      capacity: undefined,
+      counts_as_care: true,
+      auto_add_grade_levels: [],
+      auto_add_trigger_offering_ids: [],
+      sort_order: 0,
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
     },
     {
       id: "12",
       phase_id: "5",
       name: "Fixe Betreuung",
-      description: null,
+      description: undefined,
       days_of_week_mode: "fixed",
       available_days: ["tue", "thu"],
       includes_holiday_care: false,
@@ -308,6 +316,12 @@ function offerings(): PublicCareOffering[] {
       is_active: true,
       is_required: false,
       capacity: 20,
+      counts_as_care: true,
+      auto_add_grade_levels: [],
+      auto_add_trigger_offering_ids: [],
+      sort_order: 0,
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
     },
   ];
 }
@@ -334,6 +348,8 @@ function editDraft(
       // A fixed Tue/Thu offering gives each child care days so the
       // weekday_multi_mode field renders its controls.
       offering_ids: ["12"],
+      custom_data: {},
+      locked: false,
     })),
   };
 }
@@ -404,7 +420,7 @@ async function fixturePrefetchedData(
   skipCaptcha: boolean,
 ): Promise<NonNullable<FormProps["prefetchedData"]>> {
   const care = (await phaseOfferingsFixture()) as {
-    offerings: PublicCareOffering[];
+    offerings: CareOffering[];
     careOfferingSelectionMode: CareOfferingSelectionMode;
     collectGradeLevel?: boolean;
     careOfferingsEnabled?: boolean;
@@ -808,7 +824,7 @@ describe("EnrollmentForm", () => {
   });
 
   it("shows offerings per child grade and clears an invalid selection after a grade change", async () => {
-    const conditional: PublicCareOffering = {
+    const conditional: CareOffering = {
       ...offerings()[1]!,
       id: "99",
       name: "Randstunde Klasse 1 und 2",
@@ -854,7 +870,7 @@ describe("EnrollmentForm", () => {
   // support case: a grade-3 child cannot be added to a "Randstunde" limited
   // to grades 1-2, and the form said nothing at all.
   it("shows blocked offerings with their reason in admin mode", async () => {
-    const conditional: PublicCareOffering = {
+    const conditional: CareOffering = {
       ...offerings()[1]!,
       id: "99",
       name: "Randstunde",
@@ -895,7 +911,7 @@ describe("EnrollmentForm", () => {
   // Klassen 1-3"). The grades 1-2 case above reads identically either way,
   // so only this shape catches a caller that drops gradeLevelMax.
   it("describes a blocked offering against the tenant's grade ceiling", async () => {
-    const conditional: PublicCareOffering = {
+    const conditional: CareOffering = {
       ...offerings()[1]!,
       id: "99",
       name: "Randstunde",
@@ -925,7 +941,7 @@ describe("EnrollmentForm", () => {
   });
 
   it("drops the blocked section once the grade makes the offering available", async () => {
-    const conditional: PublicCareOffering = {
+    const conditional: CareOffering = {
       ...offerings()[1]!,
       id: "99",
       name: "Randstunde",
@@ -996,7 +1012,7 @@ describe("EnrollmentForm", () => {
       id: string,
       name: string,
       grades: number[],
-    ): PublicCareOffering {
+    ): CareOffering {
       return {
         ...offerings()[1]!,
         id,
@@ -1011,7 +1027,7 @@ describe("EnrollmentForm", () => {
     }
 
     function mockCatalog(
-      catalog: PublicCareOffering[],
+      catalog: CareOffering[],
       overrides: Record<string, unknown> = {},
     ) {
       phaseOfferingsFixture.mockResolvedValue({
@@ -1092,7 +1108,7 @@ describe("EnrollmentForm", () => {
     });
 
     it("asks for no grade when every rule admits every grade", async () => {
-      const unrestrictedRuleOffering: PublicCareOffering = {
+      const unrestrictedRuleOffering: CareOffering = {
         ...offerings()[1]!,
         availability_rule: {
           match: "any",
@@ -1166,10 +1182,11 @@ describe("EnrollmentForm", () => {
       );
 
       await waitFor(() => expect(submitter).toHaveBeenCalledOnce());
-      const payload = submitter.mock.calls[0]![0] as SubmitEnrollmentPayload;
-      expect(payload.children[0]).toMatchObject({
+      const payload = submitter.mock
+        .calls[0]![0] as sharedContract.SubmitEnrollmentRequest;
+      expect(payload.children![0]).toMatchObject({
         target_grade_level: undefined,
-        offering_ids: [12],
+        offering_ids: ["12"],
       });
     });
 
@@ -1288,7 +1305,7 @@ describe("EnrollmentForm", () => {
   });
 
   it("shows no occupancy or blocked section on the parent form", async () => {
-    const conditional: PublicCareOffering = {
+    const conditional: CareOffering = {
       ...offerings()[1]!,
       id: "99",
       name: "Randstunde",
@@ -1522,9 +1539,9 @@ describe("EnrollmentForm", () => {
     });
     const [, payload] = mockSubmitEnrollment.mock.calls[0] as [
       string,
-      SubmitEnrollmentPayload,
+      sharedContract.SubmitEnrollmentRequest,
     ];
-    expect(payload.children[0]?.custom_data).toMatchObject({
+    expect(payload.children![0]?.custom_data).toMatchObject({
       lunch_note: "Ohne Schweinefleisch",
     });
   });
@@ -1581,11 +1598,11 @@ describe("EnrollmentForm", () => {
     });
     const [, payload] = mockSubmitEnrollment.mock.calls[0] as [
       string,
-      SubmitEnrollmentPayload,
+      sharedContract.SubmitEnrollmentRequest,
     ];
     expect(payload.consent_flags).toEqual({ agb: true });
     // The form version the page showed (#4680).
-    expect(payload.form_schema_id).toBe(Number(schema().id));
+    expect(payload.form_schema_id).toBe(schema().id);
   });
 
   it("opens legal block details in a modal from a neutral details button", async () => {
@@ -1744,7 +1761,7 @@ describe("EnrollmentForm", () => {
     });
     const [, payload] = mockSubmitEnrollment.mock.calls[0] as [
       string,
-      SubmitEnrollmentPayload,
+      sharedContract.SubmitEnrollmentRequest,
     ];
     expect(payload.consent_flags).toEqual({});
   });
@@ -1794,7 +1811,7 @@ describe("EnrollmentForm", () => {
     });
     const [, payload] = mockSubmitEnrollment.mock.calls[0] as [
       string,
-      SubmitEnrollmentPayload,
+      sharedContract.SubmitEnrollmentRequest,
     ];
     expect(payload.consent_flags).toEqual({ custom_pool: true });
   });
@@ -1908,11 +1925,11 @@ describe("EnrollmentForm", () => {
     });
     const [tenantSlug, payload] = mockSubmitEnrollment.mock.calls[0] as [
       string,
-      SubmitEnrollmentPayload,
+      sharedContract.SubmitEnrollmentRequest,
     ];
     expect(tenantSlug).toBe("test-tenant");
     expect(payload).toMatchObject({
-      phase_id: 5,
+      phase_id: "5",
       guardian_first_name: "Mara",
       guardian_last_name: "Muster",
       guardian_email: "mara@example.test",
@@ -1926,14 +1943,14 @@ describe("EnrollmentForm", () => {
       custom_data: { pickup_note: "Kommt mit Oma." },
     });
     expect(payload.children).toHaveLength(1);
-    expect(payload.children[0]).toMatchObject({
+    expect(payload.children![0]).toMatchObject({
       first_name: "Lina",
       last_name: "Muster",
       date_of_birth: "2018-04-15",
       target_grade_level: 2,
-      offering_ids: [12],
+      offering_ids: ["12"],
     });
-    expect(payload.children[0]?.custom_data).toMatchObject({
+    expect(payload.children![0]?.custom_data).toMatchObject({
       allergies: "Nuesse",
       lunch: true,
       dismissal: { tue: "15:00" },
@@ -2047,9 +2064,9 @@ describe("EnrollmentForm", () => {
     });
     const [, payload] = mockSubmitEnrollment.mock.calls[0] as [
       string,
-      SubmitEnrollmentPayload,
+      sharedContract.SubmitEnrollmentRequest,
     ];
-    expect(payload.children[0]?.custom_data?.dismissal).toEqual({});
+    expect(payload.children![0]?.custom_data?.dismissal).toEqual({});
   });
 
   it("requires a pickup time on every care day when offerings constrain the form", async () => {
@@ -2530,7 +2547,7 @@ describe("EnrollmentForm", () => {
     });
     const [, payload] = mockSubmitEnrollment.mock.calls[0] as [
       string,
-      SubmitEnrollmentPayload,
+      sharedContract.SubmitEnrollmentRequest,
     ];
     expect(payload.consent_flags?.photo).toBe(false);
   });
@@ -2565,7 +2582,12 @@ describe("EnrollmentForm", () => {
         offerings: offerings(),
         careOfferingSelectionMode: "optional",
         eligibleGradeLevels: [],
-        schoolClass: { collect: false, available_classes: [], require: false },
+        schoolClass: {
+          collect: false,
+          available_classes: [],
+          require: false,
+          collect_grade_1: false,
+        },
         collectGradeLevel: false,
         careOfferingsEnabled: false,
       },
@@ -2605,6 +2627,7 @@ describe("EnrollmentForm", () => {
           collect: true,
           available_classes: ["2a"],
           require: true,
+          collect_grade_1: false,
         },
         collectGradeLevel: true,
         careOfferingsEnabled: true,
@@ -3363,8 +3386,9 @@ describe("EnrollmentForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Anmeldung absenden" }));
 
     await waitFor(() => expect(submitter).toHaveBeenCalledOnce());
-    const payload = submitter.mock.calls[0]![0] as SubmitEnrollmentPayload;
-    expect(payload.form_schema_id).toBe(81);
+    const payload = submitter.mock
+      .calls[0]![0] as sharedContract.SubmitEnrollmentRequest;
+    expect(payload.form_schema_id).toBe("81");
     expect(payload.consent_flags).toEqual({ care_contract: true });
   });
 
@@ -3399,15 +3423,16 @@ describe("EnrollmentForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Anmeldung absenden" }));
 
     await waitFor(() => expect(submitter).toHaveBeenCalledOnce());
-    const payload = submitter.mock.calls[0]![0] as SubmitEnrollmentPayload;
-    expect(payload.children[0]).toMatchObject({
+    const payload = submitter.mock
+      .calls[0]![0] as sharedContract.SubmitEnrollmentRequest;
+    expect(payload.children![0]).toMatchObject({
       first_name: "Anton",
       last_name: "Alster",
       date_of_birth: "2018-04-15",
       target_grade_level: 2,
       custom_data: { retired_field: "keep me" },
-      offering_ids: [12, 99],
-      offering_days: [{ offering_id: 99, selected_days: ["fri", "mon"] }],
+      offering_ids: ["12", "99"],
+      offering_days: [{ offering_id: "99", selected_days: ["fri", "mon"] }],
     });
   });
 
@@ -3415,7 +3440,7 @@ describe("EnrollmentForm", () => {
     const submitter = vi.fn().mockResolvedValue({ status_url: "/status/edit" });
     const noFieldSchema = schema();
     noFieldSchema.fields = [];
-    const conditionalRequired: PublicCareOffering = {
+    const conditionalRequired: CareOffering = {
       ...offerings()[0]!,
       id: "99",
       name: "Pflicht-Randstunde",
@@ -3449,9 +3474,10 @@ describe("EnrollmentForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Anmeldung absenden" }));
 
     await waitFor(() => expect(submitter).toHaveBeenCalledOnce());
-    const payload = submitter.mock.calls[0]![0] as SubmitEnrollmentPayload;
-    expect(payload.children[0]!.offering_ids).toEqual(
-      expect.arrayContaining([12, 99]),
+    const payload = submitter.mock
+      .calls[0]![0] as sharedContract.SubmitEnrollmentRequest;
+    expect(payload.children![0]!.offering_ids).toEqual(
+      expect.arrayContaining(["12", "99"]),
     );
   });
 
@@ -3523,6 +3549,8 @@ describe("EnrollmentForm", () => {
                 automatic_selected_days: ["mon"],
               },
             ],
+            custom_data: {},
+            locked: false,
           },
         ],
       },
@@ -3534,10 +3562,11 @@ describe("EnrollmentForm", () => {
     await waitFor(() => {
       expect(submitter).toHaveBeenCalledTimes(1);
     });
-    const payload = submitter.mock.calls[0]?.[0] as SubmitEnrollmentPayload;
-    expect(payload.children[0]?.offering_ids).toEqual([11]);
-    expect(payload.children[0]?.offering_days).toEqual([
-      { offering_id: 11, selected_days: ["mon"] },
+    const payload = submitter.mock
+      .calls[0]?.[0] as sharedContract.SubmitEnrollmentRequest;
+    expect(payload.children![0]?.offering_ids).toEqual(["11"]);
+    expect(payload.children![0]?.offering_days).toEqual([
+      { offering_id: "11", selected_days: ["mon"] },
     ]);
   });
 
@@ -3632,9 +3661,10 @@ describe("EnrollmentForm", () => {
     await waitFor(() => {
       expect(submitter).toHaveBeenCalledTimes(1);
     });
-    const payload = submitter.mock.calls[0]?.[0] as SubmitEnrollmentPayload;
+    const payload = submitter.mock
+      .calls[0]?.[0] as sharedContract.SubmitEnrollmentRequest;
     expect(payload.captcha_token).toBeUndefined();
-    expect(payload.children[0]?.offering_ids).toEqual([12]);
+    expect(payload.children![0]?.offering_ids).toEqual(["12"]);
     expect(onSubmitted).toHaveBeenCalledWith("/parents/status/1");
   });
 
@@ -3653,9 +3683,9 @@ describe("EnrollmentForm", () => {
     });
     const [, payload] = mockSubmitEnrollment.mock.calls[0] as [
       string,
-      SubmitEnrollmentPayload,
+      sharedContract.SubmitEnrollmentRequest,
     ];
-    expect(payload.children[0]?.custom_data?.bus_days).toEqual({
+    expect(payload.children![0]?.custom_data?.bus_days).toEqual({
       mon: true,
       fri: true,
     });
@@ -3724,13 +3754,13 @@ describe("EnrollmentForm", () => {
     await waitFor(() => expect(mockSubmitEnrollment).toHaveBeenCalledTimes(1));
     const [, payload] = mockSubmitEnrollment.mock.calls[0] as [
       string,
-      SubmitEnrollmentPayload,
+      sharedContract.SubmitEnrollmentRequest,
     ];
-    expect(payload.children[0]?.custom_data?.allowed_modes).toMatchObject({
+    expect(payload.children![0]?.custom_data?.allowed_modes).toMatchObject({
       mon: ["accompanied"],
     });
     expect(
-      payload.children[0]?.custom_data?.["student.departure_companion_note"],
+      payload.children![0]?.custom_data?.["student.departure_companion_note"],
     ).toBe("Geschwisterkind Mia");
   });
 
@@ -3783,6 +3813,7 @@ describe("EnrollmentForm", () => {
               custom_modes: { mon: ["bus", "accompanied"] },
               "student.departure_companion_note": "Geschwisterkind Mia",
             },
+            locked: false,
           },
         ],
       },
@@ -3801,13 +3832,13 @@ describe("EnrollmentForm", () => {
     await waitFor(() => expect(mockSubmitEnrollment).toHaveBeenCalledTimes(1));
     const [, payload] = mockSubmitEnrollment.mock.calls[0] as [
       string,
-      SubmitEnrollmentPayload,
+      sharedContract.SubmitEnrollmentRequest,
     ];
-    expect(payload.children[0]?.custom_data?.custom_modes).toEqual({
+    expect(payload.children![0]?.custom_data?.custom_modes).toEqual({
       mon: ["bus"],
     });
     expect(
-      payload.children[0]?.custom_data?.["student.departure_companion_note"],
+      payload.children![0]?.custom_data?.["student.departure_companion_note"],
     ).toBeUndefined();
   });
 
@@ -3889,13 +3920,13 @@ describe("EnrollmentForm", () => {
     await waitFor(() => expect(mockSubmitEnrollment).toHaveBeenCalledTimes(1));
     const [, payload] = mockSubmitEnrollment.mock.calls[0] as [
       string,
-      SubmitEnrollmentPayload,
+      sharedContract.SubmitEnrollmentRequest,
     ];
-    expect(payload.children[0]?.custom_data?.modes_b).toMatchObject({
+    expect(payload.children![0]?.custom_data?.modes_b).toMatchObject({
       mon: ["accompanied"],
     });
     expect(
-      payload.children[0]?.custom_data?.["student.departure_companion_note"],
+      payload.children![0]?.custom_data?.["student.departure_companion_note"],
     ).toBe("Geschwisterkind Mia");
   });
 
@@ -3991,10 +4022,10 @@ describe("EnrollmentForm", () => {
     await waitFor(() => expect(mockSubmitEnrollment).toHaveBeenCalledTimes(1));
     const [, payload] = mockSubmitEnrollment.mock.calls[0] as [
       string,
-      SubmitEnrollmentPayload,
+      sharedContract.SubmitEnrollmentRequest,
     ];
     expect(
-      payload.children[0]?.custom_data?.["student.departure_companion_note"],
+      payload.children![0]?.custom_data?.["student.departure_companion_note"],
     ).toBeUndefined();
   });
 
@@ -4175,14 +4206,20 @@ describe("EnrollmentForm", () => {
             id: "20",
             phase_id: "5",
             name: "Mittagessen",
-            description: null,
+            description: undefined,
             days_of_week_mode: "fixed",
             available_days: ["mon", "tue", "wed", "thu", "fri"],
             includes_holiday_care: false,
             includes_lunch: true,
             is_active: true,
             is_required: true,
-            capacity: null,
+            capacity: undefined,
+            counts_as_care: true,
+            auto_add_grade_levels: [],
+            auto_add_trigger_offering_ids: [],
+            sort_order: 0,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
           },
         ],
         careOfferingSelectionMode: "optional",
@@ -4227,14 +4264,20 @@ describe("EnrollmentForm", () => {
             id: "20",
             phase_id: "5",
             name: "Mittagessen",
-            description: null,
+            description: undefined,
             days_of_week_mode: "fixed",
             available_days: ["mon", "tue", "wed", "thu", "fri"],
             includes_holiday_care: false,
             includes_lunch: true,
             is_active: true,
             is_required: true,
-            capacity: null,
+            capacity: undefined,
+            counts_as_care: true,
+            auto_add_grade_levels: [],
+            auto_add_trigger_offering_ids: [],
+            sort_order: 0,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-01-01T00:00:00Z",
           },
         ],
         careOfferingSelectionMode: "optional",
@@ -4293,8 +4336,9 @@ describe("EnrollmentForm", () => {
     await waitFor(() => {
       expect(submitter).toHaveBeenCalledTimes(1);
     });
-    const payload = submitter.mock.calls[0]?.[0] as SubmitEnrollmentPayload;
-    expect(payload.children[0]?.offering_ids).toEqual([20]);
+    const payload = submitter.mock
+      .calls[0]?.[0] as sharedContract.SubmitEnrollmentRequest;
+    expect(payload.children![0]?.offering_ids).toEqual(["20"]);
   });
 
   it("auto-fills required lunch days from selected care days without submitting them as manual picks", async () => {
@@ -4345,11 +4389,12 @@ describe("EnrollmentForm", () => {
     await waitFor(() => {
       expect(submitter).toHaveBeenCalledTimes(1);
     });
-    const payload = submitter.mock.calls[0]?.[0] as SubmitEnrollmentPayload;
-    expect(payload.children[0]?.offering_ids).toEqual(
-      expect.arrayContaining([12, 20]),
+    const payload = submitter.mock
+      .calls[0]?.[0] as sharedContract.SubmitEnrollmentRequest;
+    expect(payload.children![0]?.offering_ids).toEqual(
+      expect.arrayContaining(["12", "20"]),
     );
-    expect(payload.children[0]?.offering_days).toBeUndefined();
+    expect(payload.children![0]?.offering_days).toBeUndefined();
     expect(
       screen.queryByText("Bitte mindestens einen Tag auswählen."),
     ).toBeNull();
@@ -4713,11 +4758,11 @@ describe("EnrollmentForm", () => {
     });
     const [, payload] = mockSubmitEnrollment.mock.calls[0] as [
       string,
-      SubmitEnrollmentPayload,
+      sharedContract.SubmitEnrollmentRequest,
     ];
-    expect(payload.children[0]?.offering_ids).toHaveLength(2);
-    expect(payload.children[0]?.offering_ids).toEqual(
-      expect.arrayContaining([20, 12]),
+    expect(payload.children![0]?.offering_ids).toHaveLength(2);
+    expect(payload.children![0]?.offering_ids).toEqual(
+      expect.arrayContaining(["20", "12"]),
     );
   });
 });
@@ -4769,6 +4814,7 @@ describe("EnrollmentForm — fixed pickup times", () => {
           target_grade_level: 2,
           offering_ids: [],
           custom_data: { schedule_pickup: schedule },
+          locked: false,
         },
       ],
     };
@@ -5186,12 +5232,13 @@ describe("EnrollmentForm restrictToOfferings (#2251)", () => {
       await user.click(send);
 
       await waitFor(() => expect(submitter).toHaveBeenCalledTimes(1));
-      const payload = submitter.mock.calls[0]?.[0] as SubmitEnrollmentPayload;
-      expect(payload.children[0]?.holiday_care_wish).toBe(wish);
-      expect(payload.children[0]?.offering_ids).toEqual(
-        expect.arrayContaining([11, 12]),
+      const payload = submitter.mock
+        .calls[0]?.[0] as sharedContract.SubmitEnrollmentRequest;
+      expect(payload.children![0]?.holiday_care_wish).toBe(wish);
+      expect(payload.children![0]?.offering_ids).toEqual(
+        expect.arrayContaining(["11", "12"]),
       );
-      expect(payload.children[0]?.first_name).toBe("Anton");
+      expect(payload.children![0]?.first_name).toBe("Anton");
       expect(payload.guardian_email).toBe(initialDraft.guardian_email);
     },
   );
@@ -5258,8 +5305,8 @@ describe("EnrollmentForm restrictToOfferings (#2251)", () => {
       pickup_times: { mon: "14:30" },
     });
     // The offering change is applied.
-    expect(payload.children[0]?.offering_ids).toContain(11);
-    expect(payload.children[0]?.offering_ids).toContain(12);
+    expect(payload.children[0]?.offering_ids).toContain("11");
+    expect(payload.children[0]?.offering_ids).toContain("12");
   });
 });
 
@@ -5521,7 +5568,7 @@ describe("EnrollmentForm signature (#4786)", () => {
     });
     const [, payload] = mockSubmitEnrollment.mock.calls[0] as [
       string,
-      SubmitEnrollmentPayload,
+      sharedContract.SubmitEnrollmentRequest,
     ];
     expect(payload.signature).toEqual({
       method: "drawn",
@@ -5564,9 +5611,163 @@ describe("EnrollmentForm signature (#4786)", () => {
     });
     const [, payload] = mockSubmitEnrollment.mock.calls[0] as [
       string,
-      SubmitEnrollmentPayload,
+      sharedContract.SubmitEnrollmentRequest,
     ];
     expect(payload.signature).toBeUndefined();
+  });
+
+  // A refused form (ADR 0311): the server saw another form or legal text
+  // than the one shown. The page loads the current form, which this harness
+  // hands in like the parent and public pages do.
+  async function renderRefusedForm(
+    reload: () => Promise<void> = async () => undefined,
+    agbText = "Neue AGB",
+  ) {
+    const first = {
+      ...(await fixturePrefetchedData(true)),
+      termsFingerprint: "terms-read",
+    };
+    const changedAGB = legalTexts().blocks.map((block) =>
+      block.key === "agb" ? { ...block, text: agbText } : block,
+    );
+    const current = {
+      ...first,
+      legalTexts: { ...first.legalTexts, blocks: changedAGB },
+      termsFingerprint: "terms-current",
+    };
+    const onFormChanged = vi.fn();
+    function Harness() {
+      const [data, setData] = useState(first);
+      return (
+        <EnrollmentForm
+          phaseID="5"
+          gradeLevelMax={4}
+          onSubmitted={vi.fn()}
+          prefetchedData={data}
+          onFormChanged={async () => {
+            onFormChanged();
+            await reload();
+            setData(current);
+          }}
+        />
+      );
+    }
+    render(<Harness />);
+    await waitForLoaded();
+    return onFormChanged;
+  }
+
+  const refusal = () =>
+    new ApiError("changed since it was read", 409, {
+      code: "general.changed_since_read",
+    });
+
+  it("shows the current form after a refusal, keeps the answers and asks again only for changed texts", async () => {
+    mockSubmitEnrollment.mockRejectedValueOnce(refusal());
+    const onFormChanged = await renderRefusedForm();
+    await fillRequiredFields();
+    fireEvent.click(screen.getByText(/Schulveranstaltungen fotografiert/));
+    sign();
+
+    fireEvent.click(screen.getByRole("button", { name: "Anmeldung absenden" }));
+
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", "das Anmeldeformular"),
+      ),
+    ).toBeInTheDocument();
+    expect(onFormChanged).toHaveBeenCalledOnce();
+    expect(mockSubmitEnrollment).toHaveBeenCalledOnce();
+    const [, sent] = mockSubmitEnrollment.mock.calls[0] as [
+      string,
+      sharedContract.SubmitEnrollmentRequest,
+    ];
+    expect(sent.expected_terms_fingerprint).toBe("terms-read");
+    expect(
+      screen.queryByRole("button", { name: "Wiederholen" }),
+    ).not.toBeInTheDocument();
+    // The answers stay; the changed AGB and the signature are asked again,
+    // the unchanged photo consent stays ticked.
+    expect(screen.getAllByLabelText("Vorname")[0]).toHaveValue("Mara");
+    expect(screen.getAllByLabelText("Vorname")[1]).toHaveValue("Lina");
+    expect(screen.getByRole("checkbox", { name: /AGB/ })).not.toBeChecked();
+    expect(
+      screen.getByRole("checkbox", {
+        name: /Schulveranstaltungen fotografiert/,
+      }),
+    ).toBeChecked();
+    expect(
+      screen.queryByText("Deine Unterschrift ist bereit."),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText(/AGB|Ganztag Info-Brief/));
+    sign();
+    fireEvent.click(screen.getByRole("button", { name: "Anmeldung absenden" }));
+    await waitFor(() => expect(mockSubmitEnrollment).toHaveBeenCalledTimes(2));
+    const [, resent] = mockSubmitEnrollment.mock.calls[1] as [
+      string,
+      sharedContract.SubmitEnrollmentRequest,
+    ];
+    expect(resent.expected_terms_fingerprint).toBe("terms-current");
+    expect(resent.consent_flags).toMatchObject({ agb: true, photo: true });
+  });
+
+  it("asks for a new signature after a refusal even when every text stayed", async () => {
+    mockSubmitEnrollment.mockRejectedValueOnce(refusal());
+    // Another form version with the same legal texts: the ticks stay, the
+    // signature confirmed the old form and goes.
+    await renderRefusedForm(async () => undefined, "AGB Text");
+    await fillRequiredFields();
+    sign();
+
+    fireEvent.click(screen.getByRole("button", { name: "Anmeldung absenden" }));
+
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", "das Anmeldeformular"),
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: /AGB/ })).toBeChecked();
+    expect(
+      screen.queryByText("Deine Unterschrift ist bereit."),
+    ).not.toBeInTheDocument();
+  });
+
+  it("names a failed reload after a refusal instead of claiming the new form is shown", async () => {
+    mockSubmitEnrollment.mockRejectedValueOnce(refusal());
+    let fail = true;
+    const onFormChanged = await renderRefusedForm(async () => {
+      if (fail) throw new ApiError("unavailable", 503);
+    });
+    await fillRequiredFields();
+    sign();
+
+    fireEvent.click(screen.getByRole("button", { name: "Anmeldung absenden" }));
+
+    expect(
+      await screen.findByText(
+        // ADR 0311: the failed read after a refusal says that the new state
+        // is missing, before the load error itself.
+        `Der neue Stand konnte nicht geladen werden. ${catalogText("general.unavailable", "das Anmeldeformular")}`,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        catalogText("general.changed_since_read", "das Anmeldeformular"),
+      ),
+    ).not.toBeInTheDocument();
+    expect(screen.getAllByLabelText("Vorname")[0]).toHaveValue("Mara");
+
+    // Its retry loads the form, then names the refusal; nothing is sent.
+    fail = false;
+    fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", "das Anmeldeformular"),
+      ),
+    ).toBeInTheDocument();
+    expect(onFormChanged).toHaveBeenCalledTimes(2);
+    expect(mockSubmitEnrollment).toHaveBeenCalledOnce();
   });
 
   it("shows no signature field for a change request", async () => {
@@ -5606,7 +5807,10 @@ describe("EnrollmentForm signature (#4786)", () => {
         expect(mockSubmitEnrollment).toHaveBeenCalledTimes(1);
       });
       return (
-        mockSubmitEnrollment.mock.calls[0] as [string, SubmitEnrollmentPayload]
+        mockSubmitEnrollment.mock.calls[0] as [
+          string,
+          sharedContract.SubmitEnrollmentRequest,
+        ]
       )[1];
     }
 
@@ -5718,7 +5922,7 @@ describe("EnrollmentForm signature (#4786)", () => {
       );
       const payload = await submittedPayload();
       expect(payload.consent_flags).toMatchObject({ health_data: true });
-      expect(payload.children[0]?.custom_data).toMatchObject({
+      expect(payload.children![0]?.custom_data).toMatchObject({
         health: "Nussallergie",
       });
     });

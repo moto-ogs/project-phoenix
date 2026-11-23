@@ -136,7 +136,7 @@ func TestPasskeyLoginHandlers(t *testing.T) {
 	w := httptest.NewRecorder()
 	req := passkeyJSONRequest("/passkeys/login/options", `{"tenant_slug":" school-a "}`)
 	req.Header.Set("X-Moto-Frontend-Origin", "https://school-a.localhost")
-	rs.passkeyLoginOptions(w, req)
+	testutil.ServeAtRoute(w, req, "/auth/passkeys/login/options", rs.passkeyLoginOptions)
 
 	require.Equal(t, http.StatusOK, w.Code)
 	assert.Equal(t, school.ID, svc.beginLoginReq.TenantID)
@@ -148,7 +148,7 @@ func TestPasskeyLoginHandlers(t *testing.T) {
 	req = passkeyJSONRequest("/passkeys/login/verify", `{"session_id":"login-session","response":{"id":"assertion"}}`)
 	req.Header.Set("User-Agent", "test-agent")
 	req.RemoteAddr = "203.0.113.10:1234"
-	rs.passkeyLoginVerify(w, req)
+	testutil.ServeAtRoute(w, req, "/auth/passkeys/login/verify", rs.passkeyLoginVerify)
 
 	require.Equal(t, http.StatusOK, w.Code)
 	assert.Equal(t, "login-session", svc.finishLoginReq.SessionID)
@@ -179,7 +179,7 @@ func TestPasskeyAuthenticatedHandlers(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 	assert.EqualValues(t, claims.ID, svc.enrollmentAccountID)
 	assert.Equal(t, claims.TenantID, svc.enrollmentTenantID)
-	assert.JSONEq(t, `{"challenge_token":"challenge-token","masked_email":"m***@example.test"}`, w.Body.String())
+	assert.JSONEq(t, `{"status":"success","data":{"challenge_token":"challenge-token","masked_email":"m***@example.test"},"message":"Passkey enrollment code sent"}`, w.Body.String())
 
 	w = httptest.NewRecorder()
 	req := withPasskeyClaims(passkeyJSONRequest("/passkeys/register/options", `{"code":"123456","name":" Laptop "}`), claims)
@@ -193,13 +193,13 @@ func TestPasskeyAuthenticatedHandlers(t *testing.T) {
 	rs.passkeyRegisterVerify(w, withPasskeyClaims(passkeyJSONRequest("/passkeys/register/verify", `{"session_id":"registration-session","name":"Phone","response":{"id":"credential"}}`), claims))
 	require.Equal(t, http.StatusOK, w.Code)
 	assert.Equal(t, "registration-session", svc.finishRegistrationReq.SessionID)
-	assert.JSONEq(t, `{"id":"7","name":"Laptop","created_at":"1970-01-01T00:00:01Z"}`, w.Body.String())
+	assert.JSONEq(t, `{"status":"success","data":{"id":"7","name":"Laptop","created_at":"1970-01-01T00:00:01Z"},"message":"Passkey registered"}`, w.Body.String())
 
 	w = httptest.NewRecorder()
 	rs.passkeyList(w, withPasskeyClaims(httptest.NewRequest(http.MethodGet, "/passkeys", nil), claims))
 	require.Equal(t, http.StatusOK, w.Code)
 	assert.EqualValues(t, claims.ID, svc.listAccountID)
-	assert.JSONEq(t, `[{"id":"8","name":"Phone","created_at":"1970-01-01T00:00:02Z"}]`, w.Body.String())
+	assert.JSONEq(t, `{"status":"success","data":[{"id":"8","name":"Phone","created_at":"1970-01-01T00:00:02Z"}],"message":"Passkeys retrieved"}`, w.Body.String())
 
 	w = httptest.NewRecorder()
 	passkeyID := school.ID + 1

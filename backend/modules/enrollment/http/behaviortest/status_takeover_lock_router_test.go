@@ -26,6 +26,7 @@ import (
 	enrollmentAPI "github.com/moto-ogs/project-phoenix/modules/enrollment/http"
 	transactionFailures "github.com/moto-ogs/project-phoenix/modules/transactionruntime"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -143,7 +144,7 @@ func setupTakeoverLockTest(t *testing.T, redeemableInvitation ...bool) *takeover
 	person := &peopleValues.DirectoryPersonSnapshot{
 		FirstName: "Takeover",
 		LastName:  "Tester",
-		AccountID: &account.ID,
+		AccountID: (*ident.ID)(&account.ID),
 	}
 	person.SetTenantID(tenantID)
 	require.NoError(t, db.NewInsert().Model(person).ModelTableExpr("users.persons").Column("tenant_id", "first_name", "last_name", "account_id").Returning("*").Scan(ctx))
@@ -277,7 +278,7 @@ func (env *takeoverLockEnv) postChangeRequest(t *testing.T, body string) *httpte
 	req := httptest.NewRequest(
 		http.MethodPost,
 		fmt.Sprintf("/requests/%s/change-requests", env.token),
-		strings.NewReader(body),
+		strings.NewReader(withShownTerms(t, env.router, "/requests/"+env.token+"/edit-bootstrap", body)),
 	)
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()

@@ -66,7 +66,8 @@ func TestDataImportCutover_StudentOwnerFailuresRollbackAndReplay(t *testing.T) {
 			}
 			require.Len(t, blocking, 1)
 			assert.Equal(t, "creation_failed", blocking[0].Code)
-			assert.Contains(t, blocking[0].Message, "injected owner write failure")
+			assert.Equal(t, "Die Zeile konnte nicht gespeichert werden. Bitte versuche es erneut.", blocking[0].Message)
+			assert.ErrorContains(t, err, "injected owner write failure")
 			after := countImportRows(t, db, tenantID)
 			assert.Equal(t, before, after, "no earlier owner write may escape the failed row")
 
@@ -132,7 +133,8 @@ func TestDataImportCutover_StaffOwnerFailuresRollbackAndReplay(t *testing.T) {
 			}
 			require.Len(t, blocking, 1)
 			assert.Equal(t, "creation_failed", blocking[0].Code)
-			assert.Contains(t, blocking[0].Message, "injected owner write failure")
+			assert.Equal(t, "Die Zeile konnte nicht gespeichert werden. Bitte versuche es erneut.", blocking[0].Message)
+			assert.ErrorContains(t, err, "injected owner write failure")
 			assert.Equal(t, before, counts(), "all earlier owner writes must roll back")
 			assert.Empty(t, mailer.Messages(), "a rolled-back invitation must not send mail")
 			removeFailure()

@@ -16,6 +16,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory/departure"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -26,13 +27,13 @@ type ChangeRequestResponse struct {
 	Status            string                         `json:"status"`
 	ParentNote        *string                        `json:"parent_note,omitempty"`
 	AdminDecisionNote *string                        `json:"admin_decision_note,omitempty"`
-	BaseSnapshot      map[string]any                 `json:"base_snapshot"`
-	ProposedSnapshot  map[string]any                 `json:"proposed_snapshot"`
-	Diff              map[string]any                 `json:"diff"`
+	BaseSnapshot      *ChangeRequestSnapshot         `json:"base_snapshot"`
+	ProposedSnapshot  *ChangeRequestSnapshot         `json:"proposed_snapshot"`
+	Diff              *ChangeRequestDiff             `json:"diff"`
 	CreatedAt         time.Time                      `json:"created_at"`
 	UpdatedAt         time.Time                      `json:"updated_at"`
 	ReviewedAt        *time.Time                     `json:"reviewed_at,omitempty"`
-	ReviewedBy        *int64                         `json:"reviewed_by_account_id,omitempty"`
+	ReviewedBy        *ident.ID                      `json:"reviewed_by_account_id,omitempty"`
 	Request           *AdminRequestSummary           `json:"request,omitempty"`
 	Messages          []ChangeRequestMessageResponse `json:"messages,omitempty"`
 	// RosterImpacts answer an approval that changed bookings (#5102).
@@ -42,7 +43,7 @@ type ChangeRequestResponse struct {
 type ChangeRequestMessageResponse struct {
 	ID              string    `json:"id"`
 	AuthorType      string    `json:"author_type"`
-	AuthorAccountID *int64    `json:"author_account_id,omitempty"`
+	AuthorAccountID *ident.ID `json:"author_account_id,omitempty"`
 	Body            string    `json:"body"`
 	InternalOnly    bool      `json:"internal_only"`
 	CreatedAt       time.Time `json:"created_at"`
@@ -294,7 +295,7 @@ func toChangeRequestResponse(agg *ChangeRequestAggregate, includeRequest bool, i
 		ReviewedAt:        row.ReviewedAt,
 	}
 	if includeInternal {
-		resp.ReviewedBy = row.ReviewedByAccountID
+		resp.ReviewedBy = (*ident.ID)(row.ReviewedByAccountID)
 		resp.RosterImpacts = newChildRosterImpactResponses(agg.RosterImpacts)
 	}
 	for _, msg := range agg.Messages {
@@ -306,7 +307,7 @@ func toChangeRequestResponse(agg *ChangeRequestAggregate, includeRequest bool, i
 			CreatedAt:    msg.CreatedAt,
 		}
 		if includeInternal {
-			out.AuthorAccountID = msg.AuthorAccountID
+			out.AuthorAccountID = (*ident.ID)(msg.AuthorAccountID)
 		}
 		resp.Messages = append(resp.Messages, out)
 	}
@@ -350,12 +351,16 @@ func mapChangeRequestError(w http.ResponseWriter, r *http.Request, err error) {
 	case errors.Is(err, capability.ErrChangeRequestNotAllowed),
 		errors.Is(err, capability.ErrEditNotAllowed):
 		common.RenderError(w, r, common.ErrorForbiddenWithCode(err, common.CodeEnrollmentChangeRequestNotAllowed))
+	case errors.Is(err, capability.ErrDecisionReviewerStaffRequired):
+		// Approving changed weekly times writes them in the reviewer's name
+		// (#7818): without a staff record the reason is said, not a 500.
+		common.RenderError(w, r, common.ErrorForbiddenWithCode(err, common.CodeEnrollmentApprovalStaffProfileRequired))
 	case errors.Is(err, capability.ErrChangeRequestParentNotPermitted):
 		common.RenderError(w, r, common.ErrorConflictWithCode(err, common.CodeEnrollmentChangeRequestParentNotPermitted))
 	case errors.Is(err, capability.ErrChangeRequestConflict):
 		common.RenderError(w, r, common.ErrorConflictWithCode(err, common.CodeEnrollmentChangeRequestConflict))
 	case errors.Is(err, capability.ErrChangeRequestInvalidStatus):
-		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeEnrollmentChangeRequestStatusChanged))
+		common.RenderError(w, r, common.ErrorConflictWithCode(err, common.CodeEnrollmentChangeRequestStatusChanged))
 	case errors.Is(err, capability.ErrChangeRequestInvalidData):
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 	// Approving a change (or correcting child data) replaces the student's

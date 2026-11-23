@@ -1,8 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("./session-cache", () => ({ sessionFetch: vi.fn() }));
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 
-import { sessionFetch } from "./session-cache";
+const fetchMock = vi.fn();
+beforeEach(() => {
+  vi.stubGlobal("fetch", fetchMock);
+});
+
 import { fetchHomeLayout } from "./home-layout-api";
 
 describe("fetchHomeLayout", () => {
@@ -11,12 +15,12 @@ describe("fetchHomeLayout", () => {
   });
 
   it("reads the tenant route wrapper payload", async () => {
-    vi.mocked(sessionFetch).mockResolvedValue({
+    fetchMock.mockResolvedValue({
       ok: true,
       json: () =>
         Promise.resolve({
           data: {
-            blocks: [{ key: "section.staff_notices", span: 4, col: 0, row: 0 }],
+            blocks: [{ key: "section.day_changes", span: 4, col: 0, row: 0 }],
             overrides: { "section.birthdays": false },
             policies: { "tile.students_present": "required" },
             can_manage_policies: true,
@@ -25,7 +29,7 @@ describe("fetchHomeLayout", () => {
     } as Response);
 
     await expect(fetchHomeLayout()).resolves.toEqual({
-      blocks: [{ key: "section.staff_notices", span: 4, col: 0, row: 0 }],
+      blocks: [{ key: "section.day_changes", span: 4, col: 0, row: 0 }],
       overrides: { "section.birthdays": false },
       policies: { "tile.students_present": "required" },
       canManagePolicies: true,
@@ -33,7 +37,7 @@ describe("fetchHomeLayout", () => {
   });
 
   it("uses the recommended layout only when access is unavailable", async () => {
-    vi.mocked(sessionFetch).mockResolvedValue({
+    fetchMock.mockResolvedValue({
       ok: false,
       status: 403,
     } as Response);
@@ -47,19 +51,17 @@ describe("fetchHomeLayout", () => {
   });
 
   it("throws network failures so SWR can retry the read", async () => {
-    vi.mocked(sessionFetch).mockRejectedValue(new Error("network unavailable"));
+    fetchMock.mockRejectedValue(new Error("network unavailable"));
 
     await expect(fetchHomeLayout()).rejects.toThrow("network unavailable");
   });
 
   it("throws unexpected HTTP failures so SWR can retry the read", async () => {
-    vi.mocked(sessionFetch).mockResolvedValue({
+    fetchMock.mockResolvedValue({
       ok: false,
       status: 500,
     } as Response);
 
-    await expect(fetchHomeLayout()).rejects.toThrow(
-      "home layout request failed (500)",
-    );
+    await expect(fetchHomeLayout()).rejects.toMatchObject({ status: 500 });
   });
 });

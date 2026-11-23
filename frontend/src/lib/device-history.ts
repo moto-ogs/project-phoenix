@@ -3,7 +3,7 @@
 // Schulportal und Operator-Portal zeigen dieselben Einträge; nur das
 // Operator-Portal nennt die Schule, nur das Schulportal den Namen der
 // Person aus der Schule.
-import { apiErrorFromResponse, transportFetch } from "./api-error";
+import { bffJson } from "./bff-fetch";
 import {
   berlinTodayISO,
   formatStatusDate,
@@ -14,6 +14,8 @@ import {
   getDeviceStatusDisplayName,
   getDeviceTypeDisplayName,
 } from "./iot-helpers";
+import type * as iotContract from "./contract/iot.generated";
+import type * as operatorDevicesContract from "./contract/operator-devices.generated";
 
 /** What happened to the device; the backend's closed set. */
 type DeviceHistoryAction =
@@ -46,28 +48,26 @@ export interface DeviceHistoryEntry {
   readonly schoolName?: string;
 }
 
-interface BackendHistoryEntry {
-  id: string;
-  action: string;
-  actor_kind: string;
-  actor_name?: string | null;
-  changes?: Record<string, DeviceHistoryChange> | null;
-  occurred_at: string;
-  school_name?: string;
-}
-
-/** Maps the wire entry of either portal to the shared shape. */
+/**
+ * Maps the wire entry of either portal to the shared shape: the school
+ * portal's entry names the person, the operator's the school.
+ */
 export function mapDeviceHistoryEntry(
-  raw: BackendHistoryEntry,
+  raw:
+    | iotContract.LifecycleEventResponse
+    | operatorDevicesContract.deviceHistoryResponse,
 ): DeviceHistoryEntry {
+  const actorName = "actor_name" in raw ? raw.actor_name?.trim() : undefined;
   return {
     id: raw.id,
+    // An action this build does not know reads as „Geändert“ in
+    // describeDeviceHistoryEntry.
     action: raw.action,
     actorKind: raw.actor_kind,
-    actorName: raw.actor_name?.trim() ? raw.actor_name.trim() : null,
+    actorName: actorName ? actorName : null,
     changes: raw.changes ?? {},
     occurredAt: raw.occurred_at,
-    ...(raw.school_name === undefined ? {} : { schoolName: raw.school_name }),
+    ...("school_name" in raw ? { schoolName: raw.school_name } : {}),
   };
 }
 
@@ -78,18 +78,10 @@ export function mapDeviceHistoryEntry(
 export async function fetchDeviceHistory(
   deviceId: string,
 ): Promise<DeviceHistoryEntry[]> {
-  const response = await transportFetch(
-    `/api/iot/${encodeURIComponent(deviceId)}/history`,
-  );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `device history failed (${response.status})`,
-    );
-  }
-  const body = (await response.json()) as
-    BackendHistoryEntry[] | { data?: BackendHistoryEntry[] | null };
-  const rows = Array.isArray(body) ? body : (body.data ?? []);
+  const rows = await bffJson("tenant", "GET /api/iot/{id}/history", {
+    params: { id: deviceId },
+    errorMessage: "device history failed",
+  });
   return rows.map(mapDeviceHistoryEntry);
 }
 

@@ -23,10 +23,10 @@ import (
 const absenceReportPermission = "class_day:absence_report_write"
 
 type absenceReportRow struct {
-	StudentID      int64  `json:"student_id"`
-	Status         string `json:"status"`
-	Unreported     bool   `json:"unreported"`
-	StatusBySchool bool   `json:"status_by_school"`
+	StudentID      testpkg.ID `json:"student_id"`
+	Status         string     `json:"status"`
+	Unreported     bool       `json:"unreported"`
+	StatusBySchool bool       `json:"status_by_school"`
 }
 
 // absenceRows reads the class view and returns its rows by child and the
@@ -44,7 +44,7 @@ func (f *morningAttendanceFixture) absenceRows(t *testing.T, perms ...string) (b
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &envelope))
 	rows := map[int64]absenceReportRow{}
 	for _, row := range envelope.Data.Rows {
-		rows[row.StudentID] = row
+		rows[int64(row.StudentID)] = row
 	}
 	return envelope.Data.CanReport, rows
 }

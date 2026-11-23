@@ -6,6 +6,9 @@ import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { DesktopOnlyNotice } from "~/components/ui/desktop-only-notice";
 import { useRequirePermission } from "~/lib/hooks/use-require-permission";
 
+const ENROLLMENT_FORM_INFO =
+  "Hier siehst du, welche Fragen Eltern bei der Anmeldung beantworten. Meist reicht das Basisformular. Eine eigene Vorlage legst du nur an, wenn dir etwas fehlt.";
+
 export default function EnrollmentFormPage() {
   const { isReady } = useRequirePermission("config:manage");
   // Statuszeile des Seitenkopfs: die Vorlagen, die der Editor ohnehin lädt.
@@ -36,6 +39,7 @@ export default function EnrollmentFormPage() {
   return (
     <TenantPage
       title="Anmeldeformulare"
+      info={ENROLLMENT_FORM_INFO}
       stats={statusLine}
       statsLoading={statusLine === null && !loadFailed}
       loading={!isReady}

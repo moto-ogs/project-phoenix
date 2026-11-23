@@ -11,6 +11,7 @@ import (
 	common "github.com/moto-ogs/project-phoenix/api/common"
 	careplan "github.com/moto-ogs/project-phoenix/modules/careplan"
 	sessiontoken "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	tenant "github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -52,8 +53,8 @@ func studentDocumentActor(r *http.Request) (careplan.StudentDocumentActor, error
 
 // StudentDocumentResponse is one document on the wire.
 type StudentDocumentResponse struct {
-	ID            int64     `json:"id"`
-	StudentID     int64     `json:"student_id"`
+	ID            ident.ID  `json:"id"`
+	StudentID     ident.ID  `json:"student_id"`
 	Category      string    `json:"category"`
 	CategoryLabel string    `json:"category_label"`
 	Filename      string    `json:"filename"`
@@ -65,13 +66,17 @@ type StudentDocumentResponse struct {
 	// PDF is rendered by the accident report route.
 	HasFile        bool                    `json:"has_file"`
 	AccidentReport *AccidentReportResponse `json:"accident_report,omitempty"`
+	// Version is the read-state token of an accident report
+	// (careplan.AccidentReportVersion, ADR 0311): changing, signing and the
+	// paper copy send it back as expected_version.
+	Version string `json:"version,omitempty"`
 }
 
 // StudentDocumentListResponse is the list GET: the documents the caller may
 // see plus the caller's visible categories (drives the filter and the upload
 // category picker).
 type StudentDocumentListResponse struct {
-	StudentID         int64                     `json:"student_id"`
+	StudentID         ident.ID                  `json:"student_id"`
 	Documents         []StudentDocumentResponse `json:"documents"`
 	VisibleCategories []StudentDocumentCategory `json:"visible_categories"`
 }
@@ -84,9 +89,14 @@ type StudentDocumentCategory struct {
 }
 
 func newStudentDocumentResponse(doc careplan.CareDocument) StudentDocumentResponse {
+	version := ""
+	if doc.AccidentReport != nil {
+		version = careplan.AccidentReportVersion(doc)
+	}
 	return StudentDocumentResponse{
-		ID:            doc.ID,
-		StudentID:     doc.StudentID,
+		Version:       version,
+		ID:            ident.ID(doc.ID),
+		StudentID:     ident.ID(doc.StudentID),
 		Category:      doc.Category,
 		CategoryLabel: studentDocumentLabel(doc.Category),
 		Filename:      doc.FilenameDisplay,
@@ -140,7 +150,7 @@ func (rs *Resource) listStudentDocuments(w http.ResponseWriter, r *http.Request)
 	rs.retryStudentDocumentCleanups(r.Context(), id, actor, "retry")
 
 	resp := &StudentDocumentListResponse{
-		StudentID:         id,
+		StudentID:         ident.ID(id),
 		Documents:         make([]StudentDocumentResponse, 0, len(docs)),
 		VisibleCategories: make([]StudentDocumentCategory, 0, len(visible)),
 	}
@@ -207,7 +217,7 @@ func (rs *Resource) retryStudentDocumentCleanups(ctx context.Context, studentID 
 // metadata transaction before returning, and this handler disposes of the
 // object on failure.
 func (rs *Resource) uploadStudentDocument(w http.ResponseWriter, r *http.Request) {
-	upload, ok := rs.openStudentDocumentUpload(w, r)
+	upload, ok := rs.openStudentDocumentUpload(w, r, parseStudentDocument)
 	if !ok {
 		return
 	}
@@ -257,9 +267,18 @@ type studentDocumentUpload struct {
 	storedName  string
 }
 
+// Child documents take PDF, DOCX, PNG and JPEG; the paper copy of an accident
+// report is a scan (PDF, PNG, JPEG). Both check the declared type and name
+// on top of the content (#2352).
+var (
+	parseStudentDocument = common.Declared(common.ParseDocumentWithLimits, common.DeclaredDocumentTypes)
+	parseAccidentScan    = common.Declared(common.ParseScanWithLimits, common.DeclaredScanTypes)
+)
+
 // openStudentDocumentUpload resolves the caller, the tenant and the storage
-// and parses the multipart body. The caller closes the uploaded file.
-func (rs *Resource) openStudentDocumentUpload(w http.ResponseWriter, r *http.Request) (*studentDocumentUpload, bool) {
+// and parses the multipart body with parse. The caller closes the uploaded
+// file.
+func (rs *Resource) openStudentDocumentUpload(w http.ResponseWriter, r *http.Request, parse common.UploadParser) (*studentDocumentUpload, bool) {
 	id, ok := common.ParseInt64IDWithError(w, r, "id", common.MsgInvalidStudentID)
 	if !ok {
 		return nil, false
@@ -280,7 +299,7 @@ func (rs *Resource) openStudentDocumentUpload(w http.ResponseWriter, r *http.Req
 		return nil, false
 	}
 
-	uploaded, err := common.ParseDocumentWithLimits(w, r, "file", maxStudentDocumentFile, maxStudentDocumentBody)
+	uploaded, err := parse(w, r, "file", maxStudentDocumentFile, maxStudentDocumentBody)
 	if err != nil {
 		common.RenderError(w, r, common.ErrorUpload(err, maxStudentDocumentFile))
 		return nil, false
@@ -506,5 +525,5 @@ func (rs *Resource) deleteStudentDocument(w http.ResponseWriter, r *http.Request
 			coordinator.CleanupDocument(cleanupCtx, tenantID, id, documentID, storedName, "delete")
 		})
 	}
-	common.Respond(w, r, http.StatusOK, studentDocumentDeletedResponse{StudentID: id}, "Student document deleted successfully")
+	common.Respond(w, r, http.StatusOK, studentDocumentDeletedResponse{StudentID: ident.ID(id)}, "Student document deleted successfully")
 }

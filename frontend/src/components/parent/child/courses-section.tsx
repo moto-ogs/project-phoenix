@@ -24,11 +24,10 @@ import {
   getChildCourses,
   requestChildCourse,
   withdrawChildCourseRequest,
-  type ChildCourses,
-  type CourseItem,
 } from "~/lib/parent-api";
 import { activitiesConcept } from "~/lib/concepts/activities";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 const logger = createLogger({ component: "CoursesSection" });
 
@@ -92,8 +91,8 @@ export function CoursesSection({
   >(() => undefined);
 
   const dayList = useCallback(
-    (days: string[]) => {
-      const weekdays = days.flatMap((day) => {
+    (days: readonly string[] | null) => {
+      const weekdays = (days ?? []).flatMap((day) => {
         const weekday = DAY_KEY_TO_WEEKDAY[day];
         return weekday === undefined ? [] : [weekday];
       });
@@ -111,7 +110,7 @@ export function CoursesSection({
       setBusyCourseId(courseId);
       clearActionError();
       try {
-        const next: ChildCourses =
+        const next: parentMeContract.CoursesResponse =
           kind === "request"
             ? await requestChildCourse(studentId, courseId, note)
             : await withdrawChildCourseRequest(
@@ -190,12 +189,11 @@ export function CoursesSection({
 
   const requestable =
     courses.enabled &&
-    (courses.can_request ?? true) &&
+    courses.can_request &&
     !careEnded &&
     !courses.other_request_pending &&
     !courses.pending_request_id;
-  const reasonMissing =
-    (courses.reason_required ?? false) && note.trim() === "";
+  const reasonMissing = courses.reason_required && note.trim() === "";
 
   return (
     <ParentSection
@@ -204,7 +202,7 @@ export function CoursesSection({
       concept={activitiesConcept}
     >
       <FormErrorAlert message={actionErrors.error} />
-      {courses.items.length === 0 ? (
+      {(courses.items ?? []).length === 0 ? (
         <EmptyState
           className="border-t border-gray-100"
           title={
@@ -215,7 +213,7 @@ export function CoursesSection({
         />
       ) : (
         <ul className="space-y-2">
-          {courses.items.map((course) => (
+          {(courses.items ?? []).map((course) => (
             <li
               key={course.id}
               className="moto-content-surface flex flex-wrap items-start justify-between gap-3 rounded-xl border p-3"
@@ -279,17 +277,17 @@ export function CoursesSection({
           required
         />
       ) : null}
-      {courses.items.length > 0 && careEnded ? (
+      {(courses.items ?? []).length > 0 && careEnded ? (
         <p className="text-sm text-gray-500">{t("courses.careEnded")}</p>
       ) : null}
-      {courses.items.length > 0 &&
+      {(courses.items ?? []).length > 0 &&
       !careEnded &&
       courses.can_request === false ? (
         <p className="text-sm text-gray-500">
           {t("courses.noSubmitPermission")}
         </p>
       ) : null}
-      {courses.items.length > 0 && courses.effective_from ? (
+      {(courses.items ?? []).length > 0 && courses.effective_from ? (
         <p className="text-sm text-gray-500">
           {t("courses.effectiveFrom", {
             date: formatDate(courses.effective_from, false, locale),
@@ -301,7 +299,9 @@ export function CoursesSection({
 }
 
 /** Freie Plätze im Klartext. Ohne Grenze steht hier nichts. */
-function CourseSlots({ course }: Readonly<{ course: CourseItem }>) {
+function CourseSlots({
+  course,
+}: Readonly<{ course: parentMeContract.CourseItemResponse }>) {
   const t = useCareTermTranslations("parentMasterData");
   if (course.free_slots === undefined) return null;
   if (course.free_slots <= 0) {
@@ -319,7 +319,9 @@ function CourseSlots({ course }: Readonly<{ course: CourseItem }>) {
 }
 
 /** Der Stand des Kindes bei diesem Kurs, in einem Wort. */
-function CourseState({ course }: Readonly<{ course: CourseItem }>) {
+function CourseState({
+  course,
+}: Readonly<{ course: parentMeContract.CourseItemResponse }>) {
   const t = useCareTermTranslations("parentMasterData");
   if (course.booked) {
     return <StatusBadge label={t("courses.booked")} tone="green" />;
@@ -350,8 +352,8 @@ function CourseAction({
   onWithdraw,
   careEnded,
 }: Readonly<{
-  course: CourseItem;
-  courses: ChildCourses;
+  course: parentMeContract.CourseItemResponse;
+  courses: parentMeContract.CoursesResponse;
   requestable: boolean;
   reasonMissing: boolean;
   busy: boolean;

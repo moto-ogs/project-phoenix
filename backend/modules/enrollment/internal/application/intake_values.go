@@ -16,10 +16,13 @@ type SubmitRequest struct {
 	// (#4680). Versions never change, so the snapshot proves the shown legal
 	// texts are the stored ones only when it equals the version in force.
 	DisplayedFormSchemaID int64
-	TenantID              int64
-	PhaseID               int64
-	RemoteIP              string
-	LateInviteToken       string
+	// ExpectedTermsFingerprint is the enrollment.FormTermsFingerprint the
+	// filled-in form showed (ADR 0311).
+	ExpectedTermsFingerprint string
+	TenantID                 int64
+	PhaseID                  int64
+	RemoteIP                 string
+	LateInviteToken          string
 	// The trust of a submission. Only the intake sets these: the staff
 	// manual enrollment all four, a late invite AllowClosedPhase (#6113).
 	SkipRateLimit            bool
@@ -69,6 +72,7 @@ func decodeSubmitRequest(in enrollment.SubmitRequest) SubmitRequest {
 		GuardianLastName: in.GuardianLastName, GuardianEmail: in.GuardianEmail, GuardianPhone: in.GuardianPhone,
 		GuardianAccountID: in.GuardianAccountID, GuardianSubmitEligible: in.GuardianSubmitEligible,
 		AdditionalGuardians: in.AdditionalGuardians, Signature: in.Signature, DisplayedFormSchemaID: in.DisplayedFormSchemaID,
+		ExpectedTermsFingerprint: in.ExpectedTermsFingerprint,
 	}
 	out.SourceMetadata = submittedMap(in.SourceMetadata)
 	out.ConsentFlags = submittedMap(in.ConsentFlags)

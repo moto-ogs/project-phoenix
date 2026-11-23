@@ -17,17 +17,17 @@ const (
 
 type groupSubstitutionRow struct {
 	bun.BaseModel     `bun:"table:education.group_substitution,alias:group_substitution"`
-	ID                int64        `bun:"id,pk,autoincrement"`
-	TenantID          int64        `bun:"tenant_id,notnull"`
-	TargetType        string       `bun:"target_type,notnull"`
-	GroupID           int64        `bun:"group_id,notnull"`
-	RegularStaffID    *int64       `bun:"regular_staff_id"`
-	SubstituteStaffID int64        `bun:"substitute_staff_id,notnull"`
-	StartDate         calendarDate `bun:"start_date,notnull,type:date"`
-	EndDate           calendarDate `bun:"end_date,notnull,type:date"`
-	Reason            string       `bun:"reason"`
-	CreatedAt         time.Time    `bun:"created_at,nullzero,notnull"`
-	UpdatedAt         time.Time    `bun:"updated_at,nullzero,notnull"`
+	ID                int64        `bun:"id,pk,autoincrement" json:"id"`
+	TenantID          int64        `bun:"tenant_id,notnull" json:"tenant_id"`
+	TargetType        string       `bun:"target_type,notnull" json:"target_type"`
+	GroupID           int64        `bun:"group_id,notnull" json:"group_id"`
+	RegularStaffID    *int64       `bun:"regular_staff_id" json:"regular_staff_id"`
+	SubstituteStaffID int64        `bun:"substitute_staff_id,notnull" json:"substitute_staff_id"`
+	StartDate         calendarDate `bun:"start_date,notnull,type:date" json:"start_date"`
+	EndDate           calendarDate `bun:"end_date,notnull,type:date" json:"end_date"`
+	Reason            string       `bun:"reason" json:"reason"`
+	CreatedAt         time.Time    `bun:"created_at,nullzero,notnull" json:"created_at"`
+	UpdatedAt         time.Time    `bun:"updated_at,nullzero,notnull" json:"updated_at"`
 }
 
 func (s *Store) FindGroupSubstitution(ctx context.Context, id int64, lock bool) (domain.GroupSubstitution, bool, domain.OperationStats, error) {

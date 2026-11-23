@@ -940,55 +940,6 @@ func TestPresenceAttendance_GetStudentCurrentStatus(t *testing.T) {
 	})
 }
 
-// TestAttendanceRepository_Update tests updating attendance records
-func TestPresenceAttendance_Update(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-
-	repo := newPresence(t, db)
-	ctx := testpkg.Ctx(t)
-	data := createAttendanceTestData(t, db)
-
-	t.Run("updates attendance with check-out time", func(t *testing.T) {
-		now := time.Now()
-		date := calendar.TodayDate()
-
-		attendance := studentpresence.Attendance{
-			StudentID:   data.Student1ID,
-			Date:        date.String(),
-			CheckInTime: now,
-			CheckedInBy: data.Staff1ID,
-			DeviceID:    data.Device1ID,
-		}
-
-		attendance, err := repo.RecordAttendance(ctx, attendance)
-		require.NoError(t, err)
-
-		// Update with check-out
-		checkOutTime := now.Add(3 * time.Hour)
-		checkedOutBy := data.Staff2ID
-		attendance.CheckOutTime = &checkOutTime
-		attendance.CheckedOutBy = &checkedOutBy
-
-		_, err = repo.ReviseAttendance(ctx, attendance)
-		require.NoError(t, err)
-
-		// Verify update
-		found, err := repo.FindAttendance(ctx, attendance.ID)
-		require.NoError(t, err)
-		assert.NotNil(t, found.CheckOutTime)
-		assert.NotNil(t, found.CheckedOutBy)
-		assert.Equal(t, checkedOutBy, *found.CheckedOutBy)
-	})
-
-	t.Run("update with empty attendance should fail", func(t *testing.T) {
-		_, err := repo.ReviseAttendance(ctx, studentpresence.Attendance{})
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "invalid calendar date")
-	})
-}
-
 // TestAttendanceRepository_FindByID tests finding by ID
 func TestPresenceAttendance_FindByID(t *testing.T) {
 	t.Parallel()

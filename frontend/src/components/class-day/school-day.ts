@@ -7,11 +7,7 @@
 //
 // Diese Datei enthält nur die Regeln, kein React, kein Fetch.
 
-import type {
-  SchoolDayChild,
-  SchoolDayReport,
-  SchoolDayTotals,
-} from "~/lib/school-class-day-api";
+import type * as schoolClassDayContract from "~/lib/contract/school-class-day.generated";
 import { classDayOverviewPath, classDayPath } from "./routes";
 
 /** Query-Parameter, unter dem die geöffnete Liste in der Adresse steht. */
@@ -30,8 +26,8 @@ export type SchoolDayListKey =
 export interface SchoolDayList {
   readonly key: SchoolDayListKey;
   readonly label: string;
-  readonly count: (totals: SchoolDayTotals) => number;
-  readonly matches: (child: SchoolDayChild) => boolean;
+  readonly count: (totals: schoolClassDayContract.SchoolDayTotals) => number;
+  readonly matches: (child: schoolClassDayContract.SchoolDayChild) => boolean;
   /** Nur zeigen, wenn eine Anmeldephase den Tag abdeckt. */
   readonly needsEnrollment?: boolean;
 }
@@ -102,7 +98,7 @@ const SCHOOL_DAY_LISTS: readonly SchoolDayList[] = [
  * bleibt; eine 0 bei „Bleiben in der OGS“ wäre dann eine falsche Aussage.
  */
 export function visibleSchoolDayLists(
-  report: SchoolDayReport,
+  report: schoolClassDayContract.SchoolDayReport,
 ): readonly SchoolDayList[] {
   return SCHOOL_DAY_LISTS.filter(
     (list) => !list.needsEnrollment || report.enrollment_known,
@@ -137,18 +133,18 @@ export function schoolDayClassPath(
 
 export interface SchoolDayClassGroup {
   readonly schoolClass: string;
-  readonly children: readonly SchoolDayChild[];
+  readonly children: readonly schoolClassDayContract.SchoolDayChild[];
 }
 
 /** Die Kinder einer Liste, nach Klasse gruppiert, ohne leere Klassen. */
 export function schoolDayChildrenByClass(
-  report: SchoolDayReport,
+  report: schoolClassDayContract.SchoolDayReport,
   list: SchoolDayList,
 ): SchoolDayClassGroup[] {
-  return report.classes
+  return (report.classes ?? [])
     .map((klass) => ({
       schoolClass: klass.school_class,
-      children: klass.children.filter(list.matches),
+      children: (klass.children ?? []).filter(list.matches),
     }))
     .filter((group) => group.children.length > 0);
 }

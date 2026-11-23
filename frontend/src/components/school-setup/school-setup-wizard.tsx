@@ -11,11 +11,13 @@ import { usePathname } from "next/navigation";
 import { CoachMark } from "~/components/ui/coach-mark";
 import { ConfirmationModal } from "~/components/ui/modal";
 import { useApiFormError } from "~/contexts/ToastContext";
+import { trackOnboardingSurface } from "~/lib/analytics";
 import {
   buildHelpGroupHref,
   buildHelpHref,
   type HelpTopicId,
 } from "~/lib/help-topics";
+import { useMessageComposerOnScreen } from "~/lib/hooks/use-message-composer-presence";
 import { createLogger } from "~/lib/logger";
 import {
   completeSchoolSetup,
@@ -26,7 +28,7 @@ import {
 } from "~/lib/school-setup-api";
 import { useShellAuthSafe } from "~/lib/shell-auth-context";
 import { staffWithoutTargetHref } from "~/lib/time-account-links";
-import { useNFCEnabled } from "~/lib/tenant-context";
+import { useNFCEnabled, useTenantSlugSafe } from "~/lib/tenant-context";
 import { SetupBeacon, SchoolSetupChecklist } from "./school-setup-checklist";
 import {
   applicableSteps,
@@ -57,15 +59,29 @@ type RunAction = (
 /** Knopf unten rechts oder offene Checkliste. */
 type View = "beacon" | "checklist";
 
-/** Einmal pro Anmeldung öffnet sich der Assistent von selbst. */
-function claimFirstOpen(accountID: string): boolean {
-  const key = `school-setup-opened:${accountID}`;
+/** Einmal pro Anmeldung und Schule öffnet sich der Assistent von selbst. */
+function firstOpenKey(tenantSlug: string, accountID: string): string {
+  return `school-setup-opened:${tenantSlug}:${accountID}`;
+}
+
+/** Ob sich die Checkliste in dieser Sitzung schon von selbst gezeigt hat. */
+function openedThisSession(tenantSlug: string, accountID: string): boolean {
   try {
-    if (sessionStorage.getItem(key)) return false;
-    sessionStorage.setItem(key, "1");
-    return true;
+    return sessionStorage.getItem(firstOpenKey(tenantSlug, accountID)) !== null;
   } catch {
-    return false;
+    return true;
+  }
+}
+
+/**
+ * Merkt sich das erste Öffnen erst, wenn die Checkliste zu sehen war: Hielt
+ * ein Chat sie verdeckt, geht sie nach dem Neuladen noch einmal auf (#7686).
+ */
+function rememberOpened(tenantSlug: string, accountID: string): void {
+  try {
+    sessionStorage.setItem(firstOpenKey(tenantSlug, accountID), "1");
+  } catch {
+    // Ohne Sitzungsspeicher öffnet sie sich ohnehin nicht von selbst.
   }
 }
 
@@ -89,6 +105,10 @@ function SchoolSetupWizardForAdmin({
   viaTraeger,
 }: Readonly<{ viaTraeger: boolean }>) {
   const [view, setView] = useState<View>("beacon");
+  // Ein offener Chat hat seinen Senden-Knopf genau dort, wo Knopf und
+  // Checkliste unten am Rand stehen (#7686). Solange er offen ist, treten
+  // beide zurück.
+  const chatOpen = useMessageComposerOnScreen();
   const { state, accountID, refresh, replace } = useSchoolSetup(
     view === "checklist",
   );
@@ -173,12 +193,63 @@ function SchoolSetupWizardForAdmin({
 
   const nextOpen = state ? firstOpenStep(state) : null;
 
-  // Beim ersten Aufruf der Sitzung geht die Checkliste von selbst auf.
+  // Beim ersten Aufruf der Sitzung geht die Checkliste von selbst auf. Das
+  // zählt als angezeigte Fläche des Einstiegs (#7554); klappt die Person sie
+  // danach zum ersten Mal ein oder blendet sie aus, hat sie die Fläche
+  // geschlossen. Abschließen, Überspringen und Ausblenden als Kernaktion
+  // zählt das Backend.
+  const openedByItself = useRef<{
+    readonly accountID: string;
+    readonly tenantSlug: string;
+  } | null>(null);
+  const tenantSlug = useTenantSlugSafe();
+  // Von selbst geöffnet, aber noch nie zu sehen gewesen: „angezeigt“ zählt
+  // erst, wenn die Checkliste wirklich auf dem Bildschirm steht.
+  const [shownPending, setShownPending] = useState<{
+    readonly accountID: string;
+    readonly tenantSlug: string;
+  } | null>(null);
   useEffect(() => {
-    if (visible && accountID && claimFirstOpen(accountID)) {
-      setView("checklist");
+    const opened = openedByItself.current;
+    if (
+      opened &&
+      (opened.accountID !== accountID || opened.tenantSlug !== tenantSlug)
+    ) {
+      openedByItself.current = null;
     }
-  }, [visible, accountID]);
+    if (
+      visible &&
+      tenantSlug &&
+      accountID &&
+      !openedThisSession(tenantSlug, accountID)
+    ) {
+      setView("checklist");
+      setShownPending({ accountID, tenantSlug });
+    }
+  }, [visible, tenantSlug, accountID]);
+  useEffect(() => {
+    if (!shownPending || !visible || view !== "checklist" || chatOpen) return;
+    setShownPending(null);
+    rememberOpened(shownPending.tenantSlug, shownPending.accountID);
+    if (trackOnboardingSurface("shown", "setup_checklist")) {
+      openedByItself.current = shownPending;
+    }
+  }, [shownPending, visible, view, chatOpen]);
+  const closedByPerson = () => {
+    const opened = openedByItself.current;
+    if (
+      !opened ||
+      opened.accountID !== accountID ||
+      opened.tenantSlug !== tenantSlug
+    )
+      return;
+    openedByItself.current = null;
+    trackOnboardingSurface("dismissed", "setup_checklist");
+  };
+  const collapse = () => {
+    closedByPerson();
+    setView("beacon");
+  };
 
   // Aufgeklappt ist der nächste offene Schritt, solange die Person nicht
   // selbst einen anderen gewählt hat. Wird er erledigt, rückt der nächste nach.
@@ -217,9 +288,14 @@ function SchoolSetupWizardForAdmin({
       total: stopTotal,
       target,
       missing,
+      usesMobileTarget,
     } = tour.active;
     return (
       <CoachMark
+        // Der Menü-Stopp zeigt am Telefon wieder auf den Auslöser. Das Blatt
+        // des vorigen Stopps muss vorher aus dem Overlay-Stapel verschwinden,
+        // sonst verdeckt es die neue Sprechblase.
+        key={usesMobileTarget ? `mobile-target-${stopIndex}` : undefined}
         // Dasselbe Element über alle Stationen: Die Abdunklung bleibt beim
         // Wechsel stehen, der Bildschirm blitzt nicht auf. Solange die Stelle
         // gesucht wird, wartet nur die Sprechblase; in der Mitte steht sie
@@ -251,6 +327,8 @@ function SchoolSetupWizardForAdmin({
       />
     );
   }
+
+  if (chatOpen) return null;
 
   if (view === "beacon") {
     return (
@@ -290,7 +368,7 @@ function SchoolSetupWizardForAdmin({
           void run(() => setSchoolSetupStepSkipped(step, skipped))
         }
         onComplete={() => void run(completeSchoolSetup)}
-        onCollapse={() => setView("beacon")}
+        onCollapse={collapse}
         onDismiss={() => setConfirmDismiss(true)}
       />
       {/* Ausblenden ist endgültig: kein Weg zurück in den Einstellungen,
@@ -301,7 +379,10 @@ function SchoolSetupWizardForAdmin({
         onConfirm={() =>
           void run(
             () => setSchoolSetupDismissed(true),
-            () => setConfirmDismiss(false),
+            () => {
+              closedByPerson();
+              setConfirmDismiss(false);
+            },
             // Der Grund steht in der Checkliste; der Dialog davor würde ihn
             // verdecken.
             () => setConfirmDismiss(false),

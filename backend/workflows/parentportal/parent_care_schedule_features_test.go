@@ -186,9 +186,11 @@ func TestChildFeatures_HidesAnotherGuardiansRequestUntilNamedShare(t *testing.T)
 	assert.False(t, flags.HasOpenChangeRequest, "another guardian must not learn that a private request exists")
 
 	var sharing parentService.RequestSharingService = svc
+	read, err := sharing.GetRequestSharing(ctx, author.AccountID, author.StudentID, parentService.RequestShareCareSchedule, created.PendingRequest.ID)
+	require.NoError(t, err)
 	_, err = sharing.SetRequestSharing(
 		ctx, author.AccountID, author.StudentID, parentService.RequestShareCareSchedule,
-		created.PendingRequest.ID, []int64{recipient.GuardianProfileID},
+		created.PendingRequest.ID, []int64{recipient.GuardianProfileID}, read.Version,
 	)
 	require.NoError(t, err)
 	flags, err = svc.ChildFeatures(ctx, recipient.AccountID, author.StudentID)

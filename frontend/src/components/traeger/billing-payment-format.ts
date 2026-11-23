@@ -7,13 +7,14 @@
 import { formatDate } from "~/lib/date-helpers";
 import type {
   BillingService,
-  FamilyBilling,
+  BillingTerms,
   InvoicePayment,
   PaymentMethod,
   RecipientKind,
   RunDueDate,
 } from "~/lib/traeger-billing-terms-api";
 import { PAYMENT_METHODS } from "~/lib/traeger-billing-terms-api";
+import { traegerPath } from "~/lib/traeger-url";
 
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   transfer: "Überweisung",
@@ -76,7 +77,7 @@ export function recipientLine(recipient: {
 
 /** "fällig am 15.12.2026". */
 export function dueOnText(payment: InvoicePayment): string {
-  return `fällig am ${formatDate(payment.dueOn)}`;
+  return payment.dueOn ? `fällig am ${formatDate(payment.dueOn)}` : "";
 }
 
 /**
@@ -96,7 +97,7 @@ export function runDueDatesText(dates: readonly RunDueDate[]): string | null {
   return ordered
     .map(
       (due) =>
-        `${PAYMENT_METHOD_LABELS[due.paymentMethod]} am ${formatDate(due.dueOn)}`,
+        `${PAYMENT_METHOD_LABELS[due.paymentMethod]} am ${formatDate(due.dueOn ?? "")}`,
     )
     .join(" · ");
 }
@@ -105,9 +106,9 @@ export function runDueDatesText(dates: readonly RunDueDate[]): string | null {
 export function invoiceDueDatesText(
   payments: readonly (InvoicePayment | null | undefined)[],
 ): string | null {
-  const dates = new Map<string, RunDueDate>();
+  const dates = new Map<string, RunDueDate & { readonly dueOn: string }>();
   for (const payment of payments) {
-    if (payment?.dueOn) {
+    if (payment?.dueOn && payment.method) {
       dates.set(`${payment.method}:${payment.dueOn}`, {
         paymentMethod: payment.method,
         dueOn: payment.dueOn,
@@ -130,33 +131,66 @@ export function paymentMethodsText(
   return known.map((method) => PAYMENT_METHOD_LABELS[method]).join(", ");
 }
 
+/** The query value that says the payment page was opened from the contract. */
+export const FAMILY_PAYMENT_FROM_CONTRACT = "vertrag";
+
 /**
- * The deviation that applies to an invoice: the one saved for its
- * family key, else its contract for legacy invoices without that key.
- * A payer's e-mail never identifies a family.
+ * How the list of families filters by the payment method the office set
+ * (#7770). The value travels in the address („?zahlung=ohne“), so the list
+ * comes back filtered after a family was saved.
  */
-export function findFamilyBilling(
-  families: readonly FamilyBilling[],
-  invoice: {
-    readonly contractId: string;
-    readonly familyEmail?: string;
-    readonly recipientEmail: string;
-    readonly recipientKind?: RecipientKind | "";
-  },
-): FamilyBilling | null {
-  const familyEmail = invoice.familyEmail?.trim().toLowerCase();
-  if (familyEmail) {
-    return (
-      families.find((family) => family.familyEmail === familyEmail) ?? null
-    );
-  }
-  const byContract = families.find(
-    (family) =>
-      family.contractId !== "" && family.contractId === invoice.contractId,
+const FAMILY_PAYMENT_FILTERS = ["ohne", "lastschrift", "ueberweisung"] as const;
+export type FamilyPaymentFilter = (typeof FAMILY_PAYMENT_FILTERS)[number];
+
+/** The filter a query value names, "" for none or an unknown one. */
+export function familyPaymentFilterOf(
+  value: string | null | undefined,
+): FamilyPaymentFilter | "" {
+  return FAMILY_PAYMENT_FILTERS.find((filter) => filter === value) ?? "";
+}
+
+/** The list of families, filtered by the payment method when given. */
+export function familiesPath(filter: FamilyPaymentFilter | "" = ""): string {
+  const path = traegerPath("/traeger/abrechnung/familien");
+  return filter ? `${path}?zahlung=${filter}` : path;
+}
+
+/**
+ * The address where recipient and payment of a contract's family are set
+ * without a run (#7770). `from` says where the page leads back to: the
+ * contract, or the list of families with the filter it was opened under.
+ */
+export function familyPaymentPath(
+  contractId: string,
+  from: { contract: true } | { filter?: FamilyPaymentFilter | "" } = {},
+): string {
+  const path = traegerPath(
+    `/traeger/abrechnung/familien/zahlung/${encodeURIComponent(contractId)}`,
   );
-  if (byContract) return byContract;
-  if (invoice.recipientKind === "payer") return null;
-  const email = invoice.recipientEmail.trim().toLowerCase();
-  if (!email) return null;
-  return families.find((family) => family.familyEmail === email) ?? null;
+  if ("contract" in from) return `${path}?von=${FAMILY_PAYMENT_FROM_CONTRACT}`;
+  return from.filter ? `${path}?zahlung=${from.filter}` : path;
+}
+
+/**
+ * What „Wie in den Abrechnungsvorgaben“ takes today: one payment method when
+ * every service has the same, else the method per service; null when no
+ * service names one this build knows.
+ */
+export function termsPaymentText(terms: BillingTerms): string | null {
+  const known = terms.terms.flatMap((entry) =>
+    entry.paymentMethod
+      ? [{ service: entry.service, method: entry.paymentMethod }]
+      : [],
+  );
+  const first = known[0];
+  if (!first) return null;
+  if (known.every((entry) => entry.method === first.method)) {
+    return `${PAYMENT_METHOD_LABELS[first.method]} für alle Leistungen`;
+  }
+  return known
+    .map(
+      (entry) =>
+        `${BILLING_SERVICE_LABELS[entry.service]} per ${PAYMENT_METHOD_LABELS[entry.method]}`,
+    )
+    .join(", ");
 }

@@ -149,9 +149,10 @@ func (rs *Resource) renderError(w http.ResponseWriter, r *http.Request, err erro
 	rs.runtime.Failure(w, r, status, err, "")
 }
 
-// wireTime retains the administrative API's second-precision timestamps.
-type wireTime time.Time
+// WireTime retains the administrative API's second-precision timestamps
+// (RFC 3339); the contract names it an instant.
+type WireTime time.Time
 
-func (t wireTime) MarshalJSON() ([]byte, error) {
+func (t WireTime) MarshalJSON() ([]byte, error) {
 	return []byte(`"` + time.Time(t).Format(time.RFC3339) + `"`), nil
 }

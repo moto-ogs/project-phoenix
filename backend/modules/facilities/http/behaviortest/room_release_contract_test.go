@@ -7,6 +7,7 @@ package httpadapter_test
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"net/http"
 	"strconv"
 	"testing"
@@ -17,6 +18,7 @@ import (
 	"github.com/uptrace/bun"
 
 	"github.com/moto-ogs/project-phoenix/api/testutil"
+	"github.com/moto-ogs/project-phoenix/modules/facilities"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -37,11 +39,23 @@ func roomIsReleased(t *testing.T, db *bun.DB, tenantID, roomID int64) bool {
 	return released
 }
 
-func roomReleasePayload(name string, released bool) string {
-	if released {
-		return `{"name":"` + name + `","is_open_room":true}`
-	}
-	return `{"name":"` + name + `","is_open_room":false}`
+// roomReleasePayload is the room form's save of the release, against the
+// room as it is stored now.
+func roomReleasePayload(t *testing.T, db bun.IDB, roomID int64, name string, released bool) string {
+	t.Helper()
+	body, err := json.Marshal(map[string]any{
+		"name": name, "is_open_room": released, "expected_version": storedRoomVersion(t, db, roomID),
+	})
+	require.NoError(t, err)
+	return string(body)
+}
+
+// storedRoomVersion is the version a read of the room answers now.
+func storedRoomVersion(t *testing.T, db bun.IDB, roomID int64) string {
+	t.Helper()
+	var room facilities.Room
+	require.NoError(t, db.NewRaw(`SELECT updated_at FROM facilities.rooms WHERE id = ?`, roomID).Scan(context.Background(), &room.UpdatedAt))
+	return facilities.RoomVersion(room)
 }
 
 func TestRoomRelease_RequiresTheRoomUpdatePermission(t *testing.T) {
@@ -56,7 +70,7 @@ func TestRoomRelease_RequiresTheRoomUpdatePermission(t *testing.T) {
 		req := testutil.NewRequest(
 			"PUT",
 			"/"+itoa(room.ID),
-			bytes.NewReader([]byte(roomReleasePayload(room.Name, true))),
+			bytes.NewReader([]byte(roomReleasePayload(t, tc.db, room.ID, room.Name, true))),
 		)
 		req.Header.Set("Content-Type", "application/json")
 		rr := testutil.ExecuteWithAuthPermissions(
@@ -72,7 +86,7 @@ func TestRoomRelease_RequiresTheRoomUpdatePermission(t *testing.T) {
 		req := testutil.NewRequest(
 			"PUT",
 			"/"+itoa(room.ID),
-			bytes.NewReader([]byte(roomReleasePayload(room.Name, true))),
+			bytes.NewReader([]byte(roomReleasePayload(t, tc.db, room.ID, room.Name, true))),
 		)
 		req.Header.Set("Content-Type", "application/json")
 		rr := testutil.ExecuteWithAuthPermissions(
@@ -86,7 +100,7 @@ func TestRoomRelease_RequiresTheRoomUpdatePermission(t *testing.T) {
 		req := testutil.NewRequest(
 			"PUT",
 			"/"+itoa(room.ID),
-			bytes.NewReader([]byte(roomReleasePayload(room.Name, false))),
+			bytes.NewReader([]byte(roomReleasePayload(t, tc.db, room.ID, room.Name, false))),
 		)
 		req.Header.Set("Content-Type", "application/json")
 		rr := testutil.ExecuteWithAuthPermissions(

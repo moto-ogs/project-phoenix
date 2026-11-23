@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The bell of the parents portal (#7140): the notification feed of the
@@ -15,7 +16,7 @@ import (
 // staff portal's feed (#7148), so both bells read it alike.
 
 type notificationFeedEntryResponse struct {
-	ID        int64      `json:"id"`
+	ID        ident.ID   `json:"id"`
 	Type      string     `json:"type"`
 	Title     string     `json:"title"`
 	Body      string     `json:"body"`

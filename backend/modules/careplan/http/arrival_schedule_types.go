@@ -1,6 +1,7 @@
 package careplanhttp
 
 import (
+	"context"
 	errors "errors"
 	fmt "fmt"
 	http "net/http"
@@ -9,48 +10,52 @@ import (
 
 	careplan "github.com/moto-ogs/project-phoenix/modules/careplan"
 	peopleModule "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // ArrivalScheduleResponse represents an arrival schedule in API responses
 type ArrivalScheduleResponse struct {
-	ID              int64   `json:"id"`
-	StudentID       int64   `json:"student_id"`
-	Weekday         int     `json:"weekday"`
-	WeekdayName     string  `json:"weekday_name"`
-	ExpectedArrival string  `json:"expected_arrival"` // HH:MM, empty when no time is known yet
-	Notes           *string `json:"notes,omitempty"`
+	ID              ident.ID `json:"id"`
+	StudentID       ident.ID `json:"student_id"`
+	Weekday         int      `json:"weekday"`
+	WeekdayName     string   `json:"weekday_name"`
+	ExpectedArrival string   `json:"expected_arrival"` // HH:MM, empty when no time is known yet
+	Notes           *string  `json:"notes,omitempty"`
 	// Source says where ExpectedArrival comes from: "class_schedule" = the
 	// child's class timetable, "staff" = a deliberate per-child deviation.
 	// SourceClass names the class in the first case (#2414).
-	Source      string `json:"source,omitempty"`
-	SourceClass string `json:"source_class,omitempty"`
-	CreatedBy   int64  `json:"created_by"`
-	CreatedAt   string `json:"created_at"`
-	UpdatedAt   string `json:"updated_at"`
+	Source      string   `json:"source,omitempty"`
+	SourceClass string   `json:"source_class,omitempty"`
+	CreatedBy   ident.ID `json:"created_by"`
+	CreatedAt   string   `json:"created_at"`
+	UpdatedAt   string   `json:"updated_at"`
 }
 
 // StudentArrivalExceptionResponse represents an arrival exception in API responses
 type StudentArrivalExceptionResponse struct {
-	ID              int64   `json:"id"`
-	StudentID       int64   `json:"student_id"`
-	ExceptionDate   string  `json:"exception_date"`             // YYYY-MM-DD format
-	ExpectedArrival *string `json:"expected_arrival,omitempty"` // HH:MM or null
-	Reason          *string `json:"reason,omitempty"`
-	Source          string  `json:"source"` // "staff" or "guardian" (parent-set)
-	CreatedBy       int64   `json:"created_by"`
-	CreatedAt       string  `json:"created_at"`
-	UpdatedAt       string  `json:"updated_at"`
+	ID              ident.ID `json:"id"`
+	StudentID       ident.ID `json:"student_id"`
+	ExceptionDate   string   `json:"exception_date"`             // YYYY-MM-DD format
+	ExpectedArrival *string  `json:"expected_arrival,omitempty"` // HH:MM or null
+	Reason          *string  `json:"reason,omitempty"`
+	Source          string   `json:"source"` // "staff" or "guardian" (parent-set)
+	CreatedBy       ident.ID `json:"created_by"`
+	CreatedAt       string   `json:"created_at"`
+	UpdatedAt       string   `json:"updated_at"`
 }
 
 // ArrivalNoteResponse represents an arrival note in API responses
 type ArrivalNoteResponse struct {
-	ID        int64  `json:"id"`
-	StudentID int64  `json:"student_id"`
-	NoteDate  string `json:"note_date"` // YYYY-MM-DD format
-	Content   string `json:"content"`
-	CreatedBy int64  `json:"created_by"`
-	CreatedAt string `json:"created_at"`
-	UpdatedAt string `json:"updated_at"`
+	ID        ident.ID `json:"id"`
+	StudentID ident.ID `json:"student_id"`
+	NoteDate  string   `json:"note_date"` // YYYY-MM-DD format
+	Content   string   `json:"content"`
+	CreatedBy ident.ID `json:"created_by"`
+	CreatedAt string   `json:"created_at"`
+	UpdatedAt string   `json:"updated_at"`
+	// Version is the note's read-state token (careplan.ArrivalNoteVersion);
+	// a change sends it back as expected_version (ADR 0311).
+	Version string `json:"version"`
 }
 
 // ArrivalDataResponse represents combined arrival data
@@ -58,11 +63,19 @@ type ArrivalDataResponse struct {
 	Schedules  []ArrivalScheduleResponse         `json:"schedules"`
 	Exceptions []StudentArrivalExceptionResponse `json:"exceptions"`
 	Notes      []ArrivalNoteResponse             `json:"notes"`
+	// WeeklyPlanVersion is the token of the saved weekly plan; only the save
+	// sets it (ADR 0311).
+	WeeklyPlanVersion string `json:"weekly_plan_version,omitempty"`
 }
 
 // BulkArrivalScheduleRequest represents a request to update all weekly arrival schedules for a student
+// ExpectedVersion is the weekly plan token the plan was read with
+// (weekly_plan_version of GET pickup-schedules, ADR 0311); WeekdayNotes
+// replaces the recurring pickup notes in the same save.
 type BulkArrivalScheduleRequest struct {
-	Schedules []ArrivalScheduleRequestItem `json:"schedules"`
+	Schedules       []ArrivalScheduleRequestItem `json:"schedules"`
+	WeekdayNotes    *[]PickupNoteRequest         `json:"weekday_notes,omitempty"`
+	ExpectedVersion string                       `json:"expected_version"`
 }
 
 // ArrivalScheduleRequestItem represents a single arrival schedule entry in a request
@@ -80,10 +93,23 @@ type StudentArrivalExceptionRequest struct {
 	Reason               *string `json:"reason,omitempty"`
 }
 
-// ArrivalNoteRequest represents a request to create/update an arrival note
+// ArrivalNoteRequest represents a request to create an arrival note
 type ArrivalNoteRequest struct {
 	NoteDate string `json:"note_date"` // YYYY-MM-DD format
 	Content  string `json:"content"`
+}
+
+// ArrivalNoteUpdateRequest changes an arrival note read at ExpectedVersion
+// (version of the note in the read, ADR 0311).
+type ArrivalNoteUpdateRequest struct {
+	NoteDate        string `json:"note_date"` // YYYY-MM-DD format
+	Content         string `json:"content"`
+	ExpectedVersion string `json:"expected_version"`
+}
+
+// Bind implements render.Binder.
+func (r *ArrivalNoteUpdateRequest) Bind(_ *http.Request) error {
+	return validateCareNoteRequest(r.NoteDate, r.Content)
 }
 
 const maxArrivalScheduleDateRangeDays = 7
@@ -91,10 +117,13 @@ const maxArrivalScheduleDateRangeDays = 7
 // BulkUpsertArrivalScheduleRequest represents a request to bulk upsert arrival
 // schedules for exactly one filtered student cohort.
 type BulkUpsertArrivalScheduleRequest struct {
-	SchoolClass string                          `json:"school_class"`
-	GroupID     int64                           `json:"group_id"`
-	StudentIDs  []int64                         `json:"student_ids"`
-	Schedules   []careplan.ArrivalScheduleInput `json:"schedules"`
+	SchoolClass string `json:"school_class"`
+	// ExpectedVersion is the class times' version the screen read
+	// (GET /class-arrival-times/{schoolClass}); a class save needs it.
+	ExpectedVersion string                          `json:"expected_version,omitempty"`
+	GroupID         ident.ID                        `json:"group_id"`
+	StudentIDs      []ident.ID                      `json:"student_ids"`
+	Schedules       []careplan.ArrivalScheduleInput `json:"schedules"`
 }
 
 // Bind implements render.Binder for ArrivalNoteRequest
@@ -104,6 +133,11 @@ func (r *ArrivalNoteRequest) Bind(_ *http.Request) error {
 
 // Bind implements render.Binder for BulkArrivalScheduleRequest
 func (r *BulkArrivalScheduleRequest) Bind(_ *http.Request) error {
+	if r.WeekdayNotes != nil {
+		if err := validateWeekdayPickupNotes(*r.WeekdayNotes); err != nil {
+			return err
+		}
+	}
 	return validateArrivalScheduleItems(r.Schedules)
 }
 
@@ -131,16 +165,17 @@ func validateArrivalScheduleItems(items []ArrivalScheduleRequestItem) error {
 // time format is already guaranteed valid at that point. An empty time parses
 // to the zero value on purpose — that is the care day whose time comes from the
 // class timetable (#2414).
-func toArrivalScheduleModels(items []ArrivalScheduleRequestItem, studentID, staffID int64) []*careplan.ArrivalSchedule {
+func toArrivalScheduleModels(ctx context.Context, items []ArrivalScheduleRequestItem, studentID, staffID int64) []*careplan.ArrivalSchedule {
 	schedules := make([]*careplan.ArrivalSchedule, 0, len(items))
 	for _, s := range items {
 		arrivalTime, _ := parseTimeOnly(s.ExpectedArrival)
 		schedules = append(schedules, &careplan.ArrivalSchedule{
-			StudentID:       studentID,
-			Weekday:         s.Weekday,
-			ExpectedArrival: arrivalTime,
-			Notes:           s.Notes,
-			CreatedBy:       staffID,
+			StudentID:        studentID,
+			Weekday:          s.Weekday,
+			ExpectedArrival:  arrivalTime,
+			Notes:            s.Notes,
+			CreatedBy:        staffID,
+			EnteredByTraeger: careplan.EnteredByTraeger(ctx, staffID),
 		})
 	}
 	return schedules
@@ -188,10 +223,10 @@ func validateBulkArrivalSelector(r *BulkUpsertArrivalScheduleRequest) error {
 		if id <= 0 {
 			return errors.New("student_ids must be positive")
 		}
-		if _, exists := seenStudentIDs[id]; exists {
+		if _, exists := seenStudentIDs[id.Int64()]; exists {
 			return errors.New("duplicate student_ids are not allowed")
 		}
-		seenStudentIDs[id] = struct{}{}
+		seenStudentIDs[id.Int64()] = struct{}{}
 	}
 	return nil
 }
@@ -227,14 +262,14 @@ func validateBulkArrivalSchedules(r *BulkUpsertArrivalScheduleRequest) error {
 // mapArrivalScheduleToResponse converts an arrival schedule model to API response
 func mapArrivalScheduleToResponse(s *careplan.ArrivalSchedule) ArrivalScheduleResponse {
 	resp := ArrivalScheduleResponse{
-		ID:          s.ID,
-		StudentID:   s.StudentID,
+		ID:          ident.ID(s.ID),
+		StudentID:   ident.ID(s.StudentID),
 		Weekday:     s.Weekday,
 		WeekdayName: weekdayNames[s.Weekday],
 		Notes:       s.Notes,
 		Source:      s.Source,
 		SourceClass: s.SourceClass,
-		CreatedBy:   s.CreatedBy,
+		CreatedBy:   ident.ID(s.CreatedBy),
 		CreatedAt:   s.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:   s.UpdatedAt.Format(time.RFC3339),
 	}
@@ -249,12 +284,12 @@ func mapArrivalScheduleToResponse(s *careplan.ArrivalSchedule) ArrivalScheduleRe
 // mapArrivalExceptionToResponse converts an arrival exception model to API response
 func mapArrivalExceptionToResponse(e *careplan.ArrivalException) StudentArrivalExceptionResponse {
 	resp := StudentArrivalExceptionResponse{
-		ID:            e.ID,
-		StudentID:     e.StudentID,
+		ID:            ident.ID(e.ID),
+		StudentID:     ident.ID(e.StudentID),
 		ExceptionDate: e.ExceptionDate.Format(dateFormatISO),
 		Reason:        e.Reason,
 		Source:        e.Source,
-		CreatedBy:     e.CreatedBy,
+		CreatedBy:     ident.ID(e.CreatedBy),
 		CreatedAt:     e.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:     e.UpdatedAt.Format(time.RFC3339),
 	}
@@ -268,13 +303,14 @@ func mapArrivalExceptionToResponse(e *careplan.ArrivalException) StudentArrivalE
 // mapArrivalNoteToResponse converts an arrival note model to API response
 func mapArrivalNoteToResponse(n *careplan.ArrivalNote) ArrivalNoteResponse {
 	return ArrivalNoteResponse{
-		ID:        n.ID,
-		StudentID: n.StudentID,
+		ID:        ident.ID(n.ID),
+		StudentID: ident.ID(n.StudentID),
 		NoteDate:  n.NoteDate.Format(dateFormatISO),
 		Content:   n.Content,
-		CreatedBy: n.CreatedBy,
+		CreatedBy: ident.ID(n.CreatedBy),
 		CreatedAt: n.CreatedAt.Format(time.RFC3339),
 		UpdatedAt: n.UpdatedAt.Format(time.RFC3339),
+		Version:   careplan.ArrivalNoteVersion(*n),
 	}
 }
 

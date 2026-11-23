@@ -3,7 +3,8 @@
 import { defineEntityConfig } from "@/lib/database/types";
 import { CatalogColorField } from "@/components/database/catalog-color-field";
 import { mapRoomResponse, prepareRoomForBackend } from "@/lib/room-helpers";
-import type { Room, BackendRoom } from "@/lib/room-helpers";
+import type { Room } from "@/lib/room-helpers";
+import { bffJson } from "~/lib/bff-fetch";
 import { roomsConcept } from "~/lib/concepts/rooms";
 
 export const roomsConfig = defineEntityConfig<Room>({
@@ -17,10 +18,36 @@ export const roomsConfig = defineEntityConfig<Room>({
   backUrl: "/database",
 
   api: {
-    basePath: "/api/rooms",
-    // Admin view keeps showing system rooms (Schulhof, WC) — they are
-    // rendered greyed-out via isSystemRoom instead of hidden.
-    listParams: { include_system: "true" },
+    list: async () => {
+      // Admin view keeps showing system rooms (Schulhof, WC) — they are
+      // rendered greyed-out via isSystemRoom instead of hidden.
+      const page = await bffJson("tenant", "GET /api/rooms/", {
+        query: { include_system: true },
+      });
+      return {
+        data: page.data.map(mapRoomResponse),
+        pagination: page.pagination,
+      };
+    },
+    get: async (id) =>
+      mapRoomResponse(
+        await bffJson("tenant", "GET /api/rooms/{id}", { params: { id } }),
+      ),
+    create: async (data) =>
+      mapRoomResponse(
+        await bffJson("tenant", "POST /api/rooms/", {
+          body: prepareRoomForBackend(data),
+        }),
+      ),
+    update: async (id, data) =>
+      mapRoomResponse(
+        await bffJson("tenant", "PUT /api/rooms/{id}", {
+          params: { id },
+          body: prepareRoomForBackend(data),
+        }),
+      ),
+    // Kein `delete`: ein Raum wird nur über RoomRemovalModal entfernt, das
+    // den Fingerabdruck seiner Vorschau mitschickt (ADR 0311).
   },
 
   form: {
@@ -224,11 +251,6 @@ export const roomsConfig = defineEntityConfig<Room>({
         },
       },
     },
-  },
-
-  service: {
-    mapResponse: (data: unknown) => mapRoomResponse(data as BackendRoom),
-    mapRequest: prepareRoomForBackend,
   },
 
   labels: {

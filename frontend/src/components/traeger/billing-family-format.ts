@@ -176,7 +176,10 @@ export function paymentLabel(payment: BillingPayment): string {
   }
 }
 
-export const PAYMENT_TONES: Record<BillingPayment["kind"], StatusBadgeTone> = {
+export const PAYMENT_TONES: Record<
+  NonNullable<BillingPayment["kind"]>,
+  StatusBadgeTone
+> = {
   family: "gray",
   cost_bearer: "blue",
   exempt: "green",

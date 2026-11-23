@@ -12,6 +12,8 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // The finance exports of a Träger (#4693): settings, runs, protocol,
@@ -39,6 +41,9 @@ type FinanceExportStore interface {
 	StartExportFileNumbers(ctx context.Context, organizationID, start int64) error
 	ExportMapping(ctx context.Context, organizationID int64, format string) (json.RawMessage, *time.Time, error)
 	SaveExportMapping(ctx context.Context, organizationID, accountID int64, format string, settings json.RawMessage) error
+	// LockBillingSetting holds one setting of the Abrechnung of the Träger
+	// until the transaction ends.
+	LockBillingSetting(ctx context.Context, organizationID int64, setting string) error
 	DeleteExportMapping(ctx context.Context, organizationID int64, format string) error
 	// ExportFiles and ExportRuns read limit entries after offset, newest
 	// first, and count the whole list.
@@ -178,17 +183,31 @@ func (f *FinanceExports) sollstellung(ctx context.Context, organizationID int64)
 // decodeSollstellung reads a stored mapping, the default without one.
 func decodeSollstellung(stored json.RawMessage, updatedAt *time.Time) (parentbilling.SollstellungSettings, error) {
 	if stored == nil {
-		return parentbilling.SollstellungSettings{Mapping: parentbilling.DefaultSollstellungMapping()}, nil
+		return sollstellungVersioned(parentbilling.SollstellungSettings{Mapping: parentbilling.DefaultSollstellungMapping()}), nil
 	}
 	var mapping parentbilling.SollstellungMapping
 	if err := json.Unmarshal(stored, &mapping); err != nil {
 		return parentbilling.SollstellungSettings{}, fmt.Errorf("parent billing: read the Sollstellung mapping: %w", err)
 	}
-	return parentbilling.SollstellungSettings{Mapping: mapping, Custom: true, UpdatedAt: updatedAt}, nil
+	return sollstellungVersioned(parentbilling.SollstellungSettings{Mapping: mapping, Custom: true, UpdatedAt: updatedAt}), nil
+}
+
+// settingSollstellung names the lock of the Sollstellung mapping.
+const settingSollstellung = "sollstellung"
+
+// sollstellungVersioned gives the mapping its read-state token (ADR 0311):
+// the mapping as the form shows it and whether the Träger set it.
+func sollstellungVersioned(settings parentbilling.SollstellungSettings) parentbilling.SollstellungSettings {
+	settings.Version = readstate.Fingerprint(struct {
+		Mapping parentbilling.SollstellungMapping `json:"mapping"`
+		Custom  bool                              `json:"custom"`
+	}{settings.Mapping, settings.Custom})
+	return settings
 }
 
 // SaveSollstellungMapping checks and stores the mapping of the Träger.
 func (f *FinanceExports) SaveSollstellungMapping(ctx context.Context, reviewer parentbilling.HolidayReviewer, mapping parentbilling.SollstellungMapping,
+	expectedVersion string,
 ) (parentbilling.ExportSettings, error) {
 	if err := validReviewer(reviewer); err != nil {
 		return parentbilling.ExportSettings{}, err
@@ -199,6 +218,18 @@ func (f *FinanceExports) SaveSollstellungMapping(ctx context.Context, reviewer p
 	}
 	settings, err := json.Marshal(mapping)
 	if err != nil {
+		return parentbilling.ExportSettings{}, err
+	}
+	// The change rests on the mapping as the Abrechnung read it (ADR 0311);
+	// every writer of the mapping holds its lock.
+	if err := f.store.LockBillingSetting(ctx, reviewer.OrganizationID, settingSollstellung); err != nil {
+		return parentbilling.ExportSettings{}, fmt.Errorf("parent billing: hold the Sollstellung mapping: %w", err)
+	}
+	before, err := f.sollstellung(ctx, reviewer.OrganizationID)
+	if err != nil {
+		return parentbilling.ExportSettings{}, err
+	}
+	if err := readstate.Check(expectedVersion, before.Version); err != nil {
 		return parentbilling.ExportSettings{}, err
 	}
 	if err := f.store.SaveExportMapping(ctx, reviewer.OrganizationID, reviewer.AccountID, parentbilling.ExportFormatSollstellung, settings); err != nil {
@@ -212,6 +243,9 @@ func (f *FinanceExports) ResetSollstellungMapping(ctx context.Context, reviewer 
 	if err := validReviewer(reviewer); err != nil {
 		return parentbilling.ExportSettings{}, err
 	}
+	if err := f.store.LockBillingSetting(ctx, reviewer.OrganizationID, settingSollstellung); err != nil {
+		return parentbilling.ExportSettings{}, fmt.Errorf("parent billing: hold the Sollstellung mapping: %w", err)
+	}
 	if err := f.store.DeleteExportMapping(ctx, reviewer.OrganizationID, parentbilling.ExportFormatSollstellung); err != nil {
 		return parentbilling.ExportSettings{}, err
 	}
@@ -223,7 +257,7 @@ func (f *FinanceExports) ResetSollstellungMapping(ctx context.Context, reviewer 
 	if err != nil {
 		return parentbilling.ExportSettings{}, err
 	}
-	return parentbilling.ExportSettings{Sollstellung: parentbilling.SollstellungSettings{Mapping: parentbilling.DefaultSollstellungMapping()},
+	return parentbilling.ExportSettings{Sollstellung: sollstellungVersioned(parentbilling.SollstellungSettings{Mapping: parentbilling.DefaultSollstellungMapping()}),
 		FileNumbers: numbers, Datev: datev}, nil
 }
 
@@ -498,7 +532,7 @@ func (f *FinanceExports) InvoiceHistory(ctx context.Context, reviewer parentbill
 		return parentbilling.InvoiceHistory{}, err
 	}
 	slices.SortStableFunc(steps, func(a, b parentbilling.InvoiceHistoryEntry) int { return a.At.Compare(b.At) })
-	return parentbilling.InvoiceHistory{Kind: kind, ID: id, Number: number, Entries: steps}, nil
+	return parentbilling.InvoiceHistory{Kind: kind, ID: ident.ID(id), Number: number, Entries: steps}, nil
 }
 
 // recordHistoryRead records the read of an invoice's history in the trail of

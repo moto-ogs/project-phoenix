@@ -7,6 +7,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The documents of the families of a Träger (#4691). A family is the mail
@@ -21,7 +22,8 @@ import (
 // first: the holiday invoices with their cancellations and credits and,
 // since #4689, the monthly invoices with their Storno (service "care"). It
 // reads the period of a holiday run, the first names of the children, the
-// cost bearers the positions name and whether the exemption freed them. The
+// cost bearers the positions name, whether the exemption freed them and the
+// care contract of a monthly invoice (#7770). The
 // last filter keeps the documents of one family: the family of the invoice
 // the anchor names (a holiday document by its ID, a monthly invoice by its
 // negated ID), or every family when the anchor is zero.
@@ -32,7 +34,7 @@ const familyDocumentsSQL = `WITH family_rows AS (
 		document.recipient_email, document.recipient_kind, document.recipient_second_name, document.debtor_number,
 		document.total_cents,
 		COALESCE(document.family_email, reference.family_email, LOWER(document.recipient_email)) AS family_key,
-		document.payment_method, document.due_on,
+		document.payment_method, document.due_on, NULL::bigint AS contract_id,
 		COALESCE((SELECT json_agg(DISTINCT position.child_first_name ORDER BY position.child_first_name)
 			FROM parent_billing.document_positions AS position
 			WHERE position.organization_id = document.organization_id AND position.document_id = document.id), '[]') AS child_names,
@@ -53,7 +55,7 @@ const familyDocumentsSQL = `WITH family_rows AS (
 		invoice.billing_month, (invoice.billing_month + INTERVAL '1 month' - INTERVAL '1 day')::date, NULL, NULL, '',
 		invoice.recipient_first_name, invoice.recipient_last_name, invoice.recipient_email, invoice.recipient_kind,
 		invoice.recipient_second_name, invoice.debtor_number, invoice.total_cents, COALESCE(invoice.family_email, LOWER(invoice.recipient_email)),
-		invoice.payment_method, invoice.due_on, json_build_array(invoice.child_first_name), '[]'::json, false
+		invoice.payment_method, invoice.due_on, invoice.care_contract_id, json_build_array(invoice.child_first_name), '[]'::json, false
 	FROM parent_billing.care_invoices AS invoice
 	WHERE invoice.organization_id = ?0
 	UNION ALL
@@ -61,7 +63,8 @@ const familyDocumentsSQL = `WITH family_rows AS (
 		cancellation.issued_at, '', invoice.billing_month, (invoice.billing_month + INTERVAL '1 month' - INTERVAL '1 day')::date,
 		invoice.id, invoice.number, cancellation.reason, invoice.recipient_first_name, invoice.recipient_last_name,
 		invoice.recipient_email, invoice.recipient_kind, invoice.recipient_second_name, invoice.debtor_number, cancellation.total_cents,
-		COALESCE(invoice.family_email, LOWER(invoice.recipient_email)), NULL, NULL, json_build_array(invoice.child_first_name),
+		COALESCE(invoice.family_email, LOWER(invoice.recipient_email)), NULL, NULL, invoice.care_contract_id,
+		json_build_array(invoice.child_first_name),
 		'[]'::json, false
 	FROM parent_billing.care_invoice_cancellations AS cancellation
 	JOIN parent_billing.care_invoices AS invoice
@@ -98,6 +101,7 @@ type familyDocumentRow struct {
 	FamilyKey           string         `bun:"family_key" json:"family_key"`
 	PaymentMethod       *string        `bun:"payment_method" json:"payment_method"`
 	DueOn               *calendar.Date `bun:"due_on,type:date" json:"due_on"`
+	ContractID          *int64         `bun:"contract_id" json:"contract_id"`
 	ChildNames          []string       `bun:"child_names,type:json" json:"child_names"`
 	CostBearerNames     []string       `bun:"cost_bearer_names,type:json" json:"cost_bearer_names"`
 	Exempt              bool           `bun:"exempt" json:"exempt"`
@@ -123,8 +127,8 @@ func (s *Store) FamilyDocuments(ctx context.Context, organizationID, familyID in
 
 func (row familyDocumentRow) document() parentbilling.BillingFamilyDocument {
 	document := parentbilling.BillingFamilyDocument{
-		ID: row.ID, RunID: row.RunID, Kind: row.Kind, Number: row.Number, IssuedOn: row.IssuedOn, PeriodName: row.PeriodName,
-		ServiceFrom: row.ServiceFrom, ServiceUntil: row.ServiceUntil, ReferenceDocumentID: row.ReferenceDocumentID,
+		ID: ident.ID(row.ID), RunID: ident.ID(row.RunID), Kind: row.Kind, Number: row.Number, IssuedOn: row.IssuedOn, PeriodName: row.PeriodName,
+		ServiceFrom: row.ServiceFrom, ServiceUntil: row.ServiceUntil, ReferenceDocumentID: (*ident.ID)(row.ReferenceDocumentID),
 		Reason: row.Reason, TotalCents: row.TotalCents, ChildNames: nonNil(row.ChildNames),
 		RecipientFirstName: row.RecipientFirstName, RecipientLastName: row.RecipientLastName, RecipientEmail: row.RecipientEmail,
 		FamilyKey: row.FamilyKey, CostBearerNames: nonNil(row.CostBearerNames), Exempt: row.Exempt,
@@ -136,6 +140,9 @@ func (row familyDocumentRow) document() parentbilling.BillingFamilyDocument {
 		document.DebtorNumber = *row.DebtorNumber
 	}
 	document.PaymentMethod, document.DueOn = textOf(row.PaymentMethod), row.DueOn
+	if row.ContractID != nil {
+		document.ContractID = *row.ContractID
+	}
 	document.Service, document.RecipientKind, document.RecipientSecondName = row.Service, textOf(row.RecipientKind), textOf(row.RecipientSecondName)
 	return document
 }

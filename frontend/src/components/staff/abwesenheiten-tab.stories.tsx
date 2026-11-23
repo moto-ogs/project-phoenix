@@ -2,12 +2,10 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { storyNow } from "~storybook/clock";
 import { installStorybookFetch, jsonResponse } from "~storybook/mocks/fetch";
 import { AbwesenheitenTab } from "./abwesenheiten-tab";
-import type {
-  StaffAbsenceRow,
-  StaffVacationQuotaSummary,
-} from "~/lib/staff-api";
+import type { StaffAbsenceRow } from "~/lib/staff-api";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 
-const quota: StaffVacationQuotaSummary = {
+const quota: sharedContract.VacationQuotaSummary = {
   staff_id: "1",
   year: storyNow().getFullYear(),
   entitled_days: 30,
@@ -16,10 +14,11 @@ const quota: StaffVacationQuotaSummary = {
   taken_days: 8,
   reserved_days: 3,
   remaining_days: 21,
+  version: "quota-1",
 };
 
 // Urlaubs-Übernahme zum Go-live-Stichtag (#2132).
-const quotaWithOpening: StaffVacationQuotaSummary = {
+const quotaWithOpening: sharedContract.VacationQuotaSummary = {
   ...quota,
   taken_before_days: 6,
   remaining_days: 15,
@@ -33,6 +32,9 @@ const quotaWithOpening: StaffVacationQuotaSummary = {
     note: "Übernahme aus Urlaubsliste, Stand 28.02.",
     decided_by: "4",
     decided_at: `${quota.year}-03-01T08:00:00Z`,
+    tenant_id: "1",
+    created_at: `${quota.year}-03-01T08:00:00Z`,
+    updated_at: `${quota.year}-03-01T08:00:00Z`,
   },
 };
 
@@ -76,7 +78,7 @@ const historyAbsence: StaffAbsenceRow = {
 
 function withMockedAbsences(
   absences: readonly StaffAbsenceRow[],
-  quotaOverride: StaffVacationQuotaSummary | null = quota,
+  quotaOverride: sharedContract.VacationQuotaSummary | null = quota,
 ) {
   return installStorybookFetch(({ url }) => {
     if (url.includes("/vacation/quota")) {

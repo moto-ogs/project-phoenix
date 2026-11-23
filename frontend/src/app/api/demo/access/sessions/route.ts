@@ -11,6 +11,7 @@ import {
 import { forwardBackendResponse } from "~/lib/backend-proxy-response.server";
 import { problemResponse } from "~/lib/api-helpers.server";
 import { withPrivateNoStore } from "~/lib/private-no-store";
+import { successResponse } from "~/lib/route-wrapper-utils.server";
 import { configuredPortalOfHost } from "~/lib/portal-paths";
 import { tenantPortal } from "~/server/auth";
 import { parentPortal } from "~/server/auth/parent";
@@ -101,12 +102,15 @@ async function redeem(request: NextRequest, portal: DemoPortal) {
       // The entry page hands fixed-role links to the right portal. Revoke
       // this unused session family before returning only redirect metadata.
       await revokeMintedSession(
-        request,
-        logoutRollback(minted.portal.backend.logout, mintedPair(payload)),
+        logoutRollback(
+          request,
+          minted.portal.backend.logout,
+          mintedPair(payload),
+        ),
       );
     }
     const response = NextResponse.json(
-      {
+      successResponse({
         session_created: matchesPortal,
         demo: {
           access_id: demo.access_id,
@@ -115,7 +119,7 @@ async function redeem(request: NextRequest, portal: DemoPortal) {
           fixed_role: demo.fixed_role,
           traeger: demo.traeger === true,
         },
-      },
+      }),
       { status: backend.status },
     );
     if (backend.ok && linkToken) {

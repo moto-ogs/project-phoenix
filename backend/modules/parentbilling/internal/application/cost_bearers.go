@@ -9,6 +9,7 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation"
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // The cost bearers of a Träger (#5627): the Abrechnung keeps them with its
@@ -55,7 +56,7 @@ func (s *Rules) ListCostBearers(ctx context.Context, organizationID int64) ([]pa
 		return nil, fmt.Errorf("parent billing: read cost bearers in use: %w", err)
 	}
 	for i := range bearers {
-		bearers[i].InUse = inUse[bearers[i].ID]
+		bearers[i].InUse = inUse[bearers[i].ID.Int64()]
 	}
 	return bearers, nil
 }
@@ -63,7 +64,9 @@ func (s *Rules) ListCostBearers(ctx context.Context, organizationID int64) ([]pa
 // SaveCostBearer validates a cost bearer and creates it, or changes the one
 // costBearerID names. A frozen contribution and an issued invoice keep the
 // name they copied.
-func (s *Rules) SaveCostBearer(ctx context.Context, organizationID, costBearerID int64, input parentbilling.CostBearerInput) (parentbilling.CostBearer, error) {
+func (s *Rules) SaveCostBearer(ctx context.Context, organizationID, costBearerID int64, input parentbilling.CostBearerInput,
+	expectedVersion string,
+) (parentbilling.CostBearer, error) {
 	if organizationID <= 0 {
 		return parentbilling.CostBearer{}, errTraegerRequired
 	}
@@ -76,6 +79,15 @@ func (s *Rules) SaveCostBearer(ctx context.Context, organizationID, costBearerID
 	}
 	if costBearerID == 0 {
 		return s.store.InsertCostBearer(ctx, organizationID, input)
+	}
+	// The change rests on the cost bearer as the Abrechnung read it (ADR
+	// 0311); the row lock holds it until the change is written.
+	stored, err := s.store.LockCostBearer(ctx, organizationID, costBearerID, true)
+	if err != nil {
+		return parentbilling.CostBearer{}, err
+	}
+	if err := readstate.Check(expectedVersion, stored.Version); err != nil {
+		return parentbilling.CostBearer{}, err
 	}
 	return s.store.UpdateCostBearer(ctx, organizationID, costBearerID, input)
 }

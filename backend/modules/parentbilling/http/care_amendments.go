@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	capability "github.com/moto-ogs/project-phoenix/modules/parentbilling"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // CareAmendmentRequest is the body of POST …/{id}/amendments (#6197): one
@@ -16,18 +17,18 @@ import (
 // ContractID and Service name the invoice, Fingerprint the review the
 // change was made on; Kind decides which of the other fields count.
 type CareAmendmentRequest struct {
-	ContractID     int64                 `json:"contract_id"`
+	ContractID     ident.ID              `json:"contract_id"`
 	Service        string                `json:"service"`
 	Kind           string                `json:"kind"`
 	Fingerprint    string                `json:"fingerprint"`
 	Reason         string                `json:"reason"`
-	TotalCents     *int64                `json:"total_cents"`
+	TotalCents     *int64                `json:"total_cents" contract:"number"`
 	Label          string                `json:"label"`
-	AmountCents    *int64                `json:"amount_cents"`
+	AmountCents    *int64                `json:"amount_cents" contract:"number"`
 	PositionKey    string                `json:"position_key"`
 	Recipient      *RecipientNameRequest `json:"recipient"`
 	Address        *PostalAddressRequest `json:"address"`
-	RevokesID      int64                 `json:"revokes_id"`
+	RevokesID      ident.ID              `json:"revokes_id"`
 	RevokesCarried bool                  `json:"revokes_carried"`
 }
 
@@ -63,9 +64,9 @@ func (rs *CareBillingResource) amend(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	detail, err := rs.billing.AmendCareInvoice(r.Context(), reviewer, runID, capability.CareAmendmentInput{
-		ContractID: req.ContractID, Service: req.Service, Kind: req.Kind, Fingerprint: req.Fingerprint, Reason: req.Reason,
+		ContractID: req.ContractID.Int64(), Service: req.Service, Kind: req.Kind, Fingerprint: req.Fingerprint, Reason: req.Reason,
 		TotalCents: req.TotalCents, Label: req.Label, AmountCents: req.AmountCents, PositionKey: req.PositionKey,
-		Recipient: (*capability.CareRecipientName)(req.Recipient), Address: (*capability.PostalAddress)(req.Address), RevokesID: req.RevokesID, RevokesCarried: req.RevokesCarried,
+		Recipient: (*capability.CareRecipientName)(req.Recipient), Address: (*capability.PostalAddress)(req.Address), RevokesID: req.RevokesID.Int64(), RevokesCarried: req.RevokesCarried,
 	})
 	var fields validation.Errors
 	if errors.As(err, &fields) {

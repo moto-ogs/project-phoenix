@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { bulkInviteGuardians } from "./guardian-bulk-invite-api";
 
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 function mockFetch(status: number, body: unknown) {
   const fetchMock = vi.fn().mockResolvedValue({
     ok: status >= 200 && status < 300,
@@ -14,7 +19,7 @@ function mockFetch(status: number, body: unknown) {
 describe("bulkInviteGuardians", () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it("sends numeric student IDs and maps the counts to camelCase", async () => {
+  it("sends the student IDs as strings and maps the counts to camelCase", async () => {
     const fetchMock = mockFetch(200, {
       status: "success",
       data: {
@@ -25,6 +30,9 @@ describe("bulkInviteGuardians", () => {
         skipped_active: 4,
         skipped_open: 5,
         skipped_restricted: 6,
+        notified: 8,
+        already_notified: 1,
+        without_visible_care: 2,
         problems: [
           {
             guardian_profile_id: "7",
@@ -33,12 +41,14 @@ describe("bulkInviteGuardians", () => {
             reason: "missing_email",
           },
         ],
+        fingerprint: "counted",
       },
     });
 
     const result = await bulkInviteGuardians(["4", "9"], {
       dryRun: true,
       resendOpen: true,
+      notifyActive: true,
     });
 
     expect(fetchMock).toHaveBeenCalledWith(
@@ -46,9 +56,10 @@ describe("bulkInviteGuardians", () => {
       expect.objectContaining({
         method: "POST",
         body: JSON.stringify({
-          student_ids: [4, 9],
+          student_ids: ["4", "9"],
           dry_run: true,
           resend_open: true,
+          notify_active: true,
         }),
       }),
     );
@@ -60,6 +71,9 @@ describe("bulkInviteGuardians", () => {
       skippedActive: 4,
       skippedOpen: 5,
       skippedRestricted: 6,
+      notified: 8,
+      alreadyNotified: 1,
+      withoutVisibleCare: 2,
       problems: [
         {
           guardianProfileId: "7",
@@ -68,6 +82,7 @@ describe("bulkInviteGuardians", () => {
           reason: "missing_email",
         },
       ],
+      fingerprint: "counted",
     });
   });
 
@@ -75,13 +90,24 @@ describe("bulkInviteGuardians", () => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
     mockFetch(403, {});
     await expect(
-      bulkInviteGuardians(["4"], { dryRun: false, resendOpen: false }),
+      bulkInviteGuardians(["4"], {
+        dryRun: false,
+        resendOpen: false,
+        notifyActive: false,
+      }),
     ).rejects.toMatchObject({ status: 403, code: "general.permission" });
 
     // A success answer without data is a broken answer.
     mockFetch(200, { status: "success" });
     await expect(
-      bulkInviteGuardians(["4"], { dryRun: false, resendOpen: false }),
-    ).rejects.toMatchObject({ status: 500, code: "general.server" });
+      bulkInviteGuardians(["4"], {
+        dryRun: false,
+        resendOpen: false,
+        notifyActive: false,
+      }),
+    ).rejects.toMatchObject({
+      status: 502,
+      code: "general.write_answer_unreadable",
+    });
   });
 });

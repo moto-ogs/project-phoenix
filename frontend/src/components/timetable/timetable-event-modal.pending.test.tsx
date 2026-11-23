@@ -11,6 +11,12 @@ import {
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { pagedJson, plainFetch } from "~/test/mocks/plain-session-fetch";
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 import type { ReactElement, ReactNode } from "react";
 import { ApiError } from "~/lib/api-error";
 import type { CalendarPeriod } from "~/lib/calendar-period-helpers";
@@ -107,7 +113,6 @@ function render(ui: ReactElement) {
 const periods: CalendarPeriod[] = [
   {
     id: "5",
-    tenantId: "1",
     name: "Schuljahr 2026/2027",
     periodType: "school_year",
     startDate: "2026-08-01",
@@ -160,15 +165,18 @@ const savedInstance = {
 function stubReferenceFetch() {
   vi.stubGlobal(
     "fetch",
-    vi.fn(async (input: unknown) => {
-      const url = String(input);
-      const data = url.includes("/api/rooms")
-        ? [{ id: 3, name: "Mensa", building: "Haus A" }]
-        : url.includes("/api/activities/categories")
-          ? [{ id: "2", name: "AG" }]
+    vi.fn(
+      plainFetch(async (input: unknown) => {
+        const url = String(input);
+        if (url.includes("/api/activities/categories")) {
+          return { json: async () => ({ data: [{ id: "2", name: "AG" }] }) };
+        }
+        const rows = url.includes("/api/rooms")
+          ? [{ id: "3", name: "Mensa", building: "Haus A" }]
           : [];
-      return { json: async () => ({ data }) };
-    }),
+        return { json: async () => pagedJson(rows) };
+      }),
+    ),
   );
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { isAccessRefusal } from "~/lib/access-refusal";
-import { ApiError } from "~/lib/api-error";
+import { ApiError, isChangedSinceRead } from "~/lib/api-error";
 import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
 import { groups as groupsKeys } from "~/lib/swr/groups";
 import {
@@ -47,6 +47,10 @@ import {
   type HolidayGuestGroup,
 } from "~/lib/holiday-host-api";
 import { holidayKeys } from "~/lib/swr/portal-keys";
+
+/** Info-Knopf am Titel: wofür die Seite da ist und was man zuerst tut. */
+const GROUPS_INFO =
+  "Hier legst du die Gruppen deiner OGS an, mit Gruppenraum und Gruppenleitung. Die Kinder trägst du beim Kind ein, nicht hier.";
 
 const logger = createLogger({ component: "DatabaseGroupsPage" });
 
@@ -257,13 +261,33 @@ function GroupsPageContent() {
       const payload = groupsConfig.form.transformBeforeSubmit
         ? groupsConfig.form.transformBeforeSubmit(data)
         : data;
-      await service.update(selectedGroup.id, payload);
+      let saved: Group | null;
+      try {
+        saved = await service.update(selectedGroup.id, payload);
+      } catch (err) {
+        // Jemand hat die Gruppe seit dem Lesen geändert: das Formular zeigt
+        // den gespeicherten Stand, sobald er gelesen ist (ADR 0311).
+        if (isChangedSinceRead(err)) void afterWrite.refresh();
+        throw err;
+      }
       toastSuccess(
         `Die Gruppe „${data.name ?? selectedGroup.name}“ ist gespeichert.`,
       );
+      // Die Antwort trägt den gespeicherten Stand: ein zweites Speichern
+      // schickt ihn, auch wenn das Nachladen fehlschlägt.
+      if (saved) {
+        const stored = saved;
+        await mutateGroups(
+          (groups) =>
+            groups?.map((group) =>
+              group.id === stored.id ? { ...group, ...stored } : group,
+            ),
+          { revalidate: false },
+        );
+      }
       await afterWrite.refresh();
     },
-    [selectedGroup, service, afterWrite, toastSuccess],
+    [selectedGroup, service, afterWrite, toastSuccess, mutateGroups],
   );
 
   const handleDeleteGroup = useCallback(async () => {
@@ -379,6 +403,7 @@ function GroupsPageContent() {
       className="flex w-full flex-col"
       intro={{
         title: "Gruppendaten",
+        info: GROUPS_INFO,
         description: statusLine,
         actions: accessRefused ? undefined : (
           <DatabaseCreateAction

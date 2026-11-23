@@ -2,6 +2,7 @@ package enrollmenthttp
 
 import (
 	"github.com/moto-ogs/project-phoenix/api/common"
+	lists "github.com/moto-ogs/project-phoenix/modules/documentrendering/lists"
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
 )
 
@@ -12,7 +13,7 @@ var staffPortal = []common.PortalScope{common.PortalTenant}
 // routes (ADR 0270), with patterns relative to /api/enrollment/phases.
 func PhaseRouteContracts() []common.RouteContract {
 	portals := staffPortal
-	bumps := []common.QueryParam{{Name: "bumps_grade", Kind: common.QueryString}}
+	bumps := []common.QueryParam{{Name: "bumps_grade", Kind: common.QueryBool}}
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: portals, Response: []PhaseResponse{}},
 		{Method: "POST", Pattern: "/", Portals: portals, Request: EnrollmentPhaseRequest{}, Response: PhaseResponse{}},
@@ -28,6 +29,7 @@ func PhaseRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/{id}/manual-bootstrap", Portals: portals, Response: PublicEnrollmentFormBootstrapResponse{}},
 		{Method: "POST", Pattern: "/{id}/late-invites", Portals: portals, Request: AdminCreateLateInviteRequest{}, Response: AdminCreateLateInviteResponse{}},
 		{Method: "POST", Pattern: "/{id}/manual-approved-enrollments", Portals: portals, Request: AdminManualApprovedEnrollmentRequest{}, Response: AdminManualApprovedEnrollmentResponse{}},
+		{Method: "POST", Pattern: "/{id}/export", Portals: portals, Request: phaseExportRequest{}, File: true},
 	}
 }
 
@@ -41,13 +43,21 @@ func ConfigRouteContracts() []common.RouteContract {
 		{Name: "base", Kind: common.QueryString},
 	}
 	return []common.RouteContract{
+		{Method: "GET", Pattern: "/schema/", Portals: portals, Response: FormSchemaResponse{}},
+		{Method: "POST", Pattern: "/schema/", Portals: portals, Request: PublishSchemaRequest{}, Response: FormSchemaResponse{}},
 		{Method: "GET", Pattern: "/schema/versions", Portals: portals, Response: []FormSchemaResponse{}},
 		{Method: "GET", Pattern: "/schema/preview", Portals: portals, Query: preview, Response: SchemaPreviewBootstrapResponse{}},
+		{Method: "PUT", Pattern: "/schema/{id}", Portals: portals, Request: UpdateSchemaRequest{}, Response: FormSchemaResponse{}},
+		{Method: "PATCH", Pattern: "/schema/{id}", Portals: portals, Request: RenameSchemaRequest{}, Response: FormSchemaResponse{}},
+		{Method: "DELETE", Pattern: "/schema/{id}", Portals: portals, NoData: true},
 		{Method: "DELETE", Pattern: "/legal-documents/{filename}", Portals: portals, NoData: true},
+		{Method: "POST", Pattern: "/legal-documents", Portals: portals, Multipart: true,
+			MaxBodyBytes: maxEnrollmentLegalDocumentBody, TooLargeCode: common.CodeEnrollmentLegalDocumentInvalid,
+			Response: enrollmentLegalDocumentResponse{}},
 		{Method: "GET", Pattern: "/care-offerings/", Portals: portals, Query: phase, Response: []CareOfferingResponse{}},
 		{Method: "POST", Pattern: "/care-offerings/", Portals: portals, Request: CareOfferingRequest{}, Response: CareOfferingResponse{}},
 		{Method: "GET", Pattern: "/care-offerings/booking-stats", Portals: portals, Query: phase, Response: []CareOfferingBookingStatsResponse{}},
-		{Method: "GET", Pattern: "/care-offerings/{id}/", Portals: portals, Response: CareOfferingResponse{}},
+		{Method: "GET", Pattern: "/care-offerings/{id}/", Portals: portals, Deprecated: true, Response: CareOfferingResponse{}},
 		{Method: "PUT", Pattern: "/care-offerings/{id}/", Portals: portals, Request: CareOfferingRequest{}, Response: CareOfferingResponse{}},
 		{Method: "DELETE", Pattern: "/care-offerings/{id}/", Portals: portals, NoData: true},
 		{Method: "POST", Pattern: "/care-offerings/{id}/clone", Portals: portals, Request: CloneCareOfferingRequest{}, Response: CareOfferingResponse{}},
@@ -67,6 +77,9 @@ func AdminRequestRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/admin/requests/{id}/", Portals: portals, Response: AdminRequestDetail{}},
 		{Method: "DELETE", Pattern: "/admin/requests/{id}/", Portals: portals, Request: AdminEnrollmentDeleteRequest{}, Response: AdminEnrollmentDeletionImpact{}},
 		{Method: "GET", Pattern: "/admin/requests/{id}/form-labels", Portals: portals, Response: FormLabelsResponse{}},
+		{Method: "GET", Pattern: "/admin/requests/{id}/signature-proof", Portals: portals, File: true},
+		// One proof file of the request (#4783), through the portal's proxy (#2352).
+		{Method: "GET", Pattern: "/admin/requests/{id}/uploads/{uploadId}", Portals: portals, File: true},
 		{Method: "PUT", Pattern: "/admin/requests/{id}/read", Portals: portals, NoData: true},
 		{Method: "DELETE", Pattern: "/admin/requests/{id}/read", Portals: portals, NoData: true},
 		{Method: "GET", Pattern: "/admin/requests/{id}/delete-impact", Portals: portals, Response: AdminEnrollmentDeletionImpact{}},
@@ -74,7 +87,12 @@ func AdminRequestRouteContracts() []common.RouteContract {
 		{Method: "POST", Pattern: "/admin/requests/{id}/restore", Portals: portals, Response: AdminRestoreResponse{}},
 		{Method: "GET", Pattern: "/admin/requests/{id}/children/{childId}/delete-impact", Portals: portals, Response: AdminEnrollmentDeletionImpact{}},
 		{Method: "DELETE", Pattern: "/admin/requests/{id}/children/{childId}", Portals: portals, Request: AdminEnrollmentDeleteRequest{}, Response: AdminEnrollmentDeletionImpact{}},
+		{Method: "POST", Pattern: "/admin/requests/{id}/children/{childId}/decide", Portals: portals, Request: AdminDecideRequest{}, Response: AdminRequestChild{}},
+		{Method: "PUT", Pattern: "/admin/requests/{id}/children/{childId}/data-correction", Portals: portals, Request: AdminChildDataCorrectionRequest{}, Response: ChangeRequestResponse{}},
+		{Method: "PUT", Pattern: "/admin/requests/{id}/children/{childId}/offerings", Portals: portals, Request: AdminUpdateOfferingsRequest{}, Response: AdminChildOfferingsResponse{}},
+		{Method: "GET", Pattern: "/admin/requests/{id}/children/{childId}/offering-adjustments", Portals: portals, Response: []AdminOfferingAdjustment{}},
 		{Method: "GET", Pattern: "/admin/students/{studentId}/requests/", Portals: portals, Response: []AdminRequestSummary{}},
+		{Method: "POST", Pattern: "/admin/students/{studentId}/requests/export", Portals: portals, Request: phaseExportRequest{}, File: true},
 	}
 }
 
@@ -104,6 +122,8 @@ func AdminReviewRouteContracts() []common.RouteContract {
 		{Method: "POST", Pattern: "/admin/change-requests/{id}/approve", Portals: portals, Request: ReviewChangeRequestRequest{}, Response: ChangeRequestResponse{}},
 		{Method: "POST", Pattern: "/admin/change-requests/{id}/reject", Portals: portals, Request: ReviewChangeRequestRequest{}, Response: ChangeRequestResponse{}},
 		{Method: "GET", Pattern: "/admin/reports/care-usage", Portals: portals, Query: usage, Response: CareUsageReportResponse{}},
+		{Method: "POST", Pattern: "/admin/reports/care-usage/export", Portals: portals, Request: careUsageExportRequest{}, File: true},
+		{Method: "POST", Pattern: "/admin/reports/class-roster/export", Portals: portals, Request: classRosterExportRequest{}, File: true},
 	}
 }
 
@@ -118,6 +138,9 @@ func HolidayHostRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/students/{studentId}/registration", Portals: portals, Response: []capability.HolidayStudentRegistration{}},
 		{Method: "GET", Pattern: "/{weekId}/own-children", Portals: portals, Response: []capability.HolidayOwnChildAssignment{}},
 		{Method: "GET", Pattern: "/{weekId}/participants", Portals: portals, Response: HolidayParticipantListResponse{}},
+		{Method: "GET", Pattern: "/{weekId}/participants/export", Portals: portals, File: true, Query: []common.QueryParam{
+			{Name: "format", Kind: common.QueryString, Values: []string{string(lists.FormatCSV), string(lists.FormatXLSX)}},
+		}},
 		{Method: "PUT", Pattern: "/{weekId}/guest-group", Portals: portals, Request: HolidayGuestGroupRequest{}, Response: capability.HolidayGuestTransfer{}},
 	}
 }

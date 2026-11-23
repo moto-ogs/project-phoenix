@@ -10,9 +10,21 @@ import (
 
 type Store interface {
 	FindWeek(context.Context, domain.Date, domain.Date) ([]domain.Entry, domain.OperationStats, error)
-	ReplaceDay(context.Context, domain.Date, []mealplan.Dish) (domain.OperationStats, error)
+	// ReplaceDay sets the dishes of a day; the instant marks a menu that
+	// changed after it was published (#7666), nil a day as first published.
+	ReplaceDay(context.Context, domain.Date, []mealplan.Dish, *time.Time) (domain.OperationStats, error)
 	ClearDay(context.Context, domain.Date) (domain.OperationStats, error)
+	// LockDay holds a day of the school's plan until the transaction ends,
+	// so a save's check of the stored day and its write stay together.
+	LockDay(context.Context, domain.Date) (domain.OperationStats, error)
+	// FindParticipation reads a child's registration of a window, with every
+	// period of its regular days.
 	FindParticipation(context.Context, int64, domain.Date, domain.Date) (domain.ParticipationData, domain.OperationStats, error)
+	// FindSchedules reads every period of a child's regular days.
+	FindSchedules(context.Context, int64) ([]domain.ParticipationSchedule, domain.OperationStats, error)
+	// LockSchedule holds a child's regular days until the transaction ends,
+	// so a schedule save's check and its write stay together.
+	LockSchedule(context.Context, int64) (domain.OperationStats, error)
 	InsertParticipationSchedule(context.Context, int64, int64, domain.Date, []domain.Weekday) (domain.OperationStats, error)
 	UpsertParticipationOverride(context.Context, int64, int64, domain.Date, bool) (domain.OperationStats, error)
 	UpsertParticipationOverrides(context.Context, int64, int64, []domain.Date, bool) (domain.OperationStats, error)
@@ -60,6 +72,9 @@ type Directory interface {
 	FindDailyCandidates(context.Context, domain.Date) ([]domain.DailyCandidate, domain.OperationStats, error)
 	// FindStudentNames names the children of past orders, enrolled or not.
 	FindStudentNames(context.Context, []int64) (map[int64]domain.DailyCandidate, domain.OperationStats, error)
+	// LockStudent takes the child's student row, the first lock of every
+	// write of the child's participation.
+	LockStudent(context.Context, int64) (domain.OperationStats, error)
 }
 
 type Settings interface {

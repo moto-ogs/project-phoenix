@@ -15,6 +15,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -72,7 +73,7 @@ func correctionRequest(t *testing.T, f *careFixture, date calendar.Date, approve
 		Status: carerequests.StatusPending, Payload: raw,
 	})
 	require.NoError(t, err)
-	result, err := f.svc.Decide(correctionContext(t, f), carerequests.DecideInput{
+	result, err := f.svc.Decide(correctionContext(t, f), carerequests.DecideInput{ExpectedVersion: testpkg.CareRequestVersion(t, row.ID),
 		RequestID: row.ID, Approve: approve, Reason: "Geprüft", ReviewedBy: f.staffAccount,
 	})
 	require.NoError(t, err)
@@ -82,7 +83,7 @@ func correctionRequest(t *testing.T, f *careFixture, date calendar.Date, approve
 func correctPickup(ctx context.Context, t *testing.T, f *careFixture, row carerequests.Request, approve bool) error {
 	t.Helper()
 	return testpkg.WithTenantTx(t, ctx, f.db, f.chain.TenantID, func(txCtx context.Context, _ bun.Tx) error {
-		return f.svc.(pickupCorrecter).Correct(txCtx, row.ID, approve, careplan.ParentRequestVersion(row.UpdatedAt), "Korrektur", f.staffAccount)
+		return f.svc.(pickupCorrecter).Correct(txCtx, row.ID, approve, readstate.Of(row.UpdatedAt), "Korrektur", f.staffAccount)
 	})
 }
 
@@ -177,11 +178,11 @@ func TestPickupCorrectionConcurrentGeneration(t *testing.T) {
 		require.NoError(t, tx.NewRaw("SELECT pg_backend_pid()").Scan(txCtx, &pid))
 		go func() { done <- correctPickup(ctx, t, f, row, false) }()
 		waitForRequestWriter(t, txCtx, tx, pid)
-		return f.svc.(pickupCorrecter).Correct(txCtx, row.ID, false, careplan.ParentRequestVersion(row.UpdatedAt), "Korrektur", f.staffAccount)
+		return f.svc.(pickupCorrecter).Correct(txCtx, row.ID, false, readstate.Of(row.UpdatedAt), "Korrektur", f.staffAccount)
 	})
 	loser := awaitRequestWriter(t, ctx, done)
 	require.NoError(t, err)
-	require.ErrorContains(t, loser, "stale")
+	require.ErrorIs(t, loser, readstate.ErrChanged)
 	assertCorrectionEffects(t, f, date, slotID, false)
 }
 
@@ -375,7 +376,7 @@ func TestPickupCorrectionRefusesStaffEditedCollectorNote(t *testing.T) {
 	// The handler's model: the request body plus the preserved identity.
 	edited := &careplan.PickupNote{ID: notes[0].ID, TenantID: notes[0].TenantID, StudentID: f.chain.StudentID,
 		NoteDate: careplan.Date(date), Content: "Abholung durch Oma Erika", CreatedBy: notes[0].CreatedBy, CreatedAt: notes[0].CreatedAt}
-	require.NoError(t, testpkg.TenantCommand1(t, ctx, f.db, f.schedules.Pickups.UpdateStudentPickupNote, edited))
+	require.NoError(t, testpkg.TenantCommand2(t, ctx, f.db, f.schedules.Pickups.UpdateStudentPickupNote, edited, careplan.PickupNoteVersion(notes[0])))
 
 	err = correctPickup(ctx, t, f, currentCorrectionRequest(t, f, row.ID), false)
 	require.ErrorContains(t, err, "die Abholnotiz am 26.08.2026 wurde nach der Entscheidung geändert")

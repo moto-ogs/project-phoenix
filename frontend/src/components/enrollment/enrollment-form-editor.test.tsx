@@ -713,6 +713,76 @@ describe("EnrollmentFormEditor", () => {
     expect(mocks.updateSchema).toHaveBeenCalledTimes(1);
   });
 
+  // ADR 0311: a colleague published a newer version since this one was
+  // read. The save is refused; the editor shows that version, keeps none of
+  // the stale draft and offers no retry of the same save.
+  it("shows the newest version after a refused save of an outdated one", async () => {
+    const newest = schema({
+      id: "schema-3",
+      version: 3,
+      created_at: "2026-02-01T00:00:00.000Z",
+      core_requirements: { signature: true },
+    });
+    mocks.listSchemas
+      .mockReset()
+      .mockResolvedValueOnce([schema()])
+      .mockResolvedValue([schema(), newest]);
+    mocks.listPhases.mockResolvedValue([]);
+    mocks.updateSchema
+      .mockRejectedValueOnce(
+        new ApiError("changed since it was read", 409, {
+          code: "general.changed_since_read",
+        }),
+      )
+      .mockResolvedValue(newest);
+
+    render(<EnrollmentFormEditor />);
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Aktionen für Regelformular" }),
+    );
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Bearbeiten" }),
+    );
+    fireEvent.change(await screen.findByDisplayValue("Allergien"), {
+      target: { value: "Veralteter Entwurf" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Änderungen speichern" }),
+    );
+
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", "die Formularvorlage"),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Wiederholen" }),
+    ).not.toBeInTheDocument();
+    // The colleague's version: its signature switch, not the stale label.
+    expect(
+      screen.getByRole("switch", { name: "Unterschrift erforderlich" }),
+    ).toBeChecked();
+    expect(
+      screen.queryByDisplayValue("Veralteter Entwurf"),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("switch", { name: "Unterschrift erforderlich" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Änderungen speichern" }),
+    );
+    await waitFor(() =>
+      expect(mocks.updateSchema).toHaveBeenLastCalledWith(
+        "schema-3",
+        expect.anything(),
+        expect.objectContaining({ signature: false }),
+        expect.anything(),
+        undefined,
+      ),
+    );
+  });
+
   it("renames AND publishes in one atomic request when name and content both change", async () => {
     mocks.listSchemas.mockResolvedValue([schema()]);
     mocks.listPhases.mockResolvedValue([]);

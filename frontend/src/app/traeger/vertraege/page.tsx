@@ -1,5 +1,7 @@
 "use client";
 
+import { bffFile } from "~/lib/bff-fetch";
+
 // Betreuungsverträge des Trägers (#4678, ADR 0153): alle Verträge mit Status,
 // gefiltert nach Status, Schule und Name. „Verträge erstellen“ legt Entwürfe
 // aus angenommenen Anmeldungen an; ausgewählte Entwürfe gehen per Mail und in
@@ -7,7 +9,15 @@
 // nicht: ihr Vertrag entsteht von selbst und ist sofort aktiv. Nur die Rolle
 // mit dem Recht „Verträge verwalten“ sieht die Seite.
 
-import { Plus, Send, Upload } from "lucide-react";
+import {
+  ClipboardCheck,
+  FilePenLine,
+  Link2,
+  Plus,
+  Repeat,
+  Send,
+  Upload,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { type MouseEvent, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
@@ -20,6 +30,7 @@ import {
   contractStatusTone,
   SEND_SKIP_LABELS,
   childName,
+  knownConclusionAt,
 } from "~/components/traeger/care-contract-format";
 import { careContractTabs } from "~/components/traeger/care-contract-tabs";
 import { emptySearchText } from "~/components/traeger/empty-search";
@@ -75,9 +86,13 @@ import {
   sendCareContracts,
 } from "~/lib/traeger-care-contracts-api";
 import type { TraegerSchool } from "~/lib/traeger-api";
-import { downloadTraegerList } from "~/lib/traeger-list-export";
+import {
+  downloadTraegerList,
+  listExportQuery,
+} from "~/lib/traeger-list-export";
 import { useDebounce } from "~/lib/use-debounce";
 import { traegerPath } from "~/lib/traeger-url";
+import { labelOf } from "~/lib/label-of";
 
 const logger = createLogger({ component: "TraegerVertraegePage" });
 
@@ -162,6 +177,16 @@ const COLUMNS: DataTableColumn<CareContractSummary>[] = [
         >
           {childName(contract)}
         </NavigationLink>
+        {contract.imported && !contract.studentId ? (
+          // An imported contract knows its child only by name until the
+          // office links it to the child record (#7760).
+          <StatusBadge
+            tone="gray"
+            size="xs"
+            label="Ohne Kinderakte"
+            className="ml-1.5 align-middle"
+          />
+        ) : null}
         <span className="block text-sm text-gray-500">
           {contract.modulesText || "–"}
           <span className="sm:hidden">
@@ -216,7 +241,7 @@ const COLUMNS: DataTableColumn<CareContractSummary>[] = [
     render: (contract) => (
       <span className="inline-flex flex-col items-start gap-1">
         <StatusBadge
-          label={CONTRACT_STATUS_LABELS[contract.status]}
+          label={labelOf(CONTRACT_STATUS_LABELS, contract.status, "–")}
           tone={contractStatusTone(contract)}
         />
         {contract.status === "gekuendigt" && contract.endsOn ? (
@@ -230,9 +255,12 @@ const COLUMNS: DataTableColumn<CareContractSummary>[] = [
             Ende festlegen
           </span>
         ) : contract.status === "widerrufen" ? null : contract.concluded ? (
-          <span className="text-sm text-gray-500">
-            seit {formatBerlinDate(contract.concluded.at)}
-          </span>
+          // An unknown day of a taken-over contract (#7767) is no date.
+          knownConclusionAt(contract.concluded) ? (
+            <span className="text-sm text-gray-500">
+              seit {formatBerlinDate(contract.concluded.at)}
+            </span>
+          ) : null
         ) : contract.sentAt ? (
           <span className="text-sm text-gray-500">
             am {formatBerlinDate(contract.sentAt)}
@@ -240,12 +268,13 @@ const COLUMNS: DataTableColumn<CareContractSummary>[] = [
         ) : null}
       </span>
     ),
-    sortValue: (contract) => CONTRACT_STATUS_ORDER.indexOf(contract.status),
+    sortValue: (contract) =>
+      contract.status ? CONTRACT_STATUS_ORDER.indexOf(contract.status) : -1,
     stacked: "meta",
     // On a phone the status alone, without the date under it.
     stackedRender: (contract) => (
       <StatusBadge
-        label={CONTRACT_STATUS_LABELS[contract.status]}
+        label={labelOf(CONTRACT_STATUS_LABELS, contract.status, "–")}
         tone={contractStatusTone(contract)}
       />
     ),
@@ -540,11 +569,15 @@ export default function TraegerVertraegePage() {
   // and the export („Herunterladen“) sit in the page menu.
   const exportItems = useTraegerListExportItems({
     download: (format) =>
-      downloadTraegerList("/api/traeger/contracts/export", format, {
-        status: status === "all" ? undefined : status,
-        school_id: schoolId,
-        search: debouncedSearch,
-      }),
+      downloadTraegerList(
+        bffFile("org", "GET /traeger/contracts/export", {
+          query: listExportQuery(format, {
+            status: status === "all" ? undefined : status,
+            school_id: schoolId,
+            search: debouncedSearch,
+          }),
+        }),
+      ),
     scope: traegerExportScope(
       schools.find((school) => school.value === schoolId)?.label,
     ),
@@ -555,10 +588,13 @@ export default function TraegerVertraegePage() {
 
   // The count names the children waiting for a contract; the dialog lists
   // each of them, with the reason where a draft cannot be made yet.
+  // A child an imported contract covers has its contract: the dialog shows
+  // it with the reason, but it waits for nothing (#7760).
+  const waiting = candidates.filter(
+    (candidate) => candidate.templateIssue !== "imported_contract",
+  ).length;
   const createLabel =
-    candidates.length > 0
-      ? `Verträge erstellen (${candidates.length})`
-      : "Verträge erstellen";
+    waiting > 0 ? `Verträge erstellen (${waiting})` : "Verträge erstellen";
 
   return (
     <TenantPage
@@ -566,14 +602,14 @@ export default function TraegerVertraegePage() {
       info="Hier siehst du die Betreuungsverträge aus den angenommenen Anmeldungen deiner Schulen und die Verträge, die du aus einem anderen Programm importiert hast. moto übernimmt Kind, Eltern, Beginn und die gebuchten Module je Wochentag. Gilt der Vertrag bei der Annahme, entsteht er von selbst, wenn die Eltern im Anmeldeformular den Vertragsbedingungen zugestimmt haben. Sonst prüfst du den Entwurf und sendest ihn per Mail und in die Eltern-App."
       tabs={careContractTabs("vertraege")}
       stats={
-        total > 0 || candidates.length > 0 ? (
+        total > 0 || waiting > 0 ? (
           <TenantPageStats
             items={statusFigures(
               total,
               drafts,
               sentCount,
               activeCount,
-              candidates.length,
+              waiting,
             )}
           />
         ) : null
@@ -599,6 +635,38 @@ export default function TraegerVertraegePage() {
             "Öffnet den Import von Kindern und bestehenden Verträgen aus einer CSV-Datei.",
           icon: <Upload className="h-4 w-4" aria-hidden />,
           href: traegerPath("/traeger/vertraege/import"),
+          onClick: () => undefined,
+        },
+        {
+          label: "Module neu zuordnen",
+          description:
+            "Öffnet die neue Zuordnung der Module importierter Verträge aus einer CSV-Datei.",
+          icon: <Repeat className="h-4 w-4" aria-hidden />,
+          href: traegerPath("/traeger/vertraege/module-zuordnen"),
+          onClick: () => undefined,
+        },
+        {
+          label: "Mit Kinderakten verknüpfen",
+          description:
+            "Öffnet das Verknüpfen importierter Verträge mit der Kinderakte, per CSV-Datei.",
+          icon: <Link2 className="h-4 w-4" aria-hidden />,
+          href: traegerPath("/traeger/vertraege/verknuepfen"),
+          onClick: () => undefined,
+        },
+        {
+          label: "Anmeldungen nachtragen",
+          description:
+            "Öffnet die Vorschau: Verknüpfte Verträge bekommen die Anmeldung an ihrer Schule.",
+          icon: <ClipboardCheck className="h-4 w-4" aria-hidden />,
+          href: traegerPath("/traeger/vertraege/anmeldungen"),
+          onClick: () => undefined,
+        },
+        {
+          label: "Vertragsangaben nachpflegen",
+          description:
+            "Öffnet die Seite, um Vertragsparteien, Abschlussart und Abschlussdatum importierter Verträge zu ergänzen.",
+          icon: <FilePenLine className="h-4 w-4" aria-hidden />,
+          href: traegerPath("/traeger/vertraege/nachpflege"),
           onClick: () => undefined,
         },
       ]}
@@ -701,8 +769,8 @@ export default function TraegerVertraegePage() {
                       />
                     ) : null}
                     <StatusBadge
-                      label={CONCLUSION_MODE_LABELS[school.mode]}
-                      tone={CONCLUSION_MODE_TONES[school.mode]}
+                      label={labelOf(CONCLUSION_MODE_LABELS, school.mode, "–")}
+                      tone={labelOf(CONCLUSION_MODE_TONES, school.mode, "gray")}
                     />
                   </span>
                 </li>
@@ -761,7 +829,7 @@ export default function TraegerVertraegePage() {
               }
               {...emptyText(
                 total,
-                candidates.length,
+                waiting,
                 data.modes.length > 0 &&
                   data.modes.every((school) => school.mode === "bei_annahme"),
                 emptySearchText(

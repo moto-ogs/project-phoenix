@@ -53,7 +53,6 @@ type CalendarPeriodUsageRepository interface {
 
 // CallerActivityGroups read the activity groups a caller supervises.
 type CallerActivityGroups interface {
-	ActivityGroupRows(ctx context.Context, ids []int64) (any, error)
 	SupervisedActivityGroupIDs(ctx context.Context, staffID int64) ([]int64, error)
 }
 

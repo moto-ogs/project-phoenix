@@ -341,12 +341,12 @@ function VertretungContent() {
   );
   const { data: staffData, error: staffError } = useSWRAuth(
     status === "authenticated" ? staffSwrKey : null,
-    // strict: ein Backend-Fehler muss rejecten (nicht zu [] resolven), damit
+    // Ein Backend-Fehler muss rejecten (nicht zu [] resolven), damit
     // staffError feuert und der Picker den Fehler statt "kein Personal" zeigt.
     () => substitutionService.fetchScheduleOverview(fromISO, toISO),
   );
-  // Dienstplan-Abgleich für den Hinweis über der Liste. Bewusst NICHT strict
-  // und ohne Toast: der Hinweis ist eine Zusatzinformation, sein Ausfall darf
+  // Dienstplan-Abgleich für den Hinweis über der Liste. Bewusst ohne
+  // Fehleranzeige und ohne Toast: der Hinweis ist eine Zusatzinformation, sein Ausfall darf
   // die Vertretungsarbeit nicht kommentieren (er verschwindet dann einfach).
   const { data: coverageData, error: coverageError } = useSWRAuth(
     status === "authenticated" && loadCoverage ? coverageSwrKey : null,
@@ -925,6 +925,7 @@ function VertretungContent() {
     <TenantPage
       overlays={overlays}
       title="Vertretungsplan"
+      info="Hier planst du Vertretungen, wenn jemand fehlt. Wähle oben den Tag. Unter „Offene Lücken“ stehen die Termine, die noch jemand übernehmen muss."
       stats={statusLine}
       statsLoading={showSkeleton || isLoading}
       actions={

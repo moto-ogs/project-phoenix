@@ -10,10 +10,20 @@ import type { ReactNode as TenantSWRNode } from "react";
 import { SWRConfig as TenantSWRConfig } from "~/lib/swr/testing";
 import { PersonalInfoEditPanel } from "./personal-info-edit-panel";
 import type { Student } from "~/lib/student-helpers";
-import type { StudentCompanion } from "~/lib/student-companion-api";
+import {
+  companionListKey,
+  type StudentCompanion,
+  type StudentCompanionList,
+} from "~/lib/student-companion-api";
 import { CompanionPlanConflictError } from "~/lib/student-update-errors";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
+
+// The read answers the list with the fingerprint of the same read (ADR 0311);
+// these tests give it the list's own key, so a save is seen to send it back.
+function companionList(companions: StudentCompanion[]): StudentCompanionList {
+  return { companions, fingerprint: companionListKey(companions) };
+}
 
 vi.unmock("swr");
 
@@ -56,6 +66,7 @@ async function consentLoaded() {
 function resolvedPrivacyConsent(): Promise<{
   accepted: boolean;
   dataRetentionDays: number;
+  version?: string;
 }> {
   // The ordinary form tests are not about this independent request. Resolve it
   // during the effect so their save actions still model a form that is ready.
@@ -64,6 +75,7 @@ function resolvedPrivacyConsent(): Promise<{
       onFulfilled: (value: {
         accepted: boolean;
         dataRetentionDays: number;
+        version?: string;
       }) => unknown,
     ) => {
       onFulfilled({ accepted: true, dataRetentionDays: 30 });
@@ -87,7 +99,7 @@ const {
   photosEnabledState,
 } = vi.hoisted(() => ({
   fetchStudentCompanionsMock: vi.fn<
-    (studentId: string) => Promise<StudentCompanion[]>
+    (studentId: string) => Promise<StudentCompanionList>
   >(() => new Promise(() => undefined)),
   // Datenschutzeinwilligung und Foto (#3115): beide leben neben dem Kind und
   // werden vom Bearbeiten-Zustand nachgeladen bzw. nach dem Speichern
@@ -691,9 +703,11 @@ describe("PersonalInfoEditPanel", () => {
     } as unknown as Partial<Student>;
 
     it("offers the picker once the stored links are loaded", async () => {
-      fetchStudentCompanionsMock.mockResolvedValue([
-        { companion_student_id: "42", first_name: "Lina", weekdays: ["mon"] },
-      ]);
+      fetchStudentCompanionsMock.mockResolvedValue(
+        companionList([
+          { companion_student_id: "42", first_name: "Lina", weekdays: ["mon"] },
+        ]),
+      );
 
       render(
         <PersonalInfoEditPanel
@@ -714,8 +728,9 @@ describe("PersonalInfoEditPanel", () => {
         undefined;
       fetchStudentCompanionsMock.mockImplementation(
         () =>
-          new Promise<StudentCompanion[]>((resolve) => {
-            resolveCompanions = resolve;
+          new Promise<StudentCompanionList>((resolve) => {
+            resolveCompanions = (companions) =>
+              resolve(companionList(companions));
           }),
       );
 
@@ -770,7 +785,7 @@ describe("PersonalInfoEditPanel", () => {
     });
 
     it("marks the companion note when an accompanied day has nobody named", async () => {
-      fetchStudentCompanionsMock.mockResolvedValue([]);
+      fetchStudentCompanionsMock.mockResolvedValue(companionList([]));
 
       render(
         <PersonalInfoEditPanel
@@ -800,9 +815,11 @@ describe("PersonalInfoEditPanel", () => {
     // day at all, an error about a control that is no longer on screen.
     it("clears the linked children when the last accompanied day is removed", async () => {
       mockOnSave.mockResolvedValue(undefined);
-      fetchStudentCompanionsMock.mockResolvedValue([
-        { companion_student_id: "42", first_name: "Lina", weekdays: ["mon"] },
-      ]);
+      fetchStudentCompanionsMock.mockResolvedValue(
+        companionList([
+          { companion_student_id: "42", first_name: "Lina", weekdays: ["mon"] },
+        ]),
+      );
 
       render(
         <PersonalInfoEditPanel
@@ -895,6 +912,310 @@ describe("PersonalInfoEditPanel", () => {
           }),
         );
       });
+    });
+
+    // ADR 0311: the save carries the version of each read the form shows,
+    // the consent's and the master data's.
+    it("submits the versions of the consent and the master data it read", async () => {
+      mockOnSave.mockResolvedValue(undefined);
+      fetchStudentPrivacyConsentMock.mockResolvedValue({
+        accepted: true,
+        dataRetentionDays: 21,
+        version: "consent-v1",
+      });
+
+      render(
+        <PersonalInfoEditPanel
+          onCancel={mockOnCancel}
+          student={createMockStudent({ version: "record-v1" })}
+          onSave={mockOnSave}
+        />,
+      );
+
+      const retention = await screen.findByLabelText<HTMLInputElement>(
+        "Aufbewahrungsdauer (Tage)",
+      );
+      await waitFor(() => expect(retention.value).toBe("21"));
+      fireEvent.change(retention, { target: { value: "14" } });
+      fireEvent.click(screen.getByText("Speichern"));
+
+      await waitFor(() => {
+        expect(mockOnSave).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data_retention_days: 14,
+            privacy_consent_version: "consent-v1",
+            version: "record-v1",
+          }),
+        );
+      });
+    });
+
+    it("shows the stored state again when the child changed since it was read", async () => {
+      const onStudentRefresh = vi.fn();
+      mockOnSave.mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      );
+      fetchStudentPrivacyConsentMock
+        .mockResolvedValueOnce({
+          accepted: true,
+          dataRetentionDays: 21,
+          version: "consent-v1",
+        })
+        .mockResolvedValue({
+          accepted: false,
+          dataRetentionDays: 7,
+          version: "consent-v2",
+        });
+
+      render(
+        <PersonalInfoEditPanel
+          onCancel={mockOnCancel}
+          student={createMockStudent({ version: "record-v1" })}
+          onSave={mockOnSave}
+          onStudentRefresh={onStudentRefresh}
+        />,
+      );
+
+      const retention = await screen.findByLabelText<HTMLInputElement>(
+        "Aufbewahrungsdauer (Tage)",
+      );
+      await waitFor(() => expect(retention.value).toBe("21"));
+      fireEvent.change(retention, { target: { value: "14" } });
+      fireEvent.click(screen.getByText("Speichern"));
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Du siehst jetzt den neuen Stand.",
+      );
+      expect(
+        screen.queryByRole("button", { name: "Wiederholen" }),
+      ).not.toBeInTheDocument();
+      expect(onStudentRefresh).toHaveBeenCalled();
+      await waitFor(() => expect(retention.value).toBe("7"));
+      expect(mockOnCancel).not.toHaveBeenCalled();
+    });
+
+    // The refresh the refusal starts hands in a new student object; the reset
+    // it causes shows the stored child and must keep the explanation.
+    it("keeps the refusal when the refresh hands in the stored child", async () => {
+      const onStudentRefresh = vi.fn();
+      mockOnSave.mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      );
+      fetchStudentPrivacyConsentMock.mockResolvedValue({
+        accepted: true,
+        dataRetentionDays: 21,
+        version: "consent-v1",
+      });
+      const panel = (student: Student) => (
+        <PersonalInfoEditPanel
+          onCancel={mockOnCancel}
+          student={student}
+          onSave={mockOnSave}
+          onStudentRefresh={onStudentRefresh}
+        />
+      );
+      const view = render(panel(createMockStudent({ version: "record-v1" })));
+      await consentLoaded();
+
+      const firstName = screen.getByLabelText<HTMLInputElement>("Vorname");
+      fireEvent.change(firstName, { target: { value: "Mia" } });
+      fireEvent.click(screen.getByText("Speichern"));
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Du siehst jetzt den neuen Stand.",
+      );
+      expect(onStudentRefresh).toHaveBeenCalled();
+
+      // The refreshed read arrives after the refusal is on screen.
+      view.rerender(
+        panel(createMockStudent({ first_name: "Lena", version: "record-v2" })),
+      );
+
+      await waitFor(() => expect(firstName.value).toBe("Lena"));
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Du siehst jetzt den neuen Stand.",
+      );
+    });
+
+    // ADR 0311: a live refresh of the same child (check-in, check-out)
+    // refills only an untouched draft; an edited one keeps its input and the
+    // version it was edited on.
+    it("keeps the typed input and its version across a refresh of the child", async () => {
+      mockOnSave.mockResolvedValue(undefined);
+      const panel = (student: Student) => (
+        <PersonalInfoEditPanel
+          onCancel={mockOnCancel}
+          student={student}
+          onSave={mockOnSave}
+        />
+      );
+      const view = render(panel(createMockStudent({ version: "record-v1" })));
+      await consentLoaded();
+
+      const firstName = screen.getByLabelText<HTMLInputElement>("Vorname");
+      fireEvent.change(firstName, { target: { value: "Mia" } });
+      view.rerender(panel(createMockStudent({ version: "record-v2" })));
+      expect(firstName.value).toBe("Mia");
+
+      fireEvent.click(screen.getByText("Speichern"));
+      await waitFor(() =>
+        expect(mockOnSave).toHaveBeenCalledWith(
+          expect.objectContaining({ first_name: "Mia", version: "record-v1" }),
+        ),
+      );
+    });
+
+    it("refills an untouched draft from a refresh of the child", async () => {
+      const panel = (student: Student) => (
+        <PersonalInfoEditPanel
+          onCancel={mockOnCancel}
+          student={student}
+          onSave={mockOnSave}
+        />
+      );
+      const view = render(panel(createMockStudent({ version: "record-v1" })));
+      await consentLoaded();
+      view.rerender(
+        panel(createMockStudent({ first_name: "Lena", version: "record-v2" })),
+      );
+      await waitFor(() =>
+        expect(screen.getByLabelText<HTMLInputElement>("Vorname").value).toBe(
+          "Lena",
+        ),
+      );
+    });
+
+    it("names a failed reload after a refusal as a load error", async () => {
+      mockOnSave.mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      );
+      const onStudentReload = vi.fn(() =>
+        Promise.reject(
+          new ApiError("offline", 503, { code: "general.unavailable" }),
+        ),
+      );
+      render(
+        <PersonalInfoEditPanel
+          onCancel={mockOnCancel}
+          student={createMockStudent({ version: "record-v1" })}
+          onSave={mockOnSave}
+          onStudentReload={onStudentReload}
+        />,
+      );
+      await consentLoaded();
+      fireEvent.change(screen.getByLabelText("Vorname"), {
+        target: { value: "Mia" },
+      });
+      fireEvent.click(screen.getByText("Speichern"));
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Der neue Stand konnte nicht geladen werden.",
+      );
+      expect(screen.getByRole("alert")).not.toHaveTextContent(
+        "Du siehst jetzt den neuen Stand.",
+      );
+    });
+
+    it("keeps saving locked after a refusal until a read of the stored child succeeds", async () => {
+      mockOnSave.mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      );
+      const onStudentReload = vi
+        .fn<() => Promise<unknown>>()
+        .mockRejectedValueOnce(
+          new ApiError("offline", 503, { code: "general.unavailable" }),
+        )
+        .mockResolvedValue(undefined);
+      render(
+        <PersonalInfoEditPanel
+          onCancel={mockOnCancel}
+          student={createMockStudent({ version: "record-v1" })}
+          onSave={mockOnSave}
+          onStudentReload={onStudentReload}
+        />,
+      );
+      await consentLoaded();
+      fireEvent.change(screen.getByLabelText("Vorname"), {
+        target: { value: "Mia" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Der neue Stand konnte nicht geladen werden.",
+      );
+
+      // The draft still carries the refused version: no save until a read.
+      // Blocked with its reason (`aria-disabled`), the click is swallowed.
+      const save = screen.getByRole("button", { name: "Speichern" });
+      await waitFor(() =>
+        expect(save).toHaveAttribute("aria-disabled", "true"),
+      );
+      fireEvent.click(save);
+      expect(mockOnSave).toHaveBeenCalledTimes(1);
+
+      fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
+      await waitFor(() =>
+        expect(
+          screen.getByRole("button", { name: "Speichern" }),
+        ).not.toHaveAttribute("aria-disabled"),
+      );
+      expect(screen.getByRole("button", { name: "Speichern" })).toBeEnabled();
+      expect(onStudentReload).toHaveBeenCalledTimes(2);
+    });
+
+    it("keeps saving locked after a refusal until live updates bring the stored child", async () => {
+      mockOnSave.mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      );
+      const onStudentReload = vi
+        .fn<() => Promise<unknown>>()
+        .mockRejectedValue(
+          new ApiError("offline", 503, { code: "general.unavailable" }),
+        );
+      const panel = (student: Student) => (
+        <PersonalInfoEditPanel
+          onCancel={mockOnCancel}
+          student={student}
+          onSave={mockOnSave}
+          onStudentReload={onStudentReload}
+        />
+      );
+      const { rerender } = render(
+        panel(createMockStudent({ version: "record-v1" })),
+      );
+      await consentLoaded();
+      fireEvent.change(screen.getByLabelText("Vorname"), {
+        target: { value: "Mia" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Der neue Stand konnte nicht geladen werden.",
+      );
+      await waitFor(() =>
+        expect(
+          screen.getByRole("button", { name: "Speichern" }),
+        ).toHaveAttribute("aria-disabled", "true"),
+      );
+
+      // Two live updates of the child: each is a successful read of it.
+      rerender(panel(createMockStudent({ version: "record-v2" })));
+      rerender(panel(createMockStudent({ version: "record-v3" })));
+
+      // Either saving is free again, or the alert still offers the reload:
+      // never a locked save without a way to read.
+      await waitFor(() =>
+        expect(
+          screen.getByRole("button", { name: "Speichern" }),
+        ).not.toHaveAttribute("aria-disabled"),
+      );
+      mockOnSave.mockResolvedValueOnce(undefined);
+      fireEvent.change(screen.getByLabelText("Vorname"), {
+        target: { value: "Mila" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+      await waitFor(() =>
+        expect(mockOnSave).toHaveBeenLastCalledWith(
+          expect.objectContaining({ first_name: "Mila", version: "record-v3" }),
+        ),
+      );
     });
 
     it("does not mark loaded privacy consent as changed for an unrelated save", async () => {

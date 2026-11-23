@@ -25,6 +25,7 @@ import { TagesplanView } from "./tagesplan-view";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 import { MobilePageHelpPortal } from "~/components/help/mobile-page-help-portal";
+import { ModuleNotBookedSlots } from "~/components/tenant/module-not-booked-state";
 import { roomsConcept } from "~/lib/concepts/rooms";
 import { staffConcept } from "~/lib/concepts/staff";
 
@@ -40,6 +41,10 @@ vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
 // exact subpath the component imports so the day fetch is driven per test.
 vi.mock("~/lib/swr/hooks", () => ({
   useSWRAuth: vi.fn(),
+}));
+
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({ data: { user: { roles: ["user"] } } }),
 }));
 
 vi.mock("~/lib/tenant-router", () => ({
@@ -214,6 +219,17 @@ describe("TagesplanView", () => {
     expect(url.pathname).toBe("/help/tagesplan-ansehen");
     expect(url.searchParams.get("return_to")).toBe("/tagesplan?d=2026-07-15");
     expect(help).toHaveClass("lg:hidden");
+    // Der Hilfeplatz ist in der Titelzeile, nicht in der Aktionsgruppe:
+    // diese bricht auf dem Telefon als eigene Zeile um.
+    expect(help.closest(".flex-wrap")).toContainElement(
+      screen.getByRole("heading", { level: 1, name: "15.07.2026" }),
+    );
+    // Wie im Kopf jeder Seite steht das „?“ vor den Aktionen (#7568).
+    expect(
+      help.compareDocumentPosition(
+        screen.getByRole("button", { name: "Vorheriger Tag" }),
+      ) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it("steps over a weekend of another week although the weekend follows Friday's plan (#5028)", () => {
@@ -563,7 +579,11 @@ describe("TagesplanView", () => {
     render(<TagesplanView />);
 
     expect(
-      screen.getByText("Heute ist keine Betreuung geplant"),
+      // Das Gerüst setzt Titel und Beschreibung des Leerzustands zu einem
+      // Satz zusammen.
+      screen.getByText(
+        "Heute ist keine Betreuung geplant. Sobald für diesen Tag Termine im Betreuungsplan stehen, siehst du sie hier.",
+      ),
     ).toBeInTheDocument();
   });
 
@@ -585,10 +605,76 @@ describe("TagesplanView", () => {
     ).toBeInTheDocument();
     expect(screen.queryByText(/Failed to fetch/)).not.toBeInTheDocument();
     expect(
-      screen.queryByText("Heute ist keine Betreuung geplant"),
+      screen.queryByText(/Heute ist keine Betreuung geplant/),
     ).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
     expect(reloadList).toHaveBeenCalled();
+  });
+
+  it("keeps loaded blocks visible when a refresh fails", async () => {
+    setSWR({
+      data: [makeInstance({ id: "1", title: "Basteln" })],
+      isLoading: false,
+      error: new ApiError("Failed to fetch", 503, {
+        code: "general.unavailable",
+      }),
+    });
+
+    render(<TagesplanView />);
+
+    expect(screen.getByText("Basteln")).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        catalogText("general.unavailable", "die Liste der Termine"),
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Basteln")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
+    expect(reloadList).toHaveBeenCalled();
+  });
+
+  it("does not show an empty state when an empty refresh fails", async () => {
+    setSWR({
+      data: [],
+      isLoading: false,
+      error: new ApiError("Failed to fetch", 503, {
+        code: "general.unavailable",
+      }),
+    });
+
+    render(<TagesplanView />);
+
+    expect(
+      await screen.findByText(
+        catalogText("general.unavailable", "die Liste der Termine"),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Heute ist keine Betreuung geplant/),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows the module state when a refresh is refused", async () => {
+    setSWR({
+      data: [makeInstance({ id: "1", title: "Basteln" })],
+      isLoading: false,
+      error: new ApiError("module not booked", 403, {
+        code: "module.not_booked",
+        details: { module: "zeiterfassung" },
+      }),
+    });
+
+    render(
+      <ModuleNotBookedSlots>
+        <TagesplanView />
+      </ModuleNotBookedSlots>,
+    );
+
+    expect(
+      await screen.findByText("Zeiterfassung ist nicht gebucht"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Basteln")).not.toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("explains missing permission with the catalog text (403)", async () => {
@@ -657,6 +743,17 @@ describe("TagesplanView", () => {
     render(<TagesplanView />);
 
     expect(screen.getByTestId("tagesplan-disabled")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Erklärung zu Heute" }),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Erklärung zu Heute" }));
+    expect(
+      within(
+        screen.getByRole("dialog", { name: "Erklärung zu Heute" }),
+      ).getByText(
+        "Deine Schule nutzt den Betreuungsplan zurzeit nicht. Deine Aufsichten findest du unter „Aktuelle Aufsicht“.",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("shows the own-scope hint when the school keeps staff on their own blocks (#2380)", () => {
@@ -665,9 +762,7 @@ describe("TagesplanView", () => {
 
     render(<TagesplanView />);
 
-    expect(
-      screen.getByText(/Du siehst nur Termine, für die du eingeteilt bist/),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Nur deine Einsätze")).toBeInTheDocument();
   });
 
   it("honours the ?d= day parameter for back navigation to a chosen day", () => {

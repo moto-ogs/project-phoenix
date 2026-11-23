@@ -151,7 +151,7 @@ const mockAnimate = vi.fn(() => ({
 const originalFetch = global.fetch;
 
 const resolvedTenant = {
-  tenantId: 42,
+  tenantId: "42",
   name: "",
   settings: {},
 } as ReturnType<typeof useTenant>["tenant"];
@@ -166,8 +166,10 @@ function mockFetchResponse(status: number, body: unknown): typeof global.fetch {
 }
 
 function mockTenantAuthenticatedResponse(): typeof global.fetch {
+  // The BFF's answer to the password step: `{ status, data }`.
   return mockFetchResponse(200, {
-    status: "authenticated",
+    status: "success",
+    data: { status: "authenticated" },
   });
 }
 
@@ -719,9 +721,12 @@ describe("HomePage (Login)", () => {
         .mockResolvedValueOnce(
           new Response(
             JSON.stringify({
-              status: "mfa_required",
-              challenge_token: "mfa-challenge",
-              masked_email: "l***@example.com",
+              status: "success",
+              data: {
+                status: "mfa_required",
+                challenge_token: "mfa-challenge",
+                masked_email: "l***@example.com",
+              },
             }),
             { status: 200, headers: { "Content-Type": "application/json" } },
           ),
@@ -889,16 +894,25 @@ describe("HomePage (Login)", () => {
       .fn()
       .mockResolvedValueOnce(
         Response.json({
-          status: "mfa_enrollment_required",
-          access_token: "enrollment-proof",
-          mfa_enrollment_required: true,
-          masked_email: "l***@example.test",
+          status: "success",
+          data: {
+            status: "mfa_enrollment_required",
+            access_token: "enrollment-proof",
+            mfa_enrollment_required: true,
+            masked_email: "l***@example.test",
+          },
+        }),
+      )
+      // The enrollment start route answers the BFF's `{ status, data }`.
+      .mockResolvedValueOnce(
+        Response.json({
+          status: "success",
+          data: { challenge_token: "challenge-abc" },
         }),
       )
       .mockResolvedValueOnce(
-        Response.json({ challenge_token: "challenge-abc" }),
-      )
-      .mockResolvedValueOnce(Response.json({ status: "authenticated" }));
+        Response.json({ status: "success", data: { status: "authenticated" } }),
+      );
     const view = render(<HomePage />);
     await screen.findByTestId("input-email");
     fireEvent.change(screen.getByTestId("input-email"), {

@@ -4,7 +4,15 @@
 // fetch plumbing: request shape (method, URL, body), the { data } unwrapping,
 // and the error paths that must preserve the backend's stable error code.
 
+import type * as adminContract from "~/lib/contract/admin.generated";
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
+
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
+import { pagedJson, plainResponse } from "~/test/mocks/plain-session-fetch";
 import { ApiError } from "./api-error";
 import {
   createGradeTransition,
@@ -22,14 +30,13 @@ import {
   NOT_LATEST_TRANSITION_CODE,
   PREVIEW_STALE_CODE,
   NOT_DRAFT_CODE,
-  type BackendGradeTransition,
-  type BackendTransitionPreview,
-  type BackendTransitionResult,
-  type BackendSuggestedMapping,
-  type BackendTransitionHistoryEntry,
 } from "./grade-transition-api";
 
 const BASE = "/api/admin/grade-transitions";
+// Read-state tokens as the backend mints them (readstate.Fingerprint, ADR
+// 0311): opaque hex digests the client carries back unchanged.
+const FINGERPRINT = "3f2a9c41d07e8b6a5c19e4f0b27d6a83";
+const OLDER_FINGERPRINT = "a81b44e09c3d27f6b5e01c9d8f2a7b64";
 
 interface FetchCall {
   url: string;
@@ -44,7 +51,7 @@ function stubOnce(response: Partial<Response> & { json?: () => unknown }) {
     "fetch",
     vi.fn((url: string, init?: RequestInit) => {
       calls.push({ url, init });
-      return Promise.resolve(response as unknown as Response);
+      return plainResponse(response);
     }),
   );
 }
@@ -54,6 +61,13 @@ const okData = (data: unknown) => ({
   ok: true,
   status: 200,
   json: () => Promise.resolve({ data }),
+});
+
+/** An ok page of the paginated list route. */
+const okPage = (rows: unknown[] | null) => ({
+  ok: true,
+  status: 200,
+  json: () => Promise.resolve({ ...pagedJson(rows ?? []), data: rows }),
 });
 
 /** An ok response whose body IS the payload (no { data } envelope). */
@@ -80,7 +94,7 @@ const failUnparseable = (status: number) => ({
 const parseBody = (init?: RequestInit) =>
   JSON.parse(String(init?.body ?? "null")) as Record<string, unknown>;
 
-const transitionRow: BackendGradeTransition = {
+const transitionRow: adminContract.TransitionResponse = {
   id: "7",
   academic_year: "2026-2027",
   status: "draft",
@@ -89,9 +103,11 @@ const transitionRow: BackendGradeTransition = {
   can_modify: true,
   can_apply: true,
   can_revert: false,
+  version: "v1",
 };
 
-const resultRow: BackendTransitionResult = {
+const resultRow: adminContract.TransitionResultResponse = {
+  warnings: null,
   transition_id: "7",
   status: "applied",
   students_promoted: 40,
@@ -175,20 +191,24 @@ describe("updateGradeTransition", () => {
   it("PUTs to the escaped id and omits mappings when undefined", async () => {
     stubOnce(okData(transitionRow));
 
-    await updateGradeTransition("7", { notes: "neu" });
+    await updateGradeTransition("7", { expectedVersion: "v1", notes: "neu" });
 
     const call = calls[0];
     expect(call?.url).toBe(`${BASE}/7`);
     expect(call?.init?.method).toBe("PUT");
     // `mappings: undefined` must not appear in the payload at all — the backend
     // treats an explicit [] as "remove every mapping".
-    expect(parseBody(call?.init)).toEqual({ notes: "neu" });
+    expect(parseBody(call?.init)).toEqual({
+      notes: "neu",
+      expected_version: "v1",
+    });
   });
 
   it("sends an explicit empty list when mappings are cleared", async () => {
     stubOnce(okData(transitionRow));
 
     await updateGradeTransition("7", {
+      expectedVersion: "v1",
       academicYear: "2027-2028",
       mappings: [],
     });
@@ -196,13 +216,14 @@ describe("updateGradeTransition", () => {
     expect(parseBody(calls[0]?.init)).toEqual({
       academic_year: "2027-2028",
       mappings: [],
+      expected_version: "v1",
     });
   });
 
   it("escapes the id in the URL", async () => {
     stubOnce(okData(transitionRow));
 
-    await updateGradeTransition("a b/c", { notes: "x" });
+    await updateGradeTransition("a b/c", { expectedVersion: "v1", notes: "x" });
 
     expect(calls[0]?.url).toBe(`${BASE}/a%20b%2Fc`);
   });
@@ -216,7 +237,7 @@ describe("updateGradeTransition", () => {
     );
 
     await expect(
-      updateGradeTransition("7", { notes: "x" }),
+      updateGradeTransition("7", { expectedVersion: "v1", notes: "x" }),
     ).rejects.toMatchObject({
       name: "ApiError",
       code: NOT_DRAFT_CODE,
@@ -254,7 +275,7 @@ describe("deleteGradeTransition", () => {
 });
 
 describe("previewGradeTransition", () => {
-  const preview: BackendTransitionPreview = {
+  const preview: adminContract.TransitionPreviewResponse = {
     transition_id: "7",
     academic_year: "2026-2027",
     total_students: 50,
@@ -270,7 +291,7 @@ describe("previewGradeTransition", () => {
     ],
     unmapped_classes: null,
     warnings: null,
-    fingerprint: "sha256:abc",
+    fingerprint: FINGERPRINT,
   };
 
   it("GETs the preview uncached and carries the fingerprint through", async () => {
@@ -279,24 +300,21 @@ describe("previewGradeTransition", () => {
     const p = await previewGradeTransition("7");
 
     expect(calls[0]?.url).toBe(`${BASE}/7/preview`);
-    expect(calls[0]?.init?.cache).toBe("no-store");
-    expect(p.fingerprint).toBe("sha256:abc");
+    // Uncached: the catalog proxy answers `private, no-store`
+    // (catalog-proxy.server.test.ts).
+    expect(calls[0]?.init?.method).toBe("GET");
+    expect(p.fingerprint).toBe(FINGERPRINT);
     expect(p.unmappedClasses).toEqual([]);
     expect(p.warnings).toEqual([]);
   });
 
-  it("degrades a fingerprint-less response to an empty string", async () => {
-    // An older backend answers without the digest. Apply then sends no
-    // expected_fingerprint rather than a bogus one.
-    stubOnce(okData({ ...preview, fingerprint: undefined }));
-
-    expect((await previewGradeTransition("7")).fingerprint).toBe("");
-  });
-
-  it("accepts a bare payload without the { data } envelope", async () => {
+  it("refuses a bare payload without the { data } envelope", async () => {
     stubOnce(okBare(preview));
 
-    expect((await previewGradeTransition("7")).transitionId).toBe("7");
+    await expect(previewGradeTransition("7")).rejects.toMatchObject({
+      status: 502,
+      code: "general.unavailable",
+    });
   });
 
   it("uses the status fallback on failure", async () => {
@@ -310,12 +328,12 @@ describe("applyGradeTransition", () => {
   it("binds the call to the confirmed preview via expected_fingerprint", async () => {
     stubOnce(okData(resultRow));
 
-    const r = await applyGradeTransition("7", "sha256:abc");
+    const r = await applyGradeTransition("7", FINGERPRINT);
 
     expect(calls[0]?.url).toBe(`${BASE}/7/apply`);
     expect(calls[0]?.init?.method).toBe("POST");
     expect(parseBody(calls[0]?.init)).toEqual({
-      expected_fingerprint: "sha256:abc",
+      expected_fingerprint: FINGERPRINT,
     });
     expect(r.studentsPromoted).toBe(40);
     expect(r.studentsGraduated).toBe(10);
@@ -323,28 +341,14 @@ describe("applyGradeTransition", () => {
     expect(r.warnings).toEqual([]);
   });
 
-  it("sends an empty body when no fingerprint is known", async () => {
-    stubOnce(okData(resultRow));
-
-    await applyGradeTransition("7");
-
-    expect(parseBody(calls[0]?.init)).toEqual({});
-  });
-
-  it("sends an empty body for an empty-string fingerprint", async () => {
-    // previewGradeTransition degrades a missing digest to "", and an empty
-    // expected_fingerprint would be a claim the backend cannot match.
-    stubOnce(okData(resultRow));
-
-    await applyGradeTransition("7", "");
-
-    expect(parseBody(calls[0]?.init)).toEqual({});
-  });
-
-  it("reads a result sent without the { data } envelope", async () => {
+  it("refuses a result sent without the { data } envelope", async () => {
     stubOnce(okBare(resultRow));
 
-    expect((await applyGradeTransition("7")).transitionId).toBe("7");
+    // A write may have happened: the person reloads before trying again.
+    await expect(applyGradeTransition("7", FINGERPRINT)).rejects.toMatchObject({
+      status: 502,
+      code: "general.write_answer_unreadable",
+    });
   });
 
   it("keeps the graduates_checked_in code on a 409", async () => {
@@ -355,7 +359,9 @@ describe("applyGradeTransition", () => {
       }),
     );
 
-    const err = await applyGradeTransition("7").catch((e: unknown) => e);
+    const err = await applyGradeTransition("7", FINGERPRINT).catch(
+      (e: unknown) => e,
+    );
     expect(err).toBeInstanceOf(ApiError);
     expect((err as ApiError).code).toBe(
       "grade_transition.graduates_checked_in",
@@ -367,7 +373,7 @@ describe("applyGradeTransition", () => {
       fail(409, { detail: "preview is stale", code: PREVIEW_STALE_CODE }),
     );
 
-    const err = await applyGradeTransition("7", "sha256:old").catch(
+    const err = await applyGradeTransition("7", OLDER_FINGERPRINT).catch(
       (e: unknown) => e,
     );
     expect((err as ApiError).code).toBe(PREVIEW_STALE_CODE);
@@ -376,14 +382,17 @@ describe("applyGradeTransition", () => {
   it("falls back to the status line when the error body is unreadable", async () => {
     stubOnce(failUnparseable(500));
 
-    const err = await applyGradeTransition("7").catch((e: unknown) => e);
+    const err = await applyGradeTransition("7", FINGERPRINT).catch(
+      (e: unknown) => e,
+    );
     expect((err as ApiError).message).toBe("HTTP 500");
     expect((err as ApiError).code).toBe("general.server");
   });
 });
 
 describe("revertGradeTransition", () => {
-  it("POSTs an empty body to the revert route", async () => {
+  // The route carries no request body in its contract; the handler reads none.
+  it("POSTs to the revert route without a body", async () => {
     stubOnce(
       okData({ ...resultRow, status: "reverted", warnings: ["hinweis"] }),
     );
@@ -392,7 +401,7 @@ describe("revertGradeTransition", () => {
 
     expect(calls[0]?.url).toBe(`${BASE}/7/revert`);
     expect(calls[0]?.init?.method).toBe("POST");
-    expect(parseBody(calls[0]?.init)).toEqual({});
+    expect(calls[0]?.init?.body).toBeUndefined();
     expect(r.status).toBe("reverted");
     expect(r.warnings).toEqual(["hinweis"]);
   });
@@ -431,7 +440,9 @@ describe("fetchTransitionClasses", () => {
 
     expect(await fetchTransitionClasses()).toEqual(["1a", "2a", "4b"]);
     expect(calls[0]?.url).toBe(`${BASE}/classes`);
-    expect(calls[0]?.init?.cache).toBe("no-store");
+    // Uncached: the catalog proxy answers `private, no-store`
+    // (catalog-proxy.server.test.ts).
+    expect(calls[0]?.init?.method).toBe("GET");
   });
 
   it("returns an empty list when the payload is null", async () => {
@@ -449,7 +460,7 @@ describe("fetchTransitionClasses", () => {
 
 describe("fetchSuggestedMappings", () => {
   it("maps every suggestion", async () => {
-    const suggestions: BackendSuggestedMapping[] = [
+    const suggestions: adminContract.SuggestedMappingResponse[] = [
       {
         from_class: "1a",
         to_class: "2a",
@@ -483,14 +494,14 @@ describe("fetchSuggestedMappings", () => {
 
 describe("fetchTransitionHistory", () => {
   it("maps every ledger row for the escaped id", async () => {
-    const rows: BackendTransitionHistoryEntry[] = [
+    const rows: adminContract.TransitionHistoryResponse[] = [
       {
         id: "3",
         transition_id: "7",
         student_id: "99",
         person_name: "Mika Muster",
         from_class: "4a",
-        to_class: null,
+        to_class: undefined,
         action: "graduated",
         created_at: "2026-08-01T06:00:00Z",
         student_state: "purged",
@@ -501,7 +512,9 @@ describe("fetchTransitionHistory", () => {
     const history = await fetchTransitionHistory("7");
 
     expect(calls[0]?.url).toBe(`${BASE}/7/history`);
-    expect(calls[0]?.init?.cache).toBe("no-store");
+    // Uncached: the catalog proxy answers `private, no-store`
+    // (catalog-proxy.server.test.ts).
+    expect(calls[0]?.init?.method).toBe("GET");
     expect(history[0]?.studentState).toBe("purged");
   });
 
@@ -542,16 +555,18 @@ describe("purgeGraduatedStudent", () => {
 
 describe("listGradeTransitions request handling", () => {
   it("requests uncached keyset windows of 100", async () => {
-    stubOnce(okData([transitionRow]));
+    stubOnce(okPage([transitionRow]));
 
     await listGradeTransitions();
 
     expect(calls[0]?.url).toBe(`${BASE}?after_id=0&page_size=100`);
-    expect(calls[0]?.init?.cache).toBe("no-store");
+    // Uncached: the catalog proxy answers `private, no-store`
+    // (catalog-proxy.server.test.ts).
+    expect(calls[0]?.init?.method).toBe("GET");
   });
 
   it("tolerates a null payload", async () => {
-    stubOnce(okData(null));
+    stubOnce(okPage(null));
 
     expect(await listGradeTransitions()).toEqual([]);
     expect(calls).toHaveLength(1);
@@ -565,7 +580,7 @@ describe("listGradeTransitions request handling", () => {
       ...transitionRow,
       id: String(i + 1),
     }));
-    stubOnce(okData(fullPage));
+    stubOnce(okPage(fullPage));
 
     const result = await listGradeTransitions();
 

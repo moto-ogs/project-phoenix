@@ -3,6 +3,8 @@ package workforce
 import (
 	"encoding/json"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Overview periods of the Leitungs-Dashboard.
@@ -32,16 +34,16 @@ type DashboardSummary struct {
 
 // TimeTrackingOverviewRow is one staff member's Soll/Ist/Saldo/Resturlaub.
 type TimeTrackingOverviewRow struct {
-	StaffID               int64   `json:"staff_id"`
-	FirstName             string  `json:"first_name"`
-	LastName              string  `json:"last_name"`
-	Name                  string  `json:"name"`
-	EmploymentType        string  `json:"employment_type"`
-	SollMinutes           int     `json:"soll_minutes"`
-	HasTarget             bool    `json:"has_target"`
-	IstMinutes            int     `json:"ist_minutes"`
-	BalanceMinutes        int     `json:"balance_minutes"`
-	RemainingVacationDays float64 `json:"remaining_vacation_days"`
+	StaffID               ident.ID `json:"staff_id"`
+	FirstName             string   `json:"first_name"`
+	LastName              string   `json:"last_name"`
+	Name                  string   `json:"name"`
+	EmploymentType        string   `json:"employment_type"`
+	SollMinutes           int      `json:"soll_minutes"`
+	HasTarget             bool     `json:"has_target"`
+	IstMinutes            int      `json:"ist_minutes"`
+	BalanceMinutes        int      `json:"balance_minutes"`
+	RemainingVacationDays float64  `json:"remaining_vacation_days"`
 	// LaborHintDays counts the workdays of the month with an ArbZG hint.
 	LaborHintDays int `json:"labor_hint_days"`
 }
@@ -77,28 +79,28 @@ type OverviewFilters struct {
 
 // AuditLogPerson names a staff member in the audit feed.
 type AuditLogPerson struct {
-	ID   int64  `json:"id"`
-	Name string `json:"name"`
+	ID   ident.ID `json:"id"`
+	Name string   `json:"name"`
 }
 
 // AuditLogActor is the acting person of an audit event; StaffID is nil for
 // system actions.
 type AuditLogActor struct {
-	StaffID  *int64 `json:"staff_id,omitempty"`
-	Name     string `json:"name"`
-	IsSystem bool   `json:"is_system"`
-	IsSelf   bool   `json:"is_self"`
+	StaffID  *ident.ID `json:"staff_id,omitempty"`
+	Name     string    `json:"name"`
+	IsSystem bool      `json:"is_system"`
+	IsSelf   bool      `json:"is_self"`
 }
 
 // AuditLogEvent is one feed entry: common envelope plus source-typed detail.
 type AuditLogEvent struct {
-	OccurredAt time.Time       `json:"occurred_at"`
-	Source     string          `json:"source"`
-	EntryID    int64           `json:"entry_id"`
-	Staff      *AuditLogPerson `json:"staff,omitempty"`
-	Actor      AuditLogActor   `json:"actor"`
-	Reason     string          `json:"reason"`
-	Detail     json.RawMessage `json:"detail"`
+	OccurredAt time.Time                  `json:"occurred_at"`
+	Source     string                     `json:"source"`
+	EntryID    ident.ID                   `json:"entry_id"`
+	Staff      *AuditLogPerson            `json:"staff,omitempty"`
+	Actor      AuditLogActor              `json:"actor"`
+	Reason     string                     `json:"reason"`
+	Detail     map[string]json.RawMessage `json:"detail" contract_json:"The audit source selects the recorded fields, including historical deletion payloads"`
 }
 
 // AuditLogPage is one keyset page; NextCursor is empty on the last page.

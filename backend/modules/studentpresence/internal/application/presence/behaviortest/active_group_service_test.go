@@ -13,6 +13,7 @@ import (
 	active "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -49,10 +50,10 @@ func TestActiveService_GetActiveGroup(t *testing.T) {
 		// ASSERT
 		require.NoError(t, err)
 		assert.NotNil(t, result)
-		assert.Equal(t, activeGroup.ID, result.ID)
+		assert.Equal(t, ident.ID(activeGroup.ID), result.ID)
 		require.NotNil(t, result.GroupID)
-		assert.Equal(t, activityGroup.ID, *result.GroupID)
-		assert.Equal(t, room.ID, result.RoomID)
+		assert.Equal(t, ident.ID(activityGroup.ID), *result.GroupID)
+		assert.Equal(t, ident.ID(room.ID), result.RoomID)
 	})
 
 	t.Run("returns error when not found", func(t *testing.T) {
@@ -149,8 +150,8 @@ func TestActiveService_CreateActiveGroup(t *testing.T) {
 		now := time.Now()
 		activityID := activity.ID
 		group := &ports.ActiveGroup{
-			GroupID:        &activityID,
-			RoomID:         room.ID,
+			GroupID:        (*ident.ID)(&activityID),
+			RoomID:         ident.ID(room.ID),
 			StartTime:      now,
 			LastActivity:   now,
 			TimeoutMinutes: 30,
@@ -176,79 +177,6 @@ func TestActiveService_CreateActiveGroup(t *testing.T) {
 // =============================================================================
 // UpdateActiveGroup Tests
 // =============================================================================
-
-func TestActiveService_UpdateActiveGroup(t *testing.T) {
-	t.Parallel()
-
-	db := testpkg.SetupTestDB(t)
-
-	service := createActiveService(t, db)
-	ctx := testpkg.Ctx(t)
-
-	t.Run("updates active group successfully", func(t *testing.T) {
-		// ARRANGE
-		activity := testpkg.CreateTestActivityGroup(t, db, "update-active")
-		room := testpkg.CreateTestRoom(t, db, "Update Room")
-		group := testpkg.CreateTestActiveGroup(t, db, activity.ID, room.ID)
-
-		// Modify group
-		group.TimeoutMinutes = 60
-
-		// ACT
-		err := testpkg.TenantCommand1(t, ctx, db, service.UpdateActiveGroup, sessionOf(group))
-
-		// ASSERT
-		require.NoError(t, err)
-
-		// Verify update persisted
-		updated, err := testpkg.TenantQuery1(t, ctx, db, service.GetActiveGroup, group.ID)
-		require.NoError(t, err)
-		assert.Equal(t, 60, updated.TimeoutMinutes)
-	})
-
-	t.Run("returns error for nil group", func(t *testing.T) {
-		// ACT
-		err := testpkg.TenantCommand1(t, ctx, db, service.UpdateActiveGroup, nil)
-
-		// ASSERT
-		require.Error(t, err)
-	})
-
-	t.Run("returns error for group with zero ID", func(t *testing.T) {
-		// ARRANGE
-		group := &ports.ActiveGroup{}
-		group.ID = 0
-
-		// ACT
-		err := testpkg.TenantCommand1(t, ctx, db, service.UpdateActiveGroup, group)
-
-		// ASSERT
-		require.Error(t, err)
-	})
-
-	t.Run("rejects moving open visits into a room below their occupancy", func(t *testing.T) {
-		activity := testpkg.CreateTestActivityGroup(t, db, "capacity-group-move")
-		sourceRoom := testpkg.CreateTestRoom(t, db, "Capacity Group Source")
-		targetRoom := testpkg.CreateTestRoom(t, db, "Capacity Group Target")
-		capacity := 1
-		targetRoom.Capacity = &capacity
-		_, err := db.NewUpdate().Model(targetRoom).Column("capacity").WherePK().Exec(ctx)
-		require.NoError(t, err)
-		group := testpkg.CreateTestActiveGroup(t, db, activity.ID, sourceRoom.ID)
-		studentA := testpkg.CreateTestStudent(t, db, "Capacity", "GroupA", "1a")
-		studentB := testpkg.CreateTestStudent(t, db, "Capacity", "GroupB", "1a")
-		testpkg.CreateTestVisit(t, db, studentA.ID, group.ID, time.Now().Add(-time.Hour), nil)
-		testpkg.CreateTestVisit(t, db, studentB.ID, group.ID, time.Now().Add(-time.Hour), nil)
-
-		group.RoomID = targetRoom.ID
-		err = testpkg.TenantCommand1(t, ctx, db, service.UpdateActiveGroup, sessionOf(group))
-
-		require.ErrorIs(t, err, active.ErrRoomCapacityExceeded)
-		persisted, findErr := testpkg.TenantQuery1(t, ctx, db, service.GetActiveGroup, group.ID)
-		require.NoError(t, findErr)
-		assert.Equal(t, sourceRoom.ID, persisted.RoomID)
-	})
-}
 
 // =============================================================================
 // DeleteActiveGroup Tests
@@ -496,9 +424,9 @@ func TestActiveService_FindDeviceActiveGroupInRoom(t *testing.T) {
 
 		activityID := activity.ID
 		activeGroup := &ports.ActiveGroup{
-			GroupID:        &activityID,
-			RoomID:         room.ID,
-			DeviceID:       &device.ID,
+			GroupID:        (*ident.ID)(&activityID),
+			RoomID:         ident.ID(room.ID),
+			DeviceID:       (*ident.ID)(&device.ID),
 			StartTime:      time.Now(),
 			LastActivity:   time.Now(),
 			TimeoutMinutes: 30,
@@ -838,7 +766,7 @@ func TestActiveService_EndActivitySession_WithActiveVisits(t *testing.T) {
 
 		visit1 := &studentpresence.Visit{
 			StudentID:     student1.ID,
-			ActiveGroupID: session.ID,
+			ActiveGroupID: session.ID.Int64(),
 			EntryTime:     time.Now(),
 		}
 		err = testpkg.TenantCommand1(t, deviceCtx, db, func(ctx context.Context, visit *studentpresence.Visit) error { return service.CreateVisit(ctx, visit) }, visit1)
@@ -846,14 +774,14 @@ func TestActiveService_EndActivitySession_WithActiveVisits(t *testing.T) {
 
 		visit2 := &studentpresence.Visit{
 			StudentID:     student2.ID,
-			ActiveGroupID: session.ID,
+			ActiveGroupID: session.ID.Int64(),
 			EntryTime:     time.Now(),
 		}
 		err = testpkg.TenantCommand1(t, deviceCtx, db, func(ctx context.Context, visit *studentpresence.Visit) error { return service.CreateVisit(ctx, visit) }, visit2)
 		require.NoError(t, err)
 
 		// Verify visits are active (no exit time)
-		activeVisits, err := testSchoolPresence(t, db).ListVisits(ctx, studentpresence.VisitFilter{ActiveGroupIDs: []int64{session.ID}})
+		activeVisits, err := testSchoolPresence(t, db).ListVisits(ctx, studentpresence.VisitFilter{ActiveGroupIDs: []int64{session.ID.Int64()}})
 		require.NoError(t, err)
 		activeCount := 0
 		for _, v := range activeVisits {
@@ -864,18 +792,18 @@ func TestActiveService_EndActivitySession_WithActiveVisits(t *testing.T) {
 		assert.Equal(t, 2, activeCount, "Should have 2 active visits before ending")
 
 		// ACT - End the activity session
-		_, err = testpkg.TenantQuery1(t, ctx, db, service.EndActivitySession, session.ID)
+		_, err = testpkg.TenantQuery1(t, ctx, db, service.EndActivitySession, session.ID.Int64())
 
 		// ASSERT
 		require.NoError(t, err)
 
 		// Verify session ended
-		endedSession, err := testpkg.TenantQuery1(t, ctx, db, service.GetActiveGroup, session.ID)
+		endedSession, err := testpkg.TenantQuery1(t, ctx, db, service.GetActiveGroup, session.ID.Int64())
 		require.NoError(t, err)
 		assert.NotNil(t, endedSession.EndTime, "Session should have end time set")
 
 		// Verify all visits have been ended (exit time set)
-		endedVisits, err := testSchoolPresence(t, db).ListVisits(ctx, studentpresence.VisitFilter{ActiveGroupIDs: []int64{session.ID}})
+		endedVisits, err := testSchoolPresence(t, db).ListVisits(ctx, studentpresence.VisitFilter{ActiveGroupIDs: []int64{session.ID.Int64()}})
 		require.NoError(t, err)
 		for _, v := range endedVisits {
 			assert.NotNil(t, v.ExitTime, "Visit should have exit time after session ends")
@@ -896,13 +824,13 @@ func TestActiveService_EndActivitySession_WithActiveVisits(t *testing.T) {
 		require.NoError(t, err)
 
 		// ACT - End session without any visits
-		_, err = testpkg.TenantQuery1(t, ctx, db, service.EndActivitySession, session.ID)
+		_, err = testpkg.TenantQuery1(t, ctx, db, service.EndActivitySession, session.ID.Int64())
 
 		// ASSERT
 		require.NoError(t, err)
 
 		// Verify session ended
-		endedSession, err := testpkg.TenantQuery1(t, ctx, db, service.GetActiveGroup, session.ID)
+		endedSession, err := testpkg.TenantQuery1(t, ctx, db, service.GetActiveGroup, session.ID.Int64())
 		require.NoError(t, err)
 		assert.NotNil(t, endedSession.EndTime)
 	})
@@ -920,11 +848,11 @@ func TestActiveService_EndActivitySession_WithActiveVisits(t *testing.T) {
 		session, err := testpkg.TenantQuery4(t, ctx, db, service.StartActivitySessionWithSupervisors, activity.ID, iotDevice.ID, []int64{staff.ID}, &roomID)
 		require.NoError(t, err)
 
-		_, err = testpkg.TenantQuery1(t, ctx, db, service.EndActivitySession, session.ID)
+		_, err = testpkg.TenantQuery1(t, ctx, db, service.EndActivitySession, session.ID.Int64())
 		require.NoError(t, err)
 
 		// ACT - Try to end again
-		_, err = testpkg.TenantQuery1(t, ctx, db, service.EndActivitySession, session.ID)
+		_, err = testpkg.TenantQuery1(t, ctx, db, service.EndActivitySession, session.ID.Int64())
 
 		// ASSERT
 		require.Error(t, err)
@@ -947,7 +875,7 @@ func TestActiveService_EndActivitySession_WithActiveVisits(t *testing.T) {
 		require.NoError(t, err)
 
 		// Verify supervisors are active
-		supervisors, err := testSchoolPresence(t, db).QueryGroupSupervisions(ctx, studentpresence.GroupSupervisionFilter{GroupIDs: []int64{session.ID}, ActiveOn: new(calendar.TodayDate().String())})
+		supervisors, err := testSchoolPresence(t, db).QueryGroupSupervisions(ctx, studentpresence.GroupSupervisionFilter{GroupIDs: []int64{session.ID.Int64()}, ActiveOn: new(calendar.TodayDate().String())})
 		require.NoError(t, err)
 		activeCount := 0
 		for _, sup := range supervisors {
@@ -958,13 +886,13 @@ func TestActiveService_EndActivitySession_WithActiveVisits(t *testing.T) {
 		assert.Equal(t, 2, activeCount, "Should have 2 active supervisors")
 
 		// ACT
-		_, err = testpkg.TenantQuery1(t, ctx, db, service.EndActivitySession, session.ID)
+		_, err = testpkg.TenantQuery1(t, ctx, db, service.EndActivitySession, session.ID.Int64())
 
 		// ASSERT
 		require.NoError(t, err)
 
 		// Verify all supervisors have ended
-		endedSupervisors, err := testSchoolPresence(t, db).QueryGroupSupervisions(ctx, studentpresence.GroupSupervisionFilter{GroupIDs: []int64{session.ID}, ActiveOn: new(calendar.TodayDate().String())})
+		endedSupervisors, err := testSchoolPresence(t, db).QueryGroupSupervisions(ctx, studentpresence.GroupSupervisionFilter{GroupIDs: []int64{session.ID.Int64()}, ActiveOn: new(calendar.TodayDate().String())})
 		require.NoError(t, err)
 		for _, sup := range endedSupervisors {
 			assert.NotNil(t, sup.EndDate, "Supervisor should have end time after session ends")
@@ -1010,7 +938,7 @@ func TestActiveService_EndDailySessions_WithActiveData(t *testing.T) {
 		deviceCtx := api.WithAttendanceDevice(staffCtx, device1.ID, device1.TenantID)
 		visit := &studentpresence.Visit{
 			StudentID:     student.ID,
-			ActiveGroupID: session1.ID,
+			ActiveGroupID: session1.ID.Int64(),
 			EntryTime:     time.Now(),
 		}
 		err = testpkg.TenantCommand1(t, deviceCtx, db, func(ctx context.Context, visit *studentpresence.Visit) error { return service.CreateVisit(ctx, visit) }, visit)
@@ -1026,8 +954,8 @@ func TestActiveService_EndDailySessions_WithActiveData(t *testing.T) {
 		assert.GreaterOrEqual(t, result.SessionsEnded, 2)
 
 		// Verify sessions are ended
-		ended1, _ := testpkg.TenantQuery1(t, ctx, db, service.GetActiveGroup, session1.ID)
-		ended2, _ := testpkg.TenantQuery1(t, ctx, db, service.GetActiveGroup, session2.ID)
+		ended1, _ := testpkg.TenantQuery1(t, ctx, db, service.GetActiveGroup, session1.ID.Int64())
+		ended2, _ := testpkg.TenantQuery1(t, ctx, db, service.GetActiveGroup, session2.ID.Int64())
 		assert.NotNil(t, ended1.EndTime)
 		assert.NotNil(t, ended2.EndTime)
 	})
@@ -1053,11 +981,11 @@ func TestFindUnclaimedKeepsOnlySchulhofGroups(t *testing.T) {
 		groups, err := testpkg.TenantQuery0(t, ctx, db, service.GetUnclaimedActiveGroups)
 		require.NoError(t, err)
 		require.Len(t, groups, 1)
-		assert.Equal(t, yard.ID, groups[0].ID)
+		assert.Equal(t, ident.ID(yard.ID), groups[0].ID)
 		require.NotNil(t, groups[0].Room)
 		assert.Equal(t, "Schulhof", groups[0].Room.Name)
 		require.NotNil(t, groups[0].ActualGroup)
-		assert.Equal(t, activity.ID, groups[0].ActualGroup.ID)
+		assert.Equal(t, ident.ID(activity.ID), groups[0].ActualGroup.ID)
 		assert.Equal(t, activity.Name, groups[0].ActualGroup.Name)
 		assert.Nil(t, groups[0].ActualGroup.Category, "preserve the endpoint's template relation shape")
 		return nil

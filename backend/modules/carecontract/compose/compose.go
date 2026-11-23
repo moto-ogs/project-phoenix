@@ -12,9 +12,14 @@ import (
 )
 
 type (
-	ContractPorts = application.ContractPorts
-	IntakePorts   = application.IntakePorts
-	ImportPorts   = application.ImportPorts
+	ContractPorts   = application.ContractPorts
+	IntakePorts     = application.IntakePorts
+	ImportPorts     = application.ImportPorts
+	CorrectionPorts = application.CorrectionPorts
+	// ChildLinkPorts are the ports of the link of imported contracts to child records (#7760).
+	ChildLinkPorts = application.ChildLinkPorts
+	// EnrollmentPorts are the school reads of the enrollment of the children of imported contracts (#7760, ADR 0309).
+	EnrollmentPorts = application.EnrollmentPorts
 )
 
 // NewContracts builds the contracts of the Träger-Büro; the reads open own units for each school's access log. now is the root's clock (ADR 0239), nil the real one.
@@ -42,9 +47,22 @@ func NewIntake(ports IntakePorts, today func() calendar.Date) carecontract.Intak
 	return application.NewIntake(postgres.NewStore(today), ports, today)
 }
 
-// NewContractImports builds the import of existing contracts from a file (#4723); it opens its own units. today: see NewIntake.
+// NewContractImports builds the import of existing contracts from a file (#4723), NewContractCorrections the correction of those contracts (#7767, store without day clock); both open their own units. today: see NewIntake.
 func NewContractImports(ports ImportPorts, today func() calendar.Date) carecontract.ContractImports {
 	return application.NewContractImports(postgres.NewStore(today), ports, today)
+}
+func NewContractCorrections(ports CorrectionPorts, today func() calendar.Date) carecontract.ContractCorrections {
+	return application.NewContractCorrections(postgres.NewStore(nil), ports, today)
+}
+
+// NewContractChildLinks builds the link of imported contracts to child records (#7760); it opens its own units. today: see NewIntake.
+func NewContractChildLinks(ports ChildLinkPorts, today func() calendar.Date) carecontract.ContractChildLinks {
+	return application.NewContractChildLinks(postgres.NewStore(today), ports, today)
+}
+
+// NewContractEnrollments builds the plan and the binding of the enrollment of the children of imported contracts (#7760, ADR 0309); it opens no unit, the caller runs each step in its own. today: see NewIntake.
+func NewContractEnrollments(ports EnrollmentPorts, today func() calendar.Date) carecontract.ContractEnrollments {
+	return application.NewContractEnrollments(postgres.NewStore(today), ports, today)
 }
 
 // NewConclusion builds the conclusion at the acceptance (Weg b, #4680); it opens its own units. now: see NewContracts.
@@ -64,9 +82,9 @@ func NewContractMailRenderer() carecontract.ContractMailRenderer {
 	return application.RenderContractMail
 }
 
-// NewBookedCare builds the school's read of the booked care of its contracts, the Soll of Soll und
-// Ist (#4683, ADR 0156), in the tenant transaction of the school the caller holds.
-func NewBookedCare() carecontract.BookedCare { return postgres.NewBookedCare() }
+// NewBookedCare (the Soll of Soll und Ist, #4683, ADR 0156) and NewApplicationContracts (#4788) read the school's contracts in its tenant transaction.
+func NewBookedCare() carecontract.BookedCare                     { return postgres.NewBookedCare() }
+func NewApplicationContracts() carecontract.ApplicationContracts { return postgres.NewBookedCare() }
 
 // NewOverrunEvaluations evaluates the overruns of the Träger's schools (#4683, ADR 0156) in own units on the day today.
 func NewOverrunEvaluations(ports OverrunPorts, today func() calendar.Date) carecontract.OverrunEvaluations {
@@ -80,6 +98,5 @@ type OverrunPorts struct {
 	Runtime   carecontract.Runtime
 }
 
-// NewContractRetention reads and deletes contracts for the retention of the
-// Belege of a Träger (#4720, ADR 0184) in the caller's administrative unit.
+// NewContractRetention reads and deletes contracts for the retention of the Belege of a Träger (#4720, ADR 0184) in the caller's administrative unit.
 func NewContractRetention() carecontract.ContractRetention { return postgres.NewContractRetention() }

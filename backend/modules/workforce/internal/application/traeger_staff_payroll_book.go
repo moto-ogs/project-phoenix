@@ -5,6 +5,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // payrollBook collects the lines of the Träger's payroll file and its
@@ -55,7 +56,7 @@ func (b *payrollBook) add(record domain.TraegerStaffRecord, contract domain.Trae
 		if !b.missing[record.ID] {
 			b.missing[record.ID] = true
 			b.report.WithoutNumber = append(b.report.WithoutNumber, workforce.TraegerExportPerson{
-				RecordID: record.ID, FirstName: record.FirstName, LastName: record.LastName,
+				RecordID: ident.ID(record.ID), FirstName: record.FirstName, LastName: record.LastName,
 			})
 		}
 		return
@@ -86,7 +87,7 @@ func (b *payrollBook) contractChanges(scene exportScene, changes map[int64]bool)
 	for _, record := range scene.recordsByName() {
 		if changes[record.ID] {
 			b.report.ContractChanges = append(b.report.ContractChanges, workforce.TraegerExportPerson{
-				RecordID: record.ID, FirstName: record.FirstName, LastName: record.LastName,
+				RecordID: ident.ID(record.ID), FirstName: record.FirstName, LastName: record.LastName,
 			})
 		}
 	}

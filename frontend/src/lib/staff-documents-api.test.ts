@@ -1,34 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mockSessionData } from "~/test/mocks/next-auth";
 
-// Mock session-cache before importing the module under test. sessionFetch is
-// reproduced faithfully enough to assert the headers the client relies on.
-vi.mock("./session-cache", () => {
-  const getCachedSession = vi.fn();
-  return {
-    getCachedSession,
-    clearSessionCache: vi.fn(),
-    sessionFetch: vi.fn(async (url: string, init?: RequestInit) => {
-      // Same gate as the real sessionFetch (hasSessionAccess, #5005).
-      const session = (await getCachedSession()) as {
-        user?: { id?: string };
-        error?: string;
-      } | null;
-      if (!session?.user || session.error)
-        throw new Error("No authentication token available");
-      return fetch(url, {
-        ...init,
-        headers: {
-          "Content-Type": "application/json",
-          ...(init?.headers as Record<string, string> | undefined),
-        },
-      });
-    }),
-  };
-});
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 
-import { ApiError } from "./api-error";
-import { getCachedSession } from "./session-cache";
+import { ApiError, unavailableApiError } from "./api-error";
+import * as sessionCache from "./session-cache";
 import {
   formatFileSize,
   staffDocumentCategoryLabels,
@@ -36,12 +11,19 @@ import {
   type StaffDocumentCategory,
 } from "./staff-documents-api";
 
-const mockedGetSession = vi.mocked(getCachedSession);
+/** The staff session gate refuses before any request leaves. */
+function refuseSession(
+  error: unknown = new ApiError("Authentication required", 401, {
+    code: "general.permission",
+  }),
+) {
+  vi.spyOn(sessionCache, "requireTenantSession").mockRejectedValueOnce(error);
+}
 
 function backendDocument(overrides: Record<string, unknown> = {}) {
   return {
-    id: 42,
-    staff_id: 7,
+    id: "42",
+    staff_id: "7",
     category: "arbeitsvertrag" as StaffDocumentCategory,
     filename: "Vertrag.pdf",
     size_bytes: 2048,
@@ -60,7 +42,6 @@ describe("staff-documents-api", () => {
     vi.clearAllMocks();
     originalFetch = globalThis.fetch;
     globalThis.fetch = vi.fn();
-    mockedGetSession.mockResolvedValue(mockSessionData());
   });
 
   afterEach(() => {
@@ -77,7 +58,7 @@ describe("staff-documents-api", () => {
         json: () =>
           Promise.resolve({
             data: {
-              staff_id: 7,
+              staff_id: "7",
               documents: [backendDocument()],
               visible_categories: ["arbeitsvertrag", "zeugnis"],
             },
@@ -104,11 +85,8 @@ describe("staff-documents-api", () => {
       });
       expect(mockFetch()).toHaveBeenCalledWith(
         "/api/staff/7/documents",
-        expect.objectContaining({
-          headers: expect.not.objectContaining({
-            Authorization: expect.anything(),
-          }),
-        }),
+        // The browser holds no token: no headers at all (#5005).
+        { method: "GET" },
       );
     });
 
@@ -119,15 +97,15 @@ describe("staff-documents-api", () => {
         json: () =>
           Promise.resolve({
             data: {
-              staff_id: 7,
+              staff_id: "7",
               documents: [
                 backendDocument({
-                  id: 1,
+                  id: "1",
                   retain_until: null,
                   review_due: null,
                 }),
                 backendDocument({
-                  id: 2,
+                  id: "2",
                   retain_until: undefined,
                   review_due: undefined,
                 }),
@@ -151,8 +129,8 @@ describe("staff-documents-api", () => {
         json: () => Promise.resolve({}),
       } as unknown as Response);
 
-      await expect(staffDocumentsService.list("7")).rejects.toThrow(
-        "Failed to fetch staff documents: Internal Server Error",
+      await expect(staffDocumentsService.list("7")).rejects.toBeInstanceOf(
+        ApiError,
       );
     });
   });
@@ -164,7 +142,10 @@ describe("staff-documents-api", () => {
 
     // The route reads the session cookie; the browser holds no token (#5005).
     it("posts multipart form data without Authorization or JSON content type", async () => {
-      mockFetch().mockResolvedValue({ ok: true } as unknown as Response);
+      mockFetch().mockResolvedValue({
+        ok: true,
+        status: 204,
+      } as unknown as Response);
 
       await staffDocumentsService.upload("7", file, "lohnabrechnung");
 
@@ -181,7 +162,7 @@ describe("staff-documents-api", () => {
     });
 
     it("rejects without sending when there is no session at all", async () => {
-      mockedGetSession.mockResolvedValue(null);
+      refuseSession();
 
       const failure = staffDocumentsService.upload("7", file, "sonstiges");
       await expect(failure).rejects.toBeInstanceOf(ApiError);
@@ -193,11 +174,8 @@ describe("staff-documents-api", () => {
     });
 
     it("rejects when the callback stripped the session", async () => {
-      mockedGetSession.mockResolvedValue({
-        ...mockSessionData(),
-        user: { id: "1", name: "Test User" },
-        error: "RefreshTokenError",
-      });
+      // The gate refuses a session without access like a missing one.
+      refuseSession();
 
       await expect(
         staffDocumentsService.upload("7", file, "sonstiges"),
@@ -206,7 +184,8 @@ describe("staff-documents-api", () => {
     });
 
     it("normalizes a failed session lookup as unavailable", async () => {
-      mockedGetSession.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+      // The gate turns a failed lookup into general.unavailable.
+      refuseSession(unavailableApiError(new TypeError("Failed to fetch")));
 
       const failure = staffDocumentsService.upload("7", file, "sonstiges");
 
@@ -290,18 +269,17 @@ describe("staff-documents-api", () => {
 
   describe("delete", () => {
     it("issues a DELETE against the document route", async () => {
-      mockFetch().mockResolvedValue({ ok: true } as unknown as Response);
+      mockFetch().mockResolvedValue({
+        ok: true,
+        status: 204,
+      } as unknown as Response);
 
       await staffDocumentsService.delete("7", "42");
 
       expect(mockFetch()).toHaveBeenCalledWith(
         "/api/staff/7/documents/42",
-        expect.objectContaining({
-          method: "DELETE",
-          headers: expect.not.objectContaining({
-            Authorization: expect.anything(),
-          }),
-        }),
+        // The browser holds no token: no headers at all (#5005).
+        { method: "DELETE" },
       );
     });
 

@@ -20,6 +20,7 @@ import (
 	calendarSvc "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal"
 	calendarCompose "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal/compose"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 	"github.com/stretchr/testify/assert"
@@ -104,7 +105,7 @@ type recordingAppointmentCreate struct {
 func (r *recordingAppointmentCreate) CreateAppointment(ctx context.Context, input appointments.CreateAppointment) (*appointments.Appointment, []*appointments.AppointmentTarget, error) {
 	appointment, targets, err := r.Capability.CreateAppointment(ctx, input)
 	if err == nil {
-		r.appointmentID = appointment.ID
+		r.appointmentID = appointment.ID.Int64()
 		r.targets = len(targets)
 	}
 	return appointment, targets, err
@@ -176,8 +177,8 @@ func eventDates(events []calendarSvc.Event, source string) []string {
 func findRecipientByStaff(t *testing.T, detail *calendarSvc.AppointmentDetail, staffID int64) int64 {
 	t.Helper()
 	for _, recipient := range detail.Recipients {
-		if recipient.StaffID != nil && *recipient.StaffID == staffID {
-			return recipient.ID
+		if recipient.StaffID != nil && *recipient.StaffID == ident.ID(staffID) {
+			return recipient.ID.Int64()
 		}
 	}
 	t.Fatalf("staff recipient %d not found", staffID)
@@ -193,8 +194,8 @@ func findRecipientByGuardian(t *testing.T, detail *calendarSvc.AppointmentDetail
 
 func findOptionalRecipientByGuardian(detail *calendarSvc.AppointmentDetail, guardianID int64) int64 {
 	for _, recipient := range detail.Recipients {
-		if recipient.GuardianProfileID != nil && *recipient.GuardianProfileID == guardianID {
-			return recipient.ID
+		if recipient.GuardianProfileID != nil && *recipient.GuardianProfileID == ident.ID(guardianID) {
+			return recipient.ID.Int64()
 		}
 	}
 	return 0
@@ -234,7 +235,7 @@ func TestCalendarServiceIntegration_CreateRecurringAppointmentAndResponses(t *te
 	require.NoError(t, err)
 	require.NotNil(t, detail)
 
-	assert.Equal(t, organizer.ID, detail.Appointment.OrganizerStaffID)
+	assert.Equal(t, ident.ID(organizer.ID), detail.Appointment.OrganizerStaffID)
 	require.Len(t, detail.Recipients, 2)
 	require.Len(t, detail.Targets, 2)
 	require.NotNil(t, detail.Recurrence)
@@ -322,7 +323,7 @@ func TestCalendarServiceIntegration_UpdateCancelDeleteLifecycle(t *testing.T) {
 	require.NoError(t, err)
 
 	// A non-organizer may not edit the appointment.
-	_, err = testpkg.TenantQuery2(t, calendarContext(t, invitedAccount.ID), db, service.UpdateStaffAppointment, detail.Appointment.ID, calendarSvc.UpdateAppointmentRequest{
+	_, err = testpkg.TenantQuery2(t, calendarContext(t, invitedAccount.ID), db, service.UpdateStaffAppointment, detail.Appointment.ID.Int64(), calendarSvc.UpdateAppointmentRequest{
 		Title:     "Hijack",
 		StartDate: portalDate(2026, 3, 2),
 		EndDate:   portalDate(2026, 3, 2),
@@ -333,7 +334,7 @@ func TestCalendarServiceIntegration_UpdateCancelDeleteLifecycle(t *testing.T) {
 	assert.True(t, errors.Is(err, calendarSvc.ErrForbidden))
 
 	// The organizer edits event details; recipients (RSVP audience) are preserved.
-	updated, err := testpkg.TenantQuery2(t, calendarContext(t, organizerAccount.ID), db, service.UpdateStaffAppointment, detail.Appointment.ID, calendarSvc.UpdateAppointmentRequest{
+	updated, err := testpkg.TenantQuery2(t, calendarContext(t, organizerAccount.ID), db, service.UpdateStaffAppointment, detail.Appointment.ID.Int64(), calendarSvc.UpdateAppointmentRequest{
 		Title:     "Updated title",
 		Location:  testpkg.StrPtr("Room 2"),
 		StartDate: portalDate(2026, 3, 3),
@@ -346,12 +347,12 @@ func TestCalendarServiceIntegration_UpdateCancelDeleteLifecycle(t *testing.T) {
 	require.Len(t, updated.Recipients, 1)
 
 	// The organizer can re-read the full detail (used to prefill the edit modal).
-	detailAfter, err := testpkg.TenantQuery1(t, calendarContext(t, organizerAccount.ID), db, service.GetStaffAppointmentDetail, detail.Appointment.ID)
+	detailAfter, err := testpkg.TenantQuery1(t, calendarContext(t, organizerAccount.ID), db, service.GetStaffAppointmentDetail, detail.Appointment.ID.Int64())
 	require.NoError(t, err)
 	assert.Equal(t, "Updated title", detailAfter.Appointment.Title)
 	assert.Equal(t, "Room 2", *detailAfter.Appointment.Location)
 	// A non-organizer is refused.
-	_, err = testpkg.TenantQuery1(t, calendarContext(t, invitedAccount.ID), db, service.GetStaffAppointmentDetail, detail.Appointment.ID)
+	_, err = testpkg.TenantQuery1(t, calendarContext(t, invitedAccount.ID), db, service.GetStaffAppointmentDetail, detail.Appointment.ID.Int64())
 	require.Error(t, err)
 	assert.True(t, errors.Is(err, calendarSvc.ErrForbidden))
 
@@ -363,7 +364,7 @@ func TestCalendarServiceIntegration_UpdateCancelDeleteLifecycle(t *testing.T) {
 	assert.False(t, events[0].Cancelled)
 
 	// Cancelling marks the event but keeps it visible so parents/staff see it.
-	_, err = testpkg.TenantQuery1(t, calendarContext(t, organizerAccount.ID), db, service.CancelStaffAppointment, detail.Appointment.ID)
+	_, err = testpkg.TenantQuery1(t, calendarContext(t, organizerAccount.ID), db, service.CancelStaffAppointment, detail.Appointment.ID.Int64())
 	require.NoError(t, err)
 	events, err = testpkg.TenantQuery2(t, calendarContext(t, invitedAccount.ID), db, service.ListMyStaffEvents, portalDate(2026, 3, 1), portalDate(2026, 3, 10))
 	require.NoError(t, err)
@@ -371,7 +372,7 @@ func TestCalendarServiceIntegration_UpdateCancelDeleteLifecycle(t *testing.T) {
 	assert.True(t, events[0].Cancelled)
 
 	// Deleting removes it from every reader.
-	require.NoError(t, testpkg.TenantCommand1(t, calendarContext(t, organizerAccount.ID), db, service.DeleteStaffAppointment, detail.Appointment.ID))
+	require.NoError(t, testpkg.TenantCommand1(t, calendarContext(t, organizerAccount.ID), db, service.DeleteStaffAppointment, detail.Appointment.ID.Int64()))
 	events, err = testpkg.TenantQuery2(t, calendarContext(t, invitedAccount.ID), db, service.ListMyStaffEvents, portalDate(2026, 3, 1), portalDate(2026, 3, 10))
 	require.NoError(t, err)
 	assert.Empty(t, eventDates(events, calendarSvc.EventSourceAppointment))
@@ -421,12 +422,12 @@ func TestCalendarServiceIntegration_GuardianNotifications(t *testing.T) {
 	published := outbox.enqueued[0]
 	assert.Equal(t, emailKindAppointmentPublished, published.Kind)
 	assert.Equal(t, emailRelatedTypeAppointment, published.RelatedEntityType)
-	assert.Equal(t, detail.Appointment.ID, published.RelatedEntityID)
+	assert.Equal(t, detail.Appointment.ID.Int64(), published.RelatedEntityID)
 	assert.Equal(t, "Elternabend", published.Payload["title"])
 	assert.NotEmpty(t, published.Payload["recipient_email"])
 
 	// Cancelling queues a cancellation notice and clears pending mail.
-	_, err = testpkg.TenantQuery1(t, calendarContext(t, organizerAccount.ID), db, service.CancelStaffAppointment, detail.Appointment.ID)
+	_, err = testpkg.TenantQuery1(t, calendarContext(t, organizerAccount.ID), db, service.CancelStaffAppointment, detail.Appointment.ID.Int64())
 	require.NoError(t, err)
 	assert.Equal(t, 1, outbox.cancelled, "cancel should clear pending mail once")
 	require.Len(t, outbox.enqueued, 2)
@@ -464,7 +465,7 @@ func TestCalendarServiceIntegration_CancelHonoursEmailOptOutAndTransition(t *tes
 	// Cancelling a send_email=false appointment must not mail guardians.
 	silent := newSilentAppointment("Stiller Termin", 1)
 	require.Empty(t, outbox.enqueued)
-	_, err := testpkg.TenantQuery1(t, calendarContext(t, organizerAccount.ID), db, service.CancelStaffAppointment, silent.Appointment.ID)
+	_, err := testpkg.TenantQuery1(t, calendarContext(t, organizerAccount.ID), db, service.CancelStaffAppointment, silent.Appointment.ID.Int64())
 	require.NoError(t, err)
 	assert.Empty(t, outbox.enqueued, "a send_email=false appointment must stay silent on cancellation")
 
@@ -472,10 +473,10 @@ func TestCalendarServiceIntegration_CancelHonoursEmailOptOutAndTransition(t *tes
 	// concurrent callers gate notifications so no duplicate cancellation e-mail is
 	// sent.
 	fresh := newSilentAppointment("Zweiter", 2)
-	first, err := reposAppointments.Appointments().CancelAppointment(testpkg.Ctx(t), fresh.Appointment.ID)
+	first, err := reposAppointments.Appointments().CancelAppointment(testpkg.Ctx(t), fresh.Appointment.ID.Int64())
 	require.NoError(t, err)
 	assert.True(t, first, "first cancel performs the transition")
-	second, err := reposAppointments.Appointments().CancelAppointment(testpkg.Ctx(t), fresh.Appointment.ID)
+	second, err := reposAppointments.Appointments().CancelAppointment(testpkg.Ctx(t), fresh.Appointment.ID.Int64())
 	require.NoError(t, err)
 	assert.False(t, second, "a second (concurrent) cancel does not re-transition, so it must not notify")
 }
@@ -507,15 +508,15 @@ func TestCalendarServiceIntegration_CancelAfterDeleteDoesNotTransition(t *testin
 
 	// Simulate a delete landing after a cancel request loaded the still-live
 	// appointment: soft-delete it directly.
-	require.NoError(t, reposAppointments.Appointments().SoftDeleteAppointment(testpkg.Ctx(t), detail.Appointment.ID))
+	require.NoError(t, reposAppointments.Appointments().SoftDeleteAppointment(testpkg.Ctx(t), detail.Appointment.ID.Int64()))
 
 	// The cancel transition must now match zero rows (deleted_at guard) and report
 	// no transition, so CancelStaffAppointment skips the guardian notice.
-	transitioned, err := reposAppointments.Appointments().CancelAppointment(testpkg.Ctx(t), detail.Appointment.ID)
+	transitioned, err := reposAppointments.Appointments().CancelAppointment(testpkg.Ctx(t), detail.Appointment.ID.Int64())
 	require.NoError(t, err)
 	assert.False(t, transitioned, "cancel must not transition an appointment a concurrent delete removed")
 
-	after, err := reposAppointments.Appointments().FindAppointment(testpkg.Ctx(t), detail.Appointment.ID)
+	after, err := reposAppointments.Appointments().FindAppointment(testpkg.Ctx(t), detail.Appointment.ID.Int64())
 	require.NoError(t, err)
 	require.NotNil(t, after)
 	assert.NotNil(t, after.DeletedAt, "the appointment stays deleted")
@@ -553,7 +554,7 @@ func TestCalendarServiceIntegration_AppointmentICS(t *testing.T) {
 	require.NoError(t, err)
 
 	// Organizer can export.
-	filename, content, err := testpkg.TenantQueryPair1(t, calendarContext(t, organizerAccount.ID), db, service.StaffAppointmentICS, detail.Appointment.ID)
+	filename, content, err := testpkg.TenantQueryPair1(t, calendarContext(t, organizerAccount.ID), db, service.StaffAppointmentICS, detail.Appointment.ID.Int64())
 	require.NoError(t, err)
 	assert.Equal(t, "Wchentliche-AG.ics", filename)
 	assert.Contains(t, content, "BEGIN:VEVENT")
@@ -565,20 +566,20 @@ func TestCalendarServiceIntegration_AppointmentICS(t *testing.T) {
 
 	// Cancelling a single occurrence emits an EXDATE so subscribed calendars
 	// drop that date (matching the in-app view).
-	require.NoError(t, testpkg.TenantCommand2(t, calendarContext(t, organizerAccount.ID), db, service.CancelStaffAppointmentOccurrence, detail.Appointment.ID, portalDate(2026, 5, 11)))
-	_, contentAfter, err := testpkg.TenantQueryPair1(t, calendarContext(t, organizerAccount.ID), db, service.StaffAppointmentICS, detail.Appointment.ID)
+	require.NoError(t, testpkg.TenantCommand2(t, calendarContext(t, organizerAccount.ID), db, service.CancelStaffAppointmentOccurrence, detail.Appointment.ID.Int64(), portalDate(2026, 5, 11)))
+	_, contentAfter, err := testpkg.TenantQueryPair1(t, calendarContext(t, organizerAccount.ID), db, service.StaffAppointmentICS, detail.Appointment.ID.Int64())
 	require.NoError(t, err)
 	assert.Contains(t, contentAfter, "EXDATE;TZID=Europe/Berlin:20260511T140000")
 
 	// The invited guardian can export, and also sees the exclusion.
-	_, parentContent, err := service.ParentAppointmentICS(testpkg.Ctx(t), parentChain.AccountID, detail.Appointment.ID)
+	_, parentContent, err := service.ParentAppointmentICS(testpkg.Ctx(t), parentChain.AccountID, detail.Appointment.ID.Int64())
 	require.NoError(t, err)
 	assert.Contains(t, parentContent, "SUMMARY:Wöchentliche AG")
 	assert.Contains(t, parentContent, "EXDATE;TZID=Europe/Berlin:20260511T140000")
 
 	// A stranger staff member cannot.
 	_, otherAccount := testpkg.CreateTestCalendarStaff(t, db, "ICS", "Stranger")
-	_, _, err = testpkg.TenantQueryPair1(t, calendarContext(t, otherAccount.ID), db, service.StaffAppointmentICS, detail.Appointment.ID)
+	_, _, err = testpkg.TenantQueryPair1(t, calendarContext(t, otherAccount.ID), db, service.StaffAppointmentICS, detail.Appointment.ID.Int64())
 	require.Error(t, err)
 	assert.True(t, errors.Is(err, calendarSvc.ErrNotFound))
 }
@@ -669,7 +670,7 @@ func TestCalendarServiceIntegration_SubscriptionFeed(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	require.NoError(t, testpkg.TenantCommand2(t, calendarContext(t, organizerAccount.ID), db, service.CancelStaffAppointmentOccurrence, recurring.Appointment.ID, recurStart.AddDays(7)))
+	require.NoError(t, testpkg.TenantCommand2(t, calendarContext(t, organizerAccount.ID), db, service.CancelStaffAppointmentOccurrence, recurring.Appointment.ID.Int64(), recurStart.AddDays(7)))
 
 	_, contentWithExdate, err := service.ParentCalendarFeedByToken(testpkg.Ctx(t), token)
 	require.NoError(t, err)
@@ -1092,12 +1093,12 @@ func TestCalendarServiceIntegration_StaffSubscriptionPublishesOccurrenceAndDelet
 	require.NoError(t, err)
 	token := strings.TrimPrefix(staffURL, "https://moto.test/api/calendar-feed/")
 
-	require.NoError(t, testpkg.TenantCommand2(t, calendarContext(t, account.ID), db, service.CancelStaffAppointmentOccurrence, detail.Appointment.ID, start.AddDays(7)))
+	require.NoError(t, testpkg.TenantCommand2(t, calendarContext(t, account.ID), db, service.CancelStaffAppointmentOccurrence, detail.Appointment.ID.Int64(), start.AddDays(7)))
 	_, withExdate, err := service.StaffCalendarFeedByToken(testpkg.Ctx(t), token)
 	require.NoError(t, err)
 	assert.Contains(t, withExdate, "EXDATE;TZID=Europe/Berlin:")
 
-	require.NoError(t, testpkg.TenantCommand1(t, calendarContext(t, account.ID), db, service.DeleteStaffAppointment, detail.Appointment.ID))
+	require.NoError(t, testpkg.TenantCommand1(t, calendarContext(t, account.ID), db, service.DeleteStaffAppointment, detail.Appointment.ID.Int64()))
 	_, afterDelete, err := service.StaffCalendarFeedByToken(testpkg.Ctx(t), token)
 	require.NoError(t, err)
 	assert.Contains(t, afterDelete, "SUMMARY:Wöchentliche Runde")
@@ -1132,7 +1133,7 @@ func TestCalendarServiceIntegration_CleanupExpiredFeedTombstonesDeletesStaffTomb
 		},
 	})
 	require.NoError(t, err)
-	require.NoError(t, testpkg.TenantCommand1(t, calendarContext(t, account.ID), db, service.DeleteStaffAppointment, detail.Appointment.ID))
+	require.NoError(t, testpkg.TenantCommand1(t, calendarContext(t, account.ID), db, service.DeleteStaffAppointment, detail.Appointment.ID.Int64()))
 	cancelledDetail, err := testpkg.TenantQuery1(t, calendarContext(t, account.ID), db, service.CreateStaffAppointment, calendarSvc.CreateAppointmentRequest{
 		Title:        "Alter abgesagter Feed-Termin",
 		StartDate:    day.AddDays(1),
@@ -1148,7 +1149,7 @@ func TestCalendarServiceIntegration_CleanupExpiredFeedTombstonesDeletesStaffTomb
 		},
 	})
 	require.NoError(t, err)
-	_, err = testpkg.TenantQuery1(t, calendarContext(t, account.ID), db, service.CancelStaffAppointment, cancelledDetail.Appointment.ID)
+	_, err = testpkg.TenantQuery1(t, calendarContext(t, account.ID), db, service.CancelStaffAppointment, cancelledDetail.Appointment.ID.Int64())
 	require.NoError(t, err)
 
 	room := testpkg.CreateTestRoom(t, db, "Cleanup-Raum")
@@ -1186,7 +1187,7 @@ func TestCalendarServiceIntegration_CleanupExpiredFeedTombstonesDeletesStaffTomb
 	// Cancelled and deleted appointments go in the nightly retention of the
 	// Appointments owner, which logs them (#4045,
 	// TestNightlyRetentionDeletesCancelledAppointmentsAfterTheFeedWindow).
-	for _, id := range []int64{detail.Appointment.ID, cancelledDetail.Appointment.ID} {
+	for _, id := range []int64{detail.Appointment.ID.Int64(), cancelledDetail.Appointment.ID.Int64()} {
 		var appointments int
 		require.NoError(t, db.NewSelect().Table("calendar.appointments").ColumnExpr("COUNT(*)").
 			Where("id = ?", id).Scan(context.Background(), &appointments))
@@ -1245,7 +1246,7 @@ func TestCalendarServiceIntegration_DeleteFeedVisibleLeavesTombstone(t *testing.
 	require.NoError(t, err)
 	assert.NotEmpty(t, eventDates(before, calendarSvc.EventSourceAppointment))
 
-	require.NoError(t, testpkg.TenantCommand1(t, calendarContext(t, organizerAccount.ID), db, service.DeleteStaffAppointment, detail.Appointment.ID))
+	require.NoError(t, testpkg.TenantCommand1(t, calendarContext(t, organizerAccount.ID), db, service.DeleteStaffAppointment, detail.Appointment.ID.Int64()))
 
 	// The subscription feed keeps re-exporting the same UID as a durable
 	// STATUS:CANCELLED tombstone with a bumped SEQUENCE, so subscribers purge it
@@ -1258,7 +1259,7 @@ func TestCalendarServiceIntegration_DeleteFeedVisibleLeavesTombstone(t *testing.
 
 	// But the delete is a real delete for every interactive surface: the organizer
 	// can no longer open it, and it is gone from the parent's calendar.
-	_, err = testpkg.TenantQuery1(t, calendarContext(t, organizerAccount.ID), db, service.GetStaffAppointmentDetail, detail.Appointment.ID)
+	_, err = testpkg.TenantQuery1(t, calendarContext(t, organizerAccount.ID), db, service.GetStaffAppointmentDetail, detail.Appointment.ID.Int64())
 	require.Error(t, err)
 	assert.True(t, errors.Is(err, calendarSvc.ErrNotFound))
 
@@ -1292,7 +1293,7 @@ func TestCalendarServiceIntegration_EditRacingCancellationConflicts(t *testing.T
 	require.Nil(t, detail.Appointment.CancelledAt)
 
 	// Cancel it (persists cancelled_at via the dedicated conditional update).
-	_, err = testpkg.TenantQuery1(t, calendarContext(t, organizerAccount.ID), db, service.CancelStaffAppointment, detail.Appointment.ID)
+	_, err = testpkg.TenantQuery1(t, calendarContext(t, organizerAccount.ID), db, service.CancelStaffAppointment, detail.Appointment.ID.Int64())
 	require.NoError(t, err)
 
 	// Flushing the stale edit must NOT touch the terminal row: the conditional
@@ -1301,9 +1302,9 @@ func TestCalendarServiceIntegration_EditRacingCancellationConflicts(t *testing.T
 	stale := *detail.Appointment
 	stale.Title = "Edited concurrently"
 	_, err = reposAppointments.Appointments().UpdateAppointment(testpkg.Ctx(t), appointments.UpdateAppointment{
-		ID: stale.ID,
+		ID: stale.ID.Int64(),
 		AppointmentFields: appointments.AppointmentFields{
-			OrganizerStaffID: stale.OrganizerStaffID, Title: stale.Title, Description: stale.Description,
+			OrganizerStaffID: stale.OrganizerStaffID.Int64(), Title: stale.Title, Description: stale.Description,
 			Location: stale.Location, StartDate: stale.StartDate, EndDate: stale.EndDate,
 			StartTime: stale.StartTime, EndTime: stale.EndTime, AllDay: stale.AllDay,
 			DeliveryMode: stale.DeliveryMode, OverviewVisibility: stale.OverviewVisibility,
@@ -1313,7 +1314,7 @@ func TestCalendarServiceIntegration_EditRacingCancellationConflicts(t *testing.T
 	require.Error(t, err)
 	assert.ErrorIs(t, err, appointments.ErrAppointmentLifecycleConflict)
 
-	after, err := reposAppointments.Appointments().FindAppointment(testpkg.Ctx(t), detail.Appointment.ID)
+	after, err := reposAppointments.Appointments().FindAppointment(testpkg.Ctx(t), detail.Appointment.ID.Int64())
 	require.NoError(t, err)
 	require.NotNil(t, after)
 	assert.NotNil(t, after.CancelledAt, "the cancellation stands")
@@ -1360,7 +1361,7 @@ func TestCalendarServiceIntegration_CancelledTombstoneSurvivesLookbackWindow(t *
 	// Cancel it. Even though its date aged out of the lookback, the feed must
 	// re-export it as a durable STATUS:CANCELLED tombstone (retained by cancel
 	// time), so a subscriber who was offline still receives the cancellation.
-	_, err = testpkg.TenantQuery1(t, calendarContext(t, organizerAccount.ID), db, service.CancelStaffAppointment, detail.Appointment.ID)
+	_, err = testpkg.TenantQuery1(t, calendarContext(t, organizerAccount.ID), db, service.CancelStaffAppointment, detail.Appointment.ID.Int64())
 	require.NoError(t, err)
 
 	_, afterCancel, err := service.ParentCalendarFeedByToken(testpkg.Ctx(t), token)
@@ -1476,13 +1477,13 @@ func TestCalendarServiceIntegration_CancelSingleOccurrence(t *testing.T) {
 	assert.Equal(t, []string{"2026-01-05", "2026-01-12", "2026-01-19"}, eventDates(events, calendarSvc.EventSourceAppointment))
 
 	// Cancel the middle occurrence.
-	require.NoError(t, testpkg.TenantCommand2(t, calendarContext(t, organizerAccount.ID), db, service.CancelStaffAppointmentOccurrence, detail.Appointment.ID, portalDate(2026, 1, 12)))
+	require.NoError(t, testpkg.TenantCommand2(t, calendarContext(t, organizerAccount.ID), db, service.CancelStaffAppointmentOccurrence, detail.Appointment.ID.Int64(), portalDate(2026, 1, 12)))
 	events, err = testpkg.TenantQuery2(t, calendarContext(t, invitedAccount.ID), db, service.ListMyStaffEvents, portalDate(2026, 1, 5), portalDate(2026, 1, 19))
 	require.NoError(t, err)
 	assert.Equal(t, []string{"2026-01-05", "2026-01-19"}, eventDates(events, calendarSvc.EventSourceAppointment))
 
 	// Cancelling the same occurrence again is idempotent.
-	require.NoError(t, testpkg.TenantCommand2(t, calendarContext(t, organizerAccount.ID), db, service.CancelStaffAppointmentOccurrence, detail.Appointment.ID, portalDate(2026, 1, 12)))
+	require.NoError(t, testpkg.TenantCommand2(t, calendarContext(t, organizerAccount.ID), db, service.CancelStaffAppointmentOccurrence, detail.Appointment.ID.Int64(), portalDate(2026, 1, 12)))
 }
 
 func TestCalendarServiceIntegration_AttendeeOverviewVisibility(t *testing.T) {
@@ -1517,7 +1518,7 @@ func TestCalendarServiceIntegration_AttendeeOverviewVisibility(t *testing.T) {
 	otherGuardianRecipientID := findRecipientByGuardian(t, detail, otherParentChain.GuardianProfileID)
 	require.NoError(t, service.RespondToParentInvitation(testpkg.Ctx(t), otherParentChain.AccountID, otherGuardianRecipientID, calendarSvc.InvitationAnswer{Status: appointments.ResponseStatusDeclined}))
 
-	staffOverview, err := testpkg.TenantQuery2(t, calendarContext(t, invitedAccount.ID), db, service.GetStaffAppointmentOverview, detail.Appointment.ID, calendarSvc.Date(""))
+	staffOverview, err := testpkg.TenantQuery2(t, calendarContext(t, invitedAccount.ID), db, service.GetStaffAppointmentOverview, detail.Appointment.ID.Int64(), calendarSvc.Date(""))
 	require.NoError(t, err)
 	require.NotNil(t, staffOverview)
 	assert.Equal(t, appointments.OverviewVisibilityAll, staffOverview.OverviewVisibility)
@@ -1539,7 +1540,7 @@ func TestCalendarServiceIntegration_AttendeeOverviewVisibility(t *testing.T) {
 
 	// A parent sees the staff and their own entry by name, never another
 	// parent's name or answer (#6846); the counts still cover everyone.
-	parentOverview, err := service.GetParentAppointmentOverview(testpkg.Ctx(t), parentChain.AccountID, detail.Appointment.ID, "")
+	parentOverview, err := service.GetParentAppointmentOverview(testpkg.Ctx(t), parentChain.AccountID, detail.Appointment.ID.Int64(), "")
 	require.NoError(t, err)
 	require.Len(t, parentOverview.Attendees, 2)
 	ownGuardianRecipientID := findRecipientByGuardian(t, detail, parentChain.GuardianProfileID)
@@ -1592,23 +1593,23 @@ func TestCalendarServiceIntegration_DeletedAppointmentUnreachableViaOverviewAndR
 	guardianRecipientID := findRecipientByGuardian(t, detail, parentChain.GuardianProfileID)
 
 	// Sanity: while live, overview and RSVP are reachable.
-	_, err = testpkg.TenantQuery2(t, calendarContext(t, invitedAccount.ID), db, service.GetStaffAppointmentOverview, detail.Appointment.ID, calendarSvc.Date(""))
+	_, err = testpkg.TenantQuery2(t, calendarContext(t, invitedAccount.ID), db, service.GetStaffAppointmentOverview, detail.Appointment.ID.Int64(), calendarSvc.Date(""))
 	require.NoError(t, err)
 	require.NoError(t, testpkg.TenantCommand2(t, calendarContext(t, invitedAccount.ID), db, service.RespondToStaffInvitation, staffRecipientID, calendarSvc.InvitationAnswer{Status: appointments.ResponseStatusAccepted}))
 
 	// It targets a guardian, so delete tombstones (soft-deletes) it.
-	require.NoError(t, testpkg.TenantCommand1(t, calendarContext(t, organizerAccount.ID), db, service.DeleteStaffAppointment, detail.Appointment.ID))
+	require.NoError(t, testpkg.TenantCommand1(t, calendarContext(t, organizerAccount.ID), db, service.DeleteStaffAppointment, detail.Appointment.ID.Int64()))
 
 	// Every interactive detail/overview/RSVP path — staff and parent — must now
 	// treat the retained appointment/recipient IDs as not found.
-	_, err = testpkg.TenantQuery1(t, calendarContext(t, organizerAccount.ID), db, service.GetStaffAppointmentDetail, detail.Appointment.ID)
+	_, err = testpkg.TenantQuery1(t, calendarContext(t, organizerAccount.ID), db, service.GetStaffAppointmentDetail, detail.Appointment.ID.Int64())
 	assert.ErrorIs(t, err, calendarSvc.ErrNotFound)
 
-	_, err = testpkg.TenantQuery2(t, calendarContext(t, organizerAccount.ID), db, service.GetStaffAppointmentOverview, detail.Appointment.ID, calendarSvc.Date(""))
+	_, err = testpkg.TenantQuery2(t, calendarContext(t, organizerAccount.ID), db, service.GetStaffAppointmentOverview, detail.Appointment.ID.Int64(), calendarSvc.Date(""))
 	assert.ErrorIs(t, err, calendarSvc.ErrNotFound)
-	_, err = testpkg.TenantQuery2(t, calendarContext(t, invitedAccount.ID), db, service.GetStaffAppointmentOverview, detail.Appointment.ID, calendarSvc.Date(""))
+	_, err = testpkg.TenantQuery2(t, calendarContext(t, invitedAccount.ID), db, service.GetStaffAppointmentOverview, detail.Appointment.ID.Int64(), calendarSvc.Date(""))
 	assert.ErrorIs(t, err, calendarSvc.ErrNotFound)
-	_, err = service.GetParentAppointmentOverview(testpkg.Ctx(t), parentChain.AccountID, detail.Appointment.ID, "")
+	_, err = service.GetParentAppointmentOverview(testpkg.Ctx(t), parentChain.AccountID, detail.Appointment.ID.Int64(), "")
 	assert.ErrorIs(t, err, calendarSvc.ErrNotFound)
 
 	err = testpkg.TenantCommand2(t, calendarContext(t, invitedAccount.ID), db, service.RespondToStaffInvitation, staffRecipientID, calendarSvc.InvitationAnswer{Status: appointments.ResponseStatusDeclined})
@@ -1643,20 +1644,20 @@ func TestCalendarServiceIntegration_AttendeeOverviewAccessRules(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	organizerOverview, err := testpkg.TenantQuery2(t, calendarContext(t, organizerAccount.ID), db, service.GetStaffAppointmentOverview, detail.Appointment.ID, calendarSvc.Date(""))
+	organizerOverview, err := testpkg.TenantQuery2(t, calendarContext(t, organizerAccount.ID), db, service.GetStaffAppointmentOverview, detail.Appointment.ID.Int64(), calendarSvc.Date(""))
 	require.NoError(t, err)
 	require.Len(t, organizerOverview.Attendees, 2)
 	for _, attendee := range organizerOverview.Attendees {
 		assert.Equal(t, appointments.ResponseStatusInfo, attendee.Status)
 	}
 
-	_, err = testpkg.TenantQuery2(t, calendarContext(t, invitedAccount.ID), db, service.GetStaffAppointmentOverview, detail.Appointment.ID, calendarSvc.Date(""))
+	_, err = testpkg.TenantQuery2(t, calendarContext(t, invitedAccount.ID), db, service.GetStaffAppointmentOverview, detail.Appointment.ID.Int64(), calendarSvc.Date(""))
 	require.NoError(t, err)
 
-	_, err = service.GetParentAppointmentOverview(testpkg.Ctx(t), parentChain.AccountID, detail.Appointment.ID, "")
+	_, err = service.GetParentAppointmentOverview(testpkg.Ctx(t), parentChain.AccountID, detail.Appointment.ID.Int64(), "")
 	assert.True(t, errors.Is(err, calendarSvc.ErrForbidden))
 
-	_, err = testpkg.TenantQuery2(t, calendarContext(t, outsiderAccount.ID), db, service.GetStaffAppointmentOverview, detail.Appointment.ID, calendarSvc.Date(""))
+	_, err = testpkg.TenantQuery2(t, calendarContext(t, outsiderAccount.ID), db, service.GetStaffAppointmentOverview, detail.Appointment.ID.Int64(), calendarSvc.Date(""))
 	assert.True(t, errors.Is(err, calendarSvc.ErrNotFound))
 
 	parentEvents, err := service.ListMyParentEvents(testpkg.Ctx(t), parentChain.AccountID, portalDate(2026, 2, 11), portalDate(2026, 2, 11))
@@ -1995,9 +1996,9 @@ func setupRecurrenceUpdateRollbackFixture(t *testing.T, db *bun.DB) recurrenceUp
 	})
 	require.NoError(t, err)
 	cancelledDate := portalDate(2030, 3, 11)
-	require.NoError(t, testpkg.TenantCommand2(t, calendarContext(t, account.ID), testpkg.SetupTestDB(t), service.CancelStaffAppointmentOccurrence, detail.Appointment.ID, cancelledDate))
+	require.NoError(t, testpkg.TenantCommand2(t, calendarContext(t, account.ID), testpkg.SetupTestDB(t), service.CancelStaffAppointmentOccurrence, detail.Appointment.ID.Int64(), cancelledDate))
 	newEndsOn := portalDate(2030, 6, 30)
-	return recurrenceUpdateRollbackFixture{config: config, service: service, accountID: account.ID, appointmentID: detail.Appointment.ID, cancelledDate: cancelledDate,
+	return recurrenceUpdateRollbackFixture{config: config, service: service, accountID: account.ID, appointmentID: detail.Appointment.ID.Int64(), cancelledDate: cancelledDate,
 		update: calendarSvc.UpdateAppointmentRequest{Title: "Replacement series", StartDate: portalDate(2030, 4, 2), EndDate: portalDate(2030, 4, 2),
 			StartTime: wallClock(10, 0), EndTime: wallClock(11, 0),
 			Recurrence: &calendarSvc.RecurrenceRequest{Frequency: appointments.RecurrenceFrequencyMonthly, IntervalCount: 1, MonthDays: []int{2}, EndsOn: &newEndsOn}}}
@@ -2062,7 +2063,7 @@ func TestCalendarServiceIntegration_MultiDayRecurrenceVisibleOnFinalOverlapDay(t
 	assert.Contains(t, eventDates(events, calendarSvc.EventSourceAppointment), "2026-01-31")
 
 	cancelledOverride := &appointments.AppointmentOccurrenceOverride{
-		AppointmentID:  detail.Appointment.ID,
+		AppointmentID:  detail.Appointment.ID.Int64(),
 		OccurrenceDate: appointments.NewDate(2026, 1, 31),
 		Cancelled:      true,
 	}
@@ -2134,7 +2135,7 @@ func TestCalendarServiceIntegration_ResponseAndOverviewErrors(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	_, err = testpkg.TenantQuery2(t, calendarContext(t, invitedAccount.ID), db, service.GetStaffAppointmentOverview, privateDetail.Appointment.ID, calendarSvc.Date(""))
+	_, err = testpkg.TenantQuery2(t, calendarContext(t, invitedAccount.ID), db, service.GetStaffAppointmentOverview, privateDetail.Appointment.ID.Int64(), calendarSvc.Date(""))
 	assert.True(t, errors.Is(err, calendarSvc.ErrForbidden))
 
 	infoDetail, err := testpkg.TenantQuery1(t, calendarContext(t, organizerAccount.ID), db, service.CreateStaffAppointment, calendarSvc.CreateAppointmentRequest{
@@ -2192,7 +2193,7 @@ func TestCalendarServiceIntegration_RepositoryReadAndReplacePaths(t *testing.T) 
 	require.NoError(t, err)
 	assert.Empty(t, emptyGuardianAppointments)
 
-	recurrence, err := reposAppointments.Appointments().FindRecurrenceRule(ctx, detail.Appointment.ID)
+	recurrence, err := reposAppointments.Appointments().FindRecurrenceRule(ctx, detail.Appointment.ID.Int64())
 	require.NoError(t, err)
 	require.NotNil(t, recurrence)
 	assert.Equal(t, appointments.RecurrenceFrequencyWeekly, recurrence.Frequency)
@@ -2201,15 +2202,15 @@ func TestCalendarServiceIntegration_RepositoryReadAndReplacePaths(t *testing.T) 
 	require.NoError(t, err)
 	assert.Empty(t, emptyRecurrences)
 
-	targets, err := reposAppointments.Appointments().FindAppointmentTargets(ctx, detail.Appointment.ID)
+	targets, err := reposAppointments.Appointments().FindAppointmentTargets(ctx, detail.Appointment.ID.Int64())
 	require.NoError(t, err)
 	require.Len(t, targets, 2)
 
-	recipients, err := reposAppointments.Appointments().FindAppointmentRecipients(ctx, detail.Appointment.ID)
+	recipients, err := reposAppointments.Appointments().FindAppointmentRecipients(ctx, detail.Appointment.ID.Int64())
 	require.NoError(t, err)
 	recipientIDs := make([]int64, 0, len(recipients))
 	for _, recipient := range recipients {
-		recipientIDs = append(recipientIDs, recipient.ID)
+		recipientIDs = append(recipientIDs, recipient.ID.Int64())
 	}
 	links, err := reposAppointments.Appointments().FindAppointmentRecipientStudents(ctx, recipientIDs)
 	require.NoError(t, err)
@@ -2220,14 +2221,14 @@ func TestCalendarServiceIntegration_RepositoryReadAndReplacePaths(t *testing.T) 
 	require.NoError(t, err)
 	assert.Empty(t, emptyLinks)
 
-	_, err = reposAppointments.Appointments().ReplaceAppointmentTargets(ctx, detail.Appointment.ID, nil)
+	_, err = reposAppointments.Appointments().ReplaceAppointmentTargets(ctx, detail.Appointment.ID.Int64(), nil)
 	require.NoError(t, err)
-	targets, err = reposAppointments.Appointments().FindAppointmentTargets(ctx, detail.Appointment.ID)
+	targets, err = reposAppointments.Appointments().FindAppointmentTargets(ctx, detail.Appointment.ID.Int64())
 	require.NoError(t, err)
 	assert.Empty(t, targets)
 
-	require.NoError(t, reposAppointments.Appointments().DeleteRecurrenceRule(ctx, detail.Appointment.ID))
-	recurrence, err = reposAppointments.Appointments().FindRecurrenceRule(ctx, detail.Appointment.ID)
+	require.NoError(t, reposAppointments.Appointments().DeleteRecurrenceRule(ctx, detail.Appointment.ID.Int64()))
+	recurrence, err = reposAppointments.Appointments().FindRecurrenceRule(ctx, detail.Appointment.ID.Int64())
 	require.NoError(t, err)
 	assert.Nil(t, recurrence)
 }
@@ -2415,14 +2416,14 @@ func TestCalendarServiceIntegration_SeriesEditClearsOccurrenceOverrides(t *testi
 	require.NoError(t, err)
 
 	// Cancel the middle occurrence, confirm it disappears.
-	require.NoError(t, testpkg.TenantCommand2(t, calendarContext(t, organizerAccount.ID), db, service.CancelStaffAppointmentOccurrence, detail.Appointment.ID, portalDate(2026, 1, 12)))
+	require.NoError(t, testpkg.TenantCommand2(t, calendarContext(t, organizerAccount.ID), db, service.CancelStaffAppointmentOccurrence, detail.Appointment.ID.Int64(), portalDate(2026, 1, 12)))
 	events, err := testpkg.TenantQuery2(t, calendarContext(t, invitedAccount.ID), db, service.ListMyStaffEvents, portalDate(2026, 1, 5), portalDate(2026, 1, 19))
 	require.NoError(t, err)
 	assert.Equal(t, []string{"2026-01-05", "2026-01-19"}, eventDates(events, calendarSvc.EventSourceAppointment))
 
 	// Edit the series (same cadence). The stale cancellation must be cleared, so
 	// 2026-01-12 reappears in the edited series.
-	_, err = testpkg.TenantQuery2(t, calendarContext(t, organizerAccount.ID), db, service.UpdateStaffAppointment, detail.Appointment.ID, calendarSvc.UpdateAppointmentRequest{
+	_, err = testpkg.TenantQuery2(t, calendarContext(t, organizerAccount.ID), db, service.UpdateStaffAppointment, detail.Appointment.ID.Int64(), calendarSvc.UpdateAppointmentRequest{
 		Title:      "Weekly standup (edited)",
 		StartDate:  portalDate(2026, 1, 5),
 		EndDate:    portalDate(2026, 1, 5),
@@ -2476,7 +2477,7 @@ func TestCalendarServiceIntegration_RecurringICSStartsAtFirstMatchingWeekday(t *
 	assert.Equal(t, []string{"2026-05-06"}, eventDates(events, calendarSvc.EventSourceAppointment))
 
 	// The ICS export must anchor DTSTART on that same first Wednesday.
-	_, content, err := testpkg.TenantQueryPair1(t, calendarContext(t, organizerAccount.ID), db, service.StaffAppointmentICS, detail.Appointment.ID)
+	_, content, err := testpkg.TenantQueryPair1(t, calendarContext(t, organizerAccount.ID), db, service.StaffAppointmentICS, detail.Appointment.ID.Int64())
 	require.NoError(t, err)
 	assert.Contains(t, content, "DTSTART;TZID=Europe/Berlin:20260506T140000")
 	assert.NotContains(t, content, "20260504T140000", "must not anchor DTSTART on the non-matching StartDate")
@@ -2522,7 +2523,7 @@ func TestCalendarServiceIntegration_UpdateCancelsPendingNotifications(t *testing
 
 	// Edit WITHOUT re-sending: the stale pending mail is cancelled and no new mail
 	// is queued.
-	_, err = testpkg.TenantQuery2(t, calendarContext(t, organizerAccount.ID), db, service.UpdateStaffAppointment, detail.Appointment.ID, base)
+	_, err = testpkg.TenantQuery2(t, calendarContext(t, organizerAccount.ID), db, service.UpdateStaffAppointment, detail.Appointment.ID.Int64(), base)
 	require.NoError(t, err)
 	assert.Equal(t, 1, outbox.cancelled, "update must cancel pending mail even when not re-sending")
 	require.Len(t, outbox.enqueued, 1, "no new mail queued when send_email is off")
@@ -2537,7 +2538,7 @@ func TestCalendarServiceIntegration_UpdateCancelsPendingNotifications(t *testing
 	// Edit WITH re-sending: cancels again, then queues a single update notice.
 	resend := base
 	resend.SendEmail = true
-	_, err = testpkg.TenantQuery2(t, calendarContext(t, organizerAccount.ID), db, service.UpdateStaffAppointment, detail.Appointment.ID, resend)
+	_, err = testpkg.TenantQuery2(t, calendarContext(t, organizerAccount.ID), db, service.UpdateStaffAppointment, detail.Appointment.ID.Int64(), resend)
 	require.NoError(t, err)
 	assert.Equal(t, 2, outbox.cancelled)
 	require.Len(t, outbox.enqueued, 2)
@@ -2578,7 +2579,7 @@ func TestCalendarServiceIntegration_UpdateRetainsGuardianNotificationsWhenSendEm
 	require.NoError(t, err)
 	require.Len(t, outbox.enqueued, 1)
 
-	_, err = testpkg.TenantQuery2(t, calendarContext(t, organizerAccount.ID), db, service.UpdateStaffAppointment, detail.Appointment.ID, calendarSvc.UpdateAppointmentRequest{
+	_, err = testpkg.TenantQuery2(t, calendarContext(t, organizerAccount.ID), db, service.UpdateStaffAppointment, detail.Appointment.ID.Int64(), calendarSvc.UpdateAppointmentRequest{
 		Title:     "Elternabend (verschoben)",
 		StartDate: portalDate(2026, 4, 3),
 		EndDate:   portalDate(2026, 4, 3),
@@ -2668,7 +2669,7 @@ func TestCalendarServiceIntegration_CancelledAppointmentNotRespondable(t *testin
 	assert.True(t, events[0].CanRespond)
 
 	// Cancel the appointment.
-	_, err = testpkg.TenantQuery1(t, calendarContext(t, organizerAccount.ID), db, service.CancelStaffAppointment, detail.Appointment.ID)
+	_, err = testpkg.TenantQuery1(t, calendarContext(t, organizerAccount.ID), db, service.CancelStaffAppointment, detail.Appointment.ID.Int64())
 	require.NoError(t, err)
 
 	// The API shape now forbids responding.
@@ -2712,10 +2713,10 @@ func TestCalendarServiceIntegration_EditCancelledAppointmentRejected(t *testing.
 	})
 	require.NoError(t, err)
 
-	_, err = testpkg.TenantQuery1(t, calendarContext(t, organizerAccount.ID), db, service.CancelStaffAppointment, detail.Appointment.ID)
+	_, err = testpkg.TenantQuery1(t, calendarContext(t, organizerAccount.ID), db, service.CancelStaffAppointment, detail.Appointment.ID.Int64())
 	require.NoError(t, err)
 
-	_, err = testpkg.TenantQuery2(t, calendarContext(t, organizerAccount.ID), db, service.UpdateStaffAppointment, detail.Appointment.ID, calendarSvc.UpdateAppointmentRequest{
+	_, err = testpkg.TenantQuery2(t, calendarContext(t, organizerAccount.ID), db, service.UpdateStaffAppointment, detail.Appointment.ID.Int64(), calendarSvc.UpdateAppointmentRequest{
 		Title:     "Termin (editiert)",
 		StartDate: portalDate(2026, 8, 4),
 		EndDate:   portalDate(2026, 8, 4),
@@ -2751,7 +2752,7 @@ func TestCalendarServiceIntegration_CancelOccurrenceValidation(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	err = testpkg.TenantCommand2(t, calendarContext(t, organizerAccount.ID), db, service.CancelStaffAppointmentOccurrence, single.Appointment.ID, portalDate(2026, 9, 1))
+	err = testpkg.TenantCommand2(t, calendarContext(t, organizerAccount.ID), db, service.CancelStaffAppointmentOccurrence, single.Appointment.ID.Int64(), portalDate(2026, 9, 1))
 	require.Error(t, err)
 	assert.True(t, errors.Is(err, calendarSvc.ErrInvalidRequest))
 
@@ -2778,12 +2779,12 @@ func TestCalendarServiceIntegration_CancelOccurrenceValidation(t *testing.T) {
 	require.NoError(t, err)
 
 	// 2026-09-08 is a Tuesday — not part of the Monday series.
-	err = testpkg.TenantCommand2(t, calendarContext(t, organizerAccount.ID), db, service.CancelStaffAppointmentOccurrence, recurring.Appointment.ID, portalDate(2026, 9, 8))
+	err = testpkg.TenantCommand2(t, calendarContext(t, organizerAccount.ID), db, service.CancelStaffAppointmentOccurrence, recurring.Appointment.ID.Int64(), portalDate(2026, 9, 8))
 	require.Error(t, err)
 	assert.True(t, errors.Is(err, calendarSvc.ErrInvalidRequest))
 
 	// 2026-09-14 is a generated Monday — accepted.
-	require.NoError(t, testpkg.TenantCommand2(t, calendarContext(t, organizerAccount.ID), db, service.CancelStaffAppointmentOccurrence, recurring.Appointment.ID, portalDate(2026, 9, 14)))
+	require.NoError(t, testpkg.TenantCommand2(t, calendarContext(t, organizerAccount.ID), db, service.CancelStaffAppointmentOccurrence, recurring.Appointment.ID.Int64(), portalDate(2026, 9, 14)))
 }
 
 // A recurrence that generates no occurrence (weekly weekday outside its EndsOn
@@ -2854,12 +2855,12 @@ func TestCalendarServiceIntegration_ICSRevisionSequence(t *testing.T) {
 	require.NoError(t, err)
 
 	// Freshly created: revision 0, so no SEQUENCE line.
-	_, content, err := testpkg.TenantQueryPair1(t, calendarContext(t, organizerAccount.ID), db, service.StaffAppointmentICS, detail.Appointment.ID)
+	_, content, err := testpkg.TenantQueryPair1(t, calendarContext(t, organizerAccount.ID), db, service.StaffAppointmentICS, detail.Appointment.ID.Int64())
 	require.NoError(t, err)
 	assert.NotContains(t, content, "SEQUENCE:")
 
 	// Editing bumps the revision → SEQUENCE:1.
-	_, err = testpkg.TenantQuery2(t, calendarContext(t, organizerAccount.ID), db, service.UpdateStaffAppointment, detail.Appointment.ID, calendarSvc.UpdateAppointmentRequest{
+	_, err = testpkg.TenantQuery2(t, calendarContext(t, organizerAccount.ID), db, service.UpdateStaffAppointment, detail.Appointment.ID.Int64(), calendarSvc.UpdateAppointmentRequest{
 		Title:      "Reihe (v2)",
 		StartDate:  portalDate(2026, 10, 5),
 		EndDate:    portalDate(2026, 10, 5),
@@ -2868,14 +2869,14 @@ func TestCalendarServiceIntegration_ICSRevisionSequence(t *testing.T) {
 		Recurrence: weekly(),
 	})
 	require.NoError(t, err)
-	_, content, err = testpkg.TenantQueryPair1(t, calendarContext(t, organizerAccount.ID), db, service.StaffAppointmentICS, detail.Appointment.ID)
+	_, content, err = testpkg.TenantQueryPair1(t, calendarContext(t, organizerAccount.ID), db, service.StaffAppointmentICS, detail.Appointment.ID.Int64())
 	require.NoError(t, err)
 	assert.Contains(t, content, "SEQUENCE:1")
 	assert.Contains(t, content, "LAST-MODIFIED:")
 
 	// Cancelling a single occurrence bumps it again → SEQUENCE:2 (and an EXDATE).
-	require.NoError(t, testpkg.TenantCommand2(t, calendarContext(t, organizerAccount.ID), db, service.CancelStaffAppointmentOccurrence, detail.Appointment.ID, portalDate(2026, 10, 12)))
-	_, content, err = testpkg.TenantQueryPair1(t, calendarContext(t, organizerAccount.ID), db, service.StaffAppointmentICS, detail.Appointment.ID)
+	require.NoError(t, testpkg.TenantCommand2(t, calendarContext(t, organizerAccount.ID), db, service.CancelStaffAppointmentOccurrence, detail.Appointment.ID.Int64(), portalDate(2026, 10, 12)))
+	_, content, err = testpkg.TenantQueryPair1(t, calendarContext(t, organizerAccount.ID), db, service.StaffAppointmentICS, detail.Appointment.ID.Int64())
 	require.NoError(t, err)
 	assert.Contains(t, content, "SEQUENCE:2")
 	assert.Contains(t, content, "EXDATE;TZID=Europe/Berlin:20261012T090000")
@@ -3019,9 +3020,9 @@ func TestCalendarServiceIntegration_OccurrenceCancelIsConflictSafe(t *testing.T)
 	// The insert path is exercised twice for the same occurrence; the second call
 	// takes the ON CONFLICT DO UPDATE branch and must NOT error.
 	ctx := testpkg.Ctx(t)
-	_, err = appointmentCapability.CancelAppointmentOccurrence(ctx, detail.Appointment.ID, appointments.NewDate(2026, 1, 12))
+	_, err = appointmentCapability.CancelAppointmentOccurrence(ctx, detail.Appointment.ID.Int64(), appointments.NewDate(2026, 1, 12))
 	require.NoError(t, err)
-	_, err = appointmentCapability.CancelAppointmentOccurrence(ctx, detail.Appointment.ID, appointments.NewDate(2026, 1, 12))
+	_, err = appointmentCapability.CancelAppointmentOccurrence(ctx, detail.Appointment.ID.Int64(), appointments.NewDate(2026, 1, 12))
 	require.NoError(t, err)
 
 	// The occurrence is excluded from the series exactly once.
@@ -3103,7 +3104,7 @@ func TestCalendarServiceIntegration_CancelOccurrenceClearsPendingNotifications(t
 	require.Len(t, outbox.enqueued, 1, "create with send_email queues one notice")
 
 	// Removing a single occurrence clears the still-pending notice.
-	require.NoError(t, testpkg.TenantCommand2(t, calendarContext(t, organizerAccount.ID), db, service.CancelStaffAppointmentOccurrence, detail.Appointment.ID, portalDate(2026, 1, 12)))
+	require.NoError(t, testpkg.TenantCommand2(t, calendarContext(t, organizerAccount.ID), db, service.CancelStaffAppointmentOccurrence, detail.Appointment.ID.Int64(), portalDate(2026, 1, 12)))
 	assert.Equal(t, 1, outbox.cancelled, "single-occurrence cancel must clear pending notifications")
 	assert.Equal(t, 1, pushOutbox.cancelled, "single-occurrence cancel must clear pending pushes")
 }

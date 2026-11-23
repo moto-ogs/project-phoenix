@@ -1,12 +1,10 @@
 "use client";
 
+import type * as studentsContract from "~/lib/contract/students.generated";
 import { useSession } from "next-auth/react";
 
 import { fetchOgsGroupLive } from "~/lib/ogs-group-live-api";
-import type {
-  OgsLiveViewData,
-  OgsLiveWireStudent,
-} from "~/lib/ogs-group-live-api";
+import type { OgsLiveViewData } from "~/lib/ogs-group-live-api";
 import { isCheckedInLocation } from "~/lib/location-helper";
 import { countedDayStatus } from "~/lib/presence-status";
 import {
@@ -18,7 +16,7 @@ import { homeKeys } from "~/lib/swr/portal-keys";
 
 /** Eine Abholung, die heute noch kommt. */
 export interface HomePickup {
-  readonly student: OgsLiveWireStudent;
+  readonly student: studentsContract.Student;
   /** „HH:MM" */
   readonly time: string;
   /** Was die Eltern dazu gesagt haben: Abholnotiz und Tagesnotizen in einem Satz. */
@@ -29,7 +27,7 @@ export interface HomePickup {
 
 /** Ein Kind, das längst da sein sollte und noch nicht gekommen ist. */
 export interface HomeMissingArrival {
-  readonly student: OgsLiveWireStudent;
+  readonly student: studentsContract.Student;
   /** Wann es kommen sollte, „HH:MM". */
   readonly expected: string;
   /** Was die Eltern zur Ankunft gesagt haben („Arzttermin, kommt danach"). */
@@ -50,7 +48,7 @@ export interface HomeGroupSnapshot {
    * Kinder, die heute nicht (mehr) da sind, in der Reihenfolge der Gruppe —
    * einschließlich derer, die noch erwartet werden.
    */
-  readonly away: readonly OgsLiveWireStudent[];
+  readonly away: readonly studentsContract.Student[];
   /**
    * Wer heute kommen sollte, dessen Ankunftszeit vorbei ist und der noch
    * nicht da ist — die Frage des Vormittags: „Wer fehlt noch?"
@@ -87,7 +85,7 @@ const EMPTY: Omit<HomeGroupSnapshot, "isLoading" | "error" | "retry"> = {
  * krank, nicht entschuldigt, nicht abgemeldet), es eine Ankunftszeit hat und
  * noch nicht angekommen ist.
  */
-export function isExpectedToday(student: OgsLiveWireStudent): boolean {
+export function isExpectedToday(student: studentsContract.Student): boolean {
   return (
     !student.sick &&
     !student.excused &&
@@ -103,7 +101,7 @@ export function isExpectedToday(student: OgsLiveWireStudent): boolean {
  * Status (#6371): Wer eingecheckt ist (im Haus, auf dem Schulhof oder
  * unterwegs), ist da, auch mit Krankmeldung oder Entschuldigung.
  */
-function isAwayToday(student: OgsLiveWireStudent): boolean {
+function isAwayToday(student: studentsContract.Student): boolean {
   return (
     countedDayStatus(student) !== null ||
     student.day_planning_status === "not_coming_today" ||

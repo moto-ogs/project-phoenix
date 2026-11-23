@@ -46,6 +46,7 @@ export interface TransitionResponse {
   can_modify: boolean;
   can_apply: boolean;
   can_revert: boolean;
+  version: string;
 }
 
 export const TransitionResponseSchema: z.ZodType<TransitionResponse, unknown> = object<TransitionResponse>({
@@ -63,6 +64,7 @@ export const TransitionResponseSchema: z.ZodType<TransitionResponse, unknown> = 
   can_modify: bool,
   can_apply: bool,
   can_revert: bool,
+  version: str,
 });
 
 /** Go: gradetransitionhttp.SuggestedMappingResponse */
@@ -171,6 +173,7 @@ export interface TransitionRequest {
   academic_year?: string;
   notes?: string | null;
   mappings?: TransitionMappingRequest[] | null;
+  expected_version?: string;
 }
 
 /** Go: gradetransitionhttp.TransitionApplyRequest */
@@ -197,15 +200,6 @@ export const TransitionResultResponseSchema: z.ZodType<TransitionResultResponse,
   warnings: nullable(arr(str)),
 });
 
-/** Query of GET /api/admin/grade-transitions/ */
-export interface GetAdminGradeTransitionsQuery {
-  academic_year?: string;
-  after_id?: string;
-  page?: number;
-  page_size?: number;
-  status?: string;
-}
-
 export const routes = {
   "DELETE /api/admin/grade-transitions/{id}/": {
     method: "DELETE",
@@ -217,7 +211,13 @@ export const routes = {
     method: "GET",
     pattern: "/api/admin/grade-transitions/",
     portals: ["tenant"],
-    query: ["academic_year", "after_id", "page", "page_size", "status"],
+    query: {
+      "academic_year": { kind: "string" },
+      "after_id": { kind: "id" },
+      "page": { kind: "int" },
+      "page_size": { kind: "int" },
+      "status": { kind: "string" },
+    },
     response: paginated(z.array(TransitionResponseSchema)),
   },
   "GET /api/admin/grade-transitions/classes": {
@@ -236,6 +236,7 @@ export const routes = {
     method: "GET",
     pattern: "/api/admin/grade-transitions/{id}/",
     portals: ["tenant"],
+    deprecated: true,
     response: success(TransitionResponseSchema),
   },
   "GET /api/admin/grade-transitions/{id}/history": {

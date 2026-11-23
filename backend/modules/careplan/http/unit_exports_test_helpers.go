@@ -41,6 +41,9 @@ var (
 	ReconcilePhotoConsentRequestForTest     = reconcilePhotoConsentRequest
 	RenderOfferingDecisionErrorForTest      = renderOfferingDecisionError
 	RenderPickupAdjustmentErrorForTest      = renderPickupAdjustmentError
+	RenderScheduleAuthorErrorForTest        = renderScheduleAuthorError
+	ErrUserNotStaffForTest                  = errUserNotStaff
+	ErrPersonNotFoundForAccountForTest      = errPersonNotFoundForAccount
 	ResolveConflictErrorRendererForTest     = resolveConflictErrorRenderer
 	StudentAuditBeforeImageForTest          = studentAuditBeforeImage
 	TrimPtrToNilForTest                     = trimPtrToNil

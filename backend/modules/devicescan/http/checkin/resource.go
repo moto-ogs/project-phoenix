@@ -57,7 +57,6 @@ func (rs *Resource) Router() chi.Router {
 	r.Post("/checkin", rs.deviceCheckin)
 	r.Post("/pickup-query", rs.devicePickupQuery)
 	r.Post("/ping", rs.devicePing)
-	r.Get("/status", rs.deviceStatus)
 
 	return r
 }

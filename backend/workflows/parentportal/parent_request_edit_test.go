@@ -16,6 +16,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/absencerecords"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 	parentportalcompose "github.com/moto-ogs/project-phoenix/workflows/parentportal/compose"
@@ -76,7 +77,7 @@ func TestEditExcusedRequestReplacesWithdrawal(t *testing.T) {
 		[]calendar.Date{day}, "Familienfeier", absencerecords.StudentStatusDayExcused, nil)
 	require.NoError(t, err)
 	original := res.PendingRequest
-	version := careplan.ParentRequestVersion(original.UpdatedAt)
+	version := readstate.Of(original.UpdatedAt)
 
 	corrected := day.AddDays(1)
 	edited, err := svc.EditExcusedRequest(ctx, chain.AccountID, chain.StudentID, original.ID,
@@ -87,7 +88,7 @@ func TestEditExcusedRequestReplacesWithdrawal(t *testing.T) {
 	assert.Equal(t, corrected, edited.Dates[0])
 	assert.Equal(t, "Doch einen Tag später", edited.Note)
 	assert.Equal(t, absencerecords.ExcusedRequestStatusPending, edited.Status)
-	assert.NotEqual(t, version, careplan.ParentRequestVersion(edited.UpdatedAt), "an edit bumps the version")
+	assert.NotEqual(t, version, readstate.Of(edited.UpdatedAt), "an edit bumps the version")
 
 	rows := listLedger(t, db, events, chain.TenantID, original.ID)
 	require.Len(t, rows, 2)
@@ -110,7 +111,7 @@ func TestEditExcusedRequestRefusesStaleVersion(t *testing.T) {
 	res, err := svc.SubmitSickNote(ctx, chain.AccountID, chain.StudentID,
 		[]calendar.Date{day}, "Familienfeier", absencerecords.StudentStatusDayExcused, nil)
 	require.NoError(t, err)
-	stale := careplan.ParentRequestVersion(res.PendingRequest.UpdatedAt)
+	stale := readstate.Of(res.PendingRequest.UpdatedAt)
 
 	_, err = svc.EditExcusedRequest(ctx, chain.AccountID, chain.StudentID, res.PendingRequest.ID,
 		[]calendar.Date{day.AddDays(1)}, "Erste Korrektur", stale)
@@ -118,7 +119,10 @@ func TestEditExcusedRequestRefusesStaleVersion(t *testing.T) {
 
 	_, err = svc.EditExcusedRequest(ctx, chain.AccountID, chain.StudentID, res.PendingRequest.ID,
 		[]calendar.Date{day.AddDays(2)}, "Zweite Korrektur", stale)
-	require.ErrorIs(t, err, careplan.ErrParentRequestStale)
+	require.ErrorIs(t, err, readstate.ErrChanged)
+	_, err = svc.EditExcusedRequest(ctx, chain.AccountID, chain.StudentID, res.PendingRequest.ID,
+		[]calendar.Date{day.AddDays(2)}, "Zweite Korrektur", "")
+	require.ErrorIs(t, err, readstate.ErrChanged, "an edit without a read is refused")
 }
 
 // TestEditExcusedRequestRevalidatesPayload pins that an edit runs the same
@@ -156,7 +160,7 @@ func TestEditDecidedExcusedRequestIsRefused(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NoError(t, testpkg.WithTenantTx(t, adminCtx(), db, chain.TenantID, func(txCtx context.Context, _ bun.Tx) error {
-		_, decideErr := requests.Decide(txCtx, careplan.ExcusedRequestDecideInput{
+		_, decideErr := requests.Decide(txCtx, careplan.ExcusedRequestDecideInput{ExpectedVersion: testpkg.ExcusedRequestVersion(t, res.PendingRequest.ID),
 			RequestID: res.PendingRequest.ID, Approve: true, ReviewedBy: chain.AccountID,
 		})
 		return decideErr
@@ -203,7 +207,12 @@ func TestEditMasterDataRequestRewritesProposedValue(t *testing.T) {
 		}, nil)
 	require.NoError(t, err)
 	require.Len(t, rows, 1)
-	version := careplan.ParentRequestVersion(rows[0].UpdatedAt)
+	version := readstate.Of(rows[0].UpdatedAt)
+
+	for _, expected := range []string{"stale", ""} {
+		_, err = svc.EditMasterDataRequest(ctx, chain.AccountID, chain.StudentID, rows[0].ID, json.RawMessage(`"Maxi"`), expected)
+		require.ErrorIs(t, err, readstate.ErrChanged, "version %q", expected)
+	}
 
 	edited, err := svc.EditMasterDataRequest(ctx, chain.AccountID, chain.StudentID, rows[0].ID,
 		json.RawMessage(`"Maxi"`), version)
@@ -245,7 +254,7 @@ func TestEditMasterDataRequestRefusesUnchangedValue(t *testing.T) {
 	live, err := json.Marshal(person.FirstName)
 	require.NoError(t, err)
 
-	_, err = svc.EditMasterDataRequest(ctx, chain.AccountID, chain.StudentID, rows[0].ID, live, "")
+	_, err = svc.EditMasterDataRequest(ctx, chain.AccountID, chain.StudentID, rows[0].ID, live, testpkg.MasterDataRequestVersion(t, rows[0].ID))
 	require.ErrorIs(t, err, parentService.ErrMasterDataNoChanges)
 }
 

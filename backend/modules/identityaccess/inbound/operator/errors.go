@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // profileError maps profile and password change outcomes.
@@ -49,6 +50,9 @@ func (rs *Resource) accessError(err error) render.Renderer {
 		return common.OperatorRejection(http.StatusConflict, common.CodeProvisioningSchoolAlreadyDeleted, "School is already deleted")
 	case errors.Is(err, identityaccess.ErrOperatorAuditUnavailable):
 		return operatorAuditUnavailable()
+	case errors.Is(err, readstate.ErrChanged):
+		// The roles at the school changed since the operator read them.
+		return common.ErrorBusinessRejection(err)
 	case errors.Is(err, identityaccess.ErrEmailAlreadyExists):
 		// A caterer account joins no school (ADR 0077).
 		return common.OperatorRejection(http.StatusConflict, common.CodeIdentityEmailAlreadyExists, "account cannot join a school")
@@ -61,6 +65,7 @@ func (rs *Resource) accessError(err error) render.Renderer {
 // unknown operator answers like a wrong password.
 var authRules = []common.ErrorRule{
 	{Target: identityaccess.ErrOperatorRefreshTokenInvalid, Render: func(error) render.Renderer { return common.OperatorUnauthorized() }},
+	{Target: identityaccess.ErrOperatorSessionEnded, Render: func(error) render.Renderer { return common.OperatorUnauthorized() }},
 	{Target: identityaccess.ErrOperatorInvalidCredentials, Render: func(error) render.Renderer { return common.OperatorInvalidCredentials() }},
 	{Target: identityaccess.ErrOperatorNotFound, Render: func(error) render.Renderer { return common.OperatorInvalidCredentials() }},
 	{Target: identityaccess.ErrOperatorInactive, Render: func(error) render.Renderer { return operatorInactive("Operator account is inactive") }},

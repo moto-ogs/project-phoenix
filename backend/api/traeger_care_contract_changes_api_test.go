@@ -17,6 +17,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -74,7 +75,7 @@ func careContractChangeRouter(t *testing.T, db *bun.DB, review careplan.Offering
 type contractChangesBody struct {
 	Decidable bool `json:"decidable"`
 	Pending   []struct {
-		ID      int64  `json:"id"`
+		ID      wireID `json:"id"`
 		Version string `json:"version"`
 		Lines   []struct {
 			ModuleName string   `json:"module_name"`
@@ -106,14 +107,14 @@ func TestTraegerOfficeDecidesTheParentsChangeOnlyWithTheRightAndForItsOwnTraeger
 	listPath := fmt.Sprintf("/traeger/contract-changes/%d", contract)
 	decidePath := fmt.Sprintf("%s/requests/%d/decide", listPath, review.pending.ID)
 	approve := map[string]any{"approve": true, "effective_from": "2100-03-01",
-		"expected_version": careplan.ParentRequestVersion(review.pending.UpdatedAt)}
+		"expected_version": readstate.Of(review.pending.UpdatedAt)}
 
 	rec := traegerJSON(t, router, f.office.token, http.MethodGet, listPath, nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	read := decodeSchoolPortalData[contractChangesBody](t, rec.Body.Bytes())
 	assert.True(t, read.Decidable)
 	require.Len(t, read.Pending, 1)
-	assert.Equal(t, review.pending.ID, read.Pending[0].ID)
+	assert.Equal(t, review.pending.ID, int64(read.Pending[0].ID))
 	require.Len(t, read.Pending[0].Lines, 1)
 	assert.Equal(t, "changed", read.Pending[0].Lines[0].State)
 	assert.Equal(t, []string{"mon", "tue"}, read.Pending[0].Lines[0].AfterDays)

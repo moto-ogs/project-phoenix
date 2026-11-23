@@ -324,11 +324,41 @@
       "target_owner": "settings-platform"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingCareContracts.ChildrenOf",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareContracts.ChildrenOf",
+      "reason": "Reads a batch of retained child identities for issued contracts in the caller's Träger transaction, filtered by organization and contract IDs. No locks or mutations; used only for sibling counting (#7863, ADR 0158 E1).",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractBilling.BillingChildren",
+      "target_owner": "care-contract"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingTermContracts.ChildrenOf",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareContracts.ChildrenOf",
+      "reason": "Inherits the same organization-scoped read-only binding as parentBillingCareContracts.ChildrenOf; the adapter adds no effects.",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractBilling.BillingChildren",
+      "target_owner": "care-contract"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingCareContracts.Recipients",
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareContracts.Recipients",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/carecontract.ContractBilling.BillingRecipients: the party each monthly invoice of the given contracts of the session's Träger goes to, read in its Träger transaction; the monthly run copies it and records the read in its own trail (#4684).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/carecontract.ContractBilling.BillingRecipients: the party each monthly invoice of the given contracts of the session's Träger goes to, read in its Träger transaction; the monthly run copies it and records the read in its own trail (#4684). It also marks a draft contract, so the Elternabrechnung refuses a SEPA mandate on a draft, which its discard would take along (#7862).",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractBilling.BillingRecipients",
+      "target_owner": "care-contract"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingTermContracts.Recipients",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareContracts.Recipients",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/carecontract.ContractBilling.BillingRecipients: the party each monthly invoice of the given contracts of the session's Träger goes to, read in its Träger transaction; the monthly run copies it and records the read in its own trail (#4684). For the billing terms the binding leaves out the contracts that are still drafts (#7770); the read and its effect are unchanged.",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractBilling.BillingRecipients",
       "target_owner": "care-contract"
@@ -338,7 +368,17 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareContracts.VersionsInForce",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/carecontract.ContractBilling.VersionsInForce: the effective versions of the Träger's active and ended contracts in force within the billed month, one per contract and day, with the child record and date of birth that tell two contracts of one child apart, read in the caller's Träger transaction (#4681, #4684).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/carecontract.ContractBilling.VersionsInForce: the effective versions of the Träger's active and ended contracts in force within the billed month, one per contract and day, with the child record and date of birth that tell two contracts of one child apart, read in the caller's Träger transaction (#4681, #4684). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractBilling.VersionsInForce",
+      "target_owner": "care-contract"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingTermContracts.VersionsInForce",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareContracts.VersionsInForce",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/carecontract.ContractBilling.VersionsInForce: the effective versions of the Träger's active and ended contracts in force within the billed month, one per contract and day, with the child record and date of birth that tell two contracts of one child apart, read in the caller's Träger transaction (#4681, #4684). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged. Promoted from parentBillingCareContracts for the billing terms (#7770); the call and its effect are unchanged.",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractBilling.VersionsInForce",
       "target_owner": "care-contract"
@@ -451,7 +491,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareSchools.TraegerSchools",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Capability.ListSchoolsByOrganization: lists the schools of the Träger the price list names and checks a price list against (#4684).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Capability.ListSchoolsByOrganization: lists the schools of the Träger the price list names and checks a price list against (#4684). After #2342 (ADR 0300), Organization Tenancy returns school IDs as ident.ID directly, so this binding no longer converts them from int64. Read calls, filtering, ordering and transaction scope are unchanged. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.ListSchoolsByOrganization",
       "target_owner": "organization-tenancy"
@@ -461,7 +501,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareSchools.TraegerSchools",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Query.ListSchoolsByOrganization: lists the schools of the Träger the price list names and checks a price list against (#4684).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Query.ListSchoolsByOrganization: lists the schools of the Träger the price list names and checks a price list against (#4684). After #2342 (ADR 0300), Organization Tenancy returns school IDs as ident.ID directly, so this binding no longer converts them from int64. Read calls, filtering, ordering and transaction scope are unchanged. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.ListSchoolsByOrganization",
       "target_owner": "organization-tenancy"
@@ -471,7 +511,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareSchools.TraegerSchools",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.School.IsDeleted: skips a deleted school.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.School.IsDeleted: skips a deleted school. After #2342 (ADR 0300), Organization Tenancy returns school IDs as ident.ID directly, so this binding no longer converts them from int64. Read calls, filtering, ordering and transaction scope are unchanged. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.School.IsDeleted",
       "target_owner": "organization-tenancy"
@@ -481,7 +521,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.ContractParties.Recipients",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/carecontract.ContractBilling.BillingRecipients: the name of the billing party of the one contract the parents portal checked, read in its Träger transaction to propose the account holder of a new online SEPA mandate (#4696).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/carecontract.ContractBilling.BillingRecipients: the name of the billing party of the one contract the parents portal checked, read in its Träger transaction to propose the account holder of a new online SEPA mandate (#4696). It also marks a draft contract, so the Elternabrechnung refuses a SEPA mandate on a draft, which its discard would take along (#7862).",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractBilling.BillingRecipients",
       "target_owner": "care-contract"
@@ -673,7 +713,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.HolidayBillingRegistrations.ConfirmedHolidayRegistrations",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target modules/enrollment.HolidayRegistrationReview.ListHolidayRegistrationRecipients with the status filter confirmed: Enrollment checks the period of the session's Träger, reads the confirmed registrations with the postal address of the parent (#5625), the debtor number of the family (#5621) and the date of birth of each child for its own number (#7007) and appends the list read to the period's audit trail (ADR 0114) in the caller's Träger transaction before the Elternabrechnung builds the preview or issues the invoices of a billing run (ADR 0119).",
+      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target modules/enrollment.HolidayRegistrationReview.ListHolidayRegistrationRecipients with the status filter confirmed: Enrollment checks the period of the session's Träger, reads the confirmed registrations with the postal address of the parent (#5625), the debtor number of the family (#5621) and the date of birth of each child for its own number (#7007) and appends the list read to the period's audit trail (ADR 0114) in the caller's Träger transaction before the Elternabrechnung builds the preview or issues the invoices of a billing run (ADR 0119). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayRegistrationReview.ListHolidayRegistrationRecipients",
       "target_owner": "enrollment"
@@ -704,7 +744,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.HolidayBillingRegistrations.HolidayProofRegistrations",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target modules/enrollment.HolidayRegistrationReview.ListHolidayRegistrationRecipients without a status filter: Enrollment checks the period of the session's Träger, reads every registration of the period with whether a proof of benefits exists (#5627), whatever its status, and appends the list read to the period's audit trail (ADR 0114) in the caller's Träger transaction before the Elternabrechnung renders the list of a cost bearer; the route rolls back on any later refusal.",
+      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target modules/enrollment.HolidayRegistrationReview.ListHolidayRegistrationRecipients without a status filter: Enrollment checks the period of the session's Träger, reads every registration of the period with whether a proof of benefits exists (#5627), whatever its status, and appends the list read to the period's audit trail (ADR 0114) in the caller's Träger transaction before the Elternabrechnung renders the list of a cost bearer; the route rolls back on any later refusal. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayRegistrationReview.ListHolidayRegistrationRecipients",
       "target_owner": "enrollment"
@@ -848,7 +888,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.HolidayRegistrations.HolidayWeeks",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.HolidayRegistrations.HolidayRegistrationOffer: the published period of a resolved link with the prices of its time models, read in the Träger transaction of the link's Träger for the public contribution (ADR 0115). Since #4701 the binding also copies the care days Enrollment names for a week by days, so the quote prices a day; since #5631 it copies the price of one lunch and the lunches of a whole week the same way (ADR 0235). Since #2352 Enrollment names the prices in whole cent as int (ADR 0270); the binding widens them to the int64 cent of the Elternabrechnung. It adds no read and no write.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/enrollment.HolidayRegistrations.HolidayRegistrationOffer: the published period of a resolved link with the prices of its time models, read in the Träger transaction of the link's Träger for the public contribution (ADR 0115). Since #4701 the binding also copies the care days Enrollment names for a week by days, so the quote prices a day; since #5631 it copies the price of one lunch and the lunches of a whole week the same way (ADR 0235). Since #2352 Enrollment names the prices in whole cent as int (ADR 0270); the binding widens them to the int64 cent of the Elternabrechnung. It adds no read and no write. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayRegistrations.HolidayRegistrationOffer",
       "target_owner": "enrollment"
@@ -936,6 +976,16 @@
       "target_owner": "care-contract"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.retainedContracts.DeletableContracts",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.RetainedContracts.DeletableContracts",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/carecontract.ContractRetention.DeletableContracts: which of the due contracts DeleteEndedContracts would delete, by the same condition, read in the administrative transaction of the hourly Beleg retention after due_retained_contracts locked them, so the Elternabrechnung moves a family's deviation only off contracts that go (#7862, ADR 0184 Nachtrag 2026-11-22); IDs only.",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractRetention.DeletableContracts",
+      "target_owner": "care-contract"
+    },
+    {
       "adr": "0067",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.retainedContracts.DeleteEndedContracts",
       "classification": "leaf",
@@ -944,6 +994,16 @@
       "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target modules/carecontract.ContractRetention.DeleteEndedContracts: joins the administrative transaction of the hourly Beleg retention and deletes only the given contracts of the Träger that ended by the evaluation day and whose event (end or conclusion), read as it stands at the delete, lies on or before the last day the current Weisung allows, with their trail; Care Contract keeps the guard against drafts and contracts in force. Before the call the Elternabrechnung holds the retention lock of the Träger and has locked the due contract rows (parent_billing.due_retained_contracts), so no mandate or debit can be added to them, and lists only contracts without mandate, debit or suspension (#4720, ADR 0184). The target takes no further lock, no re-read under foreign locks, no after-commit step.",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractRetention.DeleteEndedContracts",
+      "target_owner": "care-contract"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.retainedContracts.RecipientEmails",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.RetainedContracts.RecipientEmails",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/carecontract.ContractRetention.RecipientEmails: the address of the invoice recipient of each given contract past its draft, read in the administrative transaction of the hourly Beleg retention so the Elternabrechnung moves a family's deviation to another contract of the family before the deletion (#7862, ADR 0184 Nachtrag 2026-11-22); no other party, child or bank data.",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractRetention.RecipientEmails",
       "target_owner": "care-contract"
     },
     {
@@ -999,24 +1059,24 @@
     },
     {
       "adr": "0067",
-      "approval_adr": "0235",
+      "approval_adr": "0314",
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingPlaceChanges.RebookHolidayChild",
       "classification": "workflow",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling/http.HolidayPlaceChanges.RebookHolidayChild",
-      "reason": "HTTP transport entry (#4699, ADR 0206): the port is the Parent Billing http package's own narrow write port; the root binds the holiday-allocation workflow and translates values and refusals only. In the request's Träger unit the workflow takes the period billing lock (B), Enrollment's period row (P), then Enrollment's rebooking (registration, affected weeks ascending, day limits, waiting-list promotions, audit, outbox), then Parent Billing refreezes the moved-up registrations' confirmed sibling groups. Any failure rolls the unit back. Replaces Parent Billing's former coordinator HolidayContributions.RebookHolidayChild and its HolidayRegistrations.RebookHolidayChild binding. Evidence: TestHolidayAllocationWorkflowOrdersLocksAndStopsAtTheFirstFailure, TestHolidayAllocationWorkflowRollsBackOnARefusedContribution, TestHolidayPlacesMoveUpOnRebookingAndCapacity. Since #5631 (ADR 0235) the translation also hands on the lunch of each booking; lock order, transaction, placement and refreeze are unchanged, a lunch takes no place. Evidence: TestHolidayLunchShowsOnTheParticipantListOfTheHostingSchool.",
+      "reason": "HTTP transport entry (#4699, ADR 0206): the port is the Parent Billing http package's own narrow write port; the root binds the holiday-allocation workflow and translates values and refusals only. In the request's Träger unit the workflow takes the period billing lock (B), Enrollment's period row (P), then Enrollment's rebooking (registration, affected weeks ascending, day limits, waiting-list promotions, audit, outbox), then Parent Billing refreezes the moved-up registrations' confirmed sibling groups. Any failure rolls the unit back. Replaces Parent Billing's former coordinator HolidayContributions.RebookHolidayChild and its HolidayRegistrations.RebookHolidayChild binding. Evidence: TestHolidayAllocationWorkflowOrdersLocksAndStopsAtTheFirstFailure, TestHolidayAllocationWorkflowRollsBackOnARefusedContribution, TestHolidayPlacesMoveUpOnRebookingAndCapacity. Since #5631 (ADR 0235) the translation also hands on the lunch of each booking; lock order, transaction, placement and refreeze are unchanged, a lunch takes no place. Evidence: TestHolidayLunchShowsOnTheParticipantListOfTheHostingSchool. Since #2342 (ADR 0302), Enrollment and Parent Billing both use ident.ID for booking and registration identifiers; the binding passes WeekID, TimeModelID and detail.ID directly without conversion. The workflow call, lock order, transaction and error propagation are unchanged. Re-reviewed with #7975 (#7904, ADR 0311, ADR 0314): the binding also hands on the version of the registration the Büro read, which includes the placement of each booking; Enrollment compares it under the period and registration locks before it rebooks and refuses another one with readstate.ErrChanged, which the binding passes through untranslated. Lock order, transaction, placement and refreeze are unchanged. Evidence: TestTraegerFreezesReopensAndRebooksHolidayRegistrations, TestHolidayAllocationWorkflowTakesTheBillingLockBeforeThePeriod.",
       "source_owner": "parent-billing",
       "target": "*github.com/moto-ogs/project-phoenix/workflows/holidayallocation.Workflow.RebookHolidayChild",
       "target_owner": "holiday-allocation"
     },
     {
       "adr": "0067",
-      "approval_adr": "0206",
+      "approval_adr": "0301",
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingPlaceChanges.SetHolidayWeekCapacity",
       "classification": "workflow",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling/http.HolidayPlaceChanges.SetHolidayWeekCapacity",
-      "reason": "HTTP transport entry (#4699, ADR 0206): the port is the Parent Billing http package's own narrow write port; the root binds the holiday-allocation workflow and translates values and refusals only. In the request's Träger unit the workflow takes the period billing lock (B), Enrollment's period row (P), then Enrollment's capacity change (week lock, capacity, audit, promotions, outbox), then Parent Billing refreezes the moved-up registrations' confirmed sibling groups. Any failure rolls the unit back. Replaces Parent Billing's former coordinator HolidayContributions.SetHolidayWeekCapacity and its HolidayRegistrations.SetHolidayWeekCapacity binding. Evidence: TestHolidayAllocationWorkflowOrdersLocksAndStopsAtTheFirstFailure, TestHolidayAllocationWorkflowRollsBackOnARefusedContribution, TestHolidayPlacesMoveUpOnRebookingAndCapacity.",
+      "reason": "HTTP transport entry (#4699, ADR 0206): the port is the Parent Billing http package's own narrow write port; the root binds the holiday-allocation workflow and translates values and refusals only. In the request's Träger unit the workflow takes the period billing lock (B), Enrollment's period row (P), then Enrollment's capacity change (week lock, capacity, audit, promotions, outbox), then Parent Billing refreezes the moved-up registrations' confirmed sibling groups. Any failure rolls the unit back. Replaces Parent Billing's former coordinator HolidayContributions.SetHolidayWeekCapacity and its HolidayRegistrations.SetHolidayWeekCapacity binding. Evidence: TestHolidayAllocationWorkflowOrdersLocksAndStopsAtTheFirstFailure, TestHolidayAllocationWorkflowRollsBackOnARefusedContribution, TestHolidayPlacesMoveUpOnRebookingAndCapacity. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
       "source_owner": "parent-billing",
       "target": "*github.com/moto-ogs/project-phoenix/workflows/holidayallocation.Workflow.SetHolidayWeekCapacity",
       "target_owner": "holiday-allocation"
@@ -1026,7 +1086,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling/internal/application.CareLetterRecipients.Recipients",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/carecontract.ContractBilling.BillingRecipients: the party each monthly invoice of the given contracts of the session's Träger goes to now, read in its Träger transaction before a letter is sent, so a letter only goes to the address that is still the contract's billing party (#4684, ADR 0165).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/carecontract.ContractBilling.BillingRecipients: the party each monthly invoice of the given contracts of the session's Träger goes to now, read in its Träger transaction before a letter is sent, so a letter only goes to the address that is still the contract's billing party (#4684, ADR 0165). Reviewed again for #7770: the party the target answers also says whether its contract is still a draft; this binding does not read it, and no read or write changes. It also marks a draft contract, so the Elternabrechnung refuses a SEPA mandate on a draft, which its discard would take along (#7862).",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractBilling.BillingRecipients",
       "target_owner": "care-contract"

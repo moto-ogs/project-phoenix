@@ -13,6 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
 
@@ -191,17 +192,17 @@ func (rs *Resource) listMyChildren(w http.ResponseWriter, r *http.Request) {
 
 // EnrollablePhaseResponse is the wire shape for /me/enrollable-schools.
 // Mirrors the workflow enrollable-phase projection; identifiers travel as
-// strings (common.ID).
+// strings (ident.ID).
 type EnrollablePhaseResponse struct {
-	SchoolID   common.ID `json:"school_id"`
-	SchoolName string    `json:"school_name"`
-	SchoolSlug string    `json:"school_slug"`
+	SchoolID   ident.ID `json:"school_id"`
+	SchoolName string   `json:"school_name"`
+	SchoolSlug string   `json:"school_slug"`
 	// SchoolSubdomain is the identifier the picker must put in enrollment
 	// links: both /auth/tenant/resolve and /api/parent/enrollments/{tenantSlug}/*
 	// resolve tenants by subdomain (#1663).
-	SchoolSubdomain string    `json:"school_subdomain"`
-	PhaseID         common.ID `json:"phase_id"`
-	PhaseName       string    `json:"phase_name"`
+	SchoolSubdomain string   `json:"school_subdomain"`
+	PhaseID         ident.ID `json:"phase_id"`
+	PhaseName       string   `json:"phase_name"`
 	// PhaseNameTranslations maps locale → translated phase name (#3377).
 	PhaseNameTranslations map[string]string `json:"phase_name_translations,omitempty"`
 	PhaseKind             string            `json:"phase_kind"`
@@ -233,11 +234,11 @@ func (rs *Resource) listEnrollableSchools(w http.ResponseWriter, r *http.Request
 	out := make([]EnrollablePhaseResponse, 0, len(phases))
 	for _, p := range phases {
 		out = append(out, EnrollablePhaseResponse{
-			SchoolID:              common.ID(p.SchoolID),
+			SchoolID:              ident.ID(p.SchoolID),
 			SchoolName:            p.SchoolName,
 			SchoolSlug:            p.SchoolSlug,
 			SchoolSubdomain:       p.SchoolSubdomain,
-			PhaseID:               common.ID(p.PhaseID),
+			PhaseID:               ident.ID(p.PhaseID),
 			PhaseName:             p.PhaseName,
 			PhaseNameTranslations: p.PhaseNameTranslations,
 			PhaseKind:             p.PhaseKind,
@@ -251,80 +252,4 @@ func (rs *Resource) listEnrollableSchools(w http.ResponseWriter, r *http.Request
 	}
 
 	common.Respond(w, r, http.StatusOK, out, "Enrollable phases retrieved")
-}
-
-// EnrollmentRequestChildResponse is the wire shape for one child row
-// in the /me/enrollments list. ID is stringified per the int64 → string
-// frontend convention.
-type EnrollmentRequestChildResponse struct {
-	ChildID      string  `json:"child_id"`
-	FirstName    string  `json:"first_name"`
-	LastName     string  `json:"last_name"`
-	Status       string  `json:"status"`
-	StatusReason *string `json:"status_reason,omitempty"`
-}
-
-// EnrollmentRequestResponse is the wire shape for one enrollment.requests
-// row owned by the calling parent. The frontend uses StatusToken to
-// build the "details" link to /parents/anmeldung/status/{token}.
-type EnrollmentRequestResponse struct {
-	RequestID        string                           `json:"request_id"`
-	TenantID         string                           `json:"tenant_id"`
-	StatusToken      string                           `json:"status_token"`
-	SubmittedAt      time.Time                        `json:"submitted_at"`
-	WithdrawnAt      *time.Time                       `json:"withdrawn_at,omitempty"`
-	PhaseID          string                           `json:"phase_id"`
-	PhaseName        string                           `json:"phase_name"`
-	ServiceStartDate careplan.Date                    `json:"service_start_date"`
-	ServiceEndDate   careplan.Date                    `json:"service_end_date"`
-	SchoolName       string                           `json:"school_name"`
-	SchoolSlug       string                           `json:"school_slug"`
-	Children         []EnrollmentRequestChildResponse `json:"children"`
-}
-
-// listMyEnrollments returns every enrollment.requests row owned by
-// the calling parent's account, newest first. Cross-tenant — the
-// parent service runs the query under WithAdminTx.
-func (rs *Resource) listMyEnrollments(w http.ResponseWriter, r *http.Request) {
-	claims := sessiontoken.ClaimsFromCtx(r.Context())
-	if claims.ID == 0 {
-		common.RenderError(w, r, common.ErrorUnauthorized(sessiontoken.ErrTokenUnauthorized))
-		return
-	}
-
-	requests, err := rs.ParentService.ListEnrollmentsForAccount(r.Context(), int64(claims.ID))
-	if err != nil {
-		common.RenderError(w, r, common.ErrorInternalServer(err))
-		return
-	}
-
-	out := make([]EnrollmentRequestResponse, 0, len(requests))
-	for _, req := range requests {
-		children := make([]EnrollmentRequestChildResponse, 0, len(req.Children))
-		for _, c := range req.Children {
-			children = append(children, EnrollmentRequestChildResponse{
-				ChildID:      strconv.FormatInt(c.ChildID, 10),
-				FirstName:    c.FirstName,
-				LastName:     c.LastName,
-				Status:       c.Status,
-				StatusReason: c.StatusReason,
-			})
-		}
-		out = append(out, EnrollmentRequestResponse{
-			RequestID:        strconv.FormatInt(req.RequestID, 10),
-			TenantID:         strconv.FormatInt(req.TenantID, 10),
-			StatusToken:      req.StatusToken,
-			SubmittedAt:      req.SubmittedAt,
-			WithdrawnAt:      req.WithdrawnAt,
-			PhaseID:          strconv.FormatInt(req.PhaseID, 10),
-			PhaseName:        req.PhaseName,
-			ServiceStartDate: parentResponseDate(req.ServiceStartDate),
-			ServiceEndDate:   parentResponseDate(req.ServiceEndDate),
-			SchoolName:       req.SchoolName,
-			SchoolSlug:       req.SchoolSlug,
-			Children:         children,
-		})
-	}
-
-	common.Respond(w, r, http.StatusOK, out, "Enrollments retrieved")
 }

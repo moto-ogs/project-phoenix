@@ -1,101 +1,29 @@
-import type {
-  EmailAddressMark,
-  MailOutcome,
-  MailProviderBlock,
+import type * as guardiansContract from "~/lib/contract/guardians.generated";
+import { knownEnum } from "~/lib/contract/known-enum";
+import {
+  type EmailAddressMark,
+  knownMailOutcome,
+  knownMailProviderBlock,
+  type MailOutcome,
+  type MailProviderBlock,
 } from "~/lib/email-delivery-status";
-import { type ApiError, apiErrorFromBody, transportFetch } from "./api-error";
+import { bffJson } from "./bff-fetch";
 // Guardian API Client
 // Calls Next.js API routes which proxy to the Go backend
 
-import { createLogger } from "~/lib/logger";
 import type {
   Guardian,
   GuardianWithRelationship,
   GuardianFormData,
   StudentGuardianLinkRequest,
-  BackendGuardianProfile,
-  BackendGuardianPickerResponse,
-  BackendGuardianWithRelationship,
-  PhoneNumber,
   PhoneType,
-  PhoneNumberCreateRequest,
-  PhoneNumberUpdateRequest,
-  BackendPhoneNumber,
   GuardianRole,
 } from "./guardian-helpers";
 import {
-  mapGuardianResponse,
   mapGuardianPickerResponse,
   mapGuardianWithRelationshipResponse,
   mapStudentGuardianLinkToBackend,
-  mapPhoneNumberResponse,
-  mapPhoneNumberCreateToBackend,
-  mapPhoneNumberUpdateToBackend,
 } from "./guardian-helpers";
-
-const logger = createLogger({ component: "GuardianAPI" });
-
-// API Response Types
-interface ApiResponse<T> {
-  status: string;
-  data?: T;
-  message?: string;
-}
-
-interface PaginatedResponse<T> {
-  status: string;
-  data: T[];
-  pagination: {
-    current_page: number;
-    page_size: number;
-    total_pages: number;
-    total_records: number;
-  };
-  message?: string;
-  error?: string;
-}
-
-// Every failure of this client is an ApiError: the wire code, field errors
-// and request ID travel to the shared error display (#2517); the message is
-// the envelope's diagnostic `detail` and is never shown.
-
-/** The failed response as an ApiError carrying the envelope. */
-async function guardianApiError(
-  response: Response,
-  operation: string,
-  fallback: string,
-): Promise<ApiError> {
-  const body: unknown = await response.json().catch((err: unknown) => {
-    logger.debug("json_parse_failed", {
-      error: err instanceof Error ? err.message : String(err),
-      status: response.status,
-      operation,
-    });
-    return undefined;
-  });
-  return apiErrorFromBody(fallback, response.status, body);
-}
-
-/**
- * A 2xx answer that lacks the data the call needs. Nothing about it is the
- * user's input, so it counts as a server failure.
- */
-function bodyError(body: unknown, fallback: string) {
-  return apiErrorFromBody(fallback, 500, body);
-}
-
-// Partial update request type for guardian profile
-interface PartialGuardianUpdateRequest {
-  first_name?: string;
-  last_name?: string;
-  email?: string | null;
-  address_street?: string | null;
-  address_city?: string | null;
-  address_postal_code?: string | null;
-  preferred_contact_method?: string;
-  language_preference?: string;
-  notes?: string | null;
-}
 
 /**
  * Map frontend guardian form data to backend request format.
@@ -103,8 +31,8 @@ interface PartialGuardianUpdateRequest {
  */
 function mapGuardianFormToBackend(
   data: Partial<GuardianFormData>,
-): PartialGuardianUpdateRequest {
-  const result: PartialGuardianUpdateRequest = {};
+): guardiansContract.GuardianUpdateRequest {
+  const result: guardiansContract.GuardianUpdateRequest = {};
 
   if (data.firstName) result.first_name = data.firstName;
   if (data.lastName) result.last_name = data.lastName;
@@ -123,17 +51,6 @@ function mapGuardianFormToBackend(
   return result;
 }
 
-// Partial update request for student-guardian relationship
-interface PartialRelationshipUpdateRequest {
-  relationship_type?: string;
-  guardian_role?: GuardianRole;
-  is_primary?: boolean;
-  is_emergency_contact?: boolean;
-  can_pickup?: boolean;
-  pickup_notes?: string | null;
-  emergency_priority?: number;
-}
-
 // Guardian API Client Functions
 
 /**
@@ -142,32 +59,27 @@ interface PartialRelationshipUpdateRequest {
 export async function fetchStudentGuardians(
   studentId: string,
 ): Promise<GuardianWithRelationship[]> {
-  const response = await transportFetch(
-    `/api/guardians/students/${studentId}/guardians`,
+  const links = await bffJson(
+    "tenant",
+    "GET /api/guardians/students/{studentId}/guardians",
+    { params: { studentId }, errorMessage: "Failed to fetch guardians" },
   );
-
-  if (!response.ok) {
-    throw await guardianApiError(
-      response,
-      "fetch_student_guardians",
-      "Failed to fetch guardians",
-    );
-  }
-
-  const result = (await response.json()) as ApiResponse<
-    BackendGuardianWithRelationship[]
-  >;
-
-  return (result.data ?? []).map(mapGuardianWithRelationshipResponse);
+  return links.flatMap((link) => {
+    const mapped = mapGuardianWithRelationshipResponse(link);
+    return mapped ? [mapped] : [];
+  });
 }
 
-type GuardianSendBlock =
-  | "address"
-  | "delayed"
-  | "stopped"
-  | "departed"
-  | "provider"
-  | "provider_unknown";
+const SEND_BLOCKS = [
+  "address",
+  "delayed",
+  "stopped",
+  "departed",
+  "provider",
+  "provider_unknown",
+] as const;
+type GuardianSendBlock = (typeof SEND_BLOCKS)[number];
+const ADDRESS_MARKS: readonly EmailAddressMark[] = ["failed", "complained"];
 
 /** What the school knows about mail to one guardian's address (#5934). */
 export interface GuardianEmailState {
@@ -183,43 +95,27 @@ export interface GuardianEmailState {
   readonly outcomeAt?: string;
 }
 
-interface BackendGuardianEmailState {
-  guardian_profile_id: number | string;
-  mail_outcome?: MailOutcome;
-  address_mark?: EmailAddressMark;
-  emails_stopped?: boolean;
-  stop_shared?: boolean;
-  provider_block?: MailProviderBlock;
-  send_block?: GuardianSendBlock;
-  outcome_at?: string;
-}
-
 /** The mail state of every guardian of a student, keyed by guardian ID. */
 export async function fetchStudentGuardianEmailStates(
   studentId: string,
 ): Promise<Record<string, GuardianEmailState>> {
-  const response = await transportFetch(
-    `/api/guardians/students/${studentId}/email-status`,
+  const lines = await bffJson(
+    "tenant",
+    "GET /api/guardians/students/{studentId}/email-status",
+    {
+      params: { studentId },
+      errorMessage: "Failed to fetch the guardian email status",
+    },
   );
-  if (!response.ok) {
-    throw await guardianApiError(
-      response,
-      "fetch_guardian_email_status",
-      "Failed to fetch the guardian email status",
-    );
-  }
-  const result = (await response.json()) as ApiResponse<
-    BackendGuardianEmailState[]
-  >;
   const states: Record<string, GuardianEmailState> = {};
-  for (const line of result.data ?? []) {
-    states[String(line.guardian_profile_id)] = {
-      mailOutcome: line.mail_outcome,
-      addressMark: line.address_mark,
+  for (const line of lines) {
+    states[line.guardian_profile_id] = {
+      mailOutcome: knownMailOutcome(line.mail_outcome),
+      addressMark: knownEnum(ADDRESS_MARKS, line.address_mark),
       emailsStopped: line.emails_stopped,
       stopShared: line.stop_shared,
-      providerBlock: line.provider_block,
-      sendBlock: line.send_block,
+      providerBlock: knownMailProviderBlock(line.provider_block),
+      sendBlock: knownEnum(SEND_BLOCKS, line.send_block),
       outcomeAt: line.outcome_at,
     };
   }
@@ -228,83 +124,76 @@ export async function fetchStudentGuardianEmailStates(
 
 /** The school stops mail to this person, whatever address they hold later. */
 export async function stopGuardianEmails(guardianId: string): Promise<void> {
-  const response = await transportFetch(
-    `/api/guardians/${guardianId}/email-stop`,
-    { method: "POST" },
-  );
-  if (!response.ok) {
-    throw await guardianApiError(
-      response,
-      "stop_guardian_emails",
-      "Failed to stop the guardian emails",
-    );
-  }
+  await bffJson("tenant", "POST /api/guardians/{id}/email-stop", {
+    params: { id: guardianId },
+    errorMessage: "Failed to stop the guardian emails",
+  });
 }
 
 /** The school takes its stop back. */
 export async function resumeGuardianEmails(guardianId: string): Promise<void> {
-  const response = await transportFetch(
-    `/api/guardians/${guardianId}/email-stop`,
-    { method: "DELETE" },
-  );
-  if (!response.ok) {
-    throw await guardianApiError(
-      response,
-      "resume_guardian_emails",
-      "Failed to resume the guardian emails",
-    );
-  }
+  await bffJson("tenant", "DELETE /api/guardians/{id}/email-stop", {
+    params: { id: guardianId },
+    errorMessage: "Failed to resume the guardian emails",
+  });
 }
 
 /** Someone checked the address after a mail bounced. */
 export async function liftGuardianEmailBlock(
   guardianId: string,
 ): Promise<void> {
-  const response = await transportFetch(
-    `/api/guardians/${guardianId}/email-block`,
-    { method: "DELETE" },
-  );
-  if (!response.ok) {
-    throw await guardianApiError(
-      response,
-      "lift_guardian_email_block",
-      "Failed to lift the guardian email block",
-    );
-  }
+  await bffJson("tenant", "DELETE /api/guardians/{id}/email-block", {
+    params: { id: guardianId },
+    errorMessage: "Failed to lift the guardian email block",
+  });
+}
+
+/** One number of the staff form's phone list; without `id` it is new. */
+export interface GuardianEntryPhone {
+  id?: string;
+  phoneNumber: string;
+  phoneType: PhoneType | undefined;
+  label?: string;
+  isPrimary: boolean;
 }
 
 /**
- * Update a guardian profile
+ * Saves the staff form of a child's guardian in one request: profile, this
+ * child's link and the full phone list, against the version the list read
+ * (ADR 0311). A changed guardian is refused with general.changed_since_read
+ * and nothing is written. Answers the stored row with its new version.
  */
-export async function updateGuardian(
+export async function saveStudentGuardian(
+  studentId: string,
   guardianId: string,
-  data: Partial<GuardianFormData>,
-): Promise<Guardian> {
-  const backendData = mapGuardianFormToBackend(data);
-
-  const response = await transportFetch(`/api/guardians/${guardianId}`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
+  entry: {
+    guardian: Partial<GuardianFormData>;
+    relationship: Partial<StudentGuardianLinkRequest>;
+    phoneNumbers?: readonly GuardianEntryPhone[];
+  },
+  expectedVersion: string,
+): Promise<GuardianWithRelationship | null> {
+  const saved = await bffJson(
+    "tenant",
+    "PUT /api/guardians/students/{studentId}/guardians/{guardianId}",
+    {
+      params: { studentId, guardianId },
+      body: {
+        guardian: mapGuardianFormToBackend(entry.guardian),
+        relationship: mapRelationshipUpdateToBackend(entry.relationship),
+        phone_numbers: entry.phoneNumbers?.map((phone) => ({
+          id: phone.id,
+          phone_number: phone.phoneNumber,
+          phone_type: phone.phoneType,
+          label: phone.label,
+          is_primary: phone.isPrimary,
+        })),
+        expected_version: expectedVersion,
+      },
+      errorMessage: "Failed to save guardian",
     },
-    body: JSON.stringify(backendData),
-  });
-
-  if (!response.ok) {
-    throw await guardianApiError(
-      response,
-      "update_guardian",
-      "Failed to update guardian",
-    );
-  }
-
-  const result = (await response.json()) as ApiResponse<BackendGuardianProfile>;
-
-  if (!result.data) {
-    throw bodyError(result, "Failed to update guardian");
-  }
-
-  return mapGuardianResponse(result.data);
+  );
+  return mapGuardianWithRelationshipResponse(saved);
 }
 
 /**
@@ -321,31 +210,16 @@ export async function deleteGuardian(
   guardianId: string,
   opts: { force?: boolean; expectedAffectedLinkIds?: readonly string[] } = {},
 ): Promise<void> {
-  const searchParams = new URLSearchParams();
-  if (opts.force) {
-    searchParams.set("force", "true");
-  }
-  if (opts.expectedAffectedLinkIds?.length) {
-    searchParams.set(
-      "expected_link_ids",
-      opts.expectedAffectedLinkIds.join(","),
-    );
-  }
-  const queryString = searchParams.toString();
-  const url = queryString
-    ? `/api/guardians/${guardianId}?${queryString}`
-    : `/api/guardians/${guardianId}`;
-  const response = await transportFetch(url, {
-    method: "DELETE",
+  await bffJson("tenant", "DELETE /api/guardians/{id}", {
+    params: { id: guardianId },
+    query: {
+      force: opts.force ? "true" : undefined,
+      expected_link_ids: opts.expectedAffectedLinkIds?.length
+        ? opts.expectedAffectedLinkIds.join(",")
+        : undefined,
+    },
+    errorMessage: "Failed to delete guardian",
   });
-
-  if (!response.ok) {
-    throw await guardianApiError(
-      response,
-      "delete_guardian",
-      "Failed to delete guardian",
-    );
-  }
 }
 
 /** Read-only preview of what a full guardian delete would affect. */
@@ -371,38 +245,19 @@ export interface GuardianDeletePreview {
 export async function fetchGuardianDeletePreview(
   guardianId: string,
 ): Promise<GuardianDeletePreview> {
-  const response = await transportFetch(
-    `/api/guardians/${guardianId}/delete-preview`,
+  const preview = await bffJson(
+    "tenant",
+    "GET /api/guardians/{id}/delete-preview",
+    {
+      params: { id: guardianId },
+      errorMessage: "Failed to load delete preview",
+    },
   );
-
-  if (!response.ok) {
-    throw await guardianApiError(
-      response,
-      "fetch_guardian_delete_preview",
-      "Failed to load delete preview",
-    );
-  }
-
-  const result = (await response.json()) as ApiResponse<{
-    linked_count: number;
-    affected_names: string[];
-    // The backend sends int64 link IDs as strings (lossless across the JS
-    // safe-integer boundary); tolerate legacy numbers defensively.
-    affected_link_ids: Array<string | number>;
-    warning: string;
-  }>;
-
-  if (!result.data) {
-    throw bodyError(result, "Failed to load delete preview");
-  }
-
   return {
-    linkedCount: result.data.linked_count,
-    affectedNames: result.data.affected_names ?? [],
-    affectedLinkIds: (result.data.affected_link_ids ?? []).map((id) =>
-      String(id),
-    ),
-    warning: result.data.warning,
+    linkedCount: preview.linked_count,
+    affectedNames: preview.affected_names ?? [],
+    affectedLinkIds: preview.affected_link_ids ?? [],
+    warning: preview.warning,
   };
 }
 
@@ -413,26 +268,15 @@ export async function linkGuardianToStudent(
   studentId: string,
   linkData: StudentGuardianLinkRequest,
 ): Promise<void> {
-  const backendData = mapStudentGuardianLinkToBackend(linkData);
-
-  const response = await transportFetch(
-    `/api/guardians/students/${studentId}/guardians`,
+  await bffJson(
+    "tenant",
+    "POST /api/guardians/students/{studentId}/guardians",
     {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(backendData),
+      params: { studentId },
+      body: mapStudentGuardianLinkToBackend(linkData),
+      errorMessage: "Failed to link guardian",
     },
   );
-
-  if (!response.ok) {
-    throw await guardianApiError(
-      response,
-      "link_guardian_to_student",
-      "Failed to link guardian",
-    );
-  }
 }
 
 /**
@@ -458,7 +302,7 @@ export interface NewStudentGuardianInput {
   emergencyPriority: number;
   phoneNumbers?: Array<{
     phoneNumber: string;
-    phoneType: PhoneType;
+    phoneType: PhoneType | undefined;
     label?: string;
     isPrimary: boolean;
   }>;
@@ -504,34 +348,18 @@ export async function createStudentGuardians(
     })),
   };
 
-  const response = await transportFetch(
-    `/api/guardians/students/${studentId}/guardians/batch`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    },
+  await bffJson(
+    "tenant",
+    "POST /api/guardians/students/{studentId}/guardians/batch",
+    { params: { studentId }, body, errorMessage: "Failed to create guardians" },
   );
-
-  if (!response.ok) {
-    throw await guardianApiError(
-      response,
-      "create_student_guardians",
-      "Failed to create guardians",
-    );
-  }
 }
 
-/**
- * Update student-guardian relationship
- */
-export async function updateStudentGuardianRelationship(
-  relationshipId: string,
+/** The link fields of the staff form that are defined. */
+function mapRelationshipUpdateToBackend(
   updates: Partial<StudentGuardianLinkRequest>,
-): Promise<void> {
-  const backendData: PartialRelationshipUpdateRequest = {};
+): guardiansContract.StudentGuardianUpdateRequest {
+  const backendData: guardiansContract.StudentGuardianUpdateRequest = {};
 
   if (updates.relationshipType !== undefined) {
     backendData.relationship_type = updates.relationshipType;
@@ -555,24 +383,7 @@ export async function updateStudentGuardianRelationship(
     backendData.emergency_priority = updates.emergencyPriority;
   }
 
-  const response = await transportFetch(
-    `/api/guardians/relationships/${relationshipId}`,
-    {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(backendData),
-    },
-  );
-
-  if (!response.ok) {
-    throw await guardianApiError(
-      response,
-      "update_student_guardian_relationship",
-      "Failed to update relationship",
-    );
-  }
+  return backendData;
 }
 
 /**
@@ -582,20 +393,14 @@ export async function removeGuardianFromStudent(
   studentId: string,
   guardianId: string,
 ): Promise<void> {
-  const response = await transportFetch(
-    `/api/guardians/students/${studentId}/guardians/${guardianId}`,
+  await bffJson(
+    "tenant",
+    "DELETE /api/guardians/students/{studentId}/guardians/{guardianId}",
     {
-      method: "DELETE",
+      params: { studentId, guardianId },
+      errorMessage: "Failed to remove guardian",
     },
   );
-
-  if (!response.ok) {
-    throw await guardianApiError(
-      response,
-      "remove_guardian_from_student",
-      "Failed to remove guardian",
-    );
-  }
 }
 
 // Outcome returned by the unified invite resolve, mirroring the backend.
@@ -606,16 +411,12 @@ type InviteGuardianOutcome =
   | "pending_approval"
   | "existing_contact_restricted";
 
-export interface InviteGuardianResult {
+// `mail_held`: the access exists, but no mail will reach the person.
+// `existing_role`: the current role for existing_contact_restricted, so the UI
+// can name it in the upgrade confirmation (#2172).
+export type InviteGuardianResult = guardiansContract.inviteToStudentResponse & {
   outcome: InviteGuardianOutcome;
-  guardian_profile_id: string;
-  invitation_id?: string;
-  // The access exists, but no mail will reach the person.
-  mail_held?: boolean;
-  // Current guardian role for the existing_contact_restricted outcome, so the
-  // UI can name it in the upgrade confirmation (#2172).
-  existing_role?: string;
-}
+};
 
 /**
  * Invite a guardian to a student by email. For a guardian whose info is already
@@ -633,12 +434,12 @@ export async function inviteGuardianToStudent(
     confirmRoleUpgrade?: boolean;
   },
 ): Promise<InviteGuardianResult> {
-  const response = await transportFetch(
-    `/api/guardians/students/${studentId}/invite`,
+  const result = await bffJson(
+    "tenant",
+    "POST /api/guardians/students/{studentId}/invite",
     {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+      params: { studentId },
+      body: {
         email,
         first_name: options?.firstName ?? "",
         last_name: options?.lastName ?? "",
@@ -646,23 +447,11 @@ export async function inviteGuardianToStudent(
         // Only sent when confirming an upgrade; a plain invite keeps the
         // historical four-field body.
         ...(options?.confirmRoleUpgrade ? { confirm_role_upgrade: true } : {}),
-      }),
+      },
+      errorMessage: "Failed to invite guardian",
     },
   );
-
-  if (!response.ok) {
-    throw await guardianApiError(
-      response,
-      "invite_guardian_to_student",
-      "Failed to invite guardian",
-    );
-  }
-
-  const result = (await response.json()) as ApiResponse<InviteGuardianResult>;
-  if (!result.data) {
-    throw bodyError(result, "Failed to invite guardian");
-  }
-  return result.data;
+  return { ...result, outcome: result.outcome as InviteGuardianOutcome };
 }
 
 // Hard ceiling on guardian picker results, requested explicitly so the picker
@@ -677,139 +466,11 @@ export const GUARDIAN_PICKER_RESULT_LIMIT = 50;
  * Search for existing guardians (for linking)
  */
 export async function searchGuardians(query: string): Promise<Guardian[]> {
-  const response = await transportFetch(
-    `/api/guardians/search?q=${encodeURIComponent(query)}&page_size=${GUARDIAN_PICKER_RESULT_LIMIT}`,
-  );
-
-  if (!response.ok) {
-    throw await guardianApiError(
-      response,
-      "search_guardians",
-      "Failed to search guardians",
-    );
-  }
-
-  const result =
-    (await response.json()) as PaginatedResponse<BackendGuardianPickerResponse>;
-
-  return (result.data ?? []).map(mapGuardianPickerResponse);
-}
-
-// =============================================================================
-// Phone Number API Functions
-// =============================================================================
-
-/**
- * Add a phone number to a guardian
- */
-export async function addGuardianPhoneNumber(
-  guardianId: string,
-  data: PhoneNumberCreateRequest,
-): Promise<PhoneNumber> {
-  const backendData = mapPhoneNumberCreateToBackend(data);
-
-  const response = await transportFetch(
-    `/api/guardians/${guardianId}/phone-numbers`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(backendData),
-    },
-  );
-
-  if (!response.ok) {
-    throw await guardianApiError(
-      response,
-      "add_guardian_phone_number",
-      "Failed to add phone number",
-    );
-  }
-
-  const result = (await response.json()) as ApiResponse<BackendPhoneNumber>;
-
-  if (!result.data) {
-    throw bodyError(result, "Failed to add phone number");
-  }
-
-  return mapPhoneNumberResponse(result.data);
-}
-
-/**
- * Update a guardian's phone number
- */
-export async function updateGuardianPhoneNumber(
-  guardianId: string,
-  phoneId: string,
-  data: PhoneNumberUpdateRequest,
-): Promise<void> {
-  const backendData = mapPhoneNumberUpdateToBackend(data);
-
-  const response = await transportFetch(
-    `/api/guardians/${guardianId}/phone-numbers/${phoneId}`,
-    {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(backendData),
-    },
-  );
-
-  if (!response.ok) {
-    throw await guardianApiError(
-      response,
-      "update_guardian_phone_number",
-      "Failed to update phone number",
-    );
-  }
-}
-
-/**
- * Delete a guardian's phone number
- */
-export async function deleteGuardianPhoneNumber(
-  guardianId: string,
-  phoneId: string,
-): Promise<void> {
-  const response = await transportFetch(
-    `/api/guardians/${guardianId}/phone-numbers/${phoneId}`,
-    {
-      method: "DELETE",
-    },
-  );
-
-  if (!response.ok) {
-    throw await guardianApiError(
-      response,
-      "delete_guardian_phone_number",
-      "Failed to delete phone number",
-    );
-  }
-}
-
-/**
- * Set a phone number as primary for a guardian
- */
-export async function setGuardianPrimaryPhone(
-  guardianId: string,
-  phoneId: string,
-): Promise<void> {
-  const response = await transportFetch(
-    `/api/guardians/${guardianId}/phone-numbers/${phoneId}/set-primary`,
-    {
-      method: "POST",
-    },
-  );
-
-  if (!response.ok) {
-    throw await guardianApiError(
-      response,
-      "set_guardian_primary_phone",
-      "Failed to set primary phone",
-    );
-  }
+  const page = await bffJson("tenant", "GET /api/guardians/search", {
+    query: { q: query, page_size: GUARDIAN_PICKER_RESULT_LIMIT },
+    errorMessage: "Failed to search guardians",
+  });
+  return page.data.map(mapGuardianPickerResponse);
 }
 
 // ============================================================================
@@ -832,20 +493,9 @@ export interface PendingApproval {
   roleUpgrade: boolean;
 }
 
-interface BackendPendingApproval {
-  id: string;
-  guardian_profile_id: string;
-  guardian_name: string;
-  guardian_email?: string;
-  student_id?: string;
-  student_name?: string;
-  requested_by_email?: string;
-  created_at: string;
-  expires_at: string;
-  role_upgrade?: boolean;
-}
-
-function mapPendingApproval(data: BackendPendingApproval): PendingApproval {
+function mapPendingApproval(
+  data: guardiansContract.pendingApprovalResponse,
+): PendingApproval {
   return {
     id: data.id,
     guardianProfileId: data.guardian_profile_id,
@@ -856,55 +506,38 @@ function mapPendingApproval(data: BackendPendingApproval): PendingApproval {
     requestedByEmail: data.requested_by_email,
     createdAt: data.created_at,
     expiresAt: data.expires_at,
-    roleUpgrade: data.role_upgrade ?? false,
+    roleUpgrade: data.role_upgrade,
   };
 }
 
 /** List parent-initiated guardian invitations awaiting staff approval. */
 export async function listPendingApprovals(): Promise<PendingApproval[]> {
-  const response = await transportFetch(
-    "/api/guardians/invitations/pending-approval",
+  const rows = await bffJson(
+    "tenant",
+    "GET /api/guardians/invitations/pending-approval",
+    { errorMessage: "Failed to load approvals" },
   );
-  if (!response.ok) {
-    throw await guardianApiError(
-      response,
-      "list_pending_approvals",
-      "Failed to load approvals",
-    );
-  }
-  const result = (await response.json()) as ApiResponse<
-    BackendPendingApproval[]
-  >;
-  return (result.data ?? []).map(mapPendingApproval);
-}
-
-async function postInvitationAction(
-  invitationId: string,
-  action: "approve" | "reject",
-): Promise<void> {
-  const response = await transportFetch(
-    `/api/guardians/invitations/${invitationId}/${action}`,
-    { method: "POST" },
-  );
-  if (!response.ok) {
-    throw await guardianApiError(
-      response,
-      `${action}_invitation`,
-      `Failed to ${action} invitation`,
-    );
-  }
+  return rows.map(mapPendingApproval);
 }
 
 /** Approve a pending parent-initiated invitation. */
 export async function approveGuardianInvitation(
   invitationId: string,
 ): Promise<void> {
-  return postInvitationAction(invitationId, "approve");
+  await bffJson(
+    "tenant",
+    "POST /api/guardians/invitations/{invitationId}/approve",
+    { params: { invitationId }, errorMessage: "Failed to approve invitation" },
+  );
 }
 
 /** Reject a pending parent-initiated invitation. */
 export async function rejectGuardianInvitation(
   invitationId: string,
 ): Promise<void> {
-  return postInvitationAction(invitationId, "reject");
+  await bffJson(
+    "tenant",
+    "POST /api/guardians/invitations/{invitationId}/reject",
+    { params: { invitationId }, errorMessage: "Failed to reject invitation" },
+  );
 }

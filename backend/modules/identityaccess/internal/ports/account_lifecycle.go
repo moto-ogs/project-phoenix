@@ -4,7 +4,9 @@ import (
 	"context"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // AccountLifecycleStore is the persistence port over the identity-owned rows
@@ -116,6 +118,13 @@ type GuardianDirectory interface {
 	// PromoteStudentGuardianLink upgrades the relationship to legal guardian
 	// with the server-derived parent-portal permission set (#2172).
 	PromoteStudentGuardianLink(ctx context.Context, linkID int64) error
+	// ApprovedCarePeriods reads the approved care periods of the children
+	// (Enrollment) in one statement, as the parents portal reads them.
+	ApprovedCarePeriods(ctx context.Context, studentIDs []int64) ([]identityaccess.ChildCarePeriod, error)
+	// CareBookingsInForce reports which of the request children have at
+	// least one care booking in force on day (Care Plan, valid_from on or
+	// before day, valid_until after it), in one statement.
+	CareBookingsInForce(ctx context.Context, requestChildIDs []int64, day calendar.Date) ([]int64, error)
 	// ListStudentGuardianLinksByStudents reads the relationships of the given
 	// children in one statement.
 	ListStudentGuardianLinksByStudents(ctx context.Context, studentIDs []int64) ([]domain.StudentGuardianLink, error)
@@ -155,9 +164,26 @@ type GuardianInvitationStore interface {
 	// ListOpenGuardianInvitations returns the invitations of the profiles
 	// that are still going somewhere: redeemable or awaiting a decision.
 	ListOpenGuardianInvitations(ctx context.Context, guardianProfileIDs []int64) ([]domain.GuardianInvitation, error)
-	// ListRedeemableGuardianInvitations returns the invitations of the
-	// school in context whose link can still be spent.
-	ListRedeemableGuardianInvitations(ctx context.Context) ([]domain.GuardianInvitation, error)
+	// ListGuardianCareNotices reads the parent step of the given
+	// relationships of the school in context (#7760) in one statement: the
+	// marker, the stored parent_portal.access and the account the access is
+	// bound to. lock takes a share lock of the access rows, so a permission
+	// change waits for the run or is read as committed. A relationship
+	// without an access row is missing from the map.
+	ListGuardianCareNotices(ctx context.Context, relationshipIDs []int64, lock bool) (map[int64]domain.GuardianCareNoticeState, error)
+	// MarkGuardianCareNoticesSent stamps the relationships whose care
+	// notice was queued in the caller's transaction, at the database time.
+	MarkGuardianCareNoticesSent(ctx context.Context, relationshipIDs []int64) error
+	// LockBulkInviteAccounts locks the account rows FOR NO KEY UPDATE,
+	// ascending by id, in one statement, until the caller's transaction
+	// ends: the lock the grant's restoration takes, taken before anything
+	// else of the run touches the accounts.
+	LockBulkInviteAccounts(ctx context.Context, accountIDs []int64, emails []string) error
+	// LockGuardianNoticeMemberships pins, until the caller's transaction
+	// ends, the active mapping and guardian role rows of the accounts at the
+	// school in context: the membership the care notice decides on. One
+	// statement for all accounts; the accounts must be locked first.
+	LockGuardianNoticeMemberships(ctx context.Context, accountIDs []int64) error
 	InsertGuardianInvitation(ctx context.Context, invitation domain.GuardianInvitation) (domain.GuardianInvitation, error)
 	// UpdateGuardianInvitation writes the invitation only while it is still
 	// unaccepted and carries the approval status and expiry the caller read;
@@ -204,6 +230,10 @@ type GuardianInvitationDelivery interface {
 	// a new access (#3534). A guardian gets it at most once per school; a
 	// resend never asks for it.
 	EnqueueWelcomeEmail(ctx context.Context, profile domain.GuardianProfile, tenantID int64, schoolName string, precedingOutboxID int64)
+	// EnqueueCareVisibleEmail queues the one care notice of a guardian, naming
+	// every child it covers (#7760), and returns the enqueue failure; the
+	// caller's savepoint rolls back with it.
+	EnqueueCareVisibleEmail(ctx context.Context, notice identityaccess.GuardianCareNotice) error
 }
 
 // FinancialAudit is the consumer-owned port over the Audit platform's

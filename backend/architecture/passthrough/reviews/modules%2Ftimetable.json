@@ -227,11 +227,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/timetable/fixturetest/fromCalendarPeriodRecords.Update",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/timetable/fixturetest/fromCalendarPeriodRecords.UsageCounts",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -268,11 +263,6 @@
     {
       "decision": "0090",
       "id": "modules/timetable/fixturetest/fromDateframeRecords.Update",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/timetable/fixturetest/fromInstanceLifecycle.AcknowledgeUnderstaffed",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
@@ -518,11 +508,6 @@
     {
       "decision": "0090",
       "id": "modules/timetable/fixturetest/fromInstanceStudentRecords.MarkNotScheduled",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/timetable/fixturetest/fromInstanceStudentRecords.ReconcileAttendanceInterval",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
@@ -917,11 +902,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/timetable/fixturetest/intoCalendarPeriodRecords.Update",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/timetable/fixturetest/intoCalendarPeriodRecords.UsageCounts",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -1043,11 +1023,6 @@
     {
       "decision": "0090",
       "id": "modules/timetable/internal/application/ActivityService.GetGroupSupervisors",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/timetable/internal/application/ActivityService.GetSchedule",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
@@ -1417,11 +1392,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/timetable/internal/application/Service.FindTemplateStartTimes",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/timetable/internal/application/Service.ListActivityExceptions",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -1768,11 +1738,6 @@
     {
       "decision": "0090",
       "id": "modules/timetable/internal/application/closingDayCalendarRepository.FindByTenantID",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/timetable/internal/application/closingDayCalendarRepository.Update",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {

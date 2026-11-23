@@ -41,10 +41,14 @@ export function enrollmentReviewTopic(): HelpTopic {
       "Auf der Seite der Phase steht unter `Freie Plätze je Angebot`, wie viele Plätze noch frei sind. `Belegt` zählt die Kinder am vollsten Tag bis zum Ende der Phase.",
       "Hochgeladene Nachweise stehen bei `Zusatzfragen (Eltern)`. Mit `Öffnen` siehst du die Datei in einem neuen Tab.",
       "Hat die Vorlage `Unterschrift erforderlich`, steht die Unterschrift der Eltern im Abschnitt `Unterschrift`. Mit `Nachweis als PDF` lädst du den Anmeldenachweis mit der Unterschrift herunter.",
+      // #4788: Vertragsstand je Kind, nur lesend.
+      "Hat der Träger aus der Anmeldung einen Betreuungsvertrag gemacht, steht er unter `Betreuungsverträge`. Dort siehst du je Kind den Stand und die gebuchten Tage mit Uhrzeit. Ändern kann den Vertrag nur der Träger.",
       "Unter `Rechtstexte und Antworten` findest du die Texte und Antworten jeder Einreichung. Öffne einen Text, um den Wortlaut zu lesen.",
       "Mit `Statusseite öffnen` siehst du, was die Eltern sehen.",
       // #5102: Auswirkung nach einer Korrektur unter `Nachbearbeitung`.
       "Angebote eines bestätigten Kindes änderst du unter `Nachbearbeitung` mit `Bearbeiten`. Danach steht dort `Auswirkung auf den Betreuungsplan`.",
+      // #7929: ein befristetes Angebot verlängern.
+      "Eine Korrektur behält das Ende einer Buchung. Endet ein Angebot früher, als die Betreuung des Kindes läuft, steht darunter `Gebucht bis`. Setze den Haken bei `Bis … verlängern`. Dann gilt das Angebot bis zu dem Tag, der dort steht: dem Ende der Phase, dem Betreuungsende des Kindes oder dem Tag vor einer geplanten Änderung.",
       "Unter `Automatisch angepasst` stehen Regeltermine, die moto selbst geändert hat.",
       "Unter `Nicht angepasst, weil von Hand gepflegt` steht das Kind an abgemeldeten Tagen weiter im Plan. Mit `Dort auch entfernen` nimmst du es dort ab diesem Datum heraus. Vergangene Termine bleiben.",
       "Unter `Abholzeit weicht von der Buchung ab` gilt an einem Tag noch eine von Hand eingetragene Abholzeit. Mit `Gebuchte Zeiten übernehmen` gilt die gebuchte Zeit. Steht ein Datum dabei, gilt sie erst ab diesem Tag.",

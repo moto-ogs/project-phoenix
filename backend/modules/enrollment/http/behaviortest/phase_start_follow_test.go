@@ -413,7 +413,12 @@ func TestPhaseService_Update_NeverWaitsForClassGateAfterRecurrenceGate(t *testin
 // its report (#6598).
 func phaseEdit(phases enrollmentNative.PhaseAdministration) func(context.Context, *enrollmentNative.Phase) error {
 	return func(ctx context.Context, phase *enrollmentNative.Phase) error {
-		_, err := phases.UpdatePhase(ctx, phase)
+		// The edit saves over the phase as it reads it (ADR 0311).
+		stored, err := phases.PhaseByID(ctx, phase.ID)
+		if err != nil {
+			return err
+		}
+		_, err = phases.UpdatePhase(ctx, phase, enrollmentNative.PhaseVersion(stored))
 		return err
 	}
 }

@@ -3,6 +3,7 @@ package timetablehttp
 import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // SchoolSupervisionsResponse lists the caller's own blocks of today.
@@ -13,7 +14,7 @@ type SchoolSupervisionsResponse struct {
 // CompleteOperationRequest names the children the supervisor confirmed as
 // present when she ends a block.
 type CompleteOperationRequest struct {
-	ConfirmedPresentStudentIDs []int64 `json:"confirmed_present_student_ids"`
+	ConfirmedPresentStudentIDs []ident.ID `json:"confirmed_present_student_ids"`
 }
 
 // SchoolSupervisionRouteContracts registers the typed contract of the

@@ -4,38 +4,39 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	scheduleModels "github.com/moto-ogs/project-phoenix/modules/timetable/internal/domain/schedulerecords"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // ScheduledInstanceOf maps a retained instance row, whose status carries the
 // Student Presence session state, onto the owner's scheduled-instance view.
 func ScheduledInstanceOf(row *scheduleModels.ActivityInstance) timetable.ScheduledInstance {
 	return timetable.ScheduledInstance{
-		ID:                    row.ID,
+		ID:                    ident.ID(row.ID),
 		CreatedAt:             row.CreatedAt,
 		UpdatedAt:             row.UpdatedAt,
-		TenantID:              row.TenantID,
+		TenantID:              ident.ID(row.TenantID),
 		Date:                  calendar.Date(row.Date),
-		ActivityGroupID:       row.ActivityGroupID,
-		CalendarPeriodID:      row.CalendarPeriodID,
+		ActivityGroupID:       (*ident.ID)(row.ActivityGroupID),
+		CalendarPeriodID:      (*ident.ID)(row.CalendarPeriodID),
 		Title:                 row.Title,
 		Description:           row.Description,
 		StartTime:             row.StartTime,
 		EndTime:               row.EndTime,
-		RoomID:                row.RoomID,
+		RoomID:                ident.ID(row.RoomID),
 		RequiredStaff:         row.RequiredStaff,
 		Status:                row.Status,
-		ActiveGroupID:         row.ActiveGroupID,
+		ActiveGroupID:         (*ident.ID)(row.ActiveGroupID),
 		ListKind:              row.ListKind,
 		IsSpontaneous:         row.IsSpontaneous,
 		UnderstaffedAck:       row.UnderstaffedAck,
 		UnderstaffedNote:      row.UnderstaffedNote,
 		CancelReason:          row.CancelReason,
 		Notes:                 row.Notes,
-		CreatedBy:             row.CreatedBy,
-		StartedBy:             row.StartedBy,
+		CreatedBy:             (*ident.ID)(row.CreatedBy),
+		StartedBy:             (*ident.ID)(row.StartedBy),
 		StartedAt:             row.StartedAt,
 		CompletedAt:           row.CompletedAt,
-		CompletedBy:           row.CompletedBy,
+		CompletedBy:           (*ident.ID)(row.CompletedBy),
 		ReopenUntil:           row.ReopenUntil,
 		HasCompletionSnapshot: len(row.CompletionSnapshot) > 0,
 		IsDuty:                row.TemplateType == timetable.GroupTypeDuty,

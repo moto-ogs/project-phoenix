@@ -1,7 +1,7 @@
-import { operatorFetch } from "./api-helpers";
+import { sessionBff } from "~/lib/session-bff";
+import { bffJson } from "~/lib/bff-fetch";
+import type * as operatorInvitationsContract from "~/lib/contract/operator-invitations.generated";
 import type {
-  BackendInvitationsListResponse,
-  BackendInvitationValidation,
   CreateOperatorInvitationRequest,
   AcceptOperatorInvitationRequest,
   PendingOperatorInvitation,
@@ -13,7 +13,7 @@ import {
   mapOperatorInfo,
   mapInvitationValidation,
 } from "./operator-invitation-helpers";
-import { apiErrorFromResponse, transportFetch } from "~/lib/api-error";
+import { ApiError } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
 import { OPERATOR_INVITATION_FLOW_HEADER } from "./operator-invitation-flow";
 
@@ -30,155 +30,102 @@ export async function createOperatorInvitation(
   data: CreateOperatorInvitationRequest,
 ): Promise<void> {
   // Convert camelCase frontend shape to the snake_case the backend expects.
-  await operatorFetch<unknown>("/api/operator/invitations", {
-    method: "POST",
+  await bffJson("platform", "POST /operator/invitations/", {
     body: {
       email: data.email,
       display_name: data.displayName,
-    },
+    } satisfies operatorInvitationsContract.CreateInvitationRequest,
   });
 }
 
 export async function listOperatorInvitations(): Promise<OperatorInvitationsData> {
-  const raw = await operatorFetch<BackendInvitationsListResponse>(
-    "/api/operator/invitations",
-  );
+  const raw = await bffJson("platform", "GET /operator/invitations/");
+  // Go lists pointers; the contract types an entry nullable.
   return {
-    invitations: (raw.invitations ?? []).map(mapPendingInvitation),
-    operators: (raw.operators ?? []).map(mapOperatorInfo),
+    invitations: (raw.invitations ?? [])
+      .filter((entry) => entry !== null)
+      .map(mapPendingInvitation),
+    operators: (raw.operators ?? [])
+      .filter((entry) => entry !== null)
+      .map(mapOperatorInfo),
   };
 }
 
 export async function resendOperatorInvitation(id: string): Promise<void> {
-  await operatorFetch<unknown>(
-    `/api/operator/invitations/${encodeURIComponent(id)}/resend`,
-    { method: "POST" },
-  );
+  await bffJson("platform", "POST /operator/invitations/{id}/resend", {
+    params: { id },
+  });
 }
 
 export async function revokeOperatorInvitation(id: string): Promise<void> {
-  await operatorFetch<unknown>(
-    `/api/operator/invitations/${encodeURIComponent(id)}`,
-    { method: "DELETE" },
-  );
+  await bffJson("platform", "DELETE /operator/invitations/{id}", {
+    params: { id },
+  });
 }
 
 export async function deactivateOperator(id: string): Promise<void> {
-  await operatorFetch<unknown>(
-    `/api/operator/operators/${encodeURIComponent(id)}/deactivate`,
-    { method: "POST" },
-  );
+  await bffJson("platform", "POST /operator/operators/{id}/deactivate", {
+    params: { id },
+  });
 }
 
 export async function reactivateOperator(id: string): Promise<void> {
-  await operatorFetch<unknown>(
-    `/api/operator/operators/${encodeURIComponent(id)}/reactivate`,
-    { method: "POST" },
-  );
+  await bffJson("platform", "POST /operator/operators/{id}/reactivate", {
+    params: { id },
+  });
 }
 
 // --- Public (unauthenticated) API functions ---
 
+// The invitation flow's steps are BFF routes without a session (`public`):
+// the first keeps the token in the flow's cookie, the others read it there,
+// so the token never travels in a URL.
+
 export async function establishOperatorInvitationSession(
   token: string,
 ): Promise<string> {
-  const response = await transportFetch(
-    "/api/operator/auth/invitations/session",
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token }),
-    },
-  );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Invitation session failed (${response.status})`,
-    );
-  }
-  const body: unknown = await response.json();
-  if (
-    typeof body !== "object" ||
-    body === null ||
-    !("flow_id" in body) ||
-    typeof body.flow_id !== "string" ||
-    body.flow_id === ""
-  ) {
-    throw new Error("Einladungssitzung ist ungültig");
-  }
-  return body.flow_id;
+  const { flow_id } = await bffJson("public", sessionBff.startOperatorInvite, {
+    body: { token },
+    errorMessage: "Invitation session failed",
+  });
+  return flow_id;
 }
 
 export async function validateOperatorInvitation(
   flowID: string,
 ): Promise<OperatorInvitationValidation> {
-  const response = await transportFetch(
-    "/api/operator/auth/invitations/validate",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        [OPERATOR_INVITATION_FLOW_HEADER]: flowID,
-      },
-      body: JSON.stringify({}),
-    },
+  // The operator backend answers in the shared error envelope (#2507).
+  return mapInvitationValidation(
+    await bffJson("public", sessionBff.validateOperatorInvite, {
+      body: {},
+      headers: { [OPERATOR_INVITATION_FLOW_HEADER]: flowID },
+      errorMessage: "Invitation validation failed",
+    }),
   );
-
-  if (!response.ok) {
-    // The operator backend answers in the shared error envelope (#2507).
-    throw await apiErrorFromResponse(
-      response,
-      `Invitation validation failed (${response.status})`,
-    );
-  }
-
-  const json: unknown = await response.json();
-  const data = unwrapResponse<BackendInvitationValidation>(json);
-  return mapInvitationValidation(data);
 }
 
 export async function acceptOperatorInvitation(
   flowID: string,
   data: AcceptOperatorInvitationRequest,
 ): Promise<void> {
-  // Convert camelCase frontend shape to the snake_case the backend expects.
-  const response = await transportFetch(
-    "/api/operator/auth/invitations/accept",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        [OPERATOR_INVITATION_FLOW_HEADER]: flowID,
-      },
-      body: JSON.stringify({
+  try {
+    // Convert camelCase frontend shape to the snake_case the backend expects.
+    await bffJson("public", sessionBff.acceptOperatorInvite, {
+      body: {
         display_name: data.displayName,
         password: data.password,
         confirm_password: data.confirmPassword,
-      }),
-    },
-  );
-
-  if (!response.ok) {
-    const error = await apiErrorFromResponse(
-      response,
-      `Invitation accept failed (${response.status})`,
-    );
-    logger.warn("accept_invitation_failed", {
-      status: response.status,
-      code: error.code,
+      },
+      headers: { [OPERATOR_INVITATION_FLOW_HEADER]: flowID },
+      errorMessage: "Invitation accept failed",
     });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      logger.warn("accept_invitation_failed", {
+        status: error.status,
+        code: error.code,
+      });
+    }
     throw error;
   }
-}
-
-function unwrapResponse<T>(json: unknown): T {
-  if (
-    typeof json === "object" &&
-    json !== null &&
-    "data" in json &&
-    "status" in json
-  ) {
-    return (json as { data: T }).data;
-  }
-  return json as T;
 }

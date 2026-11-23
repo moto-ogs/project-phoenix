@@ -8,6 +8,7 @@ import (
 	"slices"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The rule chain of the monthly contribution (#4685): placeholder rules for
@@ -30,23 +31,23 @@ func seedConflictCode(err error, code string) bool {
 }
 
 type seedCareRule struct {
-	ID         int64          `json:"id"`
+	ID         ident.ID       `json:"id"`
 	Kind       string         `json:"kind"`
 	ValidUntil *calendar.Date `json:"valid_until"`
-	SchoolIDs  []int64        `json:"school_ids"`
+	SchoolIDs  []ident.ID     `json:"school_ids"`
 }
 
 type seedCareRuleSet struct {
 	Rules   []seedCareRule `json:"rules"`
 	Schools []struct {
-		ID int64 `json:"id"`
+		ID ident.ID `json:"id"`
 	} `json:"schools"`
 }
 
 type seedCareEvidenceSet struct {
 	Contracts []struct {
-		ContractID int64             `json:"contract_id"`
-		SchoolID   int64             `json:"school_id"`
+		ContractID ident.ID          `json:"contract_id"`
+		SchoolID   ident.ID          `json:"school_id"`
 		Evidences  []json.RawMessage `json:"evidences"`
 	} `json:"contracts"`
 	Levels []seedCareRule `json:"levels"`
@@ -113,7 +114,7 @@ func seedCareRuleChain(client *Client, auth AuthRef, schoolID int64, month calen
 	}
 	schools := make([]int64, len(set.Schools))
 	for i, school := range set.Schools {
-		schools[i] = school.ID
+		schools[i] = int64(school.ID)
 	}
 	kept := len(set.Rules)
 	for _, placeholder := range seedCareRules {
@@ -168,7 +169,7 @@ func seedCareKindKept(rules []seedCareRule, kind string) bool {
 // in month or later.
 func seedCareRuleCovers(rules []seedCareRule, kind string, schoolID int64, month calendar.Date) bool {
 	return slices.ContainsFunc(rules, func(rule seedCareRule) bool {
-		return rule.Kind == kind && slices.Contains(rule.SchoolIDs, schoolID) && (rule.ValidUntil == nil || !rule.ValidUntil.Before(month))
+		return rule.Kind == kind && slices.Contains(rule.SchoolIDs, ident.ID(schoolID)) && (rule.ValidUntil == nil || !rule.ValidUntil.Before(month))
 	})
 }
 
@@ -188,8 +189,8 @@ func seedCareEvidences(client *Client, auth AuthRef, schoolID int64, month calen
 	}
 	var own []int64
 	for _, contract := range set.Contracts {
-		if contract.SchoolID == schoolID {
-			own = append(own, contract.ContractID)
+		if int64(contract.SchoolID) == schoolID {
+			own = append(own, int64(contract.ContractID))
 		}
 	}
 	var kinds []map[string]any
@@ -204,7 +205,7 @@ func seedCareEvidences(client *Client, auth AuthRef, schoolID int64, month calen
 		if added == len(kinds) {
 			break
 		}
-		if contract.SchoolID != schoolID || len(contract.Evidences) > 0 {
+		if int64(contract.SchoolID) != schoolID || len(contract.Evidences) > 0 {
 			continue
 		}
 		body := kinds[added]

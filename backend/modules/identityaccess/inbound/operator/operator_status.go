@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // DeactivateOperator locks the account of a team member who left (#4047).
@@ -41,7 +42,7 @@ func (rs *InvitationsResource) changeOperatorStatus(w http.ResponseWriter, r *ht
 
 func operatorListItem(operator identityaccess.Operator) *OperatorListItem {
 	item := &OperatorListItem{
-		ID: operator.ID, Email: operator.Email, DisplayName: operator.DisplayName, Active: operator.Active,
+		ID: ident.ID(operator.ID), Email: operator.Email, DisplayName: operator.DisplayName, Active: operator.Active,
 		LastLogin: operator.LastLogin, DeactivatedAt: operator.DeactivatedAt, CreatedAt: operator.CreatedAt,
 	}
 	if operator.DeactivatedAt != nil {

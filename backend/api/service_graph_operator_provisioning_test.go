@@ -15,6 +15,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	configModels "github.com/moto-ogs/project-phoenix/modules/settings/records"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -124,12 +125,12 @@ func TestOperatorProvisioningIntegration_ListSchoolPersons_Success(t *testing.T)
 
 	var foundAlice, foundBob bool
 	for _, p := range result {
-		if p.ID == person1.ID {
+		if p.ID == ident.ID(person1.ID) {
 			foundAlice = true
 			assert.Equal(t, "Alice", p.FirstName)
 			assert.Equal(t, "Schmidt", p.LastName)
 		}
-		if p.ID == person2.ID {
+		if p.ID == ident.ID(person2.ID) {
 			foundBob = true
 			assert.Equal(t, "Bob", p.FirstName)
 			assert.Equal(t, "Mueller", p.LastName)
@@ -153,7 +154,7 @@ func TestOperatorProvisioningIntegration_ListSchoolPersons_ExcludesSoftDeleted(t
 	result, err := service.ListSchoolPersons(ctx, testpkg.Tenant(t))
 	require.NoError(t, err)
 	for _, p := range result {
-		assert.NotEqual(t, person.ID, p.ID, "soft-deleted person should not appear in list")
+		assert.NotEqual(t, person.ID, p.ID.Int64(), "soft-deleted person should not appear in list")
 	}
 }
 
@@ -171,12 +172,12 @@ func TestOperatorProvisioningIntegration_ListSchoolPersons_WithStaffAndStudent(t
 
 	var foundStaff, foundStudent bool
 	for _, p := range result {
-		if p.ID == staff.PersonID {
+		if p.ID == ident.ID(staff.PersonID) {
 			foundStaff = true
 			assert.True(t, p.IsStaff, "staff person should have is_staff=true")
 			assert.False(t, p.IsStudent, "staff person should have is_student=false")
 		}
-		if p.ID == student.PersonID {
+		if p.ID == ident.ID(student.PersonID) {
 			foundStudent = true
 			assert.False(t, p.IsStaff, "student person should have is_staff=false")
 			assert.True(t, p.IsStudent, "student person should have is_student=true")
@@ -199,7 +200,7 @@ func TestOperatorProvisioningIntegration_ListSchoolPersons_WithAccount(t *testin
 
 	var found bool
 	for _, p := range result {
-		if p.ID == person.ID {
+		if p.ID == ident.ID(person.ID) {
 			found = true
 			assert.True(t, p.HasAccount, "person with account should have has_account=true")
 			assert.NotNil(t, p.AccountEmail, "person with account should have email")
@@ -231,7 +232,7 @@ func TestOperatorProvisioningIntegration_ListSchoolPersons_FormerStaffHasNoAccou
 
 	byID := make(map[int64]organizationtenancy.OperatorPerson, len(result))
 	for _, p := range result {
-		byID[p.ID] = p
+		byID[p.ID.Int64()] = p
 	}
 	require.Contains(t, byID, former.PersonID)
 	assert.False(t, byID[former.PersonID].HasAccount, "the kept account link of a former staff member grants no login")
@@ -573,7 +574,7 @@ func TestOperatorProvisioningIntegration_ListAllDevices_HidesDeletedSchoolDevice
 		require.NoError(t, err)
 		ids := make([]int64, 0, len(devices))
 		for _, d := range devices {
-			ids = append(ids, d.ID)
+			ids = append(ids, d.ID.Int64())
 		}
 		return ids
 	}
@@ -595,7 +596,7 @@ func TestOperatorProvisioningIntegration_ListAllDevices_HidesDeletedSchoolDevice
 	require.NoError(t, err)
 	orgIDs := make([]int64, 0, len(orgDevices))
 	for _, d := range orgDevices {
-		orgIDs = append(orgIDs, d.ID)
+		orgIDs = append(orgIDs, d.ID.Int64())
 	}
 	require.False(t, containsDevice(orgIDs),
 		"device whose school is soft-deleted must not appear in ListOrganizationDevices")
@@ -627,7 +628,7 @@ func TestOperatorProvisioningIntegration_ListAllDevices_HidesDeletedOrgDevices(t
 	devices, err := service.ListAllDevices(ctx)
 	require.NoError(t, err)
 	for _, d := range devices {
-		assert.NotEqual(t, device.ID, d.ID,
+		assert.NotEqual(t, device.ID, d.ID.Int64(),
 			"device whose organization is soft-deleted must not appear in ListAllDevices")
 	}
 }
@@ -673,7 +674,7 @@ func provisionTestSchool(t *testing.T, db *bun.DB, graph organizationtenancy.Pro
 	organizationInput.Active = true
 	organization, err := service.CreateOrganization(ctx, organizationInput, operatorID, provisioningTestClientIP)
 	require.NoError(t, err)
-	organizationID = organization.ID
+	organizationID = organization.ID.Int64()
 
 	schoolInput := newInput(service.CreateSchool)
 	schoolInput.OrganizationID = organizationID
@@ -685,7 +686,7 @@ func provisionTestSchool(t *testing.T, db *bun.DB, graph organizationtenancy.Pro
 	schoolInput.Active = true
 	school, err := service.CreateSchool(ctx, schoolInput, operatorID, provisioningTestClientIP)
 	require.NoError(t, err)
-	schoolID = school.ID
+	schoolID = school.ID.Int64()
 
 	return organizationID, schoolID
 }
@@ -756,7 +757,7 @@ func TestOperatorProvisioningIntegration_CreateSchool_SeedsCategoriesAndWebManua
 	devices, err := service.ListSchoolDevices(provisioningContext(t, db), schoolID)
 	require.NoError(t, err)
 	require.Len(t, devices, 1)
-	status, err := service.GetDeviceTransferStatus(provisioningContext(t, db), devices[0].ID)
+	status, err := service.GetDeviceTransferStatus(provisioningContext(t, db), devices[0].ID.Int64())
 	require.NoError(t, err)
 	assert.True(t, status.IsProtected)
 	assert.False(t, status.CanTransfer)
@@ -933,7 +934,7 @@ func TestOperatorProvisioningIntegration_CreateSchoolAccount_BuildsIdentityChain
 		}
 	}
 	assert.True(t, listed, "created account must be listed for the school")
-	assert.Equal(t, 1, countOperatorAudit(t, db, "create", "account", account.ID))
+	assert.Equal(t, 1, countOperatorAudit(t, db, "create", "account", account.ID.Int64()))
 }
 
 // The caregiver upgrade of an admin account reads and assigns the platform
@@ -970,7 +971,7 @@ func TestOperatorProvisioningIntegration_CreateSchoolAccount_CaregiverUpgradeAss
 		}
 	}
 	assert.True(t, listed, "created account must be listed for the school")
-	assert.Equal(t, 1, countOperatorAudit(t, db, "create", "account", account.ID))
+	assert.Equal(t, 1, countOperatorAudit(t, db, "create", "account", account.ID.Int64()))
 }
 
 // A step failing after registration rolls the account back (#3313): blank
@@ -1088,11 +1089,11 @@ func TestOperatorProvisioningIntegration_TransferDevice_ArchivesSourceAndMovesKe
 	_, err = db.ExecContext(dbCtx, `UPDATE iot.devices SET room_id = ? WHERE id = ?`, roomID, created.ID)
 	require.NoError(t, err)
 
-	status, err := service.GetDeviceTransferStatus(ctx, created.ID)
+	status, err := service.GetDeviceTransferStatus(ctx, created.ID.Int64())
 	require.NoError(t, err)
 	assert.True(t, status.CanTransfer, "an offline device without session is transferable")
 
-	transferred, err := service.TransferDevice(ctx, created.ID, targetSchoolID, operatorID, provisioningTestClientIP)
+	transferred, err := service.TransferDevice(ctx, created.ID.Int64(), targetSchoolID.Int64(), operatorID, provisioningTestClientIP)
 	require.NoError(t, err)
 	require.NotNil(t, transferred)
 	assert.NotEqual(t, created.ID, transferred.ID, "transfer creates a new device row")
@@ -1116,7 +1117,7 @@ func TestOperatorProvisioningIntegration_TransferDevice_ArchivesSourceAndMovesKe
 	assert.Equal(t, "inactive", source.Status)
 	assert.Nil(t, source.RoomID, "source device must release the source school's room")
 	require.NotNil(t, source.TransferredToDeviceID)
-	assert.Equal(t, transferred.ID, *source.TransferredToDeviceID)
+	assert.Equal(t, transferred.ID.Int64(), *source.TransferredToDeviceID)
 
 	var target struct {
 		TenantID int64   `bun:"tenant_id"`
@@ -1127,7 +1128,7 @@ func TestOperatorProvisioningIntegration_TransferDevice_ArchivesSourceAndMovesKe
 	require.NoError(t, db.NewSelect().TableExpr("iot.devices").
 		Column("tenant_id", "api_key_hash", "status", "room_id").
 		Where("id = ?", transferred.ID).Scan(dbCtx, &target))
-	assert.Equal(t, targetSchoolID, target.TenantID)
+	assert.Equal(t, targetSchoolID.Int64(), target.TenantID)
 	require.NotNil(t, target.APIKey)
 	assert.Equal(t, originalHash, *target.APIKey, "the kiosk keeps its credential hash")
 	assert.True(t, *target.APIKey != apiKey, "the stored hash is not a bearer credential")
@@ -1141,8 +1142,8 @@ func TestOperatorProvisioningIntegration_TransferDevice_ArchivesSourceAndMovesKe
 		assert.NotEqual(t, created.ID, listed.ID, "archived source must not be listed")
 	}
 
-	assert.Equal(t, 1, countOperatorAudit(t, db, "create", "device", created.ID))
-	assert.Equal(t, 1, countOperatorAudit(t, db, "transfer", "device", created.ID))
+	assert.Equal(t, 1, countOperatorAudit(t, db, "create", "device", created.ID.Int64()))
+	assert.Equal(t, 1, countOperatorAudit(t, db, "transfer", "device", created.ID.Int64()))
 }
 
 func TestOperatorProvisioningIntegration_KeysAreIssuedOnceAndCustomKeysRefused(t *testing.T) {
@@ -1161,7 +1162,7 @@ func TestOperatorProvisioningIntegration_KeysAreIssuedOnceAndCustomKeysRefused(t
 	for _, device := range devices {
 		require.True(t, device.APIKey == nil, "operator reads must not disclose credentials")
 	}
-	rotated, err := service.SetDeviceAPIKey(ctx, created.ID, nil, operatorID, provisioningTestClientIP)
+	rotated, err := service.SetDeviceAPIKey(ctx, created.ID.Int64(), nil, operatorID, provisioningTestClientIP)
 	require.NoError(t, err)
 	require.NotNil(t, rotated.APIKey)
 	require.True(t, *rotated.APIKey != *created.APIKey, "rotation must issue a fresh credential")
@@ -1169,7 +1170,7 @@ func TestOperatorProvisioningIntegration_KeysAreIssuedOnceAndCustomKeysRefused(t
 	_, err = service.CreateDevice(ctx, schoolID, "weak-terminal", "terminal", nil, &weak, operatorID, provisioningTestClientIP)
 	var invalid *organizationtenancy.InvalidProvisioningDataError
 	require.ErrorAs(t, err, &invalid)
-	_, err = service.SetDeviceAPIKey(ctx, created.ID, &weak, operatorID, provisioningTestClientIP)
+	_, err = service.SetDeviceAPIKey(ctx, created.ID.Int64(), &weak, operatorID, provisioningTestClientIP)
 	require.ErrorAs(t, err, &invalid)
 	devices, err = service.ListAllDevices(ctx)
 	require.NoError(t, err)
@@ -1218,7 +1219,7 @@ func TestOperatorProvisioningIntegration_BlockDevice_KeepsKeyRoomAndHistory(t *t
 		return row
 	}
 
-	require.NoError(t, graph.DeviceBlocking.SetDeviceBlocked(ctx, created.ID, true, operatorID, provisioningTestClientIP))
+	require.NoError(t, graph.DeviceBlocking.SetDeviceBlocked(ctx, created.ID.Int64(), true, operatorID, provisioningTestClientIP))
 	row := stored()
 	assert.Equal(t, "inactive", row.Status)
 	assert.Nil(t, row.ArchivedAt, "a blocked device stays live")
@@ -1232,12 +1233,12 @@ func TestOperatorProvisioningIntegration_BlockDevice_KeepsKeyRoomAndHistory(t *t
 		return d.ID == created.ID && d.Status == "inactive"
 	}), "the blocked device stays listed and occupies its Geräteplatz")
 
-	require.NoError(t, graph.DeviceBlocking.SetDeviceBlocked(ctx, created.ID, true, operatorID, provisioningTestClientIP))
-	require.NoError(t, graph.DeviceBlocking.SetDeviceBlocked(ctx, created.ID, false, operatorID, provisioningTestClientIP))
+	require.NoError(t, graph.DeviceBlocking.SetDeviceBlocked(ctx, created.ID.Int64(), true, operatorID, provisioningTestClientIP))
+	require.NoError(t, graph.DeviceBlocking.SetDeviceBlocked(ctx, created.ID.Int64(), false, operatorID, provisioningTestClientIP))
 	assert.Equal(t, "active", stored().Status)
 	require.NotNil(t, stored().APIKeyHash)
 	assert.Equal(t, originalHash, *stored().APIKeyHash, "the unblocked kiosk keeps its key")
 
-	assert.Equal(t, 1, countOperatorAudit(t, db, "block", "device", created.ID), "a repeated block is not audited again")
-	assert.Equal(t, 1, countOperatorAudit(t, db, "unblock", "device", created.ID))
+	assert.Equal(t, 1, countOperatorAudit(t, db, "block", "device", created.ID.Int64()), "a repeated block is not audited again")
+	assert.Equal(t, 1, countOperatorAudit(t, db, "unblock", "device", created.ID.Int64()))
 }

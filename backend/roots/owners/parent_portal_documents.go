@@ -19,6 +19,7 @@ import (
 	parentBillingCompose "github.com/moto-ogs/project-phoenix/modules/parentbilling/compose"
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/moto-ogs/project-phoenix/workflows/parentportal"
 	parentportalcompose "github.com/moto-ogs/project-phoenix/workflows/parentportal/compose"
@@ -152,7 +153,7 @@ func (t parentSchoolTraeger) TraegerOfSchools(ctx context.Context, schoolIDs []i
 	var organizationIDs []int64
 	for _, school := range schools {
 		if !school.IsDeleted() && school.OrganizationID > 0 {
-			organizationIDs = append(organizationIDs, school.OrganizationID)
+			organizationIDs = append(organizationIDs, school.OrganizationID.Int64())
 		}
 	}
 	if len(organizationIDs) == 0 {
@@ -165,13 +166,13 @@ func (t parentSchoolTraeger) TraegerOfSchools(ctx context.Context, schoolIDs []i
 	active := make(map[int64]string, len(organizations))
 	for _, organization := range organizations {
 		if organization.Active && !organization.IsDeleted() {
-			active[organization.ID] = organization.Name
+			active[organization.ID.Int64()] = organization.Name
 		}
 	}
 	of := make(map[int64]parentportal.Traeger, len(schools))
 	for _, school := range schools {
-		if name, ok := active[school.OrganizationID]; ok && !school.IsDeleted() {
-			of[school.ID] = parentportal.Traeger{ID: school.OrganizationID, Name: name}
+		if name, ok := active[school.OrganizationID.Int64()]; ok && !school.IsDeleted() {
+			of[school.ID.Int64()] = parentportal.Traeger{ID: school.OrganizationID.Int64(), Name: name}
 		}
 	}
 	return of, nil
@@ -295,8 +296,7 @@ func (p parentDocumentPushes) send(ctx context.Context, intent deliveryContract.
 // Delivery worker over the children of the parents portal, the Träger of
 // their schools, the accounts, the guardians' languages and the school's
 // notification router (ADR 0126). It reads the children without the
-// portal's booking filter, which resolves settings per school inside the
-// administrative lookup; Delivery's module gate still drops the push of a
+// portal's booking filter: Delivery's module gate drops the push of a
 // school that does not book the Eltern-App.
 func BuildParentDocumentNotices(
 	db transactionruntime.Database, env RootEnvironment, portal carePlanCompose.ParentPortalRepositories, organizations organizationtenancy.Query,
@@ -364,7 +364,7 @@ func parentSigningView(view carecontract.SigningView, err error) (parentportal.C
 	case err != nil:
 		return nil, err
 	}
-	encoded, err := json.Marshal(view)
+	encoded, err := wire.Marshal(view)
 	if err != nil {
 		return nil, fmt.Errorf("encode contract signing view: %w", err)
 	}

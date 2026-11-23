@@ -36,14 +36,14 @@ func TestReminderNamedTablesIsolateTwoTenants(t *testing.T) {
 			StartTime: wallClock(18, 0), EndTime: wallClock(19, 0), DeliveryMode: appointments.DeliveryModeInformational,
 		}})
 		require.NoError(t, err)
-		_, _, err = module.CreateAppointmentRecipients(ctx, appointment.ID, []appointments.AppointmentRecipientFields{{
+		_, _, err = module.CreateAppointmentRecipients(ctx, appointment.ID.Int64(), []appointments.AppointmentRecipientFields{{
 			RecipientType: appointments.RecipientTypeGuardianProfile, GuardianProfileID: &guardian.ID, Status: appointments.ResponseStatusPending,
 		}})
 		require.NoError(t, err)
-		claimed, err := module.ClaimReminderPushDelivery(ctx, appointment.ID, appointment.Revision, date, guardian.ID)
+		claimed, err := module.ClaimReminderPushDelivery(ctx, appointment.ID.Int64(), appointment.Revision, date, guardian.ID)
 		require.NoError(t, err)
 		require.True(t, claimed)
-		claims[tenantID] = claim{appointment.ID, appointment.Revision, guardian.ID}
+		claims[tenantID] = claim{appointment.ID.Int64(), appointment.Revision, guardian.ID}
 		require.NoError(t, testpkg.WithTenantTx(t, ctx, db, tenantID, func(txCtx context.Context, tx bun.Tx) error {
 			_, err := tx.ExecContext(txCtx, `INSERT INTO platform.email_outbox (tenant_id, kind, payload, recipient) VALUES (?, 'appointment_reminder', '{}'::jsonb, '{}'::jsonb)`, tenantID)
 			if err != nil {

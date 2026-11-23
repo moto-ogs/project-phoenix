@@ -63,6 +63,9 @@ func (seedEnrollmentIncomeProofStep) Run(_ context.Context, rt *Runtime) error {
 		return fmt.Errorf("upload income proof returned no token: %s", string(raw))
 	}
 	body := seedIncomeProofSubmission(rt.Enrollment.PhaseID, rt.Enrollment.Offerings, upload.Data.Token)
+	if err := showFormVersion(rt.Client.Get, body); err != nil {
+		return err
+	}
 	if _, err := rt.Client.PostPublicWithHeaders("/api/enrollment/"+slug+"/submit", body, publicEnrollmentSeedHeaders(90)); err != nil {
 		return fmt.Errorf("submit enrollment with income proof: %w", err)
 	}

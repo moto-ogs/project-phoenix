@@ -12,6 +12,7 @@ import (
 	scheduleModel "github.com/moto-ogs/project-phoenix/modules/timetable/internal/domain/schedulerecords"
 	"github.com/moto-ogs/project-phoenix/modules/timetable/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -52,6 +53,9 @@ func (s *InstanceLifecycleService) UpdatePlanned(ctx context.Context, instanceID
 	if err := s.lockEditedRoster(ctx, instance.ID, req); err != nil {
 		return nil, err
 	}
+	if err := s.checkReadVersion(ctx, instance, req.ExpectedVersion); err != nil {
+		return nil, err
+	}
 	previousRoomID := instance.RoomID
 	if err := s.updateLifecycleColumns(ctx, instance, applyPlannedEdit(instance, req)...); err != nil {
 		return nil, &ports.ScheduleError{Op: "update instance", Err: duplicateTemplateInstance(err)}
@@ -74,6 +78,38 @@ func (s *InstanceLifecycleService) UpdatePlanned(ctx context.Context, instanceID
 	}
 	s.broadcastPlannedInstanceChanged(ctx, "instance_update")
 	return LifecycleInstanceOf(instance), nil
+}
+
+// checkReadVersion refuses the edit with readstate.ErrChanged unless the
+// block is stored as its editor read it (ADR 0311). It runs under the
+// tenant gates, the day locks and the staff rows the edit writes under, so
+// no other roster or planning write of the block lands between the check
+// and the write.
+func (s *InstanceLifecycleService) checkReadVersion(ctx context.Context, instance *scheduleModel.ActivityInstance, expected string) error {
+	staff, err := staffOfInstance(ctx, s.deps.InstanceStaffRepo, instance.ID)
+	if err != nil {
+		return &ports.ScheduleError{Op: "update instance: load staff for read check", Err: err}
+	}
+	students, err := participantsOfInstance(ctx, s.deps.InstanceStudents.Reads, instance.ID)
+	if err != nil {
+		return &ports.ScheduleError{Op: "update instance: load students for read check", Err: err}
+	}
+	state := timetable.InstanceEditState{
+		Date: calendar.Date(instance.Date), StartTime: instance.StartTime, EndTime: instance.EndTime,
+		Title: instance.Title, Description: instance.Description, Notes: instance.Notes,
+		RoomID: instance.RoomID, ActivityGroupID: instance.ActivityGroupID, ListKind: instance.ListKind,
+		RequiredStaff: instance.RequiredStaff, Status: instance.Status,
+		StaffIDs: make([]int64, 0, len(staff)), StudentIDs: make([]int64, 0, len(students)),
+	}
+	for _, row := range staff {
+		state.StaffIDs = append(state.StaffIDs, row.StaffID)
+	}
+	for _, row := range students {
+		if row != nil {
+			state.StudentIDs = append(state.StudentIDs, row.StudentID)
+		}
+	}
+	return readstate.Check(expected, timetable.InstanceVersion(state))
 }
 
 // lockEditedRoster takes the staff rows of the block's new people and, when

@@ -13,6 +13,7 @@
   "valueRequired": "Please enter a value.",
   "submit": "Save change",
   "saving": "Saving …",
+  "reloading": "Loading the saved version …",
   "cancel": "Cancel",
   "close": "Close window",
   "errorObject": "the request",

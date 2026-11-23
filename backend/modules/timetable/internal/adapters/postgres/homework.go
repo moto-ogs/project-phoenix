@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/modules/timetable/internal/domain"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/uptrace/bun"
 )
 
@@ -139,6 +140,72 @@ func (s *Store) DeleteClassHomework(ctx context.Context, ref timetable.HomeworkR
 	}
 	stats.Rows, err = result.RowsAffected()
 	return stats.Rows > 0, stats, err
+}
+
+// LockClassHomework locks the entry of the class for its change and returns
+// it as stored.
+func (s *Store) LockClassHomework(ctx context.Context, ref timetable.HomeworkRef, classKey string) (timetable.HomeworkEntry, bool, domain.OperationStats, error) {
+	db, tenantID, err := s.database(ctx)
+	if err != nil {
+		return timetable.HomeworkEntry{}, false, domain.OperationStats{}, err
+	}
+	if err := tenant.OrderLock(ctx, tenant.LockLeaf, "education.class_homework"); err != nil {
+		return timetable.HomeworkEntry{}, false, domain.OperationStats{}, err
+	}
+	row := classHomeworkRow{}
+	stats := domain.OperationStats{Queries: 1}
+	started := time.Now()
+	err = db.NewSelect().Model(&row).
+		Where("class_homework.tenant_id = ?", tenantID).
+		Where("class_homework.id = ?", ref.ID).
+		Where("LOWER(BTRIM(class_homework.school_class)) = ?", classKey).
+		For("UPDATE").
+		Scan(ctx)
+	stats.StatementDuration = time.Since(started)
+	if errors.Is(err, sql.ErrNoRows) {
+		return timetable.HomeworkEntry{}, false, stats, nil
+	}
+	if err != nil {
+		return timetable.HomeworkEntry{}, false, stats, fmt.Errorf("timetable postgres: lock class homework: %w", err)
+	}
+	stats.Rows = 1
+	return row.entry(), true, stats, nil
+}
+
+// LockHomeworkFeedback takes the transaction lock of the child's day before
+// reading its feedback: a feedback that is not stored yet has no row to
+// lock, and two first feedbacks must not both find none.
+func (s *Store) LockHomeworkFeedback(ctx context.Context, studentID int64, date calendar.Date) (*timetable.HomeworkFeedback, domain.OperationStats, error) {
+	db, tenantID, err := s.database(ctx)
+	if err != nil {
+		return nil, domain.OperationStats{}, err
+	}
+	if err := tenant.OrderLock(ctx, tenant.LockLeaf, "advisory:homework-feedback"); err != nil {
+		return nil, domain.OperationStats{}, err
+	}
+	stats := domain.OperationStats{Queries: 2}
+	started := time.Now()
+	key := fmt.Sprintf("timetable:homework_feedback:%d:%d:%s", tenantID, studentID, date)
+	if _, err := db.NewRaw("SELECT pg_advisory_xact_lock(hashtextextended(?, 0))", key).Exec(ctx); err != nil {
+		stats.StatementDuration = time.Since(started)
+		return nil, stats, fmt.Errorf("timetable postgres: lock homework feedback: %w", err)
+	}
+	row := homeworkFeedbackRow{}
+	err = db.NewSelect().Model(&row).
+		Where("homework_feedback.tenant_id = ?", tenantID).
+		Where("homework_feedback.student_id = ?", studentID).
+		Where("homework_feedback.date = ?", date).
+		Scan(ctx)
+	stats.StatementDuration = time.Since(started)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, stats, nil
+	}
+	if err != nil {
+		return nil, stats, fmt.Errorf("timetable postgres: read homework feedback: %w", err)
+	}
+	stats.Rows = 1
+	feedback := row.feedback()
+	return &feedback, stats, nil
 }
 
 func (s *Store) ListHomeworkFeedback(ctx context.Context, date calendar.Date, studentIDs []int64) ([]timetable.HomeworkFeedback, domain.OperationStats, error) {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	validation "github.com/go-ozzo/ozzo-validation"
@@ -39,6 +40,9 @@ const (
 	reviewStatusExcluded = "Ausgeschlossen: "
 	reviewStatusUnpriced = "Nicht abgerechnet: Preis fehlt"
 	reviewStatusDouble   = "Nicht abgerechnet: doppelter Vertrag"
+	// A child an issued invoice of the month already bills (#7892).
+	reviewStatusBilled   = "Nicht abgerechnet: Monat schon abgerechnet"
+	reviewStatusMealOnly = "Betreuung nicht abgerechnet: Rechnung nur mit Mensa"
 )
 
 // ExportCareRunReview renders the review list of a calculated run as a PDF,
@@ -71,7 +75,7 @@ func (c *CareBilling) ExportCareRunReview(ctx context.Context, reviewer parentbi
 	if err != nil {
 		return parentbilling.ExportFile{}, fmt.Errorf("parent billing: render the review list: %w", err)
 	}
-	if err := c.store.InsertCareRunEvent(ctx, reviewer.OrganizationID, run.ID, reviewer.AccountID, runEventExport,
+	if err := c.store.InsertCareRunEvent(ctx, reviewer.OrganizationID, run.ID.Int64(), reviewer.AccountID, runEventExport,
 		map[string]any{"format": format, "contract_ids": shownContracts(detail)}); err != nil {
 		return parentbilling.ExportFile{}, fmt.Errorf("parent billing: record the review list: %w", err)
 	}
@@ -196,7 +200,46 @@ func reviewHeldRows(detail parentbilling.CareRunDetail, invoiceDate string) []ma
 			"position": duplicate.ModuleName, "weekdays": germanWeekdays[duplicate.Weekday], "status": reviewStatusDouble,
 		})
 	}
+	return append(rows, reviewBilledChildRows(detail.BilledChildren, invoiceDate)...)
+}
+
+// reviewBilledChildRows writes the children the run holds back because an
+// issued invoice of the month already bills them (#7892): one row per child
+// with the schools of the held contracts and the numbers of those invoices.
+func reviewBilledChildRows(children []parentbilling.CareBilledChild, invoiceDate string) []map[string]string {
+	rows := []map[string]string{}
+	for _, child := range children {
+		schools, documents := []string{}, []string{}
+		for _, contract := range child.Contracts {
+			if !slices.Contains(schools, contract.SchoolName) {
+				schools = append(schools, contract.SchoolName)
+			}
+		}
+		for _, invoice := range child.Invoices {
+			documents = append(documents, strings.TrimSpace(billedDocumentLabel(invoice)+" "+invoice.Number))
+		}
+		status := reviewStatusBilled
+		if child.Reason == parentbilling.HoldReasonMealOnlyInvoice {
+			status = reviewStatusMealOnly
+		}
+		rows = append(rows, map[string]string{
+			"invoice_date": invoiceDate, "school": strings.Join(schools, ", "),
+			"child":    strings.TrimSpace(child.ChildFirstName + " " + child.ChildLastName),
+			"position": strings.Join(documents, ", "), "status": status,
+		})
+	}
 	return rows
+}
+
+// billedDocumentLabel names the kind of an issued document in the way.
+func billedDocumentLabel(invoice parentbilling.CareBilledInvoice) string {
+	switch {
+	case invoice.Source == parentbilling.BilledByNoticeRun:
+		return "Jahresbescheid"
+	case invoice.DocumentKind == parentbilling.DocumentKindFeeNotice:
+		return "Bescheid"
+	}
+	return "Rechnung"
 }
 
 // reviewWeekdays writes the booked weekdays of a position: "Mo, Di".

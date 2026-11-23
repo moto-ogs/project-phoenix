@@ -35,6 +35,7 @@ import (
 	settingsplatform "github.com/moto-ogs/project-phoenix/modules/settings"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -183,7 +184,7 @@ type groupLiveTeacherHintReader struct {
 	hints peopledirectory.SchoolDayHintQuery
 }
 
-func (b groupLiveTeacherHintReader) TeacherHints(ctx context.Context, studentIDs []int64, date grouplive.Date) (map[int64][]grouplive.TeacherHint, error) {
+func (b groupLiveTeacherHintReader) TeacherHints(ctx context.Context, studentIDs []int64, date grouplive.Date) (map[int64][]grouplive.GroupLiveTeacherHint, error) {
 	day, err := groupLiveDay(date)
 	if err != nil {
 		return nil, err
@@ -192,9 +193,9 @@ func (b groupLiveTeacherHintReader) TeacherHints(ctx context.Context, studentIDs
 	if err != nil {
 		return nil, err
 	}
-	result := make(map[int64][]grouplive.TeacherHint)
+	result := make(map[int64][]grouplive.GroupLiveTeacherHint)
 	for _, hint := range rows {
-		result[hint.StudentID] = append(result[hint.StudentID], grouplive.TeacherHint{
+		result[hint.StudentID] = append(result[hint.StudentID], grouplive.GroupLiveTeacherHint{
 			Body: hint.Body, AuthorName: hint.AuthorName, SchoolClass: hint.SchoolClass,
 		})
 	}
@@ -271,7 +272,7 @@ func (h groupLiveHolidayGroupWeeks) HolidayGroupWeeks(ctx context.Context) ([]gr
 	weeks := make([]grouplive.HolidayGroupWeek, len(groups))
 	for i, group := range groups {
 		weeks[i] = grouplive.HolidayGroupWeek{
-			GroupID: group.GroupID, StartsOn: grouplive.Date(group.StartsOn.String()), EndsOn: grouplive.Date(group.EndsOn.String()),
+			GroupID: group.GroupID.Int64(), StartsOn: grouplive.Date(group.StartsOn.String()), EndsOn: grouplive.Date(group.EndsOn.String()),
 		}
 	}
 	return weeks, nil
@@ -524,7 +525,7 @@ func (p groupLivePlanning) Pickups(ctx context.Context, studentIDs []int64, date
 func groupLivePickup(pickup *careplan.EffectivePickupTime) grouplive.Pickup {
 	notes := make([]grouplive.DayNote, 0, len(pickup.DayNotes))
 	for _, note := range pickup.DayNotes {
-		notes = append(notes, grouplive.DayNote{ID: note.ID, Content: note.Content})
+		notes = append(notes, grouplive.DayNote{ID: ident.ID(note.ID), Content: note.Content})
 	}
 	return grouplive.Pickup{
 		Date: grouplive.Date(pickup.Date.String()), WeekdayName: pickup.WeekdayName, PickupTime: pickup.PickupTime,

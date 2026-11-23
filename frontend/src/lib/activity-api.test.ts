@@ -2,133 +2,45 @@
 // Comprehensive tests for activity API service
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import type {
-  BackendActivitySchedule,
-  BackendTimeframe,
-  BackendStudentEnrollment,
-  Activity,
-  UpdateActivityRequest,
-} from "./activity-helpers";
+import type { Activity } from "./activity-helpers";
+import type { ActivityRequest } from "./contract/activities.generated";
+import { mapActivityResponse } from "./activity-helpers";
 import { buildBackendActivity } from "~/test/fixtures/activities";
 
-const { mockGetServerApiUrl } = vi.hoisted(() => ({
-  mockGetServerApiUrl: vi.fn(() => "http://server:8080"),
-}));
-
-// Mock dependencies
-vi.mock("./session-cache", () => {
-  const getCachedSession = vi.fn();
-  return {
-    getCachedSession,
-    clearSessionCache: vi.fn(),
-    sessionFetch: vi.fn(async (url: string, init?: RequestInit) => {
-      // Same gate as the real sessionFetch (hasSessionAccess, #5005).
-      const session = (await getCachedSession()) as {
-        user?: { id?: string };
-        error?: string;
-      } | null;
-      if (!session?.user || session.error)
-        throw new Error("No authentication token available");
-      const response = await fetch(url, {
-        ...init,
-        headers: {
-          "Content-Type": "application/json",
-          ...(init?.headers as Record<string, string> | undefined),
-        },
-      });
-      if (response.status === 401) {
-        const { handleAuthFailure } = (await import("./auth-failure")) as {
-          handleAuthFailure: () => Promise<boolean>;
-        };
-        const refreshed = await handleAuthFailure();
-        if (refreshed) {
-          const freshSession = (await getCachedSession()) as {
-            user?: { id?: string };
-            error?: string;
-          } | null;
-          if (!freshSession?.user || freshSession.error) {
-            throw new Error("Authentication expired");
-          }
-          return fetch(url, {
-            ...init,
-            headers: {
-              "Content-Type": "application/json",
-              ...(init?.headers as Record<string, string> | undefined),
-            },
-          });
-        }
-        throw new Error("Authentication expired");
-      }
-      return response;
-    }),
-  };
-});
-
-vi.mock("./api", () => ({
-  default: {
-    get: vi.fn(),
-    post: vi.fn(),
-    put: vi.fn(),
-    delete: vi.fn(),
-  },
-}));
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 
 vi.mock("./auth-api", () => ({
   handleAuthFailure: vi.fn(),
 }));
 
-vi.mock("~/lib/server-api-url", () => ({
-  getServerApiUrl: mockGetServerApiUrl,
-}));
-
 // Import after mocks
-import { getCachedSession } from "./session-cache";
-import api from "./api";
+import { ApiError } from "./api-error";
+import * as sessionCache from "./session-cache";
 import * as activityApi from "./activity-api";
 
-const mockedGetSession = vi.mocked(getCachedSession);
-const mockedApiGet = vi.mocked(api.get);
+/** The staff session gate refuses before any request leaves. */
+function refuseSession(
+  error: unknown = new ApiError("Authentication required", 401, {
+    code: "general.permission",
+  }),
+) {
+  vi.spyOn(sessionCache, "requireTenantSession").mockRejectedValueOnce(error);
+}
 
 // Sample test data
 const sampleBackendActivity = buildBackendActivity({
-  id: 1,
+  id: "1",
   name: "Basketball AG",
   max_participants: 20,
   is_open: true,
-  category_id: 1,
-  supervisor_id: 10,
+  category_id: "1",
+  supervisor_id: "10",
   enrollment_count: 15,
 });
-
-const sampleBackendSchedule: BackendActivitySchedule = {
-  id: 1,
-  weekday: 1,
-  timeframe_id: 1,
-  activity_group_id: 1,
-  created_at: "2024-01-01T00:00:00Z",
-  updated_at: "2024-01-01T00:00:00Z",
-};
-
-const sampleBackendTimeframe: BackendTimeframe = {
-  id: 1,
-  name: "Morning",
-  start_time: "08:00",
-  end_time: "12:00",
-  description: "Morning slot",
-};
-
-const sampleBackendEnrollment: BackendStudentEnrollment = {
-  id: 1,
-  first_name: "Jane",
-  last_name: "Smith",
-  school_class: "5a",
-  current_location: "room_101",
-};
 
 describe("activity-api", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetServerApiUrl.mockReturnValue("http://server:8080");
     // Reset window for browser detection
     vi.stubGlobal("window", undefined);
   });
@@ -140,10 +52,6 @@ describe("activity-api", () => {
   describe("fetchActivities", () => {
     it("fetches activities in browser context using fetch", async () => {
       vi.stubGlobal("window", {});
-      mockedGetSession.mockResolvedValueOnce({
-        user: { id: "1" },
-        expires: "2099-01-01",
-      });
 
       const mockResponse = {
         ok: true,
@@ -155,62 +63,12 @@ describe("activity-api", () => {
 
       expect(result).toHaveLength(1);
       expect(result[0]?.name).toBe("Basketball AG");
-      expect(mockGetServerApiUrl).not.toHaveBeenCalled();
-    });
-
-    it("handles nested data.data structure in browser context", async () => {
-      vi.stubGlobal("window", {});
-      mockedGetSession.mockResolvedValueOnce({
-        user: { id: "1" },
-        expires: "2099-01-01",
-      });
-
-      const mockResponse = {
-        ok: true,
-        json: async () => ({ data: { data: [sampleBackendActivity] } }),
-      };
-      vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(mockResponse));
-
-      const result = await activityApi.fetchActivities();
-
-      expect(result).toHaveLength(1);
-    });
-
-    it("handles direct array response in browser context", async () => {
-      vi.stubGlobal("window", {});
-      mockedGetSession.mockResolvedValueOnce({
-        user: { id: "1" },
-        expires: "2099-01-01",
-      });
-
-      const frontendActivity: Activity = {
-        id: "1",
-        name: "Test Activity",
-        max_participant: 20,
-        is_open_ags: true,
-        supervisor_id: "1",
-        ag_category_id: "1",
-        created_at: new Date(),
-        updated_at: new Date(),
-      };
-
-      const mockResponse = {
-        ok: true,
-        json: async () => [frontendActivity],
-      };
-      vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(mockResponse));
-
-      const result = await activityApi.fetchActivities();
-
-      expect(result).toHaveLength(1);
+      expect(result[0]?.ag_category_id).toBe("1");
+      expect(result[0]?.created_at).toBeInstanceOf(Date);
     });
 
     it("returns empty array for empty response", async () => {
       vi.stubGlobal("window", {});
-      mockedGetSession.mockResolvedValueOnce({
-        user: { id: "1" },
-        expires: "2099-01-01",
-      });
       vi.stubGlobal(
         "fetch",
         vi.fn().mockResolvedValueOnce({
@@ -226,29 +84,27 @@ describe("activity-api", () => {
 
     it("throws error when no token available in browser context", async () => {
       vi.stubGlobal("window", {});
-      mockedGetSession.mockResolvedValueOnce(null);
+      refuseSession();
 
-      await expect(activityApi.fetchActivities()).rejects.toThrow(
-        "No authentication token available",
-      );
+      await expect(activityApi.fetchActivities()).rejects.toMatchObject({
+        message: "Authentication required",
+        status: 401,
+        code: "general.permission",
+      });
     });
   });
 
   describe("updateActivity", () => {
-    const updateRequest: UpdateActivityRequest = {
+    const updateRequest: ActivityRequest = {
       name: "Updated Activity",
       max_participants: 25,
       is_open: false,
-      category_id: 2,
-      supervisor_ids: [11],
+      category_id: "2",
+      supervisor_ids: ["11"],
     };
 
     it("updates activity in browser context", async () => {
       vi.stubGlobal("window", {});
-      mockedGetSession.mockResolvedValueOnce({
-        user: { id: "1" },
-        expires: "2099-01-01",
-      });
 
       const updatedActivity: Activity = {
         id: "1",
@@ -271,18 +127,34 @@ describe("activity-api", () => {
 
       expect(result.name).toBe("Updated Activity");
     });
+
+    it("maps the contract's activity", async () => {
+      vi.stubGlobal("window", {});
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            status: "success",
+            data: sampleBackendActivity,
+          }),
+        }),
+      );
+
+      const result = await activityApi.updateActivity("1", updateRequest);
+
+      expect(result).toEqual(mapActivityResponse(sampleBackendActivity));
+    });
   });
 
   describe("deleteActivity", () => {
     it("deletes activity in browser context", async () => {
       vi.stubGlobal("window", {});
-      mockedGetSession.mockResolvedValueOnce({
-        user: { id: "1" },
-        expires: "2099-01-01",
-      });
 
-      const mockResponse = { ok: true };
-      vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(mockResponse));
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValueOnce(new Response(null, { status: 204 })),
+      );
 
       await activityApi.deleteActivity("1");
 
@@ -296,10 +168,6 @@ describe("activity-api", () => {
   describe("getCategories", () => {
     it("fetches categories in browser context with wrapped response", async () => {
       vi.stubGlobal("window", {});
-      mockedGetSession.mockResolvedValueOnce({
-        user: { id: "1" },
-        expires: "2099-01-01",
-      });
 
       const frontendCategory = {
         id: "1",
@@ -321,42 +189,11 @@ describe("activity-api", () => {
       expect(result).toHaveLength(1);
     });
 
-    it("fetches categories in browser context with direct response", async () => {
-      vi.stubGlobal("window", {});
-      mockedGetSession.mockResolvedValueOnce({
-        user: { id: "1" },
-        expires: "2099-01-01",
-      });
-
-      const frontendCategory = {
-        id: "1",
-        name: "Sport",
-        description: "Sports",
-        color: "#3b82f6",
-        created_at: new Date(),
-        updated_at: new Date(),
-      };
-
-      const mockResponse = {
-        ok: true,
-        json: async () => [frontendCategory],
-      };
-      vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(mockResponse));
-
-      const result = await activityApi.getCategories();
-
-      expect(result).toHaveLength(1);
-    });
-
     it("maps the raw backend shape (shift_type_id) in browser context (#1837)", async () => {
       // Regression: the browser path used to return the raw payload unmapped,
       // so consumers reading category.shiftTypeId (e.g. the shift-type mapping
       // modal) never matched and could clear links.
       vi.stubGlobal("window", {});
-      mockedGetSession.mockResolvedValueOnce({
-        user: { id: "1" },
-        expires: "2099-01-01",
-      });
 
       const backendShaped = {
         id: 7,
@@ -379,197 +216,49 @@ describe("activity-api", () => {
       expect(result[0]?.id).toBe("7");
       expect(result[0]?.shiftTypeId).toBe("99");
     });
-
-    it("returns empty array for non-array response", async () => {
-      vi.stubGlobal("window", {});
-      mockedGetSession.mockResolvedValueOnce({
-        user: { id: "1" },
-        expires: "2099-01-01",
-      });
-      vi.stubGlobal(
-        "fetch",
-        vi.fn().mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ data: null }),
-        }),
-      );
-
-      const result = await activityApi.getCategories();
-
-      expect(result).toEqual([]);
-    });
   });
 
   describe("getEnrolledStudents", () => {
-    it("fetches enrolled students in browser context", async () => {
+    it("reads the contract's roster and maps it to the view", async () => {
       vi.stubGlobal("window", {});
-      mockedGetSession.mockResolvedValueOnce({
-        user: { id: "1" },
-        expires: "2099-01-01",
-      });
-
-      const mockResponse = {
+      const fetchMock = vi.fn().mockResolvedValueOnce({
         ok: true,
+        status: 200,
         json: async () => ({
-          data: [
-            {
-              id: "42",
-              student_id: "42",
-              name: "Jane Smith",
-              school_class: "3A",
-              current_location: null,
-              activity_id: "1",
-              created_at: "2024-01-15T08:00:00Z",
-              updated_at: "2024-01-15T08:00:00Z",
-            },
-          ],
+          status: "success",
+          data: [{ id: "42", first_name: "Jane", last_name: "Smith" }],
         }),
-      };
-      vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(mockResponse));
+      });
+      vi.stubGlobal("fetch", fetchMock);
 
       const result = await activityApi.getEnrolledStudents("1");
 
-      expect(result).toHaveLength(1);
-      expect(result[0]?.student_id).toBe("42");
-      expect(result[0]?.name).toBe("Jane Smith");
+      expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/activities/1/students");
+      expect(result).toEqual([{ id: "42", name: "Jane Smith" }]);
     });
 
-    it("handles direct array response", async () => {
+    it("throws the API error of a failed read", async () => {
       vi.stubGlobal("window", {});
-      mockedGetSession.mockResolvedValueOnce({
-        user: { id: "1" },
-        expires: "2099-01-01",
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({
+              status: 403,
+              code: "general.forbidden",
+              detail: "no",
+            }),
+            {
+              status: 403,
+              headers: { "Content-Type": "application/problem+json" },
+            },
+          ),
+        ),
+      );
+
+      await expect(activityApi.getEnrolledStudents("1")).rejects.toMatchObject({
+        status: 403,
       });
-
-      const mockResponse = {
-        ok: true,
-        json: async () => [sampleBackendEnrollment],
-      };
-      vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(mockResponse));
-
-      const result = await activityApi.getEnrolledStudents("1");
-
-      expect(result).toHaveLength(1);
-    });
-  });
-
-  describe("getActivitySchedules", () => {
-    it("fetches schedules in server context", async () => {
-      mockedApiGet.mockResolvedValueOnce({
-        data: { data: [sampleBackendSchedule] },
-      });
-
-      const result = await activityApi.getActivitySchedules("1");
-
-      expect(result).toHaveLength(1);
-      expect(result[0]?.weekday).toBe("1");
-    });
-
-    it("returns empty array on error", async () => {
-      mockedApiGet.mockRejectedValueOnce(new Error("Network error"));
-
-      const result = await activityApi.getActivitySchedules("1");
-
-      expect(result).toEqual([]);
-    });
-
-    it("handles direct array response", async () => {
-      mockedApiGet.mockResolvedValueOnce({
-        data: [sampleBackendSchedule],
-      });
-
-      const result = await activityApi.getActivitySchedules("1");
-
-      expect(result).toHaveLength(1);
-    });
-  });
-
-  describe("getActivitySchedule", () => {
-    it("fetches single schedule in server context", async () => {
-      mockedApiGet.mockResolvedValueOnce({
-        data: { data: sampleBackendSchedule },
-      });
-
-      const result = await activityApi.getActivitySchedule("1", "1");
-
-      expect(result?.weekday).toBe("1");
-    });
-
-    it("returns null on error", async () => {
-      mockedApiGet.mockRejectedValueOnce(new Error("Not found"));
-
-      const result = await activityApi.getActivitySchedule("1", "999");
-
-      expect(result).toBeNull();
-    });
-  });
-
-  describe("getTimeframes", () => {
-    it("fetches timeframes in server context", async () => {
-      mockedApiGet.mockResolvedValueOnce({
-        data: { data: [sampleBackendTimeframe] },
-      });
-
-      const result = await activityApi.getTimeframes();
-
-      expect(result).toHaveLength(1);
-      expect(result[0]?.name).toBe("Morning");
-    });
-
-    it("handles direct array response with backend format", async () => {
-      mockedApiGet.mockResolvedValueOnce({
-        data: [sampleBackendTimeframe],
-      });
-
-      const result = await activityApi.getTimeframes();
-
-      expect(result).toHaveLength(1);
-    });
-
-    it("handles frontend format timeframes", async () => {
-      vi.stubGlobal("window", {});
-      mockedGetSession.mockResolvedValueOnce({
-        user: { id: "1" },
-        expires: "2099-01-01",
-      });
-
-      const frontendTimeframe = {
-        id: "1",
-        name: "Morning",
-        start_time: "08:00",
-        end_time: "12:00",
-      };
-
-      const mockResponse = {
-        ok: true,
-        json: async () => ({ data: [frontendTimeframe] }),
-      };
-      vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(mockResponse));
-
-      const result = await activityApi.getTimeframes();
-
-      expect(result).toHaveLength(1);
-      expect(result[0]?.id).toBe("1");
-    });
-
-    it("returns empty array for invalid response", async () => {
-      mockedApiGet.mockResolvedValueOnce({
-        data: null,
-      });
-
-      const result = await activityApi.getTimeframes();
-
-      expect(result).toEqual([]);
-    });
-
-    it("returns empty array for empty array", async () => {
-      mockedApiGet.mockResolvedValueOnce({
-        data: { data: [] },
-      });
-
-      const result = await activityApi.getTimeframes();
-
-      expect(result).toEqual([]);
     });
   });
 });

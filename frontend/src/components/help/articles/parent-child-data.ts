@@ -48,6 +48,19 @@ export function parentChildDataTopic(): HelpTopic {
           "Tippe auf `Jetzt widerrufen`.",
         ],
       },
+      {
+        // #3844: wenn der Träger den Eltern-Stopp eingeschaltet hat oder das Kind gestoppt ist.
+        title: "Raumverlauf und Stimmung stoppen",
+        description:
+          "Diese Zeile siehst du, wenn deine Schule das erlaubt oder dein Kind schon gestoppt ist.",
+        steps: [
+          "Gehe zum Abschnitt `Einwilligungen und Bestätigungen`.",
+          "Tippe bei `Raumverlauf und Stimmung` auf `Stoppen`.",
+          "Tippe auf `Jetzt stoppen`.",
+          "moto löscht sofort, in welchen Räumen dein Kind war. Danach speichert moto keine Räume und keine Stimmung mehr. Die Betreuung sieht weiter, wo dein Kind gerade ist. Schon gespeicherte Stimmungen löscht moto erst nach der üblichen Frist.",
+          "Mit `Wieder speichern` hebst du den Stopp für dein Kind auf. Deine Schule entscheidet, ob Raumverlauf und Stimmung gespeichert werden. Gelöschtes kommt nicht zurück.",
+        ],
+      },
     ],
     result:
       "Unter dem Feld steht dann `Beantragte Änderung` mit dem neuen Wert und `In Prüfung`. Bis zur Bestätigung gilt der Wert darüber.",
@@ -59,6 +72,7 @@ export function parentChildDataTopic(): HelpTopic {
     ],
     differences: [
       "Unter einem Feld steht schon `Beantragte Änderung`? Dann wartet diese Änderung noch auf die OGS.",
+      "Bei `Raumverlauf und Stimmung` steht `Gestoppt`, aber es gibt keinen Knopf? Dann hebt die OGS den Stopp auf.",
     ],
     troubleshootingDetails: [
       "Du siehst bei `Foto-Einwilligung` kein `Widerrufen` oder hast kein Elternportal? Sage der OGS Bescheid. Die OGS trägt den Widerruf für dich ein.",

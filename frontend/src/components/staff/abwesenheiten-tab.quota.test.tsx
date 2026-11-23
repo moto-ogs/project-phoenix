@@ -7,12 +7,11 @@ import {
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SessionProvider } from "next-auth/react";
-import { SWRConfig } from "~/lib/swr/testing";
+import { SWRConfig, useSWRConfig } from "~/lib/swr/testing";
 
 vi.unmock("swr");
 
 import { ApiError } from "~/lib/api-error";
-import type { StaffVacationQuotaSummary } from "~/lib/staff-api";
 import { catalogText } from "~/test/error-catalog-text";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 
@@ -55,12 +54,13 @@ vi.mock("~/lib/staff-api", () => ({
 }));
 
 import { AbwesenheitenTab } from "./abwesenheiten-tab";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 
 const year = new Date().getFullYear();
 
 function quota(
-  overrides: Partial<StaffVacationQuotaSummary> = {},
-): StaffVacationQuotaSummary {
+  overrides: Partial<sharedContract.VacationQuotaSummary> = {},
+): sharedContract.VacationQuotaSummary {
   return {
     staff_id: "4",
     year,
@@ -70,6 +70,7 @@ function quota(
     taken_days: 0,
     reserved_days: 0,
     remaining_days: 32,
+    version: "quota-1",
     ...overrides,
   };
 }
@@ -100,7 +101,7 @@ describe("AbwesenheitenTab Urlaubsanspruch bearbeiten", () => {
   });
 
   it("ignores an older year's late response before editing the current quota", async () => {
-    let resolveOld!: (value: StaffVacationQuotaSummary) => void;
+    let resolveOld!: (value: sharedContract.VacationQuotaSummary) => void;
     renderWithCache(
       <AbwesenheitenTab
         staffId="4"
@@ -113,7 +114,7 @@ describe("AbwesenheitenTab Urlaubsanspruch bearbeiten", () => {
     mocks.getVacationQuota.mockImplementation(
       (_id: string, requestedYear: number) =>
         requestedYear === year - 1
-          ? new Promise<StaffVacationQuotaSummary>((resolve) => {
+          ? new Promise<sharedContract.VacationQuotaSummary>((resolve) => {
               resolveOld = resolve;
             })
           : Promise.resolve(quota({ year: requestedYear, entitled_days: 40 })),
@@ -142,7 +143,9 @@ describe("AbwesenheitenTab Urlaubsanspruch bearbeiten", () => {
   });
 
   it("switches the section into the edit state and saves both fields", async () => {
-    mocks.setVacationQuota.mockResolvedValue(undefined);
+    mocks.setVacationQuota.mockResolvedValue(
+      quota({ entitled_days: 31.5, carryover_days: 0, version: "quota-2" }),
+    );
     renderWithCache(
       <AbwesenheitenTab
         staffId="4"
@@ -177,6 +180,7 @@ describe("AbwesenheitenTab Urlaubsanspruch bearbeiten", () => {
         entitled_days: 31.5,
         carryover_days: 0,
         reason: "Stellenumfang erhöht",
+        expected_version: "quota-1",
       });
     });
     expect(stable.toast.success).toHaveBeenCalledWith(
@@ -190,7 +194,9 @@ describe("AbwesenheitenTab Urlaubsanspruch bearbeiten", () => {
   // #6652: the claim holds once the write is through; a failed reload is a
   // load error that says the change is saved, and its retry only reloads.
   it("keeps a saved claim saved when the reload fails", async () => {
-    mocks.setVacationQuota.mockResolvedValue(undefined);
+    mocks.setVacationQuota.mockResolvedValue(
+      quota({ entitled_days: 31, version: "quota-2" }),
+    );
     mocks.getVacationQuota
       .mockReset()
       .mockResolvedValueOnce(quota())
@@ -290,6 +296,213 @@ describe("AbwesenheitenTab Urlaubsanspruch bearbeiten", () => {
     expect(mocks.getVacationQuota).toHaveBeenCalledTimes(1);
   });
 
+  it("shows the stored claim without a retry when it changed since the read", async () => {
+    mocks.setVacationQuota.mockRejectedValueOnce(
+      new ApiError("changed since it was read", 409, {
+        code: "general.changed_since_read",
+      }),
+    );
+    renderWithCache(
+      <AbwesenheitenTab
+        staffId="4"
+        canEdit
+        canEditQuota
+        canManageSickReports
+      />,
+    );
+    const fields = await openQuotaEditor();
+    mocks.getVacationQuota.mockResolvedValue(
+      quota({ entitled_days: 26, version: "quota-2" }),
+    );
+    fireEvent.change(fields.entitled, { target: { value: "28" } });
+    fireEvent.change(screen.getByLabelText("Begründung"), {
+      target: { value: "Teilzeit" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      catalogText(
+        "general.changed_since_read",
+        "die Änderung am Urlaubsanspruch",
+      ),
+    );
+    // The form shows the claim a colleague stored and saves against it.
+    await waitFor(() =>
+      expect(screen.getByLabelText("Jahresanspruch (Tage)")).toHaveValue(26),
+    );
+    expect(
+      screen.queryByRole("button", { name: "Wiederholen" }),
+    ).not.toBeInTheDocument();
+    mocks.setVacationQuota.mockResolvedValue(undefined);
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(mocks.setVacationQuota).toHaveBeenLastCalledWith(
+        "4",
+        expect.objectContaining({
+          entitled_days: 26,
+          expected_version: "quota-2",
+        }),
+      ),
+    );
+  });
+
+  // ADR 0311 rule 6: a failed read of the stored claim after a refusal is
+  // a load error, and the refused version is not sent again.
+  it("names a failed read of the stored claim after a refusal and sends nothing", async () => {
+    mocks.setVacationQuota.mockRejectedValueOnce(
+      new ApiError("changed since it was read", 409, {
+        code: "general.changed_since_read",
+      }),
+    );
+    renderWithCache(
+      <AbwesenheitenTab
+        staffId="4"
+        canEdit
+        canEditQuota
+        canManageSickReports
+      />,
+    );
+    const fields = await openQuotaEditor();
+    mocks.getVacationQuota.mockRejectedValue(
+      new ApiError("down", 503, { code: "general.unavailable" }),
+    );
+    fireEvent.change(fields.entitled, { target: { value: "28" } });
+    fireEvent.change(screen.getByLabelText("Begründung"), {
+      target: { value: "Teilzeit" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(
+      await screen.findByText(/Der neue Stand konnte nicht geladen werden/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Du siehst jetzt den neuen Stand/),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Speichern" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    expect(mocks.setVacationQuota).toHaveBeenCalledTimes(1);
+  });
+
+  // ADR 0311 rule 5: the save answers the stored claim; a second save
+  // carries its version even when the reload after the first one failed.
+  it("saves again with the version the first save answered", async () => {
+    mocks.setVacationQuota.mockResolvedValue(
+      quota({ entitled_days: 31, version: "quota-2" }),
+    );
+    renderWithCache(
+      <AbwesenheitenTab
+        staffId="4"
+        canEdit
+        canEditQuota
+        canManageSickReports
+      />,
+    );
+    const fields = await openQuotaEditor();
+    mocks.getVacationQuota.mockRejectedValue(
+      new ApiError("down", 503, { code: "general.unavailable" }),
+    );
+    fireEvent.change(fields.entitled, { target: { value: "31" } });
+    fireEvent.change(screen.getByLabelText("Begründung"), {
+      target: { value: "Stellenumfang erhöht" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    const again = await openQuotaEditor();
+    expect(again.entitled).toHaveValue(31);
+    fireEvent.change(again.carryover, { target: { value: "1" } });
+    fireEvent.change(screen.getByLabelText("Begründung"), {
+      target: { value: "Übertrag korrigiert" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(mocks.setVacationQuota).toHaveBeenLastCalledWith(
+        "4",
+        expect.objectContaining({
+          carryover_days: 1,
+          expected_version: "quota-2",
+        }),
+      ),
+    );
+  });
+
+  it("keeps typed days and their version when a colleague's claim arrives", async () => {
+    renderWithCache(
+      <>
+        <CacheHandle />
+        <AbwesenheitenTab
+          staffId="4"
+          canEdit
+          canEditQuota
+          canManageSickReports
+        />
+      </>,
+    );
+    const fields = await openQuotaEditor();
+    fireEvent.change(fields.entitled, { target: { value: "28" } });
+    const reads = mocks.getVacationQuota.mock.calls.length;
+    mocks.getVacationQuota.mockResolvedValue(
+      quota({ entitled_days: 26, version: "quota-2" }),
+    );
+    await act(revalidateAll);
+    expect(mocks.getVacationQuota.mock.calls.length).toBeGreaterThan(reads);
+
+    // The typed days stay; the save carries the version they were typed
+    // over, so the server refuses instead of storing 28 over 26 unseen.
+    expect(screen.getByLabelText("Jahresanspruch (Tage)")).toHaveValue(28);
+    fireEvent.change(screen.getByLabelText("Begründung"), {
+      target: { value: "Teilzeit" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(mocks.setVacationQuota).toHaveBeenCalledWith(
+        "4",
+        expect.objectContaining({
+          entitled_days: 28,
+          expected_version: "quota-1",
+        }),
+      ),
+    );
+  });
+
+  it("refills an untouched form from a colleague's claim and saves its version", async () => {
+    renderWithCache(
+      <>
+        <CacheHandle />
+        <AbwesenheitenTab
+          staffId="4"
+          canEdit
+          canEditQuota
+          canManageSickReports
+        />
+      </>,
+    );
+    await openQuotaEditor();
+    mocks.getVacationQuota.mockResolvedValue(
+      quota({ entitled_days: 26, version: "quota-2" }),
+    );
+    await act(revalidateAll);
+    await waitFor(() =>
+      expect(screen.getByLabelText("Jahresanspruch (Tage)")).toHaveValue(26),
+    );
+    fireEvent.change(screen.getByLabelText("Begründung"), {
+      target: { value: "Teilzeit" },
+    });
+    mocks.setVacationQuota.mockResolvedValue(undefined);
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(mocks.setVacationQuota).toHaveBeenCalledWith(
+        "4",
+        expect.objectContaining({
+          entitled_days: 26,
+          expected_version: "quota-2",
+        }),
+      ),
+    );
+  });
+
   it("discards the draft on cancel", async () => {
     renderWithCache(
       <AbwesenheitenTab
@@ -385,5 +598,13 @@ function TenantSWR({ children }: { children: React.ReactNode }) {
     </SessionProvider>
   );
 }
+// Stands in for a live update: every read in the cache revalidates.
+let revalidateAll: () => Promise<unknown> = () => Promise.resolve();
+function CacheHandle() {
+  const { mutate } = useSWRConfig();
+  revalidateAll = () => mutate(() => true);
+  return null;
+}
+
 const renderWithCache = (ui: React.ReactElement) =>
   render(ui, { wrapper: TenantSWR });

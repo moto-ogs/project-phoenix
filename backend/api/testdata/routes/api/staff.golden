@@ -12,12 +12,12 @@ GET /api/staff/absences/mails
 GET /api/staff/absences/pending
 GET /api/staff/absences/plan-gaps
 GET /api/staff/absences/requests
-GET /api/staff/available
 GET /api/staff/by-role
 GET /api/staff/dashboard-summary
 GET /api/staff/documents-directory
 GET /api/staff/documents-profile/{id}
 GET /api/staff/financial-profile/{id}
+GET /api/staff/former
 GET /api/staff/me/qualifications
 GET /api/staff/qualification-types
 GET /api/staff/qualifications
@@ -36,7 +36,6 @@ GET /api/staff/{id}/absences
 GET /api/staff/{id}/avatar
 GET /api/staff/{id}/documents
 GET /api/staff/{id}/documents/{documentId}/download
-GET /api/staff/{id}/groups
 GET /api/staff/{id}/payroll-number
 GET /api/staff/{id}/qualifications
 GET /api/staff/{id}/schedule

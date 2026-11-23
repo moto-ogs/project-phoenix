@@ -15,6 +15,7 @@ import { SkeletonRows } from "~/components/ui/skeleton";
 import { Textarea } from "~/components/ui/textarea";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { previewLetter } from "~/lib/parent-announcements-api";
+import type { AnnouncementApiBase } from "~/lib/parent-announcements-api";
 import {
   hasLetterPlaceholders,
   unknownLetterPlaceholders,
@@ -52,7 +53,7 @@ interface LetterBodyFieldProps {
   readonly required?: boolean;
   readonly disabled?: boolean;
   /** API base of the portal; the OGS routes when absent. */
-  readonly apiBase?: string;
+  readonly apiBase?: AnnouncementApiBase;
   /** Null while there is no child to show yet, such as before a class is chosen. */
   readonly previewChildren: LetterPreviewChildren | null;
   readonly placeholder?: string;
@@ -179,7 +180,7 @@ function LetterPreviewPanel({
   source,
 }: Readonly<{
   body: string;
-  apiBase?: string;
+  apiBase?: AnnouncementApiBase;
   source: LetterPreviewChildren | null;
 }>) {
   const children = useSWRAuth(

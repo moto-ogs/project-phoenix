@@ -3,5 +3,6 @@
   "copyRequestId": "Copy request ID",
   "requestId": "Request ID: {requestId}",
   "crash": "{object} could not be processed. Please try again later.",
-  "fieldCheck": "Please check this field."
+  "fieldCheck": "Please check this field.",
+  "reloadFailed": "The current version could not be loaded."
 }

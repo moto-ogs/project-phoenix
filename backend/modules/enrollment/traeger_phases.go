@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Träger phase (ADR 0195): a Träger keeps an enrollment phase once in its
@@ -73,12 +75,15 @@ type TraegerPhaseInput struct {
 	Fields     TraegerPhaseFields
 	AllSchools bool
 	SchoolIDs  []int64
+	// ExpectedVersion is the Version of the phase its author read; an
+	// update refuses another one with readstate.ErrChanged (ADR 0311).
+	ExpectedVersion string
 }
 
 // TraegerCatalogSchool is one school of a Träger phase or offering with the
 // last outcome of its copy there.
 type TraegerCatalogSchool struct {
-	SchoolID       int64      `json:"school_id"`
+	SchoolID       ident.ID   `json:"school_id"`
 	Selected       bool       `json:"selected"`
 	AppliedVersion *int       `json:"applied_version,omitempty"`
 	Outcome        string     `json:"outcome,omitempty"`
@@ -89,8 +94,8 @@ type TraegerCatalogSchool struct {
 // TraegerPhase is a Träger phase with its draft, its released version and
 // its schools.
 type TraegerPhase struct {
-	ID              int64                  `json:"id"`
-	OrganizationID  int64                  `json:"organization_id"`
+	ID              ident.ID               `json:"id"`
+	OrganizationID  ident.ID               `json:"organization_id"`
 	Draft           TraegerPhaseFields     `json:"draft"`
 	AllSchools      bool                   `json:"all_schools"`
 	ReleasedVersion *int                   `json:"released_version,omitempty"`
@@ -98,6 +103,9 @@ type TraegerPhase struct {
 	WithdrawnAt     *time.Time             `json:"withdrawn_at,omitempty"`
 	Schools         []TraegerCatalogSchool `json:"schools"`
 	UpdatedAt       time.Time              `json:"updated_at"`
+	// Version is the token of what the office edits: the draft, the
+	// schools it is chosen for and whether it is withdrawn (ADR 0311).
+	Version string `json:"version"`
 }
 
 // TraegerCopyOutcome records the outcome of one school's copy.
@@ -131,8 +139,8 @@ type TraegerPhases interface {
 type TraegerFieldChange struct {
 	Field   string `json:"field"`
 	State   string `json:"state"`
-	Traeger any    `json:"traeger"`
-	School  any    `json:"school"`
+	Traeger any    `json:"traeger" contract_json:"The changed field selects the inherited phase value type"`
+	School  any    `json:"school" contract_json:"The changed field selects the overridden phase value type"`
 }
 
 // TraegerCopyState is the state of a school's copy that a preview reads and

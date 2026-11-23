@@ -24,15 +24,16 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // StartInstanceResponse is the 200 body for POST /instances/{id}/start. Warnings
 // is always present (empty array when clean) so clients can iterate without a
 // nil check.
 type StartInstanceResponse struct {
-	InstanceID    int64                               `json:"instance_id"`
+	InstanceID    ident.ID                            `json:"instance_id"`
 	Status        string                              `json:"status"`
-	ActiveGroupID int64                               `json:"active_group_id"`
+	ActiveGroupID ident.ID                            `json:"active_group_id"`
 	StartedAt     string                              `json:"started_at"`
 	Warnings      []timetable.InstanceConflictWarning `json:"warnings"`
 }
@@ -40,10 +41,10 @@ type StartInstanceResponse struct {
 // InstanceStatusResponse is the 200 body for complete and cancel — minimal
 // because the frontend already has the full instance in its cache.
 type InstanceStatusResponse struct {
-	InstanceID  int64  `json:"instance_id"`
-	Status      string `json:"status"`
-	CompletedAt string `json:"completed_at,omitempty"`
-	ReopenUntil string `json:"reopen_until,omitempty"`
+	InstanceID  ident.ID `json:"instance_id"`
+	Status      string   `json:"status"`
+	CompletedAt string   `json:"completed_at,omitempty"`
+	ReopenUntil string   `json:"reopen_until,omitempty"`
 	// GuardianNotice is set when a cancellation informed the families (#2601).
 	GuardianNotice *GuardianNoticeResponse `json:"guardian_notice,omitempty"`
 }
@@ -58,9 +59,9 @@ type GuardianNoticeRequest struct {
 
 // GuardianNoticeResponse reports what a sent notice reached.
 type GuardianNoticeResponse struct {
-	AnnouncementID int64 `json:"announcement_id"`
-	ChildCount     int   `json:"child_count"`
-	FamilyCount    int   `json:"family_count"`
+	AnnouncementID ident.ID `json:"announcement_id"`
+	ChildCount     int      `json:"child_count"`
+	FamilyCount    int      `json:"family_count"`
 }
 
 // GuardianNoticeReachResponse is the preview for the cancel dialog.
@@ -84,7 +85,7 @@ func guardianNoticeResponseOf(result *timetable.GuardianNoticeResult) *GuardianN
 		return nil
 	}
 	return &GuardianNoticeResponse{
-		AnnouncementID: result.AnnouncementID,
+		AnnouncementID: ident.ID(result.AnnouncementID),
 		ChildCount:     result.ChildCount,
 		FamilyCount:    result.FamilyCount,
 	}
@@ -138,9 +139,9 @@ func (rs *Resource) startInstance(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := StartInstanceResponse{
-		InstanceID:    result.Instance.ID,
+		InstanceID:    ident.ID(result.Instance.ID),
 		Status:        result.Instance.Status,
-		ActiveGroupID: result.ActiveGroupID,
+		ActiveGroupID: ident.ID(result.ActiveGroupID),
 		Warnings:      result.Warnings,
 	}
 	if result.Warnings == nil {
@@ -174,7 +175,7 @@ func (rs *Resource) completeInstance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := InstanceStatusResponse{InstanceID: instance.ID, Status: instance.Status}
+	resp := InstanceStatusResponse{InstanceID: ident.ID(instance.ID), Status: instance.Status}
 	if instance.CompletedAt != nil {
 		resp.CompletedAt = instance.CompletedAt.UTC().Format("2006-01-02T15:04:05Z")
 	}
@@ -200,7 +201,7 @@ func (rs *Resource) reopenInstance(w http.ResponseWriter, r *http.Request) {
 		renderInstanceLifecycleError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, StartInstanceResponse{InstanceID: result.Instance.ID, Status: result.Instance.Status, ActiveGroupID: result.ActiveGroupID, Warnings: result.Warnings}, "Instance reopened")
+	common.Respond(w, r, http.StatusOK, StartInstanceResponse{InstanceID: ident.ID(result.Instance.ID), Status: result.Instance.Status, ActiveGroupID: ident.ID(result.ActiveGroupID), Warnings: result.Warnings}, "Instance reopened")
 }
 
 // cancelInstance handles POST /instances/{id}/cancel.
@@ -242,7 +243,7 @@ func (rs *Resource) cancelInstance(w http.ResponseWriter, r *http.Request) {
 	}
 	instance := result.Instance
 
-	resp := InstanceStatusResponse{InstanceID: instance.ID, Status: instance.Status, GuardianNotice: guardianNoticeResponseOf(result.GuardianNotice)}
+	resp := InstanceStatusResponse{InstanceID: ident.ID(instance.ID), Status: instance.Status, GuardianNotice: guardianNoticeResponseOf(result.GuardianNotice)}
 	if instance.CompletedAt != nil {
 		resp.CompletedAt = instance.CompletedAt.UTC().Format("2006-01-02T15:04:05Z")
 	}
@@ -265,7 +266,7 @@ func (rs *Resource) reinstateInstance(w http.ResponseWriter, r *http.Request) {
 		renderInstanceLifecycleError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, InstanceStatusResponse{InstanceID: instance.ID, Status: instance.Status}, "Instance reinstated")
+	common.Respond(w, r, http.StatusOK, InstanceStatusResponse{InstanceID: ident.ID(instance.ID), Status: instance.Status}, "Instance reinstated")
 }
 
 // deleteInstance handles DELETE /instances/{id}. Planned and cancelled

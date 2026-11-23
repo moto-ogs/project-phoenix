@@ -10,6 +10,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -161,8 +162,8 @@ func (s *sickCascade) sickReportWriteScope(ctx context.Context, subject, absence
 		case errors.Is(err, workforce.ErrStaffAbsenceNotFound):
 		case err != nil:
 			return nil, nil, fmt.Errorf("sick report lock: load absence: %w", err)
-		case stored.StaffID == subject:
-			reportIDs = append(reportIDs, stored.ID)
+		case stored.StaffID == ident.ID(subject):
+			reportIDs = append(reportIDs, stored.ID.Int64())
 			// An edit may move one bound only; the other keeps its stored day.
 			dateStart, dateEnd = cmp.Or(dateStart, stored.DateStart), cmp.Or(dateEnd, stored.DateEnd)
 		}
@@ -184,7 +185,7 @@ func (s *sickCascade) sickReportWriteScope(ctx context.Context, subject, absence
 	}
 	for _, report := range overlapping {
 		addDateRange(days, report.DateStart, report.DateEnd, today, report.AbsenceType != workforce.AbsenceTypeSick)
-		reportIDs = append(reportIDs, report.ID)
+		reportIDs = append(reportIDs, report.ID.Int64())
 	}
 	staffIDs := []int64{subject}
 	for _, id := range reportIDs {
@@ -216,14 +217,14 @@ func (s *sickCascade) lockedSubject(ctx context.Context, staffID, absenceID int6
 			return 0, fmt.Errorf("sick report lock: load absence: %w", err)
 		}
 		if staffID == 0 {
-			staffID = stored.StaffID
+			staffID = stored.StaffID.Int64()
 		}
-		if stored.StaffID != staffID {
+		if stored.StaffID != ident.ID(staffID) {
 			// Workforce reports the ownership error. Taking the other subject's
 			// gates here could deadlock with a valid write of staffID.
 			return 0, nil
 		}
-		subject = stored.StaffID
+		subject = stored.StaffID.Int64()
 	}
 	if subject <= 0 {
 		return 0, nil

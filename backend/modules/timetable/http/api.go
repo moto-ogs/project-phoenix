@@ -17,6 +17,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/settings"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -88,12 +89,9 @@ type Dependencies struct {
 	ClosingDays     ClosingDays
 	// Holidays serves the statutory holidays of the school (#4775).
 	Holidays Holidays
-	// SchoolVacations serves the vacations of the school's federal state,
-	// the school's confirmations of planned care and the local seed (#5345).
+	// SchoolVacations serves the vacations of the school's federal state
+	// and the school's confirmations of planned care (#5345).
 	SchoolVacations SchoolVacations
-	// IsLocalSeed admits the local demo seeder's request to the vacation
-	// seed; nil leaves the seed route out.
-	IsLocalSeed func(*http.Request) bool
 	// SchoolVacationHints counts the planned Regeltermine in the coming
 	// vacations (#5345).
 	SchoolVacationHints     timetable.SchoolVacationHintQuery
@@ -206,6 +204,10 @@ type CalendarPeriodRequest struct {
 	WeekCycleLength int     `json:"week_cycle_length"`
 	WeekCycleAnchor *string `json:"week_cycle_anchor,omitempty"`
 	IsActive        bool    `json:"is_active"`
+	// ExpectedVersion is the version of the period an update edits (ADR
+	// 0311); an update of a period changed since is refused. A create
+	// ignores it.
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 // Bind validates the request
@@ -239,10 +241,10 @@ func (req *CalendarPeriodRequest) Bind(_ *http.Request) error {
 // period response (WP-B2, QA #1577 H3). One entry is emitted per overlapping
 // active period.
 type PeriodWarning struct {
-	Code                   string   `json:"code"`
-	Message                string   `json:"message"`
-	OverlappingPeriodIDs   []int64  `json:"overlapping_period_ids"`
-	OverlappingPeriodNames []string `json:"overlapping_period_names"`
+	Code                   string     `json:"code"`
+	Message                string     `json:"message"`
+	OverlappingPeriodIDs   []ident.ID `json:"overlapping_period_ids"`
+	OverlappingPeriodNames []string   `json:"overlapping_period_names"`
 }
 
 // warningCodeOverlappingActivePeriods is the machine-readable code the
@@ -254,17 +256,19 @@ const germanDateLayout = "02.01.2006"
 
 // CalendarPeriodResponse represents a calendar period in API responses
 type CalendarPeriodResponse struct {
-	ID              int64           `json:"id"`
-	Name            string          `json:"name"`
-	PeriodType      string          `json:"period_type"`
-	StartDate       string          `json:"start_date"`
-	EndDate         string          `json:"end_date"`
-	WeekCycleLength int             `json:"week_cycle_length"`
-	WeekCycleAnchor *string         `json:"week_cycle_anchor,omitempty"`
-	IsActive        bool            `json:"is_active"`
-	CreatedAt       string          `json:"created_at"`
-	UpdatedAt       string          `json:"updated_at"`
-	Warnings        []PeriodWarning `json:"warnings,omitempty"`
+	ID              ident.ID `json:"id"`
+	Name            string   `json:"name"`
+	PeriodType      string   `json:"period_type"`
+	StartDate       string   `json:"start_date"`
+	EndDate         string   `json:"end_date"`
+	WeekCycleLength int      `json:"week_cycle_length"`
+	WeekCycleAnchor *string  `json:"week_cycle_anchor,omitempty"`
+	IsActive        bool     `json:"is_active"`
+	CreatedAt       string   `json:"created_at"`
+	UpdatedAt       string   `json:"updated_at"`
+	// Version is the token an update sends back as expected_version.
+	Version  string          `json:"version"`
+	Warnings []PeriodWarning `json:"warnings,omitempty"`
 
 	// Reference counts returned by list, detail, and bootstrap reads. The
 	// frontend uses these for the "Verwendung" column and delete-impact warning.
@@ -281,7 +285,7 @@ type CalendarPeriodResponse struct {
 
 func mapPeriodToResponse(p schoolcalendar.CalendarPeriod) CalendarPeriodResponse {
 	resp := CalendarPeriodResponse{
-		ID:              p.ID,
+		ID:              ident.ID(p.ID),
 		Name:            p.Name,
 		PeriodType:      p.PeriodType,
 		StartDate:       p.StartDate,
@@ -290,6 +294,7 @@ func mapPeriodToResponse(p schoolcalendar.CalendarPeriod) CalendarPeriodResponse
 		IsActive:        p.IsActive,
 		CreatedAt:       p.CreatedAt.Format(time.RFC3339),
 		UpdatedAt:       p.UpdatedAt.Format(time.RFC3339),
+		Version:         schoolcalendar.CalendarPeriodVersion(p),
 	}
 	if p.WeekCycleAnchor != "" {
 		anchor := p.WeekCycleAnchor
@@ -380,7 +385,7 @@ func (rs *Resource) attachOverlapWarnings(ctx context.Context, period schoolcale
 				germanCalendarDate(o.StartDate),
 				germanCalendarDate(o.EndDate),
 			),
-			OverlappingPeriodIDs:   []int64{o.ID},
+			OverlappingPeriodIDs:   []ident.ID{ident.ID(o.ID)},
 			OverlappingPeriodNames: []string{o.Name},
 		})
 	}
@@ -399,7 +404,7 @@ func (rs *Resource) periodUsageCounts(ctx context.Context) (map[int64]CalendarPe
 }
 
 func applyPeriodUsage(resp *CalendarPeriodResponse, usage map[int64]CalendarPeriodUsageCounts) {
-	if u, ok := usage[resp.ID]; ok {
+	if u, ok := usage[resp.ID.Int64()]; ok {
 		resp.EnrollmentPhaseCount = u.EnrollmentPhases
 		resp.ActivityGroupCount = u.ActivityGroups
 		resp.ScheduleCount = u.Schedules
@@ -556,6 +561,7 @@ func (rs *Resource) updatePeriod(w http.ResponseWriter, r *http.Request) {
 
 	updated, err := rs.CalendarPeriods.ChangeCalendarPeriod(r.Context(), schoolcalendar.UpdateCalendarPeriod{
 		ID: existing.ID, CalendarPeriodFields: periodFieldsFromRequest(req, startDate, endDate, anchor),
+		ExpectedVersion: req.ExpectedVersion,
 	})
 	if err != nil {
 		common.RenderError(w, r, calendarPeriodWriteErrorRenderer(r, err, "Kalenderzeitraum konnte nicht aktualisiert werden"))

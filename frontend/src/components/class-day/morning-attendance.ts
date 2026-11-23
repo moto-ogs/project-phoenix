@@ -5,8 +5,13 @@
 // „Fehlt“ (source "report"). Markierungen sammeln sich in einem Entwurf und
 // gehen erst mit „Speichern“ an das Backend.
 
-import type { ClassDayRow, MorningAttendanceStatus } from "~/lib/class-day-api";
+import {
+  MORNING_ATTENDANCE_STATUSES,
+  type MorningAttendanceStatus,
+} from "~/lib/class-day-api";
+import { knownEnum } from "~/lib/contract/known-enum";
 import type { MorningAttendanceMark } from "~/lib/school-class-day-api";
+import type * as schoolClassDayContract from "~/lib/contract/school-class-day.generated";
 
 /** Entwurf: Schlüssel der Zeile → markierter Zustand. */
 export type MorningAttendanceDraft = Readonly<
@@ -14,7 +19,7 @@ export type MorningAttendanceDraft = Readonly<
 >;
 
 /** Eigener Schlüsselraum für Klassenlisteneinträge (student_id ist dort 0). */
-export function morningRowKey(row: ClassDayRow): string {
+export function morningRowKey(row: schoolClassDayContract.DayRow): string {
   return row.list_entry
     ? `entry-${row.list_entry_id}`
     : `student-${row.student_id}`;
@@ -22,14 +27,18 @@ export function morningRowKey(row: ClassDayRow): string {
 
 /** Der Zustand, den die Zeile zeigt: Entwurf vor gespeichertem Stand. */
 export function morningStatus(
-  row: ClassDayRow,
+  row: schoolClassDayContract.DayRow,
   draft: MorningAttendanceDraft,
 ): MorningAttendanceStatus | null {
-  return draft[morningRowKey(row)] ?? row.morning_attendance?.status ?? null;
+  return (
+    draft[morningRowKey(row)] ??
+    knownEnum(MORNING_ATTENDANCE_STATUSES, row.morning_attendance?.status) ??
+    null
+  );
 }
 
 /** Krank, entschuldigt und Klassenfahrt erklären ein Fehlen am Vormittag. */
-function hasReportedAbsence(row: ClassDayRow): boolean {
+function hasReportedAbsence(row: schoolClassDayContract.DayRow): boolean {
   return (
     row.status === "sick" ||
     row.status === "excused" ||
@@ -39,7 +48,7 @@ function hasReportedAbsence(row: ClassDayRow): boolean {
 
 /** Fehlt, ohne dass eine Meldung vorliegt: das Kind, um das es geht. */
 export function missingWithoutReport(
-  row: ClassDayRow,
+  row: schoolClassDayContract.DayRow,
   status: MorningAttendanceStatus | null,
 ): boolean {
   return status === "absent" && !hasReportedAbsence(row);
@@ -47,7 +56,7 @@ export function missingWithoutReport(
 
 /** Die Zahlen des Vormittags als eine Zeile. */
 export function morningSummaryLine(
-  rows: readonly ClassDayRow[],
+  rows: readonly schoolClassDayContract.DayRow[],
   draft: MorningAttendanceDraft,
 ): string {
   let present = 0;
@@ -73,7 +82,7 @@ export function morningSummaryLine(
 
 /** Alle Kinder ohne Zustand auf „Da“ setzen; der übrige Entwurf bleibt. */
 export function markOpenPresent(
-  rows: readonly ClassDayRow[],
+  rows: readonly schoolClassDayContract.DayRow[],
   draft: MorningAttendanceDraft,
 ): MorningAttendanceDraft {
   const next: Record<string, MorningAttendanceStatus> = { ...draft };
@@ -86,7 +95,7 @@ export function markOpenPresent(
 
 /** Die Markierungen des Entwurfs für das Backend. */
 export function draftMarks(
-  rows: readonly ClassDayRow[],
+  rows: readonly schoolClassDayContract.DayRow[],
   draft: MorningAttendanceDraft,
 ): MorningAttendanceMark[] {
   const marks: MorningAttendanceMark[] = [];

@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/traegerview"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // AccessLogResource serves the access log of the Träger-Portal (#4655):
@@ -244,7 +245,7 @@ func accessLogSchoolName(filter traegerview.AccessLogFilter, entries []traegervi
 		return ""
 	}
 	for _, entry := range entries {
-		if entry.SchoolID == filter.SchoolID {
+		if entry.SchoolID == ident.ID(filter.SchoolID) {
 			return entry.SchoolName
 		}
 	}

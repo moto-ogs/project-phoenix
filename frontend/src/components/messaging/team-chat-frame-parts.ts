@@ -11,6 +11,8 @@ export interface TeamChatEmptyState {
 /** Was das Seitengerüst vom Posteingang bekommt. */
 export interface TeamChatInboxParts {
   readonly title: string;
+  /** Erklärung hinter dem Info-Knopf; fehlt im Aus-Zustand. */
+  readonly info?: string;
   /** Statuszeile aus echten Zahlen; `null`, solange keine Liste geladen ist. */
   readonly stats: ReactNode | null;
   readonly statsLoading: boolean;

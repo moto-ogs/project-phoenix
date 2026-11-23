@@ -89,6 +89,7 @@ const OVERVIEW: StaffOverview = {
 
 const PREVIEW: StaffLinkPreview = {
   record: null,
+  fingerprint: "preview-1",
   members: [mira("1", "11", "Sommer"), mira("2", "22", "Sommer-Berg")],
   fields: [
     {
@@ -222,11 +223,98 @@ describe("TraegerStaffRecordsPage", () => {
           { schoolId: "2", staffId: "22" },
         ],
         choices: { last_name: "2" },
+        expectedFingerprint: "preview-1",
       }),
     );
     await vi.waitFor(() =>
       expect(mockPush).toHaveBeenCalledWith("/personal/5?from=vorschlaege"),
     );
+  });
+
+  it("shows the values again when a school changed one since the preview", async () => {
+    api.linkStaff.mockRejectedValueOnce(
+      new ApiError("changed since it was read", 409, {
+        code: "general.changed_since_read",
+      }),
+    );
+    renderPage();
+    const proposal = await screen.findByText(
+      "Gleiches Konto",
+      {},
+      { timeout: 3000 },
+    );
+    fireEvent.click(proposal.closest("tr")!);
+    const dialog = await screen.findByRole("dialog", {
+      name: "Personalakte anlegen",
+    });
+    await within(dialog).findByText("Welcher Wert gilt?");
+    const reads = api.previewStaffLink.mock.calls.length;
+    api.previewStaffLink.mockResolvedValue({
+      ...PREVIEW,
+      fingerprint: "preview-2",
+    });
+    fireEvent.click(within(dialog).getByRole("radio", { name: /Sommer-Berg/ }));
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Akte anlegen" }),
+    );
+
+    expect(
+      await within(dialog).findByText(
+        catalogText("general.changed_since_read", "die Personalakte"),
+      ),
+    ).toBeInTheDocument();
+    // The dialog reads the values again and asks for the choice anew.
+    await vi.waitFor(() =>
+      expect(api.previewStaffLink.mock.calls.length).toBeGreaterThan(reads),
+    );
+    expect(
+      within(dialog).getByRole("radio", { name: /Sommer-Berg/ }),
+    ).not.toBeChecked();
+    expect(
+      within(dialog).queryByRole("button", { name: "Wiederholen" }),
+    ).not.toBeInTheDocument();
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  // ADR 0311 rule 6: a failed read of the values after a refusal is a load
+  // error, and the refused preview is not confirmed again.
+  it("names a failed read of the values after a refusal", async () => {
+    api.linkStaff.mockRejectedValueOnce(
+      new ApiError("changed since it was read", 409, {
+        code: "general.changed_since_read",
+      }),
+    );
+    renderPage();
+    const proposal = await screen.findByText(
+      "Gleiches Konto",
+      {},
+      { timeout: 3000 },
+    );
+    fireEvent.click(proposal.closest("tr")!);
+    const dialog = await screen.findByRole("dialog", {
+      name: "Personalakte anlegen",
+    });
+    await within(dialog).findByText("Welcher Wert gilt?");
+    api.previewStaffLink.mockRejectedValue(
+      new ApiError("down", 503, { code: "general.unavailable" }),
+    );
+    fireEvent.click(within(dialog).getByRole("radio", { name: /Sommer-Berg/ }));
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Akte anlegen" }),
+    );
+
+    expect(
+      await within(dialog).findByText(
+        /Der neue Stand konnte nicht geladen werden/,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).queryByText(/Du siehst jetzt den neuen Stand/),
+    ).not.toBeInTheDocument();
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Akte anlegen" }),
+    );
+    expect(api.linkStaff).toHaveBeenCalledTimes(1);
   });
 
   it("lists the people without a record and keeps the tab in the address", async () => {
@@ -273,7 +361,7 @@ describe("TraegerStaffRecordsPage", () => {
       fields: [],
     });
     renderPage();
-    const dialog = await screen.findByRole("dialog");
+    await screen.findByRole("dialog");
     await vi.waitFor(() =>
       expect(api.previewStaffLink).toHaveBeenCalledWith({
         recordId: null,
@@ -281,14 +369,27 @@ describe("TraegerStaffRecordsPage", () => {
         choices: {},
       }),
     );
+    // The preview of this opening has to be on screen before it is
+    // confirmed; the dialog of the loaded preview is queried anew.
+    // A locked button carries aria-disabled with its reason (#6643).
+    await vi.waitFor(() =>
+      expect(
+        within(screen.getByRole("dialog")).getByRole("button", {
+          name: "Akte anlegen",
+        }),
+      ).not.toHaveAttribute("aria-disabled", "true"),
+    );
     fireEvent.click(
-      within(dialog).getByRole("button", { name: "Akte anlegen" }),
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Akte anlegen",
+      }),
     );
     await vi.waitFor(() =>
       expect(api.linkStaff).toHaveBeenCalledWith({
         recordId: null,
         members: [{ schoolId: "2", staffId: "33" }],
         choices: {},
+        expectedFingerprint: "preview-1",
       }),
     );
     await vi.waitFor(() =>

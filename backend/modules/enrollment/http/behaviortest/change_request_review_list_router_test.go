@@ -27,6 +27,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	transactionFailures "github.com/moto-ogs/project-phoenix/modules/transactionruntime"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -70,7 +71,7 @@ func setupReviewListTest(t *testing.T) *reviewListEnv {
 	reviewer := &peopleValues.DirectoryPersonSnapshot{
 		FirstName: "Rita",
 		LastName:  "Ruecksicht",
-		AccountID: &accountID,
+		AccountID: (*ident.ID)(&accountID),
 	}
 	reviewer.SetTenantID(tenantID)
 	require.NoError(t, db.NewInsert().Model(reviewer).ModelTableExpr("users.persons").Column("tenant_id", "first_name", "last_name", "account_id").Returning("*").Scan(ctx))

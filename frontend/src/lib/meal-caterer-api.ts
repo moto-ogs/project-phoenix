@@ -3,15 +3,20 @@
 // a new invitation, taking one back, and ending the supply. The invitation
 // link reaches the caterer by mail only; the school never sees it.
 
-import { apiErrorFromResponse } from "./api-error";
-import type {
-  EmailAddressMark,
-  MailOutcome,
-  MailProviderBlock,
+import { bffJson } from "./bff-fetch";
+import { knownEnum } from "./contract/known-enum";
+import type * as wire from "./contract/meal-caterer.generated";
+import {
+  type EmailAddressMark,
+  knownMailOutcome,
+  knownMailProviderBlock,
+  type MailOutcome,
+  type MailProviderBlock,
 } from "./email-delivery-status";
-import { sessionFetch } from "./session-cache";
 
-type MealCatererInvitationStatus = "open" | "accepted" | "revoked" | "expired";
+const INVITATION_STATUSES = ["open", "accepted", "revoked", "expired"] as const;
+type MealCatererInvitationStatus = (typeof INVITATION_STATUSES)[number];
+const ADDRESS_MARKS: readonly EmailAddressMark[] = ["failed", "complained"];
 
 export interface MealCatererInvitation {
   id: string;
@@ -44,58 +49,28 @@ export interface MealCatererInvitationInput {
   deliveryAddress: string;
 }
 
-interface BackendInvitation {
-  id: string;
-  email: string;
-  caterer_name: string;
-  delivery_address: string;
-  status: MealCatererInvitationStatus;
-  expires_at: string;
-  created_at: string;
-  mail_outcome?: MailOutcome;
-  address_mark?: EmailAddressMark;
-  provider_block?: MailProviderBlock;
-}
-
-interface BackendMealCaterer {
-  supply: {
-    caterer_name: string;
-    delivery_address: string;
-    started_at: string;
-  } | null;
-  invitations: BackendInvitation[];
-}
-
-function unwrap<T>(body: unknown): T {
-  if (body && typeof body === "object" && "data" in body) {
-    return (body as { data: T }).data;
-  }
-  return body as T;
-}
-
-function mapInvitation(invitation: BackendInvitation): MealCatererInvitation {
+function mapInvitation(
+  invitation: wire.InvitationResponse,
+): MealCatererInvitation {
   return {
     id: invitation.id,
     email: invitation.email,
     catererName: invitation.caterer_name,
     deliveryAddress: invitation.delivery_address,
-    status: invitation.status,
+    // An unknown state reads as expired: it offers no action.
+    status: knownEnum(INVITATION_STATUSES, invitation.status) ?? "expired",
     expiresAt: invitation.expires_at,
     createdAt: invitation.created_at,
-    mailOutcome: invitation.mail_outcome,
-    addressMark: invitation.address_mark,
-    providerBlock: invitation.provider_block,
+    mailOutcome: knownMailOutcome(invitation.mail_outcome),
+    addressMark: knownEnum(ADDRESS_MARKS, invitation.address_mark),
+    providerBlock: knownMailProviderBlock(invitation.provider_block),
   };
 }
 
 export async function getMealCaterer(): Promise<MealCaterer> {
-  const response = await sessionFetch("/api/meal-caterer", {
-    credentials: "include",
+  const data = await bffJson("tenant", "GET /api/meal-caterer/", {
+    errorMessage: "meal caterer load failed",
   });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, "meal caterer load failed");
-  }
-  const data = unwrap<BackendMealCaterer>(await response.json());
   return {
     supply: data.supply
       ? {
@@ -111,37 +86,31 @@ export async function getMealCaterer(): Promise<MealCaterer> {
 export async function inviteMealCaterer(
   input: MealCatererInvitationInput,
 ): Promise<MealCatererInvitation> {
-  const response = await sessionFetch("/api/meal-caterer/invitations", {
-    method: "POST",
-    credentials: "include",
-    body: JSON.stringify({
-      email: input.email.trim(),
-      caterer_name: input.catererName.trim(),
-      delivery_address: input.deliveryAddress.trim(),
+  return mapInvitation(
+    await bffJson("tenant", "POST /api/meal-caterer/invitations", {
+      body: {
+        email: input.email.trim(),
+        caterer_name: input.catererName.trim(),
+        delivery_address: input.deliveryAddress.trim(),
+      },
+      errorMessage: "meal caterer invite failed",
     }),
-  });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, "meal caterer invite failed");
-  }
-  return mapInvitation(unwrap<BackendInvitation>(await response.json()));
+  );
 }
 
 export async function revokeMealCatererInvitation(id: string): Promise<void> {
-  const response = await sessionFetch(
-    `/api/meal-caterer/invitations/${encodeURIComponent(id)}`,
-    { method: "DELETE", credentials: "include" },
+  await bffJson(
+    "tenant",
+    "DELETE /api/meal-caterer/invitations/{invitationId}",
+    {
+      params: { invitationId: id },
+      errorMessage: "meal caterer revoke failed",
+    },
   );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, "meal caterer revoke failed");
-  }
 }
 
 export async function endMealCatererSupply(): Promise<void> {
-  const response = await sessionFetch("/api/meal-caterer/supply", {
-    method: "DELETE",
-    credentials: "include",
+  await bffJson("tenant", "DELETE /api/meal-caterer/supply", {
+    errorMessage: "meal caterer end failed",
   });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, "meal caterer end failed");
-  }
 }

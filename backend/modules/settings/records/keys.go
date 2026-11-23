@@ -105,6 +105,10 @@ const (
 	KeyAttendanceLogEnabled  = "gdpr.attendance_log_enabled"
 	KeyAttendanceVisibleDays = "gdpr.attendance_visible_days"
 	KeyRoomDetailVisibleDays = "gdpr.room_detail_visible_days"
+	// KeyParentRoomHistoryStopEnabled lets parents stop the room history
+	// and the mood of their own child in the parent portal (#3844). The
+	// Träger decides it for all its schools; off by default.
+	KeyParentRoomHistoryStopEnabled = "gdpr.parent_room_history_stop_enabled"
 )
 
 // Feedback settings.
@@ -181,7 +185,6 @@ const (
 	KeySessionCleanupEnabled             = "operations.session_cleanup_enabled"
 	KeySessionCleanupIntervalMinutes     = "operations.session_cleanup_interval_minutes"
 	KeySessionAbandonedThresholdMin      = "operations.session_abandoned_threshold_minutes"
-	KeySessionInactivityTimeoutMin       = "operations.session_inactivity_timeout_minutes"
 	KeyOperationalOverviewScope          = "operations.operational_overview_scope"
 	// KeyWeekendFollowsFriday makes Saturday and Sunday care days that run
 	// on Friday's weekly plan (#3921). Operator-only; the public demo

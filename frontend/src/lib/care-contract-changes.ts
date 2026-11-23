@@ -1,3 +1,4 @@
+import type * as studentsContract from "./contract/students.generated";
 /**
  * The parents' change of the booked care of a contract's child, as the
  * Träger-Büro decides it (#5979): the open request with its modules and
@@ -6,21 +7,45 @@
  * in care-contract-changes-api.ts.
  */
 
-import {
-  mapRosterImpact,
-  type RosterImpact,
-  type RosterImpactWire,
-} from "./roster-impact";
-import type { OfferingRequestDiffLine } from "./offering-request-review-api";
+import { mapRosterImpact, type RosterImpact } from "./roster-impact";
+import { knownEnum } from "./contract/known-enum";
+import { requiredDay } from "./contract/required-day";
+import type * as traegerContractChangesContract from "./contract/traeger-contract-changes.generated";
 import type { Weekday } from "./traeger-care-contracts-api";
 
-type ChangeModuleState = "added" | "removed" | "changed" | "unchanged";
+// Go does not register these sets; the contract types them as string.
+const MODULE_STATE_VALUES = [
+  "added",
+  "removed",
+  "changed",
+  "unchanged",
+] as const;
+const WEEKDAY_VALUES = [
+  "mon",
+  "tue",
+  "wed",
+  "thu",
+  "fri",
+  "sat",
+  "sun",
+] as const;
+
+type ChangeModuleState = (typeof MODULE_STATE_VALUES)[number];
+
+/** The weekdays this build knows; an unknown one is left out. */
+function knownDays(days: readonly string[] | null): Weekday[] {
+  return (days ?? []).flatMap((day) => {
+    const weekday = knownEnum(WEEKDAY_VALUES, day);
+    return weekday ? [weekday] : [];
+  });
+}
 
 /** One module of a change: what the child books now and what is asked. */
 interface ContractChangeLine {
   readonly careOfferingId: string;
   readonly moduleName: string;
-  readonly state: ChangeModuleState;
+  /** undefined: a state this build does not know. */
+  readonly state: ChangeModuleState | undefined;
   readonly beforeDays: readonly Weekday[];
   readonly afterDays: readonly Weekday[];
 }
@@ -64,71 +89,48 @@ export interface ContractChangeDecision {
   readonly expectedVersion: string;
 }
 
-interface BackendChangeLine {
-  care_offering_id: number | string;
-  module_name: string;
-  state: ChangeModuleState;
-  before_days: Weekday[] | null;
-  after_days: Weekday[] | null;
-}
-
-interface BackendChangeRequest {
-  id: number | string;
-  version: string;
-  submitted_at: string;
-  effective_from: string;
-  parent_note: string;
-  ends_all_care: boolean;
-  lines: BackendChangeLine[] | null;
-}
-
-export interface BackendContractChanges {
-  decidable: boolean;
-  pending: BackendChangeRequest[] | null;
-  last_decision: {
-    approved: boolean;
-    decided_at: string;
-    effective_from: string;
-    reason: string;
-  } | null;
-  reason_required: boolean;
-  roster_impact?: RosterImpactWire | null;
-}
-
 export function contractChangesFromBackend(
-  data: BackendContractChanges,
+  data: traegerContractChangesContract.ContractChanges,
 ): ContractChanges {
   return {
     decidable: data.decidable,
     reasonRequired: data.reason_required,
     rosterImpact: mapRosterImpact(data.roster_impact),
     pending: (data.pending ?? []).map((request) => ({
-      id: String(request.id),
+      id: request.id,
       version: request.version,
       submittedAt: request.submitted_at,
-      effectiveFrom: request.effective_from,
+      effectiveFrom: requiredDay(
+        request.effective_from,
+        "change_request.effective_from",
+      ),
       parentNote: request.parent_note,
       endsAllCare: request.ends_all_care,
       lines: (request.lines ?? []).map((line) => ({
-        careOfferingId: String(line.care_offering_id),
+        careOfferingId: line.care_offering_id,
         moduleName: line.module_name,
-        state: line.state,
-        beforeDays: line.before_days ?? [],
-        afterDays: line.after_days ?? [],
+        state: knownEnum(MODULE_STATE_VALUES, line.state),
+        beforeDays: knownDays(line.before_days),
+        afterDays: knownDays(line.after_days),
       })),
     })),
     lastDecision: data.last_decision
       ? {
           approved: data.last_decision.approved,
           decidedAt: data.last_decision.decided_at,
-          effectiveFrom: data.last_decision.effective_from,
+          effectiveFrom: requiredDay(
+            data.last_decision.effective_from,
+            "change_outcome.effective_from",
+          ),
           reason: data.last_decision.reason,
         }
       : null,
   };
 }
 
-export function decisionBody(decision: ContractChangeDecision) {
+export function decisionBody(
+  decision: ContractChangeDecision,
+): traegerContractChangesContract.ChangeDecisionRequest {
   return {
     approve: decision.approve,
     reason: decision.reason.trim(),
@@ -152,7 +154,7 @@ export function contractChangeReview(request: ContractChangeRequest) {
     days.length
       ? days.map((day) => dayLabels[day]).join(", ")
       : "Gebucht (feste Tage)";
-  const diff: OfferingRequestDiffLine[] = request.lines
+  const diff: studentsContract.OfferingRequestDiffResponse[] = request.lines
     .filter((line) => line.state !== "unchanged")
     .map((line) => ({
       offering_id: line.careOfferingId,

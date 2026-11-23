@@ -7,7 +7,7 @@ Next.js web application for GDPR-compliant RFID student attendance and room mana
 - **Next.js 16** (App Router) with **React 19** and **TypeScript 6**
 - **Tailwind CSS 4** for styling
 - **NextAuth v5** (beta) for JWT authentication
-- **Axios** + **SWR** for API communication and caching
+- **fetch** (browser to the BFF, BFF to the backend via `sendBackend`) + **SWR** for caching
 - **Zod** for runtime validation (env vars via `@t3-oss/env-nextjs`)
 - **Recharts** for data visualization
 - **Framer Motion** for animations
@@ -26,27 +26,27 @@ pnpm run dev                  # Start dev server at http://localhost:3000
 
 See `.env.example` for all required variables. Key ones:
 
-| Variable | Purpose |
-|----------|---------|
-| `NEXT_PUBLIC_API_URL` | Backend API URL (required; `.env.example` uses `http://localhost:8080`) |
-| `NEXTAUTH_URL` | Frontend URL for auth callbacks |
-| `NEXTAUTH_SECRET` | JWT signing secret (`openssl rand -base64 32`) |
-| `SKIP_ENV_VALIDATION` | Set `true` for Docker builds |
+| Variable              | Purpose                                                                    |
+| --------------------- | -------------------------------------------------------------------------- |
+| `API_URL`             | Backend URL the server calls (required)                                    |
+| `NEXTAUTH_URL`        | Frontend URL for auth callbacks                                            |
+| `NEXTAUTH_SECRET`     | JWT signing secret (`openssl rand -base64 32`)                             |
+| `SKIP_ENV_VALIDATION` | Set `true` for Docker builds                                               |
 
 ## Scripts
 
-| Command | Description |
-|---------|-------------|
-| `pnpm run dev` | Start development server |
-| `pnpm run build` | Production build |
-| `pnpm run start` | Start production server |
-| `pnpm run check` | Lint + typecheck (run before committing) |
-| `pnpm run lint` | Oxlint |
-| `pnpm run typecheck` | TypeScript type checking |
-| `pnpm run format:write` | Auto-format with Prettier |
-| `pnpm run test` | Run unit tests (Vitest) |
-| `pnpm run test:run` | Run tests once (CI mode) |
-| `pnpm run knip` | Detect unused dependencies and exports |
+| Command                 | Description                              |
+| ----------------------- | ---------------------------------------- |
+| `pnpm run dev`          | Start development server                 |
+| `pnpm run build`        | Production build                         |
+| `pnpm run start`        | Start production server                  |
+| `pnpm run check`        | Lint + typecheck (run before committing) |
+| `pnpm run lint`         | Oxlint                                   |
+| `pnpm run typecheck`    | TypeScript type checking                 |
+| `pnpm run format:write` | Auto-format with Prettier                |
+| `pnpm run test`         | Run unit tests (Vitest)                  |
+| `pnpm run test:run`     | Run tests once (CI mode)                 |
+| `pnpm run knip`         | Detect unused dependencies and exports   |
 
 ## Project Structure
 

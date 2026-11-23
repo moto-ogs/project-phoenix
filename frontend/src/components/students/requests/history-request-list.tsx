@@ -103,11 +103,14 @@ export function HistoryRequestList({
   withdrawals,
   reasonRequired,
   onCorrected,
+  onStale,
 }: Readonly<{
   items: readonly AnyItem[];
   withdrawals: readonly CareWithdrawalCompletion[];
   reasonRequired: boolean;
   onCorrected: (notice: string) => void;
+  /** Lädt die Liste neu, wenn eine Korrektur auf einem veralteten Stand lag. */
+  onStale: () => Promise<unknown>;
 }>) {
   const [target, setTarget] = useState<CorrectionTarget | null>(null);
   return (
@@ -143,6 +146,10 @@ export function HistoryRequestList({
           onCorrected={(notice: string) => {
             setTarget(null);
             onCorrected(notice);
+          }}
+          onStale={() => {
+            setTarget(null);
+            return onStale();
           }}
         />
       )}

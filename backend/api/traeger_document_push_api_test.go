@@ -62,10 +62,10 @@ func TestContractSendPushesOncePerAddress(t *testing.T) {
 	assert.Empty(t, pushes(), "a draft pushes nothing")
 	send := func(body map[string]any) {
 		t.Helper()
-		body["contract_ids"] = []int64{id}
+		body["contract_ids"] = []int64{int64(id)}
 		rec := traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts/send", body)
 		require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
-		require.Contains(t, rec.Body.String(), fmt.Sprintf(`"sent":[%d]`, id))
+		require.Contains(t, rec.Body.String(), fmt.Sprintf(`"sent":["%d"]`, id))
 	}
 	mailState := func(status string) {
 		t.Helper()
@@ -81,16 +81,17 @@ func TestContractSendPushesOncePerAddress(t *testing.T) {
 	assert.Nil(t, queued[0].TenantID, "a push of the Träger names no school")
 	assert.JSONEq(t, `{"deferred":true}`, string(queued[0].Recipient), "the devices are found when the worker sends")
 	assert.Equal(t, "care_contract_document", queued[0].RelatedType, "not the letters' type: equal IDs never collide")
-	assert.Equal(t, id, queued[0].RelatedID)
+	assert.Equal(t, int64(id), queued[0].RelatedID)
 	assert.Regexp(t, fmt.Sprintf(`^care-contract-document:%d:[0-9a-f]{16}$`, id), queued[0].IdempotencyKey, "the key names no address")
 	var payload struct {
+		// The outbox stores JSON with numbers (#7761).
 		OrganizationID int64  `json:"organization_id"`
 		ContractID     int64  `json:"contract_id"`
 		RecipientEmail string `json:"recipient_email"`
 	}
 	require.NoError(t, json.Unmarshal(queued[0].Payload, &payload))
-	assert.Equal(t, f.office.organization, payload.OrganizationID)
-	assert.Equal(t, id, payload.ContractID)
+	assert.Equal(t, f.office.organization, int64(payload.OrganizationID))
+	assert.Equal(t, int64(id), payload.ContractID)
 	assert.Equal(t, "erika.muster@example.org", payload.RecipientEmail)
 
 	mailState("sent")
@@ -129,30 +130,30 @@ func TestReleaseForParentsPushesOncePerRelease(t *testing.T) {
 	document := f.uploaded(t, token, "Elternbrief")
 	assert.Empty(t, pushes(), "an upload without a release pushes nothing")
 
-	f.released(t, token, document.ID, map[string]any{"audience": "schools"})
+	f.released(t, token, int64(document.ID), map[string]any{"audience": "schools"})
 	assert.Empty(t, pushes(), "a release for schools tells no parent")
 
-	release := f.released(t, token, document.ID, map[string]any{"audience": "parents", "school_id": f.office.schools[0]})
+	release := f.released(t, token, int64(document.ID), map[string]any{"audience": "parents", "school_id": f.office.schools[0]})
 	queued := pushes()
 	require.Len(t, queued, 1)
 	assert.Equal(t, fmt.Sprintf("traeger-document-release:%d", release.ID), queued[0].IdempotencyKey)
 	assert.Equal(t, "traeger_document_release", queued[0].RelatedType)
-	assert.Equal(t, release.ID, queued[0].RelatedID)
+	assert.Equal(t, int64(release.ID), queued[0].RelatedID)
 	assert.Nil(t, queued[0].TenantID)
 	var payload organizationtenancy.TraegerDocumentReleaseNotice
 	require.NoError(t, json.Unmarshal(queued[0].Payload, &payload))
-	assert.Equal(t, organizationtenancy.TraegerDocumentReleaseNotice{OrganizationID: f.office.organization, ReleaseID: release.ID, DocumentID: document.ID}, payload)
+	assert.Equal(t, organizationtenancy.TraegerDocumentReleaseNotice{OrganizationID: f.office.organization, ReleaseID: int64(release.ID), DocumentID: int64(document.ID)}, payload)
 
-	rec := f.release(t, token, document.ID, map[string]any{"audience": "parents", "school_id": f.office.schools[0]})
+	rec := f.release(t, token, int64(document.ID), map[string]any{"audience": "parents", "school_id": f.office.schools[0]})
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	assert.Len(t, pushes(), 1, "a repeated release is refused and pushes nothing")
 
 	rec = traegerJSON(t, f.router, token, http.MethodDelete, fmt.Sprintf("/traeger/documents/%d/releases/%d", document.ID, release.ID), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	again := f.released(t, token, document.ID, map[string]any{"audience": "parents", "school_id": f.office.schools[0]})
+	again := f.released(t, token, int64(document.ID), map[string]any{"audience": "parents", "school_id": f.office.schools[0]})
 	queued = pushes()
 	require.Len(t, queued, 2, "a release after the revocation is a new event")
-	assert.Equal(t, again.ID, queued[1].RelatedID)
+	assert.Equal(t, int64(again.ID), queued[1].RelatedID)
 }
 
 // TestDocumentPushChecksFindNothingOfAnotherTraegerBeneathRLS pins the
@@ -165,7 +166,7 @@ func TestDocumentPushChecksFindNothingOfAnotherTraegerBeneathRLS(t *testing.T) {
 	t.Parallel()
 	f := newTraegerDocumentsFixtureOn(t, testpkg.SetupTestDB(t))
 	document := f.uploaded(t, f.office.token, "Elternbrief")
-	release := f.released(t, f.office.token, document.ID, map[string]any{"audience": "parents"})
+	release := f.released(t, f.office.token, int64(document.ID), map[string]any{"audience": "parents"})
 	other := f.newOffice(t, "Träger Fremd Push unter RLS", identityaccess.TraegerRoleDocuments)
 	testpkg.OwnTraegerCareContracts(t, f.db, f.office.organization)
 	testpkg.OwnTraegerCareContracts(t, f.db, other.organization)
@@ -183,10 +184,10 @@ func TestDocumentPushChecksFindNothingOfAnotherTraegerBeneathRLS(t *testing.T) {
 			// Träger filters keep A's rows out.
 			require.NoError(t, testpkg.WithoutRequestRole(txCtx))
 			var err error
-			if _, releaseFound, err = documents.ActiveParentRelease(txCtx, organization, release.ID); err != nil {
+			if _, releaseFound, err = documents.ActiveParentRelease(txCtx, organization, int64(release.ID)); err != nil {
 				return err
 			}
-			if isNew, err = documents.ReleaseIsNewForParent(txCtx, organization, release.ID, parent); err != nil {
+			if isNew, err = documents.ReleaseIsNewForParent(txCtx, organization, int64(release.ID), parent); err != nil {
 				return err
 			}
 			_, contractFound, err = contracts.ContractNoticeTarget(txCtx, organization, contract, chain.Email)

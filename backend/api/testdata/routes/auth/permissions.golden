@@ -1,5 +1,1 @@
-DELETE /auth/permissions/{id}/
 GET /auth/permissions/
-GET /auth/permissions/{id}/
-POST /auth/permissions/
-PUT /auth/permissions/{id}/

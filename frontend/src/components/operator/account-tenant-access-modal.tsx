@@ -23,6 +23,7 @@ import {
   useToast,
 } from "~/contexts/ToastContext";
 import { isAssignableStaffRole } from "~/lib/auth-helpers";
+import { isChangedSinceRead } from "~/lib/api-error";
 import type { RefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
 import { isLehrkraftRole, systemRoleLabel } from "~/lib/role-labels";
@@ -35,7 +36,7 @@ import { changeHistoryConcept } from "~/lib/concepts/changeHistory";
 import { permissionsConcept } from "~/lib/concepts/permissions";
 import { schoolsConcept } from "~/lib/concepts/schools";
 import { Loading } from "~/components/ui/loading";
-import { useFreshSWR, useSWRAuth } from "~/lib/swr";
+import { useOpeningRead, useSWRAuth } from "~/lib/swr";
 import { operatorKeys } from "~/lib/swr/operator-keys";
 import { operatorProvisioningKeys } from "~/lib/swr/portal-keys";
 import { InsetPanel } from "~/components/ui/inset-panel";
@@ -101,7 +102,8 @@ function statusTone(status: AccountTenantAccess["status"]) {
 function statusLabel(status: AccountTenantAccess["status"]): string {
   if (status === "active") return "Aktiv";
   if (status === "pending") return "Ausstehend";
-  return "Kein Zugang";
+  if (status === "inactive") return "Kein Zugang";
+  return "–";
 }
 
 function accessRevocationBlocked(entry: AccountTenantAccess): boolean {
@@ -161,11 +163,13 @@ export function AccountTenantAccessModal({
   );
 
   const reading = isOpen && accountId !== "";
-  // The access list is what every grant, role change and revoke edits: each
-  // opening reads it anew and shows nothing of an earlier one.
-  const accessRead = useFreshSWR(
+  // The backend logs every read of the access list (operator read audit), so
+  // each opening reads it anew (ADR 0311). A role change sends the entry's
+  // version; roles changed since are refused, and the list is read again.
+  const accessRead = useOpeningRead(
     reading ? operatorKeys.accountTenantAccess(accountId) : null,
     () => accountTenantAccessService.list(accountId),
+    { showCached: false },
   );
   const schoolsRead = useSWRAuth(
     reading ? operatorProvisioningKeys.schoolSummaries() : null,
@@ -389,14 +393,25 @@ export function AccountTenantAccessModal({
           accountId,
           entry.tenantId,
           roleId,
+          entry.version,
         ),
       `Rolle an ${entry.schoolName} wurde geändert.`,
       "school_access_role_change_failed",
-      (error) =>
+      (error) => {
+        if (isChangedSinceRead(error)) {
+          // Die Rollen an der Schule haben sich geändert: Die Liste zeigt den
+          // gespeicherten Stand, ein erneutes Senden würde abgelehnt.
+          void showRoleChangeError(error, {
+            object: `die Rolle an ${entry.schoolName}`,
+          });
+          void accessRead.mutate();
+          return;
+        }
         void showRoleChangeError(error, {
           object: `die Rolle an ${entry.schoolName}`,
           retry: () => void handleRoleChange(entry, roleId),
-        }),
+        });
+      },
     );
   }
 

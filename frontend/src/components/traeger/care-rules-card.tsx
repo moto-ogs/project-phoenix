@@ -94,10 +94,19 @@ function RuleDetails({
     ].join(" · "),
   ];
   if (rule.kind === "sibling") {
+    // The rule's own schools always count (#7863); a stored choice may
+    // still name them.
+    const alsoCounted = rule.countSchoolIds.filter(
+      (id) => !rule.schoolIds.includes(id),
+    );
     lines.push(
-      `Ab dem ${rule.siblingFromChild ?? 2}. Kind · ${
-        rule.countSchoolIds.length > 0
-          ? `Geschwister zählen auch an: ${names(rule.countSchoolIds, data)}`
+      `${
+        rule.siblingAllChildren
+          ? `Alle Kinder ab ${rule.siblingFromChild ?? 2} Kindern in der Familie`
+          : `Ab dem ${rule.siblingFromChild ?? 2}. Kind`
+      } · ${
+        alsoCounted.length > 0
+          ? `Geschwister zählen auch an: ${names(alsoCounted, data)}`
           : "Geschwister zählen nur an diesen Schulen"
       }${rule.countsFamilyChildren ? " · Geschwister ohne Vertrag zählen mit" : ""}`,
     );

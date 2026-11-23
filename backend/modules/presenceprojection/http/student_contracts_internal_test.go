@@ -1,13 +1,18 @@
 package presenceprojectionhttp
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"regexp"
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // The registration lists query parameters by hand, because reflection cannot
@@ -35,4 +40,24 @@ func TestStudentListContractNamesEveryQueryParameterTheHandlerReads(t *testing.T
 	sort.Strings(want)
 	sort.Strings(registered)
 	assert.Equal(t, want, registered)
+}
+
+// The child list answers every row up to the cap when the caller sends no
+// usable page size, and never more than the cap (#7563).
+func TestStudentListPageSizeDefaultsToAndStopsAtTheCap(t *testing.T) {
+	t.Parallel()
+	for query, want := range map[string]int{
+		"":                 studentListMaxPageSize,
+		"?page_size=abc":   studentListMaxPageSize,
+		"?page_size=0":     studentListMaxPageSize,
+		"?page_size=-3":    studentListMaxPageSize,
+		"?page_size=200":   200,
+		"?page_size=1000":  studentListMaxPageSize,
+		"?page_size=5000":  studentListMaxPageSize,
+		"?page_size=10000": studentListMaxPageSize,
+	} {
+		request := httptest.NewRequest(http.MethodGet, "/"+query, nil)
+		params := parseStudentListParams(request, calendar.NewDate(2026, time.September, 9))
+		assert.Equalf(t, want, params.pageSize, "query %q", query)
+	}
 }

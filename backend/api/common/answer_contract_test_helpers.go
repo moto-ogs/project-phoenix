@@ -9,12 +9,14 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"sync"
 
 	"github.com/go-chi/chi/v5"
 
 	"github.com/moto-ogs/project-phoenix/api/common/contractmodel"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // Every test binary holds the success answers its handlers write against
@@ -27,7 +29,10 @@ import (
 // that end in this pattern and answer with this Go type, so a handler that
 // writes a different type than it registered shows only in a whole-router
 // test.
-func init() { answerObserver = observeAnswerContract }
+func init() {
+	answerObserver = observeAnswerContract
+	refusalObserver = observeRefusal
+}
 
 // answersFileEnv names a file that collects the key of every registered
 // route a test unambiguously identified and answered, one per line, to
@@ -73,6 +78,32 @@ func observeAnswerContract(r *http.Request, status int, data any, envelope any) 
 	return loadAnswerContract().observe(r, status, data, envelope, recordAnswered)
 }
 
+func observeRefusal(r *http.Request) {
+	loadAnswerContract().observeRefusal(r, recordAnswered)
+}
+
+// RefusedAnswerKey is the line the answers file holds for a refusal of the
+// route key: it answers a route that only refuses (RouteContract.Refuses),
+// no other.
+func RefusedAnswerKey(key string) string { return "refused " + key }
+
+// observeRefusal records a refusal of a route a test identified by its full
+// pattern. A route-sized router cannot tell which route refused: an error
+// carries no type to narrow the candidates.
+func (loaded *answerContract) observeRefusal(r *http.Request, record func(string)) {
+	routeContext := chi.RouteContext(r.Context())
+	if routeContext == nil {
+		return
+	}
+	pattern := strings.TrimSuffix(routeContext.RoutePattern(), "/")
+	for _, route := range loaded.doc.Routes {
+		if route.Method == r.Method && strings.TrimSuffix(route.Pattern, "/") == pattern {
+			record(RefusedAnswerKey(route.Key()))
+			return
+		}
+	}
+}
+
 func (loaded *answerContract) observe(r *http.Request, status int, data any, envelope any, record func(string)) error {
 	routeContext := chi.RouteContext(r.Context())
 	if len(loaded.byKey) == 0 || routeContext == nil || status >= http.StatusMultipleChoices {
@@ -80,17 +111,21 @@ func (loaded *answerContract) observe(r *http.Request, status int, data any, env
 	}
 	pattern := routeContext.RoutePattern()
 	routes, whole := loaded.candidates(r.Method, pattern, data)
+	routes, envelope = plainCandidates(routes, envelope)
 	if len(routes) == 0 {
 		return nil
 	}
 	var body []byte
 	if envelope != nil {
 		var err error
-		if body, err = json.Marshal(envelope); err != nil {
+		if body, err = wire.Marshal(envelope); err != nil {
 			return nil // Respond reports what does not render.
 		}
 	}
 	var reports []string
+	if err := untypedBodyError(r, routes, whole); err != nil {
+		return err
+	}
 	for _, route := range routes {
 		violations := loaded.doc.Violations(route, contractmodel.Answer{Status: status, Body: body, Variant: variantOf(r, route)})
 		if len(violations) == 0 {
@@ -111,6 +146,40 @@ func (loaded *answerContract) observe(r *http.Request, status int, data any, env
 		scope = "the whole router"
 	}
 	return fmt.Errorf("the answer of %s %s (%s) leaves the contract in api/contract/contract.json; the BFF would answer 502. Fix the handler, or the registration and run gencontract.\n%s", r.Method, pattern, scope, strings.Join(reports, "\n"))
+}
+
+// plainCandidates keeps the routes an answer of RenderJSON may belong to:
+// it writes many answers outside the contract, and only a route registered
+// as Plain reads one as its data (#7808). The body to check is the value
+// itself.
+func plainCandidates(routes []contractmodel.Route, envelope any) ([]contractmodel.Route, any) {
+	plain, isPlain := envelope.(PlainAnswer)
+	if !isPlain {
+		return routes, envelope
+	}
+	return slices.DeleteFunc(routes, func(route contractmodel.Route) bool { return !route.Plain }), plain.Value
+}
+
+// untypedBodyError refuses a handler that read a body its route's contract
+// does not type. A route-sized router names the route only when one
+// registered route fits; then its body is held to the contract as well.
+func untypedBodyError(r *http.Request, routes []contractmodel.Route, whole bool) error {
+	if (!whole && len(routes) != 1) || !readsAnUntypedBody(r, routes[0]) {
+		return nil
+	}
+	return fmt.Errorf("%s read a request body, but its contract registers no Request type, so no typed client can send it. Name the body type in the route's common.RouteContract and run gencontract", routes[0].Key())
+}
+
+// readsAnUntypedBody tells whether the handler read a body the route's
+// contract does not type (#7808). A body the handler left unread is a test
+// sending more than the route takes, not a gap of the contract.
+func readsAnUntypedBody(r *http.Request, route contractmodel.Route) bool {
+	if route.Request != nil || route.Multipart || r.ContentLength <= 0 || r.Body == nil {
+		return false
+	}
+	var next [1]byte
+	n, _ := r.Body.Read(next[:])
+	return n == 0
 }
 
 // candidates are the registered routes this answer may belong to: the one

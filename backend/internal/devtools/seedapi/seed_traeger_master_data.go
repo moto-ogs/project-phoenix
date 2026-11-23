@@ -9,6 +9,9 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"maps"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // seedTraegerMasterDataStep gives the demo Träger its branding (#4653, ADR
@@ -133,33 +136,59 @@ var seedTraegerLetterTemplate = map[string]any{
 }
 
 // seedTraegerLetterTemplateOnce saves the template while the Träger still
-// writes with the standard one. Several demo schools seed the same Träger
-// at once: a save of the same text is refused as unchanged and kept.
+// writes with the standard one.
 func seedTraegerLetterTemplateOnce(client *Client, auth AuthRef) error {
-	raw, err := client.GetWithAuth(auth, "/traeger/master-data/document-templates/bestaetigung")
+	return seedTraegerTemplateOnce(client, auth, "bestaetigung", seedTraegerLetterTemplate, "the confirmation letter")
+}
+
+// seedTraegerTemplateOnce saves the template of a kind while the Träger
+// still writes with the standard one, over the version it read (ADR 0311).
+// Several demo schools seed the same Träger at once: a save of the same
+// text is refused as unchanged and keeps that template; a save after another
+// school's is refused as changed since the read, and the seeder reads again
+// once, which then finds the other school's template and keeps it.
+func seedTraegerTemplateOnce(client *Client, auth AuthRef, kind string, template map[string]any, what string) error {
+	for attempt := 0; ; attempt++ {
+		err := seedTraegerTemplateAttempt(client, auth, kind, template, what)
+		var refused *APIError
+		if errors.As(err, &refused) && refused.Code == readstate.ChangedCode && attempt == 0 {
+			continue
+		}
+		return err
+	}
+}
+
+// seedTraegerTemplateAttempt reads the template of a kind and saves it over
+// the version it read while the Träger still writes with the standard one.
+func seedTraegerTemplateAttempt(client *Client, auth AuthRef, kind string, template map[string]any, what string) error {
+	path := "/traeger/master-data/document-templates/" + kind
+	raw, err := client.GetWithAuth(auth, path)
 	if err != nil {
-		return fmt.Errorf("read the Träger template of the confirmation letter: %w", err)
+		return fmt.Errorf("read the Träger template of %s: %w", what, err)
 	}
 	var envelope struct {
 		Data struct {
+			Version string `json:"version"`
 			Current struct {
 				Standard bool `json:"standard"`
 			} `json:"current"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil {
-		return fmt.Errorf("read the Träger template of the confirmation letter: %w", err)
+		return fmt.Errorf("read the Träger template of %s: %w", what, err)
 	}
 	if !envelope.Data.Current.Standard {
 		return nil
 	}
-	_, err = client.PostWithAuth(auth, "/traeger/master-data/document-templates/bestaetigung/versions", seedTraegerLetterTemplate)
+	body := maps.Clone(template)
+	body["expected_version"] = envelope.Data.Version
+	_, err = client.PostWithAuth(auth, path+"/versions", body)
 	var refused *APIError
 	if errors.As(err, &refused) && refused.Code == seedTraegerTemplateUnchanged {
 		return nil
 	}
 	if err != nil {
-		return fmt.Errorf("save the Träger template of the confirmation letter: %w", err)
+		return fmt.Errorf("save the Träger template of %s: %w", what, err)
 	}
 	return nil
 }

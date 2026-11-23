@@ -41,28 +41,3 @@ export async function apiPost<T, B = unknown>(
     })) ?? ({} as T)
   );
 }
-
-export async function apiPut<T, B = unknown>(
-  endpoint: string,
-  token: string,
-  body?: B,
-): Promise<T> {
-  return (await backendJson<T>("PUT", endpoint, token, body)) ?? ({} as T);
-}
-
-export async function apiPatch<T, B = unknown>(
-  endpoint: string,
-  token: string,
-  body?: B,
-): Promise<T> {
-  return (await backendJson<T>("PATCH", endpoint, token, body)) ?? ({} as T);
-}
-
-/** Resolves undefined for the backend's 204. */
-export async function apiDelete<T, B = unknown>(
-  endpoint: string,
-  token: string,
-  body?: B,
-): Promise<T | void> {
-  return backendJson<T>("DELETE", endpoint, token, body);
-}

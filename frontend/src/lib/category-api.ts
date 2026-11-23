@@ -1,34 +1,15 @@
-import { apiErrorFromResponse, type ApiError } from "./api-error";
 // API client for tenant-defined activity categories (#2131).
 //
 // Admin CRUD goes through /api/activities/categories (backend
 // activities:manage_categories). Archiving is a DELETE — the backend never
 // removes a category, so existing Termine and Aktivitäten keep theirs.
 
-import { sessionFetch } from "./session-cache";
-import type { ActivityCategory } from "./activity-helpers";
-
-interface CategoryPayload {
-  name: string;
-  description: string;
-  /** Hex color, e.g. "#83CD2D". Empty string clears it. */
-  color: string;
-}
-
-function readError(response: Response, fallback: string): Promise<ApiError> {
-  return apiErrorFromResponse(response, fallback);
-}
-
-async function readOne(
-  response: Response,
-  fallback: string,
-): Promise<ActivityCategory> {
-  if (!response.ok) {
-    throw await readError(response, fallback);
-  }
-  const json = (await response.json()) as { data: ActivityCategory };
-  return json.data;
-}
+import { bffJson } from "./bff-fetch";
+import type { ActivityCategoryRequest } from "./contract/activities.generated";
+import {
+  mapActivityCategoryResponse,
+  type ActivityCategory,
+} from "./activity-helpers";
 
 class CategoryService {
   /**
@@ -38,61 +19,69 @@ class CategoryService {
    * plain list skips the extra usage aggregate server-side.
    */
   async getManagedCategories(): Promise<ActivityCategory[]> {
-    const response = await sessionFetch(
-      "/api/activities/categories?include_archived=true&include_system=true&with_usage=true",
+    const categories = await bffJson(
+      "tenant",
+      "GET /api/activities/categories",
+      {
+        query: {
+          include_archived: true,
+          include_system: true,
+          with_usage: true,
+        },
+        errorMessage: "Kategorien konnten nicht geladen werden",
+      },
     );
-    if (!response.ok) {
-      throw await readError(
-        response,
-        "Kategorien konnten nicht geladen werden",
-      );
-    }
-    const json = (await response.json()) as {
-      data: ActivityCategory[] | null;
-    };
-    return json.data ?? [];
+    return categories.map(mapActivityCategoryResponse);
   }
 
-  async createCategory(payload: CategoryPayload): Promise<ActivityCategory> {
-    const response = await sessionFetch("/api/activities/categories", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    return readOne(response, "Kategorie konnte nicht angelegt werden");
+  async createCategory(
+    payload: ActivityCategoryRequest,
+  ): Promise<ActivityCategory> {
+    const category = await bffJson(
+      "tenant",
+      "POST /api/activities/categories",
+      {
+        body: payload,
+        errorMessage: "Kategorie konnte nicht angelegt werden",
+      },
+    );
+    return mapActivityCategoryResponse(category);
   }
 
   async updateCategory(
     id: string,
-    payload: CategoryPayload,
+    payload: ActivityCategoryRequest,
   ): Promise<ActivityCategory> {
-    const response = await sessionFetch(`/api/activities/categories/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    return readOne(response, "Kategorie konnte nicht gespeichert werden");
+    const category = await bffJson(
+      "tenant",
+      "PUT /api/activities/categories/{categoryId}",
+      {
+        params: { categoryId: id },
+        body: payload,
+        errorMessage: "Kategorie konnte nicht gespeichert werden",
+      },
+    );
+    return mapActivityCategoryResponse(category);
   }
 
   /** Archives the category. Nothing is deleted server-side. */
   async archiveCategory(id: string): Promise<void> {
-    const response = await sessionFetch(`/api/activities/categories/${id}`, {
-      method: "DELETE",
+    await bffJson("tenant", "DELETE /api/activities/categories/{categoryId}", {
+      params: { categoryId: id },
+      errorMessage: "Kategorie konnte nicht archiviert werden",
     });
-    if (!response.ok) {
-      throw await readError(
-        response,
-        "Kategorie konnte nicht archiviert werden",
-      );
-    }
   }
 
   async restoreCategory(id: string): Promise<ActivityCategory> {
-    const response = await sessionFetch(
-      `/api/activities/categories/${id}/restore`,
-      { method: "POST" },
+    const category = await bffJson(
+      "tenant",
+      "POST /api/activities/categories/{categoryId}/restore",
+      {
+        params: { categoryId: id },
+        errorMessage: "Kategorie konnte nicht wiederhergestellt werden",
+      },
     );
-    return readOne(response, "Kategorie konnte nicht wiederhergestellt werden");
+    return mapActivityCategoryResponse(category);
   }
 }
 

@@ -9,6 +9,7 @@ import (
 	absencerecords "github.com/moto-ogs/project-phoenix/modules/careplan/absencerecords"
 	studentpresence "github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Constants for date formats
@@ -29,17 +30,17 @@ type CreateStudentStatusDaysRequest struct {
 const maxStudentStatusDayCreateDays = 366
 
 type BulkCreateStudentStatusDaysRequest struct {
-	StudentIDs []int64 `json:"student_ids"`
-	Status     string  `json:"status"`
-	From       string  `json:"from"`
-	To         string  `json:"to"`
-	Reason     string  `json:"reason,omitempty"`
+	StudentIDs []ident.ID `json:"student_ids"`
+	Status     string     `json:"status"`
+	From       string     `json:"from"`
+	To         string     `json:"to"`
+	Reason     string     `json:"reason,omitempty"`
 }
 
 // PrivacyConsentResponse represents a privacy consent response
 type PrivacyConsentResponse struct {
-	ID                int64                  `json:"id"`
-	StudentID         int64                  `json:"student_id"`
+	ID                ident.ID               `json:"id"`
+	StudentID         ident.ID               `json:"student_id"`
 	PolicyVersion     string                 `json:"policy_version"`
 	Accepted          bool                   `json:"accepted"`
 	AcceptedAt        *time.Time             `json:"accepted_at,omitempty"`
@@ -47,9 +48,12 @@ type PrivacyConsentResponse struct {
 	DurationDays      *int                   `json:"duration_days,omitempty"`
 	RenewalRequired   bool                   `json:"renewal_required"`
 	DataRetentionDays int                    `json:"data_retention_days"`
-	Details           map[string]interface{} `json:"details,omitempty"`
+	Details           map[string]interface{} `json:"details,omitempty" contract_json:"Consent metadata uses keys and value types specific to the consent type"`
 	CreatedAt         time.Time              `json:"created_at"`
 	UpdatedAt         time.Time              `json:"updated_at"`
+	// Version is the state of the child's recorded consents, also when none
+	// is recorded yet; a save sends it back as expected_version (ADR 0311).
+	Version string `json:"version"`
 }
 
 // PrivacyConsentDefaultsResponse is the consent a new child starts from.
@@ -65,7 +69,9 @@ type PrivacyConsentRequest struct {
 	Accepted          bool                   `json:"accepted"`
 	DurationDays      *int                   `json:"duration_days,omitempty"`
 	DataRetentionDays int                    `json:"data_retention_days"`
-	Details           map[string]interface{} `json:"details,omitempty"`
+	Details           map[string]interface{} `json:"details,omitempty" contract_json:"Consent metadata uses keys and value types specific to the consent type"`
+	// ExpectedVersion is the version of the consent read the form shows.
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 func (req *CreateStudentStatusDaysRequest) Bind(_ *http.Request) error {
@@ -137,10 +143,10 @@ func (req *BulkCreateStudentStatusDaysRequest) Bind(_ *http.Request) error {
 		if id <= 0 {
 			return errors.New("student_ids must be positive")
 		}
-		if _, ok := seen[id]; ok {
+		if _, ok := seen[id.Int64()]; ok {
 			return errors.New("duplicate student_ids are not allowed")
 		}
-		seen[id] = struct{}{}
+		seen[id.Int64()] = struct{}{}
 	}
 	req.From = strings.TrimSpace(req.From)
 	req.To = strings.TrimSpace(req.To)

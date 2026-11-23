@@ -5,6 +5,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -45,7 +46,7 @@ func TestUpdateCustomAbsenceTypeContract(t *testing.T) {
 
 	staff := testpkg.CreateTestStaff(t, db, "Type", "Usage")
 	absence := testAbsence(staff.ID, workforce.AbsenceTypeOther, workforce.AbsenceStatusApproved, calendar.TodayDate())
-	absence.AbsenceTypeID = &created.ID
+	absence.AbsenceTypeID = (*ident.ID)(&created.ID)
 	_, err = capability.CreateStaffAbsence(ctx, absence)
 	require.NoError(t, err)
 	newName := "Changed history"

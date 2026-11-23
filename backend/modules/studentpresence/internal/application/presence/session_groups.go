@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -62,10 +63,10 @@ func (s *service) CreateActiveGroup(ctx context.Context, group *ports.ActiveGrou
 func (s *service) createActiveGroupLocked(ctx context.Context, group *ports.ActiveGroup) error {
 	// Check for room conflicts if room is assigned
 	if group.RoomID > 0 {
-		if err := s.SchoolPresence.LockRoomSessionWrites(ctx, group.RoomID); err != nil {
+		if err := s.SchoolPresence.LockRoomSessionWrites(ctx, group.RoomID.Int64()); err != nil {
 			return &ActiveError{Op: "CreateActiveGroup", Err: ErrDatabaseOperation}
 		}
-		hasConflict, _, err := s.GroupRepo.CheckRoomConflict(ctx, group.RoomID, 0)
+		hasConflict, _, err := s.GroupRepo.CheckRoomConflict(ctx, group.RoomID.Int64(), 0)
 		if err != nil {
 			return &ActiveError{Op: "CreateActiveGroup", Err: fmt.Errorf("check room conflict: %w", err)}
 		}
@@ -78,75 +79,9 @@ func (s *service) createActiveGroupLocked(ctx context.Context, group *ports.Acti
 	if err := s.GroupRepo.Create(ctx, group); err != nil {
 		return &ActiveError{Op: "CreateActiveGroup", Err: fmt.Errorf("create failed: %w", err)}
 	}
-	s.queueSupervisionRefresh(ctx, group.ID, activeSupervisionReasonActivityStarted)
+	s.queueSupervisionRefresh(ctx, group.ID.Int64(), activeSupervisionReasonActivityStarted)
 
 	return nil
-}
-
-func (s *service) UpdateActiveGroup(ctx context.Context, group *ports.ActiveGroup) error {
-	if group == nil || group.Validate() != nil {
-		return &ActiveError{Op: "UpdateActiveGroup", Err: ErrInvalidData}
-	}
-	return s.runInSessionTx(ctx, func(txCtx context.Context) error {
-		return s.updateActiveGroupLocked(txCtx, group)
-	})
-}
-
-func (s *service) updateActiveGroupLocked(ctx context.Context, group *ports.ActiveGroup) error {
-	if group.RoomID > 0 {
-		if err := s.SchoolPresence.LockRoomSessionWrites(ctx, group.RoomID); err != nil {
-			return &ActiveError{Op: "UpdateActiveGroup", Err: ErrDatabaseOperation}
-		}
-	}
-	existing, err := s.GroupRepo.FindByIDForUpdate(ctx, group.ID)
-	if err != nil {
-		if IsNoRows(err) {
-			return &ActiveError{Op: "UpdateActiveGroup", Err: ErrActiveGroupNotFound}
-		}
-		return &ActiveError{Op: "UpdateActiveGroup", Err: ErrDatabaseOperation}
-	}
-	if existing == nil {
-		return &ActiveError{Op: "UpdateActiveGroup", Err: ErrActiveGroupNotFound}
-	}
-
-	// Check for room conflicts if room is assigned (exclude current group)
-	if group.RoomID > 0 {
-		if err := s.checkActiveGroupRoomChange(ctx, existing, group); err != nil {
-			return err
-		}
-	}
-	// Switching the running session to another activity puts all its
-	// children into that activity at once (#3632).
-	if err := s.ensureSessionFitsNewActivity(ctx, existing, group); err != nil {
-		return err
-	}
-
-	if err := s.GroupRepo.Update(ctx, group); err != nil {
-		return &ActiveError{Op: "UpdateActiveGroup", Err: fmt.Errorf("update failed: %w", err)}
-	}
-	s.queueSupervisionRefresh(ctx, group.ID, activeSupervisionReasonActivityStarted)
-
-	return nil
-}
-
-// checkActiveGroupRoomChange rejects a room another session occupies and,
-// when the session changes rooms, a room without space for its children.
-func (s *service) checkActiveGroupRoomChange(ctx context.Context, existing, group *ports.ActiveGroup) error {
-	hasConflict, _, err := s.GroupRepo.CheckRoomConflict(ctx, group.RoomID, group.ID)
-	if err != nil {
-		return &ActiveError{Op: "UpdateActiveGroup", Err: fmt.Errorf("check room conflict: %w", err)}
-	}
-	if hasConflict {
-		return &ActiveError{Op: "UpdateActiveGroup", Err: ErrRoomConflict}
-	}
-	if existing.RoomID == group.RoomID {
-		return nil
-	}
-	incoming, err := s.SchoolPresence.CountOpenVisitsInGroup(ctx, group.ID)
-	if err != nil {
-		return &ActiveError{Op: "UpdateActiveGroup", Err: ErrDatabaseOperation}
-	}
-	return s.ensureRoomCapacity(ctx, group.RoomID, incoming)
 }
 
 func (s *service) DeleteActiveGroup(ctx context.Context, id int64) error {
@@ -213,7 +148,7 @@ func (s *service) EnsureOpenRoomSession(ctx context.Context, roomID, activityID 
 			return nil
 		}
 		now := s.now()
-		created := &ports.ActiveGroup{StartTime: now, LastActivity: now, GroupID: &activityID, RoomID: roomID}
+		created := &ports.ActiveGroup{StartTime: now, LastActivity: now, GroupID: (*ident.ID)(&activityID), RoomID: ident.ID(roomID)}
 		created.SetTenantID(tenant.FromContext(txCtx))
 		if err := s.GroupRepo.Create(txCtx, created); err != nil {
 			return &ActiveError{Op: op, Err: fmt.Errorf("create room session: %w", err)}

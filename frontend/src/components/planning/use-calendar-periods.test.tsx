@@ -44,7 +44,6 @@ import type { Phase } from "~/lib/enrollment-phase-api";
 
 const period: CalendarPeriod = {
   id: "5",
-  tenantId: "1",
   name: "Schuljahr 2026/2027",
   periodType: "school_year",
   startDate: "2026-08-01",
@@ -59,7 +58,7 @@ const period: CalendarPeriod = {
 const phase = {
   id: "7",
   name: "Demo Anmeldung",
-  calendar_period_id: null,
+  calendar_period_id: undefined,
   is_active: true,
 } as Phase;
 

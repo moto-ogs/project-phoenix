@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/portalauth"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // login signs a staff account in. The trusted-device cookie lets the MFA
@@ -45,7 +46,7 @@ func (rs *Resource) register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	roleID, callerTenantID, shouldReturn := rs.authorizeRoleAssignment(w, r, req.RoleID)
+	roleID, callerTenantID, shouldReturn := rs.authorizeRoleAssignment(w, r, (*int64)(req.RoleID))
 	if shouldReturn {
 		return
 	}
@@ -100,7 +101,7 @@ func (rs *Resource) linkToTenant(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Require admin auth and resolve role + tenant from JWT
-	roleID, callerTenantID, shouldReturn := rs.authorizeRoleAssignment(w, r, req.RoleID)
+	roleID, callerTenantID, shouldReturn := rs.authorizeRoleAssignment(w, r, (*int64)(req.RoleID))
 	if shouldReturn {
 		return
 	}
@@ -144,10 +145,10 @@ func (rs *Resource) linkToTenant(w http.ResponseWriter, r *http.Request) {
 
 	// Return ONLY id, email and what was provisioned at THIS school — never leak
 	// roles, username, or active status from other tenants
-	common.Respond(w, r, http.StatusOK, map[string]any{
-		"id":              provisioned.Account.ID,
-		"email":           provisioned.Account.Email,
-		"school_identity": buildSchoolIdentityResponse(provisioned.Identity),
+	common.Respond(w, r, http.StatusOK, LinkedAccountResponse{
+		ID:             ident.ID(provisioned.Account.ID),
+		Email:          provisioned.Account.Email,
+		SchoolIdentity: buildSchoolIdentityResponse(provisioned.Identity),
 	}, "Account linked to tenant successfully")
 }
 
@@ -254,7 +255,7 @@ func (rs *Resource) handleRegistrationError(w http.ResponseWriter, r *http.Reque
 // see yet, so the role list stays empty, as it was.
 func buildAccountResponse(account identityaccess.RegisteredAccount) *AccountResponse {
 	return &AccountResponse{
-		ID:       account.ID,
+		ID:       ident.ID(account.ID),
 		Email:    account.Email,
 		Username: account.Username,
 		Active:   account.Active,
@@ -269,9 +270,9 @@ func buildSchoolIdentityResponse(identity *identityaccess.SchoolIdentity) *Schoo
 		return nil
 	}
 	return &SchoolIdentityResponse{
-		PersonID:  identity.PersonID,
-		StaffID:   identity.StaffID,
-		TeacherID: identity.TeacherID,
+		PersonID:  ident.ID(identity.PersonID),
+		StaffID:   ident.ID(identity.StaffID),
+		TeacherID: ident.ID(identity.TeacherID),
 	}
 }
 
@@ -289,7 +290,7 @@ func (rs *Resource) refreshToken(w http.ResponseWriter, r *http.Request) {
 		portalauth.Render(w, r, err, portalauth.RenewalRules)
 		return
 	}
-	render.JSON(w, r, portalauth.TokenResponse{AccessToken: accessToken, RefreshToken: refreshToken})
+	common.RenderJSON(w, r, portalauth.TokenResponse{AccessToken: accessToken, RefreshToken: refreshToken})
 }
 
 func (rs *Resource) logout(w http.ResponseWriter, r *http.Request) {

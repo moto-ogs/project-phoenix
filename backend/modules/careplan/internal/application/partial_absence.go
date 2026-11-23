@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 type partialAbsenceService struct {
@@ -84,11 +85,11 @@ func (s *partialAbsenceService) createOrClaim(ctx context.Context, input carepla
 		return s.claimExisting(ctx, existing, input)
 	}
 	clock := calendar.NormalizeWallClock(input.FromTime)
-	staffID := input.StaffID
 	row := &careplan.PickupException{
 		TenantID: s.tx.TenantID(ctx), StudentID: input.StudentID, ExceptionDate: careplan.Date(input.Date),
 		PickupTime: &clock, ExcusedFrom: &clock, ExcusedReason: trimmedReason(input.Reason),
-		ExcusedCreatedBy: &staffID, ExcusedOwnsPickupTime: true, Source: careplan.ExceptionSourceStaff, CreatedBy: staffID,
+		ExcusedCreatedBy: optionalStaff(input.StaffID), ExcusedByTraeger: input.ByTraeger, ExcusedOwnsPickupTime: true,
+		Source: careplan.ExceptionSourceStaff, CreatedBy: input.StaffID, EnteredByTraeger: input.ByTraeger,
 	}
 	if err := s.pickups.Create(ctx, row); err != nil {
 		return nil, err
@@ -119,13 +120,12 @@ func (s *partialAbsenceService) claimExisting(ctx context.Context, row *careplan
 
 func setManualExcusal(row *careplan.PickupException, input careplan.PartialAbsenceInput) {
 	clock := calendar.NormalizeWallClock(input.FromTime)
-	staffID := input.StaffID
 	if row.ExcusedOwnsPickupTime {
 		row.PickupTime = &clock
 	}
 	row.ExcusedFrom = &clock
 	row.ExcusedReason = trimmedReason(input.Reason)
-	row.ExcusedCreatedBy = &staffID
+	row.ExcusedCreatedBy, row.ExcusedByTraeger = optionalStaff(input.StaffID), input.ByTraeger
 	row.ExcusedAuto = false
 	row.NormalizeWallClockTimes()
 }
@@ -141,6 +141,9 @@ func (s *partialAbsenceService) UpdatePartialAbsence(ctx context.Context, except
 		}
 		row, err := s.findOwned(txCtx, exceptionID, input.StudentID)
 		if err != nil {
+			return err
+		}
+		if err := readstate.Check(input.ExpectedVersion, careplan.PartialAbsenceVersion(*row)); err != nil {
 			return err
 		}
 		if err := s.updatePartial(txCtx, row, input); err != nil {
@@ -230,7 +233,7 @@ func (s *partialAbsenceService) removeManual(ctx context.Context, row *careplan.
 	}
 	row.ExcusedFrom = nil
 	row.ExcusedReason = nil
-	row.ExcusedCreatedBy = nil
+	row.ExcusedCreatedBy, row.ExcusedByTraeger = nil, false
 	row.ExcusedOwnsPickupTime = false
 	row.NormalizeWallClockTimes()
 	if err := s.pickups.Update(ctx, row); err != nil {
@@ -280,7 +283,7 @@ func validatePartialAbsenceInput(input careplan.PartialAbsenceInput) error {
 	if input.FromTime.IsZero() {
 		return errors.New("from_time is required")
 	}
-	if input.StaffID <= 0 {
+	if input.StaffID <= 0 && !input.ByTraeger {
 		return errors.New("staff_id is required")
 	}
 	if len(strings.TrimSpace(input.Reason)) > 255 {

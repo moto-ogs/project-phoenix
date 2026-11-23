@@ -30,13 +30,13 @@ import { SectionCard } from "~/components/ui/section-card";
 import { useStepFocus } from "~/components/ui/use-step-focus";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
-import { ApiError, wireErrorCode } from "~/lib/api-error";
+import { ApiError, isChangedSinceRead, wireErrorCode } from "~/lib/api-error";
 import { billingConcept } from "~/lib/concepts/billing";
 import { formatDate } from "~/lib/date-helpers";
 import { downloadBlob } from "~/lib/file-download";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useInvalidateFamily, useFreshSWR } from "~/lib/swr";
+import { useInvalidateFamily, useOpeningRead } from "~/lib/swr";
 import { parentInboxKeys } from "~/lib/swr/parent-inbox-keys";
 import { createLogger } from "~/lib/logger";
 import {
@@ -89,10 +89,11 @@ export function ParentSepaMandateView({
   const cacheKey = parentInboxKeys.sepaMandate(organizationId, contractId);
   const guard = useRefusalGuard(cacheKey);
   const beginRead = useSWRRequestGuard();
-  const resource = useFreshSWR(
+  const resource = useOpeningRead(
     cacheKey,
     () => fetchSepaMandate(organizationId, contractId),
     {
+      showCached: false,
       onSuccess: guard.callbacks.onSuccess,
       onError: (error) => {
         if (isMandateRefusal(error)) guard.callbacks.onError(error);
@@ -198,6 +199,7 @@ export function ParentSepaMandateView({
             setView(confirmed);
             await afterRevoke.refresh();
           }}
+          onChangedSinceRead={() => mutate()}
         />
         {view.mandate.proof ? <MandateTextCard mandate={view.mandate} /> : null}
       </div>
@@ -235,12 +237,15 @@ function MandateCard({
   view,
   mandate,
   onRevoked,
+  onChangedSinceRead,
 }: Readonly<{
   contract: ContractKey;
   view: SepaMandateView;
   mandate: SepaMandate;
   /** Applies the confirmed revocation before reloading (#6652). */
   onRevoked: (confirmed: SepaMandateView) => Promise<void>;
+  /** Reads the mandate again: another one is in force now (ADR 0311). */
+  onChangedSinceRead: () => void;
 }>) {
   const t = useTranslations("parentSepaMandate");
   const locale = useLocale();
@@ -256,7 +261,9 @@ function MandateCard({
       ? t("givenInApp", { date: date(mandate.proof.confirmedAt) })
       : mandate.source === "import"
         ? t("givenImport")
-        : t("givenOffice");
+        : mandate.source === "office"
+          ? t("givenOffice")
+          : "–";
 
   const revoke = async () => {
     revokeError.clear();
@@ -266,6 +273,7 @@ function MandateCard({
       confirmed = await revokeSepaMandate(
         contract.organizationId,
         contract.contractId,
+        mandate.version,
       );
     } catch (err) {
       logger.error("parent_sepa_mandate_revoke_failed", {
@@ -274,6 +282,9 @@ function MandateCard({
       setConfirming(false);
       void revokeError.show(err, { object: t("errorObject") });
       setRevoking(false);
+      // Another member of the family gave a new mandate since this one was
+      // read: the card shows it, so nobody revokes a mandate unseen.
+      if (isChangedSinceRead(err)) onChangedSinceRead();
       return;
     }
     setRevoking(false);

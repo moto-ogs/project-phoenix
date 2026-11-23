@@ -1,8 +1,32 @@
 import "server-only";
-import { sendBackend } from "~/lib/backend-client.server";
+import { contractWrite } from "~/lib/contract/client.server";
+import {
+  routes,
+  type SessionClaimsResponse,
+} from "~/lib/contract/auth-session.generated";
 import type { ErrorCode } from "~/lib/error-codes.generated";
 import { decodeJwtPayload, type JwtPayload } from "./jwt-payload";
 import { acceptsScope, type ValidationPortal } from "./portals";
+
+/**
+ * The backend answers the claims' identifiers as strings (ADR 0300, #7808);
+ * the session keeps the access token's own claim shape, whose school,
+ * Träger and preview admin are numbers.
+ */
+function claimShape(
+  answer: SessionClaimsResponse & { id: string },
+): JwtPayload {
+  return {
+    ...answer,
+    tenant_id:
+      answer.tenant_id === undefined ? undefined : Number(answer.tenant_id),
+    org_id: answer.org_id === undefined ? undefined : Number(answer.org_id),
+    acting_admin_id:
+      answer.acting_admin_id === undefined
+        ? undefined
+        : Number(answer.acting_admin_id),
+  };
+}
 
 /** Only backend-verified claims may cross a client token-handoff boundary. */
 export async function validateSessionToken(
@@ -21,22 +45,21 @@ export async function validateSessionToken(
   )
     return null;
   try {
-    const response = await sendBackend("/auth/session/validate", accessToken, {
-      method: "POST",
-      json: { access_token: accessToken, refresh_token: refreshToken, portal },
-      timeout: "session",
-    });
-    if (!response.ok) return null;
-    const claims = (await response.json()) as JwtPayload;
+    const reply = await contractWrite(
+      routes["POST /auth/session/validate"],
+      { access_token: accessToken, refresh_token: refreshToken, portal },
+      { token: accessToken, timeout: "session" },
+    );
+    if (!reply.ok) return null;
+    const claims = reply.value;
     if (
-      !claims ||
       !claims.id ||
       typeof claims.exp !== "number" ||
       claims.exp * 1000 <= Date.now()
     )
       return null;
     if (!acceptsScope(portal, claims.scope)) return null;
-    return claims;
+    return claimShape({ ...claims, id: claims.id });
   } catch {
     return null;
   }
@@ -76,19 +99,15 @@ export async function sessionFamilyState(
     return "unknown";
   }
   try {
-    const response = await sendBackend("/auth/session/validate", accessToken, {
-      method: "POST",
-      json: { access_token: accessToken, portal },
-      timeout: "session",
-    });
-    if (response.ok) return "live";
-    if (response.status === 401) return "ended";
-    if (response.status === 403) {
-      const body = (await response.json().catch(() => null)) as {
-        code?: unknown;
-      } | null;
-      if (body?.code === moduleNotBookedCode) return "notBooked";
-    }
+    const reply = await contractWrite(
+      routes["POST /auth/session/validate"],
+      { access_token: accessToken, portal },
+      { token: accessToken, timeout: "session" },
+    );
+    if (reply.ok) return "live";
+    if (reply.error.status === 401) return "ended";
+    if (reply.error.status === 403 && reply.error.code === moduleNotBookedCode)
+      return "notBooked";
     return "unknown";
   } catch {
     return "unknown";

@@ -77,6 +77,17 @@ module.exports = {
       to: { path: "^src/server/" },
     },
     {
+      name: "backend-only-through-send-backend",
+      comment:
+        "Only sendBackend reads the backend URL, so every server call to the backend carries its bearer, client identity, timeout, log line and metric (#2353). oxlint backend-url/only-server-api-url closes reading API_URL from the environment (#7808).",
+      severity: "error",
+      from: {
+        path: SOURCE,
+        pathNot: `${TEST_OR_SUPPORT}|^src/lib/backend-client[.]server[.]ts$`,
+      },
+      to: { path: "^src/lib/server-api-url[.]ts$" },
+    },
+    {
       name: "server-not-to-client-layers",
       severity: "error",
       from: { path: "^src/server/", pathNot: TEST_OR_SUPPORT },

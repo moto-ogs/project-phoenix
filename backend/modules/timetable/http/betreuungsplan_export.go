@@ -17,6 +17,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/planexport"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -24,17 +25,17 @@ import (
 // routes speak the same shape. Dates are "YYYY-MM-DD"; the service widens
 // them to whole weeks.
 type betreuungsplanExportRequest struct {
-	From     string `json:"from"`
-	To       string `json:"to"`
+	From     string `json:"from" contract:"date"`
+	To       string `json:"to" contract:"date"`
 	Template string `json:"template"`
 	Variant  string `json:"variant"`
 	Format   string `json:"format"`
 	// GroupID, StaffID and RoomID carry the planner's group and person
 	// filter (#4766) and its room filter (#4768); omitted, the whole plan
 	// prints.
-	GroupID *common.JSONID `json:"group_id,omitempty"`
-	StaffID *common.JSONID `json:"staff_id,omitempty"`
-	RoomID  *common.JSONID `json:"room_id,omitempty"`
+	GroupID *ident.ID `json:"group_id,omitempty"`
+	StaffID *ident.ID `json:"staff_id,omitempty"`
+	RoomID  *ident.ID `json:"room_id,omitempty"`
 }
 
 // exportBetreuungsplan handles POST /api/timetable/betreuungsplan/export.
@@ -88,7 +89,7 @@ func (rs *Resource) exportBetreuungsplan(w http.ResponseWriter, r *http.Request)
 	_, _ = w.Write(file.Data)
 }
 
-func exportFilterID(id *common.JSONID) *int64 {
+func exportFilterID(id *ident.ID) *int64 {
 	if id == nil {
 		return nil
 	}

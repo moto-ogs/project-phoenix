@@ -9,6 +9,13 @@ import {
   useOptionalSupervision,
 } from "./supervision-context";
 
+import { pagedJson, plainFetch } from "~/test/mocks/plain-session-fetch";
+
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 // renderHook updates result.current without a DOM mutation, so waitFor only
 // rechecks on its interval. Poll the same assertions more promptly; keep
 // Testing Library's timeout and real timers.
@@ -32,13 +39,13 @@ function setOverviewScope(scope: "own" | "admins" | "all_staff") {
 
 // Mock fetch globally with URL-based routing
 const mockFetch = vi.fn();
-global.fetch = mockFetch;
+global.fetch = vi.fn(plainFetch(mockFetch));
 
 // Default mock responses for the API endpoints
 const defaultMockResponses = {
-  groups: { groups: [] },
+  groups: { data: [] },
   supervised: { data: [] },
-  openRooms: { data: [] },
+  openRooms: pagedJson([]),
   adminAll: { data: [] },
 };
 
@@ -50,7 +57,7 @@ function setupFetchMock(overrides?: {
   adminAll?: object | Error | { status: number };
 }) {
   mockFetch.mockImplementation((url: string) => {
-    if (url.includes("/api/groups/context")) {
+    if (url.includes("/api/students/ogs-group-navigation")) {
       const response = overrides?.groups ?? defaultMockResponses.groups;
       if (response instanceof Error) return Promise.reject(response);
       return Promise.resolve({
@@ -176,7 +183,7 @@ describe("SupervisionProvider", () => {
   it("should fetch groups and supervision on session token", async () => {
     setupFetchMock({
       groups: {
-        groups: [
+        data: [
           { id: 1, name: "Group A" },
           { id: 2, name: "Group B" },
         ],
@@ -254,7 +261,7 @@ describe("SupervisionProvider", () => {
 
     // Update mock for refresh call
     setupFetchMock({
-      groups: { groups: [{ id: 10, name: "New Group" }] },
+      groups: { data: [{ id: 10, name: "New Group" }] },
     });
 
     await act(async () => {
@@ -270,7 +277,7 @@ describe("SupervisionProvider", () => {
   it("updates a group's personal section after a handover", async () => {
     setupFetchMock({
       groups: {
-        groups: [
+        data: [
           {
             id: "10",
             name: "Incoming Group",
@@ -291,7 +298,7 @@ describe("SupervisionProvider", () => {
 
     setupFetchMock({
       groups: {
-        groups: [
+        data: [
           {
             id: "10",
             name: "Incoming Group",
@@ -343,14 +350,15 @@ describe("SupervisionProvider", () => {
 
       expect(result.current.isLoadingGroups).toBe(true);
       expect(result.current.isLoadingSupervision).toBe(false);
-      expect(mockFetch).toHaveBeenCalledTimes(1);
+      // The staff portal sends after its session gate, a microtask later.
+      await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
       expect(mockFetch).toHaveBeenCalledWith(
-        "/api/groups/context",
+        "/api/students/ogs-group-navigation",
         expect.any(Object),
       );
 
       await act(async () => {
-        resolveGroups?.({ ok, json: async () => ({ groups: [] }) });
+        resolveGroups?.({ ok, json: async () => ({ data: [] }) });
         await retry;
       });
       expect(result.current.isLoadingGroups).toBe(false);
@@ -368,7 +376,7 @@ describe("SupervisionProvider", () => {
         room_id: "5",
         room_name: roomName,
       };
-      setupFetchMock({ groups: { groups: [group] } });
+      setupFetchMock({ groups: { data: [group] } });
       const { result } = renderHook(() => useSupervision(), {
         wrapper: createWrapper("test-token"),
       });
@@ -378,7 +386,7 @@ describe("SupervisionProvider", () => {
       });
 
       const updatedGroup = { ...group, room_name: "New room" };
-      setupFetchMock({ groups: { groups: [updatedGroup] } });
+      setupFetchMock({ groups: { data: [updatedGroup] } });
       await act(async () => {
         await result.current.refresh({
           force: true,
@@ -466,9 +474,11 @@ describe("SupervisionProvider", () => {
       .map((call) => String(call[0]));
 
     // The group list is what changed...
-    expect(refetched.some((url) => url.includes("/api/groups/context"))).toBe(
-      true,
-    );
+    expect(
+      refetched.some((url) =>
+        url.includes("/api/students/ogs-group-navigation"),
+      ),
+    ).toBe(true);
     // ...and nothing else. checkSupervision reads active.supervisors and the
     // Schulhof status, neither of which a group-access write can touch, so
     // firing them here would cost every client two guaranteed no-op requests.
@@ -487,7 +497,7 @@ describe("SupervisionProvider", () => {
     let groupRequestCount = 0;
 
     mockFetch.mockImplementation((url: string) => {
-      if (!url.includes("/api/groups/context")) {
+      if (!url.includes("/api/students/ogs-group-navigation")) {
         return fallbackFetch?.(url);
       }
       groupRequestCount++;
@@ -498,7 +508,7 @@ describe("SupervisionProvider", () => {
       }
       return Promise.resolve({
         ok: true,
-        json: async () => ({ groups: [{ id: 42, name: "Queued Group" }] }),
+        json: async () => ({ data: [{ id: 42, name: "Queued Group" }] }),
       });
     });
 
@@ -513,7 +523,7 @@ describe("SupervisionProvider", () => {
     await act(async () => {
       resolveInitialGroups?.({
         ok: true,
-        json: async () => ({ groups: [] }),
+        json: async () => ({ data: [] }),
       });
     });
 
@@ -704,7 +714,7 @@ describe("SupervisionProvider school-wide overview paths", () => {
   it("fetches from the overview endpoint for admins in own mode", async () => {
     setupFetchMock({
       adminAll: {
-        success: true,
+        status: "success",
         data: [
           {
             id: 10,
@@ -735,7 +745,7 @@ describe("SupervisionProvider school-wide overview paths", () => {
   it("keeps an admin's own regular-room supervision while loading the overview", async () => {
     setupFetchMock({
       adminAll: {
-        success: true,
+        status: "success",
         data: [
           {
             id: 10,
@@ -832,7 +842,7 @@ describe("SupervisionProvider school-wide overview paths", () => {
     setOverviewScope("all_staff");
     setupFetchMock({
       adminAll: {
-        success: true,
+        status: "success",
         data: [
           {
             id: 11,
@@ -975,7 +985,7 @@ describe("SupervisionProvider released-room handling", () => {
           },
         ],
       },
-      openRooms: { data: [{ id: 100, name: "Schulhof" }] },
+      openRooms: pagedJson([{ id: 100, name: "Schulhof" }]),
     });
 
     const { result } = renderHook(() => useSupervision(), {
@@ -996,7 +1006,7 @@ describe("SupervisionProvider released-room handling", () => {
   it("reaches a released room without any own supervision, and stays not-supervising", async () => {
     setupFetchMock({
       supervised: { data: [] },
-      openRooms: { data: [{ id: 100, name: "Schulhof" }] },
+      openRooms: pagedJson([{ id: 100, name: "Schulhof" }]),
     });
 
     const { result } = renderHook(() => useSupervision(), {
@@ -1022,7 +1032,7 @@ describe("SupervisionProvider released-room handling", () => {
     // client no longer guesses who may see what.
     setupFetchMock({
       supervised: { data: [] },
-      openRooms: { data: [{ id: 100, name: "Turnhalle" }] },
+      openRooms: pagedJson([{ id: 100, name: "Turnhalle" }]),
     });
 
     const { result } = renderHook(() => useSupervision(), {
@@ -1081,7 +1091,7 @@ describe("SupervisionProvider released-room handling", () => {
           },
         ],
       },
-      openRooms: { data: [] },
+      openRooms: pagedJson([]),
     });
 
     const { result } = renderHook(() => useSupervision(), {
@@ -1110,7 +1120,7 @@ describe("SupervisionProvider released-room handling", () => {
           },
         ],
       },
-      openRooms: { data: [{ id: 100, name: "Schulhof" }] },
+      openRooms: pagedJson([{ id: 100, name: "Schulhof" }]),
     });
 
     const { result } = renderHook(() => useSupervision(), {
@@ -1139,7 +1149,7 @@ describe("SupervisionProvider state optimization", () => {
   });
 
   it("should not update state when groups remain the same", async () => {
-    const initialGroups = { groups: [{ id: 1, name: "Group A" }] };
+    const initialGroups = { data: [{ id: 1, name: "Group A" }] };
     setupFetchMock({ groups: initialGroups });
 
     const { result, rerender } = renderHook(() => useSupervision(), {
@@ -1194,7 +1204,7 @@ describe("SupervisionProvider API response handling", () => {
 
   it("should handle non-OK response from groups API", async () => {
     mockFetch.mockImplementation((url: string) => {
-      if (url.includes("/api/groups/context")) {
+      if (url.includes("/api/students/ogs-group-navigation")) {
         return Promise.resolve({
           ok: false,
           status: 404,
@@ -1231,13 +1241,13 @@ describe("SupervisionProvider API response handling", () => {
       if (url.includes("is_open_room=true")) {
         return Promise.resolve({
           ok: true,
-          json: async () => ({ data: [{ id: 100, name: "Schulhof" }] }),
+          json: async () => pagedJson([{ id: 100, name: "Schulhof" }]),
         });
       }
-      if (url.includes("/api/groups/context")) {
+      if (url.includes("/api/students/ogs-group-navigation")) {
         return Promise.resolve({
           ok: true,
-          json: async () => ({ groups: [] }),
+          json: async () => ({ data: [] }),
         });
       }
       return Promise.resolve({
@@ -1259,34 +1269,10 @@ describe("SupervisionProvider API response handling", () => {
     expect(result.current.supervisedRooms[0]?.isOpenRoom).toBe(true);
   });
 
-  it("should handle groups API with nested data structure", async () => {
-    setupFetchMock({
-      groups: {
-        data: {
-          groups: [
-            { id: 1, name: "Nested Group A" },
-            { id: 2, name: "Nested Group B" },
-          ],
-        },
-      },
-    });
-
-    const { result } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper("test-token"),
-    });
-
-    await waitFor(() => {
-      expect(result.current.isLoadingGroups).toBe(false);
-    });
-
-    expect(result.current.hasGroups).toBe(true);
-    expect(result.current.groups).toHaveLength(2);
-  });
-
   it("should sort groups by German locale", async () => {
     setupFetchMock({
       groups: {
-        groups: [
+        data: [
           { id: 3, name: "Zebra-Gruppe" },
           { id: 1, name: "Äpfel-Gruppe" },
           { id: 2, name: "Bären-Gruppe" },
@@ -1703,10 +1689,10 @@ describe("SupervisionProvider error state change detection", () => {
 
   it("should handle fetch throwing on supervised API (catch branch)", async () => {
     mockFetch.mockImplementation((url: string) => {
-      if (url.includes("/api/groups/context")) {
+      if (url.includes("/api/students/ogs-group-navigation")) {
         return Promise.resolve({
           ok: true,
-          json: async () => ({ groups: [] }),
+          json: async () => ({ data: [] }),
         });
       }
       if (url.includes("/api/me/groups/supervised")) {
@@ -1736,7 +1722,7 @@ describe("SupervisionProvider error state change detection", () => {
   it("should handle non-OK groups API with unchanged state (optimization guard)", async () => {
     // First render with non-OK groups API
     mockFetch.mockImplementation((url: string) => {
-      if (url.includes("/api/groups/context")) {
+      if (url.includes("/api/students/ogs-group-navigation")) {
         return Promise.resolve({
           ok: false,
           status: 500,
@@ -1773,7 +1759,7 @@ describe("SupervisionProvider error state change detection", () => {
 
   it("should handle groups API fetch rejection (catch branch for checkGroups)", async () => {
     mockFetch.mockImplementation((url: string) => {
-      if (url.includes("/api/groups/context")) {
+      if (url.includes("/api/students/ogs-group-navigation")) {
         return Promise.reject(new Error("Network failure"));
       }
       if (url.includes("/api/me/groups/supervised")) {
@@ -1806,10 +1792,10 @@ describe("SupervisionProvider error state change detection", () => {
 
   it("keeps a released room reachable on a non-OK supervised response", async () => {
     mockFetch.mockImplementation((url: string) => {
-      if (url.includes("/api/groups/context")) {
+      if (url.includes("/api/students/ogs-group-navigation")) {
         return Promise.resolve({
           ok: true,
-          json: async () => ({ groups: [] }),
+          json: async () => ({ data: [] }),
         });
       }
       if (url.includes("/api/me/groups/supervised")) {
@@ -1822,7 +1808,7 @@ describe("SupervisionProvider error state change detection", () => {
       if (url.includes("is_open_room=true")) {
         return Promise.resolve({
           ok: true,
-          json: async () => ({ data: [{ id: 42, name: "Turnhalle" }] }),
+          json: async () => pagedJson([{ id: 42, name: "Turnhalle" }]),
         });
       }
       return Promise.resolve({ ok: true, json: async () => ({}) });
@@ -1859,7 +1845,7 @@ describe("SupervisionProvider uncovered condition coverage", () => {
   it("keeps a released room id separate from a session id", async () => {
     setupFetchMock({
       supervised: { data: [] },
-      openRooms: { data: [{ id: 100, name: "Turnhalle" }] },
+      openRooms: pagedJson([{ id: 100, name: "Turnhalle" }]),
     });
 
     const { result } = renderHook(() => useSupervision(), {
@@ -1908,10 +1894,10 @@ describe("SupervisionProvider uncovered condition coverage", () => {
 
   it("should handle non-OK supervised response with no Schulhof (all cleared)", async () => {
     mockFetch.mockImplementation((url: string) => {
-      if (url.includes("/api/groups/context")) {
+      if (url.includes("/api/students/ogs-group-navigation")) {
         return Promise.resolve({
           ok: true,
-          json: async () => ({ groups: [] }),
+          json: async () => ({ data: [] }),
         });
       }
       if (url.includes("/api/me/groups/supervised")) {
@@ -1947,10 +1933,10 @@ describe("SupervisionProvider uncovered condition coverage", () => {
 
   it("treats a non-OK room list as unknown rather than as no open rooms", async () => {
     mockFetch.mockImplementation((url: string) => {
-      if (url.includes("/api/groups/context")) {
+      if (url.includes("/api/students/ogs-group-navigation")) {
         return Promise.resolve({
           ok: true,
-          json: async () => ({ groups: [] }),
+          json: async () => ({ data: [] }),
         });
       }
       if (url.includes("/api/me/groups/supervised")) {
@@ -2057,7 +2043,7 @@ describe("useOptionalSupervision", () => {
 
   it("should return actual context when used inside SupervisionProvider", async () => {
     setupFetchMock({
-      groups: { groups: [{ id: 1, name: "Group A" }] },
+      groups: { data: [{ id: 1, name: "Group A" }] },
     });
 
     const { result } = renderHook(() => useOptionalSupervision(), {
@@ -2119,7 +2105,8 @@ describe("SupervisionProvider school switch (#3375)", () => {
         tenantId === null
           ? null
           : {
-              tenantId,
+              // The school of the page names its identifier as a string.
+              tenantId: String(tenantId),
               slug: resolvedTenantSlug,
               subdomain: tenantSubdomain,
             },
@@ -2128,7 +2115,7 @@ describe("SupervisionProvider school switch (#3375)", () => {
 
   function groupsCalls() {
     return mockFetch.mock.calls.filter(([url]) =>
-      String(url).includes("/api/groups/context"),
+      String(url).includes("/api/students/ogs-group-navigation"),
     ).length;
   }
 
@@ -2146,7 +2133,7 @@ describe("SupervisionProvider school switch (#3375)", () => {
 
   it("fetches nothing while the session belongs to another school", async () => {
     await mockUrlTenant(2);
-    setupFetchMock({ groups: { groups: [{ id: 1, name: "Andere Schule" }] } });
+    setupFetchMock({ groups: { data: [{ id: 1, name: "Andere Schule" }] } });
     vi.mocked(useSession).mockReturnValue(sessionFor(1));
 
     const { result } = renderHook(() => useSupervision(), {
@@ -2168,7 +2155,7 @@ describe("SupervisionProvider school switch (#3375)", () => {
     await mockUrlTenant(2);
     // The first load runs for school 2; the switch follows inside the
     // five-second throttle window, which used to swallow the reload.
-    setupFetchMock({ groups: { groups: [{ id: 1, name: "Schule 2" }] } });
+    setupFetchMock({ groups: { data: [{ id: 1, name: "Schule 2" }] } });
     vi.mocked(useSession).mockReturnValue(sessionFor(2));
 
     const { result, rerender } = renderHook(() => useSupervision(), {
@@ -2182,7 +2169,7 @@ describe("SupervisionProvider school switch (#3375)", () => {
     expect(groupsCalls()).toBe(1);
 
     await mockUrlTenant(3);
-    setupFetchMock({ groups: { groups: [{ id: 9, name: "Schule 3" }] } });
+    setupFetchMock({ groups: { data: [{ id: 9, name: "Schule 3" }] } });
     vi.mocked(useSession).mockReturnValue(sessionFor(3));
     rerender();
 
@@ -2194,14 +2181,21 @@ describe("SupervisionProvider school switch (#3375)", () => {
 
   it("reloads a server snapshot when the resolved URL school changes", async () => {
     await mockUrlTenant(null);
-    setupFetchMock({ groups: { groups: [{ id: 2, name: "Schule 2" }] } });
+    setupFetchMock({ groups: { data: [{ id: 2, name: "Schule 2" }] } });
     vi.mocked(useSession).mockReturnValue(sessionFor(2));
 
     const { result, rerender } = renderHook(() => useSupervision(), {
       wrapper: ({ children }: { children: ReactNode }) => (
         <SupervisionProvider
           initial={{
-            groups: [{ id: "1", name: "Schule 1" }],
+            groups: [
+              {
+                id: "1",
+                name: "Schule 1",
+                via_substitution: false,
+                is_personal: true,
+              },
+            ],
             supervised: [],
             openRooms: [],
             overviewOk: false,
@@ -2226,14 +2220,21 @@ describe("SupervisionProvider school switch (#3375)", () => {
 
   it("masks a server snapshot while URL tenant metadata is still stale", async () => {
     await mockUrlTenant(2, { tenantSlug: "school-a" });
-    setupFetchMock({ groups: { groups: [{ id: 1, name: "Schule A" }] } });
+    setupFetchMock({ groups: { data: [{ id: 1, name: "Schule A" }] } });
     vi.mocked(useSession).mockReturnValue(sessionFor(2));
 
     const { result, rerender } = renderHook(() => useSupervision(), {
       wrapper: ({ children }: { children: ReactNode }) => (
         <SupervisionProvider
           initial={{
-            groups: [{ id: "1", name: "Schule A" }],
+            groups: [
+              {
+                id: "1",
+                name: "Schule A",
+                via_substitution: false,
+                is_personal: true,
+              },
+            ],
             supervised: [],
             openRooms: [],
             overviewOk: false,
@@ -2269,7 +2270,7 @@ describe("SupervisionProvider school switch (#3375)", () => {
       routingMode: "path",
     });
     setupFetchMock({
-      groups: { groups: [{ id: 2, name: "Schule im Pfad" }] },
+      groups: { data: [{ id: 2, name: "Schule im Pfad" }] },
       supervised: { data: [] },
     });
     vi.mocked(useSession).mockReturnValue(sessionFor(2));
@@ -2290,12 +2291,12 @@ describe("SupervisionProvider school switch (#3375)", () => {
     await mockUrlTenant(2);
     let releaseGroups: (() => void) | undefined;
     mockFetch.mockImplementation((url: string) => {
-      if (url.includes("/api/groups/context")) {
+      if (url.includes("/api/students/ogs-group-navigation")) {
         return new Promise((resolve) => {
           releaseGroups = () =>
             resolve({
               ok: true,
-              json: async () => ({ groups: [{ id: 2, name: "Schule 2" }] }),
+              json: async () => ({ data: [{ id: 2, name: "Schule 2" }] }),
             });
         });
       }
@@ -2313,7 +2314,14 @@ describe("SupervisionProvider school switch (#3375)", () => {
     const { rerender } = render(
       <SupervisionProvider
         initial={{
-          groups: [{ id: "1", name: "Schule 1" }],
+          groups: [
+            {
+              id: "1",
+              name: "Schule 1",
+              via_substitution: false,
+              is_personal: true,
+            },
+          ],
           supervised: [],
           openRooms: [],
           overviewOk: false,
@@ -2330,7 +2338,14 @@ describe("SupervisionProvider school switch (#3375)", () => {
     rerender(
       <SupervisionProvider
         initial={{
-          groups: [{ id: "1", name: "Schule 1" }],
+          groups: [
+            {
+              id: "1",
+              name: "Schule 1",
+              via_substitution: false,
+              is_personal: true,
+            },
+          ],
           supervised: [],
           openRooms: [],
           overviewOk: false,
@@ -2356,14 +2371,14 @@ describe("SupervisionProvider school switch (#3375)", () => {
     let releaseOld: (() => void) | undefined;
     let oldResponseRead = false;
     mockFetch.mockImplementation((url: string) => {
-      if (url.includes("/api/groups/context") && !releaseOld) {
+      if (url.includes("/api/students/ogs-group-navigation") && !releaseOld) {
         return new Promise((resolve) => {
           releaseOld = () =>
             resolve({
               ok: true,
               json: async () => {
                 oldResponseRead = true;
-                return { groups: [{ id: 2, name: "Schule 2" }] };
+                return { data: [{ id: 2, name: "Schule 2" }] };
               },
             });
         });
@@ -2402,7 +2417,7 @@ describe("SupervisionProvider school switch (#3375)", () => {
     let oldResponseRead = false;
     let groupRequests = 0;
     mockFetch.mockImplementation((url: string) => {
-      if (url.includes("/api/groups/context")) {
+      if (url.includes("/api/students/ogs-group-navigation")) {
         groupRequests += 1;
         if (groupRequests === 1) {
           return new Promise((resolve) => {
@@ -2411,7 +2426,7 @@ describe("SupervisionProvider school switch (#3375)", () => {
                 ok: true,
                 json: async () => {
                   oldResponseRead = true;
-                  return { groups: [{ id: 2, name: "Alte Sitzung" }] };
+                  return { data: [{ id: 2, name: "Alte Sitzung" }] };
                 },
               });
           });
@@ -2421,7 +2436,7 @@ describe("SupervisionProvider school switch (#3375)", () => {
             resolve({
               ok: true,
               json: async () => ({
-                groups: [{ id: 2, name: "Neue Sitzung" }],
+                data: [{ id: 2, name: "Neue Sitzung" }],
               }),
             });
         });
@@ -2434,7 +2449,14 @@ describe("SupervisionProvider school switch (#3375)", () => {
       wrapper: ({ children }: { children: ReactNode }) => (
         <SupervisionProvider
           initial={{
-            groups: [{ id: "1", name: "Bestehende Gruppe" }],
+            groups: [
+              {
+                id: "1",
+                name: "Bestehende Gruppe",
+                via_substitution: false,
+                is_personal: true,
+              },
+            ],
             supervised: [],
             openRooms: [],
             overviewOk: false,
@@ -2484,20 +2506,20 @@ describe("SupervisionProvider school switch (#3375)", () => {
     await mockUrlTenant(2);
     let releaseOld: (() => void) | undefined;
     mockFetch.mockImplementation((url: string) => {
-      if (url.includes("/api/groups/context") && !releaseOld) {
+      if (url.includes("/api/students/ogs-group-navigation") && !releaseOld) {
         return new Promise((resolve) => {
           releaseOld = () =>
             resolve({
               ok: true,
-              json: async () => ({ groups: [{ id: 1, name: "Schule 2" }] }),
+              json: async () => ({ data: [{ id: 1, name: "Schule 2" }] }),
             });
         });
       }
       return Promise.resolve({
         ok: true,
         json: async () =>
-          url.includes("/api/groups/context")
-            ? { groups: [{ id: 9, name: "Schule 3" }] }
+          url.includes("/api/students/ogs-group-navigation")
+            ? { data: [{ id: 9, name: "Schule 3" }] }
             : { data: [] },
       });
     });

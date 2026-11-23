@@ -44,7 +44,7 @@ func TestStaffListFormerEmploymentsAgainstTheDatabase(t *testing.T) {
 	}
 	list := func() ([]row, []string) {
 		counter.Reset()
-		req := testutil.NewAuthenticatedRequest(t, http.MethodGet, "/staff?employment=former", nil, testutil.WithJWTBearer(token))
+		req := testutil.NewAuthenticatedRequest(t, http.MethodGet, "/staff/former", nil, testutil.WithJWTBearer(token))
 		req = req.WithContext(counter.Context(req.Context()))
 		rr := testutil.ExecuteRequest(testpkg.MountedQueryBudgetRouter("/api", ctx.router), req)
 		require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
@@ -98,7 +98,7 @@ func TestStaffListFormerEmploymentsWithRoleFilterHasFixedQueryCount(t *testing.T
 	}
 	list := func() ([]string, []string) {
 		counter.Reset()
-		req := testutil.NewAuthenticatedRequest(t, http.MethodGet, "/staff?employment=former&role=lehrkraft", nil, testutil.WithJWTBearer(token))
+		req := testutil.NewAuthenticatedRequest(t, http.MethodGet, "/staff/former?role=lehrkraft", nil, testutil.WithJWTBearer(token))
 		req = req.WithContext(counter.Context(req.Context()))
 		rr := testutil.ExecuteRequest(testpkg.MountedQueryBudgetRouter("/api", ctx.router), req)
 		require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())

@@ -18,7 +18,7 @@ type DecideCareRequestBody struct {
 	Reason      string  `json:"reason"`
 	ImpactToken *string `json:"impact_token"`
 	// ExpectedVersion is the expected_version the list emitted for this row.
-	// Empty is accepted (old clients) and skips the check.
+	// An empty or different one is refused with readstate.ErrChanged.
 	ExpectedVersion string `json:"expected_version"`
 }
 
@@ -70,6 +70,7 @@ var careRequestDecisionErrorRenderer = common.RulesRenderer(parentRequestRules(
 	common.ErrorRule{Target: carerequests.ErrNotFound, Render: common.ErrorNotFound},
 	common.ErrorRule{Target: carerequests.ErrNotPending, Render: conflictWithCode(common.CodeStudentsChangeRequestNotPending)},
 	common.ErrorRule{Target: carerequests.ErrGuardianAccessRevoked, Render: conflictWithCode(common.CodeStudentsGuardianAccessRevoked)},
+	common.ErrorRule{Target: carerequests.ErrCareRequestStaffProfileRequired, Render: staffProfileRequired},
 	common.ErrorRule{Target: carerequests.ErrCareRequestForbidden, Render: common.ErrorForbidden},
 	common.ErrorRule{Target: carerequests.ErrPickupChangeConflict, Render: conflictWithCode(common.CodeStudentsPickupChangeConflict)},
 	common.ErrorRule{Target: carerequests.ErrPickupPermissionContactGone, Render: conflictWithCode(common.CodeStudentsPickupPermissionContactGone)},
@@ -80,6 +81,13 @@ var careRequestDecisionErrorRenderer = common.RulesRenderer(parentRequestRules(
 	common.ErrorRule{Target: carerequests.ErrCareDayManagedByBooking, Render: conflictWithCode(common.CodeStudentsCareDayManagedByBooking)},
 	common.ErrorRule{Match: isInvalidCareRequestDecision, Render: common.ErrorInvalidRequest},
 ), careRequestDecisionFallback)
+
+// staffProfileRequired names why an account without a staff record of the
+// school may not decide a parent's request (#7818): the user can fix it by
+// getting a staff profile, unlike a missing right.
+func staffProfileRequired(err error) render.Renderer {
+	return common.ErrorForbiddenWithCode(err, common.CodeStudentsScheduleStaffProfileRequired)
+}
 
 func conflictWithCode(code string) func(error) render.Renderer {
 	return func(err error) render.Renderer { return common.ErrorConflictWithCode(err, code) }

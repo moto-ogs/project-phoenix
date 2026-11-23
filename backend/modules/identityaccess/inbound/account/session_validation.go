@@ -8,17 +8,43 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/portalauth"
-	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/go-chi/render"
 )
 
+// SessionValidationRequest names the tokens of a session and the portal
+// that shows it.
+type SessionValidationRequest struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+	Portal       string `json:"portal"`
+}
+
+// SessionClaimsResponse is the validated claims in the access token's claim
+// shape; its identifiers travel as strings (ADR 0300).
+type SessionClaimsResponse struct {
+	ID            ident.ID `json:"id,omitempty"`
+	Sub           string   `json:"sub,omitempty"`
+	Username      string   `json:"username,omitempty"`
+	FirstName     string   `json:"first_name,omitempty"`
+	LastName      string   `json:"last_name,omitempty"`
+	Roles         []string `json:"roles,omitempty"`
+	Permissions   []string `json:"permissions,omitempty"`
+	IsAdmin       bool     `json:"is_admin,omitempty"`
+	Scope         string   `json:"scope,omitempty"`
+	TenantID      ident.ID `json:"tenant_id,omitempty"`
+	OrgID         ident.ID `json:"org_id,omitempty"`
+	FamilyID      string   `json:"family_id,omitempty"`
+	ReadOnly      bool     `json:"read_only,omitempty"`
+	ActingAdminID ident.ID `json:"acting_admin_id,omitempty"`
+	PreviewID     string   `json:"preview_id,omitempty"`
+	ViaTraeger    bool     `json:"via_traeger,omitempty"`
+	ExpiresAt     int64    `json:"exp,omitempty" contract:"number"`
+}
+
 func (rs *Resource) validateSession(w http.ResponseWriter, r *http.Request) {
-	var input struct {
-		AccessToken  string `json:"access_token"`
-		RefreshToken string `json:"refresh_token"`
-		Portal       string `json:"portal"`
-	}
+	var input SessionValidationRequest
 	r.Body = http.MaxBytesReader(w, r.Body, 32*1024)
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid session validation request")))
@@ -37,18 +63,18 @@ func (rs *Resource) validateSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store")
-	render.JSON(w, r, sessionClaimsResponse(claims))
+	common.RenderJSON(w, r, sessionClaimsResponse(claims))
 }
 
 // sessionClaimsResponse renders the validated claims in the access-token
 // claim shape the frontend hand-off consumes.
-func sessionClaimsResponse(claims identityaccess.SessionClaims) *sessiontoken.AppClaims {
-	return &sessiontoken.AppClaims{
-		ID: int(claims.AccountID), Sub: claims.Email, Username: claims.Username, FirstName: claims.FirstName, LastName: claims.LastName,
+func sessionClaimsResponse(claims identityaccess.SessionClaims) SessionClaimsResponse {
+	return SessionClaimsResponse{
+		ID: ident.ID(claims.AccountID), Sub: claims.Email, Username: claims.Username, FirstName: claims.FirstName, LastName: claims.LastName,
 		Roles: claims.Roles, Permissions: claims.Permissions, IsAdmin: claims.IsAdmin, Scope: claims.Scope,
-		TenantID: claims.TenantID, OrgID: claims.OrgID, FamilyID: claims.FamilyID,
-		ReadOnly: claims.ReadOnly, ActingAdminID: claims.ActingAdminID, PreviewID: claims.PreviewID, ViaTraeger: claims.ViaTraeger,
-		CommonClaims: sessiontoken.CommonClaims{ExpiresAt: claims.ExpiresAt},
+		TenantID: ident.ID(claims.TenantID), OrgID: ident.ID(claims.OrgID), FamilyID: claims.FamilyID,
+		ReadOnly: claims.ReadOnly, ActingAdminID: ident.ID(claims.ActingAdminID), PreviewID: claims.PreviewID, ViaTraeger: claims.ViaTraeger,
+		ExpiresAt: claims.ExpiresAt,
 	}
 }
 

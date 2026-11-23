@@ -3,51 +3,23 @@
 // session to the backend's /caterer/* routes. The invitation and the
 // password reset need no session: the mailed link is the proof.
 
-import { authFetch } from "./api-helpers";
-import { apiErrorFromResponse, transportFetch } from "./api-error";
-import type { SchoolsResponse } from "./contract/caterer-schools.generated";
+import { bffFile, bffJson } from "./bff-fetch";
+import { knownEnum } from "./contract/known-enum";
+import type * as catererSchoolsContract from "./contract/caterer-schools.generated";
 import { downloadBlob, filenameFromDisposition } from "./file-download";
 
-interface ProxyResponse<T> {
-  success: boolean;
-  data: T;
-}
+// Go does not register these sets; the contract types them as string. A value
+// this build does not know stays undefined instead of passing as a known one.
+const ORDER_STATUS_VALUES = [
+  "open",
+  "ordered",
+  "confirmed",
+  "unordered",
+] as const;
+const RHYTHM_VALUES = ["daily", "weekly"] as const;
+const DETAIL_VALUES = ["total", "by_class"] as const;
 
-interface BackendChild {
-  first_name?: string;
-  last_name?: string;
-  school_class?: string;
-}
-
-interface BackendOrderDay {
-  date: string;
-  closed: boolean;
-  deadline: string;
-  status: CatererOrderStatus;
-  order_id?: string;
-  confirmed_at?: string;
-  total: number;
-  classes: { school_class: string; count: number }[];
-  children: BackendChild[];
-  changes: {
-    sequence: number;
-    child: BackendChild;
-    delta: number;
-    detected_at: string;
-  }[];
-}
-
-/** Wire shape of GET /caterer/schools/{schoolId}/orders. */
-interface BackendCatererOrders {
-  school: { id: string; name: string };
-  delivery_address: string;
-  format_version: number;
-  rhythm: "daily" | "weekly";
-  detail: "total" | "by_class";
-  days: BackendOrderDay[];
-}
-
-type CatererOrderStatus = "open" | "ordered" | "confirmed" | "unordered";
+type CatererOrderStatus = (typeof ORDER_STATUS_VALUES)[number];
 
 export interface CatererSchool {
   id: string;
@@ -77,7 +49,8 @@ export interface CatererOrderDay {
   date: string;
   closed: boolean;
   deadline: string;
-  status: CatererOrderStatus;
+  /** undefined: a status this build does not know. */
+  status: CatererOrderStatus | undefined;
   orderId: string | null;
   confirmedAt: string | null;
   total: number;
@@ -89,8 +62,10 @@ export interface CatererOrderDay {
 export interface CatererOrders {
   school: CatererSchool;
   deliveryAddress: string;
-  rhythm: "daily" | "weekly";
-  detail: "total" | "by_class";
+  /** undefined: a value this build does not know. */
+  rhythm: (typeof RHYTHM_VALUES)[number] | undefined;
+  /** undefined: a value this build does not know; the list shows the total. */
+  detail: (typeof DETAIL_VALUES)[number] | undefined;
   days: CatererOrderDay[];
 }
 
@@ -104,7 +79,9 @@ export interface CatererInvitationPreview {
   addressTaken: boolean;
 }
 
-function mapChild(child: BackendChild): CatererOrderChild {
+function mapChild(
+  child: catererSchoolsContract.OrderChildResponse,
+): CatererOrderChild {
   return {
     firstName: child.first_name ?? "",
     lastName: child.last_name ?? "",
@@ -112,26 +89,28 @@ function mapChild(child: BackendChild): CatererOrderChild {
   };
 }
 
-function mapCatererOrders(data: BackendCatererOrders): CatererOrders {
+function mapCatererOrders(
+  data: catererSchoolsContract.SchoolOrdersResponse,
+): CatererOrders {
   return {
     school: data.school,
     deliveryAddress: data.delivery_address,
-    rhythm: data.rhythm,
-    detail: data.detail,
-    days: data.days.map((day) => ({
+    rhythm: knownEnum(RHYTHM_VALUES, data.rhythm),
+    detail: knownEnum(DETAIL_VALUES, data.detail),
+    days: (data.days ?? []).map((day) => ({
       date: day.date,
       closed: day.closed,
       deadline: day.deadline,
-      status: day.status,
+      status: knownEnum(ORDER_STATUS_VALUES, day.status),
       orderId: day.order_id ?? null,
       confirmedAt: day.confirmed_at ?? null,
       total: day.total,
-      classes: day.classes.map((count) => ({
+      classes: (day.classes ?? []).map((count) => ({
         schoolClass: count.school_class,
         count: count.count,
       })),
-      children: day.children.map(mapChild),
-      changes: day.changes.map((change) => ({
+      children: (day.children ?? []).map(mapChild),
+      changes: (day.changes ?? []).map((change) => ({
         sequence: change.sequence,
         child: mapChild(change.child),
         delta: change.delta,
@@ -142,12 +121,10 @@ function mapCatererOrders(data: BackendCatererOrders): CatererOrders {
 }
 
 export async function fetchCatererSchools(): Promise<CatererSchools> {
-  const response = await authFetch<ProxyResponse<SchoolsResponse>>(
-    "/api/caterer/schools",
-  );
+  const data = await bffJson("caterer", "GET /caterer/schools");
   return {
-    catererName: response.data.caterer_name,
-    schools: response.data.schools ?? [],
+    catererName: data.caterer_name,
+    schools: data.schools ?? [],
   };
 }
 
@@ -156,48 +133,45 @@ export async function fetchCatererOrders(
   from: string,
   to: string,
 ): Promise<CatererOrders> {
-  const params = new URLSearchParams({ from, to });
-  const response = await authFetch<ProxyResponse<BackendCatererOrders>>(
-    `/api/caterer/schools/${encodeURIComponent(schoolId)}/orders?${params.toString()}`,
+  const data = await bffJson(
+    "caterer",
+    "GET /caterer/schools/{schoolId}/orders",
+    {
+      params: { schoolId },
+      query: { from, to },
+    },
   );
-  return mapCatererOrders(response.data);
+  return mapCatererOrders(data);
 }
 
 export async function confirmCatererOrder(
   schoolId: string,
   orderId: string,
 ): Promise<void> {
-  await authFetch<unknown>(
-    `/api/caterer/schools/${encodeURIComponent(schoolId)}/orders/${encodeURIComponent(orderId)}/confirm`,
-    { method: "POST", body: {} },
+  await bffJson(
+    "caterer",
+    "POST /caterer/schools/{schoolId}/orders/{orderId}/confirm",
+    { params: { schoolId, orderId } },
   );
-}
-
-function invitationUrl(schoolId: string, token: string): string {
-  return `/api/caterer/invitations/${encodeURIComponent(schoolId)}/${encodeURIComponent(token)}`;
 }
 
 export async function fetchCatererInvitation(
   schoolId: string,
   token: string,
 ): Promise<CatererInvitationPreview> {
-  const response = await authFetch<
-    ProxyResponse<{
-      email: string;
-      caterer_name: string;
-      school_name: string;
-      expires_at: string;
-      has_caterer_account: boolean;
-      address_taken: boolean;
-    }>
-  >(invitationUrl(schoolId, token));
+  const data = await bffJson(
+    "public",
+    "GET /caterer/invitations/{schoolId}/{token}",
+    // The token is a credential: the message names the step, not the path.
+    { params: { schoolId, token }, errorMessage: "caterer invitation failed" },
+  );
   return {
-    email: response.data.email,
-    catererName: response.data.caterer_name,
-    schoolName: response.data.school_name,
-    expiresAt: response.data.expires_at,
-    hasCatererAccount: response.data.has_caterer_account,
-    addressTaken: response.data.address_taken,
+    email: data.email,
+    catererName: data.caterer_name,
+    schoolName: data.school_name,
+    expiresAt: data.expires_at,
+    hasCatererAccount: data.has_caterer_account,
+    addressTaken: data.address_taken,
   };
 }
 
@@ -207,10 +181,15 @@ export async function acceptCatererInvitation(
   password: string,
   confirmPassword: string,
 ): Promise<void> {
-  await authFetch<unknown>(`${invitationUrl(schoolId, token)}/accept`, {
-    method: "POST",
-    body: { password, confirm_password: confirmPassword },
-  });
+  await bffJson(
+    "public",
+    "POST /caterer/invitations/{schoolId}/{token}/accept",
+    {
+      params: { schoolId, token },
+      body: { password, confirm_password: confirmPassword },
+      errorMessage: "caterer invitation acceptance failed",
+    },
+  );
 }
 
 export type DeliveryExportFormat = "pdf" | "xlsx" | "csv";
@@ -224,17 +203,10 @@ export async function downloadCatererDeliveries(
   to: string,
   format: DeliveryExportFormat,
 ): Promise<void> {
-  const params = new URLSearchParams({ from, to, format });
-  const response = await transportFetch(
-    `/api/caterer/orders/export?${params.toString()}`,
-    { credentials: "include" },
-  );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      "caterer delivery export failed",
-    );
-  }
+  const response = await bffFile("caterer", "GET /caterer/orders/export", {
+    query: { from, to, format },
+    errorMessage: "caterer delivery export failed",
+  });
   downloadBlob(
     await response.blob(),
     filenameFromDisposition(response) ??

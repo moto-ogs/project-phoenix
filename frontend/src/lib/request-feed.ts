@@ -14,6 +14,8 @@
  * laden" genau dort weitermacht, wo die jeweilige Quelle aufgehört hat.
  */
 
+import type * as studentsContract from "~/lib/contract/students.generated";
+
 export interface FeedPage<T> {
   readonly items: readonly T[];
   readonly next_cursor?: string;
@@ -25,11 +27,14 @@ export interface FeedSource<T> {
   readonly fetchPage: (cursor?: string) => Promise<FeedPage<T>>;
 }
 
-/** Jede Zeile trägt den Zeitpunkt, nach dem zusammengeführt wird. */
-export interface FeedItem {
-  readonly occurred_at: string;
-  readonly urgent_today?: boolean;
-}
+/**
+ * Jede Zeile trägt den Zeitpunkt, nach dem zusammengeführt wird, und ob sie
+ * heute dringend ist; eine Quelle ohne Dringlichkeit lässt sie weg.
+ */
+export type FeedItem = Readonly<
+  Pick<studentsContract.Item, "occurred_at"> &
+    Partial<Pick<studentsContract.Item, "urgent_today">>
+>;
 
 interface SourceState<T> {
   buffer: T[];

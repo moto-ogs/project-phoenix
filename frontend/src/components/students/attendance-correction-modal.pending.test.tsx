@@ -5,6 +5,7 @@ import {
   fireEvent,
   render as rtlRender,
   screen,
+  waitFor,
 } from "@testing-library/react";
 import { SessionProvider } from "next-auth/react";
 import type { ReactNode as TenantSWRNode } from "react";
@@ -49,9 +50,10 @@ function render(...[ui, options]: Parameters<typeof rtlRender>) {
   });
 }
 
-vi.mock("~/lib/session-cache", () => ({
-  sessionFetch: (url: string, init?: RequestInit) => fetch(url, init),
-}));
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
 
 const slot = {
   instanceId: "instance-1",
@@ -123,9 +125,12 @@ describe("AttendanceCorrectionModal pending lock (#6533)", () => {
 
   it("refreshes the data but closes nothing when the answer arrives after unmount", async () => {
     const { answer, onClose, onCorrected, unmount } = renderAndSave();
-    expect(fetch).toHaveBeenCalledWith(
-      expect.stringContaining("/correction"),
-      expect.objectContaining({ method: "POST" }),
+    // The POST leaves after the asynchronous session gate.
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith(
+        expect.stringContaining("/correction"),
+        expect.objectContaining({ method: "POST" }),
+      ),
     );
 
     unmount();

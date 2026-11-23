@@ -1,3 +1,4 @@
+import { bffFile, bffJson } from "~/lib/bff-fetch";
 /**
  * Lohnexport und Zeitexport des Trägers über alle Schulen (#4712, ADR 0250).
  *
@@ -6,13 +7,14 @@
  * Arbeitsvertrags mit ihren eigenen Lohnarten. Jedes Laden steht im
  * Zugriffsprotokoll jeder Schule; nichts wird zwischengespeichert.
  */
-import { apiErrorFromBody, transportFetch } from "./api-error";
 import { filenameFromDisposition } from "./file-download";
-import { readJson, traegerRequest } from "./traeger-api";
+import type * as traegerStaffExportsContract from "./contract/traeger-staff-exports.generated";
+import { knownEnum } from "./contract/known-enum";
 
-const BASE = "/api/traeger/staff-exports";
+// Go does not register the set; the contract types it as string.
+const PAYROLL_FORMAT_VALUES = ["datev_lodas", "datev_lug"] as const;
 
-export type PayrollFormat = "datev_lodas" | "datev_lug";
+export type PayrollFormat = (typeof PAYROLL_FORMAT_VALUES)[number];
 
 /** Die sieben Kategorien der Lohndatei in Dateireihenfolge. */
 export const PAYROLL_CATEGORIES = [
@@ -63,7 +65,8 @@ export interface PayrollGap {
 export interface PayrollReport {
   readonly year: number;
   readonly month: number;
-  readonly format: PayrollFormat;
+  /** undefined: a format this build does not know. */
+  readonly format: PayrollFormat | undefined;
   readonly contracts: number;
   readonly people: number;
   readonly schools: number;
@@ -91,57 +94,33 @@ export interface TimeReport {
   readonly withoutNumber: readonly ExportPerson[];
 }
 
-interface BackendPerson {
-  record_id: string | number;
-  first_name: string;
-  last_name: string;
-}
-
-interface BackendPayrollReport {
-  year: number;
-  month: number;
-  format: PayrollFormat;
-  contracts: number;
-  people: number;
-  schools: number;
-  line_count: number;
-  kinds: PayrollKindCount[] | null;
-  without_number: BackendPerson[] | null;
-  unconfigured: PayrollGap[] | null;
-  missing_client: boolean;
-  no_wage_type: boolean;
-  open_schools: string[] | null;
-  contract_changes: BackendPerson[] | null;
-  ready: boolean;
-}
-
-interface BackendTimeReport {
-  year: number;
-  month: number;
-  people: number;
-  schools: number;
-  rows: number;
-  without_number: BackendPerson[] | null;
-}
-
-const mapPerson = (person: BackendPerson): ExportPerson => ({
-  recordId: String(person.record_id),
+const mapPerson = (
+  person: traegerStaffExportsContract.TraegerExportPerson,
+): ExportPerson => ({
+  recordId: person.record_id,
   firstName: person.first_name,
   lastName: person.last_name,
 });
 
-function mapPayrollReport(data: BackendPayrollReport): PayrollReport {
+function mapPayrollReport(
+  data: traegerStaffExportsContract.TraegerPayrollReport,
+): PayrollReport {
   return {
     year: data.year,
     month: data.month,
-    format: data.format,
+    format: knownEnum(PAYROLL_FORMAT_VALUES, data.format),
     contracts: data.contracts,
     people: data.people,
     schools: data.schools,
     lineCount: data.line_count,
     kinds: data.kinds ?? [],
     withoutNumber: (data.without_number ?? []).map(mapPerson),
-    unconfigured: data.unconfigured ?? [],
+    // A category this build does not know has no field to fill in; `ready`
+    // from the backend still holds the file back.
+    unconfigured: (data.unconfigured ?? []).flatMap((gap) => {
+      const category = knownEnum(PAYROLL_CATEGORIES, gap.category);
+      return category === undefined ? [] : [{ category, kind: gap.kind }];
+    }),
     missingClient: data.missing_client,
     noWageType: data.no_wage_type,
     openSchools: data.open_schools ?? [],
@@ -150,7 +129,9 @@ function mapPayrollReport(data: BackendPayrollReport): PayrollReport {
   };
 }
 
-function mapTimeReport(data: BackendTimeReport): TimeReport {
+function mapTimeReport(
+  data: traegerStaffExportsContract.TraegerTimeReport,
+): TimeReport {
   return {
     year: data.year,
     month: data.month,
@@ -161,18 +142,15 @@ function mapTimeReport(data: BackendTimeReport): TimeReport {
   };
 }
 
-const monthQuery = (year: number, month: number) =>
-  `year=${year}&month=${month}`;
-
 export async function fetchPayrollReport(
   year: number,
   month: number,
   format: PayrollFormat,
 ): Promise<PayrollReport> {
   return mapPayrollReport(
-    await traegerRequest<BackendPayrollReport>(
-      `${BASE}/payroll?${monthQuery(year, month)}&format=${format}`,
-    ),
+    await bffJson("org", "GET /traeger/staff-exports/payroll", {
+      query: { year, month, format },
+    }),
   );
 }
 
@@ -181,9 +159,9 @@ export async function fetchTimeReport(
   month: number,
 ): Promise<TimeReport> {
   return mapTimeReport(
-    await traegerRequest<BackendTimeReport>(
-      `${BASE}/times?${monthQuery(year, month)}`,
-    ),
+    await bffJson("org", "GET /traeger/staff-exports/times", {
+      query: { year, month },
+    }),
   );
 }
 
@@ -192,18 +170,8 @@ export interface ExportDownload {
   readonly filename: string | null;
 }
 
-async function download(path: string): Promise<ExportDownload> {
-  const response = await transportFetch(path, {
-    credentials: "include",
-    cache: "no-store",
-  });
-  if (!response.ok) {
-    throw apiErrorFromBody(
-      `Request failed (${response.status})`,
-      response.status,
-      await readJson(response),
-    );
-  }
+async function download(file: Promise<Response>): Promise<ExportDownload> {
+  const response = await file;
   return {
     blob: await response.blob(),
     filename: filenameFromDisposition(response),
@@ -217,12 +185,18 @@ export const downloadPayrollFile = (
   format: PayrollFormat,
 ) =>
   download(
-    `${BASE}/payroll/export?${monthQuery(year, month)}&format=${format}`,
+    bffFile("org", "GET /traeger/staff-exports/payroll/export", {
+      query: { year, month, format },
+    }),
   );
 
 /** Der Zeitexport als CSV. */
 export const downloadTimeFile = (year: number, month: number) =>
-  download(`${BASE}/times/export?${monthQuery(year, month)}`);
+  download(
+    bffFile("org", "GET /traeger/staff-exports/times/export", {
+      query: { year, month },
+    }),
+  );
 
 /** Der Schlüssel der Lohnart einer Kategorie bei einer Art des Vertrags. */
 export const wageTypeKey = (category: PayrollCategory, kind: string) =>

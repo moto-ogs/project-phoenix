@@ -4,7 +4,7 @@ import {
   arr,
   calendarDate,
   instant,
-  int64StringOrNumber,
+  int64String,
   nullable,
   object,
   optional,
@@ -43,7 +43,7 @@ export interface BillingMonthChild {
 }
 
 export const BillingMonthChildSchema: z.ZodType<BillingMonthChild, unknown> = object<BillingMonthChild>({
-  student_id: int64StringOrNumber,
+  student_id: int64String,
   first_name: str,
   last_name: str,
   school_class: str,

@@ -11,9 +11,12 @@ import (
 	"testing"
 	"time"
 
+	answer "github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
+
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/devicefleet"
 	devices "github.com/moto-ogs/project-phoenix/modules/devicefleet/http/devices"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 	"github.com/stretchr/testify/require"
@@ -22,18 +25,18 @@ import (
 
 // Independent wire contract, not a process facade DTO or an owner composition.
 type deviceWriteBudgetWire struct {
-	ID             int64   `json:"id"`
-	DeviceID       string  `json:"device_id"`
-	DeviceType     string  `json:"device_type"`
-	Name           *string `json:"name,omitempty"`
-	Status         string  `json:"status"`
-	LastSeen       *string `json:"last_seen,omitempty"`
-	RegisteredByID *int64  `json:"registered_by_id,omitempty"`
-	RoomName       *string `json:"room_name,omitempty"`
-	IsOnline       bool    `json:"is_online"`
-	CreatedAt      string  `json:"created_at"`
-	UpdatedAt      string  `json:"updated_at"`
-	APIKey         *string `json:"api_key,omitempty"`
+	ID             ident.ID  `json:"id"`
+	DeviceID       string    `json:"device_id"`
+	DeviceType     string    `json:"device_type"`
+	Name           *string   `json:"name,omitempty"`
+	Status         string    `json:"status"`
+	LastSeen       *string   `json:"last_seen,omitempty"`
+	RegisteredByID *ident.ID `json:"registered_by_id,omitempty"`
+	RoomName       *string   `json:"room_name,omitempty"`
+	IsOnline       bool      `json:"is_online"`
+	CreatedAt      string    `json:"created_at"`
+	UpdatedAt      string    `json:"updated_at"`
+	APIKey         *string   `json:"api_key,omitempty"`
 }
 
 func TestDeviceWriteQueryBudgets(t *testing.T) {
@@ -83,7 +86,7 @@ func TestDeviceWriteQueryBudgets(t *testing.T) {
 						method, path, permission, status = http.MethodPut, fmt.Sprintf("/%d", before.ID), "devices:manage", http.StatusOK
 					}
 					name := "After"
-					body := map[string]any{"device_id": id, "device_type": "terminal", "name": name, "status": "active", "registered_by_id": person.ID}
+					body := map[string]any{"device_id": id, "device_type": "terminal", "name": name, "status": "active", "registered_by_id": ident.ID(person.ID)}
 					request := testutil.NewAuthenticatedRequest(t, method, path, body, testutil.WithClaims(t, testutil.DefaultTestClaims()), testutil.WithPermissions(permission))
 					ctx, cancel := context.WithTimeout(request.Context(), 10*time.Second)
 					var dbStart, dbEnd time.Time
@@ -101,7 +104,7 @@ func TestDeviceWriteQueryBudgets(t *testing.T) {
 					var row devicefleet.Device
 					require.NoError(t, testpkg.WithinTenantContext(t, testpkg.Ctx(t), db, testpkg.Tenant(t), func(ctx context.Context) error {
 						var err error
-						row, err = fleet.FindDevice(ctx, wire.ID)
+						row, err = fleet.FindDevice(ctx, wire.ID.Int64())
 						return err
 					}))
 					require.Positive(t, row.ID)
@@ -115,8 +118,7 @@ func TestDeviceWriteQueryBudgets(t *testing.T) {
 					want.UpdatedAt, want.RoomName = row.UpdatedAt, roomName
 					if scenario == "create-no-room" {
 						require.Equal(t, "no-store", response.Header().Get("Cache-Control"))
-						// The owner stamps created_at on its clock: ListOffline
-						// compares it with an owner-clock cutoff (ADR 0281).
+						// The owner stamps created_at on its clock (ADR 0281).
 						require.False(t, row.CreatedAt.Before(hostStart))
 						require.False(t, row.CreatedAt.After(hostEnd))
 						require.NotNil(t, row.LastSeen)
@@ -134,7 +136,7 @@ func TestDeviceWriteQueryBudgets(t *testing.T) {
 					require.Equal(t, testpkg.Tenant(t), row.TenantID)
 					assertDeviceWriteBudgetRow(t, want, row)
 					lastSeen := row.LastSeen.Format(time.RFC3339)
-					require.Equal(t, deviceWriteBudgetWire{ID: row.ID, DeviceID: id, DeviceType: "terminal", Name: &name, Status: "active", LastSeen: &lastSeen, RegisteredByID: &person.ID, RoomName: roomName, IsOnline: true, CreatedAt: row.CreatedAt.Format(time.RFC3339), UpdatedAt: row.UpdatedAt.Format(time.RFC3339)}, wire)
+					require.Equal(t, deviceWriteBudgetWire{ID: ident.ID(row.ID), DeviceID: id, DeviceType: "terminal", Name: &name, Status: "active", LastSeen: &lastSeen, RegisteredByID: (*ident.ID)(&person.ID), RoomName: roomName, IsOnline: true, CreatedAt: row.CreatedAt.Format(time.RFC3339), UpdatedAt: row.UpdatedAt.Format(time.RFC3339)}, wire)
 					require.Equal(t, 1, len(counter.Operation("INSERT"))+len(counter.Operation("UPDATE")))
 					inserts := 0
 					if scenario == "create-no-room" {
@@ -218,7 +220,7 @@ func decodeDeviceWriteBudgetWire(t *testing.T, body []byte, create bool) (device
 	delete(fields, "api_key")
 	actual, err := json.Marshal(fields)
 	require.NoError(t, err)
-	want, err := json.Marshal(wire)
+	want, err := answer.Marshal(wire)
 	require.NoError(t, err)
 	require.JSONEq(t, string(want), string(actual), "exact default/omitempty field presence")
 	return wire, key

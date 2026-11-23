@@ -5,6 +5,7 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
+import { mapAnnouncement } from "~/lib/operator/announcements-helpers";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const originalScrollHeight = Object.getOwnPropertyDescriptor(
@@ -1141,7 +1142,7 @@ describe("OperatorAnnouncementsPage", () => {
       mockToastError.mockClear();
     });
 
-    it("handleSave creates announcement with parsed int IDs and shows success toast", async () => {
+    it("handleSave creates announcement with string IDs and shows success toast", async () => {
       mockCreate.mockResolvedValue({});
       mockMutate.mockResolvedValue(undefined);
 
@@ -1200,8 +1201,8 @@ describe("OperatorAnnouncementsPage", () => {
           expect.objectContaining({
             title: "Test Title",
             content: "Test Content",
-            target_org_ids: [1],
-            target_tenant_ids: [10],
+            target_org_ids: ["1"],
+            target_tenant_ids: ["10"],
           }),
         );
       });
@@ -1520,6 +1521,57 @@ describe("OperatorAnnouncementsPage", () => {
       });
 
       consoleWarn.mockRestore();
+    });
+
+    it("preserves unknown type and severity when only the title changes", async () => {
+      const announcement = mapAnnouncement({
+        id: "1",
+        title: "Test Announcement",
+        content: "Test content",
+        type: "newsletter",
+        severity: "urgent",
+        active: false,
+        target_roles: [],
+        target_org_ids: [],
+        target_tenant_ids: [],
+        created_by: "1",
+        created_at: "2026-09-01T08:00:00Z",
+        updated_at: "2026-09-01T08:00:00Z",
+        status: "draft",
+      });
+      mockUpdate.mockResolvedValue({});
+      mockUseSWR.mockReturnValue({
+        data: [announcement],
+        isLoading: false,
+        mutate: mockMutate,
+      });
+
+      render(<OperatorAnnouncementsPage />);
+      expect(
+        screen.getByText("Ankündigung", { selector: "[data-status-pill]" }),
+      ).toBeInTheDocument();
+      fireEvent.click(screen.getAllByLabelText("Menü öffnen")[0]!);
+      fireEvent.click(await screen.findByText("Bearbeiten"));
+
+      expect(
+        screen.getByRole("button", { name: "Ankündigung", pressed: true }),
+      ).toBeInTheDocument();
+      expect(screen.getByText("Info")).toBeInTheDocument();
+      fireEvent.change(screen.getByRole("textbox", { name: /Titel/ }), {
+        target: { value: "Updated Title" },
+      });
+      fireEvent.click(screen.getByText("Speichern"));
+
+      await waitFor(() => {
+        expect(mockUpdate).toHaveBeenCalledWith(
+          "1",
+          expect.objectContaining({
+            title: "Updated Title",
+            type: "newsletter",
+            severity: "urgent",
+          }),
+        );
+      });
     });
 
     it("handleSave updates existing announcement and shows save toast", async () => {

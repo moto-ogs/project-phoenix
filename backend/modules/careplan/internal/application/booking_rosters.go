@@ -73,7 +73,7 @@ func (m *BookingMaterialization) enrollmentRewriteBoundary(startFrom *calendar.D
 	return boundary
 }
 
-func draftGroupIDSet(drafts map[int64]*careEnrollmentDraft) map[int64]bool {
+func draftGroupIDSet(drafts map[int64][]*careEnrollmentDraft) map[int64]bool {
 	groupIDs := make(map[int64]bool, len(drafts))
 	for groupID := range drafts {
 		groupIDs[groupID] = true
@@ -133,7 +133,7 @@ func (m *BookingMaterialization) careEnrollmentDraftsForChild(
 	ctx context.Context,
 	requestChildID, studentID int64,
 	phase careplan.OfferingPhase,
-) (map[int64]*careEnrollmentDraft, map[int64]ports.SourcedTemplate, error) {
+) (map[int64][]*careEnrollmentDraft, map[int64]ports.SourcedTemplate, error) {
 	// A future phase's selections are bounded to its service window and are
 	// therefore not active today while staff approve the request.
 	links, err := m.deps.Enrollment.SelectionsAt(ctx, requestChildID, phase.ServiceStart)
@@ -154,9 +154,9 @@ func (m *BookingMaterialization) careEnrollmentDraftsForLinks(
 	requestChildID, studentID int64,
 	links []*careplan.BookedOffering,
 	phase careplan.OfferingPhase,
-) (map[int64]*careEnrollmentDraft, map[int64]ports.SourcedTemplate, error) {
+) (map[int64][]*careEnrollmentDraft, map[int64]ports.SourcedTemplate, error) {
 	if len(links) == 0 {
-		return map[int64]*careEnrollmentDraft{}, map[int64]ports.SourcedTemplate{}, nil
+		return map[int64][]*careEnrollmentDraft{}, map[int64]ports.SourcedTemplate{}, nil
 	}
 	offerings, err := m.catalog.listByIDs(ctx, bookedOfferingIDs(links))
 	if err != nil {
@@ -251,7 +251,7 @@ func (m *BookingMaterialization) persistCareEnrollmentDrafts(
 	ctx context.Context,
 	requestChildID, studentID int64,
 	phase careplan.OfferingPhase,
-	drafts map[int64]*careEnrollmentDraft,
+	drafts map[int64][]*careEnrollmentDraft,
 	startFrom *calendar.Date,
 ) error {
 	groupIDs := make([]int64, 0, len(drafts))
@@ -259,19 +259,29 @@ func (m *BookingMaterialization) persistCareEnrollmentDrafts(
 		groupIDs = append(groupIDs, groupID)
 	}
 	slices.Sort(groupIDs)
+	// One statement writes every row of the child, however many rows its
+	// bookings cut (#7908).
+	var rows []ports.RosterEnrollment
 	for _, groupID := range groupIDs {
-		row := rosterRowFromCareDraft(requestChildID, studentID, phase, drafts[groupID], startFrom)
-		if row.ValidUntil != nil && !row.ValidFrom.Before(*row.ValidUntil) {
-			// The draft's segment ended before the row would begin (approval
-			// after a split): the capped predecessor has nothing left to plan.
-			continue
+		for _, draft := range drafts[groupID] {
+			row := rosterRowFromCareDraft(requestChildID, studentID, phase, draft, startFrom)
+			if row.ValidUntil != nil && !row.ValidFrom.Before(*row.ValidUntil) {
+				// The draft ended before the row would begin: a capped split
+				// predecessor after its split, or a booking that ended before
+				// the dated switch.
+				continue
+			}
+			if err := validateRosterRow(row); err != nil {
+				return fmt.Errorf("decision: validate enrollment: %w", err)
+			}
+			rows = append(rows, row)
 		}
-		if err := validateRosterRow(row); err != nil {
-			return fmt.Errorf("decision: validate enrollment: %w", err)
-		}
-		if err := m.deps.Rosters.CreateEnrollment(ctx, row); err != nil {
-			return fmt.Errorf("decision: create enrollment: %w", err)
-		}
+	}
+	if len(rows) == 0 {
+		return nil
+	}
+	if err := m.deps.Rosters.SaveRosterChanges(ctx, ports.RosterChanges{Create: rows}); err != nil {
+		return fmt.Errorf("decision: create enrollments: %w", err)
 	}
 	return nil
 }
@@ -283,24 +293,7 @@ func rosterRowFromCareDraft(
 	startFrom *calendar.Date,
 ) ports.RosterEnrollment {
 	validUntil := careDraftValidUntil(draft, phase)
-	validFrom := phase.ServiceStart
-	// A dated switch may start mid-phase; a phase that already began must not
-	// pull the new row back to its service start. Clamped so an effective date
-	// before the phase window cannot widen it either.
-	if startFrom != nil && startFrom.After(validFrom) {
-		validFrom = *startFrom
-	}
-	// A sourced draft is additionally bounded by its segment's recurrence
-	// envelope and by the child's offering-link window (#2147 review):
-	// approving after a split must not give the capped predecessor coverage
-	// past its valid_until, and a link starting mid-phase must not plan the
-	// child before it. Callers skip rows whose window collapses to empty.
-	if draft.scheduleValidFrom != nil && draft.scheduleValidFrom.After(validFrom) {
-		validFrom = *draft.scheduleValidFrom
-	}
-	if draft.linkValidFrom != nil && draft.linkValidFrom.After(validFrom) {
-		validFrom = *draft.linkValidFrom
-	}
+	validFrom := careDraftValidFrom(draft, phase, startFrom)
 	childID := requestChildID
 	row := ports.RosterEnrollment{
 		StudentID:                studentID,
@@ -316,16 +309,24 @@ func rosterRowFromCareDraft(
 	return row
 }
 
-// careDraftValidUntil is the exclusive end a draft's rows may reach: the
-// phase's service window, clamped by the sourced segment's recurrence
-// envelope and by the child's offering-link validity (#2147 review). The
-// dated adjustment's retained-row extension uses the same bound — extending a
-// capped split predecessor back to the phase end would overlap its successor,
-// and extending past the link end would plan the child after leaving the
-// offering.
+// careDraftValidFrom is the day a draft's row starts: the phase's service
+// start, the start override of a dated switch (a phase that already began
+// must not pull the new row back to its service start), or the draft's own
+// start where that lies later. Callers skip rows whose window collapses to
+// empty.
+func careDraftValidFrom(draft *careEnrollmentDraft, phase careplan.OfferingPhase, startFrom *calendar.Date) calendar.Date {
+	return latestDate(phase.ServiceStart, startFrom, draft.validFrom)
+}
+
+// careDraftValidUntil is the exclusive end a draft's row may reach: the
+// phase's service window, clamped by the draft's own end and the child's
+// care end. The dated adjustment sets a retained row to the same end:
+// extending a capped split predecessor back to the phase end would overlap
+// its successor, and a row past the end of its booking would plan the child
+// after leaving the offering.
 func careDraftValidUntil(draft *careEnrollmentDraft, phase careplan.OfferingPhase) calendar.Date {
 	validUntil := phase.ServiceEnd.AddDays(1)
-	for _, bound := range []*calendar.Date{draft.scheduleValidUntil, draft.linkValidUntil, draft.studentValidUntil} {
+	for _, bound := range []*calendar.Date{draft.validUntil, draft.studentValidUntil} {
 		if bound != nil && bound.Before(validUntil) {
 			validUntil = *bound
 		}

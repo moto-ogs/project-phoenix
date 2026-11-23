@@ -50,7 +50,7 @@ function renderRow(
   request: AggregatedOpenRequest,
   handlers: Partial<{
     onDecided: (key: string, notice: string) => void;
-    onStale: () => void;
+    onStale: () => Promise<unknown>;
     inConflict: boolean;
   }> = {},
 ) {
@@ -64,7 +64,7 @@ function renderRow(
         inConflict={handlers.inConflict ?? false}
         onSelectionChange={vi.fn()}
         onDecided={handlers.onDecided ?? vi.fn()}
-        onStale={handlers.onStale ?? vi.fn()}
+        onStale={handlers.onStale ?? vi.fn(async () => undefined)}
       />
     </ToastProvider>,
   );
@@ -180,27 +180,31 @@ describe("RequestDecisionRow", () => {
     await waitFor(() => expect(mockMarkDone).toHaveBeenCalledTimes(2));
   });
 
-  it("lädt bei einer veralteten Anfrage neu und meldet den Code-Text", async () => {
-    const onStale = vi.fn();
-    mockMarkDone.mockRejectedValueOnce(
-      new ApiError("change request stale", 409, {
-        code: "students.change_request_stale",
-      }),
-    );
-    renderRow(item({ past: true, bulk_eligible: false }), { onStale });
+  // general.changed_since_read: the request changed since the list was read
+  // (ADR 0311); students.change_request_stale: a master-data request's old
+  // value no longer matches. Neither is worth a retry.
+  it.each(["general.changed_since_read", "students.change_request_stale"])(
+    "lädt bei einer veralteten Anfrage (%s) neu und meldet den Code-Text",
+    async (code) => {
+      const onStale = vi.fn();
+      mockMarkDone.mockRejectedValueOnce(
+        new ApiError("change request stale", 409, { code }),
+      );
+      renderRow(item({ past: true, bulk_eligible: false }), { onStale });
 
-    fireEvent.click(
-      screen.getByRole("button", { name: "Als erledigt markieren" }),
-    );
+      fireEvent.click(
+        screen.getByRole("button", { name: "Als erledigt markieren" }),
+      );
 
-    await waitFor(() => expect(onStale).toHaveBeenCalledOnce());
-    expect(
-      await screen.findByRole("alert", { name: /^Fehler:/ }),
-    ).toHaveTextContent(/wurde inzwischen geändert/);
-    expect(
-      screen.queryByRole("button", { name: /Wiederholen/ }),
-    ).not.toBeInTheDocument();
-  });
+      await waitFor(() => expect(onStale).toHaveBeenCalledOnce());
+      expect(
+        await screen.findByRole("alert", { name: /^Fehler:/ }),
+      ).toHaveTextContent(/wurde inzwischen geändert/);
+      expect(
+        screen.queryByRole("button", { name: /Wiederholen/ }),
+      ).not.toBeInTheDocument();
+    },
+  );
 
   it("sperrt die Einzel-Entscheidung, solange ein Widerspruch offen ist", () => {
     renderRow(item(), { inConflict: true });

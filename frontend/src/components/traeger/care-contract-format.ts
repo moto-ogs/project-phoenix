@@ -23,6 +23,7 @@ import type {
   TemplateIssue,
   Weekday,
 } from "~/lib/traeger-care-contracts-api";
+import { labelOf } from "~/lib/label-of";
 
 export const CONTRACT_STATUS_LABELS: Record<CareContractStatus, string> = {
   entwurf: "Entwurf",
@@ -47,9 +48,12 @@ const CONTRACT_STATUS_TONES: Record<CareContractStatus, StatusBadgeTone> = {
  * stays orange until the contract has ended, with or without an end date.
  */
 export function contractStatusTone(
-  contract: Readonly<{ status: CareContractStatus; endsOn?: string | null }>,
+  contract: Readonly<{
+    status: CareContractStatus | undefined;
+    endsOn?: string | null;
+  }>,
 ): StatusBadgeTone {
-  return CONTRACT_STATUS_TONES[contract.status];
+  return labelOf(CONTRACT_STATUS_TONES, contract.status, "gray");
 }
 
 /** The order of the status filter: what the office works on first. */
@@ -135,9 +139,12 @@ export function formatServiceDays(
   if (days.length === 0) return "–";
   return days
     .map((day) => {
-      const ends = day.services.map(
-        (service) => service.endsAt || service.moduleName,
-      );
+      const ends = day.services.map((service) => {
+        const end = service.endsAt || service.moduleName;
+        return service.lastDay
+          ? `${end}, gebucht bis ${formatDate(service.lastDay)}`
+          : end;
+      });
       const timed = day.services.every((service) => service.endsAt);
       return `${WEEKDAY_SHORT[day.weekday]} ${timed ? "bis " : ""}${ends.join(" und ")}`;
     })
@@ -154,6 +161,8 @@ export const TEMPLATE_ISSUE_LABELS: Record<TemplateIssue, string> = {
   recipient_missing: "E-Mail-Adresse der Eltern fehlt",
   mail_blocked: "Mail-Adresse gesperrt",
   mail_stopped: "Mails gestoppt",
+  imported_contract: "Hat schon einen importierten Vertrag",
+  other: "Entwurf noch nicht möglich",
 };
 
 /**
@@ -187,6 +196,8 @@ export const SEND_SKIP_LABELS: Record<SendSkipReason, string> = {
   mail_blocked: "eine Mail an diese Adresse würde nicht rausgehen",
   mail_block_unreadable: "der Stand der Adresse lässt sich gerade nicht prüfen",
   not_sendable: "lässt sich nicht mehr senden",
+  other:
+    "lässt sich gerade nicht senden. Lade die Seite neu, dann siehst du den Grund",
 };
 
 export function childName(contract: {
@@ -202,18 +213,51 @@ const CONCLUSION_METHOD_LABELS: Record<ConclusionMethod, string> = {
   papier: "mit dem unterschriebenen Vertrag auf Papier",
 };
 
+/** How a contract taken over from an import was concluded (#7767). */
+const TAKEN_OVER_METHOD_LABELS: Partial<Record<ConclusionMethod, string>> = {
+  einfach_elektronisch: "online im vorherigen Programm",
+  papier: "auf Papier",
+};
+
 /**
  * The conclusion in one line: „Am 06.11.2026 um 16:12 Uhr, bei der Annahme
- * der Anmeldung“. An imported paper contract knows only its day (#4723): it
- * is stored at midnight and shows without a time.
+ * der Anmeldung“. A contract taken over from an import (#4723, #7767) knows
+ * at most its day: „Am 12.03.2026, auf Papier“, or „Abschlussdatum
+ * unbekannt, …“ when the office does not know it; its stand-in instant is
+ * never shown. A view without `takenOver` keeps the older
+ * rule: a paper contract stored at midnight shows without a time.
  */
 export function formatConclusion(conclusion: ContractConclusion): string {
+  if (conclusion.takenOver) {
+    const when = conclusion.dateUnknown
+      ? "Abschlussdatum unbekannt"
+      : `Am ${formatBerlinDate(conclusion.at)}`;
+    const how = conclusion.method
+      ? TAKEN_OVER_METHOD_LABELS[conclusion.method]
+      : undefined;
+    return how ? `${when}, ${how}` : when;
+  }
+  if (conclusion.dateUnknown) return "Abschlussdatum unbekannt";
   const time = formatBerlinTime(conclusion.at);
   const when =
     conclusion.method === "papier" && time === "00:00"
       ? `Am ${formatBerlinDate(conclusion.at)}`
       : `Am ${formatBerlinDate(conclusion.at)} um ${time} Uhr`;
-  return `${when}, ${CONCLUSION_METHOD_LABELS[conclusion.method]}`;
+  return conclusion.method
+    ? `${when}, ${CONCLUSION_METHOD_LABELS[conclusion.method]}`
+    : when;
+}
+
+/**
+ * When the contract was concluded, as far as the office knows it; null for
+ * a taken-over contract with an unknown day (#7767), whose instant is only a
+ * stand-in and must never show or bound a date.
+ */
+export function knownConclusionAt(
+  conclusion: ContractConclusion | null,
+): string | null {
+  if (!conclusion || conclusion.dateUnknown) return null;
+  return conclusion.at;
 }
 
 export const CONCLUSION_MODE_LABELS: Record<ConclusionMode, string> = {
@@ -231,3 +275,15 @@ export const TERMINATION_KIND_LABELS = {
   sonderkuendigung: "Sonderkündigung",
   ausserordentlich: "Außerordentlich, aus wichtigem Grund",
 } as const;
+
+/**
+ * Why a child an imported contract covers gets no second contract, and what
+ * the office checks if that is wrong (#7760).
+ */
+export function importedContractReason(contractId: string | null): string {
+  const contract =
+    contractId === null
+      ? "Ein importierter Vertrag"
+      : `Der importierte Vertrag Nr. ${contractId}`;
+  return `${contract} gilt für dieses Kind in derselben Zeit. Deshalb entsteht hier kein zweiter. Stimmt das nicht, prüfe dort die Kinderakte und das Vertragsende.`;
+}

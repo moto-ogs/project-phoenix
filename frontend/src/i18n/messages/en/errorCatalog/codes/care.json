@@ -79,6 +79,7 @@
   "request_not_found": "{object} was not found. Please reload the page.",
   "request_not_open": "{object} is no longer open. Please ask your contact person.",
   "request_sharing_invalid": "{object} contains invalid details. Please check your entries.",
+  "room_history_stop_disabled": "You cannot change {object} here at the moment. Please ask your contact person.",
   "sick_note_disabled": "{object} is not available here at the moment. Please ask your contact person.",
   "staff_managed_guardian_protected": "You cannot access {object}. Please contact the school.",
   "guardian_invite_unavailable": "This invitation could not be sent right now. Please contact the after-school care team."

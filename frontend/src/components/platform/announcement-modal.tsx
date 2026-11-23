@@ -1,5 +1,6 @@
 "use client";
 
+import type * as platformContract from "~/lib/contract/platform.generated";
 import { useState, useCallback, useEffect, useRef } from "react";
 import {
   SparkleIcon,
@@ -11,6 +12,7 @@ import { Button } from "~/components/ui/button";
 import { Modal } from "~/components/ui/modal";
 import { MotoDuotoneIcon } from "~/components/ui/moto-duotone-icon";
 import { useAnnouncements } from "~/lib/hooks/use-announcements";
+import { trackOnboardingSurface } from "~/lib/analytics";
 import { createLogger } from "~/lib/logger";
 import { IconTile } from "~/components/ui/icon-tile";
 
@@ -41,27 +43,24 @@ const TYPE_HEADERS: Record<
   },
 };
 
-interface UnreadAnnouncement {
-  id: number | string;
-  title: string;
-  content: string;
-  type: string;
-  severity: string;
-  version?: string;
-  published_at: string;
-}
-
 export function AnnouncementModal() {
-  const { announcements, dismiss, isLoading, refresh } = useAnnouncements();
+  const { announcements, dismiss, markSeen, isLoading, refresh } =
+    useAnnouncements();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
   // Keep a stable snapshot of announcements when modal opens
   const [queuedAnnouncements, setQueuedAnnouncements] = useState<
-    UnreadAnnouncement[]
+    platformContract.PlatformAnnouncementResponse[]
   >([]);
   const dismissedIdsRef = useRef<Set<string>>(new Set());
-  // Track IDs the user has seen (closed without dismissing) to avoid re-opening
+  // Track IDs closed in this session to avoid re-opening the modal.
   const closedIdsRef = useRef<Set<string>>(new Set());
+  // Einstieg (#7555): a view report is attempted at most once per modal
+  // instance. A transport failure can mean the backend committed it, so a
+  // later render must not send it again.
+  const seenAttemptedIdsRef = useRef<Set<string>>(new Set());
+  const seenRequestsRef = useRef<Map<string, Promise<void>>>(new Map());
+  const shownReportedRef = useRef(false);
 
   // Show modal when we have announcements - capture stable snapshot
   useEffect(() => {
@@ -80,6 +79,67 @@ export function AnnouncementModal() {
     }
   }, [announcements, isLoading, isVisible]);
 
+  const reportSeen = useCallback(
+    (id: string) => {
+      const key = String(id);
+      const existing = seenRequestsRef.current.get(key);
+      if (existing) return existing;
+      if (seenAttemptedIdsRef.current.has(key)) return Promise.resolve();
+
+      seenAttemptedIdsRef.current.add(key);
+      const request = Promise.resolve()
+        .then(() => markSeen(id))
+        .catch((error: unknown) => {
+          logger.error("announcement_seen_failed", {
+            error: error instanceof Error ? error.message : String(error),
+          });
+          throw error;
+        });
+      seenRequestsRef.current.set(key, request);
+      void request.then(
+        () => {
+          seenRequestsRef.current.delete(key);
+        },
+        () => undefined,
+      );
+      return request;
+    },
+    [markSeen],
+  );
+
+  const dismissAfterSeen = useCallback(
+    (id: string) => {
+      void reportSeen(id).then(
+        () =>
+          dismiss(id).catch((error: unknown) => {
+            logger.error("announcement_dismiss_failed", {
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }),
+        () => undefined,
+      );
+    },
+    [dismiss, reportSeen],
+  );
+
+  // Report each announcement once when it is on screen: the backend stores
+  // seen_at and counts it for the school; the browser reports the surface.
+  const currentId = isVisible
+    ? queuedAnnouncements[currentIndex]?.id
+    : undefined;
+  useEffect(() => {
+    if (!isVisible) {
+      shownReportedRef.current = false;
+      return;
+    }
+    if (!shownReportedRef.current) {
+      shownReportedRef.current = true;
+      trackOnboardingSurface("shown", "announcement");
+    }
+    if (currentId === undefined) return;
+    void reportSeen(currentId).catch(() => undefined);
+  }, [isVisible, currentId, reportSeen]);
+
   // Dismiss current and advance to next announcement ("Weiter" / "Verstanden")
   const handleDismiss = useCallback(async () => {
     const current = queuedAnnouncements[currentIndex];
@@ -88,31 +148,35 @@ export function AnnouncementModal() {
     // Track this ID as dismissed locally
     dismissedIdsRef.current.add(String(current.id));
 
-    // Send dismiss to backend (fire-and-forget, don't block UI)
-    dismiss(current.id).catch((error) => {
-      logger.error("announcement_dismiss_failed", {
-        error: error instanceof Error ? error.message : String(error),
-      });
-    });
+    // Preserve the write order while the UI can already advance.
+    dismissAfterSeen(current.id);
 
     // Move to next or close
     if (currentIndex < queuedAnnouncements.length - 1) {
       setCurrentIndex((prev) => prev + 1);
     } else {
+      // "Verstanden" on the last one: the person took the announcement in.
+      trackOnboardingSurface("accepted", "announcement");
       setIsVisible(false);
       // Refresh data after all announcements processed
       void refresh();
     }
-  }, [queuedAnnouncements, currentIndex, dismiss, refresh]);
+  }, [queuedAnnouncements, currentIndex, dismissAfterSeen, refresh]);
 
   // Close modal entirely (X button, backdrop, Escape key)
   // Dismiss all queued announcements on the backend so they don't reappear on next login
   const handleClose = useCallback(() => {
+    trackOnboardingSurface("dismissed", "announcement");
+    const visibleID = queuedAnnouncements[currentIndex]?.id;
     for (const a of queuedAnnouncements) {
       closedIdsRef.current.add(String(a.id));
       if (!dismissedIdsRef.current.has(String(a.id))) {
         dismissedIdsRef.current.add(String(a.id));
-        dismiss(a.id).catch((error) => {
+        if (a.id === visibleID) {
+          dismissAfterSeen(a.id);
+          continue;
+        }
+        void dismiss(a.id).catch((error) => {
           logger.error("announcement_dismiss_failed", {
             error: error instanceof Error ? error.message : String(error),
           });
@@ -120,7 +184,7 @@ export function AnnouncementModal() {
       }
     }
     setIsVisible(false);
-  }, [queuedAnnouncements, dismiss]);
+  }, [queuedAnnouncements, currentIndex, dismiss, dismissAfterSeen]);
 
   const current = queuedAnnouncements[currentIndex];
   if (!current || !isVisible) return null;

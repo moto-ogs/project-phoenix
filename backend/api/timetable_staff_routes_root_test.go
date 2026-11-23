@@ -43,7 +43,7 @@ func checkTimetableStaffRoutes(t *testing.T, api *goldenRuntime) {
 
 	t.Run("calendar period removal", func(t *testing.T) {
 		var period struct {
-			ID int64 `json:"id"`
+			ID wireID `json:"id"`
 		}
 		request(t, http.MethodPost, "/api/timetable/periods/",
 			fmt.Sprintf(`{"name":"Entfernen-%d","period_type":"custom","start_date":"2041-08-01","end_date":"2041-08-31","is_active":false}`, time.Now().UnixNano()), &period)
@@ -55,10 +55,11 @@ func checkTimetableStaffRoutes(t *testing.T, api *goldenRuntime) {
 
 	t.Run("planning track administration", func(t *testing.T) {
 		type track struct {
-			ID         int64   `json:"id"`
+			ID         wireID  `json:"id"`
 			Name       string  `json:"name"`
 			SortOrder  int     `json:"sort_order"`
 			ArchivedAt *string `json:"archived_at"`
+			Version    string  `json:"version"`
 		}
 		var early, late track
 		request(t, http.MethodPost, "/api/timetable/planning-tracks/", `{"name":"Früh","color":"#5080D8","sort_order":0}`, &early)
@@ -66,7 +67,7 @@ func checkTimetableStaffRoutes(t *testing.T, api *goldenRuntime) {
 		require.Equal(t, "Früh", early.Name)
 
 		var renamed track
-		request(t, http.MethodPut, fmt.Sprintf("/api/timetable/planning-tracks/%d", early.ID), `{"name":"Frühdienst","color":"#5080D8","sort_order":0}`, &renamed)
+		request(t, http.MethodPut, fmt.Sprintf("/api/timetable/planning-tracks/%d", early.ID), fmt.Sprintf(`{"name":"Frühdienst","color":"#5080D8","sort_order":0,"expected_version":%q}`, early.Version), &renamed)
 		assert.Equal(t, "Frühdienst", renamed.Name)
 
 		var ordered []track
@@ -86,17 +87,17 @@ func checkTimetableStaffRoutes(t *testing.T, api *goldenRuntime) {
 		offering := testpkg.CreateTestCareOffering(t, db, phase.ID, "Randstunde")
 		var sources struct {
 			Offerings []struct {
-				ID         int64 `json:"id"`
-				PhaseID    int64 `json:"phase_id"`
-				TotalCount int   `json:"total_count"`
+				ID         wireID `json:"id"`
+				PhaseID    wireID `json:"phase_id"`
+				TotalCount int    `json:"total_count"`
 			} `json:"offerings"`
 		}
 		request(t, http.MethodGet, "/api/timetable/offering-sources", "", &sources)
 		var listed bool
 		for _, option := range sources.Offerings {
-			if option.ID == offering.ID {
+			if int64(option.ID) == offering.ID {
 				listed = true
-				assert.Equal(t, phase.ID, option.PhaseID)
+				assert.Equal(t, phase.ID, int64(option.PhaseID))
 			}
 		}
 		assert.True(t, listed, "the active care offering is a selectable source")
@@ -137,15 +138,39 @@ func checkTimetableStaffRoutes(t *testing.T, api *goldenRuntime) {
 			VALUES (?, ?, ?, 'Mathe', 'Seite 12')`, tenantID, strings.ToUpper(class), day)
 		require.NoError(t, err)
 
-		var saved struct {
-			StudentID int64  `json:"student_id"`
-			Status    string `json:"status"`
+		var roster struct {
+			Rows []struct {
+				StudentID wireID `json:"student_id"`
+				Version   string `json:"homework_feedback_version"`
+			} `json:"rows"`
 		}
-		request(t, http.MethodPut, fmt.Sprintf("/api/timetable/operations/instances/%d/students/%d/homework-feedback", block.ID, child.ID), `{"status":"done"}`, &saved)
-		assert.Equal(t, child.ID, saved.StudentID)
+		request(t, http.MethodGet, fmt.Sprintf("/api/timetable/operations/instances/%d/roster", block.ID), "", &roster)
+		require.Len(t, roster.Rows, 1)
+		read := roster.Rows[0].Version
+		require.NotEmpty(t, read, "the roster answers a token also before the first feedback")
+
+		var saved struct {
+			StudentID wireID `json:"student_id"`
+			Status    string `json:"status"`
+			Version   string `json:"version"`
+		}
+		feedbackPath := fmt.Sprintf("/api/timetable/operations/instances/%d/students/%d/homework-feedback", block.ID, child.ID)
+		request(t, http.MethodPut, feedbackPath, `{"status":"done","expected_version":"`+read+`"}`, &saved)
+		assert.Equal(t, child.ID, int64(saved.StudentID))
 		assert.Equal(t, "done", saved.Status)
+		assert.NotEqual(t, read, saved.Version, "the save answers the new token")
 		var stored string
 		require.NoError(t, db.NewRaw(`SELECT status FROM education.homework_feedback WHERE tenant_id = ? AND student_id = ?`, tenantID, child.ID).Scan(testpkg.Ctx(t), &stored))
 		assert.Equal(t, "done", stored)
+
+		// ADR 0311: a colleague who read the roster before this feedback
+		// writes nothing over it.
+		refused := checkpointRequest(api, checkpointScenario{Method: http.MethodPut, Path: feedbackPath, Authenticated: true, Body: `{"status":"difficult","expected_version":"` + read + `"}`}, token)
+		assert.Equal(t, http.StatusConflict, refused.Code, refused.Body.String())
+		assert.Contains(t, refused.Body.String(), "general.changed_since_read")
+		require.NoError(t, db.NewRaw(`SELECT status FROM education.homework_feedback WHERE tenant_id = ? AND student_id = ?`, tenantID, child.ID).Scan(testpkg.Ctx(t), &stored))
+		assert.Equal(t, "done", stored)
+		request(t, http.MethodPut, feedbackPath, `{"status":"difficult","expected_version":"`+saved.Version+`"}`, &saved)
+		assert.Equal(t, "difficult", saved.Status, "the answer's token saves again")
 	})
 }

@@ -3,8 +3,8 @@
 // own absence types. Maintained on /payroll; requires config:manage. The
 // backend writes every change into the settings audit.
 
-import { apiErrorFromResponse } from "./api-error";
-import { sessionFetch } from "./session-cache";
+import { bffJson } from "./bff-fetch";
+import type { PayrollRulesResponse } from "./contract/staff.generated";
 
 export type WageTypeUnit = "stunden" | "tage" | "betrag";
 export type SurchargeKind = "nacht" | "sonntag" | "feiertag";
@@ -43,25 +43,6 @@ export interface PayrollRules {
   absenceTypes: PayrollAbsenceTypeMapping[];
 }
 
-interface BackendPayrollRules {
-  wage_types: { id: string; name: string; number: string; unit: string }[];
-  surcharge_rules: {
-    id: string;
-    kind: string;
-    window_start_minute: number | null;
-    window_end_minute: number | null;
-    rate_type: string;
-    rate_hundredths: number;
-    wage_type_id: string;
-  }[];
-  absence_types: {
-    id: string;
-    name: string;
-    is_active: boolean;
-    wage_type_id: string | null;
-  }[];
-}
-
 const UNITS: readonly WageTypeUnit[] = ["stunden", "tage", "betrag"];
 const KINDS: readonly SurchargeKind[] = ["nacht", "sonntag", "feiertag"];
 
@@ -73,15 +54,15 @@ function kindOf(value: string): SurchargeKind {
   return KINDS.find((kind) => kind === value) ?? "nacht";
 }
 
-export function mapPayrollRules(data: BackendPayrollRules): PayrollRules {
+export function mapPayrollRules(data: PayrollRulesResponse): PayrollRules {
   return {
-    wageTypes: data.wage_types.map((wageType) => ({
+    wageTypes: (data.wage_types ?? []).map((wageType) => ({
       id: wageType.id,
       name: wageType.name,
       number: wageType.number,
       unit: unitOf(wageType.unit),
     })),
-    surchargeRules: data.surcharge_rules.map((rule) => ({
+    surchargeRules: (data.surcharge_rules ?? []).map((rule) => ({
       id: rule.id,
       kind: kindOf(rule.kind),
       windowStartMinute: rule.window_start_minute,
@@ -90,7 +71,7 @@ export function mapPayrollRules(data: BackendPayrollRules): PayrollRules {
       rateHundredths: rule.rate_hundredths,
       wageTypeId: rule.wage_type_id,
     })),
-    absenceTypes: data.absence_types.map((absenceType) => ({
+    absenceTypes: (data.absence_types ?? []).map((absenceType) => ({
       id: absenceType.id,
       name: absenceType.name,
       isActive: absenceType.is_active,
@@ -99,35 +80,15 @@ export function mapPayrollRules(data: BackendPayrollRules): PayrollRules {
   };
 }
 
-const BASE = "/api/staff/time-tracking/payroll-rules";
-
-async function send(
-  path: string,
-  method: "POST" | "PUT" | "DELETE",
-  body: unknown,
-  failure: string,
-): Promise<void> {
-  const response = await sessionFetch(`${BASE}${path}`, {
-    method,
-    headers:
-      body === undefined ? undefined : { "Content-Type": "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, failure);
-  }
+/** A write whose answer the screen reloads instead of reading. */
+async function write(call: Promise<unknown>): Promise<void> {
+  await call;
 }
 
 export async function fetchPayrollRules(): Promise<PayrollRules> {
-  const response = await sessionFetch(BASE);
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `Failed to fetch payroll rules: ${response.statusText}`,
-    );
-  }
-  const json = (await response.json()) as { data: BackendPayrollRules };
-  return mapPayrollRules(json.data);
+  return mapPayrollRules(
+    await bffJson("tenant", "GET /api/staff/time-tracking/payroll-rules"),
+  );
 }
 
 export interface WageTypeInput {
@@ -137,27 +98,45 @@ export interface WageTypeInput {
 }
 
 export function createWageType(input: WageTypeInput): Promise<void> {
-  return send("/wage-types", "POST", input, "Creating the wage type failed");
+  return write(
+    bffJson(
+      "tenant",
+      "POST /api/staff/time-tracking/payroll-rules/wage-types",
+      {
+        body: input,
+        errorMessage: "Creating the wage type failed",
+      },
+    ),
+  );
 }
 
 export function updateWageType(
   id: string,
   input: WageTypeInput,
 ): Promise<void> {
-  return send(
-    `/wage-types/${encodeURIComponent(id)}`,
-    "PUT",
-    input,
-    "Updating the wage type failed",
+  return write(
+    bffJson(
+      "tenant",
+      "PUT /api/staff/time-tracking/payroll-rules/wage-types/{wageTypeId}",
+      {
+        params: { wageTypeId: id },
+        body: input,
+        errorMessage: "Updating the wage type failed",
+      },
+    ),
   );
 }
 
 export function archiveWageType(id: string): Promise<void> {
-  return send(
-    `/wage-types/${encodeURIComponent(id)}`,
-    "DELETE",
-    undefined,
-    "Archiving the wage type failed",
+  return write(
+    bffJson(
+      "tenant",
+      "DELETE /api/staff/time-tracking/payroll-rules/wage-types/{wageTypeId}",
+      {
+        params: { wageTypeId: id },
+        errorMessage: "Archiving the wage type failed",
+      },
+    ),
   );
 }
 
@@ -183,11 +162,15 @@ function ruleBody(input: SurchargeRuleInput) {
 }
 
 export function createSurchargeRule(input: SurchargeRuleInput): Promise<void> {
-  return send(
-    "/surcharge-rules",
-    "POST",
-    ruleBody(input),
-    "Creating the surcharge rule failed",
+  return write(
+    bffJson(
+      "tenant",
+      "POST /api/staff/time-tracking/payroll-rules/surcharge-rules",
+      {
+        body: ruleBody(input),
+        errorMessage: "Creating the surcharge rule failed",
+      },
+    ),
   );
 }
 
@@ -195,20 +178,29 @@ export function updateSurchargeRule(
   id: string,
   input: SurchargeRuleInput,
 ): Promise<void> {
-  return send(
-    `/surcharge-rules/${encodeURIComponent(id)}`,
-    "PUT",
-    ruleBody(input),
-    "Updating the surcharge rule failed",
+  return write(
+    bffJson(
+      "tenant",
+      "PUT /api/staff/time-tracking/payroll-rules/surcharge-rules/{ruleId}",
+      {
+        params: { ruleId: id },
+        body: ruleBody(input),
+        errorMessage: "Updating the surcharge rule failed",
+      },
+    ),
   );
 }
 
 export function archiveSurchargeRule(id: string): Promise<void> {
-  return send(
-    `/surcharge-rules/${encodeURIComponent(id)}`,
-    "DELETE",
-    undefined,
-    "Archiving the surcharge rule failed",
+  return write(
+    bffJson(
+      "tenant",
+      "DELETE /api/staff/time-tracking/payroll-rules/surcharge-rules/{ruleId}",
+      {
+        params: { ruleId: id },
+        errorMessage: "Archiving the surcharge rule failed",
+      },
+    ),
   );
 }
 
@@ -216,11 +208,16 @@ export function setAbsenceTypeWageType(
   absenceTypeId: string,
   wageTypeId: string | null,
 ): Promise<void> {
-  return send(
-    `/absence-types/${encodeURIComponent(absenceTypeId)}`,
-    "PUT",
-    { wage_type_id: wageTypeId },
-    "Setting the wage type of the absence type failed",
+  return write(
+    bffJson(
+      "tenant",
+      "PUT /api/staff/time-tracking/payroll-rules/absence-types/{absenceTypeId}",
+      {
+        params: { absenceTypeId },
+        body: { wage_type_id: wageTypeId },
+        errorMessage: "Setting the wage type of the absence type failed",
+      },
+    ),
   );
 }
 

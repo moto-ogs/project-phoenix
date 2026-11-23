@@ -12,6 +12,7 @@ import {
   getGuardianFullName,
   getRelationshipTypeLabel,
   getLanguageLabel,
+  isFullGuardianRole,
   PHONE_TYPE_LABELS,
 } from "@/lib/guardian-helpers";
 import {
@@ -142,10 +143,13 @@ function inviteNeedsEmail(
   guardian: GuardianWithRelationship,
   onInvite: GuardianListProps["onInvite"],
 ) {
+  // Nur wer mit der Rolle Zugang zur Eltern-App bekommt, soll eingeladen
+  // werden; einer Abholperson fehlt ohne E-Mail nichts. Ohne Rolle wie
+  // canInviteGuardian: einladbar.
   return Boolean(
     onInvite &&
+    (!guardian.guardianRole || isFullGuardianRole(guardian.guardianRole)) &&
     guardian.accountStatus !== "active" &&
-    guardian.guardianRole !== "social_worker" &&
     !(guardian.accountStatus === "pending" && guardian.hasAccount) &&
     !guardian.email,
   );
@@ -194,6 +198,9 @@ export default function GuardianList({
         icon: <Send className="h-4 w-4" aria-hidden />,
         disabled: isInviting,
         onClick: () => onInvite?.(guardian),
+        // Ziel der Eltern-Tour, wenn der Eintrag am Handy allein als Knopf
+        // steht (setup-tours.ts, #7799).
+        tourTarget: "guardian-invite",
       });
     }
     if (onEdit) {
@@ -496,7 +503,7 @@ function getPrimaryPhone(
 
 // Helper to get phone label with type and custom label
 function getPhoneLabel(phone: PhoneNumber): string {
-  const typeLabel = PHONE_TYPE_LABELS[phone.phoneType] ?? phone.phoneType;
+  const typeLabel = phone.phoneType ? PHONE_TYPE_LABELS[phone.phoneType] : "–";
   if (phone.label) {
     return `${typeLabel} (${phone.label})`;
   }

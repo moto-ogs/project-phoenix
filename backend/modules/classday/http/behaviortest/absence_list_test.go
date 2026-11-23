@@ -47,7 +47,7 @@ type absenceListBody struct {
 	CountedUntil  string `json:"counted_until"`
 	SchoolDays    int    `json:"school_days"`
 	Children      []struct {
-		StudentID int64 `json:"student_id"`
+		StudentID testpkg.ID `json:"student_id"`
 		absenceListCounts
 	} `json:"children"`
 	Totals absenceListCounts `json:"totals"`
@@ -95,7 +95,7 @@ func TestAbsenceListAPI(t *testing.T) {
 	assert.Equal(t, 6, list.SchoolDays)
 	counts := map[int64]absenceListCounts{}
 	for _, child := range list.Children {
-		counts[child.StudentID] = child.absenceListCounts
+		counts[int64(child.StudentID)] = child.absenceListCounts
 	}
 	require.Len(t, counts, 2, "the class-list entry and the other class stay out")
 	assert.Equal(t, absenceListCounts{AbsentDays: 2, ExcusedDays: 1, UnexcusedDays: 1, NotRecordedDays: 4}, counts[f.present])
@@ -209,7 +209,7 @@ func TestAbsenceListRetentionWindows(t *testing.T) {
 			assert.True(t, envelope.Data.Incomplete)
 			assert.Equal(t, "2099-01-30", envelope.Data.AvailableFrom)
 			for _, child := range envelope.Data.Children {
-				if child.StudentID == f.present {
+				if int64(child.StudentID) == f.present {
 					assert.Equal(t, 1, child.UnexcusedDays, "only the retained boundary day counts")
 				}
 			}
@@ -232,7 +232,7 @@ func TestAbsenceListIncludesEndedCare(t *testing.T) {
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &envelope))
 	counts := map[int64]absenceListCounts{}
 	for _, child := range envelope.Data.Children {
-		counts[child.StudentID] = child.absenceListCounts
+		counts[int64(child.StudentID)] = child.absenceListCounts
 	}
 	require.Contains(t, counts, f.present)
 	assert.Equal(t, absenceListCounts{AbsentDays: 1, UnexcusedDays: 1, NotRecordedDays: 3}, counts[f.present])
@@ -262,7 +262,7 @@ func TestAbsenceListPreservesCareBeforeAScheduledReturn(t *testing.T) {
 	before := read()
 	counts := map[int64]absenceListCounts{}
 	for _, child := range before.Children {
-		counts[child.StudentID] = child.absenceListCounts
+		counts[int64(child.StudentID)] = child.absenceListCounts
 	}
 	require.Contains(t, counts, f.present)
 	require.Equal(t, absenceListCounts{AbsentDays: 2, ExcusedDays: 1, UnexcusedDays: 1, NotRecordedDays: 3}, counts[f.present])
@@ -316,7 +316,7 @@ func TestAbsenceListLeavesOutAKnownNewChildBeforeItsStart(t *testing.T) {
 	child := testpkg.CreateTestScheduledStudent(t, f.db, "Neu", "Februar", f.class, "2099-04-19")
 	after := read()
 	for _, row := range after.Children {
-		assert.NotEqual(t, child.ID, row.StudentID, "a child that starts after today was never cared for in this period")
+		assert.NotEqual(t, child.ID, int64(row.StudentID), "a child that starts after today was never cared for in this period")
 	}
 	assert.Equal(t, before.Children, after.Children)
 	assert.Equal(t, before.Totals, after.Totals)
@@ -348,7 +348,7 @@ func TestAbsenceListKeepsRecordedCareOfAKnownNewChildBeforeItsStart(t *testing.T
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &envelope))
 	counts := map[int64]absenceListCounts{}
 	for _, row := range envelope.Data.Children {
-		counts[row.StudentID] = row.absenceListCounts
+		counts[int64(row.StudentID)] = row.absenceListCounts
 	}
 	require.Contains(t, counts, child.ID, "the day the child was cared for keeps its row")
 	assert.Equal(t, absenceListCounts{}, counts[child.ID],
@@ -377,7 +377,7 @@ func TestAbsenceListKeepsAKnownNewChildOutBeforeItsStartAfterActivation(t *testi
 	const january = "&from=2099-01-01&to=2099-01-31"
 	januaryBefore, halfYearBefore := read(january), read("")
 	for _, row := range januaryBefore.Children {
-		require.NotEqual(t, child.ID, row.StudentID, "the child was not cared for in January")
+		require.NotEqual(t, child.ID, int64(row.StudentID), "the child was not cared for in January")
 	}
 
 	startDay, err := calendar.ParseDate(start)
@@ -424,7 +424,7 @@ func TestAbsenceListLeavesOutTheCareGapOfAResumedChild(t *testing.T) {
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &envelope))
 		counts := map[int64]absenceListCounts{}
 		for _, row := range envelope.Data.Children {
-			counts[row.StudentID] = row.absenceListCounts
+			counts[int64(row.StudentID)] = row.absenceListCounts
 		}
 		return counts
 	}

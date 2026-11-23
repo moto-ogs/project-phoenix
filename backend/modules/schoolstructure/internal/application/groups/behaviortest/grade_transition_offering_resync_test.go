@@ -64,7 +64,7 @@ func TestGradeTransitionWorkflow_ApplyAndRevert_ArchiveBracketsOfferingResync(t 
 
 	transitionID := f.createDraft(t, ctx, "2025-2026", graduate(gradClass))
 
-	_, err := wf.Apply(ctx, transitionID, "")
+	_, err := wf.Apply(ctx, transitionID, previewed(ctx, wf, transitionID))
 	require.NoError(t, err)
 	assert.Equal(t, []string{"archive", "resync", "baseline"}, log,
 		"apply must archive the graduates' planned rows BEFORE the offering-source resync deletes them unarchived")
@@ -99,7 +99,7 @@ func TestGradeTransitionWorkflow_ApplyAndRevert_ResyncOfferingSourcedRosters(t *
 
 	transitionID := f.createDraft(t, ctx, "2025-2026", promote(fromClass, toClass))
 
-	_, err := wf.Apply(ctx, transitionID, "")
+	_, err := wf.Apply(ctx, transitionID, previewed(ctx, wf, transitionID))
 	require.NoError(t, err)
 	require.Len(t, f.resyncCalls, 1,
 		"apply must resync offering-sourced rosters after rewriting school classes")

@@ -3,6 +3,8 @@ package supervisiondashboard
 import (
 	"context"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Date is a calendar day (YYYY-MM-DD) without clock or zone, the same shape
@@ -213,7 +215,7 @@ type Pickup struct {
 	PickupTime  *string
 	IsException bool
 	Notes       string
-	DayNotes    []DayNote
+	DayNotes    []DashboardDayNote
 
 	// DayDepartureMode is the Abholart set for this day only (#3946).
 	DayDepartureMode string
@@ -227,14 +229,14 @@ type Arrival struct {
 	ArrivalTime *string
 	IsException bool
 	Notes       string
-	DayNotes    []DayNote
+	DayNotes    []DashboardDayNote
 }
 
-// TeacherHint is a Lehrkraft's hint for the OGS for today (#4795), written in
+// SupervisionTeacherHint is a Lehrkraft's hint for the OGS for today (#4795), written in
 // moto schule for the child or for its whole class.
-type TeacherHint struct {
-	StudentID int64  `json:"student_id,string"`
-	Body      string `json:"body"`
+type SupervisionTeacherHint struct {
+	StudentID ident.ID `json:"student_id"`
+	Body      string   `json:"body"`
 	// AuthorName is the Lehrkraft's name, empty when the person is gone.
 	AuthorName string `json:"author_name,omitempty"`
 	// SchoolClass is set when the hint is for the whole class.
@@ -244,7 +246,7 @@ type TeacherHint struct {
 // TeacherHintReader reads the Lehrkraft's day hints of many children, oldest
 // first.
 type TeacherHintReader interface {
-	TeacherHints(ctx context.Context, studentIDs []int64, date Date) ([]TeacherHint, error)
+	TeacherHints(ctx context.Context, studentIDs []int64, date Date) ([]SupervisionTeacherHint, error)
 }
 
 // Planning reads the effective day plans of students.
@@ -286,10 +288,10 @@ type Calendar interface {
 	Clock(at time.Time) string
 }
 
-// ClassHandover is today's handover of a child to the OGS with its class
+// SupervisionClassHandover is today's handover of a child to the OGS with its class
 // (#4794): the class, the moment, the Lehrkraft's name (empty when she was
 // removed since) and whether she marked the child "nicht da".
-type ClassHandover struct {
+type SupervisionClassHandover struct {
 	SchoolClass  string    `json:"school_class"`
 	HandedOverAt time.Time `json:"handed_over_at"`
 	HandedOverBy string    `json:"handed_over_by,omitempty"`
@@ -299,5 +301,5 @@ type ClassHandover struct {
 // HandoverReader returns, in one read, the handover on day of each child
 // among studentIDs the Lehrkraft handed over to the OGS.
 type HandoverReader interface {
-	ClassHandovers(ctx context.Context, studentIDs []int64, day Date) (map[int64]ClassHandover, error)
+	ClassHandovers(ctx context.Context, studentIDs []int64, day Date) (map[int64]SupervisionClassHandover, error)
 }

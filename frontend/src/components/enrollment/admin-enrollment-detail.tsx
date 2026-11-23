@@ -35,13 +35,12 @@ import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import {
   type AdminRequestChild,
   type AdminRequestDetail,
-  type AdminRequestGuardian,
-  type AdminRequestSchemaField,
   type AdminRequestSummary,
   type DecisionStatus,
   type ExistingChildChoice,
   decideAdminChild,
   announceAdminRequestOpened,
+  fromImportedContract,
   getAdminRequest,
   restoreAdminRequest,
 } from "~/lib/enrollment-admin-api";
@@ -53,6 +52,7 @@ import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 import { Textarea } from "~/components/ui/textarea";
 import { AdminLegalEvidence } from "~/components/enrollment/admin-legal-evidence";
 import { AdminEnrollmentSignature } from "~/components/enrollment/admin-enrollment-signature";
+import { AdminEnrollmentContracts } from "~/components/enrollment/admin-enrollment-contracts";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { berlinTodayISO } from "~/lib/date-helpers";
 import { enrolledClassLabel } from "~/lib/school-class-label";
@@ -115,7 +115,9 @@ import {
   isHeldForChildQuota,
 } from "~/components/enrollment/child-status-badge";
 import { enrollmentsConcept } from "~/lib/concepts/enrollments";
+import { careContractsConcept } from "~/lib/concepts/careContracts";
 import { parentsConcept } from "~/lib/concepts/parents";
+import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 
 const logger = createLogger({ component: "AdminEnrollmentDetail" });
 
@@ -150,9 +152,11 @@ const ACTIONS: ActionDef[] = [
 
 interface Props {
   readonly requestId: string;
+  /** Erklärung hinter dem Info-Knopf am Seitentitel; die Seite liefert sie. */
+  readonly info?: string;
 }
 
-export function AdminEnrollmentDetail({ requestId }: Props) {
+export function AdminEnrollmentDetail({ requestId, info }: Props) {
   const {
     mails: requestMails,
     loadError: requestMailsError,
@@ -206,6 +210,11 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
   const reloadError = useApiLoadError();
   const showReloadError = reloadError.show;
   const clearReloadError = reloadError.clear;
+  // The stored request after a refused write: a failure rejects, so the
+  // refused form can name it.
+  const readDetailAgain = useCallback(async () => {
+    await mutateDetail(fetchDetail(), { revalidate: false });
+  }, [mutateDetail, fetchDetail]);
   const refreshAfterWrite = useCallback(
     async function reload(): Promise<void> {
       clearReloadError();
@@ -436,6 +445,7 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
     return (
       <TenantPage
         title="Anmeldung"
+        info={info}
         back
         backHref="/admin/enrollments"
         backLabel="Zurück zur Anmeldungs-Übersicht"
@@ -448,6 +458,7 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
     return (
       <TenantPage
         title="Anmeldung"
+        info={info}
         back
         backHref="/admin/enrollments"
         backLabel="Zurück zur Anmeldungs-Übersicht"
@@ -555,7 +566,8 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
 
   return (
     <TenantPage
-      title={`${data.guardian_first_name} ${data.guardian_last_name}`}
+      title={requestTitle(data)}
+      info={info}
       back
       backHref={`/admin/enrollments/phases/${encodeURIComponent(data.phase_id)}`}
       backLabel="Zurück zur Anmeldephase"
@@ -726,6 +738,11 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
               />
             ) : null}
 
+            <AdminEnrollmentContracts
+              requestId={requestId}
+              childList={data.children}
+            />
+
             <SectionCard
               title="Angaben der Kinder"
               description="Zusatzfragen und Stammdaten-Antworten werden pro Kind angezeigt."
@@ -758,12 +775,14 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
                   }
                   onDecide={(status) => requestDecision(child, status)}
                   requestGuardian={`${data.guardian_first_name} ${data.guardian_last_name}`}
+                  fromContract={fromImportedContract(data)}
                   onRejectDuplicate={
                     canRejectDuplicate
                       ? () => rejectDuplicate(child)
                       : undefined
                   }
                   onOfferingsChanged={() => void refreshAfterWrite()}
+                  onChildChanged={readDetailAgain}
                   onDataCorrected={handleDataCorrected}
                   onDelete={() =>
                     setDeletionTarget({
@@ -799,6 +818,21 @@ export function AdminEnrollmentDetail({ requestId }: Props) {
   );
 }
 
+/**
+ * The heading of a request: the guardian who sent it. A request of an
+ * imported contract (ADR 0309) has no guardian; it is named after its
+ * children.
+ */
+function requestTitle(data: AdminRequestSummary): string {
+  const guardian =
+    `${data.guardian_first_name} ${data.guardian_last_name}`.trim();
+  if (guardian !== "" && !fromImportedContract(data)) return guardian;
+  const children = data.children
+    .map((child) => `${child.first_name} ${child.last_name}`.trim())
+    .filter((name) => name !== "");
+  return children.length > 0 ? children.join(", ") : "Anmeldung";
+}
+
 function EnrollmentSummary({
   data,
   submittedAt,
@@ -806,6 +840,34 @@ function EnrollmentSummary({
   data: AdminRequestSummary;
   submittedAt: string;
 }>) {
+  if (fromImportedContract(data)) {
+    return (
+      <InsetPanel as="section" framed padding="md">
+        <div className="flex items-start gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white shadow-sm">
+            <MotoConceptIcon concept={careContractsConcept} size={16} />
+          </span>
+          <div>
+            <h2 className="text-base font-semibold text-gray-900">
+              Aus importiertem Vertrag
+            </h2>
+            <p className="mt-1 text-sm text-gray-600">
+              Das Träger-Büro hat diese Anmeldung aus dem importierten
+              Betreuungsvertrag angelegt. Eltern sind hier nicht hinterlegt.
+            </p>
+          </div>
+        </div>
+        <div className="mt-4">
+          <DataGrid>
+            <DataField label="Phase">
+              {data.phase_name || "Nicht zugeordnet"}
+            </DataField>
+            <DataField label="Angelegt">{submittedAt}</DataField>
+          </DataGrid>
+        </div>
+      </InsetPanel>
+    );
+  }
   return (
     <InsetPanel as="section" framed padding="md">
       <div className="flex items-start gap-3">
@@ -837,23 +899,29 @@ function EnrollmentSummary({
           <h3 className="text-base font-semibold text-gray-900">
             Weitere erziehungsberechtigte Personen
           </h3>
-          {data.additional_guardians.map((g: AdminRequestGuardian) => (
-            <InsetPanel framed key={g.id}>
-              <p className="text-sm font-semibold text-gray-900">
-                {g.first_name} {g.last_name}
-              </p>
-              <div className="mt-1 flex flex-col gap-1 text-sm text-gray-600 sm:flex-row sm:gap-4">
-                <span className="flex items-center gap-1.5">
-                  <Mail className="h-3.5 w-3.5" aria-hidden="true" />
-                  {g.email && g.email.trim() !== "" ? g.email : "Nicht gesetzt"}
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <Phone className="h-3.5 w-3.5" aria-hidden="true" />
-                  {g.phone && g.phone.trim() !== "" ? g.phone : "Nicht gesetzt"}
-                </span>
-              </div>
-            </InsetPanel>
-          ))}
+          {data.additional_guardians.map(
+            (g: enrollmentContract.AdminRequestGuardian) => (
+              <InsetPanel framed key={g.id}>
+                <p className="text-sm font-semibold text-gray-900">
+                  {g.first_name} {g.last_name}
+                </p>
+                <div className="mt-1 flex flex-col gap-1 text-sm text-gray-600 sm:flex-row sm:gap-4">
+                  <span className="flex items-center gap-1.5">
+                    <Mail className="h-3.5 w-3.5" aria-hidden="true" />
+                    {g.email && g.email.trim() !== ""
+                      ? g.email
+                      : "Nicht gesetzt"}
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <Phone className="h-3.5 w-3.5" aria-hidden="true" />
+                    {g.phone && g.phone.trim() !== ""
+                      ? g.phone
+                      : "Nicht gesetzt"}
+                  </span>
+                </div>
+              </InsetPanel>
+            ),
+          )}
         </div>
       )}
     </InsetPanel>
@@ -869,6 +937,7 @@ function ChildInformationCard({
   onDecide,
   onDataCorrected,
   onOfferingsChanged,
+  onChildChanged,
   onReasonChange,
   onRejectDuplicate,
   onDelete,
@@ -879,6 +948,7 @@ function ChildInformationCard({
   requestId,
   schemaFields,
   weeklyPlanToday,
+  fromContract,
 }: Readonly<{
   actions: ActionDef[];
   busy: boolean;
@@ -891,13 +961,17 @@ function ChildInformationCard({
   onDecide: (status: DecisionStatus) => void;
   onDataCorrected: (correctedChild: AdminRequestChild) => void;
   onOfferingsChanged: () => void;
+  /** Reads the request again; rejects when the read fails. */
+  onChildChanged: () => Promise<void>;
   onReasonChange: (value: string) => void;
   onRejectDuplicate?: () => void;
   requestGuardian: string;
   onDelete: () => void;
   reason: string;
-  schemaFields?: AdminRequestSchemaField[];
+  schemaFields?: enrollmentContract.AdminRequestSchemaField[];
   weeklyPlanToday: string | null;
+  /** The booked days came from an imported contract, not from parents. */
+  fromContract: boolean;
 }>) {
   const terminal = isTerminalChildStatus(child.status);
   const canDeleteFromEnrollment =
@@ -957,6 +1031,8 @@ function ChildInformationCard({
                 requestId={requestId}
                 child={child}
                 onSaved={onDataCorrected}
+                // Both read the request again.
+                onChangedSinceRead={onChildChanged}
               />
             </>
           ) : null}
@@ -1011,6 +1087,7 @@ function ChildInformationCard({
           upcomingOfferings={child.upcoming_offerings}
           unavailable={child.offerings_unavailable}
           phaseName={phaseName}
+          fromContract={fromContract}
         />
         {child.status === "approved" ? (
           <ChildOfferingAdjustment
@@ -1083,7 +1160,11 @@ function ReviewSidebar({
           gehört als description in ihren Kopf. */}
       <SectionCard
         title="Status der Anmeldung"
-        description="Alle Kinder werden einzeln geprüft. Die Statusseite zeigt Eltern den aktuellen Stand der Anmeldung."
+        description={
+          fromImportedContract(data)
+            ? "Alle Kinder werden einzeln geprüft."
+            : "Alle Kinder werden einzeln geprüft. Die Statusseite zeigt Eltern den aktuellen Stand der Anmeldung."
+        }
       >
         <div className="grid grid-cols-3 gap-2">
           <StatCard
@@ -1106,21 +1187,25 @@ function ReviewSidebar({
             <DataField label="Eingegangen">{submittedAt}</DataField>
           </DataGrid>
         </div>
-        <ActionHint text="Öffnet in einem neuen Tab die Statusseite, die die Eltern sehen.">
-          <a
-            href={statusHref}
-            target="_blank"
-            rel="noreferrer"
-            className={buttonClassName({
-              variant: "outline",
-              size: "md",
-              className: "mt-4 w-full gap-2",
-            })}
-          >
-            Statusseite öffnen
-            <ExternalLink className="h-4 w-4" aria-hidden="true" />
-          </a>
-        </ActionHint>
+        {/* A request of an imported contract has no parents who would read
+            a status page. */}
+        {fromImportedContract(data) ? null : (
+          <ActionHint text="Öffnet in einem neuen Tab die Statusseite, die die Eltern sehen.">
+            <a
+              href={statusHref}
+              target="_blank"
+              rel="noreferrer"
+              className={buttonClassName({
+                variant: "outline",
+                size: "md",
+                className: "mt-4 w-full gap-2",
+              })}
+            >
+              Statusseite öffnen
+              <ExternalLink className="h-4 w-4" aria-hidden="true" />
+            </a>
+          </ActionHint>
+        )}
         {onRestoreRequest ? (
           <Button
             type="button"
@@ -1155,9 +1240,14 @@ function ReviewSidebar({
                 <h3 className="truncate text-sm font-semibold text-gray-900">
                   {child.first_name} {child.last_name}
                 </h3>
-                <p className="mt-1 text-xs text-gray-500">
-                  {enrolledClassLabel(child) || "Keine Klassenstufe"}
-                </p>
+                {/* A request of an imported contract keeps no grade of its
+                    own; the class stands in the child record. */}
+                {fromImportedContract(data) &&
+                !enrolledClassLabel(child) ? null : (
+                  <p className="mt-1 text-xs text-gray-500">
+                    {enrolledClassLabel(child) || "Keine Klassenstufe"}
+                  </p>
+                )}
               </div>
               <ChildStatusBadge status={child.status} />
             </div>

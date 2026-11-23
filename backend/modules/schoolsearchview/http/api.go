@@ -41,6 +41,26 @@ func NewResource(search schoolsearchview.Search, staff StaffCheck, notes schools
 	return &Resource{search: search, staff: staff, notes: notes}
 }
 
+// RouteContracts registers the search (ADR 0270) relative to /api/search;
+// its reshaping route file left in #7563. The query stays in the body.
+func RouteContracts() []common.RouteContract {
+	return []common.RouteContract{
+		{
+			Method: "POST", Pattern: "/", Portals: []common.PortalScope{common.PortalTenant},
+			NoCommit: "a search reads; the query travels in the body",
+			Request:  SchoolSearchRequest{}, Response: schoolsearchview.SearchResult{},
+			Enums: []common.EnumContract{{
+				Type: schoolsearchview.MatchField(""),
+				Values: []string{
+					string(schoolsearchview.MatchName), string(schoolsearchview.MatchClass), string(schoolsearchview.MatchGroup),
+					string(schoolsearchview.MatchParentNote), string(schoolsearchview.MatchEnrollmentAnswer), string(schoolsearchview.MatchStudentNote),
+					string(schoolsearchview.MatchPhone), string(schoolsearchview.MatchEmail), string(schoolsearchview.MatchContact),
+				},
+			}},
+		},
+	}
+}
+
 // Router mounts POST / inside the protected tenant routes. The route needs no
 // single permission: the Scope decides per kind what the caller may find.
 func (rs *Resource) Router(protected func(chi.Router, func(chi.Router, common.Middleware))) chi.Router {
@@ -52,14 +72,15 @@ func (rs *Resource) Router(protected func(chi.Router, func(chi.Router, common.Mi
 	return r
 }
 
-type searchRequest struct {
+// SchoolSearchRequest carries the search text.
+type SchoolSearchRequest struct {
 	Query string `json:"query"`
 }
 
-func (req *searchRequest) Bind(*http.Request) error { return nil }
+func (req *SchoolSearchRequest) Bind(*http.Request) error { return nil }
 
 func (rs *Resource) searchSchool(w http.ResponseWriter, r *http.Request) {
-	req := &searchRequest{}
+	req := &SchoolSearchRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("the body must be a JSON object with a query")))
 		return
@@ -95,14 +116,14 @@ func (rs *Resource) searchSchool(w http.ResponseWriter, r *http.Request) {
 // scope maps the caller's permissions onto what the search may read. The
 // person kinds follow the child read scope (#2329): an administrator, or
 // staff of this school. Each kind needs the permission its own page needs.
-func (rs *Resource) scope(ctx context.Context) (schoolsearchview.Scope, error) {
+func (rs *Resource) scope(ctx context.Context) (schoolsearchview.SearchScope, error) {
 	granted := grantedPermissions(sessiontoken.PermissionsFromCtx(ctx))
 	readsChildren, err := rs.readsChildren(ctx, granted)
 	if err != nil {
-		return schoolsearchview.Scope{}, err
+		return schoolsearchview.SearchScope{}, err
 	}
 	readsDetails := readsChildren && granted.any(permissions.UsersRead)
-	return schoolsearchview.Scope{
+	return schoolsearchview.SearchScope{
 		Children:     readsChildren,
 		ChildDetails: readsDetails,
 		Contacts:     readsDetails,

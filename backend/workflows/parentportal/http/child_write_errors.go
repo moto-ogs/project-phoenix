@@ -48,6 +48,8 @@ func renderParentCareWriteError(w http.ResponseWriter, r *http.Request, err erro
 		common.RenderError(w, r, common.ErrorConflictWithCode(err, common.CodeMealsParticipationCutoffPassed))
 	case errors.Is(err, parentService.ErrInvalidMealParticipation):
 		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeMealsInvalidParticipation))
+	case errors.Is(err, parentService.ErrRoomHistoryStopDisabled):
+		common.RenderError(w, r, common.ErrorForbiddenWithCode(err, common.CodeCareRoomHistoryStopDisabled))
 	case errors.Is(err, parentService.ErrPickupChangeDisabled):
 		common.RenderError(w, r, common.ErrorForbiddenWithCode(err, common.CodeCarePickupChangeDisabled))
 	case errors.Is(err, parentService.ErrPickupChangeCutoffPassed):
@@ -201,8 +203,6 @@ func renderParentAnnouncementWriteError(w http.ResponseWriter, r *http.Request, 
 		common.RenderError(w, r, common.ErrorNotFound(err))
 	case errors.Is(err, parentService.ErrAnnouncementAckNotRequired):
 		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeCareAnnouncementAckNotRequired))
-	case errors.Is(err, parentService.ErrAnnouncementStale):
-		common.RenderError(w, r, common.ErrorConflictWithCode(err, common.CodeCareAnnouncementStale))
 	case errors.Is(err, parentService.ErrAnnouncementNotAPoll):
 		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeCareAnnouncementNotAPoll))
 	case errors.Is(err, parentService.ErrPollClosed):

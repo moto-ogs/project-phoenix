@@ -82,6 +82,7 @@ type fakeMealPlan struct {
 	entries          []mealplanModule.Entry
 	lastClearCommand *mealplanModule.SetParticipationDay
 	lastWeekCommand  *mealplanModule.SetParticipationWeek
+	lastSchedule     *mealplanModule.ReplaceParticipationSchedule
 }
 
 func availableMealPlan(enabled bool) *fakeMealPlan { return &fakeMealPlan{available: enabled} }
@@ -100,9 +101,14 @@ func (f *fakeMealPlan) RegistrationAvailable(context.Context) (bool, error) {
 	return f.available, f.err
 }
 func (f *fakeMealPlan) Participation(context.Context, int64, mealplanModule.Date, mealplanModule.Date) (mealplanModule.ParticipationPlan, error) {
-	return mealplanModule.ParticipationPlan{}, f.err
+	if f.lastSchedule != nil {
+		// The regular days as the last save stored them.
+		return mealplanModule.ParticipationPlan{Version: "stored-version"}, f.err
+	}
+	return mealplanModule.ParticipationPlan{Version: "read-version"}, f.err
 }
-func (f *fakeMealPlan) ReplaceParticipationSchedule(context.Context, mealplanModule.ReplaceParticipationSchedule) (mealplanModule.Date, error) {
+func (f *fakeMealPlan) ReplaceParticipationSchedule(_ context.Context, command mealplanModule.ReplaceParticipationSchedule) (mealplanModule.Date, error) {
+	f.lastSchedule = &command
 	return "2026-09-07", f.err
 }
 func (f *fakeMealPlan) SetParticipationForDay(context.Context, mealplanModule.SetParticipationDay) error {
@@ -177,7 +183,7 @@ func TestMealParticipationWrites_CareEndedChildIsRejected(t *testing.T) {
 	svc := buildMealPlanService(t, db, mealPlanSettings(true, nil))
 	ctx := testpkg.WithPackageTenantRuntime(context.Background())
 
-	_, err := svc.ReplaceMealParticipationSchedule(ctx, chain.AccountID, chain.StudentID, []parentService.MealWeekday{1})
+	_, err := svc.ReplaceMealParticipationSchedule(ctx, chain.AccountID, chain.StudentID, []parentService.MealWeekday{1}, "")
 	require.ErrorIs(t, err, parentService.ErrChildCareEnded)
 
 	err = svc.SetMealParticipationDay(ctx, chain.AccountID, chain.StudentID, calendar.NewDate(2026, 8, 25), true)
@@ -211,7 +217,7 @@ func TestMealParticipationWrites_RequireManagePermission(t *testing.T) {
 	_, err = svc.MealParticipation(ctx, chain.AccountID, chain.StudentID, date, date)
 	require.NoError(t, err, "portal access still permits reading meal participation")
 
-	_, err = svc.ReplaceMealParticipationSchedule(ctx, chain.AccountID, chain.StudentID, []parentService.MealWeekday{1})
+	_, err = svc.ReplaceMealParticipationSchedule(ctx, chain.AccountID, chain.StudentID, []parentService.MealWeekday{1}, "")
 	require.ErrorIs(t, err, parentService.ErrMealParticipationManageDenied)
 
 	err = svc.SetMealParticipationDay(ctx, chain.AccountID, chain.StudentID, date, true)
@@ -245,7 +251,7 @@ func TestMealParticipationWrites_RequirePortalAccessEvenWithManagePermission(t *
 	date := calendar.NewDate(2026, 8, 25)
 	_, err = svc.MealParticipation(ctx, chain.AccountID, chain.StudentID, date, date)
 	require.ErrorIs(t, err, parentService.ErrChildNotLinked)
-	_, err = svc.ReplaceMealParticipationSchedule(ctx, chain.AccountID, chain.StudentID, []parentService.MealWeekday{1})
+	_, err = svc.ReplaceMealParticipationSchedule(ctx, chain.AccountID, chain.StudentID, []parentService.MealWeekday{1}, "")
 	require.ErrorIs(t, err, parentService.ErrChildNotLinked)
 	require.ErrorIs(t, svc.SetMealParticipationDay(ctx, chain.AccountID, chain.StudentID, date, true), parentService.ErrChildNotLinked)
 	require.ErrorIs(t, svc.ClearMealParticipationDay(ctx, chain.AccountID, chain.StudentID, date), parentService.ErrChildNotLinked)
@@ -268,6 +274,46 @@ func TestClearMealParticipationDay_PassesGuardianAccountID(t *testing.T) {
 	assert.Equal(t, chain.AccountID, mealPlan.lastClearCommand.GuardianAccountID)
 	assert.Equal(t, chain.StudentID, mealPlan.lastClearCommand.StudentID)
 	assert.Equal(t, mealplanModule.Date(date.String()), mealPlan.lastClearCommand.Date)
+}
+
+// The parent reads the version of the regular days and sends it back with
+// the change; the Meal Plan checks it (ADR 0311).
+func TestReplaceMealParticipationSchedule_PassesTheReadVersion(t *testing.T) {
+	t.Parallel()
+
+	db := testpkg.SetupTestDB(t)
+	chain := testpkg.CreateTestParentGuardianChain(t, db)
+	mealPlan := availableMealPlan(true)
+	svc := buildMealPlanService(t, db, mealPlanSettings(true, nil), mealPlan)
+	ctx := testpkg.WithPackageTenantRuntime(context.Background())
+	date := calendar.NewDate(2026, 8, 25)
+
+	plan, err := svc.MealParticipation(ctx, chain.AccountID, chain.StudentID, date, date)
+	require.NoError(t, err)
+	assert.Equal(t, "read-version", plan.Version)
+	_, err = svc.ReplaceMealParticipationSchedule(ctx, chain.AccountID, chain.StudentID, []parentService.MealWeekday{1}, plan.Version)
+	require.NoError(t, err)
+	require.NotNil(t, mealPlan.lastSchedule)
+	assert.Equal(t, "read-version", mealPlan.lastSchedule.ExpectedVersion)
+}
+
+// The save answers the version of the regular days it stored, read in its
+// own unit after the write (ADR 0311). That the page's next save with it is
+// not refused as changed, against the real Meal Plan, proves
+// api.TestReplaceMealParticipationSchedule_AnsweredVersionPassesTheNextSave.
+func TestReplaceMealParticipationSchedule_AnswersTheStoredVersion(t *testing.T) {
+	t.Parallel()
+
+	db := testpkg.SetupTestDB(t)
+	chain := testpkg.CreateTestParentGuardianChain(t, db)
+	mealPlan := availableMealPlan(true)
+	svc := buildMealPlanService(t, db, mealPlanSettings(true, nil), mealPlan)
+	ctx := testpkg.WithPackageTenantRuntime(context.Background())
+
+	saved, err := svc.ReplaceMealParticipationSchedule(ctx, chain.AccountID, chain.StudentID, []parentService.MealWeekday{1}, "read-version")
+	require.NoError(t, err)
+	assert.Equal(t, "2026-09-07", saved.EffectiveFrom)
+	assert.Equal(t, "stored-version", saved.Version)
 }
 
 // TestMealPlanWeek_PastWeekOutOfRange asserts parents cannot reach a staff draft

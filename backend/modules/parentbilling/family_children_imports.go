@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The children of the families from a file (#7356). A Träger that counts
@@ -19,10 +20,12 @@ import (
 //     mail address of its invoice's recipient, else the contract itself
 //     (ContractFamilyKey).
 //   - The number counts as confirmed by the Abrechnung, which imports it,
-//     from the first day of the family's contract, without an end. The
-//     import reads the contracts of the page of the numbers, in force from
-//     three months back; a contract that began earlier counts from the
-//     first day of that window.
+//     without an end, from the day the office names (#7765, ADR 0305): the
+//     day of the row's own column, else the day chosen for the whole file,
+//     else the day of the import. The import never dates a number back to
+//     the first day of the contract by itself: the file does not prove
+//     that day. The import reads the contracts of the page of the numbers,
+//     in force from three months back.
 //   - A number the Abrechnung confirmed before is never overwritten: a row
 //     that names another one is shown and left to the office.
 //   - Rows of one family that name different numbers take over none.
@@ -41,6 +44,8 @@ const (
 	FamilyImportFieldChildBirthDate = "child_birth_date"
 	FamilyImportFieldSchool         = "school"
 	FamilyImportFieldChildren       = "children"
+	// FamilyImportFieldValidFrom is the day a row's number counts from.
+	FamilyImportFieldValidFrom = "valid_from"
 )
 
 // What the import does with a row.
@@ -82,6 +87,14 @@ const (
 	// FamilyImportProblemConfirmationsDiffer requires an office decision
 	// between conflicting stored confirmations, not a correction of the file.
 	FamilyImportProblemConfirmationsDiffer = "confirmations_differ"
+	// FamilyImportProblemTooFarAhead is a day beyond the contracts moto
+	// reads ahead: moto cannot tell who belongs to the family then (#7863).
+	FamilyImportProblemTooFarAhead = "too_far_ahead"
+	// FamilyImportProblemContractEnded is a child whose contracts at the
+	// school all end before the number would start counting, the row's day
+	// or, for a renewal, the day after the old confirmation's end: the row
+	// speaks for no family (#7863).
+	FamilyImportProblemContractEnded = "contract_ended"
 )
 
 // FamilyChildrenImportColumns names per field the header of the column it
@@ -92,14 +105,18 @@ type FamilyChildrenImportColumns struct {
 	ChildBirthDate string `json:"child_birth_date"`
 	School         string `json:"school"`
 	Children       string `json:"children"`
+	ValidFrom      string `json:"valid_from"`
 }
 
 // FamilyChildrenImportMapping is how the rows of a file name a child and
 // its family's number. A file of one school needs no column for it:
-// SchoolID names the school of every row.
+// SchoolID names the school of every row. ValidFrom is the day the numbers
+// count from, for every row whose own column names none; nil takes the day
+// of the import, and the answer names the day used.
 type FamilyChildrenImportMapping struct {
-	Columns  FamilyChildrenImportColumns `json:"columns"`
-	SchoolID int64                       `json:"school_id"`
+	Columns   FamilyChildrenImportColumns `json:"columns"`
+	SchoolID  ident.ID                    `json:"school_id"`
+	ValidFrom *calendar.Date              `json:"valid_from"`
 }
 
 // FamilyChildrenImportRequest is one look at a file: the preview when Apply
@@ -132,9 +149,15 @@ type FamilyChildrenImportRow struct {
 	// Children is the number the row names; nil for none.
 	Children *int `json:"children"`
 	// ContractID is the contract of the child the number goes to and
-	// ValidFrom its first day, from which the number counts.
-	ContractID int64          `json:"contract_id,omitempty"`
-	ValidFrom  *calendar.Date `json:"valid_from"`
+	// ValidFrom the day the number counts from: the row's own, else the
+	// file's; later when it renews a confirmation that ran out. Only a row
+	// the import takes over names it. A child whose contracts belong to
+	// several families can get its number from several days: ValidFrom is
+	// then the earliest and LaterValidFrom every other day in order, else
+	// empty.
+	ContractID     ident.ID        `json:"contract_id,omitempty"`
+	ValidFrom      *calendar.Date  `json:"valid_from"`
+	LaterValidFrom []calendar.Date `json:"later_valid_from"`
 	// ConfirmedChildren is the number the Abrechnung confirmed before, for
 	// FamilyImportSame and FamilyImportDiffers.
 	ConfirmedChildren *int                          `json:"confirmed_children"`

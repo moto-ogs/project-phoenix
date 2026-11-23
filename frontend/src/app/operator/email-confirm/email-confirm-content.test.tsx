@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   render as renderPlain,
+  act,
   screen,
   fireEvent,
   waitFor,
@@ -13,6 +14,11 @@ function render(ui: React.ReactElement) {
 }
 
 const OBJECT = "die Bestätigung der E-Mail-Adresse";
+
+/** The catalog proxy's answer to a confirmation: no data. */
+function confirmed(): Response {
+  return new Response(JSON.stringify({ status: "success", data: null }));
+}
 
 function errorResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), { status });
@@ -154,11 +160,7 @@ describe("EmailConfirmContent", () => {
   });
 
   it("shows success state after successful confirmation", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({ message: "Email changed successfully" }),
-    });
+    mockFetch.mockResolvedValueOnce(confirmed());
 
     setQueryToken("test-token");
     render(<EmailConfirmContent />);
@@ -174,11 +176,7 @@ describe("EmailConfirmContent", () => {
   });
 
   it("shows success link to settings profile tab", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({ message: "OK" }),
-    });
+    mockFetch.mockResolvedValueOnce(confirmed());
 
     setQueryToken("test-token");
     render(<EmailConfirmContent />);
@@ -200,11 +198,7 @@ describe("EmailConfirmContent", () => {
       status: "authenticated",
     });
 
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({ message: "OK" }),
-    });
+    mockFetch.mockResolvedValueOnce(confirmed());
 
     setQueryToken("test-token");
     render(<EmailConfirmContent />);
@@ -220,11 +214,7 @@ describe("EmailConfirmContent", () => {
   });
 
   it("does not trigger session update when unauthenticated", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({ message: "OK" }),
-    });
+    mockFetch.mockResolvedValueOnce(confirmed());
 
     setQueryToken("test-token");
     render(<EmailConfirmContent />);
@@ -248,11 +238,7 @@ describe("EmailConfirmContent", () => {
 
     mockUpdateSession.mockRejectedValueOnce(new Error("session error"));
 
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({ message: "OK" }),
-    });
+    mockFetch.mockResolvedValueOnce(confirmed());
 
     setQueryToken("test-token");
     render(<EmailConfirmContent />);
@@ -316,11 +302,7 @@ describe("EmailConfirmContent", () => {
 
   it("handles retry after error", async () => {
     mockFetch.mockResolvedValueOnce(errorResponse(500, {}));
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({ message: "OK" }),
-    });
+    mockFetch.mockResolvedValueOnce(confirmed());
 
     setQueryToken("test-token");
     render(<EmailConfirmContent />);
@@ -334,11 +316,7 @@ describe("EmailConfirmContent", () => {
   });
 
   it("sends correct request to API", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({ message: "OK" }),
-    });
+    mockFetch.mockResolvedValueOnce(confirmed());
 
     setQueryToken("my-test-token");
     render(<EmailConfirmContent />);
@@ -379,11 +357,7 @@ describe("EmailConfirmContent", () => {
     // While confirming, the idle UI is gone — can't double-click
     expect(screen.queryByText("Jetzt bestätigen")).not.toBeInTheDocument();
 
-    resolveResponse!({
-      ok: true,
-      status: 200,
-      json: async () => ({ message: "OK" }),
-    });
+    resolveResponse!(confirmed());
 
     await waitFor(() => {
       expect(screen.getByText("E-Mail-Adresse geändert")).toBeInTheDocument();
@@ -408,4 +382,87 @@ describe("EmailConfirmContent", () => {
       ).toBeInTheDocument();
     });
   });
+  // The mount effect runs twice under StrictMode (next dev) and again when a
+  // hidden route is shown. The first run strips the token from the real URL,
+  // so the second must keep the token it already read.
+  it("keeps the token when the mount effect runs again", async () => {
+    replaceStateSpy.mockRestore();
+    mockFetch.mockResolvedValueOnce(confirmed());
+    setQueryToken("strict-token");
+
+    // StrictMode at the root, as next dev renders the page.
+    renderPlain(<EmailConfirmContent />, {
+      wrapper: ToastProvider,
+      reactStrictMode: true,
+    });
+
+    expect(await screen.findByText("Jetzt bestätigen")).toBeInTheDocument();
+    expect(window.location.search).toBe("");
+    expect(
+      screen.queryByText("Bestätigung fehlgeschlagen"),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("Jetzt bestätigen"));
+    expect(
+      await screen.findByText("E-Mail-Adresse geändert"),
+    ).toBeInTheDocument();
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(mockFetch.mock.calls[0]?.[1]?.body as string)).toEqual({
+      token: "strict-token",
+    });
+  });
+
+  it("shows the result again when the person returns after confirming", async () => {
+    replaceStateSpy.mockRestore();
+    mockFetch.mockResolvedValueOnce(confirmed());
+    setQueryToken("back-token");
+
+    const first = render(<EmailConfirmContent />);
+    fireEvent.click(await screen.findByText("Jetzt bestätigen"));
+    expect(
+      await screen.findByText("E-Mail-Adresse geändert"),
+    ).toBeInTheDocument();
+    first.unmount();
+
+    // Browser back to the same entry: no token in the URL any more.
+    render(<EmailConfirmContent />);
+    expect(
+      await screen.findByText("E-Mail-Adresse geändert"),
+    ).toBeInTheDocument();
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["/operator/settings?tab=profile#email", "/operator/email-confirm"])(
+    "leaves the destination entry unchanged after navigating to %s",
+    async (url) => {
+      replaceStateSpy.mockRestore();
+      replaceStateSpy = vi.spyOn(window.history, "replaceState");
+      let resolveResponse!: (value: Response) => void;
+      mockFetch.mockReturnValueOnce(
+        new Promise<Response>((resolve) => {
+          resolveResponse = resolve;
+        }),
+      );
+      setQueryToken("pending-token");
+
+      const page = render(<EmailConfirmContent />);
+      fireEvent.click(await screen.findByText("Jetzt bestätigen"));
+      // Anker: confirmation is pending before navigation and unmount.
+      expect(screen.getByText("E-Mail wird bestätigt...")).toBeInTheDocument();
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      page.unmount();
+      window.history.pushState({}, "", url);
+      const destinationUrl = window.location.href;
+      const destinationState: unknown = window.history.state;
+      replaceStateSpy.mockClear();
+
+      await act(async () => {
+        resolveResponse(new Response(null, { status: 200 }));
+      });
+
+      expect(window.location.href).toBe(destinationUrl);
+      expect(window.history.state).toBe(destinationState);
+      expect(replaceStateSpy).not.toHaveBeenCalled();
+    },
+  );
 });

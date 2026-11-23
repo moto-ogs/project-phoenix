@@ -183,6 +183,20 @@ var gdpr_init_bewegungsdaten_1Definitions = []config.Definition{
 		SortOrder:       12,
 		Validation:      config.Range(1, 365),
 		DependsOn:       config.DependsOnEq(config.KeyAttendanceLogEnabled, true),
+	}, {
+		// The Träger decides for all its schools whether parents may stop the
+		// room history and the mood of their own child (#3844). Off by default.
+		Key:             config.KeyParentRoomHistoryStopEnabled,
+		Levels:          config.LevelTraeger,
+		Label:           "Eltern dürfen Raumverlauf und Stimmung stoppen",
+		Description:     "Ist das an, können Eltern im Elternportal für ihr Kind Raumverlauf und Stimmung stoppen und wieder speichern lassen. Beim Stoppen löscht moto den bisherigen Raumverlauf des Kindes. Der aktuelle Raum bleibt für die Betreuung sichtbar.",
+		Type:            config.FieldBoolean,
+		Default:         false,
+		ReadPermission:  "config:read",
+		WritePermission: "config:manage",
+		Tab:             "gdpr",
+		Category:        "bewegungsdaten",
+		SortOrder:       14,
 	},
 }
 

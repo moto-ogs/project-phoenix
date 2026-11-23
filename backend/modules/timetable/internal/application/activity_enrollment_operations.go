@@ -322,16 +322,6 @@ func (s *ActivityService) isAlumnus(ctx context.Context, studentID int64) (bool,
 	return student.IsAlumnus(), nil
 }
 
-// careEnded reports whether the child has left the OGS. Same unlocked-read
-// rationale as isAlumnus (#2487).
-func (s *ActivityService) careEnded(ctx context.Context, studentID int64) (bool, error) {
-	student, err := s.loadStudentForGate(ctx, studentID)
-	if err != nil || student == nil {
-		return false, err
-	}
-	return student.CareEndedOn(s.today()), nil
-}
-
 func (s *ActivityService) loadStudentForGate(ctx context.Context, studentID int64) (*timetable.OperationStudent, error) {
 	if studentID <= 0 {
 		return nil, nil
@@ -407,6 +397,9 @@ func (s *ActivityService) addNewEnrollmentsInTx(ctx context.Context, txService a
 // GET /api/activities/{id}/students, the activity detail response and the
 // enrollment counts — a soft-deleted child must not be listed or counted there
 // (#405 review).
+//
+// A child with several rows on the group (a dated switch, or bookings that
+// end on different days, #7908) is listed once.
 func (s *ActivityService) GetEnrolledStudents(ctx context.Context, groupID int64) ([]*timetable.OperationStudent, error) {
 	// Get the enrollments for this group
 	enrollments, err := groupStudentEnrollments(ctx, s.timetable, s.directories, groupID)
@@ -423,9 +416,10 @@ func (s *ActivityService) GetEnrolledStudents(ctx context.Context, groupID int64
 	}
 
 	students := make([]*timetable.OperationStudent, 0, len(enrollments))
+	listed := make(map[int64]bool, len(enrollments))
 	for _, enrollment := range enrollments {
 		student := studentsByID[enrollment.StudentID]
-		if student == nil {
+		if student == nil || listed[enrollment.StudentID] {
 			continue
 		}
 		if student.IsAlumnus() {
@@ -441,6 +435,7 @@ func (s *ActivityService) GetEnrolledStudents(ctx context.Context, groupID int64
 			FirstName: enrollment.StudentFirstName,
 			LastName:  enrollment.StudentLastName,
 		}
+		listed[enrollment.StudentID] = true
 		students = append(students, student)
 	}
 
@@ -523,53 +518,4 @@ func (s *ActivityService) GetActiveStudentEnrollmentsByStudentIDs(ctx context.Co
 	}
 
 	return result, nil
-}
-
-// GetAvailableGroups retrieves all groups a student can enroll in (not already enrolled)
-func (s *ActivityService) GetAvailableGroups(ctx context.Context, studentID int64) ([]*activityContract.Group, error) {
-	alumnus, err := s.isAlumnus(ctx, studentID)
-	if err != nil {
-		return nil, &activityContract.ActivityError{Op: "get available groups", Err: err}
-	}
-	if alumnus {
-		return nil, &activityContract.ActivityError{Op: "get available groups", Err: activityContract.ErrStudentNotFound}
-	}
-	// A child whose care has ended cannot be booked into anything any more, so
-	// there is nothing available to offer (#2487).
-	ended, err := s.careEnded(ctx, studentID)
-	if err != nil {
-		return nil, &activityContract.ActivityError{Op: "get available groups", Err: err}
-	}
-	if ended {
-		return nil, &activityContract.ActivityError{Op: "get available groups", Err: activityContract.ErrStudentCareEnded}
-	}
-
-	// Get all active groups - assuming FindOpenGroups is the correct method
-	open, system := true, false
-	allGroups, err := listLegacyGroups(ctx, s.timetable, timetable.GroupFilter{IsOpen: &open, IsSystem: &system, OrderByName: true}, "find open groups")
-	if err != nil {
-		return nil, &activityContract.ActivityError{Op: "get all groups", Err: err}
-	}
-
-	// Get enrollments for this student
-	enrollments, err := studentEnrollments(ctx, s.timetable, studentID)
-	if err != nil {
-		return nil, &activityContract.ActivityError{Op: "get student enrollments", Err: err}
-	}
-
-	// Create a map of enrolled group IDs for quick lookup
-	enrolledMap := make(map[int64]bool)
-	for _, enrollment := range enrollments {
-		enrolledMap[enrollment.ActivityGroupID] = true
-	}
-
-	// Filter out already enrolled groups
-	availableGroups := make([]*activityContract.Group, 0)
-	for _, group := range allGroups {
-		if !enrolledMap[group.ID] {
-			availableGroups = append(availableGroups, group)
-		}
-	}
-
-	return availableGroups, nil
 }

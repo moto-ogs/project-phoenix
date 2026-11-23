@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // FamilyStore reads the issued documents of the families of a Träger in its
@@ -124,18 +125,34 @@ func familiesUnderContract(contracted, keys []string) map[string]bool {
 	return contracts
 }
 
-// nameContractFamilies gives the families without a document that moto
-// knows only by their contract (ADR 0232) the name of the contract party,
-// in one read. Their key is no mail address and is not shown as one.
+// nameContractFamilies gives the families without a document the name of
+// the party of their contract, in one read: a family moto knows only by its
+// contract (ADR 0232), whose key is no mail address and is not shown as
+// one, and a family whose deviation the office set before its first invoice
+// (#7770), which would otherwise show its address as its name. Families
+// with a name read nothing.
 func (f *BillingFamilies) nameContractFamilies(ctx context.Context, organizationID int64, families []parentbilling.BillingFamily,
 	rows []parentbilling.FamilyBilling,
 ) error {
 	contractOf := map[string]int64{}
-	var ids []int64
 	for _, row := range rows {
-		if parentbilling.IsContractFamily(row.FamilyEmail) && row.ContractID > 0 {
-			contractOf[row.FamilyEmail] = row.ContractID
-			ids = append(ids, row.ContractID)
+		if row.ContractID > 0 {
+			contractOf[row.FamilyEmail] = row.ContractID.Int64()
+		}
+	}
+	var unnamed []*parentbilling.BillingFamily
+	var ids []int64
+	for i := range families {
+		family := &families[i]
+		id, ok := contractOf[family.FamilyEmail]
+		if !ok || family.ID != 0 {
+			continue
+		}
+		if parentbilling.IsContractFamily(family.FamilyEmail) {
+			family.RecipientEmail = ""
+		}
+		if family.RecipientFirstName == "" && family.RecipientLastName == "" {
+			unnamed, ids = append(unnamed, family), append(ids, id)
 		}
 	}
 	if len(ids) == 0 {
@@ -145,16 +162,8 @@ func (f *BillingFamilies) nameContractFamilies(ctx context.Context, organization
 	if err != nil {
 		return fmt.Errorf("parent billing: read the contract parties of the families: %w", err)
 	}
-	for i := range families {
-		family := &families[i]
-		id, ok := contractOf[family.FamilyEmail]
-		if !ok || family.ID != 0 {
-			continue
-		}
-		family.RecipientEmail = ""
-		if family.RecipientFirstName == "" && family.RecipientLastName == "" {
-			family.RecipientFirstName, family.RecipientLastName = recipients[id].FirstName, recipients[id].LastName
-		}
+	for i, family := range unnamed {
+		family.RecipientFirstName, family.RecipientLastName = recipients[ids[i]].FirstName, recipients[ids[i]].LastName
 	}
 	return nil
 }
@@ -176,7 +185,7 @@ func (f *BillingFamilies) BillingFamily(ctx context.Context, reviewer parentbill
 	if len(families) != 1 {
 		return parentbilling.BillingFamilyDetail{}, parentbilling.ErrFamilyNotFound
 	}
-	if err := f.recordRead(ctx, reviewer, documents, map[string]any{"view": "family", "family_id": families[0].ID}); err != nil {
+	if err := f.recordRead(ctx, reviewer, documents, map[string]any{"view": "family", "family_id": families[0].ID.Int64()}); err != nil {
 		return parentbilling.BillingFamilyDetail{}, err
 	}
 	family := families[0]
@@ -216,7 +225,7 @@ func readEvents(documents []parentbilling.BillingFamilyDocument, details map[str
 	byRun := map[bool]map[int64][]int64{false: {}, true: {}}
 	for _, document := range documents {
 		care := document.Service == parentbilling.ServiceCare
-		byRun[care][document.RunID] = append(byRun[care][document.RunID], document.ID)
+		byRun[care][document.RunID.Int64()] = append(byRun[care][document.RunID.Int64()], document.ID.Int64())
 	}
 	events := func(runs map[int64][]int64) map[int64]map[string]any {
 		result := make(map[int64]map[string]any, len(runs))
@@ -242,7 +251,7 @@ func familiesOf(documents []parentbilling.BillingFamilyDocument) []parentbilling
 		if document.ReferenceDocumentID == nil {
 			continue
 		}
-		reference := documentKey{service: document.Service, id: *document.ReferenceDocumentID}
+		reference := documentKey{service: document.Service, id: (*document.ReferenceDocumentID).Int64()}
 		switch document.Kind {
 		case parentbilling.DocumentCancellation:
 			cancelled[reference] = true
@@ -258,7 +267,7 @@ func familiesOf(documents []parentbilling.BillingFamilyDocument) []parentbilling
 			at = len(families)
 			index[document.FamilyKey] = at
 			families = append(families, parentbilling.BillingFamilyDetail{
-				BillingFamily: parentbilling.BillingFamily{ID: familyID(document), DebtorNumbers: []string{}, Payments: []parentbilling.BillingPayment{},
+				BillingFamily: parentbilling.BillingFamily{ID: ident.ID(familyID(document)), DebtorNumbers: []string{}, Payments: []parentbilling.BillingPayment{},
 					PaymentMethods: []string{}, FamilyEmail: document.FamilyKey},
 				Documents: []parentbilling.BillingFamilyDocument{},
 			})
@@ -267,7 +276,7 @@ func familiesOf(documents []parentbilling.BillingFamilyDocument) []parentbilling
 			document.PeriodName = "Monatsbeitrag " + careMonthName(document.ServiceFrom)
 		}
 		if document.Kind == parentbilling.DocumentInvoice {
-			key := documentKey{service: document.Service, id: document.ID}
+			key := documentKey{service: document.Service, id: document.ID.Int64()}
 			document = invoiceState(document, cancelled[key], credited[key])
 		}
 		families[at].Documents = append(families[at].Documents, document)
@@ -290,9 +299,9 @@ type documentKey struct {
 // family by either.
 func familyID(document parentbilling.BillingFamilyDocument) int64 {
 	if document.Service == parentbilling.ServiceCare {
-		return -document.ID
+		return (-document.ID).Int64()
 	}
-	return document.ID
+	return document.ID.Int64()
 }
 
 // invoiceState sets who pays an invoice, its state and what it still asks
@@ -352,6 +361,11 @@ func noteDocument(family *parentbilling.BillingFamilyDetail, document parentbill
 	if family.LastIssuedOn.IsZero() || document.IssuedOn.After(family.LastIssuedOn) {
 		family.LastIssuedOn = document.IssuedOn
 	}
+	// The oldest document comes first: the latest monthly invoice names
+	// the contract.
+	if document.ContractID != 0 {
+		family.ContractID = ident.ID(document.ContractID)
+	}
 	if document.DebtorNumber != "" && !slices.Contains(family.DebtorNumbers, document.DebtorNumber) {
 		family.DebtorNumbers = append(family.DebtorNumbers, document.DebtorNumber)
 	}
@@ -400,7 +414,7 @@ func paymentOrder(kind string) string {
 // withFamilyRows adds to the families of the documents their own number and
 // whether they are known to the holiday care only (#6692), and lists the
 // families without a document: one the holiday care knows, or one with a
-// number of its own.
+// number or a payment method of its own (#7770).
 func withFamilyRows(details []parentbilling.BillingFamilyDetail, rows []parentbilling.FamilyBilling, contracts map[string]bool) []parentbilling.BillingFamily {
 	byKey := make(map[string]*parentbilling.FamilyBilling, len(rows))
 	for i := range rows {
@@ -413,7 +427,7 @@ func withFamilyRows(details []parentbilling.BillingFamilyDetail, rows []parentbi
 		listed[detail.FamilyEmail] = true
 	}
 	for _, row := range rows {
-		if listed[row.FamilyEmail] || (row.ContractID != 0 && row.DebtorNumber == "") {
+		if listed[row.FamilyEmail] || (row.ContractID != 0 && row.DebtorNumber == "" && row.PaymentMethod == "") {
 			continue
 		}
 		first, last := row.HolderFirstName, row.HolderLastName
@@ -424,6 +438,7 @@ func withFamilyRows(details []parentbilling.BillingFamilyDetail, rows []parentbi
 			RecipientFirstName: first, RecipientLastName: last, RecipientEmail: row.FamilyEmail,
 			DebtorNumbers: []string{}, Payments: []parentbilling.BillingPayment{}, PaymentMethods: []string{},
 			FamilyEmail: row.FamilyEmail, FamilyDebtorNumber: row.DebtorNumber, HolidayOnly: !contracts[row.FamilyEmail],
+			FamilyPaymentMethod: row.PaymentMethod, ContractID: row.ContractID,
 		})
 	}
 	return families
@@ -437,7 +452,11 @@ func withFamilyRow(family parentbilling.BillingFamily, documents []parentbilling
 	})
 	family.HolidayOnly = !care && !hasContract
 	if row != nil {
-		family.FamilyDebtorNumber = row.DebtorNumber
+		family.FamilyDebtorNumber, family.FamilyPaymentMethod = row.DebtorNumber, row.PaymentMethod
+		// The contract the deviation was saved for wins over an invoice's.
+		if row.ContractID != 0 {
+			family.ContractID = row.ContractID
+		}
 	}
 	return family
 }

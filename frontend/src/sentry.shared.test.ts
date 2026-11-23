@@ -37,17 +37,37 @@ describe("scrubEvent", () => {
     });
 
     expect(scrubClientEvent(network)).toBeNull();
+    expect(scrubClientEvent(other)).toBe(other);
+    expect(scrubEvent(network)).toBe(network);
+  });
+  it("groups every client chunk load failure into one issue", () => {
+    const chunkFailure = (chunk: string) =>
+      makeEvent({
+        exception: {
+          values: [
+            {
+              type: "ChunkLoadError",
+              value: `Failed to load chunk /_next/static/chunks/${chunk}.js from module 621186`,
+            },
+          ],
+        },
+      });
+
+    expect(
+      scrubClientEvent(chunkFailure("0ub6smytks-74"))?.fingerprint,
+    ).toEqual(["ChunkLoadError"]);
+    expect(
+      scrubClientEvent(chunkFailure("1abcdefghi-12"))?.fingerprint,
+    ).toEqual(["ChunkLoadError"]);
     expect(
       scrubClientEvent(
         makeEvent({
           exception: {
-            values: [{ type: "AxiosError", value: "Network Error" }],
+            values: [{ type: "TypeError", value: "x is undefined" }],
           },
         }),
-      ),
-    ).toBeNull();
-    expect(scrubClientEvent(other)).toBe(other);
-    expect(scrubEvent(network)).toBe(network);
+      )?.fingerprint,
+    ).toBeUndefined();
   });
   it("strips Authorization and Cookie headers (case-sensitive variants)", () => {
     const event = makeEvent({
@@ -669,7 +689,13 @@ it.each([
   "/parents/vertrag-unterschreiben/42.signing-credential",
   "/public/care%2Dcontract-signing/42.signing-credential",
   "/%76ertrag-unterschreiben/42.signing-credential",
-])("redacts signing URLs from events and spans: %s", (path) => {
+  "/api/public/payroll-download/42.signing-credential",
+  "/lohnbuero/42.signing-credential",
+  "/public/payroll%2Ddownload/42.signing-credential",
+  "/%6cohnbuero/42.signing-credential",
+  "/api%2Fpublic%2Fpayroll%2Ddownload%2F42.signing-credential",
+  "/%6cohnbuero%2F42.signing-credential",
+])("redacts public credential URLs from events and spans: %s", (path) => {
   const result = scrubEvent(
     makeEvent({
       request: {

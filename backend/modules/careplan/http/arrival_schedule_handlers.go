@@ -15,6 +15,7 @@ import (
 	securityruntime "github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	realtime "github.com/moto-ogs/project-phoenix/realtime"
 	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	tenant "github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -140,17 +141,19 @@ func (rs *Resource) updateStudentArrivalSchedules(w http.ResponseWriter, r *http
 
 	staffID, err := rs.getStaffIDFromJWT(r)
 	if err != nil {
-		renderError(w, r, common.ErrorForbidden(err))
+		renderScheduleAuthorError(w, r, err)
 		return
 	}
 
-	schedules := toArrivalScheduleModels(req.Schedules, student.ID, staffID)
+	schedules := toArrivalScheduleModels(r.Context(), req.Schedules, student.ID, staffID)
 
 	tenantID := tenant.FromContext(r.Context())
-	if err := withinTenant(r.Context(), tenantID, func(ctx context.Context) error {
-		return rs.ArrivalScheduleService.UpsertBulkStudentArrivalSchedules(ctx, student.ID, schedules)
-	}); err != nil {
-		renderError(w, r, common.ErrorInternalServer(err))
+	version, err := rs.WeeklyPlans.SaveWeeklyPlan(r.Context(), careplan.WeeklyPlanInput{
+		StudentID: student.ID, ArrivalSchedules: &schedules, WeekdayNotes: weekdayPickupNoteMap(req.WeekdayNotes),
+		CreatedByStaffID: staffID, ExpectedVersion: req.ExpectedVersion,
+	})
+	if err != nil {
+		renderPickupAdjustmentError(w, r, err)
 		return
 	}
 
@@ -172,7 +175,12 @@ func (rs *Resource) updateStudentArrivalSchedules(w http.ResponseWriter, r *http
 		rs.broadcastArrivalScheduleChanged(tenantID, student.ID)
 		rs.wakeChildGuardians(tenantID, student.ID)
 	})
+	if req.WeekdayNotes != nil {
+		// The weekday notes ride along in the pickup data the tiles render.
+		rs.registerPartialAbsenceBroadcasts(r, student.ID)
+	}
 	response := buildArrivalDataResponse(data)
+	response.WeeklyPlanVersion = version
 	common.Respond(w, r, http.StatusOK, response, "Arrival schedules updated successfully")
 }
 
@@ -191,7 +199,7 @@ func (rs *Resource) createStudentArrivalException(w http.ResponseWriter, r *http
 
 	staffID, err := rs.getStaffIDFromJWT(r)
 	if err != nil {
-		renderError(w, r, common.ErrorForbidden(err))
+		renderScheduleAuthorError(w, r, err)
 		return
 	}
 
@@ -205,7 +213,7 @@ func (rs *Resource) createStudentArrivalException(w http.ResponseWriter, r *http
 	tenantID := tenant.FromContext(r.Context())
 	exception, err := rs.ArrivalScheduleService.CreateOrReclaimException(
 		r.Context(), student.ID, exceptionDate, arrivalTime, req.Reason, staffID,
-		func() (int64, error) { return rs.getStaffIDFromJWT(r) },
+		rs.exceptionTakeoverStaffID(r),
 	)
 	if err != nil {
 		renderExceptionWriteError(w, r, err)
@@ -260,7 +268,7 @@ func (rs *Resource) updateStudentArrivalException(w http.ResponseWriter, r *http
 	tenantID := tenant.FromContext(r.Context())
 	exception, err := rs.ArrivalScheduleService.UpdateException(
 		r.Context(), exceptionID, student.ID, exceptionDate, req.Reason, arrivalTime, req.ClearExpectedArrival,
-		func() (int64, error) { return rs.getStaffIDFromJWT(r) },
+		rs.exceptionTakeoverStaffID(r),
 	)
 	if err != nil {
 		renderExceptionWriteError(w, r, err)
@@ -326,7 +334,7 @@ func (rs *Resource) createStudentArrivalNote(w http.ResponseWriter, r *http.Requ
 
 	staffID, err := rs.getStaffIDFromJWT(r)
 	if err != nil {
-		renderError(w, r, common.ErrorForbidden(err))
+		renderScheduleAuthorError(w, r, err)
 		return
 	}
 
@@ -335,7 +343,7 @@ func (rs *Resource) createStudentArrivalNote(w http.ResponseWriter, r *http.Requ
 		StudentID: student.ID,
 		NoteDate:  careplan.Date(noteDate),
 		Content:   req.Content,
-		CreatedBy: staffID,
+		CreatedBy: staffID, EnteredByTraeger: careplan.EnteredByTraeger(r.Context(), staffID),
 	}
 
 	tenantID := tenant.FromContext(r.Context())
@@ -372,7 +380,7 @@ func (rs *Resource) updateStudentArrivalNote(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	req := &ArrivalNoteRequest{}
+	req := &ArrivalNoteUpdateRequest{}
 	if err := render.Bind(r, req); err != nil {
 		renderError(w, r, common.ErrorInvalidRequest(err))
 		return
@@ -383,7 +391,7 @@ func (rs *Resource) updateStudentArrivalNote(w http.ResponseWriter, r *http.Requ
 		StudentID: student.ID,
 		NoteDate:  careplan.Date(noteDate),
 		Content:   req.Content,
-		CreatedBy: existingNote.CreatedBy,
+		CreatedBy: existingNote.CreatedBy, EnteredByTraeger: existingNote.EnteredByTraeger,
 	}
 	note.ID = noteID
 	note.CreatedAt = existingNote.CreatedAt
@@ -391,7 +399,7 @@ func (rs *Resource) updateStudentArrivalNote(w http.ResponseWriter, r *http.Requ
 
 	tenantID := tenant.FromContext(r.Context())
 	if err := withinTenant(r.Context(), tenantID, func(ctx context.Context) error {
-		return rs.ArrivalScheduleService.UpdateStudentArrivalNote(ctx, note)
+		return rs.ArrivalScheduleService.UpdateStudentArrivalNote(ctx, note, req.ExpectedVersion)
 	}); err != nil {
 		renderError(w, r, common.ErrorInternalServer(err))
 		return
@@ -446,7 +454,7 @@ func (rs *Resource) bulkUpsertArrivalSchedules(w http.ResponseWriter, r *http.Re
 
 	staffID, err := rs.getStaffIDFromJWT(r)
 	if err != nil {
-		renderError(w, r, common.ErrorForbidden(err))
+		renderScheduleAuthorError(w, r, err)
 		return
 	}
 
@@ -454,9 +462,10 @@ func (rs *Resource) bulkUpsertArrivalSchedules(w http.ResponseWriter, r *http.Re
 	result, err := rs.ArrivalScheduleService.BulkUpsertArrivalSchedules(
 		r.Context(),
 		careplan.ArrivalScheduleBulkFilter{
-			SchoolClass: req.SchoolClass,
-			GroupID:     req.GroupID,
-			StudentIDs:  req.StudentIDs,
+			SchoolClass:     req.SchoolClass,
+			ExpectedVersion: req.ExpectedVersion,
+			GroupID:         req.GroupID.Int64(),
+			StudentIDs:      ident.Int64s(req.StudentIDs),
 			Authorize: func(ctx context.Context, student careplan.ScheduleStudent) (bool, error) {
 				return securityruntime.CanUpdateStudent(ctx, sessiontoken.PermissionsFromCtx(r.Context()), student, rs.UserContextService)
 			},
@@ -494,37 +503,8 @@ func (rs *Resource) bulkUpsertArrivalSchedules(w http.ResponseWriter, r *http.Re
 	common.Respond(w, r, http.StatusOK, result, "Bulk arrival schedules upserted successfully")
 }
 
-// BulkArrivalDayNoteResponse represents a single day note in bulk arrival time responses
-type BulkArrivalDayNoteResponse struct {
-	ID      int64  `json:"id"`
-	Content string `json:"content"`
-}
-
-// BulkArrivalTimeResponse represents arrival time data for a single student
-type BulkArrivalTimeResponse struct {
-	StudentID       int64                        `json:"student_id"`
-	Date            string                       `json:"date"`
-	WeekdayName     string                       `json:"weekday_name"`
-	ExpectedArrival *string                      `json:"expected_arrival,omitempty"` // HH:MM format or null
-	IsException     bool                         `json:"is_exception"`
-	Notes           string                       `json:"notes,omitempty"`
-	DayNotes        []BulkArrivalDayNoteResponse `json:"day_notes,omitempty"`
-}
-
-// getBulkArrivalTimes handles POST /students/arrival-times/bulk
-func (rs *Resource) getBulkArrivalTimes(w http.ResponseWriter, r *http.Request) {
-	handleBulkEffectiveTimes(
-		rs,
-		w,
-		r,
-		"Bulk arrival times retrieved successfully",
-		rs.ArrivalScheduleService.GetBulkEffectiveArrivalTimesForDate,
-		mapBulkArrivalTimeResponse,
-	)
-}
-
 type ArrivalScheduleStatusResponse struct {
-	StudentIDs []int64 `json:"student_ids"`
+	StudentIDs []ident.ID `json:"student_ids"`
 }
 
 // getBulkArrivalScheduleStatus returns the selected children that have their
@@ -537,13 +517,13 @@ func (rs *Resource) getBulkArrivalScheduleStatus(w http.ResponseWriter, r *http.
 		return
 	}
 
-	authorizedIDs, err := rs.filterAuthorizedStudentIDs(r, req.StudentIDs)
+	authorizedIDs, err := rs.filterAuthorizedStudentIDs(r, ident.Int64s(req.StudentIDs))
 	if err != nil {
 		renderError(w, r, common.ErrorInternalServer(err))
 		return
 	}
 	if len(authorizedIDs) == 0 {
-		common.Respond(w, r, http.StatusOK, ArrivalScheduleStatusResponse{StudentIDs: []int64{}}, "Bulk arrival schedule status retrieved successfully")
+		common.Respond(w, r, http.StatusOK, ArrivalScheduleStatusResponse{StudentIDs: []ident.ID{}}, "Bulk arrival schedule status retrieved successfully")
 		return
 	}
 
@@ -558,34 +538,7 @@ func (rs *Resource) getBulkArrivalScheduleStatus(w http.ResponseWriter, r *http.
 			studentIDs = append(studentIDs, studentID)
 		}
 	}
-	common.Respond(w, r, http.StatusOK, ArrivalScheduleStatusResponse{StudentIDs: studentIDs}, "Bulk arrival schedule status retrieved successfully")
-}
-
-func mapBulkArrivalTimeResponse(
-	studentID int64,
-	effectiveTime *careplan.EffectiveArrivalTime,
-) BulkArrivalTimeResponse {
-	response := BulkArrivalTimeResponse{
-		StudentID:   studentID,
-		Date:        effectiveTime.Date.Format(dateFormatISO),
-		WeekdayName: effectiveTime.WeekdayName,
-		IsException: effectiveTime.IsException,
-		Notes:       effectiveTime.Notes,
-	}
-	if effectiveTime.ArrivalTime != nil {
-		formatted := effectiveTime.ArrivalTime.Format("15:04")
-		response.ExpectedArrival = &formatted
-	}
-	if len(effectiveTime.DayNotes) > 0 {
-		response.DayNotes = make([]BulkArrivalDayNoteResponse, 0, len(effectiveTime.DayNotes))
-		for _, note := range effectiveTime.DayNotes {
-			response.DayNotes = append(response.DayNotes, BulkArrivalDayNoteResponse{
-				ID:      note.ID,
-				Content: note.Content,
-			})
-		}
-	}
-	return response
+	common.Respond(w, r, http.StatusOK, ArrivalScheduleStatusResponse{StudentIDs: ident.IDs(studentIDs)}, "Bulk arrival schedule status retrieved successfully")
 }
 
 // ClassArrivalTimesResponse is the current Unterrichtsschluss of one class.
@@ -593,6 +546,8 @@ type ClassArrivalTimesResponse struct {
 	SchoolClass string            `json:"school_class"`
 	Times       map[string]string `json:"times"`
 	UpdatedAt   *string           `json:"updated_at,omitempty"`
+	// Version is what a class save sends back as expected_version (ADR 0311).
+	Version string `json:"version"`
 }
 
 // getClassArrivalTimes handles GET /students/class-arrival-times/{schoolClass}.
@@ -605,7 +560,7 @@ func (rs *Resource) getClassArrivalTimes(w http.ResponseWriter, r *http.Request)
 		common.RenderError(w, r, common.ErrorInternalServer(err))
 		return
 	}
-	resp := ClassArrivalTimesResponse{SchoolClass: times.SchoolClass, Times: times.Times}
+	resp := ClassArrivalTimesResponse{SchoolClass: times.SchoolClass, Times: times.Times, Version: times.Version}
 	if times.UpdatedAt != nil {
 		formatted := times.UpdatedAt.Format(time.RFC3339)
 		resp.UpdatedAt = &formatted

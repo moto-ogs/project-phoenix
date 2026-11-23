@@ -4,8 +4,10 @@ import {
   arr,
   bool,
   calendarDate,
+  fileAnswer,
   instant,
-  int64StringOrNumber,
+  int64String,
+  multipart,
   noData,
   nullable,
   object,
@@ -16,16 +18,24 @@ import {
   str,
   success,
 } from "./runtime";
+import {
+  ContractCorrectionValuesSchema,
+  type ContractCorrectionValues,
+} from "./shared.generated";
 
 /** Go: carecontract.Concluded */
 export interface Concluded {
   method: string;
   at: string;
+  date_unknown: boolean;
+  taken_over: boolean;
 }
 
 export const ConcludedSchema: z.ZodType<Concluded, unknown> = object<Concluded>({
   method: str,
   at: instant,
+  date_unknown: bool,
+  taken_over: bool,
 });
 
 /** Go: carecontract.ContractSummary */
@@ -46,13 +56,16 @@ export interface ContractSummary {
   sent_at: string | null;
   concluded: Concluded | null;
   ends_on: string | null;
+  imported: boolean;
+  follows_bookings: boolean;
+  request_child_id: string | null;
 }
 
 export const ContractSummarySchema: z.ZodType<ContractSummary, unknown> = object<ContractSummary>({
-  student_id: nullable(int64StringOrNumber),
-  id: int64StringOrNumber,
+  student_id: nullable(int64String),
+  id: int64String,
   status: str,
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   school_name: str,
   child_first_name: str,
   child_last_name: str,
@@ -65,6 +78,9 @@ export const ContractSummarySchema: z.ZodType<ContractSummary, unknown> = object
   sent_at: nullable(instant),
   concluded: nullable(ConcludedSchema),
   ends_on: nullable(calendarDate),
+  imported: bool,
+  follows_bookings: bool,
+  request_child_id: nullable(int64String),
 });
 
 /** Go: carecontract.ContractList */
@@ -91,7 +107,7 @@ export interface Service {
 
 export const ServiceSchema: z.ZodType<Service, unknown> = object<Service>({
   weekday: str,
-  care_offering_id: int64StringOrNumber,
+  care_offering_id: int64String,
   module_name: str,
   ends_at: str,
   last_day: nullable(calendarDate),
@@ -114,11 +130,12 @@ export interface Candidate {
   template_issue: string;
   modules_text: string;
   mail_block?: string;
+  imported_contract_id?: string;
 }
 
 export const CandidateSchema: z.ZodType<Candidate, unknown> = object<Candidate>({
-  school_id: int64StringOrNumber,
-  request_child_id: int64StringOrNumber,
+  school_id: int64String,
+  request_child_id: int64String,
   acceptance_issue: str,
   renewal: bool,
   school_name: str,
@@ -132,6 +149,7 @@ export const CandidateSchema: z.ZodType<Candidate, unknown> = object<Candidate>(
   template_issue: str,
   modules_text: str,
   mail_block: optional(str),
+  imported_contract_id: optional(int64String),
 });
 
 /** Go: carecontract.SchoolConclusion */
@@ -142,7 +160,7 @@ export interface SchoolConclusion {
 }
 
 export const SchoolConclusionSchema: z.ZodType<SchoolConclusion, unknown> = object<SchoolConclusion>({
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   school_name: str,
   mode: str,
 });
@@ -195,7 +213,7 @@ export interface Version {
 }
 
 export const VersionSchema: z.ZodType<Version, unknown> = object<Version>({
-  id: int64StringOrNumber,
+  id: int64String,
   number: safeInt,
   status: str,
   effective_from: nullable(calendarDate),
@@ -293,6 +311,25 @@ export const ReminderSchema: z.ZodType<Reminder, unknown> = object<Reminder>({
   sent_at: instant,
 });
 
+/** Go: carecontract.ContractCorrection */
+export interface ContractCorrection {
+  corrected_at: string;
+  file: string;
+  evidence: string;
+  changes: string[] | null;
+  before: ContractCorrectionValues;
+  after: ContractCorrectionValues;
+}
+
+export const ContractCorrectionSchema: z.ZodType<ContractCorrection, unknown> = object<ContractCorrection>({
+  corrected_at: instant,
+  file: str,
+  evidence: str,
+  changes: nullable(arr(str)),
+  before: ContractCorrectionValuesSchema,
+  after: ContractCorrectionValuesSchema,
+});
+
 /** Go: carecontract.ContractDetail */
 export interface ContractDetail {
   student_id: string | null;
@@ -311,6 +348,9 @@ export interface ContractDetail {
   sent_at: string | null;
   concluded: Concluded | null;
   ends_on: string | null;
+  imported: boolean;
+  follows_bookings: boolean;
+  request_child_id: string | null;
   version: Version;
   parties: Party[] | null;
   mailings: Mailing[] | null;
@@ -321,13 +361,14 @@ export interface ContractDetail {
   term_text: string;
   notice_text: string;
   fee_text: string;
+  corrections: ContractCorrection[] | null;
 }
 
 export const ContractDetailSchema: z.ZodType<ContractDetail, unknown> = object<ContractDetail>({
-  student_id: nullable(int64StringOrNumber),
-  id: int64StringOrNumber,
+  student_id: nullable(int64String),
+  id: int64String,
   status: str,
-  school_id: int64StringOrNumber,
+  school_id: int64String,
   school_name: str,
   child_first_name: str,
   child_last_name: str,
@@ -340,6 +381,9 @@ export const ContractDetailSchema: z.ZodType<ContractDetail, unknown> = object<C
   sent_at: nullable(instant),
   concluded: nullable(ConcludedSchema),
   ends_on: nullable(calendarDate),
+  imported: bool,
+  follows_bookings: bool,
+  request_child_id: nullable(int64String),
   version: VersionSchema,
   parties: nullable(arr(PartySchema)),
   mailings: nullable(arr(MailingSchema)),
@@ -350,12 +394,13 @@ export const ContractDetailSchema: z.ZodType<ContractDetail, unknown> = object<C
   term_text: str,
   notice_text: str,
   fee_text: str,
+  corrections: nullable(arr(ContractCorrectionSchema)),
 });
 
 /** Go: carecontract.CandidateKey */
 export interface CandidateKey {
-  school_id?: number;
-  request_child_id?: number;
+  school_id?: string;
+  request_child_id?: string;
 }
 
 /** Go: carecontracthttp.CreateRequest */
@@ -371,8 +416,8 @@ export interface CreateSkip {
 }
 
 export const CreateSkipSchema: z.ZodType<CreateSkip, unknown> = object<CreateSkip>({
-  school_id: int64StringOrNumber,
-  request_child_id: int64StringOrNumber,
+  school_id: int64String,
+  request_child_id: int64String,
   reason: str,
 });
 
@@ -389,7 +434,7 @@ export const CreateResultSchema: z.ZodType<CreateResult, unknown> = object<Creat
 
 /** Go: carecontracthttp.SendRequest */
 export interface SendRequest {
-  contract_ids?: number[] | null;
+  contract_ids?: string[] | null;
   recipient_email?: string | null;
 }
 
@@ -400,7 +445,7 @@ export interface SendSkip {
 }
 
 export const SendSkipSchema: z.ZodType<SendSkip, unknown> = object<SendSkip>({
-  id: int64StringOrNumber,
+  id: int64String,
   reason: str,
 });
 
@@ -411,23 +456,9 @@ export interface SendResult {
 }
 
 export const SendResultSchema: z.ZodType<SendResult, unknown> = object<SendResult>({
-  sent: nullable(arr(int64StringOrNumber)),
+  sent: nullable(arr(int64String)),
   skipped: nullable(arr(SendSkipSchema)),
 });
-
-/** Query of GET /traeger/contracts/ */
-export interface GetTraegerContractsQuery {
-  limit?: number;
-  offset?: number;
-  school_id?: string;
-  search?: string;
-  status?: string;
-}
-
-/** Query of GET /traeger/contracts/candidates */
-export interface GetTraegerContractsCandidatesQuery {
-  school_id?: string;
-}
 
 export const routes = {
   "DELETE /traeger/contracts/{id}": {
@@ -440,14 +471,22 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/contracts/",
     portals: ["org"],
-    query: ["limit", "offset", "school_id", "search", "status"],
+    query: {
+      "limit": { kind: "int" },
+      "offset": { kind: "int" },
+      "school_id": { kind: "id" },
+      "search": { kind: "string" },
+      "status": { kind: "string" },
+    },
     response: success(ContractListSchema),
   },
   "GET /traeger/contracts/candidates": {
     method: "GET",
     pattern: "/traeger/contracts/candidates",
     portals: ["org"],
-    query: ["school_id"],
+    query: {
+      "school_id": { kind: "id" },
+    },
     response: success(z.array(CandidateSchema)),
   },
   "GET /traeger/contracts/conclusion-modes": {
@@ -456,11 +495,41 @@ export const routes = {
     portals: ["org"],
     response: success(z.array(SchoolConclusionSchema)),
   },
+  "GET /traeger/contracts/export": {
+    method: "GET",
+    pattern: "/traeger/contracts/export",
+    portals: ["org"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+      "school_id": { kind: "id" },
+      "search": { kind: "string" },
+      "status": { kind: "string" },
+    },
+    response: fileAnswer,
+  },
   "GET /traeger/contracts/{id}": {
     method: "GET",
     pattern: "/traeger/contracts/{id}",
     portals: ["org"],
     response: success(ContractDetailSchema),
+  },
+  "GET /traeger/contracts/{id}/document": {
+    method: "GET",
+    pattern: "/traeger/contracts/{id}/document",
+    portals: ["org"],
+    response: fileAnswer,
+  },
+  "GET /traeger/contracts/{id}/paper-signature": {
+    method: "GET",
+    pattern: "/traeger/contracts/{id}/paper-signature",
+    portals: ["org"],
+    response: fileAnswer,
+  },
+  "GET /traeger/contracts/{id}/versions/{number}/document": {
+    method: "GET",
+    pattern: "/traeger/contracts/{id}/versions/{number}/document",
+    portals: ["org"],
+    response: fileAnswer,
   },
   "POST /traeger/contracts/": {
     method: "POST",
@@ -475,5 +544,14 @@ export const routes = {
     portals: ["org"],
     request: requestBody<SendRequest>(),
     response: success(SendResultSchema),
+  },
+  "POST /traeger/contracts/{id}/paper-signature": {
+    method: "POST",
+    pattern: "/traeger/contracts/{id}/paper-signature",
+    portals: ["org"],
+    maxBodyBytes: 10551296,
+    tooLargeCode: "care_contract.paper_document_invalid",
+    request: multipart,
+    response: noData,
   },
 } as const;

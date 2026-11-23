@@ -86,7 +86,7 @@ Die Folge-Issues setzen auf diese Teile auf. Neue Module kommen nur über die Mo
 **Backend, Helfer `ModuleBooking` (seit #4893):**
 
 - `settings.NewModuleBooking(reader)`; `reader` ist der Settings-Service (`ResolveBoolForTenant`). Ohne Reader liefert der Aufruf einen Fehler, die Komposition bricht ab.
-- `RequireForTenant(ctx, tenantID, modules...)` liest in einer eigenen Tenant-Transaktion und über den Request-Cache. Das passt für die Routensperre vor der Transaktion der Anfrage ebenso wie für Scheduler, Login und Refresh der Portale und Geräte (#4895, #4896).
+- `RequireForTenant(ctx, tenantID, modules...)` liest in einer eigenen Tenant-Transaktion und über den Request-Cache. Das passt für die Routensperre vor der Transaktion der Anfrage ebenso wie für Scheduler, Login und Refresh der Portale und Geräte (#4895, #4896). In einer laufenden Admin-Transaktion schlägt dieser Aufruf fehl, sobald der Cache den Schalter nicht hält. Dort liest `ResolveManyForTenants` die Schalter aller Schulen in einer Abfrage (so `ParentChildReadsForBookedSchools`, #7967).
 - `RequireForTenant` liefert `*settings.ModuleNotBookedError{TenantID, Module}` für das erste fehlende Modul. Ein Lesefehler bleibt ein Fehler und wird nie als „gebucht“ oder „nicht gebucht“ gewertet. Ein unbekannter Schlüssel ist ein Fehler (`settings.ErrUnknownModule`).
 - Fehlercode `module.not_booked` (403, Klasse `permission`). `details.module` ist der Modulschlüssel, `details.module_label` der Name. Das Frontend erklärt damit den fehlenden Modulzustand (#4894).
 

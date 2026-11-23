@@ -30,7 +30,7 @@ func (e *sickCascadeEnv) createSickAbsenceFor(t *testing.T, staffID int64, start
 			AbsenceType: "sick", DateStart: start.String(), DateEnd: end.String(),
 		})
 		if err == nil {
-			absenceID = created.ID
+			absenceID = created.ID.Int64()
 		}
 		return err
 	})

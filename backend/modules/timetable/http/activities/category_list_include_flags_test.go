@@ -5,6 +5,7 @@ package httpadapter_test
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"testing"
 	"time"
 
@@ -45,7 +46,7 @@ func TestActivityCategoriesListIncludeFlags(t *testing.T) {
 						if (category.IsSystem && !includeSystem) || (category.ArchivedAt != nil && !includeArchived) {
 							continue
 						}
-						row := map[string]any{"id": category.ID, "name": category.Name, "is_system": category.IsSystem, "created_at": category.CreatedAt, "updated_at": category.UpdatedAt}
+						row := map[string]any{"id": strconv.FormatInt(category.ID, 10), "name": category.Name, "is_system": category.IsSystem, "created_at": category.CreatedAt, "updated_at": category.UpdatedAt}
 						if category.ArchivedAt != nil {
 							row["archived_at"] = category.ArchivedAt
 						}

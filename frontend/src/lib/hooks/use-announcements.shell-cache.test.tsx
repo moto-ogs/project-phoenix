@@ -7,11 +7,11 @@ import { resetSWRScope } from "~/lib/swr/scope";
 import { useAnnouncements } from "./use-announcements";
 
 vi.unmock("swr");
-const { authFetch, owner } = vi.hoisted(() => ({
-  authFetch: vi.fn(),
+const { bffJson, owner } = vi.hoisted(() => ({
+  bffJson: vi.fn(),
   owner: { id: "7" },
 }));
-vi.mock("~/lib/api-helpers", () => ({ authFetch }));
+vi.mock("~/lib/bff-fetch", () => ({ bffJson }));
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
     data: { user: owner, expires: "2099-01-01" },
@@ -24,7 +24,7 @@ vi.mock("~/lib/tenant-context", () => ({
 
 const seed = [
   {
-    id: 1,
+    id: "1",
     title: "Release",
     content: "News",
     type: "release",
@@ -46,7 +46,7 @@ function Wrapper({ children }: { children: React.ReactNode }) {
 beforeEach(() => {
   resetSWRScope({ revalidate: false });
   owner.id = "7";
-  authFetch.mockReset().mockResolvedValue({ data: [] });
+  bffJson.mockReset().mockResolvedValue([]);
 });
 afterEach(() => resetSWRScope({ revalidate: false }));
 
@@ -54,13 +54,16 @@ it("shows bootstrap announcements without a redundant request, then refreshes fr
   const { result } = renderHook(() => useAnnouncements(), { wrapper: Wrapper });
   expect(result.current.announcements).toEqual(seed);
   await act(async () => {});
-  expect(authFetch).toHaveBeenCalledTimes(0);
+  expect(bffJson).toHaveBeenCalledTimes(0);
 
   await act(async () => {
     await result.current.refresh();
   });
-  expect(authFetch).toHaveBeenCalledTimes(1);
-  expect(authFetch).toHaveBeenCalledWith("/api/platform/announcements/unread");
+  expect(bffJson).toHaveBeenCalledTimes(1);
+  expect(bffJson).toHaveBeenCalledWith(
+    "tenant",
+    "GET /api/platform/announcements/unread",
+  );
   expect(result.current.announcements).toEqual([]);
 });
 
@@ -69,6 +72,6 @@ it("does not show another account's bootstrap announcements", async () => {
   const { result } = renderHook(() => useAnnouncements(), { wrapper: Wrapper });
   expect(result.current.announcements).toEqual([]);
   await act(async () => {});
-  expect(authFetch).toHaveBeenCalledTimes(1);
+  expect(bffJson).toHaveBeenCalledTimes(1);
   expect(result.current.announcements).toEqual([]);
 });

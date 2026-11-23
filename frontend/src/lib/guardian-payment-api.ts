@@ -1,10 +1,9 @@
-import { apiErrorFromResponse } from "./api-error";
+import { bffFile, bffJson } from "./bff-fetch";
 import {
   downloadBlob,
   filenameFromDisposition,
   openBlobForPrint,
 } from "./file-download";
-import { sessionFetch } from "./session-cache";
 
 /**
  * Guardian payment data (#2608). Bank details hang off the guardian, not off
@@ -27,11 +26,15 @@ export interface GuardianPaymentPlain {
   guardianId: string;
   iban: string | null;
   accountHolder: string | null;
+  /** The token the edit that starts from this reveal saves back (ADR 0311). */
+  version: string;
 }
 
 export interface GuardianPaymentInput {
   iban: string | null;
   accountHolder: string | null;
+  /** The version of the revealed state the edit started from. */
+  expectedVersion: string;
 }
 
 export interface PaymentOverviewRow {
@@ -47,65 +50,39 @@ export interface PaymentOverviewRow {
 
 export type PaymentExportFormat = "pdf" | "xlsx" | "docx";
 
-interface BackendMasked {
-  guardian_id: string;
-  iban_masked: string | null;
-  account_holder: string | null;
-}
-
-interface BackendPlain {
-  guardian_id: string;
-  iban: string | null;
-  account_holder: string | null;
-}
-
-interface BackendOverviewRow {
-  student_id: string;
-  student_name: string;
-  school_class: string;
-  guardian_id: string | null;
-  guardian_name: string;
-  relationship_type: string;
-  account_holder: string;
-  iban_masked: string;
-}
-
 // A failed request becomes an ApiError with the wire code, field errors and
 // request ID, so the shared error display shows the catalog text (#2517).
 // The message is a diagnostic for the logs.
 export async function fetchGuardianPayment(
   guardianId: string,
 ): Promise<GuardianPaymentMasked> {
-  const response = await sessionFetch(`/api/guardians/${guardianId}/payment`);
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, "load guardian payment failed");
-  }
-  const json = (await response.json()) as { data: BackendMasked };
+  const payment = await bffJson("tenant", "GET /api/guardians/{id}/payment", {
+    params: { id: guardianId },
+    errorMessage: "load guardian payment failed",
+  });
   return {
-    guardianId: json.data.guardian_id,
-    ibanMasked: json.data.iban_masked,
-    accountHolder: json.data.account_holder,
+    guardianId: payment.guardian_id,
+    ibanMasked: payment.iban_masked,
+    accountHolder: payment.account_holder,
   };
 }
 
 export async function revealGuardianPayment(
   guardianId: string,
 ): Promise<GuardianPaymentPlain> {
-  const response = await sessionFetch(
-    `/api/guardians/${guardianId}/payment/reveal`,
-    { method: "POST", headers: { "Content-Type": "application/json" } },
+  const payment = await bffJson(
+    "tenant",
+    "POST /api/guardians/{id}/payment/reveal",
+    {
+      params: { id: guardianId },
+      errorMessage: "reveal guardian payment failed",
+    },
   );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      "reveal guardian payment failed",
-    );
-  }
-  const json = (await response.json()) as { data: BackendPlain };
   return {
-    guardianId: json.data.guardian_id,
-    iban: json.data.iban,
-    accountHolder: json.data.account_holder,
+    guardianId: payment.guardian_id,
+    iban: payment.iban,
+    accountHolder: payment.account_holder,
+    version: payment.version,
   };
 }
 
@@ -113,20 +90,15 @@ export async function updateGuardianPayment(
   guardianId: string,
   input: GuardianPaymentInput,
 ): Promise<void> {
-  const response = await sessionFetch(`/api/guardians/${guardianId}/payment`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+  await bffJson("tenant", "PUT /api/guardians/{id}/payment", {
+    params: { id: guardianId },
+    body: {
       iban: input.iban,
       account_holder: input.accountHolder,
-    }),
+      expected_version: input.expectedVersion,
+    },
+    errorMessage: "update guardian payment failed",
   });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      "update guardian payment failed",
-    );
-  }
 }
 
 /** Marks which guardian pays for this child; null clears the assignment. */
@@ -134,26 +106,18 @@ export async function setStudentPayer(
   studentId: string,
   guardianId: string | null,
 ): Promise<void> {
-  const response = await sessionFetch(
-    `/api/guardians/students/${studentId}/payer`,
-    {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ guardian_id: guardianId }),
-    },
-  );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, "set student payer failed");
-  }
+  await bffJson("tenant", "PUT /api/guardians/students/{studentId}/payer", {
+    params: { studentId },
+    body: { guardian_id: guardianId },
+    errorMessage: "set student payer failed",
+  });
 }
 
 export async function fetchPaymentOverview(): Promise<PaymentOverviewRow[]> {
-  const response = await sessionFetch("/api/guardians/payment-overview");
-  if (!response.ok) {
-    throw await apiErrorFromResponse(response, "load payment overview failed");
-  }
-  const json = (await response.json()) as { data: BackendOverviewRow[] | null };
-  return (json.data ?? []).map((row) => ({
+  const rows = await bffJson("tenant", "GET /api/guardians/payment-overview", {
+    errorMessage: "load payment overview failed",
+  });
+  return rows.map((row) => ({
     studentId: row.student_id,
     studentName: row.student_name,
     schoolClass: row.school_class,
@@ -173,20 +137,11 @@ export async function exportPaymentOverview(
   format: PaymentExportFormat,
   printTarget?: Window,
 ): Promise<void> {
-  const response = await sessionFetch(
-    "/api/guardians/payment-overview/export",
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ format }),
-    },
+  const response = await bffFile(
+    "tenant",
+    "POST /api/guardians/payment-overview/export",
+    { body: { format }, errorMessage: "export payment overview failed" },
   );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      "export payment overview failed",
-    );
-  }
   const blob = await response.blob();
   if (printTarget) {
     await openBlobForPrint(blob, printTarget);

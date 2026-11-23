@@ -51,7 +51,7 @@ describe("guardian invitation API", () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       jsonResponse({
         data: {
-          account_id: 42,
+          account_id: "42",
           email: "mara@example.test",
           tenant_slug: "demo",
         },
@@ -69,11 +69,15 @@ describe("guardian invitation API", () => {
       email: "mara@example.test",
       tenantSlug: "demo",
     });
+    // The backend's path and field names, through the catalog proxy.
     expect(fetch).toHaveBeenCalledWith(
-      "/api/guardian-invitations/token/accept",
+      "/api/auth/guardian-invitations/token/accept",
       expect.objectContaining({
         method: "POST",
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          [passwordKey]: credential,
+          confirm_password: credential,
+        }),
       }),
     );
   });
@@ -111,8 +115,10 @@ describe("guardian invitation API", () => {
         [confirmPasswordKey]: credential,
       }),
     ).rejects.toMatchObject({
-      message: "plain failure",
+      // A plain-text body stays a diagnostic (#7806).
+      message: "Einladung konnte nicht angenommen werden.",
       status: 500,
+      code: "general.server",
     });
   });
 

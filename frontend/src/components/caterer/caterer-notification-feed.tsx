@@ -12,13 +12,14 @@ import type { ReactNode } from "react";
 
 import { NotificationFeedPageReload } from "~/components/dashboard/header/notification-feed-page-reload";
 import { catererPath } from "~/lib/caterer-url";
+import { catererNotificationFeedApi } from "~/lib/notification-feed-api";
 import {
   type NotificationFeedPortal,
   NotificationFeedPortalProvider,
 } from "~/lib/notification-feed-portal";
 
 const CATERER_NOTIFICATION_FEED_PORTAL: NotificationFeedPortal = {
-  apiBase: "/api/caterer/notifications/feed",
+  api: catererNotificationFeedApi,
   keyScope: "caterer",
   resolveLink: catererPath,
   analyticsSchoolId: null,

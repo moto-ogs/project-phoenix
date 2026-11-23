@@ -15,7 +15,6 @@ package absencetypes
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -23,6 +22,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 
+	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 )
 
@@ -34,12 +34,17 @@ type Middleware = func(http.Handler) http.Handler
 type FailureKind string
 
 const (
-	FailureInvalid      FailureKind = "invalid"
-	FailureNotFound     FailureKind = "not_found"
-	FailureConflict     FailureKind = "conflict"
-	FailureUnauthorized FailureKind = "unauthorized"
-	FailureInternal     FailureKind = "internal"
+	FailureInvalid   FailureKind = "invalid"
+	FailureNotFound  FailureKind = "not_found"
+	FailureConflict  FailureKind = "conflict"
+	FailureForbidden FailureKind = "forbidden"
+	FailureInternal  FailureKind = "internal"
 )
+
+// ErrNoStaffActor refuses an allowance change by a caller without a staff
+// record of the school: every change is recorded against a staff member,
+// also in a session opened through the Träger-Portal (#7818).
+var ErrNoStaffActor = errors.New("current staff member not found")
 
 // Runtime carries the HTTP-platform behavior this adapter must not own. Every
 // field is required, so missing production wiring fails at startup.
@@ -52,7 +57,8 @@ type Runtime struct {
 	Success       func(http.ResponseWriter, *http.Request, int, any, string)
 	Failure       func(http.ResponseWriter, *http.Request, FailureKind, error)
 	// ResolveActor identifies the staff member behind the request; an
-	// allowance change is recorded against that person.
+	// allowance change is recorded against that person. An error wrapping
+	// ErrNoStaffActor is the caller's (403), any other the server's.
 	ResolveActor func(context.Context) (int64, error)
 	// Permission names. Reading is open to anyone who may decide absences
 	// too, so the Leitung's approval views can render the school's wording.
@@ -116,21 +122,20 @@ type UpdateAbsenceTypeRequest struct {
 	// Offered and SchoolLimitDays are the school's deviation from a type of
 	// its Träger (#4710). SchoolLimitDays: omitted keeps the limit, null
 	// removes it.
-	Offered         *bool           `json:"offered"`
-	SchoolLimitDays json.RawMessage `json:"school_limit_days"`
+	Offered         *bool                         `json:"offered"`
+	SchoolLimitDays common.DeferredJSON[*float64] `json:"school_limit_days" contract_refines:"The absence type handler already requires a number or null"`
 }
 
 // schoolLimit reads the optional limit: nil when omitted, a patch without
 // days for null.
 func (req UpdateAbsenceTypeRequest) schoolLimit() (*workforce.SchoolLimitPatch, error) {
-	if len(req.SchoolLimitDays) == 0 {
+	if !req.SchoolLimitDays.Present {
 		return nil, nil
 	}
-	patch := &workforce.SchoolLimitPatch{}
-	if err := json.Unmarshal(req.SchoolLimitDays, &patch.Days); err != nil {
+	if req.SchoolLimitDays.Invalid != nil {
 		return nil, &workforce.InvalidAbsenceTypeError{Reason: "school_limit_days must be a number or null"}
 	}
-	return patch, nil
+	return &workforce.SchoolLimitPatch{Days: req.SchoolLimitDays.Value}, nil
 }
 
 // AbsenceTypeResponse is the wire format returned to clients. BaseType tells
@@ -173,6 +178,9 @@ type AllowanceSummaryResponse struct {
 	// KeptByTraeger: the Träger keeps this account over all schools of the
 	// person (#4710); the school reads it and does not change it.
 	KeptByTraeger bool `json:"kept_by_traeger"`
+	// Version is the token of the stored claim; PUT .../allowances/{staffId}
+	// sends it back as expected_version (ADR 0311).
+	Version string `json:"version"`
 }
 
 // AllowanceCarryResponse is the previous year's rest still usable in the
@@ -199,6 +207,8 @@ type SetAllowanceRequest struct {
 	Year         int     `json:"year"`
 	EntitledDays float64 `json:"entitled_days"`
 	Reason       string  `json:"reason"`
+	// ExpectedVersion is the version of the summary the form showed.
+	ExpectedVersion string `json:"expected_version"`
 }
 
 func toAllowanceSummaryResponse(summary workforce.AbsenceTypeAllowanceSummary) AllowanceSummaryResponse {
@@ -214,6 +224,7 @@ func toAllowanceSummaryResponse(summary workforce.AbsenceTypeAllowanceSummary) A
 		ExpiredDays:   summary.ExpiredDays,
 		BookingDays:   summary.BookingDays,
 		KeptByTraeger: summary.KeptByTraeger,
+		Version:       summary.Version,
 	}
 	if carried := summary.CarriedIn; carried != nil {
 		response.CarriedIn = &AllowanceCarryResponse{
@@ -414,12 +425,8 @@ func (rs *Resource) setAllowance(w http.ResponseWriter, r *http.Request) {
 		rs.runtime.Failure(w, r, FailureInvalid, err)
 		return
 	}
-	actorID, err := rs.runtime.ResolveActor(r.Context())
-	if err != nil || actorID <= 0 {
-		if err == nil {
-			err = errors.New("current staff member not found")
-		}
-		rs.runtime.Failure(w, r, FailureUnauthorized, err)
+	actorID, ok := rs.actor(w, r)
+	if !ok {
 		return
 	}
 	var req SetAllowanceRequest
@@ -430,12 +437,32 @@ func (rs *Resource) setAllowance(w http.ResponseWriter, r *http.Request) {
 	summary, err := rs.types.SetAllowance(r.Context(), workforce.SetAbsenceTypeAllowance{
 		StaffID: staffID, AbsenceTypeID: typeID, Year: req.Year,
 		EntitledDays: req.EntitledDays, Reason: req.Reason, ChangedBy: actorID,
+		ExpectedVersion: &req.ExpectedVersion,
 	})
 	if err != nil {
 		rs.renderError(w, r, err)
 		return
 	}
 	rs.runtime.Success(w, r, http.StatusOK, toAllowanceSummaryResponse(summary), "Kontingent gespeichert")
+}
+
+// actor resolves the staff member behind an allowance change or renders the
+// failure: a caller without a staff record is refused (403), a failed lookup
+// is the server's (500).
+func (rs *Resource) actor(w http.ResponseWriter, r *http.Request) (int64, bool) {
+	actorID, err := rs.runtime.ResolveActor(r.Context())
+	if err == nil && actorID <= 0 {
+		err = ErrNoStaffActor
+	}
+	if err != nil {
+		kind := FailureInternal
+		if errors.Is(err, ErrNoStaffActor) {
+			kind = FailureForbidden
+		}
+		rs.runtime.Failure(w, r, kind, err)
+		return 0, false
+	}
+	return actorID, true
 }
 
 // previewBlock names why a previewed booking is refused, "" when the error

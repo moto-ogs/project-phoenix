@@ -4,6 +4,8 @@ import (
 	"errors"
 	"slices"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // SnapshotSourceTraeger marks a close the Personalverwaltung of the Träger
@@ -11,11 +13,11 @@ import (
 const SnapshotSourceTraeger = "traeger"
 
 type StaffMonthBalanceSnapshot struct {
-	ID                    int64
+	ID                    ident.ID
 	CreatedAt             time.Time
 	UpdatedAt             time.Time
-	TenantID              int64
-	StaffID               int64
+	TenantID              ident.ID
+	StaffID               ident.ID
 	Year                  int
 	Month                 int
 	ClosingBalanceMinutes int
@@ -25,14 +27,14 @@ type StaffMonthBalanceSnapshot struct {
 	CreditedMinutes       int
 	AdjustmentMinutes     int
 	ClosedAt              time.Time
-	ClosedBy              int64
+	ClosedBy              ident.ID
 	// ClosedByAccountID is the Personalverwaltung of the Träger that closed
 	// the month (source traeger, #4711); ClosedBy is then zero.
 	ClosedByAccountID   int64
 	CloseReason         string
 	Source              string
 	ReopenedAt          *time.Time
-	ReopenedBy          *int64
+	ReopenedBy          *ident.ID
 	ReopenedByAccountID *int64
 	ReopenReason        string
 	PayrollRules        []byte

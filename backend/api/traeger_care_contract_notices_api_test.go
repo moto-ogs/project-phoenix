@@ -17,6 +17,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -50,7 +51,7 @@ func concludeWithEarlyStart(t *testing.T, f careContractFixture) int64 {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	var conditions, earlyStart string
 	for _, offering := range decodeSchoolPortalData[[]carecontract.OfferingTemplate](t, rec.Body.Bytes()) {
-		if offering.SchoolID == f.school && offering.OfferingID == f.offering {
+		if offering.SchoolID == ident.ID(f.school) && offering.OfferingID == ident.ID(f.offering) {
 			conditions, earlyStart = offering.AcceptanceText, offering.EarlyStartText
 			assert.Contains(t, offering.WithdrawalText, "Widerrufsbelehrung", "the school copies the notice into the form")
 		}

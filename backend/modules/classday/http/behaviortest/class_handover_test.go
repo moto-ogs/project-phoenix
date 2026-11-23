@@ -32,9 +32,18 @@ func (f *morningAttendanceFixture) openHandover(t *testing.T) {
 	require.NoError(t, err)
 }
 
+// handOver hands the class over as read now: the body carries the
+// handover_version of the class view unless it names one (ADR 0311).
 func (f *morningAttendanceFixture) handOver(t *testing.T, date, body string, perms ...string) int {
 	t.Helper()
-	rec := f.do(t, http.MethodPut, fmt.Sprintf("/handover/%s/%s", f.class, date), body, perms...)
+	var fields map[string]any
+	require.NoError(t, json.Unmarshal([]byte(body), &fields))
+	if _, named := fields["expected_version"]; !named {
+		fields["expected_version"] = f.handoverReport(t, date, classDayReadPermission).HandoverVersion
+	}
+	withVersion, err := json.Marshal(fields)
+	require.NoError(t, err)
+	rec := f.do(t, http.MethodPut, fmt.Sprintf("/handover/%s/%s", f.class, date), string(withVersion), perms...)
 	return rec.Code
 }
 
@@ -45,15 +54,16 @@ func (f *morningAttendanceFixture) withdrawHandover(t *testing.T, date string, p
 }
 
 type handoverReport struct {
-	CanHandOver bool `json:"can_hand_over"`
-	Handover    *struct {
+	CanHandOver     bool   `json:"can_hand_over"`
+	HandoverVersion string `json:"handover_version"`
+	Handover        *struct {
 		HandedOverAt time.Time `json:"handed_over_at"`
 		HandedOverBy string    `json:"handed_over_by"`
 		AbsentCount  int       `json:"absent_count"`
 	} `json:"handover"`
 	Rows []struct {
-		StudentID      int64 `json:"student_id"`
-		HandoverAbsent bool  `json:"handover_absent"`
+		StudentID      testpkg.ID `json:"student_id"`
+		HandoverAbsent bool       `json:"handover_absent"`
 	} `json:"rows"`
 }
 
@@ -70,7 +80,7 @@ func (f *morningAttendanceFixture) handoverReport(t *testing.T, date string, per
 
 func (r handoverReport) absent(studentID int64) bool {
 	for _, row := range r.Rows {
-		if row.StudentID == studentID {
+		if int64(row.StudentID) == studentID {
 			return row.HandoverAbsent
 		}
 	}
@@ -85,6 +95,8 @@ func TestClassHandoverRoundTrip(t *testing.T) {
 	report := f.handoverReport(t, morningMonday, classDayReadPermission, classHandoverPermission)
 	assert.True(t, report.CanHandOver)
 	assert.Nil(t, report.Handover, "not handed over yet")
+	read := report.HandoverVersion
+	require.NotEmpty(t, read, "a class not handed over has a version too")
 
 	before := time.Now()
 	code := f.handOver(t, morningMonday, fmt.Sprintf(`{"present_student_ids":[%d],"absent_student_ids":[%d]}`, f.sick, f.present), classHandoverPermission)
@@ -108,6 +120,14 @@ func TestClassHandoverRoundTrip(t *testing.T) {
 	assert.False(t, report.Handover.HandedOverAt.Before(before.Add(-time.Second)), "the moment is the write")
 	assert.True(t, report.absent(f.present))
 	assert.False(t, report.absent(f.sick))
+
+	// A class view read before that handover cannot mark the child "da"
+	// again (ADR 0311).
+	stale := f.do(t, http.MethodPut, fmt.Sprintf("/handover/%s/%s", f.class, morningMonday),
+		fmt.Sprintf(`{"present_student_ids":[%d,%d],"expected_version":%q}`, f.sick, f.present, read), classHandoverPermission)
+	require.Equal(t, http.StatusConflict, stale.Code, stale.Body.String())
+	assert.Contains(t, stale.Body.String(), `"code":"general.changed_since_read"`)
+	assert.True(t, f.handoverReport(t, morningMonday, classDayReadPermission).absent(f.present))
 
 	// A second handover the same day replaces the first.
 	code = f.handOver(t, morningMonday, `{"absent_student_ids":[]}`, classHandoverPermission)

@@ -64,7 +64,7 @@ func TestTraegerOfferingStatementsKeepTheirTraegerBeneathRLS(t *testing.T) {
 		assert.Empty(t, offerings, "A lists no offering of B")
 		_, err = store.TraegerOffering(ctx, own, foreignOffering)
 		assert.ErrorIs(t, err, careplan.ErrTraegerOfferingNotFound, "A reads no offering of B")
-		_, err = store.UpdateTraegerOffering(ctx, own, foreignOffering, traegerOfferingDraft("Übernommen", 10))
+		_, err = store.UpdateTraegerOffering(ctx, own, foreignOffering, "any", traegerOfferingDraft("Übernommen", 10))
 		assert.ErrorIs(t, err, careplan.ErrTraegerOfferingNotFound, "A changes no offering of B")
 		_, err = store.WithdrawTraegerOffering(ctx, own, foreignOffering)
 		assert.ErrorIs(t, err, careplan.ErrTraegerOfferingNotFound, "A withdraws no offering of B")
@@ -76,10 +76,10 @@ func TestTraegerOfferingStatementsKeepTheirTraegerBeneathRLS(t *testing.T) {
 		created, err := store.CreateTraegerOffering(ctx, own, ownPhase, traegerOfferingDraft("Eigen", 10))
 		require.NoError(t, err)
 		err = store.RecordTraegerOfferingOutcomes(ctx, own, map[int64][]careplan.TraegerOfferingOutcome{
-			created.ID: {{SchoolID: testpkg.Tenant(t), Outcome: "applied"}}, foreignOffering: {{SchoolID: testpkg.Tenant(t), Outcome: "applied"}},
+			created.ID.Int64(): {{SchoolID: testpkg.Tenant(t), Outcome: "applied"}}, foreignOffering: {{SchoolID: testpkg.Tenant(t), Outcome: "applied"}},
 		})
 		assert.ErrorIs(t, err, careplan.ErrTraegerOfferingNotFound, "a mixed batch validates all offerings before writing any outcome")
-		ownOffering, err := store.TraegerOffering(ctx, own, created.ID)
+		ownOffering, err := store.TraegerOffering(ctx, own, created.ID.Int64())
 		require.NoError(t, err)
 		assert.Empty(t, ownOffering.Schools)
 		return nil
@@ -138,9 +138,9 @@ func TestTraegerOfferingDraftFollowsTheCatalogRules(t *testing.T) {
 		released, err = offerings.ReleaseTraegerOfferings(ctx, own, phase, 0)
 		require.NoError(t, err)
 		assert.Equal(t, 1, *released[0].ReleasedVersion, "an unchanged draft writes no version")
-		_, err = offerings.WithdrawTraegerOffering(ctx, own, created.ID)
+		withdrawn, err := offerings.WithdrawTraegerOffering(ctx, own, created.ID.Int64())
 		require.NoError(t, err)
-		_, err = offerings.UpdateTraegerOffering(ctx, own, created.ID, traegerOfferingDraft("Neu", 20))
+		_, err = offerings.UpdateTraegerOffering(ctx, own, created.ID.Int64(), withdrawn.Version, traegerOfferingDraft("Neu", 20))
 		assert.ErrorIs(t, err, careplan.ErrTraegerOfferingWithdrawn)
 		return nil
 	}))
@@ -287,8 +287,8 @@ func TestTraegerOfferingOutcomesAreBatchedAndKeepAppliedTerms(t *testing.T) {
 			created, err := offerings.CreateTraegerOffering(ctx, own, phase, traegerOfferingDraft(fmt.Sprintf("Modul %d", index), 20))
 			require.NoError(t, err)
 			copyID := testpkg.UniqueTestTenantID(t)
-			copiedIDs[created.ID] = copyID
-			outcomes[created.ID] = []careplan.TraegerOfferingOutcome{{SchoolID: school, AppliedVersion: &one, AppliedCopyID: &copyID, Outcome: "applied"}}
+			copiedIDs[created.ID.Int64()] = copyID
+			outcomes[created.ID.Int64()] = []careplan.TraegerOfferingOutcome{{SchoolID: school, AppliedVersion: &one, AppliedCopyID: &copyID, Outcome: "applied"}}
 			if index == 0 || index == 4 {
 				_, err = offerings.ReleaseTraegerOfferings(ctx, own, phase, 0)
 				require.NoError(t, err)
@@ -305,7 +305,9 @@ func TestTraegerOfferingOutcomesAreBatchedAndKeepAppliedTerms(t *testing.T) {
 			require.NoError(t, offerings.RecordTraegerOfferingOutcomes(ctx, own, map[int64][]careplan.TraegerOfferingOutcome{id: {{SchoolID: school, Outcome: "rejected"}}}), "a financial refusal keeps the prior baseline")
 			changed := traegerOfferingDraft("New terms", 30)
 			changed.Prices[0].MonthlyCents = 1800
-			_, err = offerings.UpdateTraegerOffering(ctx, own, id, changed)
+			stored, err := offerings.TraegerOffering(ctx, own, id)
+			require.NoError(t, err)
+			_, err = offerings.UpdateTraegerOffering(ctx, own, id, stored.Version, changed)
 			require.NoError(t, err)
 		}
 		_, err := offerings.ReleaseTraegerOfferings(ctx, own, phase, 0)
@@ -320,13 +322,13 @@ func TestTraegerOfferingOutcomesAreBatchedAndKeepAppliedTerms(t *testing.T) {
 			require.NotNil(t, row.Schools[0].Applied)
 			assert.Equal(t, 1, *row.Schools[0].AppliedVersion)
 			require.NotNil(t, row.Schools[0].AppliedCopyID)
-			assert.Equal(t, copiedIDs[row.ID], *row.Schools[0].AppliedCopyID)
+			assert.Equal(t, copiedIDs[row.ID.Int64()], *row.Schools[0].AppliedCopyID)
 			assert.Equal(t, 1600, row.Schools[0].Applied.Prices[0].MonthlyCents)
 			assert.Equal(t, 1800, row.Released.Prices[0].MonthlyCents)
 		}
 		withdrawnID := rows[0].ID
-		require.NoError(t, offerings.RecordTraegerOfferingOutcomes(ctx, own, map[int64][]careplan.TraegerOfferingOutcome{withdrawnID: {{SchoolID: school, Outcome: "withdrawn"}}}))
-		withdrawn, err := offerings.TraegerOffering(ctx, own, withdrawnID)
+		require.NoError(t, offerings.RecordTraegerOfferingOutcomes(ctx, own, map[int64][]careplan.TraegerOfferingOutcome{withdrawnID.Int64(): {{SchoolID: school, Outcome: "withdrawn"}}}))
+		withdrawn, err := offerings.TraegerOffering(ctx, own, withdrawnID.Int64())
 		require.NoError(t, err)
 		assert.Nil(t, withdrawn.Schools[0].AppliedVersion)
 		assert.Nil(t, withdrawn.Schools[0].AppliedCopyID)
@@ -458,18 +460,22 @@ func TestTraegerOfferingRefusesRemovalOfReleasedFinancialTerms(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		offeringID = created.ID
+		offeringID = created.ID.Int64()
 		_, err = offerings.ReleaseTraegerOfferings(ctx, own, phase, 0)
+		if err != nil {
+			return err
+		}
+		released, err := offerings.TraegerOffering(ctx, own, created.ID.Int64())
 		if err != nil {
 			return err
 		}
 		withoutPrices := draft
 		withoutPrices.Prices = nil
-		_, err = offerings.UpdateTraegerOffering(ctx, own, created.ID, withoutPrices)
+		_, err = offerings.UpdateTraegerOffering(ctx, own, created.ID.Int64(), released.Version, withoutPrices)
 		assert.ErrorIs(t, err, careplan.ErrCareOfferingConfigInvalid, "released prices cannot disappear silently")
 		withoutTemplate := draft
 		withoutTemplate.ContractTemplate = nil
-		_, err = offerings.UpdateTraegerOffering(ctx, own, created.ID, withoutTemplate)
+		_, err = offerings.UpdateTraegerOffering(ctx, own, created.ID.Int64(), released.Version, withoutTemplate)
 		assert.ErrorIs(t, err, careplan.ErrCareOfferingConfigInvalid, "released templates cannot disappear silently")
 		return nil
 	}))

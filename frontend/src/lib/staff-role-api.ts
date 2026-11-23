@@ -1,5 +1,4 @@
-import { apiErrorFromResponse } from "~/lib/api-error";
-import { sessionFetch } from "~/lib/session-cache";
+import { bffJson } from "~/lib/bff-fetch";
 
 export interface StaffGroupLeaderCandidate {
   id: string;
@@ -7,33 +6,16 @@ export interface StaffGroupLeaderCandidate {
   fullName: string;
 }
 
-interface BackendStaffGroupLeaderCandidate {
-  id: number | string;
-  teacher_id?: number | string;
-  full_name: string;
-}
-
 export async function fetchGroupLeaderCandidates(): Promise<
   StaffGroupLeaderCandidate[]
 > {
-  const response = await sessionFetch("/api/staff/by-role?role=user", {
-    method: "GET",
+  const staff = await bffJson("tenant", "GET /api/staff/by-role", {
+    query: { role: "user" },
+    errorMessage: "Group leader candidates failed",
   });
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      "Group leader candidates failed",
-    );
-  }
-  const data = (await response.json()) as {
-    data: BackendStaffGroupLeaderCandidate[] | null;
-  };
-  if (!Array.isArray(data.data)) {
-    throw new Error("Ungültige Antwort für verfügbare Fachkräfte.");
-  }
-  return data.data.map((staff) => ({
-    id: staff.id.toString(),
-    teacherId: staff.teacher_id?.toString(),
+  return (staff ?? []).map((staff) => ({
+    id: staff.id,
+    teacherId: staff.teacher_id,
     fullName: staff.full_name,
   }));
 }

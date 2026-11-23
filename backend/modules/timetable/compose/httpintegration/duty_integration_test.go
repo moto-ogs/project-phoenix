@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -69,6 +70,7 @@ func TestDutyWithoutRoomCanBeMoved(t *testing.T) {
 	require.NoError(t, err)
 
 	updated, err := s.svc.UpdatePlanned(s.ctx, instance.ID, timetable.UpdateInstanceInput{
+		ExpectedVersion: plannerVersion(t, s.ctx, s.timetableData.Data, instance.ID),
 		Date:            calendar.Date(instance.Date),
 		StartTime:       instance.StartTime.Add(30 * time.Minute),
 		EndTime:         instance.EndTime.Add(30 * time.Minute),
@@ -120,7 +122,7 @@ func TestDutyIsAGapBelowRequiredStaff(t *testing.T) {
 	gaps, err := s.timetableData.Data.ListUnderstaffedInstances(s.ctx, materializeDate, materializeDate)
 	require.NoError(t, err)
 	require.Len(t, gaps, 1, "one present person, two required")
-	assert.Equal(t, rows[0].ID, gaps[0].Instance.ID)
+	assert.Equal(t, ident.ID(rows[0].ID), gaps[0].Instance.ID)
 
 	_, err = s.db.NewUpdate().TableExpr(`activities.groups`).Set("required_staff = 1").
 		Where("id = ?", s.template.ID).Exec(s.ctx)

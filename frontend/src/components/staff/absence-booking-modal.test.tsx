@@ -204,6 +204,7 @@ describe("AbsenceBookingModal", () => {
       futureCommitmentMinutes: 0,
       futureAdjustmentMinutes: 0,
       projectedBalanceMinutes: 120,
+      fingerprint: "preview-1",
     });
   });
 
@@ -546,6 +547,78 @@ describe("AbsenceBookingModal", () => {
           expect.objectContaining({ absence_type: "comp_time" }),
         ),
       );
+      // No minus, nothing to confirm.
+      expect(mocks.createAbsence.mock.calls[0]?.[1]).not.toHaveProperty(
+        "expected_fingerprint",
+      );
+    });
+
+    it("shows the new projection without a retry when the server finds a minus", async () => {
+      // The preview showed no minus; under its lock the server finds one
+      // and refuses the unconfirmed booking (ADR 0311).
+      mocks.createAbsence.mockRejectedValueOnce(
+        new ApiError("changed since it was read", 409, {
+          code: "general.changed_since_read",
+        }),
+      );
+      const { onSaved } = renderModal();
+      await screen.findByText("noch 12 Tage");
+      choose("Freizeitausgleich");
+      await waitFor(() => expect(submit()).toBeEnabled());
+      const reads = mocks.getCompTimePreview.mock.calls.length;
+      mocks.getCompTimePreview.mockResolvedValue({
+        currentBalanceMinutes: 120,
+        deductionMinutes: 480,
+        realizedDeductionMinutes: 0,
+        futureCommitmentMinutes: 0,
+        futureAdjustmentMinutes: 0,
+        projectedBalanceMinutes: -360,
+        fingerprint: "preview-2",
+      });
+      fireEvent.click(submit());
+
+      expect(
+        await screen.findByText(
+          catalogText("general.changed_since_read", "die Abwesenheit"),
+        ),
+      ).toBeInTheDocument();
+      expect(
+        await screen.findByText(/fällt damit unter null/),
+      ).toBeInTheDocument();
+      expect(mocks.getCompTimePreview.mock.calls.length).toBeGreaterThan(reads);
+      expect(
+        screen.queryByRole("button", { name: "Wiederholen" }),
+      ).not.toBeInTheDocument();
+      expect(submit()).toHaveAttribute("aria-disabled", "true");
+      expect(onSaved).not.toHaveBeenCalled();
+    });
+
+    // ADR 0311 rule 6: a failed read of the new projection after a refusal
+    // says so instead of claiming the new state shows.
+    it("names a failed read of the projection after a refusal", async () => {
+      mocks.createAbsence.mockRejectedValueOnce(
+        new ApiError("changed since it was read", 409, {
+          code: "general.changed_since_read",
+        }),
+      );
+      const { onSaved } = renderModal();
+      await screen.findByText("noch 12 Tage");
+      choose("Freizeitausgleich");
+      await waitFor(() => expect(submit()).toBeEnabled());
+      mocks.getCompTimePreview.mockRejectedValue(
+        new ApiError("down", 503, { code: "general.unavailable" }),
+      );
+      fireEvent.click(submit());
+
+      expect(
+        await screen.findByText(/Der neue Stand konnte nicht geladen werden/),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText(/Du siehst jetzt den neuen Stand/),
+      ).not.toBeInTheDocument();
+      expect(submit()).toHaveAttribute("aria-disabled", "true");
+      expect(mocks.createAbsence).toHaveBeenCalledTimes(1);
+      expect(onSaved).not.toHaveBeenCalled();
     });
 
     it("requires an explicit confirmation when the projection is negative", async () => {
@@ -556,6 +629,7 @@ describe("AbsenceBookingModal", () => {
         futureCommitmentMinutes: 240,
         futureAdjustmentMinutes: -60,
         projectedBalanceMinutes: -660,
+        fingerprint: "preview-minus",
       });
       renderModal();
       await screen.findByText("noch 12 Tage");
@@ -578,6 +652,66 @@ describe("AbsenceBookingModal", () => {
         }),
       );
       expect(submit()).toBeEnabled();
+      fireEvent.click(submit());
+      await waitFor(() =>
+        expect(mocks.createAbsence).toHaveBeenCalledWith(
+          "4",
+          expect.objectContaining({ expected_fingerprint: "preview-minus" }),
+        ),
+      );
+    });
+
+    it("asks again when a confirmed minus has grown since the preview", async () => {
+      const minus = {
+        currentBalanceMinutes: 120,
+        deductionMinutes: 180,
+        realizedDeductionMinutes: 0,
+        futureCommitmentMinutes: 0,
+        futureAdjustmentMinutes: 0,
+        projectedBalanceMinutes: -60,
+        fingerprint: "minus-1h",
+      };
+      mocks.getCompTimePreview.mockResolvedValue(minus);
+      mocks.createAbsence.mockRejectedValueOnce(
+        new ApiError("changed since it was read", 409, {
+          code: "general.changed_since_read",
+        }),
+      );
+      const { onSaved } = renderModal();
+      await screen.findByText("noch 12 Tage");
+      choose("Freizeitausgleich");
+      const confirm = await screen.findByRole("checkbox", {
+        name: "Ich trage den Freizeitausgleich trotzdem ein.",
+      });
+      fireEvent.click(confirm);
+      mocks.getCompTimePreview.mockResolvedValue({
+        ...minus,
+        futureCommitmentMinutes: 540,
+        projectedBalanceMinutes: -600,
+        fingerprint: "minus-10h",
+      });
+      fireEvent.click(submit());
+
+      expect(
+        await screen.findByText(
+          catalogText("general.changed_since_read", "die Abwesenheit"),
+        ),
+      ).toBeInTheDocument();
+      expect(mocks.createAbsence).toHaveBeenCalledWith(
+        "4",
+        expect.objectContaining({ expected_fingerprint: "minus-1h" }),
+      );
+      // The new minus shows, and the −1 h confirmation does not carry over.
+      expect(
+        await screen.findByText("Bereits geplanter Freizeitausgleich"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("checkbox", {
+          name: "Ich trage den Freizeitausgleich trotzdem ein.",
+        }),
+      ).not.toBeChecked();
+      expect(submit()).toHaveAttribute("aria-disabled", "true");
+      expect(onSaved).not.toHaveBeenCalled();
     });
 
     it("points to open Kontingente before they expire", async () => {
@@ -593,7 +727,9 @@ describe("AbsenceBookingModal", () => {
       await waitFor(() => expect(submit()).toBeEnabled());
     });
 
-    it("still allows booking when the preview fails to load", async () => {
+    it("books no Freizeitausgleich until the preview has loaded", async () => {
+      // The server books a minus only on the projection the dialog showed
+      // (ADR 0311): without a preview there is nothing to confirm.
       mocks.getCompTimePreview.mockRejectedValue(
         new ApiError("preview down", 503, { code: "general.unavailable" }),
       );
@@ -601,7 +737,6 @@ describe("AbsenceBookingModal", () => {
       await screen.findByText("noch 12 Tage");
       choose("Freizeitausgleich");
 
-      await waitFor(() => expect(submit()).toBeEnabled());
       // Der Ladefehler steht dort, wo die Vorschau fehlt.
       expect(
         await screen.findByText(
@@ -611,6 +746,20 @@ describe("AbsenceBookingModal", () => {
           ),
         ),
       ).toBeInTheDocument();
+      expect(submit()).toHaveAttribute("aria-disabled", "true");
+      expect(mocks.createAbsence).not.toHaveBeenCalled();
+
+      mocks.getCompTimePreview.mockResolvedValue({
+        currentBalanceMinutes: 600,
+        deductionMinutes: 480,
+        realizedDeductionMinutes: 0,
+        futureCommitmentMinutes: 0,
+        futureAdjustmentMinutes: 0,
+        projectedBalanceMinutes: 120,
+        fingerprint: "preview-1",
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
+      await waitFor(() => expect(submit()).toBeEnabled());
     });
 
     it("blocks the submit while a changed range's preview reloads (#2885)", async () => {
@@ -645,6 +794,7 @@ describe("AbsenceBookingModal", () => {
         futureCommitmentMinutes: 0,
         futureAdjustmentMinutes: 0,
         projectedBalanceMinutes: -840,
+        fingerprint: "preview-3",
       });
       expect(
         await screen.findByText(/fällt damit unter null/),

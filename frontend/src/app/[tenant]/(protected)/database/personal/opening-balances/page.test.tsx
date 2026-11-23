@@ -20,6 +20,13 @@ function render(ui: ReactElement) {
   return rtlRender(ui, { wrapper: ToastProvider });
 }
 
+import { plainResponse } from "~/test/mocks/plain-session-fetch";
+
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 vi.mock("next-auth/react", () => ({
   useSession: vi.fn(() => ({
     data: { user: { id: "1" } },
@@ -87,7 +94,7 @@ function fillParams() {
   });
 }
 
-const TENANT = { tenantId: 1, slug: "demo" } as TenantInfo;
+const TENANT = { tenantId: "1", slug: "demo" } as TenantInfo;
 
 function previewResponse(overrides: Record<string, unknown> = {}) {
   return {
@@ -95,16 +102,16 @@ function previewResponse(overrides: Record<string, unknown> = {}) {
     json: () =>
       Promise.resolve({
         data: {
-          TotalRows: 3,
-          CreatedCount: 2,
-          UpdatedCount: 0,
-          ErrorCount: 1,
-          WarningCount: 0,
-          DryRun: true,
-          Errors: [
+          total_rows: 3,
+          created_count: 2,
+          updated_count: 0,
+          error_count: 1,
+          warning_count: 0,
+          dry_run: true,
+          errors: [
             {
-              RowNumber: 4,
-              Data: {
+              row_number: 4,
+              data: {
                 personnel_number: "1003",
                 first_name: "Clara",
                 last_name: "Weber",
@@ -113,7 +120,7 @@ function previewResponse(overrides: Record<string, unknown> = {}) {
                 vacation_carryover: "0",
                 vacation_remaining: "28",
               },
-              Errors: [
+              errors: [
                 {
                   field: "vacation",
                   message: "Für diese Person besteht bereits eine Übernahme",
@@ -121,7 +128,7 @@ function previewResponse(overrides: Record<string, unknown> = {}) {
                   severity: "error",
                 },
               ],
-              Timestamp: "2026-08-03T10:00:00Z",
+              timestamp: "2026-08-03T10:00:00Z",
             },
           ],
           ...overrides,
@@ -199,7 +206,7 @@ describe("OpeningBalanceImportPage", () => {
       expect(global.fetch).toHaveBeenCalledWith(
         "/api/import/opening-balances/template?format=xlsx",
         // The route reads the session cookie (#5005).
-        { credentials: "include" },
+        expect.objectContaining({ method: "GET" }),
       );
     });
   });
@@ -317,13 +324,13 @@ describe("OpeningBalanceImportPage", () => {
         json: () =>
           Promise.resolve({
             data: {
-              TotalRows: 3,
-              CreatedCount: 2,
-              UpdatedCount: 0,
-              ErrorCount: 1,
-              WarningCount: 0,
-              DryRun: false,
-              Errors: [],
+              total_rows: 3,
+              created_count: 2,
+              updated_count: 0,
+              error_count: 1,
+              warning_count: 0,
+              dry_run: false,
+              errors: [],
             },
           }),
       });
@@ -353,42 +360,44 @@ describe("OpeningBalanceImportPage", () => {
   it("zeigt gespeicherte Zeilen und die blockierende Zeile bei import_batch_failed", async () => {
     (global.fetch as ReturnType<typeof vi.fn>)
       .mockResolvedValueOnce(previewResponse())
-      .mockResolvedValueOnce({
-        ok: false,
-        json: () =>
-          Promise.resolve({
-            status: 409,
-            detail: "import batch failed",
-            code: "import.import_batch_failed",
-            details: {
-              result: {
-                TotalRows: 205,
-                CreatedCount: 100,
-                UpdatedCount: 0,
-                ErrorCount: 1,
-                WarningCount: 0,
-                Errors: [
-                  {
-                    RowNumber: 152,
-                    Data: {
-                      personnel_number: "1003",
-                      first_name: "Clara",
-                      last_name: "Weber",
-                    },
-                    Errors: [
-                      {
-                        field: "create",
-                        message: "Anlegen fehlgeschlagen",
-                        code: "creation_failed",
-                        severity: "error",
+      .mockImplementationOnce(() =>
+        plainResponse({
+          ok: false,
+          json: () =>
+            Promise.resolve({
+              status: 409,
+              detail: "import batch failed",
+              code: "import.import_batch_failed",
+              details: {
+                result: {
+                  total_rows: 205,
+                  created_count: 100,
+                  updated_count: 0,
+                  error_count: 1,
+                  warning_count: 0,
+                  errors: [
+                    {
+                      row_number: 152,
+                      data: {
+                        personnel_number: "1003",
+                        first_name: "Clara",
+                        last_name: "Weber",
                       },
-                    ],
-                  },
-                ],
+                      errors: [
+                        {
+                          field: "create",
+                          message: "Anlegen fehlgeschlagen",
+                          code: "creation_failed",
+                          severity: "error",
+                        },
+                      ],
+                    },
+                  ],
+                },
               },
-            },
-          }),
-      });
+            }),
+        }),
+      );
 
     render(<OpeningBalanceImportPage />);
     fillParams();

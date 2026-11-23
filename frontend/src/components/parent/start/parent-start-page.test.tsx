@@ -27,7 +27,6 @@ import {
   listMessageThreads,
   listHolidayRegistrationEntries,
   listMyChildren,
-  type ParentAnnouncement,
 } from "~/lib/parent-api";
 import { holidayRegistrationEntriesFromBackend } from "~/lib/parent-holiday-registration-entries";
 import { PARENT_HOLIDAY_REGISTRATION_ENTRIES } from "~/test/fixtures/holiday-registrations";
@@ -36,6 +35,7 @@ import {
   type CalendarEvent,
 } from "~/lib/personal-calendar-api";
 import { ParentStartPage } from "./parent-start-page";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 vi.mock("~/lib/parent-url", () => ({
   parentPath: (path: string) => path,
@@ -106,9 +106,10 @@ const mia = {
 };
 
 function announcement(
-  overrides: Partial<ParentAnnouncement>,
-): ParentAnnouncement {
+  overrides: Partial<parentMeContract.AnnouncementResponse>,
+): parentMeContract.AnnouncementResponse {
   return {
+    delivery_mode: "informational",
     id: "announcement-1",
     title: "Information der OGS",
     body: "Inhalt",

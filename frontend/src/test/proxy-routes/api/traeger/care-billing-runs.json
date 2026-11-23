@@ -1,5 +1,0 @@
-{
-  "api/traeger/care-billing-runs/[id]/invoices/[invoiceId]/cancellation/mail": [
-    "POST traeger /traeger/care-billing-runs/id%2F1/invoices/invoiceId%2F1/mail?kind=cancellation"
-  ]
-}

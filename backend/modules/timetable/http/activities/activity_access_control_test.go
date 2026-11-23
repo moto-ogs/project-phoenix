@@ -151,15 +151,12 @@ func supervisorWriteCases(t *testing.T, ctx *testContext, activityID int64) []ac
 	t.Helper()
 	first := testpkg.CreateTestStaff(t, ctx.db, "Existing", "Supervisor")
 	second := testpkg.CreateTestStaff(t, ctx.db, "Second", "Supervisor")
-	target := testpkg.CreateTestStaff(t, ctx.db, "TargetSecret", "Supervisor")
 	firstSupervisor, err := ctx.resource.ActivityService.AddSupervisor(testpkg.Ctx(t), activityID, first.ID, true)
 	require.NoError(t, err)
-	secondSupervisor, err := ctx.resource.ActivityService.AddSupervisor(testpkg.Ctx(t), activityID, second.ID, false)
+	_, err = ctx.resource.ActivityService.AddSupervisor(testpkg.Ctx(t), activityID, second.ID, false)
 	require.NoError(t, err)
 
 	return []activityWriteCase{
-		{name: "assign supervisor", method: http.MethodPost, path: fmt.Sprintf("/activities/%d/supervisors", activityID), body: map[string]any{"staff_id": target.ID}},
-		{name: "change supervisor role", method: http.MethodPut, path: fmt.Sprintf("/activities/%d/supervisors/%d", activityID, secondSupervisor.ID), body: map[string]any{"is_primary": true}},
 		{name: "remove supervisor", method: http.MethodDelete, path: fmt.Sprintf("/activities/%d/supervisors/%d", activityID, firstSupervisor.ID)},
 	}
 }
@@ -171,7 +168,6 @@ func enrollmentWriteCases(t *testing.T, ctx *testContext, activityID int64) []ac
 	require.NoError(t, testpkg.TenantCommand2(t, testpkg.Ctx(t), testpkg.SetupTestDB(t), ctx.resource.ActivityService.EnrollStudent, activityID, existing.ID))
 
 	return []activityWriteCase{
-		{name: "enroll student", method: http.MethodPost, path: fmt.Sprintf("/activities/%d/students/%d", activityID, target.ID)},
 		{name: "unenroll student", method: http.MethodDelete, path: fmt.Sprintf("/activities/%d/students/%d", activityID, existing.ID)},
 		{name: "replace roster", method: http.MethodPut, path: fmt.Sprintf("/activities/%d/students", activityID), body: map[string]any{"student_ids": []int64{target.ID}}},
 	}
@@ -196,13 +192,8 @@ func TestActivityWriteRoutesRejectNonOwner(t *testing.T) {
 		})
 	}
 
-	req := testutil.NewAuthenticatedRequest(t, http.MethodGet, fmt.Sprintf("/activities/%d/supervisors", activityID), nil)
+	req := testutil.NewAuthenticatedRequest(t, http.MethodGet, fmt.Sprintf("/activities/%d/students", activityID), nil)
 	rr := testutil.ExecuteWithAuth(t, ctx.router, req, testutil.DefaultTestClaims())
-	require.Equal(t, http.StatusOK, rr.Code)
-	assert.NotContains(t, rr.Body.String(), "TargetSecret")
-
-	req = testutil.NewAuthenticatedRequest(t, http.MethodGet, fmt.Sprintf("/activities/%d/students", activityID), nil)
-	rr = testutil.ExecuteWithAuth(t, ctx.router, req, testutil.DefaultTestClaims())
 	require.Equal(t, http.StatusOK, rr.Code)
 	assert.Contains(t, rr.Body.String(), "ExistingSecret")
 	assert.NotContains(t, rr.Body.String(), "TargetSecret")
@@ -212,10 +203,12 @@ func assertActivityWritesAllowed(t *testing.T, ctx *testContext, activityID int6
 	t.Helper()
 	targetStaff := testpkg.CreateTestStaff(t, ctx.db, "Allowed", "Supervisor")
 	student := testpkg.CreateTestStudent(t, ctx.db, "Allowed", "Student", "1a")
+	supervisor, err := ctx.resource.ActivityService.AddSupervisor(testpkg.Ctx(t), activityID, targetStaff.ID, false)
+	require.NoError(t, err)
 
-	request := testutil.NewAuthenticatedRequest(t, http.MethodPost, fmt.Sprintf("/activities/%d/supervisors", activityID), map[string]any{"staff_id": targetStaff.ID})
+	request := testutil.NewAuthenticatedRequest(t, http.MethodDelete, fmt.Sprintf("/activities/%d/supervisors/%d", activityID, supervisor.ID), nil)
 	response := testutil.ExecuteWithAuth(t, ctx.router, request, claims)
-	require.Equal(t, http.StatusCreated, response.Code, "body: %s", response.Body.String())
+	require.Equal(t, http.StatusOK, response.Code, "body: %s", response.Body.String())
 
 	request = testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/activities/%d/students", activityID), map[string]any{"student_ids": []int64{student.ID}})
 	response = testutil.ExecuteWithAuth(t, ctx.router, request, claims)
@@ -228,8 +221,10 @@ func TestActivityWritesRequireDomainPermission(t *testing.T) {
 	owner, account := testpkg.CreateTestStaffWithAccount(t, ctx.db, "Permission", "Owner")
 	activityID := createOwnedActivity(t, ctx.db, owner.ID, "Permission target")
 	target := testpkg.CreateTestStaff(t, ctx.db, "PermissionSecret", "Supervisor")
+	supervisor, err := ctx.resource.ActivityService.AddSupervisor(testpkg.Ctx(t), activityID, target.ID, false)
+	require.NoError(t, err)
 
-	request := testutil.NewAuthenticatedRequest(t, http.MethodPost, fmt.Sprintf("/activities/%d/supervisors", activityID), map[string]any{"staff_id": target.ID})
+	request := testutil.NewAuthenticatedRequest(t, http.MethodDelete, fmt.Sprintf("/activities/%d/supervisors/%d", activityID, supervisor.ID), nil)
 	response := testutil.ExecuteWithAuth(t, ctx.router, request, activityStaffClaims(account))
 	assert.Equal(t, http.StatusForbidden, response.Code, "body: %s", response.Body.String())
 

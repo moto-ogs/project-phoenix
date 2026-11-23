@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -23,12 +24,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/internal/gitfixture"
 	"github.com/moto-ogs/project-phoenix/modules/communication"
 	"github.com/moto-ogs/project-phoenix/modules/mealplan"
-	mealplanCompose "github.com/moto-ogs/project-phoenix/modules/mealplan/compose"
-	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
-	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
-	schoolCalendarCompose "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/compose"
 	settingsModule "github.com/moto-ogs/project-phoenix/modules/settings"
-	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -93,6 +89,21 @@ func (f *writeFaults) arm(set func(*writeFaults)) {
 	if set != nil {
 		set(f)
 	}
+}
+
+// paused runs fn with no fault armed and keeps nothing it records: a read a
+// client takes before its write is no part of the write under test.
+func (f *writeFaults) paused(fn func()) {
+	f.mu.Lock()
+	armed := f.writeFaultState
+	f.writeFaultState = writeFaultState{}
+	f.mu.Unlock()
+	defer func() {
+		f.mu.Lock()
+		f.writeFaultState = armed
+		f.mu.Unlock()
+	}()
+	fn()
 }
 
 func (f *writeFaults) snapshot() (events []string, begins int) {
@@ -316,6 +327,16 @@ type mealWriteRig struct {
 	setSetting func(ctx context.Context, key string, value any) error
 }
 
+// rigMealPlans keeps each rig's Meal Plan, the parent routes' one, for the
+// school's writes beside the parents'; keyed by the rig's faults.
+var rigMealPlans sync.Map
+
+// meals is the rig's Meal Plan.
+func (r mealWriteRig) meals() mealplan.Capability {
+	meals, _ := rigMealPlans.Load(r.faults)
+	return meals.(mealplan.Capability)
+}
+
 func newMealWriteRig(t *testing.T) mealWriteRig {
 	t.Helper()
 	// The faults need a pool of their own, not a database of their own: every
@@ -338,11 +359,9 @@ func newMealWriteRig(t *testing.T) mealWriteRig {
 	settings, err := owners.NewSettingsTestModule(database, testpkg.TenantRuntime(t, pool))
 	require.NoError(t, err)
 	people := NewPeopleRepositorySuiteFactory(database)
-	mealSettings, err := owners.BuildMealPlanSettings(settings.Settings)
-	require.NoError(t, err)
-	schoolCalendar, err := owners.BuildSchoolCalendarRecords(database, func(schoolCalendarCompose.Observation) {}, settings.Settings, nil)
-	require.NoError(t, err)
-	meals, err := newMealPlanAt(database, mealSettings, owners.NewStudentRootReads(people.Student), owners.MustNewPeopleDirectory(database), schoolCalendar, mealWriteNow)
+	// The Meal Plan as owners.BuildServeMealPlan binds it, with the
+	// production student lock, on the rig's clock.
+	meals, err := owners.BuildMealPlanAtForTests(database, settings.Settings, owners.NewStudentRootReads(people.Student), owners.MustNewPeopleDirectory(database), nil, mealWriteNow)
 	require.NoError(t, err)
 	rig := newChildReadRigOn(t, pool, func(deps *portalCompose.Dependencies) {
 		deps.Now = mealWriteNow
@@ -357,6 +376,8 @@ func newMealWriteRig(t *testing.T) mealWriteRig {
 		deps.MessageAttachments = owners.BindParentMessageAttachments(communicationCompose.NewPortalMessageAttachments(pool))
 	})
 	require.NoError(t, settings.Settings.SetValue(testpkg.Ctx(t), settingsModule.KeyParentMessageLeadershipEnabled, true, nil, nil))
+	rigMealPlans.Store(faults, meals)
+	t.Cleanup(func() { rigMealPlans.Delete(faults) })
 	return mealWriteRig{
 		childReadRig: rig, super: super, faults: faults, readSnapshot: prepareMealWriteSnapshot(t, super),
 		broadcasts: func() int { return len(broadcaster.Calls()) },
@@ -380,69 +401,6 @@ func newMealWriteRig(t *testing.T) mealWriteRig {
 			return settings.Settings.SetValue(ctx, key, value, nil, nil)
 		},
 	}
-}
-
-// newMealPlanAt composes the Meal Plan like owners.BuildServeMealPlan, on
-// the clock now, so the ordering deadlines do not depend on when the test
-// runs.
-func newMealPlanAt(db transactionruntime.Database, settings *mealplanCompose.Settings, students owners.StudentRootReads, names peopledirectory.Capability, records schoolcalendar.Days, now func() time.Time) (mealplan.Capability, error) {
-	return mealplanCompose.New(mealplanCompose.Dependencies{
-		DB: db.Pool(), Settings: settings, Observe: func(mealplanCompose.Observation) {}, Now: now,
-		Participants: func(ctx context.Context, date string) ([]mealplan.ParticipantCandidate, error) {
-			rows, err := students.OverlappingOnDate(ctx, date, now())
-			if err != nil {
-				return nil, err
-			}
-			out := make([]mealplan.ParticipantCandidate, 0, len(rows))
-			for _, row := range rows {
-				out = append(out, mealplan.ParticipantCandidate{StudentID: row.StudentID, FirstName: row.FirstName, LastName: row.LastName, SchoolClass: row.SchoolClass})
-			}
-			return out, nil
-		},
-		ParticipantDays: func(ctx context.Context, dates []string) (map[string][]mealplan.ParticipantCandidate, error) {
-			rows, err := peopledirectory.StudentRostersOnDates(ctx, names, dates, calendar.DateFromTime(now()).String())
-			if err != nil {
-				return nil, err
-			}
-			out := make(map[string][]mealplan.ParticipantCandidate, len(rows))
-			for date, entries := range rows {
-				candidates := make([]mealplan.ParticipantCandidate, 0, len(entries))
-				for _, row := range entries {
-					if row.Record != nil {
-						candidates = append(candidates, mealplan.ParticipantCandidate{StudentID: row.Record.ID, FirstName: row.FirstName, LastName: row.LastName, SchoolClass: row.Record.SchoolClass})
-					}
-				}
-				out[date] = candidates
-			}
-			return out, nil
-		},
-		StudentNames: func(ctx context.Context, ids []int64) ([]mealplan.ParticipantCandidate, error) {
-			rows, err := names.ListStudentNamesByID(ctx, ids)
-			if err != nil {
-				return nil, err
-			}
-			out := make([]mealplan.ParticipantCandidate, 0, len(rows))
-			for _, row := range rows {
-				out = append(out, mealplan.ParticipantCandidate{StudentID: row.StudentID, FirstName: row.FirstName, LastName: row.LastName})
-			}
-			return out, nil
-		},
-		Calendar: func(ctx context.Context, from, to string) (map[string]bool, []mealplan.HolidayPeriod, error) {
-			closed, err := records.NonWorkingDayDates(ctx, from, to)
-			if err != nil {
-				return nil, nil, err
-			}
-			periods, err := records.ListCalendarPeriods(ctx, schoolcalendar.HolidaysOverlapping(from, to))
-			if err != nil {
-				return nil, nil, err
-			}
-			holidays := make([]mealplan.HolidayPeriod, 0, len(periods))
-			for _, period := range periods {
-				holidays = append(holidays, mealplan.HolidayPeriod{Start: period.StartDate, End: period.EndDate})
-			}
-			return closed, holidays, nil
-		},
-	})
 }
 
 // mealWriteFamily is the rig's one family: a child in care since August with
@@ -606,6 +564,7 @@ type writeCall struct {
 // call answers w within writeDeadline with the armed faults.
 func (r mealWriteRig) call(t *testing.T, ctx context.Context, w writeCall, token string) *httptest.ResponseRecorder {
 	t.Helper()
+	w = r.asRead(t, w, token)
 	ctx, cancel := context.WithTimeout(ctx, writeDeadline)
 	defer cancel()
 	req := testutil.NewAuthenticatedRequest(t, w.method, w.path, w.body, testutil.WithJWTBearer(token)).WithContext(ctx)
@@ -620,8 +579,40 @@ func (r mealWriteRig) call(t *testing.T, ctx context.Context, w writeCall, token
 	}
 }
 
+// mealSchedule is a parent's change of the regular days; call sends it with
+// the version a read gives just before (asRead).
 func mealSchedule(studentID int64, weekdays ...int) writeCall {
 	return writeCall{http.MethodPut, fmt.Sprintf("/parent/me/children/%d/meal-participation", studentID), map[string]any{"weekdays": weekdays}}
+}
+
+// asRead adds to a change of the regular days the version of the days a
+// parent reads first (ADR 0311), outside the armed faults and the record. A
+// refused read leaves the version empty: the change meets the same refusal.
+func (r mealWriteRig) asRead(t *testing.T, w writeCall, token string) writeCall {
+	t.Helper()
+	body, ok := w.body.(map[string]any)
+	if w.method != http.MethodPut || !strings.HasSuffix(w.path, "/meal-participation") || !ok {
+		return w
+	}
+	if _, set := body["expected_version"]; set {
+		return w
+	}
+	version := ""
+	r.faults.paused(func() {
+		req := testutil.NewAuthenticatedRequest(t, http.MethodGet, fmt.Sprintf("%s?from=%s&to=%s", w.path, childReadToday, childReadToday), nil, testutil.WithJWTBearer(token))
+		rec := testutil.ExecuteRequest(r.router, req)
+		var read struct {
+			Data struct {
+				Version string `json:"version"`
+			} `json:"data"`
+		}
+		if rec.Code == http.StatusOK && json.Unmarshal(rec.Body.Bytes(), &read) == nil {
+			version = read.Data.Version
+		}
+	})
+	withVersion := maps.Clone(body)
+	withVersion["expected_version"] = version
+	return writeCall{w.method, w.path, withVersion}
 }
 
 func mealDay(studentID int64, date calendar.Date, participating bool) writeCall {

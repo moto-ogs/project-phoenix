@@ -10,6 +10,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The state of a family's number today (#5918): the most urgent check wins,
@@ -83,7 +84,7 @@ func TestFamilyChildrenGroupsDistinctChildren(t *testing.T) {
 	families := groupFamilies(versions, recipients, nil, today)
 	assert.Len(t, families, 1)
 	if assert.Len(t, families[0].Children, 3) {
-		assert.Equal(t, []int64{1, 3, 4}, []int64{families[0].Children[0].ContractID, families[0].Children[1].ContractID, families[0].Children[2].ContractID})
+		assert.Equal(t, []int64{1, 3, 4}, []int64{families[0].Children[0].ContractID.Int64(), families[0].Children[1].ContractID.Int64(), families[0].Children[2].ContractID.Int64()})
 	}
 	// Without a second matching record, the unlinked contract joins Mia.
 	families = groupFamilies(versions[:3], recipients, nil, today)
@@ -227,7 +228,7 @@ func TestUncountedFamiliesFollowTheRunAndItsFingerprint(t *testing.T) {
 	assert.Equal(t, 2, narrowMonth(month, []int64{schoolIspringen, schoolBirkenfeld}, nil).uncounted)
 	assert.Zero(t, narrowMonth(month, []int64{999}, nil).uncounted, "another school names none")
 
-	run := parentbilling.CareRun{ID: 7, SchoolIDs: []int64{schoolIspringen}}
+	run := parentbilling.CareRun{ID: 7, SchoolIDs: []ident.ID{ident.ID(schoolIspringen)}}
 	before := previewFingerprint(run, parentbilling.MonthRuleVersionOnFirst, ispringen)
 	confirmed := narrowMonth(careMonth{uncountedSchools: map[string][]int64{}}, []int64{schoolIspringen}, nil)
 	assert.NotEqual(t, before, previewFingerprint(run, parentbilling.MonthRuleVersionOnFirst, confirmed),
@@ -355,7 +356,7 @@ func TestFamilyChildrenListsContractsWithoutAMailAddress(t *testing.T) {
 	}
 	got := make([]row, len(families))
 	for i, family := range families {
-		got[i] = row{contract: family.ContractID, child: family.Children[0].ChildFirstName, status: family.Status}
+		got[i] = row{contract: family.ContractID.Int64(), child: family.Children[0].ChildFirstName, status: family.Status}
 		if family.Count != nil {
 			got[i].children = family.Count.ConfirmedChildren
 		}
@@ -385,7 +386,7 @@ func TestFamilyChildrenNumberGoesWithTheFamily(t *testing.T) {
 		1: {LastName: "Zeller", Email: "ute@example.org"}, 2: {LastName: "Zeller", Email: "ute@example.org"},
 	}
 	brought := func(contract int64, children int) parentbilling.FamilyChildCount {
-		return parentbilling.FamilyChildCount{ID: contract, ContractID: contract, FamilyEmail: parentbilling.ContractFamilyKey("", contract),
+		return parentbilling.FamilyChildCount{ID: ident.ID(contract), ContractID: ident.ID(contract), FamilyEmail: parentbilling.ContractFamilyKey("", contract),
 			ConfirmedChildren: ptr(children), ValidFrom: &from}
 	}
 
@@ -433,7 +434,7 @@ func TestImportedChildrenAreDecidedAgainstTheConfirmedNumber(t *testing.T) {
 		row("contract:7", 2), row("split@example.org", 2), row("split@example.org", 3),
 		{family: "contract:8", status: parentbilling.ImportedChildrenInvalid},
 	}
-	decideImportedChildren(rows, func(family string) *parentbilling.FamilyChildCount { return confirmed[family] },
+	decideImportedChildren(rows, func(family string, _ calendar.Date) *parentbilling.FamilyChildCount { return confirmed[family] },
 		func(importedChildren) calendar.Date { return today })
 	statuses := make([]string, len(rows))
 	for i, decided := range rows {

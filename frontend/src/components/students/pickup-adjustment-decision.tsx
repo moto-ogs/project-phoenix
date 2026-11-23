@@ -1,5 +1,6 @@
 "use client";
 
+import type * as studentsContract from "~/lib/contract/students.generated";
 import type { RefObject } from "react";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
@@ -10,15 +11,10 @@ import { DataField, DataGrid } from "~/components/ui/data-field";
 import { InfoSection } from "~/components/ui/info-section";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { formatDate } from "~/lib/date-helpers";
-import type {
-  PickupAdjustmentCatalogItem,
-  PickupAdjustmentMatch,
-  PickupAdjustmentPreview,
-} from "~/lib/pickup-schedule-api";
 import { pickupConcept } from "~/lib/concepts/pickup";
 
 interface PickupAdjustmentDecisionProps {
-  preview: PickupAdjustmentPreview;
+  preview: studentsContract.pickupAdjustmentPreviewResponse;
   headingRef: RefObject<HTMLHeadingElement | null>;
   reason: string;
   selectedOfferingId: string | null;
@@ -59,7 +55,7 @@ function DecisionNotice({
   headingRef,
 }: Pick<PickupAdjustmentDecisionProps, "preview" | "headingRef">) {
   const message =
-    preview.matching_offerings.length > 0
+    (preview.matching_offerings ?? []).length > 0
       ? "Gehzeiten passen zu einem anderen Angebot"
       : "Gehzeiten passen zu keinem Angebot";
   return (
@@ -86,7 +82,11 @@ function DecisionNotice({
   );
 }
 
-function PlanDiff({ preview }: { readonly preview: PickupAdjustmentPreview }) {
+function PlanDiff({
+  preview,
+}: {
+  readonly preview: studentsContract.pickupAdjustmentPreviewResponse;
+}) {
   return (
     <DataGrid>
       <DataField label="Vorher">{preview.current_plan}</DataField>
@@ -116,12 +116,13 @@ function ReasonField({
 }
 
 function MatchingOfferings(props: PickupAdjustmentDecisionProps) {
-  if (props.preview.matching_offerings.length === 0) return null;
+  const matches = props.preview.matching_offerings ?? [];
+  if (matches.length === 0) return null;
   return (
     <div className="space-y-3">
       <p className="text-sm font-semibold text-gray-900">Passendes Angebot</p>
       <div className="grid gap-2 sm:grid-cols-2">
-        {props.preview.matching_offerings.map((offering) => (
+        {matches.map((offering) => (
           <OfferingButton
             key={offering.offering_id}
             offering={offering}
@@ -135,7 +136,7 @@ function MatchingOfferings(props: PickupAdjustmentDecisionProps) {
 
 function OfferingButton(
   props: PickupAdjustmentDecisionProps & {
-    readonly offering: PickupAdjustmentMatch;
+    readonly offering: studentsContract.pickupAdjustmentMatchResponse;
   },
 ) {
   const isFull = offeringHasNoFreeSlot(props.offering, props.preview);
@@ -205,7 +206,7 @@ function EffectiveDateField(props: PickupAdjustmentDecisionProps) {
 function PlanningConflicts({
   preview,
 }: {
-  readonly preview: PickupAdjustmentPreview;
+  readonly preview: studentsContract.pickupAdjustmentPreviewResponse;
 }) {
   const conflicts =
     preview.offering_consequences?.manual_planning_conflicts ?? [];
@@ -220,7 +221,8 @@ function PlanningConflicts({
       <ul className="mt-2 list-disc space-y-1 pl-5">
         {conflicts.map((conflict) => (
           <li key={conflict.activity_group_id}>
-            {conflict.activity_group_name}: {formatOfferingDays(conflict.days)}
+            {conflict.activity_group_name}:{" "}
+            {formatOfferingDays(conflict.days ?? [])}
           </li>
         ))}
       </ul>
@@ -235,7 +237,7 @@ function PlanningConflicts({
 function BookingConsequences({
   preview,
 }: {
-  readonly preview: PickupAdjustmentPreview;
+  readonly preview: studentsContract.pickupAdjustmentPreviewResponse;
 }) {
   const consequences = preview.offering_consequences;
   if (!consequences) return null;
@@ -243,15 +245,15 @@ function BookingConsequences({
     <div className="text-sm text-gray-800">
       <p className="font-semibold">Änderung der Buchung</p>
       <ul className="mt-2 space-y-1.5">
-        {consequences.selections.map((selection) => (
+        {(consequences.selections ?? []).map((selection) => (
           <li key={selection.offering_id}>
             <span className="font-medium">
               {catalogItem(preview, selection.offering_id)?.name ?? "Angebot"}:
             </span>{" "}
             {offeringSelectionChangeLabel(
               catalogItem(preview, selection.offering_id),
-              selection.state,
-              selection.days,
+              selection.state === "removed" ? "removed" : "booked",
+              selection.days ?? [],
             )}
           </li>
         ))}
@@ -323,16 +325,18 @@ function OfferingConfirmation(props: PickupAdjustmentDecisionProps) {
 function offeringRemovesAllCareDays(props: PickupAdjustmentDecisionProps) {
   if (!props.preview.offering_catalog) return false;
   const selected = new Map(
-    props.preview.matching_offerings
+    (props.preview.matching_offerings ?? [])
       .find((offering) => offering.offering_id === props.selectedOfferingId)
-      ?.selections.map((selection) => [selection.offering_id, selection]) ?? [],
+      ?.selections?.map((selection) => [selection.offering_id, selection]) ??
+      [],
   );
-  return !props.preview.offering_catalog.items.some(
+  return !(props.preview.offering_catalog.items ?? []).some(
     (item) =>
       item.counts_as_care &&
       (item.days_of_week_mode === "fixed"
-        ? selected.has(item.offering_id) && item.available_days.length > 0
-        : (selected.get(item.offering_id)?.selected_days.length ?? 0) > 0),
+        ? selected.has(item.offering_id) &&
+          (item.available_days ?? []).length > 0
+        : (selected.get(item.offering_id)?.selected_days?.length ?? 0) > 0),
   );
 }
 
@@ -386,8 +390,11 @@ function formatOfferingDays(days: readonly string[]): string {
   return days.map((day) => OFFERING_DAY_LABELS[day] ?? day).join(", ");
 }
 
-function catalogItem(preview: PickupAdjustmentPreview, id: string) {
-  return preview.offering_catalog?.items.find(
+function catalogItem(
+  preview: studentsContract.pickupAdjustmentPreviewResponse,
+  id: string,
+) {
+  return preview.offering_catalog?.items?.find(
     (item) => item.offering_id === id,
   );
 }
@@ -398,8 +405,8 @@ function weekdayLabel(weekday: number): string {
 }
 
 function offeringHasNoFreeSlot(
-  match: PickupAdjustmentMatch,
-  preview: PickupAdjustmentPreview,
+  match: studentsContract.pickupAdjustmentMatchResponse,
+  preview: studentsContract.pickupAdjustmentPreviewResponse,
 ): boolean {
   const item = catalogItem(preview, match.offering_id);
   return Boolean(
@@ -411,7 +418,7 @@ function offeringHasNoFreeSlot(
 }
 
 function offeringSelectionChangeLabel(
-  item: PickupAdjustmentCatalogItem | undefined,
+  item: studentsContract.pickupAdjustmentCatalogItemResponse | undefined,
   state: "booked" | "removed",
   days: readonly string[],
 ): string {
@@ -419,7 +426,8 @@ function offeringSelectionChangeLabel(
   const dayLabel = formatOfferingDays(days);
   if (!item?.selected)
     return dayLabel ? `wird für ${dayLabel} gebucht` : "wird gebucht";
-  if (item.selected_days.join(",") === days.join(",")) return "bleibt gebucht";
+  if ((item.selected_days ?? []).join(",") === days.join(","))
+    return "bleibt gebucht";
   return dayLabel
     ? `wird auf ${dayLabel} geändert`
     : "wird ohne ausgewählte Tage gebucht";

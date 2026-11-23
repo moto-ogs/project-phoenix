@@ -115,6 +115,10 @@ import { traegerPath } from "~/lib/traeger-url";
 
 const logger = createLogger({ component: "TraegerHolidayRegistrationsPage" });
 
+/** Was die Seite ist und was man dort zuerst tut (#7595). */
+const REGISTRATIONS_INFO =
+  "Hier siehst du alle Anmeldungen dieses Ferienzeitraums. Öffne eine Anmeldung, um sie zu prüfen und zu bestätigen. Mehrere bestätigst du auf einmal: Setze die Haken und wähle „Ausgewählte bestätigen“.";
+
 type StatusChoice = HolidayRegistrationStatus | "all";
 
 /** The key of the ZIP with one PDF per registration (#6691). */
@@ -244,7 +248,9 @@ function columns(
       key: "number",
       header: "Nr.",
       render: (registration) => registration.id,
-      sortValue: (registration) => Number(registration.id),
+      // A decimal int64 as text: padded to one length, the text order is
+      // the number order without losing digits above 2^53.
+      sortValue: (registration) => registration.id.padStart(20, "0"),
       // On a phone the status is the one value beside the name; the number
       // follows as a labelled line.
       stacked: "field",
@@ -854,6 +860,7 @@ export default function TraegerHolidayRegistrationsPage() {
 
   return (
     <TenantPage
+      info={REGISTRATIONS_INFO}
       title={period?.name ?? preview?.name ?? "Ferienzeitraum"}
       back
       backHref={traegerPath("/traeger/ferien")}

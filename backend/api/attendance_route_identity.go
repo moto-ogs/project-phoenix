@@ -21,42 +21,29 @@ func NewAttendanceRoutePeople(source attendanceRoutePeopleSource) AttendanceRout
 	return AttendanceRoutePeople{source: source}
 }
 
+// FindByAccountID reports an account without a person as not found, not as
+// an error: the attendance routes refuse it with 403 and keep 500 for a
+// failed lookup (#7818).
 func (p AttendanceRoutePeople) FindByAccountID(ctx context.Context, id int64) (int64, bool, error) {
 	row, err := p.source.FindByAccountID(ctx, id)
+	if peoplePorts.IsPersonNotFound(err) {
+		return 0, false, nil
+	}
 	if row == nil {
 		return 0, false, err
 	}
-	return row.ID, true, err
+	return row.ID.Int64(), true, err
 }
 
+// GetStaffByPersonID reports a person without a staff record as not found,
+// not as an error, for the same reason.
 func (p AttendanceRoutePeople) GetStaffByPersonID(ctx context.Context, id int64) (int64, int64, bool, error) {
 	row, err := p.source.StaffRows().FindByPersonID(ctx, id)
+	if isRepositoryNotFound(err) {
+		return 0, 0, false, nil
+	}
 	if row == nil {
 		return 0, 0, false, err
 	}
-	return row.ID, row.TenantID, true, err
-}
-
-func (p AttendanceRoutePeople) GetStudentByPersonID(ctx context.Context, id int64) (int64, *int64, bool, error) {
-	row, err := p.source.StudentRows().FindByPersonID(ctx, id)
-	if row == nil {
-		return 0, nil, false, err
-	}
-	return row.ID, row.GroupID, true, err
-}
-
-func (p AttendanceRoutePeople) GetTeacherByStaffID(ctx context.Context, id int64) (int64, bool, error) {
-	row, err := p.source.TeacherRows().FindByStaffID(ctx, id)
-	if row == nil {
-		return 0, false, err
-	}
-	return row.ID, true, err
-}
-
-func (p AttendanceRoutePeople) GetStudentByID(ctx context.Context, id int64) (int64, *int64, bool, error) {
-	row, err := p.source.StudentRows().FindByID(ctx, id)
-	if row == nil {
-		return 0, nil, false, err
-	}
-	return row.ID, row.GroupID, true, err
+	return row.ID.Int64(), row.TenantID.Int64(), true, err
 }

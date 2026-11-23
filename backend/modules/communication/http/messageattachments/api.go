@@ -14,6 +14,7 @@ import (
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/communication"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Units opens the tenant units of the attachment routes. The upload row
@@ -69,13 +70,36 @@ func (rs *Resource) upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if _, err := files.Save(r.Context(), prepared.TenantID, prepared.StoredName, parsed.Content); err != nil {
-		if discardErr := rs.units.DiscardMessageAttachment(r.Context(), prepared.Attachment.ID); discardErr != nil {
+		if discardErr := rs.units.DiscardMessageAttachment(r.Context(), prepared.Attachment.ID.Int64()); discardErr != nil {
 			err = errors.Join(err, discardErr)
 		}
 		common.RenderError(w, r, common.ErrorInternalServer(fmt.Errorf("write message attachment: %w", err)))
 		return
 	}
-	common.Respond(w, r, http.StatusCreated, prepared.Attachment, "Attachment stored")
+	common.Respond(w, r, http.StatusCreated, NewUploadResponse(
+		prepared.Attachment.ID.Int64(), prepared.Attachment.Filename, prepared.Attachment.SizeBytes,
+		prepared.Attachment.ContentType, prepared.Attachment.Width, prepared.Attachment.Height,
+	), "Attachment stored")
+}
+
+// UploadResponse is a stored attachment as the upload answers it: the
+// attachment the next message names by its ID.
+type UploadResponse struct {
+	ID          ident.ID `json:"id"`
+	Filename    string   `json:"filename"`
+	SizeBytes   int      `json:"size_bytes"`
+	ContentType string   `json:"content_type"`
+	Width       int      `json:"width,omitempty"`
+	Height      int      `json:"height,omitempty"`
+}
+
+// NewUploadResponse answers a stored attachment. A file is at most
+// MaxMessageAttachmentBytes, so its size fits an int.
+func NewUploadResponse(id int64, filename string, sizeBytes int64, contentType string, width, height int) UploadResponse {
+	return UploadResponse{
+		ID: ident.ID(id), Filename: filename, SizeBytes: int(sizeBytes),
+		ContentType: contentType, Width: width, Height: height,
+	}
 }
 
 // download streams one file to a reader of its conversation.
@@ -135,3 +159,22 @@ var errorRules = []common.ErrorRule{
 var renderError = common.RulesRenderer(errorRules, func(err error) render.Renderer {
 	return common.ErrorInternalServerWrap("message attachment request failed", err)
 })
+
+// RouteContracts registers the upload and the download of one chat family
+// (ADR 0270, #2352), relative to the family's mount. Both stream through the
+// portal's proxy; the upload's body is bounded like ParseMessageAttachment
+// bounds it, and a larger one is refused with the code of a too large file.
+func RouteContracts(portal common.PortalScope) []common.RouteContract {
+	portals := []common.PortalScope{portal}
+	return []common.RouteContract{
+		{
+			Method: "POST", Pattern: "/attachments", Portals: portals, Multipart: true,
+			MaxBodyBytes: int(common.MessageAttachmentBodyBytes(communication.MaxMessageAttachmentBytes)),
+			TooLargeCode: common.CodeFilesFileTooLarge, Response: UploadResponse{},
+		},
+		{
+			Method: "GET", Pattern: "/attachments/{attachmentId}/download", Portals: portals,
+			Query: []common.QueryParam{{Name: "inline", Kind: common.QueryString}}, File: true,
+		},
+	}
+}

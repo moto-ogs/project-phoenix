@@ -59,7 +59,9 @@ export function asStringMap(value: unknown): Record<string, string> {
 // The shapes here mirror the Go types in
 // backend/models/enrollment/form_schema.go (PhoneEntry, WeekdaySchedule,
 // ContactEntry). The decision service consumes whatever JSON these
-// components emit, so the field names must match exactly.
+// components emit, so the field names must match exactly. The answers
+// travel in `custom_data`, which the contract carries as unknown, so no
+// generated type describes them.
 
 export interface PhoneEntry {
   phone_number: string;

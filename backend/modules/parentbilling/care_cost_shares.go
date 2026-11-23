@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The cost bearer shares of the monthly care contribution (#4687, spec
@@ -95,13 +96,13 @@ var (
 // it is ahead, in force, ends within CostShareWarningDays without a
 // follow-up of its kind, or over.
 type CareCostShare struct {
-	ID               int64         `json:"id"`
-	ContractID       int64         `json:"contract_id"`
+	ID               ident.ID      `json:"id"`
+	ContractID       ident.ID      `json:"contract_id"`
 	Kind             string        `json:"kind"`
-	CostBearerID     int64         `json:"cost_bearer_id"`
+	CostBearerID     ident.ID      `json:"cost_bearer_id"`
 	CostBearerName   string        `json:"cost_bearer_name"`
 	ShareBasisPoints *int          `json:"share_basis_points"`
-	ShareCents       *int64        `json:"share_cents"`
+	ShareCents       *int64        `json:"share_cents" contract:"number"`
 	Scope            string        `json:"scope"`
 	ValidFrom        calendar.Date `json:"valid_from"`
 	ValidUntil       calendar.Date `json:"valid_until"`
@@ -109,15 +110,18 @@ type CareCostShare struct {
 	CheckedOn        calendar.Date `json:"checked_on"`
 	Status           string        `json:"status"`
 	UpdatedAt        time.Time     `json:"updated_at"`
+	// Version is the read-state token of the share (ADR 0311): a change
+	// sends it back as expected_version.
+	Version string `json:"version"`
 }
 
 // CareCostShareInput is a share as the Abrechnung writes it.
 type CareCostShareInput struct {
-	ContractID       int64         `json:"contract_id"`
+	ContractID       ident.ID      `json:"contract_id"`
 	Kind             string        `json:"kind"`
-	CostBearerID     int64         `json:"cost_bearer_id"`
+	CostBearerID     ident.ID      `json:"cost_bearer_id"`
 	ShareBasisPoints *int          `json:"share_basis_points"`
-	ShareCents       *int64        `json:"share_cents"`
+	ShareCents       *int64        `json:"share_cents" contract:"number"`
 	Scope            string        `json:"scope"`
 	ValidFrom        calendar.Date `json:"valid_from"`
 	ValidUntil       calendar.Date `json:"valid_until"`
@@ -128,8 +132,8 @@ type CareCostShareInput struct {
 // CareCostShareContract is a contract of the Träger as the share page shows
 // it: the child, its school and the shares of the contract.
 type CareCostShareContract struct {
-	ContractID     int64           `json:"contract_id"`
-	SchoolID       int64           `json:"school_id"`
+	ContractID     ident.ID        `json:"contract_id"`
+	SchoolID       ident.ID        `json:"school_id"`
 	SchoolName     string          `json:"school_name"`
 	ChildFirstName string          `json:"child_first_name"`
 	ChildLastName  string          `json:"child_last_name"`
@@ -150,13 +154,13 @@ type CareCostShareSet struct {
 // a copy of the share and the cost bearer's name at the time. AmountCents is
 // what the cost bearer pays, more than zero.
 type CareInvoiceCostShare struct {
-	Kind             string `json:"kind"`
-	CostBearerID     int64  `json:"cost_bearer_id"`
-	CostBearerName   string `json:"cost_bearer_name"`
-	ShareBasisPoints *int   `json:"share_basis_points"`
-	ShareCents       *int64 `json:"share_cents"`
-	Scope            string `json:"scope"`
-	AmountCents      int64  `json:"amount_cents"`
+	Kind             string   `json:"kind"`
+	CostBearerID     ident.ID `json:"cost_bearer_id"`
+	CostBearerName   string   `json:"cost_bearer_name"`
+	ShareBasisPoints *int     `json:"share_basis_points"`
+	ShareCents       *int64   `json:"share_cents" contract:"number"`
+	Scope            string   `json:"scope"`
+	AmountCents      int64    `json:"amount_cents" contract:"number"`
 }
 
 // ContributionCents is the contribution of the invoice before the cost
@@ -188,10 +192,10 @@ func (i CareInvoice) CorrectionCents() int64 {
 // the excluded invoices, a released run its issued invoices that no Storno
 // took back.
 type CareCostBearerTotal struct {
-	CostBearerID   int64  `json:"cost_bearer_id"`
-	CostBearerName string `json:"cost_bearer_name"`
-	InvoiceCount   int    `json:"invoice_count"`
-	AmountCents    int64  `json:"amount_cents"`
+	CostBearerID   ident.ID `json:"cost_bearer_id"`
+	CostBearerName string   `json:"cost_bearer_name"`
+	InvoiceCount   int      `json:"invoice_count"`
+	AmountCents    int64    `json:"amount_cents" contract:"number"`
 }
 
 // CareCostShares lets the Abrechnung of a Träger keep the cost bearer
@@ -202,6 +206,8 @@ type CareCostShares interface {
 	CareCostShares(ctx context.Context, reviewer HolidayReviewer) (CareCostShareSet, error)
 	// SaveCareCostShare creates a share when shareID is zero and changes
 	// that one otherwise.
-	SaveCareCostShare(ctx context.Context, reviewer HolidayReviewer, shareID int64, input CareCostShareInput) (CareCostShareSet, error)
+	// A share changed since expectedVersion is refused with
+	// readstate.ErrChanged (ADR 0311).
+	SaveCareCostShare(ctx context.Context, reviewer HolidayReviewer, shareID int64, input CareCostShareInput, expectedVersion string) (CareCostShareSet, error)
 	DeleteCareCostShare(ctx context.Context, reviewer HolidayReviewer, shareID int64) (CareCostShareSet, error)
 }

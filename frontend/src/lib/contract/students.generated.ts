@@ -5,9 +5,11 @@ import {
   bool,
   calendarDate,
   clockTime,
+  fileAnswer,
   instant,
-  int64StringOrNumber,
+  int64String,
   json,
+  multipart,
   noData,
   nullable,
   object,
@@ -21,6 +23,7 @@ import {
   type OpenEnum,
 } from "./runtime";
 import {
+  type ListFormat,
   type NewStudentGuardian,
 } from "./shared.generated";
 
@@ -62,7 +65,7 @@ export interface studentDocumentDeletedResponse {
 }
 
 export const studentDocumentDeletedResponseSchema: z.ZodType<studentDocumentDeletedResponse, unknown> = object<studentDocumentDeletedResponse>({
-  student_id: int64StringOrNumber,
+  student_id: int64String,
 });
 
 /** Go: students.studentNoteDeletedResponse */
@@ -81,6 +84,21 @@ export interface partialAbsenceDeletedResponse {
 
 export const partialAbsenceDeletedResponseSchema: z.ZodType<partialAbsenceDeletedResponse, unknown> = object<partialAbsenceDeletedResponse>({
   deleted: bool,
+});
+
+/** Go: studentpresencehttp.RoomHistoryStopResponse */
+export interface RoomHistoryStopResponse {
+  student_id: string;
+  stopped: boolean;
+  stopped_at?: string;
+  deleted_visits: number;
+}
+
+export const RoomHistoryStopResponseSchema: z.ZodType<RoomHistoryStopResponse, unknown> = object<RoomHistoryStopResponse>({
+  student_id: int64String,
+  stopped: bool,
+  stopped_at: optional(instant),
+  deleted_visits: safeInt,
 });
 
 /** Go: studentpresencehttp.StatusDayDeletedResponse */
@@ -186,8 +204,8 @@ export interface StudentResponse {
 }
 
 export const StudentResponseSchema: z.ZodType<StudentResponse, unknown> = object<StudentResponse>({
-  id: int64StringOrNumber,
-  person_id: int64StringOrNumber,
+  id: int64String,
+  person_id: int64String,
   first_name: str,
   last_name: str,
   tag_id: optional(str),
@@ -196,7 +214,7 @@ export const StudentResponseSchema: z.ZodType<StudentResponse, unknown> = object
   current_location: str,
   location_since: optional(instant),
   current_room_color: optional(str),
-  group_id: optional(int64StringOrNumber),
+  group_id: optional(int64String),
   group_name: optional(str),
   address_street: optional(str),
   address_city: optional(str),
@@ -218,7 +236,7 @@ export const StudentResponseSchema: z.ZodType<StudentResponse, unknown> = object
   departure_days: optional(rec(str)),
   allowed_departure_modes: optional(rec(nullable(arr(str)))),
   departure_companion_note: optional(str),
-  companion_student_ids: optional(arr(int64StringOrNumber)),
+  companion_student_ids: optional(arr(int64String)),
   companions_changed: optional(bool),
   bus: bool,
   bus_days: optional(rec(bool)),
@@ -236,7 +254,7 @@ export const StudentResponseSchema: z.ZodType<StudentResponse, unknown> = object
   photo_url: optional(str),
   photo_consent_given: optional(bool),
   photo_consent_given_at: optional(instant),
-  photo_consent_given_by: optional(int64StringOrNumber),
+  photo_consent_given_by: optional(int64String),
   agb_accepted_at: optional(instant),
   data_processing_accepted_at: optional(instant),
   email_contact_accepted_at: optional(instant),
@@ -257,7 +275,7 @@ export interface NameStudentResponse {
 }
 
 export const NameStudentResponseSchema: z.ZodType<NameStudentResponse, unknown> = object<NameStudentResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   first_name: str,
   last_name: str,
 });
@@ -303,14 +321,14 @@ export interface SlimStudentResponse {
 }
 
 export const SlimStudentResponseSchema: z.ZodType<SlimStudentResponse, unknown> = object<SlimStudentResponse>({
-  id: int64StringOrNumber,
+  id: int64String,
   first_name: str,
   last_name: str,
   school_class: str,
   current_location: str,
   location_since: optional(instant),
   current_room_color: optional(str),
-  group_id: optional(int64StringOrNumber),
+  group_id: optional(int64String),
   group_name: optional(str),
   sick: bool,
   sick_since: optional(instant),
@@ -335,7 +353,7 @@ export const SlimStudentResponseSchema: z.ZodType<SlimStudentResponse, unknown> 
   arrival_notes: optional(str),
   actual_arrival_time: optional(clockTime),
   actual_pickup_time: optional(clockTime),
-  companion_student_ids: optional(arr(int64StringOrNumber)),
+  companion_student_ids: optional(arr(int64String)),
   photo_url: optional(str),
   photo_consent_given: optional(bool),
   has_full_access: bool,
@@ -365,6 +383,17 @@ export const arrivalSettingsResponseSchema: z.ZodType<arrivalSettingsResponse, u
   school_periods: nullable(arr(schoolPeriodResponseSchema)),
   default_arrival_time: str,
   default_pickup_time: str,
+});
+
+/** Go: presenceprojectionhttp.CareOfferingOptionResponse */
+export interface CareOfferingOptionResponse {
+  id: string;
+  name: string;
+}
+
+export const CareOfferingOptionResponseSchema: z.ZodType<CareOfferingOptionResponse, unknown> = object<CareOfferingOptionResponse>({
+  id: int64String,
+  name: str,
 });
 
 /** Go: requestreview.CareRequestDiffResponse */
@@ -547,6 +576,197 @@ export const studentDeleteImpactResponseSchema: z.ZodType<studentDeleteImpactRes
   preserved: studentDeletePreservedDataResponseSchema,
 });
 
+/** Go: requestreview.MasterDataChangeRequestResponse */
+export interface MasterDataChangeRequestResponse {
+  id: string;
+  student_id: string;
+  first_name: string;
+  last_name: string;
+  target: string;
+  field_key: string;
+  old_value?: unknown | null;
+  new_value: unknown | null;
+  status: string;
+  created_at: string;
+  reviewed_at?: string;
+}
+
+export const MasterDataChangeRequestResponseSchema: z.ZodType<MasterDataChangeRequestResponse, unknown> = object<MasterDataChangeRequestResponse>({
+  id: str,
+  student_id: str,
+  first_name: str,
+  last_name: str,
+  target: str,
+  field_key: str,
+  old_value: optional(nullable(json)),
+  new_value: nullable(json),
+  status: str,
+  created_at: instant,
+  reviewed_at: optional(instant),
+});
+
+/** Go: requestreview.AffectedCareBlock */
+export interface AffectedCareBlock {
+  id: string;
+  title: string;
+  start_time: string;
+  end_time: string;
+}
+
+export const AffectedCareBlockSchema: z.ZodType<AffectedCareBlock, unknown> = object<AffectedCareBlock>({
+  id: str,
+  title: str,
+  start_time: str,
+  end_time: str,
+});
+
+/** Go: requestreview.CareRequestResponse */
+export interface CareRequestResponse {
+  id: string;
+  student_id: string;
+  first_name: string;
+  last_name: string;
+  status: string;
+  request_kind: string;
+  diff: CareRequestDiffResponse[] | null;
+  request_reason?: string;
+  decision_reason?: string;
+  created_at: string;
+  reviewed_at?: string;
+  affected_blocks: AffectedCareBlock[] | null;
+  impact_available: boolean;
+  impact_token: string;
+  signed?: boolean;
+}
+
+export const CareRequestResponseSchema: z.ZodType<CareRequestResponse, unknown> = object<CareRequestResponse>({
+  id: str,
+  student_id: str,
+  first_name: str,
+  last_name: str,
+  status: str,
+  request_kind: str,
+  diff: nullable(arr(CareRequestDiffResponseSchema)),
+  request_reason: optional(str),
+  decision_reason: optional(str),
+  created_at: instant,
+  reviewed_at: optional(instant),
+  affected_blocks: nullable(arr(AffectedCareBlockSchema)),
+  impact_available: bool,
+  impact_token: str,
+  signed: optional(bool),
+});
+
+/** Go: requestreview.OfferingRequestDiffResponse */
+export interface OfferingRequestDiffResponse {
+  offering_id: string;
+  label: string;
+  old: string;
+  new: string;
+  automatic?: boolean;
+  automatic_days?: string;
+  rule_days?: string;
+  new_when_excluded?: string;
+  trigger_ids?: string[];
+  trigger_names?: string[];
+  optoutable?: boolean;
+  is_course?: boolean;
+}
+
+export const OfferingRequestDiffResponseSchema: z.ZodType<OfferingRequestDiffResponse, unknown> = object<OfferingRequestDiffResponse>({
+  offering_id: str,
+  label: str,
+  old: str,
+  new: str,
+  automatic: optional(bool),
+  automatic_days: optional(str),
+  rule_days: optional(str),
+  new_when_excluded: optional(str),
+  trigger_ids: optional(arr(str)),
+  trigger_names: optional(arr(str)),
+  optoutable: optional(bool),
+  is_course: optional(bool),
+});
+
+/** Go: requestreview.OfferingRequestUnchangedResponse */
+export interface OfferingRequestUnchangedResponse {
+  offering_id: string;
+  label: string;
+  days: string;
+}
+
+export const OfferingRequestUnchangedResponseSchema: z.ZodType<OfferingRequestUnchangedResponse, unknown> = object<OfferingRequestUnchangedResponse>({
+  offering_id: str,
+  label: str,
+  days: str,
+});
+
+/** Go: requestreview.OfferingRequestResponse */
+export interface OfferingRequestResponse {
+  id: string;
+  student_id: string;
+  student_name: string;
+  status: string;
+  effective_from: string;
+  earliest_effective_from?: string;
+  latest_effective_from?: string;
+  requested_effective_from?: string;
+  note?: string;
+  diff: OfferingRequestDiffResponse[] | null;
+  unchanged?: OfferingRequestUnchangedResponse[];
+  full_withdrawal?: boolean;
+  reason?: string;
+  created_at: string;
+  reviewed_at?: string;
+}
+
+export const OfferingRequestResponseSchema: z.ZodType<OfferingRequestResponse, unknown> = object<OfferingRequestResponse>({
+  id: str,
+  student_id: str,
+  student_name: str,
+  status: str,
+  effective_from: str,
+  earliest_effective_from: optional(str),
+  latest_effective_from: optional(str),
+  requested_effective_from: optional(str),
+  note: optional(str),
+  diff: nullable(arr(OfferingRequestDiffResponseSchema)),
+  unchanged: optional(arr(OfferingRequestUnchangedResponseSchema)),
+  full_withdrawal: optional(bool),
+  reason: optional(str),
+  created_at: instant,
+  reviewed_at: optional(instant),
+});
+
+/** Go: requestreview.StaffExcusedRequestResponse */
+export interface StaffExcusedRequestResponse {
+  id: string;
+  student_id: string;
+  first_name: string;
+  last_name: string;
+  absence_status: string;
+  status: string;
+  dates: string[] | null;
+  note: string;
+  reason?: string;
+  created_at: string;
+  reviewed_at?: string;
+}
+
+export const StaffExcusedRequestResponseSchema: z.ZodType<StaffExcusedRequestResponse, unknown> = object<StaffExcusedRequestResponse>({
+  id: str,
+  student_id: str,
+  first_name: str,
+  last_name: str,
+  absence_status: str,
+  status: str,
+  dates: nullable(arr(str)),
+  note: str,
+  reason: optional(str),
+  created_at: instant,
+  reviewed_at: optional(instant),
+});
+
 /** Go: requestreview.Item */
 export interface Item {
   request_type: string;
@@ -566,11 +786,17 @@ export interface Item {
   current_value_changed?: boolean;
   current_status_by_date?: Record<string, string>;
   partial_absence_from_by_date?: Record<string, string>;
+  /** @deprecated leaves the contract with the next release */
   can_correct?: boolean;
   family_protected: boolean;
   submitted_by_name?: string;
   submitted_by_relationship?: string;
+  /** @deprecated leaves the contract with the next release */
   data: unknown | null;
+  master_data?: MasterDataChangeRequestResponse;
+  care_schedule?: CareRequestResponse;
+  offering?: OfferingRequestResponse;
+  excused?: StaffExcusedRequestResponse;
 }
 
 export const ItemSchema: z.ZodType<Item, unknown> = object<Item>({
@@ -596,6 +822,10 @@ export const ItemSchema: z.ZodType<Item, unknown> = object<Item>({
   submitted_by_name: optional(str),
   submitted_by_relationship: optional(str),
   data: nullable(json),
+  master_data: optional(MasterDataChangeRequestResponseSchema),
+  care_schedule: optional(CareRequestResponseSchema),
+  offering: optional(OfferingRequestResponseSchema),
+  excused: optional(StaffExcusedRequestResponseSchema),
 });
 
 /** Go: requestreview.Page */
@@ -631,6 +861,232 @@ export interface changeRequestAccessResponse {
 export const changeRequestAccessResponseSchema: z.ZodType<changeRequestAccessResponse, unknown> = object<changeRequestAccessResponse>({
   review_access: str,
   student: optional(studentReviewCoverageBodySchema),
+});
+
+/** Go: requestreview.MasterDataChangeRequestHistoryResponse */
+export interface MasterDataChangeRequestHistoryResponse {
+  id: string;
+  student_id: string;
+  first_name: string;
+  last_name: string;
+  target: string;
+  field_key: string;
+  old_value?: unknown | null;
+  new_value: unknown | null;
+  status: string;
+  created_at: string;
+  reviewed_at?: string;
+  decided_at: string;
+  decided_by_name?: string;
+  review_reason?: string;
+}
+
+export const MasterDataChangeRequestHistoryResponseSchema: z.ZodType<MasterDataChangeRequestHistoryResponse, unknown> = object<MasterDataChangeRequestHistoryResponse>({
+  id: str,
+  student_id: str,
+  first_name: str,
+  last_name: str,
+  target: str,
+  field_key: str,
+  old_value: optional(nullable(json)),
+  new_value: nullable(json),
+  status: str,
+  created_at: instant,
+  reviewed_at: optional(instant),
+  decided_at: instant,
+  decided_by_name: optional(str),
+  review_reason: optional(str),
+});
+
+/** Go: requestreview.CareRequestHistoryResponse */
+export interface CareRequestHistoryResponse {
+  id: string;
+  student_id: string;
+  first_name: string;
+  last_name: string;
+  status: string;
+  request_kind: string;
+  requested: CareRequestDiffResponse[] | null;
+  diff?: CareRequestDiffResponse[];
+  decision_reason?: string;
+  created_at: string;
+  decided_at: string;
+  decided_by_name?: string;
+  signed?: boolean;
+}
+
+export const CareRequestHistoryResponseSchema: z.ZodType<CareRequestHistoryResponse, unknown> = object<CareRequestHistoryResponse>({
+  id: str,
+  student_id: str,
+  first_name: str,
+  last_name: str,
+  status: str,
+  request_kind: str,
+  requested: nullable(arr(CareRequestDiffResponseSchema)),
+  diff: optional(arr(CareRequestDiffResponseSchema)),
+  decision_reason: optional(str),
+  created_at: instant,
+  decided_at: instant,
+  decided_by_name: optional(str),
+  signed: optional(bool),
+});
+
+/** Go: requestreview.OfferingRequestRequestedResponse */
+export interface OfferingRequestRequestedResponse {
+  offering_id: string;
+  label: string;
+  new: string;
+}
+
+export const OfferingRequestRequestedResponseSchema: z.ZodType<OfferingRequestRequestedResponse, unknown> = object<OfferingRequestRequestedResponse>({
+  offering_id: str,
+  label: str,
+  new: str,
+});
+
+/** Go: requestreview.OfferingRequestHistoryResponse */
+export interface OfferingRequestHistoryResponse {
+  id: string;
+  student_id: string;
+  student_name: string;
+  status: string;
+  effective_from: string;
+  earliest_effective_from?: string;
+  latest_effective_from?: string;
+  requested_effective_from?: string;
+  note?: string;
+  diff: OfferingRequestDiffResponse[] | null;
+  unchanged?: OfferingRequestUnchangedResponse[];
+  full_withdrawal?: boolean;
+  reason?: string;
+  created_at: string;
+  reviewed_at?: string;
+  decided_at: string;
+  decided_by_name?: string;
+  requested?: OfferingRequestRequestedResponse[];
+}
+
+export const OfferingRequestHistoryResponseSchema: z.ZodType<OfferingRequestHistoryResponse, unknown> = object<OfferingRequestHistoryResponse>({
+  id: str,
+  student_id: str,
+  student_name: str,
+  status: str,
+  effective_from: str,
+  earliest_effective_from: optional(str),
+  latest_effective_from: optional(str),
+  requested_effective_from: optional(str),
+  note: optional(str),
+  diff: nullable(arr(OfferingRequestDiffResponseSchema)),
+  unchanged: optional(arr(OfferingRequestUnchangedResponseSchema)),
+  full_withdrawal: optional(bool),
+  reason: optional(str),
+  created_at: instant,
+  reviewed_at: optional(instant),
+  decided_at: instant,
+  decided_by_name: optional(str),
+  requested: optional(arr(OfferingRequestRequestedResponseSchema)),
+});
+
+/** Go: requestreview.StaffExcusedRequestHistoryResponse */
+export interface StaffExcusedRequestHistoryResponse {
+  id: string;
+  student_id: string;
+  first_name: string;
+  last_name: string;
+  absence_status: string;
+  status: string;
+  dates: string[] | null;
+  note: string;
+  reason?: string;
+  created_at: string;
+  reviewed_at?: string;
+  decided_at: string;
+  decided_by_name?: string;
+}
+
+export const StaffExcusedRequestHistoryResponseSchema: z.ZodType<StaffExcusedRequestHistoryResponse, unknown> = object<StaffExcusedRequestHistoryResponse>({
+  id: str,
+  student_id: str,
+  first_name: str,
+  last_name: str,
+  absence_status: str,
+  status: str,
+  dates: nullable(arr(str)),
+  note: str,
+  reason: optional(str),
+  created_at: instant,
+  reviewed_at: optional(instant),
+  decided_at: instant,
+  decided_by_name: optional(str),
+});
+
+/** Go: requestreview.DirectCorrectionResponse */
+export interface DirectCorrectionResponse {
+  id: string;
+  student_id: string;
+  student_name: string;
+  changed_at: string;
+  changed_by_name: string;
+  reason: string;
+  diff: OfferingRequestDiffResponse[] | null;
+}
+
+export const DirectCorrectionResponseSchema: z.ZodType<DirectCorrectionResponse, unknown> = object<DirectCorrectionResponse>({
+  id: str,
+  student_id: str,
+  student_name: str,
+  changed_at: instant,
+  changed_by_name: str,
+  reason: str,
+  diff: nullable(arr(OfferingRequestDiffResponseSchema)),
+});
+
+/** Go: requestreview.HistoryItem */
+export interface HistoryItem {
+  request_type: string;
+  occurred_at: string;
+  student_id: string;
+  student_name: string;
+  group_name?: string;
+  expected_version: string;
+  can_correct?: boolean;
+  family_protected: boolean;
+  submitted_by_name?: string;
+  submitted_by_relationship?: string;
+  master_data?: MasterDataChangeRequestHistoryResponse;
+  care_schedule?: CareRequestHistoryResponse;
+  offering?: OfferingRequestHistoryResponse;
+  excused?: StaffExcusedRequestHistoryResponse;
+  direct_correction?: DirectCorrectionResponse;
+}
+
+export const HistoryItemSchema: z.ZodType<HistoryItem, unknown> = object<HistoryItem>({
+  request_type: str,
+  occurred_at: instant,
+  student_id: str,
+  student_name: str,
+  group_name: optional(str),
+  expected_version: str,
+  can_correct: optional(bool),
+  family_protected: bool,
+  submitted_by_name: optional(str),
+  submitted_by_relationship: optional(str),
+  master_data: optional(MasterDataChangeRequestHistoryResponseSchema),
+  care_schedule: optional(CareRequestHistoryResponseSchema),
+  offering: optional(OfferingRequestHistoryResponseSchema),
+  excused: optional(StaffExcusedRequestHistoryResponseSchema),
+  direct_correction: optional(DirectCorrectionResponseSchema),
+});
+
+/** Go: requestreview.HistoryPage */
+export interface HistoryPage {
+  items: HistoryItem[] | null;
+  next_cursor?: string;
+}
+
+export const HistoryPageSchema: z.ZodType<HistoryPage, unknown> = object<HistoryPage>({
+  items: nullable(arr(HistoryItemSchema)),
+  next_cursor: optional(str),
 });
 
 /** Go: requestreviewhttp.ChangeRequestPendingCountResponse */
@@ -701,12 +1157,14 @@ export interface ClassArrivalTimesResponse {
   school_class: string;
   times: Record<string, string> | null;
   updated_at?: string;
+  version: string;
 }
 
 export const ClassArrivalTimesResponseSchema: z.ZodType<ClassArrivalTimesResponse, unknown> = object<ClassArrivalTimesResponse>({
   school_class: str,
   times: nullable(rec(str)),
   updated_at: optional(str),
+  version: str,
 });
 
 /** Go: presenceprojectionhttp.dayLogClassPeriod */
@@ -838,6 +1296,289 @@ export const endedCarePageResponseSchema: z.ZodType<endedCarePageResponse, unkno
   total: safeInt,
   page: safeInt,
   page_size: safeInt,
+});
+
+/** Go: presenceprojectionhttp.EnrollmentAnswerOptionResponse */
+export interface EnrollmentAnswerOptionResponse {
+  value: string;
+  label: string;
+  count: number;
+  student_ids: string[] | null;
+}
+
+export const EnrollmentAnswerOptionResponseSchema: z.ZodType<EnrollmentAnswerOptionResponse, unknown> = object<EnrollmentAnswerOptionResponse>({
+  value: str,
+  label: str,
+  count: safeInt,
+  student_ids: nullable(arr(int64String)),
+});
+
+/** Go: presenceprojectionhttp.EnrollmentAnswerFilterResponse */
+export interface EnrollmentAnswerFilterResponse {
+  key: string;
+  label: string;
+  type: string;
+  options: EnrollmentAnswerOptionResponse[] | null;
+}
+
+export const EnrollmentAnswerFilterResponseSchema: z.ZodType<EnrollmentAnswerFilterResponse, unknown> = object<EnrollmentAnswerFilterResponse>({
+  key: str,
+  label: str,
+  type: str,
+  options: nullable(arr(EnrollmentAnswerOptionResponseSchema)),
+});
+
+/** Go: careplanhttp.CourseWaitlistEntryResponse */
+export interface CourseWaitlistEntryResponse {
+  request_id: string;
+  student_id: string;
+  student_name: string;
+  rank: number;
+  submitted_at: string;
+}
+
+export const CourseWaitlistEntryResponseSchema: z.ZodType<CourseWaitlistEntryResponse, unknown> = object<CourseWaitlistEntryResponse>({
+  request_id: str,
+  student_id: str,
+  student_name: str,
+  rank: safeInt,
+  submitted_at: instant,
+});
+
+/** Go: careplanhttp.CourseWaitlistResponse */
+export interface CourseWaitlistResponse {
+  activity_group_id: string;
+  name: string;
+  participant_limit: number | null;
+  participants: number;
+  free_slots: number | null;
+  slot_free_for_next: boolean;
+  entries: CourseWaitlistEntryResponse[] | null;
+}
+
+export const CourseWaitlistResponseSchema: z.ZodType<CourseWaitlistResponse, unknown> = object<CourseWaitlistResponse>({
+  activity_group_id: str,
+  name: str,
+  participant_limit: nullable(safeInt),
+  participants: safeInt,
+  free_slots: nullable(safeInt),
+  slot_free_for_next: bool,
+  entries: nullable(arr(CourseWaitlistEntryResponseSchema)),
+});
+
+/** Go: grouplive.NavigationGroup */
+export interface NavigationGroup {
+  id: string;
+  name: string;
+  room_id?: string;
+  room_name?: string;
+  via_substitution: boolean;
+  is_personal: boolean;
+  leaders?: string[];
+}
+
+export const NavigationGroupSchema: z.ZodType<NavigationGroup, unknown> = object<NavigationGroup>({
+  id: int64String,
+  name: str,
+  room_id: optional(int64String),
+  room_name: optional(str),
+  via_substitution: bool,
+  is_personal: bool,
+  leaders: optional(arr(str)),
+});
+
+/** Go: grouplive.GroupLiveClassHandover */
+export interface GroupLiveClassHandover {
+  school_class: string;
+  handed_over_at: string;
+  handed_over_by?: string;
+  absent: boolean;
+}
+
+export const GroupLiveClassHandoverSchema: z.ZodType<GroupLiveClassHandover, unknown> = object<GroupLiveClassHandover>({
+  school_class: str,
+  handed_over_at: instant,
+  handed_over_by: optional(str),
+  absent: bool,
+});
+
+/** Go: grouplive.GroupLiveTeacherHint */
+export interface GroupLiveTeacherHint {
+  body: string;
+  author_name?: string;
+  school_class?: string;
+}
+
+export const GroupLiveTeacherHintSchema: z.ZodType<GroupLiveTeacherHint, unknown> = object<GroupLiveTeacherHint>({
+  body: str,
+  author_name: optional(str),
+  school_class: optional(str),
+});
+
+/** Go: grouplive.PlannedActivity */
+export interface PlannedActivity {
+  title: string;
+  start_time: string;
+  end_time: string;
+}
+
+export const PlannedActivitySchema: z.ZodType<PlannedActivity, unknown> = object<PlannedActivity>({
+  title: str,
+  start_time: str,
+  end_time: str,
+});
+
+/** Go: grouplive.Student */
+export interface Student {
+  id: string;
+  first_name: string;
+  last_name: string;
+  school_class: string;
+  current_location: string;
+  location_since?: string;
+  current_room_color?: string;
+  sick: boolean;
+  sick_since?: string;
+  excused: boolean;
+  excused_since?: string;
+  class_trip: boolean;
+  class_trip_since?: string;
+  day_planning_status?: string;
+  day_planning_reason?: string;
+  day_planning_label?: string;
+  pending_excused_note?: string;
+  class_handover?: GroupLiveClassHandover;
+  arrival_time?: string;
+  arrival_is_exception?: boolean;
+  arrival_notes?: string;
+  actual_arrival_time?: string;
+  actual_pickup_time?: string;
+  photo_url?: string;
+  teacher_hints?: GroupLiveTeacherHint[];
+  planned_activities?: PlannedActivity[];
+}
+
+export const StudentSchema: z.ZodType<Student, unknown> = object<Student>({
+  id: int64String,
+  first_name: str,
+  last_name: str,
+  school_class: str,
+  current_location: str,
+  location_since: optional(instant),
+  current_room_color: optional(str),
+  sick: bool,
+  sick_since: optional(instant),
+  excused: bool,
+  excused_since: optional(instant),
+  class_trip: bool,
+  class_trip_since: optional(instant),
+  day_planning_status: optional(str),
+  day_planning_reason: optional(str),
+  day_planning_label: optional(str),
+  pending_excused_note: optional(str),
+  class_handover: optional(GroupLiveClassHandoverSchema),
+  arrival_time: optional(str),
+  arrival_is_exception: optional(bool),
+  arrival_notes: optional(str),
+  actual_arrival_time: optional(str),
+  actual_pickup_time: optional(str),
+  photo_url: optional(str),
+  teacher_hints: optional(arr(GroupLiveTeacherHintSchema)),
+  planned_activities: optional(arr(PlannedActivitySchema)),
+});
+
+/** Go: grouplive.RoomStatus */
+export interface RoomStatus {
+  in_group_room: boolean;
+  current_room_id?: string;
+}
+
+export const RoomStatusSchema: z.ZodType<RoomStatus, unknown> = object<RoomStatus>({
+  in_group_room: bool,
+  current_room_id: optional(int64String),
+});
+
+/** Go: grouplive.DayNote */
+export interface DayNote {
+  id: string;
+  content: string;
+}
+
+export const DayNoteSchema: z.ZodType<DayNote, unknown> = object<DayNote>({
+  id: int64String,
+  content: str,
+});
+
+/** Go: grouplive.PickupTime */
+export interface PickupTime {
+  student_id: string;
+  date: string;
+  weekday_name: string;
+  pickup_time?: string;
+  is_exception: boolean;
+  notes?: string;
+  day_notes?: DayNote[];
+  day_departure_mode?: string;
+}
+
+export const PickupTimeSchema: z.ZodType<PickupTime, unknown> = object<PickupTime>({
+  student_id: int64String,
+  date: str,
+  weekday_name: str,
+  pickup_time: optional(str),
+  is_exception: bool,
+  notes: optional(str),
+  day_notes: optional(arr(DayNoteSchema)),
+  day_departure_mode: optional(str),
+});
+
+/** Go: grouplive.TrackingIndicators */
+export interface TrackingIndicators {
+  labels: string[] | null;
+  results: Record<string, boolean[] | null> | null;
+}
+
+export const TrackingIndicatorsSchema: z.ZodType<TrackingIndicators, unknown> = object<TrackingIndicators>({
+  labels: nullable(arr(str)),
+  results: nullable(rec(nullable(arr(bool)))),
+});
+
+/** Go: grouplive.Transfer */
+export interface Transfer {
+  id: string;
+  group_id: string;
+  substitute_staff_id: string;
+  substitute_name?: string;
+  end_date: string;
+}
+
+export const TransferSchema: z.ZodType<Transfer, unknown> = object<Transfer>({
+  id: int64String,
+  group_id: int64String,
+  substitute_staff_id: int64String,
+  substitute_name: optional(str),
+  end_date: str,
+});
+
+/** Go: grouplive.Projection */
+export interface Projection {
+  groups: NavigationGroup[] | null;
+  group_id?: string;
+  students: Student[] | null;
+  room_status: Record<string, RoomStatus> | null;
+  pickup_times: PickupTime[] | null;
+  tracking_indicators: TrackingIndicators;
+  transfers: Transfer[] | null;
+}
+
+export const ProjectionSchema: z.ZodType<Projection, unknown> = object<Projection>({
+  groups: nullable(arr(NavigationGroupSchema)),
+  group_id: optional(int64String),
+  students: nullable(arr(StudentSchema)),
+  room_status: nullable(rec(RoomStatusSchema)),
+  pickup_times: nullable(arr(PickupTimeSchema)),
+  tracking_indicators: TrackingIndicatorsSchema,
+  transfers: nullable(arr(TransferSchema)),
 });
 
 /** Go: careplanhttp.pickupChangeNoticeResponse */
@@ -990,7 +1731,7 @@ export interface SupervisorContact {
 }
 
 export const SupervisorContactSchema: z.ZodType<SupervisorContact, unknown> = object<SupervisorContact>({
-  id: int64StringOrNumber,
+  id: int64String,
   first_name: str,
   last_name: str,
   email: optional(str),
@@ -1073,6 +1814,7 @@ export interface StudentDetailResponse {
   updated_at: string;
   has_full_access: boolean;
   has_write_access: boolean;
+  version?: string;
   consents?: StudentConsentResponse[];
   has_absence_write_access: boolean;
   has_sick_excused_write_access: boolean;
@@ -1085,8 +1827,8 @@ export interface StudentDetailResponse {
 
 export const StudentDetailResponseSchema: z.ZodType<StudentDetailResponse, unknown> = object<StudentDetailResponse>({
   privacy_consent: optional(StudentPrivacyConsentResponseSchema),
-  id: int64StringOrNumber,
-  person_id: int64StringOrNumber,
+  id: int64String,
+  person_id: int64String,
   first_name: str,
   last_name: str,
   tag_id: optional(str),
@@ -1095,7 +1837,7 @@ export const StudentDetailResponseSchema: z.ZodType<StudentDetailResponse, unkno
   current_location: str,
   location_since: optional(instant),
   current_room_color: optional(str),
-  group_id: optional(int64StringOrNumber),
+  group_id: optional(int64String),
   group_name: optional(str),
   address_street: optional(str),
   address_city: optional(str),
@@ -1117,7 +1859,7 @@ export const StudentDetailResponseSchema: z.ZodType<StudentDetailResponse, unkno
   departure_days: optional(rec(str)),
   allowed_departure_modes: optional(rec(nullable(arr(str)))),
   departure_companion_note: optional(str),
-  companion_student_ids: optional(arr(int64StringOrNumber)),
+  companion_student_ids: optional(arr(int64String)),
   companions_changed: optional(bool),
   bus: bool,
   bus_days: optional(rec(bool)),
@@ -1135,7 +1877,7 @@ export const StudentDetailResponseSchema: z.ZodType<StudentDetailResponse, unkno
   photo_url: optional(str),
   photo_consent_given: optional(bool),
   photo_consent_given_at: optional(instant),
-  photo_consent_given_by: optional(int64StringOrNumber),
+  photo_consent_given_by: optional(int64String),
   agb_accepted_at: optional(instant),
   data_processing_accepted_at: optional(instant),
   email_contact_accepted_at: optional(instant),
@@ -1147,6 +1889,7 @@ export const StudentDetailResponseSchema: z.ZodType<StudentDetailResponse, unkno
   updated_at: instant,
   has_full_access: bool,
   has_write_access: bool,
+  version: optional(str),
   consents: optional(arr(StudentConsentResponseSchema)),
   has_absence_write_access: bool,
   has_sick_excused_write_access: bool,
@@ -1173,15 +1916,15 @@ export interface ArrivalScheduleResponse {
 }
 
 export const ArrivalScheduleResponseSchema: z.ZodType<ArrivalScheduleResponse, unknown> = object<ArrivalScheduleResponse>({
-  id: int64StringOrNumber,
-  student_id: int64StringOrNumber,
+  id: int64String,
+  student_id: int64String,
   weekday: safeInt,
   weekday_name: str,
   expected_arrival: str,
   notes: optional(str),
   source: optional(str),
   source_class: optional(str),
-  created_by: int64StringOrNumber,
+  created_by: int64String,
   created_at: str,
   updated_at: str,
 });
@@ -1200,13 +1943,13 @@ export interface StudentArrivalExceptionResponse {
 }
 
 export const StudentArrivalExceptionResponseSchema: z.ZodType<StudentArrivalExceptionResponse, unknown> = object<StudentArrivalExceptionResponse>({
-  id: int64StringOrNumber,
-  student_id: int64StringOrNumber,
+  id: int64String,
+  student_id: int64String,
   exception_date: str,
   expected_arrival: optional(str),
   reason: optional(str),
   source: str,
-  created_by: int64StringOrNumber,
+  created_by: int64String,
   created_at: str,
   updated_at: str,
 });
@@ -1220,16 +1963,18 @@ export interface ArrivalNoteResponse {
   created_by: string;
   created_at: string;
   updated_at: string;
+  version: string;
 }
 
 export const ArrivalNoteResponseSchema: z.ZodType<ArrivalNoteResponse, unknown> = object<ArrivalNoteResponse>({
-  id: int64StringOrNumber,
-  student_id: int64StringOrNumber,
+  id: int64String,
+  student_id: int64String,
   note_date: str,
   content: str,
-  created_by: int64StringOrNumber,
+  created_by: int64String,
   created_at: str,
   updated_at: str,
+  version: str,
 });
 
 /** Go: careplanhttp.ArrivalDataResponse */
@@ -1237,12 +1982,14 @@ export interface ArrivalDataResponse {
   schedules: ArrivalScheduleResponse[] | null;
   exceptions: StudentArrivalExceptionResponse[] | null;
   notes: ArrivalNoteResponse[] | null;
+  weekly_plan_version?: string;
 }
 
 export const ArrivalDataResponseSchema: z.ZodType<ArrivalDataResponse, unknown> = object<ArrivalDataResponse>({
   schedules: nullable(arr(ArrivalScheduleResponseSchema)),
   exceptions: nullable(arr(StudentArrivalExceptionResponseSchema)),
   notes: nullable(arr(ArrivalNoteResponseSchema)),
+  weekly_plan_version: optional(str),
 });
 
 /** Go: presenceprojectionhttp.attendanceSessionRecord */
@@ -1279,9 +2026,9 @@ export const attendanceDayRecordSchema: z.ZodType<attendanceDayRecord, unknown> 
   check_in_time: instant,
   check_out_time: optional(instant),
   duration_minutes: optional(safeInt),
-  checked_in_by: int64StringOrNumber,
-  checked_out_by: optional(int64StringOrNumber),
-  device_id: int64StringOrNumber,
+  checked_in_by: int64String,
+  checked_out_by: optional(int64String),
+  device_id: int64String,
   checked_in_actor: optional(AttendanceActorResponseSchema),
   checked_out_actor: optional(AttendanceActorResponseSchema),
   sessions: nullable(arr(attendanceSessionRecordSchema)),
@@ -1312,7 +2059,7 @@ export interface attendanceVisitEntry {
 }
 
 export const attendanceVisitEntrySchema: z.ZodType<attendanceVisitEntry, unknown> = object<attendanceVisitEntry>({
-  room_id: optional(int64StringOrNumber),
+  room_id: optional(int64String),
   room_name: optional(str),
   entry_time: instant,
   exit_time: optional(instant),
@@ -1434,10 +2181,121 @@ export interface CompanionResponse {
 }
 
 export const CompanionResponseSchema: z.ZodType<CompanionResponse, unknown> = object<CompanionResponse>({
-  companion_student_id: int64StringOrNumber,
+  companion_student_id: int64String,
   first_name: optional(str),
   last_name: optional(str),
   weekdays: nullable(arr(str)),
+});
+
+/** Go: careplanhttp.StudentCompanionList */
+export interface StudentCompanionList {
+  companions: CompanionResponse[] | null;
+  fingerprint: string;
+}
+
+export const StudentCompanionListSchema: z.ZodType<StudentCompanionList, unknown> = object<StudentCompanionList>({
+  companions: nullable(arr(CompanionResponseSchema)),
+  fingerprint: str,
+});
+
+/** Go: careplanhttp.AccidentReportResponse */
+export interface AccidentReportResponse {
+  status: string;
+  version?: number;
+  supersedes_id?: string;
+  superseded_by_id?: string;
+  signed_at?: string;
+  signed_digitally: boolean;
+  occurred_at: string;
+  location: string;
+  description: string;
+  injured_body_parts: string;
+  injury_kind: string;
+  witnesses: string;
+  first_aid: string;
+  doctor_visited: boolean;
+  doctor: string;
+  parents_notified: string;
+  parents_notified_at?: string;
+  supervisor: string;
+}
+
+export const AccidentReportResponseSchema: z.ZodType<AccidentReportResponse, unknown> = object<AccidentReportResponse>({
+  status: str,
+  version: optional(safeInt),
+  supersedes_id: optional(str),
+  superseded_by_id: optional(str),
+  signed_at: optional(instant),
+  signed_digitally: bool,
+  occurred_at: instant,
+  location: str,
+  description: str,
+  injured_body_parts: str,
+  injury_kind: str,
+  witnesses: str,
+  first_aid: str,
+  doctor_visited: bool,
+  doctor: str,
+  parents_notified: str,
+  parents_notified_at: optional(instant),
+  supervisor: str,
+});
+
+/** Go: careplanhttp.StudentDocumentResponse */
+export interface StudentDocumentResponse {
+  id: string;
+  student_id: string;
+  category: string;
+  category_label: string;
+  filename: string;
+  size_bytes: number;
+  content_type: string;
+  uploaded_at: string;
+  sensitive: boolean;
+  has_file: boolean;
+  accident_report?: AccidentReportResponse;
+  version?: string;
+}
+
+export const StudentDocumentResponseSchema: z.ZodType<StudentDocumentResponse, unknown> = object<StudentDocumentResponse>({
+  id: int64String,
+  student_id: int64String,
+  category: str,
+  category_label: str,
+  filename: str,
+  size_bytes: safeInt,
+  content_type: str,
+  uploaded_at: instant,
+  sensitive: bool,
+  has_file: bool,
+  accident_report: optional(AccidentReportResponseSchema),
+  version: optional(str),
+});
+
+/** Go: careplanhttp.StudentDocumentCategory */
+export interface StudentDocumentCategory {
+  value: string;
+  label: string;
+  sensitive: boolean;
+}
+
+export const StudentDocumentCategorySchema: z.ZodType<StudentDocumentCategory, unknown> = object<StudentDocumentCategory>({
+  value: str,
+  label: str,
+  sensitive: bool,
+});
+
+/** Go: careplanhttp.StudentDocumentListResponse */
+export interface StudentDocumentListResponse {
+  student_id: string;
+  documents: StudentDocumentResponse[] | null;
+  visible_categories: StudentDocumentCategory[] | null;
+}
+
+export const StudentDocumentListResponseSchema: z.ZodType<StudentDocumentListResponse, unknown> = object<StudentDocumentListResponse>({
+  student_id: int64String,
+  documents: nullable(arr(StudentDocumentResponseSchema)),
+  visible_categories: nullable(arr(StudentDocumentCategorySchema)),
 });
 
 /** Go: enrollmenthttp.StudentEnrollmentExtraFieldOption */
@@ -1573,19 +2431,21 @@ export interface PartialAbsenceResponse {
   created_by: string;
   created_at: string;
   updated_at: string;
+  version: string;
 }
 
 export const PartialAbsenceResponseSchema: z.ZodType<PartialAbsenceResponse, unknown> = object<PartialAbsenceResponse>({
-  id: int64StringOrNumber,
-  student_id: int64StringOrNumber,
+  id: int64String,
+  student_id: int64String,
   date: str,
   from_time: str,
   reason: optional(str),
   pickup_time: optional(str),
   auto: bool,
-  created_by: int64StringOrNumber,
+  created_by: int64String,
   created_at: str,
   updated_at: str,
+  version: str,
 });
 
 /** Go: careplanhttp.PickupScheduleResponse */
@@ -1605,8 +2465,8 @@ export interface PickupScheduleResponse {
 }
 
 export const PickupScheduleResponseSchema: z.ZodType<PickupScheduleResponse, unknown> = object<PickupScheduleResponse>({
-  id: int64StringOrNumber,
-  student_id: int64StringOrNumber,
+  id: int64String,
+  student_id: int64String,
   weekday: safeInt,
   weekday_name: str,
   pickup_time: str,
@@ -1614,7 +2474,7 @@ export const PickupScheduleResponseSchema: z.ZodType<PickupScheduleResponse, unk
   source: str,
   care_offering_id: optional(str),
   care_offering_name: optional(str),
-  created_by: int64StringOrNumber,
+  created_by: int64String,
   created_at: str,
   updated_at: str,
 });
@@ -1648,15 +2508,15 @@ export interface PickupExceptionResponse {
 }
 
 export const PickupExceptionResponseSchema: z.ZodType<PickupExceptionResponse, unknown> = object<PickupExceptionResponse>({
-  id: int64StringOrNumber,
-  student_id: int64StringOrNumber,
+  id: int64String,
+  student_id: int64String,
   exception_date: str,
   pickup_time: optional(str),
   reason: optional(str),
   source: str,
   excused_from: optional(str),
   excused_auto: bool,
-  created_by: int64StringOrNumber,
+  created_by: int64String,
   created_at: str,
   updated_at: str,
 });
@@ -1671,17 +2531,19 @@ export interface PickupNoteResponse {
   created_by: string;
   created_at: string;
   updated_at: string;
+  version: string;
 }
 
 export const PickupNoteResponseSchema: z.ZodType<PickupNoteResponse, unknown> = object<PickupNoteResponse>({
-  id: int64StringOrNumber,
-  student_id: int64StringOrNumber,
+  id: int64String,
+  student_id: int64String,
   note_date: optional(str),
   weekday: optional(safeInt),
   content: str,
-  created_by: int64StringOrNumber,
+  created_by: int64String,
   created_at: str,
   updated_at: str,
+  version: str,
 });
 
 /** Go: careplanhttp.DepartureExceptionResponse */
@@ -1696,12 +2558,12 @@ export interface DepartureExceptionResponse {
 }
 
 export const DepartureExceptionResponseSchema: z.ZodType<DepartureExceptionResponse, unknown> = object<DepartureExceptionResponse>({
-  id: int64StringOrNumber,
-  student_id: int64StringOrNumber,
+  id: int64String,
+  student_id: int64String,
   exception_date: str,
   departure_mode: str,
   reason: optional(str),
-  created_by: optional(int64StringOrNumber),
+  created_by: optional(int64String),
   updated_at: str,
 });
 
@@ -1712,6 +2574,7 @@ export interface PickupDataResponse {
   exceptions: PickupExceptionResponse[] | null;
   notes: PickupNoteResponse[] | null;
   departure_exceptions: DepartureExceptionResponse[] | null;
+  weekly_plan_version?: string;
 }
 
 export const PickupDataResponseSchema: z.ZodType<PickupDataResponse, unknown> = object<PickupDataResponse>({
@@ -1720,6 +2583,7 @@ export const PickupDataResponseSchema: z.ZodType<PickupDataResponse, unknown> = 
   exceptions: nullable(arr(PickupExceptionResponseSchema)),
   notes: nullable(arr(PickupNoteResponseSchema)),
   departure_exceptions: nullable(arr(DepartureExceptionResponseSchema)),
+  weekly_plan_version: optional(str),
 });
 
 /** Go: studentpresencehttp.PrivacyConsentResponse */
@@ -1736,11 +2600,12 @@ export interface PrivacyConsentResponse {
   details?: Record<string, unknown | null>;
   created_at: string;
   updated_at: string;
+  version: string;
 }
 
 export const PrivacyConsentResponseSchema: z.ZodType<PrivacyConsentResponse, unknown> = object<PrivacyConsentResponse>({
-  id: int64StringOrNumber,
-  student_id: int64StringOrNumber,
+  id: int64String,
+  student_id: int64String,
   policy_version: str,
   accepted: bool,
   accepted_at: optional(instant),
@@ -1751,6 +2616,7 @@ export const PrivacyConsentResponseSchema: z.ZodType<PrivacyConsentResponse, unk
   details: optional(rec(nullable(json))),
   created_at: instant,
   updated_at: instant,
+  version: str,
 });
 
 /** Go: studentpresence.StudentStatusDayResponse */
@@ -1769,8 +2635,8 @@ export interface StudentStatusDayResponse {
 }
 
 export const StudentStatusDayResponseSchema: z.ZodType<StudentStatusDayResponse, unknown> = object<StudentStatusDayResponse>({
-  id: int64StringOrNumber,
-  student_id: int64StringOrNumber,
+  id: int64String,
+  student_id: int64String,
   date: str,
   status: str,
   label: str,
@@ -1803,7 +2669,7 @@ export interface StudentRequest {
   tag_id?: string;
   birthday?: string;
   school_class?: string;
-  group_id?: number | null;
+  group_id?: string | null;
   address_street?: string;
   address_city?: string;
   address_postal_code?: string;
@@ -1831,8 +2697,9 @@ export interface ArrivalScheduleInput {
 /** Go: careplanhttp.BulkUpsertArrivalScheduleRequest */
 export interface BulkUpsertArrivalScheduleRequest {
   school_class?: string;
-  group_id?: number;
-  student_ids?: number[] | null;
+  expected_version?: string;
+  group_id?: string;
+  student_ids?: string[] | null;
   schedules?: ArrivalScheduleInput[] | null;
 }
 
@@ -1847,7 +2714,7 @@ export interface OverwriteWarning {
 }
 
 export const OverwriteWarningSchema: z.ZodType<OverwriteWarning, unknown> = object<OverwriteWarning>({
-  student_id: int64StringOrNumber,
+  student_id: int64String,
   student_name: str,
   weekday: safeInt,
   weekday_name: str,
@@ -1868,7 +2735,7 @@ export const BulkUpsertResultSchema: z.ZodType<BulkUpsertResult, unknown> = obje
 
 /** Go: careplanhttp.BulkEffectiveTimeRequest */
 export interface BulkEffectiveTimeRequest {
-  student_ids?: number[] | null;
+  student_ids?: string[] | null;
   date?: string | null;
 }
 
@@ -1878,7 +2745,7 @@ export interface ArrivalScheduleStatusResponse {
 }
 
 export const ArrivalScheduleStatusResponseSchema: z.ZodType<ArrivalScheduleStatusResponse, unknown> = object<ArrivalScheduleStatusResponse>({
-  student_ids: nullable(arr(int64StringOrNumber)),
+  student_ids: nullable(arr(int64String)),
 });
 
 /** Go: careplanhttp.careExitRequest */
@@ -1988,58 +2855,6 @@ export interface DecideCareRequestBody {
   expected_version?: string;
 }
 
-/** Go: requestreview.AffectedCareBlock */
-export interface AffectedCareBlock {
-  id: string;
-  title: string;
-  start_time: string;
-  end_time: string;
-}
-
-export const AffectedCareBlockSchema: z.ZodType<AffectedCareBlock, unknown> = object<AffectedCareBlock>({
-  id: str,
-  title: str,
-  start_time: str,
-  end_time: str,
-});
-
-/** Go: requestreview.CareRequestResponse */
-export interface CareRequestResponse {
-  id: string;
-  student_id: string;
-  first_name: string;
-  last_name: string;
-  status: string;
-  request_kind: string;
-  diff: CareRequestDiffResponse[] | null;
-  request_reason?: string;
-  decision_reason?: string;
-  created_at: string;
-  reviewed_at?: string;
-  affected_blocks: AffectedCareBlock[] | null;
-  impact_available: boolean;
-  impact_token: string;
-  signed?: boolean;
-}
-
-export const CareRequestResponseSchema: z.ZodType<CareRequestResponse, unknown> = object<CareRequestResponse>({
-  id: str,
-  student_id: str,
-  first_name: str,
-  last_name: str,
-  status: str,
-  request_kind: str,
-  diff: nullable(arr(CareRequestDiffResponseSchema)),
-  request_reason: optional(str),
-  decision_reason: optional(str),
-  created_at: instant,
-  reviewed_at: optional(instant),
-  affected_blocks: nullable(arr(AffectedCareBlockSchema)),
-  impact_available: bool,
-  impact_token: str,
-  signed: optional(bool),
-});
-
 /** Go: careplanhttp.careWithdrawalExitRequest */
 export interface careWithdrawalExitRequest {
   last_care_day?: string;
@@ -2139,34 +2954,37 @@ export interface DecideExcusedRequestBody {
   replace_partial_absences?: boolean;
 }
 
-/** Go: requestreview.StaffExcusedRequestResponse */
-export interface StaffExcusedRequestResponse {
-  id: string;
-  student_id: string;
-  first_name: string;
-  last_name: string;
-  absence_status: string;
-  status: string;
-  dates: string[] | null;
-  note: string;
-  reason?: string;
-  created_at: string;
-  reviewed_at?: string;
+/** Go: presenceprojectionhttp.studentExportFilters */
+export interface studentExportFilters {
+  search?: string;
+  group_id?: string;
+  room_id?: string;
+  year?: string;
+  school_class?: string;
+  status?: string;
+  bus?: string;
+  photo_consent?: string;
+  pickup_status?: string;
+  day_status?: string;
+  date?: string;
+  pickup_time?: string;
+  arrival_time?: string;
+  sort?: string;
+  group_by_class?: boolean;
+  months?: string[] | null;
+  include_without_health_info?: boolean;
+  student_ids?: string[] | null;
+  enrollment_answer?: string;
 }
 
-export const StaffExcusedRequestResponseSchema: z.ZodType<StaffExcusedRequestResponse, unknown> = object<StaffExcusedRequestResponse>({
-  id: str,
-  student_id: str,
-  first_name: str,
-  last_name: str,
-  absence_status: str,
-  status: str,
-  dates: nullable(arr(str)),
-  note: str,
-  reason: optional(str),
-  created_at: instant,
-  reviewed_at: optional(instant),
-});
+/** Go: presenceprojectionhttp.studentExportRequest */
+export interface studentExportRequest {
+  format?: OpenEnum<ListFormat>;
+  preset?: string;
+  title?: string;
+  filters?: studentExportFilters;
+  columns?: string[] | null;
+}
 
 /** Go: careplanhttp.DecideMasterDataChangeRequestBody */
 export interface DecideMasterDataChangeRequestBody {
@@ -2174,35 +2992,6 @@ export interface DecideMasterDataChangeRequestBody {
   reason?: string;
   expected_version?: string;
 }
-
-/** Go: requestreview.MasterDataChangeRequestResponse */
-export interface MasterDataChangeRequestResponse {
-  id: string;
-  student_id: string;
-  first_name: string;
-  last_name: string;
-  target: string;
-  field_key: string;
-  old_value?: unknown | null;
-  new_value: unknown | null;
-  status: string;
-  created_at: string;
-  reviewed_at?: string;
-}
-
-export const MasterDataChangeRequestResponseSchema: z.ZodType<MasterDataChangeRequestResponse, unknown> = object<MasterDataChangeRequestResponse>({
-  id: str,
-  student_id: str,
-  first_name: str,
-  last_name: str,
-  target: str,
-  field_key: str,
-  old_value: optional(nullable(json)),
-  new_value: nullable(json),
-  status: str,
-  created_at: instant,
-  reviewed_at: optional(instant),
-});
 
 /** Go: careplanhttp.DecideOfferingRequestBody */
 export interface DecideOfferingRequestBody {
@@ -2346,7 +3135,7 @@ export interface PickupScheduleInput {
 
 /** Go: careplanhttp.BulkPickupSchedulePatchRequest */
 export interface BulkPickupSchedulePatchRequest {
-  student_ids?: number[] | null;
+  student_ids?: string[] | null;
   schedules?: PickupScheduleInput[] | null;
   confirmed_exception?: boolean;
 }
@@ -2394,7 +3183,7 @@ export const schoolCheckinBatchResponseSchema: z.ZodType<schoolCheckinBatchRespo
 
 /** Go: studentpresencehttp.BulkCreateStudentStatusDaysRequest */
 export interface BulkCreateStudentStatusDaysRequest {
-  student_ids?: number[] | null;
+  student_ids?: string[] | null;
   status?: string;
   from?: string;
   to?: string;
@@ -2426,85 +3215,15 @@ export interface AccidentReportRequest {
   parents_notified?: string;
   parents_notified_at?: string | null;
   supervisor?: string;
+  expected_version?: string;
 }
-
-/** Go: careplanhttp.AccidentReportResponse */
-export interface AccidentReportResponse {
-  status: string;
-  version?: number;
-  supersedes_id?: string;
-  superseded_by_id?: string;
-  signed_at?: string;
-  signed_digitally: boolean;
-  occurred_at: string;
-  location: string;
-  description: string;
-  injured_body_parts: string;
-  injury_kind: string;
-  witnesses: string;
-  first_aid: string;
-  doctor_visited: boolean;
-  doctor: string;
-  parents_notified: string;
-  parents_notified_at?: string;
-  supervisor: string;
-}
-
-export const AccidentReportResponseSchema: z.ZodType<AccidentReportResponse, unknown> = object<AccidentReportResponse>({
-  status: str,
-  version: optional(safeInt),
-  supersedes_id: optional(str),
-  superseded_by_id: optional(str),
-  signed_at: optional(instant),
-  signed_digitally: bool,
-  occurred_at: instant,
-  location: str,
-  description: str,
-  injured_body_parts: str,
-  injury_kind: str,
-  witnesses: str,
-  first_aid: str,
-  doctor_visited: bool,
-  doctor: str,
-  parents_notified: str,
-  parents_notified_at: optional(instant),
-  supervisor: str,
-});
-
-/** Go: careplanhttp.StudentDocumentResponse */
-export interface StudentDocumentResponse {
-  id: string;
-  student_id: string;
-  category: string;
-  category_label: string;
-  filename: string;
-  size_bytes: number;
-  content_type: string;
-  uploaded_at: string;
-  sensitive: boolean;
-  has_file: boolean;
-  accident_report?: AccidentReportResponse;
-}
-
-export const StudentDocumentResponseSchema: z.ZodType<StudentDocumentResponse, unknown> = object<StudentDocumentResponse>({
-  id: int64StringOrNumber,
-  student_id: int64StringOrNumber,
-  category: str,
-  category_label: str,
-  filename: str,
-  size_bytes: safeInt,
-  content_type: str,
-  uploaded_at: instant,
-  sensitive: bool,
-  has_file: bool,
-  accident_report: optional(AccidentReportResponseSchema),
-});
 
 /** Go: careplanhttp.AccidentSignatureRequest */
 export interface AccidentSignatureRequest {
   method?: string;
   image_png?: string;
   typed_name?: string;
+  expected_version?: string;
 }
 
 /** Go: careplanhttp.StudentArrivalExceptionRequest */
@@ -2564,7 +3283,17 @@ export interface PartialAbsenceRequest {
   date?: string;
   from_time?: string;
   reason?: string;
+  expected_version?: string;
 }
+
+/** Go: students.studentPhotoUploadedResponse */
+export interface studentPhotoUploadedResponse {
+  photo_url: string;
+}
+
+export const studentPhotoUploadedResponseSchema: z.ZodType<studentPhotoUploadedResponse, unknown> = object<studentPhotoUploadedResponse>({
+  photo_url: str,
+});
 
 /** Go: careplanhttp.pickupChangeNoticeRevision */
 export interface pickupChangeNoticeRevision {
@@ -2606,6 +3335,8 @@ export interface pickupAdjustmentRequest {
   effective_from?: string | null;
   selections?: pickupAdjustmentSelectionRequest[] | null;
   excluded_auto_offering_ids?: string[] | null;
+  expected_version?: string;
+  weekday_notes?: PickupNoteRequest[] | null;
   preview_token?: string;
   resolution?: string;
   reason?: string;
@@ -2615,11 +3346,13 @@ export interface pickupAdjustmentRequest {
 /** Go: careplanhttp.pickupAdjustmentResponse */
 export interface pickupAdjustmentResponse {
   resolution: string;
+  weekly_plan_version: string;
   roster_impact?: rosterImpactResponse;
 }
 
 export const pickupAdjustmentResponseSchema: z.ZodType<pickupAdjustmentResponse, unknown> = object<pickupAdjustmentResponse>({
   resolution: str,
+  weekly_plan_version: str,
   roster_impact: optional(rosterImpactResponseSchema),
 });
 
@@ -2819,7 +3552,7 @@ export interface schoolCheckinResponse {
 }
 
 export const schoolCheckinResponseSchema: z.ZodType<schoolCheckinResponse, unknown> = object<schoolCheckinResponse>({
-  student_id: int64StringOrNumber,
+  student_id: int64String,
   status: str,
   check_in_time: optional(instant),
   check_out_time: optional(instant),
@@ -2861,12 +3594,13 @@ export interface CompanionEntry {
 
 /** Go: careplanhttp.UpdateStudentRequest */
 export interface UpdateStudentRequest {
+  expected_version?: string;
   first_name?: string | null;
   last_name?: string | null;
   birthday?: string | null;
   tag_id?: string | null;
   school_class?: string | null;
-  group_id?: number | null;
+  group_id?: string | null;
   address_street?: string | null;
   address_city?: string | null;
   address_postal_code?: string | null;
@@ -2889,9 +3623,18 @@ export interface UpdateStudentRequest {
   confirmed_companion_extensions?: CompanionEntry[] | null;
 }
 
+/** Go: careplanhttp.ArrivalNoteUpdateRequest */
+export interface ArrivalNoteUpdateRequest {
+  note_date?: string;
+  content?: string;
+  expected_version?: string;
+}
+
 /** Go: careplanhttp.BulkArrivalScheduleRequest */
 export interface BulkArrivalScheduleRequest {
   schedules?: ArrivalScheduleRequestItem[] | null;
+  weekday_notes?: PickupNoteRequest[] | null;
+  expected_version?: string;
 }
 
 /** Go: careplanhttp.DepartureExceptionRequest */
@@ -2909,12 +3652,22 @@ export interface setFamilyProtectionBody {
 /** Go: careplanhttp.WeekdayPickupNotesRequest */
 export interface WeekdayPickupNotesRequest {
   notes?: PickupNoteRequest[] | null;
+  expected_version?: string;
+}
+
+/** Go: careplanhttp.PickupNoteUpdateRequest */
+export interface PickupNoteUpdateRequest {
+  note_date?: string;
+  weekday?: number;
+  content?: string;
+  expected_version?: string;
 }
 
 /** Go: careplanhttp.BulkPickupScheduleRequest */
 export interface BulkPickupScheduleRequest {
   schedules?: PickupScheduleRequest[] | null;
   effective_date?: string | null;
+  expected_version?: string;
 }
 
 /** Go: studentpresencehttp.PrivacyConsentRequest */
@@ -2924,138 +3677,7 @@ export interface PrivacyConsentRequest {
   duration_days?: number | null;
   data_retention_days?: number;
   details?: Record<string, unknown | null> | null;
-}
-
-/** Query of GET /api/students/ */
-export interface GetStudentsQuery {
-  bus?: string;
-  care_offering_id?: string;
-  care_status?: "all" | "ended" | "running";
-  date?: string;
-  day_status?: "all" | "comes_today" | "not_coming_today";
-  enrollment_answer?: string;
-  first_name?: string;
-  grade_level?: number[];
-  group_id?: string[];
-  include_arrival_times?: boolean;
-  include_companions?: boolean;
-  include_pending_withdrawals?: boolean;
-  include_pickup_times?: boolean;
-  last_name?: string;
-  location?: string;
-  location_state?: string;
-  page?: number;
-  page_size?: number;
-  photo_consent?: string;
-  pickup_status?: string;
-  room_id?: string;
-  school_class?: string[];
-  search?: string;
-  view?: "full" | "names" | "slim";
-}
-
-/** Query of GET /api/students/care-withdrawals */
-export interface GetStudentsCareWithdrawalsQuery {
-  page?: number;
-  page_size?: number;
-  search?: string;
-  state?: "pending" | "resolved";
-  student_id?: string;
-}
-
-/** Query of GET /api/students/change-requests */
-export interface GetStudentsChangeRequestsQuery {
-  cursor?: string;
-  from?: string;
-  limit?: number;
-  search?: string;
-  status?: string;
-  student_id?: string;
-  to?: string;
-  types?: string;
-  view?: "history" | "open";
-}
-
-/** Query of GET /api/students/change-requests/access */
-export interface GetStudentsChangeRequestsAccessQuery {
-  student_id?: string;
-}
-
-/** Query of GET /api/students/class-arrival-exceptions/{schoolClass} */
-export interface GetStudentsClassArrivalExceptionsSchoolClassQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /api/students/day-log */
-export interface GetStudentsDayLogQuery {
-  date?: string;
-  group_id?: string;
-}
-
-/** Query of GET /api/students/ended-care */
-export interface GetStudentsEndedCareQuery {
-  page?: number;
-  page_size?: number;
-  school_class?: string[];
-  search?: string;
-}
-
-/** Query of GET /api/students/status-days */
-export interface GetStudentsStatusDaysQuery {
-  from?: string;
-  group_id?: string;
-  page?: number;
-  page_size?: number;
-  q?: string;
-  status?: string;
-  to?: string;
-}
-
-/** Query of GET /api/students/{id} */
-export interface GetStudentsIdQuery {
-  include_privacy_consent?: boolean;
-}
-
-/** Query of GET /api/students/{id}/arrival-schedules */
-export interface GetStudentsIdArrivalSchedulesQuery {
-  date?: string;
-  to?: string;
-}
-
-/** Query of GET /api/students/{id}/attendance-history */
-export interface GetStudentsIdAttendanceHistoryQuery {
-  end?: string;
-  start?: string;
-}
-
-/** Query of GET /api/students/{id}/care-withdrawals */
-export interface GetStudentsIdCareWithdrawalsQuery {
-  page?: number;
-  page_size?: number;
-}
-
-/** Query of GET /api/students/{id}/notes */
-export interface GetStudentsIdNotesQuery {
-  kind?: string;
-}
-
-/** Query of GET /api/students/{id}/partial-absences */
-export interface GetStudentsIdPartialAbsencesQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /api/students/{id}/pickup-schedules */
-export interface GetStudentsIdPickupSchedulesQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /api/students/{id}/status-days */
-export interface GetStudentsIdStatusDaysQuery {
-  from?: string;
-  to?: string;
+  expected_version?: string;
 }
 
 export const routes = {
@@ -3070,6 +3692,13 @@ export const routes = {
     method: "DELETE",
     pattern: "/api/students/class-arrival-exceptions/{schoolClass}/{date}",
     portals: ["tenant"],
+    response: noData,
+  },
+  "DELETE /api/students/{id}": {
+    method: "DELETE",
+    pattern: "/api/students/{id}",
+    portals: ["tenant"],
+    request: requestBody<studentDeleteRequest>(),
     response: noData,
   },
   "DELETE /api/students/{id}/arrival-exceptions/{exceptionId}": {
@@ -3108,6 +3737,12 @@ export const routes = {
     portals: ["tenant"],
     response: success(partialAbsenceDeletedResponseSchema),
   },
+  "DELETE /api/students/{id}/photo": {
+    method: "DELETE",
+    pattern: "/api/students/{id}/photo",
+    portals: ["tenant"],
+    response: noData,
+  },
   "DELETE /api/students/{id}/pickup-exceptions/{exceptionId}": {
     method: "DELETE",
     pattern: "/api/students/{id}/pickup-exceptions/{exceptionId}",
@@ -3126,6 +3761,12 @@ export const routes = {
     portals: ["tenant"],
     response: noData,
   },
+  "DELETE /api/students/{id}/room-history-stop": {
+    method: "DELETE",
+    pattern: "/api/students/{id}/room-history-stop",
+    portals: ["tenant"],
+    response: success(RoomHistoryStopResponseSchema),
+  },
   "DELETE /api/students/{id}/status-days/{statusDayId}": {
     method: "DELETE",
     pattern: "/api/students/{id}/status-days/{statusDayId}",
@@ -3136,7 +3777,32 @@ export const routes = {
     method: "GET",
     pattern: "/api/students/",
     portals: ["tenant"],
-    query: ["bus", "care_offering_id", "care_status", "date", "day_status", "enrollment_answer", "first_name", "grade_level", "group_id", "include_arrival_times", "include_companions", "include_pending_withdrawals", "include_pickup_times", "last_name", "location", "location_state", "page", "page_size", "photo_consent", "pickup_status", "room_id", "school_class", "search", "view"],
+    query: {
+      "bus": { kind: "string" },
+      "care_offering_id": { kind: "id" },
+      "care_status": { kind: "string", values: ["all", "ended", "running"] },
+      "date": { kind: "date" },
+      "day_status": { kind: "string", values: ["all", "comes_today", "not_coming_today"] },
+      "enrollment_answer": { kind: "string" },
+      "first_name": { kind: "string" },
+      "grade_level": { kind: "int", repeated: true },
+      "group_id": { kind: "id", repeated: true },
+      "include_arrival_times": { kind: "bool" },
+      "include_companions": { kind: "bool" },
+      "include_pending_withdrawals": { kind: "bool" },
+      "include_pickup_times": { kind: "bool" },
+      "last_name": { kind: "string" },
+      "location": { kind: "string" },
+      "location_state": { kind: "string" },
+      "page": { kind: "int" },
+      "page_size": { kind: "int" },
+      "photo_consent": { kind: "string" },
+      "pickup_status": { kind: "string" },
+      "room_id": { kind: "id" },
+      "school_class": { kind: "string", repeated: true },
+      "search": { kind: "string" },
+      "view": { kind: "string", values: ["full", "names", "slim"] },
+    },
     variantParam: "view",
     defaultVariant: "full",
     response: {
@@ -3151,17 +3817,35 @@ export const routes = {
     portals: ["tenant"],
     response: success(arrivalSettingsResponseSchema),
   },
+  "GET /api/students/care-offerings": {
+    method: "GET",
+    pattern: "/api/students/care-offerings",
+    portals: ["tenant"],
+    response: success(z.array(CareOfferingOptionResponseSchema)),
+  },
   "GET /api/students/care-schedule-change-requests/{requestId}": {
     method: "GET",
     pattern: "/api/students/care-schedule-change-requests/{requestId}",
     portals: ["tenant"],
     response: success(CareRequestDetailResponseSchema),
   },
+  "GET /api/students/care-schedule-change-requests/{requestId}/proof": {
+    method: "GET",
+    pattern: "/api/students/care-schedule-change-requests/{requestId}/proof",
+    portals: ["tenant"],
+    response: fileAnswer,
+  },
   "GET /api/students/care-withdrawals": {
     method: "GET",
     pattern: "/api/students/care-withdrawals",
     portals: ["tenant"],
-    query: ["page", "page_size", "search", "state", "student_id"],
+    query: {
+      "page": { kind: "int" },
+      "page_size": { kind: "int" },
+      "search": { kind: "string" },
+      "state": { kind: "string", values: ["pending", "resolved"] },
+      "student_id": { kind: "id" },
+    },
     response: success(careWithdrawalPageResponseSchema),
   },
   "GET /api/students/care-withdrawals/{completionId}/deletion-impact": {
@@ -3174,15 +3858,43 @@ export const routes = {
     method: "GET",
     pattern: "/api/students/change-requests",
     portals: ["tenant"],
-    query: ["cursor", "from", "limit", "search", "status", "student_id", "to", "types", "view"],
+    query: {
+      "cursor": { kind: "string" },
+      "from": { kind: "date" },
+      "limit": { kind: "int" },
+      "search": { kind: "string" },
+      "status": { kind: "string" },
+      "student_id": { kind: "id" },
+      "to": { kind: "date" },
+      "types": { kind: "string" },
+      "view": { kind: "string", values: ["history", "open"] },
+    },
     response: success(PageSchema),
   },
   "GET /api/students/change-requests/access": {
     method: "GET",
     pattern: "/api/students/change-requests/access",
     portals: ["tenant"],
-    query: ["student_id"],
+    query: {
+      "student_id": { kind: "id" },
+    },
     response: success(changeRequestAccessResponseSchema),
+  },
+  "GET /api/students/change-requests/history": {
+    method: "GET",
+    pattern: "/api/students/change-requests/history",
+    portals: ["tenant"],
+    query: {
+      "cursor": { kind: "string" },
+      "from": { kind: "date" },
+      "limit": { kind: "int" },
+      "search": { kind: "string" },
+      "status": { kind: "string" },
+      "student_id": { kind: "id" },
+      "to": { kind: "date" },
+      "types": { kind: "string" },
+    },
+    response: success(HistoryPageSchema),
   },
   "GET /api/students/change-requests/pending-count": {
     method: "GET",
@@ -3206,7 +3918,10 @@ export const routes = {
     method: "GET",
     pattern: "/api/students/class-arrival-exceptions/{schoolClass}",
     portals: ["tenant"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(ClassArrivalExceptionListResponseSchema),
   },
   "GET /api/students/class-arrival-times/{schoolClass}": {
@@ -3219,15 +3934,67 @@ export const routes = {
     method: "GET",
     pattern: "/api/students/day-log",
     portals: ["tenant"],
-    query: ["date", "group_id"],
+    query: {
+      "date": { kind: "date" },
+      "group_id": { kind: "id" },
+    },
     response: success(dayLogResponseSchema),
+  },
+  "GET /api/students/day-log/export": {
+    method: "GET",
+    pattern: "/api/students/day-log/export",
+    portals: ["tenant"],
+    query: {
+      "date": { kind: "date" },
+      "format": { kind: "string", values: ["docx", "pdf", "xlsx"] },
+      "group_id": { kind: "id" },
+    },
+    response: fileAnswer,
   },
   "GET /api/students/ended-care": {
     method: "GET",
     pattern: "/api/students/ended-care",
     portals: ["tenant"],
-    query: ["page", "page_size", "school_class", "search"],
+    query: {
+      "page": { kind: "int" },
+      "page_size": { kind: "int" },
+      "school_class": { kind: "string", repeated: true },
+      "search": { kind: "string" },
+    },
     response: success(endedCarePageResponseSchema),
+  },
+  "GET /api/students/enrollment-answer-filters": {
+    method: "GET",
+    pattern: "/api/students/enrollment-answer-filters",
+    portals: ["tenant"],
+    query: {
+      "date": { kind: "date" },
+    },
+    response: success(z.array(EnrollmentAnswerFilterResponseSchema)),
+  },
+  "GET /api/students/offering-change-requests/course-waitlists": {
+    method: "GET",
+    pattern: "/api/students/offering-change-requests/course-waitlists",
+    portals: ["tenant"],
+    query: {
+      "activity_group_id": { kind: "id" },
+    },
+    response: success(z.array(CourseWaitlistResponseSchema)),
+  },
+  "GET /api/students/ogs-group-live": {
+    method: "GET",
+    pattern: "/api/students/ogs-group-live",
+    portals: ["tenant"],
+    query: {
+      "group_id": { kind: "id" },
+    },
+    response: success(ProjectionSchema),
+  },
+  "GET /api/students/ogs-group-navigation": {
+    method: "GET",
+    pattern: "/api/students/ogs-group-navigation",
+    portals: ["tenant"],
+    response: success(z.array(NavigationGroupSchema)),
   },
   "GET /api/students/pickup-change-notices": {
     method: "GET",
@@ -3251,7 +4018,15 @@ export const routes = {
     method: "GET",
     pattern: "/api/students/status-days",
     portals: ["tenant"],
-    query: ["from", "group_id", "page", "page_size", "q", "status", "to"],
+    query: {
+      "from": { kind: "date" },
+      "group_id": { kind: "id" },
+      "page": { kind: "int" },
+      "page_size": { kind: "int" },
+      "q": { kind: "string" },
+      "status": { kind: "string" },
+      "to": { kind: "date" },
+    },
     response: success(statusDayOverviewResponseSchema),
   },
   "GET /api/students/team-notices": {
@@ -3264,28 +4039,56 @@ export const routes = {
     method: "GET",
     pattern: "/api/students/{id}",
     portals: ["tenant"],
-    query: ["include_privacy_consent"],
+    query: {
+      "include_privacy_consent": { kind: "bool" },
+    },
     response: success(StudentDetailResponseSchema),
+  },
+  "GET /api/students/{id}/accident-reports/{documentId}/pdf": {
+    method: "GET",
+    pattern: "/api/students/{id}/accident-reports/{documentId}/pdf",
+    portals: ["tenant"],
+    response: fileAnswer,
   },
   "GET /api/students/{id}/arrival-schedules": {
     method: "GET",
     pattern: "/api/students/{id}/arrival-schedules",
     portals: ["tenant"],
-    query: ["date", "to"],
+    query: {
+      "date": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(ArrivalDataResponseSchema),
   },
   "GET /api/students/{id}/attendance-history": {
     method: "GET",
     pattern: "/api/students/{id}/attendance-history",
     portals: ["tenant"],
-    query: ["end", "start"],
+    query: {
+      "end": { kind: "string" },
+      "start": { kind: "string" },
+    },
     response: success(attendanceHistoryResponseSchema),
+  },
+  "GET /api/students/{id}/attendance-history/export": {
+    method: "GET",
+    pattern: "/api/students/{id}/attendance-history/export",
+    portals: ["tenant"],
+    query: {
+      "format": { kind: "string", values: ["docx", "pdf", "xlsx"] },
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
+    response: fileAnswer,
   },
   "GET /api/students/{id}/care-withdrawals": {
     method: "GET",
     pattern: "/api/students/{id}/care-withdrawals",
     portals: ["tenant"],
-    query: ["page", "page_size"],
+    query: {
+      "page": { kind: "int" },
+      "page_size": { kind: "int" },
+    },
     response: success(careWithdrawalPageResponseSchema),
   },
   "GET /api/students/{id}/change-history": {
@@ -3294,10 +4097,17 @@ export const routes = {
     portals: ["tenant"],
     response: success(z.array(changeHistoryEntrySchema)),
   },
+  "GET /api/students/{id}/companion-links": {
+    method: "GET",
+    pattern: "/api/students/{id}/companion-links",
+    portals: ["tenant"],
+    response: success(StudentCompanionListSchema),
+  },
   "GET /api/students/{id}/companions": {
     method: "GET",
     pattern: "/api/students/{id}/companions",
     portals: ["tenant"],
+    deprecated: true,
     response: success(z.array(CompanionResponseSchema)),
   },
   "GET /api/students/{id}/delete-impact": {
@@ -3305,6 +4115,21 @@ export const routes = {
     pattern: "/api/students/{id}/delete-impact",
     portals: ["tenant"],
     response: success(studentDeleteImpactResponseSchema),
+  },
+  "GET /api/students/{id}/documents": {
+    method: "GET",
+    pattern: "/api/students/{id}/documents",
+    portals: ["tenant"],
+    query: {
+      "category": { kind: "string" },
+    },
+    response: success(StudentDocumentListResponseSchema),
+  },
+  "GET /api/students/{id}/documents/{documentId}/download": {
+    method: "GET",
+    pattern: "/api/students/{id}/documents/{documentId}/download",
+    portals: ["tenant"],
+    response: fileAnswer,
   },
   "GET /api/students/{id}/enrollment-extra-fields": {
     method: "GET",
@@ -3328,21 +4153,37 @@ export const routes = {
     method: "GET",
     pattern: "/api/students/{id}/notes",
     portals: ["tenant"],
-    query: ["kind"],
+    query: {
+      "kind": { kind: "string" },
+    },
     response: success(z.array(studentNoteResponseSchema)),
   },
   "GET /api/students/{id}/partial-absences": {
     method: "GET",
     pattern: "/api/students/{id}/partial-absences",
     portals: ["tenant"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(z.array(PartialAbsenceResponseSchema)),
+  },
+  "GET /api/students/{id}/photo/{filename}": {
+    method: "GET",
+    pattern: "/api/students/{id}/photo/{filename}",
+    portals: ["tenant"],
+    fileCache: "private, max-age=86400, immutable",
+    conditionalGet: true,
+    response: fileAnswer,
   },
   "GET /api/students/{id}/pickup-schedules": {
     method: "GET",
     pattern: "/api/students/{id}/pickup-schedules",
     portals: ["tenant"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(PickupDataResponseSchema),
   },
   "GET /api/students/{id}/privacy-consent": {
@@ -3351,11 +4192,20 @@ export const routes = {
     portals: ["tenant"],
     response: success(PrivacyConsentResponseSchema),
   },
+  "GET /api/students/{id}/room-history-stop": {
+    method: "GET",
+    pattern: "/api/students/{id}/room-history-stop",
+    portals: ["tenant"],
+    response: success(RoomHistoryStopResponseSchema),
+  },
   "GET /api/students/{id}/status-days": {
     method: "GET",
     pattern: "/api/students/{id}/status-days",
     portals: ["tenant"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(z.array(StudentStatusDayResponseSchema)),
   },
   "POST /api/students/": {
@@ -3376,6 +4226,7 @@ export const routes = {
     method: "POST",
     pattern: "/api/students/arrival-schedules/status",
     portals: ["tenant"],
+    noCommit: "reads the arrival times of the children the body names",
     request: requestBody<BulkEffectiveTimeRequest>(),
     response: success(ArrivalScheduleStatusResponseSchema),
   },
@@ -3397,6 +4248,7 @@ export const routes = {
     method: "POST",
     pattern: "/api/students/care-end/preview",
     portals: ["tenant"],
+    noCommit: "the preview shows what a care end changes and saves nothing",
     request: requestBody<careExitRequest>(),
     response: success(careExitPreviewResponseSchema),
   },
@@ -3418,6 +4270,7 @@ export const routes = {
     method: "POST",
     pattern: "/api/students/care-withdrawals/{completionId}/care-end/preview",
     portals: ["tenant"],
+    noCommit: "the preview shows what a care end changes and saves nothing",
     request: requestBody<careWithdrawalExitRequest>(),
     response: success(careExitPreviewResponseSchema),
   },
@@ -3468,6 +4321,14 @@ export const routes = {
     request: requestBody<DecideExcusedRequestBody>(),
     response: success(StaffExcusedRequestResponseSchema),
   },
+  "POST /api/students/export": {
+    method: "POST",
+    pattern: "/api/students/export",
+    portals: ["tenant"],
+    maxBodyBytes: 1048576,
+    request: requestBody<studentExportRequest>(),
+    response: fileAnswer,
+  },
   "POST /api/students/master-data-change-requests/{requestId}/decide": {
     method: "POST",
     pattern: "/api/students/master-data-change-requests/{requestId}/decide",
@@ -3486,6 +4347,7 @@ export const routes = {
     method: "POST",
     pattern: "/api/students/offering-change-requests/{requestId}/preview",
     portals: ["tenant"],
+    noCommit: "the preview shows the decided offerings and saves nothing",
     request: requestBody<PreviewOfferingRequestBody>(),
     response: success(OfferingRequestPreviewResponseSchema),
   },
@@ -3525,6 +4387,15 @@ export const routes = {
     request: requestBody<AccidentReportRequest>(),
     response: success(StudentDocumentResponseSchema),
   },
+  "POST /api/students/{id}/accident-reports/{documentId}/paper-copy": {
+    method: "POST",
+    pattern: "/api/students/{id}/accident-reports/{documentId}/paper-copy",
+    portals: ["tenant"],
+    maxBodyBytes: 10489856,
+    tooLargeCode: "files.file_too_large",
+    request: multipart,
+    response: success(StudentDocumentResponseSchema),
+  },
   "POST /api/students/{id}/accident-reports/{documentId}/signature": {
     method: "POST",
     pattern: "/api/students/{id}/accident-reports/{documentId}/signature",
@@ -3553,6 +4424,15 @@ export const routes = {
     request: requestBody<careResumeRequest>(),
     response: success(careResumedResponseSchema),
   },
+  "POST /api/students/{id}/documents": {
+    method: "POST",
+    pattern: "/api/students/{id}/documents",
+    portals: ["tenant"],
+    maxBodyBytes: 10489856,
+    tooLargeCode: "files.file_too_large",
+    request: multipart,
+    response: success(StudentDocumentResponseSchema),
+  },
   "POST /api/students/{id}/notes": {
     method: "POST",
     pattern: "/api/students/{id}/notes",
@@ -3572,6 +4452,15 @@ export const routes = {
     portals: ["tenant"],
     request: requestBody<PartialAbsenceRequest>(),
     response: success(PartialAbsenceResponseSchema),
+  },
+  "POST /api/students/{id}/photo": {
+    method: "POST",
+    pattern: "/api/students/{id}/photo",
+    portals: ["tenant"],
+    maxBodyBytes: 5243904,
+    tooLargeCode: "files.file_too_large",
+    request: multipart,
+    response: success(studentPhotoUploadedResponseSchema),
   },
   "POST /api/students/{id}/pickup-change-notices/read": {
     method: "POST",
@@ -3605,6 +4494,7 @@ export const routes = {
     method: "POST",
     pattern: "/api/students/{id}/pickup-schedules/preview",
     portals: ["tenant"],
+    noCommit: "the preview shows the pickup times a change would set and saves nothing",
     request: requestBody<pickupAdjustmentRequest>(),
     response: success(pickupAdjustmentPreviewResponseSchema),
   },
@@ -3668,7 +4558,7 @@ export const routes = {
     method: "PUT",
     pattern: "/api/students/{id}/arrival-notes/{noteId}",
     portals: ["tenant"],
-    request: requestBody<ArrivalNoteRequest>(),
+    request: requestBody<ArrivalNoteUpdateRequest>(),
     response: success(ArrivalNoteResponseSchema),
   },
   "PUT /api/students/{id}/arrival-schedules": {
@@ -3724,7 +4614,7 @@ export const routes = {
     method: "PUT",
     pattern: "/api/students/{id}/pickup-notes/{noteId}",
     portals: ["tenant"],
-    request: requestBody<PickupNoteRequest>(),
+    request: requestBody<PickupNoteUpdateRequest>(),
     response: success(PickupNoteResponseSchema),
   },
   "PUT /api/students/{id}/pickup-schedules": {
@@ -3740,5 +4630,11 @@ export const routes = {
     portals: ["tenant"],
     request: requestBody<PrivacyConsentRequest>(),
     response: success(PrivacyConsentResponseSchema),
+  },
+  "PUT /api/students/{id}/room-history-stop": {
+    method: "PUT",
+    pattern: "/api/students/{id}/room-history-stop",
+    portals: ["tenant"],
+    response: success(RoomHistoryStopResponseSchema),
   },
 } as const;

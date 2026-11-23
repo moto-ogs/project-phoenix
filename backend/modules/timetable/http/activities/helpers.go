@@ -5,9 +5,11 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"time"
+
+	"github.com/go-chi/render"
 
 	activityContract "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
@@ -41,6 +43,27 @@ func (rs *Resource) getStaffIDAndManagePermission(r *http.Request) (int64, bool,
 	}
 
 	return staffID, hasAdminPermission, nil
+}
+
+// activityCreator names the staff author of a new activity. A staff member
+// creates as themselves. A person of the Träger-Büro, who opened the school
+// through the Absprung without a staff record there (ADR 0084 section 5,
+// #7818), creates without one: created_by NULL already means "no staff
+// owner" on activities.groups, and admins may modify the activity anyway.
+// Every other account without a staff record is refused; a failed lookup is
+// a server error, never a refusal.
+func (rs *Resource) activityCreator(r *http.Request) (*int64, render.Renderer) {
+	staffID, found, err := rs.UserContextService.CurrentStaffID(r.Context())
+	switch {
+	case err != nil:
+		return nil, common.ErrorInternalServer(err)
+	case found:
+		return &staffID, nil
+	case sessiontoken.ClaimsFromCtx(r.Context()).ViaTraeger:
+		return nil, nil
+	default:
+		return nil, common.ErrorForbiddenWithCode(errNotStaff, common.CodeTimetableNoStaffProfile)
+	}
 }
 
 // requireActivityModification applies the same owner/supervisor/admin policy
@@ -92,21 +115,21 @@ func (rs *Resource) parseAndGetActivity(w http.ResponseWriter, r *http.Request) 
 }
 
 // newCategoryResponse converts a category model to a response object
-func newCategoryResponse(category *activityContract.Category) CategoryResponse {
+func newCategoryResponse(category *activityContract.Category) ActivityCategoryResponse {
 	// Handle nil category input
 	if category == nil {
 		slog.Default().Warn("Attempted to create CategoryResponse from nil category")
-		return CategoryResponse{
+		return ActivityCategoryResponse{
 			Name: "Unknown Category", // Provide a safe default
 		}
 	}
 
-	return CategoryResponse{
-		ID:          category.ID,
+	return ActivityCategoryResponse{
+		ID:          ident.ID(category.ID),
 		Name:        category.Name,
 		Description: category.Description,
 		Color:       category.Color,
-		ShiftTypeID: category.ShiftTypeID,
+		ShiftTypeID: (*ident.ID)(category.ShiftTypeID),
 		IsSystem:    category.IsSystem,
 		ArchivedAt:  category.ArchivedAt,
 		CreatedAt:   category.CreatedAt,
@@ -125,21 +148,21 @@ func newActivityResponse(group *activityContract.Group, enrollmentCount int) Act
 
 	// Create response with only the direct fields that are guaranteed to be safe
 	response := ActivityResponse{
-		ID:              group.ID,
+		ID:              ident.ID(group.ID),
 		Name:            group.Name,
 		MaxParticipants: group.ParticipantLimit(),
 		IsOpen:          group.IsOpen,
-		CategoryID:      group.CategoryID,
-		CreatedBy:       group.CreatedBy,
+		CategoryID:      ident.ID(group.CategoryID),
+		CreatedBy:       (*ident.ID)(group.CreatedBy),
 		EnrollmentCount: enrollmentCount,
 		CreatedAt:       group.CreatedAt,
 		UpdatedAt:       group.UpdatedAt,
-		Schedules:       []ScheduleResponse{},
+		Schedules:       []ActivityScheduleResponse{},
 	}
 
 	// Safely add optional fields with nil checks
 	if group.PlannedRoomID != nil {
-		response.PlannedRoomID = group.PlannedRoomID
+		response.PlannedRoomID = (*ident.ID)(group.PlannedRoomID)
 	}
 
 	// Add category details if available - with extra nil checks
@@ -150,7 +173,7 @@ func newActivityResponse(group *activityContract.Group, enrollmentCount int) Act
 
 	// Add schedules if available - with thorough nil checking
 	if group.Schedules != nil {
-		scheduleResponses := make([]ScheduleResponse, 0, len(group.Schedules))
+		scheduleResponses := make([]ActivityScheduleResponse, 0, len(group.Schedules))
 		for _, schedule := range group.Schedules {
 			if schedule == nil {
 				slog.Default().Warn("Nil schedule encountered", slog.Int64("group_id", group.ID))
@@ -171,28 +194,28 @@ func newActivityResponse(group *activityContract.Group, enrollmentCount int) Act
 // =============================================================================
 
 // newScheduleResponse converts a schedule model to a response object.
-func newScheduleResponse(schedule *activityContract.Schedule) ScheduleResponse {
+func newScheduleResponse(schedule *activityContract.Schedule) ActivityScheduleResponse {
 	if schedule == nil {
-		return ScheduleResponse{}
+		return ActivityScheduleResponse{}
 	}
-	return ScheduleResponse{
-		ID:              schedule.ID,
+	return ActivityScheduleResponse{
+		ID:              ident.ID(schedule.ID),
 		Weekday:         schedule.Weekday,
-		TimeframeID:     schedule.TimeframeID,
-		ActivityGroupID: schedule.ActivityGroupID,
+		TimeframeID:     (*ident.ID)(schedule.TimeframeID),
+		ActivityGroupID: ident.ID(schedule.ActivityGroupID),
 		CreatedAt:       schedule.CreatedAt,
 		UpdatedAt:       schedule.UpdatedAt,
 	}
 }
 
 // newSupervisorResponse converts a supervisor model to a response object with staff details.
-func newSupervisorResponse(supervisor *activityContract.SupervisorPlanned) SupervisorResponse {
+func newSupervisorResponse(supervisor *activityContract.SupervisorPlanned) ActivitySupervisorResponse {
 	if supervisor == nil {
-		return SupervisorResponse{}
+		return ActivitySupervisorResponse{}
 	}
-	resp := SupervisorResponse{
-		ID:        supervisor.ID,
-		StaffID:   supervisor.StaffID,
+	resp := ActivitySupervisorResponse{
+		ID:        ident.ID(supervisor.ID),
+		StaffID:   ident.ID(supervisor.StaffID),
 		IsPrimary: supervisor.IsPrimary,
 	}
 	resp.FirstName = supervisor.FirstName
@@ -204,16 +227,6 @@ func newSupervisorResponse(supervisor *activityContract.SupervisorPlanned) Super
 // DATA RETRIEVAL HELPERS
 // =============================================================================
 
-func activityGroupIDs(groups []*activityContract.Group) []int64 {
-	ids := make([]int64, 0, len(groups))
-	for _, group := range groups {
-		if group != nil {
-			ids = append(ids, group.ID)
-		}
-	}
-	return ids
-}
-
 // getEnrollmentCount returns the number of enrolled students for an activity.
 func (rs *Resource) getEnrollmentCount(ctx context.Context, activityID int64) (int, error) {
 	students, err := rs.ActivityService.GetEnrolledStudents(ctx, activityID)
@@ -221,12 +234,4 @@ func (rs *Resource) getEnrollmentCount(ctx context.Context, activityID int64) (i
 		return 0, err
 	}
 	return len(students), nil
-}
-
-// formatEndTime safely formats the end time, handling nil values
-func formatEndTime(endTime *time.Time) string {
-	if endTime == nil {
-		return ""
-	}
-	return endTime.Format("15:04")
 }

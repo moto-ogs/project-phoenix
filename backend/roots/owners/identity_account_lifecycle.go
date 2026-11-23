@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 
 	auditModels "github.com/moto-ogs/project-phoenix/modules/auditlog/records"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
@@ -12,9 +13,11 @@ import (
 	identityPorts "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 
+	enrollmentOwner "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	peoplePorts "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports"
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -76,9 +79,9 @@ func (r LifecycleRepositories) complete() bool {
 // repos (the session repositories' Lifecycle, which carries the auth event
 // ledger), the audit command, the Lehrkraft guard the role administration
 // reads, and the guardian invitation delivery and enrollment claim.
-func LifecycleDependencies(repos LifecycleRepositories, audit auditModels.Command, caregivers CaregiverProfiles, delivery identityPorts.GuardianInvitationDelivery, caterers identityPorts.CatererInvitationDelivery, enrollments identityPorts.GuardianEnrollments, logger *slog.Logger) (*identityaccessCompose.LifecycleDependencies, error) {
-	if !repos.complete() || audit == nil || !caregivers.complete() {
-		return nil, errors.New("identity access composition: every lifecycle repository and owner command, the audit command and the caregiver profiles are required")
+func LifecycleDependencies(repos LifecycleRepositories, audit auditModels.Command, caregivers CaregiverProfiles, delivery identityPorts.GuardianInvitationDelivery, caterers identityPorts.CatererInvitationDelivery, enrollments identityPorts.GuardianEnrollments, carePeriods GuardianCarePeriods, logger *slog.Logger) (*identityaccessCompose.LifecycleDependencies, error) {
+	if !repos.complete() || audit == nil || !caregivers.complete() || carePeriods == nil {
+		return nil, errors.New("identity access composition: every lifecycle repository and owner command, the audit command, the caregiver profiles and Enrollment's care periods are required")
 	}
 	if delivery == nil {
 		return nil, errors.New("identity access composition: the lifecycle needs the guardian invitation delivery")
@@ -87,7 +90,7 @@ func LifecycleDependencies(repos LifecycleRepositories, audit auditModels.Comman
 		Staff:       staffDirectory{repos: repos, caregivers: caregivers},
 		Audit:       previewAudit{events: repos.AuthEvents},
 		Passwords:   passwordPolicy{},
-		Guardians:   guardianDirectory{repos: repos},
+		Guardians:   guardianDirectory{repos: repos, carePeriods: carePeriods},
 		Delivery:    delivery,
 		Caterers:    caterers,
 		Enrollments: enrollments,
@@ -103,13 +106,13 @@ type staffDirectory struct {
 
 func personRecord(person *peopledirectory.DirectoryPersonSnapshot) identityPorts.PersonRecord {
 	return identityPorts.PersonRecord{
-		ID: person.ID, TenantID: person.TenantID, AccountID: person.AccountID,
+		ID: person.ID.Int64(), TenantID: person.TenantID.Int64(), AccountID: (*int64)(person.AccountID),
 		FirstName: person.FirstName, LastName: person.LastName, TagID: person.TagID, Deleted: person.DeletedAt != nil,
 	}
 }
 
 func staffMember(staff *peopledirectory.Staff) identityPorts.StaffMember {
-	return identityPorts.StaffMember{ID: staff.ID, TenantID: staff.GetTenantID(), PersonID: staff.PersonID, Deleted: staff.DeletedAt != nil}
+	return identityPorts.StaffMember{ID: staff.ID.Int64(), TenantID: staff.GetTenantID(), PersonID: staff.PersonID.Int64(), Deleted: staff.DeletedAt != nil}
 }
 
 func (d staffDirectory) FindStaff(ctx context.Context, staffID int64) (identityPorts.StaffMember, bool, error) {
@@ -405,7 +408,60 @@ func (a previewAudit) StaffPreviewEnded(ctx context.Context, adminAccountID int6
 	return a.events.StaffPreviewEnded(ctx, adminAccountID, previewID)
 }
 
-type guardianDirectory struct{ repos LifecycleRepositories }
+// GuardianCarePeriods is the part of Enrollment's booking projection the
+// parent step of the bulk invitation reads (#7760), each in one statement
+// for all children: the approved care periods the parents portal shows, and
+// the bookings (Care Plan) in force on a day, which the portal lists under
+// „Betreuung & Wochenplan“.
+type GuardianCarePeriods interface {
+	StudentCarePeriodsByStudentIDs(context.Context, []int64) ([]*enrollmentOwner.StudentCarePeriod, error)
+	EffectiveOfferingSelectionsAtDates(context.Context, map[int64]enrollmentOwner.Date) ([]*enrollmentOwner.RequestChildOffering, error)
+}
+
+type guardianDirectory struct {
+	repos       LifecycleRepositories
+	carePeriods GuardianCarePeriods
+}
+
+// ApprovedCarePeriods translates Enrollment's approved care periods into
+// the dates Identity & Access decides on.
+func (d guardianDirectory) ApprovedCarePeriods(ctx context.Context, studentIDs []int64) ([]identityaccess.ChildCarePeriod, error) {
+	periods, err := d.carePeriods.StudentCarePeriodsByStudentIDs(ctx, studentIDs)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]identityaccess.ChildCarePeriod, 0, len(periods))
+	for _, period := range periods {
+		if period != nil {
+			result = append(result, identityaccess.ChildCarePeriod{
+				StudentID: period.StudentID, RequestChildID: period.RequestChildID,
+				Start: calendar.Date(period.ServiceStartDate), End: calendar.Date(period.ServiceEndDate),
+			})
+		}
+	}
+	return result, nil
+}
+
+// CareBookingsInForce lists the request children with at least one booking
+// in force on day, read at that day for every child at once.
+func (d guardianDirectory) CareBookingsInForce(ctx context.Context, requestChildIDs []int64, day calendar.Date) ([]int64, error) {
+	dates := make(map[int64]enrollmentOwner.Date, len(requestChildIDs))
+	for _, id := range requestChildIDs {
+		dates[id] = enrollmentOwner.Date(day)
+	}
+	bookings, err := d.carePeriods.EffectiveOfferingSelectionsAtDates(ctx, dates)
+	if err != nil {
+		return nil, err
+	}
+	booked := make([]int64, 0, len(bookings))
+	for _, booking := range bookings {
+		if booking != nil {
+			booked = append(booked, booking.RequestChildID)
+		}
+	}
+	slices.Sort(booked)
+	return slices.Compact(booked), nil
+}
 
 func guardianProfile(profile *peopledirectory.GuardianProfileSnapshot) identityPorts.GuardianProfile {
 	result := identityPorts.GuardianProfile{
@@ -561,7 +617,11 @@ func (d guardianDirectory) FindStudents(ctx context.Context, ids []int64) (map[i
 	result := make(map[int64]identityPorts.Student, len(students))
 	for id, student := range students {
 		if student != nil {
-			result[id] = identityPorts.Student{ID: student.ID, PersonID: student.PersonID}
+			result[id] = identityPorts.Student{
+				ID: student.ID, PersonID: student.PersonID,
+				WithoutCarePlace: student.WithoutCarePlace, EnrolledUntil: student.EnrolledUntil,
+				Alumnus: student.IsAlumnus(),
+			}
 		}
 	}
 	return result, nil

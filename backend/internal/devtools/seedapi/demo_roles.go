@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The reduced roles of the demo school profile (#3469). A visitor of the
@@ -122,7 +124,7 @@ func (s *FixedSeeder) seedDemoRoles(_ context.Context, definitions ...demoRoleDe
 		}
 		var role struct {
 			Data struct {
-				ID int64 `json:"id,string"`
+				ID ident.ID `json:"id"`
 			} `json:"data"`
 		}
 		if err := json.Unmarshal(created, &role); err != nil {
@@ -131,10 +133,10 @@ func (s *FixedSeeder) seedDemoRoles(_ context.Context, definitions ...demoRoleDe
 		if role.Data.ID <= 0 {
 			return fmt.Errorf("demo role %s was created without an id", definition.Name)
 		}
-		if _, err := s.client.Put(fmt.Sprintf("/auth/roles/%d/permissions", role.Data.ID), map[string]any{"permission_ids": ids}); err != nil {
+		if err := s.grantRolePermissions(int64(role.Data.ID), ids); err != nil {
 			return fmt.Errorf("grant permissions of demo role %s: %w", definition.Name, err)
 		}
-		s.roleIDs[definition.Name] = role.Data.ID
+		s.roleIDs[definition.Name] = int64(role.Data.ID)
 	}
 	if s.verbose {
 		fmt.Printf("  ✓ %d demo roles created\n", len(definitions))
@@ -151,6 +153,37 @@ func seedRoleDefinitionsOrDemo(definitions []demoRoleDefinition) []demoRoleDefin
 	return definitions
 }
 
+// grantRolePermissions replaces the role's permissions with ids, sending the
+// version of the selection it read just before (ADR 0311).
+func (s *FixedSeeder) grantRolePermissions(roleID int64, ids []string) error {
+	version, err := s.rolePermissionsVersion(roleID)
+	if err != nil {
+		return fmt.Errorf("read permissions: %w", err)
+	}
+	_, err = s.client.Put(fmt.Sprintf("/auth/roles/%d/permissions", roleID), map[string]any{
+		"permission_ids": ids, "expected_version": version,
+	})
+	return err
+}
+
+// rolePermissionsVersion reads the version of a role's permission selection,
+// which a replacement sends back as expected_version (ADR 0311).
+func (s *FixedSeeder) rolePermissionsVersion(roleID int64) (string, error) {
+	respBody, err := s.client.Get(fmt.Sprintf("/auth/roles/%d/permission-selection", roleID))
+	if err != nil {
+		return "", err
+	}
+	var resp struct {
+		Data struct {
+			Version string `json:"version"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(respBody, &resp); err != nil {
+		return "", fmt.Errorf("parse role permissions response: %w", err)
+	}
+	return resp.Data.Version, nil
+}
+
 // fetchPermissionIDs reads the permission catalog as "resource:action" -> id.
 func (s *FixedSeeder) fetchPermissionIDs() (map[string]int64, error) {
 	respBody, err := s.client.Get("/auth/permissions")
@@ -159,9 +192,9 @@ func (s *FixedSeeder) fetchPermissionIDs() (map[string]int64, error) {
 	}
 	var resp struct {
 		Data []struct {
-			ID       int64  `json:"id,string"`
-			Resource string `json:"resource"`
-			Action   string `json:"action"`
+			ID       ident.ID `json:"id"`
+			Resource string   `json:"resource"`
+			Action   string   `json:"action"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(respBody, &resp); err != nil {
@@ -169,7 +202,7 @@ func (s *FixedSeeder) fetchPermissionIDs() (map[string]int64, error) {
 	}
 	ids := make(map[string]int64, len(resp.Data))
 	for _, permission := range resp.Data {
-		ids[permission.Resource+":"+permission.Action] = permission.ID
+		ids[permission.Resource+":"+permission.Action] = int64(permission.ID)
 	}
 	return ids, nil
 }

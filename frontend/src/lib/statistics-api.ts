@@ -1,132 +1,36 @@
-import { apiErrorFromResponse, transportFetch } from "./api-error";
-// Statistik (#2606): client for GET /api/statistics/report and the export
-// URL. The proxy routes forward to the Go backend, which enforces
-// config:read + users:read, validates the window and writes the audit row.
+// Statistik (#2606): client for GET /api/statistics/report and its export.
+// The Go backend enforces config:read + users:read, validates the window and
+// writes the audit row.
+import { bffFile, bffJson } from "./bff-fetch";
+import type * as statisticsContract from "./contract/statistics.generated";
 
-export interface StatisticsStudentRow {
-  student_id: string;
-  first_name: string;
-  last_name: string;
-  school_class: string;
-  group_id?: string;
-  group_name: string;
-  present_days: number;
-  sick_days: number;
-  excused_days: number;
-  unexplained_days: number;
-  attendance_rate: number | null;
-}
+type WithLists<T, K extends keyof T> = Omit<T, K> & {
+  [P in K]: NonNullable<T[P]>;
+};
 
-export interface StatisticsGroupRow {
-  group_id: string;
-  name: string;
-  student_count: number;
-  present_days: number;
-  sick_days: number;
-  excused_days: number;
-  unexplained_days: number;
-  attendance_rate: number | null;
-}
+/** Ein Wochentag der Belegung nach Uhrzeit (#4764), Go schickt `slots` als null. */
+export type StatisticsOccupancyWeekday = WithLists<
+  statisticsContract.occupancyWeekdayResponse,
+  "slots"
+>;
 
-export interface StatisticsRoomRow {
-  room_id: string;
-  name: string;
-  capacity?: number;
-  days_used: number;
-  distinct_students: number;
-  student_minutes: number;
-  peak_occupancy: number;
-  peak_utilization_percent: number | null;
-}
+/** Belegung nach Uhrzeit, die Listen als leere Liste statt null. */
+export type StatisticsOccupancy = Omit<
+  statisticsContract.occupancyResponse,
+  "weekdays"
+> & { weekdays: StatisticsOccupancyWeekday[] };
 
-/** Kursteilnahme je Kurs (#2891). */
-export interface StatisticsCourseRow {
-  course_id: string;
-  name: string;
-  category_name: string;
-  /** 0 = keine Teilnehmergrenze. */
-  max_participants: number;
-  held_instances: number;
-  cancelled_instances: number;
-  student_count: number;
-  present_days: number;
-  absent_days: number;
-  open_days: number;
-  participation_rate: number | null;
-  occupancy_percent: number | null;
-}
+type ReportLists =
+  "students" | "groups" | "rooms" | "courses" | "course_students";
 
-/** Eine Zeile je Kind und Kurs. */
-export interface StatisticsCourseStudentRow {
-  student_id: string;
-  first_name: string;
-  last_name: string;
-  school_class: string;
-  group_name: string;
-  course_id: string;
-  course_name: string;
-  present_days: number;
-  absent_days: number;
-  open_days: number;
-  participation_rate: number | null;
-}
-
-/** Eine halbe Stunde der Belegung nach Uhrzeit (#4764). */
-export interface StatisticsOccupancySlot {
-  /** Beginn und Ende als "HH:MM" (Berliner Zeit). */
-  start: string;
-  end: string;
-  /** null, wenn für diesen Wochentag keine Krankmeldungen mehr gespeichert sind. */
-  planned_average: number | null;
-  planned_max: number | null;
-  /** null, wenn für diesen Wochentag keine Anwesenheiten mehr gespeichert sind. */
-  actual_average: number | null;
-  actual_max: number | null;
-}
-
-export interface StatisticsOccupancyWeekday {
-  /** ISO: 1 = Montag … 7 = Sonntag. */
-  weekday: number;
-  plan_days: number;
-  actual_days: number;
-  slots: StatisticsOccupancySlot[];
-}
-
-export interface StatisticsOccupancy {
-  slot_minutes: number;
-  weekdays: StatisticsOccupancyWeekday[];
-  untimed_plan_days: number;
-  actual_data_days: number;
-  actual_data_from: string;
-  plan_data_days: number;
-  plan_data_from: string;
-}
-
-export interface StatisticsReport {
-  from: string;
-  to: string;
-  care_days: number;
-  excluded_days: {
-    total: number;
-    public_holidays: number;
-    closing_days: number;
-    holiday_periods: number;
-  };
-  totals: StatisticsGroupRow;
-  students: StatisticsStudentRow[];
-  groups: StatisticsGroupRow[];
-  rooms: StatisticsRoomRow[];
-  room_history_disabled: boolean;
-  room_data_days: number;
-  room_data_from: string;
-  courses: StatisticsCourseRow[];
-  course_students: StatisticsCourseStudentRow[];
-  course_totals: StatisticsCourseRow;
-  course_data_days: number;
-  course_data_from: string;
-  /** Nur vorhanden, wenn der Abschnitt "occupancy" angefragt wurde. */
-  occupancy?: StatisticsOccupancy;
-}
+/**
+ * Der Bericht, die Listen als leere Liste statt null; `occupancy` nur, wenn
+ * der Abschnitt "occupancy" angefragt wurde.
+ */
+export type StatisticsReport = Omit<
+  WithLists<statisticsContract.reportResponse, ReportLists>,
+  "occupancy"
+> & { occupancy?: StatisticsOccupancy };
 
 /** Abschnitte, die der Bericht berechnen soll; leer = alle. */
 export type StatisticsReportSection =
@@ -155,16 +59,25 @@ export const EXPORT_FILENAME_STEM: Record<StatisticsExportSection, string> = {
   occupancy: "belegung-nach-uhrzeit",
 };
 
-function buildParams(
-  fromISO: string,
-  toISO: string,
-  filter: StatisticsFilter,
-): URLSearchParams {
-  const params = new URLSearchParams({ from: fromISO, to: toISO });
-  for (const id of filter.groupIds ?? []) params.append("group_id", id);
-  for (const name of filter.schoolClasses ?? [])
-    params.append("school_class", name);
-  return params;
+function filterQuery(fromISO: string, toISO: string, filter: StatisticsFilter) {
+  return {
+    from: fromISO,
+    to: toISO,
+    group_id: filter.groupIds ?? [],
+    school_class: filter.schoolClasses ?? [],
+  };
+}
+
+function occupancyWithLists(
+  occupancy: statisticsContract.occupancyResponse,
+): StatisticsOccupancy {
+  return {
+    ...occupancy,
+    weekdays: (occupancy.weekdays ?? []).map((weekday) => ({
+      ...weekday,
+      slots: weekday.slots ?? [],
+    })),
+  };
 }
 
 export async function fetchStatisticsReport(
@@ -173,33 +86,41 @@ export async function fetchStatisticsReport(
   filter: StatisticsFilter = {},
   sections: readonly StatisticsReportSection[] = [],
 ): Promise<StatisticsReport> {
-  const params = buildParams(fromISO, toISO, filter);
-  for (const section of sections) params.append("section", section);
-  const response = await transportFetch(
-    `/api/statistics/report?${params.toString()}`,
-    { cache: "no-store" },
-  );
-  if (!response.ok) {
-    throw await apiErrorFromResponse(
-      response,
-      `statistics request failed (${response.status})`,
-    );
-  }
-  const body = (await response.json()) as { data: StatisticsReport };
-  return body.data;
+  const report = await bffJson("tenant", "GET /api/statistics/report", {
+    query: { ...filterQuery(fromISO, toISO, filter), section: sections },
+    errorMessage: "statistics request failed",
+  });
+  const { occupancy, ...rest } = report;
+  return {
+    ...rest,
+    students: report.students ?? [],
+    groups: report.groups ?? [],
+    rooms: report.rooms ?? [],
+    courses: report.courses ?? [],
+    course_students: report.course_students ?? [],
+    ...(occupancy && { occupancy: occupancyWithLists(occupancy) }),
+  };
 }
 
-export function statisticsExportUrl(
+/**
+ * The export file of one section; the caller reads its body and its
+ * `Content-Disposition`.
+ */
+export function fetchStatisticsExport(
   fromISO: string,
   toISO: string,
   format: StatisticsExportFormat,
   filter: StatisticsFilter = {},
   section: StatisticsExportSection = "attendance",
-): string {
-  const params = buildParams(fromISO, toISO, filter);
-  params.set("format", format);
-  params.set("section", section);
-  return `/api/statistics/export?${params.toString()}`;
+): Promise<Response> {
+  return bffFile("tenant", "GET /api/statistics/export", {
+    query: {
+      ...filterQuery(fromISO, toISO, filter),
+      format,
+      section: [section],
+    },
+    errorMessage: "statistics export failed",
+  });
 }
 
 /** Renders a percent value the way the tables show it ("87,5 %"). */

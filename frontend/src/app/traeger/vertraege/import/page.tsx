@@ -8,7 +8,7 @@
 
 import { CheckCircle, Download } from "lucide-react";
 import { useSession } from "next-auth/react";
-import { useCallback, useRef, useState } from "react";
+import { useState } from "react";
 import {
   CONTRACT_IMPORT_SAMPLE,
   contractCountLabel,
@@ -19,6 +19,7 @@ import { CareContractImportLogCard } from "~/components/traeger/care-contract-im
 import { CareContractImportMappingCard } from "~/components/traeger/care-contract-import-mapping-card";
 import { CareContractImportPreviewCard } from "~/components/traeger/care-contract-import-preview-card";
 import { importFormatLabel } from "~/components/traeger/sepa-import-format";
+import { useCsvFilePreview } from "~/components/traeger/use-csv-file-preview";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
@@ -54,6 +55,13 @@ const INFO =
 
 const VERTRAEGE = "/traeger/vertraege";
 const BEDINGUNGEN = "/traeger/vertraege/bedingungen";
+const NACHPFLEGE = "/traeger/vertraege/nachpflege";
+const VERKNUEPFEN = "/traeger/vertraege/verknuepfen";
+
+const readContractImport = (
+  file: File,
+  mapping: ContractImportMapping | null,
+): Promise<ContractImportResult> => previewContractImport({ file, mapping });
 
 function errorText(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
@@ -84,7 +92,7 @@ function doneDescription(done: ContractImportResult): string {
     withoutEmail > 0
       ? ` ${contractCountLabel(withoutEmail)} ohne Mail-Adresse: Diesen Familien gibst du die Rechnungen auf Papier.`
       : "";
-  return `${parts.join(", ")}.${paper} Du findest die Verträge unter Verträge mit dem Stand „Aktiv“.`;
+  return `${parts.join(", ")}.${paper} Du findest die Verträge unter Verträge mit dem Stand „Aktiv“. Als Nächstes verknüpfst du sie mit der Kinderakte des Kindes.`;
 }
 
 export default function TraegerContractImportPage() {
@@ -100,55 +108,27 @@ export default function TraegerContractImportPage() {
     "die Liste der Importe",
   );
   const invalidateFamily = useInvalidateFamily();
-  const [file, setFile] = useState<File | null>(null);
-  const [result, setResult] = useState<ContractImportResult | null>(null);
-  const [verified, setVerified] = useState(false);
-  const [reading, setReading] = useState(false);
+  const {
+    file,
+    result,
+    setResult,
+    verified,
+    reading,
+    read,
+    choose: chooseFile,
+    restart: restartFile,
+  } = useCsvFilePreview<ContractImportMapping, ContractImportResult>({
+    preview: readContractImport,
+    logEvent: "contract_import_preview_failed",
+    maxBytes: MAX_CONTRACT_IMPORT_FILE_BYTES,
+  });
   const [applying, setApplying] = useState(false);
   const [done, setDone] = useState<ContractImportResult | null>(null);
-  const { show, showMessage } = useApiErrorDisplay();
+  const { show } = useApiErrorDisplay();
   const { success } = useToast();
-  // Only the answer to the newest look at the file counts.
-  const request = useRef(0);
-
-  const read = useCallback(
-    async (chosen: File, mapping: ContractImportMapping | null) => {
-      const id = ++request.current;
-      setVerified(false);
-      setReading(true);
-      try {
-        const next = await previewContractImport({ file: chosen, mapping });
-        if (id === request.current) {
-          setResult(next);
-          setVerified(true);
-        }
-      } catch (err) {
-        logger.error("contract_import_preview_failed", {
-          error: errorText(err),
-        });
-        if (id === request.current) void show(err, { object: "die Datei" });
-      } finally {
-        if (id === request.current) setReading(false);
-      }
-    },
-    [show],
-  );
 
   const choose = (chosen: File) => {
-    if (!/\.(csv|txt)$/i.test(chosen.name)) {
-      showMessage(
-        "Bitte wähle eine CSV-Datei. Eine Excel-Datei speichere vorher als CSV.",
-      );
-      return;
-    }
-    if (chosen.size > MAX_CONTRACT_IMPORT_FILE_BYTES) {
-      showMessage("Die Datei ist zu groß. Erlaubt sind 2 MB.");
-      return;
-    }
-    setFile(chosen);
-    setResult(null);
-    setDone(null);
-    void read(chosen, null);
+    if (chooseFile(chosen)) setDone(null);
   };
 
   const remap = (mapping: ContractImportMapping) => {
@@ -191,12 +171,8 @@ export default function TraegerContractImportPage() {
   };
 
   const restart = () => {
-    request.current++;
-    setFile(null);
-    setResult(null);
-    setVerified(false);
+    restartFile();
     setDone(null);
-    setReading(false);
   };
 
   const step = !result ? 0 : result.unmapped.length > 0 ? 1 : 2;
@@ -226,6 +202,14 @@ export default function TraegerContractImportPage() {
                   tooltip="Öffnet die Liste aller Verträge."
                 >
                   Zu den Verträgen
+                </ButtonLink>
+                <ButtonLink
+                  href={traegerPath(VERKNUEPFEN)}
+                  variant="outline"
+                  size="md"
+                  tooltip="Öffnet das Verknüpfen der Verträge mit der Kinderakte."
+                >
+                  Mit Kinderakten verknüpfen
                 </ButtonLink>
                 <Button
                   type="button"
@@ -379,7 +363,23 @@ export default function TraegerContractImportPage() {
       {logError ? (
         <LoadErrorAlert error={logError} />
       ) : log ? (
-        <CareContractImportLogCard entries={log} />
+        <CareContractImportLogCard
+          entries={log}
+          // Imported contracts know only what the file had; the originals
+          // complete them (#7767).
+          action={
+            log.length > 0 ? (
+              <ButtonLink
+                href={traegerPath(NACHPFLEGE)}
+                variant="outline"
+                size="md"
+                tooltip="Öffnet die Seite, um Parteien, Abschlussart und Abschlussdatum zu ergänzen."
+              >
+                Vertragsangaben nachpflegen
+              </ButtonLink>
+            ) : undefined
+          }
+        />
       ) : null}
     </TenantPage>
   );

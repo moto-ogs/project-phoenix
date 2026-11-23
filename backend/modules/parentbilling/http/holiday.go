@@ -15,6 +15,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	capability "github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -36,7 +37,7 @@ type HolidayResource struct {
 // up in the request's Träger transaction; refusals arrive in this owner's
 // vocabulary.
 type HolidayPlaceChanges interface {
-	RebookHolidayChild(ctx context.Context, reviewer capability.HolidayReviewer, periodID, registrationID, childID int64, bookings []capability.HolidayBookingChoice) (capability.HolidayPlaceChange, error)
+	RebookHolidayChild(ctx context.Context, reviewer capability.HolidayReviewer, periodID, registrationID, childID int64, expectedVersion string, bookings []capability.HolidayBookingChoice) (capability.HolidayPlaceChange, error)
 	SetHolidayWeekCapacity(ctx context.Context, reviewer capability.HolidayReviewer, periodID, weekID int64, capacity *int) (capability.HolidayPlaceChange, error)
 }
 
@@ -93,7 +94,7 @@ func (rs *HolidayResource) QuoteRouter() chi.Router {
 // one per child (#7007). An empty body confirms without any of them.
 type HolidayConfirmRequest struct {
 	BenefitsExemption  bool                                       `json:"benefits_exemption"`
-	CostBearerID       int64                                      `json:"cost_bearer_id"`
+	CostBearerID       ident.ID                                   `json:"cost_bearer_id"`
 	DebtorNumber       string                                     `json:"debtor_number"`
 	FamilyDebtorNumber string                                     `json:"family_debtor_number"`
 	ChildDebtorNumbers []capability.HolidayChildDebtorNumberInput `json:"child_debtor_numbers"`
@@ -181,8 +182,8 @@ func (rs *HolidayResource) setChildDebtorNumbers(w http.ResponseWriter, r *http.
 }
 
 type holidayQuoteBookingRequest struct {
-	WeekID      int64           `json:"week_id"`
-	TimeModelID int64           `json:"time_model_id"`
+	WeekID      ident.ID        `json:"week_id"`
+	TimeModelID ident.ID        `json:"time_model_id"`
 	Days        []calendar.Date `json:"days"`
 	Lunch       bool            `json:"lunch"`
 }
@@ -281,14 +282,14 @@ func (rs *HolidayResource) confirm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	confirmation, err := rs.contributions.ConfirmHolidayRegistration(r.Context(), reviewer, periodID, registrationID,
-		req.BenefitsExemption, req.CostBearerID, req.DebtorNumber, req.FamilyDebtorNumber, req.ChildDebtorNumbers)
+		req.BenefitsExemption, req.CostBearerID.Int64(), req.DebtorNumber, req.FamilyDebtorNumber, req.ChildDebtorNumbers)
 	if err != nil {
 		tenant.MarkRollback(r.Context())
 		renderHolidayError(w, r, err)
 		return
 	}
 	common.Respond(w, r, http.StatusOK, HolidayConfirmationResponse{
-		RegistrationID: confirmation.RegistrationID, Status: confirmation.Status, Contribution: holidayContributionResponse(confirmation.Contribution),
+		RegistrationID: ident.ID(confirmation.RegistrationID), Status: confirmation.Status, Contribution: holidayContributionResponse(confirmation.Contribution),
 	}, "Holiday registration confirmed successfully")
 }
 
@@ -313,6 +314,9 @@ func (rs *HolidayResource) cancel(w http.ResponseWriter, r *http.Request) {
 // bookings of the child, one time model per week.
 type HolidayRebookingRequest struct {
 	Bookings []capability.HolidayBookingChoice `json:"bookings"`
+	// ExpectedVersion is the version of the registration the Büro read; a
+	// registration changed since is refused (ADR 0311).
+	ExpectedVersion string `json:"expected_version"`
 }
 
 // Bind accepts the body; Enrollment validates the bookings.
@@ -337,7 +341,7 @@ func (rs *HolidayResource) rebookChild(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	change, err := rs.places.RebookHolidayChild(r.Context(), reviewer, periodID, registrationID, childID, req.Bookings)
+	change, err := rs.places.RebookHolidayChild(r.Context(), reviewer, periodID, registrationID, childID, req.ExpectedVersion, req.Bookings)
 	if err != nil {
 		tenant.MarkRollback(r.Context())
 		renderHolidayError(w, r, err)

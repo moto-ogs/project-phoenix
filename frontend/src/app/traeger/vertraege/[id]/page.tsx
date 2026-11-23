@@ -6,8 +6,17 @@
 // behält sein PDF und lässt sich erneut senden. Ein abgeschlossener Vertrag
 // (#4680) zeigt, wann und wie er zustande kam; erneut senden lässt er sich mit demselben PDF.
 
+import { FamilyBillingStatusCard } from "~/components/traeger/family-billing-status-card";
 import { SepaMandateStatusCard } from "~/components/traeger/sepa-mandate-status-card";
-import { Download, RotateCw, Send, Trash2 } from "lucide-react";
+import {
+  Download,
+  Link2,
+  RotateCw,
+  Send,
+  Trash2,
+  Unlink,
+  Unplug,
+} from "lucide-react";
 import {
   useParams,
   usePathname,
@@ -24,9 +33,12 @@ import {
   childName,
   formatConclusion,
   formatService,
+  knownConclusionAt,
   serviceDays,
 } from "~/components/traeger/care-contract-format";
 import { CareContractChangeCard } from "~/components/traeger/care-contract-change-card";
+import { CareContractCorrectionsCard } from "~/components/traeger/care-contract-corrections-card";
+import { CareContractChildLinkModal } from "~/components/traeger/care-contract-child-link-modal";
 import {
   CONTRACT_DELIVERY_SECTION_ID,
   CONTRACT_DETAIL_TABS,
@@ -43,6 +55,7 @@ import {
 import {
   CareContractVersions,
   plannedVersion,
+  plannedVersionText,
 } from "~/components/traeger/care-contract-versions";
 import { CareContractSignatureCard } from "~/components/traeger/care-contract-signature-card";
 import {
@@ -86,6 +99,7 @@ import {
   formatDate,
 } from "~/lib/date-helpers";
 import { mailStatusCopy } from "~/lib/email-delivery-status";
+import { ApiError, wireErrorCode } from "~/lib/api-error";
 import { downloadBlob } from "~/lib/file-download";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
@@ -100,10 +114,17 @@ import {
   sendCareContracts,
   resendCareContract,
 } from "~/lib/traeger-care-contracts-api";
+import { unlinkContractChild } from "~/lib/traeger-contract-child-links-api";
+import { unbindContractEnrollment } from "~/lib/traeger-contract-enrollments-api";
 import { traegerPath } from "~/lib/traeger-url";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
+import { labelOf } from "~/lib/label-of";
 
 const logger = createLogger({ component: "TraegerVertragPage" });
+
+/** Was die Seite ist und was man dort zuerst tut (#7595). */
+const CONTRACT_INFO =
+  "Hier siehst du den Vertrag eines Kindes. Prüfe im Reiter „Vertrag“ zuerst die „Gebuchte Betreuung“, den „Beginn“ und den „Beitrag im Monat“. Im Reiter „Unterschrift und Versand“ siehst du, ob die Eltern unterschrieben haben.";
 
 const LIST_HREF = traegerPath("/traeger/vertraege");
 
@@ -113,6 +134,7 @@ export default function TraegerVertragPage() {
     <Suspense
       fallback={
         <TenantPage
+          info={CONTRACT_INFO}
           title="Vertrag"
           back
           backHref={LIST_HREF}
@@ -180,6 +202,15 @@ function TraegerVertragView() {
   const [discarding, setDiscarding] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [confirmingSend, setConfirmingSend] = useState(false);
+  const [linkingChild, setLinkingChild] = useState(false);
+  // The child record the dialog was opened for: the confirmation removes
+  // this link, not one a colleague stored meanwhile.
+  const [confirmUnlink, setConfirmUnlink] = useState<string | null>(null);
+  const [unlinking, setUnlinking] = useState(false);
+  // The enrollment the dialog was opened for (ADR 0309, „Der Weg zurück“):
+  // the confirmation takes off this binding, not one made meanwhile.
+  const [confirmUnbind, setConfirmUnbind] = useState<string | null>(null);
+  const [unbinding, setUnbinding] = useState(false);
   const actionError = useApiErrorDisplay();
   const discardErrors = useApiFormError();
   const recipientForm = useRef<HTMLFormElement>(null);
@@ -195,6 +226,9 @@ function TraegerVertragView() {
     if (refused) {
       setRecipientEmail("");
       setConfirmDiscard(false);
+      setLinkingChild(false);
+      setConfirmUnlink(null);
+      setConfirmUnbind(null);
     }
   }
 
@@ -232,6 +266,9 @@ function TraegerVertragView() {
   // After a write on a card: the contract, and the list with its state.
   const afterCardWrite = async () => {
     void invalidateFamily(traegerContractKeys.listFamily);
+    // A link or its removal changes which children an imported contract
+    // covers in „Verträge erstellen“.
+    void invalidateFamily(traegerContractKeys.candidates());
     await mutate();
   };
 
@@ -316,6 +353,72 @@ function TraegerVertragView() {
     setSending(false);
   };
 
+  const unlinkChild = async () => {
+    // The child record the office saw when it opened the dialog.
+    const studentId = confirmUnlink;
+    if (!studentId) return;
+    setUnlinking(true);
+    try {
+      await unlinkContractChild(id, studentId);
+    } catch (err) {
+      setUnlinking(false);
+      if (
+        err instanceof ApiError &&
+        (err.code === wireErrorCode("care_contract.child_link_changed") ||
+          err.code === wireErrorCode("care_contract.child_link_bound"))
+      ) {
+        // Expected refusals: another child record is linked by now, or the
+        // contract was bound to its enrollment meanwhile. Show the contract
+        // as it is, so the office decides again.
+        void actionError.show(err, { object: "die Verknüpfung" });
+        setConfirmUnlink(null);
+        await afterCardWrite();
+        return;
+      }
+      logger.error("traeger_care_contract_unlink_child_failed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      void actionError.show(err, { object: "die Verknüpfung" });
+      return;
+    }
+    setConfirmUnlink(null);
+    setUnlinking(false);
+    success("Die Verknüpfung mit der Kinderakte ist gelöst.");
+    await afterCardWrite();
+  };
+
+  const unbindEnrollment = async () => {
+    // The enrollment the office saw when it opened the dialog.
+    const requestChildId = confirmUnbind;
+    if (!requestChildId) return;
+    setUnbinding(true);
+    try {
+      await unbindContractEnrollment(id, requestChildId);
+    } catch (err) {
+      setUnbinding(false);
+      if (
+        err instanceof ApiError &&
+        err.code === wireErrorCode("care_contract.enrollment_binding_changed")
+      ) {
+        // Expected: the contract is no longer bound to this enrollment.
+        // Show it as it is now, so the office decides again.
+        void actionError.show(err, { object: "die Bindung" });
+        setConfirmUnbind(null);
+        await afterCardWrite();
+        return;
+      }
+      logger.error("traeger_care_contract_unbind_failed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      void actionError.show(err, { object: "die Bindung" });
+      return;
+    }
+    setConfirmUnbind(null);
+    setUnbinding(false);
+    success("Die Bindung an die Anmeldung ist gelöst.");
+    await afterCardWrite();
+  };
+
   const download = async () => {
     try {
       const file = await downloadCareContract(id);
@@ -355,9 +458,17 @@ function TraegerVertragView() {
     ? contractSendBlockedReason(lastMail, isDraft)
     : undefined;
   const party = contract?.parties[0];
-  const planned = contract
+  const comingVersion = contract
     ? plannedVersion(contract.versions, today)
     : undefined;
+  // A contract that ends before the coming version starts never gets it.
+  const planned =
+    comingVersion &&
+    contract?.status === "gekuendigt" &&
+    contract.endsOn &&
+    contract.endsOn < comingVersion.effectiveFrom
+      ? undefined
+      : comingVersion;
   // An active or ended contract shows its versions, so the office sees where
   // an approved change will appear; a draft has only its first version.
   const showVersions =
@@ -419,6 +530,41 @@ function TraegerVertragView() {
       onClick: () => void download(),
     });
   }
+  // Only an imported contract is linked by hand (ADR 0307); one from an
+  // application has the child of its application.
+  if (contract?.imported && !contract.studentId) {
+    headMenu.push({
+      label: "Mit Kinderakte verknüpfen",
+      description:
+        "Zeigt Vertrag und Kinderakte zum Vergleich, dann verknüpfst du.",
+      icon: <Link2 className="h-4 w-4" aria-hidden="true" />,
+      onClick: () => setLinkingChild(true),
+    });
+  }
+  // A bound contract keeps its child record (ADR 0309): its link comes off
+  // only after the binding.
+  if (
+    contract?.imported &&
+    contract.followsBookings &&
+    contract.requestChildId
+  ) {
+    headMenu.push({
+      label: "Bindung an die Anmeldung lösen",
+      description:
+        "moto fragt vorher nach. Die Anmeldung bleibt an der Schule.",
+      icon: <Unplug className="h-4 w-4" aria-hidden="true" />,
+      onClick: () => setConfirmUnbind(contract?.requestChildId ?? null),
+    });
+  }
+  if (contract?.imported && contract.studentId && !contract.followsBookings) {
+    headMenu.push({
+      label: "Verknüpfung lösen",
+      description:
+        "moto fragt vorher nach, dann gehört der Vertrag zu keiner Kinderakte.",
+      icon: <Unlink className="h-4 w-4" aria-hidden="true" />,
+      onClick: () => setConfirmUnlink(contract?.studentId ?? null),
+    });
+  }
   if (isDraft) {
     headMenu.push({
       label: "Entwurf verwerfen",
@@ -431,6 +577,7 @@ function TraegerVertragView() {
 
   return (
     <TenantPage
+      info={CONTRACT_INFO}
       title={contract ? childName(contract) : "Vertrag"}
       leading={<ConceptIconTile concept={careContractsConcept} size="page" />}
       back
@@ -459,7 +606,7 @@ function TraegerVertragView() {
         <>
           {contract ? (
             <StatusBadge
-              label={CONTRACT_STATUS_LABELS[contract.status]}
+              label={labelOf(CONTRACT_STATUS_LABELS, contract.status, "–")}
               tone={contractStatusTone(contract)}
             />
           ) : null}
@@ -553,6 +700,68 @@ function TraegerVertragView() {
               Eine gesendete Mail lässt sich nicht zurückholen.
             </p>
           </ConfirmationModal>
+          {contract?.imported ? (
+            <CareContractChildLinkModal
+              contractId={contract.id}
+              isOpen={linkingChild}
+              onClose={() => setLinkingChild(false)}
+              onLinked={() => {
+                setLinkingChild(false);
+                success("Der Vertrag ist jetzt mit der Kinderakte verknüpft.");
+                void afterCardWrite();
+              }}
+            />
+          ) : null}
+          <ConfirmationModal
+            isOpen={confirmUnlink !== null}
+            title="Verknüpfung lösen?"
+            confirmText="Verknüpfung lösen"
+            confirmVariant="danger"
+            confirmTooltip="Löst die Verknüpfung sofort, sonst ändert sich nichts."
+            isConfirmLoading={unlinking}
+            loadingText="Wird gelöst …"
+            onClose={() => setConfirmUnlink(null)}
+            onConfirm={() => void unlinkChild()}
+          >
+            <p className="text-sm text-gray-700">
+              {confirmUnlink
+                ? `Der Vertrag ist dann nicht mehr mit der Kinderakte Nr. ${confirmUnlink} verknüpft.`
+                : "Der Vertrag ist dann mit keiner Kinderakte mehr verknüpft."}{" "}
+              Sonst ändert sich nichts: Vertrag, Eltern und Beitrag bleiben.
+              Schon ausgestellte Rechnungen bleiben, wie sie sind. Eltern
+              bekommen keine Nachricht.
+            </p>
+          </ConfirmationModal>
+          <ConfirmationModal
+            isOpen={confirmUnbind !== null}
+            title="Bindung an die Anmeldung lösen?"
+            icon={<Unplug className="h-5 w-5" aria-hidden="true" />}
+            confirmText="Bindung lösen"
+            confirmVariant="warning"
+            confirmTooltip="Löst die Bindung sofort. Die Anmeldung bleibt an der Schule."
+            isConfirmLoading={unbinding}
+            loadingText="Wird gelöst …"
+            onClose={() => setConfirmUnbind(null)}
+            onConfirm={() => void unbindEnrollment()}
+          >
+            <div className="space-y-3 text-sm text-gray-700">
+              <p>
+                Der Vertrag folgt dann nicht mehr den Buchungen der Anmeldung.
+                Ändert die Schule eine Buchung, entsteht keine neue
+                Vertragsversion mehr.
+              </p>
+              <p>
+                Die Anmeldung und ihre Buchungen bleiben an der Schule. Braucht
+                das Kind sie nicht, nimmt die Schule die Buchungen heraus.
+                Versionen, die schon entstanden sind, bleiben.
+              </p>
+              <p>
+                Danach kannst du die Verknüpfung mit der Kinderakte lösen, oder
+                du bindest den Vertrag über „Anmeldungen nachtragen“ wieder.
+                Eltern bekommen keine Nachricht.
+              </p>
+            </div>
+          </ConfirmationModal>
           <ConfirmDeleteModal
             isOpen={confirmDiscard}
             title="Entwurf verwerfen?"
@@ -578,7 +787,7 @@ function TraegerVertragView() {
           {planned ? (
             <Alert
               type="info"
-              message={`Ab ${formatDate(planned.effectiveFrom)} gilt Version ${planned.number}. Eine Änderung der Betreuung ist freigegeben. Was sich ändert, steht unter „Versionen“.`}
+              message={plannedVersionText(planned)}
               action={
                 <ContractSectionJump
                   targetId={CONTRACT_VERSIONS_SECTION_ID}
@@ -608,6 +817,7 @@ function TraegerVertragView() {
                     </DataField>
                   ) : null}
                   <DataField label="Kind">{childName(contract)}</DataField>
+                  <DataField label="Vertrag Nr.">{contract.id}</DataField>
                   <DataField label="Geboren am">
                     {contract.version.childBirthDate
                       ? formatDate(contract.version.childBirthDate)
@@ -628,6 +838,28 @@ function TraegerVertragView() {
                   <DataField label="Beitrag im Monat">
                     {contract.feeText}
                   </DataField>
+                  {contract.imported ? (
+                    <DataField label="Kinderakte">
+                      <ChildRecordValue
+                        studentId={contract.studentId}
+                        onLink={() => setLinkingChild(true)}
+                      />
+                    </DataField>
+                  ) : null}
+                  {contract.imported && contract.followsBookings ? (
+                    <DataField label="Anmeldung">
+                      <span className="flex flex-col items-start gap-1.5">
+                        <StatusBadge
+                          tone="green"
+                          label="Anmeldung nachgetragen"
+                        />
+                        <span className="text-sm font-normal text-gray-600">
+                          Der Vertrag folgt jetzt den Buchungen der Anmeldung an
+                          der Schule.
+                        </span>
+                      </span>
+                    </DataField>
+                  ) : null}
                 </DataGrid>
               </SectionCard>
               <SectionCard
@@ -658,7 +890,13 @@ function TraegerVertragView() {
                 </DataGrid>
               </SectionCard>
               <SectionCard concept={parentsConcept} title="Eltern">
-                {party ? (
+                {contract.parties.length > 1 ? (
+                  <DataGrid>
+                    <DataField label="Vertrag mit" fullWidth>
+                      <ContractPartyList parties={contract.parties} />
+                    </DataField>
+                  </DataGrid>
+                ) : party ? (
                   <DataGrid>
                     {/* „Vertragspartner“ names the Träger's side on this
                         page; the family's side is named by what it is. */}
@@ -682,7 +920,27 @@ function TraegerVertragView() {
                   </p>
                 )}
               </SectionCard>
-              {party?.email ? (
+              {contract.corrections.length > 0 ? (
+                <CareContractCorrectionsCard
+                  corrections={contract.corrections}
+                />
+              ) : null}
+              {/* How the family pays is set here before the first invoice
+                  (#7770); a mandate alone does not choose the debit. Also
+                  for an imported contract without a party: it is a family
+                  of its own. Not on a draft, which can be discarded with
+                  what hangs on it, and not on a contract that is over: the
+                  family's running contract carries it, and the retention
+                  moves it to the family's next contract (#7862). */}
+              {isDraft ||
+              contract.status === "beendet" ||
+              contract.status === "widerrufen" ||
+              (contract.endsOn && contract.endsOn < today) ? null : (
+                <FamilyBillingStatusCard contractId={contract.id} />
+              )}
+              {/* A mandate hangs on its contract; discarding a draft
+                  would take it along, so a draft gets none (#7862). */}
+              {party?.email && !isDraft ? (
                 <SepaMandateStatusCard contractId={contract.id} />
               ) : null}
             </>
@@ -855,7 +1113,7 @@ function TraegerVertragView() {
                 <CareContractNoticeCard
                   contractId={contract.id}
                   status={contract.status}
-                  concludedAt={contract.concluded.at}
+                  concludedAt={knownConclusionAt(contract.concluded)}
                   onChanged={() => void afterCardWrite()}
                 />
               ) : null}
@@ -1100,6 +1358,74 @@ function StatusNotice({
     );
   }
   return null;
+}
+
+/**
+ * Several parties of one contract (#7767), each with its address and
+ * whether a parents account is linked. One party keeps its own fields.
+ */
+function ContractPartyList({
+  parties,
+}: Readonly<{ parties: CareContractDetail["parties"] }>) {
+  return (
+    <ul className="divide-y divide-gray-100">
+      {parties.map((entry, n) => (
+        <li
+          // Two parties may share a name; the place keeps them apart.
+          key={`${n}-${entry.firstName}-${entry.lastName}`}
+          className="py-2 first:pt-0 last:pb-0"
+        >
+          <span className="block">
+            {`${entry.firstName} ${entry.lastName}`.trim() || "–"}
+          </span>
+          <span className="block text-sm font-normal text-gray-500">
+            <span className="wrap-anywhere">
+              {entry.email || "Keine E-Mail-Adresse"}
+            </span>
+            {` · ${entry.hasAccount ? "Konto verknüpft" : "Kein Konto verknüpft"}`}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
+ * Ob ein importierter Vertrag mit der Kinderakte verknüpft ist (#7760), und
+ * was ohne Verknüpfung fehlt.
+ */
+function ChildRecordValue({
+  studentId,
+  onLink,
+}: Readonly<{ studentId: string | null; onLink: () => void }>) {
+  if (studentId) {
+    return (
+      <span className="flex flex-wrap items-center gap-2">
+        <StatusBadge tone="green" label="Verknüpft" />
+        <span className="tabular-nums">Nr. {studentId}</span>
+      </span>
+    );
+  }
+  return (
+    <span className="flex flex-col items-start gap-1.5">
+      <StatusBadge tone="warning" label="Nicht verknüpft" />
+      <span className="text-sm font-normal text-gray-600">
+        Ohne Kinderakte fehlen der Soll-Ist-Vergleich, die genaue Zuordnung des
+        Essens und Rechnungen im Elternpostfach.
+      </span>
+      <Button
+        type="button"
+        variant="outline"
+        size="compact"
+        className="mt-1"
+        onClick={onLink}
+        tooltip="Zeigt Vertrag und Kinderakte zum Vergleich, dann verknüpfst du."
+      >
+        <Link2 className="mr-1.5 h-4 w-4" aria-hidden="true" />
+        Mit Kinderakte verknüpfen
+      </Button>
+    </span>
+  );
 }
 
 function StatuteValue({

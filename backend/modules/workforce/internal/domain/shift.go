@@ -79,15 +79,19 @@ type StaffShift struct {
 	// SeriesOccurrenceDate is the recurrence slot a series row materialized
 	// for; it stays put when the row is moved. Empty for standalone rows.
 	SeriesOccurrenceDate string
-	Cancelled            bool
-	ChangeReason         *string
-	OriginShiftID        *int64
-	SickAbsenceID        *int64
-	CreatedBy            int64
-	UpdatedBy            *int64
-	PlannedByTraeger     bool
-	CreatedAt            time.Time
-	UpdatedAt            time.Time
+	// SeriesStartTime and SeriesEndTime are the times planned by the linked
+	// series. They are empty for standalone shifts and reads without a series.
+	SeriesStartTime  string
+	SeriesEndTime    string
+	Cancelled        bool
+	ChangeReason     *string
+	OriginShiftID    *int64
+	SickAbsenceID    *int64
+	CreatedBy        int64
+	UpdatedBy        *int64
+	PlannedByTraeger bool
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
 }
 
 // StaffShiftOrderField names a column a shift listing may be ordered by.
@@ -106,24 +110,27 @@ type StaffShiftOrder struct {
 }
 
 // StaffShiftFilter narrows a shift listing; every set field is combined with
-// AND. From/To select rows with From <= date <= To. A non-nil StaffIDs,
-// Dates or OriginShiftIDs that is empty matches nothing, because a caller
-// that resolved an empty set expects an empty answer, not every row.
+// AND. From/To select rows with From <= date <= To. IncludeSeriesOccurrenceDate
+// also selects a row materialized for that recurrence slot, even if it was
+// moved outside the date selection. A non-nil StaffIDs, Dates or OriginShiftIDs
+// that is empty matches nothing, because a caller that resolved an empty set
+// expects an empty answer, not every row.
 type StaffShiftFilter struct {
-	StaffID        int64
-	StaffIDs       []int64
-	From           string
-	To             string
-	Dates          []string
-	SeriesID       int64
-	OriginShiftID  int64
-	OriginShiftIDs []int64
-	SickAbsenceID  *int64
-	Cancelled      *bool
-	Detached       *bool
-	Order          []StaffShiftOrder
-	Limit          int
-	Offset         int
+	StaffID                     int64
+	StaffIDs                    []int64
+	From                        string
+	To                          string
+	Dates                       []string
+	IncludeSeriesOccurrenceDate string
+	SeriesID                    int64
+	OriginShiftID               int64
+	OriginShiftIDs              []int64
+	SickAbsenceID               *int64
+	Cancelled                   *bool
+	Detached                    *bool
+	Order                       []StaffShiftOrder
+	Limit                       int
+	Offset                      int
 }
 
 // Validate rejects malformed dates in the filter before they reach a query.
@@ -132,6 +139,9 @@ func (f StaffShiftFilter) Validate() error {
 		return err
 	}
 	if err := validateShiftDate(f.To, "to"); err != nil {
+		return err
+	}
+	if err := validateShiftDate(f.IncludeSeriesOccurrenceDate, "series occurrence date"); err != nil {
 		return err
 	}
 	for _, date := range f.Dates {
@@ -168,6 +178,7 @@ type StaffShiftSeries struct {
 	IncludeSchoolBreaks bool
 	CreatedBy           int64
 	UpdatedBy           *int64
+	PlannedByTraeger    bool
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
 }
@@ -175,12 +186,13 @@ type StaffShiftSeries struct {
 // StaffShiftSeriesException is one deliberately removed occurrence of a
 // series: re-plans and splits never regenerate the date.
 type StaffShiftSeriesException struct {
-	ID        int64
-	TenantID  int64
-	SeriesID  int64
-	Date      string
-	CreatedBy int64
-	CreatedAt time.Time
+	ID               int64
+	TenantID         int64
+	SeriesID         int64
+	Date             string
+	CreatedBy        int64
+	PlannedByTraeger bool
+	CreatedAt        time.Time
 }
 
 // ShiftType is a tenant-defined label and color for planned shifts.
@@ -260,7 +272,7 @@ func ValidateStaffShiftSeries(series StaffShiftSeries) error {
 	if err := validateSeriesValidity(series.ValidFrom, series.ValidUntil); err != nil {
 		return err
 	}
-	if series.CreatedBy <= 0 {
+	if series.CreatedBy <= 0 && !series.PlannedByTraeger {
 		return invalidSeries("created by is required")
 	}
 	return nil
@@ -307,13 +319,17 @@ func validateSeriesValidity(validFromValue, validUntilValue string) error {
 	return nil
 }
 
-// ValidateStaffShiftSeriesException requires a series and a calendar day.
+// ValidateStaffShiftSeriesException requires a series, a calendar day and
+// an author: a staff member or the mark of the Träger-Büro.
 func ValidateStaffShiftSeriesException(exception StaffShiftSeriesException) error {
 	if exception.SeriesID <= 0 {
 		return invalidSeries("series ID is required")
 	}
 	if exception.Date == "" {
 		return invalidSeries("date is required")
+	}
+	if exception.CreatedBy <= 0 && !exception.PlannedByTraeger {
+		return invalidSeries("created by is required")
 	}
 	_, err := parseShiftDate(exception.Date, "date", invalidSeries)
 	return err

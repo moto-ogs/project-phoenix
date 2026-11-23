@@ -102,29 +102,41 @@ const sharedFile = "shared.generated.ts"
 const portalsFile = "portals.generated.ts"
 
 // portalTable writes the routes each portal may reach: the allowlist of a
-// portal's proxy. A route that names no portal is in no list.
+// portal's proxy. A route that names no portal is in no list. A route its
+// portal's own route file serves stands in routeFileRoutes instead, never
+// in the allowlist (#7808).
 func portalTable(resources map[string][]Route) string {
 	byPortal := map[string][]string{}
+	byRouteFile := map[string][]string{}
 	var out strings.Builder
 	out.WriteString(tsHeader)
 	for _, resource := range sortedKeys(resources) {
 		fmt.Fprintf(&out, "import { routes as %s } from \"./%s.generated\";\n", resourceAlias(resource), resource)
 		for _, route := range resources[resource] {
+			table := byPortal
+			if route.RouteFile != "" {
+				table = byRouteFile
+			}
 			for _, portal := range route.Portals {
-				byPortal[portal] = append(byPortal[portal], fmt.Sprintf("%s[%q]", resourceAlias(resource), route.Key()))
+				table[portal] = append(table[portal], fmt.Sprintf("%s[%q]", resourceAlias(resource), route.Key()))
 			}
 		}
 	}
-	out.WriteString("\n/** The registered routes of each portal, by the scope of its session token. */\nexport const portalRoutes = {\n")
+	writeTable(&out, "The registered routes of each portal, by the scope of its session token.", "portalRoutes", byPortal)
+	writeTable(&out, "The routes each portal's own route files serve; its proxy serves none of them.", "routeFileRoutes", byRouteFile)
+	return out.String()
+}
+
+func writeTable(out *strings.Builder, doc, name string, byPortal map[string][]string) {
+	fmt.Fprintf(out, "\n/** %s */\nexport const %s = {\n", doc, name)
 	for _, portal := range sortedKeys(byPortal) {
-		fmt.Fprintf(&out, "  %s: [\n", portal)
+		fmt.Fprintf(out, "  %s: [\n", portal)
 		for _, entry := range byPortal[portal] {
-			fmt.Fprintf(&out, "    %s,\n", entry)
+			fmt.Fprintf(out, "    %s,\n", entry)
 		}
 		out.WriteString("  ],\n")
 	}
 	out.WriteString("} as const;\n")
-	return out.String()
 }
 
 // resourceAlias turns parent-me into parentMe.
@@ -133,7 +145,25 @@ func resourceAlias(resource string) string {
 	for i := 1; i < len(parts); i++ {
 		parts[i] = upperFirst(parts[i])
 	}
-	return strings.Join(parts, "")
+	alias := strings.Join(parts, "")
+	// A resource such as /api/import names a reserved word, which the import
+	// of portals.generated.ts cannot bind.
+	if reservedWords[alias] {
+		return alias + "Routes"
+	}
+	return alias
+}
+
+// reservedWords are the ECMAScript words an import binding may not take.
+var reservedWords = map[string]bool{
+	"await": true, "break": true, "case": true, "catch": true, "class": true, "const": true,
+	"continue": true, "debugger": true, "default": true, "delete": true, "do": true, "else": true,
+	"enum": true, "export": true, "extends": true, "false": true, "finally": true, "for": true,
+	"function": true, "if": true, "implements": true, "import": true, "in": true, "instanceof": true,
+	"interface": true, "let": true, "new": true, "null": true, "package": true, "private": true,
+	"protected": true, "public": true, "return": true, "static": true, "super": true, "switch": true,
+	"this": true, "throw": true, "true": true, "try": true, "typeof": true, "var": true,
+	"void": true, "while": true, "with": true, "yield": true,
 }
 
 func routeSchemas(r Route) []Schema {
@@ -212,9 +242,6 @@ func (w *tsWriter) file(routes []Route, shared *tsWriter) string {
 		w.object(&body, w.byName[name])
 		delete(w.pending, name)
 	}
-	for _, route := range routes {
-		w.query(&body, route)
-	}
 	if routes != nil {
 		body.WriteString("\nexport const routes = {\n")
 		for _, route := range routes {
@@ -288,36 +315,39 @@ func (w *tsWriter) object(out *strings.Builder, object Object) {
 	out.WriteString("});\n")
 }
 
-func (w *tsWriter) query(out *strings.Builder, route Route) {
+// writeQuery emits metadata, not validators: the proxy only reads the keys.
+func writeQuery(out *strings.Builder, route Route) {
 	if len(route.Query) == 0 {
 		return
 	}
-	fmt.Fprintf(out, "\n/** Query of %s */\nexport interface %sQuery {\n", route.Key(), upperFirst(operationID(route)))
+	out.WriteString("    query: {\n")
 	for _, param := range route.Query {
-		t := map[string]string{"string": "string", "int": "number", "bool": "boolean", "date": "string", "id": "string"}[param.Kind]
-		if len(param.Values) > 0 {
-			t = strings.Join(strings.Split(quoted(param.Values), ", "), " | ")
-		}
+		fmt.Fprintf(out, "      %q: { kind: %q", param.Name, param.Kind)
 		if param.Repeated {
-			if strings.Contains(t, " ") {
-				t = "(" + t + ")"
-			}
-			t += "[]"
+			out.WriteString(", repeated: true")
 		}
-		fmt.Fprintf(out, "  %s?: %s;\n", param.Name, t)
+		if len(param.Values) > 0 {
+			fmt.Fprintf(out, ", values: [%s]", quoted(param.Values))
+		}
+		out.WriteString(" },\n")
 	}
-	out.WriteString("}\n")
+	out.WriteString("    },\n")
+}
+
+// envelopeHelper names the runtime helper of the route's answer.
+func envelopeHelper(route Route) string {
+	switch {
+	case route.File:
+		return "fileAnswer"
+	case route.NoData:
+		return "noData"
+	case route.Paginated:
+		return "paginated"
+	}
+	return "success"
 }
 
 func (w *tsWriter) route(out *strings.Builder, route Route) {
-	wrap := "success"
-	if route.Paginated {
-		wrap = "paginated"
-	}
-	if route.NoData {
-		wrap = "noData"
-	}
-	w.helpers[wrap] = true
 	fmt.Fprintf(out, "  %q: {\n    method: %q,\n    pattern: %q,\n    portals: [%s],\n", route.Key(), route.Method, route.Pattern, quoted(route.Portals))
 	if route.Deprecated {
 		out.WriteString("    deprecated: true,\n")
@@ -325,32 +355,76 @@ func (w *tsWriter) route(out *strings.Builder, route Route) {
 	if route.NoRetryAfterRenewal != "" {
 		fmt.Fprintf(out, "    noRetryAfterRenewal: %q,\n", route.NoRetryAfterRenewal)
 	}
+	if route.NoCommit != "" {
+		fmt.Fprintf(out, "    noCommit: %q,\n", route.NoCommit)
+	}
 	if route.MaxBodyBytes > 0 {
 		fmt.Fprintf(out, "    maxBodyBytes: %d,\n", route.MaxBodyBytes)
 	}
-	if len(route.Query) > 0 {
-		names := make([]string, len(route.Query))
-		for i, param := range route.Query {
-			names[i] = param.Name
-		}
-		fmt.Fprintf(out, "    query: [%s],\n", quoted(names))
+	if route.TooLargeCode != "" {
+		fmt.Fprintf(out, "    tooLargeCode: %q,\n", route.TooLargeCode)
+	}
+	if route.PublicFile != "" {
+		fmt.Fprintf(out, "    publicFile: %q,\n", route.PublicFile)
+	}
+	if route.PublicUpload != "" {
+		fmt.Fprintf(out, "    publicUpload: %q,\n", route.PublicUpload)
+	}
+	if route.FileCache != "" {
+		fmt.Fprintf(out, "    fileCache: %q,\n", route.FileCache)
+	}
+	if route.ConditionalGet {
+		out.WriteString("    conditionalGet: true,\n")
+	}
+	if route.PrivateCache {
+		out.WriteString("    privateCache: true,\n")
+	}
+	writeRouteFileTraits(out, route)
+	writeQuery(out, route)
+	if route.Multipart {
+		w.helpers["multipart"] = true
+		out.WriteString("    request: multipart,\n")
 	}
 	if route.Request != nil {
 		w.helpers["requestBody"] = true
 		fmt.Fprintf(out, "    request: requestBody<%s>(),\n", w.tsType(*route.Request, true))
 	}
+	w.response(out, route)
+	out.WriteString("  },\n")
+}
+
+// writeRouteFileTraits writes the traits of a route its portal's own route file
+// serves (#7808).
+func writeRouteFileTraits(out *strings.Builder, route Route) {
+	if route.RouteFile != "" {
+		fmt.Fprintf(out, "    routeFile: %q,\n", route.RouteFile)
+	}
+	if route.Plain {
+		out.WriteString("    plain: true,\n")
+	}
+}
+
+// response writes the route's answer: a decoder, the decoders of its
+// variants, or the marker of an answer without data.
+func (w *tsWriter) response(out *strings.Builder, route Route) {
+	if route.Plain {
+		// The data is the whole body.
+		fmt.Fprintf(out, "    response: %s,\n", w.zod(*route.Response))
+		return
+	}
+	wrap := envelopeHelper(route)
+	w.helpers[wrap] = true
 	if route.Variants != nil {
 		fmt.Fprintf(out, "    variantParam: %q,\n    defaultVariant: %q,\n    response: {\n", route.Variants.QueryParam, route.Variants.Default)
 		for _, value := range sortedKeys(route.Variants.Cases) {
 			fmt.Fprintf(out, "      %s: %s(%s),\n", value, wrap, w.zod(route.Variants.Cases[value]))
 		}
 		out.WriteString("    },\n")
-	} else if route.NoData {
-		out.WriteString("    response: noData,\n")
+	} else if route.NoData || route.File {
+		fmt.Fprintf(out, "    response: %s,\n", wrap)
 	} else {
 		fmt.Fprintf(out, "    response: %s(%s),\n", wrap, w.zod(*route.Response))
 	}
-	out.WriteString("  },\n")
 }
 
 func optionalMark(optional bool) string {
@@ -358,16 +432,6 @@ func optionalMark(optional bool) string {
 		return "?"
 	}
 	return ""
-}
-
-func operationID(route Route) string {
-	id := strings.ToLower(route.Method)
-	for _, part := range strings.FieldsFunc(route.Pattern, func(r rune) bool { return !unicode.IsLetter(r) && !unicode.IsDigit(r) }) {
-		if part != "api" {
-			id += upperFirst(part)
-		}
-	}
-	return id
 }
 
 func upperFirst(s string) string { return strings.ToUpper(s[:1]) + s[1:] }
@@ -402,17 +466,11 @@ func sortedKeys[V any](m map[string]V) []string {
 }
 
 // tsType is the type a decoder hands out or, for a request, the type the
-// client sends. An identifier is a string except where Go reads only a JSON
-// number.
+// client sends. An identifier is a string both ways.
 func (w *tsWriter) tsType(s Schema, request bool) string {
 	var t string
 	switch s.Kind {
-	case KindLegacyID:
-		t = "string"
-		if request {
-			t = "number"
-		}
-	case KindString, KindDate, KindInstant, KindClock, KindID, KindLaxID:
+	case KindString, KindDate, KindInstant, KindClock, KindID:
 		t = "string"
 	case KindBool:
 		t = "boolean"
@@ -433,6 +491,10 @@ func (w *tsWriter) tsType(s Schema, request bool) string {
 		t = "unknown"
 	case KindRef:
 		t = s.Ref
+	}
+	if s.LegacyJSON {
+		w.helpers["type LegacyJSON"] = true
+		return t + " | LegacyJSON"
 	}
 	if s.Nullable {
 		t += " | null"
@@ -461,8 +523,6 @@ func (w *tsWriter) field(s Schema) string {
 		z = helper("num")
 	case KindID:
 		z = helper("int64String")
-	case KindLegacyID, KindLaxID:
-		z = helper("int64StringOrNumber")
 	case KindDate:
 		z = helper("calendarDate")
 	case KindInstant:
@@ -486,6 +546,9 @@ func (w *tsWriter) field(s Schema) string {
 	if s.Nullable {
 		z = helper("nullable") + "(" + z + ")"
 	}
+	if s.LegacyJSON {
+		return helper("legacyJSON") + "(" + z + ")"
+	}
 	return z
 }
 
@@ -508,8 +571,6 @@ func (w *tsWriter) zod(s Schema) string {
 		z = "z.number()"
 	case KindID:
 		z = helper("int64String")
-	case KindLegacyID, KindLaxID:
-		z = helper("int64StringOrNumber")
 	case KindDate:
 		z = helper("calendarDate")
 	case KindInstant:

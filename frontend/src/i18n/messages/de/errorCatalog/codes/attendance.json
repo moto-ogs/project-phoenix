@@ -1,4 +1,5 @@
 {
+  "checkin_staff_profile_required": "Kinder ein- und auschecken kann nur das Personal der Schule. Dein Konto hat an dieser Schule kein Personalprofil.",
   "log_disabled": "Der Anwesenheitsverlauf ist an dieser Schule ausgeschaltet.",
   "web_disabled": "{object} ist hier zurzeit nicht verfügbar. Bitte frage deine Ansprechperson."
 }

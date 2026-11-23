@@ -1,17 +1,22 @@
 package timetablehttp
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/uptrace/bun"
 
 	timetableModule "github.com/moto-ogs/project-phoenix/modules/timetable"
 	timetableCompose "github.com/moto-ogs/project-phoenix/modules/timetable/compose"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
 )
@@ -53,7 +58,7 @@ func (s *offeringGapsSetup) createKlassenRandstunde(t *testing.T, class string, 
 	}
 	w := doTemplateJSON(t, s.router, http.MethodPost, "/templates", body)
 	require.Equal(t, http.StatusCreated, w.Code, "body=%s", w.Body.String())
-	return decodeTemplateData[createTemplateResponse](t, w).TemplateID
+	return (decodeTemplateData[createTemplateResponse](t, w).TemplateID).Int64()
 }
 
 // classDayRandstunde books Randstunde (pickup 12:45) as a school-day
@@ -91,7 +96,7 @@ func TestOfferingGapsClassDay(t *testing.T) {
 	gaps := s.listGaps(t, period.ID)
 	require.Len(t, gaps, 1, "%+v", gaps)
 	assert.Equal(t, offeringGapResponse{
-		Offering:     templateRosterMaintenanceOfferingResponse{ID: rosterReviewOfferingID, Name: "Randstunde"},
+		Offering:     templateRosterMaintenanceOfferingResponse{ID: ident.ID(rosterReviewOfferingID), Name: "Randstunde"},
 		StudentCount: 5, SchoolClasses: []string{"1a", "3a"}, Weekdays: []int{1, 2, 3}, AcknowledgedClasses: []string{},
 		NewSeriesClasses: []string{"1a", "3a"}, NewSeriesPlansCovered: true,
 	}, gaps[0], "without pickup times the Klassen-Randstunde covers 1a on its own days only")
@@ -106,7 +111,7 @@ func TestOfferingGapsClassDay(t *testing.T) {
 	gaps = s.listGaps(t, period.ID)
 	require.Len(t, gaps, 1, "%+v", gaps)
 	assert.Equal(t, offeringGapResponse{
-		Offering:     templateRosterMaintenanceOfferingResponse{ID: rosterReviewOfferingID, Name: "Randstunde"},
+		Offering:     templateRosterMaintenanceOfferingResponse{ID: ident.ID(rosterReviewOfferingID), Name: "Randstunde"},
 		StudentCount: 3, SchoolClasses: []string{"1a"}, Weekdays: []int{2},
 		Acknowledged: true, AcknowledgedClasses: []string{"1a", "3a"},
 		NewSeriesClasses: []string{"1a"},
@@ -169,7 +174,7 @@ func TestOfferingGapsOverlappingPeriodsFollowTheMaterializedPeriod(t *testing.T)
 	require.Equal(t, http.StatusCreated, w.Code, "body=%s", w.Body.String())
 	templateID := decodeTemplateData[createTemplateResponse](t, w).TemplateID
 	_, err := s.owner.CreateStudentEnrollment(s.ctx, timetableModule.StudentEnrollmentInput{
-		StudentID: child[0], ActivityGroupID: templateID, ValidFrom: rosterReviewMonday.AddDays(-10).String(), CalendarPeriodID: &halfYear.ID,
+		StudentID: child[0], ActivityGroupID: templateID.Int64(), ValidFrom: rosterReviewMonday.AddDays(-10).String(), CalendarPeriodID: &halfYear.ID,
 	})
 	require.NoError(t, err)
 
@@ -184,7 +189,7 @@ func TestOfferingGapsOverlappingPeriodsFollowTheMaterializedPeriod(t *testing.T)
 	assert.Equal(t, []int{1, 3}, gaps[0].Weekdays)
 
 	_, err = s.owner.CreateStudentEnrollment(s.ctx, timetableModule.StudentEnrollmentInput{
-		StudentID: child[0], ActivityGroupID: templateID, ValidFrom: rosterReviewMonday.AddDays(-10).String(),
+		StudentID: child[0], ActivityGroupID: templateID.Int64(), ValidFrom: rosterReviewMonday.AddDays(-10).String(),
 	})
 	require.NoError(t, err)
 	assert.Empty(t, s.listGaps(t, halfYear.ID), "a row without a period pin plans the child in the school year too")
@@ -236,4 +241,68 @@ func TestOfferingGapsClassDayQueryBudget(t *testing.T) {
 	t.Logf("query budget: 3 templates → %d queries, 8 templates → %d queries", small, large)
 	assert.Equal(t, small, large, "query count must not grow with the number of Regeltermine")
 	querybudgets.AssertQueryBudget(t, "api.timetable.offering_gaps.class_day", counter.Measurement(counter.Queries()))
+}
+
+// Activity exception fixtures for the offering-gap tests.
+
+// createTestActivityException is a local fixture; it inserts the schedule.activity_exceptions
+// row with raw SQL so the test does not depend on the storage model type.
+func createTestActivityException(
+	t *testing.T,
+	db *bun.DB,
+	activityGroupID int64,
+	date calendar.Date,
+	excType string,
+	startHHMM, endHHMM string,
+	reason string,
+) int64 {
+	t.Helper()
+	return insertTestActivityException(t, db, activityGroupID, date, excType, startHHMM, endHHMM, reason, nil)
+}
+
+// insertTestActivityException writes one schedule.activity_exceptions row;
+// empty strings and a nil room store NULL.
+func insertTestActivityException(
+	t *testing.T,
+	db *bun.DB,
+	activityGroupID int64,
+	date calendar.Date,
+	excType string,
+	startHHMM, endHHMM string,
+	reason string,
+	roomID *int64,
+) int64 {
+	t.Helper()
+	var start, end, reasonValue any
+	if startHHMM != "" {
+		start = parseHHMM(t, startHHMM).Format("15:04:05")
+	}
+	if endHHMM != "" {
+		end = parseHHMM(t, endHHMM).Format("15:04:05")
+	}
+	if reason != "" {
+		reasonValue = reason
+	}
+	var room any
+	if roomID != nil {
+		room = *roomID
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	var id int64
+	err := db.NewRaw(`INSERT INTO schedule.activity_exceptions
+		(tenant_id, activity_group_id, exception_date, exception_type, start_time, end_time, room_id, reason)
+		VALUES (?, ?, ?, ?, ?::time, ?::time, ?, ?) RETURNING id`,
+		testpkg.Tenant(t), activityGroupID, date.String(), excType, start, end, room, reasonValue,
+	).Scan(ctx, &id)
+	require.NoError(t, err, "failed to insert activity_exception fixture")
+	return id
+}
+
+func parseHHMM(t *testing.T, hhmm string) time.Time {
+	t.Helper()
+	parsed, err := time.Parse("15:04", hhmm)
+	require.NoError(t, err)
+	return time.Date(2000, 1, 1, parsed.Hour(), parsed.Minute(), 0, 0, time.UTC)
 }

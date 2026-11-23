@@ -15,9 +15,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/api/testutil/routetest"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	identityoperator "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/operator"
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 // invitationMockService implements OperatorAccess —
@@ -654,7 +656,7 @@ func TestValidateInvitation_Success(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
-	resource.ValidateInvitation(rr, req)
+	testutil.ServeAtRoute(rr, req, "/operator/auth/invitations/validate", resource.ValidateInvitation)
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 
@@ -678,7 +680,7 @@ func TestValidateInvitation_EmptyToken(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
-	resource.ValidateInvitation(rr, req)
+	testutil.ServeAtRoute(rr, req, "/operator/auth/invitations/validate", resource.ValidateInvitation)
 
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
@@ -694,7 +696,7 @@ func TestValidateInvitation_InvalidTokenFormat(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
-	resource.ValidateInvitation(rr, req)
+	testutil.ServeAtRoute(rr, req, "/operator/auth/invitations/validate", resource.ValidateInvitation)
 
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 	assert.Contains(t, rr.Body.String(), "invalid token format")
@@ -715,7 +717,7 @@ func TestValidateInvitation_TokenNotFound(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
-	resource.ValidateInvitation(rr, req)
+	testutil.ServeAtRoute(rr, req, "/operator/auth/invitations/validate", resource.ValidateInvitation)
 
 	// Public endpoint: should return 400, not 404 (anti-enumeration)
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
@@ -732,7 +734,7 @@ func TestValidateInvitation_InvalidJSON(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
-	resource.ValidateInvitation(rr, req)
+	testutil.ServeAtRoute(rr, req, "/operator/auth/invitations/validate", resource.ValidateInvitation)
 
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
@@ -769,7 +771,7 @@ func TestAcceptInvitation_Success(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
-	resource.AcceptInvitation(rr, req)
+	testutil.ServeAtRoute(rr, req, "/operator/auth/invitations/accept", resource.AcceptInvitation)
 
 	assert.Equal(t, http.StatusCreated, rr.Code)
 
@@ -778,7 +780,7 @@ func TestAcceptInvitation_Success(t *testing.T) {
 	require.NoError(t, err)
 
 	data := response["data"].(map[string]interface{})
-	assert.Equal(t, float64(100), data["id"])
+	assert.Equal(t, int64(100), testpkg.JSONID(t, data["id"]))
 	assert.Equal(t, "new@example.com", data["email"])
 }
 
@@ -798,7 +800,7 @@ func TestAcceptInvitation_EmptyToken(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
-	resource.AcceptInvitation(rr, req)
+	testutil.ServeAtRoute(rr, req, "/operator/auth/invitations/accept", resource.AcceptInvitation)
 
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
@@ -819,7 +821,7 @@ func TestAcceptInvitation_InvalidTokenFormat(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
-	resource.AcceptInvitation(rr, req)
+	testutil.ServeAtRoute(rr, req, "/operator/auth/invitations/accept", resource.AcceptInvitation)
 
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
@@ -840,7 +842,7 @@ func TestAcceptInvitation_EmptyDisplayName(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
-	resource.AcceptInvitation(rr, req)
+	testutil.ServeAtRoute(rr, req, "/operator/auth/invitations/accept", resource.AcceptInvitation)
 
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 	assert.Contains(t, rr.Body.String(), "display_name is required")
@@ -862,7 +864,7 @@ func TestAcceptInvitation_EmptyPassword(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
-	resource.AcceptInvitation(rr, req)
+	testutil.ServeAtRoute(rr, req, "/operator/auth/invitations/accept", resource.AcceptInvitation)
 
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 	assert.Contains(t, rr.Body.String(), "password is required")
@@ -884,7 +886,7 @@ func TestAcceptInvitation_PasswordMismatch(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
-	resource.AcceptInvitation(rr, req)
+	testutil.ServeAtRoute(rr, req, "/operator/auth/invitations/accept", resource.AcceptInvitation)
 
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 	assert.Contains(t, rr.Body.String(), "passwords do not match")
@@ -910,7 +912,7 @@ func TestAcceptInvitation_TokenNotFound(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
-	resource.AcceptInvitation(rr, req)
+	testutil.ServeAtRoute(rr, req, "/operator/auth/invitations/accept", resource.AcceptInvitation)
 
 	// Public endpoint: generic error message
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
@@ -937,7 +939,7 @@ func TestAcceptInvitation_EmailAlreadyExists(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
-	resource.AcceptInvitation(rr, req)
+	testutil.ServeAtRoute(rr, req, "/operator/auth/invitations/accept", resource.AcceptInvitation)
 
 	// Public endpoint: same generic message for both not-found and email-exists
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
@@ -964,7 +966,7 @@ func TestAcceptInvitation_InvalidData(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
-	resource.AcceptInvitation(rr, req)
+	testutil.ServeAtRoute(rr, req, "/operator/auth/invitations/accept", resource.AcceptInvitation)
 
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
@@ -989,7 +991,7 @@ func TestAcceptInvitation_ServiceError(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
-	resource.AcceptInvitation(rr, req)
+	testutil.ServeAtRoute(rr, req, "/operator/auth/invitations/accept", resource.AcceptInvitation)
 
 	assert.Equal(t, http.StatusInternalServerError, rr.Code)
 }
@@ -1004,7 +1006,7 @@ func TestAcceptInvitation_InvalidJSON(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
-	resource.AcceptInvitation(rr, req)
+	testutil.ServeAtRoute(rr, req, "/operator/auth/invitations/accept", resource.AcceptInvitation)
 
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
@@ -1045,7 +1047,7 @@ func TestValidateInvitationRequest_Bind_WhitespaceToken(t *testing.T) {
 func TestAcceptInvitationRequest_Bind_Valid(t *testing.T) {
 	t.Parallel()
 
-	req := &identityoperator.AcceptInvitationRequest{
+	req := &identityoperator.OperatorAcceptInvitationRequest{
 		Token:           "550e8400-e29b-41d4-a716-446655440000",
 		DisplayName:     "  New Op  ",
 		Password:        "SecureP@ss1",
@@ -1060,7 +1062,7 @@ func TestAcceptInvitationRequest_Bind_Valid(t *testing.T) {
 func TestAcceptInvitationRequest_Bind_WhitespaceDisplayName(t *testing.T) {
 	t.Parallel()
 
-	req := &identityoperator.AcceptInvitationRequest{
+	req := &identityoperator.OperatorAcceptInvitationRequest{
 		Token:           "550e8400-e29b-41d4-a716-446655440000",
 		DisplayName:     "   ",
 		Password:        "SecureP@ss1",

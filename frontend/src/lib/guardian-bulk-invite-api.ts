@@ -1,21 +1,21 @@
-import {
-  apiErrorFromBody,
-  apiErrorFromResponse,
-  transportFetch,
-} from "~/lib/api-error";
+import { ApiError } from "~/lib/api-error";
+import { bffJson } from "~/lib/bff-fetch";
+import { knownEnum } from "~/lib/contract/known-enum";
 import { createLogger } from "~/lib/logger";
 
 const logger = createLogger({ component: "GuardianBulkInviteAPI" });
 
-type BulkInviteProblemReason =
-  | "missing_email"
-  | "invalid_email"
-  | "duplicate_email"
-  | "email_not_queued"
-  | "address_blocked"
-  | "provider_blocked"
-  | "block_unreadable"
-  | "mail_delayed";
+const PROBLEM_REASONS = [
+  "missing_email",
+  "invalid_email",
+  "duplicate_email",
+  "email_not_queued",
+  "address_blocked",
+  "provider_blocked",
+  "block_unreadable",
+  "mail_delayed",
+] as const;
+type BulkInviteProblemReason = (typeof PROBLEM_REASONS)[number];
 
 export interface BulkInviteProblem {
   guardianProfileId: string;
@@ -34,63 +34,52 @@ export interface BulkInviteResult {
   skippedActive: number;
   skippedOpen: number;
   skippedRestricted: number;
+  /** Eltern mit Konto, die die Nachricht bekommen (#7760); nur mit
+   *  `notifyActive`, in der Vorschau: bekämen. */
+  notified: number;
+  /** Eltern mit Konto, an die die Nachricht für jedes Kind schon verschickt
+   *  wurde (eingeplant, nicht unbedingt angekommen). */
+  alreadyNotified: number;
+  /** Ausgewählte Kinder von Eltern mit Konto ohne heute gebuchte Betreuung: keine
+   *  Nachricht nennt sie. */
+  withoutVisibleCare: number;
   problems: BulkInviteProblem[];
-}
-
-interface BackendBulkInviteResult {
-  dry_run: boolean;
-  invited: number;
-  linked_existing_account: number;
-  resent: number;
-  skipped_active: number;
-  skipped_open: number;
-  skipped_restricted: number;
-  problems: Array<{
-    guardian_profile_id: string;
-    guardian_name: string;
-    student_names: string[];
-    reason: BulkInviteProblemReason;
-  }>;
-}
-
-interface BulkInviteResponse {
-  status?: string;
-  data?: BackendBulkInviteResult;
+  /** Set on a dry run: the run that confirms it sends it back (ADR 0311). */
+  fingerprint: string;
 }
 
 /**
  * Invite the guardians of many children to the parents portal in one run
  * (#3378). `dryRun` only counts and mails nobody; `resendOpen` also mails
  * guardians whose invitation is still open and restarts its expiry.
+ * `notifyActive` also tells parents who already use the parents portal,
+ * once per child, that the child's care is visible there (#7760).
  */
 export async function bulkInviteGuardians(
   studentIds: string[],
-  options: { dryRun: boolean; resendOpen: boolean },
+  options: {
+    dryRun: boolean;
+    resendOpen: boolean;
+    notifyActive: boolean;
+    /** The fingerprint of the dry run a real run confirms. */
+    expectedFingerprint?: string;
+  },
 ): Promise<BulkInviteResult> {
-  const response = await transportFetch("/api/guardians/bulk-invite", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      student_ids: studentIds.map((id) => Number.parseInt(id, 10)),
+  const data = await bffJson("tenant", "POST /api/guardians/bulk-invite", {
+    body: {
+      student_ids: studentIds,
       dry_run: options.dryRun,
       resend_open: options.resendOpen,
-    }),
+      notify_active: options.notifyActive,
+      expected_fingerprint: options.expectedFingerprint,
+    },
+    errorMessage: "Failed to bulk invite guardians",
+  }).catch((error: unknown) => {
+    logger.warn("bulk_invite_guardians_failed", {
+      status: error instanceof ApiError ? error.status : undefined,
+    });
+    throw error;
   });
-
-  if (!response.ok) {
-    logger.warn("bulk_invite_guardians_failed", { status: response.status });
-    throw await apiErrorFromResponse(
-      response,
-      `Failed to bulk invite guardians: ${response.status}`,
-    );
-  }
-
-  const result = (await response.json()) as BulkInviteResponse;
-  if (!result.data) {
-    // A 200 without data is a broken answer, so it counts as a server error.
-    throw apiErrorFromBody("Failed to bulk invite guardians", 500, result);
-  }
-  const data = result.data;
   return {
     dryRun: data.dry_run,
     invited: data.invited,
@@ -99,11 +88,16 @@ export async function bulkInviteGuardians(
     skippedActive: data.skipped_active,
     skippedOpen: data.skipped_open,
     skippedRestricted: data.skipped_restricted,
-    problems: data.problems.map((problem) => ({
+    notified: data.notified,
+    alreadyNotified: data.already_notified,
+    withoutVisibleCare: data.without_visible_care,
+    problems: (data.problems ?? []).map((problem) => ({
       guardianProfileId: problem.guardian_profile_id,
       guardianName: problem.guardian_name,
-      studentNames: problem.student_names,
-      reason: problem.reason,
+      studentNames: problem.student_names ?? [],
+      // A reason this build does not know reads as "not sent".
+      reason: knownEnum(PROBLEM_REASONS, problem.reason) ?? "email_not_queued",
     })),
+    fingerprint: data.fingerprint,
   };
 }

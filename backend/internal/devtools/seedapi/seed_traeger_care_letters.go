@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedTraegerCareLettersStep gives every released monthly run of the demo
@@ -21,8 +22,8 @@ func (seedTraegerCareLettersStep) Name() string { return "Seeding the letters of
 type seedCareLetters struct {
 	Letters   *struct{} `json:"letters"`
 	Documents []struct {
-		InvoiceID int64  `json:"invoice_id"`
-		Kind      string `json:"kind"`
+		InvoiceID ident.ID `json:"invoice_id"`
+		Kind      string   `json:"kind"`
 	} `json:"documents"`
 }
 
@@ -41,8 +42,8 @@ func (seedTraegerCareLettersStep) Run(_ context.Context, rt *Runtime) error {
 	var list struct {
 		Data struct {
 			Runs []struct {
-				ID     int64  `json:"id"`
-				Status string `json:"status"`
+				ID     ident.ID `json:"id"`
+				Status string   `json:"status"`
 			} `json:"runs"`
 		} `json:"data"`
 	}
@@ -54,7 +55,7 @@ func (seedTraegerCareLettersStep) Run(_ context.Context, rt *Runtime) error {
 		if run.Status != "released" {
 			continue
 		}
-		queued, err := seedCareRunLetters(rt.Client, auth, run.ID)
+		queued, err := seedCareRunLetters(rt.Client, auth, int64(run.ID))
 		if err != nil {
 			return err
 		}

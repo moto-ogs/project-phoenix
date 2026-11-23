@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -87,9 +88,21 @@ type SeedOptions struct {
 	// nil seeds the past without presence, unless PresenceHistoryRoute is set.
 	PresenceHistory PresenceHistoryWriter
 	MealHistory     func(context.Context, int64, []PastMealDay) error
-	// PresenceHistoryRoute writes them through the operator route only the
-	// public demo's server mounts (APP_ENV=demo, ADR 0127) when
-	// PresenceHistory is nil.
+	// FeedbackHistory writes the children's past ratings (#5029, ADR 0298);
+	// nil seeds the past without them, unless PresenceHistoryRoute is set.
+	FeedbackHistory FeedbackHistoryWriter
+	// SchoolVacations stores the seeded school vacations of every federal
+	// state (#5345, ADR 0298); nil leaves the stored vacations as the sync
+	// wrote them, unless PresenceHistoryRoute is set.
+	SchoolVacations SchoolVacationWriter
+	// BillingKeyDateCounts captures the synthetic billing snapshot of the
+	// current day (ADR 0298); nil seeds none. The public demo has no write
+	// path for it: only an operator sees the figures.
+	BillingKeyDateCounts func(context.Context) (int, error)
+	// PresenceHistoryRoute writes the past presence, the past ratings and the
+	// school vacations through the operator routes only the public demo's
+	// server mounts (APP_ENV=demo, ADR 0127 and ADR 0298) when no writer is
+	// bound.
 	PresenceHistoryRoute bool
 	// ProductScreenshots prepares the school for the product screenshots,
 	// whose simulation runs a single Tuesday: no weekend runs Friday's plan,
@@ -396,13 +409,13 @@ func (s *Seeder) createSeedOrganization(name, slug string) (int64, error) {
 	}
 	var payload struct {
 		Data struct {
-			ID int64 `json:"id"`
+			ID ident.ID `json:"id"`
 		} `json:"data"`
 	}
 	if err := parseJSON(orgResp, &payload); err != nil {
 		return 0, fmt.Errorf("parse organization response: %w", err)
 	}
-	return payload.Data.ID, nil
+	return int64(payload.Data.ID), nil
 }
 
 func (s *Seeder) findSeedOrganization(slug string) (int64, error) {
@@ -412,8 +425,8 @@ func (s *Seeder) findSeedOrganization(slug string) (int64, error) {
 	}
 	var payload struct {
 		Data []struct {
-			ID   int64  `json:"id"`
-			Slug string `json:"slug"`
+			ID   ident.ID `json:"id"`
+			Slug string   `json:"slug"`
 		} `json:"data"`
 	}
 	if err := parseJSON(resp, &payload); err != nil {
@@ -421,7 +434,7 @@ func (s *Seeder) findSeedOrganization(slug string) (int64, error) {
 	}
 	for _, organization := range payload.Data {
 		if organization.Slug == slug {
-			return organization.ID, nil
+			return int64(organization.ID), nil
 		}
 	}
 	return 0, fmt.Errorf("organization %q not found", slug)
@@ -437,11 +450,11 @@ func (s *Seeder) retireAbandonedSchool(subdomain string) error {
 	}
 	var payload struct {
 		Data []struct {
-			ID             int64  `json:"id"`
-			OrganizationID int64  `json:"organization_id"`
-			Name           string `json:"name"`
-			Subdomain      string `json:"subdomain"`
-			Email          string `json:"email"`
+			ID             ident.ID `json:"id"`
+			OrganizationID ident.ID `json:"organization_id"`
+			Name           string   `json:"name"`
+			Subdomain      string   `json:"subdomain"`
+			Email          string   `json:"email"`
 		} `json:"data"`
 	}
 	if err := parseJSON(resp, &payload); err != nil {
@@ -483,14 +496,14 @@ func (s *Seeder) createSeedSchool(organizationID int64, name, slug, subdomain st
 	}
 	var payload struct {
 		Data struct {
-			ID        int64  `json:"id"`
-			Subdomain string `json:"subdomain"`
+			ID        ident.ID `json:"id"`
+			Subdomain string   `json:"subdomain"`
 		} `json:"data"`
 	}
 	if err := parseJSON(schoolResp, &payload); err != nil {
 		return 0, "", fmt.Errorf("parse school response: %w", err)
 	}
-	return payload.Data.ID, payload.Data.Subdomain, nil
+	return int64(payload.Data.ID), payload.Data.Subdomain, nil
 }
 
 // GenerateSeedPassword creates a random password satisfying the account policy.

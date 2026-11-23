@@ -1,4 +1,5 @@
 "use client";
+import type * as schoolClassDayContract from "~/lib/contract/school-class-day.generated";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 
 // Eine Klasse an einem Tag ("moto schule", #1772/#2294).
@@ -13,7 +14,7 @@ import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 
 import { useSearchParams } from "next/navigation";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
@@ -37,9 +38,7 @@ import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { Textarea } from "~/components/ui/textarea";
 import { MOTO_COLOR_PALETTE } from "~/lib/kit-palette";
 import type {
-  ClassDayHint,
   ClassDayReport,
-  ClassDayRow,
   MorningAttendanceStatus,
 } from "~/lib/class-day-api";
 import { dayHintAuthorSuffix } from "~/lib/class-day-api";
@@ -50,11 +49,11 @@ import {
 } from "~/lib/homework-feedback";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
+import { isChangedSinceRead } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
 import {
   type ClassDayClasses,
   type ClassTripReportInput,
-  type ClassTripReportResult,
   type ClassHandoverChildren,
   deleteDayHintSchool,
   type MorningAttendanceMark,
@@ -62,7 +61,7 @@ import {
 } from "~/lib/school-class-day-api";
 import { schoolClassLabel } from "~/lib/school-class-label";
 import { schoolPath } from "~/lib/school-url";
-import { useSWRAuth } from "~/lib/swr";
+import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
 import { schoolPortalKeys } from "~/lib/swr/portal-keys";
 import { normalizeSchoolClass } from "~/lib/timetable-helpers";
 import { ClassTripBulkStatusModal } from "~/components/students/class-trip-bulk-status-modal";
@@ -168,7 +167,7 @@ export interface ClassDayClassProps {
   readonly reportClassTrip?: (
     schoolClass: string,
     input: ClassTripReportInput,
-  ) => Promise<ClassTripReportResult>;
+  ) => Promise<schoolClassDayContract.ClassTripResult>;
   /**
    * Speichert die Anwesenheit am Vormittag (#4790). Ohne sie bleibt die
    * Anwesenheit eine Anzeige.
@@ -199,6 +198,9 @@ export interface ClassDayClassProps {
     date: string,
   ) => Promise<void>;
 
+  /** Erklärung der Seite hinter dem Info-Knopf am Titel (#7567). */
+  readonly info?: ReactNode;
+
   /** Nur für Tests: fixiert den Vergleichstag für "Heute gemeldet". */
   readonly now?: Date;
 }
@@ -214,7 +216,7 @@ export function ClassDayClass({
   homework,
   handOverClass,
   withdrawClassHandover,
-
+  info,
   now,
 }: ClassDayClassProps) {
   // Kein Default-Prop: eine `new Date()` in der Signatur bricht die
@@ -252,7 +254,9 @@ export function ClassDayClass({
         return {
           classes: [],
           can_write_arrival_exception: false,
+          can_report_class_trip: false,
           weekend_follows_friday: false,
+          can_view_school_day: false,
         };
       }
       try {
@@ -290,12 +294,7 @@ export function ClassDayClass({
   const weekend = weekendDay && !weekendOpen;
 
   const classReportKey = schoolPortalKeys.classDayReport(schoolClass, dateISO);
-  const {
-    data: report,
-    error,
-    isLoading,
-    mutate: refetchReport,
-  } = useSWRAuth(
+  const reportRead = useSWRAuth(
     schoolClass && !weekend ? classReportKey : null,
     async () => {
       try {
@@ -314,6 +313,7 @@ export function ClassDayClass({
       keepPreviousData: false,
     },
   );
+  const { data: report, error, isLoading, mutate: refetchReport } = reportRead;
 
   const discardRefusedReport = useSchoolReportRefusal(error, classReportKey);
 
@@ -389,11 +389,10 @@ export function ClassDayClass({
   // Link, und nur bei Kindern mit Betreuungsplatz.
   const sharedNotesHref =
     report?.can_read_shared_notes === true
-      ? (row: ClassDayRow) => {
-          if (row.list_entry || row.without_care_place || row.student_id <= 0)
-            return undefined;
+      ? (row: schoolClassDayContract.DayRow) => {
+          if (row.list_entry || row.without_care_place) return undefined;
           return schoolPath(
-            classDayChildPath(schoolClass, String(row.student_id), dateISO),
+            classDayChildPath(schoolClass, row.student_id, dateISO),
           );
         }
       : undefined;
@@ -402,7 +401,7 @@ export function ClassDayClass({
     report?.can_write_day_hints === true && isAssignedClass && !weekend;
   // Hinweise an die OGS sind nur für Kinder mit Betreuungsplatz.
   const hintChildren = rows.filter(
-    (row) => !row.list_entry && !row.without_care_place && row.student_id > 0,
+    (row) => !row.list_entry && !row.without_care_place,
   );
   const hintOptions = [
     {
@@ -411,22 +410,21 @@ export function ClassDayClass({
       label: `Die ganze ${schoolClassLabel(schoolClass)}`,
     },
     ...hintChildren.map((row) => ({
-      value: String(row.student_id),
+      value: row.student_id,
       label: `${row.last_name}, ${row.first_name}`,
     })),
   ];
-  const ownHintFor = (target: string): ClassDayHint | undefined => {
+  const ownHintFor = (
+    target: string,
+  ): schoolClassDayContract.DayHint | undefined => {
     if (target === CLASS_TARGET) return classHints.find((hint) => hint.own);
-    const row = hintChildren.find(
-      (child) => String(child.student_id) === target,
-    );
+    const row = hintChildren.find((child) => child.student_id === target);
     return row?.day_hints?.find((hint) => hint.own);
   };
   const existingHint = ownHintFor(hintTarget);
   const trimmedHint = hintBody.trim();
   const hintTooLong = dayHintLength(trimmedHint) > DAY_HINT_MAX_LENGTH;
-  const hintStudentId =
-    hintTarget === CLASS_TARGET ? undefined : Number(hintTarget);
+  const hintStudentId = hintTarget === CLASS_TARGET ? undefined : hintTarget;
 
   const chooseHintTarget = (target: string) => {
     setHintTarget(target);
@@ -509,12 +507,9 @@ export function ClassDayClass({
   const tripStudents = useMemo(
     () =>
       rows
-        .filter(
-          (row) =>
-            !row.list_entry && !row.without_care_place && row.student_id > 0,
-        )
+        .filter((row) => !row.list_entry && !row.without_care_place)
         .map((row) => ({
-          id: String(row.student_id),
+          id: row.student_id,
           first_name: row.first_name,
           second_name: row.last_name,
           name: `${row.first_name} ${row.last_name}`.trim(),
@@ -552,7 +547,7 @@ export function ClassDayClass({
     (row) => morningStatus(row, draft) === null,
   ).length;
   const markRow = useCallback(
-    (row: ClassDayRow, status: MorningAttendanceStatus) => {
+    (row: schoolClassDayContract.DayRow, status: MorningAttendanceStatus) => {
       setDraftState((current) => ({
         key: reportKey,
         marks: {
@@ -602,6 +597,8 @@ export function ClassDayClass({
     schoolClass,
     dateISO,
     onChanged: reportAfterWrite.refresh,
+    reloadAfterRefusal: async () =>
+      (await revalidateOrThrow(reportRead)).homework ?? [],
   });
   // Übergabe an die OGS (#4794): bestätigt wird je Klasse, Ausnahmen je Kind.
   const canHandOver =
@@ -610,9 +607,23 @@ export function ClassDayClass({
     !weekend;
   const ogsRows = useMemo(() => handoverRows(rows), [rows]);
   const [handoverOpen, setHandoverOpen] = useState(false);
-  const [handoverAbsent, setHandoverAbsent] = useState<ReadonlySet<number>>(
+  const [handoverAbsent, setHandoverAbsent] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
+  // The handover the dialog was filled from (ADR 0311). A newer read fills
+  // it again only while no child was changed in it.
+  const [handoverVersion, setHandoverVersion] = useState<string | null>(null);
+  const [handoverTouched, setHandoverTouched] = useState(false);
+  const storedHandoverVersion = report?.handover_version ?? "";
+  if (
+    handoverOpen &&
+    !handoverTouched &&
+    handoverVersion !== null &&
+    handoverVersion !== storedHandoverVersion
+  ) {
+    setHandoverVersion(storedHandoverVersion);
+    setHandoverAbsent(initialAbsentIds(rows, Boolean(report?.handover), draft));
+  }
   const handoverSave = useFormModalPending(handoverOpen);
   const savingHandover = handoverSave.pending;
   const handoverErrors = useApiFormError();
@@ -622,9 +633,12 @@ export function ClassDayClass({
   const openHandover = () => {
     handoverErrors.clear();
     setHandoverAbsent(initialAbsentIds(rows, Boolean(report?.handover), draft));
+    setHandoverVersion(storedHandoverVersion);
+    setHandoverTouched(false);
     setHandoverOpen(true);
   };
-  const markHandover = (studentId: number, choice: HandoverChoice) => {
+  const markHandover = (studentId: string, choice: HandoverChoice) => {
+    setHandoverTouched(true);
     setHandoverAbsent((current) => {
       const next = new Set(current);
       if (choice === "absent") next.add(studentId);
@@ -644,6 +658,7 @@ export function ClassDayClass({
           absent: ogsRows
             .filter((row) => handoverAbsent.has(row.student_id))
             .map((row) => row.student_id),
+          expectedVersion: handoverVersion ?? storedHandoverVersion,
         });
         await reportAfterWrite.refresh();
         if (op.isCurrent()) setHandoverOpen(false);
@@ -652,9 +667,19 @@ export function ClassDayClass({
           error: cause instanceof Error ? cause.message : String(cause),
         });
         if (!op.isCurrent()) return;
+        // Another handover of the class was stored since the view was read:
+        // the dialog shows the stored one once it is read, and the same
+        // save would be refused again (ADR 0311).
+        const changed = isChangedSinceRead(cause);
+        if (changed) {
+          setHandoverTouched(false);
+          void reportAfterWrite.refresh();
+        }
         void handoverErrors.show(cause, {
           object: "die Übergabe",
-          retry: () => void retrySaveRef.current.handover(),
+          retry: changed
+            ? undefined
+            : () => void retrySaveRef.current.handover(),
         });
       }
     });
@@ -699,6 +724,7 @@ export function ClassDayClass({
       back
       backHref={schoolPath(schoolDayListPath(dateISO, openList))}
       backLabel="Alle Klassen"
+      info={info}
       stats={
         report && !weekend ? (
           <TenantPageStats items={statusItems(dateISO, report, changes)} />
@@ -729,6 +755,12 @@ export function ClassDayClass({
                   onCancel={homeworkForm.close}
                   onSave={() => void homeworkForm.save()}
                   saving={homeworkForm.saving}
+                  disabled={homeworkForm.draft?.gone === true}
+                  disabledReason={
+                    homeworkForm.draft?.gone === true
+                      ? "Die Hausaufgabe gibt es nicht mehr."
+                      : undefined
+                  }
                 />
               }
             >

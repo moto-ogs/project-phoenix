@@ -14,6 +14,7 @@ import (
 	scheduleModel "github.com/moto-ogs/project-phoenix/modules/timetable/internal/domain/schedulerecords"
 	"github.com/moto-ogs/project-phoenix/modules/timetable/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -258,10 +259,6 @@ type fakeActivityScheduleReader struct {
 	groupID int64
 }
 
-func (f *fakeActivityScheduleReader) FindTemplateStartTimes(context.Context, []int64) ([]timetable.TemplateStartTime, error) {
-	return nil, errors.New("not used by the shift-coverage probe")
-}
-
 // ListSchedules serves the probe's one read, the schedules of one template.
 func (f *fakeActivityScheduleReader) ListSchedules(_ context.Context, filter timetable.ScheduleFilter) ([]timetable.Schedule, error) {
 	f.calls++
@@ -376,7 +373,7 @@ func TestDetectShiftCoverageWarnings_EffectiveRosterAndContainingWeek(t *testing
 	})
 	require.NoError(t, err)
 	require.Len(t, warnings, 1, "only the active substitute is effective")
-	assert.Equal(t, int64(2), warnings[0].StaffID)
+	assert.Equal(t, ident.ID(int64(2)), warnings[0].StaffID)
 	assert.Equal(t, "Ersatz Person", warnings[0].StaffName)
 	assert.Equal(t, "09:00", warnings[0].UncoveredStartTime)
 	assert.Equal(t, "11:00", warnings[0].UncoveredEndTime)
@@ -407,7 +404,7 @@ func TestDetectShiftCoverageWarnings_ChangedRosterDropsPriorAbsence(t *testing.T
 	})
 	require.NoError(t, err)
 	require.Len(t, warnings, 2, "changed membership makes both submitted IDs effective")
-	assert.Equal(t, []int64{1, 4}, []int64{warnings[0].StaffID, warnings[1].StaffID})
+	assert.Equal(t, []int64{1, 4}, []int64{warnings[0].StaffID.Int64(), warnings[1].StaffID.Int64()})
 	assert.Equal(t, 1, instanceStaff.calls, "concrete roster must be loaded in one batch")
 	assert.Equal(t, 1, shiftReader.calls, "shifts and tenant week usage share one full-week snapshot")
 	assert.Equal(t, 1, staff.findCalls, "all warning names must be loaded in one batch")
@@ -453,7 +450,7 @@ func TestDetectShiftCoverageWarnings_ConvertedInstanceSurvivesRecurrenceFilterin
 	require.NoError(t, err)
 	require.Len(t, warnings, 1)
 	assert.Equal(t, concreteWeekB.String(), warnings[0].Date)
-	assert.Equal(t, int64(2), warnings[0].StaffID)
+	assert.Equal(t, ident.ID(int64(2)), warnings[0].StaffID)
 	assert.Equal(t, 1, instanceStaff.calls)
 }
 
@@ -476,7 +473,7 @@ func TestDetectShiftCoverage_SkipsExternalCaregivers(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Len(t, result.Warnings, 1)
-	assert.Equal(t, int64(1), result.Warnings[0].StaffID)
+	assert.Equal(t, ident.ID(int64(1)), result.Warnings[0].StaffID)
 	assert.Equal(t, 1, result.TotalWarningCount)
 	assert.Equal(t, 1, staff.findCalls)
 
@@ -619,7 +616,7 @@ func TestDetectShiftCoverageWarnings_SeriesReplanUsesEffectiveExceptionsAndDevia
 	})
 	require.NoError(t, err)
 	require.Len(t, warnings, 1, "covered substitute and cancelled occurrence must not warn")
-	assert.Equal(t, int64(1), warnings[0].StaffID)
+	assert.Equal(t, ident.ID(int64(1)), warnings[0].StaffID)
 	assert.Equal(t, friday.String(), warnings[0].Date)
 	assert.Equal(t, "10:00", warnings[0].StartTime)
 	assert.Equal(t, "11:00", warnings[0].EndTime)

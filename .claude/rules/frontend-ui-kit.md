@@ -106,7 +106,7 @@ An unexplained bespoke component is a review failure, not a style preference.
 | Group heading, subheading in a card or form; legend over several fields | `SectionLabel` (`as` = `h2`–`h5`/`legend`/`p`, `required`): normal case, `text-sm font-semibold text-gray-600`. Never `uppercase tracking-*` | `~/components/ui/section-label` |
 | Head of a group in a list (day of an agenda, permission group) | `ListGroupHeader` (`title`, `addon`, `meta`, `as`, `collapsible`) | `~/components/ui/list-group-header` |
 | Consent or confirmation a person ticks (Einwilligung, „verbindlich“) | `ConsentCheckbox` — `required`, `error`, `action` for the legal text button | `~/components/ui/consent-checkbox` |
-| Inline alert / banner (one notice) | `Alert` (`type`, `message`, `icon`, `onDismiss`; in fields `size="compact"`; location hex: `color`); a notice that needs attention is `type="warning"` (orange), never an amber box; several notices of the same kind follow [Several notices of the same kind](#several-notices-of-the-same-kind); naming another place, its `action` leads there: `JumpButton`, else `ButtonLink`; when, wording, new tab, rights: `ui/jump-button` (#7054) | `~/components/ui/alert`, `ui/jump-button` |
+| Inline alert / banner (one notice) | `Alert` (`type`, `message`, `icon`, `onDismiss`, X or not: [Banner oder Inhalt](#banner-oder-inhalt); in fields `size="compact"`; location hex: `color`); a notice that needs attention is `type="warning"` (orange), never an amber box; several notices of the same kind follow [Several notices of the same kind](#several-notices-of-the-same-kind); naming another place, its `action` leads there: `JumpButton`, else `ButtonLink`; when, wording, new tab, rights: `ui/jump-button` (#7054) | `~/components/ui/alert`, `ui/jump-button` |
 | Row as its own surface (start page, roster, persons in a panel); own button beside a link: no `href`, link in `children` | `ListRow` — `href`, `onClick`, `tone`, `density`, `trailing`; loading: `SkeletonRows`, `ListRowSkeleton` | `~/components/ui/list-row`, `ui/skeleton` |
 | Framed list with dividers, inside a card or panel | `FramedList` — `maxHeight`, `header` | `~/components/ui/framed-list` |
 | Row leading elsewhere: icon, title, subtitle, badge, arrow | `ListRowLink`: `selected`, `accent`, `overline`/`meta`/`unread`; alone `framed` | `~/components/ui/list-row-link` |
@@ -125,6 +125,7 @@ An unexplained bespoke component is a review failure, not a style preference.
 | Any card: page section with heading, explanation, actions, or a plain surface | `SectionCard`, the only card head: `concept`/`icon`/`leading`, `titleSize`, `collapsible`, `flush`, `footer`, `padding="none"`, `loading`; `kicker`: ADR 0149 | `~/components/ui/section-card` |
 | Any other framed white container (list wrapper, inner card, skeleton) | the `moto-content-surface` utility + `rounded-2xl border` (inner cards keep `rounded-xl`); never `border-gray-200 bg-white` by hand | `globals.css` |
 | Floating panel at a control, with content | `AnchoredPopover` — `header`, `footer`, `align`, `focusPanelOnOpen`, `swallowOutsideClick` | `~/components/ui/anchored-popover` |
+| Panel at a trigger: popover, below `sm` a bottom sheet (#7797); the only variant, no own phone branch | `ResponsivePanel` (`trigger`, `label`, `returnFocusRef`, content `(asSheet) => …`) | `~/components/ui/responsive-panel` |
 | Count on an icon or nav row | `NotificationBadge` — `tone`, `size` | `~/components/ui/notification-badge` |
 | Selectable row or tile (label around a Checkbox/Radio, mode-picker button, row with a selection state) | `ChoiceTile` — `as` = `label` (default) / `button` / `div`, `selected`, `disabled`, `tone` = `gray` `green` `blue` `red` (serious choice); padding via `className` | `~/components/ui/choice-tile` |
 | Inner surface | `InsetPanel` (`tone`, `framed`, `dashed`, `padding`, `as`). A message with icon stays `Alert` | `~/components/ui/inset-panel` |
@@ -208,13 +209,25 @@ Decided in #5529, enforced since #5531. Not up for renegotiation: if code cannot
 - One sentence, ≤ ~12 words, verb in 3rd person, full stop; the consequence, not the button word. No technical words, no „Klicken Sie hier“.
 - „sofort“ when deleted or sent without a question, „moto fragt vorher nach“ before a confirmation; name who gets notified.
 - Same action, same sentence; repeated text lives in the kit piece. Translated portals: every language's catalog.
-- `disabledReason`: what is missing or comes first („Wählen Sie zuerst mindestens ein Kind aus.“), never just „Nicht möglich.“
+- `disabledReason`: what is missing or comes first („Wähle zuerst mindestens ein Kind aus.“), never just „Nicht möglich.“
 - `noTooltip` only if the word says it all with no side effect („Abbrechen“, „Zurück“, a pure „Speichern“); never deleting, sending, releasing, icon buttons.
 - Menu entries: visible `description` or `noDescription: "<Grund>"` (`ui-kit/menu-item-needs-description`: `label` + `onClick`; not `kind`, `selected`, `retry: {…}`). Full stop optional; deleting says „sofort“ or „moto fragt vorher nach“.
 
 Kit pieces bring their sentence (#6744); override if the click does more: `closeTooltip`, `confirmTooltip`, `confirmDisabledReason` (modals), `saveTooltip`/`disabledReason` (`EditActions`), `buttonTooltip`, `collapseTooltip`, `loadMoreTooltip`, `triggerTooltip`, `tooltip` (`ExportMenu`), `removeTooltip`, `*Hint` date/time labels. German defaults drop under a non-German `KitLocaleProvider` (parents, enrollment): pass one.
 
 Examples: „Löscht die PDF sofort aus dem Anmeldeformular.“ · „Öffnet den Rechtstext für Eltern zum Ändern.“
+
+## Banner oder Inhalt
+
+When a notice gets a close X (#7704). Position decides, because a box above the page reads as a banner:
+
+- **Banner** (full width above the page content) **always has an X** and is only for events and info: a new change, an announcement, a tip, a one-time hint. What the X hides is unimportant or stays visible in the content.
+- **Lasting state is content, not a banner:** a marker at the value, a notice inside the section, form or dialog. No X; it disappears when the state ends.
+- **Result of an action:** a toast (X, expires). A result that must stay (a link to copy, a handover result) stands where the action happened; X allowed, not stored.
+- **Errors and checks** stand at the field or form, have no X and disappear once fixed.
+- **Exception „Ausblenden“ as acknowledgement** (conflict and offering-gap notices of the Betreuungsplan): only if the backend stores it, the notice returns when its data change, and „Wieder anzeigen“ exists. Label „Ausblenden“, no X.
+
+**Storing an X:** a notice of a backend object (announcement, notification) uses that object's read or dismiss endpoint; otherwise `localStorage` per account, registered in the personal-storage registry (`lib/personal-storage.ts`). An X forgotten on reload is not allowed for events and info. The X is `Alert`'s `onDismiss`, never an own „Ausblenden“ button in `action`.
 
 ## Several notices of the same kind
 
