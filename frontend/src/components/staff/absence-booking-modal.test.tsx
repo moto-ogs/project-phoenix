@@ -593,6 +593,34 @@ describe("AbsenceBookingModal", () => {
       expect(onSaved).not.toHaveBeenCalled();
     });
 
+    // ADR 0311 rule 6: a failed read of the new projection after a refusal
+    // says so instead of claiming the new state shows.
+    it("names a failed read of the projection after a refusal", async () => {
+      mocks.createAbsence.mockRejectedValueOnce(
+        new ApiError("changed since it was read", 409, {
+          code: "general.changed_since_read",
+        }),
+      );
+      const { onSaved } = renderModal();
+      await screen.findByText("noch 12 Tage");
+      choose("Freizeitausgleich");
+      await waitFor(() => expect(submit()).toBeEnabled());
+      mocks.getCompTimePreview.mockRejectedValue(
+        new ApiError("down", 503, { code: "general.unavailable" }),
+      );
+      fireEvent.click(submit());
+
+      expect(
+        await screen.findByText(/Der neue Stand konnte nicht geladen werden/),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText(/Du siehst jetzt den neuen Stand/),
+      ).not.toBeInTheDocument();
+      expect(submit()).toHaveAttribute("aria-disabled", "true");
+      expect(mocks.createAbsence).toHaveBeenCalledTimes(1);
+      expect(onSaved).not.toHaveBeenCalled();
+    });
+
     it("requires an explicit confirmation when the projection is negative", async () => {
       mocks.getCompTimePreview.mockResolvedValue({
         currentBalanceMinutes: 120,
