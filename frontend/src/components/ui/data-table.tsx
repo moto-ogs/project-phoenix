@@ -569,9 +569,13 @@ function StackedDetailsToggle({
   label,
   labelledBy,
   controls,
+  openTooltip,
+  closeTooltip,
 }: Readonly<{
   open: boolean;
   onToggle: () => void;
+  openTooltip: string | undefined;
+  closeTooltip: string | undefined;
   // Own name of an `expandable` row; otherwise the name is „Details zu“
   // followed by the card's title (`labelledBy`).
   label: string | undefined;
@@ -587,7 +591,7 @@ function StackedDetailsToggle({
       aria-controls={open ? controls : undefined}
       aria-label={label}
       aria-labelledby={label === undefined ? labelledBy : undefined}
-      tooltip={open ? DETAILS_CLOSE_TOOLTIP : DETAILS_OPEN_TOOLTIP}
+      tooltip={open ? closeTooltip : openTooltip}
       onClick={onToggle}
     >
       <ChevronDown
@@ -631,6 +635,8 @@ function StackedExtraRow<T>({
   titleKey: string | undefined;
 }>) {
   if ("content" in row) return <div>{row.content}</div>;
+  const headerOf = (key: string) =>
+    columns.find((c) => c.key === key)?.header ?? "";
   const present = row.cells.filter(
     (cell) => cell.content !== null && cell.content !== undefined,
   );
@@ -641,17 +647,12 @@ function StackedExtraRow<T>({
     <dl className="space-y-1">
       {headline ? (
         <div>
-          <dt className="sr-only">
-            {columns.find((c) => c.key === headline.columnKey)?.header}
-          </dt>
+          <dt className="sr-only">{headerOf(headline.columnKey)}</dt>
           <dd className="text-gray-900">{headline.content}</dd>
         </div>
       ) : null}
       {cells.map((cell) => (
-        <StackedField
-          key={cell.columnKey}
-          label={columns.find((c) => c.key === cell.columnKey)?.header ?? ""}
-        >
+        <StackedField key={cell.columnKey} label={headerOf(cell.columnKey)}>
           {cell.content}
         </StackedField>
       ))}
@@ -821,6 +822,11 @@ function StackedRows<T>({
   summaryRow?: (row: T) => DataTableExtraRow | null;
 }>) {
   const idBase = useId();
+  // German defaults drop under a non-German KitLocaleProvider (#6744).
+  const kitDefault = useKitDefault();
+  const openTooltip = kitDefault(DETAILS_OPEN_TOOLTIP);
+  const closeTooltip = kitDefault(DETAILS_CLOSE_TOOLTIP);
+  const detailsLabel = kitDefault("Details zu");
   // Several cards may stand open at once: unlike the table, a phone shows
   // one card's details right under it, without pushing the others away.
   const [openKeys, setOpenKeys] = useState<ReadonlySet<string | number>>(
@@ -893,31 +899,39 @@ function StackedRows<T>({
     const active = activeRowKey != null && rowKey === activeRowKey;
     const canExpand =
       expandable !== undefined && (expandable.canExpand?.(row) ?? true);
-    // As in the table, a row that expands does not also open (#5600).
-    const rowClickable =
-      clickable && !canExpand && (canClickRow?.(row) ?? true);
+    // The card keeps opening the entry, also on a row that expands: the
+    // details have their own button (#7911).
+    const rowClickable = clickable && (canClickRow?.(row) ?? true);
     const open = openKeys.has(rowKey);
-    const hiddenValues = detailFields
+    const detailValues = detailFields
       .map((col) => ({ col, value: col.render(row) }))
       .filter((entry) => entry.value !== null);
-    // Sub rows stand in the details, also those the table always shows.
-    const subRows = renderSubRows?.(row, true) ?? [];
-    const hasDetails = hiddenValues.length > 0 || subRows.length > 0;
+    // Sub rows stand in the details, also those the table always shows. As
+    // in the table, only a row that can expand gets its open sub rows.
+    const subRows = renderSubRows?.(row, canExpand) ?? [];
+    const hasDetails = detailValues.length > 0 || subRows.length > 0;
     const menu = rowMenu ? rowMenu.render(row) : null;
     const titleId = `${idBase}-title-${index}`;
     const detailsId = `${idBase}-details-${index}`;
     const toggleTextId = `${idBase}-toggle-${index}`;
+    const ownLabel = canExpand ? expandable?.rowLabel(row, open) : undefined;
     const toggle = hasDetails ? (
       <>
-        <span id={toggleTextId} className="sr-only">
-          Details zu
-        </span>
+        {/* Only the toggle's name reads it; `hidden` keeps it out of the
+            card's own reading flow. */}
+        {ownLabel === undefined ? (
+          <span id={toggleTextId} hidden>
+            {detailsLabel}
+          </span>
+        ) : null}
         <StackedDetailsToggle
           open={open}
           onToggle={() => toggleOpen(rowKey)}
-          label={canExpand ? expandable?.rowLabel(row, open) : undefined}
+          label={ownLabel}
           labelledBy={`${toggleTextId} ${titleId}`}
           controls={detailsId}
+          openTooltip={openTooltip}
+          closeTooltip={closeTooltip}
         />
       </>
     ) : null;
@@ -926,7 +940,7 @@ function StackedRows<T>({
     const end = (
       <StackedRowEnd
         toggle={toggle}
-        menu={menu ?? null}
+        menu={menu}
         className={layout === "row" ? "-my-1.5" : ""}
       />
     );
@@ -945,6 +959,7 @@ function StackedRows<T>({
         <button
           type="button"
           data-row-control=""
+          data-row-action=""
           aria-labelledby={titleId}
           onClick={() => onRowClick(row)}
           className="sr-only"
@@ -986,7 +1001,7 @@ function StackedRows<T>({
         }
       >
         <div
-          className={`${STACKED_ROW_PADDING[layout]} ${rowClickable ? "cursor-pointer" : ""} ${active ? ACTIVE_ROW_CLASS : ""} ${rowClassName ? rowClassName(row) : ""}`}
+          className={`${STACKED_ROW_PADDING[layout]} ${ROW_ACTION_FOCUS_CLASS} ${rowClickable ? "cursor-pointer" : ""} ${active ? ACTIVE_ROW_CLASS : ""} ${rowClassName ? rowClassName(row) : ""}`}
           tabIndex={rowKeyboardClickable ? 0 : undefined}
           role={rowKeyboardClickable ? "button" : undefined}
         >
@@ -1060,9 +1075,9 @@ function StackedRows<T>({
               id={detailsId}
               className="mt-2 space-y-2 border-t border-gray-100 pt-2 text-sm"
             >
-              {hiddenValues.length > 0 ? (
+              {detailValues.length > 0 ? (
                 <dl className="space-y-1">
-                  {hiddenValues.map(({ col, value }) => (
+                  {detailValues.map(({ col, value }) => (
                     <StackedFieldLine key={col.key} col={col} value={value} />
                   ))}
                 </dl>

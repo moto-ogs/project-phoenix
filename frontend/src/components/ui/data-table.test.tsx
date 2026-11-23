@@ -1229,6 +1229,7 @@ describe("DataTable phone cards without lost columns (#7911)", () => {
     (layout) => {
       const { card } = renderCards(layout);
 
+      // Anker: die Karte ist gerendert und zeigt jeden Spaltenwert.
       for (const value of values) {
         expect(card.getByText(value)).toBeInTheDocument();
       }
@@ -1241,7 +1242,7 @@ describe("DataTable phone cards without lost columns (#7911)", () => {
   it("opens the columns a row card leaves out below the card", () => {
     const { card } = renderCards("row");
 
-    // Title, meta and the chosen detail stand on the card.
+    // Anker: Titel, Meta und das gewählte Detail stehen auf der Karte.
     expect(card.getByText("Alpha")).toBeInTheDocument();
     expect(card.getByText("Da")).toBeInTheDocument();
     expect(card.getByText("15:30")).toBeInTheDocument();
@@ -1258,6 +1259,8 @@ describe("DataTable phone cards without lost columns (#7911)", () => {
     expect(card.getByText("Gruppe")).toBeInTheDocument();
 
     fireEvent.click(toggle);
+    // Anker: die Karte steht noch, nur das Detail ist zu.
+    expect(card.getByText("15:30")).toBeInTheDocument();
     expect(card.queryByText("Gruppe Rot")).not.toBeInTheDocument();
   });
 
@@ -1266,7 +1269,10 @@ describe("DataTable phone cards without lost columns (#7911)", () => {
       columns: cardColumns.filter((c) => c.key !== "actions"),
     });
 
-    fireEvent.click(card.getByRole("button", { name: "Details zu Alpha" }));
+    const toggle = card.getByRole("button", { name: "Details zu Alpha" });
+    fireEvent.click(toggle);
+    // Anker: der Knopf hat das Detail geöffnet.
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
     expect(onRowClick).not.toHaveBeenCalled();
 
     fireEvent.click(card.getByText("Alpha"));
@@ -1294,12 +1300,15 @@ describe("DataTable phone cards without lost columns (#7911)", () => {
       // The menu shares the card's first line with the title.
       expect(menu.closest("[data-stacked-head]")).toHaveTextContent("Alpha");
       fireEvent.click(menu);
+      // Anker: das Menü steht in der Karte.
+      expect(card.getByText("Alpha")).toBeInTheDocument();
       expect(onRowClick).not.toHaveBeenCalled();
     },
   );
 
   it("shows sub rows in the opened details and the summary as its own card", () => {
     const { card, cardElement } = renderCards("lines", {
+      expandable: { rowLabel: (row) => `Details zu ${row.name}` },
       renderSubRows: (row, expanded) => [
         {
           key: `${row.id}-always`,
@@ -1315,8 +1324,10 @@ describe("DataTable phone cards without lost columns (#7911)", () => {
       }),
     });
 
-    expect(card.queryByText("Verlauf des Tages")).not.toBeInTheDocument();
+    // Anker: Karte und Summenkarte sind gerendert.
+    expect(card.getByText("Alpha")).toBeInTheDocument();
     const summary = screen.getByText("Summe 40h");
+    expect(card.queryByText("Verlauf des Tages")).not.toBeInTheDocument();
     expect(cardElement).not.toContainElement(summary);
 
     fireEvent.click(card.getByRole("button", { name: "Details zu Alpha" }));
@@ -1340,5 +1351,17 @@ describe("DataTable phone cards without lost columns (#7911)", () => {
 
     expect(toggle).toHaveAccessibleName("Alpha: Verlauf schließen");
     expect(card.getByText("Verlauf des Tages")).toBeInTheDocument();
+  });
+
+  it("still opens the entry from the card of a row that expands", () => {
+    const { card, onRowClick } = renderCards("lines", {
+      expandable: { rowLabel: (row) => `Verlauf ${row.name}` },
+      renderSubRows: (row, expanded) =>
+        expanded ? [{ key: row.id, content: "Verlauf des Tages" }] : [],
+    });
+
+    fireEvent.click(card.getByText("Alpha"));
+
+    expect(onRowClick).toHaveBeenCalledWith(cardRows[0]);
   });
 });
