@@ -79,6 +79,7 @@ function detail(
   versions: DocumentTemplateDetail["versions"] = [],
 ): DocumentTemplateDetail {
   return {
+    version: `v-${versions[0]?.version ?? 0}`,
     current: versions[0] ?? {
       kind: "rechnung",
       version: 0,
@@ -288,13 +289,66 @@ describe("TraegerVorlagePage", () => {
         "Die Vorlage ist gespeichert. Neue Schreiben nutzen Version 1.",
       ),
     ).toBeInTheDocument();
-    expect(templatesApi.saveDocumentTemplate).toHaveBeenCalledWith("rechnung", {
-      ...STANDARD,
-      subject: "Ihre Rechnung",
-    });
+    expect(templatesApi.saveDocumentTemplate).toHaveBeenCalledWith(
+      "rechnung",
+      { ...STANDARD, subject: "Ihre Rechnung" },
+      "v-0",
+    );
     expect(
       await screen.findByText("Gilt für neue Schreiben"),
     ).toBeInTheDocument();
+  });
+
+  // ADR 0311: a colleague saved a version since the editor opened. The save
+  // is refused, the page shows the stored version, the draft stays, and the
+  // next save builds on the version now shown.
+  it("keeps the draft and shows the version a colleague saved since", async () => {
+    const colleague = {
+      kind: "rechnung" as const,
+      version: 1,
+      standard: false,
+      createdAt: "2026-09-09T10:00:00Z",
+      ...STANDARD,
+      closing: "Viele Grüße\n{{traeger}}",
+    };
+    renderPage();
+    fireEvent.change(await screen.findByLabelText(/Betreff/), {
+      target: { value: "Ihre Rechnung" },
+    });
+    // The background read brings the colleague's version: the draft keeps
+    // the version it started from.
+    templatesApi.fetchDocumentTemplate.mockResolvedValue(detail([colleague]));
+    templatesApi.saveDocumentTemplate.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", "die Vorlage"),
+      ),
+    ).toBeInTheDocument();
+    expect(templatesApi.saveDocumentTemplate).toHaveBeenLastCalledWith(
+      "rechnung",
+      { ...STANDARD, subject: "Ihre Rechnung" },
+      "v-0",
+    );
+    expect((await screen.findAllByText("Version 1"))[0]).toBeVisible();
+    expect(screen.getByLabelText(/Betreff/)).toHaveValue("Ihre Rechnung");
+
+    templatesApi.saveDocumentTemplate.mockResolvedValueOnce({
+      ...colleague,
+      version: 2,
+      subject: "Ihre Rechnung",
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(templatesApi.saveDocumentTemplate).toHaveBeenLastCalledWith(
+        "rechnung",
+        { ...STANDARD, subject: "Ihre Rechnung" },
+        "v-1",
+      ),
+    );
   });
 
   it("locks all draft changes until saving and reloading finish", async () => {
@@ -509,6 +563,7 @@ describe("TraegerVorlagePage", () => {
       expect(templatesApi.saveDocumentTemplate).toHaveBeenCalledWith(
         "rechnung",
         { ...STANDARD, invoice },
+        "v-0",
       ),
     );
   });

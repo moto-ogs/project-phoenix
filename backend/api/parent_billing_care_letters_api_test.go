@@ -391,7 +391,7 @@ func TestCareLettersResolveThePayerAndRefuseAChangedPayer(t *testing.T) {
 					"payer_first_name": "Oma", "payer_last_name": "Muster", "payer_email": "oma@example.org",
 					"payer_address": map[string]any{"street": "Amtsweg 2", "postal_code": "75175", "city": "Pforzheim"},
 				}
-				rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyBillingPath, input)
+				rec := putFamilyBilling(t, f.traeger, f.office.token, input)
 				require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 				run := f.startRun(t, "2030-02-01")
 				preview := f.run(t, int64(run.ID))
@@ -402,7 +402,7 @@ func TestCareLettersResolveThePayerAndRefuseAChangedPayer(t *testing.T) {
 				require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 				if changed {
 					input["payer_email"] = "neu@example.org"
-					rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyBillingPath, input)
+					rec = putFamilyBilling(t, f.traeger, f.office.token, input)
 					require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 				}
 				readsOf := func() int {

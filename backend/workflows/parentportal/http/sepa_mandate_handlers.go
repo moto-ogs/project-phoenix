@@ -100,13 +100,28 @@ func (rs *Resource) grantSEPAMandate(w http.ResponseWriter, r *http.Request) {
 	common.Respond(w, r, http.StatusCreated, view, "SEPA mandate granted successfully")
 }
 
-// revokeSEPAMandate ends the family's mandate today.
+// ParentSEPAMandateRevokeRequest names the mandate the parents read: its
+// version, which the revocation compares under the lock (ADR 0311).
+type ParentSEPAMandateRevokeRequest struct {
+	ExpectedVersion string `json:"expected_version"`
+}
+
+func (req *ParentSEPAMandateRevokeRequest) Bind(*http.Request) error { return nil }
+
+// revokeSEPAMandate ends the family's mandate today, the one the parents
+// read; a mandate given since is refused with 409 general.changed_since_read.
 func (rs *Resource) revokeSEPAMandate(w http.ResponseWriter, r *http.Request) {
 	accountID, organizationID, contractID, ok := contractNoticeKey(w, r)
 	if !ok {
 		return
 	}
-	view, err := rs.ParentService.RevokeSEPAMandate(r.Context(), accountID, organizationID, contractID)
+	req := &ParentSEPAMandateRevokeRequest{}
+	if err := render.Bind(r, req); err != nil {
+		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(errors.New("the body names no SEPA mandate"),
+			common.CodeParentBillingSepaMandateInvalid))
+		return
+	}
+	view, err := rs.ParentService.RevokeSEPAMandate(r.Context(), accountID, organizationID, contractID, req.ExpectedVersion)
 	if err != nil {
 		renderSEPAMandateError(w, r, err)
 		return

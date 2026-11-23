@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	validation "github.com/go-ozzo/ozzo-validation"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Document templates of a Träger (#4677, ADR 0152). Like the master data,
@@ -73,7 +75,7 @@ func (t *TraegerDocumentTemplates) Detail(ctx context.Context, organizationID in
 		current = versions[0]
 	}
 	return organizationtenancy.TraegerDocumentTemplateDetail{
-		Current: current, Standard: templates.Default(kind), Placeholders: templates.Placeholders(kind), Versions: versions,
+		Version: templateVersion(current), Current: current, Standard: templates.Default(kind), Placeholders: templates.Placeholders(kind), Versions: versions,
 	}, nil
 }
 
@@ -89,9 +91,28 @@ func (t *TraegerDocumentTemplates) Current(ctx context.Context, organizationID i
 	return versions[0], nil
 }
 
+// templateVersion is the read-state token of the current template of a kind:
+// its version and when it was saved (ADR 0311). The standard template has
+// version 0 and no time.
+func templateVersion(current organizationtenancy.TraegerDocumentTemplate) string {
+	var savedAt *time.Time
+	if current.CreatedAt != nil {
+		utc := current.CreatedAt.UTC()
+		savedAt = &utc
+	}
+	return readstate.Fingerprint(struct {
+		Version int        `json:"version"`
+		SavedAt *time.Time `json:"saved_at"`
+	}{current.Version, savedAt})
+}
+
 // AddVersion checks the template and stores it as the next version. A template
-// equal to the current one adds no version.
-func (t *TraegerDocumentTemplates) AddVersion(ctx context.Context, organizationID, accountID int64, kind templates.Kind, template templates.Template) (organizationtenancy.TraegerDocumentTemplate, error) {
+// equal to the current one adds no version. The editor saves over the version
+// it started from: under the lock, a version saved since is refused with
+// readstate.ErrChanged (ADR 0311).
+func (t *TraegerDocumentTemplates) AddVersion(ctx context.Context, organizationID, accountID int64, kind templates.Kind, template templates.Template,
+	expectedVersion string,
+) (organizationtenancy.TraegerDocumentTemplate, error) {
 	if organizationID <= 0 {
 		return organizationtenancy.TraegerDocumentTemplate{}, errTraegerRequired
 	}
@@ -104,6 +125,9 @@ func (t *TraegerDocumentTemplates) AddVersion(ctx context.Context, organizationI
 	}
 	current, err := t.Current(ctx, organizationID, kind)
 	if err != nil {
+		return organizationtenancy.TraegerDocumentTemplate{}, err
+	}
+	if err := readstate.Check(expectedVersion, templateVersion(current)); err != nil {
 		return organizationtenancy.TraegerDocumentTemplate{}, err
 	}
 	if current.Template == template {

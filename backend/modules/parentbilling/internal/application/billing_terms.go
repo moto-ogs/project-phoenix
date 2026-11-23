@@ -14,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Actions of the trail of a family deviation.
@@ -60,6 +61,9 @@ type TermsStore interface {
 	DeleteFamilyBilling(ctx context.Context, organizationID, id int64, familyEmail string) (*parentbilling.FamilyBilling, error)
 	// FamilyBillingOf reads the row of a family, nil without one.
 	FamilyBillingOf(ctx context.Context, organizationID int64, familyEmail string) (*parentbilling.FamilyBilling, error)
+	// LockFamilyBilling holds the family until the transaction ends, also
+	// while it has no row, and reads its row, nil without one.
+	LockFamilyBilling(ctx context.Context, organizationID int64, familyEmail string) (*parentbilling.FamilyBilling, error)
 	// ReplaceRunDueDates replaces the due dates of a run; the database
 	// refuses it for a released run.
 	ReplaceRunDueDates(ctx context.Context, organizationID, accountID, careRunID, holidayRunID int64, dates parentbilling.RunDueDates) error
@@ -222,14 +226,28 @@ func (t *BillingTerms) FamilyBillingOfContract(ctx context.Context, reviewer par
 		}
 	}
 	return parentbilling.ContractFamilyBilling{ContractID: ident.ID(contractID), FamilyEmail: key,
-		PartyFirstName: recipient.FirstName, PartyLastName: recipient.LastName, Family: stored}, nil
+		PartyFirstName: recipient.FirstName, PartyLastName: recipient.LastName, Family: stored, Version: familyBillingVersion(stored)}, nil
+}
+
+// familyBillingVersion is the read-state token of the row of a family, nil
+// without one (ADR 0311). It covers the whole row: not every writer moves
+// updated_at (the retention moves the contract of a family without it).
+func familyBillingVersion(stored *parentbilling.FamilyBilling) string {
+	if stored == nil {
+		return readstate.Fingerprint(nil)
+	}
+	canonical := *stored
+	canonical.UpdatedAt = canonical.UpdatedAt.UTC()
+	return readstate.Fingerprint(canonical)
 }
 
 // SaveFamilyBilling validates the deviation and stores it for the family of
 // the contract. A deviation that deviates in nothing removes the stored one,
 // so the family falls back to the registration and the terms; a family the
 // holiday care knows keeps its row without the deviation (#6692), so its
-// parent and its period stay.
+// parent and its period stay. The office saves over the deviation it read:
+// under the lock of the family, a deviation stored differently since is
+// refused with readstate.ErrChanged (ADR 0311).
 func (t *BillingTerms) SaveFamilyBilling(ctx context.Context, reviewer parentbilling.HolidayReviewer, input parentbilling.FamilyBillingInput) (*parentbilling.FamilyBilling, error) {
 	if err := validReviewer(reviewer); err != nil {
 		return nil, err
@@ -238,7 +256,7 @@ func (t *BillingTerms) SaveFamilyBilling(ctx context.Context, reviewer parentbil
 	if err != nil {
 		return nil, err
 	}
-	stored, err := t.store.FamilyBillingOf(ctx, reviewer.OrganizationID, key)
+	stored, err := t.store.LockFamilyBilling(ctx, reviewer.OrganizationID, key)
 	if err != nil {
 		return nil, err
 	}
@@ -252,6 +270,9 @@ func (t *BillingTerms) SaveFamilyBilling(ctx context.Context, reviewer parentbil
 	}
 	family, err := normalizeFamilyBilling(input, format)
 	if err != nil {
+		return nil, err
+	}
+	if err := readstate.Check(input.ExpectedVersion, familyBillingVersion(stored)); err != nil {
 		return nil, err
 	}
 	binding, err := t.bindingContract(ctx, reviewer.OrganizationID, key, input.ContractID, stored)

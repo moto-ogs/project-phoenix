@@ -79,7 +79,7 @@ type PortalService interface {
 	SEPAMandate(ctx context.Context, accountID, organizationID, contractID int64) (parentService.SEPAMandateView, error)
 	PreviewSEPAMandate(ctx context.Context, accountID, organizationID, contractID int64, input parentService.SEPAMandateInput) (parentService.SEPAMandateText, error)
 	GrantSEPAMandate(ctx context.Context, accountID, organizationID, contractID int64, input parentService.SEPAMandateInput) (parentService.SEPAMandateView, error)
-	RevokeSEPAMandate(ctx context.Context, accountID, organizationID, contractID int64) (parentService.SEPAMandateView, error)
+	RevokeSEPAMandate(ctx context.Context, accountID, organizationID, contractID int64, expectedVersion string) (parentService.SEPAMandateView, error)
 	DeclareContractNotice(ctx context.Context, accountID, organizationID, contractID int64, input parentService.ContractNoticeInput) (parentService.ContractNoticeOptions, error)
 	// ContractSigningView and SignContract read and sign a care contract
 	// of the inbox (#4679).

@@ -38,6 +38,8 @@ type fakeParentService struct {
 	sepaErr      error
 	gotSEPAInput parentService.SEPAMandateInput
 	gotSEPACall  string
+	// gotSEPAVersion is the expected_version of a revocation.
+	gotSEPAVersion string
 
 	declarationProof *parentService.DeclarationProof
 	pickupProof      *parentService.PickupProof

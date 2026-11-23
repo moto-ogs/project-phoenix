@@ -17,10 +17,7 @@ import { DocumentTemplatePreviewBody } from "~/components/traeger/document-templ
 import { DocumentTemplateVersionsCard } from "~/components/traeger/document-template-versions-card";
 import { TraegerLetterheadPreview } from "~/components/traeger/traeger-letterhead-preview";
 import { useTraegerSettingsSchema } from "~/components/traeger/use-traeger-resources";
-import {
-  useFreshTraegerResource,
-  useTraegerResource,
-} from "~/components/traeger/use-traeger-resource";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { EditActions } from "~/components/ui/edit-actions";
@@ -33,6 +30,7 @@ import { SectionCard } from "~/components/ui/section-card";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { Textarea } from "~/components/ui/textarea";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
+import { isChangedSinceRead } from "~/lib/api-error";
 import { hasPermission } from "~/lib/auth-utils";
 import { formatDate } from "~/lib/date-helpers";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
@@ -92,8 +90,12 @@ function TemplateEditorPage({
 }: Readonly<{ kind: DocumentTemplateKind }>) {
   const { data: session } = useSession();
   const canEdit = hasPermission(session ?? null, SETTINGS_RIGHT);
-  // Edits of the saved text; `null` follows the saved text.
-  const [edited, setEdited] = useState<DocumentTemplateText | null>(null);
+  // Edits of the saved text with the version they started from (ADR 0311);
+  // `null` follows the saved text.
+  const [edited, setEdited] = useState<{
+    readonly text: DocumentTemplateText;
+    readonly from: string;
+  } | null>(null);
   // The preview of a draft; `null` shows the preview of the saved text.
   const [draftPreview, setDraftPreview] = useState<{
     readonly text: DocumentTemplateText;
@@ -108,8 +110,10 @@ function TemplateEditorPage({
     isLoading: schemaLoading,
     loadError: schemaError,
   } = useTraegerSettingsSchema();
-  // The version a save builds on: read anew each time the editor opens.
-  const template = useFreshTraegerResource(
+  // Templates hold no personal data and no read is logged: the shared
+  // cache shows a revisit at once. A save sends the version its draft
+  // started from; the backend refuses one saved since (ADR 0311).
+  const template = useTraegerResource(
     traegerKeys.documentTemplate(kind),
     () => fetchDocumentTemplate(kind),
     "die Vorlage",
@@ -149,6 +153,21 @@ function TemplateEditorPage({
   const readTemplate = useCallback(async () => {
     await mutateTemplate(fetchDocumentTemplate(kind), { revalidate: false });
   }, [kind, mutateTemplate]);
+  // Reads the stored template after a refused save; the draft now starts
+  // from it. A failed read keeps the old start, so a save is refused again.
+  const adoptStoredTemplate = async () => {
+    try {
+      const stored = await fetchDocumentTemplate(kind);
+      await mutateTemplate(stored, { revalidate: false });
+      setEdited((before) =>
+        before ? { ...before, from: stored.version } : before,
+      );
+    } catch (err) {
+      logger.warn("traeger_document_template_reload_failed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  };
   // Nachladen nach dem Speichern: ein Fehler dabei ist ein Ladefehler über
   // der Vorlage, kein gescheitertes Speichern (#6652).
   const afterSave = useRefreshAfterWrite(
@@ -158,7 +177,14 @@ function TemplateEditorPage({
 
   const error =
     template.error ?? master.error ?? savedPreview.error ?? schemaError;
-  const draft = edited ?? current;
+  const draft = edited?.text ?? current;
+  // Changes the draft; the first change remembers the version it starts from.
+  const edit = (next: (base: DocumentTemplateText) => DocumentTemplateText) =>
+    setEdited((before) => {
+      const base = before?.text ?? current;
+      const from = before?.from ?? template.data?.version;
+      return base && from !== undefined ? { text: next(base), from } : before;
+    });
   const previewed = draftPreview?.text ?? current;
   const preview = draftPreview?.preview ?? savedPreview.data;
   const data =
@@ -194,20 +220,25 @@ function TemplateEditorPage({
     formErrors.clear();
     setSaving(true);
     const submitted = draft;
+    const from = edited?.from ?? template.data?.version ?? "";
     let saved: Awaited<ReturnType<typeof saveDocumentTemplate>>;
     try {
-      saved = await saveDocumentTemplate(kind, submitted);
+      saved = await saveDocumentTemplate(kind, submitted, from);
     } catch (err) {
       logger.error("traeger_document_template_save_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
       void formErrors.show(err, { object: "die Vorlage" });
+      // Someone saved a version since: the page shows it (number, date,
+      // versions) and the draft stays. Saving again builds on the version
+      // now shown.
+      if (isChangedSinceRead(err)) await adoptStoredTemplate();
       setSaving(false);
       return;
     }
     setEdited((before) =>
-      before && sameTemplateText(before, submitted)
-        ? templateTextOf(saved)
+      before && sameTemplateText(before.text, submitted)
+        ? { ...before, text: templateTextOf(saved) }
         : before,
     );
     void invalidateFamily(traegerKeys.documentTemplatesFamily);
@@ -224,6 +255,12 @@ function TemplateEditorPage({
         { revalidate: false },
       );
     }
+    // The saved text is now the stored one: the form follows it again.
+    setEdited((before) =>
+      before && sameTemplateText(before.text, templateTextOf(saved))
+        ? null
+        : before,
+    );
     setDraftPreview(null);
     setSaving(false);
   };
@@ -244,11 +281,7 @@ function TemplateEditorPage({
   const set = (
     part: "subject" | "salutation" | "body" | "closing" | "legalRemedy",
     value: string,
-  ) =>
-    setEdited((before) => {
-      const base = before ?? current;
-      return base ? { ...base, [part]: value } : base;
-    });
+  ) => edit((base) => ({ ...base, [part]: value }));
   const rememberCaret = (field: HTMLTextAreaElement) => {
     caret.current = { start: field.selectionStart, end: field.selectionEnd };
   };
@@ -337,7 +370,7 @@ function TemplateEditorPage({
                       tooltip="Setzt den Standardtext ins Formular, gespeichert wird erst mit „Speichern“."
                       disabled={saving}
                       onClick={() => {
-                        setEdited(templateTextOf(standard));
+                        edit(() => templateTextOf(standard));
                         formErrors.clear();
                       }}
                     >
@@ -436,12 +469,9 @@ function TemplateEditorPage({
                     <DocumentTemplateInvoiceFields
                       layout={invoiceLayoutOf(draft)}
                       onChange={(layout) =>
-                        setEdited((before) => {
-                          const base = before ?? current;
-                          return base
-                            ? templateTextOf({ ...base, invoice: layout })
-                            : base;
-                        })
+                        edit((base) =>
+                          templateTextOf({ ...base, invoice: layout }),
+                        )
                       }
                       disabled={!canEdit || saving}
                       error={formErrors.fieldError("invoice")}
@@ -533,7 +563,7 @@ function TemplateEditorPage({
                 canEdit={canEdit}
                 disabled={saving}
                 onLoad={(version) => {
-                  setEdited(templateTextOf(version));
+                  edit(() => templateTextOf(version));
                   formErrors.clear();
                   formRef.current?.scrollIntoView?.({
                     behavior: "smooth",
