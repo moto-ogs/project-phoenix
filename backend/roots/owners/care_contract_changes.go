@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/parentrequests"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // careContractChangeSettingReasonPolicy is the school's rule whether a
@@ -121,7 +122,7 @@ func careContractChangeRequest(request careplan.OfferingChangeRequest, diff, unc
 		return carecontract.ChangeRequest{}, fmt.Errorf("care contract changes: effective day of request %d: %w", request.ID, err)
 	}
 	result := carecontract.ChangeRequest{
-		ID: ident.ID(request.ID), Version: careplan.ParentRequestVersion(request.UpdatedAt), SubmittedAt: request.CreatedAt,
+		ID: ident.ID(request.ID), Version: readstate.Of(request.UpdatedAt), SubmittedAt: request.CreatedAt,
 		EffectiveFrom: effectiveFrom, EndsAllCare: request.CompleteWithdrawalConfirmed, Lines: []carecontract.ChangeLine{},
 	}
 	if request.ParentNote != nil {

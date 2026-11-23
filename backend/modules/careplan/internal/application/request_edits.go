@@ -34,7 +34,7 @@ func (s *RequestEdits) EditRequest(ctx context.Context, input carerequests.EditI
 	if request.Status != "pending" {
 		return nil, careplan.ErrCareScheduleRequestNotPending
 	}
-	if err := readstate.Check(input.ExpectedVersion, careplan.ParentRequestVersion(request.UpdatedAt)); err != nil {
+	if err := readstate.Check(input.ExpectedVersion, readstate.Of(request.UpdatedAt)); err != nil {
 		return nil, err
 	}
 	payload, err := s.payload(ctx, request, input)

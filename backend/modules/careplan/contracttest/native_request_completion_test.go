@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/compose"
 	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
@@ -44,7 +45,7 @@ func TestNativeMarkDoneOnlyClosesPastPickupRequests(t *testing.T) {
 	}
 	closeRequest := func(row carerequests.Request) error {
 		return testpkg.WithTenantTx(t, ctx, db, testpkg.Tenant(t), func(txCtx context.Context, _ bun.Tx) error {
-			return service.MarkDone(txCtx, row.ID, careplan.ParentRequestVersion(row.UpdatedAt), "  Erledigt  ", account.ID)
+			return service.MarkDone(txCtx, row.ID, readstate.Of(row.UpdatedAt), "  Erledigt  ", account.ID)
 		})
 	}
 	for _, payload := range []string{`{"date":"2026-09-20"}`, `{"date":"2026-09-21"}`, `{"date":"invalid"}`} {

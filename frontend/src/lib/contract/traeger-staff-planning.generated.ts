@@ -193,17 +193,6 @@ export interface PlanShiftRequest {
   notes?: string;
 }
 
-/** Query of GET /traeger/staff-planning/ */
-export interface GetTraegerStaffPlanningQuery {
-  week?: string;
-}
-
-/** Query of GET /traeger/staff-planning/export */
-export interface GetTraegerStaffPlanningExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-  week?: string;
-}
-
 export const routes = {
   "DELETE /traeger/staff-planning/records/{id}/schools/{schoolId}/shifts/{shiftId}": {
     method: "DELETE",
@@ -215,14 +204,19 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/staff-planning/",
     portals: ["org"],
-    query: ["week"],
+    query: {
+      "week": { kind: "date" },
+    },
     response: success(TraegerPlanningWeekSchema),
   },
   "GET /traeger/staff-planning/export": {
     method: "GET",
     pattern: "/traeger/staff-planning/export",
     portals: ["org"],
-    query: ["format", "week"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+      "week": { kind: "date" },
+    },
     response: fileAnswer,
   },
   "GET /traeger/staff-planning/future-shifts": {

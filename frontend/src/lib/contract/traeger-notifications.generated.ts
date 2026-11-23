@@ -7,18 +7,15 @@ import {
   schoolFeedPageResponseSchema,
 } from "./shared.generated";
 
-/** Query of GET /traeger/notifications/feed/ */
-export interface GetTraegerNotificationsFeedQuery {
-  cursor?: string;
-  limit?: number;
-}
-
 export const routes = {
   "GET /traeger/notifications/feed/": {
     method: "GET",
     pattern: "/traeger/notifications/feed/",
     portals: ["org"],
-    query: ["cursor", "limit"],
+    query: {
+      "cursor": { kind: "string" },
+      "limit": { kind: "int" },
+    },
     response: success(schoolFeedPageResponseSchema),
   },
   "GET /traeger/notifications/feed/unread-count": {

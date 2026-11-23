@@ -65,3 +65,23 @@ func TestSuggestMappingsSkipsEmptyClasses(t *testing.T) {
 	assert.Equal(t, "4b", suggestions[1].FromClass)
 	assert.True(t, suggestions[1].IsGraduating)
 }
+
+// The confirmed fingerprint follows one rule with the student deletion:
+// whitespace around it is ignored, an empty or other one is refused.
+func TestEnsureFingerprintMatchesIgnoresSurroundingWhitespace(t *testing.T) {
+	t.Parallel()
+	cohort := []cohortStudent{{StudentID: 7, SchoolClass: "1a"}}
+	shown := fingerprintOf(nil, cohort)
+	for name, tc := range map[string]struct {
+		expected string
+		stale    bool
+	}{
+		"shown":           {shown, false},
+		"shown, padded":   {" " + shown + "\n", false},
+		"none":            {"  ", true},
+		"another preview": {fingerprintOf(nil, nil), true},
+	} {
+		err := ensureFingerprintMatches(tc.expected, nil, cohort, nil)
+		assert.Equal(t, tc.stale, errors.Is(err, ErrPreviewStale), name)
+	}
+}

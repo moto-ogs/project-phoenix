@@ -2428,155 +2428,6 @@ export const keptStudentTemplateDaysResponseSchema: z.ZodType<keptStudentTemplat
   roster_rows: safeInt,
 });
 
-/** Query of GET /api/timetable/conflicts */
-export interface GetTimetableConflictsQuery {
-  date?: string;
-  end_time?: string;
-  exclude_activity_group_id?: string;
-  exclude_instance_id?: string;
-  room_id?: string;
-  staff_ids?: string;
-  start_time?: string;
-  student_ids?: string;
-}
-
-/** Query of GET /api/timetable/deviations/history */
-export interface GetTimetableDeviationsHistoryQuery {
-  activity_group_id?: string;
-  date?: string;
-  date_to?: string;
-  start_time?: string;
-}
-
-/** Query of GET /api/timetable/gaps */
-export interface GetTimetableGapsQuery {
-  date?: string;
-  date_to?: string;
-}
-
-/** Query of GET /api/timetable/holidays */
-export interface GetTimetableHolidaysQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /api/timetable/instances/ */
-export interface GetTimetableInstancesQuery {
-  from?: string;
-  group_id?: string;
-  room_id?: string;
-  staff_id?: string;
-  to?: string;
-  view?: string;
-}
-
-/** Query of GET /api/timetable/instances/edited-in-window */
-export interface GetTimetableInstancesEditedInWindowQuery {
-  activity_group_id?: string;
-  from?: string;
-  include_deletions?: boolean;
-  to?: string;
-}
-
-/** Query of GET /api/timetable/offering-gaps */
-export interface GetTimetableOfferingGapsQuery {
-  period_id?: string;
-}
-
-/** Query of GET /api/timetable/offering-sources */
-export interface GetTimetableOfferingSourcesQuery {
-  calendar_period_id?: string;
-}
-
-/** Query of GET /api/timetable/offering-sources/combined-counts */
-export interface GetTimetableOfferingSourcesCombinedCountsQuery {
-  calendar_period_id?: string;
-  ids?: string;
-}
-
-/** Query of GET /api/timetable/offering-sources/preview */
-export interface GetTimetableOfferingSourcesPreviewQuery {
-  from?: string;
-  grade_levels?: string;
-  list_kind?: string;
-  offering_ids?: string;
-  period_id?: string;
-  roster?: string[];
-  school_classes?: string;
-  type?: string;
-}
-
-/** Query of GET /api/timetable/offering-sources/suggestion */
-export interface GetTimetableOfferingSourcesSuggestionQuery {
-  end_time?: string;
-  grade_levels?: string;
-  list_kind?: string;
-  period_id?: string;
-  roster?: string[];
-  school_classes?: string;
-  type?: string;
-}
-
-/** Query of GET /api/timetable/operations/planned-now */
-export interface GetTimetableOperationsPlannedNowQuery {
-  date?: string;
-  horizon_minutes?: number;
-  include_roster?: boolean;
-  limit?: number;
-  scope?: "day" | "past";
-}
-
-/** Query of GET /api/timetable/pickup-extensions/ */
-export interface GetTimetablePickupExtensionsQuery {
-  student_id?: string;
-}
-
-/** Query of GET /api/timetable/school-vacations */
-export interface GetTimetableSchoolVacationsQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /api/timetable/student/{id}/day */
-export interface GetTimetableStudentIdDayQuery {
-  date?: string;
-}
-
-/** Query of GET /api/timetable/student/{id}/week */
-export interface GetTimetableStudentIdWeekQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /api/timetable/templates */
-export interface GetTimetableTemplatesQuery {
-  period_id?: string;
-}
-
-/** Query of GET /api/timetable/templates/booking-leftovers */
-export interface GetTimetableTemplatesBookingLeftoversQuery {
-  period_id?: string;
-}
-
-/** Query of GET /api/timetable/templates/roster-deviations */
-export interface GetTimetableTemplatesRosterDeviationsQuery {
-  period_id?: string;
-  template_id?: string;
-}
-
-/** Query of GET /api/timetable/templates/{id} */
-export interface GetTimetableTemplatesIdQuery {
-  period_id?: string;
-}
-
-/** Query of GET /api/timetable/templates/{id}/offering-preview */
-export interface GetTimetableTemplatesIdOfferingPreviewQuery {
-  from?: string;
-  grade_levels?: string;
-  offering_ids?: string;
-  school_classes?: string;
-}
-
 export const routes = {
   "DELETE /api/timetable/closing-days/{id}": {
     method: "DELETE",
@@ -2630,42 +2481,74 @@ export const routes = {
     method: "GET",
     pattern: "/api/timetable/conflicts",
     portals: ["tenant"],
-    query: ["date", "end_time", "exclude_activity_group_id", "exclude_instance_id", "room_id", "staff_ids", "start_time", "student_ids"],
+    query: {
+      "date": { kind: "date" },
+      "end_time": { kind: "string" },
+      "exclude_activity_group_id": { kind: "id" },
+      "exclude_instance_id": { kind: "id" },
+      "room_id": { kind: "id" },
+      "staff_ids": { kind: "string" },
+      "start_time": { kind: "string" },
+      "student_ids": { kind: "string" },
+    },
     response: success(PlannedConflictsResponseSchema),
   },
   "GET /api/timetable/deviations/history": {
     method: "GET",
     pattern: "/api/timetable/deviations/history",
     portals: ["tenant"],
-    query: ["activity_group_id", "date", "date_to", "start_time"],
+    query: {
+      "activity_group_id": { kind: "id" },
+      "date": { kind: "date" },
+      "date_to": { kind: "date" },
+      "start_time": { kind: "string" },
+    },
     response: success(DeviationHistoryResponseSchema),
   },
   "GET /api/timetable/gaps": {
     method: "GET",
     pattern: "/api/timetable/gaps",
     portals: ["tenant"],
-    query: ["date", "date_to"],
+    query: {
+      "date": { kind: "date" },
+      "date_to": { kind: "date" },
+    },
     response: success(GapsResponseSchema),
   },
   "GET /api/timetable/holidays": {
     method: "GET",
     pattern: "/api/timetable/holidays",
     portals: ["tenant"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(HolidaysResponseSchema),
   },
   "GET /api/timetable/instances/": {
     method: "GET",
     pattern: "/api/timetable/instances/",
     portals: ["tenant"],
-    query: ["from", "group_id", "room_id", "staff_id", "to", "view"],
+    query: {
+      "from": { kind: "date" },
+      "group_id": { kind: "id" },
+      "room_id": { kind: "id" },
+      "staff_id": { kind: "id" },
+      "to": { kind: "date" },
+      "view": { kind: "string" },
+    },
     response: success(weeklyInstancesResponseSchema),
   },
   "GET /api/timetable/instances/edited-in-window": {
     method: "GET",
     pattern: "/api/timetable/instances/edited-in-window",
     portals: ["tenant"],
-    query: ["activity_group_id", "from", "include_deletions", "to"],
+    query: {
+      "activity_group_id": { kind: "id" },
+      "from": { kind: "date" },
+      "include_deletions": { kind: "bool" },
+      "to": { kind: "date" },
+    },
     response: success(editedInWindowResponseSchema),
   },
   "GET /api/timetable/instances/{id}/guardian-notice": {
@@ -2696,35 +2579,59 @@ export const routes = {
     method: "GET",
     pattern: "/api/timetable/offering-gaps",
     portals: ["tenant"],
-    query: ["period_id"],
+    query: {
+      "period_id": { kind: "id" },
+    },
     response: success(offeringGapsResponseSchema),
   },
   "GET /api/timetable/offering-sources": {
     method: "GET",
     pattern: "/api/timetable/offering-sources",
     portals: ["tenant"],
-    query: ["calendar_period_id"],
+    query: {
+      "calendar_period_id": { kind: "id" },
+    },
     response: success(offeringSourcesResponseSchema),
   },
   "GET /api/timetable/offering-sources/combined-counts": {
     method: "GET",
     pattern: "/api/timetable/offering-sources/combined-counts",
     portals: ["tenant"],
-    query: ["calendar_period_id", "ids"],
+    query: {
+      "calendar_period_id": { kind: "id" },
+      "ids": { kind: "string" },
+    },
     response: success(combinedOfferingCountsResponseSchema),
   },
   "GET /api/timetable/offering-sources/preview": {
     method: "GET",
     pattern: "/api/timetable/offering-sources/preview",
     portals: ["tenant"],
-    query: ["from", "grade_levels", "list_kind", "offering_ids", "period_id", "roster", "school_classes", "type"],
+    query: {
+      "from": { kind: "date" },
+      "grade_levels": { kind: "string" },
+      "list_kind": { kind: "string" },
+      "offering_ids": { kind: "string" },
+      "period_id": { kind: "id" },
+      "roster": { kind: "string", repeated: true },
+      "school_classes": { kind: "string" },
+      "type": { kind: "string" },
+    },
     response: success(offeringPreviewResponseSchema),
   },
   "GET /api/timetable/offering-sources/suggestion": {
     method: "GET",
     pattern: "/api/timetable/offering-sources/suggestion",
     portals: ["tenant"],
-    query: ["end_time", "grade_levels", "list_kind", "period_id", "roster", "school_classes", "type"],
+    query: {
+      "end_time": { kind: "string" },
+      "grade_levels": { kind: "string" },
+      "list_kind": { kind: "string" },
+      "period_id": { kind: "id" },
+      "roster": { kind: "string", repeated: true },
+      "school_classes": { kind: "string" },
+      "type": { kind: "string" },
+    },
     response: success(offeringSuggestionEnvelopeSchema),
   },
   "GET /api/timetable/operations/active-groups/{id}/roster": {
@@ -2743,7 +2650,13 @@ export const routes = {
     method: "GET",
     pattern: "/api/timetable/operations/planned-now",
     portals: ["tenant"],
-    query: ["date", "horizon_minutes", "include_roster", "limit", "scope"],
+    query: {
+      "date": { kind: "date" },
+      "horizon_minutes": { kind: "int" },
+      "include_roster": { kind: "bool" },
+      "limit": { kind: "int" },
+      "scope": { kind: "string", values: ["day", "past"] },
+    },
     response: success(PlannedNowResponseSchema),
   },
   "GET /api/timetable/periods/": {
@@ -2762,7 +2675,9 @@ export const routes = {
     method: "GET",
     pattern: "/api/timetable/pickup-extensions/",
     portals: ["tenant"],
-    query: ["student_id"],
+    query: {
+      "student_id": { kind: "id" },
+    },
     response: success(pickupExtensionsResponseSchema),
   },
   "GET /api/timetable/planning-tracks/": {
@@ -2781,56 +2696,78 @@ export const routes = {
     method: "GET",
     pattern: "/api/timetable/school-vacations",
     portals: ["tenant"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(SchoolVacationsResponseSchema),
   },
   "GET /api/timetable/student/{id}/day": {
     method: "GET",
     pattern: "/api/timetable/student/{id}/day",
     portals: ["tenant"],
-    query: ["date"],
+    query: {
+      "date": { kind: "date" },
+    },
     response: success(StudentDayResponseSchema),
   },
   "GET /api/timetable/student/{id}/week": {
     method: "GET",
     pattern: "/api/timetable/student/{id}/week",
     portals: ["tenant"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(StudentWeekResponseSchema),
   },
   "GET /api/timetable/templates": {
     method: "GET",
     pattern: "/api/timetable/templates",
     portals: ["tenant"],
-    query: ["period_id"],
+    query: {
+      "period_id": { kind: "id" },
+    },
     response: success(listTemplatesResponseSchema),
   },
   "GET /api/timetable/templates/booking-leftovers": {
     method: "GET",
     pattern: "/api/timetable/templates/booking-leftovers",
     portals: ["tenant"],
-    query: ["period_id"],
+    query: {
+      "period_id": { kind: "id" },
+    },
     response: success(bookingLeftoversResponseSchema),
   },
   "GET /api/timetable/templates/roster-deviations": {
     method: "GET",
     pattern: "/api/timetable/templates/roster-deviations",
     portals: ["tenant"],
-    query: ["period_id", "template_id"],
+    query: {
+      "period_id": { kind: "id" },
+      "template_id": { kind: "id" },
+    },
     response: success(rosterDeviationsResponseSchema),
   },
   "GET /api/timetable/templates/{id}": {
     method: "GET",
     pattern: "/api/timetable/templates/{id}",
     portals: ["tenant"],
-    query: ["period_id"],
+    query: {
+      "period_id": { kind: "id" },
+    },
     response: success(templateResponseSchema),
   },
   "GET /api/timetable/templates/{id}/offering-preview": {
     method: "GET",
     pattern: "/api/timetable/templates/{id}/offering-preview",
     portals: ["tenant"],
-    query: ["from", "grade_levels", "offering_ids", "school_classes"],
+    query: {
+      "from": { kind: "date" },
+      "grade_levels": { kind: "string" },
+      "offering_ids": { kind: "string" },
+      "school_classes": { kind: "string" },
+    },
     response: success(offeringPreviewResponseSchema),
   },
   "PATCH /api/timetable/instances/{instance_id}/students/{student_id}": {

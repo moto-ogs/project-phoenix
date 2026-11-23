@@ -1,14 +1,13 @@
 // Apply-body handling for the grade-transition apply endpoint (#405 review).
 //
-// The body is optional — an absent or empty one means "no preview to confirm
-// against" and skips the stale-preview check. A MALFORMED body must not be
-// treated that way: swallowing the decode error left expected_fingerprint empty,
-// which ApplyChecked reads as opting out of the check, so the destructive
-// transition ran unguarded on a cohort that may have changed since the admin
-// confirmed it.
+// The apply confirms a preview: an absent or empty body names none and is
+// refused like a stale one (ADR 0311), so the destructive transition never
+// runs on a cohort nobody confirmed. A MALFORMED body is rejected as such
+// instead of being read as an empty one.
 package gradetransitionhttp_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -17,6 +16,7 @@ import (
 
 	rootAPI "github.com/moto-ogs/project-phoenix/api"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/gofrs/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -87,17 +87,53 @@ func TestGradeTransitionResource_Apply_BodyHandling(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, rr.Code)
 	})
 
-	t.Run("empty body still applies (no preview to confirm)", func(t *testing.T) {
+	draft := func(t *testing.T, transitionID int64) string {
+		t.Helper()
+		var status string
+		require.NoError(t, tc.db.NewSelect().
+			TableExpr("education.grade_transitions").
+			Column("status").
+			Where("id = ?", transitionID).
+			Scan(testpkg.Ctx(t), &status))
+		return status
+	}
+
+	for name, body := range map[string]string{"empty body": "", "empty JSON object": `{}`} {
+		t.Run(name+" confirms no preview and applies nothing", func(t *testing.T) {
+			transitionID := newTransition(t)
+
+			rr := testutil.ExecuteRequest(router, newApplyRequest(transitionID, body))
+			require.Equal(t, http.StatusConflict, rr.Code, rr.Body.String())
+			assert.Contains(t, rr.Body.String(), `"code":"grade_transition.preview_stale"`)
+			assert.Equal(t, schoolstructure.TransitionStatusDraft, draft(t, transitionID))
+		})
+	}
+
+	t.Run("the previewed fingerprint applies", func(t *testing.T) {
 		transitionID := newTransition(t)
 
-		rr := testutil.ExecuteRequest(router, newApplyRequest(transitionID, ""))
+		confirmed, err := json.Marshal(previewedApply(t, router, token, transitionID))
+		require.NoError(t, err)
+		rr := testutil.ExecuteRequest(router, newApplyRequest(transitionID, string(confirmed)))
 		testutil.AssertSuccessResponse(t, rr, http.StatusOK)
+		assert.Equal(t, schoolstructure.TransitionStatusApplied, draft(t, transitionID))
 	})
+}
 
-	t.Run("empty JSON object still applies (no preview to confirm)", func(t *testing.T) {
-		transitionID := newTransition(t)
-
-		rr := testutil.ExecuteRequest(router, newApplyRequest(transitionID, `{}`))
-		testutil.AssertSuccessResponse(t, rr, http.StatusOK)
-	})
+// previewedApply is the apply body of an admin who confirmed the preview: the
+// fingerprint the preview route answered (ADR 0311).
+func previewedApply(t *testing.T, router chi.Router, token string, transitionID int64) map[string]string {
+	t.Helper()
+	rr := testutil.ExecuteRequest(router, testutil.NewAuthenticatedRequest(t, "GET", fmt.Sprintf("/%d/preview", transitionID), nil,
+		testutil.WithJWTBearer(token),
+	))
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	var body struct {
+		Data struct {
+			Fingerprint string `json:"fingerprint"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &body))
+	require.NotEmpty(t, body.Data.Fingerprint)
+	return map[string]string{"expected_fingerprint": body.Data.Fingerprint}
 }

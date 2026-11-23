@@ -84,7 +84,7 @@ func TestStudents20DeletionImpactGrowthQueryBudget(t *testing.T) {
 				require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &body))
 				fingerprint, ok := body.Data["fingerprint"].(string)
 				require.True(t, ok)
-				require.Len(t, fingerprint, 64)
+				require.Len(t, fingerprint, 32, "a readstate.Fingerprint (ADR 0311)")
 				delete(body.Data, "fingerprint")
 				expectedCounts := map[string]any{"timetable_assignments": float64(0), "activity_enrollments": float64(0), "attendance_records": float64(0), "care_schedules": float64(n), "guardian_links": float64(0), "companion_links": float64(0), "communications": float64(0), "consents": float64(0), "enrollment_references": float64(0), "other_records": float64(0)}
 				require.Equal(t, map[string]any{"confirmation_name": "Deletion Subject", "counts": expectedCounts, "total": float64(n), "preserved": map[string]any{"guardian_profiles": true, "parent_accounts": true, "other_students": true, "shared_instances": true}}, body.Data)

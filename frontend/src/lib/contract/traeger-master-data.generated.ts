@@ -287,16 +287,6 @@ export interface WithdrawalContactRequest {
   email?: string;
 }
 
-/** Query of GET /traeger/master-data/document-templates/export */
-export interface GetTraegerMasterDataDocumentTemplatesExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-}
-
-/** Query of GET /traeger/master-data/logo */
-export interface GetTraegerMasterDataLogoQuery {
-  v?: string;
-}
-
 export const routes = {
   "DELETE /traeger/master-data/bank-accounts/{id}": {
     method: "DELETE",
@@ -326,7 +316,9 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/master-data/document-templates/export",
     portals: ["org"],
-    query: ["format"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
     response: fileAnswer,
   },
   "GET /traeger/master-data/document-templates/{kind}": {
@@ -340,7 +332,9 @@ export const routes = {
     pattern: "/traeger/master-data/logo",
     portals: ["org"],
     privateCache: true,
-    query: ["v"],
+    query: {
+      "v": { kind: "string" },
+    },
     response: fileAnswer,
   },
   "POST /traeger/master-data/bank-accounts": {

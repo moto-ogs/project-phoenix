@@ -344,21 +344,18 @@ export const SubstitutionEndResponseSchema: z.ZodType<SubstitutionEndResponse, u
   ended: bool,
 });
 
-/** Query of GET /api/substitutions/ */
-export interface GetSubstitutionsQuery {
-  active_group_id?: string;
-  date?: string;
-  from?: string;
-  group_id?: string;
-  to?: string;
-}
-
 export const routes = {
   "GET /api/substitutions/": {
     method: "GET",
     pattern: "/api/substitutions/",
     portals: ["tenant"],
-    query: ["active_group_id", "date", "from", "group_id", "to"],
+    query: {
+      "active_group_id": { kind: "id" },
+      "date": { kind: "date" },
+      "from": { kind: "date" },
+      "group_id": { kind: "id" },
+      "to": { kind: "date" },
+    },
     response: success(SubstitutionOverviewResultSchema),
   },
   "POST /api/substitutions/": {

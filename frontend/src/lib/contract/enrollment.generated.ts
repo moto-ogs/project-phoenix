@@ -2193,84 +2193,6 @@ export interface UpdateSchemaRequest {
   legal_blocks?: FormLegalBlockInput[] | null;
 }
 
-/** Query of GET /api/enrollment/admin/change-requests/ */
-export interface GetEnrollmentAdminChangeRequestsQuery {
-  request_id?: string;
-  status?: string;
-}
-
-/** Query of GET /api/enrollment/admin/change-requests/list */
-export interface GetEnrollmentAdminChangeRequestsListQuery {
-  cursor?: string;
-  from?: string;
-  limit?: number;
-  search?: string;
-  status?: string;
-  to?: string;
-  view?: string;
-}
-
-/** Query of GET /api/enrollment/admin/reports/care-usage */
-export interface GetEnrollmentAdminReportsCareUsageQuery {
-  care_offering_id?: string;
-  care_offering_ids?: string[];
-  day_count?: number;
-  grade_level?: number;
-  phase_id?: string;
-  pickup_time?: string;
-  search?: string;
-  status?: string;
-  weekday?: string;
-}
-
-/** Query of GET /api/enrollment/admin/requests/ */
-export interface GetEnrollmentAdminRequestsQuery {
-  child_status?: string;
-  phase_id?: string;
-}
-
-/** Query of GET /api/enrollment/care-offerings/ */
-export interface GetEnrollmentCareOfferingsQuery {
-  phase_id?: string;
-}
-
-/** Query of GET /api/enrollment/care-offerings/booking-stats */
-export interface GetEnrollmentCareOfferingsBookingStatsQuery {
-  phase_id?: string;
-}
-
-/** Query of GET /api/enrollment/form-bootstrap/public/{tenantSlug}/{phaseId} */
-export interface GetEnrollmentFormBootstrapPublicTenantSlugPhaseIdQuery {
-  late_invite?: string;
-}
-
-/** Query of GET /api/enrollment/legal/{tenantSlug} */
-export interface GetEnrollmentLegalTenantSlugQuery {
-  late_invite?: string;
-}
-
-/** Query of GET /api/enrollment/legal/{tenantSlug}/{phaseId} */
-export interface GetEnrollmentLegalTenantSlugPhaseIdQuery {
-  late_invite?: string;
-}
-
-/** Query of GET /api/enrollment/phases/{id}/rollover-preview */
-export interface GetEnrollmentPhasesIdRolloverPreviewQuery {
-  bumps_grade?: string;
-}
-
-/** Query of GET /api/enrollment/schema/preview */
-export interface GetEnrollmentSchemaPreviewQuery {
-  base?: string;
-  phaseId?: string;
-  schemaId?: string;
-}
-
-/** Query of POST /api/enrollment/{tenantSlug}/submit */
-export interface PostEnrollmentTenantSlugSubmitQuery {
-  late_invite?: string;
-}
-
 export const routes = {
   "DELETE /api/enrollment/admin/requests/{id}/": {
     method: "DELETE",
@@ -2320,14 +2242,25 @@ export const routes = {
     method: "GET",
     pattern: "/api/enrollment/admin/change-requests/",
     portals: ["tenant"],
-    query: ["request_id", "status"],
+    query: {
+      "request_id": { kind: "id" },
+      "status": { kind: "string" },
+    },
     response: success(z.array(ChangeRequestResponseSchema)),
   },
   "GET /api/enrollment/admin/change-requests/list": {
     method: "GET",
     pattern: "/api/enrollment/admin/change-requests/list",
     portals: ["tenant"],
-    query: ["cursor", "from", "limit", "search", "status", "to", "view"],
+    query: {
+      "cursor": { kind: "string" },
+      "from": { kind: "date" },
+      "limit": { kind: "int" },
+      "search": { kind: "string" },
+      "status": { kind: "string" },
+      "to": { kind: "date" },
+      "view": { kind: "string" },
+    },
     response: success(ChangeRequestReviewPageSchema),
   },
   "GET /api/enrollment/admin/change-requests/pending-count": {
@@ -2346,14 +2279,27 @@ export const routes = {
     method: "GET",
     pattern: "/api/enrollment/admin/reports/care-usage",
     portals: ["tenant"],
-    query: ["care_offering_id", "care_offering_ids", "day_count", "grade_level", "phase_id", "pickup_time", "search", "status", "weekday"],
+    query: {
+      "care_offering_id": { kind: "id" },
+      "care_offering_ids": { kind: "id", repeated: true },
+      "day_count": { kind: "int" },
+      "grade_level": { kind: "int" },
+      "phase_id": { kind: "id" },
+      "pickup_time": { kind: "string" },
+      "search": { kind: "string" },
+      "status": { kind: "string" },
+      "weekday": { kind: "string" },
+    },
     response: success(CareUsageReportResponseSchema),
   },
   "GET /api/enrollment/admin/requests/": {
     method: "GET",
     pattern: "/api/enrollment/admin/requests/",
     portals: ["tenant"],
-    query: ["child_status", "phase_id"],
+    query: {
+      "child_status": { kind: "string" },
+      "phase_id": { kind: "id" },
+    },
     response: success(z.array(AdminRequestSummarySchema)),
   },
   "GET /api/enrollment/admin/requests/unread-count": {
@@ -2420,14 +2366,18 @@ export const routes = {
     method: "GET",
     pattern: "/api/enrollment/care-offerings/",
     portals: ["tenant"],
-    query: ["phase_id"],
+    query: {
+      "phase_id": { kind: "id" },
+    },
     response: success(z.array(CareOfferingResponseSchema)),
   },
   "GET /api/enrollment/care-offerings/booking-stats": {
     method: "GET",
     pattern: "/api/enrollment/care-offerings/booking-stats",
     portals: ["tenant"],
-    query: ["phase_id"],
+    query: {
+      "phase_id": { kind: "id" },
+    },
     response: success(z.array(CareOfferingBookingStatsResponseSchema)),
   },
   "GET /api/enrollment/care-offerings/{id}/": {
@@ -2442,21 +2392,27 @@ export const routes = {
     pattern: "/api/enrollment/form-bootstrap/public/{tenantSlug}/{phaseId}",
     portals: ["tenant"],
     routeFile: "the route file adds the signed-in staff member's profile to the public form",
-    query: ["late_invite"],
+    query: {
+      "late_invite": { kind: "string" },
+    },
     response: success(PublicEnrollmentFormBootstrapResponseSchema),
   },
   "GET /api/enrollment/legal/{tenantSlug}": {
     method: "GET",
     pattern: "/api/enrollment/legal/{tenantSlug}",
     portals: ["public"],
-    query: ["late_invite"],
+    query: {
+      "late_invite": { kind: "string" },
+    },
     response: success(PublicLegalTextsResponseSchema),
   },
   "GET /api/enrollment/legal/{tenantSlug}/{phaseId}": {
     method: "GET",
     pattern: "/api/enrollment/legal/{tenantSlug}/{phaseId}",
     portals: ["public"],
-    query: ["late_invite"],
+    query: {
+      "late_invite": { kind: "string" },
+    },
     response: success(PublicLegalTextsResponseSchema),
   },
   "GET /api/enrollment/me/profile": {
@@ -2518,7 +2474,9 @@ export const routes = {
     method: "GET",
     pattern: "/api/enrollment/phases/{id}/rollover-preview",
     portals: ["tenant"],
-    query: ["bumps_grade"],
+    query: {
+      "bumps_grade": { kind: "bool" },
+    },
     response: success(RolloverPreviewResponseSchema),
   },
   "GET /api/enrollment/requests/{statusToken}": {
@@ -2568,7 +2526,11 @@ export const routes = {
     method: "GET",
     pattern: "/api/enrollment/schema/preview",
     portals: ["tenant"],
-    query: ["base", "phaseId", "schemaId"],
+    query: {
+      "base": { kind: "string" },
+      "phaseId": { kind: "id" },
+      "schemaId": { kind: "id" },
+    },
     response: success(SchemaPreviewBootstrapResponseSchema),
   },
   "GET /api/enrollment/schema/versions": {
@@ -2762,7 +2724,9 @@ export const routes = {
     pattern: "/api/enrollment/{tenantSlug}/submit",
     portals: ["public"],
     maxBodyBytes: 2097152,
-    query: ["late_invite"],
+    query: {
+      "late_invite": { kind: "string" },
+    },
     request: requestBody<SubmitEnrollmentRequest>(),
     response: success(SubmitEnrollmentResponseSchema),
   },

@@ -633,12 +633,14 @@ export function useSWRAuth<T, E = Error>(
 }
 
 /**
- * A read that has to be fresh each time its surface opens: the preview of a
- * deletion, the version an edit is saved against, a form's template. `data`
- * stays undefined until this opening's own request has answered, so nothing
- * decides or types against the cached answer of an earlier opening; `fresh`
- * says that it has. A `null` key closes the opening, the next key starts a
- * new one. Focus and reconnect do not replace what the person is looking at.
+ * A read made again each time its surface opens. Since ADR 0311 only a read
+ * the server logs or authorizes on every opening (access log, audit per
+ * read) keeps it; an edit or a preview reads through `useSWRAuth` and its
+ * save sends the token of what it read, which the server checks. The other
+ * callers are a transition. `data` stays undefined until this opening's own
+ * request has answered; `fresh` says that it has. A `null` key closes the
+ * opening, the next key starts a new one. Focus and reconnect do not replace
+ * what the person is looking at.
  */
 export function useFreshSWR<T, E = Error>(
   key: string | null,

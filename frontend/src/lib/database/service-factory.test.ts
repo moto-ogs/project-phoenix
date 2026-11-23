@@ -44,7 +44,7 @@ const config: EntityConfig<TestEntity> = {
   api: {
     list: async () => {
       const page = await bffJson("tenant", "GET /api/rooms/", {
-        query: { include_system: "true" },
+        query: { include_system: true },
       });
       return { data: page.data.map(entity), pagination: page.pagination };
     },

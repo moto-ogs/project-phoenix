@@ -179,12 +179,12 @@ func TestRequestDecisionRechecksStateAfterWaitingForChild(t *testing.T) {
 				ctx, cancel := context.WithTimeout(f.care.staffCtx(f.care.staffAccount), 20*time.Second)
 				defer cancel()
 				people := owners.MustNewPeopleDirectory(testpkg.NewDatabase(t, db))
-				version := careplan.ParentRequestVersion(f.careRow.UpdatedAt)
+				version := readstate.Of(f.careRow.UpdatedAt)
 				if kind == "excused" {
-					version = careplan.ParentRequestVersion(f.excusedRow.UpdatedAt)
+					version = readstate.Of(f.excusedRow.UpdatedAt)
 				}
 				if kind == "master" {
-					version = careplan.ParentRequestVersion(f.masterRow.UpdatedAt)
+					version = readstate.Of(f.masterRow.UpdatedAt)
 				}
 				done := make(chan error, 1)
 				err := testpkg.WithTenantTx(t, ctx, db, testpkg.Tenant(t), func(editCtx context.Context, tx bun.Tx) error {
@@ -255,8 +255,8 @@ func TestBulkRequestLocksAllChildrenBeforeRequests(t *testing.T) {
 		go func() {
 			done <- testpkg.WithTenantTx(t, ctx, db, testpkg.Tenant(t), func(writeCtx context.Context, _ bun.Tx) error {
 				return coordinator.BulkApprove(writeCtx, parentrequests.BulkApproveInput{Requests: []parentrequests.Ref{
-					{Kind: parentrequests.KindMasterData, ID: low.masterRow.ID, ExpectedVersion: careplan.ParentRequestVersion(low.masterRow.UpdatedAt)},
-					{Kind: parentrequests.KindExcused, ID: high.excusedRow.ID, ExpectedVersion: careplan.ParentRequestVersion(high.excusedRow.UpdatedAt)},
+					{Kind: parentrequests.KindMasterData, ID: low.masterRow.ID, ExpectedVersion: readstate.Of(low.masterRow.UpdatedAt)},
+					{Kind: parentrequests.KindExcused, ID: high.excusedRow.ID, ExpectedVersion: readstate.Of(high.excusedRow.UpdatedAt)},
 				}, Reason: "Reviewed", ReviewerID: low.care.staffAccount})
 			})
 		}()
@@ -378,8 +378,8 @@ func (f requestLockFixture) writer(t *testing.T, ctx context.Context, operation 
 	if operation == "bulk" {
 		return func(ctx context.Context) error {
 			return coordinator.BulkApprove(ctx, parentrequests.BulkApproveInput{Requests: []parentrequests.Ref{
-				{Kind: parentrequests.KindMasterData, ID: f.masterRow.ID, ExpectedVersion: careplan.ParentRequestVersion(f.masterRow.UpdatedAt)},
-				{Kind: parentrequests.KindExcused, ID: f.excusedRow.ID, ExpectedVersion: careplan.ParentRequestVersion(f.excusedRow.UpdatedAt)},
+				{Kind: parentrequests.KindMasterData, ID: f.masterRow.ID, ExpectedVersion: readstate.Of(f.masterRow.UpdatedAt)},
+				{Kind: parentrequests.KindExcused, ID: f.excusedRow.ID, ExpectedVersion: readstate.Of(f.excusedRow.UpdatedAt)},
 			}, Reason: "Reviewed", ReviewerID: f.care.staffAccount})
 		}
 	}
@@ -397,7 +397,7 @@ func (f requestLockFixture) writer(t *testing.T, ctx context.Context, operation 
 				return err
 			}
 			input.Kind, input.ConflictKey = parentrequests.KindCareSchedule, "care:pickup:1"
-			input.RequestIDs, input.ExpectedVersions = []int64{other.ID, f.careRow.ID}, []string{careplan.ParentRequestVersion(other.UpdatedAt), careplan.ParentRequestVersion(f.careRow.UpdatedAt)}
+			input.RequestIDs, input.ExpectedVersions = []int64{other.ID, f.careRow.ID}, []string{readstate.Of(other.UpdatedAt), readstate.Of(f.careRow.UpdatedAt)}
 		case "resolve excused":
 			row := f.excusedRow
 			row.ID = 0
@@ -406,7 +406,7 @@ func (f requestLockFixture) writer(t *testing.T, ctx context.Context, operation 
 				return err
 			}
 			input.Kind, input.ConflictKey = parentrequests.KindExcused, "absence:2026-08-25"
-			input.RequestIDs, input.ExpectedVersions = []int64{other.ID, f.excusedRow.ID}, []string{careplan.ParentRequestVersion(other.UpdatedAt), careplan.ParentRequestVersion(f.excusedRow.UpdatedAt)}
+			input.RequestIDs, input.ExpectedVersions = []int64{other.ID, f.excusedRow.ID}, []string{readstate.Of(other.UpdatedAt), readstate.Of(f.excusedRow.UpdatedAt)}
 		case "resolve master":
 			row := f.masterRow
 			row.ID = 0
@@ -419,7 +419,7 @@ func (f requestLockFixture) writer(t *testing.T, ctx context.Context, operation 
 				return err
 			}
 			input.Kind, input.ConflictKey = parentrequests.KindMasterData, "master_data:person:first_name"
-			input.RequestIDs, input.ExpectedVersions = []int64{other.ID, f.masterRow.ID}, []string{careplan.ParentRequestVersion(other.UpdatedAt), careplan.ParentRequestVersion(f.masterRow.UpdatedAt)}
+			input.RequestIDs, input.ExpectedVersions = []int64{other.ID, f.masterRow.ID}, []string{readstate.Of(other.UpdatedAt), readstate.Of(f.masterRow.UpdatedAt)}
 		}
 		return nil
 	}))

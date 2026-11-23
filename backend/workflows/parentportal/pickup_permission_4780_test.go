@@ -21,6 +21,7 @@ import (
 	presenceCompose "github.com/moto-ogs/project-phoenix/modules/studentpresence/compose"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
@@ -325,7 +326,7 @@ func TestPickupPermissionCorrectionRestoresThePreviousPermission(t *testing.T) {
 	})
 	require.True(t, ok)
 	require.NoError(t, testpkg.WithTenantTx(t, staffCtx, f.db, chain.TenantID, func(txCtx context.Context, _ bun.Tx) error {
-		return corrector.Correct(txCtx, created.ID, false, careplan.ParentRequestVersion(current.UpdatedAt), "Doch nicht", staffID)
+		return corrector.Correct(txCtx, created.ID, false, readstate.Of(current.UpdatedAt), "Doch nicht", staffID)
 	}))
 
 	canPickup, weekdays := pickupWeekdays(t, f.db, chain.StudentID, contactID)
@@ -405,7 +406,7 @@ func TestPickupPermissionCorrectionKeepsAnApprovedPermission(t *testing.T) {
 	})
 	require.True(t, ok)
 	require.NoError(t, testpkg.WithTenantTx(t, staffCtx, f.db, chain.TenantID, func(txCtx context.Context, _ bun.Tx) error {
-		return corrector.Correct(txCtx, created.ID, true, careplan.ParentRequestVersion(rows[0].UpdatedAt), "Bleibt bestätigt", staffID)
+		return corrector.Correct(txCtx, created.ID, true, readstate.Of(rows[0].UpdatedAt), "Bleibt bestätigt", staffID)
 	}))
 
 	canPickup, weekdays := pickupWeekdays(t, f.db, chain.StudentID, contactID)
@@ -446,7 +447,7 @@ func TestPickupPermissionCorrectionKeepsALaterStaffChange(t *testing.T) {
 	})
 	require.True(t, ok)
 	err = testpkg.WithTenantTx(t, staffCtx, f.db, chain.TenantID, func(txCtx context.Context, _ bun.Tx) error {
-		return corrector.Correct(txCtx, created.ID, false, careplan.ParentRequestVersion(rows[0].UpdatedAt), "Doch nicht", staffID)
+		return corrector.Correct(txCtx, created.ID, false, readstate.Of(rows[0].UpdatedAt), "Doch nicht", staffID)
 	})
 	require.ErrorIs(t, err, parentrequests.ErrCorrectionUnsupported)
 	canPickup, weekdays := pickupWeekdays(t, f.db, chain.StudentID, contactID)

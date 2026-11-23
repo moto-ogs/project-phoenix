@@ -4,6 +4,21 @@ Read the relevant section before changing auth, portal routing, enrollment,
 tenant scoping, IoT endpoints, or kiosk presence modes. Paths start at the
 repository root unless the section says otherwise.
 
+## Browser query parameters and request bodies
+
+Go's `RouteContracts()` declares each query key and its kind. Generated
+TypeScript route entries keep those kinds, allowed string values and
+repetition. `bffJson` and `bffFile` use them to type the query: dates are
+`YYYY-MM-DD` strings, IDs and text are strings, integers are numbers and
+booleans are booleans. The helpers serialize values to the URL; the catalog
+proxy filters names only and forwards every occurrence of each registered
+key to Go, which validates the values.
+
+Generated JSON body field types remain optional. The Go handler validates
+required fields and field combinations, as recorded in [ADR 0270](../adr/0270-der-vertrag-zwischen-go-und-frontend-entsteht-aus-der-go-registrierung.md).
+See [the route example](new-route.md) for `from` and `to` on
+`GET /api/students/{id}/partial-absences`.
+
 ## Ecosystem and IoT
 
 The sibling `../PyrePortal/` repository runs the React web kiosk on GKT/GKTL

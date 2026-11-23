@@ -17,7 +17,7 @@ proxy or named route file has decoded the Go answer already.
 
 | Portal | Example | In the code |
 |---|---|---|
-| Staff (`tenant`) | `bffJson("tenant", "GET /api/students/{id}/partial-absences", { params: { id }, query: { from, to } })` | [`guardian-api.ts`](../../frontend/src/lib/guardian-api.ts), [`timetable-api.ts`](../../frontend/src/lib/timetable-api.ts) |
+| Staff (`tenant`) | `bffJson("tenant", "GET /api/students/{id}/partial-absences", { params: { id }, query: { from, to } })` | [`student-partial-absences-api.ts`](../../frontend/src/lib/student-partial-absences-api.ts) |
 | Parents (`parent`) | `bffJson("parent", "GET /parent/me/notifications/feed/", { query: { limit, cursor } })` | [`notification-feed-api.ts`](../../frontend/src/lib/notification-feed-api.ts) `parentNotificationFeedApi` |
 | moto schule (`school`) | `bffJson("school", "GET /school/notifications/feed/", { query: { limit, cursor } })` | [`notification-feed-api.ts`](../../frontend/src/lib/notification-feed-api.ts) `schoolNotificationFeedApi` |
 | Träger (`org`) | `bffJson("org", "GET /traeger/notifications/feed/unread-count")` | [`notification-feed-api.ts`](../../frontend/src/lib/notification-feed-api.ts) `traegerNotificationFeedApi` |
@@ -31,6 +31,13 @@ slash is dropped and each parameter encoded.
 
 - **Answer:** the `data` of the envelope; a paginated list resolves to
   `{ data, pagination }`; a route without data and a 204 resolve to `null`.
+- **Query:** use the types in the route entry, not pre-serialized values.
+  For `GET /api/students/{id}/partial-absences`, `params.id` is a string,
+  and `query.from` and `query.to` are `YYYY-MM-DD` strings. The same
+  rules apply to `bffFile`: `id` and `string` take strings, `int` takes a
+  number, and `bool` takes a boolean. Registered string choices narrow the
+  type; repeated keys take arrays. The catalog proxy forwards registered
+  keys without validating or changing their values. Go validates them.
 - **Variants:** a route with response variants (`GET /api/students/`) takes
   the variant in its query (`query: { view: "names" }`), and the answer has
   that variant's type; without it the route's default variant.

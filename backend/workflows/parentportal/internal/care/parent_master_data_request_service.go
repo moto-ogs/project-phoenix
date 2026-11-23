@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
@@ -370,7 +369,7 @@ func (s *Service) lockEditableMasterDataRequest(ctx context.Context, accountID, 
 	if req.Status != DataChangeStatusPending {
 		return nil, nil, ErrMasterDataRequestNotPending
 	}
-	if err := readstate.Check(expectedVersion, excusedrequests.ParentRequestVersion(req.UpdatedAt)); err != nil {
+	if err := readstate.Check(expectedVersion, readstate.Of(req.UpdatedAt)); err != nil {
 		return nil, nil, err
 	}
 	if student.CareEndedOn(s.todayDate()) {

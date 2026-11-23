@@ -140,7 +140,7 @@ export const activitiesConfig = defineEntityConfig<Activity>({
           // Admin view keeps showing system activities (Schulhof Freispiel,
           // WC) — they are rendered greyed-out via isSystemActivity instead
           // of hidden.
-          query: { include_system: "true" },
+          query: { include_system: true },
         })
       ).map(mapActivityResponse),
     get: async (id) =>

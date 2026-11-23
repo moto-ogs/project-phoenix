@@ -257,7 +257,7 @@ func TestExcusedRequestGuardianEdit(t *testing.T) {
 		assert.ErrorIs(t, err, readstate.ErrChanged)
 		edited, err := f.requests.EditRequest(ctx, careplan.ExcusedRequestEditInput{
 			RequestID: pending.ID, StudentID: f.chain.StudentID, GuardianAccountID: f.chain.AccountID,
-			ExpectedVersion: careplan.ParentRequestVersion(pending.UpdatedAt), Dates: []careplan.Date{excusedIn3Days}, Note: "neuer Termin", NoteRequired: true,
+			ExpectedVersion: readstate.Of(pending.UpdatedAt), Dates: []careplan.Date{excusedIn3Days}, Note: "neuer Termin", NoteRequired: true,
 		})
 		require.NoError(t, err)
 		assert.Equal(t, pending.ID, edited.ID, "the request keeps its id")

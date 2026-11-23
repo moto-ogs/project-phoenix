@@ -7,12 +7,6 @@ import {
   AnnouncementAttachmentListResponseSchema,
 } from "./shared.generated";
 
-/** Query of GET /parent-news-attachments/{announcementId}/{attachmentId}/download */
-export interface GetParentNewsAttachmentsAnnouncementIdAttachmentIdDownloadQuery {
-  inline?: string;
-  student_id?: string;
-}
-
 export const routes = {
   "GET /parent-news-attachments/{announcementId}": {
     method: "GET",
@@ -24,7 +18,10 @@ export const routes = {
     method: "GET",
     pattern: "/parent-news-attachments/{announcementId}/{attachmentId}/download",
     portals: ["parent"],
-    query: ["inline", "student_id"],
+    query: {
+      "inline": { kind: "string" },
+      "student_id": { kind: "id" },
+    },
     response: fileAnswer,
   },
 } as const;

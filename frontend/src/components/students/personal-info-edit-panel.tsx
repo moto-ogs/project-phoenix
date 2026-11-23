@@ -717,21 +717,24 @@ export function PersonalInfoEditPanel({
         setPrivacyConsentChanged(false);
         void consentRead.mutate();
       }
-      // Someone changed the child or its consent since this form was filled:
-      // show the stored state again. The same save would be refused again,
-      // so the error offers no retry (ADR 0311).
+      // Someone changed the child, its consent or its Laufgemeinschaft since
+      // this form was filled: show the stored state again. The same save
+      // would be refused again, so the error offers no retry (ADR 0311).
       if (isChangedSinceRead(err)) {
         refusedStudentRef.current = student;
         setPrivacyConsentChanged(false);
         void consentRead.mutate();
+        void reloadCompanionsRef.current();
         void onStudentRefresh?.();
         await errors.show(err, { object: "das Kind" });
         return;
       }
-      // The backend saw what the announcement bus could not: another browser
-      // replaced the links this list was built on. Nothing was written. Show
-      // the stored list instead of the refused draft (ADR 0311); the same
-      // save would be refused again, so the error offers no retry.
+      // The code an older backend refused a stale Laufgemeinschaft with; the
+      // current one answers general.changed_since_read above. The backend saw
+      // what the announcement bus could not: another browser replaced the
+      // links this list was built on. Nothing was written. Show the stored
+      // list instead of the refused draft (ADR 0311); the same save would be
+      // refused again, so the error offers no retry.
       if (isCompanionsChanged(err)) {
         void reloadCompanionsRef.current();
         await errors.show(err, { object: "die Laufgemeinschaft" });

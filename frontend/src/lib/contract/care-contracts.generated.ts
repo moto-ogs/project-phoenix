@@ -72,17 +72,14 @@ export const ApplicationContractResponseSchema: z.ZodType<ApplicationContractRes
   services: nullable(arr(ApplicationContractServiceSchema)),
 });
 
-/** Query of GET /api/care-contracts/ */
-export interface GetCareContractsQuery {
-  request_child_ids?: string;
-}
-
 export const routes = {
   "GET /api/care-contracts/": {
     method: "GET",
     pattern: "/api/care-contracts/",
     portals: ["tenant"],
-    query: ["request_child_ids"],
+    query: {
+      "request_child_ids": { kind: "string" },
+    },
     response: success(z.array(ApplicationContractResponseSchema)),
   },
 } as const;

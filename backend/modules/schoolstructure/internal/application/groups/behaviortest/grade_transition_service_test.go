@@ -124,7 +124,7 @@ func TestGradeTransitionWorkflow_Update(t *testing.T) {
 		suffix := uuid.Must(uuid.NewV4()).String()[:8]
 		id := f.createDraft(t, ctx, "2025-2026",
 			promote(fmt.Sprintf("1upd-%s", suffix), fmt.Sprintf("2upd-%s", suffix)))
-		_, err := wf.Apply(ctx, id, "")
+		_, err := wf.Apply(ctx, id, previewed(ctx, wf, id))
 		require.NoError(t, err)
 
 		newYear := "2026-2027"
@@ -187,7 +187,7 @@ func TestGradeTransitionWorkflow_Delete(t *testing.T) {
 		suffix := uuid.Must(uuid.NewV4()).String()[:8]
 		id := f.createDraft(t, ctx, "2025-2026",
 			promote(fmt.Sprintf("1del-%s", suffix), fmt.Sprintf("2del-%s", suffix)))
-		_, err := wf.Apply(ctx, id, "")
+		_, err := wf.Apply(ctx, id, previewed(ctx, wf, id))
 		require.NoError(t, err)
 
 		err = wf.DeleteDraft(ctx, id)
@@ -363,7 +363,7 @@ func TestGradeTransitionWorkflow_Apply(t *testing.T) {
 
 		id := f.createDraft(t, ctx, "2025-2026", promote(fromClass, toClass))
 
-		result, err := wf.Apply(ctx, id, "")
+		result, err := wf.Apply(ctx, id, previewed(ctx, wf, id))
 		require.NoError(t, err)
 		assert.Equal(t, schoolstructure.TransitionStatusApplied, result.Status)
 		assert.Equal(t, 2, result.StudentsPromoted)
@@ -392,7 +392,7 @@ func TestGradeTransitionWorkflow_Apply(t *testing.T) {
 
 		id := f.createDraft(t, ctx, "2025-2026", promote(fromClass, toClass))
 
-		_, err := wf.Apply(ctx, id, "")
+		_, err := wf.Apply(ctx, id, previewed(ctx, wf, id))
 		require.NoError(t, err)
 
 		// Verify history was created
@@ -420,11 +420,11 @@ func TestGradeTransitionWorkflow_Apply(t *testing.T) {
 			promote(fmt.Sprintf("9z-%s", suffix), fmt.Sprintf("10z-%s", suffix)))
 
 		// First apply
-		_, err := wf.Apply(ctx, id, "")
+		_, err := wf.Apply(ctx, id, previewed(ctx, wf, id))
 		require.NoError(t, err)
 
 		// Second apply should fail
-		_, err = wf.Apply(ctx, id, "")
+		_, err = wf.Apply(ctx, id, previewed(ctx, wf, id))
 		require.ErrorIs(t, err, gradetransition.ErrTransitionNotDraft)
 		assert.Contains(t, err.Error(), "already been applied")
 	})
@@ -432,7 +432,7 @@ func TestGradeTransitionWorkflow_Apply(t *testing.T) {
 	t.Run("cannot apply transition without mappings", func(t *testing.T) {
 		id := f.createDraft(t, ctx, "2025-2026")
 
-		_, err := wf.Apply(ctx, id, "")
+		_, err := wf.Apply(ctx, id, previewed(ctx, wf, id))
 		require.ErrorIs(t, err, gradetransition.ErrTransitionNotDraft)
 		assert.Contains(t, err.Error(), "must be in draft status with mappings")
 	})
@@ -460,7 +460,7 @@ func TestGradeTransitionWorkflow_Revert(t *testing.T) {
 		// Create and apply transition
 		id := f.createDraft(t, ctx, "2025-2026", promote(fromClass, toClass))
 
-		_, err := wf.Apply(ctx, id, "")
+		_, err := wf.Apply(ctx, id, previewed(ctx, wf, id))
 		require.NoError(t, err)
 
 		// Verify student is in toClass
@@ -506,7 +506,7 @@ func TestGradeTransitionWorkflow_Revert(t *testing.T) {
 			promote(fmt.Sprintf("6y-%s", suffix), fmt.Sprintf("7y-%s", suffix)))
 
 		// Apply then revert
-		_, err := wf.Apply(ctx, id, "")
+		_, err := wf.Apply(ctx, id, previewed(ctx, wf, id))
 		require.NoError(t, err)
 		_, err = wf.Revert(ctx, id)
 		require.NoError(t, err)
@@ -696,7 +696,7 @@ func TestGradeTransitionWorkflow_History(t *testing.T) {
 		id := f.createDraft(t, ctx, "2025-2026", promote(fromClass, toClass))
 
 		// Apply transition
-		_, err := wf.Apply(ctx, id, "")
+		_, err := wf.Apply(ctx, id, previewed(ctx, wf, id))
 		require.NoError(t, err)
 
 		// Get history
@@ -751,13 +751,13 @@ func TestGradeTransitionWorkflow_Apply_RevertedTransition(t *testing.T) {
 		id := f.createDraft(t, ctx, "2025-2026", promote(fromClass, toClass))
 
 		// Apply then revert
-		_, err := wf.Apply(ctx, id, "")
+		_, err := wf.Apply(ctx, id, previewed(ctx, wf, id))
 		require.NoError(t, err)
 		_, err = wf.Revert(ctx, id)
 		require.NoError(t, err)
 
 		// Try to apply again - should fail
-		_, err = wf.Apply(ctx, id, "")
+		_, err = wf.Apply(ctx, id, previewed(ctx, wf, id))
 		require.ErrorIs(t, err, gradetransition.ErrTransitionNotDraft)
 		assert.Contains(t, err.Error(), "has been reverted")
 	})
@@ -968,7 +968,7 @@ func TestGradeTransitionWorkflow_Apply_GraduateStudents(t *testing.T) {
 
 		id := f.createDraft(t, ctx, "2025-2026", graduate(graduateClass))
 
-		result, err := wf.Apply(ctx, id, "")
+		result, err := wf.Apply(ctx, id, previewed(ctx, wf, id))
 		require.NoError(t, err)
 		assert.Equal(t, 1, result.StudentsGraduated)
 		assert.NotEmpty(t, result.Warnings)
@@ -1022,7 +1022,7 @@ func TestGradeTransitionWorkflow_Apply_CascadingGraduation(t *testing.T) {
 		graduate(upper),       // graduate 4c
 	)
 
-	result, err := wf.Apply(ctx, id, "")
+	result, err := wf.Apply(ctx, id, previewed(ctx, wf, id))
 	require.NoError(t, err)
 	assert.Equal(t, 1, result.StudentsPromoted, "only the 3c child is promoted")
 	assert.Equal(t, 1, result.StudentsGraduated, "only the original 4c child graduates")
@@ -1084,7 +1084,7 @@ func TestGradeTransitionWorkflow_Revert_WithGraduatedStudents(t *testing.T) {
 		// Create and apply transition with graduate
 		id := f.createDraft(t, ctx, "2025-2026", graduate(graduateClass))
 
-		_, err := wf.Apply(ctx, id, "")
+		_, err := wf.Apply(ctx, id, previewed(ctx, wf, id))
 		require.NoError(t, err)
 
 		// Revert - graduates are restored to active (soft delete is reversible)
@@ -1163,7 +1163,7 @@ func TestGradeTransitionWorkflow_Revert_ReconcilesOnlyReactivatedStudents(t *tes
 
 	id := f.createDraft(t, ctx, "2025-2026", graduate(graduateClass))
 
-	_, err := wf.Apply(ctx, id, "")
+	_, err := wf.Apply(ctx, id, previewed(ctx, wf, id))
 	require.NoError(t, err)
 	require.ElementsMatch(t, []int64{restorable.ID, handChanged.ID}, reconciler.removed,
 		"both graduates leave the future rosters on apply")
@@ -1221,7 +1221,7 @@ func TestGradeTransitionWorkflow_Revert_SkipsRosterReplayForNonActiveRestores(t 
 
 	id := f.createDraft(t, ctx, "2025-2026", graduate(graduateClass))
 
-	_, err = wf.Apply(ctx, id, "")
+	_, err = wf.Apply(ctx, id, previewed(ctx, wf, id))
 	require.NoError(t, err)
 
 	result, err := wf.Revert(ctx, id)
@@ -1358,7 +1358,7 @@ func TestGradeTransitionWorkflow_AlumniExcluded(t *testing.T) {
 	t.Run("apply graduates only non-alumni", func(t *testing.T) {
 		id := f.createDraft(t, ctx, "2025-2026", graduate(class))
 
-		result, err := wf.Apply(ctx, id, "")
+		result, err := wf.Apply(ctx, id, previewed(ctx, wf, id))
 		require.NoError(t, err)
 		assert.Equal(t, 1, result.StudentsGraduated, "only the active student graduates")
 	})
@@ -1391,7 +1391,7 @@ func TestGradeTransitionWorkflow_PromotionSkipsAlumni(t *testing.T) {
 
 	id := f.createDraft(t, ctx, "2025-2026", promote(fromClass, toClass))
 
-	result, err := wf.Apply(ctx, id, "")
+	result, err := wf.Apply(ctx, id, previewed(ctx, wf, id))
 	require.NoError(t, err)
 	assert.Equal(t, 0, result.StudentsPromoted)
 

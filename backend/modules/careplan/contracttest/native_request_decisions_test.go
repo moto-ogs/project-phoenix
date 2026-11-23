@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/compose"
 	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 )
@@ -87,7 +88,7 @@ func TestNativeRequestDecisionRollsBackAppliedPlanAndSnapshot(t *testing.T) {
 	service, err := compose.NewRequestDecisions(compose.RequestDecisionDependencies{Records: owner, People: boundary, Guardians: boundary, Plans: boundary,
 		Effects: boundary, Today: func() calendar.Date { return "2026-09-20" }})
 	require.NoError(t, err)
-	input := carerequests.DecideInput{RequestID: row.ID, Approve: true, ReviewedBy: reviewer.ID, ExpectedVersion: careplan.ParentRequestVersion(row.UpdatedAt)}
+	input := carerequests.DecideInput{RequestID: row.ID, Approve: true, ReviewedBy: reviewer.ID, ExpectedVersion: readstate.Of(row.UpdatedAt)}
 	_, err = service.Decide(ctx, input)
 	require.ErrorIs(t, err, boundary.ledgerErr)
 	require.Equal(t, []string{"lock_student", "authorize", "snapshot", "guardian", "apply", "effects", "reload", "ledger"}, boundary.calls)

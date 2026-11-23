@@ -147,11 +147,6 @@ export interface ProofMappingRequest {
   proof_type_id?: string | null;
 }
 
-/** Query of GET /traeger/staff-proofs/export */
-export interface GetTraegerStaffProofsExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-}
-
 export const routes = {
   "DELETE /traeger/staff-proofs/records/{id}/{typeId}": {
     method: "DELETE",
@@ -169,7 +164,9 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/staff-proofs/export",
     portals: ["org"],
-    query: ["format"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
     response: fileAnswer,
   },
   "GET /traeger/staff-proofs/school-kinds": {

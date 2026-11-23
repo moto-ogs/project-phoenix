@@ -109,7 +109,12 @@ type ParamNames<S extends string> =
   S extends `${string}{${infer N}}${infer Rest}` ? N | ParamNames<Rest> : never;
 
 type QueryValue =
-  string | number | boolean | null | undefined | readonly (string | number)[];
+  | string
+  | number
+  | boolean
+  | null
+  | undefined
+  | readonly (string | number | boolean)[];
 
 /** The variant names of a route with response variants. */
 type VariantOf<R> = R extends {
@@ -165,17 +170,35 @@ type VariantQuery<R, V> = R extends { variantParam: infer N extends string }
   ? { [key in N]?: V }
   : unknown;
 
-type QueryOf<R, V> = R extends { query: readonly (infer Q extends string)[] }
+type QueryScalar = {
+  string: string;
+  id: string;
+  // A YYYY-MM-DD string on the wire. Go validates the calendar date.
+  date: string;
+  int: number;
+  bool: boolean;
+};
+
+type ScalarOf<Q> = Q extends { values: readonly (infer Value extends string)[] }
+  ? Value
+  : Q extends { kind: infer Kind extends keyof QueryScalar }
+    ? QueryScalar[Kind]
+    : never;
+
+type QueryOf<R, V> = R extends { query: infer Q }
   ? {
-      query?: Partial<
-        Record<
-          Exclude<Q, R extends { variantParam: infer N } ? N : never>,
-          QueryValue
-        >
-      > &
-        VariantQuery<R, V>;
+      query?: {
+        -readonly [
+          K in keyof Q as R extends { variantParam: K } ? never : K
+        ]?: Q[K] extends { repeated: true }
+          ? readonly ScalarOf<Q[K]>[]
+          : ScalarOf<Q[K]>;
+      } & VariantQuery<R, V>;
     }
   : { query?: never };
+
+/** The query accepted by a generated route entry. */
+export type BffQuery<R> = NonNullable<QueryOf<R, VariantOf<R>>["query"]>;
 
 interface CallOptions {
   signal?: AbortSignal;

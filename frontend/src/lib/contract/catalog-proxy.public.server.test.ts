@@ -43,7 +43,7 @@ const publicRoutes: CatalogRoute[] = [
   {
     method: "GET",
     pattern: "/api/rows/public/{token}",
-    query: ["late_invite"],
+    query: { late_invite: { kind: "bool" } },
     response: row,
   },
   {

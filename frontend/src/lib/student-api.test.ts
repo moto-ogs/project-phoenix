@@ -669,6 +669,7 @@ describe("updateStudent", () => {
     expect(isCompanionDepartureRefusal(otherBadRequest)).toBe(false);
     expect(stale).not.toBeInstanceOf(CompanionPlanConflictError);
     expect(isCompanionsChanged(stale)).toBe(true);
+    expect(isCompanionsChanged(otherBadRequest)).toBe(false);
   });
 
   // A refused child write on top of a committed consent write says which

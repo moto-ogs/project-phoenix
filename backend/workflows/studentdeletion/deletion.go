@@ -509,10 +509,7 @@ func (w *Workflow) snapshot(ctx context.Context, studentID int64, lock bool, hel
 	if err != nil {
 		return Preview{}, err
 	}
-	fingerprint, err := fingerprintOf(student.UpdatedAt, person.UpdatedAt, counts.Counts)
-	if err != nil {
-		return Preview{}, err
-	}
+	fingerprint := fingerprintOf(student.UpdatedAt, person.UpdatedAt, counts.Counts)
 	preview := Preview{
 		StudentID: studentID, PersonID: student.PersonID,
 		ConfirmationName: strings.TrimSpace(person.FirstName + " " + person.LastName),

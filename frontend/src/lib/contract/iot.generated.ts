@@ -132,14 +132,6 @@ export const DeviceCreationResponseSchema: z.ZodType<DeviceCreationResponse, unk
   api_key: str,
 });
 
-/** Query of GET /api/iot/ */
-export interface GetIotQuery {
-  device_type?: string;
-  registered_by_id?: string;
-  search?: string;
-  status?: string;
-}
-
 export const routes = {
   "DELETE /api/iot/{id}": {
     method: "DELETE",
@@ -151,7 +143,12 @@ export const routes = {
     method: "GET",
     pattern: "/api/iot/",
     portals: ["tenant"],
-    query: ["device_type", "registered_by_id", "search", "status"],
+    query: {
+      "device_type": { kind: "string" },
+      "registered_by_id": { kind: "string" },
+      "search": { kind: "string" },
+      "status": { kind: "string" },
+    },
     response: success(z.array(DeviceResponseSchema)),
   },
   "GET /api/iot/device-slots": {
