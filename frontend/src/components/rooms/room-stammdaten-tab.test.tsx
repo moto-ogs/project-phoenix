@@ -24,6 +24,7 @@ vi.mock("~/components/database/database-form", async (importOriginal) => ({
       setValues: (
         next: (current: Record<string, unknown>) => Record<string, unknown>,
       ) => void;
+      blocked?: string;
     };
   }) {
     return (
@@ -40,6 +41,8 @@ vi.mock("~/components/database/database-form", async (importOriginal) => ({
         />
         <button
           type="button"
+          disabled={draft?.blocked !== undefined}
+          title={draft?.blocked}
           // The real form shows a refused save on its error path.
           onClick={() =>
             void onSubmit({ ...draft?.values }).catch(() => undefined)
@@ -288,6 +291,12 @@ describe("RoomStammdatenTab", () => {
       reload: () => Promise<unknown>;
     };
     await expect(options.reload()).rejects.toThrow();
+    // Speichern is locked with its reason; the load error stays shown.
+    await waitFor(() => expect(screen.getByText("Save")).toBeDisabled());
+    expect(screen.getByText("Save")).toHaveAttribute(
+      "title",
+      "Lade zuerst mit „Wiederholen“ den gespeicherten Stand.",
+    );
     fireEvent.click(screen.getByText("Save"));
     expect(onSave).toHaveBeenCalledTimes(1);
   });

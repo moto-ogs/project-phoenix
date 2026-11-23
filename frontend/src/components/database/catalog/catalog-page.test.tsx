@@ -341,6 +341,38 @@ describe("CatalogPage", () => {
     ).not.toBeInTheDocument();
   });
 
+  // ADR 0311 rule 6: after a refusal whose read failed, Speichern sends
+  // nothing and leaves the load error with its retry on screen.
+  it("keeps the failed read after a refusal on screen and locks Speichern", async () => {
+    const onChanged = vi
+      .fn()
+      .mockRejectedValue(
+        new ApiError("down", 503, { code: "general.unavailable" }),
+      );
+    const { update } = renderPage({ selectedId: "1", onChanged });
+    update.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    fireEvent.change(screen.getByDisplayValue("Essen"), {
+      target: { value: "Lernzeit" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    expect(
+      await screen.findByText(/Der neue Stand konnte nicht geladen werden/),
+    ).toBeInTheDocument();
+    const save = screen.getByRole("button", { name: "Speichern" });
+    await waitFor(() => expect(save).toHaveAttribute("aria-disabled", "true"));
+
+    fireEvent.click(save);
+    expect(
+      screen.getByText(/Der neue Stand konnte nicht geladen werden/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Wiederholen" }),
+    ).toBeInTheDocument();
+    expect(update).toHaveBeenCalledTimes(1);
+  });
+
   // ADR 0311 rule 2: a reload of the list (a live event, another tab)
   // keeps the typed draft and the entry it was typed over.
   it("keeps an edit and its entry across a reload of the list", async () => {

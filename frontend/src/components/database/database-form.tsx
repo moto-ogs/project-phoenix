@@ -304,7 +304,30 @@ interface DatabaseFormProps<T = Record<string, unknown>> {
     readonly setValues: (
       next: (current: Record<string, unknown>) => Record<string, unknown>,
     ) => void;
+    /**
+     * Why the draft cannot be sent now (`draftSubmitBlock`): Speichern
+     * stays disabled with it and a click leaves the shown error in place.
+     */
+    readonly blocked?: string;
   };
+}
+
+/**
+ * Why a draft of `useDraftOn` cannot be sent (ADR 0311, rules 4 and 6):
+ * after a refusal until the stored state is read, and after a failed read
+ * until `Wiederholen` read it. Undefined while it can be sent or a save
+ * runs (the busy label says so).
+ */
+export function draftSubmitBlock(edit: {
+  readonly status: string;
+}): string | undefined {
+  if (edit.status === "loadFailed") {
+    return "Lade zuerst mit „Wiederholen“ den gespeicherten Stand.";
+  }
+  if (edit.status === "refused" || edit.status === "reloading") {
+    return "moto lädt gerade den gespeicherten Stand.";
+  }
+  return undefined;
 }
 
 type FieldOption = { value: string; label: string };
@@ -518,6 +541,8 @@ export function DatabaseForm<T = Record<string, unknown>>({
     if (isSubmitting || isLoading) {
       return;
     }
+    // Nothing to send yet: the error that says why stays on screen.
+    if (draft?.blocked !== undefined) return;
     setIsSubmitting(true);
     errorPath.clear();
 
@@ -889,6 +914,7 @@ export function DatabaseForm<T = Record<string, unknown>>({
         {(() => {
           // Combined busy state: parent loading OR local submitting
           const isBusy = isLoading === true || isSubmitting;
+          const blocked = isBusy ? undefined : draft?.blocked;
           return stickyActions ? (
             <div className="sticky bottom-0 -mx-4 mt-4 -mb-4 flex gap-2 border-t border-gray-100 bg-white px-4 pt-3 pb-3 md:-mx-6 md:mt-6 md:-mb-6 md:gap-3 md:px-6 md:pt-4 md:pb-4">
               <Button
@@ -907,7 +933,8 @@ export function DatabaseForm<T = Record<string, unknown>>({
                 size="md"
                 data-setup-tour="form-submit"
                 className="flex-1"
-                disabled={isBusy}
+                disabled={isBusy || blocked !== undefined}
+                disabledReason={blocked}
                 tooltip={SUBMIT_TOOLTIP}
               >
                 {isBusy ? "Wird gespeichert..." : submitLabel}
@@ -928,7 +955,8 @@ export function DatabaseForm<T = Record<string, unknown>>({
               <Button
                 type="submit"
                 size="md"
-                disabled={isBusy}
+                disabled={isBusy || blocked !== undefined}
+                disabledReason={blocked}
                 tooltip={SUBMIT_TOOLTIP}
               >
                 {isBusy ? "Wird gespeichert..." : submitLabel}

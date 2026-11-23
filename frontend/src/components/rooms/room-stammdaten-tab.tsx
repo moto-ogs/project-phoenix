@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import {
   DatabaseForm,
+  draftSubmitBlock,
   formValuesFor,
   type DatabaseFormErrorPath,
 } from "~/components/database/database-form";
@@ -110,7 +111,11 @@ export function RoomStammdatenTab({
           sections={sections}
           draft={
             edit.draft
-              ? { values: edit.draft, setValues: edit.setDraft }
+              ? {
+                  values: edit.draft,
+                  setValues: edit.setDraft,
+                  blocked: draftSubmitBlock(edit),
+                }
               : undefined
           }
           initialData={room}
