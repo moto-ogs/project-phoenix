@@ -226,19 +226,26 @@ func (t *BillingTerms) FamilyBillingOfContract(ctx context.Context, reviewer par
 		}
 	}
 	return parentbilling.ContractFamilyBilling{ContractID: ident.ID(contractID), FamilyEmail: key,
-		PartyFirstName: recipient.FirstName, PartyLastName: recipient.LastName, Family: stored, Version: familyBillingVersion(stored)}, nil
+		PartyFirstName: recipient.FirstName, PartyLastName: recipient.LastName, Family: stored, Version: familyBillingVersion(key, stored)}, nil
 }
 
-// familyBillingVersion is the read-state token of the row of a family, nil
-// without one (ADR 0311). It covers the whole row: not every writer moves
-// updated_at (the retention moves the contract of a family without it).
-func familyBillingVersion(stored *parentbilling.FamilyBilling) string {
-	if stored == nil {
-		return readstate.Fingerprint(nil)
+// familyBillingVersion is the read-state token of a family and its row,
+// nil without one (ADR 0311). It names the family: a contract whose party
+// moved to another family without a deviation reads another token, so a
+// save never lands on a family the form did not name. It covers the whole
+// row: not every writer moves updated_at (the retention moves the contract
+// of a family without it).
+func familyBillingVersion(key string, stored *parentbilling.FamilyBilling) string {
+	state := struct {
+		Key string                       `json:"key"`
+		Row *parentbilling.FamilyBilling `json:"row"`
+	}{Key: key}
+	if stored != nil {
+		canonical := *stored
+		canonical.UpdatedAt = canonical.UpdatedAt.UTC()
+		state.Row = &canonical
 	}
-	canonical := *stored
-	canonical.UpdatedAt = canonical.UpdatedAt.UTC()
-	return readstate.Fingerprint(canonical)
+	return readstate.Fingerprint(state)
 }
 
 // SaveFamilyBilling validates the deviation and stores it for the family of
@@ -272,7 +279,7 @@ func (t *BillingTerms) SaveFamilyBilling(ctx context.Context, reviewer parentbil
 	if err != nil {
 		return nil, err
 	}
-	if err := readstate.Check(input.ExpectedVersion, familyBillingVersion(stored)); err != nil {
+	if err := readstate.Check(input.ExpectedVersion, familyBillingVersion(key, stored)); err != nil {
 		return nil, err
 	}
 	binding, err := t.bindingContract(ctx, reviewer.OrganizationID, key, input.ContractID, stored)

@@ -697,6 +697,24 @@ func TestFamilyBillingSaveNeedsTheReadVersion(t *testing.T) {
 	require.Equal(t, http.StatusOK, save(current, "transfer").Code)
 	method, _ := stored()
 	assert.Equal(t, "transfer", method)
+
+	// The version names the family: when the contract's party moves to
+	// another family without a deviation, the version read for the first
+	// one does not save for the second.
+	other := careContract(t, f.db, f.office.organization, f.office.schools[0], "Ben", careMonth, sjrServices()...)
+	before := familyBillingVersionOf(t, f.traeger, f.office.token, other)
+	_, err := f.db.ExecContext(context.Background(), `UPDATE care_contract.contract_parties SET email = ? WHERE contract_id = ?`,
+		"andere-familie@example.org", other)
+	require.NoError(t, err)
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, familyBillingPath, map[string]any{
+		"contract_id": other, "recipient_kind": "applicant", "payment_method": "transfer", "expected_version": before})
+	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+	code, _ := registrationRefusalOf(t, rec)
+	assert.Equal(t, "general.changed_since_read", code)
+	var families int
+	require.NoError(t, f.db.NewRaw(`SELECT count(*) FROM parent_billing.family_billing WHERE organization_id = ?`,
+		f.office.organization).Scan(context.Background(), &families))
+	assert.Equal(t, 1, families, "the other family gets no deviation")
 }
 
 // The choice „Lastschrift“ replaces no mandate (#7770): a family that chose
