@@ -291,8 +291,12 @@ gibt, und der Familie, unter der eine ausgestellte Rechnung zählt), oder
 nennen die Teile des Kindes verschiedene Geburtsdaten, legt moto ebenfalls
 nicht zusammen: Die Kette entscheidet Gleichstand bei Preis und
 Geburtsdatum nach dem Schlüssel, und nur ein Zwilling könnte mit dem Kind
-gleichstehen. So ändert kein Kind seinen Rang gegenüber einem anderen, auch
-nicht gegenüber Rechnungen, die ein Lauf des Monats schon ausgestellt hat. Ein Bescheid-Lauf entscheidet in beiden Rechnungen eines
+gleichstehen. So entscheidet der Schlüssel keinen Gleichstand neu, auch nicht
+gegenüber Rechnungen, die ein Lauf des Monats schon ausgestellt hat. Gewollt
+ändert sich nur, was aus dem einen Kind folgt: Es zählt einmal, mit der Summe
+der Beiträge seiner Teile als Basis. Dadurch kann eine Obergrenze je Familie
+oder eine Rangregel die Ermäßigung einem anderen Kind der Familie zuordnen;
+die Summe der Familie folgt der Regel für ein Kind. Ein Bescheid-Lauf entscheidet in beiden Rechnungen eines
 Monats gleich, mit den Familien aller ausgestellten Bescheide und Rechnungen.
 Dieselbe Gruppierung zählt die Kinder einer Familie in der
 Kinderzahl-Übersicht.
