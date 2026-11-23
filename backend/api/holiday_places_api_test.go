@@ -245,7 +245,7 @@ func TestHolidayPlacesMoveUpOnRebookingAndCapacity(t *testing.T) {
 	// Ben leaves the first week: Tom gets his place.
 	ben := f.list(t, "").Registrations[0].Children[1]
 	rebook := map[string]any{"bookings": []map[string]any{{"week_id": second.ID, "time_model_id": second.TimeModels[0].ID}}}
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayRebookPath(int64(f.period.ID), f.siblings, int64(ben.ID)), rebook)
+	rec := putReadRegistration(t, f.traeger, f.office.token, holidayRebookPath(int64(f.period.ID), f.siblings, int64(ben.ID)), rebook)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Empty(t, f.places(t)[int64(first.ID)].Waitlist)
 	assert.Equal(t, 1, f.mails(t, "holiday_place_granted", int64(tom.ID)))
@@ -314,7 +314,7 @@ func TestHolidayPlaceMailAfterAnOfficeChangeNamesTheTraegerAndTheHostSchool(t *t
 
 	ben := f.list(t, "").Registrations[0].Children[1]
 	rebook := map[string]any{"bookings": []map[string]any{{"week_id": second.ID, "time_model_id": second.TimeModels[0].ID}}}
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, holidayRebookPath(int64(f.period.ID), f.siblings, int64(ben.ID)), rebook)
+	rec := putReadRegistration(t, f.traeger, f.office.token, holidayRebookPath(int64(f.period.ID), f.siblings, int64(ben.ID)), rebook)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, want("ole.absender@example.org", "Ole", 0), f.placeMail(t, int64(ole.ID)), "a rebooking names the north school")
 

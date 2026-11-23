@@ -10,6 +10,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // editReviewStore is a review store with one received registration of one
@@ -88,17 +89,44 @@ func newEditReview(store *editReviewStore) *HolidayRegistrationReview {
 	return review
 }
 
-func editedPhone(phone string) enrollment.HolidayRegistrationEdit {
-	return enrollment.HolidayRegistrationEdit{Guardians: &enrollment.HolidayGuardiansEdit{Guardian: enrollment.HolidayGuardianInput{
+// storedVersion is the version a read of the registration answers.
+func storedVersion(t *testing.T, store *editReviewStore) string {
+	t.Helper()
+	detail, err := newEditReview(store).editedDetail(t.Context(), 1, enrollment.HolidayPeriod{ID: 3}, 7)
+	require.NoError(t, err)
+	require.NotEmpty(t, detail.Version)
+	return detail.Version
+}
+
+func editedPhone(t *testing.T, store *editReviewStore, phone string) enrollment.HolidayRegistrationEdit {
+	t.Helper()
+	return enrollment.HolidayRegistrationEdit{ExpectedVersion: storedVersion(t, store), Guardians: &enrollment.HolidayGuardiansEdit{Guardian: enrollment.HolidayGuardianInput{
 		FirstName: "Eva", LastName: "Muster", Email: "eva.muster@example.org", Phone: phone,
 	}}}
+}
+
+// TestHolidayRegistrationEditRefusesAnotherReadVersion pins ADR 0311: an
+// edit over another version than the stored one, or over none, is refused
+// before anything is written or audited.
+func TestHolidayRegistrationEditRefusesAnotherReadVersion(t *testing.T) {
+	t.Parallel()
+	store := &editReviewStore{}
+	reviewer := enrollment.HolidayReviewer{OrganizationID: 1, AccountID: 2}
+	for _, expected := range []string{"older", ""} {
+		edit := editedPhone(t, store, "0151 2")
+		edit.ExpectedVersion = expected
+		_, err := newEditReview(store).EditHolidayRegistration(t.Context(), reviewer, 3, 7, edit, nil)
+		require.ErrorIs(t, err, readstate.ErrChanged, "expected version %q", expected)
+	}
+	assert.Zero(t, store.written, "a refused edit writes nothing")
+	assert.Empty(t, store.audited)
 }
 
 func TestHolidayRegistrationEditFailsWithItsAuditEntry(t *testing.T) {
 	t.Parallel()
 	store := &editReviewStore{auditErr: errors.New("audit unavailable")}
 	reviewer := enrollment.HolidayReviewer{OrganizationID: 1, AccountID: 2}
-	_, err := newEditReview(store).EditHolidayRegistration(t.Context(), reviewer, 3, 7, editedPhone("0151 2"), nil)
+	_, err := newEditReview(store).EditHolidayRegistration(t.Context(), reviewer, 3, 7, editedPhone(t, store, "0151 2"), nil)
 	require.ErrorIs(t, err, store.auditErr, "without the entry the edit fails and its transaction rolls back")
 }
 
@@ -106,12 +134,12 @@ func TestHolidayRegistrationEditWithoutChangeWritesNothing(t *testing.T) {
 	t.Parallel()
 	store := &editReviewStore{}
 	reviewer := enrollment.HolidayReviewer{OrganizationID: 1, AccountID: 2}
-	_, err := newEditReview(store).EditHolidayRegistration(t.Context(), reviewer, 3, 7, editedPhone(" 0151 1 "), nil)
+	_, err := newEditReview(store).EditHolidayRegistration(t.Context(), reviewer, 3, 7, editedPhone(t, store, " 0151 1 "), nil)
 	require.NoError(t, err)
 	assert.Zero(t, store.written, "the same values, trimmed, are no change")
 	assert.Empty(t, store.audited)
 
-	_, err = newEditReview(store).EditHolidayRegistration(t.Context(), reviewer, 3, 7, editedPhone("0151 2"), nil)
+	_, err = newEditReview(store).EditHolidayRegistration(t.Context(), reviewer, 3, 7, editedPhone(t, store, "0151 2"), nil)
 	require.NoError(t, err)
 	assert.Equal(t, 1, store.written)
 	assert.Equal(t, []string{enrollment.HolidayAuditEdit}, store.audited)

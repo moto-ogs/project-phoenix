@@ -95,10 +95,10 @@ func TestChildBooksOnlyOneOfTheParallelWeeks(t *testing.T) {
 	detail := decodeSchoolPortalData[reviewRegistration](t, rec.Body.Bytes())
 	bookings := holidayRebookPath(int64(period.ID), int64(receipt.Data.ID), int64(detail.Children[0].ID))
 
-	rec = traegerJSON(t, f.traeger, office.token, http.MethodPut, bookings, map[string]any{"bookings": []map[string]any{first, second}})
+	rec = putReadRegistration(t, f.traeger, office.token, bookings, map[string]any{"bookings": []map[string]any{first, second}})
 	require.Equal(t, http.StatusBadRequest, rec.Code, rec.Body.String())
 
-	rec = traegerJSON(t, f.traeger, office.token, http.MethodPut, bookings, map[string]any{"bookings": []map[string]any{first}})
+	rec = putReadRegistration(t, f.traeger, office.token, bookings, map[string]any{"bookings": []map[string]any{first}})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 }
 

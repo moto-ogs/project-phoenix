@@ -25,10 +25,13 @@ import (
 var errHolidayHealthAnswerNotEditable = errors.New("an answer with health information cannot be changed here")
 
 // EditHolidayRegistration changes the details of a registration that is not
-// cancelled. The history names the changed fields without their values; an
+// cancelled, over the version its author read (ADR 0311). The history names the changed fields without their values; an
 // edit that changes nothing writes nothing.
 func (h *HolidayRegistrationReview) EditHolidayRegistration(ctx context.Context, reviewer enrollment.HolidayReviewer, periodID, registrationID int64, edit enrollment.HolidayRegistrationEdit, schools []enrollment.HolidaySchool) (enrollment.HolidayRegistrationDetail, error) {
 	return h.change(ctx, reviewer, periodID, registrationID, func(period enrollment.HolidayPeriod, current holidayRegistrationState) (string, any, error) {
+		if err := h.checkReadRegistration(ctx, reviewer.OrganizationID, period, current.ID, edit.ExpectedVersion); err != nil {
+			return "", nil, err
+		}
 		fields, err := h.edit(ctx, reviewer.OrganizationID, period, current, edit, schools)
 		if err != nil || len(fields) == 0 {
 			return "", nil, err

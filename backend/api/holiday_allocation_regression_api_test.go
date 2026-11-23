@@ -59,7 +59,7 @@ func TestHolidayAllocationNotifiesAgainAfterAddingDays(t *testing.T) {
 	rec = a.decide(t, decision(first, "placed", ""))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	detail := a.detail(t, traegerJSON(t, a.traeger, a.office.token, http.MethodGet, a.registrationPath(int64(registration.ID), ""), nil))
-	rec = traegerJSON(t, d.traeger, d.office.token, http.MethodPut, holidayRebookPath(int64(d.period.ID), int64(registration.ID), int64(detail.Children[0].ID)),
+	rec = putReadRegistration(t, d.traeger, d.office.token, holidayRebookPath(int64(d.period.ID), int64(registration.ID), int64(detail.Children[0].ID)),
 		map[string]any{"bookings": []map[string]any{d.days(dayMonday, dayTuesday)}})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	second := a.board(t).Weeks[0].Pending[0]

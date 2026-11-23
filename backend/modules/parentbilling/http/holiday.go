@@ -37,7 +37,7 @@ type HolidayResource struct {
 // up in the request's Träger transaction; refusals arrive in this owner's
 // vocabulary.
 type HolidayPlaceChanges interface {
-	RebookHolidayChild(ctx context.Context, reviewer capability.HolidayReviewer, periodID, registrationID, childID int64, bookings []capability.HolidayBookingChoice) (capability.HolidayPlaceChange, error)
+	RebookHolidayChild(ctx context.Context, reviewer capability.HolidayReviewer, periodID, registrationID, childID int64, expectedVersion string, bookings []capability.HolidayBookingChoice) (capability.HolidayPlaceChange, error)
 	SetHolidayWeekCapacity(ctx context.Context, reviewer capability.HolidayReviewer, periodID, weekID int64, capacity *int) (capability.HolidayPlaceChange, error)
 }
 
@@ -314,6 +314,9 @@ func (rs *HolidayResource) cancel(w http.ResponseWriter, r *http.Request) {
 // bookings of the child, one time model per week.
 type HolidayRebookingRequest struct {
 	Bookings []capability.HolidayBookingChoice `json:"bookings"`
+	// ExpectedVersion is the version of the registration the Büro read; a
+	// registration changed since is refused (ADR 0311).
+	ExpectedVersion string `json:"expected_version"`
 }
 
 // Bind accepts the body; Enrollment validates the bookings.
@@ -338,7 +341,7 @@ func (rs *HolidayResource) rebookChild(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	change, err := rs.places.RebookHolidayChild(r.Context(), reviewer, periodID, registrationID, childID, req.Bookings)
+	change, err := rs.places.RebookHolidayChild(r.Context(), reviewer, periodID, registrationID, childID, req.ExpectedVersion, req.Bookings)
 	if err != nil {
 		tenant.MarkRollback(r.Context())
 		renderHolidayError(w, r, err)

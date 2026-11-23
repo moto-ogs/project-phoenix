@@ -340,7 +340,7 @@ func TestHolidayGuestsJoinTheGroupOfTheHostingSchoolOnlyFromAConfirmedBooking(t 
 			bookings = append(bookings, map[string]any{"week_id": f.offer.Weeks[index].ID, "time_model_id": f.offer.Weeks[index].TimeModels[0].ID})
 		}
 		path := holidayRebookPath(f.periodID(t), f.siblings, benChild)
-		rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, path, map[string]any{"bookings": bookings})
+		rec := putReadRegistration(t, f.traeger, f.office.token, path, map[string]any{"bookings": bookings})
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	}
 	rebook(1)
@@ -463,7 +463,7 @@ func TestHolidayGuestReconciliationPlansWithoutAStaffAuthorAndReplansOnTheNextGr
 	require.NoError(t, f.db.NewRaw(`SELECT id FROM enrollment.holiday_registration_children WHERE holiday_registration_id = ? AND first_name = 'Ben'`,
 		f.siblings).Scan(t.Context(), &benChild))
 	path := holidayRebookPath(f.periodID(t), f.siblings, benChild)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, path, map[string]any{"bookings": []map[string]any{
+	rec := putReadRegistration(t, f.traeger, f.office.token, path, map[string]any{"bookings": []map[string]any{
 		{"week_id": week, "time_model_id": f.offer.Weeks[0].TimeModels[1].ID},
 	}})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())

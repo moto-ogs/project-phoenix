@@ -7,9 +7,11 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -74,6 +76,43 @@ func holidayContributionPath(periodID, registrationID int64) string {
 // cancellation (#4699).
 func holidayRebookPath(periodID, registrationID, childID int64) string {
 	return fmt.Sprintf("%s/children/%d/bookings", holidayContributionPath(periodID, registrationID), childID)
+}
+
+// putReadRegistration edits or rebooks a holiday registration over the
+// version its caller reads first, as the registration page does (ADR 0311).
+// path is the details route of the Träger holiday periods or the rebooking
+// route of the holiday contributions; a caller that may not read the
+// registration sends no version, its change is refused for the same reason.
+func putReadRegistration(t *testing.T, router http.Handler, token, path string, body any) *httptest.ResponseRecorder {
+	t.Helper()
+	return putReadRegistrationVia(t, router, router, token, path, body)
+}
+
+// putReadRegistrationVia reads the registration through reader, the Träger
+// router with the holiday periods, and writes through router.
+func putReadRegistrationVia(t *testing.T, reader, router http.Handler, token, path string, body any) *httptest.ResponseRecorder {
+	t.Helper()
+	return traegerJSON(t, router, token, http.MethodPut, path, withRegistrationVersion(t, reader, token, path, body))
+}
+
+// withRegistrationVersion is body with the version of the registration the
+// edit or rebooking at path changes, read now through reader.
+func withRegistrationVersion(t *testing.T, reader http.Handler, token, path string, body any) map[string]any {
+	t.Helper()
+	encoded, err := json.Marshal(body)
+	require.NoError(t, err)
+	sent := map[string]any{}
+	require.NoError(t, json.Unmarshal(encoded, &sent))
+	detail := strings.TrimSuffix(path, "/details")
+	if before, _, rebook := strings.Cut(path, "/children/"); rebook {
+		detail = strings.Replace(before, "/traeger/holiday-contributions/", "/traeger/holiday-periods/", 1)
+	}
+	if read := traegerJSON(t, reader, token, http.MethodGet, detail, nil); read.Code == http.StatusOK {
+		sent["expected_version"] = decodeSchoolPortalData[struct {
+			Version string `json:"version"`
+		}](t, read.Body.Bytes()).Version
+	}
+	return sent
 }
 
 func holidayConfirmPath(periodID, registrationID int64) string {

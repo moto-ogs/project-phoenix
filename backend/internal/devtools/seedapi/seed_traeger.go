@@ -389,8 +389,22 @@ func seedHolidayRegistrationEdit(rt *Runtime, auth AuthRef, periodID, registrati
 		maps.Copy(guardian, registered)
 	}
 	guardian["phone"] = "0151 0000009"
-	path := fmt.Sprintf("/traeger/holiday-periods/%d/registrations/%d/details", periodID, registrationID)
-	if _, err := rt.Client.PutWithAuth(auth, path, map[string]any{
+	// The edit carries the version of the registration it read (ADR 0311).
+	read := fmt.Sprintf("/traeger/holiday-periods/%d/registrations/%d", periodID, registrationID)
+	raw, err := rt.Client.GetWithAuth(auth, read)
+	if err != nil {
+		return fmt.Errorf("read the holiday registration: %w", err)
+	}
+	var stored struct {
+		Data struct {
+			Version string `json:"version"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(raw, &stored); err != nil {
+		return fmt.Errorf("decode the holiday registration: %w", err)
+	}
+	if _, err := rt.Client.PutWithAuth(auth, read+"/details", map[string]any{
+		"expected_version": stored.Data.Version,
 		"guardian":         guardian,
 		"guardian_address": registration["guardian_address"],
 		"second_guardian":  registration["second_guardian"],
