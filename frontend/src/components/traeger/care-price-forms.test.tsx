@@ -274,6 +274,54 @@ describe("CarePriceListModal", () => {
     );
   });
 
+  // A background read of the list while the form is open: an untouched
+  // form shows it with its version; typed input stays, and the save sends
+  // the version the input started from (ADR 0311).
+  it("follows a new read only until the person types", async () => {
+    const modal = (tariffs: CareTariffs) => (
+      <ToastProvider>
+        <CarePriceListModal
+          data={tariffs}
+          school={{ id: "12", name: "Grundschule Birkenfeld" }}
+          currentMonth="2027-01-01"
+          onClose={() => undefined}
+          onSaved={() => undefined}
+          onChangedSinceRead={() => undefined}
+        />
+      </ToastProvider>
+    );
+    const read = (version: string, siblingCents: number) => ({
+      ...data,
+      versions: { "12": version },
+      tariffs: data.tariffs.map((tariff) =>
+        tariff.daysPerWeek === 3 ? { ...tariff, siblingCents } : tariff,
+      ),
+    });
+    const label =
+      "Modul 4 mit Mittagessen, 3 Tage je Woche, Jedes weitere Kind, Monatspreis in Euro";
+    const { rerender } = render(modal(read("v-1", 4500)));
+    expect(await screen.findByRole("textbox", { name: label })).toHaveValue(
+      "45,00",
+    );
+
+    rerender(modal(read("v-2", 4800)));
+    await waitFor(() =>
+      expect(screen.getByRole("textbox", { name: label })).toHaveValue("48,00"),
+    );
+    fireEvent.change(screen.getByRole("textbox", { name: label }), {
+      target: { value: "40,00" },
+    });
+    rerender(modal(read("v-3", 4900)));
+    expect(screen.getByRole("textbox", { name: label })).toHaveValue("40,00");
+
+    fireEvent.click(screen.getByRole("button", { name: "Preise speichern" }));
+    await waitFor(() => expect(saveCarePriceList).toHaveBeenCalledTimes(1));
+    expect(saveCarePriceList.mock.calls[0]?.[4]).toBe("v-2");
+    expect(saveCarePriceList.mock.calls[0]?.[2]).toContainEqual(
+      expect.objectContaining({ daysPerWeek: 3, siblingCents: 4000 }),
+    );
+  });
+
   it("refuses a sibling price above the first child's", async () => {
     open();
     const sibling = await screen.findByRole("textbox", {

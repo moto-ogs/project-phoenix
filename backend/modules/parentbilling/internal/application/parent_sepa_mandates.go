@@ -384,8 +384,9 @@ func (p *ParentMandates) insertMandate(ctx context.Context, organizationID int64
 // next run no longer collects with it. The parents revoke the mandate they
 // read: the mandate in force must be the one their version names, else
 // readstate.ErrChanged (ADR 0311). The lock holds only that row; a
-// mandate revoked between finding and locking it is caught by the update,
-// which ends a mandate only while revoked_on IS NULL.
+// mandate revoked between finding and locking it keeps its identity, so
+// the locked row must still be in force: a revocation racing another one
+// is refused as changed, not answered as missing.
 func (p *ParentMandates) RevokeParentSEPAMandate(ctx context.Context, organizationID int64, reader parentbilling.ParentMandateReader,
 	expectedVersion string,
 ) (parentbilling.ParentMandate, error) {
@@ -406,6 +407,9 @@ func (p *ParentMandates) RevokeParentSEPAMandate(ctx context.Context, organizati
 	}
 	if err := readstate.Check(expectedVersion, mandateVersion(locked)); err != nil {
 		return parentbilling.ParentMandate{}, err
+	}
+	if !locked.InForce() {
+		return parentbilling.ParentMandate{}, readstate.ErrChanged
 	}
 	today := p.today()
 	if today.Before(inForce.SignedOn) {

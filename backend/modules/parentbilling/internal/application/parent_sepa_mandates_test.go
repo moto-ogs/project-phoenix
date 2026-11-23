@@ -33,6 +33,9 @@ type fakeParentMandateStore struct {
 	events       []string
 	listCalls    int
 	consentReads int
+	// beforeLock runs before SEPAMandate locks a row: a write of another
+	// request that commits between finding a mandate and locking it.
+	beforeLock func()
 }
 
 func (s *fakeParentMandateStore) SEPACreditor(context.Context, int64) (*parentbilling.SEPACreditor, error) {
@@ -50,7 +53,10 @@ func (s *fakeParentMandateStore) SEPAMandates(_ context.Context, _ int64, family
 	return out, nil
 }
 
-func (s *fakeParentMandateStore) SEPAMandate(_ context.Context, _ int64, id int64, _ bool) (parentbilling.SEPAMandate, error) {
+func (s *fakeParentMandateStore) SEPAMandate(_ context.Context, _ int64, id int64, lock bool) (parentbilling.SEPAMandate, error) {
+	if lock && s.beforeLock != nil {
+		s.beforeLock()
+	}
 	for _, mandate := range s.mandates {
 		if mandate.ID == ident.ID(id) {
 			return mandate, nil
@@ -433,6 +439,29 @@ func TestParentMandateRevocationNeedsTheReadMandate(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, revoked.Mandate.RevokedOn)
 	assert.Equal(t, replaced.Mandate.ID, revoked.Mandate.ID)
+}
+
+// Two revocations of the same read race: the second locks the row after
+// the first committed. The row keeps its identity, so it is refused as
+// changed since the read (409), not as a missing mandate, and records
+// nothing.
+func TestParentMandateRevocationRacingAnotherIsChanged(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	mandates, store, _ := newParentMandatesForTest()
+	grantParentMandate(t, mandates, mandateReader)
+	read, err := mandates.ParentSEPAMandate(ctx, 3, mandateReader)
+	require.NoError(t, err)
+	require.NotNil(t, read.Mandate)
+	events := slices.Clone(store.events)
+	store.beforeLock = func() {
+		revokedOn := mandateDay
+		store.mandates[0].RevokedOn = &revokedOn
+	}
+
+	_, err = mandates.RevokeParentSEPAMandate(ctx, 3, mandateReader, read.Mandate.Version)
+	require.ErrorIs(t, err, readstate.ErrChanged)
+	assert.Equal(t, events, store.events, "a refused revocation records nothing")
 }
 
 func TestParentMandateProofSurvivesAccountChanges(t *testing.T) {

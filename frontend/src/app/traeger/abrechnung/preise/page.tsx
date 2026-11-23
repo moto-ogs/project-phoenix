@@ -79,8 +79,10 @@ function PriceListPage() {
   );
   const [shown, setShown] = useState<Record<string, string>>({});
   const [editing, setEditing] = useState<SchoolRef | null>(null);
+  // The removal confirms what the dialog showed: the version is taken when
+  // it opens, so a background refresh cannot hand it a newer one (ADR 0311).
   const [deleting, setDeleting] = useState<
-    (SchoolRef & { validFrom: string }) | null
+    (SchoolRef & { validFrom: string; version: string }) | null
   >(null);
   const [busy, setBusy] = useState(false);
   const deleteErrors = useApiFormError();
@@ -124,7 +126,7 @@ function PriceListPage() {
         await deleteCarePriceList(
           deleting.id,
           deleting.validFrom,
-          data?.versions?.[deleting.id] ?? "",
+          deleting.version,
         ),
         { revalidate: false },
       );
@@ -273,7 +275,11 @@ function PriceListPage() {
                   }
                   onEdit={() => setEditing(school)}
                   onDelete={(validFrom) =>
-                    setDeleting({ ...school, validFrom })
+                    setDeleting({
+                      ...school,
+                      validFrom,
+                      version: data.versions?.[school.id] ?? "",
+                    })
                   }
                   siblingPricesApply={(careOfferingId) =>
                     siblingRules === null ||

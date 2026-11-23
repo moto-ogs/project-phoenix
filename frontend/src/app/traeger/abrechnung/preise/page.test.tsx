@@ -42,6 +42,8 @@ vi.mock("next/navigation", () => ({
 }));
 
 import TraegerPreislistePage from "./page";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
+import { traegerBillingKeys } from "~/lib/swr/traeger-billing-keys";
 
 vi.unmock("swr");
 
@@ -248,5 +250,64 @@ describe("removing a price list", () => {
     expect(
       screen.queryByRole("button", { name: "Löschen" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("removes with the version its dialog opened on, not a newer one read in the background", async () => {
+    const read: CareTariffs = {
+      ...data,
+      lists: [{ schoolId: "11", validFrom: "2026-01-01", freeMonths: [] }],
+      versions: { "11": "v-1" },
+    };
+    fetchCareTariffs.mockReset().mockResolvedValueOnce(read);
+    fetchCareTariffs.mockResolvedValue({ ...read, versions: { "11": "v-2" } });
+    deleteCarePriceList
+      .mockReset()
+      .mockRejectedValue(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      );
+    fetchCareRules.mockResolvedValue({ rules: [rule] });
+    // Another surface on the same shared read refreshes it while the
+    // dialog is open.
+    function BackgroundRefresh() {
+      const { data: shared, mutate } = useTraegerResource<CareTariffs>(
+        traegerBillingKeys.careTariffs(),
+        fetchCareTariffs,
+        "die Preisliste",
+      );
+      return (
+        <button type="button" onClick={() => void mutate()}>
+          {`refresh ${shared?.versions?.["11"] ?? ""}`}
+        </button>
+      );
+    }
+    render(
+      <ToastProvider>
+        <TraegerResourceTestProvider>
+          <TraegerPreislistePage />
+          <BackgroundRefresh />
+        </TraegerResourceTestProvider>
+      </ToastProvider>,
+    );
+    await screen.findAllByText("Modul A");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Weitere Aktionen: Sonnenhof" }),
+    );
+    fireEvent.click(
+      await screen.findByRole("menuitem", {
+        name: /Preise ab Januar 2026 löschen/,
+      }),
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Ja, löschen" }));
+    fireEvent.click(screen.getByRole("button", { name: "refresh v-1" }));
+    await screen.findByRole("button", { name: "refresh v-2" });
+    fireEvent.click(await screen.findByRole("button", { name: "Löschen" }));
+
+    await waitFor(() =>
+      expect(deleteCarePriceList).toHaveBeenCalledWith(
+        "11",
+        "2026-01-01",
+        "v-1",
+      ),
+    );
   });
 });
