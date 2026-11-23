@@ -26,7 +26,7 @@ import {
 } from "~/lib/invitation-helpers";
 import { looksLikeEmail } from "~/lib/email-format";
 import { createLogger } from "~/lib/logger";
-import { useFreshSWR, useSWRAuth } from "~/lib/swr";
+import { useOpeningRead, useSWRAuth } from "~/lib/swr";
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import { useDebounce } from "~/lib/use-debounce";
 import type { StammdatenGender } from "~/lib/staff-api";
@@ -64,7 +64,7 @@ function useFormerEmployment(email: string): {
   const address = useDebounce(current, FORMER_EMPLOYMENT_DEBOUNCE_MS);
   // Each address asks anew, also when the person returns to one: a
   // Wiederaufnahme must not rest on an earlier answer.
-  const lookup = useFreshSWR(
+  const lookup = useOpeningRead(
     looksLikeEmail(address) ? enrollmentKeys.formerEmployment(address) : null,
     async () => {
       const controller = new AbortController();
@@ -79,7 +79,7 @@ function useFormerEmployment(email: string): {
       }
     },
     {
-      shouldRetryOnError: false,
+      showCached: false,
       // Without a successful lookup there is no choice to offer. Keep the
       // existing invitation behavior; sending reports its own form errors.
       onError: (err) => {
@@ -89,7 +89,7 @@ function useFormerEmployment(email: string): {
       },
     },
   );
-  const answered = address === current && lookup.fresh;
+  const answered = address === current && lookup.settled;
 
   return {
     formerEmployment: answered ? (lookup.data ?? null) : null,

@@ -12,7 +12,7 @@
 import { useCallback, useState } from "react";
 
 import type { ClosingDayDraft } from "~/components/planning/closing-day-modal";
-import { useFreshTraegerResource } from "~/components/traeger/use-traeger-resource";
+import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { traegerKeys } from "~/lib/swr/traeger-keys";
 import {
   previewTraegerClosingDayHolidayBookings,
@@ -55,14 +55,15 @@ export function useClosingDayHolidayImpact(
     requested !== null && rested === requested
       ? traegerKeys.closingDayImpact(requested, saved, deleting)
       : null;
-  // Jedes Öffnen wartet auf seine eigene Vorschau: das Speichern bestätigt
-  // mit deren Zeichen, nie mit dem einer früheren.
+  // Die Vorschau kommt aus dem geteilten Cache (ADR 0311): das Speichern
+  // bestätigt mit ihrem Zeichen, und der Server lehnt ab, wenn sich die
+  // Buchungen seither geändert haben; dann lädt `reload` die neue Vorschau.
   const {
     data: impact,
     loading,
     error,
     reload,
-  } = useFreshTraegerResource(
+  } = useTraegerResource(
     key,
     () =>
       requested

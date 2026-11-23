@@ -362,7 +362,7 @@ const keyBaseline = JSON.parse(
 );
 const KEYED_HOOKS = new Set([
   "useSWRAuth",
-  "useFreshSWR",
+  "useOpeningRead",
   "useConfirmedSWR",
   "useImmutableSWR",
   "useTraegerResource",

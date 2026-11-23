@@ -10,7 +10,7 @@ import {
 import {
   type ReaderOptions,
   type SWRResponse,
-  useFreshSWR,
+  useOpeningRead,
   useSWRAuth,
 } from "~/lib/swr";
 
@@ -43,23 +43,29 @@ export function useTraegerResource<T>(
 }
 
 /**
- * `useTraegerResource` for a read that has to be fresh each time its
- * surface opens (`useFreshSWR`): a preview a save confirms, or a read of
- * person data that stands in the schools' access logs. `data` stays null
- * until this opening's own request answered; focus and reconnect do not
- * read again.
+ * `useTraegerResource` for a read the server logs or authorizes on every
+ * opening (`useOpeningRead`, `showCached: false`): person data that stands
+ * in the schools' access logs. `data` stays null until this opening's own
+ * request answered and is held then; focus, reconnect and invalidations
+ * do not read again. `reload()` reads again.
  */
 export function useFreshTraegerResource<T>(
   key: string | null,
   fetcher: () => Promise<T>,
   object: string,
-  options?: TraegerReaderOptions<T>,
+  options?: Pick<TraegerReaderOptions<T>, "isPaused">,
 ) {
   const { scoped, guard } = useTraegerScope(key);
-  const response = useFreshSWR(scoped, fetcher, {
-    ...options,
+  const opened = useOpeningRead(scoped, fetcher, {
+    showCached: false,
+    isPaused: options?.isPaused,
     ...guard.callbacks,
   });
+  const response = {
+    data: opened.data,
+    error: opened.error,
+    mutate: opened.mutate,
+  };
   return useTraegerResult(scoped, response, guard, object);
 }
 
@@ -73,7 +79,7 @@ function useTraegerScope(key: string | null) {
 
 function useTraegerResult<T>(
   scoped: string | null,
-  response: SWRResponse<T>,
+  response: Pick<SWRResponse<T>, "data" | "error" | "mutate">,
   guard: RefusalGuard,
   object: string,
 ) {

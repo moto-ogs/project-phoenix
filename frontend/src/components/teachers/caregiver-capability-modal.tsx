@@ -23,7 +23,7 @@ import {
 import { CaregiverBlockerResolutionPanel } from "~/components/teachers/caregiver-blocker-resolution-panel";
 import type { RefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useFreshSWR } from "~/lib/swr";
+import { useOpeningRead } from "~/lib/swr";
 import { staffAccessKeys } from "~/lib/swr/staff-keys";
 import { createLogger } from "~/lib/logger";
 import { groupsConcept } from "~/lib/concepts/groups";
@@ -117,13 +117,16 @@ export function CaregiverCapabilityModal({
     data: freshState,
     error: stateError,
     mutate: mutateState,
-  } = useFreshSWR(capabilityKey, () =>
-    operatorSchoolId
-      ? caregiverCapabilityService.getOperatorAccountCapability(
-          operatorSchoolId,
-          accountId,
-        )
-      : caregiverCapabilityService.getTenantAccountCapability(accountId),
+  } = useOpeningRead(
+    capabilityKey,
+    () =>
+      operatorSchoolId
+        ? caregiverCapabilityService.getOperatorAccountCapability(
+            operatorSchoolId,
+            accountId,
+          )
+        : caregiverCapabilityService.getTenantAccountCapability(accountId),
+    { showCached: false },
   );
   // Scheitert das Laden, zeigt der Dialog den Fehler, keinen älteren Stand.
   const state = stateError ? undefined : freshState;

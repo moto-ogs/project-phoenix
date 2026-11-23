@@ -18,7 +18,7 @@ import {
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { cn } from "~/lib/utils";
-import { useFreshSWR } from "~/lib/swr";
+import { useOpeningRead } from "~/lib/swr";
 import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 
 const logger = createLogger({ component: "SelectionBulkInviteModal" });
@@ -125,7 +125,7 @@ export function SelectionBulkInviteModal({
 
   // The dry run only counts; nothing is sent until the click below. The
   // button names the counts of this opening's own dry run, never a cached one.
-  const previewRead = useFreshSWR(
+  const previewRead = useOpeningRead(
     isOpen
       ? tenantStudentKeys.bulkInvitePreview(
           studentIds,
@@ -139,6 +139,7 @@ export function SelectionBulkInviteModal({
         resendOpen,
         notifyActive,
       }),
+    { showCached: false },
   );
   const { mutate: mutatePreview } = previewRead;
   // A failed dry run shows its error, not the counts of an earlier one.

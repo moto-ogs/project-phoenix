@@ -26,8 +26,7 @@ import { fetchParentEnrollmentBootstrap } from "~/lib/enrollment-submission-api"
 import { parentPath } from "~/lib/parent-url";
 import { resolveTenant, type TenantInfo } from "~/lib/tenant-api";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useSWRAuth } from "~/lib/swr";
-import { openingReadOptions, useOpeningRead } from "~/lib/opening-read";
+import { useOpeningRead } from "~/lib/swr";
 import { createLogger } from "~/lib/logger";
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import {
@@ -116,14 +115,13 @@ function ParentEnrollFormPageContent({ params }: PageProps) {
     };
   };
   // A cached form shows at once while the opening reads it again.
-  const formRead = useSWRAuth(formKey, loadForm, openingReadOptions);
   // The parent fills the form this opening read: it reads the form again
   // even right after an earlier read, then a background read no longer
   // swaps the legal texts under ticked consents. The submit sends that
   // form's token; when the school changed the form, the refusal loads the
   // current one (ADR 0311). A failed first read shows its error even over a
   // cached form: the server would refuse a form it cannot confirm.
-  const opened = useOpeningRead(formKey, formRead, loadForm);
+  const opened = useOpeningRead(formKey, loadForm, { showCached: true });
   const openedForm = opened.data;
   const loaded = openedForm ?? null;
   const reloadForm = async () => {

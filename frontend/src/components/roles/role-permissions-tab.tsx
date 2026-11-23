@@ -18,7 +18,7 @@ import type { Permission, Role } from "~/lib/auth-helpers";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
-import { useFreshSWR, useSWRAuth } from "~/lib/swr";
+import { useOpeningRead, useSWRAuth } from "~/lib/swr";
 import { staffAccessKeys } from "~/lib/swr/staff-keys";
 import {
   formatPermissionDisplay,
@@ -98,11 +98,11 @@ export function RolePermissionsTab({
   const { success: toastSuccess } = useToast();
   const wasEditing = useRef(editing);
   const enteringEdit = editing && !wasEditing.current;
-  const assignedRead = useFreshSWR(
+  const assignedRead = useOpeningRead(
     staffAccessKeys.rolePermissions(role.id),
     () => authService.getRolePermissions(role.id),
     {
-      keepPreviousData: false,
+      showCached: false,
       // Eine bestätigte Liste ersetzt einen älteren Hinweis zum Nachladen.
       onSuccess: () => clearReloadError.current(),
     },

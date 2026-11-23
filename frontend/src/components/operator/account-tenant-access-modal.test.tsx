@@ -239,7 +239,7 @@ describe("AccountTenantAccessModal", () => {
     renderModal();
 
     await waitFor(() => expect(mockList).toHaveBeenCalledWith("42"));
-    expect(screen.getByText("OGS Nord")).toBeInTheDocument();
+    expect(await screen.findByText("OGS Nord")).toBeInTheDocument();
     // Organization + role summary of the granted school.
     expect(screen.getByText(/Träger Köln • Verwaltung/)).toBeInTheDocument();
   });

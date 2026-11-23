@@ -24,8 +24,7 @@ vi.mock("~/lib/tenant-context", () => ({
 }));
 
 import { ApiError } from "~/lib/api-error";
-import { useInvalidateMatching } from "./hooks";
-import { useFreshSWR } from "./hooks";
+import { useInvalidateMatching, useOpeningRead, useSWRAuth } from "./hooks";
 import { resetSWRScope } from "./scope";
 
 function deferred<T>() {
@@ -42,17 +41,37 @@ beforeEach(() => {
   resetSWRScope({ revalidate: false });
 });
 
-describe("useFreshSWR", () => {
+/** An audited read: nothing shows until the opening's own read answered. */
+function useAudited<T>(
+  key: string | null,
+  fetcher: () => Promise<T>,
+  isPaused?: () => boolean,
+) {
+  return useOpeningRead(key, fetcher, { showCached: false, isPaused });
+}
+
+/** A fetcher that answers in order; `fail` entries reject. */
+function answering(...answers: string[]) {
+  const fetcher = vi.fn(() => {
+    const answer = answers[fetcher.mock.calls.length - 1] ?? "unexpected";
+    return answer.startsWith("fail")
+      ? Promise.reject(new Error(answer))
+      : Promise.resolve(answer);
+  });
+  return fetcher;
+}
+
+describe("useOpeningRead (showCached: false)", () => {
   it("keeps the committed reader usable when another opening suspends", async () => {
     const blocked = deferred<void>();
     const fetcher = vi.fn(async () => "confirmed");
     function Reader({ resourceKey }: Readonly<{ resourceKey: string }>) {
-      const read = useFreshSWR(resourceKey, fetcher);
+      const read = useAudited(resourceKey, fetcher);
       if (resourceKey === "fresh-suspended-b") throw blocked.promise;
       return (
         <>
           <p>{read.data ?? "Loading"}</p>
-          <button onClick={() => void read.mutate()}>Reload</button>
+          <button onClick={() => void read.reload()}>Reload</button>
         </>
       );
     }
@@ -91,18 +110,15 @@ describe("useFreshSWR", () => {
         .mockResolvedValueOnce("confirmed")
         .mockReturnValueOnce(next.promise);
       const { result } = renderHook(() =>
-        useFreshSWR("fresh-confirmed-refresh", fetcher, {
-          shouldRetryOnError: false,
-        }),
+        useAudited("fresh-confirmed-refresh", fetcher),
       );
       await waitFor(() => expect(result.current.data).toBe("confirmed"));
       let refresh!: Promise<unknown>;
       act(() => {
         refresh = result.current.mutate();
       });
-      expect(result.current.isValidating).toBe(true);
       expect(result.current.data).toBe("confirmed");
-      expect(result.current.fresh).toBe(true);
+      expect(result.current.settled).toBe(true);
       expect(result.current.isLoading).toBe(false);
       const error = new Error("offline");
       await act(async () => {
@@ -112,7 +128,7 @@ describe("useFreshSWR", () => {
       });
       expect(result.current.data).toBe(failure ? "confirmed" : "updated");
       expect(result.current.error).toBe(failure ? error : undefined);
-      expect(result.current.fresh).toBe(true);
+      expect(result.current.settled).toBe(true);
     },
   );
 
@@ -126,22 +142,20 @@ describe("useFreshSWR", () => {
         .mockRejectedValueOnce(new Error("offline"))
         .mockResolvedValueOnce("authorized");
       const { result } = renderHook(() =>
-        useFreshSWR("fresh-refused-refresh", fetcher, {
-          shouldRetryOnError: false,
-        }),
+        useAudited("fresh-refused-refresh", fetcher),
       );
       await waitFor(() => expect(result.current.data).toBe("confirmed"));
       await act(async () => {
-        await result.current.mutate();
+        await expect(result.current.reload()).rejects.toBeDefined();
       });
       expect(result.current.error).toBeDefined();
       expect(result.current.data).toBeUndefined();
       await act(async () => {
-        await result.current.mutate();
+        await expect(result.current.reload()).rejects.toBeDefined();
       });
       expect(result.current.data).toBeUndefined();
       await act(async () => {
-        await result.current.mutate();
+        await expect(result.current.reload()).resolves.toBe("authorized");
       });
       expect(result.current.data).toBe("authorized");
     },
@@ -154,7 +168,7 @@ describe("useFreshSWR", () => {
       .mockResolvedValueOnce("confirmed")
       .mockReturnValueOnce(next.promise);
     const { result } = renderHook(() => ({
-      read: useFreshSWR("fresh-clear", fetcher),
+      read: useAudited("fresh-clear", fetcher),
       invalidate: useInvalidateMatching(),
     }));
     await waitFor(() => expect(result.current.read.data).toBe("confirmed"));
@@ -164,7 +178,7 @@ describe("useFreshSWR", () => {
       });
     });
     expect(result.current.read.data).toBeUndefined();
-    expect(result.current.read.fresh).toBe(false);
+    expect(result.current.read.settled).toBe(false);
     await act(async () => {
       next.resolve("new generation");
     });
@@ -179,15 +193,15 @@ describe("useFreshSWR", () => {
       () => answers[fetcher.mock.calls.length - 1]!.promise,
     );
 
-    const first = renderHook(() => useFreshSWR("fresh-preview-1", fetcher));
+    const first = renderHook(() => useAudited("fresh-preview-1", fetcher));
     expect(first.result.current.data).toBeUndefined();
     expect(first.result.current.isLoading).toBe(true);
     await act(async () => answers[0]!.resolve("alt"));
     await waitFor(() => expect(first.result.current.data).toBe("alt"));
-    expect(first.result.current.fresh).toBe(true);
+    expect(first.result.current.settled).toBe(true);
     first.unmount();
 
-    const second = renderHook(() => useFreshSWR("fresh-preview-1", fetcher));
+    const second = renderHook(() => useAudited("fresh-preview-1", fetcher));
     expect(second.result.current.data).toBeUndefined();
     expect(second.result.current.isLoading).toBe(true);
     await act(async () => answers[1]!.resolve("neu"));
@@ -203,7 +217,7 @@ describe("useFreshSWR", () => {
 
     const { result, rerender } = renderHook(
       ({ open }: { open: boolean }) =>
-        useFreshSWR(open ? "fresh-preview-2" : null, fetcher),
+        useAudited(open ? "fresh-preview-2" : null, fetcher),
       { initialProps: { open: true } },
     );
     await act(async () => answers[0]!.resolve("alt"));
@@ -230,11 +244,11 @@ describe("useFreshSWR", () => {
     const seen: { fresh: boolean; data: string | undefined }[] = [];
     const { result, rerender } = renderHook(
       ({ key }) => {
-        const read = useFreshSWR(
+        const read = useAudited(
           key,
           key === "fresh-a" ? fetchA : () => b.promise,
         );
-        seen.push({ fresh: read.fresh, data: read.data });
+        seen.push({ fresh: read.settled, data: read.data });
         return read;
       },
       { initialProps: { key: "fresh-a" } },
@@ -266,7 +280,7 @@ describe("useFreshSWR", () => {
       const initialProps: { open: boolean } = { open: true };
       const first = renderHook(
         ({ open }: { open: boolean }) =>
-          useFreshSWR(open ? "fresh-pending" : null, fetcher),
+          useAudited(open ? "fresh-pending" : null, fetcher),
         { initialProps },
       );
       await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(1));
@@ -275,7 +289,7 @@ describe("useFreshSWR", () => {
         first.unmount();
         active = renderHook(
           ({ open }: { open: boolean }) =>
-            useFreshSWR(open ? "fresh-pending" : null, fetcher),
+            useAudited(open ? "fresh-pending" : null, fetcher),
           { initialProps },
         );
       } else {
@@ -285,7 +299,7 @@ describe("useFreshSWR", () => {
       await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(2));
       await act(async () => old.resolve("old"));
       expect(active.result.current.data).toBeUndefined();
-      expect(active.result.current.fresh).toBe(false);
+      expect(active.result.current.settled).toBe(false);
       await act(async () => current.resolve("current"));
       await waitFor(() => expect(active.result.current.data).toBe("current"));
     },
@@ -294,11 +308,10 @@ describe("useFreshSWR", () => {
   it("keeps caller pauses and starts its own request when resumed", async () => {
     const fetcher = vi.fn(async () => "fresh");
     const { result, rerender } = renderHook(
-      ({ paused }) =>
-        useFreshSWR("fresh-paused", fetcher, { isPaused: () => paused }),
+      ({ paused }) => useAudited("fresh-paused", fetcher, () => paused),
       { initialProps: { paused: true } },
     );
-    expect(result.current.fresh).toBe(false);
+    expect(result.current.settled).toBe(false);
     expect(fetcher).not.toHaveBeenCalled();
     rerender({ paused: false });
     await waitFor(() => expect(result.current.data).toBe("fresh"));
@@ -308,14 +321,12 @@ describe("useFreshSWR", () => {
   it("ends loading with the error when the opening's request fails", async () => {
     const answer = deferred<string>();
     const { result } = renderHook(() =>
-      useFreshSWR("fresh-preview-3", () => answer.promise, {
-        shouldRetryOnError: false,
-      }),
+      useAudited("fresh-preview-3", () => answer.promise),
     );
     await act(async () => answer.reject(new Error("kaputt")));
     await waitFor(() => expect(result.current.error).toBeDefined());
     expect(result.current.data).toBeUndefined();
-    expect(result.current.fresh).toBe(true);
+    expect(result.current.settled).toBe(true);
     expect(result.current.isLoading).toBe(false);
   });
 
@@ -324,23 +335,154 @@ describe("useFreshSWR", () => {
     const fetcher = vi.fn(
       () => answers[fetcher.mock.calls.length - 1]!.promise,
     );
-    const options = { shouldRetryOnError: false };
-
-    const first = renderHook(() =>
-      useFreshSWR("fresh-preview-4", fetcher, options),
-    );
+    const first = renderHook(() => useAudited("fresh-preview-4", fetcher));
     await act(async () => answers[0]!.resolve("alt"));
     await waitFor(() => expect(first.result.current.data).toBe("alt"));
     first.unmount();
 
-    const second = renderHook(() =>
-      useFreshSWR("fresh-preview-4", fetcher, options),
-    );
+    const second = renderHook(() => useAudited("fresh-preview-4", fetcher));
     // The reader takes the failure; this handle of the test must not count
     // as unhandled.
     answers[1]!.promise.catch(() => undefined);
     await act(async () => answers[1]!.reject(new Error("kaputt")));
     await waitFor(() => expect(second.result.current.error).toBeDefined());
     expect(second.result.current.data).toBeUndefined();
+  });
+
+  it("reads again on an invalidation of the key and shows that answer", async () => {
+    const fetcher = answering("Erste", "Zweite");
+    const { result } = renderHook(() => ({
+      read: useAudited("fresh-invalidated", fetcher),
+      invalidate: useInvalidateMatching(),
+    }));
+    await waitFor(() => expect(result.current.read.data).toBe("Erste"));
+    await act(async () => {
+      await result.current.invalidate((key) => key === "fresh-invalidated");
+    });
+    await waitFor(() => expect(result.current.read.data).toBe("Zweite"));
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+});
+
+/** The form surface: one opening of the shared read. */
+function useForm(key: string | null, fetcher: () => Promise<string>) {
+  return useOpeningRead(key, fetcher, { showCached: true });
+}
+
+describe("useOpeningRead (showCached: true)", () => {
+  it("reads at every opening, also right after a read of the key, and then holds it", async () => {
+    const fetcher = answering("Liste", "Formular", "Hintergrund");
+    // Another view read the key a moment ago, well inside the deduping
+    // interval.
+    const list = renderHook(() => useSWRAuth("opening-1", fetcher));
+    await waitFor(() => expect(list.result.current.data).toBe("Liste"));
+
+    const form = renderHook(() => useForm("opening-1", fetcher));
+    expect(form.result.current).toMatchObject({
+      data: "Liste",
+      settled: false,
+    });
+    await waitFor(() => expect(form.result.current.settled).toBe(true));
+    expect(form.result.current.data).toBe("Formular");
+    expect(fetcher).toHaveBeenCalledTimes(2);
+
+    // A later background read changes the cache, not the opened form.
+    await act(async () => void (await list.result.current.mutate()));
+    expect(list.result.current.data).toBe("Hintergrund");
+    expect(form.result.current.data).toBe("Formular");
+    expect(form.result.current.latest).toBe("Hintergrund");
+  });
+
+  it("keeps its answer when an invalidation reads the key again", async () => {
+    const fetcher = answering("Formular", "Neuer");
+    const { result } = renderHook(() => ({
+      form: useForm("opening-6", fetcher),
+      invalidate: useInvalidateMatching(),
+    }));
+    await waitFor(() => expect(result.current.form.data).toBe("Formular"));
+    await act(async () => {
+      await result.current.invalidate((key) => key === "opening-6");
+    });
+    await waitFor(() => expect(result.current.form.latest).toBe("Neuer"));
+    expect(result.current.form.data).toBe("Formular");
+  });
+
+  it("reads again when the surface opens again", async () => {
+    const fetcher = answering("Erste", "Zweite");
+    const form = renderHook(
+      ({ open }: { open: boolean }) =>
+        useForm(open ? "opening-2" : null, fetcher),
+      { initialProps: { open: true } },
+    );
+    await waitFor(() => expect(form.result.current.data).toBe("Erste"));
+
+    form.rerender({ open: false });
+    form.rerender({ open: true });
+    expect(form.result.current).toMatchObject({
+      data: "Erste",
+      settled: false,
+    });
+    await waitFor(() => expect(form.result.current.data).toBe("Zweite"));
+    expect(form.result.current.settled).toBe(true);
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps a failed first read failed while retries fail, without showing the cached form", async () => {
+    const fetcher = answering("Alt", "fail-1", "fail-2", "Neu");
+    const list = renderHook(() =>
+      useSWRAuth("opening-3", fetcher, { shouldRetryOnError: false }),
+    );
+    await waitFor(() => expect(list.result.current.data).toBe("Alt"));
+
+    const shown: (string | undefined)[] = [];
+    const form = renderHook(() => {
+      const opened = useForm("opening-3", fetcher);
+      shown.push(opened.data);
+      return opened;
+    });
+    await waitFor(() => expect(form.result.current.error).toBeDefined());
+    expect(form.result.current.data).toBeUndefined();
+    shown.length = 0;
+
+    act(() => form.result.current.retry());
+    await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(3));
+    await waitFor(() =>
+      expect(form.result.current.error).toMatchObject({ message: "fail-2" }),
+    );
+    expect(shown.every((data) => data === undefined)).toBe(true);
+
+    act(() => form.result.current.retry());
+    await waitFor(() => expect(form.result.current.data).toBe("Neu"));
+    expect(form.result.current.error).toBeUndefined();
+  });
+
+  it("holds the answer of a reload, and a failed reload rejects and changes nothing", async () => {
+    const fetcher = answering("Formular", "fail-reload", "Aktuell");
+    const form = renderHook(() => useForm("opening-4", fetcher));
+    await waitFor(() => expect(form.result.current.data).toBe("Formular"));
+
+    await act(async () => {
+      await expect(form.result.current.reload()).rejects.toMatchObject({
+        message: "fail-reload",
+      });
+    });
+    expect(form.result.current.data).toBe("Formular");
+    expect(form.result.current.error).toBeUndefined();
+
+    await act(async () => {
+      await expect(form.result.current.reload()).resolves.toBe("Aktuell");
+    });
+    expect(form.result.current.data).toBe("Aktuell");
+  });
+
+  it("holds a save's answer handed to mutate", async () => {
+    const fetcher = answering("Formular");
+    const form = renderHook(() => useForm("opening-5", fetcher));
+    await waitFor(() => expect(form.result.current.data).toBe("Formular"));
+    await act(async () => {
+      await form.result.current.mutate("Gespeichert", { revalidate: false });
+    });
+    expect(form.result.current.data).toBe("Gespeichert");
+    expect(fetcher).toHaveBeenCalledTimes(1);
   });
 });
