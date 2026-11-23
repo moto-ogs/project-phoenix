@@ -40,7 +40,8 @@ const columns: DataTableColumn<SchoolVacation>[] = [
   {
     key: "range",
     header: "Zeitraum",
-    stacked: "meta",
+    // Am Handy eine eigene Zeile: neben dem Namen bräche der Name mitten
+    // im Wort um.
     sortValue: (vacation) => vacation.startDate,
     render: (vacation) => (
       <span className="text-sm whitespace-nowrap text-gray-600 tabular-nums">
