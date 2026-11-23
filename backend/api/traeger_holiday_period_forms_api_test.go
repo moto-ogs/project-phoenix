@@ -45,9 +45,26 @@ type holidayFormBody struct {
 
 func holidayFormPath(periodID int64) string { return holidayPeriodPath(periodID) + "/form" }
 
+// putHolidayForm saves the next version of a form over the version its
+// caller reads first, as the form editor does (ADR 0311). A caller that may
+// not read the form sends none; its save is refused for the same reason.
+func putHolidayForm(t *testing.T, router http.Handler, token, path string, body any) *httptest.ResponseRecorder {
+	t.Helper()
+	encoded, err := json.Marshal(body)
+	require.NoError(t, err)
+	sent := map[string]any{}
+	require.NoError(t, json.Unmarshal(encoded, &sent))
+	if read := traegerJSON(t, router, token, http.MethodGet, path, nil); read.Code == http.StatusOK {
+		sent["expected_version"] = decodeSchoolPortalData[struct {
+			Version int `json:"version"`
+		}](t, read.Body.Bytes()).Version
+	}
+	return traegerJSON(t, router, token, http.MethodPut, path, sent)
+}
+
 func saveHolidayForm(t *testing.T, f holidayRegistrationFixture, office traegerOffice, periodID int64, fields []map[string]any) holidayFormBody {
 	t.Helper()
-	rec := traegerJSON(t, f.traeger, office.token, http.MethodPut, holidayFormPath(periodID), map[string]any{"fields": fields})
+	rec := putHolidayForm(t, f.traeger, office.token, holidayFormPath(periodID), map[string]any{"fields": fields})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	return decodeSchoolPortalData[holidayFormBody](t, rec.Body.Bytes())
 }
@@ -167,7 +184,7 @@ func TestTraegerHolidayFormRefusesWhatTheHolidayFormDoesNotOffer(t *testing.T) {
 		{"a select without options", []map[string]any{{"key": "wahl", "label": "Wahl", "type": "select"}},
 			"enrollment.form_field_options_invalid", "fields.0.options"},
 	} {
-		rec := traegerJSON(t, f.traeger, office.token, http.MethodPut, holidayFormPath(int64(period.ID)), map[string]any{"fields": refused.fields})
+		rec := putHolidayForm(t, f.traeger, office.token, holidayFormPath(int64(period.ID)), map[string]any{"fields": refused.fields})
 		require.Equal(t, http.StatusBadRequest, rec.Code, "%s: %s", refused.name, rec.Body.String())
 		code, fields := registrationRefusalOf(t, rec)
 		assert.Equal(t, refused.code, code, refused.name)
@@ -456,40 +473,46 @@ func TestHolidayAnswersStayWithTheTraeger(t *testing.T) {
 // TestConcurrentFormSavesWriteOneVersionEach pins invariant 2: two saves of
 // one period at the same time wait for each other on the period's row and
 // get two versions.
-func TestConcurrentFormSavesWriteOneVersionEach(t *testing.T) {
+// TestConcurrentFormSavesOverOneReadKeepOne pins ADR 0311 for the holiday
+// form: saves started from the same read version run one after the other
+// under the period lock; the first writes the next version, every later one
+// is refused with general.changed_since_read and writes nothing, so no
+// office replaces a version it never saw. A save over the version read
+// after that succeeds.
+func TestConcurrentFormSavesOverOneReadKeepOne(t *testing.T) {
 	t.Parallel()
 	f := newHolidayRegistrationFixture(t)
 	office := newTraegerOffice(t, f.db, f.traeger, "Träger Formular Gleichzeitig", identityaccess.TraegerRoleAdministration)
 	period := createHolidayPeriod(t, f.traeger, office, januaryHolidays(office))
+	path := holidayFormPath(int64(period.ID))
 
 	const saves = 4
 	codes := make(chan int, saves)
-	versions := make(chan int, saves)
 	var wg sync.WaitGroup
 	for i := range saves {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			fields := []map[string]any{{"key": fmt.Sprintf("frage_%d", i), "label": "Frage", "type": "text"}}
-			rec := traegerJSON(t, f.traeger, office.token, http.MethodPut, holidayFormPath(int64(period.ID)), map[string]any{"fields": fields})
-			codes <- rec.Code
-			if rec.Code == http.StatusOK {
-				versions <- decodeSchoolPortalData[holidayFormBody](t, rec.Body.Bytes()).Version
+			rec := traegerJSON(t, f.traeger, office.token, http.MethodPut, path, map[string]any{"fields": fields, "expected_version": 1})
+			if rec.Code == http.StatusConflict {
+				assert.Contains(t, rec.Body.String(), `"code":"general.changed_since_read"`)
 			}
+			codes <- rec.Code
 		}()
 	}
 	wg.Wait()
 	close(codes)
-	close(versions)
+	got := map[int]int{}
 	for code := range codes {
-		assert.Equal(t, http.StatusOK, code, "no save is lost to another")
+		got[code]++
 	}
-	got := []int{}
-	for version := range versions {
-		got = append(got, version)
-	}
-	assert.ElementsMatch(t, []int{2, 3, 4, 5}, got, "each save gets a version of its own")
-	assert.Equal(t, []int{1, 2, 3, 4, 5}, formVersions(t, f, int64(period.ID)))
+	assert.Equal(t, map[int]int{http.StatusOK: 1, http.StatusConflict: saves - 1}, got, "one save over the read version wins")
+	assert.Equal(t, []int{1, 2}, formVersions(t, f, int64(period.ID)), "a refused save writes no version")
+
+	rec := putHolidayForm(t, f.traeger, office.token, path, map[string]any{"fields": []map[string]any{}})
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.Equal(t, 3, decodeSchoolPortalData[holidayFormBody](t, rec.Body.Bytes()).Version)
 }
 
 func TestHolidayExportKeepsAnswersWhenAQuestionChangesScope(t *testing.T) {

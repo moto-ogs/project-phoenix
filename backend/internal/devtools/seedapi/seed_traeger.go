@@ -226,6 +226,7 @@ func seedHolidayAddressForm(client *Client, auth AuthRef, periodID int64) error 
 	}
 	var form struct {
 		Data struct {
+			Version     int             `json:"version"`
 			Fields      json.RawMessage `json:"fields"`
 			LegalBlocks json.RawMessage `json:"legal_blocks"`
 		} `json:"data"`
@@ -237,7 +238,8 @@ func seedHolidayAddressForm(client *Client, auth AuthRef, periodID int64) error 
 	if len(fields) == 0 {
 		fields = json.RawMessage(`[]`)
 	}
-	body := map[string]any{"fields": fields, "address_requirement": "optional"}
+	// The save carries the version it replaces (ADR 0311).
+	body := map[string]any{"fields": fields, "address_requirement": "optional", "expected_version": form.Data.Version}
 	if len(form.Data.LegalBlocks) > 0 {
 		body["legal_blocks"] = form.Data.LegalBlocks
 	}
