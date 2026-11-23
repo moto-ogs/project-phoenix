@@ -702,10 +702,17 @@ func (s *Store) InsertCareRunHolds(ctx context.Context, organizationID, runID in
 	}
 	rows := make([]careRunHoldRow, len(holds))
 	for i, hold := range holds {
+		// Every school the snapshot names: those of the contracts and those
+		// of the issued documents, so the row goes with any of them (#7892).
 		schools := []int64{}
 		for _, contract := range hold.Contracts {
 			if !slices.Contains(schools, contract.SchoolID.Int64()) {
 				schools = append(schools, contract.SchoolID.Int64())
+			}
+		}
+		for _, invoice := range hold.Invoices {
+			if invoice.SchoolID != 0 && !slices.Contains(schools, invoice.SchoolID.Int64()) {
+				schools = append(schools, invoice.SchoolID.Int64())
 			}
 		}
 		// Both lists are stored as arrays, an empty one too.

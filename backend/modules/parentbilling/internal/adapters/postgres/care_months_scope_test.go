@@ -153,8 +153,10 @@ func TestCareMonthsFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 
 		// A release keeps the children held for an issued invoice with that
 		// invoice (#7892); the rows read back as stored.
+		// The held contract lies at another school than the invoice.
+		const heldSchool = 987654321
 		stored := []parentbilling.CareRunHold{{Position: 2, Reason: parentbilling.HoldReasonAlreadyBilled, ChildFirstName: "Noah", ChildLastName: "Beispiel",
-			Contracts: []parentbilling.CareDuplicateContract{{ContractID: ident.ID(own.contract + 2), SchoolID: ident.ID(own.school), SchoolName: "Träger A"}},
+			Contracts: []parentbilling.CareDuplicateContract{{ContractID: ident.ID(own.contract + 2), SchoolID: heldSchool, SchoolName: "Andere Schule"}},
 			Slots:     []parentbilling.CareHeldSlot{}, Invoices: invoiced[own.contract].BilledBy}}
 		require.NoError(t, store.InsertCareRunHolds(ctx, own.organization, own.released, stored))
 		ownHolds, err := store.CareRunHolds(ctx, own.organization, own.released)
@@ -162,6 +164,14 @@ func TestCareMonthsFiltersKeepTheTraegerBelowRLS(t *testing.T) {
 		require.Len(t, ownHolds, 2)
 		assert.Empty(t, ownHolds[0].Invoices, "a hold for a duplicate contract names no invoice")
 		assert.Equal(t, stored[0], ownHolds[1])
+		// The snapshot keeps the name of the child and the number of the
+		// invoice: it goes with the school of either, so the erasure of a
+		// demo school (school_ids && hidden_schools) finds it by the school
+		// of the stored invoice too.
+		var named []int64
+		require.NoError(t, tx.NewRaw(`SELECT unnest(school_ids) FROM parent_billing.care_run_holds
+			WHERE organization_id = ? AND run_id = ? AND position = 2 ORDER BY 1`, own.organization, own.released).Scan(ctx, &named))
+		assert.ElementsMatch(t, []int64{heldSchool, own.school}, named, "the schools of the held contract and of the stored invoice")
 
 		_, err = store.MarkCareRunReleased(ctx, own.organization, other.open, september, 1, 3200, parentbilling.MonthRuleVersionOnFirst)
 		assert.ErrorIs(t, err, parentbilling.ErrBillingRunReleased, "MarkCareRunReleased of another Träger's run")
