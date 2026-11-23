@@ -383,3 +383,31 @@ Projektion nutzt „change“.
   `api.day_changes.today.children` bei 24,
   `api.day_changes.today_activities` bei 20 und
   `api.day_changes.today_appointments` bei 15 Anweisungen.
+
+## Nachtrag 2026-11-23: Budget mit Kalender-Recht (#7903)
+
+- Das Szenario `api.day_changes.today` misst jetzt den realistischen Fall:
+  eine Betreuung mit Gruppe und `calendar:own`, mit Abwesenheiten,
+  Gruppenübergaben, geänderten Diensten und Termin-Ausnahmen (ein einzeln
+  abgesagter Termin einer Serie und eine ganz abgesagte Serie). Gemessen
+  vor dem Umbau: 20 Anweisungen bei einer Obergrenze von 17.
+- Die Quelle Termine liest über die neue Lesefähigkeit
+  `appointments.StaffDayAppointments` in einer statt drei Anweisungen:
+  die sichtbaren Termine des Tages mit ihrer Regel und den Ausnahmen der
+  Tage, die heute erreichen können (höchstens 31 Tage zurück, wie bisher).
+  Appointments faltet die Zeilen der Verbindung zu einem Wert je Termin.
+  Sichtregel (`calendar:own`, Organisator oder eingeladenes Personal) und
+  Ergebnis bleiben gleich.
+- Die Quelle Personal liest die Abwesenheiten mit Planwirkung und die
+  Gruppenübergaben des Tages über `workforce.StaffDayReads` in einer statt
+  zwei Anweisungen (zwei JSON-Listen in einem Select, dieselben Filter wie
+  `ListStaffAbsences` und `ListGroupSubstitutions`).
+- Beide Lesungen bindet die Root an die vorhandenen Kompositionen der
+  Owner (`appointments.StaffDayAppointmentsOf`, Typprüfung des
+  Work-Time-Service in `NewDayChanges`), ohne neue Kompositionszeilen.
+- `api.day_changes.today` bleibt bei 17 Anweisungen.
+  `api.day_changes.today_appointments` sinkt von 15 auf 12,
+  `api.day_changes.today.children` von 24 auf 23 und
+  `api.day_changes.today_activities` von 20 auf 19. Das Szenario
+  `today_appointments` bleibt: Es misst die Sitzung ohne Gruppe mit
+  engerer Obergrenze.

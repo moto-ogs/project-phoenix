@@ -33,9 +33,10 @@ type unavailableDayChangesWorkforce struct {
 	shiftsRead    bool
 }
 
-func (w *unavailableDayChangesWorkforce) ListStaffAbsences(context.Context, workforce.StaffAbsenceFilter) ([]workforce.StaffAbsence, error) {
-	w.absencesRead = true
-	return nil, errors.New("staff absences unavailable")
+// StaffDay reads the absences and the handovers of the day together (#7903).
+func (w *unavailableDayChangesWorkforce) StaffDay(context.Context, string) (workforce.StaffDay, error) {
+	w.absencesRead, w.handoversRead = true, true
+	return workforce.StaffDay{}, errors.New("staff absences and handovers unavailable")
 }
 
 func (w *unavailableDayChangesWorkforce) ListGroupSubstitutions(context.Context, workforce.GroupSubstitutionFilter) ([]workforce.GroupSubstitution, error) {

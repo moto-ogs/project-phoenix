@@ -1,7 +1,7 @@
 {
   "scenario": "api.day_changes.today_appointments",
-  "max": 15,
+  "max": 12,
   "exact": false,
-  "description": "GET /day-changes/today (#7663, #7666) with the Termine source for a staff member with calendar:own: the Personal reads of api.day_changes.today (without the group team on a day with no absence, handover or block change, #7666) and the meal plan's change mark, plus the caller's visible calendar appointments of the day, the occurrence overrides of the dates that may reach today and the recurrence rules of cancelled series, each in one batched read inside the savepoint the sources share. TestDayChangesAppointmentSource compares the read before and after one more weekly appointment with a cancelled date.",
+  "description": "GET /day-changes/today (#7663, #7666, #7903) with the Termine source for a staff member with calendar:own and no group: the Personal reads of api.day_changes.today (without the group team on a day with no absence, handover or block change, #7666) and the meal plan's change mark, plus the caller's visible calendar appointments of the day with their recurrence rules and the overrides of the dates that may reach today in one Appointments read (#7903), inside the savepoint the sources share. TestDayChangesAppointmentSource compares the read before and after one more weekly appointment with a cancelled date; api.day_changes.today measures the source for care staff with a group.",
   "route": "GET /api/day-changes/today"
 }
