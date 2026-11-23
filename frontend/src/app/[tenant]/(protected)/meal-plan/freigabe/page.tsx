@@ -439,7 +439,6 @@ export default function MealBillingReleasePage() {
                 columns={columns(showsRelease)}
                 rows={[...shown.children]}
                 getRowKey={(child) => child.studentId}
-                stackedOnMobile
               />
             )}
           </SectionCard>

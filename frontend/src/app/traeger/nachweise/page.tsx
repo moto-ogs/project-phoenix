@@ -298,7 +298,6 @@ function useProofListView(loaded: StaffProofList | null) {
         rows={rows}
         columns={columns}
         getRowKey={entryKey}
-        stackedOnMobile
         emptyState={
           list.entries.length === 0 ? (
             <EmptyState
@@ -404,7 +403,6 @@ function ProofTypes({
       rows={[...types]}
       columns={columns}
       getRowKey={(kind) => kind.id}
-      stackedOnMobile
       onRowClick={(kind) => onEdit(kind)}
       emptyState={<EmptyState title="Noch keine Nachweisart." />}
     />

@@ -330,7 +330,6 @@ export function CarePriceListCard({
           // Five or more price columns: narrower cells keep the price from
           // the 2nd child on one line from the laptop on.
           dense
-          stackedOnMobile
         />
       </div>
     );

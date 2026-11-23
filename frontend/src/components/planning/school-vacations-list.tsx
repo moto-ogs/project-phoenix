@@ -40,6 +40,7 @@ const columns: DataTableColumn<SchoolVacation>[] = [
   {
     key: "range",
     header: "Zeitraum",
+    stacked: "meta",
     sortValue: (vacation) => vacation.startDate,
     render: (vacation) => (
       <span className="text-sm whitespace-nowrap text-gray-600 tabular-nums">
@@ -50,6 +51,7 @@ const columns: DataTableColumn<SchoolVacation>[] = [
   {
     key: "name",
     header: "Ferien",
+    stacked: "title",
     sortValue: (vacation) => vacation.name,
     render: (vacation) => (
       <span className="flex flex-wrap items-center gap-2">

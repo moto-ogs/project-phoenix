@@ -313,7 +313,6 @@ export function MealOrderWeek({
           rows={days}
           getRowKey={(day) => day.date}
           isLoading={loading}
-          stackedOnMobile
           caption={t("caption")}
         />
       )}

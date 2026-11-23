@@ -306,7 +306,6 @@ export function BillingTermsCard({
         getRowKey={(row) => row.terms.service}
         onRowClick={setEditing}
         rowHasInteractiveControls
-        stackedOnMobile
       />
       <ServiceTermsModal
         row={editing}

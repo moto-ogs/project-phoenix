@@ -346,7 +346,6 @@ function SurveysContent() {
     >
       {view === "alle" ? (
         <DataTable
-          stackedOnMobile
           columns={columns}
           rows={list}
           getRowKey={(row) => row.id}

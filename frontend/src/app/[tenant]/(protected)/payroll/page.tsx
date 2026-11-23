@@ -681,7 +681,6 @@ function LohnartenCard({
         // Auf dem Handy untereinander: die Auswahl der Einheit lag sonst
         // rechts außerhalb der Karte (#4975). Als Formular: Beschriftung
         // über dem Feld, alle Felder gleich breit (#4807).
-        stackedOnMobile
         stackedLayout="form"
         columns={lohnartColumns(onSave, drafts)}
         rows={status.categories}
@@ -1472,7 +1471,6 @@ function WageTypesCard({
         />
       ) : (
         <DataTable
-          stackedOnMobile
           stackedLayout="form"
           stackedTitle={(wageType) => wageType.name}
           columns={columns}
@@ -1693,7 +1691,6 @@ function SurchargeRulesCard({
         />
       ) : (
         <DataTable
-          stackedOnMobile
           stackedLayout="form"
           columns={columns}
           rows={[...rules.surchargeRules]}
@@ -1894,7 +1891,6 @@ function AbsenceTypeWageTypesCard({
         />
       ) : (
         <DataTable
-          stackedOnMobile
           stackedLayout="form"
           columns={columns}
           rows={[...rules.absenceTypes]}

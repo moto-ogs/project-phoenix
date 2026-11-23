@@ -327,7 +327,6 @@ function ContractPanel({
         columns={sollColumns()}
         rows={rows}
         getRowKey={(row) => row.site.schoolId}
-        stackedOnMobile
       />
       {!ended && earliest ? (
         <p className="text-sm text-gray-500">

@@ -621,7 +621,6 @@ function TraegerZeitvergleichContent() {
         defaultSortDirection="desc"
         isLoading={loading}
         loadingRowCount={3}
-        stackedOnMobile
       />
       {canSeeNames ? (
         <DataTable
@@ -656,7 +655,6 @@ function TraegerZeitvergleichContent() {
           defaultSortDirection="desc"
           isLoading={loading}
           loadingRowCount={3}
-          stackedOnMobile
           emptyState={<ChildrenEmptyState evaluation={evaluation} />}
         />
       ) : (

@@ -90,7 +90,6 @@ export function CareContractImportLogCard({
           getRowKey={(entry) =>
             `${entry.file}|${entry.importedAt}|${entry.accountId ?? ""}`
           }
-          stackedOnMobile
           stackedLayout="lines"
           dense
         />

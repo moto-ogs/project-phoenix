@@ -830,7 +830,6 @@ function BillingFamiliesContent() {
             // Seven columns with four sums: narrower cells keep the open
             // claim in view beside the family on a laptop and a tablet.
             dense
-            stackedOnMobile
             stackedLayout="row"
             stackedDetailKey="debtor"
             rowHasInteractiveControls

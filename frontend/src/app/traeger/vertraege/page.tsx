@@ -784,7 +784,6 @@ export default function TraegerVertraegePage() {
           columns={COLUMNS}
           rows={contracts}
           getRowKey={(contract) => contract.id}
-          stackedOnMobile
           stackedLayout="row"
           stackedDetailKey="school"
           onRowClick={(contract) => router.push(contractHref(contract))}

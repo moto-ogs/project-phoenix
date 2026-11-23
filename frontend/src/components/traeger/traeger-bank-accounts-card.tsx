@@ -207,7 +207,6 @@ export function TraegerBankAccountsCard({
         rows={[...accounts]}
         getRowKey={(account) => account.id}
         rowHasInteractiveControls={canEdit}
-        stackedOnMobile
         // Label above value on a phone: the whole IBAN gets the full row.
         stackedLayout="form"
         emptyState={

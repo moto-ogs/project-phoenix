@@ -503,7 +503,6 @@ export function CareRunInvoices({
             rows={invoiceRows(group.invoices, letters)}
             getRowKey={(row) => row.key}
             rowHasInteractiveControls={interactive}
-            stackedOnMobile
           />
         </SectionCard>
       ))}

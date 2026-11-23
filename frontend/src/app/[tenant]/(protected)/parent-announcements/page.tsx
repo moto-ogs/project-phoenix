@@ -838,7 +838,6 @@ function ParentAnnouncementsContent() {
     >
       <LoadErrorAlert error={formAfterWrite.error} />
       <DataTable
-        stackedOnMobile
         columns={columns}
         rows={filtered}
         getRowKey={(row) => row.id}

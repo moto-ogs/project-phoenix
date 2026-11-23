@@ -94,6 +94,8 @@ const COLUMNS: DataTableColumn<StatusDayOverviewEntry>[] = [
   {
     key: "child",
     header: "Kind",
+    // Am Handy steht das Kind oben auf der Karte, der Status daneben.
+    stacked: "title",
     render: (row) => (
       <span className="font-medium text-gray-900">
         {row.last_name}, {row.first_name}
@@ -103,6 +105,7 @@ const COLUMNS: DataTableColumn<StatusDayOverviewEntry>[] = [
   {
     key: "status",
     header: "Status",
+    stacked: "meta",
     render: (row) => (
       <StatusColorBadge label={row.label} color={STATUS_COLORS[row.status]} />
     ),

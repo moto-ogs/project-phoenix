@@ -525,7 +525,6 @@ export default function TraegerKinderzahlPage() {
           // Six columns on a tablet: narrower cells keep the state pills
           // whole beside the row menu.
           dense
-          stackedOnMobile
           emptyState={
             <EmptyState
               title="Keine Familie passt zur Suche."

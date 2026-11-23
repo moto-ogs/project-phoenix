@@ -352,7 +352,6 @@ export function PayrollFilePanel({
                   columns={kindColumns(report)}
                   rows={[...report.kinds]}
                   getRowKey={(row) => row.kind}
-                  stackedOnMobile
                 />
               </div>
             ) : null}

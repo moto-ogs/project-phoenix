@@ -623,7 +623,6 @@ function FolderFilesPanel({
         <DataTable
           // Auf dem Handy eine Zeile je Datei, das Menü rechts daneben: in der
           // Tabelle lag es außerhalb des Bildes (#4975).
-          stackedOnMobile
           stackedLayout="row"
           stackedDetailKey="uploaded"
           columns={columns}

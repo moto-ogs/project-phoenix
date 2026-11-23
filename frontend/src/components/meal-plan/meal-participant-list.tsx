@@ -433,7 +433,6 @@ export function MealParticipantList({
           rows={weekRows}
           getRowKey={(row) => row.studentId}
           isLoading={loading}
-          stackedOnMobile
           caption={t("weekCaption", {
             from: formatDate(weekStart, false, locale),
             to: formatDate(weekEnd, false, locale),
@@ -452,7 +451,6 @@ export function MealParticipantList({
           rows={participants}
           getRowKey={(row) => row.studentId}
           isLoading={loading}
-          stackedOnMobile
           rowHasInteractiveControls={canChangeDay}
           caption={t("caption", {
             date: formatDate(date, false, locale),

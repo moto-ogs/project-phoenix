@@ -178,7 +178,6 @@ export function DienstplanHoursCard({
         columns={columns}
         rows={rows}
         getRowKey={(row) => row.member.id}
-        stackedOnMobile
       />
     </SectionCard>
   );

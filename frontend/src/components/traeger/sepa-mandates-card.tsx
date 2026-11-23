@@ -607,7 +607,6 @@ export function SepaMandatesCard({
           rowHasInteractiveControls
           // Seven columns on a laptop: narrower cells keep every one in view.
           dense
-          stackedOnMobile
         />
       ) : mandates ? (
         <EmptyState

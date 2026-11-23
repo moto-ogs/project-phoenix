@@ -418,7 +418,6 @@ export default function SchoolParentLettersPage() {
             rows={rows}
             getRowKey={(row) => row.id}
             isLoading={isLoading && !letters}
-            stackedOnMobile
             defaultSortKey="sent"
             defaultSortDirection="desc"
             onRowClick={(row) =>

@@ -368,7 +368,6 @@ export function StudentTable<T extends Student>({
       heading={heading}
       // On a phone one line per child (#3834): name and status, plus the
       // one detail the user chose under the name ("In der Zeile zeigen").
-      stackedOnMobile
       stackedLayout="row"
       stackedDetailKey={phoneDetail}
       selection={

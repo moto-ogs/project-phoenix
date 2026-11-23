@@ -83,7 +83,7 @@ function stats(
   };
 }
 
-// The table renders a phone list next to it (stackedOnMobile); the rows
+// The table renders a phone list next to it (stacked below md); the rows
 // are asserted in the table.
 function table() {
   return within(screen.getByTestId("data-table-table"));

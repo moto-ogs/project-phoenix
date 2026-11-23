@@ -353,7 +353,6 @@ export default function TraegerBillingFamilyPage() {
               getRowKey={(document) =>
                 `${document.service ?? "holiday"}-${document.id}`
               }
-              stackedOnMobile
               onRowClick={(document) =>
                 router.push(
                   traegerPath(

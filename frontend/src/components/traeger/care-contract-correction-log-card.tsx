@@ -90,7 +90,6 @@ export function CareContractCorrectionLogCard({
           getRowKey={(entry) =>
             `${entry.file}|${entry.correctedAt}|${entry.accountId ?? ""}`
           }
-          stackedOnMobile
           stackedLayout="lines"
           dense
         />

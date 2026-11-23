@@ -230,7 +230,6 @@ function SectionTable({
           ? (row, expanded) => (expanded ? careFormSubRows(row) : [])
           : undefined
       }
-      stackedOnMobile
     />
   );
 }
@@ -410,7 +409,6 @@ function TemplatesBody({
       defaultSortKey="name"
       isLoading={loading}
       loadingRowCount={2}
-      stackedOnMobile
       emptyState={
         <EmptyState
           title="Noch keine Vorlage"
@@ -714,7 +712,6 @@ function TraegerReportsContent() {
             getRowKey={(row) => row.key}
             isLoading
             loadingRowCount={3}
-            stackedOnMobile
           />
         )
       ) : (

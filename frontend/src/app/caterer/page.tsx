@@ -635,7 +635,6 @@ export default function CatererOverviewPage() {
             getRowKey={(row) => row.key}
             isLoading={loading}
             loadingRowCount={3}
-            stackedOnMobile
             caption="Essen je Schule und Tag im gewählten Zeitraum"
           />
         )}
