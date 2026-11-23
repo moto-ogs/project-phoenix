@@ -22,7 +22,8 @@ import { normalizeLocale, type AppLocale } from "~/i18n/locales";
 import { useErrorContact } from "~/lib/error-contact";
 import { useModulePortal } from "~/lib/module-portal-context";
 import { portalNotBookedExplanation } from "~/lib/portal-not-booked";
-import { ApiError } from "~/lib/api-error";
+import { ApiError, isReadStateRefusal } from "~/lib/api-error";
+import type { ErrorPresentation } from "~/lib/error-presentation";
 import {
   announceModuleBookingStale,
   moduleNotBookedExplanation,
@@ -552,6 +553,14 @@ interface ApiErrorDisplayOptions {
   retry?: () => void;
   /** Concrete next step for a refusal that cannot be retried as-is. */
   action?: { label: string; onClick: () => void };
+  /**
+   * Reads the stored state again after a read-state refusal
+   * (`isReadStateRefusal`, ADR 0311) and rejects when that read fails.
+   * The message waits for it: the refusal's text says that the new state
+   * shows, a failed read shows its load error instead, with a retry that
+   * runs only the read. Other errors ignore it.
+   */
+  reload?: () => Promise<unknown>;
 }
 
 export function loginUrl(host: string, path: string): string {
@@ -673,7 +682,10 @@ function useApiErrorCore(
   }, [fieldErrors, formRef]);
 
   const show = useCallback(
-    async (error: unknown, options: ApiErrorDisplayOptions) => {
+    async function show(
+      error: unknown,
+      options: ApiErrorDisplayOptions,
+    ): Promise<ErrorPresentation | undefined> {
       const version = showVersion.current + 1;
       showVersion.current = version;
       // The hook may belong to the component that renders the dialog, above
@@ -682,6 +694,20 @@ function useApiErrorCore(
       const fixInNewTab =
         document.activeElement?.closest('[role="dialog"]') !== null;
       const locale = normalizeLocale(document.documentElement.lang);
+      // A refused write on a changed state: the same request would be
+      // refused again, so neither retry nor action is offered. The stored
+      // state is read at once, while the catalog loads.
+      const readState = isReadStateRefusal(error);
+      const reloaded =
+        readState && options.reload
+          ? options.reload().then(
+              () => ({ failed: false as const }),
+              (reloadError: unknown) => ({
+                failed: true as const,
+                error: reloadError,
+              }),
+            )
+          : undefined;
       // The presenter remains a separate chunk. The mounted error path starts
       // its load ahead of time, and concurrent failures share that request.
       let presenter: typeof import("~/lib/error-presentation");
@@ -714,8 +740,49 @@ function useApiErrorCore(
         );
         return;
       }
+      const reload = reloaded ? await reloaded : undefined;
       if (showVersion.current !== version) return;
       const { presentError, errorDisplayLabels } = presenter;
+      if (reload?.failed) {
+        // The refusal's text would claim the new state shows. Shown is the
+        // failed read, and its retry reads again (`show` once more), never
+        // the refused write.
+        const loadPresentation = presentError(
+          reload.error,
+          options.object,
+          locale,
+          contact,
+        );
+        if (loadPresentation.requiresLogin) {
+          window.location.assign(
+            loginUrl(window.location.host, window.location.pathname),
+          );
+          return loadPresentation;
+        }
+        const loadLogged = errorLogFields(reload.error);
+        logShown(reload.error, {
+          ...loadLogged,
+          error_class: loadPresentation.errorClass ?? loadLogged.error_class,
+        });
+        const loadLabels = errorDisplayLabels(locale);
+        setFieldErrors({});
+        deliver(
+          {
+            message: [loadLabels.reloadFailed, loadPresentation.message]
+              .filter(Boolean)
+              .join(" "),
+            retry: {
+              label: loadLabels.retry,
+              onClick: () => void show(error, options),
+            },
+            requestId: loadPresentation.requestId,
+            requestIdLabel: loadLabels.requestId,
+            fixInNewTab,
+          },
+          locale,
+        );
+        return loadPresentation;
+      }
       const presentation = presentError(error, options.object, locale, contact);
       if (presentation.requiresLogin) {
         window.location.assign(
@@ -758,11 +825,12 @@ function useApiErrorCore(
           message: [presentation.message, options.messageSuffix]
             .filter(Boolean)
             .join(" "),
-          retry:
-            options.action ??
-            (presentation.retryable && options.retry
-              ? { label: labels.retry, onClick: options.retry }
-              : undefined),
+          retry: readState
+            ? undefined
+            : (options.action ??
+              (presentation.retryable && options.retry
+                ? { label: labels.retry, onClick: options.retry }
+                : undefined)),
           requestId: presentation.requestId,
           requestIdLabel: labels.requestId,
           code: error instanceof ApiError ? error.code : undefined,

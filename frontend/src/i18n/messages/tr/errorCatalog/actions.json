@@ -3,5 +3,6 @@
   "copyRequestId": "İstek numarasını kopyala",
   "requestId": "İstek numarası: {requestId}",
   "crash": "{object} işlenemedi. Daha sonra yeniden deneyin.",
-  "fieldCheck": "Bu alanı kontrol edin."
+  "fieldCheck": "Bu alanı kontrol edin.",
+  "reloadFailed": "Güncel durum yüklenemedi."
 }

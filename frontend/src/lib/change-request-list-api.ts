@@ -1,4 +1,4 @@
-import { ApiError, isChangedSinceRead } from "~/lib/api-error";
+import { ApiError, isReadStateRefusal } from "~/lib/api-error";
 import { bffJson } from "~/lib/bff-fetch";
 import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 import { knownEnum, requiredEnum } from "~/lib/contract/known-enum";
@@ -392,16 +392,10 @@ export interface BulkApproveRequestRef {
  * Eine Entscheidung, die auf einem veralteten Stand beruht: die Anfrage ist
  * seit dem Lesen anders gespeichert (`general.changed_since_read`, ADR 0311),
  * oder der bisherige Wert einer Stammdaten-Anfrage stimmt nicht mehr
- * (`students.change_request_stale`). Die Liste lädt dann neu; dieselbe
- * Entscheidung noch einmal zu senden, schlüge wieder fehl.
+ * (`students.change_request_stale`). Dieselbe Prüfung wie
+ * `isReadStateRefusal`.
  */
-export function isOutdatedDecision(error: unknown): boolean {
-  return (
-    isChangedSinceRead(error) ||
-    (error instanceof ApiError &&
-      error.code === "students.change_request_stale")
-  );
-}
+export const isOutdatedDecision = isReadStateRefusal;
 
 /**
  * Meldet eine abgelehnte schreibende Anfrage (#2513). Eine veraltete
