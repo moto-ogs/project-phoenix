@@ -139,13 +139,13 @@ A surface reads stored state in one of three ways:
    (`status` `loadFailed`, `error`) that the surface shows also over a
    draft on screen (`useReadDraftLoadError`).
 3. **A read the server logs or authorizes on every opening** (an access
-   log entry per read) goes through `useOpeningRead(key, fetcher, {
-showCached: false })` (Träger: `useFreshTraegerResource`): nothing shows
-   until this opening's own read answered. Focus, reconnect and key
-   changes start no read; an invalidation of the key does, and its answer
-   replaces the shown one. Such a read is one more log entry: a write
-   hands its answer to `mutate(answer, { revalidate: false })` instead of
-   invalidating the key.
+   log entry per read) goes through
+   `useOpeningRead(key, fetcher, { showCached: false })` (Träger:
+   `useFreshTraegerResource`): nothing shows until this opening's own read
+   answered. Focus, reconnect and key changes start no read; an
+   invalidation of the key does, and its answer replaces the shown one.
+   Such a read is one more log entry: a write hands its answer to
+   `mutate(answer, { revalidate: false })` instead of invalidating the key.
 
 Not covered: a preview of an uploaded file (`useCsvFilePreview`, the
 Träger imports) answers a POST, and its token comes with that answer.

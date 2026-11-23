@@ -1161,6 +1161,63 @@ describe("PersonalInfoEditPanel", () => {
       expect(onStudentReload).toHaveBeenCalledTimes(2);
     });
 
+    it("keeps saving locked after a refusal until live updates bring the stored child", async () => {
+      mockOnSave.mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      );
+      const onStudentReload = vi
+        .fn<() => Promise<unknown>>()
+        .mockRejectedValue(
+          new ApiError("offline", 503, { code: "general.unavailable" }),
+        );
+      const panel = (student: Student) => (
+        <PersonalInfoEditPanel
+          onCancel={mockOnCancel}
+          student={student}
+          onSave={mockOnSave}
+          onStudentReload={onStudentReload}
+        />
+      );
+      const { rerender } = render(
+        panel(createMockStudent({ version: "record-v1" })),
+      );
+      await consentLoaded();
+      fireEvent.change(screen.getByLabelText("Vorname"), {
+        target: { value: "Mia" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Der neue Stand konnte nicht geladen werden.",
+      );
+      await waitFor(() =>
+        expect(
+          screen.getByRole("button", { name: "Speichern" }),
+        ).toHaveAttribute("aria-disabled", "true"),
+      );
+
+      // Two live updates of the child: each is a successful read of it.
+      rerender(panel(createMockStudent({ version: "record-v2" })));
+      rerender(panel(createMockStudent({ version: "record-v3" })));
+
+      // Either saving is free again, or the alert still offers the reload:
+      // never a locked save without a way to read.
+      await waitFor(() =>
+        expect(
+          screen.getByRole("button", { name: "Speichern" }),
+        ).not.toHaveAttribute("aria-disabled"),
+      );
+      mockOnSave.mockResolvedValueOnce(undefined);
+      fireEvent.change(screen.getByLabelText("Vorname"), {
+        target: { value: "Mila" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+      await waitFor(() =>
+        expect(mockOnSave).toHaveBeenLastCalledWith(
+          expect.objectContaining({ first_name: "Mila", version: "record-v3" }),
+        ),
+      );
+    });
+
     it("does not mark loaded privacy consent as changed for an unrelated save", async () => {
       mockOnSave.mockResolvedValue(undefined);
       fetchStudentPrivacyConsentMock.mockResolvedValue({

@@ -442,4 +442,77 @@ describe("useReadDraft", () => {
     expect(result.current.token).toBe("2");
     expect(result.current.error).toBeUndefined();
   });
+
+  it("keeps a row read before a refusal from ending the failed reload (useDraftOn)", async () => {
+    const offline = new Error("offline");
+    const reload = vi.fn(async () => {
+      throw offline;
+    });
+    const { result, rerender } = renderHook(
+      ({ row }: { row: Stored }) =>
+        useDraftOn<Stored, string, string, unknown>(
+          { opening: "row-3", data: row, reload },
+          { token: (read) => read.version, toDraft: (read) => read.name },
+        ),
+      { initialProps: { row: { version: "1", name: "Anna" } } },
+    );
+    act(() => result.current.setDraft("Hanna"));
+    // A newer row arrives under the touched draft, before the save.
+    rerender({ row: { version: "2", name: "Anne" } });
+    expect(result.current.newer).toBe(true);
+    await act(async () => {
+      const outcome = await result.current.submit(() =>
+        Promise.reject(changed()),
+      );
+      if (!outcome.ok) await outcome.reload?.()?.catch(() => undefined);
+    });
+    // The state and the shown load error agree: nothing was read since.
+    expect(result.current.status).toBe("loadFailed");
+    expect(result.current.error).toBe(offline);
+    expect(result.current.canSubmit).toBe(false);
+
+    rerender({ row: { version: "3", name: "Annika" } });
+    expect(result.current.status).toBe("ready");
+    expect(result.current.draft).toBe("Annika");
+    expect(result.current.error).toBeUndefined();
+  });
+
+  it("rests on the saved draft when the read after a save fails (useDraftOn)", async () => {
+    const offline = new Error("offline");
+    const reload = vi.fn(async () => {
+      throw offline;
+    });
+    const { result, rerender } = renderHook(
+      ({ row }: { row: Stored }) =>
+        useDraftOn<Stored, string, string, unknown>(
+          { opening: "row-4", data: row, reload },
+          { token: (read) => read.version, toDraft: (read) => read.name },
+        ),
+      { initialProps: { row: { version: "1", name: "Anna" } } },
+    );
+    act(() => result.current.setDraft("Hanna"));
+    // Another write's row, read before this save went out.
+    rerender({ row: { version: "2", name: "Anne" } });
+    let outcome!: ReadDraftResult<unknown>;
+    await act(async () => {
+      outcome = await result.current.submit(async () => undefined);
+    });
+    expect(outcome.ok).toBe(true);
+    // The row read before the save does not replace what was saved.
+    expect(result.current.status).toBe("loadFailed");
+    expect(result.current.draft).toBe("Hanna");
+    expect(result.current.touched).toBe(false);
+
+    // Cancelling an edit returns to the saved state, not the one it replaced.
+    act(() => result.current.setDraft("Hannah"));
+    expect(result.current.touched).toBe(true);
+    act(() => result.current.discard());
+    expect(result.current.draft).toBe("Hanna");
+    expect(result.current.touched).toBe(false);
+    expect(result.current.canSubmit).toBe(false);
+
+    rerender({ row: { version: "3", name: "Hanna" } });
+    expect(result.current.status).toBe("ready");
+    expect(result.current.token).toBe("3");
+  });
 });

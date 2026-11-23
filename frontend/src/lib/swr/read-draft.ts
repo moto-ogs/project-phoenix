@@ -21,7 +21,9 @@ import { useOpeningRead } from "./hooks";
  *    with the old data and hide it. Show `error` whether or not a draft is
  *    on screen (`useReadDraftLoadError` of `~/lib/hooks/use-swr-load-error`):
  *    nothing can be sent until a read of the stored state succeeded, by
- *    `retryLoad` or by a newer read arriving.
+ *    `retryLoad` or by a newer read arriving after the save went out. Until
+ *    then `discard` returns to the draft as saved, not to the state the
+ *    save replaced.
  *
  * Built on `useOpeningRead` with `showCached: true`: each opening reads
  * anew, a cached answer shows until then. The draft belongs to one
@@ -65,7 +67,13 @@ export interface ReadDraftOptions<T, D, K, A> extends DraftOptions<T, D, K, A> {
  * `useReadDraft` supplies its own opening read.
  */
 export interface DraftSource<T> {
-  /** One surface opening (a key, a row id); `null` closes it. */
+  /**
+   * One surface opening (a key, a row id); `null` closes it. Not bound to
+   * the session's scope: another account or school leaves the page
+   * (`SWRScopeBoundary`, `PersonalStorageGuard`), and a draft kept over a
+   * change of rights only carries a staleness token; the server authorizes
+   * the save under the session that sends it.
+   */
   readonly opening: string | null;
   /** The newest read; a change of its token refills an untouched draft. */
   readonly data: T | undefined;
@@ -147,6 +155,18 @@ interface DraftState<T, D> {
    * a read with another token than `base` settles the draft.
    */
   readonly awaiting?: true;
+  /**
+   * The newest read when the last save went out. A failed read after it
+   * ends only through a read that arrived later: this one may predate the
+   * save, or the refusal that said the stored state moved on.
+   */
+  readonly sent?: T;
+  /**
+   * After a save until its result is read: the draft as saved, which the
+   * stored state now holds while `base` is still the state it replaced.
+   * `touched` and `discard` measure against it.
+   */
+  readonly saved?: D;
 }
 
 const asJSON = (value: unknown) => JSON.stringify(value);
@@ -192,6 +212,7 @@ function settled<T, D>(
     prev.refused && rebase
       ? rebase(prev.refused.draft, prev.refused.base, read)
       : stored;
+  // A fresh state: `sent` and `saved` belong to the reads before this one.
   return {
     key: prev.key,
     base: read,
@@ -233,7 +254,8 @@ export function useDraftOn<T, D = T, K = unknown, A = unknown>(
     if (current !== state) setState(current);
   } else if (
     newest !== undefined &&
-    (current.awaiting === true || current.phase === "loadFailed") &&
+    (current.awaiting === true ||
+      (current.phase === "loadFailed" && newest !== current.sent)) &&
     differs(newest, current.base)
   ) {
     // Rule 3: the stored state a refusal waited for arrived, or a read
@@ -326,7 +348,8 @@ export function useDraftOn<T, D = T, K = unknown, A = unknown>(
         };
       }
       const { key: forKey, base, draft } = sent;
-      update(forKey, (prev) => ({ ...prev, phase: "saving" }));
+      const shown = latest.current.source.data;
+      update(forKey, (prev) => ({ ...prev, phase: "saving", sent: shown }));
       let saved: A;
       try {
         saved = await send(given.token(base), draft);
@@ -360,6 +383,11 @@ export function useDraftOn<T, D = T, K = unknown, A = unknown>(
         await latest.current.source.write?.(stored);
         settle(forKey, stored);
       } else {
+        update(forKey, (prev) => ({
+          ...prev,
+          saved: draft,
+          touched: !latest.current.same(prev.draft, draft),
+        }));
         // The save succeeded; a failed read of its result is the draft's
         // `error` (status `loadFailed`), shown by the surface, and nothing
         // is sent until a read succeeds (rule 6). It does not undo `ok`.
@@ -384,7 +412,7 @@ export function useDraftOn<T, D = T, K = unknown, A = unknown>(
           draft,
           touched: !latest.current.same(
             draft,
-            latest.current.toDraft(prev.base),
+            prev.saved ?? latest.current.toDraft(prev.base),
           ),
         };
       });
@@ -405,10 +433,11 @@ export function useDraftOn<T, D = T, K = unknown, A = unknown>(
     if (now === null) return;
     if (now.phase !== "ready") {
       // After a refusal or a failed read the base is not the stored state:
-      // only the input goes; sending waits for a successful read (rule 4).
+      // only the input goes, back to what was saved last; sending waits for
+      // a successful read (rule 4).
       update(now.key, (prev) => ({
         ...prev,
-        draft: latest.current.toDraft(prev.base),
+        draft: prev.saved ?? latest.current.toDraft(prev.base),
         touched: false,
         refused: undefined,
       }));

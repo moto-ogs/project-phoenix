@@ -166,6 +166,10 @@ export function PersonalInfoEditPanel({
   const [storedRead, setStoredRead] = useState<
     "current" | "reloading" | "failed"
   >("current");
+  const storedReadRef = useRef(storedRead);
+  useLayoutEffect(() => {
+    storedReadRef.current = storedRead;
+  });
   const [isSaving, setIsSaving] = useState(false);
   // Foto (#3115): bis zum Speichern nur im Browser. Eine Datei zu wählen oder
   // „Foto entfernen" zu klicken ist wie jedes andere Feld ein Entwurf; erst
@@ -330,7 +334,12 @@ export function PersonalInfoEditPanel({
     setPendingExtensions([]);
     const refused = refusedStudentRef.current;
     refusedStudentRef.current = null;
-    if (refused === null || refused === student) clearErrors();
+    // A child handed in after the refusal's read failed is a successful read
+    // of the stored state (a live update): saving is free again, and the
+    // load error with its retry no longer holds.
+    const readFailed = storedReadRef.current === "failed";
+    if (readFailed) setStoredRead("current");
+    if (readFailed || refused === null || refused === student) clearErrors();
     setPrivacyConsentChanged(false);
   }, [student, clearErrors]);
 
