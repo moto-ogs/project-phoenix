@@ -39,6 +39,8 @@ interface SepaMandateProof {
 export interface SepaMandate {
   readonly collectionEligible: boolean;
   readonly id: string;
+  /** Read-state token: the revocation sends it back (ADR 0311). */
+  readonly version: string;
   readonly reference: string;
   /** Calendar date of the signature, YYYY-MM-DD. */
   readonly signedOn: string;
@@ -85,6 +87,7 @@ export interface SepaMandateText {
 function mapMandate(mandate: parentMeContract.SEPAMandateSummary): SepaMandate {
   return {
     id: mandate.id,
+    version: mandate.version,
     collectionEligible: mandate.collection_eligible,
     reference: mandate.reference,
     signedOn: requiredDay(mandate.signed_on, "SEPAMandateSummary.signed_on"),
@@ -204,16 +207,24 @@ export async function grantSepaMandate(
   );
 }
 
-/** The parents revoke the mandate of their family. */
+/**
+ * The parents revoke the mandate of their family they read: `version` is
+ * its read-state token. A mandate another member of the family gave since
+ * is refused with `general.changed_since_read` (ADR 0311).
+ */
 export async function revokeSepaMandate(
   organizationId: string,
   contractId: string,
+  version: string,
 ): Promise<SepaMandateView> {
   return mapView(
     await bffJson(
       "parent",
       "POST /parent/me/documents/{organizationId}/contracts/{contractId}/sepa-mandate/revoke",
-      { params: { organizationId, contractId } },
+      {
+        params: { organizationId, contractId },
+        body: { expected_version: version },
+      },
     ),
   );
 }

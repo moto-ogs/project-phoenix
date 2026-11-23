@@ -1318,6 +1318,12 @@
       "portals": [
         "org"
       ],
+      "query": [
+        {
+          "name": "expected_version",
+          "kind": "string"
+        }
+      ],
       "response": {
         "kind": "ref",
         "ref": "CareTariffs"
@@ -11631,6 +11637,7 @@
       "portals": [
         "org"
       ],
+      "deprecated": true,
       "response": {
         "kind": "array",
         "elem": {
@@ -18538,6 +18545,10 @@
       "portals": [
         "parent"
       ],
+      "request": {
+        "kind": "ref",
+        "ref": "ParentSEPAMandateRevokeRequest"
+      },
       "response": {
         "kind": "ref",
         "ref": "SEPAMandateView"
@@ -39013,6 +39024,13 @@
               "ref": "CarePriceRequest"
             }
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -40694,6 +40712,16 @@
             "elem": {
               "kind": "date",
               "nullable": true
+            }
+          }
+        },
+        {
+          "name": "versions",
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
             }
           }
         }
@@ -45103,6 +45131,12 @@
             "kind": "ref",
             "nullable": true,
             "ref": "FamilyBilling"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -53856,6 +53890,13 @@
         },
         {
           "name": "debtor_number",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expected_version",
           "optional": true,
           "schema": {
             "kind": "string"
@@ -75399,6 +75440,20 @@
       ]
     },
     {
+      "name": "ParentSEPAMandateRevokeRequest",
+      "go_type": "parent.ParentSEPAMandateRevokeRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "ParentSchoolReadersResponse",
       "go_type": "parent.ParentSchoolReadersResponse",
       "fields": [
@@ -85299,6 +85354,12 @@
           "name": "id",
           "schema": {
             "kind": "id"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         },
         {
@@ -100436,6 +100497,13 @@
           "schema": {
             "kind": "string"
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -102252,6 +102320,12 @@
       "name": "TraegerDocumentTemplateDetail",
       "go_type": "organizationtenancy.TraegerDocumentTemplateDetail",
       "fields": [
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
+        },
         {
           "name": "current",
           "schema": {

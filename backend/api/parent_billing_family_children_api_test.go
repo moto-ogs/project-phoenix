@@ -50,7 +50,7 @@ func TestFamilyChildrenCountInTheSiblingRuleThroughTheRoutes(t *testing.T) {
 	f := newCareBillingFixture(t, "Träger Kinderzahl Kette")
 	school := f.office.schools[0]
 	mia := careContract(t, f.db, f.office.organization, school, "Mia", careReductionStart, sjrServices()...)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	rules := f.saveRule(t, careRule("sibling", "Geschwister mit Familie", []int64{school},
 		map[string]any{"sibling_from_child": 2, "discount_basis_points": 5000, "counts_family_children": true}))
@@ -128,7 +128,7 @@ func TestFamilySizeSiblingRuleReducesEveryChildThroughTheRoutes(t *testing.T) {
 	_, err := f.db.ExecContext(context.Background(),
 		`UPDATE care_contract.contract_parties SET email = 'geschwister@example.org' WHERE contract_id IN (?, ?)`, mia, noah)
 	require.NoError(t, err)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	f.saveRule(t, careRule("sibling", "Familienermäßigung", []int64{school}, map[string]any{
 		"sibling_from_child": 2, "discount_basis_points": 5000, "counts_family_children": true, "sibling_all_children": true}))
@@ -251,7 +251,7 @@ func TestFamilyChildrenOfContractsWithoutAMailAddressThroughTheRoutes(t *testing
 	noah := careContract(t, f.db, f.office.organization, school, "Noah", careReductionStart, sjrServices()...)
 	_, err := f.db.ExecContext(context.Background(), `UPDATE care_contract.contract_parties SET email = '' WHERE contract_id IN (?, ?)`, mia, noah)
 	require.NoError(t, err)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, carePriceList(school, "2029-09-01", 3200))
+	rec := putCarePriceList(t, f.traeger, f.office.token, carePriceList(school, "2029-09-01", 3200))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	f.saveRule(t, careRule("sibling", "Geschwister mit Familie", []int64{school},
 		map[string]any{"sibling_from_child": 2, "discount_basis_points": 5000, "counts_family_children": true}))

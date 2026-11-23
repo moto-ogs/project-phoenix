@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"slices"
 
@@ -136,32 +135,7 @@ func monthAfter(month calendar.Date) calendar.Date {
 // seedNoticeTemplateOnce saves the template of the fee notice while the
 // Träger still writes with the standard one.
 func seedNoticeTemplateOnce(client *Client, auth AuthRef) error {
-	raw, err := client.GetWithAuth(auth, "/traeger/master-data/document-templates/bescheid")
-	if err != nil {
-		return fmt.Errorf("read the Träger template of the fee notice: %w", err)
-	}
-	var envelope struct {
-		Data struct {
-			Current struct {
-				Standard bool `json:"standard"`
-			} `json:"current"`
-		} `json:"data"`
-	}
-	if err := json.Unmarshal(raw, &envelope); err != nil {
-		return fmt.Errorf("read the Träger template of the fee notice: %w", err)
-	}
-	if !envelope.Data.Current.Standard {
-		return nil
-	}
-	_, err = client.PostWithAuth(auth, "/traeger/master-data/document-templates/bescheid/versions", seedTraegerNoticeTemplate)
-	var refused *APIError
-	if errors.As(err, &refused) && refused.Code == seedTraegerTemplateUnchanged {
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("save the Träger template of the fee notice: %w", err)
-	}
-	return nil
+	return seedTraegerTemplateOnce(client, auth, "bescheid", seedTraegerNoticeTemplate, "the fee notice")
 }
 
 // seedStartNoticeRun starts the notice run of the year for the school

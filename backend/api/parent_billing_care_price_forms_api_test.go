@@ -97,7 +97,7 @@ func TestSJRPriceFormsBillThroughTheRoutes(t *testing.T) {
 	sameFamily(t, f, rosa, anna)
 	sameFamily(t, f, klara, jonas)
 	for _, list := range []map[string]any{ispringenModule2(ispringen), birkenfeldModule4(birkenfeld, 6000)} {
-		rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, list)
+		rec := putCarePriceList(t, f.traeger, f.office.token, list)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	}
 	f.saveRule(t, careRule("sibling", "Geschwisterpreis Ispringen", []int64{ispringen},
@@ -140,7 +140,7 @@ func TestSJRPriceFormsBillThroughTheRoutes(t *testing.T) {
 	}
 
 	// A billed scale step keeps its price for the billed month.
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, birkenfeldModule4(birkenfeld, 6500))
+	rec = putCarePriceList(t, f.traeger, f.office.token, birkenfeldModule4(birkenfeld, 6500))
 	assert.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "parent_billing.care_tariff_month_billed")
 
@@ -158,7 +158,7 @@ func TestSJRPriceFormsBillThroughTheRoutes(t *testing.T) {
 	assert.Equal(t, 2, decodeSchoolPortalData[priceFormsRunBody](t, rec.Body.Bytes()).FreeOfCharge)
 	changedList := ispringenModule2(ispringen)
 	changedList["free_months"] = []int{}
-	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, changedList)
+	rec = putCarePriceList(t, f.traeger, f.office.token, changedList)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, 2, f.priceFormsRun(t, int64(august.ID)).FreeOfCharge)
 }
@@ -179,8 +179,7 @@ func TestPriceFormsAreCheckedBeforeTheyAreSaved(t *testing.T) {
 			{"care_offering_id": sjrModule4, "module_name": "Modul 4", "days_per_week": 1, "monthly_cents": 2000, "sibling_cents": 2100},
 		},
 	} {
-		rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath,
-			map[string]any{"school_id": school, "valid_from": "2029-09-01", "prices": prices})
+		rec := putCarePriceList(t, f.traeger, f.office.token, map[string]any{"school_id": school, "valid_from": "2029-09-01", "prices": prices})
 		assert.Equal(t, http.StatusBadRequest, rec.Code, "%s: %s", name, rec.Body.String())
 	}
 	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRulesPath, careRule("sibling", "Beides", []int64{school},
@@ -195,7 +194,7 @@ func TestFreeMonthRunClosesWithoutInvoices(t *testing.T) {
 	f := newCareBillingFixture(t, "Träger Preisformen August")
 	ispringen := f.office.schools[0]
 	careContract(t, f.db, f.office.organization, ispringen, "Anna", careReductionStart, sjrModule2Services()...)
-	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPut, careTariffsPath, ispringenModule2(ispringen))
+	rec := putCarePriceList(t, f.traeger, f.office.token, ispringenModule2(ispringen))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunsPath,
 		map[string]any{"billing_month": "2030-08-01", "school_ids": []int64{ispringen}})

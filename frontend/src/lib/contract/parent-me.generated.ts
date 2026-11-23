@@ -1213,6 +1213,7 @@ export const SEPAMandateProofSchema: z.ZodType<SEPAMandateProof, unknown> = obje
 export interface SEPAMandateSummary {
   collection_eligible: boolean;
   id: string;
+  version: string;
   reference: string;
   signed_on: string | null;
   kind: string;
@@ -1228,6 +1229,7 @@ export interface SEPAMandateSummary {
 export const SEPAMandateSummarySchema: z.ZodType<SEPAMandateSummary, unknown> = object<SEPAMandateSummary>({
   collection_eligible: bool,
   id: int64String,
+  version: str,
   reference: str,
   signed_on: nullable(calendarDate),
   kind: str,
@@ -2392,6 +2394,11 @@ export const SEPAMandateTextSchema: z.ZodType<SEPAMandateText, unknown> = object
   account_token: str,
 });
 
+/** Go: parent.ParentSEPAMandateRevokeRequest */
+export interface ParentSEPAMandateRevokeRequest {
+  expected_version?: string;
+}
+
 /** Go: parent.ContractSignRequest */
 export interface ContractSignRequest {
   method?: string;
@@ -3277,6 +3284,7 @@ export const routes = {
     method: "POST",
     pattern: "/parent/me/documents/{organizationId}/contracts/{contractId}/sepa-mandate/revoke",
     portals: ["parent"],
+    request: requestBody<ParentSEPAMandateRevokeRequest>(),
     response: success(SEPAMandateViewSchema),
   },
   "POST /parent/me/documents/{organizationId}/contracts/{contractId}/sign": {

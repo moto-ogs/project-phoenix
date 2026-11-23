@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // keepBilledPrices holds the monthly billing and refuses a change of the
@@ -21,16 +22,24 @@ import (
 // sibling price, and a month an issued invoice billed keeps being billed. A
 // booked weekday or scale step without a price may still get one, also in
 // a billed month, so a contract a run left out can be billed by the next
-// run of the month.
-func (c *CareBilling) keepBilledPrices(ctx context.Context, organizationID, schoolID int64, validFrom calendar.Date, replacement *parentbilling.CarePriceList) error {
+// run of the month. The change is one of the school's lists as the office
+// read them: lists changed since expectedVersion are refused with
+// readstate.ErrChanged (ADR 0311). Every writer of the price lists holds
+// this lock, so the check sees what the change replaces.
+func (c *CareBilling) keepBilledPrices(ctx context.Context, organizationID, schoolID int64, validFrom calendar.Date, replacement *parentbilling.CarePriceList,
+	expectedVersion string,
+) error {
 	if err := c.store.LockCareBilling(ctx, organizationID); err != nil {
 		return fmt.Errorf("parent billing: hold the monthly billing: %w", err)
 	}
-	billed, err := c.store.CareBilledPrices(ctx, organizationID, schoolID)
+	tariffs, heads, err := c.store.CarePriceLists(ctx, organizationID)
 	if err != nil {
 		return err
 	}
-	tariffs, heads, err := c.store.CarePriceLists(ctx, organizationID)
+	if err := readstate.Check(expectedVersion, priceListsVersion(schoolID, tariffs, heads)); err != nil {
+		return err
+	}
+	billed, err := c.store.CareBilledPrices(ctx, organizationID, schoolID)
 	if err != nil {
 		return err
 	}
@@ -40,6 +49,58 @@ func (c *CareBilling) keepBilledPrices(ctx context.Context, organizationID, scho
 		return parentbilling.ErrCareTariffMonthBilled
 	}
 	return nil
+}
+
+// priceListsVersion is the read-state token of the price lists of a school
+// (ADR 0311): every list with its free months and prices, in a fixed order.
+// It covers all lists of the school, not only one month: a list keeps the
+// price of the list before for a weekday it leaves out, and a new list has
+// no stored row to name.
+func priceListsVersion(schoolID int64, tariffs []parentbilling.CareTariff, heads []parentbilling.CarePriceListHead) string {
+	type price struct {
+		ValidFrom   calendar.Date `json:"valid_from"`
+		OfferingID  int64         `json:"offering_id"`
+		ModuleName  string        `json:"module_name"`
+		Weekday     string        `json:"weekday"`
+		DaysPerWeek *int          `json:"days_per_week"`
+		Monthly     int64         `json:"monthly"`
+		Sibling     *int64        `json:"sibling"`
+		MealExtra   bool          `json:"meal_extra"`
+	}
+	type list struct {
+		ValidFrom  calendar.Date `json:"valid_from"`
+		FreeMonths []int         `json:"free_months"`
+	}
+	state := struct {
+		Lists  []list  `json:"lists"`
+		Prices []price `json:"prices"`
+	}{Lists: []list{}, Prices: []price{}}
+	for _, head := range heads {
+		if head.SchoolID == ident.ID(schoolID) {
+			months := slices.Clone(head.FreeMonths)
+			slices.Sort(months)
+			state.Lists = append(state.Lists, list{ValidFrom: head.ValidFrom, FreeMonths: months})
+		}
+	}
+	for _, tariff := range tariffs {
+		if tariff.SchoolID == ident.ID(schoolID) {
+			state.Prices = append(state.Prices, price{ValidFrom: tariff.ValidFrom, OfferingID: tariff.CareOfferingID.Int64(),
+				ModuleName: tariff.ModuleName, Weekday: tariff.Weekday, DaysPerWeek: tariff.DaysPerWeek, Monthly: tariff.MonthlyCents,
+				Sibling: tariff.SiblingCents, MealExtra: tariff.MealExtra})
+		}
+	}
+	slices.SortFunc(state.Lists, func(a, b list) int { return a.ValidFrom.Compare(b.ValidFrom) })
+	slices.SortFunc(state.Prices, func(a, b price) int {
+		days := func(p price) int {
+			if p.DaysPerWeek == nil {
+				return 0
+			}
+			return *p.DaysPerWeek
+		}
+		return firstNonZero(a.ValidFrom.Compare(b.ValidFrom), compareOrdered(a.OfferingID, b.OfferingID),
+			compareOrdered(a.Weekday, b.Weekday), compareOrdered(days(a), days(b)))
+	})
+	return readstate.Fingerprint(state)
 }
 
 // priceListsAfter are the prices and heads once the list of the school from

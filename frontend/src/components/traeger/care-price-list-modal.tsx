@@ -16,6 +16,7 @@ import { FormModal } from "~/components/ui/form-modal";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { ToggleChip } from "~/components/ui/toggle-chip";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
+import { isChangedSinceRead } from "~/lib/api-error";
 import { createLogger } from "~/lib/logger";
 import {
   type CarePriceInput,
@@ -120,6 +121,7 @@ export function CarePriceListModal({
   initialMonth,
   onClose,
   onSaved,
+  onChangedSinceRead,
 }: Readonly<{
   data: CareTariffs;
   /** The school whose prices change; null keeps the modal closed. */
@@ -130,10 +132,20 @@ export function CarePriceListModal({
   initialMonth?: string;
   onClose: () => void;
   onSaved: (data: CareTariffs) => void;
+  /**
+   * The save was refused because the school's prices changed since they
+   * were read: the page reads them again, and the form shows them.
+   */
+  onChangedSinceRead: () => void;
 }>) {
   const [month, setMonth] = useState("");
   const [drafts, setDrafts] = useState<Drafts>({});
   const [freeMonths, setFreeMonths] = useState<readonly number[]>([]);
+  // The form follows each new read of `data` until the person changes it;
+  // from then on it keeps the input and the version it was filled from,
+  // so the save confirms exactly what the form showed (ADR 0311).
+  const [touched, setTouched] = useState(false);
+  const [version, setVersion] = useState("");
   const save = useFormModalPending(school !== null);
   const saving = save.pending;
   const formRef = useRef<HTMLFormElement>(null);
@@ -150,29 +162,34 @@ export function CarePriceListModal({
     () => monthsFromTo(firstMonth, lastMonth),
     [firstMonth, lastMonth],
   );
+  // The school by its id: a caller that passes a new object for the same
+  // school does not open the form again.
+  const schoolId = school?.id ?? null;
   const rows = useMemo(
-    () => (school && month ? priceRowsAt(data, school.id, month) : []),
-    [data, school, month],
+    () => (schoolId && month ? priceRowsAt(data, schoolId, month) : []),
+    [data, schoolId, month],
   );
   const weekdays = shownWeekdays(rows);
 
   // Open with the asked month when it may still change, else the first
   // month that may.
   useEffect(() => {
-    if (!school) return;
+    if (!schoolId) return;
     const start =
       initialMonth && initialMonth >= firstMonth ? initialMonth : defaultMonth;
     setMonth(start);
+    setTouched(false);
     clearErrors();
-  }, [school, initialMonth, firstMonth, defaultMonth, clearErrors]);
+  }, [schoolId, initialMonth, firstMonth, defaultMonth, clearErrors]);
 
-  // Prefill every module with the prices that hold in the chosen month.
+  // Prefill every module with the prices that hold in the chosen month,
+  // again on a new read while the person has not changed anything.
   useEffect(() => {
-    if (!school || !month) return;
+    if (!schoolId || !month || touched) return;
     // Only the prices that hold in the chosen month; a later price stays
     // where it starts and is never copied back.
     const next: Drafts = {};
-    for (const row of priceRowsAt(data, school.id, month)) {
+    for (const row of priceRowsAt(data, schoolId, month)) {
       next[row.careOfferingId] =
         row.form === "days_per_week"
           ? {
@@ -189,8 +206,14 @@ export function CarePriceListModal({
             };
     }
     setDrafts(next);
-    setFreeMonths(freeMonthsAt(data, school.id, month));
-  }, [data, school, month]);
+    setFreeMonths(freeMonthsAt(data, schoolId, month));
+    setVersion(data.versions?.[schoolId] ?? "");
+  }, [data, schoolId, month, touched]);
+
+  const changeDrafts = (change: (current: Drafts) => Drafts) => {
+    setTouched(true);
+    setDrafts(change);
+  };
 
   const draftOf = (offeringId: string) =>
     drafts[offeringId] ?? EMPTY_MODULE_DRAFT;
@@ -225,6 +248,7 @@ export function CarePriceListModal({
           month,
           prices,
           freeMonths,
+          version,
         );
         if (op.isCurrent()) onSaved(result);
         success(`Die Preise gelten ab ${formatMonth(month)}.`);
@@ -234,16 +258,24 @@ export function CarePriceListModal({
         });
         if (!op.isCurrent()) return;
         void formErrors.show(err, { object: "die Preisliste" });
+        // A colleague changed the prices since: the form shows them instead
+        // of the draft, so no second „Speichern“ replaces them unseen.
+        if (isChangedSinceRead(err)) {
+          setTouched(false);
+          onChangedSinceRead();
+        }
       }
     });
   };
 
-  const toggleFreeMonth = (value: number, pressed: boolean) =>
+  const toggleFreeMonth = (value: number, pressed: boolean) => {
+    setTouched(true);
     setFreeMonths((current) =>
       pressed
         ? [...current, value].sort((a, b) => a - b)
         : current.filter((entry) => entry !== value),
     );
+  };
 
   return (
     <FormModal
@@ -282,7 +314,11 @@ export function CarePriceListModal({
               value,
               label: formatMonth(value),
             }))}
-            onChange={setMonth}
+            onChange={(value) => {
+              // Another start month shows the prices that hold then.
+              setMonth(value);
+              setTouched(false);
+            }}
             error={formErrors.fieldError("valid_from")}
           />
           <p className="text-sm text-gray-600 sm:pb-2.5">
@@ -334,13 +370,13 @@ export function CarePriceListModal({
                 }))}
               fieldError={(key) => formErrors.fieldError(key) ?? undefined}
               onChange={(next) =>
-                setDrafts((current) => ({
+                changeDrafts((current) => ({
                   ...current,
                   [row.careOfferingId]: next,
                 }))
               }
               onCopyFrom={(source) =>
-                setDrafts((current) => ({
+                changeDrafts((current) => ({
                   ...current,
                   [row.careOfferingId]: {
                     ...(current[source] ?? EMPTY_MODULE_DRAFT),

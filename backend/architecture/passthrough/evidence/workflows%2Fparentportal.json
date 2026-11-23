@@ -751,7 +751,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *Service) RevokeSEPAMandate(ctx context.Context, accountID, organizationID, contractID int64) (SEPAMandateView, error) {\n\tvar view SEPAMandateView\n\terr := s.sepaMandate(ctx, accountID, organizationID, contractID, GuardianPermissionEnrollmentSubmit, func(txCtx context.Context, reader SEPAMandateReader, _ bool) error {\n\t\tvar err error\n\t\tview, err = s.SEPAMandates.RevokeSEPAMandate(txCtx, organizationID, reader)\n\t\tview.CanManage = view.Enabled\n\t\treturn err\n\t})\n\treturn view, err\n}",
+      "evidence": "func (s *Service) RevokeSEPAMandate(ctx context.Context, accountID, organizationID, contractID int64, expectedVersion string) (SEPAMandateView, error) {\n\tvar view SEPAMandateView\n\terr := s.sepaMandate(ctx, accountID, organizationID, contractID, GuardianPermissionEnrollmentSubmit, func(txCtx context.Context, reader SEPAMandateReader, _ bool) error {\n\t\tvar err error\n\t\tview, err = s.SEPAMandates.RevokeSEPAMandate(txCtx, organizationID, reader, expectedVersion)\n\t\tview.CanManage = view.Enabled\n\t\treturn err\n\t})\n\treturn view, err\n}",
       "form": "unclassified-evidence",
       "id": "workflows/parentportal/internal/care/Service.RevokeSEPAMandate",
       "owner": "workflows/parentportal"

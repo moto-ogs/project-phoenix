@@ -87,12 +87,14 @@ type CarePriceRequest struct {
 
 // CarePriceListRequest is the body of PUT /traeger/care-tariffs: the
 // prices of one school from the first day of a month on and the months of
-// the year it bills nothing for.
+// the year it bills nothing for. ExpectedVersion is the version of the
+// school's price lists the office read (ADR 0311).
 type CarePriceListRequest struct {
-	SchoolID   ident.ID           `json:"school_id"`
-	ValidFrom  calendar.Date      `json:"valid_from"`
-	FreeMonths []int              `json:"free_months"`
-	Prices     []CarePriceRequest `json:"prices"`
+	SchoolID        ident.ID           `json:"school_id"`
+	ValidFrom       calendar.Date      `json:"valid_from"`
+	FreeMonths      []int              `json:"free_months"`
+	Prices          []CarePriceRequest `json:"prices"`
+	ExpectedVersion string             `json:"expected_version"`
 }
 
 // Bind accepts the body; the Owner validates the price list.
@@ -100,7 +102,7 @@ func (req *CarePriceListRequest) Bind(*http.Request) error { return nil }
 
 func (req *CarePriceListRequest) list() capability.CarePriceList {
 	list := capability.CarePriceList{SchoolID: req.SchoolID.Int64(), ValidFrom: req.ValidFrom, FreeMonths: req.FreeMonths,
-		Prices: make([]capability.CarePrice, len(req.Prices))}
+		Prices: make([]capability.CarePrice, len(req.Prices)), ExpectedVersion: req.ExpectedVersion}
 	for i, price := range req.Prices {
 		list.Prices[i] = capability.CarePrice(price)
 	}
@@ -166,7 +168,7 @@ func (rs *CareBillingResource) deletePriceList(w http.ResponseWriter, r *http.Re
 		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeParentBillingCareTariffInvalid))
 		return
 	}
-	tariffs, err := rs.billing.DeleteCarePriceList(r.Context(), reviewer, schoolID, validFrom)
+	tariffs, err := rs.billing.DeleteCarePriceList(r.Context(), reviewer, schoolID, validFrom, r.URL.Query().Get("expected_version"))
 	if err != nil {
 		tenant.MarkRollback(r.Context())
 		renderCareError(w, r, err)

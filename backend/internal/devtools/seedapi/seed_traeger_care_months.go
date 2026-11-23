@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -235,6 +236,9 @@ func seedCarePriceLists(client *Client, auth AuthRef, month calendar.Date, freeM
 				SchoolID  ident.ID      `json:"school_id"`
 				ValidFrom calendar.Date `json:"valid_from"`
 			} `json:"tariffs"`
+			// Versions is per school the version of its price lists a
+			// save sends back (ADR 0311); a save changes only its school's.
+			Versions map[string]string `json:"versions"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(raw, &envelope); err != nil {
@@ -257,12 +261,31 @@ func seedCarePriceLists(client *Client, auth AuthRef, month calendar.Date, freeM
 		}
 		if _, err := client.PutWithAuth(auth, "/traeger/care-tariffs/", map[string]any{
 			"school_id": schoolID, "valid_from": month.String(), "free_months": free, "prices": bySchool[schoolID],
+			"expected_version": envelope.Data.Versions[strconv.FormatInt(schoolID, 10)],
 		}); err != nil {
 			return 0, fmt.Errorf("set the prices of school %d: %w", schoolID, err)
 		}
 		count += len(bySchool[schoolID])
 	}
 	return count, nil
+}
+
+// seedCarePriceListsVersion reads the version of a school's price lists a
+// save sends back (ADR 0311).
+func seedCarePriceListsVersion(client *Client, auth AuthRef, school int64) (string, error) {
+	raw, err := client.GetWithAuth(auth, "/traeger/care-tariffs/")
+	if err != nil {
+		return "", fmt.Errorf("read the price list: %w", err)
+	}
+	var envelope struct {
+		Data struct {
+			Versions map[string]string `json:"versions"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(raw, &envelope); err != nil {
+		return "", fmt.Errorf("decode the price list: %w", err)
+	}
+	return envelope.Data.Versions[strconv.FormatInt(school, 10)], nil
 }
 
 // seedCarePrices builds the prices of every school without prices, by
