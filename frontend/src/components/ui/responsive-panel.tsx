@@ -1,8 +1,6 @@
 "use client";
 
 import {
-  lazy,
-  Suspense,
   useEffect,
   useId,
   useRef,
@@ -11,16 +9,7 @@ import {
 } from "react";
 
 import { BELOW_SM, useMediaQuery } from "~/lib/hooks/use-media-query";
-
-// Das Blatt (Drawer) braucht nur das Telefon. Es lädt erst, wenn ein Panel
-// unter `sm` erscheint, und bleibt so aus dem Startpaket jeder Seite mit
-// Datumsfeld oder Menü, auch aus den öffentlichen Anmeldeseiten. Das Panel
-// steht dort schon geschlossen im Baum; bis zum ersten Tippen ist es geladen.
-const ResponsivePanelSheet = lazy(() =>
-  import("./responsive-panel-sheet").then((module) => ({
-    default: module.ResponsivePanelSheet,
-  })),
-);
+import { ResponsivePanelSheet } from "./responsive-panel-sheet";
 
 /**
  * Ob ein Panel am Auslöser gerade als Blatt von unten erscheint: unter `sm`
@@ -104,18 +93,16 @@ export function ResponsivePanel({
     <>
       {trigger}
       {asSheet ? (
-        <Suspense fallback={null}>
-          <ResponsivePanelSheet
-            id={dialogId}
-            open={sheetOpen}
-            onOpenChange={onOpenChange}
-            label={label}
-            returnFocusRef={returnFocusRef}
-            initialFocus={initialFocus}
-          >
-            {children(true)}
-          </ResponsivePanelSheet>
-        </Suspense>
+        <ResponsivePanelSheet
+          id={dialogId}
+          open={sheetOpen}
+          onOpenChange={onOpenChange}
+          label={label}
+          returnFocusRef={returnFocusRef}
+          initialFocus={initialFocus}
+        >
+          {children(true)}
+        </ResponsivePanelSheet>
       ) : open ? (
         children(false)
       ) : null}
