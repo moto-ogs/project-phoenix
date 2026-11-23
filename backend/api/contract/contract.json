@@ -27934,6 +27934,13 @@
           }
         },
         {
+          "name": "extends_until",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
           "name": "submitted_terms",
           "optional": true,
           "schema": {
@@ -28638,6 +28645,13 @@
             "elem": {
               "kind": "string"
             }
+          }
+        },
+        {
+          "name": "extend_to_phase_end",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
           }
         }
       ]

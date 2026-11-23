@@ -199,6 +199,10 @@ type OfferingOverride struct {
 type OfferingAdjustmentChoice struct {
 	OfferingID   int64
 	SelectedDays []string
+	// ExtendToPhaseEnd books the offering to the end of the phase, or to the
+	// earlier care end, instead of keeping its booking's end (#7929). Only
+	// an undated correction accepts it.
+	ExtendToPhaseEnd bool
 }
 
 // OfferingAdjustment is a booking switch of one approved child.
@@ -340,6 +344,10 @@ type OfferingAdjustmentSnapshot struct {
 	ManualSelectedDays    []string `json:"manual_selected_days,omitempty"`
 	AutomaticSelectedDays []string `json:"automatic_selected_days,omitempty"`
 	AvailableDays         []string `json:"available_days,omitempty"`
+	// ExtendedUntil is the last booked day (YYYY-MM-DD) of an offering the
+	// office extended to the end of the phase (#7929), set in the after
+	// snapshot only and only when the end moved.
+	ExtendedUntil string `json:"extended_until,omitempty"`
 }
 
 // OfferingAdjustmentRecord is the audit row of one adjustment.
