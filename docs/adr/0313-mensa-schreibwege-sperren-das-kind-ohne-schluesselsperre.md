@@ -1,14 +1,14 @@
 ---
-status: proposed
+status: accepted
 ---
 
 # Mensa-Schreibwege sperren das Kind ohne Schlüsselsperre
 
 Entscheidung vom 2026-11-23 für
 [#7904](https://github.com/moto-ogs/project-phoenix/issues/7904) (PR #7956).
-Sie genehmigt neun neue Command-Effect-Diagnosen und zwei neue
-Durchreicher-Methoden. Sie fügt keinen Owner, keine Policy-Regel und keine neue
-Sperrklasse hinzu.
+Sie genehmigt zehn neue Command-Effect-Diagnosen (neun für die Mensa, eine für
+die Klassenübergabe im Nachtrag) und zwei neue Durchreicher-Methoden. Sie fügt
+keinen Owner, keine Policy-Regel und keine neue Sperrklasse hinzu.
 
 ## Kontext
 
@@ -66,6 +66,44 @@ registrierten Gegenstücks. `StudentRecords.FindByIDForUpdate` und
 `care.Service.RequireCareRunningForUpdate` rufen jetzt eine gemeinsame Methode
 für beide Sperrstärken auf und sind keine Durchreicher mehr; ihre Einträge
 entfallen.
+
+## Nachtrag: Die Klassenübergabe prüft ihren Dialog unter ihrer Sperre
+
+Derselbe PR schließt eine Lücke der Klassenübergabe (#4794) nach
+[ADR 0311](0311-ein-speichern-traegt-den-gelesenen-stand.md). Der
+Übergabe-Dialog listet die Kinder, die heute in der OGS bleiben
+(`stays_today`), und belegt die vormittags als „fehlt“ eingetragenen mit „Nicht
+da“ vor. Die Version deckte bisher nur die gespeicherte Übergabe und die
+Vormittagsmarken ab, nicht die Menge der Kinder: Eine Krankmeldung, ein
+entschuldigter Tag, eine Klassenfahrt oder ein abgesagter Betreuungstag nach
+dem Lesen ließ die Version gleich, und der veraltete Dialog übergab das Kind
+als „da“.
+
+- `studentpresence.ClassHandoverVersion` deckt die Übergabe, die Kinder des
+  Dialogs und deren „fehlt“-Marken ab.
+- Class Day bildet die Kinder beim Lesen und beim Schreiben aus derselben
+  Tagesprojektion (`stays_today`). Beim Schreiben übergibt es dafür eine
+  Funktion (`ClassHandoverChange.HandoverChildren`); Student Presence ruft sie in
+  der Schreib-Transaktion unter der Sperre von Klasse und Tag auf und prüft die
+  Version danach.
+- Die Vormittagsmarken einer Klasse nehmen dieselbe Sperre vor dem Speichern
+  (`MorningAttendanceWrite.SchoolClass`). Keine Marke landet zwischen Prüfung
+  und Commit einer Übergabe.
+- Status- und Betreuungstage schreiben andere Owner ohne diese Sperre. Ihre
+  Schreiber kennen die Klasse nicht und nehmen eigene Sperren (Kind, Tag); sie
+  an die Übergabesperre zu binden, gehört nicht in diesen PR. Die Übergabe
+  liest sie unter ihrer Sperre in derselben Transaktion. Bleibt das Fenster
+  zwischen diesem Lesen und dem Commit: Ein dort festgeschriebener Statustag
+  gilt als nach der Übergabe eingetragen.
+
+Die Funktion ist für den Effekt-Scan ein nicht auflösbares Ziel. Diese ADR
+genehmigt die eine neue Diagnose:
+
+| Port | Bindung | Ziel |
+|---|---|---|
+| `studentpresence.Owner.ChangeClassHandover` | `application.Service.ChangeClassHandover` | `studentpresence.ClassHandoverChange.HandoverChildren` |
+
+Die Funktion liest nur und schreibt nichts.
 
 ## Verworfen
 

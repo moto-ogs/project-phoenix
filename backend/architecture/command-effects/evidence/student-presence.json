@@ -7346,6 +7346,14 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ChangeClassHandover",
+      "binding_digest": "8e5a7793fca6ba74fd9d5115c77efe19",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ChangeClassHandover",
+      "source_owner": "student-presence",
+      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence.ClassHandoverChange.HandoverChildren",
+      "target_owner": ""
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ChangeClassHandover",
       "binding_digest": "afade5fb4199e0ad403df633e85b1607",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ChangeClassHandover",
       "source_owner": "student-presence",

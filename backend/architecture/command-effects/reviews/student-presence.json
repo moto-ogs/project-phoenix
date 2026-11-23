@@ -9850,6 +9850,18 @@
     },
     {
       "adr": "0083",
+      "approval_adr": "0313",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ChangeClassHandover",
+      "classification": "unresolved",
+      "effect": "unresolved",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ChangeClassHandover",
+      "reason": "Unresolved binding-flow boundary, not a query or approved leaf. Function-valued field of the command input; the caller's closure is not followed. Exact boundary: unresolved:function:modules/studentpresence.ClassHandoverChange.HandoverChildren. #7956: Class Day's closure reads its own day projection (Enrollment's roster, Care Plan's status and care days, the effective pickups) to name the children the handover dialog lists; it writes nothing and runs in the handover's transaction under the class and day's advisory lock, so the version is checked against the dialog computed under that lock (ADR 0311, ADR 0313 Nachtrag). A changed value or closure needs a fresh approval ADR.",
+      "source_owner": "student-presence",
+      "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/studentpresence.ClassHandoverChange.HandoverChildren",
+      "target_owner": ""
+    },
+    {
+      "adr": "0083",
       "approval_adr": "0101",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.ChangeClassHandover",
       "classification": "unresolved",

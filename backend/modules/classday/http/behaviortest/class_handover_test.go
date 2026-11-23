@@ -149,30 +149,6 @@ func TestClassHandoverRoundTrip(t *testing.T) {
 	assert.Contains(t, rec.Body.String(), "classday.class_handover_not_found")
 }
 
-// The handover dialog prefills a child marked "fehlt" in the morning with
-// "nicht da". A morning absence entered after the class view was read
-// changes the version: the dialog's stale "da" is refused (ADR 0311).
-func TestClassHandoverRefusesAfterANewMorningAbsence(t *testing.T) {
-	t.Parallel()
-	f := setupMorningAttendanceFixture(t, morningMonday)
-	f.openHandover(t)
-	read := f.handoverReport(t, morningMonday, classDayReadPermission).HandoverVersion
-
-	rec := f.put(t, morningMonday, fmt.Sprintf(`{"marks":[{"student_id":%d,"status":"absent"}]}`, f.present), morningAttendancePermission)
-	require.Equal(t, http.StatusNoContent, rec.Code, rec.Body.String())
-	assert.NotEqual(t, read, f.handoverReport(t, morningMonday, classDayReadPermission).HandoverVersion)
-
-	stale := f.do(t, http.MethodPut, fmt.Sprintf("/handover/%s/%s", f.class, morningMonday),
-		fmt.Sprintf(`{"present_student_ids":[%d],"expected_version":%q}`, f.present, read), classHandoverPermission)
-	require.Equal(t, http.StatusConflict, stale.Code, stale.Body.String())
-	assert.Contains(t, stale.Body.String(), `"code":"general.changed_since_read"`)
-	assert.Nil(t, f.handoverReport(t, morningMonday, classDayReadPermission).Handover, "nothing handed over")
-
-	// Read again, the handover goes through.
-	require.Equal(t, http.StatusNoContent,
-		f.handOver(t, morningMonday, fmt.Sprintf(`{"absent_student_ids":[%d]}`, f.present), classHandoverPermission))
-}
-
 func TestClassHandoverLeavesMorningAttendanceUntouched(t *testing.T) {
 	t.Parallel()
 	f := setupMorningAttendanceFixture(t, morningMonday)

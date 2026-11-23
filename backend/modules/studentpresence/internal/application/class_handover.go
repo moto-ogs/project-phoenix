@@ -42,7 +42,7 @@ func (s *Service) ChangeClassHandover(ctx context.Context, in studentpresence.Cl
 	}
 	in.PresentStudentIDs = distinctIDs(in.PresentStudentIDs)
 	in.AbsentStudentIDs = distinctIDs(in.AbsentStudentIDs)
-	if !in.Withdraw && (in.HandedOverBy <= 0 || !validHandoverChildren(in.PresentStudentIDs, in.AbsentStudentIDs)) {
+	if !in.Withdraw && (in.HandedOverBy <= 0 || in.HandoverChildren == nil || !validHandoverChildren(in.PresentStudentIDs, in.AbsentStudentIDs)) {
 		return false, studentpresence.ErrClassHandoverInvalid
 	}
 	in.SchoolClass = strings.TrimSpace(in.SchoolClass)
@@ -67,9 +67,13 @@ func (s *Service) ChangeClassHandover(ctx context.Context, in studentpresence.Cl
 }
 
 // checkClassHandover takes the lock of the class and day and refuses a
-// handover over another stored handover than the one its Lehrkraft read
-// (ADR 0311): a stale save would mark a child the class now has "nicht da"
-// as "da" again.
+// handover over another state than the one its Lehrkraft read (ADR 0311):
+// another stored handover, another set of children in the dialog, or
+// another morning absence mark of one of them. The dialog's children and
+// their marks are read under that lock; the morning-mark writes of the
+// class take it too, so no mark lands between this check and the
+// handover's commit. A stale save would mark a child the class now has
+// "nicht da", or no longer hands over, as "da".
 func (s *Service) checkClassHandover(ctx context.Context, in studentpresence.ClassHandoverChange, class string) (ports.Stats, error) {
 	stats, err := s.store.LockClassHandover(ctx, class, in.Date)
 	if err != nil {
@@ -88,14 +92,18 @@ func (s *Service) checkClassHandover(ctx context.Context, in studentpresence.Cla
 			stored = &handovers[i]
 		}
 	}
-	morningAbsent, markStats, err := s.morningAbsentOf(ctx, in.Date, in.ClassStudentIDs)
+	children, err := in.HandoverChildren(ctx)
+	if err != nil {
+		return stats, err
+	}
+	morningAbsent, markStats, err := s.morningAbsentOf(ctx, in.Date, children)
 	stats.Queries += markStats.Queries
 	stats.Rows += markStats.Rows
 	stats.StatementDuration += markStats.StatementDuration
 	if err != nil {
 		return stats, err
 	}
-	return stats, readstate.Check(in.ExpectedVersion, studentpresence.ClassHandoverVersion(stored, morningAbsent))
+	return stats, readstate.Check(in.ExpectedVersion, studentpresence.ClassHandoverVersion(stored, children, morningAbsent))
 }
 
 // morningAbsentOf lists the children among studentIDs whose stored morning
