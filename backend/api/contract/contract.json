@@ -6379,10 +6379,22 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/students/{id}/companion-links",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "StudentCompanionList"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/students/{id}/companions",
       "portals": [
         "tenant"
       ],
+      "deprecated": true,
       "response": {
         "kind": "array",
         "elem": {
@@ -34442,6 +34454,13 @@
           }
         },
         {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
           "name": "group_id",
           "optional": true,
           "schema": {
@@ -43195,6 +43214,12 @@
         {
           "name": "updated_at",
           "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "version",
           "schema": {
             "kind": "string"
           }
@@ -75426,6 +75451,13 @@
           "schema": {
             "kind": "string"
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -75491,6 +75523,12 @@
         },
         {
           "name": "updated_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "version",
           "schema": {
             "kind": "string"
           }
@@ -79711,6 +79749,13 @@
               "nullable": true
             }
           }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -79796,6 +79841,12 @@
           "name": "updated_at",
           "schema": {
             "kind": "instant"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -96694,6 +96745,29 @@
       ]
     },
     {
+      "name": "StudentCompanionList",
+      "go_type": "careplanhttp.StudentCompanionList",
+      "fields": [
+        {
+          "name": "companions",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "CompanionResponse"
+            }
+          }
+        },
+        {
+          "name": "fingerprint",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "StudentConsentResponse",
       "go_type": "presenceprojectionhttp.StudentConsentResponse",
       "fields": [
@@ -97228,6 +97302,13 @@
           "name": "has_write_access",
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         },
         {
@@ -106887,6 +106968,13 @@
       "go_type": "careplanhttp.UpdateStudentRequest",
       "request": true,
       "fields": [
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
         {
           "name": "first_name",
           "optional": true,

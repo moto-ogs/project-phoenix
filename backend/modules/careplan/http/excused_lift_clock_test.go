@@ -2,7 +2,6 @@ package careplanhttp_test
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -48,8 +47,7 @@ func TestUpdateStudent_LiftUsesSameClockForResponse(t *testing.T) {
 		return afterMidnight
 	}
 
-	lift := authExec(t, tc, testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/%d", student.ID),
-		map[string]any{"excused": false}), testutil.AdminTestClaims(1), []string{"admin:*"})
+	lift := authExec(t, tc, studentUpdateRequest(t, tc, student.ID, map[string]any{"excused": false}), testutil.AdminTestClaims(1), []string{"admin:*"})
 	require.Equal(t, http.StatusOK, lift.Code, lift.Body.String())
 	assert.False(t, decodeLiftedStatus(t, lift.Body.Bytes()).Data.Excused, "the response verifies the day that was lifted")
 	assert.Equal(t, 1, clockCalls, "the update captures its clock once")

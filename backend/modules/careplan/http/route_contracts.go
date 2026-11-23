@@ -85,7 +85,10 @@ func careExitRouteContracts() []common.RouteContract {
 		{Method: "POST", Pattern: "/care-withdrawals/{completionId}/care-end", Portals: portals, Request: careWithdrawalExitRequest{}, Response: careExitConfirmedResponse{}},
 		{Method: "POST", Pattern: "/{id}/care-end/resume", Portals: portals, Request: careResumeRequest{}, Response: careResumedResponse{}},
 		{Method: "GET", Pattern: "/ended-care", Portals: portals, Query: ended, Response: endedCarePageResponse{}},
-		{Method: "GET", Pattern: "/{id}/companions", Portals: portals, Response: []CompanionResponse{}},
+		// Superseded by /{id}/companion-links, which carries the fingerprint
+		// of the read (ADR 0311); goes after one release.
+		{Method: "GET", Pattern: "/{id}/companions", Portals: portals, Deprecated: true, Response: []CompanionResponse{}},
+		{Method: "GET", Pattern: "/{id}/companion-links", Portals: portals, Response: StudentCompanionList{}},
 	}
 }
 

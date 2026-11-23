@@ -52,49 +52,62 @@ describe("student-companion-api", () => {
       fetchMock.mockResolvedValueOnce(
         Response.json({
           status: "success",
-          data: [
-            {
-              companion_student_id: "7",
-              first_name: "Lina",
-              last_name: "Klein",
-              weekdays: ["mon", "tue"],
-            },
-            { companion_student_id: "8", weekdays: null },
-          ],
+          data: {
+            companions: [
+              {
+                companion_student_id: "7",
+                first_name: "Lina",
+                last_name: "Klein",
+                weekdays: ["mon", "tue"],
+              },
+              { companion_student_id: "8", weekdays: null },
+            ],
+            fingerprint: "server-token",
+          },
         }),
       );
 
       const result = await fetchStudentCompanions("42");
 
       expect(fetchMock).toHaveBeenCalledWith(
-        "/api/students/42/companions",
+        "/api/students/42/companion-links",
         expect.objectContaining({ method: "GET" }),
       );
-      expect(result).toEqual([
-        {
-          companion_student_id: "7",
-          first_name: "Lina",
-          last_name: "Klein",
-          weekdays: ["mon", "tue"],
-        },
-        {
-          companion_student_id: "8",
-          weekdays: [],
-        },
-      ]);
+      // The fingerprint is the server's, passed on untouched (ADR 0311).
+      expect(result).toEqual({
+        fingerprint: "server-token",
+        companions: [
+          {
+            companion_student_id: "7",
+            first_name: "Lina",
+            last_name: "Klein",
+            weekdays: ["mon", "tue"],
+          },
+          {
+            companion_student_id: "8",
+            weekdays: [],
+          },
+        ],
+      });
     });
 
     it("drops a weekday this build does not know", async () => {
       fetchMock.mockResolvedValueOnce(
         Response.json({
           status: "success",
-          data: [{ companion_student_id: "7", weekdays: ["mon", "sat"] }],
+          data: {
+            companions: [
+              { companion_student_id: "7", weekdays: ["mon", "sat"] },
+            ],
+            fingerprint: "f",
+          },
         }),
       );
 
-      await expect(fetchStudentCompanions("42")).resolves.toEqual([
-        { companion_student_id: "7", weekdays: ["mon"] },
-      ]);
+      await expect(fetchStudentCompanions("42")).resolves.toEqual({
+        fingerprint: "f",
+        companions: [{ companion_student_id: "7", weekdays: ["mon"] }],
+      });
     });
   });
 

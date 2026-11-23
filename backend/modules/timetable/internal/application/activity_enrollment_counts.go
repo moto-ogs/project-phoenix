@@ -9,8 +9,8 @@ import (
 )
 
 // GetEnrollmentCounts batches the roster reads, not a raw enrollment COUNT:
-// retained history rows count once each, but missing, graduated and departed
-// children do not. The directory reads remain observable even though their
+// each child on the roster counts once however many rows it holds there
+// (#7908), and missing, graduated and departed children do not. The directory reads remain observable even though their
 // display names and alumni annotations are not needed by the HTTP response.
 func (s *ActivityService) GetEnrollmentCounts(ctx context.Context, groupIDs []int64) (map[int64]int, error) {
 	if len(groupIDs) == 0 {
@@ -65,9 +65,11 @@ func (s *ActivityService) batchEnrollmentCounts(ctx context.Context, groupIDs []
 	if err != nil {
 		return nil, enrolledStudentsError(err)
 	}
+	counted := make(map[[2]int64]bool, len(rows))
 	for _, row := range rows {
-		student := students[row.StudentID]
-		if student != nil && !student.IsAlumnus() && !student.CareEndedOn(s.today()) {
+		student, key := students[row.StudentID], [2]int64{row.ActivityGroupID, row.StudentID}
+		if student != nil && !counted[key] && !student.IsAlumnus() && !student.CareEndedOn(s.today()) {
+			counted[key] = true
 			counts[row.ActivityGroupID]++
 		}
 	}

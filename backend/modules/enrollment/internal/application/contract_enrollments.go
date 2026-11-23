@@ -486,7 +486,7 @@ func contractBookings(phase *contractPhase, input enrollmentNative.ContractEnrol
 			return nil, reason, ""
 		}
 		if guard == "" {
-			guard = contractBookingGuard(phase, offering, booking)
+			guard = contractBookingGuard(offering, booking)
 		}
 		seen[offering.ID] = true
 		from, end := booking.ValidFrom, booking.ValidUntil

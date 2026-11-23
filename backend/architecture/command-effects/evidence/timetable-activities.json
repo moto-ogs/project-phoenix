@@ -3570,7 +3570,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.RevisePrivacyConsent",
-      "binding_digest": "7ecdf66be8cca67ac5a24312597e4c04",
+      "binding_digest": "2ab47c66adebab507773a5f7504f9417",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.RevisePrivacyConsent",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.RevisePrivacyConsent",
@@ -3578,7 +3578,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.RevisePrivacyConsent",
-      "binding_digest": "d7de43a92dd106c3a400b82364c66ff3",
+      "binding_digest": "38fd9f09140c154f9f8d5aca1dd3a506",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.RevisePrivacyConsent",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RevisePrivacyConsent",
@@ -3586,7 +3586,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RevisePrivacyConsent",
-      "binding_digest": "d7de43a92dd106c3a400b82364c66ff3",
+      "binding_digest": "38fd9f09140c154f9f8d5aca1dd3a506",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Capability.RevisePrivacyConsent",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RevisePrivacyConsent",
@@ -5650,7 +5650,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.RevisePrivacyConsent",
-      "binding_digest": "2e583cdaf94c1f9adfe27f0b19f97c7a",
+      "binding_digest": "822e4dab03a0369fe300146619a2e883",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RevisePrivacyConsent",
       "source_owner": "timetable-activities",
       "target": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.RevisePrivacyConsent",
@@ -5658,7 +5658,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RevisePrivacyConsent",
-      "binding_digest": "d7de43a92dd106c3a400b82364c66ff3",
+      "binding_digest": "38fd9f09140c154f9f8d5aca1dd3a506",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RevisePrivacyConsent",
       "source_owner": "timetable-activities",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.RevisePrivacyConsent",

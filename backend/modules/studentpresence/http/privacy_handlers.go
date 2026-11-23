@@ -5,7 +5,6 @@ import (
 	json "encoding/json"
 	errors "errors"
 	http "net/http"
-	time "time"
 
 	render "github.com/go-chi/render"
 	common "github.com/moto-ogs/project-phoenix/api/common"
@@ -93,6 +92,7 @@ func (rs *Resource) getStudentPrivacyConsent(w http.ResponseWriter, r *http.Requ
 			Accepted:          defaults.Accepted,
 			RenewalRequired:   true,
 			DataRetentionDays: defaults.DataRetentionDays,
+			Version:           studentpresence.PrivacyConsentVersion(consents),
 		}
 		common.Respond(w, r, http.StatusOK, response, "No privacy consent found, returning defaults")
 		return
@@ -103,43 +103,8 @@ func (rs *Resource) getStudentPrivacyConsent(w http.ResponseWriter, r *http.Requ
 		renderError(w, r, common.ErrorInternalServer(err))
 		return
 	}
+	response.Version = studentpresence.PrivacyConsentVersion(consents)
 	common.Respond(w, r, http.StatusOK, response, "Privacy consent retrieved successfully")
-}
-
-// findOrCreateConsent finds existing consent for a policy version or creates a new one
-func findOrCreateConsent(consents []studentpresence.PrivacyConsent, studentID int64, policyVersion string) studentpresence.PrivacyConsent {
-	var consent *studentpresence.PrivacyConsent
-	for i, c := range consents {
-		if c.PolicyVersion == policyVersion && (consent == nil || c.CreatedAt.After(consent.CreatedAt)) {
-			consent = &consents[i]
-		}
-	}
-
-	if consent == nil {
-		return studentpresence.PrivacyConsent{StudentID: studentID}
-	}
-	return *consent
-}
-
-// applyConsentUpdates updates consent fields from the request. Acceptance
-// stamping and expiry derivation are decided by the owner of
-// users.privacy_consents (issue #586, Rule 12: the consent lifecycle no longer
-// lives on the model; #3349 moved it to Student Presence).
-func applyConsentUpdates(consent studentpresence.PrivacyConsent, req *PrivacyConsentRequest, now time.Time) (studentpresence.PrivacyConsent, error) {
-	details, err := json.Marshal(req.Details)
-	if err != nil {
-		return studentpresence.PrivacyConsent{}, err
-	}
-	consent.PolicyVersion = req.PolicyVersion
-	consent.Accepted = req.Accepted
-	consent.DurationDays = req.DurationDays
-	consent.DataRetentionDays = req.DataRetentionDays
-	consent.Details = details
-
-	if req.Accepted && consent.AcceptedAt == nil {
-		return studentpresence.AcceptPrivacyConsent(consent, now), nil
-	}
-	return studentpresence.DerivePrivacyConsentExpiry(consent), nil
 }
 
 // updateStudentPrivacyConsent handles updating a student's privacy consent
@@ -165,26 +130,20 @@ func (rs *Resource) updateStudentPrivacyConsent(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	consents, err := rs.PrivacyConsents.ListPrivacyConsents(r.Context(), student.ID)
-	if err != nil {
-		renderError(w, r, common.ErrorInternalServer(err))
-		return
-	}
-
-	consent, err := applyConsentUpdates(findOrCreateConsent(consents, student.ID, req.PolicyVersion), req, rs.Now())
+	details, err := json.Marshal(req.Details)
 	if err != nil {
 		renderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
 
+	var saved studentpresence.RevisedPrivacyConsent
 	tenantID := tenant.FromContext(r.Context())
 	if err := withinTenant(r.Context(), tenantID, func(ctx context.Context) error {
 		var err error
-		if consent.ID == 0 {
-			consent, err = rs.PrivacyConsents.RecordPrivacyConsent(ctx, consent)
-		} else {
-			consent, err = rs.PrivacyConsents.RevisePrivacyConsent(ctx, consent)
-		}
+		saved, err = rs.PrivacyConsents.RevisePrivacyConsent(ctx, studentpresence.PrivacyConsentRevision{
+			StudentID: student.ID, ExpectedVersion: req.ExpectedVersion, PolicyVersion: req.PolicyVersion,
+			Accepted: req.Accepted, DurationDays: req.DurationDays, DataRetentionDays: req.DataRetentionDays, Details: details,
+		})
 		return err
 	}); err != nil {
 		if errors.Is(err, studentpresence.ErrInvalidPrivacyConsent) {
@@ -195,10 +154,11 @@ func (rs *Resource) updateStudentPrivacyConsent(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	response, err := newPrivacyConsentResponse(consent)
+	response, err := newPrivacyConsentResponse(saved.Consent)
 	if err != nil {
 		renderError(w, r, common.ErrorInternalServer(err))
 		return
 	}
+	response.Version = saved.Version
 	common.Respond(w, r, http.StatusOK, response, "Privacy consent updated successfully")
 }

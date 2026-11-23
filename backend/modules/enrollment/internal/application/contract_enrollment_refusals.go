@@ -100,38 +100,22 @@ func contractBookingRefusal(phase *contractPhase, offering *offeringContract.Car
 }
 
 // contractBookingGuard tells why a booking that is not refused as such gets
-// no new enrollment: Care Plan would derive no roster from it, or a wrong
-// one. Its offering is not active, so a roster that names it as one of its
-// sources leaves it out and the child would be approved on no roster; its
-// roster cannot end with it; or its window holds none of one of its
-// weekdays. These guard the creation only: an enrollment that is stored
+// no new enrollment: Care Plan would derive no roster from it. Its offering
+// is not active, so a roster that names it as one of its sources leaves it
+// out and the child would be approved on no roster; or its window holds
+// none of one of its weekdays. A booking that ends before the phase is
+// enrolled whatever names its roster: the row of a direct link
+// (ActivityGroupID) ends with its booking as the row of a source rule does
+// (#7908). These guard the creation only: an enrollment that is stored
 // already is not written again, so none of them refuses a repeated call.
-func contractBookingGuard(phase *contractPhase, offering *offeringContract.CareOfferingRecord, booking enrollmentNative.ContractBooking) string {
+func contractBookingGuard(offering *offeringContract.CareOfferingRecord, booking enrollmentNative.ContractBooking) string {
 	switch {
 	case !offering.IsActive:
 		return enrollmentNative.ContractEnrollmentOfferingInactive
-	case rosterBound(phase, offering, booking):
-		return enrollmentNative.ContractEnrollmentRosterBound
 	case !weekdaysInWindow(booking):
 		return enrollmentNative.ContractEnrollmentWindowTooShort
 	}
 	return ""
-}
-
-// rosterBound tells whether the booking ends before the service of the
-// phase on an offering that names its roster through the direct link
-// (ActivityGroupID). Care Plan writes the roster row of such an offering to
-// the end of the phase whatever the booking says, so the child would stay
-// on the roster and its occurrences after the booking ended. Ending the row
-// with the booking is not done here: where the same roster also names
-// another offering of the child as its only source, the row of the direct
-// link replaces the row of that source, and the child would drop off the
-// roster while the other offering still books it (ADR 0309, known
-// limitation). Two such bookings that end on different days on one roster
-// are refused by the same rule: one of them ends before the service.
-func rosterBound(phase *contractPhase, offering *offeringContract.CareOfferingRecord, booking enrollmentNative.ContractBooking) bool {
-	_, until := phase.window()
-	return offering.ActivityGroupID != nil && *offering.ActivityGroupID > 0 && booking.ValidUntil.Before(until)
 }
 
 var contractWeekdays = map[time.Weekday]string{time.Monday: "mon", time.Tuesday: "tue", time.Wednesday: "wed", time.Thursday: "thu",

@@ -36,6 +36,14 @@ func (b *rosterBatch) CreateEnrollment(_ context.Context, row ports.RosterEnroll
 	b.changes.Create = append(b.changes.Create, row)
 	return nil
 }
+func (b *rosterBatch) SaveRosterChanges(_ context.Context, changes ports.RosterChanges) error {
+	b.changes.Create = append(b.changes.Create, changes.Create...)
+	b.changes.Delete = append(b.changes.Delete, changes.Delete...)
+	for id, end := range changes.Ends {
+		b.changes.Ends[id] = end
+	}
+	return nil
+}
 func (b *rosterBatch) DeleteEnrollment(_ context.Context, id int64) error {
 	b.changes.Delete = append(b.changes.Delete, id)
 	return nil
@@ -49,7 +57,7 @@ func (b *rosterBatch) ReconcileTemplateRosters(_ context.Context, id int64, stud
 	return nil
 }
 func (b *rosterBatch) flush(ctx context.Context) error {
-	if err := b.SaveRosterChanges(ctx, b.changes); err != nil {
+	if err := b.BookingRosters.SaveRosterChanges(ctx, b.changes); err != nil {
 		return err
 	}
 	return b.ReconcileTemplateRosterBatch(ctx, b.reconciles)

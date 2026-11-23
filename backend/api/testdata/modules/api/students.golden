@@ -48,6 +48,7 @@ GET /api/students/{id}/attendance-history -> basis
 GET /api/students/{id}/attendance-history/export -> basis
 GET /api/students/{id}/care-withdrawals -> basis
 GET /api/students/{id}/change-history -> basis
+GET /api/students/{id}/companion-links -> basis
 GET /api/students/{id}/companions -> basis
 GET /api/students/{id}/delete-impact -> basis
 GET /api/students/{id}/documents -> basis

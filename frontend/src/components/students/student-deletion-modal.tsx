@@ -27,7 +27,7 @@ import {
 import type { RefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
-import { useFreshSWR } from "~/lib/swr";
+import { useSWRAuth } from "~/lib/swr";
 import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import { permissionsConcept } from "~/lib/concepts/permissions";
 
@@ -107,13 +107,18 @@ export function StudentDeletionModal({
   // Bumped after a 409 so the dialog returns to its first confirmation step.
   const [gateReset, setGateReset] = useState(0);
   // The impact the person confirms stays fixed for this opening: no focus or
-  // reconnect refresh replaces it under the acknowledgement. A changed impact
-  // comes back as a 409 and is then shown fresh (below).
-  const previewRead = useFreshSWR(
+  // reconnect refresh replaces it under the acknowledgement. It reads through
+  // the shared cache (ADR 0311): the delete carries the preview's
+  // fingerprint, so a changed impact comes back as a 409 and is then shown
+  // fresh (below).
+  const previewRead = useSWRAuth(
     isOpen ? tenantStudentKeys.deletionImpact(studentId, completionId) : null,
     () => fetchStudentDeletionImpact(studentId, completionId),
     {
       keepPreviousData: false,
+      // Every opening reads it again (no deduplication); the impact is taken
+      // from that answer.
+      dedupingInterval: 0,
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
     },
@@ -128,7 +133,6 @@ export function StudentDeletionModal({
   // a 409 failed and left none).
   const [impactTaken, setImpactTaken] = useState(false);
   const previewData = previewRead.data;
-  const previewValidating = previewRead.isValidating;
   const loadingPreview =
     isOpen &&
     (refreshingPreview || (!impactTaken && previewLoad.failure === undefined));
@@ -136,17 +140,28 @@ export function StudentDeletionModal({
   useEffect(() => {
     if (isOpen) return;
     setImpact(null);
+    setAdopted(null);
     setImpactTaken(false);
     setReason("");
     setAcknowledged(false);
     clearErrors();
   }, [clearErrors, isOpen]);
 
+  // The cached impact shows at once; the answer read again after it replaces
+  // it until the person acknowledges. From then on it stays fixed, and a
+  // changed impact comes back as the 409 below.
+  // adopted is the answer taken last, so a refresh that failed after a 409
+  // never brings the refused impact back.
+  const [adopted, setAdopted] = useState<studentDeleteImpactResponse | null>(
+    null,
+  );
   useEffect(() => {
-    if (!isOpen || impactTaken || !previewData || previewValidating) return;
+    if (!isOpen || !previewData || previewData === adopted) return;
+    if (impactTaken && acknowledged) return;
+    setAdopted(previewData);
     setImpact(previewData);
     setImpactTaken(true);
-  }, [impactTaken, isOpen, previewData, previewValidating]);
+  }, [acknowledged, adopted, impactTaken, isOpen, previewData]);
 
   const countRows = useMemo(() => {
     if (!impact) return [];
@@ -207,6 +222,7 @@ export function StudentDeletionModal({
             { revalidate: false },
           );
           setImpact(fresh ?? null);
+          if (fresh) setAdopted(fresh);
         } catch (refreshError) {
           logger.error("student_delete_preview_refresh_failed", {
             student_id: studentId,
