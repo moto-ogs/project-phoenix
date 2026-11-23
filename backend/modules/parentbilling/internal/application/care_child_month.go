@@ -274,16 +274,15 @@ func childOfVersion(version parentbilling.CareContractVersion) parentbilling.Car
 		LastName: version.ChildLastName, BirthDate: version.ChildBirthDate}
 }
 
-// groupCareChildren groups the contracts by child. Only a contract not in
-// issued lends its record to contracts without one by name and date of
-// birth: an issued contract outside the month joins by its own record and
-// never claims another child by name alone (#7863).
+// groupCareChildren groups the contracts by child. An issued contract
+// outside the month lends its record to contracts without one only with a
+// date of birth: it never claims another child by name alone (#7863).
 func groupCareChildren(identities map[int64]parentbilling.CareContractChild, order []int64, issued map[int64]bool) [][]int64 {
 	recordsOf := map[string][]int64{}
 	for _, contractID := range order {
 		child := identities[contractID]
 		person := personOf(child)
-		if child.StudentID != nil && !issued[contractID] && !slices.Contains(recordsOf[person], *child.StudentID) {
+		if child.StudentID != nil && (!issued[contractID] || child.BirthDate != nil) && !slices.Contains(recordsOf[person], *child.StudentID) {
 			recordsOf[person] = append(recordsOf[person], *child.StudentID)
 		}
 	}
