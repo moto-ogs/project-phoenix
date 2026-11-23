@@ -296,6 +296,9 @@ func ContractDocument() (contract.Document, error) {
 		reflect.TypeFor[staffShiftsHTTP.OptionalBool]():   contract.ReadsValue,
 		reflect.TypeFor[staffShiftsHTTP.OptionalInt]():    contract.ReadsValue,
 		reflect.TypeFor[staffShiftsHTTP.OptionalString](): contract.ReadsValue,
+		// The activity and group updates tell an absent room from null.
+		reflect.TypeFor[timetableActivitiesHTTP.OptionalRoomID](): contract.ReadsValue,
+		reflect.TypeFor[groupsHTTP.OptionalRoomID]():              contract.ReadsValue,
 	}
 	// Appointments and the whole-day substitution keep their own day types.
 	options.Dates = []reflect.Type{reflect.TypeFor[appointments.Date](), reflect.TypeOf(substitutions.Day)}
