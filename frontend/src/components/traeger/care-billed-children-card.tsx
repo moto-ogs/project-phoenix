@@ -74,7 +74,7 @@ function billedText(
     : `Für ${who} ${released ? "war" : "ist"} der Monat schon abgerechnet.`;
   // A Jahreslauf keeps what an earlier notice set for the month (S11).
   const follows = yearly
-    ? "Der Jahreslauf ändert diesen Monat im Bescheid nicht."
+    ? "Der Jahreslauf rechnet diesen Monat nicht noch einmal ab."
     : released
       ? "Der Lauf hat keine zweite Rechnung ausgestellt."
       : "Der Lauf stellt keine zweite Rechnung aus.";

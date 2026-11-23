@@ -99,7 +99,7 @@ export function releaseBilledLines(
     lines.push(
       mealOnly.length === 1
         ? "Bei 1 Kind bleibt die Betreuung offen: Seine Rechnung enthält nur die Mensa."
-        : `Bei ${mealOnly.length} Kindern bleibt die Betreuung offen: Ihre Rechnungen enthalten nur die Mensa.`,
+        : `Bei ${mealOnly.length} Kindern bleibt die Betreuung offen: Die Rechnungen enthalten nur die Mensa.`,
     );
   }
   return lines;

@@ -265,7 +265,7 @@ describe("TraegerCareNoticeRunPage", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        /Der Jahreslauf ändert diesen Monat im Bescheid nicht\./,
+        /Der Jahreslauf rechnet diesen Monat nicht noch einmal ab\./,
       ),
     ).toBeInTheDocument();
     expect(screen.getByText("Rechnung MB-0002 · OGS Süd")).toBeInTheDocument();

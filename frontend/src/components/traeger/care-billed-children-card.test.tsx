@@ -166,7 +166,7 @@ describe("CareBilledChildrenCard", () => {
     rerender(<CareBilledChildrenCard childrenBilled={[billed(1)]} yearly />);
     expect(
       screen.getByText(
-        "Für dieses Kind ist ein Monat des Jahres schon abgerechnet. Der Jahreslauf ändert diesen Monat im Bescheid nicht. Stimmt das, musst du nichts tun. Ist eine Rechnung falsch, storniere sie. Danach nimmt diese Vorschau den Monat auf.",
+        "Für dieses Kind ist ein Monat des Jahres schon abgerechnet. Der Jahreslauf rechnet diesen Monat nicht noch einmal ab. Stimmt das, musst du nichts tun. Ist eine Rechnung falsch, storniere sie. Danach nimmt diese Vorschau den Monat auf.",
       ),
     ).toBeInTheDocument();
   });

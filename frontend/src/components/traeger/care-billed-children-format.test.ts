@@ -67,7 +67,7 @@ describe("texts about children a run holds back for an issued invoice", () => {
       ]),
     ).toEqual([
       "1 Kind hat schon eine Rechnung und bekommt keine weitere.",
-      "Bei 2 Kindern bleibt die Betreuung offen: Ihre Rechnungen enthalten nur die Mensa.",
+      "Bei 2 Kindern bleibt die Betreuung offen: Die Rechnungen enthalten nur die Mensa.",
     ]);
   });
 });
