@@ -19,9 +19,8 @@ import { FormModal } from "~/components/ui/form-modal";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { MultiSelect } from "~/components/ui/multi-select";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
-import { isChangedSinceRead } from "~/lib/api-error";
 import { formatDate } from "~/lib/date-helpers";
-import { useOfferingPreview } from "~/lib/hooks/use-offering-preview";
+import { useReadDraftLoadError } from "~/lib/hooks/use-swr-load-error";
 import type { RefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
 import {
@@ -29,10 +28,12 @@ import {
   laterSegmentSentence,
   offeringNamesFor,
   offeringSetNames,
+  type OfferingPreview,
   type OfferingSelection,
   type RosterDeviation,
 } from "~/lib/roster-deviation";
 import { useSWRAuth } from "~/lib/swr";
+import { useReadDraft } from "~/lib/swr/read-draft";
 import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import { timetableService } from "~/lib/timetable-api";
 import type { OfferingSourceOption } from "~/lib/timetable-types";
@@ -138,12 +139,37 @@ export function ConnectOfferingModal({
     }),
     [offeringIds, deviation.gradeLevels, deviation.schoolClasses],
   );
-  const {
-    preview,
-    loading,
-    error: previewError,
-    reload: reloadPreview,
-  } = useOfferingPreview(isOpen ? deviation.templateId : undefined, selection);
+  // The preview the dialog shows is the one it confirms (ADR 0311): its
+  // fingerprint goes out with the connection, and after a refusal the new
+  // preview shows before anything is sent again.
+  const previewRead = useReadDraft<
+    OfferingPreview,
+    OfferingPreview,
+    string,
+    void
+  >({
+    key:
+      isOpen && offeringIds.length > 0
+        ? tenantDailyKeys.offeringPreview(
+            deviation.templateId,
+            selection,
+            undefined,
+          )
+        : null,
+    fetcher: () =>
+      timetableService.getOfferingPreview(deviation.templateId, selection),
+    token: (shown) => shown.fingerprint,
+    follow: false,
+    // The dialog closes after connecting: no read of the old preview.
+    answer: (_saved, shown) => shown,
+  });
+  const previewFailed = previewRead.status === "loadFailed";
+  const preview = previewFailed ? null : (previewRead.base ?? null);
+  const loading = previewRead.status === "loading" && offeringIds.length > 0;
+  const previewError = useReadDraftLoadError(
+    previewRead,
+    "die Vorschau der Kinderliste",
+  );
   const options = offeringOptions(deviation, periodOfferings, offeringIds);
   const selectedOfferings = options
     .filter((option) => offeringIds.includes(option.value))
@@ -152,29 +178,32 @@ export function ConnectOfferingModal({
   const segmentSentence = preview ? laterSegmentSentence(preview) : null;
 
   const handleSave = async () => {
-    if (!preview) return;
+    if (!preview || !previewRead.canSubmit) return;
     await save.run(async (op) => {
       formErrors.clear();
-      try {
-        await timetableService.connectTemplateToOffering(
+      const result = await previewRead.submit((_fingerprint, shown) =>
+        timetableService.connectTemplateToOffering(
           deviation.templateId,
           selection,
-          preview,
-        );
-      } catch (err) {
+          shown,
+        ),
+      );
+      if (!result.ok) {
         logger.error("offering_connection_failed", {
           template_id: deviation.templateId,
-          error: err instanceof Error ? err.message : String(err),
+          error:
+            result.error instanceof Error
+              ? result.error.message
+              : String(result.error),
         });
         if (!op.isCurrent()) return;
         // Kommen oder gehen inzwischen andere Kinder als in der Vorschau,
-        // zeigt der Dialog die neue Vorschau; bestätigt wird sie, nicht
+        // zeigt `reload` die neue Vorschau; bestätigt wird sie, nicht
         // dieselbe Anfrage noch einmal (ADR 0311).
-        const changed = isChangedSinceRead(err);
-        if (changed) reloadPreview();
-        void formErrors.show(err, {
+        void formErrors.show(result.error, {
           object: `die Verbindung von „${templateName}“ mit ${selectedOfferings.length > 1 ? "den Angeboten" : "dem Angebot"}`,
-          retry: changed ? undefined : () => latestSaveRef.current(),
+          retry: () => latestSaveRef.current(),
+          reload: result.reload,
         });
         return;
       }
@@ -203,7 +232,14 @@ export function ConnectOfferingModal({
           onCancel={onClose}
           onSave={() => void handleSave()}
           saving={saving}
-          disabled={!preview || loading}
+          disabled={!preview || loading || !previewRead.canSubmit}
+          disabledReason={
+            selectedOfferings.length === 0
+              ? undefined
+              : previewFailed
+                ? "Lade zuerst die Vorschau neu."
+                : "moto rechnet die Vorschau noch aus."
+          }
           saveLabel="Verbinden"
           savingLabel="Wird verbunden…"
         />
@@ -266,7 +302,11 @@ export function ConnectOfferingModal({
                 Die Vorschau wird geladen.
               </p>
             ) : null}
-            <LoadErrorAlert error={previewError} />
+            {/* After a refusal the form's alert already names the failed
+                read, with its retry. */}
+            {previewFailed && !formErrors.error ? (
+              <LoadErrorAlert error={previewError} />
+            ) : null}
             {preview && !loading ? (
               <>
                 {segmentSentence ? (
