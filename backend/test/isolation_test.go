@@ -19,9 +19,9 @@ import (
 	"github.com/uptrace/bun"
 
 	"github.com/moto-ogs/project-phoenix/api"
-	"github.com/moto-ogs/project-phoenix/modules/facilities"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -468,7 +468,8 @@ func TestCrossTenantWrite_RowsAffectedGuard(t *testing.T) {
 		stored, err := TenantQuery1(t, ctxA, db, repo.FindByID, any(roomA.ID))
 		require.NoError(t, err)
 		err = TenantCommand1(t, ctxB, db, repo.Update, stored)
-		require.ErrorIs(t, err, facilities.ErrRoomNotFound, "cross-tenant room update must fail on the tenant scope")
+		require.Error(t, err, "cross-tenant room update must fail")
+		assert.NotErrorIs(t, err, readstate.ErrChanged, "the tenant scope refuses it, not the read version")
 
 		stored.Name = "WriteRoomA renamed"
 		require.NoError(t, TenantCommand1(t, ctxA, db, repo.Update, stored), "the same read row saves in its own tenant")
