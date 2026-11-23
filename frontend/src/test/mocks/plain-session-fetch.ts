@@ -1,45 +1,56 @@
-// A session-cache module for client tests that stub `fetch`: sessionFetch
-// sends straight through transportFetch, without the session gate and its
-// renewal (sessionFetch's own tests cover those). A case may stub plain
-// answer objects ({ ok, status, headers, json }); they go on as Responses.
+// A session-cache module for client tests that stub `fetch`: the staff
+// session gate lets every request through, and a 401 ends like a renewal
+// the BFF refused (bff-fetch.test.ts and session-cache.test.ts cover the
+// real gate and its renewal).
 //
-//   vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
+//   vi.mock("~/lib/session-cache", () => import("~/test/mocks/plain-session-fetch"));
 //
-// Portals without a session (public, school, ...) send through transportFetch
-// directly; a test of such a call replaces it with `plainTransportFetch`.
-import { transportFetch } from "~/lib/api-error";
+// Portals without a session gate (public, school, …) need no mock. A case
+// may stub plain answer objects ({ ok, status, headers, json }); wrap them in
+// `plainResponse` or the stub in `plainFetch`, and they go out as Responses.
+import { ApiError } from "~/lib/api-error";
 
 interface PlainAnswer {
-  ok: boolean;
+  ok?: boolean;
   status?: number;
   headers?: Headers;
-  json?: () => Promise<unknown>;
+  json?: () => unknown;
   text?: () => Promise<string>;
 }
 
-async function asResponse(answer: Response | PlainAnswer): Promise<Response> {
+/** A Response for a plain answer object; a Response stays as it is. */
+export async function plainResponse(
+  answer: Response | PlainAnswer,
+): Promise<Response> {
   if (answer instanceof Response) return answer;
   const status = answer.status ?? (answer.ok === false ? 500 : 200);
   const headers = answer.headers;
   if (status === 204) return new Response(null, { status, headers });
   const body = answer.json
-    ? await answer.json().then(
-        (value) => JSON.stringify(value) ?? "",
-        () => "not JSON",
-      )
+    ? await Promise.resolve()
+        .then(() => answer.json?.())
+        .then(
+          (value) => JSON.stringify(value) ?? "",
+          () => "not JSON",
+        )
     : ((await answer.text?.()) ?? "");
   return new Response(body, { status, headers });
 }
 
-/** transportFetch with the plain answers of a stubbed fetch as Responses. */
-export const plainTransportFetch: typeof transportFetch = async (input, init) =>
-  asResponse((await transportFetch(input, init)) as Response | PlainAnswer);
+/** A fetch stub whose plain answers go out as Responses. */
+export function plainFetch(
+  answer: (input: RequestInfo | URL, init?: RequestInit) => unknown,
+): (input: RequestInfo | URL, init?: RequestInit) => Promise<Response> {
+  return async (input, init) =>
+    plainResponse((await answer(input, init)) as Response | PlainAnswer);
+}
 
-export function sessionFetch(
-  url: string,
-  init?: RequestInit,
-): Promise<Response> {
-  return plainTransportFetch(url, init);
+export async function requireTenantSession(): Promise<void> {}
+
+export async function renewTenantSession(): Promise<void> {
+  throw new ApiError("Authentication required", 401, {
+    code: "general.permission",
+  });
 }
 
 export function clearSessionCache(): void {}

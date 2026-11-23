@@ -41,11 +41,9 @@ import {
   cancelChildParentConference,
   fetchChildParentConferences,
 } from "~/lib/parent-api";
-import type {
-  ParentConferenceOffer,
-  ParentConferenceWindow,
-} from "~/lib/parent-conferences";
+import type { ParentConferenceOffer } from "~/lib/parent-conferences";
 import { calendarConcept } from "~/lib/concepts/calendar";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 
 const logger = createLogger({ component: "ParentConferencePage" });
 
@@ -113,7 +111,7 @@ export default function ParentConferencePage({
       }),
     [locale],
   );
-  const timeLabel = (window: ParentConferenceWindow) =>
+  const timeLabel = (window: sharedContract.ParentConferenceWindow) =>
     t("timeRange", { from: window.start_time, to: window.end_time });
 
   const replaceOffer = (next: ParentConferenceOffer) =>
@@ -125,7 +123,7 @@ export default function ParentConferencePage({
 
   const book = async (
     offer: ParentConferenceOffer,
-    window: ParentConferenceWindow,
+    window: sharedContract.ParentConferenceWindow,
   ) => {
     if (busy || !canBook) return;
     setBusy(`${offer.id}:${window.start_time}`);

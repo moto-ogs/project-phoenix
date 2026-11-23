@@ -25,12 +25,9 @@ export const PASSWORD_CHANGED_KEY = "passwordChanged";
 
 import { getSession } from "next-auth/react";
 import { handleAuthFailure } from "./auth-failure";
-import type { ErrorCode } from "./error-codes.generated";
 import {
   ApiError,
-  apiErrorFromResponse,
   onSessionTenantMismatch,
-  transportFetch,
   unavailableApiError,
 } from "./api-error";
 import { clearRateLimitBackoff } from "./rate-limit-backoff";
@@ -241,61 +238,32 @@ export async function getCachedSession() {
 }
 
 /**
- * Fetch with automatic session auth and 401 → refresh → retry.
- * Drop-in replacement for `fetch()` that handles expired tokens transparently.
- * On unrecoverable auth failure, signs out via handleAuthFailure().
+ * The signed-in gate of a staff request (`bffJson("tenant", …)`): the cached
+ * session must grant access before anything goes out. A failed lookup is
+ * `general.unavailable`, a session without access a 401 `general.permission`.
  *
  * The access token travels only in the session cookie: the BFF routes read it
  * server-side via auth(). A Bearer header on top sent the same token twice and
  * pushed large sessions past Node's header limit (HTTP 431, #3918), and the
- * browser session carries no token at all (#5005). The session lookup stays
- * as the signed-in gate before any request goes out.
+ * browser session carries no token at all (#5005).
  */
-export async function sessionFetch(
-  url: string,
-  init?: RequestInit,
-  options: { authRefusals?: readonly ErrorCode[] } = {},
-): Promise<Response> {
+export async function requireTenantSession(): Promise<void> {
   const session = await getSessionOrUnavailable();
-  if (!hasSessionAccess(session)) {
-    throw authenticationRequiredError();
-  }
+  if (!hasSessionAccess(session)) throw authenticationRequiredError();
+}
 
-  // A multipart body sets its own Content-Type with the boundary.
-  const mergedInit: RequestInit = {
-    ...init,
-    headers:
-      init?.body instanceof FormData
-        ? init.headers
-        : { "Content-Type": "application/json", ...init?.headers },
-  };
-
-  const response = await transportFetch(url, mergedInit);
-
-  if (response.status === 401) {
-    // These operation-specific refusals do not invalidate the source session.
-    // Preserve the body for the caller and do not refresh or sign out first.
-    if (options.authRefusals?.length) {
-      const refusal = await apiErrorFromResponse(
-        response.clone(),
-        "Request refused",
-      );
-      if (refusal.code && options.authRefusals.includes(refusal.code))
-        return response;
-    }
-    clearSessionCache();
-    const refreshed = await handleAuthFailure();
-    if (refreshed) {
-      // The refresh does not touch the cookie (see handleAuthFailure); this
-      // session lookup persists the refreshed tokens via Set-Cookie, so the
-      // retry below goes out with the fresh cookie.
-      const freshSession = await getSessionOrUnavailable();
-      if (!hasSessionAccess(freshSession)) throw authenticationRequiredError();
-      return transportFetch(url, mergedInit);
-    }
-    // Expiry signed out, or an explicit tenant logout already owns the exit.
-    throw authenticationRequiredError();
-  }
-
-  return response;
+/**
+ * Renews the session after the BFF answered 401 and resolves once the
+ * renewed session is in place, so the caller repeats its request once. An
+ * unrecoverable failure signs out (handleAuthFailure) and rejects with a 401
+ * `general.permission`; an explicit tenant logout already owns the exit.
+ */
+export async function renewTenantSession(): Promise<void> {
+  clearSessionCache();
+  const refreshed = await handleAuthFailure();
+  if (!refreshed) throw authenticationRequiredError();
+  // The refresh does not touch the cookie (see handleAuthFailure); this
+  // session lookup persists the refreshed tokens via Set-Cookie, so the
+  // retry goes out with the fresh cookie.
+  await requireTenantSession();
 }

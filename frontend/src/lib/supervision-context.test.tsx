@@ -9,7 +9,7 @@ import {
   useOptionalSupervision,
 } from "./supervision-context";
 
-import { pagedJson } from "~/test/mocks/plain-session-fetch";
+import { pagedJson, plainFetch } from "~/test/mocks/plain-session-fetch";
 
 vi.mock(
   "~/lib/session-cache",
@@ -39,7 +39,7 @@ function setOverviewScope(scope: "own" | "admins" | "all_staff") {
 
 // Mock fetch globally with URL-based routing
 const mockFetch = vi.fn();
-global.fetch = mockFetch;
+global.fetch = vi.fn(plainFetch(mockFetch));
 
 // Default mock responses for the API endpoints
 const defaultMockResponses = {
@@ -350,7 +350,8 @@ describe("SupervisionProvider", () => {
 
       expect(result.current.isLoadingGroups).toBe(true);
       expect(result.current.isLoadingSupervision).toBe(false);
-      expect(mockFetch).toHaveBeenCalledTimes(1);
+      // The staff portal sends after its session gate, a microtask later.
+      await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
       expect(mockFetch).toHaveBeenCalledWith(
         "/api/students/ogs-group-navigation",
         expect.any(Object),
@@ -2187,7 +2188,14 @@ describe("SupervisionProvider school switch (#3375)", () => {
       wrapper: ({ children }: { children: ReactNode }) => (
         <SupervisionProvider
           initial={{
-            groups: [{ id: "1", name: "Schule 1" }],
+            groups: [
+              {
+                id: "1",
+                name: "Schule 1",
+                via_substitution: false,
+                is_personal: true,
+              },
+            ],
             supervised: [],
             openRooms: [],
             overviewOk: false,
@@ -2219,7 +2227,14 @@ describe("SupervisionProvider school switch (#3375)", () => {
       wrapper: ({ children }: { children: ReactNode }) => (
         <SupervisionProvider
           initial={{
-            groups: [{ id: "1", name: "Schule A" }],
+            groups: [
+              {
+                id: "1",
+                name: "Schule A",
+                via_substitution: false,
+                is_personal: true,
+              },
+            ],
             supervised: [],
             openRooms: [],
             overviewOk: false,
@@ -2299,7 +2314,14 @@ describe("SupervisionProvider school switch (#3375)", () => {
     const { rerender } = render(
       <SupervisionProvider
         initial={{
-          groups: [{ id: "1", name: "Schule 1" }],
+          groups: [
+            {
+              id: "1",
+              name: "Schule 1",
+              via_substitution: false,
+              is_personal: true,
+            },
+          ],
           supervised: [],
           openRooms: [],
           overviewOk: false,
@@ -2316,7 +2338,14 @@ describe("SupervisionProvider school switch (#3375)", () => {
     rerender(
       <SupervisionProvider
         initial={{
-          groups: [{ id: "1", name: "Schule 1" }],
+          groups: [
+            {
+              id: "1",
+              name: "Schule 1",
+              via_substitution: false,
+              is_personal: true,
+            },
+          ],
           supervised: [],
           openRooms: [],
           overviewOk: false,
@@ -2420,7 +2449,14 @@ describe("SupervisionProvider school switch (#3375)", () => {
       wrapper: ({ children }: { children: ReactNode }) => (
         <SupervisionProvider
           initial={{
-            groups: [{ id: "1", name: "Bestehende Gruppe" }],
+            groups: [
+              {
+                id: "1",
+                name: "Bestehende Gruppe",
+                via_substitution: false,
+                is_personal: true,
+              },
+            ],
             supervised: [],
             openRooms: [],
             overviewOk: false,

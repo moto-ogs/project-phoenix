@@ -42,9 +42,10 @@ import {
   resendFailedEmails,
   withApiBase,
 } from "~/lib/parent-announcements-api";
+import type * as sharedContract from "~/lib/contract/shared.generated";
+import type { AnnouncementApiBase } from "~/lib/parent-announcements-api";
 import type {
   AnnouncementEmailAudience,
-  LetterChild,
   LetterRecipient,
 } from "~/lib/parent-announcements-api";
 import { SpinnerIcon } from "~/components/ui/icons";
@@ -116,7 +117,7 @@ export function LetterStatusPanel({
 }: {
   readonly announcementId: string;
   /** The routes of the portal that shows the letter; default the OGS's. */
-  readonly apiBase?: string;
+  readonly apiBase?: AnnouncementApiBase;
   /** Reminders and resends are only offered while the letter is live. */
   readonly canAct: boolean;
   readonly emailAudience: AnnouncementEmailAudience;
@@ -476,7 +477,11 @@ export function LetterStatusPanel({
   );
 }
 
-function ChildRow({ child }: { readonly child: LetterChild }) {
+function ChildRow({
+  child,
+}: {
+  readonly child: sharedContract.letterChildResponse;
+}) {
   return (
     <li className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
       <div className="min-w-0">

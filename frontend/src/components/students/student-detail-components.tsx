@@ -1,5 +1,6 @@
 "use client";
 
+import type * as studentsContract from "~/lib/contract/students.generated";
 import type {
   StudentEnrollmentExtraFieldGroup,
   changeHistoryEntry,
@@ -25,7 +26,6 @@ import {
   type StudentDayTimes,
 } from "~/lib/student-time-status";
 import { getDayPlanningNotComingLabel } from "~/lib/day-planning-helper";
-import type { SupervisorContact } from "~/lib/student-helpers";
 import {
   attendanceActorLabel,
   type AttendanceActor,
@@ -723,7 +723,7 @@ function TodayTimeStatusInlineRow({
 // =============================================================================
 
 interface SupervisorsCardProps {
-  supervisors: SupervisorContact[];
+  supervisors: studentsContract.SupervisorContact[];
   studentName: string;
 }
 
@@ -754,7 +754,7 @@ export function SupervisorsCard({
 }
 
 interface SupervisorItemProps {
-  supervisor: SupervisorContact;
+  supervisor: studentsContract.SupervisorContact;
   studentName: string;
   showDivider: boolean;
 }

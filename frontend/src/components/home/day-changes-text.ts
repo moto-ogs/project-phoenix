@@ -276,6 +276,33 @@ function classDismissalText(change: DayChange): string {
   return `Bei ${klass} endet der Unterricht heute um ${time} Uhr.`;
 }
 
+/** Der Titel eines Termins in Anführungszeichen, ohne Titel „Ein Termin“. */
+function appointmentName(change: DayChange): string {
+  const title = change.appointment?.title.trim();
+  return title ? `„${title}“` : "Ein Termin";
+}
+
+function appointmentCancelledText(change: DayChange): string {
+  return `${appointmentName(change)} fällt heute aus.`;
+}
+
+/**
+ * Ein Termin heute an einem anderen Ort oder zu einer anderen Zeit (#7663).
+ * Die neue Uhrzeit steht unter dem Satz, der neue Ort im Satz.
+ */
+function appointmentChangedText(change: DayChange): string {
+  const name = appointmentName(change);
+  const appointment = change.appointment;
+  const location = appointment?.location?.trim();
+  if (appointment?.locationChanged) {
+    const where = location ? ` Neuer Ort: ${location}.` : "";
+    return appointment.timeChanged
+      ? `${name} ist heute zu einer anderen Zeit und an einem anderen Ort.${where}`
+      : `${name} ist heute an einem anderen Ort.${where}`;
+  }
+  return `${name} ist heute zu einer anderen Zeit.`;
+}
+
 /** Der Satz je Art. Eine unbekannte Art zeigt die Übersicht nicht. */
 const DAY_CHANGE_TEXTS: Readonly<
   Record<string, (change: DayChange) => string>
@@ -310,6 +337,11 @@ const DAY_CHANGE_TEXTS: Readonly<
   // Ausflug und Unterrichtsschluss einer Klasse (#7681).
   class_trip: classTripText,
   class_dismissal_changed: classDismissalText,
+  // Termine aus dem eigenen Kalender (#7663).
+  appointment_cancelled: appointmentCancelledText,
+  appointment_changed: appointmentChangedText,
+  // Nur die Kurzinfo (#7666); was es gibt, steht auf der Seite Speiseplan.
+  meal_plan_changed: () => "Der Speiseplan für heute wurde geändert.",
 };
 
 export function dayChangeText(change: DayChange): string | null {
@@ -372,6 +404,8 @@ const SOURCE_FAILURE_TEXTS: Readonly<Record<string, string>> = {
   closing_days: "Schließtage konnten gerade nicht geladen werden.",
   classes:
     "Änderungen am Unterrichtsschluss der Klassen konnten gerade nicht geladen werden.",
+  appointments: "Deine Termine konnten gerade nicht geladen werden.",
+  meal_plan: "Änderungen am Speiseplan konnten gerade nicht geladen werden.",
 };
 
 export function sourceFailureText(source: string): string {
@@ -421,6 +455,10 @@ export function dayChangeLinkHref(link: DayChangeLink | null): string | null {
       // Die Zeile ersetzt den Weg durch den Tagesplan der Person
       // (useDayPlanHref); das hier ist der Weg der Betreuung.
       return "/tagesplan";
+    case "calendar":
+      return "/calendar";
+    case "meal_plan":
+      return "/meal-plan";
     default:
       return null;
   }

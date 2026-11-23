@@ -55,6 +55,11 @@ function thread(id: string): InboxThread {
     student_id: "7",
     student_name: "Mia",
     guardian_name: `Eltern ${id}`,
+    audience: "team",
+    readers: {
+      guardian: { account_id: "g1", name: "Eltern" },
+      school: { kind: "all_staff", names: [], unnamed_count: 0 },
+    },
     unread_count: 1,
   };
 }
@@ -78,6 +83,7 @@ function detail(id: string, messages: Message[]): ThreadDetail {
     student_id: "7",
     student_name: "Mia",
     guardian_name: `Eltern ${id}`,
+    audience: "team",
     messages,
   };
 }

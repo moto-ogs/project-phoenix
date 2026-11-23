@@ -101,6 +101,38 @@ func (s *Service) ListAppointmentsVisibleToStaff(ctx context.Context, staffID in
 	return result, err
 }
 
+// ListStaffDayAppointments reads the staff member's appointments of the day
+// with their rules and the overrides that may reach it (#7903). The store
+// repeats an appointment for each of its overrides; the read folds them into
+// one value per appointment, in the store's order.
+func (s *Service) ListStaffDayAppointments(ctx context.Context, staffID int64, day appointments.Date) ([]appointments.StaffDayAppointment, error) {
+	if staffID <= 0 || day.IsZero() {
+		return nil, invalid("staff ID and a day are required")
+	}
+	var rows []appointments.StaffDayAppointment
+	err := s.runUnit(ctx, "list_staff_day_appointments", func(ctx context.Context, stats *domain.OperationStats) error {
+		var queryStats domain.OperationStats
+		var err error
+		rows, queryStats, err = s.store.ListStaffDayAppointments(ctx, staffID, day)
+		stats.Add(queryStats)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	result := make([]appointments.StaffDayAppointment, 0, len(rows))
+	at := map[int64]int{}
+	for _, row := range rows {
+		index, seen := at[row.Appointment.ID.Int64()]
+		if !seen {
+			index, at[row.Appointment.ID.Int64()] = len(result), len(result)
+			result = append(result, appointments.StaffDayAppointment{Appointment: row.Appointment, Rule: row.Rule, Overrides: []*appointments.AppointmentOccurrenceOverride{}})
+		}
+		result[index].Overrides = append(result[index].Overrides, row.Overrides...)
+	}
+	return result, nil
+}
+
 func (s *Service) ListStaffCancellationTombstones(ctx context.Context, staffID int64, since time.Time) (result []*appointments.Appointment, err error) {
 	if staffID <= 0 || since.IsZero() {
 		return nil, invalid("staff ID and tombstone cutoff are required")

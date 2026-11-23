@@ -148,7 +148,8 @@ func (s Store) Contract(ctx context.Context, organizationID, contractID int64, f
 		return ports.ContractRecord{}, err
 	}
 	record := ports.ContractRecord{Summary: summary.summary(), Version: current, Parties: []carecontract.Party{},
-		Concluded: summary.concluded(), EarlyStart: summary.EarlyStart}
+		Concluded: summary.concluded(), EarlyStart: summary.EarlyStart, RequestChildID: summary.RequestChildID,
+		UpdatedAt: summary.UpdatedAt}
 	for _, party := range parties {
 		record.Parties = append(record.Parties, carecontract.Party{
 			FirstName: party.FirstName, LastName: party.LastName, Email: party.Email, HasAccount: party.AccountID != nil,

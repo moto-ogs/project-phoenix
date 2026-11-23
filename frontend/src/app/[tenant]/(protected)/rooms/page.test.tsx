@@ -410,8 +410,8 @@ describe("RoomsPage", () => {
       expect(mockExportRoomSnapshot).toHaveBeenCalledWith({
         format: "pdf",
         title: "Wer ist wo",
-        room_ids: [1],
-        include_transit: true,
+        roomIds: ["1"],
+        includeTransit: true,
       });
     });
   });

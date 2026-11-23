@@ -27,8 +27,8 @@ import {
   listTrustedDevices,
   revokeTrustedDevice,
   type LoginScope,
-  type TrustedDeviceDTO,
 } from "~/lib/mfa-api";
+import type * as sharedContract from "~/lib/contract/shared.generated";
 
 const logger = createLogger({ component: "TrustedDevicesSection" });
 
@@ -117,16 +117,15 @@ export function TrustedDevicesSection({
   const { data: session } = useSession();
   const hasAccess = hasSessionAccess(session);
   const toast = useToast();
-  const [revokingId, setRevokingId] = useState<number | null>(null);
+  const [revokingId, setRevokingId] = useState<string | null>(null);
   // Entfernen läuft erst nach der Rückfrage (Bauart 2 Regel 6, #3109); ein
   // Fehler bleibt im Dialog stehen. Ladefehler stehen vor Ort mit
   // Wiederholen, nie als leere Liste (#2517).
-  const [revokeTarget, setRevokeTarget] = useState<TrustedDeviceDTO | null>(
-    null,
-  );
+  const [revokeTarget, setRevokeTarget] =
+    useState<sharedContract.TrustedDeviceDTO | null>(null);
   const revokeRef = useRef<HTMLParagraphElement>(null);
   const revokeErrors = useApiFormError(revokeRef);
-  const latestRevokeRef = useRef<(deviceId: number) => void>(() => undefined);
+  const latestRevokeRef = useRef<(deviceId: string) => void>(() => undefined);
 
   // The routes read the session cookie (#5005); the shared reader sends no
   // request without session access.
@@ -155,7 +154,7 @@ export function TrustedDevicesSection({
   const loadFailed = !devices && Boolean(failure);
 
   const handleRevoke = useCallback(
-    async (deviceId: number) => {
+    async (deviceId: string) => {
       if (!hasAccess) return;
       setRevokingId(deviceId);
       revokeErrors.clear();

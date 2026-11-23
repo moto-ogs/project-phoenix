@@ -27,11 +27,11 @@ import {
   getRequestSharing,
   setRequestSharing,
   type ParentRequestShareType,
-  type RequestSharingState,
 } from "~/lib/parent-api";
 import { SpinnerIcon } from "~/components/ui/icons";
 import { ChoiceTile } from "~/components/ui/choice-tile";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 interface RequestSharingControlProps {
   readonly studentId: string;
@@ -159,7 +159,9 @@ function useSharingState(
   };
 }
 
-function selectedRecipients(state: RequestSharingState | undefined): string[] {
+function selectedRecipients(
+  state: parentMeContract.requestSharingResponse | undefined,
+): string[] {
   return (state?.recipients ?? [])
     .filter((recipient) => recipient.selected)
     .map((recipient) => recipient.guardian_profile_id);
@@ -178,7 +180,7 @@ function useSharingSave({
   requestType: ParentRequestShareType;
   requestId: string;
   selected: string[];
-  saved: (state: RequestSharingState) => void;
+  saved: (state: parentMeContract.requestSharingResponse) => void;
   failed: (err: unknown) => void;
   enabled: boolean;
 }>) {
@@ -207,7 +209,7 @@ function SharingRecipients({
   toggle,
   t,
 }: Readonly<{
-  state: RequestSharingState;
+  state: parentMeContract.requestSharingResponse;
   selected: string[];
   saving: boolean;
   hint?: string;
@@ -298,7 +300,7 @@ function useRequestSharingControl(props: RequestSharingControlProps) {
   } = useApiFormError();
   const { mutate } = sharing;
   const saved = useCallback(
-    (next: RequestSharingState) => {
+    (next: parentMeContract.requestSharingResponse) => {
       void mutate(next, { revalidate: false });
       setOpen(false);
     },

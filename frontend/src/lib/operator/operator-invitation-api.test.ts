@@ -8,7 +8,12 @@ const { mockBffJson } = vi.hoisted(() => ({
   mockBffJson: vi.fn(),
 }));
 
-vi.mock("~/lib/bff-fetch", () => ({ bffJson: mockBffJson }));
+// The invitation steps without a session call the real bffJsonUncontracted
+// against the stubbed fetch.
+vi.mock("~/lib/bff-fetch", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/bff-fetch")>()),
+  bffJson: mockBffJson,
+}));
 
 // Must import after mocks
 import {
@@ -293,7 +298,11 @@ describe("acceptOperatorInvitation", () => {
   });
 
   it("sends POST with form data while the server supplies the token", async () => {
-    global.fetch = vi.fn().mockResolvedValue({ ok: true });
+    global.fetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ status: "success", data: { id: "5" } }), {
+        status: 201,
+      }),
+    );
 
     await acceptOperatorInvitation("flow-1", {
       displayName: "New Op",

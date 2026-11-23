@@ -16,6 +16,11 @@ const mocks = vi.hoisted(() => ({
   setAnalyticsContext: vi.fn(),
 }));
 
+// The staff session gate lets the request through; fetch gets the answer on.
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
 vi.mock("~/env.client", () => ({ clientEnv: mocks.env }));
 vi.mock("~/lib/demo-access", () => ({ isDemoBuild: () => mocks.demo }));
 vi.mock("~/lib/posthog-client", () => ({

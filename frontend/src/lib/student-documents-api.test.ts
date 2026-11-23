@@ -1,8 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mockSessionFetch = vi.hoisted(() => vi.fn());
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 
-vi.mock("./session-cache", () => ({ sessionFetch: mockSessionFetch }));
+const fetchMock = vi.fn();
+beforeEach(() => {
+  vi.stubGlobal("fetch", fetchMock);
+});
 
 import { studentDocumentsService } from "./student-documents-api";
 
@@ -34,7 +37,7 @@ describe("studentDocumentsService.list", () => {
   });
 
   it("maps the backend row to the frontend shape", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json(
         {
           data: {
@@ -49,7 +52,7 @@ describe("studentDocumentsService.list", () => {
 
     const result = await studentDocumentsService.list("42");
 
-    expect(mockSessionFetch).toHaveBeenCalledWith(
+    expect(fetchMock).toHaveBeenCalledWith(
       "/api/students/42/documents",
       expect.objectContaining({ method: "GET" }),
     );
@@ -75,7 +78,7 @@ describe("studentDocumentsService.list", () => {
   });
 
   it("maps an accident report with its status and version (#4771)", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json(
         {
           data: {
@@ -128,7 +131,7 @@ describe("studentDocumentsService.list", () => {
   });
 
   it("returns an empty list when the child has no documents", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json(
         { data: { student_id: "42", documents: [], visible_categories: [] } },
         { status: 200 },
@@ -142,7 +145,7 @@ describe("studentDocumentsService.list", () => {
   });
 
   it("throws when the list request fails", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       new Response(null, { status: 500, statusText: "Internal Server Error" }),
     );
 
@@ -162,12 +165,12 @@ describe("studentDocumentsService.upload", () => {
   // Setting Content-Type here would clobber the multipart boundary the
   // browser generates for a FormData body.
   it("posts multipart form data without Authorization or Content-Type", async () => {
-    mockSessionFetch.mockResolvedValueOnce(new Response(null, { status: 204 }));
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
 
     await studentDocumentsService.upload("42", pdf(), "attest");
 
-    expect(mockSessionFetch).toHaveBeenCalledTimes(1);
-    const [url, init] = mockSessionFetch.mock.calls[0] as [string, RequestInit];
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe("/api/students/42/documents");
     expect(init.method).toBe("POST");
     expect(init.headers).toBeUndefined();
@@ -181,7 +184,7 @@ describe("studentDocumentsService.upload", () => {
   // ADR 0006: the backend sentence is diagnosis only; the code is what the
   // display path reads.
   it("carries the code and request ID of a refused upload", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json(
         { error: "Datei zu groß.", code: "general.input", instance: "req-1" },
         { status: 400 },
@@ -196,7 +199,7 @@ describe("studentDocumentsService.upload", () => {
   });
 
   it("classifies a non-JSON body by its status", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       new Response("<html>502</html>", { status: 502 }),
     );
 
@@ -206,7 +209,7 @@ describe("studentDocumentsService.upload", () => {
   });
 
   it("reports a missing category permission as the permission class", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json({ error: "forbidden" }, { status: 403 }),
     );
 
@@ -222,19 +225,19 @@ describe("studentDocumentsService.delete", () => {
   });
 
   it("deletes through the proxy route", async () => {
-    mockSessionFetch.mockResolvedValueOnce(new Response(null, { status: 204 }));
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
 
     await expect(
       studentDocumentsService.delete("42", "91"),
     ).resolves.toBeUndefined();
-    expect(mockSessionFetch).toHaveBeenCalledWith(
+    expect(fetchMock).toHaveBeenCalledWith(
       "/api/students/42/documents/91",
       expect.objectContaining({ method: "DELETE" }),
     );
   });
 
   it("keeps the backend sentence out of the message", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json({ error: "Dokument nicht gefunden." }, { status: 404 }),
     );
 
@@ -246,9 +249,7 @@ describe("studentDocumentsService.delete", () => {
   });
 
   it("classifies a failed delete by its status", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
-      new Response("nope", { status: 500 }),
-    );
+    fetchMock.mockResolvedValueOnce(new Response("nope", { status: 500 }));
 
     await expect(
       studentDocumentsService.delete("42", "91"),
@@ -256,7 +257,7 @@ describe("studentDocumentsService.delete", () => {
   });
 
   it("reports a missing category permission as such", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json({ error: "forbidden" }, { status: 403 }),
     );
 

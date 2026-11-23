@@ -88,10 +88,14 @@ vi.mock("~/lib/logger", () => ({
 
 global.fetch = mockFetch as unknown as typeof fetch;
 
-vi.mock("~/lib/session-cache", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/lib/session-cache")>()),
-  sessionFetch: (await import("~/test/mocks/plain-session-fetch")).sessionFetch,
-}));
+vi.mock("~/lib/session-cache", async (importOriginal) => {
+  const plain = await import("~/test/mocks/plain-session-fetch");
+  return {
+    ...(await importOriginal<typeof import("~/lib/session-cache")>()),
+    requireTenantSession: plain.requireTenantSession,
+    renewTenantSession: plain.renewTenantSession,
+  };
+});
 
 /** A successful write without data, as the catalog proxy hands it on. */
 function noData() {

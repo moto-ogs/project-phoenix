@@ -31,27 +31,27 @@ const absencePriorityOrder = `CASE "staff_absence".absence_type WHEN 'sick' THEN
 
 type staffAbsenceRow struct {
 	bun.BaseModel     `bun:"table:active.staff_absences,alias:staff_absence"`
-	ID                int64        `bun:"id,pk,autoincrement"`
-	TenantID          int64        `bun:"tenant_id,notnull"`
-	StaffID           int64        `bun:"staff_id,notnull"`
-	AbsenceType       string       `bun:"absence_type,notnull"`
-	AbsenceTypeID     *int64       `bun:"absence_type_id"`
-	DateStart         calendarDate `bun:"date_start,notnull,type:date"`
-	DateEnd           calendarDate `bun:"date_end,notnull,type:date"`
-	HalfDay           bool         `bun:"half_day,notnull,default:false"`
-	StartHalfDay      bool         `bun:"start_half_day,notnull,default:false"`
-	EndHalfDay        bool         `bun:"end_half_day,notnull,default:false"`
-	Note              string       `bun:"note"`
-	Status            string       `bun:"status,notnull,default:'reported'"`
-	ApprovedBy        *int64       `bun:"approved_by"`
-	ApprovedAt        *time.Time   `bun:"approved_at"`
-	CreatedBy         int64        `bun:"created_by,notnull"`
-	WorkingDays       *float64     `bun:"working_days"`
-	DecisionNote      string       `bun:"decision_note"`
-	RequestedAt       time.Time    `bun:"requested_at,notnull"`
-	SubstituteStaffID *int64       `bun:"substitute_staff_id"`
-	CreatedAt         time.Time    `bun:"created_at,nullzero,notnull"`
-	UpdatedAt         time.Time    `bun:"updated_at,nullzero,notnull"`
+	ID                int64        `bun:"id,pk,autoincrement" json:"id"`
+	TenantID          int64        `bun:"tenant_id,notnull" json:"tenant_id"`
+	StaffID           int64        `bun:"staff_id,notnull" json:"staff_id"`
+	AbsenceType       string       `bun:"absence_type,notnull" json:"absence_type"`
+	AbsenceTypeID     *int64       `bun:"absence_type_id" json:"absence_type_id"`
+	DateStart         calendarDate `bun:"date_start,notnull,type:date" json:"date_start"`
+	DateEnd           calendarDate `bun:"date_end,notnull,type:date" json:"date_end"`
+	HalfDay           bool         `bun:"half_day,notnull,default:false" json:"half_day"`
+	StartHalfDay      bool         `bun:"start_half_day,notnull,default:false" json:"start_half_day"`
+	EndHalfDay        bool         `bun:"end_half_day,notnull,default:false" json:"end_half_day"`
+	Note              string       `bun:"note" json:"note"`
+	Status            string       `bun:"status,notnull,default:'reported'" json:"status"`
+	ApprovedBy        *int64       `bun:"approved_by" json:"approved_by"`
+	ApprovedAt        *time.Time   `bun:"approved_at" json:"approved_at"`
+	CreatedBy         int64        `bun:"created_by,notnull" json:"created_by"`
+	WorkingDays       *float64     `bun:"working_days" json:"working_days"`
+	DecisionNote      string       `bun:"decision_note" json:"decision_note"`
+	RequestedAt       time.Time    `bun:"requested_at,notnull" json:"requested_at"`
+	SubstituteStaffID *int64       `bun:"substitute_staff_id" json:"substitute_staff_id"`
+	CreatedAt         time.Time    `bun:"created_at,nullzero,notnull" json:"created_at"`
+	UpdatedAt         time.Time    `bun:"updated_at,nullzero,notnull" json:"updated_at"`
 }
 
 type staffAbsenceTypeRow struct {

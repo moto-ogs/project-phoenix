@@ -32,7 +32,7 @@ func RouteContracts() []common.RouteContract {
 		Response: daychangesview.Overview{},
 		Enums: []common.EnumContract{
 			{Type: daychangesview.Section(""), Values: []string{string(daychangesview.SectionYou), string(daychangesview.SectionSchool)}},
-			{Type: daychangesview.Source(""), Values: []string{string(daychangesview.SourceStaff), string(daychangesview.SourceChildren), string(daychangesview.SourceNotices), string(daychangesview.SourceClosingDays), string(daychangesview.SourceActivities), string(daychangesview.SourceClasses)}},
+			{Type: daychangesview.Source(""), Values: []string{string(daychangesview.SourceStaff), string(daychangesview.SourceChildren), string(daychangesview.SourceNotices), string(daychangesview.SourceClosingDays), string(daychangesview.SourceActivities), string(daychangesview.SourceClasses), string(daychangesview.SourceAppointments), string(daychangesview.SourceMealPlan)}},
 			{Type: daychangesview.SourceState(""), Values: []string{string(daychangesview.SourceLoaded), string(daychangesview.SourceFailed)}},
 			{Type: daychangesview.Kind(""), Values: []string{
 				string(daychangesview.KindStaffAbsent), string(daychangesview.KindStaffAbsentCount),
@@ -48,6 +48,8 @@ func RouteContracts() []common.RouteContract {
 				string(daychangesview.KindBlockStaffAbsent), string(daychangesview.KindBlockSubstitution),
 				string(daychangesview.KindBlockChangeCount),
 				string(daychangesview.KindClassTrip), string(daychangesview.KindClassDismissalChanged),
+				string(daychangesview.KindAppointmentCancelled), string(daychangesview.KindAppointmentChanged),
+				string(daychangesview.KindMealPlanChanged),
 			}},
 			{Type: daychangesview.ChildStatus(""), Values: []string{string(daychangesview.ChildSick), string(daychangesview.ChildExcused)}},
 			{Type: daychangesview.PersonRole(""), Values: []string{
@@ -59,7 +61,7 @@ func RouteContracts() []common.RouteContract {
 				string(daychangesview.LinkStaffList), string(daychangesview.LinkGroupHandovers),
 				string(daychangesview.LinkOwnShiftPlan), string(daychangesview.LinkShiftPlan), string(daychangesview.LinkStudent),
 				string(daychangesview.LinkStaffNotices), string(daychangesview.LinkCalendarPeriods), string(daychangesview.LinkDayPlan),
-				string(daychangesview.LinkSubstitutionPlan),
+				string(daychangesview.LinkSubstitutionPlan), string(daychangesview.LinkCalendar), string(daychangesview.LinkMealPlan),
 			}},
 			{Type: daychangesview.NoticePriority(""), Values: []string{
 				string(daychangesview.NoticeInfo), string(daychangesview.NoticeImportant),

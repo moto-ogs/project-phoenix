@@ -85,8 +85,9 @@ const SIDE_EFFECT_TARGETS: ReadonlySet<string> = new Set([
   '[data-setup-tour="student-submit"]',
   '[data-setup-tour="guardian-submit"]',
   '[data-setup-tour="student-import-submit"]',
-  // Das Menü neben einer Person: „Einladen“ verschickt die Einladung.
-  '[role="menu"]',
+  // Das Menü neben einer Person, oder am Handy ihr Knopf „Einladen“:
+  // „Einladen“ verschickt die Einladung.
+  SETUP_TOURS.guardians!.stops.at(-1)!.target,
 ]);
 
 /** Texte der Sprechblase, wenn die Stelle fehlt (Wizards, setup-tours.ts). */
@@ -463,6 +464,14 @@ async function walkTour(
       }, `${label}: Die markierte Stelle lässt sich nicht anklicken.`).toPass({
         timeout: 30_000,
       });
+      // Am Handy zeigt die Station auf den Auslöser eines Blatts (#7799).
+      // Die Person öffnet es und wählt darin den Eintrag.
+      if (mobile && stop.mobileTarget !== undefined) {
+        await page
+          .locator(`${stop.target} >> visible=true`)
+          .first()
+          .click({ timeout: 10_000 });
+      }
       if (stop.nav && navHref) await expectNavigation(page, label, navHref);
     } else {
       await bubble.getByRole("button", { name: /^(Weiter|Fertig)$/ }).click();

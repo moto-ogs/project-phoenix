@@ -10,6 +10,10 @@ vi.mock("next-auth/react", () => ({
     status: "authenticated",
   }),
 }));
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
 vi.mock("~/lib/tenant-context", () => ({
   useTenantSlugSafe: () => "school-a",
 }));

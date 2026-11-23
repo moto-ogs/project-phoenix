@@ -39,12 +39,12 @@ import {
   downloadMySharedDocument,
   listMyDocuments,
   type ParentDocument,
-  type ParentSharedDocument,
 } from "~/lib/parent-api";
 import { careContractsConcept } from "~/lib/concepts/careContracts";
 import { documentsConcept } from "~/lib/concepts/documents";
 import { parentPath } from "~/lib/parent-url";
 import type { MotoConcept } from "~/lib/moto-concepts";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 /** The title of each kind of letter in the inbox (#4690). */
 const DOCUMENT_TITLES = {
@@ -77,7 +77,7 @@ type InboxEntry =
   | {
       readonly type: "shared";
       readonly at: string;
-      readonly document: ParentSharedDocument;
+      readonly document: parentMeContract.SharedDocumentResponse;
     };
 
 /** The failed source of the inbox, as the catalog object names it. */
@@ -90,7 +90,7 @@ const FAILED_OBJECTS = {
 
 function inboxEntries(
   documents: readonly ParentDocument[],
-  shared: readonly ParentSharedDocument[],
+  shared: readonly parentMeContract.SharedDocumentResponse[],
 ): InboxEntry[] {
   return [
     ...documents.map((document): InboxEntry => ({
@@ -449,7 +449,7 @@ function fileKind(contentType: string): string {
 /** A document a Träger released for the parents (#4692). */
 function ParentSharedDocumentCard({
   document,
-}: Readonly<{ document: ParentSharedDocument }>) {
+}: Readonly<{ document: parentMeContract.SharedDocumentResponse }>) {
   const t = useTranslations("parentDocuments");
   const locale = useLocale();
   const kind = fileKind(document.content_type);

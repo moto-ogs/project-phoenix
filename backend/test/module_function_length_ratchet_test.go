@@ -77,7 +77,6 @@ var moduleFuncLenAllowlist = map[string]int{
 	// Lowered by #7808: the cross-tenant visitor read left the presence wiring.
 	"api/active_test_helpers.go:buildActiveTestModule":            181,
 	"api/auth_test_helpers.go:NewAuthTestModule":                  164,
-	"api/calendar_test_helpers.go:NewCalendarTestModule":          63,
 	"api/guardian_invitation_test_helpers.go:lifecycleTestModule": 61,
 	"api/guardians_composition.go:NewGuardiansResource":           91,
 	"api/import_test_helpers.go:NewImportTestModuleWithOwners":    80,

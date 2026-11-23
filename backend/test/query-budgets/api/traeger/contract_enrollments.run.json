@@ -1,0 +1,7 @@
+{
+  "scenario": "api.traeger.contract_enrollments.run",
+  "max": 72,
+  "exact": false,
+  "description": "workflows/contractenrollment — POST /traeger/contract-enrollments/ (#7760, ADR 0309 section 4) that enrolls\none child without a coming pickup exception and binds its contract: the statements of the preview (with the hold of the school\nas one of the Träger), the\nsilent enrollment under the approval gates and the binding in a second Träger transaction. The workflow\nand Enrollment's own statements stay flat as children grow; Care Plan's per-child building blocks of an\napproval add an exact residual the test asserts (20 per child here, ADR 0309 section 2).",
+  "route": "POST /traeger/contract-enrollments/"
+}

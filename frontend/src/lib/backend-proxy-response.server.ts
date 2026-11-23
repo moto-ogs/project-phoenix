@@ -3,6 +3,7 @@ import { problemBody, problemTitle } from "./api-error";
 import { applyPrivateNoStore } from "./private-no-store";
 import { safeProblemExtensions } from "./api-response-error.server";
 import { requestInstance } from "./request-id";
+import { successResponse } from "./route-wrapper-utils.server";
 
 /**
  * The body of a backend fetch response, to hand on in a new Response.
@@ -49,6 +50,27 @@ export function forwardBackendResponse(
       : forwardedBody(response),
     { status: response.status, headers },
   );
+}
+
+/**
+ * A backend success the BFF answers in its own `{ status: "success", data }`
+ * (#2353, #7806): for a step whose backend route answers without the
+ * envelope (`plain`). A 204 stays bodyless; errors go through
+ * forwardBackendResponse.
+ */
+export async function envelopedBackendSuccess(
+  response: Response,
+  request?: Request,
+): Promise<NextResponse> {
+  if (response.status === 204) return forwardBackendResponse(response, request);
+  const text = await response.text();
+  const data: unknown = text ? JSON.parse(text) : null;
+  const headers = new Headers();
+  applyPrivateNoStore(headers);
+  return NextResponse.json(successResponse(data), {
+    status: response.status,
+    headers,
+  });
 }
 
 function sanitizedBackendErrorBody(

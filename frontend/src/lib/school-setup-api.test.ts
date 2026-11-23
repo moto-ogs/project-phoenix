@@ -1,10 +1,16 @@
-import { describe, expect, it, vi } from "vitest";
-import * as sessionCache from "./session-cache";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fetchSchoolSetup, mapSchoolSetupState } from "./school-setup-api";
+
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
+
+const fetchMock = vi.fn<typeof fetch>();
+beforeEach(() => {
+  vi.stubGlobal("fetch", fetchMock);
+});
 
 describe("fetchSchoolSetup", () => {
   it("refuses a state without steps instead of showing 0 of 0", async () => {
-    vi.spyOn(sessionCache, "sessionFetch").mockResolvedValue(
+    fetchMock.mockResolvedValue(
       new Response(JSON.stringify({ data: { status: "success", data: {} } }), {
         status: 200,
       }),

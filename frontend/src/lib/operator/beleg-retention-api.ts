@@ -161,13 +161,6 @@ export interface BelegRetentionOverview {
   readonly evaluatedOn: string | null;
 }
 
-export type RecordInstructionRequest =
-  operatorOrganizationsContract.instructionRequest;
-export type RecordSuspensionRequest =
-  operatorOrganizationsContract.suspensionRequest;
-export type RecordClarificationReviewRequest =
-  operatorOrganizationsContract.clarificationReviewRequest;
-
 export function mapBelegRetentionOverview(
   wire: operatorOrganizationsContract.BelegRetentionOverview,
 ): BelegRetentionOverview {
@@ -253,7 +246,7 @@ export const belegRetentionService = {
   },
   async recordInstruction(
     orgId: string,
-    data: RecordInstructionRequest,
+    data: operatorOrganizationsContract.instructionRequest,
   ): Promise<void> {
     await bffJson(
       "platform",
@@ -263,7 +256,7 @@ export const belegRetentionService = {
   },
   async recordSuspension(
     orgId: string,
-    data: RecordSuspensionRequest,
+    data: operatorOrganizationsContract.suspensionRequest,
   ): Promise<void> {
     await bffJson(
       "platform",
@@ -273,7 +266,7 @@ export const belegRetentionService = {
   },
   async recordClarificationReview(
     orgId: string,
-    data: RecordClarificationReviewRequest,
+    data: operatorOrganizationsContract.clarificationReviewRequest,
   ): Promise<void> {
     await bffJson(
       "platform",

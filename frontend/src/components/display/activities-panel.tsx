@@ -1,9 +1,6 @@
 "use client";
 
-import type {
-  DashboardRunningActivity,
-  DashboardUpcomingActivity,
-} from "~/lib/display-api";
+import type * as displayContract from "~/lib/contract/display.generated";
 import { LOCATION_COLORS } from "~/lib/location-helper";
 import { InsetPanel } from "~/components/ui/inset-panel";
 import { SectionCard } from "~/components/ui/section-card";
@@ -11,8 +8,8 @@ import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 import { activitiesConcept } from "~/lib/concepts/activities";
 
 interface ActivitiesPanelProps {
-  readonly running: DashboardRunningActivity[];
-  readonly upcoming: DashboardUpcomingActivity[];
+  readonly running: displayContract.RunningActivity[];
+  readonly upcoming: displayContract.UpcomingActivity[];
 }
 
 export function ActivitiesPanel({ running, upcoming }: ActivitiesPanelProps) {

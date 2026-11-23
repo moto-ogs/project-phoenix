@@ -20,6 +20,8 @@ function render(ui: ReactElement) {
   return rtlRender(ui, { wrapper: ToastProvider });
 }
 
+import { plainResponse } from "~/test/mocks/plain-session-fetch";
+
 vi.mock(
   "~/lib/session-cache",
   () => import("~/test/mocks/plain-session-fetch"),
@@ -358,42 +360,44 @@ describe("OpeningBalanceImportPage", () => {
   it("zeigt gespeicherte Zeilen und die blockierende Zeile bei import_batch_failed", async () => {
     (global.fetch as ReturnType<typeof vi.fn>)
       .mockResolvedValueOnce(previewResponse())
-      .mockResolvedValueOnce({
-        ok: false,
-        json: () =>
-          Promise.resolve({
-            status: 409,
-            detail: "import batch failed",
-            code: "import.import_batch_failed",
-            details: {
-              result: {
-                total_rows: 205,
-                created_count: 100,
-                updated_count: 0,
-                error_count: 1,
-                warning_count: 0,
-                errors: [
-                  {
-                    row_number: 152,
-                    data: {
-                      personnel_number: "1003",
-                      first_name: "Clara",
-                      last_name: "Weber",
-                    },
-                    errors: [
-                      {
-                        field: "create",
-                        message: "Anlegen fehlgeschlagen",
-                        code: "creation_failed",
-                        severity: "error",
+      .mockImplementationOnce(() =>
+        plainResponse({
+          ok: false,
+          json: () =>
+            Promise.resolve({
+              status: 409,
+              detail: "import batch failed",
+              code: "import.import_batch_failed",
+              details: {
+                result: {
+                  total_rows: 205,
+                  created_count: 100,
+                  updated_count: 0,
+                  error_count: 1,
+                  warning_count: 0,
+                  errors: [
+                    {
+                      row_number: 152,
+                      data: {
+                        personnel_number: "1003",
+                        first_name: "Clara",
+                        last_name: "Weber",
                       },
-                    ],
-                  },
-                ],
+                      errors: [
+                        {
+                          field: "create",
+                          message: "Anlegen fehlgeschlagen",
+                          code: "creation_failed",
+                          severity: "error",
+                        },
+                      ],
+                    },
+                  ],
+                },
               },
-            },
-          }),
-      });
+            }),
+        }),
+      );
 
     render(<OpeningBalanceImportPage />);
     fillParams();

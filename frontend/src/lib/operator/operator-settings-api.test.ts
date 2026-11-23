@@ -1,14 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Hoist mocks so vi.mock() below can reference them
-const { mockBffJson, mockUncontracted } = vi.hoisted(() => ({
+const { mockBffJson } = vi.hoisted(() => ({
   mockBffJson: vi.fn(),
-  mockUncontracted: vi.fn(),
 }));
 
 vi.mock("~/lib/bff-fetch", () => ({
   bffJson: mockBffJson,
-  bffJsonUncontracted: mockUncontracted,
 }));
 
 // Import after mocks are set up
@@ -102,7 +100,7 @@ describe("operator-settings-api", () => {
 
   describe("setOperatorSettingValue", () => {
     it("resolves on success", async () => {
-      mockUncontracted.mockResolvedValue(undefined);
+      mockBffJson.mockResolvedValue(undefined);
 
       await expect(
         setOperatorSettingValue(
@@ -111,11 +109,13 @@ describe("operator-settings-api", () => {
           "18:30",
         ),
       ).resolves.toBeUndefined();
-      expect(mockUncontracted).toHaveBeenCalledWith(
+      expect(mockBffJson).toHaveBeenCalledWith(
         "platform",
-        "PUT",
-        `/api/operator/provisioning/schools/${SCHOOL_ID}/settings/values/operations.session_end_time`,
-        { body: { value: "18:30" } },
+        "PUT /operator/schools/{id}/settings/values/{key}",
+        {
+          params: { id: SCHOOL_ID, key: "operations.session_end_time" },
+          body: { value: "18:30" },
+        },
       );
     });
 
@@ -128,7 +128,7 @@ describe("operator-settings-api", () => {
       ["server", new ApiError("boom", 500)],
       ["network", new Error("fetch failed")],
     ])("rethrows the %s error unchanged", async (_, error) => {
-      mockUncontracted.mockRejectedValue(error);
+      mockBffJson.mockRejectedValue(error);
 
       await expect(
         setOperatorSettingValue(SCHOOL_ID, "foo.bar", "x"),
@@ -138,15 +138,15 @@ describe("operator-settings-api", () => {
 
   describe("resetOperatorSettingValue", () => {
     it("resolves on success", async () => {
-      mockUncontracted.mockResolvedValue(undefined);
+      mockBffJson.mockResolvedValue(undefined);
 
       await expect(
         resetOperatorSettingValue(SCHOOL_ID, "foo.bar"),
       ).resolves.toBeUndefined();
-      expect(mockUncontracted).toHaveBeenCalledWith(
+      expect(mockBffJson).toHaveBeenCalledWith(
         "platform",
-        "DELETE",
-        `/api/operator/provisioning/schools/${SCHOOL_ID}/settings/values/foo.bar`,
+        "DELETE /operator/schools/{id}/settings/values/{key}",
+        { params: { id: SCHOOL_ID, key: "foo.bar" } },
       );
     });
 
@@ -154,7 +154,7 @@ describe("operator-settings-api", () => {
       ["server", new ApiError("boom", 500)],
       ["network", new Error("network down")],
     ])("rethrows the %s error unchanged", async (_, error) => {
-      mockUncontracted.mockRejectedValue(error);
+      mockBffJson.mockRejectedValue(error);
 
       await expect(
         resetOperatorSettingValue(SCHOOL_ID, "foo.bar"),

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -9,18 +10,21 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { uploadMessageAttachment } from "~/lib/message-attachments";
-import type { MessageAttachment } from "~/lib/message-attachments";
+import {
+  PARENT_MESSAGE_ATTACHMENTS,
+  type MessageAttachment,
+  type MessageAttachmentRoutes,
+} from "~/lib/message-attachments";
 import { AttachmentViewer } from "~/components/ui/attachment-viewer";
 import { ChatBubble } from "./chat-bubble";
 import { MessageComposer } from "./message-composer";
 
-vi.mock("~/lib/message-attachments", async (original) => ({
-  ...(await original<typeof import("~/lib/message-attachments")>()),
-  uploadMessageAttachment: vi.fn(),
-}));
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
 
-const upload = vi.mocked(uploadMessageAttachment);
+const upload = vi.fn<MessageAttachmentRoutes["upload"]>();
 
 const PHOTO: MessageAttachment = {
   id: "11",
@@ -47,7 +51,7 @@ function Composer({
       onChange={setValue}
       onSend={onSend}
       sending={false}
-      attachments={{ uploadUrl: "/api/messages/attachments" }}
+      attachments={{ upload }}
     />
   );
 }
@@ -73,7 +77,6 @@ describe("Anhänge im Eingabefeld (#6685)", () => {
     );
 
     expect(upload).toHaveBeenCalledWith(
-      "/api/messages/attachments",
       expect.objectContaining({ name: "ausflug.png" }),
     );
     await waitFor(() => expect(send).toBeEnabled());
@@ -134,7 +137,7 @@ describe("Anhänge im Eingabefeld (#6685)", () => {
         onSend={vi.fn()}
         sending={false}
         attachments={{
-          uploadUrl: "/api/messages/attachments",
+          upload,
           onOpenAttachment,
         }}
       />,
@@ -205,7 +208,10 @@ describe("Anhänge im Eingabefeld (#6685)", () => {
 });
 
 describe("Anhänge in der Sprechblase (#6685)", () => {
-  const url = (id: string) => `/files/${id}`;
+  const files = {
+    downloadUrl: (id: string) => `/files/${id}`,
+    loadFile: vi.fn<MessageAttachmentRoutes["loadFile"]>(),
+  };
 
   it("zeigt Fotos als Bilder und Dateien als Zeile zum Herunterladen", () => {
     render(
@@ -215,7 +221,7 @@ describe("Anhänge in der Sprechblase (#6685)", () => {
         senderName="OGS"
         createdAt="2026-08-16T06:50:00Z"
         attachments={[PHOTO, LIST]}
-        attachmentUrl={url}
+        attachmentFiles={files}
       />,
     );
     expect(screen.getByText("Fotos von heute")).toBeInTheDocument();
@@ -251,7 +257,7 @@ describe("Anhänge in der Sprechblase (#6685)", () => {
         senderName="OGS"
         createdAt="2026-08-16T06:50:00Z"
         attachments={[PHOTO, LIST]}
-        attachmentUrl={url}
+        attachmentFiles={PARENT_MESSAGE_ATTACHMENTS}
       />,
     );
     await user.click(
@@ -265,7 +271,7 @@ describe("Anhänge in der Sprechblase (#6685)", () => {
       "blob:pdf#view=FitH&navpanes=0",
     );
     expect(fetchSpy).toHaveBeenCalledWith(
-      "/files/12?inline=1",
+      "/api/messages/attachments/12/download?inline=1",
       expect.objectContaining({ method: "GET" }),
     );
     expect(
@@ -273,13 +279,79 @@ describe("Anhänge in der Sprechblase (#6685)", () => {
     ).toHaveAttribute("href", "blob:pdf");
     expect(
       within(viewer).getByRole("link", { name: "Herunterladen" }),
-    ).toHaveAttribute("href", "/files/12");
+    ).toHaveAttribute("href", "/api/messages/attachments/12/download");
     expect(
       within(viewer).getByRole("link", {
         name: "Herunterladen: bastelliste.pdf",
       }),
     ).toHaveAttribute("download", "bastelliste.pdf");
     fetchSpy.mockRestore();
+  });
+
+  it("behält ein geöffnetes PDF bei Chat-Updates und lädt bei einem neuen Loader neu", async () => {
+    const user = userEvent.setup();
+    const loadFile = vi
+      .fn<MessageAttachmentRoutes["loadFile"]>()
+      .mockResolvedValue(new Blob(["%PDF-1.7"]));
+    URL.createObjectURL = vi
+      .fn()
+      .mockReturnValueOnce("blob:first")
+      .mockReturnValueOnce("blob:second");
+    URL.revokeObjectURL = vi.fn();
+    const props = {
+      body: "Anhang",
+      own: false,
+      senderName: "OGS",
+      createdAt: "2026-08-16T06:50:00Z",
+      attachments: [PHOTO, LIST],
+      attachmentFiles: { ...files, loadFile },
+    };
+    const { rerender, unmount } = render(<ChatBubble {...props} />);
+    await user.click(
+      screen.getByRole("button", { name: "Datei öffnen: bastelliste.pdf" }),
+    );
+    const frame = await screen.findByTitle("bastelliste.pdf");
+    expect(frame).toHaveAttribute("src", "blob:first#view=FitH&navpanes=0");
+    expect(loadFile).toHaveBeenCalledWith(LIST.id);
+
+    await act(async () => {
+      rerender(
+        <ChatBubble
+          {...props}
+          body="Aktualisierte Nachricht"
+          attachments={props.attachments.map((item) => ({ ...item }))}
+          attachmentFiles={{
+            ...props.attachmentFiles,
+            downloadUrl: (id) => `/files/${id}`,
+          }}
+        />,
+      );
+    });
+    expect(screen.getByTitle("bastelliste.pdf")).toBe(frame);
+    expect(frame).toHaveAttribute("src", "blob:first#view=FitH&navpanes=0");
+    expect(loadFile).toHaveBeenCalledTimes(1);
+    expect(URL.createObjectURL).toHaveBeenCalledTimes(1);
+    expect(URL.revokeObjectURL).not.toHaveBeenCalled();
+
+    const replacementLoader = vi
+      .fn<MessageAttachmentRoutes["loadFile"]>()
+      .mockResolvedValue(new Blob(["%PDF-1.7 updated"]));
+    rerender(
+      <ChatBubble
+        {...props}
+        attachmentFiles={{ ...files, loadFile: replacementLoader }}
+      />,
+    );
+    await waitFor(() =>
+      expect(screen.getByTitle("bastelliste.pdf")).toHaveAttribute(
+        "src",
+        "blob:second#view=FitH&navpanes=0",
+      ),
+    );
+    expect(replacementLoader).toHaveBeenCalledWith(LIST.id);
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:first");
+    unmount();
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:second");
   });
 
   it("bietet eine Word-Datei in der Ansicht zum Herunterladen an", async () => {
@@ -300,7 +372,7 @@ describe("Anhänge in der Sprechblase (#6685)", () => {
               "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
           },
         ]}
-        attachmentUrl={url}
+        attachmentFiles={files}
       />,
     );
     await user.click(
@@ -356,7 +428,7 @@ describe("Anhänge in der Sprechblase (#6685)", () => {
         senderName="Ich"
         createdAt="2026-08-16T06:50:00Z"
         attachments={[PHOTO, { ...PHOTO, id: "13", filename: "drachen.png" }]}
-        attachmentUrl={url}
+        attachmentFiles={files}
       />,
     );
     await user.click(

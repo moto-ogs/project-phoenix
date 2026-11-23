@@ -3,7 +3,7 @@
 // PDF or XLSX; "Drucken" is the PDF opened in a print dialog, not a second
 // rendering path.
 
-import { apiErrorFromResponse, transportFetch } from "~/lib/api-error";
+import { bffFile } from "~/lib/bff-fetch";
 import { planFilterQuery, type PlanFilter } from "~/lib/plan-filter";
 import {
   downloadBlob,
@@ -37,10 +37,10 @@ function filterBody(filter: PlanFilter | undefined): Record<string, string> {
   return filter ? planFilterQuery(filter) : {};
 }
 
-const ROUTES: Record<PlanExportPlan, string> = {
-  dienstplan: "/api/staff-shifts/export",
-  betreuungsplan: "/api/timetable/betreuungsplan/export",
-};
+const ROUTES = {
+  dienstplan: "POST /api/staff-shifts/export",
+  betreuungsplan: "POST /api/timetable/betreuungsplan/export",
+} as const satisfies Record<PlanExportPlan, string>;
 
 export interface PlanExportTemplateOption {
   id: PlanExportTemplate;
@@ -123,22 +123,22 @@ export async function exportPlan(
   }
 
   try {
-    const response = await transportFetch(ROUTES[plan], {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        from: request.from,
-        to: request.to,
-        template: request.template,
-        variant: request.variant,
-        ...filterBody(request.filter),
-        format,
-      }),
-    });
-
-    if (!response.ok) {
-      throw await apiErrorFromResponse(response, `${plan} export failed`);
-    }
+    const body = {
+      from: request.from,
+      to: request.to,
+      template: request.template,
+      variant: request.variant,
+      format,
+    };
+    const errorMessage = `${plan} export failed`;
+    // The Dienstplan export reads no filter; the Betreuungsplan export does.
+    const response =
+      plan === "dienstplan"
+        ? await bffFile("tenant", ROUTES.dienstplan, { body, errorMessage })
+        : await bffFile("tenant", ROUTES.betreuungsplan, {
+            body: { ...body, ...filterBody(request.filter) },
+            errorMessage,
+          });
 
     const blob = await response.blob();
     if (mode === "print") {

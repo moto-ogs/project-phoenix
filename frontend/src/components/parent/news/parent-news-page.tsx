@@ -12,11 +12,12 @@ import { useSWRAuth } from "~/lib/swr";
 import { parentKeys } from "~/lib/swr/parent-keys";
 import { PARENT_RESOURCE_OPTIONS } from "~/lib/hooks/use-parent-resources";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { type ParentAnnouncement, listAnnouncements } from "~/lib/parent-api";
+import { listAnnouncements } from "~/lib/parent-api";
 import { ParentPage, ParentPageHeader } from "~/components/parent/parent-page";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
-const NO_ITEMS: ParentAnnouncement[] = [];
+const NO_ITEMS: parentMeContract.AnnouncementResponse[] = [];
 
 /** Elternbriefe buendeln Mitteilungen, Umfragen und Elterninformationen. */
 export function ParentNewsPage() {
@@ -49,7 +50,7 @@ export function ParentNewsPage() {
   }, [items, requestedBrief]);
 
   const applyState = useCallback(
-    (id: string, patch: Partial<ParentAnnouncement>) => {
+    (id: string, patch: Partial<parentMeContract.AnnouncementResponse>) => {
       void mutate(
         (current) =>
           current?.map((item) =>
@@ -85,7 +86,9 @@ export function ParentNewsPage() {
     (item) => !isOutstandingAnnouncement(item),
   );
 
-  const renderItems = (group: readonly ParentAnnouncement[]) => (
+  const renderItems = (
+    group: readonly parentMeContract.AnnouncementResponse[],
+  ) => (
     <ul className="mt-3 space-y-3">
       {group.map((item) => (
         <li key={item.id}>

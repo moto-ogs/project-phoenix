@@ -3,6 +3,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
+import * as sessionCache from "~/lib/session-cache";
 import { pagedJson } from "~/test/mocks/plain-session-fetch";
 
 vi.mock(
@@ -40,6 +41,7 @@ describe("api.ts list clients", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
   describe("groupService.getGroups", () => {
@@ -60,7 +62,10 @@ describe("api.ts list clients", () => {
     ] as const)(
       "keeps code, details and request ID of a %s refusal (%s)",
       async (resource, status) => {
-        fetchMock.mockResolvedValue(
+        // A 401 renews the staff session once and repeats the request; the
+        // repeat is refused the same way.
+        vi.spyOn(sessionCache, "renewTenantSession").mockResolvedValue();
+        fetchMock.mockImplementation(async () =>
           json(
             {
               status,

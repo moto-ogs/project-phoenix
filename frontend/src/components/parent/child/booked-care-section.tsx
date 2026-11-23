@@ -27,12 +27,12 @@ import {
   getChildCareOfferings,
   getChildCareSchedule,
   submitOfferingChangeRequest,
-  type ChildCareOfferings,
   type OfferingChangesDisabledReason,
 } from "~/lib/parent-api";
 import { calendarConcept } from "~/lib/concepts/calendar";
 import { carePlanConcept } from "~/lib/concepts/carePlan";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 const DAY_KEY_TO_WEEKDAY: Record<string, number> = {
   mon: 1,
@@ -499,7 +499,9 @@ export function BookedCareSection({
 
 function isAutomaticallyDerivedAddition(
   line: NonNullable<
-    NonNullable<ChildCareOfferings["pending_request"]>["diff"]
+    NonNullable<
+      parentMeContract.CareOfferingsResponse["pending_request"]
+    >["diff"]
   >[number],
 ) {
   return (

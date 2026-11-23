@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const sessionFetch = vi.hoisted(() => vi.fn());
-vi.mock("./session-cache", () => ({ sessionFetch }));
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
+
+const fetchMock = vi.fn();
+beforeEach(() => {
+  vi.stubGlobal("fetch", fetchMock);
+});
 
 import { ApiError } from "./api-error";
 import { studentNotesService } from "./student-notes-api";
@@ -10,7 +14,7 @@ describe("studentNotesService errors", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("classifies a failed load by its status", async () => {
-    sessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       new Response(null, { status: 500, statusText: "Internal Server Error" }),
     );
 
@@ -20,7 +24,7 @@ describe("studentNotesService errors", () => {
   });
 
   it("does not expose a backend validation error when saving a note", async () => {
-    sessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json(
         {
           error: "invalid student note",
@@ -52,7 +56,7 @@ describe("studentNotesService activities", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("reads the child's activities for the note reference", async () => {
-    sessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json({
         data: {
           activities: [
@@ -67,14 +71,14 @@ describe("studentNotesService activities", () => {
       { id: "12", name: "Fußball-AG" },
       { id: "15", name: "Schach" },
     ]);
-    expect(sessionFetch).toHaveBeenCalledWith(
+    expect(fetchMock).toHaveBeenCalledWith(
       "/api/students/42/note-subjects",
       expect.objectContaining({ method: "GET" }),
     );
   });
 
   it("classifies a failed activities read by its status", async () => {
-    sessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       new Response(null, { status: 500, statusText: "Internal Server Error" }),
     );
 
@@ -84,7 +88,7 @@ describe("studentNotesService activities", () => {
   });
 
   it("sends the chosen activity as the note's reference", async () => {
-    sessionFetch.mockResolvedValueOnce(Response.json({ data: {} }));
+    fetchMock.mockResolvedValueOnce(Response.json({ data: {} }));
 
     await studentNotesService.create("42", {
       kind: "journal",
@@ -94,7 +98,7 @@ describe("studentNotesService activities", () => {
       activityGroupId: "12",
     });
 
-    const [, init] = sessionFetch.mock.calls[0] as [string, RequestInit];
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(JSON.parse(init.body as string)).toMatchObject({
       activity_group_id: "12",
       education_group_id: null,
@@ -107,7 +111,7 @@ describe("studentNotesService team notice revisions", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("sends the observed note IDs and exact announcement timestamps", async () => {
-    sessionFetch.mockResolvedValueOnce(Response.json({ data: [] }));
+    fetchMock.mockResolvedValueOnce(Response.json({ data: [] }));
     const informedAt = "2026-09-09T10:00:00.123456Z";
     await expect(
       studentNotesService.markTeamNoticesRead("42", [
@@ -115,7 +119,7 @@ describe("studentNotesService team notice revisions", () => {
       ]),
     ).resolves.toEqual([]);
 
-    expect(sessionFetch).toHaveBeenCalledWith(
+    expect(fetchMock).toHaveBeenCalledWith(
       "/api/students/42/team-notices/read",
       expect.objectContaining({
         method: "POST",

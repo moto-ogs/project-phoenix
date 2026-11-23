@@ -151,7 +151,7 @@ export function RolloverForm({
   };
 
   const excludedDetails = preview
-    ? Object.entries(preview.excluded_by_status)
+    ? Object.entries(preview.excluded_by_status ?? {})
         .map(
           ([status, count]) =>
             `${CHILD_STATUS_LABELS[status as ChildStatus] ?? status}: ${count}`,
@@ -159,7 +159,7 @@ export function RolloverForm({
         .join(" · ")
     : "";
   const reviewDetails = preview
-    ? Object.entries(preview.review_by_reason)
+    ? Object.entries(preview.review_by_reason ?? {})
         .map(
           ([reason, count]) =>
             `${PREVIEW_REVIEW_REASON_LABELS[reason] ?? reason}: ${count}`,
@@ -459,4 +459,5 @@ export function RolloverForm({
 const PREVIEW_REVIEW_REASON_LABELS: Record<string, string> = {
   grade_above_max: "Klassenstufe über der Höchstgrenze",
   no_grade_level: "Keine Klassenstufe hinterlegt",
+  no_guardian: "Keine Erziehungsberechtigten hinterlegt",
 };

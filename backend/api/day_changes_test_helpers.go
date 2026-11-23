@@ -11,6 +11,8 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	dayChangesHTTP "github.com/moto-ogs/project-phoenix/modules/daychangesview/http"
+	mealplanCompose "github.com/moto-ogs/project-phoenix/modules/mealplan/compose"
+	calendarAPI "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/http"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	timetableCompose "github.com/moto-ogs/project-phoenix/modules/timetable/compose"
 	timetableAPI "github.com/moto-ogs/project-phoenix/modules/timetable/http"
@@ -52,13 +54,17 @@ func NewDayChangesTestResource(db transactionruntime.Database, unit tenant.UnitO
 	if err != nil {
 		return nil, err
 	}
+	calendarAppointments, err := NewAppointments(db)
+	if err != nil {
+		return nil, err
+	}
 	classArrivals, err := owners.BuildClassArrivals(db, slog.Default())
 	if err != nil {
 		return nil, err
 	}
 	view, err := NewDayChanges(DayChangesSources{
 		Assignments: membership, ClassArrivals: classArrivals,
-		Caller: caller, Workforce: owners.MustNewWorkforce(db), Teachers: owners.NewGroupTeacherStaff(membership),
+		Caller: caller, Workforce: owners.MustNewWorkforce(db),
 		CarePlan: carePlan, Students: owners.MustNewPeopleDirectory(db), Blocks: blocks, BlockStaff: blockStaff,
 		Names: newDayChangesStaffNames(people), Groups: owners.NewSchoolStructureSuiteRepositories(db).Group,
 		// Without calendar periods every notice applies in every week; the
@@ -66,8 +72,10 @@ func NewDayChangesTestResource(db transactionruntime.Database, unit tenant.UnitO
 		Notices: timetableCompose.NewStaffNotices(timetableCompose.StaffNoticeDependencies{
 			DB: db.Pool(), Now: func() time.Time { return today.BerlinMidnight().Add(12 * time.Hour) },
 		}),
-		ClosingDays: owners.NewSchoolClosingDayReads(),
-		Today:       func() calendar.Date { return today }, Logger: slog.Default(),
+		ClosingDays:  owners.NewSchoolClosingDayReads(),
+		MealPlan:     mealplanCompose.NewMenuChanges(),
+		Appointments: dayChangesAppointmentsOf(calendarAppointments),
+		Today:        func() calendar.Date { return today }, Logger: slog.Default(),
 	})
 	if err != nil {
 		return nil, err
@@ -112,6 +120,49 @@ func NewDayChangesNoticeTestRouter(db transactionruntime.Database, tenantID int6
 			}
 		}
 	}
+}
+
+// DayChangesCalendarSignals drains what reached the two staff connections of
+// NewDayChangesCalendarTestRouter: the calendar_appointments_changed events of
+// the school and of the other school, and whether any carried content.
+type DayChangesCalendarSignals func() (own, other int, content bool)
+
+// NewDayChangesCalendarTestRouter serves the staff calendar routes under
+// /api/calendar (#7693), composed as NewCalendarTestModule composes them, with
+// the calendar's change port bound to Delivery's tenant signals as the root
+// binds it. The hub holds one staff connection of tenantID and one of
+// otherTenantID.
+func NewDayChangesCalendarTestRouter(db transactionruntime.Database, unit tenant.UnitOfWork, tenantID, otherTenantID int64) (chi.Router, DayChangesCalendarSignals, error) {
+	hub := realtime.NewHub(slog.Default())
+	own := &realtime.Client{Channel: make(chan realtime.Event, 64), SubscribedGroups: map[string]bool{}}
+	other := &realtime.Client{Channel: make(chan realtime.Event, 64), SubscribedGroups: map[string]bool{}}
+	hub.Register(own, tenantID, nil)
+	hub.Register(other, otherTenantID, nil)
+	module, err := newCalendarTestModule(db, unit, owners.NewCalendarAppointmentChanges(hub, slog.Default()))
+	if err != nil {
+		return nil, nil, err
+	}
+	router := calendarAPI.NewResource(module.Calendar, module.Calendar, slog.Default()).Router(TenantSessionChain)
+	drain := func(connection *realtime.Client) (count int, content bool) {
+		for {
+			select {
+			case event := <-connection.Channel:
+				if event.Type != realtime.EventCalendarAppointmentsChanged {
+					continue
+				}
+				count++
+				raw, err := json.Marshal(event.Data)
+				content = content || err != nil || string(raw) != "{}"
+			default:
+				return count, content
+			}
+		}
+	}
+	return router, func() (int, int, bool) {
+		ownCount, ownContent := drain(own)
+		otherCount, otherContent := drain(other)
+		return ownCount, otherCount, ownContent || otherContent
+	}, nil
 }
 
 // DayChangesClassDismissal writes a class-wide arrival exception of one

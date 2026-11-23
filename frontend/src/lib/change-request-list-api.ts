@@ -1,23 +1,32 @@
 import { ApiError } from "~/lib/api-error";
 import { bffJson } from "~/lib/bff-fetch";
 import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
+import { knownEnum, requiredEnum } from "~/lib/contract/known-enum";
 import type * as studentsContract from "~/lib/contract/students.generated";
 import { createLogger } from "~/lib/logger";
-import type {
-  StaffCareRequest,
-  StaffCareRequestHistoryEntry,
+import {
+  toStaffCareRequest,
+  toStaffCareRequestHistoryEntry,
+  type StaffCareRequest,
+  type StaffCareRequestHistoryEntry,
 } from "~/lib/care-request-review-api";
-import type {
-  StaffExcusedRequest,
-  StaffExcusedRequestHistoryEntry,
+import {
+  toStaffExcusedRequest,
+  toStaffExcusedRequestHistoryEntry,
+  type StaffExcusedRequest,
+  type StaffExcusedRequestHistoryEntry,
 } from "~/lib/excused-request-review-api";
-import type {
-  StaffMasterDataChange,
-  StaffMasterDataHistoryEntry,
+import {
+  toStaffMasterDataChange,
+  toStaffMasterDataHistoryEntry,
+  type StaffMasterDataChange,
+  type StaffMasterDataHistoryEntry,
 } from "~/lib/master-data-review-api";
-import type {
-  StaffOfferingRequest,
-  StaffOfferingRequestHistoryEntry,
+import {
+  toStaffOfferingRequest,
+  toStaffOfferingRequestHistoryEntry,
+  type StaffOfferingRequest,
+  type StaffOfferingRequestHistoryEntry,
 } from "~/lib/offering-request-review-api";
 
 const logger = createLogger({ component: "ChangeRequestListApi" });
@@ -26,9 +35,9 @@ const logger = createLogger({ component: "ChangeRequestListApi" });
  * Aggregierte Eltern-Anfragenliste (#2432): ein Endpunkt über die vier
  * Anfragearten (Stammdaten, Betreuungszeiten, Angebote, Abwesenheiten),
  * offen oder Historie, mit serverseitiger Namenssuche, Filtern und
- * Keyset-Pagination. Jedes Item trägt unter `data` die unveränderte
- * Art-Projektion, diskriminiert über `request_type` — die bestehenden
- * Entscheiden-Aufrufe der Art-APIs bleiben unverändert.
+ * Keyset-Pagination. Jedes Item trägt seine Art-Projektion im Feld seiner
+ * Art (`master_data`, `care_schedule`, …); der Client legt sie unter `data`
+ * ab, diskriminiert über `request_type` (#7882).
  */
 
 export type AggregatedRequestType =
@@ -45,20 +54,12 @@ export type AggregatedRequestType =
  * (#2436). Keine Anfrage: kein Status, keine Entscheidung, nur in der
  * Historie.
  */
-interface DirectCorrection {
-  readonly id: string;
-  readonly student_id: string;
-  readonly student_name: string;
-  readonly changed_at: string;
-  readonly changed_by_name: string;
-  readonly reason: string;
-  readonly diff: readonly {
-    readonly offering_id: string;
-    readonly label: string;
-    readonly old: string;
-    readonly new: string;
-  }[];
-}
+type DirectCorrection = Omit<
+  studentsContract.DirectCorrectionResponse,
+  "diff"
+> & {
+  readonly diff: readonly studentsContract.OfferingRequestDiffResponse[];
+};
 
 /**
  * Eine Anmeldungsänderung (#2435) ist `enrollmentContract.ChangeRequestReviewEntry`:
@@ -98,7 +99,11 @@ export type BulkIneligibleReason =
  */
 export type RequestReviewMetadata = Omit<
   studentsContract.Item,
-  "request_type" | "data" | "occurred_at" | "bulk_ineligible_reason"
+  | "request_type"
+  | "data"
+  | "occurred_at"
+  | "bulk_ineligible_reason"
+  | ParentRequestKind
 > & { readonly bulk_ineligible_reason?: BulkIneligibleReason };
 
 /** Eine Anmeldungsänderung als Zeile der gemeinsamen Liste. */
@@ -150,13 +155,18 @@ export type AggregatedHistoryRequest =
  */
 export type RequestReviewAccess = "admin" | "team" | "group_leader" | "none";
 
-export interface AggregatedRequestPage<T> {
+/**
+ * Eine Seite der Liste: die Zeilen als Sichttypen, `next_cursor` fehlt auf
+ * der letzten Seite und gilt nur für denselben Filtersatz, `review_access`
+ * kommt nur mit der offenen Liste.
+ */
+export type AggregatedRequestPage<T> = Pick<
+  studentsContract.Page,
+  "next_cursor"
+> & {
   readonly items: readonly T[];
-  /** Fehlt auf der letzten Seite. Nur für denselben Filtersatz gültig. */
-  readonly next_cursor?: string;
-  /** Nur in der offenen Liste. */
   readonly review_access?: RequestReviewAccess;
-}
+};
 
 export interface AggregatedRequestParams {
   readonly search?: string;
@@ -176,11 +186,10 @@ export interface AggregatedRequestParams {
   readonly cursor?: string;
 }
 
-function listQuery(view: "open" | "history", params: AggregatedRequestParams) {
+function listQuery(params: AggregatedRequestParams) {
   const join = (values?: readonly string[]) =>
     values && values.length > 0 ? values.join(",") : undefined;
   return {
-    view,
     search: params.search?.trim() || undefined,
     student_id: params.studentId || undefined,
     types: join(params.types),
@@ -191,59 +200,187 @@ function listQuery(view: "open" | "history", params: AggregatedRequestParams) {
   };
 }
 
-// The contract types `data` of an item as unknown: its shape follows
-// `request_type`, which the union types above spell out.
-function refinedPage<T>(page: {
-  items: readonly unknown[] | null;
-  next_cursor?: string;
-  review_access?: string;
-}): AggregatedRequestPage<T> {
-  return {
-    items: (page.items ?? []) as readonly T[],
-    next_cursor: page.next_cursor,
-    review_access: page.review_access as RequestReviewAccess | undefined,
-  };
+const REVIEW_ACCESS = ["admin", "team", "group_leader", "none"] as const;
+const BULK_INELIGIBLE_REASONS = [
+  "past",
+  "stale",
+  "conflict",
+  "single_only",
+  "child_unavailable",
+  "access_revoked",
+] as const satisfies readonly BulkIneligibleReason[];
+
+/** The projection of a row's kind; a row without it breaks the contract. */
+function projection<T>(value: T | undefined, kind: string): T {
+  if (value === undefined) {
+    throw new Error(`contract: change request row without its ${kind}`);
+  }
+  return value;
 }
 
-async function fetchPage<T>(
-  view: "open" | "history",
-  params: AggregatedRequestParams,
-): Promise<AggregatedRequestPage<T>> {
+function openRequest(item: studentsContract.Item): AggregatedOpenRequest {
+  const {
+    request_type,
+    data: _data,
+    master_data,
+    care_schedule,
+    offering,
+    excused,
+    bulk_ineligible_reason,
+    ...meta
+  } = item;
+  const row = {
+    ...meta,
+    bulk_ineligible_reason: knownEnum(
+      BULK_INELIGIBLE_REASONS,
+      bulk_ineligible_reason,
+    ),
+  };
+  const kind = requiredEnum(PARENT_REQUEST_KINDS, request_type, "request_type");
+  switch (kind) {
+    case "master_data":
+      return {
+        ...row,
+        request_type: kind,
+        data: toStaffMasterDataChange(projection(master_data, kind)),
+      };
+    case "care_schedule":
+      return {
+        ...row,
+        request_type: kind,
+        data: toStaffCareRequest(projection(care_schedule, kind)),
+      };
+    case "offering":
+      return {
+        ...row,
+        request_type: kind,
+        data: toStaffOfferingRequest(projection(offering, kind)),
+      };
+    case "excused":
+      return {
+        ...row,
+        request_type: kind,
+        data: toStaffExcusedRequest(projection(excused, kind)),
+      };
+  }
+}
+
+const HISTORY_KINDS = [
+  "master_data",
+  "care_schedule",
+  "offering",
+  "excused",
+  "direct_correction",
+] as const;
+
+function historyRequest(
+  item: studentsContract.HistoryItem,
+): AggregatedHistoryRequest {
+  const {
+    request_type,
+    master_data,
+    care_schedule,
+    offering,
+    excused,
+    direct_correction,
+    ...meta
+  } = item;
+  const kind = requiredEnum(HISTORY_KINDS, request_type, "request_type");
+  switch (kind) {
+    case "master_data":
+      return {
+        ...meta,
+        request_type: kind,
+        data: toStaffMasterDataHistoryEntry(projection(master_data, kind)),
+      };
+    case "care_schedule":
+      return {
+        ...meta,
+        request_type: kind,
+        data: toStaffCareRequestHistoryEntry(projection(care_schedule, kind)),
+      };
+    case "offering":
+      return {
+        ...meta,
+        request_type: kind,
+        data: toStaffOfferingRequestHistoryEntry(projection(offering, kind)),
+      };
+    case "excused":
+      return {
+        ...meta,
+        request_type: kind,
+        data: toStaffExcusedRequestHistoryEntry(projection(excused, kind)),
+      };
+    case "direct_correction": {
+      const correction = projection(direct_correction, kind);
+      return {
+        ...meta,
+        request_type: kind,
+        data: { ...correction, diff: correction.diff ?? [] },
+      };
+    }
+  }
+}
+
+function logLoadFailure(view: "open" | "history", error: unknown): void {
+  // Fehlt das Recht „Kinder sehen“, trägt die Antwort den Code
+  // students.absence_read_required; den Text liefert der Katalog (#2513).
+  logger.warn("change_request_list_load_failed", {
+    view,
+    ...(error instanceof ApiError
+      ? { status: error.status, ...(error.code ? { code: error.code } : {}) }
+      : {}),
+  });
+}
+
+export async function listAggregatedOpenRequests(
+  params: AggregatedRequestParams = {},
+): Promise<AggregatedRequestPage<AggregatedOpenRequest>> {
   try {
-    return refinedPage<T>(
-      await bffJson("tenant", "GET /api/students/change-requests", {
-        query: listQuery(view, params),
-        errorMessage: "change request list load failed",
-      }),
-    );
-  } catch (error) {
-    // Fehlt das Recht „Kinder sehen“, trägt die Antwort den Code
-    // students.absence_read_required; den Text liefert der Katalog (#2513).
-    logger.warn("change_request_list_load_failed", {
-      view,
-      ...(error instanceof ApiError
-        ? { status: error.status, ...(error.code ? { code: error.code } : {}) }
-        : {}),
+    const page = await bffJson("tenant", "GET /api/students/change-requests", {
+      query: { view: "open", ...listQuery(params) },
+      errorMessage: "change request list load failed",
     });
+    return {
+      items: (page.items ?? []).map(openRequest),
+      next_cursor: page.next_cursor,
+      review_access: knownEnum(REVIEW_ACCESS, page.review_access),
+    };
+  } catch (error) {
+    logLoadFailure("open", error);
     throw error;
   }
 }
 
-export function listAggregatedOpenRequests(
-  params: AggregatedRequestParams = {},
-): Promise<AggregatedRequestPage<AggregatedOpenRequest>> {
-  return fetchPage<AggregatedOpenRequest>("open", params);
-}
-
-export function listAggregatedRequestHistory(
+export async function listAggregatedRequestHistory(
   params: AggregatedRequestParams = {},
 ): Promise<AggregatedRequestPage<AggregatedHistoryRequest>> {
-  return fetchPage<AggregatedHistoryRequest>("history", params);
+  try {
+    const page = await bffJson(
+      "tenant",
+      "GET /api/students/change-requests/history",
+      {
+        query: listQuery(params),
+        errorMessage: "change request list load failed",
+      },
+    );
+    return {
+      items: (page.items ?? []).map(historyRequest),
+      next_cursor: page.next_cursor,
+    };
+  } catch (error) {
+    logLoadFailure("history", error);
+    throw error;
+  }
 }
 
-/** Die vier Arten, die über den gemeinsamen Lebenszyklus entschieden werden. */
-export type ParentRequestKind =
-  "master_data" | "care_schedule" | "offering" | "excused";
+const PARENT_REQUEST_KINDS = [
+  "master_data",
+  "care_schedule",
+  "offering",
+  "excused",
+] as const;
+export type ParentRequestKind = (typeof PARENT_REQUEST_KINDS)[number];
 
 export interface BulkApproveRequestRef {
   readonly kind: ParentRequestKind;
@@ -466,16 +603,26 @@ export async function listEnrollmentChangeRequests(
   // dieser Endpunkt kennt ihn nicht, würde also ungefiltert antworten.
   const { types: _types, studentId: _studentId, ...rest } = params;
   try {
-    return refinedPage<EnrollmentRequestItem>(
-      await bffJson(
-        "tenant",
-        "GET /api/enrollment/admin/change-requests/list",
-        {
-          query: listQuery(view, rest),
-          errorMessage: "enrollment change request list load failed",
-        },
-      ),
+    const page = await bffJson(
+      "tenant",
+      "GET /api/enrollment/admin/change-requests/list",
+      {
+        query: { view, ...listQuery(rest) },
+        errorMessage: "enrollment change request list load failed",
+      },
     );
+    return {
+      items: (page.items ?? []).map((item) => ({
+        occurred_at: item.occurred_at,
+        request_type: requiredEnum(
+          ["enrollment"] as const,
+          item.request_type,
+          "request_type",
+        ),
+        data: item.data,
+      })),
+      next_cursor: page.next_cursor,
+    };
   } catch (error) {
     logger.warn("enrollment_change_request_list_load_failed", {
       view,

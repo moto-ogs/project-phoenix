@@ -31,5 +31,8 @@
   "letterhead_missing": "Antette gönderen bilgileri eksik. Kurumun adı ve adresi olmadan sözleşme gönderilmez. Bunları „Antet ve şablonlar” bölümüne ekleyin.",
   "child_link_changed": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "child_link_not_imported": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
-  "child_link_refused": "{object} değiştirilemedi. Güncel durumu kontrol edin."
+  "child_link_refused": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "child_link_bound": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "enrollment_preview_changed": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "enrollment_binding_changed": "{object} değiştirilemedi. Güncel durumu kontrol edin."
 }

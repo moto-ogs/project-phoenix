@@ -10,14 +10,9 @@
 
 import type * as schoolClassDayContract from "./contract/school-class-day.generated";
 
-export type ClassDayRow = schoolClassDayContract.DayRow;
-export type ClassDayHomework = schoolClassDayContract.DayHomework;
-export type ClassDayHint = schoolClassDayContract.DayHint;
-export type ClassDayHandover = schoolClassDayContract.DayHandover;
-
 /** Der Tag einer Klasse; ohne Zeilen eine leere Liste. */
 export type ClassDayReport = Omit<schoolClassDayContract.DayReport, "rows"> & {
-  rows: ClassDayRow[];
+  rows: schoolClassDayContract.DayRow[];
 };
 
 export const MORNING_ATTENDANCE_STATUSES = ["present", "absent"] as const;
@@ -25,7 +20,9 @@ export type MorningAttendanceStatus =
   (typeof MORNING_ATTENDANCE_STATUSES)[number];
 
 /** Der Verfasser eines Hinweises, wenn er nicht von der Lehrkraft selbst ist. */
-export function dayHintAuthorSuffix(hint: ClassDayHint): string {
+export function dayHintAuthorSuffix(
+  hint: schoolClassDayContract.DayHint,
+): string {
   if (hint.own || !hint.author_name) return "";
   return ` (von ${hint.author_name})`;
 }

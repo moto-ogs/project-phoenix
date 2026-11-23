@@ -1,17 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("./session-cache", () => ({
-  sessionFetch: vi.fn(),
-}));
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
+
+const fetchMock = vi.fn();
+beforeEach(() => {
+  vi.stubGlobal("fetch", fetchMock);
+});
 
 import { ApiError } from "./api-error";
-import { sessionFetch } from "./session-cache";
 import {
   staffBalanceAdjustmentService,
   staffMonthCloseService,
 } from "./staff-api";
-
-const mockedSessionFetch = vi.mocked(sessionFetch);
 
 const snapshot = {
   staff_id: "12",
@@ -50,14 +50,14 @@ describe("staffMonthCloseService", () => {
   });
 
   it("fetches and maps the school month-close status", async () => {
-    mockedSessionFetch
+    fetchMock
       .mockResolvedValueOnce(jsonResponse({ data: [snapshot] }))
       .mockResolvedValueOnce(jsonResponse({ data: null }));
 
     const result = await staffMonthCloseService.getStatus(2026, 6);
     const empty = await staffMonthCloseService.getStatus(2026, 5);
 
-    expect(mockedSessionFetch).toHaveBeenNthCalledWith(
+    expect(fetchMock).toHaveBeenNthCalledWith(
       1,
       "/api/staff/time-tracking/month-close?year=2026&month=6",
       { method: "GET" },
@@ -78,7 +78,7 @@ describe("staffMonthCloseService", () => {
   });
 
   it("reports a failed status request", async () => {
-    mockedSessionFetch.mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: false,
       statusText: "Bad Gateway",
     } as Response);
@@ -89,7 +89,7 @@ describe("staffMonthCloseService", () => {
   });
 
   it("closes a month with backend request keys and maps the result", async () => {
-    mockedSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       jsonResponse({
         data: {
           year: 2026,
@@ -107,7 +107,7 @@ describe("staffMonthCloseService", () => {
       reason: "Lohnlauf",
     });
 
-    expect(mockedSessionFetch).toHaveBeenCalledWith(
+    expect(fetchMock).toHaveBeenCalledWith(
       "/api/staff/time-tracking/month-close",
       {
         method: "POST",
@@ -134,7 +134,7 @@ describe("staffMonthCloseService", () => {
     "workforce.later_month_closed",
     "unexpected_code",
   ])("keeps close error %s", async (code) => {
-    mockedSessionFetch.mockResolvedValueOnce(errorResponse(code));
+    fetchMock.mockResolvedValueOnce(errorResponse(code));
 
     const failure = staffMonthCloseService.closeMonth({
       year: 2026,
@@ -151,7 +151,7 @@ describe("staffMonthCloseService", () => {
   });
 
   it("reopens one staff month with backend request keys", async () => {
-    mockedSessionFetch.mockResolvedValueOnce({
+    fetchMock.mockResolvedValueOnce({
       ok: true,
       status: 204,
     } as Response);
@@ -162,7 +162,7 @@ describe("staffMonthCloseService", () => {
       reason: "Fehlende Schicht",
     });
 
-    expect(mockedSessionFetch).toHaveBeenCalledWith(
+    expect(fetchMock).toHaveBeenCalledWith(
       "/api/staff/12/time-tracking/month-close/reopen",
       {
         method: "POST",
@@ -181,7 +181,7 @@ describe("staffMonthCloseService", () => {
     "workforce.later_month_closed",
     "unexpected_code",
   ])("keeps reopen error %s", async (code) => {
-    mockedSessionFetch.mockResolvedValueOnce(errorResponse(code));
+    fetchMock.mockResolvedValueOnce(errorResponse(code));
 
     const failure = staffMonthCloseService.reopenMonth("12", {
       year: 2026,
@@ -199,7 +199,7 @@ describe("staffBalanceAdjustmentService closed-month errors", () => {
   });
 
   it("keeps the closed-month code of a rejected adjustment", async () => {
-    mockedSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       errorResponse("workforce.adjustment_in_closed_month"),
     );
 
@@ -217,7 +217,7 @@ describe("staffBalanceAdjustmentService closed-month errors", () => {
   });
 
   it("keeps the closed-month code of a rejected reset", async () => {
-    mockedSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       errorResponse("workforce.adjustment_in_closed_month"),
     );
 
@@ -234,7 +234,7 @@ describe("staffBalanceAdjustmentService closed-month errors", () => {
   });
 
   it("keeps the closed-month code of a rejected deletion", async () => {
-    mockedSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       errorResponse("workforce.adjustment_in_closed_month"),
     );
 

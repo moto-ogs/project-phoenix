@@ -8,7 +8,7 @@ import {
 import { selectTriggerClassName } from "./select-trigger-styles";
 import { FieldHint, FieldShell, useFieldIds } from "./field-shell";
 import { Z_LAYER } from "./overlay-styles";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useId } from "react";
 import { createPortal } from "react-dom";
 import { FocusScope } from "@radix-ui/react-focus-scope";
 import type { Matcher } from "react-day-picker";
@@ -34,11 +34,14 @@ import {
   SHEET_SCOPE_SELECTOR,
 } from "./overlay-stack";
 import { useAnchoredPanel } from "./anchored-panel";
+import { ResponsivePanel, useResponsivePanelSheet } from "./responsive-panel";
 import { PANEL_GAP, PANEL_VIEWPORT_MARGIN } from "./panel-geometry";
 import { preloadDayPicker } from "~/components/ui/lazy-day-picker";
 import {
   CalendarMonthHeader,
   CalendarShell,
+  focusChosenCalendarDay,
+  moveFocusToChosenDayOnLoad,
   resolveCalendarLabels,
   type CalendarLabels,
 } from "./calendar-shell";
@@ -204,6 +207,7 @@ interface MultipleDatePickerCalendarProps {
   readonly disabledDates?: Date[];
   readonly compact: boolean;
   readonly calendarLayout: CalendarLayout;
+  readonly inSheet: boolean;
 }
 
 const EMPTY_DISABLED_DATES: Date[] = [];
@@ -218,6 +222,7 @@ export function DatePicker({
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
+  const sheetId = useId();
   const [mounted, setMounted] = useState(false);
   // null until the trigger rect has been measured. The portal renders only once
   // a position exists, so the calendar never paints at the top-left corner
@@ -231,13 +236,18 @@ export function DatePicker({
   const isPopover = calendarLayout !== "inline";
   const prefersBelow = calendarLayout === "popover-below";
   const isMultiple = props.mode === "multiple";
+  // Unter `sm` öffnet der Kalender in jeder Lage als Blatt von unten
+  // (`ResponsivePanel`, #7801); Lage am Auslöser und Schließen beim Scrollen
+  // gelten dann nicht.
+  const asSheet = useResponsivePanelSheet();
   const isDisabled = !isMultiple && props.disabled === true;
   const embedded = !isMultiple && props.embedded === true;
   // Known only after the trigger is measured; until then assume the roomy
   // variant, which is what every field wider than a filter chip gets.
   const isCompactPanel =
     calendarLayout === "inline" ||
-    (popoverPosition !== null &&
+    (!asSheet &&
+      popoverPosition !== null &&
       popoverPosition.width < COMPACT_CARD_MAX_WIDTH);
   const locale = isMultiple ? de : (props.locale ?? de);
   const labels = resolveCalendarLabels(isMultiple ? undefined : props.labels);
@@ -294,7 +304,7 @@ export function DatePicker({
       setIsOpen(false);
       return;
     }
-    if (isPopover) {
+    if (isPopover && !asSheet) {
       syncPopoverPosition();
     }
     setIsOpen(true);
@@ -311,7 +321,7 @@ export function DatePicker({
   // month and year lists do not count.
   const closeCovered = useCallback(() => setIsOpen(false), []);
   const { owner } = useAnchoredPanel({
-    open: isOpen && !isDisabled,
+    open: isOpen && !isDisabled && !asSheet,
     onClose: (reason) => {
       setIsOpen(false);
       if (reason === "escape") triggerRef.current?.focus();
@@ -330,6 +340,7 @@ export function DatePicker({
       disabledDates={props.disabledDates}
       compact={isCompactPanel}
       calendarLayout={calendarLayout}
+      inSheet={asSheet}
     />
   ) : (
     <DatePickerCalendar
@@ -343,6 +354,7 @@ export function DatePicker({
       labels={labels}
       compact={isCompactPanel}
       calendarLayout={calendarLayout}
+      inSheet={asSheet}
       required={props.required}
       onChange={(date) => {
         props.onChange(date);
@@ -393,149 +405,176 @@ export function DatePicker({
           value={props.value ? toISODate(props.value) : ""}
         />
       ) : null}
-      <div
-        className={cn("flex items-center gap-1", embedded && "h-full")}
-        data-date-picker-controls
-      >
-        <button
-          ref={triggerRef}
-          type="button"
-          id={isMultiple ? undefined : props.id}
-          aria-label={
-            isMultiple
-              ? undefined
-              : iconOnly
-                ? (props.ariaLabel ?? "Kalender öffnen")
-                : props.ariaLabel
-                  ? props.ariaLabel.includes(displayValue ?? placeholder)
-                    ? props.ariaLabel
-                    : `${props.ariaLabel}: ${displayValue ?? placeholder}`
-                  : undefined
-          }
-          aria-expanded={isOpen}
-          aria-describedby={triggerDescribedBy}
-          data-form-invalid={!isMultiple && props.invalid ? true : undefined}
-          disabled={isDisabled}
-          onClick={toggleOpen}
-          // Fetch the calendar module before the click, so opening does not
-          // wait for it.
-          onPointerEnter={preloadDayPicker}
-          onFocus={preloadDayPicker}
-          {...(embedded && CONTROL_PART)}
-          className={
-            embedded
-              ? cn(
-                  selectTriggerClassName({
-                    embedded: true,
-                    invalid: !isMultiple && props.invalid,
-                    disabled: isDisabled,
-                    className: "min-w-0 flex-1",
-                  }),
-                  isOpen && "bg-gray-50",
-                  !isMultiple ? props.triggerClassName : undefined,
-                )
-              : cn(
-                  "flex items-center rounded-lg border transition",
-                  iconOnly
-                    ? `${CONTROL_HEIGHT_CLASS.compact} w-10 shrink-0 justify-center pointer-coarse:size-11`
-                    : `min-w-0 flex-1 justify-between ${
-                        TRIGGER_SIZE_CLASS[
-                          (isMultiple ? undefined : props.controlSize) ??
-                            "natural"
-                        ]
-                      }`,
-                  !isMultiple && props.invalid
-                    ? "border-moto-red"
-                    : "border-gray-200",
-                  isDisabled
-                    ? "cursor-not-allowed bg-gray-50 text-gray-500"
-                    : isOpen
-                      ? "border-gray-300 bg-gray-50"
-                      : "bg-white hover:bg-gray-50",
-                  !isMultiple ? props.triggerClassName : undefined,
-                )
-          }
-        >
-          {!iconOnly && (
-            <span className={displayValue ? "text-gray-900" : "text-gray-500"}>
-              {displayValue ?? placeholder}
-            </span>
-          )}
-          <svg
-            className="h-4 w-4 shrink-0 text-gray-400"
-            aria-hidden="true"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-            />
-          </svg>
-        </button>
-        {canClear && (
-          <Button
-            type="button"
-            variant="surface"
-            size="icon"
-            // Neben dem großen Feld (44 px) so hoch wie das Feld (#5608).
-            touchTarget={!isMultiple && props.controlSize === "large"}
-            onClick={() => {
-              if (isMultiple) {
-                props.onChangeDates([]);
-              } else {
-                props.onChange(null);
-              }
-            }}
-            className="shrink-0"
-            aria-label={labels.clear}
-            tooltip={labels.clearHint}
-          >
-            <svg
-              className="h-4 w-4"
-              aria-hidden="true"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
+      <ResponsivePanel
+        open={isOpen && !isDisabled}
+        onOpenChange={setIsOpen}
+        label={(isMultiple ? undefined : props.ariaLabel) ?? placeholder}
+        sheetId={sheetId}
+        returnFocusRef={triggerRef}
+        initialFocus={focusChosenCalendarDay}
+        trigger={
+          <>
+            <div
+              className={cn("flex items-center gap-1", embedded && "h-full")}
+              data-date-picker-controls
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </Button>
-        )}
-      </div>
-      {/* Inside the positioned box: an overlay calendar opens under it. */}
-      {hint && <FieldHint id={fieldIds.hintId}>{hint}</FieldHint>}
-
-      {/* The overlay/inline layouts render in place; the popover layout renders
+              <button
+                ref={triggerRef}
+                type="button"
+                id={isMultiple ? undefined : props.id}
+                aria-label={
+                  isMultiple
+                    ? undefined
+                    : iconOnly
+                      ? (props.ariaLabel ?? "Kalender öffnen")
+                      : props.ariaLabel
+                        ? props.ariaLabel.includes(displayValue ?? placeholder)
+                          ? props.ariaLabel
+                          : `${props.ariaLabel}: ${displayValue ?? placeholder}`
+                        : undefined
+                }
+                aria-expanded={isOpen}
+                // Im Blatt öffnet der Auslöser einen Dialog.
+                aria-haspopup={asSheet ? "dialog" : undefined}
+                aria-controls={asSheet && isOpen ? sheetId : undefined}
+                aria-describedby={triggerDescribedBy}
+                data-form-invalid={
+                  !isMultiple && props.invalid ? true : undefined
+                }
+                disabled={isDisabled}
+                onClick={toggleOpen}
+                // Fetch the calendar module before the click, so opening does not
+                // wait for it.
+                onPointerEnter={preloadDayPicker}
+                onFocus={preloadDayPicker}
+                {...(embedded && CONTROL_PART)}
+                className={
+                  embedded
+                    ? cn(
+                        selectTriggerClassName({
+                          embedded: true,
+                          invalid: !isMultiple && props.invalid,
+                          disabled: isDisabled,
+                          className: "min-w-0 flex-1",
+                        }),
+                        isOpen && "bg-gray-50",
+                        !isMultiple ? props.triggerClassName : undefined,
+                      )
+                    : cn(
+                        "flex items-center rounded-lg border transition",
+                        iconOnly
+                          ? `${CONTROL_HEIGHT_CLASS.compact} w-10 shrink-0 justify-center pointer-coarse:size-11`
+                          : `min-w-0 flex-1 justify-between ${
+                              TRIGGER_SIZE_CLASS[
+                                (isMultiple ? undefined : props.controlSize) ??
+                                  "natural"
+                              ]
+                            }`,
+                        !isMultiple && props.invalid
+                          ? "border-moto-red"
+                          : "border-gray-200",
+                        isDisabled
+                          ? "cursor-not-allowed bg-gray-50 text-gray-500"
+                          : isOpen
+                            ? "border-gray-300 bg-gray-50"
+                            : "bg-white hover:bg-gray-50",
+                        !isMultiple ? props.triggerClassName : undefined,
+                      )
+                }
+              >
+                {!iconOnly && (
+                  <span
+                    className={displayValue ? "text-gray-900" : "text-gray-500"}
+                  >
+                    {displayValue ?? placeholder}
+                  </span>
+                )}
+                <svg
+                  className="h-4 w-4 shrink-0 text-gray-400"
+                  aria-hidden="true"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
+                </svg>
+              </button>
+              {canClear && (
+                <Button
+                  type="button"
+                  variant="surface"
+                  size="icon"
+                  // Neben dem großen Feld (44 px) so hoch wie das Feld (#5608).
+                  touchTarget={!isMultiple && props.controlSize === "large"}
+                  onClick={() => {
+                    if (isMultiple) {
+                      props.onChangeDates([]);
+                    } else {
+                      props.onChange(null);
+                    }
+                  }}
+                  className="shrink-0"
+                  aria-label={labels.clear}
+                  tooltip={labels.clearHint}
+                >
+                  <svg
+                    className="h-4 w-4"
+                    aria-hidden="true"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </Button>
+              )}
+            </div>
+            {/* Inside the positioned box: an overlay calendar opens under it. */}
+            {hint && <FieldHint id={fieldIds.hintId}>{hint}</FieldHint>}
+          </>
+        }
+      >
+        {(inSheet) =>
+          inSheet ? (
+            calendarContent
+          ) : (
+            <>
+              {/* The overlay/inline layouts render in place; the popover layout renders
           the calendar into document.body at a viewport-fixed position. Portals
           only exist client-side, hence the `mounted` guard on that branch, and
           the position guard keeps the first paint from landing at the origin. */}
-      {isOpen && !isDisabled && !isPopover && calendar}
-      {isOpen &&
-      !isDisabled &&
-      isPopover &&
-      mounted &&
-      popoverPosition &&
-      portalContainer
-        ? createPortal(
-            needsPortalledFocusScope ? (
-              <FocusScope asChild loop trapped>
-                {floatingPanel}
-              </FocusScope>
-            ) : (
-              floatingPanel
-            ),
-            portalContainer,
+              {isOpen && !isDisabled && !isPopover && calendar}
+              {isOpen &&
+              !isDisabled &&
+              isPopover &&
+              mounted &&
+              popoverPosition &&
+              portalContainer
+                ? createPortal(
+                    needsPortalledFocusScope ? (
+                      <FocusScope asChild loop trapped>
+                        {floatingPanel}
+                      </FocusScope>
+                    ) : (
+                      floatingPanel
+                    ),
+                    portalContainer,
+                  )
+                : null}
+            </>
           )
-        : null}
+        }
+      </ResponsivePanel>
     </div>
   );
 }
@@ -564,6 +603,7 @@ function DatePickerCalendar({
   labels,
   compact,
   calendarLayout,
+  inSheet,
   required,
   onChange,
 }: {
@@ -577,6 +617,7 @@ function DatePickerCalendar({
   readonly labels: CalendarLabels;
   readonly compact: boolean;
   readonly calendarLayout: CalendarLayout;
+  readonly inSheet: boolean;
   readonly required?: boolean;
   readonly onChange: (date: Date | null) => void;
 }) {
@@ -585,6 +626,7 @@ function DatePickerCalendar({
     value ?? defaultMonth ?? parseISODate(today),
   );
   const controlledMonthTime = value?.getTime();
+  const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (controlledMonthTime === undefined) return;
@@ -593,9 +635,10 @@ function DatePickerCalendar({
 
   return (
     <div
+      ref={panelRef}
       data-date-picker-panel
       {...SCROLL_AREA_PROPS}
-      className={getCalendarContainerClass(calendarLayout, compact)}
+      className={getCalendarContainerClass(calendarLayout, compact, inSheet)}
     >
       <CalendarMonthHeader
         compact={compact}
@@ -616,6 +659,11 @@ function DatePickerCalendar({
         onMonthChange={setMonth}
         onSelect={(date: Date | undefined) => onChange(date ?? null)}
         locale={locale}
+        onGridReady={
+          inSheet
+            ? () => moveFocusToChosenDayOnLoad(panelRef.current)
+            : undefined
+        }
       />
     </div>
   );
@@ -627,15 +675,18 @@ function MultipleDatePickerCalendar({
   disabledDates = EMPTY_DISABLED_DATES,
   compact,
   calendarLayout,
+  inSheet,
 }: MultipleDatePickerCalendarProps) {
   const today = useBerlinToday();
   const [month, setMonth] = useState(values[0] ?? parseISODate(today));
+  const panelRef = useRef<HTMLDivElement>(null);
 
   return (
     <div
+      ref={panelRef}
       data-date-picker-panel
       {...SCROLL_AREA_PROPS}
-      className={getCalendarContainerClass(calendarLayout, compact)}
+      className={getCalendarContainerClass(calendarLayout, compact, inSheet)}
     >
       <CalendarMonthHeader month={month} onMonthChange={setMonth} />
       <CalendarShell
@@ -646,6 +697,11 @@ function MultipleDatePickerCalendar({
         onMonthChange={setMonth}
         onSelect={(dates: Date[] | undefined) => onChangeDates(dates ?? [])}
         locale={de}
+        onGridReady={
+          inSheet
+            ? () => moveFocusToChosenDayOnLoad(panelRef.current)
+            : undefined
+        }
       />
     </div>
   );
@@ -972,7 +1028,10 @@ const COMPACT_CARD_MAX_WIDTH = 240;
 function getCalendarContainerClass(
   calendarLayout: CalendarLayout,
   compact: boolean,
+  inSheet: boolean,
 ): string {
+  // Im Blatt trägt das Blatt die Fläche; der Kalender füllt seine Breite.
+  if (inSheet) return "w-full px-2 pt-2";
   const base = `moto-popover-surface rounded-xl border ${
     compact ? "p-3" : "p-4"
   }`;

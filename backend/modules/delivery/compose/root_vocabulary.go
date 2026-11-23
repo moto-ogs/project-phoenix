@@ -8,8 +8,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/delivery/internal/pwa"
 )
 
-// Delivery's services and DTOs for the typed root (ADR 0053 point 2).
-// The root may not import Delivery's application packages.
+// Delivery's services and DTOs for the typed root, which may not import its application (ADR 0053 point 2).
 
 type (
 	EmailOutbox                   = emailoutbox.Service

@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mockSessionFetch = vi.hoisted(() => vi.fn());
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 
-vi.mock("./session-cache", () => ({
-  sessionFetch: mockSessionFetch,
-}));
+const fetchMock = vi.fn();
+beforeEach(() => {
+  vi.stubGlobal("fetch", fetchMock);
+});
 
 import { ApiError } from "./api-error";
 import { shiftTypeService } from "./shift-type-api";
@@ -32,20 +33,20 @@ describe("shiftTypeService requests", () => {
   });
 
   it("maps a list response and hits the correct endpoint", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json({ data: [backendShiftType] }, { status: 200 }),
     );
 
     await expect(shiftTypeService.getShiftTypes()).resolves.toEqual([
       mappedShiftType,
     ]);
-    expect(mockSessionFetch).toHaveBeenCalledWith("/api/shift-types", {
+    expect(fetchMock).toHaveBeenCalledWith("/api/shift-types", {
       method: "GET",
     });
   });
 
   it("defaults a missing description to an empty string", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json(
         { data: [{ ...backendShiftType, description: undefined }] },
         { status: 200 },
@@ -58,7 +59,7 @@ describe("shiftTypeService requests", () => {
   });
 
   it("serializes the create payload into the backend body", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json({ data: backendShiftType }, { status: 201 }),
     );
 
@@ -71,7 +72,7 @@ describe("shiftTypeService requests", () => {
       }),
     ).resolves.toEqual(mappedShiftType);
 
-    expect(mockSessionFetch).toHaveBeenCalledWith("/api/shift-types", {
+    expect(fetchMock).toHaveBeenCalledWith("/api/shift-types", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -84,7 +85,7 @@ describe("shiftTypeService requests", () => {
   });
 
   it("serializes the update payload and targets the id endpoint", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json({ data: backendShiftType }, { status: 200 }),
     );
 
@@ -97,7 +98,7 @@ describe("shiftTypeService requests", () => {
       }),
     ).resolves.toEqual(mappedShiftType);
 
-    expect(mockSessionFetch).toHaveBeenCalledWith("/api/shift-types/12", {
+    expect(fetchMock).toHaveBeenCalledWith("/api/shift-types/12", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -110,7 +111,7 @@ describe("shiftTypeService requests", () => {
   });
 
   it("includes category_ids (as strings) when the mapping is managed (#1837)", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json({ data: backendShiftType }, { status: 200 }),
     );
 
@@ -122,7 +123,7 @@ describe("shiftTypeService requests", () => {
       categoryIds: ["3", "7"],
     });
 
-    expect(mockSessionFetch).toHaveBeenCalledWith("/api/shift-types/12", {
+    expect(fetchMock).toHaveBeenCalledWith("/api/shift-types/12", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -136,7 +137,7 @@ describe("shiftTypeService requests", () => {
   });
 
   it("sends an empty category_ids array to clear the mapping", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json({ data: backendShiftType }, { status: 200 }),
     );
 
@@ -149,13 +150,13 @@ describe("shiftTypeService requests", () => {
     });
 
     const body = JSON.parse(
-      (mockSessionFetch.mock.calls[0]![1] as RequestInit).body as string,
+      (fetchMock.mock.calls[0]![1] as RequestInit).body as string,
     ) as Record<string, unknown>;
     expect(body.category_ids).toEqual([]);
   });
 
   it("omits category_ids entirely when categoryIds is undefined", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json({ data: backendShiftType }, { status: 201 }),
     );
 
@@ -167,26 +168,26 @@ describe("shiftTypeService requests", () => {
     });
 
     const body = JSON.parse(
-      (mockSessionFetch.mock.calls[0]![1] as RequestInit).body as string,
+      (fetchMock.mock.calls[0]![1] as RequestInit).body as string,
     ) as Record<string, unknown>;
     expect(body).not.toHaveProperty("category_ids");
   });
 
   it("reports a deletion after a successful delete", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json({ data: { id: 12, outcome: "deleted" } }, { status: 200 }),
     );
 
     await expect(shiftTypeService.deleteShiftType("12")).resolves.toBe(
       "deleted",
     );
-    expect(mockSessionFetch).toHaveBeenCalledWith("/api/shift-types/12", {
+    expect(fetchMock).toHaveBeenCalledWith("/api/shift-types/12", {
       method: "DELETE",
     });
   });
 
   it("reports an archived type that planned shifts still carry (#6845)", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json({ data: { id: 12, outcome: "archived" } }, { status: 200 }),
     );
 
@@ -196,7 +197,7 @@ describe("shiftTypeService requests", () => {
   });
 
   it("asks for archived types and usage only when requested", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json(
         {
           data: [
@@ -223,21 +224,21 @@ describe("shiftTypeService requests", () => {
         usage: { shifts: 4, series: 1 },
       },
     ]);
-    expect(mockSessionFetch).toHaveBeenCalledWith(
+    expect(fetchMock).toHaveBeenCalledWith(
       "/api/shift-types?include_archived=true&with_usage=true",
       { method: "GET" },
     );
   });
 
   it("seeds the defaults and returns the full list", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       Response.json({ data: [backendShiftType] }, { status: 200 }),
     );
 
     await expect(shiftTypeService.createDefaults()).resolves.toEqual([
       mappedShiftType,
     ]);
-    expect(mockSessionFetch).toHaveBeenCalledWith("/api/shift-types/defaults", {
+    expect(fetchMock).toHaveBeenCalledWith("/api/shift-types/defaults", {
       method: "POST",
     });
   });
@@ -249,7 +250,7 @@ describe("shiftTypeService errors", () => {
   });
 
   it("preserves backend detail separately from the operation message", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       new Response(JSON.stringify({ detail: "name already exists" }), {
         status: 409,
         headers: { "content-type": "application/json" },
@@ -271,7 +272,7 @@ describe("shiftTypeService errors", () => {
   });
 
   it("keeps the 409 problem fields in a domain error", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       new Response(
         JSON.stringify({
           detail: "name already exists",
@@ -304,7 +305,7 @@ describe("shiftTypeService errors", () => {
   });
 
   it("classifies non-JSON error bodies by their status", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       new Response("database timeout", { status: 500 }),
     );
 
@@ -315,7 +316,7 @@ describe("shiftTypeService errors", () => {
   });
 
   it("falls back to the default message when JSON is malformed", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       new Response("{", {
         status: 400,
         headers: { "content-type": "application/json" },
@@ -336,7 +337,7 @@ describe("shiftTypeService errors", () => {
   });
 
   it("falls back when JSON error bodies omit the detail field", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       new Response(JSON.stringify({ message: "wrong shape" }), {
         status: 422,
         headers: { "content-type": "application/json" },
@@ -350,7 +351,7 @@ describe("shiftTypeService errors", () => {
   });
 
   it("uses the delete fallback message on delete failures", async () => {
-    mockSessionFetch.mockResolvedValueOnce(new Response("", { status: 403 }));
+    fetchMock.mockResolvedValueOnce(new Response("", { status: 403 }));
 
     await expect(shiftTypeService.deleteShiftType("12")).rejects.toMatchObject({
       status: 403,
@@ -359,9 +360,7 @@ describe("shiftTypeService errors", () => {
   });
 
   it("surfaces load failures from the defaults endpoint", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
-      new Response("boom", { status: 500 }),
-    );
+    fetchMock.mockResolvedValueOnce(new Response("boom", { status: 500 }));
 
     await expect(shiftTypeService.createDefaults()).rejects.toBeInstanceOf(
       ApiError,

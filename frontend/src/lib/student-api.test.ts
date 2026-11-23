@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { mockSessionFetch } = vi.hoisted(() => ({
-  mockSessionFetch:
-    vi.fn<(url: string, init?: RequestInit) => Promise<Response>>(),
-}));
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 
-vi.mock("./session-cache", () => ({ sessionFetch: mockSessionFetch }));
+const fetchMock =
+  vi.fn<(url: string, init?: RequestInit) => Promise<Response>>();
+beforeEach(() => {
+  vi.stubGlobal("fetch", fetchMock);
+});
 
 import { ApiError } from "./api-error";
 import { buildBackendStudent } from "~/test/fixtures/students";
@@ -61,11 +62,11 @@ function pageOf(data: unknown[], pagination: unknown): Response {
 }
 
 function calledUrl(index = 0): string {
-  return mockSessionFetch.mock.calls[index]![0];
+  return fetchMock.mock.calls[index]![0];
 }
 
 function calledInit(index = 0): RequestInit {
-  return mockSessionFetch.mock.calls[index]![1] ?? {};
+  return fetchMock.mock.calls[index]![1] ?? {};
 }
 
 const page = {
@@ -76,14 +77,14 @@ const page = {
 };
 
 beforeEach(() => {
-  mockSessionFetch.mockReset();
+  fetchMock.mockReset();
 });
 
 describe("fetchStudents", () => {
   it("loads every names page for a complete child selection", async () => {
     const first = { id: "1", first_name: "Lina", last_name: "Muster" };
     const last = { id: "501", first_name: "Zoe", last_name: "Weber" };
-    mockSessionFetch
+    fetchMock
       .mockResolvedValueOnce(
         pageOf([first], {
           ...page,
@@ -106,7 +107,7 @@ describe("fetchStudents", () => {
       mapStudentListRow(first, "names"),
       mapStudentListRow(last, "names"),
     ]);
-    expect(mockSessionFetch).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
     for (const [index, expectedPage] of [
       [0, "1"],
       [1, "2"],
@@ -121,7 +122,7 @@ describe("fetchStudents", () => {
   });
 
   it("reports a later names-page failure instead of returning a partial selection", async () => {
-    mockSessionFetch
+    fetchMock
       .mockResolvedValueOnce(
         pageOf([{ id: "1", first_name: "Lina", last_name: "Muster" }], {
           ...page,
@@ -136,7 +137,7 @@ describe("fetchStudents", () => {
 
   it("maps the full rows once and keeps the page", async () => {
     const row = buildBackendStudent({ id: "1", first_name: "Max" });
-    mockSessionFetch.mockResolvedValueOnce(pageOf([row], page));
+    fetchMock.mockResolvedValueOnce(pageOf([row], page));
 
     await expect(fetchStudents()).resolves.toEqual({
       students: [mapStudentResponse(row)],
@@ -150,7 +151,7 @@ describe("fetchStudents", () => {
       ...buildBackendStudent({ id: "7" }),
       departure_modes: ["bus"],
     };
-    mockSessionFetch.mockResolvedValueOnce(pageOf([row], page));
+    fetchMock.mockResolvedValueOnce(pageOf([row], page));
 
     const { students } = await fetchStudents({ view: "slim" });
     expect(students).toEqual([mapStudentListRow(row, "slim")]);
@@ -159,7 +160,7 @@ describe("fetchStudents", () => {
   });
 
   it("sends every filter under its backend name", async () => {
-    mockSessionFetch.mockResolvedValueOnce(pageOf([], page));
+    fetchMock.mockResolvedValueOnce(pageOf([], page));
 
     await fetchStudents({
       search: "Max",
@@ -208,7 +209,7 @@ describe("fetchStudents", () => {
   });
 
   it("leaves unset and empty filters out", async () => {
-    mockSessionFetch.mockResolvedValueOnce(pageOf([], page));
+    fetchMock.mockResolvedValueOnce(pageOf([], page));
 
     await fetchStudents({
       search: "",
@@ -221,7 +222,7 @@ describe("fetchStudents", () => {
   });
 
   it("keeps the code of a refused list for the shared error path", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       problem(403, { status: 403, code: "general.permission" }),
     );
 
@@ -240,20 +241,18 @@ describe("child list filter options", () => {
     });
 
   it("maps the care offerings of the contract", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       answer([{ id: "12", name: "OGS Ganztag" }]),
     );
 
     await expect(fetchCareOfferingOptions()).resolves.toEqual([
       { id: "12", name: "OGS Ganztag" },
     ]);
-    expect(mockSessionFetch.mock.calls[0]![0]).toBe(
-      "/api/students/care-offerings",
-    );
+    expect(fetchMock.mock.calls[0]![0]).toBe("/api/students/care-offerings");
   });
 
   it("maps the registration questions without their type", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       answer([
         {
           key: "bus",
@@ -273,7 +272,7 @@ describe("child list filter options", () => {
       },
       { key: "lunch", label: "Mittagessen", options: [] },
     ]);
-    expect(mockSessionFetch.mock.calls[0]![0]).toBe(
+    expect(fetchMock.mock.calls[0]![0]).toBe(
       "/api/students/enrollment-answer-filters",
     );
   });
@@ -281,7 +280,7 @@ describe("child list filter options", () => {
 
 describe("single reads", () => {
   it("reads the school classes", async () => {
-    mockSessionFetch.mockResolvedValueOnce(ok(["1a", "2b"]));
+    fetchMock.mockResolvedValueOnce(ok(["1a", "2b"]));
 
     await expect(fetchSchoolClasses()).resolves.toEqual(["1a", "2b"]);
     expect(calledUrl()).toBe("/api/students/school-classes");
@@ -293,7 +292,7 @@ describe("single reads", () => {
       has_write_access: true,
       privacy_consent: { accepted: true, data_retention_days: 14 },
     } as StudentDetailResponse;
-    mockSessionFetch.mockResolvedValueOnce(ok(detail));
+    fetchMock.mockResolvedValueOnce(ok(detail));
 
     const student = await fetchStudent("7/x");
     expect(student).toEqual(mapStudentDetailResponse(detail));
@@ -306,14 +305,14 @@ describe("single reads", () => {
     expect(calledUrl()).toBe(
       "/api/students/7%2Fx?include_privacy_consent=true",
     );
-    expect(mockSessionFetch).toHaveBeenCalledOnce();
+    expect(fetchMock).toHaveBeenCalledOnce();
   });
 
   it("reads the enrollment extra fields of a child", async () => {
     const groups = [
       { request_id: "1", phase_name: "2026", submitted_at: "", fields: [] },
     ];
-    mockSessionFetch.mockResolvedValueOnce(ok(groups));
+    fetchMock.mockResolvedValueOnce(ok(groups));
 
     await expect(fetchStudentEnrollmentExtraFields("7")).resolves.toEqual(
       groups,
@@ -331,7 +330,7 @@ describe("createStudent", () => {
   const created = buildBackendStudent({ id: "55", first_name: "Mia" });
 
   it("creates the child with the trimmed names and leaves an unchanged consent alone", async () => {
-    mockSessionFetch
+    fetchMock
       .mockResolvedValueOnce(ok(created, 201))
       .mockResolvedValueOnce(consentAnswer(false, 30));
 
@@ -361,7 +360,7 @@ describe("createStudent", () => {
   });
 
   it("writes the changed consent after the child and carries no marker", async () => {
-    mockSessionFetch
+    fetchMock
       .mockResolvedValueOnce(ok(created, 201))
       .mockResolvedValueOnce(ok(null))
       .mockResolvedValueOnce(consentAnswer(true, 14));
@@ -389,7 +388,7 @@ describe("createStudent", () => {
   });
 
   it("answers the child with the stored consent when the consent write fails", async () => {
-    mockSessionFetch
+    fetchMock
       .mockResolvedValueOnce(ok(created, 201))
       .mockResolvedValueOnce(
         problem(500, { status: 500, code: "general.internal" }),
@@ -413,7 +412,7 @@ describe("createStudent", () => {
   });
 
   it("keeps the field errors of a refused create", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       problem(400, {
         status: 400,
         code: "general.input",
@@ -427,7 +426,7 @@ describe("createStudent", () => {
       status: 400,
       errors: [{ field: "last_name", reason: "required" }],
     });
-    expect(mockSessionFetch).toHaveBeenCalledOnce();
+    expect(fetchMock).toHaveBeenCalledOnce();
   });
 });
 
@@ -450,7 +449,7 @@ describe("updateStudent", () => {
   afterEach(() => unsubscribe());
 
   it("sends the backend body and maps the answered child once", async () => {
-    mockSessionFetch
+    fetchMock
       .mockResolvedValueOnce(ok(updated))
       .mockResolvedValueOnce(problem(403, { status: 403 }));
 
@@ -468,7 +467,7 @@ describe("updateStudent", () => {
   });
 
   it("writes a sent consent pair before the child", async () => {
-    mockSessionFetch
+    fetchMock
       .mockResolvedValueOnce(ok(null))
       .mockResolvedValueOnce(ok(updated))
       .mockResolvedValueOnce(consentAnswer(true, 21));
@@ -496,11 +495,11 @@ describe("updateStudent", () => {
     await expect(
       updateStudent("1", { privacy_consent_accepted: true }),
     ).rejects.toBeInstanceOf(TypeError);
-    expect(mockSessionFetch).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("answers the consent refusal and does not touch the child", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       problem(400, { status: 400, code: "general.input" }),
     );
 
@@ -511,11 +510,11 @@ describe("updateStudent", () => {
 
     expect(failure).toMatchObject({ status: 400 });
     expect(isPrivacyConsentSaved(failure)).toBe(false);
-    expect(mockSessionFetch).toHaveBeenCalledOnce();
+    expect(fetchMock).toHaveBeenCalledOnce();
   });
 
   it("still succeeds with the written pair when the read-back fails", async () => {
-    mockSessionFetch
+    fetchMock
       .mockResolvedValueOnce(ok(null))
       .mockResolvedValueOnce(ok(updated))
       .mockResolvedValueOnce(problem(503, { status: 503 }));
@@ -534,7 +533,7 @@ describe("updateStudent", () => {
   // An open Laufgemeinschaft form answers the announcement by discarding its
   // draft, so only a write that changed the links announces one.
   it("follows the backend's verdict on the companion links", async () => {
-    mockSessionFetch
+    fetchMock
       .mockResolvedValueOnce(ok({ ...updated, companions_changed: false }))
       .mockResolvedValueOnce(problem(403, { status: 403 }))
       .mockResolvedValueOnce(ok({ ...updated, companions_changed: true }))
@@ -554,7 +553,7 @@ describe("updateStudent", () => {
   ] as const)(
     "judges from the update %j when the backend sends no verdict",
     async (update, announced) => {
-      mockSessionFetch
+      fetchMock
         .mockResolvedValueOnce(ok(updated))
         .mockResolvedValueOnce(problem(403, { status: 403 }));
 
@@ -567,7 +566,7 @@ describe("updateStudent", () => {
   // carrying a conflict list is the question the caller can answer with
   // extend_companion_plans.
   it("types only a 409 carrying conflicts as the companion question", async () => {
-    mockSessionFetch
+    fetchMock
       .mockResolvedValueOnce(
         problem(409, {
           detail: "linked child may not walk along",
@@ -601,7 +600,7 @@ describe("updateStudent", () => {
   });
 
   it("recognises the stranded-companion and stale-list refusals by code", async () => {
-    mockSessionFetch
+    fetchMock
       .mockResolvedValueOnce(
         problem(400, {
           status: 400,
@@ -637,7 +636,7 @@ describe("updateStudent", () => {
   // half landed; everything the form branches on stays as sent.
   it("marks every refusal after a committed consent write", async () => {
     const consent = { privacy_consent_accepted: true, data_retention_days: 30 };
-    mockSessionFetch
+    fetchMock
       .mockResolvedValueOnce(ok(null))
       .mockResolvedValueOnce(
         problem(409, {
@@ -676,7 +675,7 @@ describe("updateStudent", () => {
   });
 
   it("leaves a refusal unmarked when no consent was written", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       problem(409, { code: "students.companions_changed" }),
     );
 
@@ -695,7 +694,7 @@ describe("guarded student deletion", () => {
 
   it("loads the deletion impact under the encoded id", async () => {
     const impact = { fingerprint: "abc", total: 0 };
-    mockSessionFetch.mockResolvedValueOnce(ok(impact));
+    fetchMock.mockResolvedValueOnce(ok(impact));
 
     await expect(fetchStudentDeletionImpact("42/unsafe")).resolves.toEqual(
       impact,
@@ -704,7 +703,7 @@ describe("guarded student deletion", () => {
   });
 
   it("uses the completion-scoped deletion endpoints", async () => {
-    mockSessionFetch
+    fetchMock
       .mockResolvedValueOnce(ok({ fingerprint: "abc" }))
       .mockResolvedValueOnce(new Response(null, { status: 204 }));
 
@@ -718,7 +717,7 @@ describe("guarded student deletion", () => {
   });
 
   it("sends every confirmation field in the DELETE body", async () => {
-    mockSessionFetch.mockResolvedValueOnce(ok({ success: true }));
+    fetchMock.mockResolvedValueOnce(ok({ success: true }));
 
     await deleteStudentWithData("42", input);
 
@@ -730,7 +729,7 @@ describe("guarded student deletion", () => {
   });
 
   it("keeps the conflict code and diagnostics of a stale preview", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       problem(409, {
         status: 409,
         detail: "Vorschau veraltet",
@@ -748,7 +747,7 @@ describe("guarded student deletion", () => {
 
 describe("student photo", () => {
   it("posts the photo as multipart form data and answers its URL", async () => {
-    mockSessionFetch.mockResolvedValueOnce(ok({ photo_url: "/uploads/p.jpg" }));
+    fetchMock.mockResolvedValueOnce(ok({ photo_url: "/uploads/p.jpg" }));
 
     const result = await uploadStudentPhoto(
       "7",
@@ -765,7 +764,7 @@ describe("student photo", () => {
   });
 
   it("keeps the file name of a File and sends no consent unasked", async () => {
-    mockSessionFetch.mockResolvedValueOnce(ok({ photo_url: "/uploads/p.jpg" }));
+    fetchMock.mockResolvedValueOnce(ok({ photo_url: "/uploads/p.jpg" }));
 
     await uploadStudentPhoto(
       "7",
@@ -778,7 +777,7 @@ describe("student photo", () => {
   });
 
   it("keeps code and request ID of a failed upload", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       problem(400, {
         status: 400,
         code: "general.input",
@@ -796,7 +795,7 @@ describe("student photo", () => {
   });
 
   it("deletes the photo", async () => {
-    mockSessionFetch.mockResolvedValueOnce(new Response(null, { status: 204 }));
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
 
     await expect(deleteStudentPhoto("7")).resolves.toBeUndefined();
     expect(calledUrl()).toBe("/api/students/7/photo");
@@ -806,7 +805,7 @@ describe("student photo", () => {
 
 describe("privacy consent", () => {
   it("maps the stored consent", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       ok({
         id: 1,
         student_id: 7,
@@ -827,7 +826,7 @@ describe("privacy consent", () => {
   });
 
   it("maps the school's defaults of a child without a stored consent", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       ok({
         policy_version: "1.0",
         accepted: false,
@@ -843,7 +842,7 @@ describe("privacy consent", () => {
   });
 
   it("reads the defaults a new child starts with", async () => {
-    mockSessionFetch.mockResolvedValueOnce(
+    fetchMock.mockResolvedValueOnce(
       ok({ policy_version: "1.0", accepted: false, data_retention_days: 12 }),
     );
 

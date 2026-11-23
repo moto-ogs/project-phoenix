@@ -19,8 +19,9 @@ import { staffConcept } from "~/lib/concepts/staff";
 const logger = createLogger({ component: "StaffTodayBlock" });
 
 /**
- * Baustein „Personal heute" (#2180): der Teamstand aus Leitungssicht. Wer in
- * Aufsicht ist, wer heute ausfällt, ob die Stempeluhr läuft.
+ * Baustein „Personal heute" (#2180): der Teamstand aus Leitungssicht. Wie
+ * viele in Aufsicht sind, ob die Stempeluhr läuft, wie groß das Team ist. Wer
+ * heute fehlt, zeigt „Heute anders“ mit Namen (#7668).
  *
  * Die offenen Anträge stehen bewusst NICHT hier: sie zählen im Baustein
  * „Offene Anfragen", und zwei Karten mit derselben Zahl sagen nicht mehr als
@@ -83,7 +84,6 @@ export function StaffTodayBlock({
               variant="tile"
               label={tile.label}
               value={pending ? "–" : tile.value}
-              tone={tile.tone}
             />
           ))}
         </div>
@@ -95,13 +95,13 @@ export function StaffTodayBlock({
 interface StaffTile {
   readonly label: string;
   readonly value: string | number;
-  readonly tone?: "red" | "blue";
 }
 
 /**
- * Vier Zahlen, die in eine Karte dieser Höhe passen. Die Stempeluhr steht nur
- * da, wo sie benutzt wird: „0 von 0" neben „5 in Aufsicht" läse sich wie ein
- * Widerspruch.
+ * Bis zu drei Zahlen. Krank und Urlaub stehen nicht mehr hier, sondern mit
+ * Namen in „Heute anders“ (#7668): zwei Karten mit derselben Zahl sagen nicht
+ * mehr als eine. Die Stempeluhr steht nur da, wo sie benutzt wird: „0 von 0"
+ * neben „5 in Aufsicht" läse sich wie ein Widerspruch.
  */
 export function staffTiles(
   summary: DashboardSummary | undefined,
@@ -111,18 +111,6 @@ export function staffTiles(
   if (analytics) {
     tiles.push({ label: "In Aufsicht", value: analytics.supervisorsToday });
   }
-  const sick = summary?.sickToday ?? 0;
-  const vacation = summary?.vacationToday ?? 0;
-  tiles.push({
-    label: "Krank",
-    value: sick,
-    tone: sick > 0 ? "red" : undefined,
-  });
-  tiles.push({
-    label: "Im Urlaub",
-    value: vacation,
-    tone: vacation > 0 ? "blue" : undefined,
-  });
   const expected = summary?.expectedClockedIn ?? 0;
   const clockedIn = summary?.currentlyClockedIn ?? 0;
   if (expected > 0 || clockedIn > 0) {
@@ -131,8 +119,6 @@ export function staffTiles(
       value: expected > 0 ? `${clockedIn} von ${expected}` : clockedIn,
     });
   }
-  if (tiles.length < 4) {
-    tiles.push({ label: "Team gesamt", value: summary?.activeStaffCount ?? 0 });
-  }
-  return tiles.slice(0, 4);
+  tiles.push({ label: "Team gesamt", value: summary?.activeStaffCount ?? 0 });
+  return tiles;
 }

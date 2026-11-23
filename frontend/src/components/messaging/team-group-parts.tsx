@@ -1,5 +1,6 @@
 "use client";
 
+import type * as sharedContract from "~/lib/contract/shared.generated";
 import { useLayoutEffect, useRef, useState } from "react";
 import { AnchoredPopover } from "~/components/ui/anchored-popover";
 import { Button } from "~/components/ui/button";
@@ -13,8 +14,6 @@ import { SectionCard } from "~/components/ui/section-card";
 import { AddGroupMembersModal, GROUP_NAME_MAX } from "./team-group-modals";
 import { useApiFormError } from "~/contexts/ToastContext";
 import {
-  type MessageableStaff,
-  type StaffMessage,
   type StaffMessagesApi,
   type StaffThreadDetail,
   staffRoleKindLabel,
@@ -31,11 +30,11 @@ export function GroupReadReceipt({
   message,
   members,
 }: {
-  readonly message: StaffMessage;
-  readonly members: readonly MessageableStaff[];
+  readonly message: sharedContract.MessageResponse;
+  readonly members: readonly sharedContract.RecipientResponse[];
 }) {
   const [open, setOpen] = useState(false);
-  const total = message.reader_count ?? 0;
+  const total = message.reader_count;
   if (total === 0) return null;
   const readIds = new Set(message.read_by_account_ids ?? []);
   const eligibleIds = new Set(message.eligible_reader_account_ids ?? []);
@@ -139,13 +138,14 @@ export function GroupMembersPanel({
   const members = thread.members ?? [];
   const manage = portal === "tenant" && thread.can_manage === true;
   const [addOpen, setAddOpen] = useState(false);
-  const [removing, setRemoving] = useState<MessageableStaff | null>(null);
+  const [removing, setRemoving] =
+    useState<sharedContract.RecipientResponse | null>(null);
   const [leaving, setLeaving] = useState(false);
   const [busy, setBusy] = useState(false);
   const actionError = useApiFormError();
   const removeError = useApiFormError();
 
-  const remove = async (member: MessageableStaff) => {
+  const remove = async (member: sharedContract.RecipientResponse) => {
     setBusy(true);
     removeError.clear();
     try {

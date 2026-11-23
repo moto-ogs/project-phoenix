@@ -82,6 +82,10 @@ type Config struct {
 	SchoolDays       ports.SchoolDays
 	Runtime          ports.Runtime
 	CalendarRenderer CalendarRenderer
+	// Changes wakes the staff sessions of the school after every committed
+	// appointment write (#7693). Optional: nil sends no signal, the readers
+	// still refetch on focus and reconnect.
+	Changes ports.AppointmentChanges
 
 	// Notification dependencies (all optional — nil disables e-mail; the in-app
 	// calendar is unaffected).
@@ -155,8 +159,20 @@ func NewService(cfg Config) *service {
 	return &service{cfg: cfg}
 }
 
+// withinAppointmentWrite runs every appointment write of the calendar: the
+// staff and school portal routes and the Elternsprechtag bookings. A write
+// that succeeds announces the change in its transaction; the signal leaves
+// after the commit and a rollback drops it (#7693).
 func (s *service) withinAppointmentWrite(ctx context.Context, command func(context.Context) error) error {
-	return s.cfg.Runtime.WithinAppointmentWrite(ctx, command)
+	return s.cfg.Runtime.WithinAppointmentWrite(ctx, func(txCtx context.Context) error {
+		if err := command(txCtx); err != nil {
+			return err
+		}
+		if s.cfg.Changes != nil {
+			s.cfg.Changes.Announce(txCtx)
+		}
+		return nil
+	})
 }
 
 type Event = portal.Event

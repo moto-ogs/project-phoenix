@@ -28,11 +28,10 @@ import {
   resumeChildRoomHistory,
   stopChildRoomHistory,
   withdrawChildPhotoConsent,
-  type ChildConsent,
-  type ChildRoomHistoryStop,
 } from "~/lib/parent-api";
 import { confirmationsConcept } from "~/lib/concepts/confirmations";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 // Foto-Einwilligung widerrufen/erneut geben, Raumverlauf und Stimmung
 // stoppen/wieder speichern (#3844).
@@ -51,8 +50,8 @@ const roomHistoryStopCalls = {
 // Leseroute: wenn der Träger den Stopp für Eltern freigegeben hat oder das
 // Kind gestoppt ist.
 function roomHistoryRow(
-  stop: ChildRoomHistoryStop | undefined,
-): ChildConsent | null {
+  stop: parentMeContract.ChildRoomHistoryStopResponse | undefined,
+): parentMeContract.ChildConsentResponse | null {
   if (!stop?.offered) return null;
   return {
     key: "room_history",

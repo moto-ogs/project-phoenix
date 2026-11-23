@@ -67,7 +67,12 @@ describe("ReachSummary", () => {
   it("claims no publication day for counts of the audience of today", () => {
     render(
       <ReachSummary
-        stats={{ target_count: 3, read_count: 1, acknowledged_count: 0 }}
+        stats={{
+          target_count: 3,
+          read_count: 1,
+          acknowledged_count: 0,
+          recorded: false,
+        }}
         requiresAcknowledgement={false}
         publishedAt="2026-09-07T08:30:00Z"
       />,

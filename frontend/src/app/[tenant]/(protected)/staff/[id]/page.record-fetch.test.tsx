@@ -92,7 +92,7 @@ function staffPayload(id: string) {
   };
 }
 
-// Beide Wege der Seite zur API (sessionFetch und der CRUD-Dienst der
+// Beide Wege der Seite zur API (bffJson und der CRUD-Dienst der
 // Datenverwaltung) landen hier und werden mitgeschrieben.
 function respond(input: RequestInfo | URL): Promise<Response> {
   const raw =
@@ -129,15 +129,10 @@ function respond(input: RequestInfo | URL): Promise<Response> {
   );
 }
 
-vi.mock("~/lib/session-cache", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/lib/session-cache")>()),
-  getCachedSession: () =>
-    Promise.resolve({
-      user: { id: "7" },
-      expires: "2099-01-01T00:00:00.000Z",
-    }),
-  sessionFetch: (input: string) => respond(input),
-}));
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
 
 function signIn(permissions: string[]) {
   vi.mocked(useSession).mockReturnValue({
@@ -243,7 +238,10 @@ describe("StaffDetailContent: Personal-Datensatz (#4993)", () => {
     expect(
       view.container.querySelector(".animate-pulse.h-4.w-56"),
     ).toBeInTheDocument();
-    expect(server.requests).toContain("/api/staff/financial-profile/106");
+    // The request leaves after the asynchronous session gate.
+    await waitFor(() =>
+      expect(server.requests).toContain("/api/staff/financial-profile/106"),
+    );
     const tools = renderHook(
       () => useTenantMutateMatching([staffKeys.profileKey("106")]),
       { wrapper },

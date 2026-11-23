@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { plainResponse } from "~/test/mocks/plain-session-fetch";
 
 vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 import {
@@ -96,14 +97,16 @@ describe("guardian-api functions", () => {
 
   describe("fetchStudentGuardians", () => {
     it("returns mapped guardians on success", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            status: "success",
-            data: [mockBackendGuardianWithRelationship],
-          }),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              status: "success",
+              data: [mockBackendGuardianWithRelationship],
+            }),
+        }),
+      );
 
       const result = await fetchStudentGuardians("123");
 
@@ -158,11 +161,13 @@ describe("guardian-api functions", () => {
     });
 
     it("throws error on non-ok response with JSON error", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        statusText: "Not Found",
-        json: () => Promise.resolve({ detail: "Student not found" }),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: false,
+          statusText: "Not Found",
+          json: () => Promise.resolve({ detail: "Student not found" }),
+        }),
+      );
 
       await expect(fetchStudentGuardians("999")).rejects.toThrow(
         "Failed to fetch guardians",
@@ -170,11 +175,13 @@ describe("guardian-api functions", () => {
     });
 
     it("throws error on non-ok response when JSON parse fails", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        statusText: "Internal Server Error",
-        json: () => Promise.reject(new Error("Parse error")),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: false,
+          statusText: "Internal Server Error",
+          json: () => Promise.reject(new Error("Parse error")),
+        }),
+      );
 
       await expect(fetchStudentGuardians("123")).rejects.toThrow(
         "Failed to fetch guardians",
@@ -184,14 +191,16 @@ describe("guardian-api functions", () => {
 
   describe("updateGuardian", () => {
     it("updates guardian and returns mapped result", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            status: "success",
-            data: { ...mockBackendGuardian, first_name: "Johnny" },
-          }),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              status: "success",
+              data: { ...mockBackendGuardian, first_name: "Johnny" },
+            }),
+        }),
+      );
 
       const result = await updateGuardian("1", { firstName: "Johnny" });
 
@@ -206,14 +215,16 @@ describe("guardian-api functions", () => {
     });
 
     it("only sends defined fields in partial update", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            status: "success",
-            data: mockBackendGuardian,
-          }),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              status: "success",
+              data: mockBackendGuardian,
+            }),
+        }),
+      );
 
       // When email is undefined, it should not be included in the request
       await updateGuardian("1", { firstName: "Johnny", email: undefined });
@@ -231,11 +242,13 @@ describe("guardian-api functions", () => {
     });
 
     it("sends an emptied e-mail so the backend removes the address", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({ status: "success", data: mockBackendGuardian }),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: true,
+          json: () =>
+            Promise.resolve({ status: "success", data: mockBackendGuardian }),
+        }),
+      );
 
       await updateGuardian("1", { firstName: "Johnny", email: "" });
 
@@ -250,12 +263,14 @@ describe("guardian-api functions", () => {
     });
 
     it("throws the status class code on non-ok response", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        status: 404,
-        statusText: "Not Found",
-        json: () => Promise.resolve({ detail: "guardian not found" }),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: false,
+          status: 404,
+          statusText: "Not Found",
+          json: () => Promise.resolve({ detail: "guardian not found" }),
+        }),
+      );
 
       await expect(
         updateGuardian("999", { firstName: "Johnny" }),
@@ -269,10 +284,12 @@ describe("guardian-api functions", () => {
     });
 
     it("rejects a success answer without data", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ status: "success" }),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: true,
+          json: () => Promise.resolve({ status: "success" }),
+        }),
+      );
 
       await expect(
         updateGuardian("1", { firstName: "Johnny" }),
@@ -285,10 +302,12 @@ describe("guardian-api functions", () => {
 
   describe("deleteGuardian", () => {
     it("succeeds with 204 No Content response", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        status: 204,
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: true,
+          status: 204,
+        }),
+      );
 
       await expect(deleteGuardian("1")).resolves.toBeUndefined();
       expect(global.fetch).toHaveBeenCalledWith("/api/guardians/1", {
@@ -297,21 +316,25 @@ describe("guardian-api functions", () => {
     });
 
     it("succeeds with JSON success response", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        status: 200,
-        json: () => Promise.resolve({ status: "success", data: null }),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ status: "success", data: null }),
+        }),
+      );
 
       await expect(deleteGuardian("1")).resolves.toBeUndefined();
     });
 
     it("throws error on non-ok response", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        statusText: "Not Found",
-        json: () => Promise.resolve({ detail: "Guardian not found" }),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: false,
+          statusText: "Not Found",
+          json: () => Promise.resolve({ detail: "Guardian not found" }),
+        }),
+      );
 
       await expect(deleteGuardian("999")).rejects.toThrow(
         "Failed to delete guardian",
@@ -319,7 +342,9 @@ describe("guardian-api functions", () => {
     });
 
     it("appends force=true and expected link IDs to the URL for a full delete", async () => {
-      global.fetch = vi.fn().mockResolvedValue({ ok: true, status: 204 });
+      global.fetch = vi
+        .fn()
+        .mockImplementation(() => plainResponse({ ok: true, status: 204 }));
 
       await expect(
         deleteGuardian("1", {
@@ -336,12 +361,14 @@ describe("guardian-api functions", () => {
     });
 
     it("throws a GuardianApiError carrying the HTTP status on conflict", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        status: 409,
-        statusText: "Conflict",
-        json: () => Promise.resolve({ detail: "Noch mit Kindern verknüpft" }),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: false,
+          status: 409,
+          statusText: "Conflict",
+          json: () => Promise.resolve({ detail: "Noch mit Kindern verknüpft" }),
+        }),
+      );
 
       await expect(deleteGuardian("1")).rejects.toMatchObject({
         name: "ApiError",
@@ -354,19 +381,21 @@ describe("guardian-api functions", () => {
 
   describe("fetchGuardianDeletePreview", () => {
     it("maps the snake_case preview payload to camelCase", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            status: "success",
-            data: {
-              linked_count: 2,
-              affected_names: ["Anna Müller", "Ben Müller"],
-              affected_link_ids: ["10", "20"],
-              warning: "Die Person ist mit 2 Kindern verknüpft …",
-            },
-          }),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              status: "success",
+              data: {
+                linked_count: 2,
+                affected_names: ["Anna Müller", "Ben Müller"],
+                affected_link_ids: ["10", "20"],
+                warning: "Die Person ist mit 2 Kindern verknüpft …",
+              },
+            }),
+        }),
+      );
 
       await expect(fetchGuardianDeletePreview("1")).resolves.toEqual({
         linkedCount: 2,
@@ -381,12 +410,14 @@ describe("guardian-api functions", () => {
     });
 
     it("throws a GuardianApiError carrying the status when the backend forbids it", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        status: 403,
-        statusText: "Forbidden",
-        json: () => Promise.resolve({ detail: "nur Administratoren" }),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: false,
+          status: 403,
+          statusText: "Forbidden",
+          json: () => Promise.resolve({ detail: "nur Administratoren" }),
+        }),
+      );
 
       await expect(fetchGuardianDeletePreview("1")).rejects.toMatchObject({
         name: "ApiError",
@@ -399,11 +430,13 @@ describe("guardian-api functions", () => {
 
   describe("createStudentGuardians", () => {
     it("posts the batch as snake_case to the /batch endpoint", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        status: 201,
-        json: () => Promise.resolve({ status: "success", data: null }),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: true,
+          status: 201,
+          json: () => Promise.resolve({ status: "success", data: null }),
+        }),
+      );
 
       await expect(
         createStudentGuardians("123", [
@@ -456,17 +489,19 @@ describe("guardian-api functions", () => {
     });
 
     it("keeps the wire code of a duplicate-email 400", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        status: 400,
-        statusText: "Bad Request",
-        json: () =>
-          Promise.resolve({
-            detail:
-              'Erziehungsberechtigte/r 1: E-Mail-Adresse "a@b.de" ist bereits vergeben',
-            code: "general.input",
-          }),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: false,
+          status: 400,
+          statusText: "Bad Request",
+          json: () =>
+            Promise.resolve({
+              detail:
+                'Erziehungsberechtigte/r 1: E-Mail-Adresse "a@b.de" ist bereits vergeben',
+              code: "general.input",
+            }),
+        }),
+      );
 
       await expect(
         createStudentGuardians("123", [
@@ -491,10 +526,12 @@ describe("guardian-api functions", () => {
 
   describe("linkGuardianToStudent", () => {
     it("links guardian to student successfully", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ status: "success", data: null }),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: true,
+          json: () => Promise.resolve({ status: "success", data: null }),
+        }),
+      );
 
       await expect(
         linkGuardianToStudent("123", mockLinkRequest),
@@ -526,11 +563,14 @@ describe("guardian-api functions", () => {
     });
 
     it("throws error on non-ok response", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        statusText: "Bad Request",
-        json: () => Promise.resolve({ detail: "Relationship already exists" }),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: false,
+          statusText: "Bad Request",
+          json: () =>
+            Promise.resolve({ detail: "Relationship already exists" }),
+        }),
+      );
 
       await expect(
         linkGuardianToStudent("123", mockLinkRequest),
@@ -540,10 +580,12 @@ describe("guardian-api functions", () => {
 
   describe("updateStudentGuardianRelationship", () => {
     it("updates relationship with all fields", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ status: "success", data: null }),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: true,
+          json: () => Promise.resolve({ status: "success", data: null }),
+        }),
+      );
 
       await updateStudentGuardianRelationship("10", {
         relationshipType: "guardian",
@@ -586,10 +628,12 @@ describe("guardian-api functions", () => {
     });
 
     it("only sends defined fields", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ status: "success", data: null }),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: true,
+          json: () => Promise.resolve({ status: "success", data: null }),
+        }),
+      );
 
       await updateStudentGuardianRelationship("10", {
         isPrimary: true,
@@ -607,11 +651,13 @@ describe("guardian-api functions", () => {
     });
 
     it("throws error on non-ok response", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        statusText: "Not Found",
-        json: () => Promise.resolve({ detail: "Relationship not found" }),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: false,
+          statusText: "Not Found",
+          json: () => Promise.resolve({ detail: "Relationship not found" }),
+        }),
+      );
 
       await expect(
         updateStudentGuardianRelationship("999", { isPrimary: true }),
@@ -621,10 +667,12 @@ describe("guardian-api functions", () => {
 
   describe("removeGuardianFromStudent", () => {
     it("succeeds with 204 No Content response", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        status: 204,
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: true,
+          status: 204,
+        }),
+      );
 
       await expect(
         removeGuardianFromStudent("123", "1"),
@@ -639,11 +687,13 @@ describe("guardian-api functions", () => {
     });
 
     it("succeeds with JSON success response", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        status: 200,
-        json: () => Promise.resolve({ status: "success", data: null }),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ status: "success", data: null }),
+        }),
+      );
 
       await expect(
         removeGuardianFromStudent("123", "1"),
@@ -651,11 +701,13 @@ describe("guardian-api functions", () => {
     });
 
     it("throws error on non-ok response", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        statusText: "Not Found",
-        json: () => Promise.resolve({ detail: "Relationship not found" }),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: false,
+          statusText: "Not Found",
+          json: () => Promise.resolve({ detail: "Relationship not found" }),
+        }),
+      );
 
       await expect(removeGuardianFromStudent("123", "999")).rejects.toThrow(
         "Failed to remove guardian",
@@ -665,20 +717,22 @@ describe("guardian-api functions", () => {
 
   describe("searchGuardians", () => {
     it("returns mapped guardians on success", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            status: "success",
-            data: [mockBackendGuardian],
-            pagination: {
-              current_page: 1,
-              page_size: 10,
-              total_pages: 1,
-              total_records: 1,
-            },
-          }),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              status: "success",
+              data: [mockBackendGuardian],
+              pagination: {
+                current_page: 1,
+                page_size: 10,
+                total_pages: 1,
+                total_records: 1,
+              },
+            }),
+        }),
+      );
 
       const result = await searchGuardians("john");
 
@@ -691,20 +745,22 @@ describe("guardian-api functions", () => {
     });
 
     it("encodes search query properly", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            status: "success",
-            data: [],
-            pagination: {
-              current_page: 1,
-              page_size: 50,
-              total_pages: 1,
-              total_records: 1,
-            },
-          }),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              status: "success",
+              data: [],
+              pagination: {
+                current_page: 1,
+                page_size: 50,
+                total_pages: 1,
+                total_records: 1,
+              },
+            }),
+        }),
+      );
 
       await searchGuardians("john doe & sons");
 
@@ -715,11 +771,13 @@ describe("guardian-api functions", () => {
     });
 
     it("throws error on non-ok response", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        statusText: "Unauthorized",
-        json: () => Promise.resolve({ detail: "Not authenticated" }),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: false,
+          statusText: "Unauthorized",
+          json: () => Promise.resolve({ detail: "Not authenticated" }),
+        }),
+      );
 
       await expect(searchGuardians("john")).rejects.toThrow(
         "Failed to search guardians",
@@ -727,11 +785,13 @@ describe("guardian-api functions", () => {
     });
 
     it("handles fallback error when JSON parse fails", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        statusText: "Service Unavailable",
-        json: () => Promise.reject(new Error("Parse error")),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: false,
+          statusText: "Service Unavailable",
+          json: () => Promise.reject(new Error("Parse error")),
+        }),
+      );
 
       // The catch block returns a generic error message without statusText
       await expect(searchGuardians("john")).rejects.toThrow(
@@ -762,14 +822,16 @@ describe("guardian-api functions", () => {
     };
 
     it("adds a phone number to a guardian", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            status: "success",
-            data: mockBackendPhoneNumber,
-          }),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              status: "success",
+              data: mockBackendPhoneNumber,
+            }),
+        }),
+      );
 
       const result = await addGuardianPhoneNumber("123", mockCreateRequest);
 
@@ -811,20 +873,22 @@ describe("guardian-api functions", () => {
     });
 
     it("adds phone number without optional fields", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            status: "success",
-            data: {
-              id: "4",
-              phone_number: "555-0000",
-              phone_type: "mobile",
-              is_primary: true,
-              priority: 1,
-            },
-          }),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              status: "success",
+              data: {
+                id: "4",
+                phone_number: "555-0000",
+                phone_type: "mobile",
+                is_primary: true,
+                priority: 1,
+              },
+            }),
+        }),
+      );
 
       const minimalRequest: PhoneNumberCreateRequest = {
         phoneNumber: "555-0000",
@@ -838,11 +902,13 @@ describe("guardian-api functions", () => {
     });
 
     it("throws the backend message as diagnostic on non-ok response", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        statusText: "Bad Request",
-        json: () => Promise.resolve({ detail: "validation failed" }),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: false,
+          statusText: "Bad Request",
+          json: () => Promise.resolve({ detail: "validation failed" }),
+        }),
+      );
 
       await expect(
         addGuardianPhoneNumber("123", mockCreateRequest),
@@ -850,10 +916,12 @@ describe("guardian-api functions", () => {
     });
 
     it("rejects a success answer without data", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ status: "success" }),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: true,
+          json: () => Promise.resolve({ status: "success" }),
+        }),
+      );
 
       await expect(
         addGuardianPhoneNumber("123", mockCreateRequest),
@@ -861,14 +929,16 @@ describe("guardian-api functions", () => {
     });
 
     it("throws error when data is missing", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            status: "success",
-            data: null,
-          }),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              status: "success",
+              data: null,
+            }),
+        }),
+      );
 
       await expect(
         addGuardianPhoneNumber("123", mockCreateRequest),
@@ -876,12 +946,14 @@ describe("guardian-api functions", () => {
     });
 
     it("throws the fallback diagnostic when JSON parse fails", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        status: 400,
-        statusText: "Bad Request",
-        json: () => Promise.reject(new Error("Parse error")),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: false,
+          status: 400,
+          statusText: "Bad Request",
+          json: () => Promise.reject(new Error("Parse error")),
+        }),
+      );
 
       await expect(
         addGuardianPhoneNumber("123", mockCreateRequest),
@@ -900,10 +972,12 @@ describe("guardian-api functions", () => {
     };
 
     it("updates a guardian phone number", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ status: "success", data: null }),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: true,
+          json: () => Promise.resolve({ status: "success", data: null }),
+        }),
+      );
 
       await expect(
         updateGuardianPhoneNumber("123", "456", mockUpdateRequest),
@@ -937,10 +1011,12 @@ describe("guardian-api functions", () => {
     });
 
     it("updates only specified fields", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ status: "success", data: null }),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: true,
+          json: () => Promise.resolve({ status: "success", data: null }),
+        }),
+      );
 
       const partialUpdate: PhoneNumberUpdateRequest = {
         phoneType: "home",
@@ -964,11 +1040,13 @@ describe("guardian-api functions", () => {
     });
 
     it("throws the backend message as diagnostic on non-ok response", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        statusText: "Not Found",
-        json: () => Promise.resolve({ detail: "guardian not found" }),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: false,
+          statusText: "Not Found",
+          json: () => Promise.resolve({ detail: "guardian not found" }),
+        }),
+      );
 
       await expect(
         updateGuardianPhoneNumber("999", "456", mockUpdateRequest),
@@ -976,11 +1054,13 @@ describe("guardian-api functions", () => {
     });
 
     it("throws the fallback diagnostic when JSON parse fails", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        statusText: "Bad Request",
-        json: () => Promise.reject(new Error("Parse error")),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: false,
+          statusText: "Bad Request",
+          json: () => Promise.reject(new Error("Parse error")),
+        }),
+      );
 
       await expect(
         updateGuardianPhoneNumber("123", "456", mockUpdateRequest),
@@ -990,10 +1070,12 @@ describe("guardian-api functions", () => {
 
   describe("deleteGuardianPhoneNumber", () => {
     it("deletes a phone number with 204 No Content response", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        status: 204,
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: true,
+          status: 204,
+        }),
+      );
 
       await expect(
         deleteGuardianPhoneNumber("123", "456"),
@@ -1008,11 +1090,13 @@ describe("guardian-api functions", () => {
     });
 
     it("deletes a phone number with JSON success response", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        status: 200,
-        json: () => Promise.resolve({ status: "success", data: null }),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ status: "success", data: null }),
+        }),
+      );
 
       await expect(
         deleteGuardianPhoneNumber("123", "456"),
@@ -1020,11 +1104,13 @@ describe("guardian-api functions", () => {
     });
 
     it("throws error on non-ok response", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        statusText: "Not Found",
-        json: () => Promise.resolve({ detail: "Phone number not found" }),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: false,
+          statusText: "Not Found",
+          json: () => Promise.resolve({ detail: "Phone number not found" }),
+        }),
+      );
 
       await expect(deleteGuardianPhoneNumber("123", "999")).rejects.toThrow(
         "Failed to delete phone number",
@@ -1032,11 +1118,13 @@ describe("guardian-api functions", () => {
     });
 
     it("throws fallback error when JSON parse fails", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        statusText: "Bad Request",
-        json: () => Promise.reject(new Error("Parse error")),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: false,
+          statusText: "Bad Request",
+          json: () => Promise.reject(new Error("Parse error")),
+        }),
+      );
 
       await expect(deleteGuardianPhoneNumber("123", "456")).rejects.toThrow(
         "Failed to delete phone number",
@@ -1046,10 +1134,12 @@ describe("guardian-api functions", () => {
 
   describe("setGuardianPrimaryPhone", () => {
     it("sets a phone number as primary", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ status: "success", data: null }),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: true,
+          json: () => Promise.resolve({ status: "success", data: null }),
+        }),
+      );
 
       await expect(
         setGuardianPrimaryPhone("123", "456"),
@@ -1064,11 +1154,13 @@ describe("guardian-api functions", () => {
     });
 
     it("throws error on non-ok response", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        statusText: "Not Found",
-        json: () => Promise.resolve({ detail: "Phone number not found" }),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: false,
+          statusText: "Not Found",
+          json: () => Promise.resolve({ detail: "Phone number not found" }),
+        }),
+      );
 
       await expect(setGuardianPrimaryPhone("123", "999")).rejects.toThrow(
         "Failed to set primary phone",
@@ -1076,11 +1168,13 @@ describe("guardian-api functions", () => {
     });
 
     it("throws fallback error when JSON parse fails", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        statusText: "Internal Server Error",
-        json: () => Promise.reject(new Error("Parse error")),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: false,
+          statusText: "Internal Server Error",
+          json: () => Promise.reject(new Error("Parse error")),
+        }),
+      );
 
       await expect(setGuardianPrimaryPhone("123", "456")).rejects.toThrow(
         "Failed to set primary phone",
@@ -1088,11 +1182,13 @@ describe("guardian-api functions", () => {
     });
 
     it("handles guardian not found error", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        statusText: "Not Found",
-        json: () => Promise.resolve({ detail: "Guardian not found" }),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: false,
+          statusText: "Not Found",
+          json: () => Promise.resolve({ detail: "Guardian not found" }),
+        }),
+      );
 
       await expect(setGuardianPrimaryPhone("999", "456")).rejects.toThrow(
         "Failed to set primary phone",
@@ -1100,11 +1196,13 @@ describe("guardian-api functions", () => {
     });
 
     it("handles unauthorized error", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: false,
-        statusText: "Unauthorized",
-        json: () => Promise.resolve({ detail: "Unauthorized" }),
-      });
+      global.fetch = vi.fn().mockImplementation(() =>
+        plainResponse({
+          ok: false,
+          statusText: "Unauthorized",
+          json: () => Promise.resolve({ detail: "Unauthorized" }),
+        }),
+      );
 
       await expect(setGuardianPrimaryPhone("123", "456")).rejects.toThrow(
         "Failed to set primary phone",

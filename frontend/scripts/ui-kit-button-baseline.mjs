@@ -34,13 +34,13 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-hand-rolled-button",
     file: "src/components/ui/page-header/FilterPanel.tsx",
-    lines: [225],
+    lines: [240],
     reason: "Auswahloptionen eines Filters, kein Knopf",
   },
   {
     rule: "no-hand-rolled-button",
     file: "src/components/ui/date-picker.tsx",
-    lines: [400],
+    lines: [421],
     reason: "Auslöser des Datumsfelds (Eingabefeld, sieht aus wie ein Select)",
   },
   {
@@ -165,7 +165,7 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-hand-rolled-button",
     file: "src/components/parent/child/child-switcher.tsx",
-    lines: [55],
+    lines: [57],
     reason:
       "Kinderkarte im Elternportal (Ausnahme des Epics #5576, nicht anfassen): Kachel",
   },

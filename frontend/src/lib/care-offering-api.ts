@@ -3,6 +3,7 @@ import { requiredEnum, knownEnum } from "~/lib/contract/known-enum";
 import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 import type * as sharedContract from "~/lib/contract/shared.generated";
 import type { Translations } from "~/lib/enrollment-translations";
+import { translationsFromContract } from "~/lib/enrollment-form-schema-api";
 
 // Go does not register these sets; the contract types them as string.
 const DAYS_OF_WEEK_MODES = ["fixed", "parent_choice"] as const;
@@ -139,7 +140,7 @@ function availabilityRuleFromContract(
 }
 
 /** Reads an offering of the contract; see `CareOffering`. */
-function careOfferingFromContract(
+export function careOfferingFromContract(
   offering: sharedContract.CareOfferingResponse,
 ): CareOffering {
   const {
@@ -165,21 +166,10 @@ function careOfferingFromContract(
       ),
     }),
     selection_rule: knownEnum(SELECTION_RULES, selection_rule),
-    ...(translations && { translations: translationsOf(translations) }),
+    ...(translations && {
+      translations: translationsFromContract(translations),
+    }),
   };
-}
-
-/** The translations of the contract without the languages Go sends as null. */
-function translationsOf(
-  translations: NonNullable<
-    sharedContract.CareOfferingResponse["translations"]
-  >,
-): Translations {
-  return Object.fromEntries(
-    Object.entries(translations).flatMap(([language, texts]) =>
-      texts ? [[language, texts]] : [],
-    ),
-  );
 }
 
 export async function listCareOfferings(

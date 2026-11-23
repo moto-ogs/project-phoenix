@@ -1,4 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
 import {
   getPhaseResponseOverview,
   mapPhaseResponseOverview,
@@ -102,7 +107,7 @@ describe("getPhaseResponseOverview", () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/enrollment/phases/12/responses",
-      { cache: "no-store" },
+      expect.objectContaining({ method: "GET" }),
     );
     expect(overview.applicable).toBe(true);
     expect(overview.expected).toBe(1);

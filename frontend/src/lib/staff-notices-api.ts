@@ -9,9 +9,10 @@
  * Verwaltung und Bestätigungsliste bleiben im OGS-Portal.
  */
 
-import { ApiError, apiErrorFromText, transportFetch } from "./api-error";
+import { bffJson } from "./bff-fetch";
+import type * as sharedContract from "./contract/shared.generated";
+import type * as staffNoticesContract from "./contract/staff-notices.generated";
 import { staffNoticeKeys } from "~/lib/swr/staff-keys";
-import type { ApiResponse } from "./api-envelope";
 
 export type StaffNoticePriority = "info" | "important";
 
@@ -51,123 +52,112 @@ export type StaffNoticeAudience = "all" | "staff" | "lehrkraft";
 /** 0 = jede Woche, 1 = Woche A, 2 = Woche B (Vokabular aus dem Stundenplan). */
 export type StaffNoticeWeekPattern = 0 | 1 | 2;
 
-export interface StaffNotice {
-  id: string;
-  title: string;
-  body: string;
+/**
+ * Ein Hinweis, wie ihn der Vertrag liefert; Priorität, Zielgruppe und Woche
+ * auf ihre festen Werte eingegrenzt, `weekdays` (Go darf `null` schicken) als
+ * Liste: leer = jeder Tag im Zeitraum.
+ */
+export type StaffNotice = Omit<
+  sharedContract.noticeResponse,
+  "priority" | "audience" | "week_pattern" | "weekdays"
+> & {
   priority: StaffNoticePriority;
   audience: StaffNoticeAudience;
-  /** "YYYY-MM-DD" */
-  valid_from: string;
-  /** "YYYY-MM-DD"; fehlt = unbefristet */
-  valid_until?: string;
   /** ISO-Wochentage 1..7; leer = jeder Tag im Zeitraum */
   weekdays: number[];
   week_pattern: StaffNoticeWeekPattern;
-  requires_acknowledgement: boolean;
-  active: boolean;
-  /** Zeitpunkt der EIGENEN Kenntnisnahme, sofern erfolgt */
-  acknowledged_at?: string;
-  /** Wie viele Personen den Hinweis bestätigt haben */
-  acknowledged_count?: number;
-}
+};
 
-export interface StaffNoticeInput {
-  title: string;
-  body: string;
-  priority: StaffNoticePriority;
-  audience: StaffNoticeAudience;
-  valid_from: string;
-  valid_until?: string | null;
-  weekdays: number[];
-  week_pattern: StaffNoticeWeekPattern;
-  requires_acknowledgement: boolean;
-  active: boolean;
-}
+/** Was die Leitung anlegt oder ändert; der Vertrag lässt jedes Feld offen. */
+export type StaffNoticeInput = Required<
+  Pick<
+    staffNoticesContract.noticeRequest,
+    "title" | "body" | "valid_from" | "requires_acknowledgement"
+  >
+> &
+  Pick<staffNoticesContract.noticeRequest, "valid_until"> & {
+    priority: StaffNoticePriority;
+    audience: StaffNoticeAudience;
+    weekdays: number[];
+    week_pattern: StaffNoticeWeekPattern;
+    active: boolean;
+  };
 
-/** Eine Zeile der Bestätigungsliste (#2208): wer wann bestätigt hat. */
-export interface StaffNoticeAcknowledger {
-  account_id: string;
-  name: string;
-  /** RFC 3339 */
-  acknowledged_at: string;
-}
+const PRIORITIES: readonly StaffNoticePriority[] = ["info", "important"];
+const AUDIENCES: readonly StaffNoticeAudience[] = ["all", "staff", "lehrkraft"];
 
-/**
- * Wirft die gescheiterte Antwort als ApiError mit Code, Feldfehlern und
- * Vorgangskennung aus der Hülle (#2517). Die Meldung ist Diagnose; angezeigt
- * wird der Katalogtext des Codes.
- */
-async function throwApiError(
-  response: Response,
-  fallback: string,
-): Promise<never> {
-  let text = "";
-  try {
-    text = await response.text();
-  } catch {
-    // Körper nicht lesbar: der Status klassifiziert trotzdem.
-  }
-  throw apiErrorFromText(fallback, response.status, text);
+/** Grenzt die offenen Werte des Vertrags auf die bekannten ein. */
+function toStaffNotice(notice: sharedContract.noticeResponse): StaffNotice {
+  return {
+    ...notice,
+    priority: PRIORITIES.find((p) => p === notice.priority) ?? "info",
+    audience: AUDIENCES.find((a) => a === notice.audience) ?? "all",
+    weekdays: notice.weekdays ?? [],
+    week_pattern:
+      notice.week_pattern === 1 || notice.week_pattern === 2
+        ? notice.week_pattern
+        : 0,
+  };
 }
-
-/** Erfolgsantwort ohne die erwarteten Daten. */
-function missingData(fallback: string): ApiError {
-  return new ApiError(fallback, 500);
-}
-
-async function request<T>(
-  url: string,
-  init: RequestInit | undefined,
-  fallback: string,
-): Promise<T | undefined> {
-  const response = await transportFetch(url, init);
-  if (!response.ok) await throwApiError(response, fallback);
-  if (response.status === 204) return undefined;
-  const body = (await response.json()) as ApiResponse<T>;
-  return body.data;
-}
-
-const BASE = "/api/staff-notices";
 
 /**
  * Die Lesefläche eines Portals: heute geltende Hinweise und die eigene
- * Kenntnisnahme. Das OGS-Portal nutzt sie über /api/staff-notices, moto schule
- * über /api/school/staff-notices — dieselben Aufrufe, andere Sitzung.
+ * Kenntnisnahme. Das OGS-Portal (`tenant`) und moto schule (`school`) rufen
+ * dieselben Routen über ihre eigene Sitzung.
  */
 export interface StaffNoticesReadApi {
   fetchTodaysNotices: () => Promise<StaffNotice[]>;
   acknowledgeStaffNotice: (id: string) => Promise<void>;
 }
 
-export function createStaffNoticesReadApi(base: string): StaffNoticesReadApi {
+const TODAY_FAILED = "Tagesinformationen konnten nicht geladen werden";
+const ACKNOWLEDGE_FAILED = "Kenntnisnahme konnte nicht gespeichert werden";
+
+export function createStaffNoticesReadApi(
+  portal: "tenant" | "school",
+): StaffNoticesReadApi {
+  if (portal === "school") {
+    return {
+      async fetchTodaysNotices() {
+        const rows = await bffJson(
+          "school",
+          "GET /school/staff-notices/today",
+          {
+            errorMessage: TODAY_FAILED,
+          },
+        );
+        return rows.map(toStaffNotice);
+      },
+      async acknowledgeStaffNotice(id: string) {
+        await bffJson(
+          "school",
+          "POST /school/staff-notices/{noticeId}/acknowledge",
+          { params: { noticeId: id }, errorMessage: ACKNOWLEDGE_FAILED },
+        );
+      },
+    };
+  }
   return {
     async fetchTodaysNotices() {
-      const data = await request<StaffNotice[] | { data?: StaffNotice[] }>(
-        `${base}/today`,
-        undefined,
-        "Tagesinformationen konnten nicht geladen werden",
-      );
-      // Beide Proxys liefern die Liste ausgepackt; die verschachtelte Form
-      // `{ data: [...] }` bleibt als Rückfall lesbar.
-      if (Array.isArray(data)) return data;
-      return data?.data ?? [];
+      const rows = await bffJson("tenant", "GET /api/staff-notices/today", {
+        errorMessage: TODAY_FAILED,
+      });
+      return rows.map(toStaffNotice);
     },
     async acknowledgeStaffNotice(id: string) {
-      await request<unknown>(
-        `${base}/${encodeURIComponent(id)}/acknowledge`,
+      await bffJson(
+        "tenant",
+        "POST /api/staff-notices/{noticeId}/acknowledge",
         {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: "{}",
+          params: { noticeId: id },
+          errorMessage: ACKNOWLEDGE_FAILED,
         },
-        "Kenntnisnahme konnte nicht gespeichert werden",
       );
     },
   };
 }
 
-const tenantReadApi = createStaffNoticesReadApi(BASE);
+const tenantReadApi = createStaffNoticesReadApi("tenant");
 
 /** Die heute geltenden Hinweise — die Sicht des Teams im OGS-Portal. */
 export const fetchTodaysNotices = tenantReadApi.fetchTodaysNotices;
@@ -181,65 +171,51 @@ export const acknowledgeStaffNotice = tenantReadApi.acknowledgeStaffNotice;
  * antwortet mit 404.
  */
 export async function fetchStaffNotice(id: string): Promise<StaffNotice> {
-  const data = await request<StaffNotice>(
-    `${BASE}/${encodeURIComponent(id)}`,
-    undefined,
-    "Der Hinweis konnte nicht geladen werden",
+  return toStaffNotice(
+    await bffJson("tenant", "GET /api/staff-notices/{noticeId}", {
+      params: { noticeId: id },
+      errorMessage: "Der Hinweis konnte nicht geladen werden",
+    }),
   );
-  if (!data) throw missingData("Der Hinweis konnte nicht geladen werden");
-  return data;
 }
 
 /** Alle Hinweise des Mandanten — Leitungssicht, auch abgeschaltete. */
 export async function fetchStaffNotices(): Promise<StaffNotice[]> {
-  const data = await request<StaffNotice[]>(
-    BASE,
-    undefined,
-    "Tagesinformationen konnten nicht geladen werden",
-  );
-  return data ?? [];
-}
-
-function jsonBody(input: StaffNoticeInput): RequestInit {
-  return {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
-  };
+  const rows = await bffJson("tenant", "GET /api/staff-notices/", {
+    errorMessage: TODAY_FAILED,
+  });
+  return rows.map(toStaffNotice);
 }
 
 export async function createStaffNotice(
   input: StaffNoticeInput,
 ): Promise<StaffNotice> {
-  const data = await request<StaffNotice>(
-    BASE,
-    jsonBody(input),
-    "Tagesinformation konnte nicht erstellt werden",
+  return toStaffNotice(
+    await bffJson("tenant", "POST /api/staff-notices/", {
+      body: input,
+      errorMessage: "Tagesinformation konnte nicht erstellt werden",
+    }),
   );
-  if (!data) throw missingData("Tagesinformation konnte nicht erstellt werden");
-  return data;
 }
 
 export async function updateStaffNotice(
   id: string,
   input: StaffNoticeInput,
 ): Promise<StaffNotice> {
-  const data = await request<StaffNotice>(
-    `${BASE}/${encodeURIComponent(id)}`,
-    { ...jsonBody(input), method: "PUT" },
-    "Tagesinformation konnte nicht gespeichert werden",
+  return toStaffNotice(
+    await bffJson("tenant", "PUT /api/staff-notices/{noticeId}", {
+      params: { noticeId: id },
+      body: input,
+      errorMessage: "Tagesinformation konnte nicht gespeichert werden",
+    }),
   );
-  if (!data)
-    throw missingData("Tagesinformation konnte nicht gespeichert werden");
-  return data;
 }
 
 export async function deleteStaffNotice(id: string): Promise<void> {
-  await request<unknown>(
-    `${BASE}/${encodeURIComponent(id)}`,
-    { method: "DELETE" },
-    "Tagesinformation konnte nicht gelöscht werden",
-  );
+  await bffJson("tenant", "DELETE /api/staff-notices/{noticeId}", {
+    params: { noticeId: id },
+    errorMessage: "Tagesinformation konnte nicht gelöscht werden",
+  });
 }
 
 /**
@@ -248,13 +224,15 @@ export async function deleteStaffNotice(id: string): Promise<void> {
  */
 export async function fetchNoticeAcknowledgements(
   id: string,
-): Promise<StaffNoticeAcknowledger[]> {
-  const data = await request<StaffNoticeAcknowledger[]>(
-    `${BASE}/${encodeURIComponent(id)}/acknowledgements`,
-    undefined,
-    "Die Bestätigungen konnten nicht geladen werden",
+): Promise<staffNoticesContract.acknowledgerResponse[]> {
+  return bffJson(
+    "tenant",
+    "GET /api/staff-notices/{noticeId}/acknowledgements",
+    {
+      params: { noticeId: id },
+      errorMessage: "Die Bestätigungen konnten nicht geladen werden",
+    },
   );
-  return data ?? [];
 }
 
 const WEEKDAY_LABELS = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"] as const;

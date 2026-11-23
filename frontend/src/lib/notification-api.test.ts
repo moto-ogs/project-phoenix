@@ -1,24 +1,39 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { sendTestNotification } from "./notification-api";
 
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
+
 describe("sendTestNotification", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("posts an empty JSON body to the tenant proxy", async () => {
+  it("posts to the tenant proxy", async () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
-      .mockResolvedValue(new Response(null, { status: 200 }));
+      .mockResolvedValue(Response.json({ status: "success", data: null }));
 
     await sendTestNotification();
 
     expect(fetchMock).toHaveBeenCalledWith("/api/notifications/test", {
       method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: "{}",
     });
+  });
+
+  it("posts to the school proxy for moto schule", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response(null, { status: 204 }));
+
+    await sendTestNotification("school");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/school/notifications/test",
+      expect.objectContaining({ method: "POST", credentials: "include" }),
+    );
   });
 
   // #2517: the card shows the catalog text for the code, so the client keeps

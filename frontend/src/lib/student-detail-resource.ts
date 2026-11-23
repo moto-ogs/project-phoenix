@@ -1,5 +1,6 @@
+import type * as studentsContract from "~/lib/contract/students.generated";
 import { fetchStudent } from "~/lib/student-api";
-import type { Student, SupervisorContact } from "~/lib/student-helpers";
+import type { Student } from "~/lib/student-helpers";
 import { userContextService } from "~/lib/usercontext-api";
 import { createLogger } from "~/lib/logger";
 
@@ -60,7 +61,7 @@ export interface StudentDetailResponse {
   hasSickExcusedWriteAccess: boolean;
   attendanceLogEnabled: boolean;
   feedbackEnabled: boolean;
-  supervisors: SupervisorContact[];
+  supervisors: studentsContract.SupervisorContact[];
   myGroups: string[];
   myGroupRooms: string[];
   mySupervisedRooms: string[];

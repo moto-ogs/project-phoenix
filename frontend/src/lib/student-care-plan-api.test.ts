@@ -1,10 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("./session-cache", async () => {
-  const { transportFetch } =
-    await vi.importActual<typeof import("./api-error")>("./api-error");
-  return { sessionFetch: transportFetch };
-});
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 
 import {
   correctAttendance,

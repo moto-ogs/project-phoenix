@@ -335,10 +335,15 @@ describe("invitation-api", () => {
     it("accepts invitation successfully", async () => {
       global.fetch = vi.fn().mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ status: "success" }),
+        json: async () => ({
+          status: "success",
+          data: { account_id: "77", email: "test@example.com" },
+        }),
       });
 
-      await acceptInvitation("test-token-123", acceptRequest);
+      await expect(
+        acceptInvitation("test-token-123", acceptRequest),
+      ).resolves.toEqual({ tenantSubdomain: undefined });
 
       expect(global.fetch).toHaveBeenCalledWith("/api/invitations/accept", {
         method: "POST",
@@ -349,6 +354,8 @@ describe("invitation-api", () => {
           token: "test-token-123",
           ...acceptRequest,
         }),
+        credentials: "include",
+        cache: "no-store",
       });
     });
 
@@ -358,7 +365,7 @@ describe("invitation-api", () => {
         json: async () => ({
           status: "success",
           data: {
-            account_id: 77,
+            account_id: "77",
             email: "test@example.com",
             tenant_subdomain: "burbach",
           },

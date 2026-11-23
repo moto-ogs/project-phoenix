@@ -1,4 +1,3 @@
-import type { TeacherHint } from "./student-helpers";
 import {
   HOMEWORK_FEEDBACK_STATUSES,
   type HomeworkFeedbackStatus,
@@ -7,7 +6,7 @@ import type { CareDayStatus } from "./timetable-types";
 import { knownEnum } from "./contract/known-enum";
 import type * as sharedContract from "./contract/shared.generated";
 
-import type { ClassHandover } from "~/lib/class-handover";
+import type * as studentsContract from "~/lib/contract/students.generated";
 
 // Go does not register these sets; the contract types them as string. A value
 // this build does not know stays undefined instead of passing as a known one.
@@ -153,7 +152,7 @@ export interface TimetableRosterRow {
    * Übergabe nach dem Unterricht (#4794): heute mit der Klasse an die OGS
    * übergeben, „da“ oder „nicht da“. Nur in der Aufsicht geliefert.
    */
-  classHandover?: ClassHandover;
+  classHandover?: studentsContract.ClassHandover;
   warnings: TimetableRosterWarning[];
   /**
    * Care-plan verdict for this child on the instance's date (#1747).
@@ -165,7 +164,7 @@ export interface TimetableRosterRow {
    */
   careDayStatus: CareDayStatus;
   /** Hinweise der Lehrkraft für den Tag des Blocks (#4795); nur mit users:read. */
-  teacherHints?: TeacherHint[];
+  teacherHints?: studentsContract.TeacherHint[];
   /**
    * Names the other running instance where this child is currently recorded
    * present (#2265). Null when no parallel block holds the child as present;

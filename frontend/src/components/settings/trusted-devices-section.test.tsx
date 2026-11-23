@@ -25,6 +25,11 @@ function render(ui: ReactNode) {
 
 const toastSuccess = vi.fn();
 const toastError = vi.fn();
+// The staff session gate lets the request through; fetch gets the answer on.
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
 vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/contexts/ToastContext")>()),
   useToast: () => ({
@@ -149,12 +154,11 @@ describe("TrustedDevicesSection", () => {
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
         "/api/operator/auth/mfa/trusted-devices",
-        expect.objectContaining({
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-        }),
+        expect.objectContaining({ method: "GET" }),
       );
     });
+    // No bearer token leaves the browser: the request carries no headers.
+    expect(vi.mocked(global.fetch).mock.calls[0]?.[1]?.headers).toBeUndefined();
     expect(mockGetSession).not.toHaveBeenCalled();
     expect(
       await screen.findByText(/Du hast aktuell keine vertrauten Geräte/),

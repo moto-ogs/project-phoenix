@@ -19,6 +19,9 @@ type Entry struct {
 	Dish      string
 	Note      *string
 	Allergens []string
+	// MenuChangedAt is when the menu of the day changed after it was
+	// published (#7666); nil for a day as first published.
+	MenuChangedAt *time.Time
 }
 
 type OperationStats struct {

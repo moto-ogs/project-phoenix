@@ -394,31 +394,44 @@ describe("PasskeySettingsSection", () => {
     ).toBeInTheDocument();
   });
 
-  // A wrong e-mail code answers 401 with identity.mfa_code_invalid. That is
-  // no expired session: the form says so instead of jumping to the login.
-  it("shows a wrong code in the form without leaving the page", async () => {
-    const assign = vi.fn();
-    vi.stubGlobal("location", { ...window.location, assign });
-    mockRegisterPasskey.mockRejectedValueOnce(
-      new ApiError("invalid code", 401, { code: "identity.mfa_code_invalid" }),
-    );
-    renderWithToast(<PasskeySettingsSection />);
+  // Registration refusals are not expired sessions: keep them in the form.
+  it.each([
+    ["tenant", "identity.mfa_code_invalid"],
+    ["operator", "identity.mfa_code_invalid"],
+    ["tenant", "identity.passkey_login_failed"],
+    ["operator", "identity.passkey_login_failed"],
+  ] as const)(
+    "shows %s refusal %s without leaving the page",
+    async (scope, code) => {
+      const assign = vi.fn();
+      vi.stubGlobal("location", {
+        host: "localhost:3000",
+        pathname: scope === "tenant" ? "/settings" : "/operator/settings",
+        assign,
+      });
+      mockRegisterPasskey.mockRejectedValueOnce(
+        new ApiError("registration refused", 401, { code }),
+      );
+      renderWithToast(<PasskeySettingsSection scope={scope} />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Hinzufügen" }));
-    fireEvent.click(screen.getByRole("button", { name: "E-Mail senden" }));
-    fireEvent.change(await screen.findByLabelText("Code"), {
-      target: { value: "123456" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+      fireEvent.click(
+        await screen.findByRole("button", { name: "Hinzufügen" }),
+      );
+      fireEvent.click(screen.getByRole("button", { name: "E-Mail senden" }));
+      fireEvent.change(await screen.findByLabelText("Code"), {
+        target: { value: "123456" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
-    expect(
-      await screen.findByText(
-        catalogText("identity.mfa_code_invalid", "das Hinzufügen des Passkeys"),
-      ),
-    ).toBeInTheDocument();
-    expect(assign).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
-  });
+      expect(
+        await screen.findByText(
+          catalogText(code, "das Hinzufügen des Passkeys"),
+        ),
+      ).toBeInTheDocument();
+      expect(assign).not.toHaveBeenCalled();
+      vi.unstubAllGlobals();
+    },
+  );
 
   it("treats a cancelled device prompt as no error", async () => {
     const cancelled = new Error("The operation was not allowed");

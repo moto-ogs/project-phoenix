@@ -49,7 +49,10 @@ describe("authStepProxy", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ ok: true });
+    expect(await response.json()).toEqual({
+      status: "success",
+      data: { ok: true },
+    });
     expect(sent().url).toBe("http://backend.test/auth/mfa/resend");
     expect(sent().init).toMatchObject({
       method: "POST",
@@ -149,5 +152,36 @@ describe("authStepProxy", () => {
     await vi.advanceTimersByTimeAsync(1);
 
     expect((await pending).status).toBe(503);
+  });
+});
+
+// The browser reads every auth step in the BFF's `{ status, data }`. The
+// operator's backend answers its resend unwrapped (`plain`); before the step
+// proxy wrapped it, the client read `.data` of the raw answer and the
+// operator could not request a new code.
+describe("operator MFA resend from the browser through the BFF", () => {
+  it("hands the renewed challenge token to the login page", async () => {
+    const { POST } = await import("~/app/api/operator/auth/mfa/resend/route");
+    const { resendChallenge } = await import("./mfa-api");
+    fetchMock.mockImplementation(async (input, init) => {
+      const url = input instanceof Request ? input.url : String(input);
+      if (url.startsWith("http://backend.test/")) {
+        return Response.json({ challenge_token: "renewed" });
+      }
+      return POST(
+        new NextRequest(new URL(url, "http://app.test"), {
+          method: init?.method,
+          headers: init?.headers,
+          body: init?.body,
+        }),
+      );
+    });
+
+    await expect(
+      resendChallenge("operator", { challengeToken: "old" }),
+    ).resolves.toBe("renewed");
+    expect(fetchMock.mock.calls[1]![0]).toBe(
+      "http://backend.test/operator/auth/mfa/resend",
+    );
   });
 });

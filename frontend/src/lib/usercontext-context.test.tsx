@@ -1,9 +1,9 @@
+import type * as studentsContract from "~/lib/contract/students.generated";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 import type { Session } from "next-auth";
 import type { ReactNode } from "react";
 import { UserContextProvider, useUserContext } from "./usercontext-context";
-import type { NavigationEducationalGroup } from "./usercontext-helpers";
 import { mockSessionData } from "~/test/mocks/next-auth";
 
 // Mock dependencies
@@ -35,7 +35,7 @@ describe("UserContextProvider", () => {
     expires: new Date(Date.now() + 1000 * 60 * 60).toISOString(),
   });
 
-  const mockBackendGroups: NavigationEducationalGroup[] = [
+  const mockBackendGroups: studentsContract.NavigationGroup[] = [
     {
       id: "1",
       name: "Group A",
@@ -420,7 +420,7 @@ describe("UserContextProvider", () => {
     });
 
     it("should handle groups without room information", () => {
-      const groupsWithoutRooms: NavigationEducationalGroup[] = [
+      const groupsWithoutRooms: studentsContract.NavigationGroup[] = [
         {
           id: "1",
           name: "Group A",

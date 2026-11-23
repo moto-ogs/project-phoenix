@@ -1,5 +1,6 @@
 "use client";
 
+import type * as sharedContract from "~/lib/contract/shared.generated";
 import {
   attachmentIdArgs,
   type MessageAttachment,
@@ -48,7 +49,6 @@ import { useChatViewportLock } from "~/lib/hooks/use-chat-viewport-lock";
 import { useMessagesActivity } from "~/lib/hooks/use-messages-activity";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import {
-  type StaffMessage,
   type StaffThreadDetail,
   isCounterpartUnavailable,
   isGroupThread,
@@ -144,7 +144,7 @@ export function TeamChatThread({
   // Der Verlauf bleibt lesbar, geschrieben wird hier nichts mehr.
   const [counterpartGone, setCounterpartGone] = useState(false);
 
-  const messages: StaffMessage[] = thread?.messages ?? [];
+  const messages: sharedContract.MessageResponse[] = thread?.messages ?? [];
   // Gruppenchat (#4776): Mitglieder statt eines Gegenübers.
   const group = thread ? isGroupThread(thread) : false;
   const [view, setView] = useState<"chat" | "members">("chat");
@@ -273,7 +273,8 @@ export function TeamChatThread({
             sender_name: "",
             body,
             created_at: "",
-            attachments,
+            reader_count: 0,
+            attachments: [...attachments],
           },
         ],
       }),
@@ -466,7 +467,7 @@ export function TeamChatThread({
                       showOwnSenderName={false}
                       pending={pending}
                       attachments={message.attachments}
-                      attachmentUrl={portal.attachments.downloadUrl}
+                      attachmentFiles={portal.attachments}
                     />
                   </div>
                   {group && own && pending === undefined && (
@@ -507,7 +508,7 @@ export function TeamChatThread({
             }}
             sending={isSending}
             disabled={showSkeleton}
-            attachments={{ uploadUrl: portal.attachments.uploadUrl }}
+            attachments={{ upload: portal.attachments.upload }}
             placeholder="Nachricht schreiben…"
           />
         ) : (
@@ -551,9 +552,9 @@ export function TeamChatThread({
 
 /** The sent message once, also when a refresh already brought it. */
 function withMessage(
-  messages: readonly StaffMessage[],
-  sent: StaffMessage,
-): StaffMessage[] {
+  messages: readonly sharedContract.MessageResponse[],
+  sent: sharedContract.MessageResponse,
+): sharedContract.MessageResponse[] {
   return messages.some((message) => message.id === sent.id)
     ? [...messages]
     : [...messages, sent];

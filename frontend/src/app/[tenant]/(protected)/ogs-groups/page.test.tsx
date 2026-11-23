@@ -64,10 +64,14 @@ vi.mock("~/lib/auth-utils", () => ({
 }));
 
 // Mock next-auth/react
-vi.mock("~/lib/session-cache", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/lib/session-cache")>()),
-  sessionFetch: (await import("~/test/mocks/plain-session-fetch")).sessionFetch,
-}));
+vi.mock("~/lib/session-cache", async (importOriginal) => {
+  const plain = await import("~/test/mocks/plain-session-fetch");
+  return {
+    ...(await importOriginal<typeof import("~/lib/session-cache")>()),
+    requireTenantSession: plain.requireTenantSession,
+    renewTenantSession: plain.renewTenantSession,
+  };
+});
 
 vi.mock("next-auth/react", () => ({
   useSession: vi.fn(() => ({

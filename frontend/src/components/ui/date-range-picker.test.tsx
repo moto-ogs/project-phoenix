@@ -1,8 +1,15 @@
 import { schoolDateCases, setSchoolDateClock } from "~/test/school-date-cases";
 import { afterEach as restoreZoneAfterEach, vi as zoneVi } from "vitest";
 restoreZoneAfterEach(() => zoneVi.unstubAllEnvs());
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useRef } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("react-day-picker", () => ({
@@ -18,8 +25,10 @@ import { DateRangePicker, RangeCalendarInline } from "./date-range-picker";
 import { CustomSelect } from "./custom-select";
 import { MultiSelect } from "./multi-select";
 import { Modal } from "./modal";
+import { ResponsivePanel } from "./responsive-panel";
 import { SlideOver, SlideOverContent } from "./slide-over";
 import { AnchoredPopover } from "./anchored-popover";
+import { usePhoneViewport } from "~/test/helpers/viewport";
 
 describe("DateRangePicker", () => {
   it("collapses the label when both dates share month and year", () => {
@@ -436,6 +445,57 @@ describe("DateRangePicker in a dialog", () => {
     expect(previousMonth).toHaveFocus();
   });
 
+  describe("in a phone sheet (#7800)", () => {
+    usePhoneViewport();
+
+    function InSheet() {
+      const triggerRef = useRef<HTMLButtonElement>(null);
+      return (
+        <ResponsivePanel
+          open
+          onOpenChange={vi.fn()}
+          label="Filter"
+          returnFocusRef={triggerRef}
+          trigger={null}
+        >
+          {() => (
+            <DateRangePicker
+              value={undefined}
+              onChange={vi.fn()}
+              presets={[
+                {
+                  label: "Letzte 7 Tage",
+                  range: () => ({
+                    from: new Date(2026, 8, 3),
+                    to: new Date(2026, 8, 9),
+                  }),
+                },
+              ]}
+            />
+          )}
+        </ResponsivePanel>
+      );
+    }
+
+    it("keeps the calendar reachable by Tab inside the sheet's focus trap", async () => {
+      const user = userEvent.setup();
+      render(<InSheet />);
+      await screen.findByRole("dialog", { name: "Filter" });
+      await user.click(screen.getByRole("button", { name: "Zeitraum wählen" }));
+      const preset = await screen.findByRole("button", {
+        name: "Letzte 7 Tage",
+      });
+      const previousMonth = screen.getByRole("button", {
+        name: "Vorheriger Monat",
+      });
+
+      await waitFor(() => expect(preset).toHaveFocus());
+      await user.tab();
+
+      expect(previousMonth).toHaveFocus();
+    });
+  });
+
   it("keeps its portaled panel clickable inside a slide-over", async () => {
     const onChange = vi.fn();
     render(
@@ -699,3 +759,86 @@ it.each(schoolDateCases("2026-06-01"))(
       expect(picker).toHaveAttribute("data-month", "2026-6");
   },
 );
+
+describe("DateRangePicker am Handy", () => {
+  usePhoneViewport();
+
+  /** Vaul hält das Blatt bis zum Ende seiner Animation; happy-dom spielt keine. */
+  async function finishSheetClosing() {
+    const sheet = screen.queryByRole("dialog", { name: "Zeitraum wählen" });
+    if (sheet !== null) {
+      await waitFor(() =>
+        expect(sheet).toHaveAttribute("data-state", "closed"),
+      );
+      const end = new Event("animationend");
+      Object.assign(end, {
+        animationName: getComputedStyle(sheet).animationName,
+      });
+      act(() => {
+        sheet.dispatchEvent(end);
+      });
+    }
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Zeitraum wählen" }),
+      ).not.toBeInTheDocument(),
+    );
+  }
+
+  it("öffnet als Blatt mit einem Monat; eine Vorlage setzt den Zeitraum und schließt", async () => {
+    const onChange = vi.fn();
+    const range = { from: new Date(2026, 8, 3), to: new Date(2026, 8, 9) };
+    render(
+      <DateRangePicker
+        value={undefined}
+        onChange={onChange}
+        presets={[{ label: "Diese Woche", range: () => range }]}
+      />,
+    );
+    const trigger = screen.getByRole("button", { name: "Zeitraum wählen" });
+    fireEvent.click(trigger);
+
+    const sheet = await screen.findByRole("dialog", {
+      name: "Zeitraum wählen",
+    });
+    // Kein schwebendes Panel am Auslöser, im Blatt nur ein Monat.
+    expect(document.querySelector("[data-range-panel]")).toBeNull();
+    expect(await screen.findAllByTestId("range-day-picker")).toHaveLength(1);
+    const preset = screen.getByRole("button", { name: "Diese Woche" });
+    expect(sheet).toContainElement(preset);
+
+    fireEvent.click(preset);
+    expect(onChange).toHaveBeenCalledWith(range);
+    await finishSheetClosing();
+    expect(trigger).toHaveFocus();
+  });
+
+  it("schließt in einem Modal nur das Blatt", async () => {
+    const onClose = vi.fn();
+    render(
+      <Modal isOpen onClose={onClose} title="Termine absagen">
+        <DateRangePicker
+          value={undefined}
+          onChange={vi.fn()}
+          presets={[
+            {
+              label: "Diese Woche",
+              range: () => ({
+                from: new Date(2026, 8, 3),
+                to: new Date(2026, 8, 9),
+              }),
+            },
+          ]}
+        />
+      </Modal>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Zeitraum wählen" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Diese Woche" }));
+    await finishSheetClosing();
+
+    expect(onClose).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("dialog", { name: "Termine absagen" }),
+    ).toBeInTheDocument();
+  });
+});

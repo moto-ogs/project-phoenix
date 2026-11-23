@@ -323,6 +323,9 @@ type AbsenceStore interface {
 type SubstitutionStore interface {
 	FindGroupSubstitution(ctx context.Context, id int64, lock bool) (domain.GroupSubstitution, bool, domain.OperationStats, error)
 	ListGroupSubstitutions(context.Context, domain.GroupSubstitutionFilter) ([]domain.GroupSubstitution, domain.OperationStats, error)
+	// ListStaffAbsencesAndGroupSubstitutions reads both lists in one
+	// statement (#7903).
+	ListStaffAbsencesAndGroupSubstitutions(context.Context, domain.StaffAbsenceFilter, domain.GroupSubstitutionFilter) ([]domain.StaffAbsence, []domain.GroupSubstitution, domain.OperationStats, error)
 	CreateGroupSubstitution(context.Context, domain.GroupSubstitution) (domain.GroupSubstitution, domain.OperationStats, error)
 	UpdateGroupSubstitution(context.Context, domain.GroupSubstitution) (domain.GroupSubstitution, bool, domain.OperationStats, error)
 	DeleteGroupSubstitution(context.Context, int64) (domain.OperationStats, error)

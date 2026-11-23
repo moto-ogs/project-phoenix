@@ -1,11 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// The session gate is sessionFetch's own concern; here it hands straight to
+// The session gate is session-cache's own concern; here it hands straight to
 // fetch so the tests can stand in for the export route.
-vi.mock("./session-cache", () => ({
-  sessionFetch: (url: string, init?: RequestInit) =>
-    globalThis.fetch(url, init),
-}));
+vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 
 import {
   STUDENT_EXPORT_COLUMNS,

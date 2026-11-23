@@ -10,12 +10,11 @@ import { ApiError } from "~/lib/api-error";
 const mockFetch = vi.fn();
 global.fetch = mockFetch as unknown as typeof fetch;
 
-// The session gate is sessionFetch's own concern.
-vi.mock("~/lib/session-cache", async () => {
-  const { transportFetch } =
-    await vi.importActual<typeof import("~/lib/api-error")>("~/lib/api-error");
-  return { sessionFetch: transportFetch };
-});
+// The session gate is session-cache's own concern.
+vi.mock(
+  "~/lib/session-cache",
+  () => import("~/test/mocks/plain-session-fetch"),
+);
 
 // Mock mapGroupResponse
 vi.mock("@/lib/group-helpers", async () => {

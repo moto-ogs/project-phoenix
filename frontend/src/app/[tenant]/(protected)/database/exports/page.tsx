@@ -321,10 +321,10 @@ export default function DatabaseExportsPage() {
                       exportRoomSnapshot({
                         format,
                         title: "Wer ist wo",
-                        // room_ids stays omitted on purpose: every room. An
-                        // empty array would select nothing and render an
+                        // roomIds stays omitted on purpose: every room. An
+                        // empty list would select nothing and render an
                         // empty file.
-                        include_transit: true,
+                        includeTransit: true,
                       }),
                     );
                   }}

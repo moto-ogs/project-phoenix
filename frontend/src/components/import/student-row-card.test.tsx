@@ -7,8 +7,8 @@ describe("StudentRowCard", () => {
     row: 1,
     status: "new" as const,
     errors: [],
-    first_name: "Max",
-    last_name: "Mustermann",
+    firstName: "Max",
+    lastName: "Mustermann",
     meta: ["1a", "Gruppe A", "Anna Mustermann"],
   };
 

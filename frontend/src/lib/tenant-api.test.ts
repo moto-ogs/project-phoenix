@@ -4,13 +4,13 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 // Mocks
 // ============================================================================
 
-const { mockSessionFetch, mockClearSessionCache } = vi.hoisted(() => ({
-  mockSessionFetch: vi.fn(),
+const { fetchMock, mockClearSessionCache } = vi.hoisted(() => ({
+  fetchMock: vi.fn(),
   mockClearSessionCache: vi.fn(),
 }));
 
-vi.mock("./session-cache", () => ({
-  sessionFetch: mockSessionFetch,
+vi.mock("./session-cache", async () => ({
+  ...(await import("~/test/mocks/plain-session-fetch")),
   clearSessionCache: mockClearSessionCache,
 }));
 
@@ -34,7 +34,8 @@ describe("tenant-api", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    global.fetch = vi.fn();
+    fetchMock.mockReset();
+    global.fetch = fetchMock;
   });
 
   afterEach(() => {
@@ -123,7 +124,7 @@ describe("tenant-api", () => {
 
       expect(global.fetch).toHaveBeenCalledWith(
         "/api/auth/tenant/resolve?slug=demo-school",
-        undefined,
+        { method: "GET", credentials: "include", cache: "no-store" },
       );
       expect(result).toEqual({
         careFacilityTerm: "OGS",
@@ -689,7 +690,11 @@ describe("tenant-api", () => {
       const { listAllTenants } = await import("./tenant-api");
       const result = await listAllTenants(1);
 
-      expect(global.fetch).toHaveBeenCalledWith("/api/auth/tenants");
+      expect(global.fetch).toHaveBeenCalledWith("/api/auth/tenants", {
+        method: "GET",
+        credentials: "include",
+        cache: "no-store",
+      });
       expect(result.status).toBe("ok");
       expect(result.tenants).toHaveLength(2);
       expect(result.tenants[0]).toEqual({
@@ -714,7 +719,8 @@ describe("tenant-api", () => {
       expect(result).toEqual({ tenants: [], status: "error" });
     });
 
-    it("returns empty tenants with status ok when data field is missing", async () => {
+    // #7806: an answer without `data` breaks the contract; it is no empty list.
+    it("reports an answer without data as an error, not as no schools", async () => {
       vi.mocked(global.fetch).mockResolvedValueOnce(
         new Response(JSON.stringify({}), {
           status: 200,
@@ -725,7 +731,7 @@ describe("tenant-api", () => {
       const { listAllTenants } = await import("./tenant-api");
       const result = await listAllTenants(1);
 
-      expect(result).toEqual({ tenants: [], status: "ok" });
+      expect(result).toEqual({ tenants: [], status: "error" });
     });
 
     it("returns error status after exhausting retries on network error", async () => {
@@ -772,7 +778,7 @@ describe("tenant-api", () => {
   });
 
   // --------------------------------------------------------------------------
-  // listAvailableTenants (uses sessionFetch, requires auth)
+  // listAvailableTenants (staff portal, behind the session gate)
   // --------------------------------------------------------------------------
 
   describe("listAvailableTenants", () => {
@@ -798,7 +804,7 @@ describe("tenant-api", () => {
         ],
       };
 
-      mockSessionFetch.mockResolvedValueOnce(
+      fetchMock.mockResolvedValueOnce(
         new Response(JSON.stringify(data), {
           status: 200,
           headers: { "Content-Type": "application/json" },
@@ -807,10 +813,9 @@ describe("tenant-api", () => {
 
       const result = await listAvailableTenants();
 
-      expect(mockSessionFetch).toHaveBeenCalledWith(
-        "/api/auth/account/tenants",
-        { method: "GET" },
-      );
+      expect(fetchMock).toHaveBeenCalledWith("/api/auth/account/tenants", {
+        method: "GET",
+      });
       expect(result).toHaveLength(2);
       expect(result[0]).toEqual({
         tenantId: 1,
@@ -824,7 +829,7 @@ describe("tenant-api", () => {
 
     // #2353: a failed list is an error; the switcher decides to stay silent.
     it("rejects an error response instead of answering no schools", async () => {
-      mockSessionFetch.mockResolvedValueOnce(
+      fetchMock.mockResolvedValueOnce(
         new Response("Unauthorized", { status: 401 }),
       );
 
@@ -836,7 +841,7 @@ describe("tenant-api", () => {
     it("confirms a server-side switch without reading credentials", async () => {
       const confirmation = { status: "success", data: null };
 
-      mockSessionFetch.mockResolvedValueOnce(
+      fetchMock.mockResolvedValueOnce(
         new Response(JSON.stringify(confirmation), {
           status: 200,
           headers: { "Content-Type": "application/json" },
@@ -845,25 +850,16 @@ describe("tenant-api", () => {
 
       const result = await switchTenant("school-b");
 
-      expect(mockSessionFetch).toHaveBeenCalledWith(
-        "/api/auth/switch-tenant",
-        {
-          method: "POST",
-          body: JSON.stringify({ tenant_slug: "school-b" }),
-          headers: { "Content-Type": "application/json" },
-        },
-        {
-          authRefusals: [
-            "identity.tenant_access_denied",
-            "identity.mfa_session_required",
-          ],
-        },
-      );
+      expect(fetchMock).toHaveBeenCalledWith("/api/auth/switch-tenant", {
+        method: "POST",
+        body: JSON.stringify({ tenant_slug: "school-b" }),
+        headers: { "Content-Type": "application/json" },
+      });
       expect(result).toBeUndefined();
     });
 
     it("throws classified access-denied error on tenant authorization failure", async () => {
-      mockSessionFetch.mockResolvedValueOnce(
+      fetchMock.mockResolvedValueOnce(
         new Response(
           JSON.stringify({
             status: 401,
@@ -886,8 +882,26 @@ describe("tenant-api", () => {
       });
     });
 
+    it("keeps the session when the target school asks for its second factor", async () => {
+      fetchMock.mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            status: 401,
+            code: "identity.mfa_session_required",
+          }),
+          { status: 401, headers: { "Content-Type": "application/json" } },
+        ),
+      );
+
+      // A renewal would end in general.permission; the refusal stays its own.
+      await expect(switchTenant("school-b")).rejects.toMatchObject({
+        status: 401,
+        code: "identity.mfa_session_required",
+      });
+    });
+
     it("classifies by the code, not by the diagnostic text", async () => {
-      mockSessionFetch.mockResolvedValueOnce(
+      fetchMock.mockResolvedValueOnce(
         new Response(
           JSON.stringify({
             detail: "account does not have access to this tenant",
@@ -904,7 +918,7 @@ describe("tenant-api", () => {
     });
 
     it("preserves the school portal handoff code", async () => {
-      mockSessionFetch.mockResolvedValueOnce(
+      fetchMock.mockResolvedValueOnce(
         new Response(
           JSON.stringify({
             status: 403,
@@ -926,7 +940,7 @@ describe("tenant-api", () => {
     });
 
     it("throws generic error when response body is empty", async () => {
-      mockSessionFetch.mockResolvedValueOnce(new Response("", { status: 500 }));
+      fetchMock.mockResolvedValueOnce(new Response("", { status: 500 }));
 
       await expect(switchTenant("bad")).rejects.toMatchObject({
         name: "ApiError",
@@ -937,7 +951,7 @@ describe("tenant-api", () => {
     });
 
     it("keeps the fallback diagnostic when the body is not JSON", async () => {
-      mockSessionFetch.mockResolvedValueOnce(
+      fetchMock.mockResolvedValueOnce(
         new Response("plain text error", { status: 503 }),
       );
 
@@ -950,7 +964,7 @@ describe("tenant-api", () => {
     });
 
     it("does not read a legacy message field as the diagnostic", async () => {
-      mockSessionFetch.mockResolvedValueOnce(
+      fetchMock.mockResolvedValueOnce(
         new Response(JSON.stringify({ message: "something went wrong" }), {
           status: 400,
           headers: { "Content-Type": "application/json" },
@@ -966,7 +980,7 @@ describe("tenant-api", () => {
     });
 
     it("keeps the fallback diagnostic when JSON has no detail", async () => {
-      mockSessionFetch.mockResolvedValueOnce(
+      fetchMock.mockResolvedValueOnce(
         new Response(JSON.stringify({ foo: "bar" }), {
           status: 422,
           headers: { "Content-Type": "application/json" },
@@ -997,7 +1011,7 @@ describe("tenant-api", () => {
     });
 
     it("switches server-side before clearing caches", async () => {
-      mockSessionFetch.mockResolvedValueOnce(
+      fetchMock.mockResolvedValueOnce(
         new Response(JSON.stringify(confirmation), {
           status: 200,
           headers: { "Content-Type": "application/json" },
@@ -1009,20 +1023,11 @@ describe("tenant-api", () => {
       expect(result).toBeUndefined();
 
       // Step 1: switch-tenant called
-      expect(mockSessionFetch).toHaveBeenCalledWith(
-        "/api/auth/switch-tenant",
-        {
-          method: "POST",
-          body: JSON.stringify({ tenant_slug: "school-b" }),
-          headers: { "Content-Type": "application/json" },
-        },
-        {
-          authRefusals: [
-            "identity.tenant_access_denied",
-            "identity.mfa_session_required",
-          ],
-        },
-      );
+      expect(fetchMock).toHaveBeenCalledWith("/api/auth/switch-tenant", {
+        method: "POST",
+        body: JSON.stringify({ tenant_slug: "school-b" }),
+        headers: { "Content-Type": "application/json" },
+      });
 
       // Step 3: SWR cache cleared
       expect(mockSwrMutate).toHaveBeenCalledWith(
@@ -1038,7 +1043,7 @@ describe("tenant-api", () => {
     it("calls steps in correct order", async () => {
       const callOrder: string[] = [];
 
-      mockSessionFetch.mockImplementation(async () => {
+      fetchMock.mockImplementation(async () => {
         callOrder.push("switchTenant");
         return new Response(JSON.stringify(confirmation), {
           status: 200,
@@ -1067,7 +1072,7 @@ describe("tenant-api", () => {
       localStorage.setItem("sidebar-last-group-name:1:7", "Eulen");
       localStorage.setItem("moto:personal-storage-owner", "1:7");
       localStorage.setItem("sidebar-collapsed", "true");
-      mockSessionFetch.mockResolvedValueOnce(
+      fetchMock.mockResolvedValueOnce(
         new Response(JSON.stringify(confirmation), {
           status: 200,
           headers: { "Content-Type": "application/json" },
@@ -1084,7 +1089,7 @@ describe("tenant-api", () => {
 
     it("propagates the ApiError when backend rejects", async () => {
       localStorage.setItem("sidebar-last-group-name:1:7", "Eulen");
-      mockSessionFetch.mockResolvedValueOnce(
+      fetchMock.mockResolvedValueOnce(
         new Response(
           JSON.stringify({
             detail: "account does not have access to this tenant",

@@ -23,10 +23,14 @@ function context(permissions: string[], scope = "") {
   };
 }
 
-vi.mock("~/lib/session-cache", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/lib/session-cache")>()),
-  sessionFetch: (await import("~/test/mocks/plain-session-fetch")).sessionFetch,
-}));
+vi.mock("~/lib/session-cache", async (importOriginal) => {
+  const plain = await import("~/test/mocks/plain-session-fetch");
+  return {
+    ...(await importOriginal<typeof import("~/lib/session-cache")>()),
+    requireTenantSession: plain.requireTenantSession,
+    renewTenantSession: plain.renewTenantSession,
+  };
+});
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -177,14 +181,14 @@ describe("tenant destination resources", () => {
 });
 
 it("uses the cold destination's exact entry fetcher for a parameterized supervision link", async () => {
-  const transport = vi.fn<typeof fetch>().mockResolvedValueOnce(
+  const fetchMock = vi.fn<typeof fetch>().mockResolvedValueOnce(
     new Response(
       JSON.stringify({
         data: buildSupervisionDashboardWire({ selected_group_id: "first" }),
       }),
     ),
   );
-  vi.stubGlobal("fetch", transport);
+  vi.stubGlobal("fetch", fetchMock);
   const resources = await tenantPrefetchResources(
     "/active-supervisions?session=9",
     context(["groups:read"]),
@@ -193,7 +197,7 @@ it("uses the cold destination's exact entry fetcher for a parameterized supervis
   await expect(resources[0]!.fetcher()).resolves.toMatchObject({
     selectedGroupId: "first",
   });
-  expect(transport).toHaveBeenCalledExactlyOnceWith(
+  expect(fetchMock).toHaveBeenCalledExactlyOnceWith(
     "/api/active/supervision-dashboard",
     expect.objectContaining({ method: "GET" }),
   );
