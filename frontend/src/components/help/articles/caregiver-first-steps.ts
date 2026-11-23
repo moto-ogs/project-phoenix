@@ -37,6 +37,7 @@ export function caregiverFirstStepsTopic(): HelpTopic {
     differences: [
       "Welche Schritte du siehst, hängt von deiner OGS ab. Ohne feste Gruppen fehlt zum Beispiel `Meine Gruppe ansehen`.",
       "`Meine Gruppe ansehen` erscheint erst, wenn dir eine Gruppe zugeordnet ist.",
+      "In einem Chat fehlt unten der Knopf `Erste Schritte`. So bleibt `Senden` frei. Auf den anderen Seiten ist er wieder da.",
     ],
     troubleshootingDetails: [
       "Die Checkliste erscheint nicht? Sie kommt erst, wenn deine OGS eine Gruppe oder ein Kind in moto hat. Wer schon vor der Checkliste mit moto gearbeitet hat, bekommt sie nicht.",

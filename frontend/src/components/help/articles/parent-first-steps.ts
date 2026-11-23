@@ -31,6 +31,9 @@ export function parentFirstStepsTopic(): HelpTopic {
       "`moto als App auf dem Handy hinzufügen` und `Benachrichtigungen einschalten` sind zwei getrennte Touren.",
       "Der Stand gilt für dieses Elternkonto auf diesem Gerät.",
     ],
+    differences: [
+      "In einem Chat fehlt unten der Knopf `Erste Schritte`. So bleibt `Senden` frei. Auf den anderen Seiten ist er wieder da.",
+    ],
     troubleshootingDetails: [
       "Du hast `Erste Schritte ausblenden` gewählt? Dann erscheint die Checkliste auf diesem Gerät nicht mehr. Die einzelnen Anleitungen findest du weiterhin in der Hilfe.",
       "Ein Bereich fehlt? Manche Bereiche zeigt moto nur, wenn deine OGS sie nutzt.",
