@@ -86,6 +86,7 @@ function BlockedOfferingRow({
   automaticDays,
   stats,
   onRemove,
+  extension,
 }: Readonly<{
   offering: CareOffering;
   gradeLevel: number | null | undefined;
@@ -94,6 +95,12 @@ function BlockedOfferingRow({
   automaticDays: readonly string[];
   stats: enrollmentContract.CareOfferingBookingStatsResponse | undefined;
   onRemove: () => void;
+  /** The end the office can extend (#7929); shown while the row stays booked. */
+  extension?: Readonly<{
+    end: { validUntil: string; extendsUntil: string };
+    extended: boolean;
+    onToggle: () => void;
+  }>;
 }>) {
   const reason = careOfferingAvailabilityReason(
     offering,
@@ -146,6 +153,9 @@ function BlockedOfferingRow({
           <OfferingOccupancyLine stats={stats} />
         </div>
       </label>
+      {booked && extension ? (
+        <BookingEnd inputId={`${inputId}-extend`} {...extension} />
+      ) : null}
     </OfferingRowShell>
   );
 }
@@ -399,7 +409,11 @@ export function ChildOfferingAdjustment({
     });
     setRosterImpact(mapRosterImpact(updated?.roster_impact));
     setWithdrawalCreated(completeWithdrawalConfirmed);
-    if (completeWithdrawalConfirmed) {
+    // Eine Verlängerung kann eine offene Abmeldung erledigen (#7929).
+    if (
+      completeWithdrawalConfirmed ||
+      input.offerings.some((offering) => offering.extend_to_phase_end)
+    ) {
       announceChangeRequestsChanged();
     }
     await finishSave();
@@ -624,24 +638,34 @@ export function ChildOfferingAdjustment({
                   <SectionLabel as="p">
                     Für dieses Kind nicht wählbar
                   </SectionLabel>
-                  {blockedCatalog.map((offering) => (
-                    <BlockedOfferingRow
-                      key={offering.id}
-                      offering={offering}
-                      gradeLevel={child.target_grade_level}
-                      gradeLevelMax={gradeLevelMax}
-                      booked={selected.has(offering.id)}
-                      automaticDays={automaticDaysOnFile[offering.id] ?? []}
-                      stats={bookingStats[offering.id]}
-                      onRemove={() =>
-                        setSelected((prev) => {
-                          const next = new Set(prev);
-                          next.delete(offering.id);
-                          return next;
-                        })
-                      }
-                    />
-                  ))}
+                  {blockedCatalog.map((offering) => {
+                    const end = bookingEnds[offering.id];
+                    return (
+                      <BlockedOfferingRow
+                        key={offering.id}
+                        offering={offering}
+                        gradeLevel={child.target_grade_level}
+                        gradeLevelMax={gradeLevelMax}
+                        booked={selected.has(offering.id)}
+                        automaticDays={automaticDaysOnFile[offering.id] ?? []}
+                        stats={bookingStats[offering.id]}
+                        {...(end && {
+                          extension: {
+                            end,
+                            extended: extended.has(offering.id),
+                            onToggle: () => toggleExtended(offering.id),
+                          },
+                        })}
+                        onRemove={() =>
+                          setSelected((prev) => {
+                            const next = new Set(prev);
+                            next.delete(offering.id);
+                            return next;
+                          })
+                        }
+                      />
+                    );
+                  })}
                 </div>
               ) : null}
               {hasSelectedCareDays ? (
@@ -891,6 +915,7 @@ function adjustmentPayloadOfferings(
         offering.days_of_week_mode === "parent_choice"
           ? (days[offering.offering_id] ?? offering.selected_days ?? [])
           : undefined,
+      ...(extended.has(offering.offering_id) && { extend_to_phase_end: true }),
     });
   }
   return payload;

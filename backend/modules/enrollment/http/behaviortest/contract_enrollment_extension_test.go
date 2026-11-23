@@ -116,6 +116,9 @@ func TestAScheduledChangeBoundsTheExtension(t *testing.T) {
 	assert.Equal(t, []calendar.Date{contractRunDay, inMay}, c.bookingEnds(t, c.bounded.ID),
 		"with a scheduled change the correction applies from today; the booking runs to the change")
 	assert.Equal(t, []calendar.Date{c.phaseEndExcl}, c.bookingEnds(t, c.added.ID), "the change stays")
+	assert.Equal(t, 1, c.rosterEndsOn(t, inMay), "the roster row of the source rule ends with the booking")
+	assert.Zero(t, c.rosterRowsPast(t, inMay), "no roster row runs past the change")
+	assert.Equal(t, 1, c.onOccurrence(t, c.afterEnd), "the child is on the occurrence after the old end")
 	var after string
 	require.NoError(t, c.db.NewRaw(`SELECT after_json::text FROM audit.enrollment_offering_adjustments
 		WHERE tenant_id = ? AND request_child_id = ? ORDER BY id DESC LIMIT 1`, testpkg.Tenant(t), c.childID).Scan(testpkg.Ctx(t), &after))

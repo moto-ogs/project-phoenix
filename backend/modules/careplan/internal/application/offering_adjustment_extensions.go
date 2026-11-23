@@ -29,9 +29,10 @@ func extendedOfferings(choices []careplan.OfferingAdjustmentChoice) map[int64]bo
 
 // keepUnextendedBookingEnds keeps the ends of the bookings the office does
 // not extend (keepBookingEnds) and answers the stored ends it found, the
-// extended ones included, for the history. A change scheduled after the end
-// is restored afterwards and starts where it is planned; it bounds the
-// extension (nextScheduledChange).
+// extended ones included, for the history. A change scheduled after today
+// is restored afterwards and starts where it is planned, so an extended
+// booking ends there at the latest; where the change carries the offering
+// on, the extension changes nothing.
 func keepUnextendedBookingEnds(work *offeringAdjustmentWork, history []*careplan.BookedOffering) map[int64]calendar.Date {
 	phaseEnd := work.phase.ServiceEnd.AddDays(1)
 	extended := extendedOfferings(work.input.Offerings)
@@ -43,8 +44,11 @@ func keepUnextendedBookingEnds(work *offeringAdjustmentWork, history []*careplan
 	}
 	keepBookingEnds(work.replacement, kept, history, work.offeringByID, phaseEnd)
 	if scheduled := scheduledOfferingReplacements(history, work.selectionDate); len(scheduled) > 0 {
-		next := scheduled[0].EffectiveFrom
-		work.nextScheduledChange = &next
+		for _, row := range work.replacement {
+			if extended[row.CareOfferingID] {
+				endAtMost(row, scheduled[0].EffectiveFrom)
+			}
+		}
 	}
 	return storedBookingEnds(work.beforeLinks, history, phaseEnd)
 }
@@ -60,12 +64,8 @@ func recordExtendedEnds(work *offeringAdjustmentWork) error {
 		if !extended[row.CareOfferingID] || !limited || row.ValidUntil == nil {
 			continue
 		}
-		written := *row.ValidUntil
-		if next := work.nextScheduledChange; next != nil && next.Before(written) {
-			written = *next
-		}
-		if written.After(end) {
-			until[row.CareOfferingID] = written.AddDays(-1)
+		if row.ValidUntil.After(end) {
+			until[row.CareOfferingID] = row.ValidUntil.AddDays(-1)
 		}
 	}
 	if len(until) == 0 {

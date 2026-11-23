@@ -11,7 +11,9 @@ import (
 
 // The office extends a limited booking to the end of the phase (#7929): an
 // extended offering keeps no end, the others keep theirs, and a co-booking
-// goes on with its extended trigger. The phase ends with July.
+// goes on with its extended trigger. A change scheduled after today stays
+// and closes the extension where it starts. Today is 4 January, the phase
+// ends with July.
 func TestKeepUnextendedBookingEnds(t *testing.T) {
 	t.Parallel()
 	const care, other, late = 1, 2, 3
@@ -39,10 +41,15 @@ func TestKeepUnextendedBookingEnds(t *testing.T) {
 			replacement: []*careplan.BookedOffering{manual(care), manual(other)},
 			want:        map[int64]*calendar.Date{care: nil, other: &may},
 		},
-		"an extended chain ends with the phase": {
+		"a continuation scheduled after today leaves nothing to extend": {
 			history: []*careplan.BookedOffering{stored(care, august, march), stored(care, march, may)}, before: []int{0},
 			replacement: []*careplan.BookedOffering{manual(care)},
-			want:        map[int64]*calendar.Date{care: nil},
+			want:        map[int64]*calendar.Date{care: &march},
+		},
+		"a change scheduled after today bounds the extension": {
+			history: []*careplan.BookedOffering{stored(care, august, march), stored(other, may, may.AddDays(30))}, before: []int{0},
+			replacement: []*careplan.BookedOffering{manual(care)},
+			want:        map[int64]*calendar.Date{care: &may},
 		},
 		"a co-booking goes on with an extended trigger": {
 			history: []*careplan.BookedOffering{stored(care, august, march), stored(late, august, march)}, before: []int{0, 1},
@@ -54,10 +61,11 @@ func TestKeepUnextendedBookingEnds(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			work := &offeringAdjustmentWork{
-				input:        careplan.OfferingAdjustment{Offerings: []careplan.OfferingAdjustmentChoice{{OfferingID: care, ExtendToPhaseEnd: true}}},
-				phase:        ports.BookingPhase{OfferingPhase: careplan.OfferingPhase{ServiceEnd: calendar.NewDate(2027, 7, 31)}},
-				replacement:  tc.replacement,
-				offeringByID: offerings,
+				selectionDate: calendar.NewDate(2027, 1, 4),
+				input:         careplan.OfferingAdjustment{Offerings: []careplan.OfferingAdjustmentChoice{{OfferingID: care, ExtendToPhaseEnd: true}}},
+				phase:         ports.BookingPhase{OfferingPhase: careplan.OfferingPhase{ServiceEnd: calendar.NewDate(2027, 7, 31)}},
+				replacement:   tc.replacement,
+				offeringByID:  offerings,
 			}
 			for _, i := range tc.before {
 				work.beforeLinks = append(work.beforeLinks, tc.history[i])

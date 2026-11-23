@@ -9,6 +9,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
+import { CHANGE_REQUESTS_REFRESH_EVENT } from "~/lib/change-requests-refresh";
 import { catalogText } from "~/test/error-catalog-text";
 import type { CareOffering } from "~/lib/care-offering-api";
 import type { AdminRequestChild } from "~/lib/enrollment-admin-api";
@@ -1364,6 +1365,84 @@ describe("ChildOfferingAdjustment booking end", () => {
       screen.queryByRole("checkbox", { name: /verlängern/ }),
     ).not.toBeInTheDocument();
     expect(screen.queryByText(/Gebucht bis/)).not.toBeInTheDocument();
+  });
+
+  it("extends a booked offering the child's grade no longer allows", async () => {
+    mocks.listCareOfferings.mockResolvedValue([
+      catalogOffering({
+        id: "grade-1-only",
+        name: "Randstunde",
+        availability_rule: {
+          match: "all",
+          conditions: [{ source: "grade_level", operator: "in", value: [1] }],
+        },
+      }),
+    ]);
+    mocks.updateAdminChildOfferings.mockResolvedValue({});
+    renderAdjustment(
+      adjustmentChild({
+        target_grade_level: 3,
+        offerings: [
+          {
+            offering_id: "grade-1-only",
+            offering_name: "Randstunde",
+            days_of_week_mode: "fixed",
+            selected_days: ["mon"],
+            manual_selected_days: ["mon"],
+            available_days: ["mon"],
+            includes_lunch: false,
+            includes_holiday_care: false,
+            valid_until: "2027-02-28",
+            extends_until: "2027-07-31",
+          },
+        ],
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    fireEvent.click(
+      await screen.findByRole("checkbox", {
+        name: "Bis 31.07.2027 verlängern",
+      }),
+    );
+    fireEvent.change(screen.getByLabelText("Begründung"), {
+      target: { value: "Betreuung läuft weiter" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() => {
+      expect(mocks.updateAdminChildOfferings).toHaveBeenCalledWith(
+        "request-1",
+        "child-1",
+        expect.objectContaining({
+          offerings: [
+            { offering_id: "grade-1-only", extend_to_phase_end: true },
+          ],
+        }),
+      );
+    });
+  });
+
+  it("tells open request lists to reload after an extension", async () => {
+    mocks.listCareOfferings.mockResolvedValue([catalogOffering()]);
+    mocks.updateAdminChildOfferings.mockResolvedValue({});
+    const reloads = vi.fn();
+    window.addEventListener(CHANGE_REQUESTS_REFRESH_EVENT, reloads);
+    renderAdjustment(limitedBooking("2027-07-31"));
+
+    fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    fireEvent.click(
+      await screen.findByRole("checkbox", {
+        name: "Bis 31.07.2027 verlängern",
+      }),
+    );
+    fireEvent.change(screen.getByLabelText("Begründung"), {
+      target: { value: "Betreuung läuft weiter" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() => expect(reloads).toHaveBeenCalledTimes(1));
+    window.removeEventListener(CHANGE_REQUESTS_REFRESH_EVENT, reloads);
   });
 
   it("names the extension in the history", async () => {
