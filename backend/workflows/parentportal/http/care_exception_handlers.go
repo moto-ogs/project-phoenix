@@ -13,6 +13,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
 
@@ -141,7 +142,7 @@ func toPickupChangeRequestResponse(req *careplan.CareScheduleChangeRequest, acco
 		ID: strconv.FormatInt(req.ID, 10), Date: terms.Date.String(),
 		PreviousDepartureModes: terms.PreviousDepartureModes, Reason: reason, Status: req.Status, DecisionReason: req.DecisionReason,
 		CreatedAt: req.CreatedAt, ReviewedAt: req.ReviewedAt, IsSelf: req.SubmittedBy == accountID,
-		Version: careplan.ParentRequestVersion(req.UpdatedAt),
+		Version: readstate.Of(req.UpdatedAt),
 	}
 	if terms.PickupTime != "" {
 		response.PickupTime = &terms.PickupTime

@@ -84,11 +84,6 @@ export interface updateBillingKeyDayRequest {
   key_day?: number | null;
 }
 
-/** Query of GET /operator/billing/key-date-counts/export */
-export interface GetOperatorBillingKeyDateCountsExportQuery {
-  month?: string;
-}
-
 export const routes = {
   "DELETE /operator/billing/key-day-overrides/organizations/{organizationId}": {
     method: "DELETE",
@@ -112,7 +107,9 @@ export const routes = {
     method: "GET",
     pattern: "/operator/billing/key-date-counts/export",
     portals: ["platform"],
-    query: ["month"],
+    query: {
+      "month": { kind: "string" },
+    },
     response: fileAnswer,
   },
   "GET /operator/billing/key-day": {

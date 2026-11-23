@@ -16,6 +16,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
@@ -225,7 +226,7 @@ func TestBulkRequestDeletedWhileWaitingHTTP(t *testing.T) {
 				StudentID: studentID, SubmittedBy: request.SubmittedBy, Target: "person", FieldKey: "last_name", Status: "pending", OldValue: json.RawMessage(`"Schneider"`), NewValue: json.RawMessage(`"Becker"`),
 			})
 			require.NoError(t, err)
-			body := fmt.Sprintf(`{"requests":[{"kind":"master_data","id":"%d","expected_version":"%s"},{"kind":"master_data","id":"%d","expected_version":"%s"}],"reason":"Reviewed"}`, row.id, careplan.ParentRequestVersion(request.UpdatedAt), other.ID, careplan.ParentRequestVersion(other.UpdatedAt))
+			body := fmt.Sprintf(`{"requests":[{"kind":"master_data","id":"%d","expected_version":"%s"},{"kind":"master_data","id":"%d","expected_version":"%s"}],"reason":"Reviewed"}`, row.id, readstate.Of(request.UpdatedAt), other.ID, readstate.Of(other.UpdatedAt))
 			done := make(chan *httptest.ResponseRecorder, 1)
 			err = testpkg.WithTenantTx(t, ctx, db, testpkg.Tenant(t), func(deleteCtx context.Context, tx bun.Tx) error {
 				if deletion == "child" {

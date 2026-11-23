@@ -15,8 +15,8 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan/absencerecords"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
-	"github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 var (
@@ -291,7 +291,7 @@ func pendingCareRequest(
 		CreatedAt:       pending.CreatedAt,
 		Diff:            diff,
 		SubmittedBySelf: pending.SubmittedBy == accountID,
-		Version:         excusedrequests.ParentRequestVersion(pending.UpdatedAt),
+		Version:         readstate.Of(pending.UpdatedAt),
 	}
 }
 

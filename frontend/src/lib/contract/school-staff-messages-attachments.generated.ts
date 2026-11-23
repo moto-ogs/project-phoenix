@@ -8,17 +8,14 @@ import {
   UploadResponseSchema,
 } from "./shared.generated";
 
-/** Query of GET /school-staff-messages/attachments/{attachmentId}/download */
-export interface GetSchoolStaffMessagesAttachmentsAttachmentIdDownloadQuery {
-  inline?: string;
-}
-
 export const routes = {
   "GET /school-staff-messages/attachments/{attachmentId}/download": {
     method: "GET",
     pattern: "/school-staff-messages/attachments/{attachmentId}/download",
     portals: ["school"],
-    query: ["inline"],
+    query: {
+      "inline": { kind: "string" },
+    },
     response: fileAnswer,
   },
   "POST /school-staff-messages/attachments": {

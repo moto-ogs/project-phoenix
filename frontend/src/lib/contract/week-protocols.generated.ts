@@ -138,17 +138,14 @@ export interface weekProtocolNotesRequest {
   days?: weekProtocolDayNoteInput[] | null;
 }
 
-/** Query of GET /api/week-protocols/ */
-export interface GetWeekProtocolsQuery {
-  group_id?: string;
-}
-
 export const routes = {
   "GET /api/week-protocols/": {
     method: "GET",
     pattern: "/api/week-protocols/",
     portals: ["tenant"],
-    query: ["group_id"],
+    query: {
+      "group_id": { kind: "id" },
+    },
     response: success(z.array(weekProtocolResponseSchema)),
   },
   "GET /api/week-protocols/{protocolId}": {

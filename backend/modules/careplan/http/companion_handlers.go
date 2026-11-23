@@ -50,13 +50,6 @@ func companionPlanErrorRenderer(err error) render.Renderer {
 	// whether to widen another child's plan for what is really a lock collision.
 	case errors.Is(err, careplan.ErrCompanionLockBusy), errors.Is(err, departure.ErrCompanionLockBusy):
 		return common.ErrorConflictWithCode(err, common.CodeStudentsCompanionLockBusy)
-	// The stored links no longer match the snapshot the submitted list replaces.
-	// Nothing was written, and the same list must NOT simply be re-sent — it
-	// would delete the change this refusal is protecting. A 409 with its own
-	// code lets the client reload and let the user redo the edit on the current
-	// state.
-	case errors.Is(err, careplan.ErrCompanionsChanged):
-		return common.ErrorConflictWithCode(err, common.CodeStudentsCompanionsChanged)
 	}
 	return nil
 }
@@ -104,19 +97,9 @@ var errCompanionsFingerprintRequired = errors.New("companions_fingerprint is req
 // validateCompanionsFingerprint requires the snapshot claim that makes the
 // replacement semantics safe.
 //
-// ExpectedFingerprint is documented as optional in the service because system
-// callers (trims, enrollment approval) derive the list from the stored state
-// themselves and have nothing to compare against. For an HTTP caller that
-// optionality is a hole: a nil fingerprint skips the comparison entirely, so
-// two staff members editing the same child from the same snapshot both submit
-// everything they saw and the second write deletes the first one's committed
-// links — the exact lost update the fingerprint exists to prevent. Our own
-// forms always send it; a stale build or a direct API client would not, and
-// would silently get the unprotected path.
-//
-// The empty string is a valid claim, not a missing one: it is the fingerprint
-// of an empty list, which is what a child with no Laufgemeinschaft yet loads.
-// Only the absent key is refused, which is why this takes the pointer.
+// The owner refuses an empty or different fingerprint with
+// readstate.ErrChanged (409) anyway; a replacement list without the key at
+// all is malformed input and answers 400 before any lock is taken.
 func validateCompanionsFingerprint(entries *[]CompanionEntry, fingerprint *string) error {
 	if entries == nil {
 		return nil
@@ -353,7 +336,7 @@ func (rs *Resource) checkCompanionConflicts(ctx context.Context, student *people
 	// holds, so a mismatch is answered with a retriable 409 before anything is
 	// written.
 	if !req.hasCompanionUpdate() {
-		return nil, rs.CompanionService.CheckCompanionTrimForPlan(ctx, student.ID, accompaniedDays, req.CompanionsFingerprint)
+		return nil, rs.CompanionService.CheckCompanionTrimForPlan(ctx, student.ID, accompaniedDays, req.companionsFingerprint())
 	}
 	if len(accompaniedDays) == 0 {
 		// A NON-EMPTY list on a plan that allows "Anderes Kind" on no weekday is
@@ -369,12 +352,12 @@ func (rs *Resource) checkCompanionConflicts(ctx context.Context, student *people
 		if len(*req.Companions) > 0 {
 			return nil, careplan.ErrCompanionDayNotAllowed
 		}
-		return nil, rs.CompanionService.CheckCompanionTrimForPlan(ctx, student.ID, nil, req.CompanionsFingerprint)
+		return nil, rs.CompanionService.CheckCompanionTrimForPlan(ctx, student.ID, nil, req.companionsFingerprint())
 	}
 
 	conflicts, err := rs.CompanionService.CheckCompanionConflicts(ctx, student.ID, careplan.CompanionUpdate{
 		Links:                carePlanCompanionLinks(toCompanionLinks(*req.Companions)),
-		ExpectedFingerprint:  req.CompanionsFingerprint,
+		ExpectedFingerprint:  req.companionsFingerprint(),
 		AccompaniedDays:      accompaniedDays,
 		ExtendCompanionPlans: req.ExtendCompanionPlans,
 	})
@@ -526,10 +509,10 @@ func (rs *Resource) reconcileCompanions(ctx context.Context, student *peopleModu
 	// lose their basis and go with it, exactly like the free-text note does.
 	// Otherwise the Kindersuche would keep grouping a child whose Stammdaten say
 	// "fährt Bus".
+	// The request's fingerprint was checked against these links by
+	// checkCompanionConflicts, under the row lock this transaction holds.
 	if len(accompaniedDays) == 0 {
-		if _, err := rs.CompanionService.ReplaceCompanions(ctx, student.ID, careplan.CompanionUpdate{
-			AccompaniedDays: accompaniedDays,
-		}); err != nil {
+		if _, err := rs.CompanionService.TrimCompanionsToDays(ctx, student.ID, nil); err != nil {
 			return nil, err
 		}
 		student.DepartureCompanionDays = nil
@@ -561,7 +544,7 @@ func (rs *Resource) reconcileCompanions(ctx context.Context, student *peopleModu
 	links := toCompanionLinks(*req.Companions)
 	conflicts, err := rs.CompanionService.ReplaceCompanions(ctx, student.ID, careplan.CompanionUpdate{
 		Links:                carePlanCompanionLinks(links),
-		ExpectedFingerprint:  req.CompanionsFingerprint,
+		ExpectedFingerprint:  req.companionsFingerprint(),
 		AccompaniedDays:      accompaniedDays,
 		ExtendCompanionPlans: req.ExtendCompanionPlans,
 		AuthorizedExtensions: authorizedExtensions,

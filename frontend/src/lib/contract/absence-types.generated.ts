@@ -114,18 +114,6 @@ export interface SetAllowanceRequest {
   reason?: string;
 }
 
-/** Query of GET /api/absence-types/{id}/allowances/{staffId} */
-export interface GetAbsenceTypesIdAllowancesStaffIdQuery {
-  year?: number;
-}
-
-/** Query of GET /api/absence-types/{id}/allowances/{staffId}/preview */
-export interface GetAbsenceTypesIdAllowancesStaffIdPreviewQuery {
-  date_end?: string;
-  date_start?: string;
-  half_day?: boolean;
-}
-
 export const routes = {
   "GET /api/absence-types/": {
     method: "GET",
@@ -137,14 +125,20 @@ export const routes = {
     method: "GET",
     pattern: "/api/absence-types/{id}/allowances/{staffId}",
     portals: ["tenant"],
-    query: ["year"],
+    query: {
+      "year": { kind: "int" },
+    },
     response: success(AllowanceSummaryResponseSchema),
   },
   "GET /api/absence-types/{id}/allowances/{staffId}/preview": {
     method: "GET",
     pattern: "/api/absence-types/{id}/allowances/{staffId}/preview",
     portals: ["tenant"],
-    query: ["date_end", "date_start", "half_day"],
+    query: {
+      "date_end": { kind: "date" },
+      "date_start": { kind: "date" },
+      "half_day": { kind: "bool" },
+    },
     response: success(AllowancePreviewResponseSchema),
   },
   "POST /api/absence-types/": {

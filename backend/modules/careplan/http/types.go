@@ -161,8 +161,8 @@ type UpdateStudentRequest struct {
 	// Because Companions is a complete replacement, two staff members editing
 	// the same child from the same snapshot would both submit everything they
 	// saw and the second write would delete the first one's committed links.
-	// The handler compares this against the stored links while it holds the
-	// child's row lock and answers a mismatch with a retriable 409 instead.
+	// The owner compares this against the stored links while the child's row
+	// lock is held and answers a mismatch with 409 general.changed_since_read.
 	//
 	// It is equally required WITHOUT Companions: a departure plan alone removes
 	// links too (the backend trims the weekdays the new plan no longer allows),
@@ -413,6 +413,15 @@ func (req *UpdateStudentRequest) isAbsenceOnly() bool {
 // A nil pointer means "leave the links alone"; an empty slice clears them.
 func (req *UpdateStudentRequest) hasCompanionUpdate() bool {
 	return req.Companions != nil
+}
+
+// companionsFingerprint is the claimed companion state; an absent claim is
+// empty, which the owner refuses wherever the write would remove a link.
+func (req *UpdateStudentRequest) companionsFingerprint() string {
+	if req.CompanionsFingerprint == nil {
+		return ""
+	}
+	return *req.CompanionsFingerprint
 }
 
 func (req *UpdateStudentRequest) hasDeparturePlanUpdate() bool {

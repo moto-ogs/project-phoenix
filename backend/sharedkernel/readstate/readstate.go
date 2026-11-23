@@ -33,10 +33,21 @@ func (changed) ErrorCode() string { return ChangedCode }
 // ErrorDetails is nil: the refusal names no values.
 func (changed) ErrorDetails() any { return nil }
 
+// Absent is the token of a row that is not stored yet. A read that may find
+// no row answers it, so the first save is bound as well. It is never the
+// token of a stored row.
+const Absent = "absent"
+
 // Of is the token of one stored row: the time of its last change. Pass the
 // time as the database stores it, never a clock reading the write did not
-// store, or the token of the answer and of the next read differ.
+// store, or the token of the answer and of the next read differ. A zero
+// time is no stored change: its token is empty, which Check refuses, so a
+// projection that failed to load updated_at cannot pass. Use Absent for a
+// row that does not exist yet.
 func Of(updatedAt time.Time) string {
+	if updatedAt.IsZero() {
+		return ""
+	}
 	return updatedAt.UTC().Format(time.RFC3339Nano)
 }
 

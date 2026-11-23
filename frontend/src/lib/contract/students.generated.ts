@@ -3643,179 +3643,6 @@ export interface PrivacyConsentRequest {
   expected_version?: string;
 }
 
-/** Query of GET /api/students/ */
-export interface GetStudentsQuery {
-  bus?: string;
-  care_offering_id?: string;
-  care_status?: "all" | "ended" | "running";
-  date?: string;
-  day_status?: "all" | "comes_today" | "not_coming_today";
-  enrollment_answer?: string;
-  first_name?: string;
-  grade_level?: number[];
-  group_id?: string[];
-  include_arrival_times?: boolean;
-  include_companions?: boolean;
-  include_pending_withdrawals?: boolean;
-  include_pickup_times?: boolean;
-  last_name?: string;
-  location?: string;
-  location_state?: string;
-  page?: number;
-  page_size?: number;
-  photo_consent?: string;
-  pickup_status?: string;
-  room_id?: string;
-  school_class?: string[];
-  search?: string;
-  view?: "full" | "names" | "slim";
-}
-
-/** Query of GET /api/students/care-withdrawals */
-export interface GetStudentsCareWithdrawalsQuery {
-  page?: number;
-  page_size?: number;
-  search?: string;
-  state?: "pending" | "resolved";
-  student_id?: string;
-}
-
-/** Query of GET /api/students/change-requests */
-export interface GetStudentsChangeRequestsQuery {
-  cursor?: string;
-  from?: string;
-  limit?: number;
-  search?: string;
-  status?: string;
-  student_id?: string;
-  to?: string;
-  types?: string;
-  view?: "history" | "open";
-}
-
-/** Query of GET /api/students/change-requests/access */
-export interface GetStudentsChangeRequestsAccessQuery {
-  student_id?: string;
-}
-
-/** Query of GET /api/students/change-requests/history */
-export interface GetStudentsChangeRequestsHistoryQuery {
-  cursor?: string;
-  from?: string;
-  limit?: number;
-  search?: string;
-  status?: string;
-  student_id?: string;
-  to?: string;
-  types?: string;
-}
-
-/** Query of GET /api/students/class-arrival-exceptions/{schoolClass} */
-export interface GetStudentsClassArrivalExceptionsSchoolClassQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /api/students/day-log */
-export interface GetStudentsDayLogQuery {
-  date?: string;
-  group_id?: string;
-}
-
-/** Query of GET /api/students/day-log/export */
-export interface GetStudentsDayLogExportQuery {
-  date?: string;
-  format?: "docx" | "pdf" | "xlsx";
-  group_id?: string;
-}
-
-/** Query of GET /api/students/ended-care */
-export interface GetStudentsEndedCareQuery {
-  page?: number;
-  page_size?: number;
-  school_class?: string[];
-  search?: string;
-}
-
-/** Query of GET /api/students/offering-change-requests/course-waitlists */
-export interface GetStudentsOfferingChangeRequestsCourseWaitlistsQuery {
-  activity_group_id?: string;
-}
-
-/** Query of GET /api/students/ogs-group-live */
-export interface GetStudentsOgsGroupLiveQuery {
-  group_id?: string;
-}
-
-/** Query of GET /api/students/status-days */
-export interface GetStudentsStatusDaysQuery {
-  from?: string;
-  group_id?: string;
-  page?: number;
-  page_size?: number;
-  q?: string;
-  status?: string;
-  to?: string;
-}
-
-/** Query of GET /api/students/{id} */
-export interface GetStudentsIdQuery {
-  include_privacy_consent?: boolean;
-}
-
-/** Query of GET /api/students/{id}/arrival-schedules */
-export interface GetStudentsIdArrivalSchedulesQuery {
-  date?: string;
-  to?: string;
-}
-
-/** Query of GET /api/students/{id}/attendance-history */
-export interface GetStudentsIdAttendanceHistoryQuery {
-  end?: string;
-  start?: string;
-}
-
-/** Query of GET /api/students/{id}/attendance-history/export */
-export interface GetStudentsIdAttendanceHistoryExportQuery {
-  format?: "docx" | "pdf" | "xlsx";
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /api/students/{id}/care-withdrawals */
-export interface GetStudentsIdCareWithdrawalsQuery {
-  page?: number;
-  page_size?: number;
-}
-
-/** Query of GET /api/students/{id}/documents */
-export interface GetStudentsIdDocumentsQuery {
-  category?: string;
-}
-
-/** Query of GET /api/students/{id}/notes */
-export interface GetStudentsIdNotesQuery {
-  kind?: string;
-}
-
-/** Query of GET /api/students/{id}/partial-absences */
-export interface GetStudentsIdPartialAbsencesQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /api/students/{id}/pickup-schedules */
-export interface GetStudentsIdPickupSchedulesQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /api/students/{id}/status-days */
-export interface GetStudentsIdStatusDaysQuery {
-  from?: string;
-  to?: string;
-}
-
 export const routes = {
   "DELETE /api/students/care-withdrawals/{completionId}": {
     method: "DELETE",
@@ -3913,7 +3740,32 @@ export const routes = {
     method: "GET",
     pattern: "/api/students/",
     portals: ["tenant"],
-    query: ["bus", "care_offering_id", "care_status", "date", "day_status", "enrollment_answer", "first_name", "grade_level", "group_id", "include_arrival_times", "include_companions", "include_pending_withdrawals", "include_pickup_times", "last_name", "location", "location_state", "page", "page_size", "photo_consent", "pickup_status", "room_id", "school_class", "search", "view"],
+    query: {
+      "bus": { kind: "string" },
+      "care_offering_id": { kind: "id" },
+      "care_status": { kind: "string", values: ["all", "ended", "running"] },
+      "date": { kind: "date" },
+      "day_status": { kind: "string", values: ["all", "comes_today", "not_coming_today"] },
+      "enrollment_answer": { kind: "string" },
+      "first_name": { kind: "string" },
+      "grade_level": { kind: "int", repeated: true },
+      "group_id": { kind: "id", repeated: true },
+      "include_arrival_times": { kind: "bool" },
+      "include_companions": { kind: "bool" },
+      "include_pending_withdrawals": { kind: "bool" },
+      "include_pickup_times": { kind: "bool" },
+      "last_name": { kind: "string" },
+      "location": { kind: "string" },
+      "location_state": { kind: "string" },
+      "page": { kind: "int" },
+      "page_size": { kind: "int" },
+      "photo_consent": { kind: "string" },
+      "pickup_status": { kind: "string" },
+      "room_id": { kind: "id" },
+      "school_class": { kind: "string", repeated: true },
+      "search": { kind: "string" },
+      "view": { kind: "string", values: ["full", "names", "slim"] },
+    },
     variantParam: "view",
     defaultVariant: "full",
     response: {
@@ -3950,7 +3802,13 @@ export const routes = {
     method: "GET",
     pattern: "/api/students/care-withdrawals",
     portals: ["tenant"],
-    query: ["page", "page_size", "search", "state", "student_id"],
+    query: {
+      "page": { kind: "int" },
+      "page_size": { kind: "int" },
+      "search": { kind: "string" },
+      "state": { kind: "string", values: ["pending", "resolved"] },
+      "student_id": { kind: "id" },
+    },
     response: success(careWithdrawalPageResponseSchema),
   },
   "GET /api/students/care-withdrawals/{completionId}/deletion-impact": {
@@ -3963,21 +3821,42 @@ export const routes = {
     method: "GET",
     pattern: "/api/students/change-requests",
     portals: ["tenant"],
-    query: ["cursor", "from", "limit", "search", "status", "student_id", "to", "types", "view"],
+    query: {
+      "cursor": { kind: "string" },
+      "from": { kind: "date" },
+      "limit": { kind: "int" },
+      "search": { kind: "string" },
+      "status": { kind: "string" },
+      "student_id": { kind: "id" },
+      "to": { kind: "date" },
+      "types": { kind: "string" },
+      "view": { kind: "string", values: ["history", "open"] },
+    },
     response: success(PageSchema),
   },
   "GET /api/students/change-requests/access": {
     method: "GET",
     pattern: "/api/students/change-requests/access",
     portals: ["tenant"],
-    query: ["student_id"],
+    query: {
+      "student_id": { kind: "id" },
+    },
     response: success(changeRequestAccessResponseSchema),
   },
   "GET /api/students/change-requests/history": {
     method: "GET",
     pattern: "/api/students/change-requests/history",
     portals: ["tenant"],
-    query: ["cursor", "from", "limit", "search", "status", "student_id", "to", "types"],
+    query: {
+      "cursor": { kind: "string" },
+      "from": { kind: "date" },
+      "limit": { kind: "int" },
+      "search": { kind: "string" },
+      "status": { kind: "string" },
+      "student_id": { kind: "id" },
+      "to": { kind: "date" },
+      "types": { kind: "string" },
+    },
     response: success(HistoryPageSchema),
   },
   "GET /api/students/change-requests/pending-count": {
@@ -4002,7 +3881,10 @@ export const routes = {
     method: "GET",
     pattern: "/api/students/class-arrival-exceptions/{schoolClass}",
     portals: ["tenant"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(ClassArrivalExceptionListResponseSchema),
   },
   "GET /api/students/class-arrival-times/{schoolClass}": {
@@ -4015,21 +3897,33 @@ export const routes = {
     method: "GET",
     pattern: "/api/students/day-log",
     portals: ["tenant"],
-    query: ["date", "group_id"],
+    query: {
+      "date": { kind: "date" },
+      "group_id": { kind: "id" },
+    },
     response: success(dayLogResponseSchema),
   },
   "GET /api/students/day-log/export": {
     method: "GET",
     pattern: "/api/students/day-log/export",
     portals: ["tenant"],
-    query: ["date", "format", "group_id"],
+    query: {
+      "date": { kind: "date" },
+      "format": { kind: "string", values: ["docx", "pdf", "xlsx"] },
+      "group_id": { kind: "id" },
+    },
     response: fileAnswer,
   },
   "GET /api/students/ended-care": {
     method: "GET",
     pattern: "/api/students/ended-care",
     portals: ["tenant"],
-    query: ["page", "page_size", "school_class", "search"],
+    query: {
+      "page": { kind: "int" },
+      "page_size": { kind: "int" },
+      "school_class": { kind: "string", repeated: true },
+      "search": { kind: "string" },
+    },
     response: success(endedCarePageResponseSchema),
   },
   "GET /api/students/enrollment-answer-filters": {
@@ -4042,14 +3936,18 @@ export const routes = {
     method: "GET",
     pattern: "/api/students/offering-change-requests/course-waitlists",
     portals: ["tenant"],
-    query: ["activity_group_id"],
+    query: {
+      "activity_group_id": { kind: "id" },
+    },
     response: success(z.array(CourseWaitlistResponseSchema)),
   },
   "GET /api/students/ogs-group-live": {
     method: "GET",
     pattern: "/api/students/ogs-group-live",
     portals: ["tenant"],
-    query: ["group_id"],
+    query: {
+      "group_id": { kind: "id" },
+    },
     response: success(ProjectionSchema),
   },
   "GET /api/students/ogs-group-navigation": {
@@ -4080,7 +3978,15 @@ export const routes = {
     method: "GET",
     pattern: "/api/students/status-days",
     portals: ["tenant"],
-    query: ["from", "group_id", "page", "page_size", "q", "status", "to"],
+    query: {
+      "from": { kind: "date" },
+      "group_id": { kind: "id" },
+      "page": { kind: "int" },
+      "page_size": { kind: "int" },
+      "q": { kind: "string" },
+      "status": { kind: "string" },
+      "to": { kind: "date" },
+    },
     response: success(statusDayOverviewResponseSchema),
   },
   "GET /api/students/team-notices": {
@@ -4093,7 +3999,9 @@ export const routes = {
     method: "GET",
     pattern: "/api/students/{id}",
     portals: ["tenant"],
-    query: ["include_privacy_consent"],
+    query: {
+      "include_privacy_consent": { kind: "bool" },
+    },
     response: success(StudentDetailResponseSchema),
   },
   "GET /api/students/{id}/accident-reports/{documentId}/pdf": {
@@ -4106,28 +4014,41 @@ export const routes = {
     method: "GET",
     pattern: "/api/students/{id}/arrival-schedules",
     portals: ["tenant"],
-    query: ["date", "to"],
+    query: {
+      "date": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(ArrivalDataResponseSchema),
   },
   "GET /api/students/{id}/attendance-history": {
     method: "GET",
     pattern: "/api/students/{id}/attendance-history",
     portals: ["tenant"],
-    query: ["end", "start"],
+    query: {
+      "end": { kind: "string" },
+      "start": { kind: "string" },
+    },
     response: success(attendanceHistoryResponseSchema),
   },
   "GET /api/students/{id}/attendance-history/export": {
     method: "GET",
     pattern: "/api/students/{id}/attendance-history/export",
     portals: ["tenant"],
-    query: ["format", "from", "to"],
+    query: {
+      "format": { kind: "string", values: ["docx", "pdf", "xlsx"] },
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: fileAnswer,
   },
   "GET /api/students/{id}/care-withdrawals": {
     method: "GET",
     pattern: "/api/students/{id}/care-withdrawals",
     portals: ["tenant"],
-    query: ["page", "page_size"],
+    query: {
+      "page": { kind: "int" },
+      "page_size": { kind: "int" },
+    },
     response: success(careWithdrawalPageResponseSchema),
   },
   "GET /api/students/{id}/change-history": {
@@ -4159,7 +4080,9 @@ export const routes = {
     method: "GET",
     pattern: "/api/students/{id}/documents",
     portals: ["tenant"],
-    query: ["category"],
+    query: {
+      "category": { kind: "string" },
+    },
     response: success(StudentDocumentListResponseSchema),
   },
   "GET /api/students/{id}/documents/{documentId}/download": {
@@ -4190,14 +4113,19 @@ export const routes = {
     method: "GET",
     pattern: "/api/students/{id}/notes",
     portals: ["tenant"],
-    query: ["kind"],
+    query: {
+      "kind": { kind: "string" },
+    },
     response: success(z.array(studentNoteResponseSchema)),
   },
   "GET /api/students/{id}/partial-absences": {
     method: "GET",
     pattern: "/api/students/{id}/partial-absences",
     portals: ["tenant"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(z.array(PartialAbsenceResponseSchema)),
   },
   "GET /api/students/{id}/photo/{filename}": {
@@ -4212,7 +4140,10 @@ export const routes = {
     method: "GET",
     pattern: "/api/students/{id}/pickup-schedules",
     portals: ["tenant"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(PickupDataResponseSchema),
   },
   "GET /api/students/{id}/privacy-consent": {
@@ -4231,7 +4162,10 @@ export const routes = {
     method: "GET",
     pattern: "/api/students/{id}/status-days",
     portals: ["tenant"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(z.array(StudentStatusDayResponseSchema)),
   },
   "POST /api/students/": {

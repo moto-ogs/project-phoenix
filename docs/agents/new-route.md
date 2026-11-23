@@ -53,7 +53,9 @@ Worked example, the same route from Go to the browser:
    may call it (`common.PortalTenant`, `PortalParent`, `PortalSchool`,
    `PortalTraeger`, `PortalCaterer`, `PortalOperator`, `PortalPublic`). `Query`
    lists every parameter the handler reads (`days` is `from`/`to` as
-   `QueryDate`); the proxy drops the others. Identifiers are `ident.ID`
+   `QueryDate`). The generated route keeps the kind of each key. The catalog
+   proxy drops unregistered keys and forwards every occurrence of registered
+   keys without checking values. Identifiers are `ident.ID`
    (`sharedkernel/ident`) in every role, days are `calendar.Date`, closed value
    sets go in `Enums`. A count is an `int`; an amount or a count kept as
    `int64` says so with `contract:"number"`. The generator refuses a bare
@@ -106,6 +108,14 @@ Worked example, the same route from Go to the browser:
    });
    return rows.map(mapPartialAbsence);
    ```
+
+   Pass `from` and `to` as `YYYY-MM-DD` strings, never as numbers or
+   timestamps. For both `bffJson` and `bffFile`, `QueryID` takes a string,
+   `QueryInt` a number and `QueryBool` a boolean. `QueryString` takes a
+   string or one of its registered `Values`; `Repeated: true` takes an
+   array of the corresponding type. The browser helper encodes the values;
+   Go checks format and validity. The compile-time examples in
+   `frontend/src/lib/bff-fetch.test.ts` guard against the old untyped query.
 
    `mapPartialAbsence` maps to the view type. A failure throws an `ApiError`
    for the shared error path; `errorMessage` keeps a client's own text.

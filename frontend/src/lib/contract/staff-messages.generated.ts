@@ -29,16 +29,6 @@ export interface renameGroupRequest {
   name?: string;
 }
 
-/** Query of GET /api/staff-messages/ */
-export interface GetStaffMessagesQuery {
-  only_unread?: boolean;
-}
-
-/** Query of GET /api/staff-messages/attachments/{attachmentId}/download */
-export interface GetStaffMessagesAttachmentsAttachmentIdDownloadQuery {
-  inline?: string;
-}
-
 export const routes = {
   "DELETE /api/staff-messages/threads/{threadID}/members/{accountID}": {
     method: "DELETE",
@@ -50,14 +40,18 @@ export const routes = {
     method: "GET",
     pattern: "/api/staff-messages/",
     portals: ["tenant"],
-    query: ["only_unread"],
+    query: {
+      "only_unread": { kind: "bool" },
+    },
     response: success(z.array(InboxThreadResponseSchema)),
   },
   "GET /api/staff-messages/attachments/{attachmentId}/download": {
     method: "GET",
     pattern: "/api/staff-messages/attachments/{attachmentId}/download",
     portals: ["tenant"],
-    query: ["inline"],
+    query: {
+      "inline": { kind: "string" },
+    },
     response: fileAnswer,
   },
   "GET /api/staff-messages/recipients": {

@@ -545,86 +545,6 @@ export const UtilizationChildrenSchema: z.ZodType<UtilizationChildren, unknown> 
   children: nullable(arr(ChildAttendanceSchema)),
 });
 
-/** Query of GET /traeger/schools/alerts/export */
-export interface GetTraegerSchoolsAlertsExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-  school?: string;
-}
-
-/** Query of GET /traeger/schools/arrival-pickup-times */
-export interface GetTraegerSchoolsArrivalPickupTimesQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /traeger/schools/arrival-pickup-times/export */
-export interface GetTraegerSchoolsArrivalPickupTimesExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-  from?: string;
-  school?: string;
-  to?: string;
-}
-
-/** Query of GET /traeger/schools/comparison */
-export interface GetTraegerSchoolsComparisonQuery {
-  from?: string;
-  schools?: string;
-  to?: string;
-}
-
-/** Query of GET /traeger/schools/comparison/export */
-export interface GetTraegerSchoolsComparisonExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-  from?: string;
-  metrics?: string;
-  schools?: string;
-  to?: string;
-}
-
-/** Query of GET /traeger/schools/daily-attendance */
-export interface GetTraegerSchoolsDailyAttendanceQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /traeger/schools/daily-attendance/export */
-export interface GetTraegerSchoolsDailyAttendanceExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /traeger/schools/export */
-export interface GetTraegerSchoolsExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-}
-
-/** Query of GET /traeger/schools/occupancy/export */
-export interface GetTraegerSchoolsOccupancyExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-  school?: string;
-}
-
-/** Query of GET /traeger/schools/utilization */
-export interface GetTraegerSchoolsUtilizationQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /traeger/schools/utilization/export */
-export interface GetTraegerSchoolsUtilizationExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-  from?: string;
-  school?: string;
-  to?: string;
-}
-
-/** Query of GET /traeger/schools/{id}/utilization/children */
-export interface GetTraegerSchoolsIdUtilizationChildrenQuery {
-  from?: string;
-  to?: string;
-}
-
 export const routes = {
   "GET /traeger/schools/": {
     method: "GET",
@@ -642,56 +562,86 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/schools/alerts/export",
     portals: ["org"],
-    query: ["format", "school"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+      "school": { kind: "id" },
+    },
     response: fileAnswer,
   },
   "GET /traeger/schools/arrival-pickup-times": {
     method: "GET",
     pattern: "/traeger/schools/arrival-pickup-times",
     portals: ["org"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(ArrivalPickupTimesSchema),
   },
   "GET /traeger/schools/arrival-pickup-times/export": {
     method: "GET",
     pattern: "/traeger/schools/arrival-pickup-times/export",
     portals: ["org"],
-    query: ["format", "from", "school", "to"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+      "from": { kind: "date" },
+      "school": { kind: "id" },
+      "to": { kind: "date" },
+    },
     response: fileAnswer,
   },
   "GET /traeger/schools/comparison": {
     method: "GET",
     pattern: "/traeger/schools/comparison",
     portals: ["org"],
-    query: ["from", "schools", "to"],
+    query: {
+      "from": { kind: "date" },
+      "schools": { kind: "string" },
+      "to": { kind: "date" },
+    },
     response: success(SchoolComparisonSchema),
   },
   "GET /traeger/schools/comparison/export": {
     method: "GET",
     pattern: "/traeger/schools/comparison/export",
     portals: ["org"],
-    query: ["format", "from", "metrics", "schools", "to"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+      "from": { kind: "date" },
+      "metrics": { kind: "string" },
+      "schools": { kind: "string" },
+      "to": { kind: "date" },
+    },
     response: fileAnswer,
   },
   "GET /traeger/schools/daily-attendance": {
     method: "GET",
     pattern: "/traeger/schools/daily-attendance",
     portals: ["org"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(DailyAttendanceSchema),
   },
   "GET /traeger/schools/daily-attendance/export": {
     method: "GET",
     pattern: "/traeger/schools/daily-attendance/export",
     portals: ["org"],
-    query: ["format", "from", "to"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: fileAnswer,
   },
   "GET /traeger/schools/export": {
     method: "GET",
     pattern: "/traeger/schools/export",
     portals: ["org"],
-    query: ["format"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
     response: fileAnswer,
   },
   "GET /traeger/schools/occupancy": {
@@ -704,21 +654,32 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/schools/occupancy/export",
     portals: ["org"],
-    query: ["format", "school"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+      "school": { kind: "id" },
+    },
     response: fileAnswer,
   },
   "GET /traeger/schools/utilization": {
     method: "GET",
     pattern: "/traeger/schools/utilization",
     portals: ["org"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(UtilizationSchema),
   },
   "GET /traeger/schools/utilization/export": {
     method: "GET",
     pattern: "/traeger/schools/utilization/export",
     portals: ["org"],
-    query: ["format", "from", "school", "to"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+      "from": { kind: "date" },
+      "school": { kind: "id" },
+      "to": { kind: "date" },
+    },
     response: fileAnswer,
   },
   "GET /traeger/schools/{id}": {
@@ -731,7 +692,10 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/schools/{id}/utilization/children",
     portals: ["org"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(UtilizationChildrenSchema),
   },
 } as const;

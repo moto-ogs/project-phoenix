@@ -114,7 +114,11 @@ export function fetchStatisticsExport(
   section: StatisticsExportSection = "attendance",
 ): Promise<Response> {
   return bffFile("tenant", "GET /api/statistics/export", {
-    query: { ...filterQuery(fromISO, toISO, filter), format, section },
+    query: {
+      ...filterQuery(fromISO, toISO, filter),
+      format,
+      section: [section],
+    },
     errorMessage: "statistics export failed",
   });
 }

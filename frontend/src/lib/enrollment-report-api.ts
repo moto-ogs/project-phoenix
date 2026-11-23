@@ -2,7 +2,7 @@ import { createLogger } from "~/lib/logger";
 import { requiredEnum } from "~/lib/contract/known-enum";
 import { CHILD_STATUSES, type ChildStatus } from "~/lib/enrollment-status";
 import { downloadBlob, filenameFromDisposition } from "~/lib/file-download";
-import { bffFile, bffJson } from "~/lib/bff-fetch";
+import { bffFile, bffJson, type BffQuery } from "~/lib/bff-fetch";
 import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 import { logEnrollmentFailure } from "~/lib/enrollment-api-error";
 
@@ -24,10 +24,13 @@ export type EnrollmentReportLayout = "detailed" | "compact";
  * without any offering.
  */
 export type CareUsageFilters = Omit<
-  enrollmentContract.GetEnrollmentAdminReportsCareUsageQuery,
-  "care_offering_id" | "phase_id" | "status"
+  BffQuery<
+    (typeof enrollmentContract.routes)["GET /api/enrollment/admin/reports/care-usage"]
+  >,
+  "care_offering_id" | "care_offering_ids" | "phase_id" | "status"
 > & {
   phase_id: string;
+  care_offering_ids?: string[];
   status?: EnrollmentReportStatus;
 };
 
@@ -117,7 +120,7 @@ export async function getCareUsageReport(
         phase_id: filters.phase_id,
         status: filters.status,
         // An empty list travels as one empty value: no offering at all.
-        care_offering_ids: ids?.length === 0 ? "" : ids,
+        care_offering_ids: ids?.length === 0 ? [""] : ids,
         day_count: filters.day_count,
         grade_level: filters.grade_level || undefined,
         weekday: filters.weekday || undefined,

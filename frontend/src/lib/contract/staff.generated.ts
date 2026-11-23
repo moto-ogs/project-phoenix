@@ -1495,167 +1495,6 @@ export interface VacationQuotaRequest {
   expected_version?: string;
 }
 
-/** Query of DELETE /api/staff/{id}/vacation/opening */
-export interface DeleteStaffIdVacationOpeningQuery {
-  year?: number;
-}
-
-/** Query of GET /api/staff/ */
-export interface GetStaffQuery {
-  first_name?: string;
-  last_name?: string;
-  role?: string;
-  teachers_only?: boolean;
-}
-
-/** Query of GET /api/staff/absences/mails */
-export interface GetStaffAbsencesMailsQuery {
-  ids?: string;
-}
-
-/** Query of GET /api/staff/absences/requests */
-export interface GetStaffAbsencesRequestsQuery {
-  search?: string;
-  types?: string;
-  view?: string;
-}
-
-/** Query of GET /api/staff/by-role */
-export interface GetStaffByRoleQuery {
-  role?: string;
-  roles?: string;
-}
-
-/** Query of GET /api/staff/dashboard-summary */
-export interface GetStaffDashboardSummaryQuery {
-  period?: string;
-}
-
-/** Query of GET /api/staff/former */
-export interface GetStaffFormerQuery {
-  first_name?: string;
-  last_name?: string;
-  role?: string;
-  teachers_only?: boolean;
-}
-
-/** Query of GET /api/staff/time-tracking/audit-log */
-export interface GetStaffTimeTrackingAuditLogQuery {
-  actor_id?: string;
-  cursor?: string;
-  from?: string;
-  limit?: number;
-  sources?: string;
-  staff_id?: string;
-  to?: string;
-}
-
-/** Query of GET /api/staff/time-tracking/export */
-export interface GetStaffTimeTrackingExportQuery {
-  format?: string;
-  granularity?: string;
-  month?: number;
-  time_format?: string;
-  year?: number;
-}
-
-/** Query of GET /api/staff/time-tracking/export/datev-report */
-export interface GetStaffTimeTrackingExportDatevReportQuery {
-  format?: string;
-  granularity?: string;
-  month?: number;
-  time_format?: string;
-  year?: number;
-}
-
-/** Query of GET /api/staff/time-tracking/month-close */
-export interface GetStaffTimeTrackingMonthCloseQuery {
-  month?: number;
-  year?: number;
-}
-
-/** Query of GET /api/staff/time-tracking/month-close/traeger-staff */
-export interface GetStaffTimeTrackingMonthCloseTraegerStaffQuery {
-  month?: number;
-  year?: number;
-}
-
-/** Query of GET /api/staff/time-tracking/overview */
-export interface GetStaffTimeTrackingOverviewQuery {
-  employment_type?: string;
-  month?: number;
-  order?: string;
-  saldo_max?: number;
-  saldo_min?: number;
-  sort?: string;
-  year?: number;
-}
-
-/** Query of GET /api/staff/time-tracking/target-coverage */
-export interface GetStaffTimeTrackingTargetCoverageQuery {
-  month?: number;
-  year?: number;
-}
-
-/** Query of GET /api/staff/{id}/absences */
-export interface GetStaffIdAbsencesQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /api/staff/{id}/avatar */
-export interface GetStaffIdAvatarQuery {
-  v?: string;
-}
-
-/** Query of GET /api/staff/{id}/documents */
-export interface GetStaffIdDocumentsQuery {
-  category?: string;
-}
-
-/** Query of GET /api/staff/{id}/time-tracking/adjustments */
-export interface GetStaffIdTimeTrackingAdjustmentsQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /api/staff/{id}/time-tracking/comp-time-preview */
-export interface GetStaffIdTimeTrackingCompTimePreviewQuery {
-  date_end?: string;
-  date_start?: string;
-  half_day?: boolean;
-}
-
-/** Query of GET /api/staff/{id}/time-tracking/export */
-export interface GetStaffIdTimeTrackingExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /api/staff/{id}/time-tracking/history */
-export interface GetStaffIdTimeTrackingHistoryQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /api/staff/{id}/time-tracking/month-summary */
-export interface GetStaffIdTimeTrackingMonthSummaryQuery {
-  month?: number;
-  year?: number;
-}
-
-/** Query of GET /api/staff/{id}/time-tracking/schedule-targets */
-export interface GetStaffIdTimeTrackingScheduleTargetsQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /api/staff/{id}/vacation/quota */
-export interface GetStaffIdVacationQuotaQuery {
-  year?: number;
-}
-
 export const routes = {
   "DELETE /api/staff/time-tracking/payroll-rules/surcharge-rules/{ruleId}": {
     method: "DELETE",
@@ -1709,21 +1548,30 @@ export const routes = {
     method: "DELETE",
     pattern: "/api/staff/{id}/vacation/opening",
     portals: ["tenant"],
-    query: ["year"],
+    query: {
+      "year": { kind: "int" },
+    },
     response: noData,
   },
   "GET /api/staff/": {
     method: "GET",
     pattern: "/api/staff/",
     portals: ["tenant"],
-    query: ["first_name", "last_name", "role", "teachers_only"],
+    query: {
+      "first_name": { kind: "string" },
+      "last_name": { kind: "string" },
+      "role": { kind: "string" },
+      "teachers_only": { kind: "bool" },
+    },
     response: success(z.array(StaffRecordResponseSchema)),
   },
   "GET /api/staff/absences/mails": {
     method: "GET",
     pattern: "/api/staff/absences/mails",
     portals: ["tenant"],
-    query: ["ids"],
+    query: {
+      "ids": { kind: "string" },
+    },
     response: success(AbsenceDecisionMailsResponseSchema),
   },
   "GET /api/staff/absences/pending": {
@@ -1742,21 +1590,30 @@ export const routes = {
     method: "GET",
     pattern: "/api/staff/absences/requests",
     portals: ["tenant"],
-    query: ["search", "types", "view"],
+    query: {
+      "search": { kind: "string" },
+      "types": { kind: "string" },
+      "view": { kind: "string" },
+    },
     response: success(z.array(absenceRequestResponseSchema)),
   },
   "GET /api/staff/by-role": {
     method: "GET",
     pattern: "/api/staff/by-role",
     portals: ["tenant"],
-    query: ["role", "roles"],
+    query: {
+      "role": { kind: "string" },
+      "roles": { kind: "string" },
+    },
     response: success(z.array(StaffWithRoleResponseSchema).nullable()),
   },
   "GET /api/staff/dashboard-summary": {
     method: "GET",
     pattern: "/api/staff/dashboard-summary",
     portals: ["tenant"],
-    query: ["period"],
+    query: {
+      "period": { kind: "string" },
+    },
     response: success(DashboardSummarySchema),
   },
   "GET /api/staff/documents-directory": {
@@ -1781,7 +1638,12 @@ export const routes = {
     method: "GET",
     pattern: "/api/staff/former",
     portals: ["tenant"],
-    query: ["first_name", "last_name", "role", "teachers_only"],
+    query: {
+      "first_name": { kind: "string" },
+      "last_name": { kind: "string" },
+      "role": { kind: "string" },
+      "teachers_only": { kind: "bool" },
+    },
     response: success(z.array(FormerStaffResponseSchema)),
   },
   "GET /api/staff/me/qualifications": {
@@ -1806,21 +1668,41 @@ export const routes = {
     method: "GET",
     pattern: "/api/staff/time-tracking/audit-log",
     portals: ["tenant"],
-    query: ["actor_id", "cursor", "from", "limit", "sources", "staff_id", "to"],
+    query: {
+      "actor_id": { kind: "id" },
+      "cursor": { kind: "string" },
+      "from": { kind: "date" },
+      "limit": { kind: "int" },
+      "sources": { kind: "string" },
+      "staff_id": { kind: "id" },
+      "to": { kind: "date" },
+    },
     response: success(AuditLogPageSchema),
   },
   "GET /api/staff/time-tracking/export": {
     method: "GET",
     pattern: "/api/staff/time-tracking/export",
     portals: ["tenant"],
-    query: ["format", "granularity", "month", "time_format", "year"],
+    query: {
+      "format": { kind: "string" },
+      "granularity": { kind: "string" },
+      "month": { kind: "int" },
+      "time_format": { kind: "string" },
+      "year": { kind: "int" },
+    },
     response: fileAnswer,
   },
   "GET /api/staff/time-tracking/export/datev-report": {
     method: "GET",
     pattern: "/api/staff/time-tracking/export/datev-report",
     portals: ["tenant"],
-    query: ["format", "granularity", "month", "time_format", "year"],
+    query: {
+      "format": { kind: "string" },
+      "granularity": { kind: "string" },
+      "month": { kind: "int" },
+      "time_format": { kind: "string" },
+      "year": { kind: "int" },
+    },
     response: success(DatevExportReportSchema),
   },
   "GET /api/staff/time-tracking/export/sftp-status": {
@@ -1833,21 +1715,35 @@ export const routes = {
     method: "GET",
     pattern: "/api/staff/time-tracking/month-close",
     portals: ["tenant"],
-    query: ["month", "year"],
+    query: {
+      "month": { kind: "int" },
+      "year": { kind: "int" },
+    },
     response: success(z.array(StaffMonthBalanceSnapshotSchema).nullable()),
   },
   "GET /api/staff/time-tracking/month-close/traeger-staff": {
     method: "GET",
     pattern: "/api/staff/time-tracking/month-close/traeger-staff",
     portals: ["tenant"],
-    query: ["month", "year"],
+    query: {
+      "month": { kind: "int" },
+      "year": { kind: "int" },
+    },
     response: success(TraegerMonthStaffSchema),
   },
   "GET /api/staff/time-tracking/overview": {
     method: "GET",
     pattern: "/api/staff/time-tracking/overview",
     portals: ["tenant"],
-    query: ["employment_type", "month", "order", "saldo_max", "saldo_min", "sort", "year"],
+    query: {
+      "employment_type": { kind: "string" },
+      "month": { kind: "int" },
+      "order": { kind: "string" },
+      "saldo_max": { kind: "int" },
+      "saldo_min": { kind: "int" },
+      "sort": { kind: "string" },
+      "year": { kind: "int" },
+    },
     response: success(TimeTrackingOverviewSchema),
   },
   "GET /api/staff/time-tracking/payroll-dispatch": {
@@ -1866,7 +1762,10 @@ export const routes = {
     method: "GET",
     pattern: "/api/staff/time-tracking/target-coverage",
     portals: ["tenant"],
-    query: ["month", "year"],
+    query: {
+      "month": { kind: "int" },
+      "year": { kind: "int" },
+    },
     response: success(TargetCoverageSchema),
   },
   "GET /api/staff/{id}": {
@@ -1879,7 +1778,10 @@ export const routes = {
     method: "GET",
     pattern: "/api/staff/{id}/absences",
     portals: ["tenant"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(z.array(StaffAbsenceResponseSchema).nullable()),
   },
   "GET /api/staff/{id}/avatar": {
@@ -1887,14 +1789,18 @@ export const routes = {
     pattern: "/api/staff/{id}/avatar",
     portals: ["tenant"],
     privateCache: true,
-    query: ["v"],
+    query: {
+      "v": { kind: "string" },
+    },
     response: fileAnswer,
   },
   "GET /api/staff/{id}/documents": {
     method: "GET",
     pattern: "/api/staff/{id}/documents",
     portals: ["tenant"],
-    query: ["category"],
+    query: {
+      "category": { kind: "string" },
+    },
     response: success(StaffDocumentListResponseSchema),
   },
   "GET /api/staff/{id}/documents/{documentId}/download": {
@@ -1949,42 +1855,62 @@ export const routes = {
     method: "GET",
     pattern: "/api/staff/{id}/time-tracking/adjustments",
     portals: ["tenant"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(z.array(StaffBalanceAdjustmentSchema).nullable()),
   },
   "GET /api/staff/{id}/time-tracking/comp-time-preview": {
     method: "GET",
     pattern: "/api/staff/{id}/time-tracking/comp-time-preview",
     portals: ["tenant"],
-    query: ["date_end", "date_start", "half_day"],
+    query: {
+      "date_end": { kind: "date" },
+      "date_start": { kind: "date" },
+      "half_day": { kind: "bool" },
+    },
     response: success(CompTimeBalancePreviewSchema),
   },
   "GET /api/staff/{id}/time-tracking/export": {
     method: "GET",
     pattern: "/api/staff/{id}/time-tracking/export",
     portals: ["tenant"],
-    query: ["format", "from", "to"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: fileAnswer,
   },
   "GET /api/staff/{id}/time-tracking/history": {
     method: "GET",
     pattern: "/api/staff/{id}/time-tracking/history",
     portals: ["tenant"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(HistoryResponseSchema),
   },
   "GET /api/staff/{id}/time-tracking/month-summary": {
     method: "GET",
     pattern: "/api/staff/{id}/time-tracking/month-summary",
     portals: ["tenant"],
-    query: ["month", "year"],
+    query: {
+      "month": { kind: "int" },
+      "year": { kind: "int" },
+    },
     response: success(MonthSummarySchema),
   },
   "GET /api/staff/{id}/time-tracking/schedule-targets": {
     method: "GET",
     pattern: "/api/staff/{id}/time-tracking/schedule-targets",
     portals: ["tenant"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(z.array(DailyProjectionSchema)),
   },
   "GET /api/staff/{id}/time-tracking/sessions/{sessionId}/edits": {
@@ -2003,7 +1929,9 @@ export const routes = {
     method: "GET",
     pattern: "/api/staff/{id}/vacation/quota",
     portals: ["tenant"],
-    query: ["year"],
+    query: {
+      "year": { kind: "int" },
+    },
     response: success(VacationQuotaSummarySchema),
   },
   "POST /api/staff/": {

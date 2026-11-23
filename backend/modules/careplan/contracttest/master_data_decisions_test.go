@@ -251,8 +251,8 @@ func TestParentRequestCoordinator_RollsBackEarlierDatabaseWrite(t *testing.T) {
 	err = f.inTx(t, func(ctx context.Context) error {
 		bulkErr := coordinator.BulkApprove(ctx, parentrequests.BulkApproveInput{
 			Requests: []parentrequests.Ref{
-				{Kind: parentrequests.KindMasterData, ID: first.ID, ExpectedVersion: careplan.ParentRequestVersion(first.UpdatedAt)},
-				{Kind: parentrequests.KindMasterData, ID: second.ID, ExpectedVersion: careplan.ParentRequestVersion(second.UpdatedAt)},
+				{Kind: parentrequests.KindMasterData, ID: first.ID, ExpectedVersion: readstate.Of(first.UpdatedAt)},
+				{Kind: parentrequests.KindMasterData, ID: second.ID, ExpectedVersion: readstate.Of(second.UpdatedAt)},
 			},
 			Reason: "Gemeinsam geprüft", ReviewerID: f.chain.AccountID,
 		})

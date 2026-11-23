@@ -26,7 +26,7 @@ export interface CatalogRoute {
   readonly method: string;
   readonly pattern: string;
   /** The query parameters the handler reads; nothing else is forwarded. */
-  readonly query?: readonly string[];
+  readonly query?: Readonly<Record<string, { readonly kind: string }>>;
   /** A decoder, or the decoders of a legacy route with response variants. */
   readonly response: unknown;
   /** The query parameter that picks a variant's decoder. */
@@ -434,7 +434,7 @@ export function makeCatalogProxy(
     const found = find(path);
     if (!found) throw notFound();
     const query = new URLSearchParams();
-    for (const name of found.route.query ?? []) {
+    for (const name of Object.keys(found.route.query ?? {})) {
       for (const value of request.nextUrl.searchParams.getAll(name)) {
         query.append(name, value);
       }

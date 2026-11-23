@@ -2,17 +2,15 @@ package application
 
 import (
 	"context"
-	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"hash/fnv"
 	"slices"
 
 	validation "github.com/go-ozzo/ozzo-validation"
 
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -391,13 +389,10 @@ func familyImportFingerprint(mapping parentbilling.FamilyChildrenImportMapping, 
 		}
 	}
 	// The values are plain data: encoding them cannot fail.
-	state, _ := json.Marshal(struct {
+	return readstate.Fingerprint(struct {
 		Mapping parentbilling.FamilyChildrenImportMapping `json:"mapping"`
 		Rows    []stateRow                                `json:"rows"`
 	}{mapping, rows})
-	hash := fnv.New128a()
-	_, _ = hash.Write(state)
-	return hex.EncodeToString(hash.Sum(nil))
 }
 
 // suggestFamilyImportMapping maps each field to the first header with one

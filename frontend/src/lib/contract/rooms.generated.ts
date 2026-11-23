@@ -150,27 +150,6 @@ export interface roomSnapshotExportRequest {
   include_transit?: boolean;
 }
 
-/** Query of GET /api/rooms/ */
-export interface GetRoomsQuery {
-  building?: string;
-  category?: string;
-  include_system?: string;
-  is_open_room?: string;
-  page?: number;
-  page_size?: number;
-}
-
-/** Query of GET /api/rooms/by-category */
-export interface GetRoomsByCategoryQuery {
-  category?: string;
-}
-
-/** Query of GET /api/rooms/{id}/history */
-export interface GetRoomsIdHistoryQuery {
-  end?: string;
-  start?: string;
-}
-
 export const routes = {
   "DELETE /api/rooms/{id}": {
     method: "DELETE",
@@ -183,7 +162,14 @@ export const routes = {
     method: "GET",
     pattern: "/api/rooms/",
     portals: ["tenant"],
-    query: ["building", "category", "include_system", "is_open_room", "page", "page_size"],
+    query: {
+      "building": { kind: "string" },
+      "category": { kind: "string" },
+      "include_system": { kind: "bool" },
+      "is_open_room": { kind: "bool" },
+      "page": { kind: "int" },
+      "page_size": { kind: "int" },
+    },
     response: paginated(z.array(RoomResponseSchema)),
   },
   "GET /api/rooms/by-category": {
@@ -191,7 +177,9 @@ export const routes = {
     pattern: "/api/rooms/by-category",
     portals: ["tenant"],
     deprecated: true,
-    query: ["category"],
+    query: {
+      "category": { kind: "string" },
+    },
     response: success(z.array(RoomResponseSchema)),
   },
   "GET /api/rooms/{id}": {
@@ -204,7 +192,10 @@ export const routes = {
     method: "GET",
     pattern: "/api/rooms/{id}/history",
     portals: ["tenant"],
-    query: ["end", "start"],
+    query: {
+      "end": { kind: "string" },
+      "start": { kind: "string" },
+    },
     response: success(z.array(RoomSessionEntrySchema)),
   },
   "GET /api/rooms/{id}/removal-impact": {

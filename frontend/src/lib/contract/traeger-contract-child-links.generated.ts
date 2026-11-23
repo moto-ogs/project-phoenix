@@ -129,17 +129,14 @@ export interface ChildLinkRequest {
   fingerprint?: string;
 }
 
-/** Query of DELETE /traeger/contract-child-links/{contractId} */
-export interface DeleteTraegerContractChildLinksContractIdQuery {
-  student_id?: string;
-}
-
 export const routes = {
   "DELETE /traeger/contract-child-links/{contractId}": {
     method: "DELETE",
     pattern: "/traeger/contract-child-links/{contractId}",
     portals: ["org"],
-    query: ["student_id"],
+    query: {
+      "student_id": { kind: "id" },
+    },
     response: noData,
   },
   "POST /traeger/contract-child-links/": {

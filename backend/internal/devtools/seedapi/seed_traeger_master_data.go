@@ -144,9 +144,23 @@ func seedTraegerLetterTemplateOnce(client *Client, auth AuthRef) error {
 // seedTraegerTemplateOnce saves the template of a kind while the Träger
 // still writes with the standard one, over the version it read (ADR 0311).
 // Several demo schools seed the same Träger at once: a save of the same
-// text is refused as unchanged, a save after another school's as changed
-// since the read; both keep the template that school saved.
+// text is refused as unchanged and keeps that template; a save after another
+// school's is refused as changed since the read, and the seeder reads again
+// once, which then finds the other school's template and keeps it.
 func seedTraegerTemplateOnce(client *Client, auth AuthRef, kind string, template map[string]any, what string) error {
+	for attempt := 0; ; attempt++ {
+		err := seedTraegerTemplateAttempt(client, auth, kind, template, what)
+		var refused *APIError
+		if errors.As(err, &refused) && refused.Code == readstate.ChangedCode && attempt == 0 {
+			continue
+		}
+		return err
+	}
+}
+
+// seedTraegerTemplateAttempt reads the template of a kind and saves it over
+// the version it read while the Träger still writes with the standard one.
+func seedTraegerTemplateAttempt(client *Client, auth AuthRef, kind string, template map[string]any, what string) error {
 	path := "/traeger/master-data/document-templates/" + kind
 	raw, err := client.GetWithAuth(auth, path)
 	if err != nil {
@@ -170,7 +184,7 @@ func seedTraegerTemplateOnce(client *Client, auth AuthRef, kind string, template
 	body["expected_version"] = envelope.Data.Version
 	_, err = client.PostWithAuth(auth, path+"/versions", body)
 	var refused *APIError
-	if errors.As(err, &refused) && (refused.Code == seedTraegerTemplateUnchanged || refused.Code == readstate.ChangedCode) {
+	if errors.As(err, &refused) && refused.Code == seedTraegerTemplateUnchanged {
 		return nil
 	}
 	if err != nil {

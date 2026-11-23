@@ -107,21 +107,6 @@ export interface TraegerRolesRequest {
   roles?: string[] | null;
 }
 
-/** Query of GET /traeger/accounts/export */
-export interface GetTraegerAccountsExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-}
-
-/** Query of GET /traeger/accounts/history */
-export interface GetTraegerAccountsHistoryQuery {
-  before?: string;
-}
-
-/** Query of GET /traeger/accounts/history/export */
-export interface GetTraegerAccountsHistoryExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-}
-
 export const routes = {
   "DELETE /traeger/accounts/invitations/{invitationId}": {
     method: "DELETE",
@@ -145,21 +130,27 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/accounts/export",
     portals: ["org"],
-    query: ["format"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
     response: fileAnswer,
   },
   "GET /traeger/accounts/history": {
     method: "GET",
     pattern: "/traeger/accounts/history",
     portals: ["org"],
-    query: ["before"],
+    query: {
+      "before": { kind: "id" },
+    },
     response: success(TraegerHistoryResponseSchema),
   },
   "GET /traeger/accounts/history/export": {
     method: "GET",
     pattern: "/traeger/accounts/history/export",
     portals: ["org"],
-    query: ["format"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
     response: fileAnswer,
   },
   "POST /traeger/accounts/invitations": {

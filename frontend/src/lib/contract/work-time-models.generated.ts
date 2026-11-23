@@ -112,11 +112,6 @@ export const AssignResponseSchema: z.ZodType<AssignResponse, unknown> = object<A
   valid_from: str,
 });
 
-/** Query of GET /api/work-time-models/ */
-export interface GetWorkTimeModelsQuery {
-  with_usage?: boolean;
-}
-
 export const routes = {
   "DELETE /api/work-time-models/{id}": {
     method: "DELETE",
@@ -128,7 +123,9 @@ export const routes = {
     method: "GET",
     pattern: "/api/work-time-models/",
     portals: ["tenant"],
-    query: ["with_usage"],
+    query: {
+      "with_usage": { kind: "bool" },
+    },
     response: success(z.array(ModelResponseSchema)),
   },
   "GET /api/work-time-models/staff-facts": {

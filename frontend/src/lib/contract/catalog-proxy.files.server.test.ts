@@ -54,13 +54,13 @@ const routes: CatalogRoute[] = [
   {
     method: "GET",
     pattern: "/traeger/rows/export",
-    query: ["format", "from"],
+    query: { format: { kind: "string" }, from: { kind: "date" } },
     response: fileAnswer,
   },
   {
     method: "GET",
     pattern: "/traeger/rows/{id}/logo",
-    query: ["v"],
+    query: { v: { kind: "string" } },
     privateCache: true,
     response: fileAnswer,
   },

@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Companions is the native "läuft mit" application (#3427): the edges Care
@@ -237,10 +238,10 @@ func (c *Companions) CheckCompanionTrim(ctx context.Context, studentID int64, al
 // DEPARTURE PLAN drives, and it holds the caller to a baseline. A plan-driven
 // trim carries no list of links, so a caller holding a stale plan would
 // delete links it never saw. Comparing the claimed fingerprint against the
-// stored links under the subject's row lock turns that silent loss into a
-// retriable ErrCompanionsChanged. nil claims nothing and is refused as soon
-// as the trim would actually drop something.
-func (c *Companions) CheckCompanionTrimForPlan(ctx context.Context, studentID int64, allowedDays map[string]bool, expectedFingerprint *string) error {
+// stored links under the subject's row lock turns that silent loss into
+// readstate.ErrChanged. An empty claim is refused as soon as the trim would
+// actually drop something, by the same rule as ReplaceCompanions.
+func (c *Companions) CheckCompanionTrimForPlan(ctx context.Context, studentID int64, allowedDays map[string]bool, expectedFingerprint string) error {
 	links, trimmed, err := c.planCompanionTrim(ctx, studentID, allowedDays)
 	if err != nil || links == nil {
 		return err
@@ -248,8 +249,8 @@ func (c *Companions) CheckCompanionTrimForPlan(ctx context.Context, studentID in
 	// Before the stranding check: a stale caller must be told to reload, not
 	// sent off to fill in another child's Heimweg for a removal it never asked
 	// for.
-	if expectedFingerprint == nil || *expectedFingerprint != careplan.CompanionLinksFingerprint(links) {
-		return careplan.ErrCompanionsChanged
+	if err := readstate.Check(expectedFingerprint, careplan.CompanionLinksFingerprint(links)); err != nil {
+		return err
 	}
 	return c.checkCompanionRemovals(ctx, studentID, links, trimmed)
 }
@@ -395,8 +396,8 @@ func (c *Companions) validateCompanionUpdate(ctx context.Context, studentID int6
 	if err != nil {
 		return nil, nil, err
 	}
-	if update.ExpectedFingerprint != nil && *update.ExpectedFingerprint != careplan.CompanionLinksFingerprint(current) {
-		return nil, nil, careplan.ErrCompanionsChanged
+	if err := readstate.Check(update.ExpectedFingerprint, careplan.CompanionLinksFingerprint(current)); err != nil {
+		return nil, nil, err
 	}
 	if err := c.checkCompanionRemovals(ctx, studentID, current, update.Links); err != nil {
 		return nil, nil, err

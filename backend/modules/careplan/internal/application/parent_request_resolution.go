@@ -82,7 +82,7 @@ func (c *ParentRequestCoordinator) prepareConflictGroup(
 		return lockedConflictGroup{}, err
 	}
 	for i, requestID := range input.RequestIDs {
-		if err := readstate.Check(input.ExpectedVersions[i], careplan.ParentRequestVersion(candidates[requestID].UpdatedAt)); err != nil {
+		if err := readstate.Check(input.ExpectedVersions[i], readstate.Of(candidates[requestID].UpdatedAt)); err != nil {
 			return lockedConflictGroup{}, err
 		}
 	}

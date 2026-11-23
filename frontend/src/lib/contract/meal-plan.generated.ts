@@ -257,63 +257,6 @@ export interface SetDayRequest {
   expected?: DishRequest[] | null;
 }
 
-/** Query of DELETE /api/meal-plan/{date} */
-export interface DeleteMealPlanDateQuery {
-  expected_version?: string;
-}
-
-/** Query of GET /api/meal-plan/ */
-export interface GetMealPlanQuery {
-  week_start?: string;
-}
-
-/** Query of GET /api/meal-plan/days */
-export interface GetMealPlanDaysQuery {
-  week_start?: string;
-}
-
-/** Query of GET /api/meal-plan/orders */
-export interface GetMealPlanOrdersQuery {
-  from?: string;
-  to?: string;
-}
-
-/** Query of GET /api/meal-plan/orders/month/export */
-export interface GetMealPlanOrdersMonthExportQuery {
-  format?: "pdf" | "xlsx";
-  month?: string;
-}
-
-/** Query of GET /api/meal-plan/participants */
-export interface GetMealPlanParticipantsQuery {
-  date?: string;
-  include?: string;
-}
-
-/** Query of GET /api/meal-plan/participants/export */
-export interface GetMealPlanParticipantsExportQuery {
-  date?: string;
-  format?: "pdf" | "xlsx";
-  include?: string;
-}
-
-/** Query of GET /api/meal-plan/participants/week */
-export interface GetMealPlanParticipantsWeekQuery {
-  week_start?: string;
-}
-
-/** Query of GET /api/meal-plan/participants/week/export */
-export interface GetMealPlanParticipantsWeekExportQuery {
-  format?: "pdf" | "xlsx";
-  week_start?: string;
-}
-
-/** Query of GET /api/meal-plan/participation/{studentId} */
-export interface GetMealPlanParticipationStudentIdQuery {
-  from?: string;
-  to?: string;
-}
-
 export const routes = {
   "DELETE /api/meal-plan/participation/{studentId}/days/{date}": {
     method: "DELETE",
@@ -326,7 +269,9 @@ export const routes = {
     pattern: "/api/meal-plan/{date}",
     portals: ["tenant"],
     deprecated: true,
-    query: ["expected_version"],
+    query: {
+      "expected_version": { kind: "string" },
+    },
     response: noData,
   },
   "GET /api/meal-plan/": {
@@ -334,63 +279,88 @@ export const routes = {
     pattern: "/api/meal-plan/",
     portals: ["tenant"],
     deprecated: true,
-    query: ["week_start"],
+    query: {
+      "week_start": { kind: "date" },
+    },
     response: success(z.array(MealPlanWeekEntryResponseSchema)),
   },
   "GET /api/meal-plan/days": {
     method: "GET",
     pattern: "/api/meal-plan/days",
     portals: ["tenant"],
-    query: ["week_start"],
+    query: {
+      "week_start": { kind: "date" },
+    },
     response: success(z.array(MealPlanDayResponseSchema)),
   },
   "GET /api/meal-plan/orders": {
     method: "GET",
     pattern: "/api/meal-plan/orders",
     portals: ["tenant"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(OrdersResponseSchema),
   },
   "GET /api/meal-plan/orders/month/export": {
     method: "GET",
     pattern: "/api/meal-plan/orders/month/export",
     portals: ["tenant"],
-    query: ["format", "month"],
+    query: {
+      "format": { kind: "string", values: ["pdf", "xlsx"] },
+      "month": { kind: "string" },
+    },
     response: fileAnswer,
   },
   "GET /api/meal-plan/participants": {
     method: "GET",
     pattern: "/api/meal-plan/participants",
     portals: ["tenant"],
-    query: ["date", "include"],
+    query: {
+      "date": { kind: "date" },
+      "include": { kind: "string" },
+    },
     response: success(DailyListResponseSchema),
   },
   "GET /api/meal-plan/participants/export": {
     method: "GET",
     pattern: "/api/meal-plan/participants/export",
     portals: ["tenant"],
-    query: ["date", "format", "include"],
+    query: {
+      "date": { kind: "date" },
+      "format": { kind: "string", values: ["pdf", "xlsx"] },
+      "include": { kind: "string" },
+    },
     response: fileAnswer,
   },
   "GET /api/meal-plan/participants/week": {
     method: "GET",
     pattern: "/api/meal-plan/participants/week",
     portals: ["tenant"],
-    query: ["week_start"],
+    query: {
+      "week_start": { kind: "date" },
+    },
     response: success(WeeklyListResponseSchema),
   },
   "GET /api/meal-plan/participants/week/export": {
     method: "GET",
     pattern: "/api/meal-plan/participants/week/export",
     portals: ["tenant"],
-    query: ["format", "week_start"],
+    query: {
+      "format": { kind: "string", values: ["pdf", "xlsx"] },
+      "week_start": { kind: "date" },
+    },
     response: fileAnswer,
   },
   "GET /api/meal-plan/participation/{studentId}": {
     method: "GET",
     pattern: "/api/meal-plan/participation/{studentId}",
     portals: ["tenant"],
-    query: ["from", "to"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
     response: success(ChildParticipationResponseSchema),
   },
   "PUT /api/meal-plan/days/{date}": {

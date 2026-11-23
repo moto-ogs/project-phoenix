@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // The review of a monthly run before its release (#5916, ADR 0119
@@ -257,7 +258,7 @@ func fingerprintInvoices(invoices []parentbilling.CareInvoice) []fingerprintInvo
 // those an issued invoice already bills (#7892). A change of any of them
 // since the review makes the release refuse (#5916).
 func previewFingerprint(run parentbilling.CareRun, rule string, review reviewedMonth) string {
-	return contentFingerprint(struct {
+	return readstate.Fingerprint(struct {
 		Run         int64                            `json:"run"`
 		Schools     []int64                          `json:"schools"`
 		InvoiceDate *calendar.Date                   `json:"invoice_date"`

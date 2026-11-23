@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // CareOfferingSelection is one booked care offering of the current care period.
@@ -195,7 +196,7 @@ func pendingOfferingChange(view *OfferingChangeView, accountID int64, visible bo
 		EffectiveFrom:   calendar.Date(view.Request.EffectiveFrom),
 		Diff:            view.Diff,
 		SubmittedBySelf: view.Request.SubmittedBy == accountID,
-		Version:         excusedrequests.ParentRequestVersion(view.Request.UpdatedAt),
+		Version:         readstate.Of(view.Request.UpdatedAt),
 	}
 	if view.Request.ParentNote != nil {
 		pending.Note = *view.Request.ParentNote

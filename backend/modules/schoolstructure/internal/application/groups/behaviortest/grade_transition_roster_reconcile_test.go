@@ -86,7 +86,7 @@ func TestGradeTransitionWorkflow_Apply_ReconcilesFutureRosters(t *testing.T) {
 	transitionID := f.createDraft(t, ctx, "2025-2026", graduate(gradClass))
 
 	// APPLY: the future roster row is removed, the past one survives.
-	_, err := wf.Apply(ctx, transitionID, "")
+	_, err := wf.Apply(ctx, transitionID, previewed(ctx, wf, transitionID))
 	require.NoError(t, err)
 
 	var status string
@@ -166,7 +166,7 @@ func TestGradeTransitionWorkflow_Revert_PreservesPerOccurrenceRosterEdits(t *tes
 
 	transitionID := f.createDraft(t, ctx, "2025-2026", graduate(gradClass))
 
-	_, err := wf.Apply(ctx, transitionID, "")
+	_, err := wf.Apply(ctx, transitionID, previewed(ctx, wf, transitionID))
 	require.NoError(t, err)
 
 	assert.Equal(t, 0, countRow(keptInstance.ID))
@@ -238,7 +238,7 @@ func TestGradeTransitionWorkflow_Apply_RemovesTodaysPlannedRows(t *testing.T) {
 
 	transitionID := f.createDraft(t, ctx, "2025-2026", graduate(gradClass))
 
-	_, err := wf.Apply(ctx, transitionID, "")
+	_, err := wf.Apply(ctx, transitionID, previewed(ctx, wf, transitionID))
 	require.NoError(t, err)
 
 	assert.Equal(t, 0, countRow(plannedToday.ID),
@@ -284,7 +284,7 @@ func TestGradeTransitionWorkflow_Revert_FillsTodaysInstanceMaterializedWhileAlum
 
 	transitionID := f.createDraft(t, ctx, "2025-2026", graduate(gradClass))
 
-	_, err := wf.Apply(ctx, transitionID, "")
+	_, err := wf.Apply(ctx, transitionID, previewed(ctx, wf, transitionID))
 	require.NoError(t, err)
 
 	// The materializer runs while the child is an alumnus and builds a block for
@@ -382,7 +382,7 @@ func TestGradeTransitionWorkflow_Apply_PreservesRecordedAttendance(t *testing.T)
 
 	transitionID := f.createDraft(t, ctx, "2025-2026", graduate(gradClass))
 
-	_, err := wf.Apply(ctx, transitionID, "")
+	_, err := wf.Apply(ctx, transitionID, previewed(ctx, wf, transitionID))
 	require.NoError(t, err)
 
 	assert.Equal(t, 1, countRow(completedToday.ID),
@@ -422,7 +422,7 @@ func TestGradeTransitionWorkflow_Revert_FillsBackdatedInstance(t *testing.T) {
 
 	transitionID := f.createDraft(t, ctx, "2025-2026", graduate(gradClass))
 
-	_, err := wf.Apply(ctx, transitionID, "")
+	_, err := wf.Apply(ctx, transitionID, previewed(ctx, wf, transitionID))
 	require.NoError(t, err)
 
 	// The blocked materializer commits AFTER the apply, but with the created_at
@@ -490,7 +490,7 @@ func TestGradeTransitionWorkflow_Revert_SkipsHandPlannedInstance(t *testing.T) {
 
 	transitionID := f.createDraft(t, ctx, "2025-2026", graduate(gradClass))
 
-	_, err := wf.Apply(ctx, transitionID, "")
+	_, err := wf.Apply(ctx, transitionID, previewed(ctx, wf, transitionID))
 	require.NoError(t, err)
 
 	// Created after the apply (so it is inside the alumnus window) and linked to

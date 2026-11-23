@@ -428,40 +428,23 @@ export const CountScopeSavedResponseSchema: z.ZodType<CountScopeSavedResponse, u
   scope: str,
 });
 
-/** Query of GET /api/messages/ */
-export interface GetMessagesQuery {
-  unread?: boolean;
-}
-
-/** Query of GET /api/messages/attachments/{attachmentId}/download */
-export interface GetMessagesAttachmentsAttachmentIdDownloadQuery {
-  inline?: string;
-}
-
-/** Query of GET /api/messages/group-threads/audience */
-export interface GetMessagesGroupThreadsAudienceQuery {
-  target_id?: string;
-  target_type?: string;
-}
-
-/** Query of GET /api/messages/students/{studentId}/guardians */
-export interface GetMessagesStudentsStudentIdGuardiansQuery {
-  audience?: string;
-}
-
 export const routes = {
   "GET /api/messages/": {
     method: "GET",
     pattern: "/api/messages/",
     portals: ["tenant"],
-    query: ["unread"],
+    query: {
+      "unread": { kind: "bool" },
+    },
     response: success(z.array(ParentChatInboxThreadResponseSchema)),
   },
   "GET /api/messages/attachments/{attachmentId}/download": {
     method: "GET",
     pattern: "/api/messages/attachments/{attachmentId}/download",
     portals: ["tenant"],
-    query: ["inline"],
+    query: {
+      "inline": { kind: "string" },
+    },
     response: fileAnswer,
   },
   "GET /api/messages/count-scope": {
@@ -480,7 +463,10 @@ export const routes = {
     method: "GET",
     pattern: "/api/messages/group-threads/audience",
     portals: ["tenant"],
-    query: ["target_id", "target_type"],
+    query: {
+      "target_id": { kind: "string" },
+      "target_type": { kind: "string" },
+    },
     response: success(z.array(GroupChildResponseSchema)),
   },
   "GET /api/messages/group-threads/{groupThreadId}": {
@@ -505,7 +491,9 @@ export const routes = {
     method: "GET",
     pattern: "/api/messages/students/{studentId}/guardians",
     portals: ["tenant"],
-    query: ["audience"],
+    query: {
+      "audience": { kind: "string" },
+    },
     response: success(z.array(MessageableGuardianResponseSchema)),
   },
   "GET /api/messages/students/{studentId}/threads": {

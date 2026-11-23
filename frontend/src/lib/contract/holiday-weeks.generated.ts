@@ -291,11 +291,6 @@ export const HolidayGuestTransferSchema: z.ZodType<HolidayGuestTransfer, unknown
   own_children: safeInt,
 });
 
-/** Query of GET /api/holiday-weeks/{weekId}/participants/export */
-export interface GetHolidayWeeksWeekIdParticipantsExportQuery {
-  format?: "csv" | "xlsx";
-}
-
 export const routes = {
   "GET /api/holiday-weeks/": {
     method: "GET",
@@ -337,7 +332,9 @@ export const routes = {
     method: "GET",
     pattern: "/api/holiday-weeks/{weekId}/participants/export",
     portals: ["tenant"],
-    query: ["format"],
+    query: {
+      "format": { kind: "string", values: ["csv", "xlsx"] },
+    },
     response: fileAnswer,
   },
   "PUT /api/holiday-weeks/{weekId}/guest-group": {

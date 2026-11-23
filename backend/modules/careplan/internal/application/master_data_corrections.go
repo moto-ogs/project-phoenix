@@ -84,7 +84,7 @@ func (s *MasterDataDecisions) loadCorrectableRequest(ctx context.Context, reques
 	if !req.CanCorrect() {
 		return nil, parentrequests.ErrNotDecided
 	}
-	if err := readstate.Check(expectedVersion, careplan.ParentRequestVersion(req.UpdatedAt)); err != nil {
+	if err := readstate.Check(expectedVersion, readstate.Of(req.UpdatedAt)); err != nil {
 		return nil, err
 	}
 	return req, nil

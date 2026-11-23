@@ -660,60 +660,6 @@ export interface HolidayRegistrationEditRequest {
   custom_data?: Record<string, unknown | null> | null;
 }
 
-/** Query of GET /traeger/holiday-periods/export */
-export interface GetTraegerHolidayPeriodsExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-}
-
-/** Query of GET /traeger/holiday-periods/{id}/allocation/export */
-export interface GetTraegerHolidayPeriodsIdAllocationExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-}
-
-/** Query of GET /traeger/holiday-periods/{id}/places/export */
-export interface GetTraegerHolidayPeriodsIdPlacesExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-}
-
-/** Query of GET /traeger/holiday-periods/{id}/registrations */
-export interface GetTraegerHolidayPeriodsIdRegistrationsQuery {
-  school?: string;
-  status?: string;
-  time_model?: string;
-  week_id?: string;
-  wish?: string;
-}
-
-/** Query of GET /traeger/holiday-periods/{id}/registrations/export */
-export interface GetTraegerHolidayPeriodsIdRegistrationsExportQuery {
-  format?: "csv" | "pdf" | "xlsx";
-  school?: string;
-  status?: string;
-  time_model?: string;
-  week_id?: string;
-  wish?: string;
-}
-
-/** Query of GET /traeger/holiday-periods/{id}/registrations/known-children */
-export interface GetTraegerHolidayPeriodsIdRegistrationsKnownChildrenQuery {
-  registration_id?: string;
-}
-
-/** Query of GET /traeger/holiday-periods/{id}/registrations/pdf */
-export interface GetTraegerHolidayPeriodsIdRegistrationsPdfQuery {
-  health?: boolean;
-  school?: string;
-  status?: string;
-  time_model?: string;
-  week_id?: string;
-  wish?: string;
-}
-
-/** Query of GET /traeger/holiday-periods/{id}/registrations/{registrationId}/pdf */
-export interface GetTraegerHolidayPeriodsIdRegistrationsRegistrationIdPdfQuery {
-  health?: boolean;
-}
-
 export const routes = {
   "DELETE /traeger/holiday-periods/{id}/form/documents/{documentId}": {
     method: "DELETE",
@@ -737,7 +683,9 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/holiday-periods/export",
     portals: ["org"],
-    query: ["format"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
     response: fileAnswer,
   },
   "GET /traeger/holiday-periods/{id}": {
@@ -756,7 +704,9 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/holiday-periods/{id}/allocation/export",
     portals: ["org"],
-    query: ["format"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
     response: fileAnswer,
   },
   "GET /traeger/holiday-periods/{id}/form": {
@@ -781,28 +731,45 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/holiday-periods/{id}/places/export",
     portals: ["org"],
-    query: ["format"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+    },
     response: fileAnswer,
   },
   "GET /traeger/holiday-periods/{id}/registrations": {
     method: "GET",
     pattern: "/traeger/holiday-periods/{id}/registrations",
     portals: ["org"],
-    query: ["school", "status", "time_model", "week_id", "wish"],
+    query: {
+      "school": { kind: "string" },
+      "status": { kind: "string" },
+      "time_model": { kind: "string" },
+      "week_id": { kind: "id" },
+      "wish": { kind: "string" },
+    },
     response: success(HolidayRegistrationListSchema),
   },
   "GET /traeger/holiday-periods/{id}/registrations/export": {
     method: "GET",
     pattern: "/traeger/holiday-periods/{id}/registrations/export",
     portals: ["org"],
-    query: ["format", "school", "status", "time_model", "week_id", "wish"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+      "school": { kind: "string" },
+      "status": { kind: "string" },
+      "time_model": { kind: "string" },
+      "week_id": { kind: "id" },
+      "wish": { kind: "string" },
+    },
     response: fileAnswer,
   },
   "GET /traeger/holiday-periods/{id}/registrations/known-children": {
     method: "GET",
     pattern: "/traeger/holiday-periods/{id}/registrations/known-children",
     portals: ["org"],
-    query: ["registration_id"],
+    query: {
+      "registration_id": { kind: "id" },
+    },
     response: success(HolidayKnownChildrenResponseSchema),
   },
   "GET /traeger/holiday-periods/{id}/registrations/mail-problems": {
@@ -815,7 +782,14 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/holiday-periods/{id}/registrations/pdf",
     portals: ["org"],
-    query: ["health", "school", "status", "time_model", "week_id", "wish"],
+    query: {
+      "health": { kind: "bool" },
+      "school": { kind: "string" },
+      "status": { kind: "string" },
+      "time_model": { kind: "string" },
+      "week_id": { kind: "id" },
+      "wish": { kind: "string" },
+    },
     response: fileAnswer,
   },
   "GET /traeger/holiday-periods/{id}/registrations/{registrationId}": {
@@ -834,7 +808,9 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/holiday-periods/{id}/registrations/{registrationId}/pdf",
     portals: ["org"],
-    query: ["health"],
+    query: {
+      "health": { kind: "bool" },
+    },
     response: fileAnswer,
   },
   "GET /traeger/holiday-periods/{id}/registrations/{registrationId}/proofs/{proofId}": {

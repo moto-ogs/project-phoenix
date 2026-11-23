@@ -218,7 +218,7 @@ func (s *OfferingChanges) Edit(
 	if offeringChangeTerminal(row) {
 		return nil, careplan.ErrOfferingChangeNotPending
 	}
-	if err := readstate.Check(expectedVersion, careplan.ParentRequestVersion(row.UpdatedAt)); err != nil {
+	if err := readstate.Check(expectedVersion, readstate.Of(row.UpdatedAt)); err != nil {
 		return nil, err
 	}
 	proposal, err := s.validateOfferingChangeProposal(ctx, input)

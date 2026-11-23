@@ -287,11 +287,6 @@ export interface deviceSlotsRequest {
   device_slots?: number | null;
 }
 
-/** Query of PUT /operator/schools/{id}/settings/values/{key} */
-export interface PutOperatorSchoolsIdSettingsValuesKeyQuery {
-  force?: "true";
-}
-
 export const routes = {
   "DELETE /operator/schools/{id}": {
     method: "DELETE",
@@ -451,7 +446,9 @@ export const routes = {
     pattern: "/operator/schools/{id}/settings/values/{key}",
     portals: ["platform"],
     routeFile: "the operator's route file purges the school's cached tenant lookup",
-    query: ["force"],
+    query: {
+      "force": { kind: "string", values: ["true"] },
+    },
     request: requestBody<setSchoolSettingRequest>(),
     response: success(schoolSettingMutationResponseSchema),
   },

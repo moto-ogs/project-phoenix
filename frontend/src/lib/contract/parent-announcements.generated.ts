@@ -136,17 +136,6 @@ export interface reminderRequest {
   reminder_text?: string | null;
 }
 
-/** Query of GET /api/parent-announcements/ */
-export interface GetParentAnnouncementsQuery {
-  include_inactive?: boolean;
-}
-
-/** Query of GET /api/parent-announcements/{announcementId}/declaration-export */
-export interface GetParentAnnouncementsAnnouncementIdDeclarationExportQuery {
-  format?: "csv" | "pdf";
-  student_id?: string;
-}
-
 export const routes = {
   "DELETE /api/parent-announcements/{announcementId}": {
     method: "DELETE",
@@ -158,7 +147,9 @@ export const routes = {
     method: "GET",
     pattern: "/api/parent-announcements/",
     portals: ["tenant"],
-    query: ["include_inactive"],
+    query: {
+      "include_inactive": { kind: "bool" },
+    },
     response: success(z.array(announcementResponseSchema)),
   },
   "GET /api/parent-announcements/letter-placeholders": {
@@ -183,7 +174,10 @@ export const routes = {
     method: "GET",
     pattern: "/api/parent-announcements/{announcementId}/declaration-export",
     portals: ["tenant"],
-    query: ["format", "student_id"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf"] },
+      "student_id": { kind: "id" },
+    },
     response: fileAnswer,
   },
   "GET /api/parent-announcements/{announcementId}/declaration-status": {

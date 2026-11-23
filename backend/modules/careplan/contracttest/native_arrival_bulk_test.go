@@ -57,7 +57,7 @@ func (p *arrivalClassPlansFixture) Upsert(_ context.Context, row *compose.Arriva
 }
 
 // unstoredClassVersion is the version a class without stored times reads.
-var unstoredClassVersion = readstate.Of(time.Time{})
+var unstoredClassVersion = readstate.Absent
 
 // TestClassArrivalSaveRefusesTimesChangedSinceRead pins ADR 0311 for the
 // class editor: it sends every filled weekday back, so a save made against
@@ -113,10 +113,11 @@ func TestNativeArrivalClassUpdateAuthorizesBeforeClassLockAndPreservesDeviations
 		{ScheduleStudent: careplan.ScheduleStudent{ID: second.ID, TenantID: testpkg.Tenant(t)}, SchoolClass: "1a"},
 		{ScheduleStudent: careplan.ScheduleStudent{ID: first.ID, TenantID: testpkg.Tenant(t)}, SchoolClass: " 1A "},
 	}}
-	classes := &arrivalClassPlansFixture{events: &events, row: compose.ArrivalClassPlan{SchoolClass: "1a", ArrivalTimes: map[string]string{"mon": "13:00", "tue": "12:45", "wed": "12:15"}}}
+	stored := time.Date(2026, 11, 23, 7, 0, 0, 0, time.UTC)
+	classes := &arrivalClassPlansFixture{events: &events, row: compose.ArrivalClassPlan{SchoolClass: "1a", UpdatedAt: stored, ArrivalTimes: map[string]string{"mon": "13:00", "tue": "12:45", "wed": "12:15"}}}
 	service, err := compose.NewArrivalSchedules(db, owner, nil, nil, compose.ArrivalScheduleDependencies{Students: directory, Classes: classes, Today: decisionTestDay})
 	require.NoError(t, err)
-	filter := careplan.ArrivalScheduleBulkFilter{SchoolClass: " 1a ", ExpectedVersion: unstoredClassVersion, Authorize: func(_ context.Context, row careplan.ScheduleStudent) (bool, error) {
+	filter := careplan.ArrivalScheduleBulkFilter{SchoolClass: " 1a ", ExpectedVersion: readstate.Of(stored), Authorize: func(_ context.Context, row careplan.ScheduleStudent) (bool, error) {
 		events = append(events, "authorize")
 		return row.ID == first.ID, nil
 	}}
