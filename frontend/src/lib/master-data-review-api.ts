@@ -17,6 +17,7 @@ const CHANGE_REQUEST_STATUSES = [
   "pending",
   "approved",
   "rejected",
+  "care_ended",
 ] as const;
 type ChangeRequestStatus = (typeof CHANGE_REQUEST_STATUSES)[number];
 

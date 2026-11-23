@@ -17,6 +17,8 @@ const EXCUSED_REQUEST_STATUSES = [
   "approved",
   "rejected",
   "withdrawn",
+  "done",
+  "care_ended",
 ] as const;
 const ABSENCE_STATUSES = ["sick", "excused"] as const;
 

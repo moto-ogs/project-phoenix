@@ -17,6 +17,8 @@ const OFFERING_REQUEST_STATUSES = [
   "approved",
   "rejected",
   "withdrawn",
+  "done",
+  "care_ended",
 ] as const;
 type OfferingRequestStatus = (typeof OFFERING_REQUEST_STATUSES)[number];
 

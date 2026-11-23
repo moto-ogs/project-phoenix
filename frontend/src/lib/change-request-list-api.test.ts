@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
 
 import { ApiError } from "./api-error";
+import { testClockDay } from "~/test/clock";
 import {
   bulkApproveParentRequests,
   fetchPendingEnrollmentChangeRequestCount,
@@ -90,6 +91,57 @@ describe("change request list API", () => {
       data: { id: "9", diff: [] },
     });
   });
+
+  it.each([
+    ["excused", "done"],
+    ["excused", "care_ended"],
+    ["offering", "done"],
+    ["offering", "care_ended"],
+    ["master_data", "care_ended"],
+  ] as const)(
+    "loads %s history with terminal status %s",
+    async (kind, status) => {
+      const common = {
+        id: "5",
+        student_id: "42",
+        created_at: masterData.created_at,
+        decided_at: masterData.created_at,
+        status,
+      };
+      const projections = {
+        master_data: { ...masterData, ...common },
+        excused: {
+          ...common,
+          first_name: "Emma",
+          last_name: "Beispiel",
+          absence_status: "excused",
+          dates: [testClockDay()],
+          note: "",
+        },
+        offering: {
+          ...common,
+          student_name: "Emma Beispiel",
+          effective_from: testClockDay(),
+          diff: [],
+        },
+      };
+      vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        answer([
+          {
+            request_type: kind,
+            occurred_at: common.decided_at,
+            [kind]: projections[kind],
+          },
+        ]),
+      );
+
+      const page = await listAggregatedRequestHistory();
+
+      expect(page.items).toMatchObject([
+        { request_type: kind, data: projections[kind] },
+      ]);
+    },
+  );
 
   it("fails the load on a status this build does not know", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
