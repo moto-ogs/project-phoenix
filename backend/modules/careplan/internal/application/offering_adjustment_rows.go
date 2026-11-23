@@ -457,16 +457,15 @@ func taggedWithRequestChild(row ports.RosterEnrollment, requestChildID int64) bo
 //
 // Per existing row materialized from this request child:
 //   - already ended before the switch: untouched, it is history
-//   - identical to a row the new selection wants: kept, so an unchanged
-//     offering does not become two adjacent rows
+//   - identical to a row the new selection wants on the switch date: kept,
+//     so an unchanged offering does not become two adjacent rows; its end
+//     follows retainAdjustedEnrollment
 //   - starts on/after the switch: deleted, it never took effect
 //   - started earlier: capped at effectiveFrom (valid_until is exclusive, so
 //     the last attended day is the day before)
 //
 // Rows the new selection still wants are then materialized starting at the
-// switch date. Phase-window edits are deliberately not reconciled here: a
-// kept row keeps its original valid_until, and correcting phase dates is what
-// the undated (correction) path is for.
+// switch date.
 func (m *BookingMaterialization) splitAdjustedEnrollments(
 	ctx context.Context,
 	adjusted adjustedRoster,
@@ -644,11 +643,11 @@ func (m *BookingMaterialization) excludeInvalidAdjustedUnionTemplates(ctx contex
 // row; capping it here would replace an unchanged union row (#5234). A
 // template the selection no longer feeds is not in multiSource and is
 // capped below as before.
-func deferredToUnionResync(row ports.RosterEnrollment, drafts map[int64]*careEnrollmentDraft, multiSource map[int64]ports.SourcedTemplate) bool {
+func deferredToUnionResync(row ports.RosterEnrollment, drafts map[int64][]*careEnrollmentDraft, multiSource map[int64]ports.SourcedTemplate) bool {
 	if _, ok := multiSource[row.ActivityGroupID]; !ok {
 		return false
 	}
-	return drafts[row.ActivityGroupID] == nil
+	return len(drafts[row.ActivityGroupID]) == 0
 }
 
 // reconcileAdjustedEnrollment keeps, caps or deletes one of the request
@@ -658,14 +657,13 @@ func (m *BookingMaterialization) reconcileAdjustedEnrollment(
 	row ports.RosterEnrollment,
 	adjusted adjustedRoster,
 	effectiveFrom calendar.Date,
-	drafts map[int64]*careEnrollmentDraft,
+	drafts map[int64][]*careEnrollmentDraft,
 ) error {
 	if row.ValidUntil != nil && !row.ValidUntil.After(effectiveFrom) {
 		return nil
 	}
-	if draft := drafts[row.ActivityGroupID]; draft != nil && !row.ValidFrom.After(effectiveFrom) && careDraftMatchesEnrollment(draft, row) {
-		delete(drafts, row.ActivityGroupID)
-		return m.retainAdjustedEnrollment(ctx, row, draft, adjusted)
+	if kept := takeKeptDraft(drafts, row, adjusted.phase, effectiveFrom); kept != nil {
+		return m.retainAdjustedEnrollment(ctx, row, kept, adjusted)
 	}
 	if !row.ValidFrom.Before(effectiveFrom) {
 		if err := m.deps.Rosters.DeleteEnrollment(ctx, row.ID); err != nil {
@@ -696,11 +694,37 @@ func (m *BookingMaterialization) retainAdjustedEnrollment(ctx context.Context, r
 		}
 		return nil
 	}
-	bookingEnds := adjusted.toBookingEnd && draft.linkValidUntil != nil && *draft.linkValidUntil == draftEndExclusive && draftEndExclusive.Before(phase.ServiceEnd.AddDays(1))
+	bookingEnds := adjusted.toBookingEnd && draft.validUntil != nil && *draft.validUntil == draftEndExclusive && draftEndExclusive.Before(phase.ServiceEnd.AddDays(1))
 	if bookingEnds && (row.ValidUntil == nil || row.ValidUntil.After(draftEndExclusive)) {
 		if err := m.deps.Rosters.SetEnrollmentValidUntil(ctx, row.ID, draftEndExclusive); err != nil {
 			return fmt.Errorf("decision: shorten retained adjusted enrollment: %w", err)
 		}
+	}
+	return nil
+}
+
+// takeKeptDraft removes and returns the draft the row already is on the
+// switch date: same weekdays and period, the row started by then, and the
+// draft plans that day. Such a draft needs no new row. nil when the new
+// selection wants no such row there.
+func takeKeptDraft(
+	drafts map[int64][]*careEnrollmentDraft, row ports.RosterEnrollment, phase careplan.OfferingPhase, effectiveFrom calendar.Date,
+) *careEnrollmentDraft {
+	if row.ValidFrom.After(effectiveFrom) {
+		return nil
+	}
+	group := drafts[row.ActivityGroupID]
+	for i, draft := range group {
+		if !careDraftMatchesEnrollment(draft, row) || careDraftValidFrom(draft, phase, nil).After(effectiveFrom) ||
+			!careDraftValidUntil(draft, phase).After(effectiveFrom) {
+			continue
+		}
+		if len(group) == 1 {
+			delete(drafts, row.ActivityGroupID)
+		} else {
+			drafts[row.ActivityGroupID] = slices.Delete(group, i, i+1)
+		}
+		return draft
 	}
 	return nil
 }
