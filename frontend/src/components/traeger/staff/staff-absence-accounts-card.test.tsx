@@ -179,6 +179,41 @@ describe("StaffAbsenceAccountsCard", () => {
     );
   });
 
+  // ADR 0311 rule 6: a failed read of the stored claim after a refusal is
+  // a load error, and the refused version is not sent again.
+  it("names a failed read of the stored claim after a refusal", async () => {
+    api.setTraegerAbsenceAllowance.mockRejectedValueOnce(
+      new ApiError("changed since it was read", 409, {
+        code: "general.changed_since_read",
+      }),
+    );
+    renderCard();
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Anspruch ändern: Regenerationstag",
+      }),
+    );
+    api.fetchTraegerAbsenceAccounts.mockRejectedValue(
+      new ApiError("down", 503, { code: "general.unavailable" }),
+    );
+    fireEvent.change(screen.getByLabelText(`Anspruch ${YEAR} in Tagen`), {
+      target: { value: "4" },
+    });
+    fireEvent.change(screen.getByLabelText("Begründung"), {
+      target: { value: "Vertrag" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(
+      await screen.findByText(/Der neue Stand konnte nicht geladen werden/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Du siehst jetzt den neuen Stand/),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    expect(api.setTraegerAbsenceAllowance).toHaveBeenCalledTimes(1);
+  });
+
   it("keeps typed days and their version when a colleague's claim arrives", async () => {
     renderCard();
     fireEvent.click(
