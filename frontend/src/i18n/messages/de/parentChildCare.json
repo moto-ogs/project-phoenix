@@ -125,6 +125,7 @@
     "submitting": "Wird gesendet …",
     "savingEdit": "Wird gespeichert …",
     "reloadingEdit": "Lädt den gespeicherten Stand …",
+    "reloadFirst": "Lade zuerst den gespeicherten Stand neu.",
     "resetTooltip": "Entfernt deine Änderung für diesen Tag. moto fragt vorher nach.",
     "saveEditTooltip": "Ändert deine offene Anfrage. Die {careTerm} muss sie noch bestätigen.",
     "submitTooltip": "Schickt die Anfrage sofort an die {careTerm} zur Bestätigung.",
