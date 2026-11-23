@@ -74,14 +74,27 @@ type RunAction = (
 type View = "beacon" | "checklist";
 
 /** Einmal pro Anmeldung öffnet sich die Checkliste von selbst. */
-function claimFirstOpen(tenantSlug: string, accountID: string): boolean {
-  const key = `staff-onboarding-opened:${tenantSlug}:${accountID}`;
+const firstOpenKey = (tenantSlug: string, accountID: string) =>
+  `staff-onboarding-opened:${tenantSlug}:${accountID}`;
+
+/** Ob sich die Checkliste in dieser Sitzung schon von selbst gezeigt hat. */
+function openedThisSession(tenantSlug: string, accountID: string): boolean {
   try {
-    if (sessionStorage.getItem(key)) return false;
-    sessionStorage.setItem(key, "1");
-    return true;
+    return sessionStorage.getItem(firstOpenKey(tenantSlug, accountID)) !== null;
   } catch {
-    return false;
+    return true;
+  }
+}
+
+/**
+ * Merkt sich das erste Öffnen erst, wenn die Checkliste zu sehen war: Hielt
+ * ein Chat sie verdeckt, geht sie nach dem Neuladen noch einmal auf (#7686).
+ */
+function rememberOpened(tenantSlug: string, accountID: string): void {
+  try {
+    sessionStorage.setItem(firstOpenKey(tenantSlug, accountID), "1");
+  } catch {
+    // Ohne Sitzungsspeicher öffnet sie sich ohnehin nicht von selbst.
   }
 }
 
@@ -109,7 +122,10 @@ function StaffOnboardingForPerson() {
   const chatOpen = useMessageComposerOnScreen();
   // Von selbst geöffnet, aber noch nie zu sehen gewesen: „angezeigt“ zählt
   // erst, wenn die Checkliste wirklich auf dem Bildschirm steht.
-  const [shownPending, setShownPending] = useState(false);
+  const [shownPending, setShownPending] = useState<{
+    readonly accountID: string;
+    readonly tenantSlug: string;
+  } | null>(null);
   const { state, accountID, replace } = useStaffOnboarding();
   const [expanded, setExpanded] = useState<StaffOnboardingStepKey | null>(null);
   const [expandedByPerson, setExpandedByPerson] = useState(false);
@@ -252,15 +268,16 @@ function StaffOnboardingForPerson() {
       visible &&
       tenantSlug &&
       accountID &&
-      claimFirstOpen(tenantSlug, accountID)
+      !openedThisSession(tenantSlug, accountID)
     ) {
       setView("checklist");
-      setShownPending(true);
+      setShownPending({ accountID, tenantSlug });
     }
   }, [visible, tenantSlug, accountID]);
   useEffect(() => {
     if (!shownPending || !visible || view !== "checklist" || chatOpen) return;
-    setShownPending(false);
+    setShownPending(null);
+    rememberOpened(shownPending.tenantSlug, shownPending.accountID);
     selfOpened.current = trackOnboardingSurface("shown", "staff_first_steps");
   }, [shownPending, visible, view, chatOpen]);
 

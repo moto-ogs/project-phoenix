@@ -364,6 +364,13 @@ describe("SchoolSetupWizard", () => {
   });
 
   it("counts the checklist that opened by itself as shown once it is on screen (#7686)", () => {
+    // Neu geladen, während der Chat offen ist: Die Liste bleibt fällig.
+    render(
+      <>
+        <SchoolSetupWizard />
+        <OpenChat />
+      </>,
+    ).unmount();
     const { rerender } = render(
       <>
         <SchoolSetupWizard />

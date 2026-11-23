@@ -157,6 +157,8 @@ describe("ParentFirstSteps", () => {
 
     it("counts the list that opened by itself as shown once it is on screen", async () => {
       analytics.trackOnboardingSurface.mockClear();
+      // Neu geladen, während der Chat offen ist: Die Liste bleibt fällig.
+      render(steps(true)).unmount();
       const { rerender } = render(steps(true));
       expect(await screen.findByText("Chat offen")).toBeVisible();
       expect(list()).not.toBeInTheDocument();

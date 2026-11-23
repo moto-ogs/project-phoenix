@@ -48,14 +48,27 @@ const EMPTY_STATE: ParentFirstStepsState = {
   finished: false,
 };
 
-function claimFirstOpen(accountId: string): boolean {
-  const key = `parent-first-steps-opened:${accountId}`;
+const firstOpenKey = (accountId: string) =>
+  `parent-first-steps-opened:${accountId}`;
+
+/** Ob sich die Liste in dieser Sitzung schon von selbst gezeigt hat. */
+function openedThisSession(accountId: string): boolean {
   try {
-    if (sessionStorage.getItem(key)) return false;
-    sessionStorage.setItem(key, "1");
-    return true;
+    return sessionStorage.getItem(firstOpenKey(accountId)) !== null;
   } catch {
-    return true;
+    return false;
+  }
+}
+
+/**
+ * Merkt sich das erste Öffnen erst, wenn die Liste zu sehen war: Hielt ein
+ * Chat sie verdeckt, geht sie nach dem Neuladen noch einmal von selbst auf.
+ */
+function rememberOpened(accountId: string): void {
+  try {
+    sessionStorage.setItem(firstOpenKey(accountId), "1");
+  } catch {
+    // Ohne Sitzungsspeicher öffnet sich die Liste beim nächsten Laden erneut.
   }
 }
 
@@ -234,7 +247,7 @@ export function ParentFirstSteps({
     autoOpenRef.current = false;
     setState(stored);
     const opens =
-      !stored.dismissed && !stored.finished && claimFirstOpen(accountId);
+      !stored.dismissed && !stored.finished && !openedThisSession(accountId);
     if (opens) setView("checklist");
     setShownPending(opens);
   }, [accountId]);
@@ -242,8 +255,9 @@ export function ParentFirstSteps({
   useEffect(() => {
     if (!shownPending || view !== "checklist" || chatOpen) return;
     setShownPending(false);
+    rememberOpened(accountId);
     autoOpenRef.current = trackOnboardingSurface("shown", "parent_first_steps");
-  }, [shownPending, view, chatOpen]);
+  }, [accountId, shownPending, view, chatOpen]);
 
   const updateState = useCallback(
     (next: ParentFirstStepsState) => {
