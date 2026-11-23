@@ -35,6 +35,7 @@ describe("accountTenantAccessService", () => {
             roles: [
               { id: "1", name: "admin", is_system: true, school_portal: false },
             ],
+            version: "roles-v1",
           },
         ],
       }),
@@ -68,6 +69,7 @@ describe("accountTenantAccessService", () => {
             schoolPortal: false,
           },
         ],
+        version: "roles-v1",
       },
     ]);
   });
@@ -87,6 +89,7 @@ describe("accountTenantAccessService", () => {
             has_person: false,
             has_staff: false,
             roles: null,
+            version: "roles-v0",
           },
         ],
       }),
@@ -127,12 +130,12 @@ describe("accountTenantAccessService", () => {
       }),
     );
 
-    await accountTenantAccessService.updateRole("42", "7", roleId);
+    await accountTenantAccessService.updateRole("42", "7", roleId, "roles-v1");
     expect(mockFetch).toHaveBeenLastCalledWith(
       "/api/operator/accounts/42/tenants/7",
       expect.objectContaining({
         method: "PUT",
-        body: JSON.stringify({ role_id: roleId }),
+        body: JSON.stringify({ role_id: roleId, expected_version: "roles-v1" }),
       }),
     );
   });
@@ -183,7 +186,7 @@ describe("accountTenantAccessService", () => {
     );
 
     await expect(
-      accountTenantAccessService.updateRole("42", "7", "1"),
+      accountTenantAccessService.updateRole("42", "7", "1", "roles-v1"),
     ).rejects.toThrowError(
       new ApiError("school access request failed", 400, {
         detail: "Diese Rolle existiert an der Zielschule nicht",
@@ -234,6 +237,7 @@ describe("accountTenantAccessService", () => {
             has_person: true,
             has_staff: true,
             roles: [],
+            version: "roles-v0",
           },
         ],
       }),

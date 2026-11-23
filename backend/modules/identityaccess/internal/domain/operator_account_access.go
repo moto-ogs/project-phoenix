@@ -4,6 +4,8 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Operator-led school access of an account (#3252, issue #1021): which
@@ -93,6 +95,21 @@ type AccountTenantAccess struct {
 	HasPerson        bool
 	HasStaff         bool
 	Roles            []AccountTenantRole
+	// Version is the read-state token of Roles (TenantRolesVersion).
+	Version string
+}
+
+// TenantRolesVersion is the read-state token of the roles an account holds
+// at one school: the fingerprint of their sorted IDs (ADR 0311). The access
+// listing and the role change's check derive it here from the same
+// assignments.
+func TenantRolesVersion(roles []AccountTenantRole) string {
+	ids := make([]int64, 0, len(roles))
+	for _, role := range roles {
+		ids = append(ids, role.ID)
+	}
+	slices.Sort(ids)
+	return readstate.Fingerprint(ids)
 }
 
 // OrganizationName is the organisation fact the listing shows.

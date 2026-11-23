@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // OperatorAccountAccess is the operator-led management of which schools an
@@ -161,18 +162,24 @@ func (s *OperatorAccountAccess) GrantAccountTenantAccess(ctx context.Context, re
 	})
 }
 
-// UpdateAccountTenantRole changes the role an account holds at one school:
+// UpdateAccountTenantRole changes the role an account holds at one school
+// the operator saw with expectedVersion (ADR 0311):
 // the requested role is assigned and the account's other roles at that
 // school are removed, except the ones owned by other features. Switching an
 // account between Verwaltung and Betreuung works, while an admin who also
 // does care work keeps the caregiver role until it is removed through the
 // caregiver flow.
-func (s *OperatorAccountAccess) UpdateAccountTenantRole(ctx context.Context, accountID, schoolID, roleID, operatorID int64, clientIP string) ([]identityaccess.AccountTenantAccess, error) {
+func (s *OperatorAccountAccess) UpdateAccountTenantRole(ctx context.Context, accountID, schoolID, roleID, operatorID int64, clientIP, expectedVersion string) ([]identityaccess.AccountTenantAccess, error) {
 	return runFlow(ctx, s.flow(), func(ctx context.Context) ([]identityaccess.AccountTenantAccess, error) {
 		var result []domain.AccountTenantAccess
 		err := s.runtime.WithAdminTx(ctx, func(adminCtx context.Context) error {
 			facts, err := s.roleChangeFacts(adminCtx, accountID, schoolID, roleID)
 			if err != nil {
+				return err
+			}
+			// The account row is locked: the roles read for the facts are the
+			// ones the change replaces.
+			if err := readstate.Check(expectedVersion, domain.TenantRolesVersion(facts.current)); err != nil {
 				return err
 			}
 			result, err = s.changeTenantRoleInAdmin(adminCtx, accountID, schoolID, operatorID, clientIP, facts)
@@ -488,9 +495,11 @@ func (s *OperatorAccountAccess) loadTenantAccess(ctx context.Context, accountID 
 		fact := factByTenant[entries[index].TenantID]
 		entries[index].HasPerson = fact.HasPerson
 		entries[index].HasStaff = fact.HasStaff
-		if roles := domain.RolesAtTenant(assignments, entries[index].TenantID); roles != nil {
+		roles := domain.RolesAtTenant(assignments, entries[index].TenantID)
+		if roles != nil {
 			entries[index].Roles = roles
 		}
+		entries[index].Version = domain.TenantRolesVersion(roles)
 	}
 	return entries, nil
 }
@@ -661,7 +670,7 @@ func accountTenantAccess(values []domain.AccountTenantAccess) []identityaccess.A
 			TenantID: value.TenantID, SchoolName: value.SchoolName, SchoolSlug: value.SchoolSlug, SchoolActive: value.SchoolActive,
 			OrganizationID: value.OrganizationID, OrganizationName: value.OrganizationName, Status: value.Status,
 			ActivatedAt: value.ActivatedAt, DeactivatedAt: value.DeactivatedAt, HasPerson: value.HasPerson, HasStaff: value.HasStaff,
-			Roles: roles,
+			Roles: roles, Version: value.Version,
 		})
 	}
 	return result

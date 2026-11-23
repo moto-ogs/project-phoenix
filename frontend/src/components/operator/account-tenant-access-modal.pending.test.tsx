@@ -120,6 +120,7 @@ function access(overrides: Record<string, unknown> = {}) {
     hasPerson: true,
     hasStaff: true,
     roles: [{ id: "1", name: "admin", isSystem: true, baseRole: null }],
+    version: "roles-v1",
     ...overrides,
   };
 }
