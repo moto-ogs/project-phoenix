@@ -179,7 +179,11 @@ Bekanntgabe der Abholzeiten, die die Erziehungsberechtigten im Elternportal
 erreicht.
 
 - Wiederholbar: Ein Kind, das die Anmeldung dieser Herkunft in der Phase
-  schon hat, wird mit ihr beantwortet.
+  schon hat, wird mit ihr beantwortet. Verglichen werden die Wochentage, die
+  eine Buchung wirksam hält, und ihr Zeitraum, nicht nur die angekreuzten
+  Tage. Hat eine Korrektur des Büros seit dem ersten Lauf einen Tag
+  mitgebucht (eine Mitbuchungs-Regel), ist die Anmeldung nicht mehr die des
+  Plans: `bookings_differ`.
 - Ein Kind mit einer anderen Anmeldung in der Phase bekommt keine
   (`has_application`). Gemeint ist jedes Kind einer Anmeldung der Phase, das
   die Kinderakte hält und weder abgelehnt noch zurückgezogen ist.
@@ -211,9 +215,31 @@ erreicht.
 - Abgelehnt je Zeile, ohne etwas zu schreiben: Kinderakte fehlt, ist nicht
   aktiv, hat keinen Betreuungsplatz oder kein Geburtsdatum; Angebot gehört
   nicht zur Phase; Tag wird nicht angeboten; Buchungen beginnen vor dem
-  Betreuungsbeginn der Phase oder nicht am selben Tag (`booking_window`);
-  zwei Buchungen mit verschiedenem Ende auf einem direkt verknüpften Roster
-  (`shared_roster`, siehe unten).
+  Betreuungsbeginn der Phase, nach heute oder nicht am selben Tag
+  (`booking_window`); eine befristete Buchung auf einem direkt verknüpften
+  Roster (`roster_bound`), ein Betreuungsende der Kinderakte vor dem Ende
+  der Buchungen (`care_ends_earlier`) und ein Fenster ohne einen gebuchten
+  Wochentag (`window_too_short`), alle drei siehe unten.
+- **Der erste Tag der Buchungen liegt nie nach heute.** Der Plan bucht nur
+  einen Vertrag und eine Phase, die begonnen haben. Die Anmeldung lehnt
+  einen späteren Beginn ab (`booking_window`), statt sich darauf zu
+  verlassen: Eine Korrektur des Büros ohne Datum liest die Buchungen am
+  heutigen Tag und fände eine künftige Buchung nicht als die geltende.
+- **Ein eingetragenes Betreuungsende hält die Zeile zurück**
+  (`care_ends_earlier`). Nennt die Kinderakte einen letzten Betreuungstag
+  (`enrolled_until`) vor dem letzten Tag einer Buchung, schreibt die
+  Anmeldung nichts: Care Plan kappt die Roster am Betreuungsende, die
+  Buchungen stünden darüber hinaus, und der Vertrag verspräche Betreuung,
+  die die Schule beendet hat. Gelesen wird die Kinderakte unter den Sperren
+  der Genehmigung. Das Büro klärt Vertragsende oder Betreuungsende.
+- **Ein zu kurzes Fenster bricht den Lauf nicht ab** (`window_too_short`).
+  Care Plan prüft für ein direkt verknüpftes Roster, dass jeder gebuchte
+  Wochentag im Fenster vorkommt, und antwortet sonst mit einem Fehler. Mit
+  dem Fenster ab dem ersten Tag des Vertrags wäre das der Abbruch für alle
+  Zeilen des Aufrufs: Vertrag ab Donnerstag, 29.07., Phase bis 31.07.,
+  Angebot montags und freitags. Die Anmeldung prüft deshalb vorab je
+  Buchung, ob jeder ihrer Wochentage in ihrem Zeitraum liegt, und lehnt nur
+  diese Zeile ab, in `CheckContractChildren` wie im Lauf.
 - **Das Roster beginnt mit der Buchung.** Care Plan liest die Buchungen
   einer Genehmigung am ersten Tag des Fensters, das es bekommt, und beginnt
   die Roster-Zeilen dort (`MaterializeApprovedBookings`,
@@ -234,25 +260,33 @@ erreicht.
   deshalb keine. Das Kind wird angemeldet, sobald die geplante Version gilt.
   Der Plan hält solche Zeilen selbst zurück (Abschnitt 1); die Anmeldung
   lehnt sie zusätzlich ab.
-- **Das Roster endet mit der Buchung.** Eine Buchung, die vor der Phase
-  endet (Modul mit letztem Tag, Vertrag mit Ende), beendet auch die
-  Roster-Zeile des Kindes. Für Angebote, die ihr Roster über die direkte
-  Verknüpfung `ActivityGroupID` benennen, galt das bisher nicht: Care Plan
-  schrieb die Zeile bis zum Ende der Phase, und das Kind blieb auf dem
-  Roster und seinen Terminen. Das war ein Fehler für jede befristete
-  Buchung bei einer Genehmigung und ist in Care Plan behoben
-  (`booking_drafts.go`).
-- **Zwei Buchungen auf einem direkt verknüpften Roster.** Nennen zwei
-  Angebote eines Kindes dasselbe Roster und enden an verschiedenen Tagen
-  (Montag im Februar, Mittwoch im Juli), lässt sich das nicht schreiben:
-  Care Plan führt je Kind und Roster eine Zeile mit einem Ende für alle
-  Wochentage. Wochentagsgenaue Fenster wären ein Umbau des Roster-Modells.
-  Entschieden ist das Zweite von zwei Möglichkeiten: Enden beide Buchungen
-  am selben Tag, endet die Zeile dort. Enden sie verschieden, bleibt die
-  Zeile wie vor diesem PR bis zum Ende der Phase offen, statt das spätere
-  Ende für alle Wochentage zu nehmen; und die stille Anmeldung lehnt ein
-  solches Kind vorab ab (`shared_roster`), in `CheckContractChildren` wie
-  im Lauf.
+- **Eine befristete Buchung auf einem direkt verknüpften Roster bleibt
+  zurück** (`roster_bound`). Benennt ein Angebot sein Roster über die
+  direkte Verknüpfung `ActivityGroupID`, schreibt Care Plan die Roster-Zeile
+  des Kindes bis zum Ende der Phase, auch wenn die Buchung früher endet
+  (Modul mit letztem Tag, Vertrag mit Ende). Das Kind bliebe auf dem Roster
+  und seinen Terminen. Die stille Anmeldung lehnt deshalb jedes Kind ab, das
+  eine solche Buchung vor dem Betreuungsende der Phase beendet, in
+  `CheckContractChildren` wie im Lauf, bevor etwas geschrieben wird. Zwei
+  Buchungen eines Kindes auf einem solchen Roster mit verschiedenem Ende
+  sind derselbe Fall: Eine davon endet vor der Phase. Der Fehler in Care
+  Plan besteht für jede Genehmigung mit befristeter Buchung und bleibt in
+  diesem PR bestehen (siehe „Bekannte Grenze“).
+- **Eine Korrektur des Büros ohne Datum behält den ersten Tag.** Die
+  Korrektur (`UpdateChildOfferings` ohne `effective_from`) ersetzt die
+  Buchungen ab dem Betreuungsbeginn der Phase und leitet die Roster von
+  dort neu ab. Ein ab dem 04.01. still angemeldetes Kind wäre danach ab
+  August gebucht und auf dem Roster. Für Kinder einer Anmeldung der
+  Herkunft `contract_import` beginnt die Korrektur deshalb am ersten Tag
+  ihrer gespeicherten Buchungen, wenn er nach dem Betreuungsbeginn liegt,
+  und die Roster werden ab diesem Tag neu abgeleitet. Care Plan liest dafür
+  ein Kennzeichen der Anmeldung (`StartsWithFirstBooking`), das die Bindung
+  im Root aus der Herkunft setzt; ein zusätzliches Statement gibt es nicht.
+  Die Regel liest die Herkunft, weil sie sonst bestehende Kinder träfe:
+  Ein Kind, das ohne Angebot genehmigt wurde und seine erste Buchung über
+  eine Stichtagsänderung mitten im Jahr bekam, wird von einer Korrektur
+  ohne Datum heute ab dem Betreuungsbeginn gebucht. Das ist derselbe Fehler
+  und bleibt für bestehende Kinder unverändert (siehe „Bekannte Grenze“).
 - **Ansichten des Personals aktualisieren sich nicht von selbst.** Die
   Bekanntgabe der Abholzeiten (`ReconcileOfferingPickupForStudents`) weckt
   in einem Aufruf die Erziehungsberechtigten im Elternportal und das
@@ -300,7 +334,14 @@ Büros heißt sie „Aus importiertem Vertrag“.
 der Träger-Transaktion, unter der Sperre der Verknüpfungen (ADR 0307) und den
 Zeilensperren der Verträge. Es prüft erneut: importiert, aktiv, ungebunden,
 dieselbe Kinderakte, dieselbe Zeitleiste wie im Plan, und das Kind der
-Anmeldung hat noch keinen Vertrag. Ein Vertrag, der sich geändert hat, bleibt
+Anmeldung hat noch keinen Vertrag. Die Kinderakte der Bindung ist die, für
+die die Anmeldung der Schule geantwortet hat
+(`ContractEnrollmentResult.StudentID`): Der Aufrufer reicht die Antwort
+weiter und ordnet sie über Vertrag und Kinderakte zu, nie über die Position
+im Aufruf. Die Bindung traut dem nicht und vergleicht unter den Sperren mit
+der Kinderakte, mit der der Vertrag verknüpft ist; eine Antwort für eine
+andere Kinderakte oder für keine ist `changed`, auch bei einem schon
+gebundenen Vertrag. Ein Vertrag, der sich geändert hat, bleibt
 ungebunden (`changed`). Die Bindung schreibt in den Verlauf
 (`bind_application`) und sonst nichts: keine Version, kein Dokument, kein
 Versand. Eine wiederholte Bindung ändert nichts. Nennt ein Aufruf einen
@@ -489,16 +530,35 @@ Die Entscheidung ändert diese Register (ADR 0057 Punkt 5, ADR 0070):
 
 ## Was sich für bestehende Schulen jetzt ändert
 
-Dieser PR ändert für bestehende Schulen genau eine Sache: Die Roster-Zeile
-einer Aktivität, die ein Angebot über die direkte Verknüpfung
-(`ActivityGroupID`) benennt, endet mit einer befristeten Buchung statt mit
-der Phase. Das behebt einen bestehenden Fehler bei jeder Genehmigung mit
-befristeter Buchung. Teilen sich zwei solche Buchungen eines Kindes ein
-Roster und enden verschieden, bleibt die Zeile wie bisher offen.
+Nichts. Plan, stille Anmeldung und Bindung ruft bis zum Folge-PR nichts auf,
+die Herkunft `contract_import` trägt keine Anmeldung, und die Regel der
+Verlängerung (Abschnitt 6) und die der Korrektur ohne Datum (Abschnitt 2)
+greifen nur für diese Herkunft. Care Plan leitet Roster für bestehende
+Kinder unverändert ab.
 
-Sonst ändert sich nichts: Plan, stille Anmeldung und Bindung ruft bis zum
-Folge-PR nichts auf, die Herkunft `contract_import` trägt keine Anmeldung,
-und die Regel der Verlängerung (Abschnitt 6) greift nur für diese Herkunft.
+## Bekannte Grenze: befristete Buchungen und späte erste Buchungen in Care Plan
+
+Zwei Fehler in Care Plan bestehen vor diesem PR und bleiben bestehen. Beide
+gehören in ein Folge-Issue (legt der Product Owner an).
+
+1. **Die Roster-Zeile eines direkt verknüpften Angebots endet nicht mit der
+   Buchung.** `booking_drafts.go` verwirft für Angebote mit
+   `ActivityGroupID` das Ende der Buchung; die Zeile läuft bis zum Ende der
+   Phase, und das Kind bleibt nach einer befristeten Buchung auf dem Roster
+   und seinen Terminen. Eine frühere Fassung dieses PR hat das behoben und
+   ist zurückgenommen: Die Behebung brach einen gemischten Fall. Angebot A
+   benennt ein Roster direkt und endet im Januar, dasselbe Roster nennt
+   Angebot B als einzige Quelle bis Juli, das Kind bucht beide. Die Zeile
+   der direkten Verknüpfung ersetzt die der Quelle; endet sie mit A, fällt
+   das Kind im Februar vom Roster, obwohl B es weiter bucht. Richtig
+   behoben braucht der Fall je Kind und Roster das späteste Ende aller
+   Wege, die es speisen, und damit einen Umbau der Roster-Entwürfe, der
+   jede Genehmigung bestehender Schulen ändert. Die stille Anmeldung meidet
+   den Fehler, statt ihn zu beheben: `roster_bound` (Abschnitt 2).
+2. **Eine Korrektur ohne Datum bucht ab dem Betreuungsbeginn der Phase**,
+   auch wenn die erste Buchung des Kindes später begann (Stichtagsänderung
+   für ein Kind ohne Buchung). Für die Herkunft `contract_import` ist das
+   behoben (Abschnitt 2), für alle anderen nicht.
 
 ## Verworfene Optionen
 
@@ -544,12 +604,17 @@ und die Regel der Verlängerung (Abschnitt 6) greift nur für diese Herkunft.
 - **Eine vom Plan bewiesene Anmeldung ohne Anmeldung der Schule binden.**
   So stand es zuerst in Abschnitt 3 (zwei Regeln). Zwischen Beweis und
   Bindung konnte das Büro die Buchungen ändern, ohne dass es jemand prüft.
-- **Wochentagsgenaue Roster-Fenster für zwei Buchungen auf einem Roster.**
-  Verlangt mehrere Zeilen je Kind und Roster und damit einen Umbau des
-  Roster-Schreibers und seiner Abgleiche.
-- **Das spätere Ende für alle Wochentage eines geteilten Rosters nehmen.**
-  Lässt das Kind an den Tagen der früher endenden Buchung auf dem Roster
-  und sieht dabei nach einer Befristung aus.
+- **Die Roster-Zeile der direkten Verknüpfung in diesem PR mit der Buchung
+  enden lassen.** So stand es zuerst hier. Die Änderung traf jede
+  Genehmigung bestehender Schulen und ließ ein Kind vom Roster fallen, das
+  dasselbe Roster über ein zweites Angebot als Quelle weiter bucht (siehe
+  „Bekannte Grenze“).
+- **Die Korrektur ohne Datum für alle Kinder am ersten Tag der Buchungen
+  beginnen lassen.** Ändert die Korrektur für bestehende Kinder, deren
+  erste Buchung eine Stichtagsänderung war.
+- **Einen zu kurzen Zeitraum als Fehler des Aufrufs stehen lassen.** Ein
+  Vertrag kurz vor Phasenende bräche die Anmeldung aller Kinder der Schule
+  ab.
 - **Kinder der stillen Anmeldung von der Verlängerung ausnehmen.** Sie
   verlören ihre Betreuung im nächsten Jahr, ohne dass es jemand entscheidet.
 
@@ -577,6 +642,13 @@ und die Regel der Verlängerung (Abschnitt 6) greift nur für diese Herkunft.
   Vertragsänderung behandelt.
 - Eine Schule mit ausgeschalteten Betreuungsangeboten bekommt keine stille
   Anmeldung.
+- Kinder mit einer befristeten Buchung auf einem direkt verknüpften Roster,
+  mit einem Betreuungsende vor dem Ende ihrer Buchungen oder mit einem
+  Zeitraum ohne einen gebuchten Wochentag bleiben zurück, bis das Büro
+  Vertrag, Kinderakte oder Angebot berichtigt oder Care Plan befristete
+  Buchungen auf direkt verknüpften Rostern beendet (Folge-Issue).
+- Korrigiert das Büro die Wochentage eines still angemeldeten Kindes ohne
+  Datum, bleibt der erste Tag seiner Buchungen und Roster bestehen.
 - Die Rücknahme der Migration löst die Bindung importierter Verträge wieder;
   die Anmeldungen bleiben an der Schule und heißen dann „von Hand
   eingetragen“.
