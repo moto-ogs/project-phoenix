@@ -95,6 +95,12 @@ als „da“.
   liest sie unter ihrer Sperre in derselben Transaktion. Es bleibt das Fenster
   zwischen diesem Lesen und dem Commit: Ein dort festgeschriebener Statustag
   gilt als nach der Übergabe eingetragen.
+- Dasselbe Fenster gilt für zwei weitere Schreiber der Dialog-Eingabe: eine
+  Änderung der Klassenliste (Aufnahme, Klassenwechsel) und
+  `TransferClassListEntryMarks`, das die „fehlt“-Marke eines Listeneintrags
+  auf ein Kind überträgt. Ein Kind, das dort neu hinzukommt, steht nicht im
+  Dialog und wird nicht übergeben. Kein abwesendes Kind wird dadurch als „da“
+  übergeben.
 
 Der Effekt-Scan löst die Funktion zu `classHandover.dialogChildren` (Class Day)
 auf. Sie liest nur, schreibt nichts und nimmt keine Sperre; ihr Eintrag ist als
