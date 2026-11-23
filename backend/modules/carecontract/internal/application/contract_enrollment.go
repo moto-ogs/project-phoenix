@@ -288,22 +288,25 @@ func newBindingCheck(contracts []carecontract.EnrollmentContract, children []por
 
 // decide answers one binding: done for a contract bound to the named
 // application child already, changed for one that is no longer the imported,
-// active, unbound contract with the child record and the timeline of the
-// plan, whose binding names another application child than the one its row
-// stands for or carries no confirmation of the school's enrollment, or
-// whose application child has another contract, else bound.
+// active, unbound contract with the timeline of the plan, whose binding
+// names another application child than the one its row stands for or
+// carries no confirmation of the school's enrollment, or whose application
+// child has another contract, else bound. The child record the enrollment
+// answered for is compared with the one the locked contract is linked to,
+// before anything else: the caller relays that answer, and an answer for
+// another child record, or for none, is changed whatever else it names,
+// also for a contract that is bound already.
 // A contract the call bound is bound for its later rows too: a second row
 // of it is done or changed, never a second write.
 func (c *bindingCheck) decide(binding carecontract.ApplicationBinding) string {
 	contract, known := c.contracts[binding.ContractID.Int64()]
 	requestChild := binding.RequestChildID.Int64()
 	switch {
-	case !known || requestChild <= 0:
+	case !known || requestChild <= 0 || !answeredFor(contract, binding):
 		return carecontract.BindingChanged
 	case contract.RequestChildID != nil && *contract.RequestChildID == requestChild:
 		return carecontract.BindingDone
 	case contract.RequestChildID != nil, contract.Status != carecontract.StatusActive,
-		contract.StudentID == nil || *contract.StudentID != binding.StudentID.Int64(),
 		!plannedFor(contract, binding), c.contracted[requestChild] != 0:
 		return carecontract.BindingChanged
 	}
@@ -311,6 +314,13 @@ func (c *bindingCheck) decide(binding carecontract.ApplicationBinding) string {
 	contract.RequestChildID = &requestChild
 	c.contracts[contract.ID] = contract
 	return carecontract.BindingBound
+}
+
+// answeredFor tells whether the school's enrollment answered for the child
+// record the contract is linked to.
+func answeredFor(contract carecontract.EnrollmentContract, binding carecontract.ApplicationBinding) bool {
+	student := binding.StudentID.Int64()
+	return student > 0 && contract.StudentID != nil && *contract.StudentID == student
 }
 
 // plannedFor tells whether the binding is one the plan and the school's

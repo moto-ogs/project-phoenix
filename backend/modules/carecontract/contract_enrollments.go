@@ -141,7 +141,8 @@ const (
 	// already: a repeated call changes nothing.
 	BindingDone = "done"
 	// BindingChanged is a contract that is no longer what the plan saw:
-	// another child record, another timeline, another application child than
+	// another child record than the one the school's enrollment answered
+	// for, another timeline, another application child than
 	// the one its row stands for, no longer active, or an application child
 	// that has another contract; and a binding without the confirmation of
 	// the school's enrollment. It is not bound; the office looks again.
@@ -267,10 +268,19 @@ type EnrollmentPlan struct {
 }
 
 // ApplicationBinding binds one imported contract to an application child.
-// The child record and the token are those of the ready plan row. One rule
-// says which application child a binding may name: the one the school's
-// enrollment (enrollment.ContractEnrollments) confirmed for the row under
-// its gates, with the status enrolled or existing, which Enrollment carries.
+// The token is that of the ready plan row. One rule says which application
+// child a binding may name: the one the school's enrollment
+// (enrollment.ContractEnrollments) confirmed for the row under its gates,
+// with the status enrolled or existing, which Enrollment carries.
+//
+// The caller relays the answer of the enrollment, and relates it to its row
+// by what the answer names, never by its position in the call: ContractID
+// and StudentID are the contract and the child record of
+// enrollment.ContractEnrollmentResult, RequestChildID its application child.
+// The binding trusts none of it. Under its locks it compares StudentID with
+// the child record the contract is linked to and answers any other child
+// record, and none, as BindingChanged: an answer for another child never
+// binds this contract.
 //
 //   - A row with RequestChildID names the accepted application the plan
 //     proved. The caller hands it to the enrollment with ApplicationBookings
@@ -286,7 +296,8 @@ type EnrollmentPlan struct {
 // the row pins the application child a row with RequestChildID is for, so a
 // binding that names another one is answered as BindingChanged.
 type ApplicationBinding struct {
-	ContractID     ident.ID `json:"contract_id"`
+	ContractID ident.ID `json:"contract_id"`
+	// StudentID is the child record the school's enrollment answered for.
 	StudentID      ident.ID `json:"student_id"`
 	RequestChildID ident.ID `json:"request_child_id"`
 	Token          string   `json:"token"`
@@ -336,9 +347,10 @@ type ContractEnrollments interface {
 	// Träger transaction of the reviewer: under the lock of the Träger's
 	// links and the row locks of the contracts it checks again that each is
 	// an imported, active, unbound contract of the school with the child
-	// record and the token of its plan row, and that the binding names the
-	// application child the row stands for and carries the confirmation of
-	// the school's enrollment (ApplicationBinding), binds it and records it
+	// record the enrollment answered for and the token of its plan row, and
+	// that the binding names the application child the row stands for and
+	// carries the confirmation of the school's enrollment
+	// (ApplicationBinding), binds it and records it
 	// in the trail. It reads nothing of the school: what the enrollment
 	// confirmed in the school's transaction may change before this
 	// transaction runs, and no transaction holds both (ADR 0105, ADR 0309). A contract that changed is answered as

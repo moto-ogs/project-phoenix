@@ -340,9 +340,15 @@ func TestAContractThatChangedSinceThePlanIsNotBound(t *testing.T) {
 		return f.count(t, `SELECT COUNT(*) FROM care_contract.contracts WHERE organization_id = ? AND id = ? AND request_child_id IS NOT NULL`,
 			f.org, f.imported)
 	}
+	// The binding names the child record the school's enrollment answered
+	// for. An answer for another child record, or for none, binds nothing:
+	// the caller relays the answers, and the binding does not trust it.
 	other := f.binding(row)
 	other.StudentID++
 	assert.Equal(t, carecontract.BindingChanged, f.bind(t, other)[0].Status, "another child record")
+	nobody := f.binding(row)
+	nobody.StudentID = 0
+	assert.Equal(t, carecontract.BindingChanged, f.bind(t, nobody)[0].Status, "no child record")
 	moved := f.binding(row)
 	moved.Token = "1:wirksam|new"
 	assert.Equal(t, carecontract.BindingChanged, f.bind(t, moved)[0].Status, "another timeline")
@@ -374,6 +380,11 @@ func TestAContractThatChangedSinceThePlanIsNotBound(t *testing.T) {
 	taken := f.binding(row)
 	taken.RequestChildID++
 	assert.Equal(t, carecontract.BindingChanged, f.bind(t, taken)[0].Status, "bound to another application child")
+	// A bound contract is answered as done only for its own child record.
+	misplaced := f.binding(row)
+	misplaced.StudentID++
+	assert.Equal(t, carecontract.BindingChanged, f.bind(t, misplaced)[0].Status, "an answer for another child record finds no contract done")
+	assert.Equal(t, carecontract.BindingDone, f.bind(t, f.binding(row))[0].Status)
 
 	// The key of the contract from an application is taken at its school.
 	var keySchool, keyChild int64
