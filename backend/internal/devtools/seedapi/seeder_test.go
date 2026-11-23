@@ -1660,6 +1660,13 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 			})
 			return
 		}
+		if strings.HasPrefix(r.URL.Path, "/api/admin/grade-transitions/") && strings.HasSuffix(r.URL.Path, "/preview") {
+			// The apply confirms the fingerprint of this preview (ADR 0311).
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"status": "success", "data": map[string]any{"fingerprint": "grade-transition-preview"},
+			})
+			return
+		}
 		if r.URL.Path == "/api/students/care-end/preview" {
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"status": "success", "data": map[string]any{"token": "planned-care-exit-token", "blocked": false},

@@ -230,7 +230,7 @@ func validatePendingCareRequest(row carerequests.Request, version string) error 
 	if err := requirePendingCareRequest(row); err != nil {
 		return err
 	}
-	return readstate.Check(version, careplan.ParentRequestVersion(row.UpdatedAt))
+	return readstate.Check(version, readstate.Of(row.UpdatedAt))
 }
 
 // requirePendingCareRequest checks the status only. The conflict lock uses

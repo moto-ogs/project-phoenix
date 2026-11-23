@@ -9,8 +9,8 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
-	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
 
@@ -113,7 +113,7 @@ func toMasterDataResponse(d *parentService.ChildMasterData, accountID int64) Mas
 			Status:    c.Status,
 			CreatedAt: c.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 			IsSelf:    c.SubmittedBy == accountID,
-			Version:   careplan.ParentRequestVersion(c.UpdatedAt),
+			Version:   readstate.Of(c.UpdatedAt),
 		})
 	}
 	return resp
@@ -196,7 +196,7 @@ func toMasterDataChangeResponses(rows []*parentService.StudentDataChangeRequest,
 			Status:    c.Status,
 			CreatedAt: c.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 			IsSelf:    c.SubmittedBy == accountID,
-			Version:   careplan.ParentRequestVersion(c.UpdatedAt),
+			Version:   readstate.Of(c.UpdatedAt),
 		})
 	}
 	return out

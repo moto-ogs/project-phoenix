@@ -93,7 +93,7 @@ func TestNativePickupEditChecksOldCutoffAndRollsBackLedgerFailure(t *testing.T) 
 	cutoff, err := carerequests.NewSameDayCutoff("11:00", time.Date(2026, 9, 20, 12, 0, 0, 0, calendar.Berlin))
 	require.NoError(t, err)
 	input := carerequests.EditInput{RequestID: row.ID, StudentID: student.ID, GuardianAccountID: account.ID,
-		ExpectedVersion: careplan.ParentRequestVersion(row.UpdatedAt), Date: "2026-09-21", PickupTime: time.Date(1, 1, 1, 14, 0, 0, 0, time.UTC), Reason: "Neuer Termin", Cutoff: cutoff}
+		ExpectedVersion: readstate.Of(row.UpdatedAt), Date: "2026-09-21", PickupTime: time.Date(1, 1, 1, 14, 0, 0, 0, time.UTC), Reason: "Neuer Termin", Cutoff: cutoff}
 	edit := func() error {
 		return testpkg.WithTenantTx(t, ctx, db, testpkg.Tenant(t), func(txCtx context.Context, _ bun.Tx) error {
 			_, editErr := query.EditRequest(txCtx, input)

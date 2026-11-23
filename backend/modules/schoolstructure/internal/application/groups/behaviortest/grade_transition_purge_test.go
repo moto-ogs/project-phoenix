@@ -37,7 +37,7 @@ func TestGradeTransitionWorkflow_History_StudentStates(t *testing.T) {
 
 	id := f.createDraft(t, ctx, "2026-2027", graduate(graduateClass))
 
-	_, err := wf.Apply(ctx, id, "")
+	_, err := wf.Apply(ctx, id, previewed(ctx, wf, id))
 	require.NoError(t, err)
 
 	// Put one child back the way a revert does, and remove another the way the

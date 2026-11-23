@@ -98,7 +98,7 @@ func resolverWithExcusedPort(t *testing.T, rights ports.ParentRequestRights, por
 func excusedResolveInput(versions time.Time, ids ...int64) parentrequests.ResolveConflictInput {
 	expected := make([]string, 0, len(ids))
 	for range ids {
-		expected = append(expected, careplan.ParentRequestVersion(versions))
+		expected = append(expected, readstate.Of(versions))
 	}
 	return parentrequests.ResolveConflictInput{
 		Kind: parentrequests.KindExcused, RequestIDs: ids, ExpectedVersions: expected,

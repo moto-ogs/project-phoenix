@@ -70,7 +70,7 @@ func TestGradeTransitionWorkflow_Apply_ReleasesRFIDTag(t *testing.T) {
 
 	transitionID := f.createDraft(t, ctx, "2025-2026", graduate(gradClass))
 
-	_, err := wf.Apply(ctx, transitionID, "")
+	_, err := wf.Apply(ctx, transitionID, previewed(ctx, wf, transitionID))
 	require.NoError(t, err)
 
 	assert.Empty(t, tagOf(t, ctx, db, student.PersonID),
@@ -128,7 +128,7 @@ func TestGradeTransitionWorkflow_Revert_KeepsReissuedRFIDTag(t *testing.T) {
 
 	transitionID := f.createDraft(t, ctx, "2025-2026", graduate(gradClass))
 
-	_, err := wf.Apply(ctx, transitionID, "")
+	_, err := wf.Apply(ctx, transitionID, previewed(ctx, wf, transitionID))
 	require.NoError(t, err)
 	require.Empty(t, tagOf(t, ctx, db, leaver.PersonID))
 

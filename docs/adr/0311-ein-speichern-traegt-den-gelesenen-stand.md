@@ -74,10 +74,30 @@ Variante 3.
 
 - `useFreshSWR` gilt nur noch als Übergang. Jede Stelle wird nach Punkt 1, 2
   oder 5 eingeordnet und umgestellt; danach bleibt nur das Lesen bei jedem
-  Öffnen für protokollierte Zugriffe.
+  Öffnen für protokollierte Zugriffe. Dafür bleibt ein Hook: der
+  Frontend-PR zu #7904 führt `useFreshSWR`, `useFreshTraegerResource` und
+  `useOpeningRead` zusammen.
 - Die Elternanfragen verlieren ihre vier Fehlerwerte und den leeren Token, der
-  die Prüfung übersprang.
+  die Prüfung übersprang. Ihr Token ist `readstate.Of(updated_at)` ohne
+  eigene Funktion; ein Stand ohne Zeile (Ankunftszeiten einer Klasse) hat den
+  Token der Nullzeit, damit auch das erste Speichern gebunden ist.
 - Eine neue Prüfung braucht keinen neuen Fehlercode und keine neue Übersetzung.
+  Das gilt an einer Stelle: `common.RenderError` hebt eine fachliche
+  Ablehnung aus einem 5xx und aus einem 4xx ohne eigenen Code auf 409, und
+  die Laufzeitmetriken (`observability`) zählen eine Ablehnung, die die
+  Tabelle eines Owners als `internal_error` führt, mit ihrem Code. Kein
+  Owner und kein Handler führt dafür einen eigenen Fall.
+- Die Fingerabdrücke entstehen mit `readstate.Fingerprint`, auch die der
+  Vorschauen mit eigenem Code (Zeugniswechsel, Kind löschen, Importe,
+  Abrechnungsläufe); ihre Codes bleiben. Keiner nimmt einen leeren Token an:
+  ein Zeugniswechsel ohne bestätigte Vorschau läuft nicht mehr. Weil sich einige Token-Werte dabei
+  geändert haben, bekommt ein vor dem Release geöffneter Tab einmal die
+  Ablehnung und liest neu. Die Zeilenversion der Abholberechtigungen (ADR
+  0281) bleibt ein eigenes Register.
+- Die Laufgemeinschaft eines Kindes und die Ankündigungen im Elternportal
+  lehnen einen veralteten Stand mit `general.changed_since_read` ab.
+  `students.companions_changed` bleibt registriert; der Client erkennt beide
+  Codes, bis kein älteres Backend mehr läuft.
 - Der Speiseplan (#7930) liest und schickt ein Token je Tag. Seine alten
   Routen, die den gelesenen Tag statt eines Tokens schicken (#7898), bleiben
   ein Release lang und prüfen über dieselbe Funktion.

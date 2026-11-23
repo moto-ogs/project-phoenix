@@ -108,7 +108,7 @@ func TestGradeTransitionWorkflow_Apply_RemapsClassListEntries(t *testing.T) {
 
 	transitionID := f.createDraft(t, ctx, "2026-2027", promote(class1, class2), graduate(class4))
 
-	_, err := wf.Apply(ctx, transitionID, "")
+	_, err := wf.Apply(ctx, transitionID, previewed(ctx, wf, transitionID))
 	require.NoError(t, err)
 
 	assert.Equal(t, []string{class2}, classListEntryClassesOf(t, db, ctx, "CleZoe", "Promoted"),
@@ -194,7 +194,7 @@ func TestGradeTransitionWorkflow_Revert_KeepsAdminDeletedEntriesDeleted(t *testi
 
 	transitionID := f.createDraft(t, ctx, "2026-2027", promote(class1, class2))
 
-	_, err := wf.Apply(ctx, transitionID, "")
+	_, err := wf.Apply(ctx, transitionID, previewed(ctx, wf, transitionID))
 	require.NoError(t, err)
 	require.Equal(t, []string{class2}, classListEntryClassesOf(t, db, ctx, "CleMia", "Entfernt"))
 
@@ -236,7 +236,7 @@ func TestGradeTransitionWorkflow_Revert_SkipsCollidingRestores(t *testing.T) {
 
 	transitionID := f.createDraft(t, ctx, "2026-2027", promote(class1, class2))
 
-	_, err := wf.Apply(ctx, transitionID, "")
+	_, err := wf.Apply(ctx, transitionID, previewed(ctx, wf, transitionID))
 	require.NoError(t, err)
 
 	// Between apply and revert: Anna gets re-created as an entry under the
@@ -280,7 +280,7 @@ func TestGradeTransitionWorkflow_Apply_RemapsCaseDivergentEntryClass(t *testing.
 
 	transitionID := f.createDraft(t, ctx, "2026-2027", promote(class1, class2))
 
-	_, err := wf.Apply(ctx, transitionID, "")
+	_, err := wf.Apply(ctx, transitionID, previewed(ctx, wf, transitionID))
 	require.NoError(t, err)
 
 	assert.Equal(t, []string{class2}, classListEntryClassesOf(t, db, ctx, "CleIda", "Grossklein"),
@@ -319,7 +319,7 @@ func TestGradeTransitionWorkflow_Revert_KeepsAdminEditedCreatedEntry(t *testing.
 
 	transitionID := f.createDraft(t, ctx, "2026-2027", promote(class1, class2))
 
-	_, err := wf.Apply(ctx, transitionID, "")
+	_, err := wf.Apply(ctx, transitionID, previewed(ctx, wf, transitionID))
 	require.NoError(t, err)
 	require.Equal(t, []string{class2}, classListEntryClassesOf(t, db, ctx, "CleNina", "Bearbeitet"))
 
@@ -358,7 +358,7 @@ func TestGradeTransitionWorkflow_ClassListEntries_NoEntriesNoLedger(t *testing.T
 
 	transitionID := f.createDraft(t, ctx, "2026-2027", promote(class1, class2))
 
-	_, err := wf.Apply(ctx, transitionID, "")
+	_, err := wf.Apply(ctx, transitionID, previewed(ctx, wf, transitionID))
 	require.NoError(t, err)
 
 	ledger, err := testpkg.TenantQuery1(t, ctx, db, f.deps.Structure.ListTransitionClassListLedger, transitionID)

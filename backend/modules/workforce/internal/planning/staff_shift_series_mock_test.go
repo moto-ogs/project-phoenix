@@ -209,8 +209,12 @@ func unitSeries(t *testing.T) *StaffShiftSeries {
 		WeekPattern:      WeekPatternEvery,
 		ValidFrom:        calendar.Date(calendar.NewDate(2026, 8, 24).AddDays(-7)),
 		CreatedBy:        5,
+		UpdatedAt:        mockSeriesChanged,
 	}
 }
+
+// mockSeriesChanged is the updated_at every mocked series is stored with.
+var mockSeriesChanged = time.Date(2026, 8, 20, 8, 0, 0, 0, time.UTC)
 
 func TestCreateSeriesUnit_ErrorBranches(t *testing.T) {
 	t.Parallel()
@@ -551,8 +555,8 @@ func splitInput(t *testing.T, seriesID int64) SplitSeriesInput {
 	require.NoError(t, err)
 	return SplitSeriesInput{
 		SeriesID: seriesID,
-		// The mocked series carry no updated_at: their version is the zero time.
-		ExpectedVersion: readstate.Of(time.Time{}),
+		// The mocked series are read at mockSeriesChanged.
+		ExpectedVersion: readstate.Of(mockSeriesChanged),
 		EffectiveDate:   calendar.NewDate(2026, 8, 24).AddDays(3),
 		StartTime:       calendar.NormalizeWallClock(start),
 		EndTime:         calendar.NormalizeWallClock(end),

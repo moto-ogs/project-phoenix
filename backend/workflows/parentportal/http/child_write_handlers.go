@@ -9,10 +9,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/api/common"
-	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/absencerecords"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
 
@@ -121,7 +121,7 @@ func toParentExcusedRequestResponse(req *parentService.ExcusedAbsenceRequestSnap
 		CreatedAt:      req.CreatedAt,
 		ReviewedAt:     req.ReviewedAt,
 		IsSelf:         req.SubmittedBy == accountID,
-		Version:        careplan.ParentRequestVersion(req.UpdatedAt),
+		Version:        readstate.Of(req.UpdatedAt),
 	}
 }
 

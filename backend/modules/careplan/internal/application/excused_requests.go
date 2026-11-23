@@ -248,7 +248,7 @@ func (w *ExcusedRequests) EditRequest(ctx context.Context, input careplan.Excuse
 	if req.Status != careplan.ExcusedRequestStatusPending {
 		return nil, careplan.ErrExcusedRequestNotPending
 	}
-	if err := readstate.Check(input.ExpectedVersion, careplan.ParentRequestVersion(req.UpdatedAt)); err != nil {
+	if err := readstate.Check(input.ExpectedVersion, readstate.Of(req.UpdatedAt)); err != nil {
 		return nil, err
 	}
 	absenceStatus := normalizedAbsenceRequestStatus(req.AbsenceStatus)

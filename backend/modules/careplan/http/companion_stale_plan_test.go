@@ -7,8 +7,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
+	"github.com/moto-ogs/project-phoenix/modules/careplan"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -83,10 +84,10 @@ func TestUpdateStudent_PlanOnlyTrimNeedsBaseline(t *testing.T) {
 		"companions": []map[string]any{
 			{"companion_student_id": companion.ID, "weekdays": []string{"mon", "tue"}},
 		},
-		"companions_fingerprint": "",
+		"companions_fingerprint": mondayLinkFingerprint(),
 	}))
 
-	current := fmt.Sprintf("%d:mon,tue", companion.ID)
+	current := careplan.CompanionLinksFingerprint([]careplan.CompanionLink{{CompanionStudentID: companion.ID, Weekdays: []string{"mon", "tue"}}})
 	// The narrowing an out-of-date form would submit: Tuesday gone from the plan,
 	// no list, so the Tuesday edge is on the block.
 	narrowed := func(extra map[string]any) map[string]any {
@@ -104,19 +105,19 @@ func TestUpdateStudent_PlanOnlyTrimNeedsBaseline(t *testing.T) {
 	t.Run("without a baseline the removal is refused", func(t *testing.T) {
 		rr := putStudentExpect(t, tc, student.ID, narrowed(nil))
 		require.Equal(t, http.StatusConflict, rr.Code, "Body: %s", rr.Body.String())
-		assert.Contains(t, rr.Body.String(), common.CodeStudentsCompanionsChanged,
+		assert.Contains(t, rr.Body.String(), `"code":"`+readstate.ChangedCode+`"`,
 			"the client has to be told to reload, not to confirm anything")
 		assert.Equal(t, map[int64][]string{companion.ID: {"mon", "tue"}}, companionLinkDays(t, tc, student.ID),
 			"a refused update must leave the links untouched")
 	})
 
 	t.Run("a stale baseline is refused too", func(t *testing.T) {
-		stale := fmt.Sprintf("%d:mon", companion.ID)
+		stale := mondayLinkFingerprint(companion.ID)
 		rr := putStudentExpect(t, tc, student.ID, narrowed(map[string]any{
 			"companions_fingerprint": stale,
 		}))
 		require.Equal(t, http.StatusConflict, rr.Code, "Body: %s", rr.Body.String())
-		assert.Contains(t, rr.Body.String(), common.CodeStudentsCompanionsChanged)
+		assert.Contains(t, rr.Body.String(), `"code":"`+readstate.ChangedCode+`"`)
 	})
 
 	t.Run("the current baseline lets the intended narrowing through", func(t *testing.T) {
@@ -283,7 +284,7 @@ func TestCompanionListReadCarriesTheFingerprintASaveSends(t *testing.T) {
 
 	rr = link(opened, other.ID)
 	require.Equal(t, http.StatusConflict, rr.Code, rr.Body.String())
-	require.Contains(t, rr.Body.String(), `"code":"students.companions_changed"`)
+	require.Contains(t, rr.Body.String(), `"code":"`+readstate.ChangedCode+`"`)
 	require.Equal(t, map[int64][]string{partner.ID: {"mon"}}, companionLinkDays(t, tc, student.ID))
 
 	rr = link(read(), other.ID)

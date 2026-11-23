@@ -142,5 +142,5 @@ func TestGetClassArrivalTimesUsesStandardEnvelope(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, rr.Code, "Body: %s", rr.Body.String())
 	assert.Contains(t, rr.Body.String(), `"status":"success"`)
-	assert.Contains(t, rr.Body.String(), `"data":{"school_class":"Klasse 1b","times":{},"version":"0001-01-01T00:00:00Z"}`)
+	assert.Contains(t, rr.Body.String(), `"data":{"school_class":"Klasse 1b","times":{},"version":"absent"}`)
 }

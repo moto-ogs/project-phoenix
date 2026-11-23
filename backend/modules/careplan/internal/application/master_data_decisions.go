@@ -123,7 +123,7 @@ func (s *MasterDataDecisions) loadPendingDecisionRequest(ctx context.Context, in
 		}
 		return nil, fmt.Errorf("review: find pending request: %w", err)
 	}
-	if err := readstate.Check(input.ExpectedVersion, careplan.ParentRequestVersion(req.UpdatedAt)); err != nil {
+	if err := readstate.Check(input.ExpectedVersion, readstate.Of(req.UpdatedAt)); err != nil {
 		return nil, err
 	}
 	return req, nil

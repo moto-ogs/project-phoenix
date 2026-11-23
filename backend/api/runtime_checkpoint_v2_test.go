@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/api/testutil"
+	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken/tokentest"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
@@ -255,7 +256,7 @@ func (w *targetRiskWorkload) link(t *testing.T, subjectID int64, companionIDs ..
 	for _, companionID := range companionIDs {
 		links = append(links, fmt.Sprintf(`{"companion_student_id":%d,"weekdays":["mon"]}`, companionID))
 	}
-	w.putStudent(t, subjectID, "{"+accompaniedPlan+`,"companions":[`+strings.Join(links, ",")+`],"companions_fingerprint":""}`)
+	w.putStudent(t, subjectID, "{"+accompaniedPlan+`,"companions":[`+strings.Join(links, ",")+`],"companions_fingerprint":"`+careplan.CompanionLinksFingerprint(nil)+`"}`)
 }
 
 func (w *targetRiskWorkload) putStudent(t *testing.T, studentID int64, body string) {

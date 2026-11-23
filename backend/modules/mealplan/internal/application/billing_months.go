@@ -2,11 +2,8 @@ package application
 
 import (
 	"context"
-	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"hash/fnv"
 	"slices"
 	"strings"
 	"unicode/utf8"
@@ -17,6 +14,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/collation"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // billingMonthsBack is how many months back the Mensa-Monatsfreigabe goes:
@@ -360,18 +358,10 @@ func monthFingerprint(month mealplan.BillingMonth) string {
 			AbsentDates: child.AbsentDates,
 		}
 	}
-	state, err := json.Marshal(struct {
+	return readstate.Fingerprint(struct {
 		Month    mealplan.Date      `json:"month"`
 		Children []fingerprintChild `json:"children"`
 	}{month.Month, children})
-	if err != nil {
-		// A month always marshals; no fingerprint matches no release.
-		return ""
-	}
-	// A change detector, not a secret: as the monthly run's review (#5916).
-	hash := fnv.New128a()
-	_, _ = hash.Write(state)
-	return hex.EncodeToString(hash.Sum(nil))
 }
 
 // countBillingMonth counts the month (#4686): a school day is a day of the
