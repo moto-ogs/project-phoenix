@@ -230,6 +230,10 @@ export function useSSE(
           // deleted. Named, so it must be registered here or „Heute anders“
           // and the Tagesinformationen count only refresh on focus.
           "staff_notices_changed",
+          // Kalendertermine (#7693): an appointment was written. Named, so it
+          // must be registered here or „Heute anders“ and the own calendar
+          // only refresh on focus.
+          "calendar_appointments_changed",
           // Speiseplan (#7666): the menu of a day changed. Named, so it must
           // be registered here or „Heute anders“ only refreshes on focus.
           "meal_plan_changed",

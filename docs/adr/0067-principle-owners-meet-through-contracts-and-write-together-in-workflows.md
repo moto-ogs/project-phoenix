@@ -61,6 +61,9 @@ extends exception E3 to batch forms of the data import.
    (`TestDurableSideEffectsRatchet`) names every remaining `go`, `Dispatch` and
    `AfterCommit` in HTTP, application and composition roles with the harmless
    loss it accepts; a durable write cannot be added to such a callback.
+   Delivery's one shared site for tenant-wide signals without content is
+   pinned in the ratchet instead of the register
+   ([ADR 0310](0310-tenantweite-signale-ohne-inhalt-gehen-ueber-eine-gemeinsame-after-commit-stelle.md)).
 7. **A cross-owner database function needs its own decision.** The demo
    visitor erasure is the one cross-owner database workflow. It runs only as
    its isolated role, has a fixed search path and grants its caller no table

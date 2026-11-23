@@ -3,6 +3,8 @@ package owners
 import (
 	"fmt"
 
+	"github.com/moto-ogs/project-phoenix/realtime"
+
 	email "github.com/moto-ogs/project-phoenix/modules/delivery/mail"
 
 	appointmentsModule "github.com/moto-ogs/project-phoenix/modules/appointments"
@@ -78,7 +80,7 @@ func BuildCalendarApp(
 	owner TimetableOwner, rooms facilitiesModule.Catalog, workTime workforce.Capability, organizations organizationtenancy.Query,
 	identity identityaccess.Owner, caller identityaccess.CallerContext, appointments appointmentsModule.Capability,
 	calendar schoolcalendar.Days, delivery DeliveryRuntime, notifications DeliveryNotifications, settings settingsCompose.BatchSettingsService,
-	persons peopledirectory.GuardianPortalContacts,
+	persons peopledirectory.GuardianPortalContacts, hub *realtime.Hub,
 ) calendarCompose.Application {
 	repos, links := owner.Repositories, env.Links
 	cfg := NewCalendarFacts(people.Staff, people.Students, NewCalendarGuardianDirectory(people.GuardianProfiles, persons),
@@ -98,6 +100,10 @@ func BuildCalendarApp(
 	cfg.ParentsURL, cfg.FrontendURL, cfg.CalDAVURL = links.ParentsURL, links.FrontendURL, links.PublicAPIURL
 	cfg.Notifier, cfg.ReminderNotifier = NewCalendarNotifier(notifications.Notifier), NewCalendarReminderNotifier(notifications.Notifier)
 	cfg.Preferences, cfg.Logger = notifications.Preferences, env.Logger.With("service", "calendar")
+	// A nil *realtime.Hub would become a non-nil interface; check it here.
+	if hub != nil {
+		cfg.Changes = NewCalendarAppointmentChanges(hub, cfg.Logger)
+	}
 	return NewCalendarPortal(cfg)
 }
 
